@@ -1,7 +1,7 @@
 import child_process from "node:child_process";
 import path from "node:path";
 import { URL, fileURLToPath } from "node:url";
-
+import { federation } from "@module-federation/vite";
 import svgr from "@svgr/rollup";
 import react from "@vitejs/plugin-react";
 import browserslistToEsbuild from "browserslist-to-esbuild";
@@ -10,6 +10,8 @@ import { type HttpProxy, defineConfig, loadEnv } from "vite";
 import checker from "vite-plugin-checker";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import tsconfigPaths from "vite-tsconfig-paths";
+
+const deps = require("./package.json").dependencies;
 
 const publicEnvVars: any[] = [];
 const { STAGE } = process.env;
@@ -73,6 +75,19 @@ export const viteCommonConfig = ({
 				//     });
 				//   },
 				// },
+				...(!IS_DEV
+					? [
+							federation({
+								name: "remote",
+								filename: "remoteEntry.js",
+								exposes: {
+									"./Routes": "./src/common/primitives/NullComponent",
+									"./Layout": "./src/App",
+								},
+								shared: ["react", "react-dom"],
+							}),
+						]
+					: []),
 				tsconfigPaths(),
 				nodePolyfills({
 					// To add only specific polyfills, add them here. If no option is passed, adds all polyfills

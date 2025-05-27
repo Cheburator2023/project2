@@ -46,3 +46,8 @@ next-env.d.ts
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+**/.__mf__win
+**/.__mf__temp
+**/reports/*
+nohup.out

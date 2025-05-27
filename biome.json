@@ -6,8 +6,12 @@
 		"useIgnoreFile": false
 	},
 	"files": {
-		"ignoreUnknown": false,
+		"ignoreUnknown": true,
 		"ignore": [
+			".__mf__win",
+			"**/.__mf__win",
+			"**/reports/*",
+			"**/.__mf__temp",
 			"generated/**/*",
 			"node_modules",
 			"releases",
@@ -44,12 +48,14 @@
 				"noDangerouslySetInnerHtml": "off"
 			},
 			"style": {
+				"useConst": "warn",
 				"noDefaultExport": "info",
 				"noUnusedTemplateLiteral": "off",
 				"noUselessElse": "off",
 				"noNonNullAssertion": "off",
 				"useTemplate": "off",
 				"noParameterAssign": "warn",
+				"useImportType": "off",
 				"useSelfClosingElements": {
 					"fix": "safe",
 					"level": "warn"
@@ -64,6 +70,7 @@
 				}
 			},
 			"complexity": {
+				"useLiteralKeys": "off",
 				"useOptionalChain": "off",
 				"useArrowFunction": "off",
 				"noBannedTypes": "off",

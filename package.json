@@ -2,10 +2,7 @@
 	"name": "sum_ts_boilerplate",
 	"version": "1.0.0",
 	"private": true,
-	"workspaces": [
-		"apps/*",
-		"packages/*"
-	],
+	"workspaces": ["apps/*", "packages/*"],
 	"release_logs": {
 		"features": [],
 		"fixes": [],
@@ -29,9 +26,7 @@
 		"prepare": "husky"
 	},
 	"lint-staged": {
-		"*.{ts,tsx}": [
-			"biome check --files-ignore-unknown=true --colors=force"
-		]
+		"*.{ts,tsx}": ["biome check --files-ignore-unknown=true --colors=force"]
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
@@ -52,6 +47,8 @@
 	"dependencies": {
 		"@fontsource/inter": "^5.2.5",
 		"@hookform/resolvers": "^3.9.0",
+		"keycloak-js": "15.0.2",
+		"@react-keycloak/web": "3.4.0",
 		"@sentry/react": "^8.26.0",
 		"@sentry/utils": "^8.27.0",
 		"@xyflow/react": "^12.1.1",
