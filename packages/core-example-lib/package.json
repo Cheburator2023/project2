@@ -1,0 +1,10 @@
+{
+	"name": "@core/lib",
+	"version": "1.0.0",
+	"author": "Nishant Kohli",
+	"main": "./dist/index.js",
+	"license": "MIT",
+	"scripts": {
+		"lib:build": "tsc && tsc-alias"
+	}
+}

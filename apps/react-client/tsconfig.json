@@ -5,7 +5,6 @@
 		"moduleResolution": "Bundler",
 		"lib": ["dom", "dom.iterable", "esnext"],
 		"paths": {
-			"@joint/plus/*": ["../../packages/jointjs_plus/*"],
 			"@react-client/*": ["./src/*"]
 		},
 		"allowJs": true,
@@ -26,9 +25,7 @@
 		"./src/**/*.ts",
 		"./src/**/*.tsx",
 		"../../apps/react-client/**/*.ts",
-		"../../apps/react-client/**/*.tsx",
-		"../../packages/jointjs_plus/**/*.ts",
-		"../../packages/jointjs_plus/**/*.tsx"
+		"../../apps/react-client/**/*.tsx"
 	],
 	"exclude": ["../../apps/**/node_modules", "../../packages/**/node_modules"]
 }

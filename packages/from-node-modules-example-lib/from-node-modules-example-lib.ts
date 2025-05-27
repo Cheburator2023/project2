@@ -1,0 +1,3 @@
+console.log("from-node-modules-example-lib");
+
+export {};

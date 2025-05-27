@@ -2,15 +2,11 @@ import { Typography } from "@mui/material";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { JsonEditorSvelte } from "@react-client/features/jsonEditor/organisms/JsonEditorSvelte";
-import { JsonEditorWithDiff } from "@react-client/features/jsonEditor/organisms/JsonEditorWithDiff";
-import { MonacoJSONwithValidation } from "@react-client/features/playground/MonacoJSONwithValidation";
 import { Fragment } from "react/jsx-runtime";
 
 const data = [
-	{ name: "JsonEditorWithDiff", Component: JsonEditorWithDiff },
-	{ name: "JsonEditorSvelte", Component: JsonEditorSvelte },
-	{ name: "MonacoJSONwithValidation", Component: MonacoJSONwithValidation },
+	{ name: "exmp1", Component: <div /> },
+	{ name: "exmp2", Component: <div /> },
 ];
 
 export const PlaygroundPage = () => {
@@ -26,7 +22,6 @@ export const PlaygroundPage = () => {
 					<Card>
 						<Typography variant="h2">{item.name}</Typography>
 						<Spacer />
-						<item.Component />
 					</Card>
 					<Spacer />
 				</Fragment>

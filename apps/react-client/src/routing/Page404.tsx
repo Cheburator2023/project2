@@ -1,8 +1,8 @@
 import { Typography } from "@mui/material";
 import Button from "@mui/material/Button";
-import { Spacer } from "@nextui-org/react";
 import { useNavigate } from "react-router";
 
+import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Flex } from "../common/primitives/Flex";
 import { routes } from "./routes";
 

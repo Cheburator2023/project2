@@ -1,12 +1,5 @@
 import SearchIcon from "@mui/icons-material/Search";
 import { Autocomplete, InputAdornment, TextField } from "@mui/material";
-import { LeftTruncate } from "@react-client/features/json4u/components/ui/truncate";
-import { genValueAttrs } from "@react-client/features/json4u/lib/graph/layout";
-import { toPath } from "@react-client/features/json4u/lib/idgen";
-import { hasChildren } from "@react-client/features/json4u/lib/parser";
-import { cn } from "@react-client/features/json4u/lib/utils";
-import { useStatusStore } from "@react-client/features/json4u/stores/statusStore";
-import { getTree } from "@react-client/features/json4u/stores/treeStore";
 import { useState } from "react";
 
 export function Search() {
@@ -14,9 +7,6 @@ export function Search() {
 	const [open, setOpen] = useState(false);
 	const [inputValue, setInputValue] = useState("");
 	const [items, setItems] = useState<any[]>([]);
-	console.log("🐸 Pepe said >> Search >> items:", items);
-
-	const setRevealPosition = useStatusStore((state) => state.setRevealPosition);
 
 	const searchHandler = (value: string) => {
 		return window.worker?.searchInView(value);
@@ -46,19 +36,7 @@ export function Search() {
 			fullWidth
 			options={items}
 			renderOption={(props, option) => {
-				return (
-					<Item
-						key={option.id}
-						{...option}
-						onClick={() =>
-							setRevealPosition({
-								treeNodeId: option.id,
-								type: option.revealType,
-								from: "search",
-							})
-						}
-					/>
-				);
+				return <div key={option.id} {...option} />;
 			}}
 			sx={{ width: 300 }}
 			renderInput={(params) => (
@@ -77,34 +55,5 @@ export function Search() {
 				/>
 			)}
 		/>
-	);
-}
-
-function Item(props: any) {
-	const { revealType, id, label } = props;
-	const node = getTree().node(id);
-
-	if (!node) {
-		return null;
-	}
-
-	const pathStr = ["$", ...toPath(id)].join(" > ");
-	let className = "";
-
-	if (revealType === "value") {
-		const { className: cls } = genValueAttrs(node);
-		className = cls;
-	} else if (!hasChildren(node)) {
-		className = "text-hl-key";
-	}
-
-	return (
-		<div
-			className="w-full h-12 flex flex-col justify-center"
-			onClick={props.onClick}
-		>
-			<div className={cn("text-sm truncate", className)}>{label}</div>
-			<LeftTruncate className="text-xs text-muted-foreground" text={pathStr} />
-		</div>
 	);
 }

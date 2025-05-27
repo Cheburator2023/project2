@@ -6,7 +6,6 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
-import { useStatusStore } from "@react-client/features/json4u/stores/statusStore";
 
 import { useLocation, useNavigate } from "react-router";
 
@@ -23,14 +22,6 @@ const secondaryListItems = [
 export function MenuContent() {
 	const navigate = useNavigate();
 	const location = useLocation();
-	const {
-		rightPanelSize,
-		rightPanelCollapsed,
-		viewMode,
-		setViewMode,
-		setRightPanelSize,
-		setRightPanelCollapsed,
-	} = useStatusStore();
 
 	const handler = (path: string) => {
 		navigate(path);
