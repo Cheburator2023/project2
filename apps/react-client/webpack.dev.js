@@ -4,6 +4,7 @@ const webpack = require("webpack");
 const ReactRefreshWebpackPlugin = require("@pmmmwh/react-refresh-webpack-plugin");
 
 const { DefinePlugin } = webpack;
+const APP_NAME = process.env.APP_NAME || "EXMAPLE_MF_APP_NAME_TO_REPLACE";
 
 const common = require("./webpack.common.js");
 const git_revision = require("node:child_process")
@@ -25,6 +26,7 @@ module.exports = merge(common, {
 				process.env.MOCKED_REQUESTS || "",
 			),
 			"process.env.GIT_REVISION": JSON.stringify(git_revision || ""),
+			"process.env.APP_NAME": JSON.stringify(APP_NAME),
 		}),
 	],
 	watchOptions: {
@@ -33,7 +35,7 @@ module.exports = merge(common, {
 	},
 	devServer: {
 		static: "./",
-		port: 8001,
+		port: 8004,
 		historyApiFallback: { disableDotRule: true },
 		hot: true,
 		allowedHosts: ["all"],

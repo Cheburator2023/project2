@@ -2,7 +2,10 @@
 	"name": "sum_ts_boilerplate",
 	"version": "1.0.0",
 	"private": true,
-	"workspaces": ["apps/*", "packages/*"],
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
 	"release_logs": {
 		"features": [],
 		"fixes": [],
@@ -26,9 +29,14 @@
 		"prepare": "husky"
 	},
 	"lint-staged": {
-		"*.{ts,tsx}": ["biome check --files-ignore-unknown=true --colors=force"]
+		"*.{ts,tsx}": [
+			"biome check --files-ignore-unknown=true --colors=force"
+		]
 	},
 	"devDependencies": {
+		"@babel/preset-env": "^7.27.2",
+		"@babel/preset-react": "^7.27.1",
+		"@babel/preset-typescript": "^7.27.1",
 		"@biomejs/biome": "1.9.4",
 		"@commitlint/cli": "^19.8.0",
 		"@commitlint/config-conventional": "^19.8.0",
@@ -36,6 +44,7 @@
 		"@types/node": "^22.13.14",
 		"@types/react": "19.1.2",
 		"@types/react-dom": "19.1.2",
+		"babel-loader": "^10.0.0",
 		"browserslist-to-esbuild": "2.1.1",
 		"cross-env": "7.0.3",
 		"husky": "9.1.7",
@@ -47,7 +56,7 @@
 	"dependencies": {
 		"@fontsource/inter": "^5.2.5",
 		"@hookform/resolvers": "^3.9.0",
-		"keycloak-js": "15.0.2",
+		"@module-federation/bridge-react": "^0.14.3",
 		"@react-keycloak/web": "3.4.0",
 		"@sentry/react": "^8.26.0",
 		"@sentry/utils": "^8.27.0",
@@ -64,6 +73,7 @@
 		"fuzzysort": "^3.1.0",
 		"idb-keyval": "^6.2.1",
 		"jsonpath-plus": "^10.2.0",
+		"keycloak-js": "15.0.2",
 		"lodash-es": "4.17.21",
 		"react-hook-form": "^7.53.0",
 		"react-resizable-panels": "^2.1.1",

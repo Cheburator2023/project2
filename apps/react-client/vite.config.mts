@@ -11,6 +11,8 @@ import checker from "vite-plugin-checker";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import tsconfigPaths from "vite-tsconfig-paths";
 
+const APP_NAME = process.env.APP_NAME || "EXMAPLE_MF_APP_NAME_TO_REPLACE";
+
 const deps = require("./package.json").dependencies;
 
 const publicEnvVars: any[] = [];
@@ -78,13 +80,12 @@ export const viteCommonConfig = ({
 				...(!IS_DEV
 					? [
 							federation({
-								name: "remote",
+								name: APP_NAME,
 								filename: "remoteEntry.js",
 								exposes: {
-									"./Routes": "./src/common/primitives/NullComponent",
-									"./Layout": "./src/App",
+									"./App": "./src/indexFederated",
 								},
-								shared: ["react", "react-dom"],
+								shared: [],
 							}),
 						]
 					: []),
@@ -125,6 +126,7 @@ export const viteCommonConfig = ({
 					process.env.MOCKED_REQUESTS,
 				),
 				"process.env.GIT_REVISION": JSON.stringify(git_revision),
+				"process.env.APP_NAME": JSON.stringify(APP_NAME),
 			},
 
 			// resolve: {
@@ -142,7 +144,7 @@ export const viteCommonConfig = ({
 					strict: false,
 					cachedChecks: false,
 				},
-				port: 8008,
+				port: 8004,
 				proxy: {
 					"/api": {
 						target: currentTarget,

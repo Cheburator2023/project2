@@ -1,3 +1,8 @@
+import "./theme/global.css";
+import "@fontsource/inter";
+
+import React from "react";
+
 import { CircularProgress, StyledEngineProvider } from "@mui/material";
 import CssBaseline from "@mui/material/CssBaseline";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -16,6 +21,10 @@ import {
 	datePickersCustomizations,
 	treeViewCustomizations,
 } from "./theme/customizations";
+
+import { reportWebVitals } from "./reportWebVitals";
+
+reportWebVitals(console.log);
 
 const xThemeComponents = {
 	...chartsCustomizations,
@@ -53,19 +62,28 @@ interface LayoutProps {
 	) => Promise<T>;
 	goToSum?: () => void;
 	onLogout?: () => void;
+	bridged?: boolean;
+	urlConfig?: any;
 }
 
-export const App: React.FC<LayoutProps> = ({
+const App: React.FC<LayoutProps> = ({
+	bridged,
+	urlConfig,
 	children,
 	user,
 	protectedFetch,
-	goToSum,
 	onLogout,
 }) => {
 	return (
 		<StyledEngineProvider injectFirst>
 			<QueryClientProvider client={queryClient}>
-				<BrowserRouter>
+				<BrowserRouter
+					basename={
+						bridged
+							? process.env.APP_NAME || "/EXMAPLE_MF_APP_NAME_TO_REPLACE"
+							: "/"
+					}
+				>
 					<AppTheme themeComponents={xThemeComponents}>
 						<CssBaseline enableColorScheme />
 						<Suspense fallback={<CircularProgress />}>
