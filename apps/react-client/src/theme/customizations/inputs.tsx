@@ -19,8 +19,17 @@ export const inputsCustomizations: Components<Theme> = {
 				boxSizing: "border-box",
 				transition: "all 100ms ease-in",
 				"&:focus-visible": {
-					outline: `3px solid ${alpha(theme.palette.primary.main, 0.5)}`,
+					outline: `3px auto ${alpha(theme.palette.primary.main, 0.5)}`,
 					outlineOffset: "2px",
+				},
+			}),
+		},
+	},
+	MuiAutocomplete: {
+		styleOverrides: {
+			root: ({ theme }) => ({
+				"& .MuiOutlinedInput-root": {
+					padding: "6.5px 10px",
 				},
 			}),
 		},
@@ -38,7 +47,7 @@ export const inputsCustomizations: Components<Theme> = {
 						},
 						style: {
 							height: "2.25rem",
-							padding: "8px 12px",
+							padding: "16px 12px",
 						},
 					},
 					{
@@ -46,7 +55,7 @@ export const inputsCustomizations: Components<Theme> = {
 							size: "medium",
 						},
 						style: {
-							height: "2.5rem", // 40px
+							//   height: "2.5rem", // 40px
 						},
 					},
 					{
@@ -93,8 +102,14 @@ export const inputsCustomizations: Components<Theme> = {
 						style: {
 							color: "white",
 							backgroundColor: brand[300],
-							backgroundImage: `linear-gradient(to bottom, ${alpha(brand[400], 0.8)}, ${brand[500]})`,
-							boxShadow: `inset 0 2px 0 ${alpha(brand[200], 0.2)}, inset 0 -2px 0 ${alpha(brand[700], 0.4)}`,
+							backgroundImage: `linear-gradient(to bottom, ${alpha(
+								brand[400],
+								0.8,
+							)}, ${brand[500]})`,
+							boxShadow: `inset 0 2px 0 ${alpha(
+								brand[200],
+								0.2,
+							)}, inset 0 -2px 0 ${alpha(brand[700], 0.4)}`,
 							border: `1px solid ${brand[500]}`,
 							"&:hover": {
 								backgroundColor: brand[700],
@@ -381,7 +396,7 @@ export const inputsCustomizations: Components<Theme> = {
 				padding: 0,
 			},
 			root: ({ theme }) => ({
-				padding: "8px 12px",
+				padding: "14px 12px 14px",
 				color: (theme.vars || theme).palette.text.primary,
 				borderRadius: (theme.vars || theme).shape.borderRadius,
 				border: `1px solid ${(theme.vars || theme).palette.divider}`,
@@ -391,7 +406,7 @@ export const inputsCustomizations: Components<Theme> = {
 					borderColor: gray[400],
 				},
 				[`&.${outlinedInputClasses.focused}`]: {
-					outline: `3px solid ${alpha(brand[500], 0.5)}`,
+					outline: `2px auto ${alpha(brand[500], 0.5)}`,
 					borderColor: brand[400],
 				},
 				...theme.applyStyles("dark", {
@@ -413,7 +428,7 @@ export const inputsCustomizations: Components<Theme> = {
 							size: "medium",
 						},
 						style: {
-							height: "2.5rem",
+							//   height: "2.5rem",
 						},
 					},
 				],
@@ -427,18 +442,45 @@ export const inputsCustomizations: Components<Theme> = {
 		styleOverrides: {
 			root: ({ theme }) => ({
 				color: (theme.vars || theme).palette.grey[500],
+				maxHeight: "1em",
 				...theme.applyStyles("dark", {
 					color: (theme.vars || theme).palette.grey[400],
 				}),
 			}),
 		},
 	},
-	MuiFormLabel: {
+	MuiTextField: {
 		styleOverrides: {
-			root: ({ theme }) => ({
-				typography: theme.typography.caption,
-				marginBottom: 8,
-			}),
+			root: {
+				"& .MuiFormLabel-root": {
+					transform: "translate(13px, 3px) scale(0.70)",
+					display: "flex",
+					flexDirection: "row-reverse",
+					gap: "6px",
+					"&.MuiInputLabel-shrink": {
+						transform: "translate(13px, 3px) scale(0.70)",
+					},
+					"& .Mui-focused": {
+						color: "black",
+					},
+				},
+			},
 		},
 	},
+	// MuiFormLabel: {
+	//   styleOverrides: {
+	//     root: {
+	//       transform: "translate(13px, 3px) scale(0.70)",
+	//       display: "flex",
+	//       flexDirection: "row-reverse",
+	//       gap: "6px",
+	//       "&.MuiInputLabel-shrink": {
+	//         transform: "translate(13px, 3px) scale(0.70)",
+	//       },
+	//       "& .Mui-focused": {
+	//         color: "black",
+	//       },
+	//     },
+	//   },
+	// },
 };

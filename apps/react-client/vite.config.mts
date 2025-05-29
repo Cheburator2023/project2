@@ -177,5 +177,4 @@ export const viteCommonConfig = ({
 		};
 	});
 
-// biome-ignore lint/style/noDefaultExport: <explanation>
 export default viteCommonConfig({});

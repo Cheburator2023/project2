@@ -8,7 +8,6 @@ const MfeRoot = (props: any) => {
 	return <App bridged {...props} />;
 };
 
-// biome-ignore lint/style/noDefaultExport: <default needed>
 export default createBridgeComponent({
 	rootComponent: MfeRoot,
 });

@@ -3,11 +3,9 @@ import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Fragment } from "react/jsx-runtime";
+import { PlaygroundRJSF } from "./rjsf_playground/PlaygroundRJSF";
 
-const data = [
-	{ name: "exmp1", Component: <div /> },
-	{ name: "exmp2", Component: <div /> },
-];
+const data = [{ name: "PlaygroundRJSF", Component: <PlaygroundRJSF /> }];
 
 export const PlaygroundPage = () => {
 	return (
@@ -22,6 +20,7 @@ export const PlaygroundPage = () => {
 					<Card>
 						<Typography variant="h2">{item.name}</Typography>
 						<Spacer />
+						{item.Component}
 					</Card>
 					<Spacer />
 				</Fragment>
