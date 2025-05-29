@@ -11,6 +11,7 @@ import {
 } from "react";
 import base64 from "../utils/base64";
 
+import { Flex } from "@react-client/common/primitives/Flex";
 import CopyLink from "./CopyLink";
 import RawValidatorTest from "./RawValidatorTest";
 import SampleSelector, { SampleSelectorProps } from "./SampleSelector";
@@ -86,7 +87,7 @@ function HeaderButtons({
 const liveSettingsBooleanSchema: RJSFSchema = {
 	type: "object",
 	properties: {
-		liveValidate: { type: "boolean", title: "Live validation" },
+		liveValidate: { type: "boolean", title: "Live validation", default: true },
 		disabled: { type: "boolean", title: "Disable whole form" },
 		readonly: { type: "boolean", title: "Readonly whole form" },
 		omitExtraData: { type: "boolean", title: "Omit extra data" },
@@ -360,15 +361,14 @@ export default function Header({
 
 	return (
 		<div className="page-header">
-			<h1>react-jsonschema-form</h1>
-			<div className="row">
-				<div className="col-sm-4">
+			<Flex wrap="wrap">
+				<Flex flexBasis="100%">
 					<SampleSelector
 						onSelected={onSampleSelected}
 						selectedSample={sampleName}
 					/>
-				</div>
-				<div className="col-sm-2">
+				</Flex>
+				<Flex flexBasis="20%">
 					<Form
 						idPrefix="rjsf_options"
 						schema={liveSettingsBooleanSchema}
@@ -379,8 +379,8 @@ export default function Header({
 					>
 						<div />
 					</Form>
-				</div>
-				<div className="col-sm-2">
+				</Flex>
+				<Flex flexBasis="80%">
 					<Form
 						idPrefix="rjsf_options"
 						schema={liveSettingsSelectSchema}
@@ -391,8 +391,9 @@ export default function Header({
 					>
 						<div />
 					</Form>
-				</div>
-				<div className="col-sm-2">
+				</Flex>
+
+				<Flex flexDirection="column" gap={20} flexBasis="20%">
 					<ThemeSelector
 						themes={themes}
 						theme={theme}
@@ -413,15 +414,15 @@ export default function Header({
 					<HeaderButtons playGroundFormRef={playGroundFormRef} />
 					<div style={{ marginTop: "5px" }} />
 					<CopyLink shareURL={shareURL} onShare={onShare} />
-				</div>
-				<div className="col-sm-2">
+				</Flex>
+				<Flex flexBasis="80%">
 					<RawValidatorTest
 						validator={validators[validator]}
 						schema={schema}
 						formData={formData}
 					/>
-				</div>
-			</div>
+				</Flex>
+			</Flex>
 		</div>
 	);
 }

@@ -29,7 +29,9 @@ export const inputsCustomizations: Components<Theme> = {
 		styleOverrides: {
 			root: ({ theme }) => ({
 				"& .MuiOutlinedInput-root": {
-					padding: "6.5px 10px",
+					padding: "inherit",
+					paddingLeft: "10px",
+					paddingRight: "10px",
 				},
 			}),
 		},
@@ -47,7 +49,7 @@ export const inputsCustomizations: Components<Theme> = {
 						},
 						style: {
 							height: "2.25rem",
-							padding: "16px 12px",
+							// padding: "16px 12px",
 						},
 					},
 					{
@@ -381,8 +383,10 @@ export const inputsCustomizations: Components<Theme> = {
 		styleOverrides: {
 			root: {
 				border: "none",
+				color: "redoo",
 			},
 			input: {
+				padding: "10px !important",
 				"&::placeholder": {
 					opacity: 0.7,
 					color: gray[500],
@@ -393,14 +397,17 @@ export const inputsCustomizations: Components<Theme> = {
 	MuiOutlinedInput: {
 		styleOverrides: {
 			input: {
-				padding: 0,
+				// padding: 0,
 			},
 			root: ({ theme }) => ({
-				padding: "14px 12px 14px",
+				// padding: "14px 12px 14px",
 				color: (theme.vars || theme).palette.text.primary,
 				borderRadius: (theme.vars || theme).shape.borderRadius,
 				border: `1px solid ${(theme.vars || theme).palette.divider}`,
 				backgroundColor: (theme.vars || theme).palette.background.default,
+				padding: "inherit",
+				paddingLeft: "12px",
+				paddingRight: "12px",
 				transition: "border 120ms ease-in",
 				"&:hover": {
 					borderColor: gray[400],
@@ -420,7 +427,7 @@ export const inputsCustomizations: Components<Theme> = {
 							size: "small",
 						},
 						style: {
-							height: "2.25rem",
+							// height: "2.25rem",
 						},
 					},
 					{
