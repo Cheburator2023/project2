@@ -453,12 +453,13 @@ export const inputsCustomizations: Components<Theme> = {
 		styleOverrides: {
 			root: {
 				"& .MuiFormLabel-root": {
-					transform: "translate(13px, 3px) scale(0.70)",
-					display: "flex",
-					flexDirection: "row-reverse",
-					gap: "6px",
+					position: "relative",
+					transform: "none",
+					display: "block",
+					paddingBottom: "4px",
+					fontSize: "12px",
 					"&.MuiInputLabel-shrink": {
-						transform: "translate(13px, 3px) scale(0.70)",
+						transform: "none",
 					},
 					"& .Mui-focused": {
 						color: "black",
@@ -467,20 +468,19 @@ export const inputsCustomizations: Components<Theme> = {
 			},
 		},
 	},
-	// MuiFormLabel: {
-	//   styleOverrides: {
-	//     root: {
-	//       transform: "translate(13px, 3px) scale(0.70)",
-	//       display: "flex",
-	//       flexDirection: "row-reverse",
-	//       gap: "6px",
-	//       "&.MuiInputLabel-shrink": {
-	//         transform: "translate(13px, 3px) scale(0.70)",
-	//       },
-	//       "& .Mui-focused": {
-	//         color: "black",
-	//       },
-	//     },
-	//   },
-	// },
+	MuiFormLabel: {
+		styleOverrides: {
+			root: {
+				position: "relative",
+				transform: "none",
+				display: "block",
+				"&.MuiInputLabel-shrink": {
+					transform: "none",
+				},
+				"& .Mui-focused": {
+					color: "black",
+				},
+			},
+		},
+	},
 };

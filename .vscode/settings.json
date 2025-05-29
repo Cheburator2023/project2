@@ -32,9 +32,8 @@
 	"search.exclude": {
 		"**/dist/**": true
 	},
-	"npm-scripts.showStartNotification": false,
 	"[typescriptreact]": {
-		"editor.defaultFormatter": "esbenp.prettier-vscode"
+		"editor.defaultFormatter": "biomejs.biome"
 	},
 	"typescript.preferences.importModuleSpecifier": "non-relative"
 }
