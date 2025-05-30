@@ -383,7 +383,6 @@ export const inputsCustomizations: Components<Theme> = {
 		styleOverrides: {
 			root: {
 				border: "none",
-				color: "redoo",
 			},
 			input: {
 				padding: "10px !important",
