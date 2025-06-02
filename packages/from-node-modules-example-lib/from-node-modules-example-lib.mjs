@@ -1,1 +1,1 @@
-console.log('from-node-modules-example-lib')
+console.log("from-node-modules-example-lib");

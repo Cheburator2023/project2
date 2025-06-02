@@ -2,10 +2,7 @@
 	"name": "smart_anketa_ui",
 	"version": "1.0.0",
 	"private": true,
-	"workspaces": [
-		"apps/*",
-		"packages/*"
-	],
+	"workspaces": ["apps/*", "packages/*"],
 	"release_logs": {
 		"features": [],
 		"fixes": [],
@@ -29,9 +26,7 @@
 		"prepare": "husky"
 	},
 	"lint-staged": {
-		"*.{ts,tsx}": [
-			"biome check --files-ignore-unknown=true --colors=force"
-		]
+		"*.{ts,tsx}": ["biome check --files-ignore-unknown=true --colors=force"]
 	},
 	"devDependencies": {
 		"@babel/preset-env": "^7.27.2",

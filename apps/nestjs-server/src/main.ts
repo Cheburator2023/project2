@@ -1,37 +1,22 @@
+import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
-import {
-	FastifyAdapter,
-	type NestFastifyApplication,
-} from "@nestjs/platform-fastify";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-	/**
-	 * The current config will start the NestJS application with
-	 * fastify adapter. To use the default express adapter, remove
-	 * the @nestjs/platform-fastify from package.json and uncomment
-	 * the line below...
-	 */
-	// const app = await NestFactory.create(AppModule);
+	const app = await NestFactory.create(AppModule);
 
-	/**
-	 * Unfortunately NestJs prod build with fastify, works on local
-	 * machine, but it does not port map on docker...
-	 *
-	 * Soln link -
-	 * https://stackoverflow.com/questions/66086427/docker-container-with-nodejs-appnestjs-is-not-accessible-from-both-other-conta
-	 */
-	const app = await NestFactory.create<NestFastifyApplication>(
-		AppModule,
-		new FastifyAdapter({
-			ignoreTrailingSlash: true,
-			caseSensitive: false,
-		}),
-	);
-	await app.listen(4000, "0.0.0.0");
+	// Swagger configuration
+	const config = new DocumentBuilder()
+		.setTitle("Calculation System API")
+		.setDescription("API for managing calculations")
+		.setVersion("1.0")
+		.addBearerAuth()
+		.build();
+	const document = SwaggerModule.createDocument(app, config);
+	SwaggerModule.setup("api", app, document);
+
+	app.useGlobalPipes(new ValidationPipe());
+	await app.listen(3000);
 }
-
-bootstrap().catch((error) => {
-	console.error("Error during app startup: ", error);
-	process.exit(1);
-});
+bootstrap();
