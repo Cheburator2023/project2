@@ -1,45 +1,45 @@
-import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
-import {
-	ApiBearerAuth,
-	ApiOperation,
-	ApiResponse,
-	ApiTags,
-} from "@nestjs/swagger";
-import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
+import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CreateCalculationDto } from "../dto/create-calculation.dto";
 import { Calculation } from "../entities/calculation.entity";
 import { CalculationService } from "../services/calculation.service";
 
-@ApiTags("Calculations")
-@ApiBearerAuth()
-@Controller("calculations")
+@ApiTags("Calculation")
+@Controller("calculation")
 export class CalculationController {
 	constructor(private readonly calculationService: CalculationService) {}
 
 	@Post()
-	@UseGuards(JwtAuthGuard)
-	@ApiOperation({ summary: "Create new calculation" })
+	@ApiOperation({ summary: "Save calculation result" })
 	@ApiResponse({
 		status: 201,
-		description: "The calculation has been successfully created.",
+		description: "The calculation has been successfully saved.",
 		type: Calculation,
 	})
-	@ApiResponse({ status: 401, description: "Unauthorized." })
-	async create(
-		@Body() createCalculationDto: CreateCalculationDto,
-	): Promise<Calculation> {
+	async create(@Body() createCalculationDto: CreateCalculationDto) {
 		return this.calculationService.create(createCalculationDto);
 	}
 
-	@Get()
-	@UseGuards(JwtAuthGuard)
+	@Get(":id")
+	@ApiOperation({ summary: "Get calculation by ID" })
+	@ApiOperation({ summary: "Get specific calculation" }) // Уточненное описание
+	@ApiResponse({
+		status: 200,
+		description: "Calculation data",
+		type: Calculation,
+	})
+	async findOne(@Param("id") id: string) {
+		return this.calculationService.findOne(id);
+	}
+
+	@Get("all")
 	@ApiOperation({ summary: "Get all calculations" })
 	@ApiResponse({
 		status: 200,
 		description: "List of all calculations",
 		type: [Calculation],
 	})
-	async findAll(): Promise<Calculation[]> {
+	async findAll() {
 		return this.calculationService.findAll();
 	}
 }

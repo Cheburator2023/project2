@@ -1,5 +1,4 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
-import { User } from "../../auth/entities/user.entity";
+import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity()
 export class Calculation {
@@ -12,9 +11,9 @@ export class Calculation {
 	@Column({ type: "jsonb" })
 	questionnaireData: Record<string, any>;
 
-	@ManyToOne(
-		() => User,
-		(user) => user.calculations,
-	)
-	author: User;
+	@Column({ type: "float" })
+	finalCoefficient: number;
+
+	@Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
+	createdAt: Date;
 }
