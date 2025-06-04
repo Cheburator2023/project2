@@ -2,7 +2,7 @@ import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import { styled } from "@mui/system";
 import { DatePicker } from "@mui/x-date-pickers";
 import { Card } from "@react-client/common/muiCustom/Card";
-import { Search } from "@react-client/features/navigation/organisms/Search";
+import { SearchInput } from "@react-client/features/navigation/organisms/SearchInput";
 import { Flex } from "../../../common/primitives/Flex";
 import { useGlobalSettingsStore } from "../../../common/store/globalSettingsStore";
 import { ColorModeIconDropdown } from "../../../theme/ColorModeIconDropdown";
@@ -32,7 +32,7 @@ export function Header({ navbarVisible = true }) {
 					</Flex>
 					{navbarVisible ? (
 						<Flex flexDirection="row" gap={6} alignItems="center">
-							<Search />
+							<SearchInput />
 							<DatePicker />
 							<ColorModeIconDropdown />
 						</Flex>

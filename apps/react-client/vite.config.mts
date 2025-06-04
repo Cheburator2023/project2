@@ -140,6 +140,7 @@ export const viteCommonConfig = ({
 			// },
 
 			server: {
+				// host: "www.test.vtb.ru",
 				fs: {
 					strict: false,
 					cachedChecks: false,

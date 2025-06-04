@@ -19,7 +19,6 @@ const MainWrapper = styled("div", {
 }>(({ theme, mode }) => ({
 	flexGrow: 1,
 	padding: "6px 12px",
-	backgroundColor: mode === "light" ? "#F5F6FA" : "#191b25",
 	transition: theme.transitions.create("margin", {
 		easing: theme.transitions.easing.sharp,
 		duration: theme.transitions.duration.leavingScreen,

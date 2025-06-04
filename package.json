@@ -61,7 +61,7 @@
 		"ag-charts-locale": "11.3.0",
 		"ag-charts-types": "11.3.0",
 		"ag-grid-community": "33.3.0",
-		"ag-grid-enterprise": "33.3.0",
+		"ag-grid-enterprise": "file:packages/ag-grid-enterprise",
 		"ag-grid-react": "33.3.0",
 		"cmdk": "^1.0.0",
 		"comlink": "4.4.2",
