@@ -3,7 +3,8 @@
 	"version": "1.0.0",
 	"private": true,
 	"scripts": {
-		"dev": "cross-env NODE_ENV=development vite serve",
+		"dev": "npm run serve:webpack",
+		"dev:vite": "cross-env NODE_ENV=development vite serve",
 		"build:vite": "cross-env NODE_ENV=production vite build",
 		"start:vite": "serve -s build",
 		"serve:vite": "npm run build:vite && PORT=8004 npx serve ./dist",

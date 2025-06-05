@@ -1,33 +1,47 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
+import { APP_GUARD } from "@nestjs/core";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import {
+	AuthGuard,
+	KeycloakConnectModule,
+	ResourceGuard,
+	RoleGuard,
+} from "nest-keycloak-connect";
+import { KeycloakConfigService } from "src/shared/keycloak/keycloak.config.service";
 import { CalculationModule } from "./modules/calculation/calculation.module";
-import { Calculation } from "./modules/calculation/entities/calculation.entity";
 
 @Module({
 	imports: [
 		ConfigModule.forRoot({
 			isGlobal: true,
-			envFilePath: ".env",
+			envFilePath: [".env", `.env.${process.env.NODE_ENV}`],
+		}),
+		KeycloakConnectModule.registerAsync({
+			useClass: KeycloakConfigService,
 		}),
 		TypeOrmModule.forRootAsync({
 			imports: [ConfigModule],
 			inject: [ConfigService],
 			useFactory: (configService: ConfigService) => ({
 				type: "postgres",
-				host: configService.get<string>("DB_HOST", "localhost"),
-				port: configService.get<number>("DB_PORT", 5432),
-				username: configService.get<string>("DB_USERNAME", "postgres"),
-				password: configService.get<string>("DB_PASSWORD", "postgres"),
-				database: configService.get<string>("DB_NAME", "calculation_db"),
-				entities: [Calculation],
-				synchronize: configService.get<string>("NODE_ENV") !== "production",
+				host: configService.get<string>("DB_HOST"),
+				port: configService.get<number>("DB_PORT"),
+				username: configService.get<string>("DB_USERNAME"),
+				password: configService.get<string>("DB_PASSWORD"),
+				database: configService.get<string>("DB_NAME"),
+				entities: ["dist/**/*.entity.js"],
+				synchronize: false,
 				logging: configService.get<string>("NODE_ENV") === "development",
 			}),
 		}),
 		CalculationModule,
 	],
-	controllers: [],
-	providers: [],
+	providers: [
+		KeycloakConfigService,
+		{ provide: APP_GUARD, useClass: AuthGuard },
+		{ provide: APP_GUARD, useClass: ResourceGuard },
+		{ provide: APP_GUARD, useClass: RoleGuard },
+	],
 })
 export class AppModule {}

@@ -3,7 +3,7 @@ const webpack = require("webpack");
 
 const { DefinePlugin } = webpack;
 const common = require("./webpack.common.js");
-const APP_NAME = process.env.APP_NAME || "EXMAPLE_MF_APP_NAME_TO_REPLACE";
+const APP_NAME = process.env.APP_NAME || "smartAnketa";
 
 // biome-ignore lint/style/useNodejsImportProtocol: <explanation>
 const git_revision = require("child_process")

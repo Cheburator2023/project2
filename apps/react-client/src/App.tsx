@@ -78,11 +78,7 @@ const App: React.FC<LayoutProps> = ({
 		<StyledEngineProvider injectFirst>
 			<QueryClientProvider client={queryClient}>
 				<BrowserRouter
-					basename={
-						bridged
-							? process.env.APP_NAME || "/EXMAPLE_MF_APP_NAME_TO_REPLACE"
-							: "/"
-					}
+					basename={bridged ? process.env.APP_NAME || "/smartAnketa" : "/"}
 				>
 					<AppTheme themeComponents={xThemeComponents}>
 						<CssBaseline enableColorScheme />
