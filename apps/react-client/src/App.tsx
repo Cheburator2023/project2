@@ -27,7 +27,7 @@ import { reportWebVitals } from "./reportWebVitals";
 
 reportWebVitals(console.log);
 
-const xThemeComponents = {
+const xThemeComponents: any = {
 	...chartsCustomizations,
 	...dataGridCustomizations,
 	...datePickersCustomizations,
