@@ -7,7 +7,7 @@ const SRC_DIR = path.join(__dirname, "./src");
 const TS_CONFIG_PATH = path.resolve(__dirname, "./tsconfig.json");
 const PUBLIC_PATH = process.env.PUBLIC_PATH || undefined;
 const isDev = process.env.NODE_ENV === "development";
-const APP_NAME = process.env.APP_NAME || "EXMAPLE_MF_APP_NAME_TO_REPLACE";
+const APP_NAME = process.env.APP_NAME || "smartAnketa";
 
 const ALIAS = {
 	"@react-client": `${SRC_DIR}`,

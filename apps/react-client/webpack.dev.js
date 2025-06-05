@@ -4,7 +4,7 @@ const webpack = require("webpack");
 const ReactRefreshWebpackPlugin = require("@pmmmwh/react-refresh-webpack-plugin");
 
 const { DefinePlugin } = webpack;
-const APP_NAME = process.env.APP_NAME || "EXMAPLE_MF_APP_NAME_TO_REPLACE";
+const APP_NAME = process.env.APP_NAME || "smartAnketa";
 
 const common = require("./webpack.common.js");
 const git_revision = require("node:child_process")
