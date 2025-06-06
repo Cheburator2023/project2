@@ -15,7 +15,7 @@ logs
 
 # production
 build
-dist
+apps/**/*/dist
 *.tsbuildinfo
 
 # testing
