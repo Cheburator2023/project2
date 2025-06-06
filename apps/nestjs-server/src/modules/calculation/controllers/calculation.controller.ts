@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
-import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CreateCalculationDto } from "../dto/create-calculation.dto";
+import { PaginationDto } from "../dto/pagination.dto";
 import { Calculation } from "../entities/calculation.entity";
+import { PaginatedResult } from "../interfaces/paginated-result.interface";
 import { CalculationService } from "../services/calculation.service";
 
 @ApiTags("Calculation")
@@ -20,26 +22,63 @@ export class CalculationController {
 		return this.calculationService.create(createCalculationDto);
 	}
 
-	@Get(":id")
-	@ApiOperation({ summary: "Get calculation by ID" })
-	@ApiOperation({ summary: "Get specific calculation" }) // Уточненное описание
+	@Get("all")
+	@ApiOperation({ summary: "Get all calculations (paginated)" })
+	@ApiQuery({ name: "page", required: false, type: Number })
+	@ApiQuery({ name: "limit", required: false, type: Number })
 	@ApiResponse({
 		status: 200,
-		description: "Calculation data",
-		type: Calculation,
+		description: "Paginated list of calculations",
+		schema: {
+			properties: {
+				data: {
+					type: "array",
+					items: { $ref: "#/components/schemas/Calculation" },
+				},
+				meta: {
+					properties: {
+						total: { type: "number" },
+						page: { type: "number" },
+						limit: { type: "number" },
+						lastPage: { type: "number" },
+					},
+				},
+			},
+		},
 	})
-	async findOne(@Param("id") id: string) {
-		return this.calculationService.findOne(id);
+	async findAllPaginated(
+		@Query() paginationDto: PaginationDto,
+	): Promise<PaginatedResult<Calculation>> {
+		return this.calculationService.findAllPaginated(paginationDto);
 	}
 
-	@Get("all")
-	@ApiOperation({ summary: "Get all calculations" })
+	@Get("all/list")
+	@ApiOperation({ summary: "Get all calculations (non-paginated)" })
 	@ApiResponse({
 		status: 200,
 		description: "List of all calculations",
 		type: [Calculation],
 	})
-	async findAll() {
+	async findAll(): Promise<Calculation[]> {
 		return this.calculationService.findAll();
+	}
+
+	@Get(":id")
+	@ApiOperation({ summary: "Get calculation by ID" })
+	@ApiResponse({
+		status: 200,
+		description: "Calculation data",
+		type: Calculation,
+	})
+	@ApiResponse({
+		status: 400,
+		description: "Invalid UUID format",
+	})
+	@ApiResponse({
+		status: 404,
+		description: "Calculation not found",
+	})
+	async findOne(@Param("id") id: string) {
+		return this.calculationService.findOne(id);
 	}
 }

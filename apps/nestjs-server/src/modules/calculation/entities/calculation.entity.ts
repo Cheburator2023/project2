@@ -5,15 +5,19 @@ export class Calculation {
 	@PrimaryGeneratedColumn("uuid")
 	id: string;
 
-	@Column()
+	@Column({ type: "varchar", length: 255, nullable: false })
 	name: string;
 
-	@Column({ type: "jsonb" })
+	@Column({ type: "jsonb", nullable: false })
 	questionnaireData: Record<string, any>;
 
-	@Column({ type: "float" })
+	@Column({ type: "float", nullable: false })
 	finalCoefficient: number;
 
-	@Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
+	@Column({
+		type: "timestamp",
+		default: () => "CURRENT_TIMESTAMP",
+		nullable: false,
+	})
 	createdAt: Date;
 }

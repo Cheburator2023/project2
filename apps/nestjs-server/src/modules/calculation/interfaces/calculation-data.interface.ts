@@ -1,30 +1,43 @@
 export interface CalculationData {
+	name: string;
 	modelsCount: number;
 	setupComplexity: number;
 	initiativeTimeline: string;
 	initiativeCost: string;
-	generalUncertainty: UncertaintyItem[];
+	generalUncertainty: {
+		businessProcessComplexity: ProbabilityInfluencePair;
+		projectSolutionDefects: ProbabilityInfluencePair;
+		adjacentProjectsImpact: ProbabilityInfluencePair;
+		planningRequirementGaps: ProbabilityInfluencePair;
+		contractorPerformanceIssues: ProbabilityInfluencePair;
+		qualifiedStaffShortage: ProbabilityInfluencePair;
+		sanctionsRisk: ProbabilityInfluencePair;
+		controlProceduresGaps: ProbabilityInfluencePair;
+		regulatoryChanges: ProbabilityInfluencePair;
+		systemUnderutilization: ProbabilityInfluencePair;
+		itArchitectureChanges: ProbabilityInfluencePair;
+	};
 	readyPromReports: string;
 	assessedInitiativesCount?: string;
 	dataSourcesCount: string;
 	pilotModelRequired: string;
-	algorithmComplexity: AlgorithmComplexity;
+	algorithmComplexity: AlgorithmTypeItem[];
 	pilotSupportRequired: string;
 	autoMlRequired: string;
 	productionAdditionalReports: string;
 	productionDeploymentChannels: DeploymentChannel[];
+	finalCoefficient: number;
 }
 
-export interface UncertaintyItem {
-	itemType: string;
+interface ProbabilityInfluencePair {
 	probability: string;
 	influence: string;
 }
 
-export interface AlgorithmComplexity {
+interface AlgorithmTypeItem {
 	algorithmType: string;
 }
 
-export interface DeploymentChannel {
+interface DeploymentChannel {
 	deploymentChannel: string;
 }
