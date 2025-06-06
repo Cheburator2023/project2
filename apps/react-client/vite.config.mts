@@ -36,7 +36,7 @@ export const viteCommonConfig = ({
 	appName,
 	base = "/",
 }: { appName?: string; base?: string }) =>
-	defineConfig(({ mode }) => {
+	defineConfig(({ mode }): any => {
 		const envDir = fileURLToPath(new URL("..", import.meta.url));
 		const env = loadEnv(mode, envDir, "");
 
@@ -140,6 +140,7 @@ export const viteCommonConfig = ({
 			// },
 
 			server: {
+				// host: "www.test.vtb.ru",
 				fs: {
 					strict: false,
 					cachedChecks: false,

@@ -1,6 +1,6 @@
 import DarkModeIcon from "@mui/icons-material/DarkModeRounded";
 import LightModeIcon from "@mui/icons-material/LightModeRounded";
-import { Button } from "@mui/material";
+import { IconButton } from "@mui/material";
 import Box from "@mui/material/Box";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -56,9 +56,7 @@ export function ColorModeIconDropdown() {
 	}[resolvedMode];
 	return (
 		<React.Fragment>
-			<Button onClick={handleClick} size="small" variant="outlined">
-				{icon}
-			</Button>
+			<IconButton onClick={handleClick}>{icon}</IconButton>
 			<Menu
 				anchorEl={anchorEl}
 				id="account-menu"

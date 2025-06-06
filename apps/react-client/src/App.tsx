@@ -1,5 +1,6 @@
 import "./theme/global.css";
 import "@fontsource/inter";
+import "ag-grid-community/styles/ag-theme-quartz.css";
 
 import React from "react";
 
@@ -26,7 +27,7 @@ import { reportWebVitals } from "./reportWebVitals";
 
 reportWebVitals(console.log);
 
-const xThemeComponents = {
+const xThemeComponents: any = {
 	...chartsCustomizations,
 	...dataGridCustomizations,
 	...datePickersCustomizations,
