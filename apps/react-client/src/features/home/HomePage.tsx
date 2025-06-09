@@ -1,6 +1,7 @@
 import "ag-grid-enterprise";
 
 import AddIcon from "@mui/icons-material/Add";
+import CompareIcon from "@mui/icons-material/Compare";
 import SaveIcon from "@mui/icons-material/Save";
 import {
 	SpeedDial,
@@ -9,9 +10,13 @@ import {
 	styled,
 	useColorScheme,
 } from "@mui/material";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useAllCalculations } from "@react-client/common/services/useCalculations";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { Header } from "@react-client/features/navigation/organisms/Header";
+import { SearchInput } from "@react-client/features/navigation/organisms/SearchInput";
+import { routes } from "@react-client/routing/routes";
 import {
 	GridApi,
 	GridReadyEvent,
@@ -22,6 +27,7 @@ import { colorSchemeDarkBlue } from "ag-grid-community";
 import { AllEnterpriseModule } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
 import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 
 const themeQuartzDark = themeQuartz.withPart(colorSchemeDarkBlue);
 
@@ -30,22 +36,74 @@ ModuleRegistry.registerModules([AllEnterpriseModule]);
 const rowData = [
 	{
 		record_id: 1,
+		_: "Пример текста 846",
+		col_: "Calc93025-v4",
+		__: "12/04/2022",
+		rfd: "RFD-884264106",
+		__1: "Архив",
+		__2: "Стрим B",
+		__3: "Департамент X",
+		__4: "Михайлова О.Н.",
+		col__1: "Пример текста 952",
+		__5: "model58086-v1",
+		__6: "Михайлова О.Н.",
+		__7: 359,
+		_____: 54.8,
+		col_01__: 4602,
+		col_02__: 4737,
+		col_03____: 2773,
+		col_05____mvp: 4501,
+		col_05__: 3693,
+		aml_: 2998,
+		col_05b__: 1598,
+		col_07_____: 4416,
+		col_09_____: 3178,
+		aml__1: 1251,
+	},
+	{
+		record_id: 1,
+		_: "Пример текста 846",
+		col_: "Calc93025-v4",
+		__: "12/04/2022",
+		rfd: "RFD-884264106",
+		__1: "Архив",
+		__2: "Стрим B",
+		__3: "Департамент X",
+		__4: "ихайлова О.Н.",
+		col__1: "Пример текста 952",
+		__5: "model58086-v1",
+		__6: "айлова О.Н.",
+		__7: 359,
+		_____: 54.8,
+		col_01__: 4602,
+		col_02__: 4737,
+		col_03____: 2773,
+		col_05____mvp: 4501,
+		col_05__: 3693,
+		aml_: 2998,
+		col_05b__: 1598,
+		col_07_____: 4416,
+		col_09_____: 3178,
+		aml__1: 1251,
+	},
+	{
+		record_id: 1,
 		_: "Пример текста 846", // Название расчета
 		col_: "Calc93025-v4", // Идентификатор
 		__: "12/04/2022", // Дата создания расчета
 		rfd: "RFD-884264106", // RFD
 		__1: "Архив", // Статус расчета
 		__2: "Стрим B", // Стрим исполнитель
-		__3: "Департамент X", // Департамент Заказчика
-		__4: "Михайлова О.Н.", // Фио заказчика
-		col__1: "Пример текста 952", // Комментарий
-		__5: "model58086-v1", // Связанные модели
-		__6: "Михайлова О.Н.", // Автор расчета
-		__7: 359, // Итоговая оценка
-		_____: 54.8, // % Отклонение итоговой оценки от средней
-		col_01__: 4602, // 01. Постановка задачи.
-		col_02__: 4737, // 02. Поиск данных.
-		col_03____: 2773, // 03. Построение витрины для разработки.
+		__3: "аментX", // Департамент Заказчика
+		__4: "айлова О.Н.", // Фио заказчика
+		col__1: "Пример текста 952",
+		__5: "model58086-v1",
+		__6: "ихайлова О.Н.",
+		__7: 359,
+		_____: 54.8,
+		col_01__: 4602,
+		col_02__: 4737,
+		col_03____: 2773,
 		col_05____mvp: 4501, // 05А. Разработка пилотной модели (MVP)
 		col_05__: 3693, // 05. Разработка модели.
 		aml_: 2998, // AML Разработка.
@@ -118,8 +176,21 @@ const _columnDefs = [
 export const HomePage = () => {
 	const gridRef = useRef<AgGridReact>(null);
 	const { mode } = useColorScheme();
+	const [params] = useSearchParams();
+	const navigate = useNavigate();
+	const location = useLocation();
+
+	const isInDefaultCompareMode = params.get("isInCompareMode") === "true";
+
 	const { setGridApi } = useGlobalSettingsStore();
-	const { data: rowData, isLoading, error } = useAllCalculations();
+	const { data, isLoading, error } = useAllCalculations();
+	const [isInCompareMode, setIsInCompareMode] = useState(
+		isInDefaultCompareMode,
+	);
+
+	useEffect(() => {
+		setIsInCompareMode(isInDefaultCompareMode);
+	}, [isInDefaultCompareMode]);
 
 	const [columnDefs] = useState(
 		_columnDefs.map((col) => ({
@@ -152,11 +223,22 @@ export const HomePage = () => {
 
 	const onCreateCalculation = () => {
 		console.log("Create calculation");
+		navigate(routes.anketaCreate.rootPath);
 	};
 
 	const actions = [
-		{ icon: <AddIcon onClick={onCreateCalculation} />, name: "Создать расчет" },
+		{
+			icon: <AddIcon />,
+			name: "Создать расчет",
+			onClick: onCreateCalculation,
+		},
 		{ icon: <SaveIcon onClick={onExportExcel} />, name: "Выгрузить в Excel" },
+		{
+			icon: (
+				<CompareIcon onClick={() => setIsInCompareMode(!isInCompareMode)} />
+			),
+			name: isInCompareMode ? "Отменить сравнение" : "Сравнить",
+		},
 	];
 
 	const onGridReady = (params: GridReadyEvent<any, any>) => {
@@ -171,15 +253,43 @@ export const HomePage = () => {
 		};
 	}, []);
 
+	const rowClassRules = {
+		// row style function
+		"ag-row-is-odd": (params: any) => {
+			return params?.rowIndex % 2 === 0;
+		},
+	};
+
 	return (
 		<>
+			<Spacer height={6} />
+			<Header>
+				<SearchInput />
+				{/* <DatePicker /> */}
+			</Header>
+			<Spacer height={12} />
 			<GridWrapper>
 				<AgGridReact
+					rowClass="custom-row-class"
+					rowClassRules={rowClassRules}
+					rowSelection={isInCompareMode ? { mode: "multiRow" } : undefined}
 					theme={
 						mode === "light" || mode === undefined
 							? themeQuartz
 							: themeQuartzDark
 					}
+					onSelectionChanged={(e) => {
+						const selectedRows = e.api.getSelectedNodes();
+						if (selectedRows.length === 2) {
+							navigate(
+								routes.anketaCompare.rootPath +
+									"?" +
+									selectedRows
+										.map((row, index) => `id${index + 1}=${row.data.record_id}`)
+										.join("&"),
+							);
+						}
+					}}
 					rowData={rowData}
 					columnDefs={columnDefs as any}
 					defaultColDef={defaultColDef}
@@ -189,6 +299,18 @@ export const HomePage = () => {
 					localeText={AG_GRID_LOCALE_RU}
 					ref={gridRef}
 					onGridReady={onGridReady}
+					onRowClicked={
+						isInCompareMode
+							? undefined
+							: (params) => {
+									navigate(
+										routes.anketaPreview.rootPath.replace(
+											":id",
+											params.data.record_id.toString(),
+										),
+									);
+								}
+					}
 				/>
 			</GridWrapper>
 			<SpeedDial
@@ -201,6 +323,7 @@ export const HomePage = () => {
 						key={action.name}
 						icon={action.icon}
 						tooltipTitle={action.name}
+						onClick={action.onClick}
 					/>
 				))}
 			</SpeedDial>

@@ -21,6 +21,7 @@ export const Card = (
 		onClose?: any;
 	},
 ) => {
+	const { maxHeight } = props;
 	const [visible, setVisible] = useState(true);
 
 	const handler = () => {
@@ -31,7 +32,7 @@ export const Card = (
 		<MUIPaperStyled
 			sx={{
 				padding: props.padding || "20px",
-				maxHeight: props.maxHeight || "100%",
+				maxHeight: maxHeight || "100%",
 				height: props.height || "auto",
 				width: props.width,
 				display: visible ? "block" : "none",
@@ -72,7 +73,7 @@ export const Card = (
 	);
 };
 
-const MUIPaperStyled = styled(Paper)`
+const MUIPaperStyled = styled(Paper)<any>`
 	pointer-events: all;
  & > div {
 	overflow: auto;

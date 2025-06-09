@@ -4,6 +4,7 @@ import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
 import { useLocation } from "react-router";
 
+import { camelCase } from "lodash-es";
 import { routes } from "../../../routing/routes";
 
 const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
@@ -21,8 +22,11 @@ export function NavbarBreadcrumbs() {
 	const location = useLocation();
 
 	const crumb =
-		routes[location.pathname.replace("/", "") as keyof typeof routes]?.name ||
-		routes.home.name;
+		routes[
+			camelCase(
+				location.pathname.split("/", 3).join(" "),
+			) as keyof typeof routes
+		]?.name || routes.home.name;
 
 	return (
 		<StyledBreadcrumbs

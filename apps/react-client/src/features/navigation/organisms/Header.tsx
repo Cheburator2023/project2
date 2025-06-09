@@ -1,22 +1,19 @@
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
-import { styled } from "@mui/system";
-import { DatePicker } from "@mui/x-date-pickers";
 import { Card } from "@react-client/common/muiCustom/Card";
-import { SearchInput } from "@react-client/features/navigation/organisms/SearchInput";
 import { Flex } from "../../../common/primitives/Flex";
 import { useGlobalSettingsStore } from "../../../common/store/globalSettingsStore";
 import { ColorModeIconDropdown } from "../../../theme/ColorModeIconDropdown";
 import { MenuButton } from "../molecules/MenuButton";
 import { NavbarBreadcrumbs } from "../molecules/NavbarBreadcrumbs";
 
-export function Header({ navbarVisible = true }) {
+export function Header({ children }: { children?: React.ReactNode }) {
 	const { toggleSideMenu } = useGlobalSettingsStore();
 
 	return (
 		<>
 			<Card padding="2px 3px">
-				<StyledFlex
-					width="100%"
+				<Flex
+					width="fill-available"
 					pad="2px 3px"
 					gap={2}
 					alignItems="center"
@@ -30,23 +27,12 @@ export function Header({ navbarVisible = true }) {
 						</MenuButton>
 						<NavbarBreadcrumbs />
 					</Flex>
-					{navbarVisible ? (
-						<Flex flexDirection="row" gap={6} alignItems="center">
-							<SearchInput />
-							<DatePicker />
-							<ColorModeIconDropdown />
-						</Flex>
-					) : (
+					<Flex flexDirection="row" gap={6} alignItems="center">
+						{children}
 						<ColorModeIconDropdown />
-					)}
-				</StyledFlex>
+					</Flex>
+				</Flex>
 			</Card>
 		</>
 	);
 }
-
-const StyledFlex = styled(Flex)`
-	width: -moz-available;
-	width: -webkit-fill-available;
-	width: fill-available;
-`;

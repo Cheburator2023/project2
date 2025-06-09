@@ -54,9 +54,6 @@ export function MainLayout({
 				open={store.isSideMenuVisible}
 				mode={mode}
 			>
-				<Spacer height={6} />
-				<Header navbarVisible={navbarVisible} />
-				<Spacer height={12} />
 				{children}
 			</MainWrapper>
 		</Flex>

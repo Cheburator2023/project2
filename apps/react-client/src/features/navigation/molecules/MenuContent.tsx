@@ -11,7 +11,13 @@ import { useLocation, useNavigate } from "react-router";
 
 import { routes } from "../../../routing/routes";
 
-const mainListItems = Object.values(routes).map((route) => route);
+const mainListItems = Object.values(routes)
+	.map((route) => route)
+	.filter(
+		(route) =>
+			route.rootPath !== routes.anketaPreview.rootPath &&
+			route.rootPath !== routes.anketaCompare.rootPath,
+	);
 
 const secondaryListItems = [
 	{ text: "Система управления моделями (СУМ)", icon: <InfoRoundedIcon /> },
