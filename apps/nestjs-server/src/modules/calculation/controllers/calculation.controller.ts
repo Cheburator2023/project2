@@ -1,13 +1,22 @@
-import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { Body, Controller, Get, Param, Post, Query, Req } from "@nestjs/common";
+import {
+	ApiBearerAuth,
+	ApiOperation,
+	ApiQuery,
+	ApiResponse,
+	ApiTags,
+} from "@nestjs/swagger";
+import { Resource } from "nest-keycloak-connect";
 import { CreateCalculationDto } from "../dto/create-calculation.dto";
 import { PaginationDto } from "../dto/pagination.dto";
 import { Calculation } from "../entities/calculation.entity";
 import { PaginatedResult } from "../interfaces/paginated-result.interface";
 import { CalculationService } from "../services/calculation.service";
 
+@ApiBearerAuth("JWT-auth")
 @ApiTags("Calculation")
 @Controller("calculation")
+@Resource("calculation")
 export class CalculationController {
 	constructor(private readonly calculationService: CalculationService) {}
 
@@ -59,7 +68,8 @@ export class CalculationController {
 		description: "List of all calculations",
 		type: [Calculation],
 	})
-	async findAll(): Promise<Calculation[]> {
+	async findAll(@Req() req: Request): Promise<Calculation[]> {
+		console.log("Authorization header:", req);
 		return this.calculationService.findAll();
 	}
 

@@ -9,6 +9,7 @@ import {
 	styled,
 	useColorScheme,
 } from "@mui/material";
+import { useAllCalculations } from "@react-client/common/services/useCalculations";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import {
@@ -118,6 +119,7 @@ export const HomePage = () => {
 	const gridRef = useRef<AgGridReact>(null);
 	const { mode } = useColorScheme();
 	const { setGridApi } = useGlobalSettingsStore();
+	const { data: rowData, isLoading, error } = useAllCalculations();
 
 	const [columnDefs] = useState(
 		_columnDefs.map((col) => ({
@@ -163,6 +165,7 @@ export const HomePage = () => {
 	};
 
 	useEffect(() => {
+		console.log(rowData);
 		return () => {
 			setGridApi(null);
 		};
