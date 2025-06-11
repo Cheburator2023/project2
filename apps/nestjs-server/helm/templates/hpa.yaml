@@ -2,14 +2,14 @@
 apiVersion: autoscaling/v2beta2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "smart-anketa-ui.fullname" . }}
+  name: {{ include "smart-anketa-api.fullname" . }}
   labels:
-    {{- include "smart-anketa-ui.labels" . | nindent 4 }}
+    {{- include "smart-anketa-api.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "smart-anketa-ui.fullname" . }}
+    name: {{ include "smart-anketa-api.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:

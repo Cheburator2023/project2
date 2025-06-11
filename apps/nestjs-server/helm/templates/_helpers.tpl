@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "smart-anketa-ui.name" -}}
+{{- define "smart-anketa-api.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "smart-anketa-ui.fullname" -}}
+{{- define "smart-anketa-api.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "smart-anketa-ui.chart" -}}
+{{- define "smart-anketa-api.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "smart-anketa-ui.labels" -}}
-helm.sh/chart: {{ include "smart-anketa-ui.chart" . }}
-{{ include "smart-anketa-ui.selectorLabels" . }}
+{{- define "smart-anketa-api.labels" -}}
+helm.sh/chart: {{ include "smart-anketa-api.chart" . }}
+{{ include "smart-anketa-api.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "smart-anketa-ui.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "smart-anketa-ui.name" . }}
+{{- define "smart-anketa-api.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "smart-anketa-api.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "smart-anketa-ui.serviceAccountName" -}}
+{{- define "smart-anketa-api.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "smart-anketa-ui.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "smart-anketa-api.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}

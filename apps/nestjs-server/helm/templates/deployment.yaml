@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "smart-anketa-ui.fullname" . }}
-  labels: {{- include "smart-anketa-ui.labels" . | nindent 4 }}
+  name: {{ include "smart-anketa-api.fullname" . }}
+  labels: {{- include "smart-anketa-api.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      app: {{ include "smart-anketa-ui.fullname" . }}
+      app: {{ include "smart-anketa-api.fullname" . }}
   replicas: {{ .Values.replicaCount }}
   template:
     metadata:
       labels:
-        app: {{ include "smart-anketa-ui.fullname" . }}
+        app: {{ include "smart-anketa-api.fullname" . }}
     spec:
       imagePullSecrets:
         - name: {{ .Values.pullSecret }}
@@ -39,7 +39,7 @@ spec:
           {{- end }}
           envFrom:
             - secretRef:
-                name: {{ template "smart-anketa-ui.fullname" . }}-secret
+                name: {{ template "smart-anketa-api.fullname" . }}-secret
           ports:
             - containerPort: 3000
               protocol: TCP
