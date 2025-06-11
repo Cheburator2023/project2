@@ -27,7 +27,9 @@
 			"**/*.md",
 			"**/*.lockb",
 			"LICENSE",
-			".cache/**/*"
+			".cache/**/*",
+			"src/common/api/core",
+            "src/common/api/services"
 		]
 	},
 	"formatter": {
