@@ -1,4 +1,4 @@
 apiVersion: v1
-description: A Helm chart defining smart-anketa-ui service.
-name: smart-anketa-ui
+description: A Helm chart defining smart-anketa-api service.
+name: smart-anketa-api
 version: 0.0.1
