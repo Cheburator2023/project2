@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Req } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import {
 	ApiBearerAuth,
 	ApiOperation,
@@ -7,9 +7,10 @@ import {
 	ApiTags,
 } from "@nestjs/swagger";
 import { Resource } from "nest-keycloak-connect";
+
+import { CalculationResponseDto } from "../dto/calculation-response.dto";
 import { CreateCalculationDto } from "../dto/create-calculation.dto";
 import { PaginationDto } from "../dto/pagination.dto";
-import { Calculation } from "../entities/calculation.entity";
 import { PaginatedResult } from "../interfaces/paginated-result.interface";
 import { CalculationService } from "../services/calculation.service";
 
@@ -25,9 +26,11 @@ export class CalculationController {
 	@ApiResponse({
 		status: 201,
 		description: "The calculation has been successfully saved.",
-		type: Calculation,
+		type: CalculationResponseDto,
 	})
-	async create(@Body() createCalculationDto: CreateCalculationDto) {
+	async create(
+		@Body() createCalculationDto: CreateCalculationDto,
+	): Promise<CalculationResponseDto> {
 		return this.calculationService.create(createCalculationDto);
 	}
 
@@ -42,9 +45,10 @@ export class CalculationController {
 			properties: {
 				data: {
 					type: "array",
-					items: { $ref: "#/components/schemas/Calculation" },
+					items: { $ref: "#/components/schemas/CalculationResponseDto" },
 				},
 				meta: {
+					type: "object",
 					properties: {
 						total: { type: "number" },
 						page: { type: "number" },
@@ -57,7 +61,7 @@ export class CalculationController {
 	})
 	async findAllPaginated(
 		@Query() paginationDto: PaginationDto,
-	): Promise<PaginatedResult<Calculation>> {
+	): Promise<PaginatedResult<CalculationResponseDto>> {
 		return this.calculationService.findAllPaginated(paginationDto);
 	}
 
@@ -66,10 +70,9 @@ export class CalculationController {
 	@ApiResponse({
 		status: 200,
 		description: "List of all calculations",
-		type: [Calculation],
+		type: [CalculationResponseDto],
 	})
-	async findAll(@Req() req: Request): Promise<Calculation[]> {
-		console.log("Authorization header:", req);
+	async findAll(): Promise<CalculationResponseDto[]> {
 		return this.calculationService.findAll();
 	}
 
@@ -78,7 +81,7 @@ export class CalculationController {
 	@ApiResponse({
 		status: 200,
 		description: "Calculation data",
-		type: Calculation,
+		type: CalculationResponseDto,
 	})
 	@ApiResponse({
 		status: 400,
@@ -88,7 +91,7 @@ export class CalculationController {
 		status: 404,
 		description: "Calculation not found",
 	})
-	async findOne(@Param("id") id: string) {
+	async findOne(@Param("id") id: string): Promise<CalculationResponseDto> {
 		return this.calculationService.findOne(id);
 	}
 }

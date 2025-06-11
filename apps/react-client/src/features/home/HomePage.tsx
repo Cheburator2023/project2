@@ -180,10 +180,11 @@ export const HomePage = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
 
+	const { data, isLoading, error } = useAllCalculations();
+
 	const isInDefaultCompareMode = params.get("isInCompareMode") === "true";
 
 	const { setGridApi } = useGlobalSettingsStore();
-	const { data, isLoading, error } = useAllCalculations();
 	const [isInCompareMode, setIsInCompareMode] = useState(
 		isInDefaultCompareMode,
 	);
@@ -247,7 +248,6 @@ export const HomePage = () => {
 	};
 
 	useEffect(() => {
-		console.log(rowData);
 		return () => {
 			setGridApi(null);
 		};

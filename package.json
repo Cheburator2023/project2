@@ -2,7 +2,10 @@
 	"name": "smart_anketa_ui",
 	"version": "1.0.0",
 	"private": true,
-	"workspaces": ["apps/*", "packages/*"],
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
 	"release_logs": {
 		"features": [],
 		"fixes": [],
@@ -22,11 +25,13 @@
 		"build": "turbo run build",
 		"lint": "turbo run lint",
 		"biome": "npx @biomejs/biome check",
-		"biome:fix": "npx @biomejs/biome check --log-level=error --diagnostic-level=error --fix --unsafe ./apps/react-client/src",
+		"biome:fix": "npx @biomejs/biome check --log-level=error --diagnostic-level=error --fix --unsafe ./apps/react-client/src ./apps/nestjs-server/src",
 		"prepare": "husky"
 	},
 	"lint-staged": {
-		"*.{ts,tsx}": ["biome check --files-ignore-unknown=true --colors=force"]
+		"*.{ts,tsx}": [
+			"biome check --files-ignore-unknown=true --colors=force"
+		]
 	},
 	"devDependencies": {
 		"@babel/preset-env": "7.27.2",

@@ -2,12 +2,12 @@ import { CalculationResponseDto } from "@react-client/common/api";
 import { useQuery } from "@tanstack/react-query";
 import { useProtectedFetch } from "../hooks/useProtectedFetch";
 
-export const useAllCalculations = () => {
+export const useCalculationById = (id?: string) => {
 	const protectedFetch = useProtectedFetch();
 
-	return useQuery<CalculationResponseDto[], Error>({
-		queryKey: ["calculations", "all"],
-		queryFn: () => protectedFetch("/calculation/all/list"),
-		staleTime: 30_000,
+	return useQuery<CalculationResponseDto, Error>({
+		queryKey: ["calculation", id],
+		enabled: !!id,
+		queryFn: () => protectedFetch(`/calculation/${id}`),
 	});
 };
