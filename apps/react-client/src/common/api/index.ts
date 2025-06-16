@@ -12,6 +12,8 @@ export type { CalculationResponseDto } from "./models/CalculationResponseDto";
 export type { CreateCalculationDto } from "./models/CreateCalculationDto";
 export type { DeploymentChannelDto } from "./models/DeploymentChannelDto";
 export type { GeneralUncertaintyDto } from "./models/GeneralUncertaintyDto";
+export type { PaginatedCalculationResponseDto } from "./models/PaginatedCalculationResponseDto";
+export type { PaginationMetaDto } from "./models/PaginationMetaDto";
 export type { ProbabilityInfluencePairDto } from "./models/ProbabilityInfluencePairDto";
 
 export { CalculationService } from "./services/CalculationService";

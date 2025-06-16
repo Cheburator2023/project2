@@ -8,10 +8,10 @@ import {
 } from "@nestjs/swagger";
 import { Resource } from "nest-keycloak-connect";
 
+import { PaginatedCalculationResponseDto } from "src/modules/calculation/dto/calculation-response-paginated.dto";
 import { CalculationResponseDto } from "../dto/calculation-response.dto";
 import { CreateCalculationDto } from "../dto/create-calculation.dto";
 import { PaginationDto } from "../dto/pagination.dto";
-import { PaginatedResult } from "../interfaces/paginated-result.interface";
 import { CalculationService } from "../services/calculation.service";
 
 @ApiBearerAuth("JWT-auth")
@@ -41,27 +41,11 @@ export class CalculationController {
 	@ApiResponse({
 		status: 200,
 		description: "Paginated list of calculations",
-		schema: {
-			properties: {
-				data: {
-					type: "array",
-					items: { $ref: "#/components/schemas/CalculationResponseDto" },
-				},
-				meta: {
-					type: "object",
-					properties: {
-						total: { type: "number" },
-						page: { type: "number" },
-						limit: { type: "number" },
-						lastPage: { type: "number" },
-					},
-				},
-			},
-		},
+		type: PaginatedCalculationResponseDto,
 	})
 	async findAllPaginated(
 		@Query() paginationDto: PaginationDto,
-	): Promise<PaginatedResult<CalculationResponseDto>> {
+	): Promise<PaginatedCalculationResponseDto> {
 		return this.calculationService.findAllPaginated(paginationDto);
 	}
 
