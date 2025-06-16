@@ -11,7 +11,6 @@ export class CalculationResponseDto {
 		example: {
 			generalUncertainty: {},
 			pilotSupportRequired: "Да",
-			// ... примерный вид структуры анкеты
 		},
 		description: "Данные анкеты в формате JSON",
 	})
