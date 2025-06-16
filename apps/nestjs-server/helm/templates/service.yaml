@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "smart-anketa-api.fullname" . }}
+  labels: {{- include "smart-anketa-api.labels" . | nindent 4 }}
+spec:
+  ports:
+    - name: 3000-tcp
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
+  selector:
+    app: {{ include "smart-anketa-api.fullname" . }}

@@ -1,33 +1,17 @@
 # Base Image
-FROM node:22.14.0-alpine3.20 AS phase1
-
-WORKDIR /app
-
-# first create these directories, else the copying won't work.
-RUN mkdir -p packages/core-lib
-RUN mkdir -p apps/frontend
-
-# Run npm only if package.json changes
-# copied tsconfig as core-lib's tsconfig extends rootDir's tsconfig
-COPY --chown=node:node turbo.json .
-COPY --chown=node:node tsconfig.json .
-COPY --chown=node:node package.json .
-
-
-# copying only the required packages
-COPY --chown=node:node ./packages/core-lib/package.json packages/core-lib
-COPY --chown=node:node ./packages/core-lib packages/core-lib
-
-COPY --chown=node:node ./apps/react-client/package.json apps/react-client
-COPY --chown=node:node ./apps/react-client apps/frontend
-
-# install node_modules
-RUN npm install
-# RUN npm run lib:build
+FROM docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-frontend:v1.0.0 as build-deps
 
 # build react-client
-RUN npm run build
+COPY . ./
+RUN npm run build:webpack
 
 # Phase 2 - Get the Build and host on nginx
-FROM nginx:1.25.4-alpine
-COPY --from=phase1 /app/apps/frontend/build /usr/share/nginx/html
+FROM docker.repo-ci.sfera.inno.local/sumd-docker-lib/nginx:1.20.2
+COPY --from=build-deps /app/dist /usr/share/nginx/html
+# COPY app/template /usr/share/nginx/html/template
+COPY default.conf /etc/nginx/conf.d/default.conf
+RUN chgrp -R root /var/cache/nginx /var/run /var/log/nginx && \
+    chmod -R 770 /var/cache/nginx /var/run /var/log/nginx
+EXPOSE 8080
+
+CMD ["nginx", "-g", "daemon off;"]
