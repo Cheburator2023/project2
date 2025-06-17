@@ -23,13 +23,12 @@ class ProbabilityInfluencePairDto {
 			"Реализация 1 раз в 6 мес. или чаще",
 		],
 	})
-	@IsString()
-	@IsNotEmpty()
+	@IsString({ message: 'probability must be a string' })
+	@IsNotEmpty({ message: 'probability should not be empty' })
 	probability: string;
 
 	@ApiProperty({
-		example:
-			"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+		example: "Реализация проекта с контролируемыми отклонениями от изначальных целей",
 		enum: [
 			"Незначительное влияние на вторичные функции в рамках проектной деятельности",
 			"Незначительное влияние на задачи и сроки достижения целей проекта",
@@ -38,8 +37,8 @@ class ProbabilityInfluencePairDto {
 			"Критичное отклонение качества реализации проекта",
 		],
 	})
-	@IsString()
-	@IsNotEmpty()
+	@IsString({ message: 'influence must be a string' })
+	@IsNotEmpty({ message: 'influence should not be empty' })
 	influence: string;
 }
 
@@ -57,8 +56,8 @@ class AlgorithmTypeItemDto {
 			"Графовая аналитика",
 		],
 	})
-	@IsString()
-	@IsNotEmpty()
+	@IsString({ message: 'algorithmType must be a string' })
+	@IsNotEmpty({ message: 'algorithmType should not be empty' })
 	algorithmType: string;
 }
 
@@ -79,8 +78,8 @@ class DeploymentChannelDto {
 			"Графовая платформа",
 		],
 	})
-	@IsString()
-	@IsNotEmpty()
+	@IsString({ message: 'deploymentChannel must be a string' })
+	@IsNotEmpty({ message: 'deploymentChannel should not be empty' })
 	deploymentChannel: string;
 }
 
@@ -144,147 +143,148 @@ class GeneralUncertaintyDto {
 export class CreateCalculationDto {
 	@ApiProperty({
 		example: "Оценка проекта для бизнеса",
-		description: "Название расчета",
+		description: "Название расчета"
 	})
-	@IsString()
-	@IsNotEmpty()
+	@IsString({ message: 'name must be a string' })
+	@IsNotEmpty({ message: 'name should not be empty' })
 	name: string;
 
 	@ApiProperty({
 		example: 5,
+		description: "Количество моделей (>1 для каскадов и ансамблей моделей)",
 		minimum: 1,
-		maximum: 99,
-		description: "> 1 для каскадов и ансамблей моделей",
+		maximum: 99
 	})
-	@IsNumber()
-	@Min(1)
-	@Max(99)
-	@IsNotEmpty()
+	@IsNumber({}, { message: 'modelsCount must be a number' })
+	@Min(1, { message: 'modelsCount must not be less than 1' })
+	@Max(99, { message: 'modelsCount must not be greater than 99' })
+	@IsNotEmpty({ message: 'modelsCount should not be empty' })
 	modelsCount: number;
 
 	@ApiProperty({
 		example: 3,
-		enum: [1, 2, 3, 4, 5],
-		description:
-			"Проведение регулярной валидации Моделей Регулятором нормативно не установлено.",
+		description: "Сложность настройки (1 - минимальная, 5 - максимальная)",
+		minimum: 1,
+		maximum: 5
 	})
-	@IsNumber()
-	@IsNotEmpty()
+	@IsNumber({}, { message: 'setupComplexity must be a number conforming to the specified constraints' })
+	@Min(1, { message: 'setupComplexity must not be less than 1' })
+	@Max(5, { message: 'setupComplexity must not be greater than 5' })
+	@IsNotEmpty({ message: 'setupComplexity should not be empty' })
 	setupComplexity: number;
 
 	@ApiProperty({
 		example: "4-10 мес.",
-		enum: [
-			"Менее 1 мес.",
-			"1-4 мес.",
-			"4-10 мес.",
-			"10-18 мес.",
-			"Более 18 мес.",
-		],
+		description: "Срок реализации инициативы",
+		enum: ["Менее 1 мес.", "1-4 мес.", "4-10 мес.", "10-18 мес.", "Более 18 мес."]
 	})
-	@IsString()
-	@IsNotEmpty()
+	@IsString({ message: 'initiativeTimeline must be a string' })
+	@IsNotEmpty({ message: 'initiativeTimeline should not be empty' })
 	initiativeTimeline: string;
 
 	@ApiProperty({
 		example: "45.3-438 млн.",
-		enum: [
-			"До 45.3 млн.",
-			"45.3-438 млн.",
-			"438-870 млн.",
-			"870 млн. - 2 млрд.",
-			"От 2 млрд.",
-		],
+		description: "Стоимость инициативы",
+		enum: ["До 45.3 млн.", "45.3-438 млн.", "438-870 млн.", "870 млн. - 2 млрд.", "От 2 млрд."]
 	})
-	@IsString()
-	@IsNotEmpty()
+	@IsString({ message: 'initiativeCost must be a string' })
+	@IsNotEmpty({ message: 'initiativeCost should not be empty' })
 	initiativeCost: string;
 
-	@ApiProperty({ type: GeneralUncertaintyDto })
+	@ApiProperty({
+		type: GeneralUncertaintyDto,
+		description: "Факторы общей неопределенности"
+	})
 	@ValidateNested()
 	@Type(() => GeneralUncertaintyDto)
 	generalUncertainty: GeneralUncertaintyDto;
 
 	@ApiProperty({
 		example: "Да",
-		enum: ["Да", "Нет"],
+		description: "Наличие готовых промоделированных отчетов",
+		enum: ["Да", "Нет"]
 	})
-	@IsString()
-	@IsNotEmpty()
+	@IsString({ message: 'readyPromReports must be a string' })
+	@IsNotEmpty({ message: 'readyPromReports should not be empty' })
 	readyPromReports: string;
 
 	@ApiProperty({
 		example: "3",
-		enum: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
-		required: false,
+		description: "Количество оцененных инициатив",
+		enum: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 	})
-	@IsString()
+	@IsString({ message: 'assessedInitiativesCount must be a string' })
 	@IsOptional()
 	assessedInitiativesCount?: string;
 
 	@ApiProperty({
 		example: "5",
-		enum: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+		description: "Количество источников данных",
+		enum: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 	})
-	@IsString()
-	@IsNotEmpty()
+	@IsString({ message: 'dataSourcesCount must be a string' })
+	@IsNotEmpty({ message: 'dataSourcesCount should not be empty' })
 	dataSourcesCount: string;
 
 	@ApiProperty({
 		example: "Да",
-		enum: ["Да", "Не требуется"],
+		description: "Требуется ли пилотная модель",
+		enum: ["Да", "Не требуется"]
 	})
-	@IsString()
-	@IsNotEmpty()
+	@IsString({ message: 'pilotModelRequired must be a string' })
+	@IsNotEmpty({ message: 'pilotModelRequired should not be empty' })
 	pilotModelRequired: string;
 
 	@ApiProperty({
 		type: [AlgorithmTypeItemDto],
-		example: [{ algorithmType: "Текстовая аналитика_LLM" }],
+		description: "Сложность алгоритмов"
 	})
-	@IsArray()
-	@ValidateNested({ each: true })
+	@IsArray({ message: 'algorithmComplexity must be an array' })
+	@ValidateNested({ each: true, message: 'Each algorithmComplexity item must be a valid object' })
 	@Type(() => AlgorithmTypeItemDto)
 	algorithmComplexity: AlgorithmTypeItemDto[];
 
 	@ApiProperty({
 		example: "Да",
-		enum: ["Да", "Не требуется"],
+		description: "Требуется ли поддержка пилота",
+		enum: ["Да", "Не требуется"]
 	})
-	@IsString()
-	@IsNotEmpty()
+	@IsString({ message: 'pilotSupportRequired must be a string' })
+	@IsNotEmpty({ message: 'pilotSupportRequired should not be empty' })
 	pilotSupportRequired: string;
 
 	@ApiProperty({
 		example: "Не требуется",
-		enum: ["Да", "Не требуется"],
+		description: "Требуется ли AutoML",
+		enum: ["Да", "Не требуется"]
 	})
-	@IsString()
-	@IsNotEmpty()
+	@IsString({ message: 'autoMlRequired must be a string' })
+	@IsNotEmpty({ message: 'autoMlRequired should not be empty' })
 	autoMlRequired: string;
 
 	@ApiProperty({
 		example: "2",
-		enum: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+		description: "Дополнительные отчеты для продакшена",
+		enum: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 	})
-	@IsString()
-	@IsNotEmpty()
+	@IsString({ message: 'productionAdditionalReports must be a string' })
+	@IsNotEmpty({ message: 'productionAdditionalReports should not be empty' })
 	productionAdditionalReports: string;
 
 	@ApiProperty({
 		type: [DeploymentChannelDto],
-		example: [{ deploymentChannel: "Батч + Онлайн" }],
+		description: "Каналы развертывания в продакшен"
 	})
-	@IsArray()
-	@ValidateNested({ each: true })
+	@IsArray({ message: 'productionDeploymentChannels must be an array' })
+	@ValidateNested({ each: true, message: 'Each productionDeploymentChannels item must be a valid object' })
 	@Type(() => DeploymentChannelDto)
 	productionDeploymentChannels: DeploymentChannelDto[];
 
 	@ApiProperty({
 		example: 1.8,
-		description: "Финальный коэффициент расчета",
+		description: "Финальный коэффициент расчета"
 	})
-	@IsNumber()
-	@IsNotEmpty()
+	@IsNumber({}, { message: 'finalCoefficient must be a number' })
+	@IsNotEmpty({ message: 'finalCoefficient should not be empty' })
 	finalCoefficient: number;
 }
