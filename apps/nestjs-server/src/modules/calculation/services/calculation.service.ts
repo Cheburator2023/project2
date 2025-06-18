@@ -14,7 +14,9 @@ export class CalculationService {
 		private calculationRepository: Repository<Calculation>,
 	) {}
 
-	async create(createCalculationDto: CreateCalculationDto): Promise<Calculation> {
+	async create(
+		createCalculationDto: CreateCalculationDto,
+	): Promise<Calculation> {
 		const calculation = this.calculationRepository.create({
 			name: createCalculationDto.name,
 			questionnaireData: {
@@ -31,8 +33,10 @@ export class CalculationService {
 				algorithmComplexity: createCalculationDto.algorithmComplexity,
 				pilotSupportRequired: createCalculationDto.pilotSupportRequired,
 				autoMlRequired: createCalculationDto.autoMlRequired,
-				productionAdditionalReports: createCalculationDto.productionAdditionalReports,
-				productionDeploymentChannels: createCalculationDto.productionDeploymentChannels,
+				productionAdditionalReports:
+					createCalculationDto.productionAdditionalReports,
+				productionDeploymentChannels:
+					createCalculationDto.productionDeploymentChannels,
 			},
 			finalCoefficient: createCalculationDto.finalCoefficient,
 		});
@@ -42,7 +46,7 @@ export class CalculationService {
 
 	async findOne(id: string): Promise<Calculation> {
 		const calculation = await this.calculationRepository.findOne({
-			where: { id }
+			where: { id },
 		});
 
 		if (!calculation) {

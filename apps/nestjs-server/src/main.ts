@@ -19,7 +19,7 @@ async function bootstrap() {
 				target: false,
 				value: false,
 			},
-		})
+		}),
 	);
 
 	const config = new DocumentBuilder()
