@@ -18,6 +18,7 @@
 			"images",
 			"dist",
 			"packages/**/dist",
+			"package-lock.json",
 			"packages/**/package.json",
 			"package.json",
 			"build",

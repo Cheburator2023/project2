@@ -1,6 +1,6 @@
 import DarkModeIcon from "@mui/icons-material/DarkModeRounded";
 import LightModeIcon from "@mui/icons-material/LightModeRounded";
-import { IconButton } from "@mui/material";
+import { IconButton, Tooltip } from "@mui/material";
 import Box from "@mui/material/Box";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -56,7 +56,9 @@ export function ColorModeIconDropdown() {
 	}[resolvedMode];
 	return (
 		<React.Fragment>
-			<IconButton onClick={handleClick}>{icon}</IconButton>
+			<Tooltip title="Сменить тему">
+				<IconButton onClick={handleClick}>{icon}</IconButton>
+			</Tooltip>
 			<Menu
 				anchorEl={anchorEl}
 				id="account-menu"
@@ -76,10 +78,10 @@ export function ColorModeIconDropdown() {
 				anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
 			>
 				<MenuItem selected={mode === "system"} onClick={handleMode("system")}>
-					System
+					Как в системе
 				</MenuItem>
 				<MenuItem selected={mode === "light"} onClick={handleMode("light")}>
-					Light
+					Светлая
 				</MenuItem>
 				<MenuItem selected={mode === "dark"} onClick={handleMode("dark")}>
 					Dark

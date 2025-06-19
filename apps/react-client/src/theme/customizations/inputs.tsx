@@ -39,6 +39,9 @@ export const inputsCustomizations: Components<Theme> = {
 	MuiButton: {
 		styleOverrides: {
 			root: ({ theme }) => ({
+				"&.Mui-disabled": {
+					backgroundImage: "none",
+				},
 				boxShadow: "none",
 				borderRadius: (theme.vars || theme).shape.borderRadius,
 				textTransform: "none",

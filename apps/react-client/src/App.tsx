@@ -75,12 +75,12 @@ const App: React.FC<LayoutProps> = ({
 	protectedFetch,
 	onLogout,
 }) => {
+	console.log("🚀 ~ bridged:", bridged);
+
 	return (
 		<StyledEngineProvider injectFirst>
 			<QueryClientProvider client={queryClient}>
-				<BrowserRouter
-					basename={bridged ? process.env.APP_NAME || "/smartAnketa" : "/"}
-				>
+				<BrowserRouter basename={bridged ? "/smartAnketa" : "/"}>
 					<AppTheme themeComponents={xThemeComponents}>
 						<CssBaseline enableColorScheme />
 						<Suspense fallback={<CircularProgress />}>

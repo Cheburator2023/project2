@@ -11,7 +11,7 @@ import checker from "vite-plugin-checker";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import tsconfigPaths from "vite-tsconfig-paths";
 
-const APP_NAME = process.env.APP_NAME || "smartAnketa";
+const APP_NAME = "smartAnketa";
 
 const deps = require("./package.json").dependencies;
 

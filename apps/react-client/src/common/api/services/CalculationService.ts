@@ -8,6 +8,7 @@ import type { PaginatedCalculationResponseDto } from '../models/PaginatedCalcula
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
+
 export class CalculationService {
     /**
      * Save calculation result
