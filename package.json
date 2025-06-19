@@ -84,11 +84,7 @@
 		"webpack-merge": "5.10.0",
 		"html-webpack-plugin": "5.5.0",
 		"react-refresh": "0.17.0",
-		"@pmmmwh/react-refresh-webpack-plugin": "0.6.0",
-		"react": "19.1.0",
-		"react-dom": "19.1.0",
-		"react-router": "7.6.1",
-		"react-router-dom": "7.6.1"
+		"@pmmmwh/react-refresh-webpack-plugin": "0.6.0"
 	},
 	"overrides": {
 		"webpack": "5.96.1",
@@ -97,10 +93,6 @@
 		"webpack-merge": "5.10.0",
 		"html-webpack-plugin": "5.5.0",
 		"react-refresh": "0.17.0",
-		"@pmmmwh/react-refresh-webpack-plugin": "0.6.0",
-		"react": "19.1.0",
-		"react-dom": "19.1.0",
-		"react-router": "7.6.1",
-		"react-router-dom": "7.6.1"
+		"@pmmmwh/react-refresh-webpack-plugin": "0.6.0"
 	}
 }

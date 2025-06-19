@@ -1,7 +1,8 @@
+import { Route, Routes } from "react-router";
+
 import { AnketaCreatePage } from "@react-client/features/anketa/AnketaCreatePage";
 import { HomePage } from "@react-client/features/home/HomePage";
 import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
-import { Route, Routes } from "react-router";
 
 import { AdminPage } from "@react-client/features/admin/AdminPage";
 import { AnketaPreviewPage } from "@react-client/features/anketa/AnketaPreviewPage";

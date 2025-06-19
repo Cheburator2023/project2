@@ -8,7 +8,7 @@ const MfeRoot = (props: any) => {
 
 	return (
 		<AuthProvider token={props.token}>
-			<App {...props} />
+			<App {...props} bridged />
 		</AuthProvider>
 	);
 };
