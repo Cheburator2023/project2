@@ -1,3 +1,4 @@
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "../../../common/primitives/Flex";
@@ -7,7 +8,7 @@ import { MenuButton } from "../molecules/MenuButton";
 import { NavbarBreadcrumbs } from "../molecules/NavbarBreadcrumbs";
 
 export function Header({ children }: { children?: React.ReactNode }) {
-	const { toggleSideMenu } = useGlobalSettingsStore();
+	const { toggleSideMenu, isSideMenuVisible } = useGlobalSettingsStore();
 
 	return (
 		<>
@@ -15,19 +16,25 @@ export function Header({ children }: { children?: React.ReactNode }) {
 				<Flex
 					width="fill-available"
 					pad="2px 3px"
-					gap={2}
+					gap={16}
 					alignItems="center"
 					justifyContent="space-between"
 					position="relative"
 					zIndex={1000}
 				>
-					<Flex flexDirection="row" gap={10} alignItems="center">
+					<Flex flexDirection="row" gap={8} alignItems="center" flexShrink={0}>
 						<MenuButton aria-label="menu" onClick={() => toggleSideMenu()}>
-							<MenuRoundedIcon />
+							{!isSideMenuVisible ? <MenuRoundedIcon /> : <CloseRoundedIcon />}
 						</MenuButton>
 						<NavbarBreadcrumbs />
 					</Flex>
-					<Flex flexDirection="row" gap={6} alignItems="center">
+					<Flex
+						flexDirection="row"
+						gap={6}
+						alignItems="center"
+						justifyContent="flex-end"
+						width="fill-available"
+					>
 						{children}
 						<ColorModeIconDropdown />
 					</Flex>

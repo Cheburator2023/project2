@@ -84,7 +84,7 @@ export function ColorModeIconDropdown() {
 					Светлая
 				</MenuItem>
 				<MenuItem selected={mode === "dark"} onClick={handleMode("dark")}>
-					Dark
+					Темная
 				</MenuItem>
 			</Menu>
 		</React.Fragment>

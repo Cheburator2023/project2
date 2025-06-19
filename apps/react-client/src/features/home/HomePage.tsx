@@ -1,15 +1,16 @@
 import "ag-grid-enterprise";
-
 import AddIcon from "@mui/icons-material/Add";
 import CompareIcon from "@mui/icons-material/Compare";
+import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import SaveIcon from "@mui/icons-material/Save";
 import {
-	SpeedDial,
-	SpeedDialAction,
-	SpeedDialIcon,
+	Button,
+	IconButton,
+	Tooltip,
 	styled,
 	useColorScheme,
 } from "@mui/material";
+import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useAllCalculations } from "@react-client/common/services/useCalculations";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
@@ -20,6 +21,7 @@ import { routes } from "@react-client/routing/routes";
 import {
 	GridApi,
 	GridReadyEvent,
+	IRowNode,
 	ModuleRegistry,
 	themeQuartz,
 } from "ag-grid-community";
@@ -61,7 +63,7 @@ const rowData = [
 		aml__1: 1251,
 	},
 	{
-		record_id: 1,
+		record_id: 2,
 		_: "Пример текста 846",
 		col_: "Calc93025-v4",
 		__: "12/04/2022",
@@ -87,7 +89,7 @@ const rowData = [
 		aml__1: 1251,
 	},
 	{
-		record_id: 1,
+		record_id: 3,
 		_: "Пример текста 846", // Название расчета
 		col_: "Calc93025-v4", // Идентификатор
 		__: "12/04/2022", // Дата создания расчета
@@ -113,7 +115,7 @@ const rowData = [
 		aml__1: 1251, // AML Внедрение.
 	},
 	{
-		record_id: 2,
+		record_id: 4,
 		_: "Пример текста 697",
 		col_: "Calc36812-v2",
 		__: "25/05/2021",
@@ -187,6 +189,9 @@ export const HomePage = () => {
 	const { setGridApi } = useGlobalSettingsStore();
 	const [isInCompareMode, setIsInCompareMode] = useState(
 		isInDefaultCompareMode,
+	);
+	const [selectedRows, setSelectedRows] = useState<IRowNode<any>[] | undefined>(
+		[],
 	);
 
 	useEffect(() => {
@@ -264,32 +269,80 @@ export const HomePage = () => {
 		<>
 			<Spacer height={6} />
 			<Header>
-				<SearchInput />
-				{/* <DatePicker /> */}
+				<Flex
+					width="fill-available"
+					justifyContent="space-between"
+					alignItems="center"
+				>
+					<Flex width="100%" maxWidth="550px">
+						<SearchInput />
+					</Flex>
+
+					<Flex gap={6} alignItems="center" justifyContent="flex-end">
+						<Tooltip title="Создать расчет">
+							<IconButton aria-label="menu" onClick={onCreateCalculation}>
+								<AddIcon />
+							</IconButton>
+						</Tooltip>
+
+						<Tooltip title="Сравнить">
+							<IconButton
+								disabled={selectedRows?.length !== 2}
+								aria-label="menu"
+								onClick={() => {
+									return navigate(
+										routes.anketaCompare.rootPath +
+											"?" +
+											selectedRows
+												?.map(
+													(row, index) =>
+														`id${index + 1}=${row.data.record_id}`,
+												)
+												.join("&"),
+									);
+								}}
+							>
+								<CompareArrowsIcon />
+							</IconButton>
+						</Tooltip>
+
+						<Tooltip title="Выгрузить в Excel">
+							<Button
+								aria-label="menu"
+								onClick={onExportExcel}
+								variant="contained"
+							>
+								Выгрузить в Excel
+							</Button>
+						</Tooltip>
+					</Flex>
+				</Flex>
 			</Header>
 			<Spacer height={12} />
 			<GridWrapper>
 				<AgGridReact
 					rowClass="custom-row-class"
 					rowClassRules={rowClassRules}
-					rowSelection={isInCompareMode ? { mode: "multiRow" } : undefined}
+					rowSelection={{ mode: "multiRow" }}
 					theme={
 						mode === "light" || mode === undefined
 							? themeQuartz
 							: themeQuartzDark
 					}
 					onSelectionChanged={(e) => {
-						const selectedRows = e.api.getSelectedNodes();
-						if (selectedRows.length === 2) {
-							navigate(
-								routes.anketaCompare.rootPath +
-									"?" +
-									selectedRows
-										.map((row, index) => `id${index + 1}=${row.data.record_id}`)
-										.join("&"),
-							);
-						}
+						setSelectedRows(e.api.getSelectedNodes());
 					}}
+					// 	const selectedRows = e.api.getSelectedNodes();
+					// 	if (selectedRows.length === 2) {
+					// 		navigate(
+					// 			routes.anketaCompare.rootPath +
+					// 				"?" +
+					// 				selectedRows
+					// 					.map((row, index) => `id${index + 1}=${row.data.record_id}`)
+					// 					.join("&"),
+					// 		);
+					// 	}
+					// }}
 					rowData={rowData}
 					columnDefs={columnDefs as any}
 					defaultColDef={defaultColDef}
@@ -299,34 +352,20 @@ export const HomePage = () => {
 					localeText={AG_GRID_LOCALE_RU}
 					ref={gridRef}
 					onGridReady={onGridReady}
-					onRowClicked={
-						isInCompareMode
-							? undefined
-							: (params) => {
-									navigate(
-										routes.anketaPreview.rootPath.replace(
-											":id",
-											params.data.record_id.toString(),
-										),
-									);
-								}
-					}
+					// onRowClicked={
+					// 	isInCompareMode
+					// 		? undefined
+					// 		: (params) => {
+					// 				navigate(
+					// 					routes.anketaPreview.rootPath.replace(
+					// 						":id",
+					// 						params.data.record_id.toString(),
+					// 					),
+					// 				);
+					// 			}
+					// }
 				/>
 			</GridWrapper>
-			<SpeedDial
-				ariaLabel="SpeedDial"
-				sx={{ position: "absolute", bottom: 16, right: 16 }}
-				icon={<SpeedDialIcon />}
-			>
-				{actions.map((action) => (
-					<SpeedDialAction
-						key={action.name}
-						icon={action.icon}
-						tooltipTitle={action.name}
-						onClick={action.onClick}
-					/>
-				))}
-			</SpeedDial>
 		</>
 	);
 };
