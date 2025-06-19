@@ -340,7 +340,7 @@ export const inputsCustomizations: Components<Theme> = {
 		},
 		styleOverrides: {
 			root: ({ theme }) => ({
-				margin: 10,
+				margin: 12,
 				height: 16,
 				width: 16,
 				borderRadius: 5,
@@ -359,11 +359,11 @@ export const inputsCustomizations: Components<Theme> = {
 				},
 				"&.Mui-checked": {
 					color: "white",
-					backgroundColor: brand[500],
-					borderColor: brand[500],
+					backgroundColor: gray[700],
+					borderColor: gray[700],
 					boxShadow: `none`,
 					"&:hover": {
-						backgroundColor: brand[600],
+						backgroundColor: gray[600],
 					},
 				},
 				...theme.applyStyles("dark", {
@@ -371,11 +371,11 @@ export const inputsCustomizations: Components<Theme> = {
 					boxShadow: "0 0 0 1.5px hsl(210, 0%, 0%) inset",
 					backgroundColor: alpha(gray[900], 0.8),
 					"&:hover": {
-						borderColor: brand[300],
+						borderColor: gray[600],
 					},
 					"&.Mui-focusVisible": {
-						borderColor: brand[400],
-						outline: `3px solid ${alpha(brand[500], 0.5)}`,
+						borderColor: gray[600],
+						outline: `3px solid ${alpha(gray[500], 0.5)}`,
 						outlineOffset: "2px",
 					},
 				}),
@@ -402,6 +402,9 @@ export const inputsCustomizations: Components<Theme> = {
 				// padding: 0,
 			},
 			root: ({ theme }) => ({
+				"&.Mui-error": {
+					borderColor: theme.palette.error.main,
+				},
 				// padding: "14px 12px 14px",
 				color: (theme.vars || theme).palette.text.primary,
 				borderRadius: (theme.vars || theme).shape.borderRadius,
@@ -443,7 +446,17 @@ export const inputsCustomizations: Components<Theme> = {
 				],
 			}),
 			notchedOutline: {
+				"& legend": {
+					display: "none",
+				},
 				border: "none",
+			},
+		},
+	},
+	MuiFormHelperText: {
+		styleOverrides: {
+			root: {
+				marginLeft: 0,
 			},
 		},
 	},

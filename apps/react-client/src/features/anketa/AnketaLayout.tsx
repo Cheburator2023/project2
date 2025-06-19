@@ -3,7 +3,11 @@ import { Button, styled } from "@mui/material";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+
+import { JsonFormGenerator } from "@react-client/features/jsonFormGenerator/JsonFormGenerator";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { BasicInfoForm } from "./organisms/BasicInfoForm";
+import { CalculationResultTable } from "./organisms/CalculationResultTable";
 
 export const AnketaLayout = ({ isCreate }: { isCreate?: boolean }) => {
 	return (
@@ -19,7 +23,8 @@ export const AnketaLayout = ({ isCreate }: { isCreate?: boolean }) => {
 					>
 						<Panel>
 							<Card header="Основная информация" height="100%">
-								sss
+								<Spacer />
+								<BasicInfoForm />
 							</Card>
 						</Panel>
 
@@ -29,7 +34,7 @@ export const AnketaLayout = ({ isCreate }: { isCreate?: boolean }) => {
 
 						<Panel>
 							<Card header="Итоги расчета" maxHeight="100%" height="100%">
-								ss
+								<CalculationResultTable />
 							</Card>
 						</Panel>
 					</PanelGroup>
@@ -41,7 +46,7 @@ export const AnketaLayout = ({ isCreate }: { isCreate?: boolean }) => {
 
 				<Panel>
 					<Card header="Опросник" maxHeight="100%" height="100%">
-						aaa
+						<JsonFormGenerator />
 					</Card>
 				</Panel>
 			</PanelGroup>

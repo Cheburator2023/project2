@@ -53,18 +53,15 @@ export const ProjectAssessmentForm: React.FC = () => {
 	};
 
 	return (
-		<div style={{ padding: 24, maxWidth: 960, margin: "auto" }}>
-			<h2 style={{ marginBottom: 24 }}>{schema.title}</h2>
-			<Form
-				schema={schema as RJSFSchema}
-				uiSchema={uiSchema}
-				validator={validator}
-				widgets={widgets}
-				formData={formData}
-				formContext={{ formData }}
-				onChange={handleChange}
-				onSubmit={handleSubmit}
-			/>
-		</div>
+		<Form
+			schema={schema as RJSFSchema}
+			uiSchema={uiSchema}
+			validator={validator}
+			widgets={widgets}
+			formData={formData}
+			formContext={{ formData }}
+			onChange={handleChange}
+			onSubmit={handleSubmit}
+		/>
 	);
 };
