@@ -20,6 +20,7 @@ export class CalculationService {
 		const calculation = this.calculationRepository.create({
 			name: createCalculationDto.name,
 			questionnaireData: {
+				name: createCalculationDto.name,
 				modelsCount: createCalculationDto.modelsCount,
 				setupComplexity: createCalculationDto.setupComplexity,
 				initiativeTimeline: createCalculationDto.initiativeTimeline,
@@ -39,6 +40,7 @@ export class CalculationService {
 			},
 			finalCoefficient: createCalculationDto.finalCoefficient,
 		});
+
 		return await this.calculationRepository.save(calculation);
 	}
 
