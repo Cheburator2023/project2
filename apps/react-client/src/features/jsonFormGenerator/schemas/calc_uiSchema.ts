@@ -1,6 +1,10 @@
 import { UiSchema } from "@rjsf/utils";
 
 const uiSchema: UiSchema = {
+	"ui:submitButtonOptions": {
+		norender: true,
+		submitText: "Сохранить",
+	},
 	description: {
 		"ui:widget": "textarea",
 		"ui:options": {
@@ -8,7 +12,7 @@ const uiSchema: UiSchema = {
 		},
 	},
 	projectName: {
-		"ui:placeholder": "Enter project name",
+		"ui:placeholder": "введите название проекта",
 	},
 	algorithmComplexity: {
 		"ui:widget": "AlgorithmComplexityWidget",

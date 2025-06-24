@@ -1,9 +1,11 @@
 import { withTheme } from "@rjsf/core";
+import type FormRef from "@rjsf/core";
+
+import { validatorRu } from "@react-client/features/anketa/rjsfLocaleRu";
 import type { IChangeEvent } from "@rjsf/core";
 import { Theme as MuiTheme } from "@rjsf/mui";
 import type { RJSFSchema } from "@rjsf/utils";
-import validator from "@rjsf/validator-ajv8";
-import React, { useState } from "react";
+import React, { createRef, useState } from "react";
 import schema from "../schemas/calc_schema.json";
 import uiSchema from "../schemas/calc_uiSchema";
 import type { FormData } from "../types/FormData";
@@ -24,6 +26,8 @@ const widgets = {
 };
 
 export const ProjectAssessmentForm: React.FC = () => {
+	const formRef = createRef<FormRef>();
+
 	const [formData, setFormData] = useState<FormData>({
 		modelsCount: 1,
 		algorithmComplexity: [{ algorithmType: "" }],
@@ -54,14 +58,18 @@ export const ProjectAssessmentForm: React.FC = () => {
 
 	return (
 		<Form
+			ref={formRef}
 			schema={schema as RJSFSchema}
 			uiSchema={uiSchema}
-			validator={validator}
+			validator={validatorRu}
 			widgets={widgets}
 			formData={formData}
 			formContext={{ formData }}
 			onChange={handleChange}
 			onSubmit={handleSubmit}
+			liveValidate
+			noHtml5Validate
+			showErrorList={false}
 		/>
 	);
 };
