@@ -3,13 +3,16 @@ import { Button, styled } from "@mui/material";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-
-import { JsonFormGenerator } from "@react-client/features/jsonFormGenerator/JsonFormGenerator";
+import { JsonFormGeneratorPage } from "@react-client/features/jsonFormGenerator/JsonFormGeneratorPage";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { BasicInfoForm } from "./organisms/BasicInfoForm";
 import { CalculationResultTable } from "./organisms/CalculationResultTable";
 
 export const AnketaLayout = ({ isCreate }: { isCreate?: boolean }) => {
+	const onSubmit = () => {
+		console.log("submit");
+	};
+
 	return (
 		<Flex flexDirection="column" height="100%" width="100%">
 			<PanelGroup
@@ -46,7 +49,7 @@ export const AnketaLayout = ({ isCreate }: { isCreate?: boolean }) => {
 
 				<Panel>
 					<Card header="Опросник" maxHeight="100%" height="100%">
-						<JsonFormGenerator />
+						<JsonFormGeneratorPage />
 					</Card>
 				</Panel>
 			</PanelGroup>
@@ -56,7 +59,9 @@ export const AnketaLayout = ({ isCreate }: { isCreate?: boolean }) => {
 					<Card>
 						<Flex justifyContent="space-between">
 							<div />
-							<Button variant="contained">Сохранить</Button>
+							<Button variant="contained" onClick={onSubmit}>
+								Сохранить
+							</Button>
 						</Flex>
 					</Card>
 				</>

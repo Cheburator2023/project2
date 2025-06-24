@@ -60,6 +60,9 @@ const uiSchema: UiSchema = {
 	productionDeploymentChannels: {
 		"ui:widget": "ProductionDeploymentChannelsWidget",
 	},
+	productionDeploymentChannels2: {
+		"ui:widget": "MultiSelectAutocompleteWidget",
+	},
 	pilotSupportRequired: {
 		"ui:widget": "UniversalDependencyWidget",
 		"ui:options": {

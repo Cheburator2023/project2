@@ -1,6 +1,7 @@
 import { withTheme } from "@rjsf/core";
 import type FormRef from "@rjsf/core";
 
+import { MultiSelectAutocompleteWidget } from "@react-client/features/anketa/molecules/MultiSelectAutocompleteWidget";
 import { validatorRu } from "@react-client/features/anketa/rjsfLocaleRu";
 import type { IChangeEvent } from "@rjsf/core";
 import { Theme as MuiTheme } from "@rjsf/mui";
@@ -23,6 +24,7 @@ const widgets = {
 	ProductionDeploymentChannelsWidget,
 	NumberInputWidget,
 	UniversalDependencyWidget,
+	MultiSelectAutocompleteWidget,
 };
 
 export const ProjectAssessmentForm: React.FC = () => {

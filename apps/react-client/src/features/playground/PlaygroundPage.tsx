@@ -2,10 +2,12 @@ import { Typography } from "@mui/material";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { JsonFormGenerator } from "@react-client/features/jsonFormGenerator/JsonFormGenerator";
+import { JsonFormGeneratorPage } from "@react-client/features/jsonFormGenerator/JsonFormGeneratorPage";
 import { Fragment } from "react/jsx-runtime";
 
-const data = [{ name: "JsonFormGenerator", Component: <JsonFormGenerator /> }];
+const data = [
+	{ name: "JsonFormGenerator", Component: <JsonFormGeneratorPage /> },
+];
 
 export const PlaygroundPage = () => {
 	return (
