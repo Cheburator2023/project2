@@ -9,7 +9,7 @@ export const AnketaCreatePage = () => {
 			<Spacer height={6} />
 			<Header />
 			<Spacer height={12} />
-			<Flex width="100%" height="90vh">
+			<Flex width="100%" height="-webkit-fill-available">
 				<AnketaLayout isCreate />
 			</Flex>
 		</div>

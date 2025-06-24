@@ -5,6 +5,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { styled, useColorScheme } from "@mui/material/styles";
 import { Flex } from "@react-client/common/primitives/Flex";
+import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { MenuContent } from "../molecules/MenuContent";
 import { OptionsMenu } from "../molecules/OptionsMenu";
 
@@ -23,8 +24,12 @@ const Drawer = styled(MuiDrawer)<{ mode?: string }>(({ mode }) => {
 	};
 });
 
-export function SideMenu({ open = false }) {
+export function SideMenu({
+	open = false,
+	onLogout,
+}: { open?: boolean; onLogout?: () => void }) {
 	const { mode, systemMode, setMode } = useColorScheme();
+	const { user } = useGlobalSettingsStore();
 
 	return (
 		<Drawer variant="persistent" open={open} mode={mode}>
@@ -68,7 +73,6 @@ export function SideMenu({ open = false }) {
 			>
 				<Avatar
 					sizes="small"
-					alt="Useroslav Userov"
 					src="/static/images/avatar/7.jpg"
 					sx={{ width: 36, height: 36 }}
 				/>
@@ -77,13 +81,15 @@ export function SideMenu({ open = false }) {
 						variant="body2"
 						sx={{ fontWeight: 500, lineHeight: "16px" }}
 					>
-						Useroslav Userov
+						{(user?.family_name || "") + " " + (user?.given_name || "")}
 					</Typography>
-					<Typography variant="caption" sx={{ color: "text.secondary" }}>
-						ssUserov@vtb.com
-					</Typography>
+					{user?.email && (
+						<Typography variant="caption" sx={{ color: "text.secondary" }}>
+							{user?.email}
+						</Typography>
+					)}
 				</Box>
-				<OptionsMenu />
+				<OptionsMenu onLogout={onLogout} />
 			</Stack>
 		</Drawer>
 	);

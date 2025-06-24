@@ -266,7 +266,7 @@ export const HomePage = () => {
 	};
 
 	return (
-		<>
+		<div>
 			<Spacer height={6} />
 			<Header>
 				<Flex
@@ -319,7 +319,7 @@ export const HomePage = () => {
 				</Flex>
 			</Header>
 			<Spacer height={12} />
-			<GridWrapper>
+			<GridWrapper width="100%" height="-webkit-fill-available">
 				<AgGridReact
 					rowClass="custom-row-class"
 					rowClassRules={rowClassRules}
@@ -366,13 +366,15 @@ export const HomePage = () => {
 					// }
 				/>
 			</GridWrapper>
-		</>
+		</div>
 	);
 };
 
-const GridWrapper = styled("div")`
-    height: 90vh;
-    width: 100%;
+const GridWrapper = styled(Flex)`
+
+	& > div {
+		width: 100%;
+	}
 
     & .ag-column-panel .ag-pivot-mode-panel {
         display: none;
