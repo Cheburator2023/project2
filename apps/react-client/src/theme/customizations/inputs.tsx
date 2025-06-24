@@ -411,8 +411,6 @@ export const inputsCustomizations: Components<Theme> = {
 				border: `1px solid ${(theme.vars || theme).palette.divider}`,
 				backgroundColor: (theme.vars || theme).palette.background.default,
 				padding: "inherit",
-				paddingLeft: "12px",
-				paddingRight: "12px",
 				transition: "border 120ms ease-in",
 				"&:hover": {
 					borderColor: gray[400],
@@ -471,6 +469,15 @@ export const inputsCustomizations: Components<Theme> = {
 			}),
 		},
 	},
+	MuiRadio: {
+		styleOverrides: {
+			root: {
+				"&.Mui-checked": {
+					color: gray[700],
+				},
+			},
+		},
+	},
 	MuiTextField: {
 		styleOverrides: {
 			root: {
@@ -490,12 +497,28 @@ export const inputsCustomizations: Components<Theme> = {
 			},
 		},
 	},
+	MuiFormControl: {
+		styleOverrides: {
+			root: {
+				"& .MuiList-root": {
+					padding: "0",
+					"& .MuiFormHelperText-root": {
+						fontSize: "10px",
+					},
+					"& .MuiFormHelperText-root:first-letter": {
+						textTransform: "uppercase",
+					},
+				},
+			},
+		},
+	},
 	MuiFormLabel: {
 		styleOverrides: {
 			root: {
 				position: "relative",
 				transform: "none",
 				display: "block",
+				fontSize: "12px",
 				"&.MuiInputLabel-shrink": {
 					transform: "none",
 				},

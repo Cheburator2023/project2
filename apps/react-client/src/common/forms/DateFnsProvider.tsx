@@ -3,7 +3,7 @@ import {
 	LocalizationProviderProps,
 	MuiPickersAdapter,
 } from "@mui/x-date-pickers";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFnsV3";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
 export type DateFnsProviderProps<TDate extends Date> = Omit<
 	LocalizationProviderProps<TDate, any>,

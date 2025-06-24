@@ -15,8 +15,8 @@ const mainListItems = Object.values(routes)
 	.map((route) => route)
 	.filter(
 		(route) =>
-			route.rootPath !== routes.anketaPreview.rootPath &&
-			route.rootPath !== routes.anketaCompare.rootPath,
+			route.rootPath !== routes.calculationPreview.rootPath &&
+			route.rootPath !== routes.calculationCompare.rootPath,
 	);
 
 const secondaryListItems = [

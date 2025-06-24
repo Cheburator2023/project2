@@ -13,13 +13,16 @@ import { routes } from "./routes";
 export const Routing = () => (
 	<Routes>
 		<Route index element={<HomePage />} />
-		<Route path={routes.anketaCreate.rootPath} element={<AnketaCreatePage />} />
 		<Route
-			path={routes.anketaPreview.rootPath}
+			path={routes.calculationCreate.rootPath}
+			element={<AnketaCreatePage />}
+		/>
+		<Route
+			path={routes.calculationPreview.rootPath}
 			element={<AnketaPreviewPage />}
 		/>
 		<Route
-			path={routes.anketaCompare.rootPath}
+			path={routes.calculationCompare.rootPath}
 			element={<CompareReportsPage />}
 		/>
 		<Route path={routes.admin.rootPath} element={<AdminPage />} />

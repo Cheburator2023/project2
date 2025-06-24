@@ -229,7 +229,7 @@ export const HomePage = () => {
 
 	const onCreateCalculation = () => {
 		console.log("Create calculation");
-		navigate(routes.anketaCreate.rootPath);
+		navigate(routes.calculationCreate.rootPath);
 	};
 
 	const actions = [
@@ -291,7 +291,7 @@ export const HomePage = () => {
 								aria-label="menu"
 								onClick={() => {
 									return navigate(
-										routes.anketaCompare.rootPath +
+										routes.calculationCompare.rootPath +
 											"?" +
 											selectedRows
 												?.map(
@@ -335,7 +335,7 @@ export const HomePage = () => {
 					// 	const selectedRows = e.api.getSelectedNodes();
 					// 	if (selectedRows.length === 2) {
 					// 		navigate(
-					// 			routes.anketaCompare.rootPath +
+					// 			routes.calculationCompare.rootPath +
 					// 				"?" +
 					// 				selectedRows
 					// 					.map((row, index) => `id${index + 1}=${row.data.record_id}`)

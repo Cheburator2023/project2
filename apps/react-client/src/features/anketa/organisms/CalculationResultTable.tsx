@@ -18,11 +18,16 @@ interface EpicData extends RawEpicData {
 }
 
 const initialEpicData: RawEpicData[] = [
-	{ epicName: "Разработка нового модуля", score: 8 },
-	{ epicName: "Оптимизация базы данных", score: 10 },
-	{ epicName: "Рефакторинг легаси кода", score: 6 },
-	{ epicName: "Исправление критических багов", score: 9 },
-	{ epicName: "Обновление UI-кита", score: 7 },
+	{ epicName: "01. Постановка задачи", score: 8 },
+	{ epicName: "02. Поиск данных", score: 10 },
+	{ epicName: "03. Построение витрины данных", score: 6 },
+	{ epicName: "04. Разработка MVP", score: 9 },
+	{ epicName: "05А. Разработка модели", score: 7 },
+	{ epicName: "06. Разработка прототипа", score: 100 },
+	{ epicName: "AML разработка", score: 100 },
+	{ epicName: "05B. Пилотирование модели", score: 100 },
+	{ epicName: "06. Разработка витрины для применения модели", score: 200 },
+	{ epicName: "07. Адаптация и внедрение", score: 200 },
 ];
 
 const processData = (data: RawEpicData[]): EpicData[] => {
