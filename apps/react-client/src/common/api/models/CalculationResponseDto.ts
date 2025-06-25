@@ -2,13 +2,22 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { QuestionnaireDataDto } from "./QuestionnaireDataDto";
 export type CalculationResponseDto = {
-	id: string;
-	name: string;
 	/**
-	 * Данные анкеты в формате JSON
+	 * Уникальный идентификатор расчета (UUID)
 	 */
-	questionnaireData: Record<string, any>;
+	id: string;
+	/**
+	 * Данные анкеты (структурированный объект)
+	 */
+	questionnaireData: QuestionnaireDataDto;
+	/**
+	 * Финальный коэффициент расчета
+	 */
 	finalCoefficient: number;
+	/**
+	 * Дата и время создания расчета (ISO 8601)
+	 */
 	createdAt: string;
 };

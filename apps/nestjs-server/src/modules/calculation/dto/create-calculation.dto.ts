@@ -14,6 +14,7 @@ import {
 class ProbabilityInfluencePairDto {
 	@ApiProperty({
 		example: "Реализация 1 раз в 1-3 года",
+		description: "Вероятность возникновения риска",
 		enum: [
 			"Не применимо",
 			"Реализация не чаще 1 раза в 10 лет",
@@ -30,6 +31,7 @@ class ProbabilityInfluencePairDto {
 	@ApiProperty({
 		example:
 			"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+		description: "Влияние риска на проект",
 		enum: [
 			"Незначительное влияние на вторичные функции в рамках проектной деятельности",
 			"Незначительное влияние на задачи и сроки достижения целей проекта",
@@ -43,9 +45,100 @@ class ProbabilityInfluencePairDto {
 	influence: string;
 }
 
+class GeneralUncertaintyDto {
+	@ApiProperty({
+		type: ProbabilityInfluencePairDto,
+		description: "Сложность бизнес-процессов",
+	})
+	@ValidateNested()
+	@Type(() => ProbabilityInfluencePairDto)
+	businessProcessComplexity: ProbabilityInfluencePairDto;
+
+	@ApiProperty({
+		type: ProbabilityInfluencePairDto,
+		description: "Дефекты проектного решения",
+	})
+	@ValidateNested()
+	@Type(() => ProbabilityInfluencePairDto)
+	projectSolutionDefects: ProbabilityInfluencePairDto;
+
+	@ApiProperty({
+		type: ProbabilityInfluencePairDto,
+		description: "Влияние смежных проектов",
+	})
+	@ValidateNested()
+	@Type(() => ProbabilityInfluencePairDto)
+	adjacentProjectsImpact: ProbabilityInfluencePairDto;
+
+	@ApiProperty({
+		type: ProbabilityInfluencePairDto,
+		description: "Пробелы в планировании требований",
+	})
+	@ValidateNested()
+	@Type(() => ProbabilityInfluencePairDto)
+	planningRequirementGaps: ProbabilityInfluencePairDto;
+
+	@ApiProperty({
+		type: ProbabilityInfluencePairDto,
+		description: "Проблемы с исполнением подрядчиками",
+	})
+	@ValidateNested()
+	@Type(() => ProbabilityInfluencePairDto)
+	contractorPerformanceIssues: ProbabilityInfluencePairDto;
+
+	@ApiProperty({
+		type: ProbabilityInfluencePairDto,
+		description: "Нехватка квалифицированного персонала",
+	})
+	@ValidateNested()
+	@Type(() => ProbabilityInfluencePairDto)
+	qualifiedStaffShortage: ProbabilityInfluencePairDto;
+
+	@ApiProperty({
+		type: ProbabilityInfluencePairDto,
+		description: "Риск санкций",
+	})
+	@ValidateNested()
+	@Type(() => ProbabilityInfluencePairDto)
+	sanctionsRisk: ProbabilityInfluencePairDto;
+
+	@ApiProperty({
+		type: ProbabilityInfluencePairDto,
+		description: "Пробелы в контрольных процедурах",
+	})
+	@ValidateNested()
+	@Type(() => ProbabilityInfluencePairDto)
+	controlProceduresGaps: ProbabilityInfluencePairDto;
+
+	@ApiProperty({
+		type: ProbabilityInfluencePairDto,
+		description: "Изменения в регулировании",
+	})
+	@ValidateNested()
+	@Type(() => ProbabilityInfluencePairDto)
+	regulatoryChanges: ProbabilityInfluencePairDto;
+
+	@ApiProperty({
+		type: ProbabilityInfluencePairDto,
+		description: "Недоиспользование системы",
+	})
+	@ValidateNested()
+	@Type(() => ProbabilityInfluencePairDto)
+	systemUnderutilization: ProbabilityInfluencePairDto;
+
+	@ApiProperty({
+		type: ProbabilityInfluencePairDto,
+		description: "Изменения IT-архитектуры",
+	})
+	@ValidateNested()
+	@Type(() => ProbabilityInfluencePairDto)
+	itArchitectureChanges: ProbabilityInfluencePairDto;
+}
+
 class AlgorithmTypeItemDto {
 	@ApiProperty({
 		example: "Текстовая аналитика_LLM",
+		description: "Тип используемого алгоритма",
 		enum: [
 			"Табличные данные",
 			"Текстовая аналитика_Классические модели",
@@ -65,6 +158,7 @@ class AlgorithmTypeItemDto {
 class DeploymentChannelDto {
 	@ApiProperty({
 		example: "Батч + Онлайн",
+		description: "Канал развертывания модели",
 		enum: [
 			"Батч",
 			"Батч+загрузка данных потребителю",
@@ -84,61 +178,52 @@ class DeploymentChannelDto {
 	deploymentChannel: string;
 }
 
-class GeneralUncertaintyDto {
-	@ApiProperty({ type: ProbabilityInfluencePairDto })
-	@ValidateNested()
-	@Type(() => ProbabilityInfluencePairDto)
-	businessProcessComplexity: ProbabilityInfluencePairDto;
+class UncertaintyItemDto {
+	@ApiProperty({
+		example: "planningRequirementGaps",
+		description: "Тип фактора неопределенности",
+		enum: [
+			"businessProcessComplexity",
+			"projectSolutionDefects",
+			"adjacentProjectsImpact",
+			"planningRequirementGaps",
+			"contractorPerformanceIssues",
+			"qualifiedStaffShortage",
+			"sanctionsRisk",
+			"controlProceduresGaps",
+			"regulatoryChanges",
+			"systemUnderutilization",
+			"itArchitectureChanges",
+		],
+	})
+	@IsString({ message: "type must be a string" })
+	@IsNotEmpty({ message: "type should not be empty" })
+	type: string;
 
-	@ApiProperty({ type: ProbabilityInfluencePairDto })
-	@ValidateNested()
-	@Type(() => ProbabilityInfluencePairDto)
-	projectSolutionDefects: ProbabilityInfluencePairDto;
+	@ApiProperty({
+		example: "Реализация не чаще 1 раза в 10 лет",
+		description: "Вероятность возникновения риска",
+		enum: [
+			"Не применимо",
+			"Реализация не чаще 1 раза в 10 лет",
+			"Реализация 1 раз в 3-10 лет",
+			"Реализация 1 раз в 1-3 года",
+			"Реализация 1 раз в год",
+			"Реализация 1 раз в 6 мес. или чаще",
+		],
+	})
+	@IsString({ message: "probability must be a string" })
+	@IsNotEmpty({ message: "probability should not be empty" })
+	probability: string;
 
-	@ApiProperty({ type: ProbabilityInfluencePairDto })
-	@ValidateNested()
-	@Type(() => ProbabilityInfluencePairDto)
-	adjacentProjectsImpact: ProbabilityInfluencePairDto;
-
-	@ApiProperty({ type: ProbabilityInfluencePairDto })
-	@ValidateNested()
-	@Type(() => ProbabilityInfluencePairDto)
-	planningRequirementGaps: ProbabilityInfluencePairDto;
-
-	@ApiProperty({ type: ProbabilityInfluencePairDto })
-	@ValidateNested()
-	@Type(() => ProbabilityInfluencePairDto)
-	contractorPerformanceIssues: ProbabilityInfluencePairDto;
-
-	@ApiProperty({ type: ProbabilityInfluencePairDto })
-	@ValidateNested()
-	@Type(() => ProbabilityInfluencePairDto)
-	qualifiedStaffShortage: ProbabilityInfluencePairDto;
-
-	@ApiProperty({ type: ProbabilityInfluencePairDto })
-	@ValidateNested()
-	@Type(() => ProbabilityInfluencePairDto)
-	sanctionsRisk: ProbabilityInfluencePairDto;
-
-	@ApiProperty({ type: ProbabilityInfluencePairDto })
-	@ValidateNested()
-	@Type(() => ProbabilityInfluencePairDto)
-	controlProceduresGaps: ProbabilityInfluencePairDto;
-
-	@ApiProperty({ type: ProbabilityInfluencePairDto })
-	@ValidateNested()
-	@Type(() => ProbabilityInfluencePairDto)
-	regulatoryChanges: ProbabilityInfluencePairDto;
-
-	@ApiProperty({ type: ProbabilityInfluencePairDto })
-	@ValidateNested()
-	@Type(() => ProbabilityInfluencePairDto)
-	systemUnderutilization: ProbabilityInfluencePairDto;
-
-	@ApiProperty({ type: ProbabilityInfluencePairDto })
-	@ValidateNested()
-	@Type(() => ProbabilityInfluencePairDto)
-	itArchitectureChanges: ProbabilityInfluencePairDto;
+	@ApiProperty({
+		example: "Незначительное",
+		description: "Влияние риска на проект",
+		enum: ["Незначительное", "Существенное", "Критичное"],
+	})
+	@IsString({ message: "influence must be a string" })
+	@IsNotEmpty({ message: "influence should not be empty" })
+	influence: string;
 }
 
 export class CreateCalculationDto {
@@ -151,7 +236,7 @@ export class CreateCalculationDto {
 	name: string;
 
 	@ApiProperty({
-		example: 5,
+		example: 2,
 		description: "Количество моделей (>1 для каскадов и ансамблей моделей)",
 		minimum: 1,
 		maximum: 99,
@@ -163,25 +248,16 @@ export class CreateCalculationDto {
 	modelsCount: number;
 
 	@ApiProperty({
-		example: 3,
-		description: "Сложность настройки (1 - минимальная, 5 - максимальная)",
-		minimum: 1,
-		maximum: 5,
+		example:
+			"1 Сложность: Проведение регулярной валидации Моделей Регулятором не установлено",
+		description: "Сложность настройки",
 	})
-	@IsNumber(
-		{},
-		{
-			message:
-				"setupComplexity must be a number conforming to the specified constraints",
-		},
-	)
-	@Min(1, { message: "setupComplexity must not be less than 1" })
-	@Max(5, { message: "setupComplexity must not be greater than 5" })
+	@IsString({ message: "setupComplexity must be a string" })
 	@IsNotEmpty({ message: "setupComplexity should not be empty" })
-	setupComplexity: number;
+	setupComplexity: string;
 
 	@ApiProperty({
-		example: "4-10 мес.",
+		example: "Менее 1 мес.",
 		description: "Срок реализации инициативы",
 		enum: [
 			"Менее 1 мес.",
@@ -211,15 +287,24 @@ export class CreateCalculationDto {
 	initiativeCost: string;
 
 	@ApiProperty({
-		type: GeneralUncertaintyDto,
-		description: "Факторы общей неопределенности",
+		example: 3,
+		description: "Корректировка неопределенности",
 	})
-	@ValidateNested()
-	@Type(() => GeneralUncertaintyDto)
-	generalUncertainty: GeneralUncertaintyDto;
+	@IsNumber({}, { message: "uncertaintyAdjustment must be a number" })
+	@IsOptional()
+	uncertaintyAdjustment?: number;
 
 	@ApiProperty({
-		example: "Да",
+		type: [UncertaintyItemDto],
+		description: "Факторы общей неопределенности",
+	})
+	@IsArray({ message: "generalUncertainty must be an array" })
+	@ValidateNested({ each: true })
+	@Type(() => UncertaintyItemDto)
+	generalUncertainty: UncertaintyItemDto[];
+
+	@ApiProperty({
+		example: "Нет",
 		description: "Наличие готовых промоделированных отчетов",
 		enum: ["Да", "Нет"],
 	})
@@ -228,16 +313,15 @@ export class CreateCalculationDto {
 	readyPromReports: string;
 
 	@ApiProperty({
-		example: "3",
+		example: 3,
 		description: "Количество оцененных инициатив",
-		enum: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
 	})
-	@IsString({ message: "assessedInitiativesCount must be a string" })
+	@IsNumber({}, { message: "assessedInitiativesCount must be a number" })
 	@IsOptional()
-	assessedInitiativesCount?: string;
+	assessedInitiativesCount?: number;
 
 	@ApiProperty({
-		example: "5",
+		example: "4",
 		description: "Количество источников данных",
 		enum: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
 	})
@@ -276,7 +360,7 @@ export class CreateCalculationDto {
 	pilotSupportRequired: string;
 
 	@ApiProperty({
-		example: "Не требуется",
+		example: "Да",
 		description: "Требуется ли AutoML",
 		enum: ["Да", "Не требуется"],
 	})
@@ -285,25 +369,21 @@ export class CreateCalculationDto {
 	autoMlRequired: string;
 
 	@ApiProperty({
-		example: "2",
+		example: 4,
 		description: "Дополнительные отчеты для продакшена",
-		enum: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
 	})
-	@IsString({ message: "productionAdditionalReports must be a string" })
+	@IsNumber({}, { message: "productionAdditionalReports must be a number" })
 	@IsNotEmpty({ message: "productionAdditionalReports should not be empty" })
-	productionAdditionalReports: string;
+	productionAdditionalReports: number;
 
 	@ApiProperty({
-		type: [DeploymentChannelDto],
+		type: [String],
 		description: "Каналы развертывания в продакшен",
+		example: ["Батч", "Батч+загрузка данных потребителю", "Батч + Онлайн"],
 	})
 	@IsArray({ message: "productionDeploymentChannels must be an array" })
-	@ValidateNested({
-		each: true,
-		message: "Each productionDeploymentChannels item must be a valid object",
-	})
-	@Type(() => DeploymentChannelDto)
-	productionDeploymentChannels: DeploymentChannelDto[];
+	@IsString({ each: true, message: "Each deployment channel must be a string" })
+	productionDeploymentChannels: string[];
 
 	@ApiProperty({
 		example: 1.8,
