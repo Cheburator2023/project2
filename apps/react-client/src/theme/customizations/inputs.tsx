@@ -463,6 +463,7 @@ export const inputsCustomizations: Components<Theme> = {
 			root: ({ theme }) => ({
 				color: (theme.vars || theme).palette.grey[500],
 				maxHeight: "1em",
+				padding: "0 12px",
 				...theme.applyStyles("dark", {
 					color: (theme.vars || theme).palette.grey[400],
 				}),
@@ -500,6 +501,9 @@ export const inputsCustomizations: Components<Theme> = {
 	MuiFormControl: {
 		styleOverrides: {
 			root: {
+				"&.MuiTextField-root": {
+					marginBottom: "0",
+				},
 				"& .MuiList-root": {
 					padding: "0",
 					"& .MuiFormHelperText-root": {

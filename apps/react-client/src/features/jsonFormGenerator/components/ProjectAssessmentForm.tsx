@@ -1,8 +1,8 @@
 import { withTheme } from "@rjsf/core";
 import type FormRef from "@rjsf/core";
 
+import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { MultiSelectAutocompleteWidget } from "@react-client/features/anketa/molecules/MultiSelectAutocompleteWidget";
-import { validatorRu } from "@react-client/features/anketa/rjsfLocaleRu";
 import type { IChangeEvent } from "@rjsf/core";
 import { Theme as MuiTheme } from "@rjsf/mui";
 import type { RJSFSchema } from "@rjsf/utils";
@@ -27,8 +27,12 @@ const widgets = {
 	MultiSelectAutocompleteWidget,
 };
 
-export const ProjectAssessmentForm: React.FC = () => {
+export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
+	isCreate,
+}) => {
 	const formRef = createRef<FormRef>();
+
+	const readonly = !isCreate;
 
 	const [formData, setFormData] = useState<FormData>({
 		modelsCount: 1,
@@ -69,8 +73,9 @@ export const ProjectAssessmentForm: React.FC = () => {
 			formContext={{ formData }}
 			onChange={handleChange}
 			onSubmit={handleSubmit}
-			liveValidate
+			liveValidate={!readonly}
 			noHtml5Validate
+			readonly={readonly}
 			showErrorList={false}
 		/>
 	);

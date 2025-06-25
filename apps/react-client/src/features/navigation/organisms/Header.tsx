@@ -1,5 +1,6 @@
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
+import { Typography } from "@mui/material";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "../../../common/primitives/Flex";
 import { useGlobalSettingsStore } from "../../../common/store/globalSettingsStore";
@@ -7,8 +8,14 @@ import { ColorModeIconDropdown } from "../../../theme/ColorModeIconDropdown";
 import { MenuButton } from "../molecules/MenuButton";
 import { NavbarBreadcrumbs } from "../molecules/NavbarBreadcrumbs";
 
-export function Header({ children }: { children?: React.ReactNode }) {
+export function Header({
+	children,
+	calcId,
+}: { children?: React.ReactNode; calcId?: string }) {
 	const { toggleSideMenu, isSideMenuVisible } = useGlobalSettingsStore();
+
+	const id1 = new URLSearchParams(window.location.search).get("id1");
+	const id2 = new URLSearchParams(window.location.search).get("id2");
 
 	return (
 		<>
@@ -27,6 +34,10 @@ export function Header({ children }: { children?: React.ReactNode }) {
 							{!isSideMenuVisible ? <MenuRoundedIcon /> : <CloseRoundedIcon />}
 						</MenuButton>
 						<NavbarBreadcrumbs />
+						{calcId ||
+							((id1 || id2) && (
+								<Typography> - {calcId || `${id1} / ${id2}`}</Typography>
+							))}
 					</Flex>
 					<Flex
 						flexDirection="row"

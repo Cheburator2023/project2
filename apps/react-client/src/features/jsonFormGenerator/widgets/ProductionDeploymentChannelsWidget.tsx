@@ -59,6 +59,7 @@ const ProductionDeploymentChannelsWidget: React.FC<WidgetProps> = ({
 					variant="outlined"
 					size="small"
 					sx={{ mb: 2 }}
+					slotProps={{ input: { readOnly: readonly } }}
 				/>
 
 				{/* Checkboxes */}

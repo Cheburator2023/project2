@@ -21,19 +21,16 @@ const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
 export function NavbarBreadcrumbs() {
 	const location = useLocation();
 
-	const crumb =
-		routes[
-			camelCase(
-				location.pathname.split("/", 3).join(" "),
-			) as keyof typeof routes
-		]?.name || routes.home.name;
+	const path = camelCase(location.pathname.split("/", 3).join(" "));
+
+	const pathName = routes[path as keyof typeof routes]?.name;
+	const crumb = pathName ? pathName : !path ? routes.home.name : "???";
 
 	return (
 		<StyledBreadcrumbs
 			aria-label="breadcrumb"
 			separator={<NavigateNextRoundedIcon fontSize="small" />}
 		>
-			{/* <Typography variant="h5">DataLineage</Typography> */}
 			<Typography
 				variant="body1"
 				sx={{ color: "text.primary", fontWeight: 600 }}

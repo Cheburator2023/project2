@@ -15,11 +15,17 @@ const MainWrapper = styled("div", {
 	mode?: string;
 }>(({ theme, mode }) => ({
 	flexGrow: 1,
+	minHeight: "100vh",
 	padding: "6px 12px",
 	transition: theme.transitions.create("margin", {
 		easing: theme.transitions.easing.sharp,
 		duration: theme.transitions.duration.leavingScreen,
 	}),
+	"& > div": {
+		height: "100%",
+		display: "flex",
+		flexDirection: "column",
+	},
 	marginLeft: `-${240}px`,
 	variants: [
 		{
@@ -37,14 +43,19 @@ const MainWrapper = styled("div", {
 
 export function MainLayout({
 	children,
+	onLogout,
 	navbarVisible = true,
-}: { children: React.ReactNode; navbarVisible?: boolean }) {
+}: {
+	children: React.ReactNode;
+	navbarVisible?: boolean;
+	onLogout?: () => void;
+}) {
 	const store = useGlobalSettingsStore();
 	const { mode, systemMode, setMode } = useColorScheme();
 
 	return (
 		<Flex id="main_layout_container">
-			<SideMenu open={store.isSideMenuVisible} />
+			<SideMenu open={store.isSideMenuVisible} onLogout={onLogout} />
 
 			<MainWrapper
 				id="main_layout_content"

@@ -100,6 +100,7 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 	formContext,
 	schema,
 	required,
+	readonly,
 }) => {
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 	const [selectedItem, setSelectedItem] = useState<string | null>(null);
@@ -186,7 +187,7 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 					Общая неопределенность
 				</Typography>
 
-				{!isEnabled && (
+				{!readonly && !isEnabled && (
 					<FormHelperText error>
 						Заполните "Стоимость инициативы" и "Сроки инициативы" для добавления
 						факторов неопределенности
@@ -201,6 +202,7 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 					variant="outlined"
 					size="small"
 					sx={{ mb: 2 }}
+					slotProps={{ input: { readOnly: readonly } }}
 				/>
 
 				{/* Display selected items */}

@@ -1,28 +1,38 @@
-import InfoRoundedIcon from "@mui/icons-material/InfoRounded";
-import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
+import CallMissedOutgoingIcon from "@mui/icons-material/CallMissedOutgoing";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
-
 import { useLocation, useNavigate } from "react-router";
 
+import { Button, Tooltip } from "@mui/material";
 import { routes } from "../../../routing/routes";
 
 const mainListItems = Object.values(routes)
 	.map((route) => route)
 	.filter(
 		(route) =>
+			!route?.disabled &&
 			route.rootPath !== routes.calculationPreview.rootPath &&
 			route.rootPath !== routes.calculationCompare.rootPath,
 	);
 
 const secondaryListItems = [
-	{ text: "Система управления моделями (СУМ)", icon: <InfoRoundedIcon /> },
-	{ text: "Реестр моделей (СУМ РМ)", icon: <InfoRoundedIcon /> },
-	{ text: "Настройки", icon: <SettingsRoundedIcon /> },
+	{
+		text: "sum",
+		icon: <CallMissedOutgoingIcon />,
+		tooltip: "Система управления моделями",
+		path: "/sum",
+	},
+	{
+		text: "sum-rm",
+		icon: <CallMissedOutgoingIcon />,
+		tooltip: "Рееcтр моделей",
+		path: "/sum-rm",
+	},
+	// { text: "Настройки", icon: <SettingsRoundedIcon /> },
 ];
 
 export function MenuContent() {
@@ -51,13 +61,15 @@ export function MenuContent() {
 					</ListItem>
 				))}
 			</List>
-			<List dense>
+			<List>
 				{secondaryListItems.map((item, index) => (
-					<ListItem key={index} disablePadding sx={{ display: "block" }}>
-						<ListItemButton>
-							<ListItemIcon>{item.icon}</ListItemIcon>
-							<ListItemText primary={item.text} />
-						</ListItemButton>
+					<ListItem key={index} disablePadding sx={{ paddingBottom: 1 }}>
+						<Tooltip title={item.tooltip}>
+							<Button size="small" variant="outlined" href={item.path}>
+								<ListItemIcon>{item.icon}</ListItemIcon>
+								<ListItemText primary={item.text} />
+							</Button>
+						</Tooltip>
 					</ListItem>
 				))}
 			</List>

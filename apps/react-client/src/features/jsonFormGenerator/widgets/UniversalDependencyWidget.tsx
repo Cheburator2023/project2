@@ -10,8 +10,16 @@ const widgetMap: Record<string, any> = {
 };
 
 const UniversalDependencyWidget = (props: WidgetProps) => {
-	const { formContext, uiSchema, value, onChange, registry, schema, ...rest } =
-		props;
+	const {
+		formContext,
+		uiSchema,
+		value,
+		onChange,
+		registry,
+		schema,
+		readonly,
+		...rest
+	} = props;
 	const options = uiSchema?.["ui:options"] as
 		| {
 				dependencies: {
@@ -115,6 +123,7 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 					variant="outlined"
 					size="small"
 					label={schema?.title}
+					slotProps={{ input: { readOnly: readonly } }}
 				/>
 			);
 		}
@@ -127,6 +136,7 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 				variant="outlined"
 				size="small"
 				label={schema?.title}
+				slotProps={{ input: { readOnly: readonly } }}
 			/>
 		);
 	}
@@ -148,6 +158,7 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 				variant="outlined"
 				size="small"
 				label={schema?.title}
+				slotProps={{ input: { readOnly: readonly } }}
 			/>
 		);
 	}

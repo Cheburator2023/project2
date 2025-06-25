@@ -1,6 +1,6 @@
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
-import Divider, { dividerClasses } from "@mui/material/Divider";
+import { dividerClasses } from "@mui/material/Divider";
 import { listClasses } from "@mui/material/List";
 import ListItemIcon, { listItemIconClasses } from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
@@ -16,15 +16,17 @@ const MenuItem = styled(MuiMenuItem)({
 	margin: "2px 0",
 });
 
-export function OptionsMenu() {
+export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 	const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 	const open = Boolean(anchorEl);
 	const handleClick = (event: React.MouseEvent<HTMLElement>) => {
 		setAnchorEl(event.currentTarget);
 	};
 	const handleClose = () => {
+		onLogout?.();
 		setAnchorEl(null);
 	};
+
 	return (
 		<>
 			<MenuButton
@@ -54,12 +56,12 @@ export function OptionsMenu() {
 					},
 				}}
 			>
-				<MenuItem onClick={handleClose}>Profile</MenuItem>
+				{/* <MenuItem onClick={handleClose}>Profile</MenuItem>
 				<MenuItem onClick={handleClose}>My account</MenuItem>
 				<Divider />
 				<MenuItem onClick={handleClose}>Add another account</MenuItem>
 				<MenuItem onClick={handleClose}>Settings</MenuItem>
-				<Divider />
+				<Divider /> */}
 				<MenuItem
 					onClick={handleClose}
 					sx={{
@@ -69,7 +71,7 @@ export function OptionsMenu() {
 						},
 					}}
 				>
-					<ListItemText>Logout</ListItemText>
+					<ListItemText>Выйти</ListItemText>
 					<ListItemIcon>
 						<LogoutRoundedIcon fontSize="small" />
 					</ListItemIcon>

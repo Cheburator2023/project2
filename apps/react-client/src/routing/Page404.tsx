@@ -3,19 +3,24 @@ import Button from "@mui/material/Button";
 import { useNavigate } from "react-router";
 
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import { Header } from "@react-client/features/navigation/organisms/Header";
 import { Flex } from "../common/primitives/Flex";
 import { routes } from "./routes";
 
 export const Page404 = () => {
 	const navigate = useNavigate();
 	return (
-		<Flex
-			width="100vw"
-			height="100vh"
-			alignItems="center"
-			justifyContent="center"
-		>
-			<Flex flexDirection="column" alignItems="center">
+		<div>
+			<Spacer height={6} />
+			<Header />
+			<Spacer height={12} />
+			<Flex
+				width="100%"
+				flexDirection="column"
+				alignItems="center"
+				justifyContent="center"
+				height="-webkit-fill-available"
+			>
 				<Typography variant="h4">Страница не найдена</Typography>
 				<Spacer />
 				<Button
@@ -26,6 +31,6 @@ export const Page404 = () => {
 					На главную
 				</Button>
 			</Flex>
-		</Flex>
+		</div>
 	);
 };

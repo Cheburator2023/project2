@@ -1,12 +1,17 @@
 import { AgGridReact } from "ag-grid-react";
-import React, { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 
+import { useColorScheme } from "@mui/material";
 import {
 	CellClassParams,
 	CellStyle,
 	ColDef,
 	ValueFormatterParams,
+	colorSchemeDarkBlue,
+	themeQuartz,
 } from "ag-grid-community";
+
+const themeQuartzDark = themeQuartz.withPart(colorSchemeDarkBlue);
 
 interface RawEpicData {
 	epicName: string;
@@ -50,7 +55,9 @@ const processData = (data: RawEpicData[]): EpicData[] => {
 	return [totalRow, ...detailedData];
 };
 
-export const CalculationResultTable: React.FC = () => {
+export const CalculationResultTable = ({
+	isCreate,
+}: { isCreate?: boolean }) => {
 	const [rowData] = useState<EpicData[]>(processData(initialEpicData));
 
 	const [columnDefs] = useState<ColDef<EpicData>[]>([
@@ -118,12 +125,16 @@ export const CalculationResultTable: React.FC = () => {
 		[],
 	);
 
+	const { mode } = useColorScheme();
+
 	return (
-		<div style={{ height: "100%", width: "100%" }}>
+		<div style={{ minHeight: "520px", height: "100%", width: "100%" }}>
 			<AgGridReact<EpicData>
 				rowData={rowData}
 				columnDefs={columnDefs}
-				defaultColDef={defaultColDef}
+				theme={
+					mode === "light" || mode === undefined ? themeQuartz : themeQuartzDark
+				}
 			/>
 		</div>
 	);

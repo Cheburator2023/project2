@@ -52,6 +52,7 @@ const NumberInputWidget: React.FC<WidgetProps> = ({
 			required={required}
 			label={label}
 			InputProps={{
+				readOnly: readonly,
 				startAdornment: prefix ? (
 					<InputAdornment position="start">{prefix}</InputAdornment>
 				) : undefined,
@@ -66,6 +67,7 @@ const NumberInputWidget: React.FC<WidgetProps> = ({
 			}}
 			fullWidth
 			error={
+				!readonly &&
 				value !== undefined &&
 				schema.minimum !== undefined &&
 				schema.maximum !== undefined &&

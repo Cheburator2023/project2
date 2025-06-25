@@ -19,9 +19,10 @@ export const Card = (
 		width?: string;
 		header?: any;
 		onClose?: any;
+		overflow?: boolean;
 	},
 ) => {
-	const { maxHeight } = props;
+	const { maxHeight, overflow = true } = props;
 	const [visible, setVisible] = useState(true);
 
 	const handler = () => {
@@ -63,7 +64,11 @@ export const Card = (
 			)}
 			<div
 				style={{
-					height: props.header ? `calc(100% - ${headerH + 15}px)` : "inherit",
+					height: props.header
+						? overflow
+							? `calc(100% - ${headerH + 15}px)`
+							: "inherit"
+						: "inherit",
 					width: "inherit",
 				}}
 			>

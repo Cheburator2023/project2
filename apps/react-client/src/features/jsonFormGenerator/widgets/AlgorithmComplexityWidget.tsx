@@ -32,6 +32,8 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = ({
 	onChange,
 	formContext,
 	required,
+	readonly,
+	disabled,
 }) => {
 	const modelsCount = formContext?.formData?.modelsCount || 1;
 	const prevModelsCountRef = useRef(modelsCount);
@@ -114,9 +116,10 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = ({
 					variant="outlined"
 					size="small"
 					sx={{ mb: 2 }}
-					error={hasError}
+					error={readonly ? false : hasError}
+					slotProps={{ input: { readOnly: readonly } }}
 				/>
-				{hasError && (
+				{!readonly && hasError && (
 					<FormHelperText error>
 						Необходимо выбрать хотя бы один тип алгоритма
 					</FormHelperText>
@@ -134,7 +137,8 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = ({
 						<Select
 							value={value?.[index]?.algorithmType || ""}
 							onChange={(e) => handleAlgorithmChange(index, e.target.value)}
-							error={hasError}
+							error={readonly ? false : hasError}
+							readOnly={readonly}
 						>
 							<MenuItem value="">
 								<em>Выберите тип алгоритма</em>

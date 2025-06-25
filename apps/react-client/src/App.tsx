@@ -2,7 +2,7 @@ import "./theme/global.css";
 import "@fontsource/inter";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 
-import React from "react";
+import React, { useEffect } from "react";
 
 import { CircularProgress, StyledEngineProvider } from "@mui/material";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -23,6 +23,10 @@ import {
 	treeViewCustomizations,
 } from "./theme/customizations";
 
+import { ErrorBoundary } from "@react-client/common/errors/ErrorBoundary";
+import { ErrorPage } from "@react-client/common/errors/pages/ErrorPage";
+import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
+import { isEmpty } from "lodash-es";
 import { reportWebVitals } from "./reportWebVitals";
 
 reportWebVitals(console.log);
@@ -79,23 +83,34 @@ const App: React.FC<LayoutProps> = ({
 
 	console.log("🚀 ~ bridged:", bridged);
 
+	const { setUser } = useGlobalSettingsStore();
+
+	useEffect(() => {
+		if (!isEmpty(user)) {
+		} else {
+			setUser(user);
+		}
+	}, [user]);
+
 	return (
-		<StyledEngineProvider injectFirst>
-			<QueryClientProvider client={queryClient}>
-				<BrowserRouter basename={bridged ? "/smartAnketa" : "/"}>
-					<AppTheme themeComponents={xThemeComponents}>
-						<CssBaseline enableColorScheme />
-						<Suspense fallback={<CircularProgress />}>
-							<LocalizationProvider dateAdapter={AdapterDateFns}>
-								<MainLayout>
-									<Routing />
-								</MainLayout>
-							</LocalizationProvider>
-						</Suspense>
-					</AppTheme>
-				</BrowserRouter>
-			</QueryClientProvider>
-		</StyledEngineProvider>
+		<BrowserRouter basename={bridged ? "/smartAnketa" : "/"}>
+			<AppTheme themeComponents={xThemeComponents}>
+				<ErrorBoundary ErrorPage={ErrorPage}>
+					<StyledEngineProvider injectFirst>
+						<QueryClientProvider client={queryClient}>
+							<CssBaseline enableColorScheme />
+							<Suspense fallback={<CircularProgress />}>
+								<LocalizationProvider dateAdapter={AdapterDateFns}>
+									<MainLayout onLogout={onLogout}>
+										<Routing />
+									</MainLayout>
+								</LocalizationProvider>
+							</Suspense>
+						</QueryClientProvider>
+					</StyledEngineProvider>
+				</ErrorBoundary>
+			</AppTheme>
+		</BrowserRouter>
 	);
 };
 
