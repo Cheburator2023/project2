@@ -2,7 +2,7 @@ import type FormRef from "@rjsf/core";
 import Form from "@rjsf/mui";
 import { RJSFSchema, RegistryWidgetsType, UiSchema } from "@rjsf/utils";
 
-import { validatorRu } from "@react-client/features/anketa/rjsfLocaleRu";
+import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { IChangeEvent } from "@rjsf/core";
 import { TemplatesType } from "@rjsf/utils";
 import { createRef } from "react";
@@ -90,8 +90,6 @@ const schema: RJSFSchema = {
 	},
 };
 
-// 3. Define the UI Schema with the UiSchema type
-// Note: We can strongly type this further by keying it to our FormData type
 const uiSchema: UiSchema = {
 	"ui:submitButtonOptions": {
 		props: {
@@ -129,32 +127,24 @@ const uiSchema: UiSchema = {
 	createdAt: {
 		"ui:widget": "date",
 	},
-	// id: {
-	// 	"ui:readonly": true,
-	// },
-	// author: {
-	// 	"ui:readonly": true,
-	// },
 };
 
-// 4. Define the custom widgets collection with the RegistryWidgetsType
 const widgets: RegistryWidgetsType = {
 	MultiSelectAutocomplete: MultiSelectAutocompleteWidget,
 };
 
-// 5. Provide initial data that matches the FormData interface
 const initialFormData: FormData = {
-	calculationName: "", // Start with an empty required field
-	streamExecutor: "Стрим 1", // Pre-select an option
-	department: "Департамент A", // Pre-select an option
+	calculationName: "",
+	streamExecutor: "Стрим 1",
+	department: "Департамент A",
 	id: "auto-generated-uuid-12345",
 	author: "Текущий Пользователь",
 	status: "Активна",
 	createdAt: new Date().toISOString().substring(0, 10),
-	relatedModels: ["model777"], // Pre-select a value for the autocomplete
+	relatedModels: ["model777"],
 };
 
-export const BasicInfoForm = () => {
+export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 	const formRef = createRef<FormRef>();
 
 	const onSubmit = ({ formData }: IChangeEvent<FormData>) => {
@@ -167,22 +157,23 @@ export const BasicInfoForm = () => {
 		console.log("Form errors:", errors);
 	};
 
+	const readonly = !isCreate;
+	console.log("🐸 Pepe said ~ BasicInfoForm ~ readonly:", readonly);
+
 	return (
-		<div style={{ margin: "auto" }}>
-			<Form
-				ref={formRef}
-				schema={schema}
-				uiSchema={uiSchema}
-				formData={initialFormData}
-				validator={validatorRu}
-				widgets={widgets}
-				onSubmit={onSubmit}
-				onError={onError}
-				templates={templates}
-				liveValidate
-				noHtml5Validate
-				showErrorList={false}
-			/>
-		</div>
+		<Form
+			ref={formRef}
+			schema={schema}
+			uiSchema={uiSchema}
+			formData={initialFormData}
+			validator={validatorRu}
+			widgets={widgets}
+			onSubmit={onSubmit}
+			onError={onError}
+			templates={templates}
+			liveValidate={isCreate}
+			readonly={readonly}
+			showErrorList={false}
+		/>
 	);
 };

@@ -24,11 +24,13 @@ const secondaryListItems = [
 		text: "sum",
 		icon: <CallMissedOutgoingIcon />,
 		tooltip: "Система управления моделями",
+		path: "/sum",
 	},
 	{
 		text: "sum-rm",
 		icon: <CallMissedOutgoingIcon />,
 		tooltip: "Рееcтр моделей",
+		path: "/sum-rm",
 	},
 	// { text: "Настройки", icon: <SettingsRoundedIcon /> },
 ];
@@ -63,7 +65,7 @@ export function MenuContent() {
 				{secondaryListItems.map((item, index) => (
 					<ListItem key={index} disablePadding sx={{ paddingBottom: 1 }}>
 						<Tooltip title={item.tooltip}>
-							<Button size="small" variant="outlined">
+							<Button size="small" variant="outlined" href={item.path}>
 								<ListItemIcon>{item.icon}</ListItemIcon>
 								<ListItemText primary={item.text} />
 							</Button>

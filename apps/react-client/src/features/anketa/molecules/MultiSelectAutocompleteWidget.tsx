@@ -10,6 +10,9 @@ export const MultiSelectAutocompleteWidget = ({
 	value,
 	onChange,
 	required,
+	readonly,
+	disabled,
+	...rest
 }: WidgetProps) => {
 	// The enumOptions from RJSF are of the format { label: string, value: any }
 	// We extract the string values for the Autocomplete's `options` prop.
@@ -18,6 +21,7 @@ export const MultiSelectAutocompleteWidget = ({
 	return (
 		<Autocomplete
 			multiple
+			{...(rest as any)}
 			id={id}
 			options={choices}
 			// Ensure the component's value is always an array to prevent MUI errors.
@@ -27,6 +31,8 @@ export const MultiSelectAutocompleteWidget = ({
 			onChange={(event: React.SyntheticEvent, newValue: string[]) => {
 				onChange(newValue);
 			}}
+			disabled={disabled}
+			readOnly={readonly}
 			// `renderInput` defines the text field that the user interacts with.
 			renderInput={(params) => (
 				<TextField

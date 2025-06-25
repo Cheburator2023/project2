@@ -501,6 +501,9 @@ export const inputsCustomizations: Components<Theme> = {
 	MuiFormControl: {
 		styleOverrides: {
 			root: {
+				"&.MuiTextField-root": {
+					marginBottom: "0",
+				},
 				"& .MuiList-root": {
 					padding: "0",
 					"& .MuiFormHelperText-root": {

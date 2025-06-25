@@ -3,31 +3,37 @@ import { Button, styled } from "@mui/material";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { JsonFormGeneratorPage } from "@react-client/features/jsonFormGenerator/JsonFormGeneratorPage";
+import { ProjectAssessmentForm } from "@react-client/features/jsonFormGenerator/components/ProjectAssessmentForm";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { BasicInfoForm } from "./organisms/BasicInfoForm";
-import { CalculationResultTable } from "./organisms/CalculationResultTable";
+import { useLocation } from "react-router";
+import { BasicInfoForm } from "./BasicInfoForm";
+import { CalculationResultTable } from "./CalculationResultTable";
 
-export const AnketaLayout = ({ isCreate }: { isCreate?: boolean }) => {
+export const AnketaBasicLayout = ({
+	isCreate = false,
+	isCopy,
+}: { isCreate?: boolean; isCopy?: boolean }) => {
 	const onSubmit = () => {
 		console.log("submit");
 	};
 
+	const location = useLocation();
+
 	return (
 		<Flex flexDirection="column" height="100%" width="100%">
 			<PanelGroup
-				autoSaveId="anketa_create_page_container_ver"
+				autoSaveId={`anketa_${isCreate ? "create" : "preview"}_page_container_vert_${location.pathname}`}
 				direction="vertical"
 			>
 				<Panel>
 					<PanelGroup
 						direction="horizontal"
-						autoSaveId="anketa_create_page_container_hor"
+						autoSaveId={`anketa_${isCreate ? "create" : "preview"}_page_container_hor_${location.pathname}`}
 					>
 						<Panel>
 							<Card header="Основная информация" height="100%">
 								<Spacer />
-								<BasicInfoForm />
+								<BasicInfoForm isCreate={isCreate} />
 							</Card>
 						</Panel>
 
@@ -37,7 +43,8 @@ export const AnketaLayout = ({ isCreate }: { isCreate?: boolean }) => {
 
 						<Panel>
 							<Card header="Итоги расчета" maxHeight="100%" height="100%">
-								<CalculationResultTable />
+								<Spacer />
+								<CalculationResultTable isCreate={isCreate} />
 							</Card>
 						</Panel>
 					</PanelGroup>
@@ -49,7 +56,8 @@ export const AnketaLayout = ({ isCreate }: { isCreate?: boolean }) => {
 
 				<Panel>
 					<Card header="Опросник" maxHeight="100%" height="100%">
-						<JsonFormGeneratorPage />
+						<Spacer />
+						<ProjectAssessmentForm isCreate={isCreate} />
 					</Card>
 				</Panel>
 			</PanelGroup>
@@ -57,8 +65,7 @@ export const AnketaLayout = ({ isCreate }: { isCreate?: boolean }) => {
 				<>
 					<Spacer />
 					<Card>
-						<Flex justifyContent="space-between">
-							<div />
+						<Flex justifyContent="flex-end" alignItems="center">
 							<Button variant="contained" onClick={onSubmit}>
 								Сохранить
 							</Button>
