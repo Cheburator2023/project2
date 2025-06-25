@@ -8,13 +8,11 @@ export { OpenAPI } from "./core/OpenAPI";
 export type { OpenAPIConfig } from "./core/OpenAPI";
 
 export type { AlgorithmTypeItemDto } from "./models/AlgorithmTypeItemDto";
+export type { CalculationQuestionnaireDataDto } from "./models/CalculationQuestionnaireDataDto";
 export type { CalculationResponseDto } from "./models/CalculationResponseDto";
 export type { CreateCalculationDto } from "./models/CreateCalculationDto";
-export type { DeploymentChannelDto } from "./models/DeploymentChannelDto";
-export type { GeneralUncertaintyDto } from "./models/GeneralUncertaintyDto";
 export type { PaginatedCalculationResponseDto } from "./models/PaginatedCalculationResponseDto";
 export type { PaginationMetaDto } from "./models/PaginationMetaDto";
-export type { ProbabilityInfluencePairDto } from "./models/ProbabilityInfluencePairDto";
-export type { QuestionnaireDataDto } from "./models/QuestionnaireDataDto";
+export type { UncertaintyItemDto } from "./models/UncertaintyItemDto";
 
 export { CalculationService } from "./services/CalculationService";

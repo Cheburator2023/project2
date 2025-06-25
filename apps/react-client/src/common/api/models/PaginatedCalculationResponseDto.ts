@@ -5,6 +5,12 @@
 import type { CalculationResponseDto } from "./CalculationResponseDto";
 import type { PaginationMetaDto } from "./PaginationMetaDto";
 export type PaginatedCalculationResponseDto = {
+	/**
+	 * Список расчетов
+	 */
 	data: Array<CalculationResponseDto>;
+	/**
+	 * Метаданные пагинации
+	 */
 	meta: PaginationMetaDto;
 };
