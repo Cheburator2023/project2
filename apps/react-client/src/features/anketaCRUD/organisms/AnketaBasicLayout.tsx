@@ -12,11 +12,14 @@ import { CalculationResultTable } from "./CalculationResultTable";
 export const AnketaBasicLayout = ({
 	isCreate = false,
 	isCopy,
-}: { isCreate?: boolean; isCopy?: boolean }) => {
-	const onSubmit = () => {
-		console.log("submit");
-	};
-
+	onSubmit,
+	formHasErrors,
+}: {
+	isCreate?: boolean;
+	isCopy?: boolean;
+	formHasErrors?: boolean;
+	onSubmit?: () => void;
+}) => {
 	const location = useLocation();
 
 	return (
@@ -31,7 +34,7 @@ export const AnketaBasicLayout = ({
 						autoSaveId={`anketa_${isCreate ? "create" : "preview"}_page_container_hor_${location.pathname}`}
 					>
 						<Panel>
-							<Card header="Основная информация" height="100%">
+							<Card header="Основная информация" height="100%" padding="10px">
 								<Spacer />
 								<BasicInfoForm isCreate={isCreate} />
 							</Card>
@@ -42,7 +45,12 @@ export const AnketaBasicLayout = ({
 						</PanelResizeHandleStyled>
 
 						<Panel>
-							<Card header="Итоги расчета" maxHeight="100%" height="100%">
+							<Card
+								header="Итоги расчета"
+								maxHeight="100%"
+								height="100%"
+								padding="10px"
+							>
 								<Spacer />
 								<CalculationResultTable isCreate={isCreate} />
 							</Card>
@@ -55,16 +63,17 @@ export const AnketaBasicLayout = ({
 				</PanelResizeHandleStyled>
 
 				<Panel>
-					<Card header="Опросник" maxHeight="100%" height="100%">
+					<Card header="Опросник" maxHeight="100%" height="100%" padding="10px">
 						<Spacer />
 						<ProjectAssessmentForm isCreate={isCreate} />
 					</Card>
 				</Panel>
 			</PanelGroup>
+
 			{isCreate && (
 				<>
 					<Spacer />
-					<Card>
+					<Card padding="10px">
 						<Flex justifyContent="flex-end" alignItems="center">
 							<Button variant="contained" onClick={onSubmit}>
 								Сохранить

@@ -3,8 +3,8 @@ import { styled } from "@mui/material";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { BasicInfoForm } from "@react-client/features/anketa/organisms/BasicInfoForm";
-import { CalculationResultTable } from "@react-client/features/anketa/organisms/CalculationResultTable";
+import { BasicInfoForm } from "@react-client/features/anketaCRUD/organisms/BasicInfoForm";
+import { CalculationResultTable } from "@react-client/features/anketaCRUD/organisms/CalculationResultTable";
 import { ProjectAssessmentForm } from "@react-client/features/jsonFormGenerator/components/ProjectAssessmentForm";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useLocation } from "react-router";
@@ -79,8 +79,6 @@ export const AnketaCompareLayout = () => {
 					</Panel>
 				</PanelGroup>
 			</Card>
-
-			<Spacer />
 		</Flex>
 	);
 };

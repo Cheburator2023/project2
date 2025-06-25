@@ -127,8 +127,17 @@ export const CalculationResultTable = ({
 
 	const { mode } = useColorScheme();
 
+	const height = initialEpicData.length * 51.3;
+
 	return (
-		<div style={{ minHeight: "520px", height: "100%", width: "100%" }}>
+		<div
+			style={{
+				minHeight: height,
+				height: "100%",
+				maxHeight: height,
+				width: "100%",
+			}}
+		>
 			<AgGridReact<EpicData>
 				rowData={rowData}
 				columnDefs={columnDefs}
