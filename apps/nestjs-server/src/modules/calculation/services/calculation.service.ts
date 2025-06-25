@@ -17,10 +17,41 @@ export class CalculationService {
 	async create(
 		createCalculationDto: CreateCalculationDto,
 	): Promise<Calculation> {
-		const q = createCalculationDto.questionnaireData;
+		const generalUncertaintyObject = {};
+		if (createCalculationDto.generalUncertainty) {
+			createCalculationDto.generalUncertainty.forEach((item) => {
+				generalUncertaintyObject[item.type] = {
+					probability: item.probability,
+					influence: item.influence,
+				};
+			});
+		}
+
 		const calculation = this.calculationRepository.create({
-			name: q.name,
-			questionnaireData: q,
+			name: createCalculationDto.name || "Новый расчет",
+			questionnaireData: {
+				name: createCalculationDto.name || "Новый расчет",
+				modelsCount: createCalculationDto.modelsCount,
+				setupComplexity: createCalculationDto.setupComplexity,
+				initiativeTimeline: createCalculationDto.initiativeTimeline,
+				initiativeCost: createCalculationDto.initiativeCost,
+				uncertaintyAdjustment: createCalculationDto.uncertaintyAdjustment,
+				generalUncertainty: generalUncertaintyObject,
+				readyPromReports: createCalculationDto.readyPromReports,
+				assessedInitiativesCount:
+					createCalculationDto.assessedInitiativesCount?.toString(),
+				dataSourcesCount: createCalculationDto.dataSourcesCount,
+				pilotModelRequired: createCalculationDto.pilotModelRequired,
+				algorithmComplexity: createCalculationDto.algorithmComplexity,
+				pilotSupportRequired: createCalculationDto.pilotSupportRequired,
+				autoMlRequired: createCalculationDto.autoMlRequired,
+				productionAdditionalReports:
+					createCalculationDto.productionAdditionalReports?.toString(),
+				productionDeploymentChannels:
+					createCalculationDto.productionDeploymentChannels.map((channel) => ({
+						deploymentChannel: channel,
+					})),
+			},
 			finalCoefficient: createCalculationDto.finalCoefficient,
 		});
 
