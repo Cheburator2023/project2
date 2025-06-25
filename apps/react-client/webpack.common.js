@@ -11,8 +11,6 @@ const APP_NAME = "smartAnketa";
 
 const ALIAS = {
 	"@react-client": `${SRC_DIR}`,
-	"react/jsx-dev-runtime": require.resolve("react/jsx-dev-runtime"),
-	"react/jsx-runtime": require.resolve("react/jsx-runtime"),
 };
 
 module.exports = {

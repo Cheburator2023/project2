@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import {
+	Body,
+	Controller,
+	Get,
+	Param,
+	Post,
+	Query,
+	UsePipes,
+	ValidationPipe,
+} from "@nestjs/common";
 import {
 	ApiBearerAuth,
 	ApiOperation,
@@ -7,11 +16,10 @@ import {
 	ApiTags,
 } from "@nestjs/swagger";
 import { Resource } from "nest-keycloak-connect";
-
-import { PaginatedCalculationResponseDto } from "src/modules/calculation/dto/calculation-response-paginated.dto";
-import { CalculationResponseDto } from "../dto/calculation-response.dto";
 import { CreateCalculationDto } from "../dto/create-calculation.dto";
 import { PaginationDto } from "../dto/pagination.dto";
+import { Calculation } from "../entities/calculation.entity";
+import { PaginatedResult } from "../interfaces/paginated-result.interface";
 import { CalculationService } from "../services/calculation.service";
 
 @ApiBearerAuth("JWT-auth")
@@ -22,15 +30,18 @@ export class CalculationController {
 	constructor(private readonly calculationService: CalculationService) {}
 
 	@Post()
+	@UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 	@ApiOperation({ summary: "Save calculation result" })
 	@ApiResponse({
 		status: 201,
 		description: "The calculation has been successfully saved.",
-		type: CalculationResponseDto,
+		type: Calculation,
 	})
-	async create(
-		@Body() createCalculationDto: CreateCalculationDto,
-	): Promise<CalculationResponseDto> {
+	@ApiResponse({
+		status: 400,
+		description: "Bad request. Validation failed.",
+	})
+	async create(@Body() createCalculationDto: CreateCalculationDto) {
 		return this.calculationService.create(createCalculationDto);
 	}
 
@@ -41,11 +52,26 @@ export class CalculationController {
 	@ApiResponse({
 		status: 200,
 		description: "Paginated list of calculations",
-		type: PaginatedCalculationResponseDto,
+		schema: {
+			properties: {
+				data: {
+					type: "array",
+					items: { $ref: "#/components/schemas/Calculation" },
+				},
+				meta: {
+					properties: {
+						total: { type: "number" },
+						page: { type: "number" },
+						limit: { type: "number" },
+						lastPage: { type: "number" },
+					},
+				},
+			},
+		},
 	})
 	async findAllPaginated(
 		@Query() paginationDto: PaginationDto,
-	): Promise<PaginatedCalculationResponseDto> {
+	): Promise<PaginatedResult<Calculation>> {
 		return this.calculationService.findAllPaginated(paginationDto);
 	}
 
@@ -54,9 +80,9 @@ export class CalculationController {
 	@ApiResponse({
 		status: 200,
 		description: "List of all calculations",
-		type: [CalculationResponseDto],
+		type: [Calculation],
 	})
-	async findAll(): Promise<CalculationResponseDto[]> {
+	async findAll(): Promise<Calculation[]> {
 		return this.calculationService.findAll();
 	}
 
@@ -65,7 +91,7 @@ export class CalculationController {
 	@ApiResponse({
 		status: 200,
 		description: "Calculation data",
-		type: CalculationResponseDto,
+		type: Calculation,
 	})
 	@ApiResponse({
 		status: 400,
@@ -75,7 +101,7 @@ export class CalculationController {
 		status: 404,
 		description: "Calculation not found",
 	})
-	async findOne(@Param("id") id: string): Promise<CalculationResponseDto> {
+	async findOne(@Param("id") id: string) {
 		return this.calculationService.findOne(id);
 	}
 }

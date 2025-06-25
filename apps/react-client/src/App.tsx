@@ -79,6 +79,8 @@ const App: React.FC<LayoutProps> = ({
 	protectedFetch,
 	onLogout,
 }) => {
+	console.log("User:", user);
+
 	console.log("🚀 ~ bridged:", bridged);
 
 	const { setUser } = useGlobalSettingsStore();
