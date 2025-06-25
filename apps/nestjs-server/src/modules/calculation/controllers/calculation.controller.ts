@@ -6,9 +6,10 @@ import {
 	ApiResponse,
 	ApiTags,
 } from "@nestjs/swagger";
+import { plainToInstance } from "class-transformer";
 import { Resource } from "nest-keycloak-connect";
 
-import { PaginatedCalculationResponseDto } from "src/modules/calculation/dto/calculation-response-paginated.dto";
+import { PaginatedCalculationResponseDto } from "../dto/calculation-response-paginated.dto";
 import { CalculationResponseDto } from "../dto/calculation-response.dto";
 import { CreateCalculationDto } from "../dto/create-calculation.dto";
 import { PaginationDto } from "../dto/pagination.dto";
@@ -31,7 +32,9 @@ export class CalculationController {
 	async create(
 		@Body() createCalculationDto: CreateCalculationDto,
 	): Promise<CalculationResponseDto> {
-		return this.calculationService.create(createCalculationDto);
+		const calculation =
+			await this.calculationService.create(createCalculationDto);
+		return plainToInstance(CalculationResponseDto, calculation);
 	}
 
 	@Get("all")
@@ -46,7 +49,12 @@ export class CalculationController {
 	async findAllPaginated(
 		@Query() paginationDto: PaginationDto,
 	): Promise<PaginatedCalculationResponseDto> {
-		return this.calculationService.findAllPaginated(paginationDto);
+		const result =
+			await this.calculationService.findAllPaginated(paginationDto);
+		return {
+			...result,
+			data: plainToInstance(CalculationResponseDto, result.data),
+		};
 	}
 
 	@Get("all/list")
@@ -57,7 +65,8 @@ export class CalculationController {
 		type: [CalculationResponseDto],
 	})
 	async findAll(): Promise<CalculationResponseDto[]> {
-		return this.calculationService.findAll();
+		const calculations = await this.calculationService.findAll();
+		return plainToInstance(CalculationResponseDto, calculations);
 	}
 
 	@Get(":id")
@@ -76,6 +85,7 @@ export class CalculationController {
 		description: "Calculation not found",
 	})
 	async findOne(@Param("id") id: string): Promise<CalculationResponseDto> {
-		return this.calculationService.findOne(id);
+		const calculation = await this.calculationService.findOne(id);
+		return plainToInstance(CalculationResponseDto, calculation);
 	}
 }

@@ -14,8 +14,9 @@ describe("CalculationService", () => {
 		id: "550e8400-e29b-41d4-a716-446655440000",
 		name: "Test Calculation",
 		questionnaireData: {
+			name: "Test Calculation",
 			modelsCount: 5,
-			setupComplexity: 3,
+			setupComplexity: "3",
 			initiativeTimeline: "4-10 мес.",
 			initiativeCost: "45.3-438 млн.",
 			generalUncertainty: {
@@ -90,77 +91,79 @@ describe("CalculationService", () => {
 	};
 
 	const mockCreateDto: CreateCalculationDto = {
-		name: "Test Calculation",
-		modelsCount: 5,
-		setupComplexity: 3,
-		initiativeTimeline: "4-10 мес.",
-		initiativeCost: "45.3-438 млн.",
-		generalUncertainty: {
-			businessProcessComplexity: {
-				probability: "Реализация 1 раз в 1-3 года",
-				influence:
-					"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+		questionnaireData: {
+			name: "Test Calculation",
+			modelsCount: 5,
+			setupComplexity: "3",
+			initiativeTimeline: "4-10 мес.",
+			initiativeCost: "45.3-438 млн.",
+			generalUncertainty: {
+				businessProcessComplexity: {
+					probability: "Реализация 1 раз в 1-3 года",
+					influence:
+						"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+				},
+				projectSolutionDefects: {
+					probability: "Реализация 1 раз в год",
+					influence:
+						"Незначительное влияние на задачи и сроки достижения целей проекта",
+				},
+				adjacentProjectsImpact: {
+					probability: "Реализация не чаще 1 раза в 10 лет",
+					influence:
+						"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+				},
+				planningRequirementGaps: {
+					probability: "Реализация 1 раз в 6 мес. или чаще",
+					influence:
+						"Значительный негативный эффект на возможность достижения целей проекта",
+				},
+				contractorPerformanceIssues: {
+					probability: "Реализация 1 раз в 1-3 года",
+					influence:
+						"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+				},
+				qualifiedStaffShortage: {
+					probability: "Реализация 1 раз в год",
+					influence:
+						"Незначительное влияние на задачи и сроки достижения целей проекта",
+				},
+				sanctionsRisk: {
+					probability: "Не применимо",
+					influence:
+						"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+				},
+				controlProceduresGaps: {
+					probability: "Реализация 1 раз в 1-3 года",
+					influence:
+						"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+				},
+				regulatoryChanges: {
+					probability: "Реализация 1 раз в 3-10 лет",
+					influence:
+						"Незначительное влияние на задачи и сроки достижения целей проекта",
+				},
+				systemUnderutilization: {
+					probability: "Реализация не чаще 1 раза в 10 лет",
+					influence:
+						"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+				},
+				itArchitectureChanges: {
+					probability: "Реализация 1 раз в 6 мес. или чаще",
+					influence:
+						"Значительный негативный эффект на возможность достижения целей проекта",
+				},
 			},
-			projectSolutionDefects: {
-				probability: "Реализация 1 раз в год",
-				influence:
-					"Незначительное влияние на задачи и сроки достижения целей проекта",
-			},
-			adjacentProjectsImpact: {
-				probability: "Реализация не чаще 1 раза в 10 лет",
-				influence:
-					"Незначительное влияние на вторичные функции в рамках проектной деятельности",
-			},
-			planningRequirementGaps: {
-				probability: "Реализация 1 раз в 6 мес. или чаще",
-				influence:
-					"Значительный негативный эффект на возможность достижения целей проекта",
-			},
-			contractorPerformanceIssues: {
-				probability: "Реализация 1 раз в 1-3 года",
-				influence:
-					"Реализация проекта с контролируемыми отклонениями от изначальных целей",
-			},
-			qualifiedStaffShortage: {
-				probability: "Реализация 1 раз в год",
-				influence:
-					"Незначительное влияние на задачи и сроки достижения целей проекта",
-			},
-			sanctionsRisk: {
-				probability: "Не применимо",
-				influence:
-					"Незначительное влияние на вторичные функции в рамках проектной деятельности",
-			},
-			controlProceduresGaps: {
-				probability: "Реализация 1 раз в 1-3 года",
-				influence:
-					"Реализация проекта с контролируемыми отклонениями от изначальных целей",
-			},
-			regulatoryChanges: {
-				probability: "Реализация 1 раз в 3-10 лет",
-				influence:
-					"Незначительное влияние на задачи и сроки достижения целей проекта",
-			},
-			systemUnderutilization: {
-				probability: "Реализация не чаще 1 раза в 10 лет",
-				influence:
-					"Незначительное влияние на вторичные функции в рамках проектной деятельности",
-			},
-			itArchitectureChanges: {
-				probability: "Реализация 1 раз в 6 мес. или чаще",
-				influence:
-					"Значительный негативный эффект на возможность достижения целей проекта",
-			},
+			readyPromReports: "Да",
+			assessedInitiativesCount: "3",
+			dataSourcesCount: "5",
+			pilotModelRequired: "Да",
+			algorithmComplexity: [{ algorithmType: "Текстовая аналитика_LLM" }],
+			pilotSupportRequired: "Да",
+			autoMlRequired: "Не требуется",
+			productionAdditionalReports: "2",
+			productionDeploymentChannels: [{ deploymentChannel: "Батч + Онлайн" }],
 		},
-		readyPromReports: "Да",
-		assessedInitiativesCount: "3",
-		dataSourcesCount: "5",
-		pilotModelRequired: "Да",
-		algorithmComplexity: [{ algorithmType: "Текстовая аналитика_LLM" }],
-		pilotSupportRequired: "Да",
-		autoMlRequired: "Не требуется",
-		productionAdditionalReports: "2",
-		productionDeploymentChannels: [{ deploymentChannel: "Батч + Онлайн" }],
 		finalCoefficient: 1.5,
 	};
 
@@ -196,25 +199,8 @@ describe("CalculationService", () => {
 
 			expect(result).toEqual(mockCalculation);
 			expect(repository.create).toHaveBeenCalledWith({
-				name: mockCreateDto.name,
-				questionnaireData: {
-					modelsCount: mockCreateDto.modelsCount,
-					setupComplexity: mockCreateDto.setupComplexity,
-					initiativeTimeline: mockCreateDto.initiativeTimeline,
-					initiativeCost: mockCreateDto.initiativeCost,
-					generalUncertainty: mockCreateDto.generalUncertainty,
-					readyPromReports: mockCreateDto.readyPromReports,
-					assessedInitiativesCount: mockCreateDto.assessedInitiativesCount,
-					dataSourcesCount: mockCreateDto.dataSourcesCount,
-					pilotModelRequired: mockCreateDto.pilotModelRequired,
-					algorithmComplexity: mockCreateDto.algorithmComplexity,
-					pilotSupportRequired: mockCreateDto.pilotSupportRequired,
-					autoMlRequired: mockCreateDto.autoMlRequired,
-					productionAdditionalReports:
-						mockCreateDto.productionAdditionalReports,
-					productionDeploymentChannels:
-						mockCreateDto.productionDeploymentChannels,
-				},
+				name: mockCreateDto.questionnaireData.name,
+				questionnaireData: mockCreateDto.questionnaireData,
 				finalCoefficient: mockCreateDto.finalCoefficient,
 			});
 			expect(repository.save).toHaveBeenCalled();

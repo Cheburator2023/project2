@@ -17,27 +17,10 @@ export class CalculationService {
 	async create(
 		createCalculationDto: CreateCalculationDto,
 	): Promise<Calculation> {
+		const q = createCalculationDto.questionnaireData;
 		const calculation = this.calculationRepository.create({
-			name: createCalculationDto.name,
-			questionnaireData: {
-				name: createCalculationDto.name,
-				modelsCount: createCalculationDto.modelsCount,
-				setupComplexity: createCalculationDto.setupComplexity,
-				initiativeTimeline: createCalculationDto.initiativeTimeline,
-				initiativeCost: createCalculationDto.initiativeCost,
-				generalUncertainty: createCalculationDto.generalUncertainty,
-				readyPromReports: createCalculationDto.readyPromReports,
-				assessedInitiativesCount: createCalculationDto.assessedInitiativesCount,
-				dataSourcesCount: createCalculationDto.dataSourcesCount,
-				pilotModelRequired: createCalculationDto.pilotModelRequired,
-				algorithmComplexity: createCalculationDto.algorithmComplexity,
-				pilotSupportRequired: createCalculationDto.pilotSupportRequired,
-				autoMlRequired: createCalculationDto.autoMlRequired,
-				productionAdditionalReports:
-					createCalculationDto.productionAdditionalReports,
-				productionDeploymentChannels:
-					createCalculationDto.productionDeploymentChannels,
-			},
+			name: q.name,
+			questionnaireData: q,
 			finalCoefficient: createCalculationDto.finalCoefficient,
 		});
 
