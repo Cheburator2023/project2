@@ -5,8 +5,7 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { PaginationDto } from "../dto/pagination.dto";
-import { CreateCalculationDto } from "../dto/request/create-calculation.dto";
+import { CreateCalculationDto, PaginationDto } from "../dto";
 import { Calculation } from "../entities/calculation.entity";
 import { PaginatedResult } from "../interfaces/paginated-result.interface";
 
