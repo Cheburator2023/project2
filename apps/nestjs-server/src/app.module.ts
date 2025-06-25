@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthGuard, ResourceGuard, RoleGuard } from "nest-keycloak-connect";
+import { Calculation } from "./modules/calculation/entities/calculation.entity"; // ← добавь эту строку
 
 import { CalculationModule } from "./modules/calculation/calculation.module";
 import { KeycloakModule } from "./shared/keycloak/keycloak.module";
@@ -19,13 +20,15 @@ import { KeycloakModule } from "./shared/keycloak/keycloak.module";
 			inject: [ConfigService],
 			useFactory: (configService: ConfigService) => ({
 				type: "postgres",
-				host: configService.get<string>("DB_HOST"),
-				port: configService.get<number>("DB_PORT"),
+				host: configService.get<string>("DB_HOST", "localhost"),
+				port: configService.get<number>("DB_PORT", 5430),
 				username: configService.get<string>("DB_USERNAME"),
 				password: configService.get<string>("DB_PASSWORD"),
 				database: configService.get<string>("DB_NAME"),
-				entities: ["dist/**/*.entity.js"],
-				synchronize: false,
+				entities: [Calculation],
+				migrations: ["dist/migrations/*.js"],
+				migrationsRun: true,
+				synchronize: configService.get<string>("NODE_ENV") !== "production",
 				logging: configService.get<string>("NODE_ENV") === "development",
 			}),
 		}),
