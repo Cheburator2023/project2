@@ -1,7 +1,7 @@
-import { Typography } from "@mui/material";
 import Button from "@mui/material/Button";
 import { useNavigate } from "react-router";
 
+import { ILL_404 } from "@react-client/common/illustrations/ILL_404";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { Flex } from "../common/primitives/Flex";
@@ -21,15 +21,19 @@ export const Page404 = () => {
 				justifyContent="center"
 				height="-webkit-fill-available"
 			>
-				<Typography variant="h4">Страница не найдена</Typography>
-				<Spacer />
-				<Button
-					color="primary"
-					variant="contained"
-					onClick={() => navigate(routes.home.rootPath)}
-				>
-					На главную
-				</Button>
+				<>
+					<ILL_404 />
+					<Spacer />
+					<Spacer />
+					<Button
+						color="primary"
+						size="large"
+						variant="outlined"
+						onClick={() => navigate(routes.home.rootPath)}
+					>
+						На главную
+					</Button>
+				</>
 			</Flex>
 		</div>
 	);

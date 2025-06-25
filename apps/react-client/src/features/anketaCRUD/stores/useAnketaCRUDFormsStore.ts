@@ -23,11 +23,18 @@ type AnketaCRUDFormsStoreType = {
 	[key in FormName]: FormData<AnketaCreateData | AnketaPreviewData>;
 };
 
-interface AnketaCRUDFormsStore extends AnketaCRUDFormsStoreType {
+type AnketaCRUDFormsStoreBase = {
+	calculationResult: any;
+};
+
+interface AnketaCRUDFormsStore
+	extends AnketaCRUDFormsStoreType,
+		AnketaCRUDFormsStoreBase {
 	updateFormState: (formName: FormName, state?: any) => void;
 	resetFormData: (formName: FormName) => void;
 	setApiRef: (formName: FormName, api: FormRef) => void;
 	resetApiRef: (formName: FormName) => void;
+	setCalculationResult: (result: any) => void;
 }
 
 type AnketaCreateData = any;
@@ -54,6 +61,11 @@ export const useAnketaCRUDFormsStore = create<AnketaCRUDFormsStore>((set) => ({
 		state: undefined,
 		isLoading: false,
 	},
+
+	calculationResult: undefined,
+
+	setCalculationResult: (result: any) =>
+		set((_state) => ({ calculationResult: result })),
 
 	updateFormState: (formName, newState) =>
 		set((_state) => ({ [formName]: { ..._state[formName], state: newState } })),

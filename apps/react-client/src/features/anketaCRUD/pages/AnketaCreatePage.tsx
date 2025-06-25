@@ -6,26 +6,38 @@ import { Header } from "@react-client/features/navigation/organisms/Header";
 import { useEffect } from "react";
 
 export const AnketaCreatePage = () => {
-	const { setApiRef, resetApiRef, ...store } = useAnketaCRUDFormsStore();
+	const {
+		setApiRef,
+		resetApiRef,
+		calculationResult,
+		anketaCreate_basicInfoForm,
+		anketaCreate_projectAssessmentForm,
+		...store
+	} = useAnketaCRUDFormsStore();
 
-	const stateBasicForm = store.anketaCreate_basicInfoForm.state;
+	const stateBasicForm = anketaCreate_basicInfoForm.state;
+	const stateProjectAssessmentForm = anketaCreate_projectAssessmentForm.state;
 
 	const formHasErrors = !!(
-		store.anketaCreate_basicInfoForm.api?.state.errors.length ||
-		store.anketaCreate_projectAssessmentForm.api?.state.errors.length
+		anketaCreate_basicInfoForm.api?.state.errors.length ||
+		anketaCreate_projectAssessmentForm.api?.state.errors.length
 	);
 
 	const onSubmit = () => {
-		console.log("!!! WHOLE PAGE SUBMIT:");
+		console.log("WHOLE CREATE PAGE SUBMIT:");
 
-		store.anketaCreate_basicInfoForm.api?.submit();
-		store.anketaCreate_projectAssessmentForm.api?.submit();
+		anketaCreate_basicInfoForm.api?.submit();
+		anketaCreate_projectAssessmentForm.api?.submit();
 	};
 
 	useEffect(() => {
+		console.log("1 stateBasicForm:", stateBasicForm);
+		console.log("2 calculationResult:", calculationResult);
+		console.log("3 stateProjectAssessmentForm:", stateProjectAssessmentForm);
+
 		if (!formHasErrors) {
 			// TODO: send data
-			// navigate(routes.home.rootPath);
+			// navigate(routes.home.rootPath); onSuccess
 		}
 	}, [formHasErrors]);
 
