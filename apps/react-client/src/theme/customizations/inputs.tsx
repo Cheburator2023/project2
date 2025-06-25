@@ -462,11 +462,12 @@ export const inputsCustomizations: Components<Theme> = {
 		styleOverrides: {
 			root: ({ theme }) => ({
 				color: (theme.vars || theme).palette.grey[500],
-				maxHeight: "1em",
-				padding: "0 12px",
 				...theme.applyStyles("dark", {
 					color: (theme.vars || theme).palette.grey[400],
 				}),
+				maxHeight: "1em",
+				margin: "0",
+				padding: "0 0 0 8px",
 			}),
 		},
 	},

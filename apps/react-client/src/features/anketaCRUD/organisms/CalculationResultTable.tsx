@@ -2,6 +2,8 @@ import { AgGridReact } from "ag-grid-react";
 import { useMemo, useState } from "react";
 
 import { useColorScheme } from "@mui/material";
+import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
+import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import {
 	CellClassParams,
 	CellStyle,
@@ -59,6 +61,7 @@ export const CalculationResultTable = ({
 	isCreate,
 }: { isCreate?: boolean }) => {
 	const [rowData] = useState<EpicData[]>(processData(initialEpicData));
+	const { setCalculationResult } = useAnketaCRUDFormsStore();
 
 	const [columnDefs] = useState<ColDef<EpicData>[]>([
 		{
@@ -127,8 +130,21 @@ export const CalculationResultTable = ({
 
 	const { mode } = useColorScheme();
 
+	const height = initialEpicData.length * 51.3;
+
+	useDeepEffect(() => {
+		setCalculationResult(rowData);
+	}, [rowData]);
+
 	return (
-		<div style={{ minHeight: "520px", height: "100%", width: "100%" }}>
+		<div
+			style={{
+				minHeight: height,
+				height: "100%",
+				maxHeight: height,
+				width: "100%",
+			}}
+		>
 			<AgGridReact<EpicData>
 				rowData={rowData}
 				columnDefs={columnDefs}

@@ -40,6 +40,15 @@ export function AppTheme(props: AppThemeProps) {
 						...navigationCustomizations,
 						...surfacesCustomizations,
 						...themeComponents,
+						// MuiCssBaseline: {
+						// 	styleOverrides: (themeParam) => {
+						// 		return {
+						// 			body: themeParam.palette.mode === "light" && {
+						// 				backgroundColor: "#e9ebf1",
+						// 			},
+						// 		};
+						// 	},
+						// },
 					},
 				});
 	}, [disableCustomTheme, themeComponents]);

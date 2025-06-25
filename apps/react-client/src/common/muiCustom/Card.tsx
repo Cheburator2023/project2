@@ -32,7 +32,7 @@ export const Card = (
 	return (
 		<MUIPaperStyled
 			sx={{
-				padding: props.padding || "20px",
+				padding: props.padding || "10px",
 				maxHeight: maxHeight || "100%",
 				height: props.height || "auto",
 				width: props.width,

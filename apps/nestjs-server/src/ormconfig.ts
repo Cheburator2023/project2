@@ -12,6 +12,7 @@ export default new DataSource({
 	database: configService.get<string>("DB_NAME", "calculation_db"),
 	entities: ["src/**/*.entity{.ts,.js}"],
 	migrations: ["migrations/*{.ts,.js}"],
-	synchronize: false,
+	migrationsRun: true,
+	synchronize: configService.get<string>("NODE_ENV") !== "production",
 	logging: configService.get<string>("NODE_ENV") === "development",
 });

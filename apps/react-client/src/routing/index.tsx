@@ -1,12 +1,12 @@
 import { Route, Routes } from "react-router";
 
-import { AnketaCreatePage } from "@react-client/features/anketa/AnketaCreatePage";
+import { AnketaCreatePage } from "@react-client/features/anketaCRUD/pages/AnketaCreatePage";
 import { HomePage } from "@react-client/features/home/HomePage";
 import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
 
 import { AdminPage } from "@react-client/features/admin/AdminPage";
-import { AnketaPreviewPage } from "@react-client/features/anketa/AnketaPreviewPage";
-import { CompareReportsPage } from "@react-client/features/compare/CompareReportsPage";
+import { AnketaPreviewPage } from "@react-client/features/anketaCRUD/pages/AnketaPreviewPage";
+import { CompareReportsPage } from "@react-client/features/anketaCompare/pages/CompareReportsPage";
 import { Page404 } from "./Page404";
 import { routes } from "./routes";
 

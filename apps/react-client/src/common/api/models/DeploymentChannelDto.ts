@@ -3,6 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export type DeploymentChannelDto = {
+	/**
+	 * Канал развертывания модели (выбирается из фиксированного списка)
+	 */
 	deploymentChannel:
 		| "Батч"
 		| "Батч+загрузка данных потребителю"
