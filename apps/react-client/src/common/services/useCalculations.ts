@@ -1,9 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCalculationApiService } from "../api/services/calculation-api.service";
-import {
-	CreateCalculationRequest,
-	PaginationParams,
-} from "../api/types/calculation.types";
+// import { useCalculationApiService } from "../api/services/calculation-api.service";
+import { PaginationParams } from "../api/types/calculation.types";
 
 // Query keys
 export const calculationKeys = {
@@ -17,43 +14,43 @@ export const calculationKeys = {
 
 // Hooks
 export const useAllCalculations = () => {
-	const apiService = useCalculationApiService();
+	// const apiService = useCalculationApiService();
 
 	return useQuery({
 		queryKey: calculationKeys.lists(),
-		queryFn: () => apiService.getAllCalculations(),
+		// queryFn: () => apiService.getAllCalculations(),
 		staleTime: 30_000,
 	});
 };
 
 export const useCalculationsPaginated = (params: PaginationParams = {}) => {
-	const apiService = useCalculationApiService();
+	// const apiService = useCalculationApiService();
 
 	return useQuery({
 		queryKey: calculationKeys.list(params),
-		queryFn: () => apiService.getCalculationsPaginated(params),
+		// queryFn: () => apiService.getCalculationsPaginated(params),
 		staleTime: 30_000,
 	});
 };
 
 export const useCalculationById = (id: string) => {
-	const apiService = useCalculationApiService();
+	// const apiService = useCalculationApiService();
 
 	return useQuery({
 		queryKey: calculationKeys.detail(id),
-		queryFn: () => apiService.getCalculationById(id),
+		// queryFn: () => apiService.getCalculationById(id),
 		staleTime: 30_000,
 		enabled: !!id,
 	});
 };
 
 export const useCreateCalculation = () => {
-	const apiService = useCalculationApiService();
+	// const apiService = useCalculationApiService();
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (data: CreateCalculationRequest) =>
-			apiService.createCalculation(data),
+		// mutationFn: (data: CreateCalculationRequest) =>
+		// 	apiService.createCalculation(data),
 		onSuccess: () => {
 			// Invalidate and refetch calculations lists
 			queryClient.invalidateQueries({ queryKey: calculationKeys.lists() });

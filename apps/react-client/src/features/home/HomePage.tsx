@@ -225,7 +225,7 @@ export const HomePage = () => {
 					// 		);
 					// 	}
 					// }}
-					rowData={data}
+					rowData={data as any}
 					columnDefs={columnDefs as any}
 					defaultColDef={defaultColDef}
 					sideBar={false}
