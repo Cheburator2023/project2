@@ -2,13 +2,12 @@ import "./theme/global.css";
 import "@fontsource/inter";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 
-import React, { useEffect } from "react";
+import React from "react";
 
 import { CircularProgress, StyledEngineProvider } from "@mui/material";
 import CssBaseline from "@mui/material/CssBaseline";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import Keycloak from "keycloak-js";
 import { Suspense } from "react";
 import { BrowserRouter } from "react-router";
 
@@ -25,8 +24,10 @@ import {
 
 import { ErrorBoundary } from "@react-client/common/errors/ErrorBoundary";
 import { ErrorPage } from "@react-client/common/errors/pages/ErrorPage";
+import { useEffectOnce } from "@react-client/common/hooks/useEffectOnce";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { isEmpty } from "lodash-es";
+import { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
 import { reportWebVitals } from "./reportWebVitals";
 
 reportWebVitals(console.log);
@@ -51,46 +52,29 @@ const queryClient = new QueryClient({
 
 interface LayoutProps {
 	children?: React.ReactNode;
-	user?: Keycloak.KeycloakTokenParsed & {
-		family_name: string;
-		given_name: string;
-		realm_access: {
-			roles: string[];
-		};
-		roles: string[];
-	};
-	protectedFetch?: <T, N>(
-		routeUrl: string,
-		params?: Record<string, string>,
-		body?: N,
-		method?: string,
-	) => Promise<T>;
-	goToSum?: () => void;
-	onLogout?: () => void;
+	urlConfig?: T_CONFIG_MAP;
+	token?: string;
+	user?: T_KEYCLOAK_USER;
+	userPermissions?: string[];
+	navigate?: (to: string) => void;
+	protectedFetch?: any;
 	bridged?: boolean;
-	urlConfig?: any;
+	onLogout?: () => void;
 }
 
-const App: React.FC<LayoutProps> = ({
-	bridged,
-	urlConfig,
-	children,
-	user,
-	protectedFetch,
-	onLogout,
-}) => {
-	console.log("User:", user);
+const App: React.FC<LayoutProps> = (props) => {
+	const { user, onLogout, bridged, urlConfig } = props;
+	console.log("🚀 ~ MF props form shell:", props);
 
-	console.log("🚀 ~ bridged:", bridged);
+	const { setUser, setConfigMap } = useGlobalSettingsStore();
 
-	const { setUser } = useGlobalSettingsStore();
+	useEffectOnce(() => {
+		setUser(user);
+	}, !isEmpty(user));
 
-	useEffect(() => {
-		if (!isEmpty(user)) {
-		} else {
-			setUser(user);
-		}
-	}, [user]);
+	useEffectOnce(() => {
+		setConfigMap(urlConfig);
+	}, !isEmpty(urlConfig));
 
 	return (
 		<BrowserRouter basename={bridged ? "/smartAnketa" : "/"}>
