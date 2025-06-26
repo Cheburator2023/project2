@@ -3,17 +3,11 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { AlgorithmTypeItemDto } from "./AlgorithmTypeItemDto";
-import type { DeploymentChannelDto } from "./DeploymentChannelDto";
-import type { GeneralUncertaintyDto } from "./GeneralUncertaintyDto";
-export type QuestionnaireDataDto = {
+export type CalculationQuestionnaireDataDto = {
 	/**
 	 * Название расчета
 	 */
 	name: string;
-	/**
-	 * Количество моделей (>1 для каскадов и ансамблей моделей)
-	 */
-	modelsCount: number;
 	/**
 	 * Сложность настройки
 	 */
@@ -21,31 +15,55 @@ export type QuestionnaireDataDto = {
 	/**
 	 * Срок реализации инициативы
 	 */
-	initiativeTimeline: string;
+	initiativeTimeline:
+		| "Менее 1 мес."
+		| "1-4 мес."
+		| "4-10 мес."
+		| "10-18 мес."
+		| "Более 18 мес.";
 	/**
 	 * Стоимость инициативы
 	 */
-	initiativeCost: string;
+	initiativeCost:
+		| "До 45.3 млн."
+		| "45.3-438 млн."
+		| "438-870 млн."
+		| "870 млн. - 2 млрд."
+		| "От 2 млрд.";
+	/**
+	 * Количество моделей
+	 */
+	modelsCount: number;
+	/**
+	 * Корректировка неопределенности
+	 */
+	uncertaintyAdjustment: number;
 	/**
 	 * Факторы общей неопределенности
 	 */
-	generalUncertainty: GeneralUncertaintyDto;
+	generalUncertainty: Record<
+		string,
+		{
+			probability?: string;
+			influence?: string;
+		}
+	>;
 	/**
 	 * Наличие готовых промоделированных отчетов
 	 */
-	readyPromReports: string;
+	readyPromReports: "Да" | "Нет";
 	/**
 	 * Количество оцененных инициатив
 	 */
-	assessedInitiativesCount?: string;
+	assessedInitiativesCount: string;
 	/**
 	 * Количество источников данных
 	 */
-	dataSourcesCount: string;
+	dataSourcesCount: "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10";
 	/**
 	 * Требуется ли пилотная модель
 	 */
-	pilotModelRequired: string;
+	pilotModelRequired: "Да" | "Не требуется";
 	/**
 	 * Сложность алгоритмов
 	 */
@@ -53,11 +71,11 @@ export type QuestionnaireDataDto = {
 	/**
 	 * Требуется ли поддержка пилота
 	 */
-	pilotSupportRequired: string;
+	pilotSupportRequired: "Да" | "Не требуется";
 	/**
 	 * Требуется ли AutoML
 	 */
-	autoMlRequired: string;
+	autoMlRequired: "Да" | "Не требуется";
 	/**
 	 * Дополнительные отчеты для продакшена
 	 */
@@ -65,5 +83,5 @@ export type QuestionnaireDataDto = {
 	/**
 	 * Каналы развертывания в продакшен
 	 */
-	productionDeploymentChannels: Array<DeploymentChannelDto>;
+	productionDeploymentChannels: Array<Record<string, any>>;
 };

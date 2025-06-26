@@ -3,8 +3,20 @@
 /* tslint:disable */
 /* eslint-disable */
 export type PaginationMetaDto = {
+	/**
+	 * Общее количество записей
+	 */
 	total: number;
+	/**
+	 * Номер текущей страницы
+	 */
 	page: number;
+	/**
+	 * Количество записей на странице
+	 */
 	limit: number;
+	/**
+	 * Номер последней страницы
+	 */
 	lastPage: number;
 };
