@@ -30,7 +30,7 @@
 			"LICENSE",
 			".cache/**/*",
 			"src/common/api/core",
-            "src/common/api/services"
+			"src/common/api/services"
 		]
 	},
 	"formatter": {
