@@ -5,6 +5,7 @@ import Box from "@mui/material/Box";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import { useColorScheme } from "@mui/material/styles";
+import { useEffectOnce } from "@react-client/common/hooks/useEffectOnce";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import React from "react";
 
@@ -20,6 +21,12 @@ export function ColorModeIconDropdown() {
 	const handleClose = () => {
 		setAnchorEl(null);
 	};
+
+	useEffectOnce(() => {
+		document.body.style.backgroundColor =
+			mode === "light" ? "#e6e8ef" : "#0f141c";
+	}, !!mode);
+
 	const handleMode = (targetMode: "light" | "dark") => () => {
 		// remove scrollbars
 		document.documentElement.style.overflow = "hidden";
