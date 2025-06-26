@@ -30,6 +30,7 @@ export function SideMenu({
 }: { open?: boolean; onLogout?: () => void }) {
 	const { mode, systemMode, setMode } = useColorScheme();
 	const { user } = useGlobalSettingsStore();
+	console.log("SideMenu user:", user);
 
 	return (
 		<Drawer variant="persistent" open={open} mode={mode}>
