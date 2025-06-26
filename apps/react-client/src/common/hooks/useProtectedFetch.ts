@@ -1,15 +1,15 @@
+import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { useAuthStore } from "../store/authStore";
-
-const API_BASE_URL = "http://localhost:3000";
 
 export const useProtectedFetch = () => {
 	const token = useAuthStore((state) => state.accessToken);
+	const { configMap } = useGlobalSettingsStore();
 
 	return async <T = any>(
 		url: string,
 		options: RequestInit = {},
 	): Promise<T> => {
-		const res = await fetch(`${API_BASE_URL}${url}`, {
+		const res = await fetch(`${configMap?.SMART_ANKETA_API}${url}`, {
 			...options,
 			headers: {
 				"Content-Type": "application/json",
