@@ -94,11 +94,7 @@ export const viteCommonConfig = ({
 					// To add only specific polyfills, add them here. If no option is passed, adds all polyfills
 					include: ["net"],
 				}),
-				react({
-					babel: {
-						plugins: ["../../etc/babel/babel-plugin-react-add-test-id.js"],
-					},
-				}),
+				react(),
 				svgr({
 					dimensions: false,
 					svgProps: {
