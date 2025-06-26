@@ -14,7 +14,8 @@
 		"prod": "npm build && npm start",
 		"biome": "npx @biomejs/biome check",
 		"biome:fix": "npx @biomejs/biome check --log-level=error --diagnostic-level=error --fix --unsafe ./src",
-		"generate:api": "openapi --input http://localhost:3000/api-json --output src/common/api --client none --useUnionTypes"
+		"generate:api": "openapi --input http://localhost:3000/api-json --output src/common/api --client none --useUnionTypes",
+		"orval": "npx orval --config ./orval.config.js && npm run biome:fix"
 	},
 	"dependencies": {
 		"@emotion/react": "11.14.0",
