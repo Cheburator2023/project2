@@ -29,11 +29,18 @@ export function NavbarBreadcrumbs() {
 	return (
 		<StyledBreadcrumbs
 			aria-label="breadcrumb"
-			separator={<NavigateNextRoundedIcon fontSize="small" />}
+			separator={
+				<NavigateNextRoundedIcon
+					fontSize="small"
+					data-test-id="navbar-breadcrumbs--NavigateNextRoundedIcon-0"
+				/>
+			}
+			data-test-id="navbar-breadcrumbs--StyledBreadcrumbs-0"
 		>
 			<Typography
 				variant="body1"
 				sx={{ color: "text.primary", fontWeight: 600 }}
+				data-test-id="navbar-breadcrumbs--Typography-0"
 			>
 				{crumb}
 			</Typography>

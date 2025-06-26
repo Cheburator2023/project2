@@ -221,6 +221,7 @@ export default function Playground({ themes, validators }: PlaygroundProps) {
 				setValidator={setValidator}
 				setLiveSettings={setLiveSettings}
 				setShareURL={setShareURL}
+				data-test-id="playground--Header-0"
 			/>
 			<Editors
 				formData={formData}
@@ -233,9 +234,10 @@ export default function Playground({ themes, validators }: PlaygroundProps) {
 				setExtraErrors={setExtraErrors}
 				setShareURL={setShareURL}
 				hasUiSchemaGenerator={!!uiSchemaGenerator}
+				data-test-id="playground--Editors-0"
 			/>
-			<div className="col-sm-5">
-				<ErrorBoundary>
+			<div className="col-sm-5" data-test-id="playground--div-0">
+				<ErrorBoundary data-test-id="playground--ErrorBoundary-0">
 					{showForm && (
 						<FormComponent
 							{...otherFormProps}
@@ -261,6 +263,7 @@ export default function Playground({ themes, validators }: PlaygroundProps) {
 								console.log("errors", errorList)
 							}
 							ref={playGroundFormRef}
+							data-test-id="playground--FormComponent-0"
 						/>
 					)}
 				</ErrorBoundary>

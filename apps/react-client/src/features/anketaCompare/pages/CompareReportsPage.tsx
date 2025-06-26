@@ -8,12 +8,16 @@ export const CompareReportsPage = () => {
 	const [params] = useSearchParams();
 
 	return (
-		<div>
-			<Spacer height={6} />
-			<Header />
-			<Spacer height={12} />
-			<Flex width="100%" height="-webkit-fill-available">
-				<AnketaCompareLayout />
+		<div data-test-id="compare-reports-page--div-0">
+			<Spacer height={6} data-test-id="compare-reports-page--Spacer-0" />
+			<Header data-test-id="compare-reports-page--Header-0" />
+			<Spacer height={12} data-test-id="compare-reports-page--Spacer-1" />
+			<Flex
+				width="100%"
+				height="-webkit-fill-available"
+				data-test-id="compare-reports-page--Flex-0"
+			>
+				<AnketaCompareLayout data-test-id="compare-reports-page--AnketaCompareLayout-0" />
 			</Flex>
 		</div>
 	);

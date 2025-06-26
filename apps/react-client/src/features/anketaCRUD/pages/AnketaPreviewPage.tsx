@@ -12,12 +12,16 @@ export const AnketaPreviewPage = () => {
 	const calcId = params.id;
 
 	return (
-		<div>
-			<Spacer height={6} />
-			<Header calcId={calcId} />
-			<Spacer height={12} />
-			<Flex width="100%" height="-webkit-fill-available">
-				<AnketaBasicLayout />
+		<div data-test-id="anketa-preview-page--div-0">
+			<Spacer height={6} data-test-id="anketa-preview-page--Spacer-0" />
+			<Header calcId={calcId} data-test-id="anketa-preview-page--Header-0" />
+			<Spacer height={12} data-test-id="anketa-preview-page--Spacer-1" />
+			<Flex
+				width="100%"
+				height="-webkit-fill-available"
+				data-test-id="anketa-preview-page--Flex-0"
+			>
+				<AnketaBasicLayout data-test-id="anketa-preview-page--AnketaBasicLayout-0" />
 			</Flex>
 		</div>
 	);

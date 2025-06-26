@@ -37,6 +37,7 @@ function HeaderButton({
 			title={title}
 			onClick={onClick}
 			{...buttonProps}
+			data-test-id="header--button-0"
 		>
 			{children}
 		</button>
@@ -59,23 +60,28 @@ function HeaderButtons({
 	}, [playGroundFormRef]);
 	return (
 		<>
-			<label className="control-label">Programmatic</label>
-			<div className="btn-group">
+			<label className="control-label" data-test-id="header--label-0">
+				Programmatic
+			</label>
+			<div className="btn-group" data-test-id="header--div-0">
 				<HeaderButton
 					title="Click me to submit the form programmatically."
 					onClick={submitClick}
+					data-test-id="header--HeaderButton-0"
 				>
 					Submit
 				</HeaderButton>
 				<HeaderButton
 					title="Click me to validate the form programmatically."
 					onClick={validateClick}
+					data-test-id="header--HeaderButton-1"
 				>
 					Validate
 				</HeaderButton>
 				<HeaderButton
 					title="Click me to reset the form programmatically."
 					onClick={resetClick}
+					data-test-id="header--HeaderButton-2"
 				>
 					Reset
 				</HeaderButton>
@@ -360,15 +366,16 @@ export default function Header({
 	}, [formData, liveSettings, schema, theme, uiSchema, validator, setShareURL]);
 
 	return (
-		<div className="page-header">
-			<Flex wrap="wrap">
-				<Flex flexBasis="100%">
+		<div className="page-header" data-test-id="header--div-1">
+			<Flex wrap="wrap" data-test-id="header--Flex-0">
+				<Flex flexBasis="100%" data-test-id="header--Flex-1">
 					<SampleSelector
 						onSelected={onSampleSelected}
 						selectedSample={sampleName}
+						data-test-id="header--SampleSelector-0"
 					/>
 				</Flex>
-				<Flex flexBasis="20%">
+				<Flex flexBasis="20%" data-test-id="header--Flex-2">
 					<Form
 						idPrefix="rjsf_options"
 						schema={liveSettingsBooleanSchema}
@@ -376,11 +383,12 @@ export default function Header({
 						validator={localValidator}
 						onChange={handleSetLiveSettings}
 						uiSchema={liveSettingsBooleanUiSchema}
+						data-test-id="header--Form-0"
 					>
-						<div />
+						<div data-test-id="header--div-2" />
 					</Form>
 				</Flex>
-				<Flex flexBasis="80%">
+				<Flex flexBasis="80%" data-test-id="header--Flex-3">
 					<Form
 						idPrefix="rjsf_options"
 						schema={liveSettingsSelectSchema}
@@ -388,38 +396,54 @@ export default function Header({
 						validator={localValidator}
 						onChange={handleSetLiveSettings}
 						uiSchema={liveSettingsSelectUiSchema}
+						data-test-id="header--Form-1"
 					>
-						<div />
+						<div data-test-id="header--div-3" />
 					</Form>
 				</Flex>
-
-				<Flex flexDirection="column" gap={20} flexBasis="20%">
+				<Flex
+					flexDirection="column"
+					gap={20}
+					flexBasis="20%"
+					data-test-id="header--Flex-4"
+				>
 					<ThemeSelector
 						themes={themes}
 						theme={theme}
 						select={onThemeSelected}
+						data-test-id="header--ThemeSelector-0"
 					/>
 					{themes[theme] && themes[theme].subthemes && (
 						<SubthemeSelector
 							subthemes={themes[theme].subthemes!}
 							subtheme={subtheme}
 							select={onSubthemeSelected}
+							data-test-id="header--SubthemeSelector-0"
 						/>
 					)}
 					<ValidatorSelector
 						validators={validators}
 						validator={validator}
 						select={onValidatorSelected}
+						data-test-id="header--ValidatorSelector-0"
 					/>
-					<HeaderButtons playGroundFormRef={playGroundFormRef} />
-					<div style={{ marginTop: "5px" }} />
-					<CopyLink shareURL={shareURL} onShare={onShare} />
+					<HeaderButtons
+						playGroundFormRef={playGroundFormRef}
+						data-test-id="header--HeaderButtons-0"
+					/>
+					<div style={{ marginTop: "5px" }} data-test-id="header--div-4" />
+					<CopyLink
+						shareURL={shareURL}
+						onShare={onShare}
+						data-test-id="header--CopyLink-0"
+					/>
 				</Flex>
-				<Flex flexBasis="80%">
+				<Flex flexBasis="80%" data-test-id="header--Flex-5">
 					<RawValidatorTest
 						validator={validators[validator]}
 						schema={schema}
 						formData={formData}
+						data-test-id="header--RawValidatorTest-0"
 					/>
 				</Flex>
 			</Flex>

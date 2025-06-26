@@ -23,59 +23,93 @@ export const AnketaBasicLayout = ({
 	const location = useLocation();
 
 	return (
-		<Flex flexDirection="column" height="100%" width="100%">
+		<Flex
+			flexDirection="column"
+			height="100%"
+			width="100%"
+			data-test-id="anketa-basic-layout--Flex-0"
+		>
 			<PanelGroup
 				autoSaveId={`anketa_${isCreate ? "create" : "preview"}_page_container_vert_${location.pathname}`}
 				direction="vertical"
+				data-test-id="anketa-basic-layout--PanelGroup-0"
 			>
-				<Panel>
+				<Panel data-test-id="anketa-basic-layout--Panel-0">
 					<PanelGroup
 						direction="horizontal"
 						autoSaveId={`anketa_${isCreate ? "create" : "preview"}_page_container_hor_${location.pathname}`}
+						data-test-id="anketa-basic-layout--PanelGroup-1"
 					>
-						<Panel>
-							<Card header="Основная информация" height="100%" padding="10px">
-								<Spacer />
-								<BasicInfoForm isCreate={isCreate} />
+						<Panel data-test-id="anketa-basic-layout--Panel-1">
+							<Card
+								header="Основная информация"
+								height="100%"
+								padding="10px"
+								data-test-id="anketa-basic-layout--Card-0"
+							>
+								<Spacer data-test-id="anketa-basic-layout--Spacer-0" />
+								<BasicInfoForm
+									isCreate={isCreate}
+									data-test-id="anketa-basic-layout--BasicInfoForm-0"
+								/>
 							</Card>
 						</Panel>
-
-						<PanelResizeHandleStyled>
-							<DragIndicatorIcon />
+						<PanelResizeHandleStyled data-test-id="anketa-basic-layout--PanelResizeHandleStyled-0">
+							<DragIndicatorIcon data-test-id="anketa-basic-layout--DragIndicatorIcon-0" />
 						</PanelResizeHandleStyled>
-
-						<Panel>
+						<Panel data-test-id="anketa-basic-layout--Panel-2">
 							<Card
 								header="Итоги расчета"
 								maxHeight="100%"
 								height="100%"
 								padding="10px"
+								data-test-id="anketa-basic-layout--Card-1"
 							>
-								<Spacer />
-								<CalculationResultTable isCreate={isCreate} />
+								<Spacer data-test-id="anketa-basic-layout--Spacer-1" />
+								<CalculationResultTable
+									isCreate={isCreate}
+									data-test-id="anketa-basic-layout--CalculationResultTable-0"
+								/>
 							</Card>
 						</Panel>
 					</PanelGroup>
 				</Panel>
-
-				<PanelResizeHandleStyled vertical>
-					<DragIndicatorIcon />
+				<PanelResizeHandleStyled
+					vertical
+					data-test-id="anketa-basic-layout--PanelResizeHandleStyled-1"
+				>
+					<DragIndicatorIcon data-test-id="anketa-basic-layout--DragIndicatorIcon-1" />
 				</PanelResizeHandleStyled>
-
-				<Panel>
-					<Card header="Опросник" maxHeight="100%" height="100%" padding="10px">
-						<Spacer />
-						<ProjectAssessmentForm isCreate={isCreate} />
+				<Panel data-test-id="anketa-basic-layout--Panel-3">
+					<Card
+						header="Опросник"
+						maxHeight="100%"
+						height="100%"
+						padding="10px"
+						data-test-id="anketa-basic-layout--Card-2"
+					>
+						<Spacer data-test-id="anketa-basic-layout--Spacer-2" />
+						<ProjectAssessmentForm
+							isCreate={isCreate}
+							data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
+						/>
 					</Card>
 				</Panel>
 			</PanelGroup>
-
 			{isCreate && (
 				<>
-					<Spacer />
-					<Card padding="10px">
-						<Flex justifyContent="flex-end" alignItems="center">
-							<Button variant="contained" onClick={onSubmit}>
+					<Spacer data-test-id="anketa-basic-layout--Spacer-3" />
+					<Card padding="10px" data-test-id="anketa-basic-layout--Card-3">
+						<Flex
+							justifyContent="flex-end"
+							alignItems="center"
+							data-test-id="anketa-basic-layout--Flex-1"
+						>
+							<Button
+								variant="contained"
+								onClick={onSubmit}
+								data-test-id="anketa-basic-layout--Button-0"
+							>
 								Сохранить
 							</Button>
 						</Flex>

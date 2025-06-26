@@ -46,9 +46,13 @@ function Editor({ title, code, onChange }: EditorProps) {
 			width="auto"
 			flexDirection="column"
 			flexBasis={"32%"}
+			data-test-id="editors--Flex-0"
 		>
-			<Flex className="panel-heading">
-				<span className={`${cls} glyphicon glyphicon-${icon}`} />
+			<Flex className="panel-heading" data-test-id="editors--Flex-1">
+				<span
+					className={`${cls} glyphicon glyphicon-${icon}`}
+					data-test-id="editors--span-0"
+				/>
 				{" " + title}
 			</Flex>
 			<MonacoEditor
@@ -58,6 +62,7 @@ function Editor({ title, code, onChange }: EditorProps) {
 				onChange={onCodeChange}
 				height={400}
 				options={monacoEditorOptions}
+				data-test-id="editors--MonacoEditor-0"
 			/>
 		</Flex>
 	);
@@ -135,28 +140,31 @@ export default function Editors({
 		: "UiSchema";
 
 	return (
-		<Flex width="100%">
+		<Flex width="100%" data-test-id="editors--Flex-2">
 			<Editor
 				title="JSONSchema"
 				code={toJson(schema)}
 				onChange={onSchemaEdited}
+				data-test-id="editors--Editor-0"
 			/>
 			<Editor
 				title={uiSchemaTitle}
 				code={toJson(uiSchema)}
 				onChange={onUISchemaEdited}
+				data-test-id="editors--Editor-1"
 			/>
-
 			<Editor
 				title="formData"
 				code={toJson(formData)}
 				onChange={onFormDataEdited}
+				data-test-id="editors--Editor-2"
 			/>
 			{extraErrors && (
 				<Editor
 					title="extraErrors"
 					code={toJson(extraErrors || {})}
 					onChange={onExtraErrorsEdited}
+					data-test-id="editors--Editor-3"
 				/>
 			)}
 		</Flex>

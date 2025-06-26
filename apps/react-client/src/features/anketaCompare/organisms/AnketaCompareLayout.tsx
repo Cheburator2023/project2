@@ -15,67 +15,73 @@ export const AnketaCompareLayout = () => {
 	const id2 = new URLSearchParams(window.location.search).get("id2");
 
 	return (
-		<Flex flexDirection="column" width="100%">
+		<Flex
+			flexDirection="column"
+			width="100%"
+			data-test-id="anketa-compare-layout--Flex-0"
+		>
 			<Card
 				header={"Основная информация " + id1 + " / " + id2}
 				overflow={false}
+				data-test-id="anketa-compare-layout--Card-0"
 			>
 				<PanelGroup
 					autoSaveId={`anketa_compare_page_container_hor_${location.pathname}`}
 					direction="horizontal"
+					data-test-id="anketa-compare-layout--PanelGroup-0"
 				>
-					<Panel>
-						<BasicInfoForm />
+					<Panel data-test-id="anketa-compare-layout--Panel-0">
+						<BasicInfoForm data-test-id="anketa-compare-layout--BasicInfoForm-0" />
 					</Panel>
-
-					<PanelResizeHandleStyled>
-						<DragIndicatorIcon />
+					<PanelResizeHandleStyled data-test-id="anketa-compare-layout--PanelResizeHandleStyled-0">
+						<DragIndicatorIcon data-test-id="anketa-compare-layout--DragIndicatorIcon-0" />
 					</PanelResizeHandleStyled>
-
-					<Panel>
-						<BasicInfoForm />
+					<Panel data-test-id="anketa-compare-layout--Panel-1">
+						<BasicInfoForm data-test-id="anketa-compare-layout--BasicInfoForm-1" />
 					</Panel>
 				</PanelGroup>
 			</Card>
-
-			<Spacer />
-
-			<Card header={"Итоговый расчет " + id1 + " / " + id2} overflow={false}>
+			<Spacer data-test-id="anketa-compare-layout--Spacer-0" />
+			<Card
+				header={"Итоговый расчет " + id1 + " / " + id2}
+				overflow={false}
+				data-test-id="anketa-compare-layout--Card-1"
+			>
 				<PanelGroup
 					autoSaveId={`anketa_compare_page_container_hor_${location.pathname}`}
 					direction="horizontal"
+					data-test-id="anketa-compare-layout--PanelGroup-1"
 				>
-					<Panel>
-						<CalculationResultTable />
+					<Panel data-test-id="anketa-compare-layout--Panel-2">
+						<CalculationResultTable data-test-id="anketa-compare-layout--CalculationResultTable-0" />
 					</Panel>
-
-					<PanelResizeHandleStyled>
-						<DragIndicatorIcon />
+					<PanelResizeHandleStyled data-test-id="anketa-compare-layout--PanelResizeHandleStyled-1">
+						<DragIndicatorIcon data-test-id="anketa-compare-layout--DragIndicatorIcon-1" />
 					</PanelResizeHandleStyled>
-
-					<Panel>
-						<CalculationResultTable />
+					<Panel data-test-id="anketa-compare-layout--Panel-3">
+						<CalculationResultTable data-test-id="anketa-compare-layout--CalculationResultTable-1" />
 					</Panel>
 				</PanelGroup>
 			</Card>
-
-			<Spacer />
-
-			<Card header={"Опросник " + id1 + " / " + id2} overflow={false}>
+			<Spacer data-test-id="anketa-compare-layout--Spacer-1" />
+			<Card
+				header={"Опросник " + id1 + " / " + id2}
+				overflow={false}
+				data-test-id="anketa-compare-layout--Card-2"
+			>
 				<PanelGroup
 					autoSaveId={`anketa_compare_page_container_hor_${location.pathname}`}
 					direction="horizontal"
+					data-test-id="anketa-compare-layout--PanelGroup-2"
 				>
-					<Panel>
-						<ProjectAssessmentForm />
+					<Panel data-test-id="anketa-compare-layout--Panel-4">
+						<ProjectAssessmentForm data-test-id="anketa-compare-layout--ProjectAssessmentForm-0" />
 					</Panel>
-
-					<PanelResizeHandleStyled>
-						<DragIndicatorIcon />
+					<PanelResizeHandleStyled data-test-id="anketa-compare-layout--PanelResizeHandleStyled-2">
+						<DragIndicatorIcon data-test-id="anketa-compare-layout--DragIndicatorIcon-2" />
 					</PanelResizeHandleStyled>
-
-					<Panel>
-						<ProjectAssessmentForm />
+					<Panel data-test-id="anketa-compare-layout--Panel-5">
+						<ProjectAssessmentForm data-test-id="anketa-compare-layout--ProjectAssessmentForm-1" />
 					</Panel>
 				</PanelGroup>
 			</Card>

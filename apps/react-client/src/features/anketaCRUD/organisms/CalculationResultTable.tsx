@@ -144,13 +144,15 @@ export const CalculationResultTable = ({
 				maxHeight: height,
 				width: "100%",
 			}}
+			data-test-id="calculation-result-table--div-0"
 		>
-			<AgGridReact<EpicData>
+			<AgGridReact
 				rowData={rowData}
 				columnDefs={columnDefs}
 				theme={
 					mode === "light" || mode === undefined ? themeQuartz : themeQuartzDark
 				}
+				data-test-id="calculation-result-table--AgGridReact-0"
 			/>
 		</div>
 	);

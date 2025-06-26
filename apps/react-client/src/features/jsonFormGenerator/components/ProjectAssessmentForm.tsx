@@ -4,7 +4,7 @@ import type FormRef from "@rjsf/core";
 import type { IChangeEvent } from "@rjsf/core";
 import { Theme as MuiTheme } from "@rjsf/mui";
 import type { RJSFSchema } from "@rjsf/utils";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { MultiSelectAutocompleteWidget } from "@react-client/features/anketaCRUD/molecules/MultiSelectAutocompleteWidget";
@@ -132,6 +132,7 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 			noHtml5Validate
 			readonly={readonly}
 			showErrorList={false}
+			data-test-id="project-assessment-form--Form-0"
 		/>
 	);
 };

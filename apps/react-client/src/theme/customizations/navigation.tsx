@@ -60,7 +60,12 @@ export const navigationCustomizations: Components<Theme> = {
 		defaultProps: {
 			IconComponent: React.forwardRef<SVGSVGElement, SvgIconProps>(
 				(props, ref) => (
-					<UnfoldMoreRoundedIcon fontSize="small" {...props} ref={ref} />
+					<UnfoldMoreRoundedIcon
+						fontSize="small"
+						{...props}
+						ref={ref}
+						data-test-id="navigation--UnfoldMoreRoundedIcon-0"
+					/>
 				),
 			) as any,
 		},

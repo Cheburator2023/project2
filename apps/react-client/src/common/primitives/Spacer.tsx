@@ -25,6 +25,7 @@ export const Spacer: React.FC<IProps> = ({
 		width={width}
 		mobSpace={isMobile ? mobSpace : space}
 		{...rest}
+		data-test-id="spacer--InnerSpacer-0"
 	/>
 );
 

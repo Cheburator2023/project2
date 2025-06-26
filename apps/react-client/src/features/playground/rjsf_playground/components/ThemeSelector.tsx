@@ -50,8 +50,9 @@ export default function ThemeSelector({
 			formData={theme}
 			validator={localValidator}
 			onChange={onChange}
+			data-test-id="theme-selector--Form-0"
 		>
-			<div />
+			<div data-test-id="theme-selector--div-0" />
 		</Form>
 	);
 }

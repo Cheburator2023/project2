@@ -333,10 +333,21 @@ export const inputsCustomizations: Components<Theme> = {
 			icon: (
 				<CheckBoxOutlineBlankRoundedIcon
 					sx={{ color: "hsla(210, 0%, 0%, 0.0)" }}
+					data-test-id="inputs--CheckBoxOutlineBlankRoundedIcon-0"
 				/>
 			),
-			checkedIcon: <CheckRoundedIcon sx={{ height: 14, width: 14 }} />,
-			indeterminateIcon: <RemoveRoundedIcon sx={{ height: 14, width: 14 }} />,
+			checkedIcon: (
+				<CheckRoundedIcon
+					sx={{ height: 14, width: 14 }}
+					data-test-id="inputs--CheckRoundedIcon-0"
+				/>
+			),
+			indeterminateIcon: (
+				<RemoveRoundedIcon
+					sx={{ height: 14, width: 14 }}
+					data-test-id="inputs--RemoveRoundedIcon-0"
+				/>
+			),
 		},
 		styleOverrides: {
 			root: ({ theme }) => ({

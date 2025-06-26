@@ -19,8 +19,11 @@ const MfeRoot = (props: Props) => {
 	console.log("MfeRoot >> props:", props);
 
 	return (
-		<AuthProvider token={props.token}>
-			<App {...props} bridged />
+		<AuthProvider
+			token={props.token}
+			data-test-id="index-federated--AuthProvider-0"
+		>
+			<App {...props} bridged data-test-id="index-federated--App-0" />
 		</AuthProvider>
 	);
 };

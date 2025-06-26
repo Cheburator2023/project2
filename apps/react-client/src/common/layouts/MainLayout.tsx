@@ -54,13 +54,17 @@ export function MainLayout({
 	const { mode, systemMode, setMode } = useColorScheme();
 
 	return (
-		<Flex id="main_layout_container">
-			<SideMenu open={store.isSideMenuVisible} onLogout={onLogout} />
-
+		<Flex id="main_layout_container" data-test-id="main-layout--Flex-0">
+			<SideMenu
+				open={store.isSideMenuVisible}
+				onLogout={onLogout}
+				data-test-id="main-layout--SideMenu-0"
+			/>
 			<MainWrapper
 				id="main_layout_content"
 				open={store.isSideMenuVisible}
 				mode={mode}
+				data-test-id="main-layout--MainWrapper-0"
 			>
 				{children}
 			</MainWrapper>

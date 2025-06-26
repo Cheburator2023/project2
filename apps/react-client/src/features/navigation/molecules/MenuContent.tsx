@@ -22,13 +22,17 @@ const mainListItems = Object.values(routes)
 const secondaryListItems = [
 	{
 		text: "sum",
-		icon: <CallMissedOutgoingIcon />,
+		icon: (
+			<CallMissedOutgoingIcon data-test-id="menu-content--CallMissedOutgoingIcon-0" />
+		),
 		tooltip: "Система управления моделями",
 		path: "/sum",
 	},
 	{
 		text: "sum-rm",
-		icon: <CallMissedOutgoingIcon />,
+		icon: (
+			<CallMissedOutgoingIcon data-test-id="menu-content--CallMissedOutgoingIcon-1" />
+		),
 		tooltip: "Рееcтр моделей",
 		path: "/sum-rm",
 	},
@@ -44,30 +48,56 @@ export function MenuContent() {
 	};
 
 	return (
-		<Stack sx={{ flexGrow: 1, p: 1, justifyContent: "space-between" }}>
-			<List>
+		<Stack
+			sx={{ flexGrow: 1, p: 1, justifyContent: "space-between" }}
+			data-test-id="menu-content--Stack-0"
+		>
+			<List data-test-id="menu-content--List-0">
 				{mainListItems.map((item, index) => (
 					<ListItem
 						key={index}
 						disablePadding
 						sx={{ display: "block", mb: 0.2 }}
 						onClick={() => handler(item.rootPath.replace("/", ""))}
+						data-test-id="menu-content--ListItem-0"
 					>
 						<ListItemButton
 							selected={item.rootPath === location.pathname.replace("/", "")}
+							data-test-id="menu-content--ListItemButton-0"
 						>
-							<ListItemText primary={item.name} />
+							<ListItemText
+								primary={item.name}
+								data-test-id="menu-content--ListItemText-0"
+							/>
 						</ListItemButton>
 					</ListItem>
 				))}
 			</List>
-			<List>
+			<List data-test-id="menu-content--List-1">
 				{secondaryListItems.map((item, index) => (
-					<ListItem key={index} disablePadding sx={{ paddingBottom: 1 }}>
-						<Tooltip title={item.tooltip}>
-							<Button size="small" variant="outlined" href={item.path}>
-								<ListItemIcon>{item.icon}</ListItemIcon>
-								<ListItemText primary={item.text} />
+					<ListItem
+						key={index}
+						disablePadding
+						sx={{ paddingBottom: 1 }}
+						data-test-id="menu-content--ListItem-1"
+					>
+						<Tooltip
+							title={item.tooltip}
+							data-test-id="menu-content--Tooltip-0"
+						>
+							<Button
+								size="small"
+								variant="outlined"
+								href={item.path}
+								data-test-id="menu-content--Button-0"
+							>
+								<ListItemIcon data-test-id="menu-content--ListItemIcon-0">
+									{item.icon}
+								</ListItemIcon>
+								<ListItemText
+									primary={item.text}
+									data-test-id="menu-content--ListItemText-1"
+								/>
 							</Button>
 						</Tooltip>
 					</ListItem>

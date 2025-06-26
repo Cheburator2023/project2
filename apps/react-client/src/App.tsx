@@ -77,16 +77,45 @@ const App: React.FC<LayoutProps> = (props) => {
 	}, !isEmpty(urlConfig));
 
 	return (
-		<BrowserRouter basename={bridged ? "/smartAnketa" : "/"}>
-			<AppTheme themeComponents={xThemeComponents}>
-				<ErrorBoundary ErrorPage={ErrorPage}>
-					<StyledEngineProvider injectFirst>
-						<QueryClientProvider client={queryClient}>
-							<CssBaseline enableColorScheme />
-							<Suspense fallback={<CircularProgress />}>
-								<LocalizationProvider dateAdapter={AdapterDateFns}>
-									<MainLayout onLogout={onLogout}>
-										<Routing />
+		<BrowserRouter
+			basename={bridged ? "/smartAnketa" : "/"}
+			data-test-id="app--BrowserRouter-0"
+		>
+			<AppTheme
+				themeComponents={xThemeComponents}
+				data-test-id="app--AppTheme-0"
+			>
+				<ErrorBoundary
+					ErrorPage={ErrorPage}
+					data-test-id="app--ErrorBoundary-0"
+				>
+					<StyledEngineProvider
+						injectFirst
+						data-test-id="app--StyledEngineProvider-0"
+					>
+						<QueryClientProvider
+							client={queryClient}
+							data-test-id="app--QueryClientProvider-0"
+						>
+							<CssBaseline
+								enableColorScheme
+								data-test-id="app--CssBaseline-0"
+							/>
+							<Suspense
+								fallback={
+									<CircularProgress data-test-id="app--CircularProgress-0" />
+								}
+								data-test-id="app--Suspense-0"
+							>
+								<LocalizationProvider
+									dateAdapter={AdapterDateFns}
+									data-test-id="app--LocalizationProvider-0"
+								>
+									<MainLayout
+										onLogout={onLogout}
+										data-test-id="app--MainLayout-0"
+									>
+										<Routing data-test-id="app--Routing-0" />
 									</MainLayout>
 								</LocalizationProvider>
 							</Suspense>

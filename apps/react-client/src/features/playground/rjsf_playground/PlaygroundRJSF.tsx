@@ -35,5 +35,11 @@ const themes: PlaygroundProps["themes"] = {
 };
 
 export function PlaygroundRJSF() {
-	return <PlaygroundComp themes={themes} validators={validators} />;
+	return (
+		<PlaygroundComp
+			themes={themes}
+			validators={validators}
+			data-test-id="playground-r-j-s-f--PlaygroundComp-0"
+		/>
+	);
 }

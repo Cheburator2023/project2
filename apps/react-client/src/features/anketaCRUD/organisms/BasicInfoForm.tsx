@@ -235,6 +235,7 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 			focusOnFirstError
 			readonly={readonly}
 			showErrorList={false}
+			data-test-id="basic-info-form--Form-0"
 		/>
 	);
 };

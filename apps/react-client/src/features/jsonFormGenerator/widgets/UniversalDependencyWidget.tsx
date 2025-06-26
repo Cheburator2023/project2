@@ -100,6 +100,7 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 				uiSchema={uiSchema}
 				registry={registry}
 				schema={schema}
+				data-test-id="universal-dependency-widget--DefaultWidget-0"
 			/>
 		);
 	}
@@ -124,6 +125,7 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 					size="small"
 					label={schema?.title}
 					slotProps={{ input: { readOnly: readonly } }}
+					data-test-id="universal-dependency-widget--TextField-0"
 				/>
 			);
 		}
@@ -137,6 +139,7 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 				size="small"
 				label={schema?.title}
 				slotProps={{ input: { readOnly: readonly } }}
+				data-test-id="universal-dependency-widget--TextField-1"
 			/>
 		);
 	}
@@ -159,6 +162,7 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 				size="small"
 				label={schema?.title}
 				slotProps={{ input: { readOnly: readonly } }}
+				data-test-id="universal-dependency-widget--TextField-2"
 			/>
 		);
 	}
@@ -192,6 +196,7 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 			uiSchema={uiSchema}
 			registry={registry}
 			schema={schema}
+			data-test-id="universal-dependency-widget--DefaultWidget-1"
 		/>
 	);
 };

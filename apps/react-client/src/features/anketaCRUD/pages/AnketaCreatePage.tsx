@@ -42,15 +42,20 @@ export const AnketaCreatePage = () => {
 	}, [formHasErrors]);
 
 	return (
-		<div>
-			<Spacer height={6} />
-			<Header />
-			<Spacer height={12} />
-			<Flex width="100%" height="-webkit-fill-available">
+		<div data-test-id="anketa-create-page--div-0">
+			<Spacer height={6} data-test-id="anketa-create-page--Spacer-0" />
+			<Header data-test-id="anketa-create-page--Header-0" />
+			<Spacer height={12} data-test-id="anketa-create-page--Spacer-1" />
+			<Flex
+				width="100%"
+				height="-webkit-fill-available"
+				data-test-id="anketa-create-page--Flex-0"
+			>
 				<AnketaBasicLayout
 					isCreate
 					onSubmit={onSubmit}
 					formHasErrors={formHasErrors}
+					data-test-id="anketa-create-page--AnketaBasicLayout-0"
 				/>
 			</Flex>
 		</div>

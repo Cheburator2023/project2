@@ -13,25 +13,38 @@ export const RJSFObjectFieldTemplate = ({
 		<>
 			{/* Render the title of the object/form, if provided */}
 			{(uiSchema?.["ui:title"] || title) && (
-				<Typography variant="h5" component="h2" gutterBottom>
+				<Typography
+					variant="h5"
+					component="h2"
+					gutterBottom
+					data-test-id="r-j-s-f-object-field-template--Typography-0"
+				>
 					{title}
 				</Typography>
 			)}
-
 			{/* Render the description of the object/form, if provided */}
 			{description && (
-				<Typography variant="body1" paragraph>
+				<Typography
+					variant="body1"
+					paragraph
+					data-test-id="r-j-s-f-object-field-template--Typography-1"
+				>
 					{description}
 				</Typography>
 			)}
-
 			{/* Use MUI Grid to lay out the properties */}
-			<Grid container spacing={2}>
+			<Grid
+				container
+				spacing={2}
+				data-test-id="r-j-s-f-object-field-template--Grid-0"
+			>
 				{properties.map((element, index) => (
-					// Each field is wrapped in a Grid item.
-					// - xs={12}: Takes up the full width on extra-small screens (mobile).
-					// - md={6}: Takes up half the width (6/12 columns) on medium screens and larger.
-					<Grid size={6} key={index} style={{ marginBottom: "10px" }}>
+					<Grid
+						size={6}
+						key={index}
+						style={{ marginBottom: "10px" }}
+						data-test-id="r-j-s-f-object-field-template--Grid-1"
+					>
 						{/* element.content contains the fully rendered RJSF field */}
 						{element.content}
 					</Grid>

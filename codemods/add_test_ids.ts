@@ -12,10 +12,43 @@ const jscodeshift = require("jscodeshift");
  * @returns {string}
  */
 const getElementName = (j, nameNode) => {
+	if (!nameNode) return ""; // Handle fragment shorthand <>
 	return j(nameNode).toSource();
 };
 
 /**
+ * Checks if a JSXOpeningElement is a React.Fragment in any of its forms.
+ * Forms checked:
+ * - <React.Fragment>
+ * - <Fragment> (assuming imported)
+ * - <> (shorthand syntax)
+ * @param {import('jscodeshift').JSXOpeningElement} openingElement
+ * @returns {boolean}
+ */
+const isFragment = (openingElement) => {
+	const nameNode = openingElement.name;
+	// Case 1: Shorthand <> syntax. The name is a JSXIdentifier with an empty name.
+	if (nameNode.type === "JSXIdentifier" && nameNode.name === "") {
+		return true;
+	}
+	// Case 2: <Fragment> syntax. The name is a JSXIdentifier with the name 'Fragment'.
+	if (nameNode.type === "JSXIdentifier" && nameNode.name === "Fragment") {
+		return true;
+	}
+	// Case 3: <React.Fragment> syntax. This is a member expression.
+	if (
+		nameNode.type === "JSXMemberExpression" &&
+		nameNode.object.type === "JSXIdentifier" &&
+		nameNode.object.name === "React" &&
+		nameNode.property.name === "Fragment"
+	) {
+		return true;
+	}
+	return false;
+};
+
+/**
+ * Adds a test ID attribute to all JSX elements that don't already have one.
  * @param {InputFile} file
  * @param {typeof import("jscodeshift")} j
  * @param {string} testAttribute - default value "data-test-id"
@@ -41,7 +74,7 @@ function addTestIds(file, j, testAttribute = "data-test-id") {
 	/** @type {function(el: import('jscodeshift').JSXOpeningElement): string}*/
 	const testIdName = (el) => {
 		const elementName = getElementName(j, el.name);
-		const baseName = `${file.name}__${elementName}_`;
+		const baseName = `${file.name}--${elementName}-`;
 
 		if (memo[baseName] === undefined) {
 			memo[baseName] = 0;
@@ -50,42 +83,55 @@ function addTestIds(file, j, testAttribute = "data-test-id") {
 		}
 
 		const newName = baseName + memo[baseName];
-		// If the generated name already exists (unlikely but possible), recurse to get the next index.
 		return existingTestIDs.includes(newName) ? testIdName(el) : newName;
 	};
 
-	/** @type {import("jscodeshift").Collection} Collection */
-	const jsxElements = j(file.source).find(j.JSXElement);
-
-	return jsxElements
+	return j(file.source)
+		.find(j.JSXElement)
 		.forEach((p) => {
 			const openingElement = p.node.openingElement;
-			// We no longer filter by tag type. Apply to all elements.
-			// only add the attribute if it does not already exist
-			if (!testIdExists(openingElement)) {
-				j(p).replaceWith(
-					j.jsxElement(
-						j.jsxOpeningElement(
-							// Use the original name node, which handles identifiers and member expressions
-							openingElement.name,
-							openingElement.attributes.concat(
-								j.jsxAttribute(
-									j.jsxIdentifier(testAttribute),
-									j.literal(testIdName(openingElement)),
-								),
-							),
-							openingElement.selfClosing,
-						),
-						p.node.closingElement,
-						p.node.children,
-					),
-				);
+
+			// *** NEW: Skip if the element is a Fragment or already has a test ID ***
+			if (isFragment(openingElement) || testIdExists(openingElement)) {
+				return;
 			}
+
+			j(p).replaceWith(
+				j.jsxElement(
+					j.jsxOpeningElement(
+						openingElement.name,
+						openingElement.attributes.concat(
+							j.jsxAttribute(
+								j.jsxIdentifier(testAttribute),
+								j.literal(testIdName(openingElement)),
+							),
+						),
+						openingElement.selfClosing,
+					),
+					p.node.closingElement,
+					p.node.children,
+				),
+			);
 		})
 		.toSource({ lineTerminator: "\n", trailingComma: true });
 }
 
-// Unused constants have been removed (HTML_TAGS, MY_TAGS, MUI_TAGS)
+/**
+ * Removes a specified test ID attribute from all JSX elements.
+ * @param {InputFile} file
+ * @param {typeof import("jscodeshift")} j
+ * @param {string} testAttribute - default value "data-test-id"
+ */
+function removeTestIds(file, j, testAttribute = "data-test-id") {
+	return j(file.source)
+		.find(j.JSXAttribute, {
+			name: {
+				name: testAttribute,
+			},
+		})
+		.remove()
+		.toSource({ lineTerminator: "\n", trailingComma: true });
+}
 
 const CUSTOM_IO_FOLDER = process.argv
 	.find((s) => s.includes("io-dir="))
@@ -95,7 +141,8 @@ const customAttribute = process.argv
 	.find((s) => s.includes("customAttribute="))
 	?.split("customAttribute=")[1];
 
-// Unused argument flags have been removed (--all, --mui)
+// New flag to trigger the removal of test IDs
+const shouldRemove = process.argv.includes("--remove");
 
 const INPUT_FOLDER = path.join(__dirname, CUSTOM_IO_FOLDER || "input");
 const OUTPUT_FOLDER = path.join(__dirname, CUSTOM_IO_FOLDER || "output");
@@ -159,14 +206,22 @@ const transform = (inputFilePath) => {
 		name: kebabCaseName,
 	};
 
-	// The tagList is no longer needed.
+	const j = jscodeshift.withParser("tsx");
+	// biome-ignore lint/suspicious/noImplicitAnyLet: <explanation>
+	let outputSource;
 
-	/** @type {string} */
-	const outputSource = addTestIds(
-		file,
-		jscodeshift.withParser("tsx"),
-		customAttribute,
-	);
+	if (shouldRemove) {
+		console.log(
+			`Removing attribute "${customAttribute || "data-test-id"}" from ${inputFilePath}`,
+		);
+		outputSource = removeTestIds(file, j, customAttribute);
+	} else {
+		console.log(
+			`Adding attribute "${customAttribute || "data-test-id"}" to ${inputFilePath}`,
+		);
+		outputSource = addTestIds(file, j, customAttribute);
+	}
+
 	const outputFilePath = inputFilePath.replace(INPUT_FOLDER, OUTPUT_FOLDER);
 
 	writeFile(outputFilePath, unescapeSymbol(outputSource));

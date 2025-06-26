@@ -245,6 +245,7 @@ const widgets: Sample = {
 						onChange={(event) => onChange(event.target.value)}
 						style={{ backgroundColor }}
 						value={value}
+						data-test-id="widgets--input-0"
 					/>
 				);
 			},
@@ -272,10 +273,11 @@ const widgets: Sample = {
 						style={{ backgroundColor }}
 						value={value}
 						onChange={(event) => onChange(event.target.value)}
+						data-test-id="widgets--select-0"
 					>
 						{enumOptions.map(({ label, value }, i) => {
 							return (
-								<option key={i} value={value}>
+								<option key={i} value={value} data-test-id="widgets--option-0">
 									{label}
 								</option>
 							);

@@ -27,7 +27,9 @@
 		"biome": "npx @biomejs/biome@1.9.4 check",
 		"biome:fix": "npx @biomejs/biome@1.9.4 check --log-level=error --diagnostic-level=error --fix --unsafe ./apps/react-client/src ./apps/nestjs-server/src",
 		"prepare": "husky",
-		"codemod:testids": "node ./codemods/add_test_ids.ts io-dir=../apps/react-client/src --all"
+		"codemod:testids": "node ./codemods/add_test_ids.ts io-dir=../apps/react-client/src --all",
+		"codemod:testids:remove": "node ./codemods/add_test_ids.ts io-dir=../apps/react-client/src --all --remove"
+
 	},
 	"lint-staged": {
 		"*.{ts,tsx}": [
@@ -74,6 +76,10 @@
 		"jsonpath-plus": "10.2.0",
 		"keycloak-js": "15.0.2",
 		"lodash-es": "4.17.21",
+		"react": "19.1.0",
+    	"react-dom": "19.1.0",
+    	"react-router": "7.6.1",
+    	"react-router-dom": "7.6.1",
 		"react-hook-form": "7.53.0",
 		"react-resizable-panels": "3.0.2",
 		"usehooks-ts": "3.1.0",

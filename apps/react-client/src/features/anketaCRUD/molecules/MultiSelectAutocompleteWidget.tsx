@@ -41,8 +41,10 @@ export const MultiSelectAutocompleteWidget = ({
 					required={required}
 					// Add a margin for consistent spacing with other RJSF fields
 					margin="normal"
+					data-test-id="multi-select-autocomplete-widget--TextField-0"
 				/>
 			)}
+			data-test-id="multi-select-autocomplete-widget--Autocomplete-0"
 		/>
 	);
 };
