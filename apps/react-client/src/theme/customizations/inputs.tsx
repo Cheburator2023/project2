@@ -361,7 +361,7 @@ export const inputsCustomizations: Components<Theme> = {
 					color: "white",
 					backgroundColor: gray[700],
 					borderColor: gray[700],
-					boxShadow: `none`,
+					boxShadow: "none",
 					"&:hover": {
 						backgroundColor: gray[600],
 					},

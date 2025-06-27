@@ -2,7 +2,7 @@ import { Theme as MuiTheme } from "@rjsf/mui";
 import v8Validator, { customizeValidator } from "@rjsf/validator-ajv8";
 import Ajv2019 from "ajv/dist/2019.js";
 import Ajv2020 from "ajv/dist/2020.js";
-import PlaygroundComp, { PlaygroundProps } from "./components";
+import PlaygroundComp, { type PlaygroundProps } from "./components";
 
 const esV8Validator = customizeValidator({});
 const AJV8_2019 = customizeValidator({ AjvClass: Ajv2019 });

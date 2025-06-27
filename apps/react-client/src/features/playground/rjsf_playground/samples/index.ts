@@ -1,4 +1,4 @@
-import { Sample } from "./Sample";
+import type { Sample } from "./Sample";
 import additionalProperties from "./additionalProperties";
 import allOf from "./allOf";
 import alternatives from "./alternatives";

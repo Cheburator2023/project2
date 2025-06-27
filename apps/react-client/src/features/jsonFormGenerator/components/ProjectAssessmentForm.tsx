@@ -6,7 +6,8 @@ import { MultiSelectAutocompleteWidget } from "@react-client/features/anketa/mol
 import type { IChangeEvent } from "@rjsf/core";
 import { Theme as MuiTheme } from "@rjsf/mui";
 import type { RJSFSchema } from "@rjsf/utils";
-import React, { createRef, useState } from "react";
+import type React from "react";
+import { createRef, useState } from "react";
 import schema from "../schemas/calc_schema.json";
 import uiSchema from "../schemas/calc_uiSchema";
 import type { FormData } from "../types/FormData";

@@ -43,24 +43,20 @@ export const Card = (
 			{...props}
 		>
 			{(props.header || props.onClose) && (
-				<>
-					<Flex
-						justifyContent="space-between"
-						alignItems="center"
-						width="100%"
-						as="header"
-						style={{ height: `${headerH}px` }}
-					>
-						{props.header && (
-							<Typography variant="h6">{props.header}</Typography>
-						)}
-						{props.onClose && (
-							<IconButton onClick={handler}>
-								<CloseIcon />
-							</IconButton>
-						)}
-					</Flex>
-				</>
+				<Flex
+					justifyContent="space-between"
+					alignItems="center"
+					width="100%"
+					as="header"
+					style={{ height: `${headerH}px` }}
+				>
+					{props.header && <Typography variant="h6">{props.header}</Typography>}
+					{props.onClose && (
+						<IconButton onClick={handler}>
+							<CloseIcon />
+						</IconButton>
+					)}
+				</Flex>
 			)}
 			<div
 				style={{

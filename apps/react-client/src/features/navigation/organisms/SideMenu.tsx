@@ -81,7 +81,7 @@ export function SideMenu({
 						variant="body2"
 						sx={{ fontWeight: 500, lineHeight: "16px" }}
 					>
-						{(user?.family_name || "") + " " + (user?.given_name || "")}
+						{`${user?.family_name || ""} ${user?.given_name || ""}`}
 					</Typography>
 					{user?.email && (
 						<Typography variant="caption" sx={{ color: "text.secondary" }}>

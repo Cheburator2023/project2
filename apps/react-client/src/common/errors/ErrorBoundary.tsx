@@ -1,10 +1,10 @@
 /* eslint-disable react/jsx-no-constructed-context-values */
 import { noop } from "lodash-es";
 import {
-	Context,
-	ErrorInfo,
+	type Context,
+	type ErrorInfo,
 	PureComponent,
-	ReactNode,
+	type ReactNode,
 	createContext,
 } from "react";
 
@@ -70,7 +70,7 @@ class ErrorBoundaryComponent extends PureComponent<Props, State> {
 		this.setState({
 			...this.state,
 			errorStack: error?.stack,
-			error: "Ошибка кода приложения: " + error?.message,
+			error: `Ошибка кода приложения: ${error?.message}`,
 		});
 	}
 

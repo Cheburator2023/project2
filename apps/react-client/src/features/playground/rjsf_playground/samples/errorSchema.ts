@@ -1,5 +1,5 @@
 import { ErrorSchemaBuilder } from "@rjsf/utils";
-import { Sample } from "./Sample";
+import type { Sample } from "./Sample";
 
 const errorSchemaBuilder = new ErrorSchemaBuilder();
 errorSchemaBuilder.addErrors(

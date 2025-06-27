@@ -17,7 +17,7 @@ import {
 	TextField,
 	Typography,
 } from "@mui/material";
-import { WidgetProps } from "@rjsf/utils";
+import type { WidgetProps } from "@rjsf/utils";
 import React, { useState, useEffect, useRef } from "react";
 
 interface UncertaintyItem {

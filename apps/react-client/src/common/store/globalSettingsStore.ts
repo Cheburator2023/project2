@@ -1,5 +1,5 @@
-import { GridApi } from "ag-grid-community";
-import { T_KEYCLOAK_USER } from "types";
+import type { GridApi } from "ag-grid-community";
+import type { T_KEYCLOAK_USER } from "types";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 

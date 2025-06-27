@@ -1,10 +1,10 @@
 import type FormRef from "@rjsf/core";
 import Form from "@rjsf/mui";
-import { RJSFSchema, RegistryWidgetsType, UiSchema } from "@rjsf/utils";
+import type { RJSFSchema, RegistryWidgetsType, UiSchema } from "@rjsf/utils";
 
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
-import { IChangeEvent } from "@rjsf/core";
-import { TemplatesType } from "@rjsf/utils";
+import type { IChangeEvent } from "@rjsf/core";
+import type { TemplatesType } from "@rjsf/utils";
 import { createRef } from "react";
 import { MultiSelectAutocompleteWidget } from "../molecules/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "../molecules/RJSFObjectFieldTemplate";

@@ -1,5 +1,5 @@
 import { Flex } from "@react-client/common/primitives/Flex";
-import { MouseEvent } from "react";
+import type { MouseEvent } from "react";
 import { samples } from "../samples";
 
 export interface SampleSelectorProps {

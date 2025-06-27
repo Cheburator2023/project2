@@ -1,6 +1,6 @@
 import Grid from "@mui/material/Grid";
 import Typography from "@mui/material/Typography";
-import { ObjectFieldTemplateProps } from "@rjsf/utils";
+import type { ObjectFieldTemplateProps } from "@rjsf/utils";
 
 export const RJSFObjectFieldTemplate = ({
 	title,

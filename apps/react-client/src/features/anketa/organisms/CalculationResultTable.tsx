@@ -3,10 +3,10 @@ import { useMemo, useState } from "react";
 
 import { useColorScheme } from "@mui/material";
 import {
-	CellClassParams,
-	CellStyle,
-	ColDef,
-	ValueFormatterParams,
+	type CellClassParams,
+	type CellStyle,
+	type ColDef,
+	type ValueFormatterParams,
 	colorSchemeDarkBlue,
 	themeQuartz,
 } from "ag-grid-community";

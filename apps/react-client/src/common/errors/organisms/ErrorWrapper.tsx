@@ -1,7 +1,7 @@
 import { Typography, useTheme } from "@mui/material";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import React from "react";
+import type React from "react";
 
 type Props = {
 	heading?: string;

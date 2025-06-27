@@ -1,40 +1,33 @@
-import { ArrayFieldTemplateProps } from "@rjsf/utils";
-import { Sample } from "./Sample";
+import type { ArrayFieldTemplateProps } from "@rjsf/utils";
+import type { Sample } from "./Sample";
 
 function ArrayFieldTemplate(props: ArrayFieldTemplateProps) {
 	const { className, items, canAdd, onAddClick } = props;
 	return (
 		<div className={className}>
-			{items &&
-				items.map((element: any) => (
-					<div key={element.key} className={element.className}>
-						<div>{element.children}</div>
-						{element.hasMoveDown && (
-							<button
-								onClick={element.onReorderClick(
-									element.index,
-									element.index + 1,
-								)}
-							>
-								Down
-							</button>
-						)}
-						{element.hasMoveUp && (
-							<button
-								onClick={element.onReorderClick(
-									element.index,
-									element.index - 1,
-								)}
-							>
-								Up
-							</button>
-						)}
-						<button onClick={element.onDropIndexClick(element.index)}>
-							Delete
+			{items?.map((element: any) => (
+				<div key={element.key} className={element.className}>
+					<div>{element.children}</div>
+					{element.hasMoveDown && (
+						<button
+							onClick={element.onReorderClick(element.index, element.index + 1)}
+						>
+							Down
 						</button>
-						<hr />
-					</div>
-				))}
+					)}
+					{element.hasMoveUp && (
+						<button
+							onClick={element.onReorderClick(element.index, element.index - 1)}
+						>
+							Up
+						</button>
+					)}
+					<button onClick={element.onDropIndexClick(element.index)}>
+						Delete
+					</button>
+					<hr />
+				</div>
+			))}
 
 			{canAdd && (
 				<div className="row">

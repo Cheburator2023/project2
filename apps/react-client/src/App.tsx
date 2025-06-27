@@ -2,13 +2,14 @@ import "./theme/global.css";
 import "@fontsource/inter";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 
-import React, { useEffect } from "react";
+import type React from "react";
+import { useEffect } from "react";
 
 import { CircularProgress, StyledEngineProvider } from "@mui/material";
 import CssBaseline from "@mui/material/CssBaseline";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import Keycloak from "keycloak-js";
+import type Keycloak from "keycloak-js";
 import { Suspense } from "react";
 import { BrowserRouter } from "react-router";
 

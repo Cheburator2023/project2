@@ -16,10 +16,7 @@ export const AnketaCompareLayout = () => {
 
 	return (
 		<Flex flexDirection="column" width="100%">
-			<Card
-				header={"Основная информация " + id1 + " / " + id2}
-				overflow={false}
-			>
+			<Card header={`Основная информация ${id1} / ${id2}`} overflow={false}>
 				<PanelGroup
 					autoSaveId={`anketa_compare_page_container_hor_${location.pathname}`}
 					direction="horizontal"
@@ -40,7 +37,7 @@ export const AnketaCompareLayout = () => {
 
 			<Spacer />
 
-			<Card header={"Итоговый расчет " + id1 + " / " + id2} overflow={false}>
+			<Card header={`Итоговый расчет ${id1} / ${id2}`} overflow={false}>
 				<PanelGroup
 					autoSaveId={`anketa_compare_page_container_hor_${location.pathname}`}
 					direction="horizontal"
@@ -61,7 +58,7 @@ export const AnketaCompareLayout = () => {
 
 			<Spacer />
 
-			<Card header={"Опросник " + id1 + " / " + id2} overflow={false}>
+			<Card header={`Опросник ${id1} / ${id2}`} overflow={false}>
 				<PanelGroup
 					autoSaveId={`anketa_compare_page_container_hor_${location.pathname}`}
 					direction="horizontal"
