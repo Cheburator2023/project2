@@ -6,8 +6,4 @@
  * OpenAPI spec version: 1.0
  */
 
-// Export all generated queries
-export * from './queries/calculation';
-
-// Export all generated types
-export * from './types'; 
+export type CalculationQuestionnaireDataDtoProductionDeploymentChannelsItem = { [key: string]: unknown };

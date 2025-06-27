@@ -12,7 +12,7 @@ export type CalculationControllerFindAllPaginatedParams = {
  */
 page?: number;
 /**
- * Number of items per page
+ * Number of items per page (max 100)
  */
 limit?: number;
 };

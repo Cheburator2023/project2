@@ -14,22 +14,23 @@ import type { CreateCalculationDtoPilotModelRequired } from './createCalculation
 import type { AlgorithmTypeItemDto } from './algorithmTypeItemDto';
 import type { CreateCalculationDtoPilotSupportRequired } from './createCalculationDtoPilotSupportRequired';
 import type { CreateCalculationDtoAutoMlRequired } from './createCalculationDtoAutoMlRequired';
+import type { CreateCalculationDtoProductionDeploymentChannelsItem } from './createCalculationDtoProductionDeploymentChannelsItem';
 
 export interface CreateCalculationDto {
   /** Название расчета */
   name: string;
-  /**
-   * Количество моделей (>1 для каскадов и ансамблей моделей)
-   * @minimum 1
-   * @maximum 99
-   */
-  modelsCount: number;
   /** Сложность настройки */
   setupComplexity: string;
   /** Срок реализации инициативы */
   initiativeTimeline: CreateCalculationDtoInitiativeTimeline;
   /** Стоимость инициативы */
   initiativeCost: CreateCalculationDtoInitiativeCost;
+  /**
+   * Количество моделей (>1 для каскадов и ансамблей моделей)
+   * @minimum 1
+   * @maximum 99
+   */
+  modelsCount: number;
   /** Корректировка неопределенности */
   uncertaintyAdjustment: number;
   /** Факторы общей неопределенности */
@@ -51,7 +52,7 @@ export interface CreateCalculationDto {
   /** Дополнительные отчеты для продакшена */
   productionAdditionalReports: number;
   /** Каналы развертывания в продакшен */
-  productionDeploymentChannels: string[];
+  productionDeploymentChannels: CreateCalculationDtoProductionDeploymentChannelsItem[];
   /** Финальный коэффициент расчета */
   finalCoefficient: number;
 }

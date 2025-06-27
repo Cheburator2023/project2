@@ -1,14 +1,14 @@
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
-import { getRepositoryToken } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { EntityNotFoundError } from "typeorm";
-import { CalculationService } from "../../calculation/services/calculation.service";
-import { CreateCalculationDto } from "../dto/create-calculation.dto";
+import { CreateCalculationDto } from "../dto/request/create-calculation.dto";
+import { CalculationResponseDto } from "../dto/response/calculation-response.dto";
 import { Calculation } from "../entities/calculation.entity";
+import { CalculationService } from "../services/calculation.service";
+import { CalculationController } from "./calculation.controller";
 
-describe("CalculationService", () => {
+describe("CalculationController", () => {
+	let controller: CalculationController;
 	let service: CalculationService;
-	let repository: Repository<Calculation>;
 
 	const mockCalculation: Calculation = {
 		id: "550e8400-e29b-41d4-a716-446655440000",
@@ -91,90 +91,58 @@ describe("CalculationService", () => {
 		finalCoefficient: 1.5,
 	};
 
+	const mockResponseDto: CalculationResponseDto = {
+		id: mockCalculation.id,
+		name: mockCalculation.name,
+		questionnaireData: mockCalculation.questionnaireData,
+		finalCoefficient: mockCalculation.finalCoefficient,
+		createdAt: mockCalculation.createdAt,
+	};
+
 	beforeEach(async () => {
 		const module: TestingModule = await Test.createTestingModule({
+			controllers: [CalculationController],
 			providers: [
-				CalculationService,
 				{
-					provide: getRepositoryToken(Calculation),
+					provide: CalculationService,
 					useValue: {
-						create: jest.fn().mockImplementation((dto) => ({
-							...dto,
-							id: "550e8400-e29b-41d4-a716-446655440000",
-							createdAt: new Date(),
-						})),
-						save: jest.fn().mockResolvedValue(mockCalculation),
+						create: jest.fn().mockResolvedValue(mockCalculation),
 						findOne: jest.fn().mockResolvedValue(mockCalculation),
-						findAndCount: jest.fn().mockResolvedValue([[mockCalculation], 1]),
+						findAllPaginated: jest.fn().mockResolvedValue({
+							data: [mockCalculation],
+							meta: {
+								total: 1,
+								page: 1,
+								limit: 10,
+								lastPage: 1,
+							},
+						}),
+						findAll: jest.fn().mockResolvedValue([mockCalculation]),
 					},
 				},
 			],
 		}).compile();
 
+		controller = module.get<CalculationController>(CalculationController);
 		service = module.get<CalculationService>(CalculationService);
-		repository = module.get<Repository<Calculation>>(
-			getRepositoryToken(Calculation),
-		);
 	});
 
 	describe("create()", () => {
-		it("should successfully create a calculation", async () => {
-			const result = await service.create(mockCreateDto);
+		it("should create a calculation and return response DTO", async () => {
+			const result = await controller.create(mockCreateDto);
 
-			expect(result).toEqual(mockCalculation);
-			expect(repository.create).toHaveBeenCalledWith({
-				name: mockCreateDto.name,
-				questionnaireData: {
-					name: mockCreateDto.name,
-					modelsCount: mockCreateDto.modelsCount,
-					setupComplexity: mockCreateDto.setupComplexity,
-					initiativeTimeline: mockCreateDto.initiativeTimeline,
-					initiativeCost: mockCreateDto.initiativeCost,
-					uncertaintyAdjustment: mockCreateDto.uncertaintyAdjustment,
-					generalUncertainty: {
-						planningRequirementGaps: {
-							probability: "Реализация не чаще 1 раза в 10 лет",
-							influence: "Незначительное",
-						},
-						businessProcessComplexity: {
-							probability: "Реализация 1 раз в 3-10 лет",
-							influence: "Существенное",
-						},
-					},
-					readyPromReports: mockCreateDto.readyPromReports,
-					assessedInitiativesCount:
-						mockCreateDto.assessedInitiativesCount?.toString(),
-					dataSourcesCount: mockCreateDto.dataSourcesCount,
-					pilotModelRequired: mockCreateDto.pilotModelRequired,
-					algorithmComplexity: mockCreateDto.algorithmComplexity,
-					pilotSupportRequired: mockCreateDto.pilotSupportRequired,
-					autoMlRequired: mockCreateDto.autoMlRequired,
-					productionAdditionalReports:
-						mockCreateDto.productionAdditionalReports?.toString(),
-					productionDeploymentChannels: [
-						{ deploymentChannel: "Батч" },
-						{ deploymentChannel: "Батч+загрузка данных потребителю" },
-						{ deploymentChannel: "Батч + Онлайн" },
-					],
-				},
-				finalCoefficient: mockCreateDto.finalCoefficient,
-			});
-			expect(repository.save).toHaveBeenCalled();
-		});
-	});
-
-	describe("findOne()", () => {
-		it("should return a calculation by id", async () => {
-			const id = "550e8400-e29b-41d4-a716-446655440000";
-			const result = await service.findOne(id);
-			expect(result).toEqual(mockCalculation);
-			expect(repository.findOne).toHaveBeenCalledWith({ where: { id } });
+			expect(result).toEqual(mockResponseDto);
+			expect(service.create).toHaveBeenCalledWith(mockCreateDto);
 		});
 
-		it("should throw EntityNotFoundError when calculation not found", async () => {
-			jest.spyOn(repository, "findOne").mockResolvedValue(null);
-			const id = "550e8400-e29b-41d4-a716-446655440000";
-			await expect(service.findOne(id)).rejects.toThrow(EntityNotFoundError);
+		it("should handle service errors", async () => {
+			jest
+				.spyOn(service, "create")
+				.mockRejectedValue(new BadRequestException("Validation failed"));
+
+			await expect(controller.create(mockCreateDto)).rejects.toThrow(
+				BadRequestException,
+			);
 		});
 	});
 
@@ -182,7 +150,7 @@ describe("CalculationService", () => {
 		it("should return paginated calculations", async () => {
 			const paginationDto = { page: 1, limit: 10 };
 			const expectedResult = {
-				data: [mockCalculation],
+				data: [mockResponseDto],
 				meta: {
 					total: 1,
 					page: 1,
@@ -191,13 +159,35 @@ describe("CalculationService", () => {
 				},
 			};
 
-			const result = await service.findAllPaginated(paginationDto);
+			const result = await controller.findAllPaginated(paginationDto);
 			expect(result).toEqual(expectedResult);
-			expect(repository.findAndCount).toHaveBeenCalledWith({
-				skip: 0,
-				take: 10,
-				order: { createdAt: "DESC" },
-			});
+			expect(service.findAllPaginated).toHaveBeenCalledWith(paginationDto);
+		});
+	});
+
+	describe("findAll()", () => {
+		it("should return all calculations", async () => {
+			const result = await controller.findAll();
+			expect(result).toEqual([mockResponseDto]);
+			expect(service.findAll).toHaveBeenCalled();
+		});
+	});
+
+	describe("findOne()", () => {
+		it("should return a calculation by id", async () => {
+			const id = "550e8400-e29b-41d4-a716-446655440000";
+			const result = await controller.findOne(id);
+			expect(result).toEqual(mockResponseDto);
+			expect(service.findOne).toHaveBeenCalledWith(id);
+		});
+
+		it("should handle not found errors", async () => {
+			const id = "550e8400-e29b-41d4-a716-446655440000";
+			jest
+				.spyOn(service, "findOne")
+				.mockRejectedValue(new NotFoundException("Calculation not found"));
+
+			await expect(controller.findOne(id)).rejects.toThrow(NotFoundException);
 		});
 	});
 });

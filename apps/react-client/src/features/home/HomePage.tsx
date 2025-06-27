@@ -10,7 +10,7 @@ import {
 	styled,
 	useColorScheme,
 } from "@mui/material";
-import { useCalculationControllerFindAll } from "@react-client/common/api/generated";
+import { useCalculationControllerFindAll } from "@react-client/common/api/generated/queries/calculation";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";

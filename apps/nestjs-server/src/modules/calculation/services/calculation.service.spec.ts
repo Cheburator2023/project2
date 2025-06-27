@@ -1,8 +1,8 @@
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { EntityNotFoundError } from "typeorm";
-import { CreateCalculationDto } from "../../calculation/dto/create-calculation.dto";
+import { CreateCalculationDto } from "../dto/request/create-calculation.dto";
 import { Calculation } from "../entities/calculation.entity";
 import { CalculationService } from "./calculation.service";
 
@@ -106,6 +106,7 @@ describe("CalculationService", () => {
 						save: jest.fn().mockResolvedValue(mockCalculation),
 						findOne: jest.fn().mockResolvedValue(mockCalculation),
 						findAndCount: jest.fn().mockResolvedValue([[mockCalculation], 1]),
+						find: jest.fn().mockResolvedValue([mockCalculation]),
 					},
 				},
 			],
@@ -161,6 +162,15 @@ describe("CalculationService", () => {
 			});
 			expect(repository.save).toHaveBeenCalled();
 		});
+
+		it("should throw BadRequestException when creation fails", async () => {
+			const error = new Error("Database error");
+			jest.spyOn(repository, "save").mockRejectedValue(error);
+
+			await expect(service.create(mockCreateDto)).rejects.toThrow(
+				BadRequestException,
+			);
+		});
 	});
 
 	describe("findOne()", () => {
@@ -171,10 +181,10 @@ describe("CalculationService", () => {
 			expect(repository.findOne).toHaveBeenCalledWith({ where: { id } });
 		});
 
-		it("should throw EntityNotFoundError when calculation not found", async () => {
+		it("should throw NotFoundException when calculation not found", async () => {
 			jest.spyOn(repository, "findOne").mockResolvedValue(null);
 			const id = "550e8400-e29b-41d4-a716-446655440000";
-			await expect(service.findOne(id)).rejects.toThrow(EntityNotFoundError);
+			await expect(service.findOne(id)).rejects.toThrow(NotFoundException);
 		});
 	});
 
@@ -198,6 +208,32 @@ describe("CalculationService", () => {
 				take: 10,
 				order: { createdAt: "DESC" },
 			});
+		});
+
+		it("should throw BadRequestException when pagination fails", async () => {
+			const error = new Error("Database error");
+			jest.spyOn(repository, "findAndCount").mockRejectedValue(error);
+
+			await expect(
+				service.findAllPaginated({ page: 1, limit: 10 }),
+			).rejects.toThrow(BadRequestException);
+		});
+	});
+
+	describe("findAll()", () => {
+		it("should return all calculations", async () => {
+			const result = await service.findAll();
+			expect(result).toEqual([mockCalculation]);
+			expect(repository.find).toHaveBeenCalledWith({
+				order: { createdAt: "DESC" },
+			});
+		});
+
+		it("should throw BadRequestException when fetch fails", async () => {
+			const error = new Error("Database error");
+			jest.spyOn(repository, "find").mockRejectedValue(error);
+
+			await expect(service.findAll()).rejects.toThrow(BadRequestException);
 		});
 	});
 });

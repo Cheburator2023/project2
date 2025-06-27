@@ -2,7 +2,9 @@ import {
 	Body,
 	Controller,
 	Get,
+	HttpStatus,
 	Param,
+	ParseUUIDPipe,
 	Post,
 	Query,
 	UsePipes,
@@ -11,15 +13,18 @@ import {
 import {
 	ApiBearerAuth,
 	ApiOperation,
+	ApiParam,
 	ApiQuery,
 	ApiResponse,
 	ApiTags,
 } from "@nestjs/swagger";
 import { Resource } from "nest-keycloak-connect";
-import { CreateCalculationDto } from "../dto/create-calculation.dto";
-import { PaginationDto } from "../dto/pagination.dto";
-import { Calculation } from "../entities/calculation.entity";
-import { PaginatedResult } from "../interfaces/paginated-result.interface";
+import {
+	CalculationResponseDto,
+	CreateCalculationDto,
+	PaginatedCalculationResponseDto,
+	PaginationDto,
+} from "../dto";
 import { CalculationService } from "../services/calculation.service";
 
 @ApiBearerAuth("JWT-auth")
@@ -31,77 +36,137 @@ export class CalculationController {
 
 	@Post()
 	@UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-	@ApiOperation({ summary: "Save calculation result" })
-	@ApiResponse({
-		status: 201,
-		description: "The calculation has been successfully saved.",
-		type: Calculation,
+	@ApiOperation({
+		summary: "Create new calculation",
+		description: "Creates a new calculation with the provided data",
 	})
 	@ApiResponse({
-		status: 400,
+		status: HttpStatus.CREATED,
+		description: "The calculation has been successfully created.",
+		type: CalculationResponseDto,
+	})
+	@ApiResponse({
+		status: HttpStatus.BAD_REQUEST,
 		description: "Bad request. Validation failed.",
 	})
-	async create(@Body() createCalculationDto: CreateCalculationDto) {
-		return this.calculationService.create(createCalculationDto);
+	@ApiResponse({
+		status: HttpStatus.UNAUTHORIZED,
+		description: "Unauthorized. Authentication required.",
+	})
+	async create(
+		@Body() createCalculationDto: CreateCalculationDto,
+	): Promise<CalculationResponseDto> {
+		const calculation =
+			await this.calculationService.create(createCalculationDto);
+		return this.mapToResponseDto(calculation);
 	}
 
 	@Get("all")
-	@ApiOperation({ summary: "Get all calculations (paginated)" })
-	@ApiQuery({ name: "page", required: false, type: Number })
-	@ApiQuery({ name: "limit", required: false, type: Number })
+	@ApiOperation({
+		summary: "Get all calculations (paginated)",
+		description: "Retrieves a paginated list of all calculations",
+	})
+	@ApiQuery({
+		name: "page",
+		required: false,
+		type: Number,
+		description: "Page number (starting from 1)",
+		example: 1,
+	})
+	@ApiQuery({
+		name: "limit",
+		required: false,
+		type: Number,
+		description: "Number of items per page (max 100)",
+		example: 10,
+	})
 	@ApiResponse({
-		status: 200,
+		status: HttpStatus.OK,
 		description: "Paginated list of calculations",
-		schema: {
-			properties: {
-				data: {
-					type: "array",
-					items: { $ref: "#/components/schemas/Calculation" },
-				},
-				meta: {
-					properties: {
-						total: { type: "number" },
-						page: { type: "number" },
-						limit: { type: "number" },
-						lastPage: { type: "number" },
-					},
-				},
-			},
-		},
+		type: PaginatedCalculationResponseDto,
+	})
+	@ApiResponse({
+		status: HttpStatus.UNAUTHORIZED,
+		description: "Unauthorized. Authentication required.",
 	})
 	async findAllPaginated(
 		@Query() paginationDto: PaginationDto,
-	): Promise<PaginatedResult<Calculation>> {
-		return this.calculationService.findAllPaginated(paginationDto);
+	): Promise<PaginatedCalculationResponseDto> {
+		const result =
+			await this.calculationService.findAllPaginated(paginationDto);
+		return {
+			data: result.data.map((calculation) =>
+				this.mapToResponseDto(calculation),
+			),
+			meta: result.meta,
+		};
 	}
 
 	@Get("all/list")
-	@ApiOperation({ summary: "Get all calculations (non-paginated)" })
-	@ApiResponse({
-		status: 200,
-		description: "List of all calculations",
-		type: [Calculation],
+	@ApiOperation({
+		summary: "Get all calculations (non-paginated)",
+		description: "Retrieves all calculations without pagination",
 	})
-	async findAll(): Promise<Calculation[]> {
-		return this.calculationService.findAll();
+	@ApiResponse({
+		status: HttpStatus.OK,
+		description: "List of all calculations",
+		type: [CalculationResponseDto],
+	})
+	@ApiResponse({
+		status: HttpStatus.UNAUTHORIZED,
+		description: "Unauthorized. Authentication required.",
+	})
+	async findAll(): Promise<CalculationResponseDto[]> {
+		const calculations = await this.calculationService.findAll();
+		return calculations.map((calculation) =>
+			this.mapToResponseDto(calculation),
+		);
 	}
 
 	@Get(":id")
-	@ApiOperation({ summary: "Get calculation by ID" })
-	@ApiResponse({
-		status: 200,
-		description: "Calculation data",
-		type: Calculation,
+	@ApiOperation({
+		summary: "Get calculation by ID",
+		description: "Retrieves a specific calculation by its unique identifier",
+	})
+	@ApiParam({
+		name: "id",
+		description: "Calculation unique identifier",
+		example: "550e8400-e29b-41d4-a716-446655440000",
 	})
 	@ApiResponse({
-		status: 400,
+		status: HttpStatus.OK,
+		description: "Calculation data",
+		type: CalculationResponseDto,
+	})
+	@ApiResponse({
+		status: HttpStatus.BAD_REQUEST,
 		description: "Invalid UUID format",
 	})
 	@ApiResponse({
-		status: 404,
+		status: HttpStatus.NOT_FOUND,
 		description: "Calculation not found",
 	})
-	async findOne(@Param("id") id: string) {
-		return this.calculationService.findOne(id);
+	@ApiResponse({
+		status: HttpStatus.UNAUTHORIZED,
+		description: "Unauthorized. Authentication required.",
+	})
+	async findOne(
+		@Param("id", ParseUUIDPipe) id: string,
+	): Promise<CalculationResponseDto> {
+		const calculation = await this.calculationService.findOne(id);
+		return this.mapToResponseDto(calculation);
+	}
+
+	/**
+	 * Maps calculation entity to response DTO
+	 */
+	private mapToResponseDto(calculation: any): CalculationResponseDto {
+		return {
+			id: calculation.id,
+			name: calculation.name,
+			questionnaireData: calculation.questionnaireData,
+			finalCoefficient: calculation.finalCoefficient,
+			createdAt: calculation.createdAt,
+		};
 	}
 }
