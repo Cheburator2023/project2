@@ -9,8 +9,8 @@
 /**
  * Количество источников данных
  */
-export type CreateCalculationDtoDataSourcesCount =
-  (typeof CreateCalculationDtoDataSourcesCount)[keyof typeof CreateCalculationDtoDataSourcesCount];
+export type CreateCalculationDtoDataSourcesCount = typeof CreateCalculationDtoDataSourcesCount[keyof typeof CreateCalculationDtoDataSourcesCount];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateCalculationDtoDataSourcesCount = {

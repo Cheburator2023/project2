@@ -9,8 +9,8 @@
 /**
  * Наличие готовых промоделированных отчетов
  */
-export type CreateCalculationDtoReadyPromReports =
-  (typeof CreateCalculationDtoReadyPromReports)[keyof typeof CreateCalculationDtoReadyPromReports];
+export type CreateCalculationDtoReadyPromReports = typeof CreateCalculationDtoReadyPromReports[keyof typeof CreateCalculationDtoReadyPromReports];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateCalculationDtoReadyPromReports = {

@@ -13,7 +13,6 @@ import {
 import { useCalculationControllerFindAll } from "@react-client/common/api/generated";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { useAuthStore } from "@react-client/common/store/authStore";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { Header } from "@react-client/features/navigation/organisms/Header";
@@ -64,13 +63,8 @@ export const HomePage = () => {
 	const [params] = useSearchParams();
 	const navigate = useNavigate();
 	const location = useLocation();
-	const { accessToken } = useAuthStore();
 
-	const { data, isLoading, error } = useCalculationControllerFindAll({
-		query: {
-			enabled: !!accessToken,
-		},
-	});
+	const { data, isLoading, error } = useCalculationControllerFindAll();
 
 	const isInDefaultCompareMode = params.get("isInCompareMode") === "true";
 
@@ -122,14 +116,25 @@ export const HomePage = () => {
 
 	const actions = [
 		{
-			icon: <AddIcon />,
+			icon: <AddIcon data-test-id="home-page--AddIcon-0" />,
 			name: "Создать расчет",
 			onClick: onCreateCalculation,
 		},
-		{ icon: <SaveIcon onClick={onExportExcel} />, name: "Выгрузить в Excel" },
 		{
 			icon: (
-				<CompareIcon onClick={() => setIsInCompareMode(!isInCompareMode)} />
+				<SaveIcon
+					onClick={onExportExcel}
+					data-test-id="home-page--SaveIcon-0"
+				/>
+			),
+			name: "Выгрузить в Excel",
+		},
+		{
+			icon: (
+				<CompareIcon
+					onClick={() => setIsInCompareMode(!isInCompareMode)}
+					data-test-id="home-page--CompareIcon-0"
+				/>
 			),
 			name: isInCompareMode ? "Отменить сравнение" : "Сравнить",
 		},
@@ -157,26 +162,34 @@ export const HomePage = () => {
 	}
 
 	return (
-		<div>
-			<Spacer height={6} />
-			<Header>
+		<div data-test-id="home-page--div-0">
+			<Spacer height={6} data-test-id="home-page--Spacer-0" />
+			<Header data-test-id="home-page--Header-0">
 				<Flex
 					width="fill-available"
 					justifyContent="space-between"
 					alignItems="center"
+					data-test-id="home-page--Flex-0"
 				>
-					<Flex width="100%" maxWidth="550px">
-						<SearchInput />
+					<Flex width="100%" maxWidth="550px" data-test-id="home-page--Flex-1">
+						<SearchInput data-test-id="home-page--SearchInput-0" />
 					</Flex>
-
-					<Flex gap={6} alignItems="center" justifyContent="flex-end">
-						<Tooltip title="Создать расчет">
-							<IconButton aria-label="menu" onClick={onCreateCalculation}>
-								<AddIcon />
+					<Flex
+						gap={6}
+						alignItems="center"
+						justifyContent="flex-end"
+						data-test-id="home-page--Flex-2"
+					>
+						<Tooltip title="Создать расчет" data-test-id="home-page--Tooltip-0">
+							<IconButton
+								aria-label="menu"
+								onClick={onCreateCalculation}
+								data-test-id="home-page--IconButton-0"
+							>
+								<AddIcon data-test-id="home-page--AddIcon-1" />
 							</IconButton>
 						</Tooltip>
-
-						<Tooltip title="Сравнить">
+						<Tooltip title="Сравнить" data-test-id="home-page--Tooltip-1">
 							<IconButton
 								disabled={selectedRows?.length !== 2}
 								aria-label="menu"
@@ -187,16 +200,20 @@ export const HomePage = () => {
 											.join("&")}`,
 									);
 								}}
+								data-test-id="home-page--IconButton-1"
 							>
-								<CompareArrowsIcon />
+								<CompareArrowsIcon data-test-id="home-page--CompareArrowsIcon-0" />
 							</IconButton>
 						</Tooltip>
-
-						<Tooltip title="Выгрузить в Excel">
+						<Tooltip
+							title="Выгрузить в Excel"
+							data-test-id="home-page--Tooltip-2"
+						>
 							<Button
 								aria-label="menu"
 								onClick={onExportExcel}
 								variant="contained"
+								data-test-id="home-page--Button-0"
 							>
 								Выгрузить в Excel
 							</Button>
@@ -204,8 +221,12 @@ export const HomePage = () => {
 					</Flex>
 				</Flex>
 			</Header>
-			<Spacer height={12} />
-			<GridWrapper width="100%" height="-webkit-fill-available">
+			<Spacer height={12} data-test-id="home-page--Spacer-1" />
+			<GridWrapper
+				width="100%"
+				height="-webkit-fill-available"
+				data-test-id="home-page--GridWrapper-0"
+			>
 				<AgGridReact
 					rowClass="custom-row-class"
 					rowClassRules={rowClassRules}
@@ -235,6 +256,7 @@ export const HomePage = () => {
 							),
 						);
 					}}
+					data-test-id="home-page--AgGridReact-0"
 				/>
 			</GridWrapper>
 		</div>

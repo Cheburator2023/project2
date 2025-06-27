@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useAuthStore } from "../store/authStore";
 
 interface AuthProviderProps {
-	token: string;
+	token?: string;
 	children: React.ReactNode;
 }
 
@@ -13,7 +13,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 	const setAccessToken = useAuthStore((state) => state.setAccessToken);
 
 	useEffect(() => {
-		setAccessToken(token);
+		if (token) {
+			setAccessToken(token);
+		}
 	}, [token, setAccessToken]);
 
 	return <>{children}</>;

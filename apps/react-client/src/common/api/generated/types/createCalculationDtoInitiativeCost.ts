@@ -9,8 +9,8 @@
 /**
  * Стоимость инициативы
  */
-export type CreateCalculationDtoInitiativeCost =
-  (typeof CreateCalculationDtoInitiativeCost)[keyof typeof CreateCalculationDtoInitiativeCost];
+export type CreateCalculationDtoInitiativeCost = typeof CreateCalculationDtoInitiativeCost[keyof typeof CreateCalculationDtoInitiativeCost];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateCalculationDtoInitiativeCost = {

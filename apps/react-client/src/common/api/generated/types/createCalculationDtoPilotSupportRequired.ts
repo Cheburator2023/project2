@@ -9,8 +9,8 @@
 /**
  * Требуется ли поддержка пилота
  */
-export type CreateCalculationDtoPilotSupportRequired =
-  (typeof CreateCalculationDtoPilotSupportRequired)[keyof typeof CreateCalculationDtoPilotSupportRequired];
+export type CreateCalculationDtoPilotSupportRequired = typeof CreateCalculationDtoPilotSupportRequired[keyof typeof CreateCalculationDtoPilotSupportRequired];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateCalculationDtoPilotSupportRequired = {

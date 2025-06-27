@@ -33,8 +33,9 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 				aria-label="Open menu"
 				onClick={handleClick}
 				sx={{ borderColor: "transparent" }}
+				data-test-id="options-menu--MenuButton-0"
 			>
-				<MoreVertRoundedIcon />
+				<MoreVertRoundedIcon data-test-id="options-menu--MoreVertRoundedIcon-0" />
 			</MenuButton>
 			<Menu
 				anchorEl={anchorEl}
@@ -55,6 +56,7 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 						margin: "4px -4px",
 					},
 				}}
+				data-test-id="options-menu--Menu-0"
 			>
 				{/* <MenuItem onClick={handleClose}>Profile</MenuItem>
 				<MenuItem onClick={handleClose}>My account</MenuItem>
@@ -70,10 +72,16 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 							minWidth: 0,
 						},
 					}}
+					data-test-id="options-menu--MenuItem-0"
 				>
-					<ListItemText>Выйти</ListItemText>
-					<ListItemIcon>
-						<LogoutRoundedIcon fontSize="small" />
+					<ListItemText data-test-id="options-menu--ListItemText-0">
+						Выйти
+					</ListItemText>
+					<ListItemIcon data-test-id="options-menu--ListItemIcon-0">
+						<LogoutRoundedIcon
+							fontSize="small"
+							data-test-id="options-menu--LogoutRoundedIcon-0"
+						/>
 					</ListItemIcon>
 				</MenuItem>
 			</Menu>

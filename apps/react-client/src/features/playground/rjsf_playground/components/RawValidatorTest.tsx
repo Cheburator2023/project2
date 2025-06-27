@@ -27,9 +27,17 @@ export default function RawValidatorTest({
 				: "No AJV errors encountered";
 	}
 	return (
-		<div>
-			<details style={{ marginBottom: "10px" }}>
-				<summary style={{ display: "list-item" }}>Raw Ajv Validation</summary>
+		<div data-test-id="raw-validator-test--div-0">
+			<details
+				style={{ marginBottom: "10px" }}
+				data-test-id="raw-validator-test--details-0"
+			>
+				<summary
+					style={{ display: "list-item" }}
+					data-test-id="raw-validator-test--summary-0"
+				>
+					Raw Ajv Validation
+				</summary>
 				To determine whether a validation issue is really a BUG in Ajv use the
 				button to trigger the raw Ajv validation. This will run your schema and
 				formData through Ajv without involving any react-jsonschema-form
@@ -38,26 +46,32 @@ export default function RawValidatorTest({
 					href="https://github.com/ajv-validator/ajv/issues/new/choose"
 					target="_blank"
 					rel="noreferrer"
+					data-test-id="raw-validator-test--a-0"
 				>
 					file an issue
 				</a>{" "}
 				with Ajv instead.
 			</details>
-			<div style={{ marginBottom: "10px" }}>
+			<div
+				style={{ marginBottom: "10px" }}
+				data-test-id="raw-validator-test--div-1"
+			>
 				<button
 					className="btn btn-default"
 					type="button"
 					onClick={handleRawClick}
+					data-test-id="raw-validator-test--button-0"
 				>
 					Raw Validate
 				</button>
 				{rawValidation && (
 					<>
-						<span> </span>
+						<span data-test-id="raw-validator-test--span-0"> </span>
 						<button
 							className="btn btn-default"
 							type="button"
 							onClick={handleClearClick}
+							data-test-id="raw-validator-test--button-1"
 						>
 							Clear
 						</button>
@@ -69,6 +83,7 @@ export default function RawValidatorTest({
 				readOnly
 				disabled={!rawValidation}
 				value={displayErrors}
+				data-test-id="raw-validator-test--textarea-0"
 			/>
 		</div>
 	);

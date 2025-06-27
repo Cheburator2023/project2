@@ -9,8 +9,8 @@
 /**
  * Вероятность возникновения риска
  */
-export type UncertaintyItemDtoProbability =
-  (typeof UncertaintyItemDtoProbability)[keyof typeof UncertaintyItemDtoProbability];
+export type UncertaintyItemDtoProbability = typeof UncertaintyItemDtoProbability[keyof typeof UncertaintyItemDtoProbability];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const UncertaintyItemDtoProbability = {

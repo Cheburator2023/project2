@@ -1,3 +1,3 @@
 export const AdminPage = () => {
-	return <div>AdminPage</div>;
+	return <div data-test-id="admin-page--div-0">AdminPage</div>;
 };

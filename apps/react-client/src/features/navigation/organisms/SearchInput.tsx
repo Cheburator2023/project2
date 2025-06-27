@@ -23,12 +23,16 @@ export function SearchInput() {
 			slotProps={{
 				input: {
 					startAdornment: (
-						<InputAdornment position="start">
-							<SearchIcon />
+						<InputAdornment
+							position="start"
+							data-test-id="search-input--InputAdornment-0"
+						>
+							<SearchIcon data-test-id="search-input--SearchIcon-0" />
 						</InputAdornment>
 					),
 				},
 			}}
+			data-test-id="search-input--TextField-0"
 		/>
 	);
 }

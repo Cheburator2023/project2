@@ -1,21 +1,9 @@
-import {
-	ALGORITHM_TYPE_VALUES,
-	DATA_SOURCES_COUNT_VALUES,
-	DEPLOYMENT_CHANNEL_VALUES,
-	INFLUENCE_VALUES,
-	INITIATIVE_COST_VALUES,
-	INITIATIVE_TIMELINE_VALUES,
-	PROBABILITY_VALUES,
-	YES_NO_REQUIRED_VALUES,
-	YES_NO_VALUES,
-} from "../dto/base/calculation-base.dto";
-
 export interface CalculationData {
 	name: string;
 	modelsCount: number;
-	setupComplexity: string;
-	initiativeTimeline: (typeof INITIATIVE_TIMELINE_VALUES)[number];
-	initiativeCost: (typeof INITIATIVE_COST_VALUES)[number];
+	setupComplexity: number;
+	initiativeTimeline: string;
+	initiativeCost: string;
 	generalUncertainty: {
 		businessProcessComplexity: ProbabilityInfluencePair;
 		projectSolutionDefects: ProbabilityInfluencePair;
@@ -29,27 +17,27 @@ export interface CalculationData {
 		systemUnderutilization: ProbabilityInfluencePair;
 		itArchitectureChanges: ProbabilityInfluencePair;
 	};
-	readyPromReports: (typeof YES_NO_VALUES)[number];
+	readyPromReports: string;
 	assessedInitiativesCount?: string;
-	dataSourcesCount: (typeof DATA_SOURCES_COUNT_VALUES)[number];
-	pilotModelRequired: (typeof YES_NO_REQUIRED_VALUES)[number];
+	dataSourcesCount: string;
+	pilotModelRequired: string;
 	algorithmComplexity: AlgorithmTypeItem[];
-	pilotSupportRequired: (typeof YES_NO_REQUIRED_VALUES)[number];
-	autoMlRequired: (typeof YES_NO_REQUIRED_VALUES)[number];
-	productionAdditionalReports?: string;
+	pilotSupportRequired: string;
+	autoMlRequired: string;
+	productionAdditionalReports: string;
 	productionDeploymentChannels: DeploymentChannel[];
 	finalCoefficient: number;
 }
 
 interface ProbabilityInfluencePair {
-	probability: (typeof PROBABILITY_VALUES)[number];
-	influence: (typeof INFLUENCE_VALUES)[number];
+	probability: string;
+	influence: string;
 }
 
 interface AlgorithmTypeItem {
-	algorithmType: (typeof ALGORITHM_TYPE_VALUES)[number];
+	algorithmType: string;
 }
 
 interface DeploymentChannel {
-	deploymentChannel: (typeof DEPLOYMENT_CHANNEL_VALUES)[number];
+	deploymentChannel: string;
 }

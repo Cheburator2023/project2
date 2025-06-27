@@ -32,7 +32,7 @@ function ObjectFieldTemplate<
 		options,
 	);
 	return (
-		<div>
+		<div data-test-id="custom-object--div-0">
 			{title && (
 				<TitleFieldTemplate
 					id={titleId<T>(idSchema)}
@@ -41,14 +41,16 @@ function ObjectFieldTemplate<
 					schema={schema}
 					uiSchema={uiSchema}
 					registry={registry}
+					data-test-id="custom-object--TitleFieldTemplate-0"
 				/>
 			)}{" "}
 			{description}
-			<div className="row">
+			<div className="row" data-test-id="custom-object--div-1">
 				{properties.map((prop: ObjectFieldTemplatePropertyType) => (
 					<div
 						className="col-lg-1 col-md-2 col-sm-4 col-xs-6"
 						key={prop.content.key}
+						data-test-id="custom-object--div-2"
 					>
 						{prop.content}
 					</div>

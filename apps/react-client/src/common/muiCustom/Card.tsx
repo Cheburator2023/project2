@@ -32,7 +32,7 @@ export const Card = (
 	return (
 		<MUIPaperStyled
 			sx={{
-				padding: props.padding || "20px",
+				padding: props.padding || "10px",
 				maxHeight: maxHeight || "100%",
 				height: props.height || "auto",
 				width: props.width,
@@ -41,6 +41,7 @@ export const Card = (
 			}}
 			variant="outlined"
 			{...props}
+			data-test-id="card--MUIPaperStyled-0"
 		>
 			{(props.header || props.onClose) && (
 				<Flex
@@ -49,11 +50,16 @@ export const Card = (
 					width="100%"
 					as="header"
 					style={{ height: `${headerH}px` }}
+					data-test-id="card--Flex-0"
 				>
-					{props.header && <Typography variant="h6">{props.header}</Typography>}
+					{props.header && (
+						<Typography variant="h6" data-test-id="card--Typography-0">
+							{props.header}
+						</Typography>
+					)}
 					{props.onClose && (
-						<IconButton onClick={handler}>
-							<CloseIcon />
+						<IconButton onClick={handler} data-test-id="card--IconButton-0">
+							<CloseIcon data-test-id="card--CloseIcon-0" />
 						</IconButton>
 					)}
 				</Flex>
@@ -67,6 +73,7 @@ export const Card = (
 						: "inherit",
 					width: "inherit",
 				}}
+				data-test-id="card--div-0"
 			>
 				{props.children}
 			</div>

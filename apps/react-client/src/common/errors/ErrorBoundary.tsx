@@ -103,11 +103,13 @@ class ErrorBoundaryComponent extends PureComponent<Props, State> {
 					setError: this.setError.bind(this),
 					setFullErrorData: this.setFullErrorData.bind(this),
 				}}
+				data-test-id="error-boundary--ErrorContext.Provider-0"
 			>
 				{this.state.hasError ? (
 					<this.props.ErrorPage
 						{...this.state}
 						resetErrorBoundary={this.resetErrorBoundary}
+						data-test-id="error-boundary--this.props.ErrorPage-0"
 					/>
 				) : (
 					this.props.children

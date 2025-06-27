@@ -3,13 +3,11 @@ import "@fontsource/inter";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 
 import type React from "react";
-import { useEffect } from "react";
 
 import { CircularProgress, StyledEngineProvider } from "@mui/material";
 import CssBaseline from "@mui/material/CssBaseline";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type Keycloak from "keycloak-js";
 import { Suspense } from "react";
 import { BrowserRouter } from "react-router";
 
@@ -26,8 +24,10 @@ import {
 
 import { ErrorBoundary } from "@react-client/common/errors/ErrorBoundary";
 import { ErrorPage } from "@react-client/common/errors/pages/ErrorPage";
+import { useEffectOnce } from "@react-client/common/hooks/useEffectOnce";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { isEmpty } from "lodash-es";
+import type { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
 import { reportWebVitals } from "./reportWebVitals";
 
 reportWebVitals(console.log);
@@ -52,58 +52,70 @@ const queryClient = new QueryClient({
 
 interface LayoutProps {
 	children?: React.ReactNode;
-	user?: Keycloak.KeycloakTokenParsed & {
-		family_name: string;
-		given_name: string;
-		realm_access: {
-			roles: string[];
-		};
-		roles: string[];
-	};
-	protectedFetch?: <T, N>(
-		routeUrl: string,
-		params?: Record<string, string>,
-		body?: N,
-		method?: string,
-	) => Promise<T>;
-	goToSum?: () => void;
-	onLogout?: () => void;
+	urlConfig?: T_CONFIG_MAP;
+	token?: string;
+	user?: T_KEYCLOAK_USER;
+	userPermissions?: string[];
+	navigate?: (to: string) => void;
+	protectedFetch?: any;
 	bridged?: boolean;
-	urlConfig?: any;
+	onLogout?: () => void;
 }
 
-const App: React.FC<LayoutProps> = ({
-	bridged,
-	urlConfig,
-	children,
-	user,
-	protectedFetch,
-	onLogout,
-}) => {
-	console.log("User:", user);
+const App: React.FC<LayoutProps> = (props) => {
+	const { user, onLogout, bridged, urlConfig } = props;
+	console.log("🚀 ~ MF props form shell:", props);
 
-	console.log("🚀 ~ bridged:", bridged);
+	const { setUser, setConfigMap } = useGlobalSettingsStore();
 
-	const { setUser } = useGlobalSettingsStore();
+	useEffectOnce(() => {
+		setUser(user);
+	}, !isEmpty(user));
 
-	useEffect(() => {
-		if (!isEmpty(user)) {
-		} else {
-			setUser(user);
-		}
-	}, [user]);
+	useEffectOnce(() => {
+		setConfigMap(urlConfig);
+	}, !isEmpty(urlConfig));
 
 	return (
-		<BrowserRouter basename={bridged ? "/smartAnketa" : "/"}>
-			<AppTheme themeComponents={xThemeComponents}>
-				<ErrorBoundary ErrorPage={ErrorPage}>
-					<StyledEngineProvider injectFirst>
-						<QueryClientProvider client={queryClient}>
-							<CssBaseline enableColorScheme />
-							<Suspense fallback={<CircularProgress />}>
-								<LocalizationProvider dateAdapter={AdapterDateFns}>
-									<MainLayout onLogout={onLogout}>
-										<Routing />
+		<BrowserRouter
+			basename={bridged ? "/smartAnketa" : "/"}
+			data-test-id="app--BrowserRouter-0"
+		>
+			<AppTheme
+				themeComponents={xThemeComponents}
+				data-test-id="app--AppTheme-0"
+			>
+				<ErrorBoundary
+					ErrorPage={ErrorPage}
+					data-test-id="app--ErrorBoundary-0"
+				>
+					<StyledEngineProvider
+						injectFirst
+						data-test-id="app--StyledEngineProvider-0"
+					>
+						<QueryClientProvider
+							client={queryClient}
+							data-test-id="app--QueryClientProvider-0"
+						>
+							<CssBaseline
+								enableColorScheme
+								data-test-id="app--CssBaseline-0"
+							/>
+							<Suspense
+								fallback={
+									<CircularProgress data-test-id="app--CircularProgress-0" />
+								}
+								data-test-id="app--Suspense-0"
+							>
+								<LocalizationProvider
+									dateAdapter={AdapterDateFns}
+									data-test-id="app--LocalizationProvider-0"
+								>
+									<MainLayout
+										onLogout={onLogout}
+										data-test-id="app--MainLayout-0"
+									>
+										<Routing data-test-id="app--Routing-0" />
 									</MainLayout>
 								</LocalizationProvider>
 							</Suspense>

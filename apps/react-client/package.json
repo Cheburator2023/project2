@@ -14,7 +14,7 @@
 		"prod": "npm build && npm start",
 		"biome": "npx @biomejs/biome check",
 		"biome:fix": "npx @biomejs/biome check --log-level=error --diagnostic-level=error --fix --unsafe ./src",
-		"generate:orval": "npx orval --config ./orval.config.js && npm run biome:fix || true"
+		"generate:orval": "npx orval --config ./orval.config.js"
 	},
 	"dependencies": {
 		"@emotion/react": "11.14.0",

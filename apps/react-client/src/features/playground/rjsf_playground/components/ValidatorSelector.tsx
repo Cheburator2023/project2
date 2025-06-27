@@ -42,8 +42,9 @@ export default function ValidatorSelector({
 			formData={validator}
 			validator={localValidator}
 			onChange={onChange}
+			data-test-id="validator-selector--Form-0"
 		>
-			<div />
+			<div data-test-id="validator-selector--div-0" />
 		</Form>
 	);
 }

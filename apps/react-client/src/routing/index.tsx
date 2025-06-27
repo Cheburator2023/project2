@@ -1,32 +1,53 @@
 import { Route, Routes } from "react-router";
 
-import { AnketaCreatePage } from "@react-client/features/anketa/AnketaCreatePage";
+import { AnketaCreatePage } from "@react-client/features/anketaCRUD/pages/AnketaCreatePage";
 import { HomePage } from "@react-client/features/home/HomePage";
 import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
 
 import { AdminPage } from "@react-client/features/admin/AdminPage";
-import { AnketaPreviewPage } from "@react-client/features/anketa/AnketaPreviewPage";
-import { CompareReportsPage } from "@react-client/features/compare/CompareReportsPage";
+import { AnketaPreviewPage } from "@react-client/features/anketaCRUD/pages/AnketaPreviewPage";
+import { CompareReportsPage } from "@react-client/features/anketaCompare/pages/CompareReportsPage";
 import { Page404 } from "./Page404";
 import { routes } from "./routes";
 
 export const Routing = () => (
-	<Routes>
-		<Route index element={<HomePage />} />
+	<Routes data-test-id="index--Routes-0">
+		<Route
+			index
+			element={<HomePage data-test-id="index--HomePage-0" />}
+			data-test-id="index--Route-0"
+		/>
 		<Route
 			path={routes.calculationCreate.rootPath}
-			element={<AnketaCreatePage />}
+			element={<AnketaCreatePage data-test-id="index--AnketaCreatePage-0" />}
+			data-test-id="index--Route-1"
 		/>
 		<Route
 			path={routes.calculationPreview.rootPath}
-			element={<AnketaPreviewPage />}
+			element={<AnketaPreviewPage data-test-id="index--AnketaPreviewPage-0" />}
+			data-test-id="index--Route-2"
 		/>
 		<Route
 			path={routes.calculationCompare.rootPath}
-			element={<CompareReportsPage />}
+			element={
+				<CompareReportsPage data-test-id="index--CompareReportsPage-0" />
+			}
+			data-test-id="index--Route-3"
 		/>
-		<Route path={routes.admin.rootPath} element={<AdminPage />} />
-		<Route path={routes.playground.rootPath} element={<PlaygroundPage />} />
-		<Route path="*" element={<Page404 />} />
+		<Route
+			path={routes.admin.rootPath}
+			element={<AdminPage data-test-id="index--AdminPage-0" />}
+			data-test-id="index--Route-4"
+		/>
+		<Route
+			path={routes.playground.rootPath}
+			element={<PlaygroundPage data-test-id="index--PlaygroundPage-0" />}
+			data-test-id="index--Route-5"
+		/>
+		<Route
+			path="*"
+			element={<Page404 data-test-id="index--Page404-0" />}
+			data-test-id="index--Route-6"
+		/>
 	</Routes>
 );

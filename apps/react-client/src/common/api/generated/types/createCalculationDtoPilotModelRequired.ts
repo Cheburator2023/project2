@@ -9,8 +9,8 @@
 /**
  * Требуется ли пилотная модель
  */
-export type CreateCalculationDtoPilotModelRequired =
-  (typeof CreateCalculationDtoPilotModelRequired)[keyof typeof CreateCalculationDtoPilotModelRequired];
+export type CreateCalculationDtoPilotModelRequired = typeof CreateCalculationDtoPilotModelRequired[keyof typeof CreateCalculationDtoPilotModelRequired];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateCalculationDtoPilotModelRequired = {

@@ -1,13 +1,12 @@
 import { Alert, Button, Typography } from "@mui/material";
 
+import { ILL_BUG } from "@react-client/common/illustrations/ILL_BUG";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { routes } from "@react-client/routing/routes";
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { ErrorWrapper } from "../organisms/ErrorWrapper";
-
-const IS_DEV = process.env.NODE_ENV === "development";
 
 export const ErrorPage = (props: {
 	error: string;
@@ -28,41 +27,49 @@ export const ErrorPage = (props: {
 
 	return (
 		<ErrorWrapper
-			heading="Произошла ошибка"
-			text={""}
+			heading=""
+			text=""
 			content={
 				<>
-					{IS_DEV && (
-						<Alert severity="error">
-							<Typography variant="body1">{props?.error}</Typography>
-							<Spacer />
-							<Typography variant="body2">
-								{stack.map((str, idx) => {
-									return (
-										<span key={idx}>
-											{"->"} {str}
-										</span>
-									);
-								})}
-							</Typography>
-						</Alert>
-					)}
+					<ILL_BUG data-test-id="error-page--ILL_BUG-0" />
+					<Spacer data-test-id="error-page--Spacer-0" />
+					<Alert severity="error" data-test-id="error-page--Alert-0">
+						<Typography variant="body1" data-test-id="error-page--Typography-0">
+							{props?.error}
+						</Typography>
+						<Spacer data-test-id="error-page--Spacer-1" />
+						<Typography variant="body2" data-test-id="error-page--Typography-1">
+							{stack.map((str, idx) => {
+								return (
+									<span key={idx} data-test-id="error-page--span-0">
+										{"->"} {str}
+									</span>
+								);
+							})}
+						</Typography>
+					</Alert>
 
-					<Spacer />
+					<Spacer data-test-id="error-page--Spacer-2" />
 
-					<Flex width="100%" alignItems="center">
+					<Flex
+						width="100%"
+						alignItems="center"
+						data-test-id="error-page--Flex-0"
+					>
 						<Button
 							variant="contained"
 							onClick={() => {
 								navigate(routes.home.rootPath);
 							}}
 							fullWidth
+							data-test-id="error-page--Button-0"
 						>
 							Домой
 						</Button>
 					</Flex>
 				</>
 			}
+			data-test-id="error-page--ErrorWrapper-0"
 		/>
 	);
 };

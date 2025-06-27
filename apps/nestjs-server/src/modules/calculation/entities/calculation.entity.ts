@@ -1,5 +1,4 @@
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
-import { CalculationQuestionnaireDataDto } from "../dto/response/calculation-response.dto";
 
 @Entity()
 export class Calculation {
@@ -10,7 +9,7 @@ export class Calculation {
 	name: string;
 
 	@Column({ type: "jsonb", nullable: false })
-	questionnaireData: CalculationQuestionnaireDataDto;
+	questionnaireData: Record<string, any>;
 
 	@Column({ type: "float", nullable: false })
 	finalCoefficient: number;

@@ -104,10 +104,18 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = ({
 	const hasError = required && filledCount === 0;
 
 	return (
-		<Stack spacing={2}>
+		<Stack spacing={2} data-test-id="algorithm-complexity-widget--Stack-0">
 			{/* Summary input */}
-			<FormControl fullWidth error={hasError}>
-				<Typography variant="subtitle1" gutterBottom>
+			<FormControl
+				fullWidth
+				error={hasError}
+				data-test-id="algorithm-complexity-widget--FormControl-0"
+			>
+				<Typography
+					variant="subtitle1"
+					gutterBottom
+					data-test-id="algorithm-complexity-widget--Typography-0"
+				>
 					Сложность алгоритма / тип ML задачи
 				</Typography>
 				<TextField
@@ -119,20 +127,32 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = ({
 					sx={{ mb: 2 }}
 					error={readonly ? false : hasError}
 					slotProps={{ input: { readOnly: readonly } }}
+					data-test-id="algorithm-complexity-widget--TextField-0"
 				/>
 				{!readonly && hasError && (
-					<FormHelperText error>
+					<FormHelperText
+						error
+						data-test-id="algorithm-complexity-widget--FormHelperText-0"
+					>
 						Необходимо выбрать хотя бы один тип алгоритма
 					</FormHelperText>
 				)}
 			</FormControl>
-
 			{/* Algorithm type selectors */}
 			{Array(maxCount)
 				.fill(null)
 				.map((_, index) => (
-					<FormControl key={index} fullWidth error={hasError}>
-						<Typography variant="subtitle2" gutterBottom>
+					<FormControl
+						key={index}
+						fullWidth
+						error={hasError}
+						data-test-id="algorithm-complexity-widget--FormControl-1"
+					>
+						<Typography
+							variant="subtitle2"
+							gutterBottom
+							data-test-id="algorithm-complexity-widget--Typography-1"
+						>
 							Модель {index + 1}
 						</Typography>
 						<Select
@@ -140,15 +160,22 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = ({
 							onChange={(e) => handleAlgorithmChange(index, e.target.value)}
 							error={readonly ? false : hasError}
 							readOnly={readonly}
+							data-test-id="algorithm-complexity-widget--Select-0"
 						>
-							<MenuItem value="">
-								<em>Выберите тип алгоритма</em>
+							<MenuItem
+								value=""
+								data-test-id="algorithm-complexity-widget--MenuItem-0"
+							>
+								<em data-test-id="algorithm-complexity-widget--em-0">
+									Выберите тип алгоритма
+								</em>
 							</MenuItem>
 							{algorithmTypes.map((type) => (
 								<MenuItem
 									key={type}
 									value={type}
 									disabled={isAlgorithmSelected(type, index)}
+									data-test-id="algorithm-complexity-widget--MenuItem-1"
 								>
 									{type}
 									{isAlgorithmSelected(type, index) && " (уже выбран)"}

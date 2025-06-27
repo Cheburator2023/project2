@@ -1,13 +1,20 @@
 import { withTheme } from "@rjsf/core";
 import type FormRef from "@rjsf/core";
 
-import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
-import { MultiSelectAutocompleteWidget } from "@react-client/features/anketa/molecules/MultiSelectAutocompleteWidget";
 import type { IChangeEvent } from "@rjsf/core";
 import { Theme as MuiTheme } from "@rjsf/mui";
 import type { RJSFSchema } from "@rjsf/utils";
 import type React from "react";
-import { createRef, useState } from "react";
+import { useRef, useState } from "react";
+
+import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
+import { MultiSelectAutocompleteWidget } from "@react-client/features/anketaCRUD/molecules/MultiSelectAutocompleteWidget";
+import {
+	AnketaCRUDFormNames,
+	useAnketaCRUDFormsStore,
+} from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
+
+import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import schema from "../schemas/calc_schema.json";
 import uiSchema from "../schemas/calc_uiSchema";
 import type { FormData } from "../types/FormData";
@@ -31,9 +38,9 @@ const widgets = {
 export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 	isCreate,
 }) => {
-	const formRef = createRef<FormRef>();
-
-	const readonly = !isCreate;
+	const formRef = useRef<FormRef>(null);
+	const { setApiRef, resetApiRef, updateFormState, ...store } =
+		useAnketaCRUDFormsStore();
 
 	const [formData, setFormData] = useState<FormData>({
 		modelsCount: 1,
@@ -50,16 +57,60 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 		generalUncertainty: [],
 	});
 
-	const handleSubmit = (e: IChangeEvent<FormData>) => {
+	const formName = isCreate
+		? AnketaCRUDFormNames.anketaCreate_projectAssessmentForm
+		: AnketaCRUDFormNames.anketaPreview_projectAssessmentForm;
+	const readonly = !isCreate;
+	const apiFormStore = store[formName].api;
+	const formState = apiFormStore?.state;
+	const formStateFromRef = formRef?.current?.state;
+
+	// init api in store
+	useDeepEffect(() => {
+		if (formRef.current && !apiFormStore) {
+			setApiRef(formName, formRef.current);
+		}
+	}, [formRef.current, isCreate]);
+
+	useDeepEffect(() => {
+		updateFormState(formName, formState);
+	}, [formState]);
+
+	const onChange = (e: IChangeEvent<FormData>) => {
+		if (e.formData) {
+			setFormData(e.formData);
+		}
+		if (formState) {
+			updateFormState(formName, formState);
+		}
+	};
+
+	const onSubmit = (e: IChangeEvent<FormData>) => {
 		console.log("Submitted data:", e.formData);
 		if (e.formData) {
 			setFormData(e.formData);
 		}
+		updateFormState(formName, formStateFromRef);
 	};
 
-	const handleChange = (e: IChangeEvent<FormData>) => {
-		if (e.formData) {
-			setFormData(e.formData);
+	const onError = (errors: any) => {
+		if (formStateFromRef) {
+			updateFormState(formName, formStateFromRef);
+		}
+		console.log("Form errors:", errors);
+	};
+
+	const onBlur = (id: string, data: any) => {
+		console.log("Form onBlur:", id, data);
+		if (formStateFromRef) {
+			updateFormState(formName, formStateFromRef);
+		}
+	};
+
+	const onFocus = (id: string, data: any) => {
+		console.log("Form onFocus:", id, data);
+		if (formStateFromRef) {
+			updateFormState(formName, formStateFromRef);
 		}
 	};
 
@@ -72,12 +123,17 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 			widgets={widgets}
 			formData={formData}
 			formContext={{ formData }}
-			onChange={handleChange}
-			onSubmit={handleSubmit}
-			liveValidate={!readonly}
+			onChange={onChange}
+			onSubmit={onSubmit}
+			onError={onError}
+			// onFocus={onFocus}
+			// onBlur={onBlur}
+			focusOnFirstError
+			// liveValidate={!readonly}
 			noHtml5Validate
 			readonly={readonly}
 			showErrorList={false}
+			data-test-id="project-assessment-form--Form-0"
 		/>
 	);
 };

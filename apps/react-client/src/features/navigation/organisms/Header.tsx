@@ -19,7 +19,7 @@ export function Header({
 
 	return (
 		<>
-			<Card padding="2px 3px">
+			<Card padding="2px 3px" data-test-id="header--Card-0">
 				<Flex
 					width="fill-available"
 					pad="2px 3px"
@@ -28,15 +28,32 @@ export function Header({
 					justifyContent="space-between"
 					position="relative"
 					zIndex={1000}
+					data-test-id="header--Flex-0"
 				>
-					<Flex flexDirection="row" gap={8} alignItems="center" flexShrink={0}>
-						<MenuButton aria-label="menu" onClick={() => toggleSideMenu()}>
-							{!isSideMenuVisible ? <MenuRoundedIcon /> : <CloseRoundedIcon />}
+					<Flex
+						flexDirection="row"
+						gap={8}
+						alignItems="center"
+						flexShrink={0}
+						data-test-id="header--Flex-1"
+					>
+						<MenuButton
+							aria-label="menu"
+							onClick={() => toggleSideMenu()}
+							data-test-id="header--MenuButton-0"
+						>
+							{!isSideMenuVisible ? (
+								<MenuRoundedIcon data-test-id="header--MenuRoundedIcon-0" />
+							) : (
+								<CloseRoundedIcon data-test-id="header--CloseRoundedIcon-0" />
+							)}
 						</MenuButton>
-						<NavbarBreadcrumbs />
+						<NavbarBreadcrumbs data-test-id="header--NavbarBreadcrumbs-0" />
 						{calcId ||
 							((id1 || id2) && (
-								<Typography> - {calcId || `${id1} / ${id2}`}</Typography>
+								<Typography data-test-id="header--Typography-0">
+									- {calcId || `${id1} / ${id2}`}
+								</Typography>
 							))}
 					</Flex>
 					<Flex
@@ -45,9 +62,10 @@ export function Header({
 						alignItems="center"
 						justifyContent="flex-end"
 						width="fill-available"
+						data-test-id="header--Flex-2"
 					>
 						{children}
-						<ColorModeIconDropdown />
+						<ColorModeIconDropdown data-test-id="header--ColorModeIconDropdown-0" />
 					</Flex>
 				</Flex>
 			</Card>

@@ -9,8 +9,8 @@
 /**
  * Влияние риска на проект
  */
-export type UncertaintyItemDtoInfluence =
-  (typeof UncertaintyItemDtoInfluence)[keyof typeof UncertaintyItemDtoInfluence];
+export type UncertaintyItemDtoInfluence = typeof UncertaintyItemDtoInfluence[keyof typeof UncertaintyItemDtoInfluence];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const UncertaintyItemDtoInfluence = {

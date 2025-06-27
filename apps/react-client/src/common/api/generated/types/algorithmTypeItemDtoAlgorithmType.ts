@@ -9,14 +9,13 @@
 /**
  * Тип используемого алгоритма
  */
-export type AlgorithmTypeItemDtoAlgorithmType =
-  (typeof AlgorithmTypeItemDtoAlgorithmType)[keyof typeof AlgorithmTypeItemDtoAlgorithmType];
+export type AlgorithmTypeItemDtoAlgorithmType = typeof AlgorithmTypeItemDtoAlgorithmType[keyof typeof AlgorithmTypeItemDtoAlgorithmType];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const AlgorithmTypeItemDtoAlgorithmType = {
   Табличные_данные: 'Табличные данные',
-  Текстовая_аналитика_Классические_модели:
-    'Текстовая аналитика_Классические модели',
+  Текстовая_аналитика_Классические_модели: 'Текстовая аналитика_Классические модели',
   Текстовая_аналитика_LLM: 'Текстовая аналитика_LLM',
   Аудио_Аналитика: 'Аудио Аналитика',
   Компьютерное_зрение_CV: 'Компьютерное зрение_CV',

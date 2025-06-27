@@ -9,8 +9,8 @@
 /**
  * Срок реализации инициативы
  */
-export type CreateCalculationDtoInitiativeTimeline =
-  (typeof CreateCalculationDtoInitiativeTimeline)[keyof typeof CreateCalculationDtoInitiativeTimeline];
+export type CreateCalculationDtoInitiativeTimeline = typeof CreateCalculationDtoInitiativeTimeline[keyof typeof CreateCalculationDtoInitiativeTimeline];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateCalculationDtoInitiativeTimeline = {

@@ -333,10 +333,21 @@ export const inputsCustomizations: Components<Theme> = {
 			icon: (
 				<CheckBoxOutlineBlankRoundedIcon
 					sx={{ color: "hsla(210, 0%, 0%, 0.0)" }}
+					data-test-id="inputs--CheckBoxOutlineBlankRoundedIcon-0"
 				/>
 			),
-			checkedIcon: <CheckRoundedIcon sx={{ height: 14, width: 14 }} />,
-			indeterminateIcon: <RemoveRoundedIcon sx={{ height: 14, width: 14 }} />,
+			checkedIcon: (
+				<CheckRoundedIcon
+					sx={{ height: 14, width: 14 }}
+					data-test-id="inputs--CheckRoundedIcon-0"
+				/>
+			),
+			indeterminateIcon: (
+				<RemoveRoundedIcon
+					sx={{ height: 14, width: 14 }}
+					data-test-id="inputs--RemoveRoundedIcon-0"
+				/>
+			),
 		},
 		styleOverrides: {
 			root: ({ theme }) => ({
@@ -462,11 +473,12 @@ export const inputsCustomizations: Components<Theme> = {
 		styleOverrides: {
 			root: ({ theme }) => ({
 				color: (theme.vars || theme).palette.grey[500],
-				maxHeight: "1em",
-				padding: "0 12px",
 				...theme.applyStyles("dark", {
 					color: (theme.vars || theme).palette.grey[400],
 				}),
+				maxHeight: "1em",
+				margin: "0",
+				padding: "0 0 0 8px",
 			}),
 		},
 	},

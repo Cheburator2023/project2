@@ -54,10 +54,20 @@ const NumberInputWidget: React.FC<WidgetProps> = ({
 			InputProps={{
 				readOnly: readonly,
 				startAdornment: prefix ? (
-					<InputAdornment position="start">{prefix}</InputAdornment>
+					<InputAdornment
+						position="start"
+						data-test-id="number-input-widget--InputAdornment-0"
+					>
+						{prefix}
+					</InputAdornment>
 				) : undefined,
 				endAdornment: suffix ? (
-					<InputAdornment position="end">{suffix}</InputAdornment>
+					<InputAdornment
+						position="end"
+						data-test-id="number-input-widget--InputAdornment-1"
+					>
+						{suffix}
+					</InputAdornment>
 				) : undefined,
 			}}
 			inputProps={{
@@ -81,6 +91,7 @@ const NumberInputWidget: React.FC<WidgetProps> = ({
 					? `Value must be between ${schema.minimum} and ${schema.maximum}${suffix ? suffix : ""}`
 					: ""
 			}
+			data-test-id="number-input-widget--TextField-0"
 		/>
 	);
 };

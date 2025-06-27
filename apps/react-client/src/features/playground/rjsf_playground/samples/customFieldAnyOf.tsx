@@ -16,8 +16,11 @@ function UiField(props: FieldProps) {
 	};
 	return (
 		<>
-			<h4>Location</h4>
-			<div style={{ display: "flex" }}>
+			<h4 data-test-id="custom-field-any-of--h4-0">Location</h4>
+			<div
+				style={{ display: "flex" }}
+				data-test-id="custom-field-any-of--div-0"
+			>
 				<div
 					style={{
 						display: "flex",
@@ -25,9 +28,17 @@ function UiField(props: FieldProps) {
 						width: "50%",
 						margin: "1rem",
 					}}
+					data-test-id="custom-field-any-of--div-1"
 				>
-					<div className="form-group field field-string">
-						<label className="control-label" htmlFor={`${$id}-city`}>
+					<div
+						className="form-group field field-string"
+						data-test-id="custom-field-any-of--div-2"
+					>
+						<label
+							className="control-label"
+							htmlFor={`${$id}-city`}
+							data-test-id="custom-field-any-of--label-0"
+						>
 							City
 						</label>
 						<input
@@ -38,6 +49,7 @@ function UiField(props: FieldProps) {
 							type="text"
 							value={formData?.city || ""}
 							onChange={changeHandlerFactory("city")}
+							data-test-id="custom-field-any-of--input-0"
 						/>
 					</div>
 				</div>
@@ -48,9 +60,17 @@ function UiField(props: FieldProps) {
 						width: "50%",
 						margin: "1rem",
 					}}
+					data-test-id="custom-field-any-of--div-3"
 				>
-					<div className="form-group field field-string">
-						<label className="control-label" htmlFor={`${$id}-lat`}>
+					<div
+						className="form-group field field-string"
+						data-test-id="custom-field-any-of--div-4"
+					>
+						<label
+							className="control-label"
+							htmlFor={`${$id}-lat`}
+							data-test-id="custom-field-any-of--label-1"
+						>
 							Latitude
 						</label>
 						<input
@@ -59,10 +79,18 @@ function UiField(props: FieldProps) {
 							type="number"
 							value={formData?.lat || 0}
 							onChange={changeHandlerFactory("lat")}
+							data-test-id="custom-field-any-of--input-1"
 						/>
 					</div>
-					<div className="form-group field field-string">
-						<label className="control-label" htmlFor={`${$id}-lon`}>
+					<div
+						className="form-group field field-string"
+						data-test-id="custom-field-any-of--div-5"
+					>
+						<label
+							className="control-label"
+							htmlFor={`${$id}-lon`}
+							data-test-id="custom-field-any-of--label-2"
+						>
 							Longitude
 						</label>
 						<input
@@ -71,6 +99,7 @@ function UiField(props: FieldProps) {
 							type="number"
 							value={formData?.lon || 0}
 							onChange={changeHandlerFactory("lon")}
+							data-test-id="custom-field-any-of--input-2"
 						/>
 					</div>
 				</div>

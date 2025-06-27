@@ -9,8 +9,8 @@
 /**
  * Требуется ли AutoML
  */
-export type CreateCalculationDtoAutoMlRequired =
-  (typeof CreateCalculationDtoAutoMlRequired)[keyof typeof CreateCalculationDtoAutoMlRequired];
+export type CreateCalculationDtoAutoMlRequired = typeof CreateCalculationDtoAutoMlRequired[keyof typeof CreateCalculationDtoAutoMlRequired];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateCalculationDtoAutoMlRequired = {

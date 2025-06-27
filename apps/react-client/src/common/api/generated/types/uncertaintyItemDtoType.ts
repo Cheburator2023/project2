@@ -9,8 +9,8 @@
 /**
  * Тип фактора неопределенности
  */
-export type UncertaintyItemDtoType =
-  (typeof UncertaintyItemDtoType)[keyof typeof UncertaintyItemDtoType];
+export type UncertaintyItemDtoType = typeof UncertaintyItemDtoType[keyof typeof UncertaintyItemDtoType];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const UncertaintyItemDtoType = {

@@ -5,7 +5,10 @@
  * API documentation for Smart Anketa application
  * OpenAPI spec version: 1.0
  */
-import { useMutation, useQuery } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -18,14 +21,14 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult,
+  UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
+  Calculation,
+  CalculationControllerFindAllPaginated200,
   CalculationControllerFindAllPaginatedParams,
-  CalculationResponseDto,
-  CreateCalculationDto,
-  PaginatedCalculationResponseDto,
+  CreateCalculationDto
 } from '../types';
 
 import { apiClient } from '../../helpers/apiClient';
@@ -33,584 +36,338 @@ import { customQueryOptions } from '../../helpers/queryOptions';
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
-type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
+      type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
+
+
+
 
 /**
- * Creates a new calculation with the provided data
- * @summary Create new calculation
+ * @summary Save calculation result
  */
 export const calculationControllerCreate = (
-  createCalculationDto: CreateCalculationDto,
-  signal?: AbortSignal
+    createCalculationDto: CreateCalculationDto,
+ signal?: AbortSignal
 ) => {
-  return apiClient<CalculationResponseDto>({
-    url: '/calculation',
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    data: createCalculationDto,
-    signal,
-  });
-};
+      
+      
+      return apiClient<Calculation>(
+      {url: `/calculation`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createCalculationDto, signal
+    },
+      );
+    }
+  
 
-export const getCalculationControllerCreateMutationOptions = <
-  TError = void,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof calculationControllerCreate>>,
-    TError,
-    { data: CreateCalculationDto },
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof calculationControllerCreate>>,
-  TError,
-  { data: CreateCalculationDto },
-  TContext
-> => {
-  const mutationKey = ['calculationControllerCreate'];
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      'mutationKey' in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof calculationControllerCreate>>,
-    { data: CreateCalculationDto }
-  > = (props) => {
-    const { data } = props ?? {};
+export const getCalculationControllerCreateMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof calculationControllerCreate>>, TError,{data: CreateCalculationDto}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof calculationControllerCreate>>, TError,{data: CreateCalculationDto}, TContext> => {
 
-    return calculationControllerCreate(data);
-  };
+const mutationKey = ['calculationControllerCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
 
-  return { mutationFn, ...mutationOptions };
-};
+      
 
-export type CalculationControllerCreateMutationResult = NonNullable<
-  Awaited<ReturnType<typeof calculationControllerCreate>>
->;
-export type CalculationControllerCreateMutationBody = CreateCalculationDto;
-export type CalculationControllerCreateMutationError = undefined;
 
-/**
- * @summary Create new calculation
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof calculationControllerCreate>>, {data: CreateCalculationDto}> = (props) => {
+          const {data} = props ?? {};
+
+          return  calculationControllerCreate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CalculationControllerCreateMutationResult = NonNullable<Awaited<ReturnType<typeof calculationControllerCreate>>>
+    export type CalculationControllerCreateMutationBody = CreateCalculationDto
+    export type CalculationControllerCreateMutationError = void
+
+    /**
+ * @summary Save calculation result
  */
-export const useCalculationControllerCreate = <
-  TError = void,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof calculationControllerCreate>>,
-      TError,
-      { data: CreateCalculationDto },
-      TContext
-    >;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<ReturnType<typeof calculationControllerCreate>>,
-  TError,
-  { data: CreateCalculationDto },
-  TContext
-> => {
-  const mutationOptions =
-    getCalculationControllerCreateMutationOptions(options);
+export const useCalculationControllerCreate = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof calculationControllerCreate>>, TError,{data: CreateCalculationDto}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof calculationControllerCreate>>,
+        TError,
+        {data: CreateCalculationDto},
+        TContext
+      > => {
 
-  return useMutation(mutationOptions, queryClient);
-};
+      const mutationOptions = getCalculationControllerCreateMutationOptions(options);
 
+      return useMutation(mutationOptions , queryClient);
+    }
+    
 /**
- * Retrieves a paginated list of all calculations
  * @summary Get all calculations (paginated)
  */
 export const calculationControllerFindAllPaginated = (
-  params?: CalculationControllerFindAllPaginatedParams,
-  signal?: AbortSignal
+    params?: CalculationControllerFindAllPaginatedParams,
+ signal?: AbortSignal
 ) => {
-  return apiClient<PaginatedCalculationResponseDto>({
-    url: '/calculation/all',
-    method: 'GET',
-    params,
-    signal,
-  });
-};
+      
+      
+      return apiClient<CalculationControllerFindAllPaginated200>(
+      {url: `/calculation/all`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
 
-export const getCalculationControllerFindAllPaginatedQueryKey = (
-  params?: CalculationControllerFindAllPaginatedParams
+export const getCalculationControllerFindAllPaginatedQueryKey = (params?: CalculationControllerFindAllPaginatedParams,) => {
+    return [`/calculation/all`, ...(params ? [params]: [])] as const;
+    }
+
+    
+export const useCalculationControllerFindAllPaginatedQueryOptions = <TData = Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>, TError = unknown>(params?: CalculationControllerFindAllPaginatedParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>, TError, TData>>, }
 ) => {
-  return ['/calculation/all', ...(params ? [params] : [])] as const;
-};
 
-export const useCalculationControllerFindAllPaginatedQueryOptions = <
-  TData = Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
-  TError = void,
->(
-  params?: CalculationControllerFindAllPaginatedParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
-        TError,
-        TData
-      >
-    >;
-  }
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getCalculationControllerFindAllPaginatedQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getCalculationControllerFindAllPaginatedQueryKey(params);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>
-  > = ({ signal }) => calculationControllerFindAllPaginated(params, signal);
+  
 
-  const customOptions = customQueryOptions({
-    ...queryOptions,
-    queryKey,
-    queryFn,
-  });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>> = ({ signal }) => calculationControllerFindAllPaginated(params, signal);
 
-  return customOptions as UseQueryOptions<
-    Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+      
 
-export type CalculationControllerFindAllPaginatedQueryResult = NonNullable<
-  Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>
->;
-export type CalculationControllerFindAllPaginatedQueryError = undefined;
+      const customOptions = customQueryOptions({...queryOptions, queryKey, queryFn});
 
-export function useCalculationControllerFindAllPaginated<
-  TData = Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
-  TError = void,
->(
-  params: undefined | CalculationControllerFindAllPaginatedParams,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+   return  customOptions as UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CalculationControllerFindAllPaginatedQueryResult = NonNullable<Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>>
+export type CalculationControllerFindAllPaginatedQueryError = unknown
+
+
+export function useCalculationControllerFindAllPaginated<TData = Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>, TError = unknown>(
+ params: undefined |  CalculationControllerFindAllPaginatedParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
           TError,
           Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>
-        >,
-        'initialData'
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCalculationControllerFindAllPaginated<
-  TData = Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
-  TError = void,
->(
-  params?: CalculationControllerFindAllPaginatedParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCalculationControllerFindAllPaginated<TData = Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>, TError = unknown>(
+ params?: CalculationControllerFindAllPaginatedParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
           TError,
           Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>
-        >,
-        'initialData'
-      >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCalculationControllerFindAllPaginated<
-  TData = Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
-  TError = void,
->(
-  params?: CalculationControllerFindAllPaginatedParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCalculationControllerFindAllPaginated<TData = Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>, TError = unknown>(
+ params?: CalculationControllerFindAllPaginatedParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get all calculations (paginated)
  */
 
-export function useCalculationControllerFindAllPaginated<
-  TData = Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
-  TError = void,
->(
-  params?: CalculationControllerFindAllPaginatedParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = useCalculationControllerFindAllPaginatedQueryOptions(
-    params,
-    options
-  );
+export function useCalculationControllerFindAllPaginated<TData = Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>, TError = unknown>(
+ params?: CalculationControllerFindAllPaginatedParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = useCalculationControllerFindAllPaginatedQueryOptions(params,options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
 
+
+
+
 /**
- * Retrieves all calculations without pagination
  * @summary Get all calculations (non-paginated)
  */
-export const calculationControllerFindAll = (signal?: AbortSignal) => {
-  return apiClient<CalculationResponseDto[]>({
-    url: '/calculation/all/list',
-    method: 'GET',
-    signal,
-  });
-};
+export const calculationControllerFindAll = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return apiClient<Calculation[]>(
+      {url: `/calculation/all/list`, method: 'GET', signal
+    },
+      );
+    }
+  
 
 export const getCalculationControllerFindAllQueryKey = () => {
-  return ['/calculation/all/list'] as const;
-};
+    return [`/calculation/all/list`] as const;
+    }
 
-export const useCalculationControllerFindAllQueryOptions = <
-  TData = Awaited<ReturnType<typeof calculationControllerFindAll>>,
-  TError = void,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof calculationControllerFindAll>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
+    
+export const useCalculationControllerFindAllQueryOptions = <TData = Awaited<ReturnType<typeof calculationControllerFindAll>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindAll>>, TError, TData>>, }
+) => {
 
-  const queryKey =
-    queryOptions?.queryKey ?? getCalculationControllerFindAllQueryKey();
+const {query: queryOptions} = options ?? {};
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof calculationControllerFindAll>>
-  > = ({ signal }) => calculationControllerFindAll(signal);
+  const queryKey =  queryOptions?.queryKey ?? getCalculationControllerFindAllQueryKey();
 
-  const customOptions = customQueryOptions({
-    ...queryOptions,
-    queryKey,
-    queryFn,
-  });
+  
 
-  return customOptions as UseQueryOptions<
-    Awaited<ReturnType<typeof calculationControllerFindAll>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof calculationControllerFindAll>>> = ({ signal }) => calculationControllerFindAll(signal);
 
-export type CalculationControllerFindAllQueryResult = NonNullable<
-  Awaited<ReturnType<typeof calculationControllerFindAll>>
->;
-export type CalculationControllerFindAllQueryError = undefined;
+      
 
-export function useCalculationControllerFindAll<
-  TData = Awaited<ReturnType<typeof calculationControllerFindAll>>,
-  TError = void,
->(
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof calculationControllerFindAll>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+      const customOptions = customQueryOptions({...queryOptions, queryKey, queryFn});
+
+   return  customOptions as UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindAll>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CalculationControllerFindAllQueryResult = NonNullable<Awaited<ReturnType<typeof calculationControllerFindAll>>>
+export type CalculationControllerFindAllQueryError = unknown
+
+
+export function useCalculationControllerFindAll<TData = Awaited<ReturnType<typeof calculationControllerFindAll>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindAll>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof calculationControllerFindAll>>,
           TError,
           Awaited<ReturnType<typeof calculationControllerFindAll>>
-        >,
-        'initialData'
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCalculationControllerFindAll<
-  TData = Awaited<ReturnType<typeof calculationControllerFindAll>>,
-  TError = void,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof calculationControllerFindAll>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCalculationControllerFindAll<TData = Awaited<ReturnType<typeof calculationControllerFindAll>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindAll>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof calculationControllerFindAll>>,
           TError,
           Awaited<ReturnType<typeof calculationControllerFindAll>>
-        >,
-        'initialData'
-      >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCalculationControllerFindAll<
-  TData = Awaited<ReturnType<typeof calculationControllerFindAll>>,
-  TError = void,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof calculationControllerFindAll>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCalculationControllerFindAll<TData = Awaited<ReturnType<typeof calculationControllerFindAll>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindAll>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get all calculations (non-paginated)
  */
 
-export function useCalculationControllerFindAll<
-  TData = Awaited<ReturnType<typeof calculationControllerFindAll>>,
-  TError = void,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof calculationControllerFindAll>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = useCalculationControllerFindAllQueryOptions(options);
+export function useCalculationControllerFindAll<TData = Awaited<ReturnType<typeof calculationControllerFindAll>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindAll>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = useCalculationControllerFindAllQueryOptions(options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
 
+
+
+
 /**
- * Retrieves a specific calculation by its unique identifier
  * @summary Get calculation by ID
  */
 export const calculationControllerFindOne = (
-  id: string,
-  signal?: AbortSignal
+    id: string,
+ signal?: AbortSignal
 ) => {
-  return apiClient<CalculationResponseDto>({
-    url: `/calculation/${id}`,
-    method: 'GET',
-    signal,
-  });
-};
+      
+      
+      return apiClient<Calculation>(
+      {url: `/calculation/${id}`, method: 'GET', signal
+    },
+      );
+    }
+  
 
-export const getCalculationControllerFindOneQueryKey = (id: string) => {
-  return [`/calculation/${id}`] as const;
-};
+export const getCalculationControllerFindOneQueryKey = (id: string,) => {
+    return [`/calculation/${id}`] as const;
+    }
 
-export const useCalculationControllerFindOneQueryOptions = <
-  TData = Awaited<ReturnType<typeof calculationControllerFindOne>>,
-  TError = void,
->(
-  id: string,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof calculationControllerFindOne>>,
-        TError,
-        TData
-      >
-    >;
-  }
+    
+export const useCalculationControllerFindOneQueryOptions = <TData = Awaited<ReturnType<typeof calculationControllerFindOne>>, TError = void>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindOne>>, TError, TData>>, }
 ) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getCalculationControllerFindOneQueryKey(id);
+const {query: queryOptions} = options ?? {};
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof calculationControllerFindOne>>
-  > = ({ signal }) => calculationControllerFindOne(id, signal);
+  const queryKey =  queryOptions?.queryKey ?? getCalculationControllerFindOneQueryKey(id);
 
-  const customOptions = customQueryOptions({
-    ...queryOptions,
-    queryKey,
-    queryFn,
-  });
+  
 
-  return customOptions as UseQueryOptions<
-    Awaited<ReturnType<typeof calculationControllerFindOne>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof calculationControllerFindOne>>> = ({ signal }) => calculationControllerFindOne(id, signal);
 
-export type CalculationControllerFindOneQueryResult = NonNullable<
-  Awaited<ReturnType<typeof calculationControllerFindOne>>
->;
-export type CalculationControllerFindOneQueryError = undefined;
+      
 
-export function useCalculationControllerFindOne<
-  TData = Awaited<ReturnType<typeof calculationControllerFindOne>>,
-  TError = void,
->(
-  id: string,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof calculationControllerFindOne>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+      const customOptions = customQueryOptions({...queryOptions, queryKey, queryFn});
+
+   return  customOptions as UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindOne>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CalculationControllerFindOneQueryResult = NonNullable<Awaited<ReturnType<typeof calculationControllerFindOne>>>
+export type CalculationControllerFindOneQueryError = void
+
+
+export function useCalculationControllerFindOne<TData = Awaited<ReturnType<typeof calculationControllerFindOne>>, TError = void>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindOne>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof calculationControllerFindOne>>,
           TError,
           Awaited<ReturnType<typeof calculationControllerFindOne>>
-        >,
-        'initialData'
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCalculationControllerFindOne<
-  TData = Awaited<ReturnType<typeof calculationControllerFindOne>>,
-  TError = void,
->(
-  id: string,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof calculationControllerFindOne>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCalculationControllerFindOne<TData = Awaited<ReturnType<typeof calculationControllerFindOne>>, TError = void>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindOne>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof calculationControllerFindOne>>,
           TError,
           Awaited<ReturnType<typeof calculationControllerFindOne>>
-        >,
-        'initialData'
-      >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCalculationControllerFindOne<
-  TData = Awaited<ReturnType<typeof calculationControllerFindOne>>,
-  TError = void,
->(
-  id: string,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof calculationControllerFindOne>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCalculationControllerFindOne<TData = Awaited<ReturnType<typeof calculationControllerFindOne>>, TError = void>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindOne>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get calculation by ID
  */
 
-export function useCalculationControllerFindOne<
-  TData = Awaited<ReturnType<typeof calculationControllerFindOne>>,
-  TError = void,
->(
-  id: string,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof calculationControllerFindOne>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = useCalculationControllerFindOneQueryOptions(id, options);
+export function useCalculationControllerFindOne<TData = Awaited<ReturnType<typeof calculationControllerFindOne>>, TError = void>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof calculationControllerFindOne>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = useCalculationControllerFindOneQueryOptions(id,options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
+
+
+
+
