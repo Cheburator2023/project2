@@ -5,7 +5,6 @@ const { DefinePlugin } = webpack;
 const common = require("./webpack.common.js");
 const APP_NAME = "smartAnketa";
 
-// biome-ignore lint/style/useNodejsImportProtocol: <explanation>
 const git_revision = require("child_process")
 	.execSync('git show --format="short" -s')
 	.toString()
@@ -24,6 +23,7 @@ module.exports = merge(common, {
 			),
 			"process.env.GIT_REVISION": JSON.stringify(git_revision || ""),
 			"process.env.APP_NAME": JSON.stringify(APP_NAME),
+			"process.env.REACT_APP_API_URL": JSON.stringify("http://localhost:3000"),
 		}),
 	],
 });

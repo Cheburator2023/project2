@@ -1,12 +1,12 @@
-import Form, { IChangeEvent } from "@rjsf/core";
-import { RJSFSchema, UiSchema, ValidatorType } from "@rjsf/utils";
+import Form, { type IChangeEvent } from "@rjsf/core";
+import type { RJSFSchema, UiSchema, ValidatorType } from "@rjsf/utils";
 import localValidator from "@rjsf/validator-ajv8";
 import {
-	ButtonHTMLAttributes,
-	Dispatch,
-	MutableRefObject,
-	PropsWithChildren,
-	SetStateAction,
+	type ButtonHTMLAttributes,
+	type Dispatch,
+	type MutableRefObject,
+	type PropsWithChildren,
+	type SetStateAction,
 	useCallback,
 } from "react";
 import base64 from "../utils/base64";
@@ -14,9 +14,9 @@ import base64 from "../utils/base64";
 import { Flex } from "@react-client/common/primitives/Flex";
 import CopyLink from "./CopyLink";
 import RawValidatorTest from "./RawValidatorTest";
-import SampleSelector, { SampleSelectorProps } from "./SampleSelector";
-import SubthemeSelector, { SubthemeType } from "./SubthemeSelector";
-import ThemeSelector, { ThemesType } from "./ThemeSelector";
+import SampleSelector, { type SampleSelectorProps } from "./SampleSelector";
+import SubthemeSelector, { type SubthemeType } from "./SubthemeSelector";
+import ThemeSelector, { type ThemesType } from "./ThemeSelector";
 import ValidatorSelector from "./ValidatorSelector";
 
 type HeaderButtonProps = {
@@ -413,7 +413,7 @@ export default function Header({
 						select={onThemeSelected}
 						data-test-id="header--ThemeSelector-0"
 					/>
-					{themes[theme] && themes[theme].subthemes && (
+					{themes[theme]?.subthemes && (
 						<SubthemeSelector
 							subthemes={themes[theme].subthemes!}
 							subtheme={subtheme}

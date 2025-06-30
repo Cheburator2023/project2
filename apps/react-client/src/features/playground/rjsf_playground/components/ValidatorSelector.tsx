@@ -1,5 +1,5 @@
-import Form, { IChangeEvent } from "@rjsf/core";
-import { RJSFSchema, UiSchema, ValidatorType } from "@rjsf/utils";
+import Form, { type IChangeEvent } from "@rjsf/core";
+import type { RJSFSchema, UiSchema, ValidatorType } from "@rjsf/utils";
 import localValidator from "@rjsf/validator-ajv8";
 import { useCallback } from "react";
 

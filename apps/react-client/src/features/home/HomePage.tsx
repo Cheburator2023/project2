@@ -10,18 +10,18 @@ import {
 	styled,
 	useColorScheme,
 } from "@mui/material";
+import { useCalculationControllerFindAll } from "@react-client/common/api/generated/queries/calculation";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { useAllCalculations } from "@react-client/common/services/useCalculations";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { SearchInput } from "@react-client/features/navigation/organisms/SearchInput";
 import { routes } from "@react-client/routing/routes";
 import {
-	GridApi,
-	GridReadyEvent,
-	IRowNode,
+	type GridApi,
+	type GridReadyEvent,
+	type IRowNode,
 	ModuleRegistry,
 	themeQuartz,
 } from "ag-grid-community";
@@ -36,7 +36,7 @@ const themeQuartzDark = themeQuartz.withPart(colorSchemeDarkBlue);
 ModuleRegistry.registerModules([AllEnterpriseModule]);
 
 const _columnDefs = [
-	{ headerName: "ID", field: "ID", sortable: true, filter: true },
+	{ headerName: "ID", field: "id", sortable: true, filter: true },
 	{
 		field: "name",
 		headerName: "Имя",
@@ -64,7 +64,7 @@ export const HomePage = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
 
-	const { data, isLoading, error } = useAllCalculations();
+	const { data, isLoading, error } = useCalculationControllerFindAll();
 
 	const isInDefaultCompareMode = params.get("isInCompareMode") === "true";
 
@@ -98,7 +98,7 @@ export const HomePage = () => {
 	};
 
 	const onExportExcel = () => {
-		if (gridRef.current && gridRef.current.api) {
+		if (gridRef.current?.api) {
 			gridRef.current.api.exportDataAsExcel({
 				fileName: "export_data.xlsx",
 			});
@@ -152,11 +152,14 @@ export const HomePage = () => {
 	}, []);
 
 	const rowClassRules = {
-		// row style function
 		"ag-row-is-odd": (params: any) => {
 			return params?.rowIndex % 2 === 0;
 		},
 	};
+
+	if (error) {
+		console.error("Error loading calculations:", error);
+	}
 
 	return (
 		<div data-test-id="home-page--div-0">
@@ -192,14 +195,9 @@ export const HomePage = () => {
 								aria-label="menu"
 								onClick={() => {
 									return navigate(
-										routes.calculationCompare.rootPath +
-											"?" +
-											selectedRows
-												?.map(
-													(row, index) =>
-														`id${index + 1}=${row.data.record_id}`,
-												)
-												.join("&"),
+										`${routes.calculationCompare.rootPath}?${selectedRows
+											?.map((row, index) => `id${index + 1}=${row.data.id}`)
+											.join("&")}`,
 									);
 								}}
 								data-test-id="home-page--IconButton-1"
@@ -241,17 +239,6 @@ export const HomePage = () => {
 					onSelectionChanged={(e) => {
 						setSelectedRows(e.api.getSelectedNodes());
 					}}
-					// 	const selectedRows = e.api.getSelectedNodes();
-					// 	if (selectedRows.length === 2) {
-					// 		navigate(
-					// 			routes.calculationCompare.rootPath +
-					// 				"?" +
-					// 				selectedRows
-					// 					.map((row, index) => `id${index + 1}=${row.data.record_id}`)
-					// 					.join("&"),
-					// 		);
-					// 	}
-					// }}
 					rowData={data}
 					columnDefs={columnDefs as any}
 					defaultColDef={defaultColDef}
@@ -265,7 +252,7 @@ export const HomePage = () => {
 						navigate(
 							routes.calculationPreview.rootPath.replace(
 								":id",
-								params.data.record_id.toString(),
+								params.data.id.toString(),
 							),
 						);
 					}}
@@ -277,7 +264,6 @@ export const HomePage = () => {
 };
 
 const GridWrapper = styled(Flex)`
-
 	& > div {
 		width: 100%;
 	}

@@ -1,9 +1,9 @@
-import Form, { IChangeEvent } from "@rjsf/core";
-import { RJSFSchema, UiSchema } from "@rjsf/utils";
+import Form, { type IChangeEvent } from "@rjsf/core";
+import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import localValidator from "@rjsf/validator-ajv8";
 import { useCallback } from "react";
 
-import { SubthemesType } from "./SubthemeSelector";
+import type { SubthemesType } from "./SubthemeSelector";
 
 export interface ThemesType {
 	theme: any;

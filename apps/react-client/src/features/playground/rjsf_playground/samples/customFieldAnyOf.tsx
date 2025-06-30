@@ -1,5 +1,5 @@
-import { FieldProps } from "@rjsf/utils";
-import { Sample } from "./Sample";
+import type { FieldProps } from "@rjsf/utils";
+import type { Sample } from "./Sample";
 
 function UiField(props: FieldProps) {
 	const {

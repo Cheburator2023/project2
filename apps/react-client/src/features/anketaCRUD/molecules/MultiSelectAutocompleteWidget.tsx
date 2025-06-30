@@ -1,7 +1,7 @@
 import Autocomplete from "@mui/material/Autocomplete";
 import TextField from "@mui/material/TextField";
-import { WidgetProps } from "@rjsf/utils";
-import React from "react";
+import type { WidgetProps } from "@rjsf/utils";
+import type React from "react";
 
 export const MultiSelectAutocompleteWidget = ({
 	id,

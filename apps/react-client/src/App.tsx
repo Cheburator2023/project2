@@ -2,7 +2,7 @@ import "./theme/global.css";
 import "@fontsource/inter";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 
-import React from "react";
+import type React from "react";
 
 import { CircularProgress, StyledEngineProvider } from "@mui/material";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -27,7 +27,7 @@ import { ErrorPage } from "@react-client/common/errors/pages/ErrorPage";
 import { useEffectOnce } from "@react-client/common/hooks/useEffectOnce";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { isEmpty } from "lodash-es";
-import { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
+import type { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
 import { reportWebVitals } from "./reportWebVitals";
 
 reportWebVitals(console.log);

@@ -4,7 +4,7 @@
  *
  * This is built as an on-the-fly executed function to support testing the node vs browser implementations
  */
-const base64 = (function () {
+const base64 = (() => {
 	// If we are in the browser, we can use the built-in TextEncoder and TextDecoder
 	// Otherwise, it is assumed that we are in node.js, and we can use the util module's TextEncoder and TextDecoder
 	return {
@@ -13,7 +13,7 @@ const base64 = (function () {
 			if (typeof TextEncoder !== "undefined") {
 				encoder = new TextEncoder();
 			} else {
-				const { TextEncoder } = require("util");
+				const { TextEncoder } = require("node:util");
 				encoder = new TextEncoder();
 			}
 			return btoa(safeFromCharCode(encoder, text));
@@ -23,7 +23,7 @@ const base64 = (function () {
 			if (typeof TextDecoder !== "undefined") {
 				decoder = new TextDecoder();
 			} else {
-				const { TextDecoder } = require("util");
+				const { TextDecoder } = require("node:util");
 				decoder = new TextDecoder();
 			}
 			return decoder.decode(

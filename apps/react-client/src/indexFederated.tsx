@@ -1,7 +1,7 @@
 import { createBridgeComponent } from "@module-federation/bridge-react/v19";
 import { AuthProvider } from "@react-client/common/providers/AuthProvider";
 
-import { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
+import type { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
 import App from "./App";
 
 export type Props = {

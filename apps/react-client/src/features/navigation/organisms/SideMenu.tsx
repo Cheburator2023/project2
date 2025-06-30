@@ -99,7 +99,7 @@ export function SideMenu({
 						sx={{ fontWeight: 500, lineHeight: "16px" }}
 						data-test-id="side-menu--Typography-0"
 					>
-						{(user?.family_name || "") + " " + (user?.given_name || "")}
+						{`${user?.family_name || ""} ${user?.given_name || ""}`}
 					</Typography>
 					{user?.email && (
 						<Typography

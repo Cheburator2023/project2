@@ -1,5 +1,5 @@
-import { ErrorTransformer } from "@rjsf/utils";
-import { Sample } from "./Sample";
+import type { ErrorTransformer } from "@rjsf/utils";
+import type { Sample } from "./Sample";
 
 function customValidate(
 	{ pass1, pass2 }: { pass1: string; pass2: string },

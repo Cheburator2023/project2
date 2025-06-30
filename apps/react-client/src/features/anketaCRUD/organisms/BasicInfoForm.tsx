@@ -5,10 +5,10 @@ import {
 	useAnketaCRUDFormsStore,
 } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import type FormRef from "@rjsf/core";
-import { IChangeEvent } from "@rjsf/core";
+import type { IChangeEvent } from "@rjsf/core";
 import Form from "@rjsf/mui";
-import { RJSFSchema, RegistryWidgetsType, UiSchema } from "@rjsf/utils";
-import { TemplatesType } from "@rjsf/utils";
+import type { RJSFSchema, RegistryWidgetsType, UiSchema } from "@rjsf/utils";
+import type { TemplatesType } from "@rjsf/utils";
 import { useRef } from "react";
 import { MultiSelectAutocompleteWidget } from "../molecules/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "../molecules/RJSFObjectFieldTemplate";

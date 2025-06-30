@@ -1,6 +1,6 @@
 import { InputAdornment, TextField } from "@mui/material";
-import { WidgetProps } from "@rjsf/utils";
-import React from "react";
+import type { WidgetProps } from "@rjsf/utils";
+import type React from "react";
 
 const NumberInputWidget: React.FC<WidgetProps> = ({
 	id,

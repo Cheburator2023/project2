@@ -1,49 +1,42 @@
-import { ArrayFieldTemplateProps } from "@rjsf/utils";
-import { Sample } from "./Sample";
+import type { ArrayFieldTemplateProps } from "@rjsf/utils";
+import type { Sample } from "./Sample";
 
 function ArrayFieldTemplate(props: ArrayFieldTemplateProps) {
 	const { className, items, canAdd, onAddClick } = props;
 	return (
 		<div className={className} data-test-id="custom-array--div-0">
-			{items &&
-				items.map((element: any) => (
-					<div
-						key={element.key}
-						className={element.className}
-						data-test-id="custom-array--div-1"
-					>
-						<div data-test-id="custom-array--div-2">{element.children}</div>
-						{element.hasMoveDown && (
-							<button
-								onClick={element.onReorderClick(
-									element.index,
-									element.index + 1,
-								)}
-								data-test-id="custom-array--button-0"
-							>
-								Down
-							</button>
-						)}
-						{element.hasMoveUp && (
-							<button
-								onClick={element.onReorderClick(
-									element.index,
-									element.index - 1,
-								)}
-								data-test-id="custom-array--button-1"
-							>
-								Up
-							</button>
-						)}
+			{items?.map((element: any) => (
+				<div
+					key={element.key}
+					className={element.className}
+					data-test-id="custom-array--div-1"
+				>
+					<div data-test-id="custom-array--div-2">{element.children}</div>
+					{element.hasMoveDown && (
 						<button
-							onClick={element.onDropIndexClick(element.index)}
-							data-test-id="custom-array--button-2"
+							onClick={element.onReorderClick(element.index, element.index + 1)}
+							data-test-id="custom-array--button-0"
 						>
-							Delete
+							Down
 						</button>
-						<hr data-test-id="custom-array--hr-0" />
-					</div>
-				))}
+					)}
+					{element.hasMoveUp && (
+						<button
+							onClick={element.onReorderClick(element.index, element.index - 1)}
+							data-test-id="custom-array--button-1"
+						>
+							Up
+						</button>
+					)}
+					<button
+						onClick={element.onDropIndexClick(element.index)}
+						data-test-id="custom-array--button-2"
+					>
+						Delete
+					</button>
+					<hr data-test-id="custom-array--hr-0" />
+				</div>
+			))}
 			{canAdd && (
 				<div className="row" data-test-id="custom-array--div-3">
 					<p

@@ -1,14 +1,14 @@
 import {
-	FormContextType,
-	ObjectFieldTemplatePropertyType,
-	ObjectFieldTemplateProps,
-	RJSFSchema,
-	StrictRJSFSchema,
+	type FormContextType,
+	type ObjectFieldTemplatePropertyType,
+	type ObjectFieldTemplateProps,
+	type RJSFSchema,
+	type StrictRJSFSchema,
 	getTemplate,
 	getUiOptions,
 	titleId,
 } from "@rjsf/utils";
-import { Sample } from "./Sample";
+import type { Sample } from "./Sample";
 
 function ObjectFieldTemplate<
 	T = any,

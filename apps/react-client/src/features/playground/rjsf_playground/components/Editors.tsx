@@ -1,6 +1,6 @@
 import MonacoEditor from "@monaco-editor/react";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { ErrorSchema, RJSFSchema, UiSchema } from "@rjsf/utils";
+import type { ErrorSchema, RJSFSchema, UiSchema } from "@rjsf/utils";
 import isEqualWith from "lodash/isEqualWith";
 import { useCallback, useState } from "react";
 
@@ -53,7 +53,7 @@ function Editor({ title, code, onChange }: EditorProps) {
 					className={`${cls} glyphicon glyphicon-${icon}`}
 					data-test-id="editors--span-0"
 				/>
-				{" " + title}
+				{` ${title}`}
 			</Flex>
 			<MonacoEditor
 				language="json"

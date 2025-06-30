@@ -23,16 +23,14 @@ async function bootstrap() {
 	);
 
 	const config = new DocumentBuilder()
-		.setTitle("API")
-		.setDescription("API documentation")
+		.setTitle("Smart Anketa API")
+		.setDescription("API documentation for Smart Anketa application")
 		.setVersion("1.0")
 		.addBearerAuth(
 			{
 				type: "http",
 				scheme: "bearer",
 				bearerFormat: "JWT",
-				name: "Authorization",
-				in: "header",
 			},
 			"JWT-auth",
 		)

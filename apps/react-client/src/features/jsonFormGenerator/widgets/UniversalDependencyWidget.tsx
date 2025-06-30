@@ -1,5 +1,5 @@
 import { TextField } from "@mui/material";
-import { WidgetProps } from "@rjsf/utils";
+import type { WidgetProps } from "@rjsf/utils";
 import React from "react";
 import NumberInputWidget from "./NumberInputWidget";
 

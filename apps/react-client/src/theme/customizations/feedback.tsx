@@ -1,4 +1,4 @@
-import { type Components, type Theme } from "@mui/material/styles";
+import type { Components, Theme } from "@mui/material/styles";
 import { gray } from "../themePrimitives";
 
 /* eslint-disable import/prefer-default-export */

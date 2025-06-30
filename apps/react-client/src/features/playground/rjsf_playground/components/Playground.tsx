@@ -1,6 +1,6 @@
-import { FormProps, IChangeEvent, withTheme } from "@rjsf/core";
+import { type FormProps, type IChangeEvent, withTheme } from "@rjsf/core";
 import { Theme as MuiTheme } from "@rjsf/mui";
-import {
+import type {
 	ErrorSchema,
 	RJSFSchema,
 	RJSFValidationError,
@@ -9,8 +9,8 @@ import {
 } from "@rjsf/utils";
 import { isFunction } from "lodash";
 import {
-	ComponentType,
-	FormEvent,
+	type ComponentType,
+	type FormEvent,
 	useCallback,
 	useEffect,
 	useRef,
@@ -18,14 +18,14 @@ import {
 } from "react";
 
 import { samples } from "../samples";
-import { Sample, UiSchemaForTheme } from "../samples/Sample";
+import type { Sample, UiSchemaForTheme } from "../samples/Sample";
 import base64 from "../utils/base64";
 import Editors from "./Editors";
 import ErrorBoundary from "./ErrorBoundary";
 import GeoPosition from "./GeoPosition";
-import Header, { LiveSettings } from "./Header";
+import Header, { type LiveSettings } from "./Header";
 import SpecialInput from "./SpecialInput";
-import { ThemesType } from "./ThemeSelector";
+import type { ThemesType } from "./ThemeSelector";
 
 export interface PlaygroundProps {
 	themes: { [themeName: string]: ThemesType };

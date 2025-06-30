@@ -21,7 +21,8 @@ export function generateObjectFromSchema(schema: any, numEntities = 1): any {
 			}
 		}
 		return generatedArray;
-	} else if (schema.type === "object") {
+	}
+	if (schema.type === "object") {
 		const generatedObject: any = {};
 
 		if (schema.properties) {
@@ -56,12 +57,11 @@ export function generateObjectFromSchema(schema: any, numEntities = 1): any {
 		}
 
 		return generatedObject;
-	} else {
-		// Handle primitive types directly if the schema itself is not an object or array
-		if (schema.type === "string") return "string value";
-		if (schema.type === "number") return 0;
-		if (schema.type === "integer") return 0;
-		if (schema.type === "boolean") return false;
-		return null; // Default for unknown or unsupported types
 	}
+	// Handle primitive types directly if the schema itself is not an object or array
+	if (schema.type === "string") return "string value";
+	if (schema.type === "number") return 0;
+	if (schema.type === "integer") return 0;
+	if (schema.type === "boolean") return false;
+	return null; // Default for unknown or unsupported types
 }

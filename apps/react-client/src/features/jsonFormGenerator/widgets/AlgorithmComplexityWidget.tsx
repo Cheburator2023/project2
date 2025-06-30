@@ -7,8 +7,9 @@ import {
 	TextField,
 	Typography,
 } from "@mui/material";
-import { WidgetProps } from "@rjsf/utils";
-import React, { useEffect, useRef } from "react";
+import type { WidgetProps } from "@rjsf/utils";
+import type React from "react";
+import { useEffect, useRef } from "react";
 
 interface AlgorithmValue {
 	algorithmType: string;

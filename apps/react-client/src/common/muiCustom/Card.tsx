@@ -44,27 +44,25 @@ export const Card = (
 			data-test-id="card--MUIPaperStyled-0"
 		>
 			{(props.header || props.onClose) && (
-				<>
-					<Flex
-						justifyContent="space-between"
-						alignItems="center"
-						width="100%"
-						as="header"
-						style={{ height: `${headerH}px` }}
-						data-test-id="card--Flex-0"
-					>
-						{props.header && (
-							<Typography variant="h6" data-test-id="card--Typography-0">
-								{props.header}
-							</Typography>
-						)}
-						{props.onClose && (
-							<IconButton onClick={handler} data-test-id="card--IconButton-0">
-								<CloseIcon data-test-id="card--CloseIcon-0" />
-							</IconButton>
-						)}
-					</Flex>
-				</>
+				<Flex
+					justifyContent="space-between"
+					alignItems="center"
+					width="100%"
+					as="header"
+					style={{ height: `${headerH}px` }}
+					data-test-id="card--Flex-0"
+				>
+					{props.header && (
+						<Typography variant="h6" data-test-id="card--Typography-0">
+							{props.header}
+						</Typography>
+					)}
+					{props.onClose && (
+						<IconButton onClick={handler} data-test-id="card--IconButton-0">
+							<CloseIcon data-test-id="card--CloseIcon-0" />
+						</IconButton>
+					)}
+				</Flex>
 			)}
 			<div
 				style={{

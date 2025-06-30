@@ -21,7 +21,7 @@ export const AnketaCompareLayout = () => {
 			data-test-id="anketa-compare-layout--Flex-0"
 		>
 			<Card
-				header={"Основная информация " + id1 + " / " + id2}
+				header={`Основная информация ${id1} / ${id2}`}
 				overflow={false}
 				data-test-id="anketa-compare-layout--Card-0"
 			>
@@ -43,7 +43,7 @@ export const AnketaCompareLayout = () => {
 			</Card>
 			<Spacer data-test-id="anketa-compare-layout--Spacer-0" />
 			<Card
-				header={"Итоговый расчет " + id1 + " / " + id2}
+				header={`Итоговый расчет ${id1} / ${id2}`}
 				overflow={false}
 				data-test-id="anketa-compare-layout--Card-1"
 			>
@@ -65,7 +65,7 @@ export const AnketaCompareLayout = () => {
 			</Card>
 			<Spacer data-test-id="anketa-compare-layout--Spacer-1" />
 			<Card
-				header={"Опросник " + id1 + " / " + id2}
+				header={`Опросник ${id1} / ${id2}`}
 				overflow={false}
 				data-test-id="anketa-compare-layout--Card-2"
 			>
