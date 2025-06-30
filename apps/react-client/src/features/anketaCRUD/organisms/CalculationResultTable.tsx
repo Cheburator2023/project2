@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useColorScheme } from "@mui/material";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
+import { assessmentCalculationsStore } from "@react-client/features/jsonFormGenerator/hooks/assessmentCalculationsStore";
 import {
 	type CellClassParams,
 	type CellStyle,
@@ -15,35 +16,41 @@ import {
 
 const themeQuartzDark = themeQuartz.withPart(colorSchemeDarkBlue);
 
-interface RawEpicData {
+interface EpicData {
 	epicName: string;
 	score: number;
-}
-
-interface EpicData extends RawEpicData {
 	percentFromAverage: number;
 }
 
-const initialEpicData: RawEpicData[] = [
-	{ epicName: "01. Постановка задачи", score: 8 },
-	{ epicName: "02. Поиск данных", score: 10 },
-	{ epicName: "03. Построение витрины данных", score: 6 },
-	{ epicName: "04. Разработка MVP", score: 9 },
-	{ epicName: "05А. Разработка модели", score: 7 },
-	{ epicName: "06. Разработка прототипа", score: 100 },
-	{ epicName: "AML разработка", score: 100 },
-	{ epicName: "05B. Пилотирование модели", score: 100 },
-	{ epicName: "06. Разработка витрины для применения модели", score: 200 },
-	{ epicName: "07. Адаптация и внедрение", score: 200 },
-];
+// Mapping from store properties to display names
+const stageDisplayNames: Record<string, string> = {
+	stage01: "01. Постановка задачи",
+	stage02: "02. Поиск данных",
+	stage03: "03. Построение витрины данных",
+	stage05A: "04. Разработка MVP",
+	stage05: "05А. Разработка модели",
+	amlDrafting: "AML разработка",
+	stage05B: "05B. Пилотирование модели",
+	stage07: "06. Разработка витрины для применения модели",
+	stage09: "07. Адаптация и внедрение",
+	amlEnforcement: "AML внедрение",
+};
 
-const processData = (data: RawEpicData[]): EpicData[] => {
-	if (data.length === 0) return [];
+const processStageResults = (
+	stageResults: Record<string, number>,
+): EpicData[] => {
+	// Convert store data to array format
+	const stageEntries = Object.entries(stageResults).map(([key, score]) => ({
+		epicName: stageDisplayNames[key] || key,
+		score: score,
+	}));
 
-	const totalScore = data.reduce((sum, item) => sum + item.score, 0);
-	const averageScore = totalScore / data.length;
+	if (stageEntries.length === 0) return [];
 
-	const detailedData: EpicData[] = data.map((item) => ({
+	const totalScore = stageEntries.reduce((sum, item) => sum + item.score, 0);
+	const averageScore = totalScore / stageEntries.length;
+
+	const detailedData: EpicData[] = stageEntries.map((item) => ({
 		...item,
 		percentFromAverage: ((item.score - averageScore) / averageScore) * 100,
 	}));
@@ -60,8 +67,13 @@ const processData = (data: RawEpicData[]): EpicData[] => {
 export const CalculationResultTable = ({
 	isCreate,
 }: { isCreate?: boolean }) => {
-	const [rowData] = useState<EpicData[]>(processData(initialEpicData));
+	const { stageResults } = assessmentCalculationsStore();
 	const { setCalculationResult } = useAnketaCRUDFormsStore();
+
+	// Process data from the store
+	const rowData = useMemo<EpicData[]>(() => {
+		return processStageResults(stageResults);
+	}, [stageResults]);
 
 	const [columnDefs] = useState<ColDef<EpicData>[]>([
 		{
@@ -130,7 +142,10 @@ export const CalculationResultTable = ({
 
 	const { mode } = useColorScheme();
 
-	const height = initialEpicData.length * 51.3;
+	// Calculate height based on actual data length
+	const height = useMemo(() => {
+		return rowData.length * 51.3;
+	}, [rowData.length]);
 
 	useDeepEffect(() => {
 		setCalculationResult(rowData);
@@ -149,6 +164,7 @@ export const CalculationResultTable = ({
 			<AgGridReact
 				rowData={rowData}
 				columnDefs={columnDefs}
+				defaultColDef={defaultColDef}
 				theme={
 					mode === "light" || mode === undefined ? themeQuartz : themeQuartzDark
 				}

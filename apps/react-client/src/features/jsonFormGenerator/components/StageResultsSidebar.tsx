@@ -1,3 +1,4 @@
+import { assessmentCalculationsStore } from "@react-client/features/jsonFormGenerator/hooks/assessmentCalculationsStore";
 import React from "react";
 
 interface StageResultsSidebarProps {
@@ -46,10 +47,9 @@ const coefficientNames: Record<string, string> = {
 	deploymentChannelsCoefficient: "Коэффициент каналов внедрения",
 };
 
-const StageResultsSidebar: React.FC<StageResultsSidebarProps> = ({
-	results = {},
-	coefficients = {},
-}) => {
+const StageResultsSidebar: React.FC<StageResultsSidebarProps> = () => {
+	const { coefficients, stageResults } = assessmentCalculationsStore();
+
 	return (
 		<aside
 			style={{
@@ -71,7 +71,7 @@ const StageResultsSidebar: React.FC<StageResultsSidebarProps> = ({
 			</ul>
 			<h3>Результаты этапов</h3>
 			<ul style={{ listStyle: "none", padding: 0 }}>
-				{Object.entries(results).map(([key, value]: any) => (
+				{Object.entries(stageResults).map(([key, value]: any) => (
 					<li key={key} style={{ marginBottom: 16 }}>
 						<strong>
 							{stageNames[key as keyof typeof stageNames] || key}:

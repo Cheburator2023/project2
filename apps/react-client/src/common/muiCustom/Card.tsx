@@ -100,7 +100,7 @@ export const Card = (
 				style={{
 					height: props.header
 						? overflow
-							? `calc(100% - ${headerH + 15}px)`
+							? `calc(100% - ${headerH + 45}px)`
 							: "inherit"
 						: "inherit",
 					width: "inherit",

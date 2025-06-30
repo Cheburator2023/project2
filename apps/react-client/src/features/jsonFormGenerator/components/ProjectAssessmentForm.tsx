@@ -17,7 +17,7 @@ import {
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import { RJSFObjectFieldTemplate } from "@react-client/features/anketaCRUD/molecules/RJSFObjectFieldTemplate";
 import StageResultsSidebar from "@react-client/features/jsonFormGenerator/components/StageResultsSidebar";
-import { useAssessmentCalculations } from "@react-client/features/jsonFormGenerator/hooks/useAssessmentCalculations";
+import { assessmentCalculationsStore } from "@react-client/features/jsonFormGenerator/hooks/assessmentCalculationsStore";
 import schema from "../schemas/calc_schema.json";
 import uiSchema from "../schemas/calc_uiSchema";
 import type { FormData } from "../types/FormData";
@@ -64,7 +64,7 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 		generalUncertainty: [],
 	});
 
-	const { coefficients, stageResults } = useAssessmentCalculations(formData);
+	const { setFormData: setFormDataForCalc } = assessmentCalculationsStore();
 
 	const formName = isCreate
 		? AnketaCRUDFormNames.anketaCreate_projectAssessmentForm
@@ -73,6 +73,10 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 	const apiFormStore = store[formName].api;
 	const formState = apiFormStore?.state;
 	const formStateFromRef = formRef?.current?.state;
+
+	useDeepEffect(() => {
+		setFormDataForCalc(formData);
+	}, [formData]);
 
 	// init api in store
 	useDeepEffect(() => {
@@ -146,7 +150,7 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 				showErrorList={false}
 				data-test-id="project-assessment-form--Form-0"
 			/>
-			<StageResultsSidebar results={stageResults} coefficients={coefficients} />
+			<StageResultsSidebar />
 		</>
 	);
 };
