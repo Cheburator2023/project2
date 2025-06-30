@@ -1,5 +1,5 @@
 import { TextField } from "@mui/material";
-import type { WidgetProps } from "@rjsf/utils";
+import { WidgetProps } from "@rjsf/utils";
 import React from "react";
 import NumberInputWidget from "./NumberInputWidget";
 
@@ -10,16 +10,8 @@ const widgetMap: Record<string, any> = {
 };
 
 const UniversalDependencyWidget = (props: WidgetProps) => {
-	const {
-		formContext,
-		uiSchema,
-		value,
-		onChange,
-		registry,
-		schema,
-		readonly,
-		...rest
-	} = props;
+	const { formContext, uiSchema, value, onChange, registry, schema, ...rest } =
+		props;
 	const options = uiSchema?.["ui:options"] as
 		| {
 				dependencies: {
@@ -100,7 +92,6 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 				uiSchema={uiSchema}
 				registry={registry}
 				schema={schema}
-				data-test-id="universal-dependency-widget--DefaultWidget-0"
 			/>
 		);
 	}
@@ -124,8 +115,6 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 					variant="outlined"
 					size="small"
 					label={schema?.title}
-					slotProps={{ input: { readOnly: readonly } }}
-					data-test-id="universal-dependency-widget--TextField-0"
 				/>
 			);
 		}
@@ -138,8 +127,6 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 				variant="outlined"
 				size="small"
 				label={schema?.title}
-				slotProps={{ input: { readOnly: readonly } }}
-				data-test-id="universal-dependency-widget--TextField-1"
 			/>
 		);
 	}
@@ -161,8 +148,6 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 				variant="outlined"
 				size="small"
 				label={schema?.title}
-				slotProps={{ input: { readOnly: readonly } }}
-				data-test-id="universal-dependency-widget--TextField-2"
 			/>
 		);
 	}
@@ -196,7 +181,6 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 			uiSchema={uiSchema}
 			registry={registry}
 			schema={schema}
-			data-test-id="universal-dependency-widget--DefaultWidget-1"
 		/>
 	);
 };

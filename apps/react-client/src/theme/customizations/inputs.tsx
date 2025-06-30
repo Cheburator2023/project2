@@ -478,7 +478,7 @@ export const inputsCustomizations: Components<Theme> = {
 				}),
 				maxHeight: "1em",
 				margin: "0",
-				padding: "0 0 0 8px",
+				padding: "0 4px 0 8px",
 			}),
 		},
 	},

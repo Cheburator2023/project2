@@ -3,7 +3,7 @@ import type FormRef from "@rjsf/core";
 
 import type { IChangeEvent } from "@rjsf/core";
 import { Theme as MuiTheme } from "@rjsf/mui";
-import type { RJSFSchema } from "@rjsf/utils";
+import type { RJSFSchema, TemplatesType } from "@rjsf/utils";
 import type React from "react";
 import { useRef, useState } from "react";
 
@@ -15,6 +15,9 @@ import {
 } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
+import { RJSFObjectFieldTemplate } from "@react-client/features/anketaCRUD/molecules/RJSFObjectFieldTemplate";
+import StageResultsSidebar from "@react-client/features/jsonFormGenerator/components/StageResultsSidebar";
+import { useAssessmentCalculations } from "@react-client/features/jsonFormGenerator/hooks/useAssessmentCalculations";
 import schema from "../schemas/calc_schema.json";
 import uiSchema from "../schemas/calc_uiSchema";
 import type { FormData } from "../types/FormData";
@@ -25,6 +28,10 @@ import ProductionDeploymentChannelsWidget from "../widgets/ProductionDeploymentC
 import UniversalDependencyWidget from "../widgets/UniversalDependencyWidget";
 
 const Form = withTheme(MuiTheme);
+
+const templates: Partial<TemplatesType> = {
+	ObjectFieldTemplate: RJSFObjectFieldTemplate,
+};
 
 const widgets = {
 	AlgorithmComplexityWidget,
@@ -56,6 +63,8 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 		productionDeploymentChannels: [],
 		generalUncertainty: [],
 	});
+
+	const { coefficients, stageResults } = useAssessmentCalculations(formData);
 
 	const formName = isCreate
 		? AnketaCRUDFormNames.anketaCreate_projectAssessmentForm
@@ -115,25 +124,29 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 	};
 
 	return (
-		<Form
-			ref={formRef}
-			schema={schema as RJSFSchema}
-			uiSchema={uiSchema}
-			validator={validatorRu}
-			widgets={widgets}
-			formData={formData}
-			formContext={{ formData }}
-			onChange={onChange}
-			onSubmit={onSubmit}
-			onError={onError}
-			// onFocus={onFocus}
-			// onBlur={onBlur}
-			focusOnFirstError
-			// liveValidate={!readonly}
-			noHtml5Validate
-			readonly={readonly}
-			showErrorList={false}
-			data-test-id="project-assessment-form--Form-0"
-		/>
+		<>
+			<Form
+				ref={formRef}
+				schema={schema as RJSFSchema}
+				uiSchema={uiSchema}
+				validator={validatorRu}
+				widgets={widgets}
+				formData={formData}
+				formContext={{ formData }}
+				onChange={onChange}
+				onSubmit={onSubmit}
+				onError={onError}
+				templates={templates}
+				// onFocus={onFocus}
+				// onBlur={onBlur}
+				focusOnFirstError
+				// liveValidate={!readonly}
+				noHtml5Validate
+				readonly={readonly}
+				showErrorList={false}
+				data-test-id="project-assessment-form--Form-0"
+			/>
+			<StageResultsSidebar results={stageResults} coefficients={coefficients} />
+		</>
 	);
 };

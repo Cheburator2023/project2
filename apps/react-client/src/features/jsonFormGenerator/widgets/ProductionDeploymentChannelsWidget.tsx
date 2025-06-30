@@ -7,8 +7,8 @@ import {
 	TextField,
 	Typography,
 } from "@mui/material";
-import type { WidgetProps } from "@rjsf/utils";
-import type React from "react";
+import { WidgetProps } from "@rjsf/utils";
+import React from "react";
 
 const deploymentChannels = [
 	"Батч",
@@ -45,21 +45,12 @@ const ProductionDeploymentChannelsWidget: React.FC<WidgetProps> = ({
 	};
 
 	return (
-		<Stack
-			spacing={2}
-			data-test-id="production-deployment-channels-widget--Stack-0"
-		>
-			<FormControl
-				fullWidth
-				data-test-id="production-deployment-channels-widget--FormControl-0"
-			>
-				<Typography
-					variant="subtitle1"
-					gutterBottom
-					data-test-id="production-deployment-channels-widget--Typography-0"
-				>
+		<Stack spacing={2}>
+			<FormControl fullWidth>
+				<Typography variant="subtitle1" gutterBottom>
 					Каналы внедрения моделей
 				</Typography>
+
 				{/* Summary input */}
 				<TextField
 					value={getSummaryText()}
@@ -68,11 +59,10 @@ const ProductionDeploymentChannelsWidget: React.FC<WidgetProps> = ({
 					variant="outlined"
 					size="small"
 					sx={{ mb: 2 }}
-					slotProps={{ input: { readOnly: readonly } }}
-					data-test-id="production-deployment-channels-widget--TextField-0"
 				/>
+
 				{/* Checkboxes */}
-				<FormGroup data-test-id="production-deployment-channels-widget--FormGroup-0">
+				<FormGroup>
 					{deploymentChannels.map((channel) => (
 						<FormControlLabel
 							key={channel}
@@ -81,11 +71,9 @@ const ProductionDeploymentChannelsWidget: React.FC<WidgetProps> = ({
 									checked={value.includes(channel)}
 									onChange={() => handleChange(channel)}
 									disabled={disabled || readonly}
-									data-test-id="production-deployment-channels-widget--Checkbox-0"
 								/>
 							}
 							label={channel}
-							data-test-id="production-deployment-channels-widget--FormControlLabel-0"
 						/>
 					))}
 				</FormGroup>

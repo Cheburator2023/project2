@@ -1,4 +1,4 @@
-import type { UiSchema } from "@rjsf/utils";
+import { UiSchema } from "@rjsf/utils";
 
 const uiSchema: UiSchema = {
 	"ui:submitButtonOptions": {
@@ -12,7 +12,7 @@ const uiSchema: UiSchema = {
 		},
 	},
 	projectName: {
-		"ui:placeholder": "введите название проекта",
+		"ui:placeholder": "Введите название проекта",
 	},
 	algorithmComplexity: {
 		"ui:widget": "AlgorithmComplexityWidget",
@@ -59,9 +59,6 @@ const uiSchema: UiSchema = {
 	},
 	productionDeploymentChannels: {
 		"ui:widget": "ProductionDeploymentChannelsWidget",
-	},
-	productionDeploymentChannels2: {
-		"ui:widget": "MultiSelectAutocompleteWidget",
 	},
 	pilotSupportRequired: {
 		"ui:widget": "UniversalDependencyWidget",

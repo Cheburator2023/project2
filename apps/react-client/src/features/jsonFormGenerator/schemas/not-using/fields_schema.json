@@ -1,0 +1,97 @@
+{
+  "modelsCount": {
+    "type": "number",
+    "minimum": 1,
+    "maximum": 99,
+    "title": "Количество моделей"
+  },
+  "setupComplexity": {
+    "type": "string",
+    "dictionary": "setupComplexity",
+    "title": "Сложность постановки"
+  },
+  "initiativeTimeline": {
+    "type": "string",
+    "dictionary": "initiativeTimeline",
+    "title": "Сроки инициативы"
+  },
+  "initiativeCost": {
+    "type": "string",
+    "dictionary": "initiativeCost",
+    "title": "Стоимость инициативы"
+  },
+  "uncertaintyAdjustment": {
+    "type": "number",
+    "minimum": 0,
+    "maximum": 30,
+    "title": "Поправка на общую неопределенность"
+  },
+  "generalUncertainty": {
+    "type": "array",
+    "title": "Общая неопределенность",
+    "items": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "dictionary": "generalUncertaintyType"
+        },
+        "probability": {
+          "type": "string",
+          "dictionary": "generalUncertaintyProbability"
+        },
+        "influence": {
+          "type": "string",
+          "dictionary": "generalUncertaintyInfluence"
+        }
+      },
+      "required": ["type", "probability", "influence"]
+    },
+    "uniqueItems": true
+  },
+  "readyPromReports": {
+    "type": "string",
+    "dictionary": "readyPromReports",
+    "title": "Наличие готовых пром витрин"
+  },
+  "assessedInitiativesCount": {
+    "type": "number",
+    "minimum": 1,
+    "maximum": 99,
+    "title": "Количество оцениваемых инициатив"
+  },
+  "dataSourcesCount": {
+    "type": "string",
+    "dictionary": "dataSourcesCount",
+    "title": "Количество источников для проработки"
+  },
+  "pilotModelRequired": {
+    "type": "string",
+    "dictionary": "pilotModelRequired",
+    "title": "Необходимость реализации пилотной модели"
+  },
+  "pilotSupportRequired": {
+    "type": "string",
+    "dictionary": "pilotSupportRequired",
+    "title": "Необходимость поддержки проведения пилота"
+  },
+  "algorithmComplexity": {
+    "type": "string",
+    "title": "Сложность алгоритма / тип ML задачи"
+  },
+  "autoMlRequired": {
+    "type": "string",
+    "dictionary": "autoMlRequired",
+    "title": "Необходимость AutoML"
+  },
+  "productionAdditionalReports": {
+    "type": "number",
+    "minimum": 1,
+    "maximum": 99,
+    "title": "Необходимость продуктивизации и количество дополнительных витрин"
+  },
+  "productionDeploymentChannels": {
+    "type": "string",
+    "title": "Необходимость продуктивизации и каналы внедрения моделей"
+  }
+} 

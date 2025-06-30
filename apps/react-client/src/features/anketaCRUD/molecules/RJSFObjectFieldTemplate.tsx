@@ -36,6 +36,7 @@ export const RJSFObjectFieldTemplate = ({
 			<Grid
 				container
 				spacing={2}
+				gap={1}
 				data-test-id="r-j-s-f-object-field-template--Grid-0"
 			>
 				{properties.map((element, index) => (

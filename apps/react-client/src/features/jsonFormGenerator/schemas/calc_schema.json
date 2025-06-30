@@ -6,7 +6,7 @@
 			"type": "number",
 			"minimum": 1,
 			"maximum": 99,
-			"title": "Кол-во моделей"
+			"title": "Количество моделей"
 		},
 		"setupComplexity": {
 			"type": "string",
@@ -124,7 +124,7 @@
 		},
 		"dataSourcesCount": {
 			"type": "string",
-			"enum": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+			"enum": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
 			"title": "Количество источников для проработки"
 		},
 		"pilotModelRequired": {
@@ -155,27 +155,6 @@
 		"productionDeploymentChannels": {
 			"type": "string",
 			"title": "Необходимость продуктивизации и каналы внедрения моделей"
-		},
-		"productionDeploymentChannels2": {
-			"type": "array",
-			"title": "Каналы внедрения моделей TEST AUTOCOMPLETE",
-			"items": {
-				"type": "string",
-				"enum": [
-					"Батч",
-					"Батч+загрузка данных потребителю",
-					"Батч + Онлайн",
-					"Онлайн",
-					"Онлайн gpu",
-					"Стриминг",
-					"Мобильные устройства",
-					"LLM",
-					"Гео-сервисы",
-					"Внедрение в облаке",
-					"Графовая платформа"
-				]
-			},
-			"uniqueItems": true
 		}
 	},
 	"required": [

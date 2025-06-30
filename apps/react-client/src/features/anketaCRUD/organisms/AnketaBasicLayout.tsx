@@ -45,6 +45,7 @@ export const AnketaBasicLayout = ({
 								header="Основная информация"
 								height="100%"
 								padding="10px"
+								zoom={0.7}
 								data-test-id="anketa-basic-layout--Card-0"
 							>
 								<Spacer data-test-id="anketa-basic-layout--Spacer-0" />
@@ -63,6 +64,7 @@ export const AnketaBasicLayout = ({
 								maxHeight="100%"
 								height="100%"
 								padding="10px"
+								zoom={0.7}
 								data-test-id="anketa-basic-layout--Card-1"
 							>
 								<Spacer data-test-id="anketa-basic-layout--Spacer-1" />
@@ -86,6 +88,7 @@ export const AnketaBasicLayout = ({
 						maxHeight="100%"
 						height="100%"
 						padding="10px"
+						zoom={0.7}
 						data-test-id="anketa-basic-layout--Card-2"
 					>
 						<Spacer data-test-id="anketa-basic-layout--Spacer-2" />

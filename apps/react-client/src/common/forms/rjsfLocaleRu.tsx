@@ -8,47 +8,47 @@ function localize_ru(errors: null | ErrorObject[] = []) {
 
 		switch (error.keyword) {
 			case "pattern": {
-				outMessage = `должно соответствовать образцу "${error.params.pattern}"`;
+				outMessage = `Должно соответствовать образцу "${error.params.pattern}"`;
 				break;
 			}
 			case "required": {
-				outMessage = "поле обязательно для заполнения";
+				outMessage = "Поле обязательно для заполнения";
 				break;
 			}
 			case "minLength": {
-				outMessage = `минимальная длина ${error.params.limit}`;
+				outMessage = `Поле обязательно для заполнения. Минимальная длина значения - ${error.params.limit}`;
 				break;
 			}
 			case "maxLength": {
-				outMessage = `максимальная длина ${error.params.limit}`;
+				outMessage = `Поле обязательно для заполнения. Максимальная длина значения - ${error.params.limit}`;
 				break;
 			}
 			case "type": {
-				outMessage = `должно соответствовать типу ${error.params.type}`;
+				outMessage = `Должно соответствовать типу ${error.params.type}`;
 				break;
 			}
 			case "format": {
-				outMessage = `должно соответствовать формату ${error.params.format}`;
+				outMessage = `Должно соответствовать формату ${error.params.format}`;
 				break;
 			}
 			case "enum": {
-				outMessage = `должно быть одним из значений: ${error.params.enum}`;
+				outMessage = `Выберите одно из значений`;
 				break;
 			}
 			case "minimum": {
-				outMessage = `минимальное значение ${error.params.minimum}`;
+				outMessage = `Минимальное значение ${error.params.minimum}`;
 				break;
 			}
 			case "maximum": {
-				outMessage = `максимальное значение ${error.params.maximum}`;
+				outMessage = `Максимальное значение ${error.params.maximum}`;
 				break;
 			}
 			case "multipleOf": {
-				outMessage = `должно быть кратным ${error.params.multipleOf}`;
+				outMessage = `Должно быть кратным ${error.params.multipleOf}`;
 				break;
 			}
 			case "const": {
-				outMessage = `должно быть равно ${error.params.const}`;
+				outMessage = `Должно быть равно ${error.params.const}`;
 				break;
 			}
 			default:

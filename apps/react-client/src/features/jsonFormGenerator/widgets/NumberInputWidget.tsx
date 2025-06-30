@@ -1,6 +1,6 @@
 import { InputAdornment, TextField } from "@mui/material";
-import type { WidgetProps } from "@rjsf/utils";
-import type React from "react";
+import { WidgetProps } from "@rjsf/utils";
+import React from "react";
 
 const NumberInputWidget: React.FC<WidgetProps> = ({
 	id,
@@ -52,22 +52,11 @@ const NumberInputWidget: React.FC<WidgetProps> = ({
 			required={required}
 			label={label}
 			InputProps={{
-				readOnly: readonly,
 				startAdornment: prefix ? (
-					<InputAdornment
-						position="start"
-						data-test-id="number-input-widget--InputAdornment-0"
-					>
-						{prefix}
-					</InputAdornment>
+					<InputAdornment position="start">{prefix}</InputAdornment>
 				) : undefined,
 				endAdornment: suffix ? (
-					<InputAdornment
-						position="end"
-						data-test-id="number-input-widget--InputAdornment-1"
-					>
-						{suffix}
-					</InputAdornment>
+					<InputAdornment position="end">{suffix}</InputAdornment>
 				) : undefined,
 			}}
 			inputProps={{
@@ -77,7 +66,6 @@ const NumberInputWidget: React.FC<WidgetProps> = ({
 			}}
 			fullWidth
 			error={
-				!readonly &&
 				value !== undefined &&
 				schema.minimum !== undefined &&
 				schema.maximum !== undefined &&
@@ -91,7 +79,6 @@ const NumberInputWidget: React.FC<WidgetProps> = ({
 					? `Value must be between ${schema.minimum} and ${schema.maximum}${suffix ? suffix : ""}`
 					: ""
 			}
-			data-test-id="number-input-widget--TextField-0"
 		/>
 	);
 };

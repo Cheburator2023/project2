@@ -11,13 +11,14 @@ import {
 	IconButton,
 	List,
 	ListItem,
+	ListItemButton,
 	ListItemSecondaryAction,
 	ListItemText,
 	Stack,
 	TextField,
 	Typography,
 } from "@mui/material";
-import type { WidgetProps } from "@rjsf/utils";
+import { WidgetProps } from "@rjsf/utils";
 import React, { useState, useEffect, useRef } from "react";
 
 interface UncertaintyItem {
@@ -100,7 +101,6 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 	formContext,
 	schema,
 	required,
-	readonly,
 }) => {
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 	const [selectedItem, setSelectedItem] = useState<string | null>(null);
@@ -181,28 +181,19 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 	};
 
 	return (
-		<Stack spacing={2} data-test-id="general-uncertainty-widget--Stack-0">
-			<FormControl
-				fullWidth
-				disabled={!isEnabled}
-				data-test-id="general-uncertainty-widget--FormControl-0"
-			>
-				<Typography
-					variant="subtitle1"
-					gutterBottom
-					data-test-id="general-uncertainty-widget--Typography-0"
-				>
+		<Stack spacing={2}>
+			<FormControl fullWidth disabled={!isEnabled}>
+				<Typography variant="subtitle1" gutterBottom>
 					Общая неопределенность
 				</Typography>
-				{!readonly && !isEnabled && (
-					<FormHelperText
-						error
-						data-test-id="general-uncertainty-widget--FormHelperText-0"
-					>
+
+				{!isEnabled && (
+					<FormHelperText error>
 						Заполните "Стоимость инициативы" и "Сроки инициативы" для добавления
 						факторов неопределенности
 					</FormHelperText>
 				)}
+
 				{/* Summary input */}
 				<TextField
 					value={getSummaryText()}
@@ -211,17 +202,12 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 					variant="outlined"
 					size="small"
 					sx={{ mb: 2 }}
-					slotProps={{ input: { readOnly: readonly } }}
-					data-test-id="general-uncertainty-widget--TextField-0"
 				/>
+
 				{/* Display selected items */}
-				<List data-test-id="general-uncertainty-widget--List-0">
+				<List>
 					{(value as UncertaintyItem[]).map((item, index) => (
-						<ListItem
-							key={index}
-							divider
-							data-test-id="general-uncertainty-widget--ListItem-0"
-						>
+						<ListItem key={index} divider>
 							<ListItemText
 								primary={getItemTitle(item.type)}
 								secondary={
@@ -231,84 +217,59 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 											variant="body2"
 											color="textSecondary"
 											display="block"
-											data-test-id="general-uncertainty-widget--Typography-1"
 										>
-											<strong data-test-id="general-uncertainty-widget--strong-0">
-												Вероятность:
-											</strong>{" "}
-											{item.probability}
+											<strong>Вероятность:</strong> {item.probability}
 										</Typography>
 										<Typography
 											component="span"
 											variant="body2"
 											color="textSecondary"
 											display="block"
-											data-test-id="general-uncertainty-widget--Typography-2"
 										>
-											<strong data-test-id="general-uncertainty-widget--strong-1">
-												Влияние:
-											</strong>{" "}
-											{item.influence}
+											<strong>Влияние:</strong> {item.influence}
 										</Typography>
 									</React.Fragment>
 								}
-								data-test-id="general-uncertainty-widget--ListItemText-0"
 							/>
-							<ListItemSecondaryAction data-test-id="general-uncertainty-widget--ListItemSecondaryAction-0">
+							<ListItemSecondaryAction>
 								<IconButton
 									edge="end"
 									onClick={() => handleDelete(index)}
 									size="small"
-									data-test-id="general-uncertainty-widget--IconButton-0"
 								>
-									<DeleteIcon data-test-id="general-uncertainty-widget--DeleteIcon-0" />
+									<DeleteIcon />
 								</IconButton>
 							</ListItemSecondaryAction>
 						</ListItem>
 					))}
 				</List>
+
 				{/* Add button */}
 				<Button
-					startIcon={
-						<AddIcon data-test-id="general-uncertainty-widget--AddIcon-0" />
-					}
+					startIcon={<AddIcon />}
 					onClick={handleAddClick}
 					disabled={!isEnabled || getAvailableOptions().length === 0}
 					variant="outlined"
 					sx={{ mt: 2 }}
 					color="primary"
-					data-test-id="general-uncertainty-widget--Button-0"
 				>
 					Добавить фактор неопределенности
 				</Button>
 			</FormControl>
+
 			{/* Add dialog */}
 			<Dialog
 				open={isDialogOpen}
 				onClose={handleDialogClose}
 				maxWidth="md"
 				fullWidth
-				data-test-id="general-uncertainty-widget--Dialog-0"
 			>
-				<DialogTitle data-test-id="general-uncertainty-widget--DialogTitle-0">
-					Добавить фактор неопределенности
-				</DialogTitle>
-				<DialogContent data-test-id="general-uncertainty-widget--DialogContent-0">
-					<Stack
-						spacing={3}
-						sx={{ mt: 2 }}
-						data-test-id="general-uncertainty-widget--Stack-1"
-					>
+				<DialogTitle>Добавить фактор неопределенности</DialogTitle>
+				<DialogContent>
+					<Stack spacing={3} sx={{ mt: 2 }}>
 						{/* Available items */}
-						<FormControl
-							fullWidth
-							data-test-id="general-uncertainty-widget--FormControl-1"
-						>
-							<Typography
-								variant="subtitle2"
-								gutterBottom
-								data-test-id="general-uncertainty-widget--Typography-3"
-							>
+						<FormControl fullWidth>
+							<Typography variant="subtitle2" gutterBottom>
 								Выберите фактор:
 							</Typography>
 							<List
@@ -318,46 +279,23 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 									border: "1px solid rgba(0, 0, 0, 0.12)",
 									borderRadius: 1,
 								}}
-								data-test-id="general-uncertainty-widget--List-1"
 							>
 								{getAvailableOptions().map((option) => (
-									<ListItem
+									<ListItemButton
 										key={option.id}
+										selected={option.id === selectedItem}
 										component="button"
-										// button
-										// selected={selectedItem === option.id}
 										onClick={() => handleItemSelect(option.id)}
-										sx={{
-											"&.Mui-selected": {
-												backgroundColor: "primary.light",
-												"&:hover": {
-													backgroundColor: "primary.light",
-												},
-											},
-										}}
-										data-test-id="general-uncertainty-widget--ListItem-1"
 									>
-										<ListItemText
-											primary={option.title}
-											primaryTypographyProps={{
-												style: { fontSize: "0.9rem" },
-											}}
-											data-test-id="general-uncertainty-widget--ListItemText-1"
-										/>
-									</ListItem>
+										<ListItemText primary={option.title} />
+									</ListItemButton>
 								))}
 							</List>
 						</FormControl>
+
 						{/* Probability select */}
-						<FormControl
-							fullWidth
-							data-test-id="general-uncertainty-widget--FormControl-2"
-						>
-							<Typography
-								variant="subtitle2"
-								gutterBottom
-								data-test-id="general-uncertainty-widget--Typography-4"
-							>
+						<FormControl fullWidth>
+							<Typography variant="subtitle2" gutterBottom>
 								Вероятность:
 							</Typography>
 							<TextField
@@ -369,35 +307,19 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 								}}
 								fullWidth
 								size="small"
-								data-test-id="general-uncertainty-widget--TextField-1"
 							>
-								<option
-									value=""
-									data-test-id="general-uncertainty-widget--option-0"
-								>
-									Выберите вероятность
-								</option>
+								<option value="">Выберите вероятность</option>
 								{probabilityOptions.map((option) => (
-									<option
-										key={option}
-										value={option}
-										data-test-id="general-uncertainty-widget--option-1"
-									>
+									<option key={option} value={option}>
 										{option}
 									</option>
 								))}
 							</TextField>
 						</FormControl>
+
 						{/* Influence select */}
-						<FormControl
-							fullWidth
-							data-test-id="general-uncertainty-widget--FormControl-3"
-						>
-							<Typography
-								variant="subtitle2"
-								gutterBottom
-								data-test-id="general-uncertainty-widget--Typography-5"
-							>
+						<FormControl fullWidth>
+							<Typography variant="subtitle2" gutterBottom>
 								Влияние:
 							</Typography>
 							<TextField
@@ -409,20 +331,10 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 								}}
 								fullWidth
 								size="small"
-								data-test-id="general-uncertainty-widget--TextField-2"
 							>
-								<option
-									value=""
-									data-test-id="general-uncertainty-widget--option-2"
-								>
-									Выберите влияние
-								</option>
+								<option value="">Выберите влияние</option>
 								{influenceOptions.map((option) => (
-									<option
-										key={option}
-										value={option}
-										data-test-id="general-uncertainty-widget--option-3"
-									>
+									<option key={option} value={option}>
 										{option}
 									</option>
 								))}
@@ -430,19 +342,13 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 						</FormControl>
 					</Stack>
 				</DialogContent>
-				<DialogActions data-test-id="general-uncertainty-widget--DialogActions-0">
-					<Button
-						onClick={handleDialogClose}
-						data-test-id="general-uncertainty-widget--Button-1"
-					>
-						Отмена
-					</Button>
+				<DialogActions>
+					<Button onClick={handleDialogClose}>Отмена</Button>
 					<Button
 						onClick={handleAdd}
 						disabled={!selectedItem || !probability || !influence}
 						variant="contained"
 						color="primary"
-						data-test-id="general-uncertainty-widget--Button-2"
 					>
 						Добавить
 					</Button>

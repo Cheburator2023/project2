@@ -7,9 +7,8 @@ import {
 	TextField,
 	Typography,
 } from "@mui/material";
-import type { WidgetProps } from "@rjsf/utils";
-import type React from "react";
-import { useEffect, useRef } from "react";
+import { WidgetProps } from "@rjsf/utils";
+import React, { useEffect, useRef } from "react";
 
 interface AlgorithmValue {
 	algorithmType: string;
@@ -104,18 +103,10 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = ({
 	const hasError = required && filledCount === 0;
 
 	return (
-		<Stack spacing={2} data-test-id="algorithm-complexity-widget--Stack-0">
+		<Stack spacing={2}>
 			{/* Summary input */}
-			<FormControl
-				fullWidth
-				error={hasError}
-				data-test-id="algorithm-complexity-widget--FormControl-0"
-			>
-				<Typography
-					variant="subtitle1"
-					gutterBottom
-					data-test-id="algorithm-complexity-widget--Typography-0"
-				>
+			<FormControl fullWidth error={hasError}>
+				<Typography variant="subtitle1" gutterBottom>
 					Сложность алгоритма / тип ML задачи
 				</Typography>
 				<TextField
@@ -129,46 +120,30 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = ({
 					slotProps={{ input: { readOnly: readonly } }}
 					data-test-id="algorithm-complexity-widget--TextField-0"
 				/>
-				{!readonly && hasError && (
-					<FormHelperText
-						error
-						data-test-id="algorithm-complexity-widget--FormHelperText-0"
-					>
+				{hasError && (
+					<FormHelperText error>
 						Необходимо выбрать хотя бы один тип алгоритма
 					</FormHelperText>
 				)}
 			</FormControl>
+
 			{/* Algorithm type selectors */}
 			{Array(maxCount)
 				.fill(null)
 				.map((_, index) => (
-					<FormControl
-						key={index}
-						fullWidth
-						error={hasError}
-						data-test-id="algorithm-complexity-widget--FormControl-1"
-					>
-						<Typography
-							variant="subtitle2"
-							gutterBottom
-							data-test-id="algorithm-complexity-widget--Typography-1"
-						>
+					<FormControl key={index} fullWidth error={hasError}>
+						<Typography variant="subtitle2" gutterBottom>
 							Модель {index + 1}
 						</Typography>
 						<Select
 							value={value?.[index]?.algorithmType || ""}
 							onChange={(e) => handleAlgorithmChange(index, e.target.value)}
-							error={readonly ? false : hasError}
+							error={hasError}
 							readOnly={readonly}
 							data-test-id="algorithm-complexity-widget--Select-0"
 						>
-							<MenuItem
-								value=""
-								data-test-id="algorithm-complexity-widget--MenuItem-0"
-							>
-								<em data-test-id="algorithm-complexity-widget--em-0">
-									Выберите тип алгоритма
-								</em>
+							<MenuItem value="">
+								<em>Выберите тип алгоритма</em>
 							</MenuItem>
 							{algorithmTypes.map((type) => (
 								<MenuItem
