@@ -1,3 +1,4 @@
+import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
 import { useEffect } from "react";
 import { useAuthStore } from "../store/authStore";
 
@@ -11,6 +12,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 	children,
 }) => {
 	const setAccessToken = useAuthStore((state) => state.setAccessToken);
+	const accessToken = useAuthStore((state) => state.accessToken);
 
 	useEffect(() => {
 		if (token) {
@@ -18,5 +20,5 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 		}
 	}, [token, setAccessToken]);
 
-	return <>{children}</>;
+	return accessToken ? children : <FullScreenLoader />;
 };

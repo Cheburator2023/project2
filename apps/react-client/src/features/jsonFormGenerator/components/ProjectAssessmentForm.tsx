@@ -8,15 +8,15 @@ import type React from "react";
 import { useRef, useState } from "react";
 
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
-import { MultiSelectAutocompleteWidget } from "@react-client/features/anketaCRUD/molecules/MultiSelectAutocompleteWidget";
+
 import {
 	AnketaCRUDFormNames,
 	useAnketaCRUDFormsStore,
 } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
+import { MultiSelectAutocompleteWidget } from "@react-client/features/anketaCRUD/molecules/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "@react-client/features/anketaCRUD/molecules/RJSFObjectFieldTemplate";
-import StageResultsSidebar from "@react-client/features/jsonFormGenerator/components/StageResultsSidebar";
 import { assessmentCalculationsStore } from "@react-client/features/jsonFormGenerator/hooks/assessmentCalculationsStore";
 import schema from "../schemas/calc_schema.json";
 import uiSchema from "../schemas/calc_uiSchema";
@@ -150,7 +150,6 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 				showErrorList={false}
 				data-test-id="project-assessment-form--Form-0"
 			/>
-			<StageResultsSidebar />
 		</>
 	);
 };

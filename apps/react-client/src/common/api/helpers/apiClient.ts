@@ -1,3 +1,4 @@
+import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import axios, {
 	type AxiosError,
 	type AxiosRequestConfig,
@@ -5,8 +6,11 @@ import axios, {
 } from "axios";
 import { useAuthStore } from "../../store/authStore";
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
+
+const IS_DEV = process.env.NODE_ENV === "development";
+
 const axiosInstance = axios.create({
-	baseURL: process.env.REACT_APP_API_URL || "http://localhost:3000",
 	timeout: 10000,
 	headers: {
 		"Content-Type": "application/json",
@@ -15,6 +19,12 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
 	(config) => {
+		const configMap = useGlobalSettingsStore.getState().configMap;
+
+		config.baseURL = IS_DEV
+			? API_BASE_URL
+			: configMap?.SMART_ANKETA_API || API_BASE_URL;
+
 		const token = useAuthStore.getState().accessToken;
 		if (token) {
 			config.headers.Authorization = `Bearer ${token}`;

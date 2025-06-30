@@ -1,5 +1,6 @@
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
+import { MultiSelectAutocompleteCreateWidget } from "@react-client/features/anketaCRUD/molecules/MultiSelectAutocompleteCreateWidget";
 import {
 	AnketaCRUDFormNames,
 	useAnketaCRUDFormsStore,
@@ -31,69 +32,6 @@ interface FormData {
 	author?: string;
 }
 
-const schema: RJSFSchema = {
-	type: "object",
-	required: ["calculationName", "streamExecutor", "department"],
-	properties: {
-		calculationName: {
-			type: "string",
-			title: "Название расчета",
-			minLength: 1,
-		},
-		rfd: {
-			type: "string",
-			title: "RFD",
-		},
-		streamExecutor: {
-			type: "string",
-			title: "Стрим-исполнитель",
-			enum: ["Стрим 1", "Стрим 2", "Стрим 3"],
-			minLength: 1,
-		},
-		department: {
-			type: "string",
-			title: "Департамент заказчика",
-			enum: ["Департамент A", "Департамент B", "Департамент C"],
-			minLength: 1,
-		},
-		customerName: {
-			type: "string",
-			title: "ФИО заказчика",
-		},
-		relatedModels: {
-			type: "array",
-			title: "Связанные модели",
-			items: {
-				type: "string",
-				enum: ["model666", "model777", "model888"],
-			},
-			uniqueItems: true,
-		},
-		status: {
-			type: "string",
-			title: "Статус заявки",
-			enum: ["Активна", "Завершена"],
-		},
-		createdAt: {
-			type: "string",
-			title: "Дата создания",
-			format: "date",
-		},
-		id: {
-			type: "string",
-			title: "ID",
-		},
-		author: {
-			type: "string",
-			title: "Автор",
-		},
-		comment: {
-			type: "string",
-			title: "Комментарий",
-		},
-	},
-};
-
 const uiSchema: UiSchema = {
 	"ui:submitButtonOptions": {
 		props: {
@@ -123,7 +61,7 @@ const uiSchema: UiSchema = {
 		},
 	},
 	relatedModels: {
-		"ui:widget": "MultiSelectAutocomplete",
+		"ui:widget": "MultiSelectAutocompleteCreateWidget",
 	},
 	status: {
 		"ui:widget": "radio",
@@ -134,21 +72,87 @@ const uiSchema: UiSchema = {
 };
 
 const widgets: RegistryWidgetsType = {
-	MultiSelectAutocomplete: MultiSelectAutocompleteWidget,
+	MultiSelectAutocompleteWidget,
+	MultiSelectAutocompleteCreateWidget,
 };
 
 const initialFormData: FormData = {
 	calculationName: "",
-	streamExecutor: "Стрим 1",
-	department: "Департамент A",
-	id: "auto-generated-uuid-12345",
-	author: "Текущий Пользователь",
-	status: "Активна",
-	createdAt: new Date().toISOString().substring(0, 10),
-	relatedModels: ["model777"],
+	streamExecutor: "",
+	department: "",
+	id: "",
+	author: "",
+	relatedModels: [],
 };
 
 export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
+	const schema: RJSFSchema = {
+		type: "object",
+		required: ["calculationName", "streamExecutor", "department"],
+		properties: {
+			calculationName: {
+				type: "string",
+				title: "Название расчета",
+				minLength: 1,
+			},
+			rfd: {
+				type: "string",
+				title: "RFD",
+			},
+			streamExecutor: {
+				type: "string",
+				title: "Стрим-исполнитель",
+				enum: [],
+				minLength: 1,
+			},
+			department: {
+				type: "string",
+				title: "Департамент заказчика",
+				enum: [],
+				minLength: 1,
+			},
+			customerName: {
+				type: "string",
+				title: "ФИО заказчика",
+			},
+			relatedModels: {
+				type: "array",
+				title: "Связанные модели",
+				items: {
+					type: "string",
+					enum: [],
+				},
+				uniqueItems: true,
+			},
+			comment: {
+				type: "string",
+				title: "Комментарий",
+			},
+			...(isCreate
+				? {}
+				: {
+						id: {
+							type: "string",
+							title: "ID",
+						},
+						author: {
+							type: "string",
+							title: "Автор",
+						},
+						status: {
+							type: "string",
+							title: "Статус заявки",
+							enum: ["Активна", "Завершена"],
+						},
+						createdAt: {
+							type: "string",
+							title: "Дата создания",
+							format: "date",
+						},
+					}),
+		},
+	};
+
 	const { setApiRef, resetApiRef, updateFormState, ...store } =
 		useAnketaCRUDFormsStore();
 
@@ -187,12 +191,10 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 	};
 
 	const onSubmit = ({ formData }: IChangeEvent<FormData>) => {
-		console.log("!!! Form submitted:", formData);
+		console.log("Form submitted:", formData);
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}
-
-		// formApi?.submit();
 	};
 
 	const onError = (errors: any) => {

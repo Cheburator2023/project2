@@ -515,6 +515,7 @@ export const inputsCustomizations: Components<Theme> = {
 			root: {
 				"&.MuiTextField-root": {
 					marginBottom: "0",
+					marginTop: "0",
 				},
 				"& .MuiList-root": {
 					padding: "0",

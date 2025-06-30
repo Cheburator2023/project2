@@ -65,6 +65,7 @@ export const HomePage = () => {
 	const location = useLocation();
 
 	const { data, isLoading, error } = useCalculationControllerFindAll();
+	console.log("🐸 Pepe said >> HomePage >> data:", data);
 
 	const isInDefaultCompareMode = params.get("isInCompareMode") === "true";
 

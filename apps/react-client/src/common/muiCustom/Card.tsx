@@ -95,7 +95,7 @@ export const Card = (
 					)}
 				</Flex>
 			)}
-			{!!(props.header || props.onClose) && <Spacer />}
+			{!!(props.header || props.onClose) && <Spacer space={6} />}
 			<div
 				style={{
 					height: props.header
