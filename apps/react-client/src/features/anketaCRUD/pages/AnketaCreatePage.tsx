@@ -1,9 +1,9 @@
+import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { AnketaBasicLayout } from "@react-client/features/anketaCRUD/organisms/AnketaBasicLayout";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { Header } from "@react-client/features/navigation/organisms/Header";
-import { useEffect } from "react";
 
 export const AnketaCreatePage = () => {
 	const {
@@ -24,13 +24,13 @@ export const AnketaCreatePage = () => {
 	);
 
 	const onSubmit = () => {
-		console.log("WHOLE CREATE PAGE SUBMIT:");
+		console.log("WHOLE CREATE PAGE SUBMIT:", stateBasicForm);
 
 		anketaCreate_basicInfoForm.api?.submit();
 		anketaCreate_projectAssessmentForm.api?.submit();
 	};
 
-	useEffect(() => {
+	useDeepEffect(() => {
 		console.log("1 stateBasicForm:", stateBasicForm);
 		console.log("2 calculationResult:", calculationResult);
 		console.log("3 stateProjectAssessmentForm:", stateProjectAssessmentForm);
@@ -39,7 +39,7 @@ export const AnketaCreatePage = () => {
 			// TODO: send data
 			// navigate(routes.home.rootPath); onSuccess
 		}
-	}, [formHasErrors]);
+	}, [formHasErrors, stateBasicForm]);
 
 	return (
 		<div data-test-id="anketa-create-page--div-0">
