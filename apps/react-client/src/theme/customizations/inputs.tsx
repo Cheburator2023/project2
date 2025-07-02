@@ -500,7 +500,7 @@ export const inputsCustomizations: Components<Theme> = {
 					transform: "none",
 					display: "block",
 					paddingBottom: "4px",
-					fontSize: "12px",
+					fontSize: "16px",
 					"&.MuiInputLabel-shrink": {
 						transform: "none",
 					},
