@@ -3,10 +3,12 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthGuard, ResourceGuard, RoleGuard } from "nest-keycloak-connect";
-import { Calculation } from "./modules/calculation/entities/calculation.entity"; // ← добавь эту строку
-
+import { Calculation } from "./modules/calculation/entities/calculation.entity";
 import { CalculationModule } from "./modules/calculation/calculation.module";
 import { KeycloakModule } from "./shared/keycloak/keycloak.module";
+import { QuestionnaireModule } from "./modules/questionnaire/questionnaire.module";
+import { QuestionnaireItemEntity } from "./modules/questionnaire/entities/questionnaire-item.entity";
+import { CoefficientEntity } from "./modules/questionnaire/entities/coefficient.entity";
 
 @Module({
 	imports: [
@@ -25,7 +27,11 @@ import { KeycloakModule } from "./shared/keycloak/keycloak.module";
 				username: configService.get<string>("DB_USERNAME"),
 				password: configService.get<string>("DB_PASSWORD"),
 				database: configService.get<string>("DB_NAME"),
-				entities: [Calculation],
+				entities: [
+					Calculation,
+					QuestionnaireItemEntity,
+					CoefficientEntity
+				],
 				migrations: ["dist/migrations/*.js"],
 				migrationsRun: true,
 				synchronize: configService.get<string>("NODE_ENV") !== "production",
@@ -33,11 +39,9 @@ import { KeycloakModule } from "./shared/keycloak/keycloak.module";
 			}),
 		}),
 		CalculationModule,
+		QuestionnaireModule,
 	],
-	providers: [
-		{ provide: APP_GUARD, useClass: AuthGuard },
-		{ provide: APP_GUARD, useClass: ResourceGuard },
-		{ provide: APP_GUARD, useClass: RoleGuard },
-	],
+	controllers: [],
+	providers: [],
 })
 export class AppModule {}
