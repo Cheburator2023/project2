@@ -216,7 +216,7 @@ export const HomePage = () => {
 								variant="contained"
 								data-test-id="home-page--Button-0"
 							>
-								Выгрузить в Excel
+								Выгрузить
 							</Button>
 						</Tooltip>
 					</Flex>

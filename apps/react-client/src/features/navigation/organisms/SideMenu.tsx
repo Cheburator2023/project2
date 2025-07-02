@@ -33,7 +33,7 @@ export function SideMenu({
 	console.log("SideMenu user:", user);
 
 	return (
-		<Drawer
+		<StyledDrawer
 			variant="persistent"
 			open={open}
 			mode={mode}
@@ -116,6 +116,12 @@ export function SideMenu({
 					data-test-id="side-menu--OptionsMenu-0"
 				/>
 			</Stack>
-		</Drawer>
+		</StyledDrawer>
 	);
 }
+
+const StyledDrawer = styled(Drawer)({
+	[`& .${drawerClasses.paper}`]: {
+		width: drawerWidth,
+	},
+});
