@@ -120,8 +120,8 @@ export function SideMenu({
 	);
 }
 
-const StyledDrawer = styled(Drawer)({
-	[`& .${drawerClasses.paper}`]: {
-		width: drawerWidth,
-	},
-});
+const StyledDrawer = styled(Drawer)`
+	& .smartAnketa_MuiPaper-root {
+		width: ${drawerWidth}px;
+	}
+`;
