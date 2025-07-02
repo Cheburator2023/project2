@@ -65,7 +65,12 @@ export function ColorModeIconDropdown() {
 		);
 	}
 
-	const resolvedMode = mode as "light" | "dark";
+	const currentSystemTheme = window.matchMedia?.("(prefers-color-scheme: dark)")
+		.matches
+		? "dark"
+		: "light";
+
+	const resolvedMode = mode === "system" ? currentSystemTheme : mode;
 
 	const icon = {
 		light: (

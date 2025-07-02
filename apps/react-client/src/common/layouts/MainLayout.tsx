@@ -26,7 +26,7 @@ const MainWrapper = styled("div", {
 		display: "flex",
 		flexDirection: "column",
 	},
-	marginLeft: `-${240}px`,
+	marginLeft: `-${260}px`,
 	variants: [
 		{
 			props: ({ open }) => open,

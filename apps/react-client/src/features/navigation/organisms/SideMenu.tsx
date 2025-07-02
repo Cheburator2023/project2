@@ -9,7 +9,7 @@ import { useGlobalSettingsStore } from "@react-client/common/store/globalSetting
 import { MenuContent } from "../molecules/MenuContent";
 import { OptionsMenu } from "../molecules/OptionsMenu";
 
-const drawerWidth = 240;
+const drawerWidth = 260;
 
 const Drawer = styled(MuiDrawer)<{ mode?: string }>(({ mode }) => {
 	return {

@@ -1,11 +1,16 @@
-import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
+import { useCalculationControllerCreate } from "@react-client/common/api/generated/queries/calculation";
+import { toast } from "@react-client/common/muiCustom/toasts";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { AnketaBasicLayout } from "@react-client/features/anketaCRUD/organisms/AnketaBasicLayout";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { Header } from "@react-client/features/navigation/organisms/Header";
+import { routes } from "@react-client/routing/routes";
+import { useEffect } from "react";
+import { useNavigate } from "react-router";
 
 export const AnketaCreatePage = () => {
+	const navigate = useNavigate();
 	const {
 		setApiRef,
 		resetApiRef,
@@ -17,6 +22,8 @@ export const AnketaCreatePage = () => {
 
 	const stateBasicForm = anketaCreate_basicInfoForm.state;
 	const stateProjectAssessmentForm = anketaCreate_projectAssessmentForm.state;
+	const { mutate: createCalculationMutation } =
+		useCalculationControllerCreate();
 
 	const formHasErrors = !!(
 		anketaCreate_basicInfoForm.api?.state.errors.length ||
@@ -24,22 +31,41 @@ export const AnketaCreatePage = () => {
 	);
 
 	const onSubmit = () => {
-		console.log("WHOLE CREATE PAGE SUBMIT:", stateBasicForm);
-
+		console.log(
+			"WHOLE CREATE PAGE SUBMIT:",
+			stateBasicForm,
+			stateProjectAssessmentForm,
+		);
 		anketaCreate_basicInfoForm.api?.submit();
 		anketaCreate_projectAssessmentForm.api?.submit();
 	};
 
-	useDeepEffect(() => {
+	useEffect(() => {
 		console.log("1 stateBasicForm:", stateBasicForm);
 		console.log("2 calculationResult:", calculationResult);
 		console.log("3 stateProjectAssessmentForm:", stateProjectAssessmentForm);
 
-		if (!formHasErrors) {
-			// TODO: send data
-			// navigate(routes.home.rootPath); onSuccess
+		if (formHasErrors) {
+			createCalculationMutation(
+				{
+					// @ts-ignore
+					meta: stateBasicForm,
+					calculation: stateProjectAssessmentForm,
+				},
+				{
+					onSuccess: (data) => {
+						console.log("Success:", data);
+						toast.success("Расчет успешно создан");
+						navigate(routes.home.rootPath);
+					},
+					onError: (error) => {
+						toast.error("Ошибка при создании расчета");
+						console.log("Error:", error);
+					},
+				},
+			);
 		}
-	}, [formHasErrors, stateBasicForm]);
+	}, [formHasErrors, stateBasicForm, stateProjectAssessmentForm]);
 
 	return (
 		<div data-test-id="anketa-create-page--div-0">
