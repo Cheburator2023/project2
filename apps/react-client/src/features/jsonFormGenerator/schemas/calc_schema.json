@@ -138,8 +138,27 @@
 			"title": "Необходимость поддержки проведения пилота"
 		},
 		"algorithmComplexity": {
-			"type": "string",
-			"title": "Сложность алгоритма / тип ML задачи"
+			"type": "array",
+			"title": "Сложность алгоритма / тип ML задачи",
+			"items": {
+				"type": "object",
+				"properties": {
+					"algorithmType": {
+						"type": "string",
+						"enum": [
+							"Табличные данные",
+							"Текстовая аналитика_Классические модели",
+							"Текстовая аналитика_LLM",
+							"Аудио Аналитика",
+							"Компьютерное зрение_CV",
+							"Оптимизационная задача",
+							"Гео-аналитика",
+							"Графовая аналитика"
+						]
+					}
+				},
+				"required": ["algorithmType"]
+			}
 		},
 		"autoMlRequired": {
 			"type": "string",
@@ -147,9 +166,20 @@
 			"title": "Необходимость AutoML"
 		},
 		"productionAdditionalReports": {
-			"type": "number",
-			"minimum": 1,
-			"maximum": 99,
+			"type": "string",
+			"enum": [
+				"Не требуется",
+				"1",
+				"2",
+				"3",
+				"4",
+				"5",
+				"6",
+				"7",
+				"8",
+				"9",
+				"10"
+			],
 			"title": "Необходимость продуктивизации и количество дополнительных витрин"
 		},
 		"productionDeploymentChannels": {

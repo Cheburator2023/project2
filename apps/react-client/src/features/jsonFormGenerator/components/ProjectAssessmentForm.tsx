@@ -19,12 +19,11 @@ import { MultiSelectAutocompleteWidget } from "@react-client/features/anketaCRUD
 import { RJSFObjectFieldTemplate } from "@react-client/features/anketaCRUD/molecules/RJSFObjectFieldTemplate";
 import { assessmentCalculationsStore } from "@react-client/features/jsonFormGenerator/hooks/assessmentCalculationsStore";
 import schema from "../schemas/calc_schema.json";
-import uiSchema from "../schemas/calc_uiSchema";
+import { calc_uiSchema } from "../schemas/calc_uiSchema";
 import type { FormData } from "../types/FormData";
 import AlgorithmComplexityWidget from "../widgets/AlgorithmComplexityWidget";
 import GeneralUncertaintyWidget from "../widgets/GeneralUncertaintyWidget";
 import NumberInputWidget from "../widgets/NumberInputWidget";
-import ProductionDeploymentChannelsWidget from "../widgets/ProductionDeploymentChannelsWidget";
 import UniversalDependencyWidget from "../widgets/UniversalDependencyWidget";
 
 const Form = withTheme(MuiTheme);
@@ -36,7 +35,6 @@ const templates: Partial<TemplatesType> = {
 const widgets = {
 	AlgorithmComplexityWidget,
 	GeneralUncertaintyWidget,
-	ProductionDeploymentChannelsWidget,
 	NumberInputWidget,
 	UniversalDependencyWidget,
 	MultiSelectAutocompleteWidget,
@@ -132,7 +130,7 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 			<Form
 				ref={formRef}
 				schema={schema as RJSFSchema}
-				uiSchema={uiSchema}
+				uiSchema={calc_uiSchema}
 				validator={validatorRu}
 				widgets={widgets}
 				formData={formData}

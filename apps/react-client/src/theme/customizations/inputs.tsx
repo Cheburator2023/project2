@@ -5,6 +5,7 @@ import { outlinedInputClasses } from "@mui/material/OutlinedInput";
 import { toggleButtonClasses } from "@mui/material/ToggleButton";
 import { toggleButtonGroupClasses } from "@mui/material/ToggleButtonGroup";
 import { type Components, type Theme, alpha } from "@mui/material/styles";
+
 import { brand, gray } from "../themePrimitives";
 
 /* eslint-disable import/prefer-default-export */
@@ -28,7 +29,7 @@ export const inputsCustomizations: Components<Theme> = {
 	MuiAutocomplete: {
 		styleOverrides: {
 			root: ({ theme }) => ({
-				"& .MuiOutlinedInput-root": {
+				[`& .${outlinedInputClasses.root}`]: {
 					padding: "inherit",
 					paddingLeft: "10px",
 					paddingRight: "10px",

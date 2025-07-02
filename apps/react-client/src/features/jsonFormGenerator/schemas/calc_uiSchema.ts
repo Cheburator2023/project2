@@ -1,6 +1,6 @@
 import { UiSchema } from "@rjsf/utils";
 
-const uiSchema: UiSchema = {
+export const calc_uiSchema: UiSchema = {
 	"ui:submitButtonOptions": {
 		norender: true,
 		submitText: "Сохранить",
@@ -100,9 +100,7 @@ const uiSchema: UiSchema = {
 					widget: "TextField",
 				},
 			],
-			defaultWidget: "NumberInputWidget",
+			defaultWidget: "SelectWidget",
 		},
 	},
 };
-
-export default uiSchema;

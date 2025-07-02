@@ -14,30 +14,24 @@ interface AlgorithmValue {
 	algorithmType: string;
 }
 
-const algorithmTypes = [
-	"Табличные данные",
-	"Текстовая аналитика_Классические модели",
-	"Текстовая аналитика_LLM",
-	"Аудио Аналитика",
-	"Компьютерное зрение_CV",
-	"Оптимизационная задача",
-	"Гео-аналитика",
-	"Графовая аналитика",
-];
-
 const MAX_ALGORITHMS = 8;
 
-const AlgorithmComplexityWidget: React.FC<WidgetProps> = ({
-	value = [],
-	onChange,
-	formContext,
-	required,
-	readonly,
-	disabled,
-}) => {
+const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
+	const {
+		value = [],
+		onChange,
+		formContext,
+		required,
+		readonly,
+		options,
+		disabled,
+	} = props;
+
 	const modelsCount = formContext?.formData?.modelsCount || 1;
 	const prevModelsCountRef = useRef(modelsCount);
 	const prevValueLengthRef = useRef(value?.length || 0);
+	const algorithmTypes =
+		(props?.schema?.items as any)?.properties?.algorithmType.enum || [];
 
 	useEffect(() => {
 		const currentLength = value?.length || 0;
@@ -145,7 +139,7 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = ({
 							<MenuItem value="">
 								<em>Выберите тип алгоритма</em>
 							</MenuItem>
-							{algorithmTypes.map((type) => (
+							{algorithmTypes.map((type: string) => (
 								<MenuItem
 									key={type}
 									value={type}

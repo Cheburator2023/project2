@@ -36,6 +36,7 @@ reportWebVitals(console.log);
 const APP_NAME = process.env.APP_NAME;
 
 ClassNameGenerator.configure((componentName) => `${APP_NAME}_${componentName}`);
+ClassNameGenerator.reset();
 
 const xThemeComponents: any = {
 	...chartsCustomizations,

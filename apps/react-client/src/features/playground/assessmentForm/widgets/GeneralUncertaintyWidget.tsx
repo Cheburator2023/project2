@@ -11,6 +11,7 @@ import {
 	IconButton,
 	List,
 	ListItem,
+	ListItemButton,
 	ListItemSecondaryAction,
 	ListItemText,
 	Stack,
@@ -280,27 +281,13 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 								}}
 							>
 								{getAvailableOptions().map((option) => (
-									<ListItem
+									<ListItemButton
 										key={option.id}
-										button
-										selected={selectedItem === option.id}
+										selected={option.id === selectedItem}
 										onClick={() => handleItemSelect(option.id)}
-										sx={{
-											"&.Mui-selected": {
-												backgroundColor: "primary.light",
-												"&:hover": {
-													backgroundColor: "primary.light",
-												},
-											},
-										}}
 									>
-										<ListItemText
-											primary={option.title}
-											primaryTypographyProps={{
-												style: { fontSize: "0.9rem" },
-											}}
-										/>
-									</ListItem>
+										<ListItemText primary={option.title} />
+									</ListItemButton>
 								))}
 							</List>
 						</FormControl>

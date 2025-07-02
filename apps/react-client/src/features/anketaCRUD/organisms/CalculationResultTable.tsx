@@ -21,6 +21,7 @@ interface EpicData {
 	epicName: string;
 	score: number;
 	percentFromAverage: number;
+	offset: number;
 }
 
 interface CoefficientData {
@@ -71,16 +72,28 @@ const processStageResults = (
 
 	const detailedData: EpicData[] = stageEntries.map((item) => ({
 		...item,
-		percentFromAverage: ((item.score - averageScore) / averageScore) * 100,
+		offset: ((item.score - averageScore) / averageScore) * 100,
+		percentFromAverage: (item.score / averageScore) * 100,
 	}));
+
+	const totalOffset = ((totalScore - averageScore) / averageScore) * 100;
+	const totalPercentFromAverage = (totalScore / averageScore) * 100;
 
 	const totalRow: EpicData = {
 		epicName: "Итоговая оценка",
-		score: averageScore,
-		percentFromAverage: 0,
+		score: totalScore,
+		percentFromAverage: totalPercentFromAverage,
+		offset: totalOffset,
 	};
 
-	return [totalRow, ...detailedData];
+	const averageRow: EpicData = {
+		epicName: "Cреднее значение",
+		score: averageScore,
+		percentFromAverage: 0,
+		offset: totalOffset,
+	};
+
+	return [totalRow, averageRow, ...detailedData];
 };
 
 const processCoefficients = (
@@ -96,6 +109,7 @@ export const CalculationResultTable = ({
 	isCreate,
 }: { isCreate?: boolean }) => {
 	const { stageResults, coefficients } = assessmentCalculationsStore();
+
 	const { setCalculationResult } = useAnketaCRUDFormsStore();
 	const { mode } = useColorScheme();
 
@@ -131,6 +145,34 @@ export const CalculationResultTable = ({
 			},
 			valueFormatter: (params: ValueFormatterParams<EpicData>): string => {
 				return typeof params.value === "number" ? params.value.toFixed(1) : "";
+			},
+		},
+		{
+			headerName: "Отклонение от среднего значения",
+			field: "offset",
+			flex: 1,
+			valueFormatter: (params: ValueFormatterParams<EpicData>): string => {
+				return typeof params.value === "number"
+					? `${params.value.toFixed(1)}%`
+					: "";
+			},
+			cellStyle: (params: CellClassParams<EpicData>): CellStyle => {
+				const style: CellStyle = {};
+
+				if (params.data?.epicName === "Итоговая оценка") {
+					style.fontWeight = "bold";
+					style.fontSize = "1.1em";
+				}
+
+				if (params.value != null) {
+					if (params.value > 0) {
+						style.color = "green";
+					} else if (params.value < 0) {
+						style.color = "red";
+					}
+				}
+
+				return style;
 			},
 		},
 		{

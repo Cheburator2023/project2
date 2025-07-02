@@ -68,7 +68,6 @@ const ProjectAssessmentForm: React.FC = () => {
 			}}
 		>
 			<div style={{ flex: 1, padding: 24 }}>
-				<h2 style={{ marginBottom: 24 }}>{schema.title}</h2>
 				<Form
 					schema={schema as RJSFSchema}
 					uiSchema={uiSchema}
