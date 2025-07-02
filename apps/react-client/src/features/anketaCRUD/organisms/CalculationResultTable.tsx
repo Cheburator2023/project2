@@ -90,7 +90,7 @@ const processStageResults = (
 		epicName: "Cреднее значение",
 		score: averageScore,
 		percentFromAverage: 0,
-		offset: totalOffset,
+		offset: 0,
 	};
 
 	return [totalRow, averageRow, ...detailedData];

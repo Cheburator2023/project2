@@ -50,7 +50,6 @@ export const Card = (
 			}}
 			variant="outlined"
 			{...props}
-			data-test-id="card--MUIPaperStyled-0"
 		>
 			{(props.header || props.onClose) && (
 				<Flex
@@ -59,13 +58,8 @@ export const Card = (
 					width="100%"
 					as="header"
 					style={{ height: `${headerH}px` }}
-					data-test-id="card--Flex-0"
 				>
-					{props.header && (
-						<Typography variant="h6" data-test-id="card--Typography-0">
-							{props.header}
-						</Typography>
-					)}
+					{props.header && <Typography variant="h6">{props.header}</Typography>}
 					{props.zoom && (
 						<ButtonGroup variant="outlined" size="small">
 							<Button
@@ -89,8 +83,8 @@ export const Card = (
 						</ButtonGroup>
 					)}
 					{props.onClose && (
-						<IconButton onClick={handler} data-test-id="card--IconButton-0">
-							<CloseIcon data-test-id="card--CloseIcon-0" />
+						<IconButton onClick={handler}>
+							<CloseIcon />
 						</IconButton>
 					)}
 				</Flex>
@@ -106,7 +100,6 @@ export const Card = (
 					width: "inherit",
 					zoom: _zoom,
 				}}
-				data-test-id="card--div-0"
 			>
 				{props.children}
 			</div>

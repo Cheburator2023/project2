@@ -70,7 +70,7 @@ export const AnketaCreatePage = () => {
 	return (
 		<div data-test-id="anketa-create-page--div-0">
 			<Header data-test-id="anketa-create-page--Header-0" />
-			<Spacer height={12} data-test-id="anketa-create-page--Spacer-1" />
+			<Spacer height={6} data-test-id="anketa-create-page--Spacer-1" />
 			<Flex
 				width="100%"
 				height="-webkit-fill-available"
