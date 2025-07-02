@@ -12,9 +12,7 @@ const IS_DEV = process.env.NODE_ENV === "development";
 
 const axiosInstance = axios.create({
 	timeout: 10000,
-	headers: {
-		"Content-Type": "application/json",
-	},
+	// Убираем глобальный Content-Type для тестирования
 });
 
 axiosInstance.interceptors.request.use(
