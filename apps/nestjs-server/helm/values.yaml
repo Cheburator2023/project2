@@ -73,6 +73,7 @@ env:
  KEYCLOAK_CLIENT: frontend
  NODE_TLS_REJECT_UNAUTHORIZED: 0
  PORT: 3000
+ CORS_ORIGINS: "https://smart-anketa-frontend-ds1-lpad01-sumd-team-sumcore-system.apps.ds1-lpad01.corp.dev.vtb"
 
 secret:
  DB_USERNAME: "sum_user"
