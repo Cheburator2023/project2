@@ -2,12 +2,13 @@ import { Typography } from "@mui/material";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import ProjectAssessmentForm from "@react-client/features/playground/assessmentForm/components/ProjectAssessmentForm";
 import { Fragment } from "react/jsx-runtime";
 
 const data = [
 	{
-		name: "JsonFormGenerator",
-		Component: <div data-test-id="playground-page--div-0" />,
+		name: "AssessmentForm",
+		Component: <ProjectAssessmentForm />,
 	},
 ];
 

@@ -1,0 +1,373 @@
+import AddIcon from "@mui/icons-material/Add";
+import DeleteIcon from "@mui/icons-material/Delete";
+import {
+	Button,
+	Dialog,
+	DialogActions,
+	DialogContent,
+	DialogTitle,
+	FormControl,
+	FormHelperText,
+	IconButton,
+	List,
+	ListItem,
+	ListItemSecondaryAction,
+	ListItemText,
+	Stack,
+	TextField,
+	Typography,
+} from "@mui/material";
+import { WidgetProps } from "@rjsf/utils";
+import React, { useState, useEffect, useRef } from "react";
+
+interface UncertaintyItem {
+	type: string;
+	probability: string;
+	influence: string;
+}
+
+const uncertaintyOptions = [
+	{
+		id: "businessProcessComplexity",
+		title:
+			"Изменение, недостаточная проработка или сложности бизнес-процессов Банка",
+	},
+	{
+		id: "projectSolutionDefects",
+		title: "Наличие дефектов во внедряемом решении/ПО в рамках проекта",
+	},
+	{
+		id: "adjacentProjectsImpact",
+		title: "Негативное влияние смежных проектов на показатели проекта",
+	},
+	{
+		id: "planningRequirementGaps",
+		title:
+			"Увеличение трудозатрат проекта по причине недостаточной проработки требований на этапе планирования проекта",
+	},
+	{
+		id: "contractorPerformanceIssues",
+		title:
+			"Недобросовестное исполнение услуг со стороны привлеченных контрагентов/подрядчиков",
+	},
+	{
+		id: "qualifiedStaffShortage",
+		title: "Отсутствие квалифицированного персонала или ошибок персонала",
+	},
+	{
+		id: "sanctionsRisk",
+		title: "Введение санкционных мер и других ограничений",
+	},
+	{
+		id: "controlProceduresGaps",
+		title: "Недостаток или отсутствие контрольных процедур",
+	},
+	{
+		id: "regulatoryChanges",
+		title: "Изменение регуляторных требований",
+	},
+	{
+		id: "systemUnderutilization",
+		title: "Неиспользование ИС после завершения проекта",
+	},
+	{
+		id: "itArchitectureChanges",
+		title: "Изменение целевой ИТ архитектуры Банка",
+	},
+];
+
+const probabilityOptions = [
+	"Не применимо",
+	"Реализация не чаще 1 раза в 10 лет",
+	"Реализация 1 раз в 3-10 лет",
+	"Реализация 1 раз в 1-3 года",
+	"Реализация 1 раз в год",
+	"Реализация 1 раз в 6 мес. или чаще",
+];
+
+const influenceOptions = [
+	"Не применимо",
+	"Незначительное",
+	"Умеренное",
+	"Существенное",
+	"Критическое",
+	"Катастрофическое",
+];
+
+const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
+	value = [],
+	onChange,
+	formContext,
+	schema,
+	required,
+}) => {
+	const [isDialogOpen, setIsDialogOpen] = useState(false);
+	const [selectedItem, setSelectedItem] = useState<string | null>(null);
+	const [probability, setProbability] = useState<string>("");
+	const [influence, setInfluence] = useState<string>("");
+
+	const { initiativeCost, initiativeTimeline } = formContext?.formData || {};
+	const isEnabled = initiativeCost && initiativeTimeline;
+
+	// Track previous enabled state
+	const prevEnabled = useRef(isEnabled);
+
+	useEffect(() => {
+		if (prevEnabled.current && !isEnabled) {
+			// Just transitioned from enabled to disabled
+			if (Array.isArray(value) && value.length > 0) {
+				onChange([]);
+			}
+		}
+		prevEnabled.current = isEnabled;
+	}, [isEnabled, onChange, value]);
+
+	// Get available options (not yet selected)
+	const getAvailableOptions = () => {
+		const selectedIds = (value as UncertaintyItem[]).map((item) => item.type);
+		return uncertaintyOptions.filter(
+			(option) => !selectedIds.includes(option.id),
+		);
+	};
+
+	// Get summary text for the disabled input
+	const getSummaryText = () => {
+		const count = (value as UncertaintyItem[])?.length || 0;
+		if (count === 0) {
+			return "Не выбраны факторы неопределенности";
+		}
+		return `Выбрано факторов неопределенности: ${count}`;
+	};
+
+	const handleAddClick = () => {
+		setIsDialogOpen(true);
+	};
+
+	const handleDialogClose = () => {
+		setIsDialogOpen(false);
+		setSelectedItem(null);
+		setProbability("");
+		setInfluence("");
+	};
+
+	const handleItemSelect = (id: string) => {
+		setSelectedItem(id);
+	};
+
+	const handleAdd = () => {
+		if (selectedItem && probability && influence) {
+			const newValue = [
+				...(value as UncertaintyItem[]),
+				{
+					type: selectedItem,
+					probability,
+					influence,
+				},
+			];
+			onChange(newValue);
+			handleDialogClose();
+		}
+	};
+
+	const handleDelete = (index: number) => {
+		const newValue = [...(value as UncertaintyItem[])];
+		newValue.splice(index, 1);
+		onChange(newValue);
+	};
+
+	const getItemTitle = (id: string) => {
+		return uncertaintyOptions.find((opt) => opt.id === id)?.title || id;
+	};
+
+	return (
+		<Stack spacing={2}>
+			<FormControl fullWidth disabled={!isEnabled}>
+				<Typography variant="subtitle1" gutterBottom>
+					Общая неопределенность
+				</Typography>
+
+				{!isEnabled && (
+					<FormHelperText error>
+						Заполните "Стоимость инициативы" и "Сроки инициативы" для добавления
+						факторов неопределенности
+					</FormHelperText>
+				)}
+
+				{/* Summary input */}
+				<TextField
+					value={getSummaryText()}
+					disabled
+					fullWidth
+					variant="outlined"
+					size="small"
+					sx={{ mb: 2 }}
+				/>
+
+				{/* Display selected items */}
+				<List>
+					{(value as UncertaintyItem[]).map((item, index) => (
+						<ListItem key={index} divider>
+							<ListItemText
+								primary={getItemTitle(item.type)}
+								secondary={
+									<React.Fragment>
+										<Typography
+											component="span"
+											variant="body2"
+											color="textSecondary"
+											display="block"
+										>
+											<strong>Вероятность:</strong> {item.probability}
+										</Typography>
+										<Typography
+											component="span"
+											variant="body2"
+											color="textSecondary"
+											display="block"
+										>
+											<strong>Влияние:</strong> {item.influence}
+										</Typography>
+									</React.Fragment>
+								}
+							/>
+							<ListItemSecondaryAction>
+								<IconButton
+									edge="end"
+									onClick={() => handleDelete(index)}
+									size="small"
+								>
+									<DeleteIcon />
+								</IconButton>
+							</ListItemSecondaryAction>
+						</ListItem>
+					))}
+				</List>
+
+				{/* Add button */}
+				<Button
+					startIcon={<AddIcon />}
+					onClick={handleAddClick}
+					disabled={!isEnabled || getAvailableOptions().length === 0}
+					variant="outlined"
+					sx={{ mt: 2 }}
+					color="primary"
+				>
+					Добавить фактор неопределенности
+				</Button>
+			</FormControl>
+
+			{/* Add dialog */}
+			<Dialog
+				open={isDialogOpen}
+				onClose={handleDialogClose}
+				maxWidth="md"
+				fullWidth
+			>
+				<DialogTitle>Добавить фактор неопределенности</DialogTitle>
+				<DialogContent>
+					<Stack spacing={3} sx={{ mt: 2 }}>
+						{/* Available items */}
+						<FormControl fullWidth>
+							<Typography variant="subtitle2" gutterBottom>
+								Выберите фактор:
+							</Typography>
+							<List
+								sx={{
+									maxHeight: "200px",
+									overflow: "auto",
+									border: "1px solid rgba(0, 0, 0, 0.12)",
+									borderRadius: 1,
+								}}
+							>
+								{getAvailableOptions().map((option) => (
+									<ListItem
+										key={option.id}
+										button
+										selected={selectedItem === option.id}
+										onClick={() => handleItemSelect(option.id)}
+										sx={{
+											"&.Mui-selected": {
+												backgroundColor: "primary.light",
+												"&:hover": {
+													backgroundColor: "primary.light",
+												},
+											},
+										}}
+									>
+										<ListItemText
+											primary={option.title}
+											primaryTypographyProps={{
+												style: { fontSize: "0.9rem" },
+											}}
+										/>
+									</ListItem>
+								))}
+							</List>
+						</FormControl>
+
+						{/* Probability select */}
+						<FormControl fullWidth>
+							<Typography variant="subtitle2" gutterBottom>
+								Вероятность:
+							</Typography>
+							<TextField
+								select
+								value={probability}
+								onChange={(e) => setProbability(e.target.value)}
+								SelectProps={{
+									native: true,
+								}}
+								fullWidth
+								size="small"
+							>
+								<option value="">Выберите вероятность</option>
+								{probabilityOptions.map((option) => (
+									<option key={option} value={option}>
+										{option}
+									</option>
+								))}
+							</TextField>
+						</FormControl>
+
+						{/* Influence select */}
+						<FormControl fullWidth>
+							<Typography variant="subtitle2" gutterBottom>
+								Влияние:
+							</Typography>
+							<TextField
+								select
+								value={influence}
+								onChange={(e) => setInfluence(e.target.value)}
+								SelectProps={{
+									native: true,
+								}}
+								fullWidth
+								size="small"
+							>
+								<option value="">Выберите влияние</option>
+								{influenceOptions.map((option) => (
+									<option key={option} value={option}>
+										{option}
+									</option>
+								))}
+							</TextField>
+						</FormControl>
+					</Stack>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={handleDialogClose}>Отмена</Button>
+					<Button
+						onClick={handleAdd}
+						disabled={!selectedItem || !probability || !influence}
+						variant="contained"
+						color="primary"
+					>
+						Добавить
+					</Button>
+				</DialogActions>
+			</Dialog>
+		</Stack>
+	);
+};
+
+export default GeneralUncertaintyWidget;
