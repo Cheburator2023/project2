@@ -11,13 +11,13 @@ import {
 	ValidationPipe,
 } from "@nestjs/common";
 import {
+	ApiBearerAuth,
 	ApiOperation,
 	ApiParam,
 	ApiQuery,
 	ApiResponse,
 	ApiTags,
 } from "@nestjs/swagger";
-// import { Resource } from "nest-keycloak-connect";
 import {
 	CalculationResponseDto,
 	CreateCalculationDto,
@@ -26,11 +26,9 @@ import {
 } from "../dto";
 import { CalculationService } from "../services/calculation.service";
 
-// Временно отключаем авторизацию для тестирования
-// @ApiBearerAuth("JWT-auth")
+@ApiBearerAuth("JWT-auth")
 @ApiTags("Calculation")
 @Controller("calculation")
-// @Resource("calculation")
 export class CalculationController {
 	constructor(private readonly calculationService: CalculationService) {}
 
@@ -157,9 +155,6 @@ export class CalculationController {
 		return this.mapToResponseDto(calculation);
 	}
 
-	/**
-	 * Maps calculation entity to response DTO
-	 */
 	private mapToResponseDto(calculation: any): CalculationResponseDto {
 		return {
 			id: calculation.id,

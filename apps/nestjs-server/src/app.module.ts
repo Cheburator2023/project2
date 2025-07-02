@@ -1,12 +1,12 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
-// import { APP_GUARD } from "@nestjs/core";
 import { TypeOrmModule } from "@nestjs/typeorm";
-// import { AuthGuard, ResourceGuard, RoleGuard } from "nest-keycloak-connect";
 import { Calculation } from "./modules/calculation/entities/calculation.entity";
 
+import { APP_GUARD } from "@nestjs/core";
+import { AuthGuard, ResourceGuard, RoleGuard } from "nest-keycloak-connect";
 import { CalculationModule } from "./modules/calculation/calculation.module";
-// import { KeycloakModule } from "./shared/keycloak/keycloak.module";
+import { KeycloakModule } from "./shared/keycloak/keycloak.module";
 
 @Module({
 	imports: [
@@ -14,8 +14,7 @@ import { CalculationModule } from "./modules/calculation/calculation.module";
 			isGlobal: true,
 			envFilePath: [".env", `.env.${process.env.NODE_ENV}`],
 		}),
-		// Временно отключаем Keycloak для тестирования
-		// KeycloakModule,
+		KeycloakModule,
 		TypeOrmModule.forRootAsync({
 			imports: [ConfigModule],
 			inject: [ConfigService],
@@ -36,10 +35,9 @@ import { CalculationModule } from "./modules/calculation/calculation.module";
 		CalculationModule,
 	],
 	providers: [
-		// Временно отключаем Keycloak для тестирования
-		// { provide: APP_GUARD, useClass: AuthGuard },
-		// { provide: APP_GUARD, useClass: ResourceGuard },
-		// { provide: APP_GUARD, useClass: RoleGuard },
+		{ provide: APP_GUARD, useClass: AuthGuard },
+		{ provide: APP_GUARD, useClass: ResourceGuard },
+		{ provide: APP_GUARD, useClass: RoleGuard },
 	],
 })
 export class AppModule {}
