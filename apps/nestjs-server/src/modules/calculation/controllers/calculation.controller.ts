@@ -18,7 +18,6 @@ import {
 	ApiResponse,
 	ApiTags,
 } from "@nestjs/swagger";
-import { Resource } from "nest-keycloak-connect";
 import {
 	CalculationResponseDto,
 	CreateCalculationDto,
@@ -30,7 +29,6 @@ import { CalculationService } from "../services/calculation.service";
 @ApiBearerAuth("JWT-auth")
 @ApiTags("Calculation")
 @Controller("calculation")
-@Resource("calculation")
 export class CalculationController {
 	constructor(private readonly calculationService: CalculationService) {}
 
@@ -157,9 +155,6 @@ export class CalculationController {
 		return this.mapToResponseDto(calculation);
 	}
 
-	/**
-	 * Maps calculation entity to response DTO
-	 */
 	private mapToResponseDto(calculation: any): CalculationResponseDto {
 		return {
 			id: calculation.id,
