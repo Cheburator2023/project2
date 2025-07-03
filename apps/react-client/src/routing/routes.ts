@@ -7,12 +7,12 @@ export const routes = {
 	},
 	calculationCreate: {
 		rootPath: "/calculation/create",
-		name: "Создание расчета",
+		name: "Создание анкеты",
 		disabled: false,
 	},
 	calculationPreview: {
 		rootPath: "/calculation/preview/:id",
-		name: "Просмотр расчета",
+		name: "Просмотр анкеты",
 		disabled: false,
 	},
 	calculationCompare: {

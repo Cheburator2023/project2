@@ -1,7 +1,4 @@
-import { AgGridReact } from "ag-grid-react";
-import { useMemo, useState } from "react";
-
-import { Typography, styled, useColorScheme } from "@mui/material";
+import { styled, Typography, useColorScheme } from "@mui/material";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
@@ -10,10 +7,12 @@ import {
 	type CellClassParams,
 	type CellStyle,
 	type ColDef,
-	type ValueFormatterParams,
 	colorSchemeDarkBlue,
 	themeQuartz,
+	type ValueFormatterParams,
 } from "ag-grid-community";
+import { AgGridReact } from "ag-grid-react";
+import { useMemo, useState } from "react";
 
 const themeQuartzDark = themeQuartz.withPart(colorSchemeDarkBlue);
 
@@ -107,7 +106,9 @@ const processCoefficients = (
 
 export const CalculationResultTable = ({
 	isCreate,
-}: { isCreate?: boolean }) => {
+}: {
+	isCreate?: boolean;
+}) => {
 	const { stageResults, coefficients } = assessmentCalculationsStore();
 
 	const { setCalculationResult } = useAnketaCRUDFormsStore();

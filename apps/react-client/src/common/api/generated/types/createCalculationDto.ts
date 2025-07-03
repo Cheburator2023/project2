@@ -17,7 +17,7 @@ import type { CreateCalculationDtoAutoMlRequired } from './createCalculationDtoA
 import type { CreateCalculationDtoProductionDeploymentChannelsItem } from './createCalculationDtoProductionDeploymentChannelsItem';
 
 export interface CreateCalculationDto {
-  /** Название расчета */
+  /** Название анкеты */
   name: string;
   /** Сложность настройки */
   setupComplexity: string;

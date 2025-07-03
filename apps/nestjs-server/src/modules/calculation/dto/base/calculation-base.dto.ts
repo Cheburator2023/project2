@@ -100,7 +100,7 @@ export const UNCERTAINTY_TYPE_VALUES = [
 export class CalculationBaseDto {
 	@ApiProperty({
 		example: "Оценка проекта для бизнеса",
-		description: "Название расчета",
+		description: "Название анкеты",
 	})
 	@IsString({ message: "name must be a string" })
 	@IsNotEmpty({ message: "name should not be empty" })

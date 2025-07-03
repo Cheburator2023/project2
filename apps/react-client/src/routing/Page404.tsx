@@ -1,9 +1,8 @@
 import Button from "@mui/material/Button";
-import { useNavigate } from "react-router";
-
 import { ILL_404 } from "@react-client/common/illustrations/ILL_404";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Header } from "@react-client/features/navigation/organisms/Header";
+import { useNavigate } from "react-router";
 import { Flex } from "../common/primitives/Flex";
 import { routes } from "./routes";
 

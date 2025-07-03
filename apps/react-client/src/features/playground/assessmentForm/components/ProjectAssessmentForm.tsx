@@ -1,5 +1,5 @@
-import { withTheme } from "@rjsf/core";
 import type { IChangeEvent } from "@rjsf/core";
+import { withTheme } from "@rjsf/core";
 import { Theme as MuiTheme } from "@rjsf/mui";
 import type { RJSFSchema } from "@rjsf/utils";
 import validator from "@rjsf/validator-ajv8";

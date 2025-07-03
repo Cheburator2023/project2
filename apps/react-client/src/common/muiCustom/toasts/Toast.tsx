@@ -1,6 +1,6 @@
 import { Alert, AlertTitle, Typography } from "@mui/material";
-import { CSSProperties } from "react";
 import {
+	CSSProperties,
 	Dispatch,
 	SetStateAction,
 	useCallback,
@@ -177,17 +177,16 @@ export const Toast = ({
 		const pauseTimer = () => {
 			if (lastCloseTimerStartTimeRef.current < closeTimerStartTimeRef.current) {
 				// Get the elapsed time since the timer started
-				const elapsedTime =
-					new Date().getTime() - closeTimerStartTimeRef.current;
+				const elapsedTime = Date.now() - closeTimerStartTimeRef.current;
 
 				remainingTime = remainingTime - elapsedTime;
 			}
 
-			lastCloseTimerStartTimeRef.current = new Date().getTime();
+			lastCloseTimerStartTimeRef.current = Date.now();
 		};
 
 		const startTimer = () => {
-			closeTimerStartTimeRef.current = new Date().getTime();
+			closeTimerStartTimeRef.current = Date.now();
 
 			// Let the toast know it has started
 			timeoutId = setTimeout(() => {
@@ -297,7 +296,7 @@ export const Toast = ({
 						.replace("px", "") || 0,
 				);
 				const timeTaken = dragStartTime.current
-					? new Date().getTime() - dragStartTime.current.getTime()
+					? Date.now() - dragStartTime.current.getTime()
 					: 0;
 				const velocity = Math.abs(swipeAmount) / timeTaken;
 

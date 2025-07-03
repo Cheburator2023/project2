@@ -23,7 +23,7 @@ export const MultiSelectAutocompleteWidget = ({
 			id={id}
 			options={choices}
 			value={Array.isArray(value) ? value : []}
-			onChange={(event: React.SyntheticEvent, newValue: string[]) => {
+			onChange={(_event: React.SyntheticEvent, newValue: string[]) => {
 				onChange(newValue);
 			}}
 			disabled={disabled}

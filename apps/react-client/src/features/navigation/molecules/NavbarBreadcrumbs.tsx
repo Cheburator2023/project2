@@ -1,10 +1,9 @@
 import NavigateNextRoundedIcon from "@mui/icons-material/NavigateNextRounded";
 import Breadcrumbs, { breadcrumbsClasses } from "@mui/material/Breadcrumbs";
-import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
-import { useLocation } from "react-router";
-
+import Typography from "@mui/material/Typography";
 import { camelCase } from "lodash-es";
+import { useLocation } from "react-router";
 import { routes } from "../../../routing/routes";
 
 const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({

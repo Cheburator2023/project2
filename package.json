@@ -24,12 +24,11 @@
 		"turbo:ls": "turbo ls",
 		"build": "turbo run build",
 		"lint": "turbo run lint",
-		"biome": "npx @biomejs/biome@1.9.4 check",
-		"biome:fix": "npx @biomejs/biome@1.9.4 check --log-level=error --diagnostic-level=error --fix --unsafe ./apps/react-client/src ./apps/nestjs-server/src",
+		"biome": "npx @biomejs/biome@2.0.6 check",
+		"biome:fix": "npx @biomejs/biome@2.0.6 check --log-level=error --diagnostic-level=error --fix --unsafe ./apps/react-client/src ./apps/nestjs-server/src",
 		"prepare": "husky",
 		"codemod:testids": "node ./codemods/add_test_ids.ts io-dir=../apps/react-client/src --all",
 		"codemod:testids:remove": "node ./codemods/add_test_ids.ts io-dir=../apps/react-client/src --all --remove"
-
 	},
 	"lint-staged": {
 		"*.{ts,tsx}": [
@@ -40,7 +39,7 @@
 		"@babel/preset-env": "7.27.2",
 		"@babel/preset-react": "7.27.1",
 		"@babel/preset-typescript": "7.27.1",
-		"@biomejs/biome": "1.9.4",
+		"@biomejs/biome": "2.0.6",
 		"@commitlint/cli": "19.8.0",
 		"@commitlint/config-conventional": "19.8.0",
 		"@types/lodash-es": "4.17.12",
@@ -49,11 +48,11 @@
 		"browserslist-to-esbuild": "2.1.1",
 		"cross-env": "7.0.3",
 		"husky": "9.1.7",
+		"jscodeshift": "17.3.0",
 		"lint-staged": "15.5.0",
 		"turbo": "2.4.4",
 		"type-fest": "4.26.1",
-		"typescript": "5.8.2",
-		"jscodeshift": "17.3.0"
+		"typescript": "5.8.2"
 	},
 	"dependencies": {
 		"@fontsource/inter": "5.2.5",
@@ -77,11 +76,11 @@
 		"keycloak-js": "15.0.2",
 		"lodash-es": "4.17.21",
 		"react": "19.1.0",
-    	"react-dom": "19.1.0",
-    	"react-router": "7.6.1",
-    	"react-router-dom": "7.6.1",
+		"react-dom": "19.1.0",
 		"react-hook-form": "7.53.0",
 		"react-resizable-panels": "3.0.2",
+		"react-router": "7.6.1",
+		"react-router-dom": "7.6.1",
 		"usehooks-ts": "3.1.0",
 		"zod": "3.25.20"
 	},

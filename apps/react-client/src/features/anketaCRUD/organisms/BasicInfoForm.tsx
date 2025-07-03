@@ -1,6 +1,7 @@
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import { MultiSelectAutocompleteCreateWidget } from "@react-client/features/anketaCRUD/molecules/MultiSelectAutocompleteCreateWidget";
+import { TextFieldCustomWidget } from "@react-client/features/anketaCRUD/molecules/TextFieldCustomWidget";
 import {
 	AnketaCRUDFormNames,
 	useAnketaCRUDFormsStore,
@@ -8,8 +9,12 @@ import {
 import type FormRef from "@rjsf/core";
 import type { IChangeEvent } from "@rjsf/core";
 import Form from "@rjsf/mui";
-import type { RJSFSchema, RegistryWidgetsType, UiSchema } from "@rjsf/utils";
-import type { TemplatesType } from "@rjsf/utils";
+import type {
+	RegistryWidgetsType,
+	RJSFSchema,
+	TemplatesType,
+	UiSchema,
+} from "@rjsf/utils";
 import { useRef } from "react";
 import { MultiSelectAutocompleteWidget } from "../molecules/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "../molecules/RJSFObjectFieldTemplate";
@@ -69,11 +74,20 @@ const uiSchema: UiSchema = {
 	createdAt: {
 		"ui:widget": "date",
 	},
+	rfd: {
+		"ui:widget": "TextFieldCustomWidget",
+		"ui:options": {
+			// mask: "RFD-*",
+			prefix: "RFD-",
+			// replacement: { "*": /.*/ },
+		},
+	},
 };
 
 const widgets: RegistryWidgetsType = {
 	MultiSelectAutocompleteWidget,
 	MultiSelectAutocompleteCreateWidget,
+	TextFieldCustomWidget,
 };
 
 const initialFormData: FormData = {
@@ -92,7 +106,7 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 		properties: {
 			calculationName: {
 				type: "string",
-				title: "Название расчета",
+				title: "Название анкеты",
 				minLength: 1,
 			},
 			rfd: {
@@ -115,15 +129,15 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 				type: "string",
 				title: "ФИО заказчика",
 			},
-			relatedModels: {
-				type: "array",
-				title: "Связанные модели",
-				items: {
-					type: "string",
-					enum: [],
-				},
-				uniqueItems: true,
-			},
+			// relatedModels: {
+			// 	type: "array",
+			// 	title: "Связанные модели",
+			// 	items: {
+			// 		type: "string",
+			// 		enum: [],
+			// 	},
+			// 	uniqueItems: true,
+			// },
 			comment: {
 				type: "string",
 				title: "Комментарий",

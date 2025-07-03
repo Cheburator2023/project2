@@ -2,10 +2,10 @@
 import { noop } from "lodash-es";
 import {
 	type Context,
+	createContext,
 	type ErrorInfo,
 	PureComponent,
 	type ReactNode,
-	createContext,
 } from "react";
 
 type Props = {
@@ -58,7 +58,7 @@ class ErrorBoundaryComponent extends PureComponent<Props, State> {
 		};
 	}
 
-	public resetErrorBoundary(...args: any[]) {
+	public resetErrorBoundary(..._args: any[]) {
 		const { error } = this.state;
 
 		if (error !== null) {
@@ -66,7 +66,7 @@ class ErrorBoundaryComponent extends PureComponent<Props, State> {
 		}
 	}
 
-	public componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+	public componentDidCatch(error: Error, _errorInfo: ErrorInfo): void {
 		this.setState({
 			...this.state,
 			errorStack: error?.stack,

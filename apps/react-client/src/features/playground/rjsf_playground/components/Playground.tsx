@@ -50,7 +50,7 @@ export default function Playground({ themes, validators }: PlaygroundProps) {
 	const [theme, setTheme] = useState<string>("mui");
 	const [sampleName, setSampleName] = useState<string>("Simple");
 	const [subtheme, setSubtheme] = useState<string | null>(null);
-	const [stylesheet, setStylesheet] = useState<string | null>(null);
+	const [_stylesheet, setStylesheet] = useState<string | null>(null);
 	const [validator, setValidator] = useState<string>("AJV8");
 	const [showForm, setShowForm] = useState(false);
 	const [liveSettings, setLiveSettings] = useState<LiveSettings>({

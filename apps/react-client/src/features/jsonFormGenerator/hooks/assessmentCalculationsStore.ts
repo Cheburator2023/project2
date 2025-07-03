@@ -183,7 +183,7 @@ const calculateStageResults = (
 };
 
 export const assessmentCalculationsStore = create<AssessmentState>(
-	(set, get) => ({
+	(set, _get) => ({
 		formData: {} as FormData,
 		coefficients: {
 			modelsCountCoefficient: 0,

@@ -2,8 +2,8 @@ import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import MuiDrawer, { drawerClasses } from "@mui/material/Drawer";
 import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
 import { styled, useColorScheme } from "@mui/material/styles";
+import Typography from "@mui/material/Typography";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { MenuContent } from "../molecules/MenuContent";
@@ -27,7 +27,10 @@ const Drawer = styled(MuiDrawer)<{ mode?: string }>(({ mode }) => {
 export function SideMenu({
 	open = false,
 	onLogout,
-}: { open?: boolean; onLogout?: () => void }) {
+}: {
+	open?: boolean;
+	onLogout?: () => void;
+}) {
 	const { mode, systemMode, setMode } = useColorScheme();
 	const { user } = useGlobalSettingsStore();
 	console.log("SideMenu user:", user);
