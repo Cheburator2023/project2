@@ -12,11 +12,13 @@ import { CalculationResultTable } from "./CalculationResultTable";
 export const AnketaBasicLayout = ({
 	isCreate = false,
 	isCopy,
+	isPending,
 	onSubmit,
 	formHasErrors,
 }: {
 	isCreate?: boolean;
 	isCopy?: boolean;
+	isPending?: boolean;
 	formHasErrors?: boolean;
 	onSubmit?: () => void;
 }) => {
@@ -114,6 +116,7 @@ export const AnketaBasicLayout = ({
 							<Button
 								variant="contained"
 								onClick={onSubmit}
+								loading={isPending}
 								data-test-id="anketa-basic-layout--Button-0"
 							>
 								Сохранить
