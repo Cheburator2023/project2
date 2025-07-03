@@ -19,7 +19,7 @@ import {
 	Typography,
 } from "@mui/material";
 import { WidgetProps } from "@rjsf/utils";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface UncertaintyItem {
 	type: string;

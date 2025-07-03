@@ -17,7 +17,7 @@ import type { CalculationQuestionnaireDataDtoAutoMlRequired } from './calculatio
 import type { CalculationQuestionnaireDataDtoProductionDeploymentChannelsItem } from './calculationQuestionnaireDataDtoProductionDeploymentChannelsItem';
 
 export interface CalculationQuestionnaireDataDto {
-  /** Название расчета */
+  /** Название анкеты */
   name: string;
   /** Сложность настройки */
   setupComplexity: string;

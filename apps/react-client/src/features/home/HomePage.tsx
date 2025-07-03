@@ -3,13 +3,7 @@ import AddIcon from "@mui/icons-material/Add";
 import CompareIcon from "@mui/icons-material/Compare";
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import SaveIcon from "@mui/icons-material/Save";
-import {
-	Button,
-	IconButton,
-	Tooltip,
-	styled,
-	useColorScheme,
-} from "@mui/material";
+import { IconButton, styled, Tooltip, useColorScheme } from "@mui/material";
 import { useCalculationControllerFindAll } from "@react-client/common/api/generated/queries/calculation";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
@@ -19,13 +13,13 @@ import { Header } from "@react-client/features/navigation/organisms/Header";
 import { SearchInput } from "@react-client/features/navigation/organisms/SearchInput";
 import { routes } from "@react-client/routing/routes";
 import {
+	colorSchemeDarkBlue,
 	type GridApi,
 	type GridReadyEvent,
 	type IRowNode,
 	ModuleRegistry,
 	themeQuartz,
 } from "ag-grid-community";
-import { colorSchemeDarkBlue } from "ag-grid-community";
 import { AllEnterpriseModule } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
 import { useEffect, useRef, useState } from "react";
@@ -62,7 +56,7 @@ export const HomePage = () => {
 	const { mode } = useColorScheme();
 	const [params] = useSearchParams();
 	const navigate = useNavigate();
-	const location = useLocation();
+	const _location = useLocation();
 
 	const { data, isLoading, error } = useCalculationControllerFindAll();
 
@@ -114,7 +108,7 @@ export const HomePage = () => {
 		navigate(routes.calculationCreate.rootPath);
 	};
 
-	const actions = [
+	const _actions = [
 		{
 			icon: <AddIcon data-test-id="home-page--AddIcon-0" />,
 			name: "Создать расчет",
@@ -205,7 +199,7 @@ export const HomePage = () => {
 								<CompareArrowsIcon data-test-id="home-page--CompareArrowsIcon-0" />
 							</IconButton>
 						</Tooltip>
-						<Tooltip
+						{/* <Tooltip
 							title="Выгрузить в Excel"
 							data-test-id="home-page--Tooltip-2"
 						>
@@ -217,7 +211,7 @@ export const HomePage = () => {
 							>
 								Выгрузить
 							</Button>
-						</Tooltip>
+						</Tooltip> */}
 					</Flex>
 				</Flex>
 			</Header>

@@ -4,8 +4,8 @@ import { dividerClasses } from "@mui/material/Divider";
 import { menuItemClasses } from "@mui/material/MenuItem";
 import { selectClasses } from "@mui/material/Select";
 import type { SvgIconProps } from "@mui/material/SvgIcon";
+import { alpha, type Components, type Theme } from "@mui/material/styles";
 import { tabClasses } from "@mui/material/Tab";
-import { type Components, type Theme, alpha } from "@mui/material/styles";
 import * as React from "react";
 import { brand, gray } from "../themePrimitives";
 

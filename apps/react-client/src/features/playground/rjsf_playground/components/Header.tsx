@@ -1,3 +1,4 @@
+import { Flex } from "@react-client/common/primitives/Flex";
 import Form, { type IChangeEvent } from "@rjsf/core";
 import type { RJSFSchema, UiSchema, ValidatorType } from "@rjsf/utils";
 import localValidator from "@rjsf/validator-ajv8";
@@ -10,8 +11,6 @@ import {
 	useCallback,
 } from "react";
 import base64 from "../utils/base64";
-
-import { Flex } from "@react-client/common/primitives/Flex";
 import CopyLink from "./CopyLink";
 import RawValidatorTest from "./RawValidatorTest";
 import SampleSelector, { type SampleSelectorProps } from "./SampleSelector";

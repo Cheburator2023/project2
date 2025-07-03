@@ -1,8 +1,8 @@
 import {
-	type PaletteMode,
-	type Shadows,
 	alpha,
 	createTheme,
+	type PaletteMode,
+	type Shadows,
 } from "@mui/material/styles";
 
 declare module "@mui/material/Paper" {

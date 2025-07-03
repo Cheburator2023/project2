@@ -1,11 +1,10 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { Calculation } from "./modules/calculation/entities/calculation.entity";
-
 import { APP_GUARD } from "@nestjs/core";
+import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthGuard, ResourceGuard, RoleGuard } from "nest-keycloak-connect";
 import { CalculationModule } from "./modules/calculation/calculation.module";
+import { Calculation } from "./modules/calculation/entities/calculation.entity";
 import { KeycloakModule } from "./shared/keycloak/keycloak.module";
 
 @Module({

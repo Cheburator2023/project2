@@ -2,7 +2,9 @@ import React from "react";
 
 export const FullscreenWrapper = ({
 	children,
-}: { children: React.ReactNode }) => {
+}: {
+	children: React.ReactNode;
+}) => {
 	return (
 		<div
 			style={{

@@ -12,11 +12,13 @@ import { CalculationResultTable } from "./CalculationResultTable";
 export const AnketaBasicLayout = ({
 	isCreate = false,
 	isCopy,
+	isPending,
 	onSubmit,
 	formHasErrors,
 }: {
 	isCreate?: boolean;
 	isCopy?: boolean;
+	isPending?: boolean;
 	formHasErrors?: boolean;
 	onSubmit?: () => void;
 }) => {
@@ -46,6 +48,7 @@ export const AnketaBasicLayout = ({
 								height="100%"
 								padding="10px"
 								zoom={0.7}
+								uuid="anketa_basic_info_card"
 								data-test-id="anketa-basic-layout--Card-0"
 							>
 								<Spacer data-test-id="anketa-basic-layout--Spacer-0" />
@@ -65,6 +68,7 @@ export const AnketaBasicLayout = ({
 								height="100%"
 								padding="10px"
 								zoom={0.7}
+								uuid="anketa_calculation_result_card"
 								data-test-id="anketa-basic-layout--Card-1"
 							>
 								<Spacer data-test-id="anketa-basic-layout--Spacer-1" />
@@ -89,6 +93,7 @@ export const AnketaBasicLayout = ({
 						height="100%"
 						padding="10px"
 						zoom={0.7}
+						uuid="anketa_project_assessment_card"
 						data-test-id="anketa-basic-layout--Card-2"
 					>
 						<Spacer data-test-id="anketa-basic-layout--Spacer-2" />
@@ -111,6 +116,7 @@ export const AnketaBasicLayout = ({
 							<Button
 								variant="contained"
 								onClick={onSubmit}
+								loading={isPending}
 								data-test-id="anketa-basic-layout--Button-0"
 							>
 								Сохранить

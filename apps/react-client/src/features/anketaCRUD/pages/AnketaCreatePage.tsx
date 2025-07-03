@@ -1,5 +1,4 @@
 import { useCalculationControllerCreate } from "@react-client/common/api/generated/queries/calculation";
-import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import { toast } from "@react-client/common/muiCustom/toasts";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
@@ -7,10 +6,12 @@ import { AnketaBasicLayout } from "@react-client/features/anketaCRUD/organisms/A
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { routes } from "@react-client/routing/routes";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
 export const AnketaCreatePage = () => {
 	const navigate = useNavigate();
+	const [hasSubmitted, setHasSubmitted] = useState(false);
 	const {
 		setApiRef,
 		resetApiRef,
@@ -21,8 +22,9 @@ export const AnketaCreatePage = () => {
 	} = useAnketaCRUDFormsStore();
 
 	const stateBasicForm = anketaCreate_basicInfoForm.state;
+	console.log("🚀 ~ AnketaCreatePage ~ stateBasicForm:", stateBasicForm);
 	const stateProjectAssessmentForm = anketaCreate_projectAssessmentForm.state;
-	const { mutate: createCalculationMutation } =
+	const { mutate: createCalculationMutation, isPending } =
 		useCalculationControllerCreate();
 
 	const formHasErrors = !!(
@@ -36,16 +38,17 @@ export const AnketaCreatePage = () => {
 			stateBasicForm,
 			stateProjectAssessmentForm,
 		);
+		setHasSubmitted(true);
 		anketaCreate_basicInfoForm.api?.submit();
 		anketaCreate_projectAssessmentForm.api?.submit();
 	};
 
-	useDeepEffect(() => {
+	useEffect(() => {
 		console.log("1 stateBasicForm:", stateBasicForm);
 		console.log("2 calculationResult:", calculationResult);
 		console.log("3 stateProjectAssessmentForm:", stateProjectAssessmentForm);
 
-		if (!formHasErrors) {
+		if (hasSubmitted && !formHasErrors) {
 			createCalculationMutation(
 				{
 					// @ts-ignore
@@ -71,7 +74,7 @@ export const AnketaCreatePage = () => {
 				},
 			);
 		}
-	}, [formHasErrors, stateBasicForm, stateProjectAssessmentForm]);
+	}, [hasSubmitted, formHasErrors, stateBasicForm, stateProjectAssessmentForm]);
 
 	return (
 		<div data-test-id="anketa-create-page--div-0">
@@ -84,6 +87,7 @@ export const AnketaCreatePage = () => {
 			>
 				<AnketaBasicLayout
 					isCreate
+					isPending={isPending}
 					onSubmit={onSubmit}
 					formHasErrors={formHasErrors}
 					data-test-id="anketa-create-page--AnketaBasicLayout-0"

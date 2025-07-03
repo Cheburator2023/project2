@@ -11,7 +11,10 @@ import { NavbarBreadcrumbs } from "../molecules/NavbarBreadcrumbs";
 export function Header({
 	children,
 	calcId,
-}: { children?: React.ReactNode; calcId?: string }) {
+}: {
+	children?: React.ReactNode;
+	calcId?: string;
+}) {
 	const { toggleSideMenu, isSideMenuVisible } = useGlobalSettingsStore();
 
 	const id1 = new URLSearchParams(window.location.search).get("id1");

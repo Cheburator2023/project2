@@ -4,7 +4,7 @@ import { useAuthStore } from "../../store/authStore";
 export const customMutationOptions = <TData, TError, TVariables>(
 	options: Partial<UseMutationOptions<TData, TError, TVariables>> = {},
 ): UseMutationOptions<TData, TError, TVariables> => {
-	const isAuthenticated = !!useAuthStore.getState().accessToken;
+	const _isAuthenticated = !!useAuthStore.getState().accessToken;
 
 	return {
 		...options,

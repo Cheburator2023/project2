@@ -51,7 +51,7 @@ export function MultiSelectAutocompleteCreateWidget({
 		});
 	}, [value, allOptions]);
 
-	const handleChange = (event: any, newValues: (OptionType | string)[]) => {
+	const handleChange = (_event: any, newValues: (OptionType | string)[]) => {
 		if (!onChange) return;
 
 		const processedValues: string[] = [];

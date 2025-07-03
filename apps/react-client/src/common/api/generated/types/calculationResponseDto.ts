@@ -10,7 +10,7 @@ import type { CalculationQuestionnaireDataDto } from './calculationQuestionnaire
 export interface CalculationResponseDto {
   /** Уникальный идентификатор расчета */
   id: string;
-  /** Название расчета */
+  /** Название анкеты */
   name: string;
   /** Данные анкеты расчета */
   questionnaireData: CalculationQuestionnaireDataDto;

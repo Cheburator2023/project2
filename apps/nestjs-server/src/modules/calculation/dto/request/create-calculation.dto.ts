@@ -11,8 +11,8 @@ import {
 	Min,
 	ValidateNested,
 } from "class-validator";
-import { CalculationBaseDto } from "../base/calculation-base.dto";
 import {
+	CalculationBaseDto,
 	DATA_SOURCES_COUNT_VALUES,
 	DEPLOYMENT_CHANNEL_VALUES,
 	YES_NO_REQUIRED_VALUES,

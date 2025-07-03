@@ -1,11 +1,11 @@
 import {
 	type FormContextType,
+	getTemplate,
+	getUiOptions,
 	type ObjectFieldTemplatePropertyType,
 	type ObjectFieldTemplateProps,
 	type RJSFSchema,
 	type StrictRJSFSchema,
-	getTemplate,
-	getUiOptions,
 	titleId,
 } from "@rjsf/utils";
 import type { Sample } from "./Sample";

@@ -7,7 +7,6 @@ import {
 	useState,
 } from "react";
 import ReactDOM from "react-dom";
-import { Toast } from "./Toast";
 import {
 	GAP,
 	TOAST_WIDTH,
@@ -15,12 +14,13 @@ import {
 	VISIBLE_TOASTS_AMOUNT,
 } from "./constants";
 import { ToastState } from "./state";
+import { Toast } from "./Toast";
 import {
 	HeightT,
+	ToasterProps,
 	ToastPosition,
 	ToastT,
 	ToastToDismiss,
-	ToasterProps,
 } from "./types";
 import "./style.css";
 

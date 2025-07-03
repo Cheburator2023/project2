@@ -1,9 +1,4 @@
 import { styled, useColorScheme } from "@mui/material/styles";
-import type {} from "@mui/material/themeCssVarsAugmentation";
-import type {} from "@mui/x-charts/themeAugmentation";
-import type {} from "@mui/x-data-grid-pro/themeAugmentation";
-import type {} from "@mui/x-date-pickers/themeAugmentation";
-import type {} from "@mui/x-tree-view/themeAugmentation";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { SideMenu } from "../../features/navigation/organisms/SideMenu";
 import { Flex } from "../primitives/Flex";

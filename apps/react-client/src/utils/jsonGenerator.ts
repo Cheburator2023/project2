@@ -27,7 +27,7 @@ export function generateObjectFromSchema(schema: any, numEntities = 1): any {
 
 		if (schema.properties) {
 			for (const propertyName in schema.properties) {
-				if (schema.properties.hasOwnProperty(propertyName)) {
+				if (Object.hasOwn(schema.properties, propertyName)) {
 					const propertySchema = schema.properties[propertyName];
 
 					if (propertySchema.type === "string") {

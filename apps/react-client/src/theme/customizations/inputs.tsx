@@ -2,14 +2,30 @@ import CheckBoxOutlineBlankRoundedIcon from "@mui/icons-material/CheckBoxOutline
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import RemoveRoundedIcon from "@mui/icons-material/RemoveRounded";
 import { outlinedInputClasses } from "@mui/material/OutlinedInput";
+import { alpha, type Components, type Theme } from "@mui/material/styles";
 import { toggleButtonClasses } from "@mui/material/ToggleButton";
 import { toggleButtonGroupClasses } from "@mui/material/ToggleButtonGroup";
-import { type Components, type Theme, alpha } from "@mui/material/styles";
 
 import { brand, gray } from "../themePrimitives";
 
 /* eslint-disable import/prefer-default-export */
 export const inputsCustomizations: Components<Theme> = {
+	MuiInputLabel: {
+		styleOverrides: {
+			root: {
+				pointerEvents: "all",
+			},
+		},
+	},
+	MuiButtonGroup: {
+		styleOverrides: {
+			root: {
+				"& .MuiButtonGroup-firstButton": {
+					borderRight: "none!important",
+				},
+			},
+		},
+	},
 	MuiButtonBase: {
 		defaultProps: {
 			disableTouchRipple: true,

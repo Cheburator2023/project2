@@ -1,5 +1,5 @@
-import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ThemeOptions } from "@mui/material/styles";
+import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { type ReactNode, useMemo } from "react";
 
 import { dataDisplayCustomizations } from "./customizations/dataDisplay";
