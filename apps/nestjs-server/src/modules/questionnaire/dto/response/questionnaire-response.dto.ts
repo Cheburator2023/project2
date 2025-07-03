@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 
-class DictionaryItemDto {
+export class DictionaryItemDto {
     @ApiProperty({ example: 1, description: 'Значение опции' })
     value: any;
 
@@ -8,7 +8,7 @@ class DictionaryItemDto {
     label?: string;
 
     @ApiProperty({ example: 1.0, description: 'Коэффициент для значения' })
-    coefficient: number;
+    coefficient?: number;
 
     @ApiProperty({
         example: 'Проведение регулярной валидации Моделей Регулятором не установлено',
@@ -55,7 +55,7 @@ export class QuestionnaireResponseDto {
     version: string;
 
     @ApiProperty({
-        example: '2023-11-20T14:30:00Z',
+        example: '2025-07-01T14:30:00Z',
         description: 'Дата последнего обновления'
     })
     lastUpdated: string;

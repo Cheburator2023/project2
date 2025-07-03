@@ -1,7 +1,7 @@
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 import { ApiProperty } from "@nestjs/swagger";
 
-@Entity()
+@Entity('questionnaire_item')
 export class QuestionnaireItemEntity {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000', description: 'UUID' })
@@ -24,25 +24,32 @@ export class QuestionnaireItemEntity {
     isRequired: boolean;
 
     @Column({ type: 'boolean', nullable: false, default: true })
+    @ApiProperty({ example: true, description: 'Активность поля' })
     isActive: boolean;
 
     @Column({ type: 'varchar', length: 50, nullable: false })
     @ApiProperty({
         example: 'number',
         description: 'Тип поля',
-        enum: ['number', 'text', 'select', 'multiselect', 'boolean']
+        enum: ['number', 'text', 'select', 'multiselect', 'boolean', 'risk']
     })
     fieldType: string;
 
     @Column({ type: 'jsonb', nullable: true })
     @ApiProperty({
-        example: ['1', '2', '3'],
-        description: 'Доступные опции для select/multiselect',
+        example: [{ value: 1, label: 'Уровень 1', hint: 'Описание уровня' }],
+        description: 'Доступные опции для select/multiselect/risk',
         required: false
     })
-    options?: string[];
+    options?: any[];
 
     @Column({ type: 'integer', nullable: true })
     @ApiProperty({ example: 1, description: 'Порядок отображения', required: false })
     order?: number;
+
+    @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+    createdAt: Date;
+
+    @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
+    updatedAt: Date;
 }

@@ -6,23 +6,24 @@ import { MigrationInterface, QueryRunner } from "typeorm";
  */
 
 export class CreateCalculationTable1718651234567 implements MigrationInterface {
-	public async up(queryRunner: QueryRunner): Promise<void> {
-		await queryRunner.query(`
-      CREATE TABLE calculation (
-        id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-        name varchar(255) NOT NULL,
-        questionnaire_data jsonb NOT NULL,
-        final_coefficient float NOT NULL,
-        created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-		await queryRunner.query(`
-      CREATE INDEX idx_calculation_created_at ON calculation(created_at)
-    `);
-	}
+    public async up(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`
+            CREATE TABLE calculation (
+                 "id" uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+                 "name" varchar(255) NOT NULL,
+                 "questionnaireData" jsonb NOT NULL,
+                 "finalCoefficient" float NOT NULL,
+                 "createdAt" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
 
-	public async down(queryRunner: QueryRunner): Promise<void> {
-		await queryRunner.query(`DROP INDEX idx_calculation_created_at`);
-		await queryRunner.query(`DROP TABLE calculation`);
-	}
+        await queryRunner.query(`
+            CREATE INDEX idx_calculation_created_at ON calculation("createdAt")
+        `);
+    }
+
+    public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`DROP INDEX idx_calculation_created_at`);
+        await queryRunner.query(`DROP TABLE calculation`);
+    }
 }
