@@ -123,7 +123,7 @@ export const CalculationResultTable = ({
 
 	const [columnDefs] = useState<ColDef<EpicData>[]>([
 		{
-			headerName: "Эпик",
+			headerName: "Этапы",
 			field: "epicName",
 			flex: 2,
 			cellStyle: (params: CellClassParams<EpicData>): CellStyle | null => {
@@ -218,7 +218,7 @@ export const CalculationResultTable = ({
 			valueFormatter: (
 				params: ValueFormatterParams<CoefficientData>,
 			): string => {
-				return typeof params.value === "number" ? params.value.toFixed(3) : "";
+				return typeof params.value === "number" ? params.value.toFixed(2) : "";
 			},
 		},
 	]);
