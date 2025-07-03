@@ -1,4 +1,5 @@
 import { useCalculationControllerCreate } from "@react-client/common/api/generated/queries/calculation";
+import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import { toast } from "@react-client/common/muiCustom/toasts";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
@@ -6,7 +7,6 @@ import { AnketaBasicLayout } from "@react-client/features/anketaCRUD/organisms/A
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { routes } from "@react-client/routing/routes";
-import { useEffect } from "react";
 import { useNavigate } from "react-router";
 
 export const AnketaCreatePage = () => {
@@ -26,8 +26,8 @@ export const AnketaCreatePage = () => {
 		useCalculationControllerCreate();
 
 	const formHasErrors = !!(
-		anketaCreate_basicInfoForm.api?.state.errors.length ||
-		anketaCreate_projectAssessmentForm.api?.state.errors.length
+		anketaCreate_basicInfoForm?.state?.errors?.length ||
+		anketaCreate_projectAssessmentForm?.state?.errors?.length
 	);
 
 	const onSubmit = () => {
@@ -40,12 +40,12 @@ export const AnketaCreatePage = () => {
 		anketaCreate_projectAssessmentForm.api?.submit();
 	};
 
-	useEffect(() => {
+	useDeepEffect(() => {
 		console.log("1 stateBasicForm:", stateBasicForm);
 		console.log("2 calculationResult:", calculationResult);
 		console.log("3 stateProjectAssessmentForm:", stateProjectAssessmentForm);
 
-		if (formHasErrors) {
+		if (!formHasErrors) {
 			createCalculationMutation(
 				{
 					// @ts-ignore
@@ -59,7 +59,13 @@ export const AnketaCreatePage = () => {
 						navigate(routes.home.rootPath);
 					},
 					onError: (error) => {
-						toast.error("Ошибка при создании расчета");
+						toast.error("Ошибка при создании расчета", {
+							description: "Проверьте подключение",
+							action: {
+								label: "Закрыть",
+								onClick: () => {},
+							},
+						});
 						console.log("Error:", error);
 					},
 				},
