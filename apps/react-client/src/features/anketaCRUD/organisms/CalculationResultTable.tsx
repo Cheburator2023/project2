@@ -192,9 +192,9 @@ export const CalculationResultTable = ({
 
 				if (params.value != null) {
 					if (params.value > 0) {
-						style.color = "green";
-					} else if (params.value < 0) {
 						style.color = "red";
+					} else if (params.value < 0) {
+						style.color = "green";
 					}
 				}
 
@@ -220,9 +220,9 @@ export const CalculationResultTable = ({
 
 				if (params.value != null) {
 					if (params.value > 0) {
-						style.color = "green";
-					} else if (params.value < 0) {
 						style.color = "red";
+					} else if (params.value < 0) {
+						style.color = "green";
 					}
 				}
 
