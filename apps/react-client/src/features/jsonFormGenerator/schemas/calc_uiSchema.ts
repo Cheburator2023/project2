@@ -19,6 +19,16 @@ export const calc_uiSchema: UiSchema = {
 	},
 	modelsCount: {
 		"ui:widget": "NumberInputWidget",
+		"ui:options": {
+			tooltip:
+				"Значение по-умолчанию = 1. Больше 1 возможно для каскадов и ансамблей моделей (модели/подмодели каскада/ансамбля самостоятельно не используются и работают в едином решении для заказчика",
+		},
+	},
+	setupComplexity: {
+		"ui:options": {
+			tooltip:
+				"Проведение регулярной валидации Моделей Регулятором нормативно не установлено.",
+		},
 	},
 	uncertaintyAdjustment: {
 		"ui:widget": "NumberInputWidget",

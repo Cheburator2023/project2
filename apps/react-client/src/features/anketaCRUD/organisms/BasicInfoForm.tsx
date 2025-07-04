@@ -1,7 +1,7 @@
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
+import { MultiSelectAutocompleteCreateWidget } from "@react-client/common/forms/widgets/MultiSelectAutocompleteCreateWidget";
+import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
-import { MultiSelectAutocompleteCreateWidget } from "@react-client/features/anketaCRUD/molecules/MultiSelectAutocompleteCreateWidget";
-import { TextFieldCustomWidget } from "@react-client/features/anketaCRUD/molecules/TextFieldCustomWidget";
 import {
 	AnketaCRUDFormNames,
 	useAnketaCRUDFormsStore,
@@ -16,18 +16,14 @@ import type {
 	UiSchema,
 } from "@rjsf/utils";
 import { useRef } from "react";
-import { MultiSelectAutocompleteWidget } from "../molecules/MultiSelectAutocompleteWidget";
-import { RJSFObjectFieldTemplate } from "../molecules/RJSFObjectFieldTemplate";
-
-const templates: Partial<TemplatesType> = {
-	ObjectFieldTemplate: RJSFObjectFieldTemplate,
-};
+import { MultiSelectAutocompleteWidget } from "../../../common/forms/widgets/MultiSelectAutocompleteWidget";
+import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjectFieldTemplate";
 
 interface FormData {
 	calculationName: string;
 	rfd?: string;
 	streamExecutor: string;
-	department: string;
+	department: string[];
 	customerName?: string;
 	comment?: string;
 	relatedModels?: string[];
@@ -59,29 +55,78 @@ const uiSchema: UiSchema = {
 		"author",
 		"comment",
 	],
-	comment: {
-		"ui:widget": "textarea",
+	calculationName: {
+		"ui:widget": "TextFieldCustomWidget",
 		"ui:options": {
-			rows: 3,
+			tooltip: "Текстовое поле со свободным вводом, 150 символов.",
 		},
-	},
-	relatedModels: {
-		"ui:widget": "MultiSelectAutocompleteCreateWidget",
-	},
-	status: {
-		"ui:widget": "radio",
-	},
-	createdAt: {
-		"ui:widget": "date",
 	},
 	rfd: {
 		"ui:widget": "TextFieldCustomWidget",
 		"ui:options": {
-			// mask: "RFD-*",
 			prefix: "RFD-",
-			// replacement: { "*": /.*/ },
+			tooltip: "",
 		},
 	},
+	streamExecutor: {
+		"ui:widget": "TextFieldCustomWidget",
+		"ui:options": {
+			select: true,
+			tooltip: "",
+		},
+	},
+	department: {
+		"ui:widget": "MultiSelectAutocompleteWidget",
+		"ui:options": {
+			tooltip: "",
+		},
+	},
+	customerName: {
+		"ui:widget": "TextFieldCustomWidget",
+		"ui:options": {
+			tooltip: "",
+		},
+	},
+	// relatedModels: {
+	// 	"ui:widget": "MultiSelectAutocompleteCreateWidget",
+	// 	"ui:options": {
+	// 		tooltip: "",
+	// 	},
+	// },
+	comment: {
+		"ui:widget": "TextFieldCustomWidget",
+		"ui:options": {
+			multiline: true,
+			rows: 3,
+		},
+	},
+	status: {
+		"ui:widget": "radio",
+		"ui:options": {
+			tooltip: "",
+		},
+	},
+	createdAt: {
+		"ui:widget": "date",
+		"ui:options": {
+			tooltip: "",
+		},
+	},
+	id: {
+		"ui:options": {
+			tooltip: "",
+		},
+	},
+	author: {
+		"ui:options": {
+			tooltip: "",
+		},
+	},
+};
+
+const templates: Partial<TemplatesType> = {
+	ObjectFieldTemplate: RJSFObjectFieldTemplate,
+	// FieldTemplate: RJSFFieldTemplate,
 };
 
 const widgets: RegistryWidgetsType = {
@@ -92,11 +137,16 @@ const widgets: RegistryWidgetsType = {
 
 const initialFormData: FormData = {
 	calculationName: "",
+	rfd: "Отсутствует",
 	streamExecutor: "",
-	department: "",
+	department: [],
+	customerName: "",
+	comment: "",
+	relatedModels: [],
+	status: "Активна",
+	createdAt: new Date().toISOString().split("T")[0],
 	id: "",
 	author: "",
-	relatedModels: [],
 };
 
 export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
@@ -108,39 +158,55 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 				type: "string",
 				title: "Название анкеты",
 				minLength: 1,
+				maxLength: 150,
 			},
 			rfd: {
 				type: "string",
 				title: "RFD",
+				minLength: 8,
+				maxLength: 19,
+				// pattern: "^(RFD-\\d{4,15})?$",
 			},
 			streamExecutor: {
 				type: "string",
 				title: "Стрим-исполнитель",
-				enum: [],
+				enum: ["Стрим 1", "Стрим 2", "Стрим 3", "Стрим 4", "Стрим 5"],
 				minLength: 1,
 			},
 			department: {
-				type: "string",
+				type: "array",
 				title: "Департамент заказчика",
-				enum: [],
-				minLength: 1,
+				items: {
+					type: "string",
+					enum: [
+						"Департамент разработки",
+						"Департамент аналитики",
+						"Департамент тестирования",
+						"Департамент продаж",
+						"Департамент маркетинга",
+					],
+				},
+				uniqueItems: true,
+				minItems: 1,
 			},
 			customerName: {
 				type: "string",
 				title: "ФИО заказчика",
+				maxLength: 150,
 			},
 			// relatedModels: {
 			// 	type: "array",
 			// 	title: "Связанные модели",
 			// 	items: {
 			// 		type: "string",
-			// 		enum: [],
 			// 	},
 			// 	uniqueItems: true,
+			// 	maxItems: 99,
 			// },
 			comment: {
 				type: "string",
 				title: "Комментарий",
+				maxLength: 250,
 			},
 			...(isCreate
 				? {}
@@ -148,20 +214,24 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 						id: {
 							type: "string",
 							title: "ID",
+							readOnly: true,
 						},
 						author: {
 							type: "string",
 							title: "Автор",
+							readOnly: true,
 						},
 						status: {
 							type: "string",
 							title: "Статус заявки",
 							enum: ["Активна", "Завершена"],
+							readOnly: true,
 						},
 						createdAt: {
 							type: "string",
 							title: "Дата создания",
 							format: "date",
+							readOnly: true,
 						},
 					}),
 		},

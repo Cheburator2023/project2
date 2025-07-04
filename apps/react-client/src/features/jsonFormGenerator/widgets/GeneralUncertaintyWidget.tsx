@@ -15,9 +15,9 @@ import {
 	ListItemSecondaryAction,
 	ListItemText,
 	Stack,
-	TextField,
 	Typography,
 } from "@mui/material";
+import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import { WidgetProps } from "@rjsf/utils";
 import React, { useEffect, useRef, useState } from "react";
 
@@ -195,7 +195,7 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 				)}
 
 				{/* Summary input */}
-				<TextField
+				<TextFieldCustom
 					value={getSummaryText()}
 					disabled
 					fullWidth
@@ -298,7 +298,7 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 							<Typography variant="subtitle2" gutterBottom>
 								Вероятность:
 							</Typography>
-							<TextField
+							<TextFieldCustom
 								select
 								value={probability}
 								onChange={(e) => setProbability(e.target.value)}
@@ -314,7 +314,7 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 										{option}
 									</option>
 								))}
-							</TextField>
+							</TextFieldCustom>
 						</FormControl>
 
 						{/* Influence select */}
@@ -322,7 +322,7 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 							<Typography variant="subtitle2" gutterBottom>
 								Влияние:
 							</Typography>
-							<TextField
+							<TextFieldCustom
 								select
 								value={influence}
 								onChange={(e) => setInfluence(e.target.value)}
@@ -338,7 +338,7 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 										{option}
 									</option>
 								))}
-							</TextField>
+							</TextFieldCustom>
 						</FormControl>
 					</Stack>
 				</DialogContent>

@@ -1,18 +1,23 @@
-import { InputAdornment, TextField } from "@mui/material";
+import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
+import { InputAdornment, InputLabel, Tooltip } from "@mui/material";
+import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
+import { Flex } from "@react-client/common/primitives/Flex";
 import { WidgetProps } from "@rjsf/utils";
 import React from "react";
 
-const NumberInputWidget: React.FC<WidgetProps> = ({
-	id,
-	value,
-	onChange,
-	disabled,
-	readonly,
-	schema,
-	required,
-	label,
-	uiSchema,
-}) => {
+const NumberInputWidget: React.FC<WidgetProps> = (props) => {
+	const {
+		id,
+		value,
+		onChange,
+		disabled,
+		readonly,
+		schema,
+		required,
+		label,
+		uiSchema,
+		options,
+	} = props;
 	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const inputValue = event.target.value;
 
@@ -43,7 +48,7 @@ const NumberInputWidget: React.FC<WidgetProps> = ({
 	const suffix = uiSchema?.["ui:options"]?.suffix as string | undefined;
 
 	return (
-		<TextField
+		<TextFieldCustom
 			id={id}
 			type="number"
 			value={value ?? ""}
@@ -51,6 +56,24 @@ const NumberInputWidget: React.FC<WidgetProps> = ({
 			disabled={disabled || readonly}
 			required={required}
 			label={label}
+			slots={{
+				inputLabel: (props) =>
+					options.tooltip ? (
+						<Flex gap={6}>
+							<InputLabel {...props} />
+							<Tooltip title={options.tooltip} placement="top-start">
+								<InfoOutlineIcon
+									sx={{
+										scale: 0.8,
+										color: "#88888877",
+									}}
+								/>
+							</Tooltip>
+						</Flex>
+					) : (
+						<InputLabel {...props} />
+					),
+			}}
 			InputProps={{
 				startAdornment: prefix ? (
 					<InputAdornment position="start">{prefix}</InputAdornment>

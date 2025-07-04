@@ -1,11 +1,11 @@
-import { TextField } from "@mui/material";
+import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import { WidgetProps } from "@rjsf/utils";
 import React from "react";
 import NumberInputWidget from "./NumberInputWidget";
 
 const widgetMap: Record<string, any> = {
 	NumberInputWidget,
-	TextField,
+	TextFieldCustom,
 	// Add more widgets as needed
 };
 
@@ -108,7 +108,7 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 		}, [valueToSet, value, onChange]);
 		if (widgetType === "TextField") {
 			return (
-				<TextField
+				<TextFieldCustom
 					value={valueToSet}
 					disabled
 					fullWidth
@@ -120,7 +120,7 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 		}
 		// Fallback to disabled text field
 		return (
-			<TextField
+			<TextFieldCustom
 				value={valueToSet}
 				disabled
 				fullWidth
@@ -141,7 +141,7 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 			}
 		}, [disabledValue, value, onChange]);
 		return (
-			<TextField
+			<TextFieldCustom
 				value={disabledValue}
 				disabled
 				fullWidth

@@ -22,8 +22,8 @@ export const AnketaCreatePage = () => {
 	} = useAnketaCRUDFormsStore();
 
 	const stateBasicForm = anketaCreate_basicInfoForm.state;
-	console.log("🚀 ~ AnketaCreatePage ~ stateBasicForm:", stateBasicForm);
 	const stateProjectAssessmentForm = anketaCreate_projectAssessmentForm.state;
+
 	const { mutate: createCalculationMutation, isPending } =
 		useCalculationControllerCreate();
 

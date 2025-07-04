@@ -1,7 +1,8 @@
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
+import { MultiSelectAutocompleteWidget } from "@react-client/common/forms/widgets/MultiSelectAutocompleteWidget";
+import { RJSFObjectFieldTemplate } from "@react-client/common/forms/widgets/RJSFObjectFieldTemplate";
+import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
-import { MultiSelectAutocompleteWidget } from "@react-client/features/anketaCRUD/molecules/MultiSelectAutocompleteWidget";
-import { RJSFObjectFieldTemplate } from "@react-client/features/anketaCRUD/molecules/RJSFObjectFieldTemplate";
 import {
 	AnketaCRUDFormNames,
 	useAnketaCRUDFormsStore,
@@ -29,9 +30,11 @@ const templates: Partial<TemplatesType> = {
 };
 
 const widgets = {
+	TextWidget: TextFieldCustomWidget,
+	SelectWidget: (props: any) => <TextFieldCustomWidget {...props} select />,
+	NumberInputWidget,
 	AlgorithmComplexityWidget,
 	GeneralUncertaintyWidget,
-	NumberInputWidget,
 	UniversalDependencyWidget,
 	MultiSelectAutocompleteWidget,
 };

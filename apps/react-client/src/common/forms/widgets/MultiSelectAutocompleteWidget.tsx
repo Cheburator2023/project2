@@ -1,5 +1,6 @@
 import Autocomplete from "@mui/material/Autocomplete";
 import TextField from "@mui/material/TextField";
+import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import type { WidgetProps } from "@rjsf/utils";
 import type React from "react";
 
@@ -29,7 +30,7 @@ export const MultiSelectAutocompleteWidget = ({
 			disabled={disabled}
 			readOnly={readonly}
 			renderInput={(params) => (
-				<TextField
+				<TextFieldCustom
 					{...params}
 					label={label}
 					required={required}

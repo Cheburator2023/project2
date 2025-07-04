@@ -4,9 +4,9 @@ import {
 	MenuItem,
 	Select,
 	Stack,
-	TextField,
 	Typography,
 } from "@mui/material";
+import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import { WidgetProps } from "@rjsf/utils";
 import React, { useEffect, useRef } from "react";
 
@@ -103,7 +103,7 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 				<Typography variant="subtitle1" gutterBottom>
 					Сложность алгоритма / тип ML задачи
 				</Typography>
-				<TextField
+				<TextFieldCustom
 					value={getSummaryText()}
 					disabled
 					fullWidth

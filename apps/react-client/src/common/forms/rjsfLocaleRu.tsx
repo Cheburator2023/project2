@@ -51,6 +51,15 @@ function localize_ru(errors: null | ErrorObject[] = []) {
 				outMessage = `Должно быть равно ${error.params.const}`;
 				break;
 			}
+			case "additionalProperties": {
+				outMessage = `Должно быть равно ${error.params.additionalProperties}`;
+				break;
+			}
+			case "minItems": {
+				console.log("🚀 ~ errors.forEach ~ params:", error);
+				outMessage = `Минимальное количество элементов ${error.params.limit}`;
+				break;
+			}
 			default:
 				outMessage = error.message || "Произошла ошибка валидации";
 		}

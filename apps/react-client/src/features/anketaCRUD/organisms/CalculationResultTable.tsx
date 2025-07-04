@@ -64,7 +64,6 @@ const processStageResults = (
 	stageResults: StageValues,
 	stageBaseValues: StageValues,
 ): EpicData[] => {
-	console.log("🚀 ~ stageResults:", stageResults);
 	// Convert store data to array format
 	const stageEntries = Object.entries(stageResults).map(([key, score]) => {
 		const stageBaseValue = stageBaseValues[key as keyof StageValues];
