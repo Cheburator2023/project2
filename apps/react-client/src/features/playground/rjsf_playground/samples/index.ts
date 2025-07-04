@@ -1,4 +1,3 @@
-import type { Sample } from "./Sample";
 import additionalProperties from "./additionalProperties";
 import allOf from "./allOf";
 import alternatives from "./alternatives";
@@ -30,6 +29,7 @@ import ordering from "./ordering";
 import patternProperties from "./patternProperties";
 import propertyDependencies from "./propertyDependencies";
 import references from "./references";
+import type { Sample } from "./Sample";
 import schemaDependencies from "./schemaDependencies";
 import simple from "./simple";
 import single from "./single";

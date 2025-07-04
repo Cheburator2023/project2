@@ -5,37 +5,36 @@ import {
 	IconButton,
 	Paper,
 	type PaperProps,
-	Typography,
 	styled,
+	Typography,
 } from "@mui/material";
+import { usePageLocalStorage } from "@react-client/common/hooks/usePageLocalStorage";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useState } from "react";
 
-const headerH = 30;
+const headerH = 20;
 
-export const Card = (
-	props: PaperProps & {
-		maxHeight?: string;
-		height?: string;
-		padding?: string;
-		width?: string;
-		header?: any;
-		onClose?: any;
-		overflow?: boolean;
-		zoom?: number;
-	},
-) => {
+const CardWithZoom = (props: CardWithZoomProps) => {
 	const { maxHeight, overflow = true } = props;
-	const [visible, setVisible] = useState(true);
-	const [_zoom, setZoom] = useState(props.zoom || 1);
+	const [visible, _setVisible] = useState(true);
+	const {
+		data: __zoom,
+		setValue: setZoom,
+		clearValue,
+	} = usePageLocalStorage<string>(
+		`ls_card_${props.uuid}`,
+		(props.zoom || 1).toString(),
+	);
+
+	const _zoom = Number.parseFloat(__zoom || "1");
 
 	const handler = () => {
 		props.onClose();
 	};
 
 	const zoomHandler = (fract: number) => {
-		setZoom(_zoom + fract);
+		setZoom((_zoom + fract).toString());
 	};
 
 	return (
@@ -50,7 +49,6 @@ export const Card = (
 			}}
 			variant="outlined"
 			{...props}
-			data-test-id="card--MUIPaperStyled-0"
 		>
 			{(props.header || props.onClose) && (
 				<Flex
@@ -59,38 +57,35 @@ export const Card = (
 					width="100%"
 					as="header"
 					style={{ height: `${headerH}px` }}
-					data-test-id="card--Flex-0"
 				>
 					{props.header && (
-						<Typography variant="h6" data-test-id="card--Typography-0">
-							{props.header}
+						<Typography variant="body1">
+							<b>{props.header}</b>
 						</Typography>
 					)}
-					{props.zoom && (
-						<ButtonGroup variant="outlined" size="small">
-							<Button
-								onClick={() => zoomHandler(-0.1)}
-								sx={{
-									minWidth: "30px !important",
-									height: "26px",
-								}}
-							>
-								<b>-</b>
-							</Button>
-							<Button
-								onClick={() => zoomHandler(0.1)}
-								sx={{
-									minWidth: "30px !important",
-									height: "26px",
-								}}
-							>
-								<b>+</b>
-							</Button>
-						</ButtonGroup>
-					)}
+					<ButtonGroup variant="text" size="small">
+						<Button
+							onClick={() => zoomHandler(-0.1)}
+							sx={{
+								minWidth: "30px !important",
+								height: "26px",
+							}}
+						>
+							<b>-</b>
+						</Button>
+						<Button
+							onClick={() => zoomHandler(0.1)}
+							sx={{
+								minWidth: "30px !important",
+								height: "26px",
+							}}
+						>
+							<b>+</b>
+						</Button>
+					</ButtonGroup>
 					{props.onClose && (
-						<IconButton onClick={handler} data-test-id="card--IconButton-0">
-							<CloseIcon data-test-id="card--CloseIcon-0" />
+						<IconButton onClick={handler}>
+							<CloseIcon />
 						</IconButton>
 					)}
 				</Flex>
@@ -106,7 +101,6 @@ export const Card = (
 					width: "inherit",
 					zoom: _zoom,
 				}}
-				data-test-id="card--div-0"
 			>
 				{props.children}
 			</div>
@@ -114,7 +108,90 @@ export const Card = (
 	);
 };
 
-const MUIPaperStyled = styled(Paper)<any>`
+const CardWithoutZoom = (props: BaseCardProps) => {
+	const { maxHeight, overflow = true } = props;
+	const [visible, _setVisible] = useState(true);
+
+	const handler = () => {
+		props.onClose();
+	};
+
+	return (
+		<MUIPaperStyled
+			sx={{
+				padding: props.padding || "10px 7px 10px 11px",
+				maxHeight: maxHeight || "100%",
+				height: props.height || "auto",
+				width: props.width,
+				display: visible ? "block" : "none",
+				...props.sx,
+			}}
+			variant="outlined"
+			{...props}
+		>
+			{(props.header || props.onClose) && (
+				<Flex
+					justifyContent="space-between"
+					alignItems="center"
+					width="100%"
+					as="header"
+					style={{ height: `${headerH}px` }}
+				>
+					{props.header && <Typography variant="h6">{props.header}</Typography>}
+					{props.onClose && (
+						<IconButton onClick={handler}>
+							<CloseIcon />
+						</IconButton>
+					)}
+				</Flex>
+			)}
+			{!!(props.header || props.onClose) && <Spacer space={6} />}
+			<div
+				style={{
+					height: props.header
+						? overflow
+							? `calc(100% - ${headerH + 45}px)`
+							: "inherit"
+						: "inherit",
+					width: "inherit",
+				}}
+			>
+				{props.children}
+			</div>
+		</MUIPaperStyled>
+	);
+};
+
+type BaseCardProps = PaperProps & {
+	maxHeight?: string;
+	height?: string;
+	padding?: string;
+	width?: string;
+	header?: any;
+	onClose?: any;
+	overflow?: boolean;
+};
+
+type CardWithZoomProps = BaseCardProps & {
+	zoom: number;
+	uuid: string;
+};
+
+type CardWithoutZoomProps = BaseCardProps & {
+	zoom?: never;
+	uuid?: string;
+};
+
+type CardProps = CardWithZoomProps | CardWithoutZoomProps;
+
+export const Card = (props: CardProps) => {
+	if (props.zoom !== undefined && props.uuid) {
+		return <CardWithZoom {...props} zoom={props.zoom} uuid={props.uuid} />;
+	}
+	return <CardWithoutZoom {...props} />;
+};
+
+const MUIPaperStyled = styled(Paper)`
 	pointer-events: all;
  & > div {
 	overflow: auto;

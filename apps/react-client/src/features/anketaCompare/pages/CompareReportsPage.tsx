@@ -5,7 +5,7 @@ import { Header } from "@react-client/features/navigation/organisms/Header";
 import { useSearchParams } from "react-router";
 
 export const CompareReportsPage = () => {
-	const [params] = useSearchParams();
+	const [_params] = useSearchParams();
 
 	return (
 		<div data-test-id="compare-reports-page--div-0">

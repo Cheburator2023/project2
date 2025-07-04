@@ -12,11 +12,13 @@ import { CalculationResultTable } from "./CalculationResultTable";
 export const AnketaBasicLayout = ({
 	isCreate = false,
 	isCopy,
+	isPending,
 	onSubmit,
 	formHasErrors,
 }: {
 	isCreate?: boolean;
 	isCopy?: boolean;
+	isPending?: boolean;
 	formHasErrors?: boolean;
 	onSubmit?: () => void;
 }) => {
@@ -46,6 +48,7 @@ export const AnketaBasicLayout = ({
 								height="100%"
 								padding="10px"
 								zoom={0.7}
+								uuid="anketa_basic_info_card"
 								data-test-id="anketa-basic-layout--Card-0"
 							>
 								<Spacer data-test-id="anketa-basic-layout--Spacer-0" />
@@ -65,6 +68,7 @@ export const AnketaBasicLayout = ({
 								height="100%"
 								padding="10px"
 								zoom={0.7}
+								uuid="anketa_calculation_result_card"
 								data-test-id="anketa-basic-layout--Card-1"
 							>
 								<Spacer data-test-id="anketa-basic-layout--Spacer-1" />
@@ -89,6 +93,7 @@ export const AnketaBasicLayout = ({
 						height="100%"
 						padding="10px"
 						zoom={0.7}
+						uuid="anketa_project_assessment_card"
 						data-test-id="anketa-basic-layout--Card-2"
 					>
 						<Spacer data-test-id="anketa-basic-layout--Spacer-2" />
@@ -101,7 +106,7 @@ export const AnketaBasicLayout = ({
 			</PanelGroup>
 			{isCreate && (
 				<>
-					<Spacer data-test-id="anketa-basic-layout--Spacer-3" />
+					<Spacer space={6} data-test-id="anketa-basic-layout--Spacer-3" />
 					<Card padding="10px" data-test-id="anketa-basic-layout--Card-3">
 						<Flex
 							justifyContent="flex-end"
@@ -111,6 +116,7 @@ export const AnketaBasicLayout = ({
 							<Button
 								variant="contained"
 								onClick={onSubmit}
+								loading={isPending}
 								data-test-id="anketa-basic-layout--Button-0"
 							>
 								Сохранить
@@ -130,12 +136,12 @@ const PanelResizeHandleStyled = styled(PanelResizeHandle)<{
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	width: 18px;
+	width: 12px;
 
 
 	svg {
 		${(props) => (props.vertical ? "transform: rotate(90deg); height: 100%;" : "width: 100%;")}
 	}
 
-	${(props) => props.vertical && "width: 100%; height: 18px;"}
+	${(props) => props.vertical && "width: 100%; height: 12px;"}
 `;

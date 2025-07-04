@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { CalculationBaseDto } from "../base/calculation-base.dto";
 import {
+	CalculationBaseDto,
 	DATA_SOURCES_COUNT_VALUES,
 	YES_NO_REQUIRED_VALUES,
 	YES_NO_VALUES,
@@ -109,7 +109,7 @@ export class CalculationResponseDto {
 
 	@ApiProperty({
 		example: "Оценка проекта для бизнеса",
-		description: "Название расчета",
+		description: "Название анкеты",
 	})
 	name: string;
 

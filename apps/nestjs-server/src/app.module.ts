@@ -3,8 +3,8 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthGuard, ResourceGuard, RoleGuard } from "nest-keycloak-connect";
-import { Calculation } from "./modules/calculation/entities/calculation.entity";
 import { CalculationModule } from "./modules/calculation/calculation.module";
+import { Calculation } from "./modules/calculation/entities/calculation.entity";
 import { KeycloakModule } from "./shared/keycloak/keycloak.module";
 import { QuestionnaireModule } from "./modules/questionnaire/questionnaire.module";
 import { QuestionnaireItemEntity } from "./modules/questionnaire/entities/questionnaire-item.entity";
@@ -45,7 +45,10 @@ import { ArtefactValueEntity } from "./modules/questionnaire/entities/artefact-v
 		CalculationModule,
 		QuestionnaireModule,
 	],
-	controllers: [],
-	providers: [],
+	providers: [
+		{ provide: APP_GUARD, useClass: AuthGuard },
+		{ provide: APP_GUARD, useClass: ResourceGuard },
+		{ provide: APP_GUARD, useClass: RoleGuard },
+	],
 })
 export class AppModule {}

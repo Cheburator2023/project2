@@ -2,14 +2,14 @@ import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import MuiDrawer, { drawerClasses } from "@mui/material/Drawer";
 import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
 import { styled, useColorScheme } from "@mui/material/styles";
+import Typography from "@mui/material/Typography";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { MenuContent } from "../molecules/MenuContent";
 import { OptionsMenu } from "../molecules/OptionsMenu";
 
-const drawerWidth = 240;
+const drawerWidth = 260;
 
 const Drawer = styled(MuiDrawer)<{ mode?: string }>(({ mode }) => {
 	return {
@@ -27,13 +27,16 @@ const Drawer = styled(MuiDrawer)<{ mode?: string }>(({ mode }) => {
 export function SideMenu({
 	open = false,
 	onLogout,
-}: { open?: boolean; onLogout?: () => void }) {
+}: {
+	open?: boolean;
+	onLogout?: () => void;
+}) {
 	const { mode, systemMode, setMode } = useColorScheme();
 	const { user } = useGlobalSettingsStore();
 	console.log("SideMenu user:", user);
 
 	return (
-		<Drawer
+		<StyledDrawer
 			variant="persistent"
 			open={open}
 			mode={mode}
@@ -116,6 +119,12 @@ export function SideMenu({
 					data-test-id="side-menu--OptionsMenu-0"
 				/>
 			</Stack>
-		</Drawer>
+		</StyledDrawer>
 	);
 }
+
+const StyledDrawer = styled(Drawer)`
+	& .smartAnketa_MuiPaper-root {
+		width: ${drawerWidth}px;
+	}
+`;

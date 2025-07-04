@@ -3,8 +3,22 @@ import * as helpers from "../calculations/coefficients";
 import * as mainStages from "../calculations/stages";
 import type { FormData } from "../types/FormData";
 
+export interface StageValues {
+	stage01: number;
+	stage02: number;
+	stage03: number;
+	stage05A: number;
+	stage05: number;
+	amlDrafting: number;
+	stage05B: number;
+	stage07: number;
+	stage09: number;
+	amlEnforcement: number;
+}
+
 interface AssessmentState {
 	formData: FormData;
+	stageBaseValues: StageValues;
 	coefficients: {
 		modelsCountCoefficient: number;
 		setupComplexityCoefficient: number;
@@ -18,26 +32,15 @@ interface AssessmentState {
 		productionAdditionalReportsCoefficient: number;
 		deploymentChannelsCoefficient: number;
 	};
-	stageResults: {
-		stage01: number;
-		stage02: number;
-		stage03: number;
-		stage05A: number;
-		stage05: number;
-		amlDrafting: number;
-		stage05B: number;
-		stage07: number;
-		stage09: number;
-		amlEnforcement: number;
-	};
+	stageResults: StageValues;
 	setFormData: (data: FormData) => void;
 	updateFormData: (updates: Partial<FormData>) => void;
 }
 
-const stageBaseValues = {
+const stageBaseValues: StageValues = {
 	stage01: 33,
 	stage02: 15,
-	stage04: 51,
+	stage03: 51,
 	stage05A: 40,
 	stage05: 37,
 	amlDrafting: 68, // AML Разработка
@@ -45,6 +48,19 @@ const stageBaseValues = {
 	stage07: 56,
 	stage09: 50,
 	amlEnforcement: 68, // AML Внедрение
+};
+
+const stageResults: StageValues = {
+	stage01: 0,
+	stage02: 0,
+	stage03: 0,
+	stage05A: 0,
+	stage05: 0,
+	amlDrafting: 0,
+	stage05B: 0,
+	stage07: 0,
+	stage09: 0,
+	amlEnforcement: 0,
 };
 
 const calculateCoefficients = (formData: FormData) => {
@@ -119,7 +135,7 @@ const calculateStageResults = (
 			formData.readyPromReports || "Нет",
 		),
 		stage03: mainStages.calculateStage03(
-			stageBaseValues.stage04,
+			stageBaseValues.stage03,
 			assessedInitiativesCount,
 			coefficients.setupComplexityCoefficient,
 			coefficients.generalUncertaintyCoefficient,
@@ -183,8 +199,9 @@ const calculateStageResults = (
 };
 
 export const assessmentCalculationsStore = create<AssessmentState>(
-	(set, get) => ({
+	(set, _get) => ({
 		formData: {} as FormData,
+		stageBaseValues,
 		coefficients: {
 			modelsCountCoefficient: 0,
 			setupComplexityCoefficient: 0,
@@ -198,18 +215,7 @@ export const assessmentCalculationsStore = create<AssessmentState>(
 			productionAdditionalReportsCoefficient: 0,
 			deploymentChannelsCoefficient: 0,
 		},
-		stageResults: {
-			stage01: 0,
-			stage02: 0,
-			stage03: 0,
-			stage05A: 0,
-			stage05: 0,
-			amlDrafting: 0,
-			stage05B: 0,
-			stage07: 0,
-			stage09: 0,
-			amlEnforcement: 0,
-		},
+		stageResults,
 		setFormData: (data: FormData) => {
 			set((state) => {
 				const newFormData = data;

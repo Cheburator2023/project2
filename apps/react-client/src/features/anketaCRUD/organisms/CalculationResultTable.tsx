@@ -1,26 +1,31 @@
-import { AgGridReact } from "ag-grid-react";
-import { useMemo, useState } from "react";
-
-import { Typography, styled, useColorScheme } from "@mui/material";
+import { styled, Typography, useColorScheme } from "@mui/material";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
-import { assessmentCalculationsStore } from "@react-client/features/jsonFormGenerator/hooks/assessmentCalculationsStore";
+import {
+	assessmentCalculationsStore,
+	StageValues,
+} from "@react-client/features/jsonFormGenerator/hooks/assessmentCalculationsStore";
 import {
 	type CellClassParams,
 	type CellStyle,
 	type ColDef,
-	type ValueFormatterParams,
 	colorSchemeDarkBlue,
 	themeQuartz,
+	type ValueFormatterParams,
 } from "ag-grid-community";
+import { AgGridReact } from "ag-grid-react";
+import { useMemo, useState } from "react";
 
 const themeQuartzDark = themeQuartz.withPart(colorSchemeDarkBlue);
 
 interface EpicData {
-	epicName: string;
+	stageName: string;
 	score: number;
-	percentFromAverage: number;
+	percentFromAverage?: number;
+	offset?: number;
+	stageBaseValue?: number;
+	disabled?: boolean;
 }
 
 interface CoefficientData {
@@ -56,31 +61,39 @@ const coefficientDisplayNames: Record<string, string> = {
 };
 
 const processStageResults = (
-	stageResults: Record<string, number>,
+	stageResults: StageValues,
+	stageBaseValues: StageValues,
 ): EpicData[] => {
+	console.log("🚀 ~ stageResults:", stageResults);
 	// Convert store data to array format
-	const stageEntries = Object.entries(stageResults).map(([key, score]) => ({
-		epicName: stageDisplayNames[key] || key,
-		score: score,
-	}));
+	const stageEntries = Object.entries(stageResults).map(([key, score]) => {
+		const stageBaseValue = stageBaseValues[key as keyof StageValues];
+
+		return {
+			stageName: stageDisplayNames[key] || key,
+			score: score,
+			disabled: score === 0,
+			stageBaseValue,
+			percentFromAverage: (score / stageBaseValue) * 100,
+			offset: ((score - stageBaseValue) / stageBaseValue) * 100,
+		};
+	});
 
 	if (stageEntries.length === 0) return [];
 
 	const totalScore = stageEntries.reduce((sum, item) => sum + item.score, 0);
-	const averageScore = totalScore / stageEntries.length;
-
-	const detailedData: EpicData[] = stageEntries.map((item) => ({
-		...item,
-		percentFromAverage: ((item.score - averageScore) / averageScore) * 100,
-	}));
+	const totalScoreBase = Object.entries(stageBaseValues).reduce(
+		(sum, [, value]) => sum + value,
+		0,
+	);
 
 	const totalRow: EpicData = {
-		epicName: "Итоговая оценка",
-		score: averageScore,
-		percentFromAverage: 0,
+		stageName: "Итоговая оценка",
+		score: totalScore,
+		stageBaseValue: totalScoreBase,
 	};
 
-	return [totalRow, ...detailedData];
+	return [totalRow, ...stageEntries];
 };
 
 const processCoefficients = (
@@ -94,13 +107,17 @@ const processCoefficients = (
 
 export const CalculationResultTable = ({
 	isCreate,
-}: { isCreate?: boolean }) => {
-	const { stageResults, coefficients } = assessmentCalculationsStore();
+}: {
+	isCreate?: boolean;
+}) => {
+	const { stageResults, coefficients, stageBaseValues } =
+		assessmentCalculationsStore();
+
 	const { setCalculationResult } = useAnketaCRUDFormsStore();
 	const { mode } = useColorScheme();
 
 	const rowData = useMemo<EpicData[]>(() => {
-		return processStageResults(stageResults);
+		return processStageResults(stageResults, stageBaseValues);
 	}, [stageResults]);
 
 	const coefficientData = useMemo<CoefficientData[]>(() => {
@@ -109,28 +126,84 @@ export const CalculationResultTable = ({
 
 	const [columnDefs] = useState<ColDef<EpicData>[]>([
 		{
-			headerName: "Эпик",
-			field: "epicName",
+			headerName: "Этапы",
+			field: "stageName",
 			flex: 2,
-			cellStyle: (params: CellClassParams<EpicData>): CellStyle | null => {
-				if (params.data?.epicName === "Итоговая оценка") {
-					return { fontWeight: "bold", fontSize: "1.1em" };
+			cellStyle: (params: CellClassParams<EpicData>): CellStyle => {
+				const style: CellStyle = {};
+
+				if (params.data?.stageName === "Итоговая оценка") {
+					style.fontWeight = "bold";
+					style.fontSize = "1.1em";
 				}
-				return null;
+
+				if (params.data?.disabled) {
+					style.opacity = 0.5;
+					style.pointerEvents = "none";
+				}
+
+				return style;
 			},
+		},
+		{
+			headerName: "Базовое значение",
+			field: "stageBaseValue",
+			flex: 1,
 		},
 		{
 			headerName: "Оценка",
 			field: "score",
 			flex: 1,
-			cellStyle: (params: CellClassParams<EpicData>): CellStyle | null => {
-				if (params.data?.epicName === "Итоговая оценка") {
-					return { fontWeight: "bold", fontSize: "1.1em" };
+			cellStyle: (params: CellClassParams<EpicData>): CellStyle => {
+				const style: CellStyle = {};
+
+				if (params.data?.stageName === "Итоговая оценка") {
+					style.fontWeight = "bold";
+					style.fontSize = "1.1em";
 				}
-				return null;
+
+				if (params.data?.disabled) {
+					style.opacity = 0.5;
+					style.pointerEvents = "none";
+				}
+
+				return style;
 			},
 			valueFormatter: (params: ValueFormatterParams<EpicData>): string => {
 				return typeof params.value === "number" ? params.value.toFixed(1) : "";
+			},
+		},
+		{
+			headerName: "Отклонение от среднего значения",
+			field: "offset",
+			flex: 1,
+			valueFormatter: (params: ValueFormatterParams<EpicData>): string => {
+				return typeof params.value === "number"
+					? `${params.value.toFixed(1)}%`
+					: "";
+			},
+			cellStyle: (params: CellClassParams<EpicData>): CellStyle => {
+				const style: CellStyle = {};
+
+				if (params.data?.stageName === "Итоговая оценка") {
+					style.fontWeight = "bold";
+					style.fontSize = "1.1em";
+				}
+
+				if (params.value != null) {
+					if (params.value > 0) {
+						style.color = "red";
+					} else if (params.value < 0) {
+						style.color = "green";
+					}
+				}
+
+				if (params.data?.disabled) {
+					style.opacity = 0.5;
+					style.pointerEvents = "none";
+				}
+
+				return style;
 			},
 		},
 		{
@@ -140,17 +213,22 @@ export const CalculationResultTable = ({
 			cellStyle: (params: CellClassParams<EpicData>): CellStyle => {
 				const style: CellStyle = {};
 
-				if (params.data?.epicName === "Итоговая оценка") {
+				if (params.data?.stageName === "Итоговая оценка") {
 					style.fontWeight = "bold";
 					style.fontSize = "1.1em";
 				}
 
 				if (params.value != null) {
 					if (params.value > 0) {
-						style.color = "green";
-					} else if (params.value < 0) {
 						style.color = "red";
+					} else if (params.value < 0) {
+						style.color = "green";
 					}
+				}
+
+				if (params.data?.disabled) {
+					style.opacity = 0.5;
+					style.pointerEvents = "none";
 				}
 
 				return style;
@@ -176,7 +254,7 @@ export const CalculationResultTable = ({
 			valueFormatter: (
 				params: ValueFormatterParams<CoefficientData>,
 			): string => {
-				return typeof params.value === "number" ? params.value.toFixed(3) : "";
+				return typeof params.value === "number" ? params.value.toFixed(1) : "";
 			},
 		},
 	]);
@@ -217,6 +295,18 @@ export const CalculationResultTable = ({
 					rowData={rowData}
 					columnDefs={columnDefs}
 					defaultColDef={defaultColDef}
+					getRowStyle={(
+						params,
+					): Record<string, string | number> | undefined => {
+						if (params.data?.disabled) {
+							return {
+								opacity: 0.5,
+								pointerEvents: "none",
+								cursor: "not-allowed",
+							};
+						}
+						return {};
+					}}
 					theme={
 						mode === "light" || mode === undefined
 							? themeQuartz

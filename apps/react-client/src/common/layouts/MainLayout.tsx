@@ -1,9 +1,4 @@
 import { styled, useColorScheme } from "@mui/material/styles";
-import type {} from "@mui/material/themeCssVarsAugmentation";
-import type {} from "@mui/x-charts/themeAugmentation";
-import type {} from "@mui/x-data-grid-pro/themeAugmentation";
-import type {} from "@mui/x-date-pickers/themeAugmentation";
-import type {} from "@mui/x-tree-view/themeAugmentation";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { SideMenu } from "../../features/navigation/organisms/SideMenu";
 import { Flex } from "../primitives/Flex";
@@ -16,7 +11,7 @@ const MainWrapper = styled("div", {
 }>(({ theme, mode }) => ({
 	flexGrow: 1,
 	minHeight: "100vh",
-	padding: "6px 12px",
+	padding: "4px",
 	transition: theme.transitions.create("margin", {
 		easing: theme.transitions.easing.sharp,
 		duration: theme.transitions.duration.leavingScreen,
@@ -26,7 +21,7 @@ const MainWrapper = styled("div", {
 		display: "flex",
 		flexDirection: "column",
 	},
-	marginLeft: `-${240}px`,
+	marginLeft: `-${260}px`,
 	variants: [
 		{
 			props: ({ open }) => open,

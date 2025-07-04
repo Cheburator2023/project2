@@ -6,6 +6,11 @@ import { AppModule } from "./app.module";
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
 
+	app.enableCors({
+		origin: "*",
+		credentials: true,
+	});
+
 	app.useGlobalPipes(
 		new ValidationPipe({
 			transform: true,
@@ -40,7 +45,7 @@ async function bootstrap() {
 
 	SwaggerModule.setup("api", app, document);
 
-	app.getHttpAdapter().get("/api-json", (req, res) => {
+	app.getHttpAdapter().get("/api-json", (_req, res) => {
 		res.setHeader("Content-Type", "application/json");
 		res.send(document);
 	});

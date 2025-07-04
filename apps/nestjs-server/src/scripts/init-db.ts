@@ -1,6 +1,6 @@
-import { resolve } from "path";
 import { ConfigService } from "@nestjs/config";
 import { config } from "dotenv";
+import { resolve } from "path";
 import { DataSource } from "typeorm";
 
 config({ path: resolve(__dirname, "../../.env") });

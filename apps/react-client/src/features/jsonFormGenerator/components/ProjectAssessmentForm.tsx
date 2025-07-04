@@ -1,30 +1,25 @@
-import { withTheme } from "@rjsf/core";
-import type FormRef from "@rjsf/core";
-
-import type { IChangeEvent } from "@rjsf/core";
-import { Theme as MuiTheme } from "@rjsf/mui";
-import type { RJSFSchema, TemplatesType } from "@rjsf/utils";
-import type React from "react";
-import { useRef, useState } from "react";
-
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
-
+import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
+import { MultiSelectAutocompleteWidget } from "@react-client/features/anketaCRUD/molecules/MultiSelectAutocompleteWidget";
+import { RJSFObjectFieldTemplate } from "@react-client/features/anketaCRUD/molecules/RJSFObjectFieldTemplate";
 import {
 	AnketaCRUDFormNames,
 	useAnketaCRUDFormsStore,
 } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
-
-import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
-import { MultiSelectAutocompleteWidget } from "@react-client/features/anketaCRUD/molecules/MultiSelectAutocompleteWidget";
-import { RJSFObjectFieldTemplate } from "@react-client/features/anketaCRUD/molecules/RJSFObjectFieldTemplate";
 import { assessmentCalculationsStore } from "@react-client/features/jsonFormGenerator/hooks/assessmentCalculationsStore";
+import type FormRef from "@rjsf/core";
+import type { IChangeEvent } from "@rjsf/core";
+import { withTheme } from "@rjsf/core";
+import { Theme as MuiTheme } from "@rjsf/mui";
+import type { RJSFSchema, TemplatesType } from "@rjsf/utils";
+import type React from "react";
+import { useRef, useState } from "react";
 import schema from "../schemas/calc_schema.json";
-import uiSchema from "../schemas/calc_uiSchema";
+import { calc_uiSchema } from "../schemas/calc_uiSchema";
 import type { FormData } from "../types/FormData";
 import AlgorithmComplexityWidget from "../widgets/AlgorithmComplexityWidget";
 import GeneralUncertaintyWidget from "../widgets/GeneralUncertaintyWidget";
 import NumberInputWidget from "../widgets/NumberInputWidget";
-import ProductionDeploymentChannelsWidget from "../widgets/ProductionDeploymentChannelsWidget";
 import UniversalDependencyWidget from "../widgets/UniversalDependencyWidget";
 
 const Form = withTheme(MuiTheme);
@@ -36,7 +31,6 @@ const templates: Partial<TemplatesType> = {
 const widgets = {
 	AlgorithmComplexityWidget,
 	GeneralUncertaintyWidget,
-	ProductionDeploymentChannelsWidget,
 	NumberInputWidget,
 	UniversalDependencyWidget,
 	MultiSelectAutocompleteWidget,
@@ -113,14 +107,14 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 		console.log("Form errors:", errors);
 	};
 
-	const onBlur = (id: string, data: any) => {
+	const _onBlur = (id: string, data: any) => {
 		console.log("Form onBlur:", id, data);
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}
 	};
 
-	const onFocus = (id: string, data: any) => {
+	const _onFocus = (id: string, data: any) => {
 		console.log("Form onFocus:", id, data);
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
@@ -132,7 +126,7 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 			<Form
 				ref={formRef}
 				schema={schema as RJSFSchema}
-				uiSchema={uiSchema}
+				uiSchema={calc_uiSchema}
 				validator={validatorRu}
 				widgets={widgets}
 				formData={formData}
