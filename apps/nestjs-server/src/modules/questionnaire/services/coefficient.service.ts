@@ -17,24 +17,20 @@ export class CoefficientService {
     }
 
     async findByCode(code: string): Promise<CoefficientEntity | null> {
+        const cleanCode = code.replace(/^"+|"+$/g, '');
         return this.repository.findOne({
-            where: { code, isActive: true } as FindOptionsWhere<CoefficientEntity>,
-        });
-    }
-
-    async findById(id: string): Promise<CoefficientEntity | null> {
-        return this.repository.findOne({
-            where: { id, isActive: true } as FindOptionsWhere<CoefficientEntity>,
+            where: { code: cleanCode, isActive: true } as FindOptionsWhere<CoefficientEntity>,
         });
     }
 
     async getCoefficientValue(code: string, inputValue?: any): Promise<number> {
-        const coefficient = await this.findByCode(code);
+        const cleanCode = code.replace(/^"+|"+$/g, '');
+        const coefficient = await this.findByCode(cleanCode);
+
         if (!coefficient) {
-            throw new Error(`Coefficient with code ${code} not found`);
+            throw new Error(`Coefficient with code ${cleanCode} not found`);
         }
 
-        // Apply conditions if they exist
         if (coefficient.conditions) {
             if (coefficient.conditions.default && !inputValue) {
                 return coefficient.conditions.default;
@@ -45,10 +41,14 @@ export class CoefficientService {
             }
 
             if (coefficient.conditions.formula) {
-                // Implement formula evaluation (simplified example)
-                const formula = coefficient.conditions.formula
-                    .replace('value', inputValue);
-                return eval(formula); // Note: In production, use a safer formula evaluator
+                try {
+                    const value = parseFloat(inputValue) || 0;
+                    const formula = coefficient.conditions.formula
+                        .replace('value', value.toString());
+                    return eval(formula);
+                } catch {
+                    return coefficient.baseValue;
+                }
             }
         }
 

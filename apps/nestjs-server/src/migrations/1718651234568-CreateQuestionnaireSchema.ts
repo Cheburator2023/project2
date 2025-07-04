@@ -204,10 +204,10 @@ export class CreateQuestionnaireSchema1718651234568 implements MigrationInterfac
                    (uuid_generate_v4(), 'Коэффициент AutoML (Не требуется)', 'autoMLRequired_Не требуется', 0.0, null,
                     'Использование AutoML не требуется'),
 
-                   (uuid_generate_v4(), 'Коэффициент риска 5.1', 'risk_5.1', 0.1,
+                   (uuid_generate_v4(), 'Коэффициент риска 5.1', 'risk_5_1', 0.1,
                     '{"conditions": [{"field": "initiativeTimeline", "value": "Более 18 мес."}, {"field": "initiativeCost", "value": "От 2 млрд."}]}',
                     'Коэффициент для риска изменения бизнес-процессов'),
-                   (uuid_generate_v4(), 'Коэффициент риска 5.2', 'risk_5.2', 0.07,
+                   (uuid_generate_v4(), 'Коэффициент риска 5.2', 'risk_5_2', 0.07,
                     '{"conditions": [{"field": "initiativeTimeline", "value": "10-18 мес."}, {"field": "initiativeCost", "value": "870 млн. - 2 млрд."}]}',
                     'Коэффициент для риска дефектов во внедряемом ПО');
         `);
