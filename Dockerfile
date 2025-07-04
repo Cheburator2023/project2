@@ -29,5 +29,5 @@
 #CMD ["node", "dist/main"]
 
 
-FROM docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-ui:v1.0.1
+FROM docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-ui:v1.0.2
 COPY packages/ag-grid-enterprise ./node_modules/ag-grid-enterprise
