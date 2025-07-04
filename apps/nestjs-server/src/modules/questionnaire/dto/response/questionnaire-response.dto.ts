@@ -7,7 +7,7 @@ export class DictionaryItemDto {
     @ApiProperty({ example: 'Уровень 1', description: 'Отображаемое название', required: false })
     label?: string;
 
-    @ApiProperty({ example: 1.0, description: 'Коэффициент для значения' })
+    @ApiProperty({ example: 1.0, description: 'Коэффициент для значения', required: false })
     coefficient?: number;
 
     @ApiProperty({
@@ -16,6 +16,21 @@ export class DictionaryItemDto {
         required: false
     })
     hint?: string;
+
+    @ApiProperty({
+        example: '1 + (value - 1) * 0.75',
+        description: 'Формула расчета',
+        required: false
+    })
+    formula?: string;
+
+    @ApiProperty({
+        type: 'array',
+        items: { type: 'object' },
+        description: 'Условия применения коэффициента',
+        required: false
+    })
+    conditions?: any[];
 }
 
 export class StreamAverageDto {
@@ -61,7 +76,7 @@ export class QuestionnaireResponseDto {
     lastUpdated: string;
 
     @ApiProperty({
-        example: 'admin@company.com',
+        example: 'system',
         description: 'Автор последних изменений',
         required: false
     })

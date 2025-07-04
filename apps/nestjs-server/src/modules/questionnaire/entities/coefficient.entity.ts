@@ -28,7 +28,11 @@ export class CoefficientEntity {
         description: 'Условия расчета',
         required: false
     })
-    conditions?: Record<string, any>;
+    conditions: {
+        formula?: string;
+        default?: number;
+        conditions?: any[];
+    };
 
     @Column({ type: 'text', nullable: true })
     @ApiProperty({

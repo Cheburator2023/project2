@@ -22,7 +22,7 @@ export class QuestionnaireService {
             where: { code: 'generalUncertainty', isActive: true }
         });
 
-        if (!riskItem || !riskItem.options) return [];
+        if (!riskItem?.options) return [];
 
         try {
             const options = JSON.parse(JSON.stringify(riskItem.options));
@@ -30,15 +30,18 @@ export class QuestionnaireService {
                 where: { code: 'risk_%' }
             });
 
-            return options.map((option: any) => {
-                const coeff = riskCoefficients.find(c => c.code === `risk_${option.value}`);
-                return {
-                    value: option.value,
-                    label: option.label,
-                    hint: option.hint,
-                    coefficient: coeff?.baseValue || 0
-                };
-            });
+        return riskItem.options.map((option: any) => {
+            const cleanValue = option.value.replace('.', '_');
+            const coeff = riskCoefficients.find(c => c.code === `risk_${cleanValue}`);
+
+            return {
+                value: cleanValue,
+                label: option.label,
+                hint: option.hint,
+                coefficient: coeff?.baseValue || 0,
+                conditions: coeff?.conditions?.conditions || []
+            };
+        });
         } catch (e) {
             return [];
         }
@@ -46,13 +49,8 @@ export class QuestionnaireService {
 
     async getFullQuestionnaire(): Promise<QuestionnaireResponseDto> {
         const [items, coefficients, streamAverages] = await Promise.all([
-            this.questionnaireItemRepo.find({
-                where: { isActive: true },
-                order: { order: 'ASC' }
-            }),
-            this.coefficientRepo.find({
-                where: { isActive: true }
-            }),
+            this.questionnaireItemRepo.find({ where: { isActive: true }, order: { order: 'ASC' } }),
+            this.coefficientRepo.find({ where: { isActive: true } }),
             this.streamAverageRepo.find()
         ]);
 
@@ -61,6 +59,17 @@ export class QuestionnaireService {
         for (const item of items) {
             if (item.fieldType === 'risk') {
                 dictionaries[item.code] = await this.getRiskItems();
+                continue;
+            }
+
+            if (item.fieldType === 'number') {
+                const coeff = coefficients.find(c => c.code === item.code);
+                dictionaries[item.code] = [{
+                    value: null,
+                    coefficient: coeff?.baseValue,
+                    hint: item.description || '',
+                    formula: coeff?.conditions?.formula
+                }];
                 continue;
             }
 

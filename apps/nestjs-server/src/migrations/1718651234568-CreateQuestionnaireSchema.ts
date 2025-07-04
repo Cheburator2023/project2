@@ -53,7 +53,7 @@ export class CreateQuestionnaireSchema1718651234568 implements MigrationInterfac
 
         // 4. Заполнение таблицы элементов опросника
         await queryRunner.query(`
-            INSERT INTO questionnaire_item 
+            INSERT INTO questionnaire_item
             (id, name, code, description, "isRequired", "fieldType", options, "order")
             VALUES (uuid_generate_v4(), 'Количество моделей', 'modelsCount',
                     'Количество моделей (>1 для каскадов и ансамблей моделей)', true, 'number', null, 1),
@@ -128,12 +128,20 @@ export class CreateQuestionnaireSchema1718651234568 implements MigrationInterfac
                     true, 'select',
                     '[{"value": "Да", "hint": "Требуется использование AutoML"}, 
                       {"value": "Не требуется", "hint": "Использование AutoML не требуется"}]',
-                    9);
+                    9),
+                
+                   (uuid_generate_v4(), 'Количество инициатив', 'initiativesCount', 'Количество оцениваемых инициатив',
+                    true, 'number', null, 10),
+
+                   (uuid_generate_v4(), 'Пилотная модель', 'pilotModelRequired',
+                    'Необходимость реализации пилотной модели', true, 'select',
+                    '[{"value": "Да", "hint": "Требуется разработка пилотной модели"}, 
+                      {"value": "Нет", "hint": "Пилотная модель не требуется"}]', 11)
         `);
 
         // 5. Заполнение таблицы коэффициентов
         await queryRunner.query(`
-            INSERT INTO coefficient 
+            INSERT INTO coefficient
                 (id, name, code, "baseValue", conditions, description)
             VALUES (uuid_generate_v4(), 'Коэффициент количества моделей', 'modelsCount', 1.0,
                     '{"default": 1, "formula": "1 + (value - 1) * 0.75"}', 'Коэффициент для учета количества моделей'),
@@ -209,12 +217,18 @@ export class CreateQuestionnaireSchema1718651234568 implements MigrationInterfac
                     'Коэффициент для риска изменения бизнес-процессов'),
                    (uuid_generate_v4(), 'Коэффициент риска 5.2', 'risk_5_2', 0.07,
                     '{"conditions": [{"field": "initiativeTimeline", "value": "10-18 мес."}, {"field": "initiativeCost", "value": "870 млн. - 2 млрд."}]}',
-                    'Коэффициент для риска дефектов во внедряемом ПО');
+                    'Коэффициент для риска дефектов во внедряемом ПО',
+                    (uuid_generate_v4(), 'Коэффициент риска 5.3', 'risk_5_3', 0.05,
+                     '{"conditions": [{"field": "initiativeTimeline", "value": "4-10 мес."}]}',
+                     'Коэффициент для недостатков коммуникаций'),
+                    (uuid_generate_v4(), 'Коэффициент риска 5.4', 'risk_5_4', 0.04,
+                     '{"conditions": [{"field": "initiativeCost", "value": "438-870 млн."}]}',
+                     'Коэффициент для увеличения трудозатрат'));
         `);
 
         // 6. Заполнение таблицы средних значений по стримам
         await queryRunner.query(`
-            INSERT INTO stream_average 
+            INSERT INTO stream_average
                 (id, "epicName", "averageValue", description)
             VALUES (uuid_generate_v4(), '01. Постановка задачи', 15.5, 'Этап постановки задачи'),
                    (uuid_generate_v4(), '02. Поиск данных', 20.0, 'Этап поиска и сбора данных'),
