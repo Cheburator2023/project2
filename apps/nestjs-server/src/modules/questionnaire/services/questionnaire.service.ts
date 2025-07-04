@@ -5,6 +5,7 @@ import { CoefficientEntity } from "../entities/coefficient.entity";
 import { QuestionnaireItemEntity } from "../entities/questionnaire-item.entity";
 import { StreamAverageEntity } from "../entities/stream-average.entity";
 import { DictionaryItemDto, QuestionnaireResponseDto, StreamAverageDto } from "../dto/response/questionnaire-response.dto";
+import {ReferenceDataService} from "./reference-data.service";
 
 @Injectable()
 export class QuestionnaireService {
@@ -15,6 +16,7 @@ export class QuestionnaireService {
         private readonly coefficientRepo: Repository<CoefficientEntity>,
         @InjectRepository(StreamAverageEntity)
         private readonly streamAverageRepo: Repository<StreamAverageEntity>,
+        private readonly referenceDataService: ReferenceDataService,
     ) {}
 
     private async getRiskItems(): Promise<DictionaryItemDto[]> {
@@ -48,10 +50,11 @@ export class QuestionnaireService {
     }
 
     async getFullQuestionnaire(): Promise<QuestionnaireResponseDto> {
-        const [items, coefficients, streamAverages] = await Promise.all([
+        const [items, coefficients, streamAverages, referenceData] = await Promise.all([
             this.questionnaireItemRepo.find({ where: { isActive: true }, order: { order: 'ASC' } }),
             this.coefficientRepo.find({ where: { isActive: true } }),
-            this.streamAverageRepo.find()
+            this.streamAverageRepo.find(),
+            this.referenceDataService.getReferenceData()
         ]);
 
         const dictionaries: Record<string, DictionaryItemDto[]> = {};
@@ -115,7 +118,8 @@ export class QuestionnaireService {
             lastUpdated: new Date().toISOString(),
             author: "system",
             dictionaries,
-            streamAverages: streamAveragesDto
+            streamAverages: streamAveragesDto,
+            referenceData
         };
     }
 

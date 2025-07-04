@@ -6,7 +6,10 @@ import { CoefficientEntity } from "./entities/coefficient.entity";
 import { QuestionnaireItemEntity } from "./entities/questionnaire-item.entity";
 import { CoefficientService } from "./services/coefficient.service";
 import { QuestionnaireService } from "./services/questionnaire.service";
+import { ReferenceDataService } from "./services/reference-data.service";
 import {StreamAverageEntity} from "./entities/stream-average.entity";
+import {ArtefactValueEntity} from "./entities/artefact-value.entity";
+
 
 @Module({
     imports: [
@@ -14,6 +17,7 @@ import {StreamAverageEntity} from "./entities/stream-average.entity";
             QuestionnaireItemEntity,
             CoefficientEntity,
             StreamAverageEntity,
+            ArtefactValueEntity,
         ]),
     ],
     controllers: [
@@ -23,6 +27,7 @@ import {StreamAverageEntity} from "./entities/stream-average.entity";
     providers: [
         QuestionnaireService,
         CoefficientService,
+        ReferenceDataService,
     ],
     exports: [
         QuestionnaireService,

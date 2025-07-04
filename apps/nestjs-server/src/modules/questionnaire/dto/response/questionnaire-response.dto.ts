@@ -1,4 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
+import {ReferenceDataDto} from "./reference-data.dto";
 
 export class DictionaryItemDto {
     @ApiProperty({ example: 1, description: 'Значение опции' })
@@ -97,4 +98,10 @@ export class QuestionnaireResponseDto {
         description: 'Средние значения по этапам'
     })
     streamAverages: StreamAverageDto;
+
+    @ApiProperty({
+        type: ReferenceDataDto,
+        description: 'Справочные данные (Стрим-исполнитель и Департамент заказчика)'
+    })
+    referenceData: ReferenceDataDto;
 }

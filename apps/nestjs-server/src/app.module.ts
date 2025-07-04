@@ -9,7 +9,8 @@ import { KeycloakModule } from "./shared/keycloak/keycloak.module";
 import { QuestionnaireModule } from "./modules/questionnaire/questionnaire.module";
 import { QuestionnaireItemEntity } from "./modules/questionnaire/entities/questionnaire-item.entity";
 import { CoefficientEntity } from "./modules/questionnaire/entities/coefficient.entity";
-import {StreamAverageEntity} from "./modules/questionnaire/entities/stream-average.entity";
+import { StreamAverageEntity } from "./modules/questionnaire/entities/stream-average.entity";
+import { ArtefactValueEntity } from "./modules/questionnaire/entities/artefact-value.entity";
 
 @Module({
 	imports: [
@@ -32,7 +33,8 @@ import {StreamAverageEntity} from "./modules/questionnaire/entities/stream-avera
 					Calculation,
 					QuestionnaireItemEntity,
 					CoefficientEntity,
-					StreamAverageEntity
+					StreamAverageEntity,
+					ArtefactValueEntity,
 				],
 				migrations: ["dist/migrations/*.js"],
 				migrationsRun: true,
