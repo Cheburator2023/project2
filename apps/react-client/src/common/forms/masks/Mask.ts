@@ -224,21 +224,3 @@ export default class Mask extends Input<{
 		};
 	}
 }
-
-if (process.env.__OUTPUT__ === "cdn") {
-	interface Context {
-		ReactInput?: {
-			Mask?: typeof Mask & Partial<typeof utils>;
-		};
-	}
-
-	const _global: typeof globalThis & Context =
-		typeof globalThis !== "undefined" ? globalThis : global || self;
-
-	_global.ReactInput = _global.ReactInput ?? {};
-	_global.ReactInput.Mask = Mask;
-	_global.ReactInput.Mask.format = utils.format;
-	_global.ReactInput.Mask.formatToParts = utils.formatToParts;
-	_global.ReactInput.Mask.unformat = utils.unformat;
-	_global.ReactInput.Mask.generatePattern = utils.generatePattern;
-}
