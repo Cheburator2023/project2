@@ -12,7 +12,9 @@ import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { SearchInput } from "@react-client/features/navigation/organisms/SearchInput";
 import { routes } from "@react-client/routing/routes";
+// import { AllEnterpriseModule } from "ag-grid-enterprise";
 import {
+	AllCommunityModule,
 	colorSchemeDarkBlue,
 	type GridApi,
 	type GridReadyEvent,
@@ -20,14 +22,13 @@ import {
 	ModuleRegistry,
 	themeQuartz,
 } from "ag-grid-community";
-import { AllEnterpriseModule } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 
 const themeQuartzDark = themeQuartz.withPart(colorSchemeDarkBlue);
 
-ModuleRegistry.registerModules([AllEnterpriseModule]);
+ModuleRegistry.registerModules([AllCommunityModule]);
 
 const _columnDefs = [
 	{ headerName: "ID", field: "id", sortable: true, filter: true },
