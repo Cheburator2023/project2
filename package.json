@@ -67,7 +67,7 @@
 		"ag-charts-locale": "11.3.0",
 		"ag-charts-types": "11.3.0",
 		"ag-grid-community": "33.3.0",
-		"ag-grid-enterprise": "file:./packages/ag-grid-enterprise",
+		"ag-grid-enterprise": "33.3.0",
 		"ag-grid-react": "33.3.0",
 		"comlink": "4.4.2",
 		"fuzzysort": "3.1.0",
