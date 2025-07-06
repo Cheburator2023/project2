@@ -1,6 +1,5 @@
 # Base Image
-FROM docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-ui:v1.0.2 as build-deps
-
+FROM docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-frontend:v1.0.1 as build-deps
 
 # build react-client
 COPY . ./
