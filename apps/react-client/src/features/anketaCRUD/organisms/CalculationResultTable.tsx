@@ -302,8 +302,7 @@ export const CalculationResultTable = ({
 							return {
 								opacity: 0.5,
 								pointerEvents: "none",
-								// filter: "grayscale(1) blur(5px)",
-								filter: "grayscale(1)",
+								filter: "grayscale(1) blur(6px)",
 								cursor: "not-allowed",
 							};
 						}
