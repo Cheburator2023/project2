@@ -21,13 +21,13 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 		mask,
 		rawErrors,
 	} = props;
-	const isRfdField = id.includes("rfd");
+	const isRfdField = id?.includes("rfd");
 
 	const _onChange = (value: string) => {
 		if (isRfdField && value === "") {
-			onChange("Отсутствует");
+			onChange?.("Отсутствует");
 		} else {
-			onChange(value === "" ? options.emptyValue : value);
+			onChange?.(value === "" ? options.emptyValue : value);
 		}
 	};
 
@@ -35,48 +35,49 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 		target: { value },
 	}: React.FocusEvent<HTMLInputElement>) => {
 		if (isRfdField && value === "") {
-			onChange("Отсутствует");
+			onChange?.("Отсутствует");
 		}
-		onBlur(id, value);
+		onBlur?.(id, value);
 	};
 
 	const _onFocus = ({
 		target: { value },
-	}: React.FocusEvent<HTMLInputElement>) => onFocus(id, value);
+	}: React.FocusEvent<HTMLInputElement>) => onFocus?.(id, value);
 
 	const displayValue = isRfdField && value === "Отсутствует" ? "" : value || "";
 
 	const isSelect =
-		(options.enumOptions && options.enumOptions.length > 0) ||
-		options.select ||
-		props.select;
-	const optionsForSelect = options.enumOptions;
+		(options?.enumOptions && options?.enumOptions.length > 0) ||
+		options?.select ||
+		props?.select;
+	const optionsForSelect = options?.enumOptions;
+	const isDisabled = disabled || readonly;
 
 	return (
 		<TextFieldCustom
 			id={id}
 			title={id}
-			label={label || schema.title}
+			label={label || schema?.title}
 			value={displayValue}
 			required={required}
-			disabled={disabled || readonly}
+			disabled={isDisabled}
 			autoFocus={autofocus}
 			error={rawErrors && rawErrors.length > 0}
 			// helperText={rawErrors?.join(" ")}
-			onChange={(event) => _onChange(event.target.value)}
+			onChange={(event) => _onChange?.(event.target.value)}
 			onBlur={_onBlur}
 			onFocus={_onFocus}
-			mask={options.mask}
-			replacement={options.replacement}
-			prefix={options.prefix}
-			multiline={options.multiline}
+			mask={options?.mask}
+			replacement={options?.replacement}
+			prefix={options?.prefix}
+			multiline={options?.multiline}
 			select={isSelect}
 			slots={{
 				inputLabel: (props) =>
-					options.tooltip ? (
+					options?.tooltip ? (
 						<Flex gap={6}>
 							<InputLabel {...props} />
-							<Tooltip title={options.tooltip} placement="top-start">
+							<Tooltip title={options?.tooltip} placement="top-start">
 								<InfoOutlineIcon
 									sx={{
 										scale: 0.8,

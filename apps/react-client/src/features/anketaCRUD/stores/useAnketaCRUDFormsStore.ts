@@ -16,7 +16,7 @@ export enum AnketaCRUDFormNames {
 interface FormData<T> {
 	api: FormRef | undefined;
 	state?: T | {};
-	isLoading: boolean;
+	isDirty: boolean;
 }
 
 type AnketaCRUDFormsStoreType = {
@@ -35,6 +35,7 @@ interface AnketaCRUDFormsStore
 	setApiRef: (formName: FormName, api: FormRef) => void;
 	resetApiRef: (formName: FormName) => void;
 	setCalculationResult: (result: any) => void;
+	setFormDirty: (formName: FormName, isDirty: boolean) => void;
 }
 
 type AnketaCreateData = any;
@@ -44,25 +45,28 @@ export const useAnketaCRUDFormsStore = create<AnketaCRUDFormsStore>((set) => ({
 	anketaCreate_basicInfoForm: {
 		api: undefined,
 		state: undefined,
-		isLoading: false,
+		isDirty: false,
 	},
 	anketaPreview_basicInfoForm: {
 		api: undefined,
 		state: undefined,
-		isLoading: false,
+		isDirty: false,
 	},
 	anketaCreate_projectAssessmentForm: {
 		api: undefined,
 		state: undefined,
-		isLoading: false,
+		isDirty: false,
 	},
 	anketaPreview_projectAssessmentForm: {
 		api: undefined,
 		state: undefined,
-		isLoading: false,
+		isDirty: false,
 	},
 
 	calculationResult: undefined,
+
+	setFormDirty: (formName, isDirty) =>
+		set((_state) => ({ [formName]: { ..._state[formName], isDirty } })),
 
 	setCalculationResult: (result: any) =>
 		set((_state) => ({ calculationResult: result })),
