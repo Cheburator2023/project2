@@ -1,11 +1,12 @@
 import child_process from "node:child_process";
 import path from "node:path";
-import { URL, fileURLToPath } from "node:url";
+import { fileURLToPath, URL } from "node:url";
+
 import { federation } from "@module-federation/vite";
 import svgr from "@svgr/rollup";
 import react from "@vitejs/plugin-react";
 import browserslistToEsbuild from "browserslist-to-esbuild";
-import { type HttpProxy, defineConfig, loadEnv } from "vite";
+import { defineConfig, type HttpProxy, loadEnv } from "vite";
 // import { viteStaticCopy } from 'vite-plugin-static-copy';
 import checker from "vite-plugin-checker";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
@@ -35,7 +36,10 @@ const git_revision = child_process
 export const viteCommonConfig = ({
 	appName,
 	base = "/",
-}: { appName?: string; base?: string }) =>
+}: {
+	appName?: string;
+	base?: string;
+}) =>
 	defineConfig(({ mode }): any => {
 		const envDir = fileURLToPath(new URL("..", import.meta.url));
 		const env = loadEnv(mode, envDir, "");
@@ -105,11 +109,11 @@ export const viteCommonConfig = ({
 				//   targets: [{}],
 				// }),
 				checker({
-					biome: {
-						dev: {
-							logLevel: ["error"],
-						},
-					},
+					// biome: {
+					// 	dev: {
+					// 		logLevel: ["error"],
+					// 	},
+					// },
 					typescript: true,
 					overlay: {
 						initialIsOpen: false,

@@ -1,5 +1,6 @@
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
+import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
 import {
 	Button,
 	Dialog,
@@ -15,6 +16,7 @@ import {
 	ListItemSecondaryAction,
 	ListItemText,
 	Stack,
+	Tooltip,
 	Typography,
 } from "@mui/material";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
@@ -27,81 +29,25 @@ interface UncertaintyItem {
 	influence: string;
 }
 
-const uncertaintyOptions = [
-	{
-		id: "businessProcessComplexity",
-		title:
-			"Изменение, недостаточная проработка или сложности бизнес-процессов Банка",
-	},
-	{
-		id: "projectSolutionDefects",
-		title: "Наличие дефектов во внедряемом решении/ПО в рамках проекта",
-	},
-	{
-		id: "adjacentProjectsImpact",
-		title: "Негативное влияние смежных проектов на показатели проекта",
-	},
-	{
-		id: "planningRequirementGaps",
-		title:
-			"Увеличение трудозатрат проекта по причине недостаточной проработки требований на этапе планирования проекта",
-	},
-	{
-		id: "contractorPerformanceIssues",
-		title:
-			"Недобросовестное исполнение услуг со стороны привлеченных контрагентов/подрядчиков",
-	},
-	{
-		id: "qualifiedStaffShortage",
-		title: "Отсутствие квалифицированного персонала или ошибок персонала",
-	},
-	{
-		id: "sanctionsRisk",
-		title: "Введение санкционных мер и других ограничений",
-	},
-	{
-		id: "controlProceduresGaps",
-		title: "Недостаток или отсутствие контрольных процедур",
-	},
-	{
-		id: "regulatoryChanges",
-		title: "Изменение регуляторных требований",
-	},
-	{
-		id: "systemUnderutilization",
-		title: "Неиспользование ИС после завершения проекта",
-	},
-	{
-		id: "itArchitectureChanges",
-		title: "Изменение целевой ИТ архитектуры Банка",
-	},
-];
+const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
+	const { value = [], onChange, formContext, schema, required } = props;
+	const tooltips = props.options?.tooltips;
 
-const probabilityOptions = [
-	"Не применимо",
-	"Реализация не чаще 1 раза в 10 лет",
-	"Реализация 1 раз в 3-10 лет",
-	"Реализация 1 раз в 1-3 года",
-	"Реализация 1 раз в год",
-	"Реализация 1 раз в 6 мес. или чаще",
-];
+	const enums: string[] = (props?.schema?.items as any)?.properties?.type?.enum;
+	const enumNames: string[] = (props?.schema?.items as any)?.properties?.type
+		?.enumNames;
 
-const influenceOptions = [
-	"Не применимо",
-	"Незначительное",
-	"Умеренное",
-	"Существенное",
-	"Критическое",
-	"Катастрофическое",
-];
+	const uncertaintyOptions = enums?.map((enumValue, index) => ({
+		id: enumValue,
+		title: enumNames?.[index] || enumValue,
+		tooltip: tooltips?.[index] || "",
+	}));
 
-const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
-	value = [],
-	onChange,
-	formContext,
-	schema,
-	required,
-}) => {
+	const influenceOptions: string[] = (props?.schema?.items as any)?.properties
+		?.influence.enum;
+	const probabilityOptions: string[] = (props?.schema?.items as any)?.properties
+		?.probability.enum;
+
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 	const [selectedItem, setSelectedItem] = useState<string | null>(null);
 	const [probability, setProbability] = useState<string>("");
@@ -274,7 +220,7 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 							</Typography>
 							<List
 								sx={{
-									maxHeight: "200px",
+									maxHeight: "300px",
 									overflow: "auto",
 									border: "1px solid rgba(0, 0, 0, 0.12)",
 									borderRadius: 1,
@@ -288,6 +234,9 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 										onClick={() => handleItemSelect(option.id)}
 									>
 										<ListItemText primary={option.title} />
+										<Tooltip title={option.tooltip}>
+											<InfoOutlineIcon sx={{ opacity: 0.2 }} />
+										</Tooltip>
 									</ListItemButton>
 								))}
 							</List>

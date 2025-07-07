@@ -169,7 +169,7 @@ export const CalculationResultTable = ({
 				return style;
 			},
 			valueFormatter: (params: ValueFormatterParams<EpicData>): string => {
-				return typeof params.value === "number" ? params.value.toFixed(1) : "";
+				return typeof params.value === "number" ? params.value.toFixed(2) : "";
 			},
 		},
 		{
@@ -178,7 +178,7 @@ export const CalculationResultTable = ({
 			flex: 1,
 			valueFormatter: (params: ValueFormatterParams<EpicData>): string => {
 				return typeof params.value === "number"
-					? `${params.value.toFixed(1)}%`
+					? `${params.value.toFixed(2)}%`
 					: "";
 			},
 			cellStyle: (params: CellClassParams<EpicData>): CellStyle => {
@@ -218,9 +218,10 @@ export const CalculationResultTable = ({
 				}
 
 				if (params.value != null) {
-					if (params.value > 0) {
+					if (params.value > 100) {
+						console.log("🚀 ~ params.value:", params.value);
 						style.color = "red";
-					} else if (params.value < 0) {
+					} else if (params.value < 100) {
 						style.color = "green";
 					}
 				}
@@ -253,7 +254,7 @@ export const CalculationResultTable = ({
 			valueFormatter: (
 				params: ValueFormatterParams<CoefficientData>,
 			): string => {
-				return typeof params.value === "number" ? params.value.toFixed(1) : "";
+				return typeof params.value === "number" ? params.value.toFixed(2) : "";
 			},
 		},
 	]);
@@ -301,6 +302,7 @@ export const CalculationResultTable = ({
 							return {
 								opacity: 0.5,
 								pointerEvents: "none",
+								filter: "grayscale(1) blur(5px)",
 								cursor: "not-allowed",
 							};
 						}
