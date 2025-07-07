@@ -35,7 +35,10 @@ const git_revision = child_process
 export const viteCommonConfig = ({
 	appName,
 	base = "/",
-}: { appName?: string; base?: string }) =>
+}: {
+	appName?: string;
+	base?: string;
+}) =>
 	defineConfig(({ mode }): any => {
 		const envDir = fileURLToPath(new URL("..", import.meta.url));
 		const env = loadEnv(mode, envDir, "");
