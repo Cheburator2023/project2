@@ -51,3 +51,4 @@ next-env.d.ts
 **/.__mf__temp
 **/reports/*
 nohup.out
+*.timestamp
