@@ -6,6 +6,11 @@ import { AuthGuard, ResourceGuard, RoleGuard } from "nest-keycloak-connect";
 import { CalculationModule } from "./modules/calculation/calculation.module";
 import { Calculation } from "./modules/calculation/entities/calculation.entity";
 import { KeycloakModule } from "./shared/keycloak/keycloak.module";
+import { QuestionnaireModule } from "./modules/questionnaire/questionnaire.module";
+import { QuestionnaireItemEntity } from "./modules/questionnaire/entities/questionnaire-item.entity";
+import { CoefficientEntity } from "./modules/questionnaire/entities/coefficient.entity";
+import { StreamAverageEntity } from "./modules/questionnaire/entities/stream-average.entity";
+import { ArtefactValueEntity } from "./modules/questionnaire/entities/artefact-value.entity";
 
 @Module({
 	imports: [
@@ -24,7 +29,13 @@ import { KeycloakModule } from "./shared/keycloak/keycloak.module";
 				username: configService.get<string>("DB_USERNAME"),
 				password: configService.get<string>("DB_PASSWORD"),
 				database: configService.get<string>("DB_NAME"),
-				entities: [Calculation],
+				entities: [
+					Calculation,
+					QuestionnaireItemEntity,
+					CoefficientEntity,
+					StreamAverageEntity,
+					ArtefactValueEntity,
+				],
 				migrations: ["dist/migrations/*.js"],
 				migrationsRun: true,
 				synchronize: configService.get<string>("NODE_ENV") !== "production",
@@ -32,6 +43,7 @@ import { KeycloakModule } from "./shared/keycloak/keycloak.module";
 			}),
 		}),
 		CalculationModule,
+		QuestionnaireModule,
 	],
 	providers: [
 		{ provide: APP_GUARD, useClass: AuthGuard },
