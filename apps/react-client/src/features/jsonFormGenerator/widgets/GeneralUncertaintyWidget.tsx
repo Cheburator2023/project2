@@ -78,7 +78,6 @@ const uncertaintyOptions = [
 ];
 
 const probabilityOptions = [
-	"Не применимо",
 	"Реализация не чаще 1 раза в 10 лет",
 	"Реализация 1 раз в 3-10 лет",
 	"Реализация 1 раз в 1-3 года",
@@ -87,20 +86,17 @@ const probabilityOptions = [
 ];
 
 const influenceOptions = [
-	"Не применимо",
-	"Незначительное",
-	"Умеренное",
-	"Существенное",
-	"Критическое",
-	"Катастрофическое",
+	"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+	"Незначительное влияние на задачи и сроки достижения целей проекта",
+	"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+	"Значительный негативный эффект на возможность достижения целей проекта",
+	"Критичное отклонение качества реализации проекта",
 ];
 
 const GeneralUncertaintyWidget: React.FC<WidgetProps> = ({
 	value = [],
 	onChange,
 	formContext,
-	schema,
-	required,
 }) => {
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 	const [selectedItem, setSelectedItem] = useState<string | null>(null);

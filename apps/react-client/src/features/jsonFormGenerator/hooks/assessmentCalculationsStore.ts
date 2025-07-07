@@ -74,6 +74,8 @@ const calculateCoefficients = (formData: FormData) => {
 		),
 		generalUncertaintyCoefficient: helpers.calculateTotalUncertainty(
 			formData.generalUncertainty || [],
+			formData.initiativeTimeline || "",
+			formData.initiativeCost || "",
 			Number(formData.uncertaintyAdjustment) || 0,
 		),
 		readyPromReportsCoefficient: helpers.getReadyPromReportsCoefficient(

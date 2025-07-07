@@ -36,30 +36,32 @@ export function calculateSetupComplexityCoefficient(
 
 export function calculateTotalUncertainty(
 	generalUncertainty: Array<{
-		initiativeTimeline?: string;
-		initiativeCost?: string;
 		influence: string;
 		probability: string;
 	}>,
+	initiativeTimeline: string,
+	initiativeCost: string,
 	correctionPercent = 0,
 ): number {
 	if (!Array.isArray(generalUncertainty)) return 0;
 	const coeffs = generalUncertainty.map((item) => {
 		if (
-			!item.initiativeTimeline ||
-			!item.initiativeCost ||
+			!initiativeTimeline ||
+			!initiativeCost ||
 			!item.influence ||
 			!item.probability
 		) {
 			return 0;
 		}
 		return calculateCoefficientForGeneralUncertaintyItem(
-			item.initiativeTimeline,
-			item.initiativeCost,
+			initiativeTimeline,
+			initiativeCost,
 			item.influence,
 			item.probability,
 		);
 	});
+
+	console.log(coeffs);
 
 	const sumOfCoefficients = coeffs.reduce((sum, coef) => sum + coef, 0);
 	const baseUncertainty = sumOfCoefficients + 1;

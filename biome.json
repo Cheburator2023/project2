@@ -31,7 +31,11 @@
 			"!**/LICENSE",
 			"!**/.cache/**/*",
 			"!**/src/common/api/core",
-			"!**/src/common/api/services"
+			"!**/src/common/api/services",
+			"!apps/react-client/.cache",
+			"!apps/react-client/.cache/**/*",
+			"!apps/react-client/dist",
+			"!apps/react-client/dist/**/*"
 		]
 	},
 	"formatter": {
