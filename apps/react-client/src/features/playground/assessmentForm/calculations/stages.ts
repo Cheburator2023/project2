@@ -44,7 +44,7 @@ export function calculateStage02(
 	return Math.ceil(result * 100) / 100;
 }
 
-export function calculateStage03(
+export function calculateStage04(
 	baseValue: number,
 	assessedInitiativesCount: number,
 	setupComplexityCoefficient: number,

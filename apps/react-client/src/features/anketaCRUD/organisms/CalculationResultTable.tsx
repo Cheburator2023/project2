@@ -36,9 +36,9 @@ interface CoefficientData {
 const stageDisplayNames: Record<string, string> = {
 	stage01: "01. Постановка задачи",
 	stage02: "02. Поиск данных",
-	stage03: "03. Построение витрины данных",
-	stage05A: "04. Разработка MVP",
-	stage05: "05А. Разработка модели",
+	stage04: "04. Построение витрины для разработки",
+	stage05A: "05A. Разработка MVP",
+	stage05: "05. Разработка модели",
 	amlDrafting: "AML разработка",
 	stage05B: "05B. Пилотирование модели",
 	stage07: "06. Разработка витрины для применения модели",
@@ -125,7 +125,7 @@ export const CalculationResultTable = ({
 
 	const [columnDefs] = useState<ColDef<EpicData>[]>([
 		{
-			headerName: "Этапы",
+			headerName: "Наименование этапа E2E планирования",
 			field: "stageName",
 			flex: 2,
 			cellStyle: (params: CellClassParams<EpicData>): CellStyle => {
@@ -145,12 +145,12 @@ export const CalculationResultTable = ({
 			},
 		},
 		{
-			headerName: "Базовое значение",
+			headerName: "Базовая оценка по стриму (СФЕРА)",
 			field: "stageBaseValue",
 			flex: 1,
 		},
 		{
-			headerName: "Оценка",
+			headerName: "Оценка с поправкой на коэффициент сложности",
 			field: "score",
 			flex: 1,
 			cellStyle: (params: CellClassParams<EpicData>): CellStyle => {
@@ -170,6 +170,40 @@ export const CalculationResultTable = ({
 			},
 			valueFormatter: (params: ValueFormatterParams<EpicData>): string => {
 				return typeof params.value === "number" ? params.value.toFixed(2) : "";
+			},
+		},
+		{
+			headerName: "Разница в % относительно базовой оценкой по стриму (Сфера)",
+			field: "percentFromAverage",
+			flex: 1,
+			cellStyle: (params: CellClassParams<EpicData>): CellStyle => {
+				const style: CellStyle = {};
+
+				if (params.data?.stageName === "Итоговая оценка") {
+					style.fontWeight = "bold";
+					style.fontSize = "1.1em";
+				}
+
+				if (params.value != null) {
+					if (params.value > 100) {
+						console.log("🚀 ~ params.value:", params.value);
+						style.color = "red";
+					} else if (params.value < 100) {
+						style.color = "green";
+					}
+				}
+
+				if (params.data?.disabled) {
+					style.opacity = 0.5;
+					style.pointerEvents = "none";
+				}
+
+				return style;
+			},
+			valueFormatter: (params: ValueFormatterParams<EpicData>): string => {
+				return typeof params.value === "number"
+					? `${params.value.toFixed(1)}%`
+					: "";
 			},
 		},
 		{
@@ -203,40 +237,6 @@ export const CalculationResultTable = ({
 				}
 
 				return style;
-			},
-		},
-		{
-			headerName: "% от среднего значения",
-			field: "percentFromAverage",
-			flex: 1,
-			cellStyle: (params: CellClassParams<EpicData>): CellStyle => {
-				const style: CellStyle = {};
-
-				if (params.data?.stageName === "Итоговая оценка") {
-					style.fontWeight = "bold";
-					style.fontSize = "1.1em";
-				}
-
-				if (params.value != null) {
-					if (params.value > 100) {
-						console.log("🚀 ~ params.value:", params.value);
-						style.color = "red";
-					} else if (params.value < 100) {
-						style.color = "green";
-					}
-				}
-
-				if (params.data?.disabled) {
-					style.opacity = 0.5;
-					style.pointerEvents = "none";
-				}
-
-				return style;
-			},
-			valueFormatter: (params: ValueFormatterParams<EpicData>): string => {
-				return typeof params.value === "number"
-					? `${params.value.toFixed(1)}%`
-					: "";
 			},
 		},
 	]);
@@ -302,7 +302,8 @@ export const CalculationResultTable = ({
 							return {
 								opacity: 0.5,
 								pointerEvents: "none",
-								filter: "grayscale(1) blur(5px)",
+								// filter: "grayscale(1) blur(5px)",
+								filter: "grayscale(1)",
 								cursor: "not-allowed",
 							};
 						}
