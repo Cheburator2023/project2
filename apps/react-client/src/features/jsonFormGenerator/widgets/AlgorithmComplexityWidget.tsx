@@ -1,12 +1,16 @@
+import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
 import {
 	FormControl,
 	FormHelperText,
+	InputLabel,
 	MenuItem,
 	Select,
 	Stack,
+	Tooltip,
 	Typography,
 } from "@mui/material";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
+import { Flex } from "@react-client/common/primitives/Flex";
 import { WidgetProps } from "@rjsf/utils";
 import React, { useEffect, useRef } from "react";
 
@@ -26,6 +30,7 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 		options,
 		disabled,
 	} = props;
+	console.log("🚀 ~ props:", props);
 
 	const modelsCount = formContext?.formData?.modelsCount || 1;
 	const prevModelsCountRef = useRef(modelsCount);
@@ -100,20 +105,37 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 		<Stack spacing={2}>
 			{/* Summary input */}
 			<FormControl fullWidth error={hasError}>
-				<Typography variant="subtitle1" gutterBottom>
-					Сложность алгоритма / тип ML задачи
-				</Typography>
 				<TextFieldCustom
 					value={getSummaryText()}
 					disabled
 					fullWidth
 					variant="outlined"
+					label="Сложность алгоритма / тип ML задачи"
 					size="small"
 					sx={{ mb: 2 }}
 					error={readonly ? false : hasError}
 					slotProps={{ input: { readOnly: readonly } }}
 					data-test-id="algorithm-complexity-widget--TextField-0"
+					slots={{
+						inputLabel: (props) =>
+							options.tooltip ? (
+								<Flex gap={6}>
+									<InputLabel {...props} />
+									<Tooltip title={options.tooltip} placement="top-start">
+										<InfoOutlineIcon
+											sx={{
+												scale: 0.8,
+												color: "#88888877",
+											}}
+										/>
+									</Tooltip>
+								</Flex>
+							) : (
+								<InputLabel {...props} />
+							),
+					}}
 				/>
+
 				{hasError && (
 					<FormHelperText error>
 						Необходимо выбрать хотя бы один тип алгоритма

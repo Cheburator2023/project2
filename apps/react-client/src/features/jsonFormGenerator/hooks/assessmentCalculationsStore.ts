@@ -6,7 +6,7 @@ import type { FormData } from "../types/FormData";
 export interface StageValues {
 	stage01: number;
 	stage02: number;
-	stage03: number;
+	stage04: number;
 	stage05A: number;
 	stage05: number;
 	amlDrafting: number;
@@ -40,7 +40,7 @@ interface AssessmentState {
 const stageBaseValues: StageValues = {
 	stage01: 33,
 	stage02: 15,
-	stage03: 51,
+	stage04: 51,
 	stage05A: 40,
 	stage05: 37,
 	amlDrafting: 68, // AML Разработка
@@ -53,7 +53,7 @@ const stageBaseValues: StageValues = {
 const stageResults: StageValues = {
 	stage01: 0,
 	stage02: 0,
-	stage03: 0,
+	stage04: 0,
 	stage05A: 0,
 	stage05: 0,
 	amlDrafting: 0,
@@ -136,8 +136,8 @@ const calculateStageResults = (
 			coefficients.generalUncertaintyCoefficient,
 			formData.readyPromReports || "Нет",
 		),
-		stage03: mainStages.calculateStage03(
-			stageBaseValues.stage03,
+		stage04: mainStages.calculateStage04(
+			stageBaseValues.stage04,
 			assessedInitiativesCount,
 			coefficients.setupComplexityCoefficient,
 			coefficients.generalUncertaintyCoefficient,

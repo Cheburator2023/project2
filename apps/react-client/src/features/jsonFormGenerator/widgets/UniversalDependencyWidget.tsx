@@ -1,4 +1,7 @@
+import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
+import { InputLabel, Tooltip } from "@mui/material";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
+import { Flex } from "@react-client/common/primitives/Flex";
 import { WidgetProps } from "@rjsf/utils";
 import React from "react";
 import NumberInputWidget from "./NumberInputWidget";
@@ -12,6 +15,26 @@ const widgetMap: Record<string, any> = {
 const UniversalDependencyWidget = (props: WidgetProps) => {
 	const { formContext, uiSchema, value, onChange, registry, schema, ...rest } =
 		props;
+	const tooltip = props?.options?.tooltip;
+	const label = props.label;
+
+	const inputLabelSlot = (props: any) =>
+		tooltip ? (
+			<Flex gap={6}>
+				<InputLabel {...props} />
+				<Tooltip title={tooltip} placement="top-start">
+					<InfoOutlineIcon
+						sx={{
+							scale: 0.8,
+							color: "#88888877",
+						}}
+					/>
+				</Tooltip>
+			</Flex>
+		) : (
+			<InputLabel {...props} />
+		);
+
 	const options = uiSchema?.["ui:options"] as
 		| {
 				dependencies: {
@@ -92,6 +115,10 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 				uiSchema={uiSchema}
 				registry={registry}
 				schema={schema}
+				label={label}
+				slots={{
+					inputLabel: inputLabelSlot,
+				}}
 			/>
 		);
 	}
@@ -114,7 +141,10 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 					fullWidth
 					variant="outlined"
 					size="small"
-					label={schema?.title}
+					label={label}
+					slots={{
+						inputLabel: inputLabelSlot,
+					}}
 				/>
 			);
 		}
@@ -126,7 +156,10 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 				fullWidth
 				variant="outlined"
 				size="small"
-				label={schema?.title}
+				label={label}
+				slots={{
+					inputLabel: inputLabelSlot,
+				}}
 			/>
 		);
 	}
@@ -147,7 +180,10 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 				fullWidth
 				variant="outlined"
 				size="small"
-				label={schema?.title}
+				label={label}
+				slots={{
+					inputLabel: inputLabelSlot,
+				}}
 			/>
 		);
 	}
@@ -181,6 +217,10 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 			uiSchema={uiSchema}
 			registry={registry}
 			schema={schema}
+			label={label}
+			slots={{
+				inputLabel: inputLabelSlot,
+			}}
 		/>
 	);
 };

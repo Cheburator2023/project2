@@ -4,7 +4,7 @@ interface StageResultsSidebarProps {
 	results?: {
 		stage01: number;
 		stage02: number;
-		stage03: number;
+		stage04: number;
 		stage05A: number;
 		stage05: number;
 		amlDrafting: number;
@@ -22,7 +22,7 @@ const stageNames: Record<
 > = {
 	stage01: "Stage 01: Постановка задачи",
 	stage02: "Stage 02: Поиск данных",
-	stage03: "Stage 03: Построение витрины для разработки",
+	stage04: "Stage 03: Построение витрины для разработки",
 	stage05A: "Stage 05A: Разработка пилотной модели (MVP)",
 	stage05: "Stage 05: Разработка модели",
 	amlDrafting: "AML Разработка",

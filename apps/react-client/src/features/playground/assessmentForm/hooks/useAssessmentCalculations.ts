@@ -87,7 +87,7 @@ export function useAssessmentCalculations(formData: FormData) {
 				coefficients.generalUncertaintyCoefficient,
 				formData.readyPromReports || "Нет",
 			),
-			stage03: mainStages.calculateStage03(
+			stage04: mainStages.calculateStage04(
 				stageBaseValues.stage04,
 				assessedInitiativesCount,
 				coefficients.setupComplexityCoefficient,
