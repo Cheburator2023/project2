@@ -1,6 +1,5 @@
 import Autocomplete, { createFilterOptions } from "@mui/material/Autocomplete";
 import Chip from "@mui/material/Chip";
-import TextField from "@mui/material/TextField";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import { WidgetProps } from "@rjsf/utils";
 import * as React from "react";

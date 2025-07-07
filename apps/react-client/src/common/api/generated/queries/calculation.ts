@@ -27,8 +27,11 @@ import type {
 import type {
   CalculationControllerFindAllPaginatedParams,
   CalculationResponseDto,
+  CoefficientControllerGetValueParams,
+  CoefficientEntity,
   CreateCalculationDto,
-  PaginatedCalculationResponseDto
+  PaginatedCalculationResponseDto,
+  QuestionnaireResponseDto
 } from '../types';
 
 import { apiClient } from '../../helpers/apiClient';
@@ -364,6 +367,281 @@ export function useCalculationControllerFindOne<TData = Awaited<ReturnType<typeo
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = useCalculationControllerFindOneQueryOptions(id,options)
+
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Retrieves complete questionnaire structure with dictionaries and coefficients
+ * @summary Get full questionnaire configuration
+ */
+export const questionnaireControllerGetFullQuestionnaire = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return apiClient<QuestionnaireResponseDto>(
+      {url: `/questionnaire`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+export const getQuestionnaireControllerGetFullQuestionnaireQueryKey = () => {
+    return [`/questionnaire`] as const;
+    }
+
+    
+export const useQuestionnaireControllerGetFullQuestionnaireQueryOptions = <TData = Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getQuestionnaireControllerGetFullQuestionnaireQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>> = ({ signal }) => questionnaireControllerGetFullQuestionnaire(signal);
+
+      
+
+      const customOptions = customQueryOptions({...queryOptions, queryKey, queryFn});
+
+   return  customOptions as UseQueryOptions<Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type QuestionnaireControllerGetFullQuestionnaireQueryResult = NonNullable<Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>>
+export type QuestionnaireControllerGetFullQuestionnaireQueryError = unknown
+
+
+export function useQuestionnaireControllerGetFullQuestionnaire<TData = Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>,
+          TError,
+          Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useQuestionnaireControllerGetFullQuestionnaire<TData = Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>,
+          TError,
+          Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useQuestionnaireControllerGetFullQuestionnaire<TData = Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get full questionnaire configuration
+ */
+
+export function useQuestionnaireControllerGetFullQuestionnaire<TData = Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = useQuestionnaireControllerGetFullQuestionnaireQueryOptions(options)
+
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Retrieves all active coefficients with their base values
+ * @summary Get all coefficients
+ */
+export const coefficientControllerFindAll = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return apiClient<CoefficientEntity[]>(
+      {url: `/questionnaire/coefficients`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+export const getCoefficientControllerFindAllQueryKey = () => {
+    return [`/questionnaire/coefficients`] as const;
+    }
+
+    
+export const useCoefficientControllerFindAllQueryOptions = <TData = Awaited<ReturnType<typeof coefficientControllerFindAll>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof coefficientControllerFindAll>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCoefficientControllerFindAllQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof coefficientControllerFindAll>>> = ({ signal }) => coefficientControllerFindAll(signal);
+
+      
+
+      const customOptions = customQueryOptions({...queryOptions, queryKey, queryFn});
+
+   return  customOptions as UseQueryOptions<Awaited<ReturnType<typeof coefficientControllerFindAll>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CoefficientControllerFindAllQueryResult = NonNullable<Awaited<ReturnType<typeof coefficientControllerFindAll>>>
+export type CoefficientControllerFindAllQueryError = unknown
+
+
+export function useCoefficientControllerFindAll<TData = Awaited<ReturnType<typeof coefficientControllerFindAll>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof coefficientControllerFindAll>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof coefficientControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof coefficientControllerFindAll>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCoefficientControllerFindAll<TData = Awaited<ReturnType<typeof coefficientControllerFindAll>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof coefficientControllerFindAll>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof coefficientControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof coefficientControllerFindAll>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCoefficientControllerFindAll<TData = Awaited<ReturnType<typeof coefficientControllerFindAll>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof coefficientControllerFindAll>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get all coefficients
+ */
+
+export function useCoefficientControllerFindAll<TData = Awaited<ReturnType<typeof coefficientControllerFindAll>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof coefficientControllerFindAll>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = useCoefficientControllerFindAllQueryOptions(options)
+
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Calculates coefficient value based on input
+ * @summary Get coefficient value
+ */
+export const coefficientControllerGetValue = (
+    code: string,
+    params: CoefficientControllerGetValueParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return apiClient<number>(
+      {url: `/questionnaire/coefficients/${code}`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+export const getCoefficientControllerGetValueQueryKey = (code: string,
+    params: CoefficientControllerGetValueParams,) => {
+    return [`/questionnaire/coefficients/${code}`, ...(params ? [params]: [])] as const;
+    }
+
+    
+export const useCoefficientControllerGetValueQueryOptions = <TData = Awaited<ReturnType<typeof coefficientControllerGetValue>>, TError = unknown>(code: string,
+    params: CoefficientControllerGetValueParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof coefficientControllerGetValue>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCoefficientControllerGetValueQueryKey(code,params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof coefficientControllerGetValue>>> = ({ signal }) => coefficientControllerGetValue(code,params, signal);
+
+      
+
+      const customOptions = customQueryOptions({...queryOptions, queryKey, queryFn});
+
+   return  customOptions as UseQueryOptions<Awaited<ReturnType<typeof coefficientControllerGetValue>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CoefficientControllerGetValueQueryResult = NonNullable<Awaited<ReturnType<typeof coefficientControllerGetValue>>>
+export type CoefficientControllerGetValueQueryError = unknown
+
+
+export function useCoefficientControllerGetValue<TData = Awaited<ReturnType<typeof coefficientControllerGetValue>>, TError = unknown>(
+ code: string,
+    params: CoefficientControllerGetValueParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof coefficientControllerGetValue>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof coefficientControllerGetValue>>,
+          TError,
+          Awaited<ReturnType<typeof coefficientControllerGetValue>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCoefficientControllerGetValue<TData = Awaited<ReturnType<typeof coefficientControllerGetValue>>, TError = unknown>(
+ code: string,
+    params: CoefficientControllerGetValueParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof coefficientControllerGetValue>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof coefficientControllerGetValue>>,
+          TError,
+          Awaited<ReturnType<typeof coefficientControllerGetValue>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCoefficientControllerGetValue<TData = Awaited<ReturnType<typeof coefficientControllerGetValue>>, TError = unknown>(
+ code: string,
+    params: CoefficientControllerGetValueParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof coefficientControllerGetValue>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get coefficient value
+ */
+
+export function useCoefficientControllerGetValue<TData = Awaited<ReturnType<typeof coefficientControllerGetValue>>, TError = unknown>(
+ code: string,
+    params: CoefficientControllerGetValueParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof coefficientControllerGetValue>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = useCoefficientControllerGetValueQueryOptions(code,params,options)
 
   const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
