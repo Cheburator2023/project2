@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import * as helpers from "../calculations/coefficients";
 import * as mainStages from "../calculations/stages";
-import type { FormData } from "../types/FormData";
+import type { IAssessmentFormData } from "../types/FormData";
 
 export interface StageValues {
 	stage01: number;
@@ -17,7 +17,7 @@ export interface StageValues {
 }
 
 interface AssessmentState {
-	formData: FormData;
+	formData: IAssessmentFormData;
 	stageBaseValues: StageValues;
 	coefficients: {
 		modelsCountCoefficient: number;
@@ -33,8 +33,8 @@ interface AssessmentState {
 		deploymentChannelsCoefficient: number;
 	};
 	stageResults: StageValues;
-	setFormData: (data: FormData) => void;
-	updateFormData: (updates: Partial<FormData>) => void;
+	setFormData: (data: IAssessmentFormData) => void;
+	updateFormData: (updates: Partial<IAssessmentFormData>) => void;
 }
 
 const stageBaseValues: StageValues = {
@@ -63,7 +63,7 @@ const stageResults: StageValues = {
 	amlEnforcement: 0,
 };
 
-const calculateCoefficients = (formData: FormData) => {
+const calculateCoefficients = (formData: IAssessmentFormData) => {
 	const modelsCount = Number(formData.modelsCount) || 1;
 	const dataSourcesCount = Number(formData.dataSourcesCount) || 1;
 
@@ -108,7 +108,7 @@ const calculateCoefficients = (formData: FormData) => {
 };
 
 const calculateStageResults = (
-	formData: FormData,
+	formData: IAssessmentFormData,
 	coefficients: ReturnType<typeof calculateCoefficients>,
 ) => {
 	const assessedInitiativesCount =
@@ -202,7 +202,7 @@ const calculateStageResults = (
 
 export const assessmentCalculationsStore = create<AssessmentState>(
 	(set, _get) => ({
-		formData: {} as FormData,
+		formData: {} as IAssessmentFormData,
 		stageBaseValues,
 		coefficients: {
 			modelsCountCoefficient: 0,
@@ -218,7 +218,7 @@ export const assessmentCalculationsStore = create<AssessmentState>(
 			deploymentChannelsCoefficient: 0,
 		},
 		stageResults,
-		setFormData: (data: FormData) => {
+		setFormData: (data: IAssessmentFormData) => {
 			set((state) => {
 				const newFormData = data;
 				const newCoefficients = calculateCoefficients(newFormData);
@@ -235,7 +235,7 @@ export const assessmentCalculationsStore = create<AssessmentState>(
 				};
 			});
 		},
-		updateFormData: (updates: Partial<FormData>) => {
+		updateFormData: (updates: Partial<IAssessmentFormData>) => {
 			set((state) => {
 				const newFormData = { ...state.formData, ...updates };
 				const newCoefficients = calculateCoefficients(newFormData);

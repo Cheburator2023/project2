@@ -21,10 +21,6 @@ export const AnketaCreatePage = () => {
 		anketaCreate_basicInfoForm,
 		anketaCreate_projectAssessmentForm,
 	} = store;
-	console.log(
-		"🐸 Pepe said >> AnketaCreatePage >> calculationResult:",
-		calculationResult,
-	);
 
 	const stateBasicForm = anketaCreate_basicInfoForm.state;
 	const stateProjectAssessmentForm = anketaCreate_projectAssessmentForm.state;
@@ -59,7 +55,7 @@ export const AnketaCreatePage = () => {
 			// createdAt: string;
 			// id: string;
 			// author: string;
-		} = stateBasicForm.formData;
+		} = stateBasicForm?.formData || {};
 
 		if (isFormDirty && hasSubmitted && !formHasErrors) {
 			const data: CreateCalculationDto = {

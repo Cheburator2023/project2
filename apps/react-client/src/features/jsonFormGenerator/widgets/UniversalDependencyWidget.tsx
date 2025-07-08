@@ -6,6 +6,44 @@ import { WidgetProps } from "@rjsf/utils";
 import React from "react";
 import NumberInputWidget from "./NumberInputWidget";
 
+interface DisabledDependencyHandlerProps {
+	value: any;
+	valueToSet: any;
+	onChange: (value: any) => void;
+}
+
+const DisabledDependencyHandler: React.FC<DisabledDependencyHandlerProps> = ({
+	value,
+	valueToSet,
+	onChange,
+}) => {
+	React.useEffect(() => {
+		if (value !== valueToSet) {
+			onChange(valueToSet);
+		}
+	}, [valueToSet, value, onChange]); // Dependencies for this specific effect
+	return null; // This component doesn't render any UI
+};
+
+interface GlobalDisabledHandlerProps {
+	value: any;
+	disabledValue: any;
+	onChange: (value: any) => void;
+}
+
+const GlobalDisabledHandler: React.FC<GlobalDisabledHandlerProps> = ({
+	value,
+	disabledValue,
+	onChange,
+}) => {
+	React.useEffect(() => {
+		if (value !== disabledValue) {
+			onChange(disabledValue);
+		}
+	}, [disabledValue, value, onChange]); // Dependencies for this specific effect
+	return null; // This component doesn't render any UI
+};
+
 const widgetMap: Record<string, any> = {
 	NumberInputWidget,
 	TextFieldCustom,
@@ -131,15 +169,57 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 			matchedDep.valueToSet !== undefined ? matchedDep.valueToSet : "";
 		const widgetType = matchedDep.widget || "TextField";
 
-		React.useEffect(() => {
-			if (value !== valueToSet) {
-				onChange(valueToSet);
-			}
-		}, [valueToSet, value, onChange]);
-		if (widgetType === "TextField") {
-			return (
+		return (
+			<>
+				<DisabledDependencyHandler
+					value={value}
+					valueToSet={valueToSet}
+					onChange={onChange}
+				/>
+				{widgetType === "TextField" ? (
+					<TextFieldCustom
+						value={valueToSet}
+						disabled
+						fullWidth
+						variant="outlined"
+						size="small"
+						label={label}
+						slots={{
+							inputLabel: inputLabelSlot,
+						}}
+					/>
+				) : (
+					// Fallback to disabled text field
+					<TextFieldCustom
+						value={valueToSet}
+						disabled
+						fullWidth
+						variant="outlined"
+						size="small"
+						label={label}
+						slots={{
+							inputLabel: inputLabelSlot,
+						}}
+					/>
+				)}
+			</>
+		);
+	}
+
+	// If no dependency matched, check for global disabled
+	if (options?.disabled) {
+		const disabledValue =
+			options.disabledValue !== undefined ? options.disabledValue : "";
+
+		return (
+			<>
+				<GlobalDisabledHandler
+					value={value}
+					disabledValue={disabledValue}
+					onChange={onChange}
+				/>
 				<TextFieldCustom
-					value={valueToSet}
+					value={disabledValue}
 					disabled
 					fullWidth
 					variant="outlined"
@@ -149,45 +229,7 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 						inputLabel: inputLabelSlot,
 					}}
 				/>
-			);
-		}
-		// Fallback to disabled text field
-		return (
-			<TextFieldCustom
-				value={valueToSet}
-				disabled
-				fullWidth
-				variant="outlined"
-				size="small"
-				label={label}
-				slots={{
-					inputLabel: inputLabelSlot,
-				}}
-			/>
-		);
-	}
-
-	// If no dependency matched, check for global disabled
-	if (options?.disabled) {
-		const disabledValue =
-			options.disabledValue !== undefined ? options.disabledValue : "";
-		React.useEffect(() => {
-			if (value !== disabledValue) {
-				onChange(disabledValue);
-			}
-		}, [disabledValue, value, onChange]);
-		return (
-			<TextFieldCustom
-				value={disabledValue}
-				disabled
-				fullWidth
-				variant="outlined"
-				size="small"
-				label={label}
-				slots={{
-					inputLabel: inputLabelSlot,
-				}}
-			/>
+			</>
 		);
 	}
 

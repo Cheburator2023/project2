@@ -1,4 +1,5 @@
 /* eslint-disable react/jsx-no-constructed-context-values */
+import { COEFF_IGNORED_ERROR_PREFIX } from "@react-client/common/errors/constants";
 import { noop } from "lodash-es";
 import {
 	type Context,
@@ -51,6 +52,16 @@ class ErrorBoundaryComponent extends PureComponent<Props, State> {
 	public state: State = initialState;
 
 	public static getDerivedStateFromError(_: Error): State {
+		const ignoredErrors = [COEFF_IGNORED_ERROR_PREFIX];
+		if (ignoredErrors.some((ignoredMsg) => _.message.includes(ignoredMsg))) {
+			return {
+				hasError: false,
+				fullErrorData: null,
+				errorStack: "",
+				error: "",
+			};
+		}
+
 		return {
 			hasError: true,
 			errorStack: "",
