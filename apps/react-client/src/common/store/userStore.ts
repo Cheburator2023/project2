@@ -1,29 +1,40 @@
-import { create } from "zustand";
 import {
 	Permission,
 	Role,
 	UserPermissions,
 	UserRoles,
-} from "../../types/roles";
+} from "@react-client/types/roles";
+import { create, StoreApi, UseBoundStore } from "zustand";
 
 interface UserStoreState {
 	username: string | null;
+	groups: string[];
 	roles: UserRoles;
 	permissions: UserPermissions;
 	setUsername: (username: string) => void;
-	setRoles: (roles: UserRoles) => void;
+	setGroups: (roles: string[]) => void;
+	setRoles: (role: UserRoles) => void;
 	setPermissions: (permissions: UserPermissions) => void;
 	hasRole: (role: Role) => boolean;
 	hasPermission: (permission: Permission) => boolean;
 }
 
-export const useUserStore = create<UserStoreState>((set, get) => ({
-	username: null,
-	roles: [],
-	permissions: [],
-	setUsername: (username) => set({ username }),
-	setRoles: (roles) => set({ roles }),
-	setPermissions: (permissions) => set({ permissions }),
-	hasRole: (role) => get().roles.includes(role),
-	hasPermission: (permission) => get().permissions.includes(permission),
-}));
+export const useUserStore: UseBoundStore<StoreApi<UserStoreState>> =
+	create<UserStoreState>((set) => ({
+		username: null,
+		groups: [],
+		roles: [],
+		permissions: [],
+		setUsername: (username: string) => set({ username }),
+		setGroups: (groups: string[]) => set({ groups }),
+		setRoles: (roles: UserRoles) => set({ roles }),
+		setPermissions: (permissions: UserPermissions) => set({ permissions }),
+		hasRole: (role: Role) => {
+			const { roles } = useUserStore.getState();
+			return roles.includes(role);
+		},
+		hasPermission: (permission: Permission) => {
+			const { permissions } = useUserStore.getState();
+			return permissions.includes(permission);
+		},
+	}));

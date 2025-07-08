@@ -1,7 +1,4 @@
-import {
-	useCalculationControllerCreate,
-	useQuestionnaireControllerGetFullQuestionnaire,
-} from "@react-client/common/api/generated/queries/calculation";
+import { useCalculationControllerCreate } from "@react-client/common/api/generated/queries/calculation";
 import { CreateCalculationDto } from "@react-client/common/api/generated/types";
 import { toast } from "@react-client/common/muiCustom/toasts";
 import { Flex } from "@react-client/common/primitives/Flex";
