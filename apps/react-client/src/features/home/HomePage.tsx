@@ -9,12 +9,14 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import schema from "@react-client/features/jsonFormGenerator/schemas/calc_schema.json";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { SearchInput } from "@react-client/features/navigation/organisms/SearchInput";
 import { routes } from "@react-client/routing/routes";
 // import { AllEnterpriseModule } from "ag-grid-enterprise";
 import {
 	AllCommunityModule,
+	ColDef,
 	colorSchemeDarkBlue,
 	type GridApi,
 	type GridReadyEvent,
@@ -30,8 +32,8 @@ const themeQuartzDark = themeQuartz.withPart(colorSchemeDarkBlue);
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-const _columnDefs = [
-	{ headerName: "ID", field: "id", sortable: true, filter: true },
+const _columnDefs: ColDef<any, any>[] = [
+	{ field: "id", headerName: "ID", sortable: true, filter: true },
 	{
 		field: "name",
 		headerName: "Имя",
@@ -50,6 +52,100 @@ const _columnDefs = [
 		sortable: true,
 		filter: true,
 	},
+	{ field: "questionnaireData.name", headerName: "Название анкеты" },
+	{ field: "questionnaireData.modelsCount", headerName: "Количество моделей" },
+	{ field: "finalCoefficient", headerName: "Итоговый коэффициент" },
+	{
+		field: "questionnaireData.autoMlRequired",
+		headerName: "Необходимость AutoML",
+	},
+	{
+		field: "questionnaireData.dataSourcesCount",
+		headerName: "Количество источников для проработки",
+	},
+	{
+		field: "questionnaireData.readyPromReports",
+		headerName: "Наличие готовых пром витрин",
+	},
+	{
+		field: "questionnaireData.pilotModelRequired",
+		headerName: "Необходимость реализации пилотной модели",
+	},
+	{
+		field: "questionnaireData.pilotSupportRequired",
+		headerName: "Необходимость поддержки проведения пилота",
+	},
+	{
+		field: "questionnaireData.assessedInitiativesCount",
+		headerName: "Количество оцениваемых инициатив",
+	},
+	{
+		field: "questionnaireData.productionAdditionalReports",
+		headerName:
+			"Необходимость продуктивизации и количество дополнительных витрин",
+	},
+	{
+		field: "generalUncertainty",
+		headerName: "Общая неопределенность",
+		valueGetter: (params) => {
+			const UNCERTAINTY_TYPE_VALUES =
+				schema.properties.generalUncertainty.items.properties.type.enum;
+			const UNCERTAINTY_TYPE_VALUE_NAMES =
+				schema.properties.generalUncertainty.items.properties.type.enumNames;
+
+			const generalUncertaintyObj =
+				params.data.questionnaireData?.generalUncertainty || {};
+
+			const final_pretty_string = Object.keys(generalUncertaintyObj)
+				.map((key) => {
+					const index = UNCERTAINTY_TYPE_VALUES.indexOf(key);
+
+					if (index !== -1) {
+						const prettyName = UNCERTAINTY_TYPE_VALUE_NAMES[index];
+						const rawValue = generalUncertaintyObj[key];
+
+						let formattedValue: string;
+
+						if (typeof rawValue === "object" && rawValue !== null) {
+							formattedValue = Object.values(rawValue).join(", ");
+						} else {
+							formattedValue = rawValue;
+						}
+
+						return `${prettyName}: ${formattedValue}`;
+					}
+
+					return null;
+				})
+				.filter((item) => item !== null)
+				.join(", ");
+
+			return final_pretty_string;
+		},
+	},
+	{
+		field: "algorithmComplexity",
+		headerName: "Сложность алгоритма / тип ML задачи",
+		valueGetter: (params) => {
+			const colId = params.column.getColId();
+			const channels = params.data.questionnaireData?.[colId] || [];
+			return channels
+				.map((ch: any, index: any) => `${index + 1}. ${ch.algorithmType}`)
+				.join(", ");
+		},
+	},
+	{
+		field: "productionDeploymentChannels",
+		headerName: "Необходимость продуктивизации и каналы внедрения моделей",
+		valueGetter: (params: any) => {
+			const colId = params.column.getColId();
+
+			const channels = params.data.questionnaireData?.[colId] || [];
+			return channels
+				.map((ch: any, index: any) => `${index + 1}. ${ch.deploymentChannel}`)
+				.join(", ");
+		},
+	},
 ];
 
 export const HomePage = () => {
@@ -59,7 +155,58 @@ export const HomePage = () => {
 	const navigate = useNavigate();
 	const _location = useLocation();
 
-	const { data, isLoading, error } = useCalculationControllerFindAll();
+	const {
+		data: mainData,
+		isLoading,
+		error,
+	} = useCalculationControllerFindAll();
+
+	const data = [
+		{
+			id: "b6663d2f-befe-4e9a-922b-3989b15915c7",
+			name: "Оценка проекта для бизнеса",
+			questionnaireData: {
+				name: "Оценка проекта для бизнеса",
+				modelsCount: 2,
+				autoMlRequired: "Да",
+				initiativeCost: "45.3-438 млн.",
+				setupComplexity:
+					"1 Сложность: Проведение регулярной валидации Моделей Регулятором не установлено",
+				dataSourcesCount: "4",
+				readyPromReports: "Нет",
+				generalUncertainty: {
+					planningRequirementGaps: {
+						influence: "Незначительное",
+						probability: "Реализация не чаще 1 раза в 10 лет",
+					},
+				},
+				initiativeTimeline: "Менее 1 мес.",
+				pilotModelRequired: "Да",
+				algorithmComplexity: [
+					{
+						algorithmType: "Текстовая аналитика_LLM",
+					},
+				],
+				pilotSupportRequired: "Да",
+				uncertaintyAdjustment: 3,
+				assessedInitiativesCount: "3",
+				productionAdditionalReports: "4",
+				productionDeploymentChannels: [
+					{
+						deploymentChannel: "Батч",
+					},
+					{
+						deploymentChannel: "Батч+загрузка данных потребителю",
+					},
+					{
+						deploymentChannel: "Батч + Онлайн",
+					},
+				],
+			},
+			finalCoefficient: 1.8,
+			createdAt: "2025-07-03T16:31:11.915Z",
+		},
+	];
 
 	const isInDefaultCompareMode = params.get("isInCompareMode") === "true";
 
@@ -86,10 +233,15 @@ export const HomePage = () => {
 		})),
 	);
 
-	const defaultColDef = {
+	const defaultColDef: ColDef<any, any> | undefined = {
 		sortable: true,
 		filter: true,
 		resizable: true,
+		wrapHeaderText: true,
+		autoHeaderHeight: true,
+		cellStyle: { fontSize: "11px" },
+		headerStyle: { fontSize: "11px" },
+		tooltipValueGetter: (params: any) => params.value,
 	};
 
 	const onExportExcel = () => {
@@ -243,6 +395,7 @@ export const HomePage = () => {
 					localeText={AG_GRID_LOCALE_RU}
 					ref={gridRef}
 					onGridReady={onGridReady}
+					tooltipShowDelay={500}
 					onRowClicked={(params) => {
 						navigate(
 							routes.calculationPreview.rootPath.replace(

@@ -62,7 +62,7 @@ export const AnketaCreatePage = () => {
 			// createdAt: string;
 			// id: string;
 			// author: string;
-		} = stateBasicForm.formData;
+		} = stateBasicForm?.formData || {};
 
 		if (isFormDirty && hasSubmitted && !formHasErrors) {
 			const data: CreateCalculationDto = {

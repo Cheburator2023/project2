@@ -263,6 +263,8 @@ export const CalculationResultTable = ({
 			resizable: true,
 			sortable: true,
 			editable: false,
+			wrapHeaderText: true,
+			autoHeaderHeight: true,
 		}),
 		[],
 	);
@@ -272,6 +274,8 @@ export const CalculationResultTable = ({
 			resizable: true,
 			sortable: true,
 			editable: false,
+			wrapHeaderText: true,
+			autoHeaderHeight: true,
 		}),
 		[],
 	);
