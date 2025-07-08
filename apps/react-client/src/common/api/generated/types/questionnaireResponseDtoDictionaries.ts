@@ -5,7 +5,68 @@
  * API documentation for Smart Anketa application
  * OpenAPI spec version: 1.0
  */
-import type { DictionaryItemDto } from './dictionaryItemDto';
+// import type { DictionaryItemDto } from './dictionaryItemDto';
+
+
+type DictionaryItemDto = {
+  modelsCount: Array<{
+    value: null;
+    coefficient: number;
+    hint: string;
+    formula: string;
+  }>;
+  setupComplexity: Array<{
+    value: number;
+    label: string;
+    coefficient: number;
+    hint: string;
+  }>;
+  initiativeTimeline: Array<{
+    value: string;
+    coefficient: number;
+    hint: string;
+  }>;
+  initiativeCost: Array<{
+    value: string;
+    coefficient: number;
+    hint: string;
+  }>;
+  generalUncertainty: Array<{
+    value: string;
+    label: string;
+    hint: string;
+    coefficient: number;
+    conditions: any[];
+  }>;
+  readyPromReports: Array<{
+    value: string;
+    coefficient: number;
+    hint: string;
+  }>;
+  algorithmType: Array<{
+    value: string;
+    coefficient: number;
+    hint: string;
+  }>;
+  pilotSupportRequired: Array<{
+    value: string;
+    coefficient: number;
+    hint: string;
+  }>;
+  autoMLRequired: Array<{
+    value: string;
+    coefficient: number;
+    hint: string;
+  }>;
+  initiativesCount: Array<{
+    value: null;
+    hint: string;
+  }>;
+  pilotModelRequired: Array<{
+    value: string;
+    hint: string;
+  }>;
+};
 
 /**
  * Справочники значений

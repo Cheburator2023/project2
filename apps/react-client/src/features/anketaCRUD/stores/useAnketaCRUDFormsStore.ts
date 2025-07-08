@@ -38,7 +38,7 @@ export const projectAssessmentFormInitialData: IAssessmentFormData = {
 	pilotModelRequired: "",
 	pilotSupportRequired: "",
 	autoMlRequired: "",
-	productionAdditionalReports: "1",
+	productionAdditionalReports: "Не требуется",
 	productionDeploymentChannels: [],
 	generalUncertainty: [],
 };

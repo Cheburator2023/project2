@@ -130,9 +130,8 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 		basicInfoFormInitialData,
 	);
 
-	const dictionaries = questData?.dictionaries;
-
-	console.log("🐸 Pepe said >> BasicInfoForm >> dictionaries:", dictionaries);
+	const departmentENUM = questData?.referenceData.department;
+	const streamExecutorENUM = questData?.referenceData.streamExecutor;
 
 	const schema: RJSFSchema = {
 		type: "object",
@@ -154,7 +153,7 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 			streamExecutor: {
 				type: "string",
 				title: "Стрим-исполнитель",
-				enum: ["Стрим 1", "Стрим 2", "Стрим 3", "Стрим 4", "Стрим 5"],
+				enum: streamExecutorENUM,
 				minLength: 1,
 			},
 			department: {
@@ -162,13 +161,7 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 				title: "Департамент заказчика",
 				items: {
 					type: "string",
-					enum: [
-						"Департамент разработки",
-						"Департамент аналитики",
-						"Департамент тестирования",
-						"Департамент продаж",
-						"Департамент маркетинга",
-					],
+					enum: departmentENUM,
 				},
 				uniqueItems: true,
 				minItems: 1,
