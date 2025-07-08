@@ -100,7 +100,8 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 	};
 
 	const onSubmit = (e: IChangeEvent<FormData>) => {
-		console.log("Submitted data:", e.formData);
+		console.log("🐸 ProjectAssessmentForm >> formData:", e.formData);
+
 		if (e.formData) {
 			setFormData(e.formData);
 		}

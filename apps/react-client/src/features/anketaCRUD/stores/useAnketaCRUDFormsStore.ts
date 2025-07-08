@@ -24,7 +24,24 @@ type AnketaCRUDFormsStoreType = {
 };
 
 type AnketaCRUDFormsStoreBase = {
-	calculationResult: any;
+	calculationResult: (
+		| {
+				stageName: string;
+				score: number;
+				stageBaseValue: number;
+				disabled?: undefined;
+				percentFromAverage?: undefined;
+				offset?: undefined;
+		  }
+		| {
+				stageName: string;
+				score: number;
+				disabled: boolean;
+				stageBaseValue: number;
+				percentFromAverage: number;
+				offset: number;
+		  }
+	)[];
 };
 
 interface AnketaCRUDFormsStore
@@ -63,7 +80,7 @@ export const useAnketaCRUDFormsStore = create<AnketaCRUDFormsStore>((set) => ({
 		isDirty: false,
 	},
 
-	calculationResult: undefined,
+	calculationResult: [],
 
 	setFormDirty: (formName, isDirty) =>
 		set((_state) => ({ [formName]: { ..._state[formName], isDirty } })),

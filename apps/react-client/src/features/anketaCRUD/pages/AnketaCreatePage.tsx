@@ -1,4 +1,8 @@
-import { useCalculationControllerCreate } from "@react-client/common/api/generated/queries/calculation";
+import {
+	useCalculationControllerCreate,
+	useQuestionnaireControllerGetFullQuestionnaire,
+} from "@react-client/common/api/generated/queries/calculation";
+import { CreateCalculationDto } from "@react-client/common/api/generated/types";
 import { toast } from "@react-client/common/muiCustom/toasts";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
@@ -20,6 +24,10 @@ export const AnketaCreatePage = () => {
 		anketaCreate_basicInfoForm,
 		anketaCreate_projectAssessmentForm,
 	} = store;
+	console.log(
+		"🐸 Pepe said >> AnketaCreatePage >> calculationResult:",
+		calculationResult,
+	);
 
 	const stateBasicForm = anketaCreate_basicInfoForm.state;
 	const stateProjectAssessmentForm = anketaCreate_projectAssessmentForm.state;
@@ -42,18 +50,34 @@ export const AnketaCreatePage = () => {
 	useEffect(() => {
 		setHasSubmitted(false);
 
+		const basicFormData: {
+			name: string;
+			rfd: string;
+			streamExecutor: string;
+			department: string[];
+			customerName: string;
+			comment: string;
+			// relatedModels: never[];
+			// status: string;
+			// createdAt: string;
+			// id: string;
+			// author: string;
+		} = stateBasicForm.formData;
+
 		if (isFormDirty && hasSubmitted && !formHasErrors) {
-			const data = {
-				finalScore: calculationResult[0].score,
-				...stateBasicForm.formData,
+			const data: CreateCalculationDto = {
+				finalCoefficient: calculationResult[0]?.score,
+				name: basicFormData.name,
+				rfd: basicFormData.rfd,
+				streamExecutor: basicFormData.streamExecutor,
+				department: basicFormData.department,
+				customerName: basicFormData.customerName,
+				comment: basicFormData.comment,
 				...stateProjectAssessmentForm.formData,
 			};
 
-			console.log("🚀 FINAL FORM DATA TO ENDPOINT:", data);
-
 			createCalculationMutation(
 				{
-					// @ts-ignore
 					data,
 				},
 				{

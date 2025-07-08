@@ -299,9 +299,9 @@ export const CalculationResultTable = ({
 					): Record<string, string | number> | undefined => {
 						if (params.data?.disabled) {
 							return {
-								opacity: 0.5,
+								opacity: 0.4,
 								pointerEvents: "none",
-								filter: "grayscale(1) blur(6px)",
+								filter: "grayscale(1)",
 								cursor: "not-allowed",
 							};
 						}
