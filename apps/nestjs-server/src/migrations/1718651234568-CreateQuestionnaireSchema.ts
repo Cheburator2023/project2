@@ -1,11 +1,9 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import {MigrationInterface, QueryRunner} from "typeorm";
 
-export class CreateQuestionnaireSchema1718651234568
-	implements MigrationInterface
-{
-	public async up(queryRunner: QueryRunner): Promise<void> {
-		// 1. Создание таблицы элементов опросника
-		await queryRunner.query(`
+export class CreateQuestionnaireSchema1718651234568 implements MigrationInterface {
+    public async up(queryRunner: QueryRunner): Promise<void> {
+        // 1. Создание таблицы элементов опросника
+        await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS questionnaire_item
             (
                 "id"          uuid PRIMARY KEY      DEFAULT uuid_generate_v4(),
@@ -24,8 +22,8 @@ export class CreateQuestionnaireSchema1718651234568
             );
         `);
 
-		// 2. Создание таблицы коэффициентов
-		await queryRunner.query(`
+        // 2. Создание таблицы коэффициентов
+        await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS coefficient
             (
                 "id"          uuid PRIMARY KEY      DEFAULT uuid_generate_v4(),
@@ -40,8 +38,8 @@ export class CreateQuestionnaireSchema1718651234568
             );
         `);
 
-		// 3. Создание таблицы средних значений по стримам
-		await queryRunner.query(`
+        // 3. Создание таблицы средних значений по стримам
+        await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS stream_average
             (
                 "id"           uuid PRIMARY KEY      DEFAULT uuid_generate_v4(),
@@ -53,23 +51,21 @@ export class CreateQuestionnaireSchema1718651234568
             );
         `);
 
-		// 4. Создание таблицы artefact_values
-		/*
-        await queryRunner.query(`
-            CREATE TABLE IF NOT EXISTS artefact_values
-            (
-                "artefact_value_id"       numeric(38) PRIMARY KEY,
-                "artefact_id"             numeric(38) NOT NULL,
-                "artefact_value"         varchar(4000) NOT NULL,
-                "artefact_value_label"    varchar(4000) NULL,
-                "is_active_flg"           varchar(1) DEFAULT '1',
-                "artefact_parent_value_id" numeric(38)
-                );
-        `);
-        */
+        // // 4. Создание таблицы artefact_values
+        // await queryRunner.query(`
+        //     CREATE TABLE IF NOT EXISTS artefact_values
+        //     (
+        //         "artefact_value_id"       numeric(38) PRIMARY KEY,
+        //         "artefact_id"             numeric(38) NOT NULL,
+        //         "artefact_value"         varchar(4000) NOT NULL,
+        //         "artefact_value_label"    varchar(4000),
+        //         "is_active_flg"           varchar(1) DEFAULT '1',
+        //         "artefact_parent_value_id" numeric(38)
+        //         );
+        // `);
 
-		// 5. Заполнение таблицы элементов опросника тестовыми данными
-		await queryRunner.query(`
+        // 5. Заполнение таблицы элементов опросника тестовыми данными
+        await queryRunner.query(`
             INSERT INTO questionnaire_item
             (id, name, code, description, "isRequired", "fieldType", options, "order")
             VALUES (uuid_generate_v4(), 'Количество моделей', 'modelsCount',
@@ -156,8 +152,8 @@ export class CreateQuestionnaireSchema1718651234568
                       {"value": "Нет", "hint": "Пилотная модель не требуется"}]', 11)
         `);
 
-		// 6. Заполнение таблицы коэффициентов тестовыми данными
-		await queryRunner.query(`
+        // 6. Заполнение таблицы коэффициентов тестовыми данными
+        await queryRunner.query(`
             INSERT INTO coefficient
                 (id, name, code, "baseValue", conditions, description)
             VALUES (uuid_generate_v4(), 'Коэффициент количества моделей', 'modelsCount', 1.0,
@@ -246,8 +242,8 @@ export class CreateQuestionnaireSchema1718651234568
                     'Коэффициент для увеличения трудозатрат');
         `);
 
-		// 7. Заполнение таблицы средних значений по стримам тестовыми данными
-		await queryRunner.query(`
+        // 7. Заполнение таблицы средних значений по стримам тестовыми данными
+        await queryRunner.query(`
             INSERT INTO stream_average
                 (id, "epicName", "averageValue", description)
             VALUES (uuid_generate_v4(), '01. Постановка задачи', 15.5, 'Этап постановки задачи'),
@@ -265,48 +261,46 @@ export class CreateQuestionnaireSchema1718651234568
                    (uuid_generate_v4(), 'AML Внедрение', 68.0, 'Внедрение AML компонентов');
         `);
 
-		// 8. Заполнение таблицы artefact_values тестовыми данными
-		/*
-        await queryRunner.query(`
-            INSERT INTO artefact_values (
-                artefact_value_id, 
-                artefact_id, 
-                artefact_value, 
-                artefact_value_label, 
-                is_active_flg, 
-                artefact_parent_value_id
-            )
-            VALUES
-                (248, 6, 'Депозитарий', 'bc_dep12', '1', NULL),
-                (283, 6, 'Департамент операционной поддержки бизнеса', 'bc_dep47', '1', NULL),
-                (284, 6, 'Департамент по работе с персоналом', 'bc_dep48', '1', NULL),
-                (285, 6, 'Департамент по работе со СМИ', 'bc_dep49', '1', NULL),
-                (286, 6, 'Департамент корпоративных кредитных рисков', 'bc_dep50', '1', NULL),
-                (571, 6, 'Департамент по работе с массовым сегментом', 'bc_dep73', '1', NULL),
-                (298, 6, 'Специальный отдел', 'bc_dep62', '1', NULL),
-                (237, 6, 'Департамент брокерского обслуживания', 'bc_dep1', '1', NULL),
-                (238, 6, 'Департамент инвестиционных продуктов', 'bc_dep2', '1', NULL),
-                (239, 6, 'Департамент координации и анализа бизнеса', 'bc_dep3', '1', NULL),
-                (240, 6, 'Департамент операций на рынке акций', 'bc_dep4', '1', NULL),
-                (241, 6, 'Департамент по работе с клиентами базовых отраслей', 'bc_dep5', '1', NULL),
-                (244, 6, 'Кредитный департамент', 'bc_dep8', '1', NULL),
-                (760, 6, 'Департамент розничных кредитных рисков_Управление методологии', 'Департамент розничных кредитных рисков _Управление методологии', '1', NULL),
-                (815, 6, 'Тестовый департамент map', 'Тестовый департамент map', '1', NULL),
-                (768, 6, 'Казначейство', 'Казначейство', '1', NULL),
-                (303, 6, 'Департамент технологического развития розничного бизнеса', 'bc_dep67', '1', NULL),
-                (701, 7, 'Моделирование РБ', 'Моделирование РБ', '1', NULL),
-                (702, 7, 'Разработка моделей для КМБ и КСБ', 'Разработка моделей для КМБ и КСБ', '1', NULL),
-                (703, 7, 'Моделирование RnD', 'Моделирование RnD', '1', NULL),
-                (704, 7, 'Финансовое моделирование', 'Финансовое моделирование', '1', NULL)
-            ON CONFLICT (artefact_value_id) DO NOTHING;
-        `);
-        */
-	}
+        // // 8. Заполнение таблицы artefact_values тестовыми данными
+        // await queryRunner.query(`
+        //     INSERT INTO artefact_values (
+        //         artefact_value_id, 
+        //         artefact_id, 
+        //         artefact_value, 
+        //         artefact_value_label, 
+        //         is_active_flg, 
+        //         artefact_parent_value_id
+        //     )
+        //     VALUES
+        //         (248, 6, 'Депозитарий', 'bc_dep12', '1', NULL),
+        //         (283, 6, 'Департамент операционной поддержки бизнеса', 'bc_dep47', '1', NULL),
+        //         (284, 6, 'Департамент по работе с персоналом', 'bc_dep48', '1', NULL),
+        //         (285, 6, 'Департамент по работе со СМИ', 'bc_dep49', '1', NULL),
+        //         (286, 6, 'Департамент корпоративных кредитных рисков', 'bc_dep50', '1', NULL),
+        //         (571, 6, 'Департамент по работе с массовым сегментом', 'bc_dep73', '1', NULL),
+        //         (298, 6, 'Специальный отдел', 'bc_dep62', '1', NULL),
+        //         (237, 6, 'Департамент брокерского обслуживания', 'bc_dep1', '1', NULL),
+        //         (238, 6, 'Департамент инвестиционных продуктов', 'bc_dep2', '1', NULL),
+        //         (239, 6, 'Департамент координации и анализа бизнеса', 'bc_dep3', '1', NULL),
+        //         (240, 6, 'Департамент операций на рынке акций', 'bc_dep4', '1', NULL),
+        //         (241, 6, 'Департамент по работе с клиентами базовых отраслей', 'bc_dep5', '1', NULL),
+        //         (244, 6, 'Кредитный департамент', 'bc_dep8', '1', NULL),
+        //         (760, 6, 'Департамент розничных кредитных рисков_Управление методологии', 'Департамент розничных кредитных рисков _Управление методологии', '1', NULL),
+        //         (815, 6, 'Тестовый департамент map', 'Тестовый департамент map', '1', NULL),
+        //         (768, 6, 'Казначейство', 'Казначейство', '1', NULL),
+        //         (303, 6, 'Департамент технологического развития розничного бизнеса', 'bc_dep67', '1', NULL),
+        //         (701, 7, 'Моделирование РБ', 'Моделирование РБ', '1', NULL),
+        //         (702, 7, 'Разработка моделей для КМБ и КСБ', 'Разработка моделей для КМБ и КСБ', '1', NULL),
+        //         (703, 7, 'Моделирование RnD', 'Моделирование RnD', '1', NULL),
+        //         (704, 7, 'Финансовое моделирование', 'Финансовое моделирование', '1', NULL)
+        //     ON CONFLICT (artefact_value_id) DO NOTHING;
+        // `);
+    }
 
-	public async down(queryRunner: QueryRunner): Promise<void> {
-		await queryRunner.query(`DROP TABLE IF EXISTS stream_average`);
-		await queryRunner.query(`DROP TABLE IF EXISTS coefficient`);
-		await queryRunner.query(`DROP TABLE IF EXISTS questionnaire_item`);
-		await queryRunner.query(`DROP TABLE IF EXISTS artefact_values`);
-	}
+    public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`DROP TABLE IF EXISTS stream_average`);
+        await queryRunner.query(`DROP TABLE IF EXISTS coefficient`);
+        await queryRunner.query(`DROP TABLE IF EXISTS questionnaire_item`);
+        await queryRunner.query(`DROP TABLE IF EXISTS artefact_values`);
+    }
 }
