@@ -10,7 +10,7 @@ export default new DataSource({
 	username: configService.get<string>("DB_USERNAME", "postgres"),
 	password: configService.get<string>("DB_PASSWORD", "postgres") || "postgres",
 	database: configService.get<string>("DB_NAME", "calculation_db"),
-    entities: [__dirname + "/../../**/*.entity{.ts,.js}"],
+	entities: [__dirname + "/../../**/*.entity{.ts,.js}"],
 	migrations: ["migrations/*{.ts,.js}"],
 	migrationsRun: true,
 	synchronize: configService.get<string>("NODE_ENV") !== "production",
