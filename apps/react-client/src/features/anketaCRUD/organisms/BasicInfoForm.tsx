@@ -1,3 +1,4 @@
+import { useQuestionnaireControllerGetFullQuestionnaire } from "@react-client/common/api/generated/queries/calculation";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { MultiSelectAutocompleteCreateWidget } from "@react-client/common/forms/widgets/MultiSelectAutocompleteCreateWidget";
 import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";
@@ -20,7 +21,7 @@ import { MultiSelectAutocompleteWidget } from "../../../common/forms/widgets/Mul
 import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjectFieldTemplate";
 
 interface FormData {
-	calculationName: string;
+	name: string;
 	rfd?: string;
 	streamExecutor: string;
 	department: string[];
@@ -43,7 +44,7 @@ const uiSchema: UiSchema = {
 		submitText: "Submit",
 	},
 	"ui:order": [
-		"calculationName",
+		"name",
 		"rfd",
 		"streamExecutor",
 		"department",
@@ -55,7 +56,7 @@ const uiSchema: UiSchema = {
 		"author",
 		"comment",
 	],
-	calculationName: {
+	name: {
 		"ui:widget": "TextFieldCustomWidget",
 		"ui:options": {
 			tooltip: "Текстовое поле со свободным вводом, 150 символов.",
@@ -136,7 +137,7 @@ const widgets: RegistryWidgetsType = {
 };
 
 const initialFormData: FormData = {
-	calculationName: "",
+	name: "",
 	rfd: "Отсутствует",
 	streamExecutor: "",
 	department: [],
@@ -150,11 +151,17 @@ const initialFormData: FormData = {
 };
 
 export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
+	const { data: questData } = useQuestionnaireControllerGetFullQuestionnaire();
+
+	const dictionaries = questData?.dictionaries;
+
+	console.log("🐸 Pepe said >> BasicInfoForm >> dictionaries:", dictionaries);
+
 	const schema: RJSFSchema = {
 		type: "object",
-		required: ["calculationName", "streamExecutor", "department"],
+		required: ["name", "streamExecutor", "department"],
 		properties: {
-			calculationName: {
+			name: {
 				type: "string",
 				title: "Название анкеты",
 				minLength: 1,
@@ -278,7 +285,8 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 	};
 
 	const onSubmit = ({ formData }: IChangeEvent<FormData>) => {
-		console.log("Form submitted:", formData);
+		console.log("🐸 BasicInfoForm >> formData:", formData);
+
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}
