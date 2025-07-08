@@ -83,16 +83,19 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 			}
 		}
 		return (
-			<DefaultWidget
-				{...rest}
-				disabled={false}
-				value={value}
-				onChange={onChange}
-				formContext={formContext}
-				uiSchema={uiSchema}
-				registry={registry}
-				schema={schema}
-			/>
+			<>
+				222
+				<DefaultWidget
+					{...rest}
+					disabled={false}
+					value={value}
+					onChange={onChange}
+					formContext={formContext}
+					uiSchema={uiSchema}
+					registry={registry}
+					schema={schema}
+				/>
+			</>
 		);
 	}
 
@@ -141,14 +144,17 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 			}
 		}, [disabledValue, value, onChange]);
 		return (
-			<TextField
-				value={disabledValue}
-				disabled
-				fullWidth
-				variant="outlined"
-				size="small"
-				label={schema?.title}
-			/>
+			<>
+				555
+				<TextField
+					value={disabledValue}
+					disabled
+					fullWidth
+					variant="outlined"
+					size="small"
+					label={schema?.title}
+				/>
+			</>
 		);
 	}
 

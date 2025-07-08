@@ -12,14 +12,14 @@ import { useNavigate } from "react-router";
 export const AnketaCreatePage = () => {
 	const navigate = useNavigate();
 	const [hasSubmitted, setHasSubmitted] = useState(false);
+	const store = useAnketaCRUDFormsStore();
 	const {
 		setApiRef,
 		resetApiRef,
 		calculationResult,
 		anketaCreate_basicInfoForm,
 		anketaCreate_projectAssessmentForm,
-		...store
-	} = useAnketaCRUDFormsStore();
+	} = store;
 
 	const stateBasicForm = anketaCreate_basicInfoForm.state;
 	const stateProjectAssessmentForm = anketaCreate_projectAssessmentForm.state;
@@ -28,32 +28,33 @@ export const AnketaCreatePage = () => {
 		useCalculationControllerCreate();
 
 	const formHasErrors = !!(
-		anketaCreate_basicInfoForm?.state?.errors?.length ||
-		anketaCreate_projectAssessmentForm?.state?.errors?.length
+		stateBasicForm?.errors?.length || stateProjectAssessmentForm?.errors?.length
 	);
+	const isFormDirty =
+		anketaCreate_basicInfoForm?.isDirty || stateProjectAssessmentForm?.isDirty;
 
 	const onSubmit = () => {
-		console.log(
-			"WHOLE CREATE PAGE SUBMIT:",
-			stateBasicForm,
-			stateProjectAssessmentForm,
-		);
 		setHasSubmitted(true);
 		anketaCreate_basicInfoForm.api?.submit();
 		anketaCreate_projectAssessmentForm.api?.submit();
 	};
 
 	useEffect(() => {
-		console.log("1 stateBasicForm:", stateBasicForm);
-		console.log("2 calculationResult:", calculationResult);
-		console.log("3 stateProjectAssessmentForm:", stateProjectAssessmentForm);
+		setHasSubmitted(false);
 
-		if (hasSubmitted && !formHasErrors) {
+		if (isFormDirty && hasSubmitted && !formHasErrors) {
+			const data = {
+				finalScore: calculationResult[0].score,
+				...stateBasicForm.formData,
+				...stateProjectAssessmentForm.formData,
+			};
+
+			console.log("🚀 FINAL FORM DATA TO ENDPOINT:", data);
+
 			createCalculationMutation(
 				{
 					// @ts-ignore
-					meta: stateBasicForm,
-					calculation: stateProjectAssessmentForm,
+					data,
 				},
 				{
 					onSuccess: (data) => {
@@ -74,7 +75,13 @@ export const AnketaCreatePage = () => {
 				},
 			);
 		}
-	}, [hasSubmitted, formHasErrors, stateBasicForm, stateProjectAssessmentForm]);
+	}, [
+		isFormDirty,
+		hasSubmitted,
+		formHasErrors,
+		stateBasicForm,
+		stateProjectAssessmentForm,
+	]);
 
 	return (
 		<div data-test-id="anketa-create-page--div-0">

@@ -30,7 +30,6 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 		options,
 		disabled,
 	} = props;
-	console.log("🚀 ~ props:", props);
 
 	const modelsCount = formContext?.formData?.modelsCount || 1;
 	const prevModelsCountRef = useRef(modelsCount);

@@ -537,7 +537,7 @@ export const inputsCustomizations: Components<Theme> = {
 				"& .MuiList-root": {
 					padding: "0",
 					"& .MuiFormHelperText-root": {
-						fontSize: "10px",
+						fontSize: "12px",
 					},
 					"& .MuiFormHelperText-root:first-letter": {
 						textTransform: "uppercase",

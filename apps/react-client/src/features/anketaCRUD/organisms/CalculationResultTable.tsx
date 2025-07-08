@@ -186,7 +186,6 @@ export const CalculationResultTable = ({
 
 				if (params.value != null) {
 					if (params.value > 100) {
-						console.log("🚀 ~ params.value:", params.value);
 						style.color = "red";
 					} else if (params.value < 100) {
 						style.color = "green";

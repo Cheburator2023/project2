@@ -12,7 +12,7 @@ import type FormRef from "@rjsf/core";
 import type { IChangeEvent } from "@rjsf/core";
 import { withTheme } from "@rjsf/core";
 import { Theme as MuiTheme } from "@rjsf/mui";
-import type { RJSFSchema, TemplatesType } from "@rjsf/utils";
+import type { RJSFSchema, TemplatesType, WidgetProps } from "@rjsf/utils";
 import type React from "react";
 import { useRef, useState } from "react";
 import schema from "../schemas/calc_schema.json";
@@ -31,7 +31,9 @@ const templates: Partial<TemplatesType> = {
 
 const widgets = {
 	TextWidget: TextFieldCustomWidget,
-	SelectWidget: (props: any) => <TextFieldCustomWidget {...props} select />,
+	SelectWidget: (props: WidgetProps) => {
+		return <TextFieldCustomWidget {...props} select />;
+	},
 	NumberInputWidget,
 	AlgorithmComplexityWidget,
 	GeneralUncertaintyWidget,
@@ -60,6 +62,7 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 		productionDeploymentChannels: [],
 		generalUncertainty: [],
 	});
+	const [liveValidate, setLiveValidate] = useState(false);
 
 	const { setFormData: setFormDataForCalc } = assessmentCalculationsStore();
 
@@ -67,7 +70,8 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 		? AnketaCRUDFormNames.anketaCreate_projectAssessmentForm
 		: AnketaCRUDFormNames.anketaPreview_projectAssessmentForm;
 	const readonly = !isCreate;
-	const apiFormStore = store[formName].api;
+	const formDataStore = store[formName];
+	const apiFormStore = formDataStore.api;
 	const formState = apiFormStore?.state;
 	const formStateFromRef = formRef?.current?.state;
 
@@ -118,6 +122,8 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 	};
 
 	const _onFocus = (id: string, data: any) => {
+		setLiveValidate(true);
+
 		console.log("Form onFocus:", id, data);
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
@@ -136,12 +142,13 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 				formContext={{ formData }}
 				onChange={onChange}
 				onSubmit={onSubmit}
+				onFocus={_onFocus}
 				onError={onError}
 				templates={templates}
 				// onFocus={onFocus}
 				// onBlur={onBlur}
 				focusOnFirstError
-				// liveValidate={!readonly}
+				liveValidate={liveValidate}
 				noHtml5Validate
 				readonly={readonly}
 				showErrorList={false}

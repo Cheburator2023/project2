@@ -105,9 +105,11 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 					registry.widgets.TextWidget;
 			}
 		}
+
 		return (
 			<DefaultWidget
 				{...rest}
+				options={{ ...rest.options, disabled: false }}
 				disabled={false}
 				value={value}
 				onChange={onChange}
@@ -128,6 +130,7 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 		const valueToSet =
 			matchedDep.valueToSet !== undefined ? matchedDep.valueToSet : "";
 		const widgetType = matchedDep.widget || "TextField";
+
 		React.useEffect(() => {
 			if (value !== valueToSet) {
 				onChange(valueToSet);

@@ -56,7 +56,6 @@ function localize_ru(errors: null | ErrorObject[] = []) {
 				break;
 			}
 			case "minItems": {
-				console.log("🚀 ~ errors.forEach ~ params:", error);
 				outMessage = `Минимальное количество элементов ${error.params.limit}`;
 				break;
 			}

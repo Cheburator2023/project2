@@ -68,7 +68,6 @@ interface LayoutProps {
 
 const App: React.FC<LayoutProps> = (props) => {
 	const { user, onLogout, bridged, urlConfig } = props;
-	console.log("🚀 ~ MF props form shell:", props);
 
 	const { setUser, setConfigMap } = useGlobalSettingsStore();
 

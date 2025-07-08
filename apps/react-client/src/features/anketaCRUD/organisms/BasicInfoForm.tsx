@@ -15,7 +15,7 @@ import type {
 	TemplatesType,
 	UiSchema,
 } from "@rjsf/utils";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { MultiSelectAutocompleteWidget } from "../../../common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjectFieldTemplate";
 
@@ -237,16 +237,18 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 		},
 	};
 
-	const { setApiRef, resetApiRef, updateFormState, ...store } =
+	const { setApiRef, updateFormState, setFormDirty, ...store } =
 		useAnketaCRUDFormsStore();
+	const [liveValidate, setLiveValidate] = useState(false);
 
 	const formRef = useRef<FormRef>(null);
 	const readonly = !isCreate;
+
 	const formName = isCreate
 		? AnketaCRUDFormNames.anketaCreate_basicInfoForm
 		: AnketaCRUDFormNames.anketaPreview_basicInfoForm;
-
-	const apiFormStore = store[formName].api;
+	const formDataStore = store[formName];
+	const apiFormStore = formDataStore.api;
 	const formState = apiFormStore?.state;
 	const formStateFromRef = formRef?.current?.state;
 
@@ -270,6 +272,7 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 
 	const onChange = (formState: any) => {
 		if (formState) {
+			setFormDirty(formName, true);
 			updateFormState(formName, formState);
 		}
 	};
@@ -296,6 +299,8 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 	};
 
 	const onFocus = (id: string, data: any) => {
+		setLiveValidate(true);
+
 		console.log("Form onFocus:", id, data);
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
@@ -316,7 +321,7 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 			onBlur={onBlur}
 			onFocus={onFocus}
 			templates={templates}
-			// liveValidate={isCreate}
+			liveValidate={liveValidate}
 			noHtml5Validate
 			focusOnFirstError
 			readonly={readonly}
