@@ -247,7 +247,7 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 						{/* Probability select */}
 						<FormControl fullWidth>
 							<Typography variant="subtitle2" gutterBottom>
-								Вероятность:
+								Вероятность наступления риска:
 							</Typography>
 							<TextFieldCustom
 								select
@@ -271,7 +271,7 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 						{/* Influence select */}
 						<FormControl fullWidth>
 							<Typography variant="subtitle2" gutterBottom>
-								Влияние:
+								Влияние риска на цели инициативы:
 							</Typography>
 							<TextFieldCustom
 								select
