@@ -132,7 +132,7 @@ export const calc_uiSchema: UiSchema = {
 	productionAdditionalReports: {
 		"ui:widget": "UniversalDependencyWidget",
 		"ui:options": {
-			toottip:
+			tooltip:
 				"При отсутствии витрин с агрегатами/широких витрин на регламенте в области ответственности модельного стрима  указывается количество витрин, требуемых к выводу в пром",
 			dependencies: [
 				{

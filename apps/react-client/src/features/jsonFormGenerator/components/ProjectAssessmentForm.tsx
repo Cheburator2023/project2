@@ -5,6 +5,7 @@ import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFi
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import {
 	AnketaCRUDFormNames,
+	projectAssessmentFormInitialData,
 	useAnketaCRUDFormsStore,
 } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { assessmentCalculationsStore } from "@react-client/features/jsonFormGenerator/hooks/assessmentCalculationsStore";
@@ -17,7 +18,7 @@ import type React from "react";
 import { useRef, useState } from "react";
 import schema from "../schemas/calc_schema.json";
 import { calc_uiSchema } from "../schemas/calc_uiSchema";
-import type { FormData } from "../types/FormData";
+import type { IAssessmentFormData } from "../types/FormData";
 import AlgorithmComplexityWidget from "../widgets/AlgorithmComplexityWidget";
 import GeneralUncertaintyWidget from "../widgets/GeneralUncertaintyWidget";
 import NumberInputWidget from "../widgets/NumberInputWidget";
@@ -47,24 +48,12 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 	const formRef = useRef<FormRef>(null);
 	const { setApiRef, resetApiRef, updateFormState, ...store } =
 		useAnketaCRUDFormsStore();
-
-	const [formData, setFormData] = useState<FormData>({
-		modelsCount: 1,
-		algorithmComplexity: [{ algorithmType: "" }],
-		setupComplexity: "",
-		readyPromReports: "",
-		assessedInitiativesCount: 1,
-		dataSourcesCount: "1",
-		pilotModelRequired: "Не требуется",
-		pilotSupportRequired: "Не требуется",
-		autoMlRequired: "Не требуется",
-		productionAdditionalReports: "1",
-		productionDeploymentChannels: [],
-		generalUncertainty: [],
-	});
-	const [liveValidate, setLiveValidate] = useState(false);
-
 	const { setFormData: setFormDataForCalc } = assessmentCalculationsStore();
+
+	const [formData, setFormData] = useState<IAssessmentFormData>(
+		projectAssessmentFormInitialData,
+	);
+	const [liveValidate, setLiveValidate] = useState(false);
 
 	const formName = isCreate
 		? AnketaCRUDFormNames.anketaCreate_projectAssessmentForm
@@ -90,7 +79,7 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 		updateFormState(formName, formState);
 	}, [formState]);
 
-	const onChange = (e: IChangeEvent<FormData>) => {
+	const onChange = (e: IChangeEvent<IAssessmentFormData>) => {
 		if (e.formData) {
 			setFormData(e.formData);
 		}
@@ -99,7 +88,7 @@ export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
 		}
 	};
 
-	const onSubmit = (e: IChangeEvent<FormData>) => {
+	const onSubmit = (e: IChangeEvent<IAssessmentFormData>) => {
 		console.log("🐸 ProjectAssessmentForm >> formData:", e.formData);
 
 		if (e.formData) {

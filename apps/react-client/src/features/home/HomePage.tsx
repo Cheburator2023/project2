@@ -155,58 +155,7 @@ export const HomePage = () => {
 	const navigate = useNavigate();
 	const _location = useLocation();
 
-	const {
-		data: mainData,
-		isLoading,
-		error,
-	} = useCalculationControllerFindAll();
-
-	const data = [
-		{
-			id: "b6663d2f-befe-4e9a-922b-3989b15915c7",
-			name: "Оценка проекта для бизнеса",
-			questionnaireData: {
-				name: "Оценка проекта для бизнеса",
-				modelsCount: 2,
-				autoMlRequired: "Да",
-				initiativeCost: "45.3-438 млн.",
-				setupComplexity:
-					"1 Сложность: Проведение регулярной валидации Моделей Регулятором не установлено",
-				dataSourcesCount: "4",
-				readyPromReports: "Нет",
-				generalUncertainty: {
-					planningRequirementGaps: {
-						influence: "Незначительное",
-						probability: "Реализация не чаще 1 раза в 10 лет",
-					},
-				},
-				initiativeTimeline: "Менее 1 мес.",
-				pilotModelRequired: "Да",
-				algorithmComplexity: [
-					{
-						algorithmType: "Текстовая аналитика_LLM",
-					},
-				],
-				pilotSupportRequired: "Да",
-				uncertaintyAdjustment: 3,
-				assessedInitiativesCount: "3",
-				productionAdditionalReports: "4",
-				productionDeploymentChannels: [
-					{
-						deploymentChannel: "Батч",
-					},
-					{
-						deploymentChannel: "Батч+загрузка данных потребителю",
-					},
-					{
-						deploymentChannel: "Батч + Онлайн",
-					},
-				],
-			},
-			finalCoefficient: 1.8,
-			createdAt: "2025-07-03T16:31:11.915Z",
-		},
-	];
+	const { data, isLoading, error } = useCalculationControllerFindAll();
 
 	const isInDefaultCompareMode = params.get("isInCompareMode") === "true";
 

@@ -5,6 +5,8 @@ import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFi
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import {
 	AnketaCRUDFormNames,
+	basicInfoFormInitialData,
+	IBasicFormData,
 	useAnketaCRUDFormsStore,
 } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import type FormRef from "@rjsf/core";
@@ -19,20 +21,6 @@ import type {
 import { useRef, useState } from "react";
 import { MultiSelectAutocompleteWidget } from "../../../common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjectFieldTemplate";
-
-interface FormData {
-	name: string;
-	rfd?: string;
-	streamExecutor: string;
-	department: string[];
-	customerName?: string;
-	comment?: string;
-	relatedModels?: string[];
-	status?: "Активна" | "Завершена";
-	createdAt?: string;
-	id?: string;
-	author?: string;
-}
 
 const uiSchema: UiSchema = {
 	"ui:submitButtonOptions": {
@@ -136,22 +124,11 @@ const widgets: RegistryWidgetsType = {
 	TextFieldCustomWidget,
 };
 
-const initialFormData: FormData = {
-	name: "",
-	rfd: "Отсутствует",
-	streamExecutor: "",
-	department: [],
-	customerName: "",
-	comment: "",
-	relatedModels: [],
-	status: "Активна",
-	createdAt: new Date().toISOString().split("T")[0],
-	id: "",
-	author: "",
-};
-
 export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 	const { data: questData } = useQuestionnaireControllerGetFullQuestionnaire();
+	const [formData, setFormData] = useState<IBasicFormData>(
+		basicInfoFormInitialData,
+	);
 
 	const dictionaries = questData?.dictionaries;
 
@@ -159,7 +136,7 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 
 	const schema: RJSFSchema = {
 		type: "object",
-		required: ["name", "streamExecutor", "department"],
+		required: ["name", "rfd", "streamExecutor", "department"],
 		properties: {
 			name: {
 				type: "string",
@@ -170,9 +147,9 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 			rfd: {
 				type: "string",
 				title: "RFD",
-				minLength: 8,
-				maxLength: 19,
-				// pattern: "^(RFD-\\d{4,15})?$",
+				// minLength: 8,
+				// maxLength: 19,
+				pattern: "^(RFD-\\d{4,15})?$",
 			},
 			streamExecutor: {
 				type: "string",
@@ -277,15 +254,22 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 		updateFormState(formName, formState);
 	}, [formState]);
 
-	const onChange = (formState: any) => {
+	const onChange = (formState: IChangeEvent<IBasicFormData>) => {
+		if (formState.formData) {
+			setFormData(formState.formData);
+		}
 		if (formState) {
 			setFormDirty(formName, true);
 			updateFormState(formName, formState);
 		}
 	};
 
-	const onSubmit = ({ formData }: IChangeEvent<FormData>) => {
+	const onSubmit = ({ formData }: IChangeEvent<IBasicFormData>) => {
 		console.log("🐸 BasicInfoForm >> formData:", formData);
+
+		if (formData) {
+			setFormData(formData);
+		}
 
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
@@ -320,7 +304,7 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 			ref={formRef}
 			schema={schema}
 			uiSchema={uiSchema}
-			formData={initialFormData}
+			formData={formData}
 			validator={validatorRu}
 			widgets={widgets}
 			onChange={onChange}

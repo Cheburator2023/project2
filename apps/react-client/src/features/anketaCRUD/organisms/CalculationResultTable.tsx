@@ -172,41 +172,41 @@ export const CalculationResultTable = ({
 				return typeof params.value === "number" ? params.value.toFixed(2) : "";
 			},
 		},
+		// {
+		// 	headerName: "Разница в % относительно базовой оценкой по стриму (Сфера)",
+		// 	field: "percentFromAverage",
+		// 	flex: 1,
+		// 	cellStyle: (params: CellClassParams<EpicData>): CellStyle => {
+		// 		const style: CellStyle = {};
+
+		// 		if (params.data?.stageName === "Итоговая оценка") {
+		// 			style.fontWeight = "bold";
+		// 			style.fontSize = "1.1em";
+		// 		}
+
+		// 		if (params.value != null) {
+		// 			if (params.value > 100) {
+		// 				style.color = "red";
+		// 			} else if (params.value < 100) {
+		// 				style.color = "green";
+		// 			}
+		// 		}
+
+		// 		if (params.data?.disabled) {
+		// 			style.opacity = 0.5;
+		// 			style.pointerEvents = "none";
+		// 		}
+
+		// 		return style;
+		// 	},
+		// 	valueFormatter: (params: ValueFormatterParams<EpicData>): string => {
+		// 		return typeof params.value === "number"
+		// 			? `${params.value.toFixed(1)}%`
+		// 			: "";
+		// 	},
+		// },
 		{
-			headerName: "Разница в % относительно базовой оценкой по стриму (Сфера)",
-			field: "percentFromAverage",
-			flex: 1,
-			cellStyle: (params: CellClassParams<EpicData>): CellStyle => {
-				const style: CellStyle = {};
-
-				if (params.data?.stageName === "Итоговая оценка") {
-					style.fontWeight = "bold";
-					style.fontSize = "1.1em";
-				}
-
-				if (params.value != null) {
-					if (params.value > 100) {
-						style.color = "red";
-					} else if (params.value < 100) {
-						style.color = "green";
-					}
-				}
-
-				if (params.data?.disabled) {
-					style.opacity = 0.5;
-					style.pointerEvents = "none";
-				}
-
-				return style;
-			},
-			valueFormatter: (params: ValueFormatterParams<EpicData>): string => {
-				return typeof params.value === "number"
-					? `${params.value.toFixed(1)}%`
-					: "";
-			},
-		},
-		{
-			headerName: "Отклонение от среднего значения",
+			headerName: "Отклонение относительно базовой оценки по стриму (Сфера)",
 			field: "offset",
 			flex: 1,
 			valueFormatter: (params: ValueFormatterParams<EpicData>): string => {

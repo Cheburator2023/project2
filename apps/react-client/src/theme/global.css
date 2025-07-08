@@ -6,6 +6,12 @@ body {
 	min-height: 100vh;
 	height: 100vh;
 }
+
+* {
+	scrollbar-color: #8d8d8d94 #bada5500;
+    scrollbar-width: thin;
+}
+
 .ag-watermark,
 .ag-watermark-text,
 .ag-watermark.ag-opacity-zero,

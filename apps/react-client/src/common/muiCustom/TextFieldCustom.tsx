@@ -21,7 +21,7 @@ export const TextFieldCustom: React.FC<TextFieldCustomProps> = ({
 	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		if (onChange) {
 			const _value = event.target.value;
-			const cleanValue = _value.replace(prefix || "", "");
+			const cleanValue = _value?.replace(prefix || "", "");
 			const prefixedValue = prefix ? `${prefix}${cleanValue}` : _value;
 
 			if (prefix) {

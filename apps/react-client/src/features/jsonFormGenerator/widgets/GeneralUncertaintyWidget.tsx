@@ -164,7 +164,8 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 											color="textSecondary"
 											display="block"
 										>
-											<strong>Вероятность:</strong> {item.probability}
+											<strong>Вероятность наступления риска:</strong>{" "}
+											{item.probability}
 										</Typography>
 										<Typography
 											component="span"
@@ -172,7 +173,8 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 											color="textSecondary"
 											display="block"
 										>
-											<strong>Влияние:</strong> {item.influence}
+											<strong>Влияние риска на цели инициативы:</strong>{" "}
+											{item.influence}
 										</Typography>
 									</React.Fragment>
 								}

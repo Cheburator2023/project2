@@ -1,7 +1,12 @@
+import CloseIcon from "@mui/icons-material/Close";
 import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
-import { InputLabel, MenuItem, Tooltip } from "@mui/material";
+import { InputAdornment, InputLabel, MenuItem, Tooltip } from "@mui/material";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import { Flex } from "@react-client/common/primitives/Flex";
+import {
+	basicInfoFormInitialData,
+	projectAssessmentFormInitialData,
+} from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { WidgetProps } from "@rjsf/utils";
 
 export const TextFieldCustomWidget = (props: WidgetProps) => {
@@ -21,6 +26,16 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 		mask,
 		rawErrors,
 	} = props;
+
+	const initialValue = {
+		...basicInfoFormInitialData,
+		...projectAssessmentFormInitialData,
+	}[props.name];
+
+	const reset = () => {
+		onChange(initialValue);
+	};
+
 	const isRfdField = id?.includes("rfd");
 
 	const _onChange = (value: string) => {
@@ -72,6 +87,23 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			prefix={options?.prefix}
 			multiline={options?.multiline}
 			select={isSelect}
+			slotProps={{
+				input: {
+					endAdornment: isSelect && initialValue !== props.value && (
+						<InputAdornment
+							position="end"
+							sx={{
+								position: "relative",
+								right: 30,
+								cursor: "pointer",
+								zIndex: 999,
+							}}
+						>
+							<CloseIcon onClick={reset} />
+						</InputAdornment>
+					),
+				},
+			}}
 			slots={{
 				inputLabel: (props) =>
 					options?.tooltip ? (
@@ -92,6 +124,9 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			}}
 			{...options}
 		>
+			{optionsForSelect && initialValue !== props.value && (
+				<MenuItem onClick={reset}>Сбросить</MenuItem>
+			)}
 			{optionsForSelect
 				? optionsForSelect?.map((option) => (
 						<MenuItem key={option.value} value={option.value}>

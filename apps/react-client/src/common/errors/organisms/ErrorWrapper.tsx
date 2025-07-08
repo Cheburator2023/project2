@@ -43,7 +43,7 @@ export const ErrorWrapper: React.FC<Props> = ({
 					justifyContent="center"
 					sx={{
 						padding: "64px",
-						borderRadius: "82px",
+						borderRadius: "8px",
 						backgroundColor: theme.palette.background.paper,
 					}}
 					data-test-id="error-wrapper--Flex-2"

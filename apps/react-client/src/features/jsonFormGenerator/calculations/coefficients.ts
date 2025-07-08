@@ -1,6 +1,10 @@
+import { COEFF_IGNORED_ERROR_PREFIX } from "@react-client/common/errors/constants";
+
 export function calculateModelsCoefficient(modelsCount: number): number {
 	if (modelsCount < 1) {
-		throw new Error("Количество моделей должно быть не меньше 1");
+		throw new Error(
+			COEFF_IGNORED_ERROR_PREFIX + "Количество моделей должно быть не меньше 1",
+		);
 	}
 
 	if (modelsCount === 1) {
@@ -29,7 +33,8 @@ export function calculateSetupComplexityCoefficient(
 			return 2;
 		default:
 			throw new Error(
-				"Некорректное значение сложности постановки. Ожидается одна из строк enum из схемы.",
+				COEFF_IGNORED_ERROR_PREFIX +
+					"Некорректное значение сложности постановки. Ожидается одна из строк enum из схемы.",
 			);
 	}
 }
@@ -83,7 +88,9 @@ export function calculateCoefficientForGeneralUncertaintyItem(
 		!impactOfRisk ||
 		!probabilityOfRisk
 	) {
-		throw new Error("All parameters must be provided");
+		throw new Error(
+			COEFF_IGNORED_ERROR_PREFIX + "All parameters must be provided",
+		);
 	}
 
 	// Define the conditions for each coefficient level
@@ -297,7 +304,8 @@ export function getReadyPromReportsCoefficient(
 		return 1;
 	} else {
 		throw new Error(
-			"Некорректное значение поля 'readyPromReports'. Ожидается 'Да' или 'Нет'.",
+			COEFF_IGNORED_ERROR_PREFIX +
+				"Некорректное значение поля 'readyPromReports'. Ожидается 'Да' или 'Нет'.",
 		);
 	}
 }
@@ -321,7 +329,10 @@ export function calculateDataSourceCoefficient(
 
 	const coefficient = coefficients[dataSourceCount];
 	if (coefficient === undefined) {
-		throw new Error("Количество источников должно быть числом от 1 до 10");
+		throw new Error(
+			COEFF_IGNORED_ERROR_PREFIX +
+				"Количество источников должно быть числом от 1 до 10",
+		);
 	}
 
 	return coefficient;
@@ -334,7 +345,8 @@ export function getPilotModelCoefficient(pilotModelRequired: string): number {
 		return 0;
 	} else {
 		throw new Error(
-			"Некорректное значение поля 'pilotModelRequired'. Ожидается 'Да' или 'Не требуется'.",
+			COEFF_IGNORED_ERROR_PREFIX +
+				"Некорректное значение поля 'pilotModelRequired'. Ожидается 'Да' или 'Не требуется'.",
 		);
 	}
 }
@@ -372,7 +384,8 @@ export function getPilotSupportCoefficient(
 		return 0;
 	} else {
 		throw new Error(
-			"Некорректное значение поля 'pilotSupportRequired'. Ожидается 'Да' или 'Не требуется'.",
+			COEFF_IGNORED_ERROR_PREFIX +
+				"Некорректное значение поля 'pilotSupportRequired'. Ожидается 'Да' или 'Не требуется'.",
 		);
 	}
 }
@@ -384,7 +397,8 @@ export function getAutoMlCoefficient(autoMlRequired: string): number {
 		return 0;
 	} else {
 		throw new Error(
-			"Некорректное значение поля 'autoMlRequired'. Ожидается 'Да' или 'Не требуется'.",
+			COEFF_IGNORED_ERROR_PREFIX +
+				"Некорректное значение поля 'autoMlRequired'. Ожидается 'Да' или 'Не требуется'.",
 		);
 	}
 }
@@ -398,7 +412,10 @@ export function getProductionAdditionalReportsCoefficient(
 
 	const numValue = Number.parseInt(value, 10);
 	if (Number.isNaN(numValue) || numValue < 1 || numValue > 10) {
-		throw new Error("Значение должно быть 'Не требуется' или число от 1 до 10");
+		throw new Error(
+			COEFF_IGNORED_ERROR_PREFIX +
+				"Значение должно быть 'Не требуется' или число от 1 до 10",
+		);
 	}
 
 	if (numValue === 1) {
@@ -428,7 +445,9 @@ export function calculateDeploymentChannelCoefficient(
 	return channels.reduce((total, channel) => {
 		const coef = coefficientMap[channel];
 		if (coef === undefined) {
-			throw new Error(`Неизвестный канал внедрения: ${channel}`);
+			throw new Error(
+				COEFF_IGNORED_ERROR_PREFIX + `Неизвестный канал внедрения: ${channel}`,
+			);
 		}
 		return total + coef;
 	}, 0);

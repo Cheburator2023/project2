@@ -24,10 +24,6 @@ export const AnketaCreatePage = () => {
 		anketaCreate_basicInfoForm,
 		anketaCreate_projectAssessmentForm,
 	} = store;
-	console.log(
-		"🐸 Pepe said >> AnketaCreatePage >> calculationResult:",
-		calculationResult,
-	);
 
 	const stateBasicForm = anketaCreate_basicInfoForm.state;
 	const stateProjectAssessmentForm = anketaCreate_projectAssessmentForm.state;

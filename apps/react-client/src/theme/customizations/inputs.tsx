@@ -556,6 +556,10 @@ export const inputsCustomizations: Components<Theme> = {
 				"&.MuiInputLabel-shrink": {
 					transform: "none",
 				},
+				"& .MuiFormLabel-asterisk": {
+					fontSize: "20px",
+					// fontWeight: "bold",
+				},
 				"& .Mui-focused": {
 					color: "black",
 				},

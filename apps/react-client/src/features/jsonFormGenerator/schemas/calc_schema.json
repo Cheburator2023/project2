@@ -202,6 +202,17 @@
 			}
 		}
 	},
+	"if": {
+		"properties": {
+			"readyPromReports": { "const": "Нет" }
+		}
+	},
+	"then": {
+		"required": ["dataSourcesCount"]
+	},
+	"else": {
+		"required": []
+	},
 	"required": [
 		"modelsCount",
 		"setupComplexity",

@@ -1,5 +1,47 @@
+import { IAssessmentFormData } from "@react-client/features/jsonFormGenerator/types/FormData";
 import type FormRef from "@rjsf/core";
 import { create } from "zustand";
+
+export interface IBasicFormData {
+	name: string;
+	rfd?: string;
+	streamExecutor: string;
+	department: string[];
+	customerName?: string;
+	comment?: string;
+	relatedModels?: string[];
+	status?: string;
+	createdAt?: string;
+	id?: string;
+	author?: string;
+}
+
+export const basicInfoFormInitialData: IBasicFormData = {
+	name: "",
+	rfd: "",
+	streamExecutor: "",
+	department: [],
+	customerName: "",
+	comment: "",
+	relatedModels: [],
+	id: "",
+	author: "",
+};
+
+export const projectAssessmentFormInitialData: IAssessmentFormData = {
+	modelsCount: 1,
+	algorithmComplexity: [{ algorithmType: "" }],
+	setupComplexity: "",
+	readyPromReports: "",
+	assessedInitiativesCount: 1,
+	dataSourcesCount: "",
+	pilotModelRequired: "",
+	pilotSupportRequired: "",
+	autoMlRequired: "",
+	productionAdditionalReports: "1",
+	productionDeploymentChannels: [],
+	generalUncertainty: [],
+};
 
 export type FormName =
 	| "anketaCreate_basicInfoForm"
@@ -63,21 +105,25 @@ export const useAnketaCRUDFormsStore = create<AnketaCRUDFormsStore>((set) => ({
 		api: undefined,
 		state: undefined,
 		isDirty: false,
+		initialData: basicInfoFormInitialData,
 	},
 	anketaPreview_basicInfoForm: {
 		api: undefined,
 		state: undefined,
 		isDirty: false,
+		initialData: basicInfoFormInitialData,
 	},
 	anketaCreate_projectAssessmentForm: {
 		api: undefined,
 		state: undefined,
 		isDirty: false,
+		initialData: projectAssessmentFormInitialData,
 	},
 	anketaPreview_projectAssessmentForm: {
 		api: undefined,
 		state: undefined,
 		isDirty: false,
+		initialData: projectAssessmentFormInitialData,
 	},
 
 	calculationResult: [],
@@ -94,6 +140,7 @@ export const useAnketaCRUDFormsStore = create<AnketaCRUDFormsStore>((set) => ({
 	resetFormData: (formName) =>
 		set((_state) => ({
 			[formName]: {
+				..._state[formName],
 				api: undefined,
 				state: undefined,
 				isLoading: false,
