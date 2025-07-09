@@ -1,4 +1,5 @@
 import { useQuestionnaireControllerGetFullQuestionnaire } from "@react-client/common/api/generated/queries/calculation";
+import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { MultiSelectAutocompleteCreateWidget } from "@react-client/common/forms/widgets/MultiSelectAutocompleteCreateWidget";
 import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";
@@ -18,6 +19,7 @@ import type {
 	TemplatesType,
 	UiSchema,
 } from "@rjsf/utils";
+import { omit } from "lodash-es";
 import { useRef, useState } from "react";
 import { MultiSelectAutocompleteWidget } from "../../../common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjectFieldTemplate";
@@ -89,12 +91,12 @@ const uiSchema: UiSchema = {
 			rows: 3,
 		},
 	},
-	status: {
-		"ui:widget": "radio",
-		"ui:options": {
-			tooltip: "",
-		},
-	},
+	// status: {
+	// 	"ui:widget": "radio",
+	// 	"ui:options": {
+	// 		tooltip: "",
+	// 	},
+	// },
 	createdAt: {
 		"ui:widget": "date",
 		"ui:options": {
@@ -124,10 +126,21 @@ const widgets: RegistryWidgetsType = {
 	TextFieldCustomWidget,
 };
 
-export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
+export const BasicInfoForm = ({
+	isCreate,
+	initialData,
+}: {
+	initialData?: CalculationResponseDto;
+	isCreate?: boolean;
+}) => {
+	console.log("🐸 Pepe said >> initialData:", initialData);
+
 	const { data: questData } = useQuestionnaireControllerGetFullQuestionnaire();
 	const [formData, setFormData] = useState<IBasicFormData>(
-		basicInfoFormInitialData,
+		// @ts-ignore
+		isCreate
+			? basicInfoFormInitialData
+			: omit(initialData, ["questionnaireData"]),
 	);
 
 	const departmentENUM = questData?.referenceData.department;
@@ -198,12 +211,12 @@ export const BasicInfoForm = ({ isCreate }: { isCreate?: boolean }) => {
 							title: "Автор",
 							readOnly: true,
 						},
-						status: {
-							type: "string",
-							title: "Статус заявки",
-							enum: ["Активна", "Завершена"],
-							readOnly: true,
-						},
+						// status: {
+						// 	type: "string",
+						// 	title: "Статус заявки",
+						// 	enum: ["Активна", "Завершена"],
+						// 	readOnly: true,
+						// },
 						createdAt: {
 							type: "string",
 							title: "Дата создания",

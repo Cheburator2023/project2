@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/logo.svg" />
@@ -22,10 +23,50 @@
     -->
     <title>APP UI</title>
   </head>
+
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root">
-      <div>Загрузка...</div>
+      <style>
+        body,
+        #root {
+          margin: 0;
+          font-family: sans-serif;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          width: 100%;
+          overflow: hidden;
+        }
+
+        .loader {
+          width: 40px;
+          height: 40px;
+          border: 4px solid #e3f2fd;
+          border-top: 4px solid #1976d2;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          0% {
+            transform: rotate(0deg);
+          }
+
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+      </style>
+      <script>
+        const rootEl = document.getElementById("root");
+        const storedColor = localStorage.getItem('mui-mode');
+        rootEl.style.backgroundColor = storedColor === 'light' ? "#fff !important" : "#0f141c !important";
+
+      </script>
+      <div class="loader"></div>
     </div>
   </body>
+
 </html>

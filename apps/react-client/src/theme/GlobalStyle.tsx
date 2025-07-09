@@ -1,3 +1,8 @@
+import GlobalStyles from "@mui/material/GlobalStyles";
+
+export const globalStyles = (
+	<GlobalStyles
+		styles={`
 body {
 	margin: 0;
 	min-height: 100vh;
@@ -5,11 +10,14 @@ body {
 #root {
 	min-height: 100vh;
 	height: 100vh;
+	// background-color: initial !important;
+    font-family: Inter, sans-serif;
 }
 
 * {
 	scrollbar-color: #8d8d8d94 #bada5500;
 	scrollbar-width: thin;
+        font-family: Inter, sans-serif;
 }
 
 .ag-watermark,
@@ -62,3 +70,15 @@ div.ag-watermark-text {
 [data-mui-color-scheme="dark"] .ag-row-odd {
 	background-color: rgba(121, 121, 121, 0.05);
 }
+
+#root[data-color-scheme="light"] {
+	background-color: #e6e8ef !important;
+}
+    #root[data-color-scheme="dark"] {
+	background-color: #0f141c !important;
+}
+
+
+`}
+	/>
+);

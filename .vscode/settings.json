@@ -34,5 +34,8 @@
 	"[typescriptreact]": {
 		"editor.defaultFormatter": "biomejs.biome"
 	},
-	"typescript.preferences.importModuleSpecifier": "non-relative"
+	"typescript.preferences.importModuleSpecifier": "non-relative",
+	"[html]": {
+		"editor.defaultFormatter": "vscode.html-language-features"
+	}
 }

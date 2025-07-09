@@ -17,7 +17,7 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({
 			flexDirection="column"
 			alignItems="center"
 			justifyContent="center"
-			minHeight="60vh"
+			minHeight="90vh"
 		>
 			<BlockIcon color="disabled" sx={{ fontSize: 64, mb: 2 }} />
 			<Typography variant="h6" color="text.secondary" gutterBottom>

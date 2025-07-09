@@ -23,27 +23,28 @@ export function ColorModeIconDropdown() {
 	};
 
 	useEffectOnce(() => {
-		document.body.style.backgroundColor =
-			mode === "light" ? "#e6e8ef" : "#0f141c";
+		const rootEl: HTMLElement = document.getElementById("root") as any;
+		rootEl.setAttribute(
+			"data-color-scheme",
+			mode !== "dark" ? "light" : "dark",
+		);
+		rootEl.style.backgroundColor = "";
+		setMode(mode === "dark" ? "dark" : "light");
 	}, !!mode);
 
 	const handleMode = (targetMode: "light" | "dark") => () => {
+		const rootEl: HTMLElement = document.getElementById("root") as any;
+
 		// remove scrollbars
 		document.documentElement.style.overflow = "hidden";
 		// trigger reflow so that overflow style is applied
 		document.body.clientWidth;
 		// change scheme
-		document.documentElement.setAttribute(
+		rootEl.setAttribute(
 			"data-color-scheme",
 			targetMode !== "dark" ? "light" : "dark",
 		);
-		document.body.setAttribute(
-			"data-color-scheme",
-			targetMode !== "dark" ? "light" : "dark",
-		);
-
-		document.body.style.backgroundColor =
-			targetMode === "light" ? "#e6e8ef" : "#0f141c";
+		rootEl.style.backgroundColor = "";
 		// remove overflow style, which will bring back the scrollbar with the correct scheme
 		document.documentElement.style.overflow = "";
 
