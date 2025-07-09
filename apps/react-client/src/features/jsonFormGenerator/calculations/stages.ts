@@ -22,9 +22,9 @@ export function calculateStage02(
 	dataSourcesCountCoefficient: number,
 	generalUncertaintyCoefficient: number,
 	readyPromReports: string,
+	dataSourcesCount: string,
 ): number {
-	// If 'Наличие готовых пром витрин' is 'Да', set baseValue to 0 as per business logic
-	if (readyPromReports === "Да") {
+	if (readyPromReports === "Да" || Number(dataSourcesCount) === 0) {
 		baseValue = 0;
 	}
 

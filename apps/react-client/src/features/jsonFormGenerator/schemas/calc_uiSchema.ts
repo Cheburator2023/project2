@@ -84,8 +84,7 @@ export const calc_uiSchema: UiSchema = {
 			disabledValue: "Нет",
 			dependencies: [
 				{
-					condition:
-						"readyPromReports === 'Нет' || productionAdditionalReports !== 'Не требуется'",
+					condition: "readyPromReports === 'Нет'",
 					disabled: false,
 				},
 			],
