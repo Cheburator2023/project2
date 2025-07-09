@@ -5,9 +5,9 @@
  * API documentation for Smart Anketa application
  * OpenAPI spec version: 1.0
  */
-import type { DictionaryItemDto } from './dictionaryItemDto';
+// import type { DictionaryItemDto } from './dictionaryItemDto';
 
 /**
  * Справочники значений
  */
-export type QuestionnaireResponseDtoDictionaries = {[key: string]: DictionaryItemDto[]};
+export type QuestionnaireResponseDtoDictionaries = {[key: string]: any[]};

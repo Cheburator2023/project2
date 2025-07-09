@@ -35,7 +35,7 @@ export const ErrorPage = (props: {
 					<Alert
 						severity="error"
 						data-test-id="error-page--Alert-0"
-						sx={{ height: 200 }}
+						sx={{ height: 200, overflow: "auto" }}
 					>
 						<Typography variant="body1" data-test-id="error-page--Typography-0">
 							{props?.error}

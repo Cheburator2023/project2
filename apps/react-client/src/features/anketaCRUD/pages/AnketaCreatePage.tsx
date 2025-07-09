@@ -18,10 +18,6 @@ export const AnketaCreatePage = () => {
 	const store = useAnketaCRUDFormsStore();
 	const { canCreateCalculation } = usePermissions();
 
-	if (!canCreateCalculation) {
-		return <AccessDenied message="У вас нет прав на создание анкеты" />;
-	}
-
 	const {
 		setApiRef,
 		resetApiRef,
@@ -107,6 +103,10 @@ export const AnketaCreatePage = () => {
 		stateBasicForm,
 		stateProjectAssessmentForm,
 	]);
+
+	if (!canCreateCalculation) {
+		return <AccessDenied message="У вас нет прав на создание анкеты" />;
+	}
 
 	return (
 		<div data-test-id="anketa-create-page--div-0">

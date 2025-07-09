@@ -10,10 +10,12 @@ import { NavbarBreadcrumbs } from "../molecules/NavbarBreadcrumbs";
 
 export function Header({
 	children,
+	title,
 	calcId,
 }: {
 	children?: React.ReactNode;
 	calcId?: string;
+	title?: string;
 }) {
 	const { toggleSideMenu, isSideMenuVisible } = useGlobalSettingsStore();
 
@@ -51,7 +53,11 @@ export function Header({
 								<CloseRoundedIcon data-test-id="header--CloseRoundedIcon-0" />
 							)}
 						</MenuButton>
-						<NavbarBreadcrumbs data-test-id="header--NavbarBreadcrumbs-0" />
+						{title ? (
+							<b>{title}</b>
+						) : (
+							<NavbarBreadcrumbs data-test-id="header--NavbarBreadcrumbs-0" />
+						)}
 						{calcId ||
 							((id1 || id2) && (
 								<Typography data-test-id="header--Typography-0">

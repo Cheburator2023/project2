@@ -56,7 +56,7 @@ export const surfacesCustomizations: Components<Theme> = {
 		},
 		styleOverrides: {
 			outlined: {
-				border: "1px solid hsl(220deg 20% 80% / 64%)",
+				border: "1px solid #7a7f894d",
 			},
 		},
 	},

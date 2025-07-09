@@ -8,6 +8,8 @@ import Menu from "@mui/material/Menu";
 import MuiMenuItem from "@mui/material/MenuItem";
 import { paperClasses } from "@mui/material/Paper";
 import { styled } from "@mui/material/styles";
+import { useAuthStore } from "@react-client/common/store/authStore";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { MenuButton } from "./MenuButton";
@@ -18,13 +20,23 @@ const MenuItem = styled(MuiMenuItem)({
 
 export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 	const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+	const queryClient = useQueryClient();
 	const open = Boolean(anchorEl);
 	const handleClick = (event: React.MouseEvent<HTMLElement>) => {
 		setAnchorEl(event.currentTarget);
 	};
 	const handleClose = () => {
-		onLogout?.();
 		setAnchorEl(null);
+	};
+
+	const handleLogout = () => {
+		setAnchorEl(null);
+		useAuthStore.getState().setAccessToken(null);
+		queryClient.removeQueries();
+		queryClient.clear();
+		queryClient.invalidateQueries();
+		onLogout?.();
+		window.location.reload();
 	};
 
 	return (
@@ -74,7 +86,10 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 					}}
 					data-test-id="options-menu--MenuItem-0"
 				>
-					<ListItemText data-test-id="options-menu--ListItemText-0">
+					<ListItemText
+						onClick={handleLogout}
+						data-test-id="options-menu--ListItemText-0"
+					>
 						Выйти
 					</ListItemText>
 					<ListItemIcon data-test-id="options-menu--ListItemIcon-0">
