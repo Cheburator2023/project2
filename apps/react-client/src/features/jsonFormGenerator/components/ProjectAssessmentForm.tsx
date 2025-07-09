@@ -1,3 +1,4 @@
+import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { MultiSelectAutocompleteWidget } from "@react-client/common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "@react-client/common/forms/widgets/RJSFObjectFieldTemplate";
@@ -42,16 +43,20 @@ const widgets = {
 	MultiSelectAutocompleteWidget,
 };
 
-export const ProjectAssessmentForm: React.FC<{ isCreate?: boolean }> = ({
-	isCreate,
-}) => {
+export const ProjectAssessmentForm: React.FC<{
+	isCreate?: boolean;
+	initialData?: CalculationResponseDto;
+}> = ({ isCreate, initialData }) => {
 	const formRef = useRef<FormRef>(null);
 	const { setApiRef, resetApiRef, updateFormState, ...store } =
 		useAnketaCRUDFormsStore();
 	const { setFormData: setFormDataForCalc } = assessmentCalculationsStore();
 
 	const [formData, setFormData] = useState<IAssessmentFormData>(
-		projectAssessmentFormInitialData,
+		// @ts-ignore
+		isCreate
+			? projectAssessmentFormInitialData
+			: initialData?.questionnaireData,
 	);
 	const [liveValidate, setLiveValidate] = useState(false);
 

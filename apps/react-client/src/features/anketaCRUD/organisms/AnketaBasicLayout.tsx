@@ -1,5 +1,6 @@
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import { Alert, Button, styled } from "@mui/material";
+import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
@@ -15,12 +16,14 @@ export const AnketaBasicLayout = ({
 	isPending,
 	onSubmit,
 	formHasErrors,
+	initialData,
 }: {
 	isCreate?: boolean;
 	isCopy?: boolean;
 	isPending?: boolean;
 	formHasErrors?: boolean;
 	onSubmit?: () => void;
+	initialData?: CalculationResponseDto;
 }) => {
 	const location = useLocation();
 
@@ -53,6 +56,7 @@ export const AnketaBasicLayout = ({
 							>
 								<Spacer data-test-id="anketa-basic-layout--Spacer-0" />
 								<BasicInfoForm
+									initialData={initialData}
 									isCreate={isCreate}
 									data-test-id="anketa-basic-layout--BasicInfoForm-0"
 								/>
@@ -99,6 +103,7 @@ export const AnketaBasicLayout = ({
 						<Spacer data-test-id="anketa-basic-layout--Spacer-2" />
 						<ProjectAssessmentForm
 							isCreate={isCreate}
+							initialData={initialData}
 							data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
 						/>
 					</Card>

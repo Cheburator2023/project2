@@ -1,3 +1,5 @@
+import { CircularProgress } from "@mui/material";
+import { useCalculationControllerFindOne } from "@react-client/common/api/generated/queries/calculation";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { AnketaBasicLayout } from "@react-client/features/anketaCRUD/organisms/AnketaBasicLayout";
@@ -7,9 +9,18 @@ import { useParams } from "react-router";
 
 export const AnketaPreviewPage = () => {
 	const params = useParams();
+	const calcId = params.id || "";
+
 	const { setApiRef, resetApiRef, ...store } = useAnketaCRUDFormsStore();
 
-	const calcId = params.id;
+	const { data: initialData, isFetching } = useCalculationControllerFindOne(
+		calcId,
+		{
+			query: {
+				enabled: !!calcId,
+			},
+		},
+	);
 
 	return (
 		<div data-test-id="anketa-preview-page--div-0">
@@ -21,7 +32,14 @@ export const AnketaPreviewPage = () => {
 				height="-webkit-fill-available"
 				data-test-id="anketa-preview-page--Flex-0"
 			>
-				<AnketaBasicLayout data-test-id="anketa-preview-page--AnketaBasicLayout-0" />
+				{isFetching ? (
+					<CircularProgress />
+				) : (
+					<AnketaBasicLayout
+						initialData={initialData}
+						data-test-id="anketa-preview-page--AnketaBasicLayout-0"
+					/>
+				)}
 			</Flex>
 		</div>
 	);
