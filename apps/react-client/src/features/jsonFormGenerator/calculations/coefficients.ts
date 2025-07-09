@@ -66,8 +66,6 @@ export function calculateTotalUncertainty(
 		);
 	});
 
-	console.log(coeffs);
-
 	const sumOfCoefficients = coeffs.reduce((sum, coef) => sum + coef, 0);
 	const baseUncertainty = sumOfCoefficients + 1;
 	const correctionFactor = 1 + correctionPercent / 100;
@@ -246,9 +244,9 @@ export function calculateCoefficientForGeneralUncertaintyItem(
 	// Check for Very High conditions
 	for (const condition of veryHighConditions) {
 		if (
-			condition.timeline.includes(initiativeTimeline) &&
-			condition.cost.includes(initiativeCost) &&
-			condition.impact.includes(impactOfRisk) &&
+			(condition.timeline.includes(initiativeTimeline) ||
+				condition.cost.includes(initiativeCost) ||
+				condition.impact.includes(impactOfRisk)) &&
 			condition.probability.includes(probabilityOfRisk)
 		) {
 			return 0.1;
@@ -258,9 +256,9 @@ export function calculateCoefficientForGeneralUncertaintyItem(
 	// Check for High conditions
 	for (const condition of highConditions) {
 		if (
-			condition.timeline.includes(initiativeTimeline) &&
-			condition.cost.includes(initiativeCost) &&
-			condition.impact.includes(impactOfRisk) &&
+			(condition.timeline.includes(initiativeTimeline) ||
+				condition.cost.includes(initiativeCost) ||
+				condition.impact.includes(impactOfRisk)) &&
 			condition.probability.includes(probabilityOfRisk)
 		) {
 			return 0.07;
@@ -270,9 +268,9 @@ export function calculateCoefficientForGeneralUncertaintyItem(
 	// Check for Medium conditions
 	for (const condition of mediumConditions) {
 		if (
-			condition.timeline.includes(initiativeTimeline) &&
-			condition.cost.includes(initiativeCost) &&
-			condition.impact.includes(impactOfRisk) &&
+			(condition.timeline.includes(initiativeTimeline) ||
+				condition.cost.includes(initiativeCost) ||
+				condition.impact.includes(impactOfRisk)) &&
 			condition.probability.includes(probabilityOfRisk)
 		) {
 			return 0.05;
@@ -282,9 +280,9 @@ export function calculateCoefficientForGeneralUncertaintyItem(
 	// Check for Low conditions
 	for (const condition of lowConditions) {
 		if (
-			condition.timeline.includes(initiativeTimeline) &&
-			condition.cost.includes(initiativeCost) &&
-			condition.impact.includes(impactOfRisk) &&
+			(condition.timeline.includes(initiativeTimeline) ||
+				condition.cost.includes(initiativeCost) ||
+				condition.impact.includes(impactOfRisk)) &&
 			condition.probability.includes(probabilityOfRisk)
 		) {
 			return 0.03;
