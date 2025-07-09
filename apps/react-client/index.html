@@ -13,10 +13,6 @@
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root">
       <style>
-        :root {
-          color-scheme: light dark;
-        }
-
         body,
         #root {
           margin: 0;
@@ -25,7 +21,7 @@
           align-items: center;
           justify-content: center;
           min-height: 99vh;
-          background-color: light-dark('#fff', '#0f141c');
+          width: 100%;
         }
 
         .loader {
@@ -48,12 +44,10 @@
         }
       </style>
       <script>
+        const rootEl = document.getElementById("root");
         const storedColor = localStorage.getItem('mui-mode');
-        if (storedColor === 'dark') {
-          document.body.style.backgroundColor = '#0f141c';
-        } else {
-          document.body.style.backgroundColor = '#fff';
-        }
+        rootEl.style.backgroundColor = storedColor === 'light' ? "#fff" : "#0f141c";
+
       </script>
       <div class="loader"></div>
     </div>

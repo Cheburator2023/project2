@@ -23,8 +23,11 @@ export function ColorModeIconDropdown() {
 	};
 
 	useEffectOnce(() => {
-		document.body.style.backgroundColor =
-			mode === "light" ? "#e6e8ef" : "#0f141c";
+		const rootEl = document.getElementById("root");
+
+		// @ts-ignore
+		rootEl.style.backgroundColor =
+			mode === "light" ? "#fff!important" : "#0f141c!important";
 	}, !!mode);
 
 	const handleMode = (targetMode: "light" | "dark") => () => {
@@ -42,8 +45,11 @@ export function ColorModeIconDropdown() {
 			targetMode !== "dark" ? "light" : "dark",
 		);
 
-		document.body.style.backgroundColor =
-			targetMode === "light" ? "#e6e8ef" : "#0f141c";
+		const rootEl = document.getElementById("root");
+
+		// @ts-ignore
+		rootEl.style.backgroundColor =
+			targetMode === "light" ? "#e6e8ef!important" : "#0f141c!important";
 		// remove overflow style, which will bring back the scrollbar with the correct scheme
 		document.documentElement.style.overflow = "";
 
