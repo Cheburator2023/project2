@@ -25,6 +25,16 @@ export interface CreateCalculationDto {
   initiativeTimeline: CreateCalculationDtoInitiativeTimeline;
   /** Стоимость инициативы */
   initiativeCost: CreateCalculationDtoInitiativeCost;
+  /** RFD (Reference Data) */
+  rfd?: string;
+  /** Стрим-исполнитель */
+  streamExecutor?: string;
+  /** Департамент заказчика */
+  department?: string[];
+  /** ФИО заказчика */
+  customerName?: string;
+  /** Комментарий */
+  comment?: string;
   /**
    * Количество моделей (>1 для каскадов и ансамблей моделей)
    * @minimum 1

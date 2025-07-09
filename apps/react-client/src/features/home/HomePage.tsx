@@ -3,6 +3,7 @@ import ReplayIcon from "@mui/icons-material/Replay";
 import { IconButton, styled, Tooltip, useColorScheme } from "@mui/material";
 import { useCalculationControllerFindAll } from "@react-client/common/api/generated/queries/calculation";
 import { CalculationResponseDto } from "@react-client/common/api/generated/types";
+import { AccessDenied } from "@react-client/common/primitives/AccessDenied";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
@@ -12,6 +13,7 @@ import { CalculationPreviewCell } from "@react-client/features/home/molecules/Ca
 import schema from "@react-client/features/jsonFormGenerator/schemas/calc_schema.json";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { SearchInput } from "@react-client/features/navigation/organisms/SearchInput";
+import { usePermissions } from "@react-client/hooks/usePermissions";
 import { routes } from "@react-client/routing/routes";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 // import { AllEnterpriseModule } from "ag-grid-enterprise";
@@ -219,12 +221,30 @@ export const HomeTemplete = ({
 	const isInDefaultCompareMode = params.get("isInCompareMode") === "true";
 	const navigate = useNavigate();
 	const _location = useLocation();
-	const [isInCompareMode, setIsInCompareMode] = useState(
-		isInDefaultCompareMode,
+	<<<<<<< HEAD
+	const { setGridApi } = useGlobalSettingsStore();
+	=======
+>>>>>>> origin/dev
+	const [_isInCompareMode, setIsInCompareMode] = useState(
+		params.get("isInCompareMode") === "true",
 	);
-	const [selectedRows, setSelectedRows] = useState<IRowNode<any>[] | undefined>(
+	const [_selectedRows, setSelectedRows] = useState<IRowNode<any>[] | undefined>(
 		[],
 	);
+	<<<<<<< HEAD
+	const { data, isLoading, error } = useCalculationControllerFindAll();
+	const { canViewAllCalculations } = usePermissions();
+
+	if (!canViewAllCalculations) {
+		return <AccessDenied message="У вас нет прав на просмотр списка анкет" />;
+	}
+
+	useEffect(() => {
+		setIsInCompareMode(params.get("isInCompareMode") === "true");
+	}, [params.get("isInCompareMode")]);
+
+	=======
+>>>>>>> origin/dev
 	const [columnDefs] = useState(
 		_columnDefs.map((col) => ({
 			...col,
@@ -264,7 +284,7 @@ export const HomeTemplete = ({
 		},
 	};
 
-	const onExportExcel = () => {
+	const _onExportExcel = () => {
 		if (gridRef.current?.api) {
 			gridRef.current.api.exportDataAsExcel({
 				fileName: "export_data.xlsx",

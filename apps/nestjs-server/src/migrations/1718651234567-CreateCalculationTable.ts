@@ -6,8 +6,8 @@ import { MigrationInterface, QueryRunner } from "typeorm";
  */
 
 export class CreateCalculationTable1718651234567 implements MigrationInterface {
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+	public async up(queryRunner: QueryRunner): Promise<void> {
+		await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS calculation (
                                                        "id" uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
                 "name" varchar(255) NOT NULL,
@@ -23,13 +23,13 @@ export class CreateCalculationTable1718651234567 implements MigrationInterface {
                 )
         `);
 
-        await queryRunner.query(`
+		await queryRunner.query(`
             CREATE INDEX idx_calculation_created_at ON calculation("createdAt")
         `);
-    }
+	}
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DROP INDEX idx_calculation_created_at`);
-        await queryRunner.query(`DROP TABLE calculation`);
-    }
+	public async down(queryRunner: QueryRunner): Promise<void> {
+		await queryRunner.query(`DROP INDEX idx_calculation_created_at`);
+		await queryRunner.query(`DROP TABLE calculation`);
+	}
 }
