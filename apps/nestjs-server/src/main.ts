@@ -1,8 +1,8 @@
 import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import { AppModule } from "./app.module";
 import * as express from "express";
+import { AppModule } from "./app.module";
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
@@ -12,8 +12,8 @@ async function bootstrap() {
 		credentials: true,
 	});
 
-    app.use(express.json());
-    app.use(express.urlencoded({ extended: true }));
+	app.use(express.json());
+	app.use(express.urlencoded({ extended: true }));
 
 	app.useGlobalPipes(
 		new ValidationPipe({
@@ -36,15 +36,15 @@ async function bootstrap() {
 		.setDescription("API documentation for Smart Anketa application")
 		.setVersion("1.0")
 		.addBearerAuth(
-            {
-                type: "http",
-                scheme: "bearer",
-                bearerFormat: "JWT",
-                name: "JWT",
-                description: "Enter JWT token",
-                in: "header",
-            },
-            "JWT-auth",
+			{
+				type: "http",
+				scheme: "bearer",
+				bearerFormat: "JWT",
+				name: "JWT",
+				description: "Enter JWT token",
+				in: "header",
+			},
+			"JWT-auth",
 		)
 		.build();
 

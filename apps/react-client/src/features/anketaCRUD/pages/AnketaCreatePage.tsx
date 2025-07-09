@@ -1,11 +1,13 @@
 import { useCalculationControllerCreate } from "@react-client/common/api/generated/queries/calculation";
 import { CreateCalculationDto } from "@react-client/common/api/generated/types";
 import { toast } from "@react-client/common/muiCustom/toasts";
+import { AccessDenied } from "@react-client/common/primitives/AccessDenied";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { AnketaBasicLayout } from "@react-client/features/anketaCRUD/organisms/AnketaBasicLayout";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { Header } from "@react-client/features/navigation/organisms/Header";
+import { usePermissions } from "@react-client/hooks/usePermissions";
 import { routes } from "@react-client/routing/routes";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
@@ -14,6 +16,12 @@ export const AnketaCreatePage = () => {
 	const navigate = useNavigate();
 	const [hasSubmitted, setHasSubmitted] = useState(false);
 	const store = useAnketaCRUDFormsStore();
+	const { canCreateCalculation } = usePermissions();
+
+	if (!canCreateCalculation) {
+		return <AccessDenied message="У вас нет прав на создание анкеты" />;
+	}
+
 	const {
 		setApiRef,
 		resetApiRef,

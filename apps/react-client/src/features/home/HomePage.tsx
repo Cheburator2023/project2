@@ -5,6 +5,7 @@ import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import SaveIcon from "@mui/icons-material/Save";
 import { IconButton, styled, Tooltip, useColorScheme } from "@mui/material";
 import { useCalculationControllerFindAll } from "@react-client/common/api/generated/queries/calculation";
+import { AccessDenied } from "@react-client/common/primitives/AccessDenied";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
@@ -12,6 +13,7 @@ import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.
 import schema from "@react-client/features/jsonFormGenerator/schemas/calc_schema.json";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { SearchInput } from "@react-client/features/navigation/organisms/SearchInput";
+import { usePermissions } from "@react-client/hooks/usePermissions";
 import { routes } from "@react-client/routing/routes";
 // import { AllEnterpriseModule } from "ag-grid-enterprise";
 import {
@@ -154,22 +156,23 @@ export const HomePage = () => {
 	const [params] = useSearchParams();
 	const navigate = useNavigate();
 	const _location = useLocation();
-
-	const { data, isLoading, error } = useCalculationControllerFindAll();
-
-	const isInDefaultCompareMode = params.get("isInCompareMode") === "true";
-
 	const { setGridApi } = useGlobalSettingsStore();
 	const [isInCompareMode, setIsInCompareMode] = useState(
-		isInDefaultCompareMode,
+		params.get("isInCompareMode") === "true",
 	);
 	const [selectedRows, setSelectedRows] = useState<IRowNode<any>[] | undefined>(
 		[],
 	);
+	const { data, isLoading, error } = useCalculationControllerFindAll();
+	const { canViewAllCalculations } = usePermissions();
+
+	if (!canViewAllCalculations) {
+		return <AccessDenied message="У вас нет прав на просмотр списка анкет" />;
+	}
 
 	useEffect(() => {
-		setIsInCompareMode(isInDefaultCompareMode);
-	}, [isInDefaultCompareMode]);
+		setIsInCompareMode(params.get("isInCompareMode") === "true");
+	}, [params.get("isInCompareMode")]);
 
 	const [columnDefs] = useState(
 		_columnDefs.map((col) => ({

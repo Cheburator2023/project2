@@ -12,10 +12,22 @@ export interface CalculationResponseDto {
   id: string;
   /** Название анкеты */
   name: string;
+  /** RFD (Reference Data) */
+  rfd: string;
+  /** Исполнительный стрим */
+  streamExecutor: string;
+  /** Департамент заказчика */
+  department: string[];
+  /** ФИО заказчика */
+  customerName: string;
+  /** Комментарий */
+  comment: string;
   /** Данные анкеты расчета */
   questionnaireData: CalculationQuestionnaireDataDto;
   /** Финальный коэффициент расчета */
   finalCoefficient: number;
   /** Дата создания расчета */
   createdAt: string;
+  /** Автор расчета */
+  author: string;
 }

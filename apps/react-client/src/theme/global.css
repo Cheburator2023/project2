@@ -9,7 +9,7 @@ body {
 
 * {
 	scrollbar-color: #8d8d8d94 #bada5500;
-    scrollbar-width: thin;
+	scrollbar-width: thin;
 }
 
 .ag-watermark,
@@ -55,9 +55,10 @@ div.ag-watermark-text {
 	cursor: pointer;
 }
 
-.ag-row, .ag-root-wrapper {
+.ag-row,
+.ag-root-wrapper {
 	background-color: transparent;
 }
 .ag-row-odd {
-	background-color:rgba(121, 121, 121, 0.05);
+	background-color: rgba(121, 121, 121, 0.05);
 }

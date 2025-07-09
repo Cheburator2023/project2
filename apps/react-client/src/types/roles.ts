@@ -16,11 +16,10 @@ export enum Role {
 export type UserRoles = Role[];
 
 export enum Permission {
-	VIEW_ALL_CALCULATIONS = "view_all_calculations",
-	VIEW_STREAM_CALCULATIONS = "view_stream_calculations",
-	CREATE_CALCULATION = "create_calculation",
-	EDIT_CALCULATION = "edit_calculation",
-	EXPORT_REPORTS = "export_reports",
-	ADMIN_PANEL = "admin_panel",
+	ANKETA_VIEW_ALL_CALCULATIONS = "anketa_view_all_calculations",
+	ANKETA_CREATE_CALCULATION = "anketa_create_calculation",
+	ANKETA_EDIT_CALCULATION = "anketa_edit_calculation",
+	ANKETA_EXPORT_REPORTS = "anketa_export_reports",
+	ANKETA_ADMIN_PANEL = "anketa_admin_panel",
 }
 export type UserPermissions = Permission[];

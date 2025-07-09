@@ -7,13 +7,12 @@ export const usePermissions = () => {
 	return {
 		permissions,
 		hasPermission,
-		canViewAllCalculations: hasPermission(Permission.VIEW_ALL_CALCULATIONS),
-		canViewStreamCalculations: hasPermission(
-			Permission.VIEW_STREAM_CALCULATIONS,
+		canViewAllCalculations: hasPermission(
+			Permission.ANKETA_VIEW_ALL_CALCULATIONS,
 		),
-		canCreateCalculation: hasPermission(Permission.CREATE_CALCULATION),
-		canEditCalculation: hasPermission(Permission.EDIT_CALCULATION),
-		canExportReports: hasPermission(Permission.EXPORT_REPORTS),
-		canAccessAdminPanel: hasPermission(Permission.ADMIN_PANEL),
+		canCreateCalculation: hasPermission(Permission.ANKETA_CREATE_CALCULATION),
+		canEditCalculation: hasPermission(Permission.ANKETA_EDIT_CALCULATION),
+		canExportReports: hasPermission(Permission.ANKETA_EXPORT_REPORTS),
+		canAccessAdminPanel: hasPermission(Permission.ANKETA_ADMIN_PANEL),
 	};
 };
