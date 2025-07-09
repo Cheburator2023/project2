@@ -135,6 +135,7 @@ const calculateStageResults = (
 			coefficients.dataSourcesCountCoefficient,
 			coefficients.generalUncertaintyCoefficient,
 			formData.readyPromReports || "Нет",
+			formData.dataSourcesCount,
 		),
 		stage04: mainStages.calculateStage04(
 			stageBaseValues.stage04,
