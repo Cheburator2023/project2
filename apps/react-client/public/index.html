@@ -35,8 +35,9 @@
           display: flex;
           align-items: center;
           justify-content: center;
-          min-height: 99vh;
+          min-height: 100vh;
           width: 100%;
+          overflow: hidden;
         }
 
         .loader {
@@ -61,7 +62,7 @@
       <script>
         const rootEl = document.getElementById("root");
         const storedColor = localStorage.getItem('mui-mode');
-        rootEl.style.backgroundColor = storedColor === 'light' ? "#fff" : "#0f141c";
+        rootEl.style.backgroundColor = storedColor === 'light' ? "#fff !important" : "#0f141c !important";
 
       </script>
       <div class="loader"></div>

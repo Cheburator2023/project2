@@ -1,4 +1,4 @@
-import "./theme/global.css";
+// import "./theme/global.css";
 import "@fontsource/inter";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 
@@ -13,6 +13,7 @@ import { useEffectOnce } from "@react-client/common/hooks/useEffectOnce";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { Toaster } from "@react-client/common/toasts";
+import { globalStyles } from "@react-client/theme/GlobalStyle";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setDefaultOptions } from "date-fns/esm";
 import { ru } from "date-fns/esm/locale";
@@ -89,11 +90,12 @@ const App: React.FC<LayoutProps> = (props) => {
 
 	return (
 		<BrowserRouter basename={bridged ? "/smartAnketa" : "/"}>
+			<CssBaseline enableColorScheme />
+			{globalStyles}
 			<AppTheme themeComponents={xThemeComponents}>
 				<ErrorBoundary ErrorPage={ErrorPage}>
 					<StyledEngineProvider injectFirst>
 						<QueryClientProvider client={queryClient}>
-							<CssBaseline enableColorScheme />
 							<Toaster />
 							<Suspense fallback={<CircularProgress />}>
 								<LocalizationProvider dateAdapter={AdapterDateFns}>
