@@ -188,7 +188,7 @@ export const Card = (props: CardProps) => {
 	if (props.zoom !== undefined && props.uuid) {
 		return <CardWithZoom {...props} zoom={props.zoom} uuid={props.uuid} />;
 	}
-	return <CardWithoutZoom {...props} />;
+	return <CardWithoutZoom {...props} variant="outlined" />;
 };
 
 const MUIPaperStyled = styled(Paper)`

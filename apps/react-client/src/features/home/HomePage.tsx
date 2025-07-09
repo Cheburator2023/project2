@@ -1,6 +1,5 @@
 import AddIcon from "@mui/icons-material/Add";
-import CompareIcon from "@mui/icons-material/Compare";
-import SaveIcon from "@mui/icons-material/Save";
+import ReplayIcon from "@mui/icons-material/Replay";
 import { IconButton, styled, Tooltip, useColorScheme } from "@mui/material";
 import { useCalculationControllerFindAll } from "@react-client/common/api/generated/queries/calculation";
 import { CalculationResponseDto } from "@react-client/common/api/generated/types";
@@ -14,6 +13,7 @@ import schema from "@react-client/features/jsonFormGenerator/schemas/calc_schema
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { SearchInput } from "@react-client/features/navigation/organisms/SearchInput";
 import { routes } from "@react-client/routing/routes";
+import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 // import { AllEnterpriseModule } from "ag-grid-enterprise";
 import {
 	AllCommunityModule,
@@ -52,9 +52,9 @@ const _columnDefs: ColDef<any, any>[] = [
 		suppressSizeToFit: true,
 		suppressMovable: true,
 		suppressHeaderMenuButton: true,
-		width: 150,
-		maxWidth: 150,
-		minWidth: 150,
+		width: 120,
+		maxWidth: 120,
+		minWidth: 120,
 		cellRenderer: CalculationPreviewCell,
 	},
 	{ field: "id", headerName: "ID", sortable: true, filter: true },
@@ -182,33 +182,59 @@ const _columnDefs: ColDef<any, any>[] = [
 ];
 
 export const HomePage = () => {
-	const { data, isLoading, error } = useCalculationControllerFindAll({
+	const { data, isLoading, error, refetch } = useCalculationControllerFindAll({
 		query: {
-			enabled: true,
+			refetchInterval: 30000,
 		},
 	});
 
-	return <HomeTemplete data={data} error={error} isLoading={isLoading} />;
+	return (
+		<HomeTemplete
+			data={data}
+			error={error}
+			isLoading={isLoading}
+			refetch={refetch}
+		/>
+	);
 };
 
 export const HomeTemplete = ({
 	data,
 	error,
 	isLoading,
+	refetch,
 }: {
 	data: CalculationResponseDto[] | undefined;
 	error: any;
 	isLoading: boolean;
+	refetch: (
+		options?: RefetchOptions,
+	) => Promise<QueryObserverResult<CalculationResponseDto[], void>>;
 }) => {
+	const [hoveredRowId, setHoveredRowId] = useState("");
+	const { setGridApi } = useGlobalSettingsStore();
 	const gridRef = useRef<AgGridReact>(null);
 	const { mode } = useColorScheme();
 	const [params] = useSearchParams();
+	const isInDefaultCompareMode = params.get("isInCompareMode") === "true";
 	const navigate = useNavigate();
 	const _location = useLocation();
-
-	console.log("🐸 Pepe said >> HomePage >> error:", error);
-
-	const [hoveredRowId, setHoveredRowId] = useState("");
+	const [isInCompareMode, setIsInCompareMode] = useState(
+		isInDefaultCompareMode,
+	);
+	const [selectedRows, setSelectedRows] = useState<IRowNode<any>[] | undefined>(
+		[],
+	);
+	const [columnDefs] = useState(
+		_columnDefs.map((col) => ({
+			...col,
+			headerName: col.headerName,
+			field: col.field,
+			sortable: true,
+			filter: true,
+			resizable: true,
+		})),
+	);
 
 	if (error) {
 		toast.error("Ошибка загрузки данных реестра анкет", {
@@ -220,30 +246,9 @@ export const HomeTemplete = ({
 		});
 	}
 
-	const isInDefaultCompareMode = params.get("isInCompareMode") === "true";
-
-	const { setGridApi } = useGlobalSettingsStore();
-	const [isInCompareMode, setIsInCompareMode] = useState(
-		isInDefaultCompareMode,
-	);
-	const [selectedRows, setSelectedRows] = useState<IRowNode<any>[] | undefined>(
-		[],
-	);
-
 	useEffect(() => {
 		setIsInCompareMode(isInDefaultCompareMode);
 	}, [isInDefaultCompareMode]);
-
-	const [columnDefs] = useState(
-		_columnDefs.map((col) => ({
-			...col,
-			headerName: col.headerName,
-			field: col.field,
-			sortable: true,
-			filter: true,
-			resizable: true,
-		})),
-	);
 
 	const defaultColDef: ColDef<any, any> | undefined = {
 		sortable: true,
@@ -276,32 +281,6 @@ export const HomeTemplete = ({
 		navigate(routes.calculationCreate.rootPath);
 	};
 
-	const _actions = [
-		{
-			icon: <AddIcon data-test-id="home-page--AddIcon-0" />,
-			name: "Создать расчет",
-			onClick: onCreateCalculation,
-		},
-		{
-			icon: (
-				<SaveIcon
-					onClick={onExportExcel}
-					data-test-id="home-page--SaveIcon-0"
-				/>
-			),
-			name: "Выгрузить в Excel",
-		},
-		{
-			icon: (
-				<CompareIcon
-					onClick={() => setIsInCompareMode(!isInCompareMode)}
-					data-test-id="home-page--CompareIcon-0"
-				/>
-			),
-			name: isInCompareMode ? "Отменить сравнение" : "Сравнить",
-		},
-	];
-
 	const onGridReady = (params: GridReadyEvent<any, any>) => {
 		console.log("Grid is ready, setting API in Zustand store.");
 		setGridApi(params.api as GridApi);
@@ -322,6 +301,13 @@ export const HomeTemplete = ({
 		"ag-row-is-odd": (params: any) => {
 			return params?.rowIndex % 2 === 0;
 		},
+	};
+
+	const theme =
+		mode === "light" || mode === undefined ? themeQuartz : themeQuartzDark;
+
+	const onCellMouseOver = (params: any) => {
+		setHoveredRowId(params?.node.id || "0");
 	};
 
 	return (
@@ -349,6 +335,11 @@ export const HomeTemplete = ({
 								data-test-id="home-page--IconButton-0"
 							>
 								<AddIcon data-test-id="home-page--AddIcon-1" />
+							</IconButton>
+						</Tooltip>
+						<Tooltip title="Обновить реестр">
+							<IconButton onClick={refetch as any}>
+								<ReplayIcon />
 							</IconButton>
 						</Tooltip>
 						{/* <Tooltip title="Сравнить" data-test-id="home-page--Tooltip-1">
@@ -393,17 +384,13 @@ export const HomeTemplete = ({
 					rowClass="custom-row-class"
 					rowClassRules={rowClassRules}
 					rowSelection={{ mode: "multiRow" }}
-					theme={
-						mode === "light" || mode === undefined
-							? themeQuartz
-							: themeQuartzDark
-					}
+					theme={theme}
 					onSelectionChanged={(e) => {
 						setSelectedRows(e.api.getSelectedNodes());
 					}}
 					rowData={data}
 					loading={isLoading}
-					columnDefs={columnDefs as any}
+					columnDefs={columnDefs}
 					defaultColDef={defaultColDef}
 					sideBar={false}
 					pagination={true}
@@ -411,9 +398,7 @@ export const HomeTemplete = ({
 					localeText={AG_GRID_LOCALE_RU}
 					ref={gridRef}
 					autoSizeStrategy={autoSizeStrategy}
-					onCellMouseOver={(params) => {
-						setHoveredRowId(params?.node.id || "0");
-					}}
+					onCellMouseOver={onCellMouseOver}
 					onGridReady={onGridReady}
 					tooltipShowDelay={500}
 					data-test-id="home-page--AgGridReact-0"

@@ -7,13 +7,20 @@ export const feedbackCustomizations: Components<Theme> = {
 		styleOverrides: {
 			root: ({ theme }) => ({
 				padding: "6px 2px",
+				alignItems: "center",
+
 				"& .MuiAlert-icon": {
 					marginRight: "0px",
 					padding: "0 6px",
+					alignItems: "center",
 				},
 				"& .MuiAlert-action": {
 					padding: 0,
 					margin: 0,
+				},
+				"& .MuiAlert-message": {
+					fontSize: "10px",
+					padding: "2px 8px",
 				},
 			}),
 		},
