@@ -3,7 +3,7 @@ export const ILL_BUG = () => {
 		<div data-test-id="i-l-l_-b-u-g--div-0">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
-				width="390"
+				width="290"
 				height="248.7592"
 				viewBox="0 0 690 448.7592"
 				role="img"

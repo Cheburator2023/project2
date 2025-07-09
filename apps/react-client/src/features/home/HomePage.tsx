@@ -1,14 +1,15 @@
-import "ag-grid-enterprise";
 import AddIcon from "@mui/icons-material/Add";
 import CompareIcon from "@mui/icons-material/Compare";
-import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import SaveIcon from "@mui/icons-material/Save";
 import { IconButton, styled, Tooltip, useColorScheme } from "@mui/material";
 import { useCalculationControllerFindAll } from "@react-client/common/api/generated/queries/calculation";
+import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { toast } from "@react-client/common/toasts";
+import { CalculationPreviewCell } from "@react-client/features/home/molecules/CalculationPreviewCell";
 import schema from "@react-client/features/jsonFormGenerator/schemas/calc_schema.json";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { SearchInput } from "@react-client/features/navigation/organisms/SearchInput";
@@ -22,9 +23,11 @@ import {
 	type GridReadyEvent,
 	type IRowNode,
 	ModuleRegistry,
+	SizeColumnsToContentStrategy,
 	themeQuartz,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
+import { format } from "date-fns/esm";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 
@@ -33,10 +36,31 @@ const themeQuartzDark = themeQuartz.withPart(colorSchemeDarkBlue);
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 const _columnDefs: ColDef<any, any>[] = [
+	{
+		field: "UI_PREVIEW",
+		headerName: "",
+		pinned: "right",
+		lockPinned: true,
+		filter: false,
+		sortable: false,
+		suppressColumnsToolPanel: true,
+		suppressFiltersToolPanel: true,
+		suppressHeaderFilterButton: true,
+		suppressFloatingFilterButton: true,
+		suppressFillHandle: true,
+		suppressAutoSize: true,
+		suppressSizeToFit: true,
+		suppressMovable: true,
+		suppressHeaderMenuButton: true,
+		width: 150,
+		maxWidth: 150,
+		minWidth: 150,
+		cellRenderer: CalculationPreviewCell,
+	},
 	{ field: "id", headerName: "ID", sortable: true, filter: true },
 	{
 		field: "name",
-		headerName: "Имя",
+		headerName: "Название анкеты",
 		sortable: true,
 		filter: true,
 	},
@@ -50,10 +74,19 @@ const _columnDefs: ColDef<any, any>[] = [
 		field: "createdAt",
 		headerName: "Дата создания",
 		sortable: true,
-		filter: true,
+		filter: "agDateColumnFilter",
+		cellDataType: "dateTime",
+		valueFormatter: (params) => {
+			const dt = new Date(params?.value.replace("Z", ""));
+			return format(dt, "dd MMMM yyyy, HH:mm:ss, xxxxx");
+		},
 	},
+
 	{ field: "questionnaireData.name", headerName: "Название анкеты" },
-	{ field: "questionnaireData.modelsCount", headerName: "Количество моделей" },
+	{
+		field: "questionnaireData.modelsCount",
+		headerName: "Количество моделей",
+	},
 	{ field: "finalCoefficient", headerName: "Итоговый коэффициент" },
 	{
 		field: "questionnaireData.autoMlRequired",
@@ -149,13 +182,43 @@ const _columnDefs: ColDef<any, any>[] = [
 ];
 
 export const HomePage = () => {
+	const { data, isLoading, error } = useCalculationControllerFindAll({
+		query: {
+			enabled: true,
+		},
+	});
+
+	return <HomeTemplete data={data} error={error} isLoading={isLoading} />;
+};
+
+export const HomeTemplete = ({
+	data,
+	error,
+	isLoading,
+}: {
+	data: CalculationResponseDto[] | undefined;
+	error: any;
+	isLoading: boolean;
+}) => {
 	const gridRef = useRef<AgGridReact>(null);
 	const { mode } = useColorScheme();
 	const [params] = useSearchParams();
 	const navigate = useNavigate();
 	const _location = useLocation();
 
-	const { data, isLoading, error } = useCalculationControllerFindAll();
+	console.log("🐸 Pepe said >> HomePage >> error:", error);
+
+	const [hoveredRowId, setHoveredRowId] = useState("");
+
+	if (error) {
+		toast.error("Ошибка загрузки данных реестра анкет", {
+			description: error.message,
+			action: {
+				label: "Закрыть",
+				onClick: () => {},
+			},
+		});
+	}
 
 	const isInDefaultCompareMode = params.get("isInCompareMode") === "true";
 
@@ -191,6 +254,9 @@ export const HomePage = () => {
 		cellStyle: { fontSize: "11px" },
 		headerStyle: { fontSize: "11px" },
 		tooltipValueGetter: (params: any) => params.value,
+		cellRendererParams: {
+			hoveredRowId,
+		},
 	};
 
 	const onExportExcel = () => {
@@ -241,6 +307,11 @@ export const HomePage = () => {
 		setGridApi(params.api as GridApi);
 	};
 
+	const autoSizeStrategy: SizeColumnsToContentStrategy = {
+		type: "fitCellContents",
+		skipHeader: false,
+	};
+
 	useEffect(() => {
 		return () => {
 			setGridApi(null);
@@ -253,13 +324,8 @@ export const HomePage = () => {
 		},
 	};
 
-	if (error) {
-		console.error("Error loading calculations:", error);
-	}
-
 	return (
 		<div data-test-id="home-page--div-0">
-			<Spacer height={6} data-test-id="home-page--Spacer-0" />
 			<Header data-test-id="home-page--Header-0">
 				<Flex
 					width="fill-available"
@@ -285,7 +351,7 @@ export const HomePage = () => {
 								<AddIcon data-test-id="home-page--AddIcon-1" />
 							</IconButton>
 						</Tooltip>
-						<Tooltip title="Сравнить" data-test-id="home-page--Tooltip-1">
+						{/* <Tooltip title="Сравнить" data-test-id="home-page--Tooltip-1">
 							<IconButton
 								disabled={selectedRows?.length !== 2}
 								aria-label="menu"
@@ -300,7 +366,7 @@ export const HomePage = () => {
 							>
 								<CompareArrowsIcon data-test-id="home-page--CompareArrowsIcon-0" />
 							</IconButton>
-						</Tooltip>
+						</Tooltip> */}
 						{/* <Tooltip
 							title="Выгрузить в Excel"
 							data-test-id="home-page--Tooltip-2"
@@ -317,7 +383,7 @@ export const HomePage = () => {
 					</Flex>
 				</Flex>
 			</Header>
-			<Spacer height={12} data-test-id="home-page--Spacer-1" />
+			<Spacer height={6} data-test-id="home-page--Spacer-1" />
 			<GridWrapper
 				width="100%"
 				height="-webkit-fill-available"
@@ -336,23 +402,20 @@ export const HomePage = () => {
 						setSelectedRows(e.api.getSelectedNodes());
 					}}
 					rowData={data}
+					loading={isLoading}
 					columnDefs={columnDefs as any}
 					defaultColDef={defaultColDef}
 					sideBar={false}
 					pagination={true}
-					paginationPageSize={10}
+					paginationPageSize={100}
 					localeText={AG_GRID_LOCALE_RU}
 					ref={gridRef}
+					autoSizeStrategy={autoSizeStrategy}
+					onCellMouseOver={(params) => {
+						setHoveredRowId(params?.node.id || "0");
+					}}
 					onGridReady={onGridReady}
 					tooltipShowDelay={500}
-					onRowClicked={(params) => {
-						navigate(
-							routes.calculationPreview.rootPath.replace(
-								":id",
-								params.data.id.toString(),
-							),
-						);
-					}}
 					data-test-id="home-page--AgGridReact-0"
 				/>
 			</GridWrapper>

@@ -1,4 +1,5 @@
-import { Button, IconButton, Stack, SxProps, Theme } from "@mui/material";
+import { IconButton, Stack, SxProps, Theme } from "@mui/material";
+import { GridCloseIcon } from "@mui/x-data-grid";
 import { ReactNode } from "react";
 import { ToastT } from ".";
 import { ToastAction } from "./types";
@@ -15,21 +16,15 @@ const ActionButton = ({
 	actionButtonSx,
 }: ActionButtonProps) => {
 	return (
-		<Button
-			variant="contained"
-			sx={[
-				{ p: 0.5 },
-				...formatSx(actionButtonSx),
-				...formatSx(action.buttonSx),
-			]}
+		<IconButton
 			onClick={(event) => {
 				action?.onClick(event);
 				if (event.defaultPrevented) return;
 				deleteToast();
 			}}
 		>
-			{action.label}
-		</Button>
+			<GridCloseIcon color="secondary" />
+		</IconButton>
 	);
 };
 

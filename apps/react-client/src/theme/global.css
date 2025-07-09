@@ -55,9 +55,10 @@ div.ag-watermark-text {
 	cursor: pointer;
 }
 
-.ag-row, .ag-root-wrapper {
+
+[data-mui-color-scheme="dark"] .ag-row, [data-mui-color-scheme="dark"] .ag-root-wrapper {
 	background-color: transparent;
 }
-.ag-row-odd {
+[data-mui-color-scheme="dark"] .ag-row-odd {
 	background-color:rgba(121, 121, 121, 0.05);
 }
