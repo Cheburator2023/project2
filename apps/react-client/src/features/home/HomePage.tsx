@@ -221,18 +221,13 @@ export const HomeTemplete = ({
 	const isInDefaultCompareMode = params.get("isInCompareMode") === "true";
 	const navigate = useNavigate();
 	const _location = useLocation();
-	<<<<<<< HEAD
-	const { setGridApi } = useGlobalSettingsStore();
-	=======
->>>>>>> origin/dev
 	const [_isInCompareMode, setIsInCompareMode] = useState(
 		params.get("isInCompareMode") === "true",
 	);
-	const [_selectedRows, setSelectedRows] = useState<IRowNode<any>[] | undefined>(
-		[],
-	);
-	<<<<<<< HEAD
-	const { data, isLoading, error } = useCalculationControllerFindAll();
+	const [_selectedRows, setSelectedRows] = useState<
+		IRowNode<any>[] | undefined
+	>([]);
+
 	const { canViewAllCalculations } = usePermissions();
 
 	if (!canViewAllCalculations) {
@@ -243,8 +238,6 @@ export const HomeTemplete = ({
 		setIsInCompareMode(params.get("isInCompareMode") === "true");
 	}, [params.get("isInCompareMode")]);
 
-	=======
->>>>>>> origin/dev
 	const [columnDefs] = useState(
 		_columnDefs.map((col) => ({
 			...col,
