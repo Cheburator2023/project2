@@ -1,8 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsIn, IsNotEmpty, IsString } from "class-validator";
 import {
+	INFLUENCE_VALUES,
 	PROBABILITY_VALUES,
-	SIMPLE_INFLUENCE_VALUES,
 	UNCERTAINTY_TYPE_VALUES,
 } from "../base/calculation-base.dto";
 
@@ -32,14 +32,15 @@ export class UncertaintyItemDto {
 	probability: (typeof PROBABILITY_VALUES)[number];
 
 	@ApiProperty({
-		example: "Незначительное",
+		example:
+			"Незначительное влияние на вторичные функции в рамках проектной деятельности",
 		description: "Влияние риска на проект",
-		enum: SIMPLE_INFLUENCE_VALUES,
+		enum: INFLUENCE_VALUES,
 	})
 	@IsString({ message: "influence must be a string" })
 	@IsNotEmpty({ message: "influence should not be empty" })
-	@IsIn(SIMPLE_INFLUENCE_VALUES, {
+	@IsIn(INFLUENCE_VALUES, {
 		message: "influence must be one of the allowed values",
 	})
-	influence: (typeof SIMPLE_INFLUENCE_VALUES)[number];
+	influence: (typeof INFLUENCE_VALUES)[number];
 }

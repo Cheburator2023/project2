@@ -121,7 +121,7 @@ export class CalculationResponseDto {
 
 	@ApiProperty({
 		example: "Стрим 2",
-		description: "Исполнительный стрим",
+		description: "Стрим-исполнитель",
 	})
 	streamExecutor: string;
 
