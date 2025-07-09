@@ -101,10 +101,6 @@ export const AnketaCreatePage = () => {
 		stateProjectAssessmentForm,
 	]);
 
-	if (!canCreateCalculation) {
-		return <AccessDenied message="У вас нет прав на создание анкеты" />;
-	}
-
 	return (
 		<div data-test-id="anketa-create-page--div-0">
 			<Header data-test-id="anketa-create-page--Header-0" />
