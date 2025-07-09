@@ -1,5 +1,5 @@
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import { Button, styled } from "@mui/material";
+import { Alert, Button, styled } from "@mui/material";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
@@ -112,7 +112,13 @@ export const AnketaBasicLayout = ({
 							justifyContent="flex-end"
 							alignItems="center"
 							data-test-id="anketa-basic-layout--Flex-1"
+							gap={6}
 						>
+							{formHasErrors && (
+								<Alert severity="error">
+									Форма имеет ошибки или заполнена не до конца
+								</Alert>
+							)}
 							<Button
 								variant="contained"
 								onClick={onSubmit}

@@ -47,17 +47,19 @@ const stageDisplayNames: Record<string, string> = {
 };
 
 const coefficientDisplayNames: Record<string, string> = {
-	modelsCountCoefficient: "Коэффициент количества моделей",
-	setupComplexityCoefficient: "Коэффициент сложности настройки",
-	generalUncertaintyCoefficient: "Коэффициент общей неопределенности",
-	readyPromReportsCoefficient: "Коэффициент готовых отчетов",
-	dataSourcesCountCoefficient: "Коэффициент количества источников данных",
-	pilotModelRequired: "Требуется пилотная модель",
-	algorithmComplexityCoefficient: "Коэффициент сложности алгоритма",
-	pilotSupportRequired: "Требуется поддержка пилота",
-	autoMlRequired: "Требуется AutoML",
-	productionAdditionalReportsCoefficient: "Коэффициент дополнительных отчетов",
-	deploymentChannelsCoefficient: "Коэффициент каналов развертывания",
+	modelsCountCoefficient: "Количество моделей",
+	setupComplexityCoefficient: "Сложности постановки",
+	generalUncertaintyCoefficient: "Общая неопределенность",
+	readyPromReportsCoefficient: "Наличие готовых пром витрин",
+	dataSourcesCountCoefficient: "Количество источников для проработки",
+	pilotModelRequired: "Необходимость реализации пилотной модели",
+	algorithmComplexityCoefficient: "Сложность алгоритма / тип ML задачи",
+	pilotSupportRequired: "Необходимость поддержки проведения пилота",
+	autoMlRequired: "Необходимость AutoML",
+	productionAdditionalReportsCoefficient:
+		"Необходимость продуктивизации и количество дополнительных витрин",
+	deploymentChannelsCoefficient:
+		"Необходимость продуктивизации и каналы внедрения моделей",
 };
 
 const processStageResults = (

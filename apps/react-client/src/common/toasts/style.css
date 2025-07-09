@@ -222,6 +222,7 @@ html[dir="rtl"],
 
 [data-sonner-toast] > * {
 	transition: opacity 400ms;
+	justify-content: space-between;
 }
 
 [data-sonner-toast][data-expanded="false"][data-front="false"][data-styled="true"]

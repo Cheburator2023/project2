@@ -11,9 +11,11 @@ import { ErrorBoundary } from "@react-client/common/errors/ErrorBoundary";
 import { ErrorPage } from "@react-client/common/errors/pages/ErrorPage";
 import { useEffectOnce } from "@react-client/common/hooks/useEffectOnce";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
-import { Toaster } from "@react-client/common/muiCustom/toasts";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
+import { Toaster } from "@react-client/common/toasts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { setDefaultOptions } from "date-fns/esm";
+import { ru } from "date-fns/esm/locale";
 import { isEmpty } from "lodash-es";
 import type React from "react";
 import { Suspense } from "react";
@@ -28,6 +30,8 @@ import {
 	datePickersCustomizations,
 	treeViewCustomizations,
 } from "./theme/customizations";
+
+setDefaultOptions({ locale: ru });
 
 reportWebVitals(console.log);
 
@@ -47,8 +51,8 @@ const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
 			refetchOnWindowFocus: false,
-			retry: false,
-			staleTime: 1000 * 20, // 20 seoncds
+			retry: 2,
+			staleTime: 1000 * 20, // 20 seconcds
 			gcTime: 1000 * 60 * 5, //  5 minutes
 		},
 	},

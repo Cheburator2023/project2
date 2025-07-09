@@ -258,6 +258,13 @@ export const colorSchemes = {
 				dark: brand[700],
 				contrastText: brand[50],
 			},
+			secondary: {
+				main: gray[50],
+				primary: gray[100],
+				secondary: gray[200],
+				dark: gray[700],
+				light: gray[50],
+			},
 			info: {
 				light: brand[100],
 				main: brand[300],

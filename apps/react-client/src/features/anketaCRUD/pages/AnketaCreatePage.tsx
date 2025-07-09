@@ -1,9 +1,9 @@
 import { useCalculationControllerCreate } from "@react-client/common/api/generated/queries/calculation";
 import { CreateCalculationDto } from "@react-client/common/api/generated/types";
-import { toast } from "@react-client/common/muiCustom/toasts";
 import { AccessDenied } from "@react-client/common/primitives/AccessDenied";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import { toast } from "@react-client/common/toasts";
 import { AnketaBasicLayout } from "@react-client/features/anketaCRUD/organisms/AnketaBasicLayout";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { Header } from "@react-client/features/navigation/organisms/Header";
@@ -87,11 +87,11 @@ export const AnketaCreatePage = () => {
 						toast.success("Расчет успешно создан");
 						navigate(routes.home.rootPath);
 					},
-					onError: (error) => {
+					onError: (error: any) => {
 						toast.error("Ошибка при создании расчета", {
-							description: "Проверьте подключение",
+							description: error.message,
 							action: {
-								label: "Закрыть",
+								label: "",
 								onClick: () => {},
 							},
 						});

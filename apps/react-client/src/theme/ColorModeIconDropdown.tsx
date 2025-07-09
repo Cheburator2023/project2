@@ -37,6 +37,10 @@ export function ColorModeIconDropdown() {
 			"data-color-scheme",
 			targetMode !== "dark" ? "light" : "dark",
 		);
+		document.body.setAttribute(
+			"data-color-scheme",
+			targetMode !== "dark" ? "light" : "dark",
+		);
 
 		document.body.style.backgroundColor =
 			targetMode === "light" ? "#e6e8ef" : "#0f141c";

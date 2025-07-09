@@ -1,5 +1,4 @@
 import { Alert, Button, Typography } from "@mui/material";
-
 import { ILL_BUG } from "@react-client/common/illustrations/ILL_BUG";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
@@ -33,7 +32,11 @@ export const ErrorPage = (props: {
 				<>
 					<ILL_BUG data-test-id="error-page--ILL_BUG-0" />
 					<Spacer data-test-id="error-page--Spacer-0" />
-					<Alert severity="error" data-test-id="error-page--Alert-0">
+					<Alert
+						severity="error"
+						data-test-id="error-page--Alert-0"
+						sx={{ height: 200 }}
+					>
 						<Typography variant="body1" data-test-id="error-page--Typography-0">
 							{props?.error}
 						</Typography>
@@ -54,6 +57,7 @@ export const ErrorPage = (props: {
 					<Flex
 						width="100%"
 						alignItems="center"
+						gap={8}
 						data-test-id="error-page--Flex-0"
 					>
 						<Button
@@ -65,6 +69,16 @@ export const ErrorPage = (props: {
 							data-test-id="error-page--Button-0"
 						>
 							Домой
+						</Button>
+						<Button
+							variant="contained"
+							onClick={() => {
+								window.location.reload();
+							}}
+							fullWidth
+							data-test-id="error-page--Button-0"
+						>
+							Перезагрузить страницу
 						</Button>
 					</Flex>
 				</>

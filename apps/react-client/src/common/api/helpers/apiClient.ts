@@ -41,6 +41,7 @@ axiosInstance.interceptors.response.use(
 	(error: AxiosError) => {
 		if (error.response?.status === 401) {
 			useAuthStore.getState().setAccessToken(null);
+			window.location.reload();
 		}
 		return Promise.reject(error);
 	},
