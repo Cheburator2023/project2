@@ -22,6 +22,7 @@ module.exports = merge(common, {
 	plugins: [
 		new ReactRefreshWebpackPlugin({ overlay: false }),
 		new DefinePlugin({
+			"process.env": {},
 			"process.env.MOCKED_REQUESTS": JSON.stringify(
 				process.env.MOCKED_REQUESTS || "",
 			),

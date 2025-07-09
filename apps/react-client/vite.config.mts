@@ -13,12 +13,11 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 const APP_NAME = "smartAnketa";
-
-const deps = require("./package.json").dependencies;
-
 const publicEnvVars: any[] = [];
-const { STAGE } = process.env;
+const STAGE = process.env.STAGE;
 const IS_DEV = process.env.NODE_ENV === "development";
+const NO_ROLES = process.env.NO_ROLES;
+
 const ROOT_DIR = path.resolve(__dirname, "./");
 const DIST_DIR = path.resolve(ROOT_DIR, "./dist");
 
@@ -130,6 +129,7 @@ export const viteCommonConfig = ({
 				"process.env.REACT_APP_API_URL": JSON.stringify(
 					"http://localhost:3000",
 				),
+				"process.env.NO_ROLES": JSON.stringify(NO_ROLES),
 			},
 
 			// resolve: {

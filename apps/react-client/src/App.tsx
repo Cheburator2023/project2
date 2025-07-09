@@ -31,6 +31,10 @@ import {
 	treeViewCustomizations,
 } from "./theme/customizations";
 
+const GIT_REVISION = process.env.GIT_REVISION;
+
+console.log("GIT_REVISION: ", GIT_REVISION);
+
 setDefaultOptions({ locale: ru });
 
 reportWebVitals(console.log);

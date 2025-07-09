@@ -6,6 +6,9 @@ import {
 } from "@react-client/types/roles";
 import { create, StoreApi, UseBoundStore } from "zustand";
 
+const NO_ROLES_FOR_DEV = process?.env?.NO_ROLES;
+console.log("🐸 Pepe said >> NO_ROLES_FOR_DEV:", NO_ROLES_FOR_DEV);
+
 interface UserStoreState {
 	username: string | null;
 	groups: string[];
@@ -35,6 +38,6 @@ export const useUserStore: UseBoundStore<StoreApi<UserStoreState>> =
 		},
 		hasPermission: (permission: Permission) => {
 			const { permissions } = useUserStore.getState();
-			return permissions.includes(permission);
+			return NO_ROLES_FOR_DEV ? true : permissions.includes(permission);
 		},
 	}));

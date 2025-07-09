@@ -20,6 +20,7 @@
 	"scripts": {
 		"dev:fullstack": "turbo run dev --parallel --no-cache",
 		"dev:ui": "turbo run dev --filter=react-client",
+		"dev:ui:no_roles": "turbo run dev:no_roles --filter=react-client",
 		"dev:server:nest": "turbo run dev --filter=nestjs-server",
 		"turbo:ls": "turbo ls",
 		"build": "turbo run build",
