@@ -29,6 +29,7 @@ export function ColorModeIconDropdown() {
 			mode !== "dark" ? "light" : "dark",
 		);
 		rootEl.style.backgroundColor = "";
+		setMode(mode === "dark" ? "dark" : "light");
 	}, !!mode);
 
 	const handleMode = (targetMode: "light" | "dark") => () => {
