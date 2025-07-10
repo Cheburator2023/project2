@@ -512,11 +512,16 @@ export const inputsCustomizations: Components<Theme> = {
 		styleOverrides: {
 			root: {
 				"& .MuiFormLabel-root": {
-					position: "relative",
+					position: "relative !important",
 					transform: "none",
 					display: "block",
 					paddingBottom: "4px",
 					fontSize: "16px",
+					"&.MuiInputLabel": {
+						transform: "none",
+						position: "relative !important",
+						display: "block",
+					},
 					"&.MuiInputLabel-shrink": {
 						transform: "none",
 					},
@@ -553,6 +558,13 @@ export const inputsCustomizations: Components<Theme> = {
 				transform: "none",
 				display: "block",
 				fontSize: "12px",
+				"&.MuiInputLabel-root": {
+					transform: "none",
+					position: "relative !important",
+					display: "block",
+					fontSize: "12px",
+					fontWeight: "normal",
+				},
 				"&.MuiInputLabel-shrink": {
 					transform: "none",
 				},

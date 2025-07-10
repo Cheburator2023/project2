@@ -259,6 +259,7 @@ export const HomeTemplete = ({
 		sortable: true,
 		filter: true,
 		resizable: true,
+		lockPosition: true,
 		wrapHeaderText: true,
 		autoHeaderHeight: true,
 		cellStyle: { fontSize: "11px" },

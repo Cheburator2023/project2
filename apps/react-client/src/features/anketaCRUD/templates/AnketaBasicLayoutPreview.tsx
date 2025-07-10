@@ -5,14 +5,12 @@ import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { BasicInfoFormPreview } from "@react-client/features/anketaCRUD/organisms/BasicInfoFormPreview";
-import { ProjectAssessmentForm } from "@react-client/features/jsonFormGenerator/components/ProjectAssessmentForm";
+import { CalculationResultTable } from "@react-client/features/anketaCRUD/organisms/CalculationResultTable";
+import { ProjectAssessmentFormPreview } from "@react-client/features/anketaCRUD/organisms/ProjectAssessmentFormPreview";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useLocation } from "react-router";
 
 export const AnketaBasicLayoutPreview = ({
-	isPending,
-	onSubmit,
-	formHasErrors,
 	initialData,
 }: {
 	isPending?: boolean;
@@ -45,7 +43,7 @@ export const AnketaBasicLayoutPreview = ({
 								header="Основная информация"
 								height="100%"
 								padding="10px"
-								zoom={0.7}
+								zoom={0.8}
 								uuid="anketa_basic_info_card"
 								data-test-id="anketa-basic-layout--Card-0"
 							>
@@ -65,14 +63,12 @@ export const AnketaBasicLayoutPreview = ({
 								maxHeight="100%"
 								height="100%"
 								padding="10px"
-								zoom={0.7}
+								zoom={0.8}
 								uuid="anketa_calculation_result_card"
 								data-test-id="anketa-basic-layout--Card-1"
 							>
 								<Spacer data-test-id="anketa-basic-layout--Spacer-1" />
-								{/* <CalculationResultTable
-									data-test-id="anketa-basic-layout--CalculationResultTable-0"
-								/> */}
+								<CalculationResultTable data-test-id="anketa-basic-layout--CalculationResultTable-0" />
 							</Card>
 						</Panel>
 					</PanelGroup>
@@ -89,12 +85,15 @@ export const AnketaBasicLayoutPreview = ({
 						maxHeight="100%"
 						height="100%"
 						padding="10px"
-						zoom={0.7}
+						zoom={0.8}
 						uuid="anketa_project_assessment_card"
 						data-test-id="anketa-basic-layout--Card-2"
 					>
 						<Spacer data-test-id="anketa-basic-layout--Spacer-2" />
-						<ProjectAssessmentForm data-test-id="anketa-basic-layout--ProjectAssessmentForm-0" />
+						<ProjectAssessmentFormPreview
+							initialData={initialData}
+							data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
+						/>
 					</Card>
 				</Panel>
 			</PanelGroup>

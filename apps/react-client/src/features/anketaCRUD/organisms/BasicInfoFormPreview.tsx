@@ -1,9 +1,8 @@
 import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
+import { ListWidget } from "@react-client/common/forms/widgets/ListWidget";
 import { MultiSelectAutocompleteCreateWidget } from "@react-client/common/forms/widgets/MultiSelectAutocompleteCreateWidget";
 import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";
-import { IBasicFormData } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
-import type FormRef from "@rjsf/core";
 import Form from "@rjsf/mui";
 import type {
 	RegistryWidgetsType,
@@ -12,7 +11,6 @@ import type {
 	UiSchema,
 } from "@rjsf/utils";
 import { omit } from "lodash-es";
-import { useRef, useState } from "react";
 import { MultiSelectAutocompleteWidget } from "../../../common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjectFieldTemplate";
 
@@ -34,49 +32,50 @@ const uiSchema: UiSchema = {
 		"comment",
 	],
 	name: {
-		"ui:widget": "TextFieldCustomWidget",
+		"ui:widget": "text",
 		"ui:options": {
 			tooltip: "Текстовое поле со свободным вводом, 150 символов.",
 		},
 	},
 	rfd: {
-		"ui:widget": "TextFieldCustomWidget",
+		"ui:widget": "text",
+		"ui:placeholder": "http://",
 		"ui:options": {
 			prefix: "RFD-",
 			tooltip: "",
 		},
 	},
 	streamExecutor: {
-		"ui:widget": "TextFieldCustomWidget",
+		"ui:widget": "text",
 		"ui:options": {
 			select: true,
 			tooltip: "",
 		},
 	},
 	department: {
-		"ui:widget": "MultiSelectAutocompleteWidget",
+		"ui:widget": "ListWidget",
 		"ui:options": {
-			tooltip: "",
+			addable: false,
+			orderable: false,
+			removable: false,
 		},
 	},
 	customerName: {
-		"ui:widget": "TextFieldCustomWidget",
+		"ui:widget": "text",
 		"ui:options": {
 			tooltip: "",
 		},
 	},
 	comment: {
-		"ui:widget": "TextFieldCustomWidget",
+		"ui:widget": "textarea",
 		"ui:options": {
 			multiline: true,
 			rows: 3,
 		},
 	},
 	createdAt: {
-		"ui:widget": "date",
-		"ui:options": {
-			tooltip: "",
-		},
+		type: "string",
+		format: "date-time",
 	},
 	id: {
 		"ui:options": {
@@ -99,6 +98,7 @@ const widgets: RegistryWidgetsType = {
 	MultiSelectAutocompleteWidget,
 	MultiSelectAutocompleteCreateWidget,
 	TextFieldCustomWidget,
+	ListWidget,
 };
 
 export const BasicInfoFormPreview = ({
@@ -106,11 +106,8 @@ export const BasicInfoFormPreview = ({
 }: {
 	initialData?: CalculationResponseDto;
 }) => {
-	console.log("🐸 Pepe said >> initialData:", initialData);
-
-	const [formData, setFormData] = useState<IBasicFormData>(
-		omit(initialData, ["questionnaireData"]),
-	);
+	const formData = omit(initialData, ["questionnaireData"]);
+	console.log("🐸 Pepe said >> formData:", formData);
 
 	const schema: RJSFSchema = {
 		type: "object",
@@ -118,15 +115,10 @@ export const BasicInfoFormPreview = ({
 			name: {
 				type: "string",
 				title: "Название анкеты",
-				minLength: 1,
-				maxLength: 150,
 			},
 			rfd: {
 				type: "string",
 				title: "RFD",
-				minLength: 8,
-				maxLength: 19,
-				pattern: "^(RFD-\\d{4,15})?$",
 			},
 			streamExecutor: {
 				type: "string",
@@ -135,44 +127,36 @@ export const BasicInfoFormPreview = ({
 			department: {
 				type: "array",
 				title: "Департамент заказчика",
-				uniqueItems: true,
-				minItems: 1,
+				items: {
+					type: "string",
+					default: "lorem ipsum",
+				},
 			},
 			customerName: {
 				type: "string",
 				title: "ФИО заказчика",
-				maxLength: 150,
 			},
 			comment: {
 				type: "string",
 				title: "Комментарий",
-				maxLength: 250,
 			},
 			id: {
 				type: "string",
 				title: "ID",
-				readOnly: true,
 			},
 			author: {
 				type: "string",
 				title: "Автор",
-				readOnly: true,
 			},
 			createdAt: {
 				type: "string",
 				title: "Дата создания",
-				format: "date",
-				readOnly: true,
 			},
 		},
 	};
 
-	const formRef = useRef<FormRef>(null);
-	const readonly = true;
-
 	return (
 		<Form
-			ref={formRef}
 			schema={schema}
 			uiSchema={uiSchema}
 			formData={formData}
@@ -182,7 +166,7 @@ export const BasicInfoFormPreview = ({
 			liveValidate={false}
 			noHtml5Validate
 			focusOnFirstError
-			readonly={readonly}
+			readonly
 			noValidate
 			showErrorList={false}
 		/>

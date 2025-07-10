@@ -9,6 +9,7 @@ import {
 	useAnketaCRUDFormsStore,
 } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { assessmentCalculationsStore } from "@react-client/features/jsonFormGenerator/hooks/assessmentCalculationsStore";
+import { mainCalcSchema } from "@react-client/features/jsonFormGenerator/schemas";
 import type FormRef from "@rjsf/core";
 import type { IChangeEvent } from "@rjsf/core";
 import { withTheme } from "@rjsf/core";
@@ -16,7 +17,6 @@ import { Theme as MuiTheme } from "@rjsf/mui";
 import type { RJSFSchema, TemplatesType, WidgetProps } from "@rjsf/utils";
 import type React from "react";
 import { useRef, useState } from "react";
-import schema from "../schemas/calc_schema.json";
 import { calc_uiSchema } from "../schemas/calc_uiSchema";
 import type { IAssessmentFormData } from "../types/FormData";
 import AlgorithmComplexityWidget from "../widgets/AlgorithmComplexityWidget";
@@ -51,6 +51,8 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 	const [formData, setFormData] = useState<IAssessmentFormData>(
 		projectAssessmentFormInitialData,
 	);
+	console.log("🐸 Pepe said >> formData:", formData);
+
 	const [liveValidate, setLiveValidate] = useState(false);
 
 	const formName = AnketaCRUDFormNames.anketaCreate_projectAssessmentForm;
@@ -119,7 +121,7 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 		<>
 			<Form
 				ref={formRef}
-				schema={schema as RJSFSchema}
+				schema={mainCalcSchema as RJSFSchema}
 				uiSchema={calc_uiSchema}
 				validator={validatorRu}
 				widgets={widgets}

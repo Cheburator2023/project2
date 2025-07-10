@@ -25,14 +25,14 @@ export const AnketaPreviewPage = () => {
 
 	const mock = {
 		id: "1d3a214c-6713-489a-83dc-696efec13490",
-		name: "asdf",
-		rfd: "Отсутствует",
+		name: "test_name_WWW_666",
+		rfd: "RFD-33333",
 		streamExecutor: ["Разработка моделей для КМБ и КСБ"],
-		department: ["Департамент операционной поддержки бизнеса"],
+		department: ["Департамент операционной поддержки бизнеса", "тест", "тест2"],
 		customerName: "customerName test",
 		comment: "test comment",
 		questionnaireData: {
-			name: "asdf",
+			name: "test_name_WWW_666",
 			modelsCount: 1,
 			autoMlRequired: "Не требуется",
 			initiativeCost: "438-870 млн.",
@@ -40,7 +40,20 @@ export const AnketaPreviewPage = () => {
 				"2 Сложность: Проведение регулярной валидации Моделей Регулятором не установлено. Модель оценки риска",
 			dataSourcesCount: "5",
 			readyPromReports: "Нет",
-			generalUncertainty: {},
+			generalUncertainty: [
+				{
+					type: "planningRequirementGaps",
+					probability: "Реализация 1 раз в 1-3 года",
+					influence:
+						"Значительный негативный эффект на возможность достижения целей проекта",
+				},
+				{
+					type: "adjacentProjectsImpact",
+					probability: "Реализация 1 раз в 1-3 года",
+					influence:
+						"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+				},
+			],
 			initiativeTimeline: "1-4 мес.",
 			pilotModelRequired: "Не требуется",
 			algorithmComplexity: [

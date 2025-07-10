@@ -3,6 +3,10 @@ import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Header } from "@react-client/features/navigation/organisms/Header";
+import {
+	ArrayCustomCardListsWidgetExample,
+	MultiLanguageExample,
+} from "@react-client/features/playground/ArrayCustomCardListsWidget.example";
 import ProjectAssessmentForm from "@react-client/features/playground/assessmentForm/components/ProjectAssessmentForm";
 import { Fragment } from "react/jsx-runtime";
 
@@ -10,6 +14,14 @@ const data = [
 	{
 		name: "AssessmentForm",
 		Component: <ProjectAssessmentForm />,
+	},
+	{
+		name: "ArrayCustomCardListsWidgetExample",
+		Component: <ArrayCustomCardListsWidgetExample />,
+	},
+	{
+		name: "MultiLanguageExample",
+		Component: <MultiLanguageExample />,
 	},
 ];
 
