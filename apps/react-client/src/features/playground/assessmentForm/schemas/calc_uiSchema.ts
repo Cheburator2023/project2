@@ -42,7 +42,7 @@ const uiSchema: UiSchema = {
 		"ui:widget": "UniversalDependencyWidget",
 		"ui:options": {
 			disabled: true,
-			disabledValue: "Нет",
+			disabledValue: "0",
 			dependencies: [
 				{
 					condition:

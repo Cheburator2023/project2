@@ -20,6 +20,7 @@ import {
 	Typography,
 } from "@mui/material";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 import { WidgetProps } from "@rjsf/utils";
 import React, { useEffect, useRef, useState } from "react";
 
@@ -31,6 +32,8 @@ interface UncertaintyItem {
 
 const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 	const { value = [], onChange, formContext, schema, required } = props;
+	console.log("🐸 Pepe said >> props:", props);
+
 	const tooltips = props.options?.tooltips;
 
 	const enums: string[] = (props?.schema?.items as any)?.properties?.type?.enum;
@@ -129,17 +132,6 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 	return (
 		<Stack spacing={2}>
 			<FormControl fullWidth disabled={!isEnabled}>
-				<Typography variant="subtitle1" gutterBottom>
-					Общая неопределенность
-				</Typography>
-
-				{!isEnabled && (
-					<FormHelperText error>
-						Заполните "Стоимость инициативы" и "Сроки инициативы" для добавления
-						факторов неопределенности
-					</FormHelperText>
-				)}
-
 				{/* Summary input */}
 				<TextFieldCustom
 					value={getSummaryText()}
@@ -147,9 +139,15 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 					fullWidth
 					variant="outlined"
 					size="small"
-					sx={{ mb: 2 }}
+					label={props.label}
 				/>
-
+				{!isEnabled && (
+					<FormHelperText>
+						Заполните "Стоимость инициативы" и "Сроки инициативы" для добавления
+						факторов неопределенности
+					</FormHelperText>
+				)}
+				{/* <Spacer space={24} /> */}
 				{/* Display selected items */}
 				<List>
 					{(value as UncertaintyItem[]).map((item, index) => (
@@ -191,7 +189,6 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 						</ListItem>
 					))}
 				</List>
-
 				{/* Add button */}
 				<Button
 					startIcon={<AddIcon />}

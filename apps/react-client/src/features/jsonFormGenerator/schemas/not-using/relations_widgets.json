@@ -31,7 +31,7 @@
 		"widget": "UniversalDependencyWidget",
 		"options": {
 			"disabled": true,
-			"disabledValue": "Нет",
+			"disabledValue": "0",
 			"dependencies": [
 				{
 					"condition": "readyPromReports === 'Нет' || productionAdditionalReports !== 'Не требуется'",

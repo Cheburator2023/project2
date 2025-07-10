@@ -10,6 +10,10 @@ body {
 	overflow: auto;
 
 }
+		"&::placeholder": {
+					opacity: 0.7!important,
+					color: gray[500],
+				},
 	html {
 	    overflow: hidden;
 		}

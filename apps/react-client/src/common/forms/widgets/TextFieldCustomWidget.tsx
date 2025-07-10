@@ -25,6 +25,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 		schema,
 		mask,
 		rawErrors,
+		placeholder,
 	} = props;
 
 	const initialValue = {
@@ -82,6 +83,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			onChange={(event) => _onChange?.(event.target.value)}
 			onBlur={_onBlur}
 			onFocus={_onFocus}
+			placeholder={placeholder}
 			mask={options?.mask}
 			replacement={options?.replacement}
 			prefix={options?.prefix}
@@ -107,13 +109,16 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			slots={{
 				inputLabel: (props) =>
 					options?.tooltip ? (
-						<Flex gap={6}>
+						<Flex gap={6} position="relative">
 							<InputLabel {...props} />
 							<Tooltip title={options?.tooltip} placement="top-start">
 								<InfoOutlineIcon
 									sx={{
 										scale: 0.8,
 										color: "#88888877",
+										position: "absolute",
+										top: "-4px",
+										right: "0",
 									}}
 								/>
 							</Tooltip>
@@ -122,6 +127,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 						<InputLabel {...props} />
 					),
 			}}
+			InputLabelProps={{ shrink: true }}
 			{...options}
 		>
 			{optionsForSelect && initialValue !== props.value && (

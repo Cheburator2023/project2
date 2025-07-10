@@ -66,6 +66,9 @@ const NumberInputWidget: React.FC<WidgetProps> = (props) => {
 									sx={{
 										scale: 0.8,
 										color: "#88888877",
+										position: "absolute",
+										top: "-4px",
+										right: "0",
 									}}
 								/>
 							</Tooltip>

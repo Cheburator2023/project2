@@ -91,6 +91,7 @@ interface AnketaCRUDFormsStore
 		AnketaCRUDFormsStoreBase {
 	updateFormState: (formName: FormName, state?: any) => void;
 	resetFormData: (formName: FormName) => void;
+	reset: () => void;
 	setApiRef: (formName: FormName, api: FormRef) => void;
 	resetApiRef: (formName: FormName) => void;
 	setCalculationResult: (result: any) => void;
@@ -100,7 +101,7 @@ interface AnketaCRUDFormsStore
 type AnketaCreateData = any;
 type AnketaPreviewData = any;
 
-export const useAnketaCRUDFormsStore = create<AnketaCRUDFormsStore>((set) => ({
+const init = {
 	anketaCreate_basicInfoForm: {
 		api: undefined,
 		state: undefined,
@@ -127,7 +128,10 @@ export const useAnketaCRUDFormsStore = create<AnketaCRUDFormsStore>((set) => ({
 	},
 
 	calculationResult: [],
+};
 
+export const useAnketaCRUDFormsStore = create<AnketaCRUDFormsStore>((set) => ({
+	...init,
 	setFormDirty: (formName, isDirty) =>
 		set((_state) => ({ [formName]: { ..._state[formName], isDirty } })),
 
@@ -136,6 +140,8 @@ export const useAnketaCRUDFormsStore = create<AnketaCRUDFormsStore>((set) => ({
 
 	updateFormState: (formName, newState) =>
 		set((_state) => ({ [formName]: { ..._state[formName], state: newState } })),
+
+	reset: () => set(() => init),
 
 	resetFormData: (formName) =>
 		set((_state) => ({

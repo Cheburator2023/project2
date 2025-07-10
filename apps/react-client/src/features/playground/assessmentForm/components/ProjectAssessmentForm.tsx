@@ -32,7 +32,7 @@ const ProjectAssessmentForm: React.FC = () => {
 		setupComplexity: "",
 		readyPromReports: "",
 		assessedInitiativesCount: 1,
-		dataSourcesCount: "1",
+		dataSourcesCount: "0",
 		pilotModelRequired: "Не требуется",
 		pilotSupportRequired: "Не требуется",
 		autoMlRequired: "Не требуется",

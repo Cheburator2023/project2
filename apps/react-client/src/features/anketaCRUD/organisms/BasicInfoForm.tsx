@@ -22,6 +22,45 @@ import { useRef, useState } from "react";
 import { MultiSelectAutocompleteWidget } from "../../../common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjectFieldTemplate";
 
+interface ValidationError {
+	name: string;
+	message: string;
+	property?: string;
+	instancePath?: string;
+}
+
+interface FieldUiSchema {
+	"ui:options"?: {
+		errors?: Record<string, string>;
+		[key: string]: unknown;
+	};
+	[key: string]: unknown;
+}
+
+function transformErrors(
+	errors: ValidationError[],
+	uiSchema: Record<string, FieldUiSchema>,
+): ValidationError[] {
+	return errors.map((error: ValidationError) => {
+		const fieldPath =
+			error.property?.replace(".", "") ||
+			error.instancePath?.replace(/^\//, "");
+
+		const fieldUiSchema = fieldPath ? uiSchema[fieldPath] : null;
+
+		if (fieldUiSchema?.["ui:options"]?.errors?.[error.name]) {
+			error.message = fieldUiSchema["ui:options"].errors[error.name];
+		} else if (
+			error.name === "pattern" &&
+			fieldUiSchema?.["ui:options"]?.errors?.pattern
+		) {
+			error.message = fieldUiSchema["ui:options"].errors.pattern;
+		}
+
+		return error;
+	});
+}
+
 const uiSchema: UiSchema = {
 	"ui:submitButtonOptions": {
 		props: {
@@ -46,15 +85,16 @@ const uiSchema: UiSchema = {
 	],
 	name: {
 		"ui:widget": "TextFieldCustomWidget",
-		"ui:options": {
-			tooltip: "Текстовое поле со свободным вводом, 150 символов.",
-		},
 	},
 	rfd: {
 		"ui:widget": "TextFieldCustomWidget",
+		"ui:placeholder": "Отсутствует",
 		"ui:options": {
 			prefix: "RFD-",
 			tooltip: "",
+			errors: {
+				pattern: "Только цифры, от 4 до 15 символов",
+			},
 		},
 	},
 	streamExecutor: {
@@ -135,7 +175,7 @@ export const BasicInfoForm = () => {
 
 	const schema: RJSFSchema = {
 		type: "object",
-		required: ["name", "rfd", "streamExecutor", "department"],
+		required: ["name", "streamExecutor", "department"],
 		properties: {
 			name: {
 				type: "string",
@@ -272,6 +312,7 @@ export const BasicInfoForm = () => {
 			noHtml5Validate
 			focusOnFirstError
 			showErrorList={false}
+			transformErrors={transformErrors as any}
 			data-test-id="basic-info-form--Form-0"
 		/>
 	);

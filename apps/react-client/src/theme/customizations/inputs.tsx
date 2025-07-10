@@ -6,7 +6,7 @@ import { alpha, type Components, type Theme } from "@mui/material/styles";
 import { toggleButtonClasses } from "@mui/material/ToggleButton";
 import { toggleButtonGroupClasses } from "@mui/material/ToggleButtonGroup";
 
-import { brand, gray } from "../themePrimitives";
+import { brand, gray, red } from "../themePrimitives";
 
 /* eslint-disable import/prefer-default-export */
 export const inputsCustomizations: Components<Theme> = {
@@ -516,7 +516,7 @@ export const inputsCustomizations: Components<Theme> = {
 					transform: "none",
 					display: "block",
 					paddingBottom: "4px",
-					fontSize: "16px",
+					fontSize: "12px",
 					"&.MuiInputLabel": {
 						transform: "none",
 						position: "relative !important",
@@ -558,6 +558,8 @@ export const inputsCustomizations: Components<Theme> = {
 				transform: "none",
 				display: "block",
 				fontSize: "12px",
+				paddingBottom: "4px",
+
 				"&.MuiInputLabel-root": {
 					transform: "none",
 					position: "relative !important",
@@ -570,6 +572,8 @@ export const inputsCustomizations: Components<Theme> = {
 				},
 				"& .MuiFormLabel-asterisk": {
 					fontSize: "20px",
+					color: red[300],
+					position: "absolute",
 					// fontWeight: "bold",
 				},
 				"& .Mui-focused": {

@@ -33,13 +33,10 @@ const uiSchema: UiSchema = {
 	],
 	name: {
 		"ui:widget": "text",
-		"ui:options": {
-			tooltip: "Текстовое поле со свободным вводом, 150 символов.",
-		},
 	},
 	rfd: {
 		"ui:widget": "text",
-		"ui:placeholder": "http://",
+		"ui:placeholder": "Отсутствует",
 		"ui:options": {
 			prefix: "RFD-",
 			tooltip: "",

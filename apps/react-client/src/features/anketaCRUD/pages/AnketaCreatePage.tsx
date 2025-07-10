@@ -15,8 +15,7 @@ export const AnketaCreatePage = () => {
 	const store = useAnketaCRUDFormsStore();
 
 	const {
-		setApiRef,
-		resetApiRef,
+		reset,
 		calculationResult,
 		anketaCreate_basicInfoForm,
 		anketaCreate_projectAssessmentForm,
@@ -77,6 +76,7 @@ export const AnketaCreatePage = () => {
 					onSuccess: (data) => {
 						console.log("Success:", data);
 						toast.success("Расчет успешно создан");
+						reset();
 						navigate(routes.home.rootPath);
 					},
 					onError: (error: any) => {

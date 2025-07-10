@@ -19,11 +19,11 @@ function localize_ru(errors: null | ErrorObject[] = []) {
 				break;
 			}
 			case "minLength": {
-				outMessage = `Поле обязательно для заполнения. Минимальная длина значения - ${error.params.limit}`;
+				outMessage = `Минимальная длина значения - ${error.params.limit}`;
 				break;
 			}
 			case "maxLength": {
-				outMessage = `Поле обязательно для заполнения. Максимальная длина значения - ${error.params.limit}`;
+				outMessage = `Максимальная длина значения - ${error.params.limit}`;
 				break;
 			}
 			case "type": {
