@@ -9,7 +9,7 @@ export const FullscreenWrapper = ({
 		<div
 			style={{
 				width: "100%",
-				height: "100vh",
+				height: "inherit",
 				justifyContent: "center",
 				alignItems: "center",
 				display: "flex",

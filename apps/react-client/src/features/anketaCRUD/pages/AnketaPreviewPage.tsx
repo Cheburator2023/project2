@@ -2,9 +2,12 @@
 
 import ViewComfyIcon from "@mui/icons-material/ViewComfy";
 import ViewDayIcon from "@mui/icons-material/ViewDay";
-import { CircularProgress, IconButton } from "@mui/material";
+import { Button, IconButton, Typography } from "@mui/material";
 import { useCalculationControllerFindOne } from "@react-client/common/api/generated/queries/calculation";
+import { Card } from "@react-client/common/muiCustom/Card";
+import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
 import { Flex } from "@react-client/common/primitives/Flex";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { AnketaBasicLayoutPreview } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayoutPreview";
 import { Header } from "@react-client/features/navigation/organisms/Header";
@@ -18,14 +21,16 @@ export const AnketaPreviewPage = () => {
 
 	const { setApiRef, resetApiRef, ...store } = useAnketaCRUDFormsStore();
 
-	const { data: initialData, isFetching } = useCalculationControllerFindOne(
-		calcId,
-		{
-			query: {
-				enabled: !!calcId,
-			},
+	const {
+		data: initialData,
+		refetch,
+		isFetching,
+		isError,
+	} = useCalculationControllerFindOne(calcId, {
+		query: {
+			enabled: !!calcId,
 		},
-	);
+	});
 
 	const mock = {
 		id: "1d3a214c-6713-489a-83dc-696efec13490",
@@ -83,20 +88,30 @@ export const AnketaPreviewPage = () => {
 					{!comfyView ? <ViewComfyIcon /> : <ViewDayIcon />}
 				</IconButton>
 			</Header>
-			<Flex
-				width="100%"
-				height="-webkit-fill-available"
-				data-test-id="anketa-preview-page--Flex-0"
-			>
-				{false ? (
-					<CircularProgress />
-				) : (
-					<AnketaBasicLayoutPreview
-						initialData={mock as any}
-						comfyView={comfyView}
-					/>
-				)}
-			</Flex>
+
+			{isError ? (
+				<Flex
+					justifyContent="center"
+					alignItems="center"
+					width="100%"
+					height="100%"
+				>
+					<Card padding="30px">
+						<Typography variant="h4">Ошибка!</Typography>
+						<Spacer />
+						<Button variant="contained" onClick={refetch as any}>
+							Перезапросить данные
+						</Button>
+					</Card>
+				</Flex>
+			) : isFetching ? (
+				<FullScreenLoader />
+			) : (
+				<AnketaBasicLayoutPreview
+					initialData={initialData as any}
+					comfyView={comfyView}
+				/>
+			)}
 		</div>
 	);
 };
