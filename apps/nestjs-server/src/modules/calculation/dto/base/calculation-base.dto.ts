@@ -11,6 +11,7 @@ export const SETUP_COMPLEXITY_VALUES = [
 ] as const;
 
 export const INITIATIVE_TIMELINE_VALUES = [
+	"",
 	"Менее 1 мес.",
 	"1-4 мес.",
 	"4-10 мес.",
@@ -19,6 +20,7 @@ export const INITIATIVE_TIMELINE_VALUES = [
 ] as const;
 
 export const INITIATIVE_COST_VALUES = [
+	"",
 	"До 45.3 млн.",
 	"45.3-438 млн.",
 	"438-870 млн.",
@@ -147,7 +149,6 @@ export class CalculationBaseDto {
 		enum: INITIATIVE_TIMELINE_VALUES,
 	})
 	@IsString({ message: "initiativeTimeline must be a string" })
-	@IsNotEmpty({ message: "initiativeTimeline should not be empty" })
 	@IsIn(INITIATIVE_TIMELINE_VALUES)
 	initiativeTimeline: (typeof INITIATIVE_TIMELINE_VALUES)[number];
 
@@ -157,7 +158,6 @@ export class CalculationBaseDto {
 		enum: INITIATIVE_COST_VALUES,
 	})
 	@IsString({ message: "initiativeCost must be a string" })
-	@IsNotEmpty({ message: "initiativeCost should not be empty" })
 	@IsIn(INITIATIVE_COST_VALUES)
 	initiativeCost: (typeof INITIATIVE_COST_VALUES)[number];
 }
