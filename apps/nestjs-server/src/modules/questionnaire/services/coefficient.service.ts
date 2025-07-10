@@ -39,8 +39,8 @@ export class CoefficientService {
 				return coefficient.conditions.default;
 			}
 
-			if (coefficient.conditions[inputValue]) {
-				return coefficient.conditions[inputValue];
+            if (inputValue && coefficient.conditions[inputValue] !== undefined) {
+                return coefficient.conditions[inputValue];
 			}
 
 			if (coefficient.conditions.formula) {

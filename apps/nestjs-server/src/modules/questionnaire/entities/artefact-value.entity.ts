@@ -17,6 +17,6 @@ export class ArtefactValueEntity {
 	@Column({ type: "varchar", length: 1 })
 	is_active_flg: string;
 
-	@Column({ type: "numeric", precision: 38, nullable: true })
-	artefact_parent_value_id: string;
+    @Column({ type: "numeric", precision: 38, nullable: true })
+    artefact_parent_value_id: number | null;
 }

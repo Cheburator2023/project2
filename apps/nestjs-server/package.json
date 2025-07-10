@@ -9,10 +9,13 @@
 		"start": "NODE_ENV=production tsx dist/main",
 		"start:debug": "nest start --debug --watch",
 		"prod": "npm run build && npm run start",
-		"test": "jest",
-		"test:watch": "jest --watch",
-		"test:cov": "jest --coverage",
-		"test:e2e": "jest --config ./test/jest-e2e.json"
+        "test": "jest",
+        "test:unit": "jest --testPathPattern='unit'",
+        "test:integration": "jest --testPathPattern='integration'",
+        "test:e2e": "jest --testPathPattern='e2e' --config ./test/jest-e2e.json",
+        "test:watch": "jest --watch",
+        "test:cov": "jest --coverage",
+        "test:ci": "jest --runInBand --detectOpenHandles --forceExit"
 	},
 	"dependencies": {
 		"@nestjs/cli": "11.0.5",
@@ -46,22 +49,5 @@
 		"ts-loader": "9.5.1",
 		"tsx": "4.19.3",
 		"typescript": "5.8.2"
-	},
-	"jest": {
-		"moduleFileExtensions": [
-			"js",
-			"json",
-			"ts"
-		],
-		"rootDir": "src",
-		"testRegex": ".*\\.spec\\.ts$",
-		"transform": {
-			".+\\.(t|j)s$": "ts-jest"
-		},
-		"collectCoverageFrom": [
-			"**/*.(t|j)s"
-		],
-		"coverageDirectory": "../coverage",
-		"testEnvironment": "node"
 	}
 }
