@@ -42,9 +42,7 @@ const widgets = {
 	MultiSelectAutocompleteWidget,
 };
 
-export const ProjectAssessmentForm: React.FC<{
-	isCreate?: boolean;
-}> = ({ isCreate }) => {
+export const ProjectAssessmentForm: React.FC<{}> = () => {
 	const formRef = useRef<FormRef>(null);
 	const { setApiRef, resetApiRef, updateFormState, ...store } =
 		useAnketaCRUDFormsStore();
@@ -55,10 +53,7 @@ export const ProjectAssessmentForm: React.FC<{
 	);
 	const [liveValidate, setLiveValidate] = useState(false);
 
-	const formName = isCreate
-		? AnketaCRUDFormNames.anketaCreate_projectAssessmentForm
-		: AnketaCRUDFormNames.anketaPreview_projectAssessmentForm;
-	const readonly = !isCreate;
+	const formName = AnketaCRUDFormNames.anketaCreate_projectAssessmentForm;
 	const formDataStore = store[formName];
 	const apiFormStore = formDataStore.api;
 	const formState = apiFormStore?.state;
@@ -73,7 +68,7 @@ export const ProjectAssessmentForm: React.FC<{
 		if (formRef.current && !apiFormStore) {
 			setApiRef(formName, formRef.current);
 		}
-	}, [formRef.current, isCreate]);
+	}, [formRef.current]);
 
 	useDeepEffect(() => {
 		updateFormState(formName, formState);
@@ -102,13 +97,6 @@ export const ProjectAssessmentForm: React.FC<{
 			updateFormState(formName, formStateFromRef);
 		}
 		console.log("Form errors:", errors);
-	};
-
-	const _onBlur = (id: string, data: any) => {
-		console.log("Form onBlur:", id, data);
-		if (formStateFromRef) {
-			updateFormState(formName, formStateFromRef);
-		}
 	};
 
 	const onFocus = (id: string, data: any) => {
@@ -146,7 +134,6 @@ export const ProjectAssessmentForm: React.FC<{
 				focusOnFirstError
 				liveValidate={liveValidate}
 				noHtml5Validate
-				readonly={readonly}
 				showErrorList={false}
 				data-test-id="project-assessment-form--Form-0"
 			/>

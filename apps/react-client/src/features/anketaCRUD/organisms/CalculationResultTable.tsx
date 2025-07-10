@@ -106,11 +106,7 @@ const processCoefficients = (
 	}));
 };
 
-export const CalculationResultTable = ({
-	isCreate,
-}: {
-	isCreate?: boolean;
-}) => {
+export const CalculationResultTable = () => {
 	const { stageResults, coefficients, stageBaseValues } =
 		assessmentCalculationsStore();
 

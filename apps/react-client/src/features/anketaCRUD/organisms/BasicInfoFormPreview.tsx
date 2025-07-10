@@ -1,16 +1,9 @@
-import { useQuestionnaireControllerGetFullQuestionnaire } from "@react-client/common/api/generated/queries/calculation";
+import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { MultiSelectAutocompleteCreateWidget } from "@react-client/common/forms/widgets/MultiSelectAutocompleteCreateWidget";
 import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";
-import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
-import {
-	AnketaCRUDFormNames,
-	basicInfoFormInitialData,
-	IBasicFormData,
-	useAnketaCRUDFormsStore,
-} from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
+import { IBasicFormData } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import type FormRef from "@rjsf/core";
-import type { IChangeEvent } from "@rjsf/core";
 import Form from "@rjsf/mui";
 import type {
 	RegistryWidgetsType,
@@ -18,18 +11,14 @@ import type {
 	TemplatesType,
 	UiSchema,
 } from "@rjsf/utils";
+import { omit } from "lodash-es";
 import { useRef, useState } from "react";
 import { MultiSelectAutocompleteWidget } from "../../../common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjectFieldTemplate";
 
 const uiSchema: UiSchema = {
 	"ui:submitButtonOptions": {
-		props: {
-			disabled: false,
-			className: "btn btn-info",
-		},
 		norender: true,
-		submitText: "Submit",
 	},
 	"ui:order": [
 		"name",
@@ -76,12 +65,6 @@ const uiSchema: UiSchema = {
 			tooltip: "",
 		},
 	},
-	// relatedModels: {
-	// 	"ui:widget": "MultiSelectAutocompleteCreateWidget",
-	// 	"ui:options": {
-	// 		tooltip: "",
-	// 	},
-	// },
 	comment: {
 		"ui:widget": "TextFieldCustomWidget",
 		"ui:options": {
@@ -89,12 +72,6 @@ const uiSchema: UiSchema = {
 			rows: 3,
 		},
 	},
-	// status: {
-	// 	"ui:widget": "radio",
-	// 	"ui:options": {
-	// 		tooltip: "",
-	// 	},
-	// },
 	createdAt: {
 		"ui:widget": "date",
 		"ui:options": {
@@ -124,18 +101,19 @@ const widgets: RegistryWidgetsType = {
 	TextFieldCustomWidget,
 };
 
-export const BasicInfoForm = () => {
-	const { data: questData } = useQuestionnaireControllerGetFullQuestionnaire();
-	const [formData, setFormData] = useState<IBasicFormData>(
-		basicInfoFormInitialData,
-	);
+export const BasicInfoFormPreview = ({
+	initialData,
+}: {
+	initialData?: CalculationResponseDto;
+}) => {
+	console.log("🐸 Pepe said >> initialData:", initialData);
 
-	const departmentENUM = questData?.referenceData.department;
-	const streamExecutorENUM = questData?.referenceData.streamExecutor;
+	const [formData, setFormData] = useState<IBasicFormData>(
+		omit(initialData, ["questionnaireData"]),
+	);
 
 	const schema: RJSFSchema = {
 		type: "object",
-		required: ["name", "rfd", "streamExecutor", "department"],
 		properties: {
 			name: {
 				type: "string",
@@ -153,16 +131,10 @@ export const BasicInfoForm = () => {
 			streamExecutor: {
 				type: "string",
 				title: "Стрим-исполнитель",
-				enum: streamExecutorENUM,
-				minLength: 1,
 			},
 			department: {
 				type: "array",
 				title: "Департамент заказчика",
-				items: {
-					type: "string",
-					enum: departmentENUM,
-				},
 				uniqueItems: true,
 				minItems: 1,
 			},
@@ -176,83 +148,27 @@ export const BasicInfoForm = () => {
 				title: "Комментарий",
 				maxLength: 250,
 			},
+			id: {
+				type: "string",
+				title: "ID",
+				readOnly: true,
+			},
+			author: {
+				type: "string",
+				title: "Автор",
+				readOnly: true,
+			},
+			createdAt: {
+				type: "string",
+				title: "Дата создания",
+				format: "date",
+				readOnly: true,
+			},
 		},
 	};
 
-	const { setApiRef, updateFormState, setFormDirty, ...store } =
-		useAnketaCRUDFormsStore();
-	const [liveValidate, setLiveValidate] = useState(false);
-
 	const formRef = useRef<FormRef>(null);
-
-	const formName = AnketaCRUDFormNames.anketaCreate_basicInfoForm;
-	const formDataStore = store[formName];
-	const apiFormStore = formDataStore.api;
-	const formState = apiFormStore?.state;
-	const formStateFromRef = formRef?.current?.state;
-
-	// init api in store
-	useDeepEffect(() => {
-		if (formRef.current && !apiFormStore) {
-			setApiRef(formName, formRef.current);
-		}
-	}, [formRef.current]);
-
-	// useEffect(() => {
-	// 	return () => {
-	// 		console.log("🐸 RESET:", formName);
-	// 		resetApiRef(formName);
-	// 	};
-	// }, []);
-
-	useDeepEffect(() => {
-		updateFormState(formName, formState);
-	}, [formState]);
-
-	const onChange = (formState: IChangeEvent<IBasicFormData>) => {
-		if (formState.formData) {
-			setFormData(formState.formData);
-		}
-		if (formState) {
-			setFormDirty(formName, true);
-			updateFormState(formName, formState);
-		}
-	};
-
-	const onSubmit = ({ formData }: IChangeEvent<IBasicFormData>) => {
-		console.log("🐸 BasicInfoForm >> formData:", formData);
-
-		if (formData) {
-			setFormData(formData);
-		}
-
-		if (formStateFromRef) {
-			updateFormState(formName, formStateFromRef);
-		}
-	};
-
-	const onError = (errors: any) => {
-		if (formStateFromRef) {
-			updateFormState(formName, formStateFromRef);
-		}
-		console.log("Form errors:", errors);
-	};
-
-	const onBlur = (id: string, data: any) => {
-		console.log("Form onBlur:", id, data);
-		if (formStateFromRef) {
-			updateFormState(formName, formStateFromRef);
-		}
-	};
-
-	const onFocus = (id: string, data: any) => {
-		setLiveValidate(true);
-
-		console.log("Form onFocus:", id, data);
-		if (formStateFromRef) {
-			updateFormState(formName, formStateFromRef);
-		}
-	};
+	const readonly = true;
 
 	return (
 		<Form
@@ -262,17 +178,13 @@ export const BasicInfoForm = () => {
 			formData={formData}
 			validator={validatorRu}
 			widgets={widgets}
-			onChange={onChange}
-			onSubmit={onSubmit}
-			onError={onError}
-			onBlur={onBlur}
-			onFocus={onFocus}
 			templates={templates}
-			liveValidate={liveValidate}
+			liveValidate={false}
 			noHtml5Validate
 			focusOnFirstError
+			readonly={readonly}
+			noValidate
 			showErrorList={false}
-			data-test-id="basic-info-form--Form-0"
 		/>
 	);
 };

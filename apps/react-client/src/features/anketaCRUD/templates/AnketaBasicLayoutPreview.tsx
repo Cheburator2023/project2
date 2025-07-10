@@ -1,29 +1,24 @@
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import { Alert, Button, styled } from "@mui/material";
+import { styled } from "@mui/material";
 import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import { BasicInfoFormPreview } from "@react-client/features/anketaCRUD/organisms/BasicInfoFormPreview";
 import { ProjectAssessmentForm } from "@react-client/features/jsonFormGenerator/components/ProjectAssessmentForm";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useLocation } from "react-router";
-import { BasicInfoForm } from "./BasicInfoForm";
-import { CalculationResultTable } from "./CalculationResultTable";
 
-export const AnketaBasicLayout = ({
-	isCreate = false,
-	isCopy,
+export const AnketaBasicLayoutPreview = ({
 	isPending,
 	onSubmit,
 	formHasErrors,
 	initialData,
 }: {
-	isCreate?: boolean;
-	isCopy?: boolean;
 	isPending?: boolean;
 	formHasErrors?: boolean;
 	onSubmit?: () => void;
-	initialData?: CalculationResponseDto;
+	initialData: CalculationResponseDto;
 }) => {
 	const location = useLocation();
 
@@ -35,14 +30,14 @@ export const AnketaBasicLayout = ({
 			data-test-id="anketa-basic-layout--Flex-0"
 		>
 			<PanelGroup
-				autoSaveId={`anketa_${isCreate ? "create" : "preview"}_page_container_vert_${location.pathname}`}
+				autoSaveId={`anketa_${"preview"}_page_container_vert_${location.pathname}`}
 				direction="vertical"
 				data-test-id="anketa-basic-layout--PanelGroup-0"
 			>
 				<Panel data-test-id="anketa-basic-layout--Panel-0">
 					<PanelGroup
 						direction="horizontal"
-						autoSaveId={`anketa_${isCreate ? "create" : "preview"}_page_container_hor_${location.pathname}`}
+						autoSaveId={`anketa_${"preview"}_page_container_hor_${location.pathname}`}
 						data-test-id="anketa-basic-layout--PanelGroup-1"
 					>
 						<Panel data-test-id="anketa-basic-layout--Panel-1">
@@ -55,9 +50,8 @@ export const AnketaBasicLayout = ({
 								data-test-id="anketa-basic-layout--Card-0"
 							>
 								<Spacer data-test-id="anketa-basic-layout--Spacer-0" />
-								<BasicInfoForm
+								<BasicInfoFormPreview
 									initialData={initialData}
-									isCreate={isCreate}
 									data-test-id="anketa-basic-layout--BasicInfoForm-0"
 								/>
 							</Card>
@@ -76,10 +70,9 @@ export const AnketaBasicLayout = ({
 								data-test-id="anketa-basic-layout--Card-1"
 							>
 								<Spacer data-test-id="anketa-basic-layout--Spacer-1" />
-								<CalculationResultTable
-									isCreate={isCreate}
+								{/* <CalculationResultTable
 									data-test-id="anketa-basic-layout--CalculationResultTable-0"
-								/>
+								/> */}
 							</Card>
 						</Panel>
 					</PanelGroup>
@@ -101,41 +94,10 @@ export const AnketaBasicLayout = ({
 						data-test-id="anketa-basic-layout--Card-2"
 					>
 						<Spacer data-test-id="anketa-basic-layout--Spacer-2" />
-						<ProjectAssessmentForm
-							isCreate={isCreate}
-							initialData={initialData}
-							data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
-						/>
+						<ProjectAssessmentForm data-test-id="anketa-basic-layout--ProjectAssessmentForm-0" />
 					</Card>
 				</Panel>
 			</PanelGroup>
-			{isCreate && (
-				<>
-					<Spacer space={6} data-test-id="anketa-basic-layout--Spacer-3" />
-					<Card padding="10px" data-test-id="anketa-basic-layout--Card-3">
-						<Flex
-							justifyContent="flex-end"
-							alignItems="center"
-							data-test-id="anketa-basic-layout--Flex-1"
-							gap={6}
-						>
-							{formHasErrors && (
-								<Alert severity="error">
-									Форма имеет ошибки или заполнена не до конца
-								</Alert>
-							)}
-							<Button
-								variant="contained"
-								onClick={onSubmit}
-								loading={isPending}
-								data-test-id="anketa-basic-layout--Button-0"
-							>
-								Сохранить
-							</Button>
-						</Flex>
-					</Card>
-				</>
-			)}
 		</Flex>
 	);
 };

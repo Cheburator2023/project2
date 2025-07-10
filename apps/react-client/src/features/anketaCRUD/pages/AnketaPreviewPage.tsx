@@ -3,8 +3,8 @@ import { CircularProgress } from "@mui/material";
 import { useCalculationControllerFindOne } from "@react-client/common/api/generated/queries/calculation";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { AnketaBasicLayout } from "@react-client/features/anketaCRUD/organisms/AnketaBasicLayout";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
+import { AnketaBasicLayoutPreview } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayoutPreview";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { useParams } from "react-router";
 
@@ -76,10 +76,7 @@ export const AnketaPreviewPage = () => {
 				{false ? (
 					<CircularProgress />
 				) : (
-					<AnketaBasicLayout
-						initialData={mock as any}
-						data-test-id="anketa-preview-page--AnketaBasicLayout-0"
-					/>
+					<AnketaBasicLayoutPreview initialData={mock as any} />
 				)}
 			</Flex>
 		</div>
