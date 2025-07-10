@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/correctness/noConstantCondition: <explanation> */
 import { CircularProgress } from "@mui/material";
 import { useCalculationControllerFindOne } from "@react-client/common/api/generated/queries/calculation";
 import { Flex } from "@react-client/common/primitives/Flex";
@@ -22,6 +23,46 @@ export const AnketaPreviewPage = () => {
 		},
 	);
 
+	const mock = {
+		id: "1d3a214c-6713-489a-83dc-696efec13490",
+		name: "asdf",
+		rfd: "Отсутствует",
+		streamExecutor: ["Разработка моделей для КМБ и КСБ"],
+		department: ["Департамент операционной поддержки бизнеса"],
+		customerName: "customerName test",
+		comment: "test comment",
+		questionnaireData: {
+			name: "asdf",
+			modelsCount: 1,
+			autoMlRequired: "Не требуется",
+			initiativeCost: "438-870 млн.",
+			setupComplexity:
+				"2 Сложность: Проведение регулярной валидации Моделей Регулятором не установлено. Модель оценки риска",
+			dataSourcesCount: "5",
+			readyPromReports: "Нет",
+			generalUncertainty: {},
+			initiativeTimeline: "1-4 мес.",
+			pilotModelRequired: "Не требуется",
+			algorithmComplexity: [
+				{
+					algorithmType: "Текстовая аналитика_LLM",
+				},
+			],
+			pilotSupportRequired: "Не требуется",
+			uncertaintyAdjustment: 2,
+			assessedInitiativesCount: "1",
+			productionAdditionalReports: "6",
+			productionDeploymentChannels: [
+				{
+					deploymentChannel: "LLM",
+				},
+			],
+		},
+		finalCoefficient: 718.3599999999999,
+		createdAt: "2025-07-09T15:38:39.181Z",
+		author: "test_ds_lead test_ds_lead",
+	};
+
 	return (
 		<div data-test-id="anketa-preview-page--div-0">
 			<Spacer height={6} data-test-id="anketa-preview-page--Spacer-0" />
@@ -32,11 +73,11 @@ export const AnketaPreviewPage = () => {
 				height="-webkit-fill-available"
 				data-test-id="anketa-preview-page--Flex-0"
 			>
-				{isFetching ? (
+				{false ? (
 					<CircularProgress />
 				) : (
 					<AnketaBasicLayout
-						initialData={initialData}
+						initialData={mock as any}
 						data-test-id="anketa-preview-page--AnketaBasicLayout-0"
 					/>
 				)}

@@ -89,13 +89,13 @@ const App: React.FC<LayoutProps> = (props) => {
 	}, !isEmpty(urlConfig));
 
 	return (
-		<BrowserRouter basename={bridged ? "/smartAnketa" : "/"}>
-			<CssBaseline enableColorScheme />
-			{globalStyles}
-			<AppTheme themeComponents={xThemeComponents}>
-				<ErrorBoundary ErrorPage={ErrorPage}>
-					<StyledEngineProvider injectFirst>
-						<QueryClientProvider client={queryClient}>
+		<QueryClientProvider client={queryClient}>
+			<BrowserRouter basename={bridged ? "/smartAnketa" : "/"}>
+				<CssBaseline enableColorScheme />
+				{globalStyles}
+				<AppTheme themeComponents={xThemeComponents}>
+					<ErrorBoundary ErrorPage={ErrorPage}>
+						<StyledEngineProvider injectFirst>
 							<Toaster />
 							<Suspense fallback={<CircularProgress />}>
 								<LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -104,11 +104,11 @@ const App: React.FC<LayoutProps> = (props) => {
 									</MainLayout>
 								</LocalizationProvider>
 							</Suspense>
-						</QueryClientProvider>
-					</StyledEngineProvider>
-				</ErrorBoundary>
-			</AppTheme>
-		</BrowserRouter>
+						</StyledEngineProvider>
+					</ErrorBoundary>
+				</AppTheme>
+			</BrowserRouter>
+		</QueryClientProvider>
 	);
 };
 

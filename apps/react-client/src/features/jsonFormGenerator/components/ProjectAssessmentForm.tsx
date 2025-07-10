@@ -1,4 +1,3 @@
-import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { MultiSelectAutocompleteWidget } from "@react-client/common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "@react-client/common/forms/widgets/RJSFObjectFieldTemplate";
@@ -45,18 +44,14 @@ const widgets = {
 
 export const ProjectAssessmentForm: React.FC<{
 	isCreate?: boolean;
-	initialData?: CalculationResponseDto;
-}> = ({ isCreate, initialData }) => {
+}> = ({ isCreate }) => {
 	const formRef = useRef<FormRef>(null);
 	const { setApiRef, resetApiRef, updateFormState, ...store } =
 		useAnketaCRUDFormsStore();
 	const { setFormData: setFormDataForCalc } = assessmentCalculationsStore();
 
 	const [formData, setFormData] = useState<IAssessmentFormData>(
-		// @ts-ignore
-		isCreate
-			? projectAssessmentFormInitialData
-			: initialData?.questionnaireData,
+		projectAssessmentFormInitialData,
 	);
 	const [liveValidate, setLiveValidate] = useState(false);
 
@@ -116,10 +111,17 @@ export const ProjectAssessmentForm: React.FC<{
 		}
 	};
 
-	const _onFocus = (id: string, data: any) => {
+	const onFocus = (id: string, data: any) => {
 		setLiveValidate(true);
 
 		console.log("Form onFocus:", id, data);
+		if (formStateFromRef) {
+			updateFormState(formName, formStateFromRef);
+		}
+	};
+
+	const onBlur = (id: string, data: any) => {
+		console.log("Form onBlur:", id, data);
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}
@@ -137,11 +139,10 @@ export const ProjectAssessmentForm: React.FC<{
 				formContext={{ formData }}
 				onChange={onChange}
 				onSubmit={onSubmit}
-				onFocus={_onFocus}
+				onFocus={onFocus}
 				onError={onError}
+				onBlur={onBlur}
 				templates={templates}
-				// onFocus={onFocus}
-				// onBlur={onBlur}
 				focusOnFirstError
 				liveValidate={liveValidate}
 				noHtml5Validate
