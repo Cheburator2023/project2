@@ -30,7 +30,7 @@ export interface AnketaForm {
 		pilotSupportRequired: CreateCalculationDtoPilotSupportRequired;
 		algorithmComplexity: AlgorithmTypeItemDto;
 		autoMlRequired: CreateCalculationDtoAutoMlRequired;
-		productionAdditionalReports: string | number;
+		productionAdditionalReports: string;
 		productionDeploymentChannels: CreateCalculationDtoProductionDeploymentChannelsItem[];
 		setupComplexity: string;
 		readyPromReports: CreateCalculationDtoReadyPromReports;

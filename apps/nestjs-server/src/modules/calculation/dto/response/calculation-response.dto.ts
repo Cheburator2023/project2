@@ -7,7 +7,6 @@ import {
 	YES_NO_VALUES,
 } from "../base/calculation-base.dto";
 import { AlgorithmTypeItemDto } from "../common/algorithm-type.dto";
-import { SimpleProbabilityInfluencePairDto } from "../common/probability-influence.dto";
 
 export class CalculationQuestionnaireDataDto extends CalculationBaseDto {
 	@ApiProperty({
@@ -33,7 +32,11 @@ export class CalculationQuestionnaireDataDto extends CalculationBaseDto {
 			},
 		},
 	})
-	generalUncertainty: Record<string, SimpleProbabilityInfluencePairDto>;
+	generalUncertainty: {
+		type: string;
+		probability: any;
+		influence: any;
+	}[];
 
 	@ApiProperty({
 		example: "Нет",
@@ -144,33 +147,12 @@ export class CalculationResponseDto {
 	})
 	comment: string;
 
-    @ApiProperty({
-        type: () => CalculationQuestionnaireDataDto,
-        description: "Данные анкеты расчета"
-    })
-    @Type(() => CalculationQuestionnaireDataDto)
-    questionnaireData: {
-        name: string;
-        setupComplexity: string;
-        initiativeTimeline: string;
-        initiativeCost: string;
-        modelsCount: number;
-        uncertaintyAdjustment?: number;
-        generalUncertainty: Array<{
-            type: string;
-            probability: string;
-            influence: string;
-        }>;
-        readyPromReports: string;
-        assessedInitiativesCount?: string;
-        dataSourcesCount: string;
-        pilotModelRequired: string;
-        algorithmComplexity: AlgorithmTypeItemDto[];
-        pilotSupportRequired: string;
-        autoMlRequired: string;
-        productionAdditionalReports?: string;
-        productionDeploymentChannels: string[];
-    };
+	@ApiProperty({
+		type: () => CalculationQuestionnaireDataDto,
+		description: "Данные анкеты расчета",
+	})
+	@Type(() => CalculationQuestionnaireDataDto)
+	questionnaireData: CalculationQuestionnaireDataDto;
 
 	@ApiProperty({
 		example: 1.8,

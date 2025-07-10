@@ -60,7 +60,7 @@ export interface CreateCalculationDto {
   /** Требуется ли AutoML */
   autoMlRequired: CreateCalculationDtoAutoMlRequired;
   /** Дополнительные отчеты для продакшена */
-  productionAdditionalReports: number;
+  productionAdditionalReports: string;
   /** Каналы развертывания в продакшен */
   productionDeploymentChannels: CreateCalculationDtoProductionDeploymentChannelsItem[];
   /** Финальный коэффициент расчета */

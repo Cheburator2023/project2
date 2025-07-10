@@ -80,8 +80,8 @@ export const AnketaCreatePage = () => {
 						navigate(routes.home.rootPath);
 					},
 					onError: (error: any) => {
-						toast.error("Ошибка при создании расчета", {
-							description: error.message,
+						toast.error("Ошибка создания расчета", {
+							description: error?.response?.data?.message,
 							action: {
 								label: "",
 								onClick: () => {},

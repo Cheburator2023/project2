@@ -75,7 +75,7 @@ export class CalculationService {
 				},
 				finalCoefficient: createCalculationDto.finalCoefficient,
 				author: authorName,
-			});
+			} as Partial<Calculation>);
 
 			return await this.calculationRepository.save(calculation);
 		} catch (error) {
