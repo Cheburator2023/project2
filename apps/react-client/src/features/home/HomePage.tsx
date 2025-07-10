@@ -4,7 +4,6 @@ import { IconButton, styled, Tooltip, useColorScheme } from "@mui/material";
 import { useCalculationControllerFindAll } from "@react-client/common/api/generated/queries/calculation";
 import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { toast } from "@react-client/common/toasts";
@@ -380,7 +379,7 @@ export const HomeTemplete = ({
 					</Flex>
 				</Flex>
 			</Header>
-			<Spacer height={6} data-test-id="home-page--Spacer-1" />
+
 			<GridWrapper
 				width="100%"
 				height="-webkit-fill-available"

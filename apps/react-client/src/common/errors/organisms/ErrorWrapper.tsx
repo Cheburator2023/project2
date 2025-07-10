@@ -20,7 +20,7 @@ export const ErrorWrapper: React.FC<Props> = ({
 	text,
 	withEmailCopy,
 }) => {
-	const theme = useTheme();
+	const _theme = useTheme();
 
 	return (
 		<Flex

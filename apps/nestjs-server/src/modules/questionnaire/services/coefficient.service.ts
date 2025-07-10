@@ -50,6 +50,8 @@ export class CoefficientService {
 						"value",
 						value.toString(),
 					);
+
+					// biome-ignore lint/security/noGlobalEval: <explanation>
 					return eval(formula);
 				} catch {
 					return coefficient.baseValue;

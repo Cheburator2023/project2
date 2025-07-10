@@ -22,7 +22,7 @@ export const AnketaCompareLayout = () => {
 		>
 			<Card
 				header={`Основная информация ${id1} / ${id2}`}
-				overflow={false}
+				overflow=""
 				data-test-id="anketa-compare-layout--Card-0"
 			>
 				<PanelGroup
@@ -44,7 +44,7 @@ export const AnketaCompareLayout = () => {
 			<Spacer data-test-id="anketa-compare-layout--Spacer-0" />
 			<Card
 				header={`Итоговый расчет ${id1} / ${id2}`}
-				overflow={false}
+				overflow=""
 				data-test-id="anketa-compare-layout--Card-1"
 			>
 				<PanelGroup
@@ -66,7 +66,7 @@ export const AnketaCompareLayout = () => {
 			<Spacer data-test-id="anketa-compare-layout--Spacer-1" />
 			<Card
 				header={`Опросник ${id1} / ${id2}`}
-				overflow={false}
+				overflow=""
 				data-test-id="anketa-compare-layout--Card-2"
 			>
 				<PanelGroup

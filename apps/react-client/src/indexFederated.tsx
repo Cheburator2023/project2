@@ -1,6 +1,7 @@
 import { createBridgeComponent } from "@module-federation/bridge-react/v19";
 import { AuthProvider } from "@react-client/common/providers/AuthProvider";
 import { useUserStore } from "@react-client/common/store/userStore";
+import { globalStyles } from "@react-client/theme/GlobalStyle";
 import { Permission, Role } from "@react-client/types/roles";
 import { useEffect } from "react";
 import type { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
@@ -51,6 +52,8 @@ const MfeRoot = (props: Props) => {
 			token={props.token}
 			data-test-id="index-federated--AuthProvider-0"
 		>
+			{globalStyles}
+
 			<App {...props} bridged data-test-id="index-federated--App-0" />
 		</AuthProvider>
 	);

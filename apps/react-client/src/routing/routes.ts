@@ -1,7 +1,7 @@
 export const routes = {
 	home: {
 		rootPath: "/",
-		name: "Главная",
+		name: "Главная / Реестр",
 		disabled: false,
 		subRoutes: {},
 	},

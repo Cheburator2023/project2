@@ -1,7 +1,6 @@
 import { useCalculationControllerCreate } from "@react-client/common/api/generated/queries/calculation";
 import { CreateCalculationDto } from "@react-client/common/api/generated/types";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { Spacer } from "@react-client/common/primitives/Spacer";
 import { toast } from "@react-client/common/toasts";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { AnketaBasicLayout } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayout";
@@ -104,7 +103,6 @@ export const AnketaCreatePage = () => {
 	return (
 		<div data-test-id="anketa-create-page--div-0">
 			<Header data-test-id="anketa-create-page--Header-0" />
-			<Spacer height={6} data-test-id="anketa-create-page--Spacer-1" />
 			<Flex
 				width="100%"
 				height="-webkit-fill-available"

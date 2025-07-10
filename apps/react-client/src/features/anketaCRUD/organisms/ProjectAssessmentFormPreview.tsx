@@ -4,6 +4,8 @@ import { ArrayCustomCardListsWidget } from "@react-client/common/forms/widgets/A
 import { MultiSelectAutocompleteWidget } from "@react-client/common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "@react-client/common/forms/widgets/RJSFObjectFieldTemplate";
 import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";
+import { useEffectOnce } from "@react-client/common/hooks/useEffectOnce";
+import { assessmentCalculationsStore } from "@react-client/features/jsonFormGenerator/hooks/assessmentCalculationsStore";
 import { mainCalcSchema } from "@react-client/features/jsonFormGenerator/schemas";
 import AlgorithmComplexityWidget from "@react-client/features/jsonFormGenerator/widgets/AlgorithmComplexityWidget";
 import GeneralUncertaintyWidget from "@react-client/features/jsonFormGenerator/widgets/GeneralUncertaintyWidget";
@@ -30,7 +32,7 @@ const uiSchema: UiSchema = {
 	},
 };
 
-const templates: Partial<TemplatesType> = {
+const _templates: Partial<TemplatesType> = {
 	ObjectFieldTemplate: RJSFObjectFieldTemplate,
 };
 
@@ -49,9 +51,29 @@ export const ProjectAssessmentFormPreview = ({
 }: {
 	initialData: CalculationResponseDto;
 }) => {
+	const { setFormData: setFormDataForCalc } = assessmentCalculationsStore();
+
 	const formData = initialData.questionnaireData;
 
 	const _mainCalcSchema = omit(mainCalcSchema, ["required"]);
+
+	useEffectOnce(() => {
+		// setFormDataForCalc({
+		// 	modelsCount: formData.modelsCount,
+		// 	generalUncertainty: formData.generalUncertainty as any,
+		// 	assessedInitiativesCount: formData.assessedInitiativesCount,
+		// 	algorithmComplexity: formData.algorithmComplexity,
+		// 	autoMlRequired: formData.autoMlRequired,
+		// 	productionAdditionalReports: formData.productionAdditionalReports,
+		// 	productionDeploymentChannels:
+		// 		formData.productionDeploymentChannels as any,
+		// 	setupComplexity: formData.setupComplexity,
+		// 	readyPromReports: formData.readyPromReports,
+		// 	dataSourcesCount: formData.dataSourcesCount,
+		// 	pilotModelRequired: formData.pilotModelRequired,
+		// 	pilotSupportRequired: formData.pilotSupportRequired,
+		// });
+	}, !!formData);
 
 	return (
 		<Form
@@ -60,7 +82,7 @@ export const ProjectAssessmentFormPreview = ({
 			formData={formData}
 			validator={validatorRu}
 			widgets={widgets}
-			templates={templates}
+			// templates={templates}
 			liveValidate={false}
 			noHtml5Validate
 			focusOnFirstError

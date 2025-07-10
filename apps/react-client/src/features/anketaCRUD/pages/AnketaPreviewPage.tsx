@@ -1,16 +1,20 @@
 /** biome-ignore-all lint/correctness/noConstantCondition: <explanation> */
-import { CircularProgress } from "@mui/material";
+
+import ViewComfyIcon from "@mui/icons-material/ViewComfy";
+import ViewDayIcon from "@mui/icons-material/ViewDay";
+import { CircularProgress, IconButton } from "@mui/material";
 import { useCalculationControllerFindOne } from "@react-client/common/api/generated/queries/calculation";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { AnketaBasicLayoutPreview } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayoutPreview";
 import { Header } from "@react-client/features/navigation/organisms/Header";
+import { useState } from "react";
 import { useParams } from "react-router";
 
 export const AnketaPreviewPage = () => {
 	const params = useParams();
 	const calcId = params.id || "";
+	const [comfyView, setComfyView] = useState(true);
 
 	const { setApiRef, resetApiRef, ...store } = useAnketaCRUDFormsStore();
 
@@ -65,11 +69,7 @@ export const AnketaPreviewPage = () => {
 			uncertaintyAdjustment: 2,
 			assessedInitiativesCount: "1",
 			productionAdditionalReports: "6",
-			productionDeploymentChannels: [
-				{
-					deploymentChannel: "LLM",
-				},
-			],
+			productionDeploymentChannels: ["LLM"],
 		},
 		finalCoefficient: 718.3599999999999,
 		createdAt: "2025-07-09T15:38:39.181Z",
@@ -78,9 +78,11 @@ export const AnketaPreviewPage = () => {
 
 	return (
 		<div data-test-id="anketa-preview-page--div-0">
-			<Spacer height={6} data-test-id="anketa-preview-page--Spacer-0" />
-			<Header calcId={calcId} data-test-id="anketa-preview-page--Header-0" />
-			<Spacer height={12} data-test-id="anketa-preview-page--Spacer-1" />
+			<Header calcId={calcId} data-test-id="anketa-preview-page--Header-0">
+				<IconButton onClick={() => setComfyView(!comfyView)}>
+					{!comfyView ? <ViewComfyIcon /> : <ViewDayIcon />}
+				</IconButton>
+			</Header>
 			<Flex
 				width="100%"
 				height="-webkit-fill-available"
@@ -89,7 +91,10 @@ export const AnketaPreviewPage = () => {
 				{false ? (
 					<CircularProgress />
 				) : (
-					<AnketaBasicLayoutPreview initialData={mock as any} />
+					<AnketaBasicLayoutPreview
+						initialData={mock as any}
+						comfyView={comfyView}
+					/>
 				)}
 			</Flex>
 		</div>

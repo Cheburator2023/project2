@@ -6,10 +6,15 @@ export const globalStyles = (
 body {
 	margin: 0;
 	min-height: 100vh;
-}
-#root {
-	min-height: 100vh;
 	height: 100vh;
+	overflow: auto;
+
+}
+	html {
+	    overflow: hidden;
+		}
+#root {
+
 	// background-color: initial !important;
     font-family: Inter, sans-serif;
 }
@@ -18,6 +23,10 @@ body {
 	scrollbar-color: #8d8d8d94 #bada5500;
 	scrollbar-width: thin;
         font-family: Inter, sans-serif;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
 }
 
 .ag-watermark,

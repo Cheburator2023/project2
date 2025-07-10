@@ -30,8 +30,6 @@ export const PlaygroundPage = () => {
 		<Flex flexDirection="column" data-test-id="playground-page--Flex-0">
 			<Header />
 
-			<Spacer data-test-id="playground-page--Spacer-0" />
-
 			{data.map((item) => (
 				<Fragment key={item.name} data-test-id="playground-page--Fragment-0">
 					<Card data-test-id="playground-page--Card-0">

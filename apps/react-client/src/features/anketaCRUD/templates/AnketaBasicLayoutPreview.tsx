@@ -12,10 +12,9 @@ import { useLocation } from "react-router";
 
 export const AnketaBasicLayoutPreview = ({
 	initialData,
+	comfyView,
 }: {
-	isPending?: boolean;
-	formHasErrors?: boolean;
-	onSubmit?: () => void;
+	comfyView?: boolean;
 	initialData: CalculationResponseDto;
 }) => {
 	const location = useLocation();
@@ -27,76 +26,121 @@ export const AnketaBasicLayoutPreview = ({
 			width="100%"
 			data-test-id="anketa-basic-layout--Flex-0"
 		>
-			<PanelGroup
-				autoSaveId={`anketa_${"preview"}_page_container_vert_${location.pathname}`}
-				direction="vertical"
-				data-test-id="anketa-basic-layout--PanelGroup-0"
-			>
-				<Panel data-test-id="anketa-basic-layout--Panel-0">
-					<PanelGroup
-						direction="horizontal"
-						autoSaveId={`anketa_${"preview"}_page_container_hor_${location.pathname}`}
-						data-test-id="anketa-basic-layout--PanelGroup-1"
-					>
-						<Panel data-test-id="anketa-basic-layout--Panel-1">
-							<Card
-								header="Основная информация"
-								height="100%"
-								padding="10px"
-								zoom={0.8}
-								uuid="anketa_basic_info_card"
-								data-test-id="anketa-basic-layout--Card-0"
-							>
-								<Spacer data-test-id="anketa-basic-layout--Spacer-0" />
-								<BasicInfoFormPreview
-									initialData={initialData}
-									data-test-id="anketa-basic-layout--BasicInfoForm-0"
-								/>
-							</Card>
-						</Panel>
-						<PanelResizeHandleStyled data-test-id="anketa-basic-layout--PanelResizeHandleStyled-0">
-							<DragIndicatorIcon data-test-id="anketa-basic-layout--DragIndicatorIcon-0" />
-						</PanelResizeHandleStyled>
-						<Panel data-test-id="anketa-basic-layout--Panel-2">
-							<Card
-								header="Итоги расчета"
-								maxHeight="100%"
-								height="100%"
-								padding="10px"
-								zoom={0.8}
-								uuid="anketa_calculation_result_card"
-								data-test-id="anketa-basic-layout--Card-1"
-							>
-								<Spacer data-test-id="anketa-basic-layout--Spacer-1" />
-								<CalculationResultTable data-test-id="anketa-basic-layout--CalculationResultTable-0" />
-							</Card>
-						</Panel>
-					</PanelGroup>
-				</Panel>
-				<PanelResizeHandleStyled
-					vertical
-					data-test-id="anketa-basic-layout--PanelResizeHandleStyled-1"
+			{comfyView ? (
+				<PanelGroup
+					autoSaveId={`anketa_${"preview"}_page_container_vert_${location.pathname}`}
+					direction="vertical"
+					data-test-id="anketa-basic-layout--PanelGroup-0"
 				>
-					<DragIndicatorIcon data-test-id="anketa-basic-layout--DragIndicatorIcon-1" />
-				</PanelResizeHandleStyled>
-				<Panel data-test-id="anketa-basic-layout--Panel-3">
+					<Panel data-test-id="anketa-basic-layout--Panel-3">
+						<Card
+							header="Основная информация"
+							maxHeight="100%"
+							height="100%"
+							padding="10px"
+							zoom={0.8}
+							uuid="anketa_project_assessment_card"
+							data-test-id="anketa-basic-layout--Card-2"
+						>
+							<Spacer data-test-id="anketa-basic-layout--Spacer-2" />
+							<BasicInfoFormPreview
+								initialData={initialData}
+								data-test-id="anketa-basic-layout--BasicInfoForm-0"
+							/>
+						</Card>
+					</Panel>
+					<PanelResizeHandleStyled
+						vertical
+						data-test-id="anketa-basic-layout--PanelResizeHandleStyled-1"
+					>
+						<DragIndicatorIcon data-test-id="anketa-basic-layout--DragIndicatorIcon-1" />
+					</PanelResizeHandleStyled>
+					<Panel data-test-id="anketa-basic-layout--Panel-0">
+						<PanelGroup
+							direction="horizontal"
+							autoSaveId={`anketa_${"preview"}_page_container_hor_${location.pathname}`}
+							data-test-id="anketa-basic-layout--PanelGroup-1"
+						>
+							<Panel data-test-id="anketa-basic-layout--Panel-1">
+								<Card
+									header="Опросник"
+									height="100%"
+									padding="10px"
+									zoom={0.8}
+									uuid="anketa_basic_info_card"
+									data-test-id="anketa-basic-layout--Card-0"
+								>
+									<Spacer data-test-id="anketa-basic-layout--Spacer-0" />
+									<ProjectAssessmentFormPreview
+										initialData={initialData}
+										data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
+									/>
+								</Card>
+							</Panel>
+							<PanelResizeHandleStyled data-test-id="anketa-basic-layout--PanelResizeHandleStyled-0">
+								<DragIndicatorIcon data-test-id="anketa-basic-layout--DragIndicatorIcon-0" />
+							</PanelResizeHandleStyled>
+							<Panel data-test-id="anketa-basic-layout--Panel-2">
+								<Card
+									header="Итоги расчета"
+									maxHeight="100%"
+									height="100%"
+									padding="10px"
+									zoom={0.8}
+									uuid="anketa_calculation_result_card"
+									data-test-id="anketa-basic-layout--Card-1"
+								>
+									<Spacer data-test-id="anketa-basic-layout--Spacer-1" />
+									<CalculationResultTable data-test-id="anketa-basic-layout--CalculationResultTable-0" />
+								</Card>
+							</Panel>
+						</PanelGroup>
+					</Panel>
+				</PanelGroup>
+			) : (
+				<Flex flexDirection="column" gap={10}>
 					<Card
-						header="Опросник"
-						maxHeight="100%"
-						height="100%"
+						header="Основная информация"
+						overflow={""}
 						padding="10px"
 						zoom={0.8}
 						uuid="anketa_project_assessment_card"
 						data-test-id="anketa-basic-layout--Card-2"
 					>
 						<Spacer data-test-id="anketa-basic-layout--Spacer-2" />
+						<BasicInfoFormPreview
+							initialData={initialData}
+							data-test-id="anketa-basic-layout--BasicInfoForm-0"
+						/>
+					</Card>
+					<Card
+						header="Опросник"
+						overflow={""}
+						padding="10px"
+						zoom={0.8}
+						uuid="anketa_basic_info_card"
+						data-test-id="anketa-basic-layout--Card-0"
+					>
+						<Spacer data-test-id="anketa-basic-layout--Spacer-0" />
 						<ProjectAssessmentFormPreview
 							initialData={initialData}
 							data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
 						/>
 					</Card>
-				</Panel>
-			</PanelGroup>
+					<Card
+						header="Итоги расчета"
+						height="666px"
+						overflow={"hidden"}
+						padding="10px"
+						zoom={0.8}
+						uuid="anketa_calculation_result_card"
+						data-test-id="anketa-basic-layout--Card-1"
+					>
+						<Spacer data-test-id="anketa-basic-layout--Spacer-1" />
+						<CalculationResultTable data-test-id="anketa-basic-layout--CalculationResultTable-0" />
+					</Card>
+				</Flex>
+			)}
 		</Flex>
 	);
 };

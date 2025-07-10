@@ -2,6 +2,7 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import { Typography } from "@mui/material";
 import { Card } from "@react-client/common/muiCustom/Card";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Flex } from "../../../common/primitives/Flex";
 import { useGlobalSettingsStore } from "../../../common/store/globalSettingsStore";
 import { ColorModeIconDropdown } from "../../../theme/ColorModeIconDropdown";
@@ -78,6 +79,7 @@ export function Header({
 					</Flex>
 				</Flex>
 			</Card>
+			<Spacer height={6} data-test-id="anketa-create-page--Spacer-1" />
 		</>
 	);
 }

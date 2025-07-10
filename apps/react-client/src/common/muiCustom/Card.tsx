@@ -16,7 +16,7 @@ import { useState } from "react";
 const headerH = 20;
 
 const CardWithZoom = (props: CardWithZoomProps) => {
-	const { maxHeight, overflow = true } = props;
+	const { maxHeight, overflow = "auto" } = props;
 	const [visible, _setVisible] = useState(true);
 	const {
 		data: __zoom,
@@ -39,6 +39,7 @@ const CardWithZoom = (props: CardWithZoomProps) => {
 
 	return (
 		<MUIPaperStyled
+			overflow={overflow}
 			sx={{
 				padding: props.padding || "10px",
 				maxHeight: maxHeight || "100%",
@@ -109,7 +110,7 @@ const CardWithZoom = (props: CardWithZoomProps) => {
 };
 
 const CardWithoutZoom = (props: BaseCardProps) => {
-	const { maxHeight, overflow = true } = props;
+	const { maxHeight, overflow = "auto" } = props;
 	const [visible, _setVisible] = useState(true);
 
 	const handler = () => {
@@ -118,6 +119,7 @@ const CardWithoutZoom = (props: BaseCardProps) => {
 
 	return (
 		<MUIPaperStyled
+			overflow={overflow}
 			sx={{
 				padding: props.padding || "10px 7px 10px 11px",
 				maxHeight: maxHeight || "100%",
@@ -169,7 +171,7 @@ type BaseCardProps = PaperProps & {
 	width?: string;
 	header?: any;
 	onClose?: any;
-	overflow?: boolean;
+	overflow?: string;
 };
 
 type CardWithZoomProps = BaseCardProps & {
@@ -191,9 +193,9 @@ export const Card = (props: CardProps) => {
 	return <CardWithoutZoom {...props} variant="outlined" />;
 };
 
-const MUIPaperStyled = styled(Paper)`
+const MUIPaperStyled = styled(Paper)<{ overflow: string }>`
 	pointer-events: all;
  & > div {
-	overflow: auto;
+	overflow: ${({ overflow }) => overflow && "auto"};
  }
 `;

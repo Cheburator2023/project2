@@ -43,7 +43,7 @@ export function SideMenu({
 			data-test-id="side-menu--Drawer-0"
 		>
 			<Flex
-				pad="32px 10px 0"
+				pad="22px 10px 0"
 				justifyContent="center"
 				alignItems="center"
 				data-test-id="side-menu--Flex-0"

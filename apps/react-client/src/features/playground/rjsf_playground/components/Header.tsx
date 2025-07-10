@@ -293,7 +293,7 @@ type HeaderProps = {
 	setShareURL: Dispatch<SetStateAction<string | null>>;
 };
 
-export default function Header({
+export default function RJSFHeader({
 	schema,
 	uiSchema,
 	formData,

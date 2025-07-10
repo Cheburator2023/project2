@@ -23,7 +23,7 @@ import base64 from "../utils/base64";
 import Editors from "./Editors";
 import ErrorBoundary from "./ErrorBoundary";
 import GeoPosition from "./GeoPosition";
-import Header, { type LiveSettings } from "./Header";
+import RJSFHeader, { type LiveSettings } from "./Header";
 import SpecialInput from "./SpecialInput";
 import type { ThemesType } from "./ThemeSelector";
 
@@ -201,7 +201,7 @@ export default function Playground({ themes, validators }: PlaygroundProps) {
 
 	return (
 		<>
-			<Header
+			<RJSFHeader
 				schema={schema}
 				uiSchema={uiSchema}
 				formData={formData}
