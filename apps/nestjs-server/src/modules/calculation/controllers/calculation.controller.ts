@@ -18,7 +18,9 @@ import {
 	ApiResponse,
 	ApiTags,
 } from "@nestjs/swagger";
+import { RealmRole } from "../../../shared/decorators/realm-role.decorator";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
+import { Permission } from "../../../shared/types/permissions";
 import {
 	CalculationResponseDto,
 	CreateCalculationDto,
@@ -34,6 +36,7 @@ export class CalculationController {
 	constructor(private readonly calculationService: CalculationService) {}
 
 	@Post()
+	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
 	@UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 	@ApiOperation({
 		summary: "Create new calculation",
@@ -64,6 +67,7 @@ export class CalculationController {
 	}
 
 	@Get("all")
+	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
 	@ApiOperation({
 		summary: "Get all calculations (paginated)",
 		description: "Retrieves a paginated list of all calculations",
@@ -105,6 +109,7 @@ export class CalculationController {
 	}
 
 	@Get("all/list")
+	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
 	@ApiOperation({
 		summary: "Get all calculations (non-paginated)",
 		description: "Retrieves all calculations without pagination",
