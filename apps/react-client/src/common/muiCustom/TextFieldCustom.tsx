@@ -25,6 +25,11 @@ export const TextFieldCustom: React.FC<TextFieldCustomProps> = ({
 			const prefixedValue = prefix ? `${prefix}${cleanValue}` : _value;
 
 			if (prefix) {
+				setTimeout(() => {
+					const input = event.target;
+					input.setSelectionRange(input.value.length, input.value.length);
+				}, 0);
+
 				if (cleanValue !== "") {
 					onChange({
 						...event,
@@ -48,12 +53,32 @@ export const TextFieldCustom: React.FC<TextFieldCustomProps> = ({
 		}
 	};
 
+	const handleFocus = (e: any) => {
+		props?.onFocus?.(e);
+
+		if (e.target && prefix) {
+			const length = e.target.value.length;
+			e.target.setSelectionRange(length, length);
+		}
+	};
+
+	const handleClick = (e: any) => {
+		props?.onClick?.(e);
+
+		if (e.target && prefix) {
+			const length = e.target.value.length;
+			e.target.setSelectionRange(length, length);
+		}
+	};
+
 	return (
 		<TextField
 			{...props}
 			title={props.id}
 			value={value}
 			onChange={handleChange}
+			onFocus={handleFocus}
+			onClick={handleClick}
 			inputRef={mask ? inputRef : undefined}
 		/>
 	);

@@ -104,7 +104,6 @@ export const BasicInfoFormPreview = ({
 	initialData?: CalculationResponseDto;
 }) => {
 	const formData = omit(initialData, ["questionnaireData"]);
-	console.log("🐸 Pepe said >> formData:", formData);
 
 	const schema: RJSFSchema = {
 		type: "object",

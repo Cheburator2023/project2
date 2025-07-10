@@ -51,7 +51,6 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 	const [formData, setFormData] = useState<IAssessmentFormData>(
 		projectAssessmentFormInitialData,
 	);
-	console.log("🐸 Pepe said >> formData:", formData);
 
 	const [liveValidate, setLiveValidate] = useState(false);
 

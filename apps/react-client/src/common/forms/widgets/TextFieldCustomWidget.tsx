@@ -37,30 +37,19 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 		onChange(initialValue);
 	};
 
-	const isRfdField = id?.includes("rfd");
-
-	const _onChange = (value: string) => {
-		if (isRfdField && value === "") {
-			onChange?.("Отсутствует");
-		} else {
-			onChange?.(value === "" ? options.emptyValue : value);
-		}
+	const _onChange = (e: any) => {
+		onChange?.(e.target.value);
 	};
 
 	const _onBlur = ({
 		target: { value },
 	}: React.FocusEvent<HTMLInputElement>) => {
-		if (isRfdField && value === "") {
-			onChange?.("Отсутствует");
-		}
 		onBlur?.(id, value);
 	};
 
 	const _onFocus = ({
 		target: { value },
 	}: React.FocusEvent<HTMLInputElement>) => onFocus?.(id, value);
-
-	const displayValue = isRfdField && value === "Отсутствует" ? "" : value || "";
 
 	const isSelect =
 		(options?.enumOptions && options?.enumOptions.length > 0) ||
@@ -74,13 +63,13 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			id={id}
 			title={id}
 			label={label || schema?.title}
-			value={displayValue}
+			value={value}
 			required={required}
 			disabled={isDisabled}
 			autoFocus={autofocus}
 			error={rawErrors && rawErrors.length > 0}
 			// helperText={rawErrors?.join(" ")}
-			onChange={(event) => _onChange?.(event.target.value)}
+			onChange={_onChange}
 			onBlur={_onBlur}
 			onFocus={_onFocus}
 			placeholder={placeholder}

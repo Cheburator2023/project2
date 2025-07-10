@@ -224,8 +224,6 @@ function describeTokens(tokens: RegExpToken[], options: TOptions): string {
 		}
 	}
 
-	console.log("🐸 Pepe said >> describeTokens >> descriptions:", descriptions);
-
 	// Join with proper connectors
 	let result = "";
 	for (let i = 0; i < descriptions.length; i++) {

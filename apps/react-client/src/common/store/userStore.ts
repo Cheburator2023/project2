@@ -7,7 +7,6 @@ import {
 import { create, StoreApi, UseBoundStore } from "zustand";
 
 const NO_ROLES_FOR_DEV = process?.env?.NO_ROLES;
-console.log("🐸 Pepe said >> NO_ROLES_FOR_DEV:", NO_ROLES_FOR_DEV);
 
 interface UserStoreState {
 	username: string | null;

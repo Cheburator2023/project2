@@ -32,7 +32,6 @@ interface UncertaintyItem {
 
 const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 	const { value = [], onChange, formContext, schema, required } = props;
-	console.log("🐸 Pepe said >> props:", props);
 
 	const tooltips = props.options?.tooltips;
 

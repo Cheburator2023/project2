@@ -6,13 +6,6 @@ import { useNavigate } from "react-router";
 export const CalculationPreviewCell = (props: ICellRendererParams) => {
 	const isRowHovered = props.node.id === (props as any).hoveredRowId;
 
-	console.log("🐸 Pepe said >> HomePage >> hoveredRowId:", props);
-
-	console.log(
-		"🐸 Pepe said >> CalculationPreviewCell >> props.node.id:",
-		props.node.id,
-	);
-
 	const navigate = useNavigate();
 
 	return isRowHovered ? (

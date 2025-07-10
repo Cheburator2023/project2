@@ -186,9 +186,9 @@ export const BasicInfoForm = () => {
 			rfd: {
 				type: "string",
 				title: "RFD",
-				minLength: 8,
-				maxLength: 19,
-				pattern: "^(RFD-\\d{4,15})?$",
+				minLength: formData.rfd ? 8 : undefined,
+				maxLength: formData.rfd ? 19 : undefined,
+				pattern: formData.rfd ? "^(RFD-\\d{4,15})?$" : undefined,
 			},
 			streamExecutor: {
 				type: "string",
