@@ -13,7 +13,7 @@ export function calculateStage01(
 		readyPromReportsCoefficient;
 
 	// Round up to 2 decimal places
-	return Math.ceil(result * 100) / 100;
+	return Math.round(result * 100) / 100;
 }
 
 export function calculateStage02(
@@ -25,7 +25,7 @@ export function calculateStage02(
 	dataSourcesCount: string,
 ): number {
 	if (readyPromReports === "Да" || Number(dataSourcesCount) === 0) {
-		baseValue = 0;
+		return 0;
 	}
 
 	let result: any;
@@ -41,7 +41,7 @@ export function calculateStage02(
 	}
 
 	// Round up to 2 decimal places
-	return Math.ceil(result * 100) / 100;
+	return Math.round(result * 100) / 100;
 }
 
 export function calculateStage04(
@@ -53,7 +53,7 @@ export function calculateStage04(
 ): number {
 	// If 'Наличие готовых пром витрин' is 'Да', set baseValue to 0 as per business logic
 	if (readyPromReports === "Да") {
-		baseValue = 0;
+		return 0;
 	}
 
 	let result: any;
@@ -67,7 +67,7 @@ export function calculateStage04(
 	}
 
 	// Round up to 2 decimal places
-	return Math.ceil(result * 100) / 100;
+	return Math.round(result * 100) / 100;
 }
 
 export function calculateStage05A(
@@ -92,7 +92,7 @@ export function calculateStage05A(
 		algorithmComplexityCoefficient;
 
 	// Round up to 2 decimal places
-	return Math.ceil(result * 100) / 100;
+	return Math.round(result * 100) / 100;
 }
 
 export function calculateStage05(
@@ -112,7 +112,7 @@ export function calculateStage05(
 		algorithmComplexityCoefficient;
 
 	// Round up to 2 decimal places
-	return Math.ceil(result * 100) / 100;
+	return Math.round(result * 100) / 100;
 }
 
 export function calculateAMLDrafting(
@@ -133,7 +133,7 @@ export function calculateAMLDrafting(
 		generalUncertaintyCoefficient;
 
 	// Round up to 2 decimal places
-	return Math.ceil(result * 100) / 100;
+	return Math.round(result * 100) / 100;
 }
 
 export function calculateStage05B(
@@ -150,7 +150,7 @@ export function calculateStage05B(
 		baseValue * generalUncertaintyCoefficient * readyPromReportsCoefficient;
 
 	// Round up to 2 decimal places
-	return Math.ceil(result * 100) / 100;
+	return Math.round(result * 100) / 100;
 }
 
 export function calculateStage07(
@@ -182,7 +182,7 @@ export function calculateStage07(
 	}
 
 	// Round up to 2 decimal places
-	return Math.ceil(result * 100) / 100;
+	return Math.round(result * 100) / 100;
 }
 
 export function calculateStage09(
@@ -210,7 +210,7 @@ export function calculateStage09(
 		deploymentChannelsCoefficient;
 
 	// Round up to 2 decimal places
-	return Math.ceil(result * 100) / 100;
+	return Math.round(result * 100) / 100;
 }
 
 export function calculateAMLEnforcement(
@@ -231,5 +231,5 @@ export function calculateAMLEnforcement(
 		generalUncertaintyCoefficient;
 
 	// Round up to 2 decimal places
-	return Math.ceil(result * 100) / 100;
+	return Math.round(result * 100) / 100;
 }
