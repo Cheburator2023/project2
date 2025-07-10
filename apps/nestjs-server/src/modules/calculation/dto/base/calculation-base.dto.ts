@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsIn, IsNotEmpty, IsString } from "class-validator";
+import { IsIn, IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 // Enum values for reusability
 export const SETUP_COMPLEXITY_VALUES = [
@@ -11,7 +11,6 @@ export const SETUP_COMPLEXITY_VALUES = [
 ] as const;
 
 export const INITIATIVE_TIMELINE_VALUES = [
-	"",
 	"Менее 1 мес.",
 	"1-4 мес.",
 	"4-10 мес.",
@@ -20,7 +19,6 @@ export const INITIATIVE_TIMELINE_VALUES = [
 ] as const;
 
 export const INITIATIVE_COST_VALUES = [
-	"",
 	"До 45.3 млн.",
 	"45.3-438 млн.",
 	"438-870 млн.",
@@ -147,17 +145,23 @@ export class CalculationBaseDto {
 		example: "Менее 1 мес.",
 		description: "Срок реализации инициативы",
 		enum: INITIATIVE_TIMELINE_VALUES,
+		required: false,
+		nullable: true,
 	})
 	@IsString({ message: "initiativeTimeline must be a string" })
 	@IsIn(INITIATIVE_TIMELINE_VALUES)
+	@IsOptional()
 	initiativeTimeline: (typeof INITIATIVE_TIMELINE_VALUES)[number];
 
 	@ApiProperty({
 		example: "45.3-438 млн.",
 		description: "Стоимость инициативы",
 		enum: INITIATIVE_COST_VALUES,
+		required: false,
+		nullable: true,
 	})
 	@IsString({ message: "initiativeCost must be a string" })
 	@IsIn(INITIATIVE_COST_VALUES)
+	@IsOptional()
 	initiativeCost: (typeof INITIATIVE_COST_VALUES)[number];
 }
