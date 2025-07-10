@@ -1,3 +1,4 @@
+import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard";
 import { AdminPage } from "@react-client/features/admin/AdminPage";
 import { CompareReportsPage } from "@react-client/features/anketaCompare/pages/CompareReportsPage";
 import { AnketaCreatePage } from "@react-client/features/anketaCRUD/pages/AnketaCreatePage";
@@ -12,12 +13,26 @@ export const Routing = () => (
 	<Routes data-test-id="index--Routes-0">
 		<Route
 			index
-			element={<HomePage data-test-id="index--HomePage-0" />}
+			element={
+				<PermissionGuard
+					check={(p) => p.canViewAllCalculations}
+					message="У вас нет прав на просмотр списка анкет"
+				>
+					<HomePage data-test-id="index--HomePage-0" />
+				</PermissionGuard>
+			}
 			data-test-id="index--Route-0"
 		/>
 		<Route
 			path={routes.calculationCreate.rootPath}
-			element={<AnketaCreatePage data-test-id="index--AnketaCreatePage-0" />}
+			element={
+				<PermissionGuard
+					check={(p) => p.canCreateCalculation}
+					message="У вас нет прав на создание анкеты"
+				>
+					<AnketaCreatePage data-test-id="index--AnketaCreatePage-0" />
+				</PermissionGuard>
+			}
 			data-test-id="index--Route-1"
 		/>
 		<Route
