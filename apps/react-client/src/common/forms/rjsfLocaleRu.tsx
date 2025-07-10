@@ -1,3 +1,4 @@
+import { regexpToHuman } from "@react-client/utils/regexpToHuman";
 import { customizeValidator } from "@rjsf/validator-ajv8";
 import type { ErrorObject } from "ajv";
 
@@ -8,7 +9,9 @@ function localize_ru(errors: null | ErrorObject[] = []) {
 
 		switch (error.keyword) {
 			case "pattern": {
-				outMessage = `Должно соответствовать образцу "${error.params.pattern}"`;
+				outMessage = `${regexpToHuman(error.params.pattern, {
+					required: true,
+				})}`;
 				break;
 			}
 			case "required": {
