@@ -159,19 +159,54 @@ export class CalculationController {
 		return this.mapToResponseDto(calculation);
 	}
 
-	private mapToResponseDto(calculation: any): CalculationResponseDto {
-		return {
-			id: calculation.id,
-			name: calculation.name,
-			rfd: calculation.rfd,
-			streamExecutor: calculation.streamExecutor,
-			department: calculation.department,
-			customerName: calculation.customerName,
-			comment: calculation.comment,
-			questionnaireData: calculation.questionnaireData,
-			finalCoefficient: calculation.finalCoefficient,
-			createdAt: calculation.createdAt,
-			author: calculation.author,
-		};
-	}
+    private mapToResponseDto(calculation: any): CalculationResponseDto {
+        // Преобразование generalUncertainty из объекта в массив
+        const generalUncertaintyArray = calculation.questionnaireData.generalUncertainty
+            ? Object.entries(calculation.questionnaireData.generalUncertainty).map(
+                ([type, value]: [string, any]) => ({
+                    type,
+                    probability: value.probability,
+                    influence: value.influence
+                })
+            )
+            : [];
+
+        // Преобразование productionDeploymentChannels из массива объектов в массив строк
+        const productionDeploymentChannelsArray = calculation.questionnaireData.productionDeploymentChannels
+            ? calculation.questionnaireData.productionDeploymentChannels.map(
+                (item: any) => item.deploymentChannel
+            )
+            : [];
+
+        return {
+            id: calculation.id,
+            name: calculation.name,
+            rfd: calculation.rfd,
+            streamExecutor: calculation.streamExecutor,
+            department: calculation.department,
+            customerName: calculation.customerName,
+            comment: calculation.comment,
+            questionnaireData: {
+                name: calculation.questionnaireData.name,
+                setupComplexity: calculation.questionnaireData.setupComplexity,
+                initiativeTimeline: calculation.questionnaireData.initiativeTimeline,
+                initiativeCost: calculation.questionnaireData.initiativeCost,
+                modelsCount: calculation.questionnaireData.modelsCount,
+                uncertaintyAdjustment: calculation.questionnaireData.uncertaintyAdjustment,
+                generalUncertainty: generalUncertaintyArray,
+                readyPromReports: calculation.questionnaireData.readyPromReports,
+                assessedInitiativesCount: calculation.questionnaireData.assessedInitiativesCount,
+                dataSourcesCount: calculation.questionnaireData.dataSourcesCount,
+                pilotModelRequired: calculation.questionnaireData.pilotModelRequired,
+                algorithmComplexity: calculation.questionnaireData.algorithmComplexity,
+                pilotSupportRequired: calculation.questionnaireData.pilotSupportRequired,
+                autoMlRequired: calculation.questionnaireData.autoMlRequired,
+                productionAdditionalReports: calculation.questionnaireData.productionAdditionalReports,
+                productionDeploymentChannels: productionDeploymentChannelsArray
+            },
+            finalCoefficient: calculation.finalCoefficient,
+            createdAt: calculation.createdAt,
+            author: calculation.author
+        };
+    }
 }

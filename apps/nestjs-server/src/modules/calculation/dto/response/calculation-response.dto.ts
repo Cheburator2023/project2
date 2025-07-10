@@ -144,12 +144,33 @@ export class CalculationResponseDto {
 	})
 	comment: string;
 
-	@ApiProperty({
-		type: CalculationQuestionnaireDataDto,
-		description: "Данные анкеты расчета",
-	})
-	@Type(() => CalculationQuestionnaireDataDto)
-	questionnaireData: CalculationQuestionnaireDataDto;
+    @ApiProperty({
+        type: () => CalculationQuestionnaireDataDto,
+        description: "Данные анкеты расчета"
+    })
+    @Type(() => CalculationQuestionnaireDataDto)
+    questionnaireData: {
+        name: string;
+        setupComplexity: string;
+        initiativeTimeline: string;
+        initiativeCost: string;
+        modelsCount: number;
+        uncertaintyAdjustment?: number;
+        generalUncertainty: Array<{
+            type: string;
+            probability: string;
+            influence: string;
+        }>;
+        readyPromReports: string;
+        assessedInitiativesCount?: string;
+        dataSourcesCount: string;
+        pilotModelRequired: string;
+        algorithmComplexity: AlgorithmTypeItemDto[];
+        pilotSupportRequired: string;
+        autoMlRequired: string;
+        productionAdditionalReports?: string;
+        productionDeploymentChannels: string[];
+    };
 
 	@ApiProperty({
 		example: 1.8,
