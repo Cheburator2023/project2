@@ -1,8 +1,10 @@
-import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import CloseRoundedIcon from "@mui/icons-material/MenuOpen";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
-import { Typography } from "@mui/material";
+import { IconButton, Typography } from "@mui/material";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import { useNavigate } from "react-router";
 import { Flex } from "../../../common/primitives/Flex";
 import { useGlobalSettingsStore } from "../../../common/store/globalSettingsStore";
 import { ColorModeIconDropdown } from "../../../theme/ColorModeIconDropdown";
@@ -19,6 +21,7 @@ export function Header({
 	title?: string;
 }) {
 	const { toggleSideMenu, isSideMenuVisible } = useGlobalSettingsStore();
+	const navigate = useNavigate();
 
 	const id1 = new URLSearchParams(window.location.search).get("id1");
 	const id2 = new URLSearchParams(window.location.search).get("id2");
@@ -54,6 +57,11 @@ export function Header({
 								<CloseRoundedIcon data-test-id="header--CloseRoundedIcon-0" />
 							)}
 						</MenuButton>
+						{!!history.state.idx && (
+							<IconButton size="small" onClick={() => navigate(-1)}>
+								<ArrowBackIcon />
+							</IconButton>
+						)}
 						{title ? (
 							<b>{title}</b>
 						) : (

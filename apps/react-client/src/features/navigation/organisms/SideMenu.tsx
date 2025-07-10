@@ -33,7 +33,6 @@ export function SideMenu({
 }) {
 	const { mode, systemMode, setMode } = useColorScheme();
 	const { user } = useGlobalSettingsStore();
-	console.log("SideMenu user:", user);
 
 	return (
 		<StyledDrawer
