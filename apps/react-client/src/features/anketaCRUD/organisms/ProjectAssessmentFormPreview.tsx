@@ -58,21 +58,21 @@ export const ProjectAssessmentFormPreview = ({
 	const _mainCalcSchema = omit(mainCalcSchema, ["required"]);
 
 	useEffectOnce(() => {
-		// setFormDataForCalc({
-		// 	modelsCount: formData.modelsCount,
-		// 	generalUncertainty: formData.generalUncertainty as any,
-		// 	assessedInitiativesCount: formData.assessedInitiativesCount,
-		// 	algorithmComplexity: formData.algorithmComplexity,
-		// 	autoMlRequired: formData.autoMlRequired,
-		// 	productionAdditionalReports: formData.productionAdditionalReports,
-		// 	productionDeploymentChannels:
-		// 		formData.productionDeploymentChannels as any,
-		// 	setupComplexity: formData.setupComplexity,
-		// 	readyPromReports: formData.readyPromReports,
-		// 	dataSourcesCount: formData.dataSourcesCount,
-		// 	pilotModelRequired: formData.pilotModelRequired,
-		// 	pilotSupportRequired: formData.pilotSupportRequired,
-		// });
+		setFormDataForCalc({
+			modelsCount: formData.modelsCount,
+			generalUncertainty: formData.generalUncertainty as any,
+			assessedInitiativesCount: formData.assessedInitiativesCount,
+			algorithmComplexity: formData.algorithmComplexity,
+			autoMlRequired: formData.autoMlRequired,
+			productionAdditionalReports: formData.productionAdditionalReports,
+			productionDeploymentChannels:
+				formData.productionDeploymentChannels as any,
+			setupComplexity: formData.setupComplexity,
+			readyPromReports: formData.readyPromReports,
+			dataSourcesCount: formData.dataSourcesCount,
+			pilotModelRequired: formData.pilotModelRequired,
+			pilotSupportRequired: formData.pilotSupportRequired,
+		});
 	}, !!formData);
 
 	return (
