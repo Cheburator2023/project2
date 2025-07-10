@@ -185,6 +185,7 @@ function parseQuantifier(
 
 function describeTokens(tokens: RegExpToken[], options: TOptions): string {
 	const descriptions: string[] = [];
+
 	let hasOptionalGroup = false;
 
 	for (let i = 0; i < tokens.length; i++) {
@@ -223,6 +224,8 @@ function describeTokens(tokens: RegExpToken[], options: TOptions): string {
 		}
 	}
 
+	console.log("🐸 Pepe said >> describeTokens >> descriptions:", descriptions);
+
 	// Join with proper connectors
 	let result = "";
 	for (let i = 0; i < descriptions.length; i++) {
@@ -231,12 +234,17 @@ function describeTokens(tokens: RegExpToken[], options: TOptions): string {
 		} else if (i === descriptions.length - 1) {
 			result += " и " + descriptions[i];
 		} else {
-			result += ", " + descriptions[i];
+			result += " " + descriptions[i];
 		}
 	}
 
-	if (hasOptionalGroup && !options?.required) {
-		result += " или строка должна быть пустой";
+	// Clean up double "и"
+	result = result.replace(/\s+и\s+и\s+/g, " и ");
+	result = result.replace(/\s+и\s*$/, "");
+
+	// Add "или пустая строка" if we have optional groups
+	if (hasOptionalGroup && !options.required) {
+		result += " или пустая строка";
 	}
 
 	return result;
@@ -250,7 +258,7 @@ function describeToken(token: RegExpToken, options: TOptions): string {
 			if (token.value === "start") {
 				description = "строка должна начинаться с";
 			} else if (token.value === "end") {
-				description = "заканчиваться";
+				description = "и заканчиваться";
 			}
 			break;
 		case "literal":
@@ -271,6 +279,7 @@ function describeToken(token: RegExpToken, options: TOptions): string {
 		case "group":
 			if (token.children) {
 				const groupContent = describeTokens(token.children, options);
+
 				if (token.quantifier) {
 					description = `группы (${groupContent})`;
 				} else {
