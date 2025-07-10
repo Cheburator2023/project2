@@ -71,6 +71,11 @@ export const calc_uiSchema: UiSchema = {
 					disabled: true,
 					valueToSet: 1,
 				},
+				{
+					condition: "readyPromReports === ''",
+					disabled: true,
+					valueToSet: "",
+				},
 			],
 			defaultWidget: "NumberInputWidget",
 		},
@@ -84,7 +89,7 @@ export const calc_uiSchema: UiSchema = {
 			disabledValue: "0",
 			dependencies: [
 				{
-					condition: "readyPromReports === 'Нет'",
+					condition: "readyPromReports === '0'",
 					disabled: false,
 				},
 			],
