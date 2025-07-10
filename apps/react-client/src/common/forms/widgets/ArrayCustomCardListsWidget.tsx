@@ -160,7 +160,7 @@ export const ArrayCustomCardListsWidget = ({
 
 			{items.length === 0 ? (
 				<Typography variant="body2" color="text.secondary">
-					No items to display
+					Пусто
 				</Typography>
 			) : (
 				items.map((item, index) =>
