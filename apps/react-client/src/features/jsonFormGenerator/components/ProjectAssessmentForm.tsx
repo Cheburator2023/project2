@@ -44,8 +44,13 @@ const widgets = {
 
 export const ProjectAssessmentForm: React.FC<{}> = () => {
 	const formRef = useRef<FormRef>(null);
-	const { setApiRef, resetApiRef, updateFormState, ...store } =
-		useAnketaCRUDFormsStore();
+	const {
+		setApiRef,
+		resetApiRef,
+		updateFormState,
+		setFormValidated,
+		...store
+	} = useAnketaCRUDFormsStore();
 	const { setFormData: setFormDataForCalc } = assessmentCalculationsStore();
 
 	const [formData, setFormData] = useState<IAssessmentFormData>(
@@ -85,7 +90,7 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 	};
 
 	const onSubmit = (e: IChangeEvent<IAssessmentFormData>) => {
-		console.log("🐸 ProjectAssessmentForm >> formData:", e.formData);
+		console.log("ProjectAssessmentForm >> formData:", e.formData);
 
 		if (e.formData) {
 			setFormData(e.formData);
@@ -94,6 +99,9 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 	};
 
 	const onError = (errors: any) => {
+		setFormValidated(formName, true);
+		setLiveValidate(true);
+
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}
@@ -101,16 +109,12 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 	};
 
 	const onFocus = (id: string, data: any) => {
-		setLiveValidate(true);
-
-		console.log("Form onFocus:", id, data);
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}
 	};
 
 	const onBlur = (id: string, data: any) => {
-		console.log("Form onBlur:", id, data);
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}

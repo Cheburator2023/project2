@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import { Flex } from "@react-client/common/primitives/Flex";
+import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { WidgetProps } from "@rjsf/utils";
 import React, { useEffect, useRef } from "react";
 
@@ -98,7 +99,10 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 	const maxCount = Math.min(modelsCount, MAX_ALGORITHMS);
 	const filledCount =
 		(value as AlgorithmValue[])?.filter((v) => v.algorithmType)?.length || 0;
-	const hasError = required && filledCount === 0;
+
+	const store = useAnketaCRUDFormsStore();
+	const wasValidated = store.anketaCreate_projectAssessmentForm?.wasValidated;
+	const hasError = wasValidated && required && filledCount === 0;
 
 	return (
 		<Stack spacing={2}>
@@ -139,7 +143,7 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 				/>
 
 				{hasError && (
-					<FormHelperText error>
+					<FormHelperText>
 						Необходимо выбрать хотя бы один тип алгоритма
 					</FormHelperText>
 				)}

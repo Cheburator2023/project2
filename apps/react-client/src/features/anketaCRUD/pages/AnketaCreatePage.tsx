@@ -31,7 +31,12 @@ export const AnketaCreatePage = () => {
 		stateBasicForm?.errors?.length || stateProjectAssessmentForm?.errors?.length
 	);
 	const isFormDirty =
-		anketaCreate_basicInfoForm?.isDirty || stateProjectAssessmentForm?.isDirty;
+		anketaCreate_basicInfoForm?.isDirty ||
+		anketaCreate_projectAssessmentForm?.isDirty;
+
+	const wasValidated =
+		anketaCreate_basicInfoForm?.wasValidated &&
+		anketaCreate_projectAssessmentForm?.wasValidated;
 
 	const onSubmit = () => {
 		setHasSubmitted(true);
@@ -56,7 +61,7 @@ export const AnketaCreatePage = () => {
 			// author: string;
 		} = stateBasicForm?.formData || {};
 
-		if (isFormDirty && hasSubmitted && !formHasErrors) {
+		if (wasValidated && isFormDirty && hasSubmitted && !formHasErrors) {
 			const data: CreateCalculationDto = {
 				finalCoefficient: calculationResult[0]?.score,
 				name: basicFormData.name,
@@ -94,6 +99,7 @@ export const AnketaCreatePage = () => {
 		}
 	}, [
 		isFormDirty,
+		wasValidated,
 		hasSubmitted,
 		formHasErrors,
 		stateBasicForm,

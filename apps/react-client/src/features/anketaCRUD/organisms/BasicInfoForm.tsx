@@ -219,8 +219,13 @@ export const BasicInfoForm = () => {
 		},
 	};
 
-	const { setApiRef, updateFormState, setFormDirty, ...store } =
-		useAnketaCRUDFormsStore();
+	const {
+		setApiRef,
+		updateFormState,
+		setFormDirty,
+		setFormValidated,
+		...store
+	} = useAnketaCRUDFormsStore();
 	const [liveValidate, setLiveValidate] = useState(false);
 
 	const formRef = useRef<FormRef>(null);
@@ -260,7 +265,7 @@ export const BasicInfoForm = () => {
 	};
 
 	const onSubmit = ({ formData }: IChangeEvent<IBasicFormData>) => {
-		console.log("🐸 BasicInfoForm >> formData:", formData);
+		console.log("BasicInfoForm >> formData:", formData);
 
 		if (formData) {
 			setFormData(formData);
@@ -272,6 +277,8 @@ export const BasicInfoForm = () => {
 	};
 
 	const onError = (errors: any) => {
+		setFormValidated(formName, true);
+		setLiveValidate(true);
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}
@@ -279,16 +286,12 @@ export const BasicInfoForm = () => {
 	};
 
 	const onBlur = (id: string, data: any) => {
-		console.log("Form onBlur:", id, data);
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}
 	};
 
 	const onFocus = (id: string, data: any) => {
-		setLiveValidate(true);
-
-		console.log("Form onFocus:", id, data);
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}

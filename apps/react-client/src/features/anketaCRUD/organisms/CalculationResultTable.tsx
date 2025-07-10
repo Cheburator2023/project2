@@ -48,7 +48,7 @@ const stageDisplayNames: Record<string, string> = {
 
 const coefficientDisplayNames: Record<string, string> = {
 	modelsCountCoefficient: "Количество моделей",
-	setupComplexityCoefficient: "Сложности постановки",
+	setupComplexityCoefficient: "Сложность постановки",
 	generalUncertaintyCoefficient: "Общая неопределенность",
 	readyPromReportsCoefficient: "Наличие готовых пром витрин",
 	dataSourcesCountCoefficient: "Количество источников для проработки",
@@ -70,10 +70,12 @@ const processStageResults = (
 	const stageEntries = Object.entries(stageResults).map(([key, score]) => {
 		const stageBaseValue = stageBaseValues[key as keyof StageValues];
 
+		const disabled = score === 0;
+
 		return {
 			stageName: stageDisplayNames[key] || key,
 			score: score,
-			disabled: score === 0,
+			disabled,
 			stageBaseValue,
 			percentFromAverage: (score / stageBaseValue) * 100,
 			offset: ((score - stageBaseValue) / stageBaseValue) * 100,
@@ -92,6 +94,7 @@ const processStageResults = (
 		stageName: "Итоговая оценка",
 		score: totalScore,
 		stageBaseValue: totalScoreBase,
+		offset: ((totalScore - totalScoreBase) / totalScoreBase) * 100,
 	};
 
 	return [totalRow, ...stageEntries];
@@ -160,7 +163,7 @@ export const CalculationResultTable = () => {
 				}
 
 				if (params.data?.disabled) {
-					style.opacity = 0.5;
+					style.opacity = 0.0;
 					style.pointerEvents = "none";
 				}
 
@@ -229,7 +232,7 @@ export const CalculationResultTable = () => {
 				}
 
 				if (params.data?.disabled) {
-					style.opacity = 0.5;
+					style.opacity = 0.0;
 					style.pointerEvents = "none";
 				}
 
