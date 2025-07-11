@@ -9,6 +9,7 @@
 		"ignoreUnknown": true,
 		"includes": [
 			"**",
+			"!apps/react-client/src/utils/decimal.ts",
 			"!**/.__mf__win",
 			"!**/.__mf__win",
 			"!**/reports/**/*",

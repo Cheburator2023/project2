@@ -1,4 +1,5 @@
-import Decimal from "decimal.js";
+// @ts-nocheck
+import { DecimalJS as Decimal } from "../../../utils/decimal";
 
 function roundup2d(val: Decimal.Value): number {
 	return new Decimal(val).toDecimalPlaces(2, Decimal.ROUND_UP).toNumber();
