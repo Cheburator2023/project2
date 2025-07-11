@@ -181,17 +181,19 @@ const _columnDefs: ColDef<any, any>[] = [
 ];
 
 export const HomePage = () => {
-	const { data, isLoading, error, refetch } = useCalculationControllerFindAll({
-		query: {
-			refetchInterval: 30000,
-		},
-	});
+	const { data, isLoading, isFetching, error, refetch } =
+		useCalculationControllerFindAll({
+			query: {
+				refetchInterval: 30000,
+				staleTime: 10,
+			},
+		});
 
 	return (
 		<HomeTemplete
 			data={data}
 			error={error}
-			isLoading={isLoading}
+			isLoading={isLoading || isFetching}
 			refetch={refetch}
 		/>
 	);
@@ -297,6 +299,8 @@ export const HomeTemplete = ({
 	};
 
 	useEffect(() => {
+		refetch();
+
 		return () => {
 			setGridApi(null);
 		};

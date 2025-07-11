@@ -77,7 +77,7 @@ export const AnketaCreatePage = () => {
 						reset();
 						setTimeout(() => {
 							navigate(routes.home.rootPath);
-						}, 3000);
+						}, 100);
 					},
 					onError: (error: any) => {
 						toast.error("Ошибка создания расчета", {
