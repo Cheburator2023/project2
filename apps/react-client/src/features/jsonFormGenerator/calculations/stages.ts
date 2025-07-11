@@ -1,3 +1,9 @@
+import Decimal from "decimal.js";
+
+function roundup2d(val: Decimal.Value): number {
+	return new Decimal(val).toDecimalPlaces(2, Decimal.ROUND_UP).toNumber();
+}
+
 export function calculateStage01(
 	baseValue: number,
 	modelsCountCoefficient: number,
@@ -5,15 +11,12 @@ export function calculateStage01(
 	generalUncertaintyCoefficient: number,
 	readyPromReportsCoefficient: number,
 ): number {
-	const result =
-		baseValue *
-		modelsCountCoefficient *
-		setupComplexityCoefficient *
-		generalUncertaintyCoefficient *
-		readyPromReportsCoefficient;
-
-	// Round up to 2 decimal places
-	return Math.round(result * 100) / 100;
+	const d = new Decimal(baseValue)
+		.mul(modelsCountCoefficient)
+		.mul(setupComplexityCoefficient)
+		.mul(generalUncertaintyCoefficient)
+		.mul(readyPromReportsCoefficient);
+	return roundup2d(d);
 }
 
 export function calculateStage02(
@@ -27,21 +30,18 @@ export function calculateStage02(
 	if (readyPromReports === "Да" || Number(dataSourcesCount) === 0) {
 		return 0;
 	}
-
-	let result: any;
+	let d: Decimal;
 	if (assessedInitiativesCount > 1) {
-		result =
-			(baseValue *
-				generalUncertaintyCoefficient *
-				dataSourcesCountCoefficient) /
-			assessedInitiativesCount;
+		d = new Decimal(baseValue)
+			.mul(generalUncertaintyCoefficient)
+			.mul(dataSourcesCountCoefficient)
+			.div(assessedInitiativesCount);
 	} else {
-		result =
-			baseValue * generalUncertaintyCoefficient * dataSourcesCountCoefficient;
+		d = new Decimal(baseValue)
+			.mul(generalUncertaintyCoefficient)
+			.mul(dataSourcesCountCoefficient);
 	}
-
-	// Round up to 2 decimal places
-	return Math.round(result * 100) / 100;
+	return roundup2d(d);
 }
 
 export function calculateStage04(
@@ -51,23 +51,21 @@ export function calculateStage04(
 	generalUncertaintyCoefficient: number,
 	readyPromReports: string,
 ): number {
-	// If 'Наличие готовых пром витрин' is 'Да', set baseValue to 0 as per business logic
 	if (readyPromReports === "Да") {
 		return 0;
 	}
-
-	let result: any;
+	let d: Decimal;
 	if (assessedInitiativesCount > 1) {
-		result =
-			(baseValue * setupComplexityCoefficient * generalUncertaintyCoefficient) /
-			assessedInitiativesCount;
+		d = new Decimal(baseValue)
+			.mul(setupComplexityCoefficient)
+			.mul(generalUncertaintyCoefficient)
+			.div(assessedInitiativesCount);
 	} else {
-		result =
-			baseValue * setupComplexityCoefficient * generalUncertaintyCoefficient;
+		d = new Decimal(baseValue)
+			.mul(setupComplexityCoefficient)
+			.mul(generalUncertaintyCoefficient);
 	}
-
-	// Round up to 2 decimal places
-	return Math.round(result * 100) / 100;
+	return roundup2d(d);
 }
 
 export function calculateStage05A(
@@ -82,17 +80,13 @@ export function calculateStage05A(
 	if (pilotModelRequired === "Не требуется") {
 		return 0;
 	}
-
-	const result =
-		baseValue *
-		modelsCountCoefficient *
-		setupComplexityCoefficient *
-		generalUncertaintyCoefficient *
-		readyPromReportsCoefficient *
-		algorithmComplexityCoefficient;
-
-	// Round up to 2 decimal places
-	return Math.round(result * 100) / 100;
+	const d = new Decimal(baseValue)
+		.mul(modelsCountCoefficient)
+		.mul(setupComplexityCoefficient)
+		.mul(generalUncertaintyCoefficient)
+		.mul(readyPromReportsCoefficient)
+		.mul(algorithmComplexityCoefficient);
+	return roundup2d(d);
 }
 
 export function calculateStage05(
@@ -103,16 +97,13 @@ export function calculateStage05(
 	readyPromReportsCoefficient: number,
 	algorithmComplexityCoefficient: number,
 ): number {
-	const result =
-		baseValue *
-		modelsCountCoefficient *
-		setupComplexityCoefficient *
-		generalUncertaintyCoefficient *
-		readyPromReportsCoefficient *
-		algorithmComplexityCoefficient;
-
-	// Round up to 2 decimal places
-	return Math.round(result * 100) / 100;
+	const d = new Decimal(baseValue)
+		.mul(modelsCountCoefficient)
+		.mul(setupComplexityCoefficient)
+		.mul(generalUncertaintyCoefficient)
+		.mul(readyPromReportsCoefficient)
+		.mul(algorithmComplexityCoefficient);
+	return roundup2d(d);
 }
 
 export function calculateAMLDrafting(
@@ -125,15 +116,11 @@ export function calculateAMLDrafting(
 	if (autoMlRequired === "Не требуется") {
 		return 0;
 	}
-
-	const result =
-		baseValue *
-		modelsCountCoefficient *
-		setupComplexityCoefficient *
-		generalUncertaintyCoefficient;
-
-	// Round up to 2 decimal places
-	return Math.round(result * 100) / 100;
+	const d = new Decimal(baseValue)
+		.mul(modelsCountCoefficient)
+		.mul(setupComplexityCoefficient)
+		.mul(generalUncertaintyCoefficient);
+	return roundup2d(d);
 }
 
 export function calculateStage05B(
@@ -145,12 +132,10 @@ export function calculateStage05B(
 	if (pilotSupportRequired === "Не требуется") {
 		return 0;
 	}
-
-	const result =
-		baseValue * generalUncertaintyCoefficient * readyPromReportsCoefficient;
-
-	// Round up to 2 decimal places
-	return Math.round(result * 100) / 100;
+	const d = new Decimal(baseValue)
+		.mul(generalUncertaintyCoefficient)
+		.mul(readyPromReportsCoefficient);
+	return roundup2d(d);
 }
 
 export function calculateStage07(
@@ -164,25 +149,20 @@ export function calculateStage07(
 	if (productionAdditionalReports === "Не требуется") {
 		return 0;
 	}
-
-	let result: any;
+	let d: Decimal;
 	if (assessedInitiativesCount > 0) {
-		result =
-			(baseValue *
-				setupComplexityCoefficient *
-				generalUncertaintyCoefficient *
-				productionAdditionalReportsCoefficient) /
-			assessedInitiativesCount;
+		d = new Decimal(baseValue)
+			.mul(setupComplexityCoefficient)
+			.mul(generalUncertaintyCoefficient)
+			.mul(productionAdditionalReportsCoefficient)
+			.div(assessedInitiativesCount);
 	} else {
-		result =
-			baseValue *
-			setupComplexityCoefficient *
-			generalUncertaintyCoefficient *
-			productionAdditionalReportsCoefficient;
+		d = new Decimal(baseValue)
+			.mul(setupComplexityCoefficient)
+			.mul(generalUncertaintyCoefficient)
+			.mul(productionAdditionalReportsCoefficient);
 	}
-
-	// Round up to 2 decimal places
-	return Math.round(result * 100) / 100;
+	return roundup2d(d);
 }
 
 export function calculateStage09(
@@ -200,17 +180,13 @@ export function calculateStage09(
 	) {
 		return 0;
 	}
-
-	const result =
-		baseValue *
-		modelsCountCoefficient *
-		setupComplexityCoefficient *
-		generalUncertaintyCoefficient *
-		algorithmComplexityCoefficient *
-		deploymentChannelsCoefficient;
-
-	// Round up to 2 decimal places
-	return Math.round(result * 100) / 100;
+	const d = new Decimal(baseValue)
+		.mul(modelsCountCoefficient)
+		.mul(setupComplexityCoefficient)
+		.mul(generalUncertaintyCoefficient)
+		.mul(algorithmComplexityCoefficient)
+		.mul(deploymentChannelsCoefficient);
+	return roundup2d(d);
 }
 
 export function calculateAMLEnforcement(
@@ -223,13 +199,9 @@ export function calculateAMLEnforcement(
 	if (autoMlRequired === "Не требуется") {
 		return 0;
 	}
-
-	const result =
-		baseValue *
-		modelsCountCoefficient *
-		setupComplexityCoefficient *
-		generalUncertaintyCoefficient;
-
-	// Round up to 2 decimal places
-	return Math.round(result * 100) / 100;
+	const d = new Decimal(baseValue)
+		.mul(modelsCountCoefficient)
+		.mul(setupComplexityCoefficient)
+		.mul(generalUncertaintyCoefficient);
+	return roundup2d(d);
 }

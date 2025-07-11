@@ -70,7 +70,8 @@ export function calculateTotalUncertainty(
 	const baseUncertainty = sumOfCoefficients + 1;
 	const correctionFactor = 1 + correctionPercent / 100;
 
-	return baseUncertainty * correctionFactor;
+	// Round to 2 decimal places to match Excel
+	return Math.round(baseUncertainty * correctionFactor * 100) / 100;
 }
 
 export function calculateCoefficientForGeneralUncertaintyItem(
