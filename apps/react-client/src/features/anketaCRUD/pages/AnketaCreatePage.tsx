@@ -61,7 +61,9 @@ export const AnketaCreatePage = () => {
 			// author: string;
 		} = stateBasicForm?.formData || {};
 
-		if (wasValidated && isFormDirty && hasSubmitted && !formHasErrors) {
+		console.log("🐸 Pepe said >> useEffect >> wasValidated:", wasValidated);
+
+		if (wasValidated && isFormDirty && !formHasErrors) {
 			const data: CreateCalculationDto = {
 				finalCoefficient: calculationResult[0]?.score,
 				name: basicFormData.name,
@@ -100,7 +102,6 @@ export const AnketaCreatePage = () => {
 	}, [
 		isFormDirty,
 		wasValidated,
-		hasSubmitted,
 		formHasErrors,
 		stateBasicForm,
 		stateProjectAssessmentForm,

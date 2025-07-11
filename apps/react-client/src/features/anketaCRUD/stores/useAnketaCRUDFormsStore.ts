@@ -2,6 +2,7 @@ import { IAssessmentFormData } from "@react-client/features/jsonFormGenerator/ty
 import type FormRef from "@rjsf/core";
 import { create } from "zustand";
 
+const IS_DEV = process.env.NODE_ENV === "development";
 export interface IBasicFormData {
 	name: string;
 	rfd?: string;
@@ -19,8 +20,8 @@ export interface IBasicFormData {
 export const basicInfoFormInitialData: IBasicFormData = {
 	name: "",
 	rfd: "",
-	streamExecutor: "",
-	department: [],
+	streamExecutor: IS_DEV ? "testo" : "",
+	department: IS_DEV ? ["test"] : [],
 	customerName: "",
 	comment: "",
 	relatedModels: [],

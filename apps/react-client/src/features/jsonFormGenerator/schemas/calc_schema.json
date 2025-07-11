@@ -175,7 +175,7 @@
 			"type": "array",
 			"title": "Необходимость продуктивизации и каналы внедрения моделей",
 			"uniqueItems": true,
-			"minItems": 1,
+			"minItems": 0,
 			"items": {
 				"type": "string",
 				"enum": [
@@ -210,7 +210,6 @@
 		"setupComplexity",
 		"readyPromReports",
 		"dataSourcesCount",
-		"algorithmComplexity",
-		"productionDeploymentChannels"
+		"algorithmComplexity"
 	]
 }

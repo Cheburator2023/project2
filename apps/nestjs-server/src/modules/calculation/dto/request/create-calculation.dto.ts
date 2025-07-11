@@ -192,12 +192,13 @@ export class CreateCalculationDto extends CalculationBaseDto {
 		example: ["Батч", "Батч+загрузка данных потребителю", "Батч + Онлайн"],
 		enum: DEPLOYMENT_CHANNEL_VALUES,
 	})
+	@IsOptional({ always: true })
 	@IsArray({ message: "productionDeploymentChannels must be an array" })
 	@IsString({ each: true, message: "Each deployment channel must be a string" })
-	@IsIn(DEPLOYMENT_CHANNEL_VALUES, {
-		each: true,
-		message: "Each deployment channel must be one of the allowed values",
-	})
+	// @IsIn(DEPLOYMENT_CHANNEL_VALUES, {
+	// 	each: true,
+	// 	message: "Each deployment channel must be one of the allowed values",
+	// })
 	productionDeploymentChannels: (typeof DEPLOYMENT_CHANNEL_VALUES)[number][];
 
 	@ApiProperty({
