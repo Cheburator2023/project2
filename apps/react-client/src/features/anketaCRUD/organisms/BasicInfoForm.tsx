@@ -1,5 +1,6 @@
 import { useQuestionnaireControllerGetFullQuestionnaire } from "@react-client/common/api/generated/queries/calculation";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
+import { transformErrors } from "@react-client/common/forms/transformErrors";
 import { MultiSelectAutocompleteCreateWidget } from "@react-client/common/forms/widgets/MultiSelectAutocompleteCreateWidget";
 import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
@@ -21,45 +22,6 @@ import type {
 import { useRef, useState } from "react";
 import { MultiSelectAutocompleteWidget } from "../../../common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjectFieldTemplate";
-
-interface ValidationError {
-	name: string;
-	message: string;
-	property?: string;
-	instancePath?: string;
-}
-
-interface FieldUiSchema {
-	"ui:options"?: {
-		errors?: Record<string, string>;
-		[key: string]: unknown;
-	};
-	[key: string]: unknown;
-}
-
-function transformErrors(
-	errors: ValidationError[],
-	uiSchema: Record<string, FieldUiSchema>,
-): ValidationError[] {
-	return errors.map((error: ValidationError) => {
-		const fieldPath =
-			error.property?.replace(".", "") ||
-			error.instancePath?.replace(/^\//, "");
-
-		const fieldUiSchema = fieldPath ? uiSchema[fieldPath] : null;
-
-		if (fieldUiSchema?.["ui:options"]?.errors?.[error.name]) {
-			error.message = fieldUiSchema["ui:options"].errors[error.name];
-		} else if (
-			error.name === "pattern" &&
-			fieldUiSchema?.["ui:options"]?.errors?.pattern
-		) {
-			error.message = fieldUiSchema["ui:options"].errors.pattern;
-		}
-
-		return error;
-	});
-}
 
 const uiSchema: UiSchema = {
 	"ui:submitButtonOptions": {

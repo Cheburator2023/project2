@@ -3,17 +3,19 @@ import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom"
 import type { WidgetProps } from "@rjsf/utils";
 import type React from "react";
 
-export const MultiSelectAutocompleteWidget = ({
-	id,
-	label,
-	options,
-	value,
-	onChange,
-	required,
-	readonly,
-	disabled,
-	...rest
-}: WidgetProps) => {
+export const MultiSelectAutocompleteWidget = (props: WidgetProps) => {
+	const {
+		id,
+		label,
+		options,
+		value,
+		onChange,
+		required,
+		readonly,
+		disabled,
+		...rest
+	} = props;
+
 	const choices = options.enumOptions?.map((option) => option.value) || [];
 
 	return (
@@ -33,7 +35,11 @@ export const MultiSelectAutocompleteWidget = ({
 					{...params}
 					label={label}
 					required={required}
-					margin="normal"
+					error={!!props.rawErrors}
+					placeholder={props.placeholder}
+					slotProps={{
+						inputLabel: { shrink: true },
+					}}
 					data-test-id="multi-select-autocomplete-widget--TextField-0"
 				/>
 			)}

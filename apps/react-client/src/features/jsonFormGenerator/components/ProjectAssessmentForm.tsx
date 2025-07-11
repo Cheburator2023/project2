@@ -1,4 +1,5 @@
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
+import { transformErrors } from "@react-client/common/forms/transformErrors";
 import { MultiSelectAutocompleteWidget } from "@react-client/common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "@react-client/common/forms/widgets/RJSFObjectFieldTemplate";
 import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";
@@ -40,6 +41,7 @@ const widgets = {
 	GeneralUncertaintyWidget,
 	UniversalDependencyWidget,
 	MultiSelectAutocompleteWidget,
+	TextFieldCustomWidget,
 };
 
 export const ProjectAssessmentForm: React.FC<{}> = () => {
@@ -140,6 +142,7 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 				liveValidate={liveValidate}
 				noHtml5Validate
 				showErrorList={false}
+				transformErrors={transformErrors as any}
 				data-test-id="project-assessment-form--Form-0"
 			/>
 		</>

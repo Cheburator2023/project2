@@ -409,11 +409,13 @@ export function getProductionAdditionalReportsCoefficient(
 	}
 
 	const numValue = Number.parseInt(value, 10);
-	if (Number.isNaN(numValue) || numValue < 1 || numValue > 10) {
-		throw new Error(
-			COEFF_IGNORED_ERROR_PREFIX +
-				"Значение должно быть 'Не требуется' или число от 1 до 10",
-		);
+
+	if (numValue < 1 || numValue > 99) {
+		// throw new Error(
+		// 	COEFF_IGNORED_ERROR_PREFIX +
+		// 		"Значение должно быть 'Не требуется' или число от 1 до 99",
+		// );
+		return 0;
 	}
 
 	if (numValue === 1) {

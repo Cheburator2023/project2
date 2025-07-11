@@ -60,6 +60,9 @@ export const calc_uiSchema: UiSchema = {
 			],
 		},
 	},
+	readyPromReports: {
+		"ui:widget": "text",
+	},
 	assessedInitiativesCount: {
 		"ui:widget": "UniversalDependencyWidget",
 		"ui:options": {
@@ -69,12 +72,12 @@ export const calc_uiSchema: UiSchema = {
 				{
 					condition: "readyPromReports === 'Да'",
 					disabled: true,
-					valueToSet: 1,
+					valueToSet: "1",
 				},
 				{
-					condition: "readyPromReports === ''",
-					disabled: true,
-					valueToSet: "",
+					condition: "readyPromReports === 'Нет'",
+					disabled: false,
+					valueToSet: "1",
 				},
 			],
 			defaultWidget: "NumberInputWidget",
@@ -104,6 +107,16 @@ export const calc_uiSchema: UiSchema = {
 	},
 	productionDeploymentChannels: {
 		"ui:widget": "MultiSelectAutocompleteWidget",
+	},
+	initiativeTimeline: {
+		"ui:options": {
+			reset: true,
+		},
+	},
+	initiativeCost: {
+		"ui:options": {
+			reset: true,
+		},
 	},
 	pilotSupportRequired: {
 		"ui:widget": "UniversalDependencyWidget",
@@ -136,6 +149,11 @@ export const calc_uiSchema: UiSchema = {
 	productionAdditionalReports: {
 		"ui:widget": "UniversalDependencyWidget",
 		"ui:options": {
+			defaultEnums: ["Не требуется"],
+			allowCustomInput: true,
+			errors: {
+				pattern: "Только числа, от 1 до 99 или 'Не требуется'",
+			},
 			tooltip:
 				"При отсутствии витрин с агрегатами/широких витрин на регламенте в области ответственности модельного стрима  указывается количество витрин, требуемых к выводу в пром",
 			dependencies: [
@@ -147,7 +165,6 @@ export const calc_uiSchema: UiSchema = {
 					widget: "TextField",
 				},
 			],
-			defaultWidget: "SelectWidget",
 		},
 	},
 };

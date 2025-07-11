@@ -13,19 +13,9 @@ interface OptionType {
 
 const filter = createFilterOptions<OptionType>();
 
-export function MultiSelectAutocompleteCreateWidget({
-	id,
-	label,
-	options,
-	value,
-	onChange,
-	required,
-	readonly,
-	disabled,
-	placeholder,
-	schema,
-	...rest
-}: WidgetProps) {
+export function MultiSelectAutocompleteCreateWidget(props: WidgetProps) {
+	const { id, options, value, onChange, required, readonly, disabled, schema } =
+		props;
 	// State to track all available options (including newly created ones)
 	const [allOptions, setAllOptions] = React.useState<OptionType[]>([]);
 
@@ -174,10 +164,12 @@ export function MultiSelectAutocompleteCreateWidget({
 			renderInput={(params) => (
 				<TextFieldCustom
 					{...params}
-					label={label}
-					placeholder={placeholder}
 					required={required}
-					error={false} // You can add error handling based on RJSF validation
+					error={!!props.rawErrors}
+					placeholder={props.placeholder}
+					slotProps={{
+						inputLabel: { shrink: true },
+					}}
 					helperText={schema?.description}
 				/>
 			)}

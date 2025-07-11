@@ -30,7 +30,6 @@ export const navigationCustomizations: Components<Theme> = {
 	MuiMenu: {
 		styleOverrides: {
 			list: {
-				gap: "0px",
 				[`&.${dividerClasses.root}`]: {
 					margin: "0 -8px",
 				},

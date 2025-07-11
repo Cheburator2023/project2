@@ -115,6 +115,7 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 					variant="outlined"
 					label="Сложность алгоритма / тип ML задачи"
 					size="small"
+					required={required}
 					sx={{ mb: 2 }}
 					error={readonly ? false : hasError}
 					slotProps={{ input: { readOnly: readonly } }}

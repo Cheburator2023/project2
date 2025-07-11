@@ -7,14 +7,9 @@ import {
 	ArrayCustomCardListsWidgetExample,
 	MultiLanguageExample,
 } from "@react-client/features/playground/ArrayCustomCardListsWidget.example";
-import ProjectAssessmentForm from "@react-client/features/playground/assessmentForm/components/ProjectAssessmentForm";
 import { Fragment } from "react/jsx-runtime";
 
 const data = [
-	{
-		name: "AssessmentForm",
-		Component: <ProjectAssessmentForm />,
-	},
 	{
 		name: "ArrayCustomCardListsWidgetExample",
 		Component: <ArrayCustomCardListsWidgetExample />,

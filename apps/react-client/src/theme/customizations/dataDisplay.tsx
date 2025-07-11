@@ -14,7 +14,7 @@ export const dataDisplayCustomizations: Components<Theme> = {
 				padding: "8px",
 				display: "flex",
 				flexDirection: "column",
-				gap: 0,
+				gap: 6,
 			},
 		},
 	},

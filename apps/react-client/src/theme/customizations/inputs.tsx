@@ -573,7 +573,7 @@ export const inputsCustomizations: Components<Theme> = {
 				"& .MuiFormLabel-asterisk": {
 					fontSize: "20px",
 					color: red[300],
-					position: "absolute",
+					// position: "absolute",
 					// fontWeight: "bold",
 				},
 				"& .Mui-focused": {

@@ -31,8 +31,11 @@ export const basicInfoFormInitialData: IBasicFormData = {
 export const projectAssessmentFormInitialData: IAssessmentFormData = {
 	modelsCount: 1,
 	algorithmComplexity: [{ algorithmType: "" }],
+	uncertaintyAdjustment: 0,
 	setupComplexity: "",
-	readyPromReports: "",
+	readyPromReports: "Да",
+	initiativeCost: "",
+	initiativeTimeline: "",
 	assessedInitiativesCount: 1,
 	dataSourcesCount: "",
 	pilotModelRequired: "Не требуется",

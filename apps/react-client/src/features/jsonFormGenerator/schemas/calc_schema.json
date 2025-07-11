@@ -165,25 +165,15 @@
 		},
 		"productionAdditionalReports": {
 			"type": "string",
-			"enum": [
-				"Не требуется",
-				"1",
-				"2",
-				"3",
-				"4",
-				"5",
-				"6",
-				"7",
-				"8",
-				"9",
-				"10"
-			],
-			"title": "Необходимость продуктивизации и количество дополнительных витрин"
+			"title": "Необходимость продуктивизации и количество дополнительных витрин",
+			"pattern": "^(?:[1-9][0-9]?|Не требуется)$"
 		},
+
 		"productionDeploymentChannels": {
 			"type": "array",
 			"title": "Необходимость продуктивизации и каналы внедрения моделей",
 			"uniqueItems": true,
+			"minItems": 1,
 			"items": {
 				"type": "string",
 				"enum": [
@@ -219,7 +209,6 @@
 		"readyPromReports",
 		"dataSourcesCount",
 		"algorithmComplexity",
-		"productionAdditionalReports",
 		"productionDeploymentChannels"
 	]
 }

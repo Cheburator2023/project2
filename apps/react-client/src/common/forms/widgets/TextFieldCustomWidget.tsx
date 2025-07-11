@@ -1,5 +1,5 @@
 import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
-import { InputLabel, MenuItem, Tooltip } from "@mui/material";
+import { Autocomplete, InputLabel, MenuItem, Tooltip } from "@mui/material";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import { Flex } from "@react-client/common/primitives/Flex";
 import {
@@ -51,11 +51,73 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 	}: React.FocusEvent<HTMLInputElement>) => onFocus?.(id, value);
 
 	const isSelect =
+		(options?.defaultEnums && options?.defaultEnums.length > 0) ||
 		(options?.enumOptions && options?.enumOptions.length > 0) ||
 		options?.select ||
 		props?.select;
-	const optionsForSelect = options?.enumOptions;
+	const defaultEnums =
+		options?.defaultEnums?.map((item: string) => ({
+			label: item,
+			value: item,
+		})) || [];
+	const optionsForSelect = [...defaultEnums, ...(options?.enumOptions || [])];
+	const allowCustomInput = options?.freeSolo || options?.allowCustomInput;
+
 	const isDisabled = disabled || readonly;
+
+	if (isSelect && allowCustomInput) {
+		return (
+			<Autocomplete
+				id={id}
+				freeSolo
+				options={optionsForSelect.map((option) => option.value)}
+				value={value || ""}
+				onChange={(_event, newValue) => {
+					onChange?.(newValue || "");
+				}}
+				onInputChange={(_event, newInputValue) => {
+					onChange?.(newInputValue);
+				}}
+				renderInput={(params) => (
+					<TextFieldCustom
+						{...params}
+						disabled={isDisabled}
+						label={label || schema?.title}
+						required={required}
+						error={rawErrors && rawErrors.length > 0}
+						placeholder={placeholder}
+						mask={options?.mask}
+						replacement={options?.replacement}
+						prefix={options?.prefix}
+						slotProps={{
+							inputLabel: { shrink: true },
+						}}
+						slots={{
+							inputLabel: (props) =>
+								options?.tooltip ? (
+									<Flex gap={6} position="relative">
+										<InputLabel {...props} />
+										<Tooltip title={options?.tooltip} placement="top-start">
+											<InfoOutlineIcon
+												sx={{
+													scale: 0.8,
+													color: "#88888877",
+													position: "absolute",
+													top: "-4px",
+													right: "0",
+												}}
+											/>
+										</Tooltip>
+									</Flex>
+								) : (
+									<InputLabel {...props} />
+								),
+						}}
+					/>
+				)}
+			/>
+		);
+	}
 
 	return (
 		<TextFieldCustom
@@ -67,7 +129,6 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			disabled={isDisabled}
 			autoFocus={autofocus}
 			error={rawErrors && rawErrors.length > 0}
-			// helperText={rawErrors?.join(" ")}
 			onChange={_onChange}
 			onBlur={_onBlur}
 			onFocus={_onFocus}
@@ -77,23 +138,9 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			prefix={options?.prefix}
 			multiline={options?.multiline}
 			select={isSelect}
-			// slotProps={{
-			// 	input: {
-			// 		endAdornment: isSelect && initialValue !== props.value && (
-			// 			<InputAdornment
-			// 				position="end"
-			// 				sx={{
-			// 					position: "relative",
-			// 					right: 30,
-			// 					cursor: "pointer",
-			// 					zIndex: 999,
-			// 				}}
-			// 			>
-			// 				<CloseIcon onClick={reset} />
-			// 			</InputAdornment>
-			// 		),
-			// 	},
-			// }}
+			slotProps={{
+				inputLabel: { shrink: true },
+			}}
 			slots={{
 				inputLabel: (props) =>
 					options?.tooltip ? (
@@ -115,13 +162,12 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 						<InputLabel {...props} />
 					),
 			}}
-			InputLabelProps={{ shrink: true }}
 			{...options}
 		>
-			{optionsForSelect && initialValue !== props.value && (
-				<MenuItem onClick={reset}>Сбросить</MenuItem>
-			)}
-			{optionsForSelect
+			{optionsForSelect.length > 0 &&
+				initialValue !== props.value &&
+				props.options?.reset && <MenuItem onClick={reset}>Сбросить</MenuItem>}
+			{optionsForSelect.length > 0
 				? optionsForSelect?.map((option) => (
 						<MenuItem key={option.value} value={option.value}>
 							{option.label}
