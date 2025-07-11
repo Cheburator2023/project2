@@ -57,6 +57,7 @@ export const AnketaBasicLayout = ({
 						</PanelResizeHandleStyled>
 						<Panel data-test-id="anketa-basic-layout--Panel-2">
 							<Card
+								loading={isPending}
 								header="Итоги расчета"
 								maxHeight="100%"
 								height="100%"
@@ -79,6 +80,7 @@ export const AnketaBasicLayout = ({
 				</PanelResizeHandleStyled>
 				<Panel data-test-id="anketa-basic-layout--Panel-3">
 					<Card
+						loading={isPending}
 						header="Опросник"
 						maxHeight="100%"
 						height="100%"
