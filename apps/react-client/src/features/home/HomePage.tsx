@@ -68,15 +68,15 @@ const _columnDefs: ColDef<any, any>[] = [
 		headerName: "RFD",
 		sortable: true,
 		filter: true,
-		valueFormatter: (params) => {
-			return params?.value.join(", ");
-		},
 	},
 	{
 		field: "department",
 		headerName: "Департамент Заказчика",
 		sortable: true,
 		filter: true,
+		valueFormatter: (params) => {
+			return params?.value?.join(", ");
+		},
 	},
 	{
 		field: "author",
