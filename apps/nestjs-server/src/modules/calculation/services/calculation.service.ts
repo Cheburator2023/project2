@@ -8,6 +8,7 @@ import { Repository } from "typeorm";
 import { CreateCalculationDto, PaginationDto } from "../dto";
 import { Calculation } from "../entities/calculation.entity";
 import { PaginatedResult } from "../interfaces/paginated-result.interface";
+import {UpdateCalculationDto} from "../dto/request/update-calculation.dto";
 
 @Injectable()
 export class CalculationService {
@@ -84,6 +85,43 @@ export class CalculationService {
 			);
 		}
 	}
+
+    /**
+     * Updates calculation basic information
+     */
+    async updateCalculation(
+        id: string,
+        updateDto: UpdateCalculationDto,
+    ): Promise<Calculation> {
+        try {
+            const calculation = await this.calculationRepository.findOne({
+                where: { id },
+            });
+
+            if (!calculation) {
+                throw new NotFoundException(`Calculation with ID ${id} not found`);
+            }
+
+            if (updateDto.name !== undefined) {
+                calculation.name = updateDto.name;
+                calculation.questionnaireData.name = updateDto.name;
+            }
+            if (updateDto.rfd !== undefined) calculation.rfd = updateDto.rfd;
+            if (updateDto.streamExecutor !== undefined)
+                calculation.streamExecutor = updateDto.streamExecutor;
+            if (updateDto.department !== undefined)
+                calculation.department = updateDto.department;
+            if (updateDto.customerName !== undefined)
+                calculation.customerName = updateDto.customerName;
+            if (updateDto.comment !== undefined) calculation.comment = updateDto.comment;
+
+            return await this.calculationRepository.save(calculation);
+        } catch (error) {
+            throw new BadRequestException(
+                `Failed to update calculation: ${error.message}`,
+            );
+        }
+    }
 
 	/**
 	 * Finds a calculation by ID
