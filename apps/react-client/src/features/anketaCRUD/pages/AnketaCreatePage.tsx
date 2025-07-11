@@ -103,9 +103,8 @@ export const AnketaCreatePage = () => {
 				data-test-id="anketa-create-page--Flex-0"
 			>
 				<AnketaBasicLayout
-					isPending={isPending || isFormValid}
+					isPending={isPending}
 					onSubmit={onSubmit}
-					formHasErrors={!isFormValid}
 					data-test-id="anketa-create-page--AnketaBasicLayout-0"
 				/>
 			</Flex>
