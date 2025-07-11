@@ -182,8 +182,8 @@ export class CreateCalculationDto extends CalculationBaseDto {
 		example: 4,
 		description: "Дополнительные отчеты для продакшена",
 	})
+	@IsOptional({ always: true })
 	@IsString({ message: "productionAdditionalReports must be a string" })
-	@IsNotEmpty({ message: "productionAdditionalReports should not be empty" })
 	productionAdditionalReports: string;
 
 	@ApiProperty({
