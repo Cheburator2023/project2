@@ -147,12 +147,11 @@ export const calc_uiSchema: UiSchema = {
 		},
 	},
 	productionAdditionalReports: {
-		"ui:widget": "UniversalDependencyWidget",
+		"ui:widget": "TextFieldCustomWidget",
+		"ui:placeholder": "Не требуется",
 		"ui:options": {
-			defaultEnums: ["Не требуется"],
-			allowCustomInput: true,
 			errors: {
-				pattern: "Только числа, от 1 до 99 или 'Не требуется'",
+				pattern: "Только числа, от 1 до 99",
 			},
 			tooltip:
 				"При отсутствии витрин с агрегатами/широких витрин на регламенте в области ответственности модельного стрима  указывается количество витрин, требуемых к выводу в пром",

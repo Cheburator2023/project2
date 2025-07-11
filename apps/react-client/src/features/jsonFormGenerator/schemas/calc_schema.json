@@ -168,7 +168,7 @@
 		"productionAdditionalReports": {
 			"type": "string",
 			"title": "Необходимость продуктивизации и количество дополнительных витрин",
-			"pattern": "^(?:[1-9][0-9]?|Не требуется)$"
+			"pattern": "^(?:[1-9][0-9]?|)$"
 		},
 
 		"productionDeploymentChannels": {

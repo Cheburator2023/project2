@@ -56,7 +56,7 @@ const _columnDefs: ColDef<any, any>[] = [
 		minWidth: 120,
 		cellRenderer: CalculationPreviewCell,
 	},
-	{ field: "id", headerName: "ID", sortable: true, filter: true },
+	{ field: "Идентификатор", headerName: "ID", sortable: true, filter: true },
 	{
 		field: "name",
 		headerName: "Название анкеты",
@@ -64,8 +64,41 @@ const _columnDefs: ColDef<any, any>[] = [
 		filter: true,
 	},
 	{
+		field: "rfd",
+		headerName: "RFD",
+		sortable: true,
+		filter: true,
+		valueFormatter: (params) => {
+			return params?.value.join(", ");
+		},
+	},
+	{
+		field: "department",
+		headerName: "Департамент Заказчика",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "author",
+		headerName: "Автор анкеты",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "status",
+		headerName: "Статус анкеты",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "parentCalc",
+		headerName: "Родительская анкета",
+		sortable: true,
+		filter: true,
+	},
+	{
 		field: "finalCoefficient",
-		headerName: "Финальный коэффициент",
+		headerName: "Итоговая оценка",
 		sortable: true,
 		filter: true,
 	},
@@ -80,45 +113,163 @@ const _columnDefs: ColDef<any, any>[] = [
 			return format(dt, "dd MMMM yyyy, HH:mm:ss, xxxxx");
 		},
 	},
+	{
+		field: "streamExecutor",
+		headerName: "Стрим исполнитель",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "customerName",
+		headerName: "Фио заказчика",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "comment",
+		headerName: "Комментарий",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "relatedModels",
+		headerName: "Связанные модели",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "deviationPercentage",
+		headerName: "% Отклонение итоговой оценки от средней",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "stage01",
+		headerName: "01. Постановка задачи",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "stage02",
+		headerName: "02. Поиск данных",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "stage04",
+		headerName: "04. Построение витрины для разработки",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "stage05A",
+		headerName: "05A. Разработка MVP",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "stage05",
+		headerName: "05. Разработка модели",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "amlDrafting",
+		headerName: "AML разработка",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "stage05B",
+		headerName: "05B. Пилотирование модели",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "stage07",
+		headerName: "06. Разработка витрины для применения модели",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "stage09",
+		headerName: "07. Адаптация и внедрение",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "amlEnforcement",
+		headerName: "AML внедрение",
+		sortable: true,
+		filter: true,
+	},
 
-	{ field: "questionnaireData.name", headerName: "Название анкеты" },
+	{
+		field: "questionnaireData.name",
+		headerName: "Название анкеты",
+		sortable: true,
+		filter: true,
+	},
 	{
 		field: "questionnaireData.modelsCount",
 		headerName: "Количество моделей",
+		sortable: true,
+		filter: true,
 	},
-	{ field: "finalCoefficient", headerName: "Итоговый коэффициент" },
+	{
+		field: "finalCoefficient",
+		headerName: "Итоговый коэффициент",
+		sortable: true,
+		filter: true,
+	},
 	{
 		field: "questionnaireData.autoMlRequired",
 		headerName: "Необходимость AutoML",
+		sortable: true,
+		filter: true,
 	},
 	{
 		field: "questionnaireData.dataSourcesCount",
 		headerName: "Количество источников для проработки",
+		sortable: true,
+		filter: true,
 	},
 	{
 		field: "questionnaireData.readyPromReports",
 		headerName: "Наличие готовых пром витрин",
+		sortable: true,
+		filter: true,
 	},
 	{
 		field: "questionnaireData.pilotModelRequired",
 		headerName: "Необходимость реализации пилотной модели",
+		sortable: true,
+		filter: true,
 	},
 	{
 		field: "questionnaireData.pilotSupportRequired",
 		headerName: "Необходимость поддержки проведения пилота",
+		sortable: true,
+		filter: true,
 	},
 	{
 		field: "questionnaireData.assessedInitiativesCount",
 		headerName: "Количество оцениваемых инициатив",
+		sortable: true,
+		filter: true,
 	},
 	{
 		field: "questionnaireData.productionAdditionalReports",
 		headerName:
 			"Необходимость продуктивизации и количество дополнительных витрин",
+		sortable: true,
+		filter: true,
 	},
 	{
-		field: "generalUncertainty",
+		field: "questionnaireData.generalUncertainty",
 		headerName: "Общая неопределенность",
+		sortable: true,
+		filter: true,
 		valueGetter: (params) => {
 			const UNCERTAINTY_TYPE_VALUES =
 				schema.properties.generalUncertainty.items.properties.type.enum;
@@ -156,8 +307,10 @@ const _columnDefs: ColDef<any, any>[] = [
 		},
 	},
 	{
-		field: "algorithmComplexity",
+		field: "questionnaireData.algorithmComplexity",
 		headerName: "Сложность алгоритма / тип ML задачи",
+		sortable: true,
+		filter: true,
 		valueGetter: (params) => {
 			const colId = params.column.getColId();
 			const channels = params.data.questionnaireData?.[colId] || [];
@@ -167,8 +320,10 @@ const _columnDefs: ColDef<any, any>[] = [
 		},
 	},
 	{
-		field: "productionDeploymentChannels",
+		field: "questionnaireData.productionDeploymentChannels",
 		headerName: "Необходимость продуктивизации и каналы внедрения моделей",
+		sortable: true,
+		filter: true,
 		valueGetter: (params: any) => {
 			const colId = params.column.getColId();
 
@@ -177,6 +332,235 @@ const _columnDefs: ColDef<any, any>[] = [
 				.map((ch: any, index: any) => `${index + 1}. ${ch.deploymentChannel}`)
 				.join(", ");
 		},
+	},
+	{
+		field: "questionnaireData.setupComplexity",
+		headerName: "Сложность постановки",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "questionnaireData.initiativeTimeline",
+		headerName: "Сроки инициативы",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "questionnaireData.initiativeCost",
+		headerName: "Стоимость инициативы",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "questionnaireData.uncertaintyAdjustment",
+		headerName: "Поправка на общую неопределенность",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "riskBusinessProcesses",
+		headerName:
+			"Риск: Изменение, недостаточная проработка или сложности бизнес-процессов Банка",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "riskSoftwareDefects",
+		headerName:
+			"Риск: Наличие дефектов во внедряемом решении/ПО в рамках проекта",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "riskRelatedProjects",
+		headerName:
+			"Риск: Негативное влияние смежных проектов на показатели проекта",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "riskIncreasedEffort",
+		headerName:
+			"Риск: Увеличение трудозатрат проекта по причине недостаточной проработки требований на этапе планирования проекта",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "riskContractorPerformance",
+		headerName:
+			"Риск: Недобросовестное исполнение услуг со стороны привлеченных контрагентов/подрядчиков",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "riskPersonnelQuality",
+		headerName:
+			"Риск: Отсутствие квалифицированного персонала или ошибок персонала",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "riskSanctions",
+		headerName: "Риск: Введение санкционных мер и других ограничений",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "riskControlProcedures",
+		headerName: "Риск: Недостаток или отсутствие контрольных процедур",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "riskRegulatoryChanges",
+		headerName: "Риск: Изменение регуляторных требований",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "riskSystemNonUsage",
+		headerName: "Риск: Неиспользование ИС после завершения проекта",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "riskArchitectureChanges",
+		headerName: "Риск: Изменение целевой ИТ архитектуры Банка",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "questionnaireData.algorithmTabular",
+		headerName: "Тип алгоритма: Табличные данные",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.algorithmTextClassic",
+		headerName: "Тип алгоритма: Текстовая аналитика_Классические модели",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.algorithmTextLLM",
+		headerName: "Тип алгоритма: Текстовая аналитика_LLM",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.algorithmAudio",
+		headerName: "Тип алгоритма: Аудио аналитика",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.algorithmComputerVision",
+		headerName: "Тип алгоритма: Компьютерное зрение_CV",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.algorithmOptimization",
+		headerName: "Тип алгоритма: Оптимизационная задача",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.algorithmGeoAnalytics",
+		headerName: "Тип алгоритма: Гео-аналитика",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.algorithmGraphAnalytics",
+		headerName: "Тип алгоритма: Графовая аналитика",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.deploymentBatch",
+		headerName: "Канал внедрения: Батч",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.deploymentBatchWithData",
+		headerName: "Канал внедрения: Батч + загрузка данных потребителю",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.deploymentBatchOnline",
+		headerName: "Канал внедрения: Батч + Онлайн",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.deploymentOnline",
+		headerName: "Канал внедрения: Онлайн",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.deploymentOnlineGpu",
+		headerName: "Канал внедрения: Онлайн gpu",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.deploymentStreaming",
+		headerName: "Канал внедрения: Стриминг",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.deploymentMobile",
+		headerName: "Канал внедрения: Мобильные устройства",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.deploymentLLM",
+		headerName: "Канал внедрения: LLM",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.deploymentGeoServices",
+		headerName: "Канал внедрения: Гео-сервисы",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.deploymentCloud",
+		headerName: "Канал внедрения: Внедрение в облаке",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
+	},
+	{
+		field: "questionnaireData.deploymentGraphPlatform",
+		headerName: "Канал внедрения: Графовая платформа",
+		sortable: true,
+		filter: true,
+		cellDataType: "boolean",
 	},
 ];
 
