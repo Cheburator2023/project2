@@ -7,7 +7,7 @@ import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/store
 import { AnketaBasicLayout } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayout";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { routes } from "@react-client/routing/routes";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
 export const AnketaCreatePage = () => {
@@ -34,11 +34,12 @@ export const AnketaCreatePage = () => {
 
 	const onSubmit = () => {
 		setHasSubmitted(true);
+		console.log("🐸 Pepe said >> onSubmit >> true:", true);
 		anketaCreate_basicInfoForm.api?.submit();
 		anketaCreate_projectAssessmentForm.api?.submit();
 	};
 
-	useDeepEffect(() => {
+	useEffect(() => {
 		const basicFormData: {
 			name: string;
 			rfd: string;
@@ -80,6 +81,7 @@ export const AnketaCreatePage = () => {
 						}, 100);
 					},
 					onError: (error: any) => {
+						setHasSubmitted(false);
 						toast.error("Ошибка создания расчета", {
 							description: error?.response?.data?.message,
 							action: {
