@@ -1,5 +1,12 @@
+import ClearIcon from "@mui/icons-material/Clear";
 import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
-import { Autocomplete, InputLabel, MenuItem, Tooltip } from "@mui/material";
+import {
+	Autocomplete,
+	InputAdornment,
+	InputLabel,
+	MenuItem,
+	Tooltip,
+} from "@mui/material";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import { Flex } from "@react-client/common/primitives/Flex";
 import {
@@ -140,6 +147,23 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			select={isSelect}
 			slotProps={{
 				inputLabel: { shrink: true },
+				input: {
+					endAdornment: isSelect &&
+						initialValue !== props.value &&
+						props.options?.reset && (
+							<InputAdornment
+								position="end"
+								sx={{
+									position: "relative",
+									right: 30,
+									cursor: "pointer",
+									zIndex: 999,
+								}}
+							>
+								<ClearIcon onClick={reset} />
+							</InputAdornment>
+						),
+				},
 			}}
 			slots={{
 				inputLabel: (props) =>
@@ -164,15 +188,17 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			}}
 			{...options}
 		>
-			{optionsForSelect.length > 0 &&
+			{/* {optionsForSelect.length > 0 &&
 				initialValue !== props.value &&
-				props.options?.reset && <MenuItem onClick={reset}>Сбросить</MenuItem>}
+				props.options?.reset && <MenuItem onClick={reset}>Сбросить</MenuItem>} */}
 			{optionsForSelect.length > 0
-				? optionsForSelect?.map((option) => (
-						<MenuItem key={option.value} value={option.value}>
-							{option.label}
-						</MenuItem>
-					))
+				? optionsForSelect
+						?.filter((item) => item.value)
+						?.map((option) => (
+							<MenuItem key={option.value} value={option.value}>
+								{option.label}
+							</MenuItem>
+						))
 				: null}
 		</TextFieldCustom>
 	);
