@@ -63,47 +63,63 @@ const stageResults: StageValues = {
 	amlEnforcement: 0,
 };
 
+const round2 = (v: number) => Math.round(v * 100) / 100;
+
 const calculateCoefficients = (formData: IAssessmentFormData) => {
 	const modelsCount = Number(formData.modelsCount) || 1;
 	const dataSourcesCount = Number(formData.dataSourcesCount) || 1;
 
 	return {
-		modelsCountCoefficient: helpers.calculateModelsCoefficient(modelsCount),
-		setupComplexityCoefficient: helpers.calculateSetupComplexityCoefficient(
-			formData.setupComplexity,
+		modelsCountCoefficient: round2(
+			helpers.calculateModelsCoefficient(modelsCount),
 		),
-		generalUncertaintyCoefficient: helpers.calculateTotalUncertainty(
-			formData.generalUncertainty || [],
-			formData.initiativeTimeline || "",
-			formData.initiativeCost || "",
-			Number(formData.uncertaintyAdjustment) || 0,
+		setupComplexityCoefficient: round2(
+			helpers.calculateSetupComplexityCoefficient(formData.setupComplexity),
 		),
-		readyPromReportsCoefficient: helpers.getReadyPromReportsCoefficient(
-			formData.readyPromReports || "Нет",
+		generalUncertaintyCoefficient: round2(
+			helpers.calculateTotalUncertainty(
+				formData.generalUncertainty || [],
+				formData.initiativeTimeline || "",
+				formData.initiativeCost || "",
+				Number(formData.uncertaintyAdjustment) || 0,
+			),
 		),
-		dataSourcesCountCoefficient:
+		readyPromReportsCoefficient: round2(
+			helpers.getReadyPromReportsCoefficient(
+				formData.readyPromReports || "Нет",
+			),
+		),
+		dataSourcesCountCoefficient: round2(
 			helpers.calculateDataSourceCoefficient(dataSourcesCount),
-		pilotModelRequired: helpers.getPilotModelCoefficient(
-			formData.pilotModelRequired || "Не требуется",
 		),
-		algorithmComplexityCoefficient:
+		pilotModelRequired: round2(
+			helpers.getPilotModelCoefficient(
+				formData.pilotModelRequired || "Не требуется",
+			),
+		),
+		algorithmComplexityCoefficient: round2(
 			helpers.calculateAlgorithmComplexityCoefficient(
 				formData.algorithmComplexity || [],
 			),
-		pilotSupportRequired: helpers.getPilotSupportCoefficient(
-			formData.pilotSupportRequired || "Не требуется",
 		),
-		autoMlRequired: helpers.getAutoMlCoefficient(
-			formData.autoMlRequired || "Не требуется",
+		pilotSupportRequired: round2(
+			helpers.getPilotSupportCoefficient(
+				formData.pilotSupportRequired || "Не требуется",
+			),
 		),
-		productionAdditionalReportsCoefficient:
+		autoMlRequired: round2(
+			helpers.getAutoMlCoefficient(formData.autoMlRequired || "Не требуется"),
+		),
+		productionAdditionalReportsCoefficient: round2(
 			helpers.getProductionAdditionalReportsCoefficient(
 				formData.productionAdditionalReports || "1",
 			),
-		deploymentChannelsCoefficient:
+		),
+		deploymentChannelsCoefficient: round2(
 			helpers.calculateDeploymentChannelCoefficient(
 				formData.productionDeploymentChannels || [],
 			),
+		),
 	};
 };
 
@@ -200,6 +216,8 @@ const calculateStageResults = (
 		),
 	};
 };
+
+export { calculateCoefficients, calculateStageResults };
 
 export const assessmentCalculationsStore = create<AssessmentState>(
 	(set, _get) => ({
