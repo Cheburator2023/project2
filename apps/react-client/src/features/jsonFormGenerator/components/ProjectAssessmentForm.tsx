@@ -51,6 +51,7 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 		resetApiRef,
 		updateFormState,
 		setFormValidated,
+		setFormValid,
 		...store
 	} = useAnketaCRUDFormsStore();
 	const { setFormData: setFormDataForCalc } = assessmentCalculationsStore();
@@ -94,6 +95,7 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 	const onSubmit = (e: IChangeEvent<IAssessmentFormData>) => {
 		console.log("ProjectAssessmentForm >> formData:", e.formData);
 		setFormValidated(formName, true);
+		setFormValid(formName, true);
 
 		if (e.formData) {
 			setFormData(e.formData);

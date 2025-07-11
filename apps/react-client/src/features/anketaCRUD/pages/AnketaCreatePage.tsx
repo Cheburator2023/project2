@@ -1,12 +1,13 @@
 import { useCalculationControllerCreate } from "@react-client/common/api/generated/queries/calculation";
 import { CreateCalculationDto } from "@react-client/common/api/generated/types";
+import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { toast } from "@react-client/common/toasts";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { AnketaBasicLayout } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayout";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { routes } from "@react-client/routing/routes";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 
 export const AnketaCreatePage = () => {
@@ -27,16 +28,9 @@ export const AnketaCreatePage = () => {
 	const { mutate: createCalculationMutation, isPending } =
 		useCalculationControllerCreate();
 
-	const formHasErrors = !!(
-		stateBasicForm?.errors?.length || stateProjectAssessmentForm?.errors?.length
-	);
-	const isFormDirty =
-		anketaCreate_basicInfoForm?.isDirty ||
-		anketaCreate_projectAssessmentForm?.isDirty;
-
-	const wasValidated =
-		anketaCreate_basicInfoForm?.wasValidated &&
-		anketaCreate_projectAssessmentForm?.wasValidated;
+	const isFormValid =
+		anketaCreate_basicInfoForm?.isValid ||
+		anketaCreate_projectAssessmentForm?.isValid;
 
 	const onSubmit = () => {
 		setHasSubmitted(true);
@@ -44,9 +38,7 @@ export const AnketaCreatePage = () => {
 		anketaCreate_projectAssessmentForm.api?.submit();
 	};
 
-	useEffect(() => {
-		setHasSubmitted(false);
-
+	useDeepEffect(() => {
 		const basicFormData: {
 			name: string;
 			rfd: string;
@@ -61,9 +53,7 @@ export const AnketaCreatePage = () => {
 			// author: string;
 		} = stateBasicForm?.formData || {};
 
-		console.log("🐸 Pepe said >> useEffect >> wasValidated:", wasValidated);
-
-		if (wasValidated && isFormDirty && !formHasErrors) {
+		if (isFormValid) {
 			const data: CreateCalculationDto = {
 				finalCoefficient: calculationResult[0]?.score,
 				name: basicFormData.name,
@@ -81,6 +71,7 @@ export const AnketaCreatePage = () => {
 				},
 				{
 					onSuccess: (data) => {
+						setHasSubmitted(false);
 						console.log("Success:", data);
 						toast.success("Расчет успешно создан");
 						reset();
@@ -99,13 +90,7 @@ export const AnketaCreatePage = () => {
 				},
 			);
 		}
-	}, [
-		isFormDirty,
-		wasValidated,
-		formHasErrors,
-		stateBasicForm,
-		stateProjectAssessmentForm,
-	]);
+	}, [isFormValid]);
 
 	return (
 		<div data-test-id="anketa-create-page--div-0">
@@ -118,7 +103,7 @@ export const AnketaCreatePage = () => {
 				<AnketaBasicLayout
 					isPending={isPending}
 					onSubmit={onSubmit}
-					formHasErrors={formHasErrors}
+					formHasErrors={!isFormValid}
 					data-test-id="anketa-create-page--AnketaBasicLayout-0"
 				/>
 			</Flex>

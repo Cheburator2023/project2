@@ -186,6 +186,7 @@ export const BasicInfoForm = () => {
 		updateFormState,
 		setFormDirty,
 		setFormValidated,
+		setFormValid,
 		...store
 	} = useAnketaCRUDFormsStore();
 	const [liveValidate, setLiveValidate] = useState(false);
@@ -229,6 +230,7 @@ export const BasicInfoForm = () => {
 	const onSubmit = ({ formData }: IChangeEvent<IBasicFormData>) => {
 		console.log("BasicInfoForm >> formData:", formData);
 		setFormValidated(formName, true);
+		setFormValid(formName, true);
 
 		if (formData) {
 			setFormData(formData);

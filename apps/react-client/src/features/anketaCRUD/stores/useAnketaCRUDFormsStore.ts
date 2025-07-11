@@ -64,6 +64,7 @@ interface FormData<T> {
 	state?: T | {};
 	isDirty: boolean;
 	wasValidated: boolean;
+	isValid: boolean;
 }
 
 type AnketaCRUDFormsStoreType = {
@@ -102,6 +103,7 @@ interface AnketaCRUDFormsStore
 	setCalculationResult: (result: any) => void;
 	setFormDirty: (formName: FormName, isDirty: boolean) => void;
 	setFormValidated: (formName: FormName, wasValidated: boolean) => void;
+	setFormValid: (formName: FormName, isValid: boolean) => void;
 }
 
 type AnketaCreateData = any;
@@ -113,6 +115,7 @@ const init = {
 		state: undefined,
 		isDirty: false,
 		wasValidated: false,
+		isValid: false,
 		initialData: basicInfoFormInitialData,
 	},
 	anketaPreview_basicInfoForm: {
@@ -120,6 +123,7 @@ const init = {
 		state: undefined,
 		isDirty: false,
 		wasValidated: false,
+		isValid: false,
 		initialData: basicInfoFormInitialData,
 	},
 	anketaCreate_projectAssessmentForm: {
@@ -127,6 +131,7 @@ const init = {
 		state: undefined,
 		isDirty: false,
 		wasValidated: false,
+		isValid: false,
 		initialData: projectAssessmentFormInitialData,
 	},
 	anketaPreview_projectAssessmentForm: {
@@ -134,6 +139,7 @@ const init = {
 		state: undefined,
 		isDirty: false,
 		wasValidated: false,
+		isValid: false,
 		initialData: projectAssessmentFormInitialData,
 	},
 
@@ -146,6 +152,9 @@ export const useAnketaCRUDFormsStore = create<AnketaCRUDFormsStore>((set) => ({
 		set((_state) => ({ [formName]: { ..._state[formName], isDirty } })),
 	setFormValidated: (formName, wasValidated) =>
 		set((_state) => ({ [formName]: { ..._state[formName], wasValidated } })),
+
+	setFormValid: (formName, isValid) =>
+		set((_state) => ({ [formName]: { ..._state[formName], isValid } })),
 
 	setCalculationResult: (result: any) =>
 		set((_state) => ({ calculationResult: result })),
