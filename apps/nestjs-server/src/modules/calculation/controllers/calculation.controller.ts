@@ -1,14 +1,14 @@
 import {
-	Body,
-	Controller,
-	Get,
-	HttpStatus,
-	Param,
-	ParseUUIDPipe,
-	Post,
-	Query,
-	UsePipes,
-	ValidationPipe,
+    Body,
+    Controller,
+    Get,
+    HttpStatus,
+    Param,
+    ParseUUIDPipe,
+    Post, Put,
+    Query,
+    UsePipes,
+    ValidationPipe,
 } from "@nestjs/common";
 import {
 	ApiBearerAuth,
@@ -28,6 +28,7 @@ import {
 	PaginationDto,
 } from "../dto";
 import { CalculationService } from "../services/calculation.service";
+import {UpdateCalculationDto} from "../dto/request/update-calculation.dto";
 
 @ApiBearerAuth("JWT-auth")
 @ApiTags("Calculation")
@@ -65,6 +66,46 @@ export class CalculationController {
 		);
 		return this.mapToResponseDto(calculation);
 	}
+
+    @Put(":id")
+    @RealmRole(Permission.ANKETA_EDIT_CALCULATION)
+    @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+    @ApiOperation({
+        summary: "Update calculation basic information",
+        description: "Updates basic information of an existing calculation",
+    })
+    @ApiParam({
+        name: "id",
+        description: "Calculation unique identifier",
+        example: "550e8400-e29b-41d4-a716-446655440000",
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: "The calculation has been successfully updated.",
+        type: CalculationResponseDto,
+    })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: "Bad request. Validation failed.",
+    })
+    @ApiResponse({
+        status: HttpStatus.NOT_FOUND,
+        description: "Calculation not found.",
+    })
+    @ApiResponse({
+        status: HttpStatus.UNAUTHORIZED,
+        description: "Unauthorized. Authentication required.",
+    })
+    async update(
+        @Param("id", ParseUUIDPipe) id: string,
+        @Body() updateCalculationDto: UpdateCalculationDto,
+    ): Promise<CalculationResponseDto> {
+        const calculation = await this.calculationService.updateCalculation(
+            id,
+            updateCalculationDto,
+        );
+        return this.mapToResponseDto(calculation);
+    }
 
 	@Get("all")
 	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
@@ -165,7 +206,6 @@ export class CalculationController {
 	}
 
     private mapToResponseDto(calculation: any): CalculationResponseDto {
-        // Преобразование generalUncertainty из объекта в массив
         const generalUncertaintyArray = calculation.questionnaireData.generalUncertainty
             ? Object.entries(calculation.questionnaireData.generalUncertainty).map(
                 ([type, value]: [string, any]) => ({
@@ -176,7 +216,6 @@ export class CalculationController {
             )
             : [];
 
-        // Преобразование productionDeploymentChannels из массива объектов в массив строк
         const productionDeploymentChannelsArray = calculation.questionnaireData.productionDeploymentChannels
             ? calculation.questionnaireData.productionDeploymentChannels.map(
                 (item: any) => item.deploymentChannel
