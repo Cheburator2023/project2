@@ -1,6 +1,5 @@
-import CloseIcon from "@mui/icons-material/Close";
 import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
-import { InputAdornment, InputLabel, MenuItem, Tooltip } from "@mui/material";
+import { InputLabel, MenuItem, Tooltip } from "@mui/material";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import { Flex } from "@react-client/common/primitives/Flex";
 import {
@@ -78,23 +77,23 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			prefix={options?.prefix}
 			multiline={options?.multiline}
 			select={isSelect}
-			slotProps={{
-				input: {
-					endAdornment: isSelect && initialValue !== props.value && (
-						<InputAdornment
-							position="end"
-							sx={{
-								position: "relative",
-								right: 30,
-								cursor: "pointer",
-								zIndex: 999,
-							}}
-						>
-							<CloseIcon onClick={reset} />
-						</InputAdornment>
-					),
-				},
-			}}
+			// slotProps={{
+			// 	input: {
+			// 		endAdornment: isSelect && initialValue !== props.value && (
+			// 			<InputAdornment
+			// 				position="end"
+			// 				sx={{
+			// 					position: "relative",
+			// 					right: 30,
+			// 					cursor: "pointer",
+			// 					zIndex: 999,
+			// 				}}
+			// 			>
+			// 				<CloseIcon onClick={reset} />
+			// 			</InputAdornment>
+			// 		),
+			// 	},
+			// }}
 			slots={{
 				inputLabel: (props) =>
 					options?.tooltip ? (
