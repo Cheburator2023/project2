@@ -33,7 +33,7 @@ export const projectAssessmentFormInitialData: IAssessmentFormData = {
 	algorithmComplexity: [{ algorithmType: "" }],
 	uncertaintyAdjustment: 0,
 	setupComplexity: "",
-	readyPromReports: "Да",
+	readyPromReports: "",
 	initiativeCost: "",
 	initiativeTimeline: "",
 	assessedInitiativesCount: 1,
