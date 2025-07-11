@@ -75,7 +75,9 @@ export const AnketaCreatePage = () => {
 						console.log("Success:", data);
 						toast.success("Расчет успешно создан");
 						reset();
-						navigate(routes.home.rootPath);
+						setTimeout(() => {
+							navigate(routes.home.rootPath);
+						}, 3000);
 					},
 					onError: (error: any) => {
 						toast.error("Ошибка создания расчета", {
@@ -101,7 +103,7 @@ export const AnketaCreatePage = () => {
 				data-test-id="anketa-create-page--Flex-0"
 			>
 				<AnketaBasicLayout
-					isPending={isPending}
+					isPending={isPending || isFormValid}
 					onSubmit={onSubmit}
 					formHasErrors={!isFormValid}
 					data-test-id="anketa-create-page--AnketaBasicLayout-0"
