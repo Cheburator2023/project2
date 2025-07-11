@@ -40,6 +40,7 @@ export const AnketaBasicLayout = ({
 					>
 						<Panel data-test-id="anketa-basic-layout--Panel-1">
 							<Card
+								loading={isPending}
 								header="Основная информация"
 								height="100%"
 								padding="10px"
@@ -109,6 +110,7 @@ export const AnketaBasicLayout = ({
 						variant="contained"
 						onClick={onSubmit}
 						loading={isPending}
+						disabled={formHasErrors}
 						data-test-id="anketa-basic-layout--Button-0"
 					>
 						Сохранить

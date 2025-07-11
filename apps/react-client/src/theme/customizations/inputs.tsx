@@ -58,6 +58,7 @@ export const inputsCustomizations: Components<Theme> = {
 			root: ({ theme }) => ({
 				"&.Mui-disabled": {
 					backgroundImage: "none",
+					border: "none",
 				},
 				boxShadow: "none",
 				borderRadius: (theme.vars || theme).shape.borderRadius,

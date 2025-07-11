@@ -65,6 +65,8 @@ interface FormData<T> {
 	isDirty: boolean;
 	wasValidated: boolean;
 	isValid: boolean;
+	isSubmitting: boolean;
+	submitCount: number;
 }
 
 type AnketaCRUDFormsStoreType = {
@@ -104,6 +106,9 @@ interface AnketaCRUDFormsStore
 	setFormDirty: (formName: FormName, isDirty: boolean) => void;
 	setFormValidated: (formName: FormName, wasValidated: boolean) => void;
 	setFormValid: (formName: FormName, isValid: boolean) => void;
+	setFormSubmitting: (formName: FormName, isSubmitting: boolean) => void;
+	incrementSubmitCount: (formName: FormName) => void;
+	resetSubmitCount: (formName: FormName) => void;
 }
 
 type AnketaCreateData = any;
@@ -116,6 +121,8 @@ const init = {
 		isDirty: false,
 		wasValidated: false,
 		isValid: false,
+		isSubmitting: false,
+		submitCount: 0,
 		initialData: basicInfoFormInitialData,
 	},
 	anketaPreview_basicInfoForm: {
@@ -124,6 +131,8 @@ const init = {
 		isDirty: false,
 		wasValidated: false,
 		isValid: false,
+		isSubmitting: false,
+		submitCount: 0,
 		initialData: basicInfoFormInitialData,
 	},
 	anketaCreate_projectAssessmentForm: {
@@ -132,6 +141,8 @@ const init = {
 		isDirty: false,
 		wasValidated: false,
 		isValid: false,
+		isSubmitting: false,
+		submitCount: 0,
 		initialData: projectAssessmentFormInitialData,
 	},
 	anketaPreview_projectAssessmentForm: {
@@ -140,6 +151,8 @@ const init = {
 		isDirty: false,
 		wasValidated: false,
 		isValid: false,
+		isSubmitting: false,
+		submitCount: 0,
 		initialData: projectAssessmentFormInitialData,
 	},
 
@@ -179,4 +192,18 @@ export const useAnketaCRUDFormsStore = create<AnketaCRUDFormsStore>((set) => ({
 
 	resetApiRef: (formName) =>
 		set((_state) => ({ [formName]: { ..._state[formName], api: undefined } })),
+
+	setFormSubmitting: (formName, isSubmitting) =>
+		set((_state) => ({ [formName]: { ..._state[formName], isSubmitting } })),
+
+	incrementSubmitCount: (formName) =>
+		set((_state) => ({
+			[formName]: {
+				..._state[formName],
+				submitCount: _state[formName].submitCount + 1,
+			},
+		})),
+
+	resetSubmitCount: (formName) =>
+		set((_state) => ({ [formName]: { ..._state[formName], submitCount: 0 } })),
 }));

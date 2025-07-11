@@ -2,6 +2,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import {
 	Button,
 	ButtonGroup,
+	CircularProgress,
 	IconButton,
 	Paper,
 	type PaperProps,
@@ -16,7 +17,7 @@ import { useState } from "react";
 const headerH = 20;
 
 const CardWithZoom = (props: CardWithZoomProps) => {
-	const { maxHeight, overflow = "auto" } = props;
+	const { maxHeight, overflow = "auto", loading = false } = props;
 	const [visible, _setVisible] = useState(true);
 	const {
 		data: __zoom,
@@ -51,6 +52,11 @@ const CardWithZoom = (props: CardWithZoomProps) => {
 			variant="outlined"
 			{...props}
 		>
+			{loading && (
+				<LoadingOverlay>
+					<CircularProgress size={40} />
+				</LoadingOverlay>
+			)}
 			{(props.header || props.onClose) && (
 				<Flex
 					justifyContent="space-between"
@@ -177,6 +183,7 @@ type BaseCardProps = PaperProps & {
 type CardWithZoomProps = BaseCardProps & {
 	zoom: number;
 	uuid: string;
+	loading?: boolean;
 };
 
 type CardWithoutZoomProps = BaseCardProps & {
@@ -195,7 +202,34 @@ export const Card = (props: CardProps) => {
 
 const MUIPaperStyled = styled(Paper)<{ overflow: string }>`
 	pointer-events: all;
- & > div {
-	overflow: ${({ overflow }) => overflow && "auto"};
- }
+	position: relative;
+	overflow: hidden;
+	& > div {
+		overflow: ${({ overflow }) => overflow && "auto"};
+	}
+`;
+
+const LoadingOverlay = styled("div")`
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: rgba(255, 255, 255, 0.8);
+	backdrop-filter: blur(2px);
+	z-index: 1000;
+	transition: all 0.3s ease-in-out;
+	animation: fadeIn 0.3s ease-in-out;
+
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
 `;

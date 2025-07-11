@@ -1,6 +1,5 @@
 import { useCalculationControllerCreate } from "@react-client/common/api/generated/queries/calculation";
 import { CreateCalculationDto } from "@react-client/common/api/generated/types";
-import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { toast } from "@react-client/common/toasts";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
@@ -31,6 +30,13 @@ export const AnketaCreatePage = () => {
 	const isFormValid =
 		anketaCreate_basicInfoForm?.isValid ||
 		anketaCreate_projectAssessmentForm?.isValid;
+
+	const formHasErrors = !!(
+		stateBasicForm?.errors?.length || stateProjectAssessmentForm?.errors?.length
+	);
+
+	const submitCount = anketaCreate_basicInfoForm?.submitCount;
+	console.log("🐸 Pepe said >> AnketaCreatePage >> isFormValid:", submitCount);
 
 	const onSubmit = () => {
 		setHasSubmitted(true);
@@ -82,7 +88,7 @@ export const AnketaCreatePage = () => {
 					},
 					onError: (error: any) => {
 						setHasSubmitted(false);
-						toast.error("Ошибка создания расчета", {
+						toast.error("Сетевая ошибка создания расчета", {
 							description: error?.response?.data?.message,
 							action: {
 								label: "",
@@ -94,7 +100,7 @@ export const AnketaCreatePage = () => {
 				},
 			);
 		}
-	}, [isFormValid]);
+	}, [isFormValid, submitCount]);
 
 	return (
 		<div data-test-id="anketa-create-page--div-0">
@@ -107,6 +113,7 @@ export const AnketaCreatePage = () => {
 				<AnketaBasicLayout
 					isPending={isPending}
 					onSubmit={onSubmit}
+					formHasErrors={formHasErrors}
 					data-test-id="anketa-create-page--AnketaBasicLayout-0"
 				/>
 			</Flex>
