@@ -228,6 +228,7 @@ export const BasicInfoForm = () => {
 
 	const onSubmit = ({ formData }: IChangeEvent<IBasicFormData>) => {
 		console.log("BasicInfoForm >> formData:", formData);
+		setFormValidated(formName, true);
 
 		if (formData) {
 			setFormData(formData);
@@ -241,6 +242,7 @@ export const BasicInfoForm = () => {
 	const onError = (errors: any) => {
 		setFormValidated(formName, true);
 		setLiveValidate(true);
+
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}

@@ -93,6 +93,7 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 
 	const onSubmit = (e: IChangeEvent<IAssessmentFormData>) => {
 		console.log("ProjectAssessmentForm >> formData:", e.formData);
+		setFormValidated(formName, true);
 
 		if (e.formData) {
 			setFormData(e.formData);
