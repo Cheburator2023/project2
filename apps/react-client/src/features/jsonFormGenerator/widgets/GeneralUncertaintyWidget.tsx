@@ -20,7 +20,6 @@ import {
 	Typography,
 } from "@mui/material";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
-import { Spacer } from "@react-client/common/primitives/Spacer";
 import { WidgetProps } from "@rjsf/utils";
 import React, { useEffect, useRef, useState } from "react";
 

@@ -11,7 +11,7 @@ export const customMutationOptions = <TData, TError, TVariables>(
 		onError: (error, variables, context) => {
 			if ((error as any)?.response?.status === 401) {
 				useAuthStore.getState().setAccessToken(null);
-				window.location.reload();
+				// window.location.reload(); // Removed to prevent infinite reload
 			}
 
 			if (options.onError) {

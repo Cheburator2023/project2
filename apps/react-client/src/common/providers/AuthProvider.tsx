@@ -20,5 +20,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 		}
 	}, [token, setAccessToken]);
 
+	const NO_ROLES_FOR_DEV = process?.env?.NO_ROLES;
+
+	if (NO_ROLES_FOR_DEV) return <>{children}</>;
 	return accessToken ? children : <FullScreenLoader />;
 };

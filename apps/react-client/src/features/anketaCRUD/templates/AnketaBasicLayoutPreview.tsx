@@ -4,7 +4,7 @@ import { CalculationResponseDto } from "@react-client/common/api/generated/types
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { BasicInfoFormPreview } from "@react-client/features/anketaCRUD/organisms/BasicInfoFormPreview";
+import { BasicInfoForm } from "@react-client/features/anketaCRUD/organisms/BasicInfoForm";
 import { CalculationResultTable } from "@react-client/features/anketaCRUD/organisms/CalculationResultTable";
 import { ProjectAssessmentFormPreview } from "@react-client/features/anketaCRUD/organisms/ProjectAssessmentFormPreview";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
@@ -13,9 +13,13 @@ import { useLocation } from "react-router";
 export const AnketaBasicLayoutPreview = ({
 	initialData,
 	comfyView,
+	mainInfoDisabled = true,
+	onMainInfoChange,
 }: {
 	comfyView?: boolean;
 	initialData: CalculationResponseDto;
+	mainInfoDisabled?: boolean;
+	onMainInfoChange?: (data: any) => void;
 }) => {
 	const location = useLocation();
 
@@ -43,8 +47,10 @@ export const AnketaBasicLayoutPreview = ({
 							data-test-id="anketa-basic-layout--Card-2"
 						>
 							<Spacer data-test-id="anketa-basic-layout--Spacer-2" />
-							<BasicInfoFormPreview
+							<BasicInfoForm
 								initialData={initialData}
+								disabled={mainInfoDisabled}
+								onChange={onMainInfoChange}
 								data-test-id="anketa-basic-layout--BasicInfoForm-0"
 							/>
 						</Card>
@@ -108,8 +114,10 @@ export const AnketaBasicLayoutPreview = ({
 						data-test-id="anketa-basic-layout--Card-2"
 					>
 						<Spacer data-test-id="anketa-basic-layout--Spacer-2" />
-						<BasicInfoFormPreview
+						<BasicInfoForm
 							initialData={initialData}
+							disabled={mainInfoDisabled}
+							onChange={onMainInfoChange}
 							data-test-id="anketa-basic-layout--BasicInfoForm-0"
 						/>
 					</Card>

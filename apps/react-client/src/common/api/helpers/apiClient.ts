@@ -41,7 +41,7 @@ axiosInstance.interceptors.response.use(
 	(error: AxiosError) => {
 		if (error.response?.status === 401) {
 			useAuthStore.getState().setAccessToken(null);
-			window.location.reload();
+			// window.location.reload(); // Removed to prevent infinite reload
 		}
 		return Promise.reject(error);
 	},

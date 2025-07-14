@@ -33,7 +33,7 @@ export const useUserStore: UseBoundStore<StoreApi<UserStoreState>> =
 		setPermissions: (permissions: UserPermissions) => set({ permissions }),
 		hasRole: (role: Role) => {
 			const { roles } = useUserStore.getState();
-			return roles.includes(role);
+			return NO_ROLES_FOR_DEV ? true : roles.includes(role);
 		},
 		hasPermission: (permission: Permission) => {
 			const { permissions } = useUserStore.getState();

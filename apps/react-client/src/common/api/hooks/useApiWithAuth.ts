@@ -27,7 +27,7 @@ export const useMutationWithAuth = <TData, TError, TVariables>(
 		onError: (error, variables, context) => {
 			if ((error as any)?.response?.status === 401) {
 				setAccessToken(null);
-				window.location.reload();
+				// window.location.reload(); // Removed to prevent infinite reload
 			}
 
 			if (options.onError) {

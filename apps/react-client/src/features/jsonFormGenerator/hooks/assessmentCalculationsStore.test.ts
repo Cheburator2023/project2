@@ -86,12 +86,6 @@ describe("Assessment Calculations", () => {
 		const coefficients = calculateCoefficients(formData);
 		const stages = calculateStageResults(formData, coefficients);
 
-		// Debug output
-		console.log("Actual coefficients:", coefficients);
-		console.log("Expected coefficients:", expectedCoefficients);
-		console.log("Actual stages:", stages);
-		console.log("Expected stages:", expectedStages);
-
 		// Check coefficients
 		(
 			Object.keys(expectedCoefficients) as (keyof typeof expectedCoefficients)[]

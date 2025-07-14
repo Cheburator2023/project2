@@ -11,7 +11,7 @@ import { useNavigate } from "react-router";
 
 export const AnketaCreatePage = () => {
 	const navigate = useNavigate();
-	const [hasSubmitted, setHasSubmitted] = useState(false);
+	const [_hasSubmitted, setHasSubmitted] = useState(false);
 	const store = useAnketaCRUDFormsStore();
 
 	const {

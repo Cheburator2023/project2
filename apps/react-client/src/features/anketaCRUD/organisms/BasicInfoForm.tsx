@@ -1,4 +1,5 @@
 import { useQuestionnaireControllerGetFullQuestionnaire } from "@react-client/common/api/generated/queries/calculation";
+import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { transformErrors } from "@react-client/common/forms/transformErrors";
 import { MultiSelectAutocompleteCreateWidget } from "@react-client/common/forms/widgets/MultiSelectAutocompleteCreateWidget";
@@ -19,9 +20,15 @@ import type {
 	TemplatesType,
 	UiSchema,
 } from "@rjsf/utils";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MultiSelectAutocompleteWidget } from "../../../common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjectFieldTemplate";
+
+interface BasicInfoFormProps {
+	initialData?: CalculationResponseDto;
+	disabled?: boolean;
+	onChange?: (data: any) => void;
+}
 
 const uiSchema: UiSchema = {
 	"ui:submitButtonOptions": {
@@ -47,6 +54,7 @@ const uiSchema: UiSchema = {
 	],
 	name: {
 		"ui:widget": "TextFieldCustomWidget",
+		isEditable: true,
 	},
 	rfd: {
 		"ui:widget": "TextFieldCustomWidget",
@@ -58,6 +66,7 @@ const uiSchema: UiSchema = {
 				pattern: "Только цифры, от 4 до 15 символов",
 			},
 		},
+		isEditable: true,
 	},
 	streamExecutor: {
 		"ui:widget": "TextFieldCustomWidget",
@@ -71,12 +80,14 @@ const uiSchema: UiSchema = {
 		"ui:options": {
 			tooltip: "",
 		},
+		isEditable: true,
 	},
 	customerName: {
 		"ui:widget": "TextFieldCustomWidget",
 		"ui:options": {
 			tooltip: "",
 		},
+		isEditable: true,
 	},
 	// relatedModels: {
 	// 	"ui:widget": "MultiSelectAutocompleteCreateWidget",
@@ -90,6 +101,7 @@ const uiSchema: UiSchema = {
 			multiline: true,
 			rows: 3,
 		},
+		isEditable: true,
 	},
 	// status: {
 	// 	"ui:widget": "radio",
@@ -126,7 +138,11 @@ const widgets: RegistryWidgetsType = {
 	TextFieldCustomWidget,
 };
 
-export const BasicInfoForm = () => {
+export const BasicInfoForm = ({
+	initialData,
+	disabled = false,
+	onChange,
+}: BasicInfoFormProps) => {
 	const { data: questData } = useQuestionnaireControllerGetFullQuestionnaire();
 	const [formData, setFormData] = useState<IBasicFormData>(
 		basicInfoFormInitialData,
@@ -190,7 +206,7 @@ export const BasicInfoForm = () => {
 		incrementSubmitCount,
 		...store
 	} = useAnketaCRUDFormsStore();
-	const [liveValidate, setLiveValidate] = useState(false);
+	const [_liveValidate, setLiveValidate] = useState(false);
 
 	const formRef = useRef<FormRef>(null);
 
@@ -218,7 +234,13 @@ export const BasicInfoForm = () => {
 		updateFormState(formName, formState);
 	}, [formState]);
 
-	const onChange = (formState: IChangeEvent<IBasicFormData>) => {
+	useEffect(() => {
+		if (initialData) {
+			setFormData({ ...basicInfoFormInitialData, ...initialData });
+		}
+	}, [initialData]);
+
+	const onChangeForm = (formState: IChangeEvent<IBasicFormData>) => {
 		if (formState.formData) {
 			setFormData(formState.formData);
 		}
@@ -226,6 +248,7 @@ export const BasicInfoForm = () => {
 			setFormDirty(formName, true);
 			updateFormState(formName, formState);
 		}
+		onChange?.(formState.formData);
 	};
 
 	const onSubmit = ({ formData }: IChangeEvent<IBasicFormData>) => {
@@ -254,33 +277,43 @@ export const BasicInfoForm = () => {
 		console.log("Form errors:", errors);
 	};
 
-	const onBlur = (id: string, data: any) => {
+	const onBlur = (_id: string, _data: any) => {
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}
 	};
 
-	const onFocus = (id: string, data: any) => {
+	const onFocus = (_id: string, _data: any) => {
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}
 	};
+
+	// In your uiSchema, set disabled for all fields by default, then override meta fields if in edit mode
+	const controlledUiSchema = Object.fromEntries(
+		Object.entries(uiSchema).map(([field, config]) => {
+			if (!disabled && config.isEditable) {
+				return [field, { ...config, "ui:disabled": false }];
+			}
+			return [field, { ...config, "ui:disabled": true }];
+		}),
+	);
 
 	return (
 		<Form
 			ref={formRef}
 			schema={schema}
-			uiSchema={uiSchema}
+			uiSchema={controlledUiSchema}
 			formData={formData}
 			validator={validatorRu}
 			widgets={widgets}
-			onChange={onChange}
+			onChange={onChangeForm}
 			onSubmit={onSubmit}
 			onError={onError}
 			onBlur={onBlur}
 			onFocus={onFocus}
 			templates={templates}
-			liveValidate={liveValidate}
+			liveValidate={false}
 			noHtml5Validate
 			focusOnFirstError
 			showErrorList={false}

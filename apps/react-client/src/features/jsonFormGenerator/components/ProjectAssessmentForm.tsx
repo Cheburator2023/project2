@@ -117,13 +117,13 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 		console.log("Form errors:", errors);
 	};
 
-	const onFocus = (id: string, data: any) => {
+	const onFocus = (_id: string, _data: any) => {
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}
 	};
 
-	const onBlur = (id: string, data: any) => {
+	const onBlur = (_id: string, _data: any) => {
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}
