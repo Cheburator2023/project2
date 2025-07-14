@@ -1,7 +1,0 @@
-{
-	"name": "EXMAPLE_APP_RENAME_THIS",
-	"exposes": {
-		"./Routes": "./src/common/primitives/NullComponent",
-		"./Layout": "./src/App"
-	}
-}

@@ -1,6 +1,6 @@
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
-import Divider, { dividerClasses } from "@mui/material/Divider";
+import { dividerClasses } from "@mui/material/Divider";
 import { listClasses } from "@mui/material/List";
 import ListItemIcon, { listItemIconClasses } from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
@@ -8,6 +8,8 @@ import Menu from "@mui/material/Menu";
 import MuiMenuItem from "@mui/material/MenuItem";
 import { paperClasses } from "@mui/material/Paper";
 import { styled } from "@mui/material/styles";
+import { useAuthStore } from "@react-client/common/store/authStore";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { MenuButton } from "./MenuButton";
@@ -16,8 +18,9 @@ const MenuItem = styled(MuiMenuItem)({
 	margin: "2px 0",
 });
 
-export function OptionsMenu() {
+export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 	const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+	const queryClient = useQueryClient();
 	const open = Boolean(anchorEl);
 	const handleClick = (event: React.MouseEvent<HTMLElement>) => {
 		setAnchorEl(event.currentTarget);
@@ -25,14 +28,26 @@ export function OptionsMenu() {
 	const handleClose = () => {
 		setAnchorEl(null);
 	};
+
+	const handleLogout = () => {
+		setAnchorEl(null);
+		useAuthStore.getState().setAccessToken(null);
+		queryClient.removeQueries();
+		queryClient.clear();
+		queryClient.invalidateQueries();
+		onLogout?.();
+		window.location.reload();
+	};
+
 	return (
 		<>
 			<MenuButton
 				aria-label="Open menu"
 				onClick={handleClick}
 				sx={{ borderColor: "transparent" }}
+				data-test-id="options-menu--MenuButton-0"
 			>
-				<MoreVertRoundedIcon />
+				<MoreVertRoundedIcon data-test-id="options-menu--MoreVertRoundedIcon-0" />
 			</MenuButton>
 			<Menu
 				anchorEl={anchorEl}
@@ -53,13 +68,14 @@ export function OptionsMenu() {
 						margin: "4px -4px",
 					},
 				}}
+				data-test-id="options-menu--Menu-0"
 			>
-				<MenuItem onClick={handleClose}>Profile</MenuItem>
+				{/* <MenuItem onClick={handleClose}>Profile</MenuItem>
 				<MenuItem onClick={handleClose}>My account</MenuItem>
 				<Divider />
 				<MenuItem onClick={handleClose}>Add another account</MenuItem>
 				<MenuItem onClick={handleClose}>Settings</MenuItem>
-				<Divider />
+				<Divider /> */}
 				<MenuItem
 					onClick={handleClose}
 					sx={{
@@ -68,10 +84,19 @@ export function OptionsMenu() {
 							minWidth: 0,
 						},
 					}}
+					data-test-id="options-menu--MenuItem-0"
 				>
-					<ListItemText>Logout</ListItemText>
-					<ListItemIcon>
-						<LogoutRoundedIcon fontSize="small" />
+					<ListItemText
+						onClick={handleLogout}
+						data-test-id="options-menu--ListItemText-0"
+					>
+						Выйти
+					</ListItemText>
+					<ListItemIcon data-test-id="options-menu--ListItemIcon-0">
+						<LogoutRoundedIcon
+							fontSize="small"
+							data-test-id="options-menu--LogoutRoundedIcon-0"
+						/>
 					</ListItemIcon>
 				</MenuItem>
 			</Menu>

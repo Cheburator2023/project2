@@ -1,4 +1,4 @@
-import { type Components, type Theme, alpha } from "@mui/material/styles";
+import { alpha, type Components, type Theme } from "@mui/material/styles";
 import { gray } from "../themePrimitives";
 
 /* eslint-disable import/prefer-default-export */
@@ -53,6 +53,11 @@ export const surfacesCustomizations: Components<Theme> = {
 	MuiPaper: {
 		defaultProps: {
 			elevation: 0,
+		},
+		styleOverrides: {
+			outlined: {
+				border: "1px solid #7a7f894d",
+			},
 		},
 	},
 	MuiCard: {

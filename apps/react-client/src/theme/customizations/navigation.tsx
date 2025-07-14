@@ -4,8 +4,8 @@ import { dividerClasses } from "@mui/material/Divider";
 import { menuItemClasses } from "@mui/material/MenuItem";
 import { selectClasses } from "@mui/material/Select";
 import type { SvgIconProps } from "@mui/material/SvgIcon";
+import { alpha, type Components, type Theme } from "@mui/material/styles";
 import { tabClasses } from "@mui/material/Tab";
-import { type Components, type Theme, alpha } from "@mui/material/styles";
 import * as React from "react";
 import { brand, gray } from "../themePrimitives";
 
@@ -30,7 +30,6 @@ export const navigationCustomizations: Components<Theme> = {
 	MuiMenu: {
 		styleOverrides: {
 			list: {
-				gap: "0px",
 				[`&.${dividerClasses.root}`]: {
 					margin: "0 -8px",
 				},
@@ -60,7 +59,12 @@ export const navigationCustomizations: Components<Theme> = {
 		defaultProps: {
 			IconComponent: React.forwardRef<SVGSVGElement, SvgIconProps>(
 				(props, ref) => (
-					<UnfoldMoreRoundedIcon fontSize="small" {...props} ref={ref} />
+					<UnfoldMoreRoundedIcon
+						fontSize="small"
+						{...props}
+						ref={ref}
+						data-test-id="navigation--UnfoldMoreRoundedIcon-0"
+					/>
 				),
 			) as any,
 		},
@@ -70,7 +74,8 @@ export const navigationCustomizations: Components<Theme> = {
 				border: "1px solid",
 				borderColor: gray[200],
 				backgroundColor: (theme.vars || theme).palette.background.paper,
-				boxShadow: `inset 0 1px 0 1px hsla(220, 0%, 100%, 0.6), inset 0 -1px 0 1px hsla(220, 35%, 90%, 0.5)`,
+				boxShadow:
+					"inset 0 1px 0 1px hsla(220, 0%, 100%, 0.6), inset 0 -1px 0 1px hsla(220, 35%, 90%, 0.5)",
 				"&:hover": {
 					borderColor: gray[300],
 					backgroundColor: (theme.vars || theme).palette.background.paper,

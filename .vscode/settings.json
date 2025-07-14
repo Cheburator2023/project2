@@ -20,7 +20,6 @@
 		"editor.formatOnSave": true
 	},
 	"javascript.format.insertSpaceAfterOpeningAndBeforeClosingNonemptyBraces": false,
-	"typescript.tsdk": "node_modules\\typescript\\lib",
 	"editor.codeActionsOnSave": {
 		"source.fixAll.biome": "explicit",
 		"source.organizeImports.biome": "explicit"
@@ -32,9 +31,11 @@
 	"search.exclude": {
 		"**/dist/**": true
 	},
-	"npm-scripts.showStartNotification": false,
 	"[typescriptreact]": {
 		"editor.defaultFormatter": "biomejs.biome"
 	},
-	"typescript.preferences.importModuleSpecifier": "non-relative"
+	"typescript.preferences.importModuleSpecifier": "non-relative",
+	"[html]": {
+		"editor.defaultFormatter": "vscode.html-language-features"
+	}
 }

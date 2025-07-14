@@ -1,24 +1,12 @@
 # Base Image
-FROM node:22.14.0-alpine3.20 as phase1
+FROM docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-ui:v1.0.2 as build-deps
 
-WORKDIR /app
+# build react-client
+COPY . ./
+RUN npm run build
 
-# Run npm only if package.json changes
-# copied tsconfig as nestjs-server's tsconfig extends rootDir's tsconfig
-COPY --chown=node:node turbo.json .
-COPY --chown=node:node tsconfig.json .
-COPY --chown=node:node package.json .
+EXPOSE 3000
 
-# first create these directories, else the copying won't work.
-RUN mkdir -p apps/nestjs-server
+# ENV NODE_ENV=production
 
-# copying only the required packages
-COPY --chown=node:node ./apps/nestjs-server/tsconfig.*.json apps/nestjs-server
-COPY --chown=node:node ./apps/nestjs-server/package.json apps/nestjs-server
-COPY --chown=node:node ./apps/nestjs-server apps/nestjs-server
-
-# install node_modules
-RUN npm i
-
-# run server in prod env
-CMD ["npm run prod --workspace=nestjs-server"]
+CMD ["npm","run","start"]

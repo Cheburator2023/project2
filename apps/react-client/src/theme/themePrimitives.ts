@@ -1,8 +1,8 @@
 import {
-	type PaletteMode,
-	type Shadows,
 	alpha,
 	createTheme,
+	type PaletteMode,
+	type Shadows,
 } from "@mui/material/styles";
 
 declare module "@mui/material/Paper" {
@@ -257,6 +257,13 @@ export const colorSchemes = {
 				main: brand[400],
 				dark: brand[700],
 				contrastText: brand[50],
+			},
+			secondary: {
+				main: gray[50],
+				primary: gray[100],
+				secondary: gray[200],
+				dark: gray[700],
+				light: gray[50],
 			},
 			info: {
 				light: brand[100],

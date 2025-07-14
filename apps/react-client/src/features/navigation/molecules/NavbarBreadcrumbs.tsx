@@ -1,9 +1,9 @@
 import NavigateNextRoundedIcon from "@mui/icons-material/NavigateNextRounded";
 import Breadcrumbs, { breadcrumbsClasses } from "@mui/material/Breadcrumbs";
-import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
+import Typography from "@mui/material/Typography";
+import { camelCase } from "lodash-es";
 import { useLocation } from "react-router";
-
 import { routes } from "../../../routing/routes";
 
 const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
@@ -20,19 +20,26 @@ const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
 export function NavbarBreadcrumbs() {
 	const location = useLocation();
 
-	const crumb =
-		routes[location.pathname.replace("/", "") as keyof typeof routes]?.name ||
-		routes.home.name;
+	const path = camelCase(location.pathname.split("/", 3).join(" "));
+
+	const pathName = routes[path as keyof typeof routes]?.name;
+	const crumb = pathName ? pathName : !path ? routes.home.name : "???";
 
 	return (
 		<StyledBreadcrumbs
 			aria-label="breadcrumb"
-			separator={<NavigateNextRoundedIcon fontSize="small" />}
+			separator={
+				<NavigateNextRoundedIcon
+					fontSize="small"
+					data-test-id="navbar-breadcrumbs--NavigateNextRoundedIcon-0"
+				/>
+			}
+			data-test-id="navbar-breadcrumbs--StyledBreadcrumbs-0"
 		>
-			{/* <Typography variant="h5">DataLineage</Typography> */}
 			<Typography
 				variant="body1"
 				sx={{ color: "text.primary", fontWeight: 600 }}
+				data-test-id="navbar-breadcrumbs--Typography-0"
 			>
 				{crumb}
 			</Typography>

@@ -3,20 +3,28 @@ const webpack = require("webpack");
 
 const { DefinePlugin } = webpack;
 const common = require("./webpack.common.js");
+const APP_NAME = "smartAnketa";
 
-const git_revision = require("node:child_process")
+const git_revision = require("child_process")
 	.execSync('git show --format="short" -s')
 	.toString()
 	.trim();
 
 module.exports = merge(common, {
-	mode: "production",
+	mode: "development",
+	devtool: "cheap-module-source-map",
+	optimization: {
+		minimize: false,
+	},
 	plugins: [
 		new DefinePlugin({
+			"process.env": {},
 			"process.env.MOCKED_REQUESTS": JSON.stringify(
 				process.env.MOCKED_REQUESTS || "",
 			),
 			"process.env.GIT_REVISION": JSON.stringify(git_revision || ""),
+			"process.env.APP_NAME": JSON.stringify(APP_NAME),
+			"process.env.REACT_APP_API_URL": JSON.stringify("http://localhost:3000"),
 		}),
 	],
 });

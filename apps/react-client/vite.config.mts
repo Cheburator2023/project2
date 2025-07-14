@@ -1,21 +1,23 @@
 import child_process from "node:child_process";
 import path from "node:path";
-import { URL, fileURLToPath } from "node:url";
+import { fileURLToPath, URL } from "node:url";
+
 import { federation } from "@module-federation/vite";
 import svgr from "@svgr/rollup";
 import react from "@vitejs/plugin-react";
 import browserslistToEsbuild from "browserslist-to-esbuild";
-import { type HttpProxy, defineConfig, loadEnv } from "vite";
+import { defineConfig, type HttpProxy, loadEnv } from "vite";
 // import { viteStaticCopy } from 'vite-plugin-static-copy';
 import checker from "vite-plugin-checker";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import tsconfigPaths from "vite-tsconfig-paths";
 
-const deps = require("./package.json").dependencies;
-
+const APP_NAME = "smartAnketa";
 const publicEnvVars: any[] = [];
-const { STAGE } = process.env;
+const STAGE = process.env.STAGE;
 const IS_DEV = process.env.NODE_ENV === "development";
+const NO_ROLES = process.env.NO_ROLES;
+
 const ROOT_DIR = path.resolve(__dirname, "./");
 const DIST_DIR = path.resolve(ROOT_DIR, "./dist");
 
@@ -33,8 +35,11 @@ const git_revision = child_process
 export const viteCommonConfig = ({
 	appName,
 	base = "/",
-}: { appName?: string; base?: string }) =>
-	defineConfig(({ mode }) => {
+}: {
+	appName?: string;
+	base?: string;
+}) =>
+	defineConfig(({ mode }): any => {
 		const envDir = fileURLToPath(new URL("..", import.meta.url));
 		const env = loadEnv(mode, envDir, "");
 
@@ -78,13 +83,12 @@ export const viteCommonConfig = ({
 				...(!IS_DEV
 					? [
 							federation({
-								name: "remote",
+								name: APP_NAME,
 								filename: "remoteEntry.js",
 								exposes: {
-									"./Routes": "./src/common/primitives/NullComponent",
-									"./Layout": "./src/App",
+									"./App": "./src/indexFederated",
 								},
-								shared: ["react", "react-dom"],
+								shared: [],
 							}),
 						]
 					: []),
@@ -93,11 +97,7 @@ export const viteCommonConfig = ({
 					// To add only specific polyfills, add them here. If no option is passed, adds all polyfills
 					include: ["net"],
 				}),
-				react({
-					babel: {
-						plugins: ["../../etc/babel/babel-plugin-react-add-test-id.js"],
-					},
-				}),
+				react(),
 				svgr({
 					dimensions: false,
 					svgProps: {
@@ -108,11 +108,11 @@ export const viteCommonConfig = ({
 				//   targets: [{}],
 				// }),
 				checker({
-					biome: {
-						dev: {
-							logLevel: ["error"],
-						},
-					},
+					// biome: {
+					// 	dev: {
+					// 		logLevel: ["error"],
+					// 	},
+					// },
 					typescript: true,
 					overlay: {
 						initialIsOpen: false,
@@ -125,6 +125,11 @@ export const viteCommonConfig = ({
 					process.env.MOCKED_REQUESTS,
 				),
 				"process.env.GIT_REVISION": JSON.stringify(git_revision),
+				"process.env.APP_NAME": JSON.stringify(APP_NAME),
+				"process.env.REACT_APP_API_URL": JSON.stringify(
+					"http://localhost:3000",
+				),
+				"process.env.NO_ROLES": JSON.stringify(NO_ROLES),
 			},
 
 			// resolve: {
@@ -138,11 +143,12 @@ export const viteCommonConfig = ({
 			// },
 
 			server: {
+				// host: "www.test.vtb.ru",
 				fs: {
 					strict: false,
 					cachedChecks: false,
 				},
-				port: 8008,
+				port: 8004,
 				proxy: {
 					"/api": {
 						target: currentTarget,
@@ -175,5 +181,4 @@ export const viteCommonConfig = ({
 		};
 	});
 
-// biome-ignore lint/style/noDefaultExport: <explanation>
 export default viteCommonConfig({});

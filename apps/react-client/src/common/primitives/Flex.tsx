@@ -176,7 +176,7 @@ export const Flex = styled("div")<TFlexboxProps>`
 	${props.margin ? `margin: ${props.margin};` : ""}
 
     & > * {
-    ${props.fillChild ? `width: 100%;` : ""}
+    ${props.fillChild ? "width: 100%;" : ""}
     }
     
   `}

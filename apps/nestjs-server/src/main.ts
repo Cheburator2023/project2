@@ -1,37 +1,62 @@
+import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
-import {
-	FastifyAdapter,
-	type NestFastifyApplication,
-} from "@nestjs/platform-fastify";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import * as express from "express";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-	/**
-	 * The current config will start the NestJS application with
-	 * fastify adapter. To use the default express adapter, remove
-	 * the @nestjs/platform-fastify from package.json and uncomment
-	 * the line below...
-	 */
-	// const app = await NestFactory.create(AppModule);
+	const app = await NestFactory.create(AppModule);
 
-	/**
-	 * Unfortunately NestJs prod build with fastify, works on local
-	 * machine, but it does not port map on docker...
-	 *
-	 * Soln link -
-	 * https://stackoverflow.com/questions/66086427/docker-container-with-nodejs-appnestjs-is-not-accessible-from-both-other-conta
-	 */
-	const app = await NestFactory.create<NestFastifyApplication>(
-		AppModule,
-		new FastifyAdapter({
-			ignoreTrailingSlash: true,
-			caseSensitive: false,
+	app.enableCors({
+		origin: "*",
+		credentials: true,
+	});
+
+	app.use(express.json());
+	app.use(express.urlencoded({ extended: true }));
+
+	app.useGlobalPipes(
+		new ValidationPipe({
+			transform: true,
+			whitelist: true,
+			forbidNonWhitelisted: true,
+			transformOptions: {
+				enableImplicitConversion: true,
+			},
+			disableErrorMessages: false,
+			validationError: {
+				target: false,
+				value: false,
+			},
 		}),
 	);
-	await app.listen(4000, "0.0.0.0");
-}
 
-bootstrap().catch((error) => {
-	console.error("Error during app startup: ", error);
-	process.exit(1);
-});
+	const config = new DocumentBuilder()
+		.setTitle("Smart Anketa API")
+		.setDescription("API documentation for Smart Anketa application")
+		.setVersion("1.0")
+		.addBearerAuth(
+			{
+				type: "http",
+				scheme: "bearer",
+				bearerFormat: "JWT",
+				name: "JWT",
+				description: "Enter JWT token",
+				in: "header",
+			},
+			"JWT-auth",
+		)
+		.build();
+
+	const document = SwaggerModule.createDocument(app, config);
+
+	SwaggerModule.setup("api", app, document);
+
+	app.getHttpAdapter().get("/api-json", (_req, res) => {
+		res.setHeader("Content-Type", "application/json");
+		res.send(document);
+	});
+
+	await app.listen(3000);
+}
+bootstrap();
