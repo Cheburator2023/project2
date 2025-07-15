@@ -12,11 +12,12 @@ import { Card } from "@react-client/common/muiCustom/Card";
 import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import { toast } from "@react-client/common/toasts";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { AnketaBasicLayoutPreview } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayoutPreview";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 
 export const AnketaPreviewPage = () => {
@@ -27,7 +28,9 @@ export const AnketaPreviewPage = () => {
 	const [formData, setFormData] = useState<any>(null);
 	const queryClient = useQueryClient();
 
-	const { setApiRef, resetApiRef, ...store } = useAnketaCRUDFormsStore();
+	const store = useAnketaCRUDFormsStore();
+	const { anketaPreview_basicInfoForm, anketaPreview_projectAssessmentForm } =
+		store;
 
 	const {
 		data: _initialData,
@@ -58,8 +61,18 @@ export const AnketaPreviewPage = () => {
 			setIsEditing(false);
 			refetch();
 			queryClient.invalidateQueries();
+			toast.success("Данные успешно обновлены");
+		},
+		onError: (error: any) => {
+			toast.error("Ошибка обновления данных", {
+				description: error?.response?.data?.message,
+			});
 		},
 	});
+
+	const isFormValid = anketaPreview_basicInfoForm?.isValid;
+	const formHasErrors = anketaPreview_basicInfoForm?.hasErrors;
+	const submitCount = anketaPreview_basicInfoForm?.submitCount;
 
 	const handleEdit = () => {
 		if (initialData) {
@@ -76,6 +89,11 @@ export const AnketaPreviewPage = () => {
 	};
 
 	const handleSave = () => {
+		anketaPreview_basicInfoForm.api?.submit();
+		anketaPreview_projectAssessmentForm.api?.submit();
+	};
+
+	const performUpdate = () => {
 		if (formData) {
 			// Only send allowed fields
 			// const allowedFields = [
@@ -97,6 +115,15 @@ export const AnketaPreviewPage = () => {
 			});
 		}
 	};
+
+	useEffect(() => {
+		if (formHasErrors) {
+			return;
+		}
+		if (isFormValid) {
+			performUpdate();
+		}
+	}, [isFormValid, submitCount, formHasErrors]);
 
 	return (
 		<div data-test-id="anketa-details-page--div-0">
@@ -128,7 +155,7 @@ export const AnketaPreviewPage = () => {
 					</>
 				)}
 			</Header>
-			{isError ? (
+			{false ? (
 				<Flex
 					justifyContent="center"
 					alignItems="center"
@@ -143,10 +170,11 @@ export const AnketaPreviewPage = () => {
 						</Button>
 					</Card>
 				</Flex>
-			) : isFetching ? (
+			) : false ? (
 				<FullScreenLoader />
 			) : (
 				<AnketaBasicLayoutPreview
+					isEditing={isEditing}
 					initialData={isEditing ? formData : initialData}
 					comfyView={comfyView}
 					mainInfoDisabled={!isEditing}

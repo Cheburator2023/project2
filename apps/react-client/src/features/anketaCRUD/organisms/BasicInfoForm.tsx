@@ -28,6 +28,7 @@ interface BasicInfoFormProps {
 	initialData?: CalculationResponseDto;
 	disabled?: boolean;
 	isCreate?: boolean;
+	isEditing?: boolean;
 	onChange?: (data: any) => void;
 }
 
@@ -145,6 +146,7 @@ export const BasicInfoForm = ({
 	initialData: _initialData,
 	isCreate = false,
 	disabled = false,
+	isEditing,
 	onChange,
 }: BasicInfoFormProps) => {
 	const initialData = { ..._initialData, calcName: _initialData?.name };
@@ -231,7 +233,9 @@ export const BasicInfoForm = ({
 
 	const formRef = useRef<FormRef>(null);
 
-	const formName = AnketaCRUDFormNames.anketaCreate_basicInfoForm;
+	const formName = isCreate
+		? AnketaCRUDFormNames.anketaCreate_basicInfoForm
+		: AnketaCRUDFormNames.anketaPreview_basicInfoForm;
 	const formDataStore = store[formName];
 	const apiFormStore = formDataStore.api;
 	const formState = apiFormStore?.state;
@@ -349,7 +353,7 @@ export const BasicInfoForm = ({
 			onBlur={onBlur}
 			onFocus={onFocus}
 			templates={templates}
-			liveValidate={isCreate && liveValidate}
+			liveValidate={(isEditing || isCreate) && liveValidate}
 			noHtml5Validate
 			focusOnFirstError
 			showErrorList={false}

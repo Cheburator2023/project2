@@ -13,10 +13,12 @@ import { useLocation } from "react-router";
 export const AnketaBasicLayoutPreview = ({
 	initialData,
 	comfyView,
+	isEditing = false,
 	mainInfoDisabled = true,
 	onMainInfoChange,
 }: {
 	comfyView?: boolean;
+	isEditing?: boolean;
 	initialData: CalculationResponseDto;
 	mainInfoDisabled?: boolean;
 	onMainInfoChange?: (data: any) => void;
@@ -48,6 +50,7 @@ export const AnketaBasicLayoutPreview = ({
 						>
 							<Spacer data-test-id="anketa-basic-layout--Spacer-2" />
 							<BasicInfoForm
+								isEditing={isEditing}
 								initialData={initialData}
 								disabled={mainInfoDisabled}
 								onChange={onMainInfoChange}

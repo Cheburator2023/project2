@@ -11,7 +11,6 @@ import { useNavigate } from "react-router";
 
 export const AnketaCreatePage = () => {
 	const navigate = useNavigate();
-	const [_hasSubmitted, setHasSubmitted] = useState(false);
 	const store = useAnketaCRUDFormsStore();
 
 	const {
@@ -39,7 +38,6 @@ export const AnketaCreatePage = () => {
 	const submitCount = anketaCreate_basicInfoForm?.submitCount;
 
 	const onSubmit = () => {
-		setHasSubmitted(true);
 		anketaCreate_basicInfoForm.api?.submit();
 		anketaCreate_projectAssessmentForm.api?.submit();
 	};
@@ -81,7 +79,6 @@ export const AnketaCreatePage = () => {
 				},
 				{
 					onSuccess: (data) => {
-						setHasSubmitted(false);
 						console.log("Success:", data);
 						toast.success("Расчет успешно создан");
 						reset();
@@ -90,7 +87,6 @@ export const AnketaCreatePage = () => {
 						}, 100);
 					},
 					onError: (error: any) => {
-						setHasSubmitted(false);
 						toast.error("Сетевая ошибка создания расчета", {
 							description: error?.response?.data?.message,
 							action: {
