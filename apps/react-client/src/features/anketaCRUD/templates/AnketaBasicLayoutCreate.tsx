@@ -109,11 +109,11 @@ export const AnketaBasicLayoutCreate = ({
 					data-test-id="anketa-basic-layout--Flex-1"
 					gap={6}
 				>
-					{formHasErrors && (
+					{/* {formHasErrors && (
 						<Alert severity="error">
 							Форма имеет ошибки или заполнена не до конца
 						</Alert>
-					)}
+					)} */}
 					<Button
 						variant="contained"
 						onClick={onSubmit}

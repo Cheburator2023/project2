@@ -53,7 +53,7 @@ export const ProjectAssessmentFormPreview = ({
 }) => {
 	const { setFormData: setFormDataForCalc } = assessmentCalculationsStore();
 
-	const formData = initialData.questionnaireData;
+	const formData = initialData?.questionnaireData;
 
 	const _mainCalcSchema = omit(mainCalcSchema, ["required"]);
 

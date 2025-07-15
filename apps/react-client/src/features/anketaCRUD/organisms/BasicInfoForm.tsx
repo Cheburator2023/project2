@@ -142,11 +142,13 @@ const widgets: RegistryWidgetsType = {
 };
 
 export const BasicInfoForm = ({
-	initialData,
+	initialData: _initialData,
 	isCreate = false,
 	disabled = false,
 	onChange,
 }: BasicInfoFormProps) => {
+	const initialData = { ..._initialData, calcName: _initialData?.name };
+
 	const { data: questData, refetch } =
 		useQuestionnaireControllerGetFullQuestionnaire({
 			query: {

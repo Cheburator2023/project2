@@ -25,12 +25,14 @@ export const AnketaPreviewPage = () => {
 	const [comfyView, setComfyView] = useState(true);
 	const [isEditing, setIsEditing] = useState(false);
 	const [formData, setFormData] = useState<any>(null);
+	console.log("🐸 Pepe said >> AnketaPreviewPage >> formData:", formData);
+
 	const queryClient = useQueryClient();
 
 	const { setApiRef, resetApiRef, ...store } = useAnketaCRUDFormsStore();
 
 	const {
-		data: initialData,
+		data: _initialData,
 		refetch,
 		isFetching,
 		isError,
@@ -39,6 +41,14 @@ export const AnketaPreviewPage = () => {
 			enabled: !!calcId,
 		},
 	});
+	console.log(
+		"🐸 Pepe said >> AnketaPreviewPage >> _initialData:",
+		_initialData,
+	);
+
+	const initialData = { ..._initialData, calcName: _initialData?.name };
+
+	console.log("🐸 Pepe said >> AnketaPreviewPage >> initialData:", initialData);
 
 	// Custom update mutation (PUT /calculation/:id)
 	const updateMutation = useMutation({
@@ -60,7 +70,7 @@ export const AnketaPreviewPage = () => {
 	const handleEdit = () => {
 		if (initialData) {
 			// Copy all fields from initialData, not just meta fields
-			setFormData({ ...initialData });
+			setFormData({ ...initialData, calcName: _initialData?.name });
 			setIsEditing(true);
 		}
 	};
@@ -74,7 +84,7 @@ export const AnketaPreviewPage = () => {
 		if (formData) {
 			// Only send allowed fields
 			const allowedFields = [
-				"name",
+				"calcName",
 				"rfd",
 				"streamExecutor",
 				"department",
