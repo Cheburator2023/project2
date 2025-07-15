@@ -66,7 +66,7 @@ export const HomePage = () => {
 		<HomeTemplete
 			data={(IS_DEV ? list_mock : data) as any}
 			error={error}
-			isLoading={isLoading || isFetching}
+			isLoading={IS_DEV ? false : isLoading || isFetching}
 			refetch={refetch}
 		/>
 	);

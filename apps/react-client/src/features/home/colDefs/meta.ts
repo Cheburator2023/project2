@@ -55,7 +55,8 @@ export const meta: ColDef<any, any>[] = [
 		filter: "agDateColumnFilter",
 		cellDataType: "dateTime",
 		valueFormatter: (params) => {
-			const dt = new Date(params?.value.replace("Z", ""));
+			const dt = new Date(params?.value?.replace("Z", ""));
+
 			return format(dt, "dd MMMM yyyy, HH:mm:ss, xxxxx");
 		},
 	},

@@ -36,11 +36,9 @@ export const AnketaCreatePage = () => {
 	);
 
 	const submitCount = anketaCreate_basicInfoForm?.submitCount;
-	console.log("🐸 Pepe said >> AnketaCreatePage >> isFormValid:", submitCount);
 
 	const onSubmit = () => {
 		setHasSubmitted(true);
-		console.log("🐸 Pepe said >> onSubmit >> true:", true);
 		anketaCreate_basicInfoForm.api?.submit();
 		anketaCreate_projectAssessmentForm.api?.submit();
 	};

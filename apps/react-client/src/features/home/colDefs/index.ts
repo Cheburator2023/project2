@@ -1,6 +1,6 @@
 import { calculationResult } from "@react-client/features/home/colDefs/calculationResult";
 import { meta } from "@react-client/features/home/colDefs/meta";
-import { rest } from "@react-client/features/home/colDefs/rest";
+import { questionnaire } from "@react-client/features/home/colDefs/questionnaire";
 import { CalculationPreviewCell } from "@react-client/features/home/molecules/CalculationPreviewCell";
 import { ColDef } from "ag-grid-community";
 export const _columnDefs: ColDef<any, any>[] = [
@@ -27,5 +27,5 @@ export const _columnDefs: ColDef<any, any>[] = [
 	},
 	...meta,
 	...calculationResult,
-	...rest,
+	...questionnaire,
 ];

@@ -1,13 +1,21 @@
 import schema from "@react-client/features/jsonFormGenerator/schemas/calc_schema.json";
-import { ColDef } from "ag-grid-community";
+import { ColDef, ValueGetterFunc } from "ag-grid-community";
+import { get } from "lodash-es";
+
+const valueGetter = (
+	key: string,
+	parent: string,
+): ValueGetterFunc<any, any> => {
+	return (params) => {
+		const field = params.colDef.field;
+		const regex = new RegExp(`${parent}\\.(\\d+)\\.`);
+		const index = field?.match(regex)?.[1];
+		const path = `${parent}.${index || 0}.${key}`;
+		return get(params.data, path, "-");
+	};
+};
 
 export const questionnaire: ColDef<any, any>[] = [
-	{
-		field: "questionnaireData.name",
-		headerName: "Название анкеты",
-		sortable: true,
-		filter: true,
-	},
 	{
 		field: "questionnaireData.modelsCount",
 		headerName: "Количество моделей",
@@ -136,52 +144,60 @@ export const questionnaire: ColDef<any, any>[] = [
 		filter: true,
 	},
 	{
-		field: "questionnaireData.algorithmTabular",
+		field: "questionnaireData.algorithmType.0.keyName",
 		headerName: "Тип алгоритма: Табличные данные",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.algorithmTextClassic",
+		field: "questionnaireData.algorithmType.1.keyName",
 		headerName: "Тип алгоритма: Текстовая аналитика_Классические модели",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.algorithmTextLLM",
+		field: "questionnaireData.algorithmType.2.keyName",
 		headerName: "Тип алгоритма: Текстовая аналитика_LLM",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.algorithmAudio",
+		field: "questionnaireData.algorithmType.3.keyName",
 		headerName: "Тип алгоритма: Аудио аналитика",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.algorithmComputerVision",
+		field: "questionnaireData.algorithmType.4.keyName",
 		headerName: "Тип алгоритма: Компьютерное зрение_CV",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.algorithmOptimization",
+		field: "questionnaireData.algorithmType.5.keyName",
 		headerName: "Тип алгоритма: Оптимизационная задача",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.algorithmGeoAnalytics",
+		field: "questionnaireData.algorithmType.6.keyName",
 		headerName: "Тип алгоритма: Гео-аналитика",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.algorithmGraphAnalytics",
+		field: "questionnaireData.algorithmType.7.keyName",
 		headerName: "Тип алгоритма: Графовая аналитика",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
 		field: "questionnaireData.productionDeploymentChannels",
@@ -198,139 +214,158 @@ export const questionnaire: ColDef<any, any>[] = [
 		},
 	},
 	{
-		field: "questionnaireData.productionDeploymentChannels.deploymentBatch",
+		field: "questionnaireData.deploymentChannel.0.keyName",
 		headerName: "Канал внедрения: Батч",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.deploymentBatchWithData",
+		field: "questionnaireData.deploymentChannel.1.keyName",
 		headerName: "Канал внедрения: Батч + загрузка данных потребителю",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.deploymentBatchOnline",
+		field: "questionnaireData.deploymentChannel.2.keyName",
 		headerName: "Канал внедрения: Батч + Онлайн",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.deploymentOnline",
+		field: "questionnaireData.deploymentChannel.3.keyName",
 		headerName: "Канал внедрения: Онлайн",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.deploymentOnlineGpu",
+		field: "questionnaireData.deploymentChannel.4.keyName",
 		headerName: "Канал внедрения: Онлайн gpu",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.deploymentStreaming",
+		field: "questionnaireData.deploymentChannel.5.keyName",
 		headerName: "Канал внедрения: Стриминг",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.deploymentMobile",
+		field: "questionnaireData.deploymentChannel.6.keyName",
 		headerName: "Канал внедрения: Мобильные устройства",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.deploymentLLM",
+		field: "questionnaireData.deploymentChannel.7.keyName",
 		headerName: "Канал внедрения: LLM",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.deploymentGeoServices",
+		field: "questionnaireData.deploymentChannel.8.keyName",
 		headerName: "Канал внедрения: Гео-сервисы",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.deploymentCloud",
+		field: "questionnaireData.deploymentChannel.9.keyName",
 		headerName: "Канал внедрения: Внедрение в облаке",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.deploymentGraphPlatform",
+		field: "questionnaireData.deploymentChannel.10.keyName",
 		headerName: "Канал внедрения: Графовая платформа",
 		sortable: true,
 		filter: true,
+		cellDataType: "boolean",
 	},
 	{
-		field: "questionnaireData.riskBusinessProcesses",
+		field: "questionnaireData.generalUncertainty.businessProcessComplexity",
 		headerName:
 			"Риск: Изменение, недостаточная проработка или сложности бизнес-процессов Банка",
 		sortable: true,
 		filter: true,
 	},
 	{
-		field: "questionnaireData.riskSoftwareDefects",
+		field: "questionnaireData.projectSolutionDefects",
 		headerName:
 			"Риск: Наличие дефектов во внедряемом решении/ПО в рамках проекта",
 		sortable: true,
 		filter: true,
 	},
 	{
-		field: "questionnaireData.riskRelatedProjects",
+		field: "questionnaireData.adjacentProjectsImpact",
 		headerName:
 			"Риск: Негативное влияние смежных проектов на показатели проекта",
 		sortable: true,
 		filter: true,
+		valueGetter: valueGetter(
+			"type",
+			"questionnaireData.adjacentProjectsImpact",
+		),
 	},
 	{
-		field: "questionnaireData.riskIncreasedEffort",
+		field: "questionnaireData.planningRequirementGaps",
 		headerName:
 			"Риск: Увеличение трудозатрат проекта по причине недостаточной проработки требований на этапе планирования проекта",
 		sortable: true,
 		filter: true,
+		valueGetter: valueGetter(
+			"type",
+			"questionnaireData.planningRequirementGaps",
+		),
 	},
 	{
-		field: "questionnaireData.riskContractorPerformance",
+		field: "questionnaireData.contractorPerformanceIssues",
 		headerName:
 			"Риск: Недобросовестное исполнение услуг со стороны привлеченных контрагентов/подрядчиков",
 		sortable: true,
 		filter: true,
 	},
 	{
-		field: "questionnaireData.riskPersonnelQuality",
+		field: "questionnaireData.qualifiedStaffShortage",
 		headerName:
 			"Риск: Отсутствие квалифицированного персонала или ошибок персонала",
 		sortable: true,
 		filter: true,
 	},
 	{
-		field: "questionnaireData.riskSanctions",
+		field: "questionnaireData.sanctionsRisk",
 		headerName: "Риск: Введение санкционных мер и других ограничений",
 		sortable: true,
 		filter: true,
 	},
 	{
-		field: "questionnaireData.riskControlProcedures",
+		field: "questionnaireData.controlProceduresGaps",
 		headerName: "Риск: Недостаток или отсутствие контрольных процедур",
 		sortable: true,
 		filter: true,
 	},
 	{
-		field: "questionnaireData.riskRegulatoryChanges",
+		field: "questionnaireData.regulatoryChanges",
 		headerName: "Риск: Изменение регуляторных требований",
 		sortable: true,
 		filter: true,
 	},
 	{
-		field: "questionnaireData.riskSystemNonUsage",
+		field: "questionnaireData.systemUnderutilization",
 		headerName: "Риск: Неиспользование ИС после завершения проекта",
 		sortable: true,
 		filter: true,
 	},
 	{
-		field: "questionnaireData.riskArchitectureChanges",
+		field: "questionnaireData.itArchitectureChanges",
 		headerName: "Риск: Изменение целевой ИТ архитектуры Банка",
 		sortable: true,
 		filter: true,
