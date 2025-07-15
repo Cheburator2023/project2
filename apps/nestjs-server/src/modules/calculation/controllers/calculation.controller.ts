@@ -29,6 +29,7 @@ import {
 } from "../dto";
 import { CalculationService } from "../services/calculation.service";
 import {UpdateCalculationDto} from "../dto/request/update-calculation.dto";
+import {Calculation} from "../entities/calculation.entity";
 
 @ApiBearerAuth("JWT-auth")
 @ApiTags("Calculation")
@@ -205,22 +206,19 @@ export class CalculationController {
 		return this.mapToResponseDto(calculation);
 	}
 
-    private mapToResponseDto(calculation: any): CalculationResponseDto {
-        const generalUncertaintyArray = calculation.questionnaireData.generalUncertainty
-            ? Object.entries(calculation.questionnaireData.generalUncertainty).map(
-                ([type, value]: [string, any]) => ({
+    private mapToResponseDto(calculation: Calculation): CalculationResponseDto {
+        const generalUncertainty = Array.isArray(calculation.questionnaireData.generalUncertainty)
+            ? calculation.questionnaireData.generalUncertainty
+            : Object.entries(calculation.questionnaireData.generalUncertainty || {})
+                .map(([type, value]) => ({
                     type,
                     probability: value.probability,
                     influence: value.influence
-                })
-            )
-            : [];
+                }));
 
-        const productionDeploymentChannelsArray = calculation.questionnaireData.productionDeploymentChannels
-            ? calculation.questionnaireData.productionDeploymentChannels.map(
-                (item: any) => item.deploymentChannel
-            )
-            : [];
+        const productionDeploymentChannels = calculation.questionnaireData.productionDeploymentChannels
+            ?.map(ch => typeof ch === 'string' ? { deploymentChannel: ch } : ch)
+            ?.map(ch => ch.deploymentChannel) || [];
 
         return {
             id: calculation.id,
@@ -231,22 +229,9 @@ export class CalculationController {
             customerName: calculation.customerName,
             comment: calculation.comment,
             questionnaireData: {
-                name: calculation.questionnaireData.name,
-                setupComplexity: calculation.questionnaireData.setupComplexity,
-                initiativeTimeline: calculation.questionnaireData.initiativeTimeline,
-                initiativeCost: calculation.questionnaireData.initiativeCost,
-                modelsCount: calculation.questionnaireData.modelsCount,
-                uncertaintyAdjustment: calculation.questionnaireData.uncertaintyAdjustment,
-                generalUncertainty: generalUncertaintyArray,
-                readyPromReports: calculation.questionnaireData.readyPromReports,
-                assessedInitiativesCount: calculation.questionnaireData.assessedInitiativesCount,
-                dataSourcesCount: calculation.questionnaireData.dataSourcesCount,
-                pilotModelRequired: calculation.questionnaireData.pilotModelRequired,
-                algorithmComplexity: calculation.questionnaireData.algorithmComplexity,
-                pilotSupportRequired: calculation.questionnaireData.pilotSupportRequired,
-                autoMlRequired: calculation.questionnaireData.autoMlRequired,
-                productionAdditionalReports: calculation.questionnaireData.productionAdditionalReports,
-                productionDeploymentChannels: productionDeploymentChannelsArray
+                ...calculation.questionnaireData,
+                generalUncertainty,
+                productionDeploymentChannels,
             },
             finalCoefficient: calculation.finalCoefficient,
             createdAt: calculation.createdAt,

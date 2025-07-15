@@ -24,7 +24,7 @@ export class CreateCalculationTable1718651234567 implements MigrationInterface {
         `);
 
 		await queryRunner.query(`
-            CREATE INDEX idx_calculation_created_at ON calculation("createdAt")
+            CREATE INDEX IF NOT EXISTS idx_calculation_created_at ON calculation("createdAt")
         `);
 	}
 
