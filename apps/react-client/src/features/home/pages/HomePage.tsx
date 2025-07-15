@@ -8,7 +8,6 @@ import { useGlobalSettingsStore } from "@react-client/common/store/globalSetting
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { toast } from "@react-client/common/toasts";
 import { _columnDefs } from "@react-client/features/home/colDefs";
-import { list_mock } from "@react-client/features/home/data_mock";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { SearchInput } from "@react-client/features/navigation/organisms/SearchInput";
 import { routes } from "@react-client/routing/routes";
@@ -35,7 +34,7 @@ import {
 	SetFilterModule,
 } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 
 ModuleRegistry.registerModules([
@@ -51,22 +50,22 @@ ModuleRegistry.registerModules([
 
 const themeQuartzDark = themeQuartz.withPart(colorSchemeDarkBlue);
 
-const IS_DEV = process.env.NODE_ENV !== "production";
+// const IS_DEV = process.env.NODE_ENV !== "production";
 
 export const HomePage = () => {
 	const { data, isLoading, isFetching, error, refetch } =
 		useCalculationControllerFindAll({
 			query: {
-				refetchInterval: 30000,
+				refetchInterval: 100000,
 				staleTime: 10,
 			},
 		});
 
 	return (
 		<HomeTemplete
-			data={(IS_DEV ? list_mock : data) as any}
+			data={data as any}
 			error={error}
-			isLoading={IS_DEV ? false : isLoading || isFetching}
+			isLoading={isLoading || isFetching}
 			refetch={refetch}
 		/>
 	);

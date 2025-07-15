@@ -143,7 +143,12 @@ export const BasicInfoForm = ({
 	disabled = false,
 	onChange,
 }: BasicInfoFormProps) => {
-	const { data: questData } = useQuestionnaireControllerGetFullQuestionnaire();
+	const { data: questData, refetch } =
+		useQuestionnaireControllerGetFullQuestionnaire({
+			query: {
+				staleTime: 0,
+			},
+		});
 	const [formData, setFormData] = useState<IBasicFormData>(
 		basicInfoFormInitialData,
 	);
