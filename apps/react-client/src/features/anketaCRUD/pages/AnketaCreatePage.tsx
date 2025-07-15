@@ -63,6 +63,7 @@ export const AnketaCreatePage = () => {
 		if (isFormValid) {
 			const data: CreateCalculationDto = {
 				finalCoefficient: calculationResult[0]?.score,
+				calculationResult,
 				name: basicFormData.name,
 				rfd: basicFormData.rfd,
 				streamExecutor: basicFormData.streamExecutor,
@@ -101,6 +102,11 @@ export const AnketaCreatePage = () => {
 			);
 		}
 	}, [isFormValid, submitCount]);
+
+	console.log(
+		"🐸 Pepe said >> useEffect >> calculationResult:",
+		calculationResult,
+	);
 
 	return (
 		<div data-test-id="anketa-create-page--div-0">
