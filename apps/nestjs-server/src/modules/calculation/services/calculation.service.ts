@@ -117,6 +117,9 @@ export class CalculationService {
 
             return await this.calculationRepository.save(calculation);
         } catch (error) {
+            if (error instanceof NotFoundException) {
+                throw error;
+            }
             throw new BadRequestException(
                 `Failed to update calculation: ${error.message}`,
             );
