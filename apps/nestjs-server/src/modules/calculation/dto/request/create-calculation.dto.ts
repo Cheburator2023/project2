@@ -208,4 +208,14 @@ export class CreateCalculationDto extends CalculationBaseDto {
 	@IsNumber({}, { message: "finalCoefficient must be a number" })
 	@IsNotEmpty({ message: "finalCoefficient should not be empty" })
 	finalCoefficient: number;
+
+	@ApiProperty({
+		example: [1, 2, 3],
+		description: "Результат расчета",
+		type: [Object],
+		required: false,
+	})
+	@IsArray({ message: "calculationResult must be an array" })
+	@IsOptional()
+	calculationResult?: any[];
 }
