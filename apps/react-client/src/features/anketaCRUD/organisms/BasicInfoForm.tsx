@@ -27,6 +27,7 @@ import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjec
 interface BasicInfoFormProps {
 	initialData?: CalculationResponseDto;
 	disabled?: boolean;
+	isCreate?: boolean;
 	onChange?: (data: any) => void;
 }
 
@@ -140,6 +141,7 @@ const widgets: RegistryWidgetsType = {
 
 export const BasicInfoForm = ({
 	initialData,
+	isCreate = false,
 	disabled = false,
 	onChange,
 }: BasicInfoFormProps) => {
@@ -308,7 +310,7 @@ export const BasicInfoForm = ({
 		<Form
 			ref={formRef}
 			schema={schema}
-			uiSchema={controlledUiSchema}
+			uiSchema={isCreate ? uiSchema : controlledUiSchema}
 			formData={formData}
 			validator={validatorRu}
 			widgets={widgets}
