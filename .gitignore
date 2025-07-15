@@ -41,11 +41,7 @@ next-env.d.ts
 *.sublime-workspace
 
 # IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+.vscode/
 
 **/.__mf__win
 **/.__mf__temp
