@@ -57,7 +57,7 @@ export const AnketaPreviewPage = () => {
 				url: `/calculation/${calcId}`,
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
-				data: updateDto,
+				data: { ...updateDto, name: updateDto.calcName },
 			});
 		},
 		onSuccess: () => {
