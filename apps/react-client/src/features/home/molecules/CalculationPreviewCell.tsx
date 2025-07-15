@@ -13,6 +13,9 @@ export const CalculationPreviewCell = (props: ICellRendererParams) => {
 			variant={"contained"}
 			size="small"
 			fullWidth
+			sx={{
+				height: "inherit",
+			}}
 			onClick={() => {
 				navigate(
 					routes.calculationPreview.rootPath.replace(

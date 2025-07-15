@@ -20,8 +20,8 @@ export interface IBasicFormData {
 export const basicInfoFormInitialData: IBasicFormData = {
 	name: "",
 	rfd: "",
-	streamExecutor: IS_DEV ? "testo" : "",
-	department: IS_DEV ? ["test"] : [],
+	streamExecutor: "",
+	department: [],
 	customerName: "",
 	comment: "",
 	relatedModels: [],

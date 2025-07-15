@@ -91,6 +91,10 @@ div.ag-watermark-text {
 	background-color: #0f141c !important;
 }
 
+:where(.ag-theme-params-2) {
+--ag-font-size: 12px  !important;
+--ag-spacing: 5px  !important;
+}
 
 `}
 	/>

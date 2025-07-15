@@ -33,7 +33,7 @@ interface CoefficientData {
 	value: number;
 }
 
-const stageDisplayNames: Record<string, string> = {
+export const stageDisplayNames: Record<string, string> = {
 	stage01: "01. Постановка задачи",
 	stage02: "02. Поиск данных",
 	stage04: "04. Построение витрины для разработки",

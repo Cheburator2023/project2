@@ -128,7 +128,6 @@ export function ColorModeIconDropdown() {
 				>
 					Светлая
 				</MenuItem>
-				<Spacer space={4} data-test-id="color-mode-icon-dropdown--Spacer-0" />
 				<MenuItem
 					selected={mode === "dark"}
 					onClick={handleMode("dark")}

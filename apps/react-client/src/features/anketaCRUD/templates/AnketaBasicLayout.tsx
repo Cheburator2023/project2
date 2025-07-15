@@ -49,7 +49,10 @@ export const AnketaBasicLayout = ({
 								data-test-id="anketa-basic-layout--Card-0"
 							>
 								<Spacer data-test-id="anketa-basic-layout--Spacer-0" />
-								<BasicInfoForm data-test-id="anketa-basic-layout--BasicInfoForm-0" />
+								<BasicInfoForm
+									isCreate
+									data-test-id="anketa-basic-layout--BasicInfoForm-0"
+								/>
 							</Card>
 						</Panel>
 						<PanelResizeHandleStyled data-test-id="anketa-basic-layout--PanelResizeHandleStyled-0">
