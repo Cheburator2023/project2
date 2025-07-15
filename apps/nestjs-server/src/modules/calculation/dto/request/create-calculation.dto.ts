@@ -20,6 +20,7 @@ import {
 } from "../base/calculation-base.dto";
 import { AlgorithmTypeItemDto } from "../common/algorithm-type.dto";
 import { UncertaintyItemDto } from "../common/uncertainty-item.dto";
+import {CalculationResultItemDto} from "../response/calculation-result-item.dto";
 
 export class CreateCalculationDto extends CalculationBaseDto {
 	@ApiProperty({
@@ -207,4 +208,15 @@ export class CreateCalculationDto extends CalculationBaseDto {
 	@IsNumber({}, { message: "finalCoefficient must be a number" })
 	@IsNotEmpty({ message: "finalCoefficient should not be empty" })
 	finalCoefficient: number;
+
+    @ApiProperty({
+        type: [CalculationResultItemDto],
+        description: "Результаты расчета по этапам",
+        required: false
+    })
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => CalculationResultItemDto)
+    @IsOptional()
+    calculationResult?: CalculationResultItemDto[];
 }

@@ -7,100 +7,111 @@ import {
 	YES_NO_VALUES,
 } from "../base/calculation-base.dto";
 import { AlgorithmTypeItemDto } from "../common/algorithm-type.dto";
+import {CalculationResultItemDto} from "./calculation-result-item.dto";
 
 export class CalculationQuestionnaireDataDto extends CalculationBaseDto {
-	@ApiProperty({
-		example: 2,
-		description: "Количество моделей",
-	})
-	modelsCount: number;
+    @ApiProperty({
+        example: 2,
+        description: "Количество моделей",
+    })
+    modelsCount: number;
 
-	@ApiProperty({
-		example: 3,
-		description: "Корректировка неопределенности",
-	})
-	uncertaintyAdjustment?: number;
+    @ApiProperty({
+        example: 3,
+        description: "Корректировка неопределенности",
+        required: false,
+    })
+    uncertaintyAdjustment?: number;
 
-	@ApiProperty({
-		description: "Факторы общей неопределенности",
-		type: "object",
-		additionalProperties: {
-			type: "object",
-			properties: {
-				probability: { type: "string" },
-				influence: { type: "string" },
-			},
-		},
-	})
-	generalUncertainty: {
-		type: string;
-		probability: any;
-		influence: any;
-	}[];
+    @ApiProperty({
+        description: "Факторы общей неопределенности",
+        type: "object",
+        additionalProperties: {
+            type: "object",
+            properties: {
+                probability: { type: "string" },
+                influence: { type: "string" },
+            },
+        },
+    })
+    generalUncertainty: Record<string, {
+        probability: string;
+        influence: string;
+    }>;
 
-	@ApiProperty({
-		example: "Нет",
-		description: "Наличие готовых промоделированных отчетов",
-		enum: YES_NO_VALUES,
-	})
-	readyPromReports: (typeof YES_NO_VALUES)[number];
+    @ApiProperty({
+        example: "Нет",
+        description: "Наличие готовых промоделированных отчетов",
+        enum: YES_NO_VALUES,
+    })
+    readyPromReports: (typeof YES_NO_VALUES)[number];
 
-	@ApiProperty({
-		example: "3",
-		description: "Количество оцененных инициатив",
-	})
-	assessedInitiativesCount?: string;
+    @ApiProperty({
+        example: "3",
+        description: "Количество оцененных инициатив",
+        required: false,
+    })
+    assessedInitiativesCount?: string;
 
-	@ApiProperty({
-		example: "4",
-		description: "Количество источников данных",
-		enum: DATA_SOURCES_COUNT_VALUES,
-	})
-	dataSourcesCount: (typeof DATA_SOURCES_COUNT_VALUES)[number];
+    @ApiProperty({
+        example: "4",
+        description: "Количество источников данных",
+        enum: DATA_SOURCES_COUNT_VALUES,
+    })
+    dataSourcesCount: (typeof DATA_SOURCES_COUNT_VALUES)[number];
 
-	@ApiProperty({
-		example: "Да",
-		description: "Требуется ли пилотная модель",
-		enum: YES_NO_REQUIRED_VALUES,
-	})
-	pilotModelRequired: (typeof YES_NO_REQUIRED_VALUES)[number];
+    @ApiProperty({
+        example: "Да",
+        description: "Требуется ли пилотная модель",
+        enum: YES_NO_REQUIRED_VALUES,
+    })
+    pilotModelRequired: (typeof YES_NO_REQUIRED_VALUES)[number];
 
-	@ApiProperty({
-		type: [AlgorithmTypeItemDto],
-		description: "Сложность алгоритмов",
-	})
-	@Type(() => AlgorithmTypeItemDto)
-	algorithmComplexity: AlgorithmTypeItemDto[];
+    @ApiProperty({
+        type: [AlgorithmTypeItemDto],
+        description: "Сложность алгоритмов",
+    })
+    @Type(() => AlgorithmTypeItemDto)
+    algorithmComplexity: AlgorithmTypeItemDto[];
 
-	@ApiProperty({
-		example: "Да",
-		description: "Требуется ли поддержка пилота",
-		enum: YES_NO_REQUIRED_VALUES,
-	})
-	pilotSupportRequired: (typeof YES_NO_REQUIRED_VALUES)[number];
+    @ApiProperty({
+        example: "Да",
+        description: "Требуется ли поддержка пилота",
+        enum: YES_NO_REQUIRED_VALUES,
+    })
+    pilotSupportRequired: (typeof YES_NO_REQUIRED_VALUES)[number];
 
-	@ApiProperty({
-		example: "Да",
-		description: "Требуется ли AutoML",
-		enum: YES_NO_REQUIRED_VALUES,
-	})
-	autoMlRequired: (typeof YES_NO_REQUIRED_VALUES)[number];
+    @ApiProperty({
+        example: "Да",
+        description: "Требуется ли AutoML",
+        enum: YES_NO_REQUIRED_VALUES,
+    })
+    autoMlRequired: (typeof YES_NO_REQUIRED_VALUES)[number];
 
-	@ApiProperty({
-		example: "4",
-		description: "Дополнительные отчеты для продакшена",
-	})
-	productionAdditionalReports?: string;
+    @ApiProperty({
+        example: "4",
+        description: "Дополнительные отчеты для продакшена",
+        required: false,
+    })
+    productionAdditionalReports?: string;
 
-	@ApiProperty({
-		type: [Object],
-		description: "Каналы развертывания в продакшен",
-		example: [
-			{ deploymentChannel: "Батч" },
-			{ deploymentChannel: "Батч+загрузка данных потребителю" },
-		],
-	})
-	productionDeploymentChannels: Array<{ deploymentChannel: string }>;
+    @ApiProperty({
+        type: [Object],
+        description: "Каналы развертывания в продакшен",
+        example: [
+            { deploymentChannel: "Батч" },
+            { deploymentChannel: "Батч+загрузка данных потребителю" },
+        ],
+    })
+    productionDeploymentChannels: Array<{ deploymentChannel: string }>;
+
+    @ApiProperty({
+        type: [CalculationResultItemDto],
+        description: "Результаты расчета по этапам",
+        required: false
+    })
+    @Type(() => CalculationResultItemDto)
+    calculationResult?: CalculationResultItemDto[];
 }
 
 export class CalculationResponseDto {

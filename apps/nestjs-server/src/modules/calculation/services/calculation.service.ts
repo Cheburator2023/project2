@@ -20,71 +20,81 @@ export class CalculationService {
 	/**
 	 * Creates a new calculation
 	 */
-	async create(
-		createCalculationDto: CreateCalculationDto,
-		user: any,
-	): Promise<Calculation> {
-		try {
-			const generalUncertaintyObject = {};
-			if (createCalculationDto.generalUncertainty) {
-				createCalculationDto.generalUncertainty.forEach((item) => {
-					generalUncertaintyObject[item.type] = {
-						probability: item.probability,
-						influence: item.influence,
-					};
-				});
-			}
+    async create(
+        createCalculationDto: CreateCalculationDto,
+        user: any,
+    ): Promise<Calculation> {
+        try {
+            const generalUncertaintyObject = {};
+            if (createCalculationDto.generalUncertainty) {
+                createCalculationDto.generalUncertainty.forEach((item) => {
+                    generalUncertaintyObject[item.type] = {
+                        probability: item.probability,
+                        influence: item.influence,
+                    };
+                });
+            }
 
-			const authorName = user
-				? `${user.given_name || ""} ${user.family_name || ""}`.trim() ||
-					user.preferred_username ||
-					user.email ||
-					"Система"
-				: "Система";
+            const authorName = user
+                ? `${user.given_name || ""} ${user.family_name || ""}`.trim() ||
+                user.preferred_username ||
+                user.email ||
+                "Система"
+                : "Система";
 
-			const calculation = this.calculationRepository.create({
-				name: createCalculationDto.name || "Новый расчет",
-				rfd: createCalculationDto.rfd || "Отсутствует",
-				streamExecutor: createCalculationDto.streamExecutor,
-				department: createCalculationDto.department,
-				customerName: createCalculationDto.customerName,
-				comment: createCalculationDto.comment,
-				questionnaireData: {
-					name: createCalculationDto.name || "Новый расчет",
-					modelsCount: createCalculationDto.modelsCount,
-					setupComplexity: createCalculationDto.setupComplexity,
-					initiativeTimeline: createCalculationDto.initiativeTimeline,
-					initiativeCost: createCalculationDto.initiativeCost,
-					uncertaintyAdjustment: createCalculationDto.uncertaintyAdjustment,
-					generalUncertainty: generalUncertaintyObject,
-					readyPromReports: createCalculationDto.readyPromReports,
-					assessedInitiativesCount:
-						createCalculationDto.assessedInitiativesCount?.toString(),
-					dataSourcesCount: createCalculationDto.dataSourcesCount,
-					pilotModelRequired: createCalculationDto.pilotModelRequired,
-					algorithmComplexity: createCalculationDto.algorithmComplexity,
-					pilotSupportRequired: createCalculationDto.pilotSupportRequired,
-					autoMlRequired: createCalculationDto.autoMlRequired,
-					productionAdditionalReports:
-						createCalculationDto.productionAdditionalReports?.toString(),
-					productionDeploymentChannels:
-						createCalculationDto.productionDeploymentChannels.map(
-							(channel) => ({
-								deploymentChannel: channel,
-							}),
-						),
-				},
-				finalCoefficient: createCalculationDto.finalCoefficient,
-				author: authorName,
-			} as Partial<Calculation>);
+            const calculationResult = (createCalculationDto as any).calculationResult?.map(item => ({
+                stageName: item.stageName,
+                score: item.score,
+                stageBaseValue: item.stageBaseValue,
+                percentFromAverage: item.percentFromAverage,
+                offset: item.offset,
+                disabled: item.disabled,
+            })) || [];
 
-			return await this.calculationRepository.save(calculation);
-		} catch (error) {
-			throw new BadRequestException(
-				`Failed to create calculation: ${error.message}`,
-			);
-		}
-	}
+            const calculation = this.calculationRepository.create({
+                name: createCalculationDto.name || "Новый расчет",
+                rfd: createCalculationDto.rfd || "Отсутствует",
+                streamExecutor: createCalculationDto.streamExecutor,
+                department: createCalculationDto.department,
+                customerName: createCalculationDto.customerName,
+                comment: createCalculationDto.comment,
+                questionnaireData: {
+                    name: createCalculationDto.name || "Новый расчет",
+                    modelsCount: createCalculationDto.modelsCount,
+                    setupComplexity: createCalculationDto.setupComplexity,
+                    initiativeTimeline: createCalculationDto.initiativeTimeline,
+                    initiativeCost: createCalculationDto.initiativeCost,
+                    uncertaintyAdjustment: createCalculationDto.uncertaintyAdjustment,
+                    generalUncertainty: generalUncertaintyObject,
+                    readyPromReports: createCalculationDto.readyPromReports,
+                    assessedInitiativesCount:
+                        createCalculationDto.assessedInitiativesCount?.toString(),
+                    dataSourcesCount: createCalculationDto.dataSourcesCount,
+                    pilotModelRequired: createCalculationDto.pilotModelRequired,
+                    algorithmComplexity: createCalculationDto.algorithmComplexity,
+                    pilotSupportRequired: createCalculationDto.pilotSupportRequired,
+                    autoMlRequired: createCalculationDto.autoMlRequired,
+                    productionAdditionalReports:
+                        createCalculationDto.productionAdditionalReports?.toString(),
+                    productionDeploymentChannels:
+                        createCalculationDto.productionDeploymentChannels.map(
+                            (channel) => ({
+                                deploymentChannel: channel,
+                            }),
+                        ),
+                    calculationResult: calculationResult.length > 0 ? calculationResult : undefined,
+                },
+                finalCoefficient: createCalculationDto.finalCoefficient,
+                author: authorName,
+            } as Partial<Calculation>);
+
+            return await this.calculationRepository.save(calculation);
+        } catch (error) {
+            throw new BadRequestException(
+                `Failed to create calculation: ${error.message}`,
+            );
+        }
+    }
 
     /**
      * Updates calculation basic information

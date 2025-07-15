@@ -24,8 +24,24 @@ export class Calculation {
 	@Column({ type: "varchar", length: 255, nullable: true })
 	comment: string;
 
-	@Column({ type: "jsonb", nullable: false })
-	questionnaireData: CalculationQuestionnaireDataDto;
+    @Column({
+        type: "jsonb",
+        nullable: false,
+        transformer: {
+            to: (value: CalculationQuestionnaireDataDto) => value,
+            from: (value: any) => {
+                if (value.generalUncertainty && !Array.isArray(value.generalUncertainty)) {
+                    value.generalUncertainty = Object.entries(value.generalUncertainty)
+                        .map(([type, val]) => ({
+                            type,
+                            ...(val as any)
+                        }));
+                }
+                return value as CalculationQuestionnaireDataDto;
+            }
+        }
+    })
+    questionnaireData: CalculationQuestionnaireDataDto;
 
 	@Column({ type: "float", nullable: false })
 	finalCoefficient: number;
