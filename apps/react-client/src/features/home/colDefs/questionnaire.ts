@@ -112,20 +112,6 @@ export const questionnaire: ColDef<any, any>[] = [
 		},
 	},
 	{
-		field: "questionnaireData.productionDeploymentChannels",
-		headerName: "Необходимость продуктивизации и каналы внедрения моделей",
-		sortable: true,
-		filter: true,
-		valueGetter: (params: any) => {
-			const colId = params.column.getColId();
-
-			const channels = params.data.questionnaireData?.[colId] || [];
-			return channels
-				.map((ch: any, index: any) => `${index + 1}. ${ch.deploymentChannel}`)
-				.join(", ");
-		},
-	},
-	{
 		field: "questionnaireData.setupComplexity",
 		headerName: "Сложность постановки",
 		sortable: true,
@@ -198,7 +184,21 @@ export const questionnaire: ColDef<any, any>[] = [
 		filter: true,
 	},
 	{
-		field: "questionnaireData.deploymentBatch",
+		field: "questionnaireData.productionDeploymentChannels",
+		headerName: "Необходимость продуктивизации и каналы внедрения моделей",
+		sortable: true,
+		filter: true,
+		valueGetter: (params: any) => {
+			const colId = params.column.getColId();
+
+			const channels = params.data.questionnaireData?.[colId] || [];
+			return channels
+				.map((ch: any, index: any) => `${index + 1}. ${ch.deploymentChannel}`)
+				.join(", ");
+		},
+	},
+	{
+		field: "questionnaireData.productionDeploymentChannels.deploymentBatch",
 		headerName: "Канал внедрения: Батч",
 		sortable: true,
 		filter: true,
@@ -260,6 +260,78 @@ export const questionnaire: ColDef<any, any>[] = [
 	{
 		field: "questionnaireData.deploymentGraphPlatform",
 		headerName: "Канал внедрения: Графовая платформа",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "questionnaireData.riskBusinessProcesses",
+		headerName:
+			"Риск: Изменение, недостаточная проработка или сложности бизнес-процессов Банка",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "questionnaireData.riskSoftwareDefects",
+		headerName:
+			"Риск: Наличие дефектов во внедряемом решении/ПО в рамках проекта",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "questionnaireData.riskRelatedProjects",
+		headerName:
+			"Риск: Негативное влияние смежных проектов на показатели проекта",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "questionnaireData.riskIncreasedEffort",
+		headerName:
+			"Риск: Увеличение трудозатрат проекта по причине недостаточной проработки требований на этапе планирования проекта",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "questionnaireData.riskContractorPerformance",
+		headerName:
+			"Риск: Недобросовестное исполнение услуг со стороны привлеченных контрагентов/подрядчиков",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "questionnaireData.riskPersonnelQuality",
+		headerName:
+			"Риск: Отсутствие квалифицированного персонала или ошибок персонала",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "questionnaireData.riskSanctions",
+		headerName: "Риск: Введение санкционных мер и других ограничений",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "questionnaireData.riskControlProcedures",
+		headerName: "Риск: Недостаток или отсутствие контрольных процедур",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "questionnaireData.riskRegulatoryChanges",
+		headerName: "Риск: Изменение регуляторных требований",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "questionnaireData.riskSystemNonUsage",
+		headerName: "Риск: Неиспользование ИС после завершения проекта",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "questionnaireData.riskArchitectureChanges",
+		headerName: "Риск: Изменение целевой ИТ архитектуры Банка",
 		sortable: true,
 		filter: true,
 	},
