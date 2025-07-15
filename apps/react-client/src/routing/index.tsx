@@ -3,7 +3,7 @@ import { AdminPage } from "@react-client/features/admin/AdminPage";
 import { CompareReportsPage } from "@react-client/features/anketaCompare/pages/CompareReportsPage";
 import { AnketaCreatePage } from "@react-client/features/anketaCRUD/pages/AnketaCreatePage";
 import { AnketaPreviewPage } from "@react-client/features/anketaCRUD/pages/AnketaPreviewPage";
-import { HomePage } from "@react-client/features/home/HomePage";
+import { HomePage } from "@react-client/features/home/pages/HomePage";
 import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
 import { Route, Routes } from "react-router";
 import { Page404 } from "./Page404";

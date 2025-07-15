@@ -31,8 +31,10 @@ import {
 } from "./theme/customizations";
 
 const GIT_REVISION = process.env.GIT_REVISION;
+const NODE_ENV = process.env.NODE_ENV;
 
 console.log("GIT_REVISION: ", GIT_REVISION);
+console.log("NODE_ENV: ", NODE_ENV);
 
 setDefaultOptions({ locale: ru });
 
@@ -55,7 +57,6 @@ const queryClient = new QueryClient({
 		queries: {
 			refetchOnWindowFocus: false,
 			retry: 2,
-			staleTime: 10, // 0 seconcds
 			gcTime: 1000 * 60 * 5, //  5 minutes
 		},
 	},

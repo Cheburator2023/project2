@@ -28,10 +28,14 @@ export function Header({
 
 	return (
 		<>
-			<Card padding="2px 3px" data-test-id="header--Card-0">
+			<Card
+				data-test-id="header--Card-0"
+				zoom={0.8}
+				uuid="header_uuid"
+				style={{ overflow: "visible", padding: "4px" }}
+			>
 				<Flex
 					width="fill-available"
-					pad="2px 3px"
 					gap={16}
 					alignItems="center"
 					justifyContent="space-between"

@@ -36,11 +36,9 @@ export const AnketaCreatePage = () => {
 	);
 
 	const submitCount = anketaCreate_basicInfoForm?.submitCount;
-	console.log("🐸 Pepe said >> AnketaCreatePage >> isFormValid:", submitCount);
 
 	const onSubmit = () => {
 		setHasSubmitted(true);
-		console.log("🐸 Pepe said >> onSubmit >> true:", true);
 		anketaCreate_basicInfoForm.api?.submit();
 		anketaCreate_projectAssessmentForm.api?.submit();
 	};
@@ -63,6 +61,7 @@ export const AnketaCreatePage = () => {
 		if (isFormValid) {
 			const data: CreateCalculationDto = {
 				finalCoefficient: calculationResult[0]?.score,
+				calculationResult,
 				name: basicFormData.name,
 				rfd: basicFormData.rfd,
 				streamExecutor: basicFormData.streamExecutor,
