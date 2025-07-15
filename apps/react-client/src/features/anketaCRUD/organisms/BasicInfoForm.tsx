@@ -151,14 +151,13 @@ export const BasicInfoForm = ({
 }: BasicInfoFormProps) => {
 	const initialData = { ..._initialData, calcName: _initialData?.name };
 
-	const { data: questData, refetch } =
-		useQuestionnaireControllerGetFullQuestionnaire({
-			query: {
-				staleTime: 0,
-			},
-		});
+	const { data: questData } = useQuestionnaireControllerGetFullQuestionnaire({
+		query: {
+			staleTime: 0,
+		},
+	});
 	const [formData, setFormData] = useState<IBasicFormData>(
-		basicInfoFormInitialData,
+		(isEditing ? initialData : basicInfoFormInitialData) as any,
 	);
 
 	const departmentENUM = questData?.referenceData.department;

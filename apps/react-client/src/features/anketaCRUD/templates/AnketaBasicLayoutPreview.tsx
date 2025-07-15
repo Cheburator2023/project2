@@ -14,11 +14,13 @@ export const AnketaBasicLayoutPreview = ({
 	initialData,
 	comfyView,
 	isEditing = false,
+	isPending = false,
 	mainInfoDisabled = true,
 	onMainInfoChange,
 }: {
 	comfyView?: boolean;
 	isEditing?: boolean;
+	isPending?: boolean;
 	initialData: CalculationResponseDto;
 	mainInfoDisabled?: boolean;
 	onMainInfoChange?: (data: any) => void;
@@ -45,6 +47,7 @@ export const AnketaBasicLayoutPreview = ({
 							height="100%"
 							padding="10px"
 							zoom={0.8}
+							loading={isPending}
 							uuid="anketa_project_assessment_card"
 							data-test-id="anketa-basic-layout--Card-2"
 						>

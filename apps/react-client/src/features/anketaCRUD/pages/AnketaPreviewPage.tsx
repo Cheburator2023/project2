@@ -35,7 +35,7 @@ export const AnketaPreviewPage = () => {
 	const {
 		data: _initialData,
 		refetch,
-		isFetching,
+		isPending,
 		isError,
 	} = useCalculationControllerFindOne(calcId, {
 		query: {
@@ -155,7 +155,7 @@ export const AnketaPreviewPage = () => {
 					</>
 				)}
 			</Header>
-			{false ? (
+			{isError ? (
 				<Flex
 					justifyContent="center"
 					alignItems="center"
@@ -170,10 +170,9 @@ export const AnketaPreviewPage = () => {
 						</Button>
 					</Card>
 				</Flex>
-			) : false ? (
-				<FullScreenLoader />
 			) : (
 				<AnketaBasicLayoutPreview
+					isPending={isPending}
 					isEditing={isEditing}
 					initialData={isEditing ? formData : initialData}
 					comfyView={comfyView}
