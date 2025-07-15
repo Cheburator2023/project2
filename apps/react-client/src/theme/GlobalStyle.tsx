@@ -91,7 +91,8 @@ div.ag-watermark-text {
 	background-color: #0f141c !important;
 }
 
-
+--ag-font-size", 11px;
+--ag-spacing", 5px;
 `}
 	/>
 );

@@ -1,19 +1,5 @@
 import schema from "@react-client/features/jsonFormGenerator/schemas/calc_schema.json";
-import { ColDef, ValueGetterFunc } from "ag-grid-community";
-import { get } from "lodash-es";
-
-const valueGetter = (
-	key: string,
-	parent: string,
-): ValueGetterFunc<any, any> => {
-	return (params) => {
-		const field = params.colDef.field;
-		const regex = new RegExp(`${parent}\\.(\\d+)\\.`);
-		const index = field?.match(regex)?.[1];
-		const path = `${parent}.${index || 0}.${key}`;
-		return get(params.data, path, "-");
-	};
-};
+import { ColDef } from "ag-grid-community";
 
 export const questionnaire: ColDef<any, any>[] = [
 	{
@@ -149,6 +135,13 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const algorithms =
+				params.data.questionnaireData?.algorithmComplexity || [];
+			return algorithms.some(
+				(alg: any) => alg.algorithmType === "Табличные данные",
+			);
+		},
 	},
 	{
 		field: "questionnaireData.algorithmType.1.keyName",
@@ -156,6 +149,14 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const algorithms =
+				params.data.questionnaireData?.algorithmComplexity || [];
+			return algorithms.some(
+				(alg: any) =>
+					alg.algorithmType === "Текстовая аналитика_Классические модели",
+			);
+		},
 	},
 	{
 		field: "questionnaireData.algorithmType.2.keyName",
@@ -163,6 +164,13 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const algorithms =
+				params.data.questionnaireData?.algorithmComplexity || [];
+			return algorithms.some(
+				(alg: any) => alg.algorithmType === "Текстовая аналитика_LLM",
+			);
+		},
 	},
 	{
 		field: "questionnaireData.algorithmType.3.keyName",
@@ -170,6 +178,13 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const algorithms =
+				params.data.questionnaireData?.algorithmComplexity || [];
+			return algorithms.some(
+				(alg: any) => alg.algorithmType === "Аудио Аналитика",
+			);
+		},
 	},
 	{
 		field: "questionnaireData.algorithmType.4.keyName",
@@ -177,6 +192,13 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const algorithms =
+				params.data.questionnaireData?.algorithmComplexity || [];
+			return algorithms.some(
+				(alg: any) => alg.algorithmType === "Компьютерное зрение_CV",
+			);
+		},
 	},
 	{
 		field: "questionnaireData.algorithmType.5.keyName",
@@ -184,6 +206,13 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const algorithms =
+				params.data.questionnaireData?.algorithmComplexity || [];
+			return algorithms.some(
+				(alg: any) => alg.algorithmType === "Оптимизационная задача",
+			);
+		},
 	},
 	{
 		field: "questionnaireData.algorithmType.6.keyName",
@@ -191,6 +220,13 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const algorithms =
+				params.data.questionnaireData?.algorithmComplexity || [];
+			return algorithms.some(
+				(alg: any) => alg.algorithmType === "Гео-аналитика",
+			);
+		},
 	},
 	{
 		field: "questionnaireData.algorithmType.7.keyName",
@@ -198,6 +234,13 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const algorithms =
+				params.data.questionnaireData?.algorithmComplexity || [];
+			return algorithms.some(
+				(alg: any) => alg.algorithmType === "Графовая аналитика",
+			);
+		},
 	},
 	{
 		field: "questionnaireData.productionDeploymentChannels",
@@ -205,12 +248,10 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		valueGetter: (params: any) => {
-			const colId = params.column.getColId();
+			const channels =
+				params.data.questionnaireData?.productionDeploymentChannels || [];
 
-			const channels = params.data.questionnaireData?.[colId] || [];
-			return channels
-				.map((ch: any, index: any) => `${index + 1}. ${ch.deploymentChannel}`)
-				.join(", ");
+			return channels.join(", ");
 		},
 	},
 	{
@@ -219,6 +260,11 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const channels =
+				params.data.questionnaireData?.productionDeploymentChannels || [];
+			return channels.includes("Батч");
+		},
 	},
 	{
 		field: "questionnaireData.deploymentChannel.1.keyName",
@@ -226,6 +272,11 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const channels =
+				params.data.questionnaireData?.productionDeploymentChannels || [];
+			return channels.includes("Батч+загрузка данных потребителю");
+		},
 	},
 	{
 		field: "questionnaireData.deploymentChannel.2.keyName",
@@ -233,6 +284,11 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const channels =
+				params.data.questionnaireData?.productionDeploymentChannels || [];
+			return channels.includes("Батч + Онлайн");
+		},
 	},
 	{
 		field: "questionnaireData.deploymentChannel.3.keyName",
@@ -240,6 +296,11 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const channels =
+				params.data.questionnaireData?.productionDeploymentChannels || [];
+			return channels.includes("Онлайн");
+		},
 	},
 	{
 		field: "questionnaireData.deploymentChannel.4.keyName",
@@ -247,6 +308,11 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const channels =
+				params.data.questionnaireData?.productionDeploymentChannels || [];
+			return channels.includes("Онлайн gpu");
+		},
 	},
 	{
 		field: "questionnaireData.deploymentChannel.5.keyName",
@@ -254,6 +320,11 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const channels =
+				params.data.questionnaireData?.productionDeploymentChannels || [];
+			return channels.includes("Стриминг");
+		},
 	},
 	{
 		field: "questionnaireData.deploymentChannel.6.keyName",
@@ -261,6 +332,11 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const channels =
+				params.data.questionnaireData?.productionDeploymentChannels || [];
+			return channels.includes("Мобильные устройства");
+		},
 	},
 	{
 		field: "questionnaireData.deploymentChannel.7.keyName",
@@ -268,6 +344,11 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const channels =
+				params.data.questionnaireData?.productionDeploymentChannels || [];
+			return channels.includes("LLM");
+		},
 	},
 	{
 		field: "questionnaireData.deploymentChannel.8.keyName",
@@ -275,6 +356,11 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const channels =
+				params.data.questionnaireData?.productionDeploymentChannels || [];
+			return channels.includes("Гео-сервисы");
+		},
 	},
 	{
 		field: "questionnaireData.deploymentChannel.9.keyName",
@@ -282,6 +368,11 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const channels =
+				params.data.questionnaireData?.productionDeploymentChannels || [];
+			return channels.includes("Внедрение в облаке");
+		},
 	},
 	{
 		field: "questionnaireData.deploymentChannel.10.keyName",
@@ -289,6 +380,11 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		cellDataType: "boolean",
+		valueGetter: (params) => {
+			const channels =
+				params.data.questionnaireData?.productionDeploymentChannels || [];
+			return channels.includes("Графовая платформа");
+		},
 	},
 	{
 		field: "questionnaireData.generalUncertainty.businessProcessComplexity",
@@ -296,6 +392,16 @@ export const questionnaire: ColDef<any, any>[] = [
 			"Риск: Изменение, недостаточная проработка или сложности бизнес-процессов Банка",
 		sortable: true,
 		filter: true,
+		valueGetter: (params) => {
+			const uncertainties =
+				params.data.questionnaireData?.generalUncertainty || [];
+			const risk = uncertainties.find(
+				(item: any) => item.type === "businessProcessComplexity",
+			);
+			return risk
+				? `Вероятность: ${risk.probability}, Влияние: ${risk.influence}`
+				: "-";
+		},
 	},
 	{
 		field: "questionnaireData.projectSolutionDefects",
@@ -303,6 +409,16 @@ export const questionnaire: ColDef<any, any>[] = [
 			"Риск: Наличие дефектов во внедряемом решении/ПО в рамках проекта",
 		sortable: true,
 		filter: true,
+		valueGetter: (params) => {
+			const uncertainties =
+				params.data.questionnaireData?.generalUncertainty || [];
+			const risk = uncertainties.find(
+				(item: any) => item.type === "projectSolutionDefects",
+			);
+			return risk
+				? `Вероятность: ${risk.probability}, Влияние: ${risk.influence}`
+				: "-";
+		},
 	},
 	{
 		field: "questionnaireData.adjacentProjectsImpact",
@@ -310,10 +426,16 @@ export const questionnaire: ColDef<any, any>[] = [
 			"Риск: Негативное влияние смежных проектов на показатели проекта",
 		sortable: true,
 		filter: true,
-		valueGetter: valueGetter(
-			"type",
-			"questionnaireData.adjacentProjectsImpact",
-		),
+		valueGetter: (params) => {
+			const uncertainties =
+				params.data.questionnaireData?.generalUncertainty || [];
+			const risk = uncertainties.find(
+				(item: any) => item.type === "adjacentProjectsImpact",
+			);
+			return risk
+				? `Вероятность: ${risk.probability}, Влияние: ${risk.influence}`
+				: "-";
+		},
 	},
 	{
 		field: "questionnaireData.planningRequirementGaps",
@@ -321,10 +443,16 @@ export const questionnaire: ColDef<any, any>[] = [
 			"Риск: Увеличение трудозатрат проекта по причине недостаточной проработки требований на этапе планирования проекта",
 		sortable: true,
 		filter: true,
-		valueGetter: valueGetter(
-			"type",
-			"questionnaireData.planningRequirementGaps",
-		),
+		valueGetter: (params) => {
+			const uncertainties =
+				params.data.questionnaireData?.generalUncertainty || [];
+			const risk = uncertainties.find(
+				(item: any) => item.type === "planningRequirementGaps",
+			);
+			return risk
+				? `Вероятность: ${risk.probability}, Влияние: ${risk.influence}`
+				: "-";
+		},
 	},
 	{
 		field: "questionnaireData.contractorPerformanceIssues",
@@ -332,6 +460,16 @@ export const questionnaire: ColDef<any, any>[] = [
 			"Риск: Недобросовестное исполнение услуг со стороны привлеченных контрагентов/подрядчиков",
 		sortable: true,
 		filter: true,
+		valueGetter: (params) => {
+			const uncertainties =
+				params.data.questionnaireData?.generalUncertainty || [];
+			const risk = uncertainties.find(
+				(item: any) => item.type === "contractorPerformanceIssues",
+			);
+			return risk
+				? `Вероятность: ${risk.probability}, Влияние: ${risk.influence}`
+				: "-";
+		},
 	},
 	{
 		field: "questionnaireData.qualifiedStaffShortage",
@@ -339,35 +477,95 @@ export const questionnaire: ColDef<any, any>[] = [
 			"Риск: Отсутствие квалифицированного персонала или ошибок персонала",
 		sortable: true,
 		filter: true,
+		valueGetter: (params) => {
+			const uncertainties =
+				params.data.questionnaireData?.generalUncertainty || [];
+			const risk = uncertainties.find(
+				(item: any) => item.type === "qualifiedStaffShortage",
+			);
+			return risk
+				? `Вероятность: ${risk.probability}, Влияние: ${risk.influence}`
+				: "-";
+		},
 	},
 	{
 		field: "questionnaireData.sanctionsRisk",
 		headerName: "Риск: Введение санкционных мер и других ограничений",
 		sortable: true,
 		filter: true,
+		valueGetter: (params) => {
+			const uncertainties =
+				params.data.questionnaireData?.generalUncertainty || [];
+			const risk = uncertainties.find(
+				(item: any) => item.type === "sanctionsRisk",
+			);
+			return risk
+				? `Вероятность: ${risk.probability}, Влияние: ${risk.influence}`
+				: "-";
+		},
 	},
 	{
 		field: "questionnaireData.controlProceduresGaps",
 		headerName: "Риск: Недостаток или отсутствие контрольных процедур",
 		sortable: true,
 		filter: true,
+		valueGetter: (params) => {
+			const uncertainties =
+				params.data.questionnaireData?.generalUncertainty || [];
+			const risk = uncertainties.find(
+				(item: any) => item.type === "controlProceduresGaps",
+			);
+			return risk
+				? `Вероятность: ${risk.probability}, Влияние: ${risk.influence}`
+				: "-";
+		},
 	},
 	{
 		field: "questionnaireData.regulatoryChanges",
 		headerName: "Риск: Изменение регуляторных требований",
 		sortable: true,
 		filter: true,
+		valueGetter: (params) => {
+			const uncertainties =
+				params.data.questionnaireData?.generalUncertainty || [];
+			const risk = uncertainties.find(
+				(item: any) => item.type === "regulatoryChanges",
+			);
+			return risk
+				? `Вероятность: ${risk.probability}, Влияние: ${risk.influence}`
+				: "-";
+		},
 	},
 	{
 		field: "questionnaireData.systemUnderutilization",
 		headerName: "Риск: Неиспользование ИС после завершения проекта",
 		sortable: true,
 		filter: true,
+		valueGetter: (params) => {
+			const uncertainties =
+				params.data.questionnaireData?.generalUncertainty || [];
+			const risk = uncertainties.find(
+				(item: any) => item.type === "systemUnderutilization",
+			);
+			return risk
+				? `Вероятность: ${risk.probability}, Влияние: ${risk.influence}`
+				: "-";
+		},
 	},
 	{
 		field: "questionnaireData.itArchitectureChanges",
 		headerName: "Риск: Изменение целевой ИТ архитектуры Банка",
 		sortable: true,
 		filter: true,
+		valueGetter: (params) => {
+			const uncertainties =
+				params.data.questionnaireData?.generalUncertainty || [];
+			const risk = uncertainties.find(
+				(item: any) => item.type === "itArchitectureChanges",
+			);
+			return risk
+				? `Вероятность: ${risk.probability}, Влияние: ${risk.influence}`
+				: "-";
+		},
 	},
 ];

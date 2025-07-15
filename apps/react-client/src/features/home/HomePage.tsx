@@ -35,7 +35,7 @@ import {
 	SetFilterModule,
 } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 
 ModuleRegistry.registerModules([
@@ -284,6 +284,7 @@ export const HomeTemplete = ({
 					onCellMouseOver={onCellMouseOver}
 					onGridReady={onGridReady}
 					tooltipShowDelay={500}
+					animateRows={false}
 					data-test-id="home-page--AgGridReact-0"
 				/>
 			</GridWrapper>

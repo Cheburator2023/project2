@@ -3,6 +3,7 @@ import { meta } from "@react-client/features/home/colDefs/meta";
 import { questionnaire } from "@react-client/features/home/colDefs/questionnaire";
 import { CalculationPreviewCell } from "@react-client/features/home/molecules/CalculationPreviewCell";
 import { ColDef } from "ag-grid-community";
+
 export const _columnDefs: ColDef<any, any>[] = [
 	{
 		field: "UI_PREVIEW",
@@ -19,6 +20,8 @@ export const _columnDefs: ColDef<any, any>[] = [
 		suppressAutoSize: true,
 		suppressSizeToFit: true,
 		suppressMovable: true,
+		suppressHeaderContextMenu: true,
+		floatingFilter: false,
 		suppressHeaderMenuButton: true,
 		width: 120,
 		maxWidth: 120,

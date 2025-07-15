@@ -28,7 +28,10 @@ export function Header({
 
 	return (
 		<>
-			<Card data-test-id="header--Card-0">
+			<Card
+				data-test-id="header--Card-0"
+				style={{ overflow: "visible", padding: "4px" }}
+			>
 				<Flex
 					width="fill-available"
 					gap={16}
