@@ -44,7 +44,9 @@ const widgets = {
 	TextFieldCustomWidget,
 };
 
-export const ProjectAssessmentForm: React.FC<{}> = () => {
+export const ProjectAssessmentForm: React.FC<{
+	isCreate?: boolean;
+}> = ({ isCreate }) => {
 	const formRef = useRef<FormRef>(null);
 	const {
 		setApiRef,
@@ -163,7 +165,7 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 				onBlur={onBlur}
 				templates={templates}
 				focusOnFirstError
-				liveValidate={liveValidate}
+				liveValidate={liveValidate && isCreate}
 				noHtml5Validate
 				showErrorList={false}
 				transformErrors={transformErrors as any}

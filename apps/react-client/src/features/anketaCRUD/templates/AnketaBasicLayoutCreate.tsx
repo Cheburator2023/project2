@@ -9,7 +9,7 @@ import { useLocation } from "react-router";
 import { BasicInfoForm } from "../organisms/BasicInfoForm";
 import { CalculationResultTable } from "../organisms/CalculationResultTable";
 
-export const AnketaBasicLayout = ({
+export const AnketaBasicLayoutCreate = ({
 	isPending,
 	onSubmit,
 	formHasErrors,
@@ -93,7 +93,10 @@ export const AnketaBasicLayout = ({
 						data-test-id="anketa-basic-layout--Card-2"
 					>
 						<Spacer data-test-id="anketa-basic-layout--Spacer-2" />
-						<ProjectAssessmentForm data-test-id="anketa-basic-layout--ProjectAssessmentForm-0" />
+						<ProjectAssessmentForm
+							isCreate
+							data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
+						/>
 					</Card>
 				</Panel>
 			</PanelGroup>

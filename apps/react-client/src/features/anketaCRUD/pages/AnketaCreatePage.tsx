@@ -3,7 +3,7 @@ import { CreateCalculationDto } from "@react-client/common/api/generated/types";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { toast } from "@react-client/common/toasts";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
-import { AnketaBasicLayout } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayout";
+import { AnketaBasicLayoutCreate } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayoutCreate";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { routes } from "@react-client/routing/routes";
 import { useEffect, useState } from "react";
@@ -113,7 +113,7 @@ export const AnketaCreatePage = () => {
 				height="-webkit-fill-available"
 				data-test-id="anketa-create-page--Flex-0"
 			>
-				<AnketaBasicLayout
+				<AnketaBasicLayoutCreate
 					isPending={isPending}
 					onSubmit={onSubmit}
 					formHasErrors={formHasErrors}

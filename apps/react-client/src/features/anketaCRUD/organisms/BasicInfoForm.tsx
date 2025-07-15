@@ -217,7 +217,7 @@ export const BasicInfoForm = ({
 		setFormErrors,
 		...store
 	} = useAnketaCRUDFormsStore();
-	const [_liveValidate, setLiveValidate] = useState(false);
+	const [liveValidate, setLiveValidate] = useState(false);
 
 	const formRef = useRef<FormRef>(null);
 
@@ -338,7 +338,7 @@ export const BasicInfoForm = ({
 			onBlur={onBlur}
 			onFocus={onFocus}
 			templates={templates}
-			liveValidate={isCreate}
+			liveValidate={isCreate && liveValidate}
 			noHtml5Validate
 			focusOnFirstError
 			showErrorList={false}
