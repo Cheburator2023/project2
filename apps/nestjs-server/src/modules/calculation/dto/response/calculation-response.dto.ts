@@ -117,7 +117,7 @@ export class CalculationResponseDto {
 	name: string;
 
 	@ApiProperty({
-		example: "Отсутствует",
+		example: "",
 		description: "RFD (Reference Data)",
 	})
 	rfd: string;

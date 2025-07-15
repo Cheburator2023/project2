@@ -27,7 +27,7 @@ export const meta: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		valueFormatter: (params: any) => {
-			return params?.value ? params?.value?.join(", ") : "Отсутствует";
+			return params?.value ? params?.value?.join(", ") : "-";
 		},
 	},
 	{

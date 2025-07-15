@@ -6,7 +6,6 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import { useColorScheme } from "@mui/material/styles";
 import { useEffectOnce } from "@react-client/common/hooks/useEffectOnce";
-import { Spacer } from "@react-client/common/primitives/Spacer";
 import React from "react";
 
 export function ColorModeIconDropdown() {

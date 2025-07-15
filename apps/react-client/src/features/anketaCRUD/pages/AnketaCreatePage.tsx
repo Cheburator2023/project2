@@ -6,7 +6,7 @@ import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/store
 import { AnketaBasicLayoutCreate } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayoutCreate";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { routes } from "@react-client/routing/routes";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router";
 
 export const AnketaCreatePage = () => {

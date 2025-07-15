@@ -23,7 +23,7 @@ import { UncertaintyItemDto } from "../common/uncertainty-item.dto";
 
 export class CreateCalculationDto extends CalculationBaseDto {
 	@ApiProperty({
-		example: "Отсутствует",
+		example: "",
 		description: "RFD (Reference Data)",
 		required: false,
 	})

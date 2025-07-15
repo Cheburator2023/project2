@@ -9,7 +9,6 @@ import { Button, IconButton, Typography } from "@mui/material";
 import { useCalculationControllerFindOne } from "@react-client/common/api/generated/queries/calculation";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { Card } from "@react-client/common/muiCustom/Card";
-import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { toast } from "@react-client/common/toasts";

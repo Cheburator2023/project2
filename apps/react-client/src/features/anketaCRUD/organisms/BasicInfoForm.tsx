@@ -20,7 +20,8 @@ import type {
 	TemplatesType,
 	UiSchema,
 } from "@rjsf/utils";
-import { useEffect, useRef, useState } from "react";
+import { omit } from "lodash-es";
+import { useRef, useState } from "react";
 import { MultiSelectAutocompleteWidget } from "../../../common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjectFieldTemplate";
 
@@ -149,7 +150,14 @@ export const BasicInfoForm = ({
 	isEditing,
 	onChange,
 }: BasicInfoFormProps) => {
-	const initialData = { ..._initialData, calcName: _initialData?.name };
+	const initialData = omit(
+		{
+			..._initialData,
+			calcName: _initialData?.name,
+			rfd: _initialData?.rfd === "Отсутствует" ? "" : _initialData?.rfd,
+		},
+		["name"],
+	);
 
 	const { data: questData } = useQuestionnaireControllerGetFullQuestionnaire({
 		query: {

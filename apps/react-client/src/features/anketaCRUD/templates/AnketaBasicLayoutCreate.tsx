@@ -1,5 +1,5 @@
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import { Alert, Button, styled } from "@mui/material";
+import { Button, styled } from "@mui/material";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";

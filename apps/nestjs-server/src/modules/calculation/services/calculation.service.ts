@@ -44,7 +44,7 @@ export class CalculationService {
 
 			const calculation = this.calculationRepository.create({
 				name: createCalculationDto.name || "Новый расчет",
-				rfd: createCalculationDto.rfd || "Отсутствует",
+				rfd: createCalculationDto.rfd || "",
 				streamExecutor: createCalculationDto.streamExecutor,
 				department: createCalculationDto.department,
 				customerName: createCalculationDto.customerName,

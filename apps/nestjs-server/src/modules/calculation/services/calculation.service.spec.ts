@@ -140,7 +140,7 @@ describe("CalculationService", () => {
 			expect(result).toEqual(mockCalculation);
 			expect(repository.create).toHaveBeenCalledWith({
 				name: mockCreateDto.name,
-				rfd: "Отсутствует",
+				rfd: "",
 				questionnaireData: {
 					name: mockCreateDto.name,
 					modelsCount: mockCreateDto.modelsCount,
