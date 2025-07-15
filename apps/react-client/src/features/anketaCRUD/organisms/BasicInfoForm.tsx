@@ -41,7 +41,8 @@ const uiSchema: UiSchema = {
 		submitText: "Submit",
 	},
 	"ui:order": [
-		"name",
+		// просто name ломает валидацию
+		"calcName",
 		"rfd",
 		"streamExecutor",
 		"department",
@@ -53,7 +54,8 @@ const uiSchema: UiSchema = {
 		"author",
 		"comment",
 	],
-	name: {
+	// просто name ломает валидацию
+	calcName: {
 		"ui:widget": "TextFieldCustomWidget",
 		isEditable: true,
 	},
@@ -160,9 +162,15 @@ export const BasicInfoForm = ({
 
 	const schema: RJSFSchema = {
 		type: "object",
-		required: ["name", "streamExecutor", "department"],
+
+		required: [
+			// просто name ломает валидацию
+			"calcName",
+			"streamExecutor",
+			"department",
+		],
 		properties: {
-			name: {
+			calcName: {
 				type: "string",
 				title: "Название анкеты",
 				minLength: 1,
@@ -256,6 +264,7 @@ export const BasicInfoForm = ({
 			setFormData(formState.formData);
 		}
 		if (formState) {
+			console.log("🐸 Pepe said >> onChangeForm >> formState:", formState);
 			setFormDirty(formName, true);
 			updateFormState(formName, formState);
 		}

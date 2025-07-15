@@ -49,7 +49,7 @@ export const AnketaCreatePage = () => {
 			return;
 		}
 		const basicFormData: {
-			name: string;
+			calcName: string;
 			rfd: string;
 			streamExecutor: string;
 			department: string[];
@@ -66,7 +66,7 @@ export const AnketaCreatePage = () => {
 			const data: CreateCalculationDto = {
 				finalCoefficient: calculationResult[0]?.score,
 				calculationResult,
-				name: basicFormData.name,
+				name: basicFormData.calcName,
 				rfd: basicFormData.rfd,
 				streamExecutor: basicFormData.streamExecutor,
 				department: basicFormData.department,
