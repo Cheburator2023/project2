@@ -94,7 +94,7 @@ export const AnketaPreviewPage = () => {
 			const updateDto = Object.fromEntries(
 				Object.entries(formData).filter(([key]) => allowedFields.includes(key)),
 			);
-			updateMutation.mutate(updateDto);
+			updateMutation.mutate({ ...updateDto, name: updateDto.calcName });
 		}
 	};
 
