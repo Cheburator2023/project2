@@ -30,6 +30,8 @@ export function Header({
 		<>
 			<Card
 				data-test-id="header--Card-0"
+				zoom={0.8}
+				uuid="header_uuid"
 				style={{ overflow: "visible", padding: "4px" }}
 			>
 				<Flex
