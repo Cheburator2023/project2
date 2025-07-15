@@ -115,7 +115,6 @@ export const AnketaBasicLayout = ({
 						variant="contained"
 						onClick={onSubmit}
 						loading={isPending}
-						disabled={formHasErrors}
 						data-test-id="anketa-basic-layout--Button-0"
 					>
 						Сохранить

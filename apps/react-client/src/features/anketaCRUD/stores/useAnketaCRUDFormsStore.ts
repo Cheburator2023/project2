@@ -20,8 +20,8 @@ export interface IBasicFormData {
 export const basicInfoFormInitialData: IBasicFormData = {
 	name: "",
 	rfd: "",
-	streamExecutor: "",
-	department: [],
+	streamExecutor: IS_DEV ? "testo" : "",
+	department: IS_DEV ? ["test"] : [],
 	customerName: "",
 	comment: "",
 	relatedModels: [],
@@ -67,6 +67,8 @@ interface FormData<T> {
 	isValid: boolean;
 	isSubmitting: boolean;
 	submitCount: number;
+	errors: Record<string, string>;
+	hasErrors: boolean;
 }
 
 type AnketaCRUDFormsStoreType = {
@@ -109,6 +111,10 @@ interface AnketaCRUDFormsStore
 	setFormSubmitting: (formName: FormName, isSubmitting: boolean) => void;
 	incrementSubmitCount: (formName: FormName) => void;
 	resetSubmitCount: (formName: FormName) => void;
+	setFormError: (formName: FormName, field: string, error: string) => void;
+	clearFormError: (formName: FormName, field: string) => void;
+	clearAllFormErrors: (formName: FormName) => void;
+	setFormErrors: (formName: FormName, errors: Record<string, string>) => void;
 }
 
 type AnketaCreateData = any;
@@ -123,6 +129,8 @@ const init = {
 		isValid: false,
 		isSubmitting: false,
 		submitCount: 0,
+		errors: {},
+		hasErrors: false,
 		initialData: basicInfoFormInitialData,
 	},
 	anketaPreview_basicInfoForm: {
@@ -133,6 +141,8 @@ const init = {
 		isValid: false,
 		isSubmitting: false,
 		submitCount: 0,
+		errors: {},
+		hasErrors: false,
 		initialData: basicInfoFormInitialData,
 	},
 	anketaCreate_projectAssessmentForm: {
@@ -143,6 +153,8 @@ const init = {
 		isValid: false,
 		isSubmitting: false,
 		submitCount: 0,
+		errors: {},
+		hasErrors: false,
 		initialData: projectAssessmentFormInitialData,
 	},
 	anketaPreview_projectAssessmentForm: {
@@ -153,6 +165,8 @@ const init = {
 		isValid: false,
 		isSubmitting: false,
 		submitCount: 0,
+		errors: {},
+		hasErrors: false,
 		initialData: projectAssessmentFormInitialData,
 	},
 
@@ -206,4 +220,45 @@ export const useAnketaCRUDFormsStore = create<AnketaCRUDFormsStore>((set) => ({
 
 	resetSubmitCount: (formName) =>
 		set((_state) => ({ [formName]: { ..._state[formName], submitCount: 0 } })),
+
+	setFormError: (formName, field, error) =>
+		set((_state) => ({
+			[formName]: {
+				..._state[formName],
+				errors: { ..._state[formName].errors, [field]: error },
+				hasErrors: true,
+			},
+		})),
+
+	clearFormError: (formName, field) =>
+		set((_state) => {
+			const newErrors = { ..._state[formName].errors };
+			delete newErrors[field];
+			const hasErrors = Object.keys(newErrors).length > 0;
+			return {
+				[formName]: {
+					..._state[formName],
+					errors: newErrors,
+					hasErrors,
+				},
+			};
+		}),
+
+	clearAllFormErrors: (formName) =>
+		set((_state) => ({
+			[formName]: {
+				..._state[formName],
+				errors: {},
+				hasErrors: false,
+			},
+		})),
+
+	setFormErrors: (formName, errors) =>
+		set((_state) => ({
+			[formName]: {
+				..._state[formName],
+				errors,
+				hasErrors: Object.keys(errors).length > 0,
+			},
+		})),
 }));

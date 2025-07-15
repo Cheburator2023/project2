@@ -211,6 +211,10 @@ export const BasicInfoForm = ({
 		setFormValidated,
 		setFormValid,
 		incrementSubmitCount,
+		setFormError,
+		clearFormError,
+		clearAllFormErrors,
+		setFormErrors,
 		...store
 	} = useAnketaCRUDFormsStore();
 	const [_liveValidate, setLiveValidate] = useState(false);
@@ -263,6 +267,7 @@ export const BasicInfoForm = ({
 		setFormValidated(formName, true);
 		setFormValid(formName, true);
 		incrementSubmitCount(formName);
+		clearAllFormErrors(formName);
 
 		if (formData) {
 			setFormData(formData);
@@ -281,6 +286,19 @@ export const BasicInfoForm = ({
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}
+
+		if (errors && errors.length > 0) {
+			const errorMap: Record<string, string> = {};
+			errors.forEach((error: any) => {
+				if (error.property && error.message) {
+					errorMap[error.property] = error.message;
+				}
+			});
+			setFormErrors(formName, errorMap);
+		} else {
+			clearAllFormErrors(formName);
+		}
+
 		console.log("Form errors:", errors);
 	};
 
@@ -320,7 +338,7 @@ export const BasicInfoForm = ({
 			onBlur={onBlur}
 			onFocus={onFocus}
 			templates={templates}
-			liveValidate={false}
+			liveValidate={isCreate}
 			noHtml5Validate
 			focusOnFirstError
 			showErrorList={false}

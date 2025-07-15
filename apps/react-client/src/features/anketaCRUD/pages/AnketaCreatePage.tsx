@@ -32,7 +32,8 @@ export const AnketaCreatePage = () => {
 		anketaCreate_projectAssessmentForm?.isValid;
 
 	const formHasErrors = !!(
-		stateBasicForm?.errors?.length || stateProjectAssessmentForm?.errors?.length
+		anketaCreate_basicInfoForm?.hasErrors ||
+		anketaCreate_projectAssessmentForm?.hasErrors
 	);
 
 	const submitCount = anketaCreate_basicInfoForm?.submitCount;
@@ -44,6 +45,9 @@ export const AnketaCreatePage = () => {
 	};
 
 	useEffect(() => {
+		if (formHasErrors) {
+			return;
+		}
 		const basicFormData: {
 			name: string;
 			rfd: string;
@@ -99,7 +103,7 @@ export const AnketaCreatePage = () => {
 				},
 			);
 		}
-	}, [isFormValid, submitCount]);
+	}, [isFormValid, submitCount, formHasErrors]);
 
 	return (
 		<div data-test-id="anketa-create-page--div-0">

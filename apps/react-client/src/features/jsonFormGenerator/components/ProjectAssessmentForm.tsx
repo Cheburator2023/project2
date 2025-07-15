@@ -53,7 +53,10 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 		setFormValidated,
 		setFormValid,
 		incrementSubmitCount,
-
+		setFormError,
+		clearFormError,
+		clearAllFormErrors,
+		setFormErrors,
 		...store
 	} = useAnketaCRUDFormsStore();
 	const { setFormData: setFormDataForCalc } = assessmentCalculationsStore();
@@ -99,6 +102,7 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 		setFormValidated(formName, true);
 		setFormValid(formName, true);
 		incrementSubmitCount(formName);
+		clearAllFormErrors(formName);
 
 		if (e.formData) {
 			setFormData(e.formData);
@@ -114,6 +118,19 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}
+
+		if (errors && errors.length > 0) {
+			const errorMap: Record<string, string> = {};
+			errors.forEach((error: any) => {
+				if (error.property && error.message) {
+					errorMap[error.property] = error.message;
+				}
+			});
+			setFormErrors(formName, errorMap);
+		} else {
+			clearAllFormErrors(formName);
+		}
+
 		console.log("Form errors:", errors);
 	};
 
