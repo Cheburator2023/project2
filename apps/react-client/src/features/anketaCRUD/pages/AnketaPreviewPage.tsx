@@ -25,8 +25,6 @@ export const AnketaPreviewPage = () => {
 	const [comfyView, setComfyView] = useState(true);
 	const [isEditing, setIsEditing] = useState(false);
 	const [formData, setFormData] = useState<any>(null);
-	console.log("🐸 Pepe said >> AnketaPreviewPage >> formData:", formData);
-
 	const queryClient = useQueryClient();
 
 	const { setApiRef, resetApiRef, ...store } = useAnketaCRUDFormsStore();
@@ -41,23 +39,19 @@ export const AnketaPreviewPage = () => {
 			enabled: !!calcId,
 		},
 	});
-	console.log(
-		"🐸 Pepe said >> AnketaPreviewPage >> _initialData:",
-		_initialData,
-	);
 
 	const initialData = { ..._initialData, calcName: _initialData?.name };
-
-	console.log("🐸 Pepe said >> AnketaPreviewPage >> initialData:", initialData);
 
 	// Custom update mutation (PUT /calculation/:id)
 	const updateMutation = useMutation({
 		mutationFn: async (updateDto: any) => {
+			console.log("🐸 Pepe said >> mutationFn: >> updateDto:", updateDto);
+
 			return apiClient({
 				url: `/calculation/${calcId}`,
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
-				data: { ...updateDto, name: updateDto.calcName },
+				data: updateDto,
 			});
 		},
 		onSuccess: () => {
@@ -70,7 +64,8 @@ export const AnketaPreviewPage = () => {
 	const handleEdit = () => {
 		if (initialData) {
 			// Copy all fields from initialData, not just meta fields
-			setFormData({ ...initialData, calcName: _initialData?.name });
+			// @ts-ignore
+			setFormData({ ...initialData, name: _initialData?.calcName });
 			setIsEditing(true);
 		}
 	};
@@ -83,18 +78,23 @@ export const AnketaPreviewPage = () => {
 	const handleSave = () => {
 		if (formData) {
 			// Only send allowed fields
-			const allowedFields = [
-				"calcName",
-				"rfd",
-				"streamExecutor",
-				"department",
-				"customerName",
-				"comment",
-			];
-			const updateDto = Object.fromEntries(
-				Object.entries(formData).filter(([key]) => allowedFields.includes(key)),
-			);
-			updateMutation.mutate({ ...updateDto, name: updateDto.calcName });
+			// const allowedFields = [
+			// 	"name",
+			// 	"rfd",
+			// 	"streamExecutor",
+			// 	"department",
+			// 	"customerName",
+			// 	"comment",
+			// ];
+
+			updateMutation.mutate({
+				name: formData.calcName,
+				rfd: formData.rfd,
+				streamExecutor: formData.streamExecutor,
+				department: formData.department,
+				customerName: formData.customerName,
+				comment: formData.comment,
+			});
 		}
 	};
 

@@ -255,7 +255,7 @@ export const BasicInfoForm = ({
 		updateFormState(formName, formState);
 	}, [formState]);
 
-	useEffect(() => {
+	useDeepEffect(() => {
 		if (initialData) {
 			setFormData({ ...basicInfoFormInitialData, ...initialData });
 		}
