@@ -22,7 +22,7 @@ export class CalculationService {
 	 */
 	async create(
 		createCalculationDto: CreateCalculationDto,
-		user: any,
+		user?: any,
 	): Promise<Calculation> {
 		try {
 			const generalUncertaintyObject = {};

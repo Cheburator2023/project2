@@ -8,6 +8,7 @@ import {
 	Post,
 	Put,
 	Query,
+	UseInterceptors,
 	UsePipes,
 	ValidationPipe,
 } from "@nestjs/common";
@@ -20,7 +21,9 @@ import {
 	ApiTags,
 } from "@nestjs/swagger";
 import { RealmRole } from "../../../shared/decorators/realm-role.decorator";
+import { StreamFilter } from "../../../shared/decorators/stream-filter.decorator";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
+import { StreamFilterInterceptor } from "../../../shared/interceptors/stream-filter.interceptor";
 import { Permission } from "../../../shared/types/permissions";
 import {
 	CalculationResponseDto,
@@ -34,6 +37,7 @@ import { CalculationService } from "../services/calculation.service";
 @ApiBearerAuth("JWT-auth")
 @ApiTags("Calculation")
 @Controller("calculation")
+@UseInterceptors(StreamFilterInterceptor)
 export class CalculationController {
 	constructor(private readonly calculationService: CalculationService) {}
 
@@ -110,6 +114,7 @@ export class CalculationController {
 
 	@Get("all")
 	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
+	@StreamFilter()
 	@ApiOperation({
 		summary: "Get all calculations (paginated)",
 		description: "Retrieves a paginated list of all calculations",
@@ -152,6 +157,7 @@ export class CalculationController {
 
 	@Get("all/list")
 	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
+	@StreamFilter()
 	@ApiOperation({
 		summary: "Get all calculations (non-paginated)",
 		description: "Retrieves all calculations without pagination",
