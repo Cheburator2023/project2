@@ -52,14 +52,14 @@ export class CalculationService {
             })) || [];
 
             const calculation = this.calculationRepository.create({
-                name: createCalculationDto.name || "Новый расчет",
+                calcName: createCalculationDto.calcName || "Новый расчет",
                 rfd: createCalculationDto.rfd || "Отсутствует",
                 streamExecutor: createCalculationDto.streamExecutor,
                 department: createCalculationDto.department,
                 customerName: createCalculationDto.customerName,
                 comment: createCalculationDto.comment,
                 questionnaireData: {
-                    name: createCalculationDto.name || "Новый расчет",
+                    calcName: createCalculationDto.calcName || "Новый расчет",
                     modelsCount: createCalculationDto.modelsCount,
                     setupComplexity: createCalculationDto.setupComplexity,
                     initiativeTimeline: createCalculationDto.initiativeTimeline,
@@ -112,9 +112,9 @@ export class CalculationService {
                 throw new NotFoundException(`Calculation with ID ${id} not found`);
             }
 
-            if (updateDto.name !== undefined) {
-                calculation.name = updateDto.name;
-                calculation.questionnaireData.name = updateDto.name;
+            if (updateDto.calcName !== undefined) {
+                calculation.calcName = updateDto.calcName;
+                calculation.questionnaireData.calcName = updateDto.calcName;
             }
             if (updateDto.rfd !== undefined) calculation.rfd = updateDto.rfd;
             if (updateDto.streamExecutor !== undefined)

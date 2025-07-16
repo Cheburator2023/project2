@@ -125,7 +125,7 @@ export class CalculationResponseDto {
 		example: "Оценка проекта для бизнеса",
 		description: "Название анкеты",
 	})
-	name: string;
+    calcName: string;
 
 	@ApiProperty({
 		example: "Отсутствует",
@@ -164,7 +164,7 @@ export class CalculationResponseDto {
     })
     @Type(() => CalculationQuestionnaireDataDto)
     questionnaireData: {
-        name: string;
+        calcName: string;
         setupComplexity: string;
         initiativeTimeline: string;
         initiativeCost: string;

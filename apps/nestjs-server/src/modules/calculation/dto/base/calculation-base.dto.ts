@@ -126,7 +126,7 @@ export class CalculationBaseDto {
 	})
 	@IsString({ message: "name must be a string" })
 	@IsNotEmpty({ message: "name should not be empty" })
-	name: string;
+    calcName: string;
 
 	@ApiProperty({
 		example:

@@ -222,7 +222,7 @@ export class CalculationController {
 
         return {
             id: calculation.id,
-            name: calculation.name,
+            calcName: calculation.calcName,
             rfd: calculation.rfd,
             streamExecutor: calculation.streamExecutor,
             department: calculation.department,
