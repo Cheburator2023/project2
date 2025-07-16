@@ -8,7 +8,7 @@ describe("CreateCalculationDto", () => {
 
 	it("should have required properties", () => {
 		const dto = new CreateCalculationDto();
-		dto.name = "Test Calculation";
+		dto.calcName = "Test Calculation";
 		dto.setupComplexity =
 			"1 Сложность: Проведение регулярной валидации Моделей Регулятором не установлено";
 		dto.modelsCount = 1;
@@ -23,7 +23,7 @@ describe("CreateCalculationDto", () => {
 		dto.productionDeploymentChannels = ["Батч"];
 		dto.finalCoefficient = 1.0;
 
-		expect(dto.name).toBe("Test Calculation");
+		expect(dto.calcName).toBe("Test Calculation");
 		expect(dto.modelsCount).toBe(1);
 		expect(dto.algorithmComplexity.length).toBe(1);
 	});

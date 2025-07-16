@@ -14,21 +14,21 @@ describe("CalculationService", () => {
 
 	const mockCalculation: Calculation = {
 		id: "550e8400-e29b-41d4-a716-446655440000",
-		name: "Test Calculation",
+		calcName: "Test Calculation",
 		rfd: "Отсутствует",
 		streamExecutor: "Test Stream",
 		department: ["Test Department"],
 		customerName: "Test Customer",
 		comment: "Test Comment",
 		questionnaireData: {
-			name: "Test Calculation",
+			calcName: "Test Calculation",
 			setupComplexity:
 				"1 Сложность: Проведение регулярной валидации Моделей Регулятором не установлено",
 			modelsCount: 1,
 			initiativeTimeline: "Менее 1 мес.",
 			initiativeCost: "До 45.3 млн.",
 			uncertaintyAdjustment: 1,
-			generalUncertainty: [],
+			generalUncertainty: [] as any,
 			readyPromReports: "Нет",
 			assessedInitiativesCount: "1",
 			dataSourcesCount: "1",
@@ -74,7 +74,7 @@ describe("CalculationService", () => {
 	describe("create", () => {
 		it("should successfully create a calculation", async () => {
 			const createDto: CreateCalculationDto = {
-				name: "Test Calculation",
+				calcName: "Test Calculation",
 				setupComplexity:
 					"1 Сложность: Проведение регулярной валидации Моделей Регулятором не установлено",
 				initiativeTimeline: "Менее 1 мес.",
@@ -103,7 +103,7 @@ describe("CalculationService", () => {
 
 		it("should throw BadRequestException on error", async () => {
 			const createDto: CreateCalculationDto = {
-				name: "Test Calculation",
+				calcName: "Test Calculation",
 				setupComplexity:
 					"1 Сложность: Проведение регулярной валидации Моделей Регулятором не установлено",
 				initiativeTimeline: "Менее 1 мес.",
@@ -175,7 +175,7 @@ describe("CalculationService", () => {
 	describe("updateCalculation", () => {
 		it("should update a calculation", async () => {
 			const updateDto: UpdateCalculationDto = {
-				name: "Updated Calculation",
+				calcName: "Updated Calculation",
 				comment: "Updated comment",
 			};
 
@@ -191,7 +191,7 @@ describe("CalculationService", () => {
 		it("should throw NotFoundException if calculation not found", async () => {
 			jest.spyOn(repository, "findOne").mockResolvedValue(null);
 			const updateDto: UpdateCalculationDto = {
-				name: "Updated Calculation",
+				calcName: "Updated Calculation",
 			};
 			await expect(
 				service.updateCalculation("invalid-id", updateDto),
@@ -203,7 +203,7 @@ describe("CalculationService", () => {
 				.spyOn(repository, "findOne")
 				.mockRejectedValue(new Error("Test Error"));
 			const updateDto: UpdateCalculationDto = {
-				name: "Updated Calculation",
+				calcName: "Updated Calculation",
 			};
 			await expect(
 				service.updateCalculation(

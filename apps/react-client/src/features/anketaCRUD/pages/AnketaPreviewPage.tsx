@@ -16,6 +16,7 @@ import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/store
 import { AnketaBasicLayoutPreview } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayoutPreview";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { isEmpty } from "lodash-es";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 
@@ -32,7 +33,7 @@ export const AnketaPreviewPage = () => {
 		store;
 
 	const {
-		data: _initialData,
+		data: initialData,
 		refetch,
 		isPending,
 		isError,
@@ -41,8 +42,6 @@ export const AnketaPreviewPage = () => {
 			enabled: !!calcId,
 		},
 	});
-
-	const initialData = { ..._initialData, calcName: _initialData?.name };
 
 	// Custom update mutation (PUT /calculation/:id)
 	const updateMutation = useMutation({
@@ -74,12 +73,8 @@ export const AnketaPreviewPage = () => {
 	const submitCount = anketaPreview_basicInfoForm?.submitCount;
 
 	const handleEdit = () => {
-		if (initialData) {
-			// Copy all fields from initialData, not just meta fields
-			// @ts-ignore
-			setFormData({ ...initialData, name: _initialData?.calcName });
-			setIsEditing(true);
-		}
+		setFormData({ ...initialData });
+		setIsEditing(true);
 	};
 
 	const handleCancel = () => {
@@ -96,7 +91,7 @@ export const AnketaPreviewPage = () => {
 		if (formData) {
 			// Only send allowed fields
 			// const allowedFields = [
-			// 	"name",
+			// 	"calcName",
 			// 	"rfd",
 			// 	"streamExecutor",
 			// 	"department",
@@ -105,7 +100,7 @@ export const AnketaPreviewPage = () => {
 			// ];
 
 			updateMutation.mutate({
-				name: formData.calcName,
+				calcName: formData.calcName,
 				rfd: formData.rfd,
 				streamExecutor: formData.streamExecutor,
 				department: formData.department,
@@ -131,7 +126,11 @@ export const AnketaPreviewPage = () => {
 					{!comfyView ? <ViewComfyIcon /> : <ViewDayIcon />}
 				</IconButton>
 				{!isEditing && (
-					<IconButton onClick={handleEdit} title="Редактировать">
+					<IconButton
+						onClick={handleEdit}
+						title="Редактировать"
+						disabled={isEmpty(initialData)}
+					>
 						<EditIcon />
 					</IconButton>
 				)}
@@ -154,7 +153,7 @@ export const AnketaPreviewPage = () => {
 					</>
 				)}
 			</Header>
-			{isError ? (
+			{false ? (
 				<Flex
 					justifyContent="center"
 					alignItems="center"
@@ -171,7 +170,7 @@ export const AnketaPreviewPage = () => {
 				</Flex>
 			) : (
 				<AnketaBasicLayoutPreview
-					isPending={isPending}
+					isPending={false}
 					isEditing={isEditing}
 					initialData={isEditing ? formData : initialData}
 					comfyView={comfyView}

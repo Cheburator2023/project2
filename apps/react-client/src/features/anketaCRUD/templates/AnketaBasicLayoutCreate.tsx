@@ -100,30 +100,6 @@ export const AnketaBasicLayoutCreate = ({
 					</Card>
 				</Panel>
 			</PanelGroup>
-
-			<Spacer space={6} data-test-id="anketa-basic-layout--Spacer-3" />
-			<Card padding="10px" data-test-id="anketa-basic-layout--Card-3">
-				<Flex
-					justifyContent="flex-end"
-					alignItems="center"
-					data-test-id="anketa-basic-layout--Flex-1"
-					gap={6}
-				>
-					{/* {formHasErrors && (
-						<Alert severity="error">
-							Форма имеет ошибки или заполнена не до конца
-						</Alert>
-					)} */}
-					<Button
-						variant="contained"
-						onClick={onSubmit}
-						loading={isPending}
-						data-test-id="anketa-basic-layout--Button-0"
-					>
-						Сохранить
-					</Button>
-				</Flex>
-			</Card>
 		</Flex>
 	);
 };

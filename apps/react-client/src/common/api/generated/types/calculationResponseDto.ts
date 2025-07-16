@@ -11,7 +11,7 @@ export interface CalculationResponseDto {
   /** Уникальный идентификатор расчета */
   id: string;
   /** Название анкеты */
-  name: string;
+  calcName: string;
   /** RFD (Reference Data) */
   rfd: string;
   /** Исполнительный стрим */

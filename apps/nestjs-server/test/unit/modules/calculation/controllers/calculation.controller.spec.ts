@@ -49,7 +49,7 @@ describe("CalculationController", () => {
 	describe("create", () => {
 		it("should create a new calculation", async () => {
 			const createDto: CreateCalculationDto = {
-				name: "Test Calculation",
+				calcName: "Test Calculation",
 				setupComplexity:
 					"1 Сложность: Проведение регулярной валидации Моделей Регулятором не установлено",
 				initiativeTimeline: "Менее 1 мес.",
@@ -102,7 +102,7 @@ describe("CalculationController", () => {
 	describe("update", () => {
 		it("should update a calculation", async () => {
 			const updateDto: UpdateCalculationDto = {
-				name: "Updated Calculation",
+				calcName: "Updated Calculation",
 				comment: "Updated comment",
 			};
 

@@ -34,7 +34,7 @@ export class CalculationQuestionnaireDataDto extends CalculationBaseDto {
 			},
 		},
 	})
-	generalUncertainty: Record<
+	generalUncertainty?: Record<
 		string,
 		{
 			probability: string;

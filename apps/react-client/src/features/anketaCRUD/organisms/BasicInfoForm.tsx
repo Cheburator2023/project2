@@ -144,21 +144,12 @@ const widgets: RegistryWidgetsType = {
 };
 
 export const BasicInfoForm = ({
-	initialData: _initialData,
+	initialData,
 	isCreate = false,
 	disabled = false,
 	isEditing,
 	onChange,
 }: BasicInfoFormProps) => {
-	const initialData = omit(
-		{
-			..._initialData,
-			calcName: _initialData?.name,
-			rfd: _initialData?.rfd === "Отсутствует" ? "" : _initialData?.rfd,
-		},
-		["name"],
-	);
-
 	const { data: questData } = useQuestionnaireControllerGetFullQuestionnaire({
 		query: {
 			staleTime: 0,

@@ -14,21 +14,21 @@ describe("Calculation Entity", () => {
 
 	it("should have name property", () => {
 		const calculation = new Calculation();
-		calculation.name = "Test Calculation";
-		expect(calculation.name).toBe("Test Calculation");
+		calculation.calcName = "Test Calculation";
+		expect(calculation.calcName).toBe("Test Calculation");
 	});
 
 	it("should have questionnaireData property", () => {
 		const calculation = new Calculation();
 		calculation.questionnaireData = {
-			name: "Test Calculation",
+			calcName: "Test Calculation",
 			setupComplexity:
 				"1 Сложность: Проведение регулярной валидации Моделей Регулятором не установлено",
 			modelsCount: 1,
 			initiativeTimeline: "Менее 1 мес.",
 			initiativeCost: "До 45.3 млн.",
 			uncertaintyAdjustment: 0,
-			generalUncertainty: [],
+			generalUncertainty: [] as any,
 			readyPromReports: "Нет",
 			assessedInitiativesCount: "1",
 			dataSourcesCount: "1",
@@ -39,7 +39,7 @@ describe("Calculation Entity", () => {
 			productionAdditionalReports: "0",
 			productionDeploymentChannels: [{ deploymentChannel: "Батч" }],
 		};
-		expect(calculation.questionnaireData.name).toBe("Test Calculation");
+		expect(calculation.questionnaireData.calcName).toBe("Test Calculation");
 		expect(calculation.questionnaireData.modelsCount).toBe(1);
 	});
 

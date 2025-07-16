@@ -1,3 +1,4 @@
+import { IconButton } from "@mui/material";
 import { useCalculationControllerCreate } from "@react-client/common/api/generated/queries/calculation";
 import { CreateCalculationDto } from "@react-client/common/api/generated/types";
 import { Flex } from "@react-client/common/primitives/Flex";
@@ -8,6 +9,7 @@ import { Header } from "@react-client/features/navigation/organisms/Header";
 import { routes } from "@react-client/routing/routes";
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
+import SaveIcon from "@mui/icons-material/Save";
 
 export const AnketaCreatePage = () => {
 	const navigate = useNavigate();
@@ -64,7 +66,7 @@ export const AnketaCreatePage = () => {
 			const data: CreateCalculationDto = {
 				finalCoefficient: calculationResult[0]?.score,
 				calculationResult,
-				name: basicFormData.calcName,
+				calcName: basicFormData.calcName,
 				rfd: basicFormData.rfd,
 				streamExecutor: basicFormData.streamExecutor,
 				department: basicFormData.department,
@@ -103,7 +105,11 @@ export const AnketaCreatePage = () => {
 
 	return (
 		<div data-test-id="anketa-create-page--div-0">
-			<Header data-test-id="anketa-create-page--Header-0" />
+			<Header data-test-id="anketa-create-page--Header-0">
+				<IconButton onClick={onSubmit} title="Создать" loading={isPending}>
+					<SaveIcon />
+				</IconButton>
+			</Header>
 			<Flex
 				width="100%"
 				height="-webkit-fill-available"

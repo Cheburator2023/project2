@@ -9,14 +9,14 @@ describe("CalculationResponseDto", () => {
 	it("should have required properties", () => {
 		const dto = new CalculationResponseDto();
 		dto.id = "550e8400-e29b-41d4-a716-446655440000";
-		dto.name = "Test Calculation";
+		dto.calcName = "Test Calculation";
 		dto.rfd = "Отсутствует";
 		dto.streamExecutor = "Test Stream";
 		dto.department = ["Test Department"];
 		dto.customerName = "Test Customer";
 		dto.comment = "Test Comment";
 		dto.questionnaireData = {
-			name: "Test Calculation",
+			calcName: "Test Calculation",
 			setupComplexity:
 				"1 Сложность: Проведение регулярной валидации Моделей Регулятором не установлено",
 			modelsCount: 1,
@@ -39,7 +39,7 @@ describe("CalculationResponseDto", () => {
 		dto.author = "Test User";
 
 		expect(dto.id).toBe("550e8400-e29b-41d4-a716-446655440000");
-		expect(dto.name).toBe("Test Calculation");
+		expect(dto.calcName).toBe("Test Calculation");
 		expect(dto.questionnaireData.modelsCount).toBe(1);
 		expect(dto.questionnaireData.productionDeploymentChannels).toEqual([
 			"Батч",
