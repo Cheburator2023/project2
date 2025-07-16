@@ -26,7 +26,7 @@
 		"build": "turbo run build",
 		"lint": "turbo run lint",
 		"biome": "npx @biomejs/biome@2.0.6 check",
-		"biome:fix": "npx @biomejs/biome@2.0.6 check --log-level=error --diagnostic-level=error --fix --unsafe ./apps/react-client/src ./apps/nestjs-server/src",
+		"biome:fix": "npx @biomejs/biome@2.0.6 check --log-level=error --diagnostic-level=error --unsafe --fix ./apps/react-client/src ./apps/nestjs-server/test ./apps/nestjs-server/src",
 		"prepare": "husky",
 		"codemod:testids": "node ./codemods/add_test_ids.ts io-dir=../apps/react-client/src --all",
 		"codemod:testids:remove": "node ./codemods/add_test_ids.ts io-dir=../apps/react-client/src --all --remove"

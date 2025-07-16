@@ -43,7 +43,7 @@
 		"enabled": true,
 		"lineEnding": "lf"
 	},
-	"assist": { "actions": { "source": { "organizeImports": "on" } } },
+	"assist": { "actions": { "source": { "organizeImports": "off" } } },
 	"linter": {
 		"enabled": true,
 		"rules": {
@@ -53,6 +53,7 @@
 				"noDangerouslySetInnerHtml": "off"
 			},
 			"style": {
+				
 				"useNodejsImportProtocol": "off",
 				"useConst": "warn",
 				"noDefaultExport": "off",
