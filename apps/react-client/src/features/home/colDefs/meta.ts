@@ -53,7 +53,7 @@ export const meta: ColDef<any, any>[] = [
 		headerName: "Дата создания",
 		sortable: true,
 		filter: "agDateColumnFilter",
-		cellDataType: "dateTime",
+		cellDataType: "dateString",
 		valueFormatter: (params) => {
 			const dt = new Date(params?.value?.replace("Z", ""));
 
