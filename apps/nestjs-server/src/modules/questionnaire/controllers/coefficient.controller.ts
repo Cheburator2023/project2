@@ -6,6 +6,8 @@ import {
 	ApiTags,
 } from "@nestjs/swagger";
 import { Resource } from "nest-keycloak-connect";
+import { RealmRole } from "../../../shared/decorators/realm-role.decorator";
+import { Permission } from "../../../shared/types/permissions";
 import { CoefficientEntity } from "../entities/coefficient.entity";
 import { CoefficientService } from "../services/coefficient.service";
 
@@ -17,6 +19,7 @@ export class CoefficientController {
 	constructor(private readonly service: CoefficientService) {}
 
 	@Get()
+	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
 	@ApiOperation({
 		summary: "Get all coefficients",
 		description: "Retrieves all active coefficients with their base values",
@@ -31,6 +34,7 @@ export class CoefficientController {
 	}
 
 	@Get(":code")
+	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
 	@ApiOperation({
 		summary: "Get coefficient value",
 		description: "Calculates coefficient value based on input",
