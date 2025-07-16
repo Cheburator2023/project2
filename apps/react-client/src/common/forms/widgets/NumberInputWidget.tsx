@@ -5,7 +5,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { WidgetProps } from "@rjsf/utils";
 import React from "react";
 
-const NumberInputWidget: React.FC<WidgetProps> = (props) => {
+export const NumberInputWidget: React.FC<WidgetProps> = (props) => {
 	const {
 		id,
 		value,

@@ -11,6 +11,7 @@ import { styled } from "@mui/material/styles";
 import { useAuthStore } from "@react-client/common/store/authStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useKeycloak } from "@react-keycloak/web";
 
 import { MenuButton } from "./MenuButton";
 
@@ -21,6 +22,7 @@ const MenuItem = styled(MuiMenuItem)({
 export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 	const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 	const queryClient = useQueryClient();
+
 	const open = Boolean(anchorEl);
 	const handleClick = (event: React.MouseEvent<HTMLElement>) => {
 		setAnchorEl(event.currentTarget);

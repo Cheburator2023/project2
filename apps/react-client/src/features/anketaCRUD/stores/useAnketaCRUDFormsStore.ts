@@ -1,4 +1,4 @@
-import { IAssessmentFormData } from "@react-client/features/jsonFormGenerator/types/FormData";
+import { IAssessmentFormData } from "@react-client/features/anketaCRUD/types/FormData";
 import type FormRef from "@rjsf/core";
 import { create } from "zustand";
 

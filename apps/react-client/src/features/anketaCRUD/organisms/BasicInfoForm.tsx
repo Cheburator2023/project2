@@ -20,7 +20,6 @@ import type {
 	TemplatesType,
 	UiSchema,
 } from "@rjsf/utils";
-import { omit } from "lodash-es";
 import { useRef, useState } from "react";
 import { MultiSelectAutocompleteWidget } from "../../../common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjectFieldTemplate";

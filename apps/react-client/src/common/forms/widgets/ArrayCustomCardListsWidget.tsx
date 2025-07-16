@@ -1,7 +1,7 @@
 import { Card, CardContent, InputLabel, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import calcSchema from "@react-client/features/jsonFormGenerator/schemas/calc_schema.json";
+import calcSchema from "@react-client/schemas/calc_schema.json";
 import { WidgetProps } from "@rjsf/utils";
 
 export interface ArrayCustomCardListsWidgetProps extends WidgetProps {
