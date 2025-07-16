@@ -67,15 +67,15 @@ export const AnketaCreatePage = () => {
 
 		if (isFormValid) {
 			const data: CreateCalculationDto = {
+				...stateProjectAssessmentForm.formData,
 				finalCoefficient: calculationResult[0]?.score,
-				calculationResult,
+				calculationResult: calculationResult,
 				calcName: basicFormData.calcName,
 				rfd: basicFormData.rfd,
 				streamExecutor: basicFormData.streamExecutor,
 				department: basicFormData.department,
 				customerName: basicFormData.customerName,
 				comment: basicFormData.comment,
-				...stateProjectAssessmentForm.formData,
 			};
 
 			createCalculationMutation(
