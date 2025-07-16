@@ -49,12 +49,6 @@ export const AnketaCreatePage = () => {
 
 	useEffect(() => {
 		if (formHasErrors && !isFormValid) {
-			toast.warning("Ошибка создания расчета", {
-				action: {
-					label: "",
-					onClick: () => {},
-				},
-			});
 			return;
 		}
 		const basicFormData: {
