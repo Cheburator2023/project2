@@ -27,8 +27,9 @@ export const AnketaPreviewPage = () => {
 	const [isEditing, setIsEditing] = useState(false);
 	const [formData, setFormData] = useState<any>(null);
 	const queryClient = useQueryClient();
-
 	const store = useAnketaCRUDFormsStore();
+	console.log("🐸 AnketaPreviewPage >> store:", store);
+
 	const { anketaPreview_basicInfoForm, anketaPreview_projectAssessmentForm } =
 		store;
 
@@ -46,8 +47,6 @@ export const AnketaPreviewPage = () => {
 	// Custom update mutation (PUT /calculation/:id)
 	const updateMutation = useMutation({
 		mutationFn: async (updateDto: any) => {
-			console.log("🐸 Pepe said >> mutationFn: >> updateDto:", updateDto);
-
 			return apiClient({
 				url: `/calculation/${calcId}`,
 				method: "PUT",
@@ -68,7 +67,7 @@ export const AnketaPreviewPage = () => {
 		},
 	});
 
-	const isFormValid = anketaPreview_basicInfoForm?.isValid;
+	const isFormValid = anketaPreview_basicInfoForm?.isValid; // only basic form should be valid
 	const formHasErrors = anketaPreview_basicInfoForm?.hasErrors;
 	const submitCount = anketaPreview_basicInfoForm?.submitCount;
 

@@ -1,5 +1,4 @@
 var __defProp = Object.defineProperty;
-console.log('🐸 Pepe said >> __defProp:', __defProp);
 
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;

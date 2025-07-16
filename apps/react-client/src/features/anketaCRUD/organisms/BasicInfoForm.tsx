@@ -268,7 +268,6 @@ export const BasicInfoForm = ({
 			setFormData(formState.formData);
 		}
 		if (formState) {
-			console.log("🐸 Pepe said >> onChangeForm >> formState:", formState);
 			setFormDirty(formName, true);
 			updateFormState(formName, formState);
 		}

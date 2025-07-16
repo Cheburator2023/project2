@@ -21,6 +21,7 @@ export const AnketaCreatePage = () => {
 		anketaCreate_basicInfoForm,
 		anketaCreate_projectAssessmentForm,
 	} = store;
+	console.log("AnketaCreatePage >> store:", store);
 
 	const stateBasicForm = anketaCreate_basicInfoForm.state;
 	const stateProjectAssessmentForm = anketaCreate_projectAssessmentForm.state;
@@ -29,7 +30,7 @@ export const AnketaCreatePage = () => {
 		useCalculationControllerCreate();
 
 	const isFormValid =
-		anketaCreate_basicInfoForm?.isValid ||
+		anketaCreate_basicInfoForm?.isValid &&
 		anketaCreate_projectAssessmentForm?.isValid;
 
 	const formHasErrors = !!(
@@ -37,7 +38,9 @@ export const AnketaCreatePage = () => {
 		anketaCreate_projectAssessmentForm?.hasErrors
 	);
 
-	const submitCount = anketaCreate_basicInfoForm?.submitCount;
+	const submitCount =
+		anketaCreate_basicInfoForm?.submitCount +
+		anketaCreate_projectAssessmentForm?.submitCount;
 
 	const onSubmit = () => {
 		anketaCreate_basicInfoForm.api?.submit();
@@ -45,7 +48,13 @@ export const AnketaCreatePage = () => {
 	};
 
 	useEffect(() => {
-		if (formHasErrors) {
+		if (formHasErrors && !isFormValid) {
+			toast.warning("Ошибка создания расчета", {
+				action: {
+					label: "",
+					onClick: () => {},
+				},
+			});
 			return;
 		}
 		const basicFormData: {
@@ -117,8 +126,6 @@ export const AnketaCreatePage = () => {
 			>
 				<AnketaBasicLayoutCreate
 					isPending={isPending}
-					onSubmit={onSubmit}
-					formHasErrors={formHasErrors}
 					data-test-id="anketa-create-page--AnketaBasicLayout-0"
 				/>
 			</Flex>

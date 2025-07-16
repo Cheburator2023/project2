@@ -11,12 +11,8 @@ import { CalculationResultTable } from "../organisms/CalculationResultTable";
 
 export const AnketaBasicLayoutCreate = ({
 	isPending,
-	onSubmit,
-	formHasErrors,
 }: {
 	isPending?: boolean;
-	formHasErrors?: boolean;
-	onSubmit?: () => void;
 }) => {
 	const location = useLocation();
 
