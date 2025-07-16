@@ -7,7 +7,7 @@ export class Calculation {
 	id: string;
 
 	@Column({ type: "varchar", length: 255, nullable: false })
-	name: string;
+	calcName: string;
 
 	@Column({ type: "varchar", length: 255, nullable: true })
 	rfd: string;

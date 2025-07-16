@@ -9,7 +9,7 @@ export class UpdateCalculationDto {
     })
     @IsString({ message: "name must be a string" })
     @IsOptional()
-    name?: string;
+    calcName?: string;
 
     @ApiProperty({
         example: "RFD-20250715-001",
