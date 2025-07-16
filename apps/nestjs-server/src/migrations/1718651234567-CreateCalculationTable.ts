@@ -18,7 +18,6 @@ export class CreateCalculationTable1718651234567 implements MigrationInterface {
                 "comment" varchar(255),
                 "questionnaireData" jsonb NOT NULL,
                 "finalCoefficient" float NOT NULL,
-                "calculationResult": jsonb,
                 "createdAt" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 "author" varchar(255)
                 )

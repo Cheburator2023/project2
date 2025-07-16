@@ -9,7 +9,7 @@ export class CreateQuestionnaireSchema1718651234568
             CREATE TABLE IF NOT EXISTS questionnaire_item
             (
                 "id"          uuid PRIMARY KEY      DEFAULT uuid_generate_v4(),
-                "calcName"        varchar(255) NOT NULL,
+                "name"        varchar(255) NOT NULL,
                 "code"        varchar(50)  NOT NULL UNIQUE,
                 "description" text,
                 "isRequired"  boolean      NOT NULL DEFAULT false,
@@ -29,7 +29,7 @@ export class CreateQuestionnaireSchema1718651234568
             CREATE TABLE IF NOT EXISTS coefficient
             (
                 "id"          uuid PRIMARY KEY      DEFAULT uuid_generate_v4(),
-                "calcName"        varchar(255) NOT NULL,
+                "name"        varchar(255) NOT NULL,
                 "code"        varchar(100) NOT NULL UNIQUE,
                 "baseValue"   float        NOT NULL,
                 "isActive"    boolean      NOT NULL DEFAULT true,
@@ -69,7 +69,7 @@ export class CreateQuestionnaireSchema1718651234568
 		// 5. Заполнение таблицы элементов опросника тестовыми данными
 		await queryRunner.query(`
             INSERT INTO questionnaire_item
-            (id, calcName, code, description, "isRequired", "fieldType", options, "order")
+            (id, name, code, description, "isRequired", "fieldType", options, "order")
             VALUES (uuid_generate_v4(), 'Количество моделей', 'modelsCount',
                     'Количество моделей (>1 для каскадов и ансамблей моделей)', true, 'number', null, 1),
 
@@ -157,7 +157,7 @@ export class CreateQuestionnaireSchema1718651234568
 		// 6. Заполнение таблицы коэффициентов тестовыми данными
 		await queryRunner.query(`
             INSERT INTO coefficient
-                (id, calcName, code, "baseValue", conditions, description)
+                (id, name, code, "baseValue", conditions, description)
             VALUES (uuid_generate_v4(), 'Коэффициент количества моделей', 'modelsCount', 1.0,
                     '{"default": 1, "formula": "1 + (value - 1) * 0.75"}', 'Коэффициент для учета количества моделей'),
 
