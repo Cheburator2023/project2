@@ -100,7 +100,6 @@ interface AnketaCRUDFormsStore
 	extends AnketaCRUDFormsStoreType,
 		AnketaCRUDFormsStoreBase {
 	updateFormState: (formName: FormName, state?: any) => void;
-	resetFormData: (formName: FormName) => void;
 	reset: () => void;
 	setApiRef: (formName: FormName, api: FormRef) => void;
 	resetApiRef: (formName: FormName) => void;
@@ -190,17 +189,6 @@ export const useAnketaCRUDFormsStore = create<AnketaCRUDFormsStore>((set) => ({
 		set((_state) => ({ [formName]: { ..._state[formName], state: newState } })),
 
 	reset: () => set(() => init),
-
-	resetFormData: (formName) =>
-		set((_state) => ({
-			[formName]: {
-				..._state[formName],
-				api: undefined,
-				state: undefined,
-				isLoading: false,
-			},
-		})),
-
 	setApiRef: (formName, api) =>
 		set((_state) => ({ [formName]: { ..._state[formName], api } })),
 

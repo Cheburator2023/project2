@@ -28,10 +28,14 @@ export const AnketaPreviewPage = () => {
 	const [formData, setFormData] = useState<any>(null);
 	const queryClient = useQueryClient();
 	const store = useAnketaCRUDFormsStore();
-	console.log("🐸 AnketaPreviewPage >> store:", store);
 
-	const { anketaPreview_basicInfoForm, anketaPreview_projectAssessmentForm } =
-		store;
+	console.log("AnketaPreviewPage >> store:", store);
+
+	const {
+		anketaPreview_basicInfoForm,
+		anketaPreview_projectAssessmentForm,
+		reset,
+	} = store;
 
 	const {
 		data: initialData,
@@ -117,6 +121,12 @@ export const AnketaPreviewPage = () => {
 			performUpdate();
 		}
 	}, [isFormValid, submitCount, formHasErrors]);
+
+	useEffect(() => {
+		return () => {
+			reset();
+		};
+	}, []);
 
 	return (
 		<div data-test-id="anketa-details-page--div-0">

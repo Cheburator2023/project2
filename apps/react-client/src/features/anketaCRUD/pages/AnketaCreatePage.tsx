@@ -106,6 +106,12 @@ export const AnketaCreatePage = () => {
 		}
 	}, [isFormValid, submitCount, formHasErrors]);
 
+	useEffect(() => {
+		return () => {
+			reset();
+		};
+	}, []);
+
 	return (
 		<div data-test-id="anketa-create-page--div-0">
 			<Header data-test-id="anketa-create-page--Header-0">
