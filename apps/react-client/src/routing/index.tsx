@@ -37,19 +37,38 @@ export const Routing = () => (
 		/>
 		<Route
 			path={routes.calculationPreview.rootPath}
-			element={<AnketaPreviewPage data-test-id="index--AnketaPreviewPage-0" />}
+			element={
+				<PermissionGuard
+					check={(p) => p.canViewAllCalculations}
+					message="У вас нет прав на просмотр анкеты"
+				>
+					<AnketaPreviewPage data-test-id="index--AnketaPreviewPage-0" />
+				</PermissionGuard>
+			}
 			data-test-id="index--Route-2"
 		/>
 		<Route
 			path={routes.calculationCompare.rootPath}
 			element={
-				<CompareReportsPage data-test-id="index--CompareReportsPage-0" />
+				<PermissionGuard
+					check={(p) => p.canExportReports}
+					message="У вас нет прав на сравнение отчетов"
+				>
+					<CompareReportsPage data-test-id="index--CompareReportsPage-0" />
+				</PermissionGuard>
 			}
 			data-test-id="index--Route-3"
 		/>
 		<Route
 			path={routes.admin.rootPath}
-			element={<AdminPage data-test-id="index--AdminPage-0" />}
+			element={
+				<PermissionGuard
+					check={(p) => p.canAccessAdminPanel}
+					message="У вас нет прав на доступ к панели администрирования"
+				>
+					<AdminPage data-test-id="index--AdminPage-0" />
+				</PermissionGuard>
+			}
 			data-test-id="index--Route-4"
 		/>
 		<Route

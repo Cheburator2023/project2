@@ -15,6 +15,7 @@ import { toast } from "@react-client/common/toasts";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { AnketaBasicLayoutPreview } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayoutPreview";
 import { Header } from "@react-client/features/navigation/organisms/Header";
+import { usePermissions } from "@react-client/hooks/usePermissions";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { isEmpty } from "lodash-es";
 import { useEffect, useState } from "react";
@@ -28,6 +29,7 @@ export const AnketaPreviewPage = () => {
 	const [formData, setFormData] = useState<any>(null);
 	const queryClient = useQueryClient();
 	const store = useAnketaCRUDFormsStore();
+	const { canEditCalculation } = usePermissions();
 
 	console.log("AnketaPreviewPage >> store:", store);
 
@@ -134,7 +136,7 @@ export const AnketaPreviewPage = () => {
 				<IconButton onClick={() => setComfyView(!comfyView)}>
 					{!comfyView ? <ViewComfyIcon /> : <ViewDayIcon />}
 				</IconButton>
-				{!isEditing && (
+				{!isEditing && canEditCalculation && (
 					<IconButton
 						onClick={handleEdit}
 						title="Редактировать"
@@ -143,7 +145,7 @@ export const AnketaPreviewPage = () => {
 						<EditIcon />
 					</IconButton>
 				)}
-				{isEditing && (
+				{isEditing && canEditCalculation && (
 					<>
 						<IconButton
 							onClick={handleSave}

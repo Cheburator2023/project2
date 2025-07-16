@@ -7,6 +7,7 @@ import {
     ParseUUIDPipe,
     Post, Put,
     Query,
+    UseInterceptors,
     UsePipes,
     ValidationPipe,
 } from "@nestjs/common";
@@ -19,7 +20,9 @@ import {
     ApiTags,
 } from "@nestjs/swagger";
 import { RealmRole } from "../../../shared/decorators/realm-role.decorator";
+import { StreamFilter } from "../../../shared/decorators/stream-filter.decorator";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
+import { StreamFilterInterceptor } from "../../../shared/interceptors/stream-filter.interceptor";
 import { Permission } from "../../../shared/types/permissions";
 import {
     CalculationResponseDto,
@@ -34,6 +37,7 @@ import {Calculation} from "../entities/calculation.entity";
 @ApiBearerAuth("JWT-auth")
 @ApiTags("Calculation")
 @Controller("calculation")
+@UseInterceptors(StreamFilterInterceptor)
 export class CalculationController {
     constructor(private readonly calculationService: CalculationService) {}
 
@@ -109,6 +113,7 @@ export class CalculationController {
     }
 
     @Get("all")
+    @StreamFilter()
     @RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
     @ApiOperation({
         summary: "Get all calculations (paginated)",
@@ -151,6 +156,7 @@ export class CalculationController {
     }
 
     @Get("all/list")
+    @StreamFilter()
     @RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
     @ApiOperation({
         summary: "Get all calculations (non-paginated)",
@@ -172,36 +178,37 @@ export class CalculationController {
         );
     }
 
-    @Get(":id")
-    @ApiOperation({
-        summary: "Get calculation by ID",
-        description: "Retrieves a specific calculation by its unique identifier",
-    })
-    @ApiParam({
-        name: "id",
-        description: "Calculation unique identifier",
-        example: "550e8400-e29b-41d4-a716-446655440000",
-    })
-    @ApiResponse({
-        status: HttpStatus.OK,
-        description: "Calculation data",
-        type: CalculationResponseDto,
-    })
-    @ApiResponse({
-        status: HttpStatus.BAD_REQUEST,
-        description: "Invalid UUID format",
-    })
-    @ApiResponse({
-        status: HttpStatus.NOT_FOUND,
-        description: "Calculation not found",
-    })
-    @ApiResponse({
-        status: HttpStatus.UNAUTHORIZED,
-        description: "Unauthorized. Authentication required.",
-    })
-    async findOne(
-        @Param("id", ParseUUIDPipe) id: string,
-    ): Promise<CalculationResponseDto> {
+    	@Get(":id")
+	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
+	@ApiOperation({
+		summary: "Get calculation by ID",
+		description: "Retrieves a specific calculation by its unique identifier",
+	})
+	@ApiParam({
+		name: "id",
+		description: "Calculation unique identifier",
+		example: "550e8400-e29b-41d4-a716-446655440000",
+	})
+	@ApiResponse({
+		status: HttpStatus.OK,
+		description: "Calculation data",
+		type: CalculationResponseDto,
+	})
+	@ApiResponse({
+		status: HttpStatus.BAD_REQUEST,
+		description: "Invalid UUID format",
+	})
+	@ApiResponse({
+		status: HttpStatus.NOT_FOUND,
+		description: "Calculation not found",
+	})
+	@ApiResponse({
+		status: HttpStatus.UNAUTHORIZED,
+		description: "Unauthorized. Authentication required.",
+	})
+	async findOne(
+		@Param("id", ParseUUIDPipe) id: string,
+	): Promise<CalculationResponseDto> {
         const calculation = await this.calculationService.findOne(id);
         return this.mapToResponseDto(calculation);
     }
