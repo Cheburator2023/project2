@@ -3,7 +3,7 @@ import { format } from "date-fns/esm";
 
 export const meta: ColDef<any, any>[] = [
 	{
-		field: "name",
+		field: "calcName",
 		headerName: "Название анкеты",
 		sortable: true,
 		filter: true,
