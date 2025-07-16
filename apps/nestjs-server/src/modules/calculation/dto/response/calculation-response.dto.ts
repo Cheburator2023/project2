@@ -7,6 +7,7 @@ import {
 	YES_NO_VALUES,
 } from "../base/calculation-base.dto";
 import { AlgorithmTypeItemDto } from "../common/algorithm-type.dto";
+import { CalculationResultItemDto } from "./calculation-result-item.dto";
 
 export class CalculationQuestionnaireDataDto extends CalculationBaseDto {
 	@ApiProperty({
@@ -18,6 +19,7 @@ export class CalculationQuestionnaireDataDto extends CalculationBaseDto {
 	@ApiProperty({
 		example: 3,
 		description: "Корректировка неопределенности",
+		required: false,
 	})
 	uncertaintyAdjustment?: number;
 
@@ -32,11 +34,13 @@ export class CalculationQuestionnaireDataDto extends CalculationBaseDto {
 			},
 		},
 	})
-	generalUncertainty: {
-		type: string;
-		probability: any;
-		influence: any;
-	}[];
+	generalUncertainty?: Record<
+		string,
+		{
+			probability: string;
+			influence: string;
+		}
+	>;
 
 	@ApiProperty({
 		example: "Нет",
@@ -48,6 +52,7 @@ export class CalculationQuestionnaireDataDto extends CalculationBaseDto {
 	@ApiProperty({
 		example: "3",
 		description: "Количество оцененных инициатив",
+		required: false,
 	})
 	assessedInitiativesCount?: string;
 
@@ -89,6 +94,7 @@ export class CalculationQuestionnaireDataDto extends CalculationBaseDto {
 	@ApiProperty({
 		example: "4",
 		description: "Дополнительные отчеты для продакшена",
+		required: false,
 	})
 	productionAdditionalReports?: string;
 
@@ -101,6 +107,14 @@ export class CalculationQuestionnaireDataDto extends CalculationBaseDto {
 		],
 	})
 	productionDeploymentChannels: Array<{ deploymentChannel: string }>;
+
+	@ApiProperty({
+		type: [CalculationResultItemDto],
+		description: "Результаты расчета по этапам",
+		required: false,
+	})
+	@Type(() => CalculationResultItemDto)
+	calculationResult?: CalculationResultItemDto[];
 }
 
 export class CalculationResponseDto {
@@ -114,10 +128,10 @@ export class CalculationResponseDto {
 		example: "Оценка проекта для бизнеса",
 		description: "Название анкеты",
 	})
-	name: string;
+	calcName: string;
 
 	@ApiProperty({
-		example: "Отсутствует",
+		example: "",
 		description: "RFD (Reference Data)",
 	})
 	rfd: string;
@@ -152,7 +166,28 @@ export class CalculationResponseDto {
 		description: "Данные анкеты расчета",
 	})
 	@Type(() => CalculationQuestionnaireDataDto)
-	questionnaireData: CalculationQuestionnaireDataDto;
+	questionnaireData: {
+		calcName: string;
+		setupComplexity: string;
+		initiativeTimeline: string;
+		initiativeCost: string;
+		modelsCount: number;
+		uncertaintyAdjustment?: number;
+		generalUncertainty: Array<{
+			type: string;
+			probability: string;
+			influence: string;
+		}>;
+		readyPromReports: string;
+		assessedInitiativesCount?: string;
+		dataSourcesCount: string;
+		pilotModelRequired: string;
+		algorithmComplexity: AlgorithmTypeItemDto[];
+		pilotSupportRequired: string;
+		autoMlRequired: string;
+		productionAdditionalReports?: string;
+		productionDeploymentChannels: string[];
+	};
 
 	@ApiProperty({
 		example: 1.8,

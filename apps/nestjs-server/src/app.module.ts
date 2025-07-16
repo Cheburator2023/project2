@@ -10,9 +10,9 @@ import { CoefficientEntity } from "./modules/questionnaire/entities/coefficient.
 import { QuestionnaireItemEntity } from "./modules/questionnaire/entities/questionnaire-item.entity";
 import { StreamAverageEntity } from "./modules/questionnaire/entities/stream-average.entity";
 import { QuestionnaireModule } from "./modules/questionnaire/questionnaire.module";
+import { DatabaseModule } from "./shared/database/database.module";
 import { GodModeGuard } from "./shared/keycloak/god-mode.guard";
 import { KeycloakModule } from "./shared/keycloak/keycloak.module";
-
 @Module({
 	imports: [
 		ConfigModule.forRoot({
@@ -45,6 +45,7 @@ import { KeycloakModule } from "./shared/keycloak/keycloak.module";
 		}),
 		CalculationModule,
 		QuestionnaireModule,
+		DatabaseModule,
 	],
 	providers: [
 		// AuthGuard

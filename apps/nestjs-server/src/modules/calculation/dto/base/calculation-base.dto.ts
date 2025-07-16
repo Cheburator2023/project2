@@ -126,7 +126,7 @@ export class CalculationBaseDto {
 	})
 	@IsString({ message: "name must be a string" })
 	@IsNotEmpty({ message: "name should not be empty" })
-	name: string;
+	calcName: string;
 
 	@ApiProperty({
 		example:
@@ -149,7 +149,6 @@ export class CalculationBaseDto {
 		nullable: true,
 	})
 	@IsString({ message: "initiativeTimeline must be a string" })
-	// @IsIn(INITIATIVE_TIMELINE_VALUES)
 	@IsOptional()
 	initiativeTimeline: (typeof INITIATIVE_TIMELINE_VALUES)[number];
 
@@ -161,7 +160,6 @@ export class CalculationBaseDto {
 		nullable: true,
 	})
 	@IsString({ message: "initiativeCost must be a string" })
-	// @IsIn(INITIATIVE_COST_VALUES)
 	@IsOptional()
 	initiativeCost: (typeof INITIATIVE_COST_VALUES)[number];
 }

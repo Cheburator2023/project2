@@ -20,7 +20,8 @@ import type {
 	TemplatesType,
 	UiSchema,
 } from "@rjsf/utils";
-import { useEffect, useRef, useState } from "react";
+import { omit } from "lodash-es";
+import { useRef, useState } from "react";
 import { MultiSelectAutocompleteWidget } from "../../../common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjectFieldTemplate";
 
@@ -28,6 +29,7 @@ interface BasicInfoFormProps {
 	initialData?: CalculationResponseDto;
 	disabled?: boolean;
 	isCreate?: boolean;
+	isEditing?: boolean;
 	onChange?: (data: any) => void;
 }
 
@@ -41,7 +43,8 @@ const uiSchema: UiSchema = {
 		submitText: "Submit",
 	},
 	"ui:order": [
-		"name",
+		// просто name ломает валидацию
+		"calcName",
 		"rfd",
 		"streamExecutor",
 		"department",
@@ -53,7 +56,8 @@ const uiSchema: UiSchema = {
 		"author",
 		"comment",
 	],
-	name: {
+	// просто name ломает валидацию
+	calcName: {
 		"ui:widget": "TextFieldCustomWidget",
 		isEditable: true,
 	},
@@ -143,16 +147,16 @@ export const BasicInfoForm = ({
 	initialData,
 	isCreate = false,
 	disabled = false,
+	isEditing,
 	onChange,
 }: BasicInfoFormProps) => {
-	const { data: questData, refetch } =
-		useQuestionnaireControllerGetFullQuestionnaire({
-			query: {
-				staleTime: 0,
-			},
-		});
+	const { data: questData } = useQuestionnaireControllerGetFullQuestionnaire({
+		query: {
+			staleTime: 0,
+		},
+	});
 	const [formData, setFormData] = useState<IBasicFormData>(
-		basicInfoFormInitialData,
+		(isEditing ? initialData : basicInfoFormInitialData) as any,
 	);
 
 	const departmentENUM = questData?.referenceData.department;
@@ -160,9 +164,15 @@ export const BasicInfoForm = ({
 
 	const schema: RJSFSchema = {
 		type: "object",
-		required: ["name", "streamExecutor", "department"],
+
+		required: [
+			// просто name ломает валидацию
+			"calcName",
+			"streamExecutor",
+			"department",
+		],
 		properties: {
-			name: {
+			calcName: {
 				type: "string",
 				title: "Название анкеты",
 				minLength: 1,
@@ -211,13 +221,19 @@ export const BasicInfoForm = ({
 		setFormValidated,
 		setFormValid,
 		incrementSubmitCount,
+		setFormError,
+		clearFormError,
+		clearAllFormErrors,
+		setFormErrors,
 		...store
 	} = useAnketaCRUDFormsStore();
-	const [_liveValidate, setLiveValidate] = useState(false);
+	const [liveValidate, setLiveValidate] = useState(false);
 
 	const formRef = useRef<FormRef>(null);
 
-	const formName = AnketaCRUDFormNames.anketaCreate_basicInfoForm;
+	const formName = isCreate
+		? AnketaCRUDFormNames.anketaCreate_basicInfoForm
+		: AnketaCRUDFormNames.anketaPreview_basicInfoForm;
 	const formDataStore = store[formName];
 	const apiFormStore = formDataStore.api;
 	const formState = apiFormStore?.state;
@@ -241,7 +257,7 @@ export const BasicInfoForm = ({
 		updateFormState(formName, formState);
 	}, [formState]);
 
-	useEffect(() => {
+	useDeepEffect(() => {
 		if (initialData) {
 			setFormData({ ...basicInfoFormInitialData, ...initialData });
 		}
@@ -263,6 +279,7 @@ export const BasicInfoForm = ({
 		setFormValidated(formName, true);
 		setFormValid(formName, true);
 		incrementSubmitCount(formName);
+		clearAllFormErrors(formName);
 
 		if (formData) {
 			setFormData(formData);
@@ -281,6 +298,19 @@ export const BasicInfoForm = ({
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}
+
+		if (errors && errors.length > 0) {
+			const errorMap: Record<string, string> = {};
+			errors.forEach((error: any) => {
+				if (error.property && error.message) {
+					errorMap[error.property] = error.message;
+				}
+			});
+			setFormErrors(formName, errorMap);
+		} else {
+			clearAllFormErrors(formName);
+		}
+
 		console.log("Form errors:", errors);
 	};
 
@@ -320,7 +350,7 @@ export const BasicInfoForm = ({
 			onBlur={onBlur}
 			onFocus={onFocus}
 			templates={templates}
-			liveValidate={false}
+			liveValidate={(isEditing || isCreate) && liveValidate}
 			noHtml5Validate
 			focusOnFirstError
 			showErrorList={false}

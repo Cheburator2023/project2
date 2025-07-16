@@ -1,5 +1,5 @@
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import { Alert, Button, styled } from "@mui/material";
+import { Button, styled } from "@mui/material";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
@@ -9,14 +9,10 @@ import { useLocation } from "react-router";
 import { BasicInfoForm } from "../organisms/BasicInfoForm";
 import { CalculationResultTable } from "../organisms/CalculationResultTable";
 
-export const AnketaBasicLayout = ({
+export const AnketaBasicLayoutCreate = ({
 	isPending,
-	onSubmit,
-	formHasErrors,
 }: {
 	isPending?: boolean;
-	formHasErrors?: boolean;
-	onSubmit?: () => void;
 }) => {
 	const location = useLocation();
 
@@ -93,35 +89,13 @@ export const AnketaBasicLayout = ({
 						data-test-id="anketa-basic-layout--Card-2"
 					>
 						<Spacer data-test-id="anketa-basic-layout--Spacer-2" />
-						<ProjectAssessmentForm data-test-id="anketa-basic-layout--ProjectAssessmentForm-0" />
+						<ProjectAssessmentForm
+							isCreate
+							data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
+						/>
 					</Card>
 				</Panel>
 			</PanelGroup>
-
-			<Spacer space={6} data-test-id="anketa-basic-layout--Spacer-3" />
-			<Card padding="10px" data-test-id="anketa-basic-layout--Card-3">
-				<Flex
-					justifyContent="flex-end"
-					alignItems="center"
-					data-test-id="anketa-basic-layout--Flex-1"
-					gap={6}
-				>
-					{formHasErrors && (
-						<Alert severity="error">
-							Форма имеет ошибки или заполнена не до конца
-						</Alert>
-					)}
-					<Button
-						variant="contained"
-						onClick={onSubmit}
-						loading={isPending}
-						disabled={formHasErrors}
-						data-test-id="anketa-basic-layout--Button-0"
-					>
-						Сохранить
-					</Button>
-				</Flex>
-			</Card>
 		</Flex>
 	);
 };

@@ -6,6 +6,8 @@ import {
 	ApiTags,
 } from "@nestjs/swagger";
 import { Resource } from "nest-keycloak-connect";
+import { RealmRole } from "../../../shared/decorators/realm-role.decorator";
+import { Permission } from "../../../shared/types/permissions";
 import { QuestionnaireResponseDto } from "../dto/response/questionnaire-response.dto";
 import { QuestionnaireService } from "../services/questionnaire.service";
 
@@ -17,6 +19,7 @@ export class QuestionnaireController {
 	constructor(private readonly service: QuestionnaireService) {}
 
 	@Get()
+	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
 	@ApiOperation({
 		summary: "Get full questionnaire configuration",
 		description:

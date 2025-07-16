@@ -3,7 +3,7 @@ import { format } from "date-fns/esm";
 
 export const meta: ColDef<any, any>[] = [
 	{
-		field: "name",
+		field: "calcName",
 		headerName: "Название анкеты",
 		sortable: true,
 		filter: true,
@@ -27,7 +27,7 @@ export const meta: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		valueFormatter: (params: any) => {
-			return params?.value ? params?.value?.join(", ") : "Отсутствует";
+			return params?.value ? params?.value?.join(", ") : "-";
 		},
 	},
 	{
@@ -53,7 +53,7 @@ export const meta: ColDef<any, any>[] = [
 		headerName: "Дата создания",
 		sortable: true,
 		filter: "agDateColumnFilter",
-		cellDataType: "dateTime",
+		cellDataType: "dateString",
 		valueFormatter: (params) => {
 			const dt = new Date(params?.value?.replace("Z", ""));
 

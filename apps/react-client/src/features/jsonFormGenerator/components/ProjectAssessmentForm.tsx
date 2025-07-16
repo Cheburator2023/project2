@@ -44,7 +44,9 @@ const widgets = {
 	TextFieldCustomWidget,
 };
 
-export const ProjectAssessmentForm: React.FC<{}> = () => {
+export const ProjectAssessmentForm: React.FC<{
+	isCreate?: boolean;
+}> = ({ isCreate }) => {
 	const formRef = useRef<FormRef>(null);
 	const {
 		setApiRef,
@@ -53,7 +55,10 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 		setFormValidated,
 		setFormValid,
 		incrementSubmitCount,
-
+		setFormError,
+		clearFormError,
+		clearAllFormErrors,
+		setFormErrors,
 		...store
 	} = useAnketaCRUDFormsStore();
 	const { setFormData: setFormDataForCalc } = assessmentCalculationsStore();
@@ -99,6 +104,7 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 		setFormValidated(formName, true);
 		setFormValid(formName, true);
 		incrementSubmitCount(formName);
+		clearAllFormErrors(formName);
 
 		if (e.formData) {
 			setFormData(e.formData);
@@ -114,6 +120,19 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 		if (formStateFromRef) {
 			updateFormState(formName, formStateFromRef);
 		}
+
+		if (errors && errors.length > 0) {
+			const errorMap: Record<string, string> = {};
+			errors.forEach((error: any) => {
+				if (error.property && error.message) {
+					errorMap[error.property] = error.message;
+				}
+			});
+			setFormErrors(formName, errorMap);
+		} else {
+			clearAllFormErrors(formName);
+		}
+
 		console.log("Form errors:", errors);
 	};
 
@@ -146,7 +165,7 @@ export const ProjectAssessmentForm: React.FC<{}> = () => {
 				onBlur={onBlur}
 				templates={templates}
 				focusOnFirstError
-				liveValidate={liveValidate}
+				liveValidate={liveValidate && isCreate}
 				noHtml5Validate
 				showErrorList={false}
 				transformErrors={transformErrors as any}

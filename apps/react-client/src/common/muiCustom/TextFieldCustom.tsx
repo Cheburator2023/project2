@@ -57,7 +57,7 @@ export const TextFieldCustom: React.FC<TextFieldCustomProps> = ({
 		props?.onFocus?.(e);
 
 		if (e.target && prefix) {
-			const length = e.target.value.length;
+			const length = e.target?.value?.length;
 			e.target.setSelectionRange(length, length);
 		}
 	};
@@ -66,7 +66,7 @@ export const TextFieldCustom: React.FC<TextFieldCustomProps> = ({
 		props?.onClick?.(e);
 
 		if (e.target && prefix) {
-			const length = e.target.value.length;
+			const length = e.target?.value?.length;
 			e.target.setSelectionRange(length, length);
 		}
 	};

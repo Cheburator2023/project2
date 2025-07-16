@@ -9,14 +9,16 @@ import { Button, IconButton, Typography } from "@mui/material";
 import { useCalculationControllerFindOne } from "@react-client/common/api/generated/queries/calculation";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { Card } from "@react-client/common/muiCustom/Card";
-import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import { toast } from "@react-client/common/toasts";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { AnketaBasicLayoutPreview } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayoutPreview";
 import { Header } from "@react-client/features/navigation/organisms/Header";
+import { usePermissions } from "@react-client/hooks/usePermissions";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { isEmpty } from "lodash-es";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 
 export const AnketaPreviewPage = () => {
@@ -26,13 +28,21 @@ export const AnketaPreviewPage = () => {
 	const [isEditing, setIsEditing] = useState(false);
 	const [formData, setFormData] = useState<any>(null);
 	const queryClient = useQueryClient();
+	const store = useAnketaCRUDFormsStore();
+	const { canEditCalculation } = usePermissions();
 
-	const { setApiRef, resetApiRef, ...store } = useAnketaCRUDFormsStore();
+	console.log("AnketaPreviewPage >> store:", store);
+
+	const {
+		anketaPreview_basicInfoForm,
+		anketaPreview_projectAssessmentForm,
+		reset,
+	} = store;
 
 	const {
 		data: initialData,
 		refetch,
-		isFetching,
+		isPending,
 		isError,
 	} = useCalculationControllerFindOne(calcId, {
 		query: {
@@ -54,15 +64,22 @@ export const AnketaPreviewPage = () => {
 			setIsEditing(false);
 			refetch();
 			queryClient.invalidateQueries();
+			toast.success("Данные успешно обновлены");
+		},
+		onError: (error: any) => {
+			toast.error("Ошибка обновления данных", {
+				description: error?.response?.data?.message,
+			});
 		},
 	});
 
+	const isFormValid = anketaPreview_basicInfoForm?.isValid; // only basic form should be valid
+	const formHasErrors = anketaPreview_basicInfoForm?.hasErrors;
+	const submitCount = anketaPreview_basicInfoForm?.submitCount;
+
 	const handleEdit = () => {
-		if (initialData) {
-			// Copy all fields from initialData, not just meta fields
-			setFormData({ ...initialData });
-			setIsEditing(true);
-		}
+		setFormData({ ...initialData });
+		setIsEditing(true);
 	};
 
 	const handleCancel = () => {
@@ -71,22 +88,47 @@ export const AnketaPreviewPage = () => {
 	};
 
 	const handleSave = () => {
+		anketaPreview_basicInfoForm.api?.submit();
+		anketaPreview_projectAssessmentForm.api?.submit();
+	};
+
+	const performUpdate = () => {
 		if (formData) {
 			// Only send allowed fields
-			const allowedFields = [
-				"name",
-				"rfd",
-				"streamExecutor",
-				"department",
-				"customerName",
-				"comment",
-			];
-			const updateDto = Object.fromEntries(
-				Object.entries(formData).filter(([key]) => allowedFields.includes(key)),
-			);
-			updateMutation.mutate(updateDto);
+			// const allowedFields = [
+			// 	"calcName",
+			// 	"rfd",
+			// 	"streamExecutor",
+			// 	"department",
+			// 	"customerName",
+			// 	"comment",
+			// ];
+
+			updateMutation.mutate({
+				calcName: formData.calcName,
+				rfd: formData.rfd,
+				streamExecutor: formData.streamExecutor,
+				department: formData.department,
+				customerName: formData.customerName,
+				comment: formData.comment,
+			});
 		}
 	};
+
+	useEffect(() => {
+		if (formHasErrors) {
+			return;
+		}
+		if (isFormValid) {
+			performUpdate();
+		}
+	}, [isFormValid, submitCount, formHasErrors]);
+
+	useEffect(() => {
+		return () => {
+			reset();
+		};
+	}, []);
 
 	return (
 		<div data-test-id="anketa-details-page--div-0">
@@ -94,12 +136,16 @@ export const AnketaPreviewPage = () => {
 				<IconButton onClick={() => setComfyView(!comfyView)}>
 					{!comfyView ? <ViewComfyIcon /> : <ViewDayIcon />}
 				</IconButton>
-				{!isEditing && (
-					<IconButton onClick={handleEdit} title="Редактировать">
+				{!isEditing && canEditCalculation && (
+					<IconButton
+						onClick={handleEdit}
+						title="Редактировать"
+						disabled={isEmpty(initialData)}
+					>
 						<EditIcon />
 					</IconButton>
 				)}
-				{isEditing && (
+				{isEditing && canEditCalculation && (
 					<>
 						<IconButton
 							onClick={handleSave}
@@ -118,7 +164,7 @@ export const AnketaPreviewPage = () => {
 					</>
 				)}
 			</Header>
-			{isError ? (
+			{false ? (
 				<Flex
 					justifyContent="center"
 					alignItems="center"
@@ -133,10 +179,10 @@ export const AnketaPreviewPage = () => {
 						</Button>
 					</Card>
 				</Flex>
-			) : isFetching ? (
-				<FullScreenLoader />
 			) : (
 				<AnketaBasicLayoutPreview
+					isPending={false}
+					isEditing={isEditing}
 					initialData={isEditing ? formData : initialData}
 					comfyView={comfyView}
 					mainInfoDisabled={!isEditing}
