@@ -7,7 +7,7 @@ export const SETUP_COMPLEXITY_VALUES = [
 	"2 Сложность: Проведение регулярной валидации Моделей Регулятором не установлено. Модель оценки риска",
 	"3 Сложность: Проведение регулярной валидации Моделей Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
 	"4 Сложность: Банком не планируется предоставление Модели регулятору для одобрения к использованию,но проведение регулярной валидации Моделей установлена Регулятором",
-	"5 Сложность: Банком планируестя предоставление Модели Регулятору для одобрения к использованию",
+	"5 Сложность: Банком планируется предоставление Модели Регулятору для одобрения к использованию",
 ] as const;
 
 export const INITIATIVE_TIMELINE_VALUES = [
@@ -149,7 +149,6 @@ export class CalculationBaseDto {
 		nullable: true,
 	})
 	@IsString({ message: "initiativeTimeline must be a string" })
-	// @IsIn(INITIATIVE_TIMELINE_VALUES)
 	@IsOptional()
 	initiativeTimeline: (typeof INITIATIVE_TIMELINE_VALUES)[number];
 
@@ -161,7 +160,6 @@ export class CalculationBaseDto {
 		nullable: true,
 	})
 	@IsString({ message: "initiativeCost must be a string" })
-	// @IsIn(INITIATIVE_COST_VALUES)
 	@IsOptional()
 	initiativeCost: (typeof INITIATIVE_COST_VALUES)[number];
 }
