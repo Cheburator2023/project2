@@ -11,7 +11,7 @@ import {
 } from "../dto/base/calculation-base.dto";
 
 export interface CalculationData {
-	name: string;
+	calcName: string;
 	modelsCount: number;
 	setupComplexity: string;
 	initiativeTimeline: (typeof INITIATIVE_TIMELINE_VALUES)[number];

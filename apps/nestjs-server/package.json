@@ -16,7 +16,10 @@
 		"test:e2e": "jest --testPathPattern='e2e' --config ./test/jest-e2e.json",
 		"test:watch": "jest --watch",
 		"test:cov": "jest --coverage",
-		"test:ci": "jest --runInBand --detectOpenHandles --forceExit"
+		"test:ci": "jest --runInBand --detectOpenHandles --forceExit",
+        "migration:run": "ts-node ./node_modules/typeorm/cli.js migration:run -d ./src/ormconfig.ts",
+        "migration:revert": "ts-node ./node_modules/typeorm/cli.js migration:revert -d ./src/ormconfig.ts",
+        "migration:generate": "typeorm-ts-node-commonjs migration:generate ./src/migrations/$npm_config_name -d ./src/ormconfig.ts"
 	},
 	"dependencies": {
 		"@nestjs/cli": "11.0.5",

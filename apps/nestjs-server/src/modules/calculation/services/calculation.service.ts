@@ -42,15 +42,25 @@ export class CalculationService {
 					"Система"
 				: "Система";
 
+			const calculationResult =
+				(createCalculationDto as any).calculationResult?.map((item) => ({
+					stageName: item.stageName,
+					score: item.score,
+					stageBaseValue: item.stageBaseValue,
+					percentFromAverage: item.percentFromAverage,
+					offset: item.offset,
+					disabled: item.disabled,
+				})) || [];
+
 			const calculation = this.calculationRepository.create({
-				name: createCalculationDto.name || "Новый расчет",
-				rfd: createCalculationDto.rfd || "Отсутствует",
+				calcName: createCalculationDto.calcName || "Новый расчет",
+				rfd: createCalculationDto.rfd || "",
 				streamExecutor: createCalculationDto.streamExecutor,
 				department: createCalculationDto.department,
 				customerName: createCalculationDto.customerName,
 				comment: createCalculationDto.comment,
 				questionnaireData: {
-					name: createCalculationDto.name || "Новый расчет",
+					calcName: createCalculationDto.calcName || "Новый расчет",
 					modelsCount: createCalculationDto.modelsCount,
 					setupComplexity: createCalculationDto.setupComplexity,
 					initiativeTimeline: createCalculationDto.initiativeTimeline,
@@ -73,6 +83,8 @@ export class CalculationService {
 								deploymentChannel: channel,
 							}),
 						),
+					calculationResult:
+						calculationResult.length > 0 ? calculationResult : undefined,
 				},
 				finalCoefficient: createCalculationDto.finalCoefficient,
 				author: authorName,
@@ -102,9 +114,9 @@ export class CalculationService {
 				throw new NotFoundException(`Calculation with ID ${id} not found`);
 			}
 
-			if (updateDto.name !== undefined) {
-				calculation.name = updateDto.name;
-				calculation.questionnaireData.name = updateDto.name;
+			if (updateDto.calcName !== undefined) {
+				calculation.calcName = updateDto.calcName;
+				calculation.questionnaireData.calcName = updateDto.calcName;
 			}
 			if (updateDto.rfd !== undefined) calculation.rfd = updateDto.rfd;
 			if (updateDto.streamExecutor !== undefined)
@@ -118,6 +130,9 @@ export class CalculationService {
 
 			return await this.calculationRepository.save(calculation);
 		} catch (error) {
+			if (error instanceof NotFoundException) {
+				throw error;
+			}
 			throw new BadRequestException(
 				`Failed to update calculation: ${error.message}`,
 			);

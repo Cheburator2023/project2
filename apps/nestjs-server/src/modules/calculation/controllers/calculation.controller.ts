@@ -224,23 +224,21 @@ export class CalculationController {
 				)
 			: [];
 
-		const productionDeploymentChannelsArray = calculation.questionnaireData
-			.productionDeploymentChannels
-			? calculation.questionnaireData.productionDeploymentChannels.map(
-					(item: any) => item.deploymentChannel,
-				)
-			: [];
+		const productionDeploymentChannelsArray =
+			calculation.questionnaireData.productionDeploymentChannels
+				?.map((ch) => (typeof ch === "string" ? { deploymentChannel: ch } : ch))
+				?.map((ch) => ch.deploymentChannel) || [];
 
 		return {
 			id: calculation.id,
-			name: calculation.name,
+			calcName: calculation.calcName,
 			rfd: calculation.rfd,
 			streamExecutor: calculation.streamExecutor,
 			department: calculation.department,
 			customerName: calculation.customerName,
 			comment: calculation.comment,
 			questionnaireData: {
-				name: calculation.questionnaireData.name,
+				calcName: calculation.questionnaireData.calcName,
 				setupComplexity: calculation.questionnaireData.setupComplexity,
 				initiativeTimeline: calculation.questionnaireData.initiativeTimeline,
 				initiativeCost: calculation.questionnaireData.initiativeCost,

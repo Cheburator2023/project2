@@ -18,7 +18,7 @@ import type { CreateCalculationDtoProductionDeploymentChannelsItem } from './cre
 
 export interface CreateCalculationDto {
   /** Название анкеты */
-  name: string;
+  calcName: string;
   /** Сложность настройки */
   setupComplexity: string;
   /** Срок реализации инициативы */

@@ -1,3 +1,4 @@
+import { IconButton } from "@mui/material";
 import { useCalculationControllerCreate } from "@react-client/common/api/generated/queries/calculation";
 import { CreateCalculationDto } from "@react-client/common/api/generated/types";
 import { Flex } from "@react-client/common/primitives/Flex";
@@ -6,12 +7,12 @@ import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/store
 import { AnketaBasicLayoutCreate } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayoutCreate";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { routes } from "@react-client/routing/routes";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router";
+import SaveIcon from "@mui/icons-material/Save";
 
 export const AnketaCreatePage = () => {
 	const navigate = useNavigate();
-	const [_hasSubmitted, setHasSubmitted] = useState(false);
 	const store = useAnketaCRUDFormsStore();
 
 	const {
@@ -20,6 +21,7 @@ export const AnketaCreatePage = () => {
 		anketaCreate_basicInfoForm,
 		anketaCreate_projectAssessmentForm,
 	} = store;
+	console.log("AnketaCreatePage >> store:", store);
 
 	const stateBasicForm = anketaCreate_basicInfoForm.state;
 	const stateProjectAssessmentForm = anketaCreate_projectAssessmentForm.state;
@@ -28,7 +30,7 @@ export const AnketaCreatePage = () => {
 		useCalculationControllerCreate();
 
 	const isFormValid =
-		anketaCreate_basicInfoForm?.isValid ||
+		anketaCreate_basicInfoForm?.isValid &&
 		anketaCreate_projectAssessmentForm?.isValid;
 
 	const formHasErrors = !!(
@@ -36,16 +38,17 @@ export const AnketaCreatePage = () => {
 		anketaCreate_projectAssessmentForm?.hasErrors
 	);
 
-	const submitCount = anketaCreate_basicInfoForm?.submitCount;
+	const submitCount =
+		anketaCreate_basicInfoForm?.submitCount +
+		anketaCreate_projectAssessmentForm?.submitCount;
 
 	const onSubmit = () => {
-		setHasSubmitted(true);
 		anketaCreate_basicInfoForm.api?.submit();
 		anketaCreate_projectAssessmentForm.api?.submit();
 	};
 
 	useEffect(() => {
-		if (formHasErrors) {
+		if (formHasErrors && !isFormValid) {
 			return;
 		}
 		const basicFormData: {
@@ -66,7 +69,7 @@ export const AnketaCreatePage = () => {
 			const data: CreateCalculationDto = {
 				finalCoefficient: calculationResult[0]?.score,
 				calculationResult,
-				name: basicFormData.calcName,
+				calcName: basicFormData.calcName,
 				rfd: basicFormData.rfd,
 				streamExecutor: basicFormData.streamExecutor,
 				department: basicFormData.department,
@@ -81,7 +84,6 @@ export const AnketaCreatePage = () => {
 				},
 				{
 					onSuccess: (data) => {
-						setHasSubmitted(false);
 						console.log("Success:", data);
 						toast.success("Расчет успешно создан");
 						reset();
@@ -90,7 +92,6 @@ export const AnketaCreatePage = () => {
 						}, 100);
 					},
 					onError: (error: any) => {
-						setHasSubmitted(false);
 						toast.error("Сетевая ошибка создания расчета", {
 							description: error?.response?.data?.message,
 							action: {
@@ -107,7 +108,11 @@ export const AnketaCreatePage = () => {
 
 	return (
 		<div data-test-id="anketa-create-page--div-0">
-			<Header data-test-id="anketa-create-page--Header-0" />
+			<Header data-test-id="anketa-create-page--Header-0">
+				<IconButton onClick={onSubmit} title="Создать" loading={isPending}>
+					<SaveIcon />
+				</IconButton>
+			</Header>
 			<Flex
 				width="100%"
 				height="-webkit-fill-available"
@@ -115,8 +120,6 @@ export const AnketaCreatePage = () => {
 			>
 				<AnketaBasicLayoutCreate
 					isPending={isPending}
-					onSubmit={onSubmit}
-					formHasErrors={formHasErrors}
 					data-test-id="anketa-create-page--AnketaBasicLayout-0"
 				/>
 			</Flex>

@@ -5,11 +5,10 @@ export class UpdateCalculationDto {
 	@ApiProperty({
 		example: "Обновленное название расчета",
 		description: "Название расчета",
-		required: false,
+		required: true,
 	})
 	@IsString({ message: "name must be a string" })
-	@IsOptional()
-	name?: string;
+	calcName?: string;
 
 	@ApiProperty({
 		example: "RFD-20250715-001",

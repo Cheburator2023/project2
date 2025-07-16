@@ -4,7 +4,7 @@ import { create } from "zustand";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 export interface IBasicFormData {
-	name: string;
+	calcName: string;
 	rfd?: string;
 	streamExecutor: string;
 	department: string[];
@@ -18,7 +18,7 @@ export interface IBasicFormData {
 }
 
 export const basicInfoFormInitialData: IBasicFormData = {
-	name: "",
+	calcName: "",
 	rfd: "",
 	streamExecutor: IS_DEV ? "testo" : "",
 	department: IS_DEV ? ["test"] : [],

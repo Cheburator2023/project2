@@ -20,7 +20,8 @@ import type {
 	TemplatesType,
 	UiSchema,
 } from "@rjsf/utils";
-import { useEffect, useRef, useState } from "react";
+import { omit } from "lodash-es";
+import { useRef, useState } from "react";
 import { MultiSelectAutocompleteWidget } from "../../../common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjectFieldTemplate";
 
@@ -28,6 +29,7 @@ interface BasicInfoFormProps {
 	initialData?: CalculationResponseDto;
 	disabled?: boolean;
 	isCreate?: boolean;
+	isEditing?: boolean;
 	onChange?: (data: any) => void;
 }
 
@@ -142,21 +144,19 @@ const widgets: RegistryWidgetsType = {
 };
 
 export const BasicInfoForm = ({
-	initialData: _initialData,
+	initialData,
 	isCreate = false,
 	disabled = false,
+	isEditing,
 	onChange,
 }: BasicInfoFormProps) => {
-	const initialData = { ..._initialData, calcName: _initialData?.name };
-
-	const { data: questData, refetch } =
-		useQuestionnaireControllerGetFullQuestionnaire({
-			query: {
-				staleTime: 0,
-			},
-		});
+	const { data: questData } = useQuestionnaireControllerGetFullQuestionnaire({
+		query: {
+			staleTime: 0,
+		},
+	});
 	const [formData, setFormData] = useState<IBasicFormData>(
-		basicInfoFormInitialData,
+		(isEditing ? initialData : basicInfoFormInitialData) as any,
 	);
 
 	const departmentENUM = questData?.referenceData.department;
@@ -231,7 +231,9 @@ export const BasicInfoForm = ({
 
 	const formRef = useRef<FormRef>(null);
 
-	const formName = AnketaCRUDFormNames.anketaCreate_basicInfoForm;
+	const formName = isCreate
+		? AnketaCRUDFormNames.anketaCreate_basicInfoForm
+		: AnketaCRUDFormNames.anketaPreview_basicInfoForm;
 	const formDataStore = store[formName];
 	const apiFormStore = formDataStore.api;
 	const formState = apiFormStore?.state;
@@ -266,7 +268,6 @@ export const BasicInfoForm = ({
 			setFormData(formState.formData);
 		}
 		if (formState) {
-			console.log("🐸 Pepe said >> onChangeForm >> formState:", formState);
 			setFormDirty(formName, true);
 			updateFormState(formName, formState);
 		}
@@ -349,7 +350,7 @@ export const BasicInfoForm = ({
 			onBlur={onBlur}
 			onFocus={onFocus}
 			templates={templates}
-			liveValidate={isCreate && liveValidate}
+			liveValidate={(isEditing || isCreate) && liveValidate}
 			noHtml5Validate
 			focusOnFirstError
 			showErrorList={false}
