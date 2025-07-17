@@ -29,6 +29,6 @@ export const routes = {
 		name: "Песочница",
 		rootPath: "/playground",
 		devOnly: true,
-		disabled: false,
+		disabled: true,
 	},
 };

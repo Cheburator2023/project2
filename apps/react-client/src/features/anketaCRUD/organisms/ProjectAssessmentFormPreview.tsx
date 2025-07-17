@@ -5,12 +5,12 @@ import { MultiSelectAutocompleteWidget } from "@react-client/common/forms/widget
 import { RJSFObjectFieldTemplate } from "@react-client/common/forms/widgets/RJSFObjectFieldTemplate";
 import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";
 import { useEffectOnce } from "@react-client/common/hooks/useEffectOnce";
-import { assessmentCalculationsStore } from "@react-client/features/jsonFormGenerator/hooks/assessmentCalculationsStore";
-import { mainCalcSchema } from "@react-client/features/jsonFormGenerator/schemas";
-import AlgorithmComplexityWidget from "@react-client/features/jsonFormGenerator/widgets/AlgorithmComplexityWidget";
-import GeneralUncertaintyWidget from "@react-client/features/jsonFormGenerator/widgets/GeneralUncertaintyWidget";
-import NumberInputWidget from "@react-client/features/jsonFormGenerator/widgets/NumberInputWidget";
-import UniversalDependencyWidget from "@react-client/features/jsonFormGenerator/widgets/UniversalDependencyWidget";
+import { assessmentCalculationsStore } from "@react-client/features/anketaCRUD/stores/assessmentCalculationsStore";
+import { mainCalcSchema } from "@react-client/schemas";
+import { AlgorithmComplexityWidget } from "@react-client/common/forms/widgets/AlgorithmComplexityWidget";
+import { GeneralUncertaintyWidget } from "@react-client/common/forms/widgets/GeneralUncertaintyWidget";
+import { NumberInputWidget } from "@react-client/common/forms/widgets/NumberInputWidget";
+import { UniversalDependencyWidget } from "@react-client/common/forms/widgets/UniversalDependencyWidget";
 import Form from "@rjsf/mui";
 import type {
 	RegistryWidgetsType,

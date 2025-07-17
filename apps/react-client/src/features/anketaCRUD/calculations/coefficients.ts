@@ -68,10 +68,13 @@ export function calculateTotalUncertainty(
 
 	const sumOfCoefficients = coeffs.reduce((sum, coef) => sum + coef, 0);
 	const baseUncertainty = sumOfCoefficients + 1;
-	const correctionFactor = 1 + correctionPercent / 100;
 
-	// Round to 2 decimal places to match Excel
-	return Math.round(baseUncertainty * correctionFactor * 100) / 100;
+	// Excel logic: add correctionPercent/100 instead of multiplying
+	return Math.round((baseUncertainty + correctionPercent / 100) * 100) / 100;
+}
+
+function normalizeEnumValue(value: string): string {
+	return (value || "").trim();
 }
 
 export function calculateCoefficientForGeneralUncertaintyItem(
@@ -80,23 +83,17 @@ export function calculateCoefficientForGeneralUncertaintyItem(
 	impactOfRisk: string,
 	probabilityOfRisk: string,
 ): number {
-	// Validate input
-	if (
-		!initiativeTimeline ||
-		!initiativeCost ||
-		!impactOfRisk ||
-		!probabilityOfRisk
-	) {
-		throw new Error(
-			COEFF_IGNORED_ERROR_PREFIX + "All parameters must be provided",
-		);
-	}
+	// Normalize all input values
+	initiativeTimeline = normalizeEnumValue(initiativeTimeline);
+	initiativeCost = normalizeEnumValue(initiativeCost);
+	impactOfRisk = normalizeEnumValue(impactOfRisk);
+	probabilityOfRisk = normalizeEnumValue(probabilityOfRisk);
 
-	// Define the conditions for each coefficient level
+	// Use enums from calc_schema.json for all dictionary values
 	const veryHighConditions = [
 		{
 			timeline: ["Более 18 мес."],
-			cost: ["От 2 млрд"],
+			cost: ["От 2 млрд."],
 			impact: ["Критичное отклонение качества реализации проекта"],
 			probability: [
 				"Реализация 1 раз в 1-3 года",

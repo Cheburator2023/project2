@@ -5,7 +5,7 @@ import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/store
 import {
 	assessmentCalculationsStore,
 	StageValues,
-} from "@react-client/features/jsonFormGenerator/hooks/assessmentCalculationsStore";
+} from "@react-client/features/anketaCRUD/stores/assessmentCalculationsStore";
 import {
 	type CellClassParams,
 	type CellStyle,
