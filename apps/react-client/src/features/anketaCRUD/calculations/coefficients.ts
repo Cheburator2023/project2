@@ -120,6 +120,26 @@ export function calculateCoefficientForGeneralUncertaintyItem(
 			],
 			probability: ["Реализация 1 раз в 6 мес. или чаще"],
 		},
+		{
+			timeline: ["Менее 1 мес."],
+			cost: ["От 2 млрд."],
+			impact: [
+				"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+			],
+			probability: ["Реализация 1 раз в 6 мес. или чаще"],
+		},
+		{
+			timeline: ["Менее 1 мес."],
+			cost: ["До 45.3 млн."],
+			impact: ["Критичное отклонение качества реализации проекта"],
+			probability: ["Реализация 1 раз в 6 мес. или чаще"],
+		},
+		{
+			timeline: ["Менее 1 мес."],
+			cost: ["До 45.3 млн."],
+			impact: ["Критичное отклонение качества реализации проекта"],
+			probability: ["Реализация 1 раз в год"],
+		},
 	];
 
 	const highConditions = [
@@ -155,6 +175,22 @@ export function calculateCoefficientForGeneralUncertaintyItem(
 				"Реализация 1 раз в год",
 				"Реализация 1 раз в 6 мес. или чаще",
 			],
+		},
+		{
+			timeline: ["Менее 1 мес."],
+			cost: ["45.3-438 млн."],
+			impact: [
+				"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+			],
+			probability: ["Реализация 1 раз в 6 мес. или чаще"],
+		},
+		{
+			timeline: ["Менее 1 мес."],
+			cost: ["45.3-438 млн."],
+			impact: [
+				"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+			],
+			probability: ["Реализация 1 раз в год"],
 		},
 	];
 
@@ -194,14 +230,11 @@ export function calculateCoefficientForGeneralUncertaintyItem(
 		},
 		{
 			timeline: ["Менее 1 мес."],
-			cost: ["До 45.3 млн."],
+			cost: ["От 2 млрд."],
 			impact: [
 				"Незначительное влияние на вторичные функции в рамках проектной деятельности",
 			],
-			probability: [
-				"Реализация 1 раз в год",
-				"Реализация 1 раз в 6 мес. или чаще",
-			],
+			probability: ["Реализация не чаще 1 раза в 10 лет"],
 		},
 	];
 
@@ -233,18 +266,45 @@ export function calculateCoefficientForGeneralUncertaintyItem(
 			],
 			probability: [
 				"Реализация не чаще 1 раза в 10 лет",
+				"Реализация 1 раз в год",
+				"Реализация 1 раз в 6 мес. или чаще",
+			],
+		},
+		{
+			timeline: ["Менее 1 мес."],
+			cost: ["До 45.3 млн."],
+			impact: [
+				"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+			],
+			probability: ["Реализация не чаще 1 раза в 10 лет"],
+		},
+		{
+			timeline: ["Менее 1 мес."],
+			cost: ["До 45.3 млн."],
+			impact: [
+				"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+			],
+			probability: [
 				"Реализация 1 раз в 3-10 лет",
 				"Реализация 1 раз в 1-3 года",
 			],
+		},
+		{
+			timeline: ["Менее 1 мес."],
+			cost: ["До 45.3 млн."],
+			impact: [
+				"Незначительное влияние на задачи и сроки достижения целей проекта",
+			],
+			probability: ["Реализация 1 раз в 3-10 лет"],
 		},
 	];
 
 	// Check for Very High conditions
 	for (const condition of veryHighConditions) {
 		if (
-			(condition.timeline.includes(initiativeTimeline) ||
-				condition.cost.includes(initiativeCost) ||
-				condition.impact.includes(impactOfRisk)) &&
+			condition.timeline.includes(initiativeTimeline) &&
+			condition.cost.includes(initiativeCost) &&
+			condition.impact.includes(impactOfRisk) &&
 			condition.probability.includes(probabilityOfRisk)
 		) {
 			return 0.1;
@@ -254,9 +314,9 @@ export function calculateCoefficientForGeneralUncertaintyItem(
 	// Check for High conditions
 	for (const condition of highConditions) {
 		if (
-			(condition.timeline.includes(initiativeTimeline) ||
-				condition.cost.includes(initiativeCost) ||
-				condition.impact.includes(impactOfRisk)) &&
+			condition.timeline.includes(initiativeTimeline) &&
+			condition.cost.includes(initiativeCost) &&
+			condition.impact.includes(impactOfRisk) &&
 			condition.probability.includes(probabilityOfRisk)
 		) {
 			return 0.07;
@@ -266,9 +326,9 @@ export function calculateCoefficientForGeneralUncertaintyItem(
 	// Check for Medium conditions
 	for (const condition of mediumConditions) {
 		if (
-			(condition.timeline.includes(initiativeTimeline) ||
-				condition.cost.includes(initiativeCost) ||
-				condition.impact.includes(impactOfRisk)) &&
+			condition.timeline.includes(initiativeTimeline) &&
+			condition.cost.includes(initiativeCost) &&
+			condition.impact.includes(impactOfRisk) &&
 			condition.probability.includes(probabilityOfRisk)
 		) {
 			return 0.05;
@@ -278,9 +338,9 @@ export function calculateCoefficientForGeneralUncertaintyItem(
 	// Check for Low conditions
 	for (const condition of lowConditions) {
 		if (
-			(condition.timeline.includes(initiativeTimeline) ||
-				condition.cost.includes(initiativeCost) ||
-				condition.impact.includes(impactOfRisk)) &&
+			condition.timeline.includes(initiativeTimeline) &&
+			condition.cost.includes(initiativeCost) &&
+			condition.impact.includes(impactOfRisk) &&
 			condition.probability.includes(probabilityOfRisk)
 		) {
 			return 0.03;
