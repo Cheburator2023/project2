@@ -93,6 +93,7 @@ export const AnketaBasicLayoutCreate = ({
 							isCreate
 							data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
 						/>
+						<Spacer space={500} />
 					</Card>
 				</Panel>
 			</PanelGroup>
