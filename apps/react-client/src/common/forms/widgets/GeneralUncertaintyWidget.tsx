@@ -29,7 +29,7 @@ interface UncertaintyItem {
 	influence: string;
 }
 
-const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
+export const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 	const { value = [], onChange, formContext, schema, required } = props;
 
 	const tooltips = props.options?.tooltips;
@@ -303,5 +303,3 @@ const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 		</Stack>
 	);
 };
-
-export default GeneralUncertaintyWidget;

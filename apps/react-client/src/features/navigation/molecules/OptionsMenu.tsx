@@ -21,6 +21,7 @@ const MenuItem = styled(MuiMenuItem)({
 export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 	const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 	const queryClient = useQueryClient();
+
 	const open = Boolean(anchorEl);
 	const handleClick = (event: React.MouseEvent<HTMLElement>) => {
 		setAnchorEl(event.currentTarget);

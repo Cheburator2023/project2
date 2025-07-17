@@ -50,7 +50,7 @@ const widgetMap: Record<string, any> = {
 	// Add more widgets as needed
 };
 
-const UniversalDependencyWidget = (props: WidgetProps) => {
+export const UniversalDependencyWidget = (props: WidgetProps) => {
 	const { formContext, uiSchema, value, onChange, registry, schema, ...rest } =
 		props;
 	const tooltip = props?.options?.tooltip;
@@ -272,5 +272,3 @@ const UniversalDependencyWidget = (props: WidgetProps) => {
 		/>
 	);
 };
-
-export default UniversalDependencyWidget;

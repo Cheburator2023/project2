@@ -21,7 +21,7 @@ interface AlgorithmValue {
 
 const MAX_ALGORITHMS = 8;
 
-const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
+export const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 	const {
 		value = [],
 		onChange,
@@ -184,5 +184,3 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 		</Stack>
 	);
 };
-
-export default AlgorithmComplexityWidget;

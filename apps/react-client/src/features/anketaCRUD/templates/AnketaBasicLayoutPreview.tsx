@@ -1,14 +1,13 @@
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import { styled } from "@mui/material";
 import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { Spacer } from "@react-client/common/primitives/Spacer";
 import { BasicInfoForm } from "@react-client/features/anketaCRUD/organisms/BasicInfoForm";
 import { CalculationResultTable } from "@react-client/features/anketaCRUD/organisms/CalculationResultTable";
 import { ProjectAssessmentFormPreview } from "@react-client/features/anketaCRUD/organisms/ProjectAssessmentFormPreview";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { Panel, PanelGroup } from "react-resizable-panels";
 import { useLocation } from "react-router";
+import { PanelResizeHandleStyled } from "../atoms/PanelResizeHandleStyled";
 
 export const AnketaBasicLayoutPreview = ({
 	initialData,
@@ -51,7 +50,6 @@ export const AnketaBasicLayoutPreview = ({
 							uuid="anketa_project_assessment_card"
 							data-test-id="anketa-basic-layout--Card-2"
 						>
-							<Spacer data-test-id="anketa-basic-layout--Spacer-2" />
 							<BasicInfoForm
 								isEditing={isEditing}
 								initialData={initialData}
@@ -82,7 +80,6 @@ export const AnketaBasicLayoutPreview = ({
 									uuid="anketa_basic_info_card"
 									data-test-id="anketa-basic-layout--Card-0"
 								>
-									<Spacer data-test-id="anketa-basic-layout--Spacer-0" />
 									<ProjectAssessmentFormPreview
 										initialData={initialData}
 										data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
@@ -102,7 +99,6 @@ export const AnketaBasicLayoutPreview = ({
 									uuid="anketa_calculation_result_card"
 									data-test-id="anketa-basic-layout--Card-1"
 								>
-									<Spacer data-test-id="anketa-basic-layout--Spacer-1" />
 									<CalculationResultTable data-test-id="anketa-basic-layout--CalculationResultTable-0" />
 								</Card>
 							</Panel>
@@ -119,7 +115,6 @@ export const AnketaBasicLayoutPreview = ({
 						uuid="anketa_project_assessment_card"
 						data-test-id="anketa-basic-layout--Card-2"
 					>
-						<Spacer data-test-id="anketa-basic-layout--Spacer-2" />
 						<BasicInfoForm
 							initialData={initialData}
 							disabled={mainInfoDisabled}
@@ -135,7 +130,6 @@ export const AnketaBasicLayoutPreview = ({
 						uuid="anketa_basic_info_card"
 						data-test-id="anketa-basic-layout--Card-0"
 					>
-						<Spacer data-test-id="anketa-basic-layout--Spacer-0" />
 						<ProjectAssessmentFormPreview
 							initialData={initialData}
 							data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
@@ -150,7 +144,6 @@ export const AnketaBasicLayoutPreview = ({
 						uuid="anketa_calculation_result_card"
 						data-test-id="anketa-basic-layout--Card-1"
 					>
-						<Spacer data-test-id="anketa-basic-layout--Spacer-1" />
 						<CalculationResultTable data-test-id="anketa-basic-layout--CalculationResultTable-0" />
 					</Card>
 				</Flex>
@@ -158,20 +151,3 @@ export const AnketaBasicLayoutPreview = ({
 		</Flex>
 	);
 };
-
-const PanelResizeHandleStyled = styled(PanelResizeHandle)<{
-	vertical?: boolean;
-	visible?: boolean;
-}>`
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	width: 12px;
-
-
-	svg {
-		${(props) => (props.vertical ? "transform: rotate(90deg); height: 100%;" : "width: 100%;")}
-	}
-
-	${(props) => props.vertical && "width: 100%; height: 12px;"}
-`;

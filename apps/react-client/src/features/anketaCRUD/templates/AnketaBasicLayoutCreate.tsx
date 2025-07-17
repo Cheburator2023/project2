@@ -1,13 +1,13 @@
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import { Button, styled } from "@mui/material";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { ProjectAssessmentForm } from "@react-client/features/jsonFormGenerator/components/ProjectAssessmentForm";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { Panel, PanelGroup } from "react-resizable-panels";
 import { useLocation } from "react-router";
 import { BasicInfoForm } from "../organisms/BasicInfoForm";
 import { CalculationResultTable } from "../organisms/CalculationResultTable";
+import { ProjectAssessmentForm } from "../organisms/ProjectAssessmentForm";
+import { PanelResizeHandleStyled } from "../atoms/PanelResizeHandleStyled";
 
 export const AnketaBasicLayoutCreate = ({
 	isPending,
@@ -44,7 +44,6 @@ export const AnketaBasicLayoutCreate = ({
 								uuid="anketa_basic_info_card"
 								data-test-id="anketa-basic-layout--Card-0"
 							>
-								<Spacer data-test-id="anketa-basic-layout--Spacer-0" />
 								<BasicInfoForm
 									isCreate
 									data-test-id="anketa-basic-layout--BasicInfoForm-0"
@@ -65,7 +64,6 @@ export const AnketaBasicLayoutCreate = ({
 								uuid="anketa_calculation_result_card"
 								data-test-id="anketa-basic-layout--Card-1"
 							>
-								<Spacer data-test-id="anketa-basic-layout--Spacer-1" />
 								<CalculationResultTable data-test-id="anketa-basic-layout--CalculationResultTable-0" />
 							</Card>
 						</Panel>
@@ -88,7 +86,6 @@ export const AnketaBasicLayoutCreate = ({
 						uuid="anketa_project_assessment_card"
 						data-test-id="anketa-basic-layout--Card-2"
 					>
-						<Spacer data-test-id="anketa-basic-layout--Spacer-2" />
 						<ProjectAssessmentForm
 							isCreate
 							data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
@@ -100,20 +97,3 @@ export const AnketaBasicLayoutCreate = ({
 		</Flex>
 	);
 };
-
-const PanelResizeHandleStyled = styled(PanelResizeHandle)<{
-	vertical?: boolean;
-	visible?: boolean;
-}>`
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	width: 12px;
-
-
-	svg {
-		${(props) => (props.vertical ? "transform: rotate(90deg); height: 100%;" : "width: 100%;")}
-	}
-
-	${(props) => props.vertical && "width: 100%; height: 12px;"}
-`;

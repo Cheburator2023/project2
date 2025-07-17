@@ -1,4 +1,4 @@
-import schema from "@react-client/features/jsonFormGenerator/schemas/calc_schema.json";
+import schema from "@react-client/schemas/calc_schema.json";
 import { ColDef } from "ag-grid-community";
 
 export const questionnaire: ColDef<any, any>[] = [

@@ -11,7 +11,7 @@ const MainWrapper = styled("div", {
 }>(({ theme, mode }) => ({
 	flexGrow: 1,
 	minHeight: "100vh",
-	padding: "4px",
+	padding: "8px",
 	transition: theme.transitions.create("margin", {
 		easing: theme.transitions.easing.sharp,
 		duration: theme.transitions.duration.leavingScreen,
