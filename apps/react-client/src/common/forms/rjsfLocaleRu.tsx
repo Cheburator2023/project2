@@ -62,6 +62,10 @@ function localize_ru(errors: null | ErrorObject[] = []) {
 				outMessage = `Минимальное количество элементов ${error.params.limit}`;
 				break;
 			}
+			case "contains": {
+				outMessage = `Выберите хотя бы одно значение`;
+				break;
+			}
 			default:
 				outMessage = error.message || "Произошла ошибка валидации";
 		}

@@ -142,12 +142,6 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 							),
 					}}
 				/>
-
-				{hasError && (
-					<FormHelperText>
-						Необходимо выбрать хотя бы один тип алгоритма
-					</FormHelperText>
-				)}
 			</FormControl>
 
 			{/* Algorithm type selectors */}
@@ -165,20 +159,25 @@ const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 							readOnly={readonly}
 							data-test-id="algorithm-complexity-widget--Select-0"
 						>
-							<MenuItem value="">
-								<em>Выберите тип алгоритма</em>
-							</MenuItem>
-							{algorithmTypes.map((type: string) => (
-								<MenuItem
-									key={type}
-									value={type}
-									disabled={isAlgorithmSelected(type, index)}
-									data-test-id="algorithm-complexity-widget--MenuItem-1"
-								>
-									{type}
-									{isAlgorithmSelected(type, index) && " (уже выбран)"}
-								</MenuItem>
-							))}
+							{algorithmTypes.map((type: string) => {
+								const isEmpty = type === "";
+
+								return isEmpty ? (
+									<MenuItem key={type} value={type}>
+										Сбросить
+									</MenuItem>
+								) : (
+									<MenuItem
+										key={type}
+										value={type}
+										disabled={isAlgorithmSelected(type, index)}
+										data-test-id="algorithm-complexity-widget--MenuItem-1"
+									>
+										{type}
+										{isAlgorithmSelected(type, index) && " (уже выбран)"}
+									</MenuItem>
+								);
+							})}
 						</Select>
 					</FormControl>
 				))}
