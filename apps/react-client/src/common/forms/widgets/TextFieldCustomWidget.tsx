@@ -145,6 +145,19 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			prefix={options?.prefix}
 			multiline={options?.multiline}
 			select={isSelect}
+			SelectProps={{
+				MenuProps: {
+					anchorOrigin: {
+						vertical: "bottom",
+						horizontal: "left",
+					},
+					transformOrigin: {
+						vertical: "top",
+						horizontal: "left",
+					},
+					disablePortal: false, // Try both true and false
+				},
+			}}
 			slotProps={{
 				inputLabel: { shrink: true },
 				input: {
