@@ -10,6 +10,13 @@ import { brand, gray, red } from "../themePrimitives";
 
 /* eslint-disable import/prefer-default-export */
 export const inputsCustomizations: Components<Theme> = {
+	MuiPopper: {
+		defaultProps: {
+			popperOptions: {
+				strategy: "fixed",
+			},
+		},
+	},
 	MuiInputLabel: {
 		styleOverrides: {
 			root: {
@@ -40,6 +47,13 @@ export const inputsCustomizations: Components<Theme> = {
 					outlineOffset: "2px",
 				},
 			}),
+		},
+	},
+	MuiPopover: {
+		styleOverrides: {
+			paper: {
+				position: "fixed",
+			},
 		},
 	},
 	MuiAutocomplete: {

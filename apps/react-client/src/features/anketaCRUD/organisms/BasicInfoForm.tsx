@@ -291,6 +291,7 @@ export const BasicInfoForm = ({
 
 	const onError = (errors: any) => {
 		setFormValidated(formName, true);
+		setFormValid(formName, false);
 		setLiveValidate(true);
 		incrementSubmitCount(formName);
 

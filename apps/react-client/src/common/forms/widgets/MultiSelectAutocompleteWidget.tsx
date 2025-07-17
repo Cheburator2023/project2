@@ -37,6 +37,19 @@ export const MultiSelectAutocompleteWidget = (props: WidgetProps) => {
 					required={required}
 					error={!!props.rawErrors}
 					placeholder={props.placeholder}
+					SelectProps={{
+						MenuProps: {
+							anchorOrigin: {
+								vertical: "bottom",
+								horizontal: "left",
+							},
+							transformOrigin: {
+								vertical: "top",
+								horizontal: "left",
+							},
+							disablePortal: false, // Try both true and false
+						},
+					}}
 					slotProps={{
 						inputLabel: { shrink: true },
 					}}
