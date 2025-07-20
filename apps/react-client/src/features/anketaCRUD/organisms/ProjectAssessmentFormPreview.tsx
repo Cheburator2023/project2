@@ -86,7 +86,6 @@ export const ProjectAssessmentFormPreview = ({
 			liveValidate={false}
 			noHtml5Validate
 			focusOnFirstError
-			readonly
 			noValidate
 			showErrorList={false}
 		/>

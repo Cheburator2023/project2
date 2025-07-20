@@ -26,6 +26,8 @@ export const AnketaBasicLayoutPreview = ({
 }) => {
 	const location = useLocation();
 
+	const isReadOnly = !isEditing;
+
 	return (
 		<Flex
 			flexDirection="column"
@@ -47,6 +49,7 @@ export const AnketaBasicLayoutPreview = ({
 							padding="10px"
 							zoom={0.8}
 							loading={isPending}
+							nonClickable={isReadOnly}
 							uuid="anketa_project_assessment_card"
 							data-test-id="anketa-basic-layout--Card-2"
 						>
@@ -77,6 +80,7 @@ export const AnketaBasicLayoutPreview = ({
 									height="100%"
 									padding="10px"
 									zoom={0.8}
+									nonClickable={isReadOnly}
 									uuid="anketa_basic_info_card"
 									data-test-id="anketa-basic-layout--Card-0"
 								>
@@ -114,8 +118,10 @@ export const AnketaBasicLayoutPreview = ({
 						zoom={0.8}
 						uuid="anketa_project_assessment_card"
 						data-test-id="anketa-basic-layout--Card-2"
+						nonClickable={isReadOnly}
 					>
 						<BasicInfoForm
+							isEditing={isEditing}
 							initialData={initialData}
 							disabled={mainInfoDisabled}
 							onChange={onMainInfoChange}
@@ -124,9 +130,10 @@ export const AnketaBasicLayoutPreview = ({
 					</Card>
 					<Card
 						header="Опросник"
-						overflow={""}
+						overflow=""
 						padding="10px"
 						zoom={0.8}
+						nonClickable={isReadOnly}
 						uuid="anketa_basic_info_card"
 						data-test-id="anketa-basic-layout--Card-0"
 					>
@@ -138,7 +145,7 @@ export const AnketaBasicLayoutPreview = ({
 					<Card
 						header="Итоги расчета"
 						height="666px"
-						overflow={"hidden"}
+						overflow="hidden"
 						padding="10px"
 						zoom={0.8}
 						uuid="anketa_calculation_result_card"

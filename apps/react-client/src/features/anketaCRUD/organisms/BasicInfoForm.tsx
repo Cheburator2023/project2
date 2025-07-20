@@ -149,6 +149,7 @@ export const BasicInfoForm = ({
 	isEditing,
 	onChange,
 }: BasicInfoFormProps) => {
+	const isReadOnly = isCreate || !isEditing;
 	const { data: questData } = useQuestionnaireControllerGetFullQuestionnaire({
 		query: {
 			staleTime: 0,
@@ -340,7 +341,7 @@ export const BasicInfoForm = ({
 		<Form
 			ref={formRef}
 			schema={schema}
-			uiSchema={isCreate ? uiSchema : controlledUiSchema}
+			uiSchema={isCreate || isReadOnly ? uiSchema : controlledUiSchema}
 			formData={formData}
 			validator={validatorRu}
 			widgets={widgets}
