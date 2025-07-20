@@ -38,7 +38,7 @@ describe("Assessment Calculations", () => {
 				},
 			],
 			readyPromReports: "Нет",
-			assessedInitiativesCount: 3,
+			assessedInitiativesCount: 1,
 			dataSourcesCount: "2",
 			pilotModelRequired: "Да",
 			pilotSupportRequired: "Да",
@@ -72,13 +72,13 @@ describe("Assessment Calculations", () => {
 
 		const expectedStages: StageValues = {
 			stage01: 403.39,
-			stage02: 7.62,
-			stage04: 37.79,
+			stage02: 22.86,
+			stage04: 113.35,
 			stage05A: 6014.09,
 			stage05: 5563.03,
 			amlDrafting: 0,
 			stage05B: 43.18,
-			stage07: 197.07,
+			stage07: 591.19,
 			stage09: 22552.82,
 			amlEnforcement: 0,
 		};

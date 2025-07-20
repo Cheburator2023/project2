@@ -1,7 +1,6 @@
 import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
 import {
 	FormControl,
-	FormHelperText,
 	InputLabel,
 	MenuItem,
 	Select,
