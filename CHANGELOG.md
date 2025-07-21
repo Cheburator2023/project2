@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.2.0](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.1.0...v1.2.0) (2025-07-21)
+
+
+### Features
+
+* form in readonly mode better contrast fields ([8fa2762](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/8fa276209b6cb9a6a5f4dde2e2bba38c742ce2db))
+
 # [1.1.0](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.0.2...v1.1.0) (2025-07-18)
 
 
