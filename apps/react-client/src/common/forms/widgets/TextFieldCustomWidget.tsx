@@ -195,8 +195,6 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 							return (
 								<Box
 									sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, py: 0.5 }}
-									onClick={(e) => e.stopPropagation()}
-									onMouseDown={(e) => e.stopPropagation()}
 								>
 									{selected.map((item: string, index: number) => (
 										<Chip
