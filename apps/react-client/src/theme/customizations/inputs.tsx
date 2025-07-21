@@ -16,6 +16,27 @@ export const inputsCustomizations: Components<Theme> = {
 				strategy: "fixed",
 			},
 		},
+		styleOverrides: {
+			root: ({ theme }): any => ({
+				position: "fixed !important",
+				top: "50% !important",
+				left: "50% !important",
+				transform: "translate(-50%, -50%) !important",
+				maxHeight: "80vh",
+				maxWidth: "90vw",
+				zIndex: 1300,
+				"&::before": {
+					content: '""',
+					position: "fixed",
+					top: 0,
+					left: 0,
+					right: 0,
+					bottom: 0,
+					backgroundColor: "rgba(0, 0, 0, 0.5)",
+					zIndex: -1,
+				},
+			}),
+		},
 	},
 	MuiInputLabel: {
 		styleOverrides: {
@@ -50,13 +71,44 @@ export const inputsCustomizations: Components<Theme> = {
 		},
 	},
 	MuiPopover: {
-		styleOverrides: {
-			paper: {
-				position: "fixed",
+		defaultProps: {
+			anchorOrigin: {
+				vertical: "center",
+				horizontal: "center",
 			},
+			transformOrigin: {
+				vertical: "center",
+				horizontal: "center",
+			},
+			anchorReference: "none",
+			BackdropProps: {
+				sx: {
+					backgroundColor: "rgba(0, 0, 0, 0.5)",
+				},
+			},
+		},
+		styleOverrides: {
+			root: {
+				"& .MuiBackdrop-root": {
+					backgroundColor: "rgba(0, 0, 0, 0.5)",
+				},
+			},
+			paper: ({ theme }) => ({
+				position: "fixed",
+				top: "50% !important",
+				left: "50% !important",
+				transform: "translate(-50%, -50%) !important",
+				maxHeight: "80vh",
+				maxWidth: "90vw",
+				borderRadius: (theme.vars || theme).shape.borderRadius,
+				boxShadow: theme.shadows[8],
+			}),
 		},
 	},
 	MuiAutocomplete: {
+		defaultProps: {
+			disablePortal: false,
+		},
 		styleOverrides: {
 			root: ({ theme }) => ({
 				[`& .${outlinedInputClasses.root}`]: {
@@ -65,6 +117,9 @@ export const inputsCustomizations: Components<Theme> = {
 					paddingRight: "10px",
 				},
 			}),
+			popper: {
+				zIndex: 1300,
+			},
 		},
 	},
 	MuiButton: {
