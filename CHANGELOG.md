@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.2.2](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.2.1...v1.2.2) (2025-07-21)
+
+
+### Bug Fixes
+
+* theme icons fix for rdp ([828bf77](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/828bf77c82c833918f3a91258010056372df83a0))
+
 ## [1.2.1](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.2.0...v1.2.1) (2025-07-21)
 
 
