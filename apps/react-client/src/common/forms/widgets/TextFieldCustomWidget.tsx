@@ -6,6 +6,7 @@ import {
 	Box,
 	Button,
 	Checkbox,
+	Chip,
 	InputAdornment,
 	InputLabel,
 	ListItemText,
@@ -170,7 +171,51 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 							},
 						},
 						multiple: true,
-						renderValue: (selected: any) => selected.join(", "),
+						renderValue: (selected: any) => {
+							const handleChipDelete =
+								(chipToDelete: string) => (event: any) => {
+									event.stopPropagation();
+									event.preventDefault();
+									const newSelected = selected.filter(
+										(item: string) => item !== chipToDelete,
+									);
+									onChange(newSelected);
+								};
+
+							const handleChipClick = (event: any) => {
+								event.stopPropagation();
+								event.preventDefault();
+							};
+
+							const handleChipMouseDown = (event: any) => {
+								event.stopPropagation();
+								event.preventDefault();
+							};
+
+							return (
+								<Box
+									sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, py: 0.5 }}
+									onClick={(e) => e.stopPropagation()}
+									onMouseDown={(e) => e.stopPropagation()}
+								>
+									{selected.map((item: string, index: number) => (
+										<Chip
+											key={index}
+											label={item}
+											size="medium"
+											variant="outlined"
+											onDelete={handleChipDelete(item)}
+											onClick={handleChipClick}
+											onMouseDown={handleChipMouseDown}
+											sx={{
+												fontSize: "0.75rem",
+												height: "24px",
+											}}
+										/>
+									))}
+								</Box>
+							);
+						},
 					},
 					inputLabel: { shrink: true },
 					input: {
