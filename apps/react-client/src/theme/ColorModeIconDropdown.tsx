@@ -87,7 +87,7 @@ export function ColorModeIconDropdown() {
 
 	return (
 		<React.Fragment>
-			<Tooltip
+			<div
 				title="Сменить тему"
 				data-test-id="color-mode-icon-dropdown--Tooltip-0"
 			>
@@ -97,7 +97,7 @@ export function ColorModeIconDropdown() {
 				>
 					{icon}
 				</IconButton>
-			</Tooltip>
+			</div>
 			<Menu
 				anchorEl={anchorEl}
 				id="account-menu"

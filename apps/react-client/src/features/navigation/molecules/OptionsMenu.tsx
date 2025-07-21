@@ -31,12 +31,12 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 	};
 
 	const handleLogout = () => {
+		onLogout?.();
 		setAnchorEl(null);
 		useAuthStore.getState().setAccessToken(null);
 		queryClient.removeQueries();
 		queryClient.clear();
 		queryClient.invalidateQueries();
-		onLogout?.();
 		window.location.reload();
 	};
 

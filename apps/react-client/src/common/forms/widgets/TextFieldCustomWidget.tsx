@@ -9,7 +9,6 @@ import {
 	MenuItem,
 	Select,
 	SelectChangeEvent,
-	Tooltip,
 } from "@mui/material";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import { Flex } from "@react-client/common/primitives/Flex";
@@ -135,7 +134,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 						options?.tooltip ? (
 							<Flex gap={6} position="relative">
 								<InputLabel {...props} />
-								<Tooltip title={options?.tooltip} placement="top-start">
+								<div title={options?.tooltip}>
 									<InfoOutlineIcon
 										sx={{
 											scale: 0.8,
@@ -145,7 +144,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 											right: "0",
 										}}
 									/>
-								</Tooltip>
+								</div>
 							</Flex>
 						) : (
 							<InputLabel {...props} />
@@ -196,7 +195,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 								options?.tooltip ? (
 									<Flex gap={6} position="relative">
 										<InputLabel {...props} />
-										<Tooltip title={options?.tooltip} placement="top-start">
+										<div title={options?.tooltip}>
 											<InfoOutlineIcon
 												sx={{
 													scale: 0.8,
@@ -206,7 +205,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 													right: "0",
 												}}
 											/>
-										</Tooltip>
+										</div>
 									</Flex>
 								) : (
 									<InputLabel {...props} />
@@ -267,7 +266,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 					options?.tooltip ? (
 						<Flex gap={6} position="relative">
 							<InputLabel {...props} />
-							<Tooltip title={options?.tooltip} placement="top-start">
+							<div title={options?.tooltip}>
 								<InfoOutlineIcon
 									sx={{
 										scale: 0.8,
@@ -277,7 +276,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 										right: "0",
 									}}
 								/>
-							</Tooltip>
+							</div>
 						</Flex>
 					) : (
 						<InputLabel {...props} />

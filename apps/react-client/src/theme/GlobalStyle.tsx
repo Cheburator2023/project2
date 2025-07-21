@@ -160,6 +160,10 @@ div.ag-watermark-text {
 //     transform: translateZ(0);
 // }
 
+:where(.ag-icon):before {
+     transform: translateZ(0);
+}
+
 .ag-icon-filter::before, .ag-icon-filter::after {
     transform: translateZ(0);
 }

@@ -80,10 +80,7 @@ export function MenuContent() {
 						sx={{ paddingBottom: 1 }}
 						data-test-id="menu-content--ListItem-1"
 					>
-						<Tooltip
-							title={item.tooltip}
-							data-test-id="menu-content--Tooltip-0"
-						>
+						<div title={item.tooltip} data-test-id="menu-content--Tooltip-0">
 							<Button
 								size="small"
 								variant="outlined"
@@ -98,7 +95,7 @@ export function MenuContent() {
 									data-test-id="menu-content--ListItemText-1"
 								/>
 							</Button>
-						</Tooltip>
+						</div>
 					</ListItem>
 				))}
 			</List>

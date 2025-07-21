@@ -231,9 +231,9 @@ export const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 										onClick={() => handleItemSelect(option.id)}
 									>
 										<ListItemText primary={option.title} />
-										<Tooltip title={option.tooltip}>
+										<div title={option.tooltip}>
 											<InfoOutlineIcon sx={{ opacity: 0.2 }} />
-										</Tooltip>
+										</div>
 									</ListItemButton>
 								))}
 							</List>
