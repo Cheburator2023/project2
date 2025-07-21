@@ -4,6 +4,6 @@ module.exports = {
 	extends: ["@commitlint/config-conventional"],
 	ignores: [(commit) => pullRequestRegexp.test(commit)],
 	rules: {
-		"body-max-line-length": [1, "always", 100],
+		"body-max-line-length": [1, "always", 1000],
 	},
 };
