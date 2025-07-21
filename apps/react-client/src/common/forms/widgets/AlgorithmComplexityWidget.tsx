@@ -124,7 +124,7 @@ export const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 							options.tooltip ? (
 								<Flex gap={6}>
 									<InputLabel {...props} />
-									<Tooltip title={options.tooltip} placement="top-start">
+									<div title={options.tooltip}>
 										<InfoOutlineIcon
 											sx={{
 												scale: 0.8,
@@ -134,7 +134,7 @@ export const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 												right: "0",
 											}}
 										/>
-									</Tooltip>
+									</div>
 								</Flex>
 							) : (
 								<InputLabel {...props} />

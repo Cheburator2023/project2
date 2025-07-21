@@ -21,14 +21,15 @@ export const TextFieldCustom: React.FC<TextFieldCustomProps> = ({
 	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		if (onChange) {
 			const _value = event.target.value;
-			const cleanValue = _value?.replace(prefix || "", "");
-			const prefixedValue = prefix ? `${prefix}${cleanValue}` : _value;
 
 			if (prefix) {
 				setTimeout(() => {
 					const input = event.target;
 					input.setSelectionRange(input.value.length, input.value.length);
 				}, 0);
+
+				const cleanValue = _value?.replace(prefix || "", "");
+				const prefixedValue = prefix ? `${prefix}${cleanValue}` : _value;
 
 				if (cleanValue !== "") {
 					onChange({
@@ -74,7 +75,7 @@ export const TextFieldCustom: React.FC<TextFieldCustomProps> = ({
 	return (
 		<TextField
 			{...props}
-			title={props.id}
+			title={props.title || props.id}
 			value={value}
 			onChange={handleChange}
 			onFocus={handleFocus}

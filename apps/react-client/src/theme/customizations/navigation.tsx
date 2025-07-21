@@ -16,6 +16,7 @@ export const navigationCustomizations: Components<Theme> = {
 			root: ({ theme }) => ({
 				borderRadius: (theme.vars || theme).shape.borderRadius,
 				padding: "6px 8px",
+				textWrap: "wrap",
 				[`&.${menuItemClasses.focusVisible}`]: {
 					backgroundColor: "transparent",
 				},

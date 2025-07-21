@@ -98,7 +98,8 @@ const CardWithZoom = (props: CardWithZoomProps) => {
 				</Flex>
 			)}
 			{!!(props.header || props.onClose) && <Spacer space={6} />}
-			<div
+			<Wrapper
+				nonClickable={!!props.nonClickable}
 				style={{
 					height: props.header
 						? overflow
@@ -110,10 +111,18 @@ const CardWithZoom = (props: CardWithZoomProps) => {
 				}}
 			>
 				{props.children}
-			</div>
+			</Wrapper>
 		</MUIPaperStyled>
 	);
 };
+
+const Wrapper = styled("div")<{ nonClickable: boolean }>`
+
+	& > * {
+		pointer-events: ${({ nonClickable }) => nonClickable && "none"};
+	}
+	
+					`;
 
 const CardWithoutZoom = (props: BaseCardProps) => {
 	const { maxHeight, overflow = "auto" } = props;
@@ -154,7 +163,8 @@ const CardWithoutZoom = (props: BaseCardProps) => {
 				</Flex>
 			)}
 			{!!(props.header || props.onClose) && <Spacer space={6} />}
-			<div
+			<Wrapper
+				nonClickable={!!props.nonClickable}
 				style={{
 					height: props.header
 						? overflow
@@ -165,7 +175,7 @@ const CardWithoutZoom = (props: BaseCardProps) => {
 				}}
 			>
 				{props.children}
-			</div>
+			</Wrapper>
 		</MUIPaperStyled>
 	);
 };
@@ -178,6 +188,7 @@ type BaseCardProps = PaperProps & {
 	header?: any;
 	onClose?: any;
 	overflow?: string;
+	nonClickable?: boolean;
 };
 
 type CardWithZoomProps = BaseCardProps & {

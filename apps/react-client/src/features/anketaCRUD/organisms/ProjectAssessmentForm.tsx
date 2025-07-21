@@ -1,6 +1,5 @@
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { transformErrors } from "@react-client/common/forms/transformErrors";
-import { MultiSelectAutocompleteWidget } from "@react-client/common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "@react-client/common/forms/widgets/RJSFObjectFieldTemplate";
 import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
@@ -40,7 +39,6 @@ const widgets = {
 	AlgorithmComplexityWidget,
 	GeneralUncertaintyWidget,
 	UniversalDependencyWidget,
-	MultiSelectAutocompleteWidget,
 	TextFieldCustomWidget,
 };
 

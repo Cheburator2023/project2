@@ -2,7 +2,6 @@ import { useQuestionnaireControllerGetFullQuestionnaire } from "@react-client/co
 import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { transformErrors } from "@react-client/common/forms/transformErrors";
-import { MultiSelectAutocompleteCreateWidget } from "@react-client/common/forms/widgets/MultiSelectAutocompleteCreateWidget";
 import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import {
@@ -21,7 +20,6 @@ import type {
 	UiSchema,
 } from "@rjsf/utils";
 import { useRef, useState } from "react";
-import { MultiSelectAutocompleteWidget } from "../../../common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjectFieldTemplate";
 
 interface BasicInfoFormProps {
@@ -80,9 +78,11 @@ const uiSchema: UiSchema = {
 		},
 	},
 	department: {
-		"ui:widget": "MultiSelectAutocompleteWidget",
+		"ui:widget": "TextFieldCustomWidget",
 		"ui:options": {
 			tooltip: "",
+			select: true,
+			multiple: true,
 		},
 		isEditable: true,
 	},
@@ -93,12 +93,6 @@ const uiSchema: UiSchema = {
 		},
 		isEditable: true,
 	},
-	// relatedModels: {
-	// 	"ui:widget": "MultiSelectAutocompleteCreateWidget",
-	// 	"ui:options": {
-	// 		tooltip: "",
-	// 	},
-	// },
 	comment: {
 		"ui:widget": "TextFieldCustomWidget",
 		"ui:options": {
@@ -137,8 +131,6 @@ const templates: Partial<TemplatesType> = {
 };
 
 const widgets: RegistryWidgetsType = {
-	MultiSelectAutocompleteWidget,
-	MultiSelectAutocompleteCreateWidget,
 	TextFieldCustomWidget,
 };
 
@@ -149,6 +141,7 @@ export const BasicInfoForm = ({
 	isEditing,
 	onChange,
 }: BasicInfoFormProps) => {
+	const isReadOnly = isCreate || !isEditing;
 	const { data: questData } = useQuestionnaireControllerGetFullQuestionnaire({
 		query: {
 			staleTime: 0,
@@ -340,7 +333,7 @@ export const BasicInfoForm = ({
 		<Form
 			ref={formRef}
 			schema={schema}
-			uiSchema={isCreate ? uiSchema : controlledUiSchema}
+			uiSchema={isCreate || isReadOnly ? uiSchema : controlledUiSchema}
 			formData={formData}
 			validator={validatorRu}
 			widgets={widgets}

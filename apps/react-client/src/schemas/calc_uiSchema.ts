@@ -106,7 +106,11 @@ export const calc_uiSchema: UiSchema = {
 		},
 	},
 	productionDeploymentChannels: {
-		"ui:widget": "MultiSelectAutocompleteWidget",
+		"ui:widget": "TextFieldCustomWidget",
+		"ui:options": {
+			multiple: true,
+			select: true,
+		},
 	},
 	initiativeTimeline: {
 		"ui:options": {

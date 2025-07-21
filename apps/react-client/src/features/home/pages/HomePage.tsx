@@ -18,6 +18,7 @@ import {
 	ClientSideRowModelModule,
 	ColDef,
 	colorSchemeDarkBlue,
+	GetMainMenuItemsParams,
 	type GridApi,
 	type GridReadyEvent,
 	type IRowNode,
@@ -36,6 +37,7 @@ import {
 import { AgGridReact } from "ag-grid-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
+import { agGridCustomQuartzTheme } from "../../../theme/agGridCustomTheme";
 
 ModuleRegistry.registerModules([
 	AllCommunityModule,
@@ -48,7 +50,7 @@ ModuleRegistry.registerModules([
 	...(process.env.NODE_ENV !== "production" ? [ValidationModule] : []),
 ]);
 
-const themeQuartzDark = themeQuartz.withPart(colorSchemeDarkBlue);
+const themeQuartzDark = agGridCustomQuartzTheme.withPart(colorSchemeDarkBlue);
 
 // const IS_DEV = process.env.NODE_ENV !== "production";
 
@@ -142,6 +144,11 @@ export const HomeTemplete = ({
 		cellRendererParams: {
 			hoveredRowId,
 		},
+		mainMenuItems: (params: GetMainMenuItemsParams) => {
+			return params.defaultItems.filter(
+				(item) => item !== "columnChooser" && item !== "rowGroup",
+			);
+		},
 	};
 
 	const _onExportExcel = () => {
@@ -186,7 +193,9 @@ export const HomeTemplete = ({
 	};
 
 	const theme =
-		mode === "light" || mode === undefined ? themeQuartz : themeQuartzDark;
+		mode === "light" || mode === undefined
+			? agGridCustomQuartzTheme
+			: themeQuartzDark;
 
 	const onCellMouseOver = (params: any) => {
 		setHoveredRowId(params?.node.id || "0");
@@ -210,7 +219,7 @@ export const HomeTemplete = ({
 						justifyContent="flex-end"
 						data-test-id="home-page--Flex-2"
 					>
-						<Tooltip title="Создать расчет" data-test-id="home-page--Tooltip-0">
+						<div title="Создать расчет" data-test-id="home-page--Tooltip-0">
 							<IconButton
 								aria-label="menu"
 								onClick={onCreateCalculation}
@@ -218,13 +227,13 @@ export const HomeTemplete = ({
 							>
 								<AddIcon data-test-id="home-page--AddIcon-1" />
 							</IconButton>
-						</Tooltip>
-						<Tooltip title="Обновить реестр">
+						</div>
+						<div title="Обновить реестр">
 							<IconButton onClick={refetch as any}>
 								<ReplayIcon />
 							</IconButton>
-						</Tooltip>
-						{/* <Tooltip title="Сравнить" data-test-id="home-page--Tooltip-1">
+						</div>
+						{/* <div title="Сравнить" data-test-id="home-page--Tooltip-1">
 							<IconButton
 								disabled={selectedRows?.length !== 2}
 								aria-label="menu"
@@ -239,7 +248,7 @@ export const HomeTemplete = ({
 							>
 								<CompareArrowsIcon data-test-id="home-page--CompareArrowsIcon-0" />
 							</IconButton>
-						</Tooltip> */}
+						</div> */}
 						{/* <Tooltip
 							title="Выгрузить в Excel"
 							data-test-id="home-page--Tooltip-2"
@@ -252,7 +261,7 @@ export const HomeTemplete = ({
 							>
 								Выгрузить
 							</Button>
-						</Tooltip> */}
+						</div> */}
 					</Flex>
 				</Flex>
 			</Header>

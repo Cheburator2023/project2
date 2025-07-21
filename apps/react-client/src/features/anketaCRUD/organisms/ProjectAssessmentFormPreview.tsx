@@ -1,7 +1,6 @@
 import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { ArrayCustomCardListsWidget } from "@react-client/common/forms/widgets/ArrayCustomCardListsWidget";
-import { MultiSelectAutocompleteWidget } from "@react-client/common/forms/widgets/MultiSelectAutocompleteWidget";
 import { RJSFObjectFieldTemplate } from "@react-client/common/forms/widgets/RJSFObjectFieldTemplate";
 import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";
 import { useEffectOnce } from "@react-client/common/hooks/useEffectOnce";
@@ -42,7 +41,6 @@ const widgets: RegistryWidgetsType = {
 	AlgorithmComplexityWidget,
 	GeneralUncertaintyWidget,
 	UniversalDependencyWidget,
-	MultiSelectAutocompleteWidget,
 	ArrayCustomCardListsWidget,
 };
 
@@ -86,7 +84,6 @@ export const ProjectAssessmentFormPreview = ({
 			liveValidate={false}
 			noHtml5Validate
 			focusOnFirstError
-			readonly
 			noValidate
 			showErrorList={false}
 		/>

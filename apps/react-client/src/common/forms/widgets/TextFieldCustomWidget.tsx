@@ -2,10 +2,13 @@ import ClearIcon from "@mui/icons-material/Clear";
 import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
 import {
 	Autocomplete,
+	Checkbox,
 	InputAdornment,
 	InputLabel,
+	ListItemText,
 	MenuItem,
-	Tooltip,
+	Select,
+	SelectChangeEvent,
 } from "@mui/material";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import { Flex } from "@react-client/common/primitives/Flex";
@@ -55,7 +58,9 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 
 	const _onFocus = ({
 		target: { value },
-	}: React.FocusEvent<HTMLInputElement>) => onFocus?.(id, value);
+	}: React.FocusEvent<HTMLInputElement>) => {
+		return onFocus?.(id, value);
+	};
 
 	const isSelect =
 		(options?.defaultEnums && options?.defaultEnums.length > 0) ||
@@ -69,8 +74,94 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 		})) || [];
 	const optionsForSelect = [...defaultEnums, ...(options?.enumOptions || [])];
 	const allowCustomInput = options?.freeSolo || options?.allowCustomInput;
-
 	const isDisabled = disabled || readonly;
+	const isMultiple = options?.multiple;
+
+	if (isSelect & isMultiple) {
+		const _handleChangeMult = (event: SelectChangeEvent) => {
+			const {
+				target: { value },
+			} = event;
+			onChange(
+				// On autofill we get a stringified value.
+				typeof value === "string" ? value.split(",") : value,
+			);
+		};
+
+		return (
+			<TextFieldCustom
+				value={value}
+				label={label || schema?.title}
+				onChange={_handleChangeMult as any}
+				select
+				id={id}
+				title={value}
+				required={required}
+				disabled={isDisabled}
+				autoFocus={autofocus}
+				error={rawErrors && rawErrors.length > 0}
+				placeholder={placeholder}
+				slotProps={{
+					select: {
+						MenuProps: {
+							disablePortal: false,
+						},
+
+						multiple: true,
+						renderValue: (selected: any) => selected.join(", "),
+					},
+					inputLabel: { shrink: true },
+					input: {
+						endAdornment: isSelect &&
+							initialValue !== props.value &&
+							props.options?.reset && (
+								<InputAdornment
+									position="end"
+									sx={{
+										position: "relative",
+										right: 30,
+										cursor: "pointer",
+										zIndex: 999,
+									}}
+								>
+									<ClearIcon onClick={reset} />
+								</InputAdornment>
+							),
+					},
+				}}
+				slots={{
+					inputLabel: (props) =>
+						options?.tooltip ? (
+							<Flex gap={6} position="relative">
+								<InputLabel {...props} />
+								<div title={options?.tooltip}>
+									<InfoOutlineIcon
+										sx={{
+											scale: 0.8,
+											color: "#88888877",
+											position: "absolute",
+											top: "-4px",
+											right: "0",
+										}}
+									/>
+								</div>
+							</Flex>
+						) : (
+							<InputLabel {...props} />
+						),
+				}}
+				{...options}
+				// MenuProps={MenuProps}
+			>
+				{optionsForSelect.map((item) => (
+					<MenuItem key={item.value} value={item.value}>
+						<Checkbox checked={value.includes(item.value)} />
+						<ListItemText primary={item.value} />
+					</MenuItem>
+				))}
+			</TextFieldCustom>
+		);
+	}
 
 	if (isSelect && allowCustomInput) {
 		return (
@@ -104,7 +195,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 								options?.tooltip ? (
 									<Flex gap={6} position="relative">
 										<InputLabel {...props} />
-										<Tooltip title={options?.tooltip} placement="top-start">
+										<div title={options?.tooltip}>
 											<InfoOutlineIcon
 												sx={{
 													scale: 0.8,
@@ -114,7 +205,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 													right: "0",
 												}}
 											/>
-										</Tooltip>
+										</div>
 									</Flex>
 								) : (
 									<InputLabel {...props} />
@@ -145,20 +236,12 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			prefix={options?.prefix}
 			multiline={options?.multiline}
 			select={isSelect}
-			SelectProps={{
-				MenuProps: {
-					anchorOrigin: {
-						vertical: "bottom",
-						horizontal: "left",
-					},
-					transformOrigin: {
-						vertical: "top",
-						horizontal: "left",
-					},
-					disablePortal: false, // Try both true and false
-				},
-			}}
 			slotProps={{
+				select: {
+					MenuProps: {
+						disablePortal: false,
+					},
+				},
 				inputLabel: { shrink: true },
 				input: {
 					endAdornment: isSelect &&
@@ -183,7 +266,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 					options?.tooltip ? (
 						<Flex gap={6} position="relative">
 							<InputLabel {...props} />
-							<Tooltip title={options?.tooltip} placement="top-start">
+							<div title={options?.tooltip}>
 								<InfoOutlineIcon
 									sx={{
 										scale: 0.8,
@@ -193,7 +276,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 										right: "0",
 									}}
 								/>
-							</Tooltip>
+							</div>
 						</Flex>
 					) : (
 						<InputLabel {...props} />

@@ -60,7 +60,7 @@ export const UniversalDependencyWidget = (props: WidgetProps) => {
 		tooltip ? (
 			<Flex gap={6}>
 				<InputLabel {...props} />
-				<Tooltip title={tooltip} placement="top-start">
+				<div title={tooltip}>
 					<InfoOutlineIcon
 						sx={{
 							scale: 0.8,
@@ -70,7 +70,7 @@ export const UniversalDependencyWidget = (props: WidgetProps) => {
 							right: "0",
 						}}
 					/>
-				</Tooltip>
+				</div>
 			</Flex>
 		) : (
 			<InputLabel {...props} />
