@@ -1,5 +1,5 @@
-import schema from "@react-client/schemas/calc_schema.json";
 import { ColDef } from "ag-grid-community";
+import { mainCalcSchema } from "../../../schemas";
 
 export const questionnaire: ColDef<any, any>[] = [
 	{
@@ -58,9 +58,10 @@ export const questionnaire: ColDef<any, any>[] = [
 		filter: true,
 		valueGetter: (params) => {
 			const UNCERTAINTY_TYPE_VALUES =
-				schema.properties.generalUncertainty.items.properties.type.enum;
+				mainCalcSchema.properties.generalUncertainty.items.properties.type.enum;
 			const UNCERTAINTY_TYPE_VALUE_NAMES =
-				schema.properties.generalUncertainty.items.properties.type.enumNames;
+				mainCalcSchema.properties.generalUncertainty.items.properties.type
+					.enumNames;
 
 			const generalUncertaintyObj =
 				params.data.questionnaireData?.generalUncertainty || {};

@@ -22,7 +22,7 @@ import { AlgorithmComplexityWidget } from "@react-client/common/forms/widgets/Al
 import { GeneralUncertaintyWidget } from "@react-client/common/forms/widgets/GeneralUncertaintyWidget";
 import { UniversalDependencyWidget } from "@react-client/common/forms/widgets/UniversalDependencyWidget";
 import { IAssessmentFormData } from "../types/FormData";
-import { calc_uiSchema } from "@react-client/schemas/calc_uiSchema";
+import { calc_uiSchema } from "../../../schemas/calculation/calc_uiSchema";
 
 const Form = withTheme(MuiTheme);
 

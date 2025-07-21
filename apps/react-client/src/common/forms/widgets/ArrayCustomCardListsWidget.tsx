@@ -1,8 +1,8 @@
 import { Card, CardContent, InputLabel, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import calcSchema from "@react-client/schemas/calc_schema.json";
 import { WidgetProps } from "@rjsf/utils";
+import { mainCalcSchema } from "../../../schemas";
 
 export interface ArrayCustomCardListsWidgetProps extends WidgetProps {
 	translationMap?: Record<string, string>;
@@ -49,7 +49,7 @@ const buildTranslationMapFromSchema = (schema: any): Record<string, string> => {
 	return translationMap;
 };
 
-const _translationMap = buildTranslationMapFromSchema(calcSchema);
+const _translationMap = buildTranslationMapFromSchema(mainCalcSchema);
 
 const StyledCard = styled(Card)(({ theme }) => ({
 	marginBottom: theme.spacing(2),
