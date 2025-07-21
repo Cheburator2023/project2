@@ -2,7 +2,7 @@ import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { Panel, PanelGroup } from "react-resizable-panels";
 import { useLocation } from "react-router";
 import { BasicInfoForm } from "../organisms/BasicInfoForm";
 import { CalculationResultTable } from "../organisms/CalculationResultTable";

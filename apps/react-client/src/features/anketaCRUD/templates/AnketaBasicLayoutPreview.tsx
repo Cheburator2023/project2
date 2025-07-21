@@ -1,13 +1,11 @@
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import { styled } from "@mui/material";
 import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { Spacer } from "@react-client/common/primitives/Spacer";
 import { BasicInfoForm } from "@react-client/features/anketaCRUD/organisms/BasicInfoForm";
 import { CalculationResultTable } from "@react-client/features/anketaCRUD/organisms/CalculationResultTable";
 import { ProjectAssessmentFormPreview } from "@react-client/features/anketaCRUD/organisms/ProjectAssessmentFormPreview";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { Panel, PanelGroup } from "react-resizable-panels";
 import { useLocation } from "react-router";
 import { PanelResizeHandleStyled } from "../atoms/PanelResizeHandleStyled";
 

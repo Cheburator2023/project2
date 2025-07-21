@@ -9,6 +9,7 @@ import {
 	getPilotSupportCoefficient,
 	getProductionAdditionalReportsCoefficient,
 	getReadyPromReportsCoefficient,
+	calculateTotalUncertainty,
 } from "./coefficients";
 
 describe("Coefficient Calculations", () => {
@@ -36,7 +37,7 @@ describe("Coefficient Calculations", () => {
 			).toBe(1);
 			expect(
 				calculateSetupComplexityCoefficient(
-					"5 Сложность: Банком планируетcя предоставление Модели Регулятору для одобрения к использованию",
+					"5 Сложность: Банком планируется предоставление Модели Регулятору для одобрения к использованию",
 				),
 			).toBe(2);
 		});
@@ -59,11 +60,11 @@ describe("Coefficient Calculations", () => {
 
 	describe("calculateDataSourceCoefficient", () => {
 		it("returns correct value for 1-10", () => {
+			expect(calculateDataSourceCoefficient(0)).toBe(1);
 			expect(calculateDataSourceCoefficient(1)).toBe(1);
 			expect(calculateDataSourceCoefficient(10)).toBe(3);
 		});
 		it("throws for out of range", () => {
-			expect(() => calculateDataSourceCoefficient(0)).toThrow();
 			expect(() => calculateDataSourceCoefficient(11)).toThrow();
 		});
 	});
@@ -85,9 +86,9 @@ describe("Coefficient Calculations", () => {
 			expect(
 				calculateAlgorithmComplexityCoefficient([
 					{ algorithmType: "Табличные данные" },
-					{ algorithmType: "LLM" },
+					{ algorithmType: "Текстовая аналитика_LLM" },
 				]),
-			).toBe(0.75 + 2.0);
+			).toBe(0.75 + 1.4);
 		});
 		it("skips unknown/empty types", () => {
 			expect(
@@ -151,6 +152,246 @@ describe("Coefficient Calculations", () => {
 			expect(() =>
 				calculateDeploymentChannelCoefficient(["unknown"]),
 			).toThrow();
+		});
+	});
+
+	describe("calculateTotalUncertainty", () => {
+		it("returns 1.1 for a single uncertainty item with no adjustment", () => {
+			const formData = {
+				initiativeTimeline: "Менее 1 мес.",
+				initiativeCost: "От 2 млрд.",
+				uncertaintyAdjustment: null,
+				generalUncertainty: [
+					{
+						type: "businessProcessComplexity",
+						probability: "Реализация 1 раз в 6 мес. или чаще",
+						influence:
+							"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+					},
+				],
+			};
+			const result = calculateTotalUncertainty(
+				formData.generalUncertainty,
+				formData.initiativeTimeline,
+				formData.initiativeCost,
+				formData.uncertaintyAdjustment ?? 0,
+			);
+			expect(result).toBe(1.1);
+		});
+
+		it("returns 1.05 for a single uncertainty item with no adjustment", () => {
+			const formData = {
+				initiativeTimeline: "Менее 1 мес.",
+				initiativeCost: "От 2 млрд.",
+				uncertaintyAdjustment: 0,
+				generalUncertainty: [
+					{
+						type: "businessProcessComplexity",
+						probability: "Реализация не чаще 1 раза в 10 лет",
+						influence:
+							"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+					},
+				],
+				assessedInitiativesCount: 1,
+			};
+			const result = calculateTotalUncertainty(
+				formData.generalUncertainty,
+				formData.initiativeTimeline,
+				formData.initiativeCost,
+				formData.uncertaintyAdjustment ?? 0,
+			);
+			expect(result).toBe(1.05);
+		});
+
+		it("returns 1.04 for a single uncertainty item with no adjustment", () => {
+			const formData = {
+				modelsCount: 1,
+				initiativeTimeline: "Менее 1 мес.",
+				initiativeCost: "До 45.3 млн.",
+				uncertaintyAdjustment: 1,
+				generalUncertainty: [
+					{
+						type: "businessProcessComplexity",
+						probability: "Реализация не чаще 1 раза в 10 лет",
+						influence:
+							"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+					},
+				],
+				assessedInitiativesCount: 1,
+				dataSourcesCount: "0",
+				pilotModelRequired: "Не требуется",
+				pilotSupportRequired: "Не требуется",
+				algorithmComplexity: [
+					{
+						algorithmType: "",
+					},
+				],
+				autoMlRequired: "Не требуется",
+				productionAdditionalReports: "",
+				productionDeploymentChannels: [],
+				setupComplexity: "",
+				readyPromReports: "",
+			};
+
+			const result = calculateTotalUncertainty(
+				formData.generalUncertainty,
+				formData.initiativeTimeline,
+				formData.initiativeCost,
+				formData.uncertaintyAdjustment ?? 0,
+			);
+			expect(result).toBe(1.04);
+		});
+
+		it("returns 1.27 for a single uncertainty item with no adjustment", () => {
+			const formData = {
+				initiativeTimeline: "Менее 1 мес.",
+				initiativeCost: "До 45.3 млн.",
+				uncertaintyAdjustment: 1,
+				generalUncertainty: [
+					{
+						type: "projectSolutionDefects",
+						probability: "Реализация не чаще 1 раза в 10 лет",
+						influence:
+							"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+					},
+					{
+						type: "businessProcessComplexity",
+						probability: "Реализация 1 раз в 3-10 лет",
+						influence:
+							"Незначительное влияние на задачи и сроки достижения целей проекта",
+					},
+					{
+						type: "adjacentProjectsImpact",
+						probability: "Реализация 1 раз в 6 мес. или чаще",
+						influence: "Критичное отклонение качества реализации проекта",
+					},
+					{
+						type: "qualifiedStaffShortage",
+						probability: "Реализация 1 раз в год",
+						influence: "Критичное отклонение качества реализации проекта",
+					},
+				],
+			};
+			const result = calculateTotalUncertainty(
+				formData.generalUncertainty,
+				formData.initiativeTimeline,
+				formData.initiativeCost,
+				formData.uncertaintyAdjustment ?? 0,
+			);
+			expect(result).toBe(1.27);
+		});
+
+		it("returns 1.32 for a single uncertainty item with 22% adjustment", () => {
+			const formData = {
+				initiativeTimeline: "Менее 1 мес.",
+				initiativeCost: "От 2 млрд.",
+				uncertaintyAdjustment: 22,
+				generalUncertainty: [
+					{
+						type: "businessProcessComplexity",
+						probability: "Реализация 1 раз в 6 мес. или чаще",
+						influence:
+							"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+					},
+				],
+			};
+			const result = calculateTotalUncertainty(
+				formData.generalUncertainty,
+				formData.initiativeTimeline,
+				formData.initiativeCost,
+				formData.uncertaintyAdjustment ?? 0,
+			);
+			expect(result).toBe(1.32);
+		});
+
+		it("returns 1.07 for a very high uncertainty item (case 1)", () => {
+			const formData = {
+				initiativeTimeline: "Более 18 мес.",
+				initiativeCost: "От 2 млрд.",
+				uncertaintyAdjustment: 0,
+				generalUncertainty: [
+					{
+						type: "adjacentProjectsImpact",
+						probability: "Реализация 1 раз в 3-10 лет",
+						influence: "Критичное отклонение качества реализации проекта",
+					},
+				],
+			};
+			const result = calculateTotalUncertainty(
+				formData.generalUncertainty,
+				formData.initiativeTimeline,
+				formData.initiativeCost,
+				formData.uncertaintyAdjustment ?? 0,
+			);
+			expect(result).toBe(1.07);
+		});
+
+		it("returns 1.05 for a high/low uncertainty item (case 2)", () => {
+			const formData = {
+				initiativeTimeline: "Более 18 мес.",
+				initiativeCost: "От 2 млрд.",
+				uncertaintyAdjustment: 0,
+				generalUncertainty: [
+					{
+						type: "adjacentProjectsImpact",
+						probability: "Реализация не чаще 1 раза в 10 лет",
+						influence: "Критичное отклонение качества реализации проекта",
+					},
+				],
+			};
+			const result = calculateTotalUncertainty(
+				formData.generalUncertainty,
+				formData.initiativeTimeline,
+				formData.initiativeCost,
+				formData.uncertaintyAdjustment ?? 0,
+			);
+			expect(result).toBe(1.05);
+		});
+
+		it("returns 1.05 for a low uncertainty item (case 3)", () => {
+			const formData = {
+				initiativeTimeline: "Менее 1 мес.",
+				initiativeCost: "До 45.3 млн.",
+				uncertaintyAdjustment: 0,
+				generalUncertainty: [
+					{
+						type: "adjacentProjectsImpact",
+						probability: "Реализация 1 раз в год",
+						influence:
+							"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+					},
+				],
+			};
+			const result = calculateTotalUncertainty(
+				formData.generalUncertainty,
+				formData.initiativeTimeline,
+				formData.initiativeCost,
+				formData.uncertaintyAdjustment ?? 0,
+			);
+			expect(result).toBe(1.05);
+		});
+
+		it("returns 1.05 for a low uncertainty item (case 4)", () => {
+			const formData = {
+				initiativeTimeline: "Менее 1 мес.",
+				initiativeCost: "До 45.3 млн.",
+				uncertaintyAdjustment: 0,
+				generalUncertainty: [
+					{
+						type: "adjacentProjectsImpact",
+						probability: "Реализация 1 раз в 6 мес. или чаще",
+						influence:
+							"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+					},
+				],
+			};
+			const result = calculateTotalUncertainty(
+				formData.generalUncertainty,
+				formData.initiativeTimeline,
+				formData.initiativeCost,
+				formData.uncertaintyAdjustment ?? 0,
+			);
+			expect(result).toBe(1.05);
 		});
 	});
 });

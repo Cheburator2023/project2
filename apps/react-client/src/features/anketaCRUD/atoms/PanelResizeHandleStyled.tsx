@@ -1,5 +1,5 @@
 import { PanelResizeHandle } from "react-resizable-panels";
-import { Button, styled } from "@mui/material";
+import { styled } from "@mui/material";
 
 export const PanelResizeHandleStyled = styled(PanelResizeHandle)<{
 	vertical?: boolean;

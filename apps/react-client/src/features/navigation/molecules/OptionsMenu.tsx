@@ -11,7 +11,6 @@ import { styled } from "@mui/material/styles";
 import { useAuthStore } from "@react-client/common/store/authStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useKeycloak } from "@react-keycloak/web";
 
 import { MenuButton } from "./MenuButton";
 
