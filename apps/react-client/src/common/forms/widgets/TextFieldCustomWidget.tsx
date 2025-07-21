@@ -1,15 +1,20 @@
 import ClearIcon from "@mui/icons-material/Clear";
 import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
+import SearchIcon from "@mui/icons-material/Search";
 import {
 	Autocomplete,
+	Box,
+	Button,
 	Checkbox,
 	InputAdornment,
 	InputLabel,
 	ListItemText,
 	MenuItem,
-	Select,
 	SelectChangeEvent,
+	TextField,
 } from "@mui/material";
+import { styled } from "@mui/material/styles";
+import { useState } from "react";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import { Flex } from "@react-client/common/primitives/Flex";
 import {
@@ -17,6 +22,36 @@ import {
 	projectAssessmentFormInitialData,
 } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { WidgetProps } from "@rjsf/utils";
+import { isEqual } from "lodash-es";
+import { fuzzySearch, highlightMatches } from "@react-client/utils/fuzzySearch";
+
+const HighlightedText = styled("span")<{ highlighted?: boolean }>(
+	({ highlighted, theme }) => ({
+		backgroundColor: highlighted ? theme.palette.warning.light : "transparent",
+		fontWeight: highlighted ? "bold" : "normal",
+		color: highlighted ? theme.palette.warning.contrastText : "inherit",
+	}),
+);
+
+const HighlightedMenuItem = ({
+	text,
+	matches,
+}: {
+	text: string;
+	matches: Array<{ start: number; end: number }>;
+}) => {
+	const segments = highlightMatches(text, matches);
+
+	return (
+		<>
+			{segments.map((segment, index) => (
+				<HighlightedText key={index} highlighted={segment.highlighted}>
+					{segment.text}
+				</HighlightedText>
+			))}
+		</>
+	);
+};
 
 export const TextFieldCustomWidget = (props: WidgetProps) => {
 	const {
@@ -37,6 +72,8 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 		placeholder,
 	} = props;
 
+	const [searchTerm, setSearchTerm] = useState("");
+
 	const initialValue = {
 		...basicInfoFormInitialData,
 		...projectAssessmentFormInitialData,
@@ -44,6 +81,10 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 
 	const reset = () => {
 		onChange(initialValue);
+	};
+
+	const resetSelection = () => {
+		onChange([]);
 	};
 
 	const _onChange = (e: any) => {
@@ -77,6 +118,17 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 	const isDisabled = disabled || readonly;
 	const isMultiple = options?.multiple;
 
+	const fuzzyMatches = fuzzySearch(
+		searchTerm,
+		optionsForSelect.map((item) => item.value),
+		{ threshold: 0.1 },
+	);
+
+	const filteredOptions = fuzzyMatches.map((match) => ({
+		...optionsForSelect.find((option) => option.value === match.item)!,
+		fuzzyMatch: match,
+	}));
+
 	if (isSelect & isMultiple) {
 		const _handleChangeMult = (event: SelectChangeEvent) => {
 			const {
@@ -105,15 +157,25 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 					select: {
 						MenuProps: {
 							disablePortal: false,
+							PaperProps: {
+								sx: {
+									padding: 0,
+									maxHeight: 400,
+								},
+							},
+							MenuListProps: {
+								sx: {
+									padding: "0 6px !important",
+								},
+							},
 						},
-
 						multiple: true,
 						renderValue: (selected: any) => selected.join(", "),
 					},
 					inputLabel: { shrink: true },
 					input: {
 						endAdornment: isSelect &&
-							initialValue !== props.value &&
+							!isEqual(initialValue, props.value) &&
 							props.options?.reset && (
 								<InputAdornment
 									position="end"
@@ -151,30 +213,135 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 						),
 				}}
 				{...options}
-				// MenuProps={MenuProps}
 			>
-				{optionsForSelect.map((item) => (
+				<Box
+					sx={{
+						position: "sticky",
+						top: 0,
+						backgroundColor: "white",
+						zIndex: 1,
+						p: 1,
+						paddingRight: "0px !important",
+						paddingLeft: "0px !important",
+					}}
+					onClick={(e) => e.stopPropagation()}
+					onMouseDown={(e) => e.stopPropagation()}
+				>
+					<TextField
+						size="small"
+						placeholder="Поиск по значениям..."
+						value={searchTerm}
+						onChange={(e) => setSearchTerm(e.target.value)}
+						onClick={(e) => e.stopPropagation()}
+						onMouseDown={(e) => e.stopPropagation()}
+						onFocus={(e) => e.stopPropagation()}
+						onKeyDown={(e) => {
+							e.stopPropagation();
+							if (
+								e.key === "ArrowDown" ||
+								e.key === "ArrowUp" ||
+								e.key === "Enter" ||
+								e.key === "Escape"
+							) {
+								e.preventDefault();
+							}
+						}}
+						onKeyUp={(e) => e.stopPropagation()}
+						onKeyPress={(e) => e.stopPropagation()}
+						autoFocus={false}
+						fullWidth
+						slotProps={{
+							input: {
+								startAdornment: (
+									<InputAdornment position="start">
+										<SearchIcon />
+									</InputAdornment>
+								),
+								onKeyDown: (e) => {
+									e.stopPropagation();
+									if (
+										e.key === "ArrowDown" ||
+										e.key === "ArrowUp" ||
+										e.key === "Enter" ||
+										e.key === "Escape"
+									) {
+										e.preventDefault();
+									}
+								},
+							},
+						}}
+					/>
+				</Box>
+				{filteredOptions.map((item) => (
 					<MenuItem key={item.value} value={item.value}>
 						<Checkbox checked={value.includes(item.value)} />
-						<ListItemText primary={item.value} />
+						<ListItemText
+							primary={
+								<HighlightedMenuItem
+									text={item.value}
+									matches={item.fuzzyMatch.matches}
+								/>
+							}
+						/>
 					</MenuItem>
 				))}
+				{!isEqual(initialValue, props.value) && (
+					<Box
+						sx={{
+							position: "sticky",
+							bottom: 0,
+							backgroundColor: "white",
+							zIndex: 1,
+							p: 1,
+							paddingRight: "0px !important",
+							paddingLeft: "0px !important",
+						}}
+					>
+						<Button
+							size="small"
+							variant="contained"
+							onClick={resetSelection}
+							fullWidth
+						>
+							Сброс
+						</Button>
+					</Box>
+				)}
 			</TextFieldCustom>
 		);
 	}
 
 	if (isSelect && allowCustomInput) {
+		const autocompleteOptions = optionsForSelect.map((option) => option.value);
+
 		return (
 			<Autocomplete
 				id={id}
 				freeSolo
-				options={optionsForSelect.map((option) => option.value)}
+				options={autocompleteOptions}
 				value={value || ""}
 				onChange={(_event, newValue) => {
 					onChange?.(newValue || "");
 				}}
 				onInputChange={(_event, newInputValue) => {
 					onChange?.(newInputValue);
+				}}
+				filterOptions={(options, { inputValue }) => {
+					const matches = fuzzySearch(inputValue, options, { threshold: 0.1 });
+					return matches.map((match) => match.item);
+				}}
+				renderOption={(props, option, { inputValue }) => {
+					const matches = fuzzySearch(inputValue, [option], { threshold: 0.1 });
+					const match = matches[0];
+
+					return (
+						<li {...props}>
+							<HighlightedMenuItem
+								text={option}
+								matches={match ? match.matches : []}
+							/>
+						</li>
+					);
 				}}
 				renderInput={(params) => (
 					<TextFieldCustom
@@ -245,7 +412,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 				inputLabel: { shrink: true },
 				input: {
 					endAdornment: isSelect &&
-						initialValue !== props.value &&
+						!isEqual(initialValue, props.value) &&
 						props.options?.reset && (
 							<InputAdornment
 								position="end"
@@ -288,13 +455,29 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 				initialValue !== props.value &&
 				props.options?.reset && <MenuItem onClick={reset}>Сбросить</MenuItem>} */}
 			{optionsForSelect.length > 0
-				? optionsForSelect
-						?.filter((item) => item.value)
-						?.map((option) => (
+				? fuzzySearch(
+						"",
+						optionsForSelect
+							?.filter((item) => {
+								return item.value;
+							})
+							?.map((item) => {
+								return item.value;
+							}),
+						{ threshold: 0 },
+					).map((match) => {
+						const option = optionsForSelect.find(
+							(opt) => opt.value === match.item,
+						)!;
+						return (
 							<MenuItem key={option.value} value={option.value}>
-								{option.label}
+								<HighlightedMenuItem
+									text={option.label || option.value}
+									matches={match.matches}
+								/>
 							</MenuItem>
-						))
+						);
+					})
 				: null}
 		</TextFieldCustom>
 	);

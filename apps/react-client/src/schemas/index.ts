@@ -1,3 +1,3 @@
-import schema from "./calc_schema.json";
+import calc_schema from "./calculation/calc_schema.json";
 
-export const mainCalcSchema = schema;
+export const mainCalcSchema = calc_schema;

@@ -1,18 +1,20 @@
 import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
 import {
 	FormControl,
+	InputAdornment,
 	InputLabel,
 	MenuItem,
 	Select,
 	Stack,
-	Tooltip,
 	Typography,
 } from "@mui/material";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { WidgetProps } from "@rjsf/utils";
+import { isEqual } from "lodash-es";
 import React, { useEffect, useRef } from "react";
+import ClearIcon from "@mui/icons-material/Clear";
 
 interface AlgorithmValue {
 	algorithmType: string;
@@ -156,7 +158,29 @@ export const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 							onChange={(e) => handleAlgorithmChange(index, e.target.value)}
 							error={hasError}
 							readOnly={readonly}
+							endAdornment={
+								!isEqual("", value?.[index]?.algorithmType) && (
+									<InputAdornment
+										position="end"
+										sx={{
+											position: "relative",
+											right: 30,
+											cursor: "pointer",
+											zIndex: 999,
+										}}
+									>
+										<ClearIcon
+											onClick={(_e) => handleAlgorithmChange(index, "")}
+										/>
+									</InputAdornment>
+								)
+							}
 							data-test-id="algorithm-complexity-widget--Select-0"
+							slotProps={{
+								input: {
+									readOnly: readonly,
+								},
+							}}
 						>
 							{algorithmTypes.map((type: string) => {
 								const isEmpty = type === "";

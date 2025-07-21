@@ -1,7 +1,6 @@
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Panel, PanelGroup } from "react-resizable-panels";
 import { useLocation } from "react-router";
 import { BasicInfoForm } from "../organisms/BasicInfoForm";
@@ -90,7 +89,6 @@ export const AnketaBasicLayoutCreate = ({
 							isCreate
 							data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
 						/>
-						<Spacer space={500} />
 					</Card>
 				</Panel>
 			</PanelGroup>
