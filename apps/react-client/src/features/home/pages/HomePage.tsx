@@ -36,6 +36,7 @@ import {
 import { AgGridReact } from "ag-grid-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
+import { agGridCustomQuartzTheme } from "../../../theme/agGridCustomTheme";
 
 ModuleRegistry.registerModules([
 	AllCommunityModule,
@@ -48,7 +49,7 @@ ModuleRegistry.registerModules([
 	...(process.env.NODE_ENV !== "production" ? [ValidationModule] : []),
 ]);
 
-const themeQuartzDark = themeQuartz.withPart(colorSchemeDarkBlue);
+const themeQuartzDark = agGridCustomQuartzTheme.withPart(colorSchemeDarkBlue);
 
 // const IS_DEV = process.env.NODE_ENV !== "production";
 
@@ -186,7 +187,9 @@ export const HomeTemplete = ({
 	};
 
 	const theme =
-		mode === "light" || mode === undefined ? themeQuartz : themeQuartzDark;
+		mode === "light" || mode === undefined
+			? agGridCustomQuartzTheme
+			: themeQuartzDark;
 
 	const onCellMouseOver = (params: any) => {
 		setHoveredRowId(params?.node.id || "0");

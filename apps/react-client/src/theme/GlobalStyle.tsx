@@ -96,6 +96,10 @@ div.ag-watermark-text {
 --ag-spacing: 5px  !important;
 }
 
+#main_layout_content > div > div.css-1h2mtx3 > div > div.ag-root-wrapper.ag-ltr.ag-layout-normal > div.ag-theme-params-2.ag-theme-buttonStyle-1.ag-theme-columnDropStyle-2.ag-theme-checkboxStyle-3.ag-theme-iconSet-4.ag-theme-tabStyle-5.ag-theme-inputStyle-6.ag-theme-part-7.ag-popup > div > div > div:nth-child(10) {
+display: none;
+}
+
 `}
 	/>
 );

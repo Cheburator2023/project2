@@ -16,8 +16,9 @@ import {
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useMemo, useState } from "react";
+import { agGridCustomQuartzTheme } from "../../../theme/agGridCustomTheme";
 
-const themeQuartzDark = themeQuartz.withPart(colorSchemeDarkBlue);
+const themeQuartzDark = agGridCustomQuartzTheme.withPart(colorSchemeDarkBlue);
 
 interface EpicData {
 	stageName: string;
@@ -288,6 +289,11 @@ export const CalculationResultTable = () => {
 		setCalculationResult(rowData);
 	}, [rowData]);
 
+	const theme =
+		mode === "light" || mode === undefined
+			? agGridCustomQuartzTheme
+			: themeQuartzDark;
+
 	return (
 		<>
 			<TableWrapper
@@ -312,11 +318,7 @@ export const CalculationResultTable = () => {
 						}
 						return {};
 					}}
-					theme={
-						mode === "light" || mode === undefined
-							? themeQuartz
-							: themeQuartzDark
-					}
+					theme={theme}
 					data-test-id="calculation-result-table--AgGridReact-0"
 				/>
 			</TableWrapper>
