@@ -15,8 +15,8 @@ import {
 	ListItemButton,
 	ListItemSecondaryAction,
 	ListItemText,
+	MenuItem,
 	Stack,
-	Tooltip,
 	Typography,
 } from "@mui/material";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
@@ -248,17 +248,16 @@ export const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 								select
 								value={probability}
 								onChange={(e) => setProbability(e.target.value)}
-								SelectProps={{
-									native: true,
-								}}
 								fullWidth
 								size="small"
 							>
-								<option value="">Выберите вероятность</option>
+								<MenuItem value="" disabled>
+									Выберите вероятность
+								</MenuItem>
 								{probabilityOptions.map((option) => (
-									<option key={option} value={option}>
+									<MenuItem key={option} value={option}>
 										{option}
-									</option>
+									</MenuItem>
 								))}
 							</TextFieldCustom>
 						</FormControl>
@@ -272,17 +271,16 @@ export const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 								select
 								value={influence}
 								onChange={(e) => setInfluence(e.target.value)}
-								SelectProps={{
-									native: true,
-								}}
 								fullWidth
 								size="small"
 							>
-								<option value="">Выберите влияние</option>
+								<MenuItem disabled value="">
+									Выберите влияние
+								</MenuItem>
 								{influenceOptions.map((option) => (
-									<option key={option} value={option}>
+									<MenuItem key={option} value={option}>
 										{option}
-									</option>
+									</MenuItem>
 								))}
 							</TextFieldCustom>
 						</FormControl>

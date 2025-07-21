@@ -1,6 +1,6 @@
 import AddIcon from "@mui/icons-material/Add";
 import ReplayIcon from "@mui/icons-material/Replay";
-import { IconButton, styled, Tooltip, useColorScheme } from "@mui/material";
+import { IconButton, styled, useColorScheme } from "@mui/material";
 import { useCalculationControllerFindAll } from "@react-client/common/api/generated/queries/calculation";
 import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { Flex } from "@react-client/common/primitives/Flex";
@@ -25,7 +25,6 @@ import {
 	ModuleRegistry,
 	NumberFilterModule,
 	SizeColumnsToContentStrategy,
-	themeQuartz,
 	ValidationModule,
 } from "ag-grid-community";
 import {

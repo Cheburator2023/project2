@@ -1,5 +1,5 @@
 import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
-import { InputAdornment, InputLabel, Tooltip } from "@mui/material";
+import { InputAdornment, InputLabel } from "@mui/material";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { WidgetProps } from "@rjsf/utils";
