@@ -96,8 +96,72 @@ div.ag-watermark-text {
 --ag-spacing: 5px  !important;
 }
 
-#main_layout_content > div > div.css-1h2mtx3 > div > div.ag-root-wrapper.ag-ltr.ag-layout-normal > div.ag-theme-params-2.ag-theme-buttonStyle-1.ag-theme-columnDropStyle-2.ag-theme-checkboxStyle-3.ag-theme-iconSet-4.ag-theme-tabStyle-5.ag-theme-inputStyle-6.ag-theme-part-7.ag-popup > div > div > div:nth-child(10) {
-display: none;
+.ag-icon {
+	display: inline-block !important;
+	width: 16px !important;
+	height: 16px !important;
+	background-size: contain !important;
+	background-repeat: no-repeat !important;
+	background-position: center !important;
+	-webkit-mask: none !important;
+	mask: none !important;
+	background-image: none !important;
+}
+
+.ag-icon svg {
+	width: 100% !important;
+	height: 100% !important;
+	display: block !important;
+	fill: currentColor !important;
+	color: inherit !important;
+}
+
+/* Ensure SVG icons inherit color properly */
+.ag-header-cell .ag-icon svg,
+.ag-cell .ag-icon svg,
+.ag-filter .ag-icon svg,
+.ag-menu .ag-icon svg {
+	fill: currentColor !important;
+	color: inherit !important;
+    transform: translateZ(0);
+
+}
+
+.ag-theme-alpine .ag-header,
+.ag-theme-balham .ag-header,
+.ag-theme-material .ag-header {
+    transform: translateZ(0) !important;
+}
+
+.ag-header {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+.ag-header-row {
+    transform: translateZ(0);
+}
+
+.ag-root-wrapper * {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+.ag-popup-parent {
+    transform: translateZ(0);
+}
+
+// .ag-column-drop {
+//     transform: translateZ(0);
+// }
+
+// .ag-tool-panel {
+//     transform: translateZ(0);
+// }
+
+.ag-icon-filter::before, .ag-icon-filter::after {
+    transform: translateZ(0);
 }
 
 `}

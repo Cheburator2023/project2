@@ -11,6 +11,7 @@ import {
 	type CellStyle,
 	type ColDef,
 	colorSchemeDarkBlue,
+	GetMainMenuItemsParams,
 	themeQuartz,
 	type ValueFormatterParams,
 } from "ag-grid-community";
@@ -267,6 +268,11 @@ export const CalculationResultTable = () => {
 			editable: false,
 			wrapHeaderText: true,
 			autoHeaderHeight: true,
+			mainMenuItems: (params: GetMainMenuItemsParams) => {
+				return params.defaultItems.filter(
+					(item) => item !== "columnChooser" && item !== "rowGroup",
+				);
+			},
 		}),
 		[],
 	);

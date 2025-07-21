@@ -18,6 +18,7 @@ import {
 	ClientSideRowModelModule,
 	ColDef,
 	colorSchemeDarkBlue,
+	GetMainMenuItemsParams,
 	type GridApi,
 	type GridReadyEvent,
 	type IRowNode,
@@ -142,6 +143,11 @@ export const HomeTemplete = ({
 		tooltipValueGetter: (params: any) => params.value,
 		cellRendererParams: {
 			hoveredRowId,
+		},
+		mainMenuItems: (params: GetMainMenuItemsParams) => {
+			return params.defaultItems.filter(
+				(item) => item !== "columnChooser" && item !== "rowGroup",
+			);
 		},
 	};
 
