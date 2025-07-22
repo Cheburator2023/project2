@@ -195,13 +195,4 @@ export const agGridIconSet = {
 	chartsThemePrevious: previousIcon,
 	chartsThemeNext: nextIcon,
 	chartsDownload: saveIcon,
-
-	// ui
-	checkboxChecked: checkboxCheckedIcon,
-	checkboxUnchecked: checkboxUncheckedIcon,
-	checkboxIndeterminate: checkboxIndeterminateIcon,
-	colorPicker: colorPickerIcon,
-	eye: eyeIcon,
-	radioButtonOff: radioButtonOffIcon,
-	radioButtonOn: radioButtonOnIcon,
 };
