@@ -199,7 +199,7 @@ export const BasicInfoForm = ({
 		// 	},
 		// },
 		createdAt: {
-			"ui:widget": "date",
+			"ui:widget": "datetime",
 			"ui:options": {
 				tooltip: "",
 			},
