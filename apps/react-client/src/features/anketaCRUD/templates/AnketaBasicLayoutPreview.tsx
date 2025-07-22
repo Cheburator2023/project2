@@ -80,6 +80,7 @@ export const AnketaBasicLayoutPreview = ({
 									height="100%"
 									padding="10px"
 									zoom={0.8}
+									loading={isPending}
 									nonClickable={isReadOnly}
 									uuid="anketa_basic_info_card"
 									data-test-id="anketa-basic-layout--Card-0"
@@ -119,6 +120,7 @@ export const AnketaBasicLayoutPreview = ({
 						uuid="anketa_project_assessment_card"
 						data-test-id="anketa-basic-layout--Card-2"
 						nonClickable={isReadOnly}
+						loading={isPending}
 					>
 						<BasicInfoForm
 							isEditing={isEditing}
@@ -136,6 +138,7 @@ export const AnketaBasicLayoutPreview = ({
 						nonClickable={isReadOnly}
 						uuid="anketa_basic_info_card"
 						data-test-id="anketa-basic-layout--Card-0"
+						loading={isPending}
 					>
 						<ProjectAssessmentFormPreview
 							initialData={initialData}

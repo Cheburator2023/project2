@@ -21,6 +21,7 @@ import type {
 } from "@rjsf/utils";
 import { useRef, useState } from "react";
 import { RJSFObjectFieldTemplate } from "../../../common/forms/widgets/RJSFObjectFieldTemplate";
+import { omit } from "lodash-es";
 
 interface BasicInfoFormProps {
 	initialData?: CalculationResponseDto;
@@ -29,101 +30,6 @@ interface BasicInfoFormProps {
 	isEditing?: boolean;
 	onChange?: (data: any) => void;
 }
-
-const uiSchema: UiSchema = {
-	"ui:submitButtonOptions": {
-		props: {
-			disabled: false,
-			className: "btn btn-info",
-		},
-		norender: true,
-		submitText: "Submit",
-	},
-	"ui:order": [
-		// просто name ломает валидацию
-		"calcName",
-		"rfd",
-		"streamExecutor",
-		"department",
-		"customerName",
-		"relatedModels",
-		"status",
-		"createdAt",
-		"id",
-		"author",
-		"comment",
-	],
-	// просто name ломает валидацию
-	calcName: {
-		"ui:widget": "TextFieldCustomWidget",
-		isEditable: true,
-	},
-	rfd: {
-		"ui:widget": "TextFieldCustomWidget",
-		"ui:placeholder": "Отсутствует",
-		"ui:options": {
-			prefix: "RFD-",
-			tooltip: "",
-			errors: {
-				pattern: "Только цифры, от 4 до 15 символов",
-			},
-		},
-		isEditable: true,
-	},
-	streamExecutor: {
-		"ui:widget": "TextFieldCustomWidget",
-		"ui:options": {
-			select: true,
-			tooltip: "",
-		},
-	},
-	department: {
-		"ui:widget": "TextFieldCustomWidget",
-		"ui:options": {
-			tooltip: "",
-			select: true,
-			multiple: true,
-		},
-		isEditable: true,
-	},
-	customerName: {
-		"ui:widget": "TextFieldCustomWidget",
-		"ui:options": {
-			tooltip: "",
-		},
-		isEditable: true,
-	},
-	comment: {
-		"ui:widget": "TextFieldCustomWidget",
-		"ui:options": {
-			multiline: true,
-			rows: 3,
-		},
-		isEditable: true,
-	},
-	// status: {
-	// 	"ui:widget": "radio",
-	// 	"ui:options": {
-	// 		tooltip: "",
-	// 	},
-	// },
-	createdAt: {
-		"ui:widget": "date",
-		"ui:options": {
-			tooltip: "",
-		},
-	},
-	id: {
-		"ui:options": {
-			tooltip: "",
-		},
-	},
-	author: {
-		"ui:options": {
-			tooltip: "",
-		},
-	},
-};
 
 const templates: Partial<TemplatesType> = {
 	ObjectFieldTemplate: RJSFObjectFieldTemplate,
@@ -141,7 +47,6 @@ export const BasicInfoForm = ({
 	isEditing,
 	onChange,
 }: BasicInfoFormProps) => {
-	const isReadOnly = isCreate || !isEditing;
 	const { data: questData } = useQuestionnaireControllerGetFullQuestionnaire({
 		query: {
 			staleTime: 0,
@@ -156,7 +61,6 @@ export const BasicInfoForm = ({
 
 	const schema: RJSFSchema = {
 		type: "object",
-
 		required: [
 			// просто name ломает валидацию
 			"calcName",
@@ -202,6 +106,112 @@ export const BasicInfoForm = ({
 				type: "string",
 				title: "Комментарий",
 				maxLength: 250,
+			},
+			author: {
+				type: "string",
+				title: "Автор",
+				maxLength: 250,
+			},
+			createdAt: {
+				type: "string",
+				title: "Дата создания",
+			},
+		},
+	};
+
+	const uiSchema: UiSchema = {
+		"ui:submitButtonOptions": {
+			props: {
+				disabled: false,
+				className: "btn btn-info",
+			},
+			norender: true,
+			submitText: "Submit",
+		},
+		"ui:order": [
+			// просто name ломает валидацию
+			"calcName",
+			"rfd",
+			"streamExecutor",
+			"department",
+			"customerName",
+			"relatedModels",
+			"status",
+			"createdAt",
+			"id",
+			"author",
+			"comment",
+		],
+		// просто name ломает валидацию
+		calcName: {
+			"ui:widget": "TextFieldCustomWidget",
+			isEditable: true,
+		},
+		rfd: {
+			"ui:widget": "TextFieldCustomWidget",
+			"ui:placeholder": "Отсутствует",
+			"ui:options": {
+				prefix: "RFD-",
+				tooltip: "",
+				errors: {
+					pattern: "Только цифры, от 4 до 15 символов",
+				},
+			},
+			isEditable: true,
+		},
+		streamExecutor: {
+			"ui:widget": "TextFieldCustomWidget",
+			"ui:options": {
+				select: true,
+				tooltip: "",
+			},
+			isEditable: true,
+		},
+		department: {
+			"ui:widget": "TextFieldCustomWidget",
+			"ui:options": {
+				tooltip: "",
+				select: true,
+				multiple: true,
+				noDelete: !isEditing && !isCreate,
+			},
+			isEditable: true,
+		},
+		customerName: {
+			"ui:widget": "TextFieldCustomWidget",
+			"ui:options": {
+				tooltip: "",
+			},
+			isEditable: true,
+		},
+		comment: {
+			"ui:widget": "TextFieldCustomWidget",
+			"ui:options": {
+				multiline: true,
+				rows: 3,
+			},
+			isEditable: true,
+		},
+		// status: {
+		// 	"ui:widget": "radio",
+		// 	"ui:options": {
+		// 		tooltip: "",
+		// 	},
+		// },
+		createdAt: {
+			"ui:widget": "date",
+			"ui:options": {
+				tooltip: "",
+			},
+		},
+		id: {
+			"ui:options": {
+				tooltip: "",
+			},
+		},
+		author: {
+			"ui:options": {
+				tooltip: "",
 			},
 		},
 	};
@@ -332,8 +342,12 @@ export const BasicInfoForm = ({
 	return (
 		<Form
 			ref={formRef}
-			schema={schema}
-			uiSchema={isCreate || isReadOnly ? uiSchema : controlledUiSchema}
+			schema={
+				isCreate
+					? omit(schema, ["properties.createdAt", "properties.author"])
+					: schema
+			}
+			uiSchema={isCreate || !isEditing ? uiSchema : controlledUiSchema}
 			formData={formData}
 			validator={validatorRu}
 			widgets={widgets}
