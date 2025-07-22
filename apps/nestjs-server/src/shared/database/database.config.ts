@@ -28,9 +28,11 @@ export const getTypeOrmModuleOptions = (
 		type: "postgres",
 		...dbConfig,
 		entities: [join(__dirname, "../../**/*.entity{.ts,.js}")],
-		synchronize: configService.get<string>("NODE_ENV") !== "production",
-		logging: configService.get<string>("NODE_ENV") === "development",
-		autoLoadEntities: true,
+		migrations: [join(__dirname, "../../migrations/*{.ts,.js}")],
+		migrationsRun: configService.get<boolean>("DB_MIGRATIONS_RUN", false),
+		synchronize: configService.get<boolean>("DB_SYNCHRONIZE", false),
+		logging: configService.get<boolean>("LOGGING", true),
+		autoLoadEntities: configService.get<boolean>("AUTO_LOAD_ENTITIES", false),
 	};
 };
 
@@ -44,8 +46,8 @@ export const getDataSourceOptions = (
 		...dbConfig,
 		entities: [join(__dirname, "../../**/*.entity{.ts,.js}")],
 		migrations: [join(__dirname, "../../migrations/*{.ts,.js}")],
-		migrationsRun: configService.get<string>("NODE_ENV") === "development",
-		logging: configService.get<string>("NODE_ENV") === "development",
-		synchronize: false,
+		migrationsRun: configService.get<boolean>("DB_MIGRATIONS_RUN", false),
+		synchronize: configService.get<boolean>("DB_SYNCHRONIZE", false),
+		logging: configService.get<boolean>("LOGGING", true),
 	};
 };
