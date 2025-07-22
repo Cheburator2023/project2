@@ -29,6 +29,7 @@ module.exports = merge(common, {
 			"process.env.GIT_REVISION": JSON.stringify(git_revision || ""),
 			"process.env.APP_NAME": JSON.stringify(APP_NAME),
 			"process.env.REACT_APP_API_URL": JSON.stringify("http://localhost:3000"),
+			"process.env.NO_ROLES": JSON.stringify(process.env.NO_ROLES || ""),
 		}),
 	],
 	watchOptions: {
