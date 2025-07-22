@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noIrregularWhitespace: <explanation> */
 import {
 	calculateAlgorithmComplexityCoefficient,
 	calculateDataSourceCoefficient,
@@ -392,6 +393,87 @@ describe("Coefficient Calculations", () => {
 				formData.uncertaintyAdjustment ?? 0,
 			);
 			expect(result).toBe(1.05);
+		});
+
+		it("returns 1.79 for a low uncertainty item (case 5)", () => {
+			const formData = {
+				initiativeTimeline: "Менее 1 мес.",
+				initiativeCost: "До 45.3 млн.",
+				uncertaintyAdjustment: 12,
+				generalUncertainty: [
+					{
+						type: "businessProcessComplexity",
+						probability: "Реализация не чаще 1 раза в 10 лет",
+						influence:
+							"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+					},
+					{
+						type: "projectSolutionDefects",
+						probability: "Реализация 1 раз в 3-10 лет",
+						influence:
+							"Незначительное влияние на задачи и сроки достижения целей проекта",
+					},
+					{
+						type: "adjacentProjectsImpact",
+						probability: "Реализация 1 раз в 1-3 года",
+						influence:
+							"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+					},
+					{
+						type: "planningRequirementGaps",
+						probability: "Реализация 1 раз в год",
+						influence:
+							"Значительный негативный эффект на возможность достижения целей проекта",
+					},
+					{
+						type: "contractorPerformanceIssues",
+						probability: "Реализация 1 раз в 6 мес. или чаще",
+						influence: "Критичное отклонение качества реализации проекта",
+					},
+					{
+						type: "qualifiedStaffShortage",
+						probability: "Реализация 1 раз в 6 мес. или чаще",
+						influence:
+							"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+					},
+					{
+						type: "sanctionsRisk",
+						probability: "Реализация не чаще 1 раза в 10 лет",
+						influence: "Критичное отклонение качества реализации проекта",
+					},
+					{
+						type: "controlProceduresGaps",
+						probability: "Реализация 1 раз в год",
+						influence:
+							"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+					},
+					{
+						type: "regulatoryChanges",
+						probability: "Реализация 1 раз в 3-10 лет",
+						influence:
+							"Значительный негативный эффект на возможность достижения целей проекта",
+					},
+					{
+						type: "systemUnderutilization",
+						probability: "Реализация не чаще 1 раза в 10 лет",
+						influence:
+							"Значительный негативный эффект на возможность достижения целей проекта",
+					},
+					{
+						type: "itArchitectureChanges",
+						probability: "Реализация 1 раз в 1-3 года",
+						influence:
+							"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+					},
+				],
+			};
+			const result = calculateTotalUncertainty(
+				formData.generalUncertainty,
+				formData.initiativeTimeline,
+				formData.initiativeCost,
+				formData.uncertaintyAdjustment ?? 0,
+			);
+			expect(result).toBe(1.79);
 		});
 	});
 });

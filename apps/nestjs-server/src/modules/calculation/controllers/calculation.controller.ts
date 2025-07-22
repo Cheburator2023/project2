@@ -1,24 +1,24 @@
 import {
-	Body,
-	Controller,
-	Get,
-	HttpStatus,
-	Param,
-	ParseUUIDPipe,
-	Post,
-	Put,
-	Query,
-	UseInterceptors,
-	UsePipes,
-	ValidationPipe,
+    Body,
+    Controller,
+    Get,
+    HttpStatus,
+    Param,
+    ParseUUIDPipe,
+    Post,
+    Put,
+    Query, Res,
+    UseInterceptors,
+    UsePipes,
+    ValidationPipe,
 } from "@nestjs/common";
 import {
-	ApiBearerAuth,
-	ApiOperation,
-	ApiParam,
-	ApiQuery,
-	ApiResponse,
-	ApiTags,
+    ApiBearerAuth,
+    ApiOperation,
+    ApiParam,
+    ApiQuery,
+    ApiResponse,
+    ApiTags,
 } from "@nestjs/swagger";
 import { RealmRole } from "../../../shared/decorators/realm-role.decorator";
 import { StreamFilter } from "../../../shared/decorators/stream-filter.decorator";
@@ -26,21 +26,27 @@ import { CurrentUser } from "../../../shared/decorators/user.decorator";
 import { StreamFilterInterceptor } from "../../../shared/interceptors/stream-filter.interceptor";
 import { Permission } from "../../../shared/types/permissions";
 import {
-	CalculationResponseDto,
-	CreateCalculationDto,
-	PaginatedCalculationResponseDto,
-	PaginationDto,
+    CalculationResponseDto,
+    CreateCalculationDto,
+    PaginatedCalculationResponseDto,
+    PaginationDto, TransformedExportCalculationDto,
 } from "../dto";
-import { CalculationService } from "../services/calculation.service";
 import { UpdateCalculationDto } from "../dto/request/update-calculation.dto";
+import { CalculationService } from "../services/calculation.service";
 import { Calculation } from "../entities/calculation.entity";
+import { ExcelExportService } from "../services/excel-export.service";
+import { Response } from 'express';
+import {ExportValidationPipe} from "../pipe/export-validation.pipe";
 
 @ApiBearerAuth("JWT-auth")
 @ApiTags("Calculation")
 @Controller("calculation")
 @UseInterceptors(StreamFilterInterceptor)
 export class CalculationController {
-	constructor(private readonly calculationService: CalculationService) {}
+    constructor(
+        private readonly calculationService: CalculationService,
+        private readonly excelExportService: ExcelExportService,
+    ) {}
 
 	@Post()
 	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
@@ -214,7 +220,74 @@ export class CalculationController {
 		return this.mapToResponseDto(calculation);
 	}
 
-	private mapToResponseDto(calculation: Calculation): CalculationResponseDto {
+    @Get('export/excel')
+    @RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
+    @ApiOperation({
+        summary: 'Export calculations to Excel',
+        description: 'Exports calculations to Excel file with applied filters and sorting',
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: 'Excel file download',
+        content: {
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
+                schema: { type: 'string', format: 'binary' },
+            },
+        },
+    })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: 'Bad request'
+    })
+    @ApiResponse({
+        status: HttpStatus.UNAUTHORIZED,
+        description: "Unauthorized. Authentication required."
+    })
+    @UsePipes(new ExportValidationPipe())
+    async exportToExcel(
+        @Query() queryParams: TransformedExportCalculationDto,
+        @Res() res: Response,
+    ): Promise<void> {
+        const filters = {
+            name: queryParams.name,
+            finalCoefficient: queryParams.minFinalCoefficient || queryParams.maxFinalCoefficient ? {
+                min: queryParams.minFinalCoefficient,
+                max: queryParams.maxFinalCoefficient
+            } : undefined,
+            createdAt: queryParams.createdFrom || queryParams.createdTo ? {
+                from: queryParams.createdFrom ? new Date(queryParams.createdFrom) : undefined,
+                to: queryParams.createdTo ? new Date(queryParams.createdTo) : undefined
+            } : undefined,
+            status: queryParams.status
+        };
+
+        const sort = queryParams.field || queryParams.order ? {
+            field: queryParams.field || 'createdAt',
+            order: queryParams.order || 'DESC'
+        } : undefined;
+
+        const calculations = await this.calculationService.findAllForExport(
+            filters,
+            sort,
+            queryParams.selectedIdsArray,
+        );
+
+        const buffer = await this.excelExportService.generateExcelFile(calculations);
+
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename=Calculation-List-${new Date().toLocaleDateString('ru-RU')}.xlsx`,
+        );
+
+        res.end(buffer);
+    }
+
+
+    private mapToResponseDto(calculation: Calculation): CalculationResponseDto {
 		const generalUncertainty = Array.isArray(
 			calculation.questionnaireData.generalUncertainty,
 		)
