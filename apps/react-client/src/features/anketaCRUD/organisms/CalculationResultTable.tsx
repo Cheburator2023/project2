@@ -22,6 +22,7 @@ import {
 	agGridCustomMUIThemeDark,
 } from "../../../theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "../../../theme/ag-grid/agGridIconSet";
+import { AG_GRID_LOCALE_RU } from "../../../common/tableStuff/agGridLocale.ru";
 
 interface EpicData {
 	stageName: string;
@@ -313,6 +314,7 @@ export const CalculationResultTable = () => {
 					columnDefs={columnDefs}
 					defaultColDef={defaultColDef}
 					icons={agGridIconSet}
+					localeText={AG_GRID_LOCALE_RU}
 					getRowStyle={(
 						params,
 					): Record<string, string | number> | undefined => {
@@ -343,6 +345,7 @@ export const CalculationResultTable = () => {
 					columnDefs={coefficientColumnDefs}
 					defaultColDef={defaultCoefficientColDef}
 					theme={theme}
+					localeText={AG_GRID_LOCALE_RU}
 					icons={agGridIconSet}
 					data-test-id="coefficients-table--AgGridReact-0"
 				/>
