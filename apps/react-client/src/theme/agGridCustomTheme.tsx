@@ -6,9 +6,9 @@ const svgIcons = iconOverrides({
 	icons: {
 		filter: {
 			svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="2" y="3" width="12" height="2" fill="currentColor"/>
-        <rect x="4" y="7" width="8" height="2" fill="currentColor"/>
-        <rect x="6" y="11" width="4" height="2" fill="currentColor"/>
+        <rect x="2" y="0" width="12" height="2" fill="currentColor"/>
+        <rect x="4" y="4" width="8" height="2" fill="currentColor"/>
+        <rect x="6" y="8" width="4" height="2" fill="currentColor"/>
       </svg>`,
 		},
 		"menu-alt": {
@@ -254,17 +254,4 @@ const svgIcons = iconOverrides({
 	},
 });
 
-export const agGridCustomQuartzTheme = themeQuartz
-	.withPart(svgIcons)
-	.withParams({
-		iconSize: 16,
-		spacing: 8,
-		borderRadius: 4,
-		headerHeight: 40,
-		rowHeight: 36,
-		cellHorizontalPadding: 12,
-		headerFontWeight: 600,
-		fontSize: 14,
-		fontFamily:
-			'-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-	});
+export const agGridCustomQuartzTheme = themeQuartz.withPart(svgIcons);
