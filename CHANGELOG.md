@@ -1,5 +1,20 @@
 # Semantic Versioning Changelog
 
+# [1.3.0](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.2.2...v1.3.0) (2025-07-22)
+
+
+### Bug Fixes
+
+* propagation fix ([40bc672](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/40bc67222a880e09587ce89e45c3d74a87309af1))
+* tooltip text reduced ([0a01e71](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/0a01e71cbfa876410c31a0eb455090c4bbe643b9))
+
+
+### Features
+
+* **forms:** implement fuzzy search and improve select widgets ([62ab1e9](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/62ab1e992526f5a6e4dfcdc7fbd7c37344262e1e))
+* **TextFieldCustomWidget:** replace comma-separated values with deletable chips ([e0708d8](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/e0708d8b17da8927b9e5c677194939062a84ae22))
+* search added to select dropdown ([b19b669](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/b19b66903c76035989eb662b768f23f11af6d7a6))
+
 ## [1.2.2](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.2.1...v1.2.2) (2025-07-21)
 
 
