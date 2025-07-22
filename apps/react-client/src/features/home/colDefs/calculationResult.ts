@@ -8,7 +8,15 @@ const valueGetter = (
 		const field = params.colDef.field;
 		const regex = new RegExp(`${parent}\\.(\\d+)\\.`);
 		const index = field?.match(regex)?.[1];
-		return params.data?.questionnaireData?.[parent]?.[index || 0]?.[key] ?? "-";
+		const rawValue =
+			params.data?.questionnaireData?.[parent]?.[index || 0]?.[key];
+
+		if (rawValue === null || rawValue === undefined) {
+			return null;
+		}
+
+		const numericValue = Number(rawValue);
+		return Number.isNaN(numericValue) ? null : numericValue;
 	};
 };
 
