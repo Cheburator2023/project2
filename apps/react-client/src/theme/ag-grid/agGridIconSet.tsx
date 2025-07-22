@@ -54,145 +54,151 @@ import treeOpenIcon from "./quartz-icons/tree-open.svg?raw";
 import unlinkedIcon from "./quartz-icons/unlinked.svg?raw";
 import upIcon from "./quartz-icons/up.svg?raw";
 
+const createSvgElement = (svgString: string): HTMLElement => {
+	const div = document.createElement("div");
+	div.innerHTML = svgString;
+	return div.firstElementChild as HTMLElement;
+};
+
 export const agGridIconSet = {
 	// Column group icons
-	columnGroupOpened: expandedIcon,
-	columnGroupClosed: contractedIcon,
+	columnGroupOpened: () => createSvgElement(expandedIcon),
+	columnGroupClosed: () => createSvgElement(contractedIcon),
 
 	// Column tool panel icons
-	columnSelectClosed: treeClosedIcon,
-	columnSelectOpen: treeOpenIcon,
-	columnSelectIndeterminate: treeIndeterminateIcon,
+	columnSelectClosed: () => createSvgElement(treeClosedIcon),
+	columnSelectOpen: () => createSvgElement(treeOpenIcon),
+	columnSelectIndeterminate: () => createSvgElement(treeIndeterminateIcon),
 
 	// Accordion icons
-	accordionOpen: treeOpenIcon,
-	accordionClosed: treeClosedIcon,
-	accordionIndeterminate: treeIndeterminateIcon,
+	accordionOpen: () => createSvgElement(treeOpenIcon),
+	accordionClosed: () => createSvgElement(treeClosedIcon),
+	accordionIndeterminate: () => createSvgElement(treeIndeterminateIcon),
 
 	// Column move icons
-	columnMovePin: pinIcon,
-	columnMoveHide: eyeSlashIcon,
-	columnMoveMove: arrowsIcon,
-	columnMoveLeft: leftIcon,
-	columnMoveRight: rightIcon,
-	columnMoveGroup: groupIcon,
-	columnMoveValue: aggregationIcon,
-	columnMovePivot: pivotIcon,
+	columnMovePin: () => createSvgElement(pinIcon),
+	columnMoveHide: () => createSvgElement(eyeSlashIcon),
+	columnMoveMove: () => createSvgElement(arrowsIcon),
+	columnMoveLeft: () => createSvgElement(leftIcon),
+	columnMoveRight: () => createSvgElement(rightIcon),
+	columnMoveGroup: () => createSvgElement(groupIcon),
+	columnMoveValue: () => createSvgElement(aggregationIcon),
+	columnMovePivot: () => createSvgElement(pivotIcon),
 
 	// Drop zone icons
-	dropNotAllowed: notAllowedIcon,
+	dropNotAllowed: () => createSvgElement(notAllowedIcon),
 
 	// Row group icons
-	groupContracted: treeClosedIcon,
-	groupExpanded: treeOpenIcon,
+	groupContracted: () => createSvgElement(treeClosedIcon),
+	groupExpanded: () => createSvgElement(treeOpenIcon),
 
 	// Set filter icons
-	setFilterGroupClosed: treeClosedIcon,
-	setFilterGroupOpen: treeOpenIcon,
-	setFilterGroupIndeterminate: treeIndeterminateIcon,
-	setFilterLoading: loadingIcon,
+	setFilterGroupClosed: () => createSvgElement(treeClosedIcon),
+	setFilterGroupOpen: () => createSvgElement(treeOpenIcon),
+	setFilterGroupIndeterminate: () => createSvgElement(treeIndeterminateIcon),
+	setFilterLoading: () => createSvgElement(loadingIcon),
 
 	// General UI icons
-	chart: chartIcon,
-	close: crossIcon,
-	cancel: cancelIcon,
-	check: tickIcon,
+	chart: () => createSvgElement(chartIcon),
+	close: () => createSvgElement(crossIcon),
+	cancel: () => createSvgElement(cancelIcon),
+	check: () => createSvgElement(tickIcon),
 
 	// Pagination icons
-	first: firstIcon,
-	previous: previousIcon,
-	next: nextIcon,
-	last: lastIcon,
+	first: () => createSvgElement(firstIcon),
+	previous: () => createSvgElement(previousIcon),
+	next: () => createSvgElement(nextIcon),
+	last: () => createSvgElement(lastIcon),
 
 	// Chart linking icons
-	linked: linkedIcon,
-	unlinked: unlinkedIcon,
+	linked: () => createSvgElement(linkedIcon),
+	unlinked: () => createSvgElement(unlinkedIcon),
 
 	// Loading icon
-	groupLoading: loadingIcon,
+	groupLoading: () => createSvgElement(loadingIcon),
 
 	// Menu icons
-	menu: menuIcon,
-	menuAlt: menuIcon,
-	legacyMenu: menuIcon,
+	menu: () => createSvgElement(menuIcon),
+	menuAlt: () => createSvgElement(menuIcon),
+	legacyMenu: () => createSvgElement(menuIcon),
 
 	// Filter icons
-	filter: filterIcon,
-	filterActive: filterIcon,
-	filterAdd: plusIcon,
-	filterCardCollapse: smallUpIcon,
-	filterCardExpand: smallDownIcon,
-	filterCardEditing: crossIcon,
-	filterTab: filterIcon,
-	filtersToolPanel: filterIcon,
+	filter: () => createSvgElement(filterIcon),
+	filterActive: () => createSvgElement(filterIcon),
+	filterAdd: () => createSvgElement(plusIcon),
+	filterCardCollapse: () => createSvgElement(smallUpIcon),
+	filterCardExpand: () => createSvgElement(smallDownIcon),
+	filterCardEditing: () => createSvgElement(crossIcon),
+	filterTab: () => createSvgElement(filterIcon),
+	filtersToolPanel: () => createSvgElement(filterIcon),
 
 	// Column icons
-	columns: columnsIcon,
-	columnsToolPanel: columnsIcon,
+	columns: () => createSvgElement(columnsIcon),
+	columnsToolPanel: () => createSvgElement(columnsIcon),
 
 	// Window control icons
-	maximize: maximizeIcon,
-	minimize: minimizeIcon,
+	maximize: () => createSvgElement(maximizeIcon),
+	minimize: () => createSvgElement(minimizeIcon),
 
 	// Menu items
-	menuPin: pinIcon,
-	menuValue: aggregationIcon,
-	menuAddRowGroup: groupIcon,
-	menuRemoveRowGroup: groupIcon,
+	menuPin: () => createSvgElement(pinIcon),
+	menuValue: () => createSvgElement(aggregationIcon),
+	menuAddRowGroup: () => createSvgElement(groupIcon),
+	menuRemoveRowGroup: () => createSvgElement(groupIcon),
 
 	// Clipboard icons
-	clipboardCopy: copyIcon,
-	clipboardCut: cutIcon,
-	clipboardPaste: pasteIcon,
+	clipboardCopy: () => createSvgElement(copyIcon),
+	clipboardCut: () => createSvgElement(cutIcon),
+	clipboardPaste: () => createSvgElement(pasteIcon),
 
 	// Panel icons
-	pivotPanel: pivotIcon,
-	rowGroupPanel: groupIcon,
-	valuePanel: aggregationIcon,
+	pivotPanel: () => createSvgElement(pivotIcon),
+	rowGroupPanel: () => createSvgElement(groupIcon),
+	valuePanel: () => createSvgElement(aggregationIcon),
 
 	// Drag icons
-	columnDrag: gripIcon,
-	rowDrag: gripIcon,
+	columnDrag: () => createSvgElement(gripIcon),
+	rowDrag: () => createSvgElement(gripIcon),
 
 	// Export icons
-	save: saveIcon,
-	csvExport: csvIcon,
-	excelExport: excelIcon,
+	save: () => createSvgElement(saveIcon),
+	csvExport: () => createSvgElement(csvIcon),
+	excelExport: () => createSvgElement(excelIcon),
 
 	// Select icons
-	selectOpen: smallDownIcon,
-	richSelectOpen: smallDownIcon,
-	richSelectRemove: cancelIcon,
+	selectOpen: () => createSvgElement(smallDownIcon),
+	richSelectOpen: () => createSvgElement(smallDownIcon),
+	richSelectRemove: () => createSvgElement(cancelIcon),
 
 	// Sub menu icons
-	subMenuOpen: smallRightIcon,
-	subMenuOpenRtl: smallLeftIcon,
-	panelDelimiter: smallRightIcon,
-	panelDelimiterRtl: smallLeftIcon,
+	subMenuOpen: () => createSvgElement(smallRightIcon),
+	subMenuOpenRtl: () => createSvgElement(smallLeftIcon),
+	panelDelimiter: () => createSvgElement(smallRightIcon),
+	panelDelimiterRtl: () => createSvgElement(smallLeftIcon),
 
 	// Sort icons
-	sortAscending: ascIcon,
-	sortDescending: descIcon,
-	sortUnSort: noneIcon,
+	sortAscending: () => createSvgElement(ascIcon),
+	sortDescending: () => createSvgElement(descIcon),
+	sortUnSort: () => createSvgElement(noneIcon),
 
 	// Advanced Filter icons
-	advancedFilterBuilder: groupIcon,
-	advancedFilterBuilderDrag: gripIcon,
-	advancedFilterBuilderDragHandle: menuIcon,
-	advancedFilterBuilderInvalid: notAllowedIcon,
-	advancedFilterBuilderMoveUp: upIcon,
-	advancedFilterBuilderMoveDown: downIcon,
-	advancedFilterBuilderAdd: plusIcon,
-	advancedFilterBuilderRemove: minusIcon,
-	advancedFilterBuilderSelect: smallDownIcon,
+	advancedFilterBuilder: () => createSvgElement(groupIcon),
+	advancedFilterBuilderDrag: () => createSvgElement(gripIcon),
+	advancedFilterBuilderDragHandle: () => createSvgElement(menuIcon),
+	advancedFilterBuilderInvalid: () => createSvgElement(notAllowedIcon),
+	advancedFilterBuilderMoveUp: () => createSvgElement(upIcon),
+	advancedFilterBuilderMoveDown: () => createSvgElement(downIcon),
+	advancedFilterBuilderAdd: () => createSvgElement(plusIcon),
+	advancedFilterBuilderRemove: () => createSvgElement(minusIcon),
+	advancedFilterBuilderSelect: () => createSvgElement(smallDownIcon),
 
 	// Charts icons
-	chartsMenu: menuIcon,
-	chartsMenuEdit: chartIcon,
-	chartsMenuAdvancedSettings: menuIcon,
-	chartsMenuAdd: plusIcon,
-	chartsColorPicker: smallDownIcon,
-	chartsThemePrevious: previousIcon,
-	chartsThemeNext: nextIcon,
-	chartsDownload: saveIcon,
+	chartsMenu: () => createSvgElement(menuIcon),
+	chartsMenuEdit: () => createSvgElement(chartIcon),
+	chartsMenuAdvancedSettings: () => createSvgElement(menuIcon),
+	chartsMenuAdd: () => createSvgElement(plusIcon),
+	chartsColorPicker: () => createSvgElement(smallDownIcon),
+	chartsThemePrevious: () => createSvgElement(previousIcon),
+	chartsThemeNext: () => createSvgElement(nextIcon),
+	chartsDownload: () => createSvgElement(saveIcon),
 };
