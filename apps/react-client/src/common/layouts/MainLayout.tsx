@@ -41,7 +41,7 @@ export function MainLayout({
 	onLogout,
 	navbarVisible = true,
 }: {
-	children: React.ReactNode;
+	children?: React.ReactNode;
 	navbarVisible?: boolean;
 	onLogout?: () => void;
 }) {

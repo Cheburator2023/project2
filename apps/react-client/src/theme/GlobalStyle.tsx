@@ -168,6 +168,38 @@ div.ag-watermark-text {
     transform: translateZ(0);
 }
 
+:where(.ag-theme-checkboxStyle-3) {
+    & .ag-checkbox-input-wrapper {
+        &:where(.ag-checked):after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+			border-radius: 50px;
+            line-height: 1;
+            display: block;
+            z-index: 1;
+			background-color: white;
+			mask-image: none;
+        }
+    }
+}
+
+<style>
+:where(.ag-theme-checkboxStyle-3) {
+    & .ag-checkbox-input-wrapper, & .ag-radio-button-input-wrapper {
+        &:where(.ag-checked) {
+            &:after {
+                background-color: var(--ag-checkbox-checked-shape-color);
+            }
+        }
+    }
+}
+
 `}
 	/>
 );
