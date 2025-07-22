@@ -12,6 +12,7 @@ import { Header } from "@react-client/features/navigation/organisms/Header";
 import { SearchInput } from "@react-client/features/navigation/organisms/SearchInput";
 import { routes } from "@react-client/routing/routes";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
+
 // import { AllEnterpriseModule } from "ag-grid-enterprise";
 import {
 	AllCommunityModule,
@@ -34,9 +35,13 @@ import {
 	SetFilterModule,
 } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
-import { agGridCustomQuartzTheme } from "../../../theme/agGridCustomTheme";
+import {
+	agGridCustomMUITheme,
+	agGridCustomMUIThemeDark,
+} from "../../../theme/ag-grid/agGridCustomTheme";
+import { agGridIconSet } from "../../../theme/ag-grid/agGridIconSet";
 
 ModuleRegistry.registerModules([
 	AllCommunityModule,
@@ -48,8 +53,6 @@ ModuleRegistry.registerModules([
 	NumberFilterModule,
 	...(process.env.NODE_ENV !== "production" ? [ValidationModule] : []),
 ]);
-
-const themeQuartzDark = agGridCustomQuartzTheme.withPart(colorSchemeDarkBlue);
 
 // const IS_DEV = process.env.NODE_ENV !== "production";
 
@@ -193,8 +196,8 @@ export const HomeTemplete = ({
 
 	const theme =
 		mode === "light" || mode === undefined
-			? agGridCustomQuartzTheme
-			: themeQuartzDark;
+			? agGridCustomMUITheme
+			: agGridCustomMUIThemeDark;
 
 	const onCellMouseOver = (params: any) => {
 		setHoveredRowId(params?.node.id || "0");
@@ -283,8 +286,8 @@ export const HomeTemplete = ({
 					columnDefs={columnDefs}
 					defaultColDef={defaultColDef}
 					sideBar={false}
-					pagination={true}
-					paginationPageSize={100}
+					// pagination={true}
+					// paginationPageSize={10000}
 					localeText={AG_GRID_LOCALE_RU}
 					ref={gridRef}
 					autoSizeStrategy={autoSizeStrategy}
@@ -292,6 +295,7 @@ export const HomeTemplete = ({
 					onGridReady={onGridReady}
 					tooltipShowDelay={500}
 					animateRows={false}
+					icons={agGridIconSet}
 					data-test-id="home-page--AgGridReact-0"
 				/>
 			</GridWrapper>
