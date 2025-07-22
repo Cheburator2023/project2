@@ -10,9 +10,7 @@ import {
 	type CellClassParams,
 	type CellStyle,
 	type ColDef,
-	colorSchemeDarkBlue,
 	GetMainMenuItemsParams,
-	themeQuartz,
 	type ValueFormatterParams,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
@@ -302,6 +300,13 @@ export const CalculationResultTable = () => {
 		mode === "light" || mode === undefined
 			? agGridCustomMUITheme
 			: agGridCustomMUIThemeDark;
+
+	const icons = useMemo<{
+		[key: string]: ((...args: any[]) => any) | string;
+	}>(() => {
+		return agGridIconSet;
+	}, []);
+
 	return (
 		<>
 			<TableWrapper
@@ -313,7 +318,7 @@ export const CalculationResultTable = () => {
 					rowData={rowData}
 					columnDefs={columnDefs}
 					defaultColDef={defaultColDef}
-					icons={agGridIconSet}
+					icons={icons}
 					localeText={AG_GRID_LOCALE_RU}
 					getRowStyle={(
 						params,
@@ -346,7 +351,7 @@ export const CalculationResultTable = () => {
 					defaultColDef={defaultCoefficientColDef}
 					theme={theme}
 					localeText={AG_GRID_LOCALE_RU}
-					icons={agGridIconSet}
+					icons={icons}
 					data-test-id="coefficients-table--AgGridReact-0"
 				/>
 			</TableWrapper>

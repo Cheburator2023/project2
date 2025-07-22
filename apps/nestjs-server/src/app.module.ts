@@ -1,14 +1,8 @@
 import { Module } from "@nestjs/common";
-import { ConfigModule, ConfigService } from "@nestjs/config";
+import { ConfigModule } from "@nestjs/config";
 import { APP_GUARD, Reflector } from "@nestjs/core";
-import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthGuard, ResourceGuard, RoleGuard } from "nest-keycloak-connect";
 import { CalculationModule } from "./modules/calculation/calculation.module";
-import { Calculation } from "./modules/calculation/entities/calculation.entity";
-import { ArtefactValueEntity } from "./modules/questionnaire/entities/artefact-value.entity";
-import { CoefficientEntity } from "./modules/questionnaire/entities/coefficient.entity";
-import { QuestionnaireItemEntity } from "./modules/questionnaire/entities/questionnaire-item.entity";
-import { StreamAverageEntity } from "./modules/questionnaire/entities/stream-average.entity";
 import { QuestionnaireModule } from "./modules/questionnaire/questionnaire.module";
 import { DatabaseModule } from "./shared/database/database.module";
 import { GodModeGuard } from "./shared/keycloak/god-mode.guard";
@@ -19,7 +13,7 @@ import { KeycloakModule } from "./shared/keycloak/keycloak.module";
 			isGlobal: true,
 			envFilePath: [".env", `.env.${process.env.NODE_ENV}`],
 		}),
-        DatabaseModule,
+		DatabaseModule,
 		KeycloakModule,
 		CalculationModule,
 		QuestionnaireModule,

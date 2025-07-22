@@ -18,7 +18,6 @@ import {
 	AllCommunityModule,
 	ClientSideRowModelModule,
 	ColDef,
-	colorSchemeDarkBlue,
 	GetMainMenuItemsParams,
 	type GridApi,
 	type GridReadyEvent,
@@ -203,6 +202,12 @@ export const HomeTemplete = ({
 		setHoveredRowId(params?.node.id || "0");
 	};
 
+	const icons = useMemo<{
+		[key: string]: ((...args: any[]) => any) | string;
+	}>(() => {
+		return agGridIconSet;
+	}, []);
+
 	return (
 		<div data-test-id="home-page--div-0">
 			<Header data-test-id="home-page--Header-0">
@@ -295,7 +300,7 @@ export const HomeTemplete = ({
 					onGridReady={onGridReady}
 					tooltipShowDelay={500}
 					animateRows={false}
-					icons={agGridIconSet}
+					icons={icons}
 					data-test-id="home-page--AgGridReact-0"
 				/>
 			</GridWrapper>
