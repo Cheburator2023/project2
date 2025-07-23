@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.4.1](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.4.0...v1.4.1) (2025-07-23)
+
+
+### Bug Fixes
+
+* update productionAdditionalReports schema and UI widget ([b22a405](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/b22a4050e2a8304318061c84bba3c781436c461c))
+
 # [1.4.0](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.3.0...v1.4.0) (2025-07-23)
 
 
