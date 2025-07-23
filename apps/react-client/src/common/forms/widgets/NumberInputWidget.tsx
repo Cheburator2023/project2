@@ -17,7 +17,9 @@ export const NumberInputWidget: React.FC<WidgetProps> = (props) => {
 		label,
 		uiSchema,
 		options,
+		rawErrors,
 	} = props;
+
 	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const inputValue = event.target.value;
 
@@ -92,10 +94,11 @@ export const NumberInputWidget: React.FC<WidgetProps> = (props) => {
 			}}
 			fullWidth
 			error={
-				value !== undefined &&
-				schema.minimum !== undefined &&
-				schema.maximum !== undefined &&
-				(value < schema.minimum || value > schema.maximum)
+				(rawErrors && rawErrors.length > 0) ||
+				(value !== undefined &&
+					schema.minimum !== undefined &&
+					schema.maximum !== undefined &&
+					(value < schema.minimum || value > schema.maximum))
 			}
 			helperText={
 				value !== undefined &&
@@ -108,5 +111,3 @@ export const NumberInputWidget: React.FC<WidgetProps> = (props) => {
 		/>
 	);
 };
-
-export default NumberInputWidget;

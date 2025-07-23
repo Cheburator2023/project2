@@ -28,6 +28,7 @@ const uiSchema: UiSchema = {
 	},
 	productionDeploymentChannels: {
 		"ui:widget": "TextFieldCustomWidget",
+		"ui:placeholder": "Не требуется",
 		"ui:options": {
 			select: true,
 			multiple: true,

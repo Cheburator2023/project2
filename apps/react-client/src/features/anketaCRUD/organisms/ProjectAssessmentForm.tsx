@@ -17,7 +17,7 @@ import { Theme as MuiTheme } from "@rjsf/mui";
 import type { RJSFSchema, TemplatesType, WidgetProps } from "@rjsf/utils";
 import type React from "react";
 import { useRef, useState } from "react";
-import NumberInputWidget from "@react-client/common/forms/widgets/NumberInputWidget";
+import { NumberInputWidget } from "@react-client/common/forms/widgets/NumberInputWidget";
 import { AlgorithmComplexityWidget } from "@react-client/common/forms/widgets/AlgorithmComplexityWidget";
 import { GeneralUncertaintyWidget } from "@react-client/common/forms/widgets/GeneralUncertaintyWidget";
 import { UniversalDependencyWidget } from "@react-client/common/forms/widgets/UniversalDependencyWidget";

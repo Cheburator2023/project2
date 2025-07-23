@@ -107,6 +107,7 @@ export const calc_uiSchema: UiSchema = {
 	},
 	productionDeploymentChannels: {
 		"ui:widget": "TextFieldCustomWidget",
+		"ui:placeholder": "Не требуется",
 		"ui:options": {
 			reset: true,
 			multiple: true,
