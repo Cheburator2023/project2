@@ -26,6 +26,14 @@ const uiSchema: UiSchema = {
 	algorithmComplexity: {
 		"ui:widget": "ArrayCustomCardListsWidget",
 	},
+	productionDeploymentChannels: {
+		"ui:widget": "TextFieldCustomWidget",
+		"ui:options": {
+			select: true,
+			multiple: true,
+			noDelete: true,
+		},
+	},
 	"ui:submitButtonOptions": {
 		norender: true,
 	},

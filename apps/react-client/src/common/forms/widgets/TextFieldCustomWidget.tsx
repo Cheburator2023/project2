@@ -118,6 +118,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 	const allowCustomInput = options?.freeSolo || options?.allowCustomInput;
 	const isDisabled = disabled || readonly;
 	const isMultiple = options?.multiple;
+	const noDelete = options?.noDelete;
 
 	const fuzzyMatches = fuzzySearch(
 		searchTerm,
@@ -202,9 +203,9 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 											label={item}
 											size="medium"
 											variant="outlined"
-											onDelete={handleChipDelete(item)}
-											onClick={handleChipClick}
-											onMouseDown={handleChipMouseDown}
+											onDelete={noDelete ? undefined : handleChipDelete(item)}
+											onClick={noDelete ? undefined : handleChipClick}
+											onMouseDown={noDelete ? undefined : handleChipMouseDown}
 											sx={{
 												fontSize: "0.75rem",
 												height: "24px",
