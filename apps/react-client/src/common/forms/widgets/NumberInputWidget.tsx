@@ -20,6 +20,47 @@ export const NumberInputWidget: React.FC<WidgetProps> = (props) => {
 		rawErrors,
 	} = props;
 
+	const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+		const allowedKeys = [
+			"Backspace",
+			"Delete",
+			"Tab",
+			"Escape",
+			"Enter",
+			"Home",
+			"End",
+			"ArrowLeft",
+			"ArrowRight",
+			"ArrowUp",
+			"ArrowDown",
+		];
+
+		const allowDecimal =
+			(uiSchema?.["ui:options"]?.allowDecimal as boolean) ?? false;
+
+		const isNumber = /^[0-9]$/.test(event.key);
+		const isDecimal = allowDecimal && (event.key === "." || event.key === ",");
+		const isAllowedKey = allowedKeys.includes(event.key);
+		const isCtrlA = event.ctrlKey && event.key === "a";
+		const isCtrlC = event.ctrlKey && event.key === "c";
+		const isCtrlV = event.ctrlKey && event.key === "v";
+		const isCtrlX = event.ctrlKey && event.key === "x";
+		const isCtrlZ = event.ctrlKey && event.key === "z";
+
+		if (
+			!isNumber &&
+			!isDecimal &&
+			!isAllowedKey &&
+			!isCtrlA &&
+			!isCtrlC &&
+			!isCtrlV &&
+			!isCtrlX &&
+			!isCtrlZ
+		) {
+			event.preventDefault();
+		}
+	};
+
 	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const inputValue = event.target.value;
 
@@ -30,12 +71,10 @@ export const NumberInputWidget: React.FC<WidgetProps> = (props) => {
 
 		const numValue = Number(inputValue);
 
-		// Check if the input is a valid number
 		if (Number.isNaN(numValue)) {
 			return;
 		}
 
-		// Clamp the value between min and max if they are defined
 		const min = schema.minimum;
 		const max = schema.maximum;
 		const clampedValue =
@@ -55,6 +94,7 @@ export const NumberInputWidget: React.FC<WidgetProps> = (props) => {
 			type="number"
 			value={value ?? ""}
 			onChange={handleChange}
+			onKeyDown={handleKeyDown}
 			disabled={disabled || readonly}
 			required={required}
 			label={label}
