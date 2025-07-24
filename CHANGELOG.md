@@ -1,5 +1,35 @@
 # Semantic Versioning Changelog
 
+## [1.4.1](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.4.0...v1.4.1) (2025-07-23)
+
+
+### Bug Fixes
+
+* update productionAdditionalReports schema and UI widget ([b22a405](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/b22a4050e2a8304318061c84bba3c781436c461c))
+
+# [1.4.0](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.3.0...v1.4.0) (2025-07-23)
+
+
+### Bug Fixes
+
+* date fix ([f5eecf1](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/f5eecf1b220e57d434726243b9d14edf5227f3ab))
+* **ag-grid:** correct icon mappings and add checkbox styling ([89b0624](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/89b062404f27e814f31d5efe81d5c191d204ff11))
+* **calculationResult:** handle null/undefined values and numeric conversion ([be26128](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/be261286e44c6f5ba79e50f41c67b7a53b484834))
+
+
+### Features
+
+* **ag-grid:** add custom theme and icon set for AG Grid ([c469814](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/c469814e014c1158b8aa88a37cb5d639ac36abed))
+* **ag-grid:** add icon set generation utility and memoize icons ([ccb8e61](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/ccb8e61ceb8e3f3c0def3de2ff8ae768c9f90627))
+* **anketa:** add productionDeploymentChannels field and loading states ([3d34416](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/3d34416da3701ec692268e3e4aaf6baa421201fe))
+* add general uncertainty coefficient calculations and tests ([953eb2f](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/953eb2fe586225da031bd4e2460a772eb2edce56))
+* Добавил выгрузку отчета в Excel, поправил миграции ([28c55c5](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/28c55c5479206aaa245016db4a857ac1093cc924))
+
+
+### Performance Improvements
+
+* **webpack:** enable production optimizations for smaller bundle ([f65f729](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/f65f729ebe1c1971c7b2b3d1ba68ab571ca1dcea))
+
 # [1.3.0](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.2.2...v1.3.0) (2025-07-22)
 
 

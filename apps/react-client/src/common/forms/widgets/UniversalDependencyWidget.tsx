@@ -4,7 +4,7 @@ import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom"
 import { Flex } from "@react-client/common/primitives/Flex";
 import { WidgetProps } from "@rjsf/utils";
 import React from "react";
-import NumberInputWidget from "./NumberInputWidget";
+import { NumberInputWidget } from "./NumberInputWidget";
 
 interface DisabledDependencyHandlerProps {
 	value: any;

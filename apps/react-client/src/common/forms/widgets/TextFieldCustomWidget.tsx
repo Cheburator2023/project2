@@ -70,8 +70,10 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 		schema,
 		mask,
 		rawErrors,
-		placeholder,
+		placeholder: _placeholder,
 	} = props;
+
+	const placeholder = _placeholder || props?.uiSchema?.["ui:placeholder"];
 
 	const [searchTerm, setSearchTerm] = useState("");
 
@@ -147,16 +149,17 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 				value={value}
 				label={label || schema?.title}
 				onChange={_handleChangeMult as any}
-				select
 				id={id}
 				// title={value}
 				required={required}
 				disabled={isDisabled}
 				autoFocus={autofocus}
 				error={rawErrors && rawErrors.length > 0}
-				placeholder={placeholder}
+				select
 				slotProps={{
 					select: {
+						multiple: true,
+						displayEmpty: !!placeholder,
 						MenuProps: {
 							disablePortal: false,
 							PaperProps: {
@@ -171,7 +174,6 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 								},
 							},
 						},
-						multiple: true,
 						renderValue: (selected: any) => {
 							const handleChipDelete =
 								(chipToDelete: string) => (event: any) => {
@@ -192,6 +194,10 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 								event.stopPropagation();
 								event.preventDefault();
 							};
+
+							if (selected.length === 0 && placeholder) {
+								return <div style={{ opacity: 0.4 }}>{placeholder}</div>;
+							}
 
 							return (
 								<Box
