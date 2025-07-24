@@ -3,9 +3,12 @@ import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import * as express from "express";
 import { AppModule } from "./app.module";
+import { logger } from "./shared/logger/logger.config";
 
 async function bootstrap() {
-	const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create(AppModule, {
+        logger: ['log', 'error', 'warn', 'debug', 'verbose'],
+    });
 
 	app.enableCors({
 		origin: "*",
@@ -57,6 +60,8 @@ async function bootstrap() {
 		res.send(document);
 	});
 
-	await app.listen(3000);
+    const port = process.env.PORT || 3000;
+    await app.listen(port);
+    logger.log(`Application is running on port ${port}`);
 }
 bootstrap();
