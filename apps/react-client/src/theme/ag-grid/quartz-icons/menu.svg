@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g transform="matrix(0.826045,0,0,0.826045,1.39166,1.39166)">
+        <circle cx="8" cy="8" r="1.816" fill="#000"/>
+    </g>
+    <g transform="matrix(0.826045,0,0,0.826045,1.39166,-4.10834)">
+        <circle cx="8" cy="8" r="1.816" fill="#000"/>
+    </g>
+    <g transform="matrix(0.826045,0,0,0.826045,1.39166,6.89166)">
+        <circle cx="8" cy="8" r="1.816" fill="#000"/>
+    </g>
+</svg>

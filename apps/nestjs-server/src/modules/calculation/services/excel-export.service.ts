@@ -9,11 +9,10 @@ import {
 
 @Injectable()
 export class ExcelExportService {
-    async generateExcelFile(calculations: Calculation[]): Promise<Buffer> {
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Calculations');
+	async generateExcelFile(calculations: Calculation[]): Promise<Buffer> {
+		const workbook = new ExcelJS.Workbook();
+		const worksheet = workbook.addWorksheet("Calculations");
 
-        // Заголовки столбцов (убраны статус, родительский расчет и связанные модели)
         worksheet.columns = this.getWorksheetColumns();
 
         calculations.forEach((calculation) => {

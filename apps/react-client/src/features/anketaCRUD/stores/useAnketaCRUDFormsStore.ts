@@ -27,6 +27,7 @@ export const basicInfoFormInitialData: IBasicFormData = {
 	relatedModels: [],
 	id: "",
 	author: "",
+	createdAt: "",
 };
 
 export const projectAssessmentFormInitialData: IAssessmentFormData = {

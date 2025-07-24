@@ -1,6 +1,4 @@
-// import "./theme/global.css";
 import "@fontsource/inter";
-// import "ag-grid-community/styles/ag-theme-quartz.css";
 
 import { CircularProgress, StyledEngineProvider } from "@mui/material";
 import { unstable_ClassNameGenerator as ClassNameGenerator } from "@mui/material/className";

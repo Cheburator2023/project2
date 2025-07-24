@@ -27,5 +27,7 @@ export const CalculationPreviewCell = (props: ICellRendererParams) => {
 		>
 			Просмотр
 		</Button>
-	) : null;
+	) : (
+		<div />
+	);
 };

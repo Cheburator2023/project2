@@ -181,7 +181,7 @@ export const AnketaPreviewPage = () => {
 				</Flex>
 			) : (
 				<AnketaBasicLayoutPreview
-					isPending={false}
+					isPending={isPending}
 					isEditing={isEditing}
 					initialData={isEditing ? formData : initialData}
 					comfyView={comfyView}

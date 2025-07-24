@@ -152,7 +152,7 @@ export const calc_uiSchema: UiSchema = {
 		},
 	},
 	productionAdditionalReports: {
-		"ui:widget": "TextFieldCustomWidget",
+		"ui:widget": "UniversalDependencyWidget",
 		"ui:placeholder": "Не требуется",
 		"ui:options": {
 			reset: true,
@@ -170,6 +170,7 @@ export const calc_uiSchema: UiSchema = {
 					widget: "TextField",
 				},
 			],
+			defaultWidget: "SelectWidget",
 		},
 	},
 };

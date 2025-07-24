@@ -10,16 +10,17 @@ import {
 	type CellClassParams,
 	type CellStyle,
 	type ColDef,
-	colorSchemeDarkBlue,
 	GetMainMenuItemsParams,
-	themeQuartz,
 	type ValueFormatterParams,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useMemo, useState } from "react";
-import { agGridCustomQuartzTheme } from "../../../theme/agGridCustomTheme";
-
-const themeQuartzDark = agGridCustomQuartzTheme.withPart(colorSchemeDarkBlue);
+import {
+	agGridCustomMUITheme,
+	agGridCustomMUIThemeDark,
+} from "../../../theme/ag-grid/agGridCustomTheme";
+import { agGridIconSet } from "../../../theme/ag-grid/agGridIconSet";
+import { AG_GRID_LOCALE_RU } from "../../../common/tableStuff/agGridLocale.ru";
 
 interface EpicData {
 	stageName: string;
@@ -297,8 +298,14 @@ export const CalculationResultTable = () => {
 
 	const theme =
 		mode === "light" || mode === undefined
-			? agGridCustomQuartzTheme
-			: themeQuartzDark;
+			? agGridCustomMUITheme
+			: agGridCustomMUIThemeDark;
+
+	const icons = useMemo<{
+		[key: string]: ((...args: any[]) => any) | string;
+	}>(() => {
+		return agGridIconSet;
+	}, []);
 
 	return (
 		<>
@@ -311,6 +318,8 @@ export const CalculationResultTable = () => {
 					rowData={rowData}
 					columnDefs={columnDefs}
 					defaultColDef={defaultColDef}
+					icons={icons}
+					localeText={AG_GRID_LOCALE_RU}
 					getRowStyle={(
 						params,
 					): Record<string, string | number> | undefined => {
@@ -340,11 +349,9 @@ export const CalculationResultTable = () => {
 					rowData={coefficientData}
 					columnDefs={coefficientColumnDefs}
 					defaultColDef={defaultCoefficientColDef}
-					theme={
-						mode === "light" || mode === undefined
-							? themeQuartz
-							: themeQuartzDark
-					}
+					theme={theme}
+					localeText={AG_GRID_LOCALE_RU}
+					icons={icons}
 					data-test-id="coefficients-table--AgGridReact-0"
 				/>
 			</TableWrapper>

@@ -200,67 +200,79 @@ export class CalculationService {
 		}
 	}
 
-    /**
-     * Export all calculations without pagination
-     */
-    async findAllForExport(
-        filters?: {
-            name?: string;
-            finalCoefficient?: { min?: number; max?: number };
-            createdAt?: { from?: Date; to?: Date };
-            status?: string;
-        },
-        sort?: { field: string; order: 'ASC' | 'DESC' },
-        selectedIds?: string[],
-    ): Promise<Calculation[]> {
-        const queryBuilder = this.calculationRepository.createQueryBuilder('calculation');
+	/**
+	 * Export all calculations without pagination
+	 */
+	async findAllForExport(
+		filters?: {
+			name?: string;
+			finalCoefficient?: { min?: number; max?: number };
+			createdAt?: { from?: Date; to?: Date };
+			status?: string;
+		},
+		sort?: { field: string; order: "ASC" | "DESC" },
+		selectedIds?: string[],
+	): Promise<Calculation[]> {
+		const queryBuilder =
+			this.calculationRepository.createQueryBuilder("calculation");
 
-        if (filters) {
-            if (filters.name) {
-                queryBuilder.andWhere('calculation.name LIKE :name', { name: `%${filters.name}%` });
-            }
+		if (filters) {
+			if (filters.name) {
+				queryBuilder.andWhere("calculation.name LIKE :name", {
+					name: `%${filters.name}%`,
+				});
+			}
 
-            if (filters.finalCoefficient) {
-                if (filters.finalCoefficient.min !== undefined) {
-                    queryBuilder.andWhere('calculation.finalCoefficient >= :minCoefficient', {
-                        minCoefficient: filters.finalCoefficient.min,
-                    });
-                }
-                if (filters.finalCoefficient.max !== undefined) {
-                    queryBuilder.andWhere('calculation.finalCoefficient <= :maxCoefficient', {
-                        maxCoefficient: filters.finalCoefficient.max,
-                    });
-                }
-            }
+			if (filters.finalCoefficient) {
+				if (filters.finalCoefficient.min !== undefined) {
+					queryBuilder.andWhere(
+						"calculation.finalCoefficient >= :minCoefficient",
+						{
+							minCoefficient: filters.finalCoefficient.min,
+						},
+					);
+				}
+				if (filters.finalCoefficient.max !== undefined) {
+					queryBuilder.andWhere(
+						"calculation.finalCoefficient <= :maxCoefficient",
+						{
+							maxCoefficient: filters.finalCoefficient.max,
+						},
+					);
+				}
+			}
 
-            if (filters.createdAt) {
-                if (filters.createdAt.from) {
-                    queryBuilder.andWhere('calculation.createdAt >= :fromDate', {
-                        fromDate: filters.createdAt.from,
-                    });
-                }
-                if (filters.createdAt.to) {
-                    queryBuilder.andWhere('calculation.createdAt <= :toDate', {
-                        toDate: filters.createdAt.to,
-                    });
-                }
-            }
+			if (filters.createdAt) {
+				if (filters.createdAt.from) {
+					queryBuilder.andWhere("calculation.createdAt >= :fromDate", {
+						fromDate: filters.createdAt.from,
+					});
+				}
+				if (filters.createdAt.to) {
+					queryBuilder.andWhere("calculation.createdAt <= :toDate", {
+						toDate: filters.createdAt.to,
+					});
+				}
+			}
 
-            if (filters.status) {
-                queryBuilder.andWhere('calculation.questionnaireData::jsonb->>\'status\' = :status', {
-                    status: filters.status,
-                });
-            }
-        }
+			if (filters.status) {
+				queryBuilder.andWhere(
+					"calculation.questionnaireData::jsonb->>'status' = :status",
+					{
+						status: filters.status,
+					},
+				);
+			}
+		}
 
-        if (selectedIds && selectedIds.length > 0) {
-            queryBuilder.andWhere({ id: In(selectedIds) });
-        }
+		if (selectedIds && selectedIds.length > 0) {
+			queryBuilder.andWhere({ id: In(selectedIds) });
+		}
 
-        const sortField = sort?.field || 'createdAt';
-        const sortOrder = sort?.order || 'DESC';
-        queryBuilder.orderBy(`calculation.${sortField}`, sortOrder);
+		const sortField = sort?.field || "createdAt";
+		const sortOrder = sort?.order || "DESC";
+		queryBuilder.orderBy(`calculation.${sortField}`, sortOrder);
 
-        return queryBuilder.getMany();
-    }
+		return queryBuilder.getMany();
+	}
 }

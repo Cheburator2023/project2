@@ -41,7 +41,7 @@ export const inputsCustomizations: Components<Theme> = {
 	MuiInputLabel: {
 		styleOverrides: {
 			root: {
-				pointerEvents: "all",
+				pointerEvents: "none",
 			},
 		},
 	},
