@@ -21,6 +21,7 @@ import {
 	ApiResponse,
 	ApiTags,
 } from "@nestjs/swagger";
+import { Logger } from "@nestjs/common";
 import { RealmRole } from "../../../shared/decorators/realm-role.decorator";
 import { StreamFilter } from "../../../shared/decorators/stream-filter.decorator";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
@@ -45,10 +46,12 @@ import { ExportValidationPipe } from "../pipe/export-validation.pipe";
 @Controller("calculation")
 @UseInterceptors(StreamFilterInterceptor)
 export class CalculationController {
-	constructor(
-		private readonly calculationService: CalculationService,
-		private readonly excelExportService: ExcelExportService,
-	) {}
+    private readonly logger = new Logger(CalculationController.name);
+
+    constructor(
+        private readonly calculationService: CalculationService,
+        private readonly excelExportService: ExcelExportService,
+    ) {}
 
 	@Post()
 	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
@@ -70,18 +73,33 @@ export class CalculationController {
 		status: HttpStatus.UNAUTHORIZED,
 		description: "Unauthorized. Authentication required.",
 	})
-	async create(
-		@Body() createCalculationDto: CreateCalculationDto,
-		@CurrentUser() user: any,
-	): Promise<CalculationResponseDto> {
-		const calculation = await this.calculationService.create(
-			createCalculationDto,
-			user,
-		);
-		return this.mapToResponseDto(calculation);
+    async create(
+        @Body() createCalculationDto: CreateCalculationDto,
+        @CurrentUser() user: any,
+    ): Promise<CalculationResponseDto> {
+        this.logger.log(
+            `Creating new calculation with name: ${createCalculationDto.calcName}`,
+        );
+        try {
+            const calculation = await this.calculationService.create(
+                createCalculationDto,
+                user,
+            );
+            this.logger.log(
+                `Successfully created calculation with ID: ${calculation.id}`,
+            );
+            return this.mapToResponseDto(calculation);
+        } catch (error) {
+            this.logger.error(
+                `Failed to create calculation: ${error.message}`,
+                error.stack,
+            );
+            throw error;
+        }
 	}
 
 	@Put(":id")
+    @StreamFilter()
 	@RealmRole(Permission.ANKETA_EDIT_CALCULATION)
 	@UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 	@ApiOperation({
@@ -110,15 +128,25 @@ export class CalculationController {
 		status: HttpStatus.UNAUTHORIZED,
 		description: "Unauthorized. Authentication required.",
 	})
-	async update(
-		@Param("id", ParseUUIDPipe) id: string,
-		@Body() updateCalculationDto: UpdateCalculationDto,
-	): Promise<CalculationResponseDto> {
-		const calculation = await this.calculationService.updateCalculation(
-			id,
-			updateCalculationDto,
-		);
-		return this.mapToResponseDto(calculation);
+    async update(
+        @Param("id", ParseUUIDPipe) id: string,
+        @Body() updateCalculationDto: UpdateCalculationDto,
+    ): Promise<CalculationResponseDto> {
+        this.logger.log(`Updating calculation with ID: ${id}`);
+        try {
+            const calculation = await this.calculationService.updateCalculation(
+                id,
+                updateCalculationDto,
+            );
+            this.logger.log(`Successfully updated calculation with ID: ${id}`);
+            return this.mapToResponseDto(calculation);
+        } catch (error) {
+            this.logger.error(
+                `Failed to update calculation with ID: ${id}: ${error.message}`,
+                error.stack,
+            );
+            throw error;
+        }
 	}
 
 	@Get("all")
@@ -151,17 +179,30 @@ export class CalculationController {
 		status: HttpStatus.UNAUTHORIZED,
 		description: "Unauthorized. Authentication required.",
 	})
-	async findAllPaginated(
-		@Query() paginationDto: PaginationDto,
-	): Promise<PaginatedCalculationResponseDto> {
-		const result =
-			await this.calculationService.findAllPaginated(paginationDto);
-		return {
-			data: result.data.map((calculation) =>
-				this.mapToResponseDto(calculation),
-			),
-			meta: result.meta,
-		};
+    async findAllPaginated(
+        @Query() paginationDto: PaginationDto,
+    ): Promise<PaginatedCalculationResponseDto> {
+        this.logger.log(
+            `Fetching paginated calculations, page: ${paginationDto.page}, limit: ${paginationDto.limit}`,
+        );
+        try {
+            const result = await this.calculationService.findAllPaginated(paginationDto);
+            this.logger.log(
+                `Successfully fetched ${result.data.length} calculations`,
+            );
+            return {
+                data: result.data.map((calculation) =>
+                    this.mapToResponseDto(calculation),
+                ),
+                meta: result.meta,
+            };
+        } catch (error) {
+            this.logger.error(
+                `Failed to fetch paginated calculations: ${error.message}`,
+                error.stack,
+            );
+            throw error;
+        }
 	}
 
 	@Get("all/list")
@@ -180,14 +221,25 @@ export class CalculationController {
 		status: HttpStatus.UNAUTHORIZED,
 		description: "Unauthorized. Authentication required.",
 	})
-	async findAll(): Promise<CalculationResponseDto[]> {
-		const calculations = await this.calculationService.findAll();
-		return calculations.map((calculation) =>
-			this.mapToResponseDto(calculation),
-		);
+    async findAll(): Promise<CalculationResponseDto[]> {
+        this.logger.log('Fetching all calculations');
+        try {
+            const calculations = await this.calculationService.findAll();
+            this.logger.log(`Successfully fetched ${calculations.length} calculations`);
+            return calculations.map((calculation) =>
+                this.mapToResponseDto(calculation),
+            );
+        } catch (error) {
+            this.logger.error(
+                `Failed to fetch all calculations: ${error.message}`,
+                error.stack,
+            );
+            throw error;
+        }
 	}
 
 	@Get(":id")
+    @StreamFilter()
 	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
 	@ApiOperation({
 		summary: "Get calculation by ID",
@@ -218,11 +270,22 @@ export class CalculationController {
 	async findOne(
 		@Param("id", ParseUUIDPipe) id: string,
 	): Promise<CalculationResponseDto> {
-		const calculation = await this.calculationService.findOne(id);
-		return this.mapToResponseDto(calculation);
+        this.logger.log(`Fetching calculation with ID: ${id}`);
+        try {
+            const calculation = await this.calculationService.findOne(id);
+            this.logger.log(`Successfully fetched calculation with ID: ${id}`);
+            return this.mapToResponseDto(calculation);
+        } catch (error) {
+            this.logger.error(
+                `Failed to fetch calculation with ID: ${id}: ${error.message}`,
+                error.stack,
+            );
+            throw error;
+        }
 	}
 
 	@Get("export/excel")
+    @StreamFilter()
 	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
 	@ApiOperation({
 		summary: "Export calculations to Excel",
@@ -251,57 +314,72 @@ export class CalculationController {
 		@Query() queryParams: TransformedExportCalculationDto,
 		@Res() res: Response,
 	): Promise<void> {
-		const filters = {
-			name: queryParams.name,
-			finalCoefficient:
-				queryParams.minFinalCoefficient || queryParams.maxFinalCoefficient
-					? {
-							min: queryParams.minFinalCoefficient,
-							max: queryParams.maxFinalCoefficient,
-						}
-					: undefined,
-			createdAt:
-				queryParams.createdFrom || queryParams.createdTo
-					? {
-							from: queryParams.createdFrom
-								? new Date(queryParams.createdFrom)
-								: undefined,
-							to: queryParams.createdTo
-								? new Date(queryParams.createdTo)
-								: undefined,
-						}
-					: undefined,
-			status: queryParams.status,
-		};
+        this.logger.log('Exporting calculations to Excel');
+        try {
+            const filters = {
+                name: queryParams.name,
+                finalCoefficient:
+                    queryParams.minFinalCoefficient || queryParams.maxFinalCoefficient
+                        ? {
+                                min: queryParams.minFinalCoefficient,
+                                max: queryParams.maxFinalCoefficient,
+                            }
+                        : undefined,
+                createdAt:
+                    queryParams.createdFrom || queryParams.createdTo
+                        ? {
+                                from: queryParams.createdFrom
+                                    ? new Date(queryParams.createdFrom)
+                                    : undefined,
+                                to: queryParams.createdTo
+                                    ? new Date(queryParams.createdTo)
+                                    : undefined,
+                            }
+                        : undefined,
+                status: queryParams.status,
+            };
 
-		const sort =
-			queryParams.field || queryParams.order
-				? {
-						field: queryParams.field || "createdAt",
-						order: queryParams.order || "DESC",
-					}
-				: undefined;
+            const sort =
+                queryParams.field || queryParams.order
+                    ? {
+                            field: queryParams.field || "createdAt",
+                            order: queryParams.order || "DESC",
+                        }
+                    : undefined;
 
-		const calculations = await this.calculationService.findAllForExport(
-			filters,
-			sort,
-			queryParams.selectedIdsArray,
-		);
+            this.logger.debug(
+                `Export filters: ${JSON.stringify(filters)}, sort: ${JSON.stringify(sort)}`,
+            );
 
-		const buffer =
-			await this.excelExportService.generateExcelFile(calculations);
+            const calculations = await this.calculationService.findAllForExport(
+                filters,
+                sort,
+                queryParams.selectedIdsArray,
+            );
 
-		res.setHeader(
-			"Content-Type",
-			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-		);
-		res.setHeader(
-			"Content-Disposition",
-			`attachment; filename=Calculation-List-${new Date().toLocaleDateString("ru-RU")}.xlsx`,
-		);
+            this.logger.log(`Exporting ${calculations.length} calculations to Excel`);
 
-		res.end(buffer);
-	}
+            const buffer = await this.excelExportService.generateExcelFile(calculations);
+
+            res.setHeader(
+                "Content-Type",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            );
+            res.setHeader(
+                "Content-Disposition",
+                `attachment; filename=Calculation-List-${new Date().toLocaleDateString("ru-RU")}.xlsx`,
+            );
+
+            res.end(buffer);
+            this.logger.log("Successfully exported calculations to Excel");
+        } catch (error) {
+            this.logger.error(
+                `Failed to export calculations to Excel: ${error.message}`,
+                error.stack,
+            );
+            throw error;
+        }
+    }
 
 	private mapToResponseDto(calculation: Calculation): CalculationResponseDto {
 		const generalUncertainty = Array.isArray(

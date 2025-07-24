@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import * as ExcelJS from "exceljs";
 import { Calculation } from "../entities/calculation.entity";
 import {
@@ -9,40 +9,53 @@ import {
 
 @Injectable()
 export class ExcelExportService {
-	async generateExcelFile(calculations: Calculation[]): Promise<Buffer> {
-		const workbook = new ExcelJS.Workbook();
-		const worksheet = workbook.addWorksheet("Calculations");
+    private readonly logger = new Logger(ExcelExportService.name);
 
-        worksheet.columns = this.getWorksheetColumns();
+    async generateExcelFile(calculations: Calculation[]): Promise<Buffer> {
+        this.logger.log(`Generating Excel file for ${calculations.length} calculations`);
+        try {
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet("Calculations");
 
-        calculations.forEach((calculation) => {
-            const row = this.createBaseRowData(calculation);
+            worksheet.columns = this.getWorksheetColumns();
 
-            // Обработка рисков
-            this.processUncertainties(row, calculation);
+            calculations.forEach((calculation) => {
+                const row = this.createBaseRowData(calculation);
 
-            // Обработка типов алгоритмов
-            this.processAlgorithmTypes(row, calculation);
+                // Обработка рисков
+                this.processUncertainties(row, calculation);
 
-            // Обработка каналов внедрения
-            this.processDeploymentChannels(row, calculation);
+                // Обработка типов алгоритмов
+                this.processAlgorithmTypes(row, calculation);
 
-            // Обработка этапов расчета
-            this.processCalculationStages(row, calculation);
+                // Обработка каналов внедрения
+                this.processDeploymentChannels(row, calculation);
 
-            // Добавление отклонения от средней
-            this.processDeviationPercent(row, calculation);
+                // Обработка этапов расчета
+                this.processCalculationStages(row, calculation);
 
-            // Обработка статусов отключенных этапов
-            this.processDisabledStages(row, calculation);
+                // Добавление отклонения от средней
+                this.processDeviationPercent(row, calculation);
 
-            worksheet.addRow(row);
-        });
+                // Обработка статусов отключенных этапов
+                this.processDisabledStages(row, calculation);
 
-        // Форматирование заголовков
-        this.formatHeaderRow(worksheet);
+                worksheet.addRow(row);
+            });
 
-        return workbook.xlsx.writeBuffer() as Promise<Buffer>;
+            // Форматирование заголовков
+            this.formatHeaderRow(worksheet);
+
+            const excelBuffer = await workbook.xlsx.writeBuffer();
+            this.logger.log('Successfully generated Excel file');
+            return Buffer.from(excelBuffer);
+        } catch (error) {
+            this.logger.error(
+                `Failed to generate Excel file: ${error.message}`,
+                error.stack,
+            );
+            throw error;
+        }
     }
 
     private getWorksheetColumns() {
