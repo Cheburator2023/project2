@@ -53,6 +53,7 @@ export function Header({
 						<MenuButton
 							aria-label="menu"
 							onClick={() => toggleSideMenu()}
+							title={isSideMenuVisible ? "Закртыть меню" : "Открыть меню"}
 							data-test-id="header--MenuButton-0"
 						>
 							{!isSideMenuVisible ? (
@@ -62,7 +63,11 @@ export function Header({
 							)}
 						</MenuButton>
 						{!!history.state.idx && (
-							<IconButton size="small" onClick={() => navigate(-1)}>
+							<IconButton
+								size="small"
+								onClick={() => navigate(-1)}
+								title="Вернуться назад"
+							>
 								<ArrowBackIcon />
 							</IconButton>
 						)}

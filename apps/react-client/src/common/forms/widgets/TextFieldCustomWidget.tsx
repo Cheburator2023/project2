@@ -149,7 +149,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 				onChange={_handleChangeMult as any}
 				select
 				id={id}
-				title={value}
+				// title={value}
 				required={required}
 				disabled={isDisabled}
 				autoFocus={autofocus}
@@ -239,7 +239,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 					inputLabel: (props) =>
 						options?.tooltip ? (
 							<Flex gap={6} position="relative">
-								<InputLabel {...props} />
+								<InputLabel {...props} title="" />
 								<div title={options?.tooltip}>
 									<InfoOutlineIcon
 										sx={{
@@ -431,7 +431,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 	return (
 		<TextFieldCustom
 			id={id}
-			title={id}
+			// title={id}
 			label={label || schema?.title}
 			value={value}
 			required={required}
@@ -476,7 +476,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 				inputLabel: (props) =>
 					options?.tooltip ? (
 						<Flex gap={6} position="relative">
-							<InputLabel {...props} />
+							<InputLabel {...props} title="" />
 							<div title={options?.tooltip}>
 								<InfoOutlineIcon
 									sx={{

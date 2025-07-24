@@ -133,7 +133,10 @@ export const AnketaPreviewPage = () => {
 	return (
 		<div data-test-id="anketa-details-page--div-0">
 			<Header calcId={calcId} data-test-id="anketa-details-page--Header-0">
-				<IconButton onClick={() => setComfyView(!comfyView)}>
+				<IconButton
+					title="Сменить режим разметки форм/карточек"
+					onClick={() => setComfyView(!comfyView)}
+				>
 					{!comfyView ? <ViewComfyIcon /> : <ViewDayIcon />}
 				</IconButton>
 				{!isEditing && canEditCalculation && (
