@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.5.3](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.5.2...v1.5.3) (2025-07-25)
+
+
+### Bug Fixes
+
+* **Dockerfile:** up root image ([3a51603](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/3a516030285cadd8216dfa769051521542bd8cb0))
+
 ## [1.5.2](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.5.1...v1.5.2) (2025-07-25)
 
 
