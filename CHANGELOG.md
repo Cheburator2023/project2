@@ -1,5 +1,19 @@
 # Semantic Versioning Changelog
 
+# [1.5.0](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.4.1...v1.5.0) (2025-07-25)
+
+
+### Bug Fixes
+
+* dima ui fixes ([466cd3a](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/466cd3a2a8383e54e5617d4fa461252f7024c99f))
+* dima ui fixes ([f4a1fc9](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/f4a1fc9bafc9b3a275439670f586fe1b83f0b7d8))
+
+
+### Features
+
+* placeholder added / number input error ui fix ([a523678](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/a52367857a5355f5d706b9fe01406d8998f1f073))
+* Поправил выгрузку отчета в Excel ([f0bd6f6](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/f0bd6f6a074d990ba4fde9dcf3055fcde7b98346))
+
 ## [1.4.1](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.4.0...v1.4.1) (2025-07-23)
 
 
