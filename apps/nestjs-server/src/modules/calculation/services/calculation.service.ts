@@ -1,7 +1,6 @@
 import {
 	BadRequestException,
 	Injectable,
-    Logger,
 	NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -10,14 +9,16 @@ import { CreateCalculationDto, PaginationDto } from "../dto";
 import { UpdateCalculationDto } from "../dto/request/update-calculation.dto";
 import { Calculation } from "../entities/calculation.entity";
 import { PaginatedResult } from "../interfaces/paginated-result.interface";
+import { CustomLogger } from "src/shared/services/logger.service";
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class CalculationService {
-    private readonly logger = new Logger(CalculationService.name);
 
     constructor(
         @InjectRepository(Calculation)
         private calculationRepository: Repository<Calculation>,
+        private readonly logger: CustomLogger,
     ) {}
 
     /**
@@ -27,9 +28,8 @@ export class CalculationService {
         createCalculationDto: CreateCalculationDto,
         user: any,
     ): Promise<Calculation> {
-        this.logger.log(
-            `Creating new calculation with name: ${createCalculationDto.calcName}`,
-        );
+        const eventId = uuidv4();
+        this.logger.log(`Creating calculation [${eventId}]`, 'CalculationService.create');
         try {
             const generalUncertaintyObject = {};
             if (createCalculationDto.generalUncertainty) {
@@ -94,15 +94,13 @@ export class CalculationService {
                 author: authorName,
             } as Partial<Calculation>);
 
-            const savedCalculation = await this.calculationRepository.save(calculation);
-            this.logger.log(
-                `Successfully created calculation with ID: ${savedCalculation.id}`,
-            );
-            return savedCalculation;
+            this.logger.log(`Calculation created successfully [${eventId}]`, 'CalculationService.create');
+            return calculation;
         } catch (error) {
             this.logger.error(
-                `Failed to create calculation: ${error.message}`,
+                `Failed to create calculation [${eventId}]: ${error.message}`,
                 error.stack,
+                'CalculationService.create',
             );
             throw new BadRequestException(
                 `Failed to create calculation: ${error.message}`,
