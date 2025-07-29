@@ -4,11 +4,16 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import * as express from "express";
 import { AppModule } from "./app.module";
 import { logger } from "./shared/logger/logger.config";
+import { LoggingInterceptor } from "./shared/interceptors/logging.interceptor";
+import { CustomLogger } from "./shared/services/logger.service";
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule, {
         logger: ['log', 'error', 'warn', 'debug', 'verbose'],
     });
+
+    const customLogger = app.get(CustomLogger);
+    app.useGlobalInterceptors(new LoggingInterceptor(customLogger));
 
 	app.enableCors({
 		origin: "*",

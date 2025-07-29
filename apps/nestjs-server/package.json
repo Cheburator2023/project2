@@ -17,9 +17,9 @@
 		"test:watch": "jest --watch",
 		"test:cov": "jest --coverage",
 		"test:ci": "jest --runInBand --detectOpenHandles --forceExit",
-        "migration:run": "ts-node ./node_modules/typeorm/cli.js migration:run -d ./src/ormconfig.ts",
-        "migration:revert": "ts-node ./node_modules/typeorm/cli.js migration:revert -d ./src/ormconfig.ts",
-        "migration:generate": "typeorm-ts-node-commonjs migration:generate ./src/migrations/$npm_config_name -d ./src/ormconfig.ts"
+		"migration:run": "ts-node ./node_modules/typeorm/cli.js migration:run -d ./src/ormconfig.ts",
+		"migration:revert": "ts-node ./node_modules/typeorm/cli.js migration:revert -d ./src/ormconfig.ts",
+		"migration:generate": "typeorm-ts-node-commonjs migration:generate ./src/migrations/$npm_config_name -d ./src/ormconfig.ts"
 	},
 	"dependencies": {
 		"@nestjs/cli": "11.0.5",
@@ -35,8 +35,8 @@
 		"@nestjs/typeorm": "11.0.0",
 		"class-transformer": "0.5.1",
 		"class-validator": "0.14.2",
-        "exceljs": "^4.4.0",
-        "nest-keycloak-connect": "2.0.0-alpha.1",
+		"exceljs": "^4.4.0",
+		"nest-keycloak-connect": "2.0.0-alpha.1",
 		"pg": "8.14.1",
 		"reflect-metadata": "0.2.2",
 		"typeorm": "0.3.21"
@@ -46,6 +46,7 @@
 		"@types/jest": "29.5.14",
 		"@types/node": "22.13.14",
 		"@types/supertest": "6.0.3",
+		"@types/uuid": "^10.0.0",
 		"globals": "16.0.0",
 		"jest": "29.7.0",
 		"source-map-support": "0.5.21",

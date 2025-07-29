@@ -7,6 +7,7 @@ import { QuestionnaireModule } from "./modules/questionnaire/questionnaire.modul
 import { DatabaseModule } from "./shared/database/database.module";
 import { GodModeGuard } from "./shared/keycloak/god-mode.guard";
 import { KeycloakModule } from "./shared/keycloak/keycloak.module";
+import { CustomLogger } from "./shared/services/logger.service";
 @Module({
 	imports: [
 		ConfigModule.forRoot({
@@ -19,6 +20,7 @@ import { KeycloakModule } from "./shared/keycloak/keycloak.module";
 		QuestionnaireModule,
 	],
 	providers: [
+        CustomLogger,
 		// AuthGuard
 		{
 			provide: "DELEGATE_GUARD_AUTH",

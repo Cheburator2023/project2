@@ -40,22 +40,24 @@ import { Calculation } from "../entities/calculation.entity";
 import { ExcelExportService } from "../services/excel-export.service";
 import { Response } from "express";
 import { ExportValidationPipe } from "../pipe/export-validation.pipe";
+import { CustomLogger } from "src/shared/services/logger.service";
+import { JsonValidationPipe } from "../pipe/json-validation.pipe";
 
 @ApiBearerAuth("JWT-auth")
 @ApiTags("Calculation")
 @Controller("calculation")
 @UseInterceptors(StreamFilterInterceptor)
 export class CalculationController {
-    private readonly logger = new Logger(CalculationController.name);
 
     constructor(
         private readonly calculationService: CalculationService,
         private readonly excelExportService: ExcelExportService,
+        private readonly logger: CustomLogger,
     ) {}
 
 	@Post()
 	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
-	@UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+	@UsePipes(JsonValidationPipe)
 	@ApiOperation({
 		summary: "Create new calculation",
 		description: "Creates a new calculation with the provided data",
