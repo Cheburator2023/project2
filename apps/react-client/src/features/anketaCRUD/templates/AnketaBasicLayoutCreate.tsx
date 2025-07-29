@@ -59,7 +59,7 @@ export const AnketaBasicLayoutCreate = ({
 								maxHeight="100%"
 								height="100%"
 								padding="10px"
-								zoom={0.7}
+								zoom={0.8}
 								uuid="anketa_calculation_result_card"
 								data-test-id="anketa-basic-layout--Card-1"
 							>

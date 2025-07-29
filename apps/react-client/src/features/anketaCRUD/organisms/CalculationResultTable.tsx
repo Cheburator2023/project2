@@ -1,4 +1,4 @@
-import { styled, Typography, useColorScheme } from "@mui/material";
+import { styled, Typography, useColorScheme, Chip } from "@mui/material";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
@@ -12,9 +12,11 @@ import {
 	type ColDef,
 	GetMainMenuItemsParams,
 	type ValueFormatterParams,
+	type ICellRendererParams,
+	RowHeightParams,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
 	agGridCustomMUITheme,
 	agGridCustomMUIThemeDark,
@@ -29,6 +31,7 @@ interface EpicData {
 	offset?: number;
 	stageBaseValue?: number;
 	disabled?: boolean;
+	rowHeight?: number;
 }
 
 interface CoefficientData {
@@ -97,6 +100,7 @@ const processStageResults = (
 		stageName: "Итоговая оценка",
 		score: totalScore,
 		stageBaseValue: totalScoreBase,
+		rowHeight: 60,
 		offset: ((totalScore - totalScoreBase) / totalScoreBase) * 100,
 	};
 
@@ -137,7 +141,10 @@ export const CalculationResultTable = () => {
 
 				if (params.data?.stageName === "Итоговая оценка") {
 					style.fontWeight = "bold";
-					style.fontSize = "1.1em";
+					style.fontSize = "20px";
+					style.display = "flex";
+					style.alignItems = "center";
+					style.backgroundColor = "#57b1ff38";
 				}
 
 				if (params.data?.disabled) {
@@ -152,17 +159,34 @@ export const CalculationResultTable = () => {
 			headerName: "Базовая оценка по стриму (СФЕРА)",
 			field: "stageBaseValue",
 			flex: 1,
-		},
-		{
-			headerName: "Оценка с поправкой на коэффициент сложности",
-			field: "score",
-			flex: 1,
 			cellStyle: (params: CellClassParams<EpicData>): CellStyle => {
 				const style: CellStyle = {};
 
 				if (params.data?.stageName === "Итоговая оценка") {
 					style.fontWeight = "bold";
-					style.fontSize = "1.1em";
+					style.fontSize = "20px";
+					style.display = "flex";
+					style.alignItems = "center";
+					style.backgroundColor = "#57b1ff38";
+				}
+
+				return style;
+			},
+		},
+		{
+			headerName: "Оценка с поправкой на коэффициент сложности",
+			field: "score",
+			flex: 1,
+			// cellRenderer: TotalScoreChipRenderer,
+			cellStyle: (params: CellClassParams<EpicData>): CellStyle => {
+				const style: CellStyle = {};
+
+				if (params.data?.stageName === "Итоговая оценка") {
+					style.fontWeight = "bold";
+					style.fontSize = "20px";
+					style.display = "flex";
+					style.alignItems = "center";
+					style.backgroundColor = "#57b1ff38";
 				}
 
 				if (params.data?.disabled) {
@@ -222,8 +246,11 @@ export const CalculationResultTable = () => {
 				const style: CellStyle = {};
 
 				if (params.data?.stageName === "Итоговая оценка") {
+					style.fontSize = "20px";
 					style.fontWeight = "bold";
-					style.fontSize = "1.1em";
+					style.display = "flex";
+					style.alignItems = "center";
+					style.backgroundColor = "#57b1ff38";
 				}
 
 				if (params.value != null) {
@@ -307,6 +334,13 @@ export const CalculationResultTable = () => {
 		return agGridIconSet;
 	}, []);
 
+	const getRowHeight = useCallback(
+		(params: RowHeightParams): number | undefined | null => {
+			return params.data.rowHeight;
+		},
+		[],
+	);
+
 	return (
 		<>
 			<TableWrapper
@@ -320,6 +354,7 @@ export const CalculationResultTable = () => {
 					defaultColDef={defaultColDef}
 					icons={icons}
 					localeText={AG_GRID_LOCALE_RU}
+					getRowHeight={getRowHeight}
 					getRowStyle={(
 						params,
 					): Record<string, string | number> | undefined => {
