@@ -320,7 +320,7 @@ export const CalculationResultTable = () => {
 	const coefficientsHeight = coefficientData.length * 51.3;
 
 	useDeepEffect(() => {
-		setCalculationResult(rowData);
+		setCalculationResult(rowData.map(({ rowHeight, ...rest }) => rest));
 	}, [rowData]);
 
 	const theme =
