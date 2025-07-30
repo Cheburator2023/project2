@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.6.0](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.5.3...v1.6.0) (2025-07-29)
+
+
+### Features
+
+* **CalculationResultTable:** enhance styling and add row height customization ([c4c2454](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/c4c245434098b1e007f3f5f2cd16a5fc50275861))
+
 ## [1.5.3](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.5.2...v1.5.3) (2025-07-25)
 
 
