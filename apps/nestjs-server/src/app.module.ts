@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { APP_GUARD, Reflector } from "@nestjs/core";
+import { APP_GUARD, APP_INTERCEPTOR, Reflector } from "@nestjs/core";
 import { AuthGuard, ResourceGuard, RoleGuard } from "nest-keycloak-connect";
 import { CalculationModule } from "./modules/calculation/calculation.module";
 import { QuestionnaireModule } from "./modules/questionnaire/questionnaire.module";
@@ -8,6 +8,10 @@ import { DatabaseModule } from "./shared/database/database.module";
 import { GodModeGuard } from "./shared/keycloak/god-mode.guard";
 import { KeycloakModule } from "./shared/keycloak/keycloak.module";
 import { CustomLogger } from "./shared/services/logger.service";
+import { AbortInterceptor } from "./shared/interceptors/abort.interceptor";
+import { MiddlewareModule } from "./shared/middleware/middleware.module";
+import { LoggingInterceptor } from "./shared/interceptors/logging.interceptor";
+
 @Module({
 	imports: [
 		ConfigModule.forRoot({
@@ -18,6 +22,7 @@ import { CustomLogger } from "./shared/services/logger.service";
 		KeycloakModule,
 		CalculationModule,
 		QuestionnaireModule,
+        MiddlewareModule,
 	],
 	providers: [
         CustomLogger,
@@ -54,6 +59,14 @@ import { CustomLogger } from "./shared/services/logger.service";
 				new GodModeGuard(reflector, delegateGuard),
 			inject: [Reflector, "DELEGATE_GUARD_ROLE"],
 		},
+        {
+            provide: APP_INTERCEPTOR,
+            useClass: AbortInterceptor,
+        },
+        {
+            provide: APP_INTERCEPTOR,
+            useClass: LoggingInterceptor,
+        },
 	],
 })
 export class AppModule {}

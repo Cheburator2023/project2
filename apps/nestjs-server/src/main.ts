@@ -6,11 +6,15 @@ import { AppModule } from "./app.module";
 import { logger } from "./shared/logger/logger.config";
 import { LoggingInterceptor } from "./shared/interceptors/logging.interceptor";
 import { CustomLogger } from "./shared/services/logger.service";
+import { RateLimiterMiddleware } from "./shared/middleware/rate-limiter.middleware";
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule, {
-        logger: ['log', 'error', 'warn', 'debug', 'verbose'],
+        bodyParser: true,
     });
+
+    const rateLimiter = app.get(RateLimiterMiddleware);
+    app.use(rateLimiter.use.bind(rateLimiter));
 
     const customLogger = app.get(CustomLogger);
     app.useGlobalInterceptors(new LoggingInterceptor(customLogger));
@@ -20,8 +24,8 @@ async function bootstrap() {
 		credentials: true,
 	});
 
-	app.use(express.json());
-	app.use(express.urlencoded({ extended: true }));
+    app.use(express.json({ limit: '10mb' }));
+    app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 	app.useGlobalPipes(
 		new ValidationPipe({

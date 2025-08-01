@@ -9,8 +9,9 @@ import { CreateCalculationDto, PaginationDto } from "../dto";
 import { UpdateCalculationDto } from "../dto/request/update-calculation.dto";
 import { Calculation } from "../entities/calculation.entity";
 import { PaginatedResult } from "../interfaces/paginated-result.interface";
+import { AbortSignal } from "node-abort-controller";
 import { CustomLogger } from "src/shared/services/logger.service";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 
 @Injectable()
 export class CalculationService {
@@ -18,7 +19,7 @@ export class CalculationService {
     constructor(
         @InjectRepository(Calculation)
         private calculationRepository: Repository<Calculation>,
-        private readonly logger: CustomLogger,
+        private readonly customLogger: CustomLogger,
     ) {}
 
     /**
@@ -27,9 +28,12 @@ export class CalculationService {
     async create(
         createCalculationDto: CreateCalculationDto,
         user: any,
+        signal?: AbortSignal,
     ): Promise<Calculation> {
         const eventId = uuidv4();
-        this.logger.log(`Creating calculation [${eventId}]`, 'CalculationService.create');
+        this.customLogger.log(`Creating calculation [${eventId}]`, 'CalculationService.create');
+        this.checkAborted(signal);
+
         try {
             const generalUncertaintyObject = {};
             if (createCalculationDto.generalUncertainty) {
@@ -40,6 +44,8 @@ export class CalculationService {
                     };
                 });
             }
+
+            this.checkAborted(signal);
 
             const authorName = user
                 ? `${user.given_name || ""} ${user.family_name || ""}`.trim() ||
@@ -57,6 +63,8 @@ export class CalculationService {
                     offset: item.offset,
                     disabled: item.disabled,
                 })) || [];
+
+            this.checkAborted(signal);
 
             const calculation = this.calculationRepository.create({
                 calcName: createCalculationDto.calcName || "Новый расчет",
@@ -94,13 +102,21 @@ export class CalculationService {
                 author: authorName,
             } as Partial<Calculation>);
 
-            this.logger.log(`Calculation created successfully [${eventId}]`, 'CalculationService.create');
-            return calculation;
+            this.checkAborted(signal);
+
+            const savedCalculation = await this.calculationRepository.save(calculation);
+            this.customLogger.log(`Calculation created successfully [${eventId}]`, 'CalculationService.create');
+
+            return savedCalculation;
         } catch (error) {
-            this.logger.error(
-                `Failed to create calculation [${eventId}]: ${error.message}`,
+            this.customLogger.error(
+                "Failed to create calculation",
                 error.stack,
-                'CalculationService.create',
+                "CalculationService.create",
+                {
+                    error: error.message,
+                    dto: createCalculationDto,
+                },
             );
             throw new BadRequestException(
                 `Failed to create calculation: ${error.message}`,
@@ -114,17 +130,22 @@ export class CalculationService {
     async updateCalculation(
         id: string,
         updateDto: UpdateCalculationDto,
+        signal?: AbortSignal,
     ): Promise<Calculation> {
-        this.logger.log(`Updating calculation with ID: ${id}`);
+        this.customLogger.log(`Updating calculation with ID: ${id}`);
+        this.checkAborted(signal);
+
         try {
             const calculation = await this.calculationRepository.findOne({
                 where: { id },
             });
 
             if (!calculation) {
-                this.logger.warn(`Calculation with ID ${id} not found`);
+                this.customLogger.warn(`Calculation with ID ${id} not found`);
                 throw new NotFoundException(`Calculation with ID ${id} not found`);
             }
+
+            this.checkAborted(signal);
 
             if (updateDto.calcName !== undefined) {
                 calculation.calcName = updateDto.calcName;
@@ -140,13 +161,22 @@ export class CalculationService {
             if (updateDto.comment !== undefined)
                 calculation.comment = updateDto.comment;
 
-            const updatedCalculation = await this.calculationRepository.save(calculation);
-            this.logger.log(`Successfully updated calculation with ID: ${id}`);
+            this.checkAborted(signal);
+
+            const updatedCalculation = await this.calculationRepository.save(
+                calculation,
+            );
+            this.customLogger.log(`Successfully updated calculation with ID: ${id}`);
             return updatedCalculation;
         } catch (error) {
-            this.logger.error(
-                `Failed to update calculation with ID: ${id}: ${error.message}`,
+            this.customLogger.error(
+                `Failed to update calculation with ID: ${id}`,
                 error.stack,
+                "CalculationService.updateCalculation",
+                {
+                    error: error.message,
+                    updateDto,
+                },
             );
             if (error instanceof NotFoundException) {
                 throw error;
@@ -160,24 +190,36 @@ export class CalculationService {
     /**
      * Finds a calculation by ID
      */
-    async findOne(id: string): Promise<Calculation> {
-        this.logger.log(`Fetching calculation with ID: ${id}`);
+    async findOne(
+        id: string,
+        signal?: AbortSignal,
+    ): Promise<Calculation> {
+        this.customLogger.log(`Fetching calculation with ID: ${id}`);
+        this.checkAborted(signal);
+
         try {
             const calculation = await this.calculationRepository.findOne({
                 where: { id },
             });
 
+            this.checkAborted(signal);
+
             if (!calculation) {
-                this.logger.warn(`Calculation with ID ${id} not found`);
+                this.customLogger.warn(`Calculation with ID ${id} not found`);
                 throw new NotFoundException(`Calculation with ID ${id} not found`);
             }
 
-            this.logger.log(`Successfully fetched calculation with ID: ${id}`);
+            this.customLogger.log(`Successfully fetched calculation with ID: ${id}`);
             return calculation;
         } catch (error) {
-            this.logger.error(
-                `Failed to fetch calculation with ID: ${id}: ${error.message}`,
+            this.customLogger.error(
+                `Failed to fetch calculation with ID: ${id}`,
                 error.stack,
+                "CalculationService.findOne",
+                {
+                    error: error.message,
+                    calculationId: id,
+                },
             );
             throw error;
         }
@@ -188,12 +230,17 @@ export class CalculationService {
      */
     async findAllPaginated(
         paginationDto: PaginationDto,
+        signal?: AbortSignal,
     ): Promise<PaginatedResult<Calculation>> {
-        this.logger.log(
+        this.customLogger.log(
             `Fetching paginated calculations, page: ${paginationDto.page}, limit: ${paginationDto.limit}`,
         );
+        this.checkAborted(signal);
+
         try {
             const skip = (paginationDto.page - 1) * paginationDto.limit;
+
+            this.checkAborted(signal);
 
             const [results, total] = await this.calculationRepository.findAndCount({
                 skip,
@@ -201,9 +248,8 @@ export class CalculationService {
                 order: { createdAt: "DESC" },
             });
 
-            this.logger.log(
-                `Successfully fetched ${results.length} calculations out of ${total}`,
-            );
+            this.checkAborted(signal);
+
             return {
                 data: results,
                 meta: {
@@ -214,9 +260,14 @@ export class CalculationService {
                 },
             };
         } catch (error) {
-            this.logger.error(
-                `Failed to fetch paginated calculations: ${error.message}`,
+            this.customLogger.error(
+                "Failed to fetch paginated calculations",
                 error.stack,
+                "CalculationService.findAllPaginated",
+                {
+                    error: error.message,
+                    pagination: paginationDto,
+                },
             );
             throw new BadRequestException(
                 `Failed to fetch paginated calculations: ${error.message}`,
@@ -227,18 +278,26 @@ export class CalculationService {
     /**
      * Finds all calculations without pagination
      */
-    async findAll(): Promise<Calculation[]> {
-        this.logger.log("Fetching all calculations");
+    async findAll(signal?: AbortSignal): Promise<Calculation[]> {
+        this.customLogger.log("Fetching all calculations");
+        this.checkAborted(signal);
+
         try {
             const calculations = await this.calculationRepository.find({
                 order: { createdAt: "DESC" },
             });
-            this.logger.log(`Successfully fetched ${calculations.length} calculations`);
+
+            this.checkAborted(signal);
+
             return calculations;
         } catch (error) {
-            this.logger.error(
-                `Failed to fetch calculations: ${error.message}`,
+            this.customLogger.error(
+                "Failed to fetch calculations",
                 error.stack,
+                "CalculationService.findAll",
+                {
+                    error: error.message,
+                },
             );
             throw new BadRequestException(
                 `Failed to fetch calculations: ${error.message}`,
@@ -258,10 +317,10 @@ export class CalculationService {
         },
         sort?: { field: string; order: "ASC" | "DESC" },
         selectedIds?: string[],
+        signal?: AbortSignal,
     ): Promise<Calculation[]> {
-        this.logger.log(
-            `Exporting calculations with filters: ${JSON.stringify(filters)}, sort: ${JSON.stringify(sort)}`,
-        );
+        this.checkAborted(signal);
+
         try {
             const queryBuilder =
                 this.calculationRepository.createQueryBuilder("calculation");
@@ -323,15 +382,29 @@ export class CalculationService {
             const sortOrder = sort?.order || "DESC";
             queryBuilder.orderBy(`calculation.${sortField}`, sortOrder);
 
+            this.checkAborted(signal);
+
             const calculations = await queryBuilder.getMany();
-            this.logger.log(`Exporting ${calculations.length} calculations`);
+            this.customLogger.log(`Exporting ${calculations.length} calculations`);
             return calculations;
         } catch (error) {
-            this.logger.error(
-                `Failed to export calculations: ${error.message}`,
+            this.customLogger.error(
+                'Failed to export calculations',
                 error.stack,
+                'CalculationService.findAllForExport',
+                {
+                    error: error.message,
+                    filters,
+                    sort,
+                },
             );
             throw error;
+        }
+    }
+
+    private checkAborted(signal?: AbortSignal): void {
+        if (signal?.aborted) {
+            throw new Error('Request aborted by client');
         }
     }
 }
