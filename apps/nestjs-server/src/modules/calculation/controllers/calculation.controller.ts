@@ -21,7 +21,6 @@ import {
 	ApiResponse,
 	ApiTags,
 } from "@nestjs/swagger";
-import { Logger } from "@nestjs/common";
 import { RealmRole } from "../../../shared/decorators/realm-role.decorator";
 import { StreamFilter } from "../../../shared/decorators/stream-filter.decorator";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
@@ -40,19 +39,21 @@ import { Calculation } from "../entities/calculation.entity";
 import { ExcelExportService } from "../services/excel-export.service";
 import { Response } from "express";
 import { ExportValidationPipe } from "../pipe/export-validation.pipe";
-import { CustomLogger } from "src/shared/services/logger.service";
 import { JsonValidationPipe } from "../pipe/json-validation.pipe";
+import { CustomLogger } from "../../../shared/services/logger.service";
+import { ReqContext, RequestContext } from "../../../shared/decorators/request-context.decorator";
 
 @ApiBearerAuth("JWT-auth")
 @ApiTags("Calculation")
 @Controller("calculation")
 @UseInterceptors(StreamFilterInterceptor)
 export class CalculationController {
+    private activeRequests = new Map<string, AbortController>();
 
     constructor(
         private readonly calculationService: CalculationService,
         private readonly excelExportService: ExcelExportService,
-        private readonly logger: CustomLogger,
+        private readonly customLogger: CustomLogger,
     ) {}
 
 	@Post()
@@ -76,27 +77,45 @@ export class CalculationController {
 		description: "Unauthorized. Authentication required.",
 	})
     async create(
+        @ReqContext() ctx: RequestContext,
         @Body() createCalculationDto: CreateCalculationDto,
         @CurrentUser() user: any,
     ): Promise<CalculationResponseDto> {
-        this.logger.log(
-            `Creating new calculation with name: ${createCalculationDto.calcName}`,
-        );
+        this.activeRequests.set(ctx.requestId, ctx.abortController);
+
         try {
+            this.customLogger.log(
+                `Creating calculation [${ctx.requestId}]`,
+                "CalculationController.create",
+                { userId: user?.id },
+            );
+
             const calculation = await this.calculationService.create(
                 createCalculationDto,
                 user,
+                ctx.abortController.signal,
             );
-            this.logger.log(
-                `Successfully created calculation with ID: ${calculation.id}`,
+
+            this.customLogger.log(
+                `Calculation created [${ctx.requestId}]`,
+                "CalculationController.create",
+                { calculationId: calculation.id },
             );
+
             return this.mapToResponseDto(calculation);
         } catch (error) {
-            this.logger.error(
-                `Failed to create calculation: ${error.message}`,
+            this.customLogger.error(
+                `Failed to create calculation [${ctx.requestId}]`,
                 error.stack,
+                "CalculationController.create",
+                {
+                    error: error.message,
+                    dto: createCalculationDto,
+                },
             );
             throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
         }
 	}
 
@@ -131,23 +150,21 @@ export class CalculationController {
 		description: "Unauthorized. Authentication required.",
 	})
     async update(
-        @Param("id", ParseUUIDPipe) id: string,
+        @ReqContext() ctx: RequestContext,
+        @Param('id', ParseUUIDPipe) id: string,
         @Body() updateCalculationDto: UpdateCalculationDto,
     ): Promise<CalculationResponseDto> {
-        this.logger.log(`Updating calculation with ID: ${id}`);
+        this.activeRequests.set(ctx.requestId, ctx.abortController);
+
         try {
             const calculation = await this.calculationService.updateCalculation(
                 id,
                 updateCalculationDto,
+                ctx.abortController.signal,
             );
-            this.logger.log(`Successfully updated calculation with ID: ${id}`);
             return this.mapToResponseDto(calculation);
-        } catch (error) {
-            this.logger.error(
-                `Failed to update calculation with ID: ${id}: ${error.message}`,
-                error.stack,
-            );
-            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
         }
 	}
 
@@ -182,15 +199,15 @@ export class CalculationController {
 		description: "Unauthorized. Authentication required.",
 	})
     async findAllPaginated(
+        @ReqContext() ctx: RequestContext,
         @Query() paginationDto: PaginationDto,
     ): Promise<PaginatedCalculationResponseDto> {
-        this.logger.log(
-            `Fetching paginated calculations, page: ${paginationDto.page}, limit: ${paginationDto.limit}`,
-        );
+        this.activeRequests.set(ctx.requestId, ctx.abortController);
+
         try {
-            const result = await this.calculationService.findAllPaginated(paginationDto);
-            this.logger.log(
-                `Successfully fetched ${result.data.length} calculations`,
+            const result = await this.calculationService.findAllPaginated(
+                paginationDto,
+                ctx.abortController.signal,
             );
             return {
                 data: result.data.map((calculation) =>
@@ -198,125 +215,123 @@ export class CalculationController {
                 ),
                 meta: result.meta,
             };
-        } catch (error) {
-            this.logger.error(
-                `Failed to fetch paginated calculations: ${error.message}`,
-                error.stack,
-            );
-            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
         }
 	}
 
-	@Get("all/list")
-	@StreamFilter()
-	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
-	@ApiOperation({
-		summary: "Get all calculations (non-paginated)",
-		description: "Retrieves all calculations without pagination",
-	})
-	@ApiResponse({
-		status: HttpStatus.OK,
-		description: "List of all calculations",
-		type: [CalculationResponseDto],
-	})
-	@ApiResponse({
-		status: HttpStatus.UNAUTHORIZED,
-		description: "Unauthorized. Authentication required.",
-	})
-    async findAll(): Promise<CalculationResponseDto[]> {
-        this.logger.log('Fetching all calculations');
+    @Get("all/list")
+    @StreamFilter()
+    @RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
+    @ApiOperation({
+        summary: "Get all calculations (non-paginated)",
+        description: "Retrieves all calculations without pagination",
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: "List of all calculations",
+        type: [CalculationResponseDto],
+    })
+    @ApiResponse({
+        status: HttpStatus.UNAUTHORIZED,
+        description: "Unauthorized. Authentication required.",
+    })
+    async findAll(
+        @ReqContext() ctx: RequestContext,
+    ): Promise<CalculationResponseDto[]> {
+        this.activeRequests.set(ctx.requestId, ctx.abortController);
+
         try {
-            const calculations = await this.calculationService.findAll();
-            this.logger.log(`Successfully fetched ${calculations.length} calculations`);
+            const calculations = await this.calculationService.findAll(
+                ctx.abortController.signal,
+            );
             return calculations.map((calculation) =>
                 this.mapToResponseDto(calculation),
             );
-        } catch (error) {
-            this.logger.error(
-                `Failed to fetch all calculations: ${error.message}`,
-                error.stack,
-            );
-            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
         }
 	}
 
 	@Get(":id")
     @StreamFilter()
-	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
-	@ApiOperation({
-		summary: "Get calculation by ID",
-		description: "Retrieves a specific calculation by its unique identifier",
-	})
-	@ApiParam({
-		name: "id",
-		description: "Calculation unique identifier",
-		example: "550e8400-e29b-41d4-a716-446655440000",
-	})
-	@ApiResponse({
-		status: HttpStatus.OK,
-		description: "Calculation data",
-		type: CalculationResponseDto,
-	})
-	@ApiResponse({
-		status: HttpStatus.BAD_REQUEST,
-		description: "Invalid UUID format",
-	})
-	@ApiResponse({
-		status: HttpStatus.NOT_FOUND,
-		description: "Calculation not found",
-	})
-	@ApiResponse({
-		status: HttpStatus.UNAUTHORIZED,
-		description: "Unauthorized. Authentication required.",
-	})
-	async findOne(
-		@Param("id", ParseUUIDPipe) id: string,
-	): Promise<CalculationResponseDto> {
-        this.logger.log(`Fetching calculation with ID: ${id}`);
+    @RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
+    @ApiOperation({
+        summary: "Get calculation by ID",
+        description: "Retrieves a specific calculation by its unique identifier",
+    })
+    @ApiParam({
+        name: "id",
+        description: "Calculation unique identifier",
+        example: "550e8400-e29b-41d4-a716-446655440000",
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: "Calculation data",
+        type: CalculationResponseDto,
+    })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: "Invalid UUID format",
+    })
+    @ApiResponse({
+        status: HttpStatus.NOT_FOUND,
+        description: "Calculation not found",
+    })
+    @ApiResponse({
+        status: HttpStatus.UNAUTHORIZED,
+        description: "Unauthorized. Authentication required.",
+    })
+    async findOne(
+        @ReqContext() ctx: RequestContext,
+        @Param('id', ParseUUIDPipe) id: string,
+    ): Promise<CalculationResponseDto> {
+        this.activeRequests.set(ctx.requestId, ctx.abortController);
+
         try {
-            const calculation = await this.calculationService.findOne(id);
-            this.logger.log(`Successfully fetched calculation with ID: ${id}`);
-            return this.mapToResponseDto(calculation);
-        } catch (error) {
-            this.logger.error(
-                `Failed to fetch calculation with ID: ${id}: ${error.message}`,
-                error.stack,
+            const calculation = await this.calculationService.findOne(
+                id,
+                ctx.abortController.signal,
             );
-            throw error;
+            return this.mapToResponseDto(calculation);
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
         }
 	}
 
 	@Get("export/excel")
     @StreamFilter()
-	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
-	@ApiOperation({
-		summary: "Export calculations to Excel",
-		description:
-			"Exports calculations to Excel file with applied filters and sorting",
-	})
-	@ApiResponse({
-		status: HttpStatus.OK,
-		description: "Excel file download",
-		content: {
-			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
-				schema: { type: "string", format: "binary" },
-			},
-		},
-	})
-	@ApiResponse({
-		status: HttpStatus.BAD_REQUEST,
-		description: "Bad request",
-	})
-	@ApiResponse({
-		status: HttpStatus.UNAUTHORIZED,
-		description: "Unauthorized. Authentication required.",
-	})
-	@UsePipes(new ExportValidationPipe())
-	async exportToExcel(
-		@Query() queryParams: TransformedExportCalculationDto,
-		@Res() res: Response,
-	): Promise<void> {
-        this.logger.log('Exporting calculations to Excel');
+    @RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
+    @ApiOperation({
+        summary: "Export calculations to Excel",
+        description:
+            "Exports calculations to Excel file with applied filters and sorting",
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: "Excel file download",
+        content: {
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                schema: { type: "string", format: "binary" },
+            },
+        },
+    })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: "Bad request",
+    })
+    @ApiResponse({
+        status: HttpStatus.UNAUTHORIZED,
+        description: "Unauthorized. Authentication required.",
+    })
+    @UsePipes(new ExportValidationPipe())
+    async exportToExcel(
+        @ReqContext() ctx: RequestContext,
+        @Query() queryParams: TransformedExportCalculationDto,
+        @Res() res: Response,
+    ): Promise<void> {
+        this.activeRequests.set(ctx.requestId, ctx.abortController);
+
         try {
             const filters = {
                 name: queryParams.name,
@@ -349,19 +364,16 @@ export class CalculationController {
                         }
                     : undefined;
 
-            this.logger.debug(
-                `Export filters: ${JSON.stringify(filters)}, sort: ${JSON.stringify(sort)}`,
-            );
-
             const calculations = await this.calculationService.findAllForExport(
                 filters,
                 sort,
                 queryParams.selectedIdsArray,
+                ctx.abortController.signal,
             );
 
-            this.logger.log(`Exporting ${calculations.length} calculations to Excel`);
-
-            const buffer = await this.excelExportService.generateExcelFile(calculations);
+            const buffer = await this.excelExportService.generateExcelFile(
+                calculations,
+            );
 
             res.setHeader(
                 "Content-Type",
@@ -373,13 +385,8 @@ export class CalculationController {
             );
 
             res.end(buffer);
-            this.logger.log("Successfully exported calculations to Excel");
-        } catch (error) {
-            this.logger.error(
-                `Failed to export calculations to Excel: ${error.message}`,
-                error.stack,
-            );
-            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
         }
     }
 
