@@ -11,6 +11,7 @@ import { CustomLogger } from "./shared/services/logger.service";
 import { AbortInterceptor } from "./shared/interceptors/abort.interceptor";
 import { MiddlewareModule } from "./shared/middleware/middleware.module";
 import { LoggingInterceptor } from "./shared/interceptors/logging.interceptor";
+import { RetryInterceptor } from "./shared/interceptors/retry.interceptor";
 
 @Module({
 	imports: [
@@ -66,6 +67,10 @@ import { LoggingInterceptor } from "./shared/interceptors/logging.interceptor";
         {
             provide: APP_INTERCEPTOR,
             useClass: LoggingInterceptor,
+        },
+        {
+            provide: APP_INTERCEPTOR,
+            useClass: RetryInterceptor,
         },
 	],
 })

@@ -76,6 +76,18 @@ export class CalculationController {
 		status: HttpStatus.UNAUTHORIZED,
 		description: "Unauthorized. Authentication required.",
 	})
+    @ApiResponse({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+        description: "Too many requests. Rate limit exceeded.",
+        content: {
+            "application/json": {
+                example: {
+                    message: "Too many requests",
+                    retryAfter: "34 seconds"
+                }
+            }
+        }
+    })
     async create(
         @ReqContext() ctx: RequestContext,
         @Body() createCalculationDto: CreateCalculationDto,
@@ -149,6 +161,18 @@ export class CalculationController {
 		status: HttpStatus.UNAUTHORIZED,
 		description: "Unauthorized. Authentication required.",
 	})
+    @ApiResponse({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+        description: "Too many requests. Rate limit exceeded.",
+        content: {
+            "application/json": {
+                example: {
+                    message: "Too many requests",
+                    retryAfter: "34 seconds"
+                }
+            }
+        }
+    })
     async update(
         @ReqContext() ctx: RequestContext,
         @Param('id', ParseUUIDPipe) id: string,
@@ -198,6 +222,18 @@ export class CalculationController {
 		status: HttpStatus.UNAUTHORIZED,
 		description: "Unauthorized. Authentication required.",
 	})
+    @ApiResponse({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+        description: "Too many requests. Rate limit exceeded.",
+        content: {
+            "application/json": {
+                example: {
+                    message: "Too many requests",
+                    retryAfter: "34 seconds"
+                }
+            }
+        }
+    })
     async findAllPaginated(
         @ReqContext() ctx: RequestContext,
         @Query() paginationDto: PaginationDto,
@@ -235,6 +271,18 @@ export class CalculationController {
     @ApiResponse({
         status: HttpStatus.UNAUTHORIZED,
         description: "Unauthorized. Authentication required.",
+    })
+    @ApiResponse({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+        description: "Too many requests. Rate limit exceeded.",
+        content: {
+            "application/json": {
+                example: {
+                    message: "Too many requests",
+                    retryAfter: "34 seconds"
+                }
+            }
+        }
     })
     async findAll(
         @ReqContext() ctx: RequestContext,
@@ -282,6 +330,18 @@ export class CalculationController {
         status: HttpStatus.UNAUTHORIZED,
         description: "Unauthorized. Authentication required.",
     })
+    @ApiResponse({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+        description: "Too many requests. Rate limit exceeded.",
+        content: {
+            "application/json": {
+                example: {
+                    message: "Too many requests",
+                    retryAfter: "34 seconds"
+                }
+            }
+        }
+    })
     async findOne(
         @ReqContext() ctx: RequestContext,
         @Param('id', ParseUUIDPipe) id: string,
@@ -323,6 +383,18 @@ export class CalculationController {
     @ApiResponse({
         status: HttpStatus.UNAUTHORIZED,
         description: "Unauthorized. Authentication required.",
+    })
+    @ApiResponse({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+        description: "Too many requests. Rate limit exceeded.",
+        content: {
+            "application/json": {
+                example: {
+                    message: "Too many requests",
+                    retryAfter: "34 seconds"
+                }
+            }
+        }
     })
     @UsePipes(new ExportValidationPipe())
     async exportToExcel(
