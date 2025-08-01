@@ -12,6 +12,7 @@ import { PaginatedResult } from "../interfaces/paginated-result.interface";
 import { AbortSignal } from "node-abort-controller";
 import { CustomLogger } from "src/shared/services/logger.service";
 import { v4 as uuidv4 } from "uuid";
+import { RetryUtil } from "src/shared/utils/retry.util";
 
 @Injectable()
 export class CalculationService {
@@ -30,6 +31,8 @@ export class CalculationService {
         user: any,
         signal?: AbortSignal,
     ): Promise<Calculation> {
+        return RetryUtil.withRetry(
+            async () => {
         const eventId = uuidv4();
         this.customLogger.log(`Creating calculation [${eventId}]`, 'CalculationService.create');
         this.checkAborted(signal);
@@ -122,6 +125,11 @@ export class CalculationService {
                 `Failed to create calculation: ${error.message}`,
             );
         }
+            },
+            3,
+            1000,
+            (error) => !(error instanceof BadRequestException || error?.name === "AbortError")
+        );
     }
 
     /**
@@ -132,6 +140,8 @@ export class CalculationService {
         updateDto: UpdateCalculationDto,
         signal?: AbortSignal,
     ): Promise<Calculation> {
+        return RetryUtil.withRetry(
+            async () => {
         this.customLogger.log(`Updating calculation with ID: ${id}`);
         this.checkAborted(signal);
 
@@ -185,6 +195,11 @@ export class CalculationService {
                 `Failed to update calculation: ${error.message}`,
             );
         }
+            },
+            3,
+            1000,
+            (error) => !(error instanceof NotFoundException || error?.name === "AbortError")
+        );
     }
 
     /**
@@ -194,6 +209,8 @@ export class CalculationService {
         id: string,
         signal?: AbortSignal,
     ): Promise<Calculation> {
+        return RetryUtil.withRetry(
+            async () => {
         this.customLogger.log(`Fetching calculation with ID: ${id}`);
         this.checkAborted(signal);
 
@@ -223,6 +240,11 @@ export class CalculationService {
             );
             throw error;
         }
+            },
+            3,
+            1000,
+            (error) => !(error instanceof NotFoundException || error?.name === "AbortError")
+        );
     }
 
     /**
@@ -232,6 +254,8 @@ export class CalculationService {
         paginationDto: PaginationDto,
         signal?: AbortSignal,
     ): Promise<PaginatedResult<Calculation>> {
+        return RetryUtil.withRetry(
+            async () => {
         this.customLogger.log(
             `Fetching paginated calculations, page: ${paginationDto.page}, limit: ${paginationDto.limit}`,
         );
@@ -273,12 +297,19 @@ export class CalculationService {
                 `Failed to fetch paginated calculations: ${error.message}`,
             );
         }
+            },
+            3,
+            1000,
+            (error) => !(error?.name === "AbortError")
+        );
     }
 
     /**
      * Finds all calculations without pagination
      */
     async findAll(signal?: AbortSignal): Promise<Calculation[]> {
+        return RetryUtil.withRetry(
+            async () => {
         this.customLogger.log("Fetching all calculations");
         this.checkAborted(signal);
 
@@ -303,6 +334,11 @@ export class CalculationService {
                 `Failed to fetch calculations: ${error.message}`,
             );
         }
+            },
+            3,
+            1000,
+            (error) => !(error?.name === "AbortError")
+        );
     }
 
     /**
@@ -319,6 +355,8 @@ export class CalculationService {
         selectedIds?: string[],
         signal?: AbortSignal,
     ): Promise<Calculation[]> {
+        return RetryUtil.withRetry(
+            async () => {
         this.checkAborted(signal);
 
         try {
@@ -400,6 +438,11 @@ export class CalculationService {
             );
             throw error;
         }
+            },
+            3,
+            1000,
+            (error) => !(error?.name === "AbortError")
+        );
     }
 
     private checkAborted(signal?: AbortSignal): void {
