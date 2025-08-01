@@ -39,20 +39,26 @@ import { Calculation } from "../entities/calculation.entity";
 import { ExcelExportService } from "../services/excel-export.service";
 import { Response } from "express";
 import { ExportValidationPipe } from "../pipe/export-validation.pipe";
+import { JsonValidationPipe } from "../pipe/json-validation.pipe";
+import { CustomLogger } from "../../../shared/services/logger.service";
+import { ReqContext, RequestContext } from "../../../shared/decorators/request-context.decorator";
 
 @ApiBearerAuth("JWT-auth")
 @ApiTags("Calculation")
 @Controller("calculation")
 @UseInterceptors(StreamFilterInterceptor)
 export class CalculationController {
-	constructor(
-		private readonly calculationService: CalculationService,
-		private readonly excelExportService: ExcelExportService,
-	) {}
+    private activeRequests = new Map<string, AbortController>();
+
+    constructor(
+        private readonly calculationService: CalculationService,
+        private readonly excelExportService: ExcelExportService,
+        private readonly customLogger: CustomLogger,
+    ) {}
 
 	@Post()
 	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
-	@UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+	@UsePipes(JsonValidationPipe)
 	@ApiOperation({
 		summary: "Create new calculation",
 		description: "Creates a new calculation with the provided data",
@@ -70,18 +76,63 @@ export class CalculationController {
 		status: HttpStatus.UNAUTHORIZED,
 		description: "Unauthorized. Authentication required.",
 	})
-	async create(
-		@Body() createCalculationDto: CreateCalculationDto,
-		@CurrentUser() user: any,
-	): Promise<CalculationResponseDto> {
-		const calculation = await this.calculationService.create(
-			createCalculationDto,
-			user,
-		);
-		return this.mapToResponseDto(calculation);
+    @ApiResponse({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+        description: "Too many requests. Rate limit exceeded.",
+        content: {
+            "application/json": {
+                example: {
+                    message: "Too many requests",
+                    retryAfter: "34 seconds"
+                }
+            }
+        }
+    })
+    async create(
+        @ReqContext() ctx: RequestContext,
+        @Body() createCalculationDto: CreateCalculationDto,
+        @CurrentUser() user: any,
+    ): Promise<CalculationResponseDto> {
+        this.activeRequests.set(ctx.requestId, ctx.abortController);
+
+        try {
+            this.customLogger.log(
+                `Creating calculation [${ctx.requestId}]`,
+                "CalculationController.create",
+                { userId: user?.id },
+            );
+
+            const calculation = await this.calculationService.create(
+                createCalculationDto,
+                user,
+                ctx.abortController.signal,
+            );
+
+            this.customLogger.log(
+                `Calculation created [${ctx.requestId}]`,
+                "CalculationController.create",
+                { calculationId: calculation.id },
+            );
+
+            return this.mapToResponseDto(calculation);
+        } catch (error) {
+            this.customLogger.error(
+                `Failed to create calculation [${ctx.requestId}]`,
+                error.stack,
+                "CalculationController.create",
+                {
+                    error: error.message,
+                    dto: createCalculationDto,
+                },
+            );
+            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
 	}
 
 	@Put(":id")
+    @StreamFilter()
 	@RealmRole(Permission.ANKETA_EDIT_CALCULATION)
 	@UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 	@ApiOperation({
@@ -110,15 +161,35 @@ export class CalculationController {
 		status: HttpStatus.UNAUTHORIZED,
 		description: "Unauthorized. Authentication required.",
 	})
-	async update(
-		@Param("id", ParseUUIDPipe) id: string,
-		@Body() updateCalculationDto: UpdateCalculationDto,
-	): Promise<CalculationResponseDto> {
-		const calculation = await this.calculationService.updateCalculation(
-			id,
-			updateCalculationDto,
-		);
-		return this.mapToResponseDto(calculation);
+    @ApiResponse({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+        description: "Too many requests. Rate limit exceeded.",
+        content: {
+            "application/json": {
+                example: {
+                    message: "Too many requests",
+                    retryAfter: "34 seconds"
+                }
+            }
+        }
+    })
+    async update(
+        @ReqContext() ctx: RequestContext,
+        @Param('id', ParseUUIDPipe) id: string,
+        @Body() updateCalculationDto: UpdateCalculationDto,
+    ): Promise<CalculationResponseDto> {
+        this.activeRequests.set(ctx.requestId, ctx.abortController);
+
+        try {
+            const calculation = await this.calculationService.updateCalculation(
+                id,
+                updateCalculationDto,
+                ctx.abortController.signal,
+            );
+            return this.mapToResponseDto(calculation);
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
 	}
 
 	@Get("all")
@@ -151,157 +222,245 @@ export class CalculationController {
 		status: HttpStatus.UNAUTHORIZED,
 		description: "Unauthorized. Authentication required.",
 	})
-	async findAllPaginated(
-		@Query() paginationDto: PaginationDto,
-	): Promise<PaginatedCalculationResponseDto> {
-		const result =
-			await this.calculationService.findAllPaginated(paginationDto);
-		return {
-			data: result.data.map((calculation) =>
-				this.mapToResponseDto(calculation),
-			),
-			meta: result.meta,
-		};
+    @ApiResponse({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+        description: "Too many requests. Rate limit exceeded.",
+        content: {
+            "application/json": {
+                example: {
+                    message: "Too many requests",
+                    retryAfter: "34 seconds"
+                }
+            }
+        }
+    })
+    async findAllPaginated(
+        @ReqContext() ctx: RequestContext,
+        @Query() paginationDto: PaginationDto,
+    ): Promise<PaginatedCalculationResponseDto> {
+        this.activeRequests.set(ctx.requestId, ctx.abortController);
+
+        try {
+            const result = await this.calculationService.findAllPaginated(
+                paginationDto,
+                ctx.abortController.signal,
+            );
+            return {
+                data: result.data.map((calculation) =>
+                    this.mapToResponseDto(calculation),
+                ),
+                meta: result.meta,
+            };
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
 	}
 
-	@Get("all/list")
-	@StreamFilter()
-	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
-	@ApiOperation({
-		summary: "Get all calculations (non-paginated)",
-		description: "Retrieves all calculations without pagination",
-	})
-	@ApiResponse({
-		status: HttpStatus.OK,
-		description: "List of all calculations",
-		type: [CalculationResponseDto],
-	})
-	@ApiResponse({
-		status: HttpStatus.UNAUTHORIZED,
-		description: "Unauthorized. Authentication required.",
-	})
-	async findAll(): Promise<CalculationResponseDto[]> {
-		const calculations = await this.calculationService.findAll();
-		return calculations.map((calculation) =>
-			this.mapToResponseDto(calculation),
-		);
+    @Get("all/list")
+    @StreamFilter()
+    @RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
+    @ApiOperation({
+        summary: "Get all calculations (non-paginated)",
+        description: "Retrieves all calculations without pagination",
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: "List of all calculations",
+        type: [CalculationResponseDto],
+    })
+    @ApiResponse({
+        status: HttpStatus.UNAUTHORIZED,
+        description: "Unauthorized. Authentication required.",
+    })
+    @ApiResponse({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+        description: "Too many requests. Rate limit exceeded.",
+        content: {
+            "application/json": {
+                example: {
+                    message: "Too many requests",
+                    retryAfter: "34 seconds"
+                }
+            }
+        }
+    })
+    async findAll(
+        @ReqContext() ctx: RequestContext,
+    ): Promise<CalculationResponseDto[]> {
+        this.activeRequests.set(ctx.requestId, ctx.abortController);
+
+        try {
+            const calculations = await this.calculationService.findAll(
+                ctx.abortController.signal,
+            );
+            return calculations.map((calculation) =>
+                this.mapToResponseDto(calculation),
+            );
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
 	}
 
 	@Get(":id")
-	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
-	@ApiOperation({
-		summary: "Get calculation by ID",
-		description: "Retrieves a specific calculation by its unique identifier",
-	})
-	@ApiParam({
-		name: "id",
-		description: "Calculation unique identifier",
-		example: "550e8400-e29b-41d4-a716-446655440000",
-	})
-	@ApiResponse({
-		status: HttpStatus.OK,
-		description: "Calculation data",
-		type: CalculationResponseDto,
-	})
-	@ApiResponse({
-		status: HttpStatus.BAD_REQUEST,
-		description: "Invalid UUID format",
-	})
-	@ApiResponse({
-		status: HttpStatus.NOT_FOUND,
-		description: "Calculation not found",
-	})
-	@ApiResponse({
-		status: HttpStatus.UNAUTHORIZED,
-		description: "Unauthorized. Authentication required.",
-	})
-	async findOne(
-		@Param("id", ParseUUIDPipe) id: string,
-	): Promise<CalculationResponseDto> {
-		const calculation = await this.calculationService.findOne(id);
-		return this.mapToResponseDto(calculation);
+    @StreamFilter()
+    @RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
+    @ApiOperation({
+        summary: "Get calculation by ID",
+        description: "Retrieves a specific calculation by its unique identifier",
+    })
+    @ApiParam({
+        name: "id",
+        description: "Calculation unique identifier",
+        example: "550e8400-e29b-41d4-a716-446655440000",
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: "Calculation data",
+        type: CalculationResponseDto,
+    })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: "Invalid UUID format",
+    })
+    @ApiResponse({
+        status: HttpStatus.NOT_FOUND,
+        description: "Calculation not found",
+    })
+    @ApiResponse({
+        status: HttpStatus.UNAUTHORIZED,
+        description: "Unauthorized. Authentication required.",
+    })
+    @ApiResponse({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+        description: "Too many requests. Rate limit exceeded.",
+        content: {
+            "application/json": {
+                example: {
+                    message: "Too many requests",
+                    retryAfter: "34 seconds"
+                }
+            }
+        }
+    })
+    async findOne(
+        @ReqContext() ctx: RequestContext,
+        @Param('id', ParseUUIDPipe) id: string,
+    ): Promise<CalculationResponseDto> {
+        this.activeRequests.set(ctx.requestId, ctx.abortController);
+
+        try {
+            const calculation = await this.calculationService.findOne(
+                id,
+                ctx.abortController.signal,
+            );
+            return this.mapToResponseDto(calculation);
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
 	}
 
 	@Get("export/excel")
-	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
-	@ApiOperation({
-		summary: "Export calculations to Excel",
-		description:
-			"Exports calculations to Excel file with applied filters and sorting",
-	})
-	@ApiResponse({
-		status: HttpStatus.OK,
-		description: "Excel file download",
-		content: {
-			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
-				schema: { type: "string", format: "binary" },
-			},
-		},
-	})
-	@ApiResponse({
-		status: HttpStatus.BAD_REQUEST,
-		description: "Bad request",
-	})
-	@ApiResponse({
-		status: HttpStatus.UNAUTHORIZED,
-		description: "Unauthorized. Authentication required.",
-	})
-	@UsePipes(new ExportValidationPipe())
-	async exportToExcel(
-		@Query() queryParams: TransformedExportCalculationDto,
-		@Res() res: Response,
-	): Promise<void> {
-		const filters = {
-			name: queryParams.name,
-			finalCoefficient:
-				queryParams.minFinalCoefficient || queryParams.maxFinalCoefficient
-					? {
-							min: queryParams.minFinalCoefficient,
-							max: queryParams.maxFinalCoefficient,
-						}
-					: undefined,
-			createdAt:
-				queryParams.createdFrom || queryParams.createdTo
-					? {
-							from: queryParams.createdFrom
-								? new Date(queryParams.createdFrom)
-								: undefined,
-							to: queryParams.createdTo
-								? new Date(queryParams.createdTo)
-								: undefined,
-						}
-					: undefined,
-			status: queryParams.status,
-		};
+    @StreamFilter()
+    @RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
+    @ApiOperation({
+        summary: "Export calculations to Excel",
+        description:
+            "Exports calculations to Excel file with applied filters and sorting",
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: "Excel file download",
+        content: {
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                schema: { type: "string", format: "binary" },
+            },
+        },
+    })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: "Bad request",
+    })
+    @ApiResponse({
+        status: HttpStatus.UNAUTHORIZED,
+        description: "Unauthorized. Authentication required.",
+    })
+    @ApiResponse({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+        description: "Too many requests. Rate limit exceeded.",
+        content: {
+            "application/json": {
+                example: {
+                    message: "Too many requests",
+                    retryAfter: "34 seconds"
+                }
+            }
+        }
+    })
+    @UsePipes(new ExportValidationPipe())
+    async exportToExcel(
+        @ReqContext() ctx: RequestContext,
+        @Query() queryParams: TransformedExportCalculationDto,
+        @Res() res: Response,
+    ): Promise<void> {
+        this.activeRequests.set(ctx.requestId, ctx.abortController);
 
-		const sort =
-			queryParams.field || queryParams.order
-				? {
-						field: queryParams.field || "createdAt",
-						order: queryParams.order || "DESC",
-					}
-				: undefined;
+        try {
+            const filters = {
+                name: queryParams.name,
+                finalCoefficient:
+                    queryParams.minFinalCoefficient || queryParams.maxFinalCoefficient
+                        ? {
+                                min: queryParams.minFinalCoefficient,
+                                max: queryParams.maxFinalCoefficient,
+                            }
+                        : undefined,
+                createdAt:
+                    queryParams.createdFrom || queryParams.createdTo
+                        ? {
+                                from: queryParams.createdFrom
+                                    ? new Date(queryParams.createdFrom)
+                                    : undefined,
+                                to: queryParams.createdTo
+                                    ? new Date(queryParams.createdTo)
+                                    : undefined,
+                            }
+                        : undefined,
+                status: queryParams.status,
+            };
 
-		const calculations = await this.calculationService.findAllForExport(
-			filters,
-			sort,
-			queryParams.selectedIdsArray,
-		);
+            const sort =
+                queryParams.field || queryParams.order
+                    ? {
+                            field: queryParams.field || "createdAt",
+                            order: queryParams.order || "DESC",
+                        }
+                    : undefined;
 
-		const buffer =
-			await this.excelExportService.generateExcelFile(calculations);
+            const calculations = await this.calculationService.findAllForExport(
+                filters,
+                sort,
+                queryParams.selectedIdsArray,
+                ctx.abortController.signal,
+            );
 
-		res.setHeader(
-			"Content-Type",
-			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-		);
-		res.setHeader(
-			"Content-Disposition",
-			`attachment; filename=Calculation-List-${new Date().toLocaleDateString("ru-RU")}.xlsx`,
-		);
+            const buffer = await this.excelExportService.generateExcelFile(
+                calculations,
+            );
 
-		res.end(buffer);
-	}
+            res.setHeader(
+                "Content-Type",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            );
+            res.setHeader(
+                "Content-Disposition",
+                `attachment; filename=Calculation-List-${new Date().toLocaleDateString("ru-RU")}.xlsx`,
+            );
+
+            res.end(buffer);
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
+    }
 
 	private mapToResponseDto(calculation: Calculation): CalculationResponseDto {
 		const generalUncertainty = Array.isArray(
