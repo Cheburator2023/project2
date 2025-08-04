@@ -1,5 +1,15 @@
 # Semantic Versioning Changelog
 
+# [1.7.0](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.6.1...v1.7.0) (2025-08-04)
+
+
+### Features
+
+* добавил exponential backoff ([b882b4f](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/b882b4f298e431e466c393c3c916f5418837b080))
+* добавил логи ([f4db861](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/f4db861bd155cdf7b76b4b28ff01946190c8c74b))
+* логи по ПА.СС.Жур ([7682d0c](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/7682d0cc905dd3e22e5e670864b7aa5173586d59))
+* увеличил буфер для запросов до 10Мб, добавил механизм прерывания запросов ([79ca48a](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/79ca48af030a13b8b9ed4187760be0a7e7f3768b))
+
 ## [1.6.1](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.6.0...v1.6.1) (2025-07-30)
 
 # [1.6.0](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.5.3...v1.6.0) (2025-07-29)
