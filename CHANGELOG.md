@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.8.1](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.8.0...v1.8.1) (2025-08-04)
+
+
+### Bug Fixes
+
+* ts crutch for config ([c05954f](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/c05954f58a9b27b4bcfbe4cccf035963c754eddc))
+
 # [1.8.0](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.7.0...v1.8.0) (2025-08-04)
 
 
