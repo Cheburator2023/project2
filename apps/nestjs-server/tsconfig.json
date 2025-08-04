@@ -12,12 +12,15 @@
 		"outDir": "./dist",
 		"baseUrl": "./",
 		"incremental": true,
-		"skipLibCheck": true,
 		"strictNullChecks": true,
 		"forceConsistentCasingInFileNames": true,
 		"noImplicitAny": false,
 		"strictBindCallApply": false,
-        "typeRoots": ["node_modules/@types", "./src/shared/types"],
-		"noFallthroughCasesInSwitch": false
+		"typeRoots": ["node_modules/@types", "./src/shared/types"],
+		"noFallthroughCasesInSwitch": false,
+		"skipLibCheck": true,
+		"types": [],
+		"skipDefaultLibCheck": true,
+		"noEmit": true
 	}
 }
