@@ -147,13 +147,14 @@ export class CreateCalculationDto extends CalculationBaseDto {
 		type: [AlgorithmTypeItemDto],
 		description: "Сложность алгоритмов",
 	})
+	@IsOptional()
 	@IsArray({ message: "algorithmComplexity must be an array" })
 	// @ValidateNested({
 	// 	each: true,
 	// 	message: "Each algorithmComplexity item must be a valid object",
 	// })
 	// @Type(() => AlgorithmTypeItemDto)
-	// algorithmComplexity: AlgorithmTypeItemDto[];
+	algorithmComplexity?: AlgorithmTypeItemDto[];
 
 	@ApiProperty({
 		example: "Да",
