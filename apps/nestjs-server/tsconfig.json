@@ -20,7 +20,6 @@
 		"noFallthroughCasesInSwitch": false,
 		"skipLibCheck": true,
 		"types": [],
-		"skipDefaultLibCheck": true,
-		"noEmit": true
+		"skipDefaultLibCheck": true
 	}
 }
