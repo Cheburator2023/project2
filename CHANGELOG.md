@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.8.2](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.8.1...v1.8.2) (2025-08-04)
+
+
+### Bug Fixes
+
+* card clickable fix ([4e43f02](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/4e43f024fb2ae48802527bb0c1daff275dff4e97))
+
 ## [1.8.1](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.8.0...v1.8.1) (2025-08-04)
 
 
