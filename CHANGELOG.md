@@ -1,5 +1,52 @@
 # Semantic Versioning Changelog
 
+## [1.8.3](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.8.2...v1.8.3) (2025-08-04)
+
+
+### Bug Fixes
+
+* validation fix ([4cdbabd](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/4cdbabdd611f66fbff17806415bf7ba487b8f61a))
+* validation fix ([8ba82a7](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/8ba82a7593632e3e4856e152a6d34b843d1eb134))
+
+## [1.8.2](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.8.1...v1.8.2) (2025-08-04)
+
+
+### Bug Fixes
+
+* card clickable fix ([4e43f02](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/4e43f024fb2ae48802527bb0c1daff275dff4e97))
+
+## [1.8.1](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.8.0...v1.8.1) (2025-08-04)
+
+
+### Bug Fixes
+
+* ts crutch for config ([c05954f](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/c05954f58a9b27b4bcfbe4cccf035963c754eddc))
+
+# [1.8.0](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.7.0...v1.8.0) (2025-08-04)
+
+
+### Bug Fixes
+
+* ts crutch for config ([c81edb6](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/c81edb6cdcad01f9cf1f150b7ff4d98080cb70a3))
+
+
+### Features
+
+* добавил явно 'form-data ([211e2fc](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/211e2fc2b8e3dc43ae805dc073b4f87a0c833486))
+* переустановил зависимости ([0c370ac](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/0c370acfa2d41df3aae493e3edf5f407a596469c))
+
+# [1.7.0](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.6.1...v1.7.0) (2025-08-04)
+
+
+### Features
+
+* добавил exponential backoff ([b882b4f](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/b882b4f298e431e466c393c3c916f5418837b080))
+* добавил логи ([f4db861](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/f4db861bd155cdf7b76b4b28ff01946190c8c74b))
+* логи по ПА.СС.Жур ([7682d0c](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/7682d0cc905dd3e22e5e670864b7aa5173586d59))
+* увеличил буфер для запросов до 10Мб, добавил механизм прерывания запросов ([79ca48a](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/79ca48af030a13b8b9ed4187760be0a7e7f3768b))
+
+## [1.6.1](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.6.0...v1.6.1) (2025-07-30)
+
 # [1.6.0](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.5.3...v1.6.0) (2025-07-29)
 
 

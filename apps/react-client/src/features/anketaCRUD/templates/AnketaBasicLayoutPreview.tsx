@@ -27,6 +27,10 @@ export const AnketaBasicLayoutPreview = ({
 	const location = useLocation();
 
 	const isReadOnly = !isEditing;
+	console.log(
+		"🐸 Pepe said >> AnketaBasicLayoutPreview >> isReadOnly:",
+		isReadOnly,
+	);
 
 	return (
 		<Flex
@@ -81,7 +85,7 @@ export const AnketaBasicLayoutPreview = ({
 									padding="10px"
 									zoom={0.8}
 									loading={isPending}
-									nonClickable={isReadOnly}
+									nonClickable
 									uuid="anketa_basic_info_card"
 									data-test-id="anketa-basic-layout--Card-0"
 								>
@@ -135,7 +139,7 @@ export const AnketaBasicLayoutPreview = ({
 						overflow=""
 						padding="10px"
 						zoom={0.8}
-						nonClickable={isReadOnly}
+						nonClickable
 						uuid="anketa_basic_info_card"
 						data-test-id="anketa-basic-layout--Card-0"
 						loading={isPending}

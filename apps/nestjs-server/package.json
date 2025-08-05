@@ -43,6 +43,7 @@
 	},
 	"devDependencies": {
 		"@types/express": "5.0.1",
+        "@types/form-data": "^2.5.2",
 		"@types/jest": "29.5.14",
 		"@types/node": "22.13.14",
 		"@types/supertest": "6.0.3",
