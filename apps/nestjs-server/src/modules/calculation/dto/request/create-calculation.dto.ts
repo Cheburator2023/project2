@@ -149,7 +149,7 @@ export class CreateCalculationDto extends CalculationBaseDto {
 
 	@ApiProperty({
 		type: [AlgorithmTypeItemDto],
-		description: "Сложность алгоритмов. Должен содержать не менее одного и не более 8 валидных типов алгоритмов",
+		description: "Сложность алгоритмов. Должен содержать не менее одного и не более 8 уникальных, валидных типов алгоритмов",
 	})
 	@IsArray({ message: "algorithmComplexity must be an array" })
 	@ValidateNested({
@@ -160,9 +160,18 @@ export class CreateCalculationDto extends CalculationBaseDto {
     @ArrayMinSize(1, { message: "At least one algorithm type must be specified" })
     @ArrayMaxSize(8, { message: "Maximum 8 algorithm types allowed" })
     @ValidateIf((o) => {
-        return  o.AlgorithmComplexity?.some(item =>
-       item?.algorrithmType &&  item.algorithmType?.trim() !== ""
-        );
+		if (!o.AlgorithmComplexity) return false;
+		
+        const hasValidAlgorithm = o.AlgorithmComplexity?.some(item =>
+            item?.algorrithmType &&  item.algorithmType?.trim() !== "");
+		
+		if (!hasValidAlgorithm) return false;
+		
+		if (hasValidAlgorithm.length === 0) return false;
+		
+            const types = hasValidAlgorithm.map((item) => item.algorithmType);
+            const uniqueTypes = new Set(types);
+            return types.length === uniqueTypes.size;
     })
 	algorithmComplexity?: AlgorithmTypeItemDto[];
 
