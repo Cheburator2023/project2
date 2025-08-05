@@ -22,7 +22,7 @@ export const questionnaire: ColDef<any, any>[] = [
 	},
 	{
 		field: "questionnaireData.readyPromReports",
-		headerName: "Наличие готовых пром витрин",
+		headerName: "Наличие готовых промышленных витрин",
 		sortable: true,
 		filter: true,
 	},

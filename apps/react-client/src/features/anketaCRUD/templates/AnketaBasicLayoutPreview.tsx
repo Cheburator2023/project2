@@ -27,10 +27,6 @@ export const AnketaBasicLayoutPreview = ({
 	const location = useLocation();
 
 	const isReadOnly = !isEditing;
-	console.log(
-		"🐸 Pepe said >> AnketaBasicLayoutPreview >> isReadOnly:",
-		isReadOnly,
-	);
 
 	return (
 		<Flex

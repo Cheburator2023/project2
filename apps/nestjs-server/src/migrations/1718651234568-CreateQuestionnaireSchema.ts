@@ -115,7 +115,7 @@ export class CreateQuestionnaireSchema1718651234568
                       {"value": "5.11", "label": "Изменение ИТ архитектуры", "hint": "Риски изменения целевой архитектуры"}]',
                     5),
 
-                   (uuid_generate_v4(), 'Наличие готовых пром витрин', 'readyPromReports',
+                   (uuid_generate_v4(), 'Наличие готовых промышленных витрин', 'readyPromReports',
                     'Наличие готовых промоделированных отчетов', true, 'select',
                     '[{"value": "Да", "hint": "Готовые пром-витрины доступны"}, 
                       {"value": "Нет", "hint": "Требуется разработка пром-витрин"}]',
@@ -194,9 +194,9 @@ export class CreateQuestionnaireSchema1718651234568
                    (uuid_generate_v4(), 'Коэффициент стоимости инициативы (От 2 млрд.)', 'initiativeCost_От 2 млрд.',
                     2.0, null, 'Мегапроекты'),
 
-                   (uuid_generate_v4(), 'Коэффициент готовых пром витрин (Да)', 'readyPromReports_Да', 0.5, null,
+                   (uuid_generate_v4(), 'Коэффициент готовых промышленных витрин (Да)', 'readyPromReports_Да', 0.5, null,
                     'Готовые пром-витрины доступны'),
-                   (uuid_generate_v4(), 'Коэффициент готовых пром витрин (Нет)', 'readyPromReports_Нет', 1.0, null,
+                   (uuid_generate_v4(), 'Коэффициент готовых промышленных витрин (Нет)', 'readyPromReports_Нет', 1.0, null,
                     'Требуется разработка пром-витрин'),
 
                    (uuid_generate_v4(), 'Коэффициент типа алгоритма (Табличные данные)',

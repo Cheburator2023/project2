@@ -139,6 +139,7 @@ export const HomeTemplete = ({
 		wrapHeaderText: true,
 		autoHeaderHeight: true,
 		floatingFilter: true,
+		maxWidth: 300,
 		cellStyle: { fontSize: "11px" },
 		headerStyle: { fontSize: "11px" },
 		tooltipValueGetter: (params: any) => params.value,
@@ -226,7 +227,7 @@ export const HomeTemplete = ({
 						justifyContent="flex-end"
 						data-test-id="home-page--Flex-2"
 					>
-						<div title="Создать расчет" data-test-id="home-page--Tooltip-0">
+						<div title="Создать анкету" data-test-id="home-page--Tooltip-0">
 							<IconButton
 								aria-label="menu"
 								onClick={onCreateCalculation}

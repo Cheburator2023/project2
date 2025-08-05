@@ -434,10 +434,12 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 		);
 	}
 
+	const valToTitle = props.options.valToTitle ? value : undefined;
+
 	return (
 		<TextFieldCustom
 			id={id}
-			// title={id}
+			title={valToTitle}
 			label={label || schema?.title}
 			value={value}
 			required={required}
@@ -453,6 +455,12 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			prefix={options?.prefix}
 			multiline={options?.multiline}
 			select={isSelect}
+			sx={{
+				"& .MuiInputBase-input": {
+					overflow: "hidden",
+					textOverflow: "ellipsis",
+				},
+			}}
 			slotProps={{
 				select: {
 					MenuProps: {
