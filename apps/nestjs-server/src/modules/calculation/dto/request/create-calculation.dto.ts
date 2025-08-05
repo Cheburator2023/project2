@@ -11,9 +11,11 @@ import {
 	IsString,
 	Max,
 	Min,
+    ValidateIf,
 	ValidateNested,
 } from "class-validator";
 import {
+    ALGORITHM_TYPE_VALUES,
 	CalculationBaseDto,
 	DATA_SOURCES_COUNT_VALUES,
 	DEPLOYMENT_CHANNEL_VALUES,
@@ -147,9 +149,8 @@ export class CreateCalculationDto extends CalculationBaseDto {
 
 	@ApiProperty({
 		type: [AlgorithmTypeItemDto],
-		description: "Сложность алгоритмов",
+		description: "Сложность алгоритмов. Должен содержать не менее одного и не более 8 валидных типов алгоритмов",
 	})
-	@IsOptional()
 	@IsArray({ message: "algorithmComplexity must be an array" })
 	@ValidateNested({
 		each: true,
@@ -158,6 +159,11 @@ export class CreateCalculationDto extends CalculationBaseDto {
 	@Type(() => AlgorithmTypeItemDto)
     @ArrayMinSize(1, { message: "At least one algorithm type must be specified" })
     @ArrayMaxSize(8, { message: "Maximum 8 algorithm types allowed" })
+    @ValidateIf((o) => {
+        return  o.AlgorithmComplexity?.some(item =>
+       item?.algorrithmType &&  item.algorithmType?.trim() !== ""
+        );
+    })
 	algorithmComplexity?: AlgorithmTypeItemDto[];
 
 	@ApiProperty({
