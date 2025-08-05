@@ -112,7 +112,7 @@
 			"uniqueItems": true
 		},
 		"readyPromReports": {
-			"title": "Наличие готовых пром витрин",
+			"title": "Наличие готовых промышленных витрин",
 			"type": "string",
 			"enum": ["Да", "Нет"]
 		},

@@ -20,6 +20,11 @@ import type {
 import { omit } from "lodash-es";
 
 const uiSchema: UiSchema = {
+	setupComplexity: {
+		"ui:options": {
+			valToTitle: true,
+		},
+	},
 	generalUncertainty: {
 		"ui:widget": "ArrayCustomCardListsWidget",
 	},

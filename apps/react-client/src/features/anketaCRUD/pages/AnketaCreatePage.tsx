@@ -21,7 +21,6 @@ export const AnketaCreatePage = () => {
 		anketaCreate_basicInfoForm,
 		anketaCreate_projectAssessmentForm,
 	} = store;
-	console.log("AnketaCreatePage >> store:", store);
 
 	const stateBasicForm = anketaCreate_basicInfoForm.state;
 	const stateProjectAssessmentForm = anketaCreate_projectAssessmentForm.state;
@@ -77,6 +76,7 @@ export const AnketaCreatePage = () => {
 				customerName: basicFormData.customerName,
 				comment: basicFormData.comment,
 			};
+			console.log("🐸 Pepe said >> AnketaCreatePage >> data:", data);
 
 			createCalculationMutation(
 				{

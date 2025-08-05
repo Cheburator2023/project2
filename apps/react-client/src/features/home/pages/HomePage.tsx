@@ -26,6 +26,7 @@ import {
 	NumberFilterModule,
 	SizeColumnsToContentStrategy,
 	ValidationModule,
+	ValueFormatterParams,
 } from "ag-grid-community";
 import {
 	ColumnMenuModule,
@@ -54,6 +55,23 @@ ModuleRegistry.registerModules([
 ]);
 
 // const IS_DEV = process.env.NODE_ENV !== "production";
+
+// Number formatter function for floating point values
+const numberFormatter = (params: ValueFormatterParams): string => {
+	if (params.value == null || params.value === "") {
+		return "";
+	}
+
+	const numValue = Number(params.value);
+
+	// Check if it's a valid number and has decimal places
+	if (!isNaN(numValue) && numValue % 1 !== 0) {
+		return numValue.toFixed(2);
+	}
+
+	// For integers or non-numeric values, return as is
+	return params.value.toString();
+};
 
 export const HomePage = () => {
 	const { data, isLoading, isFetching, error, refetch } =
@@ -114,6 +132,7 @@ export const HomeTemplete = ({
 			sortable: true,
 			filter: true,
 			resizable: true,
+			valueFormatter: numberFormatter, // Add number formatter to all columns
 		})),
 	);
 
@@ -139,9 +158,11 @@ export const HomeTemplete = ({
 		wrapHeaderText: true,
 		autoHeaderHeight: true,
 		floatingFilter: true,
+		maxWidth: 300,
 		cellStyle: { fontSize: "11px" },
 		headerStyle: { fontSize: "11px" },
 		tooltipValueGetter: (params: any) => params.value,
+		valueFormatter: numberFormatter, // Add number formatter as default
 		cellRendererParams: {
 			hoveredRowId,
 		},
@@ -226,7 +247,7 @@ export const HomeTemplete = ({
 						justifyContent="flex-end"
 						data-test-id="home-page--Flex-2"
 					>
-						<div title="Создать расчет" data-test-id="home-page--Tooltip-0">
+						<div title="Создать анкету" data-test-id="home-page--Tooltip-0">
 							<IconButton
 								aria-label="menu"
 								onClick={onCreateCalculation}

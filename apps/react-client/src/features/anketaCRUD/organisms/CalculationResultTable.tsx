@@ -56,7 +56,7 @@ const coefficientDisplayNames: Record<string, string> = {
 	modelsCountCoefficient: "Количество моделей",
 	setupComplexityCoefficient: "Сложность постановки",
 	generalUncertaintyCoefficient: "Общая неопределенность",
-	readyPromReportsCoefficient: "Наличие готовых пром витрин",
+	readyPromReportsCoefficient: "Наличие готовых промышленных витрин",
 	dataSourcesCountCoefficient: "Количество источников для проработки",
 	pilotModelRequired: "Необходимость реализации пилотной модели",
 	algorithmComplexityCoefficient: "Сложность алгоритма / тип ML задачи",
