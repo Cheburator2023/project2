@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.8.5](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.8.4...v1.8.5) (2025-08-05)
+
+
+### Bug Fixes
+
+* commitlint config ([33834df](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/33834df4738b0852b5950738555fd5bbd61abca6))
+
 ## [1.8.3](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.8.2...v1.8.3) (2025-08-04)
 
 
