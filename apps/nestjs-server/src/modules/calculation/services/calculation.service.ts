@@ -38,11 +38,24 @@ export class CalculationService {
         this.checkAborted(signal);
 
         try {
-            const hasValidAlgorithm = createCalculationDto.algorithmComplexity?.some(item =>
-                item?.algorithmType?.trim() !== "");
+            if (createCalculationDto.algorithmComplexity &&
+                createCalculationDto.algorithmComplexity.length > 8) {
+                throw new Error("Maximum 8 algorithm types allowed");
+            }
 
-            if (!hasValidAlgorithm) {
-                throw new Error("At least one algorithm type must have a non-empty value");
+            if (createCalculationDto.algorithmComplexity) {
+                const types = createCalculationDto.algorithmComplexity
+                    .map(item => item.algorithmType)
+                    .filter(type => type?.trim() !== "");
+
+                if (types.length === 0) {
+                    throw new Error("At least one algorithm type must have a non-empty value")
+                }
+
+                const uniqueTypes = new Set(types);
+                if (types.length !== uniqueTypes.size) {
+                    throw new Error("Algorithm types must be unique(no dublicate allowed)")
+                }
             }
 
             const generalUncertaintyObject = {};
@@ -128,15 +141,16 @@ export class CalculationService {
                     dto: createCalculationDto,
                 },
             );
-            if (error.message === "At least one algorithm type must have a non-empty value")
-            {
+            if (error.message === "Maximum 8 algorithm types allowed" ||
+                error.message === "Algorithm types must be unique (no duplicates allowed)" ||
+                error.message === "At least one algorithm type must have a non-empty value") {
                 throw new BadRequestException({
                     message: "Validation failed.",
                     errors: [{
                         field: "algorithmComplexity",
-                        message: "At least one algorithm type must have a non-empty value",
+                        message: error.message,
                     }]
-                })
+                });
             }
 
             throw new BadRequestException(
