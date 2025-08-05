@@ -1,6 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import {
+    ArrayMaxSize,
+    ArrayMinSize,
 	IsArray,
 	IsIn,
 	IsNotEmpty,
@@ -149,11 +151,13 @@ export class CreateCalculationDto extends CalculationBaseDto {
 	})
 	@IsOptional()
 	@IsArray({ message: "algorithmComplexity must be an array" })
-	// @ValidateNested({
-	// 	each: true,
-	// 	message: "Each algorithmComplexity item must be a valid object",
-	// })
-	// @Type(() => AlgorithmTypeItemDto)
+	@ValidateNested({
+		each: true,
+		message: "Each algorithmComplexity item must be a valid object",
+	})
+	@Type(() => AlgorithmTypeItemDto)
+    @ArrayMinSize(1, { message: "At least one algorithm type must be specified" })
+    @ArrayMaxSize(8, { message: "Maximum 8 algorithm types allowed" })
 	algorithmComplexity?: AlgorithmTypeItemDto[];
 
 	@ApiProperty({
