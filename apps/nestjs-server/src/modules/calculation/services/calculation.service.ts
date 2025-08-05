@@ -38,6 +38,13 @@ export class CalculationService {
         this.checkAborted(signal);
 
         try {
+            const hasValidAlgorithm = createCalculationDto.algorithmComplexity?.some(item =>
+                item?.algorithmType?.trim() !== "");
+
+            if (!hasValidAlgorithm) {
+                throw new Error("At least one algorithm type must have a non-empty value");
+            }
+
             const generalUncertaintyObject = {};
             if (createCalculationDto.generalUncertainty) {
                 createCalculationDto.generalUncertainty.forEach((item) => {
@@ -121,6 +128,17 @@ export class CalculationService {
                     dto: createCalculationDto,
                 },
             );
+            if (error.message === "At least one algorithm type must have a non-empty value")
+            {
+                throw new BadRequestException({
+                    message: "Validation failed.",
+                    errors: [{
+                        field: "algorithmComplexity",
+                        message: "At least one algorithm type must have a non-empty value",
+                    }]
+                })
+            }
+
             throw new BadRequestException(
                 `Failed to create calculation: ${error.message}`,
             );
