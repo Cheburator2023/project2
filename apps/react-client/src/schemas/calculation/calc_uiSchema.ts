@@ -30,6 +30,7 @@ export const calc_uiSchema: UiSchema = {
 	},
 	setupComplexity: {
 		"ui:options": {
+			valToTitle: true,
 			// tooltip:
 			// 	"Проведение регулярной валидации Моделей Регулятором нормативно не установлено.",
 		},

@@ -31,8 +31,6 @@ export const AnketaPreviewPage = () => {
 	const store = useAnketaCRUDFormsStore();
 	const { canEditCalculation } = usePermissions();
 
-	console.log("AnketaPreviewPage >> store:", store);
-
 	const {
 		anketaPreview_basicInfoForm,
 		anketaPreview_projectAssessmentForm,

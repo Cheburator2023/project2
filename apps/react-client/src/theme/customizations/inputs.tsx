@@ -484,7 +484,13 @@ export const inputsCustomizations: Components<Theme> = {
 		styleOverrides: {
 			root: {
 				border: "none",
+				"& .MuiSelect-select span": {
+					textOverflow: "ellipsis",
+					overflow: "hidden",
+					paddingRight: "10px",
+				},
 			},
+
 			input: {
 				padding: "10px !important",
 				"&::placeholder": {
