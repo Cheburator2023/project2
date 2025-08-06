@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+## [1.8.6](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.8.5...v1.8.6) (2025-08-06)
+
+
+### Bug Fixes
+
+* pavel calc fix ([1dd48c7](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/1dd48c70c9569a687e2fb5ad0162047121a861e8))
+* Добавил проверку на уникальность ([9b9c0c7](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/9b9c0c777ecba30423781ac4d3e193a3c3fe8049))
+
 ## [1.8.5](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.8.4...v1.8.5) (2025-08-05)
 
 
