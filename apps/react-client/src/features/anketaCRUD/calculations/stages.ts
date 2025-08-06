@@ -51,12 +51,13 @@ export function calculateStage04(
 	setupComplexityCoefficient: number,
 	generalUncertaintyCoefficient: number,
 	readyPromReports: string,
+	dataSourcesCount: string,
 ): number {
 	if (readyPromReports === "Да") {
 		return 0;
 	}
 	let d: Decimal;
-	if (assessedInitiativesCount > 1) {
+	if (assessedInitiativesCount > 1 && Number(dataSourcesCount) !== 0) {
 		d = new Decimal(baseValue)
 			.mul(setupComplexityCoefficient)
 			.mul(generalUncertaintyCoefficient)
