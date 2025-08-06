@@ -3,11 +3,12 @@ import { CalculationResponseDto } from "@react-client/common/api/generated/types
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { BasicInfoForm } from "@react-client/features/anketaCRUD/organisms/BasicInfoForm";
-import { CalculationResultTable } from "@react-client/features/anketaCRUD/organisms/CalculationResultTable";
+import { CalculationResultTablePreview } from "@react-client/features/anketaCRUD/organisms/CalculationResultTablePreview";
 import { ProjectAssessmentFormPreview } from "@react-client/features/anketaCRUD/organisms/ProjectAssessmentFormPreview";
 import { Panel, PanelGroup } from "react-resizable-panels";
 import { useLocation } from "react-router";
 import { PanelResizeHandleStyled } from "../atoms/PanelResizeHandleStyled";
+import { isEmpty } from "lodash-es";
 
 export const AnketaBasicLayoutPreview = ({
 	initialData,
@@ -101,10 +102,14 @@ export const AnketaBasicLayoutPreview = ({
 									height="100%"
 									padding="10px"
 									zoom={0.8}
+									loading={isPending && !isEmpty(initialData)}
 									uuid="anketa_calculation_result_card"
 									data-test-id="anketa-basic-layout--Card-1"
 								>
-									<CalculationResultTable data-test-id="anketa-basic-layout--CalculationResultTable-0" />
+									<CalculationResultTablePreview
+										initialData={initialData}
+										data-test-id="anketa-basic-layout--CalculationResultTable-0"
+									/>
 								</Card>
 							</Panel>
 						</PanelGroup>
@@ -150,11 +155,15 @@ export const AnketaBasicLayoutPreview = ({
 						height="666px"
 						overflow="hidden"
 						padding="10px"
+						loading={isPending && !isEmpty(initialData)}
 						zoom={0.8}
 						uuid="anketa_calculation_result_card"
 						data-test-id="anketa-basic-layout--Card-1"
 					>
-						<CalculationResultTable data-test-id="anketa-basic-layout--CalculationResultTable-0" />
+						<CalculationResultTablePreview
+							initialData={initialData}
+							data-test-id="anketa-basic-layout--CalculationResultTable-0"
+						/>
 					</Card>
 				</Flex>
 			)}

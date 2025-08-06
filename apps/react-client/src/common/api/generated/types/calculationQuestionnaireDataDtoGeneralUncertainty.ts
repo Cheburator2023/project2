@@ -12,4 +12,5 @@
 export type CalculationQuestionnaireDataDtoGeneralUncertainty = {[key: string]: {
   probability?: string;
   influence?: string;
+  type?: string;
 }};

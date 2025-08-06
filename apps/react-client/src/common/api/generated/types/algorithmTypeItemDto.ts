@@ -9,5 +9,5 @@ import type { AlgorithmTypeItemDtoAlgorithmType } from './algorithmTypeItemDtoAl
 
 export interface AlgorithmTypeItemDto {
   /** Тип используемого алгоритма */
-  algorithmType: AlgorithmTypeItemDtoAlgorithmType;
+  algorithmType: AlgorithmTypeItemDtoAlgorithmType | "";
 }
