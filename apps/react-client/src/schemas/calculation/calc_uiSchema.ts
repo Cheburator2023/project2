@@ -71,6 +71,11 @@ export const calc_uiSchema: UiSchema = {
 				"Если новая витрина создается для нескольких оцениваемых инициатив, укажите их количество",
 			dependencies: [
 				{
+					condition: "readyPromReports === ''",
+					disabled: true,
+					valueToSet: "1",
+				},
+				{
 					condition: "readyPromReports === 'Да'",
 					disabled: true,
 					valueToSet: "1",
