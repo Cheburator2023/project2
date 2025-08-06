@@ -1,5 +1,17 @@
 # Semantic Versioning Changelog
 
+# [1.9.0](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.8.6...v1.9.0) (2025-08-06)
+
+
+### Bug Fixes
+
+* assessedInitiativesCount disabled fix ([7ab0536](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/7ab05364e8b42c78648abfc0914039ee3e8e0667))
+
+
+### Features
+
+* **anketa:** add calculation result table preview component ([36e7dce](https://git.sfera.inno.local/SUMD/smart_anketa_ui/commit/36e7dcee17c15aea9a162fee715253878edd3268))
+
 ## [1.8.6](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.8.5...v1.8.6) (2025-08-06)
 
 
