@@ -29,6 +29,7 @@ import {
 	type GridApi,
 	type GridReadyEvent,
 	IDateFilterParams,
+	INumberFilterParams,
 	type IRowNode,
 	ModuleRegistry,
 	NumberFilterModule,
@@ -93,6 +94,13 @@ const dateFilterParams: IDateFilterParams = {
 	inRangeFloatingFilterDateFormat: " YYYY-MM-DD",
 };
 
+const numberFilterParams: INumberFilterParams = {
+	buttons: ["clear", "apply"],
+	maxNumConditions: 1,
+	filterOptions: ["equals", "greaterThan", "lessThan"],
+	closeOnApply: true,
+};
+
 const defaultExcelExportParams = {
 	exportAsExcelTable: true,
 };
@@ -118,12 +126,7 @@ const numberFormatter = (params: ValueFormatterParams): string => {
 
 export const HomePage = () => {
 	const { data, isLoading, isFetching, error, refetch } =
-		useCalculationControllerFindAll({
-			query: {
-				refetchInterval: 100000,
-				staleTime: 10,
-			},
-		});
+		useCalculationControllerFindAll();
 
 	return (
 		<HomeTemplete
@@ -180,7 +183,9 @@ export const HomeTemplete = ({
 				filterParams:
 					col.cellDataType === "dateString"
 						? dateFilterParams
-						: { buttons: ["clear"] },
+						: col.cellDataType === "number"
+							? numberFilterParams
+							: { buttons: ["clear"] },
 
 				filter:
 					col.cellDataType === "dateString"
