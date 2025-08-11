@@ -1,6 +1,6 @@
 import AddIcon from "@mui/icons-material/Add";
 import ReplayIcon from "@mui/icons-material/Replay";
-import { IconButton, styled, useColorScheme } from "@mui/material";
+import { Button, IconButton, styled, useColorScheme } from "@mui/material";
 import { useCalculationControllerFindAll } from "@react-client/common/api/generated/queries/calculation";
 import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { Flex } from "@react-client/common/primitives/Flex";
@@ -11,6 +11,10 @@ import { _columnDefs } from "@react-client/features/home/colDefs";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { SearchInput } from "@react-client/features/navigation/organisms/SearchInput";
 import { routes } from "@react-client/routing/routes";
+import {
+	GridFilterModel,
+	filterModelHelpers,
+} from "@react-client/types/agGridFilterModel";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 
 // import { AllEnterpriseModule } from "ag-grid-enterprise";
@@ -21,6 +25,7 @@ import {
 	GetMainMenuItemsParams,
 	type GridApi,
 	type GridReadyEvent,
+	IDateFilterParams,
 	type IRowNode,
 	ModuleRegistry,
 	NumberFilterModule,
@@ -32,6 +37,7 @@ import {
 	ColumnMenuModule,
 	ColumnsToolPanelModule,
 	ContextMenuModule,
+	ExcelExportModule,
 	SetFilterModule,
 } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
@@ -51,8 +57,42 @@ ModuleRegistry.registerModules([
 	ContextMenuModule,
 	SetFilterModule,
 	NumberFilterModule,
+	ExcelExportModule,
 	...(process.env.NODE_ENV !== "production" ? [ValidationModule] : []),
 ]);
+
+const dateFilterParams: IDateFilterParams = {
+	buttons: ["clear", "apply"],
+	inRangeInclusive: true,
+	maxNumConditions: 1,
+	filterOptions: ["equals", "inRange"],
+	closeOnApply: true,
+	comparator: (filterLocalDateAtMidnight: Date, cellValue: string) => {
+		if (cellValue == null) return -1;
+
+		const cellDate = new Date(cellValue);
+
+		if (
+			cellDate.toLocaleDateString() ===
+			filterLocalDateAtMidnight.toLocaleDateString()
+		) {
+			return 0;
+		}
+		if (cellDate < filterLocalDateAtMidnight) {
+			return -1;
+		}
+		if (cellDate > filterLocalDateAtMidnight) {
+			return 1;
+		}
+		return 0;
+	},
+	minValidYear: 2000,
+	inRangeFloatingFilterDateFormat: " YYYY-MM-DD",
+};
+
+const defaultExcelExportParams = {
+	exportAsExcelTable: true,
+};
 
 // const IS_DEV = process.env.NODE_ENV !== "production";
 
@@ -65,7 +105,7 @@ const numberFormatter = (params: ValueFormatterParams): string => {
 	const numValue = Number(params.value);
 
 	// Check if it's a valid number and has decimal places
-	if (!isNaN(numValue) && numValue % 1 !== 0) {
+	if (!Number.isNaN(numValue) && numValue % 1 !== 0) {
 		return numValue.toFixed(2);
 	}
 
@@ -119,21 +159,35 @@ export const HomeTemplete = ({
 	const [_selectedRows, setSelectedRows] = useState<
 		IRowNode<any>[] | undefined
 	>([]);
+	const [currentFilterModel, setCurrentFilterModel] =
+		useState<GridFilterModel | null>(null);
 
 	useEffect(() => {
 		setIsInCompareMode(params.get("isInCompareMode") === "true");
 	}, [params.get("isInCompareMode")]);
 
 	const [columnDefs] = useState(
-		_columnDefs.map((col) => ({
-			...col,
-			headerName: col.headerName,
-			field: col.field,
-			sortable: true,
-			filter: true,
-			resizable: true,
-			valueFormatter: numberFormatter, // Add number formatter to all columns
-		})),
+		_columnDefs.map((col) => {
+			return {
+				...col,
+				headerName: col.headerName,
+				field: col.field,
+				filterParams:
+					col.cellDataType === "dateString"
+						? dateFilterParams
+						: { buttons: ["clear"] },
+
+				filter:
+					col.cellDataType === "dateString"
+						? "agDateColumnFilter"
+						: col.cellDataType === "number"
+							? "agNumberColumnFilter"
+							: "agSetColumnFilter",
+				sortable: true,
+				resizable: true,
+				valueFormatter: numberFormatter, // Add number formatter to all columns
+			};
+		}),
 	);
 
 	if (error) {
@@ -177,6 +231,7 @@ export const HomeTemplete = ({
 		if (gridRef.current?.api) {
 			gridRef.current.api.exportDataAsExcel({
 				fileName: "export_data.xlsx",
+				fontSize: 14,
 			});
 		} else {
 			console.error(
@@ -184,6 +239,19 @@ export const HomeTemplete = ({
 			);
 		}
 	};
+
+	const gridFilterModel: GridFilterModel | null =
+		gridRef?.current?.api?.getFilterModel() || null;
+
+	console.log("🐸 Pepe said >> gridFilterModel:", gridFilterModel);
+	console.log(
+		"🐸 Pepe said >> активных фильтров:",
+		filterModelHelpers.getActiveFiltersCount(gridFilterModel || {}),
+	);
+	console.log(
+		"🐸 Pepe said >> отфильтрованные колонки:",
+		filterModelHelpers.getFilteredColumns(gridFilterModel || {}),
+	);
 
 	const onCreateCalculation = () => {
 		console.log("Create calculation");
@@ -193,6 +261,19 @@ export const HomeTemplete = ({
 	const onGridReady = (params: GridReadyEvent<any, any>) => {
 		console.log("Grid is ready, setting API in Zustand store.");
 		setGridApi(params.api as GridApi);
+	};
+
+	const onFilterChanged = () => {
+		const filterModel = gridRef?.current?.api?.getFilterModel() || null;
+		setCurrentFilterModel(filterModel);
+		console.log("🐸 Pepe said >> фильтр изменен:", filterModel);
+	};
+
+	const onClearColumnFilter = (columnId: string) => {
+		if (gridRef?.current?.api) {
+			gridRef.current.api.setColumnFilterModel(columnId, null);
+			gridRef.current.api.onFilterChanged();
+		}
 	};
 
 	const autoSizeStrategy: SizeColumnsToContentStrategy = {
@@ -292,6 +373,14 @@ export const HomeTemplete = ({
 						</div> */}
 					</Flex>
 				</Flex>
+				<Button
+					onClick={_onExportExcel}
+					variant="contained"
+					fullWidth
+					sx={{ maxWidth: "150px" }}
+				>
+					Экспорт в xlsx
+				</Button>
 			</Header>
 
 			<GridWrapper
@@ -316,9 +405,11 @@ export const HomeTemplete = ({
 					paginationPageSize={100}
 					localeText={AG_GRID_LOCALE_RU}
 					ref={gridRef}
+					defaultExcelExportParams={defaultExcelExportParams}
 					autoSizeStrategy={autoSizeStrategy}
 					onCellMouseOver={onCellMouseOver}
 					onGridReady={onGridReady}
+					onFilterChanged={onFilterChanged}
 					tooltipShowDelay={500}
 					animateRows={false}
 					icons={icons}
