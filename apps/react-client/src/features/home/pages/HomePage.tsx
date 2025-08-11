@@ -260,7 +260,7 @@ export const HomeTemplete = ({
 				.filter(Boolean);
 
 			const response = await exportToExcelMutation.mutateAsync({
-				params: {
+				data: {
 					filterModel:
 						Object.keys(filterModel).length > 0
 							? JSON.stringify(filterModel)
