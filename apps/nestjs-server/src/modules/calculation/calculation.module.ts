@@ -6,6 +6,7 @@ import { Calculation } from "./entities/calculation.entity";
 import { CalculationService } from "./services/calculation.service";
 import { ExcelExportService } from "./services/excel-export.service";
 import { AgGridFilterService } from "./services/ag-grid-filter.service";
+import { InMemoryFilterService } from "./services/in-memory-filter.service";
 import { JsonValidationPipe } from "./pipe/json-validation.pipe";
 import { CustomLogger } from "src/shared/services/logger.service";
 
@@ -19,6 +20,7 @@ import { CustomLogger } from "src/shared/services/logger.service";
 		JsonValidationPipe,
 		ExcelExportService,
 		AgGridFilterService,
+		InMemoryFilterService,
 	],
 	exports: [CalculationService],
 })

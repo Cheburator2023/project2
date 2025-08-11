@@ -13,7 +13,7 @@ import { AbortSignal } from "node-abort-controller";
 import { CustomLogger } from "src/shared/services/logger.service";
 import { v4 as uuidv4 } from "uuid";
 import { RetryUtil } from "src/shared/utils/retry.util";
-import { AgGridFilterService } from "./ag-grid-filter.service";
+import { InMemoryFilterService } from "./in-memory-filter.service";
 import {
 	AgGridFilterModel,
 	AgGridSortModel,
@@ -25,7 +25,7 @@ export class CalculationService {
 		@InjectRepository(Calculation)
 		private calculationRepository: Repository<Calculation>,
 		private readonly customLogger: CustomLogger,
-		private readonly agGridFilterService: AgGridFilterService,
+		private readonly inMemoryFilterService: InMemoryFilterService,
 	) {}
 
 	/**
@@ -417,26 +417,34 @@ export class CalculationService {
 				this.checkAborted(signal);
 
 				try {
-					const queryBuilder =
-						this.calculationRepository.createQueryBuilder("calculation");
-
-					this.agGridFilterService.applyFiltersToQuery(
-						queryBuilder,
-						filterModel,
-					);
-					this.agGridFilterService.applySortToQuery(queryBuilder, sortModel);
+					let calculations: Calculation[];
 
 					if (selectedIds && selectedIds.length > 0) {
-						queryBuilder.andWhere({ id: In(selectedIds) });
+						calculations = await this.calculationRepository.find({
+							where: { id: In(selectedIds) },
+							order: { createdAt: "DESC" },
+						});
+					} else {
+						calculations = await this.calculationRepository.find({
+							order: { createdAt: "DESC" },
+						});
 					}
 
 					this.checkAborted(signal);
 
-					const calculations = await queryBuilder.getMany();
+					const filteredCalculations =
+						this.inMemoryFilterService.applyFiltersAndSort(
+							calculations,
+							filterModel,
+							sortModel,
+						);
+
 					this.customLogger.log(
-						`Exporting ${calculations.length} calculations`,
+						`Exporting ${filteredCalculations.length} calculations (filtered from ${calculations.length} total)`,
+						"CalculationService.findAllForExport",
 					);
-					return calculations;
+
+					return filteredCalculations;
 				} catch (error) {
 					this.customLogger.error(
 						"Failed to export calculations",
