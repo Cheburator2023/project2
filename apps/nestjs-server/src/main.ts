@@ -1,4 +1,4 @@
-import {BadRequestException, ValidationPipe } from "@nestjs/common";
+import { BadRequestException, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import * as express from "express";
@@ -9,23 +9,23 @@ import { CustomLogger } from "./shared/services/logger.service";
 import { RateLimiterMiddleware } from "./shared/middleware/rate-limiter.middleware";
 
 async function bootstrap() {
-    const app = await NestFactory.create(AppModule, {
-        bodyParser: true,
-    });
+	const app = await NestFactory.create(AppModule, {
+		bodyParser: true,
+	});
 
-    const rateLimiter = app.get(RateLimiterMiddleware);
-    app.use(rateLimiter.use.bind(rateLimiter));
+	const rateLimiter = app.get(RateLimiterMiddleware);
+	app.use(rateLimiter.use.bind(rateLimiter));
 
-    const customLogger = app.get(CustomLogger);
-    app.useGlobalInterceptors(new LoggingInterceptor(customLogger));
+	const customLogger = app.get(CustomLogger);
+	app.useGlobalInterceptors(new LoggingInterceptor(customLogger));
 
 	app.enableCors({
 		origin: "*",
 		credentials: true,
 	});
 
-    app.use(express.json({ limit: '10mb' }));
-    app.use(express.urlencoded({ limit: '10mb', extended: true }));
+	app.use(express.json({ limit: "10mb" }));
+	app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 	app.useGlobalPipes(
 		new ValidationPipe({
@@ -40,21 +40,21 @@ async function bootstrap() {
 				target: false,
 				value: false,
 			},
-            exceptionFactory: (errors) => {
-                const errorMessages = errors.map(error => {
-                    const messages = error.constraints
-                    ? Object.values(error.constraints).join(', ')
-                    : `Validation failed for field ${error.property}`;
-                    return {
-                        field: error.property,
-                        message: messages,
-                    };
-                });
-                return new BadRequestException({
-                    message: 'Validation failed',
-                    errors: errorMessages,
-                })
-            }
+			exceptionFactory: (errors) => {
+				const errorMessages = errors.map((error) => {
+					const messages = error.constraints
+						? Object.values(error.constraints).join(", ")
+						: `Validation failed for field ${error.property}`;
+					return {
+						field: error.property,
+						message: messages,
+					};
+				});
+				return new BadRequestException({
+					message: "Validation failed",
+					errors: errorMessages,
+				});
+			},
 		}),
 	);
 
@@ -84,8 +84,8 @@ async function bootstrap() {
 		res.send(document);
 	});
 
-    const port = process.env.PORT || 3000;
-    await app.listen(port);
-    logger.log(`Application is running on port ${port}`);
+	const port = process.env.PORT || 3000;
+	await app.listen(port);
+	logger.log(`Application is running on port ${port}`);
 }
 bootstrap();

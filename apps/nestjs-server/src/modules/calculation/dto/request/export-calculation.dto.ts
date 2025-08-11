@@ -1,6 +1,5 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, IsIn, IsObject } from "class-validator";
-import { Type } from "class-transformer";
+import { IsOptional, IsString } from "class-validator";
 
 export type SortField =
 	| "calcName"
