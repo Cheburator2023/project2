@@ -8,6 +8,7 @@
 
 export * from './algorithmTypeItemDto';
 export * from './algorithmTypeItemDtoAlgorithmType';
+export * from './calculationControllerExportToExcelParams';
 export * from './calculationControllerFindAllPaginatedParams';
 export * from './calculationQuestionnaireDataDto';
 export * from './calculationQuestionnaireDataDtoAutoMlRequired';

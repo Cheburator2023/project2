@@ -1,21 +1,26 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # folders
-node_modules
-**/node_modules
-cache
-.cache
-**/.cache
-logs
+node_modules/
+**/node_modules/
+cache/
+.cache/
+**/.cache/
+logs/
 .pnp
 .pnp.js
-.turbo
-.next
-.vercel
+.turbo/
+.next/
+.vercel/
+dist/
+build/
+coverage/
 
 # production
 build
+dist
 apps/**/*/dist
+!packages/**/*/dist
 *.tsbuildinfo
 
 # testing
@@ -39,9 +44,6 @@ next-env.d.ts
 *.launch
 .settings/
 *.sublime-workspace
-
-# IDE - VSCode
-.vscode/
 
 **/.__mf__win
 **/.__mf__temp

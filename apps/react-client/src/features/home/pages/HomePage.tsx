@@ -1,7 +1,10 @@
 import AddIcon from "@mui/icons-material/Add";
 import ReplayIcon from "@mui/icons-material/Replay";
-import { IconButton, styled, useColorScheme } from "@mui/material";
-import { useCalculationControllerFindAll } from "@react-client/common/api/generated/queries/calculation";
+import { Button, IconButton, styled, useColorScheme } from "@mui/material";
+import {
+	useCalculationControllerFindAll,
+	useCalculationControllerExportToExcel,
+} from "@react-client/common/api/generated/queries/calculation";
 import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
@@ -11,6 +14,10 @@ import { _columnDefs } from "@react-client/features/home/colDefs";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { SearchInput } from "@react-client/features/navigation/organisms/SearchInput";
 import { routes } from "@react-client/routing/routes";
+import {
+	GridFilterModel,
+	filterModelHelpers,
+} from "@react-client/types/agGridFilterModel";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 
 // import { AllEnterpriseModule } from "ag-grid-enterprise";
@@ -21,6 +28,8 @@ import {
 	GetMainMenuItemsParams,
 	type GridApi,
 	type GridReadyEvent,
+	IDateFilterParams,
+	INumberFilterParams,
 	type IRowNode,
 	ModuleRegistry,
 	NumberFilterModule,
@@ -32,6 +41,7 @@ import {
 	ColumnMenuModule,
 	ColumnsToolPanelModule,
 	ContextMenuModule,
+	ExcelExportModule,
 	SetFilterModule,
 } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
@@ -51,8 +61,49 @@ ModuleRegistry.registerModules([
 	ContextMenuModule,
 	SetFilterModule,
 	NumberFilterModule,
+	ExcelExportModule,
 	...(process.env.NODE_ENV !== "production" ? [ValidationModule] : []),
 ]);
+
+const dateFilterParams: IDateFilterParams = {
+	buttons: ["clear", "apply"],
+	inRangeInclusive: true,
+	maxNumConditions: 1,
+	filterOptions: ["equals", "inRange"],
+	closeOnApply: true,
+	comparator: (filterLocalDateAtMidnight: Date, cellValue: string) => {
+		if (cellValue == null) return -1;
+
+		const cellDate = new Date(cellValue);
+
+		if (
+			cellDate.toLocaleDateString() ===
+			filterLocalDateAtMidnight.toLocaleDateString()
+		) {
+			return 0;
+		}
+		if (cellDate < filterLocalDateAtMidnight) {
+			return -1;
+		}
+		if (cellDate > filterLocalDateAtMidnight) {
+			return 1;
+		}
+		return 0;
+	},
+	minValidYear: 2000,
+	inRangeFloatingFilterDateFormat: " YYYY-MM-DD",
+};
+
+const numberFilterParams: INumberFilterParams = {
+	buttons: ["clear", "apply"],
+	maxNumConditions: 1,
+	filterOptions: ["equals", "greaterThan", "lessThan"],
+	closeOnApply: true,
+};
+
+const defaultExcelExportParams = {
+	exportAsExcelTable: true,
+};
 
 // const IS_DEV = process.env.NODE_ENV !== "production";
 
@@ -65,7 +116,7 @@ const numberFormatter = (params: ValueFormatterParams): string => {
 	const numValue = Number(params.value);
 
 	// Check if it's a valid number and has decimal places
-	if (!isNaN(numValue) && numValue % 1 !== 0) {
+	if (!Number.isNaN(numValue) && numValue % 1 !== 0) {
 		return numValue.toFixed(2);
 	}
 
@@ -75,12 +126,7 @@ const numberFormatter = (params: ValueFormatterParams): string => {
 
 export const HomePage = () => {
 	const { data, isLoading, isFetching, error, refetch } =
-		useCalculationControllerFindAll({
-			query: {
-				refetchInterval: 100000,
-				staleTime: 10,
-			},
-		});
+		useCalculationControllerFindAll();
 
 	return (
 		<HomeTemplete
@@ -119,21 +165,39 @@ export const HomeTemplete = ({
 	const [_selectedRows, setSelectedRows] = useState<
 		IRowNode<any>[] | undefined
 	>([]);
+	const [_currentFilterModel, setCurrentFilterModel] =
+		useState<GridFilterModel | null>(null);
+
+	const exportToExcelMutation = useCalculationControllerExportToExcel();
 
 	useEffect(() => {
 		setIsInCompareMode(params.get("isInCompareMode") === "true");
 	}, [params.get("isInCompareMode")]);
 
 	const [columnDefs] = useState(
-		_columnDefs.map((col) => ({
-			...col,
-			headerName: col.headerName,
-			field: col.field,
-			sortable: true,
-			filter: true,
-			resizable: true,
-			valueFormatter: numberFormatter, // Add number formatter to all columns
-		})),
+		_columnDefs.map((col) => {
+			return {
+				...col,
+				headerName: col.headerName,
+				field: col.field,
+				filterParams:
+					col.cellDataType === "dateString"
+						? dateFilterParams
+						: col.cellDataType === "number"
+							? numberFilterParams
+							: { buttons: ["clear"] },
+
+				filter:
+					col.cellDataType === "dateString"
+						? "agDateColumnFilter"
+						: col.cellDataType === "number"
+							? "agNumberColumnFilter"
+							: "agSetColumnFilter",
+				sortable: true,
+				resizable: true,
+				valueFormatter: numberFormatter, // Add number formatter to all columns
+			};
+		}),
 	);
 
 	if (error) {
@@ -173,17 +237,70 @@ export const HomeTemplete = ({
 		},
 	};
 
-	const _onExportExcel = () => {
-		if (gridRef.current?.api) {
-			gridRef.current.api.exportDataAsExcel({
-				fileName: "export_data.xlsx",
+	// AG Grid export solution (commented out)
+	// const _onExportExcel = () => {
+	// 	if (gridRef.current?.api) {
+	// 		gridRef.current.api.exportDataAsExcel({
+	// 			fileName: "export_data.xlsx",
+	// 			fontSize: 14,
+	// 		});
+	// 	} else {
+	// 		console.error(
+	// 			"Grid API not available, or Excel export module not registered/licensed.",
+	// 		);
+	// 	}
+	// };
+
+	const _onExportExcel = async () => {
+		try {
+			const filterModel = gridRef?.current?.api?.getFilterModel() || {};
+			const selectedNodes = gridRef?.current?.api?.getSelectedNodes() || [];
+			const selectedIds = selectedNodes
+				.map((node) => node.data?.id)
+				.filter(Boolean);
+
+			const response = await exportToExcelMutation.mutateAsync({
+				data: {
+					filterModel:
+						Object.keys(filterModel).length > 0
+							? JSON.stringify(filterModel)
+							: undefined,
+					selectedIds: selectedIds.length > 0 ? selectedIds : undefined,
+				},
 			});
-		} else {
-			console.error(
-				"Grid API not available, or Excel export module not registered/licensed.",
-			);
+
+			const blob = new Blob([response], {
+				type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			});
+
+			const url = window.URL.createObjectURL(blob);
+			const link = document.createElement("a");
+			link.href = url;
+			link.download = `расчеты_${new Date().toISOString().split("T")[0]}.xlsx`;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			window.URL.revokeObjectURL(url);
+
+			toast.success("Файл успешно экспортирован");
+		} catch (error) {
+			console.error("Ошибка экспорта:", error);
+			toast.error("Ошибка при экспорте файла");
 		}
 	};
+
+	const gridFilterModel: GridFilterModel | null =
+		gridRef?.current?.api?.getFilterModel() || null;
+
+	console.log("🐸 Pepe said >> gridFilterModel:", gridFilterModel);
+	console.log(
+		"🐸 Pepe said >> активных фильтров:",
+		filterModelHelpers.getActiveFiltersCount(gridFilterModel || {}),
+	);
+	console.log(
+		"🐸 Pepe said >> отфильтрованные колонки:",
+		filterModelHelpers.getFilteredColumns(gridFilterModel || {}),
+	);
 
 	const onCreateCalculation = () => {
 		console.log("Create calculation");
@@ -193,6 +310,19 @@ export const HomeTemplete = ({
 	const onGridReady = (params: GridReadyEvent<any, any>) => {
 		console.log("Grid is ready, setting API in Zustand store.");
 		setGridApi(params.api as GridApi);
+	};
+
+	const onFilterChanged = () => {
+		const filterModel = gridRef?.current?.api?.getFilterModel() || null;
+		setCurrentFilterModel(filterModel);
+		console.log("🐸 Pepe said >> фильтр изменен:", filterModel);
+	};
+
+	const _onClearColumnFilter = (columnId: string) => {
+		if (gridRef?.current?.api) {
+			gridRef.current.api.setColumnFilterModel(columnId, null);
+			gridRef.current.api.onFilterChanged();
+		}
 	};
 
 	const autoSizeStrategy: SizeColumnsToContentStrategy = {
@@ -292,6 +422,15 @@ export const HomeTemplete = ({
 						</div> */}
 					</Flex>
 				</Flex>
+				<Button
+					onClick={_onExportExcel}
+					variant="contained"
+					fullWidth
+					sx={{ maxWidth: "150px" }}
+					disabled={exportToExcelMutation.isPending}
+				>
+					{exportToExcelMutation.isPending ? "Экспорт..." : "Экспорт в xlsx"}
+				</Button>
 			</Header>
 
 			<GridWrapper
@@ -316,9 +455,11 @@ export const HomeTemplete = ({
 					paginationPageSize={100}
 					localeText={AG_GRID_LOCALE_RU}
 					ref={gridRef}
+					defaultExcelExportParams={defaultExcelExportParams}
 					autoSizeStrategy={autoSizeStrategy}
 					onCellMouseOver={onCellMouseOver}
 					onGridReady={onGridReady}
+					onFilterChanged={onFilterChanged}
 					tooltipShowDelay={500}
 					animateRows={false}
 					icons={icons}

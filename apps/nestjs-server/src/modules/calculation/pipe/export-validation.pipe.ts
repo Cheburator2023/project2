@@ -1,7 +1,14 @@
-import { PipeTransform, Injectable, BadRequestException } from "@nestjs/common";
+import {
+	PipeTransform,
+	Injectable,
+	BadRequestException,
+	Logger,
+} from "@nestjs/common";
 import {
 	ExportCalculationDto,
 	TransformedExportCalculationDto,
+	AgGridFilterModel,
+	AgGridSortModel,
 } from "../dto/request/export-calculation.dto";
 
 @Injectable()
@@ -9,7 +16,11 @@ export class ExportValidationPipe
 	implements
 		PipeTransform<ExportCalculationDto, TransformedExportCalculationDto>
 {
+	private readonly logger = new Logger(ExportValidationPipe.name);
+
 	transform(value: ExportCalculationDto): TransformedExportCalculationDto {
+		this.logger.debug("Received export data for validation", { value });
+
 		const transformed: TransformedExportCalculationDto = { ...value };
 
 		if (transformed.selectedIds) {
@@ -20,39 +31,113 @@ export class ExportValidationPipe
 
 			if (transformed.selectedIdsArray.length === 0) {
 				throw new BadRequestException(
-					"At least one valid ID must be provided in selectedIds",
+					"Необходимо указать хотя бы один валидный ID в selectedIds",
 				);
 			}
 		}
 
-		if (
-			transformed.createdFrom &&
-			Number.isNaN(Date.parse(transformed.createdFrom))
-		) {
-			throw new BadRequestException("Invalid createdFrom date format");
+		if (transformed.filterModel) {
+			this.logger.debug("Processing filterModel", {
+				filterModel: transformed.filterModel,
+				type: typeof transformed.filterModel,
+			});
+
+			try {
+				transformed.parsedFilterModel = JSON.parse(
+					transformed.filterModel,
+				) as AgGridFilterModel;
+
+				this.logger.debug("Parsed filterModel successfully", {
+					parsedFilterModel: transformed.parsedFilterModel,
+				});
+
+				this.validateFilterModel(transformed.parsedFilterModel);
+			} catch (error) {
+				this.logger.error("Error parsing filterModel", {
+					error: error.message,
+					stack: error.stack,
+					filterModel: transformed.filterModel,
+				});
+				throw new BadRequestException(
+					`Неверный формат filterModel: ${error.message}`,
+				);
+			}
 		}
 
-		if (
-			transformed.createdTo &&
-			Number.isNaN(Date.parse(transformed.createdTo))
-		) {
-			throw new BadRequestException("Invalid createdTo date format");
-		}
-
-		if (
-			transformed.minFinalCoefficient &&
-			Number.isNaN(Number(transformed.minFinalCoefficient))
-		) {
-			throw new BadRequestException("minFinalCoefficient must be a number");
-		}
-
-		if (
-			transformed.maxFinalCoefficient &&
-			Number.isNaN(Number(transformed.maxFinalCoefficient))
-		) {
-			throw new BadRequestException("maxFinalCoefficient must be a number");
+		if (transformed.sortModel) {
+			try {
+				transformed.parsedSortModel = JSON.parse(
+					transformed.sortModel,
+				) as AgGridSortModel[];
+				this.validateSortModel(transformed.parsedSortModel);
+			} catch (error) {
+				throw new BadRequestException(
+					`Неверный формат sortModel: ${error.message}`,
+				);
+			}
 		}
 
 		return transformed;
+	}
+
+	private validateFilterModel(filterModel: AgGridFilterModel): void {
+		if (!filterModel || typeof filterModel !== "object") {
+			throw new Error("filterModel должен быть объектом");
+		}
+
+		for (const [columnId, filter] of Object.entries(filterModel)) {
+			if (!filter.filterType) {
+				throw new Error(`Отсутствует filterType для колонки ${columnId}`);
+			}
+
+			if (!["text", "number", "date", "set"].includes(filter.filterType)) {
+				throw new Error(
+					`Неподдерживаемый filterType: ${filter.filterType} для колонки ${columnId}`,
+				);
+			}
+
+			if ("operator" in filter) {
+				if (!["AND", "OR"].includes(filter.operator)) {
+					throw new Error(
+						`Неподдерживаемый operator: ${filter.operator} для колонки ${columnId}`,
+					);
+				}
+				if (!filter.condition1 || !filter.condition2) {
+					throw new Error(
+						`Отсутствуют condition1 или condition2 для комбинированного фильтра колонки ${columnId}`,
+					);
+				}
+			}
+
+			if (filter.filterType === "date") {
+				const dateFilter = filter as any;
+				if (
+					dateFilter.dateFrom &&
+					Number.isNaN(Date.parse(dateFilter.dateFrom))
+				) {
+					throw new Error(`Неверный формат dateFrom для колонки ${columnId}`);
+				}
+				if (dateFilter.dateTo && Number.isNaN(Date.parse(dateFilter.dateTo))) {
+					throw new Error(`Неверный формат dateTo для колонки ${columnId}`);
+				}
+			}
+		}
+	}
+
+	private validateSortModel(sortModel: AgGridSortModel[]): void {
+		if (!Array.isArray(sortModel)) {
+			throw new Error("sortModel должен быть массивом");
+		}
+
+		for (const sort of sortModel) {
+			if (!sort.colId) {
+				throw new Error("Отсутствует colId в sortModel");
+			}
+			if (!["asc", "desc"].includes(sort.sort)) {
+				throw new Error(
+					`Неподдерживаемое направление сортировки: ${sort.sort}`,
+				);
+			}
+		}
 	}
 }

@@ -1,39 +1,39 @@
-import { Logger } from '@nestjs/common';
-import { delay } from './delay.util';
+import { Logger } from "@nestjs/common";
+import { delay } from "./delay.util";
 
 export class RetryUtil {
-    private static readonly logger = new Logger(RetryUtil.name);
+	private static readonly logger = new Logger(RetryUtil.name);
 
-    static async withRetry<T>(
-        operation: () => Promise<T>,
-        maxRetries = 3,
-        baseDelayMs = 1000,
-        shouldRetry = (error: any) => true
-    ): Promise<T> {
-        let attempt = 0;
-        let lastError: any;
+	static async withRetry<T>(
+		operation: () => Promise<T>,
+		maxRetries = 3,
+		baseDelayMs = 1000,
+		shouldRetry = (_error: any) => true,
+	): Promise<T> {
+		let attempt = 0;
+		let lastError: any;
 
-        while (attempt < maxRetries) {
-            try {
-                return await operation();
-            } catch (error) {
-                lastError = error;
-                attempt++;
+		while (attempt < maxRetries) {
+			try {
+				return await operation();
+			} catch (error) {
+				lastError = error;
+				attempt++;
 
-                if (!shouldRetry(error) || attempt >= maxRetries) {
-                    break;
-                }
+				if (!shouldRetry(error) || attempt >= maxRetries) {
+					break;
+				}
 
-                const delayMs = baseDelayMs * Math.pow(2, attempt - 1);
-                this.logger.warn(
-                    `Attempt ${attempt} failed. Retrying in ${delayMs}ms...`,
-                    error.message
-                );
+				const delayMs = baseDelayMs * 2 ** (attempt - 1);
+				RetryUtil.logger.warn(
+					`Attempt ${attempt} failed. Retrying in ${delayMs}ms...`,
+					error.message,
+				);
 
-                await delay(delayMs);
-            }
-        }
+				await delay(delayMs);
+			}
+		}
 
-        throw lastError;
-    }
+		throw lastError;
+	}
 }

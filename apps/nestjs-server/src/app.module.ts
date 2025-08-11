@@ -23,10 +23,10 @@ import { RetryInterceptor } from "./shared/interceptors/retry.interceptor";
 		KeycloakModule,
 		CalculationModule,
 		QuestionnaireModule,
-        MiddlewareModule,
+		MiddlewareModule,
 	],
 	providers: [
-        CustomLogger,
+		CustomLogger,
 		// AuthGuard
 		{
 			provide: "DELEGATE_GUARD_AUTH",
@@ -60,18 +60,18 @@ import { RetryInterceptor } from "./shared/interceptors/retry.interceptor";
 				new GodModeGuard(reflector, delegateGuard),
 			inject: [Reflector, "DELEGATE_GUARD_ROLE"],
 		},
-        {
-            provide: APP_INTERCEPTOR,
-            useClass: AbortInterceptor,
-        },
-        {
-            provide: APP_INTERCEPTOR,
-            useClass: LoggingInterceptor,
-        },
-        {
-            provide: APP_INTERCEPTOR,
-            useClass: RetryInterceptor,
-        },
+		{
+			provide: APP_INTERCEPTOR,
+			useClass: AbortInterceptor,
+		},
+		{
+			provide: APP_INTERCEPTOR,
+			useClass: LoggingInterceptor,
+		},
+		{
+			provide: APP_INTERCEPTOR,
+			useClass: RetryInterceptor,
+		},
 	],
 })
 export class AppModule {}
