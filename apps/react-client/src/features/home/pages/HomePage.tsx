@@ -1,7 +1,10 @@
 import AddIcon from "@mui/icons-material/Add";
 import ReplayIcon from "@mui/icons-material/Replay";
 import { Button, IconButton, styled, useColorScheme } from "@mui/material";
-import { useCalculationControllerFindAll, useCalculationControllerExportToExcel } from "@react-client/common/api/generated/queries/calculation";
+import {
+	useCalculationControllerFindAll,
+	useCalculationControllerExportToExcel,
+} from "@react-client/common/api/generated/queries/calculation";
 import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
@@ -159,7 +162,7 @@ export const HomeTemplete = ({
 	const [_selectedRows, setSelectedRows] = useState<
 		IRowNode<any>[] | undefined
 	>([]);
-	const [currentFilterModel, setCurrentFilterModel] =
+	const [_currentFilterModel, setCurrentFilterModel] =
 		useState<GridFilterModel | null>(null);
 
 	const exportToExcelMutation = useCalculationControllerExportToExcel();
@@ -247,23 +250,28 @@ export const HomeTemplete = ({
 		try {
 			const filterModel = gridRef?.current?.api?.getFilterModel() || {};
 			const selectedNodes = gridRef?.current?.api?.getSelectedNodes() || [];
-			const selectedIds = selectedNodes.map(node => node.data?.id).filter(Boolean);
+			const selectedIds = selectedNodes
+				.map((node) => node.data?.id)
+				.filter(Boolean);
 
 			const response = await exportToExcelMutation.mutateAsync({
 				params: {
-					filterModel: Object.keys(filterModel).length > 0 ? JSON.stringify(filterModel) : undefined,
+					filterModel:
+						Object.keys(filterModel).length > 0
+							? JSON.stringify(filterModel)
+							: undefined,
 					selectedIds: selectedIds.length > 0 ? selectedIds : undefined,
-				}
+				},
 			});
 
 			const blob = new Blob([response], {
-				type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+				type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 			});
-			
+
 			const url = window.URL.createObjectURL(blob);
-			const link = document.createElement('a');
+			const link = document.createElement("a");
 			link.href = url;
-			link.download = `расчеты_${new Date().toISOString().split('T')[0]}.xlsx`;
+			link.download = `расчеты_${new Date().toISOString().split("T")[0]}.xlsx`;
 			document.body.appendChild(link);
 			link.click();
 			document.body.removeChild(link);
@@ -305,7 +313,7 @@ export const HomeTemplete = ({
 		console.log("🐸 Pepe said >> фильтр изменен:", filterModel);
 	};
 
-	const onClearColumnFilter = (columnId: string) => {
+	const _onClearColumnFilter = (columnId: string) => {
 		if (gridRef?.current?.api) {
 			gridRef.current.api.setColumnFilterModel(columnId, null);
 			gridRef.current.api.onFilterChanged();
