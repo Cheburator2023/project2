@@ -1,4 +1,9 @@
-import { PipeTransform, Injectable, BadRequestException } from "@nestjs/common";
+import {
+	PipeTransform,
+	Injectable,
+	BadRequestException,
+	Logger,
+} from "@nestjs/common";
 import {
 	ExportCalculationDto,
 	TransformedExportCalculationDto,
@@ -11,7 +16,11 @@ export class ExportValidationPipe
 	implements
 		PipeTransform<ExportCalculationDto, TransformedExportCalculationDto>
 {
+	private readonly logger = new Logger(ExportValidationPipe.name);
+
 	transform(value: ExportCalculationDto): TransformedExportCalculationDto {
+		this.logger.debug("Received export data for validation", { value });
+
 		const transformed: TransformedExportCalculationDto = { ...value };
 
 		if (transformed.selectedIds) {
@@ -28,12 +37,27 @@ export class ExportValidationPipe
 		}
 
 		if (transformed.filterModel) {
+			this.logger.debug("Processing filterModel", {
+				filterModel: transformed.filterModel,
+				type: typeof transformed.filterModel,
+			});
+
 			try {
 				transformed.parsedFilterModel = JSON.parse(
 					transformed.filterModel,
 				) as AgGridFilterModel;
+
+				this.logger.debug("Parsed filterModel successfully", {
+					parsedFilterModel: transformed.parsedFilterModel,
+				});
+
 				this.validateFilterModel(transformed.parsedFilterModel);
 			} catch (error) {
+				this.logger.error("Error parsing filterModel", {
+					error: error.message,
+					stack: error.stack,
+					filterModel: transformed.filterModel,
+				});
 				throw new BadRequestException(
 					`Неверный формат filterModel: ${error.message}`,
 				);

@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { SelectQueryBuilder } from "typeorm";
 import {
 	AgGridFilterModel,
@@ -14,14 +14,34 @@ import { Calculation } from "../entities/calculation.entity";
 
 @Injectable()
 export class AgGridFilterService {
+	private readonly logger = new Logger(AgGridFilterService.name);
 	applyFiltersToQuery(
 		queryBuilder: SelectQueryBuilder<Calculation>,
 		filterModel?: AgGridFilterModel,
 	): void {
-		if (!filterModel) return;
+		if (!filterModel) {
+			this.logger.debug("No filter model provided");
+			return;
+		}
+
+		this.logger.debug("Applying filters to query", { filterModel });
 
 		for (const [columnId, filter] of Object.entries(filterModel)) {
-			this.applyColumnFilter(queryBuilder, columnId, filter);
+			try {
+				this.logger.debug(`Processing filter for column: ${columnId}`, {
+					filter,
+				});
+
+				this.applyColumnFilter(queryBuilder, columnId, filter);
+			} catch (error) {
+				this.logger.error(`Error applying filter for column ${columnId}`, {
+					error: error.message,
+					stack: error.stack,
+					columnId,
+					filter,
+				});
+				throw error;
+			}
 		}
 	}
 
@@ -103,20 +123,42 @@ export class AgGridFilterService {
 		const columnName = this.mapColumnIdToDbField(columnId);
 		const paramKey = `${columnId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+		this.logger.debug(`Building filter condition`, {
+			columnId,
+			columnName,
+			filterType: filter.filterType,
+			paramKey,
+		});
+
+		let result: { sql: string; params: Record<string, any> };
+
 		switch (filter.filterType) {
 			case "text":
-				return this.buildTextFilterCondition(columnName, filter, paramKey);
+				result = this.buildTextFilterCondition(columnName, filter, paramKey);
+				break;
 			case "number":
-				return this.buildNumberFilterCondition(columnName, filter, paramKey);
+				result = this.buildNumberFilterCondition(columnName, filter, paramKey);
+				break;
 			case "date":
-				return this.buildDateFilterCondition(columnName, filter, paramKey);
+				result = this.buildDateFilterCondition(columnName, filter, paramKey);
+				break;
 			case "set":
-				return this.buildSetFilterCondition(columnName, filter, paramKey);
-			default:
-				throw new Error(
-					`Неподдерживаемый тип фильтра: ${(filter as any).filterType}`,
-				);
+				result = this.buildSetFilterCondition(columnName, filter, paramKey);
+				break;
+			default: {
+				const error = `Неподдерживаемый тип фильтра: ${(filter as any).filterType}`;
+				this.logger.error(error, { columnId, filter });
+				throw new Error(error);
+			}
 		}
+
+		this.logger.debug(`Generated filter condition`, {
+			columnId,
+			sql: result.sql,
+			params: result.params,
+		});
+
+		return result;
 	}
 
 	private buildTextFilterCondition(
@@ -315,6 +357,8 @@ export class AgGridFilterService {
 	}
 
 	private mapColumnIdToDbField(columnId: string): string {
+		this.logger.debug(`Mapping column ID to DB field: ${columnId}`);
+
 		const mapping: Record<string, string> = {
 			calcName: "calcName",
 			name: "calcName",
@@ -329,12 +373,20 @@ export class AgGridFilterService {
 		};
 
 		if (mapping[columnId]) {
-			return mapping[columnId];
+			const mappedField = mapping[columnId];
+			this.logger.debug(`Direct mapping found: ${columnId} -> ${mappedField}`);
+			return mappedField;
 		}
 
 		if (columnId.startsWith("questionnaireData.")) {
 			const jsonPath = columnId.substring("questionnaireData.".length);
 			const pathParts = jsonPath.split(".");
+
+			this.logger.debug(`Processing questionnaireData field`, {
+				originalColumnId: columnId,
+				jsonPath,
+				pathParts,
+			});
 
 			let jsonPathExpression = "questionnaireData";
 			for (let i = 0; i < pathParts.length; i++) {
@@ -352,9 +404,17 @@ export class AgGridFilterService {
 				}
 			}
 
+			this.logger.debug(`Generated JSON path expression`, {
+				originalColumnId: columnId,
+				jsonPathExpression,
+			});
+
 			return jsonPathExpression;
 		}
 
+		this.logger.debug(
+			`No mapping found, using original column ID: ${columnId}`,
+		);
 		return columnId;
 	}
 }
