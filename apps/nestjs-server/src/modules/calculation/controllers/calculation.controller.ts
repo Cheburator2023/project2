@@ -60,25 +60,25 @@ export class CalculationController {
 	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
 	@UsePipes(JsonValidationPipe)
 	@ApiOperation({
-		summary: "Create new calculation",
-		description: "Creates a new calculation with the provided data",
+		summary: "Создать новый расчет",
+		description: "Создает новый расчет с предоставленными данными",
 	})
 	@ApiResponse({
 		status: HttpStatus.CREATED,
-		description: "The calculation has been successfully created.",
+		description: "Расчет успешно создан.",
 		type: CalculationResponseDto,
 	})
 	@ApiResponse({
 		status: HttpStatus.BAD_REQUEST,
-		description: "Bad request. Validation failed.",
+		description: "Неверный запрос. Ошибка валидации.",
 	})
 	@ApiResponse({
 		status: HttpStatus.UNAUTHORIZED,
-		description: "Unauthorized. Authentication required.",
+		description: "Не авторизован. Требуется аутентификация.",
 	})
     @ApiResponse({
         status: HttpStatus.TOO_MANY_REQUESTS,
-        description: "Too many requests. Rate limit exceeded.",
+        description: "Слишком много запросов. Превышен лимит скорости.",
         content: {
             "application/json": {
                 example: {
@@ -136,34 +136,34 @@ export class CalculationController {
 	@RealmRole(Permission.ANKETA_EDIT_CALCULATION)
 	@UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 	@ApiOperation({
-		summary: "Update calculation basic information",
-		description: "Updates basic information of an existing calculation",
+		summary: "Обновить основную информацию расчета",
+		description: "Обновляет основную информацию существующего расчета",
 	})
 	@ApiParam({
 		name: "id",
-		description: "Calculation unique identifier",
+		description: "Уникальный идентификатор расчета",
 		example: "550e8400-e29b-41d4-a716-446655440000",
 	})
 	@ApiResponse({
 		status: HttpStatus.OK,
-		description: "The calculation has been successfully updated.",
+		description: "Расчет успешно обновлен.",
 		type: CalculationResponseDto,
 	})
 	@ApiResponse({
 		status: HttpStatus.BAD_REQUEST,
-		description: "Bad request. Validation failed.",
+		description: "Неверный запрос. Ошибка валидации.",
 	})
 	@ApiResponse({
 		status: HttpStatus.NOT_FOUND,
-		description: "Calculation not found.",
+		description: "Расчет не найден.",
 	})
 	@ApiResponse({
 		status: HttpStatus.UNAUTHORIZED,
-		description: "Unauthorized. Authentication required.",
+		description: "Не авторизован. Требуется аутентификация.",
 	})
     @ApiResponse({
         status: HttpStatus.TOO_MANY_REQUESTS,
-        description: "Too many requests. Rate limit exceeded.",
+        description: "Слишком много запросов. Превышен лимит скорости.",
         content: {
             "application/json": {
                 example: {
@@ -196,35 +196,35 @@ export class CalculationController {
 	@StreamFilter()
 	@RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
 	@ApiOperation({
-		summary: "Get all calculations (paginated)",
-		description: "Retrieves a paginated list of all calculations",
+		summary: "Получить все расчеты (с пагинацией)",
+		description: "Возвращает пагинированный список всех расчетов",
 	})
 	@ApiQuery({
 		name: "page",
 		required: false,
 		type: Number,
-		description: "Page number (starting from 1)",
+		description: "Номер страницы (начиная с 1)",
 		example: 1,
 	})
 	@ApiQuery({
 		name: "limit",
 		required: false,
 		type: Number,
-		description: "Number of items per page (max 100)",
+		description: "Количество элементов на странице (максимум 100)",
 		example: 10,
 	})
 	@ApiResponse({
 		status: HttpStatus.OK,
-		description: "Paginated list of calculations",
+		description: "Пагинированный список расчетов",
 		type: PaginatedCalculationResponseDto,
 	})
 	@ApiResponse({
 		status: HttpStatus.UNAUTHORIZED,
-		description: "Unauthorized. Authentication required.",
+		description: "Не авторизован. Требуется аутентификация.",
 	})
     @ApiResponse({
         status: HttpStatus.TOO_MANY_REQUESTS,
-        description: "Too many requests. Rate limit exceeded.",
+        description: "Слишком много запросов. Превышен лимит скорости.",
         content: {
             "application/json": {
                 example: {
@@ -260,21 +260,21 @@ export class CalculationController {
     @StreamFilter()
     @RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
     @ApiOperation({
-        summary: "Get all calculations (non-paginated)",
-        description: "Retrieves all calculations without pagination",
+        summary: "Получить все расчеты (без пагинации)",
+        description: "Возвращает все расчеты без пагинации",
     })
     @ApiResponse({
         status: HttpStatus.OK,
-        description: "List of all calculations",
+        description: "Список всех расчетов",
         type: [CalculationResponseDto],
     })
     @ApiResponse({
         status: HttpStatus.UNAUTHORIZED,
-        description: "Unauthorized. Authentication required.",
+        description: "Не авторизован. Требуется аутентификация.",
     })
     @ApiResponse({
         status: HttpStatus.TOO_MANY_REQUESTS,
-        description: "Too many requests. Rate limit exceeded.",
+        description: "Слишком много запросов. Превышен лимит скорости.",
         content: {
             "application/json": {
                 example: {
@@ -305,34 +305,34 @@ export class CalculationController {
     @StreamFilter()
     @RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
     @ApiOperation({
-        summary: "Get calculation by ID",
-        description: "Retrieves a specific calculation by its unique identifier",
+        summary: "Получить расчет по ID",
+        description: "Возвращает конкретный расчет по его уникальному идентификатору",
     })
     @ApiParam({
         name: "id",
-        description: "Calculation unique identifier",
+        description: "Уникальный идентификатор расчета",
         example: "550e8400-e29b-41d4-a716-446655440000",
     })
     @ApiResponse({
         status: HttpStatus.OK,
-        description: "Calculation data",
+        description: "Данные расчета",
         type: CalculationResponseDto,
     })
     @ApiResponse({
         status: HttpStatus.BAD_REQUEST,
-        description: "Invalid UUID format",
+        description: "Неверный формат UUID",
     })
     @ApiResponse({
         status: HttpStatus.NOT_FOUND,
-        description: "Calculation not found",
+        description: "Расчет не найден",
     })
     @ApiResponse({
         status: HttpStatus.UNAUTHORIZED,
-        description: "Unauthorized. Authentication required.",
+        description: "Не авторизован. Требуется аутентификация.",
     })
     @ApiResponse({
         status: HttpStatus.TOO_MANY_REQUESTS,
-        description: "Too many requests. Rate limit exceeded.",
+        description: "Слишком много запросов. Превышен лимит скорости.",
         content: {
             "application/json": {
                 example: {
@@ -363,13 +363,34 @@ export class CalculationController {
     @StreamFilter()
     @RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
     @ApiOperation({
-        summary: "Export calculations to Excel",
+        summary: "Экспорт расчетов в Excel",
         description:
-            "Exports calculations to Excel file with applied filters and sorting",
+            "Экспортирует расчеты в файл Excel с применением фильтров и сортировки с использованием модели фильтров AG Grid",
+    })
+    @ApiQuery({
+        name: "filterModel",
+        required: false,
+        description: "Модель фильтров AG Grid в виде JSON строки. Поддерживает текстовые, числовые, даты и множественные фильтры с различными операторами (contains, equals, startsWith, endsWith, notEqual, greaterThan, lessThan, inRange)",
+        example: '{"calcName":{"filterType":"text","type":"contains","filter":"тест"},"finalCoefficient":{"filterType":"number","type":"greaterThan","filter":1.5}}',
+        schema: { type: "string" },
+    })
+    @ApiQuery({
+        name: "sortModel",
+        required: false,
+        description: "Модель сортировки AG Grid в виде JSON строки. Массив конфигураций сортировки с ID колонки и направлением сортировки",
+        example: '[{"colId":"calcName","sort":"asc"},{"colId":"createdAt","sort":"desc"}]',
+        schema: { type: "string" },
+    })
+    @ApiQuery({
+        name: "selectedIds",
+        required: false,
+        description: "Список ID расчетов для экспорта через запятую. Если указан, будут экспортированы только эти расчеты независимо от фильтров",
+        example: "550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001",
+        schema: { type: "string" },
     })
     @ApiResponse({
         status: HttpStatus.OK,
-        description: "Excel file download",
+        description: "Скачивание файла Excel",
         content: {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
                 schema: { type: "string", format: "binary" },
@@ -378,15 +399,15 @@ export class CalculationController {
     })
     @ApiResponse({
         status: HttpStatus.BAD_REQUEST,
-        description: "Bad request",
+        description: "Неверный запрос - Неверный формат JSON модели фильтров или сортировки",
     })
     @ApiResponse({
         status: HttpStatus.UNAUTHORIZED,
-        description: "Unauthorized. Authentication required.",
+        description: "Не авторизован. Требуется аутентификация.",
     })
     @ApiResponse({
         status: HttpStatus.TOO_MANY_REQUESTS,
-        description: "Too many requests. Rate limit exceeded.",
+        description: "Слишком много запросов. Превышен лимит скорости.",
         content: {
             "application/json": {
                 example: {
@@ -405,40 +426,9 @@ export class CalculationController {
         this.activeRequests.set(ctx.requestId, ctx.abortController);
 
         try {
-            const filters = {
-                name: queryParams.name,
-                finalCoefficient:
-                    queryParams.minFinalCoefficient || queryParams.maxFinalCoefficient
-                        ? {
-                                min: queryParams.minFinalCoefficient,
-                                max: queryParams.maxFinalCoefficient,
-                            }
-                        : undefined,
-                createdAt:
-                    queryParams.createdFrom || queryParams.createdTo
-                        ? {
-                                from: queryParams.createdFrom
-                                    ? new Date(queryParams.createdFrom)
-                                    : undefined,
-                                to: queryParams.createdTo
-                                    ? new Date(queryParams.createdTo)
-                                    : undefined,
-                            }
-                        : undefined,
-                status: queryParams.status,
-            };
-
-            const sort =
-                queryParams.field || queryParams.order
-                    ? {
-                            field: queryParams.field || "createdAt",
-                            order: queryParams.order || "DESC",
-                        }
-                    : undefined;
-
             const calculations = await this.calculationService.findAllForExport(
-                filters,
-                sort,
+                queryParams.parsedFilterModel,
+                queryParams.parsedSortModel,
                 queryParams.selectedIdsArray,
                 ctx.abortController.signal,
             );

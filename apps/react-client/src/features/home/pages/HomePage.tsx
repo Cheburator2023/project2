@@ -1,7 +1,7 @@
 import AddIcon from "@mui/icons-material/Add";
 import ReplayIcon from "@mui/icons-material/Replay";
 import { Button, IconButton, styled, useColorScheme } from "@mui/material";
-import { useCalculationControllerFindAll } from "@react-client/common/api/generated/queries/calculation";
+import { useCalculationControllerFindAll, useCalculationControllerExportToExcel } from "@react-client/common/api/generated/queries/calculation";
 import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
@@ -162,6 +162,8 @@ export const HomeTemplete = ({
 	const [currentFilterModel, setCurrentFilterModel] =
 		useState<GridFilterModel | null>(null);
 
+	const exportToExcelMutation = useCalculationControllerExportToExcel();
+
 	useEffect(() => {
 		setIsInCompareMode(params.get("isInCompareMode") === "true");
 	}, [params.get("isInCompareMode")]);
@@ -227,16 +229,50 @@ export const HomeTemplete = ({
 		},
 	};
 
-	const _onExportExcel = () => {
-		if (gridRef.current?.api) {
-			gridRef.current.api.exportDataAsExcel({
-				fileName: "export_data.xlsx",
-				fontSize: 14,
+	// AG Grid export solution (commented out)
+	// const _onExportExcel = () => {
+	// 	if (gridRef.current?.api) {
+	// 		gridRef.current.api.exportDataAsExcel({
+	// 			fileName: "export_data.xlsx",
+	// 			fontSize: 14,
+	// 		});
+	// 	} else {
+	// 		console.error(
+	// 			"Grid API not available, or Excel export module not registered/licensed.",
+	// 		);
+	// 	}
+	// };
+
+	const _onExportExcel = async () => {
+		try {
+			const filterModel = gridRef?.current?.api?.getFilterModel() || {};
+			const selectedNodes = gridRef?.current?.api?.getSelectedNodes() || [];
+			const selectedIds = selectedNodes.map(node => node.data?.id).filter(Boolean);
+
+			const response = await exportToExcelMutation.mutateAsync({
+				params: {
+					filterModel: Object.keys(filterModel).length > 0 ? JSON.stringify(filterModel) : undefined,
+					selectedIds: selectedIds.length > 0 ? selectedIds : undefined,
+				}
 			});
-		} else {
-			console.error(
-				"Grid API not available, or Excel export module not registered/licensed.",
-			);
+
+			const blob = new Blob([response], {
+				type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+			});
+			
+			const url = window.URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = `расчеты_${new Date().toISOString().split('T')[0]}.xlsx`;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			window.URL.revokeObjectURL(url);
+
+			toast.success("Файл успешно экспортирован");
+		} catch (error) {
+			console.error("Ошибка экспорта:", error);
+			toast.error("Ошибка при экспорте файла");
 		}
 	};
 
@@ -378,8 +414,9 @@ export const HomeTemplete = ({
 					variant="contained"
 					fullWidth
 					sx={{ maxWidth: "150px" }}
+					disabled={exportToExcelMutation.isPending}
 				>
-					Экспорт в xlsx
+					{exportToExcelMutation.isPending ? "Экспорт..." : "Экспорт в xlsx"}
 				</Button>
 			</Header>
 
