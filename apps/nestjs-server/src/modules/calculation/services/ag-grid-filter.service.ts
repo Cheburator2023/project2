@@ -179,7 +179,10 @@ export class AgGridFilterService {
 		filter: AgGridNumberFilter,
 		paramKey: string,
 	): { sql: string; params: Record<string, any> } {
-		const field = `calculation.${columnName}`;
+		const isJsonField = columnName.includes("->");
+		const field = isJsonField
+			? `(calculation.${columnName})::numeric`
+			: `calculation.${columnName}`;
 
 		switch (filter.type) {
 			case "equals":
@@ -242,7 +245,10 @@ export class AgGridFilterService {
 		filter: AgGridDateFilter,
 		paramKey: string,
 	): { sql: string; params: Record<string, any> } {
-		const field = `calculation.${columnName}`;
+		const isJsonField = columnName.includes("->");
+		const field = isJsonField
+			? `(calculation.${columnName})::timestamp`
+			: `calculation.${columnName}`;
 
 		switch (filter.type) {
 			case "equals":
@@ -322,6 +328,33 @@ export class AgGridFilterService {
 			comment: "comment",
 		};
 
-		return mapping[columnId] || columnId;
+		if (mapping[columnId]) {
+			return mapping[columnId];
+		}
+
+		if (columnId.startsWith("questionnaireData.")) {
+			const jsonPath = columnId.substring("questionnaireData.".length);
+			const pathParts = jsonPath.split(".");
+
+			let jsonPathExpression = "questionnaireData";
+			for (let i = 0; i < pathParts.length; i++) {
+				const part = pathParts[i];
+				const isLastPart = i === pathParts.length - 1;
+
+				if (/^\d+$/.test(part)) {
+					jsonPathExpression += `->${part}`;
+				} else {
+					if (isLastPart) {
+						jsonPathExpression += `->>'${part}'`;
+					} else {
+						jsonPathExpression += `->'${part}'`;
+					}
+				}
+			}
+
+			return jsonPathExpression;
+		}
+
+		return columnId;
 	}
 }
