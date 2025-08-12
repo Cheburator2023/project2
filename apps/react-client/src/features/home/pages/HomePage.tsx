@@ -26,7 +26,6 @@ import {
 	ExcelStyle,
 	GetMainMenuItemsParams,
 	GetContextMenuItemsParams,
-	MenuItemDef,
 	type GridApi,
 	type GridReadyEvent,
 	IDateFilterParams,
@@ -54,7 +53,6 @@ import {
 	agGridCustomMUIThemeDark,
 } from "../../../theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "../../../theme/ag-grid/agGridIconSet";
-import { mockListData } from "@react-client/features/home/pages/mockListData";
 
 const excelStyles: ExcelStyle[] = [
 	{
@@ -161,7 +159,7 @@ export const HomePage = () => {
 
 	return (
 		<HomeTemplete
-			data={mockListData as any}
+			data={data as any}
 			error={error}
 			isLoading={isLoading || isFetching}
 			refetch={refetch}
