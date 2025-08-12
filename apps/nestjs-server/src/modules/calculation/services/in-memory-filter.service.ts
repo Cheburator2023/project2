@@ -223,31 +223,29 @@ export class InMemoryFilterService {
 		);
 	}
 
-	private getGeneralUncertaintyValue(calculation: Calculation): string {
-		// This mimics the frontend valueGetter for generalUncertainty
-		// Since we don't have access to the schema, we'll create a simplified version
-		const generalUncertaintyObj =
-			calculation.questionnaireData?.generalUncertainty || {};
+	private getGeneralUncertaintyValue(calculation: Calculation): number {
+		const generalUncertaintyData =
+			calculation.questionnaireData?.generalUncertainty;
 
-		return Object.entries(generalUncertaintyObj)
-			.map(([key, value]) => {
-				let formattedValue: string;
-				if (typeof value === "object" && value !== null) {
-					formattedValue = Object.values(value).join(", ");
-				} else {
-					formattedValue = String(value);
-				}
-				return `${key}: ${formattedValue}`;
-			})
-			.join(", ");
+		if (Array.isArray(generalUncertaintyData)) {
+			return generalUncertaintyData.length;
+		}
+
+		if (generalUncertaintyData && typeof generalUncertaintyData === "object") {
+			return Object.keys(generalUncertaintyData).length;
+		}
+
+		return 0;
 	}
 
 	private getAlgorithmComplexityValue(calculation: Calculation): string {
 		// This mimics the frontend valueGetter for algorithmComplexity
 		const algorithms = calculation.questionnaireData?.algorithmComplexity || [];
-		return algorithms
-			.map((alg: any, index: number) => `${index + 1}. ${alg.algorithmType}`)
-			.join(", ");
+		const totalCount = algorithms.length;
+		const nonEmptyCount = algorithms.filter(
+			(alg: any) => alg.algorithmType && alg.algorithmType.trim() !== "",
+		).length;
+		return `Выбрано типов алгоритмов: ${nonEmptyCount} из ${totalCount}`;
 	}
 
 	private getNestedValue(obj: any, path: string): any {

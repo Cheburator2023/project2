@@ -209,6 +209,7 @@ export class ExcelExportService {
 			autoMlRequired: calculation.questionnaireData?.autoMlRequired,
 			productionAdditionalReports:
 				calculation.questionnaireData?.productionAdditionalReports,
+			algorithmComplexity: this.getAlgorithmComplexitySummary(calculation),
 			generalUncertainty: this.getGeneralUncertaintySummary(calculation),
 
 			// Инициализация полей этапов
@@ -225,26 +226,28 @@ export class ExcelExportService {
 		};
 	}
 
-	private getGeneralUncertaintySummary(calculation: Calculation): string {
-		if (!calculation.questionnaireData?.generalUncertainty) return "Нет данных";
+	private getAlgorithmComplexitySummary(calculation: Calculation): string {
+		if (!calculation.questionnaireData?.algorithmComplexity)
+			return "Выбрано типов алгоритмов: 0 из 0";
+
+		const algorithms = calculation.questionnaireData.algorithmComplexity;
+		const totalCount = algorithms.length;
+		const nonEmptyCount = algorithms.filter(
+			(alg: any) => alg.algorithmType && alg.algorithmType.trim() !== "",
+		).length;
+		return `Выбрано типов алгоритмов: ${nonEmptyCount} из ${totalCount}`;
+	}
+
+	private getGeneralUncertaintySummary(calculation: Calculation): number {
+		if (!calculation.questionnaireData?.generalUncertainty) return 0;
 
 		const uncertainties = Array.isArray(
 			calculation.questionnaireData.generalUncertainty,
 		)
 			? calculation.questionnaireData.generalUncertainty
-			: Object.entries(calculation.questionnaireData.generalUncertainty).map(
-					([type, value]) => ({
-						type,
-						probability: value?.probability || "Нет данных",
-						influence: value?.influence || "Нет данных",
-					}),
-				);
+			: Object.entries(calculation.questionnaireData.generalUncertainty);
 
-		if (uncertainties.length === 0) return "Нет данных";
-
-		return uncertainties
-			.map((u) => `${u.type}: ${u.probability} (${u.influence})`)
-			.join("; ");
+		return uncertainties.length;
 	}
 
 	private processUncertainties(row: any, calculation: Calculation) {
