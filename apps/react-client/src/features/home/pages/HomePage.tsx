@@ -14,10 +14,7 @@ import { _columnDefs } from "@react-client/features/home/colDefs";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { SearchInput } from "@react-client/features/navigation/organisms/SearchInput";
 import { routes } from "@react-client/routing/routes";
-import {
-	GridFilterModel,
-	filterModelHelpers,
-} from "@react-client/types/agGridFilterModel";
+import { GridFilterModel } from "@react-client/types/agGridFilterModel";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 
 // import { AllEnterpriseModule } from "ag-grid-enterprise";
@@ -25,6 +22,8 @@ import {
 	AllCommunityModule,
 	ClientSideRowModelModule,
 	ColDef,
+	ColumnWidthCallbackParams,
+	ExcelStyle,
 	GetMainMenuItemsParams,
 	type GridApi,
 	type GridReadyEvent,
@@ -52,6 +51,34 @@ import {
 	agGridCustomMUIThemeDark,
 } from "../../../theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "../../../theme/ag-grid/agGridIconSet";
+
+const excelStyles: ExcelStyle[] = [
+	{
+		id: "header",
+		alignment: {
+			vertical: "Center",
+			wrapText: true,
+		},
+		font: {
+			size: 16,
+			family: "Arial",
+			bold: true,
+		},
+		borders: {
+			borderBottom: {
+				color: "#000",
+				lineStyle: "Continuous",
+				weight: 1,
+			},
+		},
+	},
+	{
+		id: "cell",
+		alignment: {
+			// wrapText: true,
+		},
+	},
+];
 
 ModuleRegistry.registerModules([
 	AllCommunityModule,
@@ -222,7 +249,9 @@ export const HomeTemplete = ({
 		wrapHeaderText: true,
 		autoHeaderHeight: true,
 		floatingFilter: true,
-		maxWidth: 300,
+		maxWidth: 1000,
+		minWidth: 200,
+		initialWidth: 300,
 		cellStyle: { fontSize: "11px" },
 		headerStyle: { fontSize: "11px" },
 		tooltipValueGetter: (params: any) => params.value,
@@ -237,19 +266,49 @@ export const HomeTemplete = ({
 		},
 	};
 
-	// AG Grid export solution (commented out)
-	// const _onExportExcel = () => {
-	// 	if (gridRef.current?.api) {
-	// 		gridRef.current.api.exportDataAsExcel({
-	// 			fileName: "export_data.xlsx",
-	// 			fontSize: 14,
-	// 		});
-	// 	} else {
-	// 		console.error(
-	// 			"Grid API not available, or Excel export module not registered/licensed.",
-	// 		);
-	// 	}
-	// };
+	const calculateColumnWidth = (params: ColumnWidthCallbackParams) => {
+		const columnId = params.column?.getColId();
+
+		if (!columnId) return 300;
+
+		let maxLength = params.column?.getColDef().headerName?.length || 0;
+
+		data?.forEach((row: any) => {
+			const value = row[columnId];
+			if (value != null) {
+				const stringValue = String(value);
+				maxLength = Math.max(maxLength, stringValue.length);
+			}
+		});
+
+		const charWidth = 8;
+		const padding = 20;
+		const minWidth = 100;
+		const maxWidth = 1500;
+
+		const calculatedWidth = Math.max(
+			minWidth,
+			Math.min(maxWidth, maxLength * charWidth + padding),
+		);
+
+		return calculatedWidth;
+	};
+
+	// AG Grid export solution
+	const onExportExcel = () => {
+		if (gridRef.current?.api) {
+			gridRef.current.api.exportDataAsExcel({
+				fileName: `расчеты_${new Date().toISOString().split("T")[0]}.xlsx`,
+				fontSize: 14,
+				columnWidth: calculateColumnWidth,
+				sheetName: `Расчеты ${new Date().toISOString().split("T")[0]}`,
+			});
+		} else {
+			console.error(
+				"Grid API not available, or Excel export module not registered/licensed.",
+			);
+		}
+	};
 
 	const _onExportExcel = async () => {
 		try {
@@ -289,18 +348,8 @@ export const HomeTemplete = ({
 		}
 	};
 
-	const gridFilterModel: GridFilterModel | null =
-		gridRef?.current?.api?.getFilterModel() || null;
-
-	console.log("🐸 Pepe said >> gridFilterModel:", gridFilterModel);
-	console.log(
-		"🐸 Pepe said >> активных фильтров:",
-		filterModelHelpers.getActiveFiltersCount(gridFilterModel || {}),
-	);
-	console.log(
-		"🐸 Pepe said >> отфильтрованные колонки:",
-		filterModelHelpers.getFilteredColumns(gridFilterModel || {}),
-	);
+	// const gridFilterModel: GridFilterModel | null =
+	// 	gridRef?.current?.api?.getFilterModel() || null;
 
 	const onCreateCalculation = () => {
 		console.log("Create calculation");
@@ -348,10 +397,6 @@ export const HomeTemplete = ({
 		mode === "light" || mode === undefined
 			? agGridCustomMUITheme
 			: agGridCustomMUIThemeDark;
-
-	const onCellMouseOver = (params: any) => {
-		setHoveredRowId(params?.node.id || "0");
-	};
 
 	const icons = useMemo<{
 		[key: string]: ((...args: any[]) => any) | string;
@@ -423,7 +468,7 @@ export const HomeTemplete = ({
 					</Flex>
 				</Flex>
 				<Button
-					onClick={_onExportExcel}
+					onClick={onExportExcel}
 					variant="contained"
 					fullWidth
 					sx={{ maxWidth: "150px" }}
@@ -457,12 +502,12 @@ export const HomeTemplete = ({
 					ref={gridRef}
 					defaultExcelExportParams={defaultExcelExportParams}
 					autoSizeStrategy={autoSizeStrategy}
-					onCellMouseOver={onCellMouseOver}
 					onGridReady={onGridReady}
-					onFilterChanged={onFilterChanged}
 					tooltipShowDelay={500}
 					animateRows={false}
 					icons={icons}
+					excelStyles={excelStyles}
+					// suppressContextMenu
 					data-test-id="home-page--AgGridReact-0"
 				/>
 			</GridWrapper>
