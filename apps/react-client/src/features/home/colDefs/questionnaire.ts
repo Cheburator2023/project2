@@ -1,5 +1,4 @@
 import { ColDef } from "ag-grid-community";
-import { mainCalcSchema } from "../../../schemas";
 
 export const questionnaire: ColDef<any, any>[] = [
 	{
@@ -57,40 +56,21 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		valueGetter: (params) => {
-			const UNCERTAINTY_TYPE_VALUES =
-				mainCalcSchema.properties.generalUncertainty.items.properties.type.enum;
-			const UNCERTAINTY_TYPE_VALUE_NAMES =
-				mainCalcSchema.properties.generalUncertainty.items.properties.type
-					.enumNames;
+			const generalUncertaintyData =
+				params.data.questionnaireData?.generalUncertainty;
 
-			const generalUncertaintyObj =
-				params.data.questionnaireData?.generalUncertainty || {};
+			if (Array.isArray(generalUncertaintyData)) {
+				return generalUncertaintyData.length;
+			}
 
-			const final_pretty_string = Object.keys(generalUncertaintyObj)
-				.map((key) => {
-					const index = UNCERTAINTY_TYPE_VALUES.indexOf(key);
+			if (
+				generalUncertaintyData &&
+				typeof generalUncertaintyData === "object"
+			) {
+				return Object.keys(generalUncertaintyData).length;
+			}
 
-					if (index !== -1) {
-						const prettyName = UNCERTAINTY_TYPE_VALUE_NAMES[index];
-						const rawValue = generalUncertaintyObj[key];
-
-						let formattedValue: string;
-
-						if (typeof rawValue === "object" && rawValue !== null) {
-							formattedValue = Object.values(rawValue).join(", ");
-						} else {
-							formattedValue = rawValue;
-						}
-
-						return `${prettyName}: ${formattedValue}`;
-					}
-
-					return null;
-				})
-				.filter((item) => item !== null)
-				.join(", ");
-
-			return final_pretty_string;
+			return 0;
 		},
 	},
 	{
@@ -99,11 +79,13 @@ export const questionnaire: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 		valueGetter: (params) => {
-			const colId = params.column.getColId();
-			const channels = params.data.questionnaireData?.[colId] || [];
-			return channels
-				.map((ch: any, index: any) => `${index + 1}. ${ch.algorithmType}`)
-				.join(", ");
+			const algorithms =
+				params.data.questionnaireData?.algorithmComplexity || [];
+			const totalCount = algorithms.length;
+			const nonEmptyCount = algorithms.filter(
+				(alg: any) => alg.algorithmType && alg.algorithmType.trim() !== "",
+			).length;
+			return `Выбрано типов алгоритмов: ${nonEmptyCount} из ${totalCount}`;
 		},
 	},
 	{
