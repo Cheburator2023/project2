@@ -25,6 +25,8 @@ import {
 	ColumnWidthCallbackParams,
 	ExcelStyle,
 	GetMainMenuItemsParams,
+	GetContextMenuItemsParams,
+	MenuItemDef,
 	type GridApi,
 	type GridReadyEvent,
 	IDateFilterParams,
@@ -35,6 +37,7 @@ import {
 	SizeColumnsToContentStrategy,
 	ValidationModule,
 	ValueFormatterParams,
+	RowDoubleClickedEvent,
 } from "ag-grid-community";
 import {
 	ColumnMenuModule,
@@ -51,6 +54,7 @@ import {
 	agGridCustomMUIThemeDark,
 } from "../../../theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "../../../theme/ag-grid/agGridIconSet";
+import { mockListData } from "@react-client/features/home/pages/mockListData";
 
 const excelStyles: ExcelStyle[] = [
 	{
@@ -157,7 +161,7 @@ export const HomePage = () => {
 
 	return (
 		<HomeTemplete
-			data={data as any}
+			data={mockListData as any}
 			error={error}
 			isLoading={isLoading || isFetching}
 			refetch={refetch}
@@ -356,6 +360,41 @@ export const HomeTemplete = ({
 		navigate(routes.calculationCreate.rootPath);
 	};
 
+	const onRowDoubleClicked = (event: RowDoubleClickedEvent) => {
+		const calculationId = event.data?.id;
+		if (calculationId) {
+			navigate(
+				routes.calculationPreview.rootPath.replace(
+					":id",
+					calculationId.toString(),
+				),
+			);
+		}
+	};
+
+	const getContextMenuItems = (params: GetContextMenuItemsParams) => {
+		const calculationId = params.node?.data?.id;
+
+		const customItems = [
+			{
+				name: "Просмотр анкеты",
+				action: () => {
+					if (calculationId) {
+						navigate(
+							routes.calculationPreview.rootPath.replace(
+								":id",
+								calculationId.toString(),
+							),
+						);
+					}
+				},
+				icon: '<span class="ag-icon ag-icon-eye"></span>',
+			},
+		];
+
+		return [...customItems];
+	};
+
 	const onGridReady = (params: GridReadyEvent<any, any>) => {
 		console.log("Grid is ready, setting API in Zustand store.");
 		setGridApi(params.api as GridApi);
@@ -503,11 +542,12 @@ export const HomeTemplete = ({
 					defaultExcelExportParams={defaultExcelExportParams}
 					autoSizeStrategy={autoSizeStrategy}
 					onGridReady={onGridReady}
+					onRowDoubleClicked={onRowDoubleClicked}
+					getContextMenuItems={getContextMenuItems}
 					tooltipShowDelay={500}
 					animateRows={false}
 					icons={icons}
 					excelStyles={excelStyles}
-					// suppressContextMenu
 					data-test-id="home-page--AgGridReact-0"
 				/>
 			</GridWrapper>
