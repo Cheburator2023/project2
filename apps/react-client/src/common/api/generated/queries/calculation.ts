@@ -25,6 +25,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CalculationControllerExportToExcelParams,
   CalculationControllerFindAllPaginatedParams,
   CalculationResponseDto,
   CoefficientControllerGetValueParams,
@@ -196,6 +197,75 @@ export function useCalculationControllerFindAllPaginated<TData = Awaited<ReturnT
 
   return query;
 }
+
+
+
+
+/**
+ * Exports calculations to Excel file with filtering and sorting
+ * @summary Export calculations to Excel
+ */
+export const calculationControllerExportToExcel = (
+    data?: CalculationControllerExportToExcelParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return apiClient<Blob>(
+      {url: `/calculation/export/excel`, method: 'POST',
+        headers: {'Content-Type': 'application/json', },
+        data, signal,
+        responseType: 'blob'
+    },
+      );
+    }
+  
+
+export const getCalculationControllerExportToExcelMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof calculationControllerExportToExcel>>, TError,{data?: CalculationControllerExportToExcelParams}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof calculationControllerExportToExcel>>, TError,{data?: CalculationControllerExportToExcelParams}, TContext> => {
+
+const mutationKey = ['calculationControllerExportToExcel'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof calculationControllerExportToExcel>>, {data?: CalculationControllerExportToExcelParams}> = (props) => {
+          const {data} = props ?? {};
+
+          return  calculationControllerExportToExcel(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CalculationControllerExportToExcelMutationResult = NonNullable<Awaited<ReturnType<typeof calculationControllerExportToExcel>>>
+    export type CalculationControllerExportToExcelMutationBody = {data?: CalculationControllerExportToExcelParams}
+    export type CalculationControllerExportToExcelMutationError = void
+
+    /**
+ * @summary Export calculations to Excel
+ */
+export const useCalculationControllerExportToExcel = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof calculationControllerExportToExcel>>, TError,{data?: CalculationControllerExportToExcelParams}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof calculationControllerExportToExcel>>,
+        TError,
+        {data?: CalculationControllerExportToExcelParams},
+        TContext
+      > => {
+
+      const mutationOptions = getCalculationControllerExportToExcelMutationOptions(options);
+
+      return useMutation(mutationOptions , queryClient);
+    }
 
 
 

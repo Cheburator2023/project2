@@ -1,0 +1,50 @@
+{
+	"emmet.triggerExpansionOnTab": true,
+	"emmet.includeLanguages": {
+		"javascript": "javascriptreact",
+		"typescript": "typescriptreact"
+	},
+	"editor.defaultFormatter": "biomejs.biome",
+	"[javascript]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[yaml]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[typescript]": {
+		"editor.defaultFormatter": "biomejs.biome",
+		"editor.formatOnSave": true
+	},
+	"[json]": {
+		"editor.defaultFormatter": "biomejs.biome",
+		"editor.formatOnSave": true
+	},
+	"javascript.format.insertSpaceAfterOpeningAndBeforeClosingNonemptyBraces": false,
+	"typescript.tsdk": "node_modules\\typescript\\lib",
+	"editor.codeActionsOnSave": {
+		"source.fixAll.biome": "explicit",
+		"source.organizeImports.biome": "explicit"
+	},
+
+	"files.watcherExclude": {
+		"**/node_modules/**": true,
+		"**/dist/**": true,
+		"**/build/**": true,
+		"**/.turbo/**": true,
+		"**/coverage/**": true,
+		"**/.cache/**": true,
+		"**/logs/**": true
+	},
+	"search.exclude": {
+		"**/dist/**": true,
+		"**/node_modules/**": true,
+		"**/build/**": true,
+		"**/.turbo/**": true
+	},
+	"git.autorefresh": true,
+	"git.autoRepositoryDetection": true,
+	"[typescriptreact]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"typescript.preferences.importModuleSpecifier": "non-relative"
+}

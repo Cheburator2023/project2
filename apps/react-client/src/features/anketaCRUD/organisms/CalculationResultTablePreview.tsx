@@ -46,7 +46,7 @@ export const stageDisplayNames: Record<string, string> = {
 	amlEnforcement: "AML внедрение",
 };
 
-const coefficientDisplayNames: Record<string, string> = {
+const _coefficientDisplayNames: Record<string, string> = {
 	modelsCountCoefficient: "Количество моделей",
 	setupComplexityCoefficient: "Сложность постановки",
 	generalUncertaintyCoefficient: "Общая неопределенность",

@@ -1,79 +1,128 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, IsIn, IsNumber } from "class-validator";
-import { Type } from "class-transformer";
+import { IsOptional, IsString } from "class-validator";
 
-export type SortField = "name" | "createdAt" | "finalCoefficient";
+export type SortField =
+	| "calcName"
+	| "createdAt"
+	| "finalCoefficient"
+	| "author"
+	| "department"
+	| "streamExecutor";
 export type SortOrder = "ASC" | "DESC";
+
+export interface AgGridTextFilter {
+	filterType: "text";
+	type:
+		| "equals"
+		| "notEqual"
+		| "contains"
+		| "notContains"
+		| "startsWith"
+		| "endsWith"
+		| "blank"
+		| "notBlank";
+	filter: string;
+}
+
+export interface AgGridNumberFilter {
+	filterType: "number";
+	type:
+		| "equals"
+		| "notEqual"
+		| "lessThan"
+		| "lessThanOrEqual"
+		| "greaterThan"
+		| "greaterThanOrEqual"
+		| "inRange"
+		| "blank"
+		| "notBlank";
+	filter: number;
+	filterTo?: number;
+}
+
+export interface AgGridDateFilter {
+	filterType: "date";
+	type:
+		| "equals"
+		| "notEqual"
+		| "lessThan"
+		| "greaterThan"
+		| "inRange"
+		| "blank"
+		| "notBlank";
+	dateFrom: string;
+	dateTo?: string;
+}
+
+export interface AgGridSetFilter {
+	filterType: "set";
+	values: string[];
+}
+
+export interface AgGridCombinedFilter {
+	filterType: "text" | "number" | "date" | "set";
+	operator: "AND" | "OR";
+	condition1:
+		| AgGridTextFilter
+		| AgGridNumberFilter
+		| AgGridDateFilter
+		| AgGridSetFilter;
+	condition2:
+		| AgGridTextFilter
+		| AgGridNumberFilter
+		| AgGridDateFilter
+		| AgGridSetFilter;
+	conditions?: (
+		| AgGridTextFilter
+		| AgGridNumberFilter
+		| AgGridDateFilter
+		| AgGridSetFilter
+	)[];
+}
+
+export type AgGridColumnFilter =
+	| AgGridTextFilter
+	| AgGridNumberFilter
+	| AgGridDateFilter
+	| AgGridSetFilter
+	| AgGridCombinedFilter;
+
+export interface AgGridFilterModel {
+	[columnId: string]: AgGridColumnFilter;
+}
+
+export interface AgGridSortModel {
+	colId: string;
+	sort: "asc" | "desc";
+}
 
 export class ExportCalculationDto {
 	@ApiPropertyOptional({
-		example: "Оценка риска",
-		description: "Фильтр по названию расчета",
+		description: "Модель фильтров ag-Grid в формате JSON",
+		example: {
+			calcName: {
+				filterType: "text",
+				type: "contains",
+				filter: "Оценка",
+			},
+			finalCoefficient: {
+				filterType: "number",
+				type: "greaterThan",
+				filter: 1.5,
+			},
+		},
 	})
 	@IsOptional()
 	@IsString()
-	name?: string;
+	filterModel?: string;
 
 	@ApiPropertyOptional({
-		example: 1.0,
-		description: "Минимальное значение итогового коэффициента",
-	})
-	@IsOptional()
-	@Type(() => Number)
-	@IsNumber()
-	minFinalCoefficient?: number;
-
-	@ApiPropertyOptional({
-		example: 5.0,
-		description: "Максимальное значение итогового коэффициента",
-	})
-	@IsOptional()
-	@Type(() => Number)
-	@IsNumber()
-	maxFinalCoefficient?: number;
-
-	@ApiPropertyOptional({
-		example: "2024-01-01",
-		description: "Дата начала периода (YYYY-MM-DD)",
+		description: "Модель сортировки ag-Grid в формате JSON",
+		example: '[{"colId": "createdAt", "sort": "desc"}]',
 	})
 	@IsOptional()
 	@IsString()
-	createdFrom?: string;
-
-	@ApiPropertyOptional({
-		example: "2024-12-31",
-		description: "Дата окончания периода (YYYY-MM-DD)",
-	})
-	@IsOptional()
-	@IsString()
-	createdTo?: string;
-
-	@ApiPropertyOptional({
-		example: "completed",
-		description: "Статус заявки",
-		enum: ["draft", "in_progress", "completed"],
-	})
-	@IsOptional()
-	@IsString()
-	status?: string;
-
-	@ApiPropertyOptional({
-		example: "createdAt",
-		description: "Поле для сортировки",
-		enum: ["name", "createdAt", "finalCoefficient"],
-	})
-	@IsOptional()
-	@IsIn(["name", "createdAt", "finalCoefficient"])
-	field?: SortField;
-
-	@ApiPropertyOptional({
-		example: "DESC",
-		description: "Направление сортировки",
-		enum: ["ASC", "DESC"],
-	})
-	@IsOptional()
-	@IsIn(["ASC", "DESC"])
-	order?: SortOrder;
+	sortModel?: string;
 
 	@ApiPropertyOptional({
 		example:
@@ -87,4 +136,6 @@ export class ExportCalculationDto {
 
 export interface TransformedExportCalculationDto extends ExportCalculationDto {
 	selectedIdsArray?: string[];
+	parsedFilterModel?: AgGridFilterModel;
+	parsedSortModel?: AgGridSortModel[];
 }
