@@ -119,7 +119,7 @@ export class ExcelExportService {
 			// Каналы внедрения
 			...DEPLOYMENT_CHANNEL_VALUES.map(channel => ({
 				header: `Канал внедрения: ${channel}`,
-				key: `deployment_${channel?.replace(/[^a-zA-Z0-9]/g, "_") ?? "unknown"}`,
+				key: this.getDeploymentChannelKey(channel),
 				width: 35
 			}))
 		];
@@ -149,7 +149,7 @@ export class ExcelExportService {
 			id: calculation.id,
 			rfd: calculation.rfd || "",
 			streamExecutor: calculation.streamExecutor || "",
-			department: calculation.department?.join(", ") || "",
+			department: calculation.department?.join("; ") || "",
 			customerName: calculation.customerName || "",
 			comment: calculation.comment || "",
 			createdAt: calculation.createdAt,
@@ -292,7 +292,7 @@ export class ExcelExportService {
 
 		// Сначала помечаем все каналы как "Нет"
 		DEPLOYMENT_CHANNEL_VALUES.forEach((channel) => {
-			const key = `deployment_${channel.replace(/[^a-zA-Z0-9]/g, "_")}`;
+			const key = this.getDeploymentChannelKey(channel);
 			row[key] = "Нет";
 		});
 
@@ -302,11 +302,15 @@ export class ExcelExportService {
 				const channelName =
 					typeof channel === "string" ? channel : channel?.deploymentChannel;
 				if (channelName) {
-					const key = `deployment_${channelName.replace(/[^a-zA-Z0-9]/g, "_")}`;
+					const key = this.getDeploymentChannelKey(channelName);
 					row[key] = "Да";
 				}
 			},
 		);
+	}
+
+	private getDeploymentChannelKey(channel: string): string {
+		return `deployment_${channel.replace(/[^a-zA-Zа-яА-Я0-9]/g, "_")}`;
 	}
 
 	private processCalculationStages(row: any, calculation: Calculation) {
