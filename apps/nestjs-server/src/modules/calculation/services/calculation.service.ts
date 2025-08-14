@@ -40,8 +40,16 @@ export class CalculationService {
 			async () => {
 				const eventId = uuidv4();
 				this.customLogger.log(
-					`Creating calculation [${eventId}]`,
+					"Creating new calculation",
 					"CalculationService.create",
+					{
+						eventId,
+						userId: user?.id,
+						mdc: {
+							operation: "createCalculation",
+							userId: user?.id,
+						},
+					},
 				);
 				this.checkAborted(signal);
 
@@ -146,8 +154,12 @@ export class CalculationService {
 					const savedCalculation =
 						await this.calculationRepository.save(calculation);
 					this.customLogger.log(
-						`Calculation created successfully [${eventId}]`,
+						"New calculation created successfully",
 						"CalculationService.create",
+						{
+							eventId,
+							calculationId: savedCalculation.id,
+						},
 					);
 
 					return savedCalculation;
@@ -157,6 +169,7 @@ export class CalculationService {
 						error.stack,
 						"CalculationService.create",
 						{
+							eventId,
 							error: error.message,
 							dto: createCalculationDto,
 						},
@@ -201,7 +214,15 @@ export class CalculationService {
 	): Promise<Calculation> {
 		return RetryUtil.withRetry(
 			async () => {
-				this.customLogger.log(`Updating calculation with ID: ${id}`);
+				const eventId = uuidv4();
+				this.customLogger.log(
+					"Updating Calculation",
+					"CalculationService.updateCalculation",
+					{
+						eventId,
+						calculationId: id,
+					},
+				);
 				this.checkAborted(signal);
 
 				try {
@@ -210,7 +231,14 @@ export class CalculationService {
 					});
 
 					if (!calculation) {
-						this.customLogger.warn(`Calculation with ID ${id} not found`);
+						this.customLogger.warn(
+							`Calculation with ID ${id} not found`,
+							"CalculationService.updateCalculation",
+							{
+								eventId,
+								calculationId: id,
+							},
+						);
 						throw new NotFoundException(`Calculation with ID ${id} not found`);
 					}
 
@@ -235,7 +263,12 @@ export class CalculationService {
 					const updatedCalculation =
 						await this.calculationRepository.save(calculation);
 					this.customLogger.log(
-						`Successfully updated calculation with ID: ${id}`,
+						"Calculation updated successfully",
+						"CalculationService.updateCalculation",
+						{
+							eventId,
+							calculationId: id,
+						},
 					);
 					return updatedCalculation;
 				} catch (error) {
@@ -244,6 +277,8 @@ export class CalculationService {
 						error.stack,
 						"CalculationService.updateCalculation",
 						{
+							eventId,
+							calculationId: id,
 							error: error.message,
 							updateDto,
 						},
@@ -269,7 +304,15 @@ export class CalculationService {
 	async findOne(id: string, signal?: AbortSignal): Promise<Calculation> {
 		return RetryUtil.withRetry(
 			async () => {
-				this.customLogger.log(`Fetching calculation with ID: ${id}`);
+				const eventId = uuidv4();
+				this.customLogger.log(
+					`Fetching calculation with ID: ${id}`,
+					"CalculationService.findOne",
+					{
+						eventId,
+						calculationId: id,
+					},
+				);
 				this.checkAborted(signal);
 
 				try {
@@ -280,12 +323,24 @@ export class CalculationService {
 					this.checkAborted(signal);
 
 					if (!calculation) {
-						this.customLogger.warn(`Calculation with ID ${id} not found`);
+						this.customLogger.warn(
+							`Calculation with ID ${id} not found`,
+							"CalculationService.findOne",
+							{
+								eventId,
+								calculationId: id,
+							},
+						);
 						throw new NotFoundException(`Calculation with ID ${id} not found`);
 					}
 
 					this.customLogger.log(
 						`Successfully fetched calculation with ID: ${id}`,
+						"CalculationService.findOne",
+						{
+							eventId,
+							calculationId: id,
+						},
 					);
 					return calculation;
 				} catch (error) {
@@ -294,8 +349,9 @@ export class CalculationService {
 						error.stack,
 						"CalculationService.findOne",
 						{
-							error: error.message,
+							eventId,
 							calculationId: id,
+							error: error.message,
 						},
 					);
 					throw error;
@@ -317,8 +373,15 @@ export class CalculationService {
 	): Promise<PaginatedResult<Calculation>> {
 		return RetryUtil.withRetry(
 			async () => {
+				const eventId = uuidv4();
 				this.customLogger.log(
 					`Fetching paginated calculations, page: ${paginationDto.page}, limit: ${paginationDto.limit}`,
+					"CalculationService.findAllPaginated",
+					{
+						eventId,
+						page: paginationDto.page,
+						limit: paginationDto.limit,
+					},
 				);
 				this.checkAborted(signal);
 
@@ -333,6 +396,16 @@ export class CalculationService {
 							take: paginationDto.limit,
 							order: { createdAt: "DESC" },
 						});
+
+					this.customLogger.log(
+						"Paginated calculations fetched successfully",
+						"CalculationService.findAllPaginated",
+						{
+							eventId,
+							count: results.length,
+							total,
+						},
+					);
 
 					this.checkAborted(signal);
 
@@ -351,6 +424,7 @@ export class CalculationService {
 						error.stack,
 						"CalculationService.findAllPaginated",
 						{
+							eventId,
 							error: error.message,
 							pagination: paginationDto,
 						},
@@ -372,13 +446,27 @@ export class CalculationService {
 	async findAll(signal?: AbortSignal): Promise<Calculation[]> {
 		return RetryUtil.withRetry(
 			async () => {
-				this.customLogger.log("Fetching all calculations");
+				const eventId = uuidv4();
+				this.customLogger.log(
+					"Fetching all calculations",
+					"CalculationService.findAll",
+					{ eventId },
+				);
 				this.checkAborted(signal);
 
 				try {
 					const calculations = await this.calculationRepository.find({
 						order: { createdAt: "DESC" },
 					});
+
+					this.customLogger.log(
+						"All calculations fetched successfully",
+						"CalculationService.findAll",
+						{
+							eventId,
+							count: calculations.length,
+						},
+					);
 
 					this.checkAborted(signal);
 
@@ -389,6 +477,7 @@ export class CalculationService {
 						error.stack,
 						"CalculationService.findAll",
 						{
+							eventId,
 							error: error.message,
 						},
 					);
@@ -414,6 +503,15 @@ export class CalculationService {
 	): Promise<Calculation[]> {
 		return RetryUtil.withRetry(
 			async () => {
+				const eventId = uuidv4();
+				this.customLogger.log(
+					"Preparing calculations for export",
+					"CalculationService.findAllForExport",
+					{
+						eventId,
+						selectedIdsCount: selectedIds?.length || 0,
+					},
+				);
 				this.checkAborted(signal);
 
 				try {
@@ -440,9 +538,15 @@ export class CalculationService {
 						);
 
 					this.customLogger.log(
-						`Exporting ${filteredCalculations.length} calculations (filtered from ${calculations.length} total)`,
+						"Calculations for export successfully prepared.",
 						"CalculationService.findAllForExport",
+						{
+							eventId,
+							total: calculations.length,
+							filtered: filteredCalculations.length,
+						},
 					);
+
 
 					return filteredCalculations;
 				} catch (error) {
@@ -451,9 +555,8 @@ export class CalculationService {
 						error.stack,
 						"CalculationService.findAllForExport",
 						{
+							eventId,
 							error: error.message,
-							filterModel,
-							sortModel,
 						},
 					);
 					throw error;

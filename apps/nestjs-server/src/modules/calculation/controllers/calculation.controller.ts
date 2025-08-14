@@ -96,43 +96,55 @@ export class CalculationController {
 		@Body() createCalculationDto: CreateCalculationDto,
 		@CurrentUser() user: any,
 	): Promise<CalculationResponseDto> {
-		this.activeRequests.set(ctx.requestId, ctx.abortController);
+        this.activeRequests.set(ctx.requestId, ctx.abortController);
 
-		try {
-			this.customLogger.log(
-				`Creating calculation [${ctx.requestId}]`,
-				"CalculationController.create",
-				{ userId: user?.id },
-			);
+        try {
+            this.customLogger.log(
+                "Начало создания расчета",
+                "CalculationController.create",
+                {
+                    requestId: ctx.requestId,
+                    userId: user?.id,
+                    mdc: {
+                        method: "POST",
+                        path: "/calculation",
+                        userId: user?.id,
+                    },
+                },
+            );
 
-			const calculation = await this.calculationService.create(
-				createCalculationDto,
-				user,
-				ctx.abortController.signal,
-			);
+            const calculation = await this.calculationService.create(
+                createCalculationDto,
+                user,
+                ctx.abortController.signal,
+            );
 
-			this.customLogger.log(
-				`Calculation created [${ctx.requestId}]`,
-				"CalculationController.create",
-				{ calculationId: calculation.id },
-			);
+            this.customLogger.log(
+                "Расчет успешно создан",
+                "CalculationController.create",
+                {
+                    requestId: ctx.requestId,
+                    calculationId: calculation.id,
+                },
+            );
 
-			return this.mapToResponseDto(calculation);
-		} catch (error) {
-			this.customLogger.error(
-				`Failed to create calculation [${ctx.requestId}]`,
-				error.stack,
-				"CalculationController.create",
-				{
-					error: error.message,
-					dto: createCalculationDto,
-				},
-			);
-			throw error;
-		} finally {
-			this.activeRequests.delete(ctx.requestId);
-		}
-	}
+            return this.mapToResponseDto(calculation);
+        } catch (error) {
+            this.customLogger.error(
+                "Ошибка при создании расчета",
+                error.stack,
+                "CalculationController.create",
+                {
+                    requestId: ctx.requestId,
+                    error: error.message,
+                    dto: createCalculationDto,
+                },
+            );
+            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
+    }
 
 	@Put(":id")
 	@StreamFilter()
@@ -181,19 +193,55 @@ export class CalculationController {
 		@Param("id", ParseUUIDPipe) id: string,
 		@Body() updateCalculationDto: UpdateCalculationDto,
 	): Promise<CalculationResponseDto> {
-		this.activeRequests.set(ctx.requestId, ctx.abortController);
+        this.activeRequests.set(ctx.requestId, ctx.abortController);
 
-		try {
-			const calculation = await this.calculationService.updateCalculation(
-				id,
-				updateCalculationDto,
-				ctx.abortController.signal,
-			);
-			return this.mapToResponseDto(calculation);
-		} finally {
-			this.activeRequests.delete(ctx.requestId);
-		}
-	}
+        try {
+            this.customLogger.log(
+                "Начало обновления расчета",
+                "CalculationController.update",
+                {
+                    requestId: ctx.requestId,
+                    calculationId: id,
+                    mdc: {
+                        method: "PUT",
+                        path: `/calculation/${id}`,
+                    },
+                },
+            );
+
+            const calculation = await this.calculationService.updateCalculation(
+                id,
+                updateCalculationDto,
+                ctx.abortController.signal,
+            );
+
+            this.customLogger.log(
+                "Расчет успешно обновлен",
+                "CalculationController.update",
+                {
+                    requestId: ctx.requestId,
+                    calculationId: id,
+                },
+            );
+
+            return this.mapToResponseDto(calculation);
+        } catch (error) {
+            this.customLogger.error(
+                "Ошибка при обновлении расчета",
+                error.stack,
+                "CalculationController.update",
+                {
+                    requestId: ctx.requestId,
+                    calculationId: id,
+                    error: error.message,
+                    dto: updateCalculationDto,
+                },
+            );
+            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
+    }
 
 	@Get("all")
 	@StreamFilter()
@@ -243,21 +291,57 @@ export class CalculationController {
 	): Promise<PaginatedCalculationResponseDto> {
 		this.activeRequests.set(ctx.requestId, ctx.abortController);
 
-		try {
-			const result = await this.calculationService.findAllPaginated(
-				paginationDto,
-				ctx.abortController.signal,
-			);
-			return {
-				data: result.data.map((calculation) =>
-					this.mapToResponseDto(calculation),
-				),
-				meta: result.meta,
-			};
-		} finally {
-			this.activeRequests.delete(ctx.requestId);
-		}
-	}
+        try {
+            this.customLogger.log(
+                "Получение расчетов с пагинацией",
+                "CalculationController.findAllPaginated",
+                {
+                    requestId: ctx.requestId,
+                    page: paginationDto.page,
+                    limit: paginationDto.limit,
+                    mdc: {
+                        method: "GET",
+                        path: "/calculation/all",
+                    },
+                },
+            );
+
+            const result = await this.calculationService.findAllPaginated(
+                paginationDto,
+                ctx.abortController.signal,
+            );
+
+            this.customLogger.log(
+                "Расчеты с пагинацией успешно получены",
+                "CalculationController.findAllPaginated",
+                {
+                    requestId: ctx.requestId,
+                    total: result.meta.total,
+                },
+            );
+
+            return {
+                data: result.data.map((calculation) =>
+                    this.mapToResponseDto(calculation),
+                ),
+                meta: result.meta,
+            };
+        } catch (error) {
+            this.customLogger.error(
+                "Ошибка при получении расчетов с пагинацией",
+                error.stack,
+                "CalculationController.findAllPaginated",
+                {
+                    requestId: ctx.requestId,
+                    error: error.message,
+                    pagination: paginationDto,
+                },
+            );
+            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
+    }
 
 	@Get("all/list")
 	@StreamFilter()
@@ -292,17 +376,50 @@ export class CalculationController {
 	): Promise<CalculationResponseDto[]> {
 		this.activeRequests.set(ctx.requestId, ctx.abortController);
 
-		try {
-			const calculations = await this.calculationService.findAll(
-				ctx.abortController.signal,
-			);
-			return calculations.map((calculation) =>
-				this.mapToResponseDto(calculation),
-			);
-		} finally {
-			this.activeRequests.delete(ctx.requestId);
-		}
-	}
+        try {
+            this.customLogger.log(
+                "Получение всех расчетов без пагинации",
+                "CalculationController.findAll",
+                {
+                    requestId: ctx.requestId,
+                    mdc: {
+                        method: "GET",
+                        path: "/calculation/all/list",
+                    },
+                },
+            );
+
+            const calculations = await this.calculationService.findAll(
+                ctx.abortController.signal,
+            );
+
+            this.customLogger.log(
+                "Все расчеты успешно получены",
+                "CalculationController.findAll",
+                {
+                    requestId: ctx.requestId,
+                    count: calculations.length,
+                },
+            );
+
+            return calculations.map((calculation) =>
+                this.mapToResponseDto(calculation),
+            );
+        } catch (error) {
+            this.customLogger.error(
+                "Ошибка при получении всех расчетов",
+                error.stack,
+                "CalculationController.findAll",
+                {
+                    requestId: ctx.requestId,
+                    error: error.message,
+                },
+            );
+            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
+    }
 
 	@Get(":id")
 	@StreamFilter()
@@ -352,16 +469,51 @@ export class CalculationController {
 	): Promise<CalculationResponseDto> {
 		this.activeRequests.set(ctx.requestId, ctx.abortController);
 
-		try {
-			const calculation = await this.calculationService.findOne(
-				id,
-				ctx.abortController.signal,
-			);
-			return this.mapToResponseDto(calculation);
-		} finally {
-			this.activeRequests.delete(ctx.requestId);
-		}
-	}
+        try {
+            this.customLogger.log(
+                "Получение расчета по ID",
+                "CalculationController.findOne",
+                {
+                    requestId: ctx.requestId,
+                    calculationId: id,
+                    mdc: {
+                        method: "GET",
+                        path: `/calculation/${id}`,
+                    },
+                },
+            );
+
+            const calculation = await this.calculationService.findOne(
+                id,
+                ctx.abortController.signal,
+            );
+
+            this.customLogger.log(
+                "Расчет успешно получен",
+                "CalculationController.findOne",
+                {
+                    requestId: ctx.requestId,
+                    calculationId: id,
+                },
+            );
+
+            return this.mapToResponseDto(calculation);
+        } catch (error) {
+            this.customLogger.error(
+                "Ошибка при получении расчета",
+                error.stack,
+                "CalculationController.findOne",
+                {
+                    requestId: ctx.requestId,
+                    calculationId: id,
+                    error: error.message,
+                },
+            );
+            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
+    }
 
 	@Post("export/excel")
 	@StreamFilter()
@@ -409,31 +561,63 @@ export class CalculationController {
 	): Promise<void> {
 		this.activeRequests.set(ctx.requestId, ctx.abortController);
 
-		try {
-			const calculations = await this.calculationService.findAllForExport(
-				bodyParams.parsedFilterModel,
-				bodyParams.parsedSortModel,
-				bodyParams.selectedIdsArray,
-				ctx.abortController.signal,
-			);
+        try {
+            this.customLogger.log(
+                "Начало экспорта расчетов в Excel",
+                "CalculationController.exportToExcel",
+                {
+                    requestId: ctx.requestId,
+                    mdc: {
+                        method: "POST",
+                        path: "/calculation/export/excel",
+                    },
+                },
+            );
 
-			const buffer =
-				await this.excelExportService.generateExcelFile(calculations);
+            const calculations = await this.calculationService.findAllForExport(
+                bodyParams.parsedFilterModel,
+                bodyParams.parsedSortModel,
+                bodyParams.selectedIdsArray,
+                ctx.abortController.signal,
+            );
 
-			res.setHeader(
-				"Content-Type",
-				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-			);
-			res.setHeader(
-				"Content-Disposition",
-				`attachment; filename=Calculation-List-${new Date().toLocaleDateString("ru-RU")}.xlsx`,
-			);
+            const buffer =
+                await this.excelExportService.generateExcelFile(calculations);
 
-			res.end(buffer);
-		} finally {
-			this.activeRequests.delete(ctx.requestId);
-		}
-	}
+            res.setHeader(
+                "Content-Type",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            );
+            res.setHeader(
+                "Content-Disposition",
+                `attachment; filename=Calculation-List-${new Date().toLocaleDateString("ru-RU")}.xlsx`,
+            );
+
+            this.customLogger.log(
+                "Экспорт расчетов в Excel успешно завершен",
+                "CalculationController.exportToExcel",
+                {
+                    requestId: ctx.requestId,
+                    count: calculations.length,
+                },
+            );
+
+            res.end(buffer);
+        } catch (error) {
+            this.customLogger.error(
+                "Ошибка при экспорте расчетов в Excel",
+                error.stack,
+                "CalculationController.exportToExcel",
+                {
+                    requestId: ctx.requestId,
+                    error: error.message,
+                },
+            );
+            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
+    }
 
 	private mapToResponseDto(calculation: Calculation): CalculationResponseDto {
 		const generalUncertainty = Array.isArray(

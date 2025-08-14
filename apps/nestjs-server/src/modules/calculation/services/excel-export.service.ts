@@ -6,16 +6,28 @@ import {
 	DEPLOYMENT_CHANNEL_VALUES,
 	ALGORITHM_TYPE_VALUES,
 } from "../dto/base/calculation-base.dto";
+import { v4 as uuidv4 } from "uuid";
+import { CustomLogger } from "src/shared/services/logger.service";
+
 
 @Injectable()
 export class ExcelExportService {
-	private readonly logger = new Logger(ExcelExportService.name);
+	constructor(
+		private readonly customLogger: CustomLogger,
+	) {}
 
 	async generateExcelFile(calculations: Calculation[]): Promise<Buffer> {
-		this.logger.log(
-			`Generating Excel file for ${calculations.length} calculations`,
-		);
+		const eventId = uuidv4();
 		try {
+			this.customLogger.log(
+				"Start generating Excel file",
+				"ExcelExportService.generateExcelFile",
+				{
+					eventId,
+					count: calculations.length,
+				},
+			);
+
 			const workbook = new ExcelJS.Workbook();
 			const worksheet = workbook.addWorksheet("Calculations");
 
@@ -49,12 +61,24 @@ export class ExcelExportService {
 			this.formatHeaderRow(worksheet);
 
 			const excelBuffer = await workbook.xlsx.writeBuffer();
-			this.logger.log("Successfully generated Excel file");
+			this.customLogger.log(
+				"Excel file generated successfully",
+				"ExcelExportService.generateExcelFile",
+				{
+					eventId,
+					count: calculations.length,
+				},
+			);
 			return Buffer.from(excelBuffer);
 		} catch (error) {
-			this.logger.error(
-				`Failed to generate Excel file: ${error.message}`,
+			this.customLogger.error(
+				"Error generating Excel file",
 				error.stack,
+				"ExcelExportService.generateExcelFile",
+				{
+					eventId,
+					error: error.message,
+				},
 			);
 			throw error;
 		}
