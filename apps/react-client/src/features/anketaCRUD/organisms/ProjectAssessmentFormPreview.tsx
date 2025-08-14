@@ -18,8 +18,10 @@ import type {
 	UiSchema,
 } from "@rjsf/utils";
 import { omit } from "lodash-es";
+import { createSchemaWithCoefficients } from "../../../schemas/calculation/calc_uiSchemaWithCoefficients";
+import { useMemo } from "react";
 
-const uiSchema: UiSchema = {
+const _uiSchema: UiSchema = {
 	setupComplexity: {
 		"ui:options": {
 			valToTitle: true,
@@ -63,7 +65,8 @@ export const ProjectAssessmentFormPreview = ({
 }: {
 	initialData: CalculationResponseDto;
 }) => {
-	const { setFormData: setFormDataForCalc } = assessmentCalculationsStore();
+	const { setFormData: setFormDataForCalc, coefficients } =
+		assessmentCalculationsStore();
 
 	const formData = initialData?.questionnaireData;
 
@@ -87,10 +90,17 @@ export const ProjectAssessmentFormPreview = ({
 		});
 	}, !!formData);
 
+	const { uiSchema: uiSchemaWithCoefficients, schema: schemaWithCoefficients } =
+		useMemo(() => {
+			return createSchemaWithCoefficients(coefficients);
+		}, [coefficients]);
+
 	return (
 		<Form
-			schema={_mainCalcSchema as RJSFSchema}
-			uiSchema={uiSchema}
+			schema={
+				omit(schemaWithCoefficients, ["properties.description"]) as RJSFSchema
+			}
+			uiSchema={uiSchemaWithCoefficients}
 			formData={formData}
 			validator={validatorRu}
 			widgets={widgets}

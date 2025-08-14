@@ -51,7 +51,7 @@ export const stageDisplayNames: Record<string, string> = {
 	amlEnforcement: "AML внедрение",
 };
 
-const coefficientDisplayNames: Record<string, string> = {
+export const coefficientDisplayNames: Record<string, string> = {
 	modelsCountCoefficient: "Количество моделей",
 	setupComplexityCoefficient: "Сложность постановки",
 	generalUncertaintyCoefficient: "Общая неопределенность",
@@ -65,6 +65,20 @@ const coefficientDisplayNames: Record<string, string> = {
 		"Необходимость продуктивизации и количество дополнительных витрин",
 	deploymentChannelsCoefficient:
 		"Необходимость продуктивизации и каналы внедрения моделей",
+};
+
+export const coefficientToFormFieldMapping: Record<string, string> = {
+	modelsCountCoefficient: "modelsCount",
+	setupComplexityCoefficient: "setupComplexity",
+	generalUncertaintyCoefficient: "generalUncertainty",
+	readyPromReportsCoefficient: "readyPromReports",
+	dataSourcesCountCoefficient: "dataSourcesCount",
+	pilotModelRequired: "pilotModelRequired",
+	algorithmComplexityCoefficient: "algorithmComplexity",
+	pilotSupportRequired: "pilotSupportRequired",
+	autoMlRequired: "autoMlRequired",
+	productionAdditionalReportsCoefficient: "productionAdditionalReports",
+	deploymentChannelsCoefficient: "productionDeploymentChannels",
 };
 
 const processStageResults = (

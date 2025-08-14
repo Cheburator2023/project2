@@ -9,20 +9,19 @@ import {
 	useAnketaCRUDFormsStore,
 } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { assessmentCalculationsStore } from "@react-client/features/anketaCRUD/stores/assessmentCalculationsStore";
-import { mainCalcSchema } from "@react-client/schemas";
 import type FormRef from "@rjsf/core";
 import type { IChangeEvent } from "@rjsf/core";
 import { withTheme } from "@rjsf/core";
 import { Theme as MuiTheme } from "@rjsf/mui";
 import type { RJSFSchema, TemplatesType, WidgetProps } from "@rjsf/utils";
 import type React from "react";
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import { NumberInputWidget } from "@react-client/common/forms/widgets/NumberInputWidget";
 import { AlgorithmComplexityWidget } from "@react-client/common/forms/widgets/AlgorithmComplexityWidget";
 import { GeneralUncertaintyWidget } from "@react-client/common/forms/widgets/GeneralUncertaintyWidget";
 import { UniversalDependencyWidget } from "@react-client/common/forms/widgets/UniversalDependencyWidget";
 import { IAssessmentFormData } from "../types/FormData";
-import { calc_uiSchema } from "../../../schemas/calculation/calc_uiSchema";
+import { createSchemaWithCoefficients } from "../../../schemas/calculation/calc_uiSchemaWithCoefficients";
 
 const Form = withTheme(MuiTheme);
 
@@ -59,13 +58,19 @@ export const ProjectAssessmentForm: React.FC<{
 		setFormErrors,
 		...store
 	} = useAnketaCRUDFormsStore();
-	const { setFormData: setFormDataForCalc } = assessmentCalculationsStore();
+	const { setFormData: setFormDataForCalc, coefficients } =
+		assessmentCalculationsStore();
 
 	const [formData, setFormData] = useState<IAssessmentFormData>(
 		projectAssessmentFormInitialData,
 	);
 
 	const [liveValidate, setLiveValidate] = useState(false);
+
+	const { uiSchema: uiSchemaWithCoefficients, schema: schemaWithCoefficients } =
+		useMemo(() => {
+			return createSchemaWithCoefficients(coefficients);
+		}, [coefficients]);
 
 	const formName = AnketaCRUDFormNames.anketaCreate_projectAssessmentForm;
 	const formDataStore = store[formName];
@@ -151,8 +156,8 @@ export const ProjectAssessmentForm: React.FC<{
 		<>
 			<Form
 				ref={formRef}
-				schema={mainCalcSchema as RJSFSchema}
-				uiSchema={calc_uiSchema}
+				schema={schemaWithCoefficients as RJSFSchema}
+				uiSchema={uiSchemaWithCoefficients}
 				validator={validatorRu}
 				widgets={widgets}
 				formData={formData}
