@@ -1,7 +1,6 @@
 import { calculationResult } from "@react-client/features/home/colDefs/calculationResult";
 import { meta } from "@react-client/features/home/colDefs/meta";
 import { questionnaire } from "@react-client/features/home/colDefs/questionnaire";
-import { CalculationPreviewCell } from "@react-client/features/home/molecules/CalculationPreviewCell";
 import { ColDef } from "ag-grid-community";
 
 export const UI_COL_NAMES = {
