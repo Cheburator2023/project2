@@ -59,4 +59,16 @@ export class Calculation {
 
 	@Column({ type: "varchar", length: 255, nullable: true })
 	author: string;
+
+    @Column({ type: "varchar", length: 50, nullable: true })
+    status: string; 
+
+    @Column({ type: "varchar", length: 100, nullable: true })
+    seriesId: string;
+
+    @Column({ type: "integer", nullable: true })
+    version: number; 
+
+    @Column({ type: "varchar", length: 255, nullable: true })
+    parentId: string;
 }

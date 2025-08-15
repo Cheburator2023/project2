@@ -28,9 +28,18 @@ export class CalculationService {
 		private readonly inMemoryFilterService: InMemoryFilterService,
 	) {}
 
-	/**
-	 * Creates a new calculation
-	 */
+	private generateSeriesId(): string {
+		return Math.floor(10000000 + Math.random() * 90000000).toString();
+	}
+
+	private async getNextVersion(seriesId: string): Promise<number> {
+		const latestCalculation = await this.calculationRepository.findOne({
+			where: { seriesId },
+			order: { version: "DESC" },
+		});
+		return latestCalculation ? latestCalculation.version + 1 : 1;
+	}
+
 	async create(
 		createCalculationDto: CreateCalculationDto,
 		user: any,
@@ -111,6 +120,39 @@ export class CalculationService {
 
 					this.checkAborted(signal);
 
+					let seriesId = createCalculationDto.seriesId;
+					let version = createCalculationDto.version;
+					let parentId = createCalculationDto.parentId;
+
+					if (parentId) {
+						const parentCalculation = await this.calculationRepository.findOne({
+							where: { id: parentId },
+						});
+
+						if (!parentCalculation) {
+							seriesId = seriesId || this.generateSeriesId();
+							version = version || 1;
+
+							this.customLogger.warn(
+								`Parent calculation not found, creating new series`,
+								"CalculationService.create",
+								{
+									parentId,
+									generatedSeriesId: seriesId,
+									version
+								},
+							);
+						} else {
+							seriesId = parentCalculation.seriesId;
+							version = await this.getNextVersion(seriesId);
+
+							await this.archivePreviousActiveCalculation(seriesId);
+						}
+					} else {
+						seriesId = seriesId || this.generateSeriesId();
+						version = version || 1;
+					}
+
 					const calculation = this.calculationRepository.create({
 						calcName: createCalculationDto.calcName || "Новый расчет",
 						rfd: createCalculationDto.rfd || "",
@@ -147,6 +189,10 @@ export class CalculationService {
 						},
 						finalCoefficient: createCalculationDto.finalCoefficient,
 						author: authorName,
+						status: "active",
+						seriesId,
+						version,
+						parentId,
 					} as Partial<Calculation>);
 
 					this.checkAborted(signal);
@@ -159,6 +205,8 @@ export class CalculationService {
 						{
 							eventId,
 							calculationId: savedCalculation.id,
+							seriesId: savedCalculation.seriesId,
+							version: savedCalculation.version,
 						},
 					);
 
@@ -202,6 +250,21 @@ export class CalculationService {
 			(error) =>
 				!(error instanceof BadRequestException || error?.name === "AbortError"),
 		);
+	}
+
+	private async archivePreviousActiveCalculation(seriesId: string): Promise<void> {
+		const activeCalculations = await this.calculationRepository.find({
+			where: { seriesId, status: "active" },
+		});
+
+		if (activeCalculations.length > 0) {
+			await Promise.all(
+				activeCalculations.map(async (calc) => {
+					calc.status = "archive";
+					await this.calculationRepository.save(calc);
+				}),
+			);
+		}
 	}
 
 	/**
@@ -565,6 +628,75 @@ export class CalculationService {
 			3,
 			1000,
 			(error) => !(error?.name === "AbortError"),
+		);
+	}
+
+	async findBySeriesId(
+		seriesId: string,
+		signal?: AbortSignal,
+	): Promise<Calculation[]> {
+		return RetryUtil.withRetry(
+			async () => {
+				const eventId = uuidv4();
+				this.customLogger.log(
+					`Fetching calculations for series ${seriesId}`,
+					"CalculationService.findBySeriesId",
+					{
+						eventId,
+						seriesId,
+					},
+				);
+				this.checkAborted(signal);
+
+				try {
+					const calculations = await this.calculationRepository.find({
+						where: { seriesId },
+						order: { version: "ASC" },
+					});
+
+					if (!calculations || calculations.length === 0) {
+						this.customLogger.warn(
+							`No calculations found for series ${seriesId}`,
+							"CalculationService.findBySeriesId",
+							{
+								eventId,
+								seriesId,
+							},
+						);
+						throw new NotFoundException(
+							`No calculations found for series ${seriesId}`,
+						);
+					}
+
+					this.customLogger.log(
+						`Successfully fetched ${calculations.length} calculations for series ${seriesId}`,
+						"CalculationService.findBySeriesId",
+						{
+							eventId,
+							seriesId,
+							count: calculations.length,
+						},
+					);
+
+					return calculations;
+				} catch (error) {
+					this.customLogger.error(
+						`Failed to fetch calculations for series ${seriesId}`,
+						error.stack,
+						"CalculationService.findBySeriesId",
+						{
+							eventId,
+							seriesId,
+							error: error.message,
+						},
+					);
+					throw error;
+				}
+			},
+			3,
+			1000,
+			(error) =>
+				!(error instanceof NotFoundException || error?.name === "AbortError"),
 		);
 	}
 

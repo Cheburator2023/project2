@@ -3,6 +3,7 @@ import {
 	Controller,
 	Get,
 	HttpStatus,
+    NotFoundException,
 	Param,
 	ParseUUIDPipe,
 	Post,
@@ -118,6 +119,10 @@ export class CalculationController {
                 user,
                 ctx.abortController.signal,
             );
+
+            if (createCalculationDto.parentId === '') {
+                createCalculationDto.parentId = null;
+            }
 
             this.customLogger.log(
                 "Расчет успешно создан",
@@ -619,6 +624,88 @@ export class CalculationController {
         }
     }
 
+    @Get("series/:seriesId")
+    @StreamFilter()
+    @RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
+    @ApiOperation({
+        summary: "Получить все анкеты по идентификатору серии",
+        description: "Возвращает все анкеты с указанным идентификатором серии",
+    })
+    @ApiParam({
+        name: "seriesId",
+        description: "Идентификатор серии анкет",
+        example: "12345678",
+    })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: "Список анкет серии",
+        type: [CalculationResponseDto],
+    })
+    @ApiResponse({
+        status: HttpStatus.NOT_FOUND,
+        description: "Анкеты с указанным идентификатором серии не найдены",
+    })
+    async findBySeriesId(
+        @ReqContext() ctx: RequestContext,
+        @Param("seriesId") seriesId: string,
+    ): Promise<CalculationResponseDto[]> {
+        this.activeRequests.set(ctx.requestId, ctx.abortController);
+
+        try {
+            this.customLogger.log(
+                "Получение анкет по серии",
+                "CalculationController.findBySeriesId",
+                {
+                    requestId: ctx.requestId,
+                    seriesId,
+                    mdc: {
+                        method: "GET",
+                        path: `/calculation/series/${seriesId}`,
+                    },
+                },
+            );
+
+            const calculations = await this.calculationService.findBySeriesId(
+                seriesId,
+                ctx.abortController.signal,
+            );
+
+            if (!calculations || calculations.length === 0) {
+                throw new NotFoundException(
+                    `Calculations with seriesId ${seriesId} not found`,
+                );
+            }
+
+            this.customLogger.log(
+                "Анкеты серии успешно получены",
+                "CalculationController.findBySeriesId",
+                {
+                    requestId: ctx.requestId,
+                    seriesId,
+                    count: calculations.length,
+                },
+            );
+
+            return calculations.map((calculation) =>
+                this.mapToResponseDto(calculation),
+            );
+        } catch (error) {
+            this.customLogger.error(
+                "Ошибка при получении анкет по серии",
+                error.stack,
+                "CalculationController.findBySeriesId",
+                {
+                    requestId: ctx.requestId,
+                    seriesId,
+                    error: error.message,
+                },
+            );
+            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
+    }
+
 	private mapToResponseDto(calculation: Calculation): CalculationResponseDto {
 		const generalUncertainty = Array.isArray(
 			calculation.questionnaireData.generalUncertainty,
@@ -653,6 +740,10 @@ export class CalculationController {
 			finalCoefficient: calculation.finalCoefficient,
 			createdAt: calculation.createdAt,
 			author: calculation.author,
+            status: calculation.status,
+            seriesId: calculation.seriesId,
+            version: calculation.version,
+            parentId: calculation.parentId,
 		};
 	}
 }
