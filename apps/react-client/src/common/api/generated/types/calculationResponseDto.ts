@@ -7,6 +7,11 @@
  */
 import type { CalculationQuestionnaireDataDto } from './calculationQuestionnaireDataDto';
 
+export enum CalculationStatus {
+  ACTIVE = "Активная",
+  ARCHIVE = "Архивная",
+}
+
 export interface CalculationResponseDto {
   /** Уникальный идентификатор расчета */
   id: string;
@@ -30,4 +35,14 @@ export interface CalculationResponseDto {
   createdAt: string;
   /** Автор расчета */
   author: string;
+  /** Статус анкеты */
+  status: CalculationStatus;
+  /** Версия анкеты */
+  version: string;
+  /** Идентификатор серии анкет */
+  seriesId: string | null;
+  /** ID родительской анкеты */
+  parentCalcId?: string;
+  /** Составной читаемый идентификатор */
+  readableId: string | null;
 }

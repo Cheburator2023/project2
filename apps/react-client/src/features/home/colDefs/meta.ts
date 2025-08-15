@@ -78,4 +78,23 @@ export const meta: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 	},
+	{
+		field: "version",
+		headerName: "Версия",
+		sortable: true,
+		filter: true,
+		cellDataType: "number",
+	},
+	{
+		field: "seriesId",
+		headerName: "ID серии",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "readableId",
+		headerName: "Читаемый ID",
+		sortable: true,
+		filter: true,
+	},
 ];

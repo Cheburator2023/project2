@@ -8,7 +8,7 @@ import { AnketaBasicLayoutCreate } from "@react-client/features/anketaCRUD/templ
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { routes } from "@react-client/routing/routes";
 import { useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import SaveIcon from "@mui/icons-material/Save";
 
 export const AnketaCreatePage = () => {
@@ -76,7 +76,6 @@ export const AnketaCreatePage = () => {
 				customerName: basicFormData.customerName,
 				comment: basicFormData.comment,
 			};
-			console.log("🐸 Pepe said >> AnketaCreatePage >> data:", data);
 
 			createCalculationMutation(
 				{

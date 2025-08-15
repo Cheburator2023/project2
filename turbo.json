@@ -12,6 +12,11 @@
 			"persistent": true,
 			"cache": false
 		},
+		"dev:god": {
+			"dependsOn": [],
+			"persistent": true,
+			"cache": false
+		},
 		"dev:no_roles": {
 			"dependsOn": [],
 			"persistent": true,

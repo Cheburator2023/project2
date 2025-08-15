@@ -1,13 +1,25 @@
 /** biome-ignore-all lint/correctness/noConstantCondition: <explanation> */
 
 import CloseIcon from "@mui/icons-material/Close";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
 import ViewComfyIcon from "@mui/icons-material/ViewComfy";
 import ViewDayIcon from "@mui/icons-material/ViewDay";
-import { Button, IconButton, Typography } from "@mui/material";
+import FileCopyIcon from "@mui/icons-material/FileCopy";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import {
+	Button,
+	IconButton,
+	Typography,
+	Menu,
+	MenuItem,
+	Chip,
+} from "@mui/material";
 import { useCalculationControllerFindOne } from "@react-client/common/api/generated/queries/calculation";
+import { CalculationStatus } from "@react-client/common/api/generated/types/calculationResponseDto";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
+
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
@@ -19,7 +31,8 @@ import { usePermissions } from "@react-client/hooks/usePermissions";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { isEmpty } from "lodash-es";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
+import { routes } from "@react-client/routing/routes";
 
 export const AnketaPreviewPage = () => {
 	const params = useParams();
@@ -27,9 +40,12 @@ export const AnketaPreviewPage = () => {
 	const [comfyView, setComfyView] = useState(true);
 	const [isEditing, setIsEditing] = useState(false);
 	const [formData, setFormData] = useState<any>(null);
+	const [versionMenuAnchor, setVersionMenuAnchor] =
+		useState<null | HTMLElement>(null);
 	const queryClient = useQueryClient();
 	const store = useAnketaCRUDFormsStore();
-	const { canEditCalculation } = usePermissions();
+	const { canEditCalculation, canCreateCalculation } = usePermissions();
+	const navigate = useNavigate();
 
 	const {
 		anketaPreview_basicInfoForm,
@@ -90,6 +106,37 @@ export const AnketaPreviewPage = () => {
 		anketaPreview_projectAssessmentForm.api?.submit();
 	};
 
+	const handleVersionMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+		setVersionMenuAnchor(event.currentTarget);
+	};
+
+	const handleVersionMenuClose = () => {
+		setVersionMenuAnchor(null);
+	};
+
+	const handleCreateNewVersion = () => {
+		navigate(routes.calculationNewVersion.rootPath.replace(":id", calcId), {
+			state: {
+				prefillData: {
+					...initialData,
+					calcName: `${initialData?.calcName || "Анкета"} - Новая версия`,
+				},
+			},
+		});
+		handleVersionMenuClose();
+	};
+
+	const handleCloneAsTemplate = () => {
+		navigate(routes.calculationClone.rootPath.replace(":id", calcId), {
+			state: {
+				prefillData: {
+					questionnaireData: initialData?.questionnaireData,
+				},
+			},
+		});
+		handleVersionMenuClose();
+	};
+
 	const performUpdate = () => {
 		if (formData) {
 			// Only send allowed fields
@@ -131,6 +178,34 @@ export const AnketaPreviewPage = () => {
 	return (
 		<div data-test-id="anketa-details-page--div-0">
 			<Header calcId={calcId} data-test-id="anketa-details-page--Header-0">
+				{initialData?.status && (
+					<Chip
+						label={initialData?.status ? "Активная" : "Архив"}
+						color={
+							initialData?.status === CalculationStatus.ACTIVE
+								? "success"
+								: "default"
+						}
+						variant="outlined"
+						size="small"
+					/>
+				)}
+				{initialData?.parentCalcId && (
+					<IconButton
+						onClick={() =>
+							navigate(
+								routes.calculationPreview.rootPath.replace(
+									":id",
+									initialData.parentCalcId!,
+								),
+							)
+						}
+						title="Перейти к родительской анкете"
+						size="small"
+					>
+						<ArrowUpwardIcon />
+					</IconButton>
+				)}
 				<IconButton
 					title="Сменить режим разметки форм/карточек"
 					onClick={() => setComfyView(!comfyView)}
@@ -145,6 +220,44 @@ export const AnketaPreviewPage = () => {
 					>
 						<EditIcon />
 					</IconButton>
+				)}
+				{!isEditing && canCreateCalculation && (
+					<>
+						<IconButton
+							onClick={handleVersionMenuOpen}
+							title="Создать версию или клон"
+						>
+							<FileCopyIcon />
+						</IconButton>
+						<Menu
+							anchorEl={versionMenuAnchor}
+							open={Boolean(versionMenuAnchor)}
+							onClose={handleVersionMenuClose}
+						>
+							<MenuItem onClick={handleCreateNewVersion}>
+								<FileCopyIcon sx={{ mr: 1 }} />
+								<div>
+									<Typography variant="body2" fontWeight="medium">
+										Создать новую версию анкеты
+									</Typography>
+									<Typography variant="caption" color="text.secondary">
+										Наследует все данные, увеличивает версию
+									</Typography>
+								</div>
+							</MenuItem>
+							<MenuItem onClick={handleCloneAsTemplate}>
+								<ContentCopyIcon sx={{ mr: 1 }} />
+								<div>
+									<Typography variant="body2" fontWeight="medium">
+										Создать клон
+									</Typography>
+									<Typography variant="caption" color="text.secondary">
+										Создает независимый черновик для редактирования
+									</Typography>
+								</div>
+							</MenuItem>
+						</Menu>
+					</>
 				)}
 				{isEditing && canEditCalculation && (
 					<>

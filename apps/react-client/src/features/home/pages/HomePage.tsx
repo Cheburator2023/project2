@@ -37,6 +37,7 @@ import {
 	ValidationModule,
 	ValueFormatterParams,
 	RowDoubleClickedEvent,
+	SideBarDef,
 } from "ag-grid-community";
 import {
 	ColumnMenuModule,
@@ -180,7 +181,7 @@ export const HomeTemplete = ({
 		options?: RefetchOptions,
 	) => Promise<QueryObserverResult<CalculationResponseDto[], void>>;
 }) => {
-	const [hoveredRowId, setHoveredRowId] = useState("");
+	const [hoveredRowId, _setHoveredRowId] = useState("");
 	const { setGridApi } = useGlobalSettingsStore();
 	const gridRef = useRef<AgGridReact>(null);
 	const { mode } = useColorScheme();
@@ -441,6 +442,36 @@ export const HomeTemplete = ({
 		return agGridIconSet;
 	}, []);
 
+	const _initialFilterModel = useMemo(() => {
+		return {
+			status: {
+				filterType: "set",
+				values: ["ACTIVE"],
+			},
+		};
+	}, []);
+
+	const sideBarProps: SideBarDef | string | string[] | boolean | null = {
+		toolPanels: [
+			{
+				id: "columns",
+				labelDefault: "Columns",
+				labelKey: "columns",
+				iconKey: "columns",
+				toolPanel: "agColumnsToolPanel",
+			},
+			{
+				id: "filters",
+				labelDefault: "Filters",
+				labelKey: "filters",
+				iconKey: "filter",
+				toolPanel: "agFiltersToolPanel",
+			},
+		],
+		defaultToolPanel: undefined,
+		// hiddenByDefault: true,
+	};
+
 	return (
 		<div data-test-id="home-page--div-0">
 			<Header data-test-id="home-page--Header-0">
@@ -532,7 +563,9 @@ export const HomeTemplete = ({
 					loading={isLoading}
 					columnDefs={columnDefs}
 					defaultColDef={defaultColDef}
-					sideBar={false}
+					// initialFilterModel={initialFilterModel as any}
+					onFilterChanged={onFilterChanged}
+					sideBar={sideBarProps}
 					pagination={true}
 					paginationPageSize={100}
 					localeText={AG_GRID_LOCALE_RU}

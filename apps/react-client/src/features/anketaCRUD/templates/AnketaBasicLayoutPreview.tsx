@@ -102,14 +102,16 @@ export const AnketaBasicLayoutPreview = ({
 									height="100%"
 									padding="10px"
 									zoom={0.8}
-									loading={isPending && !isEmpty(initialData)}
+									loading={isPending}
 									uuid="anketa_calculation_result_card"
 									data-test-id="anketa-basic-layout--Card-1"
 								>
-									<CalculationResultTablePreview
-										initialData={initialData}
-										data-test-id="anketa-basic-layout--CalculationResultTable-0"
-									/>
+									{!isEmpty(initialData) && (
+										<CalculationResultTablePreview
+											initialData={initialData}
+											data-test-id="anketa-basic-layout--CalculationResultTable-0"
+										/>
+									)}
 								</Card>
 							</Panel>
 						</PanelGroup>
@@ -155,15 +157,17 @@ export const AnketaBasicLayoutPreview = ({
 						height="666px"
 						overflow="hidden"
 						padding="10px"
-						loading={isPending && !isEmpty(initialData)}
+						loading={isPending}
 						zoom={0.8}
 						uuid="anketa_calculation_result_card"
 						data-test-id="anketa-basic-layout--Card-1"
 					>
-						<CalculationResultTablePreview
-							initialData={initialData}
-							data-test-id="anketa-basic-layout--CalculationResultTable-0"
-						/>
+						{!isEmpty(initialData) && (
+							<CalculationResultTablePreview
+								initialData={initialData}
+								data-test-id="anketa-basic-layout--CalculationResultTable-0"
+							/>
+						)}
 					</Card>
 				</Flex>
 			)}
