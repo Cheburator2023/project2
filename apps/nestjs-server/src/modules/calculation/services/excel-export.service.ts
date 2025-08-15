@@ -89,6 +89,10 @@ export class ExcelExportService {
 			// Базовые колонки
 			{ header: "Название расчета", key: "calcName", width: 30 },
 			{ header: "Идентификатор", key: "id", width: 36 },
+			{ header: "Идентификатор серии", key: "seriesId", width: 25 },
+			{ header: "Версия", key: "version", width: 15 },
+			{ header: "Статус", key: "status", width: 15 },
+			{ header: "ID родительской анкеты", key: "parentId", width: 36 },
 			{ header: "RFD", key: "rfd", width: 20 },
 			{ header: "Стрим исполнитель", key: "streamExecutor", width: 25 },
 			{ header: "Департамент Заказчика", key: "department", width: 30 },
@@ -215,6 +219,14 @@ export class ExcelExportService {
 			stage09: "",
 			amlImplementation: "",
 		};
+
+		// Добавление информации о версии и серии
+		row.seriesId = calculation.seriesId;
+		row.version = calculation.version;
+		row.status = calculation.status === 'active' ? 'Активная' : 'Архивная';
+		row.parentId = calculation.parentId || 'Нет';
+		row.calcId = `Calc-${calculation.seriesId}-version-${calculation.version}`;
+
 
 		// Инициализация полей рисков
 		Object.keys(UNCERTAINTY_TYPE_NAMES).forEach(type => {

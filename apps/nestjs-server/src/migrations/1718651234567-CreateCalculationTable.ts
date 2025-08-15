@@ -20,16 +20,28 @@ export class CreateCalculationTable1718651234567 implements MigrationInterface {
                 "finalCoefficient" float NOT NULL,
                 "createdAt" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 "author" varchar(255)
+                "status" varchar(50),
+                "seriesId" varchar(100),
+                "version" integer,
+                "parentId" varchar(255)
                 )
         `);
 
 		await queryRunner.query(`
             CREATE INDEX IF NOT EXISTS idx_calculation_created_at ON calculation("createdAt")
         `);
+        await queryRunner.query(`
+            CREATE INDEX IF NOT EXISTS idx_calculation_status ON calculation("status")
+        `);
+        await queryRunner.query(`
+            CREATE INDEX IF NOT EXISTS idx_calculation_series_id ON calculation("seriesId")
+        `);
 	}
 
 	public async down(queryRunner: QueryRunner): Promise<void> {
 		await queryRunner.query(`DROP INDEX idx_calculation_created_at`);
 		await queryRunner.query(`DROP TABLE calculation`);
+        await queryRunner.query(`DROP INDEX idx_calculation_status`);
+        await queryRunner.query(`DROP INDEX idx_calculation_series_id`);
 	}
 }

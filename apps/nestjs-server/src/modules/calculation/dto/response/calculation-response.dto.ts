@@ -206,4 +206,29 @@ export class CalculationResponseDto {
 		description: "Автор расчета",
 	})
 	author: string;
+
+    @ApiProperty({
+        example: "active",
+        description: "Статус анкеты (active или archive)",
+    })
+    status: string;
+
+    @ApiProperty({
+        example: "Calc-12345678-version-1",
+        description: "Идентификатор серии анкет",
+    })
+    seriesId: string;
+
+    @ApiProperty({
+        example: 1,
+        description: "Номер версии анкеты",
+    })
+    version: number;
+
+    @ApiProperty({
+        example: "550e8400-e29b-41d4-a716-446655440000",
+        description: "ID родительской анкеты",
+        required: false,
+    })
+    parentId?: string;
 }
