@@ -261,7 +261,7 @@ export class InMemoryFilterService {
 
 			if (Array.isArray(current)) {
 				const index = Number.parseInt(part, 10);
-				if (!isNaN(index) && index >= 0 && index < current.length) {
+				if (!Number.isNaN(index) && index >= 0 && index < current.length) {
 					current = current[index];
 				} else {
 					return undefined;
@@ -430,7 +430,7 @@ export class InMemoryFilterService {
 			return null;
 		}
 		const num = Number(value);
-		return isNaN(num) ? null : num;
+		return Number.isNaN(num) ? null : num;
 	}
 
 	private convertToDate(value: any): Date | null {
@@ -441,7 +441,7 @@ export class InMemoryFilterService {
 			return value;
 		}
 		const date = new Date(value);
-		return isNaN(date.getTime()) ? null : date;
+		return Number.isNaN(date.getTime()) ? null : date;
 	}
 
 	private isSameDate(date1: Date, date2: Date): boolean {

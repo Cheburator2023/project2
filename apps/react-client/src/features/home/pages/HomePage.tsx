@@ -180,7 +180,7 @@ export const HomeTemplete = ({
 		options?: RefetchOptions,
 	) => Promise<QueryObserverResult<CalculationResponseDto[], void>>;
 }) => {
-	const [hoveredRowId, setHoveredRowId] = useState("");
+	const [hoveredRowId, _setHoveredRowId] = useState("");
 	const { setGridApi } = useGlobalSettingsStore();
 	const gridRef = useRef<AgGridReact>(null);
 	const { mode } = useColorScheme();
@@ -398,7 +398,7 @@ export const HomeTemplete = ({
 		setGridApi(params.api as GridApi);
 	};
 
-	const onFilterChanged = () => {
+	const _onFilterChanged = () => {
 		const filterModel = gridRef?.current?.api?.getFilterModel() || null;
 		setCurrentFilterModel(filterModel);
 		console.log("🐸 Pepe said >> фильтр изменен:", filterModel);
