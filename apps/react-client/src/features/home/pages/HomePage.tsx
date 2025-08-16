@@ -399,7 +399,7 @@ export const HomeTemplete = ({
 		setGridApi(params.api as GridApi);
 	};
 
-	const _onFilterChanged = () => {
+	const onFilterChanged = () => {
 		const filterModel = gridRef?.current?.api?.getFilterModel() || null;
 		setCurrentFilterModel(filterModel);
 	};
