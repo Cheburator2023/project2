@@ -43,7 +43,8 @@ const widgets = {
 
 export const ProjectAssessmentForm: React.FC<{
 	isCreate?: boolean;
-}> = ({ isCreate }) => {
+	initialData?: any;
+}> = ({ isCreate, initialData }) => {
 	const formRef = useRef<FormRef>(null);
 	const {
 		setApiRef,
@@ -62,7 +63,9 @@ export const ProjectAssessmentForm: React.FC<{
 		assessmentCalculationsStore();
 
 	const [formData, setFormData] = useState<IAssessmentFormData>(
-		projectAssessmentFormInitialData,
+		initialData
+			? { ...projectAssessmentFormInitialData, ...initialData }
+			: projectAssessmentFormInitialData,
 	);
 
 	const [liveValidate, setLiveValidate] = useState(false);
@@ -92,6 +95,12 @@ export const ProjectAssessmentForm: React.FC<{
 	useDeepEffect(() => {
 		updateFormState(formName, formState);
 	}, [formState]);
+
+	useDeepEffect(() => {
+		if (initialData) {
+			setFormData({ ...projectAssessmentFormInitialData, ...initialData });
+		}
+	}, [initialData]);
 
 	const onChange = (e: IChangeEvent<IAssessmentFormData>) => {
 		if (e.formData) {

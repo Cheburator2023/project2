@@ -2,6 +2,8 @@ import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard
 import { AdminPage } from "@react-client/features/admin/AdminPage";
 import { CompareReportsPage } from "@react-client/features/anketaCompare/pages/CompareReportsPage";
 import { AnketaCreatePage } from "@react-client/features/anketaCRUD/pages/AnketaCreatePage";
+import { AnketaNewVersionPage } from "@react-client/features/anketaCRUD/pages/AnketaNewVersionPage";
+import { AnketaClonePage } from "@react-client/features/anketaCRUD/pages/AnketaClonePage";
 import { AnketaPreviewPage } from "@react-client/features/anketaCRUD/pages/AnketaPreviewPage";
 import { HomePage } from "@react-client/features/home/pages/HomePage";
 import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
@@ -46,6 +48,30 @@ export const Routing = () => (
 				</PermissionGuard>
 			}
 			data-test-id="index--Route-2"
+		/>
+		<Route
+			path={routes.calculationNewVersion.rootPath}
+			element={
+				<PermissionGuard
+					check={(p) => p.canCreateCalculation}
+					message="У вас нет прав на создание новой версии анкеты"
+				>
+					<AnketaNewVersionPage data-test-id="index--AnketaNewVersionPage-0" />
+				</PermissionGuard>
+			}
+			data-test-id="index--Route-7"
+		/>
+		<Route
+			path={routes.calculationClone.rootPath}
+			element={
+				<PermissionGuard
+					check={(p) => p.canCreateCalculation}
+					message="У вас нет прав на клонирование анкеты"
+				>
+					<AnketaClonePage data-test-id="index--AnketaClonePage-0" />
+				</PermissionGuard>
+			}
+			data-test-id="index--Route-8"
 		/>
 		<Route
 			path={routes.calculationCompare.rootPath}

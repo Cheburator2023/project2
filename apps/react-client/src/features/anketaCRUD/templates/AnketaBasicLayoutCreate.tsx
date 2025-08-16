@@ -2,18 +2,33 @@ import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Panel, PanelGroup } from "react-resizable-panels";
-import { useLocation } from "react-router";
+import { useLocation, useParams } from "react-router";
 import { BasicInfoForm } from "../organisms/BasicInfoForm";
 import { CalculationResultTable } from "../organisms/CalculationResultTable";
 import { ProjectAssessmentForm } from "../organisms/ProjectAssessmentForm";
 import { PanelResizeHandleStyled } from "../atoms/PanelResizeHandleStyled";
+import { useParentCalculationData } from "@react-client/features/anketaCRUD/hooks/useParentCalculationData";
 
 export const AnketaBasicLayoutCreate = ({
 	isPending,
+	isClone,
+	isVersionUpdate,
 }: {
 	isPending?: boolean;
+	isClone?: boolean;
+	isVersionUpdate?: boolean;
 }) => {
 	const location = useLocation();
+	const { id } = useParams<{ id: string }>();
+
+	const { parentData, isLoading: isLoadingParent } =
+		useParentCalculationData(id);
+
+	const initialData: any = isClone
+		? { questionnaireData: parentData?.questionnaireData }
+		: isVersionUpdate
+			? parentData
+			: undefined;
 
 	return (
 		<Flex
@@ -45,6 +60,7 @@ export const AnketaBasicLayoutCreate = ({
 							>
 								<BasicInfoForm
 									isCreate
+									initialData={initialData}
 									data-test-id="anketa-basic-layout--BasicInfoForm-0"
 								/>
 							</Card>
@@ -87,6 +103,7 @@ export const AnketaBasicLayoutCreate = ({
 					>
 						<ProjectAssessmentForm
 							isCreate
+							initialData={initialData}
 							data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
 						/>
 					</Card>
