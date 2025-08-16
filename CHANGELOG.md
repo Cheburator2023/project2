@@ -1,5 +1,26 @@
 # Semantic Versioning Changelog
 
+# [1.10.0](https://git.sfera.inno.local/sumd/smart_anketa_ui/compare/v1.9.0...v1.10.0) (2025-08-13)
+
+
+### Bug Fixes
+
+* 500 error export questionnaireData fix ([609b9a8](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/609b9a8a55e8cc3353902ffc9fd67d4cb7aed96a))
+* 500 error export questionnaireData fix ([c8b2211](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/c8b221145bff6076255234e0522c69c7da99fb10))
+* mock fix ([0600569](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/06005692c2fcb3710bbf6a010505645485add109))
+* params parsing dot fix ([3032ef1](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/3032ef177eeb6a7d83128e0d7fce68cca3337d66))
+* Поправил отчет в Excel ([a2c0f53](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/a2c0f53890332cf2eac3b5cb9a957f35e67bdd69))
+
+
+### Features
+
+* **export:** implement server-side Excel export with AG Grid filters ([99c7205](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/99c720521e2758de7effcbea50fdce4ebb978301))
+* **export:** implement server-side Excel export with AG Grid filters ([5f86335](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/5f86335f545f3d1bfe8c03235ff3e4d08722c6dd))
+* **home:** add filter state display and model types ([06816fe](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/06816fe34f3ff470bf7aac52c1cb3a4ad2285624))
+* **home:** add number filter params to grid columns ([254913c](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/254913c0053f77c489b38770289bde8cb90296aa))
+* **home:** add row double click and context menu navigation ([03621d1](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/03621d16dfd16e9b3409009efce57117c1f8f09b))
+* **home:** improve excel export and column configuration ([f86fc1f](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/f86fc1fcc04e9f174710cf979099c1012fb42b16))
+
 # [1.9.0](https://git.sfera.inno.local/SUMD/smart_anketa_ui/compare/v1.8.6...v1.9.0) (2025-08-06)
 
 
