@@ -401,7 +401,6 @@ export const HomeTemplete = ({
 	const _onFilterChanged = () => {
 		const filterModel = gridRef?.current?.api?.getFilterModel() || null;
 		setCurrentFilterModel(filterModel);
-		console.log("🐸 Pepe said >> фильтр изменен:", filterModel);
 	};
 
 	const _onClearColumnFilter = (columnId: string) => {

@@ -76,7 +76,6 @@ export const AnketaCreatePage = () => {
 				customerName: basicFormData.customerName,
 				comment: basicFormData.comment,
 			};
-			console.log("🐸 Pepe said >> AnketaCreatePage >> data:", data);
 
 			createCalculationMutation(
 				{
