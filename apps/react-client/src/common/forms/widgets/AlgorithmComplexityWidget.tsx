@@ -114,7 +114,7 @@ export const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 					disabled
 					fullWidth
 					variant="outlined"
-					label="Сложность алгоритма / тип ML задачи"
+					label={props.label}
 					size="small"
 					required={required}
 					sx={{ mb: 2 }}
