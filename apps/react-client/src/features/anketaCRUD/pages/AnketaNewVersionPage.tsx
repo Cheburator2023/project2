@@ -1,4 +1,4 @@
-import { IconButton } from "@mui/material";
+import { Chip, IconButton } from "@mui/material";
 import { CreateNewVersionDto } from "@react-client/common/api/types/createNewVersionDto";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { toast } from "@react-client/common/toasts";
@@ -148,6 +148,20 @@ export const AnketaNewVersionPage = () => {
 	return (
 		<div data-test-id="anketa-new-version-page--div-0">
 			<Header data-test-id="anketa-new-version-page--Header-0">
+				{!isLoadingParent && (
+					<Chip
+						label={`${parentData?.version || "1.0.0"} -> ${
+							parentData?.version ||
+							"1.0.0"
+								.split(".")
+								.map((item, index) => (index === 0 ? Number(item) + 1 : item))
+								.join(".")
+						}`}
+						color="warning"
+						variant="outlined"
+						size="small"
+					/>
+				)}
 				<IconButton
 					onClick={onSubmit}
 					title="Создать новую версию"

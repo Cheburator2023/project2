@@ -190,6 +190,12 @@ export const AnketaPreviewPage = () => {
 						size="small"
 					/>
 				)}
+				<Chip
+					label={initialData?.version || "1.0.0"}
+					color="warning"
+					variant="outlined"
+					size="small"
+				/>
 				{initialData?.parentCalcId && (
 					<IconButton
 						onClick={() =>
