@@ -642,10 +642,6 @@ export class CalculationService {
 						);
 					}
 
-					if (!sourceCalculation.seriesId) {
-						throw new BadRequestException('Source calculation must have a seriesId');
-					}
-					
 					this.checkAborted(signal);
 
 					const authorName = user
@@ -655,13 +651,17 @@ export class CalculationService {
 						"Система"
 						: "Система";
 
-					// Получаем максимальную версию в серии
-					const maxVersion = await this.getMaxVersionInSeries(sourceCalculation.seriesId);
-					const newVersion = this.incrementVersion(maxVersion);
+					const seriesId = sourceCalculation.seriesId || this.generateSeriesId();
+					let maxVersion = "0.0.0";
+					let newVersion = "1.0.0";
 
-					// Проверяем уникальность readableId в серии
-					const newReadableId = `Calc-${sourceCalculation.seriesId}-version-${newVersion}`;
-					await this.ensureReadableIdIsUnique(sourceCalculation.seriesId, newReadableId);
+					if (sourceCalculation.seriesId) {
+						maxVersion = await this.getMaxVersionInSeries(sourceCalculation.seriesId);
+						newVersion = this.incrementVersion(maxVersion);
+					}
+
+					const newReadableId = `Calc-${seriesId}-version-${newVersion}`;
+					await this.ensureReadableIdIsUnique(seriesId, newReadableId);
 
 					const newCalculation = this.calculationRepository.create({
 						status: CalculationStatus.ACTIVE,
@@ -681,7 +681,7 @@ export class CalculationService {
 							createNewVersionDto.questionnaireData ||
 							sourceCalculation.questionnaireData,
 						finalCoefficient: sourceCalculation.finalCoefficient,
-						seriesId: sourceCalculation.seriesId,
+						seriesId: seriesId,
 						version: newVersion,
 						parentCalcId: sourceCalculation.id,
 						readableId: newReadableId,
@@ -690,8 +690,9 @@ export class CalculationService {
 
 					this.checkAborted(signal);
 
-					// Архивируем предыдущие активные анкеты в серии
-					await this.archivePreviousActiveCalculation(sourceCalculation.seriesId);
+					if (sourceCalculation.seriesId) {
+						await this.archivePreviousActiveCalculation(sourceCalculation.seriesId);
+					}
 
 					const savedCalculation =
 						await this.calculationRepository.save(newCalculation);
