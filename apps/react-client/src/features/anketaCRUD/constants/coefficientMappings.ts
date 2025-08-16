@@ -17,7 +17,7 @@ export const coefficientDisplayNames: Record<string, string> = {
 export const coefficientToFormFieldMapping: Record<string, string> = {
 	modelsCountCoefficient: "modelsCount",
 	setupComplexityCoefficient: "setupComplexity",
-	generalUncertaintyCoefficient: "uncertaintyAdjustment",
+	generalUncertaintyCoefficient: "generalUncertainty",
 	readyPromReportsCoefficient: "readyPromReports",
 	dataSourcesCountCoefficient: "dataSourcesCount",
 	pilotModelRequired: "pilotModelRequired",

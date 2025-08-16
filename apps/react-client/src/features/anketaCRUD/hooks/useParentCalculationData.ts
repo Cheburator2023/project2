@@ -4,7 +4,7 @@ import { IBasicFormData } from "../stores/useAnketaCRUDFormsStore";
 import { IAssessmentFormData } from "../types/FormData";
 
 export const useParentCalculationData = (parentId?: string) => {
-	const { data, isLoading, error } = useCalculationControllerFindOne(
+	const { data, isLoading, error, isError } = useCalculationControllerFindOne(
 		parentId!,
 		{ query: { enabled: !!parentId } },
 	);
@@ -12,6 +12,7 @@ export const useParentCalculationData = (parentId?: string) => {
 	return {
 		parentData: data,
 		isLoading,
+		hasError: isError,
 		error,
 		mapToBasicForm: data ? mapCalculationToBasicForm(data) : null,
 		mapToAssessmentForm: data ? mapCalculationToAssessmentForm(data) : null,

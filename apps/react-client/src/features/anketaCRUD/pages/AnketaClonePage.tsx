@@ -33,6 +33,7 @@ export const AnketaClonePage = () => {
 	const {
 		parentData,
 		isLoading: isLoadingParent,
+		hasError: hasParentError,
 		mapToAssessmentForm,
 	} = useParentCalculationData(id);
 
@@ -157,6 +158,7 @@ export const AnketaClonePage = () => {
 					onClick={onSubmit}
 					title="Клонировать как шаблон"
 					loading={isPending}
+					disabled={!!hasParentError || isLoadingParent || isPending}
 				>
 					<SaveIcon />
 				</IconButton>

@@ -32,9 +32,11 @@ export const AnketaNewVersionPage = () => {
 	const {
 		parentData,
 		isLoading: isLoadingParent,
+		hasError: hasParentError,
 		mapToBasicForm,
 		mapToAssessmentForm,
 	} = useParentCalculationData(id);
+
 	const { mutate: createNewVersionMutation, isPending } =
 		useCalculationControllerCreateNewVersion();
 
@@ -166,6 +168,7 @@ export const AnketaNewVersionPage = () => {
 					onClick={onSubmit}
 					title="Создать новую версию"
 					loading={isPending}
+					disabled={!!hasParentError || isLoadingParent || isPending}
 				>
 					<SaveIcon />
 				</IconButton>
