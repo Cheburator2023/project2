@@ -242,33 +242,4 @@ export class CreateCalculationDto extends CalculationBaseDto {
 	@Type(() => CalculationResultItemDto)
 	@IsOptional()
 	calculationResult?: CalculationResultItemDto[];
-
-	@ApiProperty({
-		example: "Calc-12345678-version-1",
-		description: "Идентификатор серии анкет",
-		required: false,
-	})
-	@IsString({ message: "seriesId must be a string" })
-	@IsOptional()
-	seriesId?: string;
-
-	@ApiProperty({
-		example: 1,
-		description: "Номер версии анкеты",
-		required: false,
-	})
-	@IsNumber({}, { message: "version must be a number" })
-	@IsOptional()
-	version?: number;
-
-	@ApiProperty({
-		example: "550e8400-e29b-41d4-a716-446655440000",
-		description: "ID родительской анкеты",
-		required: false,
-		nullable: true,
-	})
-	@IsOptional()
-	@IsString({ message: "parentId must be a string" })
-	@IsUUID()
-	parentId?:string | null;
 }

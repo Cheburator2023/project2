@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import * as ExcelJS from "exceljs";
-import { Calculation } from "../entities/calculation.entity";
+import { Calculation, CalculationStatus } from "../entities/calculation.entity";
 import {
 	UNCERTAINTY_TYPE_NAMES,
 	DEPLOYMENT_CHANNEL_VALUES,
@@ -93,6 +93,7 @@ export class ExcelExportService {
 			{ header: "Версия", key: "version", width: 15 },
 			{ header: "Статус", key: "status", width: 15 },
 			{ header: "ID родительской анкеты", key: "parentId", width: 36 },
+			{ header: "Cоставной читаемый идентификатор ", key: "readableId", width: 30 },
 			{ header: "RFD", key: "rfd", width: 20 },
 			{ header: "Стрим исполнитель", key: "streamExecutor", width: 25 },
 			{ header: "Департамент Заказчика", key: "department", width: 30 },
@@ -223,9 +224,9 @@ export class ExcelExportService {
 		// Добавление информации о версии и серии
 		row.seriesId = calculation.seriesId;
 		row.version = calculation.version;
-		row.status = calculation.status === 'active' ? 'Активная' : 'Архивная';
-		row.parentId = calculation.parentId || 'Нет';
-		row.calcId = `Calc-${calculation.seriesId}-version-${calculation.version}`;
+		row.status = calculation.status === CalculationStatus.ACTIVE ? 'Активная' : 'Архивная';
+		row.parentId = calculation.parentCalcId || 'Нет';
+		row.readableId = calculation.readableId || 'Нет данных';
 
 
 		// Инициализация полей рисков

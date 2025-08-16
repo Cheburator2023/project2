@@ -8,6 +8,7 @@ import {
 } from "../base/calculation-base.dto";
 import { AlgorithmTypeItemDto } from "../common/algorithm-type.dto";
 import { CalculationResultItemDto } from "./calculation-result-item.dto";
+import { CalculationStatus } from "../../entities/calculation.entity";
 
 export class CalculationQuestionnaireDataDto extends CalculationBaseDto {
 	@ApiProperty({
@@ -208,27 +209,36 @@ export class CalculationResponseDto {
 	author: string;
 
     @ApiProperty({
-        example: "active",
-        description: "Статус анкеты (active или archive)",
+        example: CalculationStatus.ACTIVE,
+        description: "Статус анкеты",
+        enum: CalculationStatus,
     })
-    status: string;
+    status: CalculationStatus;
 
     @ApiProperty({
-        example: "Calc-12345678-version-1",
+        example: "1.0.0",
+        description: "Версия анкеты",
+    })
+    version: string;
+
+    @ApiProperty({
+        example: "12345678",
         description: "Идентификатор серии анкет",
+        nullable: true,
     })
-    seriesId: string;
-
-    @ApiProperty({
-        example: 1,
-        description: "Номер версии анкеты",
-    })
-    version: number;
+    seriesId: string | null;
 
     @ApiProperty({
         example: "550e8400-e29b-41d4-a716-446655440000",
-        description: "ID родительской анкеты",
+        description: "ID родительской анкеты (для клонирования)",
         required: false,
     })
-    parentId?: string;
+    parentCalcId?: string;
+
+    @ApiProperty({
+        example: "Calc-12345678-version-1.0.0",
+        description: "Составной читаемый идентификатор",
+        nullable: true,
+    })
+    readableId: string | null;
 }

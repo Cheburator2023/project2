@@ -3,7 +3,6 @@ import {
 	Controller,
 	Get,
 	HttpStatus,
-    NotFoundException,
 	Param,
 	ParseUUIDPipe,
 	Post,
@@ -46,6 +45,8 @@ import {
 	ReqContext,
 	RequestContext,
 } from "../../../shared/decorators/request-context.decorator";
+import { CreateNewVersionDto } from "../dto/request/create-new-version.dto";
+import { CreateCloneDto } from "../dto/request/create-clone.dto";
 
 @ApiBearerAuth("JWT-auth")
 @ApiTags("Calculation")
@@ -120,10 +121,6 @@ export class CalculationController {
                 ctx.abortController.signal,
             );
 
-            if (createCalculationDto.parentId === '') {
-                createCalculationDto.parentId = null;
-            }
-
             this.customLogger.log(
                 "Расчет успешно создан",
                 "CalculationController.create",
@@ -197,6 +194,7 @@ export class CalculationController {
 		@ReqContext() ctx: RequestContext,
 		@Param("id", ParseUUIDPipe) id: string,
 		@Body() updateCalculationDto: UpdateCalculationDto,
+        @CurrentUser() user: any,
 	): Promise<CalculationResponseDto> {
         this.activeRequests.set(ctx.requestId, ctx.abortController);
 
@@ -206,10 +204,11 @@ export class CalculationController {
                 "CalculationController.update",
                 {
                     requestId: ctx.requestId,
-                    calculationId: id,
+                    userId: user?.id,
                     mdc: {
                         method: "PUT",
                         path: `/calculation/${id}`,
+                        userId: user?.id,
                     },
                 },
             );
@@ -217,6 +216,7 @@ export class CalculationController {
             const calculation = await this.calculationService.updateCalculation(
                 id,
                 updateCalculationDto,
+                user,
                 ctx.abortController.signal,
             );
 
@@ -293,6 +293,7 @@ export class CalculationController {
 	async findAllPaginated(
 		@ReqContext() ctx: RequestContext,
 		@Query() paginationDto: PaginationDto,
+        @CurrentUser() user: any,
 	): Promise<PaginatedCalculationResponseDto> {
 		this.activeRequests.set(ctx.requestId, ctx.abortController);
 
@@ -302,17 +303,20 @@ export class CalculationController {
                 "CalculationController.findAllPaginated",
                 {
                     requestId: ctx.requestId,
+                    userId: user?.id,
                     page: paginationDto.page,
                     limit: paginationDto.limit,
                     mdc: {
                         method: "GET",
                         path: "/calculation/all",
+                        userId: user?.id,
                     },
                 },
             );
 
             const result = await this.calculationService.findAllPaginated(
                 paginationDto,
+                user,
                 ctx.abortController.signal,
             );
 
@@ -378,6 +382,7 @@ export class CalculationController {
 	})
 	async findAll(
 		@ReqContext() ctx: RequestContext,
+        @CurrentUser() user: any,
 	): Promise<CalculationResponseDto[]> {
 		this.activeRequests.set(ctx.requestId, ctx.abortController);
 
@@ -387,14 +392,17 @@ export class CalculationController {
                 "CalculationController.findAll",
                 {
                     requestId: ctx.requestId,
+                    userId: user?.id,
                     mdc: {
                         method: "GET",
                         path: "/calculation/all/list",
+                        userId: user?.id,
                     },
                 },
             );
 
             const calculations = await this.calculationService.findAll(
+                user,
                 ctx.abortController.signal,
             );
 
@@ -471,6 +479,7 @@ export class CalculationController {
 	async findOne(
 		@ReqContext() ctx: RequestContext,
 		@Param("id", ParseUUIDPipe) id: string,
+        @CurrentUser() user: any,
 	): Promise<CalculationResponseDto> {
 		this.activeRequests.set(ctx.requestId, ctx.abortController);
 
@@ -480,16 +489,19 @@ export class CalculationController {
                 "CalculationController.findOne",
                 {
                     requestId: ctx.requestId,
+                    userId: user?.id,
                     calculationId: id,
                     mdc: {
                         method: "GET",
                         path: `/calculation/${id}`,
+                        userId: user?.id,
                     },
                 },
             );
 
             const calculation = await this.calculationService.findOne(
                 id,
+                user,
                 ctx.abortController.signal,
             );
 
@@ -562,6 +574,7 @@ export class CalculationController {
 	async exportToExcel(
 		@ReqContext() ctx: RequestContext,
 		@Body() bodyParams: TransformedExportCalculationDto,
+        @CurrentUser() user: any,
 		@Res() res: Response,
 	): Promise<void> {
 		this.activeRequests.set(ctx.requestId, ctx.abortController);
@@ -572,14 +585,17 @@ export class CalculationController {
                 "CalculationController.exportToExcel",
                 {
                     requestId: ctx.requestId,
+                    userId: user?.id,
                     mdc: {
                         method: "POST",
                         path: "/calculation/export/excel",
+                        userId: user?.id,
                     },
                 },
             );
 
             const calculations = await this.calculationService.findAllForExport(
+                user,
                 bodyParams.parsedFilterModel,
                 bodyParams.parsedSortModel,
                 bodyParams.selectedIdsArray,
@@ -624,80 +640,173 @@ export class CalculationController {
         }
     }
 
-    @Get("series/:seriesId")
-    @StreamFilter()
-    @RealmRole(Permission.ANKETA_VIEW_ALL_CALCULATIONS)
+    @Post(":id/new-version")
+    @RealmRole(Permission.ANKETA_CREATE_CALCULATION)
+    @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
     @ApiOperation({
-        summary: "Получить все анкеты по идентификатору серии",
-        description: "Возвращает все анкеты с указанным идентификатором серии",
+        summary: "Создать новую версию анкеты",
+        description:
+            "Создает новую версию существующей анкеты с наследованием данных",
     })
     @ApiParam({
-        name: "seriesId",
-        description: "Идентификатор серии анкет",
-        example: "12345678",
+        name: "id",
+        description: "Уникальный идентификатор исходной анкеты",
+        example: "550e8400-e29b-41d4-a716-446655440000",
     })
     @ApiResponse({
-        status: HttpStatus.OK,
-        description: "Список анкет серии",
-        type: [CalculationResponseDto],
+        status: HttpStatus.CREATED,
+        description: "Новая версия анкеты успешно создана.",
+        type: CalculationResponseDto,
+    })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: "Неверный запрос. Ошибка валидации.",
     })
     @ApiResponse({
         status: HttpStatus.NOT_FOUND,
-        description: "Анкеты с указанным идентификатором серии не найдены",
+        description: "Исходная анкета не найдена.",
     })
-    async findBySeriesId(
+    @ApiResponse({
+        status: HttpStatus.UNAUTHORIZED,
+        description: "Не авторизован. Требуется аутентификация.",
+    })
+    @ApiResponse({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+        description: "Слишком много запросов. Превышен лимит скорости.",
+        content: {
+            "application/json": {
+                example: {
+                    message: "Too many requests",
+                    retryAfter: "34 seconds",
+                },
+            },
+        },
+    })
+    async createNewVersion(
         @ReqContext() ctx: RequestContext,
-        @Param("seriesId") seriesId: string,
-    ): Promise<CalculationResponseDto[]> {
+        @Param("id", ParseUUIDPipe) id: string,
+        @Body() createNewVersionDto: CreateNewVersionDto,
+        @CurrentUser() user: any,
+    ): Promise<CalculationResponseDto> {
         this.activeRequests.set(ctx.requestId, ctx.abortController);
 
         try {
             this.customLogger.log(
-                "Получение анкет по серии",
-                "CalculationController.findBySeriesId",
-                {
-                    requestId: ctx.requestId,
-                    seriesId,
-                    mdc: {
-                        method: "GET",
-                        path: `/calculation/series/${seriesId}`,
-                    },
-                },
+                `Creating new version for calculation ${id} [${ctx.requestId}]`,
+                "CalculationController.createNewVersion",
+                { userId: user?.id, sourceCalcId: id },
             );
 
-            const calculations = await this.calculationService.findBySeriesId(
-                seriesId,
+            const calculation = await this.calculationService.createNewVersion(
+                id,
+                createNewVersionDto,
+                user,
                 ctx.abortController.signal,
             );
 
-            if (!calculations || calculations.length === 0) {
-                throw new NotFoundException(
-                    `Calculations with seriesId ${seriesId} not found`,
-                );
-            }
-
             this.customLogger.log(
-                "Анкеты серии успешно получены",
-                "CalculationController.findBySeriesId",
-                {
-                    requestId: ctx.requestId,
-                    seriesId,
-                    count: calculations.length,
-                },
+                `New version created [${ctx.requestId}]`,
+                "CalculationController.createNewVersion",
+                { calculationId: calculation.id, sourceCalcId: id },
             );
 
-            return calculations.map((calculation) =>
-                this.mapToResponseDto(calculation),
-            );
+            return this.mapToResponseDto(calculation);
         } catch (error) {
             this.customLogger.error(
-                "Ошибка при получении анкет по серии",
+                `Failed to create new version [${ctx.requestId}]`,
                 error.stack,
-                "CalculationController.findBySeriesId",
+                "CalculationController.createNewVersion",
                 {
                     requestId: ctx.requestId,
-                    seriesId,
                     error: error.message,
+                    sourceCalcId: id,
+                },
+            );
+            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
+    }
+
+    @Post(":id/clone")
+    @RealmRole(Permission.ANKETA_CREATE_CALCULATION)
+    @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+    @ApiOperation({
+        summary: "Клонировать анкету как шаблон",
+        description: "Создает новую анкету на базе существующей как шаблона",
+    })
+    @ApiParam({
+        name: "id",
+        description: "Уникальный идентификатор анкеты-шаблона",
+        example: "550e8400-e29b-41d4-a716-446655440000",
+    })
+    @ApiResponse({
+        status: HttpStatus.CREATED,
+        description: "Анкета успешно клонирована.",
+        type: CalculationResponseDto,
+    })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: "Неверный запрос. Ошибка валидации.",
+    })
+    @ApiResponse({
+        status: HttpStatus.NOT_FOUND,
+        description: "Анкета-шаблон не найдена.",
+    })
+    @ApiResponse({
+        status: HttpStatus.UNAUTHORIZED,
+        description: "Не авторизован. Требуется аутентификация.",
+    })
+    @ApiResponse({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+        description: "Слишком много запросов. Превышен лимит скорости.",
+        content: {
+            "application/json": {
+                example: {
+                    message: "Too many requests",
+                    retryAfter: "34 seconds",
+                },
+            },
+        },
+    })
+    async createClone(
+        @ReqContext() ctx: RequestContext,
+        @Param("id", ParseUUIDPipe) id: string,
+        @Body() createCloneDto: CreateCloneDto,
+        @CurrentUser() user: any,
+    ): Promise<CalculationResponseDto> {
+        this.activeRequests.set(ctx.requestId, ctx.abortController);
+
+        try {
+            this.customLogger.log(
+                `Creating clone from template ${id} [${ctx.requestId}]`,
+                "CalculationController.createClone",
+                { userId: user?.id, templateCalcId: id },
+            );
+
+            const calculation = await this.calculationService.createClone(
+                id,
+                createCloneDto,
+                user,
+                ctx.abortController.signal,
+            );
+
+            this.customLogger.log(
+                `Clone created [${ctx.requestId}]`,
+                "CalculationController.createClone",
+                { calculationId: calculation.id, templateCalcId: id },
+            );
+
+            return this.mapToResponseDto(calculation);
+        } catch (error) {
+            this.customLogger.error(
+                `Failed to create clone [${ctx.requestId}]`,
+                error.stack,
+                "CalculationController.createClone",
+                {
+                    requestId: ctx.requestId,
+                    error: error.message,
+                    templateCalcId: id,
                 },
             );
             throw error;
@@ -741,9 +850,10 @@ export class CalculationController {
 			createdAt: calculation.createdAt,
 			author: calculation.author,
             status: calculation.status,
-            seriesId: calculation.seriesId,
             version: calculation.version,
-            parentId: calculation.parentId,
-		};
-	}
+            seriesId: calculation.seriesId,
+            parentCalcId: calculation.parentCalcId || undefined,
+            readableId: calculation.readableId,
+        };
+    }
 }
