@@ -1,6 +1,11 @@
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 import { CalculationQuestionnaireDataDto } from "../dto/response/calculation-response.dto";
 
+export enum CalculationStatus {
+    ACTIVE = "Активная",
+    ARCHIVE = "Архивная",
+}
+
 @Entity()
 export class Calculation {
 	@PrimaryGeneratedColumn("uuid")
@@ -24,7 +29,26 @@ export class Calculation {
 	@Column({ type: "varchar", length: 255, nullable: true })
 	comment: string;
 
-	@Column({
+    @Column({
+        type: "enum",
+        enum: CalculationStatus,
+        default: CalculationStatus.ACTIVE,
+    })
+    status: CalculationStatus;
+
+    @Column({ type: "varchar", length: 20, nullable: false, default: "1.0.0" })
+    version: string;
+
+    @Column({ type: "varchar", length: 50, nullable: true })
+    seriesId: string | null;
+
+    @Column({ type: "uuid", nullable: true })
+    parentCalcId: string | null;
+
+    @Column({ type: "varchar", length: 100, nullable: true })
+    readableId: string | null;
+
+    @Column({
 		type: "jsonb",
 		nullable: false,
 		transformer: {
@@ -57,18 +81,6 @@ export class Calculation {
 	})
 	createdAt: Date;
 
-	@Column({ type: "varchar", length: 255, nullable: true })
-	author: string;
-
-    @Column({ type: "varchar", length: 50, nullable: true })
-    status: string; 
-
-    @Column({ type: "varchar", length: 100, nullable: true })
-    seriesId: string;
-
-    @Column({ type: "integer", nullable: true })
-    version: number; 
-
     @Column({ type: "varchar", length: 255, nullable: true })
-    parentId: string;
+    author: string;
 }
