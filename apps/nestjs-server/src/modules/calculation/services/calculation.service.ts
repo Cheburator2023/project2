@@ -4,7 +4,7 @@ import {
 	NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import { CreateCalculationDto, PaginationDto } from "../dto";
 import { UpdateCalculationDto } from "../dto/request/update-calculation.dto";
 import { Calculation, CalculationStatus } from "../entities/calculation.entity";
@@ -543,11 +543,6 @@ export class CalculationService {
 							error: error.message,
 						},
 					);
-					console.log(
-						"🐸 Pepe said >> CalculationService >> findAll >> error:",
-						error,
-					);
-
 					throw new BadRequestException(
 						`Failed to fetch calculations (no pagination): ${error.message}`,
 					);
@@ -685,12 +680,6 @@ export class CalculationService {
 						);
 					}
 
-					if (!sourceCalculation.seriesId) {
-						throw new BadRequestException(
-							"Source calculation must have a seriesId",
-						);
-					}
-
 					this.checkAborted(signal);
 
 					const authorName = user
@@ -749,7 +738,9 @@ export class CalculationService {
 							createNewVersionDto.customerName ||
 							sourceCalculation.customerName,
 						comment: createNewVersionDto.comment || sourceCalculation.comment,
-						questionnaireData,
+						questionnaireData:
+							createNewVersionDto.questionnaireData ||
+							sourceCalculation.questionnaireData,
 						finalCoefficient:
 							createNewVersionDto.finalCoefficient ||
 							sourceCalculation.finalCoefficient,
@@ -884,7 +875,8 @@ export class CalculationService {
 						customerName:
 							createCloneDto.customerName || sourceCalculation.customerName,
 						comment: createCloneDto.comment || sourceCalculation.comment,
-						questionnaireData,
+						questionnaireData:
+							createCloneDto.questionnaireData || sourceCalculation.questionnaireData,
 						finalCoefficient: sourceCalculation.finalCoefficient,
 						seriesId: newSeriesId,
 						version: newVersion,
