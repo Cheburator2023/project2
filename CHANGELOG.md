@@ -1,5 +1,31 @@
 # Semantic Versioning Changelog
 
+# [1.11.0](https://git.sfera.inno.local/sumd/smart_anketa_ui/compare/v1.10.0...v1.11.0) (2025-08-17)
+
+
+### Bug Fixes
+
+* **Dockerfile:** fake commit ([dac4e49](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/dac4e495e3937605adcde803a9318aa24a3e6a27))
+* onFilterChanged fixed ([3366123](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/336612395d2d2d82fc871ec178d50102878346e6))
+* Поправил выгрузку отчетов в Excel ([8b52ece](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/8b52ecea362242eb820a0256183cfc25d377929b))
+
+
+### Features
+
+* **Dockerfile:** fake commit ([f043d92](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/f043d92bfbacbab9a2592dbc948670cddfcb7422))
+* added more coefs to inputs ([561e23f](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/561e23f0e57de04cddc5bd84f7efc226acf6bda0))
+* new preview schema func ([dbbf86e](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/dbbf86e16454473905e15dedcb12f430e7b59548))
+* page readable names ([3ba1f71](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/3ba1f71ac4072fc91147d96882b20a8c87033dc2))
+* **calculation:** add final coefficient and calculation result to DTOs and forms ([c889e33](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/c889e338e3d6d8c02fde207b89a680b7fcc59d63))
+* anketa clone and new version ui only ([4a8e9bb](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/4a8e9bb0f6f0e7b6a1fe32bfe10116b8737e7a1a))
+* version chips added ([ab9e50d](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/ab9e50d56166dd62762832e50784e7ad808b4ad0))
+* version chips added ([41f94e5](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/41f94e54083bd8372bcc1cb9da9b8bf7b881f212))
+* добавил миграции, поля, эндпоинт ([b7651b9](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/b7651b92c5d818419cb62cb1c0fb97e79664983b))
+* Добавил СС Журналирование ([cef198d](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/cef198daa346cffbc6bdea05201b98550dc45a17))
+* Добавил эндпоинты, проверку на уникальность и др. ([86ce684](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/86ce68451e2de628418087aec598d17437eff89e))
+* Поправил отсутствие seriesId при создании новой версии ([a5c059f](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/a5c059f1ca3d5a7138e14b05868b0fd98a6fd2f4))
+* **assessment:** add coefficient display support to forms ([538e6b1](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/538e6b1fac2a3ea7bc3036b31aca74d7dd941c1e))
+
 # [1.10.0](https://git.sfera.inno.local/sumd/smart_anketa_ui/compare/v1.9.0...v1.10.0) (2025-08-13)
 
 
