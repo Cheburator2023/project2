@@ -739,8 +739,7 @@ export class CalculationService {
 							sourceCalculation.customerName,
 						comment: createNewVersionDto.comment || sourceCalculation.comment,
 						questionnaireData:
-							createNewVersionDto.questionnaireData ||
-							sourceCalculation.questionnaireData,
+						questionnaireData,
 						finalCoefficient:
 							createNewVersionDto.finalCoefficient ||
 							sourceCalculation.finalCoefficient,
@@ -876,7 +875,7 @@ export class CalculationService {
 							createCloneDto.customerName || sourceCalculation.customerName,
 						comment: createCloneDto.comment || sourceCalculation.comment,
 						questionnaireData:
-							createCloneDto.questionnaireData || sourceCalculation.questionnaireData,
+						questionnaireData,
 						finalCoefficient: sourceCalculation.finalCoefficient,
 						seriesId: newSeriesId,
 						version: newVersion,
