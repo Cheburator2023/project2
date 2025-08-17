@@ -2,7 +2,7 @@ import { IAssessmentFormData } from "@react-client/features/anketaCRUD/types/For
 import type FormRef from "@rjsf/core";
 import { create } from "zustand";
 
-const IS_DEV = process.env.NODE_ENV === "development";
+const _IS_DEV = process.env.NODE_ENV === "development";
 export interface IBasicFormData {
 	calcName: string;
 	rfd?: string;
@@ -20,8 +20,8 @@ export interface IBasicFormData {
 export const basicInfoFormInitialData: IBasicFormData = {
 	calcName: "",
 	rfd: "",
-	streamExecutor: IS_DEV ? "testo" : "",
-	department: IS_DEV ? ["test"] : [],
+	streamExecutor: "",
+	department: [],
 	customerName: "",
 	comment: "",
 	relatedModels: [],

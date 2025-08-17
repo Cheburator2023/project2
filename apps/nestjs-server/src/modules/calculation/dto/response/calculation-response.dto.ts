@@ -8,6 +8,7 @@ import {
 } from "../base/calculation-base.dto";
 import { AlgorithmTypeItemDto } from "../common/algorithm-type.dto";
 import { CalculationResultItemDto } from "./calculation-result-item.dto";
+import { CalculationStatus } from "../../entities/calculation.entity";
 
 export class CalculationQuestionnaireDataDto extends CalculationBaseDto {
 	@ApiProperty({
@@ -54,7 +55,7 @@ export class CalculationQuestionnaireDataDto extends CalculationBaseDto {
 		description: "Количество оцененных инициатив",
 		required: false,
 	})
-	assessedInitiativesCount?: string;
+	assessedInitiativesCount?: number;
 
 	@ApiProperty({
 		example: "4",
@@ -179,7 +180,7 @@ export class CalculationResponseDto {
 			influence: string;
 		}>;
 		readyPromReports: string;
-		assessedInitiativesCount?: string;
+		assessedInitiativesCount?: number;
 		dataSourcesCount: string;
 		pilotModelRequired: string;
 		algorithmComplexity: AlgorithmTypeItemDto[];
@@ -206,4 +207,38 @@ export class CalculationResponseDto {
 		description: "Автор расчета",
 	})
 	author: string;
+
+	@ApiProperty({
+		example: CalculationStatus.ACTIVE,
+		description: "Статус анкеты",
+		enum: CalculationStatus,
+	})
+	status: CalculationStatus;
+
+	@ApiProperty({
+		example: "1.0.0",
+		description: "Версия анкеты",
+	})
+	version: string;
+
+	@ApiProperty({
+		example: "12345678",
+		description: "Идентификатор серии анкет",
+		nullable: true,
+	})
+	seriesId: string | null;
+
+	@ApiProperty({
+		example: "550e8400-e29b-41d4-a716-446655440000",
+		description: "ID родительской анкеты (для клонирования)",
+		required: false,
+	})
+	parentCalcId?: string;
+
+	@ApiProperty({
+		example: "Calc-12345678-version-1.0.0",
+		description: "Составной читаемый идентификатор",
+		nullable: true,
+	})
+	readableId: string | null;
 }

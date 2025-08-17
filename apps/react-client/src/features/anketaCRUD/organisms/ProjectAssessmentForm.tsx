@@ -2,7 +2,6 @@ import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { transformErrors } from "@react-client/common/forms/transformErrors";
 import { RJSFObjectFieldTemplate } from "@react-client/common/forms/widgets/RJSFObjectFieldTemplate";
 import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";
-import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import {
 	AnketaCRUDFormNames,
 	projectAssessmentFormInitialData,
@@ -22,6 +21,7 @@ import { GeneralUncertaintyWidget } from "@react-client/common/forms/widgets/Gen
 import { UniversalDependencyWidget } from "@react-client/common/forms/widgets/UniversalDependencyWidget";
 import { IAssessmentFormData } from "../types/FormData";
 import { createSchemaWithCoefficients } from "../../../schemas/calculation/calc_uiSchemaWithCoefficients";
+import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 
 const Form = withTheme(MuiTheme);
 
@@ -43,7 +43,8 @@ const widgets = {
 
 export const ProjectAssessmentForm: React.FC<{
 	isCreate?: boolean;
-}> = ({ isCreate }) => {
+	initialData?: any;
+}> = ({ isCreate, initialData }) => {
 	const formRef = useRef<FormRef>(null);
 	const {
 		setApiRef,
@@ -62,7 +63,7 @@ export const ProjectAssessmentForm: React.FC<{
 		assessmentCalculationsStore();
 
 	const [formData, setFormData] = useState<IAssessmentFormData>(
-		projectAssessmentFormInitialData,
+		initialData ? initialData : projectAssessmentFormInitialData,
 	);
 
 	const [liveValidate, setLiveValidate] = useState(false);
@@ -92,6 +93,12 @@ export const ProjectAssessmentForm: React.FC<{
 	useDeepEffect(() => {
 		updateFormState(formName, formState);
 	}, [formState]);
+
+	useDeepEffect(() => {
+		if (initialData) {
+			setFormData(initialData);
+		}
+	}, [initialData]);
 
 	const onChange = (e: IChangeEvent<IAssessmentFormData>) => {
 		if (e.formData) {

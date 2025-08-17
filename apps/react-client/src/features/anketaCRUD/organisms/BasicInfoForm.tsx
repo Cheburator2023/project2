@@ -261,9 +261,17 @@ export const BasicInfoForm = ({
 
 	useDeepEffect(() => {
 		if (initialData) {
-			setFormData({ ...basicInfoFormInitialData, ...initialData });
+			const mergedData = {
+				...basicInfoFormInitialData,
+				...initialData,
+				// Ensure system fields are properly handled for cloning
+				id: isCreate ? undefined : initialData.id,
+				createdAt: isCreate ? undefined : initialData.createdAt,
+				author: isCreate ? undefined : initialData.author,
+			};
+			setFormData(mergedData);
 		}
-	}, [initialData]);
+	}, [initialData, isCreate]);
 
 	const onChangeForm = (formState: IChangeEvent<IBasicFormData>) => {
 		if (formState.formData) {

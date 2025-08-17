@@ -16,6 +16,7 @@ import { SearchInput } from "@react-client/features/navigation/organisms/SearchI
 import { routes } from "@react-client/routing/routes";
 import { GridFilterModel } from "@react-client/types/agGridFilterModel";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
+import { FiltersToolPanelModule } from "ag-grid-enterprise";
 
 // import { AllEnterpriseModule } from "ag-grid-enterprise";
 import {
@@ -37,6 +38,7 @@ import {
 	ValidationModule,
 	ValueFormatterParams,
 	RowDoubleClickedEvent,
+	SideBarDef,
 } from "ag-grid-community";
 import {
 	ColumnMenuModule,
@@ -91,6 +93,7 @@ ModuleRegistry.registerModules([
 	SetFilterModule,
 	NumberFilterModule,
 	ExcelExportModule,
+	FiltersToolPanelModule,
 	...(process.env.NODE_ENV !== "production" ? [ValidationModule] : []),
 ]);
 
@@ -398,10 +401,9 @@ export const HomeTemplete = ({
 		setGridApi(params.api as GridApi);
 	};
 
-	const _onFilterChanged = () => {
+	const onFilterChanged = () => {
 		const filterModel = gridRef?.current?.api?.getFilterModel() || null;
 		setCurrentFilterModel(filterModel);
-		console.log("🐸 Pepe said >> фильтр изменен:", filterModel);
 	};
 
 	const _onClearColumnFilter = (columnId: string) => {
@@ -440,6 +442,36 @@ export const HomeTemplete = ({
 	}>(() => {
 		return agGridIconSet;
 	}, []);
+
+	const _initialFilterModel = useMemo(() => {
+		return {
+			status: {
+				filterType: "set",
+				values: ["ACTIVE"],
+			},
+		};
+	}, []);
+
+	const sideBarProps: SideBarDef | string | string[] | boolean | null = {
+		toolPanels: [
+			{
+				id: "columns",
+				labelDefault: "Columns",
+				labelKey: "columns",
+				iconKey: "columns",
+				toolPanel: "agColumnsToolPanel",
+			},
+			{
+				id: "filters",
+				labelDefault: "Filters",
+				labelKey: "filters",
+				iconKey: "filter",
+				toolPanel: "agFiltersToolPanel",
+			},
+		],
+		defaultToolPanel: undefined,
+		// hiddenByDefault: true,
+	};
 
 	return (
 		<div data-test-id="home-page--div-0">
@@ -532,7 +564,9 @@ export const HomeTemplete = ({
 					loading={isLoading}
 					columnDefs={columnDefs}
 					defaultColDef={defaultColDef}
-					sideBar={false}
+					// initialFilterModel={initialFilterModel as any}
+					onFilterChanged={onFilterChanged}
+					sideBar={sideBarProps}
 					pagination={true}
 					paginationPageSize={100}
 					localeText={AG_GRID_LOCALE_RU}
@@ -546,6 +580,16 @@ export const HomeTemplete = ({
 					animateRows={false}
 					icons={icons}
 					excelStyles={excelStyles}
+					initialState={{
+						filter: {
+							filterModel: {
+								status: {
+									values: ["Активная"],
+									filterType: "set",
+								},
+							},
+						},
+					}}
 					data-test-id="home-page--AgGridReact-0"
 				/>
 			</GridWrapper>

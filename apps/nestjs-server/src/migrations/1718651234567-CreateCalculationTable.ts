@@ -9,7 +9,7 @@ export class CreateCalculationTable1718651234567 implements MigrationInterface {
 	public async up(queryRunner: QueryRunner): Promise<void> {
 		await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS calculation (
-                "id" uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+                                                       "id" uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
                 "calcName" varchar(255) NOT NULL,
                 "rfd" varchar(255),
                 "streamExecutor" varchar(255),

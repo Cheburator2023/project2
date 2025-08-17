@@ -15,11 +15,34 @@ interface EnhancedSchemaResult {
 	schema: any;
 }
 
+const removeDisabledLogic = (uiSchema: any): void => {
+	for (const key in uiSchema) {
+		if (typeof uiSchema[key] === "object" && uiSchema[key] !== null) {
+			if (uiSchema[key]["ui:options"]) {
+				const options = uiSchema[key]["ui:options"];
+				options.preview = true;
+				delete options.disabled;
+				delete options.disabledValue;
+				delete options.readonly;
+				delete options.dependencies;
+			}
+			delete uiSchema[key]["ui:disabled"];
+			delete uiSchema[key]["ui:readonly"];
+			removeDisabledLogic(uiSchema[key]);
+		}
+	}
+};
+
 export const createSchemaWithCoefficients = (
 	coefficients: CoefficientData,
+	isPreviewMode = false,
 ): EnhancedSchemaResult => {
 	const enhancedUiSchema: any = JSON.parse(JSON.stringify(calc_uiSchema));
 	const enhancedSchema: any = JSON.parse(JSON.stringify(mainCalcSchema));
+
+	if (isPreviewMode) {
+		removeDisabledLogic(enhancedUiSchema);
+	}
 
 	for (const [coefficientKey, fieldName] of Object.entries(
 		coefficientToFormFieldMapping,
@@ -69,6 +92,7 @@ export const createSchemaWithCoefficients = (
 
 export const createUiSchemaWithCoefficients = (
 	coefficients: CoefficientData,
+	isPreviewMode = false,
 ): UiSchema => {
-	return createSchemaWithCoefficients(coefficients).uiSchema;
+	return createSchemaWithCoefficients(coefficients, isPreviewMode).uiSchema;
 };

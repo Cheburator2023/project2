@@ -6,6 +6,7 @@ export const mockListData: CalculationResponseDto[] = [
 		calcName: "Тест для отчетности",
 		rfd: "RFD-12345",
 		streamExecutor: "Разработка моделей для КМБ и КСБ",
+		status: "Активная",
 		department: [
 			"Департамент операционной поддержки бизнеса",
 			"Департамент по работе с персоналом",
@@ -206,6 +207,7 @@ export const mockListData: CalculationResponseDto[] = [
 		id: "7d7f1981-b709-43ed-be04-566f4460f81f",
 		calcName: "Оценка проекта для бизнеса",
 		rfd: "",
+		status: "Архив",
 		streamExecutor: "Стрим 2",
 		department: ["Департамент аналитики"],
 		customerName: "Иванов Иван Иванович",

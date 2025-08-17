@@ -15,6 +15,16 @@ export const routes = {
 		name: "Просмотр анкеты",
 		disabled: false,
 	},
+	calculationNewVersion: {
+		rootPath: "/calculation/new_version/:id",
+		name: "Создание новой версии анкеты",
+		disabled: false,
+	},
+	calculationClone: {
+		rootPath: "/calculation/clone/:id",
+		name: "Клонирование анкеты",
+		disabled: false,
+	},
 	calculationCompare: {
 		rootPath: "/calculation/compare",
 		name: "Сравнение расчетов",

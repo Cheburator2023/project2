@@ -25,7 +25,7 @@ describe("CalculationResponseDto", () => {
 			uncertaintyAdjustment: 0,
 			generalUncertainty: [],
 			readyPromReports: "Нет",
-			assessedInitiativesCount: "1",
+			assessedInitiativesCount: 1,
 			dataSourcesCount: "1",
 			pilotModelRequired: "Не требуется",
 			algorithmComplexity: [{ algorithmType: "Табличные данные" }],

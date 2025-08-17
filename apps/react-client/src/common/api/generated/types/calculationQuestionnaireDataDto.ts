@@ -34,7 +34,7 @@ export interface CalculationQuestionnaireDataDto {
   /** Наличие готовых промоделированных отчетов */
   readyPromReports: CalculationQuestionnaireDataDtoReadyPromReports;
   /** Количество оцененных инициатив */
-  assessedInitiativesCount: string;
+  assessedInitiativesCount: number;
   /** Количество источников данных */
   dataSourcesCount: CalculationQuestionnaireDataDtoDataSourcesCount;
   /** Требуется ли пилотная модель */

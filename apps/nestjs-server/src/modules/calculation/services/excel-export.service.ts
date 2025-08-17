@@ -1,6 +1,6 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import * as ExcelJS from "exceljs";
-import { Calculation } from "../entities/calculation.entity";
+import { Calculation, CalculationStatus } from "../entities/calculation.entity";
 import {
 	UNCERTAINTY_TYPE_NAMES,
 	DEPLOYMENT_CHANNEL_VALUES,
@@ -9,12 +9,9 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { CustomLogger } from "src/shared/services/logger.service";
 
-
 @Injectable()
 export class ExcelExportService {
-	constructor(
-		private readonly customLogger: CustomLogger,
-	) {}
+	constructor(private readonly customLogger: CustomLogger) {}
 
 	async generateExcelFile(calculations: Calculation[]): Promise<Buffer> {
 		const eventId = uuidv4();
@@ -89,6 +86,15 @@ export class ExcelExportService {
 			// Базовые колонки
 			{ header: "Название расчета", key: "calcName", width: 30 },
 			{ header: "Идентификатор", key: "id", width: 36 },
+			{ header: "Идентификатор серии", key: "seriesId", width: 25 },
+			{ header: "Версия", key: "version", width: 15 },
+			{ header: "Статус", key: "status", width: 15 },
+			{ header: "ID родительской анкеты", key: "parentId", width: 36 },
+			{
+				header: "Cоставной читаемый идентификатор ",
+				key: "readableId",
+				width: 30,
+			},
 			{ header: "RFD", key: "rfd", width: 20 },
 			{ header: "Стрим исполнитель", key: "streamExecutor", width: 25 },
 			{ header: "Департамент Заказчика", key: "department", width: 30 },
@@ -97,19 +103,39 @@ export class ExcelExportService {
 			{ header: "Дата создания", key: "createdAt", width: 20 },
 			{ header: "Автор анкеты", key: "author", width: 25 },
 			{ header: "Итоговая оценка", key: "finalCoefficient", width: 20 },
-			{ header: "% Отклонение итоговой оценки от средней", key: "deviationPercent", width: 30 },
+			{
+				header: "% Отклонение итоговой оценки от средней",
+				key: "deviationPercent",
+				width: 30,
+			},
 			{ header: "Кол-во моделей", key: "modelsCount", width: 20 },
-			{ header: "Общая неопределенность", key: "generalUncertainty", width: 40 },
+			{
+				header: "Общая неопределенность",
+				key: "generalUncertainty",
+				width: 40,
+			},
 
 			// Этапы расчета
 			{ header: "01. Постановка задачи", key: "stage01", width: 20 },
 			{ header: "02. Поиск данных", key: "stage02", width: 20 },
-			{ header: "04. Построение витрины для разработки", key: "stage04", width: 30 },
-			{ header: "05А. Разработка пилотной модели (MVP)", key: "stage05a", width: 35 },
+			{
+				header: "04. Построение витрины для разработки",
+				key: "stage04",
+				width: 30,
+			},
+			{
+				header: "05А. Разработка пилотной модели (MVP)",
+				key: "stage05a",
+				width: 35,
+			},
 			{ header: "05. Разработка модели", key: "stage05", width: 25 },
 			{ header: "AML Разработка", key: "amlDevelopment", width: 25 },
 			{ header: "05В. Пилотирование модели", key: "stage05b", width: 25 },
-			{ header: "07. Разработка витрины для применения модели", key: "stage07", width: 35 },
+			{
+				header: "07. Разработка витрины для применения модели",
+				key: "stage07",
+				width: 35,
+			},
 			{ header: "09. Адаптация и внедрение модели", key: "stage09", width: 30 },
 			{ header: "AML Внедрение", key: "amlImplementation", width: 25 },
 
@@ -117,35 +143,63 @@ export class ExcelExportService {
 			{ header: "Сложность постановки", key: "setupComplexity", width: 40 },
 			{ header: "Сроки инициативы", key: "initiativeTimeline", width: 20 },
 			{ header: "Стоимость инициативы", key: "initiativeCost", width: 20 },
-			{ header: "Поправка на общую неопределенность", key: "uncertaintyAdjustment", width: 30 },
+			{
+				header: "Поправка на общую неопределенность",
+				key: "uncertaintyAdjustment",
+				width: 30,
+			},
 
 			// Риски с вероятностью и влиянием
 			...this.getRiskColumns(),
 
 			// Остальные параметры
-			{ header: "Наличие готовых промышленных витрин", key: "readyPromReports", width: 25 },
-			{ header: "Количество оцениваемых инициатив", key: "assessedInitiativesCount", width: 30 },
-			{ header: "Кол-во источников для проработки", key: "dataSourcesCount", width: 30 },
-			{ header: "Необходимость реализации пилотной модели", key: "pilotModelRequired", width: 35 },
+			{
+				header: "Наличие готовых промышленных витрин",
+				key: "readyPromReports",
+				width: 25,
+			},
+			{
+				header: "Количество оцениваемых инициатив",
+				key: "assessedInitiativesCount",
+				width: 30,
+			},
+			{
+				header: "Кол-во источников для проработки",
+				key: "dataSourcesCount",
+				width: 30,
+			},
+			{
+				header: "Необходимость реализации пилотной модели",
+				key: "pilotModelRequired",
+				width: 35,
+			},
 
 			// Типы алгоритмов
-			...ALGORITHM_TYPE_VALUES.map(type => ({
+			...ALGORITHM_TYPE_VALUES.map((type) => ({
 				header: `Тип алгоритма: ${type}`,
 				key: `algorithm_${type?.replace(/[^a-zA-Z0-9]/g, "_") ?? "unknown"}`,
-				width: 35
+				width: 35,
 			})),
 
-			{ header: "Необходимость поддержки проведения пилота", key: "pilotSupportRequired", width: 40 },
+			{
+				header: "Необходимость поддержки проведения пилота",
+				key: "pilotSupportRequired",
+				width: 40,
+			},
 			{ header: "Необходимость AutoML", key: "autoMlRequired", width: 25 },
-			{ header: "Необходимость продуктивизации и количество дополнительных витрин",
-				key: "productionAdditionalReports", width: 50 },
+			{
+				header:
+					"Необходимость продуктивизации и количество дополнительных витрин",
+				key: "productionAdditionalReports",
+				width: 50,
+			},
 
 			// Каналы внедрения
-			...DEPLOYMENT_CHANNEL_VALUES.map(channel => ({
+			...DEPLOYMENT_CHANNEL_VALUES.map((channel) => ({
 				header: `Канал внедрения: ${channel}`,
 				key: this.getDeploymentChannelKey(channel),
-				width: 35
-			}))
+				width: 35,
+			})),
 		];
 
 		return columns;
@@ -162,7 +216,7 @@ export class ExcelExportService {
 				header: `Риск(Влияние): ${name}`,
 				key: `${type}_influence`,
 				width: 40,
-			}
+			},
 		]);
 	}
 
@@ -185,23 +239,31 @@ export class ExcelExportService {
 
 			// Основные параметры анкеты
 			setupComplexity: calculation.questionnaireData?.setupComplexity || "",
-			initiativeTimeline: calculation.questionnaireData?.initiativeTimeline || "",
+			initiativeTimeline:
+				calculation.questionnaireData?.initiativeTimeline || "",
 			initiativeCost: calculation.questionnaireData?.initiativeCost || "",
-			uncertaintyAdjustment: calculation.questionnaireData?.uncertaintyAdjustment || 0,
+			uncertaintyAdjustment:
+				calculation.questionnaireData?.uncertaintyAdjustment || 0,
 
 			// Данные по витринам и источникам
-			readyPromReports: calculation.questionnaireData?.readyPromReports || "Нет",
-			assessedInitiativesCount: calculation.questionnaireData?.assessedInitiativesCount || "0",
+			readyPromReports:
+				calculation.questionnaireData?.readyPromReports || "Нет",
+			assessedInitiativesCount:
+				calculation.questionnaireData?.assessedInitiativesCount || 0,
 			dataSourcesCount: calculation.questionnaireData?.dataSourcesCount || "0",
-			pilotModelRequired: calculation.questionnaireData?.pilotModelRequired || "Не требуется",
+			pilotModelRequired:
+				calculation.questionnaireData?.pilotModelRequired || "Не требуется",
 
 			// Данные по алгоритмам
 			algorithmComplexity: this.getAlgorithmComplexitySummary(calculation),
 
 			// Данные по пилотированию и продуктивизации
-			pilotSupportRequired: calculation.questionnaireData?.pilotSupportRequired || "Не требуется",
-			autoMlRequired: calculation.questionnaireData?.autoMlRequired || "Не требуется",
-			productionAdditionalReports: calculation.questionnaireData?.productionAdditionalReports || "0",
+			pilotSupportRequired:
+				calculation.questionnaireData?.pilotSupportRequired || "Не требуется",
+			autoMlRequired:
+				calculation.questionnaireData?.autoMlRequired || "Не требуется",
+			productionAdditionalReports:
+				calculation.questionnaireData?.productionAdditionalReports || "0",
 
 			// Инициализация полей этапов расчета
 			stage01: "",
@@ -216,20 +278,28 @@ export class ExcelExportService {
 			amlImplementation: "",
 		};
 
+		// Добавление информации о версии и серии
+		row.seriesId = calculation.seriesId;
+		row.version = calculation.version;
+		row.status =
+			calculation.status === CalculationStatus.ACTIVE ? "Активная" : "Архивная";
+		row.parentId = calculation.parentCalcId || "Нет";
+		row.readableId = calculation.readableId || "Нет данных";
+
 		// Инициализация полей рисков
-		Object.keys(UNCERTAINTY_TYPE_NAMES).forEach(type => {
+		Object.keys(UNCERTAINTY_TYPE_NAMES).forEach((type) => {
 			row[`${type}_probability`] = "Нет данных";
 			row[`${type}_influence`] = "Нет данных";
 		});
 
 		// Инициализация полей типов алгоритмов
-		ALGORITHM_TYPE_VALUES.forEach(type => {
+		ALGORITHM_TYPE_VALUES.forEach((type) => {
 			const key = `algorithm_${type?.replace(/[^a-zA-Z0-9]/g, "_") || "unknown"}`;
 			row[key] = "Нет";
 		});
 
 		// Инициализация полей каналов внедрения
-		DEPLOYMENT_CHANNEL_VALUES.forEach(channel => {
+		DEPLOYMENT_CHANNEL_VALUES.forEach((channel) => {
 			const key = `deployment_${channel?.replace(/[^a-zA-Z0-9]/g, "_") || "unknown"}`;
 			row[key] = "Нет";
 		});
@@ -253,7 +323,7 @@ export class ExcelExportService {
 		if (!calculation.questionnaireData?.generalUncertainty) return "Нет данных";
 
 		const uncertainties = Array.isArray(
-			calculation.questionnaireData.generalUncertainty
+			calculation.questionnaireData.generalUncertainty,
 		)
 			? calculation.questionnaireData.generalUncertainty
 			: Object.entries(calculation.questionnaireData.generalUncertainty);
@@ -268,24 +338,26 @@ export class ExcelExportService {
 	private processUncertainties(row: any, calculation: Calculation) {
 		if (!calculation.questionnaireData?.generalUncertainty) return;
 
-		const uncertainties = Array.isArray(calculation.questionnaireData.generalUncertainty)
+		const uncertainties = Array.isArray(
+			calculation.questionnaireData.generalUncertainty,
+		)
 			? calculation.questionnaireData.generalUncertainty
 			: Object.entries(calculation.questionnaireData.generalUncertainty).map(
-				([type, value]) => ({
-					type,
-					probability: value?.probability || "Нет данных",
-					influence: value?.influence || "Нет данных",
-				})
-			);
+					([type, value]) => ({
+						type,
+						probability: value?.probability || "Нет данных",
+						influence: value?.influence || "Нет данных",
+					}),
+				);
 
 		// Инициализация всех возможных рисков как "Нет данных"
-		Object.keys(UNCERTAINTY_TYPE_NAMES).forEach(type => {
+		Object.keys(UNCERTAINTY_TYPE_NAMES).forEach((type) => {
 			row[`${type}_probability`] = "Нет данных";
 			row[`${type}_influence`] = "Нет данных";
 		});
 
 		// Заполнение фактических значений
-		uncertainties.forEach(uncertainty => {
+		uncertainties.forEach((uncertainty) => {
 			if (uncertainty?.type) {
 				row[`${uncertainty.type}_probability`] = uncertainty.probability;
 				row[`${uncertainty.type}_influence`] = uncertainty.influence;
@@ -444,10 +516,10 @@ export class ExcelExportService {
 			}
 		});
 
-		const riskColumns = worksheet.columns.filter(col =>
-			col.header?.toString().includes("Риск:")
+		const riskColumns = worksheet.columns.filter((col) =>
+			col.header?.toString().includes("Риск:"),
 		);
-		riskColumns.forEach(col => {
+		riskColumns.forEach((col) => {
 			col.width = 30;
 		});
 	}

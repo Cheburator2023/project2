@@ -19,6 +19,7 @@
 	"packageManager": "npm@10.0.0",
 	"scripts": {
 		"dev:fullstack": "turbo run dev --parallel --no-cache",
+		"dev:fullstack:god": "turbo run dev:god --parallel --no-cache",
 		"dev:ui": "turbo run dev --filter=react-client",
 		"dev:ui:no_roles": "turbo run dev:no_roles --filter=react-client",
 		"dev:server:nest": "turbo run dev --filter=nestjs-server",

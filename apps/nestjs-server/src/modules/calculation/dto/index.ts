@@ -8,6 +8,8 @@ export * from "./common/uncertainty-item.dto";
 
 // Request DTOs
 export * from "./request/create-calculation.dto";
+export * from "./request/create-clone.dto";
+export * from "./request/create-new-version.dto";
 export * from "./request/export-calculation.dto";
 export * from "./request/update-calculation.dto";
 

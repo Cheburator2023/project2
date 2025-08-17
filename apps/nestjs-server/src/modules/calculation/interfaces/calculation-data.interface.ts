@@ -30,7 +30,7 @@ export interface CalculationData {
 		itArchitectureChanges: ProbabilityInfluencePair;
 	};
 	readyPromReports: (typeof YES_NO_VALUES)[number];
-	assessedInitiativesCount?: string;
+	assessedInitiativesCount?: number;
 	dataSourcesCount: (typeof DATA_SOURCES_COUNT_VALUES)[number];
 	pilotModelRequired: (typeof YES_NO_REQUIRED_VALUES)[number];
 	algorithmComplexity: AlgorithmTypeItem[];

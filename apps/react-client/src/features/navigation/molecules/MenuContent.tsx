@@ -15,6 +15,8 @@ const mainListItems = Object.values(routes)
 		(route) =>
 			!route?.disabled &&
 			route.rootPath !== routes.calculationPreview.rootPath &&
+			route.rootPath !== routes.calculationClone.rootPath &&
+			route.rootPath !== routes.calculationNewVersion.rootPath &&
 			route.rootPath !== routes.calculationCompare.rootPath,
 	);
 

@@ -8,7 +8,31 @@ export const meta: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 	},
-	{ field: "id", headerName: "Идентификатор", sortable: true, filter: true },
+	{
+		field: "readableId",
+		headerName: "Идентификатор",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "id",
+		headerName: "Системный идентификатор",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "status",
+		headerName: "Статус анкеты",
+		sortable: true,
+		filter: true,
+	},
+	{
+		field: "version",
+		headerName: "Версия",
+		sortable: true,
+		filter: true,
+		cellDataType: "number",
+	},
 	{
 		field: "rfd",
 		headerName: "RFD",
@@ -61,13 +85,7 @@ export const meta: ColDef<any, any>[] = [
 		},
 	},
 	{
-		field: "status",
-		headerName: "Статус анкеты",
-		sortable: true,
-		filter: true,
-	},
-	{
-		field: "parentCalc",
+		field: "parentCalcId",
 		headerName: "Родительская анкета",
 		sortable: true,
 		filter: true,
