@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.12.1](https://git.sfera.inno.local/sumd/smart_anketa_ui/compare/v1.12.0...v1.12.1) (2025-08-17)
+
+
+### Bug Fixes
+
+* Поправил ошибку questionnaireData ([47a8fc0](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/47a8fc08faf6a2ea5927803e4131e5711f522faa))
+
 # [1.12.0](https://git.sfera.inno.local/sumd/smart_anketa_ui/compare/v1.11.0...v1.12.0) (2025-08-17)
 
 
