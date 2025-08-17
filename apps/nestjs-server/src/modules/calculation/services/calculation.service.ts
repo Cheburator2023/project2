@@ -670,18 +670,20 @@ export class CalculationService {
 							disabled: item.disabled,
 						})) || [];
 
-					// Получаем максимальную версию в серии
-					const maxVersion = await this.getMaxVersionInSeries(
-						sourceCalculation.seriesId,
-					);
-					const newVersion = this.incrementVersion(maxVersion);
+					const seriesId =
+						sourceCalculation.seriesId || this.generateSeriesId();
+					let maxVersion = "0.0.0";
+					let newVersion = "1.0.0";
 
-					// Проверяем уникальность readableId в серии
-					const newReadableId = `Calc-${sourceCalculation.seriesId}-version-${newVersion}`;
-					await this.ensureReadableIdIsUnique(
-						sourceCalculation.seriesId,
-						newReadableId,
-					);
+					if (sourceCalculation.seriesId) {
+						maxVersion = await this.getMaxVersionInSeries(
+							sourceCalculation.seriesId,
+						);
+						newVersion = this.incrementVersion(maxVersion);
+					}
+
+					const newReadableId = `Calc-${seriesId}-version-${newVersion}`;
+					await this.ensureReadableIdIsUnique(seriesId, newReadableId);
 
 					let questionnaireData =
 						createNewVersionDto.questionnaireData ||
@@ -711,7 +713,7 @@ export class CalculationService {
 						finalCoefficient:
 							createNewVersionDto.finalCoefficient ||
 							sourceCalculation.finalCoefficient,
-						seriesId: sourceCalculation.seriesId,
+						seriesId: seriesId,
 						version: newVersion,
 						parentCalcId: sourceCalculation.id,
 						readableId: newReadableId,
@@ -720,10 +722,11 @@ export class CalculationService {
 
 					this.checkAborted(signal);
 
-					// Архивируем предыдущие активные анкеты в серии
-					await this.archivePreviousActiveCalculation(
-						sourceCalculation.seriesId,
-					);
+					if (sourceCalculation.seriesId) {
+						await this.archivePreviousActiveCalculation(
+							sourceCalculation.seriesId,
+						);
+					}
 
 					const savedCalculation =
 						await this.calculationRepository.save(newCalculation);
