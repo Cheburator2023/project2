@@ -14,5 +14,5 @@ RUN chgrp -R root /var/cache/nginx /var/run /var/log/nginx && \
     chmod -R 770 /var/cache/nginx /var/run /var/log/nginx
 EXPOSE 8080
 
-# Start up commandX
+# Start up command
 CMD ["nginx", "-g", "daemon off;"]
