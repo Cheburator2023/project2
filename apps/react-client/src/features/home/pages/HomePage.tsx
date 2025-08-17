@@ -97,6 +97,9 @@ ModuleRegistry.registerModules([
 	...(process.env.NODE_ENV !== "production" ? [ValidationModule] : []),
 ]);
 
+const APP_NAME =
+	process.env.NODE_ENV === "development" ? "" : process.env.APP_NAME;
+
 const dateFilterParams: IDateFilterParams = {
 	buttons: ["clear", "apply"],
 	inRangeInclusive: true,
@@ -384,12 +387,13 @@ export const HomeTemplete = ({
 				name: "Просмотр анкеты",
 				action: () => {
 					if (calculationId) {
-						navigate(
-							routes.calculationPreview.rootPath.replace(
-								":id",
-								calculationId.toString(),
-							),
+						const route = routes.calculationPreview.rootPath.replace(
+							":id",
+							calculationId.toString(),
 						);
+
+						const url = `${location.origin}/${APP_NAME}${route}`;
+						window.open(url, "_blank");
 					}
 				},
 			},
@@ -397,10 +401,11 @@ export const HomeTemplete = ({
 				name: "Просмотр анкеты в новой вкладке",
 				action: () => {
 					if (calculationId) {
-						const url = routes.calculationPreview.rootPath.replace(
+						const route = routes.calculationPreview.rootPath.replace(
 							":id",
 							calculationId.toString(),
 						);
+						const url = `${location.origin}/${APP_NAME}${route}`;
 						window.open(url, "_blank");
 					}
 				},
@@ -409,10 +414,11 @@ export const HomeTemplete = ({
 				name: "Создать новую версию анкеты",
 				action: () => {
 					if (calculationId) {
-						const url = routes.calculationNewVersion.rootPath.replace(
+						const route = routes.calculationNewVersion.rootPath.replace(
 							":id",
 							calculationId.toString(),
 						);
+						const url = `${location.origin}/${APP_NAME}${route}`;
 						window.open(url, "_blank");
 					}
 				},
@@ -421,10 +427,12 @@ export const HomeTemplete = ({
 				name: "Создать клон анкеты",
 				action: () => {
 					if (calculationId) {
-						const url = routes.calculationClone.rootPath.replace(
+						const route = routes.calculationClone.rootPath.replace(
 							":id",
 							calculationId.toString(),
 						);
+						const url = `${location.origin}/${APP_NAME}${route}`;
+
 						window.open(url, "_blank");
 					}
 				},
@@ -604,7 +612,8 @@ export const HomeTemplete = ({
 					defaultColDef={defaultColDef}
 					// initialFilterModel={initialFilterModel as any}
 					onFilterChanged={onFilterChanged}
-					sideBar={sideBarProps}
+					// sideBar={sideBarProps}
+					sideBar={false}
 					pagination={true}
 					paginationPageSize={100}
 					localeText={AG_GRID_LOCALE_RU}
