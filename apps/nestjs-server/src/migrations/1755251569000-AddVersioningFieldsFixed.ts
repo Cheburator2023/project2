@@ -23,16 +23,12 @@ export class AddVersioningFieldsFixed1755251569000
             ADD COLUMN "readableId" varchar(100)
         `);
 
-		await queryRunner.query(`
-            UPDATE calculation 
-            SET "seriesId" = "id", "status" = 'Активная', "version" = '1.0.0'
-            WHERE "seriesId" IS NULL
-        `);
-
-		await queryRunner.query(`
-            UPDATE calculation 
-            SET "readableId" = CONCAT('Calc-', "seriesId", '-version-', "version")
-            WHERE "readableId" IS NULL
+        await queryRunner.query(`
+            UPDATE calculation
+            SET
+                "status" = 'Активная',
+                "version" = '1.0.0'
+            WHERE "status" IS NULL OR "version" IS NULL
         `);
 
 		await queryRunner.query(`
