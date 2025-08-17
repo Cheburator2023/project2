@@ -8,7 +8,12 @@ export const meta: ColDef<any, any>[] = [
 		sortable: true,
 		filter: true,
 	},
-	{ field: "id", headerName: "Идентификатор", sortable: true, filter: true },
+	{
+		field: "id",
+		headerName: "Системный идентификатор",
+		sortable: true,
+		filter: true,
+	},
 	{
 		field: "rfd",
 		headerName: "RFD",
@@ -85,15 +90,15 @@ export const meta: ColDef<any, any>[] = [
 		filter: true,
 		cellDataType: "number",
 	},
-	{
-		field: "seriesId",
-		headerName: "ID серии",
-		sortable: true,
-		filter: true,
-	},
+	// {
+	// 	field: "seriesId",
+	// 	headerName: "ID серии",
+	// 	sortable: true,
+	// 	filter: true,
+	// },
 	{
 		field: "readableId",
-		headerName: "Читаемый ID",
+		headerName: "Идентификатор",
 		sortable: true,
 		filter: true,
 	},

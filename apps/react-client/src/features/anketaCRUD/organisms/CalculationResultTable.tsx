@@ -1,4 +1,4 @@
-import { styled, Typography, useColorScheme } from "@mui/material";
+import { styled, useColorScheme } from "@mui/material";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
@@ -284,7 +284,7 @@ export const CalculationResultTable = () => {
 		},
 	]);
 
-	const [coefficientColumnDefs] = useState<ColDef<CoefficientData>[]>([
+	const [_coefficientColumnDefs] = useState<ColDef<CoefficientData>[]>([
 		{
 			headerName: "Коэффициент",
 			field: "coefficientName",
@@ -318,7 +318,7 @@ export const CalculationResultTable = () => {
 		[],
 	);
 
-	const defaultCoefficientColDef = useMemo<ColDef<CoefficientData>>(
+	const _defaultCoefficientColDef = useMemo<ColDef<CoefficientData>>(
 		() => ({
 			resizable: true,
 			sortable: true,
@@ -330,7 +330,7 @@ export const CalculationResultTable = () => {
 	);
 
 	const stageResultsHeight = rowData.length * 51.3;
-	const coefficientsHeight = coefficientData.length * 51.3;
+	const _coefficientsHeight = coefficientData.length * 51.3;
 
 	useDeepEffect(() => {
 		setCalculationResult(rowData.map(({ rowHeight, ...rest }) => rest));
@@ -386,23 +386,6 @@ export const CalculationResultTable = () => {
 				/>
 			</TableWrapper>
 			<Spacer />
-			<Typography variant="h6">Промежуточные коэффициенты</Typography>
-			<Spacer />
-			<TableWrapper
-				minHeight={coefficientsHeight}
-				maxHeight={coefficientsHeight}
-				data-test-id="coefficients-table--div-0"
-			>
-				<AgGridReact
-					rowData={coefficientData}
-					columnDefs={coefficientColumnDefs}
-					defaultColDef={defaultCoefficientColDef}
-					theme={theme}
-					localeText={AG_GRID_LOCALE_RU}
-					icons={icons}
-					data-test-id="coefficients-table--AgGridReact-0"
-				/>
-			</TableWrapper>
 		</>
 	);
 };

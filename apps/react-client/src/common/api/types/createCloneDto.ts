@@ -6,4 +6,6 @@ export interface CreateCloneDto {
 	customerName: string;
 	comment: string;
 	questionnaireData: any;
+	finalCoefficient: any;
+	calculationResult: any;
 }

@@ -9,7 +9,6 @@ import {
 	IsNumber,
 	IsOptional,
 	IsString,
-	IsUUID,
 	Max,
 	Min,
 	ValidateIf,

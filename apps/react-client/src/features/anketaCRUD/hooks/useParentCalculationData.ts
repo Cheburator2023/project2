@@ -51,5 +51,11 @@ export const mapCalculationToAssessmentForm = (
 			data.questionnaireData.productionAdditionalReports || "",
 		productionDeploymentChannels:
 			(data.questionnaireData.productionDeploymentChannels as any) || [],
+		dataSourcesCount: data.questionnaireData.dataSourcesCount,
+		readyPromReports: data.questionnaireData.readyPromReports,
+		uncertaintyAdjustment: data.questionnaireData.uncertaintyAdjustment,
+		pilotSupportRequired: data.questionnaireData.pilotSupportRequired,
+		pilotModelRequired: data.questionnaireData.pilotModelRequired,
+		assessedInitiativesCount: data.questionnaireData.assessedInitiativesCount,
 	};
 };

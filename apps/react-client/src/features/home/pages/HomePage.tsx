@@ -16,6 +16,7 @@ import { SearchInput } from "@react-client/features/navigation/organisms/SearchI
 import { routes } from "@react-client/routing/routes";
 import { GridFilterModel } from "@react-client/types/agGridFilterModel";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
+import { FiltersToolPanelModule } from "ag-grid-enterprise";
 
 // import { AllEnterpriseModule } from "ag-grid-enterprise";
 import {
@@ -92,6 +93,7 @@ ModuleRegistry.registerModules([
 	SetFilterModule,
 	NumberFilterModule,
 	ExcelExportModule,
+	FiltersToolPanelModule,
 	...(process.env.NODE_ENV !== "production" ? [ValidationModule] : []),
 ]);
 
@@ -578,6 +580,16 @@ export const HomeTemplete = ({
 					animateRows={false}
 					icons={icons}
 					excelStyles={excelStyles}
+					initialState={{
+						filter: {
+							filterModel: {
+								status: {
+									values: ["Активная"],
+									filterType: "set",
+								},
+							},
+						},
+					}}
 					data-test-id="home-page--AgGridReact-0"
 				/>
 			</GridWrapper>

@@ -141,7 +141,7 @@ export class CalculationService {
 							generalUncertainty: generalUncertaintyObject,
 							readyPromReports: createCalculationDto.readyPromReports,
 							assessedInitiativesCount:
-								createCalculationDto.assessedInitiativesCount?.toString(),
+								createCalculationDto.assessedInitiativesCount,
 							dataSourcesCount: createCalculationDto.dataSourcesCount,
 							pilotModelRequired: createCalculationDto.pilotModelRequired,
 							algorithmComplexity: createCalculationDto.algorithmComplexity,
@@ -241,7 +241,7 @@ export class CalculationService {
 							operation: "updateCalculation",
 							userId: user?.id,
 						},
-					}
+					},
 				);
 				this.checkAborted(signal);
 
@@ -321,7 +321,11 @@ export class CalculationService {
 	/**
 	 * Finds a calculation by ID
 	 */
-	async findOne(id: string, user: any, signal?: AbortSignal): Promise<Calculation> {
+	async findOne(
+		id: string,
+		user: any,
+		signal?: AbortSignal,
+	): Promise<Calculation> {
 		return RetryUtil.withRetry(
 			async () => {
 				const eventId = uuidv4();
@@ -335,7 +339,7 @@ export class CalculationService {
 							operation: "findOne",
 							userId: user?.id,
 						},
-					}
+					},
 				);
 				this.checkAborted(signal);
 
@@ -587,7 +591,6 @@ export class CalculationService {
 						},
 					);
 
-
 					return filteredCalculations;
 				} catch (error) {
 					this.customLogger.error(
@@ -643,25 +646,52 @@ export class CalculationService {
 					}
 
 					if (!sourceCalculation.seriesId) {
-						throw new BadRequestException('Source calculation must have a seriesId');
+						throw new BadRequestException(
+							"Source calculation must have a seriesId",
+						);
 					}
-					
+
 					this.checkAborted(signal);
 
 					const authorName = user
 						? `${user.given_name || ""} ${user.family_name || ""}`.trim() ||
-						user.preferred_username ||
-						user.email ||
-						"Система"
+							user.preferred_username ||
+							user.email ||
+							"Система"
 						: "Система";
 
+					const calculationResult =
+						(createNewVersionDto as any).calculationResult?.map((item) => ({
+							stageName: item.stageName,
+							score: item.score,
+							stageBaseValue: item.stageBaseValue,
+							percentFromAverage: item.percentFromAverage,
+							offset: item.offset,
+							disabled: item.disabled,
+						})) || [];
+
 					// Получаем максимальную версию в серии
-					const maxVersion = await this.getMaxVersionInSeries(sourceCalculation.seriesId);
+					const maxVersion = await this.getMaxVersionInSeries(
+						sourceCalculation.seriesId,
+					);
 					const newVersion = this.incrementVersion(maxVersion);
 
 					// Проверяем уникальность readableId в серии
 					const newReadableId = `Calc-${sourceCalculation.seriesId}-version-${newVersion}`;
-					await this.ensureReadableIdIsUnique(sourceCalculation.seriesId, newReadableId);
+					await this.ensureReadableIdIsUnique(
+						sourceCalculation.seriesId,
+						newReadableId,
+					);
+
+					let questionnaireData =
+						createNewVersionDto.questionnaireData ||
+						sourceCalculation.questionnaireData;
+					if (calculationResult.length > 0) {
+						questionnaireData = {
+							...questionnaireData,
+							calculationResult,
+						};
+					}
 
 					const newCalculation = this.calculationRepository.create({
 						status: CalculationStatus.ACTIVE,
@@ -677,10 +707,10 @@ export class CalculationService {
 							createNewVersionDto.customerName ||
 							sourceCalculation.customerName,
 						comment: createNewVersionDto.comment || sourceCalculation.comment,
-						questionnaireData:
-							createNewVersionDto.questionnaireData ||
-							sourceCalculation.questionnaireData,
-						finalCoefficient: sourceCalculation.finalCoefficient,
+						questionnaireData,
+						finalCoefficient:
+							createNewVersionDto.finalCoefficient ||
+							sourceCalculation.finalCoefficient,
 						seriesId: sourceCalculation.seriesId,
 						version: newVersion,
 						parentCalcId: sourceCalculation.id,
@@ -691,7 +721,9 @@ export class CalculationService {
 					this.checkAborted(signal);
 
 					// Архивируем предыдущие активные анкеты в серии
-					await this.archivePreviousActiveCalculation(sourceCalculation.seriesId);
+					await this.archivePreviousActiveCalculation(
+						sourceCalculation.seriesId,
+					);
 
 					const savedCalculation =
 						await this.calculationRepository.save(newCalculation);
@@ -770,13 +802,33 @@ export class CalculationService {
 
 					const authorName = user
 						? `${user.given_name || ""} ${user.family_name || ""}`.trim() ||
-						user.preferred_username ||
-						user.email ||
-						"Система"
+							user.preferred_username ||
+							user.email ||
+							"Система"
 						: "Система";
+
+					const calculationResult =
+						createCloneDto.calculationResult?.map((item) => ({
+							stageName: item.stageName,
+							score: item.score,
+							stageBaseValue: item.stageBaseValue,
+							percentFromAverage: item.percentFromAverage,
+							offset: item.offset,
+							disabled: item.disabled,
+						})) || [];
 
 					const newSeriesId = this.generateSeriesId();
 					const newVersion = "1.0.0";
+
+					let questionnaireData =
+						createCloneDto.questionnaireData ||
+						sourceCalculation.questionnaireData;
+					if (calculationResult.length > 0) {
+						questionnaireData = {
+							...questionnaireData,
+							calculationResult,
+						};
+					}
 
 					const newCalculation = this.calculationRepository.create({
 						status: CalculationStatus.ACTIVE,
@@ -789,8 +841,7 @@ export class CalculationService {
 						customerName:
 							createCloneDto.customerName || sourceCalculation.customerName,
 						comment: createCloneDto.comment || sourceCalculation.comment,
-						questionnaireData:
-							createCloneDto.questionnaireData || sourceCalculation.questionnaireData,
+						questionnaireData,
 						finalCoefficient: sourceCalculation.finalCoefficient,
 						seriesId: newSeriesId,
 						version: newVersion,
@@ -860,7 +911,7 @@ export class CalculationService {
 	private async getMaxVersionInSeries(seriesId: string): Promise<string> {
 		const calculations = await this.calculationRepository.find({
 			where: { seriesId },
-			select: ['version'],
+			select: ["version"],
 		});
 
 		if (calculations.length === 0) {
@@ -881,8 +932,8 @@ export class CalculationService {
 	 * Compares two version strings (returns true if version1 > version2)
 	 */
 	private compareVersions(version1: string, version2: string): boolean {
-		const v1 = version1.split('.').map(Number);
-		const v2 = version2.split('.').map(Number);
+		const v1 = version1.split(".").map(Number);
+		const v2 = version2.split(".").map(Number);
 
 		for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
 			const num1 = v1[i] || 0;
@@ -899,17 +950,20 @@ export class CalculationService {
 	 * Increments the major version number
 	 */
 	private incrementVersion(version: string): string {
-		const parts = version.split('.');
+		const parts = version.split(".");
 		if (parts.length === 0) return "1.0.0";
 
-		const major = parseInt(parts[0]) || 0;
+		const major = Number.parseInt(parts[0]) || 0;
 		return `${major + 1}.0.0`;
 	}
 
 	/**
 	 * Ensures that readableId is unique in the series
 	 */
-	private async ensureReadableIdIsUnique(seriesId: string, readableId: string): Promise<void> {
+	private async ensureReadableIdIsUnique(
+		seriesId: string,
+		readableId: string,
+	): Promise<void> {
 		const existing = await this.calculationRepository.findOne({
 			where: { seriesId, readableId, status: CalculationStatus.ACTIVE },
 		});
@@ -924,7 +978,9 @@ export class CalculationService {
 	/**
 	 * Archives the previous active questionnaire in the series
 	 */
-	private async archivePreviousActiveCalculation(seriesId: string): Promise<void> {
+	private async archivePreviousActiveCalculation(
+		seriesId: string,
+	): Promise<void> {
 		try {
 			// Находим все активные анкеты в этой серии
 			const activeCalculations = await this.calculationRepository.find({

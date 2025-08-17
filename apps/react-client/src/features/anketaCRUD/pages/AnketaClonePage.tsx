@@ -80,6 +80,8 @@ export const AnketaClonePage = () => {
 				customerName: basicFormData.customerName || "",
 				comment: basicFormData.comment || "",
 				questionnaireData: stateProjectAssessmentForm?.formData || {},
+				finalCoefficient: calculationResult[0]?.score,
+				calculationResult: calculationResult,
 			};
 
 			cloneCalculationMutation(

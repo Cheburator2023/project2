@@ -30,7 +30,7 @@ describe("CalculationService", () => {
 			uncertaintyAdjustment: 1,
 			generalUncertainty: [] as any,
 			readyPromReports: "Нет",
-			assessedInitiativesCount: "1",
+			assessedInitiativesCount: 1,
 			dataSourcesCount: "1",
 			pilotModelRequired: "Не требуется",
 			algorithmComplexity: [{ algorithmType: "Табличные данные" }],

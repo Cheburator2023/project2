@@ -63,6 +63,10 @@ export const AnketaPreviewPage = () => {
 			enabled: !!calcId,
 		},
 	});
+	console.log(
+		"🐸 Pepe said >> AnketaPreviewPage >> initialData !!!:",
+		initialData,
+	);
 
 	// Custom update mutation (PUT /calculation/:id)
 	const updateMutation = useMutation({
@@ -115,25 +119,12 @@ export const AnketaPreviewPage = () => {
 	};
 
 	const handleCreateNewVersion = () => {
-		navigate(routes.calculationNewVersion.rootPath.replace(":id", calcId), {
-			state: {
-				prefillData: {
-					...initialData,
-					calcName: `${initialData?.calcName || "Анкета"} - Новая версия`,
-				},
-			},
-		});
+		navigate(routes.calculationNewVersion.rootPath.replace(":id", calcId));
 		handleVersionMenuClose();
 	};
 
 	const handleCloneAsTemplate = () => {
-		navigate(routes.calculationClone.rootPath.replace(":id", calcId), {
-			state: {
-				prefillData: {
-					questionnaireData: initialData?.questionnaireData,
-				},
-			},
-		});
+		navigate(routes.calculationClone.rootPath.replace(":id", calcId));
 		handleVersionMenuClose();
 	};
 

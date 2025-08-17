@@ -6,4 +6,6 @@ export interface CreateNewVersionDto {
 	customerName: string;
 	comment: string;
 	questionnaireData: any;
+	finalCoefficient: any;
+	calculationResult: any;
 }

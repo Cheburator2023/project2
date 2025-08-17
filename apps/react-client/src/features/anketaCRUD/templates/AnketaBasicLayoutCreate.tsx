@@ -25,7 +25,9 @@ export const AnketaBasicLayoutCreate = ({
 		useParentCalculationData(id);
 
 	const initialData: any = isClone
-		? { questionnaireData: parentData?.questionnaireData }
+		? {
+				questionnaireData: parentData?.questionnaireData,
+			}
 		: isVersionUpdate
 			? parentData
 			: undefined;
@@ -101,11 +103,18 @@ export const AnketaBasicLayoutCreate = ({
 						uuid="anketa_project_assessment_card"
 						data-test-id="anketa-basic-layout--Card-2"
 					>
-						<ProjectAssessmentForm
-							isCreate
-							initialData={initialData}
-							data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
-						/>
+						{initialData?.questionnaireData ? (
+							<ProjectAssessmentForm
+								isCreate
+								initialData={initialData?.questionnaireData}
+								data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
+							/>
+						) : (
+							<ProjectAssessmentForm
+								isCreate
+								data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
+							/>
+						)}
 					</Card>
 				</Panel>
 			</PanelGroup>

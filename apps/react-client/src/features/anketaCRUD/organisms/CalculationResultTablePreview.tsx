@@ -1,4 +1,4 @@
-import { styled, Typography, useColorScheme } from "@mui/material";
+import { styled, useColorScheme } from "@mui/material";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { CalculationResponseDto } from "@react-client/common/api/generated/types";
 import {
@@ -132,6 +132,10 @@ export const CalculationResultTablePreview = ({
 	const coefficientData = useMemo<CoefficientData[]>(() => {
 		return extractCoefficients(initialData);
 	}, [initialData]);
+	console.log(
+		"🐸 Pepe said >> CalculationResultTablePreview >> coefficientData:",
+		coefficientData,
+	);
 
 	const [columnDefs] = useState<ColDef<EpicData>[]>([
 		{
@@ -239,7 +243,7 @@ export const CalculationResultTablePreview = ({
 		},
 	]);
 
-	const [coefficientColumnDefs] = useState<ColDef<CoefficientData>[]>([
+	const [_coefficientColumnDefs] = useState<ColDef<CoefficientData>[]>([
 		{
 			headerName: "Коэффициент",
 			field: "coefficientName",
@@ -273,7 +277,7 @@ export const CalculationResultTablePreview = ({
 		[],
 	);
 
-	const defaultCoefficientColDef = useMemo<ColDef<CoefficientData>>(
+	const _defaultCoefficientColDef = useMemo<ColDef<CoefficientData>>(
 		() => ({
 			resizable: true,
 			sortable: true,
@@ -285,7 +289,7 @@ export const CalculationResultTablePreview = ({
 	);
 
 	const stageResultsHeight = rowData.length * 51.3;
-	const coefficientsHeight = coefficientData.length * 51.3;
+	const _coefficientsHeight = coefficientData.length * 51.3;
 
 	const theme =
 		mode === "light" || mode === undefined
@@ -337,23 +341,6 @@ export const CalculationResultTablePreview = ({
 				/>
 			</TableWrapper>
 			<Spacer />
-			<Typography variant="h6">Промежуточные коэффициенты</Typography>
-			<Spacer />
-			<TableWrapper
-				minHeight={coefficientsHeight}
-				maxHeight={coefficientsHeight}
-				data-test-id="coefficients-table-preview--div-0"
-			>
-				<AgGridReact
-					rowData={coefficientData}
-					columnDefs={coefficientColumnDefs}
-					defaultColDef={defaultCoefficientColDef}
-					theme={theme}
-					localeText={AG_GRID_LOCALE_RU}
-					icons={icons}
-					data-test-id="coefficients-table-preview--AgGridReact-0"
-				/>
-			</TableWrapper>
 		</>
 	);
 };

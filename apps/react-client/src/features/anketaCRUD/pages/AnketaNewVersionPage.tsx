@@ -80,6 +80,8 @@ export const AnketaNewVersionPage = () => {
 				customerName: basicFormData.customerName || "",
 				comment: basicFormData.comment || "",
 				questionnaireData: stateProjectAssessmentForm?.formData || {},
+				finalCoefficient: calculationResult[0]?.score,
+				calculationResult: calculationResult,
 			};
 
 			createNewVersionMutation(
@@ -152,13 +154,12 @@ export const AnketaNewVersionPage = () => {
 			<Header data-test-id="anketa-new-version-page--Header-0">
 				{!isLoadingParent && (
 					<Chip
-						label={`${parentData?.version || "1.0.0"} -> ${
-							parentData?.version ||
-							"1.0.0"
-								.split(".")
-								.map((item, index) => (index === 0 ? Number(item) + 1 : item))
-								.join(".")
-						}`}
+						label={`${parentData?.version || "1.0.0"} -> ${(
+							parentData?.version || "1.0.0"
+						)
+							.split(".")
+							.map((item, index) => (index === 0 ? Number(item) + 1 : item))
+							.join(".")}`}
 						color="warning"
 						variant="outlined"
 						size="small"
@@ -168,7 +169,7 @@ export const AnketaNewVersionPage = () => {
 					onClick={onSubmit}
 					title="Создать новую версию"
 					loading={isPending}
-					disabled={!!hasParentError || isLoadingParent || isPending}
+					// disabled={!!hasParentError || isLoadingParent || isPending}
 				>
 					<SaveIcon />
 				</IconButton>

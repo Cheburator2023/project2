@@ -122,11 +122,11 @@ export class InMemoryFilterService {
 			customerName: calculation.customerName,
 			comment: calculation.comment,
 			id: calculation.id,
-            status: calculation.status,
-            version: calculation.version,
-            seriesId: calculation.seriesId,
-            parentCalcId: calculation.parentCalcId,
-            readableId: calculation.readableId,
+			status: calculation.status,
+			version: calculation.version,
+			seriesId: calculation.seriesId,
+			parentCalcId: calculation.parentCalcId,
+			readableId: calculation.readableId,
 		};
 
 		if (Object.hasOwn(directMapping, columnId)) {
