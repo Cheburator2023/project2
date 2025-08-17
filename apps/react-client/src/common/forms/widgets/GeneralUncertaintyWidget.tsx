@@ -33,7 +33,7 @@ export const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 	const { value = [], onChange, formContext, schema, required } = props;
 
 	const tooltips = props.options?.tooltips;
-
+	const preview = props.options.preview;
 	const enums: string[] = (props?.schema?.items as any)?.properties?.type?.enum;
 	const enumNames: string[] = (props?.schema?.items as any)?.properties?.type
 		?.enumNames;
@@ -133,13 +133,13 @@ export const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 				{/* Summary input */}
 				<TextFieldCustom
 					value={getSummaryText()}
-					disabled
+					disabled={!preview}
 					fullWidth
 					variant="outlined"
 					size="small"
 					label={props.label}
 				/>
-				{!isEnabled && (
+				{!isEnabled && !preview && (
 					<FormHelperText>
 						Заполните "Стоимость инициативы" и "Сроки инициативы" для добавления
 						факторов неопределенности
@@ -175,29 +175,33 @@ export const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 									</React.Fragment>
 								}
 							/>
-							<ListItemSecondaryAction>
-								<IconButton
-									edge="end"
-									onClick={() => handleDelete(index)}
-									size="small"
-								>
-									<DeleteIcon />
-								</IconButton>
-							</ListItemSecondaryAction>
+							{!preview && (
+								<ListItemSecondaryAction>
+									<IconButton
+										edge="end"
+										onClick={() => handleDelete(index)}
+										size="small"
+									>
+										<DeleteIcon />
+									</IconButton>
+								</ListItemSecondaryAction>
+							)}
 						</ListItem>
 					))}
 				</List>
 				{/* Add button */}
-				<Button
-					startIcon={<AddIcon />}
-					onClick={handleAddClick}
-					disabled={!isEnabled || getAvailableOptions().length === 0}
-					variant="outlined"
-					sx={{ mt: 2 }}
-					color="primary"
-				>
-					Добавить фактор неопределенности
-				</Button>
+				{!preview && (
+					<Button
+						startIcon={<AddIcon />}
+						onClick={handleAddClick}
+						disabled={!isEnabled || getAvailableOptions().length === 0}
+						variant="outlined"
+						sx={{ mt: 2 }}
+						color="primary"
+					>
+						Добавить фактор неопределенности
+					</Button>
+				)}
 			</FormControl>
 
 			{/* Add dialog */}

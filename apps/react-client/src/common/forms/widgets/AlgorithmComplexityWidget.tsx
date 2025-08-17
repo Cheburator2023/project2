@@ -33,6 +33,7 @@ export const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 		disabled,
 	} = props;
 
+	const preview = props.options.preview;
 	const modelsCount = formContext?.formData?.modelsCount || 1;
 	const prevModelsCountRef = useRef(modelsCount);
 	const prevValueLengthRef = useRef(value?.length || 0);
@@ -111,7 +112,7 @@ export const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 			<FormControl fullWidth error={hasError}>
 				<TextFieldCustom
 					value={getSummaryText()}
-					disabled
+					disabled={!preview}
 					fullWidth
 					variant="outlined"
 					label={props.label}
@@ -159,7 +160,8 @@ export const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 							error={hasError}
 							readOnly={readonly}
 							endAdornment={
-								!isEqual("", value?.[index]?.algorithmType) && (
+								!isEqual("", value?.[index]?.algorithmType) &&
+								!preview && (
 									<InputAdornment
 										position="end"
 										sx={{

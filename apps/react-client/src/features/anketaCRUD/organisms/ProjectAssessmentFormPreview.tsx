@@ -92,7 +92,7 @@ export const ProjectAssessmentFormPreview = ({
 
 	const { uiSchema: uiSchemaWithCoefficients, schema: schemaWithCoefficients } =
 		useMemo(() => {
-			return createSchemaWithCoefficients(coefficients);
+			return createSchemaWithCoefficients(coefficients, true);
 		}, [coefficients]);
 
 	return (
