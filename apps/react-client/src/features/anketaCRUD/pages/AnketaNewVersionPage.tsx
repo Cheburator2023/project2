@@ -157,8 +157,8 @@ export const AnketaNewVersionPage = () => {
 			>
 				{!isLoadingParent && (
 					<Chip
-						label={`${parentData?.version || "1.0.0"} -> ${(
-							parentData?.version || "1.0.0"
+						label={`${parentData?.seriesLatestVersion || "1.0.0"} -> ${(
+							parentData?.seriesLatestVersion || "1.0.0"
 						)
 							.split(".")
 							.map((item, index) => (index === 0 ? Number(item) + 1 : item))

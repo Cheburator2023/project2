@@ -130,7 +130,7 @@ export class CalculationController {
 				},
 			);
 
-			return this.mapToResponseDto(calculation);
+			return await this.mapToResponseDto(calculation);
 		} catch (error) {
 			this.customLogger.error(
 				"Ошибка при создании расчета",
@@ -229,7 +229,7 @@ export class CalculationController {
 				},
 			);
 
-			return this.mapToResponseDto(calculation);
+			return await this.mapToResponseDto(calculation);
 		} catch (error) {
 			this.customLogger.error(
 				"Ошибка при обновлении расчета",
@@ -330,8 +330,8 @@ export class CalculationController {
 			);
 
 			return {
-				data: result.data.map((calculation) =>
-					this.mapToResponseDto(calculation),
+				data: await Promise.all(
+					result.data.map((calculation) => this.mapToResponseDto(calculation)),
 				),
 				meta: result.meta,
 			};
@@ -415,8 +415,8 @@ export class CalculationController {
 				},
 			);
 
-			return calculations.map((calculation) =>
-				this.mapToResponseDto(calculation),
+			return await Promise.all(
+				calculations.map((calculation) => this.mapToResponseDto(calculation)),
 			);
 		} catch (error) {
 			this.customLogger.error(
@@ -514,7 +514,7 @@ export class CalculationController {
 				},
 			);
 
-			return this.mapToResponseDto(calculation);
+			return await this.mapToResponseDto(calculation);
 		} catch (error) {
 			this.customLogger.error(
 				"Ошибка при получении расчета",
@@ -710,7 +710,7 @@ export class CalculationController {
 				{ calculationId: calculation.id, sourceCalcId: id },
 			);
 
-			return this.mapToResponseDto(calculation);
+			return await this.mapToResponseDto(calculation);
 		} catch (error) {
 			this.customLogger.error(
 				`Failed to create new version [${ctx.requestId}]`,
@@ -797,7 +797,7 @@ export class CalculationController {
 				{ calculationId: calculation.id, templateCalcId: id },
 			);
 
-			return this.mapToResponseDto(calculation);
+			return await this.mapToResponseDto(calculation);
 		} catch (error) {
 			this.customLogger.error(
 				`Failed to create clone [${ctx.requestId}]`,
@@ -815,23 +815,43 @@ export class CalculationController {
 		}
 	}
 
-	private mapToResponseDto(calculation: Calculation): CalculationResponseDto {
-		const generalUncertainty = Array.isArray(
-			calculation.questionnaireData.generalUncertainty,
-		)
-			? calculation.questionnaireData.generalUncertainty
-			: Object.entries(
-					calculation.questionnaireData.generalUncertainty || {},
-				).map(([type, value]) => ({
-					type,
-					probability: value.probability,
-					influence: value.influence,
-				}));
+	private async mapToResponseDto(
+		calculation: Calculation,
+	): Promise<CalculationResponseDto> {
+		const generalUncertainty =
+			calculation.questionnaireData &&
+			calculation.questionnaireData?.generalUncertainty
+				? Array.isArray(calculation.questionnaireData.generalUncertainty)
+					? calculation.questionnaireData.generalUncertainty
+					: Object.entries(
+							calculation.questionnaireData.generalUncertainty || {},
+						).map(([type, value]) => ({
+							type,
+							probability: value.probability,
+							influence: value.influence,
+						}))
+				: [];
 
 		const productionDeploymentChannels =
-			calculation.questionnaireData.productionDeploymentChannels
-				?.map((ch) => (typeof ch === "string" ? { deploymentChannel: ch } : ch))
-				?.map((ch) => ch.deploymentChannel) || [];
+			(calculation.questionnaireData &&
+				calculation.questionnaireData?.productionDeploymentChannels
+					?.map((ch) =>
+						typeof ch === "string" ? { deploymentChannel: ch } : ch,
+					)
+					?.map((ch) => ch.deploymentChannel)) ||
+			[];
+
+		let seriesLatestVersion: string | undefined;
+		if (calculation.seriesId) {
+			try {
+				seriesLatestVersion =
+					await this.calculationService.getMaxVersionInSeries(
+						calculation.seriesId,
+					);
+			} catch (_error) {
+				seriesLatestVersion = undefined;
+			}
+		}
 
 		return {
 			id: calculation.id,
@@ -842,7 +862,7 @@ export class CalculationController {
 			customerName: calculation.customerName,
 			comment: calculation.comment,
 			questionnaireData: {
-				...calculation.questionnaireData,
+				...(calculation.questionnaireData || {}),
 				generalUncertainty,
 				productionDeploymentChannels,
 			},
@@ -855,6 +875,7 @@ export class CalculationController {
 			parentCalcId: calculation.parentCalcId || undefined,
 			readableId: calculation.readableId,
 			parentReadableId: calculation.parentCalc?.readableId || undefined,
+			seriesLatestVersion,
 		};
 	}
 }

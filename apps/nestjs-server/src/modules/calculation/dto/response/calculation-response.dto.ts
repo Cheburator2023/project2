@@ -249,4 +249,12 @@ export class CalculationResponseDto {
 		required: false,
 	})
 	parentReadableId?: string | null;
+
+	@ApiProperty({
+		example: "2.0.0",
+		description: "Последняя актуальная версия в серии",
+		nullable: true,
+		required: false,
+	})
+	seriesLatestVersion?: string;
 }

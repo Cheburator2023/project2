@@ -85,7 +85,7 @@ export const meta: ColDef<any, any>[] = [
 		},
 	},
 	{
-		field: "parentCalcId",
+		field: "parentReadableId",
 		headerName: "Родительская анкета",
 		sortable: true,
 		filter: true,

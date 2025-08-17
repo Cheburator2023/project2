@@ -65,7 +65,8 @@ export class Calculation {
 			to: (value: CalculationQuestionnaireDataDto) => value,
 			from: (value: any) => {
 				if (
-					value.generalUncertainty &&
+					value &&
+					value?.generalUncertainty &&
 					!Array.isArray(value.generalUncertainty)
 				) {
 					value.generalUncertainty = Object.entries(

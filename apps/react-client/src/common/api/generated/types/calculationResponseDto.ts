@@ -45,4 +45,8 @@ export interface CalculationResponseDto {
   parentCalcId?: string;
   /** Составной читаемый идентификатор */
   readableId: string | null;
+  /** Составной читаемый идентификатор родительской анкеты */
+  parentReadableId?: string;
+  /** Последняя актуальная версия в серии */
+  seriesLatestVersion?: string;
 }

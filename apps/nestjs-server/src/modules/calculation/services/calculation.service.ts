@@ -543,8 +543,13 @@ export class CalculationService {
 							error: error.message,
 						},
 					);
+					console.log(
+						"🐸 Pepe said >> CalculationService >> findAll >> error:",
+						error,
+					);
+
 					throw new BadRequestException(
-						`Failed to fetch calculations: ${error.message}`,
+						`Failed to fetch calculations (no pagination): ${error.message}`,
 					);
 				}
 			},
@@ -946,7 +951,7 @@ export class CalculationService {
 	/**
 	 * Gets the maximum version in the series
 	 */
-	private async getMaxVersionInSeries(seriesId: string): Promise<string> {
+	async getMaxVersionInSeries(seriesId: string): Promise<string> {
 		const calculations = await this.calculationRepository.find({
 			where: { seriesId },
 			select: ["version"],
