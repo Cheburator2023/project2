@@ -1,5 +1,21 @@
 # Semantic Versioning Changelog
 
+# [1.12.0](https://git.sfera.inno.local/sumd/smart_anketa_ui/compare/v1.11.0...v1.12.0) (2025-08-17)
+
+
+### Bug Fixes
+
+* coef fix ([62400b2](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/62400b20543fd01d00b3c8975248ae30d1e96064))
+* context path fix ([1b83d5e](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/1b83d5e13cb91542e2643b34d1327398db10fc2a))
+* dima fixes ([b4c2319](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/b4c2319b6752ea8fcdff240aa63662f112ff4b4e))
+* Поправил ошибку seriesId ([9be4de8](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/9be4de84f3b941d350fe547b2267ec69a2fd1697))
+* Убрал заполнение seriesId = id, при миграции ([fbe1144](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/fbe11444d2a5e2219abe6361e4b5a9b858333a1a))
+
+
+### Features
+
+* **calculation:** add parent calculation relationship and UI improvements ([d438a10](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/d438a108a694b5d73a93e4dabb8e760c01e802c6))
+
 # [1.11.0](https://git.sfera.inno.local/sumd/smart_anketa_ui/compare/v1.10.0...v1.11.0) (2025-08-17)
 
 
