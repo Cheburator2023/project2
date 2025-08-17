@@ -63,10 +63,6 @@ export const AnketaPreviewPage = () => {
 			enabled: !!calcId,
 		},
 	});
-	console.log(
-		"🐸 Pepe said >> AnketaPreviewPage >> initialData !!!:",
-		initialData,
-	);
 
 	// Custom update mutation (PUT /calculation/:id)
 	const updateMutation = useMutation({
@@ -168,7 +164,10 @@ export const AnketaPreviewPage = () => {
 
 	return (
 		<div data-test-id="anketa-details-page--div-0">
-			<Header calcId={calcId} data-test-id="anketa-details-page--Header-0">
+			<Header
+				calcId={initialData?.readableId || ""}
+				data-test-id="anketa-details-page--Header-0"
+			>
 				{initialData?.status && (
 					<Chip
 						label={initialData?.status ? "Активная" : "Архив"}

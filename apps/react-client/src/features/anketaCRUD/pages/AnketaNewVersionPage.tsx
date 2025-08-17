@@ -151,7 +151,10 @@ export const AnketaNewVersionPage = () => {
 
 	return (
 		<div data-test-id="anketa-new-version-page--div-0">
-			<Header data-test-id="anketa-new-version-page--Header-0">
+			<Header
+				calcId={parentData?.readableId || ""}
+				data-test-id="anketa-new-version-page--Header-0"
+			>
 				{!isLoadingParent && (
 					<Chip
 						label={`${parentData?.version || "1.0.0"} -> ${(

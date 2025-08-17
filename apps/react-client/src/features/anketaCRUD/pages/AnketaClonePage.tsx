@@ -139,7 +139,10 @@ export const AnketaClonePage = () => {
 
 	return (
 		<div data-test-id="anketa-clone-page--div-0">
-			<Header data-test-id="anketa-clone-page--Header-0">
+			<Header
+				calcId={parentData?.readableId || ""}
+				data-test-id="anketa-clone-page--Header-0"
+			>
 				{parentData?.id && (
 					<IconButton
 						onClick={() =>
