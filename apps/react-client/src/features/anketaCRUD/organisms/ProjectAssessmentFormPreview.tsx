@@ -75,6 +75,8 @@ export const ProjectAssessmentFormPreview = ({
 	useEffectOnce(() => {
 		setFormDataForCalc({
 			modelsCount: formData.modelsCount,
+			initiativeTimeline: formData.initiativeTimeline,
+			initiativeCost: formData.initiativeCost,
 			generalUncertainty: formData.generalUncertainty as any,
 			assessedInitiativesCount: formData.assessedInitiativesCount,
 			algorithmComplexity: formData.algorithmComplexity,
@@ -87,6 +89,7 @@ export const ProjectAssessmentFormPreview = ({
 			dataSourcesCount: formData.dataSourcesCount,
 			pilotModelRequired: formData.pilotModelRequired,
 			pilotSupportRequired: formData.pilotSupportRequired,
+			uncertaintyAdjustment: formData.uncertaintyAdjustment,
 		});
 	}, !!formData);
 
