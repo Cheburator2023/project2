@@ -854,6 +854,7 @@ export class CalculationController {
 			seriesId: calculation.seriesId,
 			parentCalcId: calculation.parentCalcId || undefined,
 			readableId: calculation.readableId,
+			parentReadableId: calculation.parentCalc?.readableId || undefined,
 		};
 	}
 }

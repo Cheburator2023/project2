@@ -170,7 +170,11 @@ export const AnketaPreviewPage = () => {
 			>
 				{initialData?.status && (
 					<Chip
-						label={initialData?.status ? "Активная" : "Архив"}
+						label={
+							initialData?.status === CalculationStatus.ACTIVE
+								? "Активная"
+								: "Архив"
+						}
 						color={
 							initialData?.status === CalculationStatus.ACTIVE
 								? "success"
@@ -186,22 +190,22 @@ export const AnketaPreviewPage = () => {
 					variant="outlined"
 					size="small"
 				/>
-				{initialData?.parentCalcId && (
-					<IconButton
-						onClick={() =>
-							navigate(
-								routes.calculationPreview.rootPath.replace(
-									":id",
-									initialData.parentCalcId!,
-								),
-							)
-						}
-						title="Перейти к родительской анкете"
-						size="small"
-					>
-						<ArrowUpwardIcon />
-					</IconButton>
-				)}
+
+				<IconButton
+					onClick={() => {
+						const url = routes.calculationPreview.rootPath.replace(
+							":id",
+							initialData?.parentCalcId!,
+						);
+						window.open(url, "_blank");
+					}}
+					disabled={!initialData?.parentCalcId}
+					title="Перейти к родительской анкете в новой вкладке"
+					size="small"
+				>
+					<ArrowUpwardIcon />
+				</IconButton>
+
 				<IconButton
 					title="Сменить режим разметки форм/карточек"
 					onClick={() => setComfyView(!comfyView)}
@@ -237,7 +241,8 @@ export const AnketaPreviewPage = () => {
 										Создать новую версию анкеты
 									</Typography>
 									<Typography variant="caption" color="text.secondary">
-										Наследует все данные, увеличивает версию
+										Изменить параметры опросника (будет создана новая версия
+										текущей анкеты)
 									</Typography>
 								</div>
 							</MenuItem>
@@ -248,7 +253,8 @@ export const AnketaPreviewPage = () => {
 										Создать клон
 									</Typography>
 									<Typography variant="caption" color="text.secondary">
-										Создает независимый черновик для редактирования
+										Создать новую анкету, предзаполнив параметры опросника из
+										текущей анкеты.
 									</Typography>
 								</div>
 							</MenuItem>

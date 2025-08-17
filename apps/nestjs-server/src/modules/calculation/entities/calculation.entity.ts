@@ -1,4 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import {
+	Column,
+	Entity,
+	JoinColumn,
+	ManyToOne,
+	PrimaryGeneratedColumn,
+} from "typeorm";
 import { CalculationQuestionnaireDataDto } from "../dto/response/calculation-response.dto";
 
 export enum CalculationStatus {
@@ -44,6 +50,10 @@ export class Calculation {
 
 	@Column({ type: "uuid", nullable: true })
 	parentCalcId: string | null;
+
+	@ManyToOne(() => Calculation, { nullable: true })
+	@JoinColumn({ name: "parentCalcId" })
+	parentCalc?: Calculation | null;
 
 	@Column({ type: "varchar", length: 100, nullable: true })
 	readableId: string | null;

@@ -12,7 +12,6 @@ import { useNavigate, useParams } from "react-router";
 import SaveIcon from "@mui/icons-material/Save";
 import { useParentCalculationData } from "../hooks/useParentCalculationData";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
-import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 
 export const AnketaClonePage = () => {
 	const navigate = useNavigate();
@@ -143,22 +142,6 @@ export const AnketaClonePage = () => {
 				calcId={parentData?.readableId || ""}
 				data-test-id="anketa-clone-page--Header-0"
 			>
-				{parentData?.id && (
-					<IconButton
-						onClick={() =>
-							navigate(
-								routes.calculationPreview.rootPath.replace(
-									":id",
-									parentData.id!,
-								),
-							)
-						}
-						title="Перейти к родительской анкете"
-						size="small"
-					>
-						<ArrowUpwardIcon />
-					</IconButton>
-				)}
 				<IconButton
 					onClick={onSubmit}
 					title="Клонировать как шаблон"

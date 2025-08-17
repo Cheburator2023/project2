@@ -55,6 +55,7 @@ import {
 	agGridCustomMUIThemeDark,
 } from "../../../theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "../../../theme/ag-grid/agGridIconSet";
+import { mockListData } from "@react-client/features/home/pages/mockListData";
 
 const excelStyles: ExcelStyle[] = [
 	{
@@ -162,7 +163,7 @@ export const HomePage = () => {
 
 	return (
 		<HomeTemplete
-			data={data as any}
+			data={mockListData as any}
 			error={error}
 			isLoading={isLoading || isFetching}
 			refetch={refetch}
@@ -227,7 +228,10 @@ export const HomeTemplete = ({
 							: "agSetColumnFilter",
 				sortable: true,
 				resizable: true,
-				valueFormatter: numberFormatter, // Add number formatter to all columns
+				valueFormatter:
+					col.cellDataType === "dateString"
+						? col.valueFormatter
+						: numberFormatter, // Add number formatter to all columns
 			};
 		}),
 	);
@@ -390,6 +394,19 @@ export const HomeTemplete = ({
 					}
 				},
 				icon: '<span class="ag-icon ag-icon-eye"></span>',
+			},
+			{
+				name: "Просмотр анкеты в новой вкладке",
+				action: () => {
+					if (calculationId) {
+						const url = routes.calculationPreview.rootPath.replace(
+							":id",
+							calculationId.toString(),
+						);
+						window.open(url, "_blank");
+					}
+				},
+				icon: '<span class="ag-icon ag-icon-external-link"></span>',
 			},
 		];
 

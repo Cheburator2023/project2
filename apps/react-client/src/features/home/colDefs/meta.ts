@@ -80,8 +80,8 @@ export const meta: ColDef<any, any>[] = [
 		cellDataType: "dateString",
 		valueFormatter: (params) => {
 			const dt = new Date(params?.value?.replace("Z", ""));
-
-			return format(dt, "dd MMMM yyyy, HH:mm:ss, xxxxx");
+			const result = format(dt, "dd MMMM yyyy, HH:mm:ss, xxxxx");
+			return result;
 		},
 	},
 	{

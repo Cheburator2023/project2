@@ -4,7 +4,7 @@ import {
 	NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, Repository } from "typeorm";
+import { Repository } from "typeorm";
 import { CreateCalculationDto, PaginationDto } from "../dto";
 import { UpdateCalculationDto } from "../dto/request/update-calculation.dto";
 import { Calculation, CalculationStatus } from "../entities/calculation.entity";
@@ -246,9 +246,15 @@ export class CalculationService {
 				this.checkAborted(signal);
 
 				try {
-					const calculation = await this.calculationRepository.findOne({
-						where: { id },
-					});
+					const calculation = await this.calculationRepository
+						.createQueryBuilder("calculation")
+						.leftJoinAndSelect(
+							"calculation.parentCalc",
+							"parentCalc",
+							"calculation.parentCalcId = parentCalc.id",
+						)
+						.where("calculation.id = :id", { id })
+						.getOne();
 
 					if (!calculation) {
 						this.customLogger.warn(
@@ -344,9 +350,15 @@ export class CalculationService {
 				this.checkAborted(signal);
 
 				try {
-					const calculation = await this.calculationRepository.findOne({
-						where: { id },
-					});
+					const calculation = await this.calculationRepository
+						.createQueryBuilder("calculation")
+						.leftJoinAndSelect(
+							"calculation.parentCalc",
+							"parentCalc",
+							"calculation.parentCalcId = parentCalc.id",
+						)
+						.where("calculation.id = :id", { id })
+						.getOne();
 
 					this.checkAborted(signal);
 
@@ -422,12 +434,17 @@ export class CalculationService {
 
 					this.checkAborted(signal);
 
-					const [results, total] =
-						await this.calculationRepository.findAndCount({
-							skip,
-							take: paginationDto.limit,
-							order: { createdAt: "DESC" },
-						});
+					const [results, total] = await this.calculationRepository
+						.createQueryBuilder("calculation")
+						.leftJoinAndSelect(
+							"calculation.parentCalc",
+							"parentCalc",
+							"calculation.parentCalcId = parentCalc.id",
+						)
+						.orderBy("calculation.createdAt", "DESC")
+						.skip(skip)
+						.take(paginationDto.limit)
+						.getManyAndCount();
 
 					this.customLogger.log(
 						"Paginated calculations fetched successfully",
@@ -494,9 +511,15 @@ export class CalculationService {
 				this.checkAborted(signal);
 
 				try {
-					const calculations = await this.calculationRepository.find({
-						order: { createdAt: "DESC" },
-					});
+					const calculations = await this.calculationRepository
+						.createQueryBuilder("calculation")
+						.leftJoinAndSelect(
+							"calculation.parentCalc",
+							"parentCalc",
+							"calculation.parentCalcId = parentCalc.id",
+						)
+						.orderBy("calculation.createdAt", "DESC")
+						.getMany();
 
 					this.customLogger.log(
 						"All calculations fetched successfully",
@@ -562,14 +585,26 @@ export class CalculationService {
 					let calculations: Calculation[];
 
 					if (selectedIds && selectedIds.length > 0) {
-						calculations = await this.calculationRepository.find({
-							where: { id: In(selectedIds) },
-							order: { createdAt: "DESC" },
-						});
+						calculations = await this.calculationRepository
+							.createQueryBuilder("calculation")
+							.leftJoinAndSelect(
+								"calculation.parentCalc",
+								"parentCalc",
+								"calculation.parentCalcId = parentCalc.id",
+							)
+							.where("calculation.id IN (:...selectedIds)", { selectedIds })
+							.orderBy("calculation.createdAt", "DESC")
+							.getMany();
 					} else {
-						calculations = await this.calculationRepository.find({
-							order: { createdAt: "DESC" },
-						});
+						calculations = await this.calculationRepository
+							.createQueryBuilder("calculation")
+							.leftJoinAndSelect(
+								"calculation.parentCalc",
+								"parentCalc",
+								"calculation.parentCalcId = parentCalc.id",
+							)
+							.orderBy("calculation.createdAt", "DESC")
+							.getMany();
 					}
 
 					this.checkAborted(signal);

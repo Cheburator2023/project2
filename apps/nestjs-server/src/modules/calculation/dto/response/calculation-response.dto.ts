@@ -241,4 +241,12 @@ export class CalculationResponseDto {
 		nullable: true,
 	})
 	readableId: string | null;
+
+	@ApiProperty({
+		example: "Calc-87654321-version-2.0.0",
+		description: "Составной читаемый идентификатор родительской анкеты",
+		nullable: true,
+		required: false,
+	})
+	parentReadableId?: string | null;
 }
