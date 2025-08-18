@@ -42,7 +42,7 @@ export class Calculation {
 	})
 	status: CalculationStatus;
 
-	@Column({ type: "varchar", length: 20, nullable: false, default: "1.0.0" })
+	@Column({ type: "varchar", length: 20, nullable: false, default: "1" })
 	version: string;
 
 	@Column({ type: "varchar", length: 50, nullable: true })

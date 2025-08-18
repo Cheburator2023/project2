@@ -17,7 +17,7 @@ export class AddVersioningFieldsFixed1755251569000
 		await queryRunner.query(`
             ALTER TABLE calculation 
             ADD COLUMN "status" "calculation_status_enum" DEFAULT 'Активная',
-            ADD COLUMN "version" varchar(20) DEFAULT '1.0.0',
+            ADD COLUMN "version" varchar(20) DEFAULT '1',
             ADD COLUMN "seriesId" varchar(50),
             ADD COLUMN "parentCalcId" uuid,
             ADD COLUMN "readableId" varchar(100)
@@ -27,7 +27,7 @@ export class AddVersioningFieldsFixed1755251569000
             UPDATE calculation
             SET
                 "status" = 'Активная',
-                "version" = '1.0.0'
+                "version" = '1'
             WHERE "status" IS NULL OR "version" IS NULL
         `);
 

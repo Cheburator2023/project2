@@ -216,7 +216,7 @@ export class CalculationResponseDto {
 	status: CalculationStatus;
 
 	@ApiProperty({
-		example: "1.0.0",
+		example: "1",
 		description: "Версия анкеты",
 	})
 	version: string;
@@ -236,14 +236,14 @@ export class CalculationResponseDto {
 	parentCalcId?: string;
 
 	@ApiProperty({
-		example: "Calc-12345678-version-1.0.0",
+		example: "Calc-12345678-version-1",
 		description: "Составной читаемый идентификатор",
 		nullable: true,
 	})
 	readableId: string | null;
 
 	@ApiProperty({
-		example: "Calc-87654321-version-2.0.0",
+		example: "Calc-87654321-version-2",
 		description: "Составной читаемый идентификатор родительской анкеты",
 		nullable: true,
 		required: false,
@@ -251,7 +251,7 @@ export class CalculationResponseDto {
 	parentReadableId?: string | null;
 
 	@ApiProperty({
-		example: "2.0.0",
+		example: "2",
 		description: "Последняя актуальная версия в серии",
 		nullable: true,
 		required: false,

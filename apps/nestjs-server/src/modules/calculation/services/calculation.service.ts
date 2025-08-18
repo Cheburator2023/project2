@@ -114,7 +114,7 @@ export class CalculationService {
 					this.checkAborted(signal);
 
 					const seriesId = this.generateSeriesId();
-					const version = "1.0.0";
+					const version = "1";
 					const readableId = `Calc-${seriesId}-version-${version}`;
 
 					await this.ensureReadableIdIsUnique(seriesId, readableId);
@@ -701,8 +701,8 @@ export class CalculationService {
 
 					const seriesId =
 						sourceCalculation.seriesId || this.generateSeriesId();
-					let maxVersion = "0.0.0";
-					let newVersion = "1.0.0";
+					let maxVersion = "0";
+					let newVersion = "1";
 
 					if (sourceCalculation.seriesId) {
 						maxVersion = await this.getMaxVersionInSeries(
@@ -851,7 +851,7 @@ export class CalculationService {
 						})) || [];
 
 					const newSeriesId = this.generateSeriesId();
-					const newVersion = "1.0.0";
+					const newVersion = "1";
 
 					let questionnaireData =
 						createCloneDto.questionnaireData ||
@@ -949,12 +949,14 @@ export class CalculationService {
 		});
 
 		if (calculations.length === 0) {
-			return "0.0.0";
+			return "0";
 		}
 
-		let maxVersion = "0.0.0";
+		let maxVersion = "0";
 		for (const calc of calculations) {
-			if (this.compareVersions(calc.version, maxVersion)) {
+			const currentVersion = parseInt(calc.version) || 0;
+			const maxVersionNum = parseInt(maxVersion) || 0;
+			if (currentVersion > maxVersionNum) {
 				maxVersion = calc.version;
 			}
 		}
@@ -984,11 +986,8 @@ export class CalculationService {
 	 * Increments the major version number
 	 */
 	private incrementVersion(version: string): string {
-		const parts = version.split(".");
-		if (parts.length === 0) return "1.0.0";
-
-		const major = Number.parseInt(parts[0]) || 0;
-		return `${major + 1}.0.0`;
+		const versionNum = parseInt(version) || 0;
+		return `${versionNum + 1}`;
 	}
 
 	/**
