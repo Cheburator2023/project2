@@ -306,7 +306,7 @@ export const HomeTemplete = ({
 	};
 
 	// AG Grid export solution
-	const onExportExcel = () => {
+	const _onExportExcel = () => {
 		if (gridRef.current?.api) {
 			gridRef.current.api.exportDataAsExcel({
 				fileName: `расчеты_${new Date().toISOString().split("T")[0]}.xlsx`,
@@ -321,7 +321,7 @@ export const HomeTemplete = ({
 		}
 	};
 
-	const _onExportExcel = async () => {
+	const onExportExcel = async () => {
 		try {
 			const filterModel = gridRef?.current?.api?.getFilterModel() || {};
 			const selectedNodes = gridRef?.current?.api?.getSelectedNodes() || [];
@@ -424,7 +424,7 @@ export const HomeTemplete = ({
 				},
 			},
 			{
-				name: "Создать клон анкеты",
+				name: "Использовать анкету как шаблон",
 				action: () => {
 					if (calculationId) {
 						const route = routes.calculationClone.rootPath.replace(
@@ -444,11 +444,19 @@ export const HomeTemplete = ({
 
 	const onGridReady = (params: GridReadyEvent<any, any>) => {
 		console.log("Grid is ready, setting API in Zustand store.");
+		params.api.setFilterModel({
+			status: {
+				filterType: "set",
+				values: ["Активная"],
+			},
+		});
 		setGridApi(params.api as GridApi);
 	};
 
 	const onFilterChanged = () => {
 		const filterModel = gridRef?.current?.api?.getFilterModel() || null;
+		console.log("🐸 Pepe said >> onExportExcel >> filterModel:", filterModel);
+
 		setCurrentFilterModel(filterModel);
 	};
 
@@ -489,16 +497,7 @@ export const HomeTemplete = ({
 		return agGridIconSet;
 	}, []);
 
-	const _initialFilterModel = useMemo(() => {
-		return {
-			status: {
-				filterType: "set",
-				values: ["ACTIVE"],
-			},
-		};
-	}, []);
-
-	const sideBarProps: SideBarDef | string | string[] | boolean | null = {
+	const _sideBarProps: SideBarDef | string | string[] | boolean | null = {
 		toolPanels: [
 			{
 				id: "columns",
@@ -566,19 +565,6 @@ export const HomeTemplete = ({
 							>
 								<CompareArrowsIcon data-test-id="home-page--CompareArrowsIcon-0" />
 							</IconButton>
-						</div> */}
-						{/* <Tooltip
-							title="Выгрузить в Excel"
-							data-test-id="home-page--Tooltip-2"
-						>
-							<Button
-								aria-label="menu"
-								onClick={onExportExcel}
-								variant="contained"
-								data-test-id="home-page--Button-0"
-							>
-								Выгрузить
-							</Button>
 						</div> */}
 					</Flex>
 				</Flex>

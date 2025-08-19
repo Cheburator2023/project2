@@ -15,6 +15,7 @@ import {
 	Menu,
 	MenuItem,
 	Chip,
+	Divider,
 } from "@mui/material";
 import { useCalculationControllerFindOne } from "@react-client/common/api/generated/queries/calculation";
 import { CalculationStatus } from "@react-client/common/api/generated/types/calculationResponseDto";
@@ -33,6 +34,8 @@ import { isEmpty } from "lodash-es";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { routes } from "@react-client/routing/routes";
+
+const APP_NAME = process.env.APP_NAME;
 
 export const AnketaPreviewPage = () => {
 	const params = useParams();
@@ -185,7 +188,7 @@ export const AnketaPreviewPage = () => {
 					/>
 				)}
 				<Chip
-					label={initialData?.version || "1.0.0"}
+					label={`v ${initialData?.version || "1"}`}
 					color="warning"
 					variant="outlined"
 					size="small"
@@ -193,10 +196,11 @@ export const AnketaPreviewPage = () => {
 
 				<IconButton
 					onClick={() => {
-						const url = routes.calculationPreview.rootPath.replace(
+						const route = routes.calculationPreview.rootPath.replace(
 							":id",
 							initialData?.parentCalcId!,
 						);
+						const url = `${location.origin}/${APP_NAME}${route}`;
 						window.open(url, "_blank");
 					}}
 					disabled={!initialData?.parentCalcId}
@@ -204,13 +208,6 @@ export const AnketaPreviewPage = () => {
 					size="small"
 				>
 					<ArrowUpwardIcon />
-				</IconButton>
-
-				<IconButton
-					title="Сменить режим разметки форм/карточек"
-					onClick={() => setComfyView(!comfyView)}
-				>
-					{!comfyView ? <ViewComfyIcon /> : <ViewDayIcon />}
 				</IconButton>
 				{!isEditing && canEditCalculation && (
 					<IconButton
@@ -279,6 +276,15 @@ export const AnketaPreviewPage = () => {
 						</IconButton>
 					</>
 				)}
+
+				<Divider orientation="vertical" flexItem />
+
+				<IconButton
+					title="Сменить режим разметки форм/карточек"
+					onClick={() => setComfyView(!comfyView)}
+				>
+					{!comfyView ? <ViewComfyIcon /> : <ViewDayIcon />}
+				</IconButton>
 			</Header>
 			{false ? (
 				<Flex

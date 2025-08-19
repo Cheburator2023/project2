@@ -4,7 +4,7 @@ import {
 	NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, Repository } from "typeorm";
+import { Repository } from "typeorm";
 import { CreateCalculationDto, PaginationDto } from "../dto";
 import { UpdateCalculationDto } from "../dto/request/update-calculation.dto";
 import { Calculation, CalculationStatus } from "../entities/calculation.entity";
@@ -738,8 +738,7 @@ export class CalculationService {
 							createNewVersionDto.customerName ||
 							sourceCalculation.customerName,
 						comment: createNewVersionDto.comment || sourceCalculation.comment,
-						questionnaireData:
-						questionnaireData,
+						questionnaireData: questionnaireData,
 						finalCoefficient:
 							createNewVersionDto.finalCoefficient ||
 							sourceCalculation.finalCoefficient,
@@ -874,8 +873,7 @@ export class CalculationService {
 						customerName:
 							createCloneDto.customerName || sourceCalculation.customerName,
 						comment: createCloneDto.comment || sourceCalculation.comment,
-						questionnaireData:
-						questionnaireData,
+						questionnaireData: questionnaireData,
 						finalCoefficient: sourceCalculation.finalCoefficient,
 						seriesId: newSeriesId,
 						version: newVersion,
@@ -954,8 +952,8 @@ export class CalculationService {
 
 		let maxVersion = "0";
 		for (const calc of calculations) {
-			const currentVersion = parseInt(calc.version) || 0;
-			const maxVersionNum = parseInt(maxVersion) || 0;
+			const currentVersion = Number.parseInt(calc.version) || 0;
+			const maxVersionNum = Number.parseInt(maxVersion) || 0;
 			if (currentVersion > maxVersionNum) {
 				maxVersion = calc.version;
 			}
@@ -986,7 +984,7 @@ export class CalculationService {
 	 * Increments the major version number
 	 */
 	private incrementVersion(version: string): string {
-		const versionNum = parseInt(version) || 0;
+		const versionNum = Number.parseInt(version) || 0;
 		return `${versionNum + 1}`;
 	}
 

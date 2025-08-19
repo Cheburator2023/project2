@@ -44,6 +44,10 @@ div.ag-watermark-text {
 	visibility: hidden !important;
 }
 
+  [title] {
+           pointer-events: all;
+    }
+
 .ag-filter-apply-panel {
 	gap: 8px;
 }

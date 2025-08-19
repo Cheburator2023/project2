@@ -23,7 +23,7 @@ export class AddVersioningFieldsFixed1755251569000
             ADD COLUMN "readableId" varchar(100)
         `);
 
-        await queryRunner.query(`
+		await queryRunner.query(`
             UPDATE calculation
             SET
                 "status" = 'Активная',

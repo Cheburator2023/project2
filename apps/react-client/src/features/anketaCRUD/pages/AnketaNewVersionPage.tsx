@@ -157,12 +157,9 @@ export const AnketaNewVersionPage = () => {
 			>
 				{!isLoadingParent && (
 					<Chip
-						label={`${parentData?.seriesLatestVersion || "1.0.0"} -> ${(
-							parentData?.seriesLatestVersion || "1.0.0"
-						)
-							.split(".")
-							.map((item, index) => (index === 0 ? Number(item) + 1 : item))
-							.join(".")}`}
+						label={`v ${parentData?.seriesLatestVersion || "1"} -> v ${
+							Number(parentData?.seriesLatestVersion || "1") + 1
+						}`}
 						color="warning"
 						variant="outlined"
 						size="small"
