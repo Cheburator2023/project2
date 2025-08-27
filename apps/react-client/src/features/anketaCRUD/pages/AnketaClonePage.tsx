@@ -90,14 +90,14 @@ export const AnketaClonePage = () => {
 				},
 				{
 					onSuccess: (_data) => {
-						toast.success("Анкета успешно клонирована");
+						toast.success("Анкета успешно создана");
 						reset();
 						setTimeout(() => {
 							navigate(routes.home.rootPath);
 						}, 100);
 					},
 					onError: (error: any) => {
-						toast.error("Ошибка клонирования анкеты", {
+						toast.error("Ошибка создания анкеты", {
 							description: error?.response?.data?.message,
 							action: {
 								label: "",
@@ -144,7 +144,7 @@ export const AnketaClonePage = () => {
 			>
 				<IconButton
 					onClick={onSubmit}
-					title="Клонировать как шаблон"
+					title="Использовать анкету как шаблон"
 					loading={isPending}
 					disabled={!!hasParentError || isLoadingParent || isPending}
 				>

@@ -22,7 +22,7 @@ export const routes = {
 	},
 	calculationClone: {
 		rootPath: "/calculation/clone/:id",
-		name: "Клонирование анкеты",
+		name: "Создание шаблона анкеты",
 		disabled: false,
 	},
 	calculationCompare: {

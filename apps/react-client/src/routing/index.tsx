@@ -66,7 +66,7 @@ export const Routing = () => (
 			element={
 				<PermissionGuard
 					check={(p) => p.canCreateCalculation}
-					message="У вас нет прав на клонирование анкеты"
+					message="У вас нет прав на создание шаблона анкеты"
 				>
 					<AnketaClonePage data-test-id="index--AnketaClonePage-0" />
 				</PermissionGuard>

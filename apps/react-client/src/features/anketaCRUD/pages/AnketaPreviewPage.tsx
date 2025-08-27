@@ -222,7 +222,7 @@ export const AnketaPreviewPage = () => {
 					<>
 						<IconButton
 							onClick={handleVersionMenuOpen}
-							title="Создать версию или клон"
+							title="Создать версию или шаблон"
 						>
 							<FileCopyIcon />
 						</IconButton>
@@ -247,7 +247,7 @@ export const AnketaPreviewPage = () => {
 								<ContentCopyIcon sx={{ mr: 1 }} />
 								<div>
 									<Typography variant="body2" fontWeight="medium">
-										Создать клон
+										Использовать анкету как шаблон
 									</Typography>
 									<Typography variant="caption" color="text.secondary">
 										Создать новую анкету, предзаполнив параметры опросника из
