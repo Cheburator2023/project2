@@ -46,8 +46,8 @@ export const stageDisplayNames: Record<string, string> = {
 	stage05: "05. Разработка модели",
 	amlDrafting: "AML разработка",
 	stage05B: "05B. Пилотирование модели",
-	stage07: "06. Разработка витрины для применения модели",
-	stage09: "07. Адаптация и внедрение",
+	stage07: "07. Разработка витрины для применения модели",
+	stage09: "09. Адаптация и внедрение",
 	amlEnforcement: "AML внедрение",
 };
 

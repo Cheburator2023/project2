@@ -127,9 +127,9 @@ export class CustomLogger implements LoggerService {
 
 	private cleanStack(stack: string): string {
 		return stack
-			.split("\n")
-			.map((line) => line.trim())
-			.join("\n");
+			?.split("\n")
+			?.map((line) => line.trim())
+			?.join("\n");
 	}
 
 	private sanitizeBody(body: any): string {
