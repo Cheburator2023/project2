@@ -1,5 +1,19 @@
 # Semantic Versioning Changelog
 
+# [1.13.0](https://git.sfera.inno.local/sumd/smart_anketa_ui/compare/v1.12.1...v1.13.0) (2025-08-28)
+
+
+### Bug Fixes
+
+* clone strings fix ([280e759](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/280e759d538f5934cc0a0129a7aa8286b3f8ccc9))
+* dima fixes list ([d4e6256](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/d4e6256df1e2a59cd690457565defde3673f6808))
+* удалил для многих ролей фильтрацию по стримам ([1c39b23](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/1c39b23cf60a80d1810d15b7a89a938885c16fd2))
+
+
+### Features
+
+* Заменил version с n.0.0 на n ([f272c01](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/f272c0112dc7e5cd0e84bb29098ed55df12cc68b))
+
 ## [1.12.1](https://git.sfera.inno.local/sumd/smart_anketa_ui/compare/v1.12.0...v1.12.1) (2025-08-17)
 
 
