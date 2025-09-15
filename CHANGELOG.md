@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+## [1.13.2](https://git.sfera.inno.local/sumd/smart_anketa_ui/compare/v1.13.1...v1.13.2) (2025-09-15)
+
+
+### Bug Fixes
+
+* stage name fixes ([2250950](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/2250950814c0d7d23fef8f2f5d3f8b3b5dc3161a))
+* stage name fixes ([a47b6fb](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/a47b6fba271fc9701efc8770fc1c9d0eb038e968))
+
 ## [1.13.1](https://git.sfera.inno.local/sumd/smart_anketa_ui/compare/v1.13.0...v1.13.1) (2025-09-15)
 
 
