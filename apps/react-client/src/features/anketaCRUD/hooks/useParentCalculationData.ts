@@ -39,6 +39,7 @@ export const mapCalculationToAssessmentForm = (
 	data: CalculationResponseDto,
 ): IAssessmentFormData => {
 	return {
+		modelDeveloped: (data.questionnaireData as any).modelDeveloped || "Нет",
 		modelsCount: data.questionnaireData.modelsCount,
 		algorithmComplexity: data.questionnaireData.algorithmComplexity,
 		setupComplexity: data.questionnaireData.setupComplexity,

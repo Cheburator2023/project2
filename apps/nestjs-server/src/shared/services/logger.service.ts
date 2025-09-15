@@ -1,6 +1,7 @@
 import { Injectable, LoggerService } from "@nestjs/common";
 import { v4 as uuidv4 } from "uuid";
 import { Request, Response } from "express";
+import chalk from "chalk";
 
 @Injectable()
 export class CustomLogger implements LoggerService {
@@ -11,6 +12,17 @@ export class CustomLogger implements LoggerService {
 		process.env.NODE_ENV === "production" ? "K8S" : "DEV";
 	private readonly tslgClientVersion = "1.0.0";
 	private readonly risCode = "1404";
+	private readonly enableColors =
+		this.envType === "DEV" && process.stdout.isTTY; // Enable colors only in development with TTY support
+
+	// Color mapping for different log levels
+	private readonly levelColors = {
+		INFO: chalk.blue,
+		ERROR: chalk.red,
+		WARN: chalk.yellow,
+		DEBUG: chalk.magenta,
+		VERBOSE: chalk.cyan,
+	};
 
 	log(message: string, context?: string, additionalData?: Record<string, any>) {
 		this.printLog("INFO", message, context, additionalData);
@@ -84,7 +96,11 @@ export class CustomLogger implements LoggerService {
 			};
 		}
 
-		console.log(JSON.stringify(logEntry));
+		if (this.enableColors && this.envType === "DEV") {
+			this.printColoredHttpLog(request, response, responseTime, logEntry);
+		} else {
+			console.log(JSON.stringify(logEntry));
+		}
 	}
 
 	private printLog(
@@ -122,7 +138,11 @@ export class CustomLogger implements LoggerService {
 			};
 		}
 
-		console.log(JSON.stringify(logEntry));
+		if (this.enableColors && this.envType === "DEV") {
+			this.printColoredLog(level, message, logEntry);
+		} else {
+			console.log(JSON.stringify(logEntry));
+		}
 	}
 
 	private cleanStack(stack: string): string {
@@ -220,5 +240,120 @@ export class CustomLogger implements LoggerService {
 
 	private isJwtToken(value: string): boolean {
 		return typeof value === "string" && value.split(".").length === 3;
+	}
+
+	/**
+	 * Pretty prints JSON data with proper indentation and colors
+	 */
+	private prettyPrintJson(data: any, indent = 2): string {
+		try {
+			return JSON.stringify(data, null, indent);
+		} catch {
+			return "[Non-serializable data]";
+		}
+	}
+
+	/**
+	 * Prints colored and formatted log output for development environment
+	 */
+	private printColoredLog(level: string, message: string, logEntry: any): void {
+		const timestamp = chalk.gray(new Date().toISOString());
+		const levelColor = this.levelColors[level] || chalk.white;
+		const coloredLevel = levelColor.bold(`[${level}]`);
+		const context = logEntry.loggerName
+			? chalk.green(`[${logEntry.loggerName}]`)
+			: "";
+		const coloredMessage = levelColor(message);
+
+		// Main log line
+		console.log(`${timestamp} ${coloredLevel} ${context} ${coloredMessage}`);
+
+		// Additional data formatting
+		const additionalData = { ...logEntry };
+		delete additionalData.level;
+		delete additionalData.text;
+		delete additionalData.localTime;
+		delete additionalData.loggerName;
+
+		// Show additional data if present
+		if (Object.keys(additionalData).length > 0) {
+			console.log(chalk.gray("📋 Additional Data:"));
+			console.log(chalk.gray(this.prettyPrintJson(additionalData)));
+		}
+
+		// Add separator for better readability
+		if (level === "ERROR") {
+			console.log(chalk.red("─".repeat(80)));
+		}
+	}
+
+	/**
+	 * Prints colored and formatted HTTP log output for development environment
+	 */
+	private printColoredHttpLog(
+		request: Request,
+		response: Response,
+		responseTime: number,
+		logEntry: any,
+	): void {
+		const timestamp = chalk.gray(new Date().toISOString());
+		const method = this.getMethodColor(request.method)(request.method);
+		const statusColor = this.getStatusColor(response.statusCode);
+		const status = statusColor(response.statusCode.toString());
+		const path = chalk.white(request.path);
+		const time = chalk.yellow(`${responseTime}ms`);
+		const ip = chalk.cyan(request.ip);
+
+		// Main HTTP log line
+		console.log(
+			`${timestamp} ${chalk.blue.bold("[HTTP]")} ${method} ${path} ${status} ${time} - ${ip}`,
+		);
+
+		// Request details if present
+		if (request.body && Object.keys(request.body).length > 0) {
+			console.log(chalk.gray("📤 Request Body:"));
+			console.log(chalk.gray(this.prettyPrintJson(logEntry.requestBody)));
+		}
+
+		// Response details for errors
+		if (response.statusCode >= 400) {
+			console.log(chalk.red("─".repeat(80)));
+		}
+	}
+
+	/**
+	 * Get color for HTTP method
+	 */
+	private getMethodColor(method: string) {
+		switch (method.toUpperCase()) {
+			case "GET":
+				return chalk.green;
+			case "POST":
+				return chalk.blue;
+			case "PUT":
+				return chalk.yellow;
+			case "DELETE":
+				return chalk.red;
+			case "PATCH":
+				return chalk.magenta;
+			default:
+				return chalk.white;
+		}
+	}
+
+	/**
+	 * Get color for HTTP status code
+	 */
+	private getStatusColor(statusCode: number) {
+		if (statusCode >= 200 && statusCode < 300) {
+			return chalk.green;
+		} else if (statusCode >= 300 && statusCode < 400) {
+			return chalk.yellow;
+		} else if (statusCode >= 400 && statusCode < 500) {
+			return chalk.red;
+		} else if (statusCode >= 500) {
+			return chalk.red.bold;
+		}
+		return chalk.white;
 	}
 }
