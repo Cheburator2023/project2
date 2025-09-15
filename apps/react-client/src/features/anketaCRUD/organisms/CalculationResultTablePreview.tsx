@@ -86,7 +86,12 @@ const extractCalculationResults = (
 	if (calculationResult && Array.isArray(calculationResult)) {
 		// Use data from backend if available
 		return calculationResult.map((item: any) => ({
-			stageName: item.stageName,
+			// TODO: убрать этот костыль когда будет выполнена правильная миграция
+			stageName: item.stageName.includes("06")
+				? stageDisplayNames.stage07
+				: item.stageName.includes("07")
+					? stageDisplayNames.stage09
+					: item.stageName,
 			score: item.score,
 			stageBaseValue: item.stageBaseValue,
 			percentFromAverage: item.percentFromAverage,
@@ -128,14 +133,14 @@ export const CalculationResultTablePreview = ({
 	const rowData = useMemo<EpicData[]>(() => {
 		return extractCalculationResults(initialData);
 	}, [initialData]);
+	console.log(
+		"🐸 Pepe said >> CalculationResultTablePreview >> rowData:",
+		rowData,
+	);
 
 	const coefficientData = useMemo<CoefficientData[]>(() => {
 		return extractCoefficients(initialData);
 	}, [initialData]);
-	console.log(
-		"🐸 Pepe said >> CalculationResultTablePreview >> coefficientData:",
-		coefficientData,
-	);
 
 	const [columnDefs] = useState<ColDef<EpicData>[]>([
 		{
