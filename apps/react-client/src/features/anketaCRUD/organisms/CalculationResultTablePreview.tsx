@@ -84,14 +84,18 @@ const extractCalculationResults = (
 	const calculationResult = (data?.questionnaireData as any)?.calculationResult;
 
 	if (calculationResult && Array.isArray(calculationResult)) {
+		const isBrokenNamingPresent = calculationResult.some((item: any) =>
+			item.stageName.includes("06"),
+		);
 		// Use data from backend if available
 		return calculationResult.map((item: any) => ({
 			// TODO: убрать этот костыль когда будет выполнена правильная миграция
-			stageName: item.stageName.includes("06")
-				? stageDisplayNames.stage07
-				: item.stageName.includes("07")
-					? stageDisplayNames.stage09
-					: item.stageName,
+			stageName:
+				isBrokenNamingPresent && item.stageName.includes("06")
+					? stageDisplayNames.stage07
+					: isBrokenNamingPresent && item.stageName.includes("07")
+						? stageDisplayNames.stage09
+						: item.stageName,
 			score: item.score,
 			stageBaseValue: item.stageBaseValue,
 			percentFromAverage: item.percentFromAverage,
