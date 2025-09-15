@@ -31,6 +31,7 @@ export const basicInfoFormInitialData: IBasicFormData = {
 };
 
 export const projectAssessmentFormInitialData: IAssessmentFormData = {
+	modelDeveloped: "Нет",
 	modelsCount: 1,
 	algorithmComplexity: [{ algorithmType: "" }],
 	uncertaintyAdjustment: 0,
