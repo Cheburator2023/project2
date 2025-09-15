@@ -137,6 +137,56 @@ const calculateStageResults = (
 	const productionDeploymentChannels =
 		formData.productionDeploymentChannels || [];
 
+	// Если модель разработана, обнуляем этапы E2E планирования
+	const modelDeveloped = formData.modelDeveloped === "Да";
+
+	if (modelDeveloped) {
+		return {
+			stage01: 0, // Постановка задачи
+			stage02: 0, // Поиск данных
+			stage04: 0, // Построение витрины для разработки
+			stage05A: 0, // Разработка MVP
+			stage05: 0, // Разработка модели
+			amlDrafting: mainStages.calculateAMLDrafting(
+				stageBaseValues.amlDrafting,
+				coefficients.modelsCountCoefficient,
+				coefficients.setupComplexityCoefficient,
+				coefficients.generalUncertaintyCoefficient,
+				autoMlRequired,
+			),
+			stage05B: mainStages.calculateStage05B(
+				stageBaseValues.stage05B,
+				coefficients.generalUncertaintyCoefficient,
+				coefficients.readyPromReportsCoefficient,
+				pilotSupportRequired,
+			),
+			stage07: mainStages.calculateStage07(
+				stageBaseValues.stage07,
+				assessedInitiativesCount,
+				coefficients.setupComplexityCoefficient,
+				coefficients.generalUncertaintyCoefficient,
+				coefficients.productionAdditionalReportsCoefficient,
+				productionAdditionalReports,
+			),
+			stage09: mainStages.calculateStage09(
+				stageBaseValues.stage09,
+				coefficients.modelsCountCoefficient,
+				coefficients.setupComplexityCoefficient,
+				coefficients.generalUncertaintyCoefficient,
+				coefficients.algorithmComplexityCoefficient,
+				coefficients.deploymentChannelsCoefficient,
+				productionDeploymentChannels,
+			),
+			amlEnforcement: mainStages.calculateAMLEnforcement(
+				stageBaseValues.amlEnforcement,
+				coefficients.modelsCountCoefficient,
+				coefficients.setupComplexityCoefficient,
+				coefficients.generalUncertaintyCoefficient,
+				autoMlRequired,
+			),
+		};
+	}
+
 	return {
 		stage01: mainStages.calculateStage01(
 			stageBaseValues.stage01,

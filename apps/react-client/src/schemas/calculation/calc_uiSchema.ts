@@ -5,6 +5,12 @@ export const calc_uiSchema: UiSchema = {
 		norender: true,
 		submitText: "Сохранить",
 	},
+	modelDeveloped: {
+		"ui:options": {
+			tooltip:
+				"Выберите 'Да', если модель уже разработана. При выборе 'Да' некоторые поля будут заблокированы и сброшены к значениям по умолчанию.",
+		},
+	},
 	description: {
 		"ui:widget": "textarea",
 		"ui:options": {
@@ -62,7 +68,20 @@ export const calc_uiSchema: UiSchema = {
 		},
 	},
 	readyPromReports: {
-		"ui:widget": "text",
+		"ui:widget": "UniversalDependencyWidget",
+		"ui:options": {
+			tooltip:
+				"Наличие готовых промышленных витрин. Блокируется при выборе 'Да' в поле 'Модель разработана?'",
+			dependencies: [
+				{
+					condition: "modelDeveloped === 'Да'",
+					disabled: true,
+					valueToSet: "",
+					widget: "TextField",
+				},
+			],
+			defaultWidget: "SelectWidget",
+		},
 	},
 	assessedInitiativesCount: {
 		"ui:widget": "UniversalDependencyWidget",
@@ -106,9 +125,19 @@ export const calc_uiSchema: UiSchema = {
 		},
 	},
 	pilotModelRequired: {
+		"ui:widget": "UniversalDependencyWidget",
 		"ui:options": {
 			tooltip:
-				"Применяется в случае, если требуется создать прототип модели, которую Заказчик планирует апробировать перед выносом в пром. Длительность пилота ограничена 6 месяцами.",
+				"Применяется в случае, если требуется создать прототип модели, которую Заказчик планирует апробировать перед выносом в пром. Длительность пилота ограничена 6 месяцами. Блокируется при выборе 'Да' в поле 'Модель разработана?'",
+			dependencies: [
+				{
+					condition: "modelDeveloped === 'Да'",
+					disabled: true,
+					valueToSet: "Не требуется",
+					widget: "TextField",
+				},
+			],
+			defaultWidget: "SelectWidget",
 		},
 	},
 	productionDeploymentChannels: {
@@ -133,13 +162,29 @@ export const calc_uiSchema: UiSchema = {
 	pilotSupportRequired: {
 		"ui:widget": "UniversalDependencyWidget",
 		"ui:options": {
+			tooltip:
+				"Доступно только при выборе 'Да' в поле 'Модель разработана?' и 'Не требуется' в поле 'Необходимость реализации пилотной модели'",
 			dependencies: [
 				{
-					condition: "pilotModelRequired === 'Не требуется'",
+					condition:
+						"modelDeveloped === 'Да' && pilotModelRequired === 'Не требуется'",
+					disabled: false,
+					valueToSet: "Не требуется",
+					widget: "TextField",
+				},
+				{
+					condition:
+						"modelDeveloped === 'Нет' && pilotModelRequired === 'Не требуется'",
 					disabled: true,
 					valueToSet: "Не требуется",
 					widget: "TextField",
 				},
+				// {
+				// 	condition:
+				// 		"modelDeveloped === 'Да' || pilotModelRequired === 'Не требуется'",
+				// 	disabled: false,
+				// 	widget: "SelectWidget",
+				// },
 			],
 			defaultWidget: "SelectWidget",
 		},

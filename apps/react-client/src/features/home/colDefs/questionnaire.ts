@@ -2,6 +2,12 @@ import { ColDef } from "ag-grid-community";
 
 export const questionnaire: ColDef<any, any>[] = [
 	{
+		field: "questionnaireData.modelDeveloped",
+		headerName: "Модель разработана?",
+		sortable: true,
+		filter: true,
+	},
+	{
 		field: "questionnaireData.modelsCount",
 		headerName: "Количество моделей",
 		sortable: true,
