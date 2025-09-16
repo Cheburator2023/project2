@@ -76,6 +76,11 @@ export class Calculation {
 						...(val as any),
 					}));
 				}
+
+                if (value && !value.hasOwnProperty('modelDeveloped')) {
+                    value.modelDeveloped = "Нет"; // значение по умолчанию
+                }
+                
 				return value as CalculationQuestionnaireDataDto;
 			},
 		},

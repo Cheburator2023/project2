@@ -863,6 +863,7 @@ export class CalculationController {
 			comment: calculation.comment,
 			questionnaireData: {
 				...(calculation.questionnaireData || {}),
+                modelDeveloped: calculation.questionnaireData?.modelDeveloped || "Нет",
 				generalUncertainty,
 				productionDeploymentChannels,
 			},

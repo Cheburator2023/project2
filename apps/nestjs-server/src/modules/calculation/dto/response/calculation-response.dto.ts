@@ -172,6 +172,7 @@ export class CalculationResponseDto {
 		setupComplexity: string;
 		initiativeTimeline: string;
 		initiativeCost: string;
+        modelDeveloped: string;
 		modelsCount: number;
 		uncertaintyAdjustment?: number;
 		generalUncertainty: Array<{

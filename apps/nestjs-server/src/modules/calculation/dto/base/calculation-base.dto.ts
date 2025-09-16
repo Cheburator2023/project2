@@ -162,4 +162,17 @@ export class CalculationBaseDto {
 	@IsString({ message: "initiativeCost must be a string" })
 	@IsOptional()
 	initiativeCost: (typeof INITIATIVE_COST_VALUES)[number];
+    
+    @ApiProperty({
+        example: "Нет",
+        description: "Модель разработана",
+        enum: YES_NO_VALUES,
+        required: false,
+    })
+    @IsString({ message: "modelDeveloped must be a string" })
+    @IsOptional()
+    @IsIn(YES_NO_VALUES, {
+        message: "modelDeveloped must be one of the allowed values",
+    })
+    modelDeveloped?: (typeof YES_NO_VALUES)[number];
 }
