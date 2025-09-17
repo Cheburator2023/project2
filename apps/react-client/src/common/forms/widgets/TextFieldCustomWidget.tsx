@@ -146,23 +146,27 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 	const isMultiple = options?.multiple;
 	const noDelete = options?.noDelete;
 
-	const fuzzyMatches = searchTerm.trim()
-		? fuzzySearch(
-				searchTerm,
-				optionsForSelect.map((item) => item.value),
-				{ threshold: 0.1 },
-			)
-		: [];
+	const isFuzzy = isSelect & isMultiple;
 
-	const filteredOptions = searchTerm.trim()
-		? fuzzyMatches.map((match) => ({
-				...optionsForSelect.find((option) => option.value === match.target)!,
-				fuzzyMatch: match,
-			}))
-		: optionsForSelect.map((option) => ({
-				...option,
-				fuzzyMatch: null,
-			}));
+	const fuzzyMatches =
+		isFuzzy && searchTerm.trim()
+			? fuzzySearch(
+					searchTerm,
+					optionsForSelect.map((item) => item.value),
+					{ threshold: 0.1 },
+				)
+			: [];
+
+	const filteredOptions =
+		isFuzzy && searchTerm.trim()
+			? fuzzyMatches.map((match) => ({
+					...optionsForSelect.find((option) => option.value === match.target)!,
+					fuzzyMatch: match,
+				}))
+			: optionsForSelect.map((option) => ({
+					...option,
+					fuzzyMatch: null,
+				}));
 
 	if (isSelect & isMultiple) {
 		const _handleChangeMult = (event: SelectChangeEvent) => {
@@ -353,23 +357,32 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 						}}
 					/>
 				</Box>
-				{filteredOptions.map((item) => (
-					<MenuItem key={item.value} value={item.value}>
-						<Checkbox checked={value.includes(item.value)} />
+				{filteredOptions.length > 0 ? (
+					filteredOptions.map((item) => (
+						<MenuItem key={item.value} value={item.value}>
+							<Checkbox checked={value.includes(item.value)} />
+							<ListItemText
+								primary={
+									<HighlightedMenuItem
+										text={item.value}
+										matches={
+											item.fuzzyMatch?.indexes
+												? indexesToMatches(item.fuzzyMatch.indexes)
+												: []
+										}
+									/>
+								}
+							/>
+						</MenuItem>
+					))
+				) : isFuzzy && searchTerm.trim() ? (
+					<MenuItem disabled>
 						<ListItemText
-							primary={
-								<HighlightedMenuItem
-									text={item.value}
-									matches={
-										item.fuzzyMatch?.indexes
-											? indexesToMatches(item.fuzzyMatch.indexes)
-											: []
-									}
-								/>
-							}
+							primary="Нет совпадений"
+							sx={{ textAlign: "center", opacity: 0.6 }}
 						/>
 					</MenuItem>
-				))}
+				) : null}
 				{!isEqual(initialValue, props.value) && (
 					<Box
 						sx={{
@@ -548,31 +561,20 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 				initialValue !== props.value &&
 				props.options?.reset && <MenuItem onClick={reset}>Сбросить</MenuItem>} */}
 			{optionsForSelect.length > 0
-				? fuzzySearch(
-						"",
-						optionsForSelect
-							?.filter((item) => {
-								return item.value;
-							})
-							?.map((item) => {
-								return item.value;
-							}),
-						{ threshold: 0 },
-					).map((match) => {
-						const option = optionsForSelect.find(
-							(opt) => opt.value === match.target,
-						)!;
-						return (
-							<MenuItem key={option.value} value={option.value}>
-								<HighlightedMenuItem
-									text={option.label || option.value}
-									matches={
-										match?.indexes ? indexesToMatches(match.indexes) : []
-									}
-								/>
-							</MenuItem>
-						);
-					})
+				? optionsForSelect
+						?.filter((item) => {
+							return item.value;
+						})
+						?.map((option) => {
+							return (
+								<MenuItem key={option.value} value={option.value}>
+									<HighlightedMenuItem
+										text={option.label || option.value}
+										matches={[]}
+									/>
+								</MenuItem>
+							);
+						})
 				: null}
 		</TextFieldCustom>
 	);
