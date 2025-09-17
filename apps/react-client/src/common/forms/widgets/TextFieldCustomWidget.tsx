@@ -26,6 +26,30 @@ import { WidgetProps } from "@rjsf/utils";
 import { isEqual } from "lodash-es";
 import { fuzzySearch, highlightMatches } from "@react-client/utils/fuzzySearch";
 
+// Вспомогательная функция для преобразования indexes в matches
+const indexesToMatches = (
+	indexes: ReadonlyArray<number>,
+): Array<{ start: number; end: number }> => {
+	if (!indexes || indexes.length === 0) return [];
+
+	const matches: Array<{ start: number; end: number }> = [];
+	let start = indexes[0];
+	let end = indexes[0];
+
+	for (let i = 1; i < indexes.length; i++) {
+		if (indexes[i] === end + 1) {
+			end = indexes[i];
+		} else {
+			matches.push({ start, end: end + 1 });
+			start = indexes[i];
+			end = indexes[i];
+		}
+	}
+	matches.push({ start, end: end + 1 });
+
+	return matches;
+};
+
 const HighlightedText = styled("span")<{ highlighted?: boolean }>(
 	({ highlighted, theme }) => ({
 		backgroundColor: highlighted ? theme.palette.warning.light : "transparent",
@@ -122,16 +146,23 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 	const isMultiple = options?.multiple;
 	const noDelete = options?.noDelete;
 
-	const fuzzyMatches = fuzzySearch(
-		searchTerm,
-		optionsForSelect.map((item) => item.value),
-		{ threshold: 0.1 },
-	);
+	const fuzzyMatches = searchTerm.trim()
+		? fuzzySearch(
+				searchTerm,
+				optionsForSelect.map((item) => item.value),
+				{ threshold: 0.1 },
+			)
+		: [];
 
-	const filteredOptions = fuzzyMatches.map((match) => ({
-		...optionsForSelect.find((option) => option.value === match.item)!,
-		fuzzyMatch: match,
-	}));
+	const filteredOptions = searchTerm.trim()
+		? fuzzyMatches.map((match) => ({
+				...optionsForSelect.find((option) => option.value === match.target)!,
+				fuzzyMatch: match,
+			}))
+		: optionsForSelect.map((option) => ({
+				...option,
+				fuzzyMatch: null,
+			}));
 
 	if (isSelect & isMultiple) {
 		const _handleChangeMult = (event: SelectChangeEvent) => {
@@ -329,7 +360,11 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 							primary={
 								<HighlightedMenuItem
 									text={item.value}
-									matches={item.fuzzyMatch.matches}
+									matches={
+										item.fuzzyMatch?.indexes
+											? indexesToMatches(item.fuzzyMatch.indexes)
+											: []
+									}
 								/>
 							}
 						/>
@@ -378,7 +413,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 				}}
 				filterOptions={(options, { inputValue }) => {
 					const matches = fuzzySearch(inputValue, options, { threshold: 0.1 });
-					return matches.map((match) => match.item);
+					return matches.map((match) => match.target);
 				}}
 				renderOption={(props, option, { inputValue }) => {
 					const matches = fuzzySearch(inputValue, [option], { threshold: 0.1 });
@@ -388,7 +423,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 						<li {...props}>
 							<HighlightedMenuItem
 								text={option}
-								matches={match ? match.matches : []}
+								matches={match?.indexes ? indexesToMatches(match.indexes) : []}
 							/>
 						</li>
 					);
@@ -525,13 +560,15 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 						{ threshold: 0 },
 					).map((match) => {
 						const option = optionsForSelect.find(
-							(opt) => opt.value === match.item,
+							(opt) => opt.value === match.target,
 						)!;
 						return (
 							<MenuItem key={option.value} value={option.value}>
 								<HighlightedMenuItem
 									text={option.label || option.value}
-									matches={match.matches}
+									matches={
+										match?.indexes ? indexesToMatches(match.indexes) : []
+									}
 								/>
 							</MenuItem>
 						);

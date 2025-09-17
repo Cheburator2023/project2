@@ -1,3 +1,5 @@
+import fuzzysort from "fuzzysort";
+
 export interface FuzzyMatch {
 	item: string;
 	score: number;
@@ -9,38 +11,64 @@ export interface FuzzySearchOptions {
 	caseSensitive?: boolean;
 }
 
+type HighlightCallback<T> = (match: string, index: number) => T;
+
+interface Result {
+	/**
+	 * 1 is a perfect match. 0.5 is a good match. 0 is no match.
+	 */
+	readonly score: number;
+
+	/** Your original target string */
+	readonly target: string;
+
+	highlight(highlightOpen?: string, highlightClose?: string): string;
+	highlight<T>(callback: HighlightCallback<T>): (string | T)[];
+
+	indexes: ReadonlyArray<number>;
+}
+
+interface Results extends ReadonlyArray<Result> {
+	/** Total matches before limit */
+	readonly total: number;
+}
+
 export const fuzzySearch = (
 	query: string,
 	items: string[],
 	options: FuzzySearchOptions = {},
-): FuzzyMatch[] => {
-	const { threshold = 0.3, caseSensitive = false } = options;
+): Results => {
+	// fuzzysort.go("a", mystuff, options);
 
-	if (!query.trim()) {
-		return items.map((item) => ({
-			item,
-			score: 1,
-			matches: [],
-		}));
-	}
+	return fuzzysort.go(query, items, options);
 
-	const normalizedQuery = caseSensitive ? query : query.toLowerCase();
-	const results: FuzzyMatch[] = [];
+	// const { threshold = 0.3, caseSensitive = false } = options;
 
-	for (const item of items) {
-		const normalizedItem = caseSensitive ? item : item.toLowerCase();
-		const match = calculateFuzzyMatch(normalizedQuery, normalizedItem);
+	// if (!query.trim()) {
+	// 	return items.map((item) => ({
+	// 		item,
+	// 		score: 1,
+	// 		matches: [],
+	// 	}));
+	// }
 
-		if (match.score >= threshold) {
-			results.push({
-				item,
-				score: match.score,
-				matches: match.matches,
-			});
-		}
-	}
+	// const normalizedQuery = caseSensitive ? query : query.toLowerCase();
+	// const results: FuzzyMatch[] = [];
 
-	return results.sort((a, b) => b.score - a.score);
+	// for (const item of items) {
+	// 	const normalizedItem = caseSensitive ? item : item.toLowerCase();
+	// 	const match = calculateFuzzyMatch(normalizedQuery, normalizedItem);
+
+	// 	if (match.score >= threshold) {
+	// 		results.push({
+	// 			item,
+	// 			score: match.score,
+	// 			matches: match.matches,
+	// 		});
+	// 	}
+	// }
+
+	// return results.sort((a, b) => b.score - a.score);
 };
 
 const calculateFuzzyMatch = (
