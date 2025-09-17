@@ -120,7 +120,7 @@
 		"readyPromReports": {
 			"title": "Наличие готовых промышленных витрин",
 			"type": "string",
-			"enum": ["Да", "Нет"]
+			"enum": ["Да", "Нет", ""]
 		},
 		"assessedInitiativesCount": {
 			"title": "Количество оцениваемых инициатив",
