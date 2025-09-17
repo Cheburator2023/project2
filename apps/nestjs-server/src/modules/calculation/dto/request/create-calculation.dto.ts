@@ -102,17 +102,18 @@ export class CreateCalculationDto extends CalculationBaseDto {
 	@Type(() => UncertaintyItemDto)
 	generalUncertainty: UncertaintyItemDto[];
 
-	@ApiProperty({
-		example: "Нет",
-		description: "Наличие готовых промоделированных отчетов",
-		enum: YES_NO_VALUES,
-	})
-	@IsString({ message: "readyPromReports must be a string" })
-	@IsNotEmpty({ message: "readyPromReports should not be empty" })
-	@IsIn(YES_NO_VALUES, {
-		message: "readyPromReports must be one of the allowed values",
-	})
-	readyPromReports: (typeof YES_NO_VALUES)[number];
+    @ApiProperty({
+        example: "Нет",
+        description: "Наличие готовых промоделированных отчетов",
+        enum: YES_NO_VALUES,
+        required: false,
+    })
+    @IsString({ message: "readyPromReports must be a string" })
+    @IsOptional()
+    @IsIn([...YES_NO_VALUES, ""], {
+        message: "readyPromReports must be one of the allowed values or empty",
+    })
+    readyPromReports?: (typeof YES_NO_VALUES)[number] | "";
 
 	@ApiProperty({
 		example: 3,
