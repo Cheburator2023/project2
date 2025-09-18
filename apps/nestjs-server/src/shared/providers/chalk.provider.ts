@@ -39,7 +39,7 @@ export const chalkProvider: Provider = {
 	provide: CHALK_TOKEN,
 	useFactory: (): ChalkInstance | null => {
 		// Return null in production to avoid importing chalk
-		if (process.env.NODE_ENV !== "production") {
+		if (process.env.NODE_ENV === "production") {
 			return null;
 		}
 
