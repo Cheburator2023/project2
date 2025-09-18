@@ -102,6 +102,18 @@ export const ProjectAssessmentForm: React.FC<{
 
 	const onChange = (e: IChangeEvent<IAssessmentFormData>) => {
 		if (e.formData) {
+			// Логика сброса полей при изменении modelDeveloped
+			if (
+				e.formData.modelDeveloped === "Да" &&
+				formData.modelDeveloped !== "Да"
+			) {
+				e.formData = {
+					...e.formData,
+					readyPromReports: "",
+					pilotModelRequired: "Не требуется",
+					algorithmComplexity: [{ algorithmType: "" }],
+				};
+			}
 			setFormData(e.formData);
 		}
 		if (formState) {

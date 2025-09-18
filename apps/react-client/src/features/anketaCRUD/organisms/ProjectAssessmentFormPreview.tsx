@@ -74,6 +74,7 @@ export const ProjectAssessmentFormPreview = ({
 
 	useEffectOnce(() => {
 		setFormDataForCalc({
+			modelDeveloped: (formData as any).modelDeveloped || "Нет",
 			modelsCount: formData.modelsCount,
 			initiativeTimeline: formData.initiativeTimeline,
 			initiativeCost: formData.initiativeCost,

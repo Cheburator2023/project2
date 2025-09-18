@@ -204,6 +204,10 @@ div.ag-watermark-text {
     }
 }
 
+.MuiPopover-root .MuiPaper-root.MuiPaper-rounded.MuiPopover-paper.MuiMenu-paper {
+min-width: auto!important;
+}
+
 `}
 	/>
 );

@@ -41,6 +41,8 @@ export interface CreateCalculationDto {
    * @maximum 99
    */
   modelsCount: number;
+  /** Модель разработана */
+  modelDeveloped: string;
   /** Корректировка неопределенности */
   uncertaintyAdjustment: number;
   /** Факторы общей неопределенности */

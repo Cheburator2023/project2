@@ -27,6 +27,8 @@ export interface CalculationQuestionnaireDataDto {
   initiativeCost: CalculationQuestionnaireDataDtoInitiativeCost;
   /** Количество моделей */
   modelsCount: number;
+  /** Модель разработана */
+  modelDeveloped: string;
   /** Корректировка неопределенности */
   uncertaintyAdjustment: number;
   /** Факторы общей неопределенности */

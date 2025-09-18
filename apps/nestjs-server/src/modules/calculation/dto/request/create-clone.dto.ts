@@ -92,4 +92,13 @@ export class CreateCloneDto {
 	@ValidateNested({ each: true })
 	@Type(() => CalculationResultItemDto)
 	calculationResult?: CalculationResultItemDto[];
+
+    @ApiProperty({
+        example: "Нет",
+        description: "Модель разработана",
+        required: false,
+    })
+    @IsOptional()
+    @IsString()
+    modelDeveloped?: string;
 }

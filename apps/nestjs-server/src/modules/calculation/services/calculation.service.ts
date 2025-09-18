@@ -82,6 +82,13 @@ export class CalculationService {
 						}
 					}
 
+                    const modelDeveloped = createCalculationDto.modelDeveloped || "Нет";
+
+                    let readyPromReports = createCalculationDto.readyPromReports;
+                    if (modelDeveloped === "Да" && !readyPromReports) {
+                        readyPromReports = "";
+                    }
+
 					const generalUncertaintyObject = {};
 					if (createCalculationDto.generalUncertainty) {
 						createCalculationDto.generalUncertainty.forEach((item) => {
@@ -133,6 +140,7 @@ export class CalculationService {
 						readableId,
 						questionnaireData: {
 							calcName: createCalculationDto.calcName || "Новый расчет",
+                            modelDeveloped: createCalculationDto.modelDeveloped,
 							modelsCount: createCalculationDto.modelsCount,
 							setupComplexity: createCalculationDto.setupComplexity,
 							initiativeTimeline: createCalculationDto.initiativeTimeline,
@@ -720,6 +728,7 @@ export class CalculationService {
 					if (calculationResult.length > 0) {
 						questionnaireData = {
 							...questionnaireData,
+                            modelDeveloped: questionnaireData.modelDeveloped || "Нет",
 							calculationResult,
 						};
 					}
@@ -858,6 +867,7 @@ export class CalculationService {
 					if (calculationResult.length > 0) {
 						questionnaireData = {
 							...questionnaireData,
+                            modelDeveloped: questionnaireData.modelDeveloped || "Нет",
 							calculationResult,
 						};
 					}

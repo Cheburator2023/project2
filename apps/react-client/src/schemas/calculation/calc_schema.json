@@ -2,6 +2,12 @@
 	"$schema": "http://json-schema.org/draft-07/schema#",
 	"type": "object",
 	"properties": {
+		"modelDeveloped": {
+			"type": "string",
+			"enum": ["Да", "Нет"],
+			"default": "Нет",
+			"title": "Модель разработана?"
+		},
 		"modelsCount": {
 			"type": "number",
 			"minimum": 1,
@@ -114,7 +120,7 @@
 		"readyPromReports": {
 			"title": "Наличие готовых промышленных витрин",
 			"type": "string",
-			"enum": ["Да", "Нет"]
+			"enum": ["Да", "Нет", ""]
 		},
 		"assessedInitiativesCount": {
 			"title": "Количество оцениваемых инициатив",
@@ -315,17 +321,37 @@
 			}
 		}
 	},
-	"if": {
-		"properties": {
-			"readyPromReports": { "const": "Нет" }
+	"allOf": [
+		{
+			"if": {
+				"properties": {
+					"readyPromReports": { "const": "Нет" }
+				}
+			},
+			"then": {
+				"required": ["dataSourcesCount"]
+			},
+			"else": {
+				"required": []
+			}
+		},
+		{
+			"if": {
+				"properties": {
+					"modelDeveloped": { "const": "Нет" }
+				}
+			},
+			"then": {
+				"properties": {
+					"readyPromReports": {
+						"title": "Наличие готовых промышленных витрин",
+						"type": "string",
+						"enum": ["Да", "Нет"]
+					}
+				}
+			}
 		}
-	},
-	"then": {
-		"required": ["dataSourcesCount"]
-	},
-	"else": {
-		"required": []
-	},
+	],
 	"required": [
 		"modelsCount",
 		"setupComplexity",

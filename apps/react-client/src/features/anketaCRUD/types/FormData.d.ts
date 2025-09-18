@@ -8,6 +8,7 @@ export interface UncertaintyItem extends ProbabilityInfluencePair {
 }
 
 export interface IAssessmentFormData {
+	modelDeveloped?: string;
 	modelsCount: number;
 	setupComplexity: string;
 	initiativeTimeline?: string;
