@@ -41,7 +41,7 @@ export const RJSFObjectFieldTemplate = ({
 			>
 				{properties.map((element, index) => (
 					<Grid
-						size={6}
+						size={12}
 						key={index}
 						style={{ marginBottom: "10px" }}
 						data-test-id="r-j-s-f-object-field-template--Grid-1"
