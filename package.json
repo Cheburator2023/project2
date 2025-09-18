@@ -66,6 +66,7 @@
 		"@sentry/utils": "8.27.0",
 		"@xyflow/react": "12.1.1",
 		"@xyflow/system": "0.0.43",
+		"chalk": "5.5.0",
 		"ag-charts-community": "11.3.0",
 		"ag-charts-locale": "11.3.0",
 		"ag-charts-types": "11.3.0",

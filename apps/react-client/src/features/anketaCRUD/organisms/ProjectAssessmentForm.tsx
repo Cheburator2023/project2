@@ -186,7 +186,7 @@ export const ProjectAssessmentForm: React.FC<{
 				onFocus={onFocus}
 				onError={onError}
 				onBlur={onBlur}
-				templates={templates}
+				// templates={templates}
 				focusOnFirstError
 				liveValidate={liveValidate && isCreate}
 				noHtml5Validate

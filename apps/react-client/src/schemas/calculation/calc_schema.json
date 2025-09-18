@@ -321,17 +321,37 @@
 			}
 		}
 	},
-	"if": {
-		"properties": {
-			"readyPromReports": { "const": "Нет" }
+	"allOf": [
+		{
+			"if": {
+				"properties": {
+					"readyPromReports": { "const": "Нет" }
+				}
+			},
+			"then": {
+				"required": ["dataSourcesCount"]
+			},
+			"else": {
+				"required": []
+			}
+		},
+		{
+			"if": {
+				"properties": {
+					"modelDeveloped": { "const": "Нет" }
+				}
+			},
+			"then": {
+				"properties": {
+					"readyPromReports": {
+						"title": "Наличие готовых промышленных витрин",
+						"type": "string",
+						"enum": ["Да", "Нет"]
+					}
+				}
+			}
 		}
-	},
-	"then": {
-		"required": ["dataSourcesCount"]
-	},
-	"else": {
-		"required": []
-	},
+	],
 	"required": [
 		"modelsCount",
 		"setupComplexity",
