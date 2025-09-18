@@ -12,8 +12,7 @@ export class CustomLogger implements LoggerService {
 		process.env.NODE_ENV === "production" ? "K8S" : "DEV";
 	private readonly tslgClientVersion = "1.0.0";
 	private readonly risCode = "1404";
-	private readonly enableColors =
-		this.envType === "DEV" && process.stdout.isTTY; // Enable colors only in development with TTY support
+	private readonly enableColors = this.envType === "DEV";
 
 	// Define level colors only if colors are enabled and chalk is available
 	private readonly levelColors: Record<string, any>;
@@ -107,7 +106,7 @@ export class CustomLogger implements LoggerService {
 			};
 		}
 
-		if (this.enableColors && this.envType === "DEV") {
+		if (this.envType === "DEV") {
 			this.printColoredHttpLog(request, response, responseTime, logEntry);
 		} else {
 			console.log(JSON.stringify(logEntry));
@@ -149,7 +148,7 @@ export class CustomLogger implements LoggerService {
 			};
 		}
 
-		if (this.enableColors && this.envType === "DEV") {
+		if (this.envType === "DEV") {
 			this.printColoredLog(level, message, logEntry);
 		} else {
 			console.log(JSON.stringify(logEntry));

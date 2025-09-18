@@ -46,7 +46,8 @@ export const chalkProvider: Provider = {
 		try {
 			// Dynamically import chalk only in development
 			const chalk = require("chalk");
-			return chalk;
+
+			return chalk.default;
 		} catch (error) {
 			// If chalk is not available, log warning and return fallback
 			console.warn("Chalk not available, using fallback implementation");
