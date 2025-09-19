@@ -1,5 +1,33 @@
 # Semantic Versioning Changelog
 
+## [1.14.1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.14.0...v1.14.1) (2025-09-18)
+
+# [1.14.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.13.2...v1.14.0) (2025-09-18)
+
+
+### Bug Fixes
+
+* form ui/logic fixes ([fa5f657](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/fa5f6575624f91d84db4b5cc0e8050c7d937b500))
+* form ui/logic fixes ([11b4cf9](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/11b4cf9327218261e6f92d0bdf9bb6e97fc1a363))
+* fuzzy options sort fix ([de8b14c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/de8b14c0054c54fdf779ed9be1b1ddc7a4297f0d))
+* fuzzy options sort fix ([a1082df](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a1082df5f14129895754cabbec8021f47e645d22))
+* schema def values fix ([81a93b3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/81a93b33e99505b10be903d85f952015216b278f))
+
+
+### Features
+
+* new questionnaireData prop  modelDeveloped  and calc logic added ([a223841](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a22384161315224f3e76f157c8cd458cc02a22f9))
+* Добавил modelDeveloped ([5209195](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5209195214ce5a0020b8addebcb2d44c3d26f484))
+* Поправил в контроллере ([0efce09](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0efce0999fb8093ee8b4358d5a3207d9649aa264))
+
+## [1.13.2](https://git.sfera.inno.local/sumd/smart_anketa_ui/compare/v1.13.1...v1.13.2) (2025-09-15)
+
+
+### Bug Fixes
+
+* stage name fixes ([2250950](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/2250950814c0d7d23fef8f2f5d3f8b3b5dc3161a))
+* stage name fixes ([a47b6fb](https://git.sfera.inno.local/sumd/smart_anketa_ui/commit/a47b6fba271fc9701efc8770fc1c9d0eb038e968))
+
 ## [1.13.1](https://git.sfera.inno.local/sumd/smart_anketa_ui/compare/v1.13.0...v1.13.1) (2025-09-15)
 
 

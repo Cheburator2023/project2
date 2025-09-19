@@ -12,6 +12,7 @@ import { AbortInterceptor } from "./shared/interceptors/abort.interceptor";
 import { MiddlewareModule } from "./shared/middleware/middleware.module";
 import { LoggingInterceptor } from "./shared/interceptors/logging.interceptor";
 import { RetryInterceptor } from "./shared/interceptors/retry.interceptor";
+import { chalkProvider } from "./shared/providers/chalk.provider";
 
 @Module({
 	imports: [
@@ -26,6 +27,7 @@ import { RetryInterceptor } from "./shared/interceptors/retry.interceptor";
 		MiddlewareModule,
 	],
 	providers: [
+		chalkProvider,
 		CustomLogger,
 		// AuthGuard
 		{

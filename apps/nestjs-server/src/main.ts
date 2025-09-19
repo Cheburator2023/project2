@@ -11,7 +11,6 @@ import { RateLimiterMiddleware } from "./shared/middleware/rate-limiter.middlewa
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule, {
 		bodyParser: true,
-		logger: new CustomLogger(),
 	});
 
 	const rateLimiter = app.get(RateLimiterMiddleware);
