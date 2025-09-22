@@ -11,6 +11,7 @@ export class CustomLogger implements LoggerService {
     private readonly envType = process.env.NODE_ENV === "production" ? "K8S" : "DEV";
     private readonly tslgClientVersion = process.env.TSLG_CLIENT_VERSION || "1.0.0";
     private readonly risCode = process.env.RIS_CODE || "1404";
+    private readonly isProduction = process.env.NODE_ENV === "production";
 
     private tslgTransport: TSLGTransport | null = null;
 
@@ -75,19 +76,7 @@ export class CustomLogger implements LoggerService {
     }
 
     httpLog(request: Request, response: Response, responseTime: number) {
-        const logEntry: any = {
-            eventId: uuidv4(),
-            appName: this.appName,
-            level: "INFO",
-            text: `HTTP ${request.method} ${request.path}`,
-            localTime: new Date().toISOString(),
-            tslgClientVersion: this.tslgClientVersion,
-            risCode: this.risCode,
-            projectCode: this.projectCode,
-            appType: this.appType,
-            envType: this.envType,
-            PID: process.pid,
-            loggerName: "http",
+        const logData = {
             requestMethod: request.method,
             requestURI: request.path,
             requestBody: this.sanitizeBody(request.body),
@@ -98,30 +87,12 @@ export class CustomLogger implements LoggerService {
             traceId: (request.headers["x-request-id"] as string) || uuidv4(),
         };
 
-        if (this.envType === "K8S") {
-            logEntry.namespace = process.env.KUBERNETES_NAMESPACE;
-            logEntry.podName = process.env.POD_NAME;
-            logEntry.tec = {
-                podip: process.env.POD_IP,
-                nodeName: process.env.NODE_NAME,
-            };
-        }
+        const message = `HTTP ${request.method} ${request.path}`;
 
-        // Отправляем в консоль
-        console.log(JSON.stringify(logEntry));
+        this.consoleLog("INFO", message, "http", logData);
 
-        // Отправляем в TSLG если настроено
         if (this.tslgTransport) {
-            this.tslgTransport.log("INFO", `HTTP ${request.method} ${request.path}`, "http", {
-                requestMethod: request.method,
-                requestURI: request.path,
-                requestBody: this.sanitizeBody(request.body),
-                requestHeaders: this.sanitizeHeaders(request.headers),
-                responseStatus: response.statusCode,
-                requestTime: responseTime,
-                initiatorHost: request.ip,
-                traceId: (request.headers["x-request-id"] as string) || uuidv4(),
-            });
+            this.tslgTransport.log("INFO", message, "http", logData);
         }
     }
 
@@ -137,6 +108,20 @@ export class CustomLogger implements LoggerService {
             sanitizedContext = this.sanitizeData(context);
         }
 
+        this.consoleLog(level, message, sanitizedContext as string, additionalData, stack);
+
+        if (this.tslgTransport) {
+            this.tslgTransport.log(level, message, sanitizedContext as string, additionalData, stack);
+        }
+    }
+
+    private consoleLog(
+        level: string,
+        message: string,
+        context?: string,
+        additionalData?: Record<string, any>,
+        stack?: string,
+    ) {
         const logEntry: any = {
             eventId: uuidv4(),
             appName: this.appName,
@@ -149,7 +134,7 @@ export class CustomLogger implements LoggerService {
             appType: this.appType,
             envType: this.envType,
             PID: process.pid,
-            loggerName: sanitizedContext || "application",
+            loggerName: context || "application",
             ...(additionalData && this.sanitizeData(additionalData)),
         };
 
@@ -166,13 +151,7 @@ export class CustomLogger implements LoggerService {
             };
         }
 
-        // Отправляем в консоль
         console.log(JSON.stringify(logEntry));
-
-        // Отправляем в TSLG если настроено
-        if (this.tslgTransport) {
-            this.tslgTransport.log(level, message, sanitizedContext as string, additionalData, stack);
-        }
     }
 
     private cleanStack(stack: string): string {

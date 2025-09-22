@@ -5,6 +5,7 @@ export class TSLGTransport {
     private socket: net.Socket | null = null;
     private reconnectTimeout: NodeJS.Timeout | null = null;
     private lastConnectionTime: number = 0;
+    private readonly isProduction: boolean;
 
     constructor(
         private readonly options: {
@@ -25,10 +26,16 @@ export class TSLGTransport {
             connectionTTL: 2000,
             ...options,
         };
-        this.connect();
+        this.isProduction = process.env.NODE_ENV === 'production';
+
+        if (this.isProduction) {
+            this.connect();
+        }
     }
 
     private connect() {
+        if (!this.isProduction) return;
+
         this.socket = net.createConnection(
             {
                 host: this.options.host,
@@ -50,6 +57,8 @@ export class TSLGTransport {
     }
 
     private scheduleReconnect() {
+        if (!this.isProduction) return;
+
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout);
         }
@@ -60,10 +69,25 @@ export class TSLGTransport {
     }
 
     private shouldReconnect(): boolean {
+        if (!this.isProduction) return false;
         return Date.now() - this.lastConnectionTime >= this.options.connectionTTL!;
     }
 
     log(level: string, message: string, context?: string, additionalData?: Record<string, any>, stack?: string) {
+        if (!this.isProduction) {
+            const logInfo = {
+                level,
+                message: `[TSLG STUB] ${message}`,
+                context,
+                additionalData,
+                stack,
+                timestamp: new Date().toISOString()
+            };
+            console.log(JSON.stringify(logInfo));
+            return;
+        }
+
+        // В production среде отправляем в TSLG
         if (this.socket && this.socket.writable) {
             if (this.shouldReconnect()) {
                 this.socket.destroy();
@@ -146,6 +170,8 @@ export class TSLGTransport {
     }
 
     close() {
+        if (!this.isProduction) return;
+
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout);
         }
