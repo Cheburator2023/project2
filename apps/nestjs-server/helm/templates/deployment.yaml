@@ -32,12 +32,7 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           {{- end }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          env:          
-          {{- range $key, $val := .Values.env }}
-            - name: {{ $key }}
-              value: {{ $val | quote }}
-          {{- end }}
-          envFrom:
+          env:
             - name: KUBERNETES_NAMESPACE
               valueFrom:
                 fieldRef:
@@ -53,7 +48,12 @@ spec:
             - name: POD_IP              
               valueFrom:                
                 fieldRef:                  
-                  fieldPath: status.podIP
+                  fieldPath: status.podIP      
+          {{- range $key, $val := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $val | quote }}
+          {{- end }}
+          envFrom:
             - secretRef:
                 name: {{ template "smart-anketa-api.fullname" . }}-secret
           ports:
