@@ -1,394 +1,279 @@
-import { Injectable, LoggerService, Inject, Optional } from "@nestjs/common";
+import { Injectable, LoggerService } from "@nestjs/common";
 import { v4 as uuidv4 } from "uuid";
 import { Request, Response } from "express";
-import { CHALK_TOKEN, ChalkInstance } from "../providers/chalk.provider";
+import { TSLGTransport } from "../logger/tslg.transport";
 
 @Injectable()
 export class CustomLogger implements LoggerService {
-	private readonly appName = "smart-anketa-api";
-	private readonly projectCode = "ANKETA";
-	private readonly appType = "NODEJS";
-	private readonly envType =
-		process.env.NODE_ENV === "production" ? "K8S" : "DEV";
-	private readonly tslgClientVersion = "1.0.0";
-	private readonly risCode = "1404";
-	private readonly enableColors = this.envType === "DEV";
+    private readonly appName = process.env.APP_NAME || "smart-anketa-api";
+    private readonly projectCode = process.env.PROJECT_CODE || "ANKETA";
+    private readonly appType = "NODEJS";
+    private readonly envType = process.env.NODE_ENV === "production" ? "K8S" : "DEV";
+    private readonly tslgClientVersion = process.env.TSLG_CLIENT_VERSION || "1.0.0";
+    private readonly risCode = process.env.RIS_CODE || "1404";
 
-	// Define level colors only if colors are enabled and chalk is available
-	private readonly levelColors: Record<string, any>;
+    private tslgTransport: TSLGTransport | null = null;
 
-	constructor(
-		@Optional()
-		@Inject(CHALK_TOKEN)
-		private readonly chalk: ChalkInstance | null,
-	) {
-		this.levelColors =
-			this.enableColors && this.chalk
-				? {
-						INFO: this.chalk.blue,
-						ERROR: this.chalk.red,
-						WARN: this.chalk.yellow,
-						DEBUG: this.chalk.magenta,
-						VERBOSE: this.chalk.cyan,
-					}
-				: {};
-	}
+    constructor() {
+        const tslgHost = process.env.TSLG_AGENT_HOST;
+        const tslgPort = process.env.TSLG_AGENT_PORT;
 
-	log(message: string, context?: string, additionalData?: Record<string, any>) {
-		this.printLog("INFO", message, context, additionalData);
-	}
+        if (tslgHost && tslgPort) {
+            this.tslgTransport = new TSLGTransport({
+                host: tslgHost,
+                port: parseInt(tslgPort, 10),
+                appName: this.appName,
+                projectCode: this.projectCode,
+                risCode: this.risCode,
+                appType: this.appType,
+                envType: this.envType,
+                tslgClientVersion: this.tslgClientVersion,
+                reconnectionDelay: parseInt(process.env.TSLG_RECONNECTION_DELAY_MS || '1000', 10),
+                connectionTTL: parseInt(process.env.TSLG_CONNECTION_TTL_MS || '2000', 10),
+            });
+        }
+    }
 
-	error(
-		message: string,
-		stack: string,
-		context?: string,
-		additionalData?: Record<string, any>,
-	) {
-		this.printLog("ERROR", message, context, {
-			...additionalData,
-			stack: this.cleanStack(stack),
-		});
-	}
+    log(message: string, context?: string, additionalData?: Record<string, any>) {
+        this.printLog("INFO", message, context, additionalData);
+    }
 
-	warn(
-		message: string,
-		context?: string,
-		additionalData?: Record<string, any>,
-	) {
-		this.printLog("WARN", message, context, additionalData);
-	}
+    error(
+        message: string,
+        stack: string,
+        context?: string,
+        additionalData?: Record<string, any>,
+    ) {
+        this.printLog("ERROR", message, context, {
+            ...additionalData,
+            stack: this.cleanStack(stack),
+        }, stack);
+    }
 
-	debug(
-		message: string,
-		context?: string,
-		additionalData?: Record<string, any>,
-	) {
-		this.printLog("DEBUG", message, context, additionalData);
-	}
+    warn(
+        message: string,
+        context?: string,
+        additionalData?: Record<string, any>,
+    ) {
+        this.printLog("WARN", message, context, additionalData);
+    }
 
-	verbose(
-		message: string,
-		context?: string,
-		additionalData?: Record<string, any>,
-	) {
-		this.printLog("VERBOSE", message, context, additionalData);
-	}
+    debug(
+        message: string,
+        context?: string,
+        additionalData?: Record<string, any>,
+    ) {
+        this.printLog("DEBUG", message, context, additionalData);
+    }
 
-	httpLog(request: Request, response: Response, responseTime: number) {
-		const logEntry: any = {
-			eventId: uuidv4(),
-			appName: this.appName,
-			level: "INFO",
-			text: `HTTP ${request.method} ${request.path}`,
-			localTime: new Date().toISOString(),
-			tslgClientVersion: this.tslgClientVersion,
-			risCode: this.risCode,
-			projectCode: this.projectCode,
-			appType: this.appType,
-			envType: this.envType,
-			PID: process.pid,
-			loggerName: "http",
-			requestMethod: request.method,
-			requestURI: request.path,
-			requestBody: this.sanitizeBody(request.body),
-			requestHeaders: this.sanitizeHeaders(request.headers),
-			responseStatus: response.statusCode,
-			requestTime: responseTime,
-			initiatorHost: request.ip,
-			traceId: (request.headers["x-request-id"] as string) || uuidv4(),
-		};
+    verbose(
+        message: string,
+        context?: string,
+        additionalData?: Record<string, any>,
+    ) {
+        this.printLog("VERBOSE", message, context, additionalData);
+    }
 
-		if (this.envType === "K8S") {
-			logEntry.namespace = process.env.KUBERNETES_NAMESPACE;
-			logEntry.tec = {
-				podip: process.env.POD_IP,
-				nodeName: process.env.NODE_NAME,
-			};
-		}
+    httpLog(request: Request, response: Response, responseTime: number) {
+        const logEntry: any = {
+            eventId: uuidv4(),
+            appName: this.appName,
+            level: "INFO",
+            text: `HTTP ${request.method} ${request.path}`,
+            localTime: new Date().toISOString(),
+            tslgClientVersion: this.tslgClientVersion,
+            risCode: this.risCode,
+            projectCode: this.projectCode,
+            appType: this.appType,
+            envType: this.envType,
+            PID: process.pid,
+            loggerName: "http",
+            requestMethod: request.method,
+            requestURI: request.path,
+            requestBody: this.sanitizeBody(request.body),
+            requestHeaders: this.sanitizeHeaders(request.headers),
+            responseStatus: response.statusCode,
+            requestTime: responseTime,
+            initiatorHost: request.ip,
+            traceId: (request.headers["x-request-id"] as string) || uuidv4(),
+        };
 
-		if (this.envType === "DEV") {
-			this.printColoredHttpLog(request, response, responseTime, logEntry);
-		} else {
-			console.log(JSON.stringify(logEntry));
-		}
-	}
+        if (this.envType === "K8S") {
+            logEntry.namespace = process.env.KUBERNETES_NAMESPACE;
+            logEntry.podName = process.env.POD_NAME;
+            logEntry.tec = {
+                podip: process.env.POD_IP,
+                nodeName: process.env.NODE_NAME,
+            };
+        }
 
-	private printLog(
-		level: string,
-		message: string,
-		context?: string,
-		additionalData?: Record<string, any>,
-	) {
-		let sanitizedContext = context;
-		if (context && typeof context === "object") {
-			sanitizedContext = this.sanitizeData(context);
-		}
+        // Отправляем в консоль
+        console.log(JSON.stringify(logEntry));
 
-		const logEntry: any = {
-			eventId: uuidv4(),
-			appName: this.appName,
-			level,
-			text: message,
-			localTime: new Date().toISOString(),
-			tslgClientVersion: this.tslgClientVersion,
-			risCode: this.risCode,
-			projectCode: this.projectCode,
-			appType: this.appType,
-			envType: this.envType,
-			PID: process.pid,
-			loggerName: sanitizedContext || "application",
-			...(additionalData && this.sanitizeData(additionalData)),
-		};
+        // Отправляем в TSLG если настроено
+        if (this.tslgTransport) {
+            this.tslgTransport.log("INFO", `HTTP ${request.method} ${request.path}`, "http", {
+                requestMethod: request.method,
+                requestURI: request.path,
+                requestBody: this.sanitizeBody(request.body),
+                requestHeaders: this.sanitizeHeaders(request.headers),
+                responseStatus: response.statusCode,
+                requestTime: responseTime,
+                initiatorHost: request.ip,
+                traceId: (request.headers["x-request-id"] as string) || uuidv4(),
+            });
+        }
+    }
 
-		if (this.envType === "K8S") {
-			logEntry.namespace = process.env.KUBERNETES_NAMESPACE;
-			logEntry.tec = {
-				podip: process.env.POD_IP,
-				nodeName: process.env.NODE_NAME,
-			};
-		}
+    private printLog(
+        level: string,
+        message: string,
+        context?: string,
+        additionalData?: Record<string, any>,
+        stack?: string,
+    ) {
+        let sanitizedContext = context;
+        if (context && typeof context === "object") {
+            sanitizedContext = this.sanitizeData(context);
+        }
 
-		if (this.envType === "DEV") {
-			this.printColoredLog(level, message, logEntry);
-		} else {
-			console.log(JSON.stringify(logEntry));
-		}
-	}
+        const logEntry: any = {
+            eventId: uuidv4(),
+            appName: this.appName,
+            level,
+            text: message,
+            localTime: new Date().toISOString(),
+            tslgClientVersion: this.tslgClientVersion,
+            risCode: this.risCode,
+            projectCode: this.projectCode,
+            appType: this.appType,
+            envType: this.envType,
+            PID: process.pid,
+            loggerName: sanitizedContext || "application",
+            ...(additionalData && this.sanitizeData(additionalData)),
+        };
 
-	private cleanStack(stack: string): string {
-		return stack
-			?.split("\n")
-			?.map((line) => line.trim())
-			?.join("\n");
-	}
+        if (stack) {
+            logEntry.stack = this.cleanStack(stack);
+        }
 
-	private sanitizeBody(body: any): string {
-		if (!body) return "";
-		try {
-			const sanitized = { ...body };
+        if (this.envType === "K8S") {
+            logEntry.namespace = process.env.KUBERNETES_NAMESPACE;
+            logEntry.podName = process.env.POD_NAME;
+            logEntry.tec = {
+                podip: process.env.POD_IP,
+                nodeName: process.env.NODE_NAME,
+            };
+        }
 
-			// Санитизация чувствительных данных
-			if (sanitized.password) sanitized.password = "*****";
-			if (sanitized.newPassword) sanitized.newPassword = "*****";
-			if (sanitized.currentPassword) sanitized.currentPassword = "*****";
-			if (sanitized.token) sanitized.token = "*****";
-			if (sanitized.accessToken) sanitized.accessToken = "*****";
-			if (sanitized.refreshToken) sanitized.refreshToken = "*****";
-			if (sanitized.jwt) sanitized.jwt = "*****";
-			if (sanitized.authorization) {
-				// Обработка заголовка Authorization: Bearer <token>
-				if (sanitized.authorization.startsWith("Bearer ")) {
-					sanitized.authorization = "Bearer *****";
-				} else {
-					sanitized.authorization = "*****";
-				}
-			}
+        // Отправляем в консоль
+        console.log(JSON.stringify(logEntry));
 
-			return JSON.stringify(sanitized);
-		} catch {
-			return "[Non-serializable body]";
-		}
-	}
+        // Отправляем в TSLG если настроено
+        if (this.tslgTransport) {
+            this.tslgTransport.log(level, message, sanitizedContext as string, additionalData, stack);
+        }
+    }
 
-	private sanitizeHeaders(headers: any): any {
-		if (!headers) return {};
+    private cleanStack(stack: string): string {
+        return stack
+            ?.split("\n")
+            ?.map((line) => line.trim())
+            ?.join("\n");
+    }
 
-		const sanitized = { ...headers };
-		if (sanitized.authorization) {
-			sanitized.authorization = "*****";
-		}
-		if (sanitized["x-access-token"]) {
-			sanitized["x-access-token"] = "*****";
-		}
-		if (sanitized["x-refresh-token"]) {
-			sanitized["x-refresh-token"] = "*****";
-		}
+    private sanitizeBody(body: any): string {
+        if (!body) return "";
+        try {
+            const sanitized = { ...body };
 
-		return sanitized;
-	}
+            // Санитизация чувствительных данных
+            if (sanitized.password) sanitized.password = "*****";
+            if (sanitized.newPassword) sanitized.newPassword = "*****";
+            if (sanitized.currentPassword) sanitized.currentPassword = "*****";
+            if (sanitized.token) sanitized.token = "*****";
+            if (sanitized.accessToken) sanitized.accessToken = "*****";
+            if (sanitized.refreshToken) sanitized.refreshToken = "*****";
+            if (sanitized.jwt) sanitized.jwt = "*****";
+            if (sanitized.authorization) {
+                if (sanitized.authorization.startsWith("Bearer ")) {
+                    sanitized.authorization = "Bearer *****";
+                } else {
+                    sanitized.authorization = "*****";
+                }
+            }
 
-	private sanitizeData(data: any): any {
-		if (typeof data !== "object" || data === null) {
-			if (typeof data === "string" && this.isJwtToken(data)) {
-				return "*****";
-			}
-			return data;
-		}
+            return JSON.stringify(sanitized);
+        } catch {
+            return "[Non-serializable body]";
+        }
+    }
 
-		if (Array.isArray(data)) {
-			return data.map((item) => this.sanitizeData(item));
-		}
+    private sanitizeHeaders(headers: any): any {
+        if (!headers) return {};
 
-		const sanitized = { ...data };
-		const sensitiveFields = [
-			"password",
-			"token",
-			"jwt",
-			"accessToken",
-			"refreshToken",
-			"authorization",
-			"secret",
-			"apiKey",
-			"credentials",
-		];
+        const sanitized = { ...headers };
+        if (sanitized.authorization) {
+            sanitized.authorization = "*****";
+        }
+        if (sanitized["x-access-token"]) {
+            sanitized["x-access-token"] = "*****";
+        }
+        if (sanitized["x-refresh-token"]) {
+            sanitized["x-refresh-token"] = "*****";
+        }
 
-		for (const [key, value] of Object.entries(sanitized)) {
-			if (typeof value === "string" && this.isJwtToken(value)) {
-				sanitized[key] = "*****";
-				continue;
-			}
+        return sanitized;
+    }
 
-			if (sensitiveFields.includes(key.toLowerCase())) {
-				sanitized[key] = "*****";
-			} else {
-				sanitized[key] = this.sanitizeData(value);
-			}
-		}
+    private sanitizeData(data: any): any {
+        if (typeof data !== "object" || data === null) {
+            if (typeof data === "string" && this.isJwtToken(data)) {
+                return "*****";
+            }
+            return data;
+        }
 
-		return sanitized;
-	}
+        if (Array.isArray(data)) {
+            return data.map((item) => this.sanitizeData(item));
+        }
 
-	private isJwtToken(value: string): boolean {
-		return typeof value === "string" && value.split(".").length === 3;
-	}
+        const sanitized = { ...data };
+        const sensitiveFields = [
+            "password",
+            "token",
+            "jwt",
+            "accessToken",
+            "refreshToken",
+            "authorization",
+            "secret",
+            "apiKey",
+            "credentials",
+        ];
 
-	/**
-	 * Pretty prints JSON data with proper indentation and colors
-	 */
-	private prettyPrintJson(data: any, indent = 2): string {
-		try {
-			return JSON.stringify(data, null, indent);
-		} catch {
-			return "[Non-serializable data]";
-		}
-	}
+        for (const [key, value] of Object.entries(sanitized)) {
+            if (typeof value === "string" && this.isJwtToken(value)) {
+                sanitized[key] = "*****";
+                continue;
+            }
 
-	/**
-	 * Prints colored and formatted log output for development environment
-	 */
-	private printColoredLog(level: string, message: string, logEntry: any): void {
-		if (!this.chalk) {
-			// Fallback to plain text if chalk is not available
-			console.log(JSON.stringify(logEntry));
-			return;
-		}
+            if (sensitiveFields.includes(key.toLowerCase())) {
+                sanitized[key] = "*****";
+            } else {
+                sanitized[key] = this.sanitizeData(value);
+            }
+        }
 
-		const timestamp = this.chalk.gray(new Date().toISOString());
-		const levelColor = this.levelColors[level] || this.chalk.white;
-		const coloredLevel = levelColor.bold
-			? levelColor.bold(`[${level}]`)
-			: levelColor(`[${level}]`);
-		const context = logEntry.loggerName
-			? this.chalk.green(`[${logEntry.loggerName}]`)
-			: "";
-		const coloredMessage = levelColor(message);
+        return sanitized;
+    }
 
-		// Main log line
-		console.log(`${timestamp} ${coloredLevel} ${context} ${coloredMessage}`);
+    private isJwtToken(value: string): boolean {
+        return typeof value === "string" && value.split(".").length === 3;
+    }
 
-		// Additional data formatting
-		const additionalData = { ...logEntry };
-		delete additionalData.level;
-		delete additionalData.text;
-		delete additionalData.localTime;
-		delete additionalData.loggerName;
-
-		// Show additional data if present
-		if (Object.keys(additionalData).length > 0) {
-			console.log(this.chalk.gray("📋 Additional Data:"));
-			console.log(this.chalk.gray(this.prettyPrintJson(additionalData)));
-		}
-
-		// Add separator for better readability
-		if (level === "ERROR") {
-			console.log(this.chalk.red("─".repeat(80)));
-		}
-	}
-
-	/**
-	 * Prints colored and formatted HTTP log output for development environment
-	 */
-	private printColoredHttpLog(
-		request: Request,
-		response: Response,
-		responseTime: number,
-		logEntry: any,
-	): void {
-		if (!this.chalk) {
-			// Fallback to plain text if chalk is not available
-			console.log(JSON.stringify(logEntry));
-			return;
-		}
-
-		const timestamp = this.chalk.gray(new Date().toISOString());
-		const method = this.getMethodColor(request.method)(request.method);
-		const statusColor = this.getStatusColor(response.statusCode);
-		const status = statusColor(response.statusCode.toString());
-		const path = this.chalk.white(request.path || request.url || "");
-		const time = this.chalk.yellow(`${responseTime}ms`);
-		const ip = this.chalk.cyan(request.ip || "unknown");
-
-		// Main HTTP log line
-		const httpLabel = this.chalk.blue.bold
-			? this.chalk.blue.bold("[HTTP]")
-			: this.chalk.blue("[HTTP]");
-		console.log(
-			`${timestamp} ${httpLabel} ${method} ${path} ${status} ${time} - ${ip}`,
-		);
-
-		// Request details if present
-		if (request.body && Object.keys(request.body).length > 0) {
-			console.log(this.chalk.gray("📤 Request Body:"));
-			console.log(this.chalk.gray(this.prettyPrintJson(logEntry.requestBody)));
-		}
-
-		// Response details for errors
-		if (response.statusCode >= 400) {
-			console.log(this.chalk.red("─".repeat(80)));
-		}
-	}
-
-	/**
-	 * Get color for HTTP method
-	 */
-	private getMethodColor(method: string) {
-		if (!this.chalk) {
-			return (text: string) => text; // Return identity function if chalk not available
-		}
-
-		switch (method.toUpperCase()) {
-			case "GET":
-				return this.chalk.green;
-			case "POST":
-				return this.chalk.blue;
-			case "PUT":
-				return this.chalk.yellow;
-			case "DELETE":
-				return this.chalk.red;
-			case "PATCH":
-				return this.chalk.magenta;
-			default:
-				return this.chalk.white;
-		}
-	}
-
-	/**
-	 * Get color for HTTP status code
-	 */
-	private getStatusColor(statusCode: number) {
-		if (!this.chalk) {
-			return (text: string) => text; // Return identity function if chalk not available
-		}
-
-		if (statusCode >= 200 && statusCode < 300) {
-			return this.chalk.green;
-		} else if (statusCode >= 300 && statusCode < 400) {
-			return this.chalk.yellow;
-		} else if (statusCode >= 400 && statusCode < 500) {
-			return this.chalk.red;
-		} else if (statusCode >= 500) {
-			return this.chalk.red.bold || this.chalk.red;
-		}
-		return this.chalk.white;
-	}
+    onApplicationShutdown() {
+        if (this.tslgTransport) {
+            this.tslgTransport.close();
+        }
+    }
 }
