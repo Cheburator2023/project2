@@ -9,15 +9,18 @@ import { CustomLogger } from "./shared/services/logger.service";
 import { RateLimiterMiddleware } from "./shared/middleware/rate-limiter.middleware";
 
 async function bootstrap() {
-	const app = await NestFactory.create(AppModule, {
-		bodyParser: true,
-	});
+    const customLogger = new CustomLogger();
+
+    const app = await NestFactory.create(AppModule, {
+        bodyParser: true,
+        bufferLogs: true,
+        logger: customLogger,
+    });
 
 	const rateLimiter = app.get(RateLimiterMiddleware);
 	app.use(rateLimiter.use.bind(rateLimiter));
 
-	const customLogger = app.get(CustomLogger);
-	app.useGlobalInterceptors(new LoggingInterceptor(customLogger));
+    app.useGlobalInterceptors(new LoggingInterceptor(customLogger));
 
 	app.enableCors({
 		origin: "*",
@@ -84,8 +87,20 @@ async function bootstrap() {
 		res.send(document);
 	});
 
-	const port = process.env.PORT || 3000;
-	await app.listen(port);
-	logger.log(`🔄 Application is running on port ${port}`);
+    const port = process.env.PORT || 3000;
+    await app.listen(port);
+    logger.log(`🔄 Application is running on port ${port}`);
+
+    process.on('SIGTERM', async () => {
+        customLogger.onApplicationShutdown();
+        await app.close();
+        process.exit(0);
+    });
+
+    process.on('SIGINT', async () => {
+        customLogger.onApplicationShutdown();
+        await app.close();
+        process.exit(0);
+    });
 }
 bootstrap();
