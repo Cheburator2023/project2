@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+# [1.15.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.14.2...v1.15.0) (2025-09-23)
+
+
+### Features
+
+* Добавил заглушку ([dcb41d3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/dcb41d30cee5183c0c6d2fd745acd245c49b4801))
+* Добавил подключение к агенту TSLG ([3e4d683](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3e4d6832cf0210659edbe8a7c939217b266911c0))
+
 ## [1.14.2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.14.1...v1.14.2) (2025-09-21)
 
 
