@@ -133,6 +133,72 @@ describe("QuestionnaireService", () => {
 			const result = await service.getFullQuestionnaire();
 			expect(result.dictionaries.test_item[0].coefficient).toBe(1.0);
 		});
+
+		it("handles 'number' fieldType using item-level coefficient", async () => {
+			const numberItem = {
+				...testQuestionnaireItem,
+				fieldType: "number",
+				code: "modelsCount",
+				description: "models",
+			};
+			jest.spyOn(questionnaireItemRepo, "find").mockResolvedValue([numberItem]);
+			jest.spyOn(coefficientRepo, "find").mockResolvedValue([
+				{
+					...testCoefficient,
+					code: "modelsCount",
+					baseValue: 1.5,
+					conditions: { formula: "x*2" } as any,
+				},
+			]);
+
+			const result = await service.getFullQuestionnaire();
+			expect(result.dictionaries.modelsCount[0].coefficient).toBe(1.5);
+			expect(result.dictionaries.modelsCount[0].formula).toBe("x*2");
+		});
+
+		it("falls back to {value:null,hint} for unknown fieldType", async () => {
+			const otherItem = {
+				...testQuestionnaireItem,
+				fieldType: "text",
+				code: "comment",
+				description: "free comment",
+			};
+			jest.spyOn(questionnaireItemRepo, "find").mockResolvedValue([otherItem]);
+			jest.spyOn(coefficientRepo, "find").mockResolvedValue([]);
+
+			const result = await service.getFullQuestionnaire();
+			expect(result.dictionaries.comment).toEqual([
+				{ value: null, hint: "free comment" },
+			]);
+		});
+
+		it("returns [] for risk items when no questionnaire item matches", async () => {
+			const riskItem = {
+				...testQuestionnaireItem,
+				code: "generalUncertainty",
+				fieldType: "risk",
+				options: [{ value: "5.1", label: "Risk 1" }],
+			};
+			jest.spyOn(questionnaireItemRepo, "find").mockResolvedValue([riskItem]);
+			jest.spyOn(questionnaireItemRepo, "findOne").mockResolvedValueOnce(null);
+
+			const result = await service.getFullQuestionnaire();
+			expect(result.dictionaries.generalUncertainty).toEqual([]);
+		});
+
+		it("returns [] for select item when options are not iterable", async () => {
+			const broken = {
+				...testQuestionnaireItem,
+				fieldType: "select",
+				code: "broken",
+				options: { not: "array" } as any,
+			};
+			jest.spyOn(questionnaireItemRepo, "find").mockResolvedValue([broken]);
+			jest.spyOn(coefficientRepo, "find").mockResolvedValue([]);
+
+			const result = await service.getFullQuestionnaire();
+			expect(result.dictionaries.broken).toEqual([]);
+		});
 	});
 
 	describe("getQuestionnaireItemByCode", () => {

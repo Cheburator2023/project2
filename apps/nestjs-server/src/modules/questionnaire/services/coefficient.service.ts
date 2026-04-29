@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { FindOptionsWhere, Repository } from "typeorm";
 import { CoefficientEntity } from "../entities/coefficient.entity";
@@ -31,7 +31,9 @@ export class CoefficientService {
 		const coefficient = await this.findByCode(cleanCode);
 
 		if (!coefficient) {
-			throw new Error(`Coefficient with code ${cleanCode} not found`);
+			throw new NotFoundException(
+				`Coefficient with code ${cleanCode} not found`,
+			);
 		}
 
 		if (coefficient.conditions) {
@@ -51,7 +53,7 @@ export class CoefficientService {
 						value.toString(),
 					);
 
-					// biome-ignore lint/security/noGlobalEval: <explanation>
+					// biome-ignore lint/security/noGlobalEval: формула коэффициента хранится в БД, eval необходим для её вычисления
 					return eval(formula);
 				} catch {
 					return coefficient.baseValue;

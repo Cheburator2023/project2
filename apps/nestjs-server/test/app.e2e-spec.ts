@@ -3,6 +3,11 @@ import { Test, TestingModule } from "@nestjs/testing";
 import * as request from "supertest";
 import { AppModule } from "../src/app.module";
 
+/**
+ * E2e-тест AppModule.
+ * Проверяет запуск приложения с полным AppModule (реальная БД через supertest).
+ * Использует beforeEach/afterEach (перезапуск приложения на каждый тест).
+ */
 describe("AppController (e2e)", () => {
 	let app: INestApplication;
 
@@ -19,10 +24,12 @@ describe("AppController (e2e)", () => {
 		await app.close();
 	});
 
-	it("/ (GET)", () => {
+	it("/questionnaire (GET) should return questionnaire data", () => {
 		return request(app.getHttpServer())
-			.get("/")
+			.get("/questionnaire")
 			.expect(200)
-			.expect("Hello World!");
+			.expect((res) => {
+				expect(res.body).toBeDefined();
+			});
 	});
 });

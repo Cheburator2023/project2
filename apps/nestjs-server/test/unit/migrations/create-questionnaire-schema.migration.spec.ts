@@ -28,9 +28,13 @@ describe("CreateQuestionnaireSchema1718651234568", () => {
 			);
 			expect(queries[1]).toContain("CREATE TABLE IF NOT EXISTS coefficient");
 			expect(queries[2]).toContain("CREATE TABLE IF NOT EXISTS stream_average");
-			expect(queries[3]).toContain("INSERT INTO questionnaire_item");
-			expect(queries[4]).toContain("INSERT INTO coefficient");
-			expect(queries[5]).toContain("INSERT INTO stream_average");
+			expect(queries[3]).toContain(
+				"CREATE TABLE IF NOT EXISTS artefact_values",
+			);
+			expect(queries[4]).toContain("INSERT INTO questionnaire_item");
+			expect(queries[5]).toContain("INSERT INTO coefficient");
+			expect(queries[6]).toContain("INSERT INTO stream_average");
+			expect(queries[7]).toContain("INSERT INTO artefact_values");
 		});
 	});
 
@@ -45,6 +49,9 @@ describe("CreateQuestionnaireSchema1718651234568", () => {
 			);
 			expect(queryRunner.queries[2]).toContain(
 				"DROP TABLE IF EXISTS questionnaire_item",
+			);
+			expect(queryRunner.queries[3]).toContain(
+				"DROP TABLE IF EXISTS artefact_values",
 			);
 		});
 	});

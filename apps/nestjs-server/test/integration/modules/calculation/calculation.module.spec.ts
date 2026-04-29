@@ -1,36 +1,46 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { Calculation } from "../../../../src/modules/calculation/entities/calculation.entity";
+import { getRepositoryToken } from "@nestjs/typeorm";
 import { CalculationModule } from "../../../../src/modules/calculation/calculation.module";
+import { CalculationService } from "../../../../src/modules/calculation/services/calculation.service";
+import { ExcelExportService } from "../../../../src/modules/calculation/services/excel-export.service";
+import { InMemoryFilterService } from "../../../../src/modules/calculation/services/in-memory-filter.service";
+import { AgGridFilterService } from "../../../../src/modules/calculation/services/ag-grid-filter.service";
+import { CalculationController } from "../../../../src/modules/calculation/controllers/calculation.controller";
+import { Calculation } from "../../../../src/modules/calculation/entities/calculation.entity";
 
-describe("CalculationModule", () => {
+describe("CalculationModule (wiring)", () => {
 	let module: TestingModule;
 
 	beforeAll(async () => {
 		module = await Test.createTestingModule({
-			imports: [
-				TypeOrmModule.forRoot({
-					type: "sqlite",
-					database: ":memory:",
-					entities: [Calculation],
-					synchronize: true,
-				}),
-				CalculationModule,
-			],
-		}).compile();
+			imports: [CalculationModule],
+		})
+			.overrideProvider(getRepositoryToken(Calculation))
+			.useValue({})
+			.compile();
 	});
 
-	it("should be defined", () => {
-		expect(module).toBeDefined();
+	afterAll(async () => {
+		await module.close();
 	});
 
-	it("should have CalculationService", () => {
-		const service = module.get("CalculationService");
-		expect(service).toBeDefined();
+	it("registers CalculationService", () => {
+		expect(module.get(CalculationService)).toBeDefined();
 	});
 
-	it("should have CalculationController", () => {
-		const controller = module.get("CalculationController");
-		expect(controller).toBeDefined();
+	it("registers ExcelExportService", () => {
+		expect(module.get(ExcelExportService)).toBeDefined();
+	});
+
+	it("registers InMemoryFilterService", () => {
+		expect(module.get(InMemoryFilterService)).toBeDefined();
+	});
+
+	it("registers AgGridFilterService", () => {
+		expect(module.get(AgGridFilterService)).toBeDefined();
+	});
+
+	it("registers CalculationController", () => {
+		expect(module.get(CalculationController)).toBeDefined();
 	});
 });

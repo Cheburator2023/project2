@@ -1,7 +1,6 @@
 # folders
-
 node_modules
-\*\*/node_modules
+**/node_modules
 test
 .github
 .husky
@@ -9,20 +8,17 @@ test
 .turbo
 .vercel
 
-# production
-
+# production artifacts
 build
 dist
 logs
-\*.tsbuildinfo
+**/*.tsbuildinfo
 
 # testing
-
 coverage
 .nyc_output
 
 # misc
-
 .eslintrc
 .eslintrc.js
 .eslintignore
@@ -30,10 +26,11 @@ coverage
 .gitignore
 .prettierrc
 .prettierignore
-_.log
-_.md
-Dockerfile
+**/*.log
 
-# README is not ignored, but all other .md files are ignored.
+# Документация на русском (llm/, v2_docs/) не нужна в образе
+llm/
+**/v2_docs/
 
+# README не исключаем — он нужен для контекста и некоторых тулов.
 !README.md

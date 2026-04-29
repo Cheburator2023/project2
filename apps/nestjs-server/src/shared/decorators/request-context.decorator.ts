@@ -6,17 +6,20 @@ export interface RequestContext {
 	abortController: AbortController;
 }
 
-export const ReqContext = createParamDecorator(
-	(_data: unknown, ctx: ExecutionContext): RequestContext => {
-		const request = ctx.switchToHttp().getRequest<Request>();
+export const reqContextFactory = (
+	_data: unknown,
+	ctx: ExecutionContext,
+): RequestContext => {
+	const request = ctx.switchToHttp().getRequest<Request>();
 
-		if (!request.context) {
-			request.context = {
-				requestId: Math.random().toString(36).substring(2, 9),
-				abortController: new AbortController(),
-			};
-		}
+	if (!request.context) {
+		request.context = {
+			requestId: Math.random().toString(36).substring(2, 9),
+			abortController: new AbortController(),
+		};
+	}
 
-		return request.context as RequestContext;
-	},
-);
+	return request.context as RequestContext;
+};
+
+export const ReqContext = createParamDecorator(reqContextFactory);

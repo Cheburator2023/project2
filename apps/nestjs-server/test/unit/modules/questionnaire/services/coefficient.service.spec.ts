@@ -5,6 +5,11 @@ import { testCoefficient } from "../../../../test-data";
 import { CoefficientEntity } from "../../../../../src/modules/questionnaire/entities/coefficient.entity";
 import { CoefficientService } from "../../../../../src/modules/questionnaire/services/coefficient.service";
 
+/**
+ * Unit-тесты CoefficientService.
+ * Репозиторий TypeORM заменён моком.
+ * Проверяем поиск, очистку кода от кавычек, вычисление значений через условия/формулы/дефолт, ошибки.
+ */
 describe("CoefficientService", () => {
 	let service: CoefficientService;
 	let repository: Repository<CoefficientEntity>;
@@ -30,6 +35,9 @@ describe("CoefficientService", () => {
 		expect(service).toBeDefined();
 	});
 
+	/**
+	 * findAll() — возвращает все активные коэффициенты (isActive = true).
+	 */
 	describe("findAll", () => {
 		it("should return all active coefficients", async () => {
 			const result: CoefficientEntity[] = [testCoefficient];
@@ -42,6 +50,10 @@ describe("CoefficientService", () => {
 		});
 	});
 
+	/**
+	 * findByCode() — поиск коэффициента по коду.
+	 * Очищает кавычки сначала и в конце строки перед запросом.
+	 */
 	describe("findByCode", () => {
 		it("should return coefficient by code", async () => {
 			const code = "test";
@@ -67,6 +79,11 @@ describe("CoefficientService", () => {
 		});
 	});
 
+	/**
+	 * getCoefficientValue() — вычисление значения коэффициента.
+	 * Логика: conditions[inputValue] → conditions.default → formula → baseValue.
+	 * Если коэффициент не найден — NotFoundException.
+	 */
 	describe("getCoefficientValue", () => {
 		it("should return base value if no conditions", async () => {
 			const code = "test";
@@ -83,6 +100,7 @@ describe("CoefficientService", () => {
 			expect(await service.getCoefficientValue(code)).toBe(1.5);
 		});
 
+		// Приоритет 1: conditions[inputValue]
 		it("should return value from conditions by input", async () => {
 			const code = "test";
 			const inputValue = "special_case";
@@ -98,6 +116,60 @@ describe("CoefficientService", () => {
 
 			jest.spyOn(service, "findByCode").mockResolvedValue(coefficient);
 			expect(await service.getCoefficientValue(code, inputValue)).toBe(3.0);
+		});
+
+		// Приоритет 2: conditions.default при отсутствии inputValue
+		it("returns conditions.default when inputValue is missing", async () => {
+			jest.spyOn(service, "findByCode").mockResolvedValue({
+				...testCoefficient,
+				conditions: { default: 7 } as any,
+			});
+			expect(await service.getCoefficientValue("test")).toBe(7);
+		});
+
+		// Приоритет 3: вычисление formula через eval (value подставляется из inputValue)
+		it("evaluates formula with substituted value", async () => {
+			jest.spyOn(service, "findByCode").mockResolvedValue({
+				...testCoefficient,
+				conditions: { formula: "value*2+1" } as any,
+				baseValue: 0,
+			});
+			expect(await service.getCoefficientValue("test", "5")).toBe(11);
+		});
+
+		// Если formula невалидна — фоллбэк на baseValue
+		it("falls back to baseValue when formula throws", async () => {
+			jest.spyOn(service, "findByCode").mockResolvedValue({
+				...testCoefficient,
+				conditions: { formula: "value+(((" } as any,
+				baseValue: 9,
+			});
+			expect(await service.getCoefficientValue("test", "1")).toBe(9);
+		});
+
+		it("returns baseValue when conditions object is empty", async () => {
+			jest.spyOn(service, "findByCode").mockResolvedValue({
+				...testCoefficient,
+				conditions: {} as any,
+				baseValue: 4,
+			});
+			expect(await service.getCoefficientValue("test")).toBe(4);
+		});
+
+		it("throws NotFoundException when coefficient not found", async () => {
+			jest.spyOn(service, "findByCode").mockResolvedValue(null);
+			await expect(service.getCoefficientValue("missing")).rejects.toThrow(
+				"Coefficient with code missing not found",
+			);
+		});
+
+		it("strips outer quotes from passed code", async () => {
+			const spy = jest.spyOn(service, "findByCode").mockResolvedValue({
+				...testCoefficient,
+				conditions: { default: 1 } as any,
+			});
+			await service.getCoefficientValue('"q"');
+			expect(spy).toHaveBeenCalledWith("q");
 		});
 	});
 });

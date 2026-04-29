@@ -5,7 +5,7 @@ import {
 	ManyToOne,
 	PrimaryGeneratedColumn,
 } from "typeorm";
-import { CalculationQuestionnaireDataDto } from "../dto/response/calculation-response.dto";
+import type { CalculationQuestionnaireDataDto } from "../dto/response/calculation-response.dto";
 
 export enum CalculationStatus {
 	ACTIVE = "Активная",
@@ -77,10 +77,10 @@ export class Calculation {
 					}));
 				}
 
-                if (value && !value.hasOwnProperty('modelDeveloped')) {
-                    value.modelDeveloped = "Нет"; // значение по умолчанию
-                }
-                
+				if (value && !Object.hasOwn(value, "modelDeveloped")) {
+					value.modelDeveloped = "Нет"; // значение по умолчанию
+				}
+
 				return value as CalculationQuestionnaireDataDto;
 			},
 		},

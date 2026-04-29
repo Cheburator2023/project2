@@ -16,10 +16,14 @@
 		"forceConsistentCasingInFileNames": true,
 		"noImplicitAny": false,
 		"strictBindCallApply": false,
-		"typeRoots": ["node_modules/@types", "./src/shared/types"],
+		"typeRoots": [
+			"node_modules/@types",
+			"../../node_modules/@types",
+			"./src/shared/types"
+		],
 		"noFallthroughCasesInSwitch": false,
 		"skipLibCheck": true,
-		"types": [],
+		"types": ["jest", "node"],
 		"skipDefaultLibCheck": true
 	}
 }

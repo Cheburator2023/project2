@@ -1,59 +1,55 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { TypeOrmModule } from "@nestjs/typeorm";
+import { getRepositoryToken } from "@nestjs/typeorm";
 import { QuestionnaireModule } from "../../../../src/modules/questionnaire/questionnaire.module";
+import { QuestionnaireService } from "../../../../src/modules/questionnaire/services/questionnaire.service";
+import { CoefficientService } from "../../../../src/modules/questionnaire/services/coefficient.service";
+import { ReferenceDataService } from "../../../../src/modules/questionnaire/services/reference-data.service";
+import { QuestionnaireController } from "../../../../src/modules/questionnaire/controllers/questionnaire.controller";
+import { CoefficientController } from "../../../../src/modules/questionnaire/controllers/coefficient.controller";
 import { QuestionnaireItemEntity } from "../../../../src/modules/questionnaire/entities/questionnaire-item.entity";
 import { CoefficientEntity } from "../../../../src/modules/questionnaire/entities/coefficient.entity";
 import { StreamAverageEntity } from "../../../../src/modules/questionnaire/entities/stream-average.entity";
 import { ArtefactValueEntity } from "../../../../src/modules/questionnaire/entities/artefact-value.entity";
 
-describe("QuestionnaireModule", () => {
+describe("QuestionnaireModule (wiring)", () => {
 	let module: TestingModule;
 
 	beforeAll(async () => {
 		module = await Test.createTestingModule({
-			imports: [
-				TypeOrmModule.forRoot({
-					type: "sqlite",
-					database: ":memory:",
-					entities: [
-						QuestionnaireItemEntity,
-						CoefficientEntity,
-						StreamAverageEntity,
-						ArtefactValueEntity,
-					],
-					synchronize: true,
-				}),
-				QuestionnaireModule,
-			],
-		}).compile();
+			imports: [QuestionnaireModule],
+		})
+			.overrideProvider(getRepositoryToken(QuestionnaireItemEntity))
+			.useValue({})
+			.overrideProvider(getRepositoryToken(CoefficientEntity))
+			.useValue({})
+			.overrideProvider(getRepositoryToken(StreamAverageEntity))
+			.useValue({})
+			.overrideProvider(getRepositoryToken(ArtefactValueEntity))
+			.useValue({})
+			.compile();
 	});
 
-	it("should be defined", () => {
-		expect(module).toBeDefined();
+	afterAll(async () => {
+		await module.close();
 	});
 
-	it("should have QuestionnaireService", () => {
-		const service = module.get("QuestionnaireService");
-		expect(service).toBeDefined();
+	it("registers QuestionnaireService", () => {
+		expect(module.get(QuestionnaireService)).toBeDefined();
 	});
 
-	it("should have CoefficientService", () => {
-		const service = module.get("CoefficientService");
-		expect(service).toBeDefined();
+	it("registers CoefficientService", () => {
+		expect(module.get(CoefficientService)).toBeDefined();
 	});
 
-	it("should have ReferenceDataService", () => {
-		const service = module.get("ReferenceDataService");
-		expect(service).toBeDefined();
+	it("registers ReferenceDataService", () => {
+		expect(module.get(ReferenceDataService)).toBeDefined();
 	});
 
-	it("should have QuestionnaireController", () => {
-		const controller = module.get("QuestionnaireController");
-		expect(controller).toBeDefined();
+	it("registers QuestionnaireController", () => {
+		expect(module.get(QuestionnaireController)).toBeDefined();
 	});
 
-	it("should have CoefficientController", () => {
-		const controller = module.get("CoefficientController");
-		expect(controller).toBeDefined();
+	it("registers CoefficientController", () => {
+		expect(module.get(CoefficientController)).toBeDefined();
 	});
 });

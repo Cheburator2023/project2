@@ -3,7 +3,10 @@ import { QuestionnaireItemEntity } from "../src/modules/questionnaire/entities/q
 import { StreamAverageEntity } from "../src/modules/questionnaire/entities/stream-average.entity";
 import { ArtefactValueEntity } from "../src/modules/questionnaire/entities/artefact-value.entity";
 import { CalculationResponseDto } from "../src/modules/calculation/dto";
-import { Calculation } from "../src/modules/calculation/entities/calculation.entity";
+import {
+	Calculation,
+	CalculationStatus,
+} from "../src/modules/calculation/entities/calculation.entity";
 
 export const testCoefficient: CoefficientEntity = {
 	id: "550e8400-e29b-41d4-a716-446655440000",
@@ -82,6 +85,11 @@ export const testCalculation: Calculation = {
 	finalCoefficient: 1.0,
 	createdAt: new Date(),
 	author: "Test User",
+	status: CalculationStatus.ACTIVE,
+	version: "1",
+	seriesId: "12345678",
+	parentCalcId: null,
+	readableId: "Calc-12345678-version-1",
 };
 
 // Response mock - возвращается из контроллера (со строками)
@@ -97,6 +105,7 @@ export const testCalculationResponse: CalculationResponseDto = {
 		calcName: "Test Calculation",
 		setupComplexity:
 			"1 Сложность: Проведение регулярной валидации Моделей Регулятором не установлено",
+		modelDeveloped: "Нет",
 		modelsCount: 1,
 		initiativeTimeline: "Менее 1 мес.",
 		initiativeCost: "До 45.3 млн.",
@@ -115,4 +124,9 @@ export const testCalculationResponse: CalculationResponseDto = {
 	finalCoefficient: 1.0,
 	createdAt: new Date(),
 	author: "Test User",
+	status: CalculationStatus.ACTIVE,
+	version: "1",
+	seriesId: "12345678",
+	parentCalcId: undefined,
+	readableId: "Calc-12345678-version-1",
 };

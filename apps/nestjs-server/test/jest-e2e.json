@@ -8,6 +8,8 @@
 	},
 	"setupFilesAfterEnv": ["<rootDir>/test/setup-e2e.ts"],
 	"moduleNameMapper": {
-		"^@app/(.*)$": "<rootDir>/src/$1"
+		"^@app/(.*)$": "<rootDir>/src/$1",
+		"^src/(.*)$": "<rootDir>/src/$1",
+		"^test/(.*)$": "<rootDir>/test/$1"
 	}
 }
