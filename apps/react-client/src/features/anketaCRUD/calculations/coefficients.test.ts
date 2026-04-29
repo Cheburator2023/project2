@@ -1,4 +1,4 @@
-/** biome-ignore-all lint/suspicious/noIrregularWhitespace: <explanation> */
+/** biome-ignore-all lint/suspicious/noIrregularWhitespace: тестовые строки содержат русские формулировки из бизнес-схемы */
 import {
 	calculateAlgorithmComplexityCoefficient,
 	calculateDataSourceCoefficient,
@@ -45,6 +45,31 @@ describe("Coefficient Calculations", () => {
 		it("throws for unknown string", () => {
 			expect(() => calculateSetupComplexityCoefficient("unknown")).toThrow();
 		});
+
+		it.each([
+			[
+				"1 Сложность: Проведение регулярной валидации Моделей Регулятором не установлено",
+				1,
+			],
+			[
+				"2 Сложность: Проведение регулярной валидации Моделей Регулятором не установлено. Модель оценки риска",
+				1.25,
+			],
+			[
+				"3 Сложность: Проведение регулярной валидации Моделей Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+				1.5,
+			],
+			[
+				"4 Сложность: Банком не планируется предоставление Модели регулятору для одобрения к использованию, но проведение регулярной валидации Моделей установлена Регулятором",
+				1.75,
+			],
+			[
+				"5 Сложность: Банком планируется предоставление Модели Регулятору для одобрения к использованию",
+				2,
+			],
+		])("maps setup complexity %s to %s", (value, expected) => {
+			expect(calculateSetupComplexityCoefficient(value)).toBe(expected);
+		});
 	});
 
 	describe("getReadyPromReportsCoefficient", () => {
@@ -67,6 +92,22 @@ describe("Coefficient Calculations", () => {
 		});
 		it("throws for out of range", () => {
 			expect(() => calculateDataSourceCoefficient(11)).toThrow();
+		});
+
+		it.each([
+			[0, 1],
+			[1, 1],
+			[2, 1.2],
+			[3, 1.4],
+			[4, 1.6],
+			[5, 1.8],
+			[6, 2],
+			[7, 2.2],
+			[8, 2.4],
+			[9, 2.6],
+			[10, 3],
+		])("maps %s data sources to %s", (count, expected) => {
+			expect(calculateDataSourceCoefficient(count)).toBe(expected);
 		});
 	});
 
@@ -98,6 +139,21 @@ describe("Coefficient Calculations", () => {
 					{ algorithmType: "unknown" },
 				]),
 			).toBe(0);
+		});
+
+		it.each([
+			["Табличные данные", 0.75],
+			["Текстовая аналитика_Классические модели", 1.25],
+			["Текстовая аналитика_LLM", 1.4],
+			["Аудио Аналитика", 1.6],
+			["Компьютерное зрение_CV", 1.8],
+			["Оптимизационная задача", 2.5],
+			["Гео-аналитика", 3],
+			["Графовая аналитика", 3.5],
+		])("maps algorithm type %s to %s", (algorithmType, expected) => {
+			expect(calculateAlgorithmComplexityCoefficient([{ algorithmType }])).toBe(
+				expected,
+			);
 		});
 	});
 
@@ -153,6 +209,22 @@ describe("Coefficient Calculations", () => {
 			expect(() =>
 				calculateDeploymentChannelCoefficient(["unknown"]),
 			).toThrow();
+		});
+
+		it.each([
+			["Батч", 0.5],
+			["Батч+загрузка данных потребителю", 0.75],
+			["Батч + Онлайн", 1.2],
+			["Онлайн", 1],
+			["Онлайн gpu", 1.25],
+			["Стриминг", 1.5],
+			["Мобильные устройства", 1.75],
+			["LLM", 2],
+			["Гео-сервисы", 2.25],
+			["Внедрение в облаке", 2.5],
+			["Графовая платформа", 3],
+		])("maps deployment channel %s to %s", (channel, expected) => {
+			expect(calculateDeploymentChannelCoefficient([channel])).toBe(expected);
 		});
 	});
 
