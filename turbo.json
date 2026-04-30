@@ -30,9 +30,8 @@
 			"dependsOn": []
 		},
 		"test": {
-			"dependsOn": ["build"],
-			"outputs": [],
-			"inputs": ["src/**/*.tsx", "src/**/*.ts", "test/**/*.ts", "test/**/*.tsx"]
+			"dependsOn": [],
+			"cache": false
 		},
 		"//#prettier": {
 			"dependsOn": [],

@@ -1,8 +1,9 @@
-import { HttpException, HttpStatus } from "@nestjs/common";
+import { HttpException, HttpStatus, Logger } from "@nestjs/common";
 import { HttpExceptionFilter } from "../../../../src/shared/exceptions/http-exception.filter";
 
 describe("HttpExceptionFilter", () => {
 	let filter: HttpExceptionFilter;
+	let loggerErrorSpy: jest.SpyInstance;
 	const buildHost = (overrides: any = {}) => {
 		const res = {
 			status: jest.fn().mockReturnThis(),
@@ -30,10 +31,14 @@ describe("HttpExceptionFilter", () => {
 	};
 
 	beforeEach(() => {
+		loggerErrorSpy = jest
+			.spyOn(Logger.prototype, "error")
+			.mockImplementation(() => undefined);
 		filter = new HttpExceptionFilter();
 	});
 
 	afterEach(() => {
+		loggerErrorSpy.mockRestore();
 		delete process.env.NODE_ENV;
 	});
 
@@ -51,6 +56,14 @@ describe("HttpExceptionFilter", () => {
 		expect(payload.path).toBe("/x");
 		expect(payload.requestBody).toEqual({ a: 1 });
 		expect(payload.code).toBe("E");
+		expect(loggerErrorSpy).toHaveBeenCalledWith(
+			"HTTP Exception: oops",
+			expect.objectContaining({
+				statusCode: 400,
+				code: "E",
+				requestBody: { a: 1 },
+			}),
+		);
 	});
 
 	it("omits debug fields in production", () => {
@@ -60,6 +73,13 @@ describe("HttpExceptionFilter", () => {
 		const payload = res.json.mock.calls[0][0];
 		expect(payload.requestBody).toBeUndefined();
 		expect(payload.stack).toBeUndefined();
+		expect(loggerErrorSpy).toHaveBeenCalledWith(
+			"HTTP Exception: no",
+			expect.objectContaining({
+				statusCode: 404,
+				stack: expect.any(String),
+			}),
+		);
 	});
 
 	it("handles non-object errorResponse", () => {

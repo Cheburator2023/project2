@@ -24,6 +24,7 @@
 		"dev:ui:god": "turbo run dev:god --filter=react-client",
 		"dev:server:nest:god": "turbo run dev:god --filter=nestjs-server",
 		"dev:server:nest": "turbo run dev --filter=nestjs-server",
+		"test:all": "turbo run test",
 		"turbo:ls": "turbo ls",
 		"build": "turbo run build",
 		"lint": "turbo run lint",
