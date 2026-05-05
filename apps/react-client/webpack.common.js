@@ -11,10 +11,6 @@ const APP_NAME = "smartAnketa";
 
 const ALIAS = {
 	"@react-client": `${SRC_DIR}`,
-	"@smart-anketa/api-contract": path.resolve(
-		__dirname,
-		"../../packages/api-contract/src/index.ts",
-	),
 };
 
 module.exports = {

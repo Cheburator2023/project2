@@ -3,6 +3,8 @@ FROM docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-fron
 
 # build react-client
 COPY . ./
+COPY packages/api-contract ./node_modules/@smart-anketa/api-contract
+RUN npm --prefix ./node_modules/@smart-anketa/api-contract run build
 RUN npm run build:webpack
 
 # Phase 2 - Get the Build and host on nginx
