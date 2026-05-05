@@ -1,6 +1,8 @@
 # Base Image
 FROM docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-frontend:v1.0.1 as build-deps
-
+RUN ls
+RUN echo ---------- 666 ------------
+RUN ls ../../   
 # build react-client
 COPY . ./
 COPY packages/api-contract ./node_modules/@smart-anketa/api-contract
