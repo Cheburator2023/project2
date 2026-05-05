@@ -132,6 +132,15 @@ export const viteCommonConfig = ({
 				"process.env.NO_ROLES": JSON.stringify(NO_ROLES),
 			},
 
+			resolve: {
+				alias: {
+					"@smart-anketa/api-contract": path.resolve(
+						ROOT_DIR,
+						"../../packages/api-contract/src/index.ts",
+					),
+				},
+			},
+
 			// resolve: {
 			//   alias: [
 			//     // packages

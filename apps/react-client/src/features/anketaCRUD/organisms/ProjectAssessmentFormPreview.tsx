@@ -1,4 +1,4 @@
-import { CalculationResponseDto } from "@react-client/common/api/generated/types";
+import type { CalculationResponseDto } from "@smart-anketa/api-contract";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { ArrayCustomCardListsWidget } from "@react-client/common/forms/widgets/ArrayCustomCardListsWidget";
 import { RJSFObjectFieldTemplate } from "@react-client/common/forms/widgets/RJSFObjectFieldTemplate";
@@ -76,17 +76,22 @@ export const ProjectAssessmentFormPreview = ({
 		setFormDataForCalc({
 			modelDeveloped: (formData as any).modelDeveloped || "Нет",
 			modelsCount: formData.modelsCount,
-			initiativeTimeline: formData.initiativeTimeline,
-			initiativeCost: formData.initiativeCost,
+			initiativeTimeline:
+				formData.initiativeTimeline == null
+					? undefined
+					: formData.initiativeTimeline,
+			initiativeCost:
+				formData.initiativeCost == null ? undefined : formData.initiativeCost,
 			generalUncertainty: formData.generalUncertainty as any,
 			assessedInitiativesCount: formData.assessedInitiativesCount,
 			algorithmComplexity: formData.algorithmComplexity,
 			autoMlRequired: formData.autoMlRequired,
-			productionAdditionalReports: formData.productionAdditionalReports,
+			productionAdditionalReports:
+				formData.productionAdditionalReports ?? "",
 			productionDeploymentChannels:
 				formData.productionDeploymentChannels as any,
 			setupComplexity: formData.setupComplexity,
-			readyPromReports: formData.readyPromReports,
+			readyPromReports: formData.readyPromReports ?? "",
 			dataSourcesCount: formData.dataSourcesCount,
 			pilotModelRequired: formData.pilotModelRequired,
 			pilotSupportRequired: formData.pilotSupportRequired,

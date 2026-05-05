@@ -2,7 +2,7 @@ import { Chip, IconButton } from "@mui/material";
 import { CreateNewVersionDto } from "@react-client/common/api/types/createNewVersionDto";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { toast } from "@react-client/common/toasts";
-import { useCalculationControllerCreateNewVersion } from "@react-client/common/api/hooks/useCalculationVersions";
+import { useCalculationControllerCreateNewVersion } from "@react-client/common/api/queries/calculation";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { AnketaBasicLayoutCreate } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayoutCreate";
 import { Header } from "@react-client/features/navigation/organisms/Header";

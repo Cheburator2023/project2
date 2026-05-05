@@ -2,7 +2,7 @@ import { IconButton } from "@mui/material";
 import { CreateCloneDto } from "@react-client/common/api/types/createCloneDto";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { toast } from "@react-client/common/toasts";
-import { useCalculationControllerCreateClone } from "@react-client/common/api/hooks/useCalculationVersions";
+import { useCalculationControllerCreateClone } from "@react-client/common/api/queries/calculation";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { AnketaBasicLayoutCreate } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayoutCreate";
 import { Header } from "@react-client/features/navigation/organisms/Header";

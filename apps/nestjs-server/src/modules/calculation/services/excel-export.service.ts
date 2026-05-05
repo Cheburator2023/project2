@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import type { UncertaintyMapEntry } from "@smart-anketa/api-contract";
 import * as ExcelJS from "exceljs";
 import { Calculation, CalculationStatus } from "../entities/calculation.entity";
 import {
@@ -343,10 +344,12 @@ export class ExcelExportService {
 		)
 			? calculation.questionnaireData.generalUncertainty
 			: Object.entries(calculation.questionnaireData.generalUncertainty).map(
-					([type, value]) => ({
+					([type, raw]) => ({
 						type,
-						probability: value?.probability || "Нет данных",
-						influence: value?.influence || "Нет данных",
+						probability:
+							(raw as UncertaintyMapEntry)?.probability || "Нет данных",
+						influence:
+							(raw as UncertaintyMapEntry)?.influence || "Нет данных",
 					}),
 				);
 

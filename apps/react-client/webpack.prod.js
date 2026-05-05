@@ -1,6 +1,7 @@
 const { merge } = require("webpack-merge");
 const webpack = require("webpack");
 const TerserPlugin = require("terser-webpack-plugin");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 const { DefinePlugin } = webpack;
 const common = require("./webpack.common.js");
@@ -15,21 +16,6 @@ module.exports = merge(common, {
 	mode: "development",
 	devtool: "cheap-module-source-map",
 	optimization: {
-		minimize: true,
-		minimizer: [
-			new TerserPlugin({
-				parallel: true,
-				terserOptions: {
-					compress: {
-						drop_console: true,
-					},
-					mangle: true,
-					output: {
-						comments: false,
-					},
-				},
-			}),
-		],
 		splitChunks: {
 			chunks: "async",
 			cacheGroups: {
@@ -49,6 +35,10 @@ module.exports = merge(common, {
 		concatenateModules: false,
 	},
 	plugins: [
+		new HtmlWebpackPlugin({
+			template: "./public/index.html",
+			excludeChunks: [APP_NAME],
+		}),
 		new DefinePlugin({
 			"process.env": {},
 			"process.env.MOCKED_REQUESTS": JSON.stringify(

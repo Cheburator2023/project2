@@ -5,7 +5,8 @@
 		"moduleResolution": "Bundler",
 		"lib": ["dom", "dom.iterable", "esnext"],
 		"paths": {
-			"@react-client/*": ["./src/*"]
+			"@react-client/*": ["./src/*"],
+			"@smart-anketa/api-contract": ["../../packages/api-contract/src/index.ts"]
 		},
 		"allowJs": true,
 		"skipLibCheck": true,

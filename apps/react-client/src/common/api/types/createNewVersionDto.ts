@@ -1,11 +1,1 @@
-export interface CreateNewVersionDto {
-	calcName: string;
-	rfd: string;
-	streamExecutor: string;
-	department: string[];
-	customerName: string;
-	comment: string;
-	questionnaireData: any;
-	finalCoefficient: any;
-	calculationResult: any;
-}
+export type { CreateNewVersionDto } from "@smart-anketa/api-contract";

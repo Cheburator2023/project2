@@ -1,27 +1,20 @@
-import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
 import { useEffect } from "react";
 import { useAuthStore } from "../store/authStore";
 
 interface AuthProviderProps {
-	token?: string;
 	children: React.ReactNode;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({
-	token,
-	children,
-}) => {
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 	const setAccessToken = useAuthStore((state) => state.setAccessToken);
-	const accessToken = useAuthStore((state) => state.accessToken);
+	const GOD_MODE = process?.env?.NO_ROLES === "true";
 
 	useEffect(() => {
-		if (token) {
-			setAccessToken(token);
+		if (GOD_MODE) {
+			setAccessToken("god-mode-token");
 		}
-	}, [token, setAccessToken]);
+	}, [GOD_MODE, setAccessToken]);
 
-	const NO_ROLES_FOR_DEV = process?.env?.NO_ROLES;
-
-	if (NO_ROLES_FOR_DEV) return <>{children}</>;
-	return accessToken ? children : <FullScreenLoader />;
+	if (GOD_MODE) return <>{children}</>;
+	return children;
 };

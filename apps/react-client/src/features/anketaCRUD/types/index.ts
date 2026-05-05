@@ -1,11 +1,12 @@
-import { AlgorithmTypeItemDto } from "@react-client/common/api/generated/types/algorithmTypeItemDto";
-import { CreateCalculationDtoAutoMlRequired } from "@react-client/common/api/generated/types/createCalculationDtoAutoMlRequired";
-import { CreateCalculationDtoDataSourcesCount } from "@react-client/common/api/generated/types/createCalculationDtoDataSourcesCount";
-import { CreateCalculationDtoPilotModelRequired } from "@react-client/common/api/generated/types/createCalculationDtoPilotModelRequired";
-import { CreateCalculationDtoPilotSupportRequired } from "@react-client/common/api/generated/types/createCalculationDtoPilotSupportRequired";
-import { CreateCalculationDtoProductionDeploymentChannelsItem } from "@react-client/common/api/generated/types/createCalculationDtoProductionDeploymentChannelsItem";
-import { CreateCalculationDtoReadyPromReports } from "@react-client/common/api/generated/types/createCalculationDtoReadyPromReports";
-import { UncertaintyItemDto } from "@react-client/common/api/generated/types/uncertaintyItemDto";
+import type {
+	AlgorithmTypeItemDto,
+	CalculationResponseDto,
+	DataSourcesCount,
+	DeploymentChannel,
+	UncertaintyItemDto,
+	YesNo,
+	YesNoRequired,
+} from "@smart-anketa/api-contract";
 
 export interface AnketaForm {
 	meta: {
@@ -16,23 +17,23 @@ export interface AnketaForm {
 		customerName?: string;
 		comment?: string;
 		relatedModels?: string[];
-		status?: string;
-		createdAt?: string;
-		id?: string;
-		author?: string;
+		status?: CalculationResponseDto["status"];
+		createdAt?: CalculationResponseDto["createdAt"];
+		id?: CalculationResponseDto["id"];
+		author?: CalculationResponseDto["author"];
 	};
 	calculation: {
 		modelsCount: number;
-		generalUncertainty: UncertaintyItemDto;
+		generalUncertainty: UncertaintyItemDto[];
 		assessedInitiativesCount: number;
-		dataSourcesCount: CreateCalculationDtoDataSourcesCount;
-		pilotModelRequired: CreateCalculationDtoPilotModelRequired;
-		pilotSupportRequired: CreateCalculationDtoPilotSupportRequired;
-		algorithmComplexity: AlgorithmTypeItemDto;
-		autoMlRequired: CreateCalculationDtoAutoMlRequired;
+		dataSourcesCount: DataSourcesCount;
+		pilotModelRequired: YesNoRequired;
+		pilotSupportRequired: YesNoRequired;
+		algorithmComplexity: AlgorithmTypeItemDto[];
+		autoMlRequired: YesNoRequired;
 		productionAdditionalReports: string;
-		productionDeploymentChannels: CreateCalculationDtoProductionDeploymentChannelsItem[];
+		productionDeploymentChannels: DeploymentChannel[];
 		setupComplexity: string;
-		readyPromReports: CreateCalculationDtoReadyPromReports;
+		readyPromReports: YesNo | "";
 	};
 }

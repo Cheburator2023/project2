@@ -1,5 +1,5 @@
-import { useQuestionnaireControllerGetFullQuestionnaire } from "@react-client/common/api/generated/queries/calculation";
-import { CalculationResponseDto } from "@react-client/common/api/generated/types";
+import { useQuestionnaireControllerGetFullQuestionnaire } from "@react-client/common/api/queries/calculation";
+import type { CalculationResponseDto } from "@smart-anketa/api-contract";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { transformErrors } from "@react-client/common/forms/transformErrors";
 import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";

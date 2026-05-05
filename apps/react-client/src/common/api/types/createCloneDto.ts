@@ -1,11 +1,1 @@
-export interface CreateCloneDto {
-	calcName: string;
-	rfd: string;
-	streamExecutor: string;
-	department: string[];
-	customerName: string;
-	comment: string;
-	questionnaireData: any;
-	finalCoefficient: any;
-	calculationResult: any;
-}
+export type { CreateCloneDto } from "@smart-anketa/api-contract";

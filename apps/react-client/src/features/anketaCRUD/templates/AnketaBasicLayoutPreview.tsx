@@ -1,5 +1,5 @@
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import { CalculationResponseDto } from "@react-client/common/api/generated/types";
+import type { CalculationResponseDto } from "@smart-anketa/api-contract";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { BasicInfoForm } from "@react-client/features/anketaCRUD/organisms/BasicInfoForm";

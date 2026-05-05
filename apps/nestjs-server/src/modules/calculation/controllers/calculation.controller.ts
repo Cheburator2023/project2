@@ -15,6 +15,7 @@ import {
 } from "@nestjs/common";
 import {
 	ApiBearerAuth,
+	ApiBody,
 	ApiOperation,
 	ApiParam,
 	ApiQuery,
@@ -27,11 +28,14 @@ import { CurrentUser } from "../../../shared/decorators/user.decorator";
 import { StreamFilterInterceptor } from "../../../shared/interceptors/stream-filter.interceptor";
 import { Permission } from "../../../shared/types/permissions";
 import {
+	CalculationQuestionnaireDataDto,
 	CalculationResponseDto,
 	CreateCalculationDto,
+	DEPLOYMENT_CHANNEL_VALUES,
 	PaginatedCalculationResponseDto,
 	PaginationDto,
 	TransformedExportCalculationDto,
+	UncertaintyItemDto,
 } from "../dto";
 import { UpdateCalculationDto } from "../dto/request/update-calculation.dto";
 import { CalculationService } from "../services/calculation.service";
@@ -653,6 +657,7 @@ export class CalculationController {
 		description: "Уникальный идентификатор исходной анкеты",
 		example: "550e8400-e29b-41d4-a716-446655440000",
 	})
+	@ApiBody({ type: CreateNewVersionDto })
 	@ApiResponse({
 		status: HttpStatus.CREATED,
 		description: "Новая версия анкеты успешно создана.",
@@ -740,6 +745,7 @@ export class CalculationController {
 		description: "Уникальный идентификатор анкеты-шаблона",
 		example: "550e8400-e29b-41d4-a716-446655440000",
 	})
+	@ApiBody({ type: CreateCloneDto })
 	@ApiResponse({
 		status: HttpStatus.CREATED,
 		description: "Анкета успешно клонирована.",
@@ -818,28 +824,44 @@ export class CalculationController {
 	private async mapToResponseDto(
 		calculation: Calculation,
 	): Promise<CalculationResponseDto> {
-		const generalUncertainty =
+		const generalUncertainty: UncertaintyItemDto[] =
 			calculation.questionnaireData &&
 			calculation.questionnaireData?.generalUncertainty
 				? Array.isArray(calculation.questionnaireData.generalUncertainty)
 					? calculation.questionnaireData.generalUncertainty
 					: Object.entries(
 							calculation.questionnaireData.generalUncertainty || {},
-						).map(([type, value]) => ({
-							type,
-							probability: value.probability,
-							influence: value.influence,
-						}))
+						).map(([type, value]) => {
+							const item = value as {
+								probability?: unknown;
+								influence?: unknown;
+							};
+							return {
+								type,
+								probability: String(item.probability || ""),
+								influence: String(item.influence || ""),
+							} as UncertaintyItemDto;
+						})
 				: [];
 
-		const productionDeploymentChannels =
-			(calculation.questionnaireData &&
-				calculation.questionnaireData?.productionDeploymentChannels
-					?.map((ch) =>
-						typeof ch === "string" ? { deploymentChannel: ch } : ch,
-					)
-					?.map((ch) => ch.deploymentChannel)) ||
-			[];
+		const rawProductionDeploymentChannels = (calculation.questionnaireData
+			?.productionDeploymentChannels || []) as Array<
+			string | { deploymentChannel?: string }
+		>;
+		// BUGFIX: old JSONB rows may still contain { deploymentChannel } objects; response DTO exposes a string array as the stable API contract.
+		const productionDeploymentChannels: CalculationQuestionnaireDataDto["productionDeploymentChannels"] =
+			rawProductionDeploymentChannels
+				.map((channel) =>
+					typeof channel === "string" ? channel : channel.deploymentChannel,
+				)
+				.filter(
+					(
+						channel,
+					): channel is CalculationQuestionnaireDataDto["productionDeploymentChannels"][number] =>
+						DEPLOYMENT_CHANNEL_VALUES.includes(
+							channel as CalculationQuestionnaireDataDto["productionDeploymentChannels"][number],
+						),
+				);
 
 		let seriesLatestVersion: string | undefined;
 		if (calculation.seriesId) {
@@ -863,7 +885,17 @@ export class CalculationController {
 			comment: calculation.comment,
 			questionnaireData: {
 				...(calculation.questionnaireData || {}),
-                modelDeveloped: calculation.questionnaireData?.modelDeveloped || "Нет",
+				initiativeTimeline:
+					calculation.questionnaireData?.initiativeTimeline ??
+					undefined,
+				initiativeCost:
+					calculation.questionnaireData?.initiativeCost ?? undefined,
+				modelDeveloped: calculation.questionnaireData?.modelDeveloped || "Нет",
+				readyPromReports:
+					`${calculation.questionnaireData?.readyPromReports ?? ""}`.trim() ===
+					""
+						? "Нет"
+						: (calculation.questionnaireData!.readyPromReports as "Да" | "Нет"),
 				generalUncertainty,
 				productionDeploymentChannels,
 			},

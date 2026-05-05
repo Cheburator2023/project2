@@ -6,6 +6,26 @@ import { Permission, Role } from "@react-client/types/roles";
 import { useEffect } from "react";
 import type { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
 import App from "./App";
+import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
+import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
+type TKeycloakLike = {
+	logout: () => void;
+	login: () => void;
+} & Record<string, unknown>;
+declare global {
+	interface Window {
+		__SMART_ANKETA_MFE_DEBUG__?: {
+			mountedAt: string;
+			hasToken: boolean;
+			hasUrlConfig: boolean;
+			userName?: string;
+		};
+		urlConfig?: T_CONFIG_MAP;
+		token?: string;
+		keycloak?: TKeycloakLike;
+		user?: T_KEYCLOAK_USER;
+	}
+}
 
 export type Props = {
 	urlConfig?: T_CONFIG_MAP;
@@ -16,10 +36,26 @@ export type Props = {
 	protectedFetch?: any;
 	bridged?: boolean;
 	onLogout?: () => void;
+	keycloak?: TKeycloakLike;
 };
+
 
 const MfeRoot = (props: Props) => {
 	console.log("MfeRoot >> props:", props);
+	window.__SMART_ANKETA_MFE_DEBUG__ = {
+		mountedAt: new Date().toISOString(),
+		hasToken: Boolean(props.token),
+		hasUrlConfig: Boolean(props.urlConfig),
+		userName: props.user?.preferred_username,
+	};
+
+	useDeepEffect(() => {
+		if (props?.urlConfig) {
+			window.urlConfig = props.urlConfig;
+			window.keycloak = props.keycloak;
+			window.user = props.user;
+		}
+	}, [props]);
 
 	const { user } = props;
 	const { setUsername, setGroups, setRoles, setPermissions } = useUserStore();
@@ -45,16 +81,26 @@ const MfeRoot = (props: Props) => {
 
 			setPermissions(permissions);
 		}
-	}, [user?.roles, user?.realm_access]);
+	}, [
+		user?.preferred_username,
+		user?.groups,
+		user?.realm_access?.roles,
+		setUsername,
+		setGroups,
+		setRoles,
+		setPermissions,
+	]);
 
 	return (
-		<AuthProvider
-			token={props.token}
-			data-test-id="index-federated--AuthProvider-0"
-		>
+		<AuthProvider>
 			{globalStyles}
 
-			<App {...props} bridged data-test-id="index-federated--App-0" />
+
+			{props?.urlConfig && props?.keycloak ? (
+				<App {...props} bridged />
+			) : (
+				<FullScreenLoader />
+			)}
 		</AuthProvider>
 	);
 };

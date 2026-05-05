@@ -4,8 +4,8 @@ import { Button, IconButton, styled, useColorScheme } from "@mui/material";
 import {
 	useCalculationControllerFindAll,
 	useCalculationControllerExportToExcel,
-} from "@react-client/common/api/generated/queries/calculation";
-import { CalculationResponseDto } from "@react-client/common/api/generated/types";
+} from "@react-client/common/api/queries/calculation";
+import type { CalculationResponseDto } from "@smart-anketa/api-contract";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";

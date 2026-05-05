@@ -1,6 +1,6 @@
 import { styled, useColorScheme } from "@mui/material";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { CalculationResponseDto } from "@react-client/common/api/generated/types";
+import type { CalculationResponseDto } from "@smart-anketa/api-contract";
 import {
 	type CellClassParams,
 	type CellStyle,

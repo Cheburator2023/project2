@@ -1,7 +1,42 @@
-import { useCalculationControllerFindOne } from "@react-client/common/api/generated/queries/calculation";
-import { CalculationResponseDto } from "@react-client/common/api/generated/types/calculationResponseDto";
+import type {
+	CalculationResponseDto,
+	DeploymentChannel,
+	UncertaintyItemDto,
+} from "@smart-anketa/api-contract";
+
+import { useCalculationControllerFindOne } from "@react-client/common/api/queries/calculation";
 import { IBasicFormData } from "../stores/useAnketaCRUDFormsStore";
 import { IAssessmentFormData } from "../types/FormData";
+
+const normalizeGeneralUncertainty = (
+	value: unknown,
+): UncertaintyItemDto[] => {
+	if (Array.isArray(value)) {
+		return value as UncertaintyItemDto[];
+	}
+
+	if (value && typeof value === "object") {
+		return Object.entries(
+			value as Record<string, { probability?: string; influence?: string }>,
+		).map(([type, payload]) => ({
+			type,
+			probability: payload?.probability ?? "",
+			influence: payload?.influence ?? "",
+		})) as UncertaintyItemDto[];
+	}
+
+	return [];
+};
+
+const normalizeDeploymentChannels = (value: unknown): DeploymentChannel[] => {
+	if (!Array.isArray(value)) {
+		return [];
+	}
+
+	return value
+		.map((item) => (typeof item === "string" ? item : item?.deploymentChannel))
+		.filter(Boolean) as DeploymentChannel[];
+};
 
 export const useParentCalculationData = (parentId?: string) => {
 	const { data, isLoading, error, isError } = useCalculationControllerFindOne(
@@ -39,21 +74,29 @@ export const mapCalculationToAssessmentForm = (
 	data: CalculationResponseDto,
 ): IAssessmentFormData => {
 	return {
-		modelDeveloped: (data.questionnaireData as any).modelDeveloped || "Нет",
+		modelDeveloped: data.questionnaireData.modelDeveloped || "Нет",
 		modelsCount: data.questionnaireData.modelsCount,
 		algorithmComplexity: data.questionnaireData.algorithmComplexity,
 		setupComplexity: data.questionnaireData.setupComplexity,
-		initiativeTimeline: data.questionnaireData.initiativeTimeline,
-		initiativeCost: data.questionnaireData.initiativeCost,
-		generalUncertainty:
-			(data.questionnaireData.generalUncertainty as any) || [],
+		initiativeTimeline:
+			data.questionnaireData.initiativeTimeline == null
+				? undefined
+				: data.questionnaireData.initiativeTimeline,
+		initiativeCost:
+			data.questionnaireData.initiativeCost == null
+				? undefined
+				: data.questionnaireData.initiativeCost,
+		generalUncertainty: normalizeGeneralUncertainty(
+			data.questionnaireData.generalUncertainty,
+		),
 		autoMlRequired: data.questionnaireData.autoMlRequired,
 		productionAdditionalReports:
 			data.questionnaireData.productionAdditionalReports || "",
-		productionDeploymentChannels:
-			(data.questionnaireData.productionDeploymentChannels as any) || [],
+		productionDeploymentChannels: normalizeDeploymentChannels(
+			data.questionnaireData.productionDeploymentChannels,
+		),
 		dataSourcesCount: data.questionnaireData.dataSourcesCount,
-		readyPromReports: data.questionnaireData.readyPromReports,
+		readyPromReports: data.questionnaireData.readyPromReports ?? "",
 		uncertaintyAdjustment: data.questionnaireData.uncertaintyAdjustment,
 		pilotSupportRequired: data.questionnaireData.pilotSupportRequired,
 		pilotModelRequired: data.questionnaireData.pilotModelRequired,

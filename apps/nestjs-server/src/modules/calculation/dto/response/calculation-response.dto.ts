@@ -3,10 +3,12 @@ import { Type } from "class-transformer";
 import {
 	CalculationBaseDto,
 	DATA_SOURCES_COUNT_VALUES,
+	DEPLOYMENT_CHANNEL_VALUES,
 	YES_NO_REQUIRED_VALUES,
 	YES_NO_VALUES,
 } from "../base/calculation-base.dto";
 import { AlgorithmTypeItemDto } from "../common/algorithm-type.dto";
+import { UncertaintyItemDto } from "../common/uncertainty-item.dto";
 import { CalculationResultItemDto } from "./calculation-result-item.dto";
 import { CalculationStatus } from "../../entities/calculation.entity";
 
@@ -26,22 +28,11 @@ export class CalculationQuestionnaireDataDto extends CalculationBaseDto {
 
 	@ApiProperty({
 		description: "Факторы общей неопределенности",
-		type: "object",
-		additionalProperties: {
-			type: "object",
-			properties: {
-				probability: { type: "string" },
-				influence: { type: "string" },
-			},
-		},
+		type: [UncertaintyItemDto],
+		required: false,
 	})
-	generalUncertainty?: Record<
-		string,
-		{
-			probability: string;
-			influence: string;
-		}
-	>;
+	@Type(() => UncertaintyItemDto)
+	generalUncertainty?: UncertaintyItemDto[];
 
 	@ApiProperty({
 		example: "Нет",
@@ -100,14 +91,13 @@ export class CalculationQuestionnaireDataDto extends CalculationBaseDto {
 	productionAdditionalReports?: string;
 
 	@ApiProperty({
-		type: [Object],
+		type: [String],
 		description: "Каналы развертывания в продакшен",
-		example: [
-			{ deploymentChannel: "Батч" },
-			{ deploymentChannel: "Батч+загрузка данных потребителю" },
-		],
+		enum: DEPLOYMENT_CHANNEL_VALUES,
+		example: ["Батч", "Батч+загрузка данных потребителю"],
 	})
-	productionDeploymentChannels: Array<{ deploymentChannel: string }>;
+	// BUGFIX: API responses store deployment channels as strings after mapping, not as { deploymentChannel } objects.
+	productionDeploymentChannels: (typeof DEPLOYMENT_CHANNEL_VALUES)[number][];
 
 	@ApiProperty({
 		type: [CalculationResultItemDto],
@@ -167,29 +157,7 @@ export class CalculationResponseDto {
 		description: "Данные анкеты расчета",
 	})
 	@Type(() => CalculationQuestionnaireDataDto)
-	questionnaireData: {
-		calcName: string;
-		setupComplexity: string;
-		initiativeTimeline: string;
-		initiativeCost: string;
-        modelDeveloped: string;
-		modelsCount: number;
-		uncertaintyAdjustment?: number;
-		generalUncertainty: Array<{
-			type: string;
-			probability: string;
-			influence: string;
-		}>;
-		readyPromReports: string;
-		assessedInitiativesCount?: number;
-		dataSourcesCount: string;
-		pilotModelRequired: string;
-		algorithmComplexity: AlgorithmTypeItemDto[];
-		pilotSupportRequired: string;
-		autoMlRequired: string;
-		productionAdditionalReports?: string;
-		productionDeploymentChannels: string[];
-	};
+	questionnaireData: CalculationQuestionnaireDataDto;
 
 	@ApiProperty({
 		example: 1.8,

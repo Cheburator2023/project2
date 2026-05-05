@@ -6,7 +6,6 @@ import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { ErrorBoundary } from "@react-client/common/errors/ErrorBoundary";
 import { ErrorPage } from "@react-client/common/errors/pages/ErrorPage";
-import { useEffectOnce } from "@react-client/common/hooks/useEffectOnce";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { Toaster } from "@react-client/common/toasts";
@@ -15,7 +14,7 @@ import { setDefaultOptions } from "date-fns/esm";
 import { ru } from "date-fns/esm/locale";
 import { isEmpty } from "lodash-es";
 import type React from "react";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { BrowserRouter } from "react-router";
 import type { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
 import { reportWebVitals } from "./reportWebVitals";
@@ -70,20 +69,30 @@ interface LayoutProps {
 	protectedFetch?: any;
 	bridged?: boolean;
 	onLogout?: () => void;
+	keycloak?: any;
 }
 
 const App: React.FC<LayoutProps> = (props) => {
-	const { user, onLogout, bridged, urlConfig } = props;
+	const { user, onLogout, bridged, urlConfig, keycloak } = props;
 
 	const { setUser, setConfigMap } = useGlobalSettingsStore();
 
-	useEffectOnce(() => {
-		setUser(user);
-	}, !isEmpty(user));
+	const onLogoutHandler = () => {
+		keycloak?.logout();
+		onLogout?.();
+	};
 
-	useEffectOnce(() => {
-		setConfigMap(urlConfig);
-	}, !isEmpty(urlConfig));
+	useEffect(() => {
+		if (!isEmpty(user)) {
+			setUser(user);
+		}
+	}, [user, setUser]);
+
+	useEffect(() => {
+		if (!isEmpty(urlConfig)) {
+			setConfigMap(urlConfig);
+		}
+	}, [urlConfig, setConfigMap]);
 
 	return (
 		<QueryClientProvider client={queryClient}>
@@ -95,7 +104,7 @@ const App: React.FC<LayoutProps> = (props) => {
 							<Toaster />
 							<Suspense fallback={<CircularProgress />}>
 								<LocalizationProvider dateAdapter={AdapterDateFns}>
-									<MainLayout onLogout={onLogout}>
+									<MainLayout onLogout={onLogoutHandler}>
 										<Routing />
 									</MainLayout>
 								</LocalizationProvider>

@@ -20,6 +20,7 @@ import {
 } from "../dto/request/export-calculation.dto";
 import { CreateNewVersionDto } from "../dto/request/create-new-version.dto";
 import { CreateCloneDto } from "../dto/request/create-clone.dto";
+import type { UncertaintyMapEntry } from "@smart-anketa/api-contract";
 
 @Injectable()
 export class CalculationService {
@@ -89,7 +90,10 @@ export class CalculationService {
                         readyPromReports = "";
                     }
 
-					const generalUncertaintyObject = {};
+					const generalUncertaintyObject: Record<
+						string,
+						UncertaintyMapEntry
+					> = {};
 					if (createCalculationDto.generalUncertainty) {
 						createCalculationDto.generalUncertainty.forEach((item) => {
 							generalUncertaintyObject[item.type] = {
@@ -168,7 +172,7 @@ export class CalculationService {
 						},
 						finalCoefficient: createCalculationDto.finalCoefficient,
 						author: authorName,
-					} as Partial<Calculation>);
+					});
 
 					this.checkAborted(signal);
 

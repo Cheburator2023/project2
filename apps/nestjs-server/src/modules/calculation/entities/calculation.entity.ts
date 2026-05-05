@@ -1,3 +1,5 @@
+import type { CalculationQuestionnaireDataDto } from "@smart-anketa/api-contract";
+import { CalculationStatus } from "@smart-anketa/api-contract";
 import {
 	Column,
 	Entity,
@@ -5,12 +7,8 @@ import {
 	ManyToOne,
 	PrimaryGeneratedColumn,
 } from "typeorm";
-import type { CalculationQuestionnaireDataDto } from "../dto/response/calculation-response.dto";
 
-export enum CalculationStatus {
-	ACTIVE = "Активная",
-	ARCHIVE = "Архивная",
-}
+export { CalculationStatus };
 
 @Entity()
 export class Calculation {

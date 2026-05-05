@@ -1,6 +1,6 @@
 import { IconButton } from "@mui/material";
-import { useCalculationControllerCreate } from "@react-client/common/api/generated/queries/calculation";
-import { CreateCalculationDto } from "@react-client/common/api/generated/types";
+import { useCalculationControllerCreate } from "@react-client/common/api/queries/calculation";
+import type { CreateCalculationDto } from "@smart-anketa/api-contract";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { toast } from "@react-client/common/toasts";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";

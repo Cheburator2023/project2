@@ -1,4 +1,4 @@
-import { CalculationResponseDto } from "@react-client/common/api/generated/types";
+import type { CalculationResponseDto } from "@smart-anketa/api-contract";
 
 export const mockListData: CalculationResponseDto[] = [
 	{
