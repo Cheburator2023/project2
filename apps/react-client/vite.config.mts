@@ -68,6 +68,13 @@ export const viteCommonConfig = ({
 				},
 			},
 
+			// resolve: {
+			// 	alias: {
+			// 	  '@smart-anketa/api-contract': '../../node_modules/@smart-anketa/api-contract/dist/index.js'
+			// 	}
+			// },
+
+
 			plugins: [
 				// {
 				//   name: 'deep-index',

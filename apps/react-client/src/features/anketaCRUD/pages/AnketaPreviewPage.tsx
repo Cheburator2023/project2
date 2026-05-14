@@ -18,7 +18,6 @@ import {
 	Divider,
 } from "@mui/material";
 import { useCalculationControllerFindOne } from "@react-client/common/api/queries/calculation";
-import { CalculationStatus } from "@smart-anketa/api-contract";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 
 import { Card } from "@react-client/common/muiCustom/Card";
@@ -34,6 +33,7 @@ import { isEmpty } from "lodash-es";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { routes } from "@react-client/routing/routes";
+import { CalculationStatusValues } from "@smart-anketa/api-contract";
 
 const APP_NAME = process.env.APP_NAME;
 
@@ -174,12 +174,12 @@ export const AnketaPreviewPage = () => {
 				{initialData?.status && (
 					<Chip
 						label={
-							initialData?.status === CalculationStatus.ACTIVE
+							initialData?.status === CalculationStatusValues.ACTIVE
 								? "Активная"
 								: "Архив"
 						}
 						color={
-							initialData?.status === CalculationStatus.ACTIVE
+							initialData?.status === CalculationStatusValues.ACTIVE
 								? "success"
 								: "default"
 						}

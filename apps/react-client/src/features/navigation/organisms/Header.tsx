@@ -9,16 +9,18 @@ import { Flex } from "../../../common/primitives/Flex";
 import { useGlobalSettingsStore } from "../../../common/store/globalSettingsStore";
 import { ColorModeIconDropdown } from "../../../theme/ColorModeIconDropdown";
 import { MenuButton } from "../molecules/MenuButton";
-import { NavbarBreadcrumbs } from "../molecules/NavbarBreadcrumbs";
+import { NavbarBreadcrumbs } from "@react-client/common/navigation/molecules/NavbarBreadcrumbs";
 
 export function Header({
 	children,
 	title,
 	calcId,
+	leadingAccessory,
 }: {
 	children?: React.ReactNode;
 	calcId?: string;
 	title?: string;
+	leadingAccessory?: React.ReactNode;
 }) {
 	const { toggleSideMenu, isSideMenuVisible } = useGlobalSettingsStore();
 	const navigate = useNavigate();
@@ -74,7 +76,10 @@ export function Header({
 						{title ? (
 							<b>{title}</b>
 						) : (
-							<NavbarBreadcrumbs data-test-id="header--NavbarBreadcrumbs-0" />
+							<>
+								<NavbarBreadcrumbs data-test-id="header--NavbarBreadcrumbs-0" />
+								{leadingAccessory}
+							</>
 						)}
 						{calcId ||
 							((id1 || id2) && (

@@ -1,5 +1,9 @@
 import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard";
-import { AdminPage } from "@react-client/features/admin/AdminPage";
+import { AdminLayout } from "@react-client/features/admin/layouts/AdminLayout";
+import { AdminV2DictionariesPage } from "@react-client/features/admin/pages/AdminV2DictionariesPage";
+import { AdminV2HistoryPage } from "@react-client/features/admin/pages/AdminV2HistoryPage";
+import { AdminV2SchemasPage } from "@react-client/features/admin/pages/AdminV2SchemasPage";
+import { AdminV2TemplateHistoryPage } from "@react-client/features/admin/pages/AdminV2TemplateHistoryPage";
 import { CompareReportsPage } from "@react-client/features/anketaCompare/pages/CompareReportsPage";
 import { AnketaCreatePage } from "@react-client/features/anketaCRUD/pages/AnketaCreatePage";
 import { AnketaNewVersionPage } from "@react-client/features/anketaCRUD/pages/AnketaNewVersionPage";
@@ -7,7 +11,8 @@ import { AnketaClonePage } from "@react-client/features/anketaCRUD/pages/AnketaC
 import { AnketaPreviewPage } from "@react-client/features/anketaCRUD/pages/AnketaPreviewPage";
 import { HomePage } from "@react-client/features/home/pages/HomePage";
 import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
-import { Route, Routes } from "react-router";
+import { V2TemplateSchemaEditorPage } from "@react-client/features/v2_constructor/pages/V2TemplateSchemaEditorPage";
+import { Navigate, Route, Routes } from "react-router";
 import { Page404 } from "./Page404";
 import { routes } from "./routes";
 
@@ -92,15 +97,59 @@ export const Routing = () => (
 					check={(p) => p.canAccessAdminPanel}
 					message="У вас нет прав на доступ к панели администрирования"
 				>
-					<AdminPage data-test-id="index--AdminPage-0" />
+					<AdminLayout data-test-id="index--AdminLayout-0" />
 				</PermissionGuard>
 			}
-			data-test-id="index--Route-4"
-		/>
+			data-test-id="index--Route-4-admin"
+		>
+			<Route
+				index
+				element={<Navigate to="v2/schemas" replace />}
+				data-test-id="index--Route-admin-redirect"
+			/>
+			<Route
+				path="v2/templates"
+				element={<Navigate to="/admin/v2/schemas" replace />}
+				data-test-id="index--Route-admin-templates-legacy-redirect"
+			/>
+			<Route
+				path="v2/schemas/:templateId/history"
+				element={<AdminV2TemplateHistoryPage data-test-id="index--AdminV2TemplateHistoryPage-0" />}
+				data-test-id="index--Route-admin-schema-history"
+			/>
+			<Route
+				path="v2/schemas"
+				element={<AdminV2SchemasPage data-test-id="index--AdminV2SchemasPage-0" />}
+				data-test-id="index--Route-admin-schemas"
+			/>
+			<Route
+				path="v2/dictionaries"
+				element={
+					<AdminV2DictionariesPage data-test-id="index--AdminV2DictionariesPage-0" />
+				}
+				data-test-id="index--Route-admin-dictionaries"
+			/>
+			<Route
+				path="v2/history"
+				element={<AdminV2HistoryPage data-test-id="index--AdminV2HistoryPage-0" />}
+				data-test-id="index--Route-admin-history"
+			/>
+			<Route
+				path="v2/templates/:templateId"
+				element={<V2TemplateSchemaEditorPage data-test-id="index--V2TemplateSchemaEditorPage-0" />}
+				data-test-id="index--Route-admin-v2-editor"
+			/>
+		</Route>
+
 		<Route
 			path={routes.playground.rootPath}
 			element={<PlaygroundPage data-test-id="index--PlaygroundPage-0" />}
 			data-test-id="index--Route-5"
+		/>
+		<Route
+			path={routes.playgroundV2TemplateEditor.rootPath}
+			element={<V2TemplateSchemaEditorPage data-test-id="index--V2TemplateSchemaEditorPlayground-0" />}
+			data-test-id="index--Route-playground-v2-editor"
 		/>
 		<Route
 			path="*"

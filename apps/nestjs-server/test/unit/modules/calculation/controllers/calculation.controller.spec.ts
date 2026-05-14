@@ -6,10 +6,7 @@ import { Reflector } from "@nestjs/core";
 import { CustomLogger } from "../../../../../src/shared/services/logger.service";
 import { StreamMappingService } from "../../../../../src/shared/services/stream-mapping.service";
 import { StreamFilterInterceptor } from "../../../../../src/shared/interceptors/stream-filter.interceptor";
-import {
-	Calculation,
-	CalculationStatus,
-} from "../../../../../src/modules/calculation/entities/calculation.entity";
+import { Calculation } from "../../../../../src/modules/calculation/entities/calculation.entity";
 import { RequestContext } from "../../../../../src/shared/decorators/request-context.decorator";
 import { CreateCalculationDto } from "../../../../../src/modules/calculation/dto/request/create-calculation.dto";
 import { UpdateCalculationDto } from "../../../../../src/modules/calculation/dto/request/update-calculation.dto";
@@ -18,6 +15,7 @@ import { CreateCloneDto } from "../../../../../src/modules/calculation/dto/reque
 import { PaginationDto } from "../../../../../src/modules/calculation/dto/common/pagination.dto";
 import { TransformedExportCalculationDto } from "../../../../../src/modules/calculation/dto/request/export-calculation.dto";
 import { testCalculation } from "../../../../test-data";
+import { CalculationStatusValues } from "@smart-anketa/api-contract";
 
 const ctx: RequestContext = {
 	requestId: "test-req",
@@ -28,7 +26,7 @@ const user = { given_name: "Test", family_name: "User", id: "u-1" };
 
 const sampleCalc: Calculation = {
 	...testCalculation,
-	status: CalculationStatus.ACTIVE,
+	status: CalculationStatusValues.ACTIVE,
 };
 
 const validCreateDto: CreateCalculationDto = {

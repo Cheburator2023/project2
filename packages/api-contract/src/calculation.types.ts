@@ -24,13 +24,13 @@ export type DeploymentChannel = (typeof DEPLOYMENT_CHANNEL_VALUES)[number];
 export type DataSourcesCount = (typeof DATA_SOURCES_COUNT_VALUES)[number];
 export type UncertaintyTypeKey = (typeof UNCERTAINTY_TYPE_VALUES)[number];
 
-export const CalculationStatus = {
+export const CalculationStatusValues = {
 	ACTIVE: "Активная",
 	ARCHIVE: "Архивная",
 } as const;
 
 export type CalculationStatus =
-	(typeof CalculationStatus)[keyof typeof CalculationStatus];
+	(typeof CalculationStatusValues)[keyof typeof CalculationStatusValues];
 
 export interface UncertaintyItemDto {
 	type: UncertaintyTypeKey;

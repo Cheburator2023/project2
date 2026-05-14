@@ -10,7 +10,10 @@ import {
 import { AlgorithmTypeItemDto } from "../common/algorithm-type.dto";
 import { UncertaintyItemDto } from "../common/uncertainty-item.dto";
 import { CalculationResultItemDto } from "./calculation-result-item.dto";
-import { CalculationStatus } from "../../entities/calculation.entity";
+import {
+	CalculationStatus,
+	CalculationStatusValues,
+} from "@smart-anketa/api-contract";
 
 export class CalculationQuestionnaireDataDto extends CalculationBaseDto {
 	@ApiProperty({
@@ -178,9 +181,9 @@ export class CalculationResponseDto {
 	author: string;
 
 	@ApiProperty({
-		example: CalculationStatus.ACTIVE,
+		example: CalculationStatusValues.ACTIVE,
 		description: "Статус анкеты",
-		enum: CalculationStatus,
+		enum: CalculationStatusValues,
 	})
 	status: CalculationStatus;
 

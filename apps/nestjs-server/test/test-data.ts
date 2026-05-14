@@ -3,10 +3,8 @@ import { QuestionnaireItemEntity } from "../src/modules/questionnaire/entities/q
 import { StreamAverageEntity } from "../src/modules/questionnaire/entities/stream-average.entity";
 import { ArtefactValueEntity } from "../src/modules/questionnaire/entities/artefact-value.entity";
 import { CalculationResponseDto } from "../src/modules/calculation/dto";
-import {
-	Calculation,
-	CalculationStatus,
-} from "../src/modules/calculation/entities/calculation.entity";
+import { Calculation } from "../src/modules/calculation/entities/calculation.entity";
+import { CalculationStatusValues } from "@smart-anketa/api-contract";
 
 export const testCoefficient: CoefficientEntity = {
 	id: "550e8400-e29b-41d4-a716-446655440000",
@@ -85,7 +83,7 @@ export const testCalculation: Calculation = {
 	finalCoefficient: 1.0,
 	createdAt: new Date(),
 	author: "Test User",
-	status: CalculationStatus.ACTIVE,
+	status: CalculationStatusValues.ACTIVE,
 	version: "1",
 	seriesId: "12345678",
 	parentCalcId: null,
@@ -124,7 +122,7 @@ export const testCalculationResponse: CalculationResponseDto = {
 	finalCoefficient: 1.0,
 	createdAt: new Date(),
 	author: "Test User",
-	status: CalculationStatus.ACTIVE,
+	status: CalculationStatusValues.ACTIVE,
 	version: "1",
 	seriesId: "12345678",
 	parentCalcId: undefined,

@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import type { UncertaintyMapEntry } from "@smart-anketa/api-contract";
+import { CalculationStatusValues } from "@smart-anketa/api-contract";
 import * as ExcelJS from "exceljs";
-import { Calculation, CalculationStatus } from "../entities/calculation.entity";
+import { Calculation } from "../entities/calculation.entity";
 import {
 	UNCERTAINTY_TYPE_NAMES,
 	DEPLOYMENT_CHANNEL_VALUES,
@@ -283,7 +284,9 @@ export class ExcelExportService {
 		row.seriesId = calculation.seriesId;
 		row.version = calculation.version;
 		row.status =
-			calculation.status === CalculationStatus.ACTIVE ? "Активная" : "Архивная";
+			calculation.status === CalculationStatusValues.ACTIVE
+				? "Активная"
+				: "Архивная";
 		row.parentId = calculation.parentCalcId || "Нет";
 		row.readableId = calculation.readableId || "Нет данных";
 
@@ -348,8 +351,7 @@ export class ExcelExportService {
 						type,
 						probability:
 							(raw as UncertaintyMapEntry)?.probability || "Нет данных",
-						influence:
-							(raw as UncertaintyMapEntry)?.influence || "Нет данных",
+						influence: (raw as UncertaintyMapEntry)?.influence || "Нет данных",
 					}),
 				);
 

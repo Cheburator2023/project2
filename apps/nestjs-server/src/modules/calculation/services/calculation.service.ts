@@ -7,7 +7,10 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { CreateCalculationDto, PaginationDto } from "../dto";
 import { UpdateCalculationDto } from "../dto/request/update-calculation.dto";
-import { Calculation, CalculationStatus } from "../entities/calculation.entity";
+import {
+	Calculation,
+	CalculationStatusValues,
+} from "../entities/calculation.entity";
 import { PaginatedResult } from "../interfaces/paginated-result.interface";
 import { AbortSignal } from "node-abort-controller";
 import { CustomLogger } from "src/shared/services/logger.service";
@@ -83,17 +86,15 @@ export class CalculationService {
 						}
 					}
 
-                    const modelDeveloped = createCalculationDto.modelDeveloped || "Нет";
+					const modelDeveloped = createCalculationDto.modelDeveloped || "Нет";
 
-                    let readyPromReports = createCalculationDto.readyPromReports;
-                    if (modelDeveloped === "Да" && !readyPromReports) {
-                        readyPromReports = "";
-                    }
+					let readyPromReports = createCalculationDto.readyPromReports;
+					if (modelDeveloped === "Да" && !readyPromReports) {
+						readyPromReports = "";
+					}
 
-					const generalUncertaintyObject: Record<
-						string,
-						UncertaintyMapEntry
-					> = {};
+					const generalUncertaintyObject: Record<string, UncertaintyMapEntry> =
+						{};
 					if (createCalculationDto.generalUncertainty) {
 						createCalculationDto.generalUncertainty.forEach((item) => {
 							generalUncertaintyObject[item.type] = {
@@ -137,14 +138,14 @@ export class CalculationService {
 						department: createCalculationDto.department,
 						customerName: createCalculationDto.customerName,
 						comment: createCalculationDto.comment,
-						status: CalculationStatus.ACTIVE,
+						status: CalculationStatusValues.ACTIVE,
 						version,
 						seriesId,
 						parentCalcId: null,
 						readableId,
 						questionnaireData: {
 							calcName: createCalculationDto.calcName || "Новый расчет",
-                            modelDeveloped: createCalculationDto.modelDeveloped,
+							modelDeveloped: createCalculationDto.modelDeveloped,
 							modelsCount: createCalculationDto.modelsCount,
 							setupComplexity: createCalculationDto.setupComplexity,
 							initiativeTimeline: createCalculationDto.initiativeTimeline,
@@ -732,13 +733,13 @@ export class CalculationService {
 					if (calculationResult.length > 0) {
 						questionnaireData = {
 							...questionnaireData,
-                            modelDeveloped: questionnaireData.modelDeveloped || "Нет",
+							modelDeveloped: questionnaireData.modelDeveloped || "Нет",
 							calculationResult,
 						};
 					}
 
 					const newCalculation = this.calculationRepository.create({
-						status: CalculationStatus.ACTIVE,
+						status: CalculationStatusValues.ACTIVE,
 						calcName:
 							createNewVersionDto.calcName || sourceCalculation.calcName,
 						rfd: createNewVersionDto.rfd || sourceCalculation.rfd,
@@ -871,13 +872,13 @@ export class CalculationService {
 					if (calculationResult.length > 0) {
 						questionnaireData = {
 							...questionnaireData,
-                            modelDeveloped: questionnaireData.modelDeveloped || "Нет",
+							modelDeveloped: questionnaireData.modelDeveloped || "Нет",
 							calculationResult,
 						};
 					}
 
 					const newCalculation = this.calculationRepository.create({
-						status: CalculationStatus.ACTIVE,
+						status: CalculationStatusValues.ACTIVE,
 						calcName: createCloneDto.calcName || sourceCalculation.calcName,
 						rfd: createCloneDto.rfd || sourceCalculation.rfd,
 						streamExecutor:
@@ -1010,7 +1011,7 @@ export class CalculationService {
 		readableId: string,
 	): Promise<void> {
 		const existing = await this.calculationRepository.findOne({
-			where: { seriesId, readableId, status: CalculationStatus.ACTIVE },
+			where: { seriesId, readableId, status: CalculationStatusValues.ACTIVE },
 		});
 
 		if (existing) {
@@ -1031,13 +1032,13 @@ export class CalculationService {
 			const activeCalculations = await this.calculationRepository.find({
 				where: {
 					seriesId,
-					status: CalculationStatus.ACTIVE,
+					status: CalculationStatusValues.ACTIVE,
 				},
 			});
 
 			// Архивируем все найденные активные анкеты
 			for (const calc of activeCalculations) {
-				calc.status = CalculationStatus.ARCHIVE;
+				calc.status = CalculationStatusValues.ARCHIVE;
 				await this.calculationRepository.save(calc);
 			}
 		} catch (error) {

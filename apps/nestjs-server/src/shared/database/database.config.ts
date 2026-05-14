@@ -29,7 +29,7 @@ export const getTypeOrmModuleOptions = (
 		...dbConfig,
 		entities: [join(__dirname, "../../**/*.entity{.ts,.js}")],
 		migrations: [join(__dirname, "../../migrations/*{.ts,.js}")],
-		migrationsRun: configService.get<boolean>("DB_MIGRATIONS_RUN", false),
+		migrationsRun: configService.get<boolean>("DB_MIGRATIONS_RUN", true),
 		synchronize: configService.get<boolean>("DB_SYNCHRONIZE", false),
 		logging: configService.get<boolean>("LOGGING", true),
 		autoLoadEntities: configService.get<boolean>("AUTO_LOAD_ENTITIES", false),
@@ -46,7 +46,7 @@ export const getDataSourceOptions = (
 		...dbConfig,
 		entities: [join(__dirname, "../../**/*.entity{.ts,.js}")],
 		migrations: [join(__dirname, "../../migrations/*{.ts,.js}")],
-		migrationsRun: configService.get<boolean>("DB_MIGRATIONS_RUN", false),
+		migrationsRun: configService.get<boolean>("DB_MIGRATIONS_RUN", true),
 		synchronize: configService.get<boolean>("DB_SYNCHRONIZE", false),
 		logging: configService.get<boolean>("LOGGING", true),
 	};

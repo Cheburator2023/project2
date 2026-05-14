@@ -1,14 +1,46 @@
+type NavbarGroupKey = keyof typeof navbarGroups;
+
+export type AppRouteConfig = {
+	rootPath: string;
+	name: string;
+	disabled?: boolean;
+	devOnly?: boolean;
+	/** Пункт основного сайдменю */
+	showInNavbar?: boolean;
+	navbar?: {
+		group?: NavbarGroupKey;
+		order?: number;
+	};
+	/** Короткий заголовок для крошек на вложенных экранах */
+	shortName?: string;
+};
+
+export const navbarGroups = {
+	main: { title: "Разделы" },
+	adminV2: { title: "Администрирование" },
+} as const;
+
 export const routes = {
 	home: {
 		rootPath: "/",
 		name: "Главная / Реестр",
 		disabled: false,
-		subRoutes: {},
+		showInNavbar: true,
+		navbar: { group: "main", order: 0 },
 	},
 	calculationCreate: {
 		rootPath: "/calculation/create",
 		name: "Создание анкеты",
 		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "main", order: 10 },
+	},
+	calculationCompare: {
+		rootPath: "/calculation/compare",
+		name: "Сравнение расчётов",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "main", order: 20 },
 	},
 	calculationPreview: {
 		rootPath: "/calculation/preview/:id",
@@ -25,20 +57,80 @@ export const routes = {
 		name: "Создание шаблона анкеты",
 		disabled: false,
 	},
-	calculationCompare: {
-		rootPath: "/calculation/compare",
-		name: "Сравнение расчетов",
-		disabled: false,
-	},
 	admin: {
 		rootPath: "/admin",
 		name: "Администрирование",
-		disabled: true,
+		disabled: false,
+	},
+	adminV2Schemas: {
+		rootPath: "/admin/v2/schemas",
+		name: "Схемы",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "adminV2", order: 0 },
+	},
+	adminV2Dictionaries: {
+		rootPath: "/admin/v2/dictionaries",
+		name: "Словари",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "adminV2", order: 5 },
+	},
+	adminV2History: {
+		rootPath: "/admin/v2/history",
+		name: "История сохранений",
+		disabled: false,
+		showInNavbar: false,
+	},
+	adminV2TemplateHistory: {
+		rootPath: "/admin/v2/schemas/:templateId/history",
+		name: "История изменений шаблона",
+		shortName: "История",
+		disabled: false,
+	},
+	adminV2TemplateEditor: {
+		rootPath: "/admin/v2/templates/:templateId",
+		name: "Редактор JSON-схемы",
+		shortName: "Редактор",
+		disabled: false,
 	},
 	playground: {
 		name: "Песочница",
 		rootPath: "/playground",
 		devOnly: true,
-		disabled: true,
+		disabled: false,
+		showInNavbar: true,
 	},
-};
+	playgroundV2: {
+		rootPath: "/playground/v2",
+		name: "V2 шаблоны",
+		devOnly: true,
+		disabled: false,
+	},
+	playgroundV2TemplateEditor: {
+		rootPath: "/playground/v2/templates/:templateId",
+		name: "V2 конструктор (песочница)",
+		shortName: "Конструктор",
+		devOnly: true,
+		disabled: false,
+	},
+} satisfies Record<string, AppRouteConfig>;
+
+/** Сегмент `:templateId` уже закодировать при необходимости. */
+export const pathForAdminV2Template = (templateId: string) =>
+	routes.adminV2TemplateEditor.rootPath.replace(
+		":templateId",
+		encodeURIComponent(templateId),
+	);
+
+export const pathForAdminV2TemplateHistory = (templateId: string) =>
+	routes.adminV2TemplateHistory.rootPath.replace(
+		":templateId",
+		encodeURIComponent(templateId),
+	);
+
+export const pathForPlaygroundV2Template = (templateId: string) =>
+	routes.playgroundV2TemplateEditor.rootPath.replace(
+		":templateId",
+		encodeURIComponent(templateId),
+	);

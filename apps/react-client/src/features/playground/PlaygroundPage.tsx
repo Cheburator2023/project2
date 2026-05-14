@@ -7,6 +7,7 @@ import {
 	ArrayCustomCardListsWidgetExample,
 	MultiLanguageExample,
 } from "@react-client/features/playground/ArrayCustomCardListsWidget.example";
+import { V2PlaygroundPage } from "@react-client/features/playground/v2_playground/pages/V2PlaygroundPage";
 import { Fragment } from "react/jsx-runtime";
 
 const data = [
@@ -17,6 +18,10 @@ const data = [
 	{
 		name: "MultiLanguageExample",
 		Component: <MultiLanguageExample />,
+	},
+	{
+		name: "V2 Playground — список шаблонов и пример анкеты",
+		Component: <V2PlaygroundPage />,
 	},
 ];
 

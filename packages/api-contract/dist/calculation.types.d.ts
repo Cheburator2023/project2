@@ -10,11 +10,11 @@ export type AlgorithmType = (typeof ALGORITHM_TYPE_VALUES)[number];
 export type DeploymentChannel = (typeof DEPLOYMENT_CHANNEL_VALUES)[number];
 export type DataSourcesCount = (typeof DATA_SOURCES_COUNT_VALUES)[number];
 export type UncertaintyTypeKey = (typeof UNCERTAINTY_TYPE_VALUES)[number];
-export declare const CalculationStatus: {
+export declare const CalculationStatusValues: {
     readonly ACTIVE: "Активная";
     readonly ARCHIVE: "Архивная";
 };
-export type CalculationStatus = (typeof CalculationStatus)[keyof typeof CalculationStatus];
+export type CalculationStatus = (typeof CalculationStatusValues)[keyof typeof CalculationStatusValues];
 export interface UncertaintyItemDto {
     type: UncertaintyTypeKey;
     probability: Probability;

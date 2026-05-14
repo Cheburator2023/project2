@@ -11,7 +11,7 @@ const root = ReactDOM.createRoot(
 root.render(
 	<React.StrictMode>
 		{globalStyles}
-		<AuthProvider token="6666-6666-6666-6666">
+		<AuthProvider godMode>
 			<App data-test-id="index--App-0" />
 		</AuthProvider>
 	</React.StrictMode>,

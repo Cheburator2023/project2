@@ -1,5 +1,8 @@
 import type { CalculationQuestionnaireDataDto } from "@smart-anketa/api-contract";
-import { CalculationStatus } from "@smart-anketa/api-contract";
+import {
+	CalculationStatus,
+	CalculationStatusValues,
+} from "@smart-anketa/api-contract";
 import {
 	Column,
 	Entity,
@@ -8,7 +11,7 @@ import {
 	PrimaryGeneratedColumn,
 } from "typeorm";
 
-export { CalculationStatus };
+export { CalculationStatus, CalculationStatusValues };
 
 @Entity()
 export class Calculation {
@@ -35,8 +38,8 @@ export class Calculation {
 
 	@Column({
 		type: "enum",
-		enum: CalculationStatus,
-		default: CalculationStatus.ACTIVE,
+		enum: CalculationStatusValues,
+		default: CalculationStatusValues.ACTIVE,
 	})
 	status: CalculationStatus;
 

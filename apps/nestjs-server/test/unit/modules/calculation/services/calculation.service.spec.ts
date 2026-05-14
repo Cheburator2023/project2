@@ -4,10 +4,7 @@ import { getRepositoryToken } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { CalculationService } from "../../../../../src/modules/calculation/services/calculation.service";
 import { InMemoryFilterService } from "../../../../../src/modules/calculation/services/in-memory-filter.service";
-import {
-	Calculation,
-	CalculationStatus,
-} from "../../../../../src/modules/calculation/entities/calculation.entity";
+import { Calculation } from "../../../../../src/modules/calculation/entities/calculation.entity";
 import { CreateCalculationDto } from "../../../../../src/modules/calculation/dto/request/create-calculation.dto";
 import { UpdateCalculationDto } from "../../../../../src/modules/calculation/dto/request/update-calculation.dto";
 import { PaginationDto } from "../../../../../src/modules/calculation/dto/common/pagination.dto";
@@ -15,6 +12,7 @@ import { CreateNewVersionDto } from "../../../../../src/modules/calculation/dto/
 import { CreateCloneDto } from "../../../../../src/modules/calculation/dto/request/create-clone.dto";
 import { CustomLogger } from "../../../../../src/shared/services/logger.service";
 import { testCalculation } from "../../../../test-data";
+import { CalculationStatusValues } from "@smart-anketa/api-contract";
 
 // Глобальный мок delay.util — убираем реальные паузы при ретраях для ускорения тестов
 jest.mock("../../../../../src/shared/utils/delay.util", () => ({
@@ -138,7 +136,7 @@ describe("CalculationService", () => {
 			expect(repository.create).toHaveBeenCalledTimes(1);
 			expect(repository.save).toHaveBeenCalledTimes(1);
 			expect(result.calcName).toBe(validCreateDto.calcName);
-			expect(result.status).toBe(CalculationStatus.ACTIVE);
+			expect(result.status).toBe(CalculationStatusValues.ACTIVE);
 			expect(result.version).toBe("1");
 			expect(result.seriesId).toMatch(/^\d{8}$/);
 			expect(result.readableId).toBe(`Calc-${result.seriesId}-version-1`);
@@ -393,7 +391,7 @@ describe("CalculationService", () => {
 				...testCalculation,
 				seriesId: "11111111",
 				version: "1",
-				status: CalculationStatus.ACTIVE,
+				status: CalculationStatusValues.ACTIVE,
 			} as Calculation;
 			qb.getOne.mockResolvedValue(source);
 			repository.find

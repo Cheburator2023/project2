@@ -1,6 +1,6 @@
 import { styled, useColorScheme } from "@mui/material/styles";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
-import { SideMenu } from "../../features/navigation/organisms/SideMenu";
+import { SideMenu } from "@react-client/common/navigation/organisms/SideMenu";
 import { Flex } from "../primitives/Flex";
 
 const MainWrapper = styled("div", {

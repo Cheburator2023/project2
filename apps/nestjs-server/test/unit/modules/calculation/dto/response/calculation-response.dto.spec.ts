@@ -1,5 +1,5 @@
 import { CalculationResponseDto } from "../../../../../../src/modules/calculation/dto/response/calculation-response.dto";
-import { CalculationStatus } from "../../../../../../src/modules/calculation/entities/calculation.entity";
+import { CalculationStatusValues } from "@smart-anketa/api-contract";
 
 describe("CalculationResponseDto", () => {
 	it("should be defined", () => {
@@ -39,7 +39,7 @@ describe("CalculationResponseDto", () => {
 		dto.finalCoefficient = 1.0;
 		dto.createdAt = new Date();
 		dto.author = "Test User";
-		dto.status = CalculationStatus.ACTIVE;
+		dto.status = CalculationStatusValues.ACTIVE;
 		dto.version = "1";
 		dto.seriesId = "12345678";
 		dto.readableId = "Calc-12345678-version-1";
@@ -51,7 +51,7 @@ describe("CalculationResponseDto", () => {
 		expect(dto.questionnaireData.productionDeploymentChannels).toEqual([
 			"Батч",
 		]);
-		expect(dto.status).toBe(CalculationStatus.ACTIVE);
+		expect(dto.status).toBe(CalculationStatusValues.ACTIVE);
 		expect(dto.version).toBe("1");
 	});
 

@@ -631,6 +631,9 @@ export const HomeTemplete = ({
 };
 
 const GridWrapper = styled(Flex)`
+	width: 100%;
+	height: -webkit-fill-available;
+
 	& > div {
 		width: 100%;
 	}

@@ -2,7 +2,7 @@ import * as ExcelJS from "exceljs";
 import { ExcelExportService } from "../../../../../src/modules/calculation/services/excel-export.service";
 import {
 	Calculation,
-	CalculationStatus,
+	CalculationStatusValues,
 } from "../../../../../src/modules/calculation/entities/calculation.entity";
 import { CustomLogger } from "../../../../../src/shared/services/logger.service";
 
@@ -18,7 +18,7 @@ const buildCalc = (over: Partial<Calculation> = {}): Calculation =>
 		createdAt: new Date("2025-01-15"),
 		author: "Auth",
 		finalCoefficient: 1.5,
-		status: CalculationStatus.ACTIVE,
+		status: CalculationStatusValues.ACTIVE,
 		version: "1",
 		seriesId: "11111111",
 		parentCalcId: null,
@@ -152,7 +152,7 @@ describe("ExcelExportService", () => {
 
 	it("uses 'Архивная' for archive status and tolerates missing optional fields", async () => {
 		const calc = buildCalc({
-			status: CalculationStatus.ARCHIVE,
+			status: CalculationStatusValues.ARCHIVE,
 			rfd: undefined as any,
 			department: undefined as any,
 			customerName: undefined as any,
