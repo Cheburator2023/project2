@@ -18,7 +18,7 @@ import {
 	Divider,
 } from "@mui/material";
 import { useCalculationControllerFindOne } from "@react-client/common/api/queries/calculation";
-import { CalculationStatus } from "@smart-anketa/api-contract";
+import type { CalculationStatus } from "@smart-anketa/api-contract";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 
 import { Card } from "@react-client/common/muiCustom/Card";

@@ -127,7 +127,7 @@ export const viteCommonConfig = ({
 				"process.env.GIT_REVISION": JSON.stringify(git_revision),
 				"process.env.APP_NAME": JSON.stringify(APP_NAME),
 				"process.env.REACT_APP_API_URL": JSON.stringify(
-					"http://localhost:3000",
+					"https://sum-shell-sumd.sumd.dk1-sumd01.innodev.local/proxy/smart-anketa-api",
 				),
 				"process.env.NO_ROLES": JSON.stringify(NO_ROLES),
 			},
