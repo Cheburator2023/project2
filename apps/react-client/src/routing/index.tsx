@@ -8,8 +8,8 @@ import { AnketaPreviewPage } from "@react-client/features/anketaCRUD/pages/Anket
 import { HomePage } from "@react-client/features/home/pages/HomePage";
 import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
 import { Route, Routes } from "react-router";
-import { Page404 } from "./Page404";
-import { routes } from "./routes";
+import {routes} from "@react-client/version/v1/routing/routes";
+import {Page404} from "@react-client/routing/Page404";
 
 export const Routing = () => (
 	<Routes data-test-id="index--Routes-0">

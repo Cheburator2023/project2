@@ -4,7 +4,7 @@ import { styled } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import { camelCase } from "lodash-es";
 import { useLocation } from "react-router";
-import { routes } from "../../../routing/routes";
+import {routes} from "@react-client/version/v1/routing/routes";
 
 const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
 	margin: theme.spacing(1, 0),

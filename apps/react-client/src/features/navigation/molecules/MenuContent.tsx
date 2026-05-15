@@ -7,7 +7,7 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
 import { useLocation, useNavigate } from "react-router";
-import { routes } from "../../../routing/routes";
+import {routes} from "@react-client/version/v1/routing/routes";
 
 const mainListItems = Object.values(routes)
 	.map((route) => route)

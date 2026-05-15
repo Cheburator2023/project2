@@ -1,43 +1,43 @@
 export const routes = {
 	home: {
-		rootPath: "/",
+		rootPath: "/v1",
 		name: "Главная / Реестр",
 		disabled: false,
 		subRoutes: {},
 	},
 	calculationCreate: {
-		rootPath: "/calculation/create",
+		rootPath: "/v1/calculation/create",
 		name: "Создание анкеты",
 		disabled: false,
 	},
 	calculationPreview: {
-		rootPath: "/calculation/preview/:id",
+		rootPath: "/v1/calculation/preview/:id",
 		name: "Просмотр анкеты",
 		disabled: false,
 	},
 	calculationNewVersion: {
-		rootPath: "/calculation/new_version/:id",
+		rootPath: "/v1/calculation/new_version/:id",
 		name: "Создание новой версии анкеты",
 		disabled: false,
 	},
 	calculationClone: {
-		rootPath: "/calculation/clone/:id",
+		rootPath: "/v1/calculation/clone/:id",
 		name: "Создание шаблона анкеты",
 		disabled: false,
 	},
 	calculationCompare: {
-		rootPath: "/calculation/compare",
+		rootPath: "/v1/calculation/compare",
 		name: "Сравнение расчетов",
 		disabled: false,
 	},
 	admin: {
-		rootPath: "/admin",
+		rootPath: "/v1/admin",
 		name: "Администрирование",
 		disabled: true,
 	},
 	playground: {
 		name: "Песочница",
-		rootPath: "/playground",
+		rootPath: "/v1/playground",
 		devOnly: true,
 		disabled: true,
 	},

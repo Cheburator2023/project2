@@ -33,7 +33,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { isEmpty } from "lodash-es";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
-import { routes } from "@react-client/routing/routes";
+import {routes} from "@react-client/version/v1/routing/routes";
 
 const APP_NAME = process.env.APP_NAME;
 

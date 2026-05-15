@@ -6,12 +6,12 @@ import { useCalculationControllerCreateNewVersion } from "@react-client/common/a
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { AnketaBasicLayoutCreate } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayoutCreate";
 import { Header } from "@react-client/features/navigation/organisms/Header";
-import { routes } from "@react-client/routing/routes";
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import SaveIcon from "@mui/icons-material/Save";
 import { useParentCalculationData } from "../hooks/useParentCalculationData";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
+import {routes} from "@react-client/version/v1/routing/routes";
 
 export const AnketaNewVersionPage = () => {
 	const navigate = useNavigate();

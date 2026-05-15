@@ -6,10 +6,10 @@ import { toast } from "@react-client/common/toasts";
 import { useAnketaCRUDFormsStore } from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { AnketaBasicLayoutCreate } from "@react-client/features/anketaCRUD/templates/AnketaBasicLayoutCreate";
 import { Header } from "@react-client/features/navigation/organisms/Header";
-import { routes } from "@react-client/routing/routes";
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import SaveIcon from "@mui/icons-material/Save";
+import {routes} from "@react-client/version/v1/routing/routes";
 
 export const AnketaCreatePage = () => {
 	const navigate = useNavigate();
