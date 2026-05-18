@@ -224,17 +224,26 @@ export type V2EditorHeaderMeta = {
 	status: string;
 };
 
+export type V2EditorHeaderActions = {
+	onSave: () => void;
+	onPublish: () => void;
+	savePending: boolean;
+	publishPending: boolean;
+};
+
 interface V2TemplateSchemaEditorProps {
 	templateId: string;
 	/** В админке редактируем «схему»; в песочнице — язык пользователя «шаблон анкеты». */
 	wording?: V2SchemaEditorWording;
 	onHeaderMetaChange?: (meta: V2EditorHeaderMeta | null) => void;
+	onHeaderActionsChange?: (actions: V2EditorHeaderActions | null) => void;
 }
 
 export const V2TemplateSchemaEditor = ({
 	templateId,
 	wording = "playgroundTemplate",
 	onHeaderMetaChange,
+	onHeaderActionsChange,
 }: V2TemplateSchemaEditorProps) => {
 	const { data: template } = useV2Template(templateId);
 	const { data: v2Dictionaries = [] } = useV2Dictionaries();
@@ -465,6 +474,28 @@ export const V2TemplateSchemaEditor = ({
 		});
 		refetchVersions();
 	};
+
+	useEffect(() => {
+		if (!draftVersion) {
+			onHeaderActionsChange?.(null);
+			return;
+		}
+
+		onHeaderActionsChange?.({
+			onSave: () => void handleSaveDraft(),
+			onPublish: () => void handlePublishDraft(),
+			savePending: updateVersion.isPending,
+			publishPending: publishVersion.isPending,
+		});
+	}, [
+		draftVersion,
+		onHeaderActionsChange,
+		updateVersion.isPending,
+		publishVersion.isPending,
+		jsonSchema,
+		uiSchema,
+		logic,
+	]);
 
 	const syncMonacoApply = () => {
 		let parsedSchema: unknown;
@@ -700,17 +731,6 @@ export const V2TemplateSchemaEditor = ({
 
 	return (
 		<Flex flexDirection="column" gap={2}>
-			<Flex justifyContent="flex-end" alignItems="center" wrap="wrap">
-				<Flex gap={1} wrap="wrap">
-					<Button variant="contained" onClick={() => void handleSaveDraft()}>
-						Сохранить
-					</Button>
-					<Button variant="outlined" onClick={() => void handlePublishDraft()}>
-						Опубликовать
-					</Button>
-				</Flex>
-			</Flex>
-
 			{mainTab !== "logic" && cycles.length > 0 ? (
 				<Alert severity="warning">
 					Подозреваются циклические зависимости в правилах ({cycles.length}). Откройте
