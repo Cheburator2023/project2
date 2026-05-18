@@ -189,3 +189,64 @@ export function setUiWidgetAtPointer(
 
 	return next;
 }
+
+/**
+ * Сохраняет привязку к V2-словарнику в `ui:options.dictionaryCode` (код справочника на бэкенде).
+ * Для превью конструктора enum подставляются из API отдельным шагом.
+ */
+export function setUiDictionaryCodeAtPointer(
+	ui: Record<string, unknown>,
+	fieldPointer: string,
+	dictionaryCode: string | null,
+): Record<string, unknown> {
+	const segs = pointerSegments(fieldPointer);
+	const next = structuredClone(ui) as Record<string, unknown>;
+
+	if (segs.length === 0) return next;
+
+	let cur: Record<string, unknown> = next;
+
+	for (let i = 0; i < segs.length; i++) {
+		const s = segs[i]!;
+
+		if (i === segs.length - 1) {
+			const prev = (cur[s] as Record<string, unknown>) ?? {};
+			const merged = { ...prev };
+
+			const prevOpt = merged["ui:options"];
+			const optBase =
+				prevOpt && typeof prevOpt === "object" && !Array.isArray(prevOpt)
+					? { ...(prevOpt as Record<string, unknown>) }
+					: {};
+
+			const code = dictionaryCode?.trim() ?? "";
+
+			if (code) {
+				optBase.dictionaryCode = code;
+				merged["ui:options"] = optBase;
+				if (merged["ui:widget"] === undefined || merged["ui:widget"] === "") {
+					merged["ui:widget"] = "select";
+				}
+			} else {
+				delete optBase.dictionaryCode;
+				if (Object.keys(optBase).length === 0) {
+					delete merged["ui:options"];
+				} else {
+					merged["ui:options"] = optBase;
+				}
+			}
+
+			if (Object.keys(merged).length === 0) {
+				delete cur[s];
+			} else {
+				cur[s] = merged;
+			}
+		} else {
+			const child = (cur[s] as Record<string, unknown>) ?? {};
+			cur[s] = child;
+			cur = child;
+		}
+	}
+
+	return next;
+}

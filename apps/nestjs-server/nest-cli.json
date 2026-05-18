@@ -3,6 +3,12 @@
 	"collection": "@nestjs/schematics",
 	"sourceRoot": "src",
 	"compilerOptions": {
-		"deleteOutDir": true
+		"deleteOutDir": true,
+		"assets": [
+			{
+				"include": "modules/anketa-v2/constants/*.snapshot.json",
+				"watchAssets": true
+			}
+		]
 	}
 }

@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import type {
 	V2JsonSchemaDto,
 	V2LogicGraphDto,
@@ -5,98 +8,46 @@ import type {
 } from "@smart-anketa/api-contract";
 
 /**
- * Заводская схема V2 — каркас базовой анкеты по мотивам блока «Основная информация» (v1).
- * Хранится на бэкенде и используется при сбросе шаблона к умолчанию.
+ * Эталон схемы по макетам (PNG в `llm/v2_docs/figma/`).
+ * Структурный источник: `llm/v2_docs/anketa-schema_default_parser_by_llm.json`
+ * Файл рядом с этим модулем: `v2-default-anketa.snapshot.json` (копия эталона для рантайма).
  */
+const SNAPSHOT_FILENAME = "v2-default-anketa.snapshot.json";
+
+type SnapshotFile = {
+	jsonSchema?: unknown;
+	uiSchema?: unknown;
+};
+
+function loadSnapshotPayload(): SnapshotFile {
+	const snapshotPath = join(__dirname, SNAPSHOT_FILENAME);
+	const raw = readFileSync(snapshotPath, "utf-8");
+	return JSON.parse(raw) as SnapshotFile;
+}
+
+function stripDraft07Schema(schema: Record<string, unknown>): V2JsonSchemaDto {
+	const { $schema: _omit, ...rest } = schema;
+	return rest as V2JsonSchemaDto;
+}
+
+const file = loadSnapshotPayload();
+const rawSchema =
+	file.jsonSchema &&
+	typeof file.jsonSchema === "object" &&
+	!Array.isArray(file.jsonSchema)
+		? (file.jsonSchema as Record<string, unknown>)
+		: { type: "object", properties: {} };
+
 export const V2_DEFAULT_TEMPLATE_SNAPSHOT = {
-	jsonSchema: {
-		type: "object",
-		title: "Базовая анкета",
-		required: ["calcName", "streamExecutor", "department"],
-		properties: {
-			calcName: {
-				type: "string",
-				title: "Название анкеты",
-				minLength: 1,
-				maxLength: 150,
-			},
-			rfd: {
-				type: "string",
-				title: "RFD",
-				maxLength: 64,
-			},
-			streamExecutor: {
-				type: "string",
-				title: "Стрим-исполнитель",
-				minLength: 1,
-				maxLength: 120,
-			},
-			department: {
-				type: "array",
-				title: "Департамент заказчика",
-				items: { type: "string", maxLength: 120 },
-				uniqueItems: true,
-				minItems: 1,
-			},
-			customerName: {
-				type: "string",
-				title: "ФИО заказчика",
-				maxLength: 150,
-			},
-			comment: {
-				type: "string",
-				title: "Комментарий",
-				maxLength: 250,
-			},
-			author: {
-				type: "string",
-				title: "Автор",
-				maxLength: 250,
-			},
-			createdAt: {
-				type: "string",
-				title: "Дата создания",
-				format: "date-time",
-			},
-		},
-	} satisfies V2JsonSchemaDto,
+	jsonSchema: stripDraft07Schema(rawSchema),
+	uiSchema: (typeof file.uiSchema === "object" &&
+	file.uiSchema !== null &&
+	!Array.isArray(file.uiSchema)
+		? structuredClone(file.uiSchema)
+		: {}) as V2UiSchemaDto,
 
-	uiSchema: {
-		"ui:order": [
-			"calcName",
-			"rfd",
-			"streamExecutor",
-			"department",
-			"customerName",
-			"comment",
-			"author",
-			"createdAt",
-		],
-		comment: {
-			"ui:widget": "textarea",
-			"ui:options": { rows: 4 },
-		},
-		createdAt: {
-			"ui:widget": "hidden",
-		},
-	} satisfies V2UiSchemaDto,
-
-	logic: {
-		rules: [
-			{
-				id: "default-v2-hint-comment",
-				kind: "hint",
-				targetPath: "/comment",
-				dependencies: [],
-				condition: true,
-				payload: {
-					text: "Подсказка из заводской схемы: сначала заполните название, стрим и департамент.",
-				},
-				description: "Демонстрационное правило подсказки",
-			},
-		],
-	} satisfies V2LogicGraphDto,
+	logic: { rules: [] } satisfies V2LogicGraphDto,
 
 	releaseNotes:
-		"Заводская схема V2 (каркас базовой анкеты, по мотивам блока основной информации v1)",
-} as const;
+		"Заводская схема V2 (анкета калькуляции разработки моделей; эталон из llm-парса макетов)",
+};

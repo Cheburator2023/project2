@@ -49,9 +49,6 @@ export function AdminV2SchemasPage() {
 		<Flex flexDirection="column" flexGrow={1} minHeight="0">
 			<Header>
 				<Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-				
-						<Typography variant="caption">Сброс шаблона {selectedTemplateId}</Typography>
-
 					<Button
 						variant="outlined"
 	

@@ -1,0 +1,885 @@
+{
+  "jsonSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Анкета калькуляции разработки моделей",
+    "type": "object",
+    "required": [],
+    "properties": {
+
+      "meta": {
+        "type": "object",
+        "title": "Мета",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Идентификатор",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "title": "Наименование анкеты"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Версия"
+          },
+          "status": {
+            "type": "string",
+            "title": "Статус",
+            "enum": ["Активная", "Архив"],
+            "default": "Активная"
+          }
+        }
+      },
+
+      "generalInfo": {
+        "type": "object",
+        "title": "Общая информация",
+        "properties": {
+
+          "complexity": {
+            "type": "string",
+            "title": "Сложность постановки",
+            "enum": [
+              "1 — Низкая ×1.00",
+              "2 — Средняя ×1.25",
+              "3 — Повышенная ×1.50",
+              "4 — Высокая ×2.00"
+            ]
+          },
+
+          "channels": {
+            "type": "string",
+            "title": "Каналы внедрения",
+            "enum": ["Требуется", "Не требуется"]
+          },
+
+          "overallUncertainty": {
+            "type": "string",
+            "title": "Общая неопределённость",
+            "readOnly": true
+          },
+
+          "createIS": {
+            "type": "string",
+            "title": "Создание ИС",
+            "enum": ["Требуется", "Не требуется"]
+          },
+
+          "createService": {
+            "type": "string",
+            "title": "Создание сервиса",
+            "enum": ["Стандартный продукт", "Не требуется"]
+          },
+
+          "pilotNeed": {
+            "type": "string",
+            "title": "Необходимость пилота",
+            "enum": ["Требуется MVP", "Не требуется"]
+          }
+        }
+      },
+
+      "uncertaintyCalculation": {
+        "type": "object",
+        "title": "Расчёт общей неопределённости",
+        "properties": {
+          "initiativeTimeline": {
+            "type": "string",
+            "title": "Сроки инициативы",
+            "enum": ["Краткосрочная", "Среднесрочная", "Долгосрочная"]
+          },
+          "initiativeCost": {
+            "type": "number",
+            "title": "Стоимость инициативы"
+          },
+          "uncertaintyAdjustment": {
+            "type": "number",
+            "title": "Поправка на общую неопределённость"
+          },
+          "riskGroup": {
+            "type": "object",
+            "title": "Группа рисков",
+            "properties": {
+              "businessComplexity": {
+                "type": "string",
+                "title": "Изменение, недостаточная проработка или сложности бизнеса",
+                "enum": ["Низкий", "Средний", "Высокий"]
+              },
+              "defectsInSolution": {
+                "type": "string",
+                "title": "Наличие дефектов во внедряемом решении / ПО в рамках",
+                "enum": ["Низкий", "Средний", "Высокий"]
+              },
+              "adjacentProjectsImpact": {
+                "type": "string",
+                "title": "Негативное влияние смежных проектов на показатели проекта",
+                "enum": ["Низкий", "Средний", "Высокий"]
+              },
+              "laborCostIncrease": {
+                "type": "string",
+                "title": "Увеличение трудозатрат проекта по причине недостаточной",
+                "enum": ["Низкий", "Средний", "Высокий"]
+              },
+              "thirdPartyNegligence": {
+                "type": "string",
+                "title": "Недобросовестное исполнение услуг со стороны привлечённых",
+                "enum": ["Низкий", "Средний", "Высокий"]
+              },
+              "staffShortage": {
+                "type": "string",
+                "title": "Отсутствие квалифицированного персонала или ошибок",
+                "enum": ["Низкий", "Средний", "Высокий"]
+              },
+              "sanctions": {
+                "type": "string",
+                "title": "Введение санкционных мер и других ограничений",
+                "enum": ["Низкий", "Средний", "Высокий"]
+              },
+              "controlProceduresLack": {
+                "type": "string",
+                "title": "Недостаток или отсутствие контрольных процедур",
+                "enum": ["Низкий", "Средний", "Высокий"]
+              },
+              "regulatoryChanges": {
+                "type": "string",
+                "title": "Изменение регуляторных требований",
+                "enum": ["Низкий", "Средний", "Высокий"]
+              },
+              "isNotUsedAfterProject": {
+                "type": "string",
+                "title": "Неиспользование ИС после завершения проекта",
+                "enum": ["Низкий", "Средний", "Высокий"]
+              },
+              "itArchitectureChanges": {
+                "type": "string",
+                "title": "Изменения целевой ИТ архитектуры Банка",
+                "enum": ["Низкий", "Средний", "Высокий"]
+              }
+            }
+          }
+        }
+      },
+
+      "detailInfo": {
+        "type": "object",
+        "title": "Детальная информация",
+        "properties": {
+
+          "parameters": {
+            "type": "object",
+            "title": "Параметры / Локальные риски",
+            "properties": {
+              "modelsCount": {
+                "type": "integer",
+                "title": "Кол-во моделей"
+              },
+              "algorithmType": {
+                "type": "string",
+                "title": "Тип алгоритма",
+                "enum": ["Табличные данные", "Временные ряды", "NLP", "CV", "RL"]
+              },
+              "algorithmCoeff": {
+                "type": "string",
+                "title": "Коэф. алгоритма",
+                "enum": ["×0.75", "×1.00", "×1.25", "×1.50"]
+              },
+              "autoML": {
+                "type": "string",
+                "title": "AutoML",
+                "enum": ["Не требуется", "Требуется"]
+              },
+              "specialist": {
+                "type": "string",
+                "title": "Специалист",
+                "enum": ["+10%", "+20%", "+0%"]
+              },
+              "cascadeEnsemble": {
+                "type": "string",
+                "title": "Каскад/ансамбль",
+                "enum": ["Да", "Нет"]
+              }
+            }
+          },
+
+          "sourceSystems": {
+            "type": "array",
+            "title": "Системы источники",
+            "items": {
+              "type": "object",
+              "title": "Система источник",
+              "required": ["name"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "title": "Название источника"
+                },
+                "type": {
+                  "type": "string",
+                  "title": "Тип",
+                  "enum": ["Внутренний", "Внешний"]
+                },
+                "daptRegistry": {
+                  "type": "string",
+                  "title": "Реестр в ДАПТ",
+                  "enum": ["Есть", "Нет"]
+                },
+                "requirements": {
+                  "type": "string",
+                  "title": "Требования",
+                  "enum": ["Понятны", "Не понятны", "Рисковые"]
+                },
+                "dataCoeff": {
+                  "type": "string",
+                  "title": "Коэф. данных",
+                  "enum": ["Нет", "Да"]
+                },
+                "nda": {
+                  "type": "string",
+                  "title": "НДА",
+                  "enum": ["Нет", "Да"]
+                }
+              }
+            }
+          }
+        }
+      },
+
+      "dataObjects": {
+        "type": "object",
+        "title": "Объекты данных",
+        "properties": {
+
+          "trainingSources": {
+            "type": "array",
+            "title": "Витрины-источники данных для обучения",
+            "items": {
+              "type": "object",
+              "title": "Витрина",
+              "required": ["name"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "title": "Название витрины"
+                },
+                "frequency": {
+                  "type": "string",
+                  "title": "Признаков"
+                },
+                "development": {
+                  "type": "string",
+                  "title": "Доработка",
+                  "enum": ["Не нужна", "С нуля", "Доработка"]
+                },
+                "integration": {
+                  "type": "string",
+                  "title": "Интеграция",
+                  "enum": ["Новая", "Существующая"]
+                },
+                "dataCondition": {
+                  "type": "string",
+                  "title": "Условие данных"
+                },
+                "usedModels": {
+                  "type": "string",
+                  "title": "Используемые модели"
+                },
+                "controlKD": {
+                  "type": "integer",
+                  "title": "Контрольный КД"
+                }
+              }
+            }
+          },
+
+          "applicationSources": {
+            "type": "array",
+            "title": "Витрины применения модели",
+            "items": {
+              "type": "object",
+              "title": "Витрина применения",
+              "required": ["name"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "title": "Название витрины"
+                },
+                "mode": {
+                  "type": "string",
+                  "title": "Режим",
+                  "enum": ["Батч", "Онлайн", "Мини-батч"]
+                },
+                "updateFrequency": {
+                  "type": "string",
+                  "title": "Обновление",
+                  "enum": ["Ежедневно", "Еженедельно", "Ежемесячно"]
+                },
+                "development": {
+                  "type": "string",
+                  "title": "Доработка",
+                  "enum": ["Не нужна", "С нуля", "Нужна"]
+                },
+                "controlKD": {
+                  "type": "integer",
+                  "title": "Контрольный КД"
+                },
+                "usedModels": {
+                  "type": "string",
+                  "title": "Используемые модели"
+                }
+              }
+            }
+          }
+        }
+      },
+
+      "dataProcessing": {
+        "type": "object",
+        "title": "Процессы обработки данных",
+        "properties": {
+          "sourcesRDS": {
+            "type": "integer",
+            "title": "Источников (RDS)"
+          },
+          "consumers": {
+            "type": "integer",
+            "title": "Приёмников"
+          },
+          "otherMicroservices": {
+            "type": "integer",
+            "title": "Прочих микросервисов"
+          },
+          "filters": {
+            "type": "integer",
+            "title": "Фильтров"
+          },
+          "yaspArtifact": {
+            "type": "boolean",
+            "title": "Сквозной артефакт решения (ЯСП)",
+            "description": "Является ли ЯСП мастер-системой по артефактам"
+          }
+        }
+      },
+
+      "models": {
+        "type": "object",
+        "title": "Модели",
+        "properties": {
+          "cascadeEnsemble": {
+            "type": "string",
+            "title": "Каскад / Ансамбль",
+            "enum": ["Да", "Нет"]
+          },
+          "recalibrationType": {
+            "type": "string",
+            "title": "Тип рекалибровки",
+            "enum": ["Полная рекалибровка", "Частичная", "Не требуется"]
+          },
+          "modelsList": {
+            "type": "array",
+            "title": "Список моделей",
+            "items": {
+              "type": "object",
+              "title": "Модель",
+              "required": ["name"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "title": "Название модели"
+                },
+                "class": {
+                  "type": "string",
+                  "title": "Класс",
+                  "enum": ["Розничный бизнес", "Корпоративный бизнес", "Прочий"]
+                },
+                "taskType": {
+                  "type": "string",
+                  "title": "Тип задачи",
+                  "enum": [
+                    "Бинарная классификация",
+                    "Многоклассовая классификация",
+                    "Регрессия",
+                    "Кластеризация",
+                    "Ранжирование"
+                  ]
+                },
+                "algorithm": {
+                  "type": "string",
+                  "title": "Алгоритм",
+                  "enum": ["Табличные", "Временные ряды", "NLP", "CV"]
+                },
+                "autoML": {
+                  "type": "string",
+                  "title": "Auto ML",
+                  "enum": ["Да", "Нет"]
+                },
+                "role": {
+                  "type": "string",
+                  "title": "Роль",
+                  "enum": ["Оркестратор", "Подчинённая", "Независимая"]
+                },
+                "trainingSources": {
+                  "type": "array",
+                  "title": "Витрины источников",
+                  "items": { "type": "string" }
+                },
+                "applicationSources": {
+                  "type": "array",
+                  "title": "Витрины применения",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      },
+
+      "atypicalTasks": {
+        "type": "array",
+        "title": "Нетиповые задачи",
+        "items": {
+          "type": "object",
+          "title": "Нетиповая задача",
+          "required": ["name"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Задача"
+            },
+            "estimateHoursPerDay": {
+              "type": "number",
+              "title": "Оценка ч/д"
+            },
+            "coefficient": {
+              "type": "number",
+              "title": "Коэф.",
+              "default": 1.5
+            },
+            "total": {
+              "type": "number",
+              "title": "Итог",
+              "readOnly": true
+            },
+            "includeInCalculation": {
+              "type": "boolean",
+              "title": "Включить в расчёт",
+              "default": true
+            }
+          }
+        }
+      },
+
+      "mlPlatform": {
+        "type": "object",
+        "title": "ML-платформа",
+        "properties": {
+          "param1": { "type": "string", "title": "Параметр 1" },
+          "param2": { "type": "string", "title": "Параметр 2" },
+          "param3": { "type": "string", "title": "Параметр 3" },
+          "param4": { "type": "string", "title": "Параметр 4" },
+          "param5": { "type": "string", "title": "Параметр 5" },
+          "param6": { "type": "string", "title": "Параметр 6" },
+          "typicalTasks": {
+            "type": "array",
+            "title": "Типовые задачи",
+            "items": {
+              "type": "object",
+              "title": "Задача",
+              "properties": {
+                "name": { "type": "string", "title": "Задача" },
+                "reason": { "type": "string", "title": "Причина задачи" },
+                "estimateHoursPerDay": { "type": "number", "title": "Оценка ч/д" },
+                "coefficient": { "type": "number", "title": "Коэф." },
+                "total": { "type": "number", "title": "Итог", "readOnly": true }
+              }
+            }
+          },
+          "atypicalTasks": {
+            "type": "array",
+            "title": "Нетиповые задачи",
+            "items": {
+              "type": "object",
+              "title": "Нетиповая задача",
+              "properties": {
+                "name": { "type": "string", "title": "Задача" },
+                "reason": { "type": "string", "title": "Причина задачи" },
+                "estimateHoursPerDay": { "type": "number", "title": "Оценка ч/д" },
+                "coefficient": { "type": "number", "title": "Коэф." },
+                "total": { "type": "number", "title": "Итог", "readOnly": true },
+                "includeInCalculation": {
+                  "type": "boolean",
+                  "title": "Включить в расчёт"
+                }
+              }
+            }
+          }
+        }
+      },
+
+      "modelControl": {
+        "type": "object",
+        "title": "Контроль моделей",
+        "properties": {}
+      },
+
+      "dataStorageAndProcessing": {
+        "type": "object",
+        "title": "Хранение и обработка данных",
+        "properties": {}
+      },
+
+      "summary": {
+        "type": "object",
+        "title": "Итоговая оценка",
+        "readOnly": true,
+        "properties": {
+          "baseScoreStream": {
+            "type": "number",
+            "title": "Базовая оценка по стриму (СФЕРА)",
+            "readOnly": true
+          },
+          "scoreWithComplexityCoeff": {
+            "type": "number",
+            "title": "Оценка с поправкой на коэффициент сложности",
+            "readOnly": true
+          },
+          "deviationFromBaseline": {
+            "type": "number",
+            "title": "Отклонение относительно базовой оценки по стриму (СФЕРА)",
+            "readOnly": true
+          },
+          "detailedCalculation": {
+            "type": "array",
+            "title": "Подробный расчёт",
+            "readOnly": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "stageName": { "type": "string", "title": "Наименование этапа E2E планирования" },
+                "baseScore": { "type": "number", "title": "Базовая оценка по стриму (СФЕРА)" },
+                "complexityCoeff": { "type": "number", "title": "Оценка с поправкой на коэффициент сложности" },
+                "deviationFromBase": { "type": "number", "title": "Отклонение относительно базовой оценки по стриму (СФЕРА)" }
+              }
+            }
+          }
+        }
+      }
+
+    }
+  },
+
+  "uiSchema": {
+    "meta": {
+      "ui:order": ["id", "name", "version", "status"],
+      "id": {
+        "ui:widget": "text",
+        "ui:readonly": true
+      },
+      "name": {
+        "ui:widget": "text",
+        "ui:placeholder": "Наименование анкеты"
+      },
+      "version": {
+        "ui:widget": "updown",
+        "ui:readonly": true
+      },
+      "status": {
+        "ui:widget": "select"
+      }
+    },
+
+    "generalInfo": {
+      "ui:order": [
+        "complexity",
+        "channels",
+        "createIS",
+        "overallUncertainty",
+        "createService",
+        "pilotNeed"
+      ],
+      "complexity": {
+        "ui:widget": "select",
+        "ui:placeholder": "Сложность постановки"
+      },
+      "channels": {
+        "ui:widget": "select",
+        "ui:placeholder": "Каналы внедрения"
+      },
+      "overallUncertainty": {
+        "ui:widget": "text",
+        "ui:readonly": true,
+        "ui:help": "Рассчитывается автоматически"
+      },
+      "createIS": {
+        "ui:widget": "select",
+        "ui:placeholder": "Создание ИС"
+      },
+      "createService": {
+        "ui:widget": "select",
+        "ui:placeholder": "Создание сервиса"
+      },
+      "pilotNeed": {
+        "ui:widget": "select",
+        "ui:placeholder": "Необходимость пилота"
+      }
+    },
+
+    "uncertaintyCalculation": {
+      "ui:order": ["initiativeTimeline", "initiativeCost", "uncertaintyAdjustment", "riskGroup"],
+      "initiativeTimeline": {
+        "ui:widget": "select"
+      },
+      "initiativeCost": {
+        "ui:widget": "text"
+      },
+      "uncertaintyAdjustment": {
+        "ui:widget": "text"
+      },
+      "riskGroup": {
+        "ui:order": [
+          "businessComplexity",
+          "defectsInSolution",
+          "adjacentProjectsImpact",
+          "laborCostIncrease",
+          "thirdPartyNegligence",
+          "staffShortage",
+          "sanctions",
+          "controlProceduresLack",
+          "regulatoryChanges",
+          "isNotUsedAfterProject",
+          "itArchitectureChanges"
+        ],
+        "businessComplexity": { "ui:widget": "select" },
+        "defectsInSolution": { "ui:widget": "select" },
+        "adjacentProjectsImpact": { "ui:widget": "select" },
+        "laborCostIncrease": { "ui:widget": "select" },
+        "thirdPartyNegligence": { "ui:widget": "select" },
+        "staffShortage": { "ui:widget": "select" },
+        "sanctions": { "ui:widget": "select" },
+        "controlProceduresLack": { "ui:widget": "select" },
+        "regulatoryChanges": { "ui:widget": "select" },
+        "isNotUsedAfterProject": { "ui:widget": "select" },
+        "itArchitectureChanges": { "ui:widget": "select" }
+      }
+    },
+
+    "detailInfo": {
+      "parameters": {
+        "ui:order": [
+          "modelsCount",
+          "algorithmType",
+          "algorithmCoeff",
+          "autoML",
+          "specialist",
+          "cascadeEnsemble"
+        ],
+        "modelsCount": { "ui:widget": "updown" },
+        "algorithmType": { "ui:widget": "select" },
+        "algorithmCoeff": { "ui:widget": "select" },
+        "autoML": { "ui:widget": "select" },
+        "specialist": { "ui:widget": "select" },
+        "cascadeEnsemble": { "ui:widget": "select" }
+      },
+      "sourceSystems": {
+        "ui:options": {
+          "orderable": false,
+          "addable": true,
+          "removable": true
+        },
+        "items": {
+          "name": { "ui:widget": "text" },
+          "type": { "ui:widget": "select" },
+          "daptRegistry": {
+            "ui:widget": "select",
+            "ui:options": {
+              "label": false
+            }
+          },
+          "requirements": { "ui:widget": "select" },
+          "dataCoeff": { "ui:widget": "select" },
+          "nda": { "ui:widget": "select" }
+        }
+      }
+    },
+
+    "dataObjects": {
+      "trainingSources": {
+        "ui:options": {
+          "orderable": false,
+          "addable": true,
+          "removable": true
+        },
+        "items": {
+          "name": { "ui:widget": "text" },
+          "frequency": { "ui:widget": "text" },
+          "development": { "ui:widget": "select" },
+          "integration": { "ui:widget": "select" },
+          "dataCondition": { "ui:widget": "text" },
+          "usedModels": { "ui:widget": "text" },
+          "controlKD": { "ui:widget": "updown" }
+        }
+      },
+      "applicationSources": {
+        "ui:options": {
+          "orderable": false,
+          "addable": true,
+          "removable": true
+        },
+        "items": {
+          "name": { "ui:widget": "text" },
+          "mode": { "ui:widget": "select" },
+          "updateFrequency": { "ui:widget": "select" },
+          "development": { "ui:widget": "select" },
+          "controlKD": { "ui:widget": "updown" },
+          "usedModels": { "ui:widget": "text" }
+        }
+      }
+    },
+
+    "dataProcessing": {
+      "ui:order": ["sourcesRDS", "consumers", "otherMicroservices", "filters", "yaspArtifact"],
+      "sourcesRDS": { "ui:widget": "updown" },
+      "consumers": { "ui:widget": "updown" },
+      "otherMicroservices": { "ui:widget": "updown" },
+      "filters": { "ui:widget": "updown" },
+      "yaspArtifact": {
+        "ui:widget": "checkbox",
+        "ui:description": "Является ли ЯСП мастер-системой по артефактам"
+      }
+    },
+
+    "models": {
+      "ui:order": ["cascadeEnsemble", "recalibrationType", "modelsList"],
+      "cascadeEnsemble": { "ui:widget": "select" },
+      "recalibrationType": { "ui:widget": "select" },
+      "modelsList": {
+        "ui:options": {
+          "orderable": false,
+          "addable": true,
+          "removable": true
+        },
+        "items": {
+          "name": { "ui:widget": "text" },
+          "class": { "ui:widget": "select" },
+          "taskType": { "ui:widget": "select" },
+          "algorithm": { "ui:widget": "select" },
+          "autoML": { "ui:widget": "select" },
+          "role": { "ui:widget": "select" },
+          "trainingSources": {
+            "ui:options": { "orderable": false, "addable": true, "removable": true },
+            "items": { "ui:widget": "text" }
+          },
+          "applicationSources": {
+            "ui:options": { "orderable": false, "addable": true, "removable": true },
+            "items": { "ui:widget": "text" }
+          }
+        }
+      }
+    },
+
+    "atypicalTasks": {
+      "ui:options": {
+        "orderable": false,
+        "addable": true,
+        "removable": true
+      },
+      "items": {
+        "ui:order": ["name", "estimateHoursPerDay", "coefficient", "total", "includeInCalculation"],
+        "name": { "ui:widget": "text" },
+        "estimateHoursPerDay": { "ui:widget": "text" },
+        "coefficient": { "ui:widget": "text" },
+        "total": { "ui:widget": "text", "ui:readonly": true },
+        "includeInCalculation": { "ui:widget": "checkbox" }
+      }
+    },
+
+    "mlPlatform": {
+      "ui:order": ["param1", "param2", "param3", "param4", "param5", "param6", "typicalTasks", "atypicalTasks"],
+      "param1": { "ui:widget": "select" },
+      "param2": { "ui:widget": "select" },
+      "param3": { "ui:widget": "select" },
+      "param4": { "ui:widget": "select" },
+      "param5": { "ui:widget": "select" },
+      "param6": { "ui:widget": "select" },
+      "typicalTasks": {
+        "ui:options": { "orderable": false, "addable": false, "removable": false },
+        "items": {
+          "name": { "ui:widget": "text", "ui:readonly": true },
+          "reason": { "ui:widget": "text", "ui:readonly": true },
+          "estimateHoursPerDay": { "ui:widget": "text", "ui:readonly": true },
+          "coefficient": { "ui:widget": "text", "ui:readonly": true },
+          "total": { "ui:widget": "text", "ui:readonly": true }
+        }
+      },
+      "atypicalTasks": {
+        "ui:options": { "orderable": false, "addable": true, "removable": true },
+        "items": {
+          "name": { "ui:widget": "text" },
+          "reason": { "ui:widget": "text" },
+          "estimateHoursPerDay": { "ui:widget": "text" },
+          "coefficient": { "ui:widget": "text" },
+          "total": { "ui:widget": "text", "ui:readonly": true },
+          "includeInCalculation": { "ui:widget": "checkbox" }
+        }
+      }
+    },
+
+    "modelControl": {
+      "ui:collapsible": true
+    },
+
+    "dataStorageAndProcessing": {
+      "ui:collapsible": true
+    },
+
+    "summary": {
+      "ui:readonly": true,
+      "ui:order": [
+        "baseScoreStream",
+        "scoreWithComplexityCoeff",
+        "deviationFromBaseline",
+        "detailedCalculation"
+      ],
+      "baseScoreStream": {
+        "ui:widget": "text",
+        "ui:readonly": true
+      },
+      "scoreWithComplexityCoeff": {
+        "ui:widget": "text",
+        "ui:readonly": true
+      },
+      "deviationFromBaseline": {
+        "ui:widget": "text",
+        "ui:readonly": true
+      },
+      "detailedCalculation": {
+        "ui:options": {
+          "orderable": false,
+          "addable": false,
+          "removable": false
+        },
+        "items": {
+          "stageName": { "ui:widget": "text", "ui:readonly": true },
+          "baseScore": { "ui:widget": "text", "ui:readonly": true },
+          "complexityCoeff": { "ui:widget": "text", "ui:readonly": true },
+          "deviationFromBase": { "ui:widget": "text", "ui:readonly": true }
+        }
+      }
+    },
+
+    "ui:order": [
+      "meta",
+      "generalInfo",
+      "uncertaintyCalculation",
+      "detailInfo",
+      "dataObjects",
+      "dataProcessing",
+      "models",
+      "atypicalTasks",
+      "mlPlatform",
+      "modelControl",
+      "dataStorageAndProcessing",
+      "summary"
+    ]
+  }
+}

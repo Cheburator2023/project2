@@ -168,6 +168,8 @@ export class V2TemplateVersionService {
 
 	/**
 	 * Создаёт новую версию из заводского снимка и сразу публикует её (текущая схема шаблона).
+	 * После публикации добавляет черновик — копию опубликованной версии — чтобы редактор схемы
+	 * мог сразу показать активный черновик (иначе только published и UI пишет «Нет активного черновика»).
 	 */
 	async resetToDefault(
 		templateId: string,
@@ -187,7 +189,22 @@ export class V2TemplateVersionService {
 			userId,
 		);
 
-		return this.publish(draft.id, {}, userId);
+		const published = await this.publish(draft.id, {}, userId);
+
+		await this.create(
+			templateId,
+			{
+				jsonSchema: structuredClone(published.jsonSchema),
+				uiSchema: structuredClone(published.uiSchema ?? {}),
+				logic: structuredClone(published.logic ?? { rules: [] }),
+				dictionariesSnapshot: published.dictionariesSnapshot ?? null,
+				releaseNotes: "Черновик для редактирования (копия опубликованной после сброса)",
+				parentVersionId: published.id,
+			},
+			userId,
+		);
+
+		return published;
 	}
 
 	/**

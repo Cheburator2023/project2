@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	useMutation,
+	useQueries,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import type {
 	CreateV2DictionaryItemRequestDto,
 	CreateV2DictionaryRequestDto,
@@ -16,7 +21,33 @@ import type {
 	V2TemplateDto,
 	V2TemplateVersionDto,
 } from "@smart-anketa/api-contract";
+import { useMemo } from "react";
+
 import { apiClient } from "../helpers/apiClient";
+
+/** Разбор тела `/v2/dictionaries/json/:code` для enum в превью конструктора. */
+function parseDictionaryJsonResponse(data: unknown): {
+	enums: string[];
+	enumNames: string[];
+} | null {
+	if (!data || typeof data !== "object") return null;
+	const raw = data as Record<string, unknown>;
+	const items = raw.items;
+	if (!Array.isArray(items)) return null;
+	const enums: string[] = [];
+	const enumNames: string[] = [];
+	for (const it of items) {
+		if (!it || typeof it !== "object") continue;
+		const row = it as Record<string, unknown>;
+		const code = row.code;
+		if (typeof code !== "string" || !code.trim()) continue;
+		enums.push(code);
+		const label = row.label;
+		enumNames.push(typeof label === "string" && label.trim() ? label : code);
+	}
+	if (!enums.length) return null;
+	return { enums, enumNames };
+}
 
 // Templates
 export const useV2Templates = () => {
@@ -512,6 +543,47 @@ export const useV2DictionaryAsJson = (code: string) => {
 			}),
 		enabled: !!code,
 	});
+};
+
+/** Параллельная загрузка enum для всех указанных кодов словарников (превью V2). */
+export const useV2DictionaryEnumsMaps = (dictionaryCodes: string[]) => {
+	const uniqueSorted = useMemo(
+		() =>
+			[
+				...new Set(
+					dictionaryCodes.filter((c) => typeof c === "string" && String(c).trim()),
+				),
+			].sort(),
+		[dictionaryCodes],
+	);
+
+	const queries = useQueries({
+		queries: uniqueSorted.map((code) => ({
+			queryKey: ["v2-dictionaries", "json", code] as const,
+			queryFn: () =>
+				apiClient<Record<string, unknown>>({
+					url: `/v2/dictionaries/json/${encodeURIComponent(code)}`,
+					method: "GET",
+				}),
+			enabled: !!code,
+			staleTime: 30_000,
+		})),
+	});
+
+	const enumMapByCode: Record<string, { enums: string[]; enumNames: string[] }> =
+		{};
+	for (let i = 0; i < uniqueSorted.length; i++) {
+		const code = uniqueSorted[i]!;
+		const row = queries[i];
+		if (row?.data) {
+			const parsed = parseDictionaryJsonResponse(row.data);
+			if (parsed) enumMapByCode[code] = parsed;
+		}
+	}
+
+	const isLoading = queries.some((q) => q.isPending || q.isFetching);
+
+	return { enumMapByCode, isLoading, uniqueSorted };
 };
 
 // Audit
