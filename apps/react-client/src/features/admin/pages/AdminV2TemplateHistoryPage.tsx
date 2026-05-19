@@ -8,7 +8,6 @@ import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { alpha, styled, useColorScheme, useTheme } from "@mui/material/styles";
 import {
@@ -198,15 +197,14 @@ export function AdminV2TemplateHistoryPage() {
 			<Header
 				leadingAccessory={
 					<Flex gap={1} alignItems="center" wrap="wrap" minWidth="0">
-						<Tooltip title="Назад к списку схем">
-							<IconButton
-								onClick={() => navigate(routes.adminV2Schemas.rootPath)}
-								aria-label="Назад к списку схем"
-								size="small"
-							>
-								<ArrowBackIcon />
-							</IconButton>
-						</Tooltip>
+						<IconButton
+							onClick={() => navigate(routes.adminV2Schemas.rootPath)}
+							title="Назад к списку схем"
+							aria-label="Назад к списку схем"
+							size="small"
+						>
+							<ArrowBackIcon />
+						</IconButton>
 						<Typography variant="subtitle2" component="span" fontWeight={600} noWrap>
 							История: {template?.name ?? (templateId || "…")}
 						</Typography>

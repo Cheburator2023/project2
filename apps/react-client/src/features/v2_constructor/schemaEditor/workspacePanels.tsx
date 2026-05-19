@@ -2,7 +2,7 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import type { IDockviewPanelProps } from "dockview-react";
 import { TAB_HEADINGS } from "./constants";
-import { SchemaCanvasPanel } from "./components/SchemaCanvasDnd";
+import { SchemaDesignerLayout } from "./components/SchemaDesignerLayout";
 import { SchemaFieldTreePanel } from "./components/SchemaFieldTree";
 import { useSchemaEditor } from "./SchemaEditorContext";
 import { SchemaCalculationPanel } from "./panels/SchemaCalculationPanel";
@@ -62,17 +62,7 @@ export function DesignerWorkspacePanel(_props: IDockviewPanelProps) {
 	return (
 		<PanelHost dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.panelDesigner}>
 			<CyclesWarning />
-			<Box
-				sx={{
-					flex: 1,
-					minHeight: 0,
-					overflow: "hidden",
-					display: "flex",
-					flexDirection: "column",
-				}}
-			>
-				<SchemaCanvasPanel embedded />
-			</Box>
+			<SchemaDesignerLayout />
 		</PanelHost>
 	);
 }

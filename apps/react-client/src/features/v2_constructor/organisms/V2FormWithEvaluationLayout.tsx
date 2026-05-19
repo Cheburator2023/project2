@@ -27,9 +27,9 @@ export function V2FormWithEvaluationLayout({
 				display: "grid",
 				gridTemplateColumns: {
 					xs: "1fr",
-					lg: `minmax(0, 1fr) minmax(${sideMinWidth}px, 440px)`,
+					lg: `minmax(0, 1fr) minmax(${sideMinWidth}px, 640px)`,
 				},
-				gap: 2,
+				gap: 1,
 				alignItems: "start",
 			}}
 		>
@@ -37,7 +37,6 @@ export function V2FormWithEvaluationLayout({
 			<Box
 				sx={{
 					position: { lg: "sticky" },
-					maxHeight: { lg: "calc(100vh - 24px)" },
 					overflow: { lg: "auto" },
 				}}
 			>

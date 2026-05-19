@@ -9,7 +9,6 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useCallback, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -70,15 +69,14 @@ export function AdminV2DictionaryDetailPage() {
 				leadingAccessory={
 					headerDisplay ? (
 						<Flex gap={1} alignItems="center" wrap="wrap" minWidth="0">
-							<Tooltip title="К списку справочников">
-								<IconButton
-									size="small"
-									onClick={() => navigate(routes.adminV2Dictionaries.rootPath)}
-									aria-label="К списку справочников"
-								>
-									<ArrowBackIcon />
-								</IconButton>
-							</Tooltip>
+							<IconButton
+								size="small"
+								title="К списку справочников"
+								onClick={() => navigate(routes.adminV2Dictionaries.rootPath)}
+								aria-label="К списку справочников"
+							>
+								<ArrowBackIcon />
+							</IconButton>
 							<Typography variant="subtitle2" component="span" fontWeight={600} noWrap>
 								{headerDisplay.title}
 							</Typography>

@@ -7,6 +7,53 @@ import { useSchemaEditor } from "../SchemaEditorContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "../components/PanelChrome";
 
+function JsonEditorColumn({
+	label,
+	value,
+	onChange,
+}: {
+	label: string;
+	value: string;
+	onChange: (value: string) => void;
+}) {
+	return (
+		<Box
+			sx={{
+				minHeight: 0,
+				minWidth: 0,
+				display: "flex",
+				flexDirection: "column",
+				overflow: "hidden",
+			}}
+		>
+			<Typography
+				variant="caption"
+				fontWeight={600}
+				display="block"
+				sx={{ mb: 0.5, flexShrink: 0 }}
+			>
+				{label}
+			</Typography>
+			<Box
+				sx={{
+					flex: 1,
+					minHeight: 0,
+					overflow: "hidden",
+					"& .monaco-editor": { height: "100% !important" },
+				}}
+			>
+				<Editor
+					height="100%"
+					defaultLanguage="json"
+					options={{ minimap: { enabled: false }, wordWrap: "on" }}
+					value={value}
+					onChange={(v) => onChange(v ?? "")}
+				/>
+			</Box>
+		</Box>
+	);
+}
+
 export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 	const {
 		schemaMonacoText,
@@ -18,9 +65,12 @@ export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 		reloadMonacoFromState,
 	} = useSchemaEditor();
 
+	const fillHeight = embedded;
+
 	return (
 		<PanelChrome
 			embedded={embedded}
+			fillHeight={fillHeight}
 			dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.jsonEditor}
 			title="Редактор JSON"
 			description="Прямое редактирование JSON Schema и UI Schema черновика."
@@ -35,38 +85,43 @@ export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 				</Box>
 			}
 		>
-			{monacoError ? <Alert severity="error">{monacoError}</Alert> : null}
 			<Box
-				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.jsonEditors}
 				sx={{
-					display: "grid",
-					gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-					gap: 2,
-					minHeight: 360,
+					flex: fillHeight ? 1 : undefined,
+					minHeight: fillHeight ? 0 : undefined,
+					height: fillHeight ? "100%" : undefined,
+					display: "flex",
+					flexDirection: "column",
+					gap: 1,
+					overflow: "hidden",
 				}}
 			>
-				<Box sx={{ minHeight: 320 }}>
-					<Typography variant="caption" fontWeight={600} display="block" sx={{ mb: 0.5 }}>
-						JSON Schema
-					</Typography>
-					<Editor
-						height="320px"
-						defaultLanguage="json"
-						options={{ minimap: { enabled: false }, wordWrap: "on" }}
+				{monacoError ? (
+					<Alert severity="error" sx={{ flexShrink: 0 }}>
+						{monacoError}
+					</Alert>
+				) : null}
+				<Box
+					data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.jsonEditors}
+					sx={{
+						flex: fillHeight ? 1 : undefined,
+						minHeight: fillHeight ? 0 : 360,
+						display: "grid",
+						gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+						gridTemplateRows: fillHeight ? "1fr" : undefined,
+						gap: 2,
+						overflow: "hidden",
+					}}
+				>
+					<JsonEditorColumn
+						label="JSON Schema"
 						value={schemaMonacoText}
-						onChange={(v) => setSchemaMonacoText(v ?? "")}
+						onChange={setSchemaMonacoText}
 					/>
-				</Box>
-				<Box sx={{ minHeight: 320 }}>
-					<Typography variant="caption" fontWeight={600} display="block" sx={{ mb: 0.5 }}>
-						UI Schema
-					</Typography>
-					<Editor
-						height="320px"
-						defaultLanguage="json"
-						options={{ minimap: { enabled: false }, wordWrap: "on" }}
+					<JsonEditorColumn
+						label="UI Schema"
 						value={uiMonacoText}
-						onChange={(v) => setUiMonacoText(v ?? "")}
+						onChange={setUiMonacoText}
 					/>
 				</Box>
 			</Box>

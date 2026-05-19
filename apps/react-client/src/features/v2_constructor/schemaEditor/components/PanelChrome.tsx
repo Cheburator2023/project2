@@ -9,6 +9,7 @@ export function PanelChrome({
 	actions,
 	children,
 	embedded = false,
+	fillHeight = false,
 	dataTestId,
 }: {
 	title?: string;
@@ -17,6 +18,8 @@ export function PanelChrome({
 	children: ReactNode;
 	/** Без заголовка — контент на всю панель (внутри workspace с общими вкладками). */
 	embedded?: boolean;
+	/** В embedded-режиме: flex-колонка без скролла контейнера (для Monaco и т.п.). */
+	fillHeight?: boolean;
 	dataTestId?: string;
 }) {
 	if (embedded) {
@@ -35,8 +38,11 @@ export function PanelChrome({
 					sx={{
 						flex: 1,
 						minHeight: 0,
-						overflow: "auto",
+						overflow: fillHeight ? "hidden" : "auto",
 						p: 1,
+						...(fillHeight
+							? { display: "flex", flexDirection: "column" }
+							: {}),
 					}}
 				>
 					{children}

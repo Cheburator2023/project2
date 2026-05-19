@@ -9,6 +9,7 @@ import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
+import { Card } from "@react-client/common/muiCustom/Card";
 
 export type V2SummaryFormSlice = {
 	baseScoreStream?: number;
@@ -80,15 +81,8 @@ export function V2FinalEvaluationPanel({
 			platformRows.length > 0);
 
 	return (
-		<Paper
-			elevation={0}
-			sx={{
-				border: 1,
-				borderColor: "divider",
-				borderRadius: 1,
-				overflow: "hidden",
-				bgcolor: "background.paper",
-			}}
+		<Card
+			variant="outlined"
 		>
 			<Box
 				sx={{
@@ -204,7 +198,7 @@ export function V2FinalEvaluationPanel({
 					</Box>
 				) : null}
 			</Box>
-		</Paper>
+		</Card>
 	);
 }
 
