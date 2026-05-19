@@ -1,7 +1,18 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
-import type { V2DictionaryDto, V2LogicRuleDto } from "@smart-anketa/api-contract";
+import type {
+	V2DictionaryDto,
+	V2LogicRuleDto,
+} from "@smart-anketa/api-contract";
 import { createContext, useContext } from "react";
-import type { FieldPathHint, SchemaEditorMainTab, SchemaFieldRow } from "./types";
+import type {
+	CalculationItem,
+	TaskTriggerItem,
+} from "../utils/calculationEngine";
+import type {
+	FieldPathHint,
+	SchemaEditorMainTab,
+	SchemaFieldRow,
+} from "./types";
 
 export type SchemaEditorContextValue = {
 	mainTab: SchemaEditorMainTab;
@@ -31,6 +42,11 @@ export type SchemaEditorContextValue = {
 
 	previewSchema: RJSFSchema;
 	previewUiSchema: UiSchema;
+	calculationItems: CalculationItem[];
+	taskTriggerItems: TaskTriggerItem[];
+	liveFormData: Record<string, unknown>;
+	calculationLoading: boolean;
+	calculationError: string | null;
 
 	schemaMonacoText: string;
 	setSchemaMonacoText: (v: string) => void;
@@ -54,6 +70,7 @@ export type SchemaEditorContextValue = {
 
 	rulesForSelectedExact: V2LogicRuleDto[];
 	rulesForSelectedSubtree: V2LogicRuleDto[];
+	rulesWhereSelectedIsDependency: V2LogicRuleDto[];
 
 	handleAddFieldPreset: (preset: RJSFSchema) => void;
 	handleAddFieldPresetAt: (preset: RJSFSchema, index: number) => void;
@@ -78,7 +95,9 @@ export type SchemaEditorContextValue = {
 	previewEvalNote: React.ReactNode;
 
 	resolvedField: RJSFSchema | undefined;
-	selectedPointerParent: ReturnType<typeof import("../utils/schemaPaths").parentOfPointer>;
+	selectedPointerParent: ReturnType<
+		typeof import("../utils/schemaPaths").parentOfPointer
+	>;
 	isRequired: boolean;
 	currentWidget: string;
 	currentObjectFieldTemplate: string;
@@ -91,7 +110,9 @@ export type SchemaEditorContextValue = {
 	dictionaryBindingMissing: boolean;
 };
 
-const SchemaEditorContext = createContext<SchemaEditorContextValue | null>(null);
+const SchemaEditorContext = createContext<SchemaEditorContextValue | null>(
+	null,
+);
 
 export function SchemaEditorProvider({
 	value,
@@ -101,7 +122,9 @@ export function SchemaEditorProvider({
 	children: React.ReactNode;
 }) {
 	return (
-		<SchemaEditorContext.Provider value={value}>{children}</SchemaEditorContext.Provider>
+		<SchemaEditorContext.Provider value={value}>
+			{children}
+		</SchemaEditorContext.Provider>
 	);
 }
 

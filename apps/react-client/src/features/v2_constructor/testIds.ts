@@ -16,6 +16,8 @@ export const V2_TEMPLATE_EDIT_TEST_IDS = {
 	panelLogic: "panelLogic",
 	panelPreview: "panelPreview",
 	panelSchemaTree: "panelSchemaTree",
+	panelRelations: "panelRelations",
+	panelCalculation: "panelCalculation",
 	cyclesWarning: "cyclesWarning",
 	palette: "palette",
 	paletteItem: "paletteItem",

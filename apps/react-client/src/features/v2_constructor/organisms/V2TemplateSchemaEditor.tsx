@@ -17,15 +17,11 @@ import type {
 	CreateV2TemplateVersionRequestDto,
 	V2LogicRuleDto,
 } from "@smart-anketa/api-contract";
-import JsonLogicBuilder, {
-	type JsonLogicValue,
-	applyLogic,
-} from "react-json-logic";
+import { type JsonLogicValue, applyLogic } from "react-json-logic";
 import { nanoid } from "nanoid";
 import { Box, Button, Typography } from "@mui/material";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type React from "react";
 import { useNavigate } from "react-router";
 import { SchemaEditorProvider } from "../schemaEditor/SchemaEditorContext";
 import type { SchemaEditorContextValue } from "../schemaEditor/SchemaEditorContext";
@@ -33,7 +29,9 @@ import { SchemaEditorDockProvider } from "../schemaEditor/SchemaEditorDockContex
 import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayout";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
+import { useDebouncedV2Calculation } from "../hooks/useDebouncedV2Calculation";
 import { derivePreviewSchemas } from "../utils/logicPreview";
+import { mapCalculationResult } from "../utils/mapCalculationResult";
 import {
 	collectDictionaryCodesFromUiSchema,
 	mergeDictionaryEnumsIntoPreviewSchema,
@@ -54,7 +52,6 @@ import {
 	addRootProperty,
 	applyGroupFieldOrdersToSchema,
 	insertChildPropertyAt,
-	insertRootPropertyAt,
 	isObjectFieldGroup,
 	listChildKeys,
 	listSchemaFields,
@@ -67,6 +64,7 @@ import {
 	toggleRequiredAtPointer,
 	updatePropertyAtPointer,
 } from "../utils/schemaMutators";
+import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
 
 function readUiBranch(
 	uiSchema: UiSchema | Record<string, unknown>,
@@ -219,7 +217,9 @@ export const V2TemplateSchemaEditor = ({
 		setLogic(coerceLogicGraph(draftVersion.logic));
 
 		setSchemaMonacoText(JSON.stringify(nextSchema, null, 2));
-		setUiMonacoText(JSON.stringify(coerceUiSchema(draftVersion.uiSchema), null, 2));
+		setUiMonacoText(
+			JSON.stringify(coerceUiSchema(draftVersion.uiSchema), null, 2),
+		);
 
 		setFormData({});
 	}, [draftVersion?.id]);
@@ -244,9 +244,39 @@ export const V2TemplateSchemaEditor = ({
 	const { enumMapByCode, isLoading: dictionaryEnumsLoading } =
 		useV2DictionaryEnumsMaps(referencedDictionaryCodes);
 
+	const {
+		result: calculationResult,
+		isLoading: calculationLoading,
+		error: calculationError,
+	} = useDebouncedV2Calculation({
+		templateId,
+		versionId: draftVersion?.id,
+		formData,
+		rulesOverride: logic,
+		enabled: Boolean(draftVersion?.id),
+	});
+
+	const mappedCalculation = useMemo(
+		() => (calculationResult ? mapCalculationResult(calculationResult) : null),
+		[calculationResult],
+	);
+
 	const logicPreviewPack = useMemo(
-		() => derivePreviewSchemas(jsonSchema, uiSchema, logic.rules, formData),
-		[jsonSchema, uiSchema, logic.rules, formData],
+		() =>
+			derivePreviewSchemas(
+				jsonSchema,
+				uiSchema,
+				logic.rules,
+				formData,
+				mappedCalculation
+					? {
+							computedLiveData: mappedCalculation.liveFormData,
+							calculationItems: mappedCalculation.calculationItems,
+							taskTriggerItems: mappedCalculation.taskTriggerItems,
+						}
+					: undefined,
+			),
+		[jsonSchema, uiSchema, logic.rules, formData, mappedCalculation],
 	);
 
 	const previewSchema = useMemo(
@@ -260,6 +290,9 @@ export const V2TemplateSchemaEditor = ({
 	);
 
 	const previewUiSchema = logicPreviewPack.previewUiSchema;
+	const calculationItems = logicPreviewPack.calculationItems;
+	const taskTriggerItems = logicPreviewPack.taskTriggerItems;
+	const liveFormData = logicPreviewPack.liveFormData;
 
 	const fieldPathHints = useMemo(() => {
 		const ui = uiSchema as Record<string, unknown>;
@@ -313,6 +346,14 @@ export const V2TemplateSchemaEditor = ({
 		if (selectedPointer === null) return [];
 		const np = normalizeJsonPointer(selectedPointer);
 		return logic.rules.filter((r) => normalizeJsonPointer(r.targetPath) === np);
+	}, [logic.rules, selectedPointer]);
+
+	const rulesWhereSelectedIsDependency = useMemo(() => {
+		if (selectedPointer === null) return [];
+		const np = normalizeJsonPointer(selectedPointer);
+		return logic.rules.filter((r) =>
+			r.dependencies.some((d) => normalizeJsonPointer(d) === np),
+		);
 	}, [logic.rules, selectedPointer]);
 
 	const rulesForSelectedSubtree = useMemo(() => {
@@ -497,7 +538,9 @@ export const V2TemplateSchemaEditor = ({
 
 		setJsonSchema(coerceJsonSchema(parsedSchema));
 		setUiSchema(coerceUiSchema(parsedUi));
-		setSchemaMonacoText(JSON.stringify(coerceJsonSchema(parsedSchema), null, 2));
+		setSchemaMonacoText(
+			JSON.stringify(coerceJsonSchema(parsedSchema), null, 2),
+		);
 		setUiMonacoText(JSON.stringify(coerceUiSchema(parsedUi), null, 2));
 		setMonacoError(null);
 	};
@@ -508,7 +551,9 @@ export const V2TemplateSchemaEditor = ({
 		setMonacoError(null);
 	};
 
-	const selectedPointerParent = selectedPointer ? parentOfPointer(selectedPointer) : null;
+	const selectedPointerParent = selectedPointer
+		? parentOfPointer(selectedPointer)
+		: null;
 
 	const resolvedField =
 		selectedPointer !== null
@@ -536,7 +581,8 @@ export const V2TemplateSchemaEditor = ({
 	const currentWidget =
 		typeof currentWidgetRaw === "string" ? currentWidgetRaw : "";
 
-	const currentObjectFieldTemplateRaw = leafUiBranch?.["ui:ObjectFieldTemplate"];
+	const currentObjectFieldTemplateRaw =
+		leafUiBranch?.["ui:ObjectFieldTemplate"];
 	const currentObjectFieldTemplate =
 		typeof currentObjectFieldTemplateRaw === "string"
 			? currentObjectFieldTemplateRaw
@@ -549,7 +595,10 @@ export const V2TemplateSchemaEditor = ({
 		return listChildKeys(jsonSchema, selectedPointer).map((key) => {
 			const childPointer =
 				selectedPointer === "/" ? `/${key}` : `${selectedPointer}/${key}`;
-			const child = resolveSchemaNode(jsonSchema, pointerSegments(childPointer));
+			const child = resolveSchemaNode(
+				jsonSchema,
+				pointerSegments(childPointer),
+			);
 			const typeLabel =
 				typeof child?.type === "string"
 					? child.type
@@ -591,7 +640,9 @@ export const V2TemplateSchemaEditor = ({
 				leafUiBranch?.["ui:order"]
 					? `ui:order (${(leafUiBranch["ui:order"] as unknown[]).length})`
 					: null,
-				...customUiOptionEntries.map(([k, v]) => `ui:options.${k}=${JSON.stringify(v)}`),
+				...customUiOptionEntries.map(
+					([k, v]) => `ui:options.${k}=${JSON.stringify(v)}`,
+				),
 			]
 				.filter(Boolean)
 				.join(" · ")
@@ -611,8 +662,8 @@ export const V2TemplateSchemaEditor = ({
 		typeof leafUiBranch["ui:options"] === "object" &&
 		!Array.isArray(leafUiBranch["ui:options"])
 			? String(
-					(leafUiBranch["ui:options"] as Record<string, unknown>).dictionaryCode ??
-						"",
+					(leafUiBranch["ui:options"] as Record<string, unknown>)
+						.dictionaryCode ?? "",
 				).trim()
 			: "";
 
@@ -638,7 +689,13 @@ export const V2TemplateSchemaEditor = ({
 		(parentPointer: string, preset: RJSFSchema, index: number) => {
 			const key = `field_${nanoid(8)}`;
 			const parentSegs = pointerSegments(parentPointer);
-			const next = insertChildPropertyAt(jsonSchema, parentSegs, key, preset, index);
+			const next = insertChildPropertyAt(
+				jsonSchema,
+				parentSegs,
+				key,
+				preset,
+				index,
+			);
 			if (next) {
 				setJsonSchema(next);
 				const childPointer =
@@ -695,7 +752,11 @@ export const V2TemplateSchemaEditor = ({
 	const handleToggleRequired = useCallback(
 		(checked: boolean) => {
 			if (!selectedPointer) return;
-			const next = toggleRequiredAtPointer(jsonSchema, selectedPointer, checked);
+			const next = toggleRequiredAtPointer(
+				jsonSchema,
+				selectedPointer,
+				checked,
+			);
 			if (next) setJsonSchema(next);
 		},
 		[jsonSchema, selectedPointer],
@@ -742,7 +803,9 @@ export const V2TemplateSchemaEditor = ({
 
 	const addRuleForTargetPath = useCallback((rawTarget: string) => {
 		const id = nanoid();
-		const targetPath = normalizeJsonPointer(rawTarget?.trim() ? rawTarget : "/");
+		const targetPath = normalizeJsonPointer(
+			rawTarget?.trim() ? rawTarget : "/",
+		);
 		const nextRule: V2LogicRuleDto = {
 			id,
 			kind: "visibility",
@@ -795,16 +858,21 @@ export const V2TemplateSchemaEditor = ({
 	const previewEvalNote = useMemo(() => {
 		if (!selectedRule) return null;
 		try {
-			const value = applyLogic(selectedRule.condition as JsonLogicValue, formData);
+			const value = applyLogic(
+				selectedRule.condition as JsonLogicValue,
+				formData,
+			);
 			return (
 				<Typography variant="caption" color="text.secondary">
-					Значение условия на данных превью: <code>{JSON.stringify(value)}</code>
+					Значение условия на данных превью:{" "}
+					<code>{JSON.stringify(value)}</code>
 				</Typography>
 			);
 		} catch (err) {
 			return (
 				<Typography variant="caption" color="error" component="div">
-					Ошибка интерпретации: {err instanceof Error ? err.message : String(err)}
+					Ошибка интерпретации:{" "}
+					{err instanceof Error ? err.message : String(err)}
 				</Typography>
 			);
 		}
@@ -834,6 +902,11 @@ export const V2TemplateSchemaEditor = ({
 			dictionaryEnumsLoading,
 			previewSchema,
 			previewUiSchema,
+			calculationItems,
+			taskTriggerItems,
+			liveFormData,
+			calculationLoading,
+			calculationError,
 			schemaMonacoText,
 			setSchemaMonacoText,
 			uiMonacoText,
@@ -854,6 +927,7 @@ export const V2TemplateSchemaEditor = ({
 			cycles,
 			rulesForSelectedExact,
 			rulesForSelectedSubtree,
+			rulesWhereSelectedIsDependency,
 			handleAddFieldPreset,
 			handleAddFieldPresetAt,
 			handleAddFieldPresetAtParent,
@@ -901,6 +975,11 @@ export const V2TemplateSchemaEditor = ({
 			dictionaryEnumsLoading,
 			previewSchema,
 			previewUiSchema,
+			calculationItems,
+			taskTriggerItems,
+			liveFormData,
+			calculationLoading,
+			calculationError,
 			schemaMonacoText,
 			uiMonacoText,
 			monacoError,
@@ -912,6 +991,7 @@ export const V2TemplateSchemaEditor = ({
 			cycles,
 			rulesForSelectedExact,
 			rulesForSelectedSubtree,
+			rulesWhereSelectedIsDependency,
 			handleAddFieldPreset,
 			handleAddFieldPresetAt,
 			handleAddFieldPresetAtParent,
@@ -942,6 +1022,8 @@ export const V2TemplateSchemaEditor = ({
 			currentDictionaryCode,
 			dictionaryBindingMissing,
 			handleDepsBlur,
+			calculationLoading,
+			calculationError,
 		],
 	);
 
@@ -949,7 +1031,7 @@ export const V2TemplateSchemaEditor = ({
 		return (
 			<Typography>
 				{wording === "adminSchema"
-					? "Схема не найдена или идёт загрузка..."
+					? <FullScreenLoader />
 					: "Шаблон не найден или загрузка..."}
 			</Typography>
 		);
@@ -1014,8 +1096,13 @@ export const V2TemplateSchemaEditor = ({
 					},
 				}}
 			>
-				<Box sx={{ flex: 1, minHeight: 0, position: "relative", width: "100%" }}>
-					<SchemaEditorDockProvider mainTab={mainTab} onMainTabChange={setMainTab}>
+				<Box
+					sx={{ flex: 1, minHeight: 0, position: "relative", width: "100%" }}
+				>
+					<SchemaEditorDockProvider
+						mainTab={mainTab}
+						onMainTabChange={setMainTab}
+					>
 						<V2SchemaEditorDockLayout />
 					</SchemaEditorDockProvider>
 				</Box>

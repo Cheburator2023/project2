@@ -7,6 +7,7 @@ import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
 import { useParams } from "react-router";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 
 export const V2TemplatePreviewPage = () => {
 	const { templateId } = useParams<{ templateId: string }>();
@@ -38,6 +39,7 @@ export const V2TemplatePreviewPage = () => {
 						<Typography variant="subtitle2" component="span" fontWeight={600} noWrap>
 							{template?.name ?? "Предпросмотр"}
 						</Typography>
+						<Spacer space={1} />
 						<Chip size="small" variant="outlined" label="Предпросмотр формы" />
 					</Flex>
 				}
@@ -47,7 +49,7 @@ export const V2TemplatePreviewPage = () => {
 				flexDirection="column"
 				flexGrow={1}
 				minHeight="0px"
-				sx={{ overflow: "auto", p: 2, maxWidth: 960, mx: "auto", width: "100%" }}
+				sx={{ overflow: "auto", mx: "auto", width: "100%" }}
 				data-test-id={V2_TEMPLATE_READ_TEST_IDS.formPreview}
 			>
 				<V2TemplateFormPreview templateId={templateId} />

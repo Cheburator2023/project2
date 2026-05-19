@@ -23,16 +23,22 @@ import {
 } from "../utils/coerceV2TemplateSnapshot";
 import { v2PreviewFormTemplates } from "../templates/v2PreviewFormTemplates";
 import { V2_TEMPLATE_READ_TEST_IDS } from "../testIds";
+import { useDebouncedV2Calculation } from "../hooks/useDebouncedV2Calculation";
 import { derivePreviewSchemas } from "../utils/logicPreview";
+import { mapCalculationResult } from "../utils/mapCalculationResult";
+import { V2FormWithEvaluationLayout } from "./V2FormWithEvaluationLayout";
+import { hideSummaryInPreviewUi } from "../utils/hideSummaryInPreviewUi";
+import { readSummaryFromFormData } from "../utils/readSummaryFromFormData";
 
 type V2TemplateFormPreviewProps = {
 	templateId: string;
 };
 
-export function V2TemplateFormPreview({ templateId }: V2TemplateFormPreviewProps) {
-	const { data: versions, isLoading: versionsLoading } = useV2TemplateVersions(
-		templateId,
-	);
+export function V2TemplateFormPreview({
+	templateId,
+}: V2TemplateFormPreviewProps) {
+	const { data: versions, isLoading: versionsLoading } =
+		useV2TemplateVersions(templateId);
 
 	const draftVersion = useMemo(() => {
 		const drafts =
@@ -66,9 +72,39 @@ export function V2TemplateFormPreview({ templateId }: V2TemplateFormPreviewProps
 	const { enumMapByCode, isLoading: dictionaryEnumsLoading } =
 		useV2DictionaryEnumsMaps(referencedDictionaryCodes);
 
+	const {
+		result: calculationResult,
+		isLoading: calculationLoading,
+		error: calculationError,
+	} = useDebouncedV2Calculation({
+		templateId,
+		versionId: draftVersion?.id,
+		formData,
+		rulesOverride: logic,
+		enabled: Boolean(draftVersion?.id),
+	});
+
+	const mappedCalculation = useMemo(
+		() => (calculationResult ? mapCalculationResult(calculationResult) : null),
+		[calculationResult],
+	);
+
 	const logicPreviewPack = useMemo(
-		() => derivePreviewSchemas(jsonSchema, uiSchema, logic.rules, formData),
-		[jsonSchema, uiSchema, logic.rules, formData],
+		() =>
+			derivePreviewSchemas(
+				jsonSchema,
+				uiSchema,
+				logic.rules,
+				formData,
+				mappedCalculation
+					? {
+							computedLiveData: mappedCalculation.liveFormData,
+							calculationItems: mappedCalculation.calculationItems,
+							taskTriggerItems: mappedCalculation.taskTriggerItems,
+						}
+					: undefined,
+			),
+		[jsonSchema, uiSchema, logic.rules, formData, mappedCalculation],
 	);
 
 	const previewSchema = useMemo(
@@ -81,7 +117,12 @@ export function V2TemplateFormPreview({ templateId }: V2TemplateFormPreviewProps
 		[logicPreviewPack.previewSchema, uiSchema, enumMapByCode],
 	);
 
-	const previewUiSchema = logicPreviewPack.previewUiSchema;
+	const previewUiSchema = useMemo(
+		() => hideSummaryInPreviewUi(logicPreviewPack.previewUiSchema),
+		[logicPreviewPack.previewUiSchema],
+	);
+	const displayFormData = mappedCalculation?.liveFormData ?? formData;
+	const summary = readSummaryFromFormData(displayFormData);
 
 	if (versionsLoading) {
 		return (
@@ -89,7 +130,6 @@ export function V2TemplateFormPreview({ templateId }: V2TemplateFormPreviewProps
 				justifyContent="center"
 				alignItems="center"
 				flexGrow={1}
-			
 				data-test-id={V2_TEMPLATE_READ_TEST_IDS.loading}
 			>
 				<CircularProgress size={32} />
@@ -99,7 +139,10 @@ export function V2TemplateFormPreview({ templateId }: V2TemplateFormPreviewProps
 
 	if (!draftVersion) {
 		return (
-			<Alert severity="warning" data-test-id={V2_TEMPLATE_READ_TEST_IDS.noDraft}>
+			<Alert
+				severity="warning"
+				data-test-id={V2_TEMPLATE_READ_TEST_IDS.noDraft}
+			>
 				Нет черновика для предпросмотра. Сохраните схему в редакторе.
 			</Alert>
 		);
@@ -113,26 +156,32 @@ export function V2TemplateFormPreview({ templateId }: V2TemplateFormPreviewProps
 				</Alert>
 			) : null}
 
-			<Box data-test-id={V2_TEMPLATE_READ_TEST_IDS.form}>
-				<Form
-					schema={previewSchema}
-					uiSchema={previewUiSchema}
-					formData={formData}
-					templates={v2PreviewFormTemplates}
-					validator={validatorRu}
-				liveValidate
-				noHtml5Validate
-				showErrorList={false}
-				onChange={(evt) =>
-					setFormData((evt.formData as Record<string, unknown>) ?? {})
-				}
-				/>
-			</Box>
+			{calculationError ? (
+				<Alert severity="error" sx={{ mb: 2 }}>
+					Ошибка калькуляции: {calculationError}
+				</Alert>
+			) : null}
 
-			<Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 2 }}>
-				Черновик v{draftVersion.versionNumber}. Учитываются правила видимости,
-				обязательности и подсказок по текущим данным формы.
-			</Typography>
+			<Box data-test-id={V2_TEMPLATE_READ_TEST_IDS.form}>
+				<V2FormWithEvaluationLayout
+					summary={summary}
+					calculationLoading={calculationLoading}
+				>
+					<Form
+						schema={previewSchema}
+						uiSchema={previewUiSchema}
+						formData={displayFormData}
+						templates={v2PreviewFormTemplates}
+						validator={validatorRu}
+						liveValidate
+						noHtml5Validate
+						showErrorList={false}
+						onChange={(evt) =>
+							setFormData((evt.formData as Record<string, unknown>) ?? {})
+						}
+					/>
+				</V2FormWithEvaluationLayout>
+			</Box>
 		</>
 	);
 }

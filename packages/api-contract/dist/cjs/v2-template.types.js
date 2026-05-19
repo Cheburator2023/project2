@@ -13,7 +13,7 @@
  * В одно время на шаблон допускается не более одной DRAFT-версии.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.V2_MAX_LOGIC_RULES = exports.V2_MAX_JSON_SCHEMA_BYTES = exports.V2_VALIDATION_ISSUE_LEVEL_VALUES = exports.V2_LOGIC_RULE_KIND_VALUES = exports.V2_TEMPLATE_AUDIT_ACTION_VALUES = exports.V2_TEMPLATE_STATUS_VALUES = void 0;
+exports.V2_CALC_ROLE_VALUES = exports.V2_MAX_LOGIC_RULES = exports.V2_MAX_JSON_SCHEMA_BYTES = exports.V2_VALIDATION_ISSUE_LEVEL_VALUES = exports.V2_LOGIC_RULE_KIND_VALUES = exports.V2_TEMPLATE_AUDIT_ACTION_VALUES = exports.V2_TEMPLATE_STATUS_VALUES = void 0;
 exports.V2_TEMPLATE_STATUS_VALUES = [
     "draft",
     "published",
@@ -46,6 +46,7 @@ exports.V2_LOGIC_RULE_KIND_VALUES = [
     "visibility",
     "required",
     "computed",
+    "row_computed",
     "validation",
     "hint",
     "task_trigger",
@@ -66,3 +67,12 @@ exports.V2_MAX_JSON_SCHEMA_BYTES = 1_048_576;
  * Максимальное число правил в logic graph.
  */
 exports.V2_MAX_LOGIC_RULES = 5_000;
+/* ------------------------------- Calculation ------------------------------ */
+exports.V2_CALC_ROLE_VALUES = [
+    "typical_total",
+    "atypical_total",
+    "grand_total",
+    "coefficient",
+    "stage_value",
+    "other",
+];

@@ -5,6 +5,8 @@ import { TAB_HEADINGS } from "./constants";
 import { SchemaCanvasPanel } from "./components/SchemaCanvasDnd";
 import { SchemaFieldTreePanel } from "./components/SchemaFieldTree";
 import { useSchemaEditor } from "./SchemaEditorContext";
+import { SchemaCalculationPanel } from "./panels/SchemaCalculationPanel";
+import { SchemaRelationsPanel } from "./panels/SchemaRelationsPanel";
 import { SchemaJsonPanel } from "./panels/SchemaJsonPanel";
 import { SchemaLogicPanel } from "./panels/SchemaLogicPanel";
 import { SchemaPreviewPanel } from "./panels/SchemaPreviewPanel";
@@ -48,7 +50,8 @@ function CyclesWarning() {
 			sx={{ flexShrink: 0, m: 1, mb: 0 }}
 			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.cyclesWarning}
 		>
-			Циклические зависимости в правилах ({cycles.length}). См. вкладку «Логика».
+			Циклические зависимости в правилах ({cycles.length}). См. вкладку
+			«Логика».
 		</Alert>
 	);
 }
@@ -59,7 +62,15 @@ export function DesignerWorkspacePanel(_props: IDockviewPanelProps) {
 	return (
 		<PanelHost dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.panelDesigner}>
 			<CyclesWarning />
-			<Box sx={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+			<Box
+				sx={{
+					flex: 1,
+					minHeight: 0,
+					overflow: "hidden",
+					display: "flex",
+					flexDirection: "column",
+				}}
+			>
 				<SchemaCanvasPanel embedded />
 			</Box>
 		</PanelHost>
@@ -106,10 +117,32 @@ export function PreviewWorkspacePanel(_props: IDockviewPanelProps) {
 	);
 }
 
+export const CALCULATION_PANEL_ID = "calculation";
+
+export function CalculationDockPanel(_props: IDockviewPanelProps) {
+	return (
+		<PanelHost dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.panelCalculation}>
+			<SchemaCalculationPanel embedded />
+		</PanelHost>
+	);
+}
+
+export const RELATIONS_PANEL_ID = "relations";
+
+export function RelationsDockPanel(_props: IDockviewPanelProps) {
+	return (
+		<PanelHost dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.panelRelations}>
+			<SchemaRelationsPanel embedded />
+		</PanelHost>
+	);
+}
+
 export const workspacePanelComponents = {
 	designer: DesignerWorkspacePanel,
 	json: JsonWorkspacePanel,
 	logic: LogicWorkspacePanel,
 	preview: PreviewWorkspacePanel,
 	[SCHEMA_TREE_PANEL_ID]: SchemaTreeDockPanel,
+	[CALCULATION_PANEL_ID]: CalculationDockPanel,
+	[RELATIONS_PANEL_ID]: RelationsDockPanel,
 } as const;

@@ -13,6 +13,7 @@ import {
 	buildDictionaryBindingsFromSchema,
 	collectDictionaryCodesFromUiSchema,
 } from "../utils/v2-schema-dictionary.util";
+import { V2_DEFAULT_LOGIC_GRAPH } from "./v2-default-logic";
 
 /**
  * Эталон схемы по макетам (PNG в `llm/v2_docs/figma/`).
@@ -72,7 +73,7 @@ export const V2_DEFAULT_REFERENCED_DICTIONARY_CODES =
 export const V2_DEFAULT_TEMPLATE_SNAPSHOT = {
 	jsonSchema,
 	uiSchema,
-	logic: { rules: [] } satisfies V2LogicGraphDto,
+	logic: V2_DEFAULT_LOGIC_GRAPH satisfies V2LogicGraphDto,
 	dictionariesSnapshot: {
 		referencedDictionaryCodes: V2_DEFAULT_REFERENCED_DICTIONARY_CODES,
 	},

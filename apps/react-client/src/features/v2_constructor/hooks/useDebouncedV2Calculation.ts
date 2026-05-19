@@ -1,0 +1,73 @@
+import { useCalculateV2Template } from "@react-client/common/api/queries/v2-templates";
+import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
+import type {
+	V2CalculationResultDto,
+	V2LogicGraphDto,
+} from "@smart-anketa/api-contract";
+import { useEffect, useRef, useState } from "react";
+
+type Options = {
+	templateId: string;
+	versionId?: string | null;
+	formData: Record<string, unknown>;
+	rulesOverride?: V2LogicGraphDto;
+	debounceMs?: number;
+	enabled?: boolean;
+};
+
+export function useDebouncedV2Calculation({
+	templateId,
+	versionId,
+	formData,
+	rulesOverride,
+	debounceMs = 350,
+	enabled = true,
+}: Options) {
+	const { mutateAsync, isPending } = useCalculateV2Template();
+	const [result, setResult] = useState<V2CalculationResultDto | null>(null);
+	const [error, setError] = useState<string | null>(null);
+	const requestIdRef = useRef(0);
+
+	useEffect(() => {
+		if (!enabled || !templateId || !versionId) {
+			setResult(null);
+			setError(null);
+			return;
+		}
+
+		const requestId = ++requestIdRef.current;
+		const timer = window.setTimeout(() => {
+			void mutateAsync({
+				templateId,
+				versionId,
+				dto: { formData, rulesOverride },
+			})
+				.then((data) => {
+					if (requestId !== requestIdRef.current) return;
+					setResult(data);
+					setError(null);
+				})
+				.catch((err) => {
+					if (requestId !== requestIdRef.current) return;
+					setResult(null);
+					setError(apiErrorMessage(err));
+				});
+		}, debounceMs);
+
+		return () => window.clearTimeout(timer);
+	}, [
+		templateId,
+		versionId,
+		formData,
+		rulesOverride,
+		debounceMs,
+		enabled,
+		mutateAsync,
+	]);
+
+	return {
+		result,
+		isLoading: isPending,
+		error,
+	};
+}

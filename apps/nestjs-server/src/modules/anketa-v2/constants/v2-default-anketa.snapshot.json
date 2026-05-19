@@ -406,7 +406,13 @@
                 "algorithm": {
                   "type": "string",
                   "title": "Алгоритм",
-                  "enum": ["Табличные", "Временные ряды", "NLP", "CV"]
+                  "enum": [
+                    "Табличные данные",
+                    "Временные ряды",
+                    "NLP",
+                    "CV",
+                    "RL"
+                  ]
                 },
                 "autoML": {
                   "type": "string",
@@ -545,7 +551,7 @@
           },
           "deviationFromBaseline": {
             "type": "number",
-            "title": "Отклонение относительно базовой оценки по стриму (СФЕРА)",
+            "title": "Отклонение относительно базовой оценки по стриму (СФЕРА), %",
             "readOnly": true
           },
           "detailedCalculation": {
@@ -558,7 +564,22 @@
                 "stageName": { "type": "string", "title": "Наименование этапа E2E планирования" },
                 "baseScore": { "type": "number", "title": "Базовая оценка по стриму (СФЕРА)" },
                 "complexityCoeff": { "type": "number", "title": "Оценка с поправкой на коэффициент сложности" },
-                "deviationFromBase": { "type": "number", "title": "Отклонение относительно базовой оценки по стриму (СФЕРА)" }
+                "deviationFromBase": { "type": "number", "title": "Отклонение относительно базовой оценки по стриму (СФЕРА), %" }
+              }
+            }
+          },
+          "platformStreams": {
+            "type": "array",
+            "title": "Платформенные стримы",
+            "readOnly": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "streamName": { "type": "string", "title": "Наименование стрима" },
+                "baseTypicalScore": { "type": "number", "title": "Базовая оценка (типовые)" },
+                "adjustedTypicalScore": { "type": "number", "title": "Оценка с поправкой (типовые)" },
+                "deviationPercent": { "type": "number", "title": "Отклонение, %" },
+                "atypicalScore": { "type": "number", "title": "Оценка нетиповых задач" }
               }
             }
           }
@@ -838,7 +859,8 @@
         "baseScoreStream",
         "scoreWithComplexityCoeff",
         "deviationFromBaseline",
-        "detailedCalculation"
+        "detailedCalculation",
+        "platformStreams"
       ],
       "baseScoreStream": {
         "ui:widget": "text",
@@ -863,6 +885,20 @@
           "baseScore": { "ui:widget": "text", "ui:readonly": true },
           "complexityCoeff": { "ui:widget": "text", "ui:readonly": true },
           "deviationFromBase": { "ui:widget": "text", "ui:readonly": true }
+        }
+      },
+      "platformStreams": {
+        "ui:options": {
+          "orderable": false,
+          "addable": false,
+          "removable": false
+        },
+        "items": {
+          "streamName": { "ui:widget": "text", "ui:readonly": true },
+          "baseTypicalScore": { "ui:widget": "text", "ui:readonly": true },
+          "adjustedTypicalScore": { "ui:widget": "text", "ui:readonly": true },
+          "deviationPercent": { "ui:widget": "text", "ui:readonly": true },
+          "atypicalScore": { "ui:widget": "text", "ui:readonly": true }
         }
       }
     },

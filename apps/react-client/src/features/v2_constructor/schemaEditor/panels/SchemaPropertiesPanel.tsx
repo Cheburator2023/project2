@@ -41,6 +41,7 @@ export function SchemaPropertiesPanel() {
 		v2Dictionaries,
 		rulesForSelectedExact,
 		rulesForSelectedSubtree,
+		rulesWhereSelectedIsDependency,
 		updateField,
 		handleToggleRequired,
 		handleWidgetChange,
@@ -241,15 +242,45 @@ export function SchemaPropertiesPanel() {
 					<Divider sx={{ my: 1.5 }} />
 
 					<Typography variant="caption" fontWeight={600}>
-						Правила на узел ({rulesForSelectedExact.length})
+						Влияет на это поле ({rulesForSelectedExact.length})
 					</Typography>
 					<Flex gap={0.5} sx={{ flexWrap: "wrap", mb: 1 }}>
+						{rulesForSelectedExact.length === 0 ? (
+							<Typography variant="caption" color="text.secondary">
+								Правил, меняющих это поле, нет.
+							</Typography>
+						) : null}
 						{rulesForSelectedExact.map((r) => (
 							<Chip
 								key={r.id}
 								size="small"
 								variant="outlined"
-								label={`${ruleKindLabel(r.kind)} · ${r.id.slice(0, 8)}`}
+								label={`${ruleKindLabel(r.kind)}${
+									r.description ? ` · ${r.description}` : ""
+								}`}
+								onClick={() => openLogicTabWithRule(r.id)}
+							/>
+						))}
+					</Flex>
+
+					<Typography variant="caption" fontWeight={600}>
+						Зависят от этого поля ({rulesWhereSelectedIsDependency.length})
+					</Typography>
+					<Flex gap={0.5} sx={{ flexWrap: "wrap", mb: 1 }}>
+						{rulesWhereSelectedIsDependency.length === 0 ? (
+							<Typography variant="caption" color="text.secondary">
+								Поле не используется как источник в правилах.
+							</Typography>
+						) : null}
+						{rulesWhereSelectedIsDependency.map((r) => (
+							<Chip
+								key={r.id}
+								size="small"
+								variant="outlined"
+								color="info"
+								label={`${ruleKindLabel(r.kind)} → ${normalizeJsonPointer(
+									r.targetPath,
+								)}`}
 								onClick={() => openLogicTabWithRule(r.id)}
 							/>
 						))}

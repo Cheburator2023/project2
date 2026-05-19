@@ -43,6 +43,7 @@ export const V2_LOGIC_RULE_KIND_VALUES = [
     "visibility",
     "required",
     "computed",
+    "row_computed",
     "validation",
     "hint",
     "task_trigger",
@@ -63,3 +64,12 @@ export const V2_MAX_JSON_SCHEMA_BYTES = 1_048_576;
  * Максимальное число правил в logic graph.
  */
 export const V2_MAX_LOGIC_RULES = 5_000;
+/* ------------------------------- Calculation ------------------------------ */
+export const V2_CALC_ROLE_VALUES = [
+    "typical_total",
+    "atypical_total",
+    "grand_total",
+    "coefficient",
+    "stage_value",
+    "other",
+];

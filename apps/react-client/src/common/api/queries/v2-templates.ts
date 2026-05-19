@@ -15,6 +15,8 @@ import type {
 	UpdateV2DictionaryRequestDto,
 	UpdateV2TemplateRequestDto,
 	UpdateV2TemplateVersionRequestDto,
+	V2CalculateRequestDto,
+	V2CalculationResultDto,
 	V2DictionaryDto,
 	V2DictionaryFieldUsageDto,
 	V2DictionaryItemDto,
@@ -448,6 +450,24 @@ export const useDeleteV2TemplateVersion = () => {
 	});
 };
 
+// Calculation
+export const useCalculateV2Template = () => {
+	return useMutation<
+		V2CalculationResultDto,
+		Error,
+		{ templateId: string; versionId?: string; dto: V2CalculateRequestDto }
+	>({
+		mutationFn: ({ templateId, versionId, dto }) =>
+			apiClient<V2CalculationResultDto>({
+				url: `/v2/templates/${templateId}/calculate${
+					versionId ? `?versionId=${encodeURIComponent(versionId)}` : ""
+				}`,
+				method: "POST",
+				data: dto,
+			}),
+	});
+};
+
 // Dictionaries
 export const useV2Dictionaries = () => {
 	return useQuery<V2DictionaryDto[]>({
@@ -717,7 +737,9 @@ export const useV2DictionaryEnumsMaps = (dictionaryCodes: string[]) => {
 		() =>
 			[
 				...new Set(
-					dictionaryCodes.filter((c) => typeof c === "string" && String(c).trim()),
+					dictionaryCodes.filter(
+						(c) => typeof c === "string" && String(c).trim(),
+					),
 				),
 			].sort(),
 		[dictionaryCodes],
@@ -736,8 +758,10 @@ export const useV2DictionaryEnumsMaps = (dictionaryCodes: string[]) => {
 		})),
 	});
 
-	const enumMapByCode: Record<string, { enums: string[]; enumNames: string[] }> =
-		{};
+	const enumMapByCode: Record<
+		string,
+		{ enums: string[]; enumNames: string[] }
+	> = {};
 	for (let i = 0; i < uniqueSorted.length; i++) {
 		const code = uniqueSorted[i]!;
 		const row = queries[i];

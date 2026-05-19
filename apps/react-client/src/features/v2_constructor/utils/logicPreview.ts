@@ -4,6 +4,12 @@ import type { JsonLogicValue } from "react-json-logic";
 import { applyLogic } from "react-json-logic";
 import { pointerSegments } from "./schemaPaths";
 import { resolveSchemaNode, toggleRequiredAtPointer } from "./schemaMutators";
+import {
+	evaluateComputedRules,
+	evaluateTaskTriggers,
+	type CalculationItem,
+	type TaskTriggerItem,
+} from "./calculationEngine";
 
 type UiBranch = Record<string, unknown>;
 
@@ -36,7 +42,11 @@ export function evaluateRuleCondition(
 	}
 }
 
-function mergeUiLeaf(ui: UiBranch, fieldPointer: string, patch: UiBranch): UiBranch {
+function mergeUiLeaf(
+	ui: UiBranch,
+	fieldPointer: string,
+	patch: UiBranch,
+): UiBranch {
 	let pointer = fieldPointer.trim();
 
 	if (!pointer || pointer === "/") return ui;
@@ -118,18 +128,57 @@ function deleteUiLeafKey(
  * Превью для RJSF: статические схемы + результат правил **visibility**, **required** и **hint**
  * над текущим `formData`.
  */
+export type DerivePreviewResult = {
+	previewSchema: RJSFSchema;
+	previewUiSchema: UiSchema;
+	calculationItems: CalculationItem[];
+	taskTriggerItems: TaskTriggerItem[];
+	liveFormData: Record<string, unknown>;
+};
+
+export type DerivePreviewOptions = {
+	/** После POST /calculate — visibility/hint используют обогащённые данные. */
+	computedLiveData?: Record<string, unknown>;
+	calculationItems?: CalculationItem[];
+	taskTriggerItems?: TaskTriggerItem[];
+};
+
 export function derivePreviewSchemas(
 	jsonSchema: RJSFSchema,
 	uiSchema: UiSchema,
 	rules: V2LogicRuleDto[],
 	formData: Record<string, unknown>,
-): { previewSchema: RJSFSchema; previewUiSchema: UiSchema } {
+	options?: DerivePreviewOptions,
+): DerivePreviewResult {
 	let previewSchema = structuredClone(jsonSchema) as RJSFSchema;
 
 	let previewUiRaw = structuredClone(uiSchema) as UiBranch;
 
+	const useBackendCalc = options?.computedLiveData !== undefined;
+
+	const { liveData, items: localCalculationItems } = useBackendCalc
+		? {
+				liveData: { ...options.computedLiveData },
+				items: options.calculationItems ?? [],
+			}
+		: evaluateComputedRules(rules, formData);
+
+	const calculationItems = useBackendCalc
+		? (options.calculationItems ?? [])
+		: localCalculationItems;
+
+	const taskTriggerItems = useBackendCalc
+		? (options.taskTriggerItems ?? [])
+		: evaluateTaskTriggers(rules, liveData);
+
 	for (const rule of rules) {
-		const passes = evaluateRuleCondition(rule.condition, formData);
+		if (
+			rule.kind === "computed" ||
+			rule.kind === "row_computed" ||
+			rule.kind === "task_trigger"
+		)
+			continue;
+		const passes = evaluateRuleCondition(rule.condition, liveData);
 
 		const rawTarget = rule.targetPath?.trim();
 
@@ -182,5 +231,8 @@ export function derivePreviewSchemas(
 	return {
 		previewSchema,
 		previewUiSchema: previewUiRaw as UiSchema,
+		calculationItems,
+		taskTriggerItems,
+		liveFormData: liveData,
 	};
 }

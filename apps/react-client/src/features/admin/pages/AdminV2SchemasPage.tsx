@@ -39,14 +39,6 @@ export function AdminV2SchemasPage() {
 
 	const selectedTemplate = templates?.find((t) => t.id === selectedTemplateId);
 
-	const handleAddSchema = () => {
-		createTemplate.mutate({
-			code: `schema-${Date.now()}`,
-			name: "Новая схема",
-			description: "Краткое описание для админки",
-		});
-	};
-
 	return (
 		<Flex flexDirection="column" flexGrow={1} minHeight="0">
 			<Header>

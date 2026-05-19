@@ -63,7 +63,10 @@ export const FIELD_PRESETS: Array<{
 ];
 
 /** Шаблоны отображения групп (object) в RJSF — `ui:ObjectFieldTemplate`. */
-export const GROUP_OBJECT_FIELD_TEMPLATE_PRESETS: Array<{ label: string; value: string }> = [
+export const GROUP_OBJECT_FIELD_TEMPLATE_PRESETS: Array<{
+	label: string;
+	value: string;
+}> = [
 	{ label: "По умолчанию (стандарт RJSF)", value: "" },
 	{
 		label: "Карточки секций (V2 превью) — V2PreviewObjectFieldTemplate",
@@ -77,7 +80,10 @@ export const GROUP_OBJECT_FIELD_TEMPLATE_PRESETS: Array<{ label: string; value: 
 
 export const WIDGET_PRESETS: Array<{ label: string; value: string }> = [
 	{ label: "По умолчанию (стандарт RJSF)", value: "" },
-	{ label: "Текстовое поле — TextFieldCustomWidget", value: "TextFieldCustomWidget" },
+	{
+		label: "Текстовое поле — TextFieldCustomWidget",
+		value: "TextFieldCustomWidget",
+	},
 	{ label: "Число — NumberInputWidget", value: "NumberInputWidget" },
 	{ label: "Список — ListWidget", value: "ListWidget" },
 	{
@@ -88,7 +94,10 @@ export const WIDGET_PRESETS: Array<{ label: string; value: string }> = [
 		label: "Массив карточек — ArrayCustomCardListsWidget",
 		value: "ArrayCustomCardListsWidget",
 	},
-	{ label: "Неопределённость — GeneralUncertaintyWidget", value: "GeneralUncertaintyWidget" },
+	{
+		label: "Неопределённость — GeneralUncertaintyWidget",
+		value: "GeneralUncertaintyWidget",
+	},
 	{
 		label: "Сложность алгоритма — AlgorithmComplexityWidget",
 		value: "AlgorithmComplexityWidget",
@@ -99,6 +108,7 @@ export const RULE_KIND_OPTIONS: Array<{ key: string; label: string }> = [
 	{ key: "visibility", label: "Видимость" },
 	{ key: "required", label: "Обязательность" },
 	{ key: "computed", label: "Вычисление" },
+	{ key: "row_computed", label: "Вычисление в строке массива" },
 	{ key: "validation", label: "Валидация" },
 	{ key: "hint", label: "Подсказка" },
 	{ key: "task_trigger", label: "Триггер типовых задач" },

@@ -20,6 +20,8 @@ import { SchemaPropertiesPanel } from "./panels/SchemaPropertiesPanel";
 import { useSchemaEditorDock } from "./SchemaEditorDockContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import {
+	CALCULATION_PANEL_ID,
+	RELATIONS_PANEL_ID,
 	SCHEMA_TREE_PANEL_ID,
 	workspacePanelComponents,
 } from "./workspacePanels";
@@ -116,6 +118,21 @@ function buildDefaultLayout(api: DockviewApi) {
 		title: "Свойства",
 		position: { direction: "right", referencePanel: firstTab[0] },
 		initialWidth: 300,
+	});
+
+	api.addPanel({
+		id: CALCULATION_PANEL_ID,
+		component: CALCULATION_PANEL_ID,
+		title: "Калькуляция",
+		position: { direction: "right", referencePanel: "properties" },
+		initialWidth: 320,
+	});
+
+	api.addPanel({
+		id: RELATIONS_PANEL_ID,
+		component: RELATIONS_PANEL_ID,
+		title: "Граф связей",
+		position: { referencePanel: CALCULATION_PANEL_ID },
 	});
 }
 

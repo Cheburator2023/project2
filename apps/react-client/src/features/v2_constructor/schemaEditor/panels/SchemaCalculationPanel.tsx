@@ -1,0 +1,300 @@
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Chip from "@mui/material/Chip";
+import Divider from "@mui/material/Divider";
+import IconButton from "@mui/material/IconButton";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { useMemo } from "react";
+import type {
+	CalculationItem,
+	ComputedRuleRole,
+	TaskTriggerItem,
+} from "../../utils/calculationEngine";
+import { formatComputedNumber } from "../../utils/calculationEngine";
+import { V2FinalEvaluationPanel } from "../../organisms/V2FinalEvaluationPanel";
+import { readSummaryFromFormData } from "../../utils/readSummaryFromFormData";
+import { useSchemaEditor } from "../SchemaEditorContext";
+import { PanelChrome } from "../components/PanelChrome";
+
+const ROLE_SECTIONS: Array<{
+	id: ComputedRuleRole;
+	title: string;
+	description: string;
+}> = [
+	{
+		id: "coefficient",
+		title: "Коэффициенты",
+		description: "Поправочные коэффициенты, влияющие на расчёт (ФТ-014, ФТ-024).",
+	},
+	{
+		id: "stage_value",
+		title: "Этапы",
+		description: "Значения по этапам / разделам анкеты.",
+	},
+	{
+		id: "typical_total",
+		title: "Типовые работы",
+		description: "Итог по типовым работам (см. ФТ-016).",
+	},
+	{
+		id: "atypical_total",
+		title: "Нетиповые работы",
+		description: "Итог по нетиповым работам (см. ФТ-021).",
+	},
+	{
+		id: "grand_total",
+		title: "Итог",
+		description: "Финальная калькуляция анкеты (ФТ-026).",
+	},
+	{
+		id: "other",
+		title: "Прочее",
+		description: "Прочие вычисляемые поля.",
+	},
+];
+
+function CalculationRow({
+	item,
+	onSelect,
+}: {
+	item: CalculationItem;
+	onSelect: (ruleId: string) => void;
+}) {
+	const hintText = [
+		item.formulaHint,
+		item.weightSourceLabel
+			? `Источник веса: ${item.weightSourceLabel}`
+			: null,
+		item.operands.length
+			? `Операнды: ${item.operands
+					.map((o) => `${o.varPath || "?"}=${formatComputedNumber(o.value)}`)
+					.join("; ")}`
+			: null,
+		item.error ? `Ошибка: ${item.error}` : null,
+		`JSON Pointer: ${item.targetPointer}`,
+		`Режим: ${item.mode === "preset" ? "пресет" : "эксперт"}`,
+	]
+		.filter(Boolean)
+		.join("\n");
+
+	return (
+		<Box
+			role="button"
+			tabIndex={0}
+			onClick={() => onSelect(item.ruleId)}
+			onKeyDown={(e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					onSelect(item.ruleId);
+				}
+			}}
+			sx={{
+				display: "flex",
+				alignItems: "center",
+				gap: 1,
+				px: 1,
+				py: 0.75,
+				borderRadius: 1,
+				border: 1,
+				borderColor: item.error ? "error.light" : "divider",
+				bgcolor: "background.paper",
+				cursor: "pointer",
+				"&:hover": { borderColor: "primary.main", bgcolor: "action.hover" },
+			}}
+		>
+			<Box sx={{ flex: 1, minWidth: 0 }}>
+				<Typography
+					variant="body2"
+					fontWeight={500}
+					noWrap
+					title={item.label}
+				>
+					{item.label}
+				</Typography>
+				<Typography
+					variant="caption"
+					color="text.secondary"
+					fontFamily="monospace"
+					noWrap
+				>
+					{item.targetVarPath || item.targetPointer}
+				</Typography>
+			</Box>
+
+			<Typography
+				variant="body2"
+				fontWeight={item.role === "grand_total" ? 700 : 500}
+				sx={{
+					minWidth: 60,
+					textAlign: "right",
+					color: item.error
+						? "error.main"
+						: item.value === null
+							? "text.disabled"
+							: "text.primary",
+					fontSize: item.role === "grand_total" ? 16 : 13,
+				}}
+			>
+				{formatComputedNumber(item.value)}
+			</Typography>
+
+			<IconButton size="small" title={hintText} aria-label="Подсказка">
+				<InfoOutlinedIcon sx={{ fontSize: 16 }} />
+			</IconButton>
+		</Box>
+	);
+}
+
+function TaskTriggerRow({ item }: { item: TaskTriggerItem }) {
+	const hintText = [
+		item.hint || "Триггер типовой работы.",
+		`Код: ${item.taskCode}`,
+		`Сработал: ${item.passes ? "да" : "нет"}`,
+	]
+		.filter(Boolean)
+		.join("\n");
+
+	return (
+		<Box
+			sx={{
+				display: "flex",
+				alignItems: "center",
+				gap: 1,
+				px: 1,
+				py: 0.75,
+				borderRadius: 1,
+				border: 1,
+				borderColor: item.passes ? "success.light" : "divider",
+				bgcolor: item.passes ? "action.selected" : "background.paper",
+				opacity: item.passes ? 1 : 0.7,
+			}}
+		>
+			<Chip
+				size="small"
+				label={item.taskCode}
+				color={item.passes ? "success" : "default"}
+				variant="outlined"
+				sx={{ height: 20 }}
+			/>
+			<Typography
+				variant="body2"
+				sx={{ flex: 1, minWidth: 0 }}
+				noWrap
+				title={item.label}
+			>
+				{item.label}
+			</Typography>
+			<IconButton size="small" title={hintText} aria-label="Подсказка">
+				<InfoOutlinedIcon sx={{ fontSize: 16 }} />
+			</IconButton>
+		</Box>
+	);
+}
+
+export function SchemaCalculationPanel({ embedded = false }: { embedded?: boolean }) {
+	const {
+		calculationItems,
+		taskTriggerItems,
+		calculationLoading,
+		calculationError,
+		liveFormData,
+		openLogicTabWithRule,
+	} = useSchemaEditor();
+
+	const summary = readSummaryFromFormData(liveFormData);
+
+	const sectionsWithItems = useMemo(() => {
+		const byRole = new Map<ComputedRuleRole, CalculationItem[]>();
+		for (const item of calculationItems) {
+			const arr = byRole.get(item.role) ?? [];
+			arr.push(item);
+			byRole.set(item.role, arr);
+		}
+		return ROLE_SECTIONS.map((section) => ({
+			...section,
+			items: byRole.get(section.id) ?? [],
+		})).filter((s) => s.items.length > 0);
+	}, [calculationItems]);
+
+	const hasAnything =
+		sectionsWithItems.length > 0 || taskTriggerItems.length > 0;
+
+	return (
+		<PanelChrome
+			embedded={embedded}
+			title="Калькуляция"
+			description="Оценка по правилам computed / row_computed / task_trigger и 11 этапам E2E (v1)."
+		>
+			<V2FinalEvaluationPanel
+				summary={summary}
+				isLoading={calculationLoading}
+				compact
+			/>
+			{calculationError ? (
+				<Alert severity="error" sx={{ mb: 1 }}>
+					{calculationError}
+				</Alert>
+			) : null}
+			{calculationLoading ? (
+				<Alert severity="info" sx={{ mb: 1 }}>
+					Обновление расчёта…
+				</Alert>
+			) : null}
+			{!hasAnything ? (
+				<Alert severity="info" sx={{ mb: 1 }}>
+					Добавьте правила типа «Вычисление» или «Триггер типовых задач» — здесь
+					появятся коэффициенты, этапы и итоговая оценка.
+				</Alert>
+			) : null}
+
+			<Stack spacing={2}>
+				{sectionsWithItems.map((section) => (
+					<Box key={section.id}>
+						<Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+							<Typography variant="caption" fontWeight={700}>
+								{section.title}
+							</Typography>
+							<IconButton size="small" title={section.description} aria-label="Описание">
+								<InfoOutlinedIcon sx={{ fontSize: 14 }} />
+							</IconButton>
+						</Box>
+						<Stack spacing={0.5}>
+							{section.items.map((item) => (
+								<CalculationRow
+									key={item.ruleId}
+									item={item}
+									onSelect={openLogicTabWithRule}
+								/>
+							))}
+						</Stack>
+					</Box>
+				))}
+
+				{taskTriggerItems.length > 0 ? (
+					<Box>
+						<Divider sx={{ mb: 1 }} />
+						<Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+							<Typography variant="caption" fontWeight={700}>
+								Типовые работы (триггеры)
+							</Typography>
+							<IconButton
+								size="small"
+								title="ФТ-016: формирование типовых работ при срабатывании условий."
+								aria-label="Описание"
+							>
+								<InfoOutlinedIcon sx={{ fontSize: 14 }} />
+							</IconButton>
+						</Box>
+						<Stack spacing={0.5}>
+							{taskTriggerItems.map((item) => (
+								<TaskTriggerRow key={item.ruleId} item={item} />
+							))}
+						</Stack>
+					</Box>
+				) : null}
+			</Stack>
+		</PanelChrome>
+	);
+}

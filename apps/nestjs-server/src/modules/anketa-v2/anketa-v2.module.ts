@@ -14,6 +14,8 @@ import { V2TemplateController } from "./controllers/v2-template.controller";
 import { V2TemplateVersionController } from "./controllers/v2-template-version.controller";
 import { V2DictionaryController } from "./controllers/v2-dictionary.controller";
 import { V2AuditController } from "./controllers/v2-audit.controller";
+import { V2CalculationController } from "./controllers/v2-calculation.controller";
+import { V2CalculationService } from "./services/v2-calculation.service";
 
 @Module({
 	imports: [
@@ -30,6 +32,7 @@ import { V2AuditController } from "./controllers/v2-audit.controller";
 		V2TemplateVersionController,
 		V2DictionaryController,
 		V2AuditController,
+		V2CalculationController,
 	],
 	providers: [
 		V2TemplateService,
@@ -37,12 +40,14 @@ import { V2AuditController } from "./controllers/v2-audit.controller";
 		V2DictionaryService,
 		V2DictionarySeedService,
 		V2AuditService,
+		V2CalculationService,
 	],
 	exports: [
 		V2TemplateService,
 		V2TemplateVersionService,
 		V2DictionaryService,
 		V2AuditService,
+		V2CalculationService,
 	],
 })
 export class AnketaV2Module {}

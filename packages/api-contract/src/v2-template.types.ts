@@ -51,6 +51,7 @@ export const V2_LOGIC_RULE_KIND_VALUES = [
 	"visibility",
 	"required",
 	"computed",
+	"row_computed",
 	"validation",
 	"hint",
 	"task_trigger",
@@ -325,3 +326,52 @@ export const V2_MAX_JSON_SCHEMA_BYTES = 1_048_576;
  * Максимальное число правил в logic graph.
  */
 export const V2_MAX_LOGIC_RULES = 5_000;
+
+/* ------------------------------- Calculation ------------------------------ */
+
+export const V2_CALC_ROLE_VALUES = [
+	"typical_total",
+	"atypical_total",
+	"grand_total",
+	"coefficient",
+	"stage_value",
+	"other",
+] as const;
+
+export type V2CalculationRole = (typeof V2_CALC_ROLE_VALUES)[number];
+
+export type V2CalculationItemDto = {
+	ruleId: string;
+	targetPointer: string;
+	targetVarPath: string;
+	label: string;
+	role: V2CalculationRole;
+	value: number | null;
+	formulaHint: string;
+	mode: "preset" | "expert";
+	kind?: "multiply" | "sum" | "priority_first" | "max" | "min";
+	operands: Array<{ varPath: string; value: number | null }>;
+	weightSourceLabel?: string;
+	error?: string;
+};
+
+export type V2TaskTriggerItemDto = {
+	ruleId: string;
+	taskCode: string;
+	label: string;
+	hint: string;
+	passes: boolean;
+};
+
+export type V2CalculationResultDto = {
+	formData: Record<string, unknown>;
+	items: V2CalculationItemDto[];
+	taskTriggers: V2TaskTriggerItemDto[];
+	cycles: string[];
+};
+
+export type V2CalculateRequestDto = {
+	formData: Record<string, unknown>;
+	/** Опционально: переопределить правила для предпросмотра расчёта в админке. */
+	rulesOverride?: V2LogicGraphDto;
+};
