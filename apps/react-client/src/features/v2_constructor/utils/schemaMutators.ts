@@ -75,6 +75,40 @@ export function toggleRequiredAtPointer(
 	return draft;
 }
 
+export function reorderRootProperties(
+	root: RJSFSchema,
+	orderedKeys: string[],
+): RJSFSchema | null {
+	return reorderChildProperties(root, [], orderedKeys);
+}
+
+export function reorderChildProperties(
+	root: RJSFSchema,
+	parentSegments: string[],
+	orderedKeys: string[],
+): RJSFSchema | null {
+	const draft = structuredClone(root);
+	const parent =
+		parentSegments.length === 0 ? draft : resolveSchemaNode(draft, parentSegments);
+
+	if (!parent?.properties) return null;
+
+	const props = parent.properties as Record<string, RJSFSchema>;
+	const newProps: Record<string, RJSFSchema> = {};
+
+	for (const key of orderedKeys) {
+		const node = props[key];
+		if (node) newProps[key] = node;
+	}
+
+	if (Object.keys(newProps).length !== Object.keys(props).length) {
+		return null;
+	}
+
+	parent.properties = newProps;
+	return draft;
+}
+
 export function addRootProperty(
 	root: RJSFSchema,
 	key: string,
@@ -86,6 +120,129 @@ export function addRootProperty(
 
 	const draft = structuredClone(root);
 	draft.properties = { ...draft.properties, [key]: def };
+	return draft;
+}
+
+export function insertRootPropertyAt(
+	root: RJSFSchema,
+	key: string,
+	def: RJSFSchema,
+	index: number,
+): RJSFSchema | null {
+	return insertChildPropertyAt(root, [], key, def, index);
+}
+
+export function insertChildPropertyAt(
+	root: RJSFSchema,
+	parentSegments: string[],
+	key: string,
+	def: RJSFSchema,
+	index: number,
+): RJSFSchema | null {
+	const draft = structuredClone(root);
+	const parent =
+		parentSegments.length === 0 ? draft : resolveSchemaNode(draft, parentSegments);
+
+	if (!parent) return null;
+
+	if (parent.type !== "object") {
+		parent.type = "object";
+	}
+
+	const props = (parent.properties ?? {}) as Record<string, RJSFSchema>;
+	if (props[key] !== undefined) return null;
+
+	parent.properties = { ...props, [key]: def };
+
+	const keys = Object.keys(parent.properties);
+	const fromIndex = keys.indexOf(key);
+	if (fromIndex < 0) return draft;
+
+	const ordered = keys.filter((k) => k !== key);
+	const safeIndex = Math.max(0, Math.min(index, ordered.length));
+	ordered.splice(safeIndex, 0, key);
+
+	return reorderChildProperties(draft, parentSegments, ordered);
+}
+
+export function listChildKeys(
+	root: RJSFSchema,
+	parentPointer: string,
+): string[] {
+	const segs = pointerSegments(parentPointer);
+	const parent =
+		segs.length === 0 ? root : resolveSchemaNode(root, segs);
+	return Object.keys((parent?.properties ?? {}) as Record<string, unknown>);
+}
+
+export function isObjectFieldGroup(node: RJSFSchema | undefined): boolean {
+	if (!node) return false;
+	return node.type === "object" || Boolean(node.properties);
+}
+
+export function findPropertyInTree(
+	root: RJSFSchema,
+	key: string,
+): { parentSegments: string[]; node: RJSFSchema } | null {
+	function walk(
+		schema: RJSFSchema,
+		parentSegments: string[],
+	): { parentSegments: string[]; node: RJSFSchema } | null {
+		const props = (schema.properties ?? {}) as Record<string, RJSFSchema>;
+		if (props[key]) {
+			return { parentSegments, node: props[key]! };
+		}
+
+		for (const childKey of Object.keys(props)) {
+			const found = walk(props[childKey]!, [...parentSegments, childKey]);
+			if (found) return found;
+		}
+
+		return null;
+	}
+
+	return walk(root, []);
+}
+
+export function applyGroupFieldOrdersToSchema(
+	root: RJSFSchema,
+	orders: Record<string, string[]>,
+): RJSFSchema | null {
+	const draft = structuredClone(root);
+
+	for (const [groupId, keys] of Object.entries(orders)) {
+		const parentPointer =
+			groupId === "schema-root" ? "/" : groupId.replace("schema-group:", "");
+		const parentSegments = pointerSegments(parentPointer);
+		const parent =
+			parentSegments.length === 0
+				? draft
+				: resolveSchemaNode(draft, parentSegments);
+
+		if (!parent) continue;
+
+		const newProps: Record<string, RJSFSchema> = {};
+
+		for (const key of keys) {
+			const found = findPropertyInTree(draft, key);
+			if (!found) continue;
+
+			const oldParent =
+				found.parentSegments.length === 0
+					? draft
+					: resolveSchemaNode(draft, found.parentSegments);
+
+			if (oldParent?.properties?.[key]) {
+				delete (oldParent.properties as Record<string, RJSFSchema>)[key];
+			}
+
+			newProps[key] = found.node;
+		}
+
+		parent.type = parent.type ?? "object";
+		parent.properties = newProps;
+	}
+
 	return draft;
 }
 
@@ -173,6 +330,46 @@ export function setUiWidgetAtPointer(
 				merged["ui:widget"] = widget;
 			} else {
 				delete merged["ui:widget"];
+			}
+
+			if (Object.keys(merged).length === 0) {
+				delete cur[s];
+			} else {
+				cur[s] = merged;
+			}
+		} else {
+			const child = (cur[s] as Record<string, unknown>) ?? {};
+			cur[s] = child;
+			cur = child;
+		}
+	}
+
+	return next;
+}
+
+export function setUiObjectFieldTemplateAtPointer(
+	ui: Record<string, unknown>,
+	fieldPointer: string,
+	template: string | null,
+): Record<string, unknown> {
+	const segs = pointerSegments(fieldPointer);
+	const next = structuredClone(ui) as Record<string, unknown>;
+
+	if (segs.length === 0) return next;
+
+	let cur: Record<string, unknown> = next;
+
+	for (let i = 0; i < segs.length; i++) {
+		const s = segs[i]!;
+
+		if (i === segs.length - 1) {
+			const prev = (cur[s] as Record<string, unknown>) ?? {};
+			const merged = { ...prev };
+
+			if (template && template.length > 0) {
+				merged["ui:ObjectFieldTemplate"] = template;
+			} else {
+				delete merged["ui:ObjectFieldTemplate"];
 			}
 
 			if (Object.keys(merged).length === 0) {

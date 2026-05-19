@@ -95,9 +95,15 @@ export const routes = {
 		disabled: false,
 	},
 	adminV2TemplateEditor: {
-		rootPath: "/admin/v2/templates/:templateId",
+		rootPath: "/admin/v2/templates/:templateId/edit",
 		name: "Редактор JSON-схемы",
 		shortName: "Редактор",
+		disabled: false,
+	},
+	adminV2TemplateRead: {
+		rootPath: "/admin/v2/templates/:templateId/read",
+		name: "Предпросмотр формы",
+		shortName: "Просмотр",
 		disabled: false,
 	},
 	playground: {
@@ -114,9 +120,16 @@ export const routes = {
 		disabled: false,
 	},
 	playgroundV2TemplateEditor: {
-		rootPath: "/playground/v2/templates/:templateId",
+		rootPath: "/playground/v2/templates/:templateId/edit",
 		name: "V2 конструктор (песочница)",
 		shortName: "Конструктор",
+		devOnly: true,
+		disabled: false,
+	},
+	playgroundV2TemplateRead: {
+		rootPath: "/playground/v2/templates/:templateId/read",
+		name: "Предпросмотр формы (песочница)",
+		shortName: "Просмотр",
 		devOnly: true,
 		disabled: false,
 	},
@@ -146,3 +159,21 @@ export const pathForPlaygroundV2Template = (templateId: string) =>
 		":templateId",
 		encodeURIComponent(templateId),
 	);
+
+export const pathForAdminV2TemplateRead = (templateId: string) =>
+	routes.adminV2TemplateRead.rootPath.replace(
+		":templateId",
+		encodeURIComponent(templateId),
+	);
+
+export const pathForPlaygroundV2TemplateRead = (templateId: string) =>
+	routes.playgroundV2TemplateRead.rootPath.replace(
+		":templateId",
+		encodeURIComponent(templateId),
+	);
+
+/** @deprecated используйте pathForAdminV2TemplateRead */
+export const pathForAdminV2TemplatePreview = pathForAdminV2TemplateRead;
+
+/** @deprecated используйте pathForPlaygroundV2TemplateRead */
+export const pathForPlaygroundV2TemplatePreview = pathForPlaygroundV2TemplateRead;

@@ -45,12 +45,16 @@ function adminTrail(pathname: string): string[] | null {
 		return trail;
 	}
 
-	const editorUnderTemplatesMatch = pathname.match(/^\/admin\/v2\/templates\/([^/]+)$/);
-	if (editorUnderTemplatesMatch?.[1]) {
+	const templateModeMatch = pathname.match(
+		/^\/admin\/v2\/templates\/[^/]+\/(edit|read)$/,
+	);
+	if (templateModeMatch?.[1]) {
 		trail.push(routes.adminV2Schemas.name);
 		trail.push(
-			routes.adminV2TemplateEditor.shortName ??
-				routes.adminV2TemplateEditor.name,
+			templateModeMatch[1] === "edit"
+				? (routes.adminV2TemplateEditor.shortName ??
+						routes.adminV2TemplateEditor.name)
+				: (routes.adminV2TemplateRead.shortName ?? routes.adminV2TemplateRead.name),
 		);
 		return trail;
 	}
@@ -67,12 +71,18 @@ export function NavbarBreadcrumbs() {
 		const adminLabels = adminTrail(pathname);
 		if (adminLabels) return adminLabels;
 
-		if (pathname.startsWith("/playground/v2/templates")) {
+		const playgroundTemplateMatch = pathname.match(
+			/^\/playground\/v2\/templates\/[^/]+\/(edit|read)$/,
+		);
+		if (playgroundTemplateMatch?.[1]) {
 			return [
 				routes.playground.name,
 				routes.playgroundV2.name,
-				routes.playgroundV2TemplateEditor.shortName ??
-					routes.playgroundV2TemplateEditor.name,
+				playgroundTemplateMatch[1] === "edit"
+					? (routes.playgroundV2TemplateEditor.shortName ??
+							routes.playgroundV2TemplateEditor.name)
+					: (routes.playgroundV2TemplateRead.shortName ??
+							routes.playgroundV2TemplateRead.name),
 			];
 		}
 		if (pathname.startsWith(routes.playgroundV2.rootPath)) {

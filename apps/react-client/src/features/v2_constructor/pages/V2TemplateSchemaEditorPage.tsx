@@ -5,7 +5,14 @@ import {
 } from "@react-client/features/v2_constructor/organisms/V2TemplateSchemaEditor";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/features/navigation/organisms/Header";
-import { routes } from "@react-client/routing/routes";
+import { V2_TEMPLATE_EDIT_TEST_IDS } from "@react-client/features/v2_constructor/testIds";
+import {
+	pathForAdminV2TemplateRead,
+	pathForPlaygroundV2TemplateRead,
+	routes,
+} from "@react-client/routing/routes";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
@@ -59,11 +66,24 @@ export const V2TemplateSchemaEditorPage = () => {
 	}
 
 	return (
-		<Flex flexDirection="column" flexGrow={1} minHeight="0" gap={0}>
-			<Header
+		<Flex
+			flexDirection="column"
+			flexGrow={1}
+			minHeight="0"
+			gap={0}
+			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.page}
+		>
+			<Box data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.header}>
+				<Header
 				leadingAccessory={
 					headerMeta ? (
-						<Flex gap={1} alignItems="center" wrap="wrap" minWidth="0">
+						<Flex
+							gap={1}
+							alignItems="center"
+							wrap="wrap"
+							minWidth="0"
+							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.headerMeta}
+						>
 							<Typography variant="subtitle2" component="span" fontWeight={600} noWrap>
 								{headerMeta.title}
 							</Typography>
@@ -82,10 +102,33 @@ export const V2TemplateSchemaEditorPage = () => {
 				}
 			>
 				{headerActions ? (
-					<Flex gap={1} alignItems="center" wrap="wrap">
+					<Flex
+						gap={1}
+						alignItems="center"
+						wrap="wrap"
+						data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.headerActions}
+					>
+						<Button
+							variant="outlined"
+							startIcon={<OpenInNewIcon />}
+							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnPreview}
+							onClick={() => {
+								const path = isAdminContext
+									? pathForAdminV2TemplateRead(templateId)
+									: pathForPlaygroundV2TemplateRead(templateId);
+								window.open(
+									`${window.location.origin}${path}`,
+									"_blank",
+									"noopener,noreferrer",
+								);
+							}}
+						>
+							Предпросмотр
+						</Button>
 						<Button
 							variant="contained"
 							disabled={headerActions.savePending}
+							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnSave}
 							onClick={headerActions.onSave}
 						>
 							Сохранить
@@ -93,14 +136,16 @@ export const V2TemplateSchemaEditorPage = () => {
 						<Button
 							variant="outlined"
 							disabled={headerActions.publishPending}
+							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnPublish}
 							onClick={headerActions.onPublish}
 						>
 							Опубликовать
 						</Button>
 					</Flex>
 				) : null}
-			</Header>
-			<Flex flexDirection="column" flexGrow={1} minHeight="0">
+				</Header>
+			</Box>
+			<Flex flexDirection="column" flexGrow={1} minHeight="0" sx={{ minHeight: 480 }}>
 				<V2TemplateSchemaEditor
 					templateId={templateId}
 					wording={isAdminContext ? "adminSchema" : "playgroundTemplate"}

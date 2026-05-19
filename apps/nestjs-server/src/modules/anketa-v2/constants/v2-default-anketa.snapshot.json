@@ -1,7 +1,7 @@
 {
   "jsonSchema": {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Анкета калькуляции разработки моделей",
+    "title": "",
     "type": "object",
     "required": [],
     "properties": {
