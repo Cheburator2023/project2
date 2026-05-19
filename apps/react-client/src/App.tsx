@@ -15,10 +15,11 @@ import { ru } from "date-fns/esm/locale";
 import { isEmpty } from "lodash-es";
 import type React from "react";
 import { Suspense, useEffect } from "react";
-import { BrowserRouter } from "react-router";
+import {BrowserRouter, Route, Routes} from "react-router";
 import type { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
 import { reportWebVitals } from "./reportWebVitals";
-import { Routing } from "./routing";
+import Routing from "./version/v1/routing";
+import RoutingV2 from "./version/v2/routing";
 import { AppTheme } from "./theme/AppTheme";
 import {
 	chartsCustomizations,
@@ -26,6 +27,9 @@ import {
 	datePickersCustomizations,
 	treeViewCustomizations,
 } from "./theme/customizations";
+import {useLocation} from "react-router-dom";
+import {useAppVersion} from "@react-client/hooks/useAppVersion";
+import AppRoutes from "@react-client/common/routing";
 
 const GIT_REVISION = process.env.GIT_REVISION;
 const NODE_ENV = process.env.NODE_ENV;
@@ -73,6 +77,7 @@ interface LayoutProps {
 }
 
 const App: React.FC<LayoutProps> = (props) => {
+	const version = useAppVersion();
 	const { user, onLogout, bridged, urlConfig, keycloak } = props;
 
 	const { setUser, setConfigMap } = useGlobalSettingsStore();
@@ -96,23 +101,23 @@ const App: React.FC<LayoutProps> = (props) => {
 
 	return (
 		<QueryClientProvider client={queryClient}>
-			<BrowserRouter basename={bridged ? "/smartAnketa" : "/"}>
-				{/* <CssBaseline enableColorScheme /> */}
-				<AppTheme themeComponents={xThemeComponents}>
-					<ErrorBoundary ErrorPage={ErrorPage}>
-						<StyledEngineProvider injectFirst>
-							<Toaster />
-							<Suspense fallback={<CircularProgress />}>
-								<LocalizationProvider dateAdapter={AdapterDateFns}>
-									<MainLayout onLogout={onLogoutHandler}>
-										<Routing />
-									</MainLayout>
-								</LocalizationProvider>
-							</Suspense>
-						</StyledEngineProvider>
-					</ErrorBoundary>
-				</AppTheme>
-			</BrowserRouter>
+			{ version === 'v1' && (
+				<BrowserRouter basename={bridged ? "/smartAnketa/" : "/"}>
+					{/* <CssBaseline enableColorScheme /> */}
+					<AppTheme themeComponents={xThemeComponents}>
+						<ErrorBoundary ErrorPage={ErrorPage}>
+							<StyledEngineProvider injectFirst>
+								<Toaster />
+								<Suspense fallback={<CircularProgress />}>
+									<LocalizationProvider dateAdapter={AdapterDateFns}>
+										<AppRoutes onLogout={onLogoutHandler}/>
+									</LocalizationProvider>
+								</Suspense>
+							</StyledEngineProvider>
+						</ErrorBoundary>
+					</AppTheme>
+				</BrowserRouter>
+			)}
 		</QueryClientProvider>
 	);
 };

@@ -9,12 +9,125 @@ import { HomePage } from "@react-client/features/home/pages/HomePage";
 import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
 import { Route, Routes } from "react-router";
 import {routes} from "@react-client/version/v1/routing/routes";
-import {Page404} from "@react-client/routing/Page404";
+import {Page404} from "@react-client/version/v1/routing/Page404";
+import {MainLayout} from "@react-client/common/layouts/MainLayout";
+import React from "react";
 
-export const Routing = () => (
-	<Routes data-test-id="index--Routes-0">
+export const v1Routes = ({onLogout}: { onLogout?: () => void; }) => {
+	return {
+		path: "/v1",
+		element: <MainLayout onLogout={onLogout}/>,
+		children: [
+			{
+				index: true,
+				element:
+					<PermissionGuard
+						check={(p) => p.canViewAllCalculations}
+						message="У вас нет прав на просмотр списка анкет"
+					>
+						<HomePage data-test-id="index--HomePage-0" />
+					</PermissionGuard>,
+			},
+			{
+				path: routes.home.rootPath,
+				element:
+					<PermissionGuard
+						check={(p) => p.canViewAllCalculations}
+						message="У вас нет прав на просмотр списка анкет"
+					>
+						<HomePage data-test-id="index--HomePage-0" />
+					</PermissionGuard>,
+			},
+			{
+				path: routes.calculationCreate.rootPath,
+				element:
+					<PermissionGuard
+						check={(p) => p.canCreateCalculation}
+						message="У вас нет прав на создание анкеты"
+					>
+						<AnketaCreatePage data-test-id="index--AnketaCreatePage-0" />
+					</PermissionGuard>,
+			},
+			{
+				path: routes.calculationPreview.rootPath,
+				element:
+					<PermissionGuard
+						check={(p) => p.canViewAllCalculations}
+						message="У вас нет прав на просмотр анкеты"
+					>
+						<AnketaPreviewPage data-test-id="index--AnketaPreviewPage-0" />
+					</PermissionGuard>
+			},
+			{
+				path: routes.calculationNewVersion.rootPath,
+				element:
+					<PermissionGuard
+						check={(p) => p.canCreateCalculation}
+						message="У вас нет прав на создание новой версии анкеты"
+					>
+						<AnketaNewVersionPage data-test-id="index--AnketaNewVersionPage-0" />
+					</PermissionGuard>
+			},
+			{
+				path: routes.calculationClone.rootPath,
+				element:
+					<PermissionGuard
+						check={(p) => p.canCreateCalculation}
+						message="У вас нет прав на создание шаблона анкеты"
+					>
+						<AnketaClonePage data-test-id="index--AnketaClonePage-0" />
+					</PermissionGuard>
+			},
+			{
+				path: routes.calculationCompare.rootPath,
+				element:
+					<PermissionGuard
+						check={(p) => p.canExportReports}
+						message="У вас нет прав на сравнение отчетов"
+					>
+						<CompareReportsPage data-test-id="index--CompareReportsPage-0" />
+					</PermissionGuard>
+			},
+			{
+				path: routes.admin.rootPath,
+					element:
+						<PermissionGuard
+							check={(p) => p.canAccessAdminPanel}
+							message="У вас нет прав на доступ к панели администрирования"
+						>
+							<AdminPage data-test-id="index--AdminPage-0" />
+						</PermissionGuard>
+			},
+			{
+				path: routes.playground.rootPath,
+				element:
+					<PlaygroundPage data-test-id="index--PlaygroundPage-0" />
+			},
+			{
+				path: "*",
+				element:
+					<Page404 data-test-id="index--Page404-0" />
+			},
+	],
+	}
+}
+
+export const Routing = ({onLogout}: { onLogout?: () => void; }) => (
+	<Route path="v1" element={<MainLayout onLogout={onLogout}/>}>
 		<Route
 			index
+			element={
+				<PermissionGuard
+					check={(p) => p.canViewAllCalculations}
+					message="У вас нет прав на просмотр списка анкет"
+				>
+					<HomePage data-test-id="index--HomePage-0" />
+				</PermissionGuard>
+			}
+			data-test-id="index--Route-0"
+		/>
+		<Route
+			path={routes.home.rootPath}
 			element={
 				<PermissionGuard
 					check={(p) => p.canViewAllCalculations}
@@ -103,9 +216,11 @@ export const Routing = () => (
 			data-test-id="index--Route-5"
 		/>
 		<Route
-			path="*"
+			path="/v1/*"
 			element={<Page404 data-test-id="index--Page404-0" />}
 			data-test-id="index--Route-6"
 		/>
-	</Routes>
+	</Route>
 );
+
+export default Routing

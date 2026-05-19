@@ -1,7 +1,7 @@
 export const routes = {
 	home: {
 		rootPath: "",
-		name: "Главная / Реестр",
+		name: "Реестр",
 		disabled: false,
 		subRoutes: {},
 	},
@@ -33,12 +33,12 @@ export const routes = {
 	admin: {
 		rootPath: "admin",
 		name: "Администрирование",
-		disabled: true,
+		disabled: false,
 	},
 	playground: {
 		name: "Песочница",
 		rootPath: "playground",
 		devOnly: true,
-		disabled: true,
+		disabled: false,
 	},
 };
