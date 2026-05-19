@@ -2,7 +2,7 @@ import { styled, useColorScheme } from "@mui/material/styles";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { SideMenu } from "../../features/navigation/organisms/SideMenu";
 import { Flex } from "../primitives/Flex";
-import {Outlet} from "react-router";
+import { Outlet } from "react-router";
 
 const MainWrapper = styled("div", {
 	shouldForwardProp: (prop) => prop !== "open",

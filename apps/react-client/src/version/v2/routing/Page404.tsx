@@ -4,7 +4,7 @@ import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { useNavigate } from "react-router";
 import { Flex } from "../../../common/primitives/Flex";
-import {routes} from "@react-client/version/v2/routing/routes";
+import { routes } from "@react-client/version/v2/routing/routes";
 
 export const Page404 = () => {
 	const navigate = useNavigate();

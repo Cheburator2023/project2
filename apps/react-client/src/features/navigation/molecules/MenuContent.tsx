@@ -7,8 +7,7 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
 import { useLocation, useNavigate } from "react-router";
-import {routes} from "@react-client/version/v1/routing/routes";
-import {useAppVersion} from "@react-client/hooks/useAppVersion";
+import { routes } from "@react-client/version/v1/routing/routes";
 
 const mainListItems = Object.values(routes)
 	.map((route) => route)
@@ -21,7 +20,7 @@ const mainListItems = Object.values(routes)
 			route.rootPath !== routes.calculationCompare.rootPath,
 	);
 
-const useSecondaryListItems = () =>{
+const useSecondaryListItems = () => {
 	return [
 		{
 			text: "sum",
@@ -40,22 +39,22 @@ const useSecondaryListItems = () =>{
 			path: "/sum-rm",
 		},
 		{
-			text: 'v2',
+			text: "v2",
 			icon: (
 				<CallMissedOutgoingIcon data-test-id="menu-content--CallMissedOutgoingIcon-0" />
 			),
-			tooltip: 'v2',
+			tooltip: "v2",
 			path: `/v2`,
 		},
 		// { text: "Настройки", icon: <SettingsRoundedIcon /> },
 	];
-}
+};
 
 export function MenuContent() {
 	const navigate = useNavigate();
 	const location = useLocation();
 
-	const secondaryListItems = useSecondaryListItems()
+	const secondaryListItems = useSecondaryListItems();
 
 	const handler = (path: string) => {
 		navigate(path);

@@ -7,113 +7,118 @@ import { AnketaClonePage } from "@react-client/features/anketaCRUD/pages/AnketaC
 import { AnketaPreviewPage } from "@react-client/features/anketaCRUD/pages/AnketaPreviewPage";
 import { HomePage } from "@react-client/features/home/pages/HomePage";
 import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
-import { Route, Routes } from "react-router";
-import {routes} from "@react-client/version/v1/routing/routes";
-import {Page404} from "@react-client/version/v1/routing/Page404";
-import {MainLayout} from "@react-client/common/layouts/MainLayout";
-import React from "react";
+import { Route } from "react-router";
+import { routes } from "@react-client/version/v1/routing/routes";
+import { Page404 } from "@react-client/version/v1/routing/Page404";
+import { MainLayout } from "@react-client/common/layouts/MainLayout";
 
-export const v1Routes = ({onLogout}: { onLogout?: () => void; }) => {
+export const v1Routes = ({ onLogout }: { onLogout?: () => void }) => {
 	return {
 		path: "/v1",
-		element: <MainLayout onLogout={onLogout}/>,
+		element: <MainLayout onLogout={onLogout} />,
 		children: [
 			{
 				index: true,
-				element:
+				element: (
 					<PermissionGuard
 						check={(p) => p.canViewAllCalculations}
 						message="У вас нет прав на просмотр списка анкет"
 					>
 						<HomePage data-test-id="index--HomePage-0" />
-					</PermissionGuard>,
+					</PermissionGuard>
+				),
 			},
 			{
 				path: routes.home.rootPath,
-				element:
+				element: (
 					<PermissionGuard
 						check={(p) => p.canViewAllCalculations}
 						message="У вас нет прав на просмотр списка анкет"
 					>
 						<HomePage data-test-id="index--HomePage-0" />
-					</PermissionGuard>,
+					</PermissionGuard>
+				),
 			},
 			{
 				path: routes.calculationCreate.rootPath,
-				element:
+				element: (
 					<PermissionGuard
 						check={(p) => p.canCreateCalculation}
 						message="У вас нет прав на создание анкеты"
 					>
 						<AnketaCreatePage data-test-id="index--AnketaCreatePage-0" />
-					</PermissionGuard>,
+					</PermissionGuard>
+				),
 			},
 			{
 				path: routes.calculationPreview.rootPath,
-				element:
+				element: (
 					<PermissionGuard
 						check={(p) => p.canViewAllCalculations}
 						message="У вас нет прав на просмотр анкеты"
 					>
 						<AnketaPreviewPage data-test-id="index--AnketaPreviewPage-0" />
 					</PermissionGuard>
+				),
 			},
 			{
 				path: routes.calculationNewVersion.rootPath,
-				element:
+				element: (
 					<PermissionGuard
 						check={(p) => p.canCreateCalculation}
 						message="У вас нет прав на создание новой версии анкеты"
 					>
 						<AnketaNewVersionPage data-test-id="index--AnketaNewVersionPage-0" />
 					</PermissionGuard>
+				),
 			},
 			{
 				path: routes.calculationClone.rootPath,
-				element:
+				element: (
 					<PermissionGuard
 						check={(p) => p.canCreateCalculation}
 						message="У вас нет прав на создание шаблона анкеты"
 					>
 						<AnketaClonePage data-test-id="index--AnketaClonePage-0" />
 					</PermissionGuard>
+				),
 			},
 			{
 				path: routes.calculationCompare.rootPath,
-				element:
+				element: (
 					<PermissionGuard
 						check={(p) => p.canExportReports}
 						message="У вас нет прав на сравнение отчетов"
 					>
 						<CompareReportsPage data-test-id="index--CompareReportsPage-0" />
 					</PermissionGuard>
+				),
 			},
 			{
 				path: routes.admin.rootPath,
-					element:
-						<PermissionGuard
-							check={(p) => p.canAccessAdminPanel}
-							message="У вас нет прав на доступ к панели администрирования"
-						>
-							<AdminPage data-test-id="index--AdminPage-0" />
-						</PermissionGuard>
+				element: (
+					<PermissionGuard
+						check={(p) => p.canAccessAdminPanel}
+						message="У вас нет прав на доступ к панели администрирования"
+					>
+						<AdminPage data-test-id="index--AdminPage-0" />
+					</PermissionGuard>
+				),
 			},
 			{
 				path: routes.playground.rootPath,
-				element:
-					<PlaygroundPage data-test-id="index--PlaygroundPage-0" />
+				element: <PlaygroundPage data-test-id="index--PlaygroundPage-0" />,
 			},
 			{
 				path: "*",
-				element:
-					<Page404 data-test-id="index--Page404-0" />
+				element: <Page404 data-test-id="index--Page404-0" />,
 			},
-	],
-	}
-}
+		],
+	};
+};
 
-export const Routing = ({onLogout}: { onLogout?: () => void; }) => (
-	<Route path="v1" element={<MainLayout onLogout={onLogout}/>}>
+export const Routing = ({ onLogout }: { onLogout?: () => void }) => (
+	<Route path="v1" element={<MainLayout onLogout={onLogout} />}>
 		<Route
 			index
 			element={
@@ -223,4 +228,4 @@ export const Routing = ({onLogout}: { onLogout?: () => void; }) => (
 	</Route>
 );
 
-export default Routing
+export default Routing;

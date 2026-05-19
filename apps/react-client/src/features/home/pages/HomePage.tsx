@@ -54,7 +54,7 @@ import {
 	agGridCustomMUIThemeDark,
 } from "../../../theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "../../../theme/ag-grid/agGridIconSet";
-import {routes} from "@react-client/version/v1/routing/routes";
+import { routes } from "@react-client/version/v1/routing/routes";
 
 const excelStyles: ExcelStyle[] = [
 	{

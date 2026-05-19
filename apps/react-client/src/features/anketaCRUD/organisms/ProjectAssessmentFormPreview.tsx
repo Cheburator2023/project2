@@ -86,8 +86,7 @@ export const ProjectAssessmentFormPreview = ({
 			assessedInitiativesCount: formData.assessedInitiativesCount,
 			algorithmComplexity: formData.algorithmComplexity,
 			autoMlRequired: formData.autoMlRequired,
-			productionAdditionalReports:
-				formData.productionAdditionalReports ?? "",
+			productionAdditionalReports: formData.productionAdditionalReports ?? "",
 			productionDeploymentChannels:
 				formData.productionDeploymentChannels as any,
 			setupComplexity: formData.setupComplexity,

@@ -8,9 +8,7 @@ import { useCalculationControllerFindOne } from "@react-client/common/api/querie
 import { IBasicFormData } from "../stores/useAnketaCRUDFormsStore";
 import { IAssessmentFormData } from "../types/FormData";
 
-const normalizeGeneralUncertainty = (
-	value: unknown,
-): UncertaintyItemDto[] => {
+const normalizeGeneralUncertainty = (value: unknown): UncertaintyItemDto[] => {
 	if (Array.isArray(value)) {
 		return value as UncertaintyItemDto[];
 	}

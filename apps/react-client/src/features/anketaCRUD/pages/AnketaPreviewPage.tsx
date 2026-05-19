@@ -18,7 +18,6 @@ import {
 	Divider,
 } from "@mui/material";
 import { useCalculationControllerFindOne } from "@react-client/common/api/queries/calculation";
-import type { CalculationStatus } from "@smart-anketa/api-contract";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 
 import { Card } from "@react-client/common/muiCustom/Card";
@@ -33,7 +32,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { isEmpty } from "lodash-es";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
-import {routes} from "@react-client/version/v1/routing/routes";
+import { routes } from "@react-client/version/v1/routing/routes";
 
 const APP_NAME = process.env.APP_NAME;
 

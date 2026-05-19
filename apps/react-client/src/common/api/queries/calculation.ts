@@ -125,18 +125,14 @@ export const getCalculationControllerFindAllPaginatedQueryKey = (
 ) => [`/calculation/all`, ...(params ? [params] : [])] as const;
 
 export const useCalculationControllerFindAllPaginatedQueryOptions = <
-	TData = Awaited<
-		ReturnType<typeof calculationControllerFindAllPaginated>
-	>,
+	TData = Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
 	TError = void,
 >(
 	params?: CalculationControllerFindAllPaginatedParams,
 	options?: {
 		query?: Partial<
 			UseQueryOptions<
-				Awaited<
-					ReturnType<typeof calculationControllerFindAllPaginated>
-				>,
+				Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
 				TError,
 				TData
 			>
@@ -151,8 +147,7 @@ export const useCalculationControllerFindAllPaginatedQueryOptions = <
 
 	const queryFn: QueryFunction<
 		Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>
-	> = ({ signal }) =>
-		calculationControllerFindAllPaginated(params, signal);
+	> = ({ signal }) => calculationControllerFindAllPaginated(params, signal);
 
 	const customOpts = customQueryOptions({
 		...queryOptions,
@@ -169,41 +164,28 @@ export const useCalculationControllerFindAllPaginatedQueryOptions = <
 	> & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type CalculationControllerFindAllPaginatedQueryResult =
-	NonNullable<
-		Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>
-	>;
+export type CalculationControllerFindAllPaginatedQueryResult = NonNullable<
+	Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>
+>;
 
 export function useCalculationControllerFindAllPaginated<
-	TData = Awaited<
-		ReturnType<typeof calculationControllerFindAllPaginated>
-	>,
+	TData = Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
 	TError = void,
 >(
 	params: undefined | CalculationControllerFindAllPaginatedParams,
 	options: {
 		query: Partial<
 			UseQueryOptions<
-				Awaited<
-					ReturnType<typeof calculationControllerFindAllPaginated>
-				>,
+				Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
 				TError,
 				TData
 			>
 		> &
 			Pick<
 				DefinedInitialDataOptions<
-					Awaited<
-						ReturnType<
-							typeof calculationControllerFindAllPaginated
-						>
-					>,
+					Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
 					TError,
-					Awaited<
-						ReturnType<
-							typeof calculationControllerFindAllPaginated
-						>
-					>
+					Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>
 				>,
 				"initialData"
 			>;
@@ -213,35 +195,23 @@ export function useCalculationControllerFindAllPaginated<
 	queryKey: DataTag<QueryKey, TData, TError>;
 };
 export function useCalculationControllerFindAllPaginated<
-	TData = Awaited<
-		ReturnType<typeof calculationControllerFindAllPaginated>
-	>,
+	TData = Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
 	TError = void,
 >(
 	params?: CalculationControllerFindAllPaginatedParams,
 	options?: {
 		query?: Partial<
 			UseQueryOptions<
-				Awaited<
-					ReturnType<typeof calculationControllerFindAllPaginated>
-				>,
+				Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
 				TError,
 				TData
 			>
 		> &
 			Pick<
 				UndefinedInitialDataOptions<
-					Awaited<
-						ReturnType<
-							typeof calculationControllerFindAllPaginated
-						>
-					>,
+					Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
 					TError,
-					Awaited<
-						ReturnType<
-							typeof calculationControllerFindAllPaginated
-						>
-					>
+					Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>
 				>,
 				"initialData"
 			>;
@@ -251,18 +221,14 @@ export function useCalculationControllerFindAllPaginated<
 	queryKey: DataTag<QueryKey, TData, TError>;
 };
 export function useCalculationControllerFindAllPaginated<
-	TData = Awaited<
-		ReturnType<typeof calculationControllerFindAllPaginated>
-	>,
+	TData = Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
 	TError = void,
 >(
 	params?: CalculationControllerFindAllPaginatedParams,
 	options?: {
 		query?: Partial<
 			UseQueryOptions<
-				Awaited<
-					ReturnType<typeof calculationControllerFindAllPaginated>
-				>,
+				Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
 				TError,
 				TData
 			>
@@ -273,18 +239,14 @@ export function useCalculationControllerFindAllPaginated<
 	queryKey: DataTag<QueryKey, TData, TError>;
 };
 export function useCalculationControllerFindAllPaginated<
-	TData = Awaited<
-		ReturnType<typeof calculationControllerFindAllPaginated>
-	>,
+	TData = Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
 	TError = void,
 >(
 	params?: CalculationControllerFindAllPaginatedParams,
 	options?: {
 		query?: Partial<
 			UseQueryOptions<
-				Awaited<
-					ReturnType<typeof calculationControllerFindAllPaginated>
-				>,
+				Awaited<ReturnType<typeof calculationControllerFindAllPaginated>>,
 				TError,
 				TData
 			>
@@ -392,17 +354,15 @@ export const getCalculationControllerFindAllQueryKey = () =>
 export const useCalculationControllerFindAllQueryOptions = <
 	TData = Awaited<ReturnType<typeof calculationControllerFindAll>>,
 	TError = void,
->(
-	options?: {
-		query?: Partial<
-			UseQueryOptions<
-				Awaited<ReturnType<typeof calculationControllerFindAll>>,
-				TError,
-				TData
-			>
-		>;
-	},
-) => {
+>(options?: {
+	query?: Partial<
+		UseQueryOptions<
+			Awaited<ReturnType<typeof calculationControllerFindAll>>,
+			TError,
+			TData
+		>
+	>;
+}) => {
 	const { query: queryOptions } = options ?? {};
 	const queryKey =
 		queryOptions?.queryKey ?? getCalculationControllerFindAllQueryKey();
@@ -658,10 +618,7 @@ export function useCalculationControllerFindOne<
 ): UseQueryResult<TData, TError> & {
 	queryKey: DataTag<QueryKey, TData, TError>;
 } {
-	const queryOptions = useCalculationControllerFindOneQueryOptions(
-		id,
-		options,
-	);
+	const queryOptions = useCalculationControllerFindOneQueryOptions(id, options);
 	const query = useQuery(queryOptions, queryClient) as UseQueryResult<
 		TData,
 		TError
@@ -679,40 +636,31 @@ export const questionnaireControllerGetFullQuestionnaire = (
 		signal,
 	});
 
-export const getQuestionnaireControllerGetFullQuestionnaireQueryKey =
-	() => [`/questionnaire`] as const;
+export const getQuestionnaireControllerGetFullQuestionnaireQueryKey = () =>
+	[`/questionnaire`] as const;
 
 export const useQuestionnaireControllerGetFullQuestionnaireQueryOptions = <
 	TData = Awaited<
 		ReturnType<typeof questionnaireControllerGetFullQuestionnaire>
 	>,
 	TError = unknown,
->(
-	options?: {
-		query?: Partial<
-			UseQueryOptions<
-				Awaited<
-					ReturnType<
-						typeof questionnaireControllerGetFullQuestionnaire
-					>
-				>,
-				TError,
-				TData
-			>
-		>;
-	},
-) => {
+>(options?: {
+	query?: Partial<
+		UseQueryOptions<
+			Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>,
+			TError,
+			TData
+		>
+	>;
+}) => {
 	const { query: queryOptions } = options ?? {};
 	const queryKey =
 		queryOptions?.queryKey ??
 		getQuestionnaireControllerGetFullQuestionnaireQueryKey();
 
 	const queryFn: QueryFunction<
-		Awaited<
-			ReturnType<typeof questionnaireControllerGetFullQuestionnaire>
-		>
-	> = ({ signal }) =>
-		questionnaireControllerGetFullQuestionnaire(signal);
+		Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>
+	> = ({ signal }) => questionnaireControllerGetFullQuestionnaire(signal);
 
 	const customOpts = customQueryOptions({
 		...queryOptions,
@@ -723,9 +671,7 @@ export const useQuestionnaireControllerGetFullQuestionnaireQueryOptions = <
 	});
 
 	return customOpts as UseQueryOptions<
-		Awaited<
-			ReturnType<typeof questionnaireControllerGetFullQuestionnaire>
-		>,
+		Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>,
 		TError,
 		TData
 	> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -740,11 +686,7 @@ export function useQuestionnaireControllerGetFullQuestionnaire<
 	options: {
 		query: Partial<
 			UseQueryOptions<
-				Awaited<
-					ReturnType<
-						typeof questionnaireControllerGetFullQuestionnaire
-					>
-				>,
+				Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>,
 				TError,
 				TData
 			>
@@ -752,15 +694,11 @@ export function useQuestionnaireControllerGetFullQuestionnaire<
 			Pick<
 				DefinedInitialDataOptions<
 					Awaited<
-						ReturnType<
-							typeof questionnaireControllerGetFullQuestionnaire
-						>
+						ReturnType<typeof questionnaireControllerGetFullQuestionnaire>
 					>,
 					TError,
 					Awaited<
-						ReturnType<
-							typeof questionnaireControllerGetFullQuestionnaire
-						>
+						ReturnType<typeof questionnaireControllerGetFullQuestionnaire>
 					>
 				>,
 				"initialData"
@@ -779,11 +717,7 @@ export function useQuestionnaireControllerGetFullQuestionnaire<
 	options?: {
 		query?: Partial<
 			UseQueryOptions<
-				Awaited<
-					ReturnType<
-						typeof questionnaireControllerGetFullQuestionnaire
-					>
-				>,
+				Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>,
 				TError,
 				TData
 			>
@@ -791,15 +725,11 @@ export function useQuestionnaireControllerGetFullQuestionnaire<
 			Pick<
 				UndefinedInitialDataOptions<
 					Awaited<
-						ReturnType<
-							typeof questionnaireControllerGetFullQuestionnaire
-						>
+						ReturnType<typeof questionnaireControllerGetFullQuestionnaire>
 					>,
 					TError,
 					Awaited<
-						ReturnType<
-							typeof questionnaireControllerGetFullQuestionnaire
-						>
+						ReturnType<typeof questionnaireControllerGetFullQuestionnaire>
 					>
 				>,
 				"initialData"
@@ -818,11 +748,7 @@ export function useQuestionnaireControllerGetFullQuestionnaire<
 	options?: {
 		query?: Partial<
 			UseQueryOptions<
-				Awaited<
-					ReturnType<
-						typeof questionnaireControllerGetFullQuestionnaire
-					>
-				>,
+				Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>,
 				TError,
 				TData
 			>
@@ -841,11 +767,7 @@ export function useQuestionnaireControllerGetFullQuestionnaire<
 	options?: {
 		query?: Partial<
 			UseQueryOptions<
-				Awaited<
-					ReturnType<
-						typeof questionnaireControllerGetFullQuestionnaire
-					>
-				>,
+				Awaited<ReturnType<typeof questionnaireControllerGetFullQuestionnaire>>,
 				TError,
 				TData
 			>
@@ -878,17 +800,15 @@ export const getCoefficientControllerFindAllQueryKey = () =>
 export const useCoefficientControllerFindAllQueryOptions = <
 	TData = Awaited<ReturnType<typeof coefficientControllerFindAll>>,
 	TError = unknown,
->(
-	options?: {
-		query?: Partial<
-			UseQueryOptions<
-				Awaited<ReturnType<typeof coefficientControllerFindAll>>,
-				TError,
-				TData
-			>
-		>;
-	},
-) => {
+>(options?: {
+	query?: Partial<
+		UseQueryOptions<
+			Awaited<ReturnType<typeof coefficientControllerFindAll>>,
+			TError,
+			TData
+		>
+	>;
+}) => {
 	const { query: queryOptions } = options ?? {};
 	const queryKey =
 		queryOptions?.queryKey ?? getCoefficientControllerFindAllQueryKey();
@@ -996,8 +916,7 @@ export function useCoefficientControllerFindAll<
 ): UseQueryResult<TData, TError> & {
 	queryKey: DataTag<QueryKey, TData, TError>;
 } {
-	const queryOptions =
-		useCoefficientControllerFindAllQueryOptions(options);
+	const queryOptions = useCoefficientControllerFindAllQueryOptions(options);
 	const query = useQuery(queryOptions, queryClient) as UseQueryResult<
 		TData,
 		TError
@@ -1047,8 +966,7 @@ export const useCoefficientControllerGetValueQueryOptions = <
 
 	const queryFn: QueryFunction<
 		Awaited<ReturnType<typeof coefficientControllerGetValue>>
-	> = ({ signal }) =>
-		coefficientControllerGetValue(code, params, signal);
+	> = ({ signal }) => coefficientControllerGetValue(code, params, signal);
 
 	const customOpts = customQueryOptions({
 		...queryOptions,
@@ -1225,9 +1143,7 @@ export const useCalculationControllerCreateNewVersion = <
 >(
 	options?: {
 		mutation?: UseMutationOptions<
-			Awaited<
-				ReturnType<typeof calculationControllerCreateNewVersion>
-			>,
+			Awaited<ReturnType<typeof calculationControllerCreateNewVersion>>,
 			TError,
 			{ id: string; data: CreateNewVersionDto },
 			TContext

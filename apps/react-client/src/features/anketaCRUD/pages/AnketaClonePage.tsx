@@ -11,7 +11,7 @@ import { useNavigate, useParams } from "react-router";
 import SaveIcon from "@mui/icons-material/Save";
 import { useParentCalculationData } from "../hooks/useParentCalculationData";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
-import {routes} from "@react-client/version/v1/routing/routes";
+import { routes } from "@react-client/version/v1/routing/routes";
 
 export const AnketaClonePage = () => {
 	const navigate = useNavigate();

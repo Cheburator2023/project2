@@ -6,7 +6,6 @@ import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { ErrorBoundary } from "@react-client/common/errors/ErrorBoundary";
 import { ErrorPage } from "@react-client/common/errors/pages/ErrorPage";
-import { MainLayout } from "@react-client/common/layouts/MainLayout";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { Toaster } from "@react-client/common/toasts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -15,11 +14,9 @@ import { ru } from "date-fns/esm/locale";
 import { isEmpty } from "lodash-es";
 import type React from "react";
 import { Suspense, useEffect } from "react";
-import {BrowserRouter, Route, Routes} from "react-router";
+import { BrowserRouter } from "react-router";
 import type { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
 import { reportWebVitals } from "./reportWebVitals";
-import Routing from "./version/v1/routing";
-import RoutingV2 from "./version/v2/routing";
 import { AppTheme } from "./theme/AppTheme";
 import {
 	chartsCustomizations,
@@ -27,8 +24,7 @@ import {
 	datePickersCustomizations,
 	treeViewCustomizations,
 } from "./theme/customizations";
-import {useLocation} from "react-router-dom";
-import {useAppVersion} from "@react-client/hooks/useAppVersion";
+import { useAppVersion } from "@react-client/hooks/useAppVersion";
 import AppRoutes from "@react-client/common/routing";
 
 const GIT_REVISION = process.env.GIT_REVISION;
@@ -101,7 +97,7 @@ const App: React.FC<LayoutProps> = (props) => {
 
 	return (
 		<QueryClientProvider client={queryClient}>
-			{ version === 'v1' && (
+			{version === "v1" && (
 				<BrowserRouter basename={bridged ? "/smartAnketa/" : "/"}>
 					{/* <CssBaseline enableColorScheme /> */}
 					<AppTheme themeComponents={xThemeComponents}>
@@ -110,7 +106,7 @@ const App: React.FC<LayoutProps> = (props) => {
 								<Toaster />
 								<Suspense fallback={<CircularProgress />}>
 									<LocalizationProvider dateAdapter={AdapterDateFns}>
-										<AppRoutes onLogout={onLogoutHandler}/>
+										<AppRoutes onLogout={onLogoutHandler} />
 									</LocalizationProvider>
 								</Suspense>
 							</StyledEngineProvider>
