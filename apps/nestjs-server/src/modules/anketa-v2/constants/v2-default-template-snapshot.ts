@@ -7,6 +7,13 @@ import type {
 	V2UiSchemaDto,
 } from "@smart-anketa/api-contract";
 
+import {
+	applyDictionaryBindingsToUiSchema,
+	buildDefaultDictionariesFromJsonSchema,
+	buildDictionaryBindingsFromSchema,
+	collectDictionaryCodesFromUiSchema,
+} from "../utils/v2-schema-dictionary.util";
+
 /**
  * Эталон схемы по макетам (PNG в `llm/v2_docs/figma/`).
  * Структурный источник: `llm/v2_docs/anketa-schema_default_parser_by_llm.json`
@@ -38,16 +45,37 @@ const rawSchema =
 		? (file.jsonSchema as Record<string, unknown>)
 		: { type: "object", properties: {} };
 
-export const V2_DEFAULT_TEMPLATE_SNAPSHOT = {
-	jsonSchema: stripDraft07Schema(rawSchema),
-	uiSchema: (typeof file.uiSchema === "object" &&
+const jsonSchema = stripDraft07Schema(rawSchema);
+
+const rawUi =
+	typeof file.uiSchema === "object" &&
 	file.uiSchema !== null &&
 	!Array.isArray(file.uiSchema)
 		? structuredClone(file.uiSchema)
-		: {}) as V2UiSchemaDto,
+		: {};
 
+const dictionaryBindings = buildDictionaryBindingsFromSchema(jsonSchema);
+
+const uiSchema = applyDictionaryBindingsToUiSchema(
+	rawUi as V2UiSchemaDto,
+	dictionaryBindings,
+);
+
+/** Заводские справочники (коды и элементы из enum полей эталонной схемы). */
+export const V2_DEFAULT_DICTIONARIES =
+	buildDefaultDictionariesFromJsonSchema(jsonSchema);
+
+/** Коды справочников, привязанных к заводской uiSchema. */
+export const V2_DEFAULT_REFERENCED_DICTIONARY_CODES =
+	collectDictionaryCodesFromUiSchema(uiSchema);
+
+export const V2_DEFAULT_TEMPLATE_SNAPSHOT = {
+	jsonSchema,
+	uiSchema,
 	logic: { rules: [] } satisfies V2LogicGraphDto,
-
+	dictionariesSnapshot: {
+		referencedDictionaryCodes: V2_DEFAULT_REFERENCED_DICTIONARY_CODES,
+	},
 	releaseNotes:
 		"Заводская схема V2 (анкета калькуляции разработки моделей; эталон из llm-парса макетов)",
 };

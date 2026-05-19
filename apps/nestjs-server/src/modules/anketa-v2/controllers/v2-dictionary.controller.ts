@@ -20,6 +20,7 @@ import {
 	UpdateV2DictionaryDto,
 	CreateV2DictionaryItemDto,
 	UpdateV2DictionaryItemDto,
+	BulkV2DictionaryIdsDto,
 } from "../dto";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
 
@@ -35,8 +36,50 @@ export class V2DictionaryController {
 	@ApiOperation({ summary: "Получить все справочники" })
 	@ApiResponse({ status: 200, type: [V2DictionaryResponseDto] })
 	async findAll(): Promise<V2DictionaryResponseDto[]> {
-		const dictionaries = await this.dictionaryService.findAll();
+		const dictionaries = await this.dictionaryService.findAllWithMeta();
 		return dictionaries.map((d) => this.toResponseDto(d));
+	}
+
+	@Post("bulk-delete")
+	@ApiOperation({ summary: "Массовое удаление справочников" })
+	@ApiResponse({ status: 200 })
+	async bulkDelete(
+		@Body() dto: BulkV2DictionaryIdsDto,
+		@CurrentUser() user: { id: string } | null,
+	) {
+		const result = await this.dictionaryService.bulkDelete(dto.ids);
+
+		for (const id of result.deletedIds) {
+			await this.auditService.logDictionary(
+				id,
+				"dictionary.deleted",
+				{ bulk: true },
+				user?.id ?? null,
+			);
+		}
+
+		return result;
+	}
+
+	@Post("bulk-reset")
+	@ApiOperation({ summary: "Массовый сброс заводских справочников" })
+	@ApiResponse({ status: 200 })
+	async bulkReset(
+		@Body() dto: BulkV2DictionaryIdsDto,
+		@CurrentUser() user: { id: string } | null,
+	) {
+		const result = await this.dictionaryService.bulkReset(dto.ids);
+
+		for (const id of result.resetIds) {
+			await this.auditService.logDictionary(
+				id,
+				"dictionary.updated",
+				{ resetToDefault: true, bulk: true },
+				user?.id ?? null,
+			);
+		}
+
+		return result;
 	}
 
 	@Get("code/:code")
@@ -64,6 +107,15 @@ export class V2DictionaryController {
 		return this.toItemResponseDto(item);
 	}
 
+	@Get(":id/field-usages")
+	@ApiOperation({
+		summary: "Где справочник привязан к полям схем (версии шаблонов)",
+	})
+	@ApiResponse({ status: 200 })
+	async findFieldUsages(@Param("id", ParseUUIDPipe) id: string) {
+		return this.dictionaryService.findFieldUsages(id);
+	}
+
 	@Get(":id/items")
 	@ApiOperation({ summary: "Получить все элементы справочника" })
 	@ApiResponse({ status: 200, type: [V2DictionaryItemResponseDto] })
@@ -83,11 +135,10 @@ export class V2DictionaryController {
 		@CurrentUser() user: { id: string } | null,
 	): Promise<V2DictionaryItemResponseDto> {
 		const item = await this.dictionaryService.createItem(id, dto);
-		await this.auditService.log(
+		await this.auditService.logDictionary(
 			id,
 			"dictionary_item.created",
-			null,
-			{ item },
+			{ item: this.toItemResponseDto(item) },
 			user?.id ?? null,
 		);
 		return this.toItemResponseDto(item);
@@ -102,11 +153,10 @@ export class V2DictionaryController {
 		@CurrentUser() user: { id: string } | null,
 	): Promise<V2DictionaryItemResponseDto> {
 		const item = await this.dictionaryService.updateItem(itemId, dto);
-		await this.auditService.log(
+		await this.auditService.logDictionary(
 			item.dictionaryId,
 			"dictionary_item.updated",
-			null,
-			{ item, changes: dto },
+			{ item: this.toItemResponseDto(item), changes: dto },
 			user?.id ?? null,
 		);
 		return this.toItemResponseDto(item);
@@ -122,10 +172,9 @@ export class V2DictionaryController {
 	): Promise<void> {
 		const item = await this.dictionaryService.findItem(itemId);
 		await this.dictionaryService.deleteItem(itemId);
-		await this.auditService.log(
+		await this.auditService.logDictionary(
 			item.dictionaryId,
 			"dictionary_item.deleted",
-			null,
 			{ itemId },
 			user?.id ?? null,
 		);
@@ -149,14 +198,32 @@ export class V2DictionaryController {
 		@CurrentUser() user: { id: string } | null,
 	): Promise<V2DictionaryResponseDto> {
 		const dictionary = await this.dictionaryService.create(dto);
-		await this.auditService.log(
+		await this.auditService.logDictionary(
 			dictionary.id,
 			"dictionary.created",
-			null,
-			{ dictionary },
+			{ dictionary: this.toResponseDto(dictionary) },
 			user?.id ?? null,
 		);
 		return this.toResponseDto(dictionary);
+	}
+
+	@Post(":id/reset-default")
+	@ApiOperation({ summary: "Сбросить заводской справочник к эталонным значениям" })
+	@ApiResponse({ status: 200, type: V2DictionaryResponseDto })
+	async resetToDefault(
+		@Param("id", ParseUUIDPipe) id: string,
+		@CurrentUser() user: { id: string } | null,
+	): Promise<V2DictionaryResponseDto> {
+		const dictionary = await this.dictionaryService.resetToDefault(id);
+		await this.auditService.logDictionary(
+			dictionary.id,
+			"dictionary.updated",
+			{ resetToDefault: true },
+			user?.id ?? null,
+		);
+		const meta = await this.dictionaryService.findAllWithMeta();
+		const row = meta.find((d) => d.id === dictionary.id);
+		return this.toResponseDto(row ?? { ...dictionary, isDefault: true, isInUse: false });
 	}
 
 	@Put(":id")
@@ -168,11 +235,10 @@ export class V2DictionaryController {
 		@CurrentUser() user: { id: string } | null,
 	): Promise<V2DictionaryResponseDto> {
 		const dictionary = await this.dictionaryService.update(id, dto);
-		await this.auditService.log(
+		await this.auditService.logDictionary(
 			dictionary.id,
 			"dictionary.updated",
-			null,
-			{ dictionary, changes: dto },
+			{ dictionary: this.toResponseDto(dictionary), changes: dto },
 			user?.id ?? null,
 		);
 		return this.toResponseDto(dictionary);
@@ -187,16 +253,24 @@ export class V2DictionaryController {
 		@CurrentUser() user: { id: string } | null,
 	): Promise<void> {
 		await this.dictionaryService.delete(id);
-		await this.auditService.log(
+		await this.auditService.logDictionary(
 			id,
 			"dictionary.deleted",
-			null,
-			{ dictionaryId: id },
+			{},
 			user?.id ?? null,
 		);
 	}
 
-	private toResponseDto(dictionary: any): V2DictionaryResponseDto {
+	private toResponseDto(dictionary: {
+		id: string;
+		code: string;
+		name: string;
+		description: string | null;
+		createdAt: Date;
+		updatedAt: Date;
+		isDefault?: boolean;
+		isInUse?: boolean;
+	}): V2DictionaryResponseDto {
 		return {
 			id: dictionary.id,
 			code: dictionary.code,
@@ -204,6 +278,8 @@ export class V2DictionaryController {
 			description: dictionary.description,
 			createdAt: dictionary.createdAt.toISOString(),
 			updatedAt: dictionary.updatedAt.toISOString(),
+			isDefault: dictionary.isDefault,
+			isInUse: dictionary.isInUse,
 		};
 	}
 

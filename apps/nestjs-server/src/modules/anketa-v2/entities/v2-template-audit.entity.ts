@@ -13,8 +13,8 @@ export class V2TemplateAuditEntity {
 	id: string;
 
 	@Index()
-	@Column({ name: "template_id", type: "uuid", nullable: false })
-	templateId: string;
+	@Column({ name: "template_id", type: "uuid", nullable: true })
+	templateId: string | null;
 
 	@Index()
 	@Column({ name: "version_id", type: "uuid", nullable: true })

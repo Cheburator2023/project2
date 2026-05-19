@@ -16,7 +16,10 @@ import type {
 	UpdateV2TemplateRequestDto,
 	UpdateV2TemplateVersionRequestDto,
 	V2DictionaryDto,
+	V2DictionaryFieldUsageDto,
 	V2DictionaryItemDto,
+	BulkDeleteV2DictionariesResultDto,
+	BulkResetV2DictionariesResultDto,
 	V2TemplateAuditDto,
 	V2TemplateDto,
 	V2TemplateVersionDto,
@@ -383,6 +386,18 @@ export const useV2Dictionary = (id: string) => {
 	});
 };
 
+export const useV2DictionaryFieldUsages = (dictionaryId: string) => {
+	return useQuery<V2DictionaryFieldUsageDto[]>({
+		queryKey: ["v2-dictionaries", dictionaryId, "field-usages"],
+		queryFn: () =>
+			apiClient<V2DictionaryFieldUsageDto[]>({
+				url: `/v2/dictionaries/${dictionaryId}/field-usages`,
+				method: "GET",
+			}),
+		enabled: !!dictionaryId,
+	});
+};
+
 export const useV2DictionaryByCode = (code: string) => {
 	return useQuery<V2DictionaryDto>({
 		queryKey: ["v2-dictionaries", "code", code],
@@ -428,6 +443,9 @@ export const useUpdateV2Dictionary = () => {
 		onSuccess: (_, { id }) => {
 			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries"] });
 			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries", id] });
+			queryClient.invalidateQueries({
+				queryKey: ["v2-dictionaries", id, "field-usages"],
+			});
 		},
 	});
 };
@@ -444,6 +462,59 @@ export const useDeleteV2Dictionary = () => {
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries"] });
+		},
+	});
+};
+
+export const useBulkDeleteV2Dictionaries = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation<BulkDeleteV2DictionariesResultDto, Error, string[]>({
+		mutationFn: (ids) =>
+			apiClient<BulkDeleteV2DictionariesResultDto>({
+				url: "/v2/dictionaries/bulk-delete",
+				method: "POST",
+				data: { ids },
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries"] });
+			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries", "json"] });
+		},
+	});
+};
+
+export const useBulkResetV2Dictionaries = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation<BulkResetV2DictionariesResultDto, Error, string[]>({
+		mutationFn: (ids) =>
+			apiClient<BulkResetV2DictionariesResultDto>({
+				url: "/v2/dictionaries/bulk-reset",
+				method: "POST",
+				data: { ids },
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries"] });
+			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries", "json"] });
+		},
+	});
+};
+
+export const useResetV2DictionaryToDefault = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation<V2DictionaryDto, Error, string>({
+		mutationFn: (id) =>
+			apiClient<V2DictionaryDto>({
+				url: `/v2/dictionaries/${id}/reset-default`,
+				method: "POST",
+			}),
+		onSuccess: (_, id) => {
+			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries"] });
+			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries", id] });
+			queryClient.invalidateQueries({
+				queryKey: ["v2-dictionaries", id, "items"],
+			});
 		},
 	});
 };
@@ -491,6 +562,10 @@ export const useCreateV2DictionaryItem = () => {
 			queryClient.invalidateQueries({
 				queryKey: ["v2-dictionaries", dictionaryId, "items"],
 			});
+			queryClient.invalidateQueries({
+				queryKey: ["v2-dictionaries", dictionaryId, "field-usages"],
+			});
+			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries", "json"] });
 		},
 	});
 };
@@ -509,10 +584,14 @@ export const useUpdateV2DictionaryItem = () => {
 				method: "PUT",
 				data: dto,
 			}),
-		onSuccess: (_, { itemId }) => {
+		onSuccess: (item) => {
 			queryClient.invalidateQueries({
-				queryKey: ["v2-dictionaries", "items", itemId],
+				queryKey: ["v2-dictionaries", item.dictionaryId, "items"],
 			});
+			queryClient.invalidateQueries({
+				queryKey: ["v2-dictionaries", item.dictionaryId, "field-usages"],
+			});
+			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries", "json"] });
 		},
 	});
 };
@@ -527,8 +606,9 @@ export const useDeleteV2DictionaryItem = () => {
 				method: "DELETE",
 			});
 		},
-		onSuccess: (_, itemId) => {
-			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries", "items", itemId] });
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries"] });
+			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries", "json"] });
 		},
 	});
 };

@@ -142,6 +142,12 @@ export class V2DictionaryResponseDto implements V2DictionaryDto {
 
 	@ApiProperty()
 	updatedAt: string;
+
+	@ApiProperty({ required: false })
+	isDefault?: boolean;
+
+	@ApiProperty({ required: false })
+	isInUse?: boolean;
 }
 
 export class V2DictionaryItemResponseDto implements V2DictionaryItemDto {

@@ -125,7 +125,8 @@ export type V2TemplateVersionDto = {
 
 export type V2TemplateAuditDto = {
 	id: string;
-	templateId: string;
+	/** null для событий справочников (без привязки к шаблону). */
+	templateId: string | null;
 	versionId: string | null;
 	action: V2TemplateAuditAction;
 	payload: Record<string, unknown> | null;
@@ -147,6 +148,38 @@ export type V2DictionaryDto = {
 	description: string | null;
 	createdAt: string;
 	updatedAt: string;
+	/** Заводской справочник из эталонной схемы — удалять нельзя, только сброс. */
+	isDefault?: boolean;
+	/** Есть привязки `ui:options.dictionaryCode` в версиях шаблонов. */
+	isInUse?: boolean;
+};
+
+export type V2DictionaryBulkFailureReason =
+	| "not_found"
+	| "default_dictionary"
+	| "in_use"
+	| "not_default"
+	| "reset_failed";
+
+export type V2DictionaryBulkFailureDto = {
+	id: string;
+	code: string | null;
+	reason: V2DictionaryBulkFailureReason;
+	message: string;
+};
+
+export type BulkV2DictionaryIdsRequestDto = {
+	ids: string[];
+};
+
+export type BulkDeleteV2DictionariesResultDto = {
+	deletedIds: string[];
+	failed: V2DictionaryBulkFailureDto[];
+};
+
+export type BulkResetV2DictionariesResultDto = {
+	resetIds: string[];
+	failed: V2DictionaryBulkFailureDto[];
 };
 
 export type V2DictionaryItemDto = {
@@ -158,6 +191,19 @@ export type V2DictionaryItemDto = {
 	order: number;
 	isActive: boolean;
 	payload: Record<string, unknown> | null;
+};
+
+/** Где в схемах шаблонов используется справочник (ui:options.dictionaryCode). */
+export type V2DictionaryFieldUsageDto = {
+	templateId: string;
+	templateCode: string;
+	templateName: string;
+	versionId: string;
+	versionNumber: number;
+	versionStatus: V2TemplateStatus;
+	isCurrentPublished: boolean;
+	fieldPointer: string;
+	fieldTitle: string | null;
 };
 
 /* -------------------------------- Requests -------------------------------- */

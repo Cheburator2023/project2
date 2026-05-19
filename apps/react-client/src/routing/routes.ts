@@ -76,6 +76,12 @@ export const routes = {
 		showInNavbar: true,
 		navbar: { group: "adminV2", order: 5 },
 	},
+	adminV2DictionaryDetail: {
+		rootPath: "/admin/v2/dictionaries/:dictionaryId",
+		name: "Справочник",
+		shortName: "Справочник",
+		disabled: false,
+	},
 	adminV2History: {
 		rootPath: "/admin/v2/history",
 		name: "История сохранений",
@@ -121,6 +127,12 @@ export const pathForAdminV2Template = (templateId: string) =>
 	routes.adminV2TemplateEditor.rootPath.replace(
 		":templateId",
 		encodeURIComponent(templateId),
+	);
+
+export const pathForAdminV2Dictionary = (dictionaryId: string) =>
+	routes.adminV2DictionaryDetail.rootPath.replace(
+		":dictionaryId",
+		encodeURIComponent(dictionaryId),
 	);
 
 export const pathForAdminV2TemplateHistory = (templateId: string) =>

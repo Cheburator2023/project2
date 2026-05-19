@@ -43,7 +43,13 @@ export class V2AuditService {
 			order: { createdAt: "DESC" },
 		});
 
-		const templateIds = [...new Set(audits.map((a) => a.templateId))];
+		const templateIds = [
+			...new Set(
+				audits
+					.map((a) => a.templateId)
+					.filter((id): id is string => typeof id === "string" && id.length > 0),
+			),
+		];
 		const templates =
 			templateIds.length === 0
 				? []
@@ -67,7 +73,7 @@ export class V2AuditService {
 		const versionMap = new Map(versions.map((v) => [v.id, v.versionNumber]));
 
 		return audits.map((a) => {
-			const t = templateMap.get(a.templateId);
+			const t = a.templateId ? templateMap.get(a.templateId) : undefined;
 			const vn = a.versionId ? versionMap.get(a.versionId) : undefined;
 			return Object.assign(a, {
 				templateName: t?.name ?? null,
@@ -90,6 +96,24 @@ export class V2AuditService {
 			versionId,
 			action,
 			payload,
+			createdBy: userId,
+		});
+
+		return this.auditRepository.save(audit);
+	}
+
+	/** События справочников: без привязки к шаблону (template_id = null). */
+	async logDictionary(
+		dictionaryId: string,
+		action: V2TemplateAuditAction,
+		payload: Record<string, unknown> | null = null,
+		userId: string | null = null,
+	): Promise<V2TemplateAuditEntity> {
+		const audit = this.auditRepository.create({
+			templateId: null,
+			versionId: null,
+			action,
+			payload: { dictionaryId, ...payload },
 			createdBy: userId,
 		});
 

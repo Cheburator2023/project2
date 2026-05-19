@@ -12,7 +12,9 @@ import type {
 	PublishV2TemplateVersionDto,
 	RollbackV2TemplateVersionDto,
 } from "../dto";
-import { V2_DEFAULT_TEMPLATE_SNAPSHOT } from "../constants/v2-default-template-snapshot";
+import {
+	V2_DEFAULT_TEMPLATE_SNAPSHOT,
+} from "../constants/v2-default-template-snapshot";
 import type { V2TemplateStatus } from "@smart-anketa/api-contract";
 
 @Injectable()
@@ -182,7 +184,7 @@ export class V2TemplateVersionService {
 				jsonSchema: structuredClone(snap.jsonSchema),
 				uiSchema: structuredClone(snap.uiSchema),
 				logic: structuredClone(snap.logic),
-				dictionariesSnapshot: null,
+				dictionariesSnapshot: structuredClone(snap.dictionariesSnapshot),
 				releaseNotes: snap.releaseNotes,
 				parentVersionId: null,
 			},

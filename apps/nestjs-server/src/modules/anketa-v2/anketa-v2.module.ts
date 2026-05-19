@@ -8,6 +8,7 @@ import { V2DictionaryItemEntity } from "./entities/v2-dictionary-item.entity";
 import { V2TemplateService } from "./services/v2-template.service";
 import { V2TemplateVersionService } from "./services/v2-template-version.service";
 import { V2DictionaryService } from "./services/v2-dictionary.service";
+import { V2DictionarySeedService } from "./services/v2-dictionary-seed.service";
 import { V2AuditService } from "./services/v2-audit.service";
 import { V2TemplateController } from "./controllers/v2-template.controller";
 import { V2TemplateVersionController } from "./controllers/v2-template-version.controller";
@@ -34,6 +35,7 @@ import { V2AuditController } from "./controllers/v2-audit.controller";
 		V2TemplateService,
 		V2TemplateVersionService,
 		V2DictionaryService,
+		V2DictionarySeedService,
 		V2AuditService,
 	],
 	exports: [

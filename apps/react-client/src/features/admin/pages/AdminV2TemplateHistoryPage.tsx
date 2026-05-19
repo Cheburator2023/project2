@@ -195,31 +195,33 @@ export function AdminV2TemplateHistoryPage() {
 
 	return (
 		<Flex flexDirection="column" flexGrow={1} minHeight="0">
-			<Header>
-				<Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-					<Tooltip title="Назад к списку схем">
-						<IconButton
-							onClick={() => navigate(routes.adminV2Schemas.rootPath)}
-							aria-label="Назад к списку схем"
-							size="small"
-						>
-							<ArrowBackIcon />
-						</IconButton>
-					</Tooltip>
-					<Button
-						variant="contained"
-						color="warning"
-						disabled={!templateId || resetMutation.isPending}
-						onClick={() => setConfirmOpen(true)}
-					>
-						Сбросить к заводской схеме
-					</Button>
-				</Stack>
+			<Header
+				leadingAccessory={
+					<Flex gap={1} alignItems="center" wrap="wrap" minWidth="0">
+						<Tooltip title="Назад к списку схем">
+							<IconButton
+								onClick={() => navigate(routes.adminV2Schemas.rootPath)}
+								aria-label="Назад к списку схем"
+								size="small"
+							>
+								<ArrowBackIcon />
+							</IconButton>
+						</Tooltip>
+						<Typography variant="subtitle2" component="span" fontWeight={600} noWrap>
+							История: {template?.name ?? (templateId || "…")}
+						</Typography>
+					</Flex>
+				}
+			>
+				<Button
+					variant="contained"
+					color="warning"
+					disabled={!templateId || resetMutation.isPending}
+					onClick={() => setConfirmOpen(true)}
+				>
+					Сбросить к заводской схеме
+				</Button>
 			</Header>
-
-			<Typography variant="h6" component="h1" sx={{ py: 1 }}>
-				История: {template?.name ?? (templateId || "…")}
-			</Typography>
 
 			{resetMutation.isError ? (
 				<Typography color="error" variant="body2" sx={{ pb: 1 }}>

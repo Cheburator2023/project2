@@ -46,6 +46,9 @@ import {
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
+import { Link as RouterLink } from "react-router";
+import Link from "@mui/material/Link";
+import { pathForAdminV2Dictionary } from "@react-client/routing/routes";
 import { StyledJsonLogicShell } from "../styles/styledJsonLogicShell";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
 import { derivePreviewSchemas } from "../utils/logicPreview";
@@ -394,6 +397,20 @@ export const V2TemplateSchemaEditor = ({
 		return fieldPathHints.find((h) => h.pointer === logicPathPick);
 	}, [fieldPathHints, logicPathPick]);
 
+	const dictionaryCodeByPointer = useMemo(() => {
+		const m = new Map<string, string>();
+		for (const h of fieldPathHints) {
+			if (h.dictionaryCode) m.set(h.pointer, h.dictionaryCode);
+		}
+		return m;
+	}, [fieldPathHints]);
+
+	const dictionaryIdByCode = useMemo(() => {
+		const m = new Map<string, string>();
+		for (const d of v2Dictionaries) m.set(d.code, d.id);
+		return m;
+	}, [v2Dictionaries]);
+
 	const rulesForSelectedExact = useMemo(() => {
 		if (selectedPointer === null) return [];
 		const np = normalizeJsonPointer(selectedPointer);
@@ -703,7 +720,9 @@ export const V2TemplateSchemaEditor = ({
 	if (!draftVersion) {
 		return (
 			<Flex flexDirection="column" gap={2}>
-				<Typography variant="h6">Нет активного черновика</Typography>
+				<Typography variant="subtitle1" fontWeight={600}>
+					Нет активного черновика
+				</Typography>
 				<Typography variant="body2" color="text.secondary">
 					{wording === "adminSchema"
 						? "Черновик версии живёт отдельно от опубликованной. Можно скопировать текущую опубликованную версию схемы или начать с пустого JSON Schema."
@@ -784,6 +803,10 @@ export const V2TemplateSchemaEditor = ({
 										jsonSchema,
 										pointerSegments(row.pointer),
 									);
+									const rowDictCode = dictionaryCodeByPointer.get(row.pointer);
+									const rowDictId = rowDictCode
+										? dictionaryIdByCode.get(rowDictCode)
+										: undefined;
 
 									return (
 										<Box
@@ -819,6 +842,34 @@ export const V2TemplateSchemaEditor = ({
 													{rowFieldNode.title}
 												</Typography>
 											)}
+											{rowDictCode ? (
+												rowDictId ? (
+													<Link
+														component={RouterLink}
+														to={pathForAdminV2Dictionary(rowDictId)}
+														variant="caption"
+														underline="hover"
+														onClick={(e) => e.stopPropagation()}
+														sx={{ display: "inline-block", mt: 0.25 }}
+													>
+														<Chip
+															size="small"
+															label={rowDictCode}
+															variant="outlined"
+															color="info"
+															sx={{ height: 20, fontSize: 11 }}
+														/>
+													</Link>
+												) : (
+													<Chip
+														size="small"
+														label={rowDictCode}
+														variant="outlined"
+														color="warning"
+														sx={{ mt: 0.25, height: 20, fontSize: 11 }}
+													/>
+												)
+											) : null}
 										</Box>
 									);
 								})}
