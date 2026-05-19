@@ -12,12 +12,16 @@ import {
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { V2TemplateVersionService } from "../services/v2-template-version.service";
+import { V2TemplateService } from "../services/v2-template.service";
 import { V2AuditService } from "../services/v2-audit.service";
 import {
 	V2TemplateVersionResponseDto,
 	CreateV2TemplateVersionDto,
 	PublishV2TemplateVersionDto,
 	RollbackV2TemplateVersionDto,
+	BulkDeleteV2TemplateVersionsDto,
+	RestoreV2TemplateVersionsDto,
+	V2BulkDeleteTemplateVersionsResponseDto,
 } from "../dto";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
 
@@ -26,6 +30,7 @@ import { CurrentUser } from "../../../shared/decorators/user.decorator";
 export class V2TemplateVersionController {
 	constructor(
 		private readonly versionService: V2TemplateVersionService,
+		private readonly templateService: V2TemplateService,
 		private readonly auditService: V2AuditService,
 	) {}
 
@@ -88,7 +93,11 @@ export class V2TemplateVersionController {
 	}
 
 	@Post(":id/publish")
-	@ApiOperation({ summary: "Опубликовать версию шаблона" })
+	@ApiOperation({
+		summary: "Опубликовать версию шаблона",
+		description:
+			"Версия становится опубликованной и единственной актуальной схемой системы; у других шаблонов снимается актуальность.",
+	})
 	@ApiResponse({ status: 200, type: V2TemplateVersionResponseDto })
 	async publish(
 		@Param("id", ParseUUIDPipe) id: string,
@@ -143,6 +152,59 @@ export class V2TemplateVersionController {
 		return this.toResponseDto(version);
 	}
 
+	@Post("from-default")
+	@ApiOperation({
+		summary: "Создать черновик из заводской схемы",
+		description:
+			"Новая draft-версия по эталону анкеты калькуляции. Без публикации и без смены актуальной схемы системы.",
+	})
+	@ApiResponse({ status: 201, type: V2TemplateVersionResponseDto })
+	async createFromDefault(
+		@Param("templateId", ParseUUIDPipe) templateId: string,
+		@CurrentUser() user: { id: string } | null,
+	): Promise<V2TemplateVersionResponseDto> {
+		const version = await this.versionService.createDraftFromDefault(
+			templateId,
+			user?.id ?? null,
+		);
+		await this.auditService.log(
+			templateId,
+			"version.created",
+			version.id,
+			{ version, source: "default_factory" },
+			user?.id ?? null,
+		);
+		return this.toResponseDto(version);
+	}
+
+	@Post("bulk-delete")
+	@ApiOperation({
+		summary: "Удалить версии шаблона скопом",
+		description:
+			"Удаляет указанные версии или все версии шаблона, кроме актуальной схемы системы.",
+	})
+	@ApiResponse({ status: 200, type: V2BulkDeleteTemplateVersionsResponseDto })
+	async bulkDelete(
+		@Param("templateId", ParseUUIDPipe) templateId: string,
+		@Body() dto: BulkDeleteV2TemplateVersionsDto,
+	): Promise<V2BulkDeleteTemplateVersionsResponseDto> {
+		return this.templateService.bulkDeleteVersions(
+			templateId,
+			dto.versionIds,
+		);
+	}
+
+	@Post("restore")
+	@HttpCode(HttpStatus.NO_CONTENT)
+	@ApiOperation({ summary: "Восстановить удалённые версии (undo)" })
+	@ApiResponse({ status: 204 })
+	async restoreVersions(
+		@Param("templateId", ParseUUIDPipe) templateId: string,
+		@Body() dto: RestoreV2TemplateVersionsDto,
+	): Promise<void> {
+		await this.templateService.restoreVersions(templateId, dto.versions);
+	}
+
 	@Post("reset-default")
 	@ApiOperation({
 		summary: "Сбросить шаблон к заводской схеме и логике",
@@ -167,9 +229,9 @@ export class V2TemplateVersionController {
 
 	@Post(":versionId/activate-as-current")
 	@ApiOperation({
-		summary: "Сделать версию актуальной для шаблона",
+		summary: "Сделать версию актуальной схемой системы",
 		description:
-			"Черновик будет опубликован; опубликованная — станет текущей без изменения содержимого; архивная будет скопирована в новую версию и опубликована.",
+			"В системе может быть только одна актуальная схема. У остальных шаблонов снимается признак актуальности. Черновик будет опубликован; опубликованная — станет текущей; архивная будет скопирована в новую версию и опубликована.",
 	})
 	@ApiResponse({ status: 200, type: V2TemplateVersionResponseDto })
 	async activateAsCurrent(

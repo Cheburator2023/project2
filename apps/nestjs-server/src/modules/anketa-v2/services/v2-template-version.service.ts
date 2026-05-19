@@ -7,6 +7,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
+import { V2TemplateService } from "./v2-template.service";
 import type {
 	CreateV2TemplateVersionDto,
 	PublishV2TemplateVersionDto,
@@ -24,6 +25,7 @@ export class V2TemplateVersionService {
 		private readonly versionRepository: Repository<V2TemplateVersionEntity>,
 		@InjectRepository(V2TemplateEntity)
 		private readonly templateRepository: Repository<V2TemplateEntity>,
+		private readonly templateService: V2TemplateService,
 	) {}
 
 	async findAll(templateId: string): Promise<V2TemplateVersionEntity[]> {
@@ -147,11 +149,11 @@ export class V2TemplateVersionService {
 
 		const updatedVersion = await this.versionRepository.save(version);
 
-		// Обновляем текущую версию шаблона
-		await this.templateRepository.update(version.templateId, {
-			currentVersionId: id,
-			updatedBy: userId,
-		});
+		await this.templateService.setGlobalCurrentVersion(
+			version.templateId,
+			id,
+			userId,
+		);
 
 		return updatedVersion;
 	}
@@ -173,6 +175,26 @@ export class V2TemplateVersionService {
 	 * После публикации добавляет черновик — копию опубликованной версии — чтобы редактор схемы
 	 * мог сразу показать активный черновик (иначе только published и UI пишет «Нет активного черновика»).
 	 */
+	/** Черновик из заводского эталона без публикации (для новой схемы). */
+	async createDraftFromDefault(
+		templateId: string,
+		userId: string | null,
+	): Promise<V2TemplateVersionEntity> {
+		const snap = V2_DEFAULT_TEMPLATE_SNAPSHOT;
+		return this.create(
+			templateId,
+			{
+				jsonSchema: structuredClone(snap.jsonSchema),
+				uiSchema: structuredClone(snap.uiSchema),
+				logic: structuredClone(snap.logic),
+				dictionariesSnapshot: structuredClone(snap.dictionariesSnapshot),
+				releaseNotes: snap.releaseNotes,
+				parentVersionId: null,
+			},
+			userId,
+		);
+	}
+
 	async resetToDefault(
 		templateId: string,
 		userId: string | null,
@@ -247,10 +269,11 @@ export class V2TemplateVersionService {
 		}
 
 		if (version.status === "published") {
-			await this.templateRepository.update(templateId, {
-				currentVersionId: version.id,
-				updatedBy: userId,
-			});
+			await this.templateService.setGlobalCurrentVersion(
+				templateId,
+				version.id,
+				userId,
+			);
 			return { version, changed: true };
 		}
 
@@ -322,6 +345,14 @@ export class V2TemplateVersionService {
 
 	async delete(id: string): Promise<void> {
 		const version = await this.findOne(id);
+
+		const systemCurrentId =
+			await this.templateService.getSystemCurrentVersionId();
+		if (systemCurrentId === version.id) {
+			throw new ConflictException(
+				"Нельзя удалить версию — она является актуальной схемой системы.",
+			);
+		}
 
 		if (version.status !== "draft") {
 			throw new ConflictException(

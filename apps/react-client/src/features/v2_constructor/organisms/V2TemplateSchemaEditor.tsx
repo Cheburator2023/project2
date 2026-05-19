@@ -7,7 +7,10 @@ import {
 	useV2Template,
 	useV2TemplateVersions,
 } from "@react-client/common/api/queries/v2-templates";
+import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
+import { toast } from "@react-client/common/toasts";
+import { routes } from "@react-client/routing/routes";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import type {
@@ -23,6 +26,7 @@ import { Box, Button, Typography } from "@mui/material";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
+import { useNavigate } from "react-router";
 import { SchemaEditorProvider } from "../schemaEditor/SchemaEditorContext";
 import type { SchemaEditorContextValue } from "../schemaEditor/SchemaEditorContext";
 import { SchemaEditorDockProvider } from "../schemaEditor/SchemaEditorDockContext";
@@ -113,11 +117,21 @@ export const V2TemplateSchemaEditor = ({
 	onHeaderMetaChange,
 	onHeaderActionsChange,
 }: V2TemplateSchemaEditorProps) => {
-	const { data: template } = useV2Template(templateId);
+	const navigate = useNavigate();
+	const isAdminEditor = wording === "adminSchema";
+
+	const {
+		data: template,
+		error: templateError,
+		isError: templateLoadError,
+	} = useV2Template(templateId);
 	const { data: v2Dictionaries = [] } = useV2Dictionaries();
-	const { data: versions, refetch: refetchVersions } = useV2TemplateVersions(
-		templateId,
-	);
+	const {
+		data: versions,
+		refetch: refetchVersions,
+		error: versionsError,
+		isError: versionsLoadError,
+	} = useV2TemplateVersions(templateId);
 	const createVersion = useCreateV2TemplateVersion();
 	const updateVersion = useUpdateV2TemplateVersion();
 	const publishVersion = usePublishV2TemplateVersion();
@@ -166,6 +180,20 @@ export const V2TemplateSchemaEditor = ({
 			setLogicPathPick(selectedPointer);
 		}
 	}, [mainTab, selectedPointer]);
+
+	useEffect(() => {
+		if (!isAdminEditor || !templateLoadError || !templateError) return;
+		toast.error("Не удалось загрузить схему", {
+			description: apiErrorMessage(templateError),
+		});
+	}, [isAdminEditor, templateLoadError, templateError]);
+
+	useEffect(() => {
+		if (!isAdminEditor || !versionsLoadError || !versionsError) return;
+		toast.error("Не удалось загрузить версии схемы", {
+			description: apiErrorMessage(versionsError),
+		});
+	}, [isAdminEditor, versionsLoadError, versionsError]);
 
 	useEffect(() => {
 		if (!template || !draftVersion) {
@@ -310,57 +338,120 @@ export const V2TemplateSchemaEditor = ({
 
 		let dto = emptyDto;
 
-		if (mode === "current" && template?.currentVersionId) {
-			const v = await apiClient<{
-				jsonSchema: unknown;
-				uiSchema: unknown;
-				logic: unknown;
-				versionNumber: number;
-				dictionariesSnapshot?: Record<string, unknown> | null;
-			}>({
-				url: `/v2/templates/${templateId}/versions/${template.currentVersionId}`,
-				method: "GET",
-			});
+		try {
+			if (mode === "current" && template?.currentVersionId) {
+				const v = await apiClient<{
+					jsonSchema: unknown;
+					uiSchema: unknown;
+					logic: unknown;
+					versionNumber: number;
+					dictionariesSnapshot?: Record<string, unknown> | null;
+				}>({
+					url: `/v2/templates/${templateId}/versions/${template.currentVersionId}`,
+					method: "GET",
+				});
 
-			dto = {
-				jsonSchema: coerceJsonSchema(v.jsonSchema),
-				uiSchema: coerceUiSchema(v.uiSchema),
-				logic: coerceLogicGraph(v.logic),
-				dictionariesSnapshot: v.dictionariesSnapshot ?? null,
-				releaseNotes: `Копия опубликованной v${v.versionNumber}`,
-			};
+				dto = {
+					jsonSchema: coerceJsonSchema(v.jsonSchema),
+					uiSchema: coerceUiSchema(v.uiSchema),
+					logic: coerceLogicGraph(v.logic),
+					dictionariesSnapshot: v.dictionariesSnapshot ?? null,
+					releaseNotes: `Копия опубликованной v${v.versionNumber}`,
+				};
+			}
+
+			await createVersion.mutateAsync({ templateId, dto });
+			await refetchVersions();
+
+			if (isAdminEditor) {
+				toast.success(
+					mode === "current"
+						? "Черновик создан из актуальной версии"
+						: "Пустой черновик создан",
+				);
+			}
+		} catch (error) {
+			if (isAdminEditor) {
+				toast.error("Не удалось создать черновик", {
+					description: apiErrorMessage(error),
+				});
+			}
+			throw error;
 		}
-
-		await createVersion.mutateAsync({ templateId, dto });
-		refetchVersions();
 	};
 
 	const handleSaveDraft = useCallback(async () => {
 		if (!draftVersion) return;
-		await updateVersion.mutateAsync({
-			templateId,
-			versionId: draftVersion.id,
-			dto: {
-				jsonSchema,
-				uiSchema,
-				logic,
-				dictionariesSnapshot: {
-					referencedDictionaryCodes: collectDictionaryCodesFromUiSchema(uiSchema),
+
+		try {
+			await updateVersion.mutateAsync({
+				templateId,
+				versionId: draftVersion.id,
+				dto: {
+					jsonSchema,
+					uiSchema,
+					logic,
+					dictionariesSnapshot: {
+						referencedDictionaryCodes:
+							collectDictionaryCodesFromUiSchema(uiSchema),
+					},
 				},
-			},
-		});
-		refetchVersions();
-	}, [draftVersion, jsonSchema, logic, refetchVersions, templateId, uiSchema, updateVersion]);
+			});
+			await refetchVersions();
+
+			if (isAdminEditor) {
+				toast.success("Черновик сохранён");
+				navigate(routes.adminV2Schemas.rootPath);
+			}
+		} catch (error) {
+			if (isAdminEditor) {
+				toast.error("Не удалось сохранить черновик", {
+					description: apiErrorMessage(error),
+				});
+			}
+			throw error;
+		}
+	}, [
+		draftVersion,
+		isAdminEditor,
+		jsonSchema,
+		logic,
+		navigate,
+		refetchVersions,
+		templateId,
+		uiSchema,
+		updateVersion,
+	]);
 
 	const handlePublishDraft = useCallback(async () => {
 		if (!draftVersion) return;
-		await publishVersion.mutateAsync({
-			templateId,
-			versionId: draftVersion.id,
-			dto: {},
-		});
-		refetchVersions();
-	}, [draftVersion, publishVersion, refetchVersions, templateId]);
+
+		try {
+			await publishVersion.mutateAsync({
+				templateId,
+				versionId: draftVersion.id,
+				dto: {},
+			});
+			await refetchVersions();
+
+			if (isAdminEditor) {
+				toast.success("Версия опубликована");
+			}
+		} catch (error) {
+			if (isAdminEditor) {
+				toast.error("Не удалось опубликовать версию", {
+					description: apiErrorMessage(error),
+				});
+			}
+			throw error;
+		}
+	}, [
+		draftVersion,
+		isAdminEditor,
+		publishVersion,
+		refetchVersions,
+		templateId,
+	]);
 
 	const saveDraftRef = useRef(handleSaveDraft);
 	const publishDraftRef = useRef(handlePublishDraft);

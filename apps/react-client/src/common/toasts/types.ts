@@ -22,6 +22,8 @@ export type ToastAction = {
 	label: ReactNode;
 	onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
 	buttonSx?: SxProps<Theme>;
+	/** Обратный отсчёт рядом с кнопкой действия (мс). */
+	countdownDurationMs?: number;
 };
 
 export type ToastT = {

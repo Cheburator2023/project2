@@ -1,32 +1,8 @@
 import { IconButton, Stack, SxProps, Theme } from "@mui/material";
-import { GridCloseIcon } from "@mui/x-data-grid";
 import { ReactNode } from "react";
 import { ToastT } from ".";
-import { ToastAction } from "./types";
+import { ToastActionControl } from "./ToastActionControl";
 import { formatSx } from "./utilts";
-
-interface ActionButtonProps {
-	action: ToastAction;
-	deleteToast: () => void;
-	actionButtonSx?: SxProps<Theme>;
-}
-const ActionButton = ({
-	action,
-	deleteToast,
-	actionButtonSx,
-}: ActionButtonProps) => {
-	return (
-		<IconButton
-			onClick={(event) => {
-				action?.onClick(event);
-				if (event.defaultPrevented) return;
-				deleteToast();
-			}}
-		>
-			<GridCloseIcon color="secondary" />
-		</IconButton>
-	);
-};
 
 const CloseButton = ({
 	closeButtonAriaLabel,
@@ -74,7 +50,7 @@ const AlertAction = ({
 	if (toast.action && toast.closeButton) {
 		return (
 			<Stack direction="row" gap={1}>
-				<ActionButton
+				<ToastActionControl
 					action={toast.action}
 					deleteToast={deleteToast}
 					actionButtonSx={defaultActionButtonSx}
@@ -89,7 +65,7 @@ const AlertAction = ({
 		);
 	} else if (toast.action) {
 		return (
-			<ActionButton
+			<ToastActionControl
 				action={toast.action}
 				deleteToast={deleteToast}
 				actionButtonSx={defaultActionButtonSx}

@@ -17,6 +17,8 @@ import {
 	V2TemplateResponseDto,
 	CreateV2TemplateDto,
 	UpdateV2TemplateDto,
+	RestoreV2TemplateDto,
+	V2TemplateDeleteSnapshotResponseDto,
 } from "../dto";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
 
@@ -34,6 +36,17 @@ export class V2TemplateController {
 	async findAll(): Promise<V2TemplateResponseDto[]> {
 		const templates = await this.templateService.findAll();
 		return templates.map((t) => this.toResponseDto(t));
+	}
+
+	@Post("restore")
+	@ApiOperation({ summary: "Восстановить удалённый шаблон (undo)" })
+	@ApiResponse({ status: 201, type: V2TemplateResponseDto })
+	async restore(
+		@Body() dto: RestoreV2TemplateDto,
+	): Promise<V2TemplateResponseDto> {
+		await this.templateService.restoreFromSnapshot(dto);
+		const template = await this.templateService.findOne(dto.template.id);
+		return this.toResponseDto(template);
 	}
 
 	@Get("code/:code")
@@ -98,21 +111,17 @@ export class V2TemplateController {
 	}
 
 	@Delete(":id")
-	@HttpCode(HttpStatus.NO_CONTENT)
-	@ApiOperation({ summary: "Удалить шаблон" })
-	@ApiResponse({ status: 204 })
+	@ApiOperation({
+		summary:
+			"Удалить шаблон вместе со всеми версиями (кроме случая актуальной схемы системы)",
+	})
+	@ApiResponse({ status: 200, type: V2TemplateDeleteSnapshotResponseDto })
 	async delete(
 		@Param("id", ParseUUIDPipe) id: string,
 		@CurrentUser() user: { id: string } | null,
-	): Promise<void> {
-		await this.templateService.delete(id);
-		await this.auditService.log(
-			id,
-			"template.deleted",
-			null,
-			{ templateId: id },
-			user?.id ?? null,
-		);
+	): Promise<V2TemplateDeleteSnapshotResponseDto> {
+		const snapshot = await this.templateService.deleteWithSnapshot(id);
+		return snapshot;
 	}
 
 	private toResponseDto(template: any): V2TemplateResponseDto {

@@ -214,6 +214,18 @@ export type V2ValidationReportDto = {
     ok: boolean;
     issues: V2ValidationIssueDto[];
 };
+/** Снимок шаблона и версий для отката удаления (undo). */
+export type V2TemplateDeleteSnapshotDto = {
+    template: V2TemplateDto;
+    versions: V2TemplateVersionDto[];
+};
+export type V2BulkDeleteTemplateVersionsResultDto = {
+    deletedVersionIds: string[];
+    /** Актуальная версия системы — не удалялась. */
+    skippedCurrentVersionId: string | null;
+    /** Снимок удалённых версий для undo. */
+    snapshot: V2TemplateVersionDto[];
+};
 /**
  * Максимальный размер сериализованной JSON-схемы (в символах) — защита от DoS.
  * 1 MB UTF-8 примерно покрывает анкеты с ~5к полей.

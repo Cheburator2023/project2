@@ -2,6 +2,7 @@ import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard
 import { AdminLayout } from "@react-client/features/admin/layouts/AdminLayout";
 import { AdminV2DictionariesPage } from "@react-client/features/admin/pages/AdminV2DictionariesPage";
 import { AdminV2DictionaryDetailPage } from "@react-client/features/admin/pages/AdminV2DictionaryDetailPage";
+import { AdminV2GuidePage } from "@react-client/features/admin/pages/AdminV2GuidePage";
 import { AdminV2HistoryPage } from "@react-client/features/admin/pages/AdminV2HistoryPage";
 import { AdminV2SchemasPage } from "@react-client/features/admin/pages/AdminV2SchemasPage";
 import { AdminV2TemplateHistoryPage } from "@react-client/features/admin/pages/AdminV2TemplateHistoryPage";
@@ -123,6 +124,11 @@ export const Routing = () => (
 				path="v2/schemas"
 				element={<AdminV2SchemasPage data-test-id="index--AdminV2SchemasPage-0" />}
 				data-test-id="index--Route-admin-schemas"
+			/>
+			<Route
+				path="v2/guide"
+				element={<AdminV2GuidePage data-test-id="index--AdminV2GuidePage-0" />}
+				data-test-id="index--Route-admin-guide"
 			/>
 			<Route
 				path="v2/dictionaries"

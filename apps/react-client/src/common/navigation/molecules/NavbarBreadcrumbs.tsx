@@ -40,6 +40,11 @@ function adminTrail(pathname: string): string[] | null {
 		return trail;
 	}
 
+	if (pathname.startsWith(routes.adminV2Guide.rootPath)) {
+		trail.push(routes.adminV2Guide.name);
+		return trail;
+	}
+
 	if (pathname.startsWith(routes.adminV2Dictionaries.rootPath)) {
 		trail.push(routes.adminV2Dictionaries.name);
 		return trail;

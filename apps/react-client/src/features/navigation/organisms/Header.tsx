@@ -64,7 +64,7 @@ export function Header({
 								<CloseRoundedIcon data-test-id="header--CloseRoundedIcon-0" />
 							)}
 						</MenuButton>
-						{!!history.state.idx && (
+						{(history.state?.idx ?? 0) > 0 && (
 							<IconButton
 								size="small"
 								onClick={() => navigate(-1)}

@@ -89,7 +89,7 @@ export function V2TemplateFormPreview({ templateId }: V2TemplateFormPreviewProps
 				justifyContent="center"
 				alignItems="center"
 				flexGrow={1}
-				py={4}
+			
 				data-test-id={V2_TEMPLATE_READ_TEST_IDS.loading}
 			>
 				<CircularProgress size={32} />

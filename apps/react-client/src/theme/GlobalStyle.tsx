@@ -95,9 +95,10 @@ div.ag-watermark-text {
 	background-color: #0f141c !important;
 }
 
-:where(.ag-theme-params-2) {
---ag-font-size: 12px  !important;
---ag-spacing: 5px  !important;
+/* Плотность сетки: класс ag-theme-params-N в v33 не используется — задаём на корне грида и в themeQuartz.withParams */
+:where(.ag-root-wrapper) {
+	--ag-font-size: 12px !important;
+	--ag-spacing: 5px !important;
 }
 
 .ag-icon {
@@ -172,7 +173,7 @@ div.ag-watermark-text {
     transform: translateZ(0);
 }
 
-:where(.ag-theme-checkboxStyle-3) {
+:where([class*="ag-theme-checkboxStyle"]) {
     & .ag-checkbox-input-wrapper {
         &:where(.ag-checked):after {
             content: '';
@@ -194,7 +195,7 @@ div.ag-watermark-text {
 }
 
 <style>
-:where(.ag-theme-checkboxStyle-3) {
+:where([class*="ag-theme-checkboxStyle"]) {
     & .ag-checkbox-input-wrapper, & .ag-radio-button-input-wrapper {
         &:where(.ag-checked) {
             &:after {

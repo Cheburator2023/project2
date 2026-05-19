@@ -299,6 +299,20 @@ export type V2ValidationReportDto = {
 	issues: V2ValidationIssueDto[];
 };
 
+/** Снимок шаблона и версий для отката удаления (undo). */
+export type V2TemplateDeleteSnapshotDto = {
+	template: V2TemplateDto;
+	versions: V2TemplateVersionDto[];
+};
+
+export type V2BulkDeleteTemplateVersionsResultDto = {
+	deletedVersionIds: string[];
+	/** Актуальная версия системы — не удалялась. */
+	skippedCurrentVersionId: string | null;
+	/** Снимок удалённых версий для undo. */
+	snapshot: V2TemplateVersionDto[];
+};
+
 /* --------------------------------- Limits --------------------------------- */
 
 /**

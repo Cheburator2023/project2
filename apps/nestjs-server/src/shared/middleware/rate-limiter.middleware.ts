@@ -5,7 +5,7 @@ import { Request, Response, NextFunction } from "express";
 export class RateLimiterMiddleware implements NestMiddleware {
 	private requests = new Map<string, { count: number; lastReset: number }>();
 	private readonly windowMs = 60000; // 1 minute window
-	private readonly maxRequests = 30;
+	private readonly maxRequests = 3000;
 
 	private getClientIp(req: Request): string | null {
 		const xForwardedFor = req.headers["x-forwarded-for"];

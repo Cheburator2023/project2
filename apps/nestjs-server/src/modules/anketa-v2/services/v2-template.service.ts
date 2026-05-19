@@ -1,9 +1,20 @@
 import { Injectable, NotFoundException, ConflictException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
+import type {
+	V2BulkDeleteTemplateVersionsResultDto,
+	V2TemplateDeleteSnapshotDto,
+	V2TemplateVersionDto,
+} from "@smart-anketa/api-contract";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import type { CreateV2TemplateDto, UpdateV2TemplateDto } from "../dto";
+import { V2AuditService } from "./v2-audit.service";
+import {
+	buildTemplateDeleteSnapshot,
+	mapV2TemplateToDto,
+	mapV2TemplateVersionToDto,
+} from "../utils/v2-template-mapper.util";
 
 @Injectable()
 export class V2TemplateService {
@@ -12,13 +23,84 @@ export class V2TemplateService {
 		private readonly templateRepository: Repository<V2TemplateEntity>,
 		@InjectRepository(V2TemplateVersionEntity)
 		private readonly versionRepository: Repository<V2TemplateVersionEntity>,
+		private readonly auditService: V2AuditService,
 	) {}
 
+	/** ID версии, являющейся актуальной схемой системы (если задана). */
+	async getSystemCurrentVersionId(): Promise<string | null> {
+		const withCurrent = await this.templateRepository
+			.createQueryBuilder("t")
+			.select(["t.currentVersionId"])
+			.where("t.current_version_id IS NOT NULL")
+			.getMany();
+
+		if (withCurrent.length === 0) return null;
+		if (withCurrent.length === 1) {
+			return withCurrent[0].currentVersionId;
+		}
+
+		await this.repairDuplicateCurrentTemplates();
+
+		const active = await this.templateRepository
+			.createQueryBuilder("t")
+			.select(["t.currentVersionId"])
+			.where("t.current_version_id IS NOT NULL")
+			.getOne();
+
+		return active?.currentVersionId ?? null;
+	}
+
 	async findAll(): Promise<V2TemplateEntity[]> {
+		await this.repairDuplicateCurrentTemplates();
+
 		return this.templateRepository.find({
 			relations: ["currentVersion"],
 			order: { createdAt: "DESC" },
 		});
+	}
+
+	/**
+	 * В системе может быть только одна актуальная схема (один шаблон с currentVersionId).
+	 * Сбрасывает указатель у всех остальных шаблонов.
+	 */
+	async setGlobalCurrentVersion(
+		templateId: string,
+		versionId: string,
+		userId: string | null,
+	): Promise<void> {
+		await this.templateRepository
+			.createQueryBuilder()
+			.update(V2TemplateEntity)
+			.set({ currentVersionId: null, updatedBy: userId })
+			.where("id != :templateId", { templateId })
+			.andWhere("current_version_id IS NOT NULL")
+			.execute();
+
+		await this.templateRepository.update(templateId, {
+			currentVersionId: versionId,
+			updatedBy: userId,
+		});
+	}
+
+	/** Починка legacy-данных, когда несколько шаблонов имели currentVersionId. */
+	private async repairDuplicateCurrentTemplates(): Promise<void> {
+		const withCurrent = await this.templateRepository.find({
+			where: {},
+			select: ["id", "currentVersionId", "updatedAt"],
+		});
+
+		const actives = withCurrent.filter((t) => t.currentVersionId);
+		if (actives.length <= 1) return;
+
+		const sorted = [...actives].sort(
+			(a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+		);
+		const demoteIds = sorted.slice(1).map((t) => t.id);
+
+		await this.templateRepository.update(
+			{ id: In(demoteIds) },
+			{ currentVersionId: null },
+		);
 	}
 
 	async findOne(id: string): Promise<V2TemplateEntity> {
@@ -80,21 +162,208 @@ export class V2TemplateService {
 		return this.templateRepository.save(template);
 	}
 
-	async delete(id: string): Promise<void> {
+	async deleteWithSnapshot(id: string): Promise<V2TemplateDeleteSnapshotDto> {
 		const template = await this.findOne(id);
 
-		// Проверяем, есть ли связанные версии
-		const versionCount = await this.versionRepository.count({
-			where: { templateId: id },
-		});
-
-		if (versionCount > 0) {
+		if (template.currentVersionId) {
 			throw new ConflictException(
-				`Cannot delete template with ${versionCount} associated versions. Delete versions first.`,
+				"Нельзя удалить шаблон с актуальной схемой системы. Сначала назначьте актуальной другую версию.",
 			);
 		}
 
-		await this.templateRepository.remove(template);
+		const versions = await this.versionRepository.find({
+			where: { templateId: id },
+			order: { versionNumber: "ASC" },
+		});
+
+		const systemCurrentId = await this.getSystemCurrentVersionId();
+		const blocked = versions.find((v) => v.id === systemCurrentId);
+		if (blocked) {
+			throw new ConflictException(
+				"Нельзя удалить шаблон: одна из его версий является актуальной схемой системы.",
+			);
+		}
+
+		const snapshot = buildTemplateDeleteSnapshot(template, versions);
+
+		await this.templateRepository.manager.transaction(async (em) => {
+			await this.auditService.deleteForTemplate(id);
+			if (versions.length > 0) {
+				await em.update(
+					V2TemplateVersionEntity,
+					{ templateId: id },
+					{ parentVersionId: null },
+				);
+				await em.delete(V2TemplateVersionEntity, { templateId: id });
+			}
+			await em.remove(V2TemplateEntity, template);
+		});
+
+		return snapshot;
+	}
+
+	async restoreFromSnapshot(
+		snapshot: V2TemplateDeleteSnapshotDto,
+	): Promise<V2TemplateEntity> {
+		const existing = await this.templateRepository.findOne({
+			where: { id: snapshot.template.id },
+		});
+		if (existing) {
+			throw new ConflictException(
+				`Шаблон с id ${snapshot.template.id} уже существует`,
+			);
+		}
+
+		const codeTaken = await this.templateRepository.findOne({
+			where: { code: snapshot.template.code },
+		});
+		if (codeTaken) {
+			throw new ConflictException(
+				`Шаблон с кодом ${snapshot.template.code} уже существует`,
+			);
+		}
+
+		await this.templateRepository.manager.transaction(async (em) => {
+			const templateEntity = em.create(V2TemplateEntity, {
+				id: snapshot.template.id,
+				code: snapshot.template.code,
+				name: snapshot.template.name,
+				description: snapshot.template.description,
+				streamCode: snapshot.template.streamCode,
+				currentVersionId: null,
+				createdAt: new Date(snapshot.template.createdAt),
+				updatedAt: new Date(snapshot.template.updatedAt),
+				createdBy: snapshot.template.createdBy,
+				updatedBy: snapshot.template.updatedBy,
+			});
+			await em.save(templateEntity);
+
+			const sorted = [...snapshot.versions].sort(
+				(a, b) => a.versionNumber - b.versionNumber,
+			);
+
+			for (const v of sorted) {
+				const versionEntity = em.create(V2TemplateVersionEntity, {
+					id: v.id,
+					templateId: v.templateId,
+					versionNumber: v.versionNumber,
+					status: v.status,
+					jsonSchema: v.jsonSchema,
+					uiSchema: v.uiSchema,
+					logic: v.logic,
+					dictionariesSnapshot: v.dictionariesSnapshot,
+					releaseNotes: v.releaseNotes,
+					parentVersionId: v.parentVersionId,
+					createdAt: new Date(v.createdAt),
+					updatedAt: new Date(v.updatedAt),
+					publishedAt: v.publishedAt ? new Date(v.publishedAt) : null,
+					createdBy: v.createdBy,
+				});
+				await em.save(versionEntity);
+			}
+		});
+
+		return this.findOne(snapshot.template.id);
+	}
+
+	async bulkDeleteVersions(
+		templateId: string,
+		versionIds?: string[],
+	): Promise<V2BulkDeleteTemplateVersionsResultDto> {
+		await this.findOne(templateId);
+
+		const systemCurrentId = await this.getSystemCurrentVersionId();
+		const allVersions = await this.versionRepository.find({
+			where: { templateId },
+			order: { versionNumber: "ASC" },
+		});
+
+		let candidates = allVersions;
+		if (versionIds?.length) {
+			const idSet = new Set(versionIds);
+			candidates = allVersions.filter((v) => idSet.has(v.id));
+		}
+
+		const toDelete = candidates.filter((v) => v.id !== systemCurrentId);
+		const skippedCurrentVersionId =
+			candidates.find((v) => v.id === systemCurrentId)?.id ?? null;
+
+		if (toDelete.length === 0) {
+			return {
+				deletedVersionIds: [],
+				skippedCurrentVersionId,
+				snapshot: [],
+			};
+		}
+
+		const snapshot = toDelete.map(mapV2TemplateVersionToDto);
+		const deleteIds = toDelete.map((v) => v.id);
+
+		await this.templateRepository.manager.transaction(async (em) => {
+			await this.auditService.deleteForVersionIds(deleteIds);
+			await em.update(
+				V2TemplateVersionEntity,
+				{ id: In(deleteIds) },
+				{ parentVersionId: null },
+			);
+			await em.delete(V2TemplateVersionEntity, { id: In(deleteIds) });
+		});
+
+		return {
+			deletedVersionIds: deleteIds,
+			skippedCurrentVersionId,
+			snapshot,
+		};
+	}
+
+	async restoreVersions(
+		templateId: string,
+		versions: V2TemplateVersionDto[],
+	): Promise<void> {
+		await this.findOne(templateId);
+
+		const existing = await this.versionRepository.find({
+			where: { id: In(versions.map((v) => v.id)) },
+		});
+		if (existing.length > 0) {
+			throw new ConflictException(
+				`Версии уже существуют: ${existing.map((v) => v.id).join(", ")}`,
+			);
+		}
+
+		const sorted = [...versions].sort(
+			(a, b) => a.versionNumber - b.versionNumber,
+		);
+
+		for (const v of sorted) {
+			if (v.templateId !== templateId) {
+				throw new ConflictException(
+					`Версия ${v.id} не принадлежит шаблону ${templateId}`,
+				);
+			}
+		}
+
+		await this.versionRepository.manager.transaction(async (em) => {
+			for (const v of sorted) {
+				const versionEntity = em.create(V2TemplateVersionEntity, {
+					id: v.id,
+					templateId: v.templateId,
+					versionNumber: v.versionNumber,
+					status: v.status,
+					jsonSchema: v.jsonSchema,
+					uiSchema: v.uiSchema,
+					logic: v.logic,
+					dictionariesSnapshot: v.dictionariesSnapshot,
+					releaseNotes: v.releaseNotes,
+					parentVersionId: v.parentVersionId,
+					createdAt: new Date(v.createdAt),
+					updatedAt: new Date(v.updatedAt),
+					publishedAt: v.publishedAt ? new Date(v.publishedAt) : null,
+					createdBy: v.createdBy,
+				});
+				await em.save(versionEntity);
+			}
+		});
 	}
 
 	async setCurrentVersion(
@@ -113,9 +382,8 @@ export class V2TemplateService {
 			);
 		}
 
-		template.currentVersionId = versionId;
-		template.updatedBy = userId;
+		await this.setGlobalCurrentVersion(templateId, versionId, userId);
 
-		return this.templateRepository.save(template);
+		return this.findOne(templateId);
 	}
 }

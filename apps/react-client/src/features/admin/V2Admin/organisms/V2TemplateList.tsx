@@ -2,9 +2,15 @@ import Chip from "@mui/material/Chip";
 import { alpha, styled, useColorScheme, useTheme } from "@mui/material/styles";
 import {
 	useActivateV2TemplateVersionAsCurrent,
+	useBulkDeleteV2TemplateVersions,
 	useDeleteV2Template,
+	useRestoreV2Template,
+	useRestoreV2TemplateVersions,
 	useV2Templates,
 } from "@react-client/common/api/queries/v2-templates";
+import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
+import { toast } from "@react-client/common/toasts";
+import { toastWithUndo } from "@react-client/features/admin/V2Admin/utils/v2UndoToast";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
@@ -95,7 +101,15 @@ export const V2TemplateList = () => {
 
 	const { data: templates, isLoading: templatesLoading } = useV2Templates();
 	const deleteTemplate = useDeleteV2Template();
+	const restoreTemplate = useRestoreV2Template();
+	const bulkDeleteVersions = useBulkDeleteV2TemplateVersions();
+	const restoreVersions = useRestoreV2TemplateVersions();
 	const activateVersion = useActivateV2TemplateVersionAsCurrent();
+
+	const systemCurrentVersionId = useMemo(() => {
+		const holder = templates?.find((t) => t.currentVersionId);
+		return holder?.currentVersionId ?? null;
+	}, [templates]);
 
 	const gridRef = useRef<AgGridReact<V2SchemaGridRow>>(null);
 
@@ -145,10 +159,115 @@ export const V2TemplateList = () => {
 	);
 
 	const handleDeleteTemplate = useCallback(
-		(id: string) => {
-			deleteTemplate.mutate(id);
+		(row: V2SchemaGridTemplateRow) => {
+			if (row.currentVersionId) {
+				toast.error(
+					"Нельзя удалить шаблон с актуальной схемой системы. Сначала назначьте актуальной другую версию.",
+				);
+				return;
+			}
+
+			deleteTemplate.mutate(row.id, {
+				onSuccess: (snapshot) => {
+					const versionCount = snapshot.versions.length;
+					toastWithUndo(
+						`Шаблон «${row.name}» удалён`,
+						async () => {
+							await restoreTemplate.mutateAsync(snapshot);
+							toast.success("Удаление шаблона отменено");
+						},
+						versionCount > 0
+							? { description: `Вместе с ${versionCount} версиями` }
+							: undefined,
+					);
+				},
+				onError: (error) => {
+					toast.error("Не удалось удалить шаблон", {
+						description: apiErrorMessage(error),
+					});
+				},
+			});
 		},
-		[deleteTemplate],
+		[deleteTemplate, restoreTemplate],
+	);
+
+	const handleBulkDeleteVersions = useCallback(
+		(templateId: string, templateName: string) => {
+			bulkDeleteVersions.mutate(
+				{ templateId },
+				{
+					onSuccess: (result) => {
+						const n = result.deletedVersionIds.length;
+						if (n === 0) {
+							toast.info(
+								"Нет версий для удаления — актуальная схема системы не затрагивается",
+							);
+							return;
+						}
+
+						toastWithUndo(
+							`У шаблона «${templateName}» удалено версий: ${n}`,
+							async () => {
+								await restoreVersions.mutateAsync({
+									templateId,
+									versions: result.snapshot,
+								});
+								toast.success("Удаление версий отменено");
+							},
+						);
+					},
+					onError: (error) => {
+						toast.error("Не удалось удалить версии", {
+							description: apiErrorMessage(error),
+						});
+					},
+				},
+			);
+		},
+		[bulkDeleteVersions, restoreVersions],
+	);
+
+	const handleDeleteVersion = useCallback(
+		(row: V2SchemaGridVersionRow) => {
+			if (
+				systemCurrentVersionId != null &&
+				row.id === systemCurrentVersionId
+			) {
+				toast.error(
+					"Нельзя удалить версию — она является актуальной схемой системы",
+				);
+				return;
+			}
+
+			bulkDeleteVersions.mutate(
+				{ templateId: row.templateId, versionIds: [row.id] },
+				{
+					onSuccess: (result) => {
+						if (result.deletedVersionIds.length === 0) {
+							toast.info("Версия не удалена");
+							return;
+						}
+
+						toastWithUndo(
+							`Версия ${row.versionNumber} удалена`,
+							async () => {
+								await restoreVersions.mutateAsync({
+									templateId: row.templateId,
+									versions: result.snapshot,
+								});
+								toast.success("Удаление версии отменено");
+							},
+						);
+					},
+					onError: (error) => {
+						toast.error("Не удалось удалить версию", {
+							description: apiErrorMessage(error),
+						});
+					},
+				},
+			);
+		},
+		[bulkDeleteVersions, restoreVersions, systemCurrentVersionId],
 	);
 
 	const handleRowDoubleClicked = useCallback(
@@ -212,10 +331,15 @@ export const V2TemplateList = () => {
 					},
 					"separator",
 					{
-						name: "Удалить шаблон",
-						action: () => handleDeleteTemplate(row.id),
+						name: "Удалить все версии (кроме актуальной)",
+						disabled: bulkDeleteVersions.isPending,
+						action: () => handleBulkDeleteVersions(row.id, row.name),
 					},
-					"separator",
+					{
+						name: "Удалить шаблон",
+						disabled: deleteTemplate.isPending,
+						action: () => handleDeleteTemplate(row),
+					},
 					...defaults,
 				] as any;
 			}
@@ -223,23 +347,35 @@ export const V2TemplateList = () => {
 			const isAlreadyCurrent =
 				row.templateCurrentVersionId != null &&
 				row.id === row.templateCurrentVersionId;
+			const isSystemCurrent =
+				systemCurrentVersionId != null && row.id === systemCurrentVersionId;
 
 			return [
 				{
-					name: "Сделать актуальной",
+					name: "Сделать актуальной для системы",
 					disabled: isAlreadyCurrent || activateVersion.isPending,
 					action: () =>
 						activateVersion.mutate({
 							templateId: row.templateId,
 							versionId: row.id,
 						}),
-					tooltip: isAlreadyCurrent ? "Эта версия уже является актуальной" : undefined,
+					tooltip: isAlreadyCurrent
+						? "Эта версия уже является актуальной схемой системы"
+						: "Станет единственной актуальной схемой; у других шаблонов снимок будет снят",
 				},
 				{
 					name: "Открыть редактор схемы",
 					action: () => openEditor(row.templateId),
 				},
 				"separator",
+				{
+					name: "Удалить версию",
+					disabled: isSystemCurrent || bulkDeleteVersions.isPending,
+					action: () => handleDeleteVersion(row),
+					tooltip: isSystemCurrent
+						? "Актуальная схема системы не может быть удалена"
+						: undefined,
+				},
 				...defaults,
 			] as any;
 		},
@@ -247,7 +383,12 @@ export const V2TemplateList = () => {
 			navigate,
 			openEditor,
 			handleDeleteTemplate,
+			handleBulkDeleteVersions,
+			handleDeleteVersion,
 			activateVersion,
+			bulkDeleteVersions.isPending,
+			deleteTemplate.isPending,
+			systemCurrentVersionId,
 		],
 	);
 
@@ -268,7 +409,7 @@ export const V2TemplateList = () => {
 		() => [
 			{
 				colId: "actualChip",
-				headerName: "Актуальный снимок",
+				headerName: "Актуальная схема",
 				minWidth: 190,
 				maxWidth: 220,
 				sortable: false,
@@ -289,7 +430,7 @@ export const V2TemplateList = () => {
 							size="small"
 							color="success"
 							variant="outlined"
-							label={`Актуальная №${num ?? "?"}`}
+							label={`Актуальная (система) №${num ?? "?"}`}
 						/>
 					);
 				},
@@ -321,7 +462,7 @@ export const V2TemplateList = () => {
 			},
 			{
 				field: "streamCode",
-				headerName: "Поток",
+				headerName: "Стрим",
 				minWidth: 100,
 				valueGetter: (p) =>
 					p.data?.rowKind === "template" && p.data.streamCode != null

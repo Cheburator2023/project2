@@ -20,7 +20,9 @@ import type {
 	V2DictionaryItemDto,
 	BulkDeleteV2DictionariesResultDto,
 	BulkResetV2DictionariesResultDto,
+	V2BulkDeleteTemplateVersionsResultDto,
 	V2TemplateAuditDto,
+	V2TemplateDeleteSnapshotDto,
 	V2TemplateDto,
 	V2TemplateVersionDto,
 } from "@smart-anketa/api-contract";
@@ -128,15 +130,79 @@ export const useUpdateV2Template = () => {
 export const useDeleteV2Template = () => {
 	const queryClient = useQueryClient();
 
-	return useMutation<void, Error, string>({
-		mutationFn: async (id) => {
-			await apiClient<unknown>({
+	return useMutation<V2TemplateDeleteSnapshotDto, Error, string>({
+		mutationFn: (id) =>
+			apiClient<V2TemplateDeleteSnapshotDto>({
 				url: `/v2/templates/${id}`,
 				method: "DELETE",
-			});
-		},
+			}),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
+		},
+	});
+};
+
+export const useRestoreV2Template = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation<V2TemplateDto, Error, V2TemplateDeleteSnapshotDto>({
+		mutationFn: (snapshot) =>
+			apiClient<V2TemplateDto>({
+				url: "/v2/templates/restore",
+				method: "POST",
+				data: snapshot,
+			}),
+		onSuccess: (_, snapshot) => {
+			queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
+			queryClient.invalidateQueries({
+				queryKey: ["v2-templates", snapshot.template.id, "versions"],
+			});
+		},
+	});
+};
+
+export const useBulkDeleteV2TemplateVersions = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation<
+		V2BulkDeleteTemplateVersionsResultDto,
+		Error,
+		{ templateId: string; versionIds?: string[] }
+	>({
+		mutationFn: ({ templateId, versionIds }) =>
+			apiClient<V2BulkDeleteTemplateVersionsResultDto>({
+				url: `/v2/templates/${templateId}/versions/bulk-delete`,
+				method: "POST",
+				data: versionIds?.length ? { versionIds } : {},
+			}),
+		onSuccess: (_, { templateId }) => {
+			queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
+			queryClient.invalidateQueries({
+				queryKey: ["v2-templates", templateId, "versions"],
+			});
+		},
+	});
+};
+
+export const useRestoreV2TemplateVersions = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation<
+		void,
+		Error,
+		{ templateId: string; versions: V2TemplateVersionDto[] }
+	>({
+		mutationFn: ({ templateId, versions }) =>
+			apiClient<void>({
+				url: `/v2/templates/${templateId}/versions/restore`,
+				method: "POST",
+				data: { versions },
+			}),
+		onSuccess: (_, { templateId }) => {
+			queryClient.invalidateQueries({
+				queryKey: ["v2-templates", templateId, "versions"],
+			});
+			queryClient.invalidateQueries({ queryKey: ["v2-templates", templateId] });
 		},
 	});
 };
@@ -166,6 +232,25 @@ export const useV2TemplateVersion = (
 				method: "GET",
 			}),
 		enabled: !!templateId && !!versionId,
+	});
+};
+
+export const useCreateV2TemplateVersionFromDefault = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation<V2TemplateVersionDto, Error, string>({
+		mutationFn: (templateId) =>
+			apiClient<V2TemplateVersionDto>({
+				url: `/v2/templates/${templateId}/versions/from-default`,
+				method: "POST",
+			}),
+		onSuccess: (_, templateId) => {
+			queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
+			queryClient.invalidateQueries({
+				queryKey: ["v2-templates", templateId, "versions"],
+			});
+			queryClient.invalidateQueries({ queryKey: ["v2-templates", templateId] });
+		},
 	});
 };
 
@@ -241,6 +326,7 @@ export const usePublishV2TemplateVersion = () => {
 				data: dto,
 			}),
 		onSuccess: (_, { templateId, versionId }) => {
+			queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
 			queryClient.invalidateQueries({
 				queryKey: ["v2-templates", templateId, "versions"],
 			});

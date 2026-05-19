@@ -103,6 +103,15 @@ export class V2AuditService {
 	}
 
 	/** События справочников: без привязки к шаблону (template_id = null). */
+	async deleteForTemplate(templateId: string): Promise<void> {
+		await this.auditRepository.delete({ templateId });
+	}
+
+	async deleteForVersionIds(versionIds: string[]): Promise<void> {
+		if (versionIds.length === 0) return;
+		await this.auditRepository.delete({ versionId: In(versionIds) });
+	}
+
 	async logDictionary(
 		dictionaryId: string,
 		action: V2TemplateAuditAction,

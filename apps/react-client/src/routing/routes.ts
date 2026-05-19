@@ -69,6 +69,13 @@ export const routes = {
 		showInNavbar: true,
 		navbar: { group: "adminV2", order: 0 },
 	},
+	adminV2Guide: {
+		rootPath: "/admin/v2/guide",
+		name: "Справка",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "adminV2", order: 3 },
+	},
 	adminV2Dictionaries: {
 		rootPath: "/admin/v2/dictionaries",
 		name: "Словари",

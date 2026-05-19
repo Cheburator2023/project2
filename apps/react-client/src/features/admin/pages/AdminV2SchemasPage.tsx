@@ -11,23 +11,25 @@ import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import {
-	useCreateV2Template,
 	useResetV2TemplateToDefault,
 	useV2Templates,
 } from "@react-client/common/api/queries/v2-templates";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { V2AdminButton } from "@react-client/features/admin/V2Admin/atoms/V2AdminButton";
+import { V2SchemaCreateDialog } from "@react-client/features/admin/V2Admin/organisms/V2SchemaCreateDialog";
 import { V2TemplateList } from "@react-client/features/admin/V2Admin/organisms/V2TemplateList";
 import { Header } from "@react-client/features/navigation/organisms/Header";
+import { routes } from "@react-client/routing/routes";
 import { useEffect, useState } from "react";
+import { Link as RouterLink } from "react-router";
 
 export function AdminV2SchemasPage() {
-	const createTemplate = useCreateV2Template();
 	const resetMutation = useResetV2TemplateToDefault();
 	const { data: templates } = useV2Templates();
 
 	const [selectedTemplateId, setSelectedTemplateId] = useState("");
 	const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
 	useEffect(() => {
 		if (!selectedTemplateId && templates?.length) {
@@ -50,8 +52,14 @@ export function AdminV2SchemasPage() {
 			<Header>
 				<Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
 					<Button
+						component={RouterLink}
+						to={routes.adminV2Guide.rootPath}
+						variant="text"
+					>
+						Справка
+					</Button>
+					<Button
 						variant="outlined"
-	
 						disabled={
 							!selectedTemplateId || resetMutation.isPending || !templates?.length
 						}
@@ -59,7 +67,9 @@ export function AdminV2SchemasPage() {
 					>
 						Сбросить к заводской схеме
 					</Button>
-					<V2AdminButton onClick={handleAddSchema}>Добавить схему</V2AdminButton>
+					<V2AdminButton onClick={() => setCreateDialogOpen(true)}>
+						Добавить схему
+					</V2AdminButton>
 				</Stack>
 			</Header>
 
@@ -70,6 +80,11 @@ export function AdminV2SchemasPage() {
 			) : null}
 
 			<V2TemplateList />
+
+			<V2SchemaCreateDialog
+				open={createDialogOpen}
+				onClose={() => setCreateDialogOpen(false)}
+			/>
 
 			<Dialog open={confirmResetOpen} onClose={() => setConfirmResetOpen(false)}>
 				<DialogTitle>Сброс к заводской схеме</DialogTitle>
