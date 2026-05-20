@@ -14,7 +14,7 @@ import {
 	calculatorGuideSections,
 	guideEditTemplateHint,
 	type GuideSection,
-} from "@react-client/features/admin/V2Admin/content/calculatorGuideContent";
+} from "@react-client/features/admin/pages/calculatorGuideContent";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { routes } from "@react-client/routing/routes";
 import {

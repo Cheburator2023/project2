@@ -1,6 +1,7 @@
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import type { ReactNode } from "react";
+import { dataSlotProps } from "../muiDataSlot";
 
 interface Props {
 	value?: string;
@@ -46,16 +47,12 @@ export function Accessor({ value = "", data = {}, onChange }: Props) {
 					value={levelValue}
 					onChange={(e) => handleChange(e.target.value)}
 					slotProps={{
-						input: {
-							"data-rjl-accessor-input": "",
-						},
+						input: dataSlotProps({ "data-rjl-accessor-input": "" }),
 					}}
 					SelectProps={{
 						MenuProps: {
 							slotProps: {
-								paper: {
-									"data-rjl-accessor-popup": "",
-								},
+								paper: dataSlotProps({ "data-rjl-accessor-popup": "" }),
 							},
 						},
 					}}

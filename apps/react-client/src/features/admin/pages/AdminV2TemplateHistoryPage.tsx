@@ -18,7 +18,7 @@ import {
 } from "@react-client/common/api/queries/v2-templates";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
-import { auditActionRu } from "@react-client/features/admin/V2Admin/utils/auditActionRu";
+import { auditActionRu } from "@react-client/features/admin/utils/auditActionRu";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { routes } from "@react-client/routing/routes";
 import type {

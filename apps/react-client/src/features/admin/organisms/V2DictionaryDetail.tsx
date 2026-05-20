@@ -41,8 +41,8 @@ import Link from "@mui/material/Link";
 import {
 	agGridCustomMUITheme,
 	agGridCustomMUIThemeDark,
-} from "../../../../theme/ag-grid/agGridCustomTheme";
-import { agGridIconSet } from "../../../../theme/ag-grid/agGridIconSet";
+} from "@react-client/theme/ag-grid/agGridCustomTheme";
+import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 import { pathForAdminV2Template } from "@react-client/routing/routes";
 
 export type V2DictionaryHeaderState = {

@@ -9,14 +9,14 @@ import {
 	useBulkDeleteV2Dictionaries,
 	useBulkResetV2Dictionaries,
 } from "@react-client/common/api/queries/v2-templates";
-import { V2AdminButton } from "@react-client/features/admin/V2Admin/atoms/V2AdminButton";
-import { V2DictionaryBulkResultDialog } from "@react-client/features/admin/V2Admin/organisms/V2DictionaryBulkResultDialog";
-import { V2DictionaryCreateDialog } from "@react-client/features/admin/V2Admin/organisms/V2DictionaryCreateDialog";
+import { V2AdminButton } from "@react-client/features/admin/atoms/V2AdminButton";
+import { V2DictionaryBulkResultDialog } from "@react-client/features/admin/organisms/V2DictionaryBulkResultDialog";
+import { V2DictionaryCreateDialog } from "@react-client/features/admin/organisms/V2DictionaryCreateDialog";
 import {
 	canDeleteV2Dictionary,
 	canResetV2Dictionary,
 	V2DictionaryList,
-} from "@react-client/features/admin/V2Admin/organisms/V2DictionaryList";
+} from "@react-client/features/admin/organisms/V2DictionaryList";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import type {
 	BulkDeleteV2DictionariesResultDto,

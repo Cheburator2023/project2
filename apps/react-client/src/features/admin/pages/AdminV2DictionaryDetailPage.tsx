@@ -1,7 +1,4 @@
-import {
-	type V2DictionaryHeaderState,
-	V2DictionaryDetail,
-} from "@react-client/features/admin/V2Admin/organisms/V2DictionaryDetail";
+
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { routes } from "@react-client/routing/routes";
@@ -12,6 +9,7 @@ import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 import { useCallback, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
+import { V2DictionaryDetail, V2DictionaryHeaderState } from "@react-client/features/admin/organisms/V2DictionaryDetail";
 
 type HeaderDisplay = {
 	title: string;

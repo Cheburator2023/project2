@@ -22,8 +22,8 @@ import { useNavigate } from "react-router";
 import {
 	agGridCustomMUITheme,
 	agGridCustomMUIThemeDark,
-} from "../../../../theme/ag-grid/agGridCustomTheme";
-import { agGridIconSet } from "../../../../theme/ag-grid/agGridIconSet";
+} from "@react-client/theme/ag-grid/agGridCustomTheme";
+import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 
 ModuleRegistry.registerModules([AllCommunityModule, ClientSideRowModelModule]);
 

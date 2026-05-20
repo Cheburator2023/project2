@@ -1,6 +1,7 @@
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import { useMemo } from "react";
+import { dataSlotProps } from "../muiDataSlot";
 
 const INPUT_TYPES = [
 	{ value: "text", label: "текст" },
@@ -62,10 +63,7 @@ export function Input({ name = "", value = "", type: typeProp = "text", onChange
 				value={type}
 				onChange={(e) => onTypeChange(e.target.value as InputType)}
 				slotProps={{
-					input: {
-						"data-rjl-input-type-trigger": "",
-					
-					},
+					input: dataSlotProps({ "data-rjl-input-type-trigger": "" }),
 				}}
 				sx={{
 					"& .MuiSelect-icon": {
@@ -73,16 +71,9 @@ export function Input({ name = "", value = "", type: typeProp = "text", onChange
 					}
 				}}
 				SelectProps={{
-					IconProps: {
-						style: {
-							"right": 0
-						}
-					},
 					MenuProps: {
 						slotProps: {
-							paper: {
-								"data-rjl-input-type-popup": "",
-							},
+							paper: dataSlotProps({ "data-rjl-input-type-popup": "" }),
 						},
 					},
 				}}

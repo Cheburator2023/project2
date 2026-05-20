@@ -10,7 +10,7 @@ import {
 } from "@react-client/common/api/queries/v2-templates";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { toast } from "@react-client/common/toasts";
-import { toastWithUndo } from "@react-client/features/admin/V2Admin/utils/v2UndoToast";
+import { toastWithUndo } from "@react-client/features/admin/utils/v2UndoToast";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
@@ -41,11 +41,9 @@ import { AgGridReact } from "ag-grid-react";
 import { useQueries } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router";
-import {
-	agGridCustomMUITheme,
-	agGridCustomMUIThemeDark,
-} from "../../../../theme/ag-grid/agGridCustomTheme";
-import { agGridIconSet } from "../../../../theme/ag-grid/agGridIconSet";
+import { agGridCustomMUITheme, agGridCustomMUIThemeDark } from "@react-client/theme/ag-grid/agGridCustomTheme";
+import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
+
 
 ModuleRegistry.registerModules([
 	AllCommunityModule,

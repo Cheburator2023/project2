@@ -15,9 +15,9 @@ import {
 	useV2Templates,
 } from "@react-client/common/api/queries/v2-templates";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { V2AdminButton } from "@react-client/features/admin/V2Admin/atoms/V2AdminButton";
-import { V2SchemaCreateDialog } from "@react-client/features/admin/V2Admin/organisms/V2SchemaCreateDialog";
-import { V2TemplateList } from "@react-client/features/admin/V2Admin/organisms/V2TemplateList";
+import { V2AdminButton } from "@react-client/features/admin/atoms/V2AdminButton";
+import { V2SchemaCreateDialog } from "@react-client/features/admin/organisms/V2SchemaCreateDialog";
+import { V2TemplateList } from "@react-client/features/admin/organisms/V2TemplateList";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { routes } from "@react-client/routing/routes";
 import { useEffect, useState } from "react";

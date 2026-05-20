@@ -1,5 +1,6 @@
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
+import { dataSlotProps } from "../muiDataSlot";
 import type { Operator } from "../operators.ts";
 
 interface Props {
@@ -16,9 +17,7 @@ export function SelectOperator({ value, options, onChange }: Props) {
 			value={value}
 			onChange={(e) => onChange(e.target.value)}
 			slotProps={{
-				input: {
-					"data-rjl-operator-trigger": "",
-				},
+				input: dataSlotProps({ "data-rjl-operator-trigger": "" }),
 			}}
 			sx={{
 				"& .MuiSelect-icon": {
@@ -28,9 +27,7 @@ export function SelectOperator({ value, options, onChange }: Props) {
 			SelectProps={{
 				MenuProps: {
 					slotProps: {
-						paper: {
-							"data-rjl-operator-popup": "",
-						},
+						paper: dataSlotProps({ "data-rjl-operator-popup": "" }),
 					},
 				},
 			}}
