@@ -53,6 +53,9 @@ export const viteCommonConfig = ({
 		return {
 			cacheDir: fileURLToPath(new URL("./.cache/vite-app", import.meta.url)),
 			base,
+			optimizeDeps: {
+				include: ["@smart-anketa/json-logic-ts"],
+			},
 			build: {
 				target: browserslistToEsbuild(),
 				commonjsOptions: { transformMixedEsModules: true },

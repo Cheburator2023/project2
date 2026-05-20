@@ -1,6 +1,8 @@
 import type { V2LogicRuleDto } from "@smart-anketa/api-contract";
-import type { JsonLogicValue } from "react-json-logic";
-import { applyLogic } from "react-json-logic";
+import {
+	applyLogic,
+	type JsonLogicValue,
+} from "@react-client/features/jsonLoginBuilder";
 import {
 	jsonPointerToFormDataVarPath,
 	normalizeJsonPointer,

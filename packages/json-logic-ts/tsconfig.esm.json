@@ -1,0 +1,18 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"extends": "./tsconfig.base.json",
+	"compilerOptions": {
+		"module": "ES2022",
+		"moduleResolution": "bundler",
+		"outDir": "dist/esm",
+		"declaration": false
+	},
+	"include": [
+		"src/index.esm.ts",
+		"src/engine.ts",
+		"src/loadEngine.esm.ts",
+		"src/logic.d.ts",
+		"src/truthy.ts",
+		"src/types.ts"
+	]
+}

@@ -18,6 +18,7 @@ import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
 import { useCallback, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 
 function statusChipColor(
 	status: string,
@@ -87,15 +88,11 @@ export const V2TemplateSchemaEditorPage = () => {
 							<Typography variant="subtitle2" component="span" fontWeight={600} noWrap>
 								{headerMeta.title}
 							</Typography>
+							<Spacer space={1} />
 							<Chip
 								size="small"
 								variant="outlined"
 								label={`Черновик v${headerMeta.versionNumber}`}
-							/>
-							<Chip
-								size="small"
-								label={headerMeta.status}
-								color={statusChipColor(headerMeta.status)}
 							/>
 						</Flex>
 					) : null
@@ -103,7 +100,7 @@ export const V2TemplateSchemaEditorPage = () => {
 			>
 				{headerActions ? (
 					<Flex
-						gap={1}
+						gap={4}
 						alignItems="center"
 						wrap="wrap"
 						data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.headerActions}
@@ -125,14 +122,7 @@ export const V2TemplateSchemaEditorPage = () => {
 						>
 							Предпросмотр
 						</Button>
-						<Button
-							variant="contained"
-							disabled={headerActions.savePending}
-							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnSave}
-							onClick={headerActions.onSave}
-						>
-							Сохранить
-						</Button>
+
 						<Button
 							variant="outlined"
 							disabled={headerActions.publishPending}
@@ -140,6 +130,14 @@ export const V2TemplateSchemaEditorPage = () => {
 							onClick={headerActions.onPublish}
 						>
 							Опубликовать
+						</Button>
+						<Button
+							variant="contained"
+							disabled={headerActions.savePending}
+							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnSave}
+							onClick={headerActions.onSave}
+						>
+							Сохранить
 						</Button>
 					</Flex>
 				) : null}

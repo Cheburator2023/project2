@@ -13,6 +13,7 @@ import "dockview/dist/styles/dockview.css";
 import { useCallback, useEffect, useRef } from "react";
 import { TAB_HEADINGS } from "./constants";
 import { SchemaEditorDndProvider } from "./components/SchemaEditorDndProvider";
+import { SchemaEditorDockHeaderRightActions } from "./SchemaEditorDockHeaderActions";
 import { useSchemaEditorDock } from "./SchemaEditorDockContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import {
@@ -55,18 +56,18 @@ function buildDefaultLayout(api: DockviewApi) {
 	});
 
 	api.addPanel({
+		id: RELATIONS_PANEL_ID,
+		component: RELATIONS_PANEL_ID,
+		title: "Граф связей",
+		position: { referencePanel: "json" },
+	});
+
+	api.addPanel({
 		id: CALCULATION_PANEL_ID,
 		component: CALCULATION_PANEL_ID,
 		title: "Калькуляция",
 		position: { direction: "right", referencePanel: firstTab[0] },
 		initialWidth: 320,
-	});
-
-	api.addPanel({
-		id: RELATIONS_PANEL_ID,
-		component: RELATIONS_PANEL_ID,
-		title: "Граф связей",
-		position: { referencePanel: CALCULATION_PANEL_ID },
 	});
 }
 
@@ -126,12 +127,19 @@ export function V2SchemaEditorDockLayout() {
 							height: "100%",
 							width: "100%",
 						},
+						"& .dv-right-actions-container": {
+							display: "flex",
+							alignItems: "center",
+						},
 					}}
 				>
 					<DockviewReact
 						theme={dockTheme}
 						components={workspacePanelComponents}
 						defaultTabComponent={DockTabNoClose}
+						rightHeaderActionsComponent={SchemaEditorDockHeaderRightActions}
+						floatingGroupBounds="boundedWithinViewport"
+						popoutUrl="/popout.html"
 						onReady={onReady}
 					/>
 				</Box>

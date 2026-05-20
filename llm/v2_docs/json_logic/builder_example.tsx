@@ -6,7 +6,7 @@ import JsonLogicBuilder, {
   type JsonLogicData,
   type JsonLogicValue,
   rule,
-} from "react-json-logic";
+} from "@smart-anketa/json-logic-ts";
 
 const SAMPLE_DATA = {
   user: { age: 21, name: "Ada" },

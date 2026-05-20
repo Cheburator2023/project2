@@ -1,0 +1,27 @@
+{
+	"name": "@smart-anketa/json-logic-ts",
+	"version": "2.0.5",
+	"private": true,
+	"description": "Typed json-logic-js engine for Smart Anketa (V2 rules)",
+	"main": "./dist/cjs/index.js",
+	"module": "./dist/esm/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/esm/index.js",
+			"require": "./dist/cjs/index.js",
+			"default": "./dist/esm/index.js"
+		}
+	},
+	"scripts": {
+		"build": "rm -rf dist && npm run build:dts && npm run build:cjs && npm run build:esm",
+		"build:dts": "tsc -p tsconfig.dts.json",
+		"build:cjs": "tsc -p tsconfig.cjs.json && cp logic.js dist/cjs/logic.js && mv dist/cjs/index.cjs.js dist/cjs/index.js",
+		"build:esm": "tsc -p tsconfig.esm.json && cp logic.js dist/esm/logic.js && mv dist/esm/index.esm.js dist/esm/index.js",
+		"lint": "echo noop"
+	},
+	"devDependencies": {
+		"typescript": "5.8.2"
+	}
+}

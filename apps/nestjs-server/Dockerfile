@@ -4,7 +4,9 @@ FROM docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-ui:v
 # build nestjs-server
 COPY apps/nestjs-server ./
 COPY packages/api-contract ./node_modules/@smart-anketa/api-contract
+COPY packages/json-logic-ts ./node_modules/@smart-anketa/json-logic-ts
 RUN npm --prefix ./node_modules/@smart-anketa/api-contract run build
+RUN npm --prefix ./node_modules/@smart-anketa/json-logic-ts run build
 RUN npm run build
 
 EXPOSE 3000

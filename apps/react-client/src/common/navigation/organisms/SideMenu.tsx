@@ -9,6 +9,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { MenuContent } from "@react-client/common/navigation/molecules/MenuContent";
 import { OptionsMenu } from "@react-client/features/navigation/molecules/OptionsMenu";
+import { Card } from "@react-client/common/muiCustom/Card";
 
 const drawerWidth = 260;
 
@@ -23,18 +24,17 @@ const Drawer = styled(MuiDrawer)({
 	},
 });
 
-const DrawerWrapper = styled(Paper)(({ theme }) => ({
+const DrawerWrapper = styled(Card)(({ theme }) => ({
 	flexShrink: 0,
 	boxSizing: "border-box",
 	padding: 0,
-	borderRadius:
-		typeof theme.shape.borderRadius === "number"
-			? theme.shape.borderRadius + 4
-			: theme.shape.borderRadius,
 	height: "100%",
 	display: "flex",
 	flexDirection: "column",
-	borderColor: theme.palette.divider,
+	"& > div ": {
+		display: "flex",
+		flexDirection: "column",
+	}
 }));
 
 export function SideMenu({

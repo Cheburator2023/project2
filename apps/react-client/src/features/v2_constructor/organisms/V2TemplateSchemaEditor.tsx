@@ -17,7 +17,10 @@ import type {
 	CreateV2TemplateVersionRequestDto,
 	V2LogicRuleDto,
 } from "@smart-anketa/api-contract";
-import { type JsonLogicValue, applyLogic } from "react-json-logic";
+import {
+	applyLogic,
+	type JsonLogicValue,
+} from "@react-client/features/jsonLoginBuilder";
 import { nanoid } from "nanoid";
 import { Box, Button, Typography } from "@mui/material";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";

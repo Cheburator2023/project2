@@ -1,45 +1,122 @@
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import AddIcon from "@mui/icons-material/Add";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import Alert from "@mui/material/Alert";
-import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Divider from "@mui/material/Divider";
-import IconButton from "@mui/material/IconButton";
+import Stack from "@mui/material/Stack";
+import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
-import Select from "@mui/material/Select";
-import TextField from "@mui/material/TextField";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import type { V2LogicRuleDto } from "@smart-anketa/api-contract";
-import { Flex } from "@react-client/common/primitives/Flex";
-import JsonLogicBuilder, {
-	type JsonLogicValue,
-	rule as jsonRule,
-} from "react-json-logic";
-import {
-	COMPUTED_FORMULA_OPTIONS,
-	COMPUTED_ROLE_OPTIONS,
-	type ComputedFormulaKind,
-	type ComputedRulePayload,
-	type ComputedRuleRole,
-} from "../../utils/calculationEngine";
+import { rule as jsonRule } from "@react-client/features/jsonLoginBuilder";
+import { nanoid } from "nanoid";
+import { useCallback, useEffect, useState } from "react";
 import { normalizeJsonPointer } from "../../utils/schemaPaths";
-import { RULE_KIND_OPTIONS, ruleKindLabel } from "../constants";
+import { PanelChrome } from "../components/PanelChrome";
 import { useSchemaEditor } from "../SchemaEditorContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
-import { PanelChrome } from "../components/PanelChrome";
-import { StyledJsonLogicShell } from "../../styles/styledJsonLogicShell";
+import { LogicRuleDetailEditor } from "./logicPanel/LogicRuleDetailEditor";
+import { LogicRulesSidebar } from "./logicPanel/LogicRulesSidebar";
 
-function readComputedPayload(rule: V2LogicRuleDto): ComputedRulePayload {
-	const raw = rule.payload;
-	if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
-	return raw as ComputedRulePayload;
+function buildRuleForKind(
+	kind: V2LogicRuleDto["kind"],
+	targetPath: string,
+): V2LogicRuleDto {
+	const id = nanoid();
+	const base: V2LogicRuleDto = {
+		id,
+		kind,
+		targetPath,
+		dependencies: [],
+		condition: true,
+	};
+
+	switch (kind) {
+		case "visibility":
+			return {
+				...base,
+				condition: jsonRule.looseEq(jsonRule.var("example"), ""),
+			};
+		case "required":
+			return {
+				...base,
+				condition: jsonRule.looseEq(jsonRule.var("example"), ""),
+			};
+		case "computed":
+			return {
+				...base,
+				condition: jsonRule.add(jsonRule.var("summary.baseScoreStream"), 0),
+				payload: { mode: "preset", kind: "sum", operands: [] },
+			};
+		case "row_computed":
+			return {
+				...base,
+				condition: {
+					"*": [{ var: "estimateHoursPerDay" }, { var: "coefficient" }],
+				} as V2LogicRuleDto["condition"],
+				payload: {
+					arrayPath: "mlPlatform.typicalTasks",
+					fieldVar: "total",
+				},
+			};
+		case "validation":
+			return {
+				...base,
+				condition: jsonRule.looseEq(jsonRule.var("example"), ""),
+				payload: { message: "Заполните поле" },
+			};
+		case "hint":
+			return {
+				...base,
+				condition: true,
+				payload: { text: "Подсказка для поля" },
+			};
+		case "task_trigger":
+			return {
+				...base,
+				targetPath: "/",
+				condition: jsonRule.looseEq(
+					jsonRule.var("generalInfo.pilotNeed"),
+					"Требуется",
+				),
+				payload: { taskCode: "PILOT_SUPPORT", label: "Пилот" },
+			};
+		default:
+			return base;
+	}
 }
+
+const QUICK_ADD_PRESETS: Array<{
+	kind: V2LogicRuleDto["kind"];
+	label: string;
+	description: string;
+}> = [
+	{
+		kind: "visibility",
+		label: "Видимость",
+		description: "Показать или скрыть поле по условию",
+	},
+	{
+		kind: "required",
+		label: "Обязательность",
+		description: "Сделать поле обязательным по условию",
+	},
+	{
+		kind: "computed",
+		label: "Расчёт",
+		description: "Записать вычисленное значение в поле",
+	},
+	{
+		kind: "task_trigger",
+		label: "Триггер работы",
+		description: "Отметить типовую задачу в калькуляции",
+	},
+];
 
 export function SchemaLogicPanel({ embedded = false }: { embedded?: boolean }) {
 	const {
 		logic,
+		setLogic,
 		formData,
 		addRule,
 		fieldPathHints,
@@ -49,491 +126,228 @@ export function SchemaLogicPanel({ embedded = false }: { embedded?: boolean }) {
 		dictionaryEnumsLoading,
 		cycles,
 		selectedRule,
+		selectedRuleId,
 		setSelectedRuleId,
+		selectedPointer,
 		updateRulePatch,
 		removeSelectedRule,
 		previewEvalNote,
 	} = useSchemaEditor();
 
-	const computedPayload = selectedRule
-		? readComputedPayload(selectedRule)
-		: {};
-	const computedMode: "preset" | "expert" =
-		computedPayload.mode === "preset" || computedPayload.kind
-			? "preset"
-			: "expert";
+	const [addMenuAnchor, setAddMenuAnchor] = useState<null | HTMLElement>(null);
 
-	const applyComputedPayloadPatch = (patch: Partial<ComputedRulePayload>) => {
-		if (!selectedRule) return;
-		const next: ComputedRulePayload = { ...computedPayload, ...patch };
-		updateRulePatch({ payload: next as Record<string, unknown> });
-	};
+	const resolveTargetPath = useCallback(() => {
+		return normalizeJsonPointer(
+			logicPathPick?.trim() || selectedPointer?.trim() || "/",
+		);
+	}, [logicPathPick, selectedPointer]);
+
+	const addRuleWithKind = useCallback(
+		(kind: V2LogicRuleDto["kind"]) => {
+			const nextRule = buildRuleForKind(kind, resolveTargetPath());
+			setLogic((prev) => ({ rules: [...prev.rules, nextRule] }));
+			setSelectedRuleId(nextRule.id);
+			setAddMenuAnchor(null);
+		},
+		[resolveTargetPath, setLogic, setSelectedRuleId],
+	);
+
+	const duplicateRule = useCallback(
+		(rule: V2LogicRuleDto) => {
+			const id = nanoid();
+			const copy: V2LogicRuleDto = {
+				...rule,
+				id,
+				description: rule.description
+					? `${rule.description} (копия)`
+					: undefined,
+			};
+			setLogic((prev) => ({ rules: [...prev.rules, copy] }));
+			setSelectedRuleId(id);
+		},
+		[setLogic, setSelectedRuleId],
+	);
+
+	const replaceSelectedRule = useCallback(
+		(next: V2LogicRuleDto) => {
+			setLogic((prev) => ({
+				rules: prev.rules.map((r) => (r.id === next.id ? next : r)),
+			}));
+		},
+		[setLogic],
+	);
+
+	useEffect(() => {
+		const onKeyDown = (e: KeyboardEvent) => {
+			const el = e.target as HTMLElement | null;
+			if (!el) return;
+			const tag = el.tagName;
+			if (
+				tag === "INPUT" ||
+				tag === "TEXTAREA" ||
+				tag === "SELECT" ||
+				el.isContentEditable
+			) {
+				return;
+			}
+
+			if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+				e.preventDefault();
+				const search = document.querySelector<HTMLInputElement>(
+					'[data-logic-search="true"]',
+				);
+				search?.focus();
+				return;
+			}
+
+			if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === "n") {
+				e.preventDefault();
+				addRuleWithKind("visibility");
+				return;
+			}
+
+			if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d") {
+				e.preventDefault();
+				if (selectedRule) duplicateRule(selectedRule);
+				return;
+			}
+
+			if (e.key === "Delete" && selectedRule) {
+				e.preventDefault();
+				removeSelectedRule();
+			}
+		};
+
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, [addRuleWithKind, duplicateRule, removeSelectedRule, selectedRule]);
+
+	const addRuleMenu = (
+		<>
+			<Button
+				size="small"
+				variant="contained"
+				startIcon={<AddIcon />}
+				endIcon={<ArrowDropDownIcon />}
+				onClick={(e) => setAddMenuAnchor(e.currentTarget)}
+			>
+				Новое правило
+			</Button>
+			<Menu
+				anchorEl={addMenuAnchor}
+				open={Boolean(addMenuAnchor)}
+				onClose={() => setAddMenuAnchor(null)}
+			>
+				{QUICK_ADD_PRESETS.map((preset) => (
+					<MenuItem
+						key={preset.kind}
+						onClick={() => addRuleWithKind(preset.kind)}
+					>
+						<Box>
+							<Typography variant="body2">{preset.label}</Typography>
+							<Typography variant="caption" color="text.secondary">
+								{preset.description}
+							</Typography>
+						</Box>
+					</MenuItem>
+				))}
+				<MenuItem
+					onClick={() => {
+						setAddMenuAnchor(null);
+						addRule();
+					}}
+				>
+					<Typography variant="body2">Пустое правило…</Typography>
+				</MenuItem>
+			</Menu>
+		</>
+	);
 
 	return (
 		<PanelChrome
 			embedded={embedded}
 			dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.logicEditor}
 			title="Логика (JSON Logic)"
-			description="Цель — JSON Pointer; условие — по данным превью (точечные пути в var)."
-			actions={
-				<Button size="small" variant="outlined" onClick={() => void addRule()}>
-					Добавить правило
-				</Button>
-			}
+			description="Правила видимости, обязательности, расчёта и триггеров. Условия проверяются на данных вкладки «Превью»."
+			actions={embedded ? undefined : addRuleMenu}
 		>
+			{embedded ? (
+				<Stack
+					direction="row"
+					spacing={1}
+					alignItems="center"
+					flexWrap="wrap"
+					useFlexGap
+					sx={{ mb: 1.5, flexShrink: 0 }}
+				>
+					{addRuleMenu}
+					<Typography variant="caption" color="text.secondary">
+						или клавиша <strong>N</strong>
+					</Typography>
+				</Stack>
+			) : null}
+
 			<Alert severity="info" sx={{ mb: 2 }}>
 				В <code>var</code> используйте точечные пути (<code>block.field</code>),
-				не JSON Pointer. Для справочников в данных — <strong>code</strong>{" "}
-				элемента.
+				не JSON Pointer. Горячие клавиши: <strong>N</strong> — новое правило,{" "}
+				<strong>⌘D</strong> — дублировать, <strong>Del</strong> — удалить,{" "}
+				<strong>⌘K</strong> — поиск в списке.
 			</Alert>
-
-			<Box
-				sx={{ border: 1, borderColor: "divider", borderRadius: 1, p: 2, mb: 2 }}
-			>
-				<TextField
-					select
-					fullWidth
-					size="small"
-					label="Поле схемы"
-					value={logicPathPick}
-					onChange={(e) => setLogicPathPick(e.target.value)}
-				>
-					<MenuItem value="">
-						<em>Выберите поле…</em>
-					</MenuItem>
-					{fieldPathHints.map((h) => (
-						<MenuItem key={h.pointer} value={h.pointer}>
-							{h.pointer}
-							{h.title ? ` — ${h.title}` : ""}
-							{h.dictionaryCode ? ` · ${h.dictionaryCode}` : ""}
-						</MenuItem>
-					))}
-				</TextField>
-
-				{logicPathFieldHint ? (
-					<Box sx={{ mt: 1.5 }}>
-						<Flex alignItems="center" gap={0.5} wrap="wrap" sx={{ mb: 0.5 }}>
-							<Typography variant="caption" color="text.secondary">
-								JSON Pointer:
-							</Typography>
-							<code style={{ fontSize: 12 }}>{logicPathFieldHint.pointer}</code>
-							<IconButton
-								size="small"
-								title="Копировать"
-								aria-label="Копировать"
-								onClick={() =>
-									void navigator.clipboard.writeText(logicPathFieldHint.pointer)
-								}
-							>
-								<ContentCopyIcon sx={{ fontSize: 16 }} />
-							</IconButton>
-						</Flex>
-						<Flex alignItems="center" gap={0.5} wrap="wrap" sx={{ mb: 0.5 }}>
-							<Typography variant="caption" color="text.secondary">
-								var:
-							</Typography>
-							<code style={{ fontSize: 12 }}>
-								{logicPathFieldHint.varPath || "—"}
-							</code>
-						</Flex>
-						{logicPathFieldHint.dictionaryCode ? (
-							<Typography
-								variant="caption"
-								color="text.secondary"
-								display="block"
-								sx={{ mb: 1 }}
-							>
-								Справочник {logicPathFieldHint.dictionaryCode}: коды —{" "}
-								{logicPathFieldHint.codesPreview?.join(", ") ??
-									(dictionaryEnumsLoading ? "…" : "нет")}
-							</Typography>
-						) : null}
-						<Button
-							size="small"
-							variant="outlined"
-							disabled={!selectedRule || !logicPathFieldHint.varPath}
-							onClick={() => {
-								if (!logicPathFieldHint.varPath) return;
-								updateRulePatch({
-									condition: { var: logicPathFieldHint.varPath },
-								});
-							}}
-						>
-							Подставить var
-						</Button>
-					</Box>
-				) : null}
-			</Box>
 
 			{cycles.length > 0 ? (
 				<Alert severity="warning" sx={{ mb: 2 }}>
-					Циклы зависимостей: {cycles.slice(0, 3).join(" · ")}
+					Циклы зависимостей: {cycles.slice(0, 4).join(" · ")}
+					{cycles.length > 4 ? ` (+${cycles.length - 4})` : ""}
 				</Alert>
 			) : null}
 
-			{logic.rules.length === 0 ? (
-				<Typography variant="body2">Правила не созданы.</Typography>
-			) : (
-				<Box
-					sx={{
-						display: "grid",
-						gridTemplateColumns: { xs: "1fr", lg: "260px 1fr" },
-						gap: 2,
-					}}
-				>
-					<Box>
-						<Select
-							fullWidth
-							size="small"
-							displayEmpty
-							value={selectedRule?.id ?? ""}
-							onChange={(e) => setSelectedRuleId(String(e.target.value))}
-						>
-							{logic.rules.map((r) => (
-								<MenuItem key={r.id} value={r.id}>
-									{ruleKindLabel(r.kind)} → {r.targetPath}
-								</MenuItem>
-							))}
-						</Select>
+			<Box
+				sx={{
+					display: "grid",
+					gridTemplateColumns: { xs: "1fr", lg: "minmax(240px, 300px) 1fr" },
+					gap: 2,
+					minHeight: 0,
+					height: embedded ? "100%" : undefined,
+					flex: embedded ? 1 : undefined,
+				}}
+			>
+				<LogicRulesSidebar
+					rules={logic.rules}
+					fieldPathHints={fieldPathHints}
+					selectedRuleId={selectedRuleId ?? undefined}
+					onSelect={setSelectedRuleId}
+					onAddRule={() => addRuleWithKind("visibility")}
+					onAddRuleWithKind={addRuleWithKind}
+					onDuplicate={duplicateRule}
+					cycles={cycles}
+				/>
 
-						{selectedRule ? (
-							<Box
-								sx={{
-									mt: 1.5,
-									display: "flex",
-									flexDirection: "column",
-									gap: 1,
-								}}
-							>
-								<TextField
-									select
-									size="small"
-									label="Тип"
-									value={selectedRule.kind}
-									onChange={(e) =>
-										updateRulePatch({
-											kind: e.target.value as V2LogicRuleDto["kind"],
-										})
-									}
-									fullWidth
-								>
-									{RULE_KIND_OPTIONS.map((rk) => (
-										<MenuItem key={rk.key} value={rk.key}>
-											{rk.label}
-										</MenuItem>
-									))}
-								</TextField>
-								<TextField
-									select
-									size="small"
-									label="Цель (поле схемы)"
-									fullWidth
-									value={selectedRule.targetPath}
-									onChange={(e) =>
-										updateRulePatch({
-											targetPath: normalizeJsonPointer(e.target.value),
-										})
-									}
-								>
-									{fieldPathHints.map((h) => (
-										<MenuItem key={h.pointer} value={h.pointer}>
-											{h.pointer}
-											{h.title ? ` — ${h.title}` : ""}
-										</MenuItem>
-									))}
-								</TextField>
-								<Autocomplete
-									multiple
-									size="small"
-									options={fieldPathHints.map((h) => h.pointer)}
-									value={selectedRule.dependencies.map((d) =>
-										normalizeJsonPointer(d),
-									)}
-									onChange={(_e, val) => {
-										updateRulePatch({
-											dependencies: [...new Set(val.map(normalizeJsonPointer))],
-										});
-									}}
-									getOptionLabel={(opt) => {
-										const hint = fieldPathHints.find((h) => h.pointer === opt);
-										return hint?.title ? `${opt} — ${hint.title}` : opt;
-									}}
-									renderInput={(params) => (
-										<TextField
-											{...params}
-											label="Зависимости (поля-источники)"
-											placeholder="Выберите поле…"
-										/>
-									)}
-								/>
-								<TextField
-									size="small"
-									label="Комментарий"
-									fullWidth
-									value={selectedRule.description ?? ""}
-									onChange={(e) =>
-										updateRulePatch({ description: e.target.value })
-									}
-								/>
-
-								{selectedRule.kind === "computed" ? (
-									<>
-										<Divider sx={{ my: 0.5 }}>Расчёт</Divider>
-										<TextField
-											select
-											size="small"
-											label="Роль в калькуляции"
-											fullWidth
-											value={computedPayload.role ?? "other"}
-											onChange={(e) =>
-												applyComputedPayloadPatch({
-													role: e.target.value as ComputedRuleRole,
-												})
-											}
-										>
-											{COMPUTED_ROLE_OPTIONS.map((r) => (
-												<MenuItem key={r.key} value={r.key}>
-													{r.label}
-												</MenuItem>
-											))}
-										</TextField>
-										<TextField
-											size="small"
-											label="Подпись в панели Калькуляции"
-											fullWidth
-											value={computedPayload.label ?? ""}
-											onChange={(e) =>
-												applyComputedPayloadPatch({ label: e.target.value })
-											}
-										/>
-										<TextField
-											size="small"
-											label="Источник веса / формулы (для tooltip)"
-											fullWidth
-											value={computedPayload.weightSourceLabel ?? ""}
-											onChange={(e) =>
-												applyComputedPayloadPatch({
-													weightSourceLabel: e.target.value,
-												})
-											}
-											helperText="Напр. 'Справочник complexity_weights v3 от 19.05'"
-										/>
-										<ToggleButtonGroup
-											size="small"
-											exclusive
-											value={computedMode}
-											onChange={(_e, val) => {
-												if (val !== "preset" && val !== "expert") return;
-												applyComputedPayloadPatch({
-													mode: val,
-													...(val === "expert" ? { kind: undefined } : {}),
-												});
-											}}
-										>
-											<ToggleButton value="preset">Пресет</ToggleButton>
-											<ToggleButton value="expert">Эксперт (JsonLogic)</ToggleButton>
-										</ToggleButtonGroup>
-										{computedMode === "preset" ? (
-											<>
-												<TextField
-													select
-													size="small"
-													label="Формула"
-													fullWidth
-													value={computedPayload.kind ?? "sum"}
-													onChange={(e) =>
-														applyComputedPayloadPatch({
-															kind: e.target.value as ComputedFormulaKind,
-														})
-													}
-													helperText={
-														COMPUTED_FORMULA_OPTIONS.find(
-															(f) => f.key === (computedPayload.kind ?? "sum"),
-														)?.description
-													}
-												>
-													{COMPUTED_FORMULA_OPTIONS.map((f) => (
-														<MenuItem key={f.key} value={f.key}>
-															{f.label}
-														</MenuItem>
-													))}
-												</TextField>
-												<Autocomplete
-													multiple
-													size="small"
-													options={fieldPathHints.map((h) => h.varPath)}
-													value={computedPayload.operands ?? []}
-													onChange={(_e, val) =>
-														applyComputedPayloadPatch({
-															operands: val.filter(Boolean),
-														})
-													}
-													getOptionLabel={(opt) => {
-														const hint = fieldPathHints.find(
-															(h) => h.varPath === opt,
-														);
-														return hint?.title ? `${opt} — ${hint.title}` : opt;
-													}}
-													renderInput={(params) => (
-														<TextField
-															{...params}
-															label="Операнды (var)"
-															placeholder="Выберите поле…"
-														/>
-													)}
-												/>
-											</>
-										) : null}
-										<TextField
-											size="small"
-											label="Описание формулы (tooltip)"
-											fullWidth
-											value={computedPayload.formulaHint ?? ""}
-											onChange={(e) =>
-												applyComputedPayloadPatch({ formulaHint: e.target.value })
-											}
-										/>
-									</>
-								) : null}
-
-								{selectedRule.kind === "row_computed" ? (
-									<>
-										<Divider sx={{ my: 0.5 }}>Строка массива</Divider>
-										<TextField
-											select
-											size="small"
-											label="Массив (var)"
-											fullWidth
-											value={
-												((selectedRule.payload as Record<string, unknown> | undefined)
-													?.arrayPath as string | undefined) ?? ""
-											}
-											onChange={(e) =>
-												updateRulePatch({
-													payload: {
-														...(selectedRule.payload ?? {}),
-														arrayPath: e.target.value,
-													},
-												})
-											}
-											helperText="Поле-массив, по строкам которого пишется результат"
-										>
-											{fieldPathHints
-												.filter((h) => h.varPath)
-												.map((h) => (
-													<MenuItem key={h.pointer} value={h.varPath}>
-														{h.varPath}
-														{h.title ? ` — ${h.title}` : ""}
-													</MenuItem>
-												))}
-										</TextField>
-										<TextField
-											size="small"
-											label="Поле строки (имя, например 'total')"
-											fullWidth
-											value={
-												((selectedRule.payload as Record<string, unknown> | undefined)
-													?.fieldVar as string | undefined) ?? ""
-											}
-											onChange={(e) =>
-												updateRulePatch({
-													payload: {
-														...(selectedRule.payload ?? {}),
-														fieldVar: e.target.value,
-													},
-												})
-											}
-											helperText="В JsonLogic поля строки доступны как { var: 'fieldName' } (контекст _row)"
-										/>
-									</>
-								) : null}
-
-								{selectedRule.kind === "task_trigger" ? (
-									<>
-										<Divider sx={{ my: 0.5 }}>Типовая работа</Divider>
-										<TextField
-											size="small"
-											label="Код типовой работы"
-											fullWidth
-											value={
-												(selectedRule.payload as Record<string, unknown> | undefined)
-													?.taskCode as string | undefined
-											}
-											onChange={(e) =>
-												updateRulePatch({
-													payload: {
-														...(selectedRule.payload ?? {}),
-														taskCode: e.target.value,
-													},
-												})
-											}
-										/>
-										<TextField
-											size="small"
-											label="Название"
-											fullWidth
-											value={
-												(selectedRule.payload as Record<string, unknown> | undefined)
-													?.label as string | undefined
-											}
-											onChange={(e) =>
-												updateRulePatch({
-													payload: {
-														...(selectedRule.payload ?? {}),
-														label: e.target.value,
-													},
-												})
-											}
-										/>
-									</>
-								) : null}
-								<Flex gap={1}>
-									<Button
-										size="small"
-										variant="outlined"
-										onClick={() =>
-											updateRulePatch({
-												condition: jsonRule.looseEq(
-													jsonRule.var("example"),
-													"",
-												),
-											})
-										}
-									>
-										Пример
-									</Button>
-									<Button
-										size="small"
-										color="warning"
-										onClick={removeSelectedRule}
-									>
-										Удалить
-									</Button>
-								</Flex>
-							</Box>
-						) : null}
-					</Box>
-
-					<Box sx={{ minWidth: 0 }}>
-						{selectedRule ? (
-							<>
-								<StyledJsonLogicShell sx={{ maxHeight: 440, mb: 1 }}>
-									<JsonLogicBuilder
-										value={(selectedRule.condition ?? true) as JsonLogicValue}
-										data={formData}
-										onChange={(value) =>
-											updateRulePatch({
-												condition: value as V2LogicRuleDto["condition"],
-											})
-										}
-									/>
-								</StyledJsonLogicShell>
-								{previewEvalNote}
-							</>
-						) : null}
-					</Box>
+				<Box sx={{ minWidth: 0, minHeight: 0, overflow: "auto" }}>
+					{selectedRule ? (
+						<LogicRuleDetailEditor
+							selectedRule={selectedRule}
+							fieldPathHints={fieldPathHints}
+							formData={formData}
+							logicPathPick={logicPathPick}
+							setLogicPathPick={setLogicPathPick}
+							logicPathFieldHint={logicPathFieldHint}
+							dictionaryEnumsLoading={dictionaryEnumsLoading}
+							previewEvalNote={previewEvalNote}
+							updateRulePatch={updateRulePatch}
+							removeSelectedRule={removeSelectedRule}
+							cycles={cycles}
+							onDuplicate={duplicateRule}
+							onReplaceSelected={replaceSelectedRule}
+						/>
+					) : (
+						<Alert severity="info">
+							{logic.rules.length === 0
+								? "Правил пока нет — нажмите «Новое правило» слева или выберите тип в меню выше."
+								: "Выберите правило в списке слева или создайте новое."}
+						</Alert>
+					)}
 				</Box>
-			)}
+			</Box>
 		</PanelChrome>
 	);
 }

@@ -194,7 +194,6 @@ div.ag-watermark-text {
     }
 }
 
-<style>
 :where([class*="ag-theme-checkboxStyle"]) {
     & .ag-checkbox-input-wrapper, & .ag-radio-button-input-wrapper {
         &:where(.ag-checked) {
