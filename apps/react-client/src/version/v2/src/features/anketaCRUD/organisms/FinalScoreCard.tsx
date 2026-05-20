@@ -133,7 +133,7 @@ export const FinalScoreCard: React.FC = () => {
             <Paper
                 elevation={0}
                 sx={{
-                    padding:'16px',
+                    padding:'32px 32px',
                     zIndex: 1,
                     borderRadius: 4,
                     mb: 4,
@@ -151,6 +151,7 @@ export const FinalScoreCard: React.FC = () => {
                                     Итоговая оценка
                                 </Typography>
                                 <Button
+                                    color={'primary'}
                                     variant="outlined"
                                     startIcon={<FileDownloadOutlinedIcon />}
                                 >
@@ -207,7 +208,7 @@ export const FinalScoreCard: React.FC = () => {
             <Card
                 elevation={0}
                 sx={{
-                    borderRadius: 4,
+                    borderRadius: '0 4px',
                     boxShadow: '0px 4px 20px rgba(0,0,0,0.04)',
                     marginTop:'-60px'
                 }}
@@ -224,11 +225,7 @@ export const FinalScoreCard: React.FC = () => {
 
                         <Table>
                             <TableHead>
-                                <TableRow
-                                    sx={{
-                                        backgroundColor: '#F9FAFB',
-                                    }}
-                                >
+                                <TableRow >
                                     <TableCell sx={{ fontWeight: 700 }}>
                                         Наименование этапа E2E планирования
                                     </TableCell>
@@ -292,11 +289,7 @@ export const FinalScoreCard: React.FC = () => {
                                     </TableRow>
                                 ))}
 
-                                <TableRow
-                                    sx={{
-                                        backgroundColor: '#FAFAFA',
-                                    }}
-                                >
+                                <TableRow>
                                     <TableCell>
                                         <Typography fontWeight={700}>Итого:</Typography>
                                     </TableCell>
@@ -320,22 +313,9 @@ export const FinalScoreCard: React.FC = () => {
                         Платформенные стримы
                     </Typography>
 
-                    <TableContainer
-                        component={Paper}
-                        elevation={0}
-                        sx={{
-                            border: '1px solid #E5E7EB',
-                            borderRadius: 3,
-                            overflow: 'hidden',
-                        }}
-                    >
                         <Table>
                             <TableHead>
-                                <TableRow
-                                    sx={{
-                                        backgroundColor: '#F9FAFB',
-                                    }}
-                                >
+                                <TableRow>
                                     <TableCell sx={{ fontWeight: 700 }}>
                                         Наименование стрима
                                     </TableCell>
@@ -392,7 +372,6 @@ export const FinalScoreCard: React.FC = () => {
                                 ))}
                             </TableBody>
                         </Table>
-                    </TableContainer>
                 </CardContent>
             </Card>
         </>
