@@ -4,7 +4,6 @@ import { CompareReportsPage } from "@react-client/features/anketaCompare/pages/C
 import { AnketaCreatePage } from "@react-client/features/anketaCRUD/pages/AnketaCreatePage";
 import { AnketaNewVersionPage } from "@react-client/features/anketaCRUD/pages/AnketaNewVersionPage";
 import { AnketaClonePage } from "@react-client/features/anketaCRUD/pages/AnketaClonePage";
-import { AnketaPreviewPage } from "@react-client/features/anketaCRUD/pages/AnketaPreviewPage";
 import { HomePage } from "@react-client/features/home/pages/HomePage";
 import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
 import { Route } from "react-router";
@@ -12,6 +11,7 @@ import { routes as routesV2 } from "@react-client/version/v2/routing/routes";
 import { Page404 } from "@react-client/version/v2/routing/Page404";
 import { routes } from "@react-client/version/v1/routing/routes";
 import { MainLayout } from "@react-client/version/v2/layouts/MainLayout";
+import {AnketaPreviewPage} from "@react-client/version/v2/src/features/anketaCRUD/pages/AnketaPreviewPage";
 
 export const v2Routes = ({ onLogout }: { onLogout?: () => void }) => {
 	return {
@@ -47,7 +47,7 @@ export const v2Routes = ({ onLogout }: { onLogout?: () => void }) => {
 						check={(p) => p.canCreateCalculation}
 						message="У вас нет прав на создание анкеты"
 					>
-						<AnketaCreatePage data-test-id="index--AnketaCreatePage-0" />
+						<AnketaPreviewPage data-test-id="index--AnketaPreviewPage-0" />
 					</PermissionGuard>
 				),
 			},
