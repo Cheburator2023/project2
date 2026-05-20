@@ -37,9 +37,17 @@ export function SchemaEditorDockProvider({
 	const syncingFromDockRef = useRef(false);
 	const syncingFromStateRef = useRef(false);
 
-	const activateMainTab = useCallback((tab: SchemaEditorMainTab) => {
-		apiRef.current?.getPanel(tab)?.api.setActive();
-	}, []);
+	const activateMainTab = useCallback(
+		(tab: SchemaEditorMainTab) => {
+			const panel = apiRef.current?.getPanel(tab);
+			if (!panel) return;
+			syncingFromStateRef.current = true;
+			panel.api.setActive();
+			onMainTabChange(tab);
+			syncingFromStateRef.current = false;
+		},
+		[onMainTabChange],
+	);
 
 	const registerDockApi = useCallback(
 		(api: DockviewApi | null) => {

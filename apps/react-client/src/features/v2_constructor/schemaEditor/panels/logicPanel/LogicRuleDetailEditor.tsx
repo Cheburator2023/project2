@@ -15,8 +15,6 @@ import Alert from "@mui/material/Alert";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
 import Chip from "@mui/material/Chip";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
@@ -37,6 +35,12 @@ import JsonLogicBuilder, {
 	type JsonLogicValue,
 	rule as jsonRule,
 } from "@react-client/features/jsonLoginBuilder";
+import { useSchemaEditor } from "../../SchemaEditorContext";
+import {
+	isOverwrittenByLegacyStageEngine,
+	LEGACY_STAGE_ENGINE_DESCRIPTION,
+} from "../../../utils/v2LegacyStageEngine";
+import { SumArrayTemplateDialog } from "./SumArrayTemplateDialog";
 import {
 	COMPUTED_FORMULA_OPTIONS,
 	COMPUTED_ROLE_OPTIONS,
@@ -62,6 +66,7 @@ import {
 	summarizeRule,
 	validateRule,
 } from "./helpers";
+import { Card } from "@react-client/common/muiCustom/Card";
 
 function exampleConditionForKind(kind: V2LogicRuleDto["kind"]): JsonLogicValue {
 	switch (kind) {
@@ -114,6 +119,7 @@ export function LogicRuleDetailEditor({
 	onDuplicate,
 	onReplaceSelected,
 }: Props) {
+	const { jsonSchema } = useSchemaEditor();
 	const computedPayload = readComputedPayload(selectedRule);
 	const computedMode: "preset" | "expert" =
 		computedPayload.mode === "preset" || computedPayload.kind
@@ -135,6 +141,7 @@ export function LogicRuleDetailEditor({
 	const [importOpen, setImportOpen] = useState(false);
 	const [importText, setImportText] = useState("");
 	const [importError, setImportError] = useState<string | null>(null);
+	const [sumArrayOpen, setSumArrayOpen] = useState(false);
 
 	const showDependenciesStep = selectedRule.kind !== "hint";
 	const showConditionStep = selectedRule.kind !== "hint";
@@ -194,18 +201,10 @@ export function LogicRuleDetailEditor({
 
 	return (
 		<Stack spacing={2}>
-			<Box
-				sx={{
-					position: "sticky",
-					top: 0,
-					zIndex: 2,
-					bgcolor: "background.default",
-					pt: 0.25,
-				}}
-			>
+
 				<Card variant="outlined">
-					<CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-						<Stack spacing={1.25}>
+				
+						<Stack spacing={1}>
 							<Stack
 								direction={{ xs: "column", sm: "row" }}
 								spacing={1}
@@ -317,12 +316,12 @@ export function LogicRuleDetailEditor({
 								</Stack>
 							)}
 						</Stack>
-					</CardContent>
+				
 				</Card>
-			</Box>
+
 
 			<Card variant="outlined">
-				<CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+				
 					<SectionHeader
 						icon={<RuleIcon color="primary" fontSize="small" />}
 						title="Шаг 1 · Тип правила"
@@ -366,12 +365,12 @@ export function LogicRuleDetailEditor({
 							helperText="Только для заметок, на расчёт не влияет."
 						/>
 					</Box>
-				</CardContent>
+
 			</Card>
 
 			{selectedRule.kind !== "task_trigger" ? (
 				<Card variant="outlined">
-					<CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+		
 						<SectionHeader
 							icon={<PlayArrowIcon color="primary" fontSize="small" />}
 							title="Шаг 2 · Целевое поле"
@@ -417,13 +416,13 @@ export function LogicRuleDetailEditor({
 								updateRulePatch({ targetPath: normalizeJsonPointer(pointer) })
 							}
 						/>
-					</CardContent>
+					
 				</Card>
 			) : null}
 
 			{selectedRule.kind === "hint" ? (
 				<Card variant="outlined">
-					<CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+					
 						<SectionHeader
 							title="Текст подсказки"
 							description="Отображается как ui:help у целевого поля в превью."
@@ -446,13 +445,13 @@ export function LogicRuleDetailEditor({
 								})
 							}
 						/>
-					</CardContent>
+					
 				</Card>
 			) : null}
 
 			{selectedRule.kind === "row_computed" ? (
 				<Card variant="outlined">
-					<CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+					
 						<SectionHeader
 							title="Параметры расчёта строки"
 							description="Backend обходит каждую строку массива и пишет результат в fieldVar."
@@ -495,13 +494,13 @@ export function LogicRuleDetailEditor({
 								placeholder="total"
 							/>
 						</Box>
-					</CardContent>
+					
 				</Card>
 			) : null}
 
 			{selectedRule.kind === "task_trigger" ? (
 				<Card variant="outlined">
-					<CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+					
 						<SectionHeader
 							title="Параметры типовой работы"
 							description="Если условие истинно — backend помечает работу как «требуется»."
@@ -542,13 +541,13 @@ export function LogicRuleDetailEditor({
 								}
 							/>
 						</Box>
-					</CardContent>
+					
 				</Card>
 			) : null}
 
 			{selectedRule.kind === "validation" ? (
 				<Card variant="outlined">
-					<CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+					
 						<SectionHeader
 							title="Сообщение об ошибке"
 							description="Показывается пользователю, если условие валидации ложно."
@@ -569,13 +568,13 @@ export function LogicRuleDetailEditor({
 								})
 							}
 						/>
-					</CardContent>
+					
 				</Card>
 			) : null}
 
 			{showDependenciesStep ? (
 				<Card variant="outlined">
-					<CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+					
 						<SectionHeader
 							icon={<HighlightAltIcon color="primary" fontSize="small" />}
 							title="Шаг 3 · Зависимости"
@@ -636,8 +635,16 @@ export function LogicRuleDetailEditor({
 								<strong>{unclaimedVars.join(", ")}</strong>.
 							</Alert>
 						) : null}
-					</CardContent>
+					
 				</Card>
+			) : null}
+
+			{selectedRule.kind === "computed" &&
+			isOverwrittenByLegacyStageEngine(selectedRule.targetPath) ? (
+				<Alert severity="warning" sx={{ mb: 1.5 }}>
+					{LEGACY_STAGE_ENGINE_DESCRIPTION} Значение этого правила в данных
+					формы будет заменено результатом этапов v1.
+				</Alert>
 			) : null}
 
 			{selectedRule.kind === "computed" ? (
@@ -651,7 +658,7 @@ export function LogicRuleDetailEditor({
 
 			{showConditionStep ? (
 				<Card variant="outlined">
-					<CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+					
 						<SectionHeader
 							icon={<FunctionsIcon color="primary" fontSize="small" />}
 							title={
@@ -685,6 +692,15 @@ export function LogicRuleDetailEditor({
 							>
 								Вставить пример
 							</Button>
+							{selectedRule.kind === "computed" && computedMode === "expert" ? (
+								<Button
+									size="small"
+									variant="outlined"
+									onClick={() => setSumArrayOpen(true)}
+								>
+									Σ по массиву
+								</Button>
+							) : null}
 							{readPayloadString(selectedRule, "label") ? null : (
 								<Typography variant="caption" color="text.secondary">
 									Pro tip: задайте «Название» в шаге 1, чтобы правило было видно
@@ -694,10 +710,17 @@ export function LogicRuleDetailEditor({
 						</Stack>
 						{selectedRule.kind === "row_computed" ? (
 							<Alert severity="info" sx={{ mt: 1.25 }}>
-								В формуле строки используйте var относительно строки:{" "}
-								<code>estimateHoursPerDay</code>, <code>coefficient</code>.
+								В формуле указывайте поля одной строки массива, например{" "}
+								<code>estimateHoursPerDay</code>, <code>coefficient</code> — без
+								префикса раздела.
 							</Alert>
-						) : null}
+						) : (
+							<Alert severity="info" sx={{ mt: 1.25 }}>
+								Собирайте выражение в конструкторе: поля выбираются из схемы
+								анкеты (те же пути, что в превью формы). Результат проверяется на
+								вкладке «Превью» ниже.
+							</Alert>
+						)}
 						<JsonLogicBuilder
 							shellSx={{ maxHeight: { xs: 360, md: 480 }, minHeight: 200 }}
 							value={(selectedRule.condition ?? true) as JsonLogicValue}
@@ -718,9 +741,25 @@ export function LogicRuleDetailEditor({
 							Проверка на данных превью (вкладка «Превью»):
 						</Typography>
 						{previewEvalNote}
-					</CardContent>
+					
 				</Card>
 			) : null}
+
+			<SumArrayTemplateDialog
+				open={sumArrayOpen}
+				jsonSchema={jsonSchema}
+				onClose={() => setSumArrayOpen(false)}
+				onApply={(condition) => {
+					const draft = { ...selectedRule, condition };
+					updateRulePatch({
+						condition,
+						dependencies: mergeDependenciesWithVars(
+							draft,
+							fieldPathHints,
+						),
+					});
+				}}
+			/>
 
 			<Dialog
 				open={importOpen}
@@ -1028,7 +1067,7 @@ function ComputedSettingsCard({
 }) {
 	return (
 		<Card variant="outlined">
-			<CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+			
 				<SectionHeader
 					icon={<FunctionsIcon color="primary" fontSize="small" />}
 					title="Настройки вычисления"
@@ -1161,7 +1200,7 @@ function ComputedSettingsCard({
 						applyComputedPayloadPatch({ formulaHint: e.target.value })
 					}
 				/>
-			</CardContent>
+			
 		</Card>
 	);
 }

@@ -1,4 +1,6 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.V2_CALC_ROLE_VALUES = exports.V2_MAX_LOGIC_RULES = exports.V2_MAX_JSON_SCHEMA_BYTES = exports.V2_VALIDATION_ISSUE_LEVEL_VALUES = exports.V2_LOGIC_RULE_KIND_VALUES = exports.V2_TEMPLATE_AUDIT_ACTION_VALUES = exports.V2_TEMPLATE_STATUS_VALUES = void 0;
 /**
  * Smart-Анкета V2 — типы шаблонов и справочников.
  *
@@ -12,8 +14,6 @@
  * Версии шаблона имеют статусы DRAFT → PUBLISHED → ARCHIVED.
  * В одно время на шаблон допускается не более одной DRAFT-версии.
  */
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.V2_CALC_ROLE_VALUES = exports.V2_MAX_LOGIC_RULES = exports.V2_MAX_JSON_SCHEMA_BYTES = exports.V2_VALIDATION_ISSUE_LEVEL_VALUES = exports.V2_LOGIC_RULE_KIND_VALUES = exports.V2_TEMPLATE_AUDIT_ACTION_VALUES = exports.V2_TEMPLATE_STATUS_VALUES = void 0;
 exports.V2_TEMPLATE_STATUS_VALUES = [
     "draft",
     "published",

@@ -31,19 +31,30 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { alpha, useTheme } from "@mui/material/styles";
 import { nanoid } from "nanoid";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	createContext,
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import type { V2LogicRuleDto } from "@smart-anketa/api-contract";
 import { normalizeJsonPointer } from "../../utils/schemaPaths";
 import { ruleKindLabel } from "../constants";
-import { useSchemaEditorDock } from "../SchemaEditorDockContext";
 import { useSchemaEditor } from "../SchemaEditorContext";
+import { openV2TemplateLogicPage } from "../../utils/v2TemplateLogicPaths";
 import { layoutRelationsGraphWithElk } from "./layoutRelationsGraphElk";
 import {
 	buildRelationsGraph,
+	FIELD_NODE_WIDTH,
+	RULE_NODE_WIDTH,
 	type FieldNodeData,
 	type RuleNodeData,
 } from "./relationsGraph";
 import { resolveCollisions } from "./resolveCollisions";
+import { useRelationsNodeAutoSize } from "./useRelationsNodeAutoSize";
 import {
 	FIELD_ENTITY_ICON,
 	FIELD_ROLE_VISUAL,
@@ -65,10 +76,26 @@ const COLLISION_DRAG = {
 	margin: 20,
 } as const;
 
+type RelationsGraphActions = {
+	openFieldInLogic: (pointer: string) => void;
+	openRuleInLogic: (ruleId: string) => void;
+};
+
+const RelationsGraphActionsContext =
+	createContext<RelationsGraphActions | null>(null);
+
+function useRelationsGraphActions(): RelationsGraphActions {
+	const ctx = useContext(RelationsGraphActionsContext);
+	if (!ctx) {
+		throw new Error(
+			"useRelationsGraphActions must be used within RelationsGraphActionsContext",
+		);
+	}
+	return ctx;
+}
+
 function attachNodeHandlers(
 	nodes: Node[],
-	openFieldInLogic: (pointer: string) => void,
-	openRuleInLogic: (ruleId: string) => void,
 	selectedPointer: string | null,
 	selectedRuleId: string | null,
 ): Node[] {
@@ -84,7 +111,6 @@ function attachNodeHandlers(
 				data: {
 					...d,
 					selected: selectedNorm === normalizeJsonPointer(d.pointer),
-					onOpen: () => openFieldInLogic(d.pointer),
 				},
 			};
 		}
@@ -95,7 +121,6 @@ function attachNodeHandlers(
 				data: {
 					...d,
 					selected: d.ruleId === selectedRuleId,
-					onOpen: () => openRuleInLogic(d.ruleId),
 				},
 			};
 		}
@@ -110,14 +135,13 @@ const handleSx = {
 	borderColor: "background.paper",
 };
 
-const clampLinesSx = (lines: number) => ({
-	display: "-webkit-box",
-	WebkitLineClamp: lines,
-	WebkitBoxOrient: "vertical" as const,
-	overflow: "hidden",
+const NODE_TEXT_SX = {
 	wordBreak: "break-word" as const,
 	lineHeight: 1.35,
-});
+	whiteSpace: "normal" as const,
+};
+
+const NODE_CARD_BG = "#ffffff";
 
 function NodeOpenButton({ onOpen }: { onOpen: () => void }) {
 	return (
@@ -167,12 +191,18 @@ function NodeIconBadge({
 	);
 }
 
-function FieldNode({ data }: NodeProps) {
+function FieldNode({ id, data }: NodeProps) {
 	const d = data as FieldNodeData;
+	const { openFieldInLogic } = useRelationsGraphActions();
 	const visual = FIELD_ROLE_VISUAL[d.role];
 	const { Icon } = visual;
 	const palette = visual.palette;
 	const showPointer = d.pointer !== d.varPath;
+	const cardRef = useRelationsNodeAutoSize(
+		id,
+		FIELD_NODE_WIDTH,
+		`${d.label}|${d.varPath}|${d.pointer}|${showPointer}|${d.role}|${d.selected}`,
+	);
 
 	return (
 		<>
@@ -183,8 +213,10 @@ function FieldNode({ data }: NodeProps) {
 				style={{ ...handleSx, background: visual.handleIn }}
 			/>
 			<Box
-				className="nodrag nopan"
+				ref={cardRef}
 				sx={{
+					boxSizing: "border-box",
+					width: FIELD_NODE_WIDTH,
 					px: 1.5,
 					py: 1.25,
 					borderRadius: 1.5,
@@ -192,12 +224,7 @@ function FieldNode({ data }: NodeProps) {
 					borderColor: d.selected
 						? "primary.main"
 						: (t) => alpha(t.palette[palette].main, 0.55),
-					bgcolor: (t) =>
-						d.selected
-							? alpha(t.palette.primary.main, 0.1)
-							: alpha(t.palette[palette].main, 0.06),
-					width: "100%",
-					height: "100%",
+					bgcolor: d.selected ? "#e8f4fc" : NODE_CARD_BG,
 					boxShadow: d.selected ? 3 : 1,
 					pointerEvents: "all",
 				}}
@@ -226,7 +253,7 @@ function FieldNode({ data }: NodeProps) {
 							variant="body2"
 							fontWeight={700}
 							title={d.label || d.varPath}
-							sx={clampLinesSx(2)}
+							sx={NODE_TEXT_SX}
 						>
 							{d.label || d.varPath}
 						</Typography>
@@ -235,7 +262,7 @@ function FieldNode({ data }: NodeProps) {
 							color="text.secondary"
 							title={d.varPath}
 							sx={{
-								...clampLinesSx(2),
+								...NODE_TEXT_SX,
 								fontFamily: "monospace",
 								fontSize: 11,
 								mt: 0.35,
@@ -249,7 +276,7 @@ function FieldNode({ data }: NodeProps) {
 								color="text.disabled"
 								title={d.pointer}
 								sx={{
-									...clampLinesSx(1),
+									...NODE_TEXT_SX,
 									fontSize: 10,
 									mt: 0.25,
 								}}
@@ -258,7 +285,7 @@ function FieldNode({ data }: NodeProps) {
 							</Typography>
 						) : null}
 					</Box>
-					<NodeOpenButton onOpen={() => d.onOpen?.()} />
+					<NodeOpenButton onOpen={() => openFieldInLogic(d.pointer)} />
 				</Stack>
 			</Box>
 			<Handle
@@ -271,12 +298,18 @@ function FieldNode({ data }: NodeProps) {
 	);
 }
 
-function RuleNode({ data }: NodeProps) {
+function RuleNode({ id, data }: NodeProps) {
 	const d = data as RuleNodeData;
+	const { openRuleInLogic } = useRelationsGraphActions();
 	const visual = getRuleKindVisual(d.kind);
 	const { Icon } = visual;
 	const palette = visual.palette;
 	const kindLabel = ruleKindLabel(d.kind);
+	const cardRef = useRelationsNodeAutoSize(
+		id,
+		RULE_NODE_WIDTH,
+		`${d.label}|${d.kind}|${kindLabel}|${d.selected}`,
+	);
 
 	return (
 		<>
@@ -287,8 +320,10 @@ function RuleNode({ data }: NodeProps) {
 				style={{ ...handleSx, background: "#64748b" }}
 			/>
 			<Box
-				className="nodrag nopan"
+				ref={cardRef}
 				sx={{
+					boxSizing: "border-box",
+					width: RULE_NODE_WIDTH,
 					px: 1.5,
 					py: 1.25,
 					borderRadius: 1.5,
@@ -296,12 +331,7 @@ function RuleNode({ data }: NodeProps) {
 					borderColor: d.selected
 						? "secondary.main"
 						: (t) => alpha(t.palette[palette].main, 0.5),
-					bgcolor: (t) =>
-						d.selected
-							? alpha(t.palette.secondary.main, 0.12)
-							: alpha(t.palette[palette].main, 0.07),
-					width: "100%",
-					height: "100%",
+					bgcolor: d.selected ? "#f3e8ff" : NODE_CARD_BG,
 					boxShadow: d.selected ? 3 : 1,
 					pointerEvents: "all",
 				}}
@@ -328,7 +358,7 @@ function RuleNode({ data }: NodeProps) {
 							variant="body2"
 							fontWeight={700}
 							title={d.label || kindLabel}
-							sx={clampLinesSx(2)}
+							sx={NODE_TEXT_SX}
 						>
 							{d.label || kindLabel}
 						</Typography>
@@ -340,7 +370,7 @@ function RuleNode({ data }: NodeProps) {
 							Тип: {kindLabel}
 						</Typography>
 					</Box>
-					<NodeOpenButton onOpen={() => d.onOpen?.()} />
+					<NodeOpenButton onOpen={() => openRuleInLogic(d.ruleId)} />
 				</Stack>
 			</Box>
 			<Handle
@@ -367,8 +397,8 @@ function LegendItem({ color, label }: { color: string; label: string }) {
 					"&::after": {
 						content: '""',
 						position: "absolute",
-						right: -1,
-						top: -4,
+						right: -6,
+						top: -5,
 						border: "4px solid transparent",
 						borderLeft: `6px solid ${color}`,
 					},
@@ -412,8 +442,8 @@ type ContextMenuState = {
 
 function RelationsFlowInner() {
 	const theme = useTheme();
-	const { activateMainTab } = useSchemaEditorDock();
 	const {
+		templateId,
 		fieldPathHints,
 		logic,
 		setLogic,
@@ -421,8 +451,6 @@ function RelationsFlowInner() {
 		selectedRuleId,
 		setSelectedPointer,
 		setSelectedRuleId,
-		setMainTab,
-		openLogicTabWithRule,
 		cycles,
 	} = useSchemaEditor();
 
@@ -431,18 +459,25 @@ function RelationsFlowInner() {
 	const openFieldInLogic = useCallback(
 		(pointer: string) => {
 			setSelectedPointer(pointer);
-			setMainTab("logic");
-			activateMainTab("logic");
+			openV2TemplateLogicPage({ templateId, pointer });
 		},
-		[activateMainTab, setMainTab, setSelectedPointer],
+		[setSelectedPointer, templateId],
 	);
 
 	const openRuleInLogic = useCallback(
 		(ruleId: string) => {
-			openLogicTabWithRule(ruleId);
-			activateMainTab("logic");
+			setSelectedRuleId(ruleId);
+			openV2TemplateLogicPage({ templateId, ruleId });
 		},
-		[activateMainTab, openLogicTabWithRule],
+		[setSelectedRuleId, templateId],
+	);
+
+	const relationsGraphActions = useMemo(
+		(): RelationsGraphActions => ({
+			openFieldInLogic,
+			openRuleInLogic,
+		}),
+		[openFieldInLogic, openRuleInLogic],
 	);
 
 	const graphActions = useMemo(
@@ -533,8 +568,6 @@ function RelationsFlowInner() {
 			setNodes(
 				attachNodeHandlers(
 					layouted,
-					openFieldInLogic,
-					openRuleInLogic,
 					selectedPointerRef.current,
 					selectedRuleIdRef.current,
 				),
@@ -553,15 +586,7 @@ function RelationsFlowInner() {
 				);
 			}
 		},
-		[
-			fieldPathHints,
-			fitView,
-			logic.rules,
-			openFieldInLogic,
-			openRuleInLogic,
-			setEdges,
-			setNodes,
-		],
+		[fieldPathHints, fitView, logic.rules, setEdges, setNodes],
 	);
 
 	useEffect(() => {
@@ -578,24 +603,10 @@ function RelationsFlowInner() {
 		setNodes((nds) =>
 			nds.length === 0
 				? nds
-				: attachNodeHandlers(
-						nds,
-						openFieldInLogic,
-						openRuleInLogic,
-						selectedPointer,
-						selectedRuleId,
-					),
+				: attachNodeHandlers(nds, selectedPointer, selectedRuleId),
 		);
 		setEdges(displayEdges);
-	}, [
-		displayEdges,
-		openFieldInLogic,
-		openRuleInLogic,
-		selectedPointer,
-		selectedRuleId,
-		setEdges,
-		setNodes,
-	]);
+	}, [displayEdges, selectedPointer, selectedRuleId, setEdges, setNodes]);
 
 	const onRelayoutClick = useCallback(() => {
 		void runElkLayout().then((layouted) => commitLayout(layouted));
@@ -604,6 +615,22 @@ function RelationsFlowInner() {
 	const onNodeDragStop = useCallback(() => {
 		setNodes((nds) => resolveCollisions(nds, COLLISION_DRAG));
 	}, [setNodes]);
+
+	const nodesSizeKey = useMemo(
+		() =>
+			nodes
+				.map((n) => `${n.id}:${n.width ?? 0}x${n.height ?? 0}`)
+				.join("|"),
+		[nodes],
+	);
+
+	useEffect(() => {
+		if (nodes.length === 0) return;
+		const t = window.setTimeout(() => {
+			setNodes((nds) => resolveCollisions(nds, COLLISION_LAYOUT));
+		}, 300);
+		return () => window.clearTimeout(t);
+	}, [nodesSizeKey, setNodes]);
 
 	const onNodeClick = useCallback(
 		(_event: React.MouseEvent, node: Node) => {
@@ -654,7 +681,8 @@ function RelationsFlowInner() {
 	}
 
 	return (
-		<Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+		<RelationsGraphActionsContext.Provider value={relationsGraphActions}>
+			<Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
 				<Stack
 					spacing={1}
 					sx={{
@@ -737,8 +765,8 @@ function RelationsFlowInner() {
 						</Stack>
 					</Stack>
 					<Typography variant="caption" color="text.secondary">
-						Раскладка ELK (слева направо: поля → правила → поля). После перетаскивания
-						узлы раздвигаются автоматически. Кнопка ↗ — переход на вкладку «Логика».
+						Раскладка ELK (слева направо: поля → правила → поля). ↗ открывает редактор
+						логики в отдельной вкладке. Узлы можно перетаскивать.
 					</Typography>
 					{edges.length === 0 ? (
 						<Typography variant="caption" color="warning.main">
@@ -757,6 +785,7 @@ function RelationsFlowInner() {
 						flex: 1,
 						minHeight: 240,
 						"& .react-flow__edge-path": { strokeLinecap: "round" },
+						"& .react-flow__node": { overflow: "visible" },
 					}}
 				>
 					<ReactFlow
@@ -905,6 +934,7 @@ function RelationsFlowInner() {
 					) : null}
 				</Menu>
 			</Box>
+		</RelationsGraphActionsContext.Provider>
 	);
 }
 

@@ -10,6 +10,8 @@ import {
 } from "../../../utils/schemaPaths";
 import { ruleKindLabel } from "../../constants";
 import type { FieldPathHint } from "../../types";
+import { evaluateRuleCondition } from "../../../utils/logicPreview";
+import { isOverwrittenByLegacyStageEngine } from "../../../utils/v2LegacyStageEngine";
 
 export function readComputedPayload(rule: V2LogicRuleDto): ComputedRulePayload {
 	const raw = rule.payload;
@@ -95,6 +97,11 @@ export function ruleMatchesFilter(
 }
 
 /** Извлекает все var-пути из JsonLogic-выражения, рекурсивно. */
+/** var внутри тела `reduce` — не пути formData. */
+function isReduceScopedVar(varPath: string): boolean {
+	return varPath === "accumulator" || varPath.startsWith("current.");
+}
+
 export function extractVarsFromLogic(value: unknown): string[] {
 	const out = new Set<string>();
 	const walk = (node: unknown) => {
@@ -131,6 +138,7 @@ export function findUnclaimedVars(
 	);
 	const result: string[] = [];
 	for (const v of vars) {
+		if (isReduceScopedVar(v)) continue;
 		const hint = fieldPathHints.find((h) => h.varPath === v || h.pointer === v);
 		const pointer = hint?.pointer ?? normalizeJsonPointer(v);
 		if (!declared.has(pointer)) result.push(v);
@@ -148,6 +156,7 @@ export function mergeDependenciesWithVars(
 	);
 	const vars = extractVarsFromLogic(rule.condition);
 	for (const v of vars) {
+		if (isReduceScopedVar(v)) continue;
 		const hint = fieldPathHints.find((h) => h.varPath === v || h.pointer === v);
 		const pointer = hint?.pointer ?? normalizeJsonPointer(v);
 		if (pointer && !declared.includes(pointer)) declared.push(pointer);
@@ -173,6 +182,10 @@ export function evaluateRuleLive(
 			kind: "skipped",
 			reason: "Считается по строке массива на бекенде",
 		};
+	}
+	if (rule.kind === "validation") {
+		const passes = evaluateRuleCondition(rule.condition, formData);
+		return { kind: "boolean", value: passes };
 	}
 	try {
 		const raw = applyLogic(rule.condition as JsonLogicValue, formData);
@@ -239,6 +252,30 @@ export function validateRule(
 				message: "Не указан код типовой работы (taskCode)",
 			});
 		}
+	}
+	if (rule.kind === "validation") {
+		const message =
+			typeof payload.message === "string"
+				? payload.message
+				: typeof payload.text === "string"
+					? payload.text
+					: "";
+		if (!message.trim()) {
+			issues.push({
+				severity: "error",
+				message: "Укажите текст ошибки (payload.message)",
+			});
+		}
+	}
+	if (
+		rule.kind === "computed" &&
+		isOverwrittenByLegacyStageEngine(rule.targetPath)
+	) {
+		issues.push({
+			severity: "warning",
+			message:
+				"Целевое поле перезаписывается движком этапов v1 на /calculate — значение JsonLogic в formData не сохранится.",
+		});
 	}
 	if (rule.kind === "computed") {
 		const mode = payload.mode === "expert" ? "expert" : "preset";
@@ -327,6 +364,10 @@ export function describeJsonLogic(value: unknown): string {
 	if (op === "in") return `${ds[0]} ∈ ${ds[1]}`;
 	if (op === "missing") return `отсутствуют: ${ds.join(", ")}`;
 	if (op === "cat") return `concat(${ds.join(", ")})`;
+	if (op === "reduce" && ds.length >= 2) {
+		const init = ds.length >= 3 ? `, начало ${ds[2]}` : "";
+		return `Σ по ${ds[0]} (${ds[1]}${init})`;
+	}
 	return `${op}(${ds.join(", ")})`;
 }
 

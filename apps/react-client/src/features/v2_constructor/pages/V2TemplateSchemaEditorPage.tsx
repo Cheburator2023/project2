@@ -6,11 +6,13 @@ import {
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "@react-client/features/v2_constructor/testIds";
+import { openV2TemplateLogicPage } from "@react-client/features/v2_constructor/utils/v2TemplateLogicPaths";
 import {
 	pathForAdminV2TemplateRead,
 	pathForPlaygroundV2TemplateRead,
 	routes,
 } from "@react-client/routing/routes";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -121,6 +123,14 @@ export const V2TemplateSchemaEditorPage = () => {
 							}}
 						>
 							Предпросмотр
+						</Button>
+						<Button
+							variant="outlined"
+							startIcon={<AccountTreeIcon />}
+							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnLogic}
+							onClick={() => openV2TemplateLogicPage({ templateId, pathname })}
+						>
+							Логика
 						</Button>
 
 						<Button

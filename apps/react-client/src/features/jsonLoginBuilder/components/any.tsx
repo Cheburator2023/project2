@@ -9,6 +9,7 @@ import {
 import Accessor from "./accessor";
 import HigherOrder from "./higher-order";
 import Input from "./input";
+import ReduceBody from "./reduce-body";
 import SelectOperator from "./select-operator";
 
 type DataObject = Record<string, unknown> | unknown[];
@@ -114,7 +115,7 @@ export function Any({ parent, value, data = {}, onChange }: Props) {
 		}
 		const op = OPERATORS.find((item) => item.signature === nextField);
 		onChange({
-			[nextField]: op ? initialChildArray(op) : [],
+			[nextField]: op?.seed ?? (op ? initialChildArray(op) : []),
 		});
 	};
 
@@ -199,6 +200,11 @@ export function Any({ parent, value, data = {}, onChange }: Props) {
 						data={data}
 						onChange={childOnChange}
 					/>
+				);
+				break;
+			case "reduce-body":
+				element = (
+					<ReduceBody value={childValue} data={data} onChange={childOnChange} />
 				);
 				break;
 		}

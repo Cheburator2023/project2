@@ -12,6 +12,14 @@ import {
 	type CalculationItem,
 	type TaskTriggerItem,
 } from "./calculationEngine";
+import {
+	evaluateLogicValidationRules,
+	logicValidationIssuesToExtraErrors,
+	mergeStaticHiddenFromPreviewUi,
+	resolveHiddenFieldPointers,
+	type LogicValidationIssue,
+} from "./logicValidation";
+import type { ErrorSchema } from "@rjsf/utils";
 
 type UiBranch = Record<string, unknown>;
 
@@ -136,6 +144,8 @@ export type DerivePreviewResult = {
 	calculationItems: CalculationItem[];
 	taskTriggerItems: TaskTriggerItem[];
 	liveFormData: Record<string, unknown>;
+	logicValidationIssues: LogicValidationIssue[];
+	extraErrors: ErrorSchema;
 };
 
 export type DerivePreviewOptions = {
@@ -143,6 +153,8 @@ export type DerivePreviewOptions = {
 	computedLiveData?: Record<string, unknown>;
 	calculationItems?: CalculationItem[];
 	taskTriggerItems?: TaskTriggerItem[];
+	/** С сервера POST /calculate; иначе считается локально. */
+	validationIssues?: LogicValidationIssue[];
 };
 
 export function derivePreviewSchemas(
@@ -230,11 +242,25 @@ export function derivePreviewSchemas(
 		}
 	}
 
+	const hiddenPointers = mergeStaticHiddenFromPreviewUi(
+		resolveHiddenFieldPointers(rules, liveData),
+		previewUiRaw,
+	);
+
+	const logicValidationIssues =
+		options?.validationIssues ??
+		evaluateLogicValidationRules(rules, liveData, {
+			jsonSchema,
+			hiddenPointers,
+		});
+
 	return {
 		previewSchema,
 		previewUiSchema: previewUiRaw as UiSchema,
 		calculationItems,
 		taskTriggerItems,
 		liveFormData: liveData,
+		logicValidationIssues,
+		extraErrors: logicValidationIssuesToExtraErrors(logicValidationIssues),
 	};
 }

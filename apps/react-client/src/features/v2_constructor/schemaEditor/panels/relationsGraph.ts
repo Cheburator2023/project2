@@ -8,9 +8,10 @@ import { extractVarsFromLogic } from "./logicPanel/helpers";
 import type { FieldPathHint } from "../types";
 
 export const FIELD_NODE_WIDTH = 300;
-export const FIELD_NODE_HEIGHT = 118;
+/** Стартовая высота для ELK; после монтирования подстраивается по контенту. */
+export const FIELD_NODE_MIN_HEIGHT = 88;
 export const RULE_NODE_WIDTH = 268;
-export const RULE_NODE_HEIGHT = 106;
+export const RULE_NODE_MIN_HEIGHT = 80;
 
 export type FieldNodeData = {
 	label: string;
@@ -152,7 +153,7 @@ export function buildRelationsGraph(
 			type: "field",
 			position: { x: 0, y: 0 },
 			width: FIELD_NODE_WIDTH,
-			height: FIELD_NODE_HEIGHT,
+			height: FIELD_NODE_MIN_HEIGHT,
 			data: {
 				label: h.title ?? h.key,
 				varPath: h.varPath,
@@ -172,7 +173,7 @@ export function buildRelationsGraph(
 			type: "rule",
 			position: { x: 0, y: 0 },
 			width: RULE_NODE_WIDTH,
-			height: RULE_NODE_HEIGHT,
+			height: RULE_NODE_MIN_HEIGHT,
 			data: {
 				label:
 					(rule.payload?.label as string | undefined) ??

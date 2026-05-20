@@ -31,7 +31,7 @@ export const ErrorWrapper: React.FC<Props> = ({
 			height="100%"
 			data-test-id="error-wrapper--Flex-0"
 		>
-			<Flex style={{ maxWidth: "720px" }} data-test-id="error-wrapper--Flex-1">
+			<Flex style={{ maxWidth: "820px" }} data-test-id="error-wrapper--Flex-1">
 				<Card padding="20px" data-test-id="error-wrapper--Flex-2">
 					<Flex
 						flexDirection="column"

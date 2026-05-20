@@ -94,6 +94,14 @@ export function V2BackendCalculationSummary({
 		<Box sx={{ mt: 2, p: 2, border: 1, borderColor: "divider", borderRadius: 1 }}>
 			<Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
 				<Typography variant="subtitle2">Калькуляция (backend)</Typography>
+				{result.legacyStageEvaluation?.applied ? (
+					<Chip
+						size="small"
+						variant="outlined"
+						label="+ этапы v1"
+						title="После JsonLogic применён движок этапов v1 (summary перезаписан)"
+					/>
+				) : null}
 				{isLoading ? <CircularProgress size={12} /> : null}
 				<Box sx={{ flex: 1 }} />
 				{result.cycles.length > 0 ? (

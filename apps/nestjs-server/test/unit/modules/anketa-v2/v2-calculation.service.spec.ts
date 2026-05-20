@@ -101,6 +101,82 @@ describe("V2CalculationService", () => {
 		);
 		expect(trigger?.passes).toBe(false);
 	});
+
+	it("returns validationIssues when validation rule condition is false", () => {
+		const result = service.evaluate(
+			{
+				rules: [
+					{
+						id: "v1",
+						kind: "validation",
+						targetPath: "/detailInfo/parameters/algorithmType",
+						dependencies: [],
+						condition: {
+							"==": [
+								{ var: "detailInfo.parameters.algorithmType" },
+								"NLP",
+							],
+						},
+						payload: { message: "Должен быть NLP" },
+					},
+				],
+			},
+			{
+				detailInfo: { parameters: { algorithmType: "CV" } },
+			},
+		);
+
+		expect(result.validationIssues).toHaveLength(1);
+		expect(result.validationIssues[0]?.message).toBe("Должен быть NLP");
+		expect(result.validationIssues[0]?.path).toBe(
+			"/detailInfo/parameters/algorithmType",
+		);
+	});
+
+	it("skips validation on fields hidden by visibility", () => {
+		const result = service.evaluate(
+			{
+				rules: [
+					{
+						id: "hide",
+						kind: "visibility",
+						targetPath: "/detailInfo/parameters/algorithmType",
+						dependencies: [],
+						condition: false,
+					},
+					{
+						id: "v1",
+						kind: "validation",
+						targetPath: "/detailInfo/parameters/algorithmType",
+						dependencies: [],
+						condition: false,
+						payload: { message: "Ошибка" },
+					},
+				],
+			},
+			{
+				detailInfo: { parameters: { algorithmType: "CV" } },
+			},
+		);
+
+		expect(result.validationIssues).toHaveLength(0);
+	});
+
+	it("returns legacyStageEvaluation metadata after stage engine runs", () => {
+		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+			mlPlatform: { typicalTasks: [{ estimateHoursPerDay: 1, coefficient: 1 }] },
+		});
+
+		expect(result.legacyStageEvaluation?.applied).toBe(true);
+		expect(result.legacyStageEvaluation?.source).toBe("v1_stages");
+		expect(result.legacyStageEvaluation?.overwrittenPaths).toContain(
+			"/summary/deviationFromBaseline",
+		);
+		expect(
+			(result.formData.summary as { detailedCalculation?: unknown[] })
+				?.detailedCalculation?.length,
+		).toBeGreaterThan(0);
+	});
 });
 
 describe("v2-json-logic", () => {

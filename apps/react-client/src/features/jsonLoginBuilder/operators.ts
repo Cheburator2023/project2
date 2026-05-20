@@ -1,10 +1,16 @@
-export type FieldType = "any" | "input" | "accessor" | "higher-order";
+export type FieldType =
+  | "any"
+  | "input"
+  | "accessor"
+  | "higher-order"
+  | "reduce-body";
 
 export const FIELD_TYPES = {
   ANY: "any",
   INPUT: "input",
   ACCESSOR: "accessor",
   HIGHER_ORDER: "higher-order",
+  REDUCE_BODY: "reduce-body",
 } as const satisfies Record<string, FieldType>;
 
 export interface Operator {
@@ -14,6 +20,8 @@ export interface Operator {
   fields: FieldType[];
   notAvailableUnder: string[];
   fieldCount: { min: number; max: number };
+  /** Начальные аргументы при выборе оператора в UI. */
+  seed?: JsonLogicValue[];
 }
 
 export type JsonLogicValue =
@@ -294,5 +302,23 @@ export const OPERATORS: Operator[] = [
     fields: ["any", "higher-order"],
     notAvailableUnder: [],
     fieldCount: { min: 2, max: 2 },
+  },
+
+  // ── Reduce (fold) ─────────────────────────────────────────────────────
+  // reduce: [array, reducer, initial] — reducer видит accumulator и current.
+  {
+    type: "Array",
+    signature: "reduce",
+    label: "Свернуть (reduce)",
+    fields: ["any", "reduce-body", "input"],
+    notAvailableUnder: ["master"],
+    fieldCount: { min: 3, max: 3 },
+    seed: [
+      "",
+      {
+        "+": [{ var: "accumulator" }, { max: [0, { var: "current.total" }] }],
+      },
+      0,
+    ],
   },
 ];

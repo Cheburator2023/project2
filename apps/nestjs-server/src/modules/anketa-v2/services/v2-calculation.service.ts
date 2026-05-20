@@ -17,6 +17,7 @@ import {
 	toFiniteNumberOrNull,
 } from "./v2-json-logic";
 import { applyLegacySummaryToFormData } from "./v2-legacy-stage-evaluation";
+import { evaluateLogicValidationRules } from "./v2-logic-validation";
 
 type ComputedPayload = {
 	role?: V2CalculationRole;
@@ -226,13 +227,19 @@ export class V2CalculationService {
 			};
 		});
 
-		liveData = applyLegacySummaryToFormData(liveData);
+		const { formData: afterLegacy, legacyStageEvaluation } =
+			applyLegacySummaryToFormData(liveData);
+		liveData = afterLegacy;
+
+		const validationIssues = evaluateLogicValidationRules(rules, liveData);
 
 		return {
 			formData: liveData,
 			items,
 			taskTriggers: triggerResults,
 			cycles,
+			validationIssues,
+			legacyStageEvaluation,
 		};
 	}
 

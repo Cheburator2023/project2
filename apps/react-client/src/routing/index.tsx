@@ -13,6 +13,7 @@ import { AnketaClonePage } from "@react-client/features/anketaCRUD/pages/AnketaC
 import { AnketaPreviewPage } from "@react-client/features/anketaCRUD/pages/AnketaPreviewPage";
 import { HomePage } from "@react-client/features/home/pages/HomePage";
 import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
+import { V2TemplateLogicPage } from "@react-client/features/v2_constructor/pages/V2TemplateLogicPage";
 import { V2TemplatePreviewPage } from "@react-client/features/v2_constructor/pages/V2TemplatePreviewPage";
 import { V2TemplateSchemaEditorPage } from "@react-client/features/v2_constructor/pages/V2TemplateSchemaEditorPage";
 import { Navigate, Route, Routes } from "react-router";
@@ -155,6 +156,11 @@ export const Routing = () => (
 				data-test-id="index--Route-admin-v2-read"
 			/>
 			<Route
+				path="v2/templates/:templateId/logic"
+				element={<V2TemplateLogicPage data-test-id="index--V2TemplateLogicPage-0" />}
+				data-test-id="index--Route-admin-v2-logic"
+			/>
+			<Route
 				path="v2/templates/:templateId/edit"
 				element={<V2TemplateSchemaEditorPage data-test-id="index--V2TemplateSchemaEditorPage-0" />}
 				data-test-id="index--Route-admin-v2-edit"
@@ -170,6 +176,11 @@ export const Routing = () => (
 			path={routes.playgroundV2TemplateRead.rootPath}
 			element={<V2TemplatePreviewPage data-test-id="index--V2TemplatePreviewPlayground-0" />}
 			data-test-id="index--Route-playground-v2-read"
+		/>
+		<Route
+			path={routes.playgroundV2TemplateLogic.rootPath}
+			element={<V2TemplateLogicPage data-test-id="index--V2TemplateLogicPlayground-0" />}
+			data-test-id="index--Route-playground-v2-logic"
 		/>
 		<Route
 			path={routes.playgroundV2TemplateEditor.rootPath}

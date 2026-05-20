@@ -86,4 +86,14 @@ export const rule = {
   filter: (collection: JsonLogicValue, predicate: JsonLogicValue): JsonLogicValue => ({
     filter: [collection, predicate],
   }),
+
+  /**
+   * Fold array: `reduce(collection, reducer, initial)`.
+   * Reducer receives `{ accumulator, current }` per row.
+   */
+  reduce: (
+    collection: JsonLogicValue,
+    reducer: JsonLogicValue,
+    initial: JsonLogicValue,
+  ): JsonLogicValue => ({ reduce: [collection, reducer, initial] }),
 } as const;

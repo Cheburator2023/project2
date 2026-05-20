@@ -1,3 +1,4 @@
+import type { V2LegacyStageEvaluationDto } from "./v2-legacy-stage.constants";
 /**
  * Smart-Анкета V2 — типы шаблонов и справочников.
  *
@@ -266,6 +267,10 @@ export type V2CalculationResultDto = {
     items: V2CalculationItemDto[];
     taskTriggers: V2TaskTriggerItemDto[];
     cycles: string[];
+    /** Ошибки правил `validation` (JsonLogic) по текущим данным формы. */
+    validationIssues: V2ValidationIssueDto[];
+    /** Этапы E2E v1: перезапись полей summary после JsonLogic. */
+    legacyStageEvaluation: V2LegacyStageEvaluationDto | null;
 };
 export type V2CalculateRequestDto = {
     formData: Record<string, unknown>;

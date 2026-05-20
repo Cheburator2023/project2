@@ -31,6 +31,8 @@ import {
 	rulePrimaryLabel,
 	validateRule,
 } from "./helpers";
+import { QUICK_ADD_RULE_PRESETS } from "./rulePresets";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 
 type Props = {
 	rules: V2LogicRuleDto[];
@@ -97,7 +99,7 @@ export function LogicRulesSidebar({
 						<Typography variant="subtitle2">Список правил</Typography>
 						<Typography variant="caption" color="text.secondary">
 							{rules.length === 0
-								? "Создайте первое правило (N)."
+								? "Создайте первое правило кнопкой ниже или клавишей N."
 								: `Всего: ${rules.length}. Группы — по разделам схемы.`}
 						</Typography>
 					</Box>
@@ -106,7 +108,7 @@ export function LogicRulesSidebar({
 						<>
 							<Button
 								size="small"
-								variant="outlined"
+								variant="contained"
 								startIcon={<AddIcon />}
 								endIcon={<ArrowDropDownIcon />}
 								onClick={(e) => setAddMenuAnchor(e.currentTarget)}
@@ -119,52 +121,36 @@ export function LogicRulesSidebar({
 								open={Boolean(addMenuAnchor)}
 								onClose={() => setAddMenuAnchor(null)}
 							>
-								<MenuItem
-									onClick={() => {
-										onAddRuleWithKind("visibility");
-										setAddMenuAnchor(null);
-									}}
-								>
-									Видимость
-								</MenuItem>
-								<MenuItem
-									onClick={() => {
-										onAddRuleWithKind("required");
-										setAddMenuAnchor(null);
-									}}
-								>
-									Обязательность
-								</MenuItem>
-								<MenuItem
-									onClick={() => {
-										onAddRuleWithKind("computed");
-										setAddMenuAnchor(null);
-									}}
-								>
-									Расчёт
-								</MenuItem>
-								<MenuItem
-									onClick={() => {
-										onAddRuleWithKind("task_trigger");
-										setAddMenuAnchor(null);
-									}}
-								>
-									Триггер работы
-								</MenuItem>
+								{QUICK_ADD_RULE_PRESETS.map((preset) => (
+									<MenuItem
+										key={preset.kind}
+										onClick={() => {
+											onAddRuleWithKind(preset.kind);
+											setAddMenuAnchor(null);
+										}}
+									>
+										<Box>
+											<Typography variant="body2">{preset.label}</Typography>
+											<Typography variant="caption" color="text.secondary">
+												{preset.description}
+											</Typography>
+										</Box>
+									</MenuItem>
+								))}
 								<MenuItem
 									onClick={() => {
 										setAddMenuAnchor(null);
 										onAddRule();
 									}}
 								>
-									Пустое правило…
+									<Typography variant="body2">Пустое правило…</Typography>
 								</MenuItem>
 							</Menu>
 						</>
 					) : (
 						<Button
 							size="small"
-							variant="outlined"
+							variant="contained"
 							startIcon={<AddIcon />}
 							onClick={onAddRule}
 							fullWidth
@@ -172,6 +158,19 @@ export function LogicRulesSidebar({
 							Новое правило
 						</Button>
 					)}
+
+					<Typography variant="caption" color="text.secondary">
+						<strong>N</strong> — новое правило · <strong>⌘D</strong> — дублировать ·{" "}
+						<strong>Del</strong> — удалить
+						{rules.length > 0 ? (
+							<>
+								{" "}
+								· <strong>⌘K</strong> — поиск
+							</>
+						) : null}
+					</Typography>
+
+					<Spacer space={4} />
 
 					{rules.length > 0 ? (
 						<>

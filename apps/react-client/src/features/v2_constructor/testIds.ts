@@ -5,6 +5,7 @@ export const V2_TEMPLATE_EDIT_TEST_IDS = {
 	headerMeta: "headerMeta",
 	headerActions: "headerActions",
 	btnPreview: "btnPreview",
+	btnLogic: "btnLogic",
 	btnSave: "btnSave",
 	btnPublish: "btnPublish",
 	schemaEditor: "schemaEditor",
@@ -32,6 +33,17 @@ export const V2_TEMPLATE_EDIT_TEST_IDS = {
 	previewEmbed: "previewEmbed",
 	noDraft: "noDraft",
 	panelChromeHeader: "panelChromeHeader",
+} as const;
+
+/** data-test-id для отдельной страницы логики (/logic). */
+export const V2_TEMPLATE_LOGIC_TEST_IDS = {
+	page: "logicPage",
+	header: "logicHeader",
+	headerMeta: "logicHeaderMeta",
+	headerActions: "logicHeaderActions",
+	btnEditor: "logicBtnEditor",
+	btnSave: "logicBtnSave",
+	logicWorkspace: "logicWorkspace",
 } as const;
 
 /** data-test-id для режима просмотра формы (/read). Ключ = значение, без суффиксов. */

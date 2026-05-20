@@ -113,6 +113,12 @@ export const routes = {
 		shortName: "Просмотр",
 		disabled: false,
 	},
+	adminV2TemplateLogic: {
+		rootPath: "/admin/v2/templates/:templateId/logic",
+		name: "Редактор логики",
+		shortName: "Логика",
+		disabled: false,
+	},
 	playground: {
 		name: "Песочница",
 		rootPath: "/playground",
@@ -137,6 +143,13 @@ export const routes = {
 		rootPath: "/playground/v2/templates/:templateId/read",
 		name: "Предпросмотр формы (песочница)",
 		shortName: "Просмотр",
+		devOnly: true,
+		disabled: false,
+	},
+	playgroundV2TemplateLogic: {
+		rootPath: "/playground/v2/templates/:templateId/logic",
+		name: "Редактор логики (песочница)",
+		shortName: "Логика",
 		devOnly: true,
 		disabled: false,
 	},
@@ -175,6 +188,18 @@ export const pathForAdminV2TemplateRead = (templateId: string) =>
 
 export const pathForPlaygroundV2TemplateRead = (templateId: string) =>
 	routes.playgroundV2TemplateRead.rootPath.replace(
+		":templateId",
+		encodeURIComponent(templateId),
+	);
+
+export const pathForAdminV2TemplateLogic = (templateId: string) =>
+	routes.adminV2TemplateLogic.rootPath.replace(
+		":templateId",
+		encodeURIComponent(templateId),
+	);
+
+export const pathForPlaygroundV2TemplateLogic = (templateId: string) =>
+	routes.playgroundV2TemplateLogic.rootPath.replace(
 		":templateId",
 		encodeURIComponent(templateId),
 	);

@@ -64,6 +64,8 @@ type Props = {
 	isLoading?: boolean;
 	compact?: boolean;
 	onExportExcel?: () => void;
+	/** Подзаголовок источника данных (например, движок v1). */
+	engineCaption?: string;
 };
 
 export function V2FinalEvaluationPanel({
@@ -71,6 +73,7 @@ export function V2FinalEvaluationPanel({
 	isLoading,
 	compact,
 	onExportExcel,
+	engineCaption,
 }: Props) {
 	const rows = summary?.detailedCalculation ?? [];
 	const platformRows = summary?.platformStreams ?? [];
@@ -83,6 +86,7 @@ export function V2FinalEvaluationPanel({
 	return (
 		<Card
 			variant="outlined"
+			sx={{ overflow: "auto" }}
 		>
 			<Box
 				sx={{
@@ -95,9 +99,16 @@ export function V2FinalEvaluationPanel({
 					gap: 1,
 				}}
 			>
-				<Typography variant="subtitle1" fontWeight={700} sx={{ flex: 1 }}>
-					Итоговая оценка
-				</Typography>
+				<Box sx={{ flex: 1, minWidth: 0 }}>
+					<Typography variant="subtitle1" fontWeight={700}>
+						Итоговая оценка
+					</Typography>
+					{engineCaption ? (
+						<Typography variant="caption" color="text.secondary" display="block">
+							{engineCaption}
+						</Typography>
+					) : null}
+				</Box>
 				{isLoading ? <CircularProgress size={16} /> : null}
 				{onExportExcel ? (
 					<Button

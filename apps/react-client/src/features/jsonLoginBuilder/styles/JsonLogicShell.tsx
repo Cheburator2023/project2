@@ -204,6 +204,19 @@ export const JsonLogicShell = styled(Box)(({ theme }) => {
 			fontWeight: 400,
 		},
 
+		"& [data-rjl-reduce-body]": {
+			display: "inline-flex",
+			flexDirection: "column",
+			alignItems: "flex-start",
+			gap: theme.spacing(0.5),
+			verticalAlign: "top",
+		},
+
+		"& [data-rjl-reduce-body] code": {
+			fontSize: "0.85em",
+			fontFamily: "ui-monospace, monospace",
+		},
+
 		"& [data-rjl-accessor]": {
 			display: "inline-flex",
 			alignItems: "center",

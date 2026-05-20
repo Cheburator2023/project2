@@ -3,3 +3,4 @@ export * from "./calculation.types";
 export * from "./coefficient.types";
 export * from "./questionnaire.types";
 export * from "./v2-template.types";
+export * from "./v2-legacy-stage.constants";

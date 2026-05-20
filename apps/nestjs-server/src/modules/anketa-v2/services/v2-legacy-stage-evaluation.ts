@@ -1,9 +1,15 @@
 import {
+	V2_LEGACY_STAGE_SUMMARY_POINTERS,
+	type V2LegacyStageEvaluationDto,
+} from "@smart-anketa/api-contract";
+import {
 	V2_PLATFORM_STREAM_NAMES,
 	V2_STAGE_BASE_VALUES,
 	V2_STAGE_DISPLAY_NAMES,
 	type V2StageKey,
 } from "../constants/v2-stage-catalog";
+
+export { V2_LEGACY_STAGE_SUMMARY_POINTERS };
 
 export type V2DetailedCalculationRow = {
 	stageName: string;
@@ -653,9 +659,21 @@ export function evaluateLegacyV2Summary(
 	};
 }
 
+export function buildLegacyStageEvaluationMeta(
+	summary: V2LegacySummaryResult,
+): V2LegacyStageEvaluationDto {
+	return {
+		applied: true,
+		source: "v1_stages",
+		overwrittenPaths: [...V2_LEGACY_STAGE_SUMMARY_POINTERS],
+		stageRowCount: summary.detailedCalculation.length,
+		platformStreamCount: summary.platformStreams.length,
+	};
+}
+
 export function applyLegacySummaryToFormData(
 	data: Record<string, unknown>,
-): Record<string, unknown> {
+): { formData: Record<string, unknown>; legacyStageEvaluation: V2LegacyStageEvaluationDto } {
 	const summary = evaluateLegacyV2Summary(data);
 	const next = { ...data };
 	const prevSummary = readRecord(next.summary) ?? {};
@@ -667,5 +685,8 @@ export function applyLegacySummaryToFormData(
 		detailedCalculation: summary.detailedCalculation,
 		platformStreams: summary.platformStreams,
 	};
-	return next;
+	return {
+		formData: next,
+		legacyStageEvaluation: buildLegacyStageEvaluationMeta(summary),
+	};
 }

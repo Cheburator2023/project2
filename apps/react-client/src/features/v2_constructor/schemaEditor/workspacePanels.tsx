@@ -3,6 +3,7 @@ import Box from "@mui/material/Box";
 import type { IDockviewPanelProps } from "dockview-react";
 import { TAB_HEADINGS } from "./constants";
 import { SchemaDesignerLayout } from "./components/SchemaDesignerLayout";
+import { SchemaEditorDndProvider } from "./components/SchemaEditorDndProvider";
 import { SchemaFieldTreePanel } from "./components/SchemaFieldTree";
 import { useSchemaEditor } from "./SchemaEditorContext";
 import { SchemaCalculationPanel } from "./panels/SchemaCalculationPanel";
@@ -61,8 +62,10 @@ export const SCHEMA_TREE_PANEL_ID = "schema-tree";
 export function DesignerWorkspacePanel(_props: IDockviewPanelProps) {
 	return (
 		<PanelHost dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.panelDesigner}>
-			<CyclesWarning />
-			<SchemaDesignerLayout />
+			<SchemaEditorDndProvider>
+				<CyclesWarning />
+				<SchemaDesignerLayout />
+			</SchemaEditorDndProvider>
 		</PanelHost>
 	);
 }

@@ -17,10 +17,7 @@ import type {
 	CreateV2TemplateVersionRequestDto,
 	V2LogicRuleDto,
 } from "@smart-anketa/api-contract";
-import {
-	applyLogic,
-	type JsonLogicValue,
-} from "@react-client/features/jsonLoginBuilder";
+import { evaluateRuleLive } from "../schemaEditor/panels/logicPanel/helpers";
 import { nanoid } from "nanoid";
 import { Box, Button, Typography } from "@mui/material";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
@@ -30,6 +27,7 @@ import { SchemaEditorProvider } from "../schemaEditor/SchemaEditorContext";
 import type { SchemaEditorContextValue } from "../schemaEditor/SchemaEditorContext";
 import { SchemaEditorDockProvider } from "../schemaEditor/SchemaEditorDockContext";
 import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayout";
+import { SchemaLogicPanel } from "../schemaEditor/panels/SchemaLogicPanel";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
 import { useDebouncedV2Calculation } from "../hooks/useDebouncedV2Calculation";
@@ -105,9 +103,14 @@ export type V2EditorHeaderActions = {
 	publishPending: boolean;
 };
 
+export type V2SchemaEditorLayoutMode = "dock" | "logic-only";
+
 interface V2TemplateSchemaEditorProps {
 	templateId: string;
 	wording?: V2SchemaEditorWording;
+	layoutMode?: V2SchemaEditorLayoutMode;
+	initialRuleId?: string | null;
+	initialPointer?: string | null;
 	onHeaderMetaChange?: (meta: V2EditorHeaderMeta | null) => void;
 	onHeaderActionsChange?: (actions: V2EditorHeaderActions | null) => void;
 }
@@ -115,6 +118,9 @@ interface V2TemplateSchemaEditorProps {
 export const V2TemplateSchemaEditor = ({
 	templateId,
 	wording = "playgroundTemplate",
+	layoutMode = "dock",
+	initialRuleId = null,
+	initialPointer = null,
 	onHeaderMetaChange,
 	onHeaderActionsChange,
 }: V2TemplateSchemaEditorProps) => {
@@ -150,7 +156,9 @@ export const V2TemplateSchemaEditor = ({
 	const [logic, setLogic] = useState(coerceLogicGraph(undefined));
 	const [formData, setFormData] = useState<Record<string, unknown>>({});
 
-	const [selectedPointer, setSelectedPointer] = useState<string | null>(null);
+	const [selectedPointer, setSelectedPointer] = useState<string | null>(
+		initialPointer ? normalizeJsonPointer(initialPointer) : null,
+	);
 	const [schemaMonacoText, setSchemaMonacoText] = useState(
 		JSON.stringify(EMPTY_JSON_SCHEMA, null, 2),
 	);
@@ -158,9 +166,11 @@ export const V2TemplateSchemaEditor = ({
 
 	const [mainTab, setMainTab] = useState<
 		"designer" | "json" | "logic" | "preview"
-	>("designer");
+	>(layoutMode === "logic-only" ? "logic" : "designer");
 
-	const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
+	const [selectedRuleId, setSelectedRuleId] = useState<string | null>(
+		initialRuleId,
+	);
 	const [depsDraft, setDepsDraft] = useState("");
 	const [monacoError, setMonacoError] = useState<string | null>(null);
 	const [logicPathPick, setLogicPathPick] = useState<string>("");
@@ -181,6 +191,16 @@ export const V2TemplateSchemaEditor = ({
 			setLogicPathPick(selectedPointer);
 		}
 	}, [mainTab, selectedPointer]);
+
+	useEffect(() => {
+		if (initialRuleId) setSelectedRuleId(initialRuleId);
+	}, [initialRuleId]);
+
+	useEffect(() => {
+		if (initialPointer) {
+			setSelectedPointer(normalizeJsonPointer(initialPointer));
+		}
+	}, [initialPointer]);
 
 	useEffect(() => {
 		if (!isAdminEditor || !templateLoadError || !templateError) return;
@@ -276,6 +296,7 @@ export const V2TemplateSchemaEditor = ({
 							computedLiveData: mappedCalculation.liveFormData,
 							calculationItems: mappedCalculation.calculationItems,
 							taskTriggerItems: mappedCalculation.taskTriggerItems,
+							validationIssues: mappedCalculation.validationIssues,
 						}
 					: undefined,
 			),
@@ -296,6 +317,9 @@ export const V2TemplateSchemaEditor = ({
 	const calculationItems = logicPreviewPack.calculationItems;
 	const taskTriggerItems = logicPreviewPack.taskTriggerItems;
 	const liveFormData = logicPreviewPack.liveFormData;
+	const logicExtraErrors = logicPreviewPack.extraErrors;
+	const logicValidationIssueCount = logicPreviewPack.logicValidationIssues.length;
+	const legacyStageEvaluation = mappedCalculation?.legacyStageEvaluation ?? null;
 
 	const fieldPathHints = useMemo(() => {
 		const ui = uiSchema as Record<string, unknown>;
@@ -860,29 +884,54 @@ export const V2TemplateSchemaEditor = ({
 
 	const previewEvalNote = useMemo(() => {
 		if (!selectedRule) return null;
-		try {
-			const value = applyLogic(
-				selectedRule.condition as JsonLogicValue,
-				formData,
-			);
+		const liveEval = evaluateRuleLive(selectedRule, liveFormData);
+		if (liveEval.kind === "skipped") {
 			return (
 				<Typography variant="caption" color="text.secondary">
-					Значение условия на данных превью:{" "}
-					<code>{JSON.stringify(value)}</code>
-				</Typography>
-			);
-		} catch (err) {
-			return (
-				<Typography variant="caption" color="error" component="div">
-					Ошибка интерпретации:{" "}
-					{err instanceof Error ? err.message : String(err)}
+					{liveEval.reason}
 				</Typography>
 			);
 		}
-	}, [formData, selectedRule]);
+		if (liveEval.kind === "error") {
+			return (
+				<Typography variant="caption" color="error" component="div">
+					{liveEval.message}
+				</Typography>
+			);
+		}
+		if (selectedRule.kind === "validation") {
+			const ok = liveEval.kind === "boolean" && liveEval.value;
+			return (
+				<Typography
+					variant="caption"
+					color={ok ? "success.main" : "error"}
+					component="div"
+				>
+					{ok
+						? "Проверка пройдена (условие истинно)."
+						: "Ошибка валидации (условие ложно) — сообщение покажется на поле в превью."}
+				</Typography>
+			);
+		}
+		const raw =
+			liveEval.kind === "boolean" ||
+			liveEval.kind === "number" ||
+			liveEval.kind === "string"
+				? liveEval.value
+				: liveEval.kind === "other"
+					? liveEval.raw
+					: null;
+		return (
+			<Typography variant="caption" color="text.secondary">
+				Значение условия на данных превью:{" "}
+				<code>{JSON.stringify(raw)}</code>
+			</Typography>
+		);
+	}, [formData, liveFormData, selectedRule]);
 
 	const editorContext = useMemo<SchemaEditorContextValue>(
 		() => ({
+			templateId,
 			mainTab,
 			setMainTab,
 			jsonSchema,
@@ -910,6 +959,9 @@ export const V2TemplateSchemaEditor = ({
 			liveFormData,
 			calculationLoading,
 			calculationError,
+			logicExtraErrors,
+			logicValidationIssueCount,
+			legacyStageEvaluation,
 			schemaMonacoText,
 			setSchemaMonacoText,
 			uiMonacoText,
@@ -962,6 +1014,7 @@ export const V2TemplateSchemaEditor = ({
 			dictionaryBindingMissing,
 		}),
 		[
+			templateId,
 			mainTab,
 			jsonSchema,
 			uiSchema,
@@ -983,6 +1036,9 @@ export const V2TemplateSchemaEditor = ({
 			liveFormData,
 			calculationLoading,
 			calculationError,
+			logicExtraErrors,
+			logicValidationIssueCount,
+			legacyStageEvaluation,
 			schemaMonacoText,
 			uiMonacoText,
 			monacoError,
@@ -1073,6 +1129,14 @@ export const V2TemplateSchemaEditor = ({
 					</Button>
 				</Flex>
 			</Flex>
+		);
+	}
+
+	if (layoutMode === "logic-only") {
+		return (
+			<SchemaEditorProvider value={editorContext}>
+				<SchemaLogicPanel embedded />
+			</SchemaEditorProvider>
 		);
 	}
 

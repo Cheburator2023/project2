@@ -1,9 +1,9 @@
 import ELK from "elkjs/lib/elk.bundled.js";
 import { Position, type Edge, type Node } from "@xyflow/react";
 import {
-	FIELD_NODE_HEIGHT,
+	FIELD_NODE_MIN_HEIGHT,
 	FIELD_NODE_WIDTH,
-	RULE_NODE_HEIGHT,
+	RULE_NODE_MIN_HEIGHT,
 	RULE_NODE_WIDTH,
 } from "./relationsGraph";
 
@@ -22,12 +22,12 @@ function nodeDimensions(node: Node): { width: number; height: number } {
 	if (node.type === "field") {
 		return {
 			width: Number(node.width) || FIELD_NODE_WIDTH,
-			height: Number(node.height) || FIELD_NODE_HEIGHT,
+			height: Number(node.height) || FIELD_NODE_MIN_HEIGHT,
 		};
 	}
 	return {
 		width: Number(node.width) || RULE_NODE_WIDTH,
-		height: Number(node.height) || RULE_NODE_HEIGHT,
+		height: Number(node.height) || RULE_NODE_MIN_HEIGHT,
 	};
 }
 

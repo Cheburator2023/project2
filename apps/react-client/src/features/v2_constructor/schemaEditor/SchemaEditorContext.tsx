@@ -1,4 +1,4 @@
-import type { RJSFSchema, UiSchema } from "@rjsf/utils";
+import type { ErrorSchema, RJSFSchema, UiSchema } from "@rjsf/utils";
 import type {
 	V2DictionaryDto,
 	V2LogicRuleDto,
@@ -8,6 +8,7 @@ import type {
 	CalculationItem,
 	TaskTriggerItem,
 } from "../utils/calculationEngine";
+import type { V2LegacyStageEvaluationDto } from "@smart-anketa/api-contract";
 import type {
 	FieldPathHint,
 	SchemaEditorMainTab,
@@ -15,6 +16,7 @@ import type {
 } from "./types";
 
 export type SchemaEditorContextValue = {
+	templateId: string;
 	mainTab: SchemaEditorMainTab;
 	setMainTab: (tab: SchemaEditorMainTab) => void;
 
@@ -47,6 +49,9 @@ export type SchemaEditorContextValue = {
 	liveFormData: Record<string, unknown>;
 	calculationLoading: boolean;
 	calculationError: string | null;
+	logicExtraErrors: ErrorSchema;
+	logicValidationIssueCount: number;
+	legacyStageEvaluation: V2LegacyStageEvaluationDto | null;
 
 	schemaMonacoText: string;
 	setSchemaMonacoText: (v: string) => void;

@@ -15,6 +15,11 @@ import type {
 import { formatComputedNumber } from "../../utils/calculationEngine";
 import { V2FinalEvaluationPanel } from "../../organisms/V2FinalEvaluationPanel";
 import { readSummaryFromFormData } from "../../utils/readSummaryFromFormData";
+import {
+	isOverwrittenByLegacyStageEngine,
+	LEGACY_STAGE_ENGINE_DESCRIPTION,
+	LEGACY_STAGE_ENGINE_TITLE,
+} from "../../utils/v2LegacyStageEngine";
 import { useSchemaEditor } from "../SchemaEditorContext";
 import { PanelChrome } from "../components/PanelChrome";
 
@@ -58,9 +63,11 @@ const ROLE_SECTIONS: Array<{
 function CalculationRow({
 	item,
 	onSelect,
+	legacyOverwritten,
 }: {
 	item: CalculationItem;
 	onSelect: (ruleId: string) => void;
+	legacyOverwritten: boolean;
 }) {
 	const hintText = [
 		item.formulaHint,
@@ -121,6 +128,16 @@ function CalculationRow({
 				>
 					{item.targetVarPath || item.targetPointer}
 				</Typography>
+				{legacyOverwritten ? (
+					<Chip
+						size="small"
+						variant="outlined"
+						color="warning"
+						label="→ этапы v1"
+						sx={{ height: 18, mt: 0.25 }}
+						title="Значение в formData перезаписывается движком этапов v1 после JsonLogic"
+					/>
+				) : null}
 			</Box>
 
 			<Typography
@@ -200,6 +217,7 @@ export function SchemaCalculationPanel({ embedded = false }: { embedded?: boolea
 		calculationLoading,
 		calculationError,
 		liveFormData,
+		legacyStageEvaluation,
 		openLogicTabWithRule,
 	} = useSchemaEditor();
 
@@ -221,17 +239,40 @@ export function SchemaCalculationPanel({ embedded = false }: { embedded?: boolea
 	const hasAnything =
 		sectionsWithItems.length > 0 || taskTriggerItems.length > 0;
 
+	const legacyApplied = legacyStageEvaluation?.applied ?? false;
+
 	return (
 		<PanelChrome
 			embedded={embedded}
 			title="Калькуляция"
-			description="Оценка по правилам computed / row_computed / task_trigger и 11 этапам E2E (v1)."
+			description="Два слоя: правила JsonLogic шаблона и движок этапов v1 (TypeScript на бекенде)."
 		>
+			<Alert severity="info" sx={{ mb: 1.5 }}>
+				<strong>JsonLogic</strong> — visibility, validation, computed, row_computed,
+				task_trigger (редактор «Логика»).{" "}
+				<strong>{LEGACY_STAGE_ENGINE_TITLE}</strong> — {LEGACY_STAGE_ENGINE_DESCRIPTION}
+			</Alert>
+
+			<Typography variant="caption" fontWeight={700} display="block" sx={{ mb: 0.5 }}>
+				{LEGACY_STAGE_ENGINE_TITLE}
+			</Typography>
 			<V2FinalEvaluationPanel
 				summary={summary}
 				isLoading={calculationLoading}
 				compact
+				engineCaption={
+					legacyApplied
+						? `После /calculate · ${legacyStageEvaluation?.stageRowCount ?? 0} этапов · ${legacyStageEvaluation?.platformStreamCount ?? 0} стримов`
+						: "Данные появятся после расчёта на бекенде"
+				}
 			/>
+
+			<Divider sx={{ my: 2 }} />
+
+			<Typography variant="caption" fontWeight={700} display="block" sx={{ mb: 1 }}>
+				Правила JsonLogic (computed / row_computed / триггеры)
+			</Typography>
+
 			{calculationError ? (
 				<Alert severity="error" sx={{ mb: 1 }}>
 					{calculationError}
@@ -266,6 +307,10 @@ export function SchemaCalculationPanel({ embedded = false }: { embedded?: boolea
 									key={item.ruleId}
 									item={item}
 									onSelect={openLogicTabWithRule}
+									legacyOverwritten={
+										legacyApplied &&
+										isOverwrittenByLegacyStageEngine(item.targetPointer)
+									}
 								/>
 							))}
 						</Stack>

@@ -12,7 +12,6 @@ import {
 import "dockview/dist/styles/dockview.css";
 import { useCallback, useEffect, useRef } from "react";
 import { TAB_HEADINGS } from "./constants";
-import { SchemaEditorDndProvider } from "./components/SchemaEditorDndProvider";
 import { SchemaEditorDockHeaderRightActions } from "./SchemaEditorDockHeaderActions";
 import { useSchemaEditorDock } from "./SchemaEditorDockContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
@@ -109,41 +108,39 @@ export function V2SchemaEditorDockLayout() {
 				position: "relative",
 			}}
 		>
-			<SchemaEditorDndProvider>
-				<Box
-					sx={{
-						position: "absolute",
-						inset: 0,
-						"& .dv-root": { height: "100%", width: "100%" },
-						"& .dv-grid-view": { height: "100%" },
-						"& .dv-content-container": {
-							display: "flex",
-							flexDirection: "column",
-							overflow: "hidden",
-						},
-						"& .dv-content-container > *": {
-							flex: 1,
-							minHeight: 0,
-							height: "100%",
-							width: "100%",
-						},
-						"& .dv-right-actions-container": {
-							display: "flex",
-							alignItems: "center",
-						},
-					}}
-				>
-					<DockviewReact
-						theme={dockTheme}
-						components={workspacePanelComponents}
-						defaultTabComponent={DockTabNoClose}
-						rightHeaderActionsComponent={SchemaEditorDockHeaderRightActions}
-						floatingGroupBounds="boundedWithinViewport"
-						popoutUrl="/popout.html"
-						onReady={onReady}
-					/>
-				</Box>
-			</SchemaEditorDndProvider>
+			<Box
+				sx={{
+					position: "absolute",
+					inset: 0,
+					"& .dv-root": { height: "100%", width: "100%" },
+					"& .dv-grid-view": { height: "100%" },
+					"& .dv-content-container": {
+						display: "flex",
+						flexDirection: "column",
+						overflow: "hidden",
+					},
+					"& .dv-content-container > *": {
+						flex: 1,
+						minHeight: 0,
+						height: "100%",
+						width: "100%",
+					},
+					"& .dv-right-actions-container": {
+						display: "flex",
+						alignItems: "center",
+					},
+				}}
+			>
+				<DockviewReact
+					theme={dockTheme}
+					components={workspacePanelComponents}
+					defaultTabComponent={DockTabNoClose}
+					rightHeaderActionsComponent={SchemaEditorDockHeaderRightActions}
+					floatingGroupBounds="boundedWithinViewport"
+					popoutUrl="/popout.html"
+					onReady={onReady}
+				/>
+			</Box>
 		</Box>
 	);
 }

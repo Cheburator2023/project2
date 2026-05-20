@@ -1,16 +1,9 @@
-import AddIcon from "@mui/icons-material/Add";
-import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Stack from "@mui/material/Stack";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
-import Typography from "@mui/material/Typography";
 import type { V2LogicRuleDto } from "@smart-anketa/api-contract";
 import { rule as jsonRule } from "@react-client/features/jsonLoginBuilder";
 import { nanoid } from "nanoid";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { normalizeJsonPointer } from "../../utils/schemaPaths";
 import { PanelChrome } from "../components/PanelChrome";
 import { useSchemaEditor } from "../SchemaEditorContext";
@@ -86,33 +79,6 @@ function buildRuleForKind(
 	}
 }
 
-const QUICK_ADD_PRESETS: Array<{
-	kind: V2LogicRuleDto["kind"];
-	label: string;
-	description: string;
-}> = [
-	{
-		kind: "visibility",
-		label: "Видимость",
-		description: "Показать или скрыть поле по условию",
-	},
-	{
-		kind: "required",
-		label: "Обязательность",
-		description: "Сделать поле обязательным по условию",
-	},
-	{
-		kind: "computed",
-		label: "Расчёт",
-		description: "Записать вычисленное значение в поле",
-	},
-	{
-		kind: "task_trigger",
-		label: "Триггер работы",
-		description: "Отметить типовую задачу в калькуляции",
-	},
-];
-
 export function SchemaLogicPanel({ embedded = false }: { embedded?: boolean }) {
 	const {
 		logic,
@@ -134,8 +100,6 @@ export function SchemaLogicPanel({ embedded = false }: { embedded?: boolean }) {
 		previewEvalNote,
 	} = useSchemaEditor();
 
-	const [addMenuAnchor, setAddMenuAnchor] = useState<null | HTMLElement>(null);
-
 	const resolveTargetPath = useCallback(() => {
 		return normalizeJsonPointer(
 			logicPathPick?.trim() || selectedPointer?.trim() || "/",
@@ -147,7 +111,6 @@ export function SchemaLogicPanel({ embedded = false }: { embedded?: boolean }) {
 			const nextRule = buildRuleForKind(kind, resolveTargetPath());
 			setLogic((prev) => ({ rules: [...prev.rules, nextRule] }));
 			setSelectedRuleId(nextRule.id);
-			setAddMenuAnchor(null);
 		},
 		[resolveTargetPath, setLogic, setSelectedRuleId],
 	);
@@ -222,78 +185,13 @@ export function SchemaLogicPanel({ embedded = false }: { embedded?: boolean }) {
 		return () => window.removeEventListener("keydown", onKeyDown);
 	}, [addRuleWithKind, duplicateRule, removeSelectedRule, selectedRule]);
 
-	const addRuleMenu = (
-		<>
-			<Button
-				size="small"
-				variant="contained"
-				startIcon={<AddIcon />}
-				endIcon={<ArrowDropDownIcon />}
-				onClick={(e) => setAddMenuAnchor(e.currentTarget)}
-			>
-				Новое правило
-			</Button>
-			<Menu
-				anchorEl={addMenuAnchor}
-				open={Boolean(addMenuAnchor)}
-				onClose={() => setAddMenuAnchor(null)}
-			>
-				{QUICK_ADD_PRESETS.map((preset) => (
-					<MenuItem
-						key={preset.kind}
-						onClick={() => addRuleWithKind(preset.kind)}
-					>
-						<Box>
-							<Typography variant="body2">{preset.label}</Typography>
-							<Typography variant="caption" color="text.secondary">
-								{preset.description}
-							</Typography>
-						</Box>
-					</MenuItem>
-				))}
-				<MenuItem
-					onClick={() => {
-						setAddMenuAnchor(null);
-						addRule();
-					}}
-				>
-					<Typography variant="body2">Пустое правило…</Typography>
-				</MenuItem>
-			</Menu>
-		</>
-	);
-
 	return (
 		<PanelChrome
 			embedded={embedded}
 			dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.logicEditor}
 			title="Логика (JSON Logic)"
-			description="Правила видимости, обязательности, расчёта и триггеров. Условия проверяются на данных вкладки «Превью»."
-			actions={embedded ? undefined : addRuleMenu}
+			description="JsonLogic: видимость, обязательность, validation, computed, row_computed, триггеры. Итоги summary (база, отклонение %, 11 этапов) считает отдельный движок v1 на бекенде — см. «Калькуляция»."
 		>
-			{embedded ? (
-				<Stack
-					direction="row"
-					spacing={1}
-					alignItems="center"
-					flexWrap="wrap"
-					useFlexGap
-					sx={{ mb: 1.5, flexShrink: 0 }}
-				>
-					{addRuleMenu}
-					<Typography variant="caption" color="text.secondary">
-						или клавиша <strong>N</strong>
-					</Typography>
-				</Stack>
-			) : null}
-
-			<Alert severity="info" sx={{ mb: 2 }}>
-				В <code>var</code> используйте точечные пути (<code>block.field</code>),
-				не JSON Pointer. Горячие клавиши: <strong>N</strong> — новое правило,{" "}
-				<strong>⌘D</strong> — дублировать, <strong>Del</strong> — удалить,{" "}
-				<strong>⌘K</strong> — поиск в списке.
-			</Alert>
-
 			{cycles.length > 0 ? (
 				<Alert severity="warning" sx={{ mb: 2 }}>
 					Циклы зависимостей: {cycles.slice(0, 4).join(" · ")}
@@ -316,7 +214,7 @@ export function SchemaLogicPanel({ embedded = false }: { embedded?: boolean }) {
 					fieldPathHints={fieldPathHints}
 					selectedRuleId={selectedRuleId ?? undefined}
 					onSelect={setSelectedRuleId}
-					onAddRule={() => addRuleWithKind("visibility")}
+					onAddRule={addRule}
 					onAddRuleWithKind={addRuleWithKind}
 					onDuplicate={duplicateRule}
 					cycles={cycles}
@@ -342,7 +240,7 @@ export function SchemaLogicPanel({ embedded = false }: { embedded?: boolean }) {
 					) : (
 						<Alert severity="info">
 							{logic.rules.length === 0
-								? "Правил пока нет — нажмите «Новое правило» слева или выберите тип в меню выше."
+								? "Правил пока нет — нажмите «Новое правило» в списке слева."
 								: "Выберите правило в списке слева или создайте новое."}
 						</Alert>
 					)}

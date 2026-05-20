@@ -101,6 +101,7 @@ export function V2TemplateFormPreview({
 							computedLiveData: mappedCalculation.liveFormData,
 							calculationItems: mappedCalculation.calculationItems,
 							taskTriggerItems: mappedCalculation.taskTriggerItems,
+							validationIssues: mappedCalculation.validationIssues,
 						}
 					: undefined,
 			),
@@ -121,6 +122,8 @@ export function V2TemplateFormPreview({
 		() => hideSummaryInPreviewUi(logicPreviewPack.previewUiSchema),
 		[logicPreviewPack.previewUiSchema],
 	);
+	const logicExtraErrors = logicPreviewPack.extraErrors;
+	const logicValidationIssueCount = logicPreviewPack.logicValidationIssues.length;
 	const displayFormData = mappedCalculation?.liveFormData ?? formData;
 	const summary = readSummaryFromFormData(displayFormData);
 
@@ -161,6 +164,12 @@ export function V2TemplateFormPreview({
 					Ошибка калькуляции: {calculationError}
 				</Alert>
 			) : null}
+			{logicValidationIssueCount > 0 ? (
+				<Alert severity="warning" sx={{ mb: 2 }}>
+					Логическая валидация: {logicValidationIssueCount}{" "}
+					{logicValidationIssueCount === 1 ? "замечание" : "замечаний"}
+				</Alert>
+			) : null}
 
 			<Box data-test-id={V2_TEMPLATE_READ_TEST_IDS.form}>
 				<V2FormWithEvaluationLayout
@@ -171,6 +180,7 @@ export function V2TemplateFormPreview({
 						schema={previewSchema}
 						uiSchema={previewUiSchema}
 						formData={displayFormData}
+						extraErrors={logicExtraErrors}
 						templates={v2PreviewFormTemplates}
 						validator={validatorRu}
 						liveValidate

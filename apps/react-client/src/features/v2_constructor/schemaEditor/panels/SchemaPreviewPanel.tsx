@@ -20,6 +20,8 @@ export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean })
 		dictionaryEnumsLoading,
 		calculationLoading,
 		calculationError,
+		logicExtraErrors,
+		logicValidationIssueCount,
 	} = useSchemaEditor();
 
 	const summary = readSummaryFromFormData(liveFormData);
@@ -49,6 +51,13 @@ export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean })
 					Обновление расчёта…
 				</Alert>
 			) : null}
+			{logicValidationIssueCount > 0 ? (
+				<Alert severity="warning" sx={{ mb: 1 }}>
+					Логическая валидация: {logicValidationIssueCount}{" "}
+					{logicValidationIssueCount === 1 ? "замечание" : "замечаний"} — см.
+					поля формы.
+				</Alert>
+			) : null}
 
 			<V2FormWithEvaluationLayout
 				summary={summary}
@@ -58,6 +67,7 @@ export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean })
 					schema={previewSchema}
 					uiSchema={previewUiWithoutSummary}
 					formData={liveFormData}
+					extraErrors={logicExtraErrors}
 					validator={validatorRu}
 					liveValidate
 					noHtml5Validate
@@ -69,7 +79,8 @@ export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean })
 			</V2FormWithEvaluationLayout>
 
 			<Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-				Учитываются правила видимости, обязательности и подсказок по текущим данным формы.
+				Учитываются правила видимости, обязательности, подсказок и валидации (JsonLogic)
+				по текущим данным формы.
 			</Typography>
 		</PanelChrome>
 	);
