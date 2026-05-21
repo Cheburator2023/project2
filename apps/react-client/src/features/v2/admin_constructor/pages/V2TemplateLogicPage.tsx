@@ -11,7 +11,7 @@ import {
 	pathForAdminV2Template,
 	pathForPlaygroundV2Template,
 	routes,
-} from "@react-client/routing/version/v1/routing/routes";
+} from "@react-client/routing/version/v1/routes";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";

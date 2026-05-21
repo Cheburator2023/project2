@@ -20,7 +20,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { toast } from "@react-client/common/toasts";
 import { EMPTY_JSON_SCHEMA } from "@react-client/features/v2/admin_constructor/utils/coerceV2TemplateSnapshot";
-import { pathForAdminV2Template } from "@react-client/routing/version/v1/routing/routes";
+import { pathForAdminV2Template } from "@react-client/routing/version/v1/routes";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 

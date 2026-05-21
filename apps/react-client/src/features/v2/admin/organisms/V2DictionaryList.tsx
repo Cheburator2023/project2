@@ -16,7 +16,7 @@ import {
 	ModuleRegistry,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
-import { pathForAdminV2Dictionary } from "@react-client/routing/version/v1/routing/routes";
+import { pathForAdminV2Dictionary } from "@react-client/routing/version/v1/routes";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import {

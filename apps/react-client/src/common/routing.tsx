@@ -3,9 +3,9 @@ import {
 	adminV2LegacyRedirects,
 	playgroundRoutes,
 } from "@react-client/routing/adminV2Routes";
-import { v1Routes } from "@react-client/routing/version/v1/routing";
-import { v2Routes } from "@react-client/routing/version/v2/routing";
-import { Page404 } from "@react-client/routing/version/v1/routing/Page404";
+import { v1Routes } from "@react-client/routing/version/v1";
+import { v2Routes } from "@react-client/routing/version/v2";
+import { Page404 } from "@react-client/routing/version/v1/Page404";
 
 export default function AppRoutes({ onLogout }: { onLogout?: () => void }) {
 	return useRoutes([

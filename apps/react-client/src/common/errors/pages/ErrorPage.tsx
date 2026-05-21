@@ -7,7 +7,7 @@ import { Header } from "@react-client/common/navigation/organisms/Header";
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { ErrorWrapper } from "../organisms/ErrorWrapper";
-import { routes } from "@react-client/routing/version/v1/routing/routes";
+import { routes } from "@react-client/routing/version/v1/routes";
 
 export const ErrorPage = (props: {
 	error: string;

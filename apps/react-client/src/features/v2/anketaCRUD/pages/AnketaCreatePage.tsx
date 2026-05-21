@@ -9,7 +9,7 @@ import { Header } from "@react-client/common/navigation/organisms/Header";
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import SaveIcon from "@mui/icons-material/Save";
-import { routes } from "@react-client/routing/version/v2/routing/routes";
+import { routes } from "@react-client/routing/version/v2/routes";
 
 export const AnketaCreatePageV2 = () => {
 	const navigate = useNavigate();

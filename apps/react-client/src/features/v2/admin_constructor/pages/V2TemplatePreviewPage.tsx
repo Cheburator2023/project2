@@ -7,7 +7,7 @@ import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
 import { useParams, useSearchParams } from "react-router";
-import { V2_TEMPLATE_VERSION_QUERY } from "@react-client/routing/version/v1/routing/routes";
+import { V2_TEMPLATE_VERSION_QUERY } from "@react-client/routing/version/v1/routes";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { V2_TEMPLATE_READ_TEST_IDS } from "@react-client/features/v2/admin_constructor/testIds";
 

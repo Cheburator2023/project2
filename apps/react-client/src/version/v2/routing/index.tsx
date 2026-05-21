@@ -3,8 +3,8 @@ import { CompareReportsPage } from "@react-client/features/v1/anketaCompare/page
 import { AnketaCreatePage } from "@react-client/features/v1/anketaCRUD/pages/AnketaCreatePage";
 import { AnketaNewVersionPage } from "@react-client/features/v1/anketaCRUD/pages/AnketaNewVersionPage";
 import { AnketaClonePage } from "@react-client/features/v1/anketaCRUD/pages/AnketaClonePage";
-import { routes } from "@react-client/routing/version/v2/routing/routes";
-import { Page404 } from "@react-client/routing/version/v2/routing/Page404";
+import { routes } from "@react-client/routing/version/v2/routes";
+import { Page404 } from "@react-client/routing/version/v2/Page404";
 import { AnketaPreviewPageV2 } from "@react-client/features/v2/anketaCRUD/pages/AnketaPreviewPageV2";
 import { adminV2ChildRoutes } from "@react-client/routing/adminV2Routes";
 import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard";

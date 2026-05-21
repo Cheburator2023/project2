@@ -10,8 +10,8 @@ import {
 	navbarGroups,
 	routes,
 	type AppRouteConfig,
-} from "@react-client/routing/version/v1/routing/routes";
-import { routes as routesV2User } from "@react-client/routing/version/v2/routing/routes";
+} from "@react-client/routing/version/v1/routes";
+import { routes as routesV2User } from "@react-client/routing/version/v2/routes";
 import { useLocation, useNavigate } from "react-router";
 
 type NavbarGroupKey = keyof typeof navbarGroups;

@@ -9,8 +9,8 @@ import { AnketaNewVersionPage } from "@react-client/features/v1/anketaCRUD/pages
 import { AnketaPreviewPage } from "@react-client/features/v1/anketaCRUD/pages/AnketaPreviewPage";
 import { AnketaCreatePage } from "@react-client/features/v1/anketaCRUD/pages/AnketaCreatePage";
 import { AnketaClonePage } from "@react-client/features/v1/anketaCRUD/pages/AnketaClonePage";
-import { routes } from "@react-client/routing/version/v1/routing/routes";
-import { Page404 } from "@react-client/routing/version/v1/routing/Page404";
+import { routes } from "@react-client/routing/version/v1/routes";
+import { Page404 } from "@react-client/routing/version/v1/Page404";
 
 import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
 

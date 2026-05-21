@@ -1,7 +1,7 @@
 import {
 	pathForAdminV2Template,
 	routes,
-} from "@react-client/routing/version/v1/routing/routes";
+} from "@react-client/routing/version/v1/routes";
 
 export type GuideSection = {
 	id: string;

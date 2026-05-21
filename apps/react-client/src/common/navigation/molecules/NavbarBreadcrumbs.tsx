@@ -2,7 +2,7 @@ import NavigateNextRoundedIcon from "@mui/icons-material/NavigateNextRounded";
 import Breadcrumbs, { breadcrumbsClasses } from "@mui/material/Breadcrumbs";
 import { styled } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
-import { routes } from "@react-client/routing/version/v1/routing/routes";
+import { routes } from "@react-client/routing/version/v1/routes";
 import { useMemo } from "react";
 import { useLocation } from "react-router";
 

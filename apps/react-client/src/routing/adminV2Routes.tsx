@@ -11,7 +11,7 @@ import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage
 import { V2TemplateLogicPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplateLogicPage";
 import { V2TemplatePreviewPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplatePreviewPage";
 import { V2TemplateSchemaEditorPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplateSchemaEditorPage";
-import { routes } from "@react-client/routing/version/v1/routing/routes";
+import { routes } from "@react-client/routing/version/v1/routes";
 import type { RouteObject } from "react-router";
 
 /** Дочерние маршруты админки под `/v2/admin` (внутри MainLayout). */

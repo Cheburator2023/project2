@@ -54,7 +54,7 @@ import {
 	agGridCustomMUIThemeDark,
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
-import { routes as routesV1 } from "@react-client/routing/version/v1/routing/routes";
+import { routes as routesV1 } from "@react-client/routing/version/v1/routes";
 
 export type RegistryRoutes = {
 	calculationCreate: { rootPath: string };

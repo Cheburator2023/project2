@@ -16,7 +16,7 @@ import {
 	type GuideSection,
 } from "@react-client/features/v2/admin/pages/calculatorGuideContent";
 import { Header } from "@react-client/common/navigation/organisms/Header";
-import { routes } from "@react-client/routing/version/v1/routing/routes";
+import { routes } from "@react-client/routing/version/v1/routes";
 import {
 	useCallback,
 	useEffect,

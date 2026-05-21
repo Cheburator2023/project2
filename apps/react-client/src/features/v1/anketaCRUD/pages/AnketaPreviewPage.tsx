@@ -33,7 +33,7 @@ import { isEmpty } from "lodash-es";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { CalculationStatusValues } from "@smart-anketa/api-contract";
-import { routes } from "@react-client/routing/version/v1/routing/routes";
+import { routes } from "@react-client/routing/version/v1/routes";
 
 const APP_NAME = process.env.APP_NAME;
 

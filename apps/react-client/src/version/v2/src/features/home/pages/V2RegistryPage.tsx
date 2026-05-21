@@ -5,7 +5,7 @@ import {
 	HomeTemplete,
 } from "@react-client/features/v2/home/pages/HomePage";
 import type { CalculationResponseDto } from "@smart-anketa/api-contract";
-import { routes as routesV2 } from "@react-client/routing/version/v2/routing/routes";
+import { routes as routesV2 } from "@react-client/routing/version/v2/routes";
 
 /** Реестр анкет v2 — тот же ag-grid, что в v1, с маршрутами /v2/... */
 export function V2RegistryPage() {

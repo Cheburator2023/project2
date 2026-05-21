@@ -5,7 +5,7 @@ import Typography from "@mui/material/Typography";
 import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
 import { useMemo } from "react";
 import { Link as RouterLink } from "react-router";
-import { pathForAdminV2Dictionary } from "@react-client/routing/version/v1/routing/routes";
+import { pathForAdminV2Dictionary } from "@react-client/routing/version/v1/routes";
 import { resolveSchemaNode } from "../../utils/schemaMutators";
 import { pointerSegments } from "../../utils/schemaPaths";
 import { ruSchemaTypeLabel } from "../constants";

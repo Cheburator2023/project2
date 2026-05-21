@@ -1,8 +1,8 @@
 import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
 import { AnketaCreatePageV2 } from "@react-client/features/v2/anketaCRUD/pages/AnketaCreatePage";
-import { routes } from "@react-client/routing/version/v2/routing/routes";
-import { Page404 } from "@react-client/routing/version/v2/routing/Page404";
+import { routes } from "@react-client/routing/version/v2/routes";
+import { Page404 } from "@react-client/routing/version/v2/Page404";
 import { AnketaPreviewPageV2 } from "@react-client/features/v2/anketaCRUD/pages/AnketaPreviewPageV2";
 import { V2RegistryPage } from "@react-client/version/v2/src/features/home/pages/V2RegistryPage";
 import { adminV2ChildRoutes } from "@react-client/routing/adminV2Routes";

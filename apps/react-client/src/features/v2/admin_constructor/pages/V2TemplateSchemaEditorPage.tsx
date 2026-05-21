@@ -21,7 +21,7 @@ import {
 	pathForAdminV2TemplateRead,
 	pathForPlaygroundV2TemplateRead,
 	routes,
-} from "@react-client/routing/version/v1/routing/routes";
+} from "@react-client/routing/version/v1/routes";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 
 export const V2TemplateSchemaEditorPage = () => {

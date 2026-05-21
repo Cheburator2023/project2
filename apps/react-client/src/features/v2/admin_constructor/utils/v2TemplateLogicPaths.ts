@@ -2,7 +2,7 @@ import {
 	V2_TEMPLATE_VERSION_QUERY,
 	pathForAdminV2TemplateLogic,
 	pathForPlaygroundV2TemplateLogic,
-} from "@react-client/routing/version/v1/routing/routes";
+} from "@react-client/routing/version/v1/routes";
 
 export function resolveV2TemplateLogicPath(
 	templateId: string,

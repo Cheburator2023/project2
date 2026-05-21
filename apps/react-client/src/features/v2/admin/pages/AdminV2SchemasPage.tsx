@@ -19,7 +19,7 @@ import { V2AdminButton } from "@react-client/features/v2/admin/atoms/V2AdminButt
 import { V2SchemaCreateDialog } from "@react-client/features/v2/admin/organisms/V2SchemaCreateDialog";
 import { V2TemplateList } from "@react-client/features/v2/admin/organisms/V2TemplateList";
 import { Header } from "@react-client/common/navigation/organisms/Header";
-import { routes } from "@react-client/routing/version/v1/routing/routes";
+import { routes } from "@react-client/routing/version/v1/routes";
 import { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router";
 

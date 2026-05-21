@@ -7,7 +7,7 @@ import TextField from "@mui/material/TextField";
 import { useCreateV2Dictionary } from "@react-client/common/api/queries/v2-templates";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { pathForAdminV2Dictionary } from "@react-client/routing/version/v1/routing/routes";
+import { pathForAdminV2Dictionary } from "@react-client/routing/version/v1/routes";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 

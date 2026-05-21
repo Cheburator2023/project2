@@ -5,7 +5,7 @@ import { Spacer } from "@react-client/common/primitives/Spacer";
 import { V2PlaygroundButton } from "../atoms/V2PlaygroundButton";
 import { useV2Templates } from "@react-client/common/api/queries/v2-templates";
 import { useCreateV2Template } from "@react-client/common/api/queries/v2-templates";
-import { pathForPlaygroundV2Template } from "@react-client/routing/version/v1/routing/routes";
+import { pathForPlaygroundV2Template } from "@react-client/routing/version/v1/routes";
 import { useNavigate } from "react-router";
 
 export const V2TemplateList = () => {

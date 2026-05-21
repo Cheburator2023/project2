@@ -15,7 +15,7 @@ import {
 	pathForAdminV2Template,
 	pathForPlaygroundV2Template,
 	routes,
-} from "@react-client/routing/version/v1/routing/routes";
+} from "@react-client/routing/version/v1/routes";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import type {
