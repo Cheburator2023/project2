@@ -1,5 +1,5 @@
-import type { JsonLogicValue } from "../operators.js";
-import Any from "./any.js";
+import type { JsonLogicValue } from "../operators";
+import {Any} from "./any";
 
 interface Props {
   parent: string;

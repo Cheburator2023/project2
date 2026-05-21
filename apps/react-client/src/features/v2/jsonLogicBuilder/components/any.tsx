@@ -250,4 +250,3 @@ export function Any({ parent, value, data = {}, onChange }: Props) {
 	);
 }
 
-export default Any;
