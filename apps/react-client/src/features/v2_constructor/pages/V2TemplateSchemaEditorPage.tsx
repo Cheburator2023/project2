@@ -7,33 +7,43 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "@react-client/features/v2_constructor/testIds";
 import { openV2TemplateLogicPage } from "@react-client/features/v2_constructor/utils/v2TemplateLogicPaths";
-import {
-	pathForAdminV2TemplateRead,
-	pathForPlaygroundV2TemplateRead,
-	routes,
-} from "@react-client/routing/routes";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
+import { v2TemplateVersionChipLabel } from "@react-client/features/v2_constructor/utils/v2TemplateVersionLabels";
 import { useCallback, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
+import {
+	V2_TEMPLATE_VERSION_QUERY,
+	pathForAdminV2TemplateRead,
+	pathForPlaygroundV2TemplateRead,
+	routes,
+} from "@react-client/routing/routes";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-
-function statusChipColor(
-	status: string,
-): "default" | "success" | "warning" {
-	if (status === "published") return "success";
-	if (status === "draft") return "warning";
-	return "default";
-}
 
 export const V2TemplateSchemaEditorPage = () => {
 	const { templateId } = useParams<{ templateId: string }>();
 	const navigate = useNavigate();
 	const { pathname } = useLocation();
+	const [searchParams, setSearchParams] = useSearchParams();
+	const versionId = searchParams.get(V2_TEMPLATE_VERSION_QUERY);
+
+	const setVersionId = useCallback(
+		(id: string) => {
+			setSearchParams(
+				(prev) => {
+					const next = new URLSearchParams(prev);
+					next.set(V2_TEMPLATE_VERSION_QUERY, id);
+					return next;
+				},
+				{ replace: true },
+			);
+		},
+		[setSearchParams],
+	);
 
 	const [headerMeta, setHeaderMeta] = useState<V2EditorHeaderMeta | null>(null);
 	const [headerActions, setHeaderActions] = useState<V2EditorHeaderActions | null>(
@@ -94,7 +104,18 @@ export const V2TemplateSchemaEditorPage = () => {
 							<Chip
 								size="small"
 								variant="outlined"
-								label={`Черновик v${headerMeta.versionNumber}`}
+								color={
+									headerMeta.status === "published"
+										? "success"
+										: headerMeta.status === "draft"
+											? "warning"
+											: "default"
+								}
+								label={v2TemplateVersionChipLabel(
+									headerMeta.versionNumber,
+									headerMeta.status,
+									headerMeta.isSystemCurrent,
+								)}
 							/>
 						</Flex>
 					) : null
@@ -128,19 +149,27 @@ export const V2TemplateSchemaEditorPage = () => {
 							variant="outlined"
 							startIcon={<AccountTreeIcon />}
 							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnLogic}
-							onClick={() => openV2TemplateLogicPage({ templateId, pathname })}
+							onClick={() =>
+								openV2TemplateLogicPage({
+									templateId,
+									versionId,
+									pathname,
+								})
+							}
 						>
 							Логика
 						</Button>
 
-						<Button
-							variant="outlined"
-							disabled={headerActions.publishPending}
-							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnPublish}
-							onClick={headerActions.onPublish}
-						>
-							Опубликовать
-						</Button>
+						{headerActions.canPublish ? (
+							<Button
+								variant="outlined"
+								disabled={headerActions.publishPending}
+								data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnPublish}
+								onClick={headerActions.onPublish}
+							>
+								Опубликовать
+							</Button>
+						) : null}
 						<Button
 							variant="contained"
 							disabled={headerActions.savePending}
@@ -156,6 +185,8 @@ export const V2TemplateSchemaEditorPage = () => {
 			<Flex flexDirection="column" flexGrow={1} minHeight="0" sx={{ minHeight: 480 }}>
 				<V2TemplateSchemaEditor
 					templateId={templateId}
+					initialVersionId={versionId}
+					onVersionIdChange={setVersionId}
 					wording={isAdminContext ? "adminSchema" : "playgroundTemplate"}
 					onHeaderMetaChange={onHeaderMetaChange}
 					onHeaderActionsChange={onHeaderActionsChange}

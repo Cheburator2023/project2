@@ -1,5 +1,7 @@
 import {
 	useV2DictionaryEnumsMaps,
+	useV2Template,
+	useV2TemplateVersion,
 	useV2TemplateVersions,
 } from "@react-client/common/api/queries/v2-templates";
 import { Flex } from "@react-client/common/primitives/Flex";
@@ -32,15 +34,18 @@ import { readSummaryFromFormData } from "../utils/readSummaryFromFormData";
 
 type V2TemplateFormPreviewProps = {
 	templateId: string;
+	initialVersionId?: string | null;
 };
 
 export function V2TemplateFormPreview({
 	templateId,
+	initialVersionId = null,
 }: V2TemplateFormPreviewProps) {
+	const { data: template } = useV2Template(templateId);
 	const { data: versions, isLoading: versionsLoading } =
 		useV2TemplateVersions(templateId);
 
-	const draftVersion = useMemo(() => {
+	const latestDraft = useMemo(() => {
 		const drafts =
 			versions
 				?.filter((v) => v.status === "draft")
@@ -48,21 +53,33 @@ export function V2TemplateFormPreview({
 		return drafts[0];
 	}, [versions]);
 
+	const previewVersionId = useMemo(
+		() =>
+			initialVersionId ??
+			latestDraft?.id ??
+			template?.currentVersionId ??
+			null,
+		[initialVersionId, latestDraft?.id, template?.currentVersionId],
+	);
+
+	const { data: previewVersion, isLoading: previewVersionLoading } =
+		useV2TemplateVersion(templateId, previewVersionId);
+
 	const [jsonSchema, setJsonSchema] = useState<RJSFSchema>(EMPTY_JSON_SCHEMA);
 	const [uiSchema, setUiSchema] = useState<UiSchema>({});
 	const [logic, setLogic] = useState(coerceLogicGraph(undefined));
 	const [formData, setFormData] = useState<Record<string, unknown>>({});
 
 	useEffect(() => {
-		if (!draftVersion?.id) {
+		if (!previewVersion?.id) {
 			return;
 		}
 
-		setJsonSchema(coerceJsonSchema(draftVersion.jsonSchema));
-		setUiSchema(coerceUiSchema(draftVersion.uiSchema));
-		setLogic(coerceLogicGraph(draftVersion.logic));
+		setJsonSchema(coerceJsonSchema(previewVersion.jsonSchema));
+		setUiSchema(coerceUiSchema(previewVersion.uiSchema));
+		setLogic(coerceLogicGraph(previewVersion.logic));
 		setFormData({});
-	}, [draftVersion?.id]);
+	}, [previewVersion?.id]);
 
 	const referencedDictionaryCodes = useMemo(
 		() => collectDictionaryCodesFromUiSchema(uiSchema),
@@ -78,10 +95,10 @@ export function V2TemplateFormPreview({
 		error: calculationError,
 	} = useDebouncedV2Calculation({
 		templateId,
-		versionId: draftVersion?.id,
+		versionId: previewVersion?.id,
 		formData,
 		rulesOverride: logic,
-		enabled: Boolean(draftVersion?.id),
+		enabled: Boolean(previewVersion?.id),
 	});
 
 	const mappedCalculation = useMemo(
@@ -127,7 +144,7 @@ export function V2TemplateFormPreview({
 	const displayFormData = mappedCalculation?.liveFormData ?? formData;
 	const summary = readSummaryFromFormData(displayFormData);
 
-	if (versionsLoading) {
+	if (versionsLoading || previewVersionLoading) {
 		return (
 			<Flex
 				justifyContent="center"
@@ -140,13 +157,14 @@ export function V2TemplateFormPreview({
 		);
 	}
 
-	if (!draftVersion) {
+	if (!previewVersion) {
 		return (
 			<Alert
 				severity="warning"
 				data-test-id={V2_TEMPLATE_READ_TEST_IDS.noDraft}
 			>
-				Нет черновика для предпросмотра. Сохраните схему в редакторе.
+				Нет версии для предпросмотра. Создайте черновик или выберите версию в
+				редакторе.
 			</Alert>
 		);
 	}

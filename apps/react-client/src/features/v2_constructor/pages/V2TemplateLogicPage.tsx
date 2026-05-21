@@ -7,6 +7,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/features/navigation/organisms/Header";
 import { V2_TEMPLATE_LOGIC_TEST_IDS } from "@react-client/features/v2_constructor/testIds";
 import {
+	V2_TEMPLATE_VERSION_QUERY,
 	pathForAdminV2Template,
 	pathForPlaygroundV2Template,
 	routes,
@@ -22,7 +23,7 @@ import { Spacer } from "@react-client/common/primitives/Spacer";
 export const V2TemplateLogicPage = () => {
 	const { templateId } = useParams<{ templateId: string }>();
 	const { pathname } = useLocation();
-	const [searchParams] = useSearchParams();
+	const [searchParams, setSearchParams] = useSearchParams();
 
 	const [headerMeta, setHeaderMeta] = useState<V2EditorHeaderMeta | null>(null);
 	const [headerActions, setHeaderActions] = useState<V2EditorHeaderActions | null>(
@@ -40,15 +41,30 @@ export const V2TemplateLogicPage = () => {
 		pathname.includes(`${routes.admin.rootPath}/`) ||
 		pathname.startsWith(routes.admin.rootPath);
 
+	const versionId = searchParams.get(V2_TEMPLATE_VERSION_QUERY);
 	const initialRuleId = searchParams.get("ruleId");
 	const initialPointer = searchParams.get("pointer");
+
+	const setVersionId = useCallback(
+		(id: string) => {
+			setSearchParams(
+				(prev) => {
+					const next = new URLSearchParams(prev);
+					next.set(V2_TEMPLATE_VERSION_QUERY, id);
+					return next;
+				},
+				{ replace: true },
+			);
+		},
+		[setSearchParams],
+	);
 
 	const editorHref = useMemo(() => {
 		if (!templateId) return null;
 		return isAdminContext
-			? pathForAdminV2Template(templateId)
-			: pathForPlaygroundV2Template(templateId);
-	}, [isAdminContext, templateId]);
+			? pathForAdminV2Template(templateId, versionId)
+			: pathForPlaygroundV2Template(templateId, versionId);
+	}, [isAdminContext, templateId, versionId]);
 
 	if (!templateId) {
 		return (
@@ -129,6 +145,8 @@ export const V2TemplateLogicPage = () => {
 
 				<V2TemplateSchemaEditor
 					templateId={templateId}
+					initialVersionId={versionId}
+					onVersionIdChange={setVersionId}
 					wording={isAdminContext ? "adminSchema" : "playgroundTemplate"}
 					layoutMode="logic-only"
 					initialRuleId={initialRuleId}

@@ -6,11 +6,14 @@ import { Header } from "@react-client/features/navigation/organisms/Header";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
-import { useParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
+import { V2_TEMPLATE_VERSION_QUERY } from "@react-client/routing/routes";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 
 export const V2TemplatePreviewPage = () => {
 	const { templateId } = useParams<{ templateId: string }>();
+	const [searchParams] = useSearchParams();
+	const versionId = searchParams.get(V2_TEMPLATE_VERSION_QUERY);
 	const { data: template } = useV2Template(templateId ?? "");
 
 	if (!templateId) {
@@ -52,7 +55,10 @@ export const V2TemplatePreviewPage = () => {
 				sx={{ overflow: "auto", mx: "auto", width: "100%" }}
 				data-test-id={V2_TEMPLATE_READ_TEST_IDS.formPreview}
 			>
-				<V2TemplateFormPreview templateId={templateId} />
+				<V2TemplateFormPreview
+					templateId={templateId}
+					initialVersionId={versionId}
+				/>
 			</Flex>
 		</Flex>
 	);

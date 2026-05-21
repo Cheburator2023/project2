@@ -5,12 +5,17 @@ import {
 	useV2DictionaryEnumsMaps,
 	useV2Dictionaries,
 	useV2Template,
+	useV2TemplateVersion,
 	useV2TemplateVersions,
 } from "@react-client/common/api/queries/v2-templates";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { toast } from "@react-client/common/toasts";
-import { routes } from "@react-client/routing/routes";
+import {
+	pathForAdminV2Template,
+	pathForPlaygroundV2Template,
+	routes,
+} from "@react-client/routing/routes";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import type {
@@ -66,6 +71,8 @@ import {
 	updatePropertyAtPointer,
 } from "../utils/schemaMutators";
 import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
+import { V2TemplateSaveDialog } from "./V2TemplateSaveDialog";
+import type { V2TemplateStatus } from "@smart-anketa/api-contract";
 
 function readUiBranch(
 	uiSchema: UiSchema | Record<string, unknown>,
@@ -93,7 +100,8 @@ export type V2SchemaEditorWording = "adminSchema" | "playgroundTemplate";
 export type V2EditorHeaderMeta = {
 	title: string;
 	versionNumber: number;
-	status: string;
+	status: V2TemplateStatus;
+	isSystemCurrent: boolean;
 };
 
 export type V2EditorHeaderActions = {
@@ -101,12 +109,16 @@ export type V2EditorHeaderActions = {
 	onPublish: () => void;
 	savePending: boolean;
 	publishPending: boolean;
+	canPublish: boolean;
 };
 
 export type V2SchemaEditorLayoutMode = "dock" | "logic-only";
 
 interface V2TemplateSchemaEditorProps {
 	templateId: string;
+	/** Версия из URL (`versionId`); без неё — черновик или актуальная опубликованная. */
+	initialVersionId?: string | null;
+	onVersionIdChange?: (versionId: string) => void;
 	wording?: V2SchemaEditorWording;
 	layoutMode?: V2SchemaEditorLayoutMode;
 	initialRuleId?: string | null;
@@ -117,6 +129,8 @@ interface V2TemplateSchemaEditorProps {
 
 export const V2TemplateSchemaEditor = ({
 	templateId,
+	initialVersionId = null,
+	onVersionIdChange,
 	wording = "playgroundTemplate",
 	layoutMode = "dock",
 	initialRuleId = null,
@@ -143,13 +157,33 @@ export const V2TemplateSchemaEditor = ({
 	const updateVersion = useUpdateV2TemplateVersion();
 	const publishVersion = usePublishV2TemplateVersion();
 
-	const draftVersion = useMemo(() => {
+	const latestDraft = useMemo(() => {
 		const drafts =
 			versions
 				?.filter((v) => v.status === "draft")
 				.sort((a, b) => b.versionNumber - a.versionNumber) ?? [];
 		return drafts[0] ?? undefined;
 	}, [versions]);
+
+	const activeVersionId = useMemo(() => {
+		if (initialVersionId) return initialVersionId;
+		if (latestDraft?.id) return latestDraft.id;
+		return template?.currentVersionId ?? null;
+	}, [initialVersionId, latestDraft?.id, template?.currentVersionId]);
+
+	const {
+		data: activeVersion,
+		isLoading: activeVersionLoading,
+		isError: activeVersionLoadError,
+		error: activeVersionError,
+	} = useV2TemplateVersion(templateId, activeVersionId);
+
+	const isSystemCurrent = Boolean(
+		template?.currentVersionId &&
+			activeVersion?.id === template.currentVersionId,
+	);
+
+	const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
 	const [jsonSchema, setJsonSchema] = useState<RJSFSchema>(EMPTY_JSON_SCHEMA);
 	const [uiSchema, setUiSchema] = useState<UiSchema>({});
@@ -217,35 +251,43 @@ export const V2TemplateSchemaEditor = ({
 	}, [isAdminEditor, versionsLoadError, versionsError]);
 
 	useEffect(() => {
-		if (!template || !draftVersion) {
+		if (!isAdminEditor || !activeVersionLoadError || !activeVersionError) return;
+		toast.error("Не удалось загрузить версию схемы", {
+			description: apiErrorMessage(activeVersionError),
+		});
+	}, [isAdminEditor, activeVersionLoadError, activeVersionError]);
+
+	useEffect(() => {
+		if (!template || !activeVersion) {
 			onHeaderMetaChange?.(null);
 			return;
 		}
 
 		onHeaderMetaChange?.({
 			title: template.name,
-			versionNumber: draftVersion.versionNumber,
-			status: draftVersion.status,
+			versionNumber: activeVersion.versionNumber,
+			status: activeVersion.status,
+			isSystemCurrent,
 		});
-	}, [template, draftVersion, onHeaderMetaChange]);
+	}, [template, activeVersion, isSystemCurrent, onHeaderMetaChange]);
 
 	useEffect(() => {
-		if (!draftVersion?.id) {
+		if (!activeVersion?.id) {
 			return;
 		}
 
-		const nextSchema = coerceJsonSchema(draftVersion.jsonSchema);
+		const nextSchema = coerceJsonSchema(activeVersion.jsonSchema);
 		setJsonSchema(nextSchema);
-		setUiSchema(coerceUiSchema(draftVersion.uiSchema));
-		setLogic(coerceLogicGraph(draftVersion.logic));
+		setUiSchema(coerceUiSchema(activeVersion.uiSchema));
+		setLogic(coerceLogicGraph(activeVersion.logic));
 
 		setSchemaMonacoText(JSON.stringify(nextSchema, null, 2));
 		setUiMonacoText(
-			JSON.stringify(coerceUiSchema(draftVersion.uiSchema), null, 2),
+			JSON.stringify(coerceUiSchema(activeVersion.uiSchema), null, 2),
 		);
 
 		setFormData({});
-	}, [draftVersion?.id]);
+	}, [activeVersion?.id]);
 
 	const cycles = useMemo(
 		() => dependencyCycleWarnings(logic.rules),
@@ -273,10 +315,10 @@ export const V2TemplateSchemaEditor = ({
 		error: calculationError,
 	} = useDebouncedV2Calculation({
 		templateId,
-		versionId: draftVersion?.id,
+		versionId: activeVersion?.id,
 		formData,
 		rulesOverride: logic,
-		enabled: Boolean(draftVersion?.id),
+		enabled: Boolean(activeVersion?.id),
 	});
 
 	const mappedCalculation = useMemo(
@@ -428,8 +470,9 @@ export const V2TemplateSchemaEditor = ({
 				};
 			}
 
-			await createVersion.mutateAsync({ templateId, dto });
+			const created = await createVersion.mutateAsync({ templateId, dto });
 			await refetchVersions();
+			persistVersionInUrl(created.id);
 
 			if (isAdminEditor) {
 				toast.success(
@@ -448,56 +491,110 @@ export const V2TemplateSchemaEditor = ({
 		}
 	};
 
-	const handleSaveDraft = useCallback(async () => {
-		if (!draftVersion) return;
+	const versionSnapshotDto = useCallback(
+		(): CreateV2TemplateVersionRequestDto => ({
+			jsonSchema,
+			uiSchema,
+			logic,
+			dictionariesSnapshot: {
+				referencedDictionaryCodes:
+					collectDictionaryCodesFromUiSchema(uiSchema),
+			},
+		}),
+		[jsonSchema, logic, uiSchema],
+	);
+
+	const persistVersionInUrl = useCallback(
+		(versionId: string) => {
+			if (onVersionIdChange) {
+				onVersionIdChange(versionId);
+				return;
+			}
+			const path = isAdminEditor
+				? pathForAdminV2Template(templateId, versionId)
+				: pathForPlaygroundV2Template(templateId, versionId);
+			navigate(path, { replace: true });
+		},
+		[isAdminEditor, navigate, onVersionIdChange, templateId],
+	);
+
+	const handleSaveInPlace = useCallback(async () => {
+		if (!activeVersion || activeVersion.status !== "draft") return;
 
 		try {
 			await updateVersion.mutateAsync({
 				templateId,
-				versionId: draftVersion.id,
-				dto: {
-					jsonSchema,
-					uiSchema,
-					logic,
-					dictionariesSnapshot: {
-						referencedDictionaryCodes:
-							collectDictionaryCodesFromUiSchema(uiSchema),
-					},
-				},
+				versionId: activeVersion.id,
+				dto: versionSnapshotDto(),
 			});
 			await refetchVersions();
+			setSaveDialogOpen(false);
 
 			if (isAdminEditor) {
-				toast.success("Черновик сохранён");
-				navigate(routes.adminV2Schemas.rootPath);
+				toast.success(`Версия v${activeVersion.versionNumber} сохранена`);
 			}
 		} catch (error) {
 			if (isAdminEditor) {
-				toast.error("Не удалось сохранить черновик", {
+				toast.error("Не удалось сохранить версию", {
 					description: apiErrorMessage(error),
 				});
 			}
 			throw error;
 		}
 	}, [
-		draftVersion,
+		activeVersion,
 		isAdminEditor,
-		jsonSchema,
-		logic,
-		navigate,
 		refetchVersions,
 		templateId,
-		uiSchema,
 		updateVersion,
+		versionSnapshotDto,
 	]);
 
+	const handleSaveAsNewVersion = useCallback(
+		async (releaseNotes: string) => {
+			try {
+				const created = await createVersion.mutateAsync({
+					templateId,
+					dto: {
+						...versionSnapshotDto(),
+						parentVersionId: activeVersion?.id ?? null,
+						releaseNotes: releaseNotes || "Новый черновик",
+					},
+				});
+				await refetchVersions();
+				setSaveDialogOpen(false);
+				persistVersionInUrl(created.id);
+
+				if (isAdminEditor) {
+					toast.success(`Создан черновик v${created.versionNumber}`);
+				}
+			} catch (error) {
+				if (isAdminEditor) {
+					toast.error("Не удалось создать новую версию", {
+						description: apiErrorMessage(error),
+					});
+				}
+				throw error;
+			}
+		},
+		[
+			activeVersion?.id,
+			createVersion,
+			isAdminEditor,
+			persistVersionInUrl,
+			refetchVersions,
+			templateId,
+			versionSnapshotDto,
+		],
+	);
+
 	const handlePublishDraft = useCallback(async () => {
-		if (!draftVersion) return;
+		if (!activeVersion || activeVersion.status !== "draft") return;
 
 		try {
 			await publishVersion.mutateAsync({
 				templateId,
-				versionId: draftVersion.id,
+				versionId: activeVersion.id,
 				dto: {},
 			});
 			await refetchVersions();
@@ -514,34 +611,36 @@ export const V2TemplateSchemaEditor = ({
 			throw error;
 		}
 	}, [
-		draftVersion,
+		activeVersion,
 		isAdminEditor,
 		publishVersion,
 		refetchVersions,
 		templateId,
 	]);
 
-	const saveDraftRef = useRef(handleSaveDraft);
 	const publishDraftRef = useRef(handlePublishDraft);
-	saveDraftRef.current = handleSaveDraft;
 	publishDraftRef.current = handlePublishDraft;
 
+	const savePending =
+		updateVersion.isPending || createVersion.isPending;
+
 	useEffect(() => {
-		if (!draftVersion) {
+		if (!activeVersion) {
 			onHeaderActionsChange?.(null);
 			return;
 		}
 
 		onHeaderActionsChange?.({
-			onSave: () => void saveDraftRef.current(),
+			onSave: () => setSaveDialogOpen(true),
 			onPublish: () => void publishDraftRef.current(),
-			savePending: updateVersion.isPending,
+			savePending,
 			publishPending: publishVersion.isPending,
+			canPublish: activeVersion.status === "draft",
 		});
 	}, [
-		draftVersion,
+		activeVersion,
 		onHeaderActionsChange,
-		updateVersion.isPending,
+		savePending,
 		publishVersion.isPending,
 	]);
 
@@ -1086,7 +1185,7 @@ export const V2TemplateSchemaEditor = ({
 		],
 	);
 
-	if (!template) {
+	if (!template || activeVersionLoading) {
 		return (
 			<Typography>
 				{wording === "adminSchema"
@@ -1096,7 +1195,7 @@ export const V2TemplateSchemaEditor = ({
 		);
 	}
 
-	if (!draftVersion) {
+	if (!activeVersion) {
 		return (
 			<Flex
 				flexDirection="column"
@@ -1134,9 +1233,23 @@ export const V2TemplateSchemaEditor = ({
 
 	if (layoutMode === "logic-only") {
 		return (
-			<SchemaEditorProvider value={editorContext}>
-				<SchemaLogicPanel embedded />
-			</SchemaEditorProvider>
+			<>
+				<SchemaEditorProvider value={editorContext}>
+					<SchemaLogicPanel embedded />
+				</SchemaEditorProvider>
+				{activeVersion ? (
+					<V2TemplateSaveDialog
+						open={saveDialogOpen}
+						onClose={() => setSaveDialogOpen(false)}
+						versionNumber={activeVersion.versionNumber}
+						versionStatus={activeVersion.status}
+						isSystemCurrent={isSystemCurrent}
+						savePending={savePending}
+						onSaveAsNewVersion={handleSaveAsNewVersion}
+						onSaveInPlace={handleSaveInPlace}
+					/>
+				) : null}
+			</>
 		);
 	}
 
@@ -1174,6 +1287,18 @@ export const V2TemplateSchemaEditor = ({
 					</SchemaEditorDockProvider>
 				</Box>
 			</Card>
+			{activeVersion ? (
+				<V2TemplateSaveDialog
+					open={saveDialogOpen}
+					onClose={() => setSaveDialogOpen(false)}
+					versionNumber={activeVersion.versionNumber}
+					versionStatus={activeVersion.status}
+					isSystemCurrent={isSystemCurrent}
+					savePending={savePending}
+					onSaveAsNewVersion={handleSaveAsNewVersion}
+					onSaveInPlace={handleSaveInPlace}
+				/>
+			) : null}
 		</SchemaEditorProvider>
 	);
 };

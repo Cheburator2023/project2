@@ -150,10 +150,24 @@ export const V2TemplateList = () => {
 	}, [templates, versionQueries]);
 
 	const openEditor = useCallback(
-		(templateId: string) => {
-			navigate(pathForAdminV2Template(templateId));
+		(templateId: string, versionId?: string | null) => {
+			navigate(pathForAdminV2Template(templateId, versionId));
 		},
 		[navigate],
+	);
+
+	const resolveDefaultVersionId = useCallback(
+		(templateId: string): string | null => {
+			const t = templates?.find((x) => x.id === templateId);
+			const idx = templates?.findIndex((x) => x.id === templateId) ?? -1;
+			const vers = idx >= 0 ? (versionQueries[idx]?.data ?? []) : [];
+			const latestDraft = vers
+				.filter((v) => v.status === "draft")
+				.sort((a, b) => b.versionNumber - a.versionNumber)[0];
+			if (latestDraft?.id) return latestDraft.id;
+			return t?.currentVersionId ?? null;
+		},
+		[templates, versionQueries],
 	);
 
 	const handleDeleteTemplate = useCallback(
@@ -272,10 +286,13 @@ export const V2TemplateList = () => {
 		(e: RowDoubleClickedEvent<V2SchemaGridRow>) => {
 			const row = e.data;
 			if (!row) return;
-			const tid = row.rowKind === "template" ? row.id : row.templateId;
-			openEditor(tid);
+			if (row.rowKind === "version") {
+				openEditor(row.templateId, row.id);
+				return;
+			}
+			openEditor(row.id, resolveDefaultVersionId(row.id));
 		},
-		[openEditor],
+		[openEditor, resolveDefaultVersionId],
 	);
 
 	const getRowStyle = useCallback(
@@ -325,7 +342,8 @@ export const V2TemplateList = () => {
 					},
 					{
 						name: "Открыть редактор",
-						action: () => openEditor(row.id),
+						action: () =>
+							openEditor(row.id, resolveDefaultVersionId(row.id)),
 					},
 					"separator",
 					{
@@ -363,7 +381,7 @@ export const V2TemplateList = () => {
 				},
 				{
 					name: "Открыть редактор схемы",
-					action: () => openEditor(row.templateId),
+					action: () => openEditor(row.templateId, row.id),
 				},
 				"separator",
 				{
@@ -380,6 +398,7 @@ export const V2TemplateList = () => {
 		[
 			navigate,
 			openEditor,
+			resolveDefaultVersionId,
 			handleDeleteTemplate,
 			handleBulkDeleteVersions,
 			handleDeleteVersion,
