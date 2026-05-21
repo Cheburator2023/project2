@@ -25,6 +25,7 @@ import {
 	treeViewCustomizations,
 } from "./theme/customizations";
 import AppRoutes from "@react-client/common/routing";
+import { getRouterBasename } from "@react-client/routing/basename";
 
 const GIT_REVISION = process.env.GIT_REVISION;
 const NODE_ENV = process.env.NODE_ENV;
@@ -95,7 +96,7 @@ const App: React.FC<LayoutProps> = (props) => {
 
 	return (
 		<QueryClientProvider client={queryClient}>
-			<BrowserRouter basename={bridged ? "/smartAnketa/" : "/"}>
+			<BrowserRouter basename={getRouterBasename(bridged)}>
 				<AppTheme themeComponents={xThemeComponents}>
 					<ErrorBoundary ErrorPage={ErrorPage}>
 						<StyledEngineProvider injectFirst>

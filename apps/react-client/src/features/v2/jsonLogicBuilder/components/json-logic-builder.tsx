@@ -2,7 +2,7 @@ import type { SxProps, Theme } from "@mui/material/styles";
 import { useEffect, useMemo, useRef } from "react";
 import type { JsonLogicValue } from "../operators";
 import { JsonLogicShell } from "../styles/JsonLogicShell";
-import Any from "./any";
+import {Any} from "./any";
 
 /** Sample data the builder uses for accessor (`var`) suggestions. */
 export type JsonLogicData = Record<string, unknown> | unknown[];

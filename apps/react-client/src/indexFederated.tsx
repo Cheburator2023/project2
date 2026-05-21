@@ -6,6 +6,7 @@ import { Permission, Role } from "@react-client/types/roles";
 import { useEffect } from "react";
 import type { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
 import App from "./App";
+import { normalizeMfeUrlIfNeeded } from "@react-client/routing/basename";
 import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
 type TKeycloakLike = {
@@ -40,6 +41,8 @@ export type Props = {
 };
 
 const MfeRoot = (props: Props) => {
+	normalizeMfeUrlIfNeeded();
+
 	console.log("MfeRoot >> props:", props);
 	window.__SMART_ANKETA_MFE_DEBUG__ = {
 		mountedAt: new Date().toISOString(),
