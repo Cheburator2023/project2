@@ -6,7 +6,6 @@ import { AnketaClonePage } from "@react-client/features/v1/anketaCRUD/pages/Anke
 import { routes } from "@react-client/routing/version/v2/routes";
 import { Page404 } from "@react-client/routing/version/v2/Page404";
 import { AnketaPreviewPageV2 } from "@react-client/features/v2/anketaCRUD/pages/AnketaPreviewPageV2";
-import { adminV2ChildRoutes } from "@react-client/routing/adminV2Routes";
 import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard";
 import { V2RegistryPage } from "@react-client/features/v2/home/pages/V2RegistryPage";
 
@@ -80,10 +79,6 @@ export const v2Routes = ({ onLogout }: { onLogout?: () => void }) => {
 						<CompareReportsPage />
 					</PermissionGuard>
 				),
-			},
-			{
-				path: "admin",
-				children: adminV2ChildRoutes(),
 			},
 			{
 				path: "*",

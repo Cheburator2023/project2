@@ -17,7 +17,7 @@ import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.
 import {
 	pathForAdminV2Template,
 	pathForAdminV2TemplateHistory,
-} from "@react-client/routing/version/v1/routes";
+} from "@react-client/routing/common/pathHelpers";
 import type {
 	V2TemplateDto,
 	V2TemplateStatus,

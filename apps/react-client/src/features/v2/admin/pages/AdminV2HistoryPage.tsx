@@ -1,4 +1,4 @@
-import { routes } from "@react-client/routing/version/v1/routes";
+import { commonRoutes as routes } from "@react-client/routing/common/routes";
 import { Navigate } from "react-router";
 
 /** Глобальная история перенесена в контекст шаблона и списка схем. */

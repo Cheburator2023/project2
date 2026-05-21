@@ -12,8 +12,6 @@ import { AnketaClonePage } from "@react-client/features/v1/anketaCRUD/pages/Anke
 import { routes } from "@react-client/routing/version/v1/routes";
 import { Page404 } from "@react-client/routing/version/v1/Page404";
 
-import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
-
 export const v1Routes = ({ onLogout }: { onLogout?: () => void }) => {
 	return {
 		path: "/v1",
@@ -95,10 +93,6 @@ export const v1Routes = ({ onLogout }: { onLogout?: () => void }) => {
 						<CompareReportsPage data-test-id="index--CompareReportsPage-0" />
 					</PermissionGuard>
 				),
-			},
-			{
-				path: routes.playground.rootPath,
-				element: <PlaygroundPage data-test-id="index--PlaygroundPage-0" />,
 			},
 			{
 				path: "*",
@@ -196,13 +190,8 @@ export const Routing = ({ onLogout }: { onLogout?: () => void }) => (
 		/>
 		<Route
 			path="admin"
-			element={<Navigate to="/v2/admin/schemas" replace />}
+			element={<Navigate to="/admin/schemas" replace />}
 			data-test-id="index--Route-4"
-		/>
-		<Route
-			path={routes.playground.rootPath}
-			element={<PlaygroundPage data-test-id="index--PlaygroundPage-0" />}
-			data-test-id="index--Route-5"
 		/>
 		<Route
 			path="/v1/*"

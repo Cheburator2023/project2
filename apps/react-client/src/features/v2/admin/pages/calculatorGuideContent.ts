@@ -1,7 +1,6 @@
-import {
-	pathForAdminV2Template,
-	routes,
-} from "@react-client/routing/version/v1/routes";
+import { pathForAdminV2Template } from "@react-client/routing/common/pathHelpers";
+import { commonRoutes as routes } from "@react-client/routing/common/routes";
+import { v2Routes } from "@react-client/routing/version/v2/routes";
 
 export type GuideSection = {
 	id: string;
@@ -157,7 +156,12 @@ export const calculatorGuideSections: GuideSection[] = [
 				"Форма строится по опубликованной JSON/UI-схеме и логике. Изменения в админке не затрагивают уже сохранённые анкеты, " +
 				"пока не опубликована новая версия (поведение зависит от политики версионирования на бэкенде).",
 		],
-		links: [{ label: "Создание анкеты", href: routes.calculationCreate.rootPath }],
+		links: [
+			{
+				label: "Создание анкеты",
+				href: `/v2/${v2Routes.calculationCreate.rootPath}`,
+			},
+		],
 	},
 	{
 		id: "tips",

@@ -7,58 +7,56 @@ import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
 import { IS_DEV } from "@react-client/common/constants/dev";
 import {
-	navbarGroups,
-	routes,
-	type AppRouteConfig,
-} from "@react-client/routing/version/v1/routes";
-import { routes as routesV2User } from "@react-client/routing/version/v2/routes";
+	commonRoutes,
+	navbarGroups as commonNavbarGroups,
+} from "@react-client/routing/common/routes";
+import type { AppRouteConfig } from "@react-client/routing/common/types";
+import { v1Routes } from "@react-client/routing/version/v1/routes";
+import { v2Routes } from "@react-client/routing/version/v2/routes";
 import { useLocation, useNavigate } from "react-router";
-
-type NavbarGroupKey = keyof typeof navbarGroups;
 
 const V1_PREFIX = "/v1";
 const V2_PREFIX = "/v2";
 
-const getNavbarItemsByGroup = (group: NavbarGroupKey) =>
-	(Object.values(routes) as AppRouteConfig[])
+const getAdminNavbarItems = () =>
+	(Object.values(commonRoutes) as AppRouteConfig[])
 		.filter((r) => r.showInNavbar)
-		.filter((r) => r.navbar?.group === group)
+		.filter((r) => r.navbar?.group === "adminV2")
 		.filter((r) => !r.disabled)
-		.filter((r) => !(r.devOnly && !IS_DEV))
 		.sort((a, b) => (a.navbar?.order ?? 0) - (b.navbar?.order ?? 0));
 
-const devOnlyNavItems = (Object.values(routes) as AppRouteConfig[])
-	.filter((r) => r.showInNavbar)
-	.filter((r) => Boolean(r.devOnly) && IS_DEV)
-	.filter((r) => !r.disabled)
-	.sort((a, b) => (a.navbar?.order ?? 0) - (b.navbar?.order ?? 0));
+const getDevNavbarItems = () =>
+	(Object.values(commonRoutes) as AppRouteConfig[])
+		.filter((r) => r.showInNavbar)
+		.filter((r) => Boolean(r.devOnly) && IS_DEV)
+		.filter((r) => !r.disabled)
+		.sort((a, b) => (a.navbar?.order ?? 0) - (b.navbar?.order ?? 0));
 
-function joinVersionPath(prefix: string, segment: string): string {
-	if (!segment) return prefix;
-	if (segment.startsWith("/")) return segment;
-	return `${prefix}/${segment}`.replace(/\/+/g, "/");
-}
-
-const v1MainNestedItems = () =>
-	getNavbarItemsByGroup("main").filter((r) => r.rootPath !== routes.home.rootPath);
+const getV1MainNestedItems = () =>
+	(Object.values(v1Routes) as AppRouteConfig[])
+		.filter((r) => r.showInNavbar)
+		.filter((r) => r.navbar?.group === "main")
+		.filter((r) => !r.disabled)
+		.filter((r) => r.rootPath !== v1Routes.home.rootPath)
+		.sort((a, b) => (a.navbar?.order ?? 0) - (b.navbar?.order ?? 0));
 
 const v2UserNavItems = () =>
-	(Object.values(routesV2User) as AppRouteConfig[]).filter(
+	(Object.values(v2Routes) as AppRouteConfig[]).filter(
 		(r) =>
 			!r.disabled &&
-			r.rootPath !== routesV2User.home.rootPath &&
-			r.rootPath !== routesV2User.calculationPreview.rootPath &&
-			r.rootPath !== routesV2User.calculationClone.rootPath &&
-			r.rootPath !== routesV2User.calculationNewVersion.rootPath &&
-			r.rootPath !== routesV2User.calculationCompare.rootPath,
+			r.rootPath !== v2Routes.home.rootPath &&
+			r.rootPath !== v2Routes.calculationPreview.rootPath &&
+			r.rootPath !== v2Routes.calculationClone.rootPath &&
+			r.rootPath !== v2Routes.calculationNewVersion.rootPath &&
+			r.rootPath !== v2Routes.calculationCompare.rootPath,
 	);
 
 function routeRowSelected(route: AppRouteConfig, pathname: string): boolean {
-	if (route.rootPath === routes.adminV2Schemas.rootPath) {
+	if (route.rootPath === commonRoutes.adminV2Schemas.rootPath) {
 		return (
-			pathname === routes.adminV2Schemas.rootPath ||
-			/^\/v2\/admin\/schemas\/[^/]+\/history$/.test(pathname) ||
-			/^\/v2\/admin\/templates\/[^/]+/.test(pathname)
+			pathname === commonRoutes.adminV2Schemas.rootPath ||
+			/^\/admin\/schemas\/[^/]+\/history$/.test(pathname) ||
+			/^\/admin\/templates\/[^/]+/.test(pathname)
 		);
 	}
 	return route.rootPath === pathname;
@@ -100,10 +98,7 @@ function NavSection({
 				{nestedItems.map((route) => {
 					const fullPath = route.rootPath.startsWith("/")
 						? route.rootPath
-						: joinVersionPath(
-								homePath.startsWith(V2_PREFIX) ? V2_PREFIX : V1_PREFIX,
-								route.rootPath,
-							);
+						: `${homePath}/${route.rootPath}`.replace(/\/+/g, "/");
 					return (
 						<ListItem
 							key={fullPath}
@@ -136,7 +131,7 @@ export function MenuContent() {
 			<List data-test-id="menu-content--List-0" disablePadding>
 				<NavSection
 					title="Калькулятор v2"
-					homeLabel={routesV2User.home.name}
+					homeLabel={v2Routes.home.name}
 					homePath={V2_PREFIX}
 					nestedItems={v2UserNavItems()}
 					pathname={pathname}
@@ -147,9 +142,9 @@ export function MenuContent() {
 
 				<NavSection
 					title="Калькулятор v1"
-					homeLabel={routes.home.name}
+					homeLabel={v1Routes.home.name}
 					homePath={V1_PREFIX}
-					nestedItems={v1MainNestedItems()}
+					nestedItems={getV1MainNestedItems()}
 					pathname={pathname}
 					onNavigate={go}
 				/>
@@ -158,10 +153,10 @@ export function MenuContent() {
 
 				<Box sx={{ display: "block", mb: 0.2 }}>
 					<ListItemButton disabled>
-						<ListItemText secondary={navbarGroups.adminV2.title} />
+						<ListItemText secondary={commonNavbarGroups.adminV2.title} />
 					</ListItemButton>
 					<List disablePadding sx={{ py: 0 }}>
-						{getNavbarItemsByGroup("adminV2").map((route) => (
+						{getAdminNavbarItems().map((route) => (
 							<ListItem
 								key={route.rootPath}
 								disablePadding
@@ -176,29 +171,24 @@ export function MenuContent() {
 					</List>
 				</Box>
 
-				{devOnlyNavItems.length > 0 ? (
+				{getDevNavbarItems().length > 0 ? (
 					<>
 						<Divider sx={{ my: 1 }} />
 						<ListItemButton disabled>
-							<ListItemText secondary="Разработка" />
+							<ListItemText secondary={commonNavbarGroups.dev.title} />
 						</ListItemButton>
-						{devOnlyNavItems.map((item) => {
-							const href = item.rootPath.startsWith("/")
-								? item.rootPath
-								: `/${item.rootPath}`;
-							return (
+						{getDevNavbarItems().map((item) => (
 							<ListItem
-								key={href}
+								key={item.rootPath}
 								disablePadding
 								sx={{ display: "block", mb: 0.2 }}
-								onClick={() => go(href)}
+								onClick={() => go(item.rootPath)}
 							>
-								<ListItemButton selected={pathname === href}>
+								<ListItemButton selected={pathname === item.rootPath}>
 									<ListItemText primary={item.name} />
 								</ListItemButton>
 							</ListItem>
-							);
-						})}
+						))}
 					</>
 				) : null}
 			</List>

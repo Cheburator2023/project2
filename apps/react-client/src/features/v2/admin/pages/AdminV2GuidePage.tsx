@@ -16,7 +16,7 @@ import {
 	type GuideSection,
 } from "@react-client/features/v2/admin/pages/calculatorGuideContent";
 import { Header } from "@react-client/common/navigation/organisms/Header";
-import { routes } from "@react-client/routing/version/v1/routes";
+import { commonRoutes as routes } from "@react-client/routing/common/routes";
 import {
 	useCallback,
 	useEffect,
@@ -228,30 +228,9 @@ export function AdminV2GuidePage() {
 	const { activeId, selectSection } = useActiveGuideSection(scrollRef);
 
 	return (
-		<Box
-			sx={{
-				display: "flex",
-				flexDirection: "column",
-				flex: 1,
-				minHeight: 0,
-				width: "100%",
-				height: "100%",
-				overflow: "hidden",
-			}}
-		>
+		<>
 			<Header title={routes.adminV2Guide.name} />
-			<Box
-				sx={{
-					display: "flex",
-					flex: 1,
-					minHeight: 0,
-					width: "100%",
-					gap: 1.5,
-					px: 1,
-					pb: 1,
-					overflow: "hidden",
-				}}
-			>
+<Flex>
 				<Card
 					overflow=""
 					sx={{
@@ -338,7 +317,7 @@ export function AdminV2GuidePage() {
 						))}
 					</Card>
 				</Box>
-			</Box>
-		</Box>
+			</Flex>
+		</>
 	);
 }

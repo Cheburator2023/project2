@@ -1,9 +1,15 @@
-export const routes = {
+import type { AppRouteConfig } from "@react-client/routing/common/types";
+
+export const navbarGroups = {
+	main: { title: "Разделы" },
+} as const;
+
+/** Маршруты пользовательского калькулятора v2 (относительно `/v2`). */
+export const v2Routes = {
 	home: {
 		rootPath: "",
 		name: "Реестр",
 		disabled: false,
-		subRoutes: {},
 	},
 	calculationCreate: {
 		rootPath: "calculation/create",
@@ -30,15 +36,7 @@ export const routes = {
 		name: "Сравнение расчетов",
 		disabled: false,
 	},
-	admin: {
-		rootPath: "admin",
-		name: "Администрирование",
-		disabled: false,
-	},
-	playground: {
-		name: "Песочница",
-		rootPath: "playground",
-		devOnly: true,
-		disabled: false,
-	},
-};
+} satisfies Record<string, AppRouteConfig>;
+
+/** @deprecated используйте v2Routes */
+export const routes = v2Routes;

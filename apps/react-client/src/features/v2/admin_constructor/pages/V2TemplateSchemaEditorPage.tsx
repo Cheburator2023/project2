@@ -20,8 +20,8 @@ import {
 	V2_TEMPLATE_VERSION_QUERY,
 	pathForAdminV2TemplateRead,
 	pathForPlaygroundV2TemplateRead,
-	routes,
-} from "@react-client/routing/version/v1/routes";
+} from "@react-client/routing/common/pathHelpers";
+import { commonRoutes as routes } from "@react-client/routing/common/routes";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 
 export const V2TemplateSchemaEditorPage = () => {

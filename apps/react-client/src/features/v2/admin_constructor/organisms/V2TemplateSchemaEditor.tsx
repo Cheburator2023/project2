@@ -14,8 +14,7 @@ import { toast } from "@react-client/common/toasts";
 import {
 	pathForAdminV2Template,
 	pathForPlaygroundV2Template,
-	routes,
-} from "@react-client/routing/version/v1/routes";
+} from "@react-client/routing/common/pathHelpers";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import type {

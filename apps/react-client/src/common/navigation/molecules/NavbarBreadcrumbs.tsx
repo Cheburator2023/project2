@@ -2,7 +2,9 @@ import NavigateNextRoundedIcon from "@mui/icons-material/NavigateNextRounded";
 import Breadcrumbs, { breadcrumbsClasses } from "@mui/material/Breadcrumbs";
 import { styled } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
-import { routes } from "@react-client/routing/version/v1/routes";
+import { commonRoutes } from "@react-client/routing/common/routes";
+import { v1Routes } from "@react-client/routing/version/v1/routes";
+import { v2Routes } from "@react-client/routing/version/v2/routes";
 import { useMemo } from "react";
 import { useLocation } from "react-router";
 
@@ -18,49 +20,65 @@ const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
 }));
 
 function adminTrail(pathname: string): string[] | null {
-	if (!pathname.startsWith("/v2/admin")) return null;
+	const adminRoot = commonRoutes.admin.rootPath;
+	if (!pathname.startsWith(adminRoot)) return null;
 
-	const trail: string[] = [routes.admin.name];
+	const trail: string[] = [commonRoutes.admin.name];
 
-	if (pathname.startsWith("/v2/admin/schemas/") && pathname.endsWith("/history")) {
-		trail.push(routes.adminV2Schemas.name);
+	if (
+		pathname.startsWith(`${adminRoot}/schemas/`) &&
+		pathname.endsWith("/history")
+	) {
+		trail.push(commonRoutes.adminV2Schemas.name);
 		trail.push(
-			routes.adminV2TemplateHistory.shortName ?? routes.adminV2TemplateHistory.name,
+			commonRoutes.adminV2TemplateHistory.shortName ??
+				commonRoutes.adminV2TemplateHistory.name,
 		);
 		return trail;
 	}
 
-	if (pathname.startsWith(routes.adminV2History.rootPath)) {
-		trail.push(routes.adminV2Schemas.name);
+	if (pathname.startsWith(commonRoutes.adminV2History.rootPath)) {
+		trail.push(commonRoutes.adminV2Schemas.name);
 		return trail;
 	}
 
-	if (pathname.startsWith(routes.adminV2Schemas.rootPath)) {
-		trail.push(routes.adminV2Schemas.name);
+	if (pathname.startsWith(commonRoutes.adminV2Schemas.rootPath)) {
+		trail.push(commonRoutes.adminV2Schemas.name);
 		return trail;
 	}
 
-	if (pathname.startsWith(routes.adminV2Guide.rootPath)) {
-		trail.push(routes.adminV2Guide.name);
+	if (pathname.startsWith(commonRoutes.adminV2Guide.rootPath)) {
+		trail.push(commonRoutes.adminV2Guide.name);
 		return trail;
 	}
 
-	if (pathname.startsWith(routes.adminV2Dictionaries.rootPath)) {
-		trail.push(routes.adminV2Dictionaries.name);
+	if (pathname.startsWith(commonRoutes.adminV2Dictionaries.rootPath)) {
+		trail.push(commonRoutes.adminV2Dictionaries.name);
 		return trail;
 	}
 
 	const templateModeMatch = pathname.match(
-		/^\/v2\/admin\/templates\/[^/]+\/(edit|read)$/,
+		/^\/admin\/templates\/[^/]+\/(edit|read|logic)$/,
 	);
 	if (templateModeMatch?.[1]) {
-		trail.push(routes.adminV2Schemas.name);
-		trail.push(
-			templateModeMatch[1] === "edit"
-				? (routes.adminV2TemplateEditor.shortName ??
-						routes.adminV2TemplateEditor.name)
-				: (routes.adminV2TemplateRead.shortName ?? routes.adminV2TemplateRead.name),
-		);
+		trail.push(commonRoutes.adminV2Schemas.name);
+		const mode = templateModeMatch[1];
+		if (mode === "edit") {
+			trail.push(
+				commonRoutes.adminV2TemplateEditor.shortName ??
+					commonRoutes.adminV2TemplateEditor.name,
+			);
+		} else if (mode === "read") {
+			trail.push(
+				commonRoutes.adminV2TemplateRead.shortName ??
+					commonRoutes.adminV2TemplateRead.name,
+			);
+		} else {
+			trail.push(
+				commonRoutes.adminV2TemplateLogic.shortName ??
+					commonRoutes.adminV2TemplateLogic.name,
+			);
+		}
 		return trail;
 	}
 
@@ -77,37 +95,37 @@ export function NavbarBreadcrumbs() {
 		if (adminLabels) return adminLabels;
 
 		const playgroundTemplateMatch = pathname.match(
-			/^\/playground\/v2\/templates\/[^/]+\/(edit|read)$/,
+			/^\/playground\/v2\/templates\/[^/]+\/(edit|read|logic)$/,
 		);
 		if (playgroundTemplateMatch?.[1]) {
+			const mode = playgroundTemplateMatch[1];
+			const modeLabel =
+				mode === "edit"
+					? (commonRoutes.playgroundV2TemplateEditor.shortName ??
+							commonRoutes.playgroundV2TemplateEditor.name)
+					: mode === "read"
+						? (commonRoutes.playgroundV2TemplateRead.shortName ??
+								commonRoutes.playgroundV2TemplateRead.name)
+						: (commonRoutes.playgroundV2TemplateLogic.shortName ??
+								commonRoutes.playgroundV2TemplateLogic.name);
 			return [
-				routes.playground.name,
-				routes.playgroundV2.name,
-				playgroundTemplateMatch[1] === "edit"
-					? (routes.playgroundV2TemplateEditor.shortName ??
-							routes.playgroundV2TemplateEditor.name)
-					: (routes.playgroundV2TemplateRead.shortName ??
-							routes.playgroundV2TemplateRead.name),
+				commonRoutes.playground.name,
+				commonRoutes.playgroundV2.name,
+				modeLabel,
 			];
 		}
-		if (pathname.startsWith(routes.playgroundV2.rootPath)) {
-			return [routes.playground.name, routes.playgroundV2.name];
+		if (pathname.startsWith(commonRoutes.playgroundV2.rootPath)) {
+			return [commonRoutes.playground.name, commonRoutes.playgroundV2.name];
 		}
-		if (pathname.startsWith(routes.playground.rootPath)) {
-			return [routes.playground.name];
-		}
-
-		for (const r of Object.values(routes)) {
-			if ("rootPath" in r && typeof r.rootPath === "string" && !r.rootPath.includes(":")) {
-				if (r.rootPath === pathname) return [r.name];
-			}
+		if (pathname.startsWith(commonRoutes.playground.rootPath)) {
+			return [commonRoutes.playground.name];
 		}
 
 		if (pathname === "/v2" || pathname === "/v2/") {
-			return ["Калькулятор v2", "Реестр"];
+			return ["Калькулятор v2", v2Routes.home.name];
 		}
 		if (pathname.startsWith("/v2/")) {
-			for (const segment of Object.values(routes)) {
+			for (const segment of Object.values(v2Routes)) {
 				if (
 					"rootPath" in segment &&
 					typeof segment.rootPath === "string" &&
@@ -123,10 +141,10 @@ export function NavbarBreadcrumbs() {
 		}
 
 		if (pathname === "/v1" || pathname === "/v1/") {
-			return [routes.home.name];
+			return [v1Routes.home.name];
 		}
 		if (pathname.startsWith("/v1/")) {
-			for (const r of Object.values(routes)) {
+			for (const r of Object.values(v1Routes)) {
 				if (
 					"rootPath" in r &&
 					typeof r.rootPath === "string" &&

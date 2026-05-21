@@ -20,7 +20,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { auditActionRu } from "@react-client/features/v2/admin/utils/auditActionRu";
 import { Header } from "@react-client/common/navigation/organisms/Header";
-import { routes } from "@react-client/routing/version/v1/routes";
+import { commonRoutes as routes } from "@react-client/routing/common/routes";
 import type {
 	V2TemplateAuditAction,
 	V2TemplateAuditDto,

@@ -1,7 +1,7 @@
 
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { routes } from "@react-client/routing/version/v1/routes";
+import { commonRoutes as routes } from "@react-client/routing/common/routes";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";

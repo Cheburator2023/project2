@@ -2,15 +2,19 @@ import {
 	V2_TEMPLATE_VERSION_QUERY,
 	pathForAdminV2TemplateLogic,
 	pathForPlaygroundV2TemplateLogic,
-} from "@react-client/routing/version/v1/routes";
+} from "@react-client/routing/common/pathHelpers";
+import { commonRoutes } from "@react-client/routing/common/routes";
 
 export function resolveV2TemplateLogicPath(
 	templateId: string,
 	pathname = window.location.pathname,
 	versionId?: string | null,
 ): string {
+	const adminRoot = commonRoutes.admin.rootPath;
 	const isAdmin =
-		pathname.includes("/v2/admin/") || pathname.startsWith("/v2/admin");
+		pathname.startsWith(adminRoot) ||
+		pathname.includes(`${adminRoot}/`) ||
+		pathname.startsWith("/v2/admin");
 	return isAdmin
 		? pathForAdminV2TemplateLogic(templateId, { versionId })
 		: pathForPlaygroundV2TemplateLogic(templateId, { versionId });

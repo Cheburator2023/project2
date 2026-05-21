@@ -1,5 +1,7 @@
-import { Navigate, useParams } from "react-router";
+import { Navigate, useLocation, useParams } from "react-router";
+import type { RouteObject } from "react-router";
 import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard";
+import { MainLayout } from "@react-client/common/layouts/MainLayout";
 import { AdminLayout } from "@react-client/features/v2/admin/layouts/AdminLayout";
 import { AdminV2DictionariesPage } from "@react-client/features/v2/admin/pages/AdminV2DictionariesPage";
 import { AdminV2DictionaryDetailPage } from "@react-client/features/v2/admin/pages/AdminV2DictionaryDetailPage";
@@ -7,15 +9,12 @@ import { AdminV2GuidePage } from "@react-client/features/v2/admin/pages/AdminV2G
 import { AdminV2HistoryPage } from "@react-client/features/v2/admin/pages/AdminV2HistoryPage";
 import { AdminV2SchemasPage } from "@react-client/features/v2/admin/pages/AdminV2SchemasPage";
 import { AdminV2TemplateHistoryPage } from "@react-client/features/v2/admin/pages/AdminV2TemplateHistoryPage";
-import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
 import { V2TemplateLogicPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplateLogicPage";
 import { V2TemplatePreviewPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplatePreviewPage";
 import { V2TemplateSchemaEditorPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplateSchemaEditorPage";
-import { routes } from "@react-client/routing/version/v1/routes";
-import type { RouteObject } from "react-router";
+import { commonRoutes } from "./routes";
 
-/** Дочерние маршруты админки под `/v2/admin` (внутри MainLayout). */
-export function adminV2ChildRoutes(): RouteObject[] {
+function adminChildRoutes(): RouteObject[] {
 	return [
 		{
 			element: (
@@ -30,7 +29,7 @@ export function adminV2ChildRoutes(): RouteObject[] {
 				{ index: true, element: <Navigate to="schemas" replace /> },
 				{
 					path: "templates",
-					element: <Navigate to={routes.adminV2Schemas.rootPath} replace />,
+					element: <Navigate to={commonRoutes.adminV2Schemas.rootPath} replace />,
 				},
 				{
 					path: "schemas/:templateId/history",
@@ -61,11 +60,20 @@ export function adminV2ChildRoutes(): RouteObject[] {
 	];
 }
 
+/** Админка v2: `/admin/...` с общим сайдбаром. */
+export function adminRoutes({ onLogout }: { onLogout?: () => void }): RouteObject {
+	return {
+		path: commonRoutes.admin.rootPath,
+		element: <MainLayout onLogout={onLogout} />,
+		children: adminChildRoutes(),
+	};
+}
+
 function LegacyAdminTemplateRedirect({ suffix }: { suffix: string }) {
 	const { templateId = "" } = useParams<{ templateId: string }>();
 	return (
 		<Navigate
-			to={`/v2/admin/templates/${encodeURIComponent(templateId)}${suffix}`}
+			to={`${commonRoutes.admin.rootPath}/templates/${encodeURIComponent(templateId)}${suffix}`}
 			replace
 		/>
 	);
@@ -75,9 +83,16 @@ function LegacyAdminDictionaryRedirect() {
 	const { dictionaryId = "" } = useParams<{ dictionaryId: string }>();
 	return (
 		<Navigate
-			to={`/v2/admin/dictionaries/${encodeURIComponent(dictionaryId)}`}
+			to={pathForAdminDictionaryLegacy(dictionaryId)}
 			replace
 		/>
+	);
+}
+
+function pathForAdminDictionaryLegacy(dictionaryId: string) {
+	return commonRoutes.adminV2DictionaryDetail.rootPath.replace(
+		":dictionaryId",
+		encodeURIComponent(dictionaryId),
 	);
 }
 
@@ -85,22 +100,35 @@ function LegacyAdminSchemaHistoryRedirect() {
 	const { templateId = "" } = useParams<{ templateId: string }>();
 	return (
 		<Navigate
-			to={`/v2/admin/schemas/${encodeURIComponent(templateId)}/history`}
+			to={`${commonRoutes.admin.rootPath}/schemas/${encodeURIComponent(templateId)}/history`}
 			replace
 		/>
 	);
 }
 
-/** Редиректы со старых URL /admin/v2/... */
-export function adminV2LegacyRedirects(): RouteObject[] {
+function RedirectV2AdminPrefixToAdmin() {
+	const { pathname } = useLocation();
+	const rest = pathname.replace(/^\/v2\/admin\/?/, "");
+	const target = rest
+		? `${commonRoutes.admin.rootPath}/${rest}`
+		: commonRoutes.adminV2Schemas.rootPath;
+	return <Navigate to={target} replace />;
+}
+
+/** Редиректы со старых URL. */
+export function adminLegacyRedirects(): RouteObject[] {
 	return [
 		{
-			path: "/admin",
-			element: <Navigate to={routes.adminV2Schemas.rootPath} replace />,
+			path: "/v2/admin",
+			element: <RedirectV2AdminPrefixToAdmin />,
+		},
+		{
+			path: "/v2/admin/*",
+			element: <RedirectV2AdminPrefixToAdmin />,
 		},
 		{
 			path: "/admin/v2/schemas",
-			element: <Navigate to={routes.adminV2Schemas.rootPath} replace />,
+			element: <Navigate to={commonRoutes.adminV2Schemas.rootPath} replace />,
 		},
 		{
 			path: "/admin/v2/schemas/:templateId/history",
@@ -108,11 +136,11 @@ export function adminV2LegacyRedirects(): RouteObject[] {
 		},
 		{
 			path: "/admin/v2/guide",
-			element: <Navigate to={routes.adminV2Guide.rootPath} replace />,
+			element: <Navigate to={commonRoutes.adminV2Guide.rootPath} replace />,
 		},
 		{
 			path: "/admin/v2/dictionaries",
-			element: <Navigate to={routes.adminV2Dictionaries.rootPath} replace />,
+			element: <Navigate to={commonRoutes.adminV2Dictionaries.rootPath} replace />,
 		},
 		{
 			path: "/admin/v2/dictionaries/:dictionaryId",
@@ -120,7 +148,7 @@ export function adminV2LegacyRedirects(): RouteObject[] {
 		},
 		{
 			path: "/admin/v2/history",
-			element: <Navigate to={routes.adminV2History.rootPath} replace />,
+			element: <Navigate to={commonRoutes.adminV2History.rootPath} replace />,
 		},
 		{
 			path: "/admin/v2/templates/:templateId/read",
@@ -133,24 +161,6 @@ export function adminV2LegacyRedirects(): RouteObject[] {
 		{
 			path: "/admin/v2/templates/:templateId/edit",
 			element: <LegacyAdminTemplateRedirect suffix="/edit" />,
-		},
-	];
-}
-
-export function playgroundRoutes(): RouteObject[] {
-	return [
-		{ path: routes.playground.rootPath, element: <PlaygroundPage /> },
-		{
-			path: routes.playgroundV2TemplateRead.rootPath,
-			element: <V2TemplatePreviewPage />,
-		},
-		{
-			path: routes.playgroundV2TemplateLogic.rootPath,
-			element: <V2TemplateLogicPage />,
-		},
-		{
-			path: routes.playgroundV2TemplateEditor.rootPath,
-			element: <V2TemplateSchemaEditorPage />,
 		},
 	];
 }

@@ -10,8 +10,8 @@ import {
 	V2_TEMPLATE_VERSION_QUERY,
 	pathForAdminV2Template,
 	pathForPlaygroundV2Template,
-	routes,
-} from "@react-client/routing/version/v1/routes";
+} from "@react-client/routing/common/pathHelpers";
+import { commonRoutes as routes } from "@react-client/routing/common/routes";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";

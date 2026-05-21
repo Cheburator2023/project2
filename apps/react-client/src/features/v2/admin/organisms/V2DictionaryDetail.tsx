@@ -43,7 +43,7 @@ import {
 	agGridCustomMUIThemeDark,
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
-import { pathForAdminV2Template } from "@react-client/routing/version/v1/routes";
+import { pathForAdminV2Template } from "@react-client/routing/common/pathHelpers";
 
 export type V2DictionaryHeaderState = {
 	title: string;
