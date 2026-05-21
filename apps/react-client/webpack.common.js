@@ -76,19 +76,10 @@ module.exports = {
 				test: /\.(gif|svg|jpg|png|otf|ttf)$/,
 				use: "file-loader",
 			},
+			// Глобальные стили (dockview, xyflow, toasts) — без CSS Modules, как в data_lineage.
 			{
 				test: /\.css$/,
-				use: [
-					"style-loader",
-					{
-						loader: "css-loader",
-						options: {
-							modules: {
-								localIdentName: "[name]__[local]__[hash:base64:5]",
-							},
-						},
-					},
-				],
+				use: ["style-loader", "css-loader"],
 			},
 		],
 	},
