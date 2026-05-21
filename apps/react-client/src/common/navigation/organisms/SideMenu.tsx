@@ -8,8 +8,8 @@ import { styled, useColorScheme } from "@mui/material/styles";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { MenuContent } from "@react-client/common/navigation/molecules/MenuContent";
-import { OptionsMenu } from "@react-client/features/navigation/molecules/OptionsMenu";
 import { Card } from "@react-client/common/muiCustom/Card";
+import { OptionsMenu } from "@react-client/common/navigation/organisms/OptionsMenu";
 
 const drawerWidth = 260;
 

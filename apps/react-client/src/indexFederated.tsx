@@ -39,7 +39,6 @@ export type Props = {
 	keycloak?: TKeycloakLike;
 };
 
-
 const MfeRoot = (props: Props) => {
 	console.log("MfeRoot >> props:", props);
 	window.__SMART_ANKETA_MFE_DEBUG__ = {
@@ -94,7 +93,6 @@ const MfeRoot = (props: Props) => {
 	return (
 		<AuthProvider>
 			{globalStyles}
-
 
 			{props?.urlConfig && props?.keycloak ? (
 				<App {...props} bridged />

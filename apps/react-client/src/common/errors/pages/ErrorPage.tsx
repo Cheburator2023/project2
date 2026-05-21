@@ -3,11 +3,11 @@ import { ILL_BUG } from "@react-client/common/illustrations/ILL_BUG";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { Header } from "@react-client/features/navigation/organisms/Header";
-import { routes } from "@react-client/routing/routes";
+import { Header } from "@react-client/common/navigation/organisms/Header";
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { ErrorWrapper } from "../organisms/ErrorWrapper";
+import { routes } from "@react-client/routing/version/v1/routing/routes";
 
 export const ErrorPage = (props: {
 	error: string;

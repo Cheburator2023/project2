@@ -1,10 +1,7 @@
 import { UiSchema } from "@rjsf/utils";
 import { calc_uiSchema } from "./calc_uiSchema";
-import {
-	coefficientDisplayNames,
-	coefficientToFormFieldMapping,
-} from "../../features/anketaCRUD/constants/coefficientMappings";
 import { mainCalcSchema } from "@react-client/schemas";
+import { coefficientDisplayNames, coefficientToFormFieldMapping } from "@react-client/features/v1/anketaCRUD/constants/coefficientMappings";
 
 interface CoefficientData {
 	[key: string]: number;

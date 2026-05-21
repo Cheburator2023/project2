@@ -2,6 +2,7 @@ import { styled, useColorScheme } from "@mui/material/styles";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { SideMenu } from "@react-client/common/navigation/organisms/SideMenu";
 import { Flex } from "../primitives/Flex";
+import { Outlet } from "react-router";
 
 const MainWrapper = styled("div", {
 	shouldForwardProp: (prop) => prop !== "open",
@@ -61,7 +62,7 @@ export function MainLayout({
 				mode={mode}
 				data-test-id="main-layout--MainWrapper-0"
 			>
-				{children}
+				<Outlet />
 			</MainWrapper>
 		</Flex>
 	);

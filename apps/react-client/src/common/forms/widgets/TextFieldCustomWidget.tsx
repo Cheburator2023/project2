@@ -21,7 +21,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import {
 	basicInfoFormInitialData,
 	projectAssessmentFormInitialData,
-} from "@react-client/features/anketaCRUD/stores/useAnketaCRUDFormsStore";
+} from "@react-client/features/v1/anketaCRUD/stores/useAnketaCRUDFormsStore";
 import { WidgetProps } from "@rjsf/utils";
 import { isEqual } from "lodash-es";
 import { fuzzySearch, highlightMatches } from "@react-client/utils/fuzzySearch";

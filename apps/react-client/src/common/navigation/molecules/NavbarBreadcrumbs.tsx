@@ -2,7 +2,7 @@ import NavigateNextRoundedIcon from "@mui/icons-material/NavigateNextRounded";
 import Breadcrumbs, { breadcrumbsClasses } from "@mui/material/Breadcrumbs";
 import { styled } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
-import { routes } from "@react-client/routing/routes";
+import { routes } from "@react-client/routing/version/v1/routing/routes";
 import { useMemo } from "react";
 import { useLocation } from "react-router";
 
@@ -18,11 +18,11 @@ const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
 }));
 
 function adminTrail(pathname: string): string[] | null {
-	if (!pathname.startsWith("/admin")) return null;
+	if (!pathname.startsWith("/v2/admin")) return null;
 
 	const trail: string[] = [routes.admin.name];
 
-	if (pathname.startsWith("/admin/v2/schemas/") && pathname.endsWith("/history")) {
+	if (pathname.startsWith("/v2/admin/schemas/") && pathname.endsWith("/history")) {
 		trail.push(routes.adminV2Schemas.name);
 		trail.push(
 			routes.adminV2TemplateHistory.shortName ?? routes.adminV2TemplateHistory.name,
@@ -51,7 +51,7 @@ function adminTrail(pathname: string): string[] | null {
 	}
 
 	const templateModeMatch = pathname.match(
-		/^\/admin\/v2\/templates\/[^/]+\/(edit|read)$/,
+		/^\/v2\/admin\/templates\/[^/]+\/(edit|read)$/,
 	);
 	if (templateModeMatch?.[1]) {
 		trail.push(routes.adminV2Schemas.name);
@@ -103,7 +103,43 @@ export function NavbarBreadcrumbs() {
 			}
 		}
 
-		if (pathname === "/") return [routes.home.name];
+		if (pathname === "/v2" || pathname === "/v2/") {
+			return ["Калькулятор v2", "Реестр"];
+		}
+		if (pathname.startsWith("/v2/")) {
+			for (const segment of Object.values(routes)) {
+				if (
+					"rootPath" in segment &&
+					typeof segment.rootPath === "string" &&
+					!segment.rootPath.startsWith("/") &&
+					!segment.rootPath.includes(":")
+				) {
+					const full = `/v2/${segment.rootPath}`.replace(/\/$/, "");
+					if (pathname === full || pathname.startsWith(`${full}/`)) {
+						return ["Калькулятор v2", segment.name];
+					}
+				}
+			}
+		}
+
+		if (pathname === "/v1" || pathname === "/v1/") {
+			return [routes.home.name];
+		}
+		if (pathname.startsWith("/v1/")) {
+			for (const r of Object.values(routes)) {
+				if (
+					"rootPath" in r &&
+					typeof r.rootPath === "string" &&
+					!r.rootPath.startsWith("/") &&
+					!r.rootPath.includes(":")
+				) {
+					const full = `/v1/${r.rootPath}`.replace(/\/$/, "");
+					if (pathname === full) return ["Калькулятор v1", r.name];
+				}
+			}
+		}
+
+		if (pathname === "/") return ["Реестр"];
 
 		return ["…"];
 	}, [location.pathname]);

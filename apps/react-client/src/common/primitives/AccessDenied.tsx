@@ -1,6 +1,6 @@
 import BlockIcon from "@mui/icons-material/Block";
 import { Box, Typography } from "@mui/material";
-import { Header } from "@react-client/features/navigation/organisms/Header";
+import { Header } from "@react-client/common/navigation/organisms/Header";
 import React from "react";
 
 interface AccessDeniedProps {

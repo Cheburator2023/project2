@@ -1,0 +1,176 @@
+import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import type { CalculationResponseDto } from "@smart-anketa/api-contract";
+import { Card } from "@react-client/common/muiCustom/Card";
+import { Flex } from "@react-client/common/primitives/Flex";
+import { BasicInfoForm } from "@react-client/features/v1/anketaCRUD/organisms/BasicInfoForm";
+import { CalculationResultTablePreview } from "@react-client/features/v1/anketaCRUD/organisms/CalculationResultTablePreview";
+import { ProjectAssessmentFormPreview } from "@react-client/features/v1/anketaCRUD/organisms/ProjectAssessmentFormPreview";
+import { Panel, PanelGroup } from "react-resizable-panels";
+import { useLocation } from "react-router";
+import { PanelResizeHandleStyled } from "../atoms/PanelResizeHandleStyled";
+import { isEmpty } from "lodash-es";
+
+export const AnketaBasicLayoutPreview = ({
+	initialData,
+	comfyView,
+	isEditing = false,
+	isPending = false,
+	mainInfoDisabled = true,
+	onMainInfoChange,
+}: {
+	comfyView?: boolean;
+	isEditing?: boolean;
+	isPending?: boolean;
+	initialData: CalculationResponseDto;
+	mainInfoDisabled?: boolean;
+	onMainInfoChange?: (data: any) => void;
+}) => {
+	const location = useLocation();
+
+	const isReadOnly = !isEditing;
+
+	return (
+		<Flex
+			flexDirection="column"
+			height="100%"
+			width="100%"
+			data-test-id="anketa-basic-layout--Flex-0"
+		>
+			{comfyView ? (
+				<PanelGroup
+					autoSaveId={`anketa_${"preview"}_page_container_vert_${location.pathname}`}
+					direction="vertical"
+					data-test-id="anketa-basic-layout--PanelGroup-0"
+				>
+					<Panel data-test-id="anketa-basic-layout--Panel-3">
+						<Card
+							header="Основная информация"
+							maxHeight="100%"
+							height="100%"
+							padding="10px"
+							zoom={0.8}
+							loading={isPending}
+							nonClickable={isReadOnly}
+							uuid="anketa_project_assessment_card"
+							data-test-id="anketa-basic-layout--Card-2"
+						>
+							<BasicInfoForm
+								isEditing={isEditing}
+								initialData={initialData}
+								disabled={mainInfoDisabled}
+								onChange={onMainInfoChange}
+								data-test-id="anketa-basic-layout--BasicInfoForm-0"
+							/>
+						</Card>
+					</Panel>
+					<PanelResizeHandleStyled
+						vertical
+						data-test-id="anketa-basic-layout--PanelResizeHandleStyled-1"
+					>
+						<DragIndicatorIcon data-test-id="anketa-basic-layout--DragIndicatorIcon-1" />
+					</PanelResizeHandleStyled>
+					<Panel data-test-id="anketa-basic-layout--Panel-0">
+						<PanelGroup
+							direction="horizontal"
+							autoSaveId={`anketa_${"preview"}_page_container_hor_${location.pathname}`}
+							data-test-id="anketa-basic-layout--PanelGroup-1"
+						>
+							<Panel data-test-id="anketa-basic-layout--Panel-1">
+								<Card
+									header="Опросник"
+									height="100%"
+									padding="10px"
+									zoom={0.8}
+									loading={isPending}
+									nonClickable
+									uuid="anketa_basic_info_card"
+									data-test-id="anketa-basic-layout--Card-0"
+								>
+									<ProjectAssessmentFormPreview
+										initialData={initialData}
+										data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
+									/>
+								</Card>
+							</Panel>
+							<PanelResizeHandleStyled data-test-id="anketa-basic-layout--PanelResizeHandleStyled-0">
+								<DragIndicatorIcon data-test-id="anketa-basic-layout--DragIndicatorIcon-0" />
+							</PanelResizeHandleStyled>
+							<Panel data-test-id="anketa-basic-layout--Panel-2">
+								<Card
+									header="Итоги расчета"
+									maxHeight="100%"
+									height="100%"
+									padding="10px"
+									zoom={0.8}
+									loading={isPending}
+									uuid="anketa_calculation_result_card"
+									data-test-id="anketa-basic-layout--Card-1"
+								>
+									{!isEmpty(initialData) && (
+										<CalculationResultTablePreview
+											initialData={initialData}
+											data-test-id="anketa-basic-layout--CalculationResultTable-0"
+										/>
+									)}
+								</Card>
+							</Panel>
+						</PanelGroup>
+					</Panel>
+				</PanelGroup>
+			) : (
+				<Flex flexDirection="column" gap={10}>
+					<Card
+						header="Основная информация"
+						overflow={""}
+						padding="10px"
+						zoom={0.8}
+						uuid="anketa_project_assessment_card"
+						data-test-id="anketa-basic-layout--Card-2"
+						nonClickable={isReadOnly}
+						loading={isPending}
+					>
+						<BasicInfoForm
+							isEditing={isEditing}
+							initialData={initialData}
+							disabled={mainInfoDisabled}
+							onChange={onMainInfoChange}
+							data-test-id="anketa-basic-layout--BasicInfoForm-0"
+						/>
+					</Card>
+					<Card
+						header="Опросник"
+						overflow=""
+						padding="10px"
+						zoom={0.8}
+						nonClickable
+						uuid="anketa_basic_info_card"
+						data-test-id="anketa-basic-layout--Card-0"
+						loading={isPending}
+					>
+						<ProjectAssessmentFormPreview
+							initialData={initialData}
+							data-test-id="anketa-basic-layout--ProjectAssessmentForm-0"
+						/>
+					</Card>
+					<Card
+						header="Итоги расчета"
+						height="666px"
+						overflow="hidden"
+						padding="10px"
+						loading={isPending}
+						zoom={0.8}
+						uuid="anketa_calculation_result_card"
+						data-test-id="anketa-basic-layout--Card-1"
+					>
+						{!isEmpty(initialData) && (
+							<CalculationResultTablePreview
+								initialData={initialData}
+								data-test-id="anketa-basic-layout--CalculationResultTable-0"
+							/>
+						)}
+					</Card>
+				</Flex>
+			)}
+		</Flex>
+	);
+};
