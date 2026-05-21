@@ -6,6 +6,7 @@ import { Permission, Role } from "@react-client/types/roles";
 import { useEffect } from "react";
 import type { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
 import App from "./App";
+import { syncMfeAuthFromHost } from "@react-client/common/auth/syncMfeAuth";
 import { normalizeMfeUrlIfNeeded } from "@react-client/routing/basename";
 import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
@@ -42,6 +43,7 @@ export type Props = {
 
 const MfeRoot = (props: Props) => {
 	normalizeMfeUrlIfNeeded();
+	syncMfeAuthFromHost(props);
 
 	console.log("MfeRoot >> props:", props);
 	window.__SMART_ANKETA_MFE_DEBUG__ = {
@@ -56,6 +58,9 @@ const MfeRoot = (props: Props) => {
 			window.urlConfig = props.urlConfig;
 			window.keycloak = props.keycloak;
 			window.user = props.user;
+		}
+		if (props?.token) {
+			window.token = props.token;
 		}
 	}, [props]);
 
@@ -94,7 +99,7 @@ const MfeRoot = (props: Props) => {
 	]);
 
 	return (
-		<AuthProvider>
+		<AuthProvider token={props.token} keycloak={props.keycloak}>
 			{globalStyles}
 
 			{props?.urlConfig && props?.keycloak ? (

@@ -1,3 +1,4 @@
+import { resolveHostAccessToken } from "@react-client/common/auth/syncMfeAuth";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import axios, {
 	type AxiosError,
@@ -25,7 +26,13 @@ axiosInstance.interceptors.request.use(
 			? API_BASE_URL
 			: configMap?.SMART_ANKETA_API || API_BASE_URL;
 
-		const token = useAuthStore.getState().accessToken;
+		let token = useAuthStore.getState().accessToken;
+		if (!token) {
+			token = resolveHostAccessToken();
+			if (token) {
+				useAuthStore.getState().setAccessToken(token);
+			}
+		}
 		if (token) {
 			config.headers.Authorization = `Bearer ${token}`;
 		}
