@@ -11,7 +11,7 @@ export function AdminLayout() {
 				height: "100%",
 				display: "flex",
 				flexDirection: "column",
-				overflow: "hidden",
+				"& > *": { flex: 1, minHeight: 0, minWidth: 0 },
 			}}
 		>
 			<Outlet />

@@ -2,6 +2,12 @@ import { pathForAdminV2Template } from "@react-client/routing/common/pathHelpers
 import { commonRoutes as routes } from "@react-client/routing/common/routes";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
 
+export type GuideHeading = {
+	id: string;
+	text: string;
+	level: 2 | 3;
+};
+
 export type GuideSection = {
 	id: string;
 	title: string;
@@ -19,6 +25,33 @@ export const CALCULATOR_GUIDE_INTRO =
 	"Калькулятор (конструктор схем V2) — инструмент администрирования анкеты расчёта трудозатрат. " +
 	"Он задаёт структуру формы (JSON Schema), отображение полей (UI Schema), условную логику (JSON Logic) " +
 	"и привязки к справочникам. Пользователи заполняют уже опубликованную схему в разделе «Создание анкеты».";
+
+export function guideSubsectionId(sectionId: string, title: string): string {
+	const slug = title
+		.trim()
+		.toLowerCase()
+		.replace(/[«»"']/g, "")
+		.replace(/\s+/g, "-")
+		.replace(/[^a-zа-яё0-9-]+/gi, "")
+		.replace(/-+/g, "-")
+		.replace(/^-|-$/g, "");
+	return `${sectionId}--${slug || "subsection"}`;
+}
+
+export function buildGuideHeadings(): GuideHeading[] {
+	const headings: GuideHeading[] = [];
+	for (const section of calculatorGuideSections) {
+		headings.push({ id: section.id, text: section.title, level: 2 });
+		for (const sub of section.subsections ?? []) {
+			headings.push({
+				id: guideSubsectionId(section.id, sub.title),
+				text: sub.title,
+				level: 3,
+			});
+		}
+	}
+	return headings;
+}
 
 export const calculatorGuideSections: GuideSection[] = [
 	{

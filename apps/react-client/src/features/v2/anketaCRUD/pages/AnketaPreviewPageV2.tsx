@@ -1,47 +1,26 @@
-/** biome-ignore-all lint/correctness/noConstantCondition: <explanation> */
-
-import React from "react";
-import {
-  Grid, IconButton,
-} from "@mui/material";
-import {GeneralInfo} from "@react-client/features/v2/anketaCRUD/organisms/GeneralInfo";
-import {Header} from "@react-client/common/navigation/organisms/Header";
 import SaveIcon from "@mui/icons-material/Save";
-import {Flex} from "@react-client/common/primitives/Flex";
-import { FinalScoreCard } from "@react-client/features/v2/anketaCRUD/organisms/FinalScoreCard";
+import { IconButton } from "@mui/material";
 import { DetailedInfo } from "@react-client/features/v2/anketaCRUD/organisms/DetailedInfo";
-const APP_NAME = process.env.APP_NAME;
+import { FinalScoreCard } from "@react-client/features/v2/anketaCRUD/organisms/FinalScoreCard";
+import { GeneralInfo } from "@react-client/features/v2/anketaCRUD/organisms/GeneralInfo";
+import { AnketaFormPageLayout } from "@react-client/features/v2/anketaCRUD/templates/AnketaFormPageLayout";
 
 export const AnketaPreviewPageV2 = () => {
-
 	return (
-        <div data-test-id="anketa-create-page--div-0">
-          <Header data-test-id="anketa-create-page--Header-0">
-            <IconButton onClick={()=>{}} title="Создать" >
-              <SaveIcon />
-            </IconButton>
-          </Header>
-          <Grid
-              display={'grid'}
-              gridTemplateColumns={'2fr 1fr'}
-              gap={2}
-              width="100%"
-              height="-webkit-fill-available"
-              data-test-id="anketa-create-page--Flex-0"
-          >
-            <Flex
-                flexDirection={'column'}
-                >
-             <GeneralInfo/>
-             <DetailedInfo/>
-            </Flex>
-            <Flex
-                flexDirection={'column'}
-            >
-              <FinalScoreCard/>
-            </Flex>
-          </Grid>
-        </div>
-
-    )
+		<AnketaFormPageLayout
+			data-test-id="anketa-preview-page"
+			headerActions={
+				<IconButton onClick={() => {}} title="Сохранить">
+					<SaveIcon />
+				</IconButton>
+			}
+			main={
+				<>
+					<GeneralInfo />
+					<DetailedInfo />
+				</>
+			}
+			sidebar={<FinalScoreCard />}
+		/>
+	);
 };

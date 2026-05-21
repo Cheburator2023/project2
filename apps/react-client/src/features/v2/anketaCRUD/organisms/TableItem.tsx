@@ -1,227 +1,138 @@
-import React from 'react';
-import {
-    Box,
-    Chip,
-    IconButton,
-    Paper,
-    Stack,
-    Typography,
-} from '@mui/material';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import { Box, Chip, IconButton, Stack, Typography } from "@mui/material";
+import type { ReactNode } from "react";
 
 type TableItemProps = {
-    name: string;
-    workType: string;
-    channels: string[];
-    pilotRequired: boolean;
-    modelClass: string;
-    controls: string[];
+	name: string;
+	workType: string;
+	channels: string[];
+	pilotRequired: boolean;
+	modelClass: string;
+	controls: string[];
 };
 
-export const TableItem: React.FC<TableItemProps> = ({
-                                                 name,
-                                                 workType,
-                                                 channels,
-                                                 pilotRequired,
-                                                 modelClass,
-                                                 controls,
-                                             }) => {
-    return (
-        <>
-            <Box
-                sx={{
-                    display: 'grid',
-                    gridTemplateColumns: '1.3fr 1fr 1.2fr 0.8fr 1.2fr 1fr auto',
-                    alignItems: 'center',
-                    gap: 3,
-                    minWidth: 900,
-                }}
-            >
-                {/* Название */}
-                <Box>
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            color: '#9CA3AF',
-                            fontWeight: 500,
-                            mb: 0.5,
-                            display: 'block',
-                        }}
-                    >
-                        Название
-                    </Typography>
+function FieldBlock({
+	label,
+	children,
+}: {
+	label: string;
+	children: ReactNode;
+}) {
+	return (
+		<Box sx={{ minWidth: 0 }}>
+			<Typography
+				variant="caption"
+				sx={{ color: "#9CA3AF", fontWeight: 500, mb: 0.5, display: "block" }}
+			>
+				{label}
+			</Typography>
+			{children}
+		</Box>
+	);
+}
 
-                    <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography
-                            variant="body1"
-                            sx={{
-                                fontWeight: 600,
-                                color: '#111827',
-                            }}
-                        >
-                            {name}
-                        </Typography>
+export const TableItem = ({
+	name,
+	workType,
+	channels,
+	pilotRequired,
+	modelClass,
+	controls,
+}: TableItemProps) => {
+	return (
+		<Box
+			sx={{
+				display: "grid",
+				gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+				alignItems: "start",
+				gap: 2,
+				width: "100%",
+				maxWidth: "100%",
+				minWidth: 0,
+			}}
+		>
+			<FieldBlock label="Название">
+				<Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
+					<Typography variant="body2" fontWeight={600} noWrap title={name}>
+						{name}
+					</Typography>
+					<OpenInNewIcon sx={{ fontSize: 16, color: "#6B7280", flexShrink: 0 }} />
+				</Stack>
+			</FieldBlock>
 
-                        <OpenInNewIcon
-                            sx={{
-                                fontSize: 18,
-                                color: '#6B7280',
-                                cursor: 'pointer',
-                            }}
-                        />
-                    </Stack>
-                </Box>
+			<FieldBlock label="Тип работ">
+				<Typography variant="body2" fontWeight={500}>
+					{workType}
+				</Typography>
+			</FieldBlock>
 
-                {/* Тип работ */}
-                <Box>
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            color: '#9CA3AF',
-                            fontWeight: 500,
-                            mb: 0.5,
-                            display: 'block',
-                        }}
-                    >
-                        Тип работ
-                    </Typography>
+			<FieldBlock label="Канал внедрения">
+				<Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+					{channels.map((channel) => (
+						<Chip
+							key={channel}
+							label={channel}
+							size="small"
+							sx={{
+								backgroundColor: "#F3F4F6",
+								color: "#374151",
+								borderRadius: "8px",
+								fontWeight: 500,
+								maxWidth: "100%",
+							}}
+						/>
+					))}
+				</Stack>
+			</FieldBlock>
 
-                    <Typography
-                        variant="body2"
-                        sx={{
-                            color: '#111827',
-                            fontWeight: 500,
-                        }}
-                    >
-                        {workType}
-                    </Typography>
-                </Box>
+			<FieldBlock label="Требуется пилот">
+				<Typography
+					variant="body2"
+					fontWeight={600}
+					sx={{ color: pilotRequired ? "#059669" : "#DC2626" }}
+				>
+					{pilotRequired ? "Да" : "Нет"}
+				</Typography>
+			</FieldBlock>
 
-                {/* Канал внедрения */}
-                <Box>
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            color: '#9CA3AF',
-                            fontWeight: 500,
-                            mb: 0.5,
-                            display: 'block',
-                        }}
-                    >
-                        Канал внедрения
-                    </Typography>
+			<FieldBlock label="Класс моделей">
+				<Typography variant="body2" fontWeight={500}>
+					{modelClass}
+				</Typography>
+			</FieldBlock>
 
-                    <Stack direction="row" spacing={1} flexWrap="wrap">
-                        {channels.map((channel) => (
-                            <Chip
-                                key={channel}
-                                label={channel}
-                                size="small"
-                                sx={{
-                                    backgroundColor: '#F3F4F6',
-                                    color: '#374151',
-                                    borderRadius: '8px',
-                                    fontWeight: 500,
-                                }}
-                            />
-                        ))}
-                    </Stack>
-                </Box>
+			<FieldBlock label="Вид контроля">
+				<Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+					{controls.map((control) => (
+						<Chip
+							key={control}
+							label={control}
+							size="small"
+							sx={{
+								backgroundColor: "#EEF2FF",
+								color: "#4338CA",
+								borderRadius: "8px",
+								fontWeight: 500,
+							}}
+						/>
+					))}
+				</Stack>
+			</FieldBlock>
 
-                {/* Требуется пилот */}
-                <Box>
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            color: '#9CA3AF',
-                            fontWeight: 500,
-                            mb: 0.5,
-                            display: 'block',
-                        }}
-                    >
-                        Требуется пилот
-                    </Typography>
-
-                    <Typography
-                        variant="body2"
-                        sx={{
-                            color: pilotRequired ? '#059669' : '#DC2626',
-                            fontWeight: 600,
-                        }}
-                    >
-                        {pilotRequired ? 'Да' : 'Нет'}
-                    </Typography>
-                </Box>
-
-                {/* Класс моделей */}
-                <Box>
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            color: '#9CA3AF',
-                            fontWeight: 500,
-                            mb: 0.5,
-                            display: 'block',
-                        }}
-                    >
-                        Класс моделей
-                    </Typography>
-                    <Typography
-                        variant="body2"
-                        sx={{
-                            color: '#111827',
-                            fontWeight: 500,
-                        }}
-                    >
-                        {modelClass}
-                    </Typography>
-                </Box>
-
-                {/* Вид контроля */}
-                <Box>
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            color: '#9CA3AF',
-                            fontWeight: 500,
-                            mb: 0.5,
-                            display: 'block',
-                        }}
-                    >
-                        Вид контроля
-                    </Typography>
-
-                    <Stack direction="row" spacing={1} flexWrap="wrap">
-                        {controls.map((control) => (
-                            <Chip
-                                key={control}
-                                label={control}
-                                size="small"
-                                sx={{
-                                    backgroundColor: '#EEF2FF',
-                                    color: '#4338CA',
-                                    borderRadius: '8px',
-                                    fontWeight: 500,
-                                }}
-                            />
-                        ))}
-                    </Stack>
-                </Box>
-
-                {/* Action */}
-                <IconButton
-                    size="small"
-                    sx={{
-                        border: '1px solid #E5E7EB',
-                        borderRadius: '10px',
-                        width: 36,
-                        height: 36,
-                    }}
-                >
-                    <EditOutlinedIcon fontSize="small" />
-                </IconButton>
-            </Box>
-        </>
-    );
+			<Box sx={{ display: "flex", justifyContent: { xs: "flex-start", sm: "flex-end" } }}>
+				<IconButton
+					size="small"
+					sx={{
+						border: "1px solid #E5E7EB",
+						borderRadius: "10px",
+						width: 36,
+						height: 36,
+					}}
+				>
+					<EditOutlinedIcon fontSize="small" />
+				</IconButton>
+			</Box>
+		</Box>
+	);
 };
