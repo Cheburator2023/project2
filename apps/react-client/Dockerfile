@@ -1,10 +1,11 @@
 # Base Image
-FROM docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-frontend:v1.0.1 as build-deps
+FROM docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-ui:v3.0.0 as build-deps
 
 # build react-client
 COPY apps/react-client ./
 COPY packages/api-contract ./node_modules/@smart-anketa/api-contract
 COPY packages/json-logic-ts ./node_modules/@smart-anketa/json-logic-ts
+COPY packages/ag-grid-enterprise ./node_modules/ag-grid-enterprise
 RUN npm --prefix ./node_modules/@smart-anketa/api-contract run build
 RUN npm --prefix ./node_modules/@smart-anketa/json-logic-ts run build
 RUN npm run build:webpack
