@@ -8,7 +8,7 @@ export const navbarGroups = {
 export const v1Routes = {
 	home: {
 		rootPath: "",
-		name: "Главная / Реестр",
+		name: "Реестр анкет v1",
 		disabled: false,
 		showInNavbar: true,
 		navbar: { group: "main", order: 0 },

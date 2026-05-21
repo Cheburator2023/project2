@@ -1,4 +1,5 @@
 import "@fontsource/inter";
+import "./theme/dockview.css";
 
 import { CircularProgress, StyledEngineProvider } from "@mui/material";
 import { unstable_ClassNameGenerator as ClassNameGenerator } from "@mui/material/className";

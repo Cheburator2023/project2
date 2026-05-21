@@ -8,7 +8,7 @@ export const navbarGroups = {
 export const v2Routes = {
 	home: {
 		rootPath: "",
-		name: "Реестр",
+		name: "Реестр анкет v2",
 		disabled: false,
 	},
 	calculationCreate: {

@@ -9,7 +9,7 @@ import {
 	type DockviewReadyEvent,
 	type IDockviewPanelHeaderProps,
 } from "dockview-react";
-import "dockview/dist/styles/dockview.css";
+
 import { useCallback, useEffect, useRef } from "react";
 import { TAB_HEADINGS } from "./constants";
 import { SchemaEditorDockHeaderRightActions } from "./SchemaEditorDockHeaderActions";
