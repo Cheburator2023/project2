@@ -12,9 +12,10 @@ import { ColorModeIconDropdown } from "../../../theme/ColorModeIconDropdown";
 import { MenuButton } from "../molecules/MenuButton";
 import { NavbarBreadcrumbs } from "@react-client/common/navigation/molecules/NavbarBreadcrumbs";
 import { useLayoutEffect, useRef, useState } from "react";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 
 const DRAWER_WIDTH = 260;
-const MAIN_PADDING = 21;
+const MAIN_PADDING = 8;
 const HEADER_BOTTOM_GAP = 6;
 
 export function Header({
@@ -22,11 +23,13 @@ export function Header({
 	title,
 	calcId,
 	leadingAccessory,
+	fixed = false,
 }: {
 	children?: React.ReactNode;
 	calcId?: string;
 	title?: string;
 	leadingAccessory?: React.ReactNode;
+	fixed?: boolean;
 }) {
 	const theme = useTheme();
 	const { toggleSideMenu, isSideMenuVisible } = useGlobalSettingsStore();
@@ -62,17 +65,25 @@ export function Header({
 				ref={headerRef}
 				component="header"
 				data-test-id="header--fixed-shell-0"
-				sx={{
-					position: "fixed",
-					top: MAIN_PADDING,
-					left: isSideMenuVisible ? DRAWER_WIDTH + MAIN_PADDING : MAIN_PADDING,
-					right: MAIN_PADDING,
-					zIndex: theme.zIndex.appBar,
-					transition: theme.transitions.create("left", {
-						easing: theme.transitions.easing.sharp,
-						duration: theme.transitions.duration.enteringScreen,
-					}),
-				}}
+				sx={
+					fixed
+						? {
+								position: "fixed",
+								top: MAIN_PADDING,
+								left: isSideMenuVisible
+									? DRAWER_WIDTH + MAIN_PADDING
+									: MAIN_PADDING,
+								right: "20px",
+								zIndex: theme.zIndex.appBar,
+								transition: theme.transitions.create("left", {
+									easing: theme.transitions.easing.sharp,
+									duration: theme.transitions.duration.enteringScreen,
+								}),
+							}
+						: {
+								left: isSideMenuVisible ? DRAWER_WIDTH : MAIN_PADDING,
+							}
+				}
 			>
 				<Card
 					data-test-id="header--Card-0"
@@ -146,11 +157,15 @@ export function Header({
 					</Flex>
 				</Card>
 			</Box>
-			<Box
-				aria-hidden
-				data-test-id="header--spacer-0"
-				sx={{ height: spacerHeight, flexShrink: 0 }}
-			/>
+			{fixed ? (
+				<Box
+					aria-hidden
+					data-test-id="header--spacer-0"
+					sx={{ height: spacerHeight, flexShrink: 0 }}
+				/>
+			) : (
+				<Spacer height={8} />
+			)}
 		</>
 	);
 }

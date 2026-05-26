@@ -62,12 +62,13 @@ function resolveScrollContainer(
 	return null;
 }
 
-function getGuideScrollContainer(preferred: HTMLElement | null): HTMLElement | null {
+function getGuideScrollContainer(
+	preferred: HTMLElement | null,
+): HTMLElement | null {
 	const sampleId = GUIDE_HEADINGS[0]?.id;
 	const sample = sampleId ? document.getElementById(sampleId) : null;
 	if (sample) return resolveScrollContainer(sample, preferred);
-	return preferred &&
-		preferred.scrollHeight > preferred.clientHeight + 2
+	return preferred && preferred.scrollHeight > preferred.clientHeight + 2
 		? preferred
 		: null;
 }
@@ -128,8 +129,12 @@ function useGuideScrollSpy(
 	}, []);
 
 	const selectSection = useCallback(
-		(sectionId: string, options?: { updateHash?: boolean; scroll?: boolean }) => {
-			const { updateHash: shouldUpdateHash = true, scroll = true } = options ?? {};
+		(
+			sectionId: string,
+			options?: { updateHash?: boolean; scroll?: boolean },
+		) => {
+			const { updateHash: shouldUpdateHash = true, scroll = true } =
+				options ?? {};
 			setActiveId(sectionId);
 			if (shouldUpdateHash) updateHash(sectionId);
 			if (scroll) {
@@ -191,7 +196,11 @@ function TableOfContents({
 	onSelect: (id: string) => void;
 }) {
 	return (
-		<Box component="nav" aria-label="Содержание справки" sx={{ width: "100%", padding: '10px 7px 10px 11px' }}>
+		<Box
+			component="nav"
+			aria-label="Содержание справки"
+			sx={{ width: "100%", padding: "10px 7px 10px 11px" }}
+		>
 			<Typography variant="subtitle2" sx={{ px: 0.5, pb: 1, fontWeight: 600 }}>
 				Содержание
 			</Typography>
@@ -230,7 +239,7 @@ function TableOfContents({
 	);
 }
 
-function GuideHeading({
+function GuideHeading2({
 	id,
 	level,
 	onActivate,
@@ -311,11 +320,16 @@ function GuideBlock({
 }) {
 	return (
 		<Box component="section">
-			<GuideHeading id={section.id} level={2} onActivate={onActivate}>
+			<GuideHeading2 id={section.id} level={2} onActivate={onActivate}>
 				{section.title}
-			</GuideHeading>
+			</GuideHeading2>
 			{section.paragraphs?.map((p) => (
-				<Typography key={p.slice(0, 40)} variant="body2" color="text.secondary" paragraph>
+				<Typography
+					key={p.slice(0, 40)}
+					variant="body2"
+					color="text.secondary"
+					paragraph
+				>
 					{p}
 				</Typography>
 			))}
@@ -338,9 +352,9 @@ function GuideBlock({
 				const subId = guideSubsectionId(section.id, sub.title);
 				return (
 					<Box key={subId} component="article" sx={{ mb: 2 }}>
-						<GuideHeading id={subId} level={3} onActivate={onActivate}>
+						<GuideHeading2 id={subId} level={3} onActivate={onActivate}>
 							{sub.title}
-						</GuideHeading>
+						</GuideHeading2>
 						{sub.paragraphs?.map((p) => (
 							<Typography
 								key={p.slice(0, 40)}
@@ -397,7 +411,10 @@ export function AdminV2GuidePage() {
 		setScrollRoot(node);
 	}, []);
 
-	const { activeId, selectSection } = useGuideScrollSpy(GUIDE_HEADINGS, scrollRoot);
+	const { activeId, selectSection } = useGuideScrollSpy(
+		GUIDE_HEADINGS,
+		scrollRoot,
+	);
 
 	const activateHeading = useCallback(
 		(id: string) => selectSection(id, { updateHash: true, scroll: true }),
@@ -411,7 +428,7 @@ export function AdminV2GuidePage() {
 			minHeight="0"
 			height="-webkit-fill-available"
 		>
-			<Header title={routes.adminV2Guide.name} />
+			<Header fixed title={routes.adminV2Guide.name} />
 			<Box
 				sx={{
 					flex: 1,

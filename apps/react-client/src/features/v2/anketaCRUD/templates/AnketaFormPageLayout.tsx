@@ -27,7 +27,9 @@ export function AnketaFormPageLayout({
 				boxSizing: "border-box",
 			}}
 		>
-			<Header data-test-id={`${dataTestId}--Header`}>{headerActions}</Header>
+			<Header fixed data-test-id={`${dataTestId}--Header`}>
+				{headerActions}
+			</Header>
 
 			<Box
 				component="main"

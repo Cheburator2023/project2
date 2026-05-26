@@ -120,7 +120,8 @@ export function V2QuestionnaireList() {
 
 		return [...bySeries.entries()].map(([seriesId, versions]) => {
 			const sorted = [...versions].sort(
-				(a, b) => Number.parseInt(b.version, 10) - Number.parseInt(a.version, 10),
+				(a, b) =>
+					Number.parseInt(b.version, 10) - Number.parseInt(a.version, 10),
 			);
 			const head = sorted[0];
 			return {
@@ -184,7 +185,8 @@ export function V2QuestionnaireList() {
 				colId: "author",
 				headerName: "Автор",
 				width: 140,
-				valueGetter: (p) => (p.data?.rowKind === "version" ? p.data.author : ""),
+				valueGetter: (p) =>
+					p.data?.rowKind === "version" ? p.data.author : "",
 			},
 			{
 				colId: "createdAt",
@@ -202,7 +204,9 @@ export function V2QuestionnaireList() {
 		(e: RowDoubleClickedEvent<V2QuestionnaireGridRow>) => {
 			const row = e.data;
 			if (!row || row.rowKind !== "version") return;
-			navigate(`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", row.id)}`);
+			navigate(
+				`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", row.id)}`,
+			);
 		},
 		[navigate],
 	);
@@ -212,7 +216,9 @@ export function V2QuestionnaireList() {
 	}, []);
 
 	const getContextMenuItems = useCallback(
-		(params: GetContextMenuItemsParams<V2QuestionnaireGridRow>): MenuItemDef[] => {
+		(
+			params: GetContextMenuItemsParams<V2QuestionnaireGridRow>,
+		): MenuItemDef[] => {
 			const row = params.node?.data;
 			if (!row || row.rowKind !== "version") {
 				return [];
@@ -238,7 +244,7 @@ export function V2QuestionnaireList() {
 	);
 
 	return (
-		<Flex flexDirection="column" flexGrow={1} minHeight="0">
+		<div>
 			<Header>
 				<Button
 					variant="contained"
@@ -249,7 +255,7 @@ export function V2QuestionnaireList() {
 					Создать анкету
 				</Button>
 			</Header>
-			<GridWrapper flexGrow={1} minHeight="0" sx={{ px: 2, pb: 2 }}>
+			<GridWrapper flexGrow={1} minHeight="0" sx={{ p: 0 }}>
 				<AgGridReact<V2QuestionnaireGridRow>
 					ref={gridRef}
 					theme={gridTheme}
@@ -259,9 +265,7 @@ export function V2QuestionnaireList() {
 					columnDefs={columnDefs}
 					treeData
 					getDataPath={(row) =>
-						row.rowKind === "series"
-							? [row.seriesId]
-							: [row.seriesId, row.id]
+						row.rowKind === "series" ? [row.seriesId] : [row.seriesId, row.id]
 					}
 					autoGroupColumnDef={{
 						headerName: "Серия",
@@ -277,6 +281,6 @@ export function V2QuestionnaireList() {
 					domLayout="normal"
 				/>
 			</GridWrapper>
-		</Flex>
+		</div>
 	);
 }
