@@ -1,10 +1,16 @@
-import { Card } from "@react-client/common/muiCustom/Card";
 import { V2_TEMPLATE_READ_TEST_IDS } from "../testIds";
+import AddIcon from "@mui/icons-material/Add";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import Accordion from "@mui/material/Accordion";
+import AccordionDetails from "@mui/material/AccordionDetails";
+import AccordionSummary from "@mui/material/AccordionSummary";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import type {
+	ArrayFieldTemplateProps,
 	FieldPathId,
 	ObjectFieldTemplateProps,
 	RJSFSchema,
@@ -36,21 +42,168 @@ function resolveSectionTitle(
 	);
 }
 
+function isHiddenUiNode(uiNode: unknown): boolean {
+	if (!uiNode || typeof uiNode !== "object" || Array.isArray(uiNode))
+		return false;
+	const node = uiNode as UiSchema;
+	const options = node["ui:options"];
+	return (
+		node["ui:widget"] === "hidden" ||
+		(Boolean(options) &&
+			typeof options === "object" &&
+			!Array.isArray(options) &&
+			(options as { hidden?: unknown }).hidden === true)
+	);
+}
+
+function propertySchemaFor(
+	schemaNode: RJSFSchema,
+	name: string,
+): RJSFSchema | undefined {
+	const properties = schemaNode.properties;
+	if (
+		!properties ||
+		typeof properties !== "object" ||
+		Array.isArray(properties)
+	) {
+		return undefined;
+	}
+	return properties[name] as RJSFSchema | undefined;
+}
+
+function gridSizeForProperty(
+	name: string,
+	propertySchema: RJSFSchema | undefined,
+	propertyUiSchema: UiSchema | undefined,
+) {
+	const options = propertyUiSchema?.["ui:options"];
+	const fullWidth =
+		(Boolean(options) &&
+			typeof options === "object" &&
+			!Array.isArray(options) &&
+			(options as { fullWidth?: unknown }).fullWidth === true) ||
+		name === "calcName" ||
+		name === "name" ||
+		propertySchema?.type === "object" ||
+		propertySchema?.type === "array";
+
+	return { xs: 12, md: fullWidth ? 12 : 6 };
+}
+
 function ObjectFieldsGrid({
 	properties,
-}: Pick<ObjectFieldTemplateProps, "properties">) {
+	schema,
+	uiSchema,
+}: Pick<ObjectFieldTemplateProps, "properties"> & {
+	schema: RJSFSchema;
+	uiSchema: UiSchema | undefined;
+}) {
+	const visibleProperties = properties.filter(
+		(element) => !isHiddenUiNode(uiSchema?.[element.name]),
+	);
+
 	return (
-		<Grid container spacing={2}>
-			{properties.map((element, index) => (
-				<Grid size={12} key={element.name ?? index}>
-					{element.content}
-				</Grid>
-			))}
+		<Grid container spacing={2} sx={{ width: "100%", minWidth: 0 }}>
+			{visibleProperties.map((element, index) => {
+				const propertySchema = propertySchemaFor(schema, element.name);
+				const propertyUiSchema = uiSchema?.[element.name] as
+					| UiSchema
+					| undefined;
+
+				return (
+					<Grid
+						size={gridSizeForProperty(
+							element.name,
+							propertySchema,
+							propertyUiSchema,
+						)}
+						key={element.name ?? index}
+						sx={{ minWidth: 0 }}
+					>
+						{element.content}
+					</Grid>
+				);
+			})}
 		</Grid>
 	);
 }
 
-/** Группы/секции (object) в Card; корень — только вертикальный стек без обёртки. */
+export function V2PreviewArrayFieldTemplate({
+	canAdd,
+	disabled,
+	fieldPathId,
+	items,
+	onAddClick,
+	readonly,
+	required,
+	schema,
+	title,
+	uiSchema,
+}: ArrayFieldTemplateProps) {
+	const uiTitle = uiSchema?.["ui:title"];
+	const sectionTitle =
+		(typeof uiTitle === "string" && uiTitle) ||
+		title ||
+		(typeof schema.title === "string" ? schema.title : undefined) ||
+		"Список";
+	const canEdit = !disabled && !readonly;
+	const addLabel =
+		typeof (uiSchema?.["ui:options"] as { addButtonText?: unknown } | undefined)
+			?.addButtonText === "string"
+			? ((uiSchema?.["ui:options"] as { addButtonText: string }).addButtonText)
+			: `Добавить ${sectionTitle.toLowerCase()}`;
+
+	return (
+		<Box id={fieldPathId.$id} sx={{ minWidth: 0 }}>
+			<Typography variant="h6" fontWeight={700} mb={2}>
+				{sectionTitle}
+				{required ? " *" : ""}
+			</Typography>
+			<Box
+				sx={{
+					border: "1px solid #E5E7EB",
+					borderRadius: 2,
+					overflow: "hidden",
+					minWidth: 0,
+				}}
+			>
+				{items.length > 0 ? (
+					items.map((element) => (
+						<Box
+							key={element.key}
+							sx={{
+								p: 2,
+								borderBottom: 1,
+								borderColor: "divider",
+								"&:last-child": { borderBottom: 0 },
+							}}
+						>
+							{element}
+						</Box>
+					))
+				) : (
+					<Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+						Нет строк
+					</Typography>
+				)}
+			</Box>
+			{canAdd && canEdit ? (
+				<Box mt={3}>
+					<Button
+						variant="outlined"
+						startIcon={<AddIcon />}
+						onClick={onAddClick}
+						sx={{ textTransform: "uppercase", fontWeight: 600 }}
+					>
+						{addLabel}
+					</Button>
+				</Box>
+			) : null}
+		</Box>
+	);
+}
+
+/** Группы/секции (object) в accordion-карточках; корень — только вертикальный стек. */
 export function V2PreviewObjectFieldTemplate({
 	title,
 	description,
@@ -61,17 +214,28 @@ export function V2PreviewObjectFieldTemplate({
 	registry,
 }: ObjectFieldTemplateProps) {
 	const schemaNode = schema as RJSFSchema;
-	const isRoot = isRootObjectField(fieldPathId, schemaNode, registry.rootSchema);
+	const isRoot = isRootObjectField(
+		fieldPathId,
+		schemaNode,
+		registry.rootSchema,
+	);
 
 	if (isRoot) {
+		const visibleProperties = properties.filter(
+			(element) =>
+				!isHiddenUiNode((uiSchema as UiSchema | undefined)?.[element.name]),
+		);
+
 		return (
 			<Stack
 				spacing={2}
-				sx={{ width: "100%" }}
+				sx={{ width: "100%", minWidth: 0 }}
 				data-test-id={V2_TEMPLATE_READ_TEST_IDS.formSections}
 			>
-				{properties.map((element) => (
-					<Box key={element.name}>{element.content}</Box>
+				{visibleProperties.map((element) => (
+					<Box key={element.name} sx={{ minWidth: 0 }}>
+						{element.content}
+					</Box>
 				))}
 			</Stack>
 		);
@@ -83,20 +247,71 @@ export function V2PreviewObjectFieldTemplate({
 		uiSchema as UiSchema,
 		fieldPathId?.$id ?? "Секция",
 	);
+	const objectDepth = fieldPathId?.path?.length ?? 1;
+
+	if (objectDepth > 1) {
+		return (
+			<Box sx={{ minWidth: 0 }}>
+				<Typography variant="h6" fontWeight={700} mb={3}>
+					{sectionTitle}
+				</Typography>
+				{description ? (
+					<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+						{description}
+					</Typography>
+				) : null}
+				<ObjectFieldsGrid
+					properties={properties}
+					schema={schemaNode}
+					uiSchema={uiSchema as UiSchema | undefined}
+				/>
+			</Box>
+		);
+	}
 
 	return (
-		<Card
-			header={sectionTitle}
-			padding="12px 16px"
-			sx={{ width: "100%" }}
+		<Accordion
+			defaultExpanded
+			disableGutters
+			sx={{
+				height: "auto !important",
+				borderRadius: 3,
+				boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+				overflow: "hidden",
+				"&:before": { display: "none" },
+			}}
 			data-test-id={V2_TEMPLATE_READ_TEST_IDS.formSection}
 		>
-			{description ? (
-				<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-					{description}
+			<AccordionSummary
+				expandIcon={<ExpandMoreIcon />}
+				sx={{
+					minHeight: 56,
+					"& .MuiAccordionSummary-content": {
+						alignItems: "center",
+						my: 1.5,
+					},
+				}}
+			>
+				<Typography
+					variant={sectionTitle === "Детальная информация" ? "h5" : "h6"}
+					fontWeight={sectionTitle === "Детальная информация" ? 700 : undefined}
+					sx={{ minWidth: 0 }}
+				>
+					{sectionTitle}
 				</Typography>
-			) : null}
-			<ObjectFieldsGrid properties={properties} />
-		</Card>
+			</AccordionSummary>
+			<AccordionDetails sx={{ minWidth: 0 }}>
+				{description ? (
+					<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+						{description}
+					</Typography>
+				) : null}
+				<ObjectFieldsGrid
+					properties={properties}
+					schema={schemaNode}
+					uiSchema={uiSchema as UiSchema | undefined}
+				/>
+			</AccordionDetails>
+		</Accordion>
 	);
 }

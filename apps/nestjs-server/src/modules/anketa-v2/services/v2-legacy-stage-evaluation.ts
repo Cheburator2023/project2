@@ -612,6 +612,9 @@ export function evaluateLegacyV2Summary(
 				: null,
 	});
 
+	const sourceTypical = sumTaskTotals(
+		readArray(readRecord(data.detailInfo)?.sourceTypicalTasks),
+	);
 	const mlTypical = sumTaskTotals(readArray(mlPlatform?.typicalTasks));
 	const mlAtypical = sumAtypicalIncluded(readArray(mlPlatform?.atypicalTasks));
 	const algorithmMult = Math.max(coefficients.algorithmComplexityCoefficient, 1);
@@ -633,15 +636,9 @@ export function evaluateLegacyV2Summary(
 		},
 		{
 			streamName: V2_PLATFORM_STREAM_NAMES[2],
-			baseTypicalScore: roundUp2(
-				readArray(readRecord(data.dataObjects)?.trainingSources).length * 10,
-			),
-			adjustedTypicalScore: roundUp2(
-				readArray(readRecord(data.dataObjects)?.trainingSources).length *
-					10 *
-					algorithmMult,
-			),
-			deviationPercent: null,
+			baseTypicalScore: sourceTypical,
+			adjustedTypicalScore: roundUp2(sourceTypical * algorithmMult),
+			deviationPercent: percentDeviation(sourceTypical, sourceTypical * algorithmMult),
 			atypicalScore: 0,
 		},
 	];

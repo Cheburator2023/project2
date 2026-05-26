@@ -37,6 +37,21 @@
         "title": "Общая информация",
         "properties": {
 
+          "calcName": {
+            "type": "string",
+            "title": "Название анкеты"
+          },
+
+          "businessCustomer": {
+            "type": "string",
+            "title": "Бизнес-заказчик"
+          },
+
+          "implementationStream": {
+            "type": "string",
+            "title": "Стрим/исполнитель"
+          },
+
           "complexity": {
             "type": "string",
             "title": "Сложность постановки",
@@ -229,6 +244,20 @@
                   "title": "Требования",
                   "enum": ["Понятны", "Не понятны", "Рисковые"]
                 },
+                "additionalUncertainty": {
+                  "type": "string",
+                  "title": "Доп. неопределённость источника",
+                  "enum": ["Нет", "Да"]
+                },
+                "integrationReadiness": {
+                  "type": "string",
+                  "title": "Готовность к интеграции в ПД",
+                  "enum": [
+                    "Готов к интеграции",
+                    "Нужны доработки ИС",
+                    "Сложная интеграция"
+                  ]
+                },
                 "dataCoeff": {
                   "type": "string",
                   "title": "Коэф. данных",
@@ -239,6 +268,23 @@
                   "title": "НДА",
                   "enum": ["Нет", "Да"]
                 }
+              }
+            }
+          },
+
+          "sourceTypicalTasks": {
+            "type": "array",
+            "title": "Типовые работы по источникам данных",
+            "readOnly": true,
+            "items": {
+              "type": "object",
+              "title": "Типовая работа источника",
+              "properties": {
+                "name": { "type": "string", "title": "Задача", "readOnly": true },
+                "reason": { "type": "string", "title": "Причина", "readOnly": true },
+                "estimateHoursPerDay": { "type": "number", "title": "Оценка ч/д", "readOnly": true },
+                "coefficient": { "type": "number", "title": "Коэф.", "readOnly": true },
+                "total": { "type": "number", "title": "Итог", "readOnly": true }
               }
             }
           }
@@ -591,6 +637,7 @@
 
   "uiSchema": {
     "meta": {
+      "ui:options": { "hidden": true },
       "ui:order": ["id", "name", "version", "status"],
       "id": {
         "ui:widget": "text",
@@ -611,6 +658,9 @@
 
     "generalInfo": {
       "ui:order": [
+        "calcName",
+        "businessCustomer",
+        "implementationStream",
         "complexity",
         "channels",
         "createIS",
@@ -618,6 +668,19 @@
         "createService",
         "pilotNeed"
       ],
+      "calcName": {
+        "ui:widget": "text",
+        "ui:placeholder": "Название анкеты",
+        "ui:options": { "fullWidth": true }
+      },
+      "businessCustomer": {
+        "ui:widget": "text",
+        "ui:placeholder": "Бизнес-заказчик"
+      },
+      "implementationStream": {
+        "ui:widget": "text",
+        "ui:placeholder": "Стрим/исполнитель"
+      },
       "complexity": {
         "ui:widget": "select",
         "ui:placeholder": "Сложность постановки"
@@ -717,8 +780,25 @@
             }
           },
           "requirements": { "ui:widget": "select" },
+          "additionalUncertainty": { "ui:widget": "select" },
+          "integrationReadiness": { "ui:widget": "select" },
           "dataCoeff": { "ui:widget": "select" },
           "nda": { "ui:widget": "select" }
+        }
+      },
+      "sourceTypicalTasks": {
+        "ui:readonly": true,
+        "ui:options": {
+          "orderable": false,
+          "addable": false,
+          "removable": false
+        },
+        "items": {
+          "name": { "ui:widget": "text", "ui:readonly": true },
+          "reason": { "ui:widget": "text", "ui:readonly": true },
+          "estimateHoursPerDay": { "ui:widget": "text", "ui:readonly": true },
+          "coefficient": { "ui:widget": "text", "ui:readonly": true },
+          "total": { "ui:widget": "text", "ui:readonly": true }
         }
       }
     },

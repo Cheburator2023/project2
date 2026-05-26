@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"emmet.includeLanguages": {
+			"javascript": "javascriptreact",
+			"typescript": "typescriptreact"
+		},
+		"typescript.tsdk": "node_modules\\typescript\\lib",
+		"git.autorefresh": true,
+		"git.autoRepositoryDetection": true
+	}
+}

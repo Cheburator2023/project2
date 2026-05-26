@@ -34,43 +34,26 @@ export function AnketaFormPageLayout({
 				data-test-id={`${dataTestId}--main`}
 				sx={{
 					flex: 1,
+					display: "grid",
+					gridTemplateColumns: {
+						xs: "1fr",
+						lg: "minmax(0, 2fr) minmax(360px, 1fr)",
+					},
+					gap: 2,
+					alignItems: "start",
 					minHeight: 0,
 					minWidth: 0,
 					width: "100%",
 					maxWidth: "100%",
+					height: "-webkit-fill-available",
 					overflowY: "auto",
 					overflowX: "hidden",
 					boxSizing: "border-box",
+					"& > *": { minWidth: 0, maxWidth: "100%" },
 				}}
 			>
-				<Box
-					sx={{
-						display: "grid",
-						gridTemplateColumns: {
-							xs: "1fr",
-							lg: "minmax(0, 1.65fr) minmax(0, 1fr)",
-						},
-						gap: 2,
-						alignItems: "start",
-						width: "100%",
-						maxWidth: "100%",
-						minWidth: 0,
-						boxSizing: "border-box",
-					}}
-				>
-					<Box
-						sx={{
-							minWidth: 0,
-							maxWidth: "100%",
-							display: "flex",
-							flexDirection: "column",
-							gap: 2,
-						}}
-					>
-						{main}
-					</Box>
-					<Box sx={{ minWidth: 0, maxWidth: "100%" }}>{sidebar}</Box>
-				</Box>
+				{main}
+				{sidebar}
 			</Box>
 		</Box>
 	);

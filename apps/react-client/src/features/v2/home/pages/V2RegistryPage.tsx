@@ -1,25 +1,6 @@
-import {
-	useCalculationControllerFindAll,
-} from "@react-client/common/api/queries/calculation";
-import {
-	HomeTemplete,
-} from "@react-client/features/v2/home/pages/HomePage";
-import type { CalculationResponseDto } from "@smart-anketa/api-contract";
-import { v2Routes as routesV2 } from "@react-client/routing/version/v2/routes";
+import { V2QuestionnaireList } from "@react-client/features/v2/home/organisms/V2QuestionnaireList";
 
-/** Реестр анкет v2 — тот же ag-grid, что в v1, с маршрутами /v2/... */
+/** Реестр анкет v2 — отдельная сущность от реестра схем (шаблонов). */
 export function V2RegistryPage() {
-	const { data, isLoading, isFetching, error, refetch } =
-		useCalculationControllerFindAll();
-
-	return (
-		<HomeTemplete
-			data={data as CalculationResponseDto[] | undefined}
-			error={error}
-			isLoading={isLoading || isFetching}
-			refetch={refetch}
-			registryRoutes={routesV2}
-			pathPrefix="/v2"
-		/>
-	);
+	return <V2QuestionnaireList />;
 }

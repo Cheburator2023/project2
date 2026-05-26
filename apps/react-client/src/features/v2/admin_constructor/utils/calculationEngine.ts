@@ -35,9 +35,21 @@ export type ComputedRulePayload = {
 };
 
 export type TaskTriggerPayload = {
+	mode?: "generated_rows";
 	taskCode?: string;
 	label?: string;
 	hint?: string;
+	sourceArrayPath?: string;
+	outputArrayPath?: string;
+	tasks?: Array<{
+		taskCode?: string;
+		label?: string;
+		name?: string;
+		reason?: string;
+		estimateHoursPerDay?: number;
+		coefficient?: number;
+		match?: Record<string, unknown>;
+	}>;
 };
 
 export type CalculationItem = {
@@ -105,6 +117,21 @@ export function writeByDotPath(
 	}
 	cur[parts[parts.length - 1]!] = value;
 	return next;
+}
+
+function valueMatches(actual: unknown, expected: unknown): boolean {
+	if (Array.isArray(expected)) return expected.includes(actual);
+	return actual === expected;
+}
+
+function rowMatches(
+	row: Record<string, unknown>,
+	match: Record<string, unknown> | undefined,
+): boolean {
+	if (!match) return true;
+	return Object.entries(match).every(([field, expected]) =>
+		valueMatches(row[field], expected),
+	);
 }
 
 export function toFiniteNumber(value: unknown): number | null {
@@ -246,7 +273,11 @@ export function evaluateComputedRules(
 
 	let liveData: Record<string, unknown> = { ...initialFormData };
 
-	// row_computed выполняются первыми: они пишут per-row totals,
+	for (const rule of rules.filter((r) => r.kind === "task_trigger")) {
+		liveData = applyGeneratedRows(rule, liveData);
+	}
+
+	// row_computed выполняются после генерации: они пишут per-row totals,
 	// которые потом агрегируются в обычных computed-правилах.
 	for (const rule of rowComputed) {
 		liveData = applyRowComputedRule(rule, liveData);
@@ -326,6 +357,61 @@ export function evaluateComputedRules(
 	}
 
 	return { liveData, items };
+}
+
+function applyGeneratedRows(
+	rule: V2LogicRuleDto,
+	data: Record<string, unknown>,
+): Record<string, unknown> {
+	const payload = (rule.payload ?? {}) as TaskTriggerPayload;
+	if (payload.mode !== "generated_rows") return data;
+	const sourceArrayPath = payload.sourceArrayPath?.trim();
+	const outputArrayPath = payload.outputArrayPath?.trim();
+	if (!sourceArrayPath || !outputArrayPath || !payload.tasks?.length) return data;
+
+	let passes = false;
+	try {
+		const raw = applyLogic(rule.condition as JsonLogicValue, data);
+		passes =
+			raw === true ||
+			(typeof raw === "number" && Number.isFinite(raw) && raw !== 0) ||
+			(typeof raw === "string" && raw.length > 0 && raw !== "0") ||
+			(typeof raw === "object" && raw !== null);
+	} catch {
+		passes = false;
+	}
+	if (!passes) return writeByDotPath(data, outputArrayPath, []);
+
+	const sourceRows = readByDotPath(data, sourceArrayPath);
+	if (!Array.isArray(sourceRows)) return writeByDotPath(data, outputArrayPath, []);
+
+	const generated = sourceRows.flatMap((row, sourceIndex) => {
+		const source =
+			row && typeof row === "object" && !Array.isArray(row)
+				? (row as Record<string, unknown>)
+				: {};
+		const sourceName =
+			typeof source.name === "string" && source.name.trim()
+				? source.name.trim()
+				: `Источник ${sourceIndex + 1}`;
+
+		return (payload.tasks ?? [])
+			.filter((task) => rowMatches(source, task.match))
+			.map((task) => ({
+				taskCode: task.taskCode,
+				name: task.name ?? task.label ?? task.taskCode ?? "Типовая работа",
+				reason: task.reason
+					? `${sourceName}: ${task.reason}`
+					: `${sourceName}: параметр источника`,
+				estimateHoursPerDay: task.estimateHoursPerDay ?? 0,
+				coefficient: task.coefficient ?? 1,
+				sourceComponent: "Источник данных",
+				sourceName,
+				generatedByRuleId: rule.id,
+			}));
+	});
+
+	return writeByDotPath(data, outputArrayPath, generated);
 }
 
 function buildAutoFormulaHint(

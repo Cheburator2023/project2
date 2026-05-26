@@ -67,6 +67,45 @@ describe("V2CalculationService", () => {
 		expect(trigger?.passes).toBe(true);
 	});
 
+	it("generates typical tasks for data source parameters from IND rules", () => {
+		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+			detailInfo: {
+				sourceSystems: [
+					{
+						name: "CRM Retail",
+						daptRegistry: "Нет",
+						requirements: "Не понятны",
+						additionalUncertainty: "Нет",
+						integrationReadiness: "Готов к интеграции",
+					},
+				],
+			},
+		});
+
+		const detailInfo = result.formData.detailInfo as {
+			sourceTypicalTasks: Array<{
+				name: string;
+				total: number;
+				reason: string;
+			}>;
+		};
+
+		expect(detailInfo.sourceTypicalTasks.length).toBeGreaterThan(0);
+		expect(detailInfo.sourceTypicalTasks.some((task) => task.total === 3)).toBe(
+			true,
+		);
+		expect(
+			detailInfo.sourceTypicalTasks.some((task) =>
+				task.reason.includes("требования по источнику не понятны"),
+			),
+		).toBe(true);
+		expect(
+			detailInfo.sourceTypicalTasks.some((task) =>
+				task.reason.includes("высокая готовность"),
+			),
+		).toBe(true);
+	});
+
 	it("fills legacy summary with 11 E2E stages in detailedCalculation", () => {
 		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
 			detailInfo: {

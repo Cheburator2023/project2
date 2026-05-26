@@ -37,9 +37,21 @@ type RowComputedPayload = {
 };
 
 type TaskTriggerPayload = {
+	mode?: "generated_rows";
 	taskCode?: string;
 	label?: string;
 	hint?: string;
+	sourceArrayPath?: string;
+	outputArrayPath?: string;
+	tasks?: Array<{
+		taskCode?: string;
+		label?: string;
+		name?: string;
+		reason?: string;
+		estimateHoursPerDay?: number;
+		coefficient?: number;
+		match?: Record<string, unknown>;
+	}>;
 };
 
 function normalizePointer(pointer: string): string {
@@ -98,6 +110,21 @@ function writeByDotPath(
 	}
 	cur[parts[parts.length - 1] as string] = value;
 	return next;
+}
+
+function valueMatches(actual: unknown, expected: unknown): boolean {
+	if (Array.isArray(expected)) return expected.includes(actual);
+	return actual === expected;
+}
+
+function rowMatches(
+	row: Record<string, unknown>,
+	match: Record<string, unknown> | undefined,
+): boolean {
+	if (!match) return true;
+	return Object.entries(match).every(([field, expected]) =>
+		valueMatches(row[field], expected),
+	);
 }
 
 function computePreset(
@@ -193,12 +220,17 @@ export class V2CalculationService {
 
 		let liveData: Record<string, unknown> = { ...(formData ?? {}) };
 
-		// 1) row_computed — пишем per-row значения.
+		// 1) task_trigger/generated_rows — материализуем автозадачи до расчёта строк.
+		for (const rule of taskTriggers) {
+			liveData = this.applyGeneratedRows(rule, liveData);
+		}
+
+		// 2) row_computed — пишем per-row значения.
 		for (const rule of rowComputed) {
 			liveData = this.applyRowComputed(rule, liveData);
 		}
 
-		// 2) computed — топосорт + последовательный расчёт.
+		// 3) computed — топосорт + последовательный расчёт.
 		const { sorted, cycles } = topoSortComputed(computed);
 		const items: V2CalculationItemDto[] = [];
 		for (const rule of sorted) {
@@ -207,7 +239,7 @@ export class V2CalculationService {
 			items.push(item);
 		}
 
-		// 3) task_trigger.
+		// 4) task_trigger.
 		const triggerResults: V2TaskTriggerItemDto[] = taskTriggers.map((rule) => {
 			const payload = (rule.payload ?? {}) as TaskTriggerPayload;
 			let passes = false;
@@ -271,6 +303,60 @@ export class V2CalculationService {
 			return { ...rowObj, [fieldVar]: computed };
 		});
 		return writeByDotPath(data, arrayPath, next);
+	}
+
+	private applyGeneratedRows(
+		rule: V2LogicRuleDto,
+		data: Record<string, unknown>,
+	): Record<string, unknown> {
+		const payload = (rule.payload ?? {}) as TaskTriggerPayload;
+		if (payload.mode !== "generated_rows") return data;
+		const sourceArrayPath = payload.sourceArrayPath?.trim();
+		const outputArrayPath = payload.outputArrayPath?.trim();
+		if (!sourceArrayPath || !outputArrayPath || !payload.tasks?.length) {
+			return data;
+		}
+
+		let passes = false;
+		try {
+			passes = isJsonLogicTruthy(
+				applyJsonLogic(rule.condition as V2JsonLogicValue, data),
+			);
+		} catch {
+			passes = false;
+		}
+		if (!passes) return writeByDotPath(data, outputArrayPath, []);
+
+		const sourceRows = readByDotPath(data, sourceArrayPath);
+		if (!Array.isArray(sourceRows)) return writeByDotPath(data, outputArrayPath, []);
+
+		const generated = sourceRows.flatMap((row, sourceIndex) => {
+			const source =
+				row && typeof row === "object" && !Array.isArray(row)
+					? (row as Record<string, unknown>)
+					: {};
+			const sourceName =
+				typeof source.name === "string" && source.name.trim()
+					? source.name.trim()
+					: `Источник ${sourceIndex + 1}`;
+
+			return (payload.tasks ?? [])
+				.filter((task) => rowMatches(source, task.match))
+				.map((task) => ({
+					taskCode: task.taskCode,
+					name: task.name ?? task.label ?? task.taskCode ?? "Типовая работа",
+					reason: task.reason
+						? `${sourceName}: ${task.reason}`
+						: `${sourceName}: параметр источника`,
+					estimateHoursPerDay: task.estimateHoursPerDay ?? 0,
+					coefficient: task.coefficient ?? 1,
+					sourceComponent: "Источник данных",
+					sourceName,
+					generatedByRuleId: rule.id,
+				}));
+		});
+
+		return writeByDotPath(data, outputArrayPath, generated);
 	}
 
 	private applyComputed(

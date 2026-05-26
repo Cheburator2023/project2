@@ -72,6 +72,16 @@ const ROW_TASK_TOTAL: V2JsonLogicValue = {
 	"*": [{ var: "estimateHoursPerDay" }, { var: "coefficient" }],
 };
 
+const SUM_SOURCE_TYPICAL_TOTAL: V2JsonLogicValue = {
+	reduce: [
+		{ var: "detailInfo.sourceTypicalTasks" },
+		{
+			"+": [{ var: "accumulator" }, { max: [0, { var: "current.total" }] }],
+		},
+		0,
+	],
+};
+
 /** Σ atypical totals, отфильтрованных флагом includeInCalculation. */
 const SUM_ATYPICAL_INCLUDED: V2JsonLogicValue = {
 	reduce: [
@@ -91,6 +101,77 @@ const SUM_ATYPICAL_INCLUDED: V2JsonLogicValue = {
 		0,
 	],
 };
+
+const IND_210_BASE_TASKS = [
+	["REQ", "Уточнение требований, сбор первичной информации", 1],
+	["SEARCH", "Исследование Источника/Поиск Данных", 2],
+	["QUALITY", "Анализ Данных/Связок/Проверка качества", 3],
+	["COUNTERPARTY", "Проработка вопросов с контрагентами", 3],
+	["EXPORT", "Организация выгрузок", 2],
+	["NOTE", "Оформление Аналитической Записки", 1],
+	["ISSUES", "Расследование проблем с качеством/контроль устранения", 2],
+] as const;
+
+const DATA_SOURCE_TYPICAL_TASKS = [
+	...IND_210_BASE_TASKS.flatMap(([code, name, estimateHoursPerDay]) => [
+		{
+			taskCode: `IND210_${code}_REPLICA`,
+			name,
+			reason: "Этап 210, источник с репликой в ДАПП",
+			estimateHoursPerDay,
+			coefficient: 1,
+			match: { daptRegistry: "Есть" },
+		},
+		{
+			taskCode: `IND210_${code}_NO_REPLICA`,
+			name,
+			reason: "Этап 210, источник без реплики в ДАПП",
+			estimateHoursPerDay,
+			coefficient: 1.5,
+			match: { daptRegistry: "Нет" },
+		},
+	]),
+	{
+		taskCode: "IND210_UNCLEAR_REQ",
+		name: "Доп. сбор требований/аналитика по источнику",
+		reason: "Этап 210, требования по источнику не понятны",
+		estimateHoursPerDay: 14,
+		coefficient: 0.3,
+		match: { requirements: ["Не понятны", "Рисковые"] },
+	},
+	{
+		taskCode: "IND210_EXTRA_UNKNOWN",
+		name: "Доп. неопределённый источник/тематика",
+		reason: "Этап 210, риск привнесения новых требований",
+		estimateHoursPerDay: 14,
+		coefficient: 1.5,
+		match: { additionalUncertainty: "Да" },
+	},
+	{
+		taskCode: "IND211_INTEGRATION_READY",
+		name: "БТ на интеграцию источника в ПД",
+		reason: "Этап 211, высокая готовность + простая архитектура",
+		estimateHoursPerDay: 22,
+		coefficient: 0.5,
+		match: { integrationReadiness: "Готов к интеграции" },
+	},
+	{
+		taskCode: "IND211_INTEGRATION_REVISION",
+		name: "БТ на интеграцию источника в ПД",
+		reason: "Этап 211, нужны доработки ИС + простая архитектура",
+		estimateHoursPerDay: 22,
+		coefficient: 0.8,
+		match: { integrationReadiness: "Нужны доработки ИС" },
+	},
+	{
+		taskCode: "IND211_INTEGRATION_COMPLEX",
+		name: "БТ на интеграцию источника в ПД",
+		reason: "Этап 211, сложная интеграция",
+		estimateHoursPerDay: 22,
+		coefficient: 1.2,
+		match: { integrationReadiness: "Сложная интеграция" },
+	},
+];
 
 export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 	rule("default-hint-algorithm-coeff", {
@@ -125,16 +206,16 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 	rule("default-computed-base-score-stream", {
 		kind: "computed",
 		targetPath: "/summary/baseScoreStream",
-		dependencies: ["/mlPlatform/typicalTasks"],
-		condition: SUM_TASK_TOTAL,
+		dependencies: ["/mlPlatform/typicalTasks", "/detailInfo/sourceTypicalTasks"],
+		condition: { "+": [SUM_TASK_TOTAL, SUM_SOURCE_TYPICAL_TOTAL] },
 		payload: {
 			mode: "expert",
 			role: "typical_total",
 			label: "Базовая оценка по стриму (Σ типовых работ)",
 			formulaHint:
-				"Σ mlPlatform.typicalTasks[].total. Соответствует v1 сумме calculateStage01..09.",
+				"Σ mlPlatform.typicalTasks[].total + Σ detailInfo.sourceTypicalTasks[].total. Источники данных берутся из IND.",
 			weightSourceLabel:
-				"Справочник типовых работ + per-row coefficient (источник: schema mlPlatform.typicalTasks).",
+				"Справочник типовых работ + per-row coefficient (источник: schema mlPlatform.typicalTasks и IND/sourceSystems).",
 		},
 		description: "ФТ-026: база по стриму.",
 	}),
@@ -152,6 +233,21 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 				"row.total = row.estimateHoursPerDay × row.coefficient. ФТ-016.",
 		},
 		description: "Расчёт total строки таблицы типовых работ.",
+	}),
+
+	rule("default-row-source-typical-task-total", {
+		kind: "row_computed",
+		targetPath: "/detailInfo/sourceTypicalTasks",
+		dependencies: [],
+		condition: ROW_TASK_TOTAL,
+		payload: {
+			arrayPath: "detailInfo.sourceTypicalTasks",
+			fieldVar: "total",
+			label: "Per-row total типовых работ источников данных",
+			formulaHint:
+				"row.total = row.estimateHoursPerDay × row.coefficient. Источник: IND, этапы 210/211.",
+		},
+		description: "Расчёт total строки типовых работ по источникам данных.",
 	}),
 
 	rule("default-row-atypical-task-total", {
@@ -272,6 +368,24 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 				"generalInfo.pilotNeed = 'Требуется'.",
 		},
 		description: "Пример триггера типовой работы (ФТ-016).",
+	}),
+
+	rule("default-task-trigger-data-source-typical-tasks", {
+		kind: "task_trigger",
+		targetPath: "/detailInfo/sourceTypicalTasks",
+		dependencies: ["/detailInfo/sourceSystems"],
+		condition: true,
+		payload: {
+			mode: "generated_rows",
+			sourceArrayPath: "detailInfo.sourceSystems",
+			outputArrayPath: "detailInfo.sourceTypicalTasks",
+			taskCode: "IND_SOURCE_TASKS",
+			label: "Типовые работы по источникам данных",
+			hint:
+				"IND: при добавлении арх. компонента 'Источник данных' выбранные ручные параметры источника генерируют типовые работы этапов 210/211.",
+			tasks: DATA_SOURCE_TYPICAL_TASKS,
+		},
+		description: "IND: генерация типовых работ по арх. компоненту Источник данных.",
 	}),
 ];
 

@@ -5,6 +5,7 @@ import { V2TemplateVersionEntity } from "./entities/v2-template-version.entity";
 import { V2TemplateAuditEntity } from "./entities/v2-template-audit.entity";
 import { V2DictionaryEntity } from "./entities/v2-dictionary.entity";
 import { V2DictionaryItemEntity } from "./entities/v2-dictionary-item.entity";
+import { V2QuestionnaireEntity } from "./entities/v2-questionnaire.entity";
 import { V2TemplateService } from "./services/v2-template.service";
 import { V2TemplateVersionService } from "./services/v2-template-version.service";
 import { V2DictionaryService } from "./services/v2-dictionary.service";
@@ -16,6 +17,8 @@ import { V2DictionaryController } from "./controllers/v2-dictionary.controller";
 import { V2AuditController } from "./controllers/v2-audit.controller";
 import { V2CalculationController } from "./controllers/v2-calculation.controller";
 import { V2CalculationService } from "./services/v2-calculation.service";
+import { V2QuestionnaireService } from "./services/v2-questionnaire.service";
+import { V2QuestionnaireController } from "./controllers/v2-questionnaire.controller";
 
 @Module({
 	imports: [
@@ -25,6 +28,7 @@ import { V2CalculationService } from "./services/v2-calculation.service";
 			V2TemplateAuditEntity,
 			V2DictionaryEntity,
 			V2DictionaryItemEntity,
+			V2QuestionnaireEntity,
 		]),
 	],
 	controllers: [
@@ -33,6 +37,7 @@ import { V2CalculationService } from "./services/v2-calculation.service";
 		V2DictionaryController,
 		V2AuditController,
 		V2CalculationController,
+		V2QuestionnaireController,
 	],
 	providers: [
 		V2TemplateService,
@@ -41,6 +46,7 @@ import { V2CalculationService } from "./services/v2-calculation.service";
 		V2DictionarySeedService,
 		V2AuditService,
 		V2CalculationService,
+		V2QuestionnaireService,
 	],
 	exports: [
 		V2TemplateService,
@@ -48,6 +54,7 @@ import { V2CalculationService } from "./services/v2-calculation.service";
 		V2DictionaryService,
 		V2AuditService,
 		V2CalculationService,
+		V2QuestionnaireService,
 	],
 })
 export class AnketaV2Module {}

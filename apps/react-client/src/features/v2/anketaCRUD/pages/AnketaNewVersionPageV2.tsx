@@ -1,5 +1,5 @@
 import {
-	useUpdateV2Questionnaire,
+	useCreateV2QuestionnaireVersion,
 	useV2QuestionnaireFormPackage,
 } from "@react-client/common/api/queries/v2-questionnaires";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
@@ -7,18 +7,20 @@ import { toast } from "@react-client/common/toasts";
 import { AnketaFormShell } from "@react-client/features/v2/anketaCRUD/templates/AnketaFormShell";
 import { useV2AnketaSchemaEngine } from "@react-client/features/v2/anketaCRUD/hooks/useV2AnketaSchemaEngine";
 import { getV2QuestionnaireFormTitle } from "@react-client/features/v2/anketaCRUD/utils/v2QuestionnaireFormTitle";
-import { useMemo } from "react";
-import { useParams } from "react-router";
+import { v2Routes } from "@react-client/routing/version/v2/routes";
 import Alert from "@mui/material/Alert";
 import CircularProgress from "@mui/material/CircularProgress";
 import { Flex } from "@react-client/common/primitives/Flex";
+import { useMemo } from "react";
+import { useNavigate, useParams } from "react-router";
 
-export const AnketaPreviewPageV2 = () => {
+export const AnketaNewVersionPageV2 = () => {
 	const { id } = useParams<{ id: string }>();
+	const navigate = useNavigate();
 	const { data: formPackage, isLoading, error } = useV2QuestionnaireFormPackage(
 		id ?? "",
 	);
-	const updateMutation = useUpdateV2Questionnaire();
+	const createVersion = useCreateV2QuestionnaireVersion();
 
 	const source = useMemo(
 		() =>
@@ -39,7 +41,7 @@ export const AnketaPreviewPageV2 = () => {
 
 	const onSave = () => {
 		if (!id) return;
-		updateMutation.mutate(
+		createVersion.mutate(
 			{
 				id,
 				body: {
@@ -48,13 +50,17 @@ export const AnketaPreviewPageV2 = () => {
 						formPackage?.questionnaire.calcName,
 					),
 					formData: engine.formData,
-					finalCoefficient: null,
 				},
 			},
 			{
-				onSuccess: () => toast.success("Анкета сохранена"),
+				onSuccess: (created) => {
+					toast.success("Создана новая версия анкеты");
+					navigate(
+						`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", created.id)}`,
+					);
+				},
 				onError: (err) =>
-					toast.error("Не удалось сохранить", {
+					toast.error("Не удалось создать версию", {
 						description: apiErrorMessage(err),
 					}),
 			},
@@ -79,14 +85,13 @@ export const AnketaPreviewPageV2 = () => {
 
 	return (
 		<AnketaFormShell
-			data-test-id="anketa-preview-page"
-			title={formPackage.questionnaire.calcName}
+			data-test-id="anketa-new-version-page"
+			title={`Новая версия: ${formPackage.questionnaire.calcName}`}
 			source={source}
 			engine={engine}
 			schemaBinding={formPackage.questionnaire.schemaBinding}
-			readOnly={formPackage.readOnly}
 			onSave={onSave}
-			savePending={updateMutation.isPending}
+			savePending={createVersion.isPending}
 		/>
 	);
 };

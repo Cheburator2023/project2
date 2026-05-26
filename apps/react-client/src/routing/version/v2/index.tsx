@@ -1,9 +1,10 @@
 import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
-import { AnketaCreatePageV2 } from "@react-client/features/v2/anketaCRUD/pages/AnketaCreatePage";
+import { AnketaCreatePageV2 } from "@react-client/features/v2/anketaCRUD/pages/AnketaCreatePageV2";
 import { routes } from "@react-client/routing/version/v2/routes";
 import { Page404 } from "@react-client/routing/version/v2/Page404";
 import { AnketaPreviewPageV2 } from "@react-client/features/v2/anketaCRUD/pages/AnketaPreviewPageV2";
+import { AnketaNewVersionPageV2 } from "@react-client/features/v2/anketaCRUD/pages/AnketaNewVersionPageV2";
 import { V2RegistryPage } from "@react-client/version/v2/src/features/home/pages/V2RegistryPage";
 export const v2Routes = ({ onLogout }: { onLogout?: () => void }) => {
 	return {
@@ -40,6 +41,17 @@ export const v2Routes = ({ onLogout }: { onLogout?: () => void }) => {
 						message="У вас нет прав на просмотр анкеты"
 					>
 						<AnketaPreviewPageV2 />
+					</PermissionGuard>
+				),
+			},
+			{
+				path: routes.calculationNewVersion.rootPath,
+				element: (
+					<PermissionGuard
+						check={(p) => p.canCreateCalculation}
+						message="У вас нет прав на создание версии анкеты"
+					>
+						<AnketaNewVersionPageV2 />
 					</PermissionGuard>
 				),
 			},

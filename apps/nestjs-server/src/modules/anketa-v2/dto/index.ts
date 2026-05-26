@@ -7,5 +7,8 @@ export * from "./request/bulk-v2-dictionary.dto";
 export * from "./request/restore-v2-template.dto";
 export * from "./request/bulk-delete-v2-template-versions.dto";
 export * from "./request/calculate-v2-template.dto";
+export * from "./request/create-v2-questionnaire.dto";
+export * from "./request/update-v2-questionnaire.dto";
+export * from "./request/create-v2-questionnaire-version.dto";
 export * from "./response/v2-template-response.dto";
 export * from "./response/v2-template-delete-snapshot.dto";

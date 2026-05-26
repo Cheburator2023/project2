@@ -19,4 +19,5 @@ __exportStar(require("./calculation.types"), exports);
 __exportStar(require("./coefficient.types"), exports);
 __exportStar(require("./questionnaire.types"), exports);
 __exportStar(require("./v2-template.types"), exports);
+__exportStar(require("./v2-questionnaire.types"), exports);
 __exportStar(require("./v2-legacy-stage.constants"), exports);
