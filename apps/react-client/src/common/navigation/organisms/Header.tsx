@@ -14,7 +14,7 @@ import { NavbarBreadcrumbs } from "@react-client/common/navigation/molecules/Nav
 import { useLayoutEffect, useRef, useState } from "react";
 
 const DRAWER_WIDTH = 260;
-const MAIN_PADDING = 8;
+const MAIN_PADDING = 21;
 const HEADER_BOTTOM_GAP = 6;
 
 export function Header({
@@ -65,9 +65,7 @@ export function Header({
 				sx={{
 					position: "fixed",
 					top: MAIN_PADDING,
-					left: isSideMenuVisible
-						? DRAWER_WIDTH + MAIN_PADDING
-						: MAIN_PADDING,
+					left: isSideMenuVisible ? DRAWER_WIDTH + MAIN_PADDING : MAIN_PADDING,
 					right: MAIN_PADDING,
 					zIndex: theme.zIndex.appBar,
 					transition: theme.transitions.create("left", {
