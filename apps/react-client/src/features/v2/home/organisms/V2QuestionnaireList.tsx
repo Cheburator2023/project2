@@ -23,7 +23,7 @@ import {
 } from "ag-grid-community";
 import { ContextMenuModule, TreeDataModule } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
-import { useCallback, useMemo, useRef } from "react";
+import {useCallback, useEffect, useMemo, useRef} from "react";
 import { useNavigate } from "react-router";
 import {
 	agGridCustomMUITheme,
@@ -118,24 +118,30 @@ export function V2QuestionnaireList() {
 			bySeries.set(q.seriesId, list);
 		}
 
-		return [...bySeries.entries()].map(([seriesId, versions]) => {
+		const buffer = [...bySeries.entries()].map(([seriesId, versions]) => {
 			const sorted = [...versions].sort(
 				(a, b) =>
 					Number.parseInt(b.version, 10) - Number.parseInt(a.version, 10),
 			);
+			const children = sorted.map((v) => ({
+				...v,
+				rowKind: "version" as const,
+				displayLabel: `Версия ${v.version}${v.readableId ? ` · ${v.readableId}` : ""}`,
+			}))
+
 			const head = sorted[0];
-			return {
-				rowKind: "series" as const,
-				seriesId,
-				displayLabel: head?.calcName ?? seriesId,
-				calcName: head?.calcName ?? seriesId,
-				children: sorted.map((v) => ({
-					...v,
-					rowKind: "version" as const,
-					displayLabel: `Версия ${v.version}${v.readableId ? ` · ${v.readableId}` : ""}`,
-				})),
-			};
+			return [
+				{
+					rowKind: "series" as const,
+					seriesId,
+					displayLabel: head?.calcName ?? seriesId,
+					calcName: head?.calcName ?? seriesId,
+				},
+				...children
+			];
 		});
+
+		return buffer.flat()
 	}, [questionnaires]);
 
 	const columnDefs = useMemo<ColDef<V2QuestionnaireGridRow>[]>(
@@ -272,7 +278,7 @@ export function V2QuestionnaireList() {
 						minWidth: 200,
 						cellRendererParams: { suppressCount: true },
 					}}
-					groupDefaultExpanded={0}
+					groupDefaultExpanded={1}
 					defaultColDef={{ sortable: true, resizable: true }}
 					onRowDoubleClicked={onRowDoubleClicked}
 					getContextMenuItems={getContextMenuItems}
