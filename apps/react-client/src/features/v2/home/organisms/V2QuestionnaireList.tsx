@@ -9,19 +9,31 @@ import type {
 	V2QuestionnaireDto,
 	V2SchemaBindingStatus,
 } from "@smart-anketa/api-contract";
+import type {
+	V2QuestionnaireGridRow,
+	V2QuestionnaireSeriesRow,
+} from "../types/v2QuestionnaireGrid.types";
 import {
 	AllCommunityModule,
 	ClientSideRowModelModule,
-	type ColDef,
 	type GetContextMenuItemsParams,
 	type GridReadyEvent,
 	type ICellRendererParams,
 	type MenuItemDef,
 	type RowDoubleClickedEvent,
 	ModuleRegistry,
+	type SideBarDef,
 	ValidationModule,
 } from "ag-grid-community";
-import { ContextMenuModule, TreeDataModule } from "ag-grid-enterprise";
+import {
+	ColumnMenuModule,
+	ColumnsToolPanelModule,
+	ContextMenuModule,
+	FiltersToolPanelModule,
+	SetFilterModule,
+	SideBarModule,
+	TreeDataModule,
+} from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
 import { useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router";
@@ -30,12 +42,25 @@ import {
 	agGridCustomMUIThemeDark,
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
+import { buildV2QuestionnaireColumnDefs } from "../utils/v2QuestionnaireGridColumns";
+import { resolveVersionRow } from "../utils/v2QuestionnaireGridValue";
+
+export type {
+	V2QuestionnaireGridRow,
+	V2QuestionnaireSeriesRow,
+	V2QuestionnaireVersionRow,
+} from "../types/v2QuestionnaireGrid.types";
 
 ModuleRegistry.registerModules([
 	AllCommunityModule,
 	ClientSideRowModelModule,
 	TreeDataModule,
 	ContextMenuModule,
+	ColumnsToolPanelModule,
+	ColumnMenuModule,
+	FiltersToolPanelModule,
+	SetFilterModule,
+	SideBarModule,
 	...(process.env.NODE_ENV !== "production" ? [ValidationModule] : []),
 ]);
 
@@ -64,26 +89,6 @@ const BINDING_COLOR: Record<
 	superseded: "warning",
 	unavailable: "error",
 };
-
-export type V2QuestionnaireSeriesRow = {
-	rowKind: "series";
-	seriesId: string;
-	displayLabel: string;
-	calcName: string;
-	children: V2QuestionnaireVersionRow[];
-};
-
-export type V2QuestionnaireVersionRow = V2QuestionnaireDto & {
-	rowKind: "version";
-	displayLabel: string;
-};
-
-export type V2QuestionnaireGridRow =
-	| V2QuestionnaireSeriesRow
-	| V2QuestionnaireVersionRow;
-
-const dateFmt = (v: unknown) =>
-	v ? new Date(String(v)).toLocaleString("ru-RU") : "";
 
 function BindingChip({ status }: { status: V2SchemaBindingStatus }) {
 	return (
@@ -138,72 +143,41 @@ export function V2QuestionnaireList() {
 		});
 	}, [questionnaires]);
 
-	const columnDefs = useMemo<ColDef<V2QuestionnaireGridRow>[]>(
-		() => [
-			{
-				field: "displayLabel",
-				headerName: "Анкета / версия",
-				flex: 2,
-				minWidth: 220,
-				cellRenderer: (p: ICellRendererParams<V2QuestionnaireGridRow>) =>
-					p.data?.displayLabel ?? "",
-			},
-			{
-				colId: "readableId",
-				headerName: "Код",
-				width: 160,
-				valueGetter: (p) =>
-					p.data?.rowKind === "version" ? p.data.readableId : "",
-			},
-			{
-				colId: "schemaBinding",
-				headerName: "Схема",
-				width: 180,
-				cellRenderer: (p: ICellRendererParams<V2QuestionnaireGridRow>) => {
-					if (p.data?.rowKind !== "version") return null;
-					return <BindingChip status={p.data.schemaBinding.status} />;
+	const columnDefs = useMemo(() => buildV2QuestionnaireColumnDefs(), []);
+
+	const sideBar = useMemo<SideBarDef>(
+		() => ({
+			toolPanels: [
+				{
+					id: "columns",
+					labelDefault: "Столбцы",
+					labelKey: "columns",
+					iconKey: "columns",
+					toolPanel: "agColumnsToolPanel",
+					toolPanelParams: {
+						suppressPivotMode: true,
+						suppressRowGroups: true,
+						suppressValues: true,
+					},
 				},
-			},
-			{
-				colId: "templateName",
-				headerName: "Шаблон схемы",
-				flex: 1,
-				minWidth: 140,
-				valueGetter: (p) =>
-					p.data?.rowKind === "version" ? p.data.templateName : "",
-			},
-			{
-				colId: "boundVersion",
-				headerName: "Версия схемы",
-				width: 110,
-				valueGetter: (p) =>
-					p.data?.rowKind === "version"
-						? p.data.schemaBinding.boundTemplateVersionNumber
-						: "",
-			},
-			{
-				colId: "author",
-				headerName: "Автор",
-				width: 140,
-				valueGetter: (p) =>
-					p.data?.rowKind === "version" ? p.data.author : "",
-			},
-			{
-				colId: "createdAt",
-				headerName: "Создана",
-				width: 160,
-				valueFormatter: (p) => dateFmt(p.value),
-				valueGetter: (p) =>
-					p.data?.rowKind === "version" ? p.data.createdAt : "",
-			},
-		],
+				{
+					id: "filters",
+					labelDefault: "Фильтры",
+					labelKey: "filters",
+					iconKey: "filter",
+					toolPanel: "agFiltersToolPanel",
+				},
+			],
+			defaultToolPanel: "columns",
+			position: "right",
+		}),
 		[],
 	);
 
 	const onRowDoubleClicked = useCallback(
 		(e: RowDoubleClickedEvent<V2QuestionnaireGridRow>) => {
-			const row = e.data;
-			if (!row || row.rowKind !== "version") return;
+			const row = resolveVersionRow(e.data);
+			if (!row) return;
 			navigate(
 				`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", row.id)}`,
 			);
@@ -211,16 +185,24 @@ export function V2QuestionnaireList() {
 		[navigate],
 	);
 
+	const getRowId = useCallback(
+		(p: { data: V2QuestionnaireGridRow }) =>
+			p.data.rowKind === "series"
+				? `series:${p.data.seriesId}`
+				: `version:${p.data.id}`,
+		[],
+	);
+
 	const onGridReady = useCallback((e: GridReadyEvent) => {
-		e.api.sizeColumnsToFit();
+		e.api.expandAll();
 	}, []);
 
 	const getContextMenuItems = useCallback(
 		(
 			params: GetContextMenuItemsParams<V2QuestionnaireGridRow>,
 		): MenuItemDef[] => {
-			const row = params.node?.data;
-			if (!row || row.rowKind !== "version") {
+			const row = resolveVersionRow(params.node?.data);
+			if (!row) {
 				return [];
 			}
 			return [
@@ -264,21 +246,47 @@ export function V2QuestionnaireList() {
 					rowData={treeRowData}
 					columnDefs={columnDefs}
 					treeData
-					getDataPath={(row) =>
-						row.rowKind === "series" ? [row.seriesId] : [row.seriesId, row.id]
-					}
+					treeDataChildrenField="children"
+					getRowId={getRowId}
 					autoGroupColumnDef={{
-						headerName: "Серия",
-						minWidth: 200,
+						headerName: "Анкета / версия",
+						minWidth: 260,
+						pinned: "left",
 						cellRendererParams: { suppressCount: true },
+						filter: "agTextColumnFilter",
+						valueGetter: (p) => p.data?.displayLabel ?? "",
+						cellRenderer: (p: ICellRendererParams<V2QuestionnaireGridRow>) => {
+							const version = resolveVersionRow(p.data);
+							if (version) {
+								return (
+									<Flex gap={1} alignItems="center" minWidth="0">
+										<span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+											{p.data?.displayLabel ?? version.calcName}
+										</span>
+										<BindingChip status={version.schemaBinding.status} />
+									</Flex>
+								);
+							}
+							return p.data?.displayLabel ?? "";
+						},
 					}}
-					groupDefaultExpanded={0}
-					defaultColDef={{ sortable: true, resizable: true }}
+					groupDefaultExpanded={-1}
+					defaultColDef={{
+						sortable: true,
+						resizable: true,
+						filter: true,
+						minWidth: 90,
+					}}
+					defaultColGroupDef={{
+						marryChildren: true,
+					}}
+					sideBar={sideBar}
 					onRowDoubleClicked={onRowDoubleClicked}
 					getContextMenuItems={getContextMenuItems}
 					onGridReady={onGridReady}
 					loading={isLoading}
 					domLayout="normal"
+					suppressAggFuncInHeader
 				/>
 			</GridWrapper>
 		</div>
