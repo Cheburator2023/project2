@@ -260,7 +260,9 @@ export function V2QuestionnaireList() {
 							if (version) {
 								return (
 									<Flex gap={1} alignItems="center" minWidth="0">
-										<span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+										<span
+											style={{ overflow: "hidden", textOverflow: "ellipsis" }}
+										>
 											{p.data?.displayLabel ?? version.calcName}
 										</span>
 										<BindingChip status={version.schemaBinding.status} />
