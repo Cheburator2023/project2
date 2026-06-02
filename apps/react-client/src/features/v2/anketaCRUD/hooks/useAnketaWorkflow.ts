@@ -1,0 +1,115 @@
+import {
+	allRequiredSectionsCompleted,
+	completeGlobalQuestionnaire,
+	completeSection,
+	createDefaultV2AnketaWorkflow,
+	mainSectionIdForFormPath,
+	markSectionInProgress,
+	normalizeV2AnketaWorkflow,
+	type V2AnketaMainSectionId,
+	type V2AnketaWorkflowDto,
+} from "@smart-anketa/api-contract";
+import { useCallback, useMemo } from "react";
+import { migrateV2AnketaFormData } from "../utils/v2FormDataMigration";
+
+export function readWorkflowFromFormData(
+	formData: Record<string, unknown>,
+): V2AnketaWorkflowDto {
+	return normalizeV2AnketaWorkflow(formData.workflow);
+}
+
+export function withWorkflow(
+	formData: Record<string, unknown>,
+	workflow: V2AnketaWorkflowDto,
+): Record<string, unknown> {
+	return { ...formData, workflow };
+}
+
+export function touchSectionInFormData(
+	formData: Record<string, unknown>,
+	sectionId: V2AnketaMainSectionId,
+): Record<string, unknown> {
+	const workflow = readWorkflowFromFormData(formData);
+	const next = markSectionInProgress(workflow, sectionId);
+	if (next === workflow) return formData;
+	return withWorkflow(formData, next);
+}
+
+export function touchSectionForPathInFormData(
+	formData: Record<string, unknown>,
+	path: string,
+): Record<string, unknown> {
+	const sectionId = mainSectionIdForFormPath(path);
+	if (!sectionId) return formData;
+	return touchSectionInFormData(formData, sectionId);
+}
+
+export function useAnketaWorkflow(
+	formData: Record<string, unknown>,
+	setFormData: (next: Record<string, unknown>) => void,
+) {
+	const workflow = useMemo(() => readWorkflowFromFormData(formData), [formData]);
+	const globallyLocked = workflow.globalStatus === "Заполнено";
+	const allSectionsCompleted = useMemo(
+		() => allRequiredSectionsCompleted(workflow),
+		[workflow],
+	);
+
+	const setWorkflow = useCallback(
+		(next: V2AnketaWorkflowDto, baseFormData?: Record<string, unknown>) => {
+			setFormData(withWorkflow(baseFormData ?? formData, next));
+		},
+		[formData, setFormData],
+	);
+
+	const completeMainSection = useCallback(
+		(sectionId: V2AnketaMainSectionId) => {
+			setWorkflow(completeSection(workflow, sectionId));
+		},
+		[setWorkflow, workflow],
+	);
+
+	const touchMainSection = useCallback(
+		(sectionId: V2AnketaMainSectionId, baseFormData?: Record<string, unknown>) => {
+			const base = baseFormData ?? formData;
+			const current = readWorkflowFromFormData(base);
+			const next = markSectionInProgress(current, sectionId);
+			if (next === current) return;
+			setFormData(withWorkflow(base, next));
+		},
+		[formData, setFormData],
+	);
+
+	const completeGlobalFill = useCallback(() => {
+		const current = readWorkflowFromFormData(formData);
+		const next = completeGlobalQuestionnaire(current);
+		if (next === current) return;
+		setFormData(withWorkflow(formData, next));
+	}, [formData, setFormData]);
+
+	const isSectionLocked = useCallback(
+		(sectionId: V2AnketaMainSectionId) =>
+			globallyLocked || workflow.sections[sectionId] === "Заполнено",
+		[globallyLocked, workflow.sections],
+	);
+
+	return {
+		workflow,
+		globallyLocked,
+		allSectionsCompleted,
+		completeMainSection,
+		touchMainSection,
+		completeGlobalFill,
+		isSectionLocked,
+	};
+}
+
+export function ensureAnketaFormDataWithWorkflow(
+	formData: Record<string, unknown>,
+): Record<string, unknown> {
+	const migrated = migrateV2AnketaFormData(formData);
+	if (!migrated.workflow) {
+		return withWorkflow(migrated, createDefaultV2AnketaWorkflow());
+	}
+	return migrated;
+}

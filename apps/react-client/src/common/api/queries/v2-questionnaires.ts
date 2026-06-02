@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
 	CreateV2QuestionnaireRequestDto,
 	CreateV2QuestionnaireVersionRequestDto,
+	BulkDeleteV2QuestionnairesResultDto,
+	SeedV2TestQuestionnairesResultDto,
 	UpdateV2QuestionnaireRequestDto,
 	V2QuestionnaireDto,
 	V2QuestionnaireFormPackageDto,
@@ -92,6 +94,32 @@ export const useCreateV2QuestionnaireVersion = () => {
 		}) =>
 			apiClient<V2QuestionnaireDto>({
 				url: `/v2/questionnaires/${id}/new-version`,
+				method: "POST",
+				data: body,
+			}),
+		onSuccess: () => qc.invalidateQueries({ queryKey: ROOT_KEY }),
+	});
+};
+
+export const useBulkDeleteV2Questionnaires = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (body: { ids: string[] }) =>
+			apiClient<BulkDeleteV2QuestionnairesResultDto>({
+				url: "/v2/questionnaires/bulk-delete",
+				method: "POST",
+				data: body,
+			}),
+		onSuccess: () => qc.invalidateQueries({ queryKey: ROOT_KEY }),
+	});
+};
+
+export const useSeedV2TestQuestionnaires = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (body: { templateId?: string } = {}) =>
+			apiClient<SeedV2TestQuestionnairesResultDto>({
+				url: "/v2/questionnaires/seed-test",
 				method: "POST",
 				data: body,
 			}),

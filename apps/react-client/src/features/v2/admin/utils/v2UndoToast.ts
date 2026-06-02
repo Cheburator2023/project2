@@ -10,12 +10,21 @@ export function toastWithUndo(
 	toast.success(message, {
 		duration: UNDO_DURATION_MS,
 		description: options?.description,
-		action: {
-			label: "Отменить",
-			countdownDurationMs: UNDO_DURATION_MS,
-			onClick: () => {
-				void undo();
+		actions: [
+			{
+				label: "Отменить",
+				countdownDurationMs: UNDO_DURATION_MS,
+				onClick: () => {
+					void undo();
+				},
 			},
-		},
+			{
+				label: "Удалить",
+				title: "Подтвердить удаление и закрыть без отмены",
+				onClick: () => {
+					// Досрочно подтвердить удаление — закрыть тост без отмены.
+				},
+			},
+		],
 	});
 }

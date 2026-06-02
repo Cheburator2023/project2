@@ -1,6 +1,5 @@
-import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import CircularProgress from "@mui/material/CircularProgress";
+import Typography from "@mui/material/Typography";
 import Form from "@rjsf/mui";
 import type { UiSchema } from "@rjsf/utils";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
@@ -12,15 +11,19 @@ import {
 } from "../hooks/useV2AnketaSchemaEngine";
 import type { AnketaFormContextValue } from "../utils/anketaFormContext";
 import { ANKETA_MODAL_ARRAY_PATHS } from "../utils/anketaFormModalPaths";
+import { applySectionLocksToUiSchema } from "../utils/anketaSectionUiSchema";
+import { readWorkflowFromFormData, touchSectionInFormData } from "../hooks/useAnketaWorkflow";
+import type { V2AnketaMainSectionId } from "@smart-anketa/api-contract";
+import type { ReactNode } from "react";
 import { useMemo } from "react";
 
-const BINDING_SEVERITY: Record<
+const BINDING_TEXT_COLOR: Record<
 	V2SchemaBindingDto["status"],
-	"success" | "warning" | "error"
+	"success.main" | "warning.main" | "error.main"
 > = {
-	aligned: "success",
-	superseded: "warning",
-	unavailable: "error",
+	aligned: "success.main",
+	superseded: "warning.main",
+	unavailable: "error.main",
 };
 
 type Props = {
@@ -106,6 +109,27 @@ function withModalArrayFields(uiSchema: UiSchema): UiSchema {
 	return next;
 }
 
+function FormNotice({
+	children,
+	color = "text.secondary",
+	testId,
+}: {
+	children: ReactNode;
+	color?: string;
+	testId?: string;
+}) {
+	return (
+		<Typography
+			variant="body2"
+			color={color}
+			sx={{ mb: 2 }}
+			data-test-id={testId}
+		>
+			{children}
+		</Typography>
+	);
+}
+
 export function V2AnketaSchemaForm({
 	source,
 	engine: engineProp,
@@ -118,17 +142,23 @@ export function V2AnketaSchemaForm({
 	const internalEngine = useV2AnketaSchemaEngine(engineProp ? null : source);
 	const engine = engineProp ?? internalEngine;
 	const disabled = readOnly || engine.readOnly;
+	const workflow = useMemo(
+		() => readWorkflowFromFormData(engine.formData),
+		[engine.formData],
+	);
+
 	const formUiSchema = useMemo(() => {
 		let ui = withHiddenTopLevelFields(
 			engine.previewUiSchema,
 			hiddenTopLevelFields,
 		);
 		ui = withModalArrayFields(ui);
+		ui = applySectionLocksToUiSchema(ui, workflow);
 		return {
 			...ui,
 			"ui:submitButtonOptions": { norender: true },
 		};
-	}, [engine.previewUiSchema, hiddenTopLevelFields]);
+	}, [engine.previewUiSchema, hiddenTopLevelFields, workflow]);
 
 	const formContext = useMemo(
 		(): AnketaFormContextValue => ({
@@ -145,60 +175,45 @@ export function V2AnketaSchemaForm({
 
 	if (!source?.templateId) {
 		return (
-			<Alert severity="info" data-test-id={`${dataTestId}--no-source`}>
+			<FormNotice testId={`${dataTestId}--no-source`}>
 				Не задан шаблон схемы
-			</Alert>
-		);
-	}
-
-	if (engine.versionLoading) {
-		return (
-			<Box
-				sx={{ display: "flex", justifyContent: "center", py: 4 }}
-				data-test-id={`${dataTestId}--loading`}
-			>
-				<CircularProgress size={32} />
-			</Box>
+			</FormNotice>
 		);
 	}
 
 	if (!engine.version?.id) {
 		return (
-			<Alert severity="warning" data-test-id={`${dataTestId}--no-version`}>
+			<FormNotice
+				color="warning.main"
+				testId={`${dataTestId}--no-version`}
+			>
 				Нет версии схемы для отображения формы
-			</Alert>
+			</FormNotice>
 		);
 	}
 
 	return (
 		<Box data-test-id={dataTestId} sx={{ width: "100%", minWidth: 0 }}>
 			{schemaBinding ? (
-				<Alert
-					severity={BINDING_SEVERITY[schemaBinding.status]}
-					sx={{ mb: 2 }}
-					data-test-id={`${dataTestId}--schema-binding`}
+				<FormNotice
+					color={BINDING_TEXT_COLOR[schemaBinding.status]}
+					testId={`${dataTestId}--schema-binding`}
 				>
 					{schemaBinding.message}
-				</Alert>
-			) : null}
-
-			{engine.dictionaryEnumsLoading ? (
-				<Alert severity="info" sx={{ mb: 2 }}>
-					Загрузка справочников…
-				</Alert>
+				</FormNotice>
 			) : null}
 
 			{engine.calculationError ? (
-				<Alert severity="error" sx={{ mb: 2 }}>
+				<FormNotice color="error.main">
 					Ошибка калькуляции: {engine.calculationError}
-				</Alert>
+				</FormNotice>
 			) : null}
 
 			{engine.logicValidationIssueCount > 0 ? (
-				<Alert severity="warning" sx={{ mb: 2 }}>
+				<FormNotice color="warning.main">
 					Логическая валидация: {engine.logicValidationIssueCount}{" "}
 					{engine.logicValidationIssueCount === 1 ? "замечание" : "замечаний"}
-				</Alert>
+				</FormNotice>
 			) : null}
 
 			<Form
@@ -214,9 +229,15 @@ export function V2AnketaSchemaForm({
 				disabled={disabled}
 				readonly={disabled}
 				formContext={formContext}
-				onChange={(evt) =>
-					engine.setFormData((evt.formData as Record<string, unknown>) ?? {})
-				}
+				onChange={(evt) => {
+					const next = (evt.formData as Record<string, unknown>) ?? {};
+					const touchedId = resolveTouchedMainSection(evt);
+					const withWorkflowTouch =
+						touchedId != null
+							? touchSectionInFormData(next, touchedId)
+							: next;
+					engine.setFormData(withWorkflowTouch);
+				}}
 			/>
 		</Box>
 	);
@@ -224,4 +245,15 @@ export function V2AnketaSchemaForm({
 
 export function useV2AnketaSchemaFormEngine(source: V2AnketaSchemaEngineSource | null) {
 	return useV2AnketaSchemaEngine(source);
+}
+
+function resolveTouchedMainSection(evt: {
+	id?: string;
+	schema?: unknown;
+}): V2AnketaMainSectionId | null {
+	const id = evt.id ?? "";
+	const match = id.match(
+		/^root_(generalInfo|detailInfo|streamDataSources|streamMlPlatform|streamModelControl)/,
+	);
+	return (match?.[1] as V2AnketaMainSectionId | undefined) ?? null;
 }

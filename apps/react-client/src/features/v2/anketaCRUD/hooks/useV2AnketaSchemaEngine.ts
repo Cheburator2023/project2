@@ -19,6 +19,7 @@ import { derivePreviewSchemas } from "@react-client/features/v2/admin_constructo
 import { mapCalculationResult } from "@react-client/features/v2/admin_constructor/utils/mapCalculationResult";
 import { readSummaryFromFormData } from "@react-client/features/v2/admin_constructor/utils/readSummaryFromFormData";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
+import { ensureAnketaFormDataWithWorkflow } from "./useAnketaWorkflow";
 import { useEffect, useMemo, useState } from "react";
 import type { V2LogicGraphDto } from "@smart-anketa/api-contract";
 
@@ -44,8 +45,8 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 	const [jsonSchema, setJsonSchema] = useState<RJSFSchema>(EMPTY_JSON_SCHEMA);
 	const [uiSchema, setUiSchema] = useState<UiSchema>({});
 	const [logic, setLogic] = useState(coerceLogicGraph(undefined));
-	const [formData, setFormData] = useState<Record<string, unknown>>(
-		source?.initialFormData ?? {},
+	const [formData, setFormData] = useState<Record<string, unknown>>(() =>
+		ensureAnketaFormDataWithWorkflow(source?.initialFormData ?? {}),
 	);
 
 	useEffect(() => {
@@ -53,7 +54,7 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 			setJsonSchema(coerceJsonSchema(source.initialJsonSchema));
 			setUiSchema(coerceUiSchema(source.initialUiSchema));
 			setLogic(coerceLogicGraph(source.initialLogic));
-			setFormData(source.initialFormData ?? {});
+			setFormData(ensureAnketaFormDataWithWorkflow(source.initialFormData ?? {}));
 			return;
 		}
 		if (!version?.id) return;
@@ -61,7 +62,7 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		setUiSchema(coerceUiSchema(version.uiSchema));
 		setLogic(coerceLogicGraph(version.logic));
 		if (source?.initialFormData) {
-			setFormData(source.initialFormData);
+			setFormData(ensureAnketaFormDataWithWorkflow(source.initialFormData));
 		}
 	}, [
 		version?.id,

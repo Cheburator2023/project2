@@ -2,6 +2,7 @@ import {
 	Body,
 	Controller,
 	Get,
+	HttpCode,
 	Param,
 	ParseUUIDPipe,
 	Patch,
@@ -9,12 +10,16 @@ import {
 } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type {
+	BulkDeleteV2QuestionnairesResultDto,
+	SeedV2TestQuestionnairesResultDto,
 	V2QuestionnaireDto,
 	V2QuestionnaireFormPackageDto,
 } from "@smart-anketa/api-contract";
 import {
+	BulkDeleteV2QuestionnairesDto,
 	CreateV2QuestionnaireDto,
 	CreateV2QuestionnaireVersionDto,
+	SeedV2TestQuestionnairesDto,
 	UpdateV2QuestionnaireDto,
 } from "../dto";
 import { V2QuestionnaireService } from "../services/v2-questionnaire.service";
@@ -29,6 +34,31 @@ export class V2QuestionnaireController {
 	@ApiOperation({ summary: "Реестр анкет v2 (отдельно от реестра схем)" })
 	async findAll(): Promise<V2QuestionnaireDto[]> {
 		return this.questionnaireService.findAll();
+	}
+
+	@Post("bulk-delete")
+	@HttpCode(200)
+	@ApiOperation({ summary: "Массовое удаление анкет v2 по id (админка)" })
+	async bulkDelete(
+		@Body() body: BulkDeleteV2QuestionnairesDto,
+	): Promise<BulkDeleteV2QuestionnairesResultDto> {
+		return this.questionnaireService.bulkDelete(body.ids);
+	}
+
+	@Post("seed-test")
+	@HttpCode(200)
+	@ApiOperation({
+		summary:
+			"Создать тестовые анкеты по актуальной схеме шаблона (formData из jsonSchema + расчёт)",
+	})
+	async seedTest(
+		@Body() body: SeedV2TestQuestionnairesDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<SeedV2TestQuestionnairesResultDto> {
+		return this.questionnaireService.seedTestQuestionnaires(
+			body.templateId,
+			user as never,
+		);
 	}
 
 	@Get(":id")

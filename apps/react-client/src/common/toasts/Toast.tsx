@@ -91,9 +91,10 @@ export const Toast = ({
 		() => toast.duration || durationFromToaster || TOAST_LIFETIME,
 		[toast.duration, durationFromToaster],
 	);
-	const closeTimerStartTimeRef = useRef(0);
+	const remainingMsRef = useRef(duration);
+	const timerStartedAtRef = useRef(0);
+	const autoCloseTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 	const offset = useRef(0);
-	const lastCloseTimerStartTimeRef = useRef(0);
 	const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
 	const [y, x] = position.split("-");
 	const toastsHeightBefore = useMemo(() => {
@@ -165,50 +166,58 @@ export const Toast = ({
 	}, [toast, removeToast, setHeights, offset]);
 
 	useEffect(() => {
+		remainingMsRef.current = duration;
+		timerStartedAtRef.current = 0;
+	}, [toast.id, duration]);
+
+	useEffect(() => {
 		if (
 			(toast.promise && toastType === "loading") ||
 			toast.duration === Number.POSITIVE_INFINITY ||
 			toast.type === "loading"
-		)
+		) {
 			return;
-		let timeoutId: NodeJS.Timeout;
-		let remainingTime = duration;
-		// Pause the timer on each hover
-		const pauseTimer = () => {
-			if (lastCloseTimerStartTimeRef.current < closeTimerStartTimeRef.current) {
-				// Get the elapsed time since the timer started
-				const elapsedTime = Date.now() - closeTimerStartTimeRef.current;
-
-				remainingTime = remainingTime - elapsedTime;
-			}
-
-			lastCloseTimerStartTimeRef.current = Date.now();
-		};
-
-		const startTimer = () => {
-			closeTimerStartTimeRef.current = Date.now();
-
-			// Let the toast know it has started
-			timeoutId = setTimeout(() => {
-				toast.onAutoClose?.(toast);
-				deleteToast();
-			}, remainingTime);
-		};
-
-		if (expanded || interacting) {
-			pauseTimer();
-		} else {
-			startTimer();
 		}
 
-		return () => clearTimeout(timeoutId);
+		const stopTimer = () => {
+			if (autoCloseTimeoutRef.current) {
+				clearTimeout(autoCloseTimeoutRef.current);
+				autoCloseTimeoutRef.current = undefined;
+			}
+		};
+
+		const persistRemaining = () => {
+			if (timerStartedAtRef.current <= 0) return;
+			const elapsed = Date.now() - timerStartedAtRef.current;
+			remainingMsRef.current = Math.max(0, remainingMsRef.current - elapsed);
+			timerStartedAtRef.current = 0;
+		};
+
+		const autoClosePaused = expanded || interacting;
+
+		if (autoClosePaused) {
+			persistRemaining();
+			stopTimer();
+			return stopTimer;
+		}
+
+		stopTimer();
+		timerStartedAtRef.current = Date.now();
+		autoCloseTimeoutRef.current = setTimeout(() => {
+			timerStartedAtRef.current = 0;
+			remainingMsRef.current = 0;
+			toast.onAutoClose?.(toast);
+			deleteToast();
+		}, remainingMsRef.current);
+
+		return stopTimer;
 	}, [
 		expanded,
 		interacting,
-		expandByDefault,
-		toast,
 		duration,
 		deleteToast,
+		toast.id,
+		toast.onAutoClose,
 		toast.promise,
 		toastType,
 	]);
@@ -356,6 +365,7 @@ export const Toast = ({
 						closeButtonAriaLabel={closeButtonAriaLabel}
 						defaultActionButtonSx={toastDefaults?.[severity]?.actionButtonSx}
 						defaultCloseButtonSx={toastDefaults?.[severity]?.closeButtonSx}
+						autoClosePaused={expanded || interacting}
 					/>
 				}
 			>

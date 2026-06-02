@@ -11,7 +11,7 @@ import { useNavigate } from "react-router";
 
 export const AnketaCreatePageV2 = () => {
 	const navigate = useNavigate();
-	const { data: templates } = useV2Templates();
+	const { data: templates, isLoading: templatesLoading } = useV2Templates();
 	const createMutation = useCreateV2Questionnaire();
 
 	const activeTemplate = useMemo(
@@ -64,6 +64,7 @@ export const AnketaCreatePageV2 = () => {
 			data-test-id="anketa-create-page"
 			source={source}
 			engine={engine}
+			loading={templatesLoading}
 			onSave={onSave}
 			savePending={createMutation.isPending}
 			saveDisabled={!activeTemplate?.currentVersionId}

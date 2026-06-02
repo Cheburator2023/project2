@@ -37,7 +37,27 @@ interface AlertActionProps {
 	closeButtonAriaLabel?: string;
 	defaultCloseButtonSx?: SxProps<Theme>;
 	defaultActionButtonSx?: SxProps<Theme>;
+	autoClosePaused?: boolean;
 }
+
+const renderActions = (
+	actions: NonNullable<ToastT["actions"]>,
+	deleteToast: () => void,
+	defaultActionButtonSx?: SxProps<Theme>,
+	autoClosePaused?: boolean,
+) => (
+	<Stack direction="row" gap={0.75} alignItems="flex-end" flexWrap="wrap">
+		{actions.map((action, index) => (
+			<ToastActionControl
+				key={index}
+				action={action}
+				deleteToast={deleteToast}
+				actionButtonSx={defaultActionButtonSx}
+				autoClosePaused={autoClosePaused}
+			/>
+		))}
+	</Stack>
+);
 
 const AlertAction = ({
 	toast,
@@ -46,7 +66,37 @@ const AlertAction = ({
 	closeButtonAriaLabel,
 	defaultCloseButtonSx,
 	defaultActionButtonSx,
+	autoClosePaused,
 }: AlertActionProps) => {
+	const toastActions =
+		toast.actions && toast.actions.length > 0 ? toast.actions : null;
+
+	if (toastActions && toast.closeButton) {
+		return (
+			<Stack direction="row" gap={1}>
+				{renderActions(
+					toastActions,
+					deleteToast,
+					defaultActionButtonSx,
+					autoClosePaused,
+				)}
+				<CloseButton
+					closeButtonAriaLabel={closeButtonAriaLabel}
+					deleteToast={deleteToast}
+					closeIcon={closeIcon}
+					closeButtonSx={defaultCloseButtonSx}
+				/>
+			</Stack>
+		);
+	}
+	if (toastActions) {
+		return renderActions(
+			toastActions,
+			deleteToast,
+			defaultActionButtonSx,
+			autoClosePaused,
+		);
+	}
 	if (toast.action && toast.closeButton) {
 		return (
 			<Stack direction="row" gap={1}>
@@ -54,6 +104,7 @@ const AlertAction = ({
 					action={toast.action}
 					deleteToast={deleteToast}
 					actionButtonSx={defaultActionButtonSx}
+					autoClosePaused={autoClosePaused}
 				/>
 				<CloseButton
 					closeButtonAriaLabel={closeButtonAriaLabel}
@@ -69,6 +120,7 @@ const AlertAction = ({
 				action={toast.action}
 				deleteToast={deleteToast}
 				actionButtonSx={defaultActionButtonSx}
+				autoClosePaused={autoClosePaused}
 			/>
 		);
 	} else if (toast.closeButton) {

@@ -1,10 +1,10 @@
 export const ANKETA_MODAL_ARRAY_PATHS = [
-	"detailInfo.sourceSystems",
-	"dataObjects.trainingSources",
-	"dataObjects.applicationSources",
-	"models.modelsList",
-	"atypicalTasks",
-	"mlPlatform.atypicalTasks",
+	"streamDataSources.sourceSystems",
+	"streamModelControl.dataObjects.trainingSources",
+	"streamModelControl.dataObjects.applicationSources",
+	"streamModelControl.models.modelsList",
+	"streamModelControl.atypicalTasks",
+	"streamMlPlatform.atypicalTasks",
 ] as const;
 
 export type AnketaModalArrayPath = (typeof ANKETA_MODAL_ARRAY_PATHS)[number];
@@ -13,14 +13,14 @@ export type AnketaModalKind = "dataSource" | "modelService" | "nonStandardTask";
 
 export function modalKindForArrayPath(path: string): AnketaModalKind | null {
 	switch (path) {
-		case "detailInfo.sourceSystems":
-		case "dataObjects.trainingSources":
-		case "dataObjects.applicationSources":
+		case "streamDataSources.sourceSystems":
+		case "streamModelControl.dataObjects.trainingSources":
+		case "streamModelControl.dataObjects.applicationSources":
 			return "dataSource";
-		case "models.modelsList":
+		case "streamModelControl.models.modelsList":
 			return "modelService";
-		case "atypicalTasks":
-		case "mlPlatform.atypicalTasks":
+		case "streamModelControl.atypicalTasks":
+		case "streamMlPlatform.atypicalTasks":
 			return "nonStandardTask";
 		default:
 			return null;

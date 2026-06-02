@@ -1,4 +1,8 @@
 import type { ReactNode } from "react";
+import type {
+	V2AnketaMainSectionId,
+	V2AnketaWorkflowDto,
+} from "@smart-anketa/api-contract";
 
 export type AnketaFormContextValue = {
 	formData?: Record<string, unknown>;
@@ -8,6 +12,10 @@ export type AnketaFormContextValue = {
 	deleteAnketaArrayItem?: (path: string, index: number) => void;
 	anketaModalArrayPaths?: ReadonlySet<string>;
 	anketaReadOnly?: boolean;
+	workflow?: V2AnketaWorkflowDto;
+	onCompleteMainSection?: (sectionId: V2AnketaMainSectionId) => void;
+	onTouchMainSection?: (sectionId: V2AnketaMainSectionId) => void;
+	isMainSectionLocked?: (sectionId: V2AnketaMainSectionId) => boolean;
 };
 
 export function readAnketaFormContext(

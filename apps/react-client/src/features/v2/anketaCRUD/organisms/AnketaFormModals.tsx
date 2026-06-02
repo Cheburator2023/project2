@@ -27,6 +27,7 @@ import {
 	removeAtFormPath,
 	updateAtFormPath,
 } from "../utils/anketaFormModalMappers";
+import { touchSectionForPathInFormData, touchSectionInFormData } from "../hooks/useAnketaWorkflow";
 
 const RISK_FIELD_TO_MODAL: Record<string, string> = {
 	businessComplexity: "business_change",
@@ -139,7 +140,9 @@ export function AnketaFormModals({
 
 	const deleteArrayItem = useCallback(
 		(path: string, index: number) => {
-			onFormDataChange((prev) => removeAtFormPath(prev, path, index));
+			onFormDataChange((prev) =>
+				touchSectionForPathInFormData(removeAtFormPath(prev, path, index), path),
+			);
 		},
 		[onFormDataChange],
 	);
@@ -185,25 +188,28 @@ export function AnketaFormModals({
 					? undefined
 					: Number(values.totalUncertaintyAdjustment.replace(",", "."));
 
-			return {
-				...prev,
-				generalInfo: {
-					...asRecord(prev.generalInfo),
-					overallUncertainty: values.totalUncertaintyAdjustment
-						? `Средняя ×${values.totalUncertaintyAdjustment.replace("%", "")}`
-						: asRecord(prev.generalInfo).overallUncertainty,
+			return touchSectionInFormData(
+				{
+					...prev,
+					generalInfo: {
+						...asRecord(prev.generalInfo),
+						overallUncertainty: values.totalUncertaintyAdjustment
+							? `Средняя ×${values.totalUncertaintyAdjustment.replace("%", "")}`
+							: asRecord(prev.generalInfo).overallUncertainty,
+					},
+					uncertaintyCalculation: {
+						...currentUncertainty,
+						initiativeTimeline: values.initiativeTimeline,
+						initiativeCost:
+							values.initiativeCost === ""
+								? undefined
+								: Number(values.initiativeCost.replace(",", ".")),
+						uncertaintyAdjustment: adjustment,
+						riskGroup: nextRiskGroup,
+					},
 				},
-				uncertaintyCalculation: {
-					...currentUncertainty,
-					initiativeTimeline: values.initiativeTimeline,
-					initiativeCost:
-						values.initiativeCost === ""
-							? undefined
-							: Number(values.initiativeCost.replace(",", ".")),
-					uncertaintyAdjustment: adjustment,
-					riskGroup: nextRiskGroup,
-				},
-			};
+				"generalInfo",
+			);
 		});
 		closeModal();
 	};
@@ -217,11 +223,13 @@ export function AnketaFormModals({
 			| NonStandardTaskFormValues,
 	) => {
 		const item = mapModalValuesToArrayItem(path, values);
-		onFormDataChange((prev) =>
-			editIndex == null
-				? appendAtFormPath(prev, path, item)
-				: updateAtFormPath(prev, path, editIndex, item),
-		);
+		onFormDataChange((prev) => {
+			const updated =
+				editIndex == null
+					? appendAtFormPath(prev, path, item)
+					: updateAtFormPath(prev, path, editIndex, item);
+			return touchSectionForPathInFormData(updated, path);
+		});
 		closeModal();
 	};
 

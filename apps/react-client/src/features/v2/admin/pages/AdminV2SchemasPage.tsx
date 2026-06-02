@@ -14,6 +14,9 @@ import {
 	useResetV2TemplateToDefault,
 	useV2Templates,
 } from "@react-client/common/api/queries/v2-templates";
+import { useSeedV2TestQuestionnaires } from "@react-client/common/api/queries/v2-questionnaires";
+import { toast } from "@react-client/common/toasts";
+import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { V2AdminButton } from "@react-client/features/v2/admin/atoms/V2AdminButton";
 import { V2SchemaCreateDialog } from "@react-client/features/v2/admin/organisms/V2SchemaCreateDialog";
@@ -25,6 +28,7 @@ import { Link as RouterLink } from "react-router";
 
 export function AdminV2SchemasPage() {
 	const resetMutation = useResetV2TemplateToDefault();
+	const seedMutation = useSeedV2TestQuestionnaires();
 	const { data: templates } = useV2Templates();
 
 	const [selectedTemplateId, setSelectedTemplateId] = useState("");
@@ -63,6 +67,31 @@ export function AdminV2SchemasPage() {
 						onClick={() => setConfirmResetOpen(true)}
 					>
 						Сбросить к заводской схеме
+					</Button>
+					<Button
+						variant="outlined"
+						disabled={
+							!selectedTemplateId || seedMutation.isPending || !templates?.length
+						}
+						title="Создать 3 тестовые анкеты по актуальной схеме (черновик, в работе, завершена)"
+						onClick={() =>
+							seedMutation.mutate(
+								{ templateId: selectedTemplateId },
+								{
+									onSuccess: (result) => {
+										toast.success(
+											`Создано тестовых анкет: ${result.created.length}`,
+										);
+									},
+									onError: (err) =>
+										toast.error("Не удалось создать тестовые анкеты", {
+											description: apiErrorMessage(err),
+										}),
+								},
+							)
+						}
+					>
+						{seedMutation.isPending ? "Создание…" : "Сид тестовых анкет"}
 					</Button>
 					<V2AdminButton onClick={() => setCreateDialogOpen(true)}>
 						Добавить схему

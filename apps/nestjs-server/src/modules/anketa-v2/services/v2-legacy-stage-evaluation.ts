@@ -360,6 +360,9 @@ function extractCoefficients(data: Record<string, unknown>): Coefficients {
 	const modelsCount = Number(detailParams?.modelsCount) || 1;
 	const dataSourcesCount =
 		Number(dataProcessing?.sourcesRDS) ||
+		readArray(
+			readRecord(readRecord(data.streamModelControl)?.dataObjects)?.trainingSources,
+		).length ||
 		readArray(readRecord(data.dataObjects)?.trainingSources).length ||
 		1;
 
@@ -543,7 +546,7 @@ export function evaluateLegacyV2Summary(
 	const coefficients = extractCoefficients(data);
 	const stages = calculateAllStages(data, coefficients);
 	const generalInfo = readRecord(data.generalInfo);
-	const mlPlatform = readRecord(data.mlPlatform);
+	const mlPlatform = readRecord(data.streamMlPlatform ?? data.mlPlatform);
 
 	const stageKeys = Object.keys(V2_STAGE_BASE_VALUES) as V2StageKey[];
 	const detailedCalculation: V2DetailedCalculationRow[] = [];
@@ -595,7 +598,11 @@ export function evaluateLegacyV2Summary(
 			isAdjusted > 0 ? percentDeviation(isBase, isAdjusted) : null,
 	});
 
-	const globalAtypical = sumAtypicalIncluded(readArray(data.atypicalTasks));
+	const globalAtypical = sumAtypicalIncluded(
+		readArray(
+			readRecord(data.streamModelControl)?.atypicalTasks ?? data.atypicalTasks,
+		),
+	);
 	const atypicalBase = 33;
 	const atypicalAdjusted =
 		globalAtypical > 0
@@ -613,7 +620,10 @@ export function evaluateLegacyV2Summary(
 	});
 
 	const sourceTypical = sumTaskTotals(
-		readArray(readRecord(data.detailInfo)?.sourceTypicalTasks),
+		readArray(
+			readRecord(data.streamDataSources)?.sourceTypicalTasks ??
+				readRecord(data.detailInfo)?.sourceTypicalTasks,
+		),
 	);
 	const mlTypical = sumTaskTotals(readArray(mlPlatform?.typicalTasks));
 	const mlAtypical = sumAtypicalIncluded(readArray(mlPlatform?.atypicalTasks));

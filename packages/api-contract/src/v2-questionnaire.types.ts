@@ -3,6 +3,11 @@ import type {
 	V2LogicGraphDto,
 	V2UiSchemaDto,
 } from "./v2-template.types";
+import type {
+	V2AnketaGlobalStatus,
+	V2AnketaMainSectionId,
+	V2AnketaSectionStatus,
+} from "./v2-anketa-workflow.types";
 
 export const V2_QUESTIONNAIRE_STATUS_VALUES = ["active", "archived"] as const;
 export type V2QuestionnaireStatus =
@@ -48,6 +53,12 @@ export type V2QuestionnaireDto = {
 	createdAt: string;
 	updatedAt: string;
 	schemaBinding: V2SchemaBindingDto;
+	/** Дублирует `formData.workflow.globalStatus` для реестра и фильтров. */
+	workflowGlobalStatus: V2AnketaGlobalStatus | null;
+	/** Дублирует `formData.workflow.sections` для чипов в реестре. */
+	workflowSectionStatuses: Partial<
+		Record<V2AnketaMainSectionId, V2AnketaSectionStatus>
+	>;
 };
 
 export type V2QuestionnaireFormPackageDto = {
@@ -77,4 +88,27 @@ export type CreateV2QuestionnaireVersionRequestDto = {
 	calcName?: string;
 	formData?: Record<string, unknown>;
 	finalCoefficient?: number | null;
+};
+
+export type BulkDeleteV2QuestionnairesRequestDto = {
+	ids: string[];
+};
+
+export type BulkDeleteV2QuestionnairesFailureDto = {
+	id: string;
+	reason: "not_found" | "delete_failed";
+	message: string;
+};
+
+export type BulkDeleteV2QuestionnairesResultDto = {
+	deletedIds: string[];
+	failed: BulkDeleteV2QuestionnairesFailureDto[];
+};
+
+export type SeedV2TestQuestionnairesRequestDto = {
+	templateId?: string;
+};
+
+export type SeedV2TestQuestionnairesResultDto = {
+	created: V2QuestionnaireDto[];
 };

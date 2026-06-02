@@ -30,7 +30,7 @@ const UNIFIED = { calcModel: "unified" } as const;
 /** Σ task.total по массиву (читает `current.total` в reduce JsonLogic). */
 const SUM_TASK_TOTAL: V2JsonLogicValue = {
 	reduce: [
-		{ var: "mlPlatform.typicalTasks" },
+		{ var: "streamMlPlatform.typicalTasks" },
 		{ "+": [{ var: "accumulator" }, { max: [0, { var: "current.total" }] }] },
 		0,
 	],
@@ -38,7 +38,7 @@ const SUM_TASK_TOTAL: V2JsonLogicValue = {
 
 const SUM_SOURCE_TYPICAL_TOTAL: V2JsonLogicValue = {
 	reduce: [
-		{ var: "detailInfo.sourceTypicalTasks" },
+		{ var: "streamDataSources.sourceTypicalTasks" },
 		{ "+": [{ var: "accumulator" }, { max: [0, { var: "current.total" }] }] },
 		0,
 	],
@@ -46,7 +46,7 @@ const SUM_SOURCE_TYPICAL_TOTAL: V2JsonLogicValue = {
 
 const SUM_CONTROL_TYPICAL_TOTAL: V2JsonLogicValue = {
 	reduce: [
-		{ var: "modelControl.controlTypicalTasks" },
+		{ var: "streamModelControl.control.controlTypicalTasks" },
 		{ "+": [{ var: "accumulator" }, { max: [0, { var: "current.total" }] }] },
 		0,
 	],
@@ -96,11 +96,11 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 	// --- Per-row итоги (норматив × коэффициент группы) -----------------------
 	rule("default-row-typical-task-total", {
 		kind: "row_computed",
-		targetPath: "/mlPlatform/typicalTasks",
+		targetPath: "/streamMlPlatform/typicalTasks",
 		dependencies: [],
 		condition: ROW_TASK_TOTAL,
 		payload: {
-			arrayPath: "mlPlatform.typicalTasks",
+			arrayPath: "streamMlPlatform.typicalTasks",
 			fieldVar: "total",
 			label: "Per-row total типовых работ платформы",
 			formulaHint: "row.total = estimateHoursPerDay × coefficient.",
@@ -110,11 +110,11 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 
 	rule("default-row-source-typical-task-total", {
 		kind: "row_computed",
-		targetPath: "/detailInfo/sourceTypicalTasks",
+		targetPath: "/streamDataSources/sourceTypicalTasks",
 		dependencies: [],
 		condition: ROW_TASK_TOTAL,
 		payload: {
-			arrayPath: "detailInfo.sourceTypicalTasks",
+			arrayPath: "streamDataSources.sourceTypicalTasks",
 			fieldVar: "total",
 			label: "Per-row итог типовой работы источника (ФТ-024)",
 			formulaHint:
@@ -125,11 +125,11 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 
 	rule("default-row-atypical-task-total", {
 		kind: "row_computed",
-		targetPath: "/atypicalTasks",
+		targetPath: "/streamModelControl/atypicalTasks",
 		dependencies: [],
 		condition: ROW_TASK_TOTAL,
 		payload: {
-			arrayPath: "atypicalTasks",
+			arrayPath: "streamModelControl.atypicalTasks",
 			fieldVar: "total",
 			label: "Per-row итог нетиповой работы",
 			formulaHint: "row.total = базовая оценка × коэффициент. ФТ-022.",
@@ -140,14 +140,14 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 	// --- Триггер типовых работ по источникам (каталог, реальные нормативы) ---
 	rule("unified-source-typical-works", {
 		kind: "task_trigger",
-		targetPath: "/detailInfo/sourceTypicalTasks",
-		dependencies: ["/detailInfo/sourceSystems"],
+		targetPath: "/streamDataSources/sourceTypicalTasks",
+		dependencies: ["/streamDataSources/sourceSystems"],
 		condition: true,
 		payload: {
 			...UNIFIED,
 			mode: "generated_rows",
-			sourceArrayPath: "detailInfo.sourceSystems",
-			outputArrayPath: "detailInfo.sourceTypicalTasks",
+			sourceArrayPath: "streamDataSources.sourceSystems",
+			outputArrayPath: "streamDataSources.sourceTypicalTasks",
 			taskCode: "IND_SOURCE_TASKS",
 			label: "Типовые работы по источникам данных (стрим «Источники данных»)",
 			hint:
@@ -163,11 +163,11 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 
 	rule("unified-control-row-total", {
 		kind: "row_computed",
-		targetPath: "/modelControl/controlTypicalTasks",
+		targetPath: "/streamModelControl/control/controlTypicalTasks",
 		dependencies: [],
 		condition: ROW_TASK_TOTAL,
 		payload: {
-			arrayPath: "modelControl.controlTypicalTasks",
+			arrayPath: "streamModelControl.control.controlTypicalTasks",
 			fieldVar: "total",
 			label: "Per-row итог работы контроля моделей",
 			formulaHint:
@@ -178,14 +178,14 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 
 	rule("unified-control-typical-works", {
 		kind: "task_trigger",
-		targetPath: "/modelControl/controlTypicalTasks",
-		dependencies: ["/modelControl/controlTypes"],
+		targetPath: "/streamModelControl/control/controlTypicalTasks",
+		dependencies: ["/streamModelControl/control/controlTypes"],
 		condition: true,
 		payload: {
 			...UNIFIED,
 			mode: "generated_rows",
-			sourceArrayPath: "modelControl.controlTypes",
-			outputArrayPath: "modelControl.controlTypicalTasks",
+			sourceArrayPath: "streamModelControl.control.controlTypes",
+			outputArrayPath: "streamModelControl.control.controlTypicalTasks",
 			taskCode: "CONTROL_TASKS",
 			label: "Работы по контролю моделей (стрим «Контроль моделей»)",
 			hint:
@@ -198,7 +198,7 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 
 	rule("default-task-trigger-pilot-required", {
 		kind: "task_trigger",
-		targetPath: "/mlPlatform/typicalTasks",
+		targetPath: "/streamMlPlatform/typicalTasks",
 		dependencies: ["/generalInfo/pilotNeed"],
 		condition: { "==": [{ var: "generalInfo.pilotNeed" }, "Требуется"] },
 		payload: {
@@ -214,9 +214,9 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 		kind: "computed",
 		targetPath: "/summary/typicalTotal",
 		dependencies: [
-			"/detailInfo/sourceTypicalTasks",
-			"/mlPlatform/typicalTasks",
-			"/modelControl/controlTypicalTasks",
+			"/streamDataSources/sourceTypicalTasks",
+			"/streamMlPlatform/typicalTasks",
+			"/streamModelControl/control/controlTypicalTasks",
 		],
 		condition: {
 			"+": [
@@ -231,7 +231,7 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 			role: "typical_total",
 			label: "Сумма по типовым работам",
 			formulaHint:
-				"Σ источники + Σ платформа + Σ контроль моделей (sourceTypicalTasks + mlPlatform.typicalTasks + modelControl.controlTypicalTasks).",
+				"Σ источники + Σ платформа + Σ контроль моделей (sourceTypicalTasks + streamMlPlatform.typicalTasks + streamModelControl.control.controlTypicalTasks).",
 		},
 		description: "ФТ-026: сумма итоговых оценок типовых работ.",
 	}),
@@ -239,11 +239,14 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 	rule("unified-atypical-total", {
 		kind: "computed",
 		targetPath: "/summary/atypicalTotal",
-		dependencies: ["/atypicalTasks", "/mlPlatform/atypicalTasks"],
+		dependencies: [
+			"/streamModelControl/atypicalTasks",
+			"/streamMlPlatform/atypicalTasks",
+		],
 		condition: {
 			"+": [
-				sumAtypicalIncluded("atypicalTasks"),
-				sumAtypicalIncluded("mlPlatform.atypicalTasks"),
+				sumAtypicalIncluded("streamModelControl.atypicalTasks"),
+				sumAtypicalIncluded("streamMlPlatform.atypicalTasks"),
 			],
 		},
 		payload: {
@@ -252,7 +255,7 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 			role: "atypical_total",
 			label: "Сумма по нетиповым работам (включённым)",
 			formulaHint:
-				"Σ (atypicalTasks + mlPlatform.atypicalTasks) где includeInCalculation = true.",
+				"Σ (streamModelControl.atypicalTasks + streamMlPlatform.atypicalTasks) где includeInCalculation = true.",
 		},
 		description: "ФТ-026: сумма итоговых оценок нетиповых работ.",
 	}),

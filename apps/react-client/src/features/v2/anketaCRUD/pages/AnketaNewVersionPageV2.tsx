@@ -8,9 +8,6 @@ import { AnketaFormShell } from "@react-client/features/v2/anketaCRUD/templates/
 import { useV2AnketaSchemaEngine } from "@react-client/features/v2/anketaCRUD/hooks/useV2AnketaSchemaEngine";
 import { getV2QuestionnaireFormTitle } from "@react-client/features/v2/anketaCRUD/utils/v2QuestionnaireFormTitle";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
-import Alert from "@mui/material/Alert";
-import CircularProgress from "@mui/material/CircularProgress";
-import { Flex } from "@react-client/common/primitives/Flex";
 import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router";
 
@@ -40,14 +37,14 @@ export const AnketaNewVersionPageV2 = () => {
 	const engine = useV2AnketaSchemaEngine(source);
 
 	const onSave = () => {
-		if (!id) return;
+		if (!id || !formPackage) return;
 		createVersion.mutate(
 			{
 				id,
 				body: {
 					calcName: getV2QuestionnaireFormTitle(
 						engine.formData,
-						formPackage?.questionnaire.calcName,
+						formPackage.questionnaire.calcName,
 					),
 					formData: engine.formData,
 				},
@@ -67,29 +64,22 @@ export const AnketaNewVersionPageV2 = () => {
 		);
 	};
 
-	if (isLoading) {
-		return (
-			<Flex justifyContent="center" alignItems="center" flexGrow={1}>
-				<CircularProgress />
-			</Flex>
-		);
-	}
-
-	if (error || !formPackage) {
-		return (
-			<Alert severity="error" sx={{ m: 2 }}>
-				{error ? apiErrorMessage(error) : "Анкета не найдена"}
-			</Alert>
-		);
-	}
+	const errorMessage =
+		!isLoading && (error || !formPackage)
+			? error
+				? apiErrorMessage(error)
+				: "Анкета не найдена"
+			: null;
 
 	return (
 		<AnketaFormShell
 			data-test-id="anketa-new-version-page"
 			source={source}
 			engine={engine}
-			schemaBinding={formPackage.questionnaire.schemaBinding}
-			onSave={onSave}
+			loading={isLoading}
+			errorMessage={errorMessage}
+			schemaBinding={formPackage?.questionnaire.schemaBinding}
+			onSave={formPackage && !errorMessage ? onSave : undefined}
 			savePending={createVersion.isPending}
 		/>
 	);

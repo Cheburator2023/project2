@@ -9,9 +9,6 @@ import { useV2AnketaSchemaEngine } from "@react-client/features/v2/anketaCRUD/ho
 import { getV2QuestionnaireFormTitle } from "@react-client/features/v2/anketaCRUD/utils/v2QuestionnaireFormTitle";
 import { useMemo } from "react";
 import { useParams } from "react-router";
-import Alert from "@mui/material/Alert";
-import CircularProgress from "@mui/material/CircularProgress";
-import { Flex } from "@react-client/common/primitives/Flex";
 
 export const AnketaPreviewPageV2 = () => {
 	const { id } = useParams<{ id: string }>();
@@ -38,14 +35,14 @@ export const AnketaPreviewPageV2 = () => {
 	const engine = useV2AnketaSchemaEngine(source);
 
 	const onSave = () => {
-		if (!id) return;
+		if (!id || !formPackage) return;
 		updateMutation.mutate(
 			{
 				id,
 				body: {
 					calcName: getV2QuestionnaireFormTitle(
 						engine.formData,
-						formPackage?.questionnaire.calcName,
+						formPackage.questionnaire.calcName,
 					),
 					formData: engine.formData,
 					finalCoefficient: null,
@@ -61,30 +58,24 @@ export const AnketaPreviewPageV2 = () => {
 		);
 	};
 
-	if (isLoading) {
-		return (
-			<Flex justifyContent="center" alignItems="center" flexGrow={1}>
-				<CircularProgress />
-			</Flex>
-		);
-	}
-
-	if (error || !formPackage) {
-		return (
-			<Alert severity="error" sx={{ m: 2 }}>
-				{error ? apiErrorMessage(error) : "Анкета не найдена"}
-			</Alert>
-		);
-	}
+	const errorMessage =
+		!isLoading && (error || !formPackage)
+			? error
+				? apiErrorMessage(error)
+				: "Анкета не найдена"
+			: null;
 
 	return (
 		<AnketaFormShell
 			data-test-id="anketa-preview-page"
 			source={source}
 			engine={engine}
-			schemaBinding={formPackage.questionnaire.schemaBinding}
-			readOnly={formPackage.readOnly}
-			onSave={onSave}
+			loading={isLoading}
+			errorMessage={errorMessage}
+			questionnaireId={id}
+			schemaBinding={formPackage?.questionnaire.schemaBinding}
+			readOnly={formPackage?.readOnly}
+			onSave={formPackage && !errorMessage ? onSave : undefined}
 			savePending={updateMutation.isPending}
 		/>
 	);

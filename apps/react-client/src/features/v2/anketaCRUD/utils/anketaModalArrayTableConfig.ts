@@ -40,7 +40,7 @@ export const ANKETA_ARRAY_TABLE_COLUMNS: Record<
 	AnketaModalArrayPath,
 	AnketaArrayTableColumn[]
 > = {
-	"detailInfo.sourceSystems": [
+	"streamDataSources.sourceSystems": [
 		{
 			key: "name",
 			header: "Название источника",
@@ -98,7 +98,7 @@ export const ANKETA_ARRAY_TABLE_COLUMNS: Record<
 			},
 		},
 	],
-	"dataObjects.trainingSources": [
+	"streamModelControl.dataObjects.trainingSources": [
 		{
 			key: "name",
 			header: "Название витрины",
@@ -125,7 +125,7 @@ export const ANKETA_ARRAY_TABLE_COLUMNS: Record<
 			render: (item) => text(item, "usedModels"),
 		},
 	],
-	"dataObjects.applicationSources": [
+	"streamModelControl.dataObjects.applicationSources": [
 		{
 			key: "name",
 			header: "Название витрины",
@@ -152,7 +152,7 @@ export const ANKETA_ARRAY_TABLE_COLUMNS: Record<
 			render: (item) => text(item, "usedModels"),
 		},
 	],
-	"models.modelsList": [
+	"streamModelControl.models.modelsList": [
 		{
 			key: "name",
 			header: "Название модели",
@@ -185,7 +185,7 @@ export const ANKETA_ARRAY_TABLE_COLUMNS: Record<
 			render: (item) => text(item, "role"),
 		},
 	],
-	atypicalTasks: [
+	"streamModelControl.atypicalTasks": [
 		{
 			key: "name",
 			header: "Название",
@@ -218,7 +218,7 @@ export const ANKETA_ARRAY_TABLE_COLUMNS: Record<
 			render: (item) => text(item, "total"),
 		},
 	],
-	"mlPlatform.atypicalTasks": [
+	"streamMlPlatform.atypicalTasks": [
 		{
 			key: "name",
 			header: "Название",
@@ -272,4 +272,29 @@ export function getArrayAtPath(
 		(item): item is Record<string, unknown> =>
 			item != null && typeof item === "object" && !Array.isArray(item),
 	);
+}
+
+export function getValueAtPath(
+	data: Record<string, unknown>,
+	path: string,
+): unknown {
+	const parts = path.split(".");
+	let current: unknown = data;
+	for (const part of parts) {
+		if (current == null || typeof current !== "object") return undefined;
+		current = (current as Record<string, unknown>)[part];
+	}
+	return current;
+}
+
+/** Сумма элементов массивов + заполненных числовых/boolean полей в подразделе. */
+export function countSubsectionFilledItems(value: unknown): number {
+	if (!value || typeof value !== "object" || Array.isArray(value)) return 0;
+	let count = 0;
+	for (const v of Object.values(value as Record<string, unknown>)) {
+		if (Array.isArray(v)) count += v.length;
+		else if (typeof v === "number" && v > 0) count += 1;
+		else if (v === true) count += 1;
+	}
+	return count;
 }

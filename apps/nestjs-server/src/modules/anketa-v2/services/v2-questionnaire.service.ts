@@ -5,8 +5,10 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type {
+	BulkDeleteV2QuestionnairesResultDto,
 	CreateV2QuestionnaireRequestDto,
 	CreateV2QuestionnaireVersionRequestDto,
+	SeedV2TestQuestionnairesResultDto,
 	UpdateV2QuestionnaireRequestDto,
 	V2QuestionnaireFormPackageDto,
 	V2QuestionnaireDto,
@@ -16,11 +18,21 @@ import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import { V2TemplateService } from "./v2-template.service";
+import { V2CalculationService } from "./v2-calculation.service";
+import {
+	buildTestQuestionnaireFormData,
+	V2_TEST_QUESTIONNAIRE_SEED_SPECS,
+} from "../utils/v2-test-questionnaire-form-data.builder";
 import {
 	buildSchemaBinding,
 	mapV2QuestionnaireToDto,
 } from "../utils/v2-questionnaire-mapper.util";
 import { mapV2TemplateVersionToDto } from "../utils/v2-template-mapper.util";
+import {
+	migrateV2AnketaFormData,
+	resetWorkflowForCopy,
+} from "../utils/v2-form-data-migration.util";
+import { normalizeV2AnketaWorkflow } from "../utils/v2-anketa-workflow.util";
 
 type TUserLike = {
 	given_name?: string;
@@ -39,6 +51,7 @@ export class V2QuestionnaireService {
 		@InjectRepository(V2TemplateVersionEntity)
 		private readonly versionRepository: Repository<V2TemplateVersionEntity>,
 		private readonly templateService: V2TemplateService,
+		private readonly calculationService: V2CalculationService,
 	) {}
 
 	async findAll(): Promise<V2QuestionnaireDto[]> {
@@ -62,12 +75,17 @@ export class V2QuestionnaireService {
 			throw new NotFoundException("Привязанная версия схемы не найдена");
 		}
 		const versionDto = mapV2TemplateVersionToDto(bound);
+		const workflow = normalizeV2AnketaWorkflow(dto.formData.workflow);
+		const readOnly =
+			dto.schemaBinding.status === "unavailable" ||
+			workflow.globalStatus === "Заполнено";
+
 		return {
 			questionnaire: dto,
 			jsonSchema: versionDto.jsonSchema,
 			uiSchema: versionDto.uiSchema,
 			logic: versionDto.logic,
-			readOnly: dto.schemaBinding.status === "unavailable",
+			readOnly,
 		};
 	}
 
@@ -91,7 +109,7 @@ export class V2QuestionnaireService {
 			readableId,
 			templateId: template.id,
 			boundTemplateVersionId: version.id,
-			formData: dto.formData ?? {},
+			formData: migrateV2AnketaFormData(dto.formData ?? {}),
 			finalCoefficient: dto.finalCoefficient ?? null,
 			author: this.authorName(user),
 		});
@@ -109,7 +127,7 @@ export class V2QuestionnaireService {
 			row.calcName = dto.calcName.trim() || row.calcName;
 		}
 		if (dto.formData !== undefined) {
-			row.formData = dto.formData;
+			row.formData = migrateV2AnketaFormData(dto.formData);
 		}
 		if (dto.finalCoefficient !== undefined) {
 			row.finalCoefficient = dto.finalCoefficient;
@@ -147,7 +165,9 @@ export class V2QuestionnaireService {
 			readableId,
 			templateId: parent.templateId,
 			boundTemplateVersionId: parent.boundTemplateVersionId,
-			formData: dto.formData ?? { ...parent.formData },
+			formData: migrateV2AnketaFormData(
+				resetWorkflowForCopy(dto.formData ?? { ...parent.formData }),
+			),
 			finalCoefficient:
 				dto.finalCoefficient !== undefined
 					? dto.finalCoefficient
@@ -157,6 +177,69 @@ export class V2QuestionnaireService {
 
 		const saved = await this.questionnaireRepository.save(entity);
 		return this.findOne(saved.id);
+	}
+
+	async bulkDelete(ids: string[]): Promise<BulkDeleteV2QuestionnairesResultDto> {
+		const uniqueIds = [...new Set(ids)];
+		const deletedIds: string[] = [];
+		const failed: BulkDeleteV2QuestionnairesResultDto["failed"] = [];
+
+		for (const id of uniqueIds) {
+			try {
+				const row = await this.questionnaireRepository.findOne({
+					where: { id },
+				});
+				if (!row) {
+					failed.push({
+						id,
+						reason: "not_found",
+						message: "Анкета не найдена",
+					});
+					continue;
+				}
+				await this.questionnaireRepository.remove(row);
+				deletedIds.push(id);
+			} catch {
+				failed.push({
+					id,
+					reason: "delete_failed",
+					message: "Не удалось удалить анкету",
+				});
+			}
+		}
+
+		return { deletedIds, failed };
+	}
+
+	async seedTestQuestionnaires(
+		templateId: string | undefined,
+		user?: TUserLike | null,
+	): Promise<SeedV2TestQuestionnairesResultDto> {
+		const { template, version } = await this.resolveTemplateForCreate(templateId);
+		const logic = version.logic as { rules?: unknown[] };
+		const jsonSchema = version.jsonSchema;
+		const created: V2QuestionnaireDto[] = [];
+		const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+
+		for (const spec of V2_TEST_QUESTIONNAIRE_SEED_SPECS) {
+			const raw = buildTestQuestionnaireFormData(jsonSchema, spec.variant);
+			const evaluated = this.calculationService.evaluate(
+				{ rules: logic?.rules ?? [] } as never,
+				raw,
+			);
+			const formData = migrateV2AnketaFormData(evaluated.formData);
+			const dto = await this.create(
+				{
+					templateId: template.id,
+					calcName: `[seed ${stamp}] ${spec.calcNameSuffix}`,
+					formData,
+				},
+				user,
+			);
+			created.push(dto);
+		}
+
+		return { created };
 	}
 
 	private async loadWithRelations(id: string): Promise<V2QuestionnaireEntity> {

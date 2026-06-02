@@ -20,4 +20,6 @@ __exportStar(require("./coefficient.types"), exports);
 __exportStar(require("./questionnaire.types"), exports);
 __exportStar(require("./v2-template.types"), exports);
 __exportStar(require("./v2-questionnaire.types"), exports);
+__exportStar(require("./v2-anketa-workflow.types"), exports);
+__exportStar(require("./v2-anketa-workflow.util"), exports);
 __exportStar(require("./v2-legacy-stage.constants"), exports);

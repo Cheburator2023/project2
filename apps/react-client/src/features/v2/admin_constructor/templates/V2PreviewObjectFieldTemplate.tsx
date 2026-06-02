@@ -9,6 +9,7 @@ import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import type { ReactNode } from "react";
 import type {
 	ArrayFieldTemplateProps,
 	FieldPathId,
@@ -16,8 +17,21 @@ import type {
 	RJSFSchema,
 	UiSchema,
 } from "@rjsf/utils";
-import { objectFieldSlot, readAnketaFormContext } from "@react-client/features/v2/anketaCRUD/utils/anketaFormContext";
+import { AnketaSectionStatusChip } from "@react-client/features/v2/anketaCRUD/molecules/AnketaSectionStatusChip";
 import { AnketaModalArrayTable } from "@react-client/features/v2/anketaCRUD/molecules/AnketaModalArrayTable";
+import {
+	objectFieldSlot,
+	readAnketaFormContext,
+} from "@react-client/features/v2/anketaCRUD/utils/anketaFormContext";
+import {
+	countSubsectionFilledItems,
+	getValueAtPath,
+} from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
+import {
+	V2_ANKETA_MAIN_SECTION_IDS,
+	V2_ANKETA_SECTION_COMPLETE_LABELS,
+	type V2AnketaMainSectionId,
+} from "@smart-anketa/api-contract";
 
 function isRootObjectField(
 	fieldPathId: FieldPathId | undefined,
@@ -71,6 +85,106 @@ function propertySchemaFor(
 		return undefined;
 	}
 	return properties[name] as RJSFSchema | undefined;
+}
+
+const MAIN_SECTION_SET = new Set<string>(V2_ANKETA_MAIN_SECTION_IDS);
+
+function isMainSectionId(name: string): name is V2AnketaMainSectionId {
+	return MAIN_SECTION_SET.has(name);
+}
+
+function OpenSubSectionPanel({
+	sectionTitle,
+	count,
+	description,
+	children,
+}: {
+	sectionTitle: string;
+	count?: number;
+	description?: string;
+	children: ReactNode;
+}) {
+	const titleWithCount =
+		count != null && count > 0 ? `${sectionTitle} (${count})` : sectionTitle;
+
+	return (
+		<Box sx={{ minWidth: 0, mb: 3 }}>
+			<Typography variant="h6" fontWeight={700} mb={description ? 1 : 3}>
+				{titleWithCount}
+			</Typography>
+			{description ? (
+				<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+					{description}
+				</Typography>
+			) : null}
+			{children}
+		</Box>
+	);
+}
+
+function SectionPanelAccordion({
+	sectionTitle,
+	sectionStatusChip,
+	completeButton,
+	description,
+	children,
+	defaultExpanded,
+	titleVariant = "h6",
+}: {
+	sectionTitle: string;
+	sectionStatusChip?: ReactNode;
+	completeButton?: ReactNode;
+	description?: string;
+	children: ReactNode;
+	defaultExpanded?: boolean;
+	titleVariant?: "h5" | "h6";
+}) {
+	return (
+		<Accordion
+			defaultExpanded={defaultExpanded ?? true}
+			disableGutters
+			sx={{
+				height: "auto !important",
+				borderRadius: 3,
+				boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+				overflow: "hidden",
+				"&:before": { display: "none" },
+			}}
+			data-test-id={V2_TEMPLATE_READ_TEST_IDS.formSection}
+		>
+			<AccordionSummary
+				expandIcon={<ExpandMoreIcon />}
+				sx={{
+					minHeight: 56,
+					"& .MuiAccordionSummary-content": {
+						alignItems: "center",
+						my: 1.5,
+						gap: 1,
+					},
+				}}
+			>
+				<Typography
+					variant={titleVariant}
+					fontWeight={titleVariant === "h5" ? 700 : undefined}
+					sx={{ minWidth: 0, flex: 1 }}
+				>
+					{sectionTitle}
+				</Typography>
+				{sectionStatusChip ? (
+					<Box sx={{ ml: "auto", mr: 1 }}>{sectionStatusChip}</Box>
+				) : null}
+			</AccordionSummary>
+			<AccordionDetails sx={{ minWidth: 0 }}>
+				{description ? (
+					<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+						{description}
+					</Typography>
+				) : null}
+				{children}
+				{completeButton ? <Box sx={{ mt: 2 }}>{completeButton}</Box> : null}
+			</AccordionDetails>
+		</Accordion>
+	);
 }
 
 function gridSizeForProperty(
@@ -279,6 +393,12 @@ export function V2PreviewObjectFieldTemplate({
 
 	const pathKey = fieldPathId?.path?.join(".") ?? "";
 	const sectionSlot = objectFieldSlot(registry.formContext, pathKey);
+	const {
+		workflow,
+		onCompleteMainSection,
+		isMainSectionLocked,
+		anketaReadOnly,
+	} = readAnketaFormContext(registry.formContext);
 
 	const sectionTitle = resolveSectionTitle(
 		title,
@@ -287,6 +407,83 @@ export function V2PreviewObjectFieldTemplate({
 		fieldPathId?.$id ?? "Секция",
 	);
 	const objectDepth = fieldPathId?.path?.length ?? 1;
+	const parentPath = fieldPathId?.path?.[0] ?? "";
+	const sectionName = String(fieldPathId?.path?.[0] ?? "");
+	const sectionDescription =
+		typeof description === "string" ? description : undefined;
+	const isStreamSubsection =
+		objectDepth === 2 &&
+		(parentPath === "streamModelControl" ||
+			parentPath === "streamMlPlatform" ||
+			parentPath === "streamDataSources");
+
+	const fieldsBody = (
+		<>
+			<ObjectFieldsGrid
+				properties={properties}
+				schema={schemaNode}
+				uiSchema={uiSchema as UiSchema | undefined}
+			/>
+			{sectionSlot ? <Box sx={{ mt: 2 }}>{sectionSlot}</Box> : null}
+		</>
+	);
+
+	if (objectDepth === 1 && isMainSectionId(sectionName)) {
+		const sectionId = sectionName;
+		const sectionStatus = workflow?.sections[sectionId];
+		const locked =
+			anketaReadOnly ||
+			isMainSectionLocked?.(sectionId) ||
+			workflow?.globalStatus === "Заполнено";
+		const canComplete =
+			!locked &&
+			sectionStatus !== "Заполнено" &&
+			Boolean(onCompleteMainSection);
+
+		return (
+			<SectionPanelAccordion
+				sectionTitle={sectionTitle}
+				titleVariant={
+					sectionTitle === "Детальная информация" ? "h5" : "h6"
+				}
+				description={sectionDescription}
+				defaultExpanded={sectionId === V2_ANKETA_MAIN_SECTION_IDS[0]}
+				sectionStatusChip={
+					sectionStatus ? (
+						<AnketaSectionStatusChip kind="section" status={sectionStatus} />
+					) : null
+				}
+				completeButton={
+					canComplete ? (
+						<Button
+							variant="contained"
+							onClick={() => onCompleteMainSection?.(sectionId)}
+							sx={{ textTransform: "uppercase", fontWeight: 600 }}
+						>
+							{V2_ANKETA_SECTION_COMPLETE_LABELS[sectionId]}
+						</Button>
+					) : null
+				}
+			>
+				{fieldsBody}
+			</SectionPanelAccordion>
+		);
+	}
+
+	if (isStreamSubsection) {
+		const formData = readAnketaFormContext(registry.formContext).formData ?? {};
+		const count = countSubsectionFilledItems(getValueAtPath(formData, pathKey));
+
+		return (
+			<OpenSubSectionPanel
+				sectionTitle={sectionTitle}
+				count={count}
+				description={sectionDescription}
+			>
+				{fieldsBody}
+			</OpenSubSectionPanel>
+		);
+	}
 
 	if (objectDepth > 1) {
 		return (
@@ -294,64 +491,22 @@ export function V2PreviewObjectFieldTemplate({
 				<Typography variant="h6" fontWeight={700} mb={3}>
 					{sectionTitle}
 				</Typography>
-				{description ? (
+				{sectionDescription ? (
 					<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-						{description}
+						{sectionDescription}
 					</Typography>
 				) : null}
-				<ObjectFieldsGrid
-					properties={properties}
-					schema={schemaNode}
-					uiSchema={uiSchema as UiSchema | undefined}
-				/>
+				{fieldsBody}
 			</Box>
 		);
 	}
 
 	return (
-		<Accordion
-			defaultExpanded
-			disableGutters
-			sx={{
-				height: "auto !important",
-				borderRadius: 3,
-				boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
-				overflow: "hidden",
-				"&:before": { display: "none" },
-			}}
-			data-test-id={V2_TEMPLATE_READ_TEST_IDS.formSection}
+		<SectionPanelAccordion
+			sectionTitle={sectionTitle}
+			description={sectionDescription}
 		>
-			<AccordionSummary
-				expandIcon={<ExpandMoreIcon />}
-				sx={{
-					minHeight: 56,
-					"& .MuiAccordionSummary-content": {
-						alignItems: "center",
-						my: 1.5,
-					},
-				}}
-			>
-				<Typography
-					variant={sectionTitle === "Детальная информация" ? "h5" : "h6"}
-					fontWeight={sectionTitle === "Детальная информация" ? 700 : undefined}
-					sx={{ minWidth: 0 }}
-				>
-					{sectionTitle}
-				</Typography>
-			</AccordionSummary>
-			<AccordionDetails sx={{ minWidth: 0 }}>
-				{description ? (
-					<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-						{description}
-					</Typography>
-				) : null}
-				<ObjectFieldsGrid
-					properties={properties}
-					schema={schemaNode}
-					uiSchema={uiSchema as UiSchema | undefined}
-				/>
-				{sectionSlot ? <Box sx={{ mt: 2 }}>{sectionSlot}</Box> : null}
-			</AccordionDetails>
-		</Accordion>
+			{fieldsBody}
+		</SectionPanelAccordion>
 	);
 }

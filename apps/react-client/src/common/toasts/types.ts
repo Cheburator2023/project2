@@ -24,6 +24,8 @@ export type ToastAction = {
 	buttonSx?: SxProps<Theme>;
 	/** Обратный отсчёт рядом с кнопкой действия (мс). */
 	countdownDurationMs?: number;
+	/** Нативная подсказка на кнопке. */
+	title?: string;
 };
 
 export type ToastT = {
@@ -42,6 +44,8 @@ export type ToastT = {
 	delete?: boolean;
 	important?: boolean;
 	action?: ToastAction;
+	/** Несколько кнопок действия (приоритетнее одиночного `action`). */
+	actions?: ToastAction[];
 	onDismiss?: (toast: ToastT) => void;
 	onAutoClose?: (toast: ToastT) => void;
 	promise?: PromiseT;

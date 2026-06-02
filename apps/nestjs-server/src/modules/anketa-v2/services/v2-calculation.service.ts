@@ -18,6 +18,7 @@ import {
 } from "./v2-json-logic";
 import { applyLegacySummaryToFormData } from "./v2-legacy-stage-evaluation";
 import { evaluateLogicValidationRules } from "./v2-logic-validation";
+import { migrateV2AnketaFormData } from "../utils/v2-form-data-migration.util";
 
 type ComputedPayload = {
 	role?: V2CalculationRole;
@@ -291,7 +292,7 @@ export class V2CalculationService {
 		const computed = rules.filter((r) => r.kind === "computed");
 		const taskTriggers = rules.filter((r) => r.kind === "task_trigger");
 
-		let liveData: Record<string, unknown> = { ...(formData ?? {}) };
+		let liveData = migrateV2AnketaFormData({ ...(formData ?? {}) });
 
 		// 1) task_trigger/generated_rows — материализуем автозадачи до расчёта строк.
 		for (const rule of taskTriggers) {
@@ -332,19 +333,11 @@ export class V2CalculationService {
 			};
 		});
 
-		// ФТ-024: единый расчёт задаётся правилами шаблона (флаг calcModel: "unified").
-		// Для таких шаблонов legacy v1-движок не перезаписывает summary; для старых
-		// версий (без флага) поведение не меняется — v1-расчёты не ломаем.
-		const isUnified = rules.some(
-			(r) => (r.payload as { calcModel?: string } | undefined)?.calcModel === "unified",
-		);
-		let legacyStageEvaluation: V2CalculationResultDto["legacyStageEvaluation"] =
-			null;
-		if (!isUnified) {
-			const legacy = applyLegacySummaryToFormData(liveData);
-			liveData = legacy.formData;
-			legacyStageEvaluation = legacy.legacyStageEvaluation;
-		}
+		// Legacy E2E + платформенные стримы: таблицы «Подробный расчёт» / «Платформенные стримы».
+		// При unified merge через spread не затирает total/typicalTotal/atypicalTotal.
+		const legacy = applyLegacySummaryToFormData(liveData);
+		liveData = legacy.formData;
+		const legacyStageEvaluation = legacy.legacyStageEvaluation;
 
 		const validationIssues = evaluateLogicValidationRules(rules, liveData);
 

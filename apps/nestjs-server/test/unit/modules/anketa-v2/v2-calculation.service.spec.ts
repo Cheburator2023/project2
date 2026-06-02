@@ -10,7 +10,7 @@ describe("V2CalculationService", () => {
 
 	it("applies row_computed totals on typicalTasks rows", () => {
 		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
-			mlPlatform: {
+			streamMlPlatform: {
 				typicalTasks: [
 					{ estimateHoursPerDay: 2, coefficient: 1.5 },
 					{ estimateHoursPerDay: 1, coefficient: 2 },
@@ -19,7 +19,7 @@ describe("V2CalculationService", () => {
 		});
 
 		const tasks = (
-			result.formData.mlPlatform as {
+			result.formData.streamMlPlatform as {
 				typicalTasks: Array<{ total: number }>;
 			}
 		).typicalTasks;
@@ -30,13 +30,25 @@ describe("V2CalculationService", () => {
 
 	it("computes unified Total = typicalTotal + atypicalTotal (ФТ-026)", () => {
 		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
-			mlPlatform: {
+			streamMlPlatform: {
 				typicalTasks: [{ estimateHoursPerDay: 2, coefficient: 1.5, total: 3 }],
 			},
-			atypicalTasks: [
-				{ estimateHoursPerDay: 4, coefficient: 2, total: 8, includeInCalculation: true },
-				{ estimateHoursPerDay: 5, coefficient: 1, total: 5, includeInCalculation: false },
-			],
+			streamModelControl: {
+				atypicalTasks: [
+					{
+						estimateHoursPerDay: 4,
+						coefficient: 2,
+						total: 8,
+						includeInCalculation: true,
+					},
+					{
+						estimateHoursPerDay: 5,
+						coefficient: 1,
+						total: 5,
+						includeInCalculation: false,
+					},
+				],
+			},
 		});
 
 		const summary = result.formData.summary as {
@@ -47,8 +59,11 @@ describe("V2CalculationService", () => {
 		expect(summary.typicalTotal).toBe(3);
 		expect(summary.atypicalTotal).toBe(8);
 		expect(summary.total).toBe(11);
-		// единый расчёт → legacy v1-движок не запускается
-		expect(result.legacyStageEvaluation).toBeNull();
+		expect(result.legacyStageEvaluation?.applied).toBe(true);
+		expect(
+			(result.formData.summary as { detailedCalculation?: unknown[] })
+				.detailedCalculation?.length,
+		).toBeGreaterThan(0);
 	});
 
 	it("evaluates task_trigger when pilotNeed is required", () => {
@@ -64,32 +79,30 @@ describe("V2CalculationService", () => {
 
 	it("generates internal source typical works from catalog with real norms", () => {
 		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
-			detailInfo: {
+			streamDataSources: {
 				sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
 			},
 		});
 
-		const detailInfo = result.formData.detailInfo as {
+		const streamDataSources = result.formData.streamDataSources as {
 			sourceTypicalTasks: Array<{ name: string; total: number; coefficient: number }>;
 		};
 
-		expect(detailInfo.sourceTypicalTasks.length).toBeGreaterThan(0);
-		// норматив берётся из работы.csv; без весов параметров коэф. группы = 1
+		expect(streamDataSources.sourceTypicalTasks.length).toBeGreaterThan(0);
 		expect(
-			detailInfo.sourceTypicalTasks.every((t) => t.coefficient === 1),
+			streamDataSources.sourceTypicalTasks.every((t) => t.coefficient === 1),
 		).toBe(true);
 		expect(
-			detailInfo.sourceTypicalTasks.some((t) =>
+			streamDataSources.sourceTypicalTasks.some((t) =>
 				t.name.includes("Анализ Данных"),
 			),
 		).toBe(true);
-		// «Анализ Данных, Связок, Проверка качества» норматив = 3 ч/д
-		expect(detailInfo.sourceTypicalTasks.some((t) => t.total === 3)).toBe(true);
+		expect(streamDataSources.sourceTypicalTasks.some((t) => t.total === 3)).toBe(true);
 	});
 
 	it("applies multiplicative group coefficient from dictionary weights (ФТ-024)", () => {
 		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
-			detailInfo: {
+			streamDataSources: {
 				sourceSystems: [
 					{
 						name: "Внешний банк",
@@ -101,12 +114,12 @@ describe("V2CalculationService", () => {
 			},
 		});
 
-		const detailInfo = result.formData.detailInfo as {
+		const streamDataSources = result.formData.streamDataSources as {
 			sourceTypicalTasks: Array<{ name: string; total: number; coefficient: number }>;
 		};
 		// Высокая ×1.5 × Большое ×1.25 = 1.875
-		expect(detailInfo.sourceTypicalTasks[0]?.coefficient).toBeCloseTo(1.875);
-		const analysis = detailInfo.sourceTypicalTasks.find((t) =>
+		expect(streamDataSources.sourceTypicalTasks[0]?.coefficient).toBeCloseTo(1.875);
+		const analysis = streamDataSources.sourceTypicalTasks.find((t) =>
 			t.name.includes("Анализ Данных"),
 		);
 		// норматив 3 × 1.875 = 5.625
@@ -115,26 +128,33 @@ describe("V2CalculationService", () => {
 
 	it("generates external source works (stage 214+) for external type", () => {
 		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
-			detailInfo: {
+			streamDataSources: {
 				sourceSystems: [{ name: "Внешний поставщик", type: "Внешний" }],
 			},
 		});
-		const detailInfo = result.formData.detailInfo as {
+		const streamDataSources = result.formData.streamDataSources as {
 			sourceTypicalTasks: Array<{ reason: string }>;
 		};
-		expect(detailInfo.sourceTypicalTasks.length).toBeGreaterThan(0);
+		expect(streamDataSources.sourceTypicalTasks.length).toBeGreaterThan(0);
 		expect(
-			detailInfo.sourceTypicalTasks.some((t) => t.reason.includes("214")),
+			streamDataSources.sourceTypicalTasks.some((t) => t.reason.includes("214")),
 		).toBe(true);
 	});
 
 	it("generates control-model works from selected control types", () => {
 		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
-			modelControl: { modelClass: "Розничные бизнес-модели", controlTypes: ["КД", "ОК"] },
+			streamModelControl: {
+				control: {
+					modelClass: "Розничные бизнес-модели",
+					controlTypes: ["КД", "ОК"],
+				},
+			},
 		});
-		const control = result.formData.modelControl as {
-			controlTypicalTasks: Array<{ name: string }>;
-		};
+		const control = (
+			result.formData.streamModelControl as {
+				control: { controlTypicalTasks: Array<{ name: string }> };
+			}
+		).control;
 		expect(control.controlTypicalTasks).toHaveLength(2);
 		expect(
 			control.controlTypicalTasks.some((t) => t.name.includes("[КД]")),
@@ -215,7 +235,9 @@ describe("V2CalculationService", () => {
 			{
 				detailInfo: { parameters: { modelsCount: 1, algorithmType: "NLP" } },
 				generalInfo: { complexity: "1 — Низкая ×1.00" },
-				mlPlatform: { typicalTasks: [{ estimateHoursPerDay: 1, coefficient: 1 }] },
+				streamMlPlatform: {
+					typicalTasks: [{ estimateHoursPerDay: 1, coefficient: 1 }],
+				},
 			},
 		);
 
@@ -245,14 +267,16 @@ describe("v2-json-logic", () => {
 		const sum = applyJsonLogic(
 			{
 				reduce: [
-					{ var: "mlPlatform.typicalTasks" },
+					{ var: "streamMlPlatform.typicalTasks" },
 					{
 						"+": [{ var: "accumulator" }, { max: [0, { var: "current.total" }] }],
 					},
 					0,
 				],
 			},
-			{ mlPlatform: { typicalTasks: [{ total: 3 }, { total: 2 }] } },
+			{
+				streamMlPlatform: { typicalTasks: [{ total: 3 }, { total: 2 }] },
+			},
 		);
 		expect(sum).toBe(5);
 	});

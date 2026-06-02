@@ -1,4 +1,9 @@
 import type { ColDef, ColGroupDef } from "ag-grid-community";
+import {
+	V2WorkflowGlobalStatusCell,
+	v2WorkflowSectionStatusCell,
+} from "../molecules/V2WorkflowStatusCell";
+import type { V2AnketaMainSectionId } from "@smart-anketa/api-contract";
 import type { V2QuestionnaireGridRow } from "../types/v2QuestionnaireGrid.types";
 import {
 	formatGridCellValue,
@@ -103,6 +108,32 @@ const PLATFORM_STREAM_FIELDS = [
 	{ key: "atypicalScore", headerName: "Нетиповые", width: 110 },
 ];
 
+const SECTION_STATUS_COLUMNS: Array<{
+	id: V2AnketaMainSectionId;
+	headerName: string;
+}> = [
+	{ id: "generalInfo", headerName: "Общая инф." },
+	{ id: "detailInfo", headerName: "Детальная" },
+	{ id: "streamDataSources", headerName: "Источники" },
+	{ id: "streamMlPlatform", headerName: "Платформа" },
+	{ id: "streamModelControl", headerName: "Контроль" },
+];
+
+function sectionStatusCol(
+	sectionId: V2AnketaMainSectionId,
+	headerName: string,
+): ColDef<V2QuestionnaireGridRow> {
+	return {
+		colId: `workflowSection.${sectionId}`,
+		headerName,
+		width: 120,
+		filter: "agSetColumnFilter",
+		cellRenderer: v2WorkflowSectionStatusCell(sectionId),
+		valueGetter: (p) =>
+			resolveVersionRow(p.data)?.workflowSectionStatuses?.[sectionId] ?? null,
+	};
+}
+
 const E2E_STAGE_FIELDS = [
 	{ key: "stageName", headerName: "Этап E2E", width: 200 },
 	{ key: "baseScore", headerName: "Базовая", width: 100 },
@@ -124,7 +155,7 @@ export function buildV2QuestionnaireColumnDefs(): (
 					colId: "readableId",
 					headerName: "Код",
 					width: 150,
-					pinned: "left",
+					// pinned: "left",
 					filter: "agTextColumnFilter",
 					valueGetter: (p) => resolveVersionRow(p.data)?.readableId ?? "",
 				},
@@ -142,6 +173,18 @@ export function buildV2QuestionnaireColumnDefs(): (
 					filter: "agSetColumnFilter",
 					valueGetter: (p) => resolveVersionRow(p.data)?.status ?? "",
 				},
+				{
+					colId: "workflowGlobalStatus",
+					headerName: "Заполнение",
+					width: 120,
+					filter: "agSetColumnFilter",
+					cellRenderer: V2WorkflowGlobalStatusCell,
+					valueGetter: (p) =>
+						resolveVersionRow(p.data)?.workflowGlobalStatus ?? null,
+				},
+				...SECTION_STATUS_COLUMNS.map(({ id, headerName }) =>
+					sectionStatusCol(id, headerName),
+				),
 				{
 					colId: "author",
 					headerName: "Автор",
@@ -277,7 +320,11 @@ export function buildV2QuestionnaireColumnDefs(): (
 				headerName: "Коэф. алгоритма",
 				width: 120,
 			},
-			{ path: "detailInfo.parameters.autoML", headerName: "AutoML", width: 110 },
+			{
+				path: "detailInfo.parameters.autoML",
+				headerName: "AutoML",
+				width: 110,
+			},
 			{
 				path: "detailInfo.parameters.specialist",
 				headerName: "Специалист",
@@ -295,7 +342,7 @@ export function buildV2QuestionnaireColumnDefs(): (
 			children: [0, 1, 2].map((index) =>
 				arrayItemGroup(
 					"Источник",
-					"detailInfo.sourceSystems",
+					"streamDataSources.sourceSystems",
 					index,
 					SOURCE_SYSTEM_FIELDS,
 				),
@@ -303,23 +350,23 @@ export function buildV2QuestionnaireColumnDefs(): (
 		},
 		formFieldGroup("Типовые работы (источники)", [
 			{
-				path: "detailInfo.sourceTypicalTasks[0].name",
+				path: "streamDataSources.sourceTypicalTasks[0].name",
 				headerName: "Задача 1",
 				width: 180,
 			},
 			{
-				path: "detailInfo.sourceTypicalTasks[0].total",
+				path: "streamDataSources.sourceTypicalTasks[0].total",
 				headerName: "Итог 1",
 				width: 90,
 				filter: "agNumberColumnFilter",
 			},
 			{
-				path: "detailInfo.sourceTypicalTasks[1].name",
+				path: "streamDataSources.sourceTypicalTasks[1].name",
 				headerName: "Задача 2",
 				width: 180,
 			},
 			{
-				path: "detailInfo.sourceTypicalTasks[1].total",
+				path: "streamDataSources.sourceTypicalTasks[1].total",
 				headerName: "Итог 2",
 				width: 90,
 				filter: "agNumberColumnFilter",
@@ -331,7 +378,7 @@ export function buildV2QuestionnaireColumnDefs(): (
 			children: [0, 1].map((index) =>
 				arrayItemGroup(
 					"Витрина",
-					"dataObjects.trainingSources",
+					"streamModelControl.dataObjects.trainingSources",
 					index,
 					TRAINING_SOURCE_FIELDS,
 				),
@@ -343,7 +390,7 @@ export function buildV2QuestionnaireColumnDefs(): (
 			children: [0].map((index) =>
 				arrayItemGroup(
 					"Витрина",
-					"dataObjects.applicationSources",
+					"streamModelControl.dataObjects.applicationSources",
 					index,
 					[
 						{ key: "name", headerName: "Название", width: 150 },
@@ -403,7 +450,12 @@ export function buildV2QuestionnaireColumnDefs(): (
 			headerName: "Список моделей",
 			marryChildren: true,
 			children: [0, 1].map((index) =>
-				arrayItemGroup("Модель", "models.modelsList", index, MODEL_FIELDS),
+				arrayItemGroup(
+					"Модель",
+					"streamModelControl.models.modelsList",
+					index,
+					MODEL_FIELDS,
+				),
 			),
 		},
 		formFieldGroup("Итоговая оценка", [

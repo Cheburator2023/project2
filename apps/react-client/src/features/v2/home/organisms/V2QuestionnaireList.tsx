@@ -1,15 +1,27 @@
 import AddIcon from "@mui/icons-material/Add";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import {
 	Button,
 	Chip,
 	Divider,
+	Dialog,
+	DialogActions,
+	DialogContent,
+	DialogContentText,
+	DialogTitle,
 	Stack,
 	TextField,
 	Typography,
 	styled,
 	useColorScheme,
 } from "@mui/material";
-import { useV2Questionnaires } from "@react-client/common/api/queries/v2-questionnaires";
+import {
+	useBulkDeleteV2Questionnaires,
+	useV2Questionnaires,
+} from "@react-client/common/api/queries/v2-questionnaires";
+import { usePermissions } from "@react-client/hooks/usePermissions";
+import { toast } from "@react-client/common/toasts";
+import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
@@ -21,6 +33,7 @@ import type {
 import type {
 	V2QuestionnaireGridRow,
 	V2QuestionnaireSeriesRow,
+	V2QuestionnaireVersionRow,
 } from "../types/v2QuestionnaireGrid.types";
 import {
 	AllCommunityModule,
@@ -30,6 +43,7 @@ import {
 	type ICellRendererParams,
 	type MenuItemDef,
 	type RowDoubleClickedEvent,
+	type SelectionChangedEvent,
 	ModuleRegistry,
 	type SideBarDef,
 	ValidationModule,
@@ -329,6 +343,12 @@ export function V2QuestionnaireList() {
 	const { mode } = useColorScheme();
 	const navigate = useNavigate();
 	const gridRef = useRef<AgGridReact<V2QuestionnaireGridRow>>(null);
+	const { canAccessAdminPanel } = usePermissions();
+	const bulkDelete = useBulkDeleteV2Questionnaires();
+	const [selectedVersions, setSelectedVersions] = useState<
+		V2QuestionnaireVersionRow[]
+	>([]);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
 	const gridTheme =
 		mode === "light" || mode === undefined
@@ -470,18 +490,87 @@ export function V2QuestionnaireList() {
 		[navigate],
 	);
 
+	const runBulkDelete = useCallback(() => {
+		const ids = selectedVersions.map((row) => row.id);
+		if (!ids.length) return;
+		bulkDelete.mutate(
+			{ ids },
+			{
+				onSuccess: (result) => {
+					setDeleteDialogOpen(false);
+					setSelectedVersions([]);
+					gridRef.current?.api?.deselectAll();
+					const deleted = result.deletedIds.length;
+					const failed = result.failed.length;
+					if (deleted > 0) {
+						toast.success(
+							failed > 0
+								? `Удалено анкет: ${deleted}, ошибок: ${failed}`
+								: `Удалено анкет: ${deleted}`,
+						);
+					} else if (failed > 0) {
+						toast.error("Не удалось удалить выбранные анкеты");
+					}
+				},
+				onError: (err) =>
+					toast.error("Ошибка удаления", {
+						description: apiErrorMessage(err),
+					}),
+			},
+		);
+	}, [bulkDelete, selectedVersions]);
+
 	return (
 		<div>
 			<Header>
-				<Button
-					variant="contained"
-					size="small"
-					startIcon={<AddIcon />}
-					onClick={() => navigate(`/v2/${v2Routes.calculationCreate.rootPath}`)}
-				>
-					Создать анкету
-				</Button>
+				<Stack direction="row" spacing={1} alignItems="center">
+					{canAccessAdminPanel ? (
+						<Button
+							variant="outlined"
+							size="small"
+							color="error"
+							startIcon={<DeleteOutlineIcon />}
+							disabled={!selectedVersions.length || bulkDelete.isPending}
+							onClick={() => setDeleteDialogOpen(true)}
+						>
+							Удалить выбранные ({selectedVersions.length})
+						</Button>
+					) : null}
+					<Button
+						variant="contained"
+						size="small"
+						startIcon={<AddIcon />}
+						onClick={() =>
+							navigate(`/v2/${v2Routes.calculationCreate.rootPath}`)
+						}
+					>
+						Создать анкету
+					</Button>
+				</Stack>
 			</Header>
+			<Dialog
+				open={deleteDialogOpen}
+				onClose={() => setDeleteDialogOpen(false)}
+			>
+				<DialogTitle>Удалить анкеты?</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						Будет удалено записей: {selectedVersions.length}. Действие
+						необратимо.
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setDeleteDialogOpen(false)}>Отмена</Button>
+					<Button
+						color="error"
+						variant="contained"
+						disabled={bulkDelete.isPending}
+						onClick={runBulkDelete}
+					>
+						Удалить
+					</Button>
+				</DialogActions>
+			</Dialog>
 			<GridWrapper flexGrow={1} minHeight="0" sx={{ p: 0 }}>
 				<AgGridReact<V2QuestionnaireGridRow>
 					ref={gridRef}
@@ -496,7 +585,6 @@ export function V2QuestionnaireList() {
 					autoGroupColumnDef={{
 						headerName: "Анкета / версия",
 						minWidth: 260,
-						pinned: "left",
 						cellRendererParams: { suppressCount: true },
 						filter: "agTextColumnFilter",
 						valueGetter: (p) => p.data?.displayLabel ?? "",
@@ -532,6 +620,28 @@ export function V2QuestionnaireList() {
 					getContextMenuItems={getContextMenuItems}
 					onGridReady={onGridReady}
 					loading={isLoading}
+					isRowSelectable={(node) => node.data?.rowKind === "version"}
+					rowSelection={
+						canAccessAdminPanel
+							? {
+									mode: "multiRow",
+									checkboxes: true,
+									headerCheckbox: true,
+									enableClickSelection: false,
+								}
+							: undefined
+					}
+					onSelectionChanged={(
+						e: SelectionChangedEvent<V2QuestionnaireGridRow>,
+					) => {
+						const rows = e.api
+							.getSelectedRows()
+							.filter(
+								(row): row is V2QuestionnaireVersionRow =>
+									row.rowKind === "version",
+							);
+						setSelectedVersions(rows);
+					}}
 					domLayout="normal"
 					suppressAggFuncInHeader
 				/>

@@ -109,38 +109,40 @@ export function V2FinalEvaluationPanel({
 			>
 				<Stack
 					direction="row"
-					justifyContent="space-between"
-					alignItems="baseline"
-					gap={2}
+					alignItems="center"
+					flexWrap="wrap"
+					gap={1.5}
+					mb={engineCaption ? 1 : 4}
 				>
-					<Box sx={{ minWidth: 0 }}>
-						<Typography variant={compact ? "h5" : "h4"} fontWeight={700} mb={4}>
-							Итоговая оценка
-						</Typography>
-						{engineCaption ? (
-							<Typography
-								variant="caption"
-								color="text.secondary"
-								display="block"
-							>
-								{engineCaption}
-							</Typography>
-						) : null}
-					</Box>
-					<Stack direction="row" gap={1} alignItems="center" flexShrink={0}>
-						{isLoading ? <CircularProgress size={16} /> : null}
-						{onExportExcel ? (
-							<Button
-								size="small"
-								variant="contained"
-								startIcon={<FileDownloadOutlinedIcon />}
-								onClick={onExportExcel}
-							>
-								Экспорт в Excel
-							</Button>
-						) : null}
-					</Stack>
+					<Typography variant={compact ? "h5" : "h4"} fontWeight={700}>
+						Итоговая оценка
+					</Typography>
+					<Button
+						size="small"
+						variant="contained"
+						startIcon={<FileDownloadOutlinedIcon />}
+						disabled={isLoading || !onExportExcel}
+						title={
+							onExportExcel
+								? "Экспорт расчёта в Excel"
+								: "Экспорт будет доступен позже"
+						}
+						onClick={onExportExcel}
+					>
+						Экспорт в Excel
+					</Button>
+					{isLoading ? <CircularProgress size={16} /> : null}
 				</Stack>
+				{engineCaption ? (
+					<Typography
+						variant="caption"
+						color="text.secondary"
+						display="block"
+						sx={{ mb: 4 }}
+					>
+						{engineCaption}
+					</Typography>
+				) : null}
 
 				<Stack spacing={2}>
 					{hasUnified ? (

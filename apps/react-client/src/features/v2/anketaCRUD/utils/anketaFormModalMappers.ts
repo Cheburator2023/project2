@@ -103,16 +103,16 @@ export function mapModalValuesToArrayItem(
 		| NonStandardTaskFormValues,
 ): Record<string, unknown> {
 	switch (path) {
-		case "detailInfo.sourceSystems":
+		case "streamDataSources.sourceSystems":
 			return mapDataSourceToSourceSystem(values as DataSourceFormValues);
-		case "dataObjects.trainingSources":
+		case "streamModelControl.dataObjects.trainingSources":
 			return mapDataSourceToTrainingSource(values as DataSourceFormValues);
-		case "dataObjects.applicationSources":
+		case "streamModelControl.dataObjects.applicationSources":
 			return mapDataSourceToApplicationSource(values as DataSourceFormValues);
-		case "models.modelsList":
+		case "streamModelControl.models.modelsList":
 			return mapModelServiceToModelItem(values as ModelServiceFormValues);
-		case "atypicalTasks":
-		case "mlPlatform.atypicalTasks":
+		case "streamModelControl.atypicalTasks":
+		case "streamMlPlatform.atypicalTasks":
 			return mapNonStandardTaskToAtypicalTask(
 				values as NonStandardTaskFormValues,
 			);
@@ -191,9 +191,9 @@ export function mapArrayItemToModalDefaults(
 	| Partial<ModelServiceFormValues>
 	| Partial<NonStandardTaskFormValues> {
 	switch (path) {
-		case "detailInfo.sourceSystems":
-		case "dataObjects.trainingSources":
-		case "dataObjects.applicationSources":
+		case "streamDataSources.sourceSystems":
+		case "streamModelControl.dataObjects.trainingSources":
+		case "streamModelControl.dataObjects.applicationSources":
 			return {
 				name: String(item.name ?? ""),
 				sourceType:
@@ -216,7 +216,7 @@ export function mapArrayItemToModalDefaults(
 				domainComplexity: String(item.domainComplexity ?? ""),
 				entityVolume: String(item.entityVolume ?? ""),
 			};
-		case "models.modelsList":
+		case "streamModelControl.models.modelsList":
 			return {
 				name: String(item.name ?? ""),
 				workType:
@@ -227,8 +227,8 @@ export function mapArrayItemToModalDefaults(
 							: "pilot",
 				isCreationRequired: item.autoML === "Да" ? "yes" : "no",
 			};
-		case "atypicalTasks":
-		case "mlPlatform.atypicalTasks":
+		case "streamModelControl.atypicalTasks":
+		case "streamMlPlatform.atypicalTasks":
 			return {
 				name: String(item.name ?? ""),
 				reason: String(item.reason ?? ""),

@@ -2,7 +2,9 @@ import type {
 	V2QuestionnaireDto,
 	V2SchemaBindingDto,
 } from "@smart-anketa/api-contract";
+import { normalizeV2AnketaWorkflow } from "@smart-anketa/api-contract";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
+import { migrateV2AnketaFormData } from "./v2-form-data-migration.util";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 
@@ -59,6 +61,8 @@ export function mapV2QuestionnaireToDto(
 	entity: V2QuestionnaireEntity,
 	schemaBinding: V2SchemaBindingDto,
 ): V2QuestionnaireDto {
+	const formData = migrateV2AnketaFormData(entity.formData ?? {});
+	const workflow = normalizeV2AnketaWorkflow(formData.workflow);
 	return {
 		id: entity.id,
 		calcName: entity.calcName,
@@ -71,11 +75,13 @@ export function mapV2QuestionnaireToDto(
 		templateCode: entity.template?.code ?? null,
 		templateName: entity.template?.name ?? null,
 		boundTemplateVersionId: entity.boundTemplateVersionId,
-		formData: entity.formData ?? {},
+		formData,
 		finalCoefficient: entity.finalCoefficient,
 		author: entity.author,
 		createdAt: entity.createdAt.toISOString(),
 		updatedAt: entity.updatedAt.toISOString(),
 		schemaBinding,
+		workflowGlobalStatus: workflow.globalStatus,
+		workflowSectionStatuses: workflow.sections,
 	};
 }

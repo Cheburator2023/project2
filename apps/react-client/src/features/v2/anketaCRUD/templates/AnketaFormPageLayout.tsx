@@ -1,4 +1,5 @@
 import Box from "@mui/material/Box";
+import CircularProgress from "@mui/material/CircularProgress";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import type { ReactNode } from "react";
 
@@ -6,11 +7,13 @@ export function AnketaFormPageLayout({
 	headerActions,
 	main,
 	sidebar,
+	loading = false,
 	"data-test-id": dataTestId = "anketa-form-page",
 }: {
 	headerActions?: ReactNode;
 	main: ReactNode;
 	sidebar: ReactNode;
+	loading?: boolean;
 	"data-test-id"?: string;
 }) {
 	return (
@@ -54,8 +57,26 @@ export function AnketaFormPageLayout({
 					"& > *": { minWidth: 0, maxWidth: "100%" },
 				}}
 			>
-				{main}
-				{sidebar}
+				{loading ? (
+					<Box
+						data-test-id={`${dataTestId}--loading`}
+						sx={{
+							gridColumn: "1 / -1",
+							display: "flex",
+							justifyContent: "center",
+							alignItems: "center",
+							minHeight: "min(480px, 60vh)",
+							py: 6,
+						}}
+					>
+						<CircularProgress color="info" />
+					</Box>
+				) : (
+					<>
+						{main}
+						{sidebar}
+					</>
+				)}
 			</Box>
 		</Box>
 	);
