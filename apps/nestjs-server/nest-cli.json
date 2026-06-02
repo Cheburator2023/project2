@@ -7,12 +7,10 @@
 		"assets": [
 			{
 				"include": "modules/anketa-v2/constants/*.snapshot.json",
-				"outDir": "dist/src",
 				"watchAssets": true
 			},
 			{
 				"include": "modules/anketa-v2/constants/generated/*.generated.json",
-				"outDir": "dist/src",
 				"watchAssets": true
 			}
 		]
