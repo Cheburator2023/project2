@@ -93,7 +93,7 @@ export const Toast = ({
 	);
 	const remainingMsRef = useRef(duration);
 	const timerStartedAtRef = useRef(0);
-	const autoCloseTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+	const autoCloseTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 	const offset = useRef(0);
 	const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
 	const [y, x] = position.split("-");

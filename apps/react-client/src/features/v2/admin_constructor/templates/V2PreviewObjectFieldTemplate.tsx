@@ -270,7 +270,7 @@ export function V2PreviewArrayFieldTemplate({
 	const addLabel =
 		typeof (uiSchema?.["ui:options"] as { addButtonText?: unknown } | undefined)
 			?.addButtonText === "string"
-			? ((uiSchema?.["ui:options"] as { addButtonText: string }).addButtonText)
+			? (uiSchema?.["ui:options"] as { addButtonText: string }).addButtonText
 			: `Добавить ${sectionTitle.toLowerCase()}`;
 	const showAddButton = canEdit && (useModalAdd || canAdd);
 
@@ -389,7 +389,7 @@ export function V2PreviewObjectFieldTemplate({
 	}
 
 	const pathKey = fieldPathId?.path?.join(".") ?? "";
-	const pathSegments = fieldPathId?.path ?? [];
+	const pathSegments: any[] = fieldPathId?.path ?? [];
 	const sectionSlot = objectFieldSlot(registry.formContext, pathKey);
 	const {
 		workflow,
