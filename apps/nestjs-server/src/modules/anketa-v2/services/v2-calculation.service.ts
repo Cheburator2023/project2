@@ -50,6 +50,12 @@ type TaskTriggerPayload = {
 		reason?: string;
 		estimateHoursPerDay?: number;
 		coefficient?: number;
+		coefficientBySourceCount?: Record<string, number>;
+		coefficientByField?: {
+			field: string;
+			values: Record<string, number>;
+			default?: number;
+		};
 		match?: Record<string, unknown>;
 	}>;
 };
@@ -113,8 +119,56 @@ function writeByDotPath(
 }
 
 function valueMatches(actual: unknown, expected: unknown): boolean {
-	if (Array.isArray(expected)) return expected.includes(actual);
+	if (
+		expected &&
+		typeof expected === "object" &&
+		!Array.isArray(expected)
+	) {
+		const spec = expected as Record<string, unknown>;
+		if (Array.isArray(spec.anyOf)) return spec.anyOf.some((v) => valueMatches(actual, v));
+		if (Array.isArray(spec.includesAny)) {
+			return Array.isArray(actual)
+				? spec.includesAny.some((v) => actual.includes(v))
+				: spec.includesAny.includes(actual);
+		}
+		if (typeof spec.gte === "number") {
+			return typeof actual === "number" && actual >= spec.gte;
+		}
+		if (typeof spec.lte === "number") {
+			return typeof actual === "number" && actual <= spec.lte;
+		}
+		if (spec.truthy === true) return Boolean(actual);
+	}
+	if (Array.isArray(expected)) {
+		return Array.isArray(actual)
+			? expected.some((v) => actual.includes(v))
+			: expected.includes(actual);
+	}
 	return actual === expected;
+}
+
+function sourceCountBucket(count: number): string {
+	return count >= 8 ? "8+" : String(count);
+}
+
+function resolveGeneratedTaskCoefficient(
+	task: NonNullable<TaskTriggerPayload["tasks"]>[number],
+	source: Record<string, unknown>,
+	sourceCount: number,
+): number {
+	const byField = task.coefficientByField;
+	if (byField?.field) {
+		const value = source[byField.field];
+		if (typeof value === "string" && byField.values[value] !== undefined) {
+			return byField.values[value] as number;
+		}
+		if (byField.default !== undefined) return byField.default;
+	}
+	const bucket = sourceCountBucket(sourceCount);
+	if (task.coefficientBySourceCount?.[bucket] !== undefined) {
+		return task.coefficientBySourceCount[bucket] as number;
+	}
+	return task.coefficient ?? 1;
 }
 
 function rowMatches(
@@ -330,18 +384,20 @@ export class V2CalculationService {
 		const sourceRows = readByDotPath(data, sourceArrayPath);
 		if (!Array.isArray(sourceRows)) return writeByDotPath(data, outputArrayPath, []);
 
+		const sourceCount = sourceRows.length;
 		const generated = sourceRows.flatMap((row, sourceIndex) => {
 			const source =
 				row && typeof row === "object" && !Array.isArray(row)
 					? (row as Record<string, unknown>)
 					: {};
+			const sourceForMatch = { ...source, sourceCount, sourceIndex };
 			const sourceName =
 				typeof source.name === "string" && source.name.trim()
 					? source.name.trim()
 					: `Источник ${sourceIndex + 1}`;
 
 			return (payload.tasks ?? [])
-				.filter((task) => rowMatches(source, task.match))
+				.filter((task) => rowMatches(sourceForMatch, task.match))
 				.map((task) => ({
 					taskCode: task.taskCode,
 					name: task.name ?? task.label ?? task.taskCode ?? "Типовая работа",
@@ -349,7 +405,11 @@ export class V2CalculationService {
 						? `${sourceName}: ${task.reason}`
 						: `${sourceName}: параметр источника`,
 					estimateHoursPerDay: task.estimateHoursPerDay ?? 0,
-					coefficient: task.coefficient ?? 1,
+					coefficient: resolveGeneratedTaskCoefficient(
+						task,
+						sourceForMatch,
+						sourceCount,
+					),
 					sourceComponent: "Источник данных",
 					sourceName,
 					generatedByRuleId: rule.id,

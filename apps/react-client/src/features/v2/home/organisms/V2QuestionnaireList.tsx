@@ -1,5 +1,14 @@
 import AddIcon from "@mui/icons-material/Add";
-import { Button, Chip, styled, useColorScheme } from "@mui/material";
+import {
+	Button,
+	Chip,
+	Divider,
+	Stack,
+	TextField,
+	Typography,
+	styled,
+	useColorScheme,
+} from "@mui/material";
 import { useV2Questionnaires } from "@react-client/common/api/queries/v2-questionnaires";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/common/navigation/organisms/Header";
@@ -35,7 +44,7 @@ import {
 	TreeDataModule,
 } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import {
 	agGridCustomMUITheme,
@@ -43,6 +52,10 @@ import {
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 import { buildV2QuestionnaireColumnDefs } from "../utils/v2QuestionnaireGridColumns";
+import {
+	FACTORY_GRID_PRESETS,
+	isFactoryPresetId,
+} from "../utils/v2QuestionnaireGridFactoryPresets";
 import { resolveVersionRow } from "../utils/v2QuestionnaireGridValue";
 
 export type {
@@ -101,6 +114,201 @@ function BindingChip({ status }: { status: V2SchemaBindingStatus }) {
 	);
 }
 
+const GRID_PRESETS_STORAGE_KEY = "smart_anketa:v2-questionnaire-grid-presets";
+
+type GridPreset = {
+	id: string;
+	name: string;
+	columnState: unknown;
+	filterModel: unknown;
+	savedAt: string;
+	builtIn?: boolean;
+};
+
+type PresetGridApi = {
+	getColumnState: () => unknown;
+	applyColumnState: (params: {
+		state: unknown;
+		applyOrder?: boolean;
+	}) => void;
+	getFilterModel: () => unknown;
+	setFilterModel: (model: unknown) => void;
+	resetColumnState: () => void;
+	onFilterChanged: () => void;
+};
+
+function readGridPresets(): GridPreset[] {
+	if (typeof window === "undefined") return [];
+	try {
+		const raw = window.localStorage.getItem(GRID_PRESETS_STORAGE_KEY);
+		if (!raw) return [];
+		const parsed = JSON.parse(raw);
+		if (!Array.isArray(parsed)) return [];
+		return parsed.filter(
+			(preset): preset is GridPreset =>
+				Boolean(preset && typeof preset === "object") &&
+				!isFactoryPresetId(String((preset as GridPreset).id)),
+		);
+	} catch {
+		return [];
+	}
+}
+
+function writeGridPresets(presets: GridPreset[]) {
+	window.localStorage.setItem(GRID_PRESETS_STORAGE_KEY, JSON.stringify(presets));
+}
+
+function newPresetId(): string {
+	return typeof crypto !== "undefined" && "randomUUID" in crypto
+		? crypto.randomUUID()
+		: `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function GridPresetToolPanel({ api }: { api: PresetGridApi }) {
+	const [presets, setPresets] = useState<GridPreset[]>(readGridPresets);
+	const [name, setName] = useState("");
+
+	const updatePresets = (next: GridPreset[]) => {
+		setPresets(next);
+		writeGridPresets(next);
+	};
+
+	const savePreset = () => {
+		const trimmedName = name.trim() || `Пресет ${presets.length + 1}`;
+		const nextPreset: GridPreset = {
+			id: newPresetId(),
+			name: trimmedName,
+			columnState: api.getColumnState(),
+			filterModel: api.getFilterModel(),
+			savedAt: new Date().toISOString(),
+		};
+		updatePresets([nextPreset, ...presets]);
+		setName("");
+	};
+
+	const applyPreset = (preset: {
+		columnState: unknown;
+		filterModel: unknown;
+	}) => {
+		api.applyColumnState({
+			state: preset.columnState as Parameters<
+				PresetGridApi["applyColumnState"]
+			>[0]["state"],
+			applyOrder: true,
+		});
+		api.setFilterModel(preset.filterModel ?? null);
+		api.onFilterChanged();
+	};
+
+	const deletePreset = (presetId: string) => {
+		updatePresets(presets.filter((preset) => preset.id !== presetId));
+	};
+
+	const resetGridState = () => {
+		api.resetColumnState();
+		api.setFilterModel(null);
+		api.onFilterChanged();
+	};
+
+	return (
+		<Stack spacing={1.5} sx={{ p: 1.5, minWidth: 240 }}>
+			<Typography variant="subtitle2" fontWeight={700}>
+				Пресеты колонок
+			</Typography>
+			<Typography variant="caption" color="text.secondary">
+				Сохраняет порядок, видимость колонок и фильтры из панели AG Grid.
+			</Typography>
+			<TextField
+				size="small"
+				label="Название пресета"
+				value={name}
+				onChange={(event) => setName(event.target.value)}
+			/>
+			<Button variant="contained" size="small" onClick={savePreset}>
+				Сохранить текущий вид
+			</Button>
+			<Button variant="outlined" size="small" onClick={resetGridState}>
+				Сбросить колонки и фильтры
+			</Button>
+			<Divider />
+			<Typography variant="subtitle2" fontWeight={700}>
+				Заводские пресеты
+			</Typography>
+			{FACTORY_GRID_PRESETS.map((preset) => (
+				<Stack
+					key={preset.id}
+					spacing={0.75}
+					sx={{
+						border: "1px solid",
+						borderColor: "primary.light",
+						borderRadius: 1,
+						p: 1,
+						bgcolor: "action.hover",
+					}}
+				>
+					<Stack direction="row" spacing={1} alignItems="center">
+						<Typography variant="body2" fontWeight={600}>
+							{preset.name}
+						</Typography>
+						<Chip size="small" label="заводской" variant="outlined" />
+					</Stack>
+					<Typography variant="caption" color="text.secondary">
+						{preset.description}
+					</Typography>
+					<Button
+						variant="outlined"
+						size="small"
+						onClick={() => applyPreset(preset)}
+					>
+						Применить
+					</Button>
+				</Stack>
+			))}
+			<Divider />
+			<Typography variant="subtitle2" fontWeight={700}>
+				Мои пресеты
+			</Typography>
+			{presets.length === 0 ? (
+				<Typography variant="caption" color="text.secondary">
+					Сохранённых пресетов пока нет.
+				</Typography>
+			) : (
+				presets.map((preset) => (
+					<Stack
+						key={preset.id}
+						spacing={0.75}
+						sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 1 }}
+					>
+						<Typography variant="body2" fontWeight={600}>
+							{preset.name}
+						</Typography>
+						<Typography variant="caption" color="text.secondary">
+							{new Date(preset.savedAt).toLocaleString("ru-RU")}
+						</Typography>
+						<Stack direction="row" spacing={1}>
+							<Button
+								variant="outlined"
+								size="small"
+								onClick={() => applyPreset(preset)}
+							>
+								Применить
+							</Button>
+							<Button
+								variant="text"
+								color="error"
+								size="small"
+								onClick={() => deletePreset(preset.id)}
+							>
+								Удалить
+							</Button>
+						</Stack>
+					</Stack>
+				))
+			)}
+		</Stack>
+	);
+}
+
 export function V2QuestionnaireList() {
 	const { mode } = useColorScheme();
 	const navigate = useNavigate();
@@ -149,6 +357,13 @@ export function V2QuestionnaireList() {
 		() => ({
 			toolPanels: [
 				{
+					id: "presets",
+					labelDefault: "Пресеты",
+					labelKey: "presets",
+					iconKey: "columns",
+					toolPanel: GridPresetToolPanel,
+				},
+				{
 					id: "columns",
 					labelDefault: "Столбцы",
 					labelKey: "columns",
@@ -168,7 +383,7 @@ export function V2QuestionnaireList() {
 					toolPanel: "agFiltersToolPanel",
 				},
 			],
-			defaultToolPanel: "columns",
+			defaultToolPanel: "presets",
 			position: "right",
 		}),
 		[],
@@ -195,6 +410,13 @@ export function V2QuestionnaireList() {
 
 	const onGridReady = useCallback((e: GridReadyEvent) => {
 		e.api.expandAll();
+		const defaultFactory = FACTORY_GRID_PRESETS[0];
+		if (defaultFactory) {
+			e.api.applyColumnState({
+				state: defaultFactory.columnState,
+				applyOrder: true,
+			});
+		}
 	}, []);
 
 	const getContextMenuItems = useCallback(

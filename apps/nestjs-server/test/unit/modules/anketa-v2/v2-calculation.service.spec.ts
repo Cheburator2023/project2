@@ -73,10 +73,14 @@ describe("V2CalculationService", () => {
 				sourceSystems: [
 					{
 						name: "CRM Retail",
+						type: "Внутренний",
 						daptRegistry: "Нет",
 						requirements: "Не понятны",
 						additionalUncertainty: "Нет",
 						integrationReadiness: "Готов к интеграции",
+						manualParameters: [
+							"Требуется мониторинг (таблиц/ источника/Витрины)",
+						],
 					},
 				],
 			},
@@ -102,6 +106,11 @@ describe("V2CalculationService", () => {
 		expect(
 			detailInfo.sourceTypicalTasks.some((task) =>
 				task.reason.includes("высокая готовность"),
+			),
+		).toBe(true);
+		expect(
+			detailInfo.sourceTypicalTasks.some((task) =>
+				task.name.includes("мониторинга"),
 			),
 		).toBe(true);
 	});

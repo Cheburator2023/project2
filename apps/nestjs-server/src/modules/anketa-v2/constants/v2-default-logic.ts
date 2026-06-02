@@ -112,6 +112,70 @@ const IND_210_BASE_TASKS = [
 	["ISSUES", "Расследование проблем с качеством/контроль устранения", 2],
 ] as const;
 
+const SOURCE_COUNT_COEFFICIENT = {
+	"1": 1,
+	"2": 1.2,
+	"3": 1.4,
+	"4": 1.6,
+	"5": 1.8,
+	"6": 2,
+	"7": 2.2,
+	"8+": 2.4,
+};
+
+const INTERNAL_MANUAL_PARAMETERS = {
+	promReady: "Готовы интеграции, выполнены доработки источников к выводу в ПРОМ",
+	sourceRevision: "Необходима доработка источник т к выводу в ПРОМ",
+	intermediateIntegration:
+		"Требуются интеграции с промежуточными системами (например СХК,СФП, и тд)",
+	monitoring: "Требуется мониторинг (таблиц/ источника/Витрины)",
+	previousStage:
+		"Инициировано предыдущим этапом (например, инициировано загрузкой, в которой уже прошла часть аналитики)",
+	domainComplexity:
+		"Сложность предметной области. Оценивается лидером команды/стрима исполнителя на основании опыта и профиля команды.",
+	entityVolume: "Объем запроса по сущностям",
+} as const;
+
+const EXTERNAL_MANUAL_PARAMETERS = {
+	requestClarity:
+		"Детализация и ясность запроса в RDS или ином артефакте, предоставляемые заказчиком",
+	searchRequired:
+		"Определены ли исследуемые источник(и) или исследование предполагает их поиск",
+	dataSpecificity:
+		"Конкретизированы ли искомые данные или состав/объём данных понадобится в каждом источнике определять в согласовании с заказчиком",
+	ndaRequired: "Необходимо ли заключение NDA",
+	standardNda: "Согласен ли Источник на стандартную форму NDA",
+	confidentialData: "Предмет исследования включает в себя конфиденциальные данные",
+	pilotType: "Новый пилот или повторный",
+	pilotLegalBasis:
+		"Есть ли юридические основания для проведения пилота / разовой загрузки",
+	pilotConfidentialExchange:
+		"Пилот / разовая загрузка предусматривает обмен конфиденциальными данными",
+	pilotEncryption:
+		"Пилот / разовая загрузка предусматривает хэширование/шифрование",
+	pilotTwoWayExchange:
+		"Пилот / разовая загрузка предусматривает двусторонний обмен данными",
+	oneTimeBankUpload:
+		"Предусматривает ли пилот разовую загрузку командой Облако в ИС храрнения Банка?",
+	regulatedUpload: "Договор предусматривает регламентную или разовую загрузу",
+	competition: "Предусмотрено ли проведение соревновательной процедуры (конкурса)",
+	standardContract: "Согласен ли Источник на стандартную форму договора Банка",
+	solutionType: "Новое решение или доработка существующего",
+	stakeholdersKnown:
+		"Известны ли все стеикхолдеры (владелец сервиса, разработчик модели / витрин, РП и тд.)",
+	dataUsageMode: "Данные необходимы заказчику непосредственно или через витрины / модель",
+	exchangeLegalBasis:
+		"Есть ли юридические основания для реализация решения по обмену данными",
+	implementationComplexity:
+		"Сложность реализации. Определяется техническим лидом команды/стрима исполнителя.",
+	logicComplexity:
+		"Сложность логики формирования витрины и предметной области. Оценивается лидером команды/стрима исполнителя на основании опыта и профиля команды.",
+	changeVolume: "Объем изменения, вносимого в ТИС",
+	regulationsStudy:
+		"Необходимо ли изучение регламентов Банка по ведению радактируемого раздела",
+	artifactReapproval: "Необходимо ли пеерсогласование артефакта",
+} as const;
+
 const DATA_SOURCE_TYPICAL_TASKS = [
 	...IND_210_BASE_TASKS.flatMap(([code, name, estimateHoursPerDay]) => [
 		{
@@ -170,6 +234,187 @@ const DATA_SOURCE_TYPICAL_TASKS = [
 		estimateHoursPerDay: 22,
 		coefficient: 1.2,
 		match: { integrationReadiness: "Сложная интеграция" },
+	},
+	{
+		taskCode: "IND_COUNT_UNCERTAINTY",
+		name: "Коэффициент на количество источников данных",
+		reason: "IND: риск привнесения новых требований по количеству источников",
+		estimateHoursPerDay: 10,
+		coefficientBySourceCount: SOURCE_COUNT_COEFFICIENT,
+		match: { additionalUncertainty: "Да" },
+	},
+	{
+		taskCode: "IND_INTERNAL_PROM_READY",
+		name: "Проверка готовности интеграций к выводу в ПРОМ",
+		reason: "IND: ручной параметр внутреннего источника",
+		estimateHoursPerDay: 8,
+		coefficient: 0.5,
+		match: {
+			type: "Внутренний",
+			manualParameters: { includesAny: [INTERNAL_MANUAL_PARAMETERS.promReady] },
+		},
+	},
+	{
+		taskCode: "IND_INTERNAL_SOURCE_REVISION",
+		name: "Доработка источника к выводу в ПРОМ",
+		reason: "IND: ручной параметр внутреннего источника",
+		estimateHoursPerDay: 18,
+		coefficient: 1.2,
+		match: {
+			type: "Внутренний",
+			manualParameters: {
+				includesAny: [INTERNAL_MANUAL_PARAMETERS.sourceRevision],
+			},
+		},
+	},
+	{
+		taskCode: "IND_INTERNAL_INTERMEDIATE_INTEGRATION",
+		name: "Интеграция с промежуточными системами",
+		reason: "IND: СХК/СФП/промежуточные системы",
+		estimateHoursPerDay: 20,
+		coefficient: 1.25,
+		match: {
+			type: "Внутренний",
+			manualParameters: {
+				includesAny: [INTERNAL_MANUAL_PARAMETERS.intermediateIntegration],
+			},
+		},
+	},
+	{
+		taskCode: "IND_INTERNAL_MONITORING",
+		name: "Настройка мониторинга источника/витрины",
+		reason: "IND: требуется мониторинг",
+		estimateHoursPerDay: 12,
+		coefficient: 1,
+		match: {
+			type: "Внутренний",
+			manualParameters: { includesAny: [INTERNAL_MANUAL_PARAMETERS.monitoring] },
+		},
+	},
+	{
+		taskCode: "IND_INTERNAL_LOCAL_ANALYSIS",
+		name: "Локальная аналитика по предметной области и объёму сущностей",
+		reason: "IND: локальные параметры внутреннего источника",
+		estimateHoursPerDay: 16,
+		coefficient: 1.25,
+		match: {
+			type: "Внутренний",
+			manualParameters: {
+				includesAny: [
+					INTERNAL_MANUAL_PARAMETERS.previousStage,
+					INTERNAL_MANUAL_PARAMETERS.domainComplexity,
+					INTERNAL_MANUAL_PARAMETERS.entityVolume,
+				],
+			},
+		},
+	},
+	{
+		taskCode: "IND_EXTERNAL_DISCOVERY",
+		name: "Исследование внешнего источника и состава данных",
+		reason: "IND: детализация/поиск/конкретизация внешних данных",
+		estimateHoursPerDay: 20,
+		coefficient: 1.25,
+		match: {
+			type: "Внешний",
+			manualParameters: {
+				includesAny: [
+					EXTERNAL_MANUAL_PARAMETERS.requestClarity,
+					EXTERNAL_MANUAL_PARAMETERS.searchRequired,
+					EXTERNAL_MANUAL_PARAMETERS.dataSpecificity,
+				],
+			},
+		},
+	},
+	{
+		taskCode: "IND_EXTERNAL_NDA",
+		name: "Проработка NDA и стандартной формы соглашения",
+		reason: "IND: параметры NDA внешнего источника",
+		estimateHoursPerDay: 14,
+		coefficient: 1.25,
+		match: {
+			type: "Внешний",
+			manualParameters: {
+				includesAny: [
+					EXTERNAL_MANUAL_PARAMETERS.ndaRequired,
+					EXTERNAL_MANUAL_PARAMETERS.standardNda,
+					EXTERNAL_MANUAL_PARAMETERS.confidentialData,
+				],
+			},
+		},
+	},
+	{
+		taskCode: "IND_EXTERNAL_PILOT_EXCHANGE",
+		name: "Юридическая и техническая проработка пилота/разовой загрузки",
+		reason: "IND: параметры пилота и обмена данными",
+		estimateHoursPerDay: 24,
+		coefficient: 1.25,
+		match: {
+			type: "Внешний",
+			manualParameters: {
+				includesAny: [
+					EXTERNAL_MANUAL_PARAMETERS.pilotType,
+					EXTERNAL_MANUAL_PARAMETERS.pilotLegalBasis,
+					EXTERNAL_MANUAL_PARAMETERS.pilotConfidentialExchange,
+					EXTERNAL_MANUAL_PARAMETERS.pilotEncryption,
+					EXTERNAL_MANUAL_PARAMETERS.pilotTwoWayExchange,
+					EXTERNAL_MANUAL_PARAMETERS.oneTimeBankUpload,
+					EXTERNAL_MANUAL_PARAMETERS.regulatedUpload,
+				],
+			},
+		},
+	},
+	{
+		taskCode: "IND_EXTERNAL_CONTRACT",
+		name: "Договорная и закупочная проработка внешнего источника",
+		reason: "IND: конкурс/договор/новое решение",
+		estimateHoursPerDay: 18,
+		coefficient: 1.1,
+		match: {
+			type: "Внешний",
+			manualParameters: {
+				includesAny: [
+					EXTERNAL_MANUAL_PARAMETERS.competition,
+					EXTERNAL_MANUAL_PARAMETERS.standardContract,
+					EXTERNAL_MANUAL_PARAMETERS.solutionType,
+					EXTERNAL_MANUAL_PARAMETERS.stakeholdersKnown,
+				],
+			},
+		},
+	},
+	{
+		taskCode: "IND_EXTERNAL_IMPLEMENTATION_COMPLEXITY",
+		name: "Проработка сложности реализации и логики витрины",
+		reason: "IND: сложность реализации/логики, изменение ТИС",
+		estimateHoursPerDay: 22,
+		coefficient: 1.5,
+		match: {
+			type: "Внешний",
+			manualParameters: {
+				includesAny: [
+					EXTERNAL_MANUAL_PARAMETERS.dataUsageMode,
+					EXTERNAL_MANUAL_PARAMETERS.exchangeLegalBasis,
+					EXTERNAL_MANUAL_PARAMETERS.implementationComplexity,
+					EXTERNAL_MANUAL_PARAMETERS.logicComplexity,
+					EXTERNAL_MANUAL_PARAMETERS.changeVolume,
+				],
+			},
+		},
+	},
+	{
+		taskCode: "IND_EXTERNAL_ARTIFACT_REAPPROVAL",
+		name: "Изучение регламентов и пересогласование артефакта",
+		reason: "IND: локальные параметры внешнего источника",
+		estimateHoursPerDay: 10,
+		coefficient: 1,
+		match: {
+			type: "Внешний",
+			manualParameters: {
+				includesAny: [
+					EXTERNAL_MANUAL_PARAMETERS.regulationsStudy,
+					EXTERNAL_MANUAL_PARAMETERS.artifactReapproval,
+				],
+			},
+		},
 	},
 ];
 
