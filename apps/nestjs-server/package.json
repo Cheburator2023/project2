@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "nest start --watch",
 		"dev:god": "cross-env NODE_ENV=development NO_ROLES=true nest start --watch",
-		"build": "npm run build:doc-catalog && nest build",
+		"build": "nest build",
 		"build:doc-catalog": "tsx scripts/build-v2-doc-catalog.ts",
 		"sync:anketa-snapshot-layout": "tsx scripts/sync-v2-anketa-snapshot-layout.ts",
 		"start": "NODE_ENV=production tsx dist/main",

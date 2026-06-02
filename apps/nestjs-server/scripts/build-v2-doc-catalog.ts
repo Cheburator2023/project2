@@ -12,7 +12,7 @@
  * строка в CSV, а не правка кода. Этот скрипт переносит данные доков в каталог,
  * который потребляют seed-сервис и заводская логика. Запуск: `npm run build:doc-catalog`.
  */
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const REPO_ROOT = join(__dirname, "..", "..", "..");
@@ -222,7 +222,29 @@ function buildDictionaries(): Dictionary[] {
 		.filter((d) => d.name.length > 0);
 }
 
+function docCatalogSourcesAvailable(): boolean {
+	return existsSync(WORKS_CSV) && existsSync(DICTS_CSV);
+}
+
 function main(): void {
+	if (!docCatalogSourcesAvailable()) {
+		if (existsSync(OUT_FILE)) {
+			console.log(
+				"V2 doc-catalog: CSV источники не найдены, используется закоммиченный артефакт:",
+			);
+			console.log(`  → ${OUT_FILE}`);
+			return;
+		}
+		throw new Error(
+			[
+				"V2 doc-catalog: не найдены CSV источники и отсутствует сгенерированный каталог.",
+				`Ожидались: ${WORKS_CSV}, ${DICTS_CSV}`,
+				`Или артефакт: ${OUT_FILE}`,
+				"Локально: положите CSV в llm/v2_new_docs и запустите npm run build:doc-catalog.",
+			].join("\n"),
+		);
+	}
+
 	const typicalWorks = buildTypicalWorks();
 	const dictionaries = buildDictionaries();
 
