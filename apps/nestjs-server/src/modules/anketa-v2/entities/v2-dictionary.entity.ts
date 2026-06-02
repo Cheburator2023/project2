@@ -19,6 +19,9 @@ export class V2DictionaryEntity {
 	@Column({ type: "varchar", length: 255, nullable: false })
 	name: string;
 
+	@Column({ type: "varchar", length: 100, nullable: true })
+	category: string | null;
+
 	@Column({ type: "text", nullable: true })
 	description: string | null;
 

@@ -28,32 +28,27 @@ describe("V2CalculationService", () => {
 		expect(tasks[1]?.total).toBe(2);
 	});
 
-	it("sums baseScoreStream from row totals (typical_total)", () => {
+	it("computes unified Total = typicalTotal + atypicalTotal (ФТ-026)", () => {
 		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
 			mlPlatform: {
-				typicalTasks: [
-					{ estimateHoursPerDay: 2, coefficient: 1.5, total: 3 },
-					{ estimateHoursPerDay: 1, coefficient: 2, total: 2 },
-				],
+				typicalTasks: [{ estimateHoursPerDay: 2, coefficient: 1.5, total: 3 }],
 			},
+			atypicalTasks: [
+				{ estimateHoursPerDay: 4, coefficient: 2, total: 8, includeInCalculation: true },
+				{ estimateHoursPerDay: 5, coefficient: 1, total: 5, includeInCalculation: false },
+			],
 		});
 
-		const base = result.items.find((i) => i.role === "typical_total");
-		expect(base?.value).toBe(5);
-		// summary.baseScoreStream — legacy E2E (сумма баз этапов), не Σ typicalTasks
-		expect(
-			(result.formData.summary as { baseScoreStream: number }).baseScoreStream,
-		).toBeGreaterThan(0);
-	});
-
-	it("maps algorithmType to algorithmCoeffValue (NLP → 1.25)", () => {
-		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
-			detailInfo: { parameters: { algorithmType: "NLP" } },
-		});
-
-		expect(result.formData.detailInfo).toMatchObject({
-			parameters: { algorithmCoeffValue: 1.25 },
-		});
+		const summary = result.formData.summary as {
+			typicalTotal: number;
+			atypicalTotal: number;
+			total: number;
+		};
+		expect(summary.typicalTotal).toBe(3);
+		expect(summary.atypicalTotal).toBe(8);
+		expect(summary.total).toBe(11);
+		// единый расчёт → legacy v1-движок не запускается
+		expect(result.legacyStageEvaluation).toBeNull();
 	});
 
 	it("evaluates task_trigger when pilotNeed is required", () => {
@@ -67,76 +62,86 @@ describe("V2CalculationService", () => {
 		expect(trigger?.passes).toBe(true);
 	});
 
-	it("generates typical tasks for data source parameters from IND rules", () => {
+	it("generates internal source typical works from catalog with real norms", () => {
+		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+			detailInfo: {
+				sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
+			},
+		});
+
+		const detailInfo = result.formData.detailInfo as {
+			sourceTypicalTasks: Array<{ name: string; total: number; coefficient: number }>;
+		};
+
+		expect(detailInfo.sourceTypicalTasks.length).toBeGreaterThan(0);
+		// норматив берётся из работы.csv; без весов параметров коэф. группы = 1
+		expect(
+			detailInfo.sourceTypicalTasks.every((t) => t.coefficient === 1),
+		).toBe(true);
+		expect(
+			detailInfo.sourceTypicalTasks.some((t) =>
+				t.name.includes("Анализ Данных"),
+			),
+		).toBe(true);
+		// «Анализ Данных, Связок, Проверка качества» норматив = 3 ч/д
+		expect(detailInfo.sourceTypicalTasks.some((t) => t.total === 3)).toBe(true);
+	});
+
+	it("applies multiplicative group coefficient from dictionary weights (ФТ-024)", () => {
 		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
 			detailInfo: {
 				sourceSystems: [
 					{
-						name: "CRM Retail",
+						name: "Внешний банк",
 						type: "Внутренний",
-						daptRegistry: "Нет",
-						requirements: "Не понятны",
-						additionalUncertainty: "Нет",
-						integrationReadiness: "Готов к интеграции",
-						manualParameters: [
-							"Требуется мониторинг (таблиц/ источника/Витрины)",
-						],
+						domainComplexity: "Высокая",
+						entityVolume: "Большое",
 					},
 				],
 			},
 		});
 
 		const detailInfo = result.formData.detailInfo as {
-			sourceTypicalTasks: Array<{
-				name: string;
-				total: number;
-				reason: string;
-			}>;
+			sourceTypicalTasks: Array<{ name: string; total: number; coefficient: number }>;
 		};
-
-		expect(detailInfo.sourceTypicalTasks.length).toBeGreaterThan(0);
-		expect(detailInfo.sourceTypicalTasks.some((task) => task.total === 3)).toBe(
-			true,
+		// Высокая ×1.5 × Большое ×1.25 = 1.875
+		expect(detailInfo.sourceTypicalTasks[0]?.coefficient).toBeCloseTo(1.875);
+		const analysis = detailInfo.sourceTypicalTasks.find((t) =>
+			t.name.includes("Анализ Данных"),
 		);
+		// норматив 3 × 1.875 = 5.625
+		expect(analysis?.total).toBeCloseTo(5.625);
+	});
+
+	it("generates external source works (stage 214+) for external type", () => {
+		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+			detailInfo: {
+				sourceSystems: [{ name: "Внешний поставщик", type: "Внешний" }],
+			},
+		});
+		const detailInfo = result.formData.detailInfo as {
+			sourceTypicalTasks: Array<{ reason: string }>;
+		};
+		expect(detailInfo.sourceTypicalTasks.length).toBeGreaterThan(0);
 		expect(
-			detailInfo.sourceTypicalTasks.some((task) =>
-				task.reason.includes("требования по источнику не понятны"),
-			),
-		).toBe(true);
-		expect(
-			detailInfo.sourceTypicalTasks.some((task) =>
-				task.reason.includes("высокая готовность"),
-			),
-		).toBe(true);
-		expect(
-			detailInfo.sourceTypicalTasks.some((task) =>
-				task.name.includes("мониторинга"),
-			),
+			detailInfo.sourceTypicalTasks.some((t) => t.reason.includes("214")),
 		).toBe(true);
 	});
 
-	it("fills legacy summary with 11 E2E stages in detailedCalculation", () => {
+	it("generates control-model works from selected control types", () => {
 		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
-			detailInfo: {
-				parameters: { modelsCount: 1, algorithmType: "NLP" },
-			},
-			generalInfo: { complexity: "1 — Низкая ×1.00" },
+			modelControl: { modelClass: "Розничные бизнес-модели", controlTypes: ["КД", "ОК"] },
 		});
-
-		const summary = result.formData.summary as {
-			detailedCalculation: Array<{ stageName: string }>;
-			platformStreams: unknown[];
-			deviationFromBaseline: number;
+		const control = result.formData.modelControl as {
+			controlTypicalTasks: Array<{ name: string }>;
 		};
-
-		expect(summary.detailedCalculation.length).toBeGreaterThanOrEqual(13);
+		expect(control.controlTypicalTasks).toHaveLength(2);
 		expect(
-			summary.detailedCalculation.some((r) =>
-				r.stageName.includes("01. Постановка"),
-			),
+			control.controlTypicalTasks.some((t) => t.name.includes("[КД]")),
 		).toBe(true);
-		expect(summary.platformStreams).toHaveLength(3);
-		expect(typeof summary.deviationFromBaseline).toBe("number");
+		expect(
+			control.controlTypicalTasks.some((t) => t.name.includes("[ОК]")),
+		).toBe(true);
 	});
 
 	it("does not fire task_trigger when pilotNeed is empty", () => {
@@ -160,18 +165,13 @@ describe("V2CalculationService", () => {
 						targetPath: "/detailInfo/parameters/algorithmType",
 						dependencies: [],
 						condition: {
-							"==": [
-								{ var: "detailInfo.parameters.algorithmType" },
-								"NLP",
-							],
+							"==": [{ var: "detailInfo.parameters.algorithmType" }, "NLP"],
 						},
 						payload: { message: "Должен быть NLP" },
 					},
 				],
 			},
-			{
-				detailInfo: { parameters: { algorithmType: "CV" } },
-			},
+			{ detailInfo: { parameters: { algorithmType: "CV" } } },
 		);
 
 		expect(result.validationIssues).toHaveLength(1);
@@ -202,28 +202,31 @@ describe("V2CalculationService", () => {
 					},
 				],
 			},
-			{
-				detailInfo: { parameters: { algorithmType: "CV" } },
-			},
+			{ detailInfo: { parameters: { algorithmType: "CV" } } },
 		);
 
 		expect(result.validationIssues).toHaveLength(0);
 	});
 
-	it("returns legacyStageEvaluation metadata after stage engine runs", () => {
-		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
-			mlPlatform: { typicalTasks: [{ estimateHoursPerDay: 1, coefficient: 1 }] },
-		});
+	it("runs legacy v1 stage engine for non-unified graphs (back-compat)", () => {
+		// Граф без флага calcModel: "unified" → legacy v1-движок этапов работает.
+		const result = service.evaluate(
+			{ rules: [] },
+			{
+				detailInfo: { parameters: { modelsCount: 1, algorithmType: "NLP" } },
+				generalInfo: { complexity: "1 — Низкая ×1.00" },
+				mlPlatform: { typicalTasks: [{ estimateHoursPerDay: 1, coefficient: 1 }] },
+			},
+		);
 
+		const summary = result.formData.summary as {
+			detailedCalculation: Array<{ stageName: string }>;
+			platformStreams: unknown[];
+		};
 		expect(result.legacyStageEvaluation?.applied).toBe(true);
 		expect(result.legacyStageEvaluation?.source).toBe("v1_stages");
-		expect(result.legacyStageEvaluation?.overwrittenPaths).toContain(
-			"/summary/deviationFromBaseline",
-		);
-		expect(
-			(result.formData.summary as { detailedCalculation?: unknown[] })
-				?.detailedCalculation?.length,
-		).toBeGreaterThan(0);
+		expect(summary.detailedCalculation.length).toBeGreaterThan(0);
+		expect(summary.platformStreams).toHaveLength(3);
 	});
 });
 
@@ -242,20 +245,14 @@ describe("v2-json-logic", () => {
 		const sum = applyJsonLogic(
 			{
 				reduce: [
-					{
-						var: "mlPlatform.typicalTasks",
-					},
+					{ var: "mlPlatform.typicalTasks" },
 					{
 						"+": [{ var: "accumulator" }, { max: [0, { var: "current.total" }] }],
 					},
 					0,
 				],
 			},
-			{
-				mlPlatform: {
-					typicalTasks: [{ total: 3 }, { total: 2 }],
-				},
-			},
+			{ mlPlatform: { typicalTasks: [{ total: 3 }, { total: 2 }] } },
 		);
 		expect(sum).toBe(5);
 	});

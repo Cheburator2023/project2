@@ -74,7 +74,7 @@ export function AnketaFormShell({
 						</Typography>
 						<Box>
 							<Button
-								variant="contained"
+								variant="outlined"
 								size="small"
 								startIcon={<CalculateOutlinedIcon />}
 								disabled={readOnly}

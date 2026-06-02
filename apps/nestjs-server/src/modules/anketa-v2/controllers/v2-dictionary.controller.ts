@@ -265,6 +265,7 @@ export class V2DictionaryController {
 		id: string;
 		code: string;
 		name: string;
+		category?: string | null;
 		description: string | null;
 		createdAt: Date;
 		updatedAt: Date;
@@ -275,6 +276,7 @@ export class V2DictionaryController {
 			id: dictionary.id,
 			code: dictionary.code,
 			name: dictionary.name,
+			category: dictionary.category ?? null,
 			description: dictionary.description,
 			createdAt: dictionary.createdAt.toISOString(),
 			updatedAt: dictionary.updatedAt.toISOString(),

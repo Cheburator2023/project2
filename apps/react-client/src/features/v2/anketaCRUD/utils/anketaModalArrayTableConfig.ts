@@ -55,6 +55,18 @@ export const ANKETA_ARRAY_TABLE_COLUMNS: Record<
 			render: (item) => text(item, "type"),
 		},
 		{
+			key: "domainComplexity",
+			header: "Сложность ПО",
+			width: "1fr",
+			render: (item) => text(item, "domainComplexity"),
+		},
+		{
+			key: "entityVolume",
+			header: "Объём по сущностям",
+			width: "1fr",
+			render: (item) => text(item, "entityVolume"),
+		},
+		{
 			key: "workType",
 			header: "Тип работ",
 			width: "1fr",

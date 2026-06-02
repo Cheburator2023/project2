@@ -97,10 +97,12 @@ export type V2DictionaryDto = {
     id: string;
     code: string;
     name: string;
+    /** Категория: «Схема», «Методологический», … */
+    category: string | null;
     description: string | null;
     createdAt: string;
     updatedAt: string;
-    /** Заводской справочник из эталонной схемы — удалять нельзя, только сброс. */
+    /** Заводской справочник — удалять нельзя, только сброс. */
     isDefault?: boolean;
     /** Есть привязки `ui:options.dictionaryCode` в версиях шаблонов. */
     isInUse?: boolean;

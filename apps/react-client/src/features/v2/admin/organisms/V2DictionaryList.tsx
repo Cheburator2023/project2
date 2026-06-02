@@ -110,6 +110,13 @@ export const V2DictionaryList = ({
 			{ field: "code", headerName: "Код", flex: 1, minWidth: 140 },
 			{ field: "name", headerName: "Название", flex: 1.2, minWidth: 160 },
 			{
+				field: "category",
+				headerName: "Категория",
+				flex: 0.9,
+				minWidth: 140,
+				valueFormatter: (p) => (p.value == null ? "" : String(p.value)),
+			},
+			{
 				colId: "flags",
 				headerName: "Статус",
 				width: 180,

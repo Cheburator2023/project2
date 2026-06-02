@@ -1,11 +1,18 @@
 import type { V2JsonSchemaDto, V2UiSchemaDto } from "@smart-anketa/api-contract";
+import { methodologyDictionaryByName } from "../constants/v2-default-dictionaries.registry";
 
 export type V2DefaultDictionaryDef = {
 	code: string;
 	name: string;
 	description: string | null;
-	fieldPointer: string;
-	items: Array<{ code: string; label: string; order: number }>;
+	category: string;
+	fieldPointer?: string;
+	items: Array<{
+		code: string;
+		label: string;
+		order: number;
+		payload?: Record<string, unknown> | null;
+	}>;
 };
 
 export type V2DictionaryFieldBinding = {
@@ -101,17 +108,21 @@ export function extractEnumFieldsFromJsonSchema(
 export function buildDefaultDictionariesFromJsonSchema(
 	schema: V2JsonSchemaDto,
 ): V2DefaultDictionaryDef[] {
-	return extractEnumFieldsFromJsonSchema(schema).map((f) => ({
-		code: f.dictionaryCode,
-		name: f.title,
-		description: `Заводской справочник для поля ${f.pointer}`,
-		fieldPointer: f.pointer,
-		items: f.enumValues.map((label, order) => ({
-			code: label,
-			label,
-			order,
-		})),
-	}));
+	return extractEnumFieldsFromJsonSchema(schema)
+		.filter((f) => !methodologyDictionaryByName(f.title))
+		.map((f) => ({
+			code: f.dictionaryCode,
+			name: f.title,
+			description: `Заводской справочник для поля ${f.pointer}`,
+			category: "Схема",
+			fieldPointer: f.pointer,
+			items: f.enumValues.map((label, order) => ({
+				code: label,
+				label,
+				order,
+				payload: { fieldPointer: f.pointer },
+			})),
+		}));
 }
 
 function pointerSegments(pointer: string): string[] {
@@ -166,7 +177,8 @@ export function buildDictionaryBindingsFromSchema(
 ): V2DictionaryFieldBinding[] {
 	return extractEnumFieldsFromJsonSchema(schema).map((f) => ({
 		fieldPointer: f.pointer,
-		dictionaryCode: f.dictionaryCode,
+		dictionaryCode:
+			methodologyDictionaryByName(f.title)?.code ?? f.dictionaryCode,
 		fieldTitle: f.title,
 	}));
 }

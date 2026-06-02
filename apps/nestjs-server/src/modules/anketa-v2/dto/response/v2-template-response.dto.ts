@@ -134,6 +134,9 @@ export class V2DictionaryResponseDto implements V2DictionaryDto {
 	@ApiProperty({ example: "Класс модели" })
 	name: string;
 
+	@ApiProperty({ required: false, example: "Методологический" })
+	category: string | null;
+
 	@ApiProperty({ required: false })
 	description: string | null;
 

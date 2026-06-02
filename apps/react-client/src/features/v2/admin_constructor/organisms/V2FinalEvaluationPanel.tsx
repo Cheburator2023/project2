@@ -15,6 +15,9 @@ import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 
 export type V2SummaryFormSlice = {
+	total?: number;
+	typicalTotal?: number;
+	atypicalTotal?: number;
 	baseScoreStream?: number;
 	scoreWithComplexityCoeff?: number;
 	deviationFromBaseline?: number;
@@ -80,9 +83,15 @@ export function V2FinalEvaluationPanel({
 }: Props) {
 	const rows = summary?.detailedCalculation ?? [];
 	const platformRows = summary?.platformStreams ?? [];
+	const hasUnified =
+		summary &&
+		(summary.total !== undefined ||
+			summary.typicalTotal !== undefined ||
+			summary.atypicalTotal !== undefined);
 	const hasData =
 		summary &&
-		(summary.baseScoreStream !== undefined ||
+		(hasUnified ||
+			summary.baseScoreStream !== undefined ||
 			rows.length > 0 ||
 			platformRows.length > 0);
 
@@ -134,19 +143,38 @@ export function V2FinalEvaluationPanel({
 				</Stack>
 
 				<Stack spacing={2}>
-					<Metric
-						label="Базовая оценка по стриму (СФЕРА):"
-						value={formatNum(summary?.baseScoreStream)}
-					/>
-					<Metric
-						label="Оценка с поправкой на коэффициент сложности:"
-						value={formatNum(summary?.scoreWithComplexityCoeff)}
-					/>
-					<Metric
-						label="Отклонение относительно базовой оценки по стриму (СФЕРА):"
-						value={formatPercent(summary?.deviationFromBaseline)}
-						valueColor={deviationColor(summary?.deviationFromBaseline)}
-					/>
+					{hasUnified ? (
+						<>
+							<Metric
+								label="Итоговая трудоёмкость (ч/д):"
+								value={formatNum(summary?.total)}
+							/>
+							<Metric
+								label="Типовые работы:"
+								value={formatNum(summary?.typicalTotal)}
+							/>
+							<Metric
+								label="Нетиповые работы:"
+								value={formatNum(summary?.atypicalTotal)}
+							/>
+						</>
+					) : (
+						<>
+							<Metric
+								label="Базовая оценка по стриму (СФЕРА):"
+								value={formatNum(summary?.baseScoreStream)}
+							/>
+							<Metric
+								label="Оценка с поправкой на коэффициент сложности:"
+								value={formatNum(summary?.scoreWithComplexityCoeff)}
+							/>
+							<Metric
+								label="Отклонение относительно базовой оценки по стриму (СФЕРА):"
+								value={formatPercent(summary?.deviationFromBaseline)}
+								valueColor={deviationColor(summary?.deviationFromBaseline)}
+							/>
+						</>
+					)}
 				</Stack>
 			</Paper>
 

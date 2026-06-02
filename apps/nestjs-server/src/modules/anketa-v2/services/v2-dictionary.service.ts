@@ -192,7 +192,9 @@ export class V2DictionaryService {
 				order: item.order,
 				isActive: true,
 				parentCode: null,
-				payload: { fieldPointer: def.fieldPointer },
+				payload:
+					item.payload ??
+					(def.fieldPointer ? { fieldPointer: def.fieldPointer } : null),
 			}),
 		);
 
@@ -201,6 +203,7 @@ export class V2DictionaryService {
 		}
 
 		dictionary.name = def.name;
+		dictionary.category = def.category;
 		dictionary.description = def.description;
 
 		return this.dictionaryRepository.save(dictionary);

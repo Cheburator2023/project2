@@ -28,6 +28,8 @@ export type DataSourceFormValues = {
   pilotRequired: string;
   configExchange: string;
   sourceFor: string;
+  domainComplexity: string;
+  entityVolume: string;
 };
 
 type DataSourceModalProps = {
@@ -68,6 +70,24 @@ const SOURCE_FOR_OPTIONS: Option[] = [
   { value: "dm_corp_scoring_features", label: "dm_corp_scoring_features" },
 ];
 
+// Справочник №27 «Сложность предметной области» (значения = labels из каталога).
+const DOMAIN_COMPLEXITY_OPTIONS: Option[] = [
+  { value: "Низкая", label: "Низкая" },
+  { value: "Средняя", label: "Средняя" },
+  { value: "Высокая", label: "Высокая" },
+  { value: "Масштабное", label: "Масштабное" },
+  { value: "Неизвестно", label: "Неизвестно" },
+];
+
+// Справочник №28 «Объём запроса по сущностям».
+const ENTITY_VOLUME_OPTIONS: Option[] = [
+  { value: "Точечное", label: "Точечное" },
+  { value: "Малое", label: "Малое" },
+  { value: "Среднее", label: "Среднее" },
+  { value: "Большое", label: "Большое" },
+  { value: "Масштабное", label: "Масштабное" },
+];
+
 const INITIAL_VALUES: DataSourceFormValues = {
   name: "",
   sourceType: "",
@@ -75,6 +95,8 @@ const INITIAL_VALUES: DataSourceFormValues = {
   pilotRequired: "",
   configExchange: "",
   sourceFor: "",
+  domainComplexity: "",
+  entityVolume: "",
 };
 
 export const DataSourceModal = ({
@@ -142,6 +164,20 @@ export const DataSourceModal = ({
             value={values.workType}
             onChange={(value) => setField("workType", value)}
             options={WORK_TYPE_OPTIONS}
+          />
+
+          <SelectField
+            label="Сложность предметной области"
+            value={values.domainComplexity}
+            onChange={(value) => setField("domainComplexity", value)}
+            options={DOMAIN_COMPLEXITY_OPTIONS}
+          />
+
+          <SelectField
+            label="Объём запроса по сущностям"
+            value={values.entityVolume}
+            onChange={(value) => setField("entityVolume", value)}
+            options={ENTITY_VOLUME_OPTIONS}
           />
 
           <SelectField

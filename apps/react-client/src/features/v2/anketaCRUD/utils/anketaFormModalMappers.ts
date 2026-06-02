@@ -32,6 +32,8 @@ export function mapDataSourceToSourceSystem(
 				? "Нужны доработки ИС"
 				: "Готов к интеграции",
 		daptRegistry: values.sourceFor || undefined,
+		domainComplexity: values.domainComplexity || undefined,
+		entityVolume: values.entityVolume || undefined,
 	};
 }
 
@@ -211,6 +213,8 @@ export function mapArrayItemToModalDefaults(
 						? "required"
 						: "not_required",
 				sourceFor: String(item.daptRegistry ?? item.name ?? ""),
+				domainComplexity: String(item.domainComplexity ?? ""),
+				entityVolume: String(item.entityVolume ?? ""),
 			};
 		case "models.modelsList":
 			return {

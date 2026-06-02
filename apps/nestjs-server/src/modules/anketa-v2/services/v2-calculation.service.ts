@@ -43,6 +43,13 @@ type TaskTriggerPayload = {
 	hint?: string;
 	sourceArrayPath?: string;
 	outputArrayPath?: string;
+	/**
+	 * ФТ-024: единый коэффициент группы для всех работ компонента — произведение
+	 * весов параметров строки-источника. JsonLogic вычисляется по строке источника
+	 * (`{...row, sourceCount, sourceIndex}`); редактируется через админку.
+	 * Имеет приоритет над per-task coefficient*, кроме coefficientByField.
+	 */
+	coefficientLogic?: V2JsonLogicValue;
 	tasks?: Array<{
 		taskCode?: string;
 		label?: string;
@@ -155,6 +162,7 @@ function resolveGeneratedTaskCoefficient(
 	task: NonNullable<TaskTriggerPayload["tasks"]>[number],
 	source: Record<string, unknown>,
 	sourceCount: number,
+	coefficientLogic?: V2JsonLogicValue,
 ): number {
 	const byField = task.coefficientByField;
 	if (byField?.field) {
@@ -167,6 +175,17 @@ function resolveGeneratedTaskCoefficient(
 	const bucket = sourceCountBucket(sourceCount);
 	if (task.coefficientBySourceCount?.[bucket] !== undefined) {
 		return task.coefficientBySourceCount[bucket] as number;
+	}
+	// ФТ-024: единый коэффициент группы (произведение весов параметров источника).
+	if (coefficientLogic !== undefined) {
+		try {
+			const computed = toFiniteNumberOrNull(
+				applyJsonLogic(coefficientLogic, source),
+			);
+			if (computed !== null) return computed * (task.coefficient ?? 1);
+		} catch {
+			// fallback ниже
+		}
 	}
 	return task.coefficient ?? 1;
 }
@@ -313,9 +332,19 @@ export class V2CalculationService {
 			};
 		});
 
-		const { formData: afterLegacy, legacyStageEvaluation } =
-			applyLegacySummaryToFormData(liveData);
-		liveData = afterLegacy;
+		// ФТ-024: единый расчёт задаётся правилами шаблона (флаг calcModel: "unified").
+		// Для таких шаблонов legacy v1-движок не перезаписывает summary; для старых
+		// версий (без флага) поведение не меняется — v1-расчёты не ломаем.
+		const isUnified = rules.some(
+			(r) => (r.payload as { calcModel?: string } | undefined)?.calcModel === "unified",
+		);
+		let legacyStageEvaluation: V2CalculationResultDto["legacyStageEvaluation"] =
+			null;
+		if (!isUnified) {
+			const legacy = applyLegacySummaryToFormData(liveData);
+			liveData = legacy.formData;
+			legacyStageEvaluation = legacy.legacyStageEvaluation;
+		}
 
 		const validationIssues = evaluateLogicValidationRules(rules, liveData);
 
@@ -386,10 +415,14 @@ export class V2CalculationService {
 
 		const sourceCount = sourceRows.length;
 		const generated = sourceRows.flatMap((row, sourceIndex) => {
+			// Строки-источники могут быть объектами (системы-источники) или строками
+			// (мультиселект, напр. виды контроля) — строку оборачиваем для match.
 			const source =
 				row && typeof row === "object" && !Array.isArray(row)
 					? (row as Record<string, unknown>)
-					: {};
+					: typeof row === "string"
+						? { value: row, controlType: row, name: row }
+						: {};
 			const sourceForMatch = { ...source, sourceCount, sourceIndex };
 			const sourceName =
 				typeof source.name === "string" && source.name.trim()
@@ -409,6 +442,7 @@ export class V2CalculationService {
 						task,
 						sourceForMatch,
 						sourceCount,
+						payload.coefficientLogic,
 					),
 					sourceComponent: "Источник данных",
 					sourceName,

@@ -27,8 +27,28 @@ type SnapshotFile = {
 	uiSchema?: unknown;
 };
 
+function resolveSnapshotPath(): string {
+	const local = join(__dirname, SNAPSHOT_FILENAME);
+	try {
+		readFileSync(local);
+		return local;
+	} catch {
+		return join(
+			__dirname,
+			"..",
+			"..",
+			"..",
+			"..",
+			"modules",
+			"anketa-v2",
+			"constants",
+			SNAPSHOT_FILENAME,
+		);
+	}
+}
+
 function loadSnapshotPayload(): SnapshotFile {
-	const snapshotPath = join(__dirname, SNAPSHOT_FILENAME);
+	const snapshotPath = resolveSnapshotPath();
 	const raw = readFileSync(snapshotPath, "utf-8");
 	return JSON.parse(raw) as SnapshotFile;
 }
