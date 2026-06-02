@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import {
   Box,
@@ -66,6 +66,14 @@ export const NonStandardTaskModal = ({
     ...INITIAL_VALUES,
     ...defaultValues,
   });
+
+  useEffect(() => {
+    if (!open) return;
+    setValues({
+      ...INITIAL_VALUES,
+      ...defaultValues,
+    });
+  }, [defaultValues, open]);
 
   const total = useMemo(() => {
     const estimate = Number(values.estimateHours.replace(",", "."));

@@ -49,11 +49,13 @@ export const V2TemplatePreviewPage = () => {
 	return (
 		<AnketaFormShell
 			data-test-id={V2_TEMPLATE_READ_TEST_IDS.page}
-			title={template?.name ?? "Предпросмотр"}
 			source={source}
 			engine={engine}
 			headerExtra={
 				<>
+					<Typography variant="subtitle2" fontWeight={600} sx={{ mr: 1 }} noWrap>
+						{template?.name ?? "Предпросмотр"}
+					</Typography>
 					<Chip size="small" variant="outlined" label="Предпросмотр схемы" />
 					<Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
 						Режим админки — без сохранения в реестр анкет

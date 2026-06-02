@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import {
   Box,
@@ -83,6 +83,14 @@ export const ModelServiceModal = ({
     ...INITIAL_VALUES,
     ...defaultValues,
   });
+
+  useEffect(() => {
+    if (!open) return;
+    setValues({
+      ...INITIAL_VALUES,
+      ...defaultValues,
+    });
+  }, [open, defaultValues]);
 
   const channelMap = useMemo(
     () => new Map(CHANNEL_OPTIONS.map((option) => [option.value, option.label])),

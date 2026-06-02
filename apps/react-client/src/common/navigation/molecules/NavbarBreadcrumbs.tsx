@@ -125,19 +125,48 @@ export function NavbarBreadcrumbs() {
 			return ["Калькулятор v2", v2Routes.home.name];
 		}
 		if (pathname.startsWith("/v2/")) {
-			for (const segment of Object.values(v2Routes)) {
-				if (
-					"rootPath" in segment &&
-					typeof segment.rootPath === "string" &&
-					!segment.rootPath.startsWith("/") &&
-					!segment.rootPath.includes(":")
-				) {
-					const full = `/v2/${segment.rootPath}`.replace(/\/$/, "");
-					if (pathname === full || pathname.startsWith(`${full}/`)) {
-						return ["Калькулятор v2", segment.name];
-					}
+			const staticRoutes = Object.values(v2Routes)
+				.filter(
+					(segment) =>
+						"rootPath" in segment &&
+						typeof segment.rootPath === "string" &&
+						segment.rootPath.length > 0 &&
+						!segment.rootPath.includes(":"),
+				)
+				.map((segment) => ({
+					name: segment.name,
+					full: `/v2/${segment.rootPath}`.replace(/\/$/, ""),
+				}))
+				.sort((a, b) => b.full.length - a.full.length);
+
+			for (const route of staticRoutes) {
+				if (pathname === route.full || pathname.startsWith(`${route.full}/`)) {
+					return ["Калькулятор v2", route.name];
 				}
 			}
+
+			const paramRoutes: Array<{ pattern: RegExp; name: string }> = [
+				{
+					pattern: /^\/v2\/calculation\/preview\//,
+					name: v2Routes.calculationPreview.name,
+				},
+				{
+					pattern: /^\/v2\/calculation\/new_version\//,
+					name: v2Routes.calculationNewVersion.name,
+				},
+				{
+					pattern: /^\/v2\/calculation\/clone\//,
+					name: v2Routes.calculationClone.name,
+				},
+			];
+
+			for (const route of paramRoutes) {
+				if (route.pattern.test(pathname)) {
+					return ["Калькулятор v2", route.name];
+				}
+			}
+
+			return ["Калькулятор v2", v2Routes.home.name];
 		}
 
 		if (pathname === "/v1" || pathname === "/v1/") {

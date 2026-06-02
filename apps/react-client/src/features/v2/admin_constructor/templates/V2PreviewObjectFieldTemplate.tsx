@@ -16,6 +16,8 @@ import type {
 	RJSFSchema,
 	UiSchema,
 } from "@rjsf/utils";
+import { objectFieldSlot, readAnketaFormContext } from "@react-client/features/v2/anketaCRUD/utils/anketaFormContext";
+import { AnketaModalArrayTable } from "@react-client/features/v2/anketaCRUD/molecules/AnketaModalArrayTable";
 
 function isRootObjectField(
 	fieldPathId: FieldPathId | undefined,
@@ -135,23 +137,55 @@ export function V2PreviewArrayFieldTemplate({
 	items,
 	onAddClick,
 	readonly,
+	registry,
 	required,
 	schema,
 	title,
 	uiSchema,
 }: ArrayFieldTemplateProps) {
+	const { openAnketaModal, anketaModalArrayPaths, anketaReadOnly } =
+		readAnketaFormContext(registry.formContext);
+	const pathKey = fieldPathId?.path?.join(".") ?? "";
+	const useModalAdd = Boolean(
+		pathKey && anketaModalArrayPaths?.has(pathKey) && openAnketaModal,
+	);
 	const uiTitle = uiSchema?.["ui:title"];
 	const sectionTitle =
 		(typeof uiTitle === "string" && uiTitle) ||
 		title ||
 		(typeof schema.title === "string" ? schema.title : undefined) ||
 		"Список";
-	const canEdit = !disabled && !readonly;
+	const canEdit = !disabled && !readonly && !anketaReadOnly;
 	const addLabel =
 		typeof (uiSchema?.["ui:options"] as { addButtonText?: unknown } | undefined)
 			?.addButtonText === "string"
 			? ((uiSchema?.["ui:options"] as { addButtonText: string }).addButtonText)
 			: `Добавить ${sectionTitle.toLowerCase()}`;
+	const showAddButton = canEdit && (useModalAdd || canAdd);
+
+	if (useModalAdd) {
+		return (
+			<Box id={fieldPathId.$id} sx={{ minWidth: 0 }}>
+				<AnketaModalArrayTable
+					pathKey={pathKey}
+					sectionTitle={sectionTitle}
+					formContext={registry.formContext}
+				/>
+				{showAddButton ? (
+					<Box mt={2}>
+						<Button
+							variant="contained"
+							startIcon={<AddIcon />}
+							onClick={() => openAnketaModal?.(pathKey)}
+							sx={{ textTransform: "uppercase", fontWeight: 600 }}
+						>
+							{addLabel}
+						</Button>
+					</Box>
+				) : null}
+			</Box>
+		);
+	}
 
 	return (
 		<Box id={fieldPathId.$id} sx={{ minWidth: 0 }}>
@@ -187,12 +221,14 @@ export function V2PreviewArrayFieldTemplate({
 					</Typography>
 				)}
 			</Box>
-			{canAdd && canEdit ? (
+			{showAddButton ? (
 				<Box mt={3}>
 					<Button
-						variant="outlined"
+						variant="contained"
 						startIcon={<AddIcon />}
-						onClick={onAddClick}
+						onClick={() =>
+							useModalAdd ? openAnketaModal?.(pathKey) : onAddClick?.()
+						}
 						sx={{ textTransform: "uppercase", fontWeight: 600 }}
 					>
 						{addLabel}
@@ -240,6 +276,9 @@ export function V2PreviewObjectFieldTemplate({
 			</Stack>
 		);
 	}
+
+	const pathKey = fieldPathId?.path?.join(".") ?? "";
+	const sectionSlot = objectFieldSlot(registry.formContext, pathKey);
 
 	const sectionTitle = resolveSectionTitle(
 		title,
@@ -311,6 +350,7 @@ export function V2PreviewObjectFieldTemplate({
 					schema={schemaNode}
 					uiSchema={uiSchema as UiSchema | undefined}
 				/>
+				{sectionSlot ? <Box sx={{ mt: 2 }}>{sectionSlot}</Box> : null}
 			</AccordionDetails>
 		</Accordion>
 	);

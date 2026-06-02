@@ -1,4 +1,7 @@
-import { resolveHostAccessToken } from "@react-client/common/auth/syncMfeAuth";
+import {
+	refreshHostAccessToken,
+	resolveFreshAccessToken,
+} from "@react-client/common/auth/syncMfeAuth";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import axios, {
 	type AxiosError,
@@ -18,6 +21,19 @@ const axiosInstance = axios.create({
 	},
 });
 
+type RetriableAxiosConfig = AxiosRequestConfig & { _authRetry?: boolean };
+
+let refreshPromise: Promise<string | null> | null = null;
+
+function queueTokenRefresh(): Promise<string | null> {
+	if (!refreshPromise) {
+		refreshPromise = refreshHostAccessToken().finally(() => {
+			refreshPromise = null;
+		});
+	}
+	return refreshPromise;
+}
+
 axiosInstance.interceptors.request.use(
 	(config) => {
 		const configMap = useGlobalSettingsStore.getState().configMap;
@@ -26,13 +42,7 @@ axiosInstance.interceptors.request.use(
 			? API_BASE_URL
 			: configMap?.SMART_ANKETA_API || API_BASE_URL;
 
-		let token = useAuthStore.getState().accessToken;
-		if (!token) {
-			token = resolveHostAccessToken();
-			if (token) {
-				useAuthStore.getState().setAccessToken(token);
-			}
-		}
+		const token = resolveFreshAccessToken();
 		if (token) {
 			config.headers.Authorization = `Bearer ${token}`;
 		}
@@ -45,12 +55,32 @@ axiosInstance.interceptors.request.use(
 
 axiosInstance.interceptors.response.use(
 	(response: AxiosResponse) => response,
-	(error: AxiosError) => {
-		if (error.response?.status === 401) {
-			useAuthStore.getState().setAccessToken(null);
-			// window.location.reload(); // Removed to prevent infinite reload
+	async (error: AxiosError) => {
+		const originalRequest = error.config as RetriableAxiosConfig | undefined;
+		const status = error.response?.status;
+
+		if (status !== 401 || !originalRequest || originalRequest._authRetry) {
+			return Promise.reject(error);
 		}
-		return Promise.reject(error);
+
+		originalRequest._authRetry = true;
+
+		try {
+			const nextToken = await queueTokenRefresh();
+			if (!nextToken) {
+				useAuthStore.getState().setAccessToken(null);
+				return Promise.reject(error);
+			}
+
+			originalRequest.headers = {
+				...originalRequest.headers,
+				Authorization: `Bearer ${nextToken}`,
+			};
+			return axiosInstance(originalRequest);
+		} catch (refreshError) {
+			useAuthStore.getState().setAccessToken(null);
+			return Promise.reject(refreshError);
+		}
 	},
 );
 

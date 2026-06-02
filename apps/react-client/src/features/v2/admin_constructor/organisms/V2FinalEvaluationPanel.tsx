@@ -123,7 +123,7 @@ export function V2FinalEvaluationPanel({
 						{onExportExcel ? (
 							<Button
 								size="small"
-								variant="outlined"
+								variant="contained"
 								startIcon={<FileDownloadOutlinedIcon />}
 								onClick={onExportExcel}
 							>

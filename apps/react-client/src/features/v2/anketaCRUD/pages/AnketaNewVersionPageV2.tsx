@@ -86,7 +86,6 @@ export const AnketaNewVersionPageV2 = () => {
 	return (
 		<AnketaFormShell
 			data-test-id="anketa-new-version-page"
-			title={`Новая версия: ${formPackage.questionnaire.calcName}`}
 			source={source}
 			engine={engine}
 			schemaBinding={formPackage.questionnaire.schemaBinding}

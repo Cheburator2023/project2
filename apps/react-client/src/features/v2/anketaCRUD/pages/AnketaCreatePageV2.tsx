@@ -62,7 +62,6 @@ export const AnketaCreatePageV2 = () => {
 	return (
 		<AnketaFormShell
 			data-test-id="anketa-create-page"
-			title={activeTemplate?.name ?? "Создание анкеты"}
 			source={source}
 			engine={engine}
 			onSave={onSave}

@@ -80,7 +80,6 @@ export const AnketaPreviewPageV2 = () => {
 	return (
 		<AnketaFormShell
 			data-test-id="anketa-preview-page"
-			title={formPackage.questionnaire.calcName}
 			source={source}
 			engine={engine}
 			schemaBinding={formPackage.questionnaire.schemaBinding}

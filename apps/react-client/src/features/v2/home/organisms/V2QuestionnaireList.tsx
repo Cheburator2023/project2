@@ -116,6 +116,11 @@ function BindingChip({ status }: { status: V2SchemaBindingStatus }) {
 
 const GRID_PRESETS_STORAGE_KEY = "smart_anketa:v2-questionnaire-grid-presets";
 
+const GRID_SETTINGS_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none">
+<path d="M10.255 4.18806C9.84269 5.17755 8.68655 5.62456 7.71327 5.17535C6.10289 4.4321 4.4321 6.10289 5.17535 7.71327C5.62456 8.68655 5.17755 9.84269 4.18806 10.255C2.63693 10.9013 2.63693 13.0987 4.18806 13.745C5.17755 14.1573 5.62456 15.3135 5.17535 16.2867C4.4321 17.8971 6.10289 19.5679 7.71327 18.8246C8.68655 18.3754 9.84269 18.8224 10.255 19.8119C10.9013 21.3631 13.0987 21.3631 13.745 19.8119C14.1573 18.8224 15.3135 18.3754 16.2867 18.8246C17.8971 19.5679 19.5679 17.8971 18.8246 16.2867C18.3754 15.3135 18.8224 14.1573 19.8119 13.745C21.3631 13.0987 21.3631 10.9013 19.8119 10.255C18.8224 9.84269 18.3754 8.68655 18.8246 7.71327C19.5679 6.10289 17.8971 4.4321 16.2867 5.17535C15.3135 5.62456 14.1573 5.17755 13.745 4.18806C13.0987 2.63693 10.9013 2.63693 10.255 4.18806Z" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z" stroke="#000" stroke-width="2"/>
+</svg>`;
+
 type GridPreset = {
 	id: string;
 	name: string;
@@ -127,10 +132,7 @@ type GridPreset = {
 
 type PresetGridApi = {
 	getColumnState: () => unknown;
-	applyColumnState: (params: {
-		state: unknown;
-		applyOrder?: boolean;
-	}) => void;
+	applyColumnState: (params: { state: unknown; applyOrder?: boolean }) => void;
 	getFilterModel: () => unknown;
 	setFilterModel: (model: unknown) => void;
 	resetColumnState: () => void;
@@ -155,7 +157,10 @@ function readGridPresets(): GridPreset[] {
 }
 
 function writeGridPresets(presets: GridPreset[]) {
-	window.localStorage.setItem(GRID_PRESETS_STORAGE_KEY, JSON.stringify(presets));
+	window.localStorage.setItem(
+		GRID_PRESETS_STORAGE_KEY,
+		JSON.stringify(presets),
+	);
 }
 
 function newPresetId(): string {
@@ -174,7 +179,7 @@ function GridPresetToolPanel({ api }: { api: PresetGridApi }) {
 	};
 
 	const savePreset = () => {
-		const trimmedName = name.trim() || `Пресет ${presets.length + 1}`;
+		const trimmedName = name.trim() || `Преднастройка ${presets.length + 1}`;
 		const nextPreset: GridPreset = {
 			id: newPresetId(),
 			name: trimmedName,
@@ -211,100 +216,111 @@ function GridPresetToolPanel({ api }: { api: PresetGridApi }) {
 	};
 
 	return (
-		<Stack spacing={1.5} sx={{ p: 1.5, minWidth: 240 }}>
-			<Typography variant="subtitle2" fontWeight={700}>
-				Пресеты колонок
+		<Stack spacing={2} sx={{ p: 1.5, minWidth: 240 }}>
+			<Typography variant="subtitle1" fontWeight={700}>
+				Настройки
 			</Typography>
-			<Typography variant="caption" color="text.secondary">
-				Сохраняет порядок, видимость колонок и фильтры из панели AG Grid.
-			</Typography>
-			<TextField
-				size="small"
-				label="Название пресета"
-				value={name}
-				onChange={(event) => setName(event.target.value)}
-			/>
-			<Button variant="contained" size="small" onClick={savePreset}>
-				Сохранить текущий вид
-			</Button>
-			<Button variant="outlined" size="small" onClick={resetGridState}>
-				Сбросить колонки и фильтры
-			</Button>
-			<Divider />
-			<Typography variant="subtitle2" fontWeight={700}>
-				Заводские пресеты
-			</Typography>
-			{FACTORY_GRID_PRESETS.map((preset) => (
-				<Stack
-					key={preset.id}
-					spacing={0.75}
-					sx={{
-						border: "1px solid",
-						borderColor: "primary.light",
-						borderRadius: 1,
-						p: 1,
-						bgcolor: "action.hover",
-					}}
-				>
-					<Stack direction="row" spacing={1} alignItems="center">
-						<Typography variant="body2" fontWeight={600}>
-							{preset.name}
-						</Typography>
-						<Chip size="small" label="заводской" variant="outlined" />
-					</Stack>
-					<Typography variant="caption" color="text.secondary">
-						{preset.description}
-					</Typography>
-					<Button
-						variant="outlined"
-						size="small"
-						onClick={() => applyPreset(preset)}
-					>
-						Применить
-					</Button>
-				</Stack>
-			))}
-			<Divider />
-			<Typography variant="subtitle2" fontWeight={700}>
-				Мои пресеты
-			</Typography>
-			{presets.length === 0 ? (
-				<Typography variant="caption" color="text.secondary">
-					Сохранённых пресетов пока нет.
+
+			<Stack spacing={1.5}>
+				<Typography variant="subtitle2" fontWeight={600}>
+					Преднастройки таблицы
 				</Typography>
-			) : (
-				presets.map((preset) => (
+				<Typography variant="caption" color="text.secondary">
+					Сохраняет порядок, видимость колонок и фильтры текущего вида таблицы.
+				</Typography>
+				<TextField
+					size="small"
+					label="Название преднастройки"
+					value={name}
+					onChange={(event) => setName(event.target.value)}
+				/>
+				<Button variant="contained" size="small" onClick={savePreset}>
+					Сохранить текущий вид
+				</Button>
+				<Button variant="outlined" size="small" onClick={resetGridState}>
+					Сбросить колонки и фильтры
+				</Button>
+				<Divider />
+				<Typography variant="body2" fontWeight={600}>
+					Готовые преднастройки
+				</Typography>
+				{FACTORY_GRID_PRESETS.map((preset) => (
 					<Stack
 						key={preset.id}
 						spacing={0.75}
-						sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 1 }}
+						sx={{
+							border: "1px solid",
+							borderColor: "primary.light",
+							borderRadius: 1,
+							p: 1,
+							bgcolor: "action.hover",
+						}}
 					>
-						<Typography variant="body2" fontWeight={600}>
-							{preset.name}
-						</Typography>
-						<Typography variant="caption" color="text.secondary">
-							{new Date(preset.savedAt).toLocaleString("ru-RU")}
-						</Typography>
-						<Stack direction="row" spacing={1}>
-							<Button
-								variant="outlined"
-								size="small"
-								onClick={() => applyPreset(preset)}
-							>
-								Применить
-							</Button>
-							<Button
-								variant="text"
-								color="error"
-								size="small"
-								onClick={() => deletePreset(preset.id)}
-							>
-								Удалить
-							</Button>
+						<Stack direction="row" spacing={1} alignItems="center">
+							<Typography variant="body2" fontWeight={600}>
+								{preset.name}
+							</Typography>
+							<Chip size="small" label="заводской" variant="outlined" />
 						</Stack>
+						<Typography variant="caption" color="text.secondary">
+							{preset.description}
+						</Typography>
+						<Button
+							variant="outlined"
+							size="small"
+							onClick={() => applyPreset(preset)}
+						>
+							Применить
+						</Button>
 					</Stack>
-				))
-			)}
+				))}
+				<Divider />
+				<Typography variant="body2" fontWeight={600}>
+					Мои преднастройки
+				</Typography>
+				{presets.length === 0 ? (
+					<Typography variant="caption" color="text.secondary">
+						Сохранённых преднастроек пока нет.
+					</Typography>
+				) : (
+					presets.map((preset) => (
+						<Stack
+							key={preset.id}
+							spacing={0.75}
+							sx={{
+								border: "1px solid",
+								borderColor: "divider",
+								borderRadius: 1,
+								p: 1,
+							}}
+						>
+							<Typography variant="body2" fontWeight={600}>
+								{preset.name}
+							</Typography>
+							<Typography variant="caption" color="text.secondary">
+								{new Date(preset.savedAt).toLocaleString("ru-RU")}
+							</Typography>
+							<Stack direction="row" spacing={1}>
+								<Button
+									variant="outlined"
+									size="small"
+									onClick={() => applyPreset(preset)}
+								>
+									Применить
+								</Button>
+								<Button
+									variant="text"
+									color="error"
+									size="small"
+									onClick={() => deletePreset(preset.id)}
+								>
+									Удалить
+								</Button>
+							</Stack>
+						</Stack>
+					))
+				)}
+			</Stack>
 		</Stack>
 	);
 }
@@ -353,16 +369,17 @@ export function V2QuestionnaireList() {
 
 	const columnDefs = useMemo(() => buildV2QuestionnaireColumnDefs(), []);
 
+	const gridIcons = useMemo(
+		() => ({
+			...agGridIconSet,
+			settings: GRID_SETTINGS_ICON,
+		}),
+		[],
+	);
+
 	const sideBar = useMemo<SideBarDef>(
 		() => ({
 			toolPanels: [
-				{
-					id: "presets",
-					labelDefault: "Пресеты",
-					labelKey: "presets",
-					iconKey: "columns",
-					toolPanel: GridPresetToolPanel,
-				},
 				{
 					id: "columns",
 					labelDefault: "Столбцы",
@@ -382,8 +399,14 @@ export function V2QuestionnaireList() {
 					iconKey: "filter",
 					toolPanel: "agFiltersToolPanel",
 				},
+				{
+					id: "settings",
+					labelDefault: "Настройки",
+					labelKey: "settings",
+					iconKey: "settings",
+					toolPanel: GridPresetToolPanel,
+				},
 			],
-			defaultToolPanel: "presets",
 			position: "right",
 		}),
 		[],
@@ -463,7 +486,7 @@ export function V2QuestionnaireList() {
 				<AgGridReact<V2QuestionnaireGridRow>
 					ref={gridRef}
 					theme={gridTheme}
-					icons={agGridIconSet}
+					icons={gridIcons}
 					localeText={AG_GRID_LOCALE_RU}
 					rowData={treeRowData}
 					columnDefs={columnDefs}

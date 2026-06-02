@@ -62,6 +62,7 @@ const MfeRoot = (props: Props) => {
 		if (props?.token) {
 			window.token = props.token;
 		}
+		syncMfeAuthFromHost(props);
 	}, [props]);
 
 	const { user } = props;

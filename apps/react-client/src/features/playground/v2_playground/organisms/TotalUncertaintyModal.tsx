@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import {
     Box,
@@ -82,6 +82,18 @@ export const TotalUncertaintyModal = ({
             ...defaultValues?.risks,
         },
     });
+
+    useEffect(() => {
+        if (!open) return;
+        setValues({
+            ...INITIAL_VALUES,
+            ...defaultValues,
+            risks: {
+                ...INITIAL_VALUES.risks,
+                ...defaultValues?.risks,
+            },
+        });
+    }, [defaultValues, open]);
 
     const handleRiskChange = (riskId: string) => (event: SelectChangeEvent<string>) => {
         const nextValue = event.target.value;

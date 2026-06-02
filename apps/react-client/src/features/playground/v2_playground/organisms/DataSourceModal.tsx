@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import {
   Box,
@@ -88,6 +88,14 @@ export const DataSourceModal = ({
     ...INITIAL_VALUES,
     ...defaultValues,
   });
+
+  useEffect(() => {
+    if (!open) return;
+    setValues({
+      ...INITIAL_VALUES,
+      ...defaultValues,
+    });
+  }, [open, defaultValues]);
 
   const setField = <K extends keyof DataSourceFormValues>(
     field: K,

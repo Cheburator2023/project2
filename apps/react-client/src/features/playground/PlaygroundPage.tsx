@@ -3,22 +3,10 @@ import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Header } from "@react-client/common/navigation/organisms/Header";
-import {
-	ArrayCustomCardListsWidgetExample,
-	MultiLanguageExample,
-} from "@react-client/features/playground/ArrayCustomCardListsWidget.example";
 import { V2PlaygroundPage } from "@react-client/features/playground/v2_playground/pages/V2PlaygroundPage";
 import { Fragment } from "react/jsx-runtime";
 
 const data = [
-	{
-		name: "ArrayCustomCardListsWidgetExample",
-		Component: <ArrayCustomCardListsWidgetExample />,
-	},
-	{
-		name: "MultiLanguageExample",
-		Component: <MultiLanguageExample />,
-	},
 	{
 		name: "V2 Playground — список шаблонов и пример анкеты",
 		Component: <V2PlaygroundPage />,
