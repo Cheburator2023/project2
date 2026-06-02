@@ -1,0 +1,99 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.V2_ANKETA_STREAM_SECTION_IDS = exports.V2_ANKETA_SECTION_ROLE_VALUES = void 0;
+exports.readV2AnketaSectionUiOptions = readV2AnketaSectionUiOptions;
+exports.isV2AnketaMainSectionId = isV2AnketaMainSectionId;
+exports.isV2AnketaStreamSectionId = isV2AnketaStreamSectionId;
+exports.resolveV2AnketaSectionRole = resolveV2AnketaSectionRole;
+exports.resolveV2AnketaDefaultExpanded = resolveV2AnketaDefaultExpanded;
+exports.resolveV2AnketaWorkflowSectionId = resolveV2AnketaWorkflowSectionId;
+exports.resolveV2AnketaSectionTitleVariant = resolveV2AnketaSectionTitleVariant;
+const v2_anketa_workflow_types_1 = require("./v2-anketa-workflow.types");
+exports.V2_ANKETA_SECTION_ROLE_VALUES = [
+    "main",
+    "subsection",
+    "panel",
+    "flat",
+];
+const STREAM_SECTION_IDS = v2_anketa_workflow_types_1.V2_ANKETA_MAIN_SECTION_IDS.filter((id) => id.startsWith("stream"));
+exports.V2_ANKETA_STREAM_SECTION_IDS = STREAM_SECTION_IDS;
+function readRecord(value) {
+    return value && typeof value === "object" && !Array.isArray(value)
+        ? value
+        : undefined;
+}
+function readV2AnketaSectionUiOptions(uiNode) {
+    const node = readRecord(uiNode);
+    const opts = readRecord(node?.["ui:options"]);
+    if (!opts)
+        return {};
+    return {
+        sectionRole: isSectionRole(opts.sectionRole)
+            ? opts.sectionRole
+            : undefined,
+        defaultExpanded: typeof opts.defaultExpanded === "boolean"
+            ? opts.defaultExpanded
+            : undefined,
+        workflowSectionId: isMainSectionId(opts.workflowSectionId)
+            ? opts.workflowSectionId
+            : undefined,
+        showFilledCount: typeof opts.showFilledCount === "boolean"
+            ? opts.showFilledCount
+            : undefined,
+        titleVariant: opts.titleVariant === "h5" || opts.titleVariant === "h6"
+            ? opts.titleVariant
+            : undefined,
+        hidden: opts.hidden === true ? true : undefined,
+    };
+}
+function isSectionRole(value) {
+    return (typeof value === "string" &&
+        exports.V2_ANKETA_SECTION_ROLE_VALUES.includes(value));
+}
+function isV2AnketaMainSectionId(value) {
+    return v2_anketa_workflow_types_1.V2_ANKETA_MAIN_SECTION_IDS.includes(value);
+}
+function isMainSectionId(value) {
+    return typeof value === "string" && isV2AnketaMainSectionId(value);
+}
+function isV2AnketaStreamSectionId(value) {
+    return STREAM_SECTION_IDS.includes(value);
+}
+/** Роль секции: явно из ui:options или эвристика для старых схем без layout. */
+function resolveV2AnketaSectionRole(uiNode, path) {
+    const opts = readV2AnketaSectionUiOptions(uiNode);
+    if (opts.sectionRole)
+        return opts.sectionRole;
+    const root = path[0] ?? "";
+    if (path.length === 1 && isV2AnketaMainSectionId(root))
+        return "main";
+    if (path.length === 2 &&
+        isV2AnketaStreamSectionId(root)) {
+        return "subsection";
+    }
+    if (path.length === 1)
+        return "panel";
+    return "flat";
+}
+function resolveV2AnketaDefaultExpanded(uiNode, path, role) {
+    const opts = readV2AnketaSectionUiOptions(uiNode);
+    if (typeof opts.defaultExpanded === "boolean")
+        return opts.defaultExpanded;
+    if (role === "main") {
+        return path[0] === v2_anketa_workflow_types_1.V2_ANKETA_MAIN_SECTION_IDS[0];
+    }
+    if (role === "panel")
+        return true;
+    return true;
+}
+function resolveV2AnketaWorkflowSectionId(uiNode, path) {
+    const opts = readV2AnketaSectionUiOptions(uiNode);
+    if (opts.workflowSectionId)
+        return opts.workflowSectionId;
+    const root = path[0] ?? "";
+    return path.length === 1 && isV2AnketaMainSectionId(root) ? root : null;
+}
+function resolveV2AnketaSectionTitleVariant(uiNode, fallback = "h6") {
+    const opts = readV2AnketaSectionUiOptions(uiNode);
+    return opts.titleVariant ?? fallback;
+}

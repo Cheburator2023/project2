@@ -52,14 +52,14 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 	useEffect(() => {
 		if (source?.initialJsonSchema && source.initialUiSchema && source.initialLogic) {
 			setJsonSchema(coerceJsonSchema(source.initialJsonSchema));
-			setUiSchema(coerceUiSchema(source.initialUiSchema));
+			setUiSchema(coerceUiSchema(source.initialUiSchema, source.initialJsonSchema));
 			setLogic(coerceLogicGraph(source.initialLogic));
 			setFormData(ensureAnketaFormDataWithWorkflow(source.initialFormData ?? {}));
 			return;
 		}
 		if (!version?.id) return;
 		setJsonSchema(coerceJsonSchema(version.jsonSchema));
-		setUiSchema(coerceUiSchema(version.uiSchema));
+		setUiSchema(coerceUiSchema(version.uiSchema, version.jsonSchema));
 		setLogic(coerceLogicGraph(version.logic));
 		if (source?.initialFormData) {
 			setFormData(ensureAnketaFormDataWithWorkflow(source.initialFormData));

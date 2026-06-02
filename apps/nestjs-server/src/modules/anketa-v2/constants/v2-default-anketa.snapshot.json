@@ -1161,6 +1161,11 @@
 			"pilotNeed": {
 				"ui:widget": "select",
 				"ui:placeholder": "Необходимость пилота"
+			},
+			"ui:options": {
+				"sectionRole": "main",
+				"workflowSectionId": "generalInfo",
+				"defaultExpanded": true
 			}
 		},
 		"uncertaintyCalculation": {
@@ -1238,6 +1243,12 @@
 					"specialist",
 					"cascadeEnsemble"
 				]
+			},
+			"ui:options": {
+				"sectionRole": "main",
+				"workflowSectionId": "detailInfo",
+				"defaultExpanded": false,
+				"titleVariant": "h5"
 			}
 		},
 		"summary": {
@@ -1346,6 +1357,12 @@
 					"type": {
 						"ui:widget": "select"
 					},
+					"domainComplexity": {
+						"ui:widget": "select"
+					},
+					"entityVolume": {
+						"ui:widget": "select"
+					},
 					"daptRegistry": {
 						"ui:widget": "select",
 						"ui:options": {
@@ -1404,6 +1421,11 @@
 						"ui:readonly": true
 					}
 				}
+			},
+			"ui:options": {
+				"sectionRole": "main",
+				"workflowSectionId": "streamDataSources",
+				"defaultExpanded": false
 			}
 		},
 		"streamMlPlatform": {
@@ -1491,12 +1513,19 @@
 						"ui:widget": "checkbox"
 					}
 				}
+			},
+			"ui:options": {
+				"sectionRole": "main",
+				"workflowSectionId": "streamMlPlatform",
+				"defaultExpanded": false
 			}
 		},
 		"streamModelControl": {
 			"dataSource": {
 				"ui:options": {
-					"hidden": true
+					"hidden": true,
+					"sectionRole": "subsection",
+					"showFilledCount": true
 				}
 			},
 			"dataProcessing": {
@@ -1522,6 +1551,10 @@
 				"yaspArtifact": {
 					"ui:widget": "checkbox",
 					"ui:description": "Является ли ЯСП мастер-системой по артефактам"
+				},
+				"ui:options": {
+					"sectionRole": "subsection",
+					"showFilledCount": true
 				}
 			},
 			"dataObjects": {
@@ -1581,6 +1614,10 @@
 							"ui:widget": "text"
 						}
 					}
+				},
+				"ui:options": {
+					"sectionRole": "subsection",
+					"showFilledCount": true
 				}
 			},
 			"models": {
@@ -1641,6 +1678,10 @@
 							}
 						}
 					}
+				},
+				"ui:options": {
+					"sectionRole": "subsection",
+					"showFilledCount": true
 				}
 			},
 			"atypicalTasks": {
@@ -1676,7 +1717,16 @@
 				}
 			},
 			"control": {
-				"ui:collapsible": true
+				"ui:collapsible": true,
+				"ui:options": {
+					"sectionRole": "subsection",
+					"showFilledCount": true
+				}
+			},
+			"ui:options": {
+				"sectionRole": "main",
+				"workflowSectionId": "streamModelControl",
+				"defaultExpanded": false
 			}
 		}
 	}

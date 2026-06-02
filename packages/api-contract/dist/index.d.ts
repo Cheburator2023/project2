@@ -6,4 +6,6 @@ export * from "./v2-template.types";
 export * from "./v2-questionnaire.types";
 export * from "./v2-anketa-workflow.types";
 export * from "./v2-anketa-workflow.util";
+export * from "./v2-anketa-section-ui.util";
+export * from "./v2-anketa-ui-layout.util";
 export * from "./v2-legacy-stage.constants";

@@ -447,3 +447,35 @@ export function setUiDictionaryCodeAtPointer(
 
 	return next;
 }
+
+/** Частичное обновление `ui:options` узла uiSchema по JSON Pointer. */
+export function patchUiOptionsAtPointer(
+	ui: Record<string, unknown>,
+	fieldPointer: string,
+	patch: Record<string, unknown>,
+): Record<string, unknown> {
+	const segs = pointerSegments(fieldPointer);
+	const next = structuredClone(ui) as Record<string, unknown>;
+	if (segs.length === 0) return next;
+
+	let cur: Record<string, unknown> = next;
+	for (let i = 0; i < segs.length; i++) {
+		const s = segs[i]!;
+		if (i === segs.length - 1) {
+			const prev = (cur[s] as Record<string, unknown>) ?? {};
+			const merged = { ...prev };
+			const prevOpt = merged["ui:options"];
+			const optBase =
+				prevOpt && typeof prevOpt === "object" && !Array.isArray(prevOpt)
+					? { ...(prevOpt as Record<string, unknown>) }
+					: {};
+			merged["ui:options"] = { ...optBase, ...patch };
+			cur[s] = merged;
+		} else {
+			const child = (cur[s] as Record<string, unknown>) ?? {};
+			cur[s] = child;
+			cur = child;
+		}
+	}
+	return next;
+}

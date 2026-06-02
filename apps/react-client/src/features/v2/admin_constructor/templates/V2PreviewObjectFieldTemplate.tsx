@@ -28,9 +28,12 @@ import {
 	getValueAtPath,
 } from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
 import {
-	V2_ANKETA_MAIN_SECTION_IDS,
 	V2_ANKETA_SECTION_COMPLETE_LABELS,
-	type V2AnketaMainSectionId,
+	resolveV2AnketaDefaultExpanded,
+	resolveV2AnketaSectionRole,
+	resolveV2AnketaSectionTitleVariant,
+	resolveV2AnketaWorkflowSectionId,
+	readV2AnketaSectionUiOptions,
 } from "@smart-anketa/api-contract";
 
 function isRootObjectField(
@@ -87,12 +90,6 @@ function propertySchemaFor(
 	return properties[name] as RJSFSchema | undefined;
 }
 
-const MAIN_SECTION_SET = new Set<string>(V2_ANKETA_MAIN_SECTION_IDS);
-
-function isMainSectionId(name: string): name is V2AnketaMainSectionId {
-	return MAIN_SECTION_SET.has(name);
-}
-
 function OpenSubSectionPanel({
 	sectionTitle,
 	count,
@@ -141,7 +138,7 @@ function SectionPanelAccordion({
 }) {
 	return (
 		<Accordion
-			defaultExpanded={defaultExpanded ?? true}
+			defaultExpanded={defaultExpanded ?? false}
 			disableGutters
 			sx={{
 				height: "auto !important",
@@ -392,6 +389,7 @@ export function V2PreviewObjectFieldTemplate({
 	}
 
 	const pathKey = fieldPathId?.path?.join(".") ?? "";
+	const pathSegments = fieldPathId?.path ?? [];
 	const sectionSlot = objectFieldSlot(registry.formContext, pathKey);
 	const {
 		workflow,
@@ -406,16 +404,20 @@ export function V2PreviewObjectFieldTemplate({
 		uiSchema as UiSchema,
 		fieldPathId?.$id ?? "Секция",
 	);
-	const objectDepth = fieldPathId?.path?.length ?? 1;
-	const parentPath = fieldPathId?.path?.[0] ?? "";
-	const sectionName = String(fieldPathId?.path?.[0] ?? "");
 	const sectionDescription =
 		typeof description === "string" ? description : undefined;
-	const isStreamSubsection =
-		objectDepth === 2 &&
-		(parentPath === "streamModelControl" ||
-			parentPath === "streamMlPlatform" ||
-			parentPath === "streamDataSources");
+	const sectionRole = resolveV2AnketaSectionRole(uiSchema, pathSegments);
+	const defaultExpanded = resolveV2AnketaDefaultExpanded(
+		uiSchema,
+		pathSegments,
+		sectionRole,
+	);
+	const titleVariant = resolveV2AnketaSectionTitleVariant(uiSchema);
+	const sectionUiOptions = readV2AnketaSectionUiOptions(uiSchema);
+	const workflowSectionId = resolveV2AnketaWorkflowSectionId(
+		uiSchema,
+		pathSegments,
+	);
 
 	const fieldsBody = (
 		<>
@@ -428,8 +430,8 @@ export function V2PreviewObjectFieldTemplate({
 		</>
 	);
 
-	if (objectDepth === 1 && isMainSectionId(sectionName)) {
-		const sectionId = sectionName;
+	if (sectionRole === "main" && workflowSectionId) {
+		const sectionId = workflowSectionId;
 		const sectionStatus = workflow?.sections[sectionId];
 		const locked =
 			anketaReadOnly ||
@@ -443,11 +445,9 @@ export function V2PreviewObjectFieldTemplate({
 		return (
 			<SectionPanelAccordion
 				sectionTitle={sectionTitle}
-				titleVariant={
-					sectionTitle === "Детальная информация" ? "h5" : "h6"
-				}
+				titleVariant={titleVariant}
 				description={sectionDescription}
-				defaultExpanded={sectionId === V2_ANKETA_MAIN_SECTION_IDS[0]}
+				defaultExpanded={defaultExpanded}
 				sectionStatusChip={
 					sectionStatus ? (
 						<AnketaSectionStatusChip kind="section" status={sectionStatus} />
@@ -470,9 +470,11 @@ export function V2PreviewObjectFieldTemplate({
 		);
 	}
 
-	if (isStreamSubsection) {
+	if (sectionRole === "subsection") {
 		const formData = readAnketaFormContext(registry.formContext).formData ?? {};
-		const count = countSubsectionFilledItems(getValueAtPath(formData, pathKey));
+		const count = sectionUiOptions.showFilledCount
+			? countSubsectionFilledItems(getValueAtPath(formData, pathKey))
+			: undefined;
 
 		return (
 			<OpenSubSectionPanel
@@ -485,7 +487,20 @@ export function V2PreviewObjectFieldTemplate({
 		);
 	}
 
-	if (objectDepth > 1) {
+	if (sectionRole === "panel") {
+		return (
+			<SectionPanelAccordion
+				sectionTitle={sectionTitle}
+				description={sectionDescription}
+				defaultExpanded={defaultExpanded}
+				titleVariant={titleVariant}
+			>
+				{fieldsBody}
+			</SectionPanelAccordion>
+		);
+	}
+
+	if (sectionRole === "flat") {
 		return (
 			<Box sx={{ minWidth: 0 }}>
 				<Typography variant="h6" fontWeight={700} mb={3}>
@@ -505,6 +520,7 @@ export function V2PreviewObjectFieldTemplate({
 		<SectionPanelAccordion
 			sectionTitle={sectionTitle}
 			description={sectionDescription}
+			defaultExpanded={defaultExpanded}
 		>
 			{fieldsBody}
 		</SectionPanelAccordion>

@@ -10,12 +10,16 @@ import {
 } from "@mui/material";
 import type { V2SchemaBindingDto } from "@smart-anketa/api-contract";
 import { V2_ANKETA_GLOBAL_COMPLETE_LABEL } from "@smart-anketa/api-contract";
-import { useMemo, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
 	AnketaFormModals,
 	type AnketaFormModalControls,
 	uncertaintySummaryText,
 } from "../organisms/AnketaFormModals";
+import {
+	AnketaGlobalCompleteDialog,
+	type AnketaGlobalCompleteDialogPhase,
+} from "../organisms/AnketaGlobalCompleteDialog";
 import { FinalScoreCard } from "../organisms/FinalScoreCard";
 import { V2AnketaSchemaForm } from "../organisms/V2AnketaSchemaForm";
 import {
@@ -24,6 +28,7 @@ import {
 } from "../hooks/useV2AnketaSchemaEngine";
 import { AnketaSectionStatusChip } from "../molecules/AnketaSectionStatusChip";
 import { useAnketaWorkflow } from "../hooks/useAnketaWorkflow";
+import { useSchemaBindingToast } from "../hooks/useSchemaBindingToast";
 import type { AnketaFormContextValue } from "../utils/anketaFormContext";
 import { ANKETA_MODAL_ARRAY_PATH_SET } from "../utils/anketaFormModalPaths";
 import { AnketaFormPageLayout } from "./AnketaFormPageLayout";
@@ -72,7 +77,8 @@ export function AnketaFormShell({
 	const createCopy = useCreateV2QuestionnaireVersion();
 	const internalEngine = useV2AnketaSchemaEngine(engineProp ? null : source);
 	const engine = engineProp ?? internalEngine;
-	const setFormData = (next: Record<string, unknown>) => engine.setFormData(next);
+	const setFormData = (next: Record<string, unknown>) =>
+		engine.setFormData(next);
 	const {
 		workflow,
 		globallyLocked,
@@ -83,11 +89,76 @@ export function AnketaFormShell({
 		isSectionLocked,
 	} = useAnketaWorkflow(engine.formData, setFormData);
 	const effectiveReadOnly = readOnly || globallyLocked;
+	const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+	const [completeDialogPhase, setCompleteDialogPhase] =
+		useState<AnketaGlobalCompleteDialogPhase>("confirm");
+	const saveAfterCompleteRef = useRef(false);
 	const modalControlsRef = useRef<AnketaFormModalControls>({
 		openArrayModal: () => {},
 		openUncertaintyModal: () => {},
 		deleteArrayItem: () => {},
 	});
+
+	const openCompleteDialog = useCallback(() => {
+		setCompleteDialogPhase("confirm");
+		setCompleteDialogOpen(true);
+	}, []);
+
+	const closeCompleteDialog = useCallback(() => {
+		setCompleteDialogOpen(false);
+		setCompleteDialogPhase("confirm");
+		saveAfterCompleteRef.current = false;
+	}, []);
+
+	const handleCreateCopy = useCallback(() => {
+		if (!questionnaireId) return;
+		createCopy.mutate(
+			{ id: questionnaireId, body: { formData: engine.formData } },
+			{
+				onSuccess: (created) => {
+					toast.success("Создана копия анкеты");
+					closeCompleteDialog();
+					navigate(
+						`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", created.id)}`,
+					);
+				},
+				onError: (err) =>
+					toast.error("Не удалось создать копию", {
+						description: apiErrorMessage(err),
+					}),
+			},
+		);
+	}, [
+		closeCompleteDialog,
+		createCopy,
+		engine.formData,
+		navigate,
+		questionnaireId,
+	]);
+
+	const finalizeComplete = useCallback(
+		(withSave: boolean) => {
+			saveAfterCompleteRef.current = withSave;
+			completeGlobalFill();
+		},
+		[completeGlobalFill],
+	);
+
+	useEffect(() => {
+		if (!completeDialogOpen || completeDialogPhase !== "confirm") return;
+		if (workflow.globalStatus !== "Заполнено") return;
+
+		setCompleteDialogPhase("next");
+		if (saveAfterCompleteRef.current) {
+			saveAfterCompleteRef.current = false;
+			onSave?.();
+		}
+	}, [
+		completeDialogOpen,
+		completeDialogPhase,
+		onSave,
+		workflow.globalStatus,
+	]);
 
 	const anketaFormContext = useMemo((): AnketaFormContextValue => {
 		const controls = modalControlsRef.current;
@@ -150,8 +221,8 @@ export function AnketaFormShell({
 								? undefined
 								: "Сначала завершите заполнение всех основных разделов"
 						}
-						onClick={completeGlobalFill}
-						sx={{ textTransform: "uppercase", fontWeight: 600, whiteSpace: "nowrap" }}
+						onClick={openCompleteDialog}
+						sx={{ fontWeight: 600, whiteSpace: "nowrap" }}
 					>
 						{V2_ANKETA_GLOBAL_COMPLETE_LABEL}
 					</Button>
@@ -163,23 +234,7 @@ export function AnketaFormShell({
 						size="small"
 						disabled={createCopy.isPending}
 						title="Создать копию анкеты в статусе «Черновик»"
-						onClick={() =>
-							createCopy.mutate(
-								{ id: questionnaireId, body: { formData: engine.formData } },
-								{
-									onSuccess: (created) => {
-										toast.success("Создана копия анкеты");
-										navigate(
-											`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", created.id)}`,
-										);
-									},
-									onError: (err) =>
-										toast.error("Не удалось создать копию", {
-											description: apiErrorMessage(err),
-										}),
-								},
-							)
-						}
+						onClick={handleCreateCopy}
 						sx={{ textTransform: "none", whiteSpace: "nowrap" }}
 					>
 						Создать копию
@@ -205,19 +260,22 @@ export function AnketaFormShell({
 			workflow.globalStatus,
 			globallyLocked,
 			allSectionsCompleted,
-			completeGlobalFill,
+			openCompleteDialog,
 			questionnaireId,
-			createCopy,
-			engine.formData,
-			navigate,
+			createCopy.isPending,
+			handleCreateCopy,
 		],
 	);
 
 	const isPageLoading =
 		!errorMessage &&
-		(externalLoading ||
-			engine.versionLoading ||
-			engine.dictionaryEnumsLoading);
+		(externalLoading || engine.versionLoading || engine.dictionaryEnumsLoading);
+
+	useSchemaBindingToast(
+		schemaBinding,
+		questionnaireId,
+		Boolean(schemaBinding) && !isPageLoading && !errorMessage,
+	);
 
 	return (
 		<>
@@ -234,7 +292,6 @@ export function AnketaFormShell({
 						<V2AnketaSchemaForm
 							source={source}
 							engine={engine}
-							schemaBinding={schemaBinding}
 							readOnly={effectiveReadOnly}
 							hiddenTopLevelFields={HIDDEN_TOP_LEVEL_FIELDS}
 							anketaFormContext={anketaFormContext}
@@ -259,6 +316,30 @@ export function AnketaFormShell({
 					controlsRef={modalControlsRef}
 				/>
 			)}
+			<AnketaGlobalCompleteDialog
+				open={completeDialogOpen}
+				phase={completeDialogPhase}
+				onClose={closeCompleteDialog}
+				canSave={Boolean(onSave) && !saveDisabled}
+				savePending={savePending}
+				hasQuestionnaireId={Boolean(questionnaireId)}
+				createCopyPending={createCopy.isPending}
+				onConfirmComplete={() => finalizeComplete(false)}
+				onConfirmCompleteAndSave={() => finalizeComplete(true)}
+				onSave={() => onSave?.()}
+				onCreateCopy={handleCreateCopy}
+				onNewVersion={() => {
+					if (!questionnaireId) return;
+					closeCompleteDialog();
+					navigate(
+						`/v2/${v2Routes.calculationNewVersion.rootPath.replace(":id", questionnaireId)}`,
+					);
+				}}
+				onGoToRegistry={() => {
+					closeCompleteDialog();
+					navigate("/v2");
+				}}
+			/>
 		</>
 	);
 }

@@ -13,6 +13,7 @@ import {
 	buildDictionaryBindingsFromSchema,
 	collectDictionaryCodesFromUiSchema,
 } from "../utils/v2-schema-dictionary.util";
+import { enrichAnketaLayoutUiSchema } from "../utils/v2-anketa-ui-layout.util";
 import { V2_DEFAULT_LOGIC_GRAPH } from "./v2-default-logic";
 
 /**
@@ -77,9 +78,9 @@ const rawUi =
 
 const dictionaryBindings = buildDictionaryBindingsFromSchema(jsonSchema);
 
-const uiSchema = applyDictionaryBindingsToUiSchema(
-	rawUi as V2UiSchemaDto,
-	dictionaryBindings,
+const uiSchema = enrichAnketaLayoutUiSchema(
+	applyDictionaryBindingsToUiSchema(rawUi as V2UiSchemaDto, dictionaryBindings),
+	jsonSchema,
 );
 
 /** Заводские справочники (коды и элементы из enum полей эталонной схемы). */

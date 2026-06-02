@@ -276,14 +276,13 @@ export const V2TemplateSchemaEditor = ({
 		}
 
 		const nextSchema = coerceJsonSchema(activeVersion.jsonSchema);
+		const nextUi = coerceUiSchema(activeVersion.uiSchema, nextSchema);
 		setJsonSchema(nextSchema);
-		setUiSchema(coerceUiSchema(activeVersion.uiSchema));
+		setUiSchema(nextUi);
 		setLogic(coerceLogicGraph(activeVersion.logic));
 
 		setSchemaMonacoText(JSON.stringify(nextSchema, null, 2));
-		setUiMonacoText(
-			JSON.stringify(coerceUiSchema(activeVersion.uiSchema), null, 2),
-		);
+		setUiMonacoText(JSON.stringify(nextUi, null, 2));
 
 		setFormData({});
 	}, [activeVersion?.id]);

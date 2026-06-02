@@ -4,7 +4,6 @@ import Form from "@rjsf/mui";
 import type { UiSchema } from "@rjsf/utils";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { v2PreviewFormTemplates } from "@react-client/features/v2/admin_constructor/templates/v2PreviewFormTemplates";
-import type { V2SchemaBindingDto } from "@smart-anketa/api-contract";
 import {
 	useV2AnketaSchemaEngine,
 	type V2AnketaSchemaEngineSource,
@@ -17,19 +16,9 @@ import type { V2AnketaMainSectionId } from "@smart-anketa/api-contract";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 
-const BINDING_TEXT_COLOR: Record<
-	V2SchemaBindingDto["status"],
-	"success.main" | "warning.main" | "error.main"
-> = {
-	aligned: "success.main",
-	superseded: "warning.main",
-	unavailable: "error.main",
-};
-
 type Props = {
 	source: V2AnketaSchemaEngineSource | null;
 	engine?: ReturnType<typeof useV2AnketaSchemaEngine>;
-	schemaBinding?: V2SchemaBindingDto | null;
 	readOnly?: boolean;
 	hiddenTopLevelFields?: string[];
 	anketaFormContext?: AnketaFormContextValue;
@@ -133,7 +122,6 @@ function FormNotice({
 export function V2AnketaSchemaForm({
 	source,
 	engine: engineProp,
-	schemaBinding,
 	readOnly = false,
 	hiddenTopLevelFields = [],
 	anketaFormContext,
@@ -194,15 +182,6 @@ export function V2AnketaSchemaForm({
 
 	return (
 		<Box data-test-id={dataTestId} sx={{ width: "100%", minWidth: 0 }}>
-			{schemaBinding ? (
-				<FormNotice
-					color={BINDING_TEXT_COLOR[schemaBinding.status]}
-					testId={`${dataTestId}--schema-binding`}
-				>
-					{schemaBinding.message}
-				</FormNotice>
-			) : null}
-
 			{engine.calculationError ? (
 				<FormNotice color="error.main">
 					Ошибка калькуляции: {engine.calculationError}

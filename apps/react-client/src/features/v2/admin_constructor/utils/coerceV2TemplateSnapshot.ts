@@ -1,6 +1,7 @@
 import type { UiSchema } from "@rjsf/utils";
 import type { RJSFSchema } from "@rjsf/utils";
 import type { V2LogicGraphDto, V2LogicRuleDto } from "@smart-anketa/api-contract";
+import { enrichAnketaLayoutUiSchema } from "@smart-anketa/api-contract";
 
 export const EMPTY_JSON_SCHEMA: RJSFSchema = {
 	type: "object",
@@ -30,11 +31,21 @@ export function coerceJsonSchema(input: unknown): RJSFSchema {
 	} as RJSFSchema;
 }
 
-export function coerceUiSchema(input: unknown): UiSchema {
+export function coerceUiSchema(
+	input: unknown,
+	jsonSchema?: unknown,
+): UiSchema {
 	if (!input || typeof input !== "object" || Array.isArray(input)) {
 		return {};
 	}
-	return structuredClone(input) as UiSchema;
+	const ui = structuredClone(input) as UiSchema;
+	if (jsonSchema) {
+		return enrichAnketaLayoutUiSchema(
+			ui as Record<string, unknown>,
+			coerceJsonSchema(jsonSchema) as Record<string, unknown>,
+		) as UiSchema;
+	}
+	return ui;
 }
 
 function isLogicRule(value: unknown): value is V2LogicRuleDto {

@@ -21,6 +21,13 @@ import { useSchemaEditor } from "../SchemaEditorContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "../components/PanelChrome";
 import { normalizeJsonPointer } from "../../utils/schemaPaths";
+import { patchUiOptionsAtPointer } from "../../utils/schemaMutators";
+import {
+	readV2AnketaSectionUiOptions,
+	V2_ANKETA_SECTION_ROLE_VALUES,
+	type V2AnketaSectionRole,
+} from "@smart-anketa/api-contract";
+import type { UiSchema } from "@rjsf/utils";
 
 export function SchemaPropertiesPanel() {
 	const {
@@ -50,7 +57,45 @@ export function SchemaPropertiesPanel() {
 		addRuleForTargetPath,
 		setMainTab,
 		handleDeleteField,
+		uiSchema,
+		setUiSchema,
 	} = useSchemaEditor();
+
+	const leafUiBranch =
+		selectedPointer && uiSchema
+			? (() => {
+					const segs = normalizeJsonPointer(selectedPointer)
+						.replace(/^\//, "")
+						.split("/")
+						.filter(Boolean);
+					let cur: Record<string, unknown> = uiSchema as Record<
+						string,
+						unknown
+					>;
+					for (const seg of segs) {
+						const next = cur[seg];
+						if (!next || typeof next !== "object" || Array.isArray(next)) {
+							return undefined;
+						}
+						cur = next as Record<string, unknown>;
+					}
+					return cur;
+				})()
+			: undefined;
+
+	const sectionUiOptions = readV2AnketaSectionUiOptions(leafUiBranch);
+
+	const patchSectionUi = (patch: Record<string, unknown>) => {
+		if (!selectedPointer) return;
+		setUiSchema(
+			(prev) =>
+				patchUiOptionsAtPointer(
+					prev as Record<string, unknown>,
+					selectedPointer,
+					patch,
+				) as UiSchema,
+		);
+	};
 
 	return (
 		<PanelChrome
@@ -147,6 +192,44 @@ export function SchemaPropertiesPanel() {
 									</MenuItem>
 								))}
 							</TextField>
+							<Spacer />
+							<TextField
+								select
+								fullWidth
+								size="small"
+								label="Роль секции (ui:options.sectionRole)"
+								value={sectionUiOptions.sectionRole ?? ""}
+								onChange={(e) =>
+									patchSectionUi({
+										sectionRole: (e.target.value ||
+											undefined) as V2AnketaSectionRole,
+									})
+								}
+								helperText="main — главная панель с workflow; subsection — подсекция стрима"
+							>
+								<MenuItem value="">
+									<em>Авто (эвристика)</em>
+								</MenuItem>
+								{V2_ANKETA_SECTION_ROLE_VALUES.map((role) => (
+									<MenuItem key={role} value={role}>
+										{role}
+									</MenuItem>
+								))}
+							</TextField>
+							<Spacer />
+							<FormControlLabel
+								control={
+									<Checkbox
+										checked={sectionUiOptions.defaultExpanded ?? false}
+										onChange={(e) =>
+											patchSectionUi({
+												defaultExpanded: e.target.checked,
+											})
+										}
+									/>
+								}
+								label="Развёрнута по умолчанию (defaultExpanded)"
+							/>
 							<Spacer />
 						</>
 					) : null}
