@@ -45,6 +45,7 @@ import {
 	type RowDoubleClickedEvent,
 	type SelectionChangedEvent,
 	ModuleRegistry,
+	type ColumnState,
 	type SideBarDef,
 	ValidationModule,
 } from "ag-grid-community";
@@ -68,7 +69,11 @@ import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 import { buildV2QuestionnaireColumnDefs } from "../utils/v2QuestionnaireGridColumns";
 import {
 	FACTORY_GRID_PRESETS,
+	FACTORY_PRESET_IDS,
+	applyQuestionnaireGridPreset,
+	getFactoryGridPreset,
 	isFactoryPresetId,
+	type QuestionnaireGridPresetApi,
 } from "../utils/v2QuestionnaireGridFactoryPresets";
 import { resolveVersionRow } from "../utils/v2QuestionnaireGridValue";
 
@@ -144,13 +149,9 @@ type GridPreset = {
 	builtIn?: boolean;
 };
 
-type PresetGridApi = {
+type PresetGridApi = QuestionnaireGridPresetApi & {
 	getColumnState: () => unknown;
-	applyColumnState: (params: { state: unknown; applyOrder?: boolean }) => void;
 	getFilterModel: () => unknown;
-	setFilterModel: (model: unknown) => void;
-	resetColumnState: () => void;
-	onFilterChanged: () => void;
 };
 
 function readGridPresets(): GridPreset[] {
@@ -209,14 +210,13 @@ function GridPresetToolPanel({ api }: { api: PresetGridApi }) {
 		columnState: unknown;
 		filterModel: unknown;
 	}) => {
-		api.applyColumnState({
-			state: preset.columnState as Parameters<
-				PresetGridApi["applyColumnState"]
-			>[0]["state"],
-			applyOrder: true,
+		applyQuestionnaireGridPreset(api, {
+			columnState: preset.columnState as ColumnState[],
+			filterModel: (preset.filterModel ?? null) as Record<
+				string,
+				unknown
+			> | null,
 		});
-		api.setFilterModel(preset.filterModel ?? null);
-		api.onFilterChanged();
 	};
 
 	const deletePreset = (presetId: string) => {
@@ -224,9 +224,12 @@ function GridPresetToolPanel({ api }: { api: PresetGridApi }) {
 	};
 
 	const resetGridState = () => {
-		api.resetColumnState();
-		api.setFilterModel(null);
-		api.onFilterChanged();
+		const allInformationPreset = getFactoryGridPreset(
+			FACTORY_PRESET_IDS.allInformation,
+		);
+		if (allInformationPreset) {
+			applyQuestionnaireGridPreset(api, allInformationPreset);
+		}
 	};
 
 	return (
@@ -274,7 +277,7 @@ function GridPresetToolPanel({ api }: { api: PresetGridApi }) {
 							<Typography variant="body2" fontWeight={600}>
 								{preset.name}
 							</Typography>
-							<Chip size="small" label="заводской" variant="outlined" />
+							{/* <Chip size="small" label="заводской" variant="outlined" /> */}
 						</Stack>
 						<Typography variant="caption" color="text.secondary">
 							{preset.description}
@@ -453,12 +456,9 @@ export function V2QuestionnaireList() {
 
 	const onGridReady = useCallback((e: GridReadyEvent) => {
 		e.api.expandAll();
-		const defaultFactory = FACTORY_GRID_PRESETS[0];
-		if (defaultFactory) {
-			e.api.applyColumnState({
-				state: defaultFactory.columnState,
-				applyOrder: true,
-			});
+		const basicPreset = getFactoryGridPreset(FACTORY_PRESET_IDS.default);
+		if (basicPreset) {
+			applyQuestionnaireGridPreset(e.api, basicPreset);
 		}
 	}, []);
 

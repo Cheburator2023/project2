@@ -56,8 +56,9 @@ export type V2QuestionnaireDto = {
 	/** Дублирует `formData.workflow.globalStatus` для реестра и фильтров. */
 	workflowGlobalStatus: V2AnketaGlobalStatus | null;
 	/** Дублирует `formData.workflow.sections` для чипов в реестре. */
-	workflowSectionStatuses: Partial<
-		Record<V2AnketaMainSectionId, V2AnketaSectionStatus>
+	workflowSectionStatuses: Record<
+		V2AnketaMainSectionId,
+		V2AnketaSectionStatus
 	>;
 };
 

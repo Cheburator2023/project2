@@ -4,8 +4,8 @@ import { buildV2QuestionnaireColumnDefs } from "./v2QuestionnaireGridColumns";
 import { formPathColId } from "./v2QuestionnaireGridValue";
 
 export const FACTORY_PRESET_IDS = {
-	platformStreams: "factory:platform-streams",
-	model: "factory:model",
+	default: "factory:default",
+	allInformation: "factory:all-information",
 } as const;
 
 export type FactoryGridPreset = {
@@ -17,20 +17,23 @@ export type FactoryGridPreset = {
 	filterModel: Record<string, unknown> | null;
 };
 
+/** API грида, достаточный для применения преднастройки. */
+export type QuestionnaireGridPresetApi = {
+	resetColumnState: () => void;
+	applyColumnState: (params: {
+		state: ColumnState[];
+		applyOrder?: boolean;
+		defaultState?: Partial<ColumnState>;
+	}) => void;
+	setFilterModel: (model: Record<string, unknown> | null) => void;
+	onFilterChanged: () => void;
+	refreshHeader?: () => void;
+};
+
 const AUTO_GROUP_COL_ID = "ag-Grid-AutoColumn";
 
 function pathCol(path: string): string {
 	return formPathColId(path);
-}
-
-function arrayCols(
-	basePath: string,
-	indices: number[],
-	keys: string[],
-): string[] {
-	return indices.flatMap((index) =>
-		keys.map((key) => pathCol(`${basePath}[${index}].${key}`)),
-	);
 }
 
 function collectLeafColumnIds(
@@ -79,101 +82,56 @@ function buildColumnState(
 	}));
 }
 
-/** Платформенные стримы: оценка по стримам, E2E, процессы данных (IND). */
-const PLATFORM_STREAMS_VISIBLE = [
-	AUTO_GROUP_COL_ID,
-	"readableId",
-	"version",
-	"author",
-	"finalCoefficient",
-	pathCol("generalInfo.calcName"),
-	pathCol("generalInfo.implementationStream"),
-	pathCol("generalInfo.complexity"),
-	pathCol("generalInfo.channels"),
-	pathCol("generalInfo.pilotNeed"),
-	pathCol("summary.baseScoreStream"),
-	pathCol("summary.scoreWithComplexityCoeff"),
-	pathCol("summary.deviationFromBaseline"),
-	...arrayCols("summary.platformStreams", [0, 1, 2, 3], [
-		"streamName",
-		"baseTypicalScore",
-		"adjustedTypicalScore",
-		"deviationPercent",
-		"atypicalScore",
-	]),
-	...arrayCols("summary.detailedCalculation", [0, 1, 2, 3, 4], [
-		"stageName",
-		"baseScore",
-		"complexityCoeff",
-		"deviationFromBase",
-	]),
-	pathCol("dataProcessing.sourcesRDS"),
-	pathCol("dataProcessing.consumers"),
-	pathCol("dataProcessing.otherMicroservices"),
-	pathCol("dataProcessing.filters"),
-	pathCol("dataProcessing.yaspArtifact"),
-];
+function buildAllColumnsVisibleState(): ColumnState[] {
+	return buildColumnState(getAllGridColumnIds(), [
+		AUTO_GROUP_COL_ID,
+		...getAllGridColumnIds(),
+	]);
+}
 
-/** Модельные: параметры модели, список моделей, витрины (Контроль моделей / ПиРМ). */
-const MODEL_VISIBLE = [
+/** Сбрасывает фильтры/сортировку и применяет преднастройку колонок. */
+export function applyQuestionnaireGridPreset(
+	api: QuestionnaireGridPresetApi,
+	preset: Pick<FactoryGridPreset, "columnState" | "filterModel">,
+): void {
+	api.setFilterModel(null);
+	api.resetColumnState();
+	api.applyColumnState({
+		state: preset.columnState,
+		applyOrder: true,
+		defaultState: {
+			sort: null,
+			rowGroup: false,
+			pivot: false,
+			pinned: null,
+		},
+	});
+	api.setFilterModel(preset.filterModel ?? null);
+	api.onFilterChanged();
+	api.refreshHeader?.();
+}
+
+export function getFactoryGridPreset(id: string): FactoryGridPreset | undefined {
+	return FACTORY_GRID_PRESETS.find((preset) => preset.id === id);
+}
+
+/** Базовый вид реестра анкет по умолчанию. */
+const DEFAULT_REGISTRY_VISIBLE = [
 	AUTO_GROUP_COL_ID,
 	"readableId",
-	"version",
-	"author",
-	"finalCoefficient",
 	pathCol("generalInfo.calcName"),
+	"createdAt",
 	pathCol("generalInfo.businessCustomer"),
 	pathCol("generalInfo.implementationStream"),
-	pathCol("generalInfo.complexity"),
-	pathCol("generalInfo.overallUncertainty"),
-	pathCol("generalInfo.pilotNeed"),
-	pathCol("uncertaintyCalculation.initiativeTimeline"),
-	pathCol("uncertaintyCalculation.initiativeCost"),
-	pathCol("uncertaintyCalculation.uncertaintyAdjustment"),
-	pathCol("uncertaintyCalculation.riskGroup.businessComplexity"),
-	pathCol("uncertaintyCalculation.riskGroup.regulatoryChanges"),
-	pathCol("uncertaintyCalculation.riskGroup.itArchitectureChanges"),
-	pathCol("detailInfo.parameters.modelsCount"),
-	pathCol("detailInfo.parameters.algorithmType"),
-	pathCol("detailInfo.parameters.algorithmCoeff"),
-	pathCol("detailInfo.parameters.autoML"),
-	pathCol("detailInfo.parameters.specialist"),
-	pathCol("detailInfo.parameters.cascadeEnsemble"),
-	pathCol("models.cascadeEnsemble"),
-	pathCol("models.recalibrationType"),
-	...arrayCols("models.modelsList", [0, 1], [
-		"name",
-		"class",
-		"taskType",
-		"algorithm",
-		"autoML",
-		"role",
-	]),
-	...arrayCols("dataObjects.trainingSources", [0, 1], [
-		"name",
-		"frequency",
-		"development",
-		"integration",
-		"usedModels",
-		"controlKD",
-	]),
-	...arrayCols("dataObjects.applicationSources", [0], [
-		"name",
-		"mode",
-		"updateFrequency",
-		"development",
-		"controlKD",
-		"usedModels",
-	]),
-	pathCol("summary.baseScoreStream"),
-	pathCol("summary.scoreWithComplexityCoeff"),
-	...arrayCols("summary.platformStreams", [0, 1], [
-		"streamName",
-		"baseTypicalScore",
-		"adjustedTypicalScore",
-		"deviationPercent",
-		"atypicalScore",
-	]),
+	"version",
+	"workflowGlobalStatus",
+	"workflowSection.generalInfo",
+	"workflowSection.detailInfo",
+	"workflowSection.streamDataSources",
+	"workflowSection.streamMlPlatform",
+	"workflowSection.streamModelControl",
+	pathCol("summary.total"),
+	"updatedAt",
 ];
 
 let cachedAllColumnIds: string[] | null = null;
@@ -186,31 +144,28 @@ export function getAllGridColumnIds(): string[] {
 }
 
 export function isFactoryPresetId(id: string): boolean {
-	return (
-		id === FACTORY_PRESET_IDS.platformStreams || id === FACTORY_PRESET_IDS.model
-	);
+	return (Object.values(FACTORY_PRESET_IDS) as string[]).includes(id);
 }
 
 export const FACTORY_GRID_PRESETS: FactoryGridPreset[] = [
 	{
-		id: FACTORY_PRESET_IDS.platformStreams,
-		name: "Платформенные стримы",
+		id: FACTORY_PRESET_IDS.default,
+		name: "Базовый",
 		description:
-			"Итоговая оценка, платформенные стримы, E2E-этапы и процессы обработки данных.",
+			"ID, название, даты, заказчик, стрим, версия, статусы разделов и общая стоимость.",
 		builtIn: true,
 		columnState: buildColumnState(
 			getAllGridColumnIds(),
-			PLATFORM_STREAMS_VISIBLE,
+			DEFAULT_REGISTRY_VISIBLE,
 		),
 		filterModel: null,
 	},
 	{
-		id: FACTORY_PRESET_IDS.model,
-		name: "Модельные",
-		description:
-			"Параметры модели, список моделей, витрины и ключевые поля контроля моделей.",
+		id: FACTORY_PRESET_IDS.allInformation,
+		name: "Вся информация",
+		description: "Все колонки анкеты: реестр, разделы, итоговая оценка и расчёты.",
 		builtIn: true,
-		columnState: buildColumnState(getAllGridColumnIds(), MODEL_VISIBLE),
+		columnState: buildAllColumnsVisibleState(),
 		filterModel: null,
 	},
 ];
