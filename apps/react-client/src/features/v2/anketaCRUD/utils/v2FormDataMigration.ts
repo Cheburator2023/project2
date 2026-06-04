@@ -72,18 +72,9 @@ export function migrateV2AnketaFormData(
 	delete next.modelControl;
 	delete next.dataStorageAndProcessing;
 
+	// Пути detailInfo остаются в formData для UI; копии уходят в stream*-разделы для движка.
 	if (detailInfo) {
-		const {
-			sourceSystems: _s,
-			sourceTypicalTasks: _t,
-			dataProcess: _dp,
-			dataMart: _dm,
-			model: _m,
-			detailTypicalTasks: _dt,
-			detailAtypicalTasks: _da,
-			...detailRest
-		} = detailInfo;
-		next.detailInfo = detailRest;
+		next.detailInfo = detailInfo;
 	}
 
 	if (Object.keys(streamDataSources).length > 0) {

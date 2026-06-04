@@ -20,6 +20,7 @@ import type {
 import { AnketaSectionStatusChip } from "@react-client/features/v2/anketaCRUD/molecules/AnketaSectionStatusChip";
 import { AnketaArchObjectPanel } from "@react-client/features/v2/anketaCRUD/molecules/AnketaArchObjectPanel";
 import { AnketaModalArrayTable } from "@react-client/features/v2/anketaCRUD/molecules/AnketaModalArrayTable";
+import { ListEmptyPlaceholder } from "@react-client/features/v2/anketaCRUD/molecules/ListEmptyPlaceholder";
 import { ANKETA_MODAL_OBJECT_PATH_SET } from "@react-client/features/v2/anketaCRUD/utils/anketaFormModalPaths";
 import {
 	objectFieldSlot,
@@ -258,8 +259,12 @@ export function V2PreviewArrayFieldTemplate({
 	title,
 	uiSchema,
 }: ArrayFieldTemplateProps) {
-	const { openAnketaModal, anketaModalArrayPaths, anketaReadOnly } =
-		readAnketaFormContext(registry.formContext);
+	const {
+		openAnketaModal,
+		anketaModalArrayPaths,
+		anketaCompactArrayTablePaths,
+		anketaReadOnly,
+	} = readAnketaFormContext(registry.formContext);
 	const archComponent = resolveV2AnketaArchComponent(uiSchema);
 	const wrapArch = (node: ReactNode): ReactNode => (
 		<ArchComponentDevOutline archComponent={archComponent}>
@@ -267,8 +272,14 @@ export function V2PreviewArrayFieldTemplate({
 		</ArchComponentDevOutline>
 	);
 	const pathKey = fieldPathId?.path?.join(".") ?? "";
+	const useCompactTable = Boolean(
+		pathKey && anketaCompactArrayTablePaths?.has(pathKey),
+	);
 	const useModalAdd = Boolean(
-		pathKey && anketaModalArrayPaths?.has(pathKey) && openAnketaModal,
+		pathKey &&
+			anketaModalArrayPaths?.has(pathKey) &&
+			openAnketaModal &&
+			useCompactTable,
 	);
 	const uiTitle = uiSchema?.["ui:title"];
 	const sectionTitle =
@@ -284,7 +295,7 @@ export function V2PreviewArrayFieldTemplate({
 			: `Добавить ${sectionTitle.toLowerCase()}`;
 	const showAddButton = canEdit && (useModalAdd || canAdd);
 
-	if (useModalAdd) {
+	if (useCompactTable) {
 		return wrapArch(
 			<Box id={fieldPathId.$id} sx={{ minWidth: 0 }}>
 				<AnketaModalArrayTable
@@ -337,9 +348,7 @@ export function V2PreviewArrayFieldTemplate({
 						</Box>
 					))
 				) : (
-					<Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-						Нет строк
-					</Typography>
+					<ListEmptyPlaceholder>Нет строк</ListEmptyPlaceholder>
 				)}
 			</Box>
 			{showAddButton ? (

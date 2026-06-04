@@ -13,6 +13,7 @@ import {
   MenuItem,
   Select,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
 
@@ -39,11 +40,6 @@ type DataSourceModalProps = {
   loading?: boolean;
   defaultValues?: Partial<DataSourceFormValues>;
 };
-
-const NAME_OPTIONS: Option[] = [
-  { value: "crm_retail", label: "CRM Retail" },
-  { value: "crm_corp", label: "CRM Corp" },
-];
 
 const SOURCE_TYPE_OPTIONS: Option[] = [
   { value: "internal", label: "Внутренний" },
@@ -145,11 +141,11 @@ export const DataSourceModal = ({
 
       <DialogContent sx={{ px: 3, py: 1 }}>
         <Stack spacing={2}>
-          <SelectField
+          <TextField
+            fullWidth
             label="Название"
             value={values.name}
-            onChange={(value) => setField("name", value)}
-            options={NAME_OPTIONS}
+            onChange={(event) => setField("name", event.target.value)}
           />
 
           <SelectField

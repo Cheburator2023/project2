@@ -106,7 +106,7 @@ export const ModalExample = () => {
                 onClose={handleDataSourceClose}
                 onSubmit={handleDataSourceSubmit}
                 defaultValues={{
-                    name: "crm_retail",
+                    name: "CRM Retail",
                     sourceType: "internal",
                     workType: "development",
                     pilotRequired: "yes",

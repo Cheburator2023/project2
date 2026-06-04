@@ -1,35 +1,21 @@
 import Alert from "@mui/material/Alert";
 import Typography from "@mui/material/Typography";
-import Form from "@rjsf/mui";
-import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
+import { V2AnketaFormWithModals } from "@react-client/features/v2/anketaCRUD/organisms/V2AnketaFormWithModals";
+import { useSchemaEditorAnketaEngine } from "../../hooks/useSchemaEditorAnketaEngine";
 import { V2FormWithEvaluationLayout } from "../../organisms/V2FormWithEvaluationLayout";
-import { hideSummaryInPreviewUi } from "../../utils/hideSummaryInPreviewUi";
-import { readSummaryFromFormData } from "../../utils/readSummaryFromFormData";
-import { useMemo } from "react";
 import { useSchemaEditor } from "../SchemaEditorContext";
-import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "../components/PanelChrome";
-import { v2PreviewFormTemplates } from "../../templates/v2PreviewFormTemplates";
+
+const PREVIEW_HIDDEN_TOP_LEVEL = ["workflow", "uncertaintyCalculation"];
 
 export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean }) {
+	const engine = useSchemaEditorAnketaEngine();
 	const {
-		previewSchema,
-		previewUiSchema,
-		formData,
-		liveFormData,
-		setFormData,
 		dictionaryEnumsLoading,
 		calculationLoading,
 		calculationError,
-		logicExtraErrors,
 		logicValidationIssueCount,
 	} = useSchemaEditor();
-
-	const summary = readSummaryFromFormData(liveFormData);
-	const previewUiWithoutSummary = useMemo(
-		() => hideSummaryInPreviewUi(previewUiSchema),
-		[previewUiSchema],
-	);
 
 	return (
 		<PanelChrome
@@ -61,22 +47,13 @@ export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean })
 			) : null}
 
 			<V2FormWithEvaluationLayout
-				summary={summary}
+				summary={engine.summary}
 				calculationLoading={calculationLoading}
 			>
-				<Form
-					schema={previewSchema}
-					uiSchema={previewUiWithoutSummary}
-					formData={liveFormData}
-					extraErrors={logicExtraErrors}
-					templates={v2PreviewFormTemplates}
-					validator={validatorRu}
-					liveValidate
-					noHtml5Validate
-					showErrorList={false}
-					onChange={(evt) =>
-						setFormData((evt.formData as Record<string, unknown>) ?? {})
-					}
+				<V2AnketaFormWithModals
+					engine={engine}
+					hiddenTopLevelFields={PREVIEW_HIDDEN_TOP_LEVEL}
+					data-test-id="schema-editor-anketa-preview"
 				/>
 			</V2FormWithEvaluationLayout>
 

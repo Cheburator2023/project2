@@ -1,39 +1,29 @@
-import CalculateOutlinedIcon from "@mui/icons-material/CalculateOutlined";
 import SaveIcon from "@mui/icons-material/Save";
 import {
 	Box,
 	Button,
 	CircularProgress,
 	IconButton,
-	Stack,
 	Typography,
 } from "@mui/material";
 import type { V2SchemaBindingDto } from "@smart-anketa/api-contract";
 import { V2_ANKETA_GLOBAL_COMPLETE_LABEL } from "@smart-anketa/api-contract";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-	AnketaFormModals,
-	type AnketaFormModalControls,
-	uncertaintySummaryText,
-} from "../organisms/AnketaFormModals";
-import {
 	AnketaGlobalCompleteDialog,
 	type AnketaGlobalCompleteDialogPhase,
 } from "../organisms/AnketaGlobalCompleteDialog";
 import { FinalScoreCard } from "../organisms/FinalScoreCard";
-import { V2AnketaSchemaForm } from "../organisms/V2AnketaSchemaForm";
+import { V2AnketaFormWithModals } from "../organisms/V2AnketaFormWithModals";
 import {
 	useV2AnketaSchemaEngine,
+	type V2AnketaSchemaEngine,
 	type V2AnketaSchemaEngineSource,
 } from "../hooks/useV2AnketaSchemaEngine";
 import { AnketaSectionStatusChip } from "../molecules/AnketaSectionStatusChip";
 import { useAnketaWorkflow } from "../hooks/useAnketaWorkflow";
 import { useSchemaBindingToast } from "../hooks/useSchemaBindingToast";
 import type { AnketaFormContextValue } from "../utils/anketaFormContext";
-import {
-	ANKETA_MODAL_ARRAY_PATH_SET,
-	ANKETA_MODAL_OBJECT_PATH_SET,
-} from "../utils/anketaFormModalPaths";
 import { AnketaFormPageLayout } from "./AnketaFormPageLayout";
 import { useCreateV2QuestionnaireVersion } from "@react-client/common/api/queries/v2-questionnaires";
 import { useNavigate } from "react-router";
@@ -41,7 +31,7 @@ import { v2Routes } from "@react-client/routing/version/v2/routes";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 
-type Engine = ReturnType<typeof useV2AnketaSchemaEngine>;
+type Engine = V2AnketaSchemaEngine;
 
 const HIDDEN_TOP_LEVEL_FIELDS = ["workflow", "uncertaintyCalculation"];
 
@@ -96,13 +86,6 @@ export function AnketaFormShell({
 	const [completeDialogPhase, setCompleteDialogPhase] =
 		useState<AnketaGlobalCompleteDialogPhase>("confirm");
 	const saveAfterCompleteRef = useRef(false);
-	const modalControlsRef = useRef<AnketaFormModalControls>({
-		openArrayModal: () => {},
-		openUncertaintyModal: () => {},
-		deleteArrayItem: () => {},
-		deleteObject: () => {},
-	});
-
 	const openCompleteDialog = useCallback(() => {
 		setCompleteDialogPhase("confirm");
 		setCompleteDialogOpen(true);
@@ -165,47 +148,16 @@ export function AnketaFormShell({
 	]);
 
 	const anketaFormContext = useMemo((): AnketaFormContextValue => {
-		const controls = modalControlsRef.current;
 		return {
-			formData: engine.displayFormData,
+			formData: engine.formData,
 			workflow,
 			onCompleteMainSection: completeMainSection,
 			onTouchMainSection: touchMainSection,
 			isMainSectionLocked: isSectionLocked,
-			objectFieldSlots: {
-				generalInfo: (
-					<Stack spacing={1.5} sx={{ pt: 1 }}>
-						<Typography variant="body2" color="text.secondary">
-							Общая неопределенность:{" "}
-							{uncertaintySummaryText(engine.displayFormData)}
-						</Typography>
-						<Box>
-							<Button
-								variant="outlined"
-								size="small"
-								startIcon={<CalculateOutlinedIcon />}
-								disabled={effectiveReadOnly}
-								onClick={() => controls.openUncertaintyModal()}
-								sx={{ textTransform: "uppercase", fontWeight: 600 }}
-							>
-								Рассчитать общую неопределенность
-							</Button>
-						</Box>
-					</Stack>
-				),
-			},
-			openAnketaModal: (path, editIndex) =>
-				controls.openArrayModal(path, editIndex),
-			openUncertaintyModal: () => controls.openUncertaintyModal(),
-			deleteAnketaArrayItem: (path, index) =>
-				controls.deleteArrayItem(path, index),
-			deleteAnketaObject: (path) => controls.deleteObject(path),
-			anketaModalArrayPaths: ANKETA_MODAL_ARRAY_PATH_SET,
-			anketaModalObjectPaths: ANKETA_MODAL_OBJECT_PATH_SET,
 			anketaReadOnly: effectiveReadOnly,
 		};
 	}, [
-		engine.displayFormData,
+		engine.formData,
 		effectiveReadOnly,
 		workflow,
 		completeMainSection,
@@ -295,12 +247,12 @@ export function AnketaFormShell({
 							{errorMessage}
 						</Typography>
 					) : (
-						<V2AnketaSchemaForm
-							source={source}
+						<V2AnketaFormWithModals
 							engine={engine}
 							readOnly={effectiveReadOnly}
 							hiddenTopLevelFields={HIDDEN_TOP_LEVEL_FIELDS}
 							anketaFormContext={anketaFormContext}
+							showUncertaintySlot
 						/>
 					)
 				}
@@ -315,15 +267,6 @@ export function AnketaFormShell({
 					)
 				}
 			/>
-			{errorMessage ? null : (
-				<AnketaFormModals
-					formData={engine.formData}
-					previewSchema={engine.previewSchema}
-					previewUiSchema={engine.previewUiSchema}
-					onFormDataChange={engine.setFormData}
-					controlsRef={modalControlsRef}
-				/>
-			)}
 			<AnketaGlobalCompleteDialog
 				open={completeDialogOpen}
 				phase={completeDialogPhase}

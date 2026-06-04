@@ -6,6 +6,11 @@ import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import { ListEmptyPlaceholder } from "./ListEmptyPlaceholder";
+import {
+	ANKETA_MOLECULE_TEST_IDS,
+	anketaMoleculeTestIdForPath,
+} from "./testIds";
 import { readAnketaFormContext } from "../utils/anketaFormContext";
 import {
 	getObjectAtPath,
@@ -33,11 +38,16 @@ export function AnketaArchObjectPanel({
 	if (!columns) return null;
 
 	const addLabel = `Добавить ${sectionTitle.toLowerCase()}`;
+	const panelTestId = anketaMoleculeTestIdForPath(
+		ANKETA_MOLECULE_TEST_IDS.archObjectPanel,
+		pathKey,
+	);
 
 	return (
-		<Box sx={{ minWidth: 0 }}>
+		<Box data-test-id={panelTestId} sx={{ minWidth: 0 }}>
 			{filled ? (
 				<Box
+					data-test-id={`${panelTestId}--row`}
 					sx={{
 						display: "grid",
 						gridTemplateColumns: `repeat(${columns.length}, 1fr) 72px`,
@@ -75,6 +85,7 @@ export function AnketaArchObjectPanel({
 							size="small"
 							disabled={readOnly}
 							title="Редактировать"
+							data-test-id={`${panelTestId}--edit`}
 							onClick={() => ctx.openAnketaModal?.(pathKey)}
 						>
 							<EditOutlinedIcon fontSize="small" />
@@ -83,6 +94,7 @@ export function AnketaArchObjectPanel({
 							size="small"
 							disabled={readOnly}
 							title="Удалить"
+							data-test-id={`${panelTestId}--delete`}
 							onClick={() => ctx.deleteAnketaObject?.(pathKey)}
 						>
 							<DeleteOutlineIcon fontSize="small" />
@@ -90,15 +102,16 @@ export function AnketaArchObjectPanel({
 					</Stack>
 				</Box>
 			) : (
-				<Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+				<ListEmptyPlaceholder data-test-id={`${panelTestId}--empty`}>
 					Нет записей
-				</Typography>
+				</ListEmptyPlaceholder>
 			)}
 			{!readOnly ? (
-				<Box mt={2}>
+				<Box mt={2} data-test-id={`${panelTestId}--add-wrap`}>
 					<Button
 						variant="contained"
 						startIcon={<AddIcon />}
+						data-test-id={`${panelTestId}--add`}
 						onClick={() => ctx.openAnketaModal?.(pathKey)}
 						sx={{ textTransform: "uppercase", fontWeight: 600 }}
 					>

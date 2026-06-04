@@ -6,8 +6,14 @@ import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import { ListEmptyPlaceholder } from "./ListEmptyPlaceholder";
+import {
+	ANKETA_MOLECULE_TEST_IDS,
+	anketaMoleculeTestIdForPath,
+} from "./testIds";
 import { readAnketaFormContext } from "../utils/anketaFormContext";
 import {
+	arrayTableShowsRowActions,
 	getArrayAtPath,
 	getArrayTableColumns,
 	type AnketaArrayTableColumn,
@@ -18,8 +24,12 @@ type Props = {
 	sectionTitle: string;
 };
 
-function gridTemplate(columns: AnketaArrayTableColumn[]): string {
-	return `${columns.map((col) => col.width ?? "1fr").join(" ")} 72px`;
+function gridTemplate(
+	columns: AnketaArrayTableColumn[],
+	showRowActions: boolean,
+): string {
+	const cols = columns.map((col) => col.width ?? "1fr").join(" ");
+	return showRowActions ? `${cols} 72px` : cols;
 }
 
 function CellValue({
@@ -59,7 +69,9 @@ function CellValue({
 				>
 					{value}
 				</Typography>
-				<OpenInNewIcon sx={{ fontSize: 16, color: "primary.main", flexShrink: 0 }} />
+				<OpenInNewIcon
+					sx={{ fontSize: 16, color: "primary.main", flexShrink: 0 }}
+				/>
 			</Stack>
 		);
 	}
@@ -68,7 +80,11 @@ function CellValue({
 		<Typography
 			variant="body2"
 			color={value === "—" ? "text.disabled" : "text.primary"}
-			sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+			sx={{
+				overflow: "hidden",
+				textOverflow: "ellipsis",
+				whiteSpace: "nowrap",
+			}}
 		>
 			{value}
 		</Typography>
@@ -84,30 +100,54 @@ export function AnketaModalArrayTable({
 	const columns = getArrayTableColumns(pathKey);
 	const items = getArrayAtPath(ctx.formData ?? {}, pathKey);
 	const readOnly = ctx.anketaReadOnly;
+	const showRowActions = arrayTableShowsRowActions(pathKey);
 
 	if (!columns) return null;
 
+	const tableTestId = anketaMoleculeTestIdForPath(
+		ANKETA_MOLECULE_TEST_IDS.arrayTable,
+		pathKey,
+	);
+
 	return (
-		<Box sx={{ minWidth: 0 }}>
-			<Stack direction="row" spacing={0.75} alignItems="baseline" mb={1.5}>
-				<Typography variant="subtitle1" fontWeight={700}>
+		<Box data-test-id={tableTestId} sx={{ minWidth: 0 }}>
+			<Stack
+				direction="row"
+				spacing={0.75}
+				alignItems="baseline"
+				mb={1.5}
+				data-test-id={`${tableTestId}--header`}
+			>
+				<Typography
+					variant="subtitle1"
+					fontWeight={700}
+					data-test-id={ANKETA_MOLECULE_TEST_IDS.arrayTableTitle}
+				>
 					{sectionTitle}
 				</Typography>
-				<Typography variant="body2" color="text.secondary">
+				<Typography
+					variant="body2"
+					color="text.secondary"
+					data-test-id={ANKETA_MOLECULE_TEST_IDS.arrayTableCount}
+				>
 					({items.length})
 				</Typography>
 			</Stack>
 
 			{items.length > 0 ? (
-				<Box sx={{ minWidth: 0, overflowX: "auto" }}>
+				<Box
+					data-test-id={`${tableTestId}--scroll`}
+					sx={{ minWidth: 0, overflowX: "auto" }}
+				>
 					<Box
+						data-test-id={`${tableTestId}--columns-header`}
 						sx={{
 							display: "grid",
-							gridTemplateColumns: gridTemplate(columns),
+							gridTemplateColumns: gridTemplate(columns, showRowActions),
 							gap: 1,
 							px: 1.5,
 							py: 0.75,
-							minWidth: 720,
+							minWidth: showRowActions ? 720 : 640,
 						}}
 					>
 						{columns.map((column) => (
@@ -120,16 +160,24 @@ export function AnketaModalArrayTable({
 								{column.header}
 							</Typography>
 						))}
-						<Box />
+						{showRowActions ? <Box /> : null}
 					</Box>
 
-					<Stack spacing={1} sx={{ minWidth: 720 }}>
+					<Stack
+						spacing={1}
+						data-test-id={`${tableTestId}--body`}
+						sx={{ minWidth: showRowActions ? 720 : 640 }}
+					>
 						{items.map((item, index) => (
 							<Box
 								key={`${pathKey}-${index}`}
+								data-test-id={`${tableTestId}--row--${index}`}
 								sx={{
 									display: "grid",
-									gridTemplateColumns: gridTemplate(columns),
+									gridTemplateColumns: gridTemplate(
+										columns,
+										showRowActions,
+									),
 									gap: 1,
 									alignItems: "center",
 									px: 1.5,
@@ -151,34 +199,46 @@ export function AnketaModalArrayTable({
 										}
 									/>
 								))}
-								<Stack direction="row" spacing={0.25} justifyContent="flex-end">
-									<IconButton
-										size="small"
-										disabled={readOnly}
-										title="Редактировать"
-										onClick={() => ctx.openAnketaModal?.(pathKey, index)}
+								{showRowActions ? (
+									<Stack
+										direction="row"
+										spacing={0.25}
+										justifyContent="flex-end"
 									>
-										<EditOutlinedIcon fontSize="small" />
-									</IconButton>
-									<IconButton
-										size="small"
-										disabled={readOnly}
-										title="Удалить"
-										onClick={() =>
-											ctx.deleteAnketaArrayItem?.(pathKey, index)
-										}
-									>
-										<DeleteOutlineIcon fontSize="small" />
-									</IconButton>
-								</Stack>
+										<IconButton
+											size="small"
+											disabled={readOnly}
+											title="Редактировать"
+											data-test-id={`${tableTestId}--edit--${index}`}
+											onClick={() =>
+												ctx.openAnketaModal?.(pathKey, index)
+											}
+										>
+											<EditOutlinedIcon fontSize="small" />
+										</IconButton>
+										<IconButton
+											size="small"
+											disabled={readOnly}
+											title="Удалить"
+											data-test-id={`${tableTestId}--delete--${index}`}
+											onClick={() =>
+												ctx.deleteAnketaArrayItem?.(pathKey, index)
+											}
+										>
+											<DeleteOutlineIcon fontSize="small" />
+										</IconButton>
+									</Stack>
+								) : null}
 							</Box>
 						))}
 					</Stack>
 				</Box>
 			) : (
-				<Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+				<ListEmptyPlaceholder
+					data-test-id={`${tableTestId}--empty`}
+				>
 					Нет записей
-				</Typography>
+				</ListEmptyPlaceholder>
 			)}
 		</Box>
 	);

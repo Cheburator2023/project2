@@ -1,4 +1,5 @@
-import type { AnketaModalArrayPath } from "./anketaFormModalPaths";
+import type { AnketaCompactArrayTablePath } from "./anketaFormModalPaths";
+import { isReadonlyArrayTablePath } from "./anketaFormModalPaths";
 
 export type AnketaArrayTableColumn = {
 	key: string;
@@ -36,8 +37,76 @@ function formatNameLabel(raw: string): string {
 	return raw;
 }
 
+const TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
+	{
+		key: "name",
+		header: "Задача",
+		width: "1.5fr",
+		link: true,
+		render: (item) => text(item, "name"),
+	},
+	{
+		key: "reason",
+		header: "Причина",
+		width: "1.4fr",
+		render: (item) => text(item, "reason"),
+	},
+	{
+		key: "estimate",
+		header: "Оценка, чд",
+		width: "0.8fr",
+		render: (item) => text(item, "estimateHoursPerDay"),
+	},
+	{
+		key: "coefficient",
+		header: "Коэф.",
+		width: "0.7fr",
+		render: (item) => text(item, "coefficient"),
+	},
+	{
+		key: "total",
+		header: "Итог",
+		width: "0.7fr",
+		render: (item) => text(item, "total"),
+	},
+];
+
+const ATYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
+	{
+		key: "name",
+		header: "Название",
+		width: "1.5fr",
+		link: true,
+		render: (item) => text(item, "name"),
+	},
+	{
+		key: "reason",
+		header: "Причина",
+		width: "1.5fr",
+		render: (item) => text(item, "reason"),
+	},
+	{
+		key: "estimate",
+		header: "Оценка, чд",
+		width: "0.8fr",
+		render: (item) => text(item, "estimateHoursPerDay"),
+	},
+	{
+		key: "coefficient",
+		header: "Коэф.",
+		width: "0.7fr",
+		render: (item) => text(item, "coefficient"),
+	},
+	{
+		key: "total",
+		header: "Итог",
+		width: "0.7fr",
+		render: (item) => text(item, "total"),
+	},
+];
+
 export const ANKETA_ARRAY_TABLE_COLUMNS: Record<
-	AnketaModalArrayPath,
+	AnketaCompactArrayTablePath,
 	AnketaArrayTableColumn[]
 > = {
 	"detailInfo.sourceSystems": [
@@ -276,67 +345,18 @@ export const ANKETA_ARRAY_TABLE_COLUMNS: Record<
 			render: (item) => text(item, "role"),
 		},
 	],
-	"streamModelControl.atypicalTasks": [
-		{
-			key: "name",
-			header: "Название",
-			width: "1.5fr",
-			link: true,
-			render: (item) => text(item, "name"),
-		},
-		{
-			key: "reason",
-			header: "Причина",
-			width: "1.5fr",
-			render: (item) => text(item, "reason"),
-		},
-		{
-			key: "estimate",
-			header: "Оценка, чд",
-			width: "0.8fr",
-			render: (item) => text(item, "estimateHoursPerDay"),
-		},
-		{
-			key: "coefficient",
-			header: "Коэф.",
-			width: "0.7fr",
-			render: (item) => text(item, "coefficient"),
-		},
-		{
-			key: "total",
-			header: "Итог",
-			width: "0.7fr",
-			render: (item) => text(item, "total"),
-		},
-	],
-	"streamMlPlatform.atypicalTasks": [
-		{
-			key: "name",
-			header: "Название",
-			width: "1.5fr",
-			link: true,
-			render: (item) => text(item, "name"),
-		},
-		{
-			key: "reason",
-			header: "Причина",
-			width: "1.5fr",
-			render: (item) => text(item, "reason"),
-		},
-		{
-			key: "estimate",
-			header: "Оценка, чд",
-			width: "0.8fr",
-			render: (item) => text(item, "estimateHoursPerDay"),
-		},
-		{
-			key: "total",
-			header: "Итог",
-			width: "0.7fr",
-			render: (item) => text(item, "total"),
-		},
-	],
+	"detailInfo.detailTypicalTasks": TYPICAL_WORK_COLUMNS,
+	"detailInfo.detailAtypicalTasks": ATYPICAL_WORK_COLUMNS,
+	"streamDataSources.sourceTypicalTasks": TYPICAL_WORK_COLUMNS,
+	"streamModelControl.control.controlTypicalTasks": TYPICAL_WORK_COLUMNS,
+	"streamMlPlatform.typicalTasks": TYPICAL_WORK_COLUMNS,
+	"streamModelControl.atypicalTasks": ATYPICAL_WORK_COLUMNS,
+	"streamMlPlatform.atypicalTasks": ATYPICAL_WORK_COLUMNS,
 };
+
+export function arrayTableShowsRowActions(path: string): boolean {
+	return !isReadonlyArrayTablePath(path);
+}
 
 export function getArrayTableColumns(
 	path: string,

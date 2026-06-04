@@ -32,14 +32,14 @@ export function ArchComponentDevOutline({
 	archComponent: V2ArchComponentType | null | undefined;
 	children: ReactNode;
 }) {
-	if (!ARCH_DEV_OUTLINE_ENABLED || !archComponent) {
+	if (!archComponent) {
 		return <>{children}</>;
 	}
 
 	const color = ARCH_COMPONENT_COLORS[archComponent];
 	const label = V2_ARCH_COMPONENT_LABELS[archComponent];
 
-	return (
+	return !ARCH_DEV_OUTLINE_ENABLED ? (
 		<Box
 			sx={{
 				position: "relative",
@@ -75,6 +75,17 @@ export function ArchComponentDevOutline({
 			>
 				◆ Арх. компонент · {label}
 			</Box>
+			{children}
+		</Box>
+	) : (
+		<Box
+			sx={{
+				position: "relative",
+				border: `2px dashed #00000014`,
+				borderRadius: 2,
+				p: "20px",
+			}}
+		>
 			{children}
 		</Box>
 	);

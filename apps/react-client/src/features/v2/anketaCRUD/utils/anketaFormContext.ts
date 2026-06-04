@@ -12,6 +12,8 @@ export type AnketaFormContextValue = {
 	deleteAnketaArrayItem?: (path: string, index: number) => void;
 	deleteAnketaObject?: (path: string) => void;
 	anketaModalArrayPaths?: ReadonlySet<string>;
+	/** Массивы с компактной таблицей (в т.ч. типовые работы только для чтения). */
+	anketaCompactArrayTablePaths?: ReadonlySet<string>;
 	anketaModalObjectPaths?: ReadonlySet<string>;
 	anketaReadOnly?: boolean;
 	workflow?: V2AnketaWorkflowDto;

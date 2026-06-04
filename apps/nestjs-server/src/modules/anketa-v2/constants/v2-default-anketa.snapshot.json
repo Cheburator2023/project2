@@ -12,10 +12,7 @@
 					"globalStatus": {
 						"type": "string",
 						"title": "Глобальный статус",
-						"enum": [
-							"Черновик",
-							"Заполнено"
-						],
+						"enum": ["Черновик", "Заполнено"],
 						"default": "Черновик",
 						"readOnly": true
 					},
@@ -26,47 +23,27 @@
 						"properties": {
 							"generalInfo": {
 								"type": "string",
-								"enum": [
-									"Создано",
-									"В работе",
-									"Заполнено"
-								],
+								"enum": ["Создано", "В работе", "Заполнено"],
 								"default": "Создано"
 							},
 							"detailInfo": {
 								"type": "string",
-								"enum": [
-									"Создано",
-									"В работе",
-									"Заполнено"
-								],
+								"enum": ["Создано", "В работе", "Заполнено"],
 								"default": "Создано"
 							},
 							"streamDataSources": {
 								"type": "string",
-								"enum": [
-									"Создано",
-									"В работе",
-									"Заполнено"
-								],
+								"enum": ["Создано", "В работе", "Заполнено"],
 								"default": "Создано"
 							},
 							"streamMlPlatform": {
 								"type": "string",
-								"enum": [
-									"Создано",
-									"В работе",
-									"Заполнено"
-								],
+								"enum": ["Создано", "В работе", "Заполнено"],
 								"default": "Создано"
 							},
 							"streamModelControl": {
 								"type": "string",
-								"enum": [
-									"Создано",
-									"В работе",
-									"Заполнено"
-								],
+								"enum": ["Создано", "В работе", "Заполнено"],
 								"default": "Создано"
 							}
 						}
@@ -93,10 +70,7 @@
 					"status": {
 						"type": "string",
 						"title": "Статус",
-						"enum": [
-							"Активная",
-							"Архив"
-						],
+						"enum": ["Активная", "Архив"],
 						"default": "Активная"
 					}
 				}
@@ -137,42 +111,27 @@
 					"createIS": {
 						"type": "string",
 						"title": "Создание ИС",
-						"enum": [
-							"Требуется",
-							"Не требуется"
-						]
+						"enum": ["Требуется", "Не требуется"]
 					},
 					"createService": {
 						"type": "string",
 						"title": "Требуется создание сервиса",
-						"enum": [
-							"Требуется",
-							"Не требуется"
-						]
+						"enum": ["Требуется", "Не требуется"]
 					},
 					"prePromEval": {
 						"type": "string",
 						"title": "Оценка реализации на пре-проме (MVP/Прототип)",
-						"enum": [
-							"Требуется",
-							"Не требуется"
-						]
+						"enum": ["Требуется", "Не требуется"]
 					},
 					"prodNeed": {
 						"type": "string",
 						"title": "Определение необходимости промышленной реализации",
-						"enum": [
-							"Требуется",
-							"Не требуется"
-						]
+						"enum": ["Требуется", "Не требуется"]
 					},
 					"integrEval": {
 						"type": "string",
 						"title": "Оценка новых интеграционных решений",
-						"enum": [
-							"Требуется",
-							"Не требуется"
-						]
+						"enum": ["Требуется", "Не требуется"]
 					},
 					"overallUncertainty": {
 						"type": "string",
@@ -182,10 +141,7 @@
 					"pilotNeed": {
 						"type": "string",
 						"title": "Необходимость пилота",
-						"enum": [
-							"Требуется MVP",
-							"Не требуется"
-						]
+						"enum": ["Требуется MVP", "Не требуется"]
 					},
 					"modelService": {
 						"type": "object",
@@ -194,40 +150,19 @@
 							"workType": {
 								"type": "string",
 								"title": "Тип работ",
-								"enum": [
-									"Разработка",
-									"Доработка",
-									"Настройка"
-								]
+								"enum": ["Разработка", "Доработка", "Настройка"]
 							},
 							"modelClass": {
 								"type": "string",
 								"title": "Класс моделей",
-								"enum": [
-									"1",
-									"2",
-									"3",
-									"4",
-									"5",
-									"6",
-									"7",
-									"8",
-									"9"
-								]
+								"enum": ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
 							},
 							"controlTypes": {
 								"type": "array",
 								"title": "Вид контроля",
 								"items": {
 									"type": "string",
-									"enum": [
-										"КД",
-										"ТМ",
-										"ОК",
-										"АК",
-										"КМЗ",
-										"ОВ"
-									]
+									"enum": ["КД", "ТМ", "ОК", "АК", "КМЗ", "ОВ"]
 								},
 								"uniqueItems": true
 							},
@@ -255,42 +190,27 @@
 							"pkRecalibration": {
 								"type": "string",
 								"title": "ПК: Рекалибровка",
-								"enum": [
-									"Да",
-									"Нет"
-								]
+								"enum": ["Да", "Нет"]
 							},
 							"pkOtherChannel": {
 								"type": "string",
 								"title": "ПК: Использование в другом канале",
-								"enum": [
-									"Да",
-									"Нет"
-								]
+								"enum": ["Да", "Нет"]
 							},
 							"pkRework": {
 								"type": "string",
 								"title": "ПК: Переработка существующей",
-								"enum": [
-									"Да",
-									"Нет"
-								]
+								"enum": ["Да", "Нет"]
 							},
 							"pkRegulatory": {
 								"type": "string",
 								"title": "ПК: Модель ПВР/Регуляторная",
-								"enum": [
-									"Да",
-									"Нет"
-								]
+								"enum": ["Да", "Нет"]
 							},
 							"pkNewType": {
 								"type": "string",
 								"title": "ПК: Новый тип модели",
-								"enum": [
-									"Да",
-									"Нет"
-								]
+								"enum": ["Да", "Нет"]
 							},
 							"pirmBlock": {
 								"type": "object",
@@ -299,82 +219,52 @@
 									"connectISRepo": {
 										"type": "string",
 										"title": "Подключение ИС к РЕПО",
-										"enum": [
-											"Да",
-											"Нет"
-										]
+										"enum": ["Да", "Нет"]
 									},
 									"interface": {
 										"type": "string",
 										"title": "Интерфейс",
-										"enum": [
-											"Да",
-											"Нет"
-										]
+										"enum": ["Да", "Нет"]
 									},
 									"businessFunc": {
 										"type": "string",
 										"title": "Доработка бизнес-функционала",
-										"enum": [
-											"Да",
-											"Нет"
-										]
+										"enum": ["Да", "Нет"]
 									},
 									"systemFunc": {
 										"type": "string",
 										"title": "Функционал системы",
-										"enum": [
-											"Да",
-											"Нет"
-										]
+										"enum": ["Да", "Нет"]
 									},
 									"visualization": {
 										"type": "string",
 										"title": "Визуализация и аналитика",
-										"enum": [
-											"Да",
-											"Нет"
-										]
+										"enum": ["Да", "Нет"]
 									},
 									"clusterExpansion": {
 										"type": "string",
 										"title": "Расширение кластера",
-										"enum": [
-											"Да",
-											"Нет"
-										]
+										"enum": ["Да", "Нет"]
 									},
 									"newModel": {
 										"type": "string",
 										"title": "Новая модель",
-										"enum": [
-											"Да",
-											"Нет"
-										]
+										"enum": ["Да", "Нет"]
 									},
 									"loadTesting": {
 										"type": "string",
 										"title": "Требуется НТ",
-										"enum": [
-											"Да",
-											"Нет"
-										]
+										"enum": ["Да", "Нет"]
 									},
 									"krsUtilization": {
 										"type": "string",
 										"title": "КРС утилизации серверов",
-										"enum": [
-											"Да",
-											"Нет"
-										]
+										"enum": ["Да", "Нет"]
 									},
 									"logging": {
 										"type": "string",
 										"title": "Логирование",
-										"enum": [
-											"Да",
-											"Нет"
-										]
+										"enum": ["Да", "Нет"]
 									}
 								}
 							}
@@ -383,10 +273,7 @@
 					"channels": {
 						"type": "string",
 						"title": "Каналы внедрения (legacy)",
-						"enum": [
-							"Требуется",
-							"Не требуется"
-						]
+						"enum": ["Требуется", "Не требуется"]
 					}
 				}
 			},
@@ -397,11 +284,7 @@
 					"initiativeTimeline": {
 						"type": "string",
 						"title": "Сроки инициативы",
-						"enum": [
-							"Краткосрочная",
-							"Среднесрочная",
-							"Долгосрочная"
-						]
+						"enum": ["Краткосрочная", "Среднесрочная", "Долгосрочная"]
 					},
 					"initiativeCost": {
 						"type": "number",
@@ -418,101 +301,57 @@
 							"businessComplexity": {
 								"type": "string",
 								"title": "Изменение, недостаточная проработка или сложности бизнеса",
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								]
+								"enum": ["Низкий", "Средний", "Высокий"]
 							},
 							"defectsInSolution": {
 								"type": "string",
 								"title": "Наличие дефектов во внедряемом решении / ПО в рамках",
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								]
+								"enum": ["Низкий", "Средний", "Высокий"]
 							},
 							"adjacentProjectsImpact": {
 								"type": "string",
 								"title": "Негативное влияние смежных проектов на показатели проекта",
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								]
+								"enum": ["Низкий", "Средний", "Высокий"]
 							},
 							"laborCostIncrease": {
 								"type": "string",
 								"title": "Увеличение трудозатрат проекта по причине недостаточной",
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								]
+								"enum": ["Низкий", "Средний", "Высокий"]
 							},
 							"thirdPartyNegligence": {
 								"type": "string",
 								"title": "Недобросовестное исполнение услуг со стороны привлечённых",
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								]
+								"enum": ["Низкий", "Средний", "Высокий"]
 							},
 							"staffShortage": {
 								"type": "string",
 								"title": "Отсутствие квалифицированного персонала или ошибок",
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								]
+								"enum": ["Низкий", "Средний", "Высокий"]
 							},
 							"sanctions": {
 								"type": "string",
 								"title": "Введение санкционных мер и других ограничений",
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								]
+								"enum": ["Низкий", "Средний", "Высокий"]
 							},
 							"controlProceduresLack": {
 								"type": "string",
 								"title": "Недостаток или отсутствие контрольных процедур",
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								]
+								"enum": ["Низкий", "Средний", "Высокий"]
 							},
 							"regulatoryChanges": {
 								"type": "string",
 								"title": "Изменение регуляторных требований",
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								]
+								"enum": ["Низкий", "Средний", "Высокий"]
 							},
 							"isNotUsedAfterProject": {
 								"type": "string",
 								"title": "Неиспользование ИС после завершения проекта",
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								]
+								"enum": ["Низкий", "Средний", "Высокий"]
 							},
 							"itArchitectureChanges": {
 								"type": "string",
 								"title": "Изменения целевой ИТ архитектуры Банка",
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								]
+								"enum": ["Низкий", "Средний", "Высокий"]
 							}
 						}
 					}
@@ -522,15 +361,38 @@
 				"type": "object",
 				"title": "Детальная информация",
 				"properties": {
+					"parameters": {
+						"type": "object",
+						"title": "Параметры",
+						"properties": {
+							"streamDigitalAgents": {
+								"type": "boolean",
+								"title": "Стрим Цифровые агенты",
+								"default": false
+							},
+							"streamStreamingData": {
+								"type": "boolean",
+								"title": "Стрим Потоковые данные",
+								"default": false
+							},
+							"streamsOutsideDADM": {
+								"type": "boolean",
+								"title": "Стримы вне ДАДМ",
+								"default": false
+							},
+							"streamNames": {
+								"type": "string",
+								"title": "Названия стримов"
+							}
+						}
+					},
 					"sourceSystems": {
 						"type": "array",
 						"title": "Системы источники",
 						"items": {
 							"type": "object",
 							"title": "Система источник",
-							"required": [
-								"name"
-							],
+							"required": ["name"],
 							"properties": {
 								"name": {
 									"type": "string",
@@ -539,10 +401,7 @@
 								"type": {
 									"type": "string",
 									"title": "Тип",
-									"enum": [
-										"Внутренний",
-										"Внешний"
-									]
+									"enum": ["Внутренний", "Внешний"]
 								},
 								"domainComplexity": {
 									"type": "string",
@@ -569,27 +428,17 @@
 								"daptRegistry": {
 									"type": "string",
 									"title": "Реестр в ДАПТ",
-									"enum": [
-										"Есть",
-										"Нет"
-									]
+									"enum": ["Есть", "Нет"]
 								},
 								"requirements": {
 									"type": "string",
 									"title": "Требования",
-									"enum": [
-										"Понятны",
-										"Не понятны",
-										"Рисковые"
-									]
+									"enum": ["Понятны", "Не понятны", "Рисковые"]
 								},
 								"additionalUncertainty": {
 									"type": "string",
 									"title": "Доп. неопределённость источника",
-									"enum": [
-										"Нет",
-										"Да"
-									]
+									"enum": ["Нет", "Да"]
 								},
 								"integrationReadiness": {
 									"type": "string",
@@ -603,18 +452,12 @@
 								"dataCoeff": {
 									"type": "string",
 									"title": "Коэф. данных",
-									"enum": [
-										"Нет",
-										"Да"
-									]
+									"enum": ["Нет", "Да"]
 								},
 								"nda": {
 									"type": "string",
 									"title": "НДА",
-									"enum": [
-										"Нет",
-										"Да"
-									]
+									"enum": ["Нет", "Да"]
 								},
 								"manualParameters": {
 									"type": "array",
@@ -667,54 +510,32 @@
 							"workType": {
 								"type": "string",
 								"title": "Тип работ",
-								"enum": [
-									"Разработка",
-									"Доработка",
-									"Настройка"
-								]
+								"enum": ["Разработка", "Доработка", "Настройка"]
 							},
 							"autoCertification": {
 								"type": "string",
 								"title": "Автосертификация",
-								"enum": [
-									"Да",
-									"Нет"
-								]
+								"enum": ["Да", "Нет"]
 							},
 							"featureStore": {
 								"type": "string",
 								"title": "Feature Store",
-								"enum": [
-									"Да",
-									"Нет"
-								]
+								"enum": ["Да", "Нет"]
 							},
 							"confidentialData": {
 								"type": "string",
 								"title": "Конфиденциальные данные",
-								"enum": [
-									"Да",
-									"Нет"
-								]
+								"enum": ["Да", "Нет"]
 							},
 							"deliveryMode": {
 								"type": "string",
 								"title": "Данные заказчику",
-								"enum": [
-									"Напрямую",
-									"Опосредованно",
-									"Неизвестно"
-								]
+								"enum": ["Напрямую", "Опосредованно", "Неизвестно"]
 							},
 							"implComplexity": {
 								"type": "string",
 								"title": "Сложность реализации",
-								"enum": [
-									"Низкая",
-									"Средняя",
-									"Высокая",
-									"Неизвестно"
-								]
+								"enum": ["Низкая", "Средняя", "Высокая", "Неизвестно"]
 							}
 						}
 					},
@@ -725,11 +546,7 @@
 							"workType": {
 								"type": "string",
 								"title": "Тип работ",
-								"enum": [
-									"Разработка",
-									"Доработка",
-									"Настройка"
-								]
+								"enum": ["Разработка", "Доработка", "Настройка"]
 							},
 							"integrationReadiness": {
 								"type": "string",
@@ -743,19 +560,12 @@
 							"metricsCount": {
 								"type": "string",
 								"title": "Количество метрик",
-								"enum": [
-									"До 20",
-									"20–50",
-									"Более 50"
-								]
+								"enum": ["До 20", "20–50", "Более 50"]
 							},
 							"qualityControl": {
 								"type": "string",
 								"title": "Контроль качества",
-								"enum": [
-									"Да",
-									"Нет"
-								]
+								"enum": ["Да", "Нет"]
 							}
 						}
 					},
@@ -766,11 +576,7 @@
 							"workType": {
 								"type": "string",
 								"title": "Тип работ",
-								"enum": [
-									"Обучение",
-									"Дообучение",
-									"Калибровка"
-								]
+								"enum": ["Обучение", "Дообучение", "Калибровка"]
 							},
 							"modelsCount": {
 								"type": "integer",
@@ -790,37 +596,22 @@
 							"algorithmCoeff": {
 								"type": "string",
 								"title": "Коэф. алгоритма",
-								"enum": [
-									"×0.75",
-									"×1.00",
-									"×1.25",
-									"×1.50"
-								]
+								"enum": ["×0.75", "×1.00", "×1.25", "×1.50"]
 							},
 							"autoML": {
 								"type": "string",
 								"title": "AutoML",
-								"enum": [
-									"Не требуется",
-									"Требуется"
-								]
+								"enum": ["Не требуется", "Требуется"]
 							},
 							"specialist": {
 								"type": "string",
 								"title": "Специалист",
-								"enum": [
-									"+10%",
-									"+20%",
-									"+0%"
-								]
+								"enum": ["+10%", "+20%", "+0%"]
 							},
 							"cascadeEnsemble": {
 								"type": "string",
 								"title": "Каскад/ансамбль",
-								"enum": [
-									"Да",
-									"Нет"
-								]
+								"enum": ["Да", "Нет"]
 							},
 							"modelsList": {
 								"type": "array",
@@ -828,9 +619,7 @@
 								"items": {
 									"type": "object",
 									"title": "Модель",
-									"required": [
-										"name"
-									],
+									"required": ["name"],
 									"properties": {
 										"name": {
 											"type": "string",
@@ -870,19 +659,12 @@
 										"autoML": {
 											"type": "string",
 											"title": "Auto ML",
-											"enum": [
-												"Да",
-												"Нет"
-											]
+											"enum": ["Да", "Нет"]
 										},
 										"role": {
 											"type": "string",
 											"title": "Роль",
-											"enum": [
-												"Оркестратор",
-												"Подчинённая",
-												"Независимая"
-											]
+											"enum": ["Оркестратор", "Подчинённая", "Независимая"]
 										},
 										"trainingSources": {
 											"type": "array",
@@ -905,7 +687,7 @@
 					},
 					"detailTypicalTasks": {
 						"type": "array",
-						"title": "Типовые работы (детальная информация)",
+						"title": "Типовые работы",
 						"readOnly": true,
 						"items": {
 							"type": "object",
@@ -941,13 +723,11 @@
 					},
 					"detailAtypicalTasks": {
 						"type": "array",
-						"title": "Нетиповые работы (детальная информация)",
+						"title": "Нетиповые работы",
 						"items": {
 							"type": "object",
 							"title": "Нетиповая задача",
-							"required": [
-								"name"
-							],
+							"required": ["name"],
 							"properties": {
 								"name": {
 									"type": "string",
@@ -1103,18 +883,12 @@
 							"cloudOneTimeLoad": {
 								"type": "string",
 								"title": "Разовая загрузка «Облако»",
-								"enum": [
-									"Да",
-									"Нет"
-								]
+								"enum": ["Да", "Нет"]
 							},
 							"stakeholdersKnown": {
 								"type": "string",
 								"title": "Известны ли все стейкхолдеры",
-								"enum": [
-									"Да",
-									"Нет"
-								]
+								"enum": ["Да", "Нет"]
 							},
 							"tisChangeVolume": {
 								"type": "string",
@@ -1130,18 +904,12 @@
 							"studyRegulations": {
 								"type": "string",
 								"title": "Изучение регламентов",
-								"enum": [
-									"Да",
-									"Нет"
-								]
+								"enum": ["Да", "Нет"]
 							},
 							"reapproveArtifact": {
 								"type": "string",
 								"title": "Пересогласование артефакта",
-								"enum": [
-									"Да",
-									"Нет"
-								]
+								"enum": ["Да", "Нет"]
 							}
 						}
 					},
@@ -1194,10 +962,7 @@
 							"contourRegion": {
 								"type": "string",
 								"title": "Контуры (region/inno.local)",
-								"enum": [
-									"Да",
-									"Нет"
-								]
+								"enum": ["Да", "Нет"]
 							},
 							"userScenarios": {
 								"type": "integer",
@@ -1207,19 +972,12 @@
 							"logStructureCertainty": {
 								"type": "string",
 								"title": "Определённость структуры логов",
-								"enum": [
-									"Высокая",
-									"Средняя",
-									"Низкая"
-								]
+								"enum": ["Высокая", "Средняя", "Низкая"]
 							},
 							"serviceControlInsteadOfModels": {
 								"type": "string",
 								"title": "Контроль работы сервиса вместо моделей",
-								"enum": [
-									"Да",
-									"Нет"
-								]
+								"enum": ["Да", "Нет"]
 							}
 						}
 					},
@@ -1247,14 +1005,7 @@
 								"title": "Виды контроля",
 								"items": {
 									"type": "string",
-									"enum": [
-										"КД",
-										"ТМ",
-										"ОК",
-										"АК",
-										"КМЗ",
-										"ОВ"
-									]
+									"enum": ["КД", "ТМ", "ОК", "АК", "КМЗ", "ОВ"]
 								},
 								"uniqueItems": true
 							},
@@ -1301,9 +1052,7 @@
 						"items": {
 							"type": "object",
 							"title": "Нетиповая задача",
-							"required": [
-								"name"
-							],
+							"required": ["name"],
 							"properties": {
 								"name": {
 									"type": "string",
@@ -1436,12 +1185,7 @@
 			"ui:options": {
 				"hidden": true
 			},
-			"ui:order": [
-				"id",
-				"name",
-				"version",
-				"status"
-			],
+			"ui:order": ["id", "name", "version", "status"],
 			"id": {
 				"ui:widget": "text",
 				"ui:readonly": true
@@ -1651,6 +1395,7 @@
 				"titleVariant": "h5"
 			},
 			"ui:order": [
+				"parameters",
 				"sourceSystems",
 				"dataProcess",
 				"dataMart",
@@ -1658,6 +1403,29 @@
 				"detailTypicalTasks",
 				"detailAtypicalTasks"
 			],
+			"parameters": {
+				"ui:options": {
+					"sectionRole": "flat"
+				},
+				"ui:order": [
+					"streamDigitalAgents",
+					"streamsOutsideDADM",
+					"streamStreamingData",
+					"streamNames"
+				],
+				"streamDigitalAgents": {
+					"ui:widget": "checkbox"
+				},
+				"streamStreamingData": {
+					"ui:widget": "checkbox"
+				},
+				"streamsOutsideDADM": {
+					"ui:widget": "checkbox"
+				},
+				"streamNames": {
+					"ui:widget": "text"
+				}
+			},
 			"sourceSystems": {
 				"ui:options": {
 					"orderable": false,
@@ -1919,10 +1687,7 @@
 				"workflowSectionId": "streamDataSources",
 				"defaultExpanded": false
 			},
-			"ui:order": [
-				"localParams",
-				"sourceTypicalTasks"
-			],
+			"ui:order": ["localParams", "sourceTypicalTasks"],
 			"localParams": {
 				"ui:options": {
 					"sectionRole": "subsection",
@@ -2068,11 +1833,7 @@
 				"workflowSectionId": "streamModelControl",
 				"defaultExpanded": false
 			},
-			"ui:order": [
-				"localParams",
-				"control",
-				"atypicalTasks"
-			],
+			"ui:order": ["localParams", "control", "atypicalTasks"],
 			"localParams": {
 				"ui:options": {
 					"sectionRole": "subsection",

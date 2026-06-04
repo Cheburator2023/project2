@@ -7,6 +7,7 @@ import {
 	type AccordionProps,
 } from "@mui/material";
 import type { ReactNode } from "react";
+import { ANKETA_MOLECULE_TEST_IDS } from "./testIds";
 
 export function AnketaSectionAccordion({
 	title,
@@ -22,6 +23,7 @@ export function AnketaSectionAccordion({
 } & Omit<AccordionProps, "children" | "defaultExpanded">) {
 	return (
 		<Accordion
+			data-test-id={ANKETA_MOLECULE_TEST_IDS.sectionAccordion}
 			defaultExpanded={defaultExpanded}
 			sx={{
 				width: "100%",
@@ -35,12 +37,18 @@ export function AnketaSectionAccordion({
 			}}
 			{...accordionProps}
 		>
-			<AccordionSummary expandIcon={<ExpandMoreIcon />}>
+			<AccordionSummary
+				expandIcon={<ExpandMoreIcon />}
+				data-test-id={ANKETA_MOLECULE_TEST_IDS.sectionAccordionSummary}
+			>
 				<Typography variant={titleVariant} fontWeight={titleVariant === "h5" ? 700 : 600}>
 					{title}
 				</Typography>
 			</AccordionSummary>
-			<AccordionDetails sx={{ minWidth: 0, maxWidth: "100%", overflow: "hidden" }}>
+			<AccordionDetails
+				data-test-id={ANKETA_MOLECULE_TEST_IDS.sectionAccordionDetails}
+				sx={{ minWidth: 0, maxWidth: "100%", overflow: "hidden" }}
+			>
 				{children}
 			</AccordionDetails>
 		</Accordion>

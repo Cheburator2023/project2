@@ -46,7 +46,7 @@ const renderActions = (
 	defaultActionButtonSx?: SxProps<Theme>,
 	autoClosePaused?: boolean,
 ) => (
-	<Stack direction="row" gap={0.75} alignItems="flex-end" flexWrap="wrap">
+	<Stack direction="row" gap={0.75} alignItems="center" flexWrap="wrap">
 		{actions.map((action, index) => (
 			<ToastActionControl
 				key={index}

@@ -348,8 +348,16 @@ export const Toast = ({
 				sx={[
 					{
 						width: "100%",
-						"& .MuiAlert-action": { pl: 0, py: 0.5, pr: 1 },
-						"& .MuiAlert-icon": { py: 1 },
+						alignItems: "center",
+						"& .MuiAlert-message": { py: 1, pr: 1, minWidth: 0 },
+						"& .MuiAlert-action": {
+							pl: 0,
+							py: 1,
+							pr: 1,
+							alignItems: "center",
+							mr: 0,
+						},
+						"& .MuiAlert-icon": { py: 1, alignSelf: "flex-start" },
 					},
 					...formatSx(toastDefaults?.alertSx),
 				]}

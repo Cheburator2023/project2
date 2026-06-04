@@ -6,11 +6,12 @@ import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { v2PreviewFormTemplates } from "@react-client/features/v2/admin_constructor/templates/v2PreviewFormTemplates";
 import {
 	useV2AnketaSchemaEngine,
+	type V2AnketaSchemaEngine,
 	type V2AnketaSchemaEngineSource,
 } from "../hooks/useV2AnketaSchemaEngine";
 import type { AnketaFormContextValue } from "../utils/anketaFormContext";
 import { withHiddenArchModalFields } from "../utils/anketaArchModalUiSchema";
-import { ANKETA_MODAL_ARRAY_PATHS } from "../utils/anketaFormModalPaths";
+import { ANKETA_COMPACT_ARRAY_TABLE_PATHS } from "../utils/anketaFormModalPaths";
 import { applySectionLocksToUiSchema } from "../utils/anketaSectionUiSchema";
 import { readWorkflowFromFormData, touchSectionInFormData } from "../hooks/useAnketaWorkflow";
 import type { V2AnketaMainSectionId } from "@smart-anketa/api-contract";
@@ -18,8 +19,8 @@ import type { ReactNode } from "react";
 import { useMemo } from "react";
 
 type Props = {
-	source: V2AnketaSchemaEngineSource | null;
-	engine?: ReturnType<typeof useV2AnketaSchemaEngine>;
+	source?: V2AnketaSchemaEngineSource | null;
+	engine?: V2AnketaSchemaEngine;
 	readOnly?: boolean;
 	hiddenTopLevelFields?: string[];
 	anketaFormContext?: AnketaFormContextValue;
@@ -91,9 +92,9 @@ function setNestedUiOption(
 	return next;
 }
 
-function withModalArrayFields(uiSchema: UiSchema): UiSchema {
+function withCompactArrayFields(uiSchema: UiSchema): UiSchema {
 	let next = uiSchema;
-	for (const path of ANKETA_MODAL_ARRAY_PATHS) {
+	for (const path of ANKETA_COMPACT_ARRAY_TABLE_PATHS) {
 		next = setNestedUiOption(next, path, { addable: false, removable: false });
 	}
 	return next;
@@ -128,8 +129,11 @@ export function V2AnketaSchemaForm({
 	anketaFormContext,
 	"data-test-id": dataTestId = "v2-anketa-schema-form",
 }: Props) {
-	const internalEngine = useV2AnketaSchemaEngine(engineProp ? null : source);
+	const internalEngine = useV2AnketaSchemaEngine(
+		engineProp ? null : (source ?? null),
+	);
 	const engine = engineProp ?? internalEngine;
+	const usesExternalEngine = Boolean(engineProp);
 	const disabled = readOnly || engine.readOnly;
 	const workflow = useMemo(
 		() => readWorkflowFromFormData(engine.formData),
@@ -141,7 +145,7 @@ export function V2AnketaSchemaForm({
 			engine.previewUiSchema,
 			hiddenTopLevelFields,
 		);
-		ui = withModalArrayFields(ui);
+		ui = withCompactArrayFields(ui);
 		ui = withHiddenArchModalFields(ui, engine.previewSchema);
 		ui = applySectionLocksToUiSchema(ui, workflow);
 		return {
@@ -153,17 +157,16 @@ export function V2AnketaSchemaForm({
 	const formContext = useMemo(
 		(): AnketaFormContextValue => ({
 			...anketaFormContext,
-			formData:
-				anketaFormContext?.formData ?? engine.displayFormData,
-			anketaModalArrayPaths:
-				anketaFormContext?.anketaModalArrayPaths ??
-				new Set(ANKETA_MODAL_ARRAY_PATHS),
+			formData: anketaFormContext?.formData ?? engine.formData,
+			anketaModalArrayPaths: anketaFormContext?.anketaModalArrayPaths,
+			anketaCompactArrayTablePaths:
+				anketaFormContext?.anketaCompactArrayTablePaths,
 			anketaReadOnly: readOnly || anketaFormContext?.anketaReadOnly,
 		}),
-		[anketaFormContext, readOnly, engine.displayFormData],
+		[anketaFormContext, readOnly, engine.formData],
 	);
 
-	if (!source?.templateId) {
+	if (!usesExternalEngine && !source?.templateId) {
 		return (
 			<FormNotice testId={`${dataTestId}--no-source`}>
 				Не задан шаблон схемы
@@ -171,7 +174,7 @@ export function V2AnketaSchemaForm({
 		);
 	}
 
-	if (!engine.version?.id) {
+	if (!usesExternalEngine && !engine.version?.id) {
 		return (
 			<FormNotice
 				color="warning.main"

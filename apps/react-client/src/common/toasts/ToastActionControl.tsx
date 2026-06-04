@@ -87,7 +87,12 @@ export function ToastActionControl({
 
 	if (showCountdown && hasLabel) {
 		return (
-			<Stack alignItems="flex-end" spacing={0.25} sx={{ minWidth: 88 }}>
+			<Stack
+				direction="row"
+				alignItems="center"
+				spacing={1}
+				sx={{ flexShrink: 0 }}
+			>
 				<Button
 					size="small"
 					variant="outlined"
@@ -102,7 +107,11 @@ export function ToastActionControl({
 				>
 					{action.label}
 				</Button>
-				<Typography variant="caption" color="inherit" sx={{ opacity: 0.85 }}>
+				<Typography
+					variant="caption"
+					color="inherit"
+					sx={{ opacity: 0.85, minWidth: 28, textAlign: "right" }}
+				>
 					{remainingSec} с
 				</Typography>
 			</Stack>

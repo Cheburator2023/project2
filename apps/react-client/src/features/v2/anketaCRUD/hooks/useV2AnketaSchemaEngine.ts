@@ -19,6 +19,7 @@ import { derivePreviewSchemas } from "@react-client/features/v2/admin_constructo
 import { mapCalculationResult } from "@react-client/features/v2/admin_constructor/utils/mapCalculationResult";
 import { readSummaryFromFormData } from "@react-client/features/v2/admin_constructor/utils/readSummaryFromFormData";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
+import { mergeAnketaDisplayFormData } from "../utils/mergeAnketaDisplayFormData";
 import { ensureAnketaFormDataWithWorkflow } from "./useAnketaWorkflow";
 import { useEffect, useMemo, useState } from "react";
 import type { V2LogicGraphDto } from "@smart-anketa/api-contract";
@@ -31,6 +32,8 @@ export type V2AnketaSchemaEngineSource = {
 	initialUiSchema?: Record<string, unknown>;
 	initialLogic?: V2LogicGraphDto;
 };
+
+export type V2AnketaSchemaEngine = ReturnType<typeof useV2AnketaSchemaEngine>;
 
 export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | null) {
 	const templateId = source?.templateId ?? "";
@@ -131,7 +134,14 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		[logicPreviewPack.previewUiSchema],
 	);
 
-	const displayFormData = mappedCalculation?.liveFormData ?? formData;
+	const displayFormData = useMemo(
+		() =>
+			mergeAnketaDisplayFormData(
+				formData,
+				mappedCalculation?.liveFormData,
+			),
+		[formData, mappedCalculation?.liveFormData],
+	);
 	const summary = readSummaryFromFormData(displayFormData);
 
 	return {
