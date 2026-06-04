@@ -9,12 +9,19 @@ import { alpha, useTheme } from "@mui/material/styles";
 import { useDraggable, useDroppable } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import type { ReactNode } from "react";
+import { V2_ARCH_COMPONENT_LABELS } from "@smart-anketa/api-contract";
 import {
+	getObjectItemsSchema,
 	isObjectFieldGroup,
 	resolveSchemaNode,
 } from "../../utils/schemaMutators";
 import { pointerSegments } from "../../utils/schemaPaths";
-import { FIELD_PRESETS, ruSchemaTypeLabel } from "../constants";
+import {
+	ARCH_COMPONENT_PRESETS,
+	FIELD_PRESETS,
+	type PalettePreset,
+	ruSchemaTypeLabel,
+} from "../constants";
 import { useSchemaEditor } from "../SchemaEditorContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "./PanelChrome";
@@ -30,19 +37,42 @@ import {
 	useSchemaEditorDnd,
 } from "./SchemaEditorDndProvider";
 
-function PaletteItem({ preset }: { preset: (typeof FIELD_PRESETS)[number] }) {
-	const { handleAddFieldPreset } = useSchemaEditor();
+const ARCH_CHIP_COLORS: Record<string, string> = {
+	modelService: "#7C3AED",
+	model: "#2563EB",
+	sourceSystem: "#059669",
+	dataMart: "#D97706",
+	dataProcess: "#0891B2",
+	deployChannel: "#DB2777",
+	modelControl: "#DC2626",
+};
+
+function PaletteItem({ preset }: { preset: PalettePreset }) {
+	const { handleAddFieldPresetAtParent } = useSchemaEditor();
+	const { displayOrders } = useSchemaEditorDnd();
+	const rootCount = displayOrders["schema-root"]?.length ?? 0;
 	const { ref, isDragging } = useDraggable<PaletteDragData>({
 		id: `palette-${preset.id}`,
 		type: PALETTE_DRAG_TYPE,
 		data: { type: PALETTE_DRAG_TYPE, presetId: String(preset.id) },
 	});
 
+	const isArch = preset.section === "arch";
+	const archColor = isArch ? ARCH_CHIP_COLORS[preset.chipLabel] : undefined;
+
 	return (
 		<Box
 			ref={ref}
 			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.paletteItem}
-			onDoubleClick={() => handleAddFieldPreset(preset.make())}
+			onDoubleClick={() =>
+				handleAddFieldPresetAtParent(
+					"/",
+					preset.make(),
+					rootCount,
+					preset.uiOptions,
+				)
+			}
+			title={`Перетащите или дважды щёлкните — ${preset.title}`}
 			sx={{
 				display: "flex",
 				alignItems: "center",
@@ -52,17 +82,42 @@ function PaletteItem({ preset }: { preset: (typeof FIELD_PRESETS)[number] }) {
 				mb: 0.5,
 				borderRadius: 1,
 				border: 1,
-				borderColor: "divider",
+				borderColor: isArch ? alpha(archColor ?? "primary.main", 0.45) : "divider",
 				bgcolor: isDragging ? "action.selected" : "background.paper",
 				cursor: "grab",
 				opacity: isDragging ? 0.5 : 1,
-				"&:hover": { borderColor: "primary.main", bgcolor: "action.hover" },
+				"&:hover": {
+					borderColor: isArch ? archColor : "primary.main",
+					bgcolor: "action.hover",
+				},
 			}}
 		>
-			<Typography variant="body2" sx={{ flex: 1 }}>
+			<Typography variant="body2" sx={{ flex: 1, minWidth: 0 }}>
 				{preset.title}
 			</Typography>
-			<Chip size="small" label={String(preset.id)} variant="outlined" sx={{ height: 20 }} />
+			<Chip
+				size="small"
+				label={
+					isArch
+						? (V2_ARCH_COMPONENT_LABELS[
+								preset.chipLabel as keyof typeof V2_ARCH_COMPONENT_LABELS
+							] ?? preset.chipLabel)
+						: preset.chipLabel
+				}
+				variant={isArch ? "filled" : "outlined"}
+				sx={{
+					height: 20,
+					maxWidth: 120,
+					...(isArch && archColor
+						? {
+								bgcolor: alpha(archColor, 0.12),
+								color: archColor,
+								border: `1px solid ${alpha(archColor, 0.35)}`,
+								"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem" },
+							}
+						: {}),
+				}}
+			/>
 		</Box>
 	);
 }
@@ -184,11 +239,20 @@ function SortableFieldRow({
 	const node = resolveSchemaNode(jsonSchema, segs);
 	const selected = selectedPointer === fieldPointer;
 	const isGroup = isObjectFieldGroup(node);
+	const arrayItemsObj = isGroup ? undefined : getObjectItemsSchema(node);
 
 	const childGroupId = groupIdFromParentPointer(fieldPointer);
 	const childKeys = isGroup
 		? (displayOrders[childGroupId] ??
 			Object.keys((node?.properties ?? {}) as Record<string, unknown>))
+		: [];
+
+	const itemsGroupId = arrayItemsObj
+		? groupIdFromParentPointer(`${fieldPointer}/items`)
+		: null;
+	const itemFieldKeys = itemsGroupId
+		? (displayOrders[itemsGroupId] ??
+			Object.keys((arrayItemsObj?.properties ?? {}) as Record<string, unknown>))
 		: [];
 
 	const { ref, handleRef, isDragging } = useSortable<FieldDragData>({
@@ -240,6 +304,7 @@ function SortableFieldRow({
 					sx={{ cursor: "grab", mt: -0.25 }}
 					onClick={(e) => e.stopPropagation()}
 					aria-label="Перетащить"
+					title="Перетащить"
 				>
 					<DragIndicatorIcon fontSize="small" />
 				</IconButton>
@@ -252,7 +317,7 @@ function SortableFieldRow({
 							gap: 0.75,
 						}}
 					>
-						{isGroup ? (
+						{isGroup || arrayItemsObj ? (
 							<FolderOutlinedIcon sx={{ fontSize: 16, color: "info.main" }} />
 						) : null}
 						<Typography variant="body2" fontWeight={selected ? 600 : 500}>
@@ -268,6 +333,14 @@ function SortableFieldRow({
 							<Chip
 								size="small"
 								label={`${childKeys.length} полей`}
+								variant="outlined"
+								sx={{ height: 20 }}
+							/>
+						) : null}
+						{arrayItemsObj ? (
+							<Chip
+								size="small"
+								label={`${itemFieldKeys.length} полей элемента`}
 								variant="outlined"
 								sx={{ height: 20 }}
 							/>
@@ -320,6 +393,31 @@ function SortableFieldRow({
 						parentPointer={fieldPointer}
 						depth={depth + 1}
 						emptyLabel="Перетащите поле в группу"
+					/>
+				</Box>
+			) : null}
+
+			{arrayItemsObj ? (
+				<Box
+					sx={{
+						mt: 1,
+						ml: 2,
+						pl: 1,
+						borderLeft: 2,
+						borderColor: selected ? "primary.light" : "divider",
+					}}
+				>
+					<Typography
+						variant="caption"
+						color="text.secondary"
+						sx={{ display: "block", mb: 0.5 }}
+					>
+						Поля элемента массива
+					</Typography>
+					<FieldList
+						parentPointer={`${fieldPointer}/items`}
+						depth={depth + 1}
+						emptyLabel="Перетащите поле в элемент массива"
 					/>
 				</Box>
 			) : null}
@@ -381,7 +479,24 @@ export function SchemaPalettePanel({ embedded = false }: { embedded?: boolean })
 			dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.palette}
 			description="Перетащите на холст или дважды щёлкните для добавления в корень схемы."
 		>
+			<Typography
+				variant="caption"
+				color="text.secondary"
+				sx={{ display: "block", mb: 0.75, fontWeight: 600 }}
+			>
+				Примитивные типы
+			</Typography>
 			{FIELD_PRESETS.map((preset) => (
+				<PaletteItem key={String(preset.id)} preset={preset} />
+			))}
+			<Typography
+				variant="caption"
+				color="text.secondary"
+				sx={{ display: "block", mt: 1.5, mb: 0.75, fontWeight: 600 }}
+			>
+				Арх. компоненты
+			</Typography>
+			{ARCH_COMPONENT_PRESETS.map((preset) => (
 				<PaletteItem key={String(preset.id)} preset={preset} />
 			))}
 		</PanelChrome>
@@ -394,7 +509,7 @@ export function SchemaCanvasPanel({ embedded = false }: { embedded?: boolean }) 
 			embedded={embedded}
 			dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.canvas}
 			title="Холст полей"
-			description="Корневые поля и вложенные группы. Перетаскивайте для изменения порядка."
+			description="Корневые поля, группы и поля элементов массива. Перетаскивайте для изменения порядка."
 		>
 			<FieldList
 				parentPointer="/"

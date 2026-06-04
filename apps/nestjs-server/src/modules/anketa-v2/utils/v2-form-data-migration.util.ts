@@ -29,9 +29,12 @@ export function migrateV2AnketaFormData(
 		if (!streamDataSources.sourceTypicalTasks && detailInfo.sourceTypicalTasks) {
 			streamDataSources.sourceTypicalTasks = detailInfo.sourceTypicalTasks;
 		}
-		const { sourceSystems: _s, sourceTypicalTasks: _t, ...detailRest } =
-			detailInfo;
-		next.detailInfo = detailRest;
+		if (
+			!streamDataSources.sourceTypicalTasks &&
+			detailInfo.detailTypicalTasks
+		) {
+			streamDataSources.sourceTypicalTasks = detailInfo.detailTypicalTasks;
+		}
 	}
 
 	if (next.mlPlatform && !next.streamMlPlatform) {
@@ -40,6 +43,22 @@ export function migrateV2AnketaFormData(
 	}
 
 	const smc: Record<string, unknown> = { ...streamModelControl };
+
+	if (detailInfo) {
+		if (!smc.dataProcessing && detailInfo.dataProcess) {
+			smc.dataProcessing = detailInfo.dataProcess;
+		}
+		if (!smc.dataObjects && detailInfo.dataMart) {
+			smc.dataObjects = detailInfo.dataMart;
+		}
+		if (!smc.models && detailInfo.model) {
+			smc.models = detailInfo.model;
+		}
+		if (!smc.atypicalTasks && detailInfo.detailAtypicalTasks) {
+			smc.atypicalTasks = detailInfo.detailAtypicalTasks;
+		}
+	}
+
 	if (next.dataObjects && !smc.dataObjects) smc.dataObjects = next.dataObjects;
 	if (next.dataProcessing && !smc.dataProcessing)
 		smc.dataProcessing = next.dataProcessing;
@@ -57,6 +76,20 @@ export function migrateV2AnketaFormData(
 	delete next.atypicalTasks;
 	delete next.modelControl;
 	delete next.dataStorageAndProcessing;
+
+	if (detailInfo) {
+		const {
+			sourceSystems: _s,
+			sourceTypicalTasks: _t,
+			dataProcess: _dp,
+			dataMart: _dm,
+			model: _m,
+			detailTypicalTasks: _dt,
+			detailAtypicalTasks: _da,
+			...detailRest
+		} = detailInfo;
+		next.detailInfo = detailRest;
+	}
 
 	if (Object.keys(streamDataSources).length > 0) {
 		next.streamDataSources = streamDataSources;

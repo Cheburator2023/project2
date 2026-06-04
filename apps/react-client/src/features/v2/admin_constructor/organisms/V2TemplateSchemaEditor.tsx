@@ -56,10 +56,12 @@ import {
 import {
 	addRootProperty,
 	applyGroupFieldOrdersToSchema,
+	applyGroupFieldOrdersToUiSchema,
 	insertChildPropertyAt,
 	isObjectFieldGroup,
-	listChildKeys,
+	listOrderedChildKeys,
 	listSchemaFields,
+	patchUiOptionsAtPointer,
 	removePropertyAtPointer,
 	reorderRootProperties,
 	resolveSchemaNode,
@@ -716,26 +718,28 @@ export const V2TemplateSchemaEditor = ({
 
 	const groupChildFields = useMemo(() => {
 		if (!isObjectGroup || !selectedPointer) return [];
-		return listChildKeys(jsonSchema, selectedPointer).map((key) => {
-			const childPointer =
-				selectedPointer === "/" ? `/${key}` : `${selectedPointer}/${key}`;
-			const child = resolveSchemaNode(
-				jsonSchema,
-				pointerSegments(childPointer),
-			);
-			const typeLabel =
-				typeof child?.type === "string"
-					? child.type
-					: Array.isArray(child?.type)
-						? child.type.join(" | ")
-						: "?";
-			return {
-				key,
-				title: typeof child?.title === "string" ? child.title : key,
-				typeLabel,
-			};
-		});
-	}, [isObjectGroup, jsonSchema, selectedPointer]);
+		return listOrderedChildKeys(jsonSchema, selectedPointer, uiSchema).map(
+			(key) => {
+				const childPointer =
+					selectedPointer === "/" ? `/${key}` : `${selectedPointer}/${key}`;
+				const child = resolveSchemaNode(
+					jsonSchema,
+					pointerSegments(childPointer),
+				);
+				const typeLabel =
+					typeof child?.type === "string"
+						? child.type
+						: Array.isArray(child?.type)
+							? child.type.join(" | ")
+							: "?";
+				return {
+					key,
+					title: typeof child?.title === "string" ? child.title : key,
+					typeLabel,
+				};
+			},
+		);
+	}, [isObjectGroup, jsonSchema, selectedPointer, uiSchema]);
 
 	const leafUiOptions =
 		leafUiBranch?.["ui:options"] &&
@@ -810,7 +814,12 @@ export const V2TemplateSchemaEditor = ({
 	);
 
 	const handleAddFieldPresetAtParent = useCallback(
-		(parentPointer: string, preset: RJSFSchema, index: number) => {
+		(
+			parentPointer: string,
+			preset: RJSFSchema,
+			index: number,
+			uiOptions?: Record<string, unknown>,
+		) => {
 			const key = `field_${nanoid(8)}`;
 			const parentSegs = pointerSegments(parentPointer);
 			const next = insertChildPropertyAt(
@@ -825,6 +834,15 @@ export const V2TemplateSchemaEditor = ({
 				const childPointer =
 					parentPointer === "/" ? `/${key}` : `${parentPointer}/${key}`;
 				setSelectedPointer(childPointer);
+				if (uiOptions && Object.keys(uiOptions).length > 0) {
+					setUiSchema((prev) =>
+						patchUiOptionsAtPointer(
+							prev as Record<string, unknown>,
+							childPointer,
+							uiOptions,
+						),
+					);
+				}
 			}
 		},
 		[jsonSchema],
@@ -847,10 +865,11 @@ export const V2TemplateSchemaEditor = ({
 
 	const applyGroupFieldOrders = useCallback(
 		(orders: Record<string, string[]>) => {
-			const next = applyGroupFieldOrdersToSchema(jsonSchema, orders);
-			if (next) setJsonSchema(next);
+			const nextSchema = applyGroupFieldOrdersToSchema(jsonSchema, orders);
+			if (nextSchema) setJsonSchema(nextSchema);
+			setUiSchema(applyGroupFieldOrdersToUiSchema(uiSchema, orders));
 		},
-		[jsonSchema],
+		[jsonSchema, uiSchema],
 	);
 
 	const updateField = useCallback(

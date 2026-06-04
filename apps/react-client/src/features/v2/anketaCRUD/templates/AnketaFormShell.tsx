@@ -30,7 +30,10 @@ import { AnketaSectionStatusChip } from "../molecules/AnketaSectionStatusChip";
 import { useAnketaWorkflow } from "../hooks/useAnketaWorkflow";
 import { useSchemaBindingToast } from "../hooks/useSchemaBindingToast";
 import type { AnketaFormContextValue } from "../utils/anketaFormContext";
-import { ANKETA_MODAL_ARRAY_PATH_SET } from "../utils/anketaFormModalPaths";
+import {
+	ANKETA_MODAL_ARRAY_PATH_SET,
+	ANKETA_MODAL_OBJECT_PATH_SET,
+} from "../utils/anketaFormModalPaths";
 import { AnketaFormPageLayout } from "./AnketaFormPageLayout";
 import { useCreateV2QuestionnaireVersion } from "@react-client/common/api/queries/v2-questionnaires";
 import { useNavigate } from "react-router";
@@ -97,6 +100,7 @@ export function AnketaFormShell({
 		openArrayModal: () => {},
 		openUncertaintyModal: () => {},
 		deleteArrayItem: () => {},
+		deleteObject: () => {},
 	});
 
 	const openCompleteDialog = useCallback(() => {
@@ -195,7 +199,9 @@ export function AnketaFormShell({
 			openUncertaintyModal: () => controls.openUncertaintyModal(),
 			deleteAnketaArrayItem: (path, index) =>
 				controls.deleteArrayItem(path, index),
+			deleteAnketaObject: (path) => controls.deleteObject(path),
 			anketaModalArrayPaths: ANKETA_MODAL_ARRAY_PATH_SET,
+			anketaModalObjectPaths: ANKETA_MODAL_OBJECT_PATH_SET,
 			anketaReadOnly: effectiveReadOnly,
 		};
 	}, [
@@ -312,6 +318,8 @@ export function AnketaFormShell({
 			{errorMessage ? null : (
 				<AnketaFormModals
 					formData={engine.formData}
+					previewSchema={engine.previewSchema}
+					previewUiSchema={engine.previewUiSchema}
 					onFormDataChange={engine.setFormData}
 					controlsRef={modalControlsRef}
 				/>

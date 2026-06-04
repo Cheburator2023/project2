@@ -31,6 +31,27 @@ export function coerceJsonSchema(input: unknown): RJSFSchema {
 	} as RJSFSchema;
 }
 
+/** Виджеты v1, не подключённые к RJSF v2 — подменяем при загрузке шаблона. */
+const V2_UI_WIDGET_REPLACEMENTS: Record<string, string> = {
+	GeneralUncertaintyWidget: "hidden",
+	AlgorithmComplexityWidget: "text",
+};
+
+function sanitizeV2UiWidgets(node: unknown): void {
+	if (!node || typeof node !== "object" || Array.isArray(node)) return;
+	const record = node as Record<string, unknown>;
+	const widget = record["ui:widget"];
+	if (
+		typeof widget === "string" &&
+		widget in V2_UI_WIDGET_REPLACEMENTS
+	) {
+		record["ui:widget"] = V2_UI_WIDGET_REPLACEMENTS[widget];
+	}
+	for (const value of Object.values(record)) {
+		sanitizeV2UiWidgets(value);
+	}
+}
+
 export function coerceUiSchema(
 	input: unknown,
 	jsonSchema?: unknown,
@@ -39,6 +60,7 @@ export function coerceUiSchema(
 		return {};
 	}
 	const ui = structuredClone(input) as UiSchema;
+	sanitizeV2UiWidgets(ui);
 	if (jsonSchema) {
 		return enrichAnketaLayoutUiSchema(
 			ui as Record<string, unknown>,

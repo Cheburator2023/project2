@@ -9,6 +9,7 @@ import {
 	type V2AnketaSchemaEngineSource,
 } from "../hooks/useV2AnketaSchemaEngine";
 import type { AnketaFormContextValue } from "../utils/anketaFormContext";
+import { withHiddenArchModalFields } from "../utils/anketaArchModalUiSchema";
 import { ANKETA_MODAL_ARRAY_PATHS } from "../utils/anketaFormModalPaths";
 import { applySectionLocksToUiSchema } from "../utils/anketaSectionUiSchema";
 import { readWorkflowFromFormData, touchSectionInFormData } from "../hooks/useAnketaWorkflow";
@@ -141,12 +142,13 @@ export function V2AnketaSchemaForm({
 			hiddenTopLevelFields,
 		);
 		ui = withModalArrayFields(ui);
+		ui = withHiddenArchModalFields(ui, engine.previewSchema);
 		ui = applySectionLocksToUiSchema(ui, workflow);
 		return {
 			...ui,
 			"ui:submitButtonOptions": { norender: true },
 		};
-	}, [engine.previewUiSchema, hiddenTopLevelFields, workflow]);
+	}, [engine.previewUiSchema, engine.previewSchema, hiddenTopLevelFields, workflow]);
 
 	const formContext = useMemo(
 		(): AnketaFormContextValue => ({

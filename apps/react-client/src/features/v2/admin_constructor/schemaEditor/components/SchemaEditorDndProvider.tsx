@@ -11,11 +11,12 @@ import {
 	type ReactNode,
 } from "react";
 import type { RJSFSchema } from "@rjsf/utils";
-import { FIELD_PRESETS } from "../constants";
+import { PALETTE_PRESETS } from "../constants";
 import { useSchemaEditor } from "../SchemaEditorContext";
 import {
+	getObjectItemsSchema,
 	isObjectFieldGroup,
-	listChildKeys,
+	listOrderedChildKeys,
 	resolveSchemaNode,
 } from "../../utils/schemaMutators";
 import { pointerSegments } from "../../utils/schemaPaths";
@@ -73,10 +74,11 @@ export function parseDropAppendId(id: string): string | null {
 
 export function collectGroupOrders(
 	schema: RJSFSchema,
+	uiSchema?: import("@rjsf/utils").UiSchema,
 	parentPointer = "/",
 ): Record<string, string[]> {
 	const groupId = groupIdFromParentPointer(parentPointer);
-	const keys = listChildKeys(schema, parentPointer);
+	const keys = listOrderedChildKeys(schema, parentPointer, uiSchema);
 	const result: Record<string, string[]> = { [groupId]: keys };
 
 	for (const key of keys) {
@@ -84,7 +86,14 @@ export function collectGroupOrders(
 			parentPointer === "/" ? `/${key}` : `${parentPointer.replace(/\/$/, "")}/${key}`;
 		const node = resolveSchemaNode(schema, pointerSegments(childPointer));
 		if (isObjectFieldGroup(node)) {
-			Object.assign(result, collectGroupOrders(schema, childPointer));
+			Object.assign(result, collectGroupOrders(schema, uiSchema, childPointer));
+		}
+		const itemsObj = getObjectItemsSchema(node);
+		if (itemsObj && Object.keys(itemsObj.properties ?? {}).length > 0) {
+			Object.assign(
+				result,
+				collectGroupOrders(schema, uiSchema, `${childPointer}/items`),
+			);
 		}
 	}
 
@@ -199,7 +208,7 @@ export function useSchemaEditorDndOrders(): Record<string, string[]> {
 }
 
 export function SchemaEditorDndProvider({ children }: { children: ReactNode }) {
-	const { jsonSchema, handleAddFieldPresetAtParent, applyGroupFieldOrders } =
+	const { jsonSchema, uiSchema, handleAddFieldPresetAtParent, applyGroupFieldOrders } =
 		useSchemaEditor();
 	const [dragOrders, setDragOrders] = useState<Record<string, string[]> | null>(null);
 	const [insertIndicator, setInsertIndicator] = useState<DndInsertIndicator | null>(null);
@@ -208,20 +217,20 @@ export function SchemaEditorDndProvider({ children }: { children: ReactNode }) {
 	const dragOrdersRef = useRef<Record<string, string[]> | null>(null);
 
 	const presetById = useMemo(
-		() => new Map(FIELD_PRESETS.map((p) => [String(p.id), p])),
+		() => new Map(PALETTE_PRESETS.map((p) => [String(p.id), p])),
 		[],
 	);
 
-	const displayOrders = dragOrders ?? collectGroupOrders(jsonSchema);
+	const displayOrders = dragOrders ?? collectGroupOrders(jsonSchema, uiSchema);
 
 	const onDragStart = useCallback(() => {
-		const initial = collectGroupOrders(jsonSchema);
+		const initial = collectGroupOrders(jsonSchema, uiSchema);
 		initialOrdersRef.current = initial;
 		dragOrdersRef.current = initial;
 		setDragOrders(initial);
 		setIsDragging(true);
 		setInsertIndicator(null);
-	}, [jsonSchema]);
+	}, [jsonSchema, uiSchema]);
 
 	const onDragOver = useCallback(
 		(event: DragOverEvent) => {
@@ -271,7 +280,12 @@ export function SchemaEditorDndProvider({ children }: { children: ReactNode }) {
 						target?.id,
 						finalOrders,
 					);
-					handleAddFieldPresetAtParent(parentPointer, preset.make(), index);
+					handleAddFieldPresetAtParent(
+						parentPointer,
+						preset.make(),
+						index,
+						preset.uiOptions,
+					);
 				}
 				setDragOrders(null);
 				dragOrdersRef.current = null;

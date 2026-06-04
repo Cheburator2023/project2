@@ -83,6 +83,7 @@ export type SchemaEditorContextValue = {
 		parentPointer: string,
 		preset: RJSFSchema,
 		index: number,
+		uiOptions?: Record<string, unknown>,
 	) => void;
 	reorderRootFieldKeys: (orderedKeys: string[]) => void;
 	applyGroupFieldOrders: (orders: Record<string, string[]>) => void;

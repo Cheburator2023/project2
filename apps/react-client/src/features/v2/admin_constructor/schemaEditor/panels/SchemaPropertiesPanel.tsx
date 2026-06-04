@@ -25,7 +25,10 @@ import { patchUiOptionsAtPointer } from "../../utils/schemaMutators";
 import {
 	readV2AnketaSectionUiOptions,
 	V2_ANKETA_SECTION_ROLE_VALUES,
+	V2_ARCH_COMPONENT_LABELS,
+	V2_ARCH_COMPONENT_TYPES,
 	type V2AnketaSectionRole,
+	type V2ArchComponentType,
 } from "@smart-anketa/api-contract";
 import type { UiSchema } from "@rjsf/utils";
 
@@ -147,13 +150,27 @@ export function SchemaPropertiesPanel() {
 							updateField({
 								type: e.target.value as FieldTypePreset,
 								...(e.target.value === "object" ? { properties: {} } : {}),
+								...(e.target.value === "array"
+									? {
+											items: {
+												type: "object",
+												title: "Элемент",
+												properties: {},
+											},
+										}
+									: {}),
 							});
 						}}
 					>
 						{FIELD_PRESETS.filter((fp) =>
-							["string", "number", "integer", "boolean", "object"].includes(
-								fp.id as string,
-							),
+							[
+								"string",
+								"number",
+								"integer",
+								"boolean",
+								"object",
+								"array",
+							].includes(fp.id as string),
 						).map((fp) => (
 							<MenuItem key={`${fp.id}`} value={`${fp.id}`}>
 								{fp.title}
@@ -230,6 +247,35 @@ export function SchemaPropertiesPanel() {
 								}
 								label="Развёрнута по умолчанию (defaultExpanded)"
 							/>
+							<Spacer />
+						</>
+					) : null}
+
+					{isObjectGroup || resolvedField?.type === "array" ? (
+						<>
+							<TextField
+								select
+								fullWidth
+								size="small"
+								label="Арх. компонент (ui:options.archComponent)"
+								value={sectionUiOptions.archComponent ?? ""}
+								onChange={(e) =>
+									patchSectionUi({
+										archComponent: (e.target.value ||
+											undefined) as V2ArchComponentType | undefined,
+									})
+								}
+								helperText="Помечает группу/массив как арх. компонент: подсветка в dev-режиме и связь «параметр → типовые работы»"
+							>
+								<MenuItem value="">
+									<em>Не компонент</em>
+								</MenuItem>
+								{V2_ARCH_COMPONENT_TYPES.map((t) => (
+									<MenuItem key={t} value={t}>
+										{V2_ARCH_COMPONENT_LABELS[t]}
+									</MenuItem>
+								))}
+							</TextField>
 							<Spacer />
 						</>
 					) : null}

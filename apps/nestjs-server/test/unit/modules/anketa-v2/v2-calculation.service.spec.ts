@@ -100,6 +100,19 @@ describe("V2CalculationService", () => {
 		expect(streamDataSources.sourceTypicalTasks.some((t) => t.total === 3)).toBe(true);
 	});
 
+	it("migrates detailInfo.sourceSystems before source typical works generation", () => {
+		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+			detailInfo: {
+				sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
+			},
+		});
+
+		const streamDataSources = result.formData.streamDataSources as {
+			sourceTypicalTasks: Array<{ name: string }>;
+		};
+		expect(streamDataSources.sourceTypicalTasks.length).toBeGreaterThan(0);
+	});
+
 	it("applies multiplicative group coefficient from dictionary weights (ФТ-024)", () => {
 		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
 			streamDataSources: {

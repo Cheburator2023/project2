@@ -40,6 +40,64 @@ export const ANKETA_ARRAY_TABLE_COLUMNS: Record<
 	AnketaModalArrayPath,
 	AnketaArrayTableColumn[]
 > = {
+	"detailInfo.sourceSystems": [
+		{
+			key: "name",
+			header: "Название источника",
+			width: "1.4fr",
+			link: true,
+			render: (item) => formatNameLabel(text(item, "name")),
+		},
+		{
+			key: "type",
+			header: "Тип источника",
+			width: "1fr",
+			render: (item) => text(item, "type"),
+		},
+		{
+			key: "domainComplexity",
+			header: "Сложность ПО",
+			width: "1fr",
+			render: (item) => text(item, "domainComplexity"),
+		},
+		{
+			key: "entityVolume",
+			header: "Объём по сущностям",
+			width: "1fr",
+			render: (item) => text(item, "entityVolume"),
+		},
+		{
+			key: "workType",
+			header: "Тип работ",
+			width: "1fr",
+			render: workTypeFromIntegration,
+		},
+		{
+			key: "pilot",
+			header: "Требуется пилот",
+			width: "0.9fr",
+			render: (item) => text(item, "additionalUncertainty"),
+		},
+		{
+			key: "config",
+			header: "Обмен конф. данными",
+			width: "1.1fr",
+			render: configFromRequirements,
+		},
+		{
+			key: "sourceFor",
+			header: "Источник для",
+			width: "1.2fr",
+			chip: true,
+			render: (item) => {
+				const manual = item.manualParameters;
+				if (Array.isArray(manual) && manual.length > 0) {
+					return String(manual[0]);
+				}
+				return text(item, "daptRegistry");
+			},
+		},
+	],
 	"streamDataSources.sourceSystems": [
 		{
 			key: "name",
@@ -150,6 +208,39 @@ export const ANKETA_ARRAY_TABLE_COLUMNS: Record<
 			header: "Модели",
 			width: "1fr",
 			render: (item) => text(item, "usedModels"),
+		},
+	],
+	"detailInfo.model.modelsList": [
+		{
+			key: "name",
+			header: "Название модели",
+			width: "1.4fr",
+			link: true,
+			render: (item) => text(item, "name"),
+		},
+		{
+			key: "class",
+			header: "Класс",
+			width: "1fr",
+			render: (item) => text(item, "class"),
+		},
+		{
+			key: "taskType",
+			header: "Тип задачи",
+			width: "1.2fr",
+			render: (item) => text(item, "taskType"),
+		},
+		{
+			key: "algorithm",
+			header: "Алгоритм",
+			width: "1fr",
+			render: (item) => text(item, "algorithm"),
+		},
+		{
+			key: "role",
+			header: "Роль",
+			width: "0.9fr",
+			render: (item) => text(item, "role"),
 		},
 	],
 	"streamModelControl.models.modelsList": [

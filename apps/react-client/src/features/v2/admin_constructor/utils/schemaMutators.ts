@@ -1,17 +1,101 @@
-import type { RJSFSchema } from "@rjsf/utils";
+import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { parentOfPointer, pointerSegments } from "./schemaPaths";
 
+function readUiBranchAtParent(
+	uiSchema: Record<string, unknown> | UiSchema | undefined,
+	parentPointer: string,
+): Record<string, unknown> | undefined {
+	if (!uiSchema || typeof uiSchema !== "object") return undefined;
+	const segs = pointerSegments(parentPointer);
+	if (segs.length === 0) {
+		return uiSchema as Record<string, unknown>;
+	}
+	let cur: unknown = uiSchema;
+	for (const s of segs) {
+		if (!cur || typeof cur !== "object" || Array.isArray(cur)) {
+			return undefined;
+		}
+		cur = (cur as Record<string, unknown>)[s];
+	}
+	if (!cur || typeof cur !== "object" || Array.isArray(cur)) return undefined;
+	return cur as Record<string, unknown>;
+}
+
+/** Порядок дочерних ключей: `ui:order` (как в RJSF), затем остальные из `properties`. */
+export function listOrderedChildKeys(
+	root: RJSFSchema,
+	parentPointer: string,
+	uiSchema?: UiSchema | Record<string, unknown>,
+): string[] {
+	const keys = listChildKeys(root, parentPointer);
+	if (!uiSchema) return keys;
+
+	const branch = readUiBranchAtParent(uiSchema, parentPointer);
+	const order = branch?.["ui:order"];
+	if (!Array.isArray(order)) return keys;
+
+	const ordered = (order as string[]).filter((k) => keys.includes(k));
+	const rest = keys.filter((k) => !ordered.includes(k));
+	return [...ordered, ...rest];
+}
+
+export function applyGroupFieldOrdersToUiSchema(
+	ui: UiSchema,
+	orders: Record<string, string[]>,
+): UiSchema {
+	const next = structuredClone(ui) as UiSchema;
+
+	for (const [groupId, keys] of Object.entries(orders)) {
+		const parentPointer =
+			groupId === "schema-root" ? "/" : groupId.replace("schema-group:", "");
+		const branch = readUiBranchAtParent(next, parentPointer);
+		if (!branch) continue;
+		branch["ui:order"] = keys;
+	}
+
+	return next;
+}
+
+/**
+ * Разрешает узел схемы по JSON Pointer сегментам.
+ * Поддерживает сегмент `items` для входа в элементы массива
+ * (`/sourceSystems/items/name` → schema.sourceSystems.items.properties.name).
+ */
 export function resolveSchemaNode(
 	root: RJSFSchema,
 	segments: string[],
 ): RJSFSchema | undefined {
 	let cur: RJSFSchema = root;
 	for (const seg of segments) {
-		const next = cur.properties?.[seg] as RJSFSchema | undefined;
-		if (!next) return undefined;
-		cur = next;
+		const fromProps = cur.properties?.[seg] as RJSFSchema | undefined;
+		if (fromProps) {
+			cur = fromProps;
+			continue;
+		}
+		if (seg === "items" && isPlainObject(cur.items)) {
+			cur = cur.items as RJSFSchema;
+			continue;
+		}
+		return undefined;
 	}
 	return cur;
+}
+
+function isPlainObject(value: unknown): value is RJSFSchema {
+	return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+/** Объектная схема элементов массива (для массивов объектов), либо undefined. */
+export function getObjectItemsSchema(
+	node: RJSFSchema | undefined,
+): RJSFSchema | undefined {
+	if (!node || node.type !== "array") return undefined;
+	const items = node.items;
+	if (!isPlainObject(items)) return undefined;
+	const itemsSchema = items as RJSFSchema;
+	return itemsSchema.type === "object" || itemsSchema.properties
+		? itemsSchema
+		: undefined;
 }
 
 export function updatePropertyAtPointer(
@@ -29,9 +113,16 @@ export function updatePropertyAtPointer(
 
 	for (let i = 0; i < fullSegments.length - 1; i++) {
 		const seg = fullSegments[i]!;
-		const next = cur.properties?.[seg] as RJSFSchema | undefined;
-		if (!next) return null;
-		cur = next as RJSFSchema;
+		const fromProps = cur.properties?.[seg] as RJSFSchema | undefined;
+		if (fromProps) {
+			cur = fromProps;
+			continue;
+		}
+		if (seg === "items" && isPlainObject(cur.items)) {
+			cur = cur.items as RJSFSchema;
+			continue;
+		}
+		return null;
 	}
 
 	const leaf = fullSegments[fullSegments.length - 1]!;
@@ -196,6 +287,25 @@ export function findPropertyInTree(
 		for (const childKey of Object.keys(props)) {
 			const found = walk(props[childKey]!, [...parentSegments, childKey]);
 			if (found) return found;
+		}
+
+		const itemsObj = getObjectItemsSchema(schema);
+		if (itemsObj?.properties) {
+			const itemProps = itemsObj.properties as Record<string, RJSFSchema>;
+			if (itemProps[key]) {
+				return {
+					parentSegments: [...parentSegments, "items"],
+					node: itemProps[key]!,
+				};
+			}
+			for (const itemKey of Object.keys(itemProps)) {
+				const found = walk(itemProps[itemKey]!, [
+					...parentSegments,
+					"items",
+					itemKey,
+				]);
+				if (found) return found;
+			}
 		}
 
 		return null;

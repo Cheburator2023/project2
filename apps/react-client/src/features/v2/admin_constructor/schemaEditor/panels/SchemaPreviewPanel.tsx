@@ -9,6 +9,7 @@ import { useMemo } from "react";
 import { useSchemaEditor } from "../SchemaEditorContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "../components/PanelChrome";
+import { v2PreviewFormTemplates } from "../../templates/v2PreviewFormTemplates";
 
 export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean }) {
 	const {
@@ -68,6 +69,7 @@ export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean })
 					uiSchema={previewUiWithoutSummary}
 					formData={liveFormData}
 					extraErrors={logicExtraErrors}
+					templates={v2PreviewFormTemplates}
 					validator={validatorRu}
 					liveValidate
 					noHtml5Validate

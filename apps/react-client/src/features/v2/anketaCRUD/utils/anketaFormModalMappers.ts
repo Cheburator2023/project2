@@ -12,6 +12,30 @@ const YES_NO_TO_DA: Record<string, string> = {
 	no: "Нет",
 };
 
+const CHANNEL_TO_SCHEMA: Record<string, string> = {
+	batch: "Батч",
+	batch_user_upload: "Батч+загрузка",
+	batch_online: "Батч+Онлайн",
+	online: "Онлайн",
+	online_gpu: "Онлайн GPU",
+	llm: "LLM",
+	streaming: "Стриминг",
+};
+
+const CHANNEL_FROM_SCHEMA = Object.fromEntries(
+	Object.entries(CHANNEL_TO_SCHEMA).map(([k, v]) => [v, k]),
+) as Record<string, string>;
+
+const WORK_TYPE_MODAL_TO_SCHEMA: Record<string, string> = {
+	development: "Разработка",
+	support: "Доработка",
+	pilot: "Настройка",
+};
+
+const WORK_TYPE_SCHEMA_TO_MODAL = Object.fromEntries(
+	Object.entries(WORK_TYPE_MODAL_TO_SCHEMA).map(([k, v]) => [v, k]),
+) as Record<string, string>;
+
 function numericOrUndefined(value: string): number | undefined {
 	if (value === "") return undefined;
 	const parsed = Number(value.replace(",", "."));
@@ -75,6 +99,19 @@ export function mapModelServiceToModelItem(
 	};
 }
 
+export function mapModelServiceModalToBlock(
+	values: ModelServiceFormValues,
+): Record<string, unknown> {
+	return {
+		workType: WORK_TYPE_MODAL_TO_SCHEMA[values.workType] ?? values.workType,
+		deployChannels: values.channels
+			.map((ch) => CHANNEL_TO_SCHEMA[ch] ?? ch)
+			.filter(Boolean),
+		pkRecalibration: YES_NO_TO_DA[values.pilotRequired] ?? "Нет",
+		pkNewType: YES_NO_TO_DA[values.newServiceCreationRequired] ?? "Нет",
+	};
+}
+
 export function mapNonStandardTaskToAtypicalTask(
 	values: NonStandardTaskFormValues,
 ): Record<string, unknown> {
@@ -103,12 +140,14 @@ export function mapModalValuesToArrayItem(
 		| NonStandardTaskFormValues,
 ): Record<string, unknown> {
 	switch (path) {
+		case "detailInfo.sourceSystems":
 		case "streamDataSources.sourceSystems":
 			return mapDataSourceToSourceSystem(values as DataSourceFormValues);
 		case "streamModelControl.dataObjects.trainingSources":
 			return mapDataSourceToTrainingSource(values as DataSourceFormValues);
 		case "streamModelControl.dataObjects.applicationSources":
 			return mapDataSourceToApplicationSource(values as DataSourceFormValues);
+		case "detailInfo.model.modelsList":
 		case "streamModelControl.models.modelsList":
 			return mapModelServiceToModelItem(values as ModelServiceFormValues);
 		case "streamModelControl.atypicalTasks":
@@ -119,6 +158,38 @@ export function mapModalValuesToArrayItem(
 		default:
 			return {};
 	}
+}
+
+export function setObjectAtFormPath(
+	data: Record<string, unknown>,
+	path: string,
+	value: Record<string, unknown>,
+): Record<string, unknown> {
+	const parts = path.split(".");
+	const next = { ...data };
+	let current: Record<string, unknown> = next;
+
+	for (let i = 0; i < parts.length - 1; i++) {
+		const key = parts[i];
+		const child =
+			current[key] != null &&
+			typeof current[key] === "object" &&
+			!Array.isArray(current[key])
+				? { ...(current[key] as Record<string, unknown>) }
+				: {};
+		current[key] = child;
+		current = child;
+	}
+
+	current[parts[parts.length - 1]] = value;
+	return next;
+}
+
+export function clearObjectAtFormPath(
+	data: Record<string, unknown>,
+	path: string,
+): Record<string, unknown> {
+	return setObjectAtFormPath(data, path, {});
 }
 
 export function appendAtFormPath(
@@ -191,6 +262,7 @@ export function mapArrayItemToModalDefaults(
 	| Partial<ModelServiceFormValues>
 	| Partial<NonStandardTaskFormValues> {
 	switch (path) {
+		case "detailInfo.sourceSystems":
 		case "streamDataSources.sourceSystems":
 		case "streamModelControl.dataObjects.trainingSources":
 		case "streamModelControl.dataObjects.applicationSources":
@@ -216,6 +288,7 @@ export function mapArrayItemToModalDefaults(
 				domainComplexity: String(item.domainComplexity ?? ""),
 				entityVolume: String(item.entityVolume ?? ""),
 			};
+		case "detailInfo.model.modelsList":
 		case "streamModelControl.models.modelsList":
 			return {
 				name: String(item.name ?? ""),
@@ -227,6 +300,22 @@ export function mapArrayItemToModalDefaults(
 							: "pilot",
 				isCreationRequired: item.autoML === "Да" ? "yes" : "no",
 			};
+		case "generalInfo.modelService": {
+			const channels = Array.isArray(item.deployChannels)
+				? (item.deployChannels as string[])
+						.map((label) => CHANNEL_FROM_SCHEMA[label] ?? "")
+						.filter(Boolean)
+				: [];
+			return {
+				name: "model-service",
+				channels,
+				pilotRequired: item.pkRecalibration === "Да" ? "yes" : "no",
+				isCreationRequired: "no",
+				newServiceCreationRequired: item.pkNewType === "Да" ? "yes" : "no",
+				workType:
+					WORK_TYPE_SCHEMA_TO_MODAL[String(item.workType ?? "")] ?? "development",
+			};
+		}
 		case "streamModelControl.atypicalTasks":
 		case "streamMlPlatform.atypicalTasks":
 			return {

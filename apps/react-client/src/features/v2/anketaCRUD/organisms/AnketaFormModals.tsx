@@ -15,18 +15,28 @@ import {
 	type TotalUncertaintyFormValues,
 } from "@react-client/features/playground/v2_playground/organisms/TotalUncertaintyModal";
 import { useCallback, useEffect, useMemo, useState, type MutableRefObject } from "react";
+import { getObjectAtPath } from "../utils/anketaArchObjectTableConfig";
 import { getArrayAtPath } from "../utils/anketaModalArrayTableConfig";
 import {
-	modalKindForArrayPath,
+	modalKindForPath,
 	type AnketaModalKind,
 } from "../utils/anketaFormModalPaths";
 import {
 	appendAtFormPath,
+	clearObjectAtFormPath,
 	mapArrayItemToModalDefaults,
+	mapModelServiceModalToBlock,
 	mapModalValuesToArrayItem,
 	removeAtFormPath,
+	setObjectAtFormPath,
 	updateAtFormPath,
 } from "../utils/anketaFormModalMappers";
+import {
+	getObjectSchemaSlice,
+	getObjectUiSlice,
+} from "../utils/anketaSchemaAtPath";
+import { AnketaRjsfObjectModal } from "./AnketaRjsfObjectModal";
+import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { touchSectionForPathInFormData, touchSectionInFormData } from "../hooks/useAnketaWorkflow";
 
 const RISK_FIELD_TO_MODAL: Record<string, string> = {
@@ -111,10 +121,13 @@ export type AnketaFormModalControls = {
 	openArrayModal: (path: string, editIndex?: number) => void;
 	openUncertaintyModal: () => void;
 	deleteArrayItem: (path: string, index: number) => void;
+	deleteObject: (path: string) => void;
 };
 
 type Props = {
 	formData: Record<string, unknown>;
+	previewSchema: RJSFSchema;
+	previewUiSchema: UiSchema;
 	onFormDataChange: (
 		updater: (prev: Record<string, unknown>) => Record<string, unknown>,
 	) => void;
@@ -123,13 +136,15 @@ type Props = {
 
 export function AnketaFormModals({
 	formData,
+	previewSchema,
+	previewUiSchema,
 	onFormDataChange,
 	controlsRef,
 }: Props) {
 	const [activeModal, setActiveModal] = useState<ActiveModal | null>(null);
 
 	const openArrayModal = useCallback((path: string, editIndex?: number) => {
-		const kind = modalKindForArrayPath(path);
+		const kind = modalKindForPath(path);
 		if (!kind) return;
 		setActiveModal({ kind, path, editIndex });
 	}, []);
@@ -147,29 +162,61 @@ export function AnketaFormModals({
 		[onFormDataChange],
 	);
 
+	const deleteObject = useCallback(
+		(path: string) => {
+			onFormDataChange((prev) =>
+				touchSectionForPathInFormData(clearObjectAtFormPath(prev, path), path),
+			);
+		},
+		[onFormDataChange],
+	);
+
 	useEffect(() => {
 		controlsRef.current = {
 			openArrayModal,
 			openUncertaintyModal,
 			deleteArrayItem,
+			deleteObject,
 		};
-	}, [controlsRef, openArrayModal, openUncertaintyModal, deleteArrayItem]);
+	}, [
+		controlsRef,
+		openArrayModal,
+		openUncertaintyModal,
+		deleteArrayItem,
+		deleteObject,
+	]);
 
 	const closeModal = () => setActiveModal(null);
 
 	const arrayModalDefaults = useMemo(() => {
-		if (
-			!activeModal ||
-			activeModal.kind === "uncertainty" ||
-			activeModal.editIndex == null
-		) {
+		if (!activeModal || activeModal.kind === "uncertainty") {
 			return undefined;
 		}
+		if (activeModal.kind === "rjsfObject" || activeModal.kind === "modelServiceBlock") {
+			return mapArrayItemToModalDefaults(
+				activeModal.path,
+				getObjectAtPath(formData, activeModal.path),
+			);
+		}
+		if (activeModal.editIndex == null) return undefined;
 		const items = getArrayAtPath(formData, activeModal.path);
 		const item = items[activeModal.editIndex];
 		if (!item) return undefined;
 		return mapArrayItemToModalDefaults(activeModal.path, item);
 	}, [activeModal, formData]);
+
+	const rjsfObjectModalSlice = useMemo(() => {
+		if (!activeModal || activeModal.kind !== "rjsfObject") return null;
+		const schema = getObjectSchemaSlice(previewSchema, activeModal.path);
+		if (!schema) return null;
+		return {
+			schema,
+			uiSchema: getObjectUiSlice(previewUiSchema, activeModal.path),
+			values: getObjectAtPath(formData, activeModal.path),
+			title:
+				typeof schema.title === "string" ? schema.title : activeModal.path,
+		};
+	}, [activeModal, formData, previewSchema, previewUiSchema]);
 
 	const handleUncertaintySubmit = (values: TotalUncertaintyFormValues) => {
 		onFormDataChange((prev) => {
@@ -233,6 +280,32 @@ export function AnketaFormModals({
 		closeModal();
 	};
 
+	const handleObjectModalSubmit = (
+		path: string,
+		kind: AnketaModalKind,
+		values:
+			| DataSourceFormValues
+			| ModelServiceFormValues
+			| NonStandardTaskFormValues
+			| Record<string, unknown>,
+	) => {
+		const item =
+			kind === "modelServiceBlock"
+				? {
+						...getObjectAtPath(formData, path),
+						...mapModelServiceModalToBlock(values as ModelServiceFormValues),
+					}
+				: (values as Record<string, unknown>);
+
+		onFormDataChange((prev) =>
+			touchSectionForPathInFormData(
+				setObjectAtFormPath(prev, path, item),
+				path,
+			),
+		);
+		closeModal();
+	};
+
 	return (
 		<>
 			<TotalUncertaintyModal
@@ -259,10 +332,22 @@ export function AnketaFormModals({
 				}
 			/>
 			<ModelServiceModal
-				open={activeModal?.kind === "modelService"}
+				open={
+					activeModal?.kind === "modelService" ||
+					activeModal?.kind === "modelServiceBlock"
+				}
 				onClose={closeModal}
 				onSubmit={(values) => {
-					if (activeModal?.kind !== "modelService") return;
+					if (!activeModal) return;
+					if (activeModal.kind === "modelServiceBlock") {
+						handleObjectModalSubmit(
+							activeModal.path,
+							activeModal.kind,
+							values,
+						);
+						return;
+					}
+					if (activeModal.kind !== "modelService") return;
 					handleArrayModalSubmit(
 						activeModal.path,
 						activeModal.editIndex,
@@ -270,11 +355,30 @@ export function AnketaFormModals({
 					);
 				}}
 				defaultValues={
-					activeModal?.kind === "modelService"
+					activeModal?.kind === "modelService" ||
+					activeModal?.kind === "modelServiceBlock"
 						? (arrayModalDefaults as Partial<ModelServiceFormValues>)
 						: undefined
 				}
 			/>
+			{rjsfObjectModalSlice ? (
+				<AnketaRjsfObjectModal
+					open={activeModal?.kind === "rjsfObject"}
+					title={rjsfObjectModalSlice.title}
+					schema={rjsfObjectModalSlice.schema}
+					uiSchema={rjsfObjectModalSlice.uiSchema}
+					defaultValues={rjsfObjectModalSlice.values}
+					onClose={closeModal}
+					onSubmit={(values) => {
+						if (activeModal?.kind !== "rjsfObject") return;
+						handleObjectModalSubmit(
+							activeModal.path,
+							activeModal.kind,
+							values,
+						);
+					}}
+				/>
+			) : null}
 			<NonStandardTaskModal
 				open={activeModal?.kind === "nonStandardTask"}
 				onClose={closeModal}

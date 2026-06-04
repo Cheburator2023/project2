@@ -31,8 +31,10 @@ describe("enrichAnketaLayoutUiSchema", () => {
 		expect(detail?.defaultExpanded).toBe(false);
 
 		const processing = (
-			(ui.streamModelControl as Record<string, unknown>)
-				?.dataProcessing as Record<string, unknown>
+			(ui.streamModelControl as Record<string, unknown>)?.localParams as Record<
+				string,
+				unknown
+			>
 		)?.["ui:options"] as Record<string, unknown>;
 		expect(processing?.sectionRole).toBe("subsection");
 		expect(processing?.showFilledCount).toBe(true);

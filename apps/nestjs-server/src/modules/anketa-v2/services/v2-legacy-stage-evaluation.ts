@@ -352,7 +352,9 @@ type Coefficients = {
 
 function extractCoefficients(data: Record<string, unknown>): Coefficients {
 	const generalInfo = readRecord(data.generalInfo);
-	const detailParams = readRecord(readRecord(data.detailInfo)?.parameters);
+	const detailInfo = readRecord(data.detailInfo);
+	const detailParams =
+		readRecord(detailInfo?.model) ?? readRecord(detailInfo?.parameters);
 	const uncertainty = readRecord(data.uncertaintyCalculation);
 	const dataProcessing = readRecord(data.dataProcessing);
 	const models = readRecord(data.models);
@@ -416,7 +418,9 @@ function calculateAllStages(
 	coefficients: Coefficients,
 ): Record<V2StageKey, number> {
 	const generalInfo = readRecord(data.generalInfo);
-	const detailParams = readRecord(readRecord(data.detailInfo)?.parameters);
+	const detailInfo = readRecord(data.detailInfo);
+	const detailParams =
+		readRecord(detailInfo?.model) ?? readRecord(detailInfo?.parameters);
 	const assessedInitiativesCount = 1;
 	const pilotModelRequired =
 		String(generalInfo?.pilotNeed ?? "").includes("MVP") ||

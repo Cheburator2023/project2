@@ -332,33 +332,33 @@ export function buildV2QuestionnaireColumnDefs(): (
 		),
 		mainSectionGroup("detailInfo", [
 			formFieldCol({
-				path: "detailInfo.parameters.modelsCount",
+				path: "detailInfo.model.modelsCount",
 				headerName: "Кол-во моделей",
 				width: 120,
 				filter: "agNumberColumnFilter",
 			}),
 			formFieldCol({
-				path: "detailInfo.parameters.algorithmType",
+				path: "detailInfo.model.algorithmType",
 				headerName: "Тип алгоритма",
 				width: 140,
 			}),
 			formFieldCol({
-				path: "detailInfo.parameters.algorithmCoeff",
+				path: "detailInfo.model.algorithmCoeff",
 				headerName: "Коэф. алгоритма",
 				width: 120,
 			}),
 			formFieldCol({
-				path: "detailInfo.parameters.autoML",
+				path: "detailInfo.model.autoML",
 				headerName: "AutoML",
 				width: 110,
 			}),
 			formFieldCol({
-				path: "detailInfo.parameters.specialist",
+				path: "detailInfo.model.specialist",
 				headerName: "Специалист",
 				width: 110,
 			}),
 			formFieldCol({
-				path: "detailInfo.parameters.cascadeEnsemble",
+				path: "detailInfo.model.cascadeEnsemble",
 				headerName: "Каскад/ансамбль",
 				width: 130,
 			}),
@@ -367,7 +367,7 @@ export function buildV2QuestionnaireColumnDefs(): (
 			...([0, 1, 2] as const).map((index) =>
 				arrayItemGroup(
 					"Источник",
-					"streamDataSources.sourceSystems",
+					"detailInfo.sourceSystems",
 					index,
 					SOURCE_SYSTEM_FIELDS,
 				),

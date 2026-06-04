@@ -1,7 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.V2_ANKETA_STREAM_SECTION_IDS = exports.V2_ANKETA_SECTION_ROLE_VALUES = void 0;
+exports.V2_ANKETA_STREAM_SECTION_IDS = exports.V2_ARCH_COMPONENT_LABELS = exports.V2_ARCH_COMPONENT_TYPES = exports.V2_ANKETA_SECTION_ROLE_VALUES = void 0;
+exports.isV2ArchComponentType = isV2ArchComponentType;
 exports.readV2AnketaSectionUiOptions = readV2AnketaSectionUiOptions;
+exports.resolveV2AnketaArchComponent = resolveV2AnketaArchComponent;
 exports.isV2AnketaMainSectionId = isV2AnketaMainSectionId;
 exports.isV2AnketaStreamSectionId = isV2AnketaStreamSectionId;
 exports.resolveV2AnketaSectionRole = resolveV2AnketaSectionRole;
@@ -15,6 +17,35 @@ exports.V2_ANKETA_SECTION_ROLE_VALUES = [
     "panel",
     "flat",
 ];
+/**
+ * Архитектурные компоненты (глоссарий, §3.4) — типовые структурные элементы
+ * функциональных областей анкеты. Состав фиксирован, но расширяем.
+ * Параметры арх. компонента одновременно являются триггерами генерации
+ * типовых работ из справочника.
+ */
+exports.V2_ARCH_COMPONENT_TYPES = [
+    "modelService",
+    "model",
+    "sourceSystem",
+    "dataMart",
+    "dataProcess",
+    "deployChannel",
+    "modelControl",
+];
+/** Человекочитаемые названия арх. компонентов (из глоссария). */
+exports.V2_ARCH_COMPONENT_LABELS = {
+    modelService: "Модельный сервис",
+    model: "Модель",
+    sourceSystem: "Система-источник",
+    dataMart: "Объект / Витрина данных",
+    dataProcess: "Процесс обработки данных",
+    deployChannel: "Канал внедрения",
+    modelControl: "Контроль модели",
+};
+function isV2ArchComponentType(value) {
+    return (typeof value === "string" &&
+        exports.V2_ARCH_COMPONENT_TYPES.includes(value));
+}
 const STREAM_SECTION_IDS = v2_anketa_workflow_types_1.V2_ANKETA_MAIN_SECTION_IDS.filter((id) => id.startsWith("stream"));
 exports.V2_ANKETA_STREAM_SECTION_IDS = STREAM_SECTION_IDS;
 function readRecord(value) {
@@ -44,7 +75,14 @@ function readV2AnketaSectionUiOptions(uiNode) {
             ? opts.titleVariant
             : undefined,
         hidden: opts.hidden === true ? true : undefined,
+        archComponent: isV2ArchComponentType(opts.archComponent)
+            ? opts.archComponent
+            : undefined,
     };
+}
+/** Тип арх. компонента секции из ui:options, либо null. */
+function resolveV2AnketaArchComponent(uiNode) {
+    return readV2AnketaSectionUiOptions(uiNode).archComponent ?? null;
 }
 function isSectionRole(value) {
     return (typeof value === "string" &&

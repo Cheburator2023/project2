@@ -10,7 +10,9 @@ export type AnketaFormContextValue = {
 	openAnketaModal?: (path: string, editIndex?: number) => void;
 	openUncertaintyModal?: () => void;
 	deleteAnketaArrayItem?: (path: string, index: number) => void;
+	deleteAnketaObject?: (path: string) => void;
 	anketaModalArrayPaths?: ReadonlySet<string>;
+	anketaModalObjectPaths?: ReadonlySet<string>;
 	anketaReadOnly?: boolean;
 	workflow?: V2AnketaWorkflowDto;
 	onCompleteMainSection?: (sectionId: V2AnketaMainSectionId) => void;

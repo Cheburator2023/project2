@@ -18,7 +18,9 @@ import type {
 	UiSchema,
 } from "@rjsf/utils";
 import { AnketaSectionStatusChip } from "@react-client/features/v2/anketaCRUD/molecules/AnketaSectionStatusChip";
+import { AnketaArchObjectPanel } from "@react-client/features/v2/anketaCRUD/molecules/AnketaArchObjectPanel";
 import { AnketaModalArrayTable } from "@react-client/features/v2/anketaCRUD/molecules/AnketaModalArrayTable";
+import { ANKETA_MODAL_OBJECT_PATH_SET } from "@react-client/features/v2/anketaCRUD/utils/anketaFormModalPaths";
 import {
 	objectFieldSlot,
 	readAnketaFormContext,
@@ -29,12 +31,14 @@ import {
 } from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
 import {
 	V2_ANKETA_SECTION_COMPLETE_LABELS,
+	resolveV2AnketaArchComponent,
 	resolveV2AnketaDefaultExpanded,
 	resolveV2AnketaSectionRole,
 	resolveV2AnketaSectionTitleVariant,
 	resolveV2AnketaWorkflowSectionId,
 	readV2AnketaSectionUiOptions,
 } from "@smart-anketa/api-contract";
+import { ArchComponentDevOutline } from "./ArchComponentDevOutline";
 
 function isRootObjectField(
 	fieldPathId: FieldPathId | undefined,
@@ -256,6 +260,12 @@ export function V2PreviewArrayFieldTemplate({
 }: ArrayFieldTemplateProps) {
 	const { openAnketaModal, anketaModalArrayPaths, anketaReadOnly } =
 		readAnketaFormContext(registry.formContext);
+	const archComponent = resolveV2AnketaArchComponent(uiSchema);
+	const wrapArch = (node: ReactNode): ReactNode => (
+		<ArchComponentDevOutline archComponent={archComponent}>
+			{node}
+		</ArchComponentDevOutline>
+	);
 	const pathKey = fieldPathId?.path?.join(".") ?? "";
 	const useModalAdd = Boolean(
 		pathKey && anketaModalArrayPaths?.has(pathKey) && openAnketaModal,
@@ -275,7 +285,7 @@ export function V2PreviewArrayFieldTemplate({
 	const showAddButton = canEdit && (useModalAdd || canAdd);
 
 	if (useModalAdd) {
-		return (
+		return wrapArch(
 			<Box id={fieldPathId.$id} sx={{ minWidth: 0 }}>
 				<AnketaModalArrayTable
 					pathKey={pathKey}
@@ -298,7 +308,7 @@ export function V2PreviewArrayFieldTemplate({
 		);
 	}
 
-	return (
+	return wrapArch(
 		<Box id={fieldPathId.$id} sx={{ minWidth: 0 }}>
 			<Typography variant="h6" fontWeight={700} mb={2}>
 				{sectionTitle}
@@ -418,6 +428,12 @@ export function V2PreviewObjectFieldTemplate({
 		uiSchema,
 		pathSegments,
 	);
+	const archComponent = resolveV2AnketaArchComponent(uiSchema);
+	const wrapArch = (node: ReactNode): ReactNode => (
+		<ArchComponentDevOutline archComponent={archComponent}>
+			{node}
+		</ArchComponentDevOutline>
+	);
 
 	const fieldsBody = (
 		<>
@@ -442,7 +458,7 @@ export function V2PreviewObjectFieldTemplate({
 			sectionStatus !== "Заполнено" &&
 			Boolean(onCompleteMainSection);
 
-		return (
+		return wrapArch(
 			<SectionPanelAccordion
 				sectionTitle={sectionTitle}
 				titleVariant={titleVariant}
@@ -475,20 +491,45 @@ export function V2PreviewObjectFieldTemplate({
 		const count = sectionUiOptions.showFilledCount
 			? countSubsectionFilledItems(getValueAtPath(formData, pathKey))
 			: undefined;
+		const useArchObjectModal =
+			Boolean(archComponent) && ANKETA_MODAL_OBJECT_PATH_SET.has(pathKey);
+		const visibleProperties = properties.filter(
+			(element) =>
+				!isHiddenUiNode((uiSchema as UiSchema | undefined)?.[element.name]),
+		);
+		const subsectionBody = (
+			<>
+				{useArchObjectModal ? (
+					<AnketaArchObjectPanel
+						pathKey={pathKey}
+						sectionTitle={sectionTitle}
+						formContext={registry.formContext}
+					/>
+				) : null}
+				{visibleProperties.length > 0 ? (
+					<ObjectFieldsGrid
+						properties={visibleProperties}
+						schema={schemaNode}
+						uiSchema={uiSchema as UiSchema | undefined}
+					/>
+				) : null}
+				{sectionSlot ? <Box sx={{ mt: 2 }}>{sectionSlot}</Box> : null}
+			</>
+		);
 
-		return (
+		return wrapArch(
 			<OpenSubSectionPanel
 				sectionTitle={sectionTitle}
 				count={count}
 				description={sectionDescription}
 			>
-				{fieldsBody}
+				{subsectionBody}
 			</OpenSubSectionPanel>
 		);
 	}
 
 	if (sectionRole === "panel") {
-		return (
+		return wrapArch(
 			<SectionPanelAccordion
 				sectionTitle={sectionTitle}
 				description={sectionDescription}
@@ -501,7 +542,7 @@ export function V2PreviewObjectFieldTemplate({
 	}
 
 	if (sectionRole === "flat") {
-		return (
+		return wrapArch(
 			<Box sx={{ minWidth: 0 }}>
 				<Typography variant="h6" fontWeight={700} mb={3}>
 					{sectionTitle}
@@ -516,7 +557,7 @@ export function V2PreviewObjectFieldTemplate({
 		);
 	}
 
-	return (
+	return wrapArch(
 		<SectionPanelAccordion
 			sectionTitle={sectionTitle}
 			description={sectionDescription}

@@ -14,6 +14,44 @@ export type V2AnketaSectionRole = (typeof V2_ANKETA_SECTION_ROLE_VALUES)[number]
 
 export type V2AnketaSectionTitleVariant = "h5" | "h6";
 
+/**
+ * Архитектурные компоненты (глоссарий, §3.4) — типовые структурные элементы
+ * функциональных областей анкеты. Состав фиксирован, но расширяем.
+ * Параметры арх. компонента одновременно являются триггерами генерации
+ * типовых работ из справочника.
+ */
+export const V2_ARCH_COMPONENT_TYPES = [
+	"modelService",
+	"model",
+	"sourceSystem",
+	"dataMart",
+	"dataProcess",
+	"deployChannel",
+	"modelControl",
+] as const;
+
+export type V2ArchComponentType = (typeof V2_ARCH_COMPONENT_TYPES)[number];
+
+/** Человекочитаемые названия арх. компонентов (из глоссария). */
+export const V2_ARCH_COMPONENT_LABELS: Record<V2ArchComponentType, string> = {
+	modelService: "Модельный сервис",
+	model: "Модель",
+	sourceSystem: "Система-источник",
+	dataMart: "Объект / Витрина данных",
+	dataProcess: "Процесс обработки данных",
+	deployChannel: "Канал внедрения",
+	modelControl: "Контроль модели",
+};
+
+export function isV2ArchComponentType(
+	value: unknown,
+): value is V2ArchComponentType {
+	return (
+		typeof value === "string" &&
+		(V2_ARCH_COMPONENT_TYPES as readonly string[]).includes(value)
+	);
+}
+
 export type V2AnketaSectionUiOptions = {
 	/** Роль секции в layout анкеты (конструктор / uiSchema). */
 	sectionRole?: V2AnketaSectionRole;
@@ -25,6 +63,8 @@ export type V2AnketaSectionUiOptions = {
 	showFilledCount?: boolean;
 	titleVariant?: V2AnketaSectionTitleVariant;
 	hidden?: boolean;
+	/** Тип арх. компонента (глоссарий §3.4) для разметки и dev-подсветки. */
+	archComponent?: V2ArchComponentType;
 };
 
 const STREAM_SECTION_IDS = V2_ANKETA_MAIN_SECTION_IDS.filter((id) =>
@@ -63,7 +103,17 @@ export function readV2AnketaSectionUiOptions(
 				? opts.titleVariant
 				: undefined,
 		hidden: opts.hidden === true ? true : undefined,
+		archComponent: isV2ArchComponentType(opts.archComponent)
+			? opts.archComponent
+			: undefined,
 	};
+}
+
+/** Тип арх. компонента секции из ui:options, либо null. */
+export function resolveV2AnketaArchComponent(
+	uiNode: unknown,
+): V2ArchComponentType | null {
+	return readV2AnketaSectionUiOptions(uiNode).archComponent ?? null;
 }
 
 function isSectionRole(value: unknown): value is V2AnketaSectionRole {
