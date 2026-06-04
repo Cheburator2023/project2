@@ -8,10 +8,10 @@ import {
 describe("V2CalculationService", () => {
 	const service = new V2CalculationService(null as never, null as never);
 
-	it("applies row_computed totals on typicalTasks rows", () => {
+	it("applies row_computed totals on atypicalTasks rows", () => {
 		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
-			streamMlPlatform: {
-				typicalTasks: [
+			streamModelControl: {
+				atypicalTasks: [
 					{ estimateHoursPerDay: 2, coefficient: 1.5 },
 					{ estimateHoursPerDay: 1, coefficient: 2 },
 				],
@@ -19,35 +19,31 @@ describe("V2CalculationService", () => {
 		});
 
 		const tasks = (
-			result.formData.streamMlPlatform as {
-				typicalTasks: Array<{ total: number }>;
+			result.formData.streamModelControl as {
+				atypicalTasks: Array<{ total: number }>;
 			}
-		).typicalTasks;
+		).atypicalTasks;
 
 		expect(tasks[0]?.total).toBe(3);
 		expect(tasks[1]?.total).toBe(2);
 	});
 
 	it("computes unified Total = typicalTotal + atypicalTotal (ФТ-026)", () => {
-		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
-			streamMlPlatform: {
-				typicalTasks: [{ estimateHoursPerDay: 2, coefficient: 1.5, total: 3 }],
+		const summaryOnlyGraph = {
+			rules: V2_DEFAULT_LOGIC_GRAPH.rules.filter((r) =>
+				["unified-typical-total", "unified-atypical-total", "unified-grand-total"].includes(
+					r.id,
+				),
+			),
+		};
+		const result = service.evaluate(summaryOnlyGraph, {
+			streamDataSources: {
+				sourceTypicalTasks: [{ total: 3 }],
+				atypicalTasks: [{ total: 8, includeInCalculation: true }],
 			},
 			streamModelControl: {
-				atypicalTasks: [
-					{
-						estimateHoursPerDay: 4,
-						coefficient: 2,
-						total: 8,
-						includeInCalculation: true,
-					},
-					{
-						estimateHoursPerDay: 5,
-						coefficient: 1,
-						total: 5,
-						includeInCalculation: false,
-					},
-				],
+				control: { controlTypicalTasks: [] },
+				atypicalTasks: [{ total: 5, includeInCalculation: false }],
 			},
 		});
 
@@ -64,17 +60,6 @@ describe("V2CalculationService", () => {
 			(result.formData.summary as { detailedCalculation?: unknown[] })
 				.detailedCalculation?.length,
 		).toBeGreaterThan(0);
-	});
-
-	it("evaluates task_trigger when pilotNeed is required", () => {
-		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
-			generalInfo: { pilotNeed: "Требуется" },
-		});
-
-		const trigger = result.taskTriggers.find(
-			(t) => t.taskCode === "PILOT_SUPPORT",
-		);
-		expect(trigger?.passes).toBe(true);
 	});
 
 	it("generates internal source typical works from catalog with real norms", () => {
@@ -177,17 +162,6 @@ describe("V2CalculationService", () => {
 		).toBe(true);
 	});
 
-	it("does not fire task_trigger when pilotNeed is empty", () => {
-		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
-			generalInfo: { pilotNeed: "" },
-		});
-
-		const trigger = result.taskTriggers.find(
-			(t) => t.taskCode === "PILOT_SUPPORT",
-		);
-		expect(trigger?.passes).toBe(false);
-	});
-
 	it("returns validationIssues when validation rule condition is false", () => {
 		const result = service.evaluate(
 			{
@@ -280,7 +254,7 @@ describe("v2-json-logic", () => {
 		const sum = applyJsonLogic(
 			{
 				reduce: [
-					{ var: "streamMlPlatform.typicalTasks" },
+					{ var: "streamDataSources.sourceTypicalTasks" },
 					{
 						"+": [{ var: "accumulator" }, { max: [0, { var: "current.total" }] }],
 					},
@@ -288,7 +262,9 @@ describe("v2-json-logic", () => {
 				],
 			},
 			{
-				streamMlPlatform: { typicalTasks: [{ total: 3 }, { total: 2 }] },
+				streamDataSources: {
+					sourceTypicalTasks: [{ total: 3 }, { total: 2 }],
+				},
 			},
 		);
 		expect(sum).toBe(5);

@@ -33,8 +33,8 @@ describe("resolveV2AnketaEditorBindings", () => {
 				"detailInfo.sourceSystems",
 				"detailInfo.model.modelsList",
 				"detailInfo.detailAtypicalTasks",
+				"streamDataSources.atypicalTasks",
 				"streamModelControl.atypicalTasks",
-				"streamMlPlatform.atypicalTasks",
 			]),
 		);
 
@@ -43,7 +43,6 @@ describe("resolveV2AnketaEditorBindings", () => {
 				"detailInfo.detailTypicalTasks",
 				"streamDataSources.sourceTypicalTasks",
 				"streamModelControl.control.controlTypicalTasks",
-				"streamMlPlatform.typicalTasks",
 			]),
 		);
 

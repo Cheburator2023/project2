@@ -210,7 +210,9 @@ export function AnketaFormModals({
 
 	const rjsfObjectModalSlice = useMemo(() => {
 		if (!activeModal || activeModal.kind !== "rjsfObject") return null;
-		const schema = getObjectSchemaSlice(previewSchema, activeModal.path);
+		const schema = getObjectSchemaSlice(previewSchema, activeModal.path, {
+			omitTitle: true,
+		});
 		if (!schema) return null;
 		return {
 			schema,

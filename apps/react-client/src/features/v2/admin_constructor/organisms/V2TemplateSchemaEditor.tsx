@@ -31,6 +31,7 @@ import { SchemaEditorProvider } from "../schemaEditor/SchemaEditorContext";
 import type { SchemaEditorContextValue } from "../schemaEditor/SchemaEditorContext";
 import type { SchemaEditorMainTab } from "../schemaEditor/types";
 import { SchemaEditorDockProvider } from "../schemaEditor/SchemaEditorDockContext";
+import { SchemaEditorDndProvider } from "../schemaEditor/components/SchemaEditorDndProvider";
 import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayout";
 import { SchemaLogicPanel } from "../schemaEditor/panels/SchemaLogicPanel";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
@@ -1256,7 +1257,9 @@ export const V2TemplateSchemaEditor = ({
 		return (
 			<>
 				<SchemaEditorProvider value={editorContext}>
-					<SchemaLogicPanel embedded />
+					<SchemaEditorDndProvider>
+						<SchemaLogicPanel embedded />
+					</SchemaEditorDndProvider>
 				</SchemaEditorProvider>
 				{activeVersion ? (
 					<V2TemplateSaveDialog
@@ -1276,6 +1279,7 @@ export const V2TemplateSchemaEditor = ({
 
 	return (
 		<SchemaEditorProvider value={editorContext}>
+			<SchemaEditorDndProvider>
 			<Card
 				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.schemaEditor}
 				height="100%"
@@ -1320,6 +1324,7 @@ export const V2TemplateSchemaEditor = ({
 					onSaveInPlace={handleSaveInPlace}
 				/>
 			) : null}
+			</SchemaEditorDndProvider>
 		</SchemaEditorProvider>
 	);
 };

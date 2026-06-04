@@ -80,14 +80,12 @@ exports.V2_ANKETA_SECTION_COMPLETE_LABELS = {
     generalInfo: "Завершить заполнение общей информации",
     detailInfo: "Завершить заполнение детальной информации",
     streamDataSources: "Завершить заполнение стрима «Источники данных»",
-    streamMlPlatform: "Завершить заполнение стрима «Платформы и решения для моделирования»",
     streamModelControl: "Завершить заполнение стрима «Контроль моделей»",
 };
 exports.V2_ANKETA_MAIN_SECTION_TITLES = {
     generalInfo: "Общая информация",
     detailInfo: "Детальная информация",
     streamDataSources: "Стрим «Источники данных»",
-    streamMlPlatform: "Стрим «Платформы и решения для моделирования»",
     streamModelControl: "Стрим «Контроль моделей»",
 };
 exports.V2_ANKETA_SECTION_STATUS_CHIP_COLOR = {

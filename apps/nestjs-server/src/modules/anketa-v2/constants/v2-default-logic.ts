@@ -27,15 +27,6 @@ function rule(id: string, patch: Omit<V2LogicRuleDto, "id">): V2LogicRuleDto {
 
 const UNIFIED = { calcModel: "unified" } as const;
 
-/** Σ task.total по массиву (читает `current.total` в reduce JsonLogic). */
-const SUM_TASK_TOTAL: V2JsonLogicValue = {
-	reduce: [
-		{ var: "streamMlPlatform.typicalTasks" },
-		{ "+": [{ var: "accumulator" }, { max: [0, { var: "current.total" }] }] },
-		0,
-	],
-};
-
 const SUM_SOURCE_TYPICAL_TOTAL: V2JsonLogicValue = {
 	reduce: [
 		{ var: "streamDataSources.sourceTypicalTasks" },
@@ -94,20 +85,6 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 	}),
 
 	// --- Per-row итоги (норматив × коэффициент группы) -----------------------
-	rule("default-row-typical-task-total", {
-		kind: "row_computed",
-		targetPath: "/streamMlPlatform/typicalTasks",
-		dependencies: [],
-		condition: ROW_TASK_TOTAL,
-		payload: {
-			arrayPath: "streamMlPlatform.typicalTasks",
-			fieldVar: "total",
-			label: "Per-row total типовых работ платформы",
-			formulaHint: "row.total = estimateHoursPerDay × coefficient.",
-		},
-		description: "Расчёт total строки типовых работ платформы.",
-	}),
-
 	rule("default-row-source-typical-task-total", {
 		kind: "row_computed",
 		targetPath: "/streamDataSources/sourceTypicalTasks",
@@ -121,6 +98,20 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 				"row.total = норматив (ч/д) × коэффициент группы источника. Норматив из работы.csv.",
 		},
 		description: "ФТ-024: итог строки типовой работы источника данных.",
+	}),
+
+	rule("default-row-atypical-ds-task-total", {
+		kind: "row_computed",
+		targetPath: "/streamDataSources/atypicalTasks",
+		dependencies: [],
+		condition: ROW_TASK_TOTAL,
+		payload: {
+			arrayPath: "streamDataSources.atypicalTasks",
+			fieldVar: "total",
+			label: "Per-row итог нетиповой работы (источники данных)",
+			formulaHint: "row.total = базовая оценка × коэффициент. ФТ-022.",
+		},
+		description: "Расчёт total строки нетиповых работ стрима «Источники данных».",
 	}),
 
 	rule("default-row-atypical-task-total", {
@@ -149,7 +140,7 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 			sourceArrayPath: "streamDataSources.sourceSystems",
 			outputArrayPath: "streamDataSources.sourceTypicalTasks",
 			taskCode: "IND_SOURCE_TASKS",
-			label: "Типовые работы по источникам данных (стрим «Источники данных»)",
+			label: "Типовые работы (стрим «Источники данных»)",
 			hint:
 				"Глоссарий «Справочник типовых работ»: при добавлении компонента «Система-источник» " +
 				"тип источника (внутренний/внешний) подтягивает типовые работы этапов из работы.csv " +
@@ -187,7 +178,7 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 			sourceArrayPath: "streamModelControl.control.controlTypes",
 			outputArrayPath: "streamModelControl.control.controlTypicalTasks",
 			taskCode: "CONTROL_TASKS",
-			label: "Работы по контролю моделей (стрим «Контроль моделей»)",
+			label: "Типовые работы (стрим «Контроль моделей»)",
 			hint:
 				"Глоссарий «Контроль модели»: выбранные виды контроля (справочник №3) " +
 				"подтягивают работы. Нормативы ч/д — из матрицы №40 по классу модели (задаёт методолог).",
@@ -196,34 +187,16 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 		description: "Контроль моделей: генерация работ по выбранным видам контроля.",
 	}),
 
-	rule("default-task-trigger-pilot-required", {
-		kind: "task_trigger",
-		targetPath: "/streamMlPlatform/typicalTasks",
-		dependencies: ["/generalInfo/pilotNeed"],
-		condition: { "==": [{ var: "generalInfo.pilotNeed" }, "Требуется"] },
-		payload: {
-			taskCode: "PILOT_SUPPORT",
-			label: "Сопровождение пилота",
-			hint: "Формирует типовую работу «Сопровождение пилота» при pilotNeed = «Требуется».",
-		},
-		description: "Триггер типовой работы пилота.",
-	}),
-
 	// --- Единая итоговая калькуляция (ФТ-026) --------------------------------
 	rule("unified-typical-total", {
 		kind: "computed",
 		targetPath: "/summary/typicalTotal",
 		dependencies: [
 			"/streamDataSources/sourceTypicalTasks",
-			"/streamMlPlatform/typicalTasks",
 			"/streamModelControl/control/controlTypicalTasks",
 		],
 		condition: {
-			"+": [
-				SUM_SOURCE_TYPICAL_TOTAL,
-				SUM_TASK_TOTAL,
-				SUM_CONTROL_TYPICAL_TOTAL,
-			],
+			"+": [SUM_SOURCE_TYPICAL_TOTAL, SUM_CONTROL_TYPICAL_TOTAL],
 		},
 		payload: {
 			...UNIFIED,
@@ -231,7 +204,7 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 			role: "typical_total",
 			label: "Сумма по типовым работам",
 			formulaHint:
-				"Σ источники + Σ платформа + Σ контроль моделей (sourceTypicalTasks + streamMlPlatform.typicalTasks + streamModelControl.control.controlTypicalTasks).",
+				"Σ источники + Σ контроль моделей (sourceTypicalTasks + controlTypicalTasks).",
 		},
 		description: "ФТ-026: сумма итоговых оценок типовых работ.",
 	}),
@@ -240,13 +213,13 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 		kind: "computed",
 		targetPath: "/summary/atypicalTotal",
 		dependencies: [
+			"/streamDataSources/atypicalTasks",
 			"/streamModelControl/atypicalTasks",
-			"/streamMlPlatform/atypicalTasks",
 		],
 		condition: {
 			"+": [
+				sumAtypicalIncluded("streamDataSources.atypicalTasks"),
 				sumAtypicalIncluded("streamModelControl.atypicalTasks"),
-				sumAtypicalIncluded("streamMlPlatform.atypicalTasks"),
 			],
 		},
 		payload: {
@@ -255,7 +228,7 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 			role: "atypical_total",
 			label: "Сумма по нетиповым работам (включённым)",
 			formulaHint:
-				"Σ (streamModelControl.atypicalTasks + streamMlPlatform.atypicalTasks) где includeInCalculation = true.",
+				"Σ (streamDataSources.atypicalTasks + streamModelControl.atypicalTasks) где includeInCalculation = true.",
 		},
 		description: "ФТ-026: сумма итоговых оценок нетиповых работ.",
 	}),

@@ -571,6 +571,59 @@ export function setUiDictionaryCodeAtPointer(
 }
 
 /** Частичное обновление `ui:options` узла uiSchema по JSON Pointer. */
+/** Скрытие поля/группы в форме анкеты (`ui:options.hidden` + `ui:widget: hidden`). */
+export function setUiHiddenAtPointer(
+	ui: Record<string, unknown>,
+	fieldPointer: string,
+	hidden: boolean,
+): Record<string, unknown> {
+	if (hidden) {
+		return setUiWidgetAtPointer(
+			patchUiOptionsAtPointer(ui, fieldPointer, { hidden: true }),
+			fieldPointer,
+			"hidden",
+		);
+	}
+
+	const segs = pointerSegments(fieldPointer);
+	const next = structuredClone(ui) as Record<string, unknown>;
+	if (segs.length === 0) return next;
+
+	let cur: Record<string, unknown> = next;
+	for (let i = 0; i < segs.length; i++) {
+		const s = segs[i]!;
+		if (i === segs.length - 1) {
+			const prev = (cur[s] as Record<string, unknown>) ?? {};
+			const merged = { ...prev };
+			delete merged["ui:widget"];
+			const prevOpt = merged["ui:options"];
+			if (
+				prevOpt &&
+				typeof prevOpt === "object" &&
+				!Array.isArray(prevOpt)
+			) {
+				const opt = { ...(prevOpt as Record<string, unknown>) };
+				delete opt.hidden;
+				if (Object.keys(opt).length === 0) {
+					delete merged["ui:options"];
+				} else {
+					merged["ui:options"] = opt;
+				}
+			}
+			if (Object.keys(merged).length === 0) {
+				delete cur[s];
+			} else {
+				cur[s] = merged;
+			}
+		} else {
+			const child = (cur[s] as Record<string, unknown>) ?? {};
+			cur[s] = child;
+			cur = child;
+		}
+	}
+	return next;
+}
+
 export function patchUiOptionsAtPointer(
 	ui: Record<string, unknown>,
 	fieldPointer: string,

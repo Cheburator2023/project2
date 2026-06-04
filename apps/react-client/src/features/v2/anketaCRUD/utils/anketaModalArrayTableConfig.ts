@@ -348,10 +348,9 @@ export const ANKETA_ARRAY_TABLE_COLUMNS: Record<
 	"detailInfo.detailTypicalTasks": TYPICAL_WORK_COLUMNS,
 	"detailInfo.detailAtypicalTasks": ATYPICAL_WORK_COLUMNS,
 	"streamDataSources.sourceTypicalTasks": TYPICAL_WORK_COLUMNS,
+	"streamDataSources.atypicalTasks": ATYPICAL_WORK_COLUMNS,
 	"streamModelControl.control.controlTypicalTasks": TYPICAL_WORK_COLUMNS,
-	"streamMlPlatform.typicalTasks": TYPICAL_WORK_COLUMNS,
 	"streamModelControl.atypicalTasks": ATYPICAL_WORK_COLUMNS,
-	"streamMlPlatform.atypicalTasks": ATYPICAL_WORK_COLUMNS,
 };
 
 export function arrayTableShowsRowActions(

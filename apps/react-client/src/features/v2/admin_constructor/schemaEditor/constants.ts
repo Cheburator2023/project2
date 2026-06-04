@@ -302,6 +302,7 @@ export const GROUP_OBJECT_FIELD_TEMPLATE_PRESETS: Array<{
 
 export const WIDGET_PRESETS: Array<{ label: string; value: string }> = [
 	{ label: "По умолчанию (стандарт RJSF)", value: "" },
+	{ label: "Скрыто в форме — hidden", value: "hidden" },
 	{
 		label: "Текстовое поле — TextFieldCustomWidget",
 		value: "TextFieldCustomWidget",

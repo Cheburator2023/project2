@@ -151,8 +151,8 @@ export function mapModalValuesToArrayItem(
 		case "streamModelControl.models.modelsList":
 			return mapModelServiceToModelItem(values as ModelServiceFormValues);
 		case "detailInfo.detailAtypicalTasks":
+		case "streamDataSources.atypicalTasks":
 		case "streamModelControl.atypicalTasks":
-		case "streamMlPlatform.atypicalTasks":
 			return mapNonStandardTaskToAtypicalTask(
 				values as NonStandardTaskFormValues,
 			);
@@ -318,8 +318,8 @@ export function mapArrayItemToModalDefaults(
 			};
 		}
 		case "detailInfo.detailAtypicalTasks":
+		case "streamDataSources.atypicalTasks":
 		case "streamModelControl.atypicalTasks":
-		case "streamMlPlatform.atypicalTasks":
 			return {
 				name: String(item.name ?? ""),
 				reason: String(item.reason ?? ""),

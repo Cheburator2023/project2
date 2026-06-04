@@ -128,7 +128,6 @@ const DEFAULT_REGISTRY_VISIBLE = [
 	"workflowSection.generalInfo",
 	"workflowSection.detailInfo",
 	"workflowSection.streamDataSources",
-	"workflowSection.streamMlPlatform",
 	"workflowSection.streamModelControl",
 	pathCol("summary.total"),
 	"updatedAt",

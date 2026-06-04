@@ -21,6 +21,7 @@ import {
 import {
 	getObjectItemsSchema,
 	isObjectFieldGroup,
+	listOrderedChildKeys,
 	readUiSchemaBranchAtPointer,
 	resolveSchemaNode,
 } from "../../utils/schemaMutators";
@@ -92,9 +93,9 @@ function CanvasUiKindChip({ kind }: { kind: V2AnketaCanvasUiKind }) {
 }
 
 function PaletteItem({ preset }: { preset: PalettePreset }) {
-	const { handleAddFieldPresetAtParent } = useSchemaEditor();
-	const { displayOrders } = useSchemaEditorDnd();
-	const rootCount = displayOrders["schema-root"]?.length ?? 0;
+	const { handleAddFieldPresetAtParent, jsonSchema, uiSchema } =
+		useSchemaEditor();
+	const rootCount = listOrderedChildKeys(jsonSchema, "/", uiSchema).length;
 	const { ref, isDragging } = useDraggable<PaletteDragData>({
 		id: `palette-${preset.id}`,
 		type: PALETTE_DRAG_TYPE,

@@ -9,7 +9,6 @@ const MAIN_SECTION_FIELD: Record<V2AnketaMainSectionId, string> = {
 	generalInfo: "generalInfo",
 	detailInfo: "detailInfo",
 	streamDataSources: "streamDataSources",
-	streamMlPlatform: "streamMlPlatform",
 	streamModelControl: "streamModelControl",
 };
 

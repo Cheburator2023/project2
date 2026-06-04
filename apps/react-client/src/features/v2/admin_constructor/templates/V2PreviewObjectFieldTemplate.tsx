@@ -113,6 +113,7 @@ function OpenSubSectionPanel({
 
 function SectionPanelAccordion({
 	sectionTitle,
+	sectionCaption,
 	sectionStatusChip,
 	completeButton,
 	description,
@@ -121,6 +122,7 @@ function SectionPanelAccordion({
 	titleVariant = "h6",
 }: {
 	sectionTitle: string;
+	sectionCaption?: string;
 	sectionStatusChip?: ReactNode;
 	completeButton?: ReactNode;
 	description?: string;
@@ -152,13 +154,24 @@ function SectionPanelAccordion({
 					},
 				}}
 			>
-				<Typography
-					variant={titleVariant}
-					fontWeight={titleVariant === "h5" ? 700 : undefined}
-					sx={{ minWidth: 0, flex: 1 }}
-				>
-					{sectionTitle}
-				</Typography>
+				<Box sx={{ minWidth: 0, flex: 1 }}>
+					<Typography
+						variant={titleVariant}
+						fontWeight={titleVariant === "h5" ? 700 : undefined}
+					>
+						{sectionTitle}
+					</Typography>
+					{sectionCaption ? (
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							display="block"
+							sx={{ mt: 0.25 }}
+						>
+							{sectionCaption}
+						</Typography>
+					) : null}
+				</Box>
 				{sectionStatusChip ? (
 					<Box sx={{ ml: "auto", mr: 1 }}>{sectionStatusChip}</Box>
 				) : null}
@@ -457,6 +470,7 @@ export function V2PreviewObjectFieldTemplate({
 		return wrapArch(
 			<SectionPanelAccordion
 				sectionTitle={sectionTitle}
+				sectionCaption={sectionUiOptions.sectionCaption}
 				titleVariant={titleVariant}
 				description={sectionDescription}
 				defaultExpanded={defaultExpanded}

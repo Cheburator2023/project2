@@ -21,8 +21,12 @@ import { useSchemaEditor } from "../SchemaEditorContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "../components/PanelChrome";
 import { normalizeJsonPointer } from "../../utils/schemaPaths";
-import { patchUiOptionsAtPointer } from "../../utils/schemaMutators";
 import {
+	patchUiOptionsAtPointer,
+	setUiHiddenAtPointer,
+} from "../../utils/schemaMutators";
+import {
+	isV2AnketaHiddenUiNode,
 	readV2AnketaSectionUiOptions,
 	V2_ANKETA_SECTION_ROLE_VALUES,
 	V2_ARCH_COMPONENT_LABELS,
@@ -87,6 +91,7 @@ export function SchemaPropertiesPanel() {
 			: undefined;
 
 	const sectionUiOptions = readV2AnketaSectionUiOptions(leafUiBranch);
+	const isHiddenInForm = isV2AnketaHiddenUiNode(leafUiBranch);
 
 	const patchSectionUi = (patch: Record<string, unknown>) => {
 		if (!selectedPointer) return;
@@ -192,6 +197,36 @@ export function SchemaPropertiesPanel() {
 
 					<Spacer />
 
+					<FormControlLabel
+						control={
+							<Checkbox
+								checked={isHiddenInForm}
+								onChange={(e) => {
+									if (!selectedPointer) return;
+									setUiSchema(
+										(prev) =>
+											setUiHiddenAtPointer(
+												prev as Record<string, unknown>,
+												selectedPointer,
+												e.target.checked,
+											) as UiSchema,
+									);
+								}}
+							/>
+						}
+						label="Скрыть в форме анкеты"
+					/>
+					<Typography
+						variant="caption"
+						color="text.secondary"
+						display="block"
+						sx={{ mt: -0.5, mb: 1 }}
+					>
+						Поле не показывается в превью и анкете; на холсте — чип «Скрыто».
+					</Typography>
+
+					<Spacer />
+
 					{isObjectGroup ? (
 						<>
 							<TextField
@@ -248,6 +283,24 @@ export function SchemaPropertiesPanel() {
 								label="Развёрнута по умолчанию (defaultExpanded)"
 							/>
 							<Spacer />
+							{(sectionUiOptions.sectionRole ?? "") === "main" ||
+							sectionUiOptions.workflowSectionId ? (
+								<>
+									<TextField
+										fullWidth
+										size="small"
+										label="Подпись под заголовком (sectionCaption)"
+										value={sectionUiOptions.sectionCaption ?? ""}
+										onChange={(e) =>
+											patchSectionUi({
+												sectionCaption: e.target.value.trim() || undefined,
+											})
+										}
+										helperText="Отображается под заголовком секции в анкете (caption)"
+									/>
+									<Spacer />
+								</>
+							) : null}
 						</>
 					) : null}
 

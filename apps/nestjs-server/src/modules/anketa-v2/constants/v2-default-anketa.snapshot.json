@@ -36,11 +36,6 @@
 								"enum": ["Создано", "В работе", "Заполнено"],
 								"default": "Создано"
 							},
-							"streamMlPlatform": {
-								"type": "string",
-								"enum": ["Создано", "В работе", "Заполнено"],
-								"default": "Создано"
-							},
 							"streamModelControl": {
 								"type": "string",
 								"enum": ["Создано", "В работе", "Заполнено"],
@@ -915,7 +910,7 @@
 					},
 					"sourceTypicalTasks": {
 						"type": "array",
-						"title": "Типовые работы по источникам данных",
+						"title": "Типовые работы",
 						"readOnly": true,
 						"items": {
 							"type": "object",
@@ -945,6 +940,40 @@
 									"type": "number",
 									"title": "Итог",
 									"readOnly": true
+								}
+							}
+						}
+					},
+					"atypicalTasks": {
+						"type": "array",
+						"title": "Нетиповые работы",
+						"items": {
+							"type": "object",
+							"title": "Нетиповая работа",
+							"required": ["name"],
+							"properties": {
+								"name": {
+									"type": "string",
+									"title": "Задача"
+								},
+								"estimateHoursPerDay": {
+									"type": "number",
+									"title": "Оценка ч/д"
+								},
+								"coefficient": {
+									"type": "number",
+									"title": "Коэф.",
+									"default": 1.5
+								},
+								"total": {
+									"type": "number",
+									"title": "Итог",
+									"readOnly": true
+								},
+								"includeInCalculation": {
+									"type": "boolean",
+									"title": "Включить в расчёт",
+									"default": true
 								}
 							}
 						}
@@ -981,71 +1010,6 @@
 							}
 						}
 					},
-					"control": {
-						"type": "object",
-						"title": "Контроль моделей",
-						"properties": {
-							"modelClass": {
-								"type": "string",
-								"title": "Класс моделей",
-								"enum": [
-									"Розничные регуляторные модели",
-									"Розничные бизнес-модели",
-									"Розничные модели CRM",
-									"Розничные модели Collection",
-									"Корпоративные регуляторные модели",
-									"Корпоративные бизнес-модели",
-									"Прочие корпоративные модели",
-									"Модели финансового моделирования",
-									"Модели цифровых помощников"
-								]
-							},
-							"controlTypes": {
-								"type": "array",
-								"title": "Виды контроля",
-								"items": {
-									"type": "string",
-									"enum": ["КД", "ТМ", "ОК", "АК", "КМЗ", "ОВ"]
-								},
-								"uniqueItems": true
-							},
-							"controlTypicalTasks": {
-								"type": "array",
-								"title": "Работы по контролю моделей",
-								"readOnly": true,
-								"items": {
-									"type": "object",
-									"properties": {
-										"name": {
-											"type": "string",
-											"title": "Работа",
-											"readOnly": true
-										},
-										"reason": {
-											"type": "string",
-											"title": "Причина",
-											"readOnly": true
-										},
-										"estimateHoursPerDay": {
-											"type": "number",
-											"title": "Норматив ч/д",
-											"readOnly": true
-										},
-										"coefficient": {
-											"type": "number",
-											"title": "Коэф.",
-											"readOnly": true
-										},
-										"total": {
-											"type": "number",
-											"title": "Итог",
-											"readOnly": true
-										}
-									}
-								}
-							}
-						}
-					},
 					"atypicalTasks": {
 						"type": "array",
 						"title": "Нетиповые задачи",
@@ -1076,102 +1040,6 @@
 									"type": "boolean",
 									"title": "Включить в расчёт",
 									"default": true
-								}
-							}
-						}
-					}
-				}
-			},
-			"streamMlPlatform": {
-				"type": "object",
-				"title": "Стрим «Платформы и решения для моделирования»",
-				"properties": {
-					"param1": {
-						"type": "string",
-						"title": "Параметр 1"
-					},
-					"param2": {
-						"type": "string",
-						"title": "Параметр 2"
-					},
-					"param3": {
-						"type": "string",
-						"title": "Параметр 3"
-					},
-					"param4": {
-						"type": "string",
-						"title": "Параметр 4"
-					},
-					"param5": {
-						"type": "string",
-						"title": "Параметр 5"
-					},
-					"param6": {
-						"type": "string",
-						"title": "Параметр 6"
-					},
-					"typicalTasks": {
-						"type": "array",
-						"title": "Типовые задачи",
-						"items": {
-							"type": "object",
-							"title": "Задача",
-							"properties": {
-								"name": {
-									"type": "string",
-									"title": "Задача"
-								},
-								"reason": {
-									"type": "string",
-									"title": "Причина задачи"
-								},
-								"estimateHoursPerDay": {
-									"type": "number",
-									"title": "Оценка ч/д"
-								},
-								"coefficient": {
-									"type": "number",
-									"title": "Коэф."
-								},
-								"total": {
-									"type": "number",
-									"title": "Итог",
-									"readOnly": true
-								}
-							}
-						}
-					},
-					"atypicalTasks": {
-						"type": "array",
-						"title": "Нетиповые задачи",
-						"items": {
-							"type": "object",
-							"title": "Нетиповая задача",
-							"properties": {
-								"name": {
-									"type": "string",
-									"title": "Задача"
-								},
-								"reason": {
-									"type": "string",
-									"title": "Причина задачи"
-								},
-								"estimateHoursPerDay": {
-									"type": "number",
-									"title": "Оценка ч/д"
-								},
-								"coefficient": {
-									"type": "number",
-									"title": "Коэф."
-								},
-								"total": {
-									"type": "number",
-									"title": "Итог",
-									"readOnly": true
-								},
-								"includeInCalculation": {
-									"type": "boolean",
-									"title": "Включить в расчёт"
 								}
 							}
 						}
@@ -1648,7 +1516,6 @@
 			"uncertaintyCalculation",
 			"detailInfo",
 			"streamDataSources",
-			"streamMlPlatform",
 			"streamModelControl",
 			"summary"
 		],
@@ -1688,77 +1555,6 @@
 					}
 				}
 			},
-			"ui:options": {
-				"sectionRole": "main",
-				"workflowSectionId": "streamDataSources",
-				"defaultExpanded": false
-			},
-			"ui:order": ["localParams", "sourceTypicalTasks"],
-			"localParams": {
-				"ui:options": {
-					"sectionRole": "subsection",
-					"showFilledCount": true
-				}
-			}
-		},
-		"streamMlPlatform": {
-			"ui:order": [
-				"param1",
-				"param2",
-				"param3",
-				"param4",
-				"param5",
-				"param6",
-				"typicalTasks",
-				"atypicalTasks"
-			],
-			"param1": {
-				"ui:widget": "select"
-			},
-			"param2": {
-				"ui:widget": "select"
-			},
-			"param3": {
-				"ui:widget": "select"
-			},
-			"param4": {
-				"ui:widget": "select"
-			},
-			"param5": {
-				"ui:widget": "select"
-			},
-			"param6": {
-				"ui:widget": "select"
-			},
-			"typicalTasks": {
-				"ui:options": {
-					"orderable": false,
-					"addable": false,
-					"removable": false
-				},
-				"items": {
-					"name": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"reason": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"estimateHoursPerDay": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"coefficient": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"total": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					}
-				}
-			},
 			"atypicalTasks": {
 				"ui:options": {
 					"orderable": false,
@@ -1766,10 +1562,14 @@
 					"removable": true
 				},
 				"items": {
+					"ui:order": [
+						"name",
+						"estimateHoursPerDay",
+						"coefficient",
+						"total",
+						"includeInCalculation"
+					],
 					"name": {
-						"ui:widget": "text"
-					},
-					"reason": {
 						"ui:widget": "text"
 					},
 					"estimateHoursPerDay": {
@@ -1789,8 +1589,16 @@
 			},
 			"ui:options": {
 				"sectionRole": "main",
-				"workflowSectionId": "streamMlPlatform",
-				"defaultExpanded": false
+				"workflowSectionId": "streamDataSources",
+				"defaultExpanded": false,
+				"sectionCaption": "Платформенные и поддерживающие стримы"
+			},
+			"ui:order": ["localParams", "sourceTypicalTasks", "atypicalTasks"],
+			"localParams": {
+				"ui:options": {
+					"sectionRole": "subsection",
+					"showFilledCount": true
+				}
 			}
 		},
 		"streamModelControl": {
@@ -1826,20 +1634,13 @@
 					}
 				}
 			},
-			"control": {
-				"ui:collapsible": true,
-				"ui:options": {
-					"sectionRole": "subsection",
-					"showFilledCount": true,
-					"archComponent": "modelControl"
-				}
-			},
 			"ui:options": {
 				"sectionRole": "main",
 				"workflowSectionId": "streamModelControl",
-				"defaultExpanded": false
+				"defaultExpanded": false,
+				"sectionCaption": "Платформенные и поддерживающие стримы"
 			},
-			"ui:order": ["localParams", "control", "atypicalTasks"],
+			"ui:order": ["localParams", "atypicalTasks"],
 			"localParams": {
 				"ui:options": {
 					"sectionRole": "subsection",

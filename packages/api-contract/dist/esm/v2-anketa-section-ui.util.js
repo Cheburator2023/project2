@@ -61,6 +61,9 @@ export function readV2AnketaSectionUiOptions(uiNode) {
         titleVariant: opts.titleVariant === "h5" || opts.titleVariant === "h6"
             ? opts.titleVariant
             : undefined,
+        sectionCaption: typeof opts.sectionCaption === "string" && opts.sectionCaption.trim()
+            ? opts.sectionCaption.trim()
+            : undefined,
         hidden: opts.hidden === true ? true : undefined,
         archComponent: isV2ArchComponentType(opts.archComponent)
             ? opts.archComponent

@@ -11,6 +11,5 @@ export const V2_ANKETA_MAIN_SECTION_IDS = [
     "generalInfo",
     "detailInfo",
     "streamDataSources",
-    "streamMlPlatform",
     "streamModelControl",
 ];

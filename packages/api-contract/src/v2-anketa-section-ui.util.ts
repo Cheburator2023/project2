@@ -62,6 +62,8 @@ export type V2AnketaSectionUiOptions = {
 	/** Подсекция: счётчик заполненных элементов в заголовке. */
 	showFilledCount?: boolean;
 	titleVariant?: V2AnketaSectionTitleVariant;
+	/** Подпись под заголовком главной секции (caption). */
+	sectionCaption?: string;
 	hidden?: boolean;
 	/** Тип арх. компонента (глоссарий §3.4) для разметки и dev-подсветки. */
 	archComponent?: V2ArchComponentType;
@@ -101,6 +103,10 @@ export function readV2AnketaSectionUiOptions(
 		titleVariant:
 			opts.titleVariant === "h5" || opts.titleVariant === "h6"
 				? opts.titleVariant
+				: undefined,
+		sectionCaption:
+			typeof opts.sectionCaption === "string" && opts.sectionCaption.trim()
+				? opts.sectionCaption.trim()
 				: undefined,
 		hidden: opts.hidden === true ? true : undefined,
 		archComponent: isV2ArchComponentType(opts.archComponent)

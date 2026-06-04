@@ -106,8 +106,6 @@ export const V2_ANKETA_SECTION_COMPLETE_LABELS: Record<
 	generalInfo: "Завершить заполнение общей информации",
 	detailInfo: "Завершить заполнение детальной информации",
 	streamDataSources: "Завершить заполнение стрима «Источники данных»",
-	streamMlPlatform:
-		"Завершить заполнение стрима «Платформы и решения для моделирования»",
 	streamModelControl: "Завершить заполнение стрима «Контроль моделей»",
 };
 
@@ -116,7 +114,6 @@ export const V2_ANKETA_MAIN_SECTION_TITLES: Record<V2AnketaMainSectionId, string
 		generalInfo: "Общая информация",
 		detailInfo: "Детальная информация",
 		streamDataSources: "Стрим «Источники данных»",
-		streamMlPlatform: "Стрим «Платформы и решения для моделирования»",
 		streamModelControl: "Стрим «Контроль моделей»",
 	};
 

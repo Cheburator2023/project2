@@ -394,56 +394,13 @@ export function buildV2QuestionnaireColumnDefs(): (
 				width: 110,
 				filter: "agNumberColumnFilter",
 			}),
-		]),
-		mainSectionGroup("streamMlPlatform", [
 			formFieldCol({
-				path: "streamMlPlatform.param1",
-				headerName: "Параметр 1",
-				width: 120,
-			}),
-			formFieldCol({
-				path: "streamMlPlatform.param2",
-				headerName: "Параметр 2",
-				width: 120,
-			}),
-			formFieldCol({
-				path: "streamMlPlatform.param3",
-				headerName: "Параметр 3",
-				width: 120,
-			}),
-			formFieldCol({
-				path: "streamMlPlatform.param4",
-				headerName: "Параметр 4",
-				width: 120,
-			}),
-			formFieldCol({
-				path: "streamMlPlatform.param5",
-				headerName: "Параметр 5",
-				width: 120,
-			}),
-			formFieldCol({
-				path: "streamMlPlatform.param6",
-				headerName: "Параметр 6",
-				width: 120,
-			}),
-			formFieldCol({
-				path: "streamMlPlatform.typicalTasks[0].name",
-				headerName: "Типовая задача 1",
-				width: 180,
-			}),
-			formFieldCol({
-				path: "streamMlPlatform.typicalTasks[0].total",
-				headerName: "Итог типовой 1",
-				width: 110,
-				filter: "agNumberColumnFilter",
-			}),
-			formFieldCol({
-				path: "streamMlPlatform.atypicalTasks[0].name",
+				path: "streamDataSources.atypicalTasks[0].name",
 				headerName: "Нетиповая задача 1",
 				width: 180,
 			}),
 			formFieldCol({
-				path: "streamMlPlatform.atypicalTasks[0].total",
+				path: "streamDataSources.atypicalTasks[0].total",
 				headerName: "Итог нетиповой 1",
 				width: 120,
 				filter: "agNumberColumnFilter",

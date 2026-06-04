@@ -265,7 +265,7 @@ function resolveTouchedMainSection(evt: {
 }): V2AnketaMainSectionId | null {
 	const id = evt.id ?? "";
 	const match = id.match(
-		/^root_(generalInfo|detailInfo|streamDataSources|streamMlPlatform|streamModelControl)/,
+		/^root_(generalInfo|detailInfo|streamDataSources|streamModelControl)/,
 	);
 	return (match?.[1] as V2AnketaMainSectionId | undefined) ?? null;
 }

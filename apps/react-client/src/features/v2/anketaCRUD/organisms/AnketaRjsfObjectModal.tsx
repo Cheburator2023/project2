@@ -11,7 +11,7 @@ import {
 import Form from "@rjsf/mui";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Props = {
 	open: boolean;
@@ -22,6 +22,22 @@ type Props = {
 	onClose: () => void;
 	onSubmit: (values: Record<string, unknown>) => void;
 };
+
+/** uiSchema для модалки: без повторного заголовка корневого object (есть DialogTitle). */
+function modalRootUiSchema(uiSchema: UiSchema): UiSchema {
+	const baseOptions =
+		uiSchema["ui:options"] &&
+		typeof uiSchema["ui:options"] === "object" &&
+		!Array.isArray(uiSchema["ui:options"])
+			? (uiSchema["ui:options"] as Record<string, unknown>)
+			: {};
+	return {
+		...uiSchema,
+		"ui:title": "",
+		"ui:options": { ...baseOptions, label: false },
+		"ui:submitButtonOptions": { norender: true },
+	};
+}
 
 export function AnketaRjsfObjectModal({
 	open,
@@ -34,6 +50,16 @@ export function AnketaRjsfObjectModal({
 }: Props) {
 	const [formData, setFormData] = useState<Record<string, unknown>>({});
 
+	const formSchema = useMemo((): RJSFSchema => {
+		const { title: _title, ...rest } = schema;
+		return { ...rest, type: "object" };
+	}, [schema]);
+
+	const formUiSchema = useMemo(
+		() => modalRootUiSchema(uiSchema),
+		[uiSchema],
+	);
+
 	useEffect(() => {
 		if (!open) return;
 		setFormData(defaultValues ?? {});
@@ -45,6 +71,7 @@ export function AnketaRjsfObjectModal({
 				{title}
 				<IconButton
 					aria-label="Закрыть"
+					title="Закрыть"
 					onClick={onClose}
 					sx={{ position: "absolute", right: 8, top: 8 }}
 				>
@@ -54,11 +81,8 @@ export function AnketaRjsfObjectModal({
 			<DialogContent dividers>
 				<Box sx={{ pt: 0.5 }}>
 					<Form
-						schema={schema}
-						uiSchema={{
-							...uiSchema,
-							"ui:submitButtonOptions": { norender: true },
-						}}
+						schema={formSchema}
+						uiSchema={formUiSchema}
 						formData={formData}
 						validator={validatorRu}
 						liveValidate

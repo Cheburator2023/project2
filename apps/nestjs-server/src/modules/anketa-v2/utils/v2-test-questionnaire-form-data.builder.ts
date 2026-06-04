@@ -140,7 +140,6 @@ function applyWorkflowVariant(
 				generalInfo: "В работе",
 				detailInfo: "В работе",
 				streamDataSources: "В работе",
-				streamMlPlatform: "В работе",
 				streamModelControl: "В работе",
 			},
 		};
@@ -151,7 +150,6 @@ function applyWorkflowVariant(
 				generalInfo: "Заполнено",
 				detailInfo: "Заполнено",
 				streamDataSources: "Заполнено",
-				streamMlPlatform: "Заполнено",
 				streamModelControl: "Заполнено",
 			},
 		});

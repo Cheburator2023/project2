@@ -26,12 +26,13 @@ function readUiAtPath(
 export function getObjectSchemaSlice(
 	rootSchema: RJSFSchema,
 	path: string,
+	options?: { omitTitle?: boolean },
 ): RJSFSchema | null {
 	const node = resolveSchemaNode(rootSchema, dotPathToSegments(path));
 	if (!node || node.type !== "object") return null;
 	return {
 		type: "object",
-		title: node.title,
+		...(options?.omitTitle ? {} : { title: node.title }),
 		properties: node.properties,
 		required: node.required,
 	};
