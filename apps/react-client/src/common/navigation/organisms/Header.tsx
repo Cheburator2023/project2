@@ -73,7 +73,7 @@ export function Header({
 								left: isSideMenuVisible
 									? DRAWER_WIDTH + MAIN_PADDING
 									: MAIN_PADDING,
-								right: "20px",
+								right: "18px",
 								zIndex: theme.zIndex.appBar,
 								transition: theme.transitions.create("left", {
 									easing: theme.transitions.easing.sharp,

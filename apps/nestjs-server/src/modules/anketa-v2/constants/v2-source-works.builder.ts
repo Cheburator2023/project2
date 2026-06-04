@@ -17,6 +17,8 @@ import {
 export type GeneratedTask = {
 	taskCode: string;
 	name: string;
+	/** Тип работ из каталога (колонка «Тип работ» в UI). */
+	workType: string;
 	reason: string;
 	estimateHoursPerDay: number;
 	coefficient: number;
@@ -52,6 +54,7 @@ function indTasks(stream: string, matchType: string): GeneratedTask[] {
 				w.name,
 			)}_${i}`,
 			name: w.name,
+			workType: w.workType?.trim() || "—",
 			reason: `${w.stage || "IND"} · ${w.component || "Источник"} · ${w.workType}`.trim(),
 			estimateHoursPerDay: w.norm as number,
 			coefficient: 1,
@@ -84,6 +87,7 @@ export const CONTROL_TYPES: Array<{ code: string; name: string }> = [
 export const CONTROL_TYPICAL_TASKS: GeneratedTask[] = CONTROL_TYPES.map((c) => ({
 	taskCode: `CTRL_${c.code}`,
 	name: c.name,
+	workType: "Контроль моделей",
 	reason: `Контроль моделей · вид контроля ${c.code}`,
 	estimateHoursPerDay: 0,
 	coefficient: 1,

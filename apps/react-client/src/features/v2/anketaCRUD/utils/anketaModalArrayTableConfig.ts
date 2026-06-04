@@ -40,21 +40,21 @@ function formatNameLabel(raw: string): string {
 const TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
 	{
 		key: "name",
-		header: "Задача",
+		header: "Наименование",
 		width: "1.5fr",
 		link: true,
 		render: (item) => text(item, "name"),
 	},
 	{
-		key: "reason",
-		header: "Причина",
-		width: "1.4fr",
-		render: (item) => text(item, "reason"),
+		key: "workType",
+		header: "Тип работ",
+		width: "1.1fr",
+		render: (item) => text(item, "workType"),
 	},
 	{
 		key: "estimate",
-		header: "Оценка, чд",
-		width: "0.8fr",
+		header: "Базовая оценка (ч/д)",
+		width: "0.95fr",
 		render: (item) => text(item, "estimateHoursPerDay"),
 	},
 	{
@@ -87,8 +87,8 @@ const ATYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
 	},
 	{
 		key: "estimate",
-		header: "Оценка, чд",
-		width: "0.8fr",
+		header: "Базовая оценка (ч/д)",
+		width: "0.95fr",
 		render: (item) => text(item, "estimateHoursPerDay"),
 	},
 	{

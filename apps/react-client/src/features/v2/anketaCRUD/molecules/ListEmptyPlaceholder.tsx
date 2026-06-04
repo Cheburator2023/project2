@@ -19,7 +19,7 @@ export function ListEmptyPlaceholder({
 			sx={{
 				py: 1.5,
 				px: 1,
-				bgcolor: "grey.50",
+				bgcolor: "#4c4c4c08",
 				borderRadius: 1.5,
 				textAlign: "center",
 			}}

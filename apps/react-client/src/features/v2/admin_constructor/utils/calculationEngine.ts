@@ -1,4 +1,8 @@
-import type { V2LogicRuleDto } from "@smart-anketa/api-contract";
+import type { V2JsonLogicValue, V2LogicRuleDto } from "@smart-anketa/api-contract";
+import {
+	mergeTypicalCoefficientContext,
+	readStreamLocalParamsForTypicalOutput,
+} from "@smart-anketa/api-contract";
 import {
 	applyLogic,
 	type JsonLogicValue,
@@ -41,11 +45,13 @@ export type TaskTriggerPayload = {
 	hint?: string;
 	sourceArrayPath?: string;
 	outputArrayPath?: string;
+	coefficientLogic?: V2JsonLogicValue;
 	tasks?: Array<{
 		taskCode?: string;
 		label?: string;
 		name?: string;
 		reason?: string;
+		workType?: string;
 		estimateHoursPerDay?: number;
 		coefficient?: number;
 		coefficientBySourceCount?: Record<string, number>;
@@ -162,6 +168,7 @@ function resolveGeneratedTaskCoefficient(
 	task: NonNullable<TaskTriggerPayload["tasks"]>[number],
 	source: Record<string, unknown>,
 	sourceCount: number,
+	coefficientLogic?: V2JsonLogicValue,
 ): number {
 	const byField = task.coefficientByField;
 	if (byField?.field) {
@@ -174,6 +181,15 @@ function resolveGeneratedTaskCoefficient(
 	const bucket = sourceCountBucket(sourceCount);
 	if (task.coefficientBySourceCount?.[bucket] !== undefined) {
 		return task.coefficientBySourceCount[bucket] as number;
+	}
+	if (coefficientLogic !== undefined) {
+		try {
+			const raw = applyLogic(coefficientLogic, source);
+			const computed = toFiniteNumber(raw);
+			if (computed !== null) return computed * (task.coefficient ?? 1);
+		} catch {
+			// fallback
+		}
 	}
 	return task.coefficient ?? 1;
 }
@@ -440,12 +456,22 @@ function applyGeneratedRows(
 	if (!Array.isArray(sourceRows)) return writeByDotPath(data, outputArrayPath, []);
 
 	const sourceCount = sourceRows.length;
+	const streamLocalParams = readStreamLocalParamsForTypicalOutput(
+		data,
+		outputArrayPath,
+	);
 	const generated = sourceRows.flatMap((row, sourceIndex) => {
 		const source =
 			row && typeof row === "object" && !Array.isArray(row)
 				? (row as Record<string, unknown>)
-				: {};
+				: typeof row === "string"
+					? { value: row, controlType: row, name: row }
+					: {};
 		const sourceForMatch = { ...source, sourceCount, sourceIndex };
+		const coefficientContext = mergeTypicalCoefficientContext(
+			streamLocalParams,
+			sourceForMatch,
+		);
 		const sourceName =
 			typeof source.name === "string" && source.name.trim()
 				? source.name.trim()
@@ -456,14 +482,19 @@ function applyGeneratedRows(
 			.map((task) => ({
 				taskCode: task.taskCode,
 				name: task.name ?? task.label ?? task.taskCode ?? "Типовая работа",
+				workType:
+					typeof task.workType === "string" && task.workType.trim()
+						? task.workType.trim()
+						: "—",
 				reason: task.reason
 					? `${sourceName}: ${task.reason}`
 					: `${sourceName}: параметр источника`,
 				estimateHoursPerDay: task.estimateHoursPerDay ?? 0,
 				coefficient: resolveGeneratedTaskCoefficient(
 					task,
-					sourceForMatch,
+					coefficientContext,
 					sourceCount,
+					payload.coefficientLogic,
 				),
 				sourceComponent: "Источник данных",
 				sourceName,

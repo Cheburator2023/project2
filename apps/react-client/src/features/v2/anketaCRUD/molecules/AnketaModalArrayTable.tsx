@@ -22,6 +22,8 @@ import {
 type Props = {
 	pathKey: string;
 	sectionTitle: string;
+	/** Подсказка под заголовком (ui:description массива). */
+	sectionHint?: string;
 };
 
 function gridTemplate(
@@ -94,6 +96,7 @@ function CellValue({
 export function AnketaModalArrayTable({
 	pathKey,
 	sectionTitle,
+	sectionHint,
 	formContext,
 }: Props & { formContext: unknown }) {
 	const ctx = readAnketaFormContext(formContext);
@@ -133,6 +136,16 @@ export function AnketaModalArrayTable({
 					({items.length})
 				</Typography>
 			</Stack>
+			{sectionHint ? (
+				<Typography
+					variant="body2"
+					color="text.secondary"
+					sx={{ mb: 1.5, whiteSpace: "pre-line" }}
+					data-test-id={`${tableTestId}--hint`}
+				>
+					{sectionHint}
+				</Typography>
+			) : null}
 
 			{items.length > 0 ? (
 				<Box

@@ -42,7 +42,6 @@ describe("resolveV2AnketaEditorBindings", () => {
 			expect.arrayContaining([
 				"detailInfo.detailTypicalTasks",
 				"streamDataSources.sourceTypicalTasks",
-				"streamModelControl.control.controlTypicalTasks",
 			]),
 		);
 

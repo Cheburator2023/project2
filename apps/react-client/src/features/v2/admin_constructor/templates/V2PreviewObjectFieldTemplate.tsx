@@ -287,6 +287,10 @@ export function V2PreviewArrayFieldTemplate({
 		title ||
 		(typeof schema.title === "string" ? schema.title : undefined) ||
 		"Список";
+	const sectionHint =
+		typeof uiSchema?.["ui:description"] === "string"
+			? uiSchema["ui:description"]
+			: undefined;
 	const canEdit = !disabled && !readonly && !anketaReadOnly;
 	const addLabel =
 		typeof (uiSchema?.["ui:options"] as { addButtonText?: unknown } | undefined)
@@ -301,12 +305,13 @@ export function V2PreviewArrayFieldTemplate({
 				<AnketaModalArrayTable
 					pathKey={pathKey}
 					sectionTitle={sectionTitle}
+					sectionHint={sectionHint}
 					formContext={registry.formContext}
 				/>
 				{showAddButton ? (
-					<Box mt={2}>
+					<Box mt={2} data-test-id={`add_modal_button_compact_table`}>
 						<Button
-							variant="contained"
+							variant="outlined"
 							startIcon={<AddIcon />}
 							onClick={() => openAnketaModal?.(pathKey)}
 							sx={{ textTransform: "uppercase", fontWeight: 600 }}
@@ -315,7 +320,7 @@ export function V2PreviewArrayFieldTemplate({
 						</Button>
 					</Box>
 				) : null}
-			</Box>
+			</Box>,
 		);
 	}
 
@@ -352,9 +357,9 @@ export function V2PreviewArrayFieldTemplate({
 				)}
 			</Box>
 			{showAddButton ? (
-				<Box mt={3}>
+				<Box mt={3} data-test-id={`add_modal_button`}>
 					<Button
-						variant="contained"
+						variant="outlined"
 						startIcon={<AddIcon />}
 						onClick={() =>
 							useModalAdd ? openAnketaModal?.(pathKey) : onAddClick?.()
@@ -365,7 +370,7 @@ export function V2PreviewArrayFieldTemplate({
 					</Button>
 				</Box>
 			) : null}
-		</Box>
+		</Box>,
 	);
 }
 
@@ -389,7 +394,9 @@ export function V2PreviewObjectFieldTemplate({
 	if (isRoot) {
 		const visibleProperties = properties.filter(
 			(element) =>
-				!isV2AnketaHiddenUiNode((uiSchema as UiSchema | undefined)?.[element.name]),
+				!isV2AnketaHiddenUiNode(
+					(uiSchema as UiSchema | undefined)?.[element.name],
+				),
 		);
 
 		return (
@@ -492,7 +499,7 @@ export function V2PreviewObjectFieldTemplate({
 				}
 			>
 				{fieldsBody}
-			</SectionPanelAccordion>
+			</SectionPanelAccordion>,
 		);
 	}
 
@@ -507,7 +514,9 @@ export function V2PreviewObjectFieldTemplate({
 			isV2AnketaModalObjectArch(archComponent);
 		const visibleProperties = properties.filter(
 			(element) =>
-				!isV2AnketaHiddenUiNode((uiSchema as UiSchema | undefined)?.[element.name]),
+				!isV2AnketaHiddenUiNode(
+					(uiSchema as UiSchema | undefined)?.[element.name],
+				),
 		);
 		const subsectionBody = (
 			<>
@@ -536,7 +545,7 @@ export function V2PreviewObjectFieldTemplate({
 				description={sectionDescription}
 			>
 				{subsectionBody}
-			</OpenSubSectionPanel>
+			</OpenSubSectionPanel>,
 		);
 	}
 
@@ -549,7 +558,7 @@ export function V2PreviewObjectFieldTemplate({
 				titleVariant={titleVariant}
 			>
 				{fieldsBody}
-			</SectionPanelAccordion>
+			</SectionPanelAccordion>,
 		);
 	}
 
@@ -565,7 +574,7 @@ export function V2PreviewObjectFieldTemplate({
 					</Typography>
 				) : null}
 				{fieldsBody}
-			</Box>
+			</Box>,
 		);
 	}
 
@@ -576,6 +585,6 @@ export function V2PreviewObjectFieldTemplate({
 			defaultExpanded={defaultExpanded}
 		>
 			{fieldsBody}
-		</SectionPanelAccordion>
+		</SectionPanelAccordion>,
 	);
 }

@@ -9,6 +9,10 @@ import type {
 	V2TaskTriggerItemDto,
 	V2TemplateVersionDto,
 } from "@smart-anketa/api-contract";
+import {
+	mergeTypicalCoefficientContext,
+	readStreamLocalParamsForTypicalOutput,
+} from "@smart-anketa/api-contract";
 import { V2TemplateService } from "./v2-template.service";
 import { V2TemplateVersionService } from "./v2-template-version.service";
 import {
@@ -46,8 +50,8 @@ type TaskTriggerPayload = {
 	outputArrayPath?: string;
 	/**
 	 * ФТ-024: единый коэффициент группы для всех работ компонента — произведение
-	 * весов параметров строки-источника. JsonLogic вычисляется по строке источника
-	 * (`{...row, sourceCount, sourceIndex}`); редактируется через админку.
+	 * весов параметров. JsonLogic — по merge(localParams стрима, строка компонента);
+	 * поля источника перекрывают localParams. Редактируется через админку.
 	 * Имеет приоритет над per-task coefficient*, кроме coefficientByField.
 	 */
 	coefficientLogic?: V2JsonLogicValue;
@@ -56,6 +60,7 @@ type TaskTriggerPayload = {
 		label?: string;
 		name?: string;
 		reason?: string;
+		workType?: string;
 		estimateHoursPerDay?: number;
 		coefficient?: number;
 		coefficientBySourceCount?: Record<string, number>;
@@ -407,6 +412,10 @@ export class V2CalculationService {
 		if (!Array.isArray(sourceRows)) return writeByDotPath(data, outputArrayPath, []);
 
 		const sourceCount = sourceRows.length;
+		const streamLocalParams = readStreamLocalParamsForTypicalOutput(
+			data,
+			outputArrayPath,
+		);
 		const generated = sourceRows.flatMap((row, sourceIndex) => {
 			// Строки-источники могут быть объектами (системы-источники) или строками
 			// (мультиселект, напр. виды контроля) — строку оборачиваем для match.
@@ -417,6 +426,10 @@ export class V2CalculationService {
 						? { value: row, controlType: row, name: row }
 						: {};
 			const sourceForMatch = { ...source, sourceCount, sourceIndex };
+			const coefficientContext = mergeTypicalCoefficientContext(
+				streamLocalParams,
+				sourceForMatch,
+			);
 			const sourceName =
 				typeof source.name === "string" && source.name.trim()
 					? source.name.trim()
@@ -427,13 +440,17 @@ export class V2CalculationService {
 				.map((task) => ({
 					taskCode: task.taskCode,
 					name: task.name ?? task.label ?? task.taskCode ?? "Типовая работа",
+					workType:
+						typeof task.workType === "string" && task.workType.trim()
+							? task.workType.trim()
+							: "—",
 					reason: task.reason
 						? `${sourceName}: ${task.reason}`
 						: `${sourceName}: параметр источника`,
 					estimateHoursPerDay: task.estimateHoursPerDay ?? 0,
 					coefficient: resolveGeneratedTaskCoefficient(
 						task,
-						sourceForMatch,
+						coefficientContext,
 						sourceCount,
 						payload.coefficientLogic,
 					),

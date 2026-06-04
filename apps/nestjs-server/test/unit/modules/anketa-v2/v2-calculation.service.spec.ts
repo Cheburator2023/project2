@@ -98,6 +98,22 @@ describe("V2CalculationService", () => {
 		expect(streamDataSources.sourceTypicalTasks.length).toBeGreaterThan(0);
 	});
 
+	it("uses stream localParams for coefficient when source row has no weights (ФТ-024)", () => {
+		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+			streamDataSources: {
+				localParams: {
+					domainComplexity: "Высокая",
+					entityVolume: "Большое",
+				},
+				sourceSystems: [{ name: "CRM", type: "Внутренний" }],
+			},
+		});
+		const streamDataSources = result.formData.streamDataSources as {
+			sourceTypicalTasks: Array<{ coefficient: number }>;
+		};
+		expect(streamDataSources.sourceTypicalTasks[0]?.coefficient).toBeCloseTo(1.875);
+	});
+
 	it("applies multiplicative group coefficient from dictionary weights (ФТ-024)", () => {
 		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
 			streamDataSources: {

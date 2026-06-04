@@ -109,7 +109,7 @@ export function AnketaArchObjectPanel({
 			{!readOnly ? (
 				<Box mt={2} data-test-id={`${panelTestId}--add-wrap`}>
 					<Button
-						variant="contained"
+						variant="outlined"
 						startIcon={<AddIcon />}
 						data-test-id={`${panelTestId}--add`}
 						onClick={() => ctx.openAnketaModal?.(pathKey)}

@@ -690,7 +690,12 @@
 							"properties": {
 								"name": {
 									"type": "string",
-									"title": "Задача",
+									"title": "Наименование",
+									"readOnly": true
+								},
+								"workType": {
+									"type": "string",
+									"title": "Тип работ",
 									"readOnly": true
 								},
 								"reason": {
@@ -700,7 +705,7 @@
 								},
 								"estimateHoursPerDay": {
 									"type": "number",
-									"title": "Оценка ч/д",
+									"title": "Базовая оценка (ч/д)",
 									"readOnly": true
 								},
 								"coefficient": {
@@ -918,7 +923,12 @@
 							"properties": {
 								"name": {
 									"type": "string",
-									"title": "Задача",
+									"title": "Наименование",
+									"readOnly": true
+								},
+								"workType": {
+									"type": "string",
+									"title": "Тип работ",
 									"readOnly": true
 								},
 								"reason": {
@@ -928,7 +938,7 @@
 								},
 								"estimateHoursPerDay": {
 									"type": "number",
-									"title": "Оценка ч/д",
+									"title": "Базовая оценка (ч/д)",
 									"readOnly": true
 								},
 								"coefficient": {
@@ -1416,6 +1426,7 @@
 			},
 			"detailTypicalTasks": {
 				"ui:readonly": true,
+				"ui:description": "Формируются автоматически по правилам справочника при расчёте анкеты.\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог",
 				"ui:options": {
 					"addable": false,
 					"removable": false,
@@ -1527,6 +1538,7 @@
 		"streamDataSources": {
 			"sourceTypicalTasks": {
 				"ui:readonly": true,
+				"ui:description": "Формируются автоматически по правилам справочника на основании локальных параметров стрима и компонентов «Система-источник».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог",
 				"ui:options": {
 					"orderable": false,
 					"addable": false,
@@ -1534,6 +1546,10 @@
 				},
 				"items": {
 					"name": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					},
+					"workType": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					},

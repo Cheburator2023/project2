@@ -8,5 +8,6 @@ export * from "./v2-anketa-workflow.types";
 export * from "./v2-anketa-workflow.util";
 export * from "./v2-anketa-section-ui.util";
 export * from "./v2-anketa-editor-ui.util";
+export * from "./v2-typical-works.util";
 export * from "./v2-anketa-ui-layout.util";
 export * from "./v2-legacy-stage.constants";
