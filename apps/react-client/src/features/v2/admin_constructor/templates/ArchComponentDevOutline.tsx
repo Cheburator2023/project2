@@ -4,7 +4,6 @@ import {
 	V2_ARCH_COMPONENT_LABELS,
 	type V2ArchComponentType,
 } from "@smart-anketa/api-contract";
-import { IS_DEV } from "@react-client/common/constants/dev";
 
 /** Цвета арх. компонентов для dev-подсветки (figma/miro-style). */
 const ARCH_COMPONENT_COLORS: Record<V2ArchComponentType, string> = {
@@ -18,7 +17,7 @@ const ARCH_COMPONENT_COLORS: Record<V2ArchComponentType, string> = {
 };
 
 /** Подсветка включена только в dev-сборке. */
-export const ARCH_DEV_OUTLINE_ENABLED = IS_DEV;
+export const ARCH_DEV_OUTLINE_ENABLED = false;
 
 /**
  * Обводит группу/массив как арх. компонент в dev-режиме: цветная пунктирная
