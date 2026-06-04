@@ -5,12 +5,25 @@ import {
 	type V2ArchComponentType,
 } from "@smart-anketa/api-contract";
 
-export const TAB_HEADINGS = [
-	["designer", "Конструктор"],
+export const MAIN_DOCK_PANEL_ID = "designer";
+
+export const SCHEMA_TREE_PANEL_ID = "schema-tree";
+export const RELATIONS_PANEL_ID = "relations";
+export const CALCULATION_PANEL_ID = "calculation";
+
+/** Все вкладки дока на одном уровне; первая — главная (конструктор). */
+export const DOCK_PANEL_HEADINGS = [
+	[MAIN_DOCK_PANEL_ID, "Конструктор"],
 	["json", "Редактор JSON"],
 	["logic", "Логика"],
 	["preview", "Превью"],
+	[SCHEMA_TREE_PANEL_ID, "Дерево схемы"],
+	[RELATIONS_PANEL_ID, "Граф связей"],
+	[CALCULATION_PANEL_ID, "Калькуляция"],
 ] as const;
+
+/** @deprecated Используйте {@link DOCK_PANEL_HEADINGS}. */
+export const TAB_HEADINGS = DOCK_PANEL_HEADINGS;
 
 export const SCHEMA_TYPE_RU: Record<string, string> = {
 	string: "строка",

@@ -29,6 +29,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { SchemaEditorProvider } from "../schemaEditor/SchemaEditorContext";
 import type { SchemaEditorContextValue } from "../schemaEditor/SchemaEditorContext";
+import type { SchemaEditorMainTab } from "../schemaEditor/types";
 import { SchemaEditorDockProvider } from "../schemaEditor/SchemaEditorDockContext";
 import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayout";
 import { SchemaLogicPanel } from "../schemaEditor/panels/SchemaLogicPanel";
@@ -199,9 +200,9 @@ export const V2TemplateSchemaEditor = ({
 	);
 	const [uiMonacoText, setUiMonacoText] = useState("{}");
 
-	const [mainTab, setMainTab] = useState<
-		"designer" | "json" | "logic" | "preview"
-	>(layoutMode === "logic-only" ? "logic" : "designer");
+	const [mainTab, setMainTab] = useState<SchemaEditorMainTab>(
+		layoutMode === "logic-only" ? "logic" : "designer",
+	);
 
 	const [selectedRuleId, setSelectedRuleId] = useState<string | null>(
 		initialRuleId,

@@ -11,7 +11,7 @@ import { SchemaPropertiesPanel } from "../panels/SchemaPropertiesPanel";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { SchemaCanvasPanel, SchemaPalettePanel } from "./SchemaCanvasDnd";
 
-const PALETTE_WIDTH = 220;
+const PALETTE_WIDTH = 250;
 const PROPERTIES_WIDTH = 300;
 
 function DesignerSidebarHeader({
@@ -35,7 +35,11 @@ function DesignerSidebarHeader({
 				minHeight: 40,
 			}}
 		>
-			<Typography variant="caption" fontWeight={700} sx={{ flex: 1, minWidth: 0 }}>
+			<Typography
+				variant="caption"
+				fontWeight={700}
+				sx={{ flex: 1, minWidth: 0 }}
+			>
 				{title}
 			</Typography>
 			{action}

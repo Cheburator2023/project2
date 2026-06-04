@@ -1,7 +1,12 @@
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import type { IDockviewPanelProps } from "dockview-react";
-import { TAB_HEADINGS } from "./constants";
+import {
+	CALCULATION_PANEL_ID,
+	DOCK_PANEL_HEADINGS,
+	RELATIONS_PANEL_ID,
+	SCHEMA_TREE_PANEL_ID,
+} from "./constants";
 import { SchemaDesignerLayout } from "./components/SchemaDesignerLayout";
 import { SchemaEditorDndProvider } from "./components/SchemaEditorDndProvider";
 import { SchemaFieldTreePanel } from "./components/SchemaFieldTree";
@@ -13,7 +18,13 @@ import { SchemaLogicPanel } from "./panels/SchemaLogicPanel";
 import { SchemaPreviewPanel } from "./panels/SchemaPreviewPanel";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 
-export const WORKSPACE_PANEL_IDS = TAB_HEADINGS.map(([id]) => id);
+export const WORKSPACE_PANEL_IDS = DOCK_PANEL_HEADINGS.map(([id]) => id);
+
+export {
+	CALCULATION_PANEL_ID,
+	RELATIONS_PANEL_ID,
+	SCHEMA_TREE_PANEL_ID,
+} from "./constants";
 
 function PanelHost({
 	children,
@@ -56,8 +67,6 @@ function CyclesWarning() {
 		</Alert>
 	);
 }
-
-export const SCHEMA_TREE_PANEL_ID = "schema-tree";
 
 export function DesignerWorkspacePanel(_props: IDockviewPanelProps) {
 	return (
@@ -110,8 +119,6 @@ export function PreviewWorkspacePanel(_props: IDockviewPanelProps) {
 	);
 }
 
-export const CALCULATION_PANEL_ID = "calculation";
-
 export function CalculationDockPanel(_props: IDockviewPanelProps) {
 	return (
 		<PanelHost dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.panelCalculation}>
@@ -119,8 +126,6 @@ export function CalculationDockPanel(_props: IDockviewPanelProps) {
 		</PanelHost>
 	);
 }
-
-export const RELATIONS_PANEL_ID = "relations";
 
 export function RelationsDockPanel(_props: IDockviewPanelProps) {
 	return (

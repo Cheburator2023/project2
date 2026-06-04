@@ -82,7 +82,9 @@ function PaletteItem({ preset }: { preset: PalettePreset }) {
 				mb: 0.5,
 				borderRadius: 1,
 				border: 1,
-				borderColor: isArch ? alpha(archColor ?? "primary.main", 0.45) : "divider",
+				borderColor: isArch
+					? alpha(archColor ?? "primary.main", 0.45)
+					: "divider",
 				bgcolor: isDragging ? "action.selected" : "background.paper",
 				cursor: "grab",
 				opacity: isDragging ? 0.5 : 1,
@@ -92,10 +94,13 @@ function PaletteItem({ preset }: { preset: PalettePreset }) {
 				},
 			}}
 		>
-			<Typography variant="body2" sx={{ flex: 1, minWidth: 0 }}>
+			<Typography
+				variant="body2"
+				sx={{ flex: 1, minWidth: 0, color: archColor }}
+			>
 				{preset.title}
 			</Typography>
-			<Chip
+			{/* <Chip
 				size="small"
 				label={
 					isArch
@@ -117,7 +122,7 @@ function PaletteItem({ preset }: { preset: PalettePreset }) {
 							}
 						: {}),
 				}}
-			/>
+			/> */}
 		</Box>
 	);
 }
@@ -190,7 +195,13 @@ function DropInsertionLine() {
 	);
 }
 
-function CanvasDropZone({ groupId, label }: { groupId: string; label: string }) {
+function CanvasDropZone({
+	groupId,
+	label,
+}: {
+	groupId: string;
+	label: string;
+}) {
 	const { ref, isDropTarget } = useDroppable({
 		id: dropAppendId(groupId),
 		type: CANVAS_ZONE_TYPE,
@@ -346,7 +357,11 @@ function SortableFieldRow({
 							/>
 						) : null}
 					</Box>
-					<Typography variant="caption" color="text.secondary" fontFamily="monospace">
+					<Typography
+						variant="caption"
+						color="text.secondary"
+						fontFamily="monospace"
+					>
 						{fieldKey}
 					</Typography>
 				</Box>
@@ -472,7 +487,11 @@ function FieldList({
 	);
 }
 
-export function SchemaPalettePanel({ embedded = false }: { embedded?: boolean }) {
+export function SchemaPalettePanel({
+	embedded = false,
+}: {
+	embedded?: boolean;
+}) {
 	return (
 		<PanelChrome
 			embedded={embedded}
@@ -503,7 +522,11 @@ export function SchemaPalettePanel({ embedded = false }: { embedded?: boolean })
 	);
 }
 
-export function SchemaCanvasPanel({ embedded = false }: { embedded?: boolean }) {
+export function SchemaCanvasPanel({
+	embedded = false,
+}: {
+	embedded?: boolean;
+}) {
 	return (
 		<PanelChrome
 			embedded={embedded}

@@ -11,16 +11,14 @@ import {
 } from "dockview-react";
 
 import { useCallback, useEffect, useRef } from "react";
-import { TAB_HEADINGS } from "./constants";
+import {
+	DOCK_PANEL_HEADINGS,
+	MAIN_DOCK_PANEL_ID,
+} from "./constants";
 import { SchemaEditorDockHeaderRightActions } from "./SchemaEditorDockHeaderActions";
 import { useSchemaEditorDock } from "./SchemaEditorDockContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
-import {
-	CALCULATION_PANEL_ID,
-	RELATIONS_PANEL_ID,
-	SCHEMA_TREE_PANEL_ID,
-	workspacePanelComponents,
-} from "./workspacePanels";
+import { workspacePanelComponents } from "./workspacePanels";
 
 function DockTabNoClose(props: IDockviewPanelHeaderProps) {
 	return <DockviewDefaultTab {...props} hideClose />;
@@ -29,45 +27,25 @@ function DockTabNoClose(props: IDockviewPanelHeaderProps) {
 function buildDefaultLayout(api: DockviewApi) {
 	if (api.totalPanels > 0) return;
 
-	const [firstTab, ...restTabs] = TAB_HEADINGS;
+	const [mainPanel, ...otherPanels] = DOCK_PANEL_HEADINGS;
 
 	api.addPanel({
-		id: firstTab[0],
-		component: firstTab[0],
-		title: firstTab[1],
+		id: mainPanel[0],
+		component: mainPanel[0],
+		title: mainPanel[1],
 	});
 
-	for (const [id, title] of restTabs) {
+	for (const [id, title] of otherPanels) {
 		api.addPanel({
 			id,
 			component: id,
 			title,
-			position: { referencePanel: firstTab[0] },
+			position: { referencePanel: MAIN_DOCK_PANEL_ID },
 		});
 	}
 
-	api.addPanel({
-		id: SCHEMA_TREE_PANEL_ID,
-		component: SCHEMA_TREE_PANEL_ID,
-		title: "Дерево схемы",
-		position: { direction: "below", referencePanel: firstTab[0] },
-		initialHeight: 220,
-	});
-
-	api.addPanel({
-		id: RELATIONS_PANEL_ID,
-		component: RELATIONS_PANEL_ID,
-		title: "Граф связей",
-		position: { referencePanel: "json" },
-	});
-
-	api.addPanel({
-		id: CALCULATION_PANEL_ID,
-		component: CALCULATION_PANEL_ID,
-		title: "Калькуляция",
-		position: { direction: "right", referencePanel: firstTab[0] },
-		initialWidth: 320,
-	});
+	const designer = api.getPanel(MAIN_DOCK_PANEL_ID);
+	designer?.api.setActive();
 }
 
 export function V2SchemaEditorDockLayout() {
