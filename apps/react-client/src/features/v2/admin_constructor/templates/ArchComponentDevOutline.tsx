@@ -38,7 +38,7 @@ export function ArchComponentDevOutline({
 	const color = ARCH_COMPONENT_COLORS[archComponent];
 	const label = V2_ARCH_COMPONENT_LABELS[archComponent];
 
-	return !ARCH_DEV_OUTLINE_ENABLED ? (
+	return ARCH_DEV_OUTLINE_ENABLED ? (
 		<Box
 			sx={{
 				position: "relative",
