@@ -6,7 +6,15 @@ import { RichTreeView } from "@mui/x-tree-view/RichTreeView";
 import { useMemo } from "react";
 import { Link as RouterLink } from "react-router";
 import { pathForAdminV2Dictionary } from "@react-client/routing/common/pathHelpers";
-import { resolveSchemaNode } from "../../utils/schemaMutators";
+import {
+	readUiSchemaBranchAtPointer,
+	resolveSchemaNode,
+} from "../../utils/schemaMutators";
+import {
+	resolveV2AnketaArchComponent,
+	resolveV2AnketaCanvasUiKind,
+	V2_ARCH_COMPONENT_LABELS,
+} from "@smart-anketa/api-contract";
 import { pointerSegments } from "../../utils/schemaPaths";
 import { ruSchemaTypeLabel } from "../constants";
 import { useSchemaEditor } from "../SchemaEditorContext";
@@ -54,6 +62,7 @@ export function SchemaFieldTreePanel({ embedded = false }: { embedded?: boolean 
 	const {
 		treeRows,
 		jsonSchema,
+		uiSchema,
 		selectedPointer,
 		setSelectedPointer,
 		dictionaryCodeByPointer,
@@ -66,7 +75,17 @@ export function SchemaFieldTreePanel({ embedded = false }: { embedded?: boolean 
 		const segs = pointerSegments(item.id);
 		const node = resolveSchemaNode(jsonSchema, segs);
 		const title = typeof node?.title === "string" ? node.title : item.label;
-		return `${title} · ${ruSchemaTypeLabel(item.typeLabel)}`;
+		const uiBranch = readUiSchemaBranchAtPointer(uiSchema, item.id);
+		const arch = resolveV2AnketaArchComponent(uiBranch);
+		const canvasKind = resolveV2AnketaCanvasUiKind(uiBranch);
+		const archSuffix = arch ? ` · ${V2_ARCH_COMPONENT_LABELS[arch]}` : "";
+		const kindSuffix =
+			canvasKind === "hidden"
+				? " · Скрыто"
+				: canvasKind === "utility"
+					? " · Системное"
+					: "";
+		return `${title} · ${ruSchemaTypeLabel(item.typeLabel)}${archSuffix}${kindSuffix}`;
 	};
 
 	return (

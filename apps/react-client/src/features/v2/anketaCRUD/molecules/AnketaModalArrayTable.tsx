@@ -100,7 +100,7 @@ export function AnketaModalArrayTable({
 	const columns = getArrayTableColumns(pathKey);
 	const items = getArrayAtPath(ctx.formData ?? {}, pathKey);
 	const readOnly = ctx.anketaReadOnly;
-	const showRowActions = arrayTableShowsRowActions(pathKey);
+	const showRowActions = arrayTableShowsRowActions(pathKey, formContext);
 
 	if (!columns) return null;
 

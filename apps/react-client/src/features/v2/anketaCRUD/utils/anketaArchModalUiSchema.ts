@@ -1,10 +1,6 @@
-import { resolveSchemaNode } from "@react-client/features/v2/admin_constructor/utils/schemaMutators";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
-import {
-	ANKETA_MODAL_OBJECT_PATHS,
-	ANKETA_MODEL_WRAPPER_HIDDEN_CHILDREN,
-	ANKETA_MODEL_WRAPPER_PATH,
-} from "./anketaFormModalPaths";
+import type { V2AnketaEditorBindings } from "@smart-anketa/api-contract";
+import { resolveV2AnketaEditorBindings } from "@smart-anketa/api-contract";
 
 function setNestedHidden(uiSchema: UiSchema, path: string): UiSchema {
 	const parts = path.split(".");
@@ -46,25 +42,17 @@ function setNestedHidden(uiSchema: UiSchema, path: string): UiSchema {
 export function withHiddenArchModalFields(
 	uiSchema: UiSchema,
 	jsonSchema: RJSFSchema,
+	bindings?: V2AnketaEditorBindings,
 ): UiSchema {
+	const resolved =
+		bindings ??
+		resolveV2AnketaEditorBindings(
+			jsonSchema as Record<string, unknown>,
+			uiSchema as Record<string, unknown>,
+		);
 	let next = uiSchema;
-
-	for (const objectPath of ANKETA_MODAL_OBJECT_PATHS) {
-		const node = resolveSchemaNode(
-			jsonSchema,
-			objectPath.split(".").filter(Boolean),
-		);
-		const keys = Object.keys(
-			(node?.properties ?? {}) as Record<string, unknown>,
-		);
-		for (const key of keys) {
-			next = setNestedHidden(next, `${objectPath}.${key}`);
-		}
+	for (const dotPath of resolved.bodyHiddenDotPaths) {
+		next = setNestedHidden(next, dotPath);
 	}
-
-	for (const key of ANKETA_MODEL_WRAPPER_HIDDEN_CHILDREN) {
-		next = setNestedHidden(next, `${ANKETA_MODEL_WRAPPER_PATH}.${key}`);
-	}
-
 	return next;
 }

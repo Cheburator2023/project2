@@ -6,11 +6,7 @@ import Typography from "@mui/material/Typography";
 import { useMemo, useRef, type ReactNode } from "react";
 import type { V2AnketaSchemaEngine } from "../hooks/useV2AnketaSchemaEngine";
 import type { AnketaFormContextValue } from "../utils/anketaFormContext";
-import {
-	ANKETA_COMPACT_ARRAY_TABLE_PATH_SET,
-	ANKETA_MODAL_ARRAY_PATH_SET,
-	ANKETA_MODAL_OBJECT_PATH_SET,
-} from "../utils/anketaFormModalPaths";
+import { resolveAnketaFormModalBindingSets } from "../utils/anketaFormModalPaths";
 import {
 	AnketaFormModals,
 	type AnketaFormModalControls,
@@ -22,6 +18,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 type Props = {
 	engine: V2AnketaSchemaEngine;
 	readOnly?: boolean;
+	/** Доп. корневые ключи, скрываемые поверх uiSchema (редко). */
 	hiddenTopLevelFields?: string[];
 	anketaFormContext?: AnketaFormContextValue;
 	/** Слот «Рассчитать общую неопределённость» в generalInfo (режим анкеты). */
@@ -39,6 +36,16 @@ export function V2AnketaFormWithModals({
 	"data-test-id": dataTestId = "v2-anketa-form-with-modals",
 }: Props) {
 	const effectiveReadOnly = readOnly || engine.readOnly;
+
+	const modalBindingSets = useMemo(
+		() =>
+			resolveAnketaFormModalBindingSets(
+				engine.previewSchema as Record<string, unknown>,
+				engine.previewUiSchema as Record<string, unknown>,
+			),
+		[engine.previewSchema, engine.previewUiSchema],
+	);
+
 	const modalControlsRef = useRef<AnketaFormModalControls>({
 		openArrayModal: () => {},
 		openUncertaintyModal: () => {},
@@ -90,21 +97,23 @@ export function V2AnketaFormWithModals({
 				((path) => controls.deleteObject(path)),
 			anketaModalArrayPaths:
 				anketaFormContextProp?.anketaModalArrayPaths ??
-				ANKETA_MODAL_ARRAY_PATH_SET,
+				modalBindingSets.modalArrayPathSet,
 			anketaCompactArrayTablePaths:
 				anketaFormContextProp?.anketaCompactArrayTablePaths ??
-				ANKETA_COMPACT_ARRAY_TABLE_PATH_SET,
+				modalBindingSets.compactArrayTablePathSet,
 			anketaModalObjectPaths:
 				anketaFormContextProp?.anketaModalObjectPaths ??
-				ANKETA_MODAL_OBJECT_PATH_SET,
+				modalBindingSets.modalObjectPathSet,
 			anketaReadOnly:
 				anketaFormContextProp?.anketaReadOnly ?? effectiveReadOnly,
 		};
 	}, [
 		anketaFormContextProp,
 		engine.formData,
+		engine.displayFormData,
 		effectiveReadOnly,
 		showUncertaintySlot,
+		modalBindingSets,
 	]);
 
 	return (
@@ -120,6 +129,7 @@ export function V2AnketaFormWithModals({
 				formData={engine.formData}
 				previewSchema={engine.previewSchema}
 				previewUiSchema={engine.previewUiSchema}
+				modalBindings={modalBindingSets.bindings}
 				onFormDataChange={engine.setFormData}
 				controlsRef={modalControlsRef}
 			/>

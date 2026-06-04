@@ -1,7 +1,8 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { parentOfPointer, pointerSegments } from "./schemaPaths";
 
-function readUiBranchAtParent(
+/** UiSchema-ветка для родительского JSON Pointer (корень — `parentPointer` `/`). */
+export function readUiSchemaBranchAtPointer(
 	uiSchema: Record<string, unknown> | UiSchema | undefined,
 	parentPointer: string,
 ): Record<string, unknown> | undefined {
@@ -30,7 +31,7 @@ export function listOrderedChildKeys(
 	const keys = listChildKeys(root, parentPointer);
 	if (!uiSchema) return keys;
 
-	const branch = readUiBranchAtParent(uiSchema, parentPointer);
+	const branch = readUiSchemaBranchAtPointer(uiSchema, parentPointer);
 	const order = branch?.["ui:order"];
 	if (!Array.isArray(order)) return keys;
 
@@ -48,7 +49,7 @@ export function applyGroupFieldOrdersToUiSchema(
 	for (const [groupId, keys] of Object.entries(orders)) {
 		const parentPointer =
 			groupId === "schema-root" ? "/" : groupId.replace("schema-group:", "");
-		const branch = readUiBranchAtParent(next, parentPointer);
+		const branch = readUiSchemaBranchAtPointer(next, parentPointer);
 		if (!branch) continue;
 		branch["ui:order"] = keys;
 	}
@@ -386,6 +387,7 @@ export function listSchemaFields(
 	schema: RJSFSchema,
 	basePointer = "/",
 	depth = 0,
+	uiSchema?: UiSchema | Record<string, unknown>,
 ): Array<{ pointer: string; depth: number; key: string; typeLabel: string }> {
 	const rows: Array<{
 		pointer: string;
@@ -394,10 +396,13 @@ export function listSchemaFields(
 		typeLabel: string;
 	}> = [];
 
-	const props = (schema.properties ?? {}) as Record<string, RJSFSchema>;
+	const keys = listOrderedChildKeys(schema, basePointer, uiSchema);
 
-	for (const key of Object.keys(props)) {
-		const sub = props[key] as RJSFSchema;
+	for (const key of keys) {
+		const segs = pointerSegments(basePointer);
+		const parent =
+			segs.length === 0 ? schema : resolveSchemaNode(schema, segs);
+		const sub = (parent?.properties?.[key] ?? {}) as RJSFSchema;
 		const pointer =
 			basePointer === "/" ? `/${key}` : `${basePointer.replace(/\/$/, "")}/${key}`;
 		const typeLabel =
@@ -409,8 +414,15 @@ export function listSchemaFields(
 
 		rows.push({ pointer, depth, key, typeLabel });
 
-		if (sub.type === "object" && sub.properties && Object.keys(sub.properties).length) {
-			rows.push(...listSchemaFields(sub, pointer, depth + 1));
+		if (isObjectFieldGroup(sub) && Object.keys(sub.properties ?? {}).length > 0) {
+			rows.push(...listSchemaFields(sub, pointer, depth + 1, uiSchema));
+		}
+
+		const itemsObj = getObjectItemsSchema(sub);
+		if (itemsObj && Object.keys(itemsObj.properties ?? {}).length > 0) {
+			rows.push(
+				...listSchemaFields(itemsObj, `${pointer}/items`, depth + 1, uiSchema),
+			);
 		}
 	}
 

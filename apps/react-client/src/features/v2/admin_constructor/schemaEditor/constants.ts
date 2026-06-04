@@ -5,6 +5,23 @@ import {
 	type V2ArchComponentType,
 } from "@smart-anketa/api-contract";
 
+/** Цвета чипов арх. компонентов в конструкторе (как в dev-подсветке анкеты). */
+/** Подсветка скрытых секций на холсте конструктора. */
+export const CANVAS_HIDDEN_CHIP_COLOR = "#64748B";
+
+/** Подсветка системных/readonly-секций (summary, panel, …). */
+export const CANVAS_UTILITY_CHIP_COLOR = "#94A3B8";
+
+export const ARCH_COMPONENT_CHIP_COLORS: Record<V2ArchComponentType, string> = {
+	modelService: "#7C3AED",
+	model: "#2563EB",
+	sourceSystem: "#059669",
+	dataMart: "#D97706",
+	dataProcess: "#0891B2",
+	deployChannel: "#DB2777",
+	modelControl: "#DC2626",
+};
+
 export const MAIN_DOCK_PANEL_ID = "designer";
 
 export const SCHEMA_TREE_PANEL_ID = "schema-tree";

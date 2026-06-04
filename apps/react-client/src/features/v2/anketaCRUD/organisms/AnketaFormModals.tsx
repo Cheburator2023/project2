@@ -17,10 +17,8 @@ import {
 import { useCallback, useEffect, useMemo, useState, type MutableRefObject } from "react";
 import { getObjectAtPath } from "../utils/anketaArchObjectTableConfig";
 import { getArrayAtPath } from "../utils/anketaModalArrayTableConfig";
-import {
-	modalKindForPath,
-	type AnketaModalKind,
-} from "../utils/anketaFormModalPaths";
+import { modalKindForPath, type AnketaModalKind } from "../utils/anketaFormModalPaths";
+import type { V2AnketaEditorBindings } from "@smart-anketa/api-contract";
 import {
 	appendAtFormPath,
 	clearObjectAtFormPath,
@@ -128,6 +126,7 @@ type Props = {
 	formData: Record<string, unknown>;
 	previewSchema: RJSFSchema;
 	previewUiSchema: UiSchema;
+	modalBindings: V2AnketaEditorBindings;
 	onFormDataChange: (
 		updater: (prev: Record<string, unknown>) => Record<string, unknown>,
 	) => void;
@@ -138,16 +137,20 @@ export function AnketaFormModals({
 	formData,
 	previewSchema,
 	previewUiSchema,
+	modalBindings,
 	onFormDataChange,
 	controlsRef,
 }: Props) {
 	const [activeModal, setActiveModal] = useState<ActiveModal | null>(null);
 
-	const openArrayModal = useCallback((path: string, editIndex?: number) => {
-		const kind = modalKindForPath(path);
-		if (!kind) return;
-		setActiveModal({ kind, path, editIndex });
-	}, []);
+	const openArrayModal = useCallback(
+		(path: string, editIndex?: number) => {
+			const kind = modalKindForPath(path, modalBindings);
+			if (!kind) return;
+			setActiveModal({ kind, path, editIndex });
+		},
+		[modalBindings],
+	);
 
 	const openUncertaintyModal = useCallback(() => {
 		setActiveModal({ kind: "uncertainty" });

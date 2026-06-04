@@ -6,8 +6,6 @@ import { V2FormWithEvaluationLayout } from "../../organisms/V2FormWithEvaluation
 import { useSchemaEditor } from "../SchemaEditorContext";
 import { PanelChrome } from "../components/PanelChrome";
 
-const PREVIEW_HIDDEN_TOP_LEVEL = ["workflow", "uncertaintyCalculation"];
-
 export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean }) {
 	const engine = useSchemaEditorAnketaEngine();
 	const {
@@ -52,7 +50,6 @@ export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean })
 			>
 				<V2AnketaFormWithModals
 					engine={engine}
-					hiddenTopLevelFields={PREVIEW_HIDDEN_TOP_LEVEL}
 					data-test-id="schema-editor-anketa-preview"
 				/>
 			</V2FormWithEvaluationLayout>

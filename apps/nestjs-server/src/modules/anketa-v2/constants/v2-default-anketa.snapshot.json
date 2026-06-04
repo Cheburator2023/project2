@@ -1323,6 +1323,9 @@
 			}
 		},
 		"uncertaintyCalculation": {
+			"ui:options": {
+				"hidden": true
+			},
 			"ui:order": [
 				"initiativeTimeline",
 				"initiativeCost",
@@ -1561,6 +1564,9 @@
 		},
 		"summary": {
 			"ui:readonly": true,
+			"ui:options": {
+				"hidden": true
+			},
 			"ui:order": [
 				"baseScoreStream",
 				"scoreWithComplexityCoeff",

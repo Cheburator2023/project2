@@ -295,7 +295,10 @@ export const V2TemplateSchemaEditor = ({
 		[logic.rules],
 	);
 
-	const treeRows = useMemo(() => listSchemaFields(jsonSchema), [jsonSchema]);
+	const treeRows = useMemo(
+		() => listSchemaFields(jsonSchema, "/", 0, uiSchema),
+		[jsonSchema, uiSchema],
+	);
 
 	const rootFieldKeys = useMemo(
 		() => Object.keys((jsonSchema.properties ?? {}) as Record<string, unknown>),
@@ -366,7 +369,7 @@ export const V2TemplateSchemaEditor = ({
 
 	const fieldPathHints = useMemo(() => {
 		const ui = uiSchema as Record<string, unknown>;
-		return listSchemaFields(jsonSchema).map((row) => {
+		return listSchemaFields(jsonSchema, "/", 0, uiSchema).map((row) => {
 			const segs = pointerSegments(row.pointer);
 			const node = resolveSchemaNode(jsonSchema, segs);
 			const title = typeof node?.title === "string" ? node.title : null;

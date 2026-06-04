@@ -13,8 +13,6 @@ import { useMemo } from "react";
 import { V2_TEMPLATE_READ_TEST_IDS } from "../testIds";
 import { V2FormWithEvaluationLayout } from "./V2FormWithEvaluationLayout";
 
-const PREVIEW_HIDDEN_TOP_LEVEL = ["workflow", "uncertaintyCalculation"];
-
 type V2TemplateFormPreviewProps = {
 	templateId: string;
 	initialVersionId?: string | null;
@@ -106,7 +104,6 @@ export function V2TemplateFormPreview({
 				>
 					<V2AnketaFormWithModals
 						engine={engine}
-						hiddenTopLevelFields={PREVIEW_HIDDEN_TOP_LEVEL}
 						data-test-id="template-form-preview"
 					/>
 				</V2FormWithEvaluationLayout>

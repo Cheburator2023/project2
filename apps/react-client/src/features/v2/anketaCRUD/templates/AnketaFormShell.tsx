@@ -33,8 +33,6 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 
 type Engine = V2AnketaSchemaEngine;
 
-const HIDDEN_TOP_LEVEL_FIELDS = ["workflow", "uncertaintyCalculation"];
-
 type Props = {
 	source: V2AnketaSchemaEngineSource | null;
 	engine?: Engine;
@@ -250,7 +248,6 @@ export function AnketaFormShell({
 						<V2AnketaFormWithModals
 							engine={engine}
 							readOnly={effectiveReadOnly}
-							hiddenTopLevelFields={HIDDEN_TOP_LEVEL_FIELDS}
 							anketaFormContext={anketaFormContext}
 							showUncertaintySlot
 						/>

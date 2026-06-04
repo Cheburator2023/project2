@@ -1,4 +1,3 @@
-import { hideSummaryInPreviewUi } from "@react-client/features/v2/admin_constructor/utils/hideSummaryInPreviewUi";
 import { readSummaryFromFormData } from "@react-client/features/v2/admin_constructor/utils/readSummaryFromFormData";
 import type { V2AnketaSchemaEngine } from "@react-client/features/v2/anketaCRUD/hooks/useV2AnketaSchemaEngine";
 import { mergeAnketaDisplayFormData } from "@react-client/features/v2/anketaCRUD/utils/mergeAnketaDisplayFormData";
@@ -36,7 +35,7 @@ export function useSchemaEditorAnketaEngine(): V2AnketaSchemaEngine {
 			logicValidationIssueCount,
 			logicExtraErrors,
 			previewSchema,
-			previewUiSchema: hideSummaryInPreviewUi(previewUiSchema),
+			previewUiSchema,
 			displayFormData,
 			formData,
 			setFormData,

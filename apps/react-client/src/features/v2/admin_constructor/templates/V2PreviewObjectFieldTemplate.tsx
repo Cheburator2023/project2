@@ -21,7 +21,6 @@ import { AnketaSectionStatusChip } from "@react-client/features/v2/anketaCRUD/mo
 import { AnketaArchObjectPanel } from "@react-client/features/v2/anketaCRUD/molecules/AnketaArchObjectPanel";
 import { AnketaModalArrayTable } from "@react-client/features/v2/anketaCRUD/molecules/AnketaModalArrayTable";
 import { ListEmptyPlaceholder } from "@react-client/features/v2/anketaCRUD/molecules/ListEmptyPlaceholder";
-import { ANKETA_MODAL_OBJECT_PATH_SET } from "@react-client/features/v2/anketaCRUD/utils/anketaFormModalPaths";
 import {
 	objectFieldSlot,
 	readAnketaFormContext,
@@ -32,6 +31,8 @@ import {
 } from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
 import {
 	V2_ANKETA_SECTION_COMPLETE_LABELS,
+	isV2AnketaHiddenUiNode,
+	isV2AnketaModalObjectArch,
 	resolveV2AnketaArchComponent,
 	resolveV2AnketaDefaultExpanded,
 	resolveV2AnketaSectionRole,
@@ -63,20 +64,6 @@ function resolveSectionTitle(
 		title ||
 		(typeof schemaNode?.title === "string" ? schemaNode.title : undefined) ||
 		fallbackName
-	);
-}
-
-function isHiddenUiNode(uiNode: unknown): boolean {
-	if (!uiNode || typeof uiNode !== "object" || Array.isArray(uiNode))
-		return false;
-	const node = uiNode as UiSchema;
-	const options = node["ui:options"];
-	return (
-		node["ui:widget"] === "hidden" ||
-		(Boolean(options) &&
-			typeof options === "object" &&
-			!Array.isArray(options) &&
-			(options as { hidden?: unknown }).hidden === true)
 	);
 }
 
@@ -217,7 +204,7 @@ function ObjectFieldsGrid({
 	uiSchema: UiSchema | undefined;
 }) {
 	const visibleProperties = properties.filter(
-		(element) => !isHiddenUiNode(uiSchema?.[element.name]),
+		(element) => !isV2AnketaHiddenUiNode(uiSchema?.[element.name]),
 	);
 
 	return (
@@ -389,7 +376,7 @@ export function V2PreviewObjectFieldTemplate({
 	if (isRoot) {
 		const visibleProperties = properties.filter(
 			(element) =>
-				!isHiddenUiNode((uiSchema as UiSchema | undefined)?.[element.name]),
+				!isV2AnketaHiddenUiNode((uiSchema as UiSchema | undefined)?.[element.name]),
 		);
 
 		return (
@@ -500,11 +487,13 @@ export function V2PreviewObjectFieldTemplate({
 		const count = sectionUiOptions.showFilledCount
 			? countSubsectionFilledItems(getValueAtPath(formData, pathKey))
 			: undefined;
+		const ctx = readAnketaFormContext(registry.formContext);
 		const useArchObjectModal =
-			Boolean(archComponent) && ANKETA_MODAL_OBJECT_PATH_SET.has(pathKey);
+			ctx.anketaModalObjectPaths?.has(pathKey) ??
+			isV2AnketaModalObjectArch(archComponent);
 		const visibleProperties = properties.filter(
 			(element) =>
-				!isHiddenUiNode((uiSchema as UiSchema | undefined)?.[element.name]),
+				!isV2AnketaHiddenUiNode((uiSchema as UiSchema | undefined)?.[element.name]),
 		);
 		const subsectionBody = (
 			<>

@@ -14,7 +14,6 @@ import {
 	collectDictionaryCodesFromUiSchema,
 	mergeDictionaryEnumsIntoPreviewSchema,
 } from "@react-client/features/v2/admin_constructor/utils/dictionaryPreview";
-import { hideSummaryInPreviewUi } from "@react-client/features/v2/admin_constructor/utils/hideSummaryInPreviewUi";
 import { derivePreviewSchemas } from "@react-client/features/v2/admin_constructor/utils/logicPreview";
 import { mapCalculationResult } from "@react-client/features/v2/admin_constructor/utils/mapCalculationResult";
 import { readSummaryFromFormData } from "@react-client/features/v2/admin_constructor/utils/readSummaryFromFormData";
@@ -129,10 +128,7 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		[logicPreviewPack.previewSchema, uiSchema, enumMapByCode],
 	);
 
-	const previewUiSchema = useMemo(
-		() => hideSummaryInPreviewUi(logicPreviewPack.previewUiSchema),
-		[logicPreviewPack.previewUiSchema],
-	);
+	const previewUiSchema = logicPreviewPack.previewUiSchema;
 
 	const displayFormData = useMemo(
 		() =>

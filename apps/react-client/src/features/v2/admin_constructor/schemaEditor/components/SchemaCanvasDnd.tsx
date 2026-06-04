@@ -1,23 +1,35 @@
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
+import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useDraggable, useDroppable } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
-import type { ReactNode } from "react";
-import { V2_ARCH_COMPONENT_LABELS } from "@smart-anketa/api-contract";
+import { useState, type ReactNode } from "react";
+import {
+	resolveV2AnketaArchComponent,
+	resolveV2AnketaCanvasUiKind,
+	V2_ARCH_COMPONENT_LABELS,
+	type V2AnketaCanvasUiKind,
+	type V2ArchComponentType,
+} from "@smart-anketa/api-contract";
 import {
 	getObjectItemsSchema,
 	isObjectFieldGroup,
+	readUiSchemaBranchAtPointer,
 	resolveSchemaNode,
 } from "../../utils/schemaMutators";
 import { pointerSegments } from "../../utils/schemaPaths";
 import {
+	ARCH_COMPONENT_CHIP_COLORS,
 	ARCH_COMPONENT_PRESETS,
+	CANVAS_HIDDEN_CHIP_COLOR,
+	CANVAS_UTILITY_CHIP_COLOR,
 	FIELD_PRESETS,
 	type PalettePreset,
 	ruSchemaTypeLabel,
@@ -37,15 +49,47 @@ import {
 	useSchemaEditorDnd,
 } from "./SchemaEditorDndProvider";
 
-const ARCH_CHIP_COLORS: Record<string, string> = {
-	modelService: "#7C3AED",
-	model: "#2563EB",
-	sourceSystem: "#059669",
-	dataMart: "#D97706",
-	dataProcess: "#0891B2",
-	deployChannel: "#DB2777",
-	modelControl: "#DC2626",
+function ArchComponentChip({ arch }: { arch: V2ArchComponentType }) {
+	const color = ARCH_COMPONENT_CHIP_COLORS[arch];
+	return (
+		<Chip
+			size="small"
+			label={V2_ARCH_COMPONENT_LABELS[arch]}
+			variant="filled"
+			sx={{
+				height: 20,
+				bgcolor: alpha(color, 0.12),
+				color,
+				border: `1px solid ${alpha(color, 0.35)}`,
+				"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem", fontWeight: 600 },
+			}}
+		/>
+	);
+}
+
+const CANVAS_UI_KIND_LABELS: Record<V2AnketaCanvasUiKind, string> = {
+	hidden: "Скрыто",
+	utility: "Системное",
 };
+
+function CanvasUiKindChip({ kind }: { kind: V2AnketaCanvasUiKind }) {
+	const color =
+		kind === "hidden" ? CANVAS_HIDDEN_CHIP_COLOR : CANVAS_UTILITY_CHIP_COLOR;
+	return (
+		<Chip
+			size="small"
+			label={CANVAS_UI_KIND_LABELS[kind]}
+			variant="filled"
+			sx={{
+				height: 20,
+				bgcolor: alpha(color, 0.14),
+				color,
+				border: `1px solid ${alpha(color, 0.4)}`,
+				"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem", fontWeight: 600 },
+			}}
+		/>
+	);
+}
 
 function PaletteItem({ preset }: { preset: PalettePreset }) {
 	const { handleAddFieldPresetAtParent } = useSchemaEditor();
@@ -58,7 +102,9 @@ function PaletteItem({ preset }: { preset: PalettePreset }) {
 	});
 
 	const isArch = preset.section === "arch";
-	const archColor = isArch ? ARCH_CHIP_COLORS[preset.chipLabel] : undefined;
+	const archColor = isArch
+		? ARCH_COMPONENT_CHIP_COLORS[preset.chipLabel as V2ArchComponentType]
+		: undefined;
 
 	return (
 		<Box
@@ -242,9 +288,15 @@ function SortableFieldRow({
 	depth: number;
 }) {
 	const theme = useTheme();
+	const [expanded, setExpanded] = useState(false);
 	const { displayOrders } = useSchemaEditorDnd();
-	const { jsonSchema, selectedPointer, setSelectedPointer, handleDeleteField } =
-		useSchemaEditor();
+	const {
+		jsonSchema,
+		uiSchema,
+		selectedPointer,
+		setSelectedPointer,
+		handleDeleteField,
+	} = useSchemaEditor();
 
 	const segs = pointerSegments(fieldPointer);
 	const node = resolveSchemaNode(jsonSchema, segs);
@@ -281,6 +333,17 @@ function SortableFieldRow({
 				? node.type.join(" | ")
 				: "?";
 
+	const hasNestedContent = isGroup || Boolean(arrayItemsObj);
+	const uiBranch = readUiSchemaBranchAtPointer(uiSchema, fieldPointer);
+	const archComponent = resolveV2AnketaArchComponent(uiBranch);
+	const canvasUiKind = resolveV2AnketaCanvasUiKind(uiBranch);
+	const canvasUiColor =
+		canvasUiKind === "hidden"
+			? CANVAS_HIDDEN_CHIP_COLOR
+			: canvasUiKind === "utility"
+				? CANVAS_UTILITY_CHIP_COLOR
+				: undefined;
+
 	return (
 		<Box sx={{ pl: depth > 0 ? 1.5 : 0 }}>
 			<Box
@@ -297,9 +360,11 @@ function SortableFieldRow({
 					borderColor: selected ? "primary.main" : "divider",
 					bgcolor: selected
 						? alpha(theme.palette.primary.main, 0.08)
-						: isGroup
-							? alpha(theme.palette.info.main, 0.03)
-							: "background.paper",
+						: canvasUiColor
+							? alpha(canvasUiColor, 0.08)
+							: isGroup
+								? alpha(theme.palette.info.main, 0.03)
+								: "background.paper",
 					boxShadow: isDragging ? 3 : 0,
 					opacity: isDragging ? 0.45 : 1,
 					cursor: "pointer",
@@ -309,6 +374,29 @@ function SortableFieldRow({
 					),
 				}}
 			>
+				{hasNestedContent ? (
+					<IconButton
+						size="small"
+						title={expanded ? "Свернуть" : "Развернуть"}
+						aria-label={expanded ? "Свернуть" : "Развернуть"}
+						aria-expanded={expanded}
+						onClick={(e) => {
+							e.stopPropagation();
+							setExpanded((v) => !v);
+						}}
+						sx={{ mt: -0.25, p: 0.35 }}
+					>
+						<ExpandMoreIcon
+							fontSize="small"
+							sx={{
+								transform: expanded ? "rotate(180deg)" : "rotate(-90deg)",
+								transition: "transform 0.2s",
+							}}
+						/>
+					</IconButton>
+				) : (
+					<Box sx={{ width: 28, flexShrink: 0 }} />
+				)}
 				<IconButton
 					ref={handleRef}
 					size="small"
@@ -340,6 +428,12 @@ function SortableFieldRow({
 							variant="outlined"
 							sx={{ height: 20 }}
 						/>
+						{archComponent ? (
+							<ArchComponentChip arch={archComponent} />
+						) : null}
+						{canvasUiKind ? (
+							<CanvasUiKindChip kind={canvasUiKind} />
+						) : null}
 						{isGroup ? (
 							<Chip
 								size="small"
@@ -394,48 +488,50 @@ function SortableFieldRow({
 				</Box>
 			</Box>
 
-			{isGroup ? (
-				<Box
-					sx={{
-						mt: 1,
-						ml: 2,
-						pl: 1,
-						borderLeft: 2,
-						borderColor: selected ? "primary.light" : "divider",
-					}}
-				>
-					<FieldList
-						parentPointer={fieldPointer}
-						depth={depth + 1}
-						emptyLabel="Перетащите поле в группу"
-					/>
-				</Box>
-			) : null}
-
-			{arrayItemsObj ? (
-				<Box
-					sx={{
-						mt: 1,
-						ml: 2,
-						pl: 1,
-						borderLeft: 2,
-						borderColor: selected ? "primary.light" : "divider",
-					}}
-				>
-					<Typography
-						variant="caption"
-						color="text.secondary"
-						sx={{ display: "block", mb: 0.5 }}
+			<Collapse in={expanded && hasNestedContent} unmountOnExit>
+				{isGroup ? (
+					<Box
+						sx={{
+							mt: 1,
+							ml: 2,
+							pl: 1,
+							borderLeft: 2,
+							borderColor: selected ? "primary.light" : "divider",
+						}}
 					>
-						Поля элемента массива
-					</Typography>
-					<FieldList
-						parentPointer={`${fieldPointer}/items`}
-						depth={depth + 1}
-						emptyLabel="Перетащите поле в элемент массива"
-					/>
-				</Box>
-			) : null}
+						<FieldList
+							parentPointer={fieldPointer}
+							depth={depth + 1}
+							emptyLabel="Перетащите поле в группу"
+						/>
+					</Box>
+				) : null}
+
+				{arrayItemsObj ? (
+					<Box
+						sx={{
+							mt: isGroup ? 1.5 : 1,
+							ml: 2,
+							pl: 1,
+							borderLeft: 2,
+							borderColor: selected ? "primary.light" : "divider",
+						}}
+					>
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							sx={{ display: "block", mb: 0.5 }}
+						>
+							Поля элемента массива
+						</Typography>
+						<FieldList
+							parentPointer={`${fieldPointer}/items`}
+							depth={depth + 1}
+							emptyLabel="Перетащите поле в элемент массива"
+						/>
+					</Box>
+				) : null}
+			</Collapse>
 		</Box>
 	);
 }

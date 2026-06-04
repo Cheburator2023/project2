@@ -11,7 +11,7 @@ import {
 } from "../hooks/useV2AnketaSchemaEngine";
 import type { AnketaFormContextValue } from "../utils/anketaFormContext";
 import { withHiddenArchModalFields } from "../utils/anketaArchModalUiSchema";
-import { ANKETA_COMPACT_ARRAY_TABLE_PATHS } from "../utils/anketaFormModalPaths";
+import { resolveAnketaFormModalBindingSets } from "../utils/anketaFormModalPaths";
 import { applySectionLocksToUiSchema } from "../utils/anketaSectionUiSchema";
 import { readWorkflowFromFormData, touchSectionInFormData } from "../hooks/useAnketaWorkflow";
 import type { V2AnketaMainSectionId } from "@smart-anketa/api-contract";
@@ -92,9 +92,12 @@ function setNestedUiOption(
 	return next;
 }
 
-function withCompactArrayFields(uiSchema: UiSchema): UiSchema {
+function withCompactArrayFields(
+	uiSchema: UiSchema,
+	compactPaths: Iterable<string>,
+): UiSchema {
 	let next = uiSchema;
-	for (const path of ANKETA_COMPACT_ARRAY_TABLE_PATHS) {
+	for (const path of compactPaths) {
 		next = setNestedUiOption(next, path, { addable: false, removable: false });
 	}
 	return next;
@@ -140,19 +143,44 @@ export function V2AnketaSchemaForm({
 		[engine.formData],
 	);
 
+	const modalBindings = useMemo(
+		() =>
+			resolveAnketaFormModalBindingSets(
+				engine.previewSchema as Record<string, unknown>,
+				engine.previewUiSchema as Record<string, unknown>,
+			),
+		[engine.previewSchema, engine.previewUiSchema],
+	);
+
+	const effectiveHiddenRootKeys = useMemo(() => {
+		const fromSchema = new Set(modalBindings.hiddenRootKeys);
+		for (const key of hiddenTopLevelFields) fromSchema.add(key);
+		return [...fromSchema];
+	}, [modalBindings.hiddenRootKeys, hiddenTopLevelFields]);
+
 	const formUiSchema = useMemo(() => {
 		let ui = withHiddenTopLevelFields(
 			engine.previewUiSchema,
-			hiddenTopLevelFields,
+			effectiveHiddenRootKeys,
 		);
-		ui = withCompactArrayFields(ui);
-		ui = withHiddenArchModalFields(ui, engine.previewSchema);
+		ui = withCompactArrayFields(ui, modalBindings.compactArrayTablePathSet);
+		ui = withHiddenArchModalFields(
+			ui,
+			engine.previewSchema,
+			modalBindings.bindings,
+		);
 		ui = applySectionLocksToUiSchema(ui, workflow);
 		return {
 			...ui,
 			"ui:submitButtonOptions": { norender: true },
 		};
-	}, [engine.previewUiSchema, engine.previewSchema, hiddenTopLevelFields, workflow]);
+	}, [
+		engine.previewUiSchema,
+		engine.previewSchema,
+		effectiveHiddenRootKeys,
+		modalBindings,
+		workflow,
+	]);
 
 	const formContext = useMemo(
 		(): AnketaFormContextValue => ({

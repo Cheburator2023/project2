@@ -1,5 +1,5 @@
 import type { AnketaCompactArrayTablePath } from "./anketaFormModalPaths";
-import { isReadonlyArrayTablePath } from "./anketaFormModalPaths";
+import { readAnketaFormContext } from "./anketaFormContext";
 
 export type AnketaArrayTableColumn = {
 	key: string;
@@ -354,8 +354,15 @@ export const ANKETA_ARRAY_TABLE_COLUMNS: Record<
 	"streamMlPlatform.atypicalTasks": ATYPICAL_WORK_COLUMNS,
 };
 
-export function arrayTableShowsRowActions(path: string): boolean {
-	return !isReadonlyArrayTablePath(path);
+export function arrayTableShowsRowActions(
+	path: string,
+	formContext: unknown,
+): boolean {
+	const ctx = readAnketaFormContext(formContext);
+	if (ctx.anketaModalArrayPaths) {
+		return ctx.anketaModalArrayPaths.has(path);
+	}
+	return true;
 }
 
 export function getArrayTableColumns(
