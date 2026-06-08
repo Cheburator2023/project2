@@ -14,7 +14,6 @@ import { Spacer } from "@react-client/common/primitives/Spacer";
 import type { FieldTypePreset } from "../constants";
 import {
 	FIELD_PRESETS,
-	GROUP_OBJECT_FIELD_TEMPLATE_PRESETS,
 	LAYOUT_GRID_COLUMN_OPTIONS,
 	ruSchemaTypeLabel,
 	ruleKindLabel,
@@ -31,8 +30,11 @@ import {
 import {
 	isV2AnketaHiddenUiNode,
 	readV2AnketaSectionUiOptions,
+	V2_ANKETA_MAIN_SECTION_IDS,
+	V2_ANKETA_MAIN_SECTION_TITLES,
 	V2_ANKETA_SECTION_ROLE_VALUES,
 	V2_ARCH_COMPONENT_LABELS,
+	type V2AnketaMainSectionId,
 	type V2AnketaSectionRole,
 } from "@smart-anketa/api-contract";
 import type { UiSchema } from "@rjsf/utils";
@@ -51,11 +53,9 @@ export function SchemaPropertiesPanel() {
 		selectedPointerParent: pk,
 		resolvedField,
 		isRequired,
-		currentObjectFieldTemplate,
 		groupChildFields,
 		isCustomUiGroup,
 		customUiGroupSummary,
-		handleObjectFieldTemplateChange,
 		canBindDictionary,
 		currentDictionaryCode,
 		dictionaryBindingMissing,
@@ -381,22 +381,6 @@ export function SchemaPropertiesPanel() {
 								select
 								fullWidth
 								size="small"
-								label="Шаблон группы (ui:ObjectFieldTemplate)"
-								value={currentObjectFieldTemplate}
-								onChange={(e) => handleObjectFieldTemplateChange(e.target.value)}
-								helperText="Внешний вид секции в форме"
-							>
-								{GROUP_OBJECT_FIELD_TEMPLATE_PRESETS.map((w) => (
-									<MenuItem key={`oft-${w.value || "default"}`} value={w.value}>
-										{w.label}
-									</MenuItem>
-								))}
-							</TextField>
-							<Spacer />
-							<TextField
-								select
-								fullWidth
-								size="small"
 								label="Роль секции"
 								value={sectionUiOptions.sectionRole ?? ""}
 								onChange={(e) =>
@@ -449,23 +433,43 @@ export function SchemaPropertiesPanel() {
 								</>
 							) : null}
 							<Spacer />
-							{(sectionUiOptions.sectionRole ?? "") === "main" ||
-							sectionUiOptions.workflowSectionId ? (
-								<>
-									<TextField
-										fullWidth
-										size="small"
-										label="Подпись под заголовком (sectionCaption)"
-										value={sectionUiOptions.sectionCaption ?? ""}
-										onChange={(e) =>
-											patchSectionUi({
-												sectionCaption: e.target.value.trim() || undefined,
-											})
-										}
-									/>
-									<Spacer />
-								</>
-							) : null}
+							<TextField
+								select
+								fullWidth
+								size="small"
+								label="Раздел workflow (workflowSectionId)"
+								value={sectionUiOptions.workflowSectionId ?? ""}
+								onChange={(e) =>
+									patchSectionUi({
+										workflowSectionId: (e.target.value ||
+											undefined) as V2AnketaMainSectionId,
+									})
+								}
+								helperText="Чип статуса и кнопка завершения — при роли main или при явном выборе раздела. «Авто» — по ключу на корне (generalInfo, detailInfo, …)."
+							>
+								<MenuItem value="">
+									<em>Авто (по ключу на корне)</em>
+								</MenuItem>
+								{V2_ANKETA_MAIN_SECTION_IDS.map((id) => (
+									<MenuItem key={id} value={id}>
+										{V2_ANKETA_MAIN_SECTION_TITLES[id]} ({id})
+									</MenuItem>
+								))}
+							</TextField>
+							<Spacer />
+							<TextField
+								fullWidth
+								size="small"
+								label="Подпись под заголовком (sectionCaption)"
+								value={sectionUiOptions.sectionCaption ?? ""}
+								onChange={(e) =>
+									patchSectionUi({
+										sectionCaption: e.target.value.trim() || undefined,
+									})
+								}
+								helperText="Отображается под заголовком секции в превью анкеты"
+							/>
+							<Spacer />
 							<Typography variant="caption" fontWeight={600}>
 								Поля в группе ({groupChildFields.length})
 							</Typography>

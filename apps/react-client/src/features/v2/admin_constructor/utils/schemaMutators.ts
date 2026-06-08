@@ -917,6 +917,26 @@ export function setUiWidgetAtPointer(
 	return next;
 }
 
+/** Удаляет per-field `ui:ObjectFieldTemplate` — в превью всегда глобальный V2-шаблон. */
+export function stripUiObjectFieldTemplatesFromUi(
+	ui: Record<string, unknown>,
+): Record<string, unknown> {
+	function walk(node: Record<string, unknown>): Record<string, unknown> {
+		const next: Record<string, unknown> = { ...node };
+		delete next["ui:ObjectFieldTemplate"];
+
+		for (const [key, value] of Object.entries(next)) {
+			if (key.startsWith("ui:")) continue;
+			if (value && typeof value === "object" && !Array.isArray(value)) {
+				next[key] = walk(value as Record<string, unknown>);
+			}
+		}
+		return next;
+	}
+
+	return walk(ui);
+}
+
 export function setUiObjectFieldTemplateAtPointer(
 	ui: Record<string, unknown>,
 	fieldPointer: string,

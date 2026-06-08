@@ -79,7 +79,7 @@ import {
 	reorderRootProperties,
 	resolveSchemaNode,
 	setUiDictionaryCodeAtPointer,
-	setUiObjectFieldTemplateAtPointer,
+	stripUiObjectFieldTemplatesFromUi,
 	setUiWidgetAtPointer,
 	toggleRequiredAtPointer,
 	updatePropertyAtPointer,
@@ -296,7 +296,12 @@ export const V2TemplateSchemaEditor = ({
 		}
 
 		const nextSchema = coerceJsonSchema(activeVersion.jsonSchema);
-		const nextUi = coerceUiSchema(activeVersion.uiSchema, nextSchema);
+		const nextUi = stripUiObjectFieldTemplatesFromUi(
+			coerceUiSchema(activeVersion.uiSchema, nextSchema) as Record<
+				string,
+				unknown
+			>,
+		) as UiSchema;
 		setJsonSchema(nextSchema);
 		setUiSchema(nextUi);
 		setLogic(coerceLogicGraph(activeVersion.logic));
@@ -520,7 +525,9 @@ export const V2TemplateSchemaEditor = ({
 	const versionSnapshotDto = useCallback(
 		(): CreateV2TemplateVersionRequestDto => ({
 			jsonSchema,
-			uiSchema,
+			uiSchema: stripUiObjectFieldTemplatesFromUi(
+				uiSchema as Record<string, unknown>,
+			) as UiSchema,
 			logic,
 			dictionariesSnapshot: {
 				referencedDictionaryCodes:
@@ -770,13 +777,6 @@ export const V2TemplateSchemaEditor = ({
 	const currentWidget =
 		typeof currentWidgetRaw === "string" ? currentWidgetRaw : "";
 
-	const currentObjectFieldTemplateRaw =
-		leafUiBranch?.["ui:ObjectFieldTemplate"];
-	const currentObjectFieldTemplate =
-		typeof currentObjectFieldTemplateRaw === "string"
-			? currentObjectFieldTemplateRaw
-			: "";
-
 	const isObjectGroup = isObjectFieldGroup(resolvedField);
 
 	const groupChildFields = useMemo(() => {
@@ -812,16 +812,12 @@ export const V2TemplateSchemaEditor = ({
 
 	const isCustomUiGroup =
 		isObjectGroup &&
-		(Boolean(currentObjectFieldTemplate) ||
-			Boolean(currentWidget) ||
+		(Boolean(currentWidget) ||
 			customUiOptionEntries.length > 0 ||
 			Boolean(leafUiBranch?.["ui:order"]));
 
 	const customUiGroupSummary = isCustomUiGroup
 		? [
-				currentObjectFieldTemplate
-					? `ui:ObjectFieldTemplate=${currentObjectFieldTemplate}`
-					: null,
 				currentWidget ? `ui:widget=${currentWidget}` : null,
 				leafUiBranch?.["ui:order"]
 					? `ui:order (${(leafUiBranch["ui:order"] as unknown[]).length})`
@@ -1053,19 +1049,6 @@ export const V2TemplateSchemaEditor = ({
 		[selectedPointer, uiSchema],
 	);
 
-	const handleObjectFieldTemplateChange = useCallback(
-		(template: string) => {
-			if (!selectedPointer) return;
-			const nextUi = setUiObjectFieldTemplateAtPointer(
-				uiSchema as Record<string, unknown>,
-				selectedPointer,
-				template.length ? template : null,
-			);
-			setUiSchema(nextUi as UiSchema);
-		},
-		[selectedPointer, uiSchema],
-	);
-
 	const handleDictionaryCodeChange = useCallback(
 		(code: string) => {
 			if (!selectedPointer) return;
@@ -1256,7 +1239,6 @@ export const V2TemplateSchemaEditor = ({
 			handleDeleteField,
 			handleToggleRequired,
 			handleWidgetChange,
-			handleObjectFieldTemplateChange,
 			handleDictionaryCodeChange,
 			addRule,
 			addRuleForTargetPath,
@@ -1268,7 +1250,6 @@ export const V2TemplateSchemaEditor = ({
 			selectedPointerParent,
 			isRequired,
 			currentWidget,
-			currentObjectFieldTemplate,
 			isObjectGroup,
 			groupChildFields,
 			isCustomUiGroup,
@@ -1324,7 +1305,6 @@ export const V2TemplateSchemaEditor = ({
 			handleDeleteField,
 			handleToggleRequired,
 			handleWidgetChange,
-			handleObjectFieldTemplateChange,
 			handleDictionaryCodeChange,
 			addRule,
 			addRuleForTargetPath,
@@ -1336,7 +1316,6 @@ export const V2TemplateSchemaEditor = ({
 			selectedPointerParent,
 			isRequired,
 			currentWidget,
-			currentObjectFieldTemplate,
 			isObjectGroup,
 			groupChildFields,
 			isCustomUiGroup,

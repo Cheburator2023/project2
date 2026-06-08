@@ -140,6 +140,10 @@ export const FIELD_PRESETS: PalettePreset[] = [
 			title: "Группа полей",
 			properties: {},
 		}),
+		uiOptions: {
+			sectionRole: "main",
+			defaultExpanded: true,
+		},
 	},
 ];
 
@@ -210,22 +214,6 @@ export const PALETTE_PRESETS: PalettePreset[] = [
 	...CALCULATION_FIELD_PRESETS,
 	...ARCH_COMPONENT_PRESETS,
 	...WORK_COMPONENT_PRESETS,
-];
-
-/** Шаблоны отображения групп (object) в RJSF — `ui:ObjectFieldTemplate`. */
-export const GROUP_OBJECT_FIELD_TEMPLATE_PRESETS: Array<{
-	label: string;
-	value: string;
-}> = [
-	{ label: "По умолчанию (стандарт RJSF)", value: "" },
-	{
-		label: "Карточки секций (V2 превью) — V2PreviewObjectFieldTemplate",
-		value: "V2PreviewObjectFieldTemplate",
-	},
-	{
-		label: "Стандартная сетка — RJSFObjectFieldTemplate",
-		value: "RJSFObjectFieldTemplate",
-	},
 ];
 
 export const WIDGET_PRESETS: Array<{ label: string; value: string }> = [

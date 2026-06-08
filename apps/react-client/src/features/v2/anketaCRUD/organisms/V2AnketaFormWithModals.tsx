@@ -3,6 +3,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import { useMemo, useRef, type ReactNode } from "react";
+import { useAnketaWorkflow } from "../hooks/useAnketaWorkflow";
 import type { V2AnketaSchemaEngine } from "../hooks/useV2AnketaSchemaEngine";
 import type { AnketaFormContextValue } from "../utils/anketaFormContext";
 import { resolveAnketaFormModalBindingSets } from "../utils/anketaFormModalPaths";
@@ -35,6 +36,13 @@ export function V2AnketaFormWithModals({
 	"data-test-id": dataTestId = "v2-anketa-form-with-modals",
 }: Props) {
 	const effectiveReadOnly = readOnly || engine.readOnly;
+
+	const {
+		workflow,
+		completeMainSection,
+		touchMainSection,
+		isSectionLocked,
+	} = useAnketaWorkflow(engine.formData, engine.setFormData);
 
 	const modalBindingSets = useMemo(
 		() =>
@@ -77,6 +85,13 @@ export function V2AnketaFormWithModals({
 		return {
 			...anketaFormContextProp,
 			formData: anketaFormContextProp?.formData ?? engine.formData,
+			workflow: anketaFormContextProp?.workflow ?? workflow,
+			onCompleteMainSection:
+				anketaFormContextProp?.onCompleteMainSection ?? completeMainSection,
+			onTouchMainSection:
+				anketaFormContextProp?.onTouchMainSection ?? touchMainSection,
+			isMainSectionLocked:
+				anketaFormContextProp?.isMainSectionLocked ?? isSectionLocked,
 			objectFieldSlots: {
 				...anketaFormContextProp?.objectFieldSlots,
 				...(uncertaintySlot ? { generalInfo: uncertaintySlot } : {}),
@@ -114,6 +129,10 @@ export function V2AnketaFormWithModals({
 		effectiveReadOnly,
 		showUncertaintySlot,
 		modalBindingSets,
+		workflow,
+		completeMainSection,
+		touchMainSection,
+		isSectionLocked,
 	]);
 
 	return (

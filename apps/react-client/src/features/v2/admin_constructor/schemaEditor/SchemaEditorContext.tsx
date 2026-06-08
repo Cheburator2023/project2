@@ -95,7 +95,6 @@ export type SchemaEditorContextValue = {
 	handleDeleteField: (pointer?: string | null) => void;
 	handleToggleRequired: (checked: boolean) => void;
 	handleWidgetChange: (widget: string) => void;
-	handleObjectFieldTemplateChange: (template: string) => void;
 	handleDictionaryCodeChange: (code: string) => void;
 	addRule: () => void;
 	addRuleForTargetPath: (rawTarget: string) => void;
@@ -110,7 +109,6 @@ export type SchemaEditorContextValue = {
 	>;
 	isRequired: boolean;
 	currentWidget: string;
-	currentObjectFieldTemplate: string;
 	isObjectGroup: boolean;
 	groupChildFields: Array<{ key: string; title: string; typeLabel: string }>;
 	isCustomUiGroup: boolean;

@@ -5,7 +5,11 @@ import {
 	type JsonLogicValue,
 } from "@react-client/features/v2/jsonLogicBuilder";
 import { pointerSegments } from "./schemaPaths";
-import { resolveSchemaNode, toggleRequiredAtPointer } from "./schemaMutators";
+import {
+	resolveSchemaNode,
+	stripUiObjectFieldTemplatesFromUi,
+	toggleRequiredAtPointer,
+} from "./schemaMutators";
 import {
 	evaluateComputedRules,
 	evaluateTaskTriggers,
@@ -166,7 +170,9 @@ export function derivePreviewSchemas(
 ): DerivePreviewResult {
 	let previewSchema = structuredClone(jsonSchema) as RJSFSchema;
 
-	let previewUiRaw = structuredClone(uiSchema) as UiBranch;
+	let previewUiRaw = stripUiObjectFieldTemplatesFromUi(
+		structuredClone(uiSchema) as UiBranch,
+	) as UiBranch;
 
 	const useBackendCalc = options?.computedLiveData !== undefined;
 

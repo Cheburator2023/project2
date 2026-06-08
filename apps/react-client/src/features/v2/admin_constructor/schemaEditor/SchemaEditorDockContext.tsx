@@ -36,51 +36,49 @@ export function SchemaEditorDockProvider({
 	const activePanelDisposableRef = useRef<DockviewIDisposable | null>(null);
 	const syncingFromDockRef = useRef(false);
 	const syncingFromStateRef = useRef(false);
+	const mainTabRef = useRef(mainTab);
+	mainTabRef.current = mainTab;
+	const onMainTabChangeRef = useRef(onMainTabChange);
+	onMainTabChangeRef.current = onMainTabChange;
 
-	const activateMainTab = useCallback(
-		(tab: SchemaEditorMainTab) => {
-			const panel = apiRef.current?.getPanel(tab);
-			if (!panel) return;
+	const activateMainTab = useCallback((tab: SchemaEditorMainTab) => {
+		const panel = apiRef.current?.getPanel(tab);
+		if (!panel) return;
+		syncingFromStateRef.current = true;
+		panel.api.setActive();
+		onMainTabChangeRef.current(tab);
+		syncingFromStateRef.current = false;
+	}, []);
+
+	const registerDockApi = useCallback((api: DockviewApi | null) => {
+		activePanelDisposableRef.current?.dispose();
+		activePanelDisposableRef.current = null;
+		apiRef.current = api;
+
+		if (!api) {
+			return;
+		}
+
+		const panel = api.getPanel(mainTabRef.current);
+		if (panel && !panel.api.isActive) {
 			syncingFromStateRef.current = true;
 			panel.api.setActive();
-			onMainTabChange(tab);
 			syncingFromStateRef.current = false;
-		},
-		[onMainTabChange],
-	);
+		}
 
-	const registerDockApi = useCallback(
-		(api: DockviewApi | null) => {
-			activePanelDisposableRef.current?.dispose();
-			activePanelDisposableRef.current = null;
-			apiRef.current = api;
+		activePanelDisposableRef.current = api.onDidActivePanelChange((panel) => {
+			if (syncingFromStateRef.current) return;
 
-			if (!api) {
+			const id = panel?.id;
+			if (!id || !isWorkspacePanelId(id)) {
 				return;
 			}
 
-			const panel = api.getPanel(mainTab);
-			if (panel && !panel.api.isActive) {
-				syncingFromStateRef.current = true;
-				panel.api.setActive();
-				syncingFromStateRef.current = false;
-			}
-
-			activePanelDisposableRef.current = api.onDidActivePanelChange((panel) => {
-				if (syncingFromStateRef.current) return;
-
-				const id = panel?.id;
-				if (!id || !isWorkspacePanelId(id)) {
-					return;
-				}
-
-				syncingFromDockRef.current = true;
-				onMainTabChange(id);
-				syncingFromDockRef.current = false;
-			});
-		},
-		[mainTab, onMainTabChange],
-	);
+			syncingFromDockRef.current = true;
+			onMainTabChangeRef.current(id);
+			syncingFromDockRef.current = false;
+		});
+	}, []);
 
 	useEffect(() => {
 		const api = apiRef.current;

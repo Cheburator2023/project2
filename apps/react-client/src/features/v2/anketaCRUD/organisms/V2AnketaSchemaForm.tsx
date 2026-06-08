@@ -183,26 +183,24 @@ export function V2AnketaSchemaForm({
 		workflow,
 	]);
 
-	const formContext = useMemo(
-		(): AnketaFormContextValue => ({
-			...anketaFormContext,
-			formData: anketaFormContext?.formData ?? engine.formData,
-			openAnketaModal: anketaFormContext?.openAnketaModal,
-			deleteAnketaObject: anketaFormContext?.deleteAnketaObject,
-			deleteAnketaArrayItem: anketaFormContext?.deleteAnketaArrayItem,
+	const formContext = useMemo((): AnketaFormContextValue => {
+		const base = anketaFormContext ?? {};
+		return {
+			...base,
+			formData: base.formData ?? engine.formData,
+			openAnketaModal: base.openAnketaModal,
+			deleteAnketaObject: base.deleteAnketaObject,
+			deleteAnketaArrayItem: base.deleteAnketaArrayItem,
 			anketaModalObjectPaths:
-				anketaFormContext?.anketaModalObjectPaths ??
-				modalBindings.modalObjectPathSet,
+				base.anketaModalObjectPaths ?? modalBindings.modalObjectPathSet,
 			anketaModalArrayPaths:
-				anketaFormContext?.anketaModalArrayPaths ??
-				modalBindings.modalArrayPathSet,
+				base.anketaModalArrayPaths ?? modalBindings.modalArrayPathSet,
 			anketaCompactArrayTablePaths:
-				anketaFormContext?.anketaCompactArrayTablePaths ??
+				base.anketaCompactArrayTablePaths ??
 				modalBindings.compactArrayTablePathSet,
-			anketaReadOnly: readOnly || anketaFormContext?.anketaReadOnly,
-		}),
-		[anketaFormContext, readOnly, engine.formData, modalBindings],
-	);
+			anketaReadOnly: readOnly || base.anketaReadOnly,
+		};
+	}, [anketaFormContext, readOnly, engine.formData, modalBindings]);
 
 	if (!usesExternalEngine && !source?.templateId) {
 		return (

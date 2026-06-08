@@ -10,7 +10,7 @@ import {
 	type IDockviewPanelHeaderProps,
 } from "dockview-react";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
 	DOCK_PANEL_HEADINGS,
 	MAIN_DOCK_PANEL_ID,
@@ -19,6 +19,10 @@ import { SchemaEditorDockHeaderRightActions } from "./SchemaEditorDockHeaderActi
 import { useSchemaEditorDock } from "./SchemaEditorDockContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { workspacePanelComponents } from "./workspacePanels";
+import {
+	layoutDockviewToContainer,
+	useDockviewStableLayout,
+} from "./useDockviewStableLayout";
 
 function DockTabNoClose(props: IDockviewPanelHeaderProps) {
 	return <DockviewDefaultTab {...props} hideClose />;
@@ -35,11 +39,11 @@ function buildDefaultLayout(api: DockviewApi) {
 		title: mainPanel[1],
 	});
 
-	for (const [id, title] of otherPanels) {
+	for (const [id, panelTitle] of otherPanels) {
 		api.addPanel({
 			id,
 			component: id,
-			title,
+			title: panelTitle,
 			position: { referencePanel: MAIN_DOCK_PANEL_ID },
 		});
 	}
@@ -52,19 +56,32 @@ export function V2SchemaEditorDockLayout() {
 	const { mode } = useColorScheme();
 	const { registerDockApi } = useSchemaEditorDock();
 	const layoutInitializedRef = useRef(false);
+	const containerRef = useRef<HTMLDivElement | null>(null);
+	const dockApiRef = useRef<DockviewApi | null>(null);
 
-	const dockTheme = mode === "dark" ? themeDark : themeLight;
+	const dockTheme = useMemo(
+		() => (mode === "dark" ? themeDark : themeLight),
+		[mode],
+	);
+
+	useDockviewStableLayout(containerRef, dockApiRef);
 
 	const onReady = useCallback(
 		(event: DockviewReadyEvent) => {
+			dockApiRef.current = event.api;
 			registerDockApi(event.api);
 
-			if (layoutInitializedRef.current || event.api.totalPanels > 0) {
-				return;
+			if (!layoutInitializedRef.current && event.api.totalPanels === 0) {
+				layoutInitializedRef.current = true;
+				buildDefaultLayout(event.api);
 			}
 
-			layoutInitializedRef.current = true;
-			buildDefaultLayout(event.api);
+			const el = containerRef.current;
+			if (el) {
+				requestAnimationFrame(() => {
+					layoutDockviewToContainer(event.api, el);
+				});
+			}
 		},
 		[registerDockApi],
 	);
@@ -72,53 +89,45 @@ export function V2SchemaEditorDockLayout() {
 	useEffect(() => {
 		return () => {
 			layoutInitializedRef.current = false;
+			dockApiRef.current = null;
 			registerDockApi(null);
 		};
 	}, [registerDockApi]);
 
 	return (
 		<Box
+			ref={containerRef}
 			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.dockLayout}
 			sx={{
 				height: "100%",
 				width: "100%",
 				minHeight: 0,
-				position: "relative",
+				overflow: "hidden",
+				"& .dv-root": { height: "100%", width: "100%" },
+				"& .dv-grid-view": { height: "100%" },
+				"& .dv-groupview > .dv-content-container": {
+					minHeight: 0,
+					overflow: "hidden",
+				},
+				"& .dv-pane-container.dv-animated .dv-view": {
+					transition: "none",
+				},
+				"& .dv-right-actions-container": {
+					display: "flex",
+					alignItems: "center",
+				},
 			}}
 		>
-			<Box
-				sx={{
-					position: "absolute",
-					inset: 0,
-					"& .dv-root": { height: "100%", width: "100%" },
-					"& .dv-grid-view": { height: "100%" },
-					"& .dv-content-container": {
-						display: "flex",
-						flexDirection: "column",
-						overflow: "hidden",
-					},
-					"& .dv-content-container > *": {
-						flex: 1,
-						minHeight: 0,
-						height: "100%",
-						width: "100%",
-					},
-					"& .dv-right-actions-container": {
-						display: "flex",
-						alignItems: "center",
-					},
-				}}
-			>
-				<DockviewReact
-					theme={dockTheme}
-					components={workspacePanelComponents}
-					defaultTabComponent={DockTabNoClose}
-					rightHeaderActionsComponent={SchemaEditorDockHeaderRightActions}
-					floatingGroupBounds="boundedWithinViewport"
-					popoutUrl="/popout.html"
-					onReady={onReady}
-				/>
-			</Box>
+			<DockviewReact
+				theme={dockTheme}
+				components={workspacePanelComponents}
+				defaultTabComponent={DockTabNoClose}
+				rightHeaderActionsComponent={SchemaEditorDockHeaderRightActions}
+				floatingGroupBounds="boundedWithinViewport"
+				popoutUrl="/popout.html"
+				disableAutoResizing
+				onReady={onReady}
+			/>
 		</Box>
 	);
 }

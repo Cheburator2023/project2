@@ -113,11 +113,13 @@ function propertySchemaFor(
 
 function OpenSubSectionPanel({
 	sectionTitle,
+	sectionCaption,
 	count,
 	description,
 	children,
 }: {
 	sectionTitle: string;
+	sectionCaption?: string;
 	count?: number;
 	description?: string;
 	children: ReactNode;
@@ -127,9 +129,14 @@ function OpenSubSectionPanel({
 
 	return (
 		<Box sx={{ minWidth: 0, mb: 3 }}>
-			<Typography variant="h6" fontWeight={700} mb={description ? 1 : 3}>
+			<Typography variant="h6" fontWeight={700} mb={sectionCaption || description ? 1 : 3}>
 				{titleWithCount}
 			</Typography>
+			{sectionCaption ? (
+				<Typography variant="caption" color="text.secondary" display="block" sx={{ mb: description ? 1 : 2 }}>
+					{sectionCaption}
+				</Typography>
+			) : null}
 			{description ? (
 				<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
 					{description}
@@ -541,18 +548,40 @@ export function V2PreviewObjectFieldTemplate({
 		</>
 	);
 
-	if (sectionRole === "main" && workflowSectionId) {
-		const sectionId = workflowSectionId;
-		const sectionStatus = workflow?.sections[sectionId];
-		const locked =
-			anketaReadOnly ||
-			isMainSectionLocked?.(sectionId) ||
-			workflow?.globalStatus === "Заполнено";
-		const canComplete =
-			!locked &&
-			sectionStatus !== "Заполнено" &&
-			Boolean(onCompleteMainSection);
+	const showWorkflowChrome =
+		sectionRole === "main" || Boolean(sectionUiOptions.workflowSectionId);
+	const workflowSectionIdResolved = workflowSectionId;
+	const sectionStatus =
+		workflowSectionIdResolved && workflow
+			? (workflow.sections[workflowSectionIdResolved] ?? "Создано")
+			: "Создано";
+	const workflowLocked = workflowSectionIdResolved
+		? anketaReadOnly ||
+			isMainSectionLocked?.(workflowSectionIdResolved) ||
+			workflow?.globalStatus === "Заполнено"
+		: anketaReadOnly;
+	const canCompleteWorkflow =
+		Boolean(workflowSectionIdResolved) &&
+		!workflowLocked &&
+		sectionStatus !== "Заполнено" &&
+		Boolean(onCompleteMainSection);
+	const workflowStatusChip = showWorkflowChrome ? (
+		<AnketaSectionStatusChip kind="section" status={sectionStatus} />
+	) : null;
+	const workflowCompleteButton =
+		canCompleteWorkflow && workflowSectionIdResolved ? (
+			<Button
+				variant="contained"
+				onClick={() =>
+					onCompleteMainSection?.(workflowSectionIdResolved)
+				}
+				sx={{ textTransform: "uppercase", fontWeight: 600 }}
+			>
+				{V2_ANKETA_SECTION_COMPLETE_LABELS[workflowSectionIdResolved]}
+			</Button>
+		) : null;
 
+	if (showWorkflowChrome) {
 		return wrapArch(
 			<SectionPanelAccordion
 				sectionTitle={sectionTitle}
@@ -560,22 +589,8 @@ export function V2PreviewObjectFieldTemplate({
 				titleVariant={titleVariant}
 				description={sectionDescription}
 				defaultExpanded={defaultExpanded}
-				sectionStatusChip={
-					sectionStatus ? (
-						<AnketaSectionStatusChip kind="section" status={sectionStatus} />
-					) : null
-				}
-				completeButton={
-					canComplete ? (
-						<Button
-							variant="contained"
-							onClick={() => onCompleteMainSection?.(sectionId)}
-							sx={{ textTransform: "uppercase", fontWeight: 600 }}
-						>
-							{V2_ANKETA_SECTION_COMPLETE_LABELS[sectionId]}
-						</Button>
-					) : null
-				}
+				sectionStatusChip={workflowStatusChip}
+				completeButton={workflowCompleteButton}
 			>
 				{fieldsBody}
 			</SectionPanelAccordion>,
@@ -591,6 +606,7 @@ export function V2PreviewObjectFieldTemplate({
 		return wrapArch(
 			<OpenSubSectionPanel
 				sectionTitle={sectionTitle}
+				sectionCaption={sectionUiOptions.sectionCaption}
 				count={count}
 				description={sectionDescription}
 			>
@@ -603,6 +619,7 @@ export function V2PreviewObjectFieldTemplate({
 		return wrapArch(
 			<SectionPanelAccordion
 				sectionTitle={sectionTitle}
+				sectionCaption={sectionUiOptions.sectionCaption}
 				description={sectionDescription}
 				defaultExpanded={defaultExpanded}
 				titleVariant={titleVariant}
@@ -619,9 +636,14 @@ export function V2PreviewObjectFieldTemplate({
 		}
 		return wrapArch(
 			<Box sx={{ minWidth: 0 }}>
-				<Typography variant="h6" fontWeight={700} mb={3}>
+				<Typography variant="h6" fontWeight={700} mb={sectionUiOptions.sectionCaption || sectionDescription ? 1 : 3}>
 					{sectionTitle}
 				</Typography>
+				{sectionUiOptions.sectionCaption ? (
+					<Typography variant="caption" color="text.secondary" display="block" sx={{ mb: sectionDescription ? 1 : 2 }}>
+						{sectionUiOptions.sectionCaption}
+					</Typography>
+				) : null}
 				{sectionDescription ? (
 					<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
 						{sectionDescription}
@@ -635,6 +657,7 @@ export function V2PreviewObjectFieldTemplate({
 	return wrapArch(
 		<SectionPanelAccordion
 			sectionTitle={sectionTitle}
+			sectionCaption={sectionUiOptions.sectionCaption}
 			description={sectionDescription}
 			defaultExpanded={defaultExpanded}
 		>
