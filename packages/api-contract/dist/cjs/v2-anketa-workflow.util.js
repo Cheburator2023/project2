@@ -6,6 +6,8 @@ exports.normalizeV2AnketaWorkflow = normalizeV2AnketaWorkflow;
 exports.allRequiredSectionsCompleted = allRequiredSectionsCompleted;
 exports.markSectionInProgress = markSectionInProgress;
 exports.completeSection = completeSection;
+exports.readPanelSectionStatus = readPanelSectionStatus;
+exports.completePanelSection = completePanelSection;
 exports.completeGlobalQuestionnaire = completeGlobalQuestionnaire;
 exports.mainSectionIdForFormPath = mainSectionIdForFormPath;
 const v2_anketa_workflow_types_1 = require("./v2-anketa-workflow.types");
@@ -32,7 +34,23 @@ function normalizeV2AnketaWorkflow(raw) {
             sections[id] = value;
         }
     }
-    return { globalStatus, sections };
+    const panelSectionsRaw = input.panelSections && typeof input.panelSections === "object"
+        ? input.panelSections
+        : {};
+    const panelSections = {};
+    for (const [pathKey, value] of Object.entries(panelSectionsRaw)) {
+        if (typeof pathKey === "string" &&
+            pathKey.trim() &&
+            typeof value === "string" &&
+            v2_anketa_workflow_types_1.V2_ANKETA_SECTION_STATUS_VALUES.includes(value)) {
+            panelSections[pathKey] = value;
+        }
+    }
+    return {
+        globalStatus,
+        sections,
+        ...(Object.keys(panelSections).length > 0 ? { panelSections } : {}),
+    };
 }
 function allRequiredSectionsCompleted(workflow) {
     return v2_anketa_workflow_types_1.V2_ANKETA_MAIN_SECTION_IDS.every((id) => workflow.sections[id] === "Заполнено");
@@ -52,10 +70,28 @@ function completeSection(workflow, sectionId) {
     if (workflow.globalStatus === "Заполнено")
         return workflow;
     return {
+        ...workflow,
         globalStatus: workflow.globalStatus,
         sections: {
             ...workflow.sections,
             [sectionId]: "Заполнено",
+        },
+    };
+}
+function readPanelSectionStatus(workflow, pathKey) {
+    return workflow.panelSections?.[pathKey] ?? "Создано";
+}
+function completePanelSection(workflow, pathKey) {
+    if (workflow.globalStatus === "Заполнено")
+        return workflow;
+    const trimmed = pathKey.trim();
+    if (!trimmed)
+        return workflow;
+    return {
+        ...workflow,
+        panelSections: {
+            ...workflow.panelSections,
+            [trimmed]: "Заполнено",
         },
     };
 }

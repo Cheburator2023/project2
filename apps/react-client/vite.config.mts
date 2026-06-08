@@ -54,7 +54,12 @@ export const viteCommonConfig = ({
 			cacheDir: fileURLToPath(new URL("./.cache/vite-app", import.meta.url)),
 			base,
 			optimizeDeps: {
-				include: ["@smart-anketa/json-logic-ts"],
+				include: [
+					"@smart-anketa/json-logic-ts",
+					"react-dnd",
+					"react-dnd-html5-backend",
+					"@minoru/react-dnd-treeview",
+				],
 			},
 			build: {
 				target: browserslistToEsbuild(),

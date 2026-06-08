@@ -4,6 +4,8 @@ export declare function normalizeV2AnketaWorkflow(raw: unknown): V2AnketaWorkflo
 export declare function allRequiredSectionsCompleted(workflow: V2AnketaWorkflowDto): boolean;
 export declare function markSectionInProgress(workflow: V2AnketaWorkflowDto, sectionId: V2AnketaMainSectionId): V2AnketaWorkflowDto;
 export declare function completeSection(workflow: V2AnketaWorkflowDto, sectionId: V2AnketaMainSectionId): V2AnketaWorkflowDto;
+export declare function readPanelSectionStatus(workflow: V2AnketaWorkflowDto, pathKey: string): V2AnketaSectionStatus;
+export declare function completePanelSection(workflow: V2AnketaWorkflowDto, pathKey: string): V2AnketaWorkflowDto;
 /** Глобальное «Заполнено» — только когда все разделы подтверждены (кнопка в шапке). */
 export declare function completeGlobalQuestionnaire(workflow: V2AnketaWorkflowDto): V2AnketaWorkflowDto;
 export declare function mainSectionIdForFormPath(path: string): V2AnketaMainSectionId | null;

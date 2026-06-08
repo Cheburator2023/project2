@@ -87,3 +87,15 @@ export const GENERAL_UNCERTAINTY_UI_BRANCH: Record<string, unknown> = {
 		tooltips: GENERAL_UNCERTAINTY_TOOLTIPS,
 	},
 };
+
+/** Поле-триггер модалки TotalUncertaintyModal (данные в uncertaintyCalculation). */
+export function makeUncertaintyModalField(): RJSFSchema {
+	return {
+		type: "string",
+		title: "Расчёт общей неопределённости",
+	};
+}
+
+export const UNCERTAINTY_MODAL_UI_BRANCH: Record<string, unknown> = {
+	"ui:widget": "V2UncertaintyModalWidget",
+};

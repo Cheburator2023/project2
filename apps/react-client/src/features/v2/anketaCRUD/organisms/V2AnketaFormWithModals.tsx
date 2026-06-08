@@ -40,6 +40,7 @@ export function V2AnketaFormWithModals({
 	const {
 		workflow,
 		completeMainSection,
+		completePanelSectionByPath,
 		touchMainSection,
 		isSectionLocked,
 	} = useAnketaWorkflow(engine.formData, engine.setFormData);
@@ -88,6 +89,9 @@ export function V2AnketaFormWithModals({
 			workflow: anketaFormContextProp?.workflow ?? workflow,
 			onCompleteMainSection:
 				anketaFormContextProp?.onCompleteMainSection ?? completeMainSection,
+			onCompletePanelSection:
+				anketaFormContextProp?.onCompletePanelSection ??
+				completePanelSectionByPath,
 			onTouchMainSection:
 				anketaFormContextProp?.onTouchMainSection ?? touchMainSection,
 			isMainSectionLocked:
@@ -131,6 +135,7 @@ export function V2AnketaFormWithModals({
 		modalBindingSets,
 		workflow,
 		completeMainSection,
+		completePanelSectionByPath,
 		touchMainSection,
 		isSectionLocked,
 	]);

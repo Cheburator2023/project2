@@ -1,6 +1,6 @@
 import { AlgorithmComplexityWidget } from "@react-client/common/forms/widgets/AlgorithmComplexityWidget";
 import { ArrayCustomCardListsWidget } from "@react-client/common/forms/widgets/ArrayCustomCardListsWidget";
-import { GeneralUncertaintyWidget } from "@react-client/common/forms/widgets/GeneralUncertaintyWidget";
+import { V2UncertaintyModalWidget } from "@react-client/features/v2/anketaCRUD/widgets/V2UncertaintyModalWidget";
 import { NumberInputWidget } from "@react-client/common/forms/widgets/NumberInputWidget";
 import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";
 import { UniversalDependencyWidget } from "@react-client/common/forms/widgets/UniversalDependencyWidget";
@@ -18,7 +18,8 @@ export const v2PreviewFormWidgets: RegistryWidgetsType = {
 	SelectWidget,
 	select: SelectWidget,
 	AlgorithmComplexityWidget,
-	GeneralUncertaintyWidget,
+	V2UncertaintyModalWidget,
+	GeneralUncertaintyWidget: V2UncertaintyModalWidget,
 	UniversalDependencyWidget,
 	ArrayCustomCardListsWidget,
 };

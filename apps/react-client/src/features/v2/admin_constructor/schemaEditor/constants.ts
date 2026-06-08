@@ -6,8 +6,8 @@ import {
 } from "@smart-anketa/api-contract";
 import { ARCH_COMPONENT_PRESET_DEFS } from "./archComponentPresets";
 import {
-	GENERAL_UNCERTAINTY_UI_BRANCH,
-	makeGeneralUncertaintyField,
+	UNCERTAINTY_MODAL_UI_BRANCH,
+	makeUncertaintyModalField,
 } from "./fieldTypePresets";
 
 /** Цвета чипов арх. компонентов в конструкторе (как в dev-подсветке анкеты). */
@@ -130,10 +130,13 @@ export const FIELD_PRESETS: PalettePreset[] = [
 		chipLabel: "boolean",
 		make: () => ({ type: "boolean", title: "Логический" }),
 	},
+];
+
+export const LAYOUT_PRESETS: PalettePreset[] = [
 	{
 		id: "object",
 		title: "Объект (группа)",
-		section: "primitive",
+		section: "layout",
 		chipLabel: "object",
 		make: () => ({
 			type: "object",
@@ -145,9 +148,6 @@ export const FIELD_PRESETS: PalettePreset[] = [
 			defaultExpanded: true,
 		},
 	},
-];
-
-export const LAYOUT_PRESETS: PalettePreset[] = [
 	{
 		id: "layout",
 		title: "Разметка",
@@ -172,8 +172,8 @@ export const CALCULATION_FIELD_PRESETS: PalettePreset[] = [
 		title: "Расчёт общей неопределённости",
 		section: "calculation",
 		chipLabel: "неопределённость",
-		make: () => makeGeneralUncertaintyField(),
-		uiBranch: GENERAL_UNCERTAINTY_UI_BRANCH,
+		make: () => makeUncertaintyModalField(),
+		uiBranch: UNCERTAINTY_MODAL_UI_BRANCH,
 	},
 ];
 
@@ -234,8 +234,8 @@ export const WIDGET_PRESETS: Array<{ label: string; value: string }> = [
 		value: "ArrayCustomCardListsWidget",
 	},
 	{
-		label: "Неопределённость — GeneralUncertaintyWidget",
-		value: "GeneralUncertaintyWidget",
+		label: "Неопределённость — V2UncertaintyModalWidget",
+		value: "V2UncertaintyModalWidget",
 	},
 	{
 		label: "Сложность алгоритма — AlgorithmComplexityWidget",

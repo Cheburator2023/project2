@@ -31,9 +31,8 @@ export function coerceJsonSchema(input: unknown): RJSFSchema {
 	} as RJSFSchema;
 }
 
-/** Виджеты v1, не подключённые к RJSF v2 — подменяем при загрузке шаблона. */
+/** Виджеты v1 без v2-аналога — подменяем при загрузке шаблона. */
 const V2_UI_WIDGET_REPLACEMENTS: Record<string, string> = {
-	GeneralUncertaintyWidget: "hidden",
 	AlgorithmComplexityWidget: "text",
 };
 

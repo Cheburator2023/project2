@@ -22,7 +22,23 @@ export function normalizeV2AnketaWorkflow(raw) {
             sections[id] = value;
         }
     }
-    return { globalStatus, sections };
+    const panelSectionsRaw = input.panelSections && typeof input.panelSections === "object"
+        ? input.panelSections
+        : {};
+    const panelSections = {};
+    for (const [pathKey, value] of Object.entries(panelSectionsRaw)) {
+        if (typeof pathKey === "string" &&
+            pathKey.trim() &&
+            typeof value === "string" &&
+            V2_ANKETA_SECTION_STATUS_VALUES.includes(value)) {
+            panelSections[pathKey] = value;
+        }
+    }
+    return {
+        globalStatus,
+        sections,
+        ...(Object.keys(panelSections).length > 0 ? { panelSections } : {}),
+    };
 }
 export function allRequiredSectionsCompleted(workflow) {
     return V2_ANKETA_MAIN_SECTION_IDS.every((id) => workflow.sections[id] === "Заполнено");
@@ -42,10 +58,28 @@ export function completeSection(workflow, sectionId) {
     if (workflow.globalStatus === "Заполнено")
         return workflow;
     return {
+        ...workflow,
         globalStatus: workflow.globalStatus,
         sections: {
             ...workflow.sections,
             [sectionId]: "Заполнено",
+        },
+    };
+}
+export function readPanelSectionStatus(workflow, pathKey) {
+    return workflow.panelSections?.[pathKey] ?? "Создано";
+}
+export function completePanelSection(workflow, pathKey) {
+    if (workflow.globalStatus === "Заполнено")
+        return workflow;
+    const trimmed = pathKey.trim();
+    if (!trimmed)
+        return workflow;
+    return {
+        ...workflow,
+        panelSections: {
+            ...workflow.panelSections,
+            [trimmed]: "Заполнено",
         },
     };
 }

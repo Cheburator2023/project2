@@ -31,7 +31,6 @@ import { SchemaEditorProvider } from "../schemaEditor/SchemaEditorContext";
 import type { SchemaEditorContextValue } from "../schemaEditor/SchemaEditorContext";
 import type { SchemaEditorMainTab } from "../schemaEditor/types";
 import { SchemaEditorDockProvider } from "../schemaEditor/SchemaEditorDockContext";
-import { SchemaEditorDndProvider } from "../schemaEditor/components/SchemaEditorDndProvider";
 import {
 	canBindDictionaryToField,
 	isDictionaryMultiField,
@@ -1379,9 +1378,7 @@ export const V2TemplateSchemaEditor = ({
 		return (
 			<>
 				<SchemaEditorProvider value={editorContext}>
-					<SchemaEditorDndProvider>
-						<SchemaLogicPanel embedded />
-					</SchemaEditorDndProvider>
+					<SchemaLogicPanel embedded />
 				</SchemaEditorProvider>
 				{activeVersion ? (
 					<V2TemplateSaveDialog
@@ -1401,7 +1398,6 @@ export const V2TemplateSchemaEditor = ({
 
 	return (
 		<SchemaEditorProvider value={editorContext}>
-			<SchemaEditorDndProvider>
 			<Card
 				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.schemaEditor}
 				height="100%"
@@ -1446,7 +1442,6 @@ export const V2TemplateSchemaEditor = ({
 					onSaveInPlace={handleSaveInPlace}
 				/>
 			) : null}
-			</SchemaEditorDndProvider>
 		</SchemaEditorProvider>
 	);
 };

@@ -188,6 +188,11 @@ export function V2AnketaSchemaForm({
 		return {
 			...base,
 			formData: base.formData ?? engine.formData,
+			workflow: base.workflow ?? workflow,
+			onCompleteMainSection: base.onCompleteMainSection,
+			onCompletePanelSection: base.onCompletePanelSection,
+			onTouchMainSection: base.onTouchMainSection,
+			isMainSectionLocked: base.isMainSectionLocked,
 			openAnketaModal: base.openAnketaModal,
 			deleteAnketaObject: base.deleteAnketaObject,
 			deleteAnketaArrayItem: base.deleteAnketaArrayItem,
@@ -199,8 +204,18 @@ export function V2AnketaSchemaForm({
 				base.anketaCompactArrayTablePaths ??
 				modalBindings.compactArrayTablePathSet,
 			anketaReadOnly: readOnly || base.anketaReadOnly,
+			schemaEditorPreview:
+				base.schemaEditorPreview ??
+				engine.version?.id === "editor-draft",
 		};
-	}, [anketaFormContext, readOnly, engine.formData, modalBindings]);
+	}, [
+		anketaFormContext,
+		readOnly,
+		engine.formData,
+		engine.version?.id,
+		modalBindings,
+		workflow,
+	]);
 
 	if (!usesExternalEngine && !source?.templateId) {
 		return (

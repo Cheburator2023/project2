@@ -269,7 +269,7 @@ export function SchemaPropertiesPanel() {
 							label="Тип поля"
 							value="Расчёт общей неопределённости"
 							disabled
-							helperText="Виджет GeneralUncertaintyWidget — участвует в калькуляции анкеты"
+							helperText="Кнопка открывает модалку расчёта; данные сохраняются в uncertaintyCalculation"
 						/>
 					) : showObjectLayout ? (
 						<TextField

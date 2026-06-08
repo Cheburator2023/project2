@@ -8,6 +8,7 @@ import {
 	SCHEMA_TREE_PANEL_ID,
 } from "./constants";
 import { SchemaDesignerLayout } from "./components/SchemaDesignerLayout";
+import { SchemaEditorDndProvider } from "./components/SchemaEditorDndProvider";
 import { SchemaFieldTreePanel } from "./components/SchemaFieldTree";
 import { useSchemaEditor } from "./SchemaEditorContext";
 import { SchemaCalculationPanel } from "./panels/SchemaCalculationPanel";
@@ -70,8 +71,10 @@ function CyclesWarning() {
 export function DesignerWorkspacePanel(_props: IDockviewPanelProps) {
 	return (
 		<PanelHost dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.panelDesigner}>
-			<CyclesWarning />
-			<SchemaDesignerLayout />
+			<SchemaEditorDndProvider>
+				<CyclesWarning />
+				<SchemaDesignerLayout />
+			</SchemaEditorDndProvider>
 		</PanelHost>
 	);
 }

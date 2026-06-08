@@ -1,3 +1,4 @@
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
@@ -7,9 +8,20 @@ import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 import { alpha, useTheme } from "@mui/material/styles";
-import { useDraggable, useDroppable } from "@dnd-kit/react";
-import { useSortable } from "@dnd-kit/react/sortable";
-import type { ReactNode } from "react";
+import {
+	Tree,
+	type DropOptions,
+	type NodeModel,
+} from "@minoru/react-dnd-treeview";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	type CSSProperties,
+} from "react";
+import { useDrag } from "react-dnd";
+import { getEmptyImage } from "react-dnd-html5-backend";
 import {
 	resolveV2AnketaArchComponent,
 	resolveV2AnketaCanvasUiKind,
@@ -40,17 +52,25 @@ import {
 import { useSchemaEditor } from "../SchemaEditorContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "./PanelChrome";
+import { SchemaCanvasPlaceholder } from "./SchemaCanvasPlaceholder";
 import {
-	CANVAS_ZONE_TYPE,
-	FIELD_DRAG_TYPE,
+	buildPaletteDragNode,
+	buildSchemaCanvasTree,
+	collectGroupOrders,
+	getPresetIdFromPaletteDragSource,
+	isPaletteDragSource,
 	PALETTE_DRAG_TYPE,
-	type FieldDragData,
-	type PaletteDragData,
-	dropAppendId,
-	fieldSortableId,
-	groupIdFromParentPointer,
-	useSchemaEditorDnd,
-} from "./SchemaEditorDndProvider";
+	resolvePaletteDropTarget,
+	SCHEMA_CANVAS_ROOT_ID,
+	treeToGroupOrders,
+	type SchemaCanvasNodeData,
+} from "../schemaCanvasTree";
+
+const DEPTH_INDENT_PX = 12;
+const CANVAS_TREE_DROP_TARGET_CLASS = "schema-canvas-tree-drop-target";
+const CANVAS_TREE_DRAGGING_CLASS = "schema-canvas-tree-dragging";
+const CANVAS_TREE_PLACEHOLDER_CLASS = "schema-canvas-tree-placeholder";
+const CANVAS_TREE_ROOT_CLASS = "schema-canvas-tree-root";
 
 function ArchComponentChip({ arch }: { arch: V2ArchComponentType }) {
 	const color = ARCH_COMPONENT_CHIP_COLORS[arch];
@@ -130,222 +150,111 @@ function findPointerByArchComponent(
 	return walk(rows, "/");
 }
 
-function PaletteItem({ preset }: { preset: PalettePreset }) {
-	const {
-		handleAddFieldPresetAtParent,
-		jsonSchema,
-		uiSchema,
-		setSelectedPointer,
-	} = useSchemaEditor();
-	const rootCount = listOrderedChildKeys(jsonSchema, "/", uiSchema).length;
-	const { ref, isDragging } = useDraggable<PaletteDragData>({
-		id: `palette-${preset.id}`,
+/** Паттерн ExternalElementInsideReactDnd/ExternalNode.tsx — native div + useRef + drag(ref). */
+function PaletteItem({
+	preset,
+	archColor,
+	isArch,
+	onArchClick,
+	onDoubleClickAdd,
+}: {
+	preset: PalettePreset;
+	archColor?: string;
+	isArch: boolean;
+	onArchClick?: () => void;
+	onDoubleClickAdd: () => void;
+}) {
+	const theme = useTheme();
+	const ref = useRef<HTMLDivElement>(null);
+	const dragNode = useMemo(
+		() => buildPaletteDragNode(String(preset.id), preset.title),
+		[preset.id, preset.title],
+	);
+
+	const [{ isDragging }, drag, dragPreview] = useDrag({
 		type: PALETTE_DRAG_TYPE,
-		data: { type: PALETTE_DRAG_TYPE, presetId: String(preset.id) },
+		item: dragNode,
+		collect: (monitor) => ({ isDragging: monitor.isDragging() }),
 	});
 
-	const isArch = preset.section === "arch" || preset.section === "works";
-	const archType = isArch ? (preset.chipLabel as V2ArchComponentType) : null;
-	const archColor = archType ? ARCH_COMPONENT_CHIP_COLORS[archType] : undefined;
+	useEffect(() => {
+		dragPreview(getEmptyImage(), { captureDraggingState: true });
+	}, [dragPreview]);
 
-	const handleArchClick = () => {
-		if (!archType) return;
-		const pointer = findPointerByArchComponent(jsonSchema, uiSchema, archType);
-		if (pointer) {
-			setSelectedPointer(pointer);
-			return;
-		}
+	drag(ref);
+
+	const borderColor = isArch
+		? (archColor ?? theme.palette.primary.main)
+		: theme.palette.divider;
+
+	const rootStyle: CSSProperties = {
+		display: "flex",
+		alignItems: "center",
+		gap: 8,
+		padding: "6px 8px",
+		marginBottom: 4,
+		borderRadius: 4,
+		border: `1px solid ${isArch ? alpha(borderColor, 0.45) : borderColor}`,
+		background: theme.palette.background.paper,
+		cursor: isDragging ? "grabbing" : "grab",
+		opacity: isDragging ? 0.45 : 0.92,
+		userSelect: "none",
 	};
 
 	return (
-		<Box
+		<div
 			ref={ref}
 			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.paletteItem}
-			onClick={isArch ? handleArchClick : undefined}
-			onDoubleClick={() =>
-				handleAddFieldPresetAtParent(
-					"/",
-					preset.make(),
-					rootCount,
-					preset.uiOptions,
-					preset.uiBranch,
-				)
-			}
+			onClick={onArchClick}
+			onDoubleClick={onDoubleClickAdd}
 			title={
 				isArch
 					? `Щёлкните — выбрать на холсте; перетащите или дважды щёлкните — добавить «${preset.title}»`
 					: `Перетащите или дважды щёлкните — ${preset.title}`
 			}
-			sx={{
-				display: "flex",
-				alignItems: "center",
-				gap: 1,
-				px: 1,
-				py: 0.75,
-				mb: 0.5,
-				borderRadius: 1,
-				border: 1,
-				borderColor: isArch
-					? alpha(archColor ?? "primary.main", 0.45)
-					: "divider",
-				bgcolor: isDragging ? "action.selected" : "background.paper",
-				cursor: "grab",
-				opacity: isDragging ? 0.5 : 1,
-				"&:hover": {
-					borderColor: isArch ? archColor : "primary.main",
-					bgcolor: "action.hover",
-				},
-			}}
+			style={rootStyle}
 		>
-			<Typography
-				variant="body2"
-				sx={{ flex: 1, minWidth: 0, color: archColor }}
+			<DragIndicatorIcon
+				fontSize="small"
+				sx={{ color: "text.secondary", flexShrink: 0, pointerEvents: "none" }}
+			/>
+			<span
+				style={{
+					flex: 1,
+					minWidth: 0,
+					fontSize: "0.875rem",
+					lineHeight: 1.43,
+					color: archColor,
+					overflow: "hidden",
+					textOverflow: "ellipsis",
+					whiteSpace: "nowrap",
+					pointerEvents: "none",
+				}}
 			>
 				{preset.title}
-			</Typography>
-			{/* <Chip
-				size="small"
-				label={
-					isArch
-						? (V2_ARCH_COMPONENT_LABELS[
-								preset.chipLabel as keyof typeof V2_ARCH_COMPONENT_LABELS
-							] ?? preset.chipLabel)
-						: preset.chipLabel
-				}
-				variant={isArch ? "filled" : "outlined"}
-				sx={{
-					height: 20,
-					maxWidth: 120,
-					...(isArch && archColor
-						? {
-								bgcolor: alpha(archColor, 0.12),
-								color: archColor,
-								border: `1px solid ${alpha(archColor, 0.35)}`,
-								"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem" },
-							}
-						: {}),
-				}}
-			/> */}
-		</Box>
+			</span>
+		</div>
 	);
 }
 
-/** Вертикальный зазор между строками холста (padding слота × 2). */
-const FIELD_ROW_SLOT_PY = 0.75;
-
-function FieldRowSlot({
-	children,
-	showInsertLine,
-}: {
-	children: ReactNode;
-	showInsertLine?: boolean;
-}) {
-	return (
-		<Box
-			sx={{
-				position: "relative",
-				pt: FIELD_ROW_SLOT_PY,
-				pb: FIELD_ROW_SLOT_PY,
-			}}
-		>
-			{showInsertLine ? <DropInsertionLine /> : null}
-			{children}
-		</Box>
-	);
-}
-
-/** Не участвует в потоке — без скачков layout при DnD. */
-function DropInsertionLine() {
-	const theme = useTheme();
-
-	return (
-		<Box
-			role="presentation"
-			aria-hidden
-			sx={{
-				position: "absolute",
-				left: 8,
-				right: 8,
-				top: 0,
-				height: 0,
-				zIndex: 2,
-				pointerEvents: "none",
-				transform: "translateY(-50%)",
-				"&::before": {
-					content: '""',
-					position: "absolute",
-					left: 0,
-					right: 0,
-					top: 0,
-					height: 3,
-					borderRadius: 2,
-					bgcolor: theme.palette.primary.main,
-					boxShadow: `0 0 0 1px ${alpha(theme.palette.primary.main, 0.35)}`,
-				},
-				"&::after": {
-					content: '""',
-					position: "absolute",
-					left: -2,
-					top: -5,
-					width: 10,
-					height: 10,
-					borderRadius: "50%",
-					bgcolor: theme.palette.primary.main,
-					border: `2px solid ${theme.palette.background.paper}`,
-				},
-			}}
-		/>
-	);
-}
-
-function CanvasDropZone({
-	groupId,
-	label,
-}: {
-	groupId: string;
-	label: string;
-}) {
-	const { ref, isDropTarget } = useDroppable({
-		id: dropAppendId(groupId),
-		type: CANVAS_ZONE_TYPE,
-	});
-
-	return (
-		<Box
-			ref={ref}
-			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasDropZone}
-			sx={{
-				py: 1,
-				px: 1,
-				textAlign: "center",
-				borderRadius: 1,
-				border: 1,
-				borderStyle: "dashed",
-				borderColor: isDropTarget ? "primary.light" : "divider",
-				color: "text.secondary",
-				opacity: isDropTarget ? 1 : 0.85,
-			}}
-		>
-			<Typography variant="caption">{label}</Typography>
-		</Box>
-	);
-}
-
-function SortableFieldRow({
-	fieldKey,
-	fieldPointer,
-	parentPointer,
-	index,
+function SchemaCanvasFieldRow({
+	node,
 	depth,
+	isDragging,
+	isOpen,
+	isDropTarget,
+	hasChild,
+	onToggle,
 }: {
-	fieldKey: string;
-	fieldPointer: string;
-	parentPointer: string;
-	index: number;
+	node: NodeModel<SchemaCanvasNodeData>;
 	depth: number;
+	isDragging: boolean;
+	isOpen: boolean;
+	isDropTarget: boolean;
+	hasChild: boolean;
+	onToggle: () => void;
 }) {
 	const theme = useTheme();
-	const { isDragging: isCanvasDragging } = useSchemaEditorDnd();
 	const {
 		jsonSchema,
 		uiSchema,
@@ -354,40 +263,49 @@ function SortableFieldRow({
 		handleDeleteField,
 	} = useSchemaEditor();
 
-	const segs = pointerSegments(fieldPointer);
-	const node = resolveSchemaNode(jsonSchema, segs);
-	const selected = selectedPointer === fieldPointer;
-	const isGroup = isObjectFieldGroup(node);
-	const arrayItemsObj = isGroup ? undefined : getObjectItemsSchema(node);
+	if (node.data?.kind === "array-items-section") {
+		return (
+			<Box
+				sx={{
+					pl: `${depth * DEPTH_INDENT_PX}px`,
+					py: 0.5,
+					pr: 1,
+				}}
+			>
+				<Typography variant="caption" color="text.secondary" fontWeight={600}>
+					{node.text}
+				</Typography>
+			</Box>
+		);
+	}
 
+	const fieldPointer = node.data?.fieldPointer ?? String(node.id);
+	const fieldKey = node.data?.fieldKey ?? "";
+	const segs = pointerSegments(fieldPointer);
+	const schemaNode = resolveSchemaNode(jsonSchema, segs);
+	const selected = selectedPointer === fieldPointer;
+	const isGroup = isObjectFieldGroup(schemaNode);
+	const arrayItemsObj = isGroup ? undefined : getObjectItemsSchema(schemaNode);
 	const childKeys = isGroup
 		? listOrderedChildKeys(jsonSchema, fieldPointer, uiSchema)
 		: [];
-
 	const itemFieldKeys = arrayItemsObj
 		? listOrderedChildKeys(jsonSchema, `${fieldPointer}/items`, uiSchema)
 		: [];
 
-	const { ref, handleRef, isDragging } = useSortable<FieldDragData>({
-		id: fieldSortableId(fieldPointer),
-		index,
-		group: groupIdFromParentPointer(parentPointer),
-		type: FIELD_DRAG_TYPE,
-		data: { type: FIELD_DRAG_TYPE, key: fieldKey, parentPointer, index },
-	});
-
 	const typeLabel =
-		typeof node?.type === "string"
-			? node.type
-			: Array.isArray(node?.type)
-				? node.type.join(" | ")
+		typeof schemaNode?.type === "string"
+			? schemaNode.type
+			: Array.isArray(schemaNode?.type)
+				? schemaNode.type.join(" | ")
 				: "?";
 
-	const hasNestedContent = isGroup || Boolean(arrayItemsObj);
 	const uiBranch = readUiSchemaBranchAtPointer(uiSchema, fieldPointer);
 	const uiWidget =
 		typeof uiBranch?.["ui:widget"] === "string" ? uiBranch["ui:widget"] : "";
-	const isGeneralUncertainty = uiWidget === "GeneralUncertaintyWidget";
+	const isGeneralUncertainty =
+		uiWidget === "GeneralUncertaintyWidget" ||
+		uiWidget === "V2UncertaintyModalWidget";
 	const uiOptions =
 		uiBranch?.["ui:options"] &&
 		typeof uiBranch["ui:options"] === "object" &&
@@ -403,224 +321,178 @@ function SortableFieldRow({
 			: canvasUiKind === "utility"
 				? CANVAS_UTILITY_CHIP_COLOR
 				: undefined;
-	const showDragging = isCanvasDragging && isDragging;
+
+	const showExpand = hasChild && node.data?.kind === "field";
 
 	return (
-		<Box sx={{ pl: depth > 0 ? 1.5 : 0 }}>
-			<Box
-				ref={ref}
-				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasFieldRow}
-				onClick={() => setSelectedPointer(fieldPointer)}
-				sx={{
-					display: "flex",
-					alignItems: "flex-start",
-					gap: 0.5,
-					p: 1,
-					borderRadius: 1,
-					border: 1,
-					borderColor: selected ? "primary.main" : "divider",
-					bgcolor: selected
+		<Box
+			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasFieldRow}
+			onClick={() => setSelectedPointer(fieldPointer)}
+			sx={{
+				display: "flex",
+				alignItems: "flex-start",
+				gap: 0.5,
+				ml: `${depth * DEPTH_INDENT_PX}px`,
+				mr: 1,
+				my: 0.5,
+				p: 1,
+				borderRadius: 1,
+				border: 2,
+				borderStyle: "solid",
+				borderColor: isDropTarget
+					? theme.palette.primary.main
+					: selected
+						? "primary.main"
+						: "divider",
+				bgcolor: isDropTarget
+					? alpha(theme.palette.primary.main, 0.14)
+					: selected
 						? alpha(theme.palette.primary.main, 0.08)
 						: canvasUiColor
 							? alpha(canvasUiColor, 0.08)
 							: isGroup
 								? alpha(theme.palette.info.main, 0.03)
 								: "background.paper",
-					boxShadow: showDragging ? 3 : 0,
-					opacity: showDragging ? 0.45 : 1,
-					cursor: "pointer",
-					transition: theme.transitions.create(
-						["border-color", "background-color", "box-shadow", "opacity"],
-						{ duration: 150 },
-					),
-				}}
-			>
-				<Box sx={{ width: 28, flexShrink: 0 }} />
+				boxShadow: isDragging ? 3 : 0,
+				opacity: isDragging ? 0.55 : 1,
+				cursor: "grab",
+			}}
+		>
+			{showExpand ? (
 				<IconButton
-					ref={handleRef}
 					size="small"
-					sx={{ cursor: "grab", mt: -0.25 }}
-					onClick={(e) => e.stopPropagation()}
-					aria-label="Перетащить"
-					title="Перетащить"
+					sx={{ mt: -0.25, flexShrink: 0 }}
+					onClick={(e) => {
+						e.stopPropagation();
+						onToggle();
+					}}
+					aria-label={isOpen ? "Свернуть" : "Развернуть"}
+					title={isOpen ? "Свернуть" : "Развернуть"}
 				>
-					<DragIndicatorIcon fontSize="small" />
-				</IconButton>
-				<Box sx={{ flex: 1, minWidth: 0 }}>
-					<Box
+					<ChevronRightIcon
+						fontSize="small"
 						sx={{
-							display: "flex",
-							alignItems: "center",
-							flexWrap: "wrap",
-							gap: 0.75,
+							transform: isOpen ? "rotate(90deg)" : "none",
+							transition: "transform 0.15s ease",
 						}}
-					>
-						{isLayoutGroup ? (
-							<GridViewIcon sx={{ fontSize: 16, color: "secondary.main" }} />
-						) : isGroup || arrayItemsObj ? (
-							<FolderOutlinedIcon sx={{ fontSize: 16, color: "info.main" }} />
-						) : null}
-						<Typography variant="body2" fontWeight={selected ? 600 : 500}>
-							{typeof node?.title === "string" ? node.title : fieldKey}
-						</Typography>
+					/>
+				</IconButton>
+			) : (
+				<Box sx={{ width: 28, flexShrink: 0 }} />
+			)}
+			<Box sx={{ flex: 1, minWidth: 0 }}>
+				<Box
+					sx={{
+						display: "flex",
+						alignItems: "center",
+						flexWrap: "wrap",
+						gap: 0.75,
+					}}
+				>
+					{isLayoutGroup ? (
+						<GridViewIcon sx={{ fontSize: 16, color: "secondary.main" }} />
+					) : isGroup || arrayItemsObj ? (
+						<FolderOutlinedIcon sx={{ fontSize: 16, color: "info.main" }} />
+					) : null}
+					<Typography variant="body2" fontWeight={selected ? 600 : 500}>
+						{node.text}
+					</Typography>
+					<Chip
+						size="small"
+						label={
+							isLayoutGroup
+								? "разметка"
+								: isGeneralUncertainty
+									? "неопределённость"
+									: ruSchemaTypeLabel(typeLabel)
+						}
+						variant="outlined"
+						sx={{ height: 20 }}
+					/>
+					{archComponent ? <ArchComponentChip arch={archComponent} /> : null}
+					{canvasUiKind ? <CanvasUiKindChip kind={canvasUiKind} /> : null}
+					{isGroup ? (
 						<Chip
 							size="small"
-							label={
-								isLayoutGroup
-									? "разметка"
-									: isGeneralUncertainty
-										? "неопределённость"
-										: ruSchemaTypeLabel(typeLabel)
-							}
+							label={`${childKeys.length} полей`}
 							variant="outlined"
 							sx={{ height: 20 }}
 						/>
-						{archComponent ? <ArchComponentChip arch={archComponent} /> : null}
-						{canvasUiKind ? <CanvasUiKindChip kind={canvasUiKind} /> : null}
-						{isGroup ? (
-							<Chip
-								size="small"
-								label={`${childKeys.length} полей`}
-								variant="outlined"
-								sx={{ height: 20 }}
-							/>
-						) : null}
-						{arrayItemsObj ? (
-							<Chip
-								size="small"
-								label={`${itemFieldKeys.length} полей элемента`}
-								variant="outlined"
-								sx={{ height: 20 }}
-							/>
-						) : null}
-					</Box>
-					<Typography
-						variant="caption"
-						color="text.secondary"
-						fontFamily="monospace"
-					>
-						{fieldKey}
-					</Typography>
-				</Box>
-				<Box
-					sx={{
-						width: 34,
-						flexShrink: 0,
-						display: "flex",
-						alignItems: "flex-start",
-						justifyContent: "center",
-					}}
-				>
-					<IconButton
-						size="small"
-						color="error"
-						title="Удалить поле"
-						aria-label="Удалить поле"
-						tabIndex={selected ? 0 : -1}
-						onClick={(e) => {
-							e.stopPropagation();
-							handleDeleteField(fieldPointer);
-						}}
-					>
-						<DeleteOutlineIcon fontSize="small" />
-					</IconButton>
-				</Box>
-			</Box>
-
-			{hasNestedContent ? (
-				<>
-					{isGroup ? (
-						<Box
-							sx={{
-								mt: 1,
-								ml: 2,
-								pl: 1,
-								borderLeft: 2,
-								borderColor: selected ? "primary.light" : "divider",
-							}}
-						>
-							<FieldList
-								parentPointer={fieldPointer}
-								depth={depth + 1}
-								emptyLabel="Перетащите поле в группу"
-							/>
-						</Box>
 					) : null}
 					{arrayItemsObj ? (
-						<Box
-							sx={{
-								mt: isGroup ? 1.5 : 1,
-								ml: 2,
-								pl: 1,
-								borderLeft: 2,
-								borderColor: selected ? "primary.light" : "divider",
-							}}
-						>
-							<Typography
-								variant="caption"
-								color="text.secondary"
-								sx={{ display: "block", mb: 0.5 }}
-							>
-								Поля элемента массива
-							</Typography>
-							<FieldList
-								parentPointer={`${fieldPointer}/items`}
-								depth={depth + 1}
-								emptyLabel="Перетащите поле в элемент массива"
-							/>
-						</Box>
+						<Chip
+							size="small"
+							label={`${itemFieldKeys.length} полей элемента`}
+							variant="outlined"
+							sx={{ height: 20 }}
+						/>
 					) : null}
-				</>
-			) : null}
+				</Box>
+				<Typography
+					variant="caption"
+					color="text.secondary"
+					fontFamily="monospace"
+				>
+					{fieldKey}
+				</Typography>
+			</Box>
+			<IconButton
+				size="small"
+				color="error"
+				title="Удалить поле"
+				aria-label="Удалить поле"
+				tabIndex={selected ? 0 : -1}
+				onClick={(e) => {
+					e.stopPropagation();
+					handleDeleteField(fieldPointer);
+				}}
+				sx={{ flexShrink: 0 }}
+			>
+				<DeleteOutlineIcon fontSize="small" />
+			</IconButton>
 		</Box>
 	);
 }
 
-function FieldList({
-	parentPointer,
-	depth,
-	emptyLabel,
-}: {
-	parentPointer: string;
-	depth: number;
-	emptyLabel: string;
-}) {
-	const { insertIndicator, isDragging } = useSchemaEditorDnd();
-	const { jsonSchema, uiSchema } = useSchemaEditor();
-	const groupId = groupIdFromParentPointer(parentPointer);
-	const keys = listOrderedChildKeys(jsonSchema, parentPointer, uiSchema);
-	const showIndicator = isDragging && insertIndicator?.groupId === groupId;
+function PalettePresetRow({ preset }: { preset: PalettePreset }) {
+	const {
+		handleAddFieldPresetAtParent,
+		jsonSchema,
+		uiSchema,
+		setSelectedPointer,
+	} = useSchemaEditor();
+	const rootCount = listOrderedChildKeys(jsonSchema, "/", uiSchema).length;
+	const isArch = preset.section === "arch" || preset.section === "works";
+	const archType = isArch ? (preset.chipLabel as V2ArchComponentType) : null;
+	const archColor = archType ? ARCH_COMPONENT_CHIP_COLORS[archType] : undefined;
 
 	return (
-		<>
-			{keys.map((key, index) => {
-				const fieldPointer =
-					parentPointer === "/" ? `/${key}` : `${parentPointer}/${key}`;
-				return (
-					<FieldRowSlot
-						key={fieldPointer}
-						showInsertLine={Boolean(
-							showIndicator && insertIndicator!.index === index,
-						)}
-					>
-						<SortableFieldRow
-							fieldKey={key}
-							fieldPointer={fieldPointer}
-							parentPointer={parentPointer}
-							index={index}
-							depth={depth}
-						/>
-					</FieldRowSlot>
-				);
-			})}
-			<FieldRowSlot
-				showInsertLine={Boolean(
-					showIndicator && insertIndicator!.index >= keys.length,
-				)}
-			>
-				<CanvasDropZone groupId={groupId} label={emptyLabel} />
-			</FieldRowSlot>
-		</>
+		<PaletteItem
+			preset={preset}
+			isArch={isArch}
+			archColor={archColor}
+			onArchClick={
+				archType
+					? () => {
+							const pointer = findPointerByArchComponent(
+								jsonSchema,
+								uiSchema,
+								archType,
+							);
+							if (pointer) setSelectedPointer(pointer);
+						}
+					: undefined
+			}
+			onDoubleClickAdd={() =>
+				handleAddFieldPresetAtParent(
+					"/",
+					preset.make(),
+					rootCount,
+					preset.uiOptions,
+					preset.uiBranch,
+				)
+			}
+		/>
 	);
 }
 
@@ -643,7 +515,7 @@ export function SchemaPalettePanel({
 				Примитивные типы
 			</Typography>
 			{FIELD_PRESETS.map((preset) => (
-				<PaletteItem key={String(preset.id)} preset={preset} />
+				<PalettePresetRow key={String(preset.id)} preset={preset} />
 			))}
 			<Typography
 				variant="caption"
@@ -653,7 +525,7 @@ export function SchemaPalettePanel({
 				Разметка
 			</Typography>
 			{LAYOUT_PRESETS.map((preset) => (
-				<PaletteItem key={String(preset.id)} preset={preset} />
+				<PalettePresetRow key={String(preset.id)} preset={preset} />
 			))}
 			<Typography
 				variant="caption"
@@ -663,7 +535,7 @@ export function SchemaPalettePanel({
 				Расчёты
 			</Typography>
 			{CALCULATION_FIELD_PRESETS.map((preset) => (
-				<PaletteItem key={String(preset.id)} preset={preset} />
+				<PalettePresetRow key={String(preset.id)} preset={preset} />
 			))}
 			<Typography
 				variant="caption"
@@ -673,7 +545,7 @@ export function SchemaPalettePanel({
 				Арх. компоненты
 			</Typography>
 			{ARCH_COMPONENT_PRESETS.map((preset) => (
-				<PaletteItem key={String(preset.id)} preset={preset} />
+				<PalettePresetRow key={String(preset.id)} preset={preset} />
 			))}
 			<Typography
 				variant="caption"
@@ -683,7 +555,7 @@ export function SchemaPalettePanel({
 				Работы
 			</Typography>
 			{WORK_COMPONENT_PRESETS.map((preset) => (
-				<PaletteItem key={String(preset.id)} preset={preset} />
+				<PalettePresetRow key={String(preset.id)} preset={preset} />
 			))}
 		</PanelChrome>
 	);
@@ -694,6 +566,107 @@ export function SchemaCanvasPanel({
 }: {
 	embedded?: boolean;
 }) {
+	const {
+		jsonSchema,
+		uiSchema,
+		applyGroupFieldOrders,
+		handleAddFieldPresetAtParent,
+	} = useSchemaEditor();
+	const initialOrdersRef = useRef<Record<string, string[]>>({});
+
+	const presetById = useMemo(
+		() =>
+			new Map(
+				[
+					...FIELD_PRESETS,
+					...LAYOUT_PRESETS,
+					...CALCULATION_FIELD_PRESETS,
+					...ARCH_COMPONENT_PRESETS,
+					...WORK_COMPONENT_PRESETS,
+				].map((preset) => [String(preset.id), preset]),
+			),
+		[],
+	);
+
+	const treeData = useMemo(
+		() => buildSchemaCanvasTree(jsonSchema, uiSchema),
+		[jsonSchema, uiSchema],
+	);
+
+	const handleDragStart = useCallback(() => {
+		initialOrdersRef.current = collectGroupOrders(jsonSchema, uiSchema);
+	}, [jsonSchema, uiSchema]);
+
+	const handleDrop = useCallback(
+		(
+			newTree: NodeModel<SchemaCanvasNodeData>[],
+			options: DropOptions<SchemaCanvasNodeData>,
+		) => {
+			if (options.monitor.getItemType() === PALETTE_DRAG_TYPE) {
+				const presetId = getPresetIdFromPaletteDragSource(
+					options.monitor.getItem(),
+				);
+				if (!presetId) return;
+				const preset = presetById.get(presetId);
+				if (!preset) return;
+				const { parentPointer, index } = resolvePaletteDropTarget(options);
+				handleAddFieldPresetAtParent(
+					parentPointer,
+					preset.make(),
+					index,
+					preset.uiOptions,
+					preset.uiBranch,
+				);
+				return;
+			}
+
+			const finalOrders = treeToGroupOrders(newTree);
+			applyGroupFieldOrders(finalOrders, initialOrdersRef.current);
+		},
+		[applyGroupFieldOrders, handleAddFieldPresetAtParent, presetById],
+	);
+
+	const canDrop = useCallback(
+		(
+			_tree: NodeModel<SchemaCanvasNodeData>[],
+			{
+				dragSource,
+				dropTarget,
+				dropTargetId,
+			}: DropOptions<SchemaCanvasNodeData>,
+		) => {
+			if (dragSource?.data?.kind === "array-items-section") {
+				return false;
+			}
+
+			if (isPaletteDragSource(dragSource)) {
+				if (dropTargetId === SCHEMA_CANVAS_ROOT_ID) return true;
+				if (dropTarget?.droppable) return true;
+				if (dropTarget?.data?.kind === "field") return true;
+				return false;
+			}
+
+			if (!dragSource) {
+				if (dropTargetId === SCHEMA_CANVAS_ROOT_ID) return true;
+				return dropTarget?.droppable === true;
+			}
+
+			if (dragSource.parent === dropTargetId) return true;
+			if (dropTargetId === SCHEMA_CANVAS_ROOT_ID) return true;
+			if (dropTarget?.droppable) return true;
+			if (dropTarget?.data?.kind === "field") return true;
+
+			return undefined;
+		},
+		[],
+	);
+
+	const canDrag = useCallback((node?: NodeModel<SchemaCanvasNodeData>) => {
+		return node?.data?.kind === "field";
+	}, []);
+
+	const theme = useTheme();
+
 	return (
 		<PanelChrome
 			embedded={embedded}
@@ -701,11 +674,124 @@ export function SchemaCanvasPanel({
 			title="Холст полей"
 			description="Корневые поля, группы и поля элементов массива. Перетаскивайте для изменения порядка."
 		>
-			<FieldList
-				parentPointer="/"
-				depth={0}
-				emptyLabel="Перетащите поле сюда"
-			/>
+			<Box
+				sx={{
+					flex: 1,
+					minHeight: 0,
+					overflow: "auto",
+					px: 0.5,
+					py: 0.5,
+					height: "100%",
+					[`& .${CANVAS_TREE_ROOT_CLASS}`]: {
+						listStyle: "none",
+						m: 0,
+						p: 1,
+						minHeight: 72,
+						boxSizing: "border-box",
+						height: "100%",
+					},
+					[`& [role="listitem"].${CANVAS_TREE_DROP_TARGET_CLASS}`]: {
+						borderRadius: 1,
+						bgcolor: alpha(theme.palette.primary.main, 0.1),
+						outline: `2px solid ${alpha(theme.palette.primary.main, 0.4)}`,
+					},
+					[`& [role="listitem"].${CANVAS_TREE_DRAGGING_CLASS}`]: {
+						opacity: 0.45,
+					},
+					[`& .${CANVAS_TREE_PLACEHOLDER_CLASS}`]: {
+						listStyle: "none",
+					},
+				}}
+			>
+				<Tree<SchemaCanvasNodeData>
+					tree={treeData}
+					rootId={SCHEMA_CANVAS_ROOT_ID}
+					extraAcceptTypes={[PALETTE_DRAG_TYPE]}
+					sort={false}
+					insertDroppableFirst={false}
+					initialOpen
+					dropTargetOffset={5}
+					rootProps={{
+						style: {
+							minHeight: 72,
+							width: "100%",
+						},
+					}}
+					onDragStart={handleDragStart}
+					onDrop={handleDrop}
+					canDrop={canDrop}
+					canDrag={canDrag}
+					placeholderRender={(node, { depth }) => (
+						<SchemaCanvasPlaceholder node={node} depth={depth} />
+					)}
+					dragPreviewRender={(monitorProps) => (
+						<Box
+							sx={{
+								display: "inline-flex",
+								px: 1.25,
+								py: 0.75,
+								borderRadius: 1,
+								border: 1,
+								borderColor: "primary.main",
+								bgcolor: "background.paper",
+								boxShadow: 3,
+								fontSize: "0.875rem",
+								fontWeight: 600,
+								maxWidth: 240,
+							}}
+						>
+							{monitorProps.item.text}
+						</Box>
+					)}
+					classes={{
+						root: CANVAS_TREE_ROOT_CLASS,
+						dropTarget: CANVAS_TREE_DROP_TARGET_CLASS,
+						draggingSource: CANVAS_TREE_DRAGGING_CLASS,
+						placeholder: CANVAS_TREE_PLACEHOLDER_CLASS,
+					}}
+					render={(
+						node,
+						{ depth, isDragging, isOpen, isDropTarget, hasChild, onToggle },
+					) => (
+						<SchemaCanvasFieldRow
+							node={node}
+							depth={depth}
+							isDragging={isDragging}
+							isOpen={isOpen}
+							isDropTarget={isDropTarget}
+							hasChild={hasChild}
+							onToggle={onToggle}
+						/>
+					)}
+				/>
+				{treeData.length === 0 ? (
+					<Box
+						data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasDropZone}
+						sx={{
+							py: 2,
+							px: 1,
+							textAlign: "center",
+							borderRadius: 1,
+							border: 1,
+							borderStyle: "dashed",
+							borderColor: "divider",
+							color: "text.secondary",
+							position: "absolute",
+							top: 0,
+							right: 0,
+							bottom: 0,
+							display: "flex",
+							justifyContent: "center",
+							alignItems: "center",
+							height: "100%",
+							pointerEvents: "none",
+							width: `calc(100% - ${250}px)`,
+						}}
+					>
+						<Typography variant="caption">Перетащите поле сюда</Typography>
+					</Box>
+				) : null}
+			</Box>
 		</PanelChrome>
 	);
 }

@@ -1,6 +1,7 @@
 import {
 	allRequiredSectionsCompleted,
 	completeGlobalQuestionnaire,
+	completePanelSection,
 	completeSection,
 	createDefaultV2AnketaWorkflow,
 	mainSectionIdForFormPath,
@@ -64,9 +65,18 @@ export function useAnketaWorkflow(
 
 	const completeMainSection = useCallback(
 		(sectionId: V2AnketaMainSectionId) => {
-			setWorkflow(completeSection(workflow, sectionId));
+			const current = readWorkflowFromFormData(formData);
+			setWorkflow(completeSection(current, sectionId));
 		},
-		[setWorkflow, workflow],
+		[formData, setWorkflow],
+	);
+
+	const completePanelSectionByPath = useCallback(
+		(pathKey: string) => {
+			const current = readWorkflowFromFormData(formData);
+			setWorkflow(completePanelSection(current, pathKey));
+		},
+		[formData, setWorkflow],
 	);
 
 	const touchMainSection = useCallback(
@@ -98,6 +108,7 @@ export function useAnketaWorkflow(
 		globallyLocked,
 		allSectionsCompleted,
 		completeMainSection,
+		completePanelSectionByPath,
 		touchMainSection,
 		completeGlobalFill,
 		isSectionLocked,

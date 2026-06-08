@@ -29,20 +29,83 @@ interface UncertaintyItem {
 	influence: string;
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+	return value && typeof value === "object" && !Array.isArray(value)
+		? (value as Record<string, unknown>)
+		: {};
+}
+
+function hasTruthyInitiativeValue(value: unknown): boolean {
+	if (value == null || value === "") return false;
+	return true;
+}
+
+/** V1: корень formData; V2: uncertaintyCalculation.*; опционально пути из ui:options. */
+export function resolveGeneralUncertaintyEnabled(
+	formData: unknown,
+	options?: Record<string, unknown>,
+): boolean {
+	const data = asRecord(formData);
+	const costPath =
+		typeof options?.initiativeCostPath === "string"
+			? options.initiativeCostPath
+			: undefined;
+	const timelinePath =
+		typeof options?.initiativeTimelinePath === "string"
+			? options.initiativeTimelinePath
+			: undefined;
+
+	if (costPath && timelinePath) {
+		const parts = (path: string) => path.split(".").filter(Boolean);
+		const readPath = (path: string) => {
+			let current: unknown = data;
+			for (const key of parts(path)) {
+				current = asRecord(current)[key];
+			}
+			return current;
+		};
+		return (
+			hasTruthyInitiativeValue(readPath(costPath)) &&
+			hasTruthyInitiativeValue(readPath(timelinePath))
+		);
+	}
+
+	if (
+		hasTruthyInitiativeValue(data.initiativeCost) &&
+		hasTruthyInitiativeValue(data.initiativeTimeline)
+	) {
+		return true;
+	}
+
+	const uncertainty = asRecord(data.uncertaintyCalculation);
+	return (
+		hasTruthyInitiativeValue(uncertainty.initiativeCost) &&
+		hasTruthyInitiativeValue(uncertainty.initiativeTimeline)
+	);
+}
+
 export const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
-	const { value = [], onChange, formContext, schema, required } = props;
+	const { value = [], onChange, formContext, disabled, readonly } = props;
 
 	const tooltips = props.options?.tooltips;
-	const preview = props.options.preview;
+	const readOnlyMode = Boolean(
+		props.options?.preview ||
+			disabled ||
+			readonly ||
+			formContext?.anketaReadOnly,
+	);
+	const requireInitiativeFields = props.options?.requireInitiativeFields !== false;
+	const isSchemaEditorPreview = formContext?.schemaEditorPreview === true;
 	const enums: string[] = (props?.schema?.items as any)?.properties?.type?.enum;
 	const enumNames: string[] = (props?.schema?.items as any)?.properties?.type
 		?.enumNames;
 
-	const uncertaintyOptions = enums?.map((enumValue, index) => ({
-		id: enumValue,
-		title: enumNames?.[index] || enumValue,
-		tooltip: tooltips?.[index] || "",
-	}));
+	const uncertaintyOptions =
+		enums?.map((enumValue, index) => ({
+			id: enumValue,
+			title: enumNames?.[index] || enumValue,
+			tooltip: tooltips?.[index] || "",
+		})) ?? [];
 
 	const influenceOptions: string[] = (props?.schema?.items as any)?.properties
 		?.influence.enum;
@@ -54,8 +117,13 @@ export const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 	const [probability, setProbability] = useState<string>("");
 	const [influence, setInfluence] = useState<string>("");
 
-	const { initiativeCost, initiativeTimeline } = formContext?.formData || {};
-	const isEnabled = initiativeCost && initiativeTimeline;
+	const isEnabled =
+		isSchemaEditorPreview ||
+		!requireInitiativeFields ||
+		resolveGeneralUncertaintyEnabled(
+			formContext?.formData,
+			props.options as Record<string, unknown> | undefined,
+		);
 
 	// Track previous enabled state
 	const prevEnabled = useRef(isEnabled);
@@ -133,16 +201,17 @@ export const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 				{/* Summary input */}
 				<TextFieldCustom
 					value={getSummaryText()}
-					disabled={!preview}
+					disabled
 					fullWidth
 					variant="outlined"
 					size="small"
 					label={props.label}
 				/>
-				{!isEnabled && !preview && (
+				{!isEnabled && !readOnlyMode && (
 					<FormHelperText>
-						Заполните "Стоимость инициативы" и "Сроки инициативы" для добавления
-						факторов неопределенности
+						Заполните «Стоимость инициативы» и «Сроки инициативы» в расчёте
+						неопределённости (кнопка в блоке «Общие сведения») или укажите их в
+						полях формы
 					</FormHelperText>
 				)}
 				{/* <Spacer space={24} /> */}
@@ -175,7 +244,7 @@ export const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 									</React.Fragment>
 								}
 							/>
-							{!preview && (
+							{!readOnlyMode && (
 								<ListItemSecondaryAction>
 									<IconButton
 										edge="end"
@@ -190,7 +259,7 @@ export const GeneralUncertaintyWidget: React.FC<WidgetProps> = (props) => {
 					))}
 				</List>
 				{/* Add button */}
-				{!preview && (
+				{!readOnlyMode && (
 					<Button
 						startIcon={<AddIcon />}
 						onClick={handleAddClick}

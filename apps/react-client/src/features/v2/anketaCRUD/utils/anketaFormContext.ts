@@ -16,8 +16,12 @@ export type AnketaFormContextValue = {
 	anketaCompactArrayTablePaths?: ReadonlySet<string>;
 	anketaModalObjectPaths?: ReadonlySet<string>;
 	anketaReadOnly?: boolean;
+	/** Превью в конструкторе схемы — виджеты вроде GeneralUncertainty без gate по инициативе. */
+	schemaEditorPreview?: boolean;
 	workflow?: V2AnketaWorkflowDto;
 	onCompleteMainSection?: (sectionId: V2AnketaMainSectionId) => void;
+	/** Завершение кастомной панели (группа без workflowSectionId) по path. */
+	onCompletePanelSection?: (pathKey: string) => void;
 	onTouchMainSection?: (sectionId: V2AnketaMainSectionId) => void;
 	isMainSectionLocked?: (sectionId: V2AnketaMainSectionId) => boolean;
 };

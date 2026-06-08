@@ -10,4 +10,6 @@ export type V2AnketaMainSectionId = (typeof V2_ANKETA_MAIN_SECTION_IDS)[number];
 export type V2AnketaWorkflowDto = {
     globalStatus: V2AnketaGlobalStatus;
     sections: Record<V2AnketaMainSectionId, V2AnketaSectionStatus>;
+    /** Статусы панелей конструктора / кастомных групп по path (например `mySection`). */
+    panelSections?: Record<string, V2AnketaSectionStatus>;
 };

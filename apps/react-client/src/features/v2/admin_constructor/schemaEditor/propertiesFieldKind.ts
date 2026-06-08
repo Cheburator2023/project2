@@ -61,6 +61,7 @@ export function isGeneralUncertaintyField(
 	uiWidget: string | undefined,
 	resolvedField: RJSFSchema | undefined,
 ): boolean {
+	if (uiWidget === "V2UncertaintyModalWidget") return true;
 	return (
 		uiWidget === "GeneralUncertaintyWidget" &&
 		resolveSchemaNodeType(resolvedField) === "array"
