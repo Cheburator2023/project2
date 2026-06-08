@@ -5,6 +5,7 @@ import {
 	resolveSchemaNode,
 	updatePropertyAtPointer,
 } from "./schemaMutators";
+import { resolveSchemaNodeType } from "../schemaEditor/propertiesFieldKind";
 import { pointerSegments } from "./schemaPaths";
 
 /** Ответ `/v2/dictionaries/json/:code` — извлекаем коды под enum в схеме. */
@@ -109,13 +110,26 @@ export function mergeDictionaryEnumsIntoPreviewSchema(
 	for (const row of rows) {
 		const segs = pointerSegments(row.pointer);
 		const node = resolveSchemaNode(draft, segs);
-		if (!node || !isStringLikeFieldForDictionary(node)) continue;
+		if (!node) continue;
 
 		const leafUi = readUiBranch(ui, segs);
-		const opt = leafUi?.["ui:options"];
+		const opt =
+			leafUi?.["ui:options"] &&
+			typeof leafUi["ui:options"] === "object" &&
+			!Array.isArray(leafUi["ui:options"])
+				? (leafUi["ui:options"] as Record<string, unknown>)
+				: undefined;
+
+		const multi = opt?.multiple === true;
+		const isTarget = multi
+			? resolveSchemaNodeType(node) === "array" &&
+				resolveSchemaNodeType(node.items as RJSFSchema | undefined) === "string"
+			: isStringLikeFieldForDictionary(node);
+		if (!isTarget) continue;
+
 		let code: string | null = null;
-		if (opt && typeof opt === "object" && !Array.isArray(opt)) {
-			const raw = (opt as Record<string, unknown>).dictionaryCode;
+		if (opt) {
+			const raw = opt.dictionaryCode;
 			code = typeof raw === "string" && raw.trim() ? raw.trim() : null;
 		}
 		if (!code) continue;
@@ -123,10 +137,20 @@ export function mergeDictionaryEnumsIntoPreviewSchema(
 		const pair = enumMapByCode[code];
 		if (!pair?.enums.length) continue;
 
-		const patched = updatePropertyAtPointer(draft, segs, {
+		const dictionaryItemsSchema: RJSFSchema = {
+			type: "string",
 			enum: pair.enums,
 			enumNames: pair.enumNames,
-		});
+		};
+		const patched = multi
+			? updatePropertyAtPointer(draft, segs, {
+					items: dictionaryItemsSchema,
+					uniqueItems: true,
+				})
+			: updatePropertyAtPointer(draft, segs, {
+					enum: pair.enums,
+					enumNames: pair.enumNames,
+				});
 		if (patched) draft = patched;
 	}
 

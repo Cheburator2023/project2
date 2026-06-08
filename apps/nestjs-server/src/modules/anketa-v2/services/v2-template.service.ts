@@ -1,11 +1,12 @@
 import { Injectable, NotFoundException, ConflictException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, Repository } from "typeorm";
+import { In, Repository, type EntityManager } from "typeorm";
 import type {
 	V2BulkDeleteTemplateVersionsResultDto,
 	V2TemplateDeleteSnapshotDto,
 	V2TemplateVersionDto,
 } from "@smart-anketa/api-contract";
+import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import type { CreateV2TemplateDto, UpdateV2TemplateDto } from "../dto";
@@ -23,8 +24,101 @@ export class V2TemplateService {
 		private readonly templateRepository: Repository<V2TemplateEntity>,
 		@InjectRepository(V2TemplateVersionEntity)
 		private readonly versionRepository: Repository<V2TemplateVersionEntity>,
+		@InjectRepository(V2QuestionnaireEntity)
+		private readonly questionnaireRepository: Repository<V2QuestionnaireEntity>,
 		private readonly auditService: V2AuditService,
 	) {}
+
+	private async resolveRebindTargetVersionId(
+		templateId: string,
+		excludingVersionIds: Set<string>,
+		systemCurrentId: string | null,
+	): Promise<string | null> {
+		const template = await this.templateRepository.findOne({
+			where: { id: templateId },
+		});
+		if (!template) return null;
+
+		if (
+			template.currentVersionId &&
+			!excludingVersionIds.has(template.currentVersionId)
+		) {
+			return template.currentVersionId;
+		}
+
+		if (systemCurrentId && !excludingVersionIds.has(systemCurrentId)) {
+			const systemOnTemplate = await this.versionRepository.findOne({
+				where: { id: systemCurrentId, templateId },
+			});
+			if (systemOnTemplate) return systemCurrentId;
+		}
+
+		const remaining = await this.versionRepository.find({
+			where: { templateId },
+			order: { versionNumber: "DESC" },
+		});
+
+		const published = remaining.find(
+			(v) => v.status === "published" && !excludingVersionIds.has(v.id),
+		);
+		if (published) return published.id;
+
+		const any = remaining.find((v) => !excludingVersionIds.has(v.id));
+		return any?.id ?? null;
+	}
+
+	private async detachQuestionnairesFromVersions(
+		em: EntityManager,
+		templateId: string,
+		versionIdsToDelete: string[],
+		excludingVersionIds: Set<string>,
+		systemCurrentId: string | null,
+	): Promise<{ reboundCount: number; deletedQuestionnaireCount: number }> {
+		if (versionIdsToDelete.length === 0) {
+			return { reboundCount: 0, deletedQuestionnaireCount: 0 };
+		}
+
+		const questionnaires = await em.find(V2QuestionnaireEntity, {
+			where: {
+				templateId,
+				boundTemplateVersionId: In(versionIdsToDelete),
+			},
+		});
+
+		if (questionnaires.length === 0) {
+			return { reboundCount: 0, deletedQuestionnaireCount: 0 };
+		}
+
+		const fallbackId = await this.resolveRebindTargetVersionId(
+			templateId,
+			excludingVersionIds,
+			systemCurrentId,
+		);
+
+		if (fallbackId) {
+			await em.update(
+				V2QuestionnaireEntity,
+				{
+					templateId,
+					boundTemplateVersionId: In(versionIdsToDelete),
+				},
+				{ boundTemplateVersionId: fallbackId },
+			);
+			return {
+				reboundCount: questionnaires.length,
+				deletedQuestionnaireCount: 0,
+			};
+		}
+
+		await em.delete(V2QuestionnaireEntity, {
+			id: In(questionnaires.map((q) => q.id)),
+		});
+
+		return {
+			reboundCount: 0,
+			deletedQuestionnaireCount: questionnaires.length,
+		};
+	}
 
 	/** ID версии, являющейся актуальной схемой системы (если задана). */
 	async getSystemCurrentVersionId(): Promise<string | null> {
@@ -187,6 +281,7 @@ export class V2TemplateService {
 		const snapshot = buildTemplateDeleteSnapshot(template, versions);
 
 		await this.templateRepository.manager.transaction(async (em) => {
+			await em.delete(V2QuestionnaireEntity, { templateId: id });
 			await this.auditService.deleteForTemplate(id);
 			if (versions.length > 0) {
 				await em.update(
@@ -292,14 +387,31 @@ export class V2TemplateService {
 			return {
 				deletedVersionIds: [],
 				skippedCurrentVersionId,
+				skippedBoundVersionIds: [],
+				reboundQuestionnaireCount: 0,
+				deletedQuestionnaireCount: 0,
 				snapshot: [],
 			};
 		}
 
 		const snapshot = toDelete.map(mapV2TemplateVersionToDto);
 		const deleteIds = toDelete.map((v) => v.id);
+		const excludingVersionIds = new Set(deleteIds);
+
+		let reboundQuestionnaireCount = 0;
+		let deletedQuestionnaireCount = 0;
 
 		await this.templateRepository.manager.transaction(async (em) => {
+			const detached = await this.detachQuestionnairesFromVersions(
+				em,
+				templateId,
+				deleteIds,
+				excludingVersionIds,
+				systemCurrentId,
+			);
+			reboundQuestionnaireCount = detached.reboundCount;
+			deletedQuestionnaireCount = detached.deletedQuestionnaireCount;
+
 			await this.auditService.deleteForVersionIds(deleteIds);
 			await em.update(
 				V2TemplateVersionEntity,
@@ -312,6 +424,9 @@ export class V2TemplateService {
 		return {
 			deletedVersionIds: deleteIds,
 			skippedCurrentVersionId,
+			skippedBoundVersionIds: [],
+			reboundQuestionnaireCount,
+			deletedQuestionnaireCount,
 			snapshot,
 		};
 	}

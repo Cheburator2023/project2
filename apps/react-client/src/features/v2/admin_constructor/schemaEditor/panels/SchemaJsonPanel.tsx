@@ -73,7 +73,7 @@ export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 			fillHeight={fillHeight}
 			dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.jsonEditor}
 			title="Редактор JSON"
-			description="Прямое редактирование JSON Schema и UI Schema черновика."
+			description="Прямое редактирование JSON Schema и UI Schema. Изменения попадают в конструктор только после «Применить»; «Сбросить» откатывает текст к текущему состоянию."
 			actions={
 				<Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
 					<Button size="small" variant="contained" onClick={syncMonacoApply}>
@@ -101,6 +101,18 @@ export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 						{monacoError}
 					</Alert>
 				) : null}
+				<Typography
+					variant="caption"
+					color="text.secondary"
+					display="block"
+					sx={{ flexShrink: 0 }}
+					title="Подсказка по JSON-редактору"
+				>
+					Чтобы убрать поле из схемы, удалите его из JSON Schema и связанный
+					узел в UI Schema, затем нажмите «Применить». Таблица параметров
+					компонента в модалках анкеты — отдельный слой; её нельзя править
+					только через JSON, если поля скрыты ui:options.hidden.
+				</Typography>
 				<Box
 					data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.jsonEditors}
 					sx={{

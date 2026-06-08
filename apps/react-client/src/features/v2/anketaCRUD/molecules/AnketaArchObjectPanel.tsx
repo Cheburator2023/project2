@@ -35,12 +35,33 @@ export function AnketaArchObjectPanel({
 	const filled = isArchObjectFilled(item);
 	const readOnly = ctx.anketaReadOnly;
 
-	if (!columns) return null;
-
 	const addLabel = `Добавить ${sectionTitle.toLowerCase()}`;
 	const panelTestId = anketaMoleculeTestIdForPath(
 		ANKETA_MOLECULE_TEST_IDS.archObjectPanel,
 		pathKey,
+	);
+
+	const rowActions = (
+		<Stack direction="row" spacing={0.25} justifyContent="flex-end">
+			<IconButton
+				size="small"
+				disabled={readOnly}
+				title="Редактировать"
+				data-test-id={`${panelTestId}--edit`}
+				onClick={() => ctx.openAnketaModal?.(pathKey)}
+			>
+				<EditOutlinedIcon fontSize="small" />
+			</IconButton>
+			<IconButton
+				size="small"
+				disabled={readOnly}
+				title="Удалить"
+				data-test-id={`${panelTestId}--delete`}
+				onClick={() => ctx.deleteAnketaObject?.(pathKey)}
+			>
+				<DeleteOutlineIcon fontSize="small" />
+			</IconButton>
+		</Stack>
 	);
 
 	return (
@@ -50,7 +71,9 @@ export function AnketaArchObjectPanel({
 					data-test-id={`${panelTestId}--row`}
 					sx={{
 						display: "grid",
-						gridTemplateColumns: `repeat(${columns.length}, 1fr) 72px`,
+						gridTemplateColumns: columns
+							? `repeat(${columns.length}, 1fr) 72px`
+							: "1fr 72px",
 						gap: 1,
 						alignItems: "center",
 						px: 1.5,
@@ -63,43 +86,30 @@ export function AnketaArchObjectPanel({
 						overflowX: "auto",
 					}}
 				>
-					{columns.map((column) => (
-						<Box key={column.key} minWidth={0}>
-							<Typography variant="caption" color="text.secondary">
-								{column.header}
-							</Typography>
-							<Typography
-								variant="body2"
-								sx={{
-									overflow: "hidden",
-									textOverflow: "ellipsis",
-									whiteSpace: "nowrap",
-								}}
-							>
-								{column.render(item)}
-							</Typography>
-						</Box>
-					))}
-					<Stack direction="row" spacing={0.25} justifyContent="flex-end">
-						<IconButton
-							size="small"
-							disabled={readOnly}
-							title="Редактировать"
-							data-test-id={`${panelTestId}--edit`}
-							onClick={() => ctx.openAnketaModal?.(pathKey)}
-						>
-							<EditOutlinedIcon fontSize="small" />
-						</IconButton>
-						<IconButton
-							size="small"
-							disabled={readOnly}
-							title="Удалить"
-							data-test-id={`${panelTestId}--delete`}
-							onClick={() => ctx.deleteAnketaObject?.(pathKey)}
-						>
-							<DeleteOutlineIcon fontSize="small" />
-						</IconButton>
-					</Stack>
+					{columns ? (
+						columns.map((column) => (
+							<Box key={column.key} minWidth={0}>
+								<Typography variant="caption" color="text.secondary">
+									{column.header}
+								</Typography>
+								<Typography
+									variant="body2"
+									sx={{
+										overflow: "hidden",
+										textOverflow: "ellipsis",
+										whiteSpace: "nowrap",
+									}}
+								>
+									{column.render(item)}
+								</Typography>
+							</Box>
+						))
+					) : (
+						<Typography variant="body2" color="text.secondary">
+							Заполнено
+						</Typography>
+					)}
+					{rowActions}
 				</Box>
 			) : (
 				<ListEmptyPlaceholder data-test-id={`${panelTestId}--empty`}>

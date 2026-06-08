@@ -1,6 +1,5 @@
 import type { DragEndEvent, DragOverEvent } from "@dnd-kit/dom";
 import { DragDropProvider } from "@dnd-kit/react";
-import { arrayMove, move } from "@dnd-kit/helpers";
 import {
 	createContext,
 	useCallback,
@@ -14,6 +13,7 @@ import type { RJSFSchema } from "@rjsf/utils";
 import { PALETTE_PRESETS } from "../constants";
 import { useSchemaEditor } from "../SchemaEditorContext";
 import {
+	buildOrdersForFieldMove,
 	getObjectItemsSchema,
 	isObjectFieldGroup,
 	listOrderedChildKeys,
@@ -137,6 +137,54 @@ function resolvePaletteDrop(
 	};
 }
 
+function resolveFieldDropTarget(
+	targetId: string | number | undefined,
+	orders: Record<string, string[]>,
+	sortable: SortableDragSource | null,
+	fieldData: FieldDragData,
+): { sourceGroupId: string; targetGroupId: string; targetIndex: number } | null {
+	const sourceGroupId = String(
+		sortable?.initialGroup ?? groupIdFromParentPointer(fieldData.parentPointer),
+	);
+
+	const appendGroupId = targetId ? parseDropAppendId(String(targetId)) : null;
+	if (appendGroupId) {
+		const keys = orders[appendGroupId] ?? [];
+		return {
+			sourceGroupId,
+			targetGroupId: appendGroupId,
+			targetIndex: keys.length,
+		};
+	}
+
+	const fieldPointer = targetId ? parseFieldSortableId(String(targetId)) : null;
+	if (fieldPointer) {
+		const parts = fieldPointer.split("/").filter(Boolean);
+		const key = parts[parts.length - 1]!;
+		const parentPointer =
+			parts.length <= 1 ? "/" : `/${parts.slice(0, -1).join("/")}`;
+		const targetGroupId = groupIdFromParentPointer(parentPointer);
+
+		if (targetGroupId !== sourceGroupId) {
+			const keys = orders[targetGroupId] ?? [];
+			const index = keys.indexOf(key);
+			return {
+				sourceGroupId,
+				targetGroupId,
+				targetIndex: index >= 0 ? index : keys.length,
+			};
+		}
+	}
+
+	if (!sortable) return null;
+
+	return {
+		sourceGroupId,
+		targetGroupId: String(sortable.group ?? sourceGroupId),
+		targetIndex: sortable.index,
+	};
+}
+
 function resolveInsertIndicator(
 	event: DragOverEvent,
 	orders: Record<string, string[]>,
@@ -149,11 +197,15 @@ function resolveInsertIndicator(
 
 	if (sourceType === FIELD_DRAG_TYPE) {
 		const sortable = asSortableSource(source);
-		if (sortable) {
-			return {
-				groupId: String(sortable.group ?? ROOT_GROUP_ID),
-				index: sortable.index,
-			};
+		const fieldData = source.data as FieldDragData;
+		const drop = resolveFieldDropTarget(
+			target.id,
+			orders,
+			sortable,
+			fieldData,
+		);
+		if (drop) {
+			return { groupId: drop.targetGroupId, index: drop.targetIndex };
 		}
 	}
 
@@ -187,7 +239,6 @@ function asSortableSource(
 }
 
 type SchemaEditorDndState = {
-	displayOrders: Record<string, string[]>;
 	insertIndicator: DndInsertIndicator | null;
 	isDragging: boolean;
 };
@@ -202,72 +253,57 @@ export function useSchemaEditorDnd(): SchemaEditorDndState {
 	return ctx;
 }
 
-/** @deprecated use useSchemaEditorDnd */
-export function useSchemaEditorDndOrders(): Record<string, string[]> {
-	return useSchemaEditorDnd().displayOrders;
-}
-
 export function SchemaEditorDndProvider({ children }: { children: ReactNode }) {
 	const { jsonSchema, uiSchema, handleAddFieldPresetAtParent, applyGroupFieldOrders } =
 		useSchemaEditor();
-	const [dragOrders, setDragOrders] = useState<Record<string, string[]> | null>(null);
 	const [insertIndicator, setInsertIndicator] = useState<DndInsertIndicator | null>(null);
 	const [isDragging, setIsDragging] = useState(false);
 	const initialOrdersRef = useRef<Record<string, string[]>>({});
-	const dragOrdersRef = useRef<Record<string, string[]> | null>(null);
+	const baselineOrdersRef = useRef<Record<string, string[]>>({});
 
 	const presetById = useMemo(
 		() => new Map(PALETTE_PRESETS.map((p) => [String(p.id), p])),
 		[],
 	);
 
-	const displayOrders = dragOrders ?? collectGroupOrders(jsonSchema, uiSchema);
+	const baselineOrders = useMemo(
+		() => collectGroupOrders(jsonSchema, uiSchema),
+		[jsonSchema, uiSchema],
+	);
+
+	baselineOrdersRef.current = baselineOrders;
+
+	const resetDragState = useCallback(() => {
+		setIsDragging(false);
+		setInsertIndicator(null);
+	}, []);
 
 	const onDragStart = useCallback(() => {
 		const initial = collectGroupOrders(jsonSchema, uiSchema);
 		initialOrdersRef.current = initial;
-		dragOrdersRef.current = initial;
-		setDragOrders(initial);
 		setIsDragging(true);
 		setInsertIndicator(null);
 	}, [jsonSchema, uiSchema]);
 
-	const onDragOver = useCallback(
-		(event: DragOverEvent) => {
-			const source = event.operation.source;
-			if (!source) return;
-
-			const orders = dragOrdersRef.current ?? initialOrdersRef.current;
-			setInsertIndicator(resolveInsertIndicator(event, orders));
-
-			const sourceType = (source.data as { type?: string } | undefined)?.type;
-			if (sourceType === FIELD_DRAG_TYPE) {
-				setDragOrders((prev) => {
-					const base = prev ?? initialOrdersRef.current;
-					const next = move(base, event) as Record<string, string[]>;
-					dragOrdersRef.current = next;
-					return next;
-				});
-			}
-		},
-		[],
-	);
+	const onDragOver = useCallback((event: DragOverEvent) => {
+		const source = event.operation.source;
+		if (!source) return;
+		setInsertIndicator(
+			resolveInsertIndicator(event, baselineOrdersRef.current),
+		);
+	}, []);
 
 	const onDragEnd = useCallback(
 		(event: DragEndEvent) => {
-			setIsDragging(false);
-			setInsertIndicator(null);
-
 			if (event.canceled) {
-				setDragOrders(null);
-				dragOrdersRef.current = null;
+				resetDragState();
 				return;
 			}
 
 			const source = event.operation.source;
 			const target = event.operation.target;
 			const initialOrders = initialOrdersRef.current;
-			const finalOrders = dragOrdersRef.current ?? initialOrders;
+			const currentOrders = baselineOrdersRef.current;
 
 			if (
 				source &&
@@ -278,17 +314,17 @@ export function SchemaEditorDndProvider({ children }: { children: ReactNode }) {
 				if (preset) {
 					const { parentPointer, index } = resolvePaletteDrop(
 						target?.id,
-						finalOrders,
+						currentOrders,
 					);
 					handleAddFieldPresetAtParent(
 						parentPointer,
 						preset.make(),
 						index,
 						preset.uiOptions,
+						preset.uiBranch,
 					);
 				}
-				setDragOrders(null);
-				dragOrdersRef.current = null;
+				resetDragState();
 				return;
 			}
 
@@ -297,40 +333,48 @@ export function SchemaEditorDndProvider({ children }: { children: ReactNode }) {
 				(source.data as FieldDragData | undefined)?.type === FIELD_DRAG_TYPE
 			) {
 				const sortable = asSortableSource(source);
-				if (sortable) {
-					const groupId = String(sortable.group ?? ROOT_GROUP_ID);
-					const initialGroup = String(sortable.initialGroup ?? groupId);
-					const from = sortable.initialIndex;
-					const to = sortable.index;
+				const fieldData = source.data as FieldDragData;
+				const drop = resolveFieldDropTarget(
+					target?.id,
+					initialOrders,
+					sortable,
+					fieldData,
+				);
+				if (drop) {
+					const { sourceGroupId, targetGroupId, targetIndex } = drop;
+					const from = sortable?.initialIndex ?? fieldData.index;
+					const sameGroup = sourceGroupId === targetGroupId;
+					const moved =
+						!sameGroup ||
+						from !== targetIndex ||
+						initialOrders[sourceGroupId]?.[from] !== fieldData.key;
 
-					if (from !== to) {
-						if (initialGroup === groupId) {
-							const keys = [
-								...(finalOrders[groupId] ?? initialOrders[groupId] ?? []),
-							];
-							const reordered = arrayMove(keys, from, to);
-							applyGroupFieldOrders({ ...finalOrders, [groupId]: reordered });
-						} else {
-							applyGroupFieldOrders(finalOrders);
-						}
-						setDragOrders(null);
-						dragOrdersRef.current = null;
-						return;
+					if (moved) {
+						const nextOrders = buildOrdersForFieldMove(
+							initialOrders,
+							fieldData.key,
+							sourceGroupId,
+							targetGroupId,
+							targetIndex,
+						);
+						applyGroupFieldOrders(nextOrders, initialOrders);
 					}
 				}
-
-				applyGroupFieldOrders(finalOrders);
 			}
 
-			setDragOrders(null);
-			dragOrdersRef.current = null;
+			resetDragState();
 		},
-		[applyGroupFieldOrders, handleAddFieldPresetAtParent, presetById],
+		[
+			applyGroupFieldOrders,
+			handleAddFieldPresetAtParent,
+			presetById,
+			resetDragState,
+		],
 	);
 
 	const dndState = useMemo(
-		() => ({ displayOrders, insertIndicator, isDragging }),
-		[displayOrders, insertIndicator, isDragging],
+		() => ({ insertIndicator, isDragging }),
+		[insertIndicator, isDragging],
 	);
 
 	return (

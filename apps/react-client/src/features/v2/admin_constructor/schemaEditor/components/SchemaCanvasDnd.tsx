@@ -1,16 +1,15 @@
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
+import GridViewIcon from "@mui/icons-material/GridView";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
-import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useDraggable, useDroppable } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import {
 	resolveV2AnketaArchComponent,
 	resolveV2AnketaCanvasUiKind,
@@ -29,9 +28,12 @@ import { pointerSegments } from "../../utils/schemaPaths";
 import {
 	ARCH_COMPONENT_CHIP_COLORS,
 	ARCH_COMPONENT_PRESETS,
+	CALCULATION_FIELD_PRESETS,
 	CANVAS_HIDDEN_CHIP_COLOR,
 	CANVAS_UTILITY_CHIP_COLOR,
 	FIELD_PRESETS,
+	LAYOUT_PRESETS,
+	WORK_COMPONENT_PRESETS,
 	type PalettePreset,
 	ruSchemaTypeLabel,
 } from "../constants";
@@ -92,9 +94,49 @@ function CanvasUiKindChip({ kind }: { kind: V2AnketaCanvasUiKind }) {
 	);
 }
 
+function findPointerByArchComponent(
+	jsonSchema: import("@rjsf/utils").RJSFSchema,
+	uiSchema: import("@rjsf/utils").UiSchema,
+	arch: V2ArchComponentType,
+): string | null {
+	const rows = listOrderedChildKeys(jsonSchema, "/", uiSchema);
+	const walk = (keys: string[], parentPointer: string): string | null => {
+		for (const key of keys) {
+			const pointer =
+				parentPointer === "/" ? `/${key}` : `${parentPointer}/${key}`;
+			const branch = readUiSchemaBranchAtPointer(uiSchema, pointer);
+			if (resolveV2AnketaArchComponent(branch) === arch) {
+				return pointer;
+			}
+			const node = resolveSchemaNode(jsonSchema, pointerSegments(pointer));
+			if (isObjectFieldGroup(node)) {
+				const childKeys = listOrderedChildKeys(jsonSchema, pointer, uiSchema);
+				const found = walk(childKeys, pointer);
+				if (found) return found;
+			}
+			const itemsObj = getObjectItemsSchema(node);
+			if (itemsObj) {
+				const itemKeys = listOrderedChildKeys(
+					jsonSchema,
+					`${pointer}/items`,
+					uiSchema,
+				);
+				const found = walk(itemKeys, `${pointer}/items`);
+				if (found) return found;
+			}
+		}
+		return null;
+	};
+	return walk(rows, "/");
+}
+
 function PaletteItem({ preset }: { preset: PalettePreset }) {
-	const { handleAddFieldPresetAtParent, jsonSchema, uiSchema } =
-		useSchemaEditor();
+	const {
+		handleAddFieldPresetAtParent,
+		jsonSchema,
+		uiSchema,
+		setSelectedPointer,
+	} = useSchemaEditor();
 	const rootCount = listOrderedChildKeys(jsonSchema, "/", uiSchema).length;
 	const { ref, isDragging } = useDraggable<PaletteDragData>({
 		id: `palette-${preset.id}`,
@@ -102,24 +144,38 @@ function PaletteItem({ preset }: { preset: PalettePreset }) {
 		data: { type: PALETTE_DRAG_TYPE, presetId: String(preset.id) },
 	});
 
-	const isArch = preset.section === "arch";
-	const archColor = isArch
-		? ARCH_COMPONENT_CHIP_COLORS[preset.chipLabel as V2ArchComponentType]
-		: undefined;
+	const isArch = preset.section === "arch" || preset.section === "works";
+	const archType = isArch ? (preset.chipLabel as V2ArchComponentType) : null;
+	const archColor = archType ? ARCH_COMPONENT_CHIP_COLORS[archType] : undefined;
+
+	const handleArchClick = () => {
+		if (!archType) return;
+		const pointer = findPointerByArchComponent(jsonSchema, uiSchema, archType);
+		if (pointer) {
+			setSelectedPointer(pointer);
+			return;
+		}
+	};
 
 	return (
 		<Box
 			ref={ref}
 			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.paletteItem}
+			onClick={isArch ? handleArchClick : undefined}
 			onDoubleClick={() =>
 				handleAddFieldPresetAtParent(
 					"/",
 					preset.make(),
 					rootCount,
 					preset.uiOptions,
+					preset.uiBranch,
 				)
 			}
-			title={`Перетащите или дважды щёлкните — ${preset.title}`}
+			title={
+				isArch
+					? `Щёлкните — выбрать на холсте; перетащите или дважды щёлкните — добавить «${preset.title}»`
+					: `Перетащите или дважды щёлкните — ${preset.title}`
+			}
 			sx={{
 				display: "flex",
 				alignItems: "center",
@@ -289,8 +345,7 @@ function SortableFieldRow({
 	depth: number;
 }) {
 	const theme = useTheme();
-	const [expanded, setExpanded] = useState(false);
-	const { displayOrders } = useSchemaEditorDnd();
+	const { isDragging: isCanvasDragging } = useSchemaEditorDnd();
 	const {
 		jsonSchema,
 		uiSchema,
@@ -305,18 +360,12 @@ function SortableFieldRow({
 	const isGroup = isObjectFieldGroup(node);
 	const arrayItemsObj = isGroup ? undefined : getObjectItemsSchema(node);
 
-	const childGroupId = groupIdFromParentPointer(fieldPointer);
 	const childKeys = isGroup
-		? (displayOrders[childGroupId] ??
-			Object.keys((node?.properties ?? {}) as Record<string, unknown>))
+		? listOrderedChildKeys(jsonSchema, fieldPointer, uiSchema)
 		: [];
 
-	const itemsGroupId = arrayItemsObj
-		? groupIdFromParentPointer(`${fieldPointer}/items`)
-		: null;
-	const itemFieldKeys = itemsGroupId
-		? (displayOrders[itemsGroupId] ??
-			Object.keys((arrayItemsObj?.properties ?? {}) as Record<string, unknown>))
+	const itemFieldKeys = arrayItemsObj
+		? listOrderedChildKeys(jsonSchema, `${fieldPointer}/items`, uiSchema)
 		: [];
 
 	const { ref, handleRef, isDragging } = useSortable<FieldDragData>({
@@ -336,6 +385,16 @@ function SortableFieldRow({
 
 	const hasNestedContent = isGroup || Boolean(arrayItemsObj);
 	const uiBranch = readUiSchemaBranchAtPointer(uiSchema, fieldPointer);
+	const uiWidget =
+		typeof uiBranch?.["ui:widget"] === "string" ? uiBranch["ui:widget"] : "";
+	const isGeneralUncertainty = uiWidget === "GeneralUncertaintyWidget";
+	const uiOptions =
+		uiBranch?.["ui:options"] &&
+		typeof uiBranch["ui:options"] === "object" &&
+		!Array.isArray(uiBranch["ui:options"])
+			? (uiBranch["ui:options"] as Record<string, unknown>)
+			: undefined;
+	const isLayoutGroup = uiOptions?.layoutGroup === true;
 	const archComponent = resolveV2AnketaArchComponent(uiBranch);
 	const canvasUiKind = resolveV2AnketaCanvasUiKind(uiBranch);
 	const canvasUiColor =
@@ -344,6 +403,7 @@ function SortableFieldRow({
 			: canvasUiKind === "utility"
 				? CANVAS_UTILITY_CHIP_COLOR
 				: undefined;
+	const showDragging = isCanvasDragging && isDragging;
 
 	return (
 		<Box sx={{ pl: depth > 0 ? 1.5 : 0 }}>
@@ -366,8 +426,8 @@ function SortableFieldRow({
 							: isGroup
 								? alpha(theme.palette.info.main, 0.03)
 								: "background.paper",
-					boxShadow: isDragging ? 3 : 0,
-					opacity: isDragging ? 0.45 : 1,
+					boxShadow: showDragging ? 3 : 0,
+					opacity: showDragging ? 0.45 : 1,
 					cursor: "pointer",
 					transition: theme.transitions.create(
 						["border-color", "background-color", "box-shadow", "opacity"],
@@ -375,29 +435,7 @@ function SortableFieldRow({
 					),
 				}}
 			>
-				{hasNestedContent ? (
-					<IconButton
-						size="small"
-						title={expanded ? "Свернуть" : "Развернуть"}
-						aria-label={expanded ? "Свернуть" : "Развернуть"}
-						aria-expanded={expanded}
-						onClick={(e) => {
-							e.stopPropagation();
-							setExpanded((v) => !v);
-						}}
-						sx={{ mt: -0.25, p: 0.35 }}
-					>
-						<ExpandMoreIcon
-							fontSize="small"
-							sx={{
-								transform: expanded ? "rotate(180deg)" : "rotate(-90deg)",
-								transition: "transform 0.2s",
-							}}
-						/>
-					</IconButton>
-				) : (
-					<Box sx={{ width: 28, flexShrink: 0 }} />
-				)}
+				<Box sx={{ width: 28, flexShrink: 0 }} />
 				<IconButton
 					ref={handleRef}
 					size="small"
@@ -417,7 +455,9 @@ function SortableFieldRow({
 							gap: 0.75,
 						}}
 					>
-						{isGroup || arrayItemsObj ? (
+						{isLayoutGroup ? (
+							<GridViewIcon sx={{ fontSize: 16, color: "secondary.main" }} />
+						) : isGroup || arrayItemsObj ? (
 							<FolderOutlinedIcon sx={{ fontSize: 16, color: "info.main" }} />
 						) : null}
 						<Typography variant="body2" fontWeight={selected ? 600 : 500}>
@@ -425,16 +465,18 @@ function SortableFieldRow({
 						</Typography>
 						<Chip
 							size="small"
-							label={ruSchemaTypeLabel(typeLabel)}
+							label={
+								isLayoutGroup
+									? "разметка"
+									: isGeneralUncertainty
+										? "неопределённость"
+										: ruSchemaTypeLabel(typeLabel)
+							}
 							variant="outlined"
 							sx={{ height: 20 }}
 						/>
-						{archComponent ? (
-							<ArchComponentChip arch={archComponent} />
-						) : null}
-						{canvasUiKind ? (
-							<CanvasUiKindChip kind={canvasUiKind} />
-						) : null}
+						{archComponent ? <ArchComponentChip arch={archComponent} /> : null}
+						{canvasUiKind ? <CanvasUiKindChip kind={canvasUiKind} /> : null}
 						{isGroup ? (
 							<Chip
 								size="small"
@@ -475,13 +517,9 @@ function SortableFieldRow({
 						title="Удалить поле"
 						aria-label="Удалить поле"
 						tabIndex={selected ? 0 : -1}
-						sx={{
-							visibility: selected ? "visible" : "hidden",
-							pointerEvents: selected ? "auto" : "none",
-						}}
 						onClick={(e) => {
 							e.stopPropagation();
-							handleDeleteField();
+							handleDeleteField(fieldPointer);
 						}}
 					>
 						<DeleteOutlineIcon fontSize="small" />
@@ -489,50 +527,51 @@ function SortableFieldRow({
 				</Box>
 			</Box>
 
-			<Collapse in={expanded && hasNestedContent} unmountOnExit>
-				{isGroup ? (
-					<Box
-						sx={{
-							mt: 1,
-							ml: 2,
-							pl: 1,
-							borderLeft: 2,
-							borderColor: selected ? "primary.light" : "divider",
-						}}
-					>
-						<FieldList
-							parentPointer={fieldPointer}
-							depth={depth + 1}
-							emptyLabel="Перетащите поле в группу"
-						/>
-					</Box>
-				) : null}
-
-				{arrayItemsObj ? (
-					<Box
-						sx={{
-							mt: isGroup ? 1.5 : 1,
-							ml: 2,
-							pl: 1,
-							borderLeft: 2,
-							borderColor: selected ? "primary.light" : "divider",
-						}}
-					>
-						<Typography
-							variant="caption"
-							color="text.secondary"
-							sx={{ display: "block", mb: 0.5 }}
+			{hasNestedContent ? (
+				<>
+					{isGroup ? (
+						<Box
+							sx={{
+								mt: 1,
+								ml: 2,
+								pl: 1,
+								borderLeft: 2,
+								borderColor: selected ? "primary.light" : "divider",
+							}}
 						>
-							Поля элемента массива
-						</Typography>
-						<FieldList
-							parentPointer={`${fieldPointer}/items`}
-							depth={depth + 1}
-							emptyLabel="Перетащите поле в элемент массива"
-						/>
-					</Box>
-				) : null}
-			</Collapse>
+							<FieldList
+								parentPointer={fieldPointer}
+								depth={depth + 1}
+								emptyLabel="Перетащите поле в группу"
+							/>
+						</Box>
+					) : null}
+					{arrayItemsObj ? (
+						<Box
+							sx={{
+								mt: isGroup ? 1.5 : 1,
+								ml: 2,
+								pl: 1,
+								borderLeft: 2,
+								borderColor: selected ? "primary.light" : "divider",
+							}}
+						>
+							<Typography
+								variant="caption"
+								color="text.secondary"
+								sx={{ display: "block", mb: 0.5 }}
+							>
+								Поля элемента массива
+							</Typography>
+							<FieldList
+								parentPointer={`${fieldPointer}/items`}
+								depth={depth + 1}
+								emptyLabel="Перетащите поле в элемент массива"
+							/>
+						</Box>
+					) : null}
+				</>
+			) : null}
 		</Box>
 	);
 }
@@ -546,9 +585,10 @@ function FieldList({
 	depth: number;
 	emptyLabel: string;
 }) {
-	const { displayOrders, insertIndicator, isDragging } = useSchemaEditorDnd();
+	const { insertIndicator, isDragging } = useSchemaEditorDnd();
+	const { jsonSchema, uiSchema } = useSchemaEditor();
 	const groupId = groupIdFromParentPointer(parentPointer);
-	const keys = displayOrders[groupId] ?? [];
+	const keys = listOrderedChildKeys(jsonSchema, parentPointer, uiSchema);
 	const showIndicator = isDragging && insertIndicator?.groupId === groupId;
 
 	return (
@@ -610,9 +650,39 @@ export function SchemaPalettePanel({
 				color="text.secondary"
 				sx={{ display: "block", mt: 1.5, mb: 0.75, fontWeight: 600 }}
 			>
+				Разметка
+			</Typography>
+			{LAYOUT_PRESETS.map((preset) => (
+				<PaletteItem key={String(preset.id)} preset={preset} />
+			))}
+			<Typography
+				variant="caption"
+				color="text.secondary"
+				sx={{ display: "block", mt: 1.5, mb: 0.75, fontWeight: 600 }}
+			>
+				Расчёты
+			</Typography>
+			{CALCULATION_FIELD_PRESETS.map((preset) => (
+				<PaletteItem key={String(preset.id)} preset={preset} />
+			))}
+			<Typography
+				variant="caption"
+				color="text.secondary"
+				sx={{ display: "block", mt: 1.5, mb: 0.75, fontWeight: 600 }}
+			>
 				Арх. компоненты
 			</Typography>
 			{ARCH_COMPONENT_PRESETS.map((preset) => (
+				<PaletteItem key={String(preset.id)} preset={preset} />
+			))}
+			<Typography
+				variant="caption"
+				color="text.secondary"
+				sx={{ display: "block", mt: 1.5, mb: 0.75, fontWeight: 600 }}
+			>
+				Работы
+			</Typography>
+			{WORK_COMPONENT_PRESETS.map((preset) => (
 				<PaletteItem key={String(preset.id)} preset={preset} />
 			))}
 		</PanelChrome>

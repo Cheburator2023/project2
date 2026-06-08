@@ -7,7 +7,7 @@ export const V2_TEMPLATE_EDIT_TEST_IDS = {
 	btnPreview: "btnPreview",
 	btnLogic: "btnLogic",
 	btnSave: "btnSave",
-	btnPublish: "btnPublish",
+	btnActivate: "btnActivate",
 	schemaEditor: "schemaEditor",
 	dockLayout: "dockLayout",
 	panelPalette: "panelPalette",
@@ -43,6 +43,7 @@ export const V2_TEMPLATE_LOGIC_TEST_IDS = {
 	headerActions: "logicHeaderActions",
 	btnEditor: "logicBtnEditor",
 	btnSave: "logicBtnSave",
+	btnActivate: "logicBtnActivate",
 	logicWorkspace: "logicWorkspace",
 } as const;
 

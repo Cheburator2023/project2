@@ -1,7 +1,6 @@
 import CalculateOutlinedIcon from "@mui/icons-material/CalculateOutlined";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useMemo, useRef, type ReactNode } from "react";
 import type { V2AnketaSchemaEngine } from "../hooks/useV2AnketaSchemaEngine";
@@ -54,7 +53,6 @@ export function V2AnketaFormWithModals({
 	});
 
 	const anketaFormContext = useMemo((): AnketaFormContextValue => {
-		const controls = modalControlsRef.current;
 		const uncertaintySlot: ReactNode | undefined = showUncertaintySlot ? (
 			<Flex gap={1.5} alignItems="center" justifyContent="space-between">
 				<Typography variant="body2" color="text.secondary">
@@ -67,7 +65,7 @@ export function V2AnketaFormWithModals({
 						size="small"
 						startIcon={<CalculateOutlinedIcon />}
 						disabled={effectiveReadOnly}
-						onClick={() => controls.openUncertaintyModal()}
+						onClick={() => modalControlsRef.current.openUncertaintyModal()}
 						sx={{ textTransform: "uppercase", fontWeight: 600 }}
 					>
 						Рассчитать общую неопределенность
@@ -85,16 +83,18 @@ export function V2AnketaFormWithModals({
 			},
 			openAnketaModal:
 				anketaFormContextProp?.openAnketaModal ??
-				((path, editIndex) => controls.openArrayModal(path, editIndex)),
+				((path, editIndex) =>
+					modalControlsRef.current.openArrayModal(path, editIndex)),
 			openUncertaintyModal:
 				anketaFormContextProp?.openUncertaintyModal ??
-				(() => controls.openUncertaintyModal()),
+				(() => modalControlsRef.current.openUncertaintyModal()),
 			deleteAnketaArrayItem:
 				anketaFormContextProp?.deleteAnketaArrayItem ??
-				((path, index) => controls.deleteArrayItem(path, index)),
+				((path, index) =>
+					modalControlsRef.current.deleteArrayItem(path, index)),
 			deleteAnketaObject:
 				anketaFormContextProp?.deleteAnketaObject ??
-				((path) => controls.deleteObject(path)),
+				((path) => modalControlsRef.current.deleteObject(path)),
 			anketaModalArrayPaths:
 				anketaFormContextProp?.anketaModalArrayPaths ??
 				modalBindingSets.modalArrayPathSet,

@@ -3,6 +3,7 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import { styled, useColorScheme } from "@mui/material/styles";
 import { Flex } from "@react-client/common/primitives/Flex";
+import TextField from "@mui/material/TextField";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { useV2Dictionaries } from "@react-client/common/api/queries/v2-templates";
 import type { V2DictionaryDto } from "@smart-anketa/api-contract";
@@ -17,7 +18,7 @@ import {
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { pathForAdminV2Dictionary } from "@react-client/routing/common/pathHelpers";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import {
 	agGridCustomMUITheme,
@@ -61,6 +62,11 @@ export const V2DictionaryList = ({
 	const { mode } = useColorScheme();
 	const { data: dictionaries, isLoading } = useV2Dictionaries();
 	const gridRef = useRef<AgGridReact<V2DictionaryDto>>(null);
+	const [quickFilter, setQuickFilter] = useState("");
+
+	useEffect(() => {
+		gridRef.current?.api?.setGridOption("quickFilterText", quickFilter);
+	}, [quickFilter]);
 
 	const [menuState, setMenuState] = useState<{
 		mouseX: number;
@@ -146,7 +152,15 @@ export const V2DictionaryList = ({
 	const menuCanReset = menuRow ? canResetV2Dictionary(menuRow) : false;
 
 	return (
-		<GridWrapper>
+		<GridWrapper flexDirection="column" gap={1}>
+			<TextField
+				size="small"
+				placeholder="Поиск по коду, названию, категории…"
+				value={quickFilter}
+				onChange={(e) => setQuickFilter(e.target.value)}
+				sx={{ maxWidth: 420, flexShrink: 0 }}
+				inputProps={{ "aria-label": "Поиск справочников" }}
+			/>
 			<AgGridReact<V2DictionaryDto>
 				ref={gridRef}
 				theme={gridTheme}

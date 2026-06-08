@@ -4,6 +4,11 @@ import {
 	V2_ARCH_COMPONENT_TYPES,
 	type V2ArchComponentType,
 } from "@smart-anketa/api-contract";
+import { ARCH_COMPONENT_PRESET_DEFS } from "./archComponentPresets";
+import {
+	GENERAL_UNCERTAINTY_UI_BRANCH,
+	makeGeneralUncertaintyField,
+} from "./fieldTypePresets";
 
 /** Цвета чипов арх. компонентов в конструкторе (как в dev-подсветке анкеты). */
 /** Подсветка скрытых секций на холсте конструктора. */
@@ -20,7 +25,17 @@ export const ARCH_COMPONENT_CHIP_COLORS: Record<V2ArchComponentType, string> = {
 	dataProcess: "#0891B2",
 	deployChannel: "#DB2777",
 	modelControl: "#DC2626",
+	typicalWork: "#65A30D",
+	atypicalWork: "#CA8A04",
 };
+
+/** Не показывать в палитре конструктора (остаются в типах для существующих схем). */
+export const PALETTE_HIDDEN_ARCH_COMPONENTS: V2ArchComponentType[] = [
+	"deployChannel",
+	"modelControl",
+	"typicalWork",
+	"atypicalWork",
+];
 
 export const MAIN_DOCK_PANEL_ID = "designer";
 
@@ -61,12 +76,21 @@ export function ruSchemaTypeLabel(typeLabel: string): string {
 
 export type FieldTypePreset = RJSFSchema["type"];
 
+export type PaletteSection =
+	| "primitive"
+	| "layout"
+	| "calculation"
+	| "arch"
+	| "works";
+
 export type PalettePreset = {
 	id: string;
 	title: string;
-	section: "primitive" | "arch";
+	section: PaletteSection;
 	chipLabel: string;
 	uiOptions?: Record<string, unknown>;
+	/** Дочерние ветки uiSchema (например modelsList у arch:model). */
+	uiBranch?: Record<string, unknown>;
 	make: () => RJSFSchema;
 };
 
@@ -77,6 +101,13 @@ export const FIELD_PRESETS: PalettePreset[] = [
 		section: "primitive",
 		chipLabel: "string",
 		make: () => ({ type: "string", title: "Строковое поле" }),
+	},
+	{
+		id: "string-dictionary",
+		title: "Строка / справочник",
+		section: "primitive",
+		chipLabel: "string·справочник",
+		make: () => ({ type: "string", title: "Поле справочника" }),
 	},
 	{
 		id: "integer",
@@ -110,178 +141,75 @@ export const FIELD_PRESETS: PalettePreset[] = [
 			properties: {},
 		}),
 	},
+];
+
+export const LAYOUT_PRESETS: PalettePreset[] = [
 	{
-		id: "array",
-		title: "Массив (список)",
-		section: "primitive",
-		chipLabel: "array",
+		id: "layout",
+		title: "Разметка",
+		section: "layout",
+		chipLabel: "layout",
 		make: () => ({
-			type: "array",
-			title: "Список",
-			items: { type: "object", title: "Элемент", properties: {} },
+			type: "object",
+			title: "Разметка",
+			properties: {},
 		}),
+		uiOptions: {
+			layoutGroup: true,
+			gridColumns: 2,
+			sectionRole: "flat",
+		},
 	},
 ];
 
-function archObjectPreset(
-	_arch: V2ArchComponentType,
-	title: string,
-): () => RJSFSchema {
-	return () => ({
-		type: "object",
-		title,
-		properties: {
-			workType: {
-				type: "string",
-				title: "Тип работ",
-				enum: ["Разработка", "Доработка", "Настройка"],
-			},
-		},
-	});
-}
+export const CALCULATION_FIELD_PRESETS: PalettePreset[] = [
+	{
+		id: "general-uncertainty",
+		title: "Расчёт общей неопределённости",
+		section: "calculation",
+		chipLabel: "неопределённость",
+		make: () => makeGeneralUncertaintyField(),
+		uiBranch: GENERAL_UNCERTAINTY_UI_BRANCH,
+	},
+];
 
-function archArrayPreset(
-	_arch: V2ArchComponentType,
-	title: string,
-	itemTitle: string,
-): () => RJSFSchema {
-	return () => ({
-		type: "array",
-		title,
-		items: {
-			type: "object",
-			title: itemTitle,
-			properties: {
-				name: { type: "string", title: "Наименование" },
-			},
-		},
-	});
-}
+/** Число колонок сетки в блоке «Разметка» (md-брейкпоинт, 12 / columns). */
+export const LAYOUT_GRID_COLUMN_OPTIONS = [
+	{ value: 1, label: "1 колонка (на всю ширину)" },
+	{ value: 2, label: "2 колонки" },
+	{ value: 3, label: "3 колонки" },
+] as const;
 
-const ARCH_PRESET_MAKERS: Record<
-	V2ArchComponentType,
-	{ make: () => RJSFSchema; uiOptions?: Record<string, unknown> }
-> = {
-	modelService: {
-		make: archObjectPreset("modelService", "Модельный сервис"),
-		uiOptions: {
-			archComponent: "modelService",
-			sectionRole: "subsection",
-		},
-	},
-	sourceSystem: {
-		make: archArrayPreset(
-			"sourceSystem",
-			"Системы-источники",
-			"Система-источник",
-		),
-		uiOptions: {
-			archComponent: "sourceSystem",
-			addable: true,
-			removable: true,
-			orderable: false,
-		},
-	},
-	dataProcess: {
-		make: archObjectPreset("dataProcess", "Процессы обработки данных"),
-		uiOptions: {
-			archComponent: "dataProcess",
-			sectionRole: "subsection",
-			showFilledCount: true,
-		},
-	},
-	dataMart: {
-		make: archObjectPreset("dataMart", "Объект / Витрина данных"),
-		uiOptions: {
-			archComponent: "dataMart",
-			sectionRole: "subsection",
-			showFilledCount: true,
-		},
-	},
-	model: {
-		make: archObjectPreset("model", "Модель"),
-		uiOptions: {
-			archComponent: "model",
-			sectionRole: "subsection",
-			showFilledCount: true,
-		},
-	},
-	deployChannel: {
-		make: () => ({
-			type: "array",
-			title: "Каналы внедрения",
-			items: {
-				type: "string",
-				enum: [
-					"Батч",
-					"Батч+загрузка",
-					"Батч+Онлайн",
-					"Онлайн",
-					"Онлайн GPU",
-					"Стриминг",
-					"Мобильные",
-					"LLM",
-					"Гео",
-					"Облако",
-					"Графовая платформа",
-				],
-			},
-			uniqueItems: true,
-		}),
-		uiOptions: { archComponent: "deployChannel" },
-	},
-	modelControl: {
-		make: () => ({
-			type: "object",
-			title: "Контроль модели",
-			properties: {
-				modelClass: {
-					type: "string",
-					title: "Класс моделей",
-					enum: [
-						"1",
-						"2",
-						"3",
-						"4",
-						"5",
-						"6",
-						"7",
-						"8",
-						"9",
-					],
-				},
-				controlTypes: {
-					type: "array",
-					title: "Виды контроля",
-					items: {
-						type: "string",
-						enum: ["КД", "ТМ", "ОК", "АК", "КМЗ", "ОВ"],
-					},
-					uniqueItems: true,
-				},
-			},
-		}),
-		uiOptions: {
-			archComponent: "modelControl",
-			sectionRole: "subsection",
-		},
-	},
-};
+export const ARCH_COMPONENT_PRESETS: PalettePreset[] = V2_ARCH_COMPONENT_TYPES.filter(
+	(arch) => !PALETTE_HIDDEN_ARCH_COMPONENTS.includes(arch),
+).map((arch) => ({
+	id: `arch:${arch}`,
+	title: V2_ARCH_COMPONENT_LABELS[arch],
+	section: "arch" as const,
+	chipLabel: arch,
+	make: ARCH_COMPONENT_PRESET_DEFS[arch].make,
+	uiOptions: ARCH_COMPONENT_PRESET_DEFS[arch].uiOptions,
+	uiBranch: ARCH_COMPONENT_PRESET_DEFS[arch].uiBranch,
+}));
 
-export const ARCH_COMPONENT_PRESETS: PalettePreset[] = V2_ARCH_COMPONENT_TYPES.map(
-	(arch) => ({
-		id: `arch:${arch}`,
-		title: V2_ARCH_COMPONENT_LABELS[arch],
-		section: "arch" as const,
-		chipLabel: arch,
-		make: ARCH_PRESET_MAKERS[arch].make,
-		uiOptions: ARCH_PRESET_MAKERS[arch].uiOptions,
-	}),
-);
+export const WORK_COMPONENT_PRESETS: PalettePreset[] = (
+	["typicalWork", "atypicalWork"] as const
+).map((arch) => ({
+	id: `work:${arch}`,
+	title: V2_ARCH_COMPONENT_LABELS[arch],
+	section: "works" as const,
+	chipLabel: arch,
+	make: ARCH_COMPONENT_PRESET_DEFS[arch].make,
+	uiOptions: ARCH_COMPONENT_PRESET_DEFS[arch].uiOptions,
+	uiBranch: ARCH_COMPONENT_PRESET_DEFS[arch].uiBranch,
+}));
 
 export const PALETTE_PRESETS: PalettePreset[] = [
 	...FIELD_PRESETS,
+	...LAYOUT_PRESETS,
+	...CALCULATION_FIELD_PRESETS,
 	...ARCH_COMPONENT_PRESETS,
+	...WORK_COMPONENT_PRESETS,
 ];
 
 /** Шаблоны отображения групп (object) в RJSF — `ui:ObjectFieldTemplate`. */

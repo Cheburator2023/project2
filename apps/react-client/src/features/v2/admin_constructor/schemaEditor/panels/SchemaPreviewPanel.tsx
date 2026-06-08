@@ -3,6 +3,7 @@ import Typography from "@mui/material/Typography";
 import { V2AnketaFormWithModals } from "@react-client/features/v2/anketaCRUD/organisms/V2AnketaFormWithModals";
 import { useSchemaEditorAnketaEngine } from "../../hooks/useSchemaEditorAnketaEngine";
 import { V2FormWithEvaluationLayout } from "../../organisms/V2FormWithEvaluationLayout";
+import { SchemaEditorPanelErrorBoundary } from "../components/SchemaEditorPanelErrorBoundary";
 import { useSchemaEditor } from "../SchemaEditorContext";
 import { PanelChrome } from "../components/PanelChrome";
 
@@ -44,15 +45,24 @@ export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean })
 				</Alert>
 			) : null}
 
-			<V2FormWithEvaluationLayout
-				summary={engine.summary}
-				calculationLoading={calculationLoading}
-			>
-				<V2AnketaFormWithModals
-					engine={engine}
-					data-test-id="schema-editor-anketa-preview"
-				/>
-			</V2FormWithEvaluationLayout>
+			<SchemaEditorPanelErrorBoundary title="Ошибка превью анкеты">
+				{embedded ? (
+					<V2AnketaFormWithModals
+						engine={engine}
+						data-test-id="schema-editor-anketa-preview"
+					/>
+				) : (
+					<V2FormWithEvaluationLayout
+						summary={engine.summary}
+						calculationLoading={calculationLoading}
+					>
+						<V2AnketaFormWithModals
+							engine={engine}
+							data-test-id="schema-editor-anketa-preview"
+						/>
+					</V2FormWithEvaluationLayout>
+				)}
+			</SchemaEditorPanelErrorBoundary>
 
 			<Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
 				Учитываются правила видимости, обязательности, подсказок и валидации (JsonLogic)

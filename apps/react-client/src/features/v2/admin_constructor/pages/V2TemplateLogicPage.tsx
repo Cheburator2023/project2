@@ -19,6 +19,7 @@ import Typography from "@mui/material/Typography";
 import { useCallback, useMemo, useState } from "react";
 import { useLocation, useParams, useSearchParams } from "react-router";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import { V2TemplateVersionHeaderControls } from "@react-client/features/v2/admin_constructor/molecules/V2TemplateVersionHeaderControls";
 
 export const V2TemplateLogicPage = () => {
 	const { templateId } = useParams<{ templateId: string }>();
@@ -121,6 +122,13 @@ export const V2TemplateLogicPage = () => {
 							wrap="wrap"
 							data-test-id={V2_TEMPLATE_LOGIC_TEST_IDS.headerActions}
 						>
+							{isAdminContext ? (
+								<V2TemplateVersionHeaderControls
+									templateId={templateId}
+									versionId={versionId}
+									onVersionIdChange={setVersionId}
+								/>
+							) : null}
 							{editorHref ? (
 								<Button
 									variant="outlined"
@@ -129,6 +137,17 @@ export const V2TemplateLogicPage = () => {
 									data-test-id={V2_TEMPLATE_LOGIC_TEST_IDS.btnEditor}
 								>
 									Конструктор
+								</Button>
+							) : null}
+							{isAdminContext && headerActions.canActivateAsCurrent ? (
+								<Button
+									variant="outlined"
+									disabled={headerActions.activatePending}
+									data-test-id={V2_TEMPLATE_LOGIC_TEST_IDS.btnActivate}
+									title="Опубликует черновик при необходимости и сделает версию актуальной схемой системы"
+									onClick={headerActions.onActivateAsCurrent}
+								>
+									Сделать актуальной
 								</Button>
 							) : null}
 							<Button

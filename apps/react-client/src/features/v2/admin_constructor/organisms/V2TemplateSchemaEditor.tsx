@@ -1,6 +1,6 @@
 import {
+	useActivateV2TemplateVersionAsCurrent,
 	useCreateV2TemplateVersion,
-	usePublishV2TemplateVersion,
 	useUpdateV2TemplateVersion,
 	useV2DictionaryEnumsMaps,
 	useV2Dictionaries,
@@ -32,6 +32,12 @@ import type { SchemaEditorContextValue } from "../schemaEditor/SchemaEditorConte
 import type { SchemaEditorMainTab } from "../schemaEditor/types";
 import { SchemaEditorDockProvider } from "../schemaEditor/SchemaEditorDockContext";
 import { SchemaEditorDndProvider } from "../schemaEditor/components/SchemaEditorDndProvider";
+import {
+	canBindDictionaryToField,
+	isDictionaryMultiField,
+	isLayoutGroupUi,
+	readLeafUiOptions,
+} from "../schemaEditor/propertiesFieldKind";
 import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayout";
 import { SchemaLogicPanel } from "../schemaEditor/panels/SchemaLogicPanel";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
@@ -57,14 +63,19 @@ import {
 } from "../utils/schemaPaths";
 import {
 	addRootProperty,
+	appendKeyToUiOrderAtPointer,
 	applyGroupFieldOrdersToSchema,
 	applyGroupFieldOrdersToUiSchema,
+	buildDictionaryMultiSchemaPatch,
+	buildFieldTypeTransitionPatch,
 	insertChildPropertyAt,
 	isObjectFieldGroup,
 	listOrderedChildKeys,
 	listSchemaFields,
+	mergeUiBranchAtPointer,
 	patchUiOptionsAtPointer,
 	removePropertyAtPointer,
+	removeUiSchemaAtPointer,
 	reorderRootProperties,
 	resolveSchemaNode,
 	setUiDictionaryCodeAtPointer,
@@ -109,10 +120,10 @@ export type V2EditorHeaderMeta = {
 
 export type V2EditorHeaderActions = {
 	onSave: () => void;
-	onPublish: () => void;
+	onActivateAsCurrent: () => void;
 	savePending: boolean;
-	publishPending: boolean;
-	canPublish: boolean;
+	activatePending: boolean;
+	canActivateAsCurrent: boolean;
 };
 
 export type V2SchemaEditorLayoutMode = "dock" | "logic-only";
@@ -158,7 +169,7 @@ export const V2TemplateSchemaEditor = ({
 	} = useV2TemplateVersions(templateId);
 	const createVersion = useCreateV2TemplateVersion();
 	const updateVersion = useUpdateV2TemplateVersion();
-	const publishVersion = usePublishV2TemplateVersion();
+	const activateVersion = useActivateV2TemplateVersionAsCurrent();
 
 	const latestDraft = useMemo(() => {
 		const drafts =
@@ -185,6 +196,11 @@ export const V2TemplateSchemaEditor = ({
 		template?.currentVersionId &&
 			activeVersion?.id === template.currentVersionId,
 	);
+
+	useEffect(() => {
+		if (!activeVersionId || !onVersionIdChange || initialVersionId) return;
+		onVersionIdChange(activeVersionId);
+	}, [activeVersionId, initialVersionId, onVersionIdChange]);
 
 	const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
@@ -370,31 +386,36 @@ export const V2TemplateSchemaEditor = ({
 
 	const fieldPathHints = useMemo(() => {
 		const ui = uiSchema as Record<string, unknown>;
-		return listSchemaFields(jsonSchema, "/", 0, uiSchema).map((row) => {
-			const segs = pointerSegments(row.pointer);
-			const node = resolveSchemaNode(jsonSchema, segs);
-			const title = typeof node?.title === "string" ? node.title : null;
-			const leaf = readUiBranch(ui, segs);
-			let dictionaryCode: string | null = null;
-			const opts = leaf?.["ui:options"];
-			if (opts && typeof opts === "object" && !Array.isArray(opts)) {
-				const dc = (opts as Record<string, unknown>).dictionaryCode;
-				if (typeof dc === "string" && dc.trim()) dictionaryCode = dc.trim();
-			}
-			const varPath = jsonPointerToFormDataVarPath(row.pointer);
-			const codesPreview =
-				dictionaryCode && enumMapByCode[dictionaryCode]
-					? enumMapByCode[dictionaryCode]!.enums.slice(0, 8)
-					: null;
-			return {
-				pointer: row.pointer,
-				key: row.key,
-				title,
-				varPath,
-				dictionaryCode,
-				codesPreview,
-			};
-		});
+		return listSchemaFields(jsonSchema, "/", 0, uiSchema)
+			.filter((row) => {
+				const leaf = readUiBranch(ui, pointerSegments(row.pointer));
+				return !isLayoutGroupUi(readLeafUiOptions(leaf));
+			})
+			.map((row) => {
+				const segs = pointerSegments(row.pointer);
+				const node = resolveSchemaNode(jsonSchema, segs);
+				const title = typeof node?.title === "string" ? node.title : null;
+				const leaf = readUiBranch(ui, segs);
+				let dictionaryCode: string | null = null;
+				const opts = leaf?.["ui:options"];
+				if (opts && typeof opts === "object" && !Array.isArray(opts)) {
+					const dc = (opts as Record<string, unknown>).dictionaryCode;
+					if (typeof dc === "string" && dc.trim()) dictionaryCode = dc.trim();
+				}
+				const varPath = jsonPointerToFormDataVarPath(row.pointer);
+				const codesPreview =
+					dictionaryCode && enumMapByCode[dictionaryCode]
+						? enumMapByCode[dictionaryCode]!.enums.slice(0, 8)
+						: null;
+				return {
+					pointer: row.pointer,
+					key: row.key,
+					title,
+					varPath,
+					dictionaryCode,
+					codesPreview,
+				};
+			});
 	}, [jsonSchema, uiSchema, enumMapByCode]);
 
 	const logicPathFieldHint = useMemo(() => {
@@ -593,38 +614,51 @@ export const V2TemplateSchemaEditor = ({
 		],
 	);
 
-	const handlePublishDraft = useCallback(async () => {
-		if (!activeVersion || activeVersion.status !== "draft") return;
+	const handleActivateAsCurrent = useCallback(async () => {
+		if (!activeVersion || isSystemCurrent) return;
 
 		try {
-			await publishVersion.mutateAsync({
+			if (activeVersion.status === "draft") {
+				await updateVersion.mutateAsync({
+					templateId,
+					versionId: activeVersion.id,
+					dto: versionSnapshotDto(),
+				});
+			}
+
+			const activated = await activateVersion.mutateAsync({
 				templateId,
 				versionId: activeVersion.id,
-				dto: {},
 			});
 			await refetchVersions();
+			persistVersionInUrl(activated.id);
 
 			if (isAdminEditor) {
-				toast.success("Версия опубликована");
+				toast.success(
+					`Версия v${activated.versionNumber} — актуальная схема системы`,
+				);
 			}
 		} catch (error) {
 			if (isAdminEditor) {
-				toast.error("Не удалось опубликовать версию", {
+				toast.error("Не удалось сделать версию актуальной", {
 					description: apiErrorMessage(error),
 				});
 			}
-			throw error;
 		}
 	}, [
 		activeVersion,
+		activateVersion,
 		isAdminEditor,
-		publishVersion,
+		isSystemCurrent,
+		persistVersionInUrl,
 		refetchVersions,
 		templateId,
+		updateVersion,
+		versionSnapshotDto,
 	]);
 
-	const publishDraftRef = useRef(handlePublishDraft);
-	publishDraftRef.current = handlePublishDraft;
+	const activateAsCurrentRef = useRef(handleActivateAsCurrent);
+	activateAsCurrentRef.current = handleActivateAsCurrent;
 
 	const savePending =
 		updateVersion.isPending || createVersion.isPending;
@@ -637,16 +671,21 @@ export const V2TemplateSchemaEditor = ({
 
 		onHeaderActionsChange?.({
 			onSave: () => setSaveDialogOpen(true),
-			onPublish: () => void publishDraftRef.current(),
+			onActivateAsCurrent: () => void activateAsCurrentRef.current(),
 			savePending,
-			publishPending: publishVersion.isPending,
-			canPublish: activeVersion.status === "draft",
+			activatePending:
+				activateVersion.isPending ||
+				(activeVersion.status === "draft" && updateVersion.isPending),
+			canActivateAsCurrent: isAdminEditor && !isSystemCurrent,
 		});
 	}, [
 		activeVersion,
+		activateVersion.isPending,
+		isAdminEditor,
+		isSystemCurrent,
 		onHeaderActionsChange,
 		savePending,
-		publishVersion.isPending,
+		updateVersion.isPending,
 	]);
 
 	const syncMonacoApply = () => {
@@ -667,13 +706,32 @@ export const V2TemplateSchemaEditor = ({
 			return;
 		}
 
-		setJsonSchema(coerceJsonSchema(parsedSchema));
-		setUiSchema(coerceUiSchema(parsedUi));
-		setSchemaMonacoText(
-			JSON.stringify(coerceJsonSchema(parsedSchema), null, 2),
-		);
-		setUiMonacoText(JSON.stringify(coerceUiSchema(parsedUi), null, 2));
-		setMonacoError(null);
+		if (!parsedSchema || typeof parsedSchema !== "object" || Array.isArray(parsedSchema)) {
+			setMonacoError("JSON Schema: ожидается объект");
+			return;
+		}
+
+		if (!parsedUi || typeof parsedUi !== "object" || Array.isArray(parsedUi)) {
+			setMonacoError("UI Schema: ожидается объект");
+			return;
+		}
+
+		try {
+			const nextSchema = coerceJsonSchema(parsedSchema);
+			const nextUi = coerceUiSchema(parsedUi, nextSchema);
+			listSchemaFields(nextSchema, "/", 0, nextUi);
+			setJsonSchema(nextSchema);
+			setUiSchema(nextUi);
+			setSchemaMonacoText(JSON.stringify(nextSchema, null, 2));
+			setUiMonacoText(JSON.stringify(nextUi, null, 2));
+			setMonacoError(null);
+		} catch (error) {
+			setMonacoError(
+				error instanceof Error
+					? error.message
+					: "Не удалось применить JSON — проверьте структуру схемы",
+			);
+		}
 	};
 
 	const reloadMonacoFromState = () => {
@@ -746,12 +804,7 @@ export const V2TemplateSchemaEditor = ({
 		);
 	}, [isObjectGroup, jsonSchema, selectedPointer, uiSchema]);
 
-	const leafUiOptions =
-		leafUiBranch?.["ui:options"] &&
-		typeof leafUiBranch["ui:options"] === "object" &&
-		!Array.isArray(leafUiBranch["ui:options"])
-			? (leafUiBranch["ui:options"] as Record<string, unknown>)
-			: undefined;
+	const leafUiOptions = readLeafUiOptions(leafUiBranch);
 
 	const customUiOptionEntries = leafUiOptions
 		? Object.entries(leafUiOptions).filter(([k]) => k !== "dictionaryCode")
@@ -781,13 +834,10 @@ export const V2TemplateSchemaEditor = ({
 				.join(" · ")
 		: null;
 
-	const canBindDictionary =
-		Boolean(resolvedField) &&
-		resolvedField?.type !== "object" &&
-		!(
-			resolvedField?.properties &&
-			Object.keys(resolvedField.properties as object).length > 0
-		);
+	const canBindDictionary = canBindDictionaryToField(
+		resolvedField,
+		leafUiOptions,
+	);
 
 	const currentDictionaryCode =
 		leafUiBranch &&
@@ -824,6 +874,7 @@ export const V2TemplateSchemaEditor = ({
 			preset: RJSFSchema,
 			index: number,
 			uiOptions?: Record<string, unknown>,
+			uiBranch?: Record<string, unknown>,
 		) => {
 			const key = `field_${nanoid(8)}`;
 			const parentSegs = pointerSegments(parentPointer);
@@ -839,15 +890,28 @@ export const V2TemplateSchemaEditor = ({
 				const childPointer =
 					parentPointer === "/" ? `/${key}` : `${parentPointer}/${key}`;
 				setSelectedPointer(childPointer);
-				if (uiOptions && Object.keys(uiOptions).length > 0) {
-					setUiSchema((prev) =>
-						patchUiOptionsAtPointer(
-							prev as Record<string, unknown>,
+				setUiSchema((prev) => {
+					let nextUi = appendKeyToUiOrderAtPointer(
+						prev as Record<string, unknown>,
+						parentPointer,
+						key,
+					);
+					if (uiOptions && Object.keys(uiOptions).length > 0) {
+						nextUi = patchUiOptionsAtPointer(
+							nextUi,
 							childPointer,
 							uiOptions,
-						),
-					);
-				}
+						);
+					}
+					if (uiBranch && Object.keys(uiBranch).length > 0) {
+						nextUi = mergeUiBranchAtPointer(
+							nextUi,
+							childPointer,
+							uiBranch,
+						);
+					}
+					return nextUi as UiSchema;
+				});
 			}
 		},
 		[jsonSchema],
@@ -869,10 +933,25 @@ export const V2TemplateSchemaEditor = ({
 	);
 
 	const applyGroupFieldOrders = useCallback(
-		(orders: Record<string, string[]>) => {
-			const nextSchema = applyGroupFieldOrdersToSchema(jsonSchema, orders);
-			if (nextSchema) setJsonSchema(nextSchema);
-			setUiSchema(applyGroupFieldOrdersToUiSchema(uiSchema, orders));
+		(
+			finalOrders: Record<string, string[]>,
+			initialOrders: Record<string, string[]>,
+		) => {
+			const nextSchema = applyGroupFieldOrdersToSchema(
+				jsonSchema,
+				initialOrders,
+				finalOrders,
+			);
+			if (!nextSchema) return;
+			setJsonSchema(nextSchema);
+			setUiSchema(
+				applyGroupFieldOrdersToUiSchema(
+					uiSchema,
+					jsonSchema,
+					initialOrders,
+					finalOrders,
+				),
+			);
 		},
 		[jsonSchema, uiSchema],
 	);
@@ -881,21 +960,72 @@ export const V2TemplateSchemaEditor = ({
 		(patch: Partial<RJSFSchema>) => {
 			if (!selectedPointer) return;
 			const segs = pointerSegments(selectedPointer);
-			const next = updatePropertyAtPointer(jsonSchema, segs, patch);
-			if (next) setJsonSchema(next);
+			let effectivePatch = patch;
+
+			if (typeof patch.type === "string") {
+				effectivePatch = {
+					...buildFieldTypeTransitionPatch(resolvedField, patch.type),
+					...patch,
+				};
+			}
+
+			try {
+				const next = updatePropertyAtPointer(jsonSchema, segs, effectivePatch);
+				if (next) {
+					listSchemaFields(next, "/", 0, uiSchema);
+					setJsonSchema(next);
+					setMonacoError(null);
+				} else {
+					setMonacoError(
+						`Не удалось обновить поле по пути ${selectedPointer}`,
+					);
+				}
+			} catch (error) {
+				setMonacoError(
+					error instanceof Error
+						? error.message
+						: "Не удалось применить изменение типа поля",
+				);
+			}
+		},
+		[jsonSchema, selectedPointer, resolvedField, uiSchema, setMonacoError],
+	);
+
+	const handleDeleteField = useCallback(
+		(pointer?: string | null) => {
+			const targetPointer = pointer ?? selectedPointer;
+			if (!targetPointer) return;
+			const segs = pointerSegments(targetPointer);
+			const next = removePropertyAtPointer(jsonSchema, segs);
+			if (next) {
+				setJsonSchema(next);
+				setUiSchema((prev) =>
+					removeUiSchemaAtPointer(
+						prev as Record<string, unknown>,
+						targetPointer,
+					),
+				);
+				const selected = normalizeJsonPointer(targetPointer);
+				const subtreePrefix = `${selected}/`;
+				setLogic((prev) => ({
+					rules: prev.rules.filter((rule) => {
+						const target = normalizeJsonPointer(rule.targetPath);
+						if (target === selected || target.startsWith(subtreePrefix)) {
+							return false;
+						}
+						return !rule.dependencies.some((dep) => {
+							const normalized = normalizeJsonPointer(dep);
+							return (
+								normalized === selected || normalized.startsWith(subtreePrefix)
+							);
+						});
+					}),
+				}));
+				setSelectedPointer(null);
+			}
 		},
 		[jsonSchema, selectedPointer],
 	);
-
-	const handleDeleteField = useCallback(() => {
-		if (!selectedPointer) return;
-		const segs = pointerSegments(selectedPointer);
-		const next = removePropertyAtPointer(jsonSchema, segs);
-		if (next) {
-			setJsonSchema(next);
-			setSelectedPointer(null);
-		}
-	}, [jsonSchema, selectedPointer]);
 
 	const handleToggleRequired = useCallback(
 		(checked: boolean) => {
@@ -939,14 +1069,27 @@ export const V2TemplateSchemaEditor = ({
 	const handleDictionaryCodeChange = useCallback(
 		(code: string) => {
 			if (!selectedPointer) return;
+			const trimmed = code.trim();
 			const nextUi = setUiDictionaryCodeAtPointer(
 				uiSchema as Record<string, unknown>,
 				selectedPointer,
-				code.trim().length ? code.trim() : null,
+				trimmed.length ? trimmed : null,
 			);
 			setUiSchema(nextUi as UiSchema);
+			if (
+				!trimmed.length &&
+				isDictionaryMultiField(resolvedField, leafUiOptions)
+			) {
+				const segs = pointerSegments(selectedPointer);
+				const next = updatePropertyAtPointer(
+					jsonSchema,
+					segs,
+					buildDictionaryMultiSchemaPatch(false),
+				);
+				if (next) setJsonSchema(next);
+			}
 		},
-		[selectedPointer, uiSchema],
+		[selectedPointer, uiSchema, jsonSchema, resolvedField, leafUiOptions],
 	);
 
 	const addRuleForTargetPath = useCallback((rawTarget: string) => {
@@ -1209,7 +1352,7 @@ export const V2TemplateSchemaEditor = ({
 
 	if (!template || activeVersionLoading) {
 		return (
-			<Typography>
+			<Typography component="div">
 				{wording === "adminSchema"
 					? <FullScreenLoader />
 					: "Шаблон не найден или загрузка..."}

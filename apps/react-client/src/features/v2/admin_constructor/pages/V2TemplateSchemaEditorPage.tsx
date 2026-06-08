@@ -13,6 +13,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
+import { V2TemplateVersionHeaderControls } from "@react-client/features/v2/admin_constructor/molecules/V2TemplateVersionHeaderControls";
 import { v2TemplateVersionChipLabel } from "@react-client/features/v2/admin_constructor/utils/v2TemplateVersionLabels";
 import { useCallback, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
@@ -128,6 +129,13 @@ export const V2TemplateSchemaEditorPage = () => {
 						wrap="wrap"
 						data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.headerActions}
 					>
+						{isAdminContext ? (
+							<V2TemplateVersionHeaderControls
+								templateId={templateId}
+								versionId={versionId}
+								onVersionIdChange={setVersionId}
+							/>
+						) : null}
 						<Button
 							variant="outlined"
 							startIcon={<OpenInNewIcon />}
@@ -160,14 +168,15 @@ export const V2TemplateSchemaEditorPage = () => {
 							Логика
 						</Button>
 
-						{headerActions.canPublish ? (
+						{isAdminContext && headerActions.canActivateAsCurrent ? (
 							<Button
 								variant="outlined"
-								disabled={headerActions.publishPending}
-								data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnPublish}
-								onClick={headerActions.onPublish}
+								disabled={headerActions.activatePending}
+								data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnActivate}
+								title="Опубликует черновик при необходимости и сделает версию актуальной схемой системы"
+								onClick={headerActions.onActivateAsCurrent}
 							>
-								Опубликовать
+								Сделать актуальной
 							</Button>
 						) : null}
 						<Button

@@ -8,6 +8,7 @@ import {
 	Param,
 	HttpCode,
 	HttpStatus,
+	Logger,
 	ParseUUIDPipe,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
@@ -28,6 +29,8 @@ import { CurrentUser } from "../../../shared/decorators/user.decorator";
 @ApiTags("v2-template-versions")
 @Controller("v2/templates/:templateId/versions")
 export class V2TemplateVersionController {
+	private readonly logger = new Logger(V2TemplateVersionController.name);
+
 	constructor(
 		private readonly versionService: V2TemplateVersionService,
 		private readonly templateService: V2TemplateService,
@@ -246,13 +249,20 @@ export class V2TemplateVersionController {
 		);
 
 		if (changed) {
-			await this.auditService.log(
-				templateId,
-				"version.activated_as_current",
-				version.id,
-				{ version },
-				user?.id ?? null,
-			);
+			try {
+				await this.auditService.log(
+					templateId,
+					"version.activated_as_current",
+					version.id,
+					this.auditVersionPayload(version),
+					user?.id ?? null,
+				);
+			} catch (error) {
+				this.logger.warn(
+					`Audit log failed for version.activated_as_current (${version.id})`,
+					error instanceof Error ? error.stack : String(error),
+				);
+			}
 		}
 
 		return this.toResponseDto(version);
@@ -277,6 +287,26 @@ export class V2TemplateVersionController {
 		);
 	}
 
+	private auditVersionPayload(version: {
+		id: string;
+		templateId: string;
+		versionNumber: number;
+		status: string;
+	}): Record<string, unknown> {
+		return {
+			versionId: version.id,
+			templateId: version.templateId,
+			versionNumber: version.versionNumber,
+			status: version.status,
+		};
+	}
+
+	private toIsoString(value: Date | string | null | undefined): string | null {
+		if (value == null) return null;
+		if (typeof value === "string") return value;
+		return value.toISOString();
+	}
+
 	private toResponseDto(version: any): V2TemplateVersionResponseDto {
 		return {
 			id: version.id,
@@ -289,9 +319,9 @@ export class V2TemplateVersionController {
 			dictionariesSnapshot: version.dictionariesSnapshot,
 			releaseNotes: version.releaseNotes,
 			parentVersionId: version.parentVersionId,
-			createdAt: version.createdAt.toISOString(),
-			updatedAt: version.updatedAt.toISOString(),
-			publishedAt: version.publishedAt?.toISOString() ?? null,
+			createdAt: this.toIsoString(version.createdAt) ?? new Date(0).toISOString(),
+			updatedAt: this.toIsoString(version.updatedAt) ?? new Date(0).toISOString(),
+			publishedAt: this.toIsoString(version.publishedAt),
 			createdBy: version.createdBy,
 		};
 	}

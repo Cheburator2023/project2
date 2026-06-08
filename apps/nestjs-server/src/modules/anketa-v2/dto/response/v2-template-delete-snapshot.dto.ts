@@ -22,6 +22,15 @@ export class V2BulkDeleteTemplateVersionsResponseDto
 	@ApiProperty({ required: false, nullable: true })
 	skippedCurrentVersionId: string | null;
 
+	@ApiProperty({ type: [String] })
+	skippedBoundVersionIds: string[];
+
+	@ApiProperty()
+	reboundQuestionnaireCount: number;
+
+	@ApiProperty()
+	deletedQuestionnaireCount: number;
+
 	@ApiProperty({ type: [V2TemplateVersionResponseDto] })
 	snapshot: V2TemplateVersionResponseDto[];
 }

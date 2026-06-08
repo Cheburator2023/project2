@@ -109,6 +109,7 @@ export function resolveV2AnketaCanvasUiKind(
 	uiNode: unknown,
 ): V2AnketaCanvasUiKind | null {
 	if (isV2AnketaHiddenUiNode(uiNode)) return "hidden";
+	if (readUiOptions(uiNode).layoutGroup === true) return "utility";
 	const opts = readV2AnketaSectionUiOptions(uiNode);
 	if (opts.sectionRole === "panel") return "utility";
 	const node = readRecord(uiNode);
@@ -160,7 +161,7 @@ function isModalEditableArray(
 ): boolean {
 	if (resolveSchemaType(schemaNode) !== "array") return false;
 	if (isReadonlyGeneratedArray(uiNode, schemaNode)) return false;
-	if (arch === "sourceSystem") return true;
+	if (arch === "sourceSystem" || arch === "atypicalWork") return true;
 	if (
 		fieldKey === "modelsList" ||
 		fieldKey === "trainingSources" ||
@@ -188,7 +189,11 @@ function modalKindForArrayField(
 		return "dataSource";
 	}
 	if (fieldKey === "modelsList") return "modelService";
-	if (/[Aa]typical/.test(fieldKey) || fieldKey === "atypicalTasks") {
+	if (
+		arch === "atypicalWork" ||
+		/[Aa]typical/.test(fieldKey) ||
+		fieldKey === "atypicalTasks"
+	) {
 		return "nonStandardTask";
 	}
 	return null;

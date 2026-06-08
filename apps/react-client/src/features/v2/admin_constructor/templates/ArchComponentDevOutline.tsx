@@ -14,6 +14,8 @@ const ARCH_COMPONENT_COLORS: Record<V2ArchComponentType, string> = {
 	dataProcess: "#0891B2",
 	deployChannel: "#DB2777",
 	modelControl: "#DC2626",
+	typicalWork: "#65A30D",
+	atypicalWork: "#CA8A04",
 };
 
 /** Подсветка включена только в dev-сборке. */
@@ -77,15 +79,6 @@ export function ArchComponentDevOutline({
 			{children}
 		</Box>
 	) : (
-		<Box
-			sx={{
-				position: "relative",
-				border: `2px dashed #00000014`,
-				borderRadius: 2,
-				p: "20px",
-			}}
-		>
-			{children}
-		</Box>
+		<>{children}</>
 	);
 }

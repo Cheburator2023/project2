@@ -1,6 +1,7 @@
 import type { DataSourceFormValues } from "@react-client/features/playground/v2_playground/organisms/DataSourceModal";
 import type { ModelServiceFormValues } from "@react-client/features/playground/v2_playground/organisms/ModelServiceModal";
 import type { NonStandardTaskFormValues } from "@react-client/features/playground/v2_playground/organisms/NonStandardTaskModal";
+import type { V2AnketaModalKind } from "@smart-anketa/api-contract";
 
 const SOURCE_TYPE_TO_SCHEMA: Record<string, string> = {
 	internal: "Внутренний",
@@ -132,13 +133,59 @@ export function mapNonStandardTaskToAtypicalTask(
 	};
 }
 
+function mapDataSourceModalValues(
+	path: string,
+	values: DataSourceFormValues,
+): Record<string, unknown> {
+	if (path.endsWith("trainingSources")) {
+		return mapDataSourceToTrainingSource(values);
+	}
+	if (path.endsWith("applicationSources")) {
+		return mapDataSourceToApplicationSource(values);
+	}
+	return mapDataSourceToSourceSystem(values);
+}
+
+export function mapModelServiceBlockToModalDefaults(
+	item: Record<string, unknown>,
+): Partial<ModelServiceFormValues> {
+	const channels = Array.isArray(item.deployChannels)
+		? (item.deployChannels as string[])
+				.map((label) => CHANNEL_FROM_SCHEMA[label] ?? "")
+				.filter(Boolean)
+		: [];
+	return {
+		name: "model-service",
+		channels,
+		pilotRequired: item.pkRecalibration === "Да" ? "yes" : "no",
+		isCreationRequired: "no",
+		newServiceCreationRequired: item.pkNewType === "Да" ? "yes" : "no",
+		workType:
+			WORK_TYPE_SCHEMA_TO_MODAL[String(item.workType ?? "")] ?? "development",
+	};
+}
+
 export function mapModalValuesToArrayItem(
 	path: string,
 	values:
 		| DataSourceFormValues
 		| ModelServiceFormValues
 		| NonStandardTaskFormValues,
+	kind: V2AnketaModalKind | null = null,
 ): Record<string, unknown> {
+	switch (kind) {
+		case "dataSource":
+			return mapDataSourceModalValues(path, values as DataSourceFormValues);
+		case "modelService":
+			return mapModelServiceToModelItem(values as ModelServiceFormValues);
+		case "nonStandardTask":
+			return mapNonStandardTaskToAtypicalTask(
+				values as NonStandardTaskFormValues,
+			);
+		default:
+			break;
+	}
+
 	switch (path) {
 		case "detailInfo.sourceSystems":
 		case "streamDataSources.sourceSystems":
@@ -258,10 +305,60 @@ function mutateArrayAtPath(
 export function mapArrayItemToModalDefaults(
 	path: string,
 	item: Record<string, unknown>,
+	kind: V2AnketaModalKind | null = null,
 ):
 	| Partial<DataSourceFormValues>
 	| Partial<ModelServiceFormValues>
 	| Partial<NonStandardTaskFormValues> {
+	if (kind === "modelServiceBlock") {
+		return mapModelServiceBlockToModalDefaults(item);
+	}
+	if (kind === "dataSource") {
+		return {
+			name: String(item.name ?? ""),
+			sourceType:
+				item.type === "Внутренний"
+					? "internal"
+					: item.type === "Внешний"
+						? "external"
+						: "",
+			workType: String(item.integrationReadiness ?? "").includes("доработки")
+				? "development"
+				: item.development === "С нуля" || item.development === "Нужна"
+					? "development"
+					: "support",
+			pilotRequired: item.additionalUncertainty === "Да" ? "yes" : "no",
+			configExchange:
+				item.requirements === "Рисковые" || item.integration === "Новая"
+					? "required"
+					: "not_required",
+			sourceFor: String(item.daptRegistry ?? item.name ?? ""),
+			domainComplexity: String(item.domainComplexity ?? ""),
+			entityVolume: String(item.entityVolume ?? ""),
+		};
+	}
+	if (kind === "modelService") {
+		return {
+			name: String(item.name ?? ""),
+			workType:
+				item.role === "Оркестратор"
+					? "development"
+					: item.role === "Подчинённая"
+						? "support"
+						: "pilot",
+			isCreationRequired: item.autoML === "Да" ? "yes" : "no",
+		};
+	}
+	if (kind === "nonStandardTask") {
+		return {
+			name: String(item.name ?? ""),
+			reason: String(item.reason ?? ""),
+			estimateHours: String(item.estimateHoursPerDay ?? ""),
+			coefficient: String(item.coefficient ?? ""),
+			includeInCalculation: item.includeInCalculation !== false,
+		};
+	}
+
 	switch (path) {
 		case "detailInfo.sourceSystems":
 		case "streamDataSources.sourceSystems":
@@ -301,22 +398,8 @@ export function mapArrayItemToModalDefaults(
 							: "pilot",
 				isCreationRequired: item.autoML === "Да" ? "yes" : "no",
 			};
-		case "generalInfo.modelService": {
-			const channels = Array.isArray(item.deployChannels)
-				? (item.deployChannels as string[])
-						.map((label) => CHANNEL_FROM_SCHEMA[label] ?? "")
-						.filter(Boolean)
-				: [];
-			return {
-				name: "model-service",
-				channels,
-				pilotRequired: item.pkRecalibration === "Да" ? "yes" : "no",
-				isCreationRequired: "no",
-				newServiceCreationRequired: item.pkNewType === "Да" ? "yes" : "no",
-				workType:
-					WORK_TYPE_SCHEMA_TO_MODAL[String(item.workType ?? "")] ?? "development",
-			};
-		}
+		case "generalInfo.modelService":
+			return mapModelServiceBlockToModalDefaults(item);
 		case "detailInfo.detailAtypicalTasks":
 		case "streamDataSources.atypicalTasks":
 		case "streamModelControl.atypicalTasks":

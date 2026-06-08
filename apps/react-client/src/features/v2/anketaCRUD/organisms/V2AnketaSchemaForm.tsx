@@ -4,6 +4,7 @@ import Form from "@rjsf/mui";
 import type { UiSchema } from "@rjsf/utils";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { v2PreviewFormTemplates } from "@react-client/features/v2/admin_constructor/templates/v2PreviewFormTemplates";
+import { v2PreviewFormWidgets } from "@react-client/features/v2/admin_constructor/templates/v2PreviewFormWidgets";
 import {
 	useV2AnketaSchemaEngine,
 	type V2AnketaSchemaEngine,
@@ -186,12 +187,21 @@ export function V2AnketaSchemaForm({
 		(): AnketaFormContextValue => ({
 			...anketaFormContext,
 			formData: anketaFormContext?.formData ?? engine.formData,
-			anketaModalArrayPaths: anketaFormContext?.anketaModalArrayPaths,
+			openAnketaModal: anketaFormContext?.openAnketaModal,
+			deleteAnketaObject: anketaFormContext?.deleteAnketaObject,
+			deleteAnketaArrayItem: anketaFormContext?.deleteAnketaArrayItem,
+			anketaModalObjectPaths:
+				anketaFormContext?.anketaModalObjectPaths ??
+				modalBindings.modalObjectPathSet,
+			anketaModalArrayPaths:
+				anketaFormContext?.anketaModalArrayPaths ??
+				modalBindings.modalArrayPathSet,
 			anketaCompactArrayTablePaths:
-				anketaFormContext?.anketaCompactArrayTablePaths,
+				anketaFormContext?.anketaCompactArrayTablePaths ??
+				modalBindings.compactArrayTablePathSet,
 			anketaReadOnly: readOnly || anketaFormContext?.anketaReadOnly,
 		}),
-		[anketaFormContext, readOnly, engine.formData],
+		[anketaFormContext, readOnly, engine.formData, modalBindings],
 	);
 
 	if (!usesExternalEngine && !source?.templateId) {
@@ -234,6 +244,7 @@ export function V2AnketaSchemaForm({
 				formData={engine.displayFormData}
 				extraErrors={engine.logicExtraErrors}
 				templates={v2PreviewFormTemplates}
+				widgets={v2PreviewFormWidgets}
 				validator={validatorRu}
 				liveValidate
 				noHtml5Validate

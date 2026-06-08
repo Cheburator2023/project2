@@ -4,14 +4,14 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import MenuItem from "@mui/material/MenuItem";
-import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import {
+	useBulkDeleteV2TemplateVersions,
+	useDeleteV2Template,
 	useResetV2TemplateToDefault,
+	useRestoreV2Template,
+	useRestoreV2TemplateVersions,
 	useV2Templates,
 } from "@react-client/common/api/queries/v2-templates";
 import { useSeedV2TestQuestionnaires } from "@react-client/common/api/queries/v2-questionnaires";
@@ -20,20 +20,51 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import { Flex } from "@react-client/common/primitives/Flex";
 import { V2AdminButton } from "@react-client/features/v2/admin/atoms/V2AdminButton";
 import { V2SchemaCreateDialog } from "@react-client/features/v2/admin/organisms/V2SchemaCreateDialog";
-import { V2TemplateList } from "@react-client/features/v2/admin/organisms/V2TemplateList";
+import {
+	splitSelectedSchemaRows,
+	V2TemplateList,
+	type V2SchemaGridRow,
+	type V2TemplateListHandle,
+} from "@react-client/features/v2/admin/organisms/V2TemplateList";
+import { toastWithUndo } from "@react-client/features/v2/admin/utils/v2UndoToast";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { commonRoutes as routes } from "@react-client/routing/common/routes";
-import { useEffect, useState } from "react";
+import type {
+	V2TemplateDeleteSnapshotDto,
+	V2TemplateVersionDto,
+} from "@smart-anketa/api-contract";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink } from "react-router";
 
 export function AdminV2SchemasPage() {
 	const resetMutation = useResetV2TemplateToDefault();
 	const seedMutation = useSeedV2TestQuestionnaires();
+	const bulkDeleteVersions = useBulkDeleteV2TemplateVersions();
+	const deleteTemplate = useDeleteV2Template();
+	const restoreTemplate = useRestoreV2Template();
+	const restoreVersions = useRestoreV2TemplateVersions();
 	const { data: templates } = useV2Templates();
+	const listRef = useRef<V2TemplateListHandle>(null);
 
 	const [selectedTemplateId, setSelectedTemplateId] = useState("");
 	const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
+	const [selectedRows, setSelectedRows] = useState<V2SchemaGridRow[]>([]);
+	const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false);
+
+	const systemCurrentVersionId = useMemo(() => {
+		const holder = templates?.find((t) => t.currentVersionId);
+		return holder?.currentVersionId ?? null;
+	}, [templates]);
+
+	const { templates: selectedTemplates, versionsWithoutSelectedTemplate } =
+		useMemo(
+			() => splitSelectedSchemaRows(selectedRows),
+			[selectedRows],
+		);
+
+	const bulkDeletePending =
+		bulkDeleteVersions.isPending || deleteTemplate.isPending;
 
 	useEffect(() => {
 		if (!selectedTemplateId && templates?.length) {
@@ -42,6 +73,156 @@ export function AdminV2SchemasPage() {
 	}, [templates, selectedTemplateId]);
 
 	const selectedTemplate = templates?.find((t) => t.id === selectedTemplateId);
+
+	const runBulkDelete = useCallback(async () => {
+		if (!selectedRows.length) return;
+
+		const { templates: tplRows, versionsWithoutSelectedTemplate: verRows } =
+			splitSelectedSchemaRows(selectedRows);
+
+		let deletedVersionCount = 0;
+		let deletedTemplateCount = 0;
+		let reboundQuestionnaireCount = 0;
+		let deletedQuestionnaireCount = 0;
+		const templateErrors: string[] = [];
+		const restoreVersionBatches: {
+			templateId: string;
+			versions: V2TemplateVersionDto[];
+		}[] = [];
+		const restoreTemplateSnapshots: V2TemplateDeleteSnapshotDto[] = [];
+
+		const trackVersionDeleteResult = (result: {
+			deletedVersionIds: string[];
+			reboundQuestionnaireCount?: number;
+			deletedQuestionnaireCount?: number;
+			snapshot: V2TemplateVersionDto[];
+		}, templateId: string) => {
+			deletedVersionCount += result.deletedVersionIds.length;
+			reboundQuestionnaireCount += result.reboundQuestionnaireCount ?? 0;
+			deletedQuestionnaireCount += result.deletedQuestionnaireCount ?? 0;
+			if (result.snapshot.length > 0) {
+				restoreVersionBatches.push({
+					templateId,
+					versions: result.snapshot,
+				});
+			}
+		};
+
+		try {
+			for (const tpl of tplRows) {
+				if (tpl.currentVersionId) {
+					const result = await bulkDeleteVersions.mutateAsync({
+						templateId: tpl.id,
+					});
+					trackVersionDeleteResult(result, tpl.id);
+				} else {
+					try {
+						const snapshot = await deleteTemplate.mutateAsync(tpl.id);
+						deletedTemplateCount += 1;
+						deletedVersionCount += snapshot.versions.length;
+						restoreTemplateSnapshots.push(snapshot);
+					} catch (error) {
+						templateErrors.push(
+							`«${tpl.name}»: ${apiErrorMessage(error)}`,
+						);
+					}
+				}
+			}
+
+			const versionsByTemplate = new Map<string, string[]>();
+			for (const row of verRows) {
+				if (
+					systemCurrentVersionId != null &&
+					row.id === systemCurrentVersionId
+				) {
+					continue;
+				}
+				const ids = versionsByTemplate.get(row.templateId) ?? [];
+				ids.push(row.id);
+				versionsByTemplate.set(row.templateId, ids);
+			}
+
+			for (const [templateId, versionIds] of versionsByTemplate) {
+				if (!versionIds.length) continue;
+				const result = await bulkDeleteVersions.mutateAsync({
+					templateId,
+					versionIds,
+				});
+				trackVersionDeleteResult(result, templateId);
+			}
+
+			setConfirmBulkDeleteOpen(false);
+			setSelectedRows([]);
+			listRef.current?.clearSelection();
+
+			const notes: string[] = [];
+			if (reboundQuestionnaireCount > 0) {
+				notes.push(`перепривязано анкет: ${reboundQuestionnaireCount}`);
+			}
+			if (deletedQuestionnaireCount > 0) {
+				notes.push(`удалено анкет: ${deletedQuestionnaireCount}`);
+			}
+			if (templateErrors.length > 0) {
+				notes.push(`схемы не удалены: ${templateErrors.length}`);
+			}
+
+			if (deletedVersionCount === 0 && deletedTemplateCount === 0) {
+				if (notes.length > 0) {
+					toast.error("Ничего не удалено", {
+						description: [...notes, ...templateErrors].join("; "),
+					});
+				} else {
+					toast.info(
+						"Нечего удалять — актуальная схема системы не затрагивается",
+					);
+				}
+				return;
+			}
+
+			const parts: string[] = [];
+			if (deletedTemplateCount > 0) {
+				parts.push(`схем: ${deletedTemplateCount}`);
+			}
+			if (deletedVersionCount > 0) {
+				parts.push(`версий: ${deletedVersionCount}`);
+			}
+
+			const descriptionParts = [
+				"Актуальная схема системы сохранена",
+				...notes,
+			];
+			if (templateErrors.length > 0) {
+				descriptionParts.push(templateErrors.join("; "));
+			}
+
+			toastWithUndo(
+				`Удалено ${parts.join(", ")}`,
+				async () => {
+					for (const snapshot of restoreTemplateSnapshots) {
+						await restoreTemplate.mutateAsync(snapshot);
+					}
+					for (const batch of restoreVersionBatches) {
+						await restoreVersions.mutateAsync(batch);
+					}
+					toast.success("Массовое удаление отменено");
+				},
+				{
+					description: descriptionParts.join(". "),
+				},
+			);
+		} catch (error) {
+			toast.error("Не удалось выполнить массовое удаление", {
+				description: apiErrorMessage(error),
+			});
+		}
+	}, [
+		bulkDeleteVersions,
+		deleteTemplate,
+		restoreTemplate,
+		restoreVersions,
+		selectedRows,
+		systemCurrentVersionId,
+	]);
 
 	return (
 		<Flex
@@ -96,6 +277,15 @@ export function AdminV2SchemasPage() {
 					<V2AdminButton onClick={() => setCreateDialogOpen(true)}>
 						Добавить схему
 					</V2AdminButton>
+					<V2AdminButton
+						color="error"
+						variant="outlined"
+						disabled={!selectedRows.length || bulkDeletePending}
+						onClick={() => setConfirmBulkDeleteOpen(true)}
+					>
+						Удалить выбранное
+						{selectedRows.length ? ` (${selectedRows.length})` : ""}
+					</V2AdminButton>
 				</Stack>
 			</Header>
 
@@ -105,12 +295,58 @@ export function AdminV2SchemasPage() {
 				</Typography>
 			) : null}
 
-			<V2TemplateList />
+			<V2TemplateList
+				ref={listRef}
+				onSelectionChange={setSelectedRows}
+			/>
 
 			<V2SchemaCreateDialog
 				open={createDialogOpen}
 				onClose={() => setCreateDialogOpen(false)}
 			/>
+
+			<Dialog
+				open={confirmBulkDeleteOpen}
+				onClose={() => setConfirmBulkDeleteOpen(false)}
+			>
+				<DialogTitle>Массовое удаление схем и версий</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						Будет обработано выбранных строк: {selectedRows.length}.
+						{selectedTemplates.length > 0 ? (
+							<>
+								{" "}
+								Схем: {selectedTemplates.length}
+								{selectedTemplates.some((t) => t.currentVersionId)
+									? " — у схем с актуальной версией удалятся только прочие версии (анкеты перепривяжутся)"
+									: " — схемы без актуальной версии будут удалены целиком вместе с анкетами"}
+							</>
+						) : null}
+						{versionsWithoutSelectedTemplate.length > 0 ? (
+							<>
+								{" "}
+								Отдельно выбранных версий:{" "}
+								{versionsWithoutSelectedTemplate.length}.
+							</>
+						) : null}{" "}
+						Полное удаление схемы из реестра — через контекстное меню
+						«Удалить шаблон» (связанные анкеты удаляются вместе со схемой).
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setConfirmBulkDeleteOpen(false)}>
+						Отмена
+					</Button>
+					<Button
+						onClick={() => void runBulkDelete()}
+						color="error"
+						variant="contained"
+						disabled={!selectedRows.length || bulkDeletePending}
+					>
+						Удалить
+					</Button>
+				</DialogActions>
+			</Dialog>
 
 			<Dialog open={confirmResetOpen} onClose={() => setConfirmResetOpen(false)}>
 				<DialogTitle>Сброс к заводской схеме</DialogTitle>

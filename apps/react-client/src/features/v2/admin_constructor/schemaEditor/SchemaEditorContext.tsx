@@ -84,11 +84,15 @@ export type SchemaEditorContextValue = {
 		preset: RJSFSchema,
 		index: number,
 		uiOptions?: Record<string, unknown>,
+		uiBranch?: Record<string, unknown>,
 	) => void;
 	reorderRootFieldKeys: (orderedKeys: string[]) => void;
-	applyGroupFieldOrders: (orders: Record<string, string[]>) => void;
+	applyGroupFieldOrders: (
+		finalOrders: Record<string, string[]>,
+		initialOrders: Record<string, string[]>,
+	) => void;
 	updateField: (patch: Partial<RJSFSchema>) => void;
-	handleDeleteField: () => void;
+	handleDeleteField: (pointer?: string | null) => void;
 	handleToggleRequired: (checked: boolean) => void;
 	handleWidgetChange: (widget: string) => void;
 	handleObjectFieldTemplateChange: (template: string) => void;

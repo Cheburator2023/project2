@@ -1,5 +1,6 @@
 import { readSummaryFromFormData } from "@react-client/features/v2/admin_constructor/utils/readSummaryFromFormData";
 import type { V2AnketaSchemaEngine } from "@react-client/features/v2/anketaCRUD/hooks/useV2AnketaSchemaEngine";
+import { ensureAnketaFormDataWithWorkflow } from "@react-client/features/v2/anketaCRUD/hooks/useAnketaWorkflow";
 import { mergeAnketaDisplayFormData } from "@react-client/features/v2/anketaCRUD/utils/mergeAnketaDisplayFormData";
 import { useMemo } from "react";
 import { useSchemaEditor } from "../schemaEditor/SchemaEditorContext";
@@ -19,9 +20,14 @@ export function useSchemaEditorAnketaEngine(): V2AnketaSchemaEngine {
 		logicValidationIssueCount,
 	} = useSchemaEditor();
 
+	const previewFormData = useMemo(
+		() => ensureAnketaFormDataWithWorkflow(formData),
+		[formData],
+	);
+
 	const displayFormData = useMemo(
-		() => mergeAnketaDisplayFormData(formData, liveFormData),
-		[formData, liveFormData],
+		() => mergeAnketaDisplayFormData(previewFormData, liveFormData),
+		[previewFormData, liveFormData],
 	);
 
 	return useMemo(
@@ -37,7 +43,7 @@ export function useSchemaEditorAnketaEngine(): V2AnketaSchemaEngine {
 			previewSchema,
 			previewUiSchema,
 			displayFormData,
-			formData,
+			formData: previewFormData,
 			setFormData,
 			summary: readSummaryFromFormData(displayFormData),
 			readOnly: false,
@@ -46,7 +52,7 @@ export function useSchemaEditorAnketaEngine(): V2AnketaSchemaEngine {
 			previewSchema,
 			previewUiSchema,
 			displayFormData,
-			formData,
+			previewFormData,
 			setFormData,
 			dictionaryEnumsLoading,
 			calculationLoading,

@@ -3,6 +3,7 @@ import {
 	useQueries,
 	useQuery,
 	useQueryClient,
+	type QueryClient,
 } from "@tanstack/react-query";
 import type {
 	CreateV2DictionaryItemRequestDto,
@@ -138,8 +139,8 @@ export const useDeleteV2Template = () => {
 				url: `/v2/templates/${id}`,
 				method: "DELETE",
 			}),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
+		onSettled: () => {
+			refreshV2TemplateRegistry(queryClient);
 		},
 	});
 };
@@ -177,11 +178,8 @@ export const useBulkDeleteV2TemplateVersions = () => {
 				method: "POST",
 				data: versionIds?.length ? { versionIds } : {},
 			}),
-		onSuccess: (_, { templateId }) => {
-			queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
-			queryClient.invalidateQueries({
-				queryKey: ["v2-templates", templateId, "versions"],
-			});
+		onSettled: () => {
+			refreshV2TemplateRegistry(queryClient);
 		},
 	});
 };
@@ -386,6 +384,11 @@ export const useRollbackV2TemplateVersion = () => {
 	});
 };
 
+function refreshV2TemplateRegistry(queryClient: QueryClient) {
+	void queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
+	void queryClient.refetchQueries({ queryKey: ["v2-templates"] });
+}
+
 export const useActivateV2TemplateVersionAsCurrent = () => {
 	const queryClient = useQueryClient();
 
@@ -399,11 +402,8 @@ export const useActivateV2TemplateVersionAsCurrent = () => {
 				url: `/v2/templates/${templateId}/versions/${versionId}/activate-as-current`,
 				method: "POST",
 			}),
-		onSuccess: (_, { templateId }) => {
-			queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
-			queryClient.invalidateQueries({
-				queryKey: ["v2-templates", templateId, "versions"],
-			});
+		onSettled: () => {
+			refreshV2TemplateRegistry(queryClient);
 			queryClient.invalidateQueries({ queryKey: ["v2-audit"] });
 		},
 	});

@@ -31,16 +31,20 @@ exports.V2_ARCH_COMPONENT_TYPES = [
     "dataProcess",
     "deployChannel",
     "modelControl",
+    "typicalWork",
+    "atypicalWork",
 ];
 /** Человекочитаемые названия арх. компонентов (из глоссария). */
 exports.V2_ARCH_COMPONENT_LABELS = {
     modelService: "Модельный сервис",
-    model: "Модель",
+    model: "Модели",
     sourceSystem: "Система-источник",
     dataMart: "Объект / Витрина данных",
     dataProcess: "Процесс обработки данных",
     deployChannel: "Канал внедрения",
     modelControl: "Контроль модели",
+    typicalWork: "Типовые работы",
+    atypicalWork: "Нетиповые работы",
 };
 function isV2ArchComponentType(value) {
     return (typeof value === "string" &&
@@ -100,11 +104,21 @@ function isMainSectionId(value) {
 function isV2AnketaStreamSectionId(value) {
     return STREAM_SECTION_IDS.includes(value);
 }
+const MODAL_OBJECT_ARCH_TYPES = [
+    "modelService",
+    "dataProcess",
+    "dataMart",
+];
 /** Роль секции: явно из ui:options или эвристика для старых схем без layout. */
 function resolveV2AnketaSectionRole(uiNode, path) {
     const opts = readV2AnketaSectionUiOptions(uiNode);
     if (opts.sectionRole)
         return opts.sectionRole;
+    if (opts.archComponent &&
+        (MODAL_OBJECT_ARCH_TYPES.includes(opts.archComponent) ||
+            opts.archComponent === "model")) {
+        return "subsection";
+    }
     const root = path[0] ?? "";
     if (path.length === 1 && isV2AnketaMainSectionId(root))
         return "main";

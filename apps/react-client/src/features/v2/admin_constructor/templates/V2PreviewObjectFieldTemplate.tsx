@@ -39,8 +39,37 @@ import {
 	resolveV2AnketaSectionTitleVariant,
 	resolveV2AnketaWorkflowSectionId,
 	readV2AnketaSectionUiOptions,
+	type V2ArchComponentType,
 } from "@smart-anketa/api-contract";
 import { ArchComponentDevOutline } from "./ArchComponentDevOutline";
+import type { AnketaFormContextValue } from "@react-client/features/v2/anketaCRUD/utils/anketaFormContext";
+
+function shouldUseArchObjectModal(
+	ctx: AnketaFormContextValue,
+	pathKey: string,
+	archComponent: V2ArchComponentType | null,
+): boolean {
+	return (
+		(ctx.anketaModalObjectPaths?.has(pathKey) ?? false) ||
+		isV2AnketaModalObjectArch(archComponent)
+	);
+}
+
+function isModalEditableArrayField(
+	archComponent: V2ArchComponentType | null,
+	fieldKey: string,
+): boolean {
+	if (archComponent === "sourceSystem" || archComponent === "atypicalWork") {
+		return true;
+	}
+	return (
+		fieldKey === "modelsList" ||
+		fieldKey === "trainingSources" ||
+		fieldKey === "applicationSources" ||
+		fieldKey === "atypicalTasks" ||
+		/[Aa]typical/.test(fieldKey)
+	);
+}
 
 function isRootObjectField(
 	fieldPathId: FieldPathId | undefined,
@@ -189,10 +218,25 @@ function SectionPanelAccordion({
 	);
 }
 
+function readLayoutGridColumns(
+	parentUiSchema: UiSchema | undefined,
+): number | null {
+	const options = parentUiSchema?.["ui:options"];
+	if (!options || typeof options !== "object" || Array.isArray(options)) {
+		return null;
+	}
+	const opts = options as { layoutGroup?: unknown; gridColumns?: unknown };
+	if (opts.layoutGroup !== true) return null;
+	const cols = opts.gridColumns;
+	if (cols === 1 || cols === 2 || cols === 3) return cols;
+	return 2;
+}
+
 function gridSizeForProperty(
 	name: string,
 	propertySchema: RJSFSchema | undefined,
 	propertyUiSchema: UiSchema | undefined,
+	layoutColumns: number | null,
 ) {
 	const options = propertyUiSchema?.["ui:options"];
 	const fullWidth =
@@ -205,7 +249,11 @@ function gridSizeForProperty(
 		propertySchema?.type === "object" ||
 		propertySchema?.type === "array";
 
-	return { xs: 12, md: fullWidth ? 12 : 6 };
+	const defaultMd = 6;
+	const layoutMd =
+		layoutColumns != null ? Math.floor(12 / layoutColumns) : defaultMd;
+
+	return { xs: 12, md: fullWidth ? 12 : layoutMd };
 }
 
 function ObjectFieldsGrid({
@@ -216,6 +264,7 @@ function ObjectFieldsGrid({
 	schema: RJSFSchema;
 	uiSchema: UiSchema | undefined;
 }) {
+	const layoutColumns = readLayoutGridColumns(uiSchema);
 	const visibleProperties = properties.filter(
 		(element) => !isV2AnketaHiddenUiNode(uiSchema?.[element.name]),
 	);
@@ -234,6 +283,7 @@ function ObjectFieldsGrid({
 							element.name,
 							propertySchema,
 							propertyUiSchema,
+							layoutColumns,
 						)}
 						key={element.name ?? index}
 						sx={{ minWidth: 0 }}
@@ -272,14 +322,22 @@ export function V2PreviewArrayFieldTemplate({
 		</ArchComponentDevOutline>
 	);
 	const pathKey = fieldPathId?.path?.join(".") ?? "";
+	const lastSegment = fieldPathId?.path?.at(-1);
+	const fieldKey: string =
+		typeof lastSegment === "string" || typeof lastSegment === "number"
+			? String(lastSegment)
+			: "";
 	const useCompactTable = Boolean(
-		pathKey && anketaCompactArrayTablePaths?.has(pathKey),
+		pathKey &&
+			((anketaCompactArrayTablePaths?.has(pathKey) ?? false) ||
+				isModalEditableArrayField(archComponent, fieldKey)),
 	);
 	const useModalAdd = Boolean(
 		pathKey &&
-			anketaModalArrayPaths?.has(pathKey) &&
 			openAnketaModal &&
-			useCompactTable,
+			useCompactTable &&
+			((anketaModalArrayPaths?.has(pathKey) ?? false) ||
+				isModalEditableArrayField(archComponent, fieldKey)),
 	);
 	const uiTitle = uiSchema?.["ui:title"];
 	const sectionTitle =
@@ -450,14 +508,35 @@ export function V2PreviewObjectFieldTemplate({
 			{node}
 		</ArchComponentDevOutline>
 	);
+	const anketaCtx = readAnketaFormContext(registry.formContext);
+	const useArchObjectModal = shouldUseArchObjectModal(
+		anketaCtx,
+		pathKey,
+		archComponent,
+	);
+	const visibleProperties = properties.filter(
+		(element) =>
+			!isV2AnketaHiddenUiNode(
+				(uiSchema as UiSchema | undefined)?.[element.name],
+			),
+	);
 
 	const fieldsBody = (
 		<>
-			<ObjectFieldsGrid
-				properties={properties}
-				schema={schemaNode}
-				uiSchema={uiSchema as UiSchema | undefined}
-			/>
+			{useArchObjectModal ? (
+				<AnketaArchObjectPanel
+					pathKey={pathKey}
+					sectionTitle={sectionTitle}
+					formContext={registry.formContext}
+				/>
+			) : null}
+			{visibleProperties.length > 0 ? (
+				<ObjectFieldsGrid
+					properties={visibleProperties}
+					schema={schemaNode}
+					uiSchema={uiSchema as UiSchema | undefined}
+				/>
+			) : null}
 			{sectionSlot ? <Box sx={{ mt: 2 }}>{sectionSlot}</Box> : null}
 		</>
 	);
@@ -504,39 +583,10 @@ export function V2PreviewObjectFieldTemplate({
 	}
 
 	if (sectionRole === "subsection") {
-		const formData = readAnketaFormContext(registry.formContext).formData ?? {};
+		const formData = anketaCtx.formData ?? {};
 		const count = sectionUiOptions.showFilledCount
 			? countSubsectionFilledItems(getValueAtPath(formData, pathKey))
 			: undefined;
-		const ctx = readAnketaFormContext(registry.formContext);
-		const useArchObjectModal =
-			ctx.anketaModalObjectPaths?.has(pathKey) ??
-			isV2AnketaModalObjectArch(archComponent);
-		const visibleProperties = properties.filter(
-			(element) =>
-				!isV2AnketaHiddenUiNode(
-					(uiSchema as UiSchema | undefined)?.[element.name],
-				),
-		);
-		const subsectionBody = (
-			<>
-				{useArchObjectModal ? (
-					<AnketaArchObjectPanel
-						pathKey={pathKey}
-						sectionTitle={sectionTitle}
-						formContext={registry.formContext}
-					/>
-				) : null}
-				{visibleProperties.length > 0 ? (
-					<ObjectFieldsGrid
-						properties={visibleProperties}
-						schema={schemaNode}
-						uiSchema={uiSchema as UiSchema | undefined}
-					/>
-				) : null}
-				{sectionSlot ? <Box sx={{ mt: 2 }}>{sectionSlot}</Box> : null}
-			</>
-		);
 
 		return wrapArch(
 			<OpenSubSectionPanel
@@ -544,7 +594,7 @@ export function V2PreviewObjectFieldTemplate({
 				count={count}
 				description={sectionDescription}
 			>
-				{subsectionBody}
+				{fieldsBody}
 			</OpenSubSectionPanel>,
 		);
 	}
@@ -563,6 +613,10 @@ export function V2PreviewObjectFieldTemplate({
 	}
 
 	if (sectionRole === "flat") {
+		const layoutColumns = readLayoutGridColumns(uiSchema as UiSchema);
+		if (layoutColumns != null) {
+			return wrapArch(<Box sx={{ minWidth: 0 }}>{fieldsBody}</Box>);
+		}
 		return wrapArch(
 			<Box sx={{ minWidth: 0 }}>
 				<Typography variant="h6" fontWeight={700} mb={3}>

@@ -14,7 +14,13 @@ import {
 	TotalUncertaintyModal,
 	type TotalUncertaintyFormValues,
 } from "@react-client/features/playground/v2_playground/organisms/TotalUncertaintyModal";
-import { useCallback, useEffect, useMemo, useState, type MutableRefObject } from "react";
+import {
+	useCallback,
+	useLayoutEffect,
+	useMemo,
+	useState,
+	type MutableRefObject,
+} from "react";
 import { getObjectAtPath } from "../utils/anketaArchObjectTableConfig";
 import { getArrayAtPath } from "../utils/anketaModalArrayTableConfig";
 import { modalKindForPath, type AnketaModalKind } from "../utils/anketaFormModalPaths";
@@ -174,13 +180,11 @@ export function AnketaFormModals({
 		[onFormDataChange],
 	);
 
-	useEffect(() => {
-		controlsRef.current = {
-			openArrayModal,
-			openUncertaintyModal,
-			deleteArrayItem,
-			deleteObject,
-		};
+	useLayoutEffect(() => {
+		controlsRef.current.openArrayModal = openArrayModal;
+		controlsRef.current.openUncertaintyModal = openUncertaintyModal;
+		controlsRef.current.deleteArrayItem = deleteArrayItem;
+		controlsRef.current.deleteObject = deleteObject;
 	}, [
 		controlsRef,
 		openArrayModal,
@@ -199,13 +203,18 @@ export function AnketaFormModals({
 			return mapArrayItemToModalDefaults(
 				activeModal.path,
 				getObjectAtPath(formData, activeModal.path),
+				activeModal.kind,
 			);
 		}
 		if (activeModal.editIndex == null) return undefined;
 		const items = getArrayAtPath(formData, activeModal.path);
 		const item = items[activeModal.editIndex];
 		if (!item) return undefined;
-		return mapArrayItemToModalDefaults(activeModal.path, item);
+		return mapArrayItemToModalDefaults(
+			activeModal.path,
+			item,
+			activeModal.kind,
+		);
 	}, [activeModal, formData]);
 
 	const rjsfObjectModalSlice = useMemo(() => {
@@ -274,7 +283,8 @@ export function AnketaFormModals({
 			| ModelServiceFormValues
 			| NonStandardTaskFormValues,
 	) => {
-		const item = mapModalValuesToArrayItem(path, values);
+		const kind = modalKindForPath(path, modalBindings);
+		const item = mapModalValuesToArrayItem(path, values, kind);
 		onFormDataChange((prev) => {
 			const updated =
 				editIndex == null

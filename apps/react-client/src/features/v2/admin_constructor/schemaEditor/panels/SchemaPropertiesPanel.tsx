@@ -1,3 +1,5 @@
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
@@ -13,7 +15,7 @@ import type { FieldTypePreset } from "../constants";
 import {
 	FIELD_PRESETS,
 	GROUP_OBJECT_FIELD_TEMPLATE_PRESETS,
-	WIDGET_PRESETS,
+	LAYOUT_GRID_COLUMN_OPTIONS,
 	ruSchemaTypeLabel,
 	ruleKindLabel,
 } from "../constants";
@@ -22,6 +24,7 @@ import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "../components/PanelChrome";
 import { normalizeJsonPointer } from "../../utils/schemaPaths";
 import {
+	buildDictionaryMultiSchemaPatch,
 	patchUiOptionsAtPointer,
 	setUiHiddenAtPointer,
 } from "../../utils/schemaMutators";
@@ -30,11 +33,17 @@ import {
 	readV2AnketaSectionUiOptions,
 	V2_ANKETA_SECTION_ROLE_VALUES,
 	V2_ARCH_COMPONENT_LABELS,
-	V2_ARCH_COMPONENT_TYPES,
 	type V2AnketaSectionRole,
-	type V2ArchComponentType,
 } from "@smart-anketa/api-contract";
 import type { UiSchema } from "@rjsf/utils";
+import {
+	describeArrayItems,
+	isDictionaryMultiField,
+	isWorkArchComponent,
+	readArrayToolbarOptions,
+	readLeafUiOptions,
+	resolvePropertiesFieldKind,
+} from "../propertiesFieldKind";
 
 export function SchemaPropertiesPanel() {
 	const {
@@ -42,9 +51,7 @@ export function SchemaPropertiesPanel() {
 		selectedPointerParent: pk,
 		resolvedField,
 		isRequired,
-		currentWidget,
 		currentObjectFieldTemplate,
-		isObjectGroup,
 		groupChildFields,
 		isCustomUiGroup,
 		customUiGroupSummary,
@@ -58,7 +65,6 @@ export function SchemaPropertiesPanel() {
 		rulesWhereSelectedIsDependency,
 		updateField,
 		handleToggleRequired,
-		handleWidgetChange,
 		handleDictionaryCodeChange,
 		openLogicTabWithRule,
 		addRuleForTargetPath,
@@ -66,6 +72,7 @@ export function SchemaPropertiesPanel() {
 		handleDeleteField,
 		uiSchema,
 		setUiSchema,
+		monacoError,
 	} = useSchemaEditor();
 
 	const leafUiBranch =
@@ -90,8 +97,28 @@ export function SchemaPropertiesPanel() {
 				})()
 			: undefined;
 
+	const leafUiOptions = readLeafUiOptions(leafUiBranch);
 	const sectionUiOptions = readV2AnketaSectionUiOptions(leafUiBranch);
+	const archComponent = sectionUiOptions.archComponent ?? null;
+	const uiWidget =
+		typeof leafUiBranch?.["ui:widget"] === "string"
+			? leafUiBranch["ui:widget"]
+			: undefined;
+	const fieldKind = resolvePropertiesFieldKind(
+		resolvedField,
+		archComponent,
+		leafUiOptions,
+		uiWidget,
+	);
+	const dictionaryMultiple = leafUiOptions?.multiple === true;
+	const layoutGridColumns =
+		typeof leafUiOptions?.gridColumns === "number"
+			? leafUiOptions.gridColumns
+			: 2;
 	const isHiddenInForm = isV2AnketaHiddenUiNode(leafUiBranch);
+	const arrayToolbar = readArrayToolbarOptions(leafUiBranch);
+	const arrayItemsLabel = describeArrayItems(resolvedField);
+	const isReadonlyArray = resolvedField?.readOnly === true;
 
 	const patchSectionUi = (patch: Record<string, unknown>) => {
 		if (!selectedPointer) return;
@@ -105,21 +132,58 @@ export function SchemaPropertiesPanel() {
 		);
 	};
 
+	const showObjectLayout =
+		fieldKind === "object" || fieldKind === "arch-object";
+	const showLayoutOptions = fieldKind === "layout";
+	const showArrayOptions =
+		fieldKind === "array" || fieldKind === "arch-array";
+	const workArch = isWorkArchComponent(archComponent);
+
 	return (
 		<PanelChrome
 			dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.properties}
 			description="JSON Schema и UI Schema выбранного узла."
 		>
+			{monacoError ? (
+				<Alert severity="error" sx={{ mb: 1 }}>
+					{monacoError}
+				</Alert>
+			) : null}
 			{!selectedPointer || !pk ? (
 				<Typography variant="body2" color="text.secondary">
 					Выберите поле в дереве или на холсте.
 				</Typography>
 			) : (
 				<>
-					<Typography variant="caption" color="text.secondary" display="block">
-						Путь: <code>{selectedPointer}</code>
-					</Typography>
+					<Flex alignItems="center" justifyContent="space-between" gap={1}>
+						<Typography variant="caption" color="text.secondary">
+							Путь: <code>{selectedPointer}</code>
+						</Typography>
+						<Button
+							size="small"
+							color="error"
+							variant="outlined"
+							startIcon={<DeleteOutlineIcon fontSize="small" />}
+							onClick={() => handleDeleteField()}
+							sx={{ flexShrink: 0 }}
+						>
+							Удалить
+						</Button>
+					</Flex>
 					<Spacer />
+
+					{archComponent ? (
+						<>
+							<Typography variant="caption" color="text.secondary" display="block">
+								Тип блока
+							</Typography>
+							<Chip
+								size="small"
+								label={V2_ARCH_COMPONENT_LABELS[archComponent]}
+								sx={{ mb: 1 }}
+							/>
+						</>
+					) : null}
 
 					<TextField
 						fullWidth
@@ -141,47 +205,81 @@ export function SchemaPropertiesPanel() {
 					/>
 					<Spacer />
 
-					<TextField
-						select
-						fullWidth
-						size="small"
-						label="Тип JSON Schema"
-						value={
-							(Array.isArray(resolvedField?.type)
-								? resolvedField!.type.join(",")
-								: resolvedField?.type) ?? "string"
-						}
-						onChange={(e) => {
-							updateField({
-								type: e.target.value as FieldTypePreset,
-								...(e.target.value === "object" ? { properties: {} } : {}),
-								...(e.target.value === "array"
-									? {
-											items: {
-												type: "object",
-												title: "Элемент",
-												properties: {},
-											},
-										}
-									: {}),
-							});
-						}}
-					>
-						{FIELD_PRESETS.filter((fp) =>
-							[
-								"string",
-								"number",
-								"integer",
-								"boolean",
-								"object",
-								"array",
-							].includes(fp.id as string),
-						).map((fp) => (
-							<MenuItem key={`${fp.id}`} value={`${fp.id}`}>
-								{fp.title}
-							</MenuItem>
-						))}
-					</TextField>
+					{fieldKind === "primitive" ? (
+						isDictionaryMultiField(resolvedField, leafUiOptions) ? (
+							<TextField
+								fullWidth
+								size="small"
+								label="Тип поля"
+								value="Справочник (множественный выбор)"
+								disabled
+							/>
+						) : (
+							<TextField
+								select
+								fullWidth
+								size="small"
+								label="Тип поля"
+								value={
+									(Array.isArray(resolvedField?.type)
+										? resolvedField!.type.join(",")
+										: resolvedField?.type) ?? "string"
+								}
+								onChange={(e) => {
+									updateField({ type: e.target.value as FieldTypePreset });
+								}}
+								helperText="integer — целые; number — дробные. При смене типа несовместимые ключи удаляются."
+							>
+								{FIELD_PRESETS.filter((fp) =>
+									["string", "number", "integer", "boolean"].includes(
+										fp.id as string,
+									),
+								).map((fp) => (
+									<MenuItem key={`${fp.id}`} value={`${fp.id}`}>
+										{fp.title}
+									</MenuItem>
+								))}
+							</TextField>
+						)
+					) : showArrayOptions ? (
+						<TextField
+							fullWidth
+							size="small"
+							label="Тип поля"
+							value="Массив (список)"
+							disabled
+							helperText={
+								arrayItemsLabel
+									? `Элемент списка: ${arrayItemsLabel}`
+									: undefined
+							}
+						/>
+					) : showLayoutOptions ? (
+						<TextField
+							fullWidth
+							size="small"
+							label="Тип поля"
+							value="Разметка (сетка полей)"
+							disabled
+						/>
+					) : fieldKind === "general-uncertainty" ? (
+						<TextField
+							fullWidth
+							size="small"
+							label="Тип поля"
+							value="Расчёт общей неопределённости"
+							disabled
+							helperText="Виджет GeneralUncertaintyWidget — участвует в калькуляции анкеты"
+						/>
+					) : showObjectLayout ? (
+						<TextField
+							fullWidth
+							size="small"
+							label="Тип поля"
+							value="Группа (object)"
+							disabled
+						/>
+					) : null}
 
 					<Spacer />
 
@@ -225,10 +323,60 @@ export function SchemaPropertiesPanel() {
 						Поле не показывается в превью и анкете; на холсте — чип «Скрыто».
 					</Typography>
 
-					<Spacer />
-
-					{isObjectGroup ? (
+					{showLayoutOptions ? (
 						<>
+							<Spacer />
+							<TextField
+								select
+								fullWidth
+								size="small"
+								label="Колонки сетки"
+								value={layoutGridColumns}
+								onChange={(e) =>
+									patchSectionUi({
+										gridColumns: Number(e.target.value),
+									})
+								}
+								helperText="Число колонок для вложенных полей в превью и анкете"
+							>
+								{LAYOUT_GRID_COLUMN_OPTIONS.map((opt) => (
+									<MenuItem key={opt.value} value={opt.value}>
+										{opt.label}
+									</MenuItem>
+								))}
+							</TextField>
+							<Spacer />
+							<Typography variant="caption" fontWeight={600}>
+								Поля в разметке ({groupChildFields.length})
+							</Typography>
+							{groupChildFields.length === 0 ? (
+								<Typography variant="caption" color="text.secondary">
+									Перетащите поля внутрь блока разметки на холсте.
+								</Typography>
+							) : (
+								<Box component="ul" sx={{ m: 0, pl: 2.5, mb: 1 }}>
+									{groupChildFields.map((child) => (
+										<Box component="li" key={child.key} sx={{ mb: 0.5 }}>
+											<Typography variant="body2" component="span">
+												{child.title}
+											</Typography>
+											<Typography
+												variant="caption"
+												color="text.secondary"
+												sx={{ ml: 0.5 }}
+											>
+												({child.key} · {ruSchemaTypeLabel(child.typeLabel)})
+											</Typography>
+										</Box>
+									))}
+								</Box>
+							)}
+						</>
+					) : null}
+
+					{showObjectLayout ? (
+						<>
+							<Spacer />
 							<TextField
 								select
 								fullWidth
@@ -236,7 +384,7 @@ export function SchemaPropertiesPanel() {
 								label="Шаблон группы (ui:ObjectFieldTemplate)"
 								value={currentObjectFieldTemplate}
 								onChange={(e) => handleObjectFieldTemplateChange(e.target.value)}
-								helperText="Определяет внешний вид секции/группы в форме"
+								helperText="Внешний вид секции в форме"
 							>
 								{GROUP_OBJECT_FIELD_TEMPLATE_PRESETS.map((w) => (
 									<MenuItem key={`oft-${w.value || "default"}`} value={w.value}>
@@ -249,7 +397,7 @@ export function SchemaPropertiesPanel() {
 								select
 								fullWidth
 								size="small"
-								label="Роль секции (ui:options.sectionRole)"
+								label="Роль секции"
 								value={sectionUiOptions.sectionRole ?? ""}
 								onChange={(e) =>
 									patchSectionUi({
@@ -257,10 +405,10 @@ export function SchemaPropertiesPanel() {
 											undefined) as V2AnketaSectionRole,
 									})
 								}
-								helperText="main — главная панель с workflow; subsection — подсекция стрима"
+								helperText="main — главная панель; subsection — подсекция стрима"
 							>
 								<MenuItem value="">
-									<em>Авто (эвристика)</em>
+									<em>Авто</em>
 								</MenuItem>
 								{V2_ANKETA_SECTION_ROLE_VALUES.map((role) => (
 									<MenuItem key={role} value={role}>
@@ -280,8 +428,26 @@ export function SchemaPropertiesPanel() {
 										}
 									/>
 								}
-								label="Развёрнута по умолчанию (defaultExpanded)"
+								label="Развёрнута по умолчанию"
 							/>
+							{fieldKind === "arch-object" ? (
+								<>
+									<Spacer />
+									<FormControlLabel
+										control={
+											<Checkbox
+												checked={sectionUiOptions.showFilledCount ?? false}
+												onChange={(e) =>
+													patchSectionUi({
+														showFilledCount: e.target.checked,
+													})
+												}
+											/>
+										}
+										label="Счётчик заполненных в заголовке"
+									/>
+								</>
+							) : null}
 							<Spacer />
 							{(sectionUiOptions.sectionRole ?? "") === "main" ||
 							sectionUiOptions.workflowSectionId ? (
@@ -296,73 +462,16 @@ export function SchemaPropertiesPanel() {
 												sectionCaption: e.target.value.trim() || undefined,
 											})
 										}
-										helperText="Отображается под заголовком секции в анкете (caption)"
 									/>
 									<Spacer />
 								</>
 							) : null}
-						</>
-					) : null}
-
-					{isObjectGroup || resolvedField?.type === "array" ? (
-						<>
-							<TextField
-								select
-								fullWidth
-								size="small"
-								label="Арх. компонент (ui:options.archComponent)"
-								value={sectionUiOptions.archComponent ?? ""}
-								onChange={(e) =>
-									patchSectionUi({
-										archComponent: (e.target.value ||
-											undefined) as V2ArchComponentType | undefined,
-									})
-								}
-								helperText="Помечает группу/массив как арх. компонент: подсветка в dev-режиме и связь «параметр → типовые работы»"
-							>
-								<MenuItem value="">
-									<em>Не компонент</em>
-								</MenuItem>
-								{V2_ARCH_COMPONENT_TYPES.map((t) => (
-									<MenuItem key={t} value={t}>
-										{V2_ARCH_COMPONENT_LABELS[t]}
-									</MenuItem>
-								))}
-							</TextField>
-							<Spacer />
-						</>
-					) : null}
-
-					<TextField
-						select
-						fullWidth
-						size="small"
-						label="Виджет UI Schema"
-						value={currentWidget}
-						onChange={(e) => handleWidgetChange(e.target.value)}
-						helperText={
-							isObjectGroup
-								? "Дополнительный ui:widget на узле группы (если используется кастомным шаблоном)"
-								: undefined
-						}
-					>
-						{WIDGET_PRESETS.map((w) => (
-							<MenuItem key={w.label + w.value} value={w.value}>
-								{w.label}
-							</MenuItem>
-						))}
-					</TextField>
-
-					{isObjectGroup ? (
-						<>
-							<Spacer />
 							<Typography variant="caption" fontWeight={600}>
 								Поля в группе ({groupChildFields.length})
 							</Typography>
 							{groupChildFields.length === 0 ? (
 								<Typography variant="caption" color="text.secondary">
-									Пока нет вложенных полей. Перетащите тип поля на холст внутрь
-									группы.
+									Перетащите поле внутрь группы на холсте.
 								</Typography>
 							) : (
 								<Box component="ul" sx={{ m: 0, pl: 2.5, mb: 1 }}>
@@ -386,40 +495,133 @@ export function SchemaPropertiesPanel() {
 								<Typography variant="caption" color="info.main" display="block">
 									Кастомная UI-конфигурация: {customUiGroupSummary}
 								</Typography>
-							) : (
+							) : null}
+						</>
+					) : null}
+
+					{showArrayOptions ? (
+						<>
+							<Spacer />
+							<Typography variant="caption" fontWeight={600} display="block">
+								Список
+							</Typography>
+							<FormControlLabel
+								control={
+									<Checkbox
+										checked={isReadonlyArray}
+										onChange={(e) =>
+											updateField({ readOnly: e.target.checked || undefined })
+										}
+									/>
+								}
+								label="Только чтение (schema.readOnly)"
+							/>
+							<FormControlLabel
+								control={
+									<Checkbox
+										checked={arrayToolbar.addable ?? true}
+										disabled={
+											isReadonlyArray ||
+											(workArch && archComponent === "typicalWork")
+										}
+										onChange={(e) =>
+											patchSectionUi({ addable: e.target.checked })
+										}
+									/>
+								}
+								label="Можно добавлять строки"
+							/>
+							<FormControlLabel
+								control={
+									<Checkbox
+										checked={arrayToolbar.removable ?? true}
+										disabled={
+											isReadonlyArray ||
+											(workArch && archComponent === "typicalWork")
+										}
+										onChange={(e) =>
+											patchSectionUi({ removable: e.target.checked })
+										}
+									/>
+								}
+								label="Можно удалять строки"
+							/>
+							<FormControlLabel
+								control={
+									<Checkbox
+										checked={arrayToolbar.orderable ?? false}
+										disabled={isReadonlyArray}
+										onChange={(e) =>
+											patchSectionUi({ orderable: e.target.checked })
+										}
+									/>
+								}
+								label="Можно менять порядок строк"
+							/>
+							{workArch && archComponent === "typicalWork" ? (
 								<Typography variant="caption" color="text.secondary" display="block">
-									Стандартная группа без дополнительных ui:options.
+									Типовые работы генерируются автоматически — добавление и
+									удаление отключены.
 								</Typography>
-							)}
+							) : null}
 						</>
 					) : null}
 
 					<Divider sx={{ my: 1.5 }} />
 
 					{canBindDictionary ? (
-						<TextField
-							select
-							fullWidth
-							size="small"
-							label="Справочник"
-							value={currentDictionaryCode}
-							onChange={(e) => handleDictionaryCodeChange(e.target.value)}
-							error={dictionaryBindingMissing}
-						>
-							<MenuItem value="">
-								<em>Не привязан</em>
-							</MenuItem>
-							{v2Dictionaries.map((d) => (
-								<MenuItem key={d.id} value={d.code}>
-									{d.code} — {d.name}
+						<>
+							<TextField
+								select
+								fullWidth
+								size="small"
+								label="Справочник"
+								value={currentDictionaryCode}
+								onChange={(e) => handleDictionaryCodeChange(e.target.value)}
+								error={dictionaryBindingMissing}
+								helperText="В форме поле отображается как выпадающий список значений справочника"
+							>
+								<MenuItem value="">
+									<em>Не привязан</em>
 								</MenuItem>
-							))}
-						</TextField>
-					) : (
+								{v2Dictionaries.map((d) => (
+									<MenuItem key={d.id} value={d.code}>
+										{d.code} — {d.name}
+									</MenuItem>
+								))}
+							</TextField>
+							{currentDictionaryCode ? (
+								<FormControlLabel
+									sx={{ mt: 0.5, display: "block" }}
+									control={
+										<Checkbox
+											checked={dictionaryMultiple}
+											onChange={(e) => {
+												const checked = e.target.checked;
+												patchSectionUi({
+													multiple: checked || undefined,
+												});
+												updateField(
+													buildDictionaryMultiSchemaPatch(checked),
+												);
+											}}
+										/>
+									}
+									label="Множественный выбор"
+								/>
+							) : null}
+						</>
+					) : fieldKind === "primitive" ? (
 						<Typography variant="caption" color="text.secondary">
-							Для групп (object) привязка задаётся на вложенных полях.
+							Справочники доступны только для полей типа «строка».
 						</Typography>
-					)}
+					) : fieldKind === "object" ||
+					  fieldKind === "arch-object" ||
+					  fieldKind === "layout" ? (
+						<Typography variant="caption" color="text.secondary">
+							Справочник задаётся на вложенных строковых полях группы.
+						</Typography>
+					) : null}
 
 					<Divider sx={{ my: 1.5 }} />
 

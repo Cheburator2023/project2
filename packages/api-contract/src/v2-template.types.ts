@@ -314,6 +314,12 @@ export type V2BulkDeleteTemplateVersionsResultDto = {
 	deletedVersionIds: string[];
 	/** Актуальная версия системы — не удалялась. */
 	skippedCurrentVersionId: string | null;
+	/** @deprecated Всегда пусто: анкеты перепривязываются или удаляются. */
+	skippedBoundVersionIds: string[];
+	/** Анкеты перепривязаны к оставшейся версии схемы. */
+	reboundQuestionnaireCount: number;
+	/** Анкеты удалены (не осталось версии для перепривязки). */
+	deletedQuestionnaireCount: number;
 	/** Снимок удалённых версий для undo. */
 	snapshot: V2TemplateVersionDto[];
 };

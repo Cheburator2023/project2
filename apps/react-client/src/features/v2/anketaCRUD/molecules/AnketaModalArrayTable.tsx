@@ -105,12 +105,85 @@ export function AnketaModalArrayTable({
 	const readOnly = ctx.anketaReadOnly;
 	const showRowActions = arrayTableShowsRowActions(pathKey, formContext);
 
-	if (!columns) return null;
-
 	const tableTestId = anketaMoleculeTestIdForPath(
 		ANKETA_MOLECULE_TEST_IDS.arrayTable,
 		pathKey,
 	);
+
+	// Fallback for paths without a column config (e.g., custom constructor schemas)
+	if (!columns) {
+		return (
+			<Box data-test-id={tableTestId} sx={{ minWidth: 0 }}>
+				<Stack direction="row" spacing={0.75} alignItems="baseline" mb={1.5}>
+					<Typography
+						variant="subtitle1"
+						fontWeight={700}
+						data-test-id={ANKETA_MOLECULE_TEST_IDS.arrayTableTitle}
+					>
+						{sectionTitle}
+					</Typography>
+					<Typography
+						variant="body2"
+						color="text.secondary"
+						data-test-id={ANKETA_MOLECULE_TEST_IDS.arrayTableCount}
+					>
+						({items.length})
+					</Typography>
+				</Stack>
+				{items.length === 0 ? (
+					<ListEmptyPlaceholder>Нет записей</ListEmptyPlaceholder>
+				) : (
+					<Box
+						sx={{
+							border: "1px solid",
+							borderColor: "divider",
+							borderRadius: 1.5,
+							overflow: "hidden",
+						}}
+					>
+						{items.map((item, idx) => (
+							<Stack
+								key={idx}
+								direction="row"
+								alignItems="center"
+								justifyContent="space-between"
+								sx={{
+									px: 1.5,
+									py: 1,
+									borderBottom: idx < items.length - 1 ? "1px solid" : "none",
+									borderColor: "divider",
+								}}
+							>
+								<Typography variant="body2" color="text.secondary">
+									{typeof item.name === "string" && item.name
+										? item.name
+										: `Запись ${idx + 1}`}
+								</Typography>
+								{showRowActions && !readOnly ? (
+									<Stack direction="row" spacing={0.25}>
+										<IconButton
+											size="small"
+											title="Редактировать"
+											onClick={() => ctx.openAnketaModal?.(pathKey, idx)}
+										>
+											<EditOutlinedIcon fontSize="small" />
+										</IconButton>
+										<IconButton
+											size="small"
+											title="Удалить"
+											onClick={() => ctx.deleteAnketaArrayItem?.(pathKey, idx)}
+										>
+											<DeleteOutlineIcon fontSize="small" />
+										</IconButton>
+									</Stack>
+								) : null}
+							</Stack>
+						))}
+					</Box>
+				)}
+			</Box>
+		);
+	}
 
 	return (
 		<Box data-test-id={tableTestId} sx={{ minWidth: 0 }}>

@@ -33,13 +33,14 @@ import {
 	type RowClassParams,
 	type RowDoubleClickedEvent,
 	type RowStyle,
+	type SelectionChangedEvent,
 	ModuleRegistry,
 	ValidationModule,
 } from "ag-grid-community";
 import { ContextMenuModule, TreeDataModule } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
 import { useQueries } from "@tanstack/react-query";
-import { useCallback, useMemo, useRef } from "react";
+import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from "react";
 import { useNavigate } from "react-router";
 import { agGridCustomMUITheme, agGridCustomMUIThemeDark } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
@@ -84,10 +85,49 @@ export type V2SchemaGridVersionRow = V2TemplateVersionDto & {
 
 export type V2SchemaGridRow = V2SchemaGridTemplateRow | V2SchemaGridVersionRow;
 
+export function isV2SchemaRowSelectable(
+	row: V2SchemaGridRow | undefined,
+	systemCurrentVersionId: string | null,
+): boolean {
+	if (!row) return false;
+	if (
+		row.rowKind === "version" &&
+		systemCurrentVersionId != null &&
+		row.id === systemCurrentVersionId
+	) {
+		return false;
+	}
+	return true;
+}
+
+export function splitSelectedSchemaRows(rows: V2SchemaGridRow[]): {
+	templates: V2SchemaGridTemplateRow[];
+	versionsWithoutSelectedTemplate: V2SchemaGridVersionRow[];
+} {
+	const templates = rows.filter(
+		(r): r is V2SchemaGridTemplateRow => r.rowKind === "template",
+	);
+	const selectedTemplateIds = new Set(templates.map((t) => t.id));
+	const versionsWithoutSelectedTemplate = rows.filter(
+		(r): r is V2SchemaGridVersionRow =>
+			r.rowKind === "version" && !selectedTemplateIds.has(r.templateId),
+	);
+	return { templates, versionsWithoutSelectedTemplate };
+}
+
+type V2TemplateListProps = {
+	onSelectionChange?: (rows: V2SchemaGridRow[]) => void;
+};
+
+export type V2TemplateListHandle = {
+	clearSelection: () => void;
+};
+
 const dateFmt = (v: unknown) =>
 	v ? new Date(String(v)).toLocaleString("ru-RU") : "";
 
-export const V2TemplateList = () => {
+export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListProps>(
+	function V2TemplateList({ onSelectionChange }, ref) {
 	const theme = useTheme();
 	const { mode } = useColorScheme();
 	const navigate = useNavigate();
@@ -110,6 +150,12 @@ export const V2TemplateList = () => {
 	}, [templates]);
 
 	const gridRef = useRef<AgGridReact<V2SchemaGridRow>>(null);
+
+	useImperativeHandle(ref, () => ({
+		clearSelection: () => {
+			gridRef.current?.api?.deselectAll();
+		},
+	}));
 
 	const versionQueries = useQueries({
 		queries: (templates ?? []).map((t) => ({
@@ -217,6 +263,18 @@ export const V2TemplateList = () => {
 							return;
 						}
 
+						const extraNotes: string[] = [];
+						if (result.reboundQuestionnaireCount > 0) {
+							extraNotes.push(
+								`перепривязано анкет: ${result.reboundQuestionnaireCount}`,
+							);
+						}
+						if (result.deletedQuestionnaireCount > 0) {
+							extraNotes.push(
+								`удалено анкет: ${result.deletedQuestionnaireCount}`,
+							);
+						}
+
 						toastWithUndo(
 							`У шаблона «${templateName}» удалено версий: ${n}`,
 							async () => {
@@ -226,6 +284,9 @@ export const V2TemplateList = () => {
 								});
 								toast.success("Удаление версий отменено");
 							},
+							extraNotes.length
+								? { description: extraNotes.join(", ") }
+								: undefined,
 						);
 					},
 					onError: (error) => {
@@ -360,24 +421,35 @@ export const V2TemplateList = () => {
 				] as any;
 			}
 
-			const isAlreadyCurrent =
-				row.templateCurrentVersionId != null &&
-				row.id === row.templateCurrentVersionId;
 			const isSystemCurrent =
 				systemCurrentVersionId != null && row.id === systemCurrentVersionId;
 
 			return [
 				{
 					name: "Сделать актуальной для системы",
-					disabled: isAlreadyCurrent || activateVersion.isPending,
+					disabled: isSystemCurrent || activateVersion.isPending,
 					action: () =>
-						activateVersion.mutate({
-							templateId: row.templateId,
-							versionId: row.id,
-						}),
-					tooltip: isAlreadyCurrent
+						activateVersion.mutate(
+							{
+								templateId: row.templateId,
+								versionId: row.id,
+							},
+							{
+								onSuccess: () => {
+									toast.success(
+										`Версия ${row.versionNumber} — актуальная схема системы`,
+									);
+								},
+								onError: (error) => {
+									toast.error("Не удалось сделать версию актуальной", {
+										description: apiErrorMessage(error),
+									});
+								},
+							},
+						),
+					tooltip: isSystemCurrent
 						? "Эта версия уже является актуальной схемой системы"
-						: "Станет единственной актуальной схемой; у других шаблонов снимок будет снят",
+						: "Станет единственной актуальной схемой; у других шаблонов снимется актуальность",
 				},
 				{
 					name: "Открыть редактор схемы",
@@ -569,6 +641,18 @@ export const V2TemplateList = () => {
 				paginationPageSize={50}
 				localeText={AG_GRID_LOCALE_RU}
 				onRowDoubleClicked={handleRowDoubleClicked}
+				isRowSelectable={(node) =>
+					isV2SchemaRowSelectable(node.data, systemCurrentVersionId)
+				}
+				rowSelection={{
+					mode: "multiRow",
+					checkboxes: true,
+					headerCheckbox: true,
+					enableClickSelection: false,
+				}}
+				onSelectionChanged={(e: SelectionChangedEvent<V2SchemaGridRow>) => {
+					onSelectionChange?.(e.api.getSelectedRows());
+				}}
 				suppressCsvExport
 				suppressExcelExport
 				paginationAutoPageSize={false}
@@ -576,4 +660,5 @@ export const V2TemplateList = () => {
 			/>
 		</GridWrapper>
 	);
-};
+},
+);

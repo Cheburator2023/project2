@@ -8,7 +8,7 @@ export type V2AnketaSectionTitleVariant = "h5" | "h6";
  * Параметры арх. компонента одновременно являются триггерами генерации
  * типовых работ из справочника.
  */
-export declare const V2_ARCH_COMPONENT_TYPES: readonly ["modelService", "model", "sourceSystem", "dataMart", "dataProcess", "deployChannel", "modelControl"];
+export declare const V2_ARCH_COMPONENT_TYPES: readonly ["modelService", "model", "sourceSystem", "dataMart", "dataProcess", "deployChannel", "modelControl", "typicalWork", "atypicalWork"];
 export type V2ArchComponentType = (typeof V2_ARCH_COMPONENT_TYPES)[number];
 /** Человекочитаемые названия арх. компонентов (из глоссария). */
 export declare const V2_ARCH_COMPONENT_LABELS: Record<V2ArchComponentType, string>;

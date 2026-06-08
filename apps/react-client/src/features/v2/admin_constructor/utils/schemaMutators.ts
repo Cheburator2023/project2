@@ -40,21 +40,251 @@ export function listOrderedChildKeys(
 	return [...ordered, ...rest];
 }
 
-export function applyGroupFieldOrdersToUiSchema(
-	ui: UiSchema,
-	orders: Record<string, string[]>,
-): UiSchema {
-	const next = structuredClone(ui) as UiSchema;
+function groupIdToParentPointer(groupId: string): string {
+	if (groupId === "schema-root") return "/";
+	return groupId.replace("schema-group:", "");
+}
 
-	for (const [groupId, keys] of Object.entries(orders)) {
-		const parentPointer =
-			groupId === "schema-root" ? "/" : groupId.replace("schema-group:", "");
-		const branch = readUiSchemaBranchAtPointer(next, parentPointer);
-		if (!branch) continue;
-		branch["ui:order"] = keys;
+function getMutableUiParent(
+	ui: Record<string, unknown>,
+	parentPointer: string,
+): Record<string, unknown> {
+	if (parentPointer === "/" || parentPointer === "") {
+		return ui;
+	}
+	const segs = pointerSegments(parentPointer);
+	let cur: Record<string, unknown> = ui;
+	for (const seg of segs) {
+		const child = (cur[seg] as Record<string, unknown>) ?? {};
+		cur[seg] = child;
+		cur = child;
+	}
+	return cur;
+}
+
+function walkSchemaParentPointers(
+	schema: RJSFSchema,
+	parentPointer: string,
+	visit: (pointer: string) => void,
+): void {
+	visit(parentPointer);
+	const segs = pointerSegments(parentPointer);
+	const parent =
+		segs.length === 0 ? schema : resolveSchemaNode(schema, segs);
+	if (!parent) return;
+
+	for (const key of listChildKeys(schema, parentPointer)) {
+		const childPointer =
+			parentPointer === "/" ? `/${key}` : `${parentPointer.replace(/\/$/, "")}/${key}`;
+		const node = resolveSchemaNode(schema, pointerSegments(childPointer));
+		if (isObjectFieldGroup(node)) {
+			walkSchemaParentPointers(schema, childPointer, visit);
+		}
+		const itemsObj = getObjectItemsSchema(node);
+		if (itemsObj && Object.keys(itemsObj.properties ?? {}).length > 0) {
+			walkSchemaParentPointers(schema, `${childPointer}/items`, visit);
+		}
+	}
+}
+
+/** Ищет первое вхождение ключа свойства в дереве схемы. */
+export function findPropertyPointerByKey(
+	schema: RJSFSchema,
+	key: string,
+): string | null {
+	let result: string | null = null;
+
+	function walk(node: RJSFSchema, segs: string[]): void {
+		if (result) return;
+		const props = (node.properties ?? {}) as Record<string, RJSFSchema>;
+		for (const childKey of Object.keys(props)) {
+			const nextSegs = [...segs, childKey];
+			if (childKey === key) {
+				result = `/${nextSegs.join("/")}`;
+				return;
+			}
+			walk(props[childKey]!, nextSegs);
+			const itemsObj = getObjectItemsSchema(props[childKey]);
+			if (itemsObj) {
+				walk(itemsObj, [...nextSegs, "items"]);
+			}
+		}
 	}
 
-	return next;
+	walk(schema, []);
+	return result;
+}
+
+function filterDominatedNestedKeys(
+	schema: RJSFSchema,
+	keys: Set<string>,
+): Set<string> {
+	const nodeByKey = collectPropertyNodes(schema);
+	const result = new Set<string>();
+
+	for (const key of keys) {
+		const loc = nodeByKey.get(key);
+		if (!loc) continue;
+
+		let dominated = false;
+		for (const ancestorKey of keys) {
+			if (ancestorKey === key) continue;
+			const ancestorLoc = nodeByKey.get(ancestorKey);
+			if (!ancestorLoc) continue;
+
+			const ancestorPath = [...ancestorLoc.parentSegments, ancestorKey];
+			const keyPath = [...loc.parentSegments, key];
+			if (
+				keyPath.length > ancestorPath.length &&
+				ancestorPath.every((seg, i) => keyPath[i] === seg)
+			) {
+				dominated = true;
+				break;
+			}
+		}
+
+		if (!dominated) result.add(key);
+	}
+
+	return result;
+}
+
+/** Ключи, реально изменившие родителя или порядок между initial и final orders. */
+export function resolveChangedDirectMoveKeys(
+	schema: RJSFSchema,
+	initialOrders: Record<string, string[]>,
+	finalOrders: Record<string, string[]>,
+): Set<string> {
+	const changed = new Set<string>();
+	const groupIds = new Set([
+		...Object.keys(initialOrders),
+		...Object.keys(finalOrders),
+	]);
+
+	for (const groupId of groupIds) {
+		const before = initialOrders[groupId] ?? [];
+		const after = finalOrders[groupId] ?? [];
+		const beforeSet = new Set(before);
+
+		for (const key of before) {
+			if (!after.includes(key)) changed.add(key);
+		}
+		for (const key of after) {
+			if (!beforeSet.has(key)) changed.add(key);
+		}
+		if (before.join("|") !== after.join("|")) {
+			for (const key of after) {
+				if (before.indexOf(key) !== after.indexOf(key)) changed.add(key);
+			}
+		}
+	}
+
+	return filterDominatedNestedKeys(schema, changed);
+}
+
+function shouldApplyUiOrderGroup(
+	groupId: string,
+	keys: string[],
+	directMoveKeys: Set<string>,
+	sourceParentByKey: Map<string, string>,
+): boolean {
+	const parentPointer = groupIdToParentPointer(groupId);
+	for (const key of directMoveKeys) {
+		if (keys.includes(key)) return true;
+		if (sourceParentByKey.get(key) === parentPointer) return true;
+	}
+	return false;
+}
+
+/** Путь поля для списка на холсте: прямой или фактический в схеме (при DnD между группами). */
+export function resolveFieldPointerForListKey(
+	key: string,
+	listParentPointer: string,
+	schema: RJSFSchema,
+): string {
+	const direct =
+		listParentPointer === "/"
+			? `/${key}`
+			: `${listParentPointer.replace(/\/$/, "")}/${key}`;
+	if (resolveSchemaNode(schema, pointerSegments(direct))) {
+		return direct;
+	}
+	return findPropertyPointerByKey(schema, key) ?? direct;
+}
+
+export function applyGroupFieldOrdersToUiSchema(
+	ui: UiSchema,
+	schema: RJSFSchema,
+	initialOrders: Record<string, string[]>,
+	finalOrders: Record<string, string[]>,
+): UiSchema {
+	const sourceUi = ui as Record<string, unknown>;
+	const directMoveKeys = resolveChangedDirectMoveKeys(
+		schema,
+		initialOrders,
+		finalOrders,
+	);
+	if (!directMoveKeys.size) return structuredClone(ui);
+
+	const branchByKey = new Map<string, Record<string, unknown>>();
+	const sourceParentByKey = new Map<string, string>();
+
+	walkSchemaParentPointers(schema, "/", (parentPointer) => {
+		for (const key of listChildKeys(schema, parentPointer)) {
+			if (!directMoveKeys.has(key) || branchByKey.has(key)) continue;
+			const pointer =
+				parentPointer === "/"
+					? `/${key}`
+					: `${parentPointer.replace(/\/$/, "")}/${key}`;
+			const branch = readUiSchemaBranchAtPointer(sourceUi, pointer);
+			if (branch) {
+				branchByKey.set(key, structuredClone(branch));
+				sourceParentByKey.set(key, parentPointer);
+			}
+		}
+	});
+
+	const next = structuredClone(sourceUi) as Record<string, unknown>;
+
+	for (const [key, sourceParent] of sourceParentByKey) {
+		const parentNode = getMutableUiParent(next, sourceParent);
+		delete parentNode[key];
+		if (Array.isArray(parentNode["ui:order"])) {
+			parentNode["ui:order"] = (parentNode["ui:order"] as string[]).filter(
+				(k) => k !== key,
+			);
+			if ((parentNode["ui:order"] as string[]).length === 0) {
+				delete parentNode["ui:order"];
+			}
+		}
+	}
+
+	for (const [groupId, keys] of Object.entries(finalOrders)) {
+		if (!shouldApplyUiOrderGroup(groupId, keys, directMoveKeys, sourceParentByKey)) {
+			continue;
+		}
+
+		const parentPointer = groupIdToParentPointer(groupId);
+		const parentNode = getMutableUiParent(next, parentPointer);
+		parentNode["ui:order"] = [...keys];
+
+		for (const key of keys) {
+			if (!directMoveKeys.has(key)) continue;
+			const branch = branchByKey.get(key);
+			if (branch) {
+				parentNode[key] = branch;
+			}
+		}
+
+		for (const propKey of Object.keys(parentNode)) {
+			if (propKey.startsWith("ui:")) continue;
+			if (directMoveKeys.has(propKey) && !keys.includes(propKey)) {
+				delete parentNode[propKey];
+			}
+		}
+	}
+
+	return next as UiSchema;
 }
 
 /**
@@ -129,12 +359,106 @@ export function updatePropertyAtPointer(
 	const leaf = fullSegments[fullSegments.length - 1]!;
 	if (!cur.properties?.[leaf]) return null;
 
-	cur.properties[leaf] = {
-		...(cur.properties[leaf] as RJSFSchema),
-		...patch,
-	};
+	const merged = { ...(cur.properties[leaf] as RJSFSchema) };
+	for (const [key, value] of Object.entries(patch)) {
+		if (value === undefined) {
+			delete merged[key as keyof RJSFSchema];
+		} else {
+			(merged as Record<string, unknown>)[key] = value;
+		}
+	}
+	cur.properties[leaf] = merged;
 
 	return draft;
+}
+
+const OBJECT_ONLY_KEYS = [
+	"properties",
+	"required",
+	"additionalProperties",
+	"minProperties",
+	"maxProperties",
+] as const;
+
+const ARRAY_ONLY_KEYS = ["items", "minItems", "maxItems", "uniqueItems"] as const;
+
+const STRING_ONLY_KEYS = [
+	"minLength",
+	"maxLength",
+	"pattern",
+	"format",
+] as const;
+
+const NUMBER_ONLY_KEYS = [
+	"minimum",
+	"maximum",
+	"exclusiveMinimum",
+	"exclusiveMaximum",
+	"multipleOf",
+] as const;
+
+/** Патч смены типа поля: убирает несовместимые ключи JSON Schema и задаёт дефолты. */
+export function buildFieldTypeTransitionPatch(
+	current: RJSFSchema | undefined,
+	nextType: string,
+): Partial<RJSFSchema> {
+	const patch: Partial<RJSFSchema> = {
+		type: nextType as RJSFSchema["type"],
+	};
+
+	const strip = (...keys: readonly string[]) => {
+		for (const key of keys) {
+			if (current && key in current) {
+				(patch as Record<string, undefined>)[key] = undefined;
+			}
+		}
+	};
+
+	switch (nextType) {
+		case "string":
+			strip(...OBJECT_ONLY_KEYS, ...ARRAY_ONLY_KEYS, ...NUMBER_ONLY_KEYS);
+			break;
+		case "number":
+		case "integer":
+			strip(
+				...OBJECT_ONLY_KEYS,
+				...ARRAY_ONLY_KEYS,
+				...STRING_ONLY_KEYS,
+				"enum",
+				"enumNames",
+			);
+			break;
+		case "boolean":
+			strip(
+				...OBJECT_ONLY_KEYS,
+				...ARRAY_ONLY_KEYS,
+				...STRING_ONLY_KEYS,
+				...NUMBER_ONLY_KEYS,
+				"enum",
+				"enumNames",
+			);
+			break;
+		case "object":
+			strip(...ARRAY_ONLY_KEYS, "enum", "enumNames");
+			if (!current?.properties) {
+				patch.properties = {};
+			}
+			break;
+		case "array":
+			strip(...OBJECT_ONLY_KEYS, "enum", "enumNames", ...STRING_ONLY_KEYS);
+			if (!current?.items) {
+				patch.items = {
+					type: "object",
+					title: "Элемент",
+					properties: {},
+				};
+			}
+			break;
+		default:
+			break;
+	}
+
+	return patch;
 }
 
 export function toggleRequiredAtPointer(
@@ -236,10 +560,7 @@ export function insertChildPropertyAt(
 		parentSegments.length === 0 ? draft : resolveSchemaNode(draft, parentSegments);
 
 	if (!parent) return null;
-
-	if (parent.type !== "object") {
-		parent.type = "object";
-	}
+	if (parent.type !== "object") return null;
 
 	const props = (parent.properties ?? {}) as Record<string, RJSFSchema>;
 	if (props[key] !== undefined) return null;
@@ -269,92 +590,219 @@ export function listChildKeys(
 
 export function isObjectFieldGroup(node: RJSFSchema | undefined): boolean {
 	if (!node) return false;
-	return node.type === "object" || Boolean(node.properties);
+	return node.type === "object";
+}
+
+function collectPropertyNodes(
+	root: RJSFSchema,
+): Map<string, { parentSegments: string[]; node: RJSFSchema }> {
+	const nodes = new Map<string, { parentSegments: string[]; node: RJSFSchema }>();
+
+	function walk(
+		schema: RJSFSchema,
+		parentSegments: string[],
+	): void {
+		const props = (schema.properties ?? {}) as Record<string, RJSFSchema>;
+		for (const childKey of Object.keys(props)) {
+			if (!nodes.has(childKey)) {
+				nodes.set(childKey, { parentSegments, node: props[childKey]! });
+			}
+			walk(props[childKey]!, [...parentSegments, childKey]);
+		}
+
+		const itemsObj = getObjectItemsSchema(schema);
+		if (itemsObj?.properties) {
+			const itemProps = itemsObj.properties as Record<string, RJSFSchema>;
+			for (const itemKey of Object.keys(itemProps)) {
+				if (!nodes.has(itemKey)) {
+					nodes.set(itemKey, {
+						parentSegments: [...parentSegments, "items"],
+						node: itemProps[itemKey]!,
+					});
+				}
+				walk(itemProps[itemKey]!, [...parentSegments, "items", itemKey]);
+			}
+		}
+	}
+
+	walk(root, []);
+	return nodes;
 }
 
 export function findPropertyInTree(
 	root: RJSFSchema,
 	key: string,
 ): { parentSegments: string[]; node: RJSFSchema } | null {
-	function walk(
-		schema: RJSFSchema,
-		parentSegments: string[],
-	): { parentSegments: string[]; node: RJSFSchema } | null {
-		const props = (schema.properties ?? {}) as Record<string, RJSFSchema>;
+	return collectPropertyNodes(root).get(key) ?? null;
+}
+
+function removeFirstPropertyKeyFromTree(
+	root: RJSFSchema,
+	key: string,
+): boolean {
+	function walk(node: RJSFSchema): boolean {
+		const props = (node.properties ?? {}) as Record<string, RJSFSchema>;
 		if (props[key]) {
-			return { parentSegments, node: props[key]! };
-		}
-
-		for (const childKey of Object.keys(props)) {
-			const found = walk(props[childKey]!, [...parentSegments, childKey]);
-			if (found) return found;
-		}
-
-		const itemsObj = getObjectItemsSchema(schema);
-		if (itemsObj?.properties) {
-			const itemProps = itemsObj.properties as Record<string, RJSFSchema>;
-			if (itemProps[key]) {
-				return {
-					parentSegments: [...parentSegments, "items"],
-					node: itemProps[key]!,
-				};
+			delete props[key];
+			if (Array.isArray(node.required)) {
+				node.required = node.required.filter((k) => k !== key);
+				if (node.required.length === 0) delete node.required;
 			}
-			for (const itemKey of Object.keys(itemProps)) {
-				const found = walk(itemProps[itemKey]!, [
-					...parentSegments,
-					"items",
-					itemKey,
-				]);
-				if (found) return found;
-			}
+			return true;
 		}
-
-		return null;
+		for (const child of Object.values(props)) {
+			if (walk(child)) return true;
+			const itemsObj = getObjectItemsSchema(child);
+			if (itemsObj && walk(itemsObj)) return true;
+		}
+		return false;
 	}
 
-	return walk(root, []);
+	return walk(root);
 }
 
 export function applyGroupFieldOrdersToSchema(
 	root: RJSFSchema,
-	orders: Record<string, string[]>,
+	initialOrders: Record<string, string[]>,
+	finalOrders: Record<string, string[]>,
 ): RJSFSchema | null {
-	const draft = structuredClone(root);
+	const directMoveKeys = resolveChangedDirectMoveKeys(
+		root,
+		initialOrders,
+		finalOrders,
+	);
+	if (!directMoveKeys.size) return structuredClone(root);
 
-	for (const [groupId, keys] of Object.entries(orders)) {
-		const parentPointer =
-			groupId === "schema-root" ? "/" : groupId.replace("schema-group:", "");
+	const nodeByKey = collectPropertyNodes(root);
+	const nodesByKey = new Map<string, RJSFSchema>();
+	for (const key of directMoveKeys) {
+		const found = nodeByKey.get(key);
+		if (found) nodesByKey.set(key, structuredClone(found.node));
+	}
+
+	const draft = structuredClone(root);
+	for (const key of directMoveKeys) {
+		removeFirstPropertyKeyFromTree(draft, key);
+	}
+
+	for (const [groupId, keys] of Object.entries(finalOrders)) {
+		const parentPointer = groupIdToParentPointer(groupId);
 		const parentSegments = pointerSegments(parentPointer);
 		const parent =
 			parentSegments.length === 0
 				? draft
 				: resolveSchemaNode(draft, parentSegments);
 
-		if (!parent) continue;
+		if (!parent || parent.type !== "object") continue;
 
+		const touchesGroup = keys.some((key) => directMoveKeys.has(key));
+		const before = initialOrders[groupId] ?? [];
+		if (!touchesGroup && before.join("|") === keys.join("|")) continue;
+
+		const existingProps = (parent.properties ?? {}) as Record<string, RJSFSchema>;
 		const newProps: Record<string, RJSFSchema> = {};
-
 		for (const key of keys) {
-			const found = findPropertyInTree(draft, key);
-			if (!found) continue;
-
-			const oldParent =
-				found.parentSegments.length === 0
-					? draft
-					: resolveSchemaNode(draft, found.parentSegments);
-
-			if (oldParent?.properties?.[key]) {
-				delete (oldParent.properties as Record<string, RJSFSchema>)[key];
+			const moved = nodesByKey.get(key);
+			if (moved) {
+				newProps[key] = moved;
+			} else if (existingProps[key]) {
+				newProps[key] = existingProps[key];
 			}
-
-			newProps[key] = found.node;
 		}
-
-		parent.type = parent.type ?? "object";
 		parent.properties = newProps;
 	}
 
 	return draft;
+}
+
+function remapNestedGroupOrderKeys(
+	orders: Record<string, string[]>,
+	movedKey: string,
+	sourceGroupId: string,
+	targetGroupId: string,
+): void {
+	if (sourceGroupId === targetGroupId) return;
+
+	const sourceParent = groupIdToParentPointer(sourceGroupId);
+	const targetParent = groupIdToParentPointer(targetGroupId);
+	const oldPrefix =
+		sourceParent === "/"
+			? `schema-group:/${movedKey}`
+			: `schema-group:${sourceParent}/${movedKey}`;
+	const newPrefix =
+		targetParent === "/"
+			? `schema-group:/${movedKey}`
+			: `schema-group:${targetParent}/${movedKey}`;
+
+	const remapped: Record<string, string[]> = {};
+	for (const [groupId, groupKeys] of Object.entries(orders)) {
+		if (groupId === oldPrefix || groupId.startsWith(`${oldPrefix}/`)) {
+			const suffix = groupId.slice(oldPrefix.length);
+			remapped[`${newPrefix}${suffix}`] = groupKeys;
+			delete orders[groupId];
+		}
+	}
+	Object.assign(orders, remapped);
+}
+
+/** Перенос одного поля между списками (источник → цель) с полными массивами ключей. */
+export function buildOrdersForFieldMove(
+	initialOrders: Record<string, string[]>,
+	key: string,
+	sourceGroupId: string,
+	targetGroupId: string,
+	targetIndex: number,
+): Record<string, string[]> {
+	const next = structuredClone(initialOrders) as Record<string, string[]>;
+	const sourceKeys = [...(next[sourceGroupId] ?? [])];
+	const sourcePos = sourceKeys.indexOf(key);
+	if (sourcePos >= 0) {
+		sourceKeys.splice(sourcePos, 1);
+	}
+	next[sourceGroupId] = sourceKeys;
+
+	const targetKeys = [...(next[targetGroupId] ?? [])].filter((k) => k !== key);
+	const safeIndex = Math.max(0, Math.min(targetIndex, targetKeys.length));
+	targetKeys.splice(safeIndex, 0, key);
+	next[targetGroupId] = targetKeys;
+
+	remapNestedGroupOrderKeys(next, key, sourceGroupId, targetGroupId);
+
+	return next;
+}
+
+function readUiParentAtSegments(
+	ui: Record<string, unknown>,
+	segments: string[],
+): Record<string, unknown> | null {
+	let cur: Record<string, unknown> = ui;
+	for (const seg of segments) {
+		const child = cur[seg];
+		if (!child || typeof child !== "object" || Array.isArray(child)) return null;
+		cur = child as Record<string, unknown>;
+	}
+	return cur;
+}
+
+export function removeUiSchemaAtPointer(
+	ui: Record<string, unknown>,
+	fieldPointer: string,
+): Record<string, unknown> {
+	const pk = parentOfPointer(fieldPointer);
+	if (!pk) return ui;
+
+	const next = structuredClone(ui) as Record<string, unknown>;
+	const parent = readUiParentAtSegments(next, pk.parentSegments);
+	if (!parent) return next;
+
+	delete parent[pk.key];
+
+	const order = parent["ui:order"];
+	if (Array.isArray(order)) {
+		parent["ui:order"] = order.filter((k) => k !== pk.key);
+	}
+
+	return next;
 }
 
 export function removePropertyAtPointer(
@@ -548,6 +996,13 @@ export function setUiDictionaryCodeAtPointer(
 				}
 			} else {
 				delete optBase.dictionaryCode;
+				delete optBase.multiple;
+				if (
+					merged["ui:widget"] === "select" ||
+					merged["ui:widget"] === "SelectWidget"
+				) {
+					delete merged["ui:widget"];
+				}
 				if (Object.keys(optBase).length === 0) {
 					delete merged["ui:options"];
 				} else {
@@ -568,6 +1023,28 @@ export function setUiDictionaryCodeAtPointer(
 	}
 
 	return next;
+}
+
+/** Переключение справочника между одиночным (string) и множественным (array of string). */
+export function buildDictionaryMultiSchemaPatch(
+	enable: boolean,
+): Partial<RJSFSchema> {
+	if (enable) {
+		return {
+			type: "array",
+			items: { type: "string" },
+			uniqueItems: true,
+			enum: undefined,
+			enumNames: undefined,
+		};
+	}
+	return {
+		type: "string",
+		items: undefined,
+		uniqueItems: undefined,
+		minItems: undefined,
+		maxItems: undefined,
+	};
 }
 
 /** Частичное обновление `ui:options` узла uiSchema по JSON Pointer. */
@@ -615,6 +1092,64 @@ export function setUiHiddenAtPointer(
 			} else {
 				cur[s] = merged;
 			}
+		} else {
+			const child = (cur[s] as Record<string, unknown>) ?? {};
+			cur[s] = child;
+			cur = child;
+		}
+	}
+	return next;
+}
+
+/** Сливает ветку uiSchema на узле (дочерние ключи properties, ui:order, …). */
+/** Добавляет ключ в ui:order родительской ветки (корень или вложенный object). */
+export function appendKeyToUiOrderAtPointer(
+	ui: Record<string, unknown>,
+	parentPointer: string,
+	key: string,
+): Record<string, unknown> {
+	const next = structuredClone(ui) as Record<string, unknown>;
+	const normalizedParent =
+		parentPointer === "/" || parentPointer === "" ? "/" : parentPointer;
+
+	let parentNode: Record<string, unknown>;
+	if (normalizedParent === "/") {
+		parentNode = next;
+	} else {
+		const segs = pointerSegments(normalizedParent);
+		let cur: Record<string, unknown> = next;
+		for (const seg of segs) {
+			const child = (cur[seg] as Record<string, unknown>) ?? {};
+			cur[seg] = child;
+			cur = child;
+		}
+		parentNode = cur;
+	}
+
+	const order = Array.isArray(parentNode["ui:order"])
+		? [...(parentNode["ui:order"] as string[])]
+		: [];
+	if (!order.includes(key)) {
+		parentNode["ui:order"] = [...order, key];
+	}
+	return next;
+}
+
+export function mergeUiBranchAtPointer(
+	ui: Record<string, unknown>,
+	fieldPointer: string,
+	branch: Record<string, unknown>,
+): Record<string, unknown> {
+	const segs = pointerSegments(fieldPointer);
+	const next = structuredClone(ui) as Record<string, unknown>;
+	if (segs.length === 0) return next;
+
+	let cur: Record<string, unknown> = next;
+	for (let i = 0; i < segs.length; i++) {
+		const s = segs[i]!;
+		if (i === segs.length - 1) {
+			const prev = (cur[s] as Record<string, unknown>) ?? {};
+			cur[s] = { ...prev, ...structuredClone(branch) };
 		} else {
 			const child = (cur[s] as Record<string, unknown>) ?? {};
 			cur[s] = child;
