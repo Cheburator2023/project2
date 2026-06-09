@@ -91,6 +91,15 @@ export type SchemaEditorContextValue = {
 		finalOrders: Record<string, string[]>,
 		initialOrders: Record<string, string[]>,
 	) => void;
+	moveCanvasField: (
+		sourcePointer: string,
+		targetParentPointer: string,
+		targetIndex: number,
+	) => void;
+	canUndoDraft: boolean;
+	canRedoDraft: boolean;
+	undoDraft: () => void;
+	redoDraft: () => void;
 	updateField: (patch: Partial<RJSFSchema>) => void;
 	handleDeleteField: (pointer?: string | null) => void;
 	handleToggleRequired: (checked: boolean) => void;

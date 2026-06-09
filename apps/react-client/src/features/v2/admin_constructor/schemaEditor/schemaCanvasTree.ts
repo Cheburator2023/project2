@@ -233,7 +233,8 @@ export function treeToGroupOrders(
 	return orders;
 }
 
-export function resolvePaletteDropTarget(
+/** Целевой родитель и индекс вставки по placeholder DnD (палитра и холст). */
+export function resolveCanvasDropTarget(
 	options: DropOptions<SchemaCanvasNodeData>,
 	rootId: string = SCHEMA_CANVAS_ROOT_ID,
 ): { parentPointer: string; index: number } {
@@ -258,3 +259,6 @@ export function resolvePaletteDropTarget(
 
 	return { parentPointer: "/", index };
 }
+
+/** @deprecated Используйте {@link resolveCanvasDropTarget}. */
+export const resolvePaletteDropTarget = resolveCanvasDropTarget;

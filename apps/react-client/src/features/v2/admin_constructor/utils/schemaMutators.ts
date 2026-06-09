@@ -1,5 +1,5 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
-import { parentOfPointer, pointerSegments } from "./schemaPaths";
+import { normalizeJsonPointer, parentOfPointer, pointerSegments } from "./schemaPaths";
 
 /** UiSchema-ветка для родительского JSON Pointer (корень — `parentPointer` `/`). */
 export function readUiSchemaBranchAtPointer(
@@ -762,7 +762,15 @@ export function buildOrdersForFieldMove(
 	next[sourceGroupId] = sourceKeys;
 
 	const targetKeys = [...(next[targetGroupId] ?? [])].filter((k) => k !== key);
-	const safeIndex = Math.max(0, Math.min(targetIndex, targetKeys.length));
+	let insertIndex = targetIndex;
+	if (
+		sourceGroupId === targetGroupId &&
+		sourcePos >= 0 &&
+		sourcePos < targetIndex
+	) {
+		insertIndex = targetIndex - 1;
+	}
+	const safeIndex = Math.max(0, Math.min(insertIndex, targetKeys.length));
 	targetKeys.splice(safeIndex, 0, key);
 	next[targetGroupId] = targetKeys;
 
@@ -829,6 +837,147 @@ export function removePropertyAtPointer(
 	}
 
 	return draft;
+}
+
+function isSameOrDescendantPointer(pointer: string, maybeAncestor: string): boolean {
+	const normalizedPointer = normalizeJsonPointer(pointer);
+	const normalizedAncestor = normalizeJsonPointer(maybeAncestor);
+	return (
+		normalizedPointer === normalizedAncestor ||
+		normalizedPointer.startsWith(`${normalizedAncestor.replace(/\/$/, "")}/`)
+	);
+}
+
+function pointerFromSegments(segments: string[]): string {
+	return segments.length === 0 ? "/" : `/${segments.join("/")}`;
+}
+
+function orderedSchemaKeysForInsert(
+	parent: RJSFSchema,
+	key: string,
+	index: number,
+): string[] {
+	const keys = Object.keys((parent.properties ?? {}) as Record<string, unknown>);
+	const withoutKey = keys.filter((k) => k !== key);
+	const safeIndex = Math.max(0, Math.min(index, withoutKey.length));
+	withoutKey.splice(safeIndex, 0, key);
+	return withoutKey;
+}
+
+/** Точный перенос поля по JSON Pointer. Не использует fieldKey глобально, чтобы не трогать одноимённые поля в других группах. */
+export function movePropertyAtPointer(
+	root: RJSFSchema,
+	sourcePointer: string,
+	targetParentPointer: string,
+	targetIndex: number,
+): RJSFSchema | null {
+	const sourcePk = parentOfPointer(sourcePointer);
+	if (!sourcePk) return null;
+	if (isSameOrDescendantPointer(targetParentPointer, sourcePointer)) return null;
+
+	const sourceNode = resolveSchemaNode(root, pointerSegments(sourcePointer));
+	if (!sourceNode) return null;
+
+	const sourceParent = resolveSchemaNode(root, sourcePk.parentSegments);
+	const sourceKeys = Object.keys(
+		(sourceParent?.properties ?? {}) as Record<string, unknown>,
+	);
+	const sourceIndex = sourceKeys.indexOf(sourcePk.key);
+	const sameParent =
+		pointerFromSegments(sourcePk.parentSegments) ===
+		normalizeJsonPointer(targetParentPointer);
+	const effectiveIndex =
+		sameParent && sourceIndex >= 0 && sourceIndex < targetIndex
+			? targetIndex - 1
+			: targetIndex;
+
+	const draft = structuredClone(root);
+	const draftSourceParent = resolveSchemaNode(draft, sourcePk.parentSegments);
+	if (!draftSourceParent?.properties?.[sourcePk.key]) return null;
+
+	delete draftSourceParent.properties[sourcePk.key];
+	if (Array.isArray(draftSourceParent.required)) {
+		draftSourceParent.required = draftSourceParent.required.filter(
+			(k) => k !== sourcePk.key,
+		);
+		if (draftSourceParent.required.length === 0) {
+			delete draftSourceParent.required;
+		}
+	}
+
+	const targetParent = resolveSchemaNode(
+		draft,
+		pointerSegments(targetParentPointer),
+	);
+	if (!targetParent || targetParent.type !== "object") return null;
+	if (targetParent.properties?.[sourcePk.key]) return null;
+
+	targetParent.properties = {
+		...((targetParent.properties ?? {}) as Record<string, RJSFSchema>),
+		[sourcePk.key]: structuredClone(sourceNode),
+	};
+
+	return reorderChildProperties(
+		draft,
+		pointerSegments(targetParentPointer),
+		orderedSchemaKeysForInsert(targetParent, sourcePk.key, effectiveIndex),
+	);
+}
+
+/** Точный перенос ветки uiSchema вместе с ui:order. */
+export function moveUiSchemaBranchAtPointer(
+	ui: Record<string, unknown>,
+	sourcePointer: string,
+	targetParentPointer: string,
+	targetIndex: number,
+): Record<string, unknown> {
+	const sourcePk = parentOfPointer(sourcePointer);
+	if (!sourcePk) return ui;
+	if (isSameOrDescendantPointer(targetParentPointer, sourcePointer)) return ui;
+
+	const next = structuredClone(ui) as Record<string, unknown>;
+	const sourceParent = readUiParentAtSegments(next, sourcePk.parentSegments);
+	const sourceBranch = sourceParent?.[sourcePk.key];
+	const sourceOrder = Array.isArray(sourceParent?.["ui:order"])
+		? ([...(sourceParent!["ui:order"] as string[])] as string[])
+		: [];
+	const sourceIndex = sourceOrder.indexOf(sourcePk.key);
+	const sameParent =
+		pointerFromSegments(sourcePk.parentSegments) ===
+		normalizeJsonPointer(targetParentPointer);
+	const effectiveIndex =
+		sameParent && sourceIndex >= 0 && sourceIndex < targetIndex
+			? targetIndex - 1
+			: targetIndex;
+
+	if (sourceParent) {
+		delete sourceParent[sourcePk.key];
+		if (Array.isArray(sourceParent["ui:order"])) {
+			sourceParent["ui:order"] = (sourceParent["ui:order"] as string[]).filter(
+				(k) => k !== sourcePk.key,
+			);
+		}
+	}
+
+	const targetParent = getMutableUiParent(next, targetParentPointer);
+	if (
+		sourceBranch &&
+		typeof sourceBranch === "object" &&
+		!Array.isArray(sourceBranch) &&
+		!targetParent[sourcePk.key]
+	) {
+		targetParent[sourcePk.key] = sourceBranch;
+	}
+
+	const currentOrder = Array.isArray(targetParent["ui:order"])
+		? [...(targetParent["ui:order"] as string[])]
+		: Object.keys(targetParent).filter((key) => !key.startsWith("ui:"));
+	const withoutKey = currentOrder.filter((key) => key !== sourcePk.key);
+	const safeIndex = Math.max(0, Math.min(effectiveIndex, withoutKey.length));
+	withoutKey.splice(safeIndex, 0, sourcePk.key);
+	targetParent["ui:order"] = withoutKey;
+
+	return next;
 }
 
 export function listSchemaFields(
@@ -1188,6 +1337,25 @@ export function appendKeyToUiOrderAtPointer(
 	if (!order.includes(key)) {
 		parentNode["ui:order"] = [...order, key];
 	}
+	return next;
+}
+
+/** Вставляет ключ в ui:order родительской ветки в указанную позицию. */
+export function insertKeyToUiOrderAtPointer(
+	ui: Record<string, unknown>,
+	parentPointer: string,
+	key: string,
+	index: number,
+): Record<string, unknown> {
+	const next = structuredClone(ui) as Record<string, unknown>;
+	const parentNode = getMutableUiParent(next, parentPointer);
+	const order = Array.isArray(parentNode["ui:order"])
+		? [...(parentNode["ui:order"] as string[])]
+		: Object.keys(parentNode).filter((k) => !k.startsWith("ui:"));
+	const withoutKey = order.filter((k) => k !== key);
+	const safeIndex = Math.max(0, Math.min(index, withoutKey.length));
+	withoutKey.splice(safeIndex, 0, key);
+	parentNode["ui:order"] = withoutKey;
 	return next;
 }
 

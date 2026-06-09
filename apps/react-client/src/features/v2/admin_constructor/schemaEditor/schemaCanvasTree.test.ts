@@ -6,8 +6,11 @@ import {
 	getPresetIdFromPaletteDragSource,
 	PALETTE_DRAG_TYPE,
 	SCHEMA_CANVAS_ROOT_ID,
+	resolveCanvasDropTarget,
 	treeToGroupOrders,
 } from "./schemaCanvasTree";
+import type { DropOptions } from "@minoru/react-dnd-treeview";
+import type { SchemaCanvasNodeData } from "./schemaCanvasTree";
 
 describe("palette drag helpers", () => {
 	it("builds NodeModel drag item and resolves preset id", () => {
@@ -70,6 +73,32 @@ describe("buildSchemaCanvasTree", () => {
 		const row = tree.find((n) => n.data?.fieldKey === "row");
 		expect(row?.id).toBe("/items/items/row");
 		expect(row?.parent).toBe("/items/@items");
+	});
+});
+
+describe("resolveCanvasDropTarget", () => {
+	it("uses relativeIndex when dropping before a sibling field", () => {
+		const options = {
+			dropTargetId: "/group1/child2",
+			dropTarget: {
+				id: "/group1/child2",
+				parent: "/group1",
+				text: "B",
+				droppable: false,
+				data: {
+					kind: "field",
+					fieldPointer: "/group1/child2",
+					fieldKey: "child2",
+					parentPointer: "/group1",
+				},
+			},
+			relativeIndex: 1,
+		} as DropOptions<SchemaCanvasNodeData>;
+
+		expect(resolveCanvasDropTarget(options)).toEqual({
+			parentPointer: "/group1",
+			index: 1,
+		});
 	});
 });
 

@@ -4,8 +4,10 @@ import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import GridViewIcon from "@mui/icons-material/GridView";
+import RedoIcon from "@mui/icons-material/Redo";
 import UnfoldLessIcon from "@mui/icons-material/UnfoldLess";
 import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
+import UndoIcon from "@mui/icons-material/Undo";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
@@ -63,13 +65,11 @@ import { SchemaCanvasPlaceholder } from "./SchemaCanvasPlaceholder";
 import {
 	buildPaletteDragNode,
 	buildSchemaCanvasTree,
-	collectGroupOrders,
 	getPresetIdFromPaletteDragSource,
 	isPaletteDragSource,
 	PALETTE_DRAG_TYPE,
-	resolvePaletteDropTarget,
+	resolveCanvasDropTarget,
 	SCHEMA_CANVAS_ROOT_ID,
-	treeToGroupOrders,
 	type SchemaCanvasNodeData,
 } from "../schemaCanvasTree";
 
@@ -622,10 +622,13 @@ export function SchemaCanvasPanel({
 	const {
 		jsonSchema,
 		uiSchema,
-		applyGroupFieldOrders,
 		handleAddFieldPresetAtParent,
+		moveCanvasField,
+		canUndoDraft,
+		canRedoDraft,
+		undoDraft,
+		redoDraft,
 	} = useSchemaEditor();
-	const initialOrdersRef = useRef<Record<string, string[]>>({});
 	const treeRef = useRef<TreeMethods>(null);
 
 	const presetById = useMemo(
@@ -665,6 +668,26 @@ export function SchemaCanvasPanel({
 
 	const canvasExpandActions = (
 		<Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
+			<IconButton
+				size="small"
+				disabled={!canUndoDraft}
+				onClick={undoDraft}
+				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasUndo}
+				aria-label="Отменить действие на холсте"
+				title="Отменить"
+			>
+				<UndoIcon fontSize="small" />
+			</IconButton>
+			<IconButton
+				size="small"
+				disabled={!canRedoDraft}
+				onClick={redoDraft}
+				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasRedo}
+				aria-label="Повторить действие на холсте"
+				title="Повторить"
+			>
+				<RedoIcon fontSize="small" />
+			</IconButton>
 			<Button
 				size="small"
 				variant="outlined"
@@ -690,13 +713,9 @@ export function SchemaCanvasPanel({
 		</Box>
 	);
 
-	const handleDragStart = useCallback(() => {
-		initialOrdersRef.current = collectGroupOrders(jsonSchema, uiSchema);
-	}, [jsonSchema, uiSchema]);
-
 	const handleDrop = useCallback(
 		(
-			newTree: NodeModel<SchemaCanvasNodeData>[],
+			_newTree: NodeModel<SchemaCanvasNodeData>[],
 			options: DropOptions<SchemaCanvasNodeData>,
 		) => {
 			if (options.monitor.getItemType() === PALETTE_DRAG_TYPE) {
@@ -706,7 +725,7 @@ export function SchemaCanvasPanel({
 				if (!presetId) return;
 				const preset = presetById.get(presetId);
 				if (!preset) return;
-				const { parentPointer, index } = resolvePaletteDropTarget(options);
+				const { parentPointer, index } = resolveCanvasDropTarget(options);
 				handleAddFieldPresetAtParent(
 					parentPointer,
 					preset.make(),
@@ -717,10 +736,13 @@ export function SchemaCanvasPanel({
 				return;
 			}
 
-			const finalOrders = treeToGroupOrders(newTree);
-			applyGroupFieldOrders(finalOrders, initialOrdersRef.current);
+			const dragSource = options.dragSource;
+			if (dragSource?.data?.kind !== "field") return;
+
+			const { parentPointer, index } = resolveCanvasDropTarget(options);
+			moveCanvasField(dragSource.data.fieldPointer, parentPointer, index);
 		},
-		[applyGroupFieldOrders, handleAddFieldPresetAtParent, presetById],
+		[handleAddFieldPresetAtParent, moveCanvasField, presetById],
 	);
 
 	const canDrop = useCallback(
@@ -739,7 +761,6 @@ export function SchemaCanvasPanel({
 			if (isPaletteDragSource(dragSource)) {
 				if (dropTargetId === SCHEMA_CANVAS_ROOT_ID) return true;
 				if (dropTarget?.droppable) return true;
-				if (dropTarget?.data?.kind === "field") return true;
 				return false;
 			}
 
@@ -751,7 +772,6 @@ export function SchemaCanvasPanel({
 			if (dragSource.parent === dropTargetId) return true;
 			if (dropTargetId === SCHEMA_CANVAS_ROOT_ID) return true;
 			if (dropTarget?.droppable) return true;
-			if (dropTarget?.data?.kind === "field") return true;
 
 			return undefined;
 		},
@@ -839,7 +859,6 @@ export function SchemaCanvasPanel({
 							width: "100%",
 						},
 					}}
-					onDragStart={handleDragStart}
 					onDrop={handleDrop}
 					canDrop={canDrop}
 					canDrag={canDrag}

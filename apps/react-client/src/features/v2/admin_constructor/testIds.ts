@@ -23,6 +23,8 @@ export const V2_TEMPLATE_EDIT_TEST_IDS = {
 	palette: "palette",
 	paletteItem: "paletteItem",
 	canvas: "canvas",
+	canvasUndo: "canvasUndo",
+	canvasRedo: "canvasRedo",
 	canvasExpandAll: "canvasExpandAll",
 	canvasCollapseAll: "canvasCollapseAll",
 	canvasDropZone: "canvasDropZone",

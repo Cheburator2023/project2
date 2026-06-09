@@ -63,16 +63,18 @@ import {
 } from "../utils/schemaPaths";
 import {
 	addRootProperty,
-	appendKeyToUiOrderAtPointer,
 	applyGroupFieldOrdersToSchema,
 	applyGroupFieldOrdersToUiSchema,
 	buildDictionaryMultiSchemaPatch,
 	buildFieldTypeTransitionPatch,
 	insertChildPropertyAt,
+	insertKeyToUiOrderAtPointer,
 	isObjectFieldGroup,
 	listOrderedChildKeys,
 	listSchemaFields,
 	mergeUiBranchAtPointer,
+	movePropertyAtPointer,
+	moveUiSchemaBranchAtPointer,
 	patchUiOptionsAtPointer,
 	removePropertyAtPointer,
 	removeUiSchemaAtPointer,
@@ -127,6 +129,14 @@ export type V2EditorHeaderActions = {
 };
 
 export type V2SchemaEditorLayoutMode = "dock" | "logic-only";
+
+type DraftHistorySnapshot = {
+	jsonSchema: RJSFSchema;
+	uiSchema: UiSchema;
+	selectedPointer: string | null;
+};
+
+const DRAFT_HISTORY_LIMIT = 50;
 
 interface V2TemplateSchemaEditorProps {
 	templateId: string;
@@ -216,6 +226,8 @@ export const V2TemplateSchemaEditor = ({
 		JSON.stringify(EMPTY_JSON_SCHEMA, null, 2),
 	);
 	const [uiMonacoText, setUiMonacoText] = useState("{}");
+	const [draftPast, setDraftPast] = useState<DraftHistorySnapshot[]>([]);
+	const [draftFuture, setDraftFuture] = useState<DraftHistorySnapshot[]>([]);
 
 	const [mainTab, setMainTab] = useState<SchemaEditorMainTab>(
 		layoutMode === "logic-only" ? "logic" : "designer",
@@ -254,6 +266,57 @@ export const V2TemplateSchemaEditor = ({
 			setSelectedPointer(normalizeJsonPointer(initialPointer));
 		}
 	}, [initialPointer]);
+
+	const pushDraftHistory = useCallback(() => {
+		const snapshot: DraftHistorySnapshot = {
+			jsonSchema: structuredClone(jsonSchema),
+			uiSchema: structuredClone(uiSchema),
+			selectedPointer,
+		};
+		setDraftPast((prev) => [...prev, snapshot].slice(-DRAFT_HISTORY_LIMIT));
+		setDraftFuture([]);
+	}, [jsonSchema, uiSchema, selectedPointer]);
+
+	const applyDraftSnapshot = useCallback((snapshot: DraftHistorySnapshot) => {
+		setJsonSchema(snapshot.jsonSchema);
+		setUiSchema(snapshot.uiSchema);
+		setSelectedPointer(snapshot.selectedPointer);
+		setSchemaMonacoText(JSON.stringify(snapshot.jsonSchema, null, 2));
+		setUiMonacoText(JSON.stringify(snapshot.uiSchema, null, 2));
+		setMonacoError(null);
+	}, []);
+
+	const undoDraft = useCallback(() => {
+		setDraftPast((past) => {
+			const previous = past[past.length - 1];
+			if (!previous) return past;
+
+			const current: DraftHistorySnapshot = {
+				jsonSchema: structuredClone(jsonSchema),
+				uiSchema: structuredClone(uiSchema),
+				selectedPointer,
+			};
+			setDraftFuture((future) => [current, ...future].slice(0, DRAFT_HISTORY_LIMIT));
+			applyDraftSnapshot(previous);
+			return past.slice(0, -1);
+		});
+	}, [applyDraftSnapshot, jsonSchema, uiSchema, selectedPointer]);
+
+	const redoDraft = useCallback(() => {
+		setDraftFuture((future) => {
+			const next = future[0];
+			if (!next) return future;
+
+			const current: DraftHistorySnapshot = {
+				jsonSchema: structuredClone(jsonSchema),
+				uiSchema: structuredClone(uiSchema),
+				selectedPointer,
+			};
+			setDraftPast((past) => [...past, current].slice(-DRAFT_HISTORY_LIMIT));
+			applyDraftSnapshot(next);
+			return future.slice(1);
+		});
+	}, [applyDraftSnapshot, jsonSchema, uiSchema, selectedPointer]);
 
 	useEffect(() => {
 		if (!isAdminEditor || !templateLoadError || !templateError) return;
@@ -308,6 +371,8 @@ export const V2TemplateSchemaEditor = ({
 
 		setSchemaMonacoText(JSON.stringify(nextSchema, null, 2));
 		setUiMonacoText(JSON.stringify(nextUi, null, 2));
+		setDraftPast([]);
+		setDraftFuture([]);
 
 		setFormData({});
 	}, [activeVersion?.id]);
@@ -872,11 +937,12 @@ export const V2TemplateSchemaEditor = ({
 			const key = `field_${nanoid(8)}`;
 			const next = addRootProperty(jsonSchema, key, preset);
 			if (next) {
+				pushDraftHistory();
 				setJsonSchema(next);
 				setSelectedPointer(`/${key}`);
 			}
 		},
-		[jsonSchema],
+		[jsonSchema, pushDraftHistory],
 	);
 
 	const handleAddFieldPresetAtParent = useCallback(
@@ -897,15 +963,17 @@ export const V2TemplateSchemaEditor = ({
 				index,
 			);
 			if (next) {
+				pushDraftHistory();
 				setJsonSchema(next);
 				const childPointer =
 					parentPointer === "/" ? `/${key}` : `${parentPointer}/${key}`;
 				setSelectedPointer(childPointer);
 				setUiSchema((prev) => {
-					let nextUi = appendKeyToUiOrderAtPointer(
+					let nextUi = insertKeyToUiOrderAtPointer(
 						prev as Record<string, unknown>,
 						parentPointer,
 						key,
+						index,
 					);
 					if (uiOptions && Object.keys(uiOptions).length > 0) {
 						nextUi = patchUiOptionsAtPointer(
@@ -925,7 +993,7 @@ export const V2TemplateSchemaEditor = ({
 				});
 			}
 		},
-		[jsonSchema],
+		[jsonSchema, pushDraftHistory],
 	);
 
 	const handleAddFieldPresetAt = useCallback(
@@ -965,6 +1033,43 @@ export const V2TemplateSchemaEditor = ({
 			);
 		},
 		[jsonSchema, uiSchema],
+	);
+
+	const moveCanvasField = useCallback(
+		(
+			sourcePointer: string,
+			targetParentPointer: string,
+			targetIndex: number,
+		) => {
+			const nextSchema = movePropertyAtPointer(
+				jsonSchema,
+				sourcePointer,
+				targetParentPointer,
+				targetIndex,
+			);
+			if (!nextSchema) return;
+
+			pushDraftHistory();
+			setJsonSchema(nextSchema);
+			setUiSchema(
+				moveUiSchemaBranchAtPointer(
+					uiSchema as Record<string, unknown>,
+					sourcePointer,
+					targetParentPointer,
+					targetIndex,
+				) as UiSchema,
+			);
+
+			const key = pointerSegments(sourcePointer).at(-1);
+			const nextPointer =
+				key == null
+					? null
+					: targetParentPointer === "/"
+						? `/${key}`
+						: `${targetParentPointer.replace(/\/$/, "")}/${key}`;
+			setSelectedPointer(nextPointer);
+		},
+		[jsonSchema, uiSchema, pushDraftHistory],
 	);
 
 	const updateField = useCallback(
@@ -1250,6 +1355,11 @@ export const V2TemplateSchemaEditor = ({
 			handleAddFieldPresetAtParent,
 			reorderRootFieldKeys,
 			applyGroupFieldOrders,
+			moveCanvasField,
+			canUndoDraft: draftPast.length > 0,
+			canRedoDraft: draftFuture.length > 0,
+			undoDraft,
+			redoDraft,
 			updateField,
 			handleDeleteField,
 			handleToggleRequired,
@@ -1316,6 +1426,11 @@ export const V2TemplateSchemaEditor = ({
 			handleAddFieldPresetAtParent,
 			reorderRootFieldKeys,
 			applyGroupFieldOrders,
+			moveCanvasField,
+			draftPast.length,
+			draftFuture.length,
+			undoDraft,
+			redoDraft,
 			updateField,
 			handleDeleteField,
 			handleToggleRequired,

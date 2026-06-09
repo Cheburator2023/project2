@@ -6,7 +6,10 @@ import {
 	buildOrdersForFieldMove,
 	buildFieldTypeTransitionPatch,
 	buildDictionaryMultiSchemaPatch,
+	insertKeyToUiOrderAtPointer,
 	insertChildPropertyAt,
+	movePropertyAtPointer,
+	moveUiSchemaBranchAtPointer,
 	setUiDictionaryCodeAtPointer,
 	syncDictionaryFieldUiAtPointer,
 	isObjectFieldGroup,
@@ -263,7 +266,130 @@ describe("applyGroupFieldOrdersToUiSchema", () => {
 	});
 });
 
+describe("pointer-based canvas move", () => {
+	it("moves only the exact pointer when duplicate field keys exist", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				left: {
+					type: "object",
+					properties: {
+						name: { type: "object", title: "Left object", properties: {} },
+					},
+				},
+				right: {
+					type: "object",
+					properties: {
+						name: { type: "string", title: "Right string" },
+					},
+				},
+			},
+		};
+
+		const next = movePropertyAtPointer(
+			schema,
+			"/right/name",
+			"/",
+			2,
+		);
+
+		const left = next?.properties?.left as RJSFSchema;
+		const leftName = left.properties?.name as RJSFSchema;
+		expect(leftName.type).toBe("object");
+		expect(leftName.title).toBe("Left object");
+		expect((next?.properties?.right as RJSFSchema).properties?.name).toBeUndefined();
+		expect((next?.properties?.name as RJSFSchema).title).toBe("Right string");
+	});
+
+	it("moves ui branch by exact pointer and updates target order", () => {
+		const ui: UiSchema = {
+			left: {
+				"ui:order": ["name"],
+				name: { "ui:title": "left" },
+			},
+			right: {
+				"ui:order": ["name"],
+				name: { "ui:title": "right" },
+			},
+		};
+
+		const next = moveUiSchemaBranchAtPointer(
+			ui as Record<string, unknown>,
+			"/right/name",
+			"/",
+			2,
+		) as UiSchema;
+
+		expect((next.left as Record<string, unknown>).name).toMatchObject({
+			"ui:title": "left",
+		});
+		expect((next.right as Record<string, unknown>).name).toBeUndefined();
+		expect(next.name).toMatchObject({
+			"ui:title": "right",
+		});
+	});
+});
+
+describe("insertKeyToUiOrderAtPointer", () => {
+	it("inserts new key into ui:order at requested index", () => {
+		const ui: UiSchema = {
+			group1: {
+				"ui:order": ["a", "b", "c"],
+			},
+		};
+
+		const next = insertKeyToUiOrderAtPointer(
+			ui as Record<string, unknown>,
+			"/group1",
+			"x",
+			1,
+		) as UiSchema;
+
+		expect((next.group1 as Record<string, unknown>)["ui:order"]).toEqual([
+			"a",
+			"x",
+			"b",
+			"c",
+		]);
+	});
+});
+
 describe("buildOrdersForFieldMove", () => {
+	it("moves root field into group at placeholder index", () => {
+		const initial = {
+			"schema-root": ["group1", "x"],
+			"schema-group:/group1": ["a", "b", "c"],
+		};
+
+		const final = buildOrdersForFieldMove(
+			initial,
+			"x",
+			"schema-root",
+			"schema-group:/group1",
+			1,
+		);
+
+		expect(final["schema-root"]).toEqual(["group1"]);
+		expect(final["schema-group:/group1"]).toEqual(["a", "x", "b", "c"]);
+	});
+
+	it("reorders within the same group using placeholder index", () => {
+		const initial = {
+			"schema-root": ["group1"],
+			"schema-group:/group1": ["a", "b", "c"],
+		};
+
+		const final = buildOrdersForFieldMove(
+			initial,
+			"c",
+			"schema-group:/group1",
+			"schema-group:/group1",
+			1,
+		);
+
+		expect(final["schema-group:/group1"]).toEqual(["a", "c", "b"]);
+	});
+
 	it("remaps nested group order keys when moving a layout group into another group", () => {
 		const initial = {
 			"schema-root": ["layout1", "group1"],
