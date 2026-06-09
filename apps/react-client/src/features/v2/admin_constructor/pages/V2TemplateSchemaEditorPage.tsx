@@ -142,8 +142,8 @@ export const V2TemplateSchemaEditorPage = () => {
 							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnPreview}
 							onClick={() => {
 								const path = isAdminContext
-									? pathForAdminV2TemplateRead(templateId)
-									: pathForPlaygroundV2TemplateRead(templateId);
+									? pathForAdminV2TemplateRead(templateId, versionId)
+									: pathForPlaygroundV2TemplateRead(templateId, versionId);
 								window.open(
 									`${window.location.origin}${path}`,
 									"_blank",

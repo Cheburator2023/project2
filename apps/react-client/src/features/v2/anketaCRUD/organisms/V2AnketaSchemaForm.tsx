@@ -15,7 +15,10 @@ import { withHiddenArchModalFields } from "../utils/anketaArchModalUiSchema";
 import { resolveAnketaFormModalBindingSets } from "../utils/anketaFormModalPaths";
 import { applySectionLocksToUiSchema } from "../utils/anketaSectionUiSchema";
 import { readWorkflowFromFormData, touchSectionInFormData } from "../hooks/useAnketaWorkflow";
-import type { V2AnketaMainSectionId } from "@smart-anketa/api-contract";
+import {
+	isV2AnketaHiddenUiNode,
+	type V2AnketaMainSectionId,
+} from "@smart-anketa/api-contract";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 
@@ -221,6 +224,14 @@ export function V2AnketaSchemaForm({
 		workflow,
 	]);
 
+	const visibleRootFieldCount = useMemo(() => {
+		const props = engine.previewSchema.properties ?? {};
+		return Object.keys(props).filter((key) => {
+			if (effectiveHiddenRootKeys.includes(key)) return false;
+			return !isV2AnketaHiddenUiNode(formUiSchema[key]);
+		}).length;
+	}, [engine.previewSchema.properties, effectiveHiddenRootKeys, formUiSchema]);
+
 	if (!usesExternalEngine && !source?.templateId) {
 		return (
 			<FormNotice testId={`${dataTestId}--no-source`}>
@@ -252,6 +263,13 @@ export function V2AnketaSchemaForm({
 				<FormNotice color="warning.main">
 					Логическая валидация: {engine.logicValidationIssueCount}{" "}
 					{engine.logicValidationIssueCount === 1 ? "замечание" : "замечаний"}
+				</FormNotice>
+			) : null}
+
+			{visibleRootFieldCount === 0 ? (
+				<FormNotice testId={`${dataTestId}--empty-schema`}>
+					В схеме нет полей для отображения. Добавьте секции в редакторе или
+					создайте схему из заводского эталона.
 				</FormNotice>
 			) : null}
 

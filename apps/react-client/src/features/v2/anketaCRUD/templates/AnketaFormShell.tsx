@@ -1,4 +1,5 @@
 import SaveIcon from "@mui/icons-material/Save";
+import Alert from "@mui/material/Alert";
 import {
 	Box,
 	Button,
@@ -224,8 +225,7 @@ export function AnketaFormShell({
 	);
 
 	const isPageLoading =
-		!errorMessage &&
-		(externalLoading || engine.versionLoading || engine.dictionaryEnumsLoading);
+		!errorMessage && (externalLoading || engine.versionLoading);
 
 	useSchemaBindingToast(
 		schemaBinding,
@@ -245,12 +245,19 @@ export function AnketaFormShell({
 							{errorMessage}
 						</Typography>
 					) : (
-						<V2AnketaFormWithModals
-							engine={engine}
-							readOnly={effectiveReadOnly}
-							anketaFormContext={anketaFormContext}
-							showUncertaintySlot
-						/>
+						<>
+							{engine.dictionaryEnumsLoading ? (
+								<Alert severity="info" sx={{ mb: 2 }}>
+									Загрузка справочников…
+								</Alert>
+							) : null}
+							<V2AnketaFormWithModals
+								engine={engine}
+								readOnly={effectiveReadOnly}
+								anketaFormContext={anketaFormContext}
+								showUncertaintySlot
+							/>
+						</>
 					)
 				}
 				sidebar={

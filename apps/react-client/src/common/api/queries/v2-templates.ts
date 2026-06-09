@@ -771,7 +771,7 @@ export const useV2DictionaryEnumsMaps = (dictionaryCodes: string[]) => {
 		}
 	}
 
-	const isLoading = queries.some((q) => q.isPending || q.isFetching);
+	const isLoading = queries.some((q) => q.isPending);
 
 	return { enumMapByCode, isLoading, uniqueSorted };
 };
