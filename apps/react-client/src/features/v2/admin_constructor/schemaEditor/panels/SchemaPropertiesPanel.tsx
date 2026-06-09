@@ -9,8 +9,10 @@ import FormControlLabel from "@mui/material/FormControlLabel";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import type { V2DictionaryDto } from "@smart-anketa/api-contract";
 import type { FieldTypePreset } from "../constants";
 import {
 	FIELD_PRESETS,
@@ -26,6 +28,7 @@ import {
 	buildDictionaryMultiSchemaPatch,
 	patchUiOptionsAtPointer,
 	setUiHiddenAtPointer,
+	syncDictionaryFieldUiAtPointer,
 } from "../../utils/schemaMutators";
 import {
 	isV2AnketaHiddenUiNode,
@@ -615,25 +618,24 @@ export function SchemaPropertiesPanel() {
 
 					{canBindDictionary ? (
 						<>
-							<TextField
-								select
-								fullWidth
-								size="small"
+							<FuzzyAutocomplete<V2DictionaryDto>
+								options={v2Dictionaries}
+								value={
+									v2Dictionaries.find(
+										(d) => d.code === currentDictionaryCode,
+									) ?? null
+								}
+								onChange={(d) =>
+									handleDictionaryCodeChange(d?.code ?? "")
+								}
+								getOptionLabel={(d) => `${d.code} — ${d.name}`}
+								getOptionValue={(d) => d.code}
 								label="Справочник"
-								value={currentDictionaryCode}
-								onChange={(e) => handleDictionaryCodeChange(e.target.value)}
+								placeholder="Не привязан"
 								error={dictionaryBindingMissing}
+								noMatchesText="Совпадений нет"
 								helperText="В форме поле отображается как выпадающий список значений справочника"
-							>
-								<MenuItem value="">
-									<em>Не привязан</em>
-								</MenuItem>
-								{v2Dictionaries.map((d) => (
-									<MenuItem key={d.id} value={d.code}>
-										{d.code} — {d.name}
-									</MenuItem>
-								))}
-							</TextField>
+							/>
 							{currentDictionaryCode ? (
 								<FormControlLabel
 									sx={{ mt: 0.5, display: "block" }}
@@ -642,9 +644,15 @@ export function SchemaPropertiesPanel() {
 											checked={dictionaryMultiple}
 											onChange={(e) => {
 												const checked = e.target.checked;
-												patchSectionUi({
-													multiple: checked || undefined,
-												});
+												if (!selectedPointer) return;
+												setUiSchema(
+													(prev) =>
+														syncDictionaryFieldUiAtPointer(
+															prev as Record<string, unknown>,
+															selectedPointer,
+															{ multiple: checked },
+														) as UiSchema,
+												);
 												updateField(
 													buildDictionaryMultiSchemaPatch(checked),
 												);

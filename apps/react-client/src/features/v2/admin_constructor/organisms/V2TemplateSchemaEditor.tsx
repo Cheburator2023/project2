@@ -47,6 +47,7 @@ import { mapCalculationResult } from "../utils/mapCalculationResult";
 import {
 	collectDictionaryCodesFromUiSchema,
 	mergeDictionaryEnumsIntoPreviewSchema,
+	mergeDictionaryOptionsIntoPreviewUiSchema,
 } from "../utils/dictionaryPreview";
 import {
 	EMPTY_JSON_SCHEMA,
@@ -376,11 +377,26 @@ export const V2TemplateSchemaEditor = ({
 				logicPreviewPack.previewSchema,
 				uiSchema,
 				enumMapByCode,
+				jsonSchema,
 			),
-		[logicPreviewPack.previewSchema, uiSchema, enumMapByCode],
+		[logicPreviewPack.previewSchema, uiSchema, enumMapByCode, jsonSchema],
 	);
 
-	const previewUiSchema = logicPreviewPack.previewUiSchema;
+	const previewUiSchema = useMemo(
+		() =>
+			mergeDictionaryOptionsIntoPreviewUiSchema(
+				logicPreviewPack.previewUiSchema,
+				uiSchema,
+				jsonSchema,
+				enumMapByCode,
+			),
+		[
+			logicPreviewPack.previewUiSchema,
+			uiSchema,
+			jsonSchema,
+			enumMapByCode,
+		],
+	);
 	const calculationItems = logicPreviewPack.calculationItems;
 	const taskTriggerItems = logicPreviewPack.taskTriggerItems;
 	const liveFormData = logicPreviewPack.liveFormData;

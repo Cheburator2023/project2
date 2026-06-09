@@ -1,4 +1,5 @@
 import type { V2JsonSchemaDto } from "@smart-anketa/api-contract";
+import { V2_ORGANIZATIONAL_DICTIONARIES } from "./v2-default-organizational-dictionaries";
 import { V2_METHODOLOGY_DICTIONARIES } from "./v2-methodology-dictionaries";
 import type { V2DefaultDictionaryDef } from "../utils/v2-schema-dictionary.util";
 import {
@@ -30,7 +31,11 @@ export function filterSchemaDefaultDictionaries(
 export function buildAllDefaultDictionaries(
 	schemaDicts: V2DefaultDictionaryDef[],
 ): V2DefaultDictionaryDef[] {
-	return [...filterSchemaDefaultDictionaries(schemaDicts), ...V2_METHODOLOGY_DICTIONARIES];
+	return [
+		...filterSchemaDefaultDictionaries(schemaDicts),
+		...V2_ORGANIZATIONAL_DICTIONARIES,
+		...V2_METHODOLOGY_DICTIONARIES,
+	];
 }
 
 export function findDefaultDictionaryDef(

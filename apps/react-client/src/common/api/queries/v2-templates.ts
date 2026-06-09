@@ -31,31 +31,8 @@ import type {
 } from "@smart-anketa/api-contract";
 import { useMemo } from "react";
 
+import { parseDictionaryJsonToEnumPair } from "@react-client/features/v2/admin_constructor/utils/dictionaryPreview";
 import { apiClient } from "../helpers/apiClient";
-
-/** Разбор тела `/v2/dictionaries/json/:code` для enum в превью конструктора. */
-function parseDictionaryJsonResponse(data: unknown): {
-	enums: string[];
-	enumNames: string[];
-} | null {
-	if (!data || typeof data !== "object") return null;
-	const raw = data as Record<string, unknown>;
-	const items = raw.items;
-	if (!Array.isArray(items)) return null;
-	const enums: string[] = [];
-	const enumNames: string[] = [];
-	for (const it of items) {
-		if (!it || typeof it !== "object") continue;
-		const row = it as Record<string, unknown>;
-		const code = row.code;
-		if (typeof code !== "string" || !code.trim()) continue;
-		enums.push(code);
-		const label = row.label;
-		enumNames.push(typeof label === "string" && label.trim() ? label : code);
-	}
-	if (!enums.length) return null;
-	return { enums, enumNames };
-}
 
 // Templates
 export const useV2Templates = () => {
@@ -766,7 +743,7 @@ export const useV2DictionaryEnumsMaps = (dictionaryCodes: string[]) => {
 		const code = uniqueSorted[i]!;
 		const row = queries[i];
 		if (row?.data) {
-			const parsed = parseDictionaryJsonResponse(row.data);
+			const parsed = parseDictionaryJsonToEnumPair(row.data);
 			if (parsed) enumMapByCode[code] = parsed;
 		}
 	}

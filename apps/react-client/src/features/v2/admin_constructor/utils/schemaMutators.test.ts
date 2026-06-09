@@ -5,7 +5,10 @@ import {
 	applyGroupFieldOrdersToUiSchema,
 	buildOrdersForFieldMove,
 	buildFieldTypeTransitionPatch,
+	buildDictionaryMultiSchemaPatch,
 	insertChildPropertyAt,
+	setUiDictionaryCodeAtPointer,
+	syncDictionaryFieldUiAtPointer,
 	isObjectFieldGroup,
 	listOrderedChildKeys,
 	listSchemaFields,
@@ -283,6 +286,65 @@ describe("buildOrdersForFieldMove", () => {
 			"child1",
 			"child2",
 		]);
+	});
+});
+
+describe("dictionary field ui sync", () => {
+	it("replaces text widget with select when binding dictionary", () => {
+		const ui: UiSchema = {
+			generalInfo: {
+				businessCustomer: {
+					"ui:widget": "text",
+				},
+			},
+		};
+
+		const next = setUiDictionaryCodeAtPointer(
+			ui as Record<string, unknown>,
+			"/generalInfo/businessCustomer",
+			"v2.generalInfo.businessCustomer",
+		);
+
+		const leaf = (next.generalInfo as Record<string, unknown>)
+			.businessCustomer as Record<string, unknown>;
+		expect(leaf["ui:widget"]).toBe("select");
+		expect(
+			(leaf["ui:options"] as Record<string, unknown>).dictionaryCode,
+		).toBe("v2.generalInfo.businessCustomer");
+	});
+
+	it("keeps select widget when enabling dictionary multiple", () => {
+		const ui: UiSchema = {
+			generalInfo: {
+				businessCustomer: {
+					"ui:widget": "text",
+					"ui:options": {
+						dictionaryCode: "v2.generalInfo.businessCustomer",
+					},
+				},
+			},
+		};
+
+		const next = syncDictionaryFieldUiAtPointer(
+			ui as Record<string, unknown>,
+			"/generalInfo/businessCustomer",
+			{ multiple: true },
+		);
+
+		const leaf = (next.generalInfo as Record<string, unknown>)
+			.businessCustomer as Record<string, unknown>;
+		expect(leaf["ui:widget"]).toBe("select");
+		expect((leaf["ui:options"] as Record<string, unknown>).multiple).toBe(true);
+	});
+
+	it("switches schema type for dictionary multiple toggle", () => {
+		expect(buildDictionaryMultiSchemaPatch(true)).toEqual({
+			type: "array",
+			items: { type: "string" },
+			uniqueItems: true,
+			enum: undefined,
+			enumNames: undefined,
+		});
 	});
 });
 

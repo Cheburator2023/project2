@@ -1011,9 +1011,7 @@ export function setUiDictionaryCodeAtPointer(
 			if (code) {
 				optBase.dictionaryCode = code;
 				merged["ui:options"] = optBase;
-				if (merged["ui:widget"] === undefined || merged["ui:widget"] === "") {
-					merged["ui:widget"] = "select";
-				}
+				merged["ui:widget"] = "select";
 			} else {
 				delete optBase.dictionaryCode;
 				delete optBase.multiple;
@@ -1043,6 +1041,44 @@ export function setUiDictionaryCodeAtPointer(
 	}
 
 	return next;
+}
+
+/** Синхронизирует ui:widget при привязке справочника и переключении multiple. */
+export function syncDictionaryFieldUiAtPointer(
+	ui: Record<string, unknown>,
+	fieldPointer: string,
+	patch: { dictionaryCode?: string | null; multiple?: boolean },
+): Record<string, unknown> {
+	const segs = pointerSegments(fieldPointer);
+	if (segs.length === 0) return ui;
+
+	let withOptions = ui;
+	if (patch.dictionaryCode !== undefined || patch.multiple !== undefined) {
+		const optionsPatch: Record<string, unknown> = {};
+		if (patch.dictionaryCode !== undefined) {
+			const code = patch.dictionaryCode?.trim() ?? "";
+			if (code) optionsPatch.dictionaryCode = code;
+			else optionsPatch.dictionaryCode = undefined;
+		}
+		if (patch.multiple !== undefined) {
+			optionsPatch.multiple = patch.multiple ? true : undefined;
+		}
+		withOptions = patchUiOptionsAtPointer(ui, fieldPointer, optionsPatch);
+	}
+
+	const leaf = readUiSchemaBranchAtPointer(withOptions, fieldPointer);
+	const opt =
+		leaf?.["ui:options"] &&
+		typeof leaf["ui:options"] === "object" &&
+		!Array.isArray(leaf["ui:options"])
+			? (leaf["ui:options"] as Record<string, unknown>)
+			: undefined;
+	const dictionaryCode =
+		typeof opt?.dictionaryCode === "string" ? opt.dictionaryCode.trim() : "";
+
+	return dictionaryCode
+		? setUiWidgetAtPointer(withOptions, fieldPointer, "select")
+		: withOptions;
 }
 
 /** Переключение справочника между одиночным (string) и множественным (array of string). */

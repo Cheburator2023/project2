@@ -86,8 +86,12 @@
 						"title": "Название анкеты"
 					},
 					"businessCustomer": {
-						"type": "string",
-						"title": "Департамент заказчика"
+						"type": "array",
+						"title": "Департамент заказчика",
+						"items": {
+							"type": "string"
+						},
+						"uniqueItems": true
 					},
 					"implementationStream": {
 						"type": "string",
@@ -1123,12 +1127,19 @@
 				}
 			},
 			"businessCustomer": {
-				"ui:widget": "text",
-				"ui:placeholder": "Бизнес-заказчик"
+				"ui:widget": "select",
+				"ui:placeholder": "Департамент заказчика",
+				"ui:options": {
+					"dictionaryCode": "v2.generalInfo.businessCustomer",
+					"multiple": true
+				}
 			},
 			"implementationStream": {
-				"ui:widget": "text",
-				"ui:placeholder": "Стрим/исполнитель"
+				"ui:widget": "select",
+				"ui:placeholder": "Стрим/исполнитель",
+				"ui:options": {
+					"dictionaryCode": "v2.generalInfo.implementationStream"
+				}
 			},
 			"complexity": {
 				"ui:widget": "select",

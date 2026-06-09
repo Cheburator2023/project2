@@ -1,12 +1,12 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 
+import { resolveSchemaNodeType } from "../schemaEditor/propertiesFieldKind";
+import { pointerSegments } from "./schemaPaths";
 import {
-	listSchemaFields,
+	patchUiOptionsAtPointer,
 	resolveSchemaNode,
 	updatePropertyAtPointer,
 } from "./schemaMutators";
-import { resolveSchemaNodeType } from "../schemaEditor/propertiesFieldKind";
-import { pointerSegments } from "./schemaPaths";
 
 /** Ответ `/v2/dictionaries/json/:code` — извлекаем коды под enum в схеме. */
 export function parseDictionaryJsonToEnumPair(data: unknown): {
@@ -31,6 +31,12 @@ export function parseDictionaryJsonToEnumPair(data: unknown): {
 	if (!enums.length) return null;
 	return { enums, enumNames };
 }
+
+export type DictionaryFieldBinding = {
+	pointer: string;
+	dictionaryCode: string;
+	multiple: boolean;
+};
 
 function walkUiForDictionaryCodes(node: unknown, out: Set<string>): void {
 	if (!node || typeof node !== "object" || Array.isArray(node)) return;
@@ -65,19 +71,55 @@ export function collectDictionaryCodesFromUiSchema(ui: unknown): string[] {
 	return [...out].sort();
 }
 
-function readUiBranch(
-	uiSchema: Record<string, unknown>,
-	segments: string[],
-): Record<string, unknown> | undefined {
-	let cur: unknown = uiSchema;
-	for (const s of segments) {
-		if (!cur || typeof cur !== "object" || Array.isArray(cur)) {
-			return undefined;
+/** Все поля uiSchema с привязкой `dictionaryCode` и признаком multiple. */
+export function collectDictionaryFieldBindings(
+	uiSchema: UiSchema,
+	schemaForBindings: RJSFSchema,
+): DictionaryFieldBinding[] {
+	const bindings: DictionaryFieldBinding[] = [];
+
+	const walk = (node: unknown, segments: string[]) => {
+		if (!node || typeof node !== "object" || Array.isArray(node)) return;
+		const rec = node as Record<string, unknown>;
+
+		const opts = rec["ui:options"];
+		let dictionaryCode: string | null = null;
+		let explicitMultiple = false;
+		if (opts && typeof opts === "object" && !Array.isArray(opts)) {
+			const opt = opts as Record<string, unknown>;
+			const rawCode = opt.dictionaryCode;
+			if (typeof rawCode === "string" && rawCode.trim()) {
+				dictionaryCode = rawCode.trim();
+			}
+			explicitMultiple = opt.multiple === true;
 		}
-		cur = (cur as Record<string, unknown>)[s];
-	}
-	if (!cur || typeof cur !== "object" || Array.isArray(cur)) return undefined;
-	return cur as Record<string, unknown>;
+
+		if (dictionaryCode && segments.length > 0) {
+			const pointer = `/${segments.join("/")}`;
+			const schemaNode = resolveSchemaNode(schemaForBindings, segments);
+			const nodeType = resolveSchemaNodeType(schemaNode);
+			const itemsType = resolveSchemaNodeType(
+				schemaNode?.items as RJSFSchema | undefined,
+			);
+			const multiple =
+				explicitMultiple ||
+				(nodeType === "array" && itemsType === "string");
+
+			bindings.push({
+				pointer,
+				dictionaryCode,
+				multiple,
+			});
+		}
+
+		for (const [key, value] of Object.entries(rec)) {
+			if (key.startsWith("ui:")) continue;
+			walk(value, [...segments, key]);
+		}
+	};
+
+	walk(uiSchema, []);
+	return bindings;
 }
 
 function isStringLikeFieldForDictionary(field: RJSFSchema): boolean {
@@ -97,44 +139,41 @@ function isStringLikeFieldForDictionary(field: RJSFSchema): boolean {
 	return t === "string" || t === undefined;
 }
 
-/** Дополняет снимок JSON Schema enum-ами активных элементов словарников (по ui). */
+function buildEnumOptionsPair(pair: {
+	enums: string[];
+	enumNames: string[];
+}): Array<{ value: string; label: string }> {
+	return pair.enums.map((value, index) => ({
+		value,
+		label: pair.enumNames[index] ?? value,
+	}));
+}
+
+/** Дополняет JSON Schema enum-ами активных элементов справочников (по ui). */
 export function mergeDictionaryEnumsIntoPreviewSchema(
-	jsonSchema: RJSFSchema,
+	previewSchema: RJSFSchema,
 	uiSchema: UiSchema,
 	enumMapByCode: Record<string, { enums: string[]; enumNames: string[] }>,
+	schemaForBindings: RJSFSchema = previewSchema,
 ): RJSFSchema {
-	const ui = uiSchema as Record<string, unknown>;
-	let draft = structuredClone(jsonSchema) as RJSFSchema;
-	const rows = listSchemaFields(jsonSchema);
+	let draft = structuredClone(previewSchema) as RJSFSchema;
 
-	for (const row of rows) {
-		const segs = pointerSegments(row.pointer);
+	for (const binding of collectDictionaryFieldBindings(
+		uiSchema,
+		schemaForBindings,
+	)) {
+		const segs = pointerSegments(binding.pointer);
 		const node = resolveSchemaNode(draft, segs);
 		if (!node) continue;
 
-		const leafUi = readUiBranch(ui, segs);
-		const opt =
-			leafUi?.["ui:options"] &&
-			typeof leafUi["ui:options"] === "object" &&
-			!Array.isArray(leafUi["ui:options"])
-				? (leafUi["ui:options"] as Record<string, unknown>)
-				: undefined;
-
-		const multi = opt?.multiple === true;
-		const isTarget = multi
+		const isTarget = binding.multiple
 			? resolveSchemaNodeType(node) === "array" &&
-				resolveSchemaNodeType(node.items as RJSFSchema | undefined) === "string"
+				resolveSchemaNodeType(node.items as RJSFSchema | undefined) ===
+					"string"
 			: isStringLikeFieldForDictionary(node);
 		if (!isTarget) continue;
 
-		let code: string | null = null;
-		if (opt) {
-			const raw = opt.dictionaryCode;
-			code = typeof raw === "string" && raw.trim() ? raw.trim() : null;
-		}
-		if (!code) continue;
-
-		const pair = enumMapByCode[code];
+		const pair = enumMapByCode[binding.dictionaryCode];
 		if (!pair?.enums.length) continue;
 
 		const dictionaryItemsSchema: RJSFSchema = {
@@ -142,7 +181,7 @@ export function mergeDictionaryEnumsIntoPreviewSchema(
 			enum: pair.enums,
 			enumNames: pair.enumNames,
 		};
-		const patched = multi
+		const patched = binding.multiple
 			? updatePropertyAtPointer(draft, segs, {
 					items: dictionaryItemsSchema,
 					uniqueItems: true,
@@ -152,6 +191,35 @@ export function mergeDictionaryEnumsIntoPreviewSchema(
 					enumNames: pair.enumNames,
 				});
 		if (patched) draft = patched;
+	}
+
+	return draft;
+}
+
+/** Прокидывает `ui:options.enumOptions` и `multiple` в превью uiSchema для select-виджета. */
+export function mergeDictionaryOptionsIntoPreviewUiSchema(
+	previewUiSchema: UiSchema,
+	sourceUiSchema: UiSchema,
+	schemaForBindings: RJSFSchema,
+	enumMapByCode: Record<string, { enums: string[]; enumNames: string[] }>,
+): UiSchema {
+	let draft = structuredClone(previewUiSchema) as UiSchema;
+
+	for (const binding of collectDictionaryFieldBindings(
+		sourceUiSchema,
+		schemaForBindings,
+	)) {
+		const pair = enumMapByCode[binding.dictionaryCode];
+		if (!pair?.enums.length) continue;
+
+		draft = patchUiOptionsAtPointer(
+			draft as Record<string, unknown>,
+			binding.pointer,
+			{
+				enumOptions: buildEnumOptionsPair(pair),
+				multiple: binding.multiple ? true : undefined,
+			},
+		) as UiSchema;
 	}
 
 	return draft;

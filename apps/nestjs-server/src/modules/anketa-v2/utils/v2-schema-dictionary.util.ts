@@ -149,7 +149,7 @@ function setUiDictionaryCodeBranch(
 			cur[s] = {
 				...prev,
 				"ui:options": optBase,
-				"ui:widget": prev["ui:widget"] ?? "select",
+				"ui:widget": "select",
 			};
 		} else {
 			cur[s] = (cur[s] as Record<string, unknown>) ?? {};

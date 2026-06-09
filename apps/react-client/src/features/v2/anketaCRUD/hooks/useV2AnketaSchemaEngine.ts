@@ -13,6 +13,7 @@ import {
 import {
 	collectDictionaryCodesFromUiSchema,
 	mergeDictionaryEnumsIntoPreviewSchema,
+	mergeDictionaryOptionsIntoPreviewUiSchema,
 } from "@react-client/features/v2/admin_constructor/utils/dictionaryPreview";
 import { derivePreviewSchemas } from "@react-client/features/v2/admin_constructor/utils/logicPreview";
 import { mapCalculationResult } from "@react-client/features/v2/admin_constructor/utils/mapCalculationResult";
@@ -132,11 +133,26 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 				logicPreviewPack.previewSchema,
 				uiSchema,
 				enumMapByCode,
+				jsonSchema,
 			),
-		[logicPreviewPack.previewSchema, uiSchema, enumMapByCode],
+		[logicPreviewPack.previewSchema, uiSchema, enumMapByCode, jsonSchema],
 	);
 
-	const previewUiSchema = logicPreviewPack.previewUiSchema;
+	const previewUiSchema = useMemo(
+		() =>
+			mergeDictionaryOptionsIntoPreviewUiSchema(
+				logicPreviewPack.previewUiSchema,
+				uiSchema,
+				jsonSchema,
+				enumMapByCode,
+			),
+		[
+			logicPreviewPack.previewUiSchema,
+			uiSchema,
+			jsonSchema,
+			enumMapByCode,
+		],
+	);
 
 	const displayFormData = useMemo(
 		() =>

@@ -4,7 +4,10 @@ import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import GridViewIcon from "@mui/icons-material/GridView";
+import UnfoldLessIcon from "@mui/icons-material/UnfoldLess";
+import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
@@ -13,6 +16,7 @@ import {
 	Tree,
 	type DropOptions,
 	type NodeModel,
+	type TreeMethods,
 } from "@minoru/react-dnd-treeview";
 import {
 	useCallback,
@@ -622,6 +626,7 @@ export function SchemaCanvasPanel({
 		handleAddFieldPresetAtParent,
 	} = useSchemaEditor();
 	const initialOrdersRef = useRef<Record<string, string[]>>({});
+	const treeRef = useRef<TreeMethods>(null);
 
 	const presetById = useMemo(
 		() =>
@@ -640,6 +645,49 @@ export function SchemaCanvasPanel({
 	const treeData = useMemo(
 		() => buildSchemaCanvasTree(jsonSchema, uiSchema),
 		[jsonSchema, uiSchema],
+	);
+
+	const hasExpandableNodes = useMemo(
+		() =>
+			treeData.some((node) =>
+				treeData.some((child) => child.parent === node.id),
+			),
+		[treeData],
+	);
+
+	const handleExpandAll = useCallback(() => {
+		treeRef.current?.openAll();
+	}, []);
+
+	const handleCollapseAll = useCallback(() => {
+		treeRef.current?.closeAll();
+	}, []);
+
+	const canvasExpandActions = (
+		<Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
+			<Button
+				size="small"
+				variant="outlined"
+				startIcon={<UnfoldMoreIcon fontSize="small" />}
+				disabled={!hasExpandableNodes}
+				onClick={handleExpandAll}
+				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasExpandAll}
+				title="Раскрыть все группы на холсте"
+			>
+				Раскрыть все
+			</Button>
+			<Button
+				size="small"
+				variant="outlined"
+				startIcon={<UnfoldLessIcon fontSize="small" />}
+				disabled={!hasExpandableNodes}
+				onClick={handleCollapseAll}
+				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasCollapseAll}
+				title="Свернуть все группы на холсте"
+			>
+				Свернуть все
+			</Button>
+		</Box>
 	);
 
 	const handleDragStart = useCallback(() => {
@@ -722,15 +770,39 @@ export function SchemaCanvasPanel({
 			dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.canvas}
 			title="Холст полей"
 			description="Корневые поля, группы и поля элементов массива. Перетаскивайте для изменения порядка."
+			actions={embedded ? undefined : canvasExpandActions}
 		>
 			<Box
 				sx={{
+					display: "flex",
+					flexDirection: "column",
 					flex: 1,
 					minHeight: 0,
-					overflow: "auto",
-					px: 0.5,
-					py: 0.5,
 					height: "100%",
+				}}
+			>
+				{embedded ? (
+					<Box
+						sx={{
+							display: "flex",
+							justifyContent: "flex-end",
+							px: 0.5,
+							pt: 0.5,
+							pb: 0.25,
+							flexShrink: 0,
+						}}
+					>
+						{canvasExpandActions}
+					</Box>
+				) : null}
+				<Box
+					sx={{
+						flex: 1,
+						minHeight: 0,
+						overflow: "auto",
+						px: 0.5,
+						py: 0.5,
+						position: "relative",
 					[`& .${CANVAS_TREE_ROOT_CLASS}`]: {
 						listStyle: "none",
 						m: 0,
@@ -753,6 +825,7 @@ export function SchemaCanvasPanel({
 				}}
 			>
 				<Tree<SchemaCanvasNodeData>
+					ref={treeRef}
 					tree={treeData}
 					rootId={SCHEMA_CANVAS_ROOT_ID}
 					extraAcceptTypes={[PALETTE_DRAG_TYPE]}
@@ -826,20 +899,17 @@ export function SchemaCanvasPanel({
 							borderColor: "divider",
 							color: "text.secondary",
 							position: "absolute",
-							top: 0,
-							right: 0,
-							bottom: 0,
+							inset: 0,
 							display: "flex",
 							justifyContent: "center",
 							alignItems: "center",
-							height: "100%",
 							pointerEvents: "none",
-							width: `calc(100% - ${250}px)`,
 						}}
 					>
 						<Typography variant="caption">Перетащите поле сюда</Typography>
 					</Box>
 				) : null}
+				</Box>
 			</Box>
 		</PanelChrome>
 	);
