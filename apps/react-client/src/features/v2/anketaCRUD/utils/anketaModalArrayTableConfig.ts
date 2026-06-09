@@ -1,4 +1,6 @@
+import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { AnketaCompactArrayTablePath } from "./anketaFormModalPaths";
+import { getArrayItemSchemaSliceForModal } from "./anketaSchemaAtPath";
 import { readAnketaFormContext } from "./anketaFormContext";
 
 export type AnketaArrayTableColumn = {
@@ -362,6 +364,45 @@ export function arrayTableShowsRowActions(
 		return ctx.anketaModalArrayPaths.has(path);
 	}
 	return true;
+}
+
+const ARRAY_TABLE_PREVIEW_COLUMN_LIMIT = 5;
+
+/** Колонки компактной таблицы массива из jsonSchema (title полей элемента). */
+export function getArrayTableColumnsFromSchema(
+	rootSchema: RJSFSchema | undefined,
+	rootUi: UiSchema | undefined,
+	path: string,
+): AnketaArrayTableColumn[] | null {
+	if (!rootSchema || !rootUi) return null;
+	const slice = getArrayItemSchemaSliceForModal(rootSchema, rootUi, path);
+	const props = slice?.schema.properties as Record<string, RJSFSchema> | undefined;
+	if (!props) return null;
+	const keys = Object.keys(props);
+	if (keys.length === 0) return null;
+	return keys.slice(0, ARRAY_TABLE_PREVIEW_COLUMN_LIMIT).map((key) => {
+		const field = props[key];
+		const title =
+			typeof field?.title === "string" && field.title.trim()
+				? field.title.trim()
+				: key;
+		return {
+			key,
+			header: title,
+			render: (item) => text(item, key),
+		};
+	});
+}
+
+export function resolveArrayTableColumns(
+	path: string,
+	rootSchema?: RJSFSchema,
+	rootUi?: UiSchema,
+): AnketaArrayTableColumn[] | null {
+	return (
+		getArrayTableColumnsFromSchema(rootSchema, rootUi, path) ??
+		getArrayTableColumns(path)
+	);
 }
 
 export function getArrayTableColumns(

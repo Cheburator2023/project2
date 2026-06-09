@@ -60,6 +60,11 @@ export function AnketaRjsfObjectModal({
 		[uiSchema],
 	);
 
+	const formKey = useMemo(
+		() => JSON.stringify({ schema: formSchema, uiSchema: formUiSchema }),
+		[formSchema, formUiSchema],
+	);
+
 	useEffect(() => {
 		if (!open) return;
 		setFormData(defaultValues ?? {});
@@ -81,6 +86,7 @@ export function AnketaRjsfObjectModal({
 			<DialogContent dividers>
 				<Box sx={{ pt: 0.5 }}>
 					<Form
+						key={formKey}
 						schema={formSchema}
 						uiSchema={formUiSchema}
 						formData={formData}

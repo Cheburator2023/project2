@@ -1,16 +1,4 @@
 import {
-	DataSourceModal,
-	type DataSourceFormValues,
-} from "@react-client/features/playground/v2_playground/organisms/DataSourceModal";
-import {
-	ModelServiceModal,
-	type ModelServiceFormValues,
-} from "@react-client/features/playground/v2_playground/organisms/ModelServiceModal";
-import {
-	NonStandardTaskModal,
-	type NonStandardTaskFormValues,
-} from "@react-client/features/playground/v2_playground/organisms/NonStandardTaskModal";
-import {
 	TotalUncertaintyModal,
 	type TotalUncertaintyFormValues,
 } from "@react-client/features/playground/v2_playground/organisms/TotalUncertaintyModal";
@@ -23,21 +11,18 @@ import {
 } from "react";
 import { getObjectAtPath } from "../utils/anketaArchObjectTableConfig";
 import { getArrayAtPath } from "../utils/anketaModalArrayTableConfig";
-import { modalKindForPath, type AnketaModalKind } from "../utils/anketaFormModalPaths";
+import type { AnketaModalKind } from "../utils/anketaFormModalPaths";
 import type { V2AnketaEditorBindings } from "@smart-anketa/api-contract";
 import {
 	appendAtFormPath,
 	clearObjectAtFormPath,
-	mapArrayItemToModalDefaults,
-	mapModelServiceModalToBlock,
-	mapModalValuesToArrayItem,
 	removeAtFormPath,
 	setObjectAtFormPath,
 	updateAtFormPath,
 } from "../utils/anketaFormModalMappers";
 import {
-	getObjectSchemaSlice,
-	getObjectUiSlice,
+	getArrayItemSchemaSliceForModal,
+	getObjectSchemaSliceForModal,
 } from "../utils/anketaSchemaAtPath";
 import { AnketaRjsfObjectModal } from "./AnketaRjsfObjectModal";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
@@ -48,32 +33,25 @@ const RISK_FIELD_TO_MODAL: Record<string, string> = {
 	defectsInSolution: "solution_defects",
 	adjacentProjectsImpact: "adjacent_projects",
 	laborCostIncrease: "labor_growth",
-	thirdPartyNegligence: "contractor_risk",
+	contractorMisconduct: "contractor_issues",
 	staffShortage: "staff_shortage",
-	sanctions: "sanctions",
-	controlProceduresLack: "lack_of_controls",
-	regulatoryChanges: "regulatory_changes",
-	isNotUsedAfterProject: "post_project_usage",
-	itArchitectureChanges: "target_architecture",
+	sanctionsRisk: "sanctions",
+	controlGaps: "control_gaps",
+	regulatoryChanges: "regulatory",
+	systemUnderutilization: "underutilization",
+	itArchitectureChanges: "architecture",
 };
 
 const RISK_FIELD_FROM_MODAL = Object.fromEntries(
-	Object.entries(RISK_FIELD_TO_MODAL).map(([schemaKey, modalKey]) => [
-		modalKey,
-		schemaKey,
-	]),
-) as Record<string, string>;
-
-const RISK_LEVEL_TO_MODAL: Record<string, string> = {
-	Низкий: "low",
-	Средний: "medium",
-	Высокий: "high",
-};
+	Object.entries(RISK_FIELD_TO_MODAL).map(([schema, modal]) => [modal, schema]),
+);
 
 const RISK_LEVEL_FROM_MODAL: Record<string, string> = {
-	low: "Низкий",
-	medium: "Средний",
-	high: "Высокий",
+	low: "Реализация не чаще 1 раза в 10 лет",
+	medium_low: "Реализация 1 раз в 3-10 лет",
+	medium: "Реализация 1 раз в 1-3 года",
+	medium_high: "Реализация 1 раз в год",
+	high: "Реализация 1 раз в 6 мес. или чаще",
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -83,7 +61,7 @@ function asRecord(value: unknown): Record<string, unknown> {
 }
 
 function toText(value: unknown): string {
-	if (value == null || value === "") return "";
+	if (value == null) return "";
 	return String(value);
 }
 
@@ -100,7 +78,7 @@ export function uncertaintyModalDefaults(
 		risks: Object.fromEntries(
 			Object.entries(RISK_FIELD_TO_MODAL).map(([schemaKey, modalKey]) => [
 				modalKey,
-				RISK_LEVEL_TO_MODAL[toText(riskGroup[schemaKey])] ?? "",
+				toText(riskGroup[schemaKey]),
 			]),
 		),
 	};
@@ -149,13 +127,18 @@ export function AnketaFormModals({
 }: Props) {
 	const [activeModal, setActiveModal] = useState<ActiveModal | null>(null);
 
+	const modalArrayPathSet = useMemo(
+		() => new Set(modalBindings.modalArrayPaths),
+		[modalBindings.modalArrayPaths],
+	);
+
 	const openArrayModal = useCallback(
 		(path: string, editIndex?: number) => {
-			const kind = modalKindForPath(path, modalBindings);
+			const kind = modalBindings.modalKindByPath[path];
 			if (!kind) return;
 			setActiveModal({ kind, path, editIndex });
 		},
-		[modalBindings],
+		[modalBindings.modalKindByPath],
 	);
 
 	const openUncertaintyModal = useCallback(() => {
@@ -195,42 +178,60 @@ export function AnketaFormModals({
 
 	const closeModal = () => setActiveModal(null);
 
-	const arrayModalDefaults = useMemo(() => {
-		if (!activeModal || activeModal.kind === "uncertainty") {
-			return undefined;
-		}
-		if (activeModal.kind === "rjsfObject" || activeModal.kind === "modelServiceBlock") {
-			return mapArrayItemToModalDefaults(
-				activeModal.path,
-				getObjectAtPath(formData, activeModal.path),
-				activeModal.kind,
-			);
-		}
-		if (activeModal.editIndex == null) return undefined;
-		const items = getArrayAtPath(formData, activeModal.path);
-		const item = items[activeModal.editIndex];
-		if (!item) return undefined;
-		return mapArrayItemToModalDefaults(
-			activeModal.path,
-			item,
-			activeModal.kind,
-		);
-	}, [activeModal, formData]);
-
-	const rjsfObjectModalSlice = useMemo(() => {
+	const rjsfModalSlice = useMemo(() => {
 		if (!activeModal || activeModal.kind !== "rjsfObject") return null;
-		const schema = getObjectSchemaSlice(previewSchema, activeModal.path, {
-			omitTitle: true,
-		});
-		if (!schema) return null;
+
+		const isArrayModal = modalArrayPathSet.has(activeModal.path);
+
+		if (isArrayModal) {
+			const slice = getArrayItemSchemaSliceForModal(
+				previewSchema,
+				previewUiSchema,
+				activeModal.path,
+				{ omitTitle: true },
+			);
+			if (!slice) return null;
+			const items = getArrayAtPath(formData, activeModal.path);
+			const values =
+				activeModal.editIndex != null
+					? ((items[activeModal.editIndex] as Record<string, unknown>) ?? {})
+					: {};
+			const parentNode = resolveSchemaNodeTitle(
+				previewSchema,
+				activeModal.path,
+			);
+			return {
+				...slice,
+				values,
+				title:
+					typeof slice.schema.title === "string" && slice.schema.title.trim()
+						? slice.schema.title
+						: parentNode ?? "Элемент",
+				isArrayModal: true,
+			};
+		}
+
+		const slice = getObjectSchemaSliceForModal(
+			previewSchema,
+			previewUiSchema,
+			activeModal.path,
+			{ omitTitle: true },
+		);
+		if (!slice) return null;
+		const parentNode = resolveSchemaNodeTitle(previewSchema, activeModal.path);
 		return {
-			schema,
-			uiSchema: getObjectUiSlice(previewUiSchema, activeModal.path),
+			...slice,
 			values: getObjectAtPath(formData, activeModal.path),
-			title:
-				typeof schema.title === "string" ? schema.title : activeModal.path,
+			title: parentNode ?? activeModal.path,
+			isArrayModal: false,
 		};
-	}, [activeModal, formData, previewSchema, previewUiSchema]);
+	}, [
+		activeModal,
+		formData,
+		modalArrayPathSet,
+		previewSchema,
+		previewUiSchema,
+	]);
 
 	const handleUncertaintySubmit = (values: TotalUncertaintyFormValues) => {
 		onFormDataChange((prev) => {
@@ -275,21 +276,16 @@ export function AnketaFormModals({
 		closeModal();
 	};
 
-	const handleArrayModalSubmit = (
+	const handleRjsfArrayModalSubmit = (
 		path: string,
 		editIndex: number | undefined,
-		values:
-			| DataSourceFormValues
-			| ModelServiceFormValues
-			| NonStandardTaskFormValues,
+		values: Record<string, unknown>,
 	) => {
-		const kind = modalKindForPath(path, modalBindings);
-		const item = mapModalValuesToArrayItem(path, values, kind);
 		onFormDataChange((prev) => {
 			const updated =
 				editIndex == null
-					? appendAtFormPath(prev, path, item)
-					: updateAtFormPath(prev, path, editIndex, item);
+					? appendAtFormPath(prev, path, values)
+					: updateAtFormPath(prev, path, editIndex, values);
 			return touchSectionForPathInFormData(updated, path);
 		});
 		closeModal();
@@ -297,24 +293,11 @@ export function AnketaFormModals({
 
 	const handleObjectModalSubmit = (
 		path: string,
-		kind: AnketaModalKind,
-		values:
-			| DataSourceFormValues
-			| ModelServiceFormValues
-			| NonStandardTaskFormValues
-			| Record<string, unknown>,
+		values: Record<string, unknown>,
 	) => {
-		const item =
-			kind === "modelServiceBlock"
-				? {
-						...getObjectAtPath(formData, path),
-						...mapModelServiceModalToBlock(values as ModelServiceFormValues),
-					}
-				: (values as Record<string, unknown>);
-
 		onFormDataChange((prev) =>
 			touchSectionForPathInFormData(
-				setObjectAtFormPath(prev, path, item),
+				setObjectAtFormPath(prev, path, values),
 				path,
 			),
 		);
@@ -329,88 +312,49 @@ export function AnketaFormModals({
 				onSubmit={handleUncertaintySubmit}
 				defaultValues={uncertaintyModalDefaults(formData)}
 			/>
-			<DataSourceModal
-				open={activeModal?.kind === "dataSource"}
-				onClose={closeModal}
-				onSubmit={(values) => {
-					if (activeModal?.kind !== "dataSource") return;
-					handleArrayModalSubmit(
-						activeModal.path,
-						activeModal.editIndex,
-						values,
-					);
-				}}
-				defaultValues={
-					activeModal?.kind === "dataSource"
-						? (arrayModalDefaults as Partial<DataSourceFormValues>)
-						: undefined
-				}
-			/>
-			<ModelServiceModal
-				open={
-					activeModal?.kind === "modelService" ||
-					activeModal?.kind === "modelServiceBlock"
-				}
-				onClose={closeModal}
-				onSubmit={(values) => {
-					if (!activeModal) return;
-					if (activeModal.kind === "modelServiceBlock") {
-						handleObjectModalSubmit(
-							activeModal.path,
-							activeModal.kind,
-							values,
-						);
-						return;
-					}
-					if (activeModal.kind !== "modelService") return;
-					handleArrayModalSubmit(
-						activeModal.path,
-						activeModal.editIndex,
-						values,
-					);
-				}}
-				defaultValues={
-					activeModal?.kind === "modelService" ||
-					activeModal?.kind === "modelServiceBlock"
-						? (arrayModalDefaults as Partial<ModelServiceFormValues>)
-						: undefined
-				}
-			/>
-			{rjsfObjectModalSlice ? (
+			{rjsfModalSlice ? (
 				<AnketaRjsfObjectModal
 					open={activeModal?.kind === "rjsfObject"}
-					title={rjsfObjectModalSlice.title}
-					schema={rjsfObjectModalSlice.schema}
-					uiSchema={rjsfObjectModalSlice.uiSchema}
-					defaultValues={rjsfObjectModalSlice.values}
+					title={rjsfModalSlice.title}
+					schema={rjsfModalSlice.schema}
+					uiSchema={rjsfModalSlice.uiSchema}
+					defaultValues={rjsfModalSlice.values}
 					onClose={closeModal}
 					onSubmit={(values) => {
 						if (activeModal?.kind !== "rjsfObject") return;
-						handleObjectModalSubmit(
-							activeModal.path,
-							activeModal.kind,
-							values,
-						);
+						if (rjsfModalSlice.isArrayModal) {
+							handleRjsfArrayModalSubmit(
+								activeModal.path,
+								activeModal.editIndex,
+								values,
+							);
+							return;
+						}
+						handleObjectModalSubmit(activeModal.path, values);
 					}}
 				/>
 			) : null}
-			<NonStandardTaskModal
-				open={activeModal?.kind === "nonStandardTask"}
-				onClose={closeModal}
-				onSubmit={(values) => {
-					if (activeModal?.kind !== "nonStandardTask") return;
-					handleArrayModalSubmit(
-						activeModal.path,
-						activeModal.editIndex,
-						values,
-					);
-				}}
-				defaultValues={
-					activeModal?.kind === "nonStandardTask"
-						? (arrayModalDefaults as Partial<NonStandardTaskFormValues>)
-						: undefined
-				}
-			/>
 		</>
 	);
+}
+
+function resolveSchemaNodeTitle(
+	rootSchema: RJSFSchema,
+	dotPath: string,
+): string | undefined {
+	const segments = dotPath.split(".").filter(Boolean);
+	let cur: RJSFSchema | undefined = rootSchema;
+	for (const seg of segments) {
+		const fromProps = cur?.properties?.[seg] as RJSFSchema | undefined;
+		if (fromProps) {
+			cur = fromProps;
+			continue;
+		}
+		if (seg === "items" && cur?.items && typeof cur.items === "object") {
+			cur = cur.items as RJSFSchema;
+			continue;
+		}
+		return undefined;
+	}
+	return typeof cur?.title === "string" ? cur.title : undefined;
 }

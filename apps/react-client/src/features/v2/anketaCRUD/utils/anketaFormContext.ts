@@ -1,3 +1,4 @@
+import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { ReactNode } from "react";
 import type {
 	V2AnketaMainSectionId,
@@ -6,6 +7,9 @@ import type {
 
 export type AnketaFormContextValue = {
 	formData?: Record<string, unknown>;
+	/** Актуальные схемы превью (для арх. таблиц и модалок). */
+	previewSchema?: RJSFSchema;
+	previewUiSchema?: UiSchema;
 	objectFieldSlots?: Record<string, ReactNode>;
 	openAnketaModal?: (path: string, editIndex?: number) => void;
 	openUncertaintyModal?: () => void;
@@ -31,6 +35,16 @@ export function readAnketaFormContext(
 ): AnketaFormContextValue {
 	if (!formContext || typeof formContext !== "object") return {};
 	return formContext as AnketaFormContextValue;
+}
+
+/** RJSF v6: formContext на виджетах — в `registry`, не в корне props. */
+export function readAnketaFormContextFromRjsfProps(props: {
+	formContext?: unknown;
+	registry?: { formContext?: unknown };
+}): AnketaFormContextValue {
+	return readAnketaFormContext(
+		props.registry?.formContext ?? props.formContext,
+	);
 }
 
 export function objectFieldSlot(

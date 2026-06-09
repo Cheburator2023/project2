@@ -1,4 +1,6 @@
+import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { AnketaModalObjectPath } from "./anketaFormModalPaths";
+import { getObjectSchemaSliceForModal } from "./anketaSchemaAtPath";
 import { getValueAtPath } from "./anketaModalArrayTableConfig";
 
 export type AnketaObjectTableColumn = {
@@ -80,6 +82,45 @@ export function getObjectTableColumns(
 		(ANKETA_OBJECT_TABLE_COLUMNS as Record<string, AnketaObjectTableColumn[]>)[
 			path
 		] ?? null
+	);
+}
+
+const OBJECT_TABLE_PREVIEW_COLUMN_LIMIT = 3;
+
+/** Колонки компактной таблицы арх. объекта из jsonSchema (title полей). */
+export function getObjectTableColumnsFromSchema(
+	rootSchema: RJSFSchema | undefined,
+	rootUi: UiSchema | undefined,
+	path: string,
+): AnketaObjectTableColumn[] | null {
+	if (!rootSchema || !rootUi) return null;
+	const slice = getObjectSchemaSliceForModal(rootSchema, rootUi, path);
+	const props = slice?.schema.properties as Record<string, RJSFSchema> | undefined;
+	if (!props) return null;
+	const keys = Object.keys(props);
+	if (keys.length === 0) return null;
+	return keys.slice(0, OBJECT_TABLE_PREVIEW_COLUMN_LIMIT).map((key) => {
+		const field = props[key];
+		const title =
+			typeof field?.title === "string" && field.title.trim()
+				? field.title.trim()
+				: key;
+		return {
+			key,
+			header: title,
+			render: (item) => text(item, key),
+		};
+	});
+}
+
+export function resolveObjectTableColumns(
+	path: string,
+	rootSchema?: RJSFSchema,
+	rootUi?: UiSchema,
+): AnketaObjectTableColumn[] | null {
+	return (
+		getObjectTableColumnsFromSchema(rootSchema, rootUi, path) ??
+		getObjectTableColumns(path)
 	);
 }
 

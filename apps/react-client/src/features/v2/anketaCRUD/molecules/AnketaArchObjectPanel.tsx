@@ -14,8 +14,8 @@ import {
 import { readAnketaFormContext } from "../utils/anketaFormContext";
 import {
 	getObjectAtPath,
-	getObjectTableColumns,
 	isArchObjectFilled,
+	resolveObjectTableColumns,
 } from "../utils/anketaArchObjectTableConfig";
 
 type Props = {
@@ -30,7 +30,11 @@ export function AnketaArchObjectPanel({
 	formContext,
 }: Props) {
 	const ctx = readAnketaFormContext(formContext);
-	const columns = getObjectTableColumns(pathKey);
+	const columns = resolveObjectTableColumns(
+		pathKey,
+		ctx.previewSchema,
+		ctx.previewUiSchema,
+	);
 	const item = getObjectAtPath(ctx.formData ?? {}, pathKey);
 	const filled = isArchObjectFilled(item);
 	const readOnly = ctx.anketaReadOnly;

@@ -15,7 +15,7 @@ import { readAnketaFormContext } from "../utils/anketaFormContext";
 import {
 	arrayTableShowsRowActions,
 	getArrayAtPath,
-	getArrayTableColumns,
+	resolveArrayTableColumns,
 	type AnketaArrayTableColumn,
 } from "../utils/anketaModalArrayTableConfig";
 
@@ -100,7 +100,11 @@ export function AnketaModalArrayTable({
 	formContext,
 }: Props & { formContext: unknown }) {
 	const ctx = readAnketaFormContext(formContext);
-	const columns = getArrayTableColumns(pathKey);
+	const columns = resolveArrayTableColumns(
+		pathKey,
+		ctx.previewSchema,
+		ctx.previewUiSchema,
+	);
 	const items = getArrayAtPath(ctx.formData ?? {}, pathKey);
 	const readOnly = ctx.anketaReadOnly;
 	const showRowActions = arrayTableShowsRowActions(pathKey, formContext);

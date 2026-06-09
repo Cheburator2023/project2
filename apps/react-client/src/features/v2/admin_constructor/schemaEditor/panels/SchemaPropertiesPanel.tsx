@@ -44,8 +44,10 @@ import {
 	isWorkArchComponent,
 	readArrayToolbarOptions,
 	readLeafUiOptions,
+	resolveArchComponentAtPointer,
 	resolvePropertiesFieldKind,
 } from "../propertiesFieldKind";
+import { readUiSchemaBranchAtPointer } from "../../utils/schemaMutators";
 
 export function SchemaPropertiesPanel() {
 	const {
@@ -77,29 +79,18 @@ export function SchemaPropertiesPanel() {
 
 	const leafUiBranch =
 		selectedPointer && uiSchema
-			? (() => {
-					const segs = normalizeJsonPointer(selectedPointer)
-						.replace(/^\//, "")
-						.split("/")
-						.filter(Boolean);
-					let cur: Record<string, unknown> = uiSchema as Record<
-						string,
-						unknown
-					>;
-					for (const seg of segs) {
-						const next = cur[seg];
-						if (!next || typeof next !== "object" || Array.isArray(next)) {
-							return undefined;
-						}
-						cur = next as Record<string, unknown>;
-					}
-					return cur;
-				})()
+			? readUiSchemaBranchAtPointer(
+					uiSchema as Record<string, unknown>,
+					selectedPointer,
+				)
 			: undefined;
 
 	const leafUiOptions = readLeafUiOptions(leafUiBranch);
 	const sectionUiOptions = readV2AnketaSectionUiOptions(leafUiBranch);
-	const archComponent = sectionUiOptions.archComponent ?? null;
+	const archComponent = resolveArchComponentAtPointer(
+		uiSchema,
+		selectedPointer ?? "",
+	);
 	const uiWidget =
 		typeof leafUiBranch?.["ui:widget"] === "string"
 			? leafUiBranch["ui:widget"]

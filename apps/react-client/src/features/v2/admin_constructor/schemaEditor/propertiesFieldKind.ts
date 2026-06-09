@@ -1,8 +1,11 @@
-import type { RJSFSchema } from "@rjsf/utils";
+import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { V2ArchComponentType } from "@smart-anketa/api-contract";
+import { resolveV2AnketaArchComponent } from "@smart-anketa/api-contract";
+import { pointerSegments } from "../utils/schemaPaths";
 import {
 	getObjectItemsSchema,
 	isObjectFieldGroup,
+	readUiSchemaBranchAtPointer,
 } from "../utils/schemaMutators";
 
 export type PropertiesFieldKind =
@@ -118,6 +121,22 @@ export function isWorkArchComponent(
 	arch: V2ArchComponentType | null | undefined,
 ): boolean {
 	return arch != null && WORK_ARCH_TYPES.has(arch);
+}
+
+/** archComponent с предка (для полей внутри арх. блока / items). */
+export function resolveArchComponentAtPointer(
+	uiSchema: UiSchema | Record<string, unknown> | undefined,
+	pointer: string,
+): V2ArchComponentType | null {
+	if (!uiSchema || !pointer) return null;
+	const segs = pointerSegments(pointer);
+	for (let len = segs.length; len > 0; len -= 1) {
+		const partial = `/${segs.slice(0, len).join("/")}`;
+		const branch = readUiSchemaBranchAtPointer(uiSchema, partial);
+		const arch = resolveV2AnketaArchComponent(branch);
+		if (arch) return arch;
+	}
+	return null;
 }
 
 export function describeArrayItems(

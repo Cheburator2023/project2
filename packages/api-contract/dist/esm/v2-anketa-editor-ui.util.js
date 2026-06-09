@@ -129,23 +129,11 @@ function isModalEditableArray(uiNode, schemaNode, fieldKey, arch) {
     }
     return false;
 }
-function modalKindForArrayField(fieldKey, arch) {
-    if (arch === "sourceSystem" ||
-        fieldKey === "trainingSources" ||
-        fieldKey === "applicationSources") {
-        return "dataSource";
-    }
-    if (fieldKey === "modelsList")
-        return "modelService";
-    if (arch === "atypicalWork" ||
-        /[Aa]typical/.test(fieldKey) ||
-        fieldKey === "atypicalTasks") {
-        return "nonStandardTask";
-    }
-    return null;
+function modalKindForArrayField(_fieldKey, _arch) {
+    return "rjsfObject";
 }
-function modalKindForObjectArch(arch) {
-    return arch === "modelService" ? "modelServiceBlock" : "rjsfObject";
+function modalKindForObjectArch(_arch) {
+    return "rjsfObject";
 }
 function walkAnketaEditorUi(schemaNode, uiBranch, pointer, acc) {
     if (!schemaNode || pointer === "/")
@@ -173,16 +161,6 @@ function walkAnketaEditorUi(schemaNode, uiBranch, pointer, acc) {
             if (props) {
                 for (const childKey of Object.keys(props)) {
                     acc.bodyHiddenDotPaths.push(`${dotPath}.${childKey}`);
-                }
-            }
-        }
-        if (arch === "model") {
-            const props = readRecord(schemaNode.properties);
-            if (props) {
-                for (const childKey of Object.keys(props)) {
-                    if (childKey !== "modelsList") {
-                        acc.bodyHiddenDotPaths.push(`${dotPath}.${childKey}`);
-                    }
                 }
             }
         }

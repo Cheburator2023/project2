@@ -178,31 +178,16 @@ function isModalEditableArray(
 }
 
 function modalKindForArrayField(
-	fieldKey: string,
-	arch: V2ArchComponentType | null,
+	_fieldKey: string,
+	_arch: V2ArchComponentType | null,
 ): V2AnketaModalKind | null {
-	if (
-		arch === "sourceSystem" ||
-		fieldKey === "trainingSources" ||
-		fieldKey === "applicationSources"
-	) {
-		return "dataSource";
-	}
-	if (fieldKey === "modelsList") return "modelService";
-	if (
-		arch === "atypicalWork" ||
-		/[Aa]typical/.test(fieldKey) ||
-		fieldKey === "atypicalTasks"
-	) {
-		return "nonStandardTask";
-	}
-	return null;
+	return "rjsfObject";
 }
 
 function modalKindForObjectArch(
-	arch: V2ArchComponentType,
+	_arch: V2ArchComponentType,
 ): V2AnketaModalKind {
-	return arch === "modelService" ? "modelServiceBlock" : "rjsfObject";
+	return "rjsfObject";
 }
 
 type WalkAcc = {
@@ -244,16 +229,6 @@ function walkAnketaEditorUi(
 			if (props) {
 				for (const childKey of Object.keys(props)) {
 					acc.bodyHiddenDotPaths.push(`${dotPath}.${childKey}`);
-				}
-			}
-		}
-		if (arch === "model") {
-			const props = readRecord(schemaNode.properties);
-			if (props) {
-				for (const childKey of Object.keys(props)) {
-					if (childKey !== "modelsList") {
-						acc.bodyHiddenDotPaths.push(`${dotPath}.${childKey}`);
-					}
 				}
 			}
 		}

@@ -54,10 +54,13 @@ describe("resolveV2AnketaEditorBindings", () => {
 		);
 
 		expect(bindings.modalKindByPath["detailInfo.sourceSystems"]).toBe(
-			"dataSource",
+			"rjsfObject",
+		);
+		expect(bindings.modalKindByPath["generalInfo.modelService"]).toBe(
+			"rjsfObject",
 		);
 		expect(bindings.bodyHiddenDotPaths).toEqual(
-			expect.arrayContaining(["detailInfo.model.workType"]),
+			expect.arrayContaining(["generalInfo.modelService.workType"]),
 		);
 	});
 });

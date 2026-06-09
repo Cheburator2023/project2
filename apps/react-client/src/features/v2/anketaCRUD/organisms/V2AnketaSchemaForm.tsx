@@ -188,12 +188,16 @@ export function V2AnketaSchemaForm({
 		return {
 			...base,
 			formData: base.formData ?? engine.formData,
+			previewSchema: base.previewSchema ?? engine.previewSchema,
+			previewUiSchema: base.previewUiSchema ?? engine.previewUiSchema,
 			workflow: base.workflow ?? workflow,
 			onCompleteMainSection: base.onCompleteMainSection,
 			onCompletePanelSection: base.onCompletePanelSection,
 			onTouchMainSection: base.onTouchMainSection,
 			isMainSectionLocked: base.isMainSectionLocked,
 			openAnketaModal: base.openAnketaModal,
+			openUncertaintyModal: base.openUncertaintyModal,
+			objectFieldSlots: base.objectFieldSlots,
 			deleteAnketaObject: base.deleteAnketaObject,
 			deleteAnketaArrayItem: base.deleteAnketaArrayItem,
 			anketaModalObjectPaths:

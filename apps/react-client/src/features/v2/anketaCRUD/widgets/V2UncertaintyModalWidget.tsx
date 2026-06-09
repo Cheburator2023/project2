@@ -4,12 +4,12 @@ import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { uncertaintySummaryText } from "../organisms/AnketaFormModals";
-import { readAnketaFormContext } from "../utils/anketaFormContext";
+import { readAnketaFormContextFromRjsfProps } from "../utils/anketaFormContext";
 import type { WidgetProps } from "@rjsf/utils";
 
 /** Кнопка «Рассчитать общую неопределённость» + модалка (как uncertaintySlot в анкете). */
 export function V2UncertaintyModalWidget(props: WidgetProps) {
-	const ctx = readAnketaFormContext(props.formContext);
+	const ctx = readAnketaFormContextFromRjsfProps(props);
 	const readOnly =
 		ctx.anketaReadOnly === true || props.disabled || props.readonly;
 	const summary = uncertaintySummaryText(ctx.formData ?? {});

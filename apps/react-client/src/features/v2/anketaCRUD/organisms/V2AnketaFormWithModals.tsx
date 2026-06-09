@@ -86,6 +86,10 @@ export function V2AnketaFormWithModals({
 		return {
 			...anketaFormContextProp,
 			formData: anketaFormContextProp?.formData ?? engine.formData,
+			previewSchema:
+				anketaFormContextProp?.previewSchema ?? engine.previewSchema,
+			previewUiSchema:
+				anketaFormContextProp?.previewUiSchema ?? engine.previewUiSchema,
 			workflow: anketaFormContextProp?.workflow ?? workflow,
 			onCompleteMainSection:
 				anketaFormContextProp?.onCompleteMainSection ?? completeMainSection,
