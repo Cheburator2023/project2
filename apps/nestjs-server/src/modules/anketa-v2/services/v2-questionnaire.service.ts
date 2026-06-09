@@ -306,26 +306,35 @@ export class V2QuestionnaireService {
 			template = withCurrent[0];
 		}
 
-		const versionId = template.currentVersionId;
-		if (!versionId) {
-			throw new BadRequestException(
-				"У выбранного шаблона не задана актуальная версия схемы.",
-			);
-		}
-
-		const version = await this.versionRepository.findOne({
-			where: { id: versionId, templateId: template.id },
-		});
-		if (!version) {
-			throw new BadRequestException("Актуальная версия схемы не найдена");
-		}
-		if (version.status !== "published") {
-			throw new BadRequestException(
-				"Создание анкеты возможно только по опубликованной актуальной схеме.",
-			);
-		}
+		const version = await this.resolvePublishedVersionForTemplate(template);
 
 		return { template, version };
+	}
+
+	/** Опубликованная версия шаблона: актуальная системная или последняя published. */
+	private async resolvePublishedVersionForTemplate(
+		template: V2TemplateEntity,
+	): Promise<V2TemplateVersionEntity> {
+		if (template.currentVersionId) {
+			const current = await this.versionRepository.findOne({
+				where: { id: template.currentVersionId, templateId: template.id },
+			});
+			if (current?.status === "published") {
+				return current;
+			}
+		}
+
+		const latestPublished = await this.versionRepository.findOne({
+			where: { templateId: template.id, status: "published" },
+			order: { versionNumber: "DESC" },
+		});
+		if (!latestPublished) {
+			throw new BadRequestException(
+				"У выбранного шаблона нет опубликованной версии. Опубликуйте черновик или назначьте версию актуальной.",
+			);
+		}
+
+		return latestPublished;
 	}
 
 	private generateSeriesId(): string {

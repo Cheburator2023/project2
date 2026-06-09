@@ -3,7 +3,6 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import { styled, useColorScheme } from "@mui/material/styles";
 import { Flex } from "@react-client/common/primitives/Flex";
-import TextField from "@mui/material/TextField";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { useV2Dictionaries } from "@react-client/common/api/queries/v2-templates";
 import type { V2DictionaryDto } from "@smart-anketa/api-contract";
@@ -45,15 +44,18 @@ const dateFmt = (v: unknown) =>
 export const canDeleteV2Dictionary = (row: V2DictionaryDto) =>
 	!row.isDefault && !row.isInUse;
 
-export const canResetV2Dictionary = (row: V2DictionaryDto) => Boolean(row.isDefault);
+export const canResetV2Dictionary = (row: V2DictionaryDto) =>
+	Boolean(row.isDefault);
 
 type Props = {
+	quickFilter?: string;
 	onSelectionChange?: (rows: V2DictionaryDto[]) => void;
 	onDeleteRequest?: (rows: V2DictionaryDto[]) => void;
 	onResetRequest?: (rows: V2DictionaryDto[]) => void;
 };
 
 export const V2DictionaryList = ({
+	quickFilter = "",
 	onSelectionChange,
 	onDeleteRequest,
 	onResetRequest,
@@ -62,7 +64,6 @@ export const V2DictionaryList = ({
 	const { mode } = useColorScheme();
 	const { data: dictionaries, isLoading } = useV2Dictionaries();
 	const gridRef = useRef<AgGridReact<V2DictionaryDto>>(null);
-	const [quickFilter, setQuickFilter] = useState("");
 
 	useEffect(() => {
 		gridRef.current?.api?.setGridOption("quickFilterText", quickFilter);
@@ -102,10 +103,20 @@ export const V2DictionaryList = ({
 		return (
 			<Flex gap={0.5} wrap="wrap" alignItems="center">
 				{row.isDefault ? (
-					<Chip size="small" label="Заводской" variant="outlined" color="info" />
+					<Chip
+						size="small"
+						label="Заводской"
+						variant="outlined"
+						color="info"
+					/>
 				) : null}
 				{row.isInUse ? (
-					<Chip size="small" label="В схемах" variant="outlined" color="warning" />
+					<Chip
+						size="small"
+						label="В схемах"
+						variant="outlined"
+						color="warning"
+					/>
 				) : null}
 			</Flex>
 		);
@@ -153,14 +164,6 @@ export const V2DictionaryList = ({
 
 	return (
 		<GridWrapper flexDirection="column" gap={1}>
-			<TextField
-				size="small"
-				placeholder="Поиск по коду, названию, категории…"
-				value={quickFilter}
-				onChange={(e) => setQuickFilter(e.target.value)}
-				sx={{ maxWidth: 420, flexShrink: 0 }}
-				inputProps={{ "aria-label": "Поиск справочников" }}
-			/>
 			<AgGridReact<V2DictionaryDto>
 				ref={gridRef}
 				theme={gridTheme}

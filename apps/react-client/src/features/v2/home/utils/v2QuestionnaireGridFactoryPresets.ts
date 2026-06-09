@@ -30,7 +30,7 @@ export type QuestionnaireGridPresetApi = {
 	refreshHeader?: () => void;
 };
 
-const AUTO_GROUP_COL_ID = "ag-Grid-AutoColumn";
+const PRIMARY_NAME_COL_ID = "calcName";
 
 function pathCol(path: string): string {
 	return formPathColId(path);
@@ -63,9 +63,9 @@ function buildColumnState(
 ): ColumnState[] {
 	const visibleSet = new Set(visibleOrdered);
 	const ordered = [
-		AUTO_GROUP_COL_ID,
+		PRIMARY_NAME_COL_ID,
 		...visibleOrdered.filter(
-			(colId) => colId !== AUTO_GROUP_COL_ID && allIds.includes(colId),
+			(colId) => colId !== PRIMARY_NAME_COL_ID && allIds.includes(colId),
 		),
 		...allIds.filter((colId) => !visibleSet.has(colId)),
 	];
@@ -73,18 +73,18 @@ function buildColumnState(
 	const uniqueOrdered = ordered.filter((colId) => {
 		if (seen.has(colId)) return false;
 		seen.add(colId);
-		return colId === AUTO_GROUP_COL_ID || allIds.includes(colId);
+		return colId === PRIMARY_NAME_COL_ID || allIds.includes(colId);
 	});
 
 	return uniqueOrdered.map((colId) => ({
 		colId,
-		hide: colId !== AUTO_GROUP_COL_ID && !visibleSet.has(colId),
+		hide: colId !== PRIMARY_NAME_COL_ID && !visibleSet.has(colId),
 	}));
 }
 
 function buildAllColumnsVisibleState(): ColumnState[] {
 	return buildColumnState(getAllGridColumnIds(), [
-		AUTO_GROUP_COL_ID,
+		PRIMARY_NAME_COL_ID,
 		...getAllGridColumnIds(),
 	]);
 }
@@ -117,9 +117,8 @@ export function getFactoryGridPreset(id: string): FactoryGridPreset | undefined 
 
 /** Базовый вид реестра анкет по умолчанию. */
 const DEFAULT_REGISTRY_VISIBLE = [
-	AUTO_GROUP_COL_ID,
+	PRIMARY_NAME_COL_ID,
 	"readableId",
-	pathCol("generalInfo.calcName"),
 	"createdAt",
 	pathCol("generalInfo.businessCustomer"),
 	pathCol("generalInfo.implementationStream"),

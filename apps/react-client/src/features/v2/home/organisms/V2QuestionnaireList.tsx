@@ -2,7 +2,6 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import {
 	Button,
-	Chip,
 	Divider,
 	Dialog,
 	DialogActions,
@@ -26,21 +25,12 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
-import type {
-	V2QuestionnaireDto,
-	V2SchemaBindingStatus,
-} from "@smart-anketa/api-contract";
-import type {
-	V2QuestionnaireGridRow,
-	V2QuestionnaireSeriesRow,
-	V2QuestionnaireVersionRow,
-} from "../types/v2QuestionnaireGrid.types";
+import type { V2QuestionnaireGridRow, V2QuestionnaireVersionRow } from "../types/v2QuestionnaireGrid.types";
 import {
 	AllCommunityModule,
 	ClientSideRowModelModule,
 	type GetContextMenuItemsParams,
 	type GridReadyEvent,
-	type ICellRendererParams,
 	type MenuItemDef,
 	type RowDoubleClickedEvent,
 	type SelectionChangedEvent,
@@ -56,7 +46,6 @@ import {
 	FiltersToolPanelModule,
 	SetFilterModule,
 	SideBarModule,
-	TreeDataModule,
 } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -79,14 +68,12 @@ import { resolveVersionRow } from "../utils/v2QuestionnaireGridValue";
 
 export type {
 	V2QuestionnaireGridRow,
-	V2QuestionnaireSeriesRow,
 	V2QuestionnaireVersionRow,
 } from "../types/v2QuestionnaireGrid.types";
 
 ModuleRegistry.registerModules([
 	AllCommunityModule,
 	ClientSideRowModelModule,
-	TreeDataModule,
 	ContextMenuModule,
 	ColumnsToolPanelModule,
 	ColumnMenuModule,
@@ -106,32 +93,6 @@ const GridWrapper = styled(Flex)`
 		height: -webkit-fill-available;
 	}
 `;
-
-const BINDING_LABEL: Record<V2SchemaBindingStatus, string> = {
-	aligned: "Схема актуальна",
-	superseded: "Схема устарела",
-	unavailable: "Схема недоступна",
-};
-
-const BINDING_COLOR: Record<
-	V2SchemaBindingStatus,
-	"success" | "warning" | "error"
-> = {
-	aligned: "success",
-	superseded: "warning",
-	unavailable: "error",
-};
-
-function BindingChip({ status }: { status: V2SchemaBindingStatus }) {
-	return (
-		<Chip
-			size="small"
-			label={BINDING_LABEL[status]}
-			color={BINDING_COLOR[status]}
-			variant="outlined"
-		/>
-	);
-}
 
 const GRID_PRESETS_STORAGE_KEY = "smart_anketa:v2-questionnaire-grid-presets";
 
@@ -360,34 +321,13 @@ export function V2QuestionnaireList() {
 
 	const { data: questionnaires, isLoading } = useV2Questionnaires();
 
-	const treeRowData = useMemo<V2QuestionnaireSeriesRow[]>(() => {
+	const rowData = useMemo<V2QuestionnaireVersionRow[]>(() => {
 		if (!questionnaires?.length) return [];
-
-		const bySeries = new Map<string, V2QuestionnaireDto[]>();
-		for (const q of questionnaires) {
-			const list = bySeries.get(q.seriesId) ?? [];
-			list.push(q);
-			bySeries.set(q.seriesId, list);
-		}
-
-		return [...bySeries.entries()].map(([seriesId, versions]) => {
-			const sorted = [...versions].sort(
-				(a, b) =>
-					Number.parseInt(b.version, 10) - Number.parseInt(a.version, 10),
-			);
-			const head = sorted[0];
-			return {
-				rowKind: "series" as const,
-				seriesId,
-				displayLabel: head?.calcName ?? seriesId,
-				calcName: head?.calcName ?? seriesId,
-				children: sorted.map((v) => ({
-					...v,
-					rowKind: "version" as const,
-					displayLabel: `Версия ${v.version}${v.readableId ? ` · ${v.readableId}` : ""}`,
-				})),
-			};
-		});
+		return questionnaires.map((q) => ({
+			...q,
+			rowKind: "version" as const,
+			displayLabel: q.calcName,
+		}));
 	}, [questionnaires]);
 
 	const columnDefs = useMemo(() => buildV2QuestionnaireColumnDefs(), []);
@@ -447,15 +387,11 @@ export function V2QuestionnaireList() {
 	);
 
 	const getRowId = useCallback(
-		(p: { data: V2QuestionnaireGridRow }) =>
-			p.data.rowKind === "series"
-				? `series:${p.data.seriesId}`
-				: `version:${p.data.id}`,
+		(p: { data: V2QuestionnaireGridRow }) => `version:${p.data.id}`,
 		[],
 	);
 
 	const onGridReady = useCallback((e: GridReadyEvent) => {
-		e.api.expandAll();
 		const basicPreset = getFactoryGridPreset(FACTORY_PRESET_IDS.default);
 		if (basicPreset) {
 			applyQuestionnaireGridPreset(e.api, basicPreset);
@@ -577,35 +513,9 @@ export function V2QuestionnaireList() {
 					theme={gridTheme}
 					icons={gridIcons}
 					localeText={AG_GRID_LOCALE_RU}
-					rowData={treeRowData}
+					rowData={rowData}
 					columnDefs={columnDefs}
-					treeData
-					treeDataChildrenField="children"
 					getRowId={getRowId}
-					autoGroupColumnDef={{
-						headerName: "Анкета / версия",
-						minWidth: 260,
-						cellRendererParams: { suppressCount: true },
-						filter: "agTextColumnFilter",
-						valueGetter: (p) => p.data?.displayLabel ?? "",
-						cellRenderer: (p: ICellRendererParams<V2QuestionnaireGridRow>) => {
-							const version = resolveVersionRow(p.data);
-							if (version) {
-								return (
-									<Flex gap={1} alignItems="center" minWidth="0">
-										<span
-											style={{ overflow: "hidden", textOverflow: "ellipsis" }}
-										>
-											{p.data?.displayLabel ?? version.calcName}
-										</span>
-										<BindingChip status={version.schemaBinding.status} />
-									</Flex>
-								);
-							}
-							return p.data?.displayLabel ?? "";
-						},
-					}}
-					groupDefaultExpanded={-1}
 					defaultColDef={{
 						sortable: true,
 						resizable: true,
@@ -620,7 +530,6 @@ export function V2QuestionnaireList() {
 					getContextMenuItems={getContextMenuItems}
 					onGridReady={onGridReady}
 					loading={isLoading}
-					isRowSelectable={(node) => node.data?.rowKind === "version"}
 					rowSelection={
 						canAccessAdminPanel
 							? {
@@ -634,13 +543,9 @@ export function V2QuestionnaireList() {
 					onSelectionChanged={(
 						e: SelectionChangedEvent<V2QuestionnaireGridRow>,
 					) => {
-						const rows = e.api
-							.getSelectedRows()
-							.filter(
-								(row): row is V2QuestionnaireVersionRow =>
-									row.rowKind === "version",
-							);
-						setSelectedVersions(rows);
+						setSelectedVersions(
+							e.api.getSelectedRows() as V2QuestionnaireVersionRow[],
+						);
 					}}
 					domLayout="normal"
 					suppressAggFuncInHeader

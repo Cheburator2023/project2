@@ -3,13 +3,12 @@ import type {
 	V2QuestionnaireVersionRow,
 } from "../types/v2QuestionnaireGrid.types";
 
-/** Данные версии для ячейки: на строке серии — актуальная (первая) версия. */
+/** Данные версии анкеты для ячейки грида. */
 export function resolveVersionRow(
 	row: V2QuestionnaireGridRow | undefined,
 ): V2QuestionnaireVersionRow | null {
-	if (!row) return null;
-	if (row.rowKind === "version") return row;
-	return row.children[0] ?? null;
+	if (!row || row.rowKind !== "version") return null;
+	return row;
 }
 
 export function versionFormData(

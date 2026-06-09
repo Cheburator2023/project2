@@ -68,11 +68,31 @@ export function AdminV2SchemasPage() {
 
 	useEffect(() => {
 		if (!selectedTemplateId && templates?.length) {
-			setSelectedTemplateId(templates[0].id);
+			const withCurrent = templates.find((t) => t.currentVersionId);
+			setSelectedTemplateId(withCurrent?.id ?? templates[0].id);
 		}
 	}, [templates, selectedTemplateId]);
 
-	const selectedTemplate = templates?.find((t) => t.id === selectedTemplateId);
+	const actionTargetTemplate = useMemo(() => {
+		if (selectedTemplates.length === 1) {
+			return selectedTemplates[0];
+		}
+		return (
+			templates?.find((t) => t.id === selectedTemplateId) ??
+			templates?.find((t) => t.currentVersionId) ??
+			templates?.[0]
+		);
+	}, [selectedTemplates, selectedTemplateId, templates]);
+
+	const selectedTemplate = actionTargetTemplate;
+
+	const handleGridSelectionChange = useCallback((rows: V2SchemaGridRow[]) => {
+		setSelectedRows(rows);
+		const { templates: tplRows } = splitSelectedSchemaRows(rows);
+		if (tplRows.length === 1) {
+			setSelectedTemplateId(tplRows[0].id);
+		}
+	}, []);
 
 	const runBulkDelete = useCallback(async () => {
 		if (!selectedRows.length) return;
@@ -243,7 +263,9 @@ export function AdminV2SchemasPage() {
 					<Button
 						variant="outlined"
 						disabled={
-							!selectedTemplateId || resetMutation.isPending || !templates?.length
+							!actionTargetTemplate?.id ||
+							resetMutation.isPending ||
+							!templates?.length
 						}
 						onClick={() => setConfirmResetOpen(true)}
 					>
@@ -252,12 +274,18 @@ export function AdminV2SchemasPage() {
 					<Button
 						variant="outlined"
 						disabled={
-							!selectedTemplateId || seedMutation.isPending || !templates?.length
+							!actionTargetTemplate?.id ||
+							seedMutation.isPending ||
+							!templates?.length
 						}
-						title="Создать 3 тестовые анкеты по актуальной схеме (черновик, в работе, завершена)"
+						title={
+							actionTargetTemplate
+								? `Создать 3 тестовые анкеты по схеме «${actionTargetTemplate.name}» (нужна опубликованная версия)`
+								: "Выберите схему в таблице"
+						}
 						onClick={() =>
 							seedMutation.mutate(
-								{ templateId: selectedTemplateId },
+								{ templateId: actionTargetTemplate!.id },
 								{
 									onSuccess: (result) => {
 										toast.success(
@@ -297,7 +325,7 @@ export function AdminV2SchemasPage() {
 
 			<V2TemplateList
 				ref={listRef}
-				onSelectionChange={setSelectedRows}
+				onSelectionChange={handleGridSelectionChange}
 			/>
 
 			<V2SchemaCreateDialog
@@ -361,8 +389,8 @@ export function AdminV2SchemasPage() {
 					<Button onClick={() => setConfirmResetOpen(false)}>Отмена</Button>
 					<Button
 						onClick={() => {
-							if (!selectedTemplateId) return;
-							resetMutation.mutate(selectedTemplateId, {
+							if (!actionTargetTemplate?.id) return;
+							resetMutation.mutate(actionTargetTemplate.id, {
 								onSuccess: () => setConfirmResetOpen(false),
 							});
 						}}

@@ -173,6 +173,13 @@ export function buildV2QuestionnaireColumnDefs(): (
 			openByDefault: true,
 			children: [
 				{
+					colId: "calcName",
+					headerName: "Анкета",
+					width: 260,
+					filter: "agTextColumnFilter",
+					valueGetter: (p) => resolveVersionRow(p.data)?.calcName ?? "",
+				},
+				{
 					colId: "readableId",
 					headerName: "ID анкеты",
 					width: 150,
