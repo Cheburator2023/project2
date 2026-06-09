@@ -11,6 +11,8 @@ import {
 import Form from "@rjsf/mui";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
+import { v2AnketaFormTemplates } from "@react-client/features/v2/admin_constructor/templates/v2PreviewFormTemplates";
+import { v2AnketaFormWidgets } from "@react-client/features/v2/admin_constructor/templates/v2PreviewFormWidgets";
 import { useEffect, useMemo, useState } from "react";
 
 type Props = {
@@ -55,10 +57,7 @@ export function AnketaRjsfObjectModal({
 		return { ...rest, type: "object" };
 	}, [schema]);
 
-	const formUiSchema = useMemo(
-		() => modalRootUiSchema(uiSchema),
-		[uiSchema],
-	);
+	const formUiSchema = useMemo(() => modalRootUiSchema(uiSchema), [uiSchema]);
 
 	const formKey = useMemo(
 		() => JSON.stringify({ schema: formSchema, uiSchema: formUiSchema }),
@@ -90,14 +89,14 @@ export function AnketaRjsfObjectModal({
 						schema={formSchema}
 						uiSchema={formUiSchema}
 						formData={formData}
+						templates={v2AnketaFormTemplates}
+						widgets={v2AnketaFormWidgets}
 						validator={validatorRu}
 						liveValidate
 						noHtml5Validate
 						showErrorList={false}
 						onChange={(evt) =>
-							setFormData(
-								(evt.formData as Record<string, unknown>) ?? {},
-							)
+							setFormData((evt.formData as Record<string, unknown>) ?? {})
 						}
 					/>
 				</Box>

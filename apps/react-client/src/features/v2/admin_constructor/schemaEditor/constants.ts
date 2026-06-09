@@ -162,6 +162,7 @@ export const LAYOUT_PRESETS: PalettePreset[] = [
 			layoutGroup: true,
 			gridColumns: 2,
 			sectionRole: "flat",
+			hideTitle: true,
 		},
 	},
 ];

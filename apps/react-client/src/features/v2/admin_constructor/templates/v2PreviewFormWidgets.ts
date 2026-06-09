@@ -11,8 +11,8 @@ function SelectWidget(props: WidgetProps) {
 	return createElement(TextFieldCustomWidget, { ...props, select: true });
 }
 
-/** RJSF-виджеты для превью анкеты в конструкторе (те же имена, что в ui:widget). */
-export const v2PreviewFormWidgets: RegistryWidgetsType = {
+/** Единые RJSF-виджеты v2 анкеты: те же имена, что в `ui:widget`. */
+export const v2AnketaFormWidgets: RegistryWidgetsType = {
 	TextFieldCustomWidget,
 	NumberInputWidget,
 	SelectWidget,
@@ -23,3 +23,6 @@ export const v2PreviewFormWidgets: RegistryWidgetsType = {
 	UniversalDependencyWidget,
 	ArrayCustomCardListsWidget,
 };
+
+/** @deprecated Используйте `v2AnketaFormWidgets`; имя сохранено для совместимости. */
+export const v2PreviewFormWidgets = v2AnketaFormWidgets;

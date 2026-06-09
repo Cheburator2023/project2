@@ -56,3 +56,21 @@ export function objectFieldSlot(
 	const ctx = readAnketaFormContext(formContext);
 	return ctx.objectFieldSlots?.[pathKey] ?? null;
 }
+
+/**
+ * Merge form context layers without accidentally replacing defined caller values.
+ * `objectFieldSlots` are additive because shells often contribute page-level slots.
+ */
+export function mergeAnketaFormContext(
+	base: AnketaFormContextValue | undefined,
+	fallback: AnketaFormContextValue,
+): AnketaFormContextValue {
+	return {
+		...fallback,
+		...base,
+		objectFieldSlots: {
+			...base?.objectFieldSlots,
+			...fallback.objectFieldSlots,
+		},
+	};
+}

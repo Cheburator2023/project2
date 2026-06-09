@@ -106,6 +106,7 @@ export function SchemaPropertiesPanel() {
 		typeof leafUiOptions?.gridColumns === "number"
 			? leafUiOptions.gridColumns
 			: 2;
+	const layoutHideTitle = leafUiOptions?.hideTitle !== false;
 	const isHiddenInForm = isV2AnketaHiddenUiNode(leafUiBranch);
 	const arrayToolbar = readArrayToolbarOptions(leafUiBranch);
 	const arrayItemsLabel = describeArrayItems(resolvedField);
@@ -336,6 +337,20 @@ export function SchemaPropertiesPanel() {
 									</MenuItem>
 								))}
 							</TextField>
+							<Spacer />
+							<FormControlLabel
+								control={
+									<Checkbox
+										checked={layoutHideTitle}
+										onChange={(e) =>
+											patchSectionUi({
+												hideTitle: e.target.checked ? undefined : false,
+											})
+										}
+									/>
+								}
+								label="Без заголовка"
+							/>
 							<Spacer />
 							<Typography variant="caption" fontWeight={600}>
 								Поля в разметке ({groupChildFields.length})

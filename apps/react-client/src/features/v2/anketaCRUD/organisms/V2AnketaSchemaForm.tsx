@@ -3,18 +3,27 @@ import Typography from "@mui/material/Typography";
 import Form from "@rjsf/mui";
 import type { UiSchema } from "@rjsf/utils";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
-import { v2PreviewFormTemplates } from "@react-client/features/v2/admin_constructor/templates/v2PreviewFormTemplates";
-import { v2PreviewFormWidgets } from "@react-client/features/v2/admin_constructor/templates/v2PreviewFormWidgets";
+import { v2AnketaFormTemplates } from "@react-client/features/v2/admin_constructor/templates/v2PreviewFormTemplates";
+import { v2AnketaFormWidgets } from "@react-client/features/v2/admin_constructor/templates/v2PreviewFormWidgets";
 import {
 	useV2AnketaSchemaEngine,
 	type V2AnketaSchemaEngine,
 	type V2AnketaSchemaEngineSource,
 } from "../hooks/useV2AnketaSchemaEngine";
-import type { AnketaFormContextValue } from "../utils/anketaFormContext";
+import {
+	mergeAnketaFormContext,
+	type AnketaFormContextValue,
+} from "../utils/anketaFormContext";
 import { withHiddenArchModalFields } from "../utils/anketaArchModalUiSchema";
-import { resolveAnketaFormModalBindingSets } from "../utils/anketaFormModalPaths";
+import {
+	resolveAnketaFormModalBindingSets,
+	type AnketaFormModalBindingSets,
+} from "../utils/anketaFormModalPaths";
 import { applySectionLocksToUiSchema } from "../utils/anketaSectionUiSchema";
-import { readWorkflowFromFormData, touchSectionInFormData } from "../hooks/useAnketaWorkflow";
+import {
+	readWorkflowFromFormData,
+	touchSectionInFormData,
+} from "../hooks/useAnketaWorkflow";
 import {
 	isV2AnketaHiddenUiNode,
 	setGroupActivationAtPath,
@@ -29,6 +38,7 @@ type Props = {
 	readOnly?: boolean;
 	hiddenTopLevelFields?: string[];
 	anketaFormContext?: AnketaFormContextValue;
+	modalBindings?: AnketaFormModalBindingSets;
 	"data-test-id"?: string;
 };
 
@@ -135,6 +145,7 @@ export function V2AnketaSchemaForm({
 	readOnly = false,
 	hiddenTopLevelFields = [],
 	anketaFormContext,
+	modalBindings: modalBindingsProp,
 	"data-test-id": dataTestId = "v2-anketa-schema-form",
 }: Props) {
 	const internalEngine = useV2AnketaSchemaEngine(
@@ -148,14 +159,16 @@ export function V2AnketaSchemaForm({
 		[engine.formData],
 	);
 
-	const modalBindings = useMemo(
+	const resolvedModalBindings = useMemo(
 		() =>
+			modalBindingsProp ??
 			resolveAnketaFormModalBindingSets(
 				engine.previewSchema as Record<string, unknown>,
 				engine.previewUiSchema as Record<string, unknown>,
 			),
-		[engine.previewSchema, engine.previewUiSchema],
+		[engine.previewSchema, engine.previewUiSchema, modalBindingsProp],
 	);
+	const modalBindings = resolvedModalBindings;
 
 	const effectiveHiddenRootKeys = useMemo(() => {
 		const fromSchema = new Set(modalBindings.hiddenRootKeys);
@@ -198,21 +211,11 @@ export function V2AnketaSchemaForm({
 
 	const formContext = useMemo((): AnketaFormContextValue => {
 		const base = anketaFormContext ?? {};
-		return {
-			...base,
-			formData: base.formData ?? engine.formData,
-			previewSchema: base.previewSchema ?? engine.previewSchema,
-			previewUiSchema: base.previewUiSchema ?? engine.previewUiSchema,
-			workflow: base.workflow ?? workflow,
-			onCompleteMainSection: base.onCompleteMainSection,
-			onCompletePanelSection: base.onCompletePanelSection,
-			onTouchMainSection: base.onTouchMainSection,
-			isMainSectionLocked: base.isMainSectionLocked,
-			openAnketaModal: base.openAnketaModal,
-			openUncertaintyModal: base.openUncertaintyModal,
-			objectFieldSlots: base.objectFieldSlots,
-			deleteAnketaObject: base.deleteAnketaObject,
-			deleteAnketaArrayItem: base.deleteAnketaArrayItem,
+		return mergeAnketaFormContext(base, {
+			formData: engine.formData,
+			previewSchema: engine.previewSchema,
+			previewUiSchema: engine.previewUiSchema,
+			workflow,
 			anketaModalObjectPaths:
 				base.anketaModalObjectPaths ?? modalBindings.modalObjectPathSet,
 			anketaModalArrayPaths:
@@ -222,12 +225,11 @@ export function V2AnketaSchemaForm({
 				modalBindings.compactArrayTablePathSet,
 			anketaReadOnly: readOnly || base.anketaReadOnly,
 			schemaEditorPreview:
-				base.schemaEditorPreview ??
-				engine.version?.id === "editor-draft",
+				base.schemaEditorPreview ?? engine.version?.id === "editor-draft",
 			onToggleGroupActivation:
 				base.onToggleGroupActivation ??
 				(disabled ? undefined : handleToggleGroupActivation),
-		};
+		});
 	}, [
 		anketaFormContext,
 		readOnly,
@@ -241,9 +243,10 @@ export function V2AnketaSchemaForm({
 
 	const visibleRootFieldCount = useMemo(() => {
 		const props = engine.previewSchema.properties ?? {};
+		const formUi = formUiSchema as Record<string, unknown>;
 		return Object.keys(props).filter((key) => {
 			if (effectiveHiddenRootKeys.includes(key)) return false;
-			return !isV2AnketaHiddenUiNode(formUiSchema[key]);
+			return !isV2AnketaHiddenUiNode(formUi[key]);
 		}).length;
 	}, [engine.previewSchema.properties, effectiveHiddenRootKeys, formUiSchema]);
 
@@ -257,17 +260,23 @@ export function V2AnketaSchemaForm({
 
 	if (!usesExternalEngine && !engine.version?.id) {
 		return (
-			<FormNotice
-				color="warning.main"
-				testId={`${dataTestId}--no-version`}
-			>
+			<FormNotice color="warning.main" testId={`${dataTestId}--no-version`}>
 				Нет версии схемы для отображения формы
 			</FormNotice>
 		);
 	}
 
 	return (
-		<Box data-test-id={dataTestId} sx={{ width: "100%", minWidth: 0 }}>
+		<Box
+			data-test-id={dataTestId}
+			sx={{
+				width: "100%",
+				minWidth: 0,
+				overflow: "auto",
+				height: "calc(100vh - 66px)",
+				borderRadius: "8px",
+			}}
+		>
 			{engine.calculationError ? (
 				<FormNotice color="error.main">
 					Ошибка калькуляции: {engine.calculationError}
@@ -293,8 +302,8 @@ export function V2AnketaSchemaForm({
 				uiSchema={formUiSchema}
 				formData={engine.displayFormData}
 				extraErrors={engine.logicExtraErrors}
-				templates={v2PreviewFormTemplates}
-				widgets={v2PreviewFormWidgets}
+				templates={v2AnketaFormTemplates}
+				widgets={v2AnketaFormWidgets}
 				validator={validatorRu}
 				liveValidate
 				noHtml5Validate
@@ -306,9 +315,7 @@ export function V2AnketaSchemaForm({
 					const next = (evt.formData as Record<string, unknown>) ?? {};
 					const touchedId = resolveTouchedMainSection(evt);
 					const withWorkflowTouch =
-						touchedId != null
-							? touchSectionInFormData(next, touchedId)
-							: next;
+						touchedId != null ? touchSectionInFormData(next, touchedId) : next;
 					engine.setFormData(withWorkflowTouch);
 				}}
 			/>
@@ -316,7 +323,9 @@ export function V2AnketaSchemaForm({
 	);
 }
 
-export function useV2AnketaSchemaFormEngine(source: V2AnketaSchemaEngineSource | null) {
+export function useV2AnketaSchemaFormEngine(
+	source: V2AnketaSchemaEngineSource | null,
+) {
 	return useV2AnketaSchemaEngine(source);
 }
 

@@ -75,6 +75,8 @@ export type V2AnketaSectionUiOptions = {
 	groupActivatable?: boolean;
 	/** Активна по умолчанию, если в formData ещё нет записи в groupActivation. */
 	groupActive?: boolean;
+	/** Блок разметки: не показывать заголовок (для layoutGroup по умолчанию true). */
+	hideTitle?: boolean;
 };
 
 const STREAM_SECTION_IDS = V2_ANKETA_MAIN_SECTION_IDS.filter((id) =>
@@ -123,6 +125,12 @@ export function readV2AnketaSectionUiOptions(
 		groupActivatable: opts.groupActivatable === true ? true : undefined,
 		groupActive:
 			typeof opts.groupActive === "boolean" ? opts.groupActive : undefined,
+		hideTitle:
+			opts.layoutGroup === true
+				? opts.hideTitle !== false
+				: opts.hideTitle === true
+					? true
+					: undefined,
 	};
 }
 

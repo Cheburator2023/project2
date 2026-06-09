@@ -5,7 +5,10 @@ import Typography from "@mui/material/Typography";
 import { useMemo, useRef, type ReactNode } from "react";
 import { useAnketaWorkflow } from "../hooks/useAnketaWorkflow";
 import type { V2AnketaSchemaEngine } from "../hooks/useV2AnketaSchemaEngine";
-import type { AnketaFormContextValue } from "../utils/anketaFormContext";
+import {
+	mergeAnketaFormContext,
+	type AnketaFormContextValue,
+} from "../utils/anketaFormContext";
 import { resolveAnketaFormModalBindingSets } from "../utils/anketaFormModalPaths";
 import {
 	AnketaFormModals,
@@ -83,8 +86,7 @@ export function V2AnketaFormWithModals({
 			</Flex>
 		) : undefined;
 
-		return {
-			...anketaFormContextProp,
+		return mergeAnketaFormContext(anketaFormContextProp, {
 			formData: anketaFormContextProp?.formData ?? engine.formData,
 			previewSchema:
 				anketaFormContextProp?.previewSchema ?? engine.previewSchema,
@@ -129,8 +131,8 @@ export function V2AnketaFormWithModals({
 				modalBindingSets.modalObjectPathSet,
 			anketaReadOnly:
 				anketaFormContextProp?.anketaReadOnly ?? effectiveReadOnly,
-			schemaEditorPreview: anketaFormContextProp?.schemaEditorPreview ?? false,
-		};
+			schemaEditorPreview: anketaFormContextProp?.schemaEditorPreview,
+		});
 	}, [
 		anketaFormContextProp,
 		engine.formData,
@@ -152,6 +154,7 @@ export function V2AnketaFormWithModals({
 				readOnly={effectiveReadOnly}
 				hiddenTopLevelFields={hiddenTopLevelFields}
 				anketaFormContext={anketaFormContext}
+				modalBindings={modalBindingSets}
 				data-test-id={dataTestId}
 			/>
 			<AnketaFormModals

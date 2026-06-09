@@ -4,7 +4,11 @@ import {
 	V2PreviewObjectFieldTemplate,
 } from "./V2PreviewObjectFieldTemplate";
 
-export const v2PreviewFormTemplates: Partial<TemplatesType> = {
+/** Единые RJSF-шаблоны v2 анкеты: используются и в превью, и в реальной анкете. */
+export const v2AnketaFormTemplates: Partial<TemplatesType> = {
 	ArrayFieldTemplate: V2PreviewArrayFieldTemplate,
 	ObjectFieldTemplate: V2PreviewObjectFieldTemplate,
 };
+
+/** @deprecated Используйте `v2AnketaFormTemplates`; имя сохранено для совместимости. */
+export const v2PreviewFormTemplates = v2AnketaFormTemplates;

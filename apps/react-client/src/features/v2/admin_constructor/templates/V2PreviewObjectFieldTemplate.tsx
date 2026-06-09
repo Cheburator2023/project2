@@ -389,6 +389,7 @@ function FlatSectionHeader({
 	sectionTitle,
 	sectionCaption,
 	sectionDescription,
+	hideTitle,
 	groupActivatable,
 	groupActive,
 	pathKey,
@@ -398,6 +399,7 @@ function FlatSectionHeader({
 	sectionTitle: string;
 	sectionCaption?: string;
 	sectionDescription?: string;
+	hideTitle?: boolean;
 	groupActivatable?: boolean;
 	groupActive?: boolean;
 	pathKey?: string;
@@ -406,6 +408,26 @@ function FlatSectionHeader({
 }) {
 	const inactive = groupActivatable && !groupActive;
 	const textDimSx = inactive ? { opacity: 0.55 } : undefined;
+
+	if (hideTitle) {
+		if (!groupActivatable || !pathKey) return null;
+		return (
+			<Box
+				sx={{
+					display: "flex",
+					justifyContent: "flex-end",
+					mb: 1,
+				}}
+			>
+				<GroupActivationHeaderButton
+					pathKey={pathKey}
+					active={groupActive ?? false}
+					readOnly={readOnly}
+					onToggle={onToggleGroupActivation}
+				/>
+			</Box>
+		);
+	}
 
 	return (
 		<>
@@ -916,8 +938,15 @@ export function V2PreviewObjectFieldTemplate({
 		const flatHeader = (
 			<FlatSectionHeader
 				sectionTitle={sectionTitle}
-				sectionCaption={sectionUiOptions.sectionCaption}
-				sectionDescription={sectionDescription}
+				sectionCaption={
+					sectionUiOptions.hideTitle
+						? undefined
+						: sectionUiOptions.sectionCaption
+				}
+				sectionDescription={
+					sectionUiOptions.hideTitle ? undefined : sectionDescription
+				}
+				hideTitle={sectionUiOptions.hideTitle}
 				{...groupActivationProps}
 			/>
 		);
