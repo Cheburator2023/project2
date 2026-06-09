@@ -980,6 +980,68 @@ export function moveUiSchemaBranchAtPointer(
 	return next;
 }
 
+export type DuplicateFieldResult = {
+	schema: RJSFSchema;
+	ui: Record<string, unknown>;
+	newPointer: string;
+};
+
+/** Копирует поле (включая вложенные schema/ui) и вставляет сразу после оригинала. */
+export function duplicateFieldAtPointer(
+	root: RJSFSchema,
+	ui: Record<string, unknown>,
+	sourcePointer: string,
+	newKey: string,
+): DuplicateFieldResult | null {
+	const sourcePk = parentOfPointer(sourcePointer);
+	if (!sourcePk) return null;
+
+	const sourceNode = resolveSchemaNode(root, pointerSegments(sourcePointer));
+	if (!sourceNode) return null;
+
+	const parentPointer = pointerFromSegments(sourcePk.parentSegments);
+	const siblings = listOrderedChildKeys(root, parentPointer, ui);
+	const sourceIndex = siblings.indexOf(sourcePk.key);
+	const insertIndex = sourceIndex >= 0 ? sourceIndex + 1 : siblings.length;
+
+	const nextSchema = insertChildPropertyAt(
+		root,
+		sourcePk.parentSegments,
+		newKey,
+		structuredClone(sourceNode) as RJSFSchema,
+		insertIndex,
+	);
+	if (!nextSchema) return null;
+
+	const newPointer =
+		parentPointer === "/"
+			? `/${newKey}`
+			: `${normalizeJsonPointer(parentPointer)}/${newKey}`;
+
+	let nextUi = insertKeyToUiOrderAtPointer(
+		ui,
+		parentPointer,
+		newKey,
+		insertIndex,
+	);
+
+	const sourceUiBranch = readUiSchemaBranchAtPointer(ui, sourcePointer);
+	if (sourceUiBranch) {
+		nextUi = mergeUiBranchAtPointer(nextUi, newPointer, sourceUiBranch);
+	}
+
+	const parentNode = resolveSchemaNode(nextSchema, sourcePk.parentSegments);
+	if (
+		parentNode &&
+		Array.isArray(parentNode.required) &&
+		parentNode.required.includes(sourcePk.key)
+	) {
+		parentNode.required = [...parentNode.required, newKey];
+	}
+
+	return { schema: nextSchema, ui: nextUi, newPointer };
+}
+
 export function listSchemaFields(
 	schema: RJSFSchema,
 	basePointer = "/",

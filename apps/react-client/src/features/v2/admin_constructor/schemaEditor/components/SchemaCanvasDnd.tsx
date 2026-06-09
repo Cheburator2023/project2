@@ -1,4 +1,5 @@
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
@@ -269,6 +270,7 @@ function SchemaCanvasFieldRow({
 		setSelectedPointer,
 		setUiSchema,
 		handleDeleteField,
+		duplicateCanvasField,
 	} = useSchemaEditor();
 
 	if (node.data?.kind === "array-items-section") {
@@ -489,6 +491,20 @@ function SchemaCanvasFieldRow({
 					<PowerSettingsNewIcon fontSize="small" />
 				</IconButton>
 			) : null}
+			<IconButton
+				size="small"
+				title="Дублировать поле"
+				aria-label="Дублировать поле"
+				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasDuplicateField}
+				tabIndex={selected ? 0 : -1}
+				onClick={(e) => {
+					e.stopPropagation();
+					duplicateCanvasField(fieldPointer);
+				}}
+				sx={{ flexShrink: 0 }}
+			>
+				<ContentCopyIcon fontSize="small" />
+			</IconButton>
 			<IconButton
 				size="small"
 				color="error"
@@ -823,13 +839,21 @@ export function SchemaCanvasPanel({
 						px: 0.5,
 						py: 0.5,
 						position: "relative",
+					[`& .${CANVAS_TREE_ROOT_CLASS}, & .${CANVAS_TREE_ROOT_CLASS} ul`]:
+						{
+							listStyle: "none",
+							m: 0,
+							p: 0,
+						},
 					[`& .${CANVAS_TREE_ROOT_CLASS}`]: {
-						listStyle: "none",
-						m: 0,
 						p: 1,
 						minHeight: 72,
 						boxSizing: "border-box",
 						height: "100%",
+					},
+					[`& .${CANVAS_TREE_ROOT_CLASS} li, & [role="listitem"]`]: {
+						listStyle: "none",
+						"&::marker": { display: "none" },
 					},
 					[`& [role="listitem"].${CANVAS_TREE_DROP_TARGET_CLASS}`]: {
 						borderRadius: 1,
@@ -841,6 +865,7 @@ export function SchemaCanvasPanel({
 					},
 					[`& .${CANVAS_TREE_PLACEHOLDER_CLASS}`]: {
 						listStyle: "none",
+						"&::marker": { display: "none" },
 					},
 				}}
 			>
@@ -848,6 +873,9 @@ export function SchemaCanvasPanel({
 					ref={treeRef}
 					tree={treeData}
 					rootId={SCHEMA_CANVAS_ROOT_ID}
+					listComponent="div"
+					listItemComponent="div"
+					placeholderComponent="div"
 					extraAcceptTypes={[PALETTE_DRAG_TYPE]}
 					sort={false}
 					insertDroppableFirst={false}

@@ -5,6 +5,7 @@ import {
 	applyGroupFieldOrdersToUiSchema,
 	buildOrdersForFieldMove,
 	buildFieldTypeTransitionPatch,
+	duplicateFieldAtPointer,
 	buildDictionaryMultiSchemaPatch,
 	insertKeyToUiOrderAtPointer,
 	insertChildPropertyAt,
@@ -412,6 +413,104 @@ describe("buildOrdersForFieldMove", () => {
 			"child1",
 			"child2",
 		]);
+	});
+});
+
+describe("duplicateFieldAtPointer", () => {
+	it("copies a primitive field right after the original", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				group1: {
+					type: "object",
+					properties: {
+						name: { type: "string", title: "Имя" },
+						age: { type: "number", title: "Возраст" },
+					},
+					required: ["name"],
+				},
+			},
+		};
+		const ui: UiSchema = {
+			group1: {
+				"ui:order": ["name", "age"],
+				name: { "ui:widget": "text" },
+				age: { "ui:widget": "updown" },
+			},
+		};
+
+		const result = duplicateFieldAtPointer(
+			schema,
+			ui as Record<string, unknown>,
+			"/group1/name",
+			"name_copy",
+		);
+
+		expect(result?.newPointer).toBe("/group1/name_copy");
+		expect(listOrderedChildKeys(result!.schema, "/group1", result!.ui)).toEqual([
+			"name",
+			"name_copy",
+			"age",
+		]);
+		const group = result!.schema.properties!.group1 as RJSFSchema;
+		expect((group.properties as Record<string, RJSFSchema>).name_copy).toEqual({
+			type: "string",
+			title: "Имя",
+		});
+		expect(group.required).toEqual(["name", "name_copy"]);
+		const groupUi = (result!.ui.group1 as Record<string, unknown>).name_copy as
+			| Record<string, unknown>
+			| undefined;
+		expect(groupUi?.["ui:widget"]).toBe("text");
+	});
+
+	it("copies a group with nested children and ui branches", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				layout1: {
+					type: "object",
+					title: "Разметка",
+					properties: {
+						child1: { type: "string", title: "Поле 1" },
+						child2: { type: "string", title: "Поле 2" },
+					},
+				},
+				other: { type: "string" },
+			},
+		};
+		const ui: UiSchema = {
+			"ui:order": ["layout1", "other"],
+			layout1: {
+				"ui:options": { layoutGroup: true },
+				"ui:order": ["child2", "child1"],
+				child1: { "ui:widget": "textarea" },
+				child2: { "ui:widget": "text" },
+			},
+		};
+
+		const result = duplicateFieldAtPointer(
+			schema,
+			ui as Record<string, unknown>,
+			"/layout1",
+			"layout1_copy",
+		);
+
+		expect(result?.newPointer).toBe("/layout1_copy");
+		expect(listOrderedChildKeys(result!.schema, "/", result!.ui)).toEqual([
+			"layout1",
+			"layout1_copy",
+			"other",
+		]);
+		const copy = (result!.schema.properties as Record<string, RJSFSchema>)
+			.layout1_copy;
+		expect(Object.keys(copy.properties ?? {})).toEqual(["child1", "child2"]);
+		const copyUi = result!.ui.layout1_copy as Record<string, unknown>;
+		expect(copyUi["ui:options"]).toEqual({ layoutGroup: true });
+		expect(copyUi["ui:order"]).toEqual(["child2", "child1"]);
+		expect(
+			(copyUi.child1 as Record<string, unknown>)["ui:widget"],
+		).toBe("textarea");
 	});
 });
 

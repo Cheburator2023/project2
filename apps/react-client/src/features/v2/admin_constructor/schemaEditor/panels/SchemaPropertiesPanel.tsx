@@ -363,9 +363,9 @@ export function SchemaPropertiesPanel() {
 									Перетащите поля внутрь блока разметки на холсте.
 								</Typography>
 							) : (
-								<Box component="ul" sx={{ m: 0, pl: 2.5, mb: 1 }}>
+								<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mb: 1 }}>
 									{groupChildFields.map((child) => (
-										<Box component="li" key={child.key} sx={{ mb: 0.5 }}>
+										<Box key={child.key}>
 											<Typography variant="body2" component="span">
 												{child.title}
 											</Typography>
@@ -521,9 +521,9 @@ export function SchemaPropertiesPanel() {
 									Перетащите поле внутрь группы на холсте.
 								</Typography>
 							) : (
-								<Box component="ul" sx={{ m: 0, pl: 2.5, mb: 1 }}>
+								<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mb: 1 }}>
 									{groupChildFields.map((child) => (
-										<Box component="li" key={child.key} sx={{ mb: 0.5 }}>
+										<Box key={child.key}>
 											<Typography variant="body2" component="span">
 												{child.title}
 											</Typography>

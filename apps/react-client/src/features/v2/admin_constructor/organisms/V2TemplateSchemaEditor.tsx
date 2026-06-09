@@ -67,6 +67,7 @@ import {
 	applyGroupFieldOrdersToUiSchema,
 	buildDictionaryMultiSchemaPatch,
 	buildFieldTypeTransitionPatch,
+	duplicateFieldAtPointer,
 	insertChildPropertyAt,
 	insertKeyToUiOrderAtPointer,
 	isObjectFieldGroup,
@@ -1072,6 +1073,25 @@ export const V2TemplateSchemaEditor = ({
 		[jsonSchema, uiSchema, pushDraftHistory],
 	);
 
+	const duplicateCanvasField = useCallback(
+		(sourcePointer: string) => {
+			const newKey = `field_${nanoid(8)}`;
+			const result = duplicateFieldAtPointer(
+				jsonSchema,
+				uiSchema as Record<string, unknown>,
+				sourcePointer,
+				newKey,
+			);
+			if (!result) return;
+
+			pushDraftHistory();
+			setJsonSchema(result.schema);
+			setUiSchema(result.ui as UiSchema);
+			setSelectedPointer(result.newPointer);
+		},
+		[jsonSchema, uiSchema, pushDraftHistory],
+	);
+
 	const updateField = useCallback(
 		(patch: Partial<RJSFSchema>) => {
 			if (!selectedPointer) return;
@@ -1356,6 +1376,7 @@ export const V2TemplateSchemaEditor = ({
 			reorderRootFieldKeys,
 			applyGroupFieldOrders,
 			moveCanvasField,
+			duplicateCanvasField,
 			canUndoDraft: draftPast.length > 0,
 			canRedoDraft: draftFuture.length > 0,
 			undoDraft,
@@ -1427,6 +1448,7 @@ export const V2TemplateSchemaEditor = ({
 			reorderRootFieldKeys,
 			applyGroupFieldOrders,
 			moveCanvasField,
+			duplicateCanvasField,
 			draftPast.length,
 			draftFuture.length,
 			undoDraft,

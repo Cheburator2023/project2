@@ -100,15 +100,22 @@ export function SchemaFieldTreePanel({ embedded = false }: { embedded?: boolean 
 					Добавьте поля из палитры слева.
 				</Typography>
 			) : (
-				<RichTreeView
-					items={items}
-					getItemId={(item) => item.id}
-					getItemLabel={getItemLabel}
-					selectedItems={selectedPointer}
-					onSelectedItemsChange={(_e, id) => {
-						if (typeof id === "string") setSelectedPointer(id);
+				<Box
+					sx={{
+						"& ul": { listStyle: "none", m: 0, p: 0 },
+						"& li": { listStyle: "none", "&::marker": { display: "none" } },
 					}}
-				/>
+				>
+					<RichTreeView
+						items={items}
+						getItemId={(item) => item.id}
+						getItemLabel={getItemLabel}
+						selectedItems={selectedPointer}
+						onSelectedItemsChange={(_e, id) => {
+							if (typeof id === "string") setSelectedPointer(id);
+						}}
+					/>
+				</Box>
 			)}
 			{selectedPointer && dictionaryCodeByPointer.get(selectedPointer) ? (
 				<Box sx={{ mt: 1 }}>

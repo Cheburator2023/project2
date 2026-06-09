@@ -96,6 +96,7 @@ export type SchemaEditorContextValue = {
 		targetParentPointer: string,
 		targetIndex: number,
 	) => void;
+	duplicateCanvasField: (sourcePointer: string) => void;
 	canUndoDraft: boolean;
 	canRedoDraft: boolean;
 	undoDraft: () => void;

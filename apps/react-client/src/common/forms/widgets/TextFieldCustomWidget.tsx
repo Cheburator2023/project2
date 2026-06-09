@@ -25,6 +25,10 @@ import {
 import { WidgetProps } from "@rjsf/utils";
 import { isEqual } from "lodash-es";
 import { fuzzySearch, highlightMatches } from "@react-client/utils/fuzzySearch";
+import {
+	buildSelectOptions,
+	selectLabelForValue,
+} from "./selectFieldOptions";
 
 // Вспомогательная функция для преобразования indexes в matches
 const indexesToMatches = (
@@ -130,17 +134,9 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 		return onFocus?.(id, value);
 	};
 
+	const optionsForSelect = buildSelectOptions(options, schema);
 	const isSelect =
-		(options?.defaultEnums && options?.defaultEnums.length > 0) ||
-		(options?.enumOptions && options?.enumOptions.length > 0) ||
-		options?.select ||
-		props?.select;
-	const defaultEnums =
-		options?.defaultEnums?.map((item: string) => ({
-			label: item,
-			value: item,
-		})) || [];
-	const optionsForSelect = [...defaultEnums, ...(options?.enumOptions || [])];
+		optionsForSelect.length > 0 || options?.select || props?.select;
 	const allowCustomInput = options?.freeSolo || options?.allowCustomInput;
 	const isDisabled = disabled || readonly;
 	const isMultiple = options?.multiple;
@@ -152,7 +148,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 		isFuzzy && searchTerm.trim()
 			? fuzzySearch(
 					searchTerm,
-					optionsForSelect.map((item) => item.value),
+					optionsForSelect.map((item) => item.label || item.value),
 					{ threshold: 0.1 },
 				)
 			: [];
@@ -160,7 +156,9 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 	const filteredOptions =
 		isFuzzy && searchTerm.trim()
 			? fuzzyMatches.map((match) => ({
-					...optionsForSelect.find((option) => option.value === match.target)!,
+					...optionsForSelect.find(
+						(option) => (option.label || option.value) === match.target,
+					)!,
 					fuzzyMatch: match,
 				}))
 			: optionsForSelect.map((option) => ({
@@ -241,7 +239,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 									{selected.map((item: string, index: number) => (
 										<Chip
 											key={index}
-											label={item}
+											label={selectLabelForValue(item, optionsForSelect)}
 											size="medium"
 											variant="outlined"
 											onDelete={noDelete ? undefined : handleChipDelete(item)}
@@ -364,7 +362,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 							<ListItemText
 								primary={
 									<HighlightedMenuItem
-										text={item.value}
+										text={item.label || item.value}
 										matches={
 											item.fuzzyMatch?.indexes
 												? indexesToMatches(item.fuzzyMatch.indexes)
@@ -511,6 +509,17 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			}}
 			slotProps={{
 				select: {
+					displayEmpty: !!placeholder,
+					renderValue: (selected: unknown) => {
+						if (selected == null || selected === "") {
+							return placeholder ? (
+								<span style={{ opacity: 0.4 }}>{placeholder}</span>
+							) : (
+								""
+							);
+						}
+						return selectLabelForValue(String(selected), optionsForSelect);
+					},
 					MenuProps: {
 						disablePortal: false,
 					},

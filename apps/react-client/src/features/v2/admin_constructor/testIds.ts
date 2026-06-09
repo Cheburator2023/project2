@@ -29,6 +29,7 @@ export const V2_TEMPLATE_EDIT_TEST_IDS = {
 	canvasCollapseAll: "canvasCollapseAll",
 	canvasDropZone: "canvasDropZone",
 	canvasFieldRow: "canvasFieldRow",
+	canvasDuplicateField: "canvasDuplicateField",
 	fieldTree: "fieldTree",
 	properties: "properties",
 	jsonEditor: "jsonEditor",
