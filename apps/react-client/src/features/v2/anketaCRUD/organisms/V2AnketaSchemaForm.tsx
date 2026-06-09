@@ -17,10 +17,11 @@ import { applySectionLocksToUiSchema } from "../utils/anketaSectionUiSchema";
 import { readWorkflowFromFormData, touchSectionInFormData } from "../hooks/useAnketaWorkflow";
 import {
 	isV2AnketaHiddenUiNode,
+	setGroupActivationAtPath,
 	type V2AnketaMainSectionId,
 } from "@smart-anketa/api-contract";
 import type { ReactNode } from "react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 type Props = {
 	source?: V2AnketaSchemaEngineSource | null;
@@ -186,6 +187,15 @@ export function V2AnketaSchemaForm({
 		workflow,
 	]);
 
+	const handleToggleGroupActivation = useCallback(
+		(pathKey: string, active: boolean) => {
+			engine.setFormData(
+				setGroupActivationAtPath(engine.formData, pathKey, active),
+			);
+		},
+		[engine],
+	);
+
 	const formContext = useMemo((): AnketaFormContextValue => {
 		const base = anketaFormContext ?? {};
 		return {
@@ -214,10 +224,15 @@ export function V2AnketaSchemaForm({
 			schemaEditorPreview:
 				base.schemaEditorPreview ??
 				engine.version?.id === "editor-draft",
+			onToggleGroupActivation:
+				base.onToggleGroupActivation ??
+				(disabled ? undefined : handleToggleGroupActivation),
 		};
 	}, [
 		anketaFormContext,
 		readOnly,
+		disabled,
+		handleToggleGroupActivation,
 		engine.formData,
 		engine.version?.id,
 		modalBindings,

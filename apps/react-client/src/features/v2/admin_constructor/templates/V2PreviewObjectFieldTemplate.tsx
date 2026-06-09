@@ -9,7 +9,7 @@ import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type {
 	ArrayFieldTemplateProps,
 	FieldPathId,
@@ -40,6 +40,7 @@ import {
 	resolveV2AnketaSectionTitleVariant,
 	resolveV2AnketaWorkflowSectionId,
 	readV2AnketaSectionUiOptions,
+	resolveGroupIsActive,
 	type V2ArchComponentType,
 } from "@smart-anketa/api-contract";
 import { ArchComponentDevOutline } from "./ArchComponentDevOutline";
@@ -118,33 +119,142 @@ function OpenSubSectionPanel({
 	count,
 	description,
 	children,
+	groupActivatable,
+	groupActive,
+	pathKey,
+	readOnly,
+	onToggleGroupActivation,
 }: {
 	sectionTitle: string;
 	sectionCaption?: string;
 	count?: number;
 	description?: string;
 	children: ReactNode;
+	groupActivatable?: boolean;
+	groupActive?: boolean;
+	pathKey?: string;
+	readOnly?: boolean;
+	onToggleGroupActivation?: (pathKey: string, active: boolean) => void;
 }) {
 	const titleWithCount =
 		count != null && count > 0 ? `${sectionTitle} (${count})` : sectionTitle;
+	const inactive = groupActivatable && !groupActive;
+
+	const textDimSx = inactive ? { opacity: 0.55 } : undefined;
 
 	return (
 		<Box sx={{ minWidth: 0, mb: 3 }}>
-			<Typography variant="h6" fontWeight={700} mb={sectionCaption || description ? 1 : 3}>
-				{titleWithCount}
-			</Typography>
+			<Box
+				sx={{
+					display: "flex",
+					alignItems: "flex-start",
+					gap: 1,
+					mb: sectionCaption || description ? 1 : 3,
+				}}
+			>
+				<Typography
+					variant="h6"
+					fontWeight={700}
+					sx={{ flex: 1, minWidth: 0, ...textDimSx }}
+				>
+					{titleWithCount}
+				</Typography>
+				{groupActivatable && pathKey ? (
+					<Box sx={{ flexShrink: 0, opacity: 1 }}>
+						<GroupActivationHeaderButton
+							pathKey={pathKey}
+							active={groupActive ?? false}
+							readOnly={readOnly}
+							onToggle={onToggleGroupActivation}
+						/>
+					</Box>
+				) : null}
+			</Box>
 			{sectionCaption ? (
-				<Typography variant="caption" color="text.secondary" display="block" sx={{ mb: description ? 1 : 2 }}>
+				<Typography
+					variant="caption"
+					color="text.secondary"
+					display="block"
+					sx={{ mb: description ? 1 : 2, ...textDimSx }}
+				>
 					{sectionCaption}
 				</Typography>
 			) : null}
 			{description ? (
-				<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+				<Typography
+					variant="body2"
+					color="text.secondary"
+					sx={{ mb: 2, ...textDimSx }}
+				>
 					{description}
 				</Typography>
 			) : null}
-			{children}
+			{inactive ? null : children}
 		</Box>
+	);
+}
+
+function GroupActivationHeaderButton({
+	pathKey,
+	active,
+	readOnly,
+	onToggle,
+}: {
+	pathKey: string;
+	active: boolean;
+	readOnly?: boolean;
+	onToggle?: (pathKey: string, active: boolean) => void;
+}) {
+	return (
+		<Button
+			size="small"
+			variant={active ? "outlined" : "contained"}
+			disabled={readOnly}
+			onClick={(e) => {
+				e.stopPropagation();
+				onToggle?.(pathKey, !active);
+			}}
+			sx={{ flexShrink: 0, textTransform: "none", opacity: 1 }}
+		>
+			{active ? "Деактивировать" : "Активировать"}
+		</Button>
+	);
+}
+
+function SectionPanelHeaderActions({
+	groupActivatable,
+	groupActive,
+	pathKey,
+	readOnly,
+	onToggleGroupActivation,
+	sectionStatusChip,
+}: {
+	groupActivatable?: boolean;
+	groupActive?: boolean;
+	pathKey?: string;
+	readOnly?: boolean;
+	onToggleGroupActivation?: (pathKey: string, active: boolean) => void;
+	sectionStatusChip?: ReactNode;
+}) {
+	if (!groupActivatable && !sectionStatusChip) return null;
+
+	return (
+		<Stack
+			direction="row"
+			spacing={1}
+			alignItems="center"
+			sx={{ flexShrink: 0, opacity: 1 }}
+		>
+			{groupActivatable && pathKey ? (
+				<GroupActivationHeaderButton
+					pathKey={pathKey}
+					active={groupActive ?? false}
+					readOnly={readOnly}
+					onToggle={onToggleGroupActivation}
+				/>
+			) : null}
+			{sectionStatusChip}
+		</Stack>
 	);
 }
 
@@ -157,6 +267,11 @@ function SectionPanelAccordion({
 	children,
 	defaultExpanded,
 	titleVariant = "h6",
+	groupActivatable,
+	groupActive,
+	pathKey,
+	readOnly,
+	onToggleGroupActivation,
 }: {
 	sectionTitle: string;
 	sectionCaption?: string;
@@ -166,10 +281,25 @@ function SectionPanelAccordion({
 	children: ReactNode;
 	defaultExpanded?: boolean;
 	titleVariant?: "h5" | "h6";
+	groupActivatable?: boolean;
+	groupActive?: boolean;
+	pathKey?: string;
+	readOnly?: boolean;
+	onToggleGroupActivation?: (pathKey: string, active: boolean) => void;
 }) {
+	const inactive = groupActivatable && !groupActive;
+	const canExpand = !inactive;
+	const textDimSx = inactive ? { opacity: 0.55 } : undefined;
+	const [expanded, setExpanded] = useState(defaultExpanded ?? false);
+	const showDetails = canExpand;
+	const accordionExpanded = canExpand ? expanded : false;
+
 	return (
 		<Accordion
-			defaultExpanded={defaultExpanded ?? false}
+			expanded={accordionExpanded}
+			onChange={(_, next) => {
+				if (canExpand) setExpanded(next);
+			}}
 			disableGutters
 			sx={{
 				height: "auto !important",
@@ -181,48 +311,143 @@ function SectionPanelAccordion({
 			data-test-id={V2_TEMPLATE_READ_TEST_IDS.formSection}
 		>
 			<AccordionSummary
-				expandIcon={<ExpandMoreIcon />}
+				expandIcon={canExpand ? <ExpandMoreIcon /> : null}
 				sx={{
 					minHeight: 56,
+					cursor: canExpand ? "pointer" : "default",
 					"& .MuiAccordionSummary-content": {
 						alignItems: "center",
 						my: 1.5,
-						gap: 1,
+						marginRight: 1,
+						overflow: "visible",
 					},
 				}}
 			>
-				<Box sx={{ minWidth: 0, flex: 1 }}>
-					<Typography
-						variant={titleVariant}
-						fontWeight={titleVariant === "h5" ? 700 : undefined}
-					>
-						{sectionTitle}
-					</Typography>
-					{sectionCaption ? (
+				<Box
+					sx={{
+						display: "flex",
+						alignItems: "center",
+						gap: 1,
+						width: "100%",
+						minWidth: 0,
+					}}
+				>
+					<Box sx={{ minWidth: 0, flex: 1, ...textDimSx }}>
 						<Typography
-							variant="caption"
-							color="text.secondary"
-							display="block"
-							sx={{ mt: 0.25 }}
+							variant={titleVariant}
+							fontWeight={titleVariant === "h5" ? 700 : undefined}
 						>
-							{sectionCaption}
+							{sectionTitle}
 						</Typography>
-					) : null}
+						{sectionCaption ? (
+							<Typography
+								variant="caption"
+								color="text.secondary"
+								display="block"
+								sx={{ mt: 0.25 }}
+							>
+								{sectionCaption}
+							</Typography>
+						) : null}
+					</Box>
+					<SectionPanelHeaderActions
+						groupActivatable={groupActivatable}
+						groupActive={groupActive}
+						pathKey={pathKey}
+						readOnly={readOnly}
+						onToggleGroupActivation={onToggleGroupActivation}
+						sectionStatusChip={sectionStatusChip}
+					/>
 				</Box>
-				{sectionStatusChip ? (
-					<Box sx={{ ml: "auto", mr: 1 }}>{sectionStatusChip}</Box>
-				) : null}
 			</AccordionSummary>
-			<AccordionDetails sx={{ minWidth: 0 }}>
-				{description ? (
-					<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-						{description}
-					</Typography>
-				) : null}
-				{children}
-				{completeButton ? <Box sx={{ mt: 2 }}>{completeButton}</Box> : null}
-			</AccordionDetails>
+			{showDetails ? (
+				<AccordionDetails sx={{ minWidth: 0 }}>
+					{canExpand ? (
+						<>
+							{description ? (
+								<Typography
+									variant="body2"
+									color="text.secondary"
+									sx={{ mb: 1.5 }}
+								>
+									{description}
+								</Typography>
+							) : null}
+							{children}
+						</>
+					) : null}
+					{canExpand && completeButton ? (
+						<Box sx={{ mt: canExpand ? 2 : 0, opacity: 1 }}>{completeButton}</Box>
+					) : null}
+				</AccordionDetails>
+			) : null}
 		</Accordion>
+	);
+}
+
+function FlatSectionHeader({
+	sectionTitle,
+	sectionCaption,
+	sectionDescription,
+	groupActivatable,
+	groupActive,
+	pathKey,
+	readOnly,
+	onToggleGroupActivation,
+}: {
+	sectionTitle: string;
+	sectionCaption?: string;
+	sectionDescription?: string;
+	groupActivatable?: boolean;
+	groupActive?: boolean;
+	pathKey?: string;
+	readOnly?: boolean;
+	onToggleGroupActivation?: (pathKey: string, active: boolean) => void;
+}) {
+	const inactive = groupActivatable && !groupActive;
+	const textDimSx = inactive ? { opacity: 0.55 } : undefined;
+
+	return (
+		<>
+			<Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, mb: 1 }}>
+				<Typography
+					variant="h6"
+					fontWeight={700}
+					sx={{ flex: 1, minWidth: 0, ...textDimSx }}
+				>
+					{sectionTitle}
+				</Typography>
+				{groupActivatable && pathKey ? (
+					<Box sx={{ flexShrink: 0, opacity: 1 }}>
+						<GroupActivationHeaderButton
+							pathKey={pathKey}
+							active={groupActive ?? false}
+							readOnly={readOnly}
+							onToggle={onToggleGroupActivation}
+						/>
+					</Box>
+				) : null}
+			</Box>
+			{sectionCaption ? (
+				<Typography
+					variant="caption"
+					color="text.secondary"
+					display="block"
+					sx={{ mb: sectionDescription ? 1 : 2, ...textDimSx }}
+				>
+					{sectionCaption}
+				</Typography>
+			) : null}
+			{sectionDescription ? (
+				<Typography
+					variant="body2"
+					color="text.secondary"
+					sx={{ mb: 1.5, ...textDimSx }}
+				>
+					{sectionDescription}
+				</Typography>
+			) : null}
+		</>
 	);
 }
 
@@ -518,6 +743,25 @@ export function V2PreviewObjectFieldTemplate({
 		</ArchComponentDevOutline>
 	);
 	const anketaCtx = readAnketaFormContext(registry.formContext);
+	const enforceGroupActivation = !anketaCtx.schemaEditorPreview;
+	const groupActivatable =
+		enforceGroupActivation && sectionUiOptions.groupActivatable === true;
+	const groupActive = enforceGroupActivation
+		? resolveGroupIsActive(
+				pathKey,
+				anketaCtx.previewUiSchema ?? (uiSchema as UiSchema),
+				anketaCtx.formData,
+			)
+		: true;
+	const groupActivationProps = {
+		groupActivatable,
+		groupActive,
+		pathKey,
+		readOnly: anketaReadOnly,
+		onToggleGroupActivation: enforceGroupActivation
+			? anketaCtx.onToggleGroupActivation
+			: undefined,
+	};
 	const useArchObjectModal = shouldUseArchObjectModal(
 		anketaCtx,
 		pathKey,
@@ -551,7 +795,9 @@ export function V2PreviewObjectFieldTemplate({
 	);
 
 	const showWorkflowChrome =
-		sectionRole === "main" || Boolean(sectionUiOptions.workflowSectionId);
+		sectionRole === "main" ||
+		Boolean(sectionUiOptions.workflowSectionId) ||
+		sectionUiOptions.groupActivatable === true;
 	const workflowSectionIdResolved = workflowSectionId;
 	const hasExplicitWorkflowSectionId = Boolean(
 		sectionUiOptions.workflowSectionId,
@@ -596,7 +842,7 @@ export function V2PreviewObjectFieldTemplate({
 	const workflowStatusChip = showWorkflowChrome ? (
 		<AnketaSectionStatusChip kind="section" status={sectionStatus} />
 	) : null;
-	const workflowCompleteButton = canCompleteWorkflow ? (
+	const workflowCompleteButton = groupActivatable && !groupActive ? null : canCompleteWorkflow ? (
 		<Button
 			variant="contained"
 			onClick={() => {
@@ -624,6 +870,7 @@ export function V2PreviewObjectFieldTemplate({
 				defaultExpanded={defaultExpanded}
 				sectionStatusChip={workflowStatusChip}
 				completeButton={workflowCompleteButton}
+				{...groupActivationProps}
 			>
 				{fieldsBody}
 			</SectionPanelAccordion>,
@@ -642,6 +889,7 @@ export function V2PreviewObjectFieldTemplate({
 				sectionCaption={sectionUiOptions.sectionCaption}
 				count={count}
 				description={sectionDescription}
+				{...groupActivationProps}
 			>
 				{fieldsBody}
 			</OpenSubSectionPanel>,
@@ -656,6 +904,7 @@ export function V2PreviewObjectFieldTemplate({
 				description={sectionDescription}
 				defaultExpanded={defaultExpanded}
 				titleVariant={titleVariant}
+				{...groupActivationProps}
 			>
 				{fieldsBody}
 			</SectionPanelAccordion>,
@@ -664,25 +913,31 @@ export function V2PreviewObjectFieldTemplate({
 
 	if (sectionRole === "flat") {
 		const layoutColumns = readLayoutGridColumns(uiSchema as UiSchema);
+		const flatHeader = (
+			<FlatSectionHeader
+				sectionTitle={sectionTitle}
+				sectionCaption={sectionUiOptions.sectionCaption}
+				sectionDescription={sectionDescription}
+				{...groupActivationProps}
+			/>
+		);
+		const flatBody =
+			groupActivatable && !groupActive ? null : (
+				<Box sx={{ mt: layoutColumns != null ? 1 : 0 }}>{fieldsBody}</Box>
+			);
+
 		if (layoutColumns != null) {
-			return wrapArch(<Box sx={{ minWidth: 0 }}>{fieldsBody}</Box>);
+			return wrapArch(
+				<Box sx={{ minWidth: 0 }}>
+					{flatHeader}
+					{flatBody}
+				</Box>,
+			);
 		}
 		return wrapArch(
 			<Box sx={{ minWidth: 0 }}>
-				<Typography variant="h6" fontWeight={700} mb={sectionUiOptions.sectionCaption || sectionDescription ? 1 : 3}>
-					{sectionTitle}
-				</Typography>
-				{sectionUiOptions.sectionCaption ? (
-					<Typography variant="caption" color="text.secondary" display="block" sx={{ mb: sectionDescription ? 1 : 2 }}>
-						{sectionUiOptions.sectionCaption}
-					</Typography>
-				) : null}
-				{sectionDescription ? (
-					<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-						{sectionDescription}
-					</Typography>
-				) : null}
-				{fieldsBody}
+				{flatHeader}
+				{flatBody}
 			</Box>,
 		);
 	}
@@ -693,6 +948,7 @@ export function V2PreviewObjectFieldTemplate({
 			sectionCaption={sectionUiOptions.sectionCaption}
 			description={sectionDescription}
 			defaultExpanded={defaultExpanded}
+			{...groupActivationProps}
 		>
 			{fieldsBody}
 		</SectionPanelAccordion>,

@@ -70,6 +70,13 @@
 					}
 				}
 			},
+			"groupActivation": {
+				"type": "object",
+				"title": "Активность групп",
+				"additionalProperties": {
+					"type": "boolean"
+				}
+			},
 			"generalInfo": {
 				"type": "object",
 				"title": "Общая информация",
@@ -360,16 +367,6 @@
 						"type": "object",
 						"title": "Параметры",
 						"properties": {
-							"streamDigitalAgents": {
-								"type": "boolean",
-								"title": "Стрим Цифровые агенты",
-								"default": false
-							},
-							"streamStreamingData": {
-								"type": "boolean",
-								"title": "Стрим Потоковые данные",
-								"default": false
-							},
 							"streamsOutsideDADM": {
 								"type": "boolean",
 								"title": "Стримы вне ДАДМ",
@@ -1055,6 +1052,28 @@
 						}
 					}
 				}
+			},
+			"streamDigitalAgents": {
+				"type": "object",
+				"title": "Стрим «Цифровые агенты»",
+				"properties": {
+					"localParams": {
+						"type": "object",
+						"title": "Локальные параметры стрима «Цифровые агенты»",
+						"properties": {}
+					}
+				}
+			},
+			"streamStreamingData": {
+				"type": "object",
+				"title": "Стрим «Потоковые данные»",
+				"properties": {
+					"localParams": {
+						"type": "object",
+						"title": "Локальные параметры стрима «Потоковые данные»",
+						"properties": {}
+					}
+				}
 			}
 		}
 	},
@@ -1289,17 +1308,9 @@
 					"sectionRole": "flat"
 				},
 				"ui:order": [
-					"streamDigitalAgents",
 					"streamsOutsideDADM",
-					"streamStreamingData",
 					"streamNames"
 				],
-				"streamDigitalAgents": {
-					"ui:widget": "checkbox"
-				},
-				"streamStreamingData": {
-					"ui:widget": "checkbox"
-				},
 				"streamsOutsideDADM": {
 					"ui:widget": "checkbox"
 				},
@@ -1522,15 +1533,23 @@
 		},
 		"ui:order": [
 			"workflow",
+			"groupActivation",
 			"meta",
 			"generalInfo",
 			"uncertaintyCalculation",
 			"detailInfo",
 			"streamDataSources",
 			"streamModelControl",
+			"streamDigitalAgents",
+			"streamStreamingData",
 			"summary"
 		],
 		"workflow": {
+			"ui:options": {
+				"hidden": true
+			}
+		},
+		"groupActivation": {
 			"ui:options": {
 				"hidden": true
 			}
@@ -1657,6 +1676,38 @@
 				"sectionCaption": "Платформенные и поддерживающие стримы"
 			},
 			"ui:order": ["localParams", "atypicalTasks"],
+			"localParams": {
+				"ui:options": {
+					"sectionRole": "subsection",
+					"showFilledCount": true
+				}
+			}
+		},
+		"streamDigitalAgents": {
+			"ui:options": {
+				"sectionRole": "panel",
+				"groupActivatable": true,
+				"groupActive": false,
+				"defaultExpanded": false,
+				"sectionCaption": "Платформенные и поддерживающие стримы"
+			},
+			"ui:order": ["localParams"],
+			"localParams": {
+				"ui:options": {
+					"sectionRole": "subsection",
+					"showFilledCount": true
+				}
+			}
+		},
+		"streamStreamingData": {
+			"ui:options": {
+				"sectionRole": "panel",
+				"groupActivatable": true,
+				"groupActive": false,
+				"defaultExpanded": false,
+				"sectionCaption": "Платформенные и поддерживающие стримы"
+			},
+			"ui:order": ["localParams"],
 			"localParams": {
 				"ui:options": {
 					"sectionRole": "subsection",

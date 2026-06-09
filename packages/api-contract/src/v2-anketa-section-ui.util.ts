@@ -71,6 +71,10 @@ export type V2AnketaSectionUiOptions = {
 	hidden?: boolean;
 	/** Тип арх. компонента (глоссарий §3.4) для разметки и dev-подсветки. */
 	archComponent?: V2ArchComponentType;
+	/** Группу можно включать/выключать в форме (кнопка в шапке секции). */
+	groupActivatable?: boolean;
+	/** Активна по умолчанию, если в formData ещё нет записи в groupActivation. */
+	groupActive?: boolean;
 };
 
 const STREAM_SECTION_IDS = V2_ANKETA_MAIN_SECTION_IDS.filter((id) =>
@@ -116,6 +120,9 @@ export function readV2AnketaSectionUiOptions(
 		archComponent: isV2ArchComponentType(opts.archComponent)
 			? opts.archComponent
 			: undefined,
+		groupActivatable: opts.groupActivatable === true ? true : undefined,
+		groupActive:
+			typeof opts.groupActive === "boolean" ? opts.groupActive : undefined,
 	};
 }
 

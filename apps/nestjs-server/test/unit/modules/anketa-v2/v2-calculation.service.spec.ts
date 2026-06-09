@@ -1,3 +1,4 @@
+import { setGroupActivationAtPath } from "@smart-anketa/api-contract";
 import { V2_DEFAULT_LOGIC_GRAPH } from "../../../../src/modules/anketa-v2/constants/v2-default-logic";
 import { V2CalculationService } from "../../../../src/modules/anketa-v2/services/v2-calculation.service";
 import {
@@ -26,6 +27,25 @@ describe("V2CalculationService", () => {
 
 		expect(tasks[0]?.total).toBe(3);
 		expect(tasks[1]?.total).toBe(2);
+	});
+
+	it("skips rules under inactive activatable groups", () => {
+		const inactive = setGroupActivationAtPath(
+			{
+				streamModelControl: {
+					atypicalTasks: [{ estimateHoursPerDay: 2, coefficient: 1.5 }],
+				},
+			},
+			"streamModelControl",
+			false,
+		);
+		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, inactive);
+		const tasks = (
+			result.formData.streamModelControl as {
+				atypicalTasks: Array<{ total?: number }>;
+			}
+		).atypicalTasks;
+		expect(tasks[0]?.total).toBeUndefined();
 	});
 
 	it("computes unified Total = typicalTotal + atypicalTotal (ФТ-026)", () => {

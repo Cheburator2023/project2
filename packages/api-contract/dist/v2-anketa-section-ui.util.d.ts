@@ -28,6 +28,10 @@ export type V2AnketaSectionUiOptions = {
     hidden?: boolean;
     /** Тип арх. компонента (глоссарий §3.4) для разметки и dev-подсветки. */
     archComponent?: V2ArchComponentType;
+    /** Группу можно включать/выключать в форме (кнопка в шапке секции). */
+    groupActivatable?: boolean;
+    /** Активна по умолчанию, если в formData ещё нет записи в groupActivation. */
+    groupActive?: boolean;
 };
 declare const STREAM_SECTION_IDS: V2AnketaMainSectionId[];
 export declare function readV2AnketaSectionUiOptions(uiNode: unknown): V2AnketaSectionUiOptions;

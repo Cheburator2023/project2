@@ -1,5 +1,6 @@
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import GridViewIcon from "@mui/icons-material/GridView";
@@ -23,6 +24,7 @@ import {
 import { useDrag } from "react-dnd";
 import { getEmptyImage } from "react-dnd-html5-backend";
 import {
+	readV2AnketaSectionUiOptions,
 	resolveV2AnketaArchComponent,
 	resolveV2AnketaCanvasUiKind,
 	V2_ARCH_COMPONENT_LABELS,
@@ -33,6 +35,7 @@ import {
 	getObjectItemsSchema,
 	isObjectFieldGroup,
 	listOrderedChildKeys,
+	patchUiOptionsAtPointer,
 	readUiSchemaBranchAtPointer,
 	resolveSchemaNode,
 } from "../../utils/schemaMutators";
@@ -260,6 +263,7 @@ function SchemaCanvasFieldRow({
 		uiSchema,
 		selectedPointer,
 		setSelectedPointer,
+		setUiSchema,
 		handleDeleteField,
 	} = useSchemaEditor();
 
@@ -313,6 +317,11 @@ function SchemaCanvasFieldRow({
 			? (uiBranch["ui:options"] as Record<string, unknown>)
 			: undefined;
 	const isLayoutGroup = uiOptions?.layoutGroup === true;
+	const sectionUiOptions = readV2AnketaSectionUiOptions(uiBranch);
+	const groupInactive =
+		isGroup &&
+		sectionUiOptions.groupActivatable &&
+		sectionUiOptions.groupActive === false;
 	const archComponent = resolveV2AnketaArchComponent(uiBranch);
 	const canvasUiKind = resolveV2AnketaCanvasUiKind(uiBranch);
 	const canvasUiColor =
@@ -354,7 +363,7 @@ function SchemaCanvasFieldRow({
 								? alpha(theme.palette.info.main, 0.03)
 								: "background.paper",
 				boxShadow: isDragging ? 3 : 0,
-				opacity: isDragging ? 0.55 : 1,
+				opacity: isDragging ? 0.55 : groupInactive ? 0.55 : 1,
 				cursor: "grab",
 			}}
 		>
@@ -419,6 +428,15 @@ function SchemaCanvasFieldRow({
 							sx={{ height: 20 }}
 						/>
 					) : null}
+					{groupInactive ? (
+						<Chip
+							size="small"
+							label="неактивна"
+							variant="outlined"
+							color="warning"
+							sx={{ height: 20 }}
+						/>
+					) : null}
 					{arrayItemsObj ? (
 						<Chip
 							size="small"
@@ -436,6 +454,37 @@ function SchemaCanvasFieldRow({
 					{fieldKey}
 				</Typography>
 			</Box>
+			{sectionUiOptions.groupActivatable ? (
+				<IconButton
+					size="small"
+					color={groupInactive ? "primary" : "default"}
+					title={
+						groupInactive
+							? "Активировать группу по умолчанию"
+							: "Деактивировать группу по умолчанию"
+					}
+					aria-label={
+						groupInactive
+							? "Активировать группу по умолчанию"
+							: "Деактивировать группу по умолчанию"
+					}
+					tabIndex={selected ? 0 : -1}
+					onClick={(e) => {
+						e.stopPropagation();
+						setUiSchema(
+							(prev) =>
+								patchUiOptionsAtPointer(
+									prev as Record<string, unknown>,
+									fieldPointer,
+									{ groupActive: groupInactive },
+								) as typeof prev,
+						);
+					}}
+					sx={{ flexShrink: 0 }}
+				>
+					<PowerSettingsNewIcon fontSize="small" />
+				</IconButton>
+			) : null}
 			<IconButton
 				size="small"
 				color="error"

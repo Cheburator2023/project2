@@ -129,6 +129,7 @@ export function V2AnketaFormWithModals({
 				modalBindingSets.modalObjectPathSet,
 			anketaReadOnly:
 				anketaFormContextProp?.anketaReadOnly ?? effectiveReadOnly,
+			schemaEditorPreview: anketaFormContextProp?.schemaEditorPreview ?? false,
 		};
 	}, [
 		anketaFormContextProp,

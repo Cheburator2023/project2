@@ -149,14 +149,19 @@ export function AnketaFormShell({
 	const anketaFormContext = useMemo((): AnketaFormContextValue => {
 		return {
 			formData: engine.formData,
+			previewSchema: engine.previewSchema,
+			previewUiSchema: engine.previewUiSchema,
 			workflow,
 			onCompleteMainSection: completeMainSection,
 			onTouchMainSection: touchMainSection,
 			isMainSectionLocked: isSectionLocked,
 			anketaReadOnly: effectiveReadOnly,
+			schemaEditorPreview: false,
 		};
 	}, [
 		engine.formData,
+		engine.previewSchema,
+		engine.previewUiSchema,
 		effectiveReadOnly,
 		workflow,
 		completeMainSection,

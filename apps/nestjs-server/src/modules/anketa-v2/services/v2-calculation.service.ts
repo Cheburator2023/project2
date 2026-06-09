@@ -10,6 +10,7 @@ import type {
 	V2TemplateVersionDto,
 } from "@smart-anketa/api-contract";
 import {
+	isCalculationPathActive,
 	mergeTypicalCoefficientContext,
 	readStreamLocalParamsForTypicalOutput,
 } from "@smart-anketa/api-contract";
@@ -301,11 +302,13 @@ export class V2CalculationService {
 
 		// 1) task_trigger/generated_rows — материализуем автозадачи до расчёта строк.
 		for (const rule of taskTriggers) {
+			if (!isCalculationPathActive(liveData, rule.targetPath)) continue;
 			liveData = this.applyGeneratedRows(rule, liveData);
 		}
 
 		// 2) row_computed — пишем per-row значения.
 		for (const rule of rowComputed) {
+			if (!isCalculationPathActive(liveData, rule.targetPath)) continue;
 			liveData = this.applyRowComputed(rule, liveData);
 		}
 
@@ -313,6 +316,7 @@ export class V2CalculationService {
 		const { sorted, cycles } = topoSortComputed(computed);
 		const items: V2CalculationItemDto[] = [];
 		for (const rule of sorted) {
+			if (!isCalculationPathActive(liveData, rule.targetPath)) continue;
 			const { item, nextData } = this.applyComputed(rule, liveData);
 			liveData = nextData;
 			items.push(item);

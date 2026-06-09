@@ -405,6 +405,40 @@ export function SchemaPropertiesPanel() {
 								}
 								label="Развёрнута по умолчанию"
 							/>
+							<Spacer />
+							<FormControlLabel
+								control={
+									<Checkbox
+										checked={sectionUiOptions.groupActivatable ?? false}
+										onChange={(e) =>
+											patchSectionUi({
+												groupActivatable: e.target.checked || undefined,
+												...(e.target.checked
+													? {}
+													: {
+															groupActive: undefined,
+														}),
+											})
+										}
+									/>
+								}
+								label="Можно активировать и деактивировать"
+							/>
+							{sectionUiOptions.groupActivatable ? (
+								<FormControlLabel
+									control={
+										<Checkbox
+											checked={sectionUiOptions.groupActive !== false}
+											onChange={(e) =>
+												patchSectionUi({
+													groupActive: e.target.checked,
+												})
+											}
+										/>
+									}
+									label="Активна по умолчанию"
+								/>
+							) : null}
 							{fieldKind === "arch-object" ? (
 								<>
 									<Spacer />

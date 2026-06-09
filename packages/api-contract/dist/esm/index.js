@@ -11,4 +11,5 @@ export * from "./v2-arch-component-presets";
 export * from "./v2-anketa-editor-ui.util";
 export * from "./v2-typical-works.util";
 export * from "./v2-anketa-ui-layout.util";
+export * from "./v2-group-activation.util";
 export * from "./v2-legacy-stage.constants";

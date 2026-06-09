@@ -72,6 +72,8 @@ export function readV2AnketaSectionUiOptions(uiNode) {
         archComponent: isV2ArchComponentType(opts.archComponent)
             ? opts.archComponent
             : undefined,
+        groupActivatable: opts.groupActivatable === true ? true : undefined,
+        groupActive: typeof opts.groupActive === "boolean" ? opts.groupActive : undefined,
     };
 }
 /** Тип арх. компонента секции из ui:options, либо null. */

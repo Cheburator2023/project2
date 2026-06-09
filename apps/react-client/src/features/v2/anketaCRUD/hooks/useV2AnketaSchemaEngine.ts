@@ -21,7 +21,10 @@ import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { mergeAnketaDisplayFormData } from "../utils/mergeAnketaDisplayFormData";
 import { ensureAnketaFormDataWithWorkflow } from "./useAnketaWorkflow";
 import { useEffect, useMemo, useState } from "react";
-import type { V2LogicGraphDto } from "@smart-anketa/api-contract";
+import {
+	ensureGroupActivationDefaults,
+	type V2LogicGraphDto,
+} from "@smart-anketa/api-contract";
 
 export type V2AnketaSchemaEngineSource = {
 	templateId: string;
@@ -73,6 +76,11 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		source?.initialUiSchema,
 		source?.initialLogic,
 	]);
+
+	useEffect(() => {
+		if (!uiSchema || Object.keys(uiSchema).length === 0) return;
+		setFormData((prev) => ensureGroupActivationDefaults(prev, uiSchema));
+	}, [uiSchema]);
 
 	const referencedDictionaryCodes = useMemo(
 		() => collectDictionaryCodesFromUiSchema(uiSchema),

@@ -28,6 +28,8 @@ export type AnketaFormContextValue = {
 	onCompletePanelSection?: (pathKey: string) => void;
 	onTouchMainSection?: (sectionId: V2AnketaMainSectionId) => void;
 	isMainSectionLocked?: (sectionId: V2AnketaMainSectionId) => boolean;
+	/** Включить/выключить опциональную группу (путь в formData, напр. streamDigitalAgents). */
+	onToggleGroupActivation?: (pathKey: string, active: boolean) => void;
 };
 
 export function readAnketaFormContext(
