@@ -12,6 +12,10 @@ import UndoIcon from "@mui/icons-material/Undo";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 import { alpha, useTheme } from "@mui/material/styles";
@@ -26,6 +30,7 @@ import {
 	useEffect,
 	useMemo,
 	useRef,
+	useState,
 	type CSSProperties,
 } from "react";
 import { useDrag } from "react-dnd";
@@ -75,6 +80,12 @@ import {
 } from "../schemaCanvasTree";
 
 const DEPTH_INDENT_PX = 12;
+
+type CanvasDeleteConfirmState = {
+	pointer: string;
+	label: string;
+	hasChildren: boolean;
+};
 const CANVAS_TREE_DROP_TARGET_CLASS = "schema-canvas-tree-drop-target";
 const CANVAS_TREE_DRAGGING_CLASS = "schema-canvas-tree-dragging";
 const CANVAS_TREE_PLACEHOLDER_CLASS = "schema-canvas-tree-placeholder";
@@ -253,6 +264,7 @@ function SchemaCanvasFieldRow({
 	isDropTarget,
 	hasChild,
 	onToggle,
+	onRequestDelete,
 }: {
 	node: NodeModel<SchemaCanvasNodeData>;
 	depth: number;
@@ -261,6 +273,7 @@ function SchemaCanvasFieldRow({
 	isDropTarget: boolean;
 	hasChild: boolean;
 	onToggle: () => void;
+	onRequestDelete: (state: CanvasDeleteConfirmState) => void;
 }) {
 	const theme = useTheme();
 	const {
@@ -269,7 +282,6 @@ function SchemaCanvasFieldRow({
 		selectedPointer,
 		setSelectedPointer,
 		setUiSchema,
-		handleDeleteField,
 		duplicateCanvasField,
 	} = useSchemaEditor();
 
@@ -513,7 +525,11 @@ function SchemaCanvasFieldRow({
 				tabIndex={selected ? 0 : -1}
 				onClick={(e) => {
 					e.stopPropagation();
-					handleDeleteField(fieldPointer);
+					onRequestDelete({
+						pointer: fieldPointer,
+						label: node.text,
+						hasChildren: hasChild,
+					});
 				}}
 				sx={{ flexShrink: 0 }}
 			>
@@ -639,6 +655,7 @@ export function SchemaCanvasPanel({
 		jsonSchema,
 		uiSchema,
 		handleAddFieldPresetAtParent,
+		handleDeleteField,
 		moveCanvasField,
 		canUndoDraft,
 		canRedoDraft,
@@ -646,6 +663,18 @@ export function SchemaCanvasPanel({
 		redoDraft,
 	} = useSchemaEditor();
 	const treeRef = useRef<TreeMethods>(null);
+	const [deleteConfirm, setDeleteConfirm] =
+		useState<CanvasDeleteConfirmState | null>(null);
+
+	const handleRequestDelete = useCallback((state: CanvasDeleteConfirmState) => {
+		setDeleteConfirm(state);
+	}, []);
+
+	const handleConfirmDelete = useCallback(() => {
+		if (!deleteConfirm) return;
+		handleDeleteField(deleteConfirm.pointer);
+		setDeleteConfirm(null);
+	}, [deleteConfirm, handleDeleteField]);
 
 	const presetById = useMemo(
 		() =>
@@ -930,6 +959,7 @@ export function SchemaCanvasPanel({
 							isDropTarget={isDropTarget}
 							hasChild={hasChild}
 							onToggle={onToggle}
+							onRequestDelete={handleRequestDelete}
 						/>
 					)}
 				/>
@@ -958,6 +988,36 @@ export function SchemaCanvasPanel({
 				) : null}
 				</Box>
 			</Box>
+			<Dialog
+				open={deleteConfirm !== null}
+				onClose={() => setDeleteConfirm(null)}
+				maxWidth="xs"
+				fullWidth
+				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasDeleteConfirm}
+			>
+				<DialogTitle>Удалить поле?</DialogTitle>
+				<DialogContent>
+					<Typography variant="body2">
+						Поле «{deleteConfirm?.label}» будет удалено из схемы.
+						{deleteConfirm?.hasChildren
+							? " Вместе с ним удалятся все вложенные поля."
+							: null}{" "}
+						Связанные правила логики для этого поля и его потомков тоже будут
+						удалены.
+					</Typography>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setDeleteConfirm(null)}>Отмена</Button>
+					<Button
+						variant="contained"
+						color="error"
+						data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasDeleteConfirmSubmit}
+						onClick={handleConfirmDelete}
+					>
+						Удалить
+					</Button>
+				</DialogActions>
+			</Dialog>
 		</PanelChrome>
 	);
 }
