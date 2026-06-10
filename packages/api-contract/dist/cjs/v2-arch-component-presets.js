@@ -70,128 +70,68 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "uniqueItems": true
                 },
                 "pkRecalibration": {
-                    "type": "string",
-                    "title": "ПК: Рекалибровка",
-                    "enum": [
-                        "Да",
-                        "Нет"
-                    ]
+                    "type": "boolean",
+                    "title": "ПК: Рекалибровка"
                 },
                 "pkOtherChannel": {
-                    "type": "string",
-                    "title": "ПК: Использование в другом канале",
-                    "enum": [
-                        "Да",
-                        "Нет"
-                    ]
+                    "type": "boolean",
+                    "title": "ПК: Использование в другом канале"
                 },
                 "pkRework": {
-                    "type": "string",
-                    "title": "ПК: Переработка существующей",
-                    "enum": [
-                        "Да",
-                        "Нет"
-                    ]
+                    "type": "boolean",
+                    "title": "ПК: Переработка существующей"
                 },
                 "pkRegulatory": {
-                    "type": "string",
-                    "title": "ПК: Модель ПВР/Регуляторная",
-                    "enum": [
-                        "Да",
-                        "Нет"
-                    ]
+                    "type": "boolean",
+                    "title": "ПК: Модель ПВР/Регуляторная"
                 },
                 "pkNewType": {
-                    "type": "string",
-                    "title": "ПК: Новый тип модели",
-                    "enum": [
-                        "Да",
-                        "Нет"
-                    ]
+                    "type": "boolean",
+                    "title": "ПК: Новый тип модели"
                 },
                 "pirmBlock": {
                     "type": "object",
                     "title": "Блок ПиРМ",
                     "properties": {
                         "connectISRepo": {
-                            "type": "string",
-                            "title": "Подключение ИС к РЕПО",
-                            "enum": [
-                                "Да",
-                                "Нет"
-                            ]
+                            "type": "boolean",
+                            "title": "Подключение ИС к РЕПО"
                         },
                         "interface": {
-                            "type": "string",
-                            "title": "Интерфейс",
-                            "enum": [
-                                "Да",
-                                "Нет"
-                            ]
+                            "type": "boolean",
+                            "title": "Интерфейс"
                         },
                         "businessFunc": {
-                            "type": "string",
-                            "title": "Доработка бизнес-функционала",
-                            "enum": [
-                                "Да",
-                                "Нет"
-                            ]
+                            "type": "boolean",
+                            "title": "Доработка бизнес-функционала"
                         },
                         "systemFunc": {
-                            "type": "string",
-                            "title": "Функционал системы",
-                            "enum": [
-                                "Да",
-                                "Нет"
-                            ]
+                            "type": "boolean",
+                            "title": "Функционал системы"
                         },
                         "visualization": {
-                            "type": "string",
-                            "title": "Визуализация и аналитика",
-                            "enum": [
-                                "Да",
-                                "Нет"
-                            ]
+                            "type": "boolean",
+                            "title": "Визуализация и аналитика"
                         },
                         "clusterExpansion": {
-                            "type": "string",
-                            "title": "Расширение кластера",
-                            "enum": [
-                                "Да",
-                                "Нет"
-                            ]
+                            "type": "boolean",
+                            "title": "Расширение кластера"
                         },
                         "newModel": {
-                            "type": "string",
-                            "title": "Новая модель",
-                            "enum": [
-                                "Да",
-                                "Нет"
-                            ]
+                            "type": "boolean",
+                            "title": "Новая модель"
                         },
                         "loadTesting": {
-                            "type": "string",
-                            "title": "Требуется НТ",
-                            "enum": [
-                                "Да",
-                                "Нет"
-                            ]
+                            "type": "boolean",
+                            "title": "Требуется НТ"
                         },
                         "krsUtilization": {
-                            "type": "string",
-                            "title": "КРС утилизации серверов",
-                            "enum": [
-                                "Да",
-                                "Нет"
-                            ]
+                            "type": "boolean",
+                            "title": "КРС утилизации серверов"
                         },
                         "logging": {
-                            "type": "string",
-                            "title": "Логирование",
-                            "enum": [
-                                "Да",
-                                "Нет"
-                            ]
+                            "type": "boolean",
+                            "title": "Логирование"
                         }
                     }
                 }
@@ -228,23 +168,53 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "ui:widget": "checkboxes"
             },
             "pkRecalibration": {
-                "ui:widget": "select"
+                "ui:widget": "checkbox"
             },
             "pkOtherChannel": {
-                "ui:widget": "select"
+                "ui:widget": "checkbox"
             },
             "pkRework": {
-                "ui:widget": "select"
+                "ui:widget": "checkbox"
             },
             "pkRegulatory": {
-                "ui:widget": "select"
+                "ui:widget": "checkbox"
             },
             "pkNewType": {
-                "ui:widget": "select"
+                "ui:widget": "checkbox"
             },
             "pirmBlock": {
                 "ui:options": {
                     "sectionRole": "panel"
+                },
+                "connectISRepo": {
+                    "ui:widget": "checkbox"
+                },
+                "interface": {
+                    "ui:widget": "checkbox"
+                },
+                "businessFunc": {
+                    "ui:widget": "checkbox"
+                },
+                "systemFunc": {
+                    "ui:widget": "checkbox"
+                },
+                "visualization": {
+                    "ui:widget": "checkbox"
+                },
+                "clusterExpansion": {
+                    "ui:widget": "checkbox"
+                },
+                "newModel": {
+                    "ui:widget": "checkbox"
+                },
+                "loadTesting": {
+                    "ui:widget": "checkbox"
+                },
+                "krsUtilization": {
+                    "ui:widget": "checkbox"
+                },
+                "logging": {
+                    "ui:widget": "checkbox"
                 }
             }
         }
@@ -312,12 +282,8 @@ const SNAPSHOT_ARCH_PRESETS = {
                         ]
                     },
                     "additionalUncertainty": {
-                        "type": "string",
-                        "title": "Доп. неопределённость источника",
-                        "enum": [
-                            "Нет",
-                            "Да"
-                        ]
+                        "type": "boolean",
+                        "title": "Доп. неопределённость источника"
                     },
                     "integrationReadiness": {
                         "type": "string",
@@ -329,20 +295,12 @@ const SNAPSHOT_ARCH_PRESETS = {
                         ]
                     },
                     "dataCoeff": {
-                        "type": "string",
-                        "title": "Коэф. данных",
-                        "enum": [
-                            "Нет",
-                            "Да"
-                        ]
+                        "type": "boolean",
+                        "title": "Коэф. данных"
                     },
                     "nda": {
-                        "type": "string",
-                        "title": "НДА",
-                        "enum": [
-                            "Нет",
-                            "Да"
-                        ]
+                        "type": "boolean",
+                        "title": "НДА"
                     },
                     "manualParameters": {
                         "type": "array",
@@ -418,16 +376,16 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "ui:widget": "select"
                 },
                 "additionalUncertainty": {
-                    "ui:widget": "select"
+                    "ui:widget": "checkbox"
                 },
                 "integrationReadiness": {
                     "ui:widget": "select"
                 },
                 "dataCoeff": {
-                    "ui:widget": "select"
+                    "ui:widget": "checkbox"
                 },
                 "nda": {
-                    "ui:widget": "select"
+                    "ui:widget": "checkbox"
                 },
                 "manualParameters": {
                     "ui:widget": "checkboxes",
@@ -453,28 +411,16 @@ const SNAPSHOT_ARCH_PRESETS = {
                     ]
                 },
                 "autoCertification": {
-                    "type": "string",
-                    "title": "Автосертификация",
-                    "enum": [
-                        "Да",
-                        "Нет"
-                    ]
+                    "type": "boolean",
+                    "title": "Автосертификация"
                 },
                 "featureStore": {
-                    "type": "string",
-                    "title": "Feature Store",
-                    "enum": [
-                        "Да",
-                        "Нет"
-                    ]
+                    "type": "boolean",
+                    "title": "Feature Store"
                 },
                 "confidentialData": {
-                    "type": "string",
-                    "title": "Конфиденциальные данные",
-                    "enum": [
-                        "Да",
-                        "Нет"
-                    ]
+                    "type": "boolean",
+                    "title": "Конфиденциальные данные"
                 },
                 "deliveryMode": {
                     "type": "string",
@@ -501,6 +447,17 @@ const SNAPSHOT_ARCH_PRESETS = {
             "archComponent": "dataProcess",
             "sectionRole": "subsection",
             "showFilledCount": true
+        },
+        "uiBranch": {
+            "autoCertification": {
+                "ui:widget": "checkbox"
+            },
+            "featureStore": {
+                "ui:widget": "checkbox"
+            },
+            "confidentialData": {
+                "ui:widget": "checkbox"
+            }
         }
     },
     "dataMart": {
@@ -536,12 +493,8 @@ const SNAPSHOT_ARCH_PRESETS = {
                     ]
                 },
                 "qualityControl": {
-                    "type": "string",
-                    "title": "Контроль качества",
-                    "enum": [
-                        "Да",
-                        "Нет"
-                    ]
+                    "type": "boolean",
+                    "title": "Контроль качества"
                 }
             }
         },
@@ -549,6 +502,11 @@ const SNAPSHOT_ARCH_PRESETS = {
             "archComponent": "dataMart",
             "sectionRole": "subsection",
             "showFilledCount": true
+        },
+        "uiBranch": {
+            "qualityControl": {
+                "ui:widget": "checkbox"
+            }
         }
     },
     "model": {
@@ -591,12 +549,8 @@ const SNAPSHOT_ARCH_PRESETS = {
                     ]
                 },
                 "autoML": {
-                    "type": "string",
-                    "title": "AutoML",
-                    "enum": [
-                        "Не требуется",
-                        "Требуется"
-                    ]
+                    "type": "boolean",
+                    "title": "AutoML"
                 },
                 "specialist": {
                     "type": "string",
@@ -608,12 +562,8 @@ const SNAPSHOT_ARCH_PRESETS = {
                     ]
                 },
                 "cascadeEnsemble": {
-                    "type": "string",
-                    "title": "Каскад/ансамбль",
-                    "enum": [
-                        "Да",
-                        "Нет"
-                    ]
+                    "type": "boolean",
+                    "title": "Каскад/ансамбль"
                 },
                 "modelsList": {
                     "type": "array",
@@ -661,12 +611,8 @@ const SNAPSHOT_ARCH_PRESETS = {
                                 ]
                             },
                             "autoML": {
-                                "type": "string",
-                                "title": "Auto ML",
-                                "enum": [
-                                    "Да",
-                                    "Нет"
-                                ]
+                                "type": "boolean",
+                                "title": "Auto ML"
                             },
                             "role": {
                                 "type": "string",
@@ -722,7 +668,7 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "ui:widget": "select"
                     },
                     "autoML": {
-                        "ui:widget": "select"
+                        "ui:widget": "checkbox"
                     },
                     "role": {
                         "ui:widget": "select"
@@ -748,6 +694,12 @@ const SNAPSHOT_ARCH_PRESETS = {
                         }
                     }
                 }
+            },
+            "autoML": {
+                "ui:widget": "checkbox"
+            },
+            "cascadeEnsemble": {
+                "ui:widget": "checkbox"
             }
         }
     }

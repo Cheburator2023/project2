@@ -33,7 +33,9 @@
 		"prepare": "husky",
 		"codemod:testids": "node ./codemods/add_test_ids.ts io-dir=../apps/react-client/src --all",
 		"codemod:testids:remove": "node ./codemods/add_test_ids.ts io-dir=../apps/react-client/src --all --remove",
-		"sync:arch-presets": "node ./scripts/sync-v2-arch-component-presets.mjs"
+		"sync:arch-presets": "node ./scripts/sync-v2-arch-component-presets.mjs",
+		"migrate:v2-binary-booleans": "node ./scripts/migrate-v2-binary-enums-to-boolean.mjs",
+		"strip:boolean-schema-defaults": "node ./scripts/strip-boolean-schema-defaults.mjs"
 	},
 	"lint-staged": {
 		"*.{ts,tsx}": [

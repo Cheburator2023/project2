@@ -5,8 +5,6 @@ import {
 	type V2ArchComponentPresetDef,
 } from "@smart-anketa/api-contract";
 
-const YES_NO = ["Да", "Нет"] as const;
-
 const DEPLOY_CHANNEL_ITEMS = [
 	"Батч",
 	"Батч+загрузка",

@@ -43,6 +43,7 @@ import {
 	resolveGroupIsActive,
 	type V2ArchComponentType,
 } from "@smart-anketa/api-contract";
+import { isGeneralUncertaintyField } from "../schemaEditor/propertiesFieldKind";
 import { ArchComponentDevOutline } from "./ArchComponentDevOutline";
 import type { AnketaFormContextValue } from "@react-client/features/v2/anketaCRUD/utils/anketaFormContext";
 
@@ -494,6 +495,10 @@ function gridSizeForProperty(
 	layoutColumns: number | null,
 ) {
 	const options = propertyUiSchema?.["ui:options"];
+	const uiWidget =
+		typeof propertyUiSchema?.["ui:widget"] === "string"
+			? propertyUiSchema["ui:widget"]
+			: undefined;
 	const fullWidth =
 		(Boolean(options) &&
 			typeof options === "object" &&
@@ -502,7 +507,8 @@ function gridSizeForProperty(
 		name === "calcName" ||
 		name === "name" ||
 		propertySchema?.type === "object" ||
-		propertySchema?.type === "array";
+		propertySchema?.type === "array" ||
+		isGeneralUncertaintyField(uiWidget, propertySchema);
 
 	const defaultMd = 6;
 	const layoutMd =

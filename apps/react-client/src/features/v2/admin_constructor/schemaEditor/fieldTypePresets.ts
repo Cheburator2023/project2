@@ -98,4 +98,7 @@ export function makeUncertaintyModalField(): RJSFSchema {
 
 export const UNCERTAINTY_MODAL_UI_BRANCH: Record<string, unknown> = {
 	"ui:widget": "V2UncertaintyModalWidget",
+	"ui:options": {
+		fullWidth: true,
+	},
 };

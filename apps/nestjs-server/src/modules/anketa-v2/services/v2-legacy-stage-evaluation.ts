@@ -1,4 +1,5 @@
 import {
+	isPositiveBinaryFormValue,
 	V2_LEGACY_STAGE_SUMMARY_POINTERS,
 	type V2LegacyStageEvaluationDto,
 } from "@smart-anketa/api-contract";
@@ -379,10 +380,9 @@ function extractCoefficients(data: Record<string, unknown>): Coefficients {
 		algorithmTypes.push(singleType.trim());
 	}
 
-	const autoMl =
-		String(detailParams?.autoML ?? "Не требуется") === "Требуется"
-			? "Да"
-			: "Не требуется";
+	const autoMl = isPositiveBinaryFormValue(detailParams?.autoML)
+		? "Да"
+		: "Не требуется";
 
 	const channelsRaw = generalInfo?.channels;
 	const deploymentChannels =
@@ -428,10 +428,9 @@ function calculateAllStages(
 			? "Да"
 			: "Не требуется";
 	const pilotSupportRequired = pilotModelRequired;
-	const autoMlRequired =
-		String(detailParams?.autoML ?? "Не требуется") === "Требуется"
-			? "Да"
-			: "Не требуется";
+	const autoMlRequired = isPositiveBinaryFormValue(detailParams?.autoML)
+		? "Да"
+		: "Не требуется";
 	const productionAdditionalReports = "1";
 	const productionDeploymentChannels: string[] = [];
 	const readyPromReports = "Нет";
@@ -529,8 +528,8 @@ function integrationRowScore(
 	createService: string | undefined,
 ): number {
 	const required =
-		createIS === "Требуется" ||
-		(createService && createService !== "Не требуется");
+		isPositiveBinaryFormValue(createIS) ||
+		isPositiveBinaryFormValue(createService);
 	if (!required) return 0;
 	return calculateStage01(
 		base,

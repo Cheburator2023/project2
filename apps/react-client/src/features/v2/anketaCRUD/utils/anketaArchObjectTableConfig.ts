@@ -9,9 +9,24 @@ export type AnketaObjectTableColumn = {
 	render: (item: Record<string, unknown>) => string;
 };
 
+/** Есть ли у поля осмысленное значение (не дефолт «пусто»). */
+export function isMeaningfulAnketaFieldValue(value: unknown): boolean {
+	if (value == null || value === "") return false;
+	if (typeof value === "boolean") return value;
+	if (typeof value === "number") return Number.isFinite(value) && value !== 0;
+	if (Array.isArray(value)) return value.length > 0;
+	if (typeof value === "object") {
+		return Object.values(value as Record<string, unknown>).some(
+			isMeaningfulAnketaFieldValue,
+		);
+	}
+	return true;
+}
+
 function text(item: Record<string, unknown>, field: string): string {
 	const value = item[field];
 	if (value == null || value === "") return "—";
+	if (typeof value === "boolean") return value ? "Да" : "—";
 	if (Array.isArray(value)) {
 		return value.length > 0 ? value.map(String).join(", ") : "—";
 	}
@@ -136,10 +151,5 @@ export function getObjectAtPath(
 }
 
 export function isArchObjectFilled(item: Record<string, unknown>): boolean {
-	return Object.values(item).some((v) => {
-		if (v == null || v === "") return false;
-		if (Array.isArray(v)) return v.length > 0;
-		if (typeof v === "object") return Object.keys(v as object).length > 0;
-		return true;
-	});
+	return Object.values(item).some(isMeaningfulAnketaFieldValue);
 }

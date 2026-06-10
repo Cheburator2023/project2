@@ -108,6 +108,14 @@ export function weightMapLogic(
 		if (v.coeff === null) continue;
 		cases.push({ "==": [{ var: field }, v.label] } as V2JsonLogicValue);
 		cases.push(v.coeff as V2JsonLogicValue);
+		const normalized = v.label.trim().toLowerCase();
+		if (normalized === "да" || normalized === "требуется") {
+			cases.push({ "==": [{ var: field }, true] } as V2JsonLogicValue);
+			cases.push(v.coeff as V2JsonLogicValue);
+		} else if (normalized === "нет" || normalized === "не требуется") {
+			cases.push({ "==": [{ var: field }, false] } as V2JsonLogicValue);
+			cases.push(v.coeff as V2JsonLogicValue);
+		}
 	}
 	cases.push(fallback as V2JsonLogicValue);
 	return { if: cases } as V2JsonLogicValue;

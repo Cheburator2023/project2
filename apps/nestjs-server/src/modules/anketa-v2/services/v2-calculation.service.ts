@@ -174,8 +174,21 @@ function resolveGeneratedTaskCoefficient(
 	const byField = task.coefficientByField;
 	if (byField?.field) {
 		const value = source[byField.field];
-		if (typeof value === "string" && byField.values[value] !== undefined) {
-			return byField.values[value] as number;
+		let lookupKey: string | undefined;
+		if (typeof value === "string") {
+			lookupKey = value;
+		} else if (typeof value === "boolean") {
+			const usesRequired = "Требуется" in byField.values;
+			lookupKey = value
+				? usesRequired
+					? "Требуется"
+					: "Да"
+				: usesRequired
+					? "Не требуется"
+					: "Нет";
+		}
+		if (lookupKey !== undefined && byField.values[lookupKey] !== undefined) {
+			return byField.values[lookupKey] as number;
 		}
 		if (byField.default !== undefined) return byField.default;
 	}

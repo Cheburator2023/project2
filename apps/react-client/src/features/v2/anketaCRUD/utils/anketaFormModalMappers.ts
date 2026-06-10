@@ -8,10 +8,14 @@ const SOURCE_TYPE_TO_SCHEMA: Record<string, string> = {
 	external: "Внешний",
 };
 
-const YES_NO_TO_DA: Record<string, string> = {
-	yes: "Да",
-	no: "Нет",
-};
+function yesNoModalToBoolean(value: string): boolean {
+	return value === "yes";
+}
+
+function booleanToYesNoModal(value: unknown): "yes" | "no" {
+	if (value === true || value === "Да" || value === "Требуется") return "yes";
+	return "no";
+}
 
 const CHANNEL_TO_SCHEMA: Record<string, string> = {
 	batch: "Батч",
@@ -49,7 +53,7 @@ export function mapDataSourceToSourceSystem(
 	return {
 		name: values.name,
 		type: SOURCE_TYPE_TO_SCHEMA[values.sourceType] ?? values.sourceType,
-		additionalUncertainty: YES_NO_TO_DA[values.pilotRequired],
+		additionalUncertainty: yesNoModalToBoolean(values.pilotRequired),
 		requirements:
 			values.configExchange === "required" ? "Рисковые" : "Понятны",
 		integrationReadiness:
@@ -90,7 +94,7 @@ export function mapModelServiceToModelItem(
 ): Record<string, unknown> {
 	return {
 		name: values.name,
-		autoML: YES_NO_TO_DA[values.isCreationRequired] ?? "Нет",
+		autoML: yesNoModalToBoolean(values.isCreationRequired),
 		role:
 			values.workType === "development"
 				? "Оркестратор"
@@ -108,8 +112,8 @@ export function mapModelServiceModalToBlock(
 		deployChannels: values.channels
 			.map((ch) => CHANNEL_TO_SCHEMA[ch] ?? ch)
 			.filter(Boolean),
-		pkRecalibration: YES_NO_TO_DA[values.pilotRequired] ?? "Нет",
-		pkNewType: YES_NO_TO_DA[values.newServiceCreationRequired] ?? "Нет",
+		pkRecalibration: yesNoModalToBoolean(values.pilotRequired),
+		pkNewType: yesNoModalToBoolean(values.newServiceCreationRequired),
 	};
 }
 
@@ -157,9 +161,9 @@ export function mapModelServiceBlockToModalDefaults(
 	return {
 		name: "model-service",
 		channels,
-		pilotRequired: item.pkRecalibration === "Да" ? "yes" : "no",
+		pilotRequired: booleanToYesNoModal(item.pkRecalibration),
 		isCreationRequired: "no",
-		newServiceCreationRequired: item.pkNewType === "Да" ? "yes" : "no",
+		newServiceCreationRequired: booleanToYesNoModal(item.pkNewType),
 		workType:
 			WORK_TYPE_SCHEMA_TO_MODAL[String(item.workType ?? "")] ?? "development",
 	};
@@ -327,7 +331,7 @@ export function mapArrayItemToModalDefaults(
 				: item.development === "С нуля" || item.development === "Нужна"
 					? "development"
 					: "support",
-			pilotRequired: item.additionalUncertainty === "Да" ? "yes" : "no",
+			pilotRequired: booleanToYesNoModal(item.additionalUncertainty),
 			configExchange:
 				item.requirements === "Рисковые" || item.integration === "Новая"
 					? "required"
@@ -346,7 +350,7 @@ export function mapArrayItemToModalDefaults(
 					: item.role === "Подчинённая"
 						? "support"
 						: "pilot",
-			isCreationRequired: item.autoML === "Да" ? "yes" : "no",
+			isCreationRequired: booleanToYesNoModal(item.autoML),
 		};
 	}
 	if (kind === "nonStandardTask") {
@@ -377,7 +381,7 @@ export function mapArrayItemToModalDefaults(
 					: item.development === "С нуля" || item.development === "Нужна"
 						? "development"
 						: "support",
-				pilotRequired: item.additionalUncertainty === "Да" ? "yes" : "no",
+				pilotRequired: booleanToYesNoModal(item.additionalUncertainty),
 				configExchange:
 					item.requirements === "Рисковые" || item.integration === "Новая"
 						? "required"
@@ -396,7 +400,7 @@ export function mapArrayItemToModalDefaults(
 						: item.role === "Подчинённая"
 							? "support"
 							: "pilot",
-				isCreationRequired: item.autoML === "Да" ? "yes" : "no",
+				isCreationRequired: booleanToYesNoModal(item.autoML),
 			};
 		case "generalInfo.modelService":
 			return mapModelServiceBlockToModalDefaults(item);
