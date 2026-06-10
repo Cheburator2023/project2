@@ -28,6 +28,7 @@ import {
 	buildDictionaryMultiSchemaPatch,
 	patchUiOptionsAtPointer,
 	setUiHiddenAtPointer,
+	setUiPlaceholderAtPointer,
 	syncDictionaryFieldUiAtPointer,
 } from "../../utils/schemaMutators";
 import {
@@ -114,6 +115,10 @@ export function SchemaPropertiesPanel() {
 	const arrayToolbar = readArrayToolbarOptions(leafUiBranch);
 	const arrayItemsLabel = describeArrayItems(resolvedField);
 	const isReadonlyArray = resolvedField?.readOnly === true;
+	const uiPlaceholder =
+		typeof leafUiBranch?.["ui:placeholder"] === "string"
+			? leafUiBranch["ui:placeholder"]
+			: "";
 
 	const patchSectionUi = (patch: Record<string, unknown>) => {
 		if (!selectedPointer) return;
@@ -132,6 +137,10 @@ export function SchemaPropertiesPanel() {
 	const showLayoutOptions = fieldKind === "layout";
 	const showArrayOptions =
 		fieldKind === "array" || fieldKind === "arch-array";
+	const showPlaceholderField =
+		fieldKind === "primitive" ||
+		showArrayOptions ||
+		fieldKind === "general-uncertainty";
 	const workArch = isWorkArchComponent(archComponent);
 
 	return (
@@ -199,6 +208,30 @@ export function SchemaPropertiesPanel() {
 						onChange={(e) => updateField({ description: e.target.value })}
 					/>
 					<Spacer />
+
+					{showPlaceholderField ? (
+						<>
+							<TextField
+								fullWidth
+								size="small"
+								label="Подсказка в поле (placeholder)"
+								value={uiPlaceholder}
+								onChange={(e) => {
+									if (!selectedPointer) return;
+									setUiSchema(
+										(prev) =>
+											setUiPlaceholderAtPointer(
+												prev as Record<string, unknown>,
+												selectedPointer,
+												e.target.value,
+											) as UiSchema,
+									);
+								}}
+								helperText="Текст в пустом поле в превью и анкете. Очистите, чтобы убрать подсказку."
+							/>
+							<Spacer />
+						</>
+					) : null}
 
 					{fieldKind === "primitive" ? (
 						isDictionaryMultiField(resolvedField, leafUiOptions) ? (

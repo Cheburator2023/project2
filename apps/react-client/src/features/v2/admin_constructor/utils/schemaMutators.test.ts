@@ -12,6 +12,7 @@ import {
 	movePropertyAtPointer,
 	moveUiSchemaBranchAtPointer,
 	setUiDictionaryCodeAtPointer,
+	setUiPlaceholderAtPointer,
 	syncDictionaryFieldUiAtPointer,
 	isObjectFieldGroup,
 	listOrderedChildKeys,
@@ -511,6 +512,41 @@ describe("duplicateFieldAtPointer", () => {
 		expect(
 			(copyUi.child1 as Record<string, unknown>)["ui:widget"],
 		).toBe("textarea");
+	});
+});
+
+describe("setUiPlaceholderAtPointer", () => {
+	it("sets and clears ui:placeholder on a field branch", () => {
+		const ui: UiSchema = {
+			generalInfo: {
+				title: { "ui:widget": "text" },
+			},
+		};
+
+		const withPlaceholder = setUiPlaceholderAtPointer(
+			ui as Record<string, unknown>,
+			"/generalInfo/title",
+			"Название анкеты",
+		);
+		expect(
+			(
+				(withPlaceholder.generalInfo as Record<string, unknown>)
+					.title as Record<string, unknown>
+			)["ui:placeholder"],
+		).toBe("Название анкеты");
+
+		const cleared = setUiPlaceholderAtPointer(
+			withPlaceholder,
+			"/generalInfo/title",
+			"  ",
+		);
+		expect(
+			(
+				(cleared.generalInfo as Record<string, unknown>).title as
+					| Record<string, unknown>
+					| undefined
+			)?.["ui:placeholder"],
+		).toBeUndefined();
 	});
 });
 
