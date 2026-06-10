@@ -48,6 +48,10 @@ const SNAPSHOT_ARCH_PRESETS = {
                     },
                     "uniqueItems": true
                 },
+                "pkRegulatory": {
+                    "type": "boolean",
+                    "title": "ПК: Модель ПВР/Регуляторная"
+                },
                 "deployChannels": {
                     "type": "array",
                     "title": "Каналы внедрения",
@@ -69,6 +73,38 @@ const SNAPSHOT_ARCH_PRESETS = {
                     },
                     "uniqueItems": true
                 },
+                "field_4IL7OStC": {
+                    "type": "boolean",
+                    "title": "Способ загрузки данных в BI-систему"
+                },
+                "field_F7nK-We5": {
+                    "type": "boolean",
+                    "title": "Тип БД для BI-системы"
+                },
+                "field_JcKtx9Mg": {
+                    "type": "boolean",
+                    "title": "Требуется оркестратор"
+                },
+                "field_KzzDtkB0": {
+                    "type": "boolean",
+                    "title": "Требуется визуализация результатов работы модельного сервиса"
+                },
+                "field_Y2S_XRAQ": {
+                    "type": "boolean",
+                    "title": "Использование данных СХК через РЕПО"
+                },
+                "field_imxB4YEd": {
+                    "type": "boolean",
+                    "title": "Первичное подключение ИС к РЕПО"
+                },
+                "field_kkbRs50S": {
+                    "type": "boolean",
+                    "title": "Хранение артефактов в РЕПО"
+                },
+                "field_r66ph-79": {
+                    "type": "boolean",
+                    "title": "Перекладка артефактов между контурами посредством РЕПО"
+                },
                 "pkRecalibration": {
                     "type": "boolean",
                     "title": "ПК: Рекалибровка"
@@ -80,10 +116,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "pkRework": {
                     "type": "boolean",
                     "title": "ПК: Переработка существующей"
-                },
-                "pkRegulatory": {
-                    "type": "boolean",
-                    "title": "ПК: Модель ПВР/Регуляторная"
                 },
                 "pkNewType": {
                     "type": "boolean",
@@ -147,11 +179,19 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "workType",
                 "modelClass",
                 "controlTypes",
+                "pkRegulatory",
                 "deployChannels",
+                "field_4IL7OStC",
+                "field_F7nK-We5",
+                "field_JcKtx9Mg",
+                "field_KzzDtkB0",
+                "field_Y2S_XRAQ",
+                "field_imxB4YEd",
+                "field_kkbRs50S",
+                "field_r66ph-79",
                 "pkRecalibration",
                 "pkOtherChannel",
                 "pkRework",
-                "pkRegulatory",
                 "pkNewType",
                 "pirmBlock"
             ],
@@ -216,6 +256,30 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "logging": {
                     "ui:widget": "checkbox"
                 }
+            },
+            "field_4IL7OStC": {
+                "ui:widget": "checkbox"
+            },
+            "field_F7nK-We5": {
+                "ui:widget": "checkbox"
+            },
+            "field_JcKtx9Mg": {
+                "ui:widget": "checkbox"
+            },
+            "field_KzzDtkB0": {
+                "ui:widget": "checkbox"
+            },
+            "field_Y2S_XRAQ": {
+                "ui:widget": "checkbox"
+            },
+            "field_imxB4YEd": {
+                "ui:widget": "checkbox"
+            },
+            "field_kkbRs50S": {
+                "ui:widget": "checkbox"
+            },
+            "field_r66ph-79": {
+                "ui:widget": "checkbox"
             }
         }
     },
@@ -242,17 +306,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                             "Внешний"
                         ]
                     },
-                    "domainComplexity": {
-                        "type": "string",
-                        "title": "Сложность предметной области",
-                        "enum": [
-                            "Низкая",
-                            "Средняя",
-                            "Высокая",
-                            "Неизвестно",
-                            "Масштабное"
-                        ]
-                    },
                     "entityVolume": {
                         "type": "string",
                         "title": "Объём запроса по сущностям",
@@ -264,14 +317,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                             "Масштабное"
                         ]
                     },
-                    "daptRegistry": {
-                        "type": "string",
-                        "title": "Реестр в ДАПТ",
-                        "enum": [
-                            "Есть",
-                            "Нет"
-                        ]
-                    },
                     "requirements": {
                         "type": "string",
                         "title": "Требования",
@@ -281,9 +326,359 @@ const SNAPSHOT_ARCH_PRESETS = {
                             "Рисковые"
                         ]
                     },
+                    "field_-t8JSf3p": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Форма договора"
+                    },
+                    "field_1ANadh7U": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Тип загрузки данных"
+                    },
+                    "field_1bl3dfSX": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Требуется новая модель для автоматической разметки данных"
+                    },
+                    "field_3a0vme2u": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Предусмотрено проведение конкурса"
+                    },
+                    "field_4Gff93vI": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Требуется подготовка сырых данных для загрузки в ИС 1860"
+                    },
+                    "field_4jxR0E0m": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Пилот"
+                    },
+                    "field_61bkBs0m": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Требуется регламентный импорт/экспорт данных или отчетности в/из ИС 1860"
+                    },
+                    "field_788N1lwi": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Режим обмена данными"
+                    },
+                    "field_9BXQE8SI": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Режим обмена данными"
+                    },
+                    "field_AKLVuyFy": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Наличие конфиденциальных данных"
+                    },
+                    "field_DBFG7kIN": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Наличие юридического основания для пилота"
+                    },
+                    "field_DJJtx7nX": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Требуется разметка данных источника"
+                    },
+                    "field_F8GPVM7R": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Размер модели разметки данных"
+                    },
+                    "field_HMnqITVb": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Требуется хэширование/ шифрование"
+                    },
+                    "field_HuOLfL4K": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Риск появления дополнительных систем-источников"
+                    },
+                    "field_K2ioHD8d": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Режим обмена данными"
+                    },
+                    "field_L1lRlgf1": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Сложность реализации"
+                    },
+                    "field_LxBG0mW-": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Наличие конфиденциальных данных"
+                    },
+                    "field_RFcOprSG": {
+                        "type": "boolean",
+                        "title": "Наличие реплики в DAPP"
+                    },
+                    "field_TvqjyIO-": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Требуется донастройка ИС 1860 под выбранную модель разметки данных"
+                    },
+                    "field_VX7y3PsB": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Сложность конфигурации модели разметки данных"
+                    },
+                    "field_WgK6lIS-": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Требуется ручная обработка результатов автоматизированной разметки данных"
+                    },
+                    "field_bHwz9vwn": {
+                        "type": "boolean",
+                        "title": "Необходим новый тракт данных от источника"
+                    },
+                    "field_bylzUFPM": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Требуется регламентный импорт/экспорт данных или отчетности в/из ИС 1860"
+                    },
+                    "field_fJ_7OdE7": {
+                        "type": "boolean",
+                        "title": "Необходимо подтвердить возможность интеграции"
+                    },
+                    "field_lDw9gG39": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
+                    },
+                    "field_nE73kPQl": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Детализация и ясность запроса постановки задачи"
+                    },
+                    "field_p4zxdNZG": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Наличие конфиденциальных данных"
+                    },
+                    "field_tpROQBf5": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "NDA"
+                    },
+                    "field_vqqlHbU6": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Требуется хэширование/ шифрование"
+                    },
+                    "field_wf7CHiVI": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик"
+                    },
+                    "field_wuYlhnu0": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Сложность настройки шаблона разметки данных"
+                    },
+                    "domainComplexity": {
+                        "type": "string",
+                        "title": "Сложность предметной области",
+                        "enum": [
+                            "Низкая",
+                            "Средняя",
+                            "Высокая",
+                            "Неизвестно",
+                            "Масштабное"
+                        ]
+                    },
                     "additionalUncertainty": {
                         "type": "boolean",
                         "title": "Доп. неопределённость источника"
+                    },
+                    "daptRegistry": {
+                        "type": "string",
+                        "title": "Реестр в ДАПТ",
+                        "enum": [
+                            "Есть",
+                            "Нет"
+                        ]
                     },
                     "integrationReadiness": {
                         "type": "string",
@@ -392,7 +787,67 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "ui:options": {
                         "inline": false
                     }
-                }
+                },
+                "field_RFcOprSG": {
+                    "ui:widget": "checkbox"
+                },
+                "field_bHwz9vwn": {
+                    "ui:widget": "checkbox"
+                },
+                "field_fJ_7OdE7": {
+                    "ui:widget": "checkbox"
+                },
+                "field_nE73kPQl": {
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.method.28.объ_м_запроса_по_сущностям"
+                    }
+                },
+                "ui:order": [
+                    "name",
+                    "type",
+                    "entityVolume",
+                    "requirements",
+                    "field_-t8JSf3p",
+                    "field_1ANadh7U",
+                    "field_1bl3dfSX",
+                    "field_3a0vme2u",
+                    "field_4Gff93vI",
+                    "field_4jxR0E0m",
+                    "field_61bkBs0m",
+                    "field_788N1lwi",
+                    "field_9BXQE8SI",
+                    "field_AKLVuyFy",
+                    "field_DBFG7kIN",
+                    "field_DJJtx7nX",
+                    "field_F8GPVM7R",
+                    "field_HMnqITVb",
+                    "field_HuOLfL4K",
+                    "field_K2ioHD8d",
+                    "field_L1lRlgf1",
+                    "field_LxBG0mW-",
+                    "field_RFcOprSG",
+                    "field_TvqjyIO-",
+                    "field_VX7y3PsB",
+                    "field_WgK6lIS-",
+                    "field_bHwz9vwn",
+                    "field_bylzUFPM",
+                    "field_fJ_7OdE7",
+                    "field_lDw9gG39",
+                    "field_nE73kPQl",
+                    "field_p4zxdNZG",
+                    "field_tpROQBf5",
+                    "field_vqqlHbU6",
+                    "field_wf7CHiVI",
+                    "field_wuYlhnu0",
+                    "domainComplexity",
+                    "additionalUncertainty",
+                    "daptRegistry",
+                    "integrationReadiness",
+                    "dataCoeff",
+                    "nda",
+                    "manualParameters"
+                ]
             }
         }
     },
@@ -401,6 +856,50 @@ const SNAPSHOT_ARCH_PRESETS = {
             "type": "object",
             "title": "Процессы обработки данных",
             "properties": {
+                "deliveryMode": {
+                    "type": "string",
+                    "title": "Данные заказчику",
+                    "enum": [
+                        "Напрямую",
+                        "Опосредованно",
+                        "Неизвестно"
+                    ]
+                },
+                "field_C6oqyTPh": {
+                    "type": "boolean",
+                    "title": "Требуется хэширование/ шифрование"
+                },
+                "field_HgUCNn6E": {
+                    "type": "boolean",
+                    "title": "Тип процесса обработки данных"
+                },
+                "field_R3Lx-csF": {
+                    "type": "boolean",
+                    "title": "Двусторонний обмен данными"
+                },
+                "field_UEzs5Q87": {
+                    "enum": [
+                        "Низкая",
+                        "Средняя",
+                        "Высокая",
+                        "Неизвестно"
+                    ],
+                    "type": "string",
+                    "title": "Сложность реализации"
+                },
+                "field_yJ51GkCR": {
+                    "enum": [
+                        "Разработка",
+                        "Доработка",
+                        "Настройка"
+                    ],
+                    "type": "string",
+                    "title": "Тип работ"
+                },
+                "confidentialData": {
+                    "type": "boolean",
+                    "title": "Конфиденциальные данные"
+                },
                 "workType": {
                     "type": "string",
                     "title": "Тип работ",
@@ -417,19 +916,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "featureStore": {
                     "type": "boolean",
                     "title": "Feature Store"
-                },
-                "confidentialData": {
-                    "type": "boolean",
-                    "title": "Конфиденциальные данные"
-                },
-                "deliveryMode": {
-                    "type": "string",
-                    "title": "Данные заказчику",
-                    "enum": [
-                        "Напрямую",
-                        "Опосредованно",
-                        "Неизвестно"
-                    ]
                 },
                 "implComplexity": {
                     "type": "string",
@@ -457,7 +943,41 @@ const SNAPSHOT_ARCH_PRESETS = {
             },
             "confidentialData": {
                 "ui:widget": "checkbox"
-            }
+            },
+            "field_C6oqyTPh": {
+                "ui:widget": "checkbox"
+            },
+            "field_HgUCNn6E": {
+                "ui:widget": "checkbox"
+            },
+            "field_R3Lx-csF": {
+                "ui:widget": "checkbox"
+            },
+            "field_UEzs5Q87": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.dataProcess.implComplexity"
+                }
+            },
+            "field_yJ51GkCR": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.dataProcess.workType"
+                }
+            },
+            "ui:order": [
+                "deliveryMode",
+                "field_C6oqyTPh",
+                "field_HgUCNn6E",
+                "field_R3Lx-csF",
+                "field_UEzs5Q87",
+                "field_yJ51GkCR",
+                "confidentialData",
+                "workType",
+                "autoCertification",
+                "featureStore",
+                "implComplexity"
+            ]
         }
     },
     "dataMart": {
@@ -474,15 +994,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "Настройка"
                     ]
                 },
-                "integrationReadiness": {
-                    "type": "string",
-                    "title": "Готовность к интеграции в ПД",
-                    "enum": [
-                        "Готов к интеграции",
-                        "Нужны доработки ИС",
-                        "Сложная интеграция"
-                    ]
-                },
                 "metricsCount": {
                     "type": "string",
                     "title": "Количество метрик",
@@ -490,6 +1001,91 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "До 20",
                         "20–50",
                         "Более 50"
+                    ]
+                },
+                "field_0uV7wafS": {
+                    "type": "boolean",
+                    "title": "Требуется хэширование/ шифрование"
+                },
+                "field_28IPlEQu": {
+                    "type": "boolean",
+                    "title": "Количество метрик"
+                },
+                "field_46LCnfWo": {
+                    "enum": [
+                        "До 20",
+                        "20–50",
+                        "Более 50"
+                    ],
+                    "type": "string",
+                    "title": "Сложность реализации"
+                },
+                "field_Ad1msOl7": {
+                    "type": "boolean",
+                    "title": "Необходима продуктивизация"
+                },
+                "field_L-WWLDWY": {
+                    "type": "boolean",
+                    "title": "Наличие конфиденциальных данных"
+                },
+                "field_N9LFD6Hu": {
+                    "type": "boolean",
+                    "title": "Двусторонний обмен данными"
+                },
+                "field_Q8DGJNTn": {
+                    "type": "boolean",
+                    "title": "Количество Контролей качества Признаков"
+                },
+                "field_fRuMuWtn": {
+                    "type": "boolean",
+                    "title": "Способ предоставления данных заказчику"
+                },
+                "field_hIM0c5gG": {
+                    "enum": [
+                        "До 20",
+                        "20–50",
+                        "Более 50"
+                    ],
+                    "type": "string",
+                    "title": "Содержит сырые данные"
+                },
+                "field_le47srI7": {
+                    "type": "boolean",
+                    "title": "Слой хранения"
+                },
+                "field_lovKvLZc": {
+                    "enum": [
+                        "До 20",
+                        "20–50",
+                        "Более 50"
+                    ],
+                    "type": "string",
+                    "title": "Реализуется в Хранилище признаков"
+                },
+                "field_rZeUo8a_": {
+                    "type": "boolean",
+                    "title": "Требуется контроль качества Признаков"
+                },
+                "field_w_EN6lWe": {
+                    "enum": [
+                        "До 20",
+                        "20–50",
+                        "Более 50"
+                    ],
+                    "type": "string",
+                    "title": "Требуется парсинг сырых данных"
+                },
+                "field_xva1dRvW": {
+                    "type": "boolean",
+                    "title": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик"
+                },
+                "integrationReadiness": {
+                    "type": "string",
+                    "title": "Готовность к интеграции в ПД",
+                    "enum": [
+                        "Готов к интеграции",
+                        "Нужны доработки ИС",
+                        "Сложная интеграция"
                     ]
                 },
                 "qualityControl": {
@@ -506,7 +1102,57 @@ const SNAPSHOT_ARCH_PRESETS = {
         "uiBranch": {
             "qualityControl": {
                 "ui:widget": "checkbox"
-            }
+            },
+            "field_0uV7wafS": {
+                "ui:widget": "checkbox"
+            },
+            "field_28IPlEQu": {
+                "ui:widget": "checkbox"
+            },
+            "field_Ad1msOl7": {
+                "ui:widget": "checkbox"
+            },
+            "field_L-WWLDWY": {
+                "ui:widget": "checkbox"
+            },
+            "field_N9LFD6Hu": {
+                "ui:widget": "checkbox"
+            },
+            "field_Q8DGJNTn": {
+                "ui:widget": "checkbox"
+            },
+            "field_fRuMuWtn": {
+                "ui:widget": "checkbox"
+            },
+            "field_le47srI7": {
+                "ui:widget": "checkbox"
+            },
+            "field_rZeUo8a_": {
+                "ui:widget": "checkbox"
+            },
+            "field_xva1dRvW": {
+                "ui:widget": "checkbox"
+            },
+            "ui:order": [
+                "workType",
+                "metricsCount",
+                "field_0uV7wafS",
+                "field_28IPlEQu",
+                "field_46LCnfWo",
+                "field_Ad1msOl7",
+                "field_L-WWLDWY",
+                "field_N9LFD6Hu",
+                "field_Q8DGJNTn",
+                "field_fRuMuWtn",
+                "field_hIM0c5gG",
+                "field_le47srI7",
+                "field_lovKvLZc",
+                "field_rZeUo8a_",
+                "field_w_EN6lWe",
+                "field_xva1dRvW",
+                "integrationReadiness",
+                "qualityControl"
+            ]
         }
     },
     "model": {
@@ -514,6 +1160,10 @@ const SNAPSHOT_ARCH_PRESETS = {
             "type": "object",
             "title": "Модели",
             "properties": {
+                "autoML": {
+                    "type": "boolean",
+                    "title": "AutoML"
+                },
                 "workType": {
                     "type": "string",
                     "title": "Тип работ",
@@ -522,10 +1172,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "Дообучение",
                         "Калибровка"
                     ]
-                },
-                "modelsCount": {
-                    "type": "integer",
-                    "title": "Кол-во моделей"
                 },
                 "algorithmType": {
                     "type": "string",
@@ -538,6 +1184,30 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "RL"
                     ]
                 },
+                "field_58TkWuwu": {
+                    "type": "boolean",
+                    "title": "AutoML: встраивание внешнего кода"
+                },
+                "field_CeBkWcQc": {
+                    "type": "boolean",
+                    "title": "AutoML: требуется преобразование данных"
+                },
+                "field_S23CbRXp": {
+                    "type": "boolean",
+                    "title": "AutoML: требуется постановка на регламент"
+                },
+                "field_S41Rqt5E": {
+                    "type": "boolean",
+                    "title": "AutoML: требуется новая библиотека"
+                },
+                "cascadeEnsemble": {
+                    "type": "boolean",
+                    "title": "Каскад/ансамбль"
+                },
+                "modelsCount": {
+                    "type": "integer",
+                    "title": "Кол-во моделей"
+                },
                 "algorithmCoeff": {
                     "type": "string",
                     "title": "Коэф. алгоритма",
@@ -548,10 +1218,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "×1.50"
                     ]
                 },
-                "autoML": {
-                    "type": "boolean",
-                    "title": "AutoML"
-                },
                 "specialist": {
                     "type": "string",
                     "title": "Специалист",
@@ -560,10 +1226,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "+20%",
                         "+0%"
                     ]
-                },
-                "cascadeEnsemble": {
-                    "type": "boolean",
-                    "title": "Каскад/ансамбль"
                 },
                 "modelsList": {
                     "type": "array",
@@ -700,7 +1362,33 @@ const SNAPSHOT_ARCH_PRESETS = {
             },
             "cascadeEnsemble": {
                 "ui:widget": "checkbox"
-            }
+            },
+            "field_58TkWuwu": {
+                "ui:widget": "checkbox"
+            },
+            "field_CeBkWcQc": {
+                "ui:widget": "checkbox"
+            },
+            "field_S23CbRXp": {
+                "ui:widget": "checkbox"
+            },
+            "field_S41Rqt5E": {
+                "ui:widget": "checkbox"
+            },
+            "ui:order": [
+                "autoML",
+                "workType",
+                "algorithmType",
+                "field_58TkWuwu",
+                "field_CeBkWcQc",
+                "field_S23CbRXp",
+                "field_S41Rqt5E",
+                "cascadeEnsemble",
+                "modelsCount",
+                "algorithmCoeff",
+                "specialist",
+                "modelsList"
+            ]
         }
     }
 };

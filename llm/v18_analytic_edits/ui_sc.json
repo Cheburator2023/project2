@@ -1,0 +1,951 @@
+{
+	"meta": {
+		"id": {
+			"ui:widget": "text",
+			"ui:readonly": true
+		},
+		"name": {
+			"ui:widget": "text",
+			"ui:placeholder": "Наименование анкеты"
+		},
+		"status": {
+			"ui:widget": "select",
+			"ui:options": {
+				"dictionaryCode": "v2.meta.status"
+			}
+		},
+		"version": {
+			"ui:widget": "updown",
+			"ui:readonly": true
+		},
+		"ui:order": ["id", "name", "version", "status"],
+		"ui:options": {
+			"hidden": true
+		}
+	},
+	"summary": {
+		"ui:order": [
+			"baseScoreStream",
+			"scoreWithComplexityCoeff",
+			"deviationFromBaseline",
+			"detailedCalculation",
+			"platformStreams"
+		],
+		"ui:options": {
+			"hidden": true
+		},
+		"ui:readonly": true,
+		"baseScoreStream": {
+			"ui:widget": "text",
+			"ui:readonly": true
+		},
+		"platformStreams": {
+			"items": {
+				"streamName": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				},
+				"atypicalScore": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				},
+				"baseTypicalScore": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				},
+				"deviationPercent": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				},
+				"adjustedTypicalScore": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				}
+			},
+			"ui:options": {
+				"addable": false,
+				"orderable": false,
+				"removable": false
+			}
+		},
+		"detailedCalculation": {
+			"items": {
+				"baseScore": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				},
+				"stageName": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				},
+				"complexityCoeff": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				},
+				"deviationFromBase": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				}
+			},
+			"ui:options": {
+				"addable": false,
+				"orderable": false,
+				"removable": false
+			}
+		},
+		"deviationFromBaseline": {
+			"ui:widget": "text",
+			"ui:readonly": true
+		},
+		"scoreWithComplexityCoeff": {
+			"ui:widget": "text",
+			"ui:readonly": true
+		}
+	},
+	"ui:order": [
+		"workflow",
+		"groupActivation",
+		"meta",
+		"generalInfo",
+		"uncertaintyCalculation",
+		"detailInfo",
+		"streamDataSources",
+		"streamModelControl",
+		"streamDigitalAgents",
+		"streamStreamingData",
+		"summary"
+	],
+	"workflow": {
+		"sections": {
+			"detailInfo": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.workflow.sections.detailInfo"
+				}
+			},
+			"generalInfo": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.workflow.sections.generalInfo"
+				}
+			},
+			"streamDataSources": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.workflow.sections.streamDataSources"
+				}
+			},
+			"streamModelControl": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.workflow.sections.streamModelControl"
+				}
+			}
+		},
+		"ui:options": {
+			"hidden": true
+		},
+		"globalStatus": {
+			"ui:widget": "select",
+			"ui:options": {
+				"dictionaryCode": "v2.workflow.globalStatus"
+			}
+		}
+	},
+	"detailInfo": {
+		"model": {
+			"autoML": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.model.autoML"
+				}
+			},
+			"ui:order": [
+				"workType",
+				"cascadeEnsemble",
+				"autoML",
+				"field_58TkWuwu",
+				"field_CeBkWcQc",
+				"field_S23CbRXp",
+				"field_S41Rqt5E",
+				"algorithmType"
+			],
+			"workType": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.model.workType"
+				}
+			},
+			"ui:options": {
+				"sectionRole": "subsection",
+				"archComponent": "model",
+				"showFilledCount": true
+			},
+			"algorithmType": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.model.algorithmType"
+				}
+			},
+			"field_58TkWuwu": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.model.autoML"
+				}
+			},
+			"field_CeBkWcQc": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.model.autoML"
+				}
+			},
+			"field_S23CbRXp": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.model.autoML"
+				}
+			},
+			"field_S41Rqt5E": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.model.autoML"
+				}
+			},
+			"cascadeEnsemble": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.model.cascadeEnsemble"
+				}
+			}
+		},
+		"dataMart": {
+			"ui:order": [
+				"workType",
+				"field_lovKvLZc",
+				"field_hIM0c5gG",
+				"field_w_EN6lWe",
+				"metricsCount",
+				"field_46LCnfWo",
+				"field_le47srI7",
+				"field_rZeUo8a_",
+				"field_Q8DGJNTn",
+				"field_xva1dRvW",
+				"field_Ad1msOl7",
+				"field_28IPlEQu",
+				"field_fRuMuWtn",
+				"field_L-WWLDWY",
+				"field_0uV7wafS",
+				"field_N9LFD6Hu"
+			],
+			"workType": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataMart.workType"
+				}
+			},
+			"ui:options": {
+				"sectionRole": "subsection",
+				"archComponent": "dataMart",
+				"showFilledCount": true
+			},
+			"field_0uV7wafS": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataMart.qualityControl"
+				}
+			},
+			"field_28IPlEQu": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataMart.qualityControl"
+				}
+			},
+			"field_Ad1msOl7": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataMart.qualityControl"
+				}
+			},
+			"field_L-WWLDWY": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataMart.qualityControl"
+				}
+			},
+			"field_N9LFD6Hu": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataMart.qualityControl"
+				}
+			},
+			"field_Q8DGJNTn": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataMart.qualityControl"
+				}
+			},
+			"field_fRuMuWtn": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataMart.qualityControl"
+				}
+			},
+			"field_le47srI7": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataMart.qualityControl"
+				}
+			},
+			"field_rZeUo8a_": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataMart.qualityControl"
+				}
+			},
+			"field_xva1dRvW": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataMart.qualityControl"
+				}
+			}
+		},
+		"ui:order": [
+			"parameters",
+			"sourceSystems",
+			"dataProcess",
+			"dataMart",
+			"model",
+			"detailTypicalTasks",
+			"detailAtypicalTasks"
+		],
+		"parameters": {
+			"ui:order": ["streamsOutsideDADM", "streamNames"],
+			"ui:options": {
+				"sectionRole": "flat"
+			},
+			"streamNames": {
+				"ui:widget": "text"
+			},
+			"streamsOutsideDADM": {
+				"ui:widget": "checkbox"
+			}
+		},
+		"ui:options": {
+			"sectionRole": "main",
+			"titleVariant": "h5",
+			"defaultExpanded": false,
+			"workflowSectionId": "detailInfo"
+		},
+		"dataProcess": {
+			"ui:order": [
+				"field_yJ51GkCR",
+				"deliveryMode",
+				"field_UEzs5Q87",
+				"confidentialData",
+				"field_C6oqyTPh",
+				"field_R3Lx-csF",
+				"field_HgUCNn6E"
+			],
+			"ui:options": {
+				"sectionRole": "subsection",
+				"archComponent": "dataProcess",
+				"showFilledCount": true
+			},
+			"deliveryMode": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataProcess.deliveryMode"
+				}
+			},
+			"field_C6oqyTPh": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataProcess.confidentialData"
+				}
+			},
+			"field_HgUCNn6E": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataProcess.confidentialData"
+				}
+			},
+			"field_R3Lx-csF": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataProcess.confidentialData"
+				}
+			},
+			"field_UEzs5Q87": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataProcess.implComplexity"
+				}
+			},
+			"field_yJ51GkCR": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataProcess.workType"
+				}
+			},
+			"confidentialData": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.detailInfo.dataProcess.confidentialData"
+				}
+			}
+		},
+		"sourceSystems": {
+			"items": {
+				"name": {
+					"ui:widget": "text"
+				},
+				"type": {
+					"ui:widget": "select",
+					"ui:options": {
+						"dictionaryCode": "v2.detailInfo.sourceSystems.items.type"
+					}
+				},
+				"ui:order": [
+					"name",
+					"type",
+					"field_RFcOprSG",
+					"requirements",
+					"additionalUncertainty",
+					"field_bHwz9vwn",
+					"field_fJ_7OdE7",
+					"domainComplexity",
+					"entityVolume",
+					"field_nE73kPQl",
+					"field_HuOLfL4K",
+					"field_wf7CHiVI",
+					"field_tpROQBf5",
+					"field_AKLVuyFy",
+					"field_4jxR0E0m",
+					"field_DBFG7kIN",
+					"field_p4zxdNZG",
+					"field_vqqlHbU6",
+					"field_9BXQE8SI",
+					"field_K2ioHD8d",
+					"field_1ANadh7U",
+					"field_3a0vme2u",
+					"field_-t8JSf3p",
+					"field_DJJtx7nX",
+					"field_1bl3dfSX",
+					"field_wuYlhnu0",
+					"field_4Gff93vI",
+					"field_F8GPVM7R",
+					"field_TvqjyIO-",
+					"field_VX7y3PsB",
+					"field_61bkBs0m",
+					"field_bylzUFPM",
+					"field_L1lRlgf1",
+					"field_LxBG0mW-",
+					"field_HMnqITVb",
+					"field_788N1lwi",
+					"field_lDw9gG39",
+					"field_WgK6lIS-"
+				],
+				"entityVolume": {
+					"ui:widget": "select",
+					"ui:options": {
+						"dictionaryCode": "v2.method.28.объ_м_запроса_по_сущностям"
+					}
+				},
+				"requirements": {
+					"ui:widget": "select",
+					"ui:options": {
+						"dictionaryCode": "v2.detailInfo.sourceSystems.items.requirements"
+					}
+				},
+				"field_RFcOprSG": {
+					"ui:widget": "select",
+					"ui:options": {
+						"dictionaryCode": "v2.detailInfo.sourceSystems.items.additionalUncertainty"
+					}
+				},
+				"field_nE73kPQl": {
+					"ui:widget": "select",
+					"ui:options": {
+						"dictionaryCode": "v2.method.28.объ_м_запроса_по_сущностям"
+					}
+				},
+				"domainComplexity": {
+					"ui:widget": "select",
+					"ui:options": {
+						"dictionaryCode": "v2.method.27.сложность_предметной_области"
+					}
+				},
+				"additionalUncertainty": {
+					"ui:widget": "select",
+					"ui:options": {
+						"dictionaryCode": "v2.detailInfo.sourceSystems.items.additionalUncertainty"
+					}
+				}
+			},
+			"ui:options": {
+				"addable": true,
+				"orderable": false,
+				"removable": true,
+				"archComponent": "sourceSystem"
+			}
+		},
+		"detailTypicalTasks": {
+			"ui:options": {
+				"addable": false,
+				"orderable": false,
+				"removable": false
+			},
+			"ui:readonly": true,
+			"ui:description": "Формируются автоматически по правилам справочника при расчёте анкеты.\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
+		},
+		"detailAtypicalTasks": {
+			"ui:options": {
+				"addable": true,
+				"orderable": false,
+				"removable": true
+			}
+		}
+	},
+	"generalInfo": {
+		"calcName": {
+			"ui:widget": "text",
+			"ui:options": {
+				"fullWidth": true
+			},
+			"ui:placeholder": "Название анкеты"
+		},
+		"createIS": {
+			"ui:widget": "select",
+			"ui:options": {
+				"dictionaryCode": "v2.generalInfo.createIS"
+			},
+			"ui:placeholder": "Создание ИС"
+		},
+		"ui:order": [
+			"calcName",
+			"businessCustomer",
+			"implementationStream",
+			"complexity",
+			"createIS",
+			"createService",
+			"overallUncertainty",
+			"modelService"
+		],
+		"complexity": {
+			"ui:widget": "select",
+			"ui:options": {
+				"dictionaryCode": "v2.generalInfo.complexity"
+			},
+			"ui:placeholder": "Регуляторные требования"
+		},
+		"ui:options": {
+			"sectionRole": "main",
+			"defaultExpanded": true,
+			"workflowSectionId": "generalInfo"
+		},
+		"modelService": {
+			"ui:order": [
+				"workType",
+				"modelClass",
+				"deployChannels",
+				"controlTypes",
+				"pkRegulatory",
+				"field_imxB4YEd",
+				"field_kkbRs50S",
+				"field_r66ph-79",
+				"field_Y2S_XRAQ",
+				"field_JcKtx9Mg",
+				"field_KzzDtkB0",
+				"field_F7nK-We5",
+				"field_4IL7OStC",
+				"pilotNeed",
+				"prePromEval"
+			],
+			"workType": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.generalInfo.modelService.workType"
+				}
+			},
+			"pilotNeed": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.generalInfo.pilotNeed"
+				},
+				"ui:placeholder": "Необходимость пилота"
+			},
+			"modelClass": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.method.2.класс_моделей"
+				}
+			},
+			"ui:options": {
+				"sectionRole": "subsection",
+				"archComponent": "modelService",
+				"showFilledCount": true
+			},
+			"prePromEval": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.generalInfo.prePromEval"
+				}
+			},
+			"controlTypes": {
+				"items": {
+					"ui:widget": "select",
+					"ui:options": {
+						"dictionaryCode": "v2.generalInfo.modelService.controlTypes.items"
+					}
+				},
+				"ui:widget": "checkboxes"
+			},
+			"pkRegulatory": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.generalInfo.modelService.pkRegulatory"
+				}
+			},
+			"deployChannels": {
+				"items": {
+					"ui:widget": "select",
+					"ui:options": {
+						"dictionaryCode": "v2.generalInfo.modelService.deployChannels.items"
+					}
+				},
+				"ui:widget": "checkboxes"
+			}
+		},
+		"createService": {
+			"ui:widget": "select",
+			"ui:options": {
+				"dictionaryCode": "v2.generalInfo.createService"
+			},
+			"ui:placeholder": "Создание сервиса"
+		},
+		"businessCustomer": {
+			"ui:widget": "select",
+			"ui:options": {
+				"multiple": true,
+				"dictionaryCode": "v2.generalInfo.businessCustomer"
+			},
+			"ui:placeholder": "Департамент заказчика"
+		},
+		"overallUncertainty": {
+			"ui:help": "Редактируется через кнопку «Рассчитать общую неопределённость» в разделе",
+			"ui:widget": "hidden",
+			"ui:options": {
+				"hidden": true
+			}
+		},
+		"implementationStream": {
+			"ui:widget": "select",
+			"ui:options": {
+				"dictionaryCode": "v2.generalInfo.implementationStream"
+			},
+			"ui:placeholder": "Стрим/исполнитель"
+		}
+	},
+	"groupActivation": {
+		"ui:options": {
+			"hidden": true
+		}
+	},
+	"streamDataSources": {
+		"ui:order": ["localParams", "sourceTypicalTasks", "atypicalTasks"],
+		"ui:options": {
+			"sectionRole": "main",
+			"sectionCaption": "Платформенные и поддерживающие стримы",
+			"defaultExpanded": false,
+			"workflowSectionId": "streamDataSources"
+		},
+		"localParams": {
+			"ui:order": [
+				"stakeholdersKnown",
+				"field_sDjdrIMS",
+				"field_P1nnb5h5",
+				"field_fWcU13WA"
+			],
+			"ui:options": {
+				"sectionRole": "subsection",
+				"showFilledCount": true
+			},
+			"field_sDjdrIMS": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.method.34.объ_м_изменения_в_тис"
+				}
+			},
+			"stakeholdersKnown": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.streamDataSources.localParams.stakeholdersKnown"
+				}
+			}
+		},
+		"atypicalTasks": {
+			"items": {
+				"name": {
+					"ui:widget": "text"
+				},
+				"total": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				},
+				"ui:order": [
+					"name",
+					"estimateHoursPerDay",
+					"coefficient",
+					"total",
+					"includeInCalculation"
+				],
+				"coefficient": {
+					"ui:widget": "text"
+				},
+				"estimateHoursPerDay": {
+					"ui:widget": "text"
+				},
+				"includeInCalculation": {
+					"ui:widget": "checkbox"
+				}
+			},
+			"ui:options": {
+				"addable": true,
+				"orderable": false,
+				"removable": true
+			}
+		},
+		"sourceTypicalTasks": {
+			"items": {
+				"name": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				},
+				"total": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				},
+				"reason": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				},
+				"workType": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				},
+				"coefficient": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				},
+				"estimateHoursPerDay": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				}
+			},
+			"ui:options": {
+				"addable": false,
+				"orderable": false,
+				"removable": false
+			},
+			"ui:readonly": true,
+			"ui:description": "Формируются автоматически по правилам справочника на основании локальных параметров стрима и компонентов «Система-источник».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
+		}
+	},
+	"streamModelControl": {
+		"ui:order": [
+			"localParams",
+			"field_oVFNOrlT",
+			"field_IGQX_9FN",
+			"field_5tjhj31h",
+			"atypicalTasks"
+		],
+		"ui:options": {
+			"sectionRole": "main",
+			"sectionCaption": "Платформенные и поддерживающие стримы",
+			"defaultExpanded": false,
+			"workflowSectionId": "streamModelControl"
+		},
+		"localParams": {
+			"ui:order": [
+				"field_B3r6KeDB",
+				"field_Vc8LdrIe",
+				"field_ovsN_jvq",
+				"field_Tq1ez5gv",
+				"field_OrZLpCID"
+			],
+			"ui:options": {
+				"sectionRole": "subsection",
+				"showFilledCount": true
+			}
+		},
+		"atypicalTasks": {
+			"items": {
+				"name": {
+					"ui:widget": "text"
+				},
+				"total": {
+					"ui:widget": "text",
+					"ui:readonly": true
+				},
+				"ui:order": [
+					"name",
+					"estimateHoursPerDay",
+					"coefficient",
+					"total",
+					"includeInCalculation"
+				],
+				"coefficient": {
+					"ui:widget": "text"
+				},
+				"estimateHoursPerDay": {
+					"ui:widget": "text"
+				},
+				"includeInCalculation": {
+					"ui:widget": "checkbox"
+				}
+			},
+			"ui:options": {
+				"addable": true,
+				"orderable": false,
+				"removable": true
+			}
+		}
+	},
+	"streamDigitalAgents": {
+		"ui:order": ["localParams"],
+		"ui:options": {
+			"groupActive": false,
+			"sectionRole": "panel",
+			"sectionCaption": "Платформенные и поддерживающие стримы",
+			"defaultExpanded": false,
+			"groupActivatable": true
+		},
+		"localParams": {
+			"ui:options": {
+				"sectionRole": "subsection",
+				"showFilledCount": true
+			}
+		}
+	},
+	"streamStreamingData": {
+		"ui:order": ["localParams"],
+		"ui:options": {
+			"groupActive": false,
+			"sectionRole": "panel",
+			"sectionCaption": "Платформенные и поддерживающие стримы",
+			"defaultExpanded": false,
+			"groupActivatable": true
+		},
+		"localParams": {
+			"ui:options": {
+				"sectionRole": "subsection",
+				"showFilledCount": true
+			}
+		}
+	},
+	"uncertaintyCalculation": {
+		"ui:order": [
+			"initiativeTimeline",
+			"initiativeCost",
+			"uncertaintyAdjustment",
+			"riskGroup"
+		],
+		"riskGroup": {
+			"ui:order": [
+				"businessComplexity",
+				"defectsInSolution",
+				"adjacentProjectsImpact",
+				"laborCostIncrease",
+				"thirdPartyNegligence",
+				"staffShortage",
+				"sanctions",
+				"controlProceduresLack",
+				"regulatoryChanges",
+				"isNotUsedAfterProject",
+				"itArchitectureChanges"
+			],
+			"sanctions": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.sanctions"
+				}
+			},
+			"staffShortage": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.staffShortage"
+				}
+			},
+			"defectsInSolution": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.defectsInSolution"
+				}
+			},
+			"laborCostIncrease": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.laborCostIncrease"
+				}
+			},
+			"regulatoryChanges": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.regulatoryChanges"
+				}
+			},
+			"businessComplexity": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.businessComplexity"
+				}
+			},
+			"thirdPartyNegligence": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.thirdPartyNegligence"
+				}
+			},
+			"controlProceduresLack": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.controlProceduresLack"
+				}
+			},
+			"isNotUsedAfterProject": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.isNotUsedAfterProject"
+				}
+			},
+			"itArchitectureChanges": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.itArchitectureChanges"
+				}
+			},
+			"adjacentProjectsImpact": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.adjacentProjectsImpact"
+				}
+			}
+		},
+		"ui:widget": "hidden",
+		"ui:options": {
+			"hidden": true
+		},
+		"initiativeCost": {
+			"ui:widget": "text"
+		},
+		"initiativeTimeline": {
+			"ui:widget": "select",
+			"ui:options": {
+				"dictionaryCode": "v2.method.21.сроки_инициативы"
+			}
+		},
+		"uncertaintyAdjustment": {
+			"ui:widget": "text"
+		}
+	}
+}
