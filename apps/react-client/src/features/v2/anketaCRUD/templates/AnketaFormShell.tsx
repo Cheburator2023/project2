@@ -8,7 +8,10 @@ import {
 	Typography,
 } from "@mui/material";
 import type { V2SchemaBindingDto } from "@smart-anketa/api-contract";
-import { V2_ANKETA_GLOBAL_COMPLETE_LABEL } from "@smart-anketa/api-contract";
+import {
+	schemaHasUncertaintyModalWidget,
+	V2_ANKETA_GLOBAL_COMPLETE_LABEL,
+} from "@smart-anketa/api-contract";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
 	AnketaGlobalCompleteDialog,
@@ -238,6 +241,14 @@ export function AnketaFormShell({
 		Boolean(schemaBinding) && !isPageLoading && !errorMessage,
 	);
 
+	const hasUncertaintyModalWidget = useMemo(
+		() =>
+			schemaHasUncertaintyModalWidget(
+				engine.previewUiSchema as Record<string, unknown>,
+			),
+		[engine.previewUiSchema],
+	);
+
 	return (
 		<>
 			<AnketaFormPageLayout
@@ -260,7 +271,7 @@ export function AnketaFormShell({
 								engine={engine}
 								readOnly={effectiveReadOnly}
 								anketaFormContext={anketaFormContext}
-								showUncertaintySlot
+								showUncertaintySlot={!hasUncertaintyModalWidget}
 							/>
 						</>
 					)

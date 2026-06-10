@@ -3,6 +3,7 @@ import type {
 	V2LogicGraphDto,
 	V2LogicRuleDto,
 } from "@smart-anketa/api-contract";
+import { buildBooleanVisibilityRule } from "@smart-anketa/api-contract";
 import {
 	CONTROL_TYPICAL_TASKS,
 	SOURCE_GROUP_COEFFICIENT_LOGIC,
@@ -71,6 +72,14 @@ const ROW_TASK_TOTAL: V2JsonLogicValue = {
 };
 
 export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
+	buildBooleanVisibilityRule({
+		id: "default-visibility-stream-names",
+		targetPointer: "/detailInfo/parameters/streamNames",
+		sourcePointer: "/detailInfo/parameters/streamsOutsideDADM",
+		description:
+			"«Названия стримов» видно только при включённой галочке «Стримы вне ДАДМ».",
+	}),
+
 	rule("default-hint-overall-uncertainty", {
 		kind: "hint",
 		targetPath: "/uncertaintyCalculation/uncertaintyAdjustment",

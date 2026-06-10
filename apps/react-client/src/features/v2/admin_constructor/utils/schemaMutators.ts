@@ -986,6 +986,101 @@ export type DuplicateFieldResult = {
 	newPointer: string;
 };
 
+function schemaNodeType(node: RJSFSchema | undefined): string | undefined {
+	if (!node) return undefined;
+	const t = node.type;
+	if (typeof t === "string") return t;
+	if (Array.isArray(t)) {
+		return t.find((x) => x !== "null") as string | undefined;
+	}
+	if (node.properties) return "object";
+	if (node.items) return "array";
+	return undefined;
+}
+
+/** Снимает enum справочника и другие привязки из копии поля. */
+function stripDictionaryBindingsFromSchemaNode(node: RJSFSchema): RJSFSchema {
+	const clone = structuredClone(node) as RJSFSchema;
+	const type = schemaNodeType(clone);
+
+	if (type === "string") {
+		delete clone.enum;
+		delete clone.enumNames;
+		return clone;
+	}
+
+	if (type === "array") {
+		const items = clone.items as RJSFSchema | undefined;
+		if (items && typeof items === "object" && !Array.isArray(items)) {
+			if (schemaNodeType(items) === "string") {
+				delete items.enum;
+				delete items.enumNames;
+			} else {
+				clone.items = stripDictionaryBindingsFromSchemaNode(items);
+			}
+		}
+		return clone;
+	}
+
+	if (type === "object" && clone.properties) {
+		const props = clone.properties as Record<string, RJSFSchema>;
+		for (const key of Object.keys(props)) {
+			props[key] = stripDictionaryBindingsFromSchemaNode(props[key]!);
+		}
+	}
+
+	return clone;
+}
+
+/** Сбрасывает привязки справочника и скрытие в копии uiSchema. */
+function stripDictionaryBindingsFromUiBranch(
+	branch: Record<string, unknown>,
+): Record<string, unknown> {
+	const next = structuredClone(branch) as Record<string, unknown>;
+
+	if (
+		next.items &&
+		typeof next.items === "object" &&
+		!Array.isArray(next.items)
+	) {
+		next.items = stripDictionaryBindingsFromUiBranch(
+			next.items as Record<string, unknown>,
+		);
+	}
+
+	const opts = next["ui:options"];
+	if (opts && typeof opts === "object" && !Array.isArray(opts)) {
+		const cleaned = { ...(opts as Record<string, unknown>) };
+		delete cleaned.dictionaryCode;
+		delete cleaned.multiple;
+		delete cleaned.enumOptions;
+		delete cleaned.enumNames;
+		delete cleaned.hidden;
+		if (Object.keys(cleaned).length === 0) {
+			delete next["ui:options"];
+		} else {
+			next["ui:options"] = cleaned;
+		}
+	}
+
+	if (next["ui:widget"] === "select" || next["ui:widget"] === "hidden") {
+		delete next["ui:widget"];
+	}
+	delete next["ui:hidden"];
+
+	for (const key of Object.keys(next)) {
+		if (key.startsWith("ui:") || key === "items") continue;
+		const child = next[key];
+		if (child && typeof child === "object" && !Array.isArray(child)) {
+			next[key] = stripDictionaryBindingsFromUiBranch(
+				child as Record<string, unknown>,
+			);
+		}
+	}
+
+	return next;
+}
+
 /** Копирует поле (включая вложенные schema/ui) и вставляет сразу после оригинала. */
 export function duplicateFieldAtPointer(
 	root: RJSFSchema,
@@ -993,10 +1088,11 @@ export function duplicateFieldAtPointer(
 	sourcePointer: string,
 	newKey: string,
 ): DuplicateFieldResult | null {
-	const sourcePk = parentOfPointer(sourcePointer);
+	const normalizedSource = normalizeJsonPointer(sourcePointer);
+	const sourcePk = parentOfPointer(normalizedSource);
 	if (!sourcePk) return null;
 
-	const sourceNode = resolveSchemaNode(root, pointerSegments(sourcePointer));
+	const sourceNode = resolveSchemaNode(root, pointerSegments(normalizedSource));
 	if (!sourceNode) return null;
 
 	const parentPointer = pointerFromSegments(sourcePk.parentSegments);
@@ -1008,7 +1104,7 @@ export function duplicateFieldAtPointer(
 		root,
 		sourcePk.parentSegments,
 		newKey,
-		structuredClone(sourceNode) as RJSFSchema,
+		stripDictionaryBindingsFromSchemaNode(sourceNode),
 		insertIndex,
 	);
 	if (!nextSchema) return null;
@@ -1025,9 +1121,13 @@ export function duplicateFieldAtPointer(
 		insertIndex,
 	);
 
-	const sourceUiBranch = readUiSchemaBranchAtPointer(ui, sourcePointer);
+	const sourceUiBranch = readUiSchemaBranchAtPointer(ui, normalizedSource);
 	if (sourceUiBranch) {
-		nextUi = mergeUiBranchAtPointer(nextUi, newPointer, sourceUiBranch);
+		nextUi = mergeUiBranchAtPointer(
+			nextUi,
+			newPointer,
+			stripDictionaryBindingsFromUiBranch(sourceUiBranch),
+		);
 	}
 
 	const parentNode = resolveSchemaNode(nextSchema, sourcePk.parentSegments);
@@ -1114,6 +1214,52 @@ export function setUiPlaceholderAtPointer(
 				delete merged["ui:placeholder"];
 			}
 
+			if (Object.keys(merged).length === 0) {
+				delete cur[s];
+			} else {
+				cur[s] = merged;
+			}
+		} else {
+			const child = (cur[s] as Record<string, unknown>) ?? {};
+			cur[s] = child;
+			cur = child;
+		}
+	}
+
+	return next;
+}
+
+/** Подсказка у подписи поля (`ui:options.tooltip`) — иконка ℹ с нативным title. */
+export function setUiTooltipAtPointer(
+	ui: Record<string, unknown>,
+	fieldPointer: string,
+	tooltip: string | null | undefined,
+): Record<string, unknown> {
+	const trimmed = tooltip?.trim() ?? "";
+	if (trimmed) {
+		return patchUiOptionsAtPointer(ui, fieldPointer, { tooltip: trimmed });
+	}
+
+	const segs = pointerSegments(fieldPointer);
+	const next = structuredClone(ui) as Record<string, unknown>;
+	if (segs.length === 0) return next;
+
+	let cur: Record<string, unknown> = next;
+	for (let i = 0; i < segs.length; i++) {
+		const s = segs[i]!;
+		if (i === segs.length - 1) {
+			const prev = (cur[s] as Record<string, unknown>) ?? {};
+			const merged = { ...prev };
+			const prevOpt = merged["ui:options"];
+			if (prevOpt && typeof prevOpt === "object" && !Array.isArray(prevOpt)) {
+				const optBase = { ...(prevOpt as Record<string, unknown>) };
+				delete optBase.tooltip;
+				if (Object.keys(optBase).length === 0) {
+					delete merged["ui:options"];
+				} else {
+					merged["ui:options"] = optBase;
+				}
+			}
 			if (Object.keys(merged).length === 0) {
 				delete cur[s];
 			} else {
@@ -1331,6 +1477,18 @@ export function syncDictionaryFieldUiAtPointer(
 	return dictionaryCode
 		? setUiWidgetAtPointer(withOptions, fieldPointer, "select")
 		: withOptions;
+}
+
+/** Снимает привязку справочника и виджет select с поля. */
+export function clearDictionaryFieldBindingAtPointer(
+	ui: Record<string, unknown>,
+	fieldPointer: string,
+): Record<string, unknown> {
+	const withoutOptions = syncDictionaryFieldUiAtPointer(ui, fieldPointer, {
+		dictionaryCode: null,
+		multiple: false,
+	});
+	return setUiWidgetAtPointer(withoutOptions, fieldPointer, null);
 }
 
 /** Переключение справочника между одиночным (string) и множественным (array of string). */

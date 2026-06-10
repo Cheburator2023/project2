@@ -82,10 +82,10 @@ const ATYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
 		render: (item) => text(item, "name"),
 	},
 	{
-		key: "reason",
-		header: "Причина",
-		width: "1.5fr",
-		render: (item) => text(item, "reason"),
+		key: "workType",
+		header: "Тип работ",
+		width: "1.2fr",
+		render: (item) => text(item, "workType"),
 	},
 	{
 		key: "estimate",

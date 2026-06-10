@@ -3,9 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
 	buildPaletteDragNode,
 	buildSchemaCanvasTree,
+	clampCanvasInsertIndex,
 	getPresetIdFromPaletteDragSource,
+	listCanvasEditableChildKeys,
+	listCanvasOrderedChildKeys,
 	PALETTE_DRAG_TYPE,
 	SCHEMA_CANVAS_ROOT_ID,
+	SCHEMA_CANVAS_SYSTEM_DIVIDER_ID,
 	resolveCanvasDropTarget,
 	treeToGroupOrders,
 } from "./schemaCanvasTree";
@@ -69,10 +73,49 @@ describe("buildSchemaCanvasTree", () => {
 		};
 
 		const tree = buildSchemaCanvasTree(schema);
-		expect(tree.some((n) => n.id === "/items/@items")).toBe(true);
+		expect(tree.some((n) => n.id === "/items/@items")).toBe(false);
+		expect(tree.find((n) => n.id === "/items")?.droppable).toBe(true);
 		const row = tree.find((n) => n.data?.fieldKey === "row");
 		expect(row?.id).toBe("/items/items/row");
-		expect(row?.parent).toBe("/items/@items");
+		expect(row?.parent).toBe("/items");
+	});
+
+	it("renders atypical work item fields as direct children of the array", () => {
+		const preset = {
+			type: "array",
+			title: "Нетиповые работы",
+			items: {
+				type: "object",
+				properties: {
+					name: { type: "string", title: "Задача" },
+					workType: { type: "string", title: "Тип работ" },
+				},
+			},
+		} satisfies RJSFSchema;
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				detailAtypicalTasks: preset,
+			},
+		};
+		const ui: UiSchema = {
+			detailAtypicalTasks: {
+				"ui:options": { archComponent: "atypicalWork" },
+				items: {
+					"ui:order": ["name", "workType"],
+				},
+			},
+		};
+
+		const tree = buildSchemaCanvasTree(schema, ui);
+		const arrayId = "/detailAtypicalTasks";
+		const name = tree.find((n) => n.id === `${arrayId}/items/name`);
+		const workType = tree.find((n) => n.id === `${arrayId}/items/workType`);
+
+		expect(name?.parent).toBe(arrayId);
+		expect(workType?.parent).toBe(arrayId);
+		expect(name?.data?.kind).toBe("field");
+		expect(workType?.data?.kind).toBe("field");
 	});
 });
 
@@ -100,6 +143,137 @@ describe("resolveCanvasDropTarget", () => {
 			index: 1,
 		});
 	});
+
+	it("redirects drop on array field to items properties", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				tasks: {
+					type: "array",
+					items: {
+						type: "object",
+						properties: {
+							name: { type: "string" },
+						},
+					},
+				},
+			},
+		};
+		const options = {
+			dropTargetId: "/tasks",
+			dropTarget: {
+				id: "/tasks",
+				parent: SCHEMA_CANVAS_ROOT_ID,
+				text: "Tasks",
+				droppable: true,
+				data: {
+					kind: "field",
+					fieldPointer: "/tasks",
+					fieldKey: "tasks",
+					parentPointer: "/",
+				},
+			},
+			relativeIndex: 0,
+		} as DropOptions<SchemaCanvasNodeData>;
+
+		expect(resolveCanvasDropTarget(options, SCHEMA_CANVAS_ROOT_ID, schema)).toEqual(
+			{
+				parentPointer: "/tasks/items",
+				index: 0,
+			},
+		);
+	});
+});
+
+describe("buildSchemaCanvasTree system divider", () => {
+	it("inserts divider before first root system field", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				generalInfo: { type: "object", properties: {} },
+				meta: { type: "object", properties: {} },
+			},
+		};
+		const ui: UiSchema = {
+			"ui:order": ["generalInfo", "meta"],
+			meta: { "ui:options": { hidden: true, system: true } },
+		};
+
+		const tree = buildSchemaCanvasTree(schema, ui);
+		const rootChildren = tree
+			.filter((node) => node.parent === SCHEMA_CANVAS_ROOT_ID)
+			.map((node) => String(node.id));
+
+		expect(rootChildren).toEqual([
+			"/generalInfo",
+			SCHEMA_CANVAS_SYSTEM_DIVIDER_ID,
+			"/meta",
+		]);
+	});
+});
+
+describe("listCanvasEditableChildKeys", () => {
+	it("excludes system-marked siblings", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				generalInfo: { type: "object", properties: {} },
+				meta: { type: "object", properties: {} },
+				workflow: { type: "object", properties: {} },
+			},
+		};
+		const ui: UiSchema = {
+			"ui:order": ["workflow", "meta", "generalInfo"],
+			meta: { "ui:options": { hidden: true, system: true } },
+			workflow: { "ui:options": { hidden: true, system: true } },
+		};
+
+		expect(listCanvasEditableChildKeys(schema, "/", ui)).toEqual([
+			"generalInfo",
+		]);
+	});
+});
+
+describe("clampCanvasInsertIndex", () => {
+	it("clamps insert index before system siblings", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				generalInfo: { type: "object", properties: {} },
+				meta: { type: "object", properties: {} },
+			},
+		};
+		const ui: UiSchema = {
+			"ui:order": ["generalInfo", "meta"],
+			meta: { "ui:options": { hidden: true, system: true } },
+		};
+
+		expect(clampCanvasInsertIndex(schema, "/", ui, 99)).toBe(1);
+	});
+});
+
+describe("listCanvasOrderedChildKeys", () => {
+	it("moves system-marked siblings to the end of the canvas list", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				generalInfo: { type: "object", properties: {} },
+				meta: { type: "object", properties: {} },
+				workflow: { type: "object", properties: {} },
+			},
+		};
+		const ui: UiSchema = {
+			"ui:order": ["workflow", "meta", "generalInfo"],
+			meta: { "ui:options": { hidden: true, system: true } },
+			workflow: { "ui:options": { hidden: true, system: true } },
+		};
+
+		expect(listCanvasOrderedChildKeys(schema, "/", ui)).toEqual([
+			"generalInfo",
+			"workflow",
+			"meta",
+		]);
+	});
 });
 
 describe("treeToGroupOrders", () => {
@@ -124,10 +298,36 @@ describe("treeToGroupOrders", () => {
 		};
 
 		const tree = buildSchemaCanvasTree(schema, ui);
-		const orders = treeToGroupOrders(tree);
+		const orders = treeToGroupOrders(tree, schema);
 
 		expect(orders["schema-root"]).toEqual(["left", "right"]);
 		expect(orders["schema-group:/left"]).toEqual([]);
 		expect(orders["schema-group:/right"]).toEqual(["b", "a"]);
+	});
+
+	it("maps array item siblings to items parent pointer", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				tasks: {
+					type: "array",
+					items: {
+						type: "object",
+						properties: {
+							a: { type: "string" },
+							b: { type: "string" },
+						},
+					},
+				},
+			},
+		};
+		const ui: UiSchema = {
+			tasks: { items: { "ui:order": ["b", "a"] } },
+		};
+
+		const tree = buildSchemaCanvasTree(schema, ui);
+		const orders = treeToGroupOrders(tree, schema);
+
+		expect(orders["schema-group:/tasks/items"]).toEqual(["b", "a"]);
 	});
 });

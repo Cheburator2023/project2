@@ -6,7 +6,7 @@ import TextField, { type TextFieldProps } from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
 import type { SelectChangeEvent } from "@mui/material/Select";
 import { styled } from "@mui/material/styles";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { fuzzySearch, highlightMatches } from "@react-client/utils/fuzzySearch";
 
 const indexesToMatches = (
@@ -107,7 +107,13 @@ export function FuzzyAutocomplete<T>({
 	disabled,
 }: FuzzyAutocompleteProps<T>) {
 	const [searchTerm, setSearchTerm] = useState("");
+	const [open, setOpen] = useState(false);
 	const resolveValue = getOptionValue ?? getOptionLabel;
+
+	const closeMenu = useCallback(() => {
+		setOpen(false);
+		setSearchTerm("");
+	}, []);
 
 	const optionsForSelect = useMemo(
 		() =>
@@ -143,11 +149,13 @@ export function FuzzyAutocomplete<T>({
 		const nextValue = event.target.value;
 		if (!nextValue) {
 			onChange(null);
+			closeMenu();
 			return;
 		}
 		onChange(
 			options.find((option) => resolveValue(option) === nextValue) ?? null,
 		);
+		closeMenu();
 	};
 
 	const stopMenuEvent = (event: React.SyntheticEvent) => {
@@ -156,11 +164,15 @@ export function FuzzyAutocomplete<T>({
 
 	const blockSelectKeys = (event: React.KeyboardEvent) => {
 		event.stopPropagation();
+		if (event.key === "Escape") {
+			event.preventDefault();
+			closeMenu();
+			return;
+		}
 		if (
 			event.key === "ArrowDown" ||
 			event.key === "ArrowUp" ||
-			event.key === "Enter" ||
-			event.key === "Escape"
+			event.key === "Enter"
 		) {
 			event.preventDefault();
 		}
@@ -182,9 +194,12 @@ export function FuzzyAutocomplete<T>({
 			slotProps={{
 				select: {
 					displayEmpty: allowEmpty,
+					open,
+					onOpen: () => setOpen(true),
+					onClose: closeMenu,
 					MenuProps: {
 						disablePortal: false,
-						onClose: () => setSearchTerm(""),
+						onClose: closeMenu,
 						PaperProps: {
 							sx: {
 								padding: 0,

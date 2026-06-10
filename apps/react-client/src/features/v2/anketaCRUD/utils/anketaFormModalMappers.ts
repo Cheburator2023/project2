@@ -125,7 +125,7 @@ export function mapNonStandardTaskToAtypicalTask(
 
 	return {
 		name: values.name,
-		reason: values.reason,
+		workType: values.workType,
 		estimateHoursPerDay,
 		coefficient,
 		total,
@@ -352,7 +352,7 @@ export function mapArrayItemToModalDefaults(
 	if (kind === "nonStandardTask") {
 		return {
 			name: String(item.name ?? ""),
-			reason: String(item.reason ?? ""),
+			workType: String(item.workType ?? item.reason ?? ""),
 			estimateHours: String(item.estimateHoursPerDay ?? ""),
 			coefficient: String(item.coefficient ?? ""),
 			includeInCalculation: item.includeInCalculation !== false,
@@ -405,7 +405,7 @@ export function mapArrayItemToModalDefaults(
 		case "streamModelControl.atypicalTasks":
 			return {
 				name: String(item.name ?? ""),
-				reason: String(item.reason ?? ""),
+				workType: String(item.workType ?? item.reason ?? ""),
 				estimateHours: String(item.estimateHoursPerDay ?? ""),
 				coefficient: String(item.coefficient ?? ""),
 				includeInCalculation: item.includeInCalculation !== false,

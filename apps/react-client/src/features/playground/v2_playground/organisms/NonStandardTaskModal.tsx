@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import {
+  ATYPICAL_WORK_TYPE_LABELS,
+} from "@react-client/features/v2/admin_constructor/schemaEditor/archComponentPresets";
+import {
   Box,
   Button,
   Dialog,
@@ -33,7 +36,7 @@ const COEFFICIENT_OPTIONS: Option[] = [
 
 export type NonStandardTaskFormValues = {
   name: string;
-  reason: string;
+  workType: string;
   estimateHours: string;
   coefficient: string;
   includeInCalculation: boolean;
@@ -49,7 +52,7 @@ type NonStandardTaskModalProps = {
 
 const INITIAL_VALUES: NonStandardTaskFormValues = {
   name: "",
-  reason: "",
+  workType: "",
   estimateHours: "",
   coefficient: "",
   includeInCalculation: true,
@@ -114,14 +117,22 @@ export const NonStandardTaskModal = ({
             }
           />
 
-          <TextField
-            fullWidth
-            label="Причина задачи"
-            value={values.reason}
-            onChange={(event) =>
-              setValues((prev) => ({ ...prev, reason: event.target.value }))
-            }
-          />
+          <FormControl fullWidth>
+            <InputLabel>Тип работ</InputLabel>
+            <Select
+              value={values.workType}
+              label="Тип работ"
+              onChange={(event) =>
+                setValues((prev) => ({ ...prev, workType: event.target.value }))
+              }
+            >
+              {ATYPICAL_WORK_TYPE_LABELS.map((label) => (
+                <MenuItem key={label} value={label}>
+                  {label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
           <TextField
             fullWidth

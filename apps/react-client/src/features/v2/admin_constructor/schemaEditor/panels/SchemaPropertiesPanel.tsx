@@ -1,4 +1,3 @@
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -8,15 +7,15 @@ import Divider from "@mui/material/Divider";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
+import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { Spacer } from "@react-client/common/primitives/Spacer";
 import type { V2DictionaryDto } from "@smart-anketa/api-contract";
-import type { FieldTypePreset } from "../constants";
+import type { FieldTypePreset, PrimitiveFieldTypeVariant } from "../constants";
 import {
-	FIELD_PRESETS,
 	LAYOUT_GRID_COLUMN_OPTIONS,
+	PRIMITIVE_FIELD_TYPE_OPTIONS,
 	ruSchemaTypeLabel,
 	ruleKindLabel,
 } from "../constants";
@@ -26,9 +25,11 @@ import { PanelChrome } from "../components/PanelChrome";
 import { normalizeJsonPointer } from "../../utils/schemaPaths";
 import {
 	buildDictionaryMultiSchemaPatch,
+	clearDictionaryFieldBindingAtPointer,
 	patchUiOptionsAtPointer,
 	setUiHiddenAtPointer,
 	setUiPlaceholderAtPointer,
+	setUiTooltipAtPointer,
 	syncDictionaryFieldUiAtPointer,
 } from "../../utils/schemaMutators";
 import {
@@ -41,25 +42,259 @@ import {
 	type V2AnketaMainSectionId,
 	type V2AnketaSectionRole,
 } from "@smart-anketa/api-contract";
-import type { UiSchema } from "@rjsf/utils";
+import type { RJSFSchema, UiSchema } from "@rjsf/utils";
+import type { ReactNode } from "react";
+import { useCallback, useMemo } from "react";
+import { useBufferedDraftText } from "../hooks/useBufferedDraftText";
+import { usePropertiesPanelWidth } from "../hooks/usePropertiesPanelWidth";
 import {
 	describeArrayItems,
-	isDictionaryMultiField,
 	isWorkArchComponent,
 	readArrayToolbarOptions,
 	readLeafUiOptions,
 	resolveArchComponentAtPointer,
+	resolvePrimitiveFieldTypeVariant,
 	resolvePropertiesFieldKind,
 } from "../propertiesFieldKind";
 import { readUiSchemaBranchAtPointer } from "../../utils/schemaMutators";
 
+function PropertiesSection({
+	title,
+	children,
+}: {
+	title: string;
+	children: ReactNode;
+}) {
+	return (
+		<Box sx={{ mb: 2 }}>
+			<Typography
+				variant="overline"
+				color="text.secondary"
+				sx={{
+					display: "block",
+					letterSpacing: 0.6,
+					lineHeight: 1.6,
+					mb: 1,
+				}}
+			>
+				{title}
+			</Typography>
+			<Stack gap={1.25}>{children}</Stack>
+		</Box>
+	);
+}
+
+function GroupChildFieldsList({
+	fields,
+	emptyHint,
+	onSelectField,
+}: {
+	fields: Array<{ key: string; title: string; typeLabel: string }>;
+	emptyHint: string;
+	onSelectField?: (key: string) => void;
+}) {
+	if (fields.length === 0) {
+		return (
+			<Typography variant="caption" color="text.secondary">
+				{emptyHint}
+			</Typography>
+		);
+	}
+	return (
+		<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+			{fields.map((child) => (
+				<Box
+					key={child.key}
+					onClick={
+						onSelectField
+							? () => {
+									onSelectField(child.key);
+								}
+							: undefined
+					}
+					sx={
+						onSelectField
+							? {
+									cursor: "pointer",
+									borderRadius: 0.5,
+									px: 0.5,
+									mx: -0.5,
+									"&:hover": { bgcolor: "action.hover" },
+								}
+							: undefined
+					}
+				>
+					<Typography variant="body2" component="span">
+						{child.title}
+					</Typography>
+					<Typography
+						variant="caption"
+						color="text.secondary"
+						sx={{ ml: 0.5 }}
+					>
+						({child.key} · {ruSchemaTypeLabel(child.typeLabel)})
+					</Typography>
+				</Box>
+			))}
+		</Box>
+	);
+}
+
+function FieldTypeControl({
+	fieldKind,
+	primitiveTypeVariant,
+	onPrimitiveTypeChange,
+	arrayItemsLabel,
+}: {
+	fieldKind: ReturnType<typeof resolvePropertiesFieldKind>;
+	primitiveTypeVariant: PrimitiveFieldTypeVariant;
+	onPrimitiveTypeChange: (variant: PrimitiveFieldTypeVariant) => void;
+	arrayItemsLabel: string | null;
+}) {
+	if (fieldKind === "primitive") {
+		return (
+			<TextField
+				select
+				fullWidth
+				size="small"
+				label="Тип поля"
+				value={primitiveTypeVariant}
+				onChange={(e) =>
+					onPrimitiveTypeChange(e.target.value as PrimitiveFieldTypeVariant)
+				}
+				helperText="Справочник / список — мультиселект; при смене типа привязка справочника сбрасывается."
+			>
+				{PRIMITIVE_FIELD_TYPE_OPTIONS.map((option) => (
+					<MenuItem key={option.id} value={option.id}>
+						{option.title}
+					</MenuItem>
+				))}
+			</TextField>
+		);
+	}
+	if (fieldKind === "array" || fieldKind === "arch-array") {
+		return (
+			<TextField
+				fullWidth
+				size="small"
+				label="Тип поля"
+				value="Массив (список)"
+				disabled
+				helperText={
+					arrayItemsLabel ? `Элемент списка: ${arrayItemsLabel}` : undefined
+				}
+			/>
+		);
+	}
+	if (fieldKind === "layout") {
+		return (
+			<TextField
+				fullWidth
+				size="small"
+				label="Тип поля"
+				value="Разметка (сетка полей)"
+				disabled
+			/>
+		);
+	}
+	if (fieldKind === "general-uncertainty") {
+		return (
+			<TextField
+				fullWidth
+				size="small"
+				label="Тип поля"
+				value="Расчёт общей неопределённости"
+				disabled
+				helperText="Кнопка открывает модалку расчёта; данные сохраняются в uncertaintyCalculation"
+			/>
+		);
+	}
+	if (fieldKind === "object" || fieldKind === "arch-object") {
+		return (
+			<TextField
+				fullWidth
+				size="small"
+				label="Тип поля"
+				value="Группа (object)"
+				disabled
+			/>
+		);
+	}
+	return null;
+}
+
+/** Правая колонка конструктора: заголовок + ресайз за левый край. */
+export function SchemaPropertiesPanelColumn({ header }: { header: ReactNode }) {
+	const { width, isResizing, onResizeStart } = usePropertiesPanelWidth();
+
+	return (
+		<Box
+			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.panelProperties}
+			sx={{
+				position: "relative",
+				flexShrink: 0,
+				width,
+				display: "flex",
+				flexDirection: "column",
+				minHeight: 0,
+				borderLeft: 1,
+				borderColor: "divider",
+				bgcolor: "background.default",
+			}}
+		>
+			<Box
+				role="separator"
+				aria-orientation="vertical"
+				aria-label="Изменить ширину панели свойств"
+				title="Потяните, чтобы изменить ширину"
+				onMouseDown={onResizeStart}
+				sx={{
+					position: "absolute",
+					left: 0,
+					top: 0,
+					bottom: 0,
+					width: 10,
+					transform: "translateX(-50%)",
+					cursor: "col-resize",
+					zIndex: 2,
+					"&:hover": {
+						"&::after": {
+							opacity: 0.35,
+						},
+					},
+					"&::after": {
+						content: '""',
+						position: "absolute",
+						left: "50%",
+						top: 0,
+						bottom: 0,
+						width: 2,
+						transform: "translateX(-50%)",
+						borderRadius: 1,
+						bgcolor: "primary.main",
+						opacity: isResizing ? 0.45 : 0,
+						transition: "opacity 0.15s",
+					},
+				}}
+			/>
+			{header}
+			<Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+				<SchemaPropertiesPanel />
+			</Box>
+		</Box>
+	);
+}
+
 export function SchemaPropertiesPanel() {
 	const {
 		selectedPointer,
+		setSelectedPointer,
 		selectedPointerParent: pk,
 		resolvedField,
 		isRequired,
 		groupChildFields,
+		hasArrayObjectItems,
+		arrayItemChildFields,
 		isCustomUiGroup,
 		customUiGroupSummary,
 		canBindDictionary,
@@ -69,43 +304,151 @@ export function SchemaPropertiesPanel() {
 		rulesForSelectedExact,
 		rulesForSelectedSubtree,
 		rulesWhereSelectedIsDependency,
+		recordDraftHistory,
 		updateField,
+		patchUiSchema,
 		handleToggleRequired,
 		handleDictionaryCodeChange,
 		openLogicTabWithRule,
 		addRuleForTargetPath,
 		setMainTab,
-		handleDeleteField,
 		uiSchema,
-		setUiSchema,
 		monacoError,
 	} = useSchemaEditor();
 
-	const leafUiBranch =
-		selectedPointer && uiSchema
-			? readUiSchemaBranchAtPointer(
-					uiSchema as Record<string, unknown>,
-					selectedPointer,
-				)
-			: undefined;
-
-	const leafUiOptions = readLeafUiOptions(leafUiBranch);
-	const sectionUiOptions = readV2AnketaSectionUiOptions(leafUiBranch);
-	const archComponent = resolveArchComponentAtPointer(
-		uiSchema,
-		selectedPointer ?? "",
+	const leafUiBranch = useMemo(
+		() =>
+			selectedPointer && uiSchema
+				? readUiSchemaBranchAtPointer(
+						uiSchema as Record<string, unknown>,
+						selectedPointer,
+					)
+				: undefined,
+		[selectedPointer, uiSchema],
 	);
-	const uiWidget =
-		typeof leafUiBranch?.["ui:widget"] === "string"
-			? leafUiBranch["ui:widget"]
-			: undefined;
-	const fieldKind = resolvePropertiesFieldKind(
-		resolvedField,
-		archComponent,
-		leafUiOptions,
-		uiWidget,
+
+	const leafUiOptions = useMemo(
+		() => readLeafUiOptions(leafUiBranch),
+		[leafUiBranch],
+	);
+	const sectionUiOptions = useMemo(
+		() => readV2AnketaSectionUiOptions(leafUiBranch),
+		[leafUiBranch],
+	);
+	const archComponent = useMemo(
+		() => resolveArchComponentAtPointer(uiSchema, selectedPointer ?? ""),
+		[uiSchema, selectedPointer],
+	);
+	const uiWidget = useMemo(
+		() =>
+			typeof leafUiBranch?.["ui:widget"] === "string"
+				? leafUiBranch["ui:widget"]
+				: undefined,
+		[leafUiBranch],
+	);
+	const fieldKind = useMemo(
+		() =>
+			resolvePropertiesFieldKind(
+				resolvedField,
+				archComponent,
+				leafUiOptions,
+				uiWidget,
+			),
+		[resolvedField, archComponent, leafUiOptions, uiWidget],
 	);
 	const dictionaryMultiple = leafUiOptions?.multiple === true;
+	const primitiveTypeVariant = useMemo(
+		() =>
+			resolvePrimitiveFieldTypeVariant(resolvedField, leafUiOptions, uiWidget),
+		[resolvedField, leafUiOptions, uiWidget],
+	);
+
+	const commitFieldPatch = useCallback(
+		(patch: Partial<RJSFSchema>) =>
+			updateField(patch, { recordHistory: false }),
+		[updateField],
+	);
+
+	const handlePrimitiveTypeChange = useCallback(
+		(nextVariant: PrimitiveFieldTypeVariant) => {
+			if (!selectedPointer) return;
+			recordDraftHistory();
+
+			if (nextVariant === "dictionary-list") {
+				patchUiSchema(
+					(prev) =>
+						syncDictionaryFieldUiAtPointer(
+							prev as Record<string, unknown>,
+							selectedPointer,
+							{ multiple: true },
+						) as UiSchema,
+					{ recordHistory: false },
+				);
+				updateField(buildDictionaryMultiSchemaPatch(true), {
+					recordHistory: false,
+				});
+				return;
+			}
+
+			if (nextVariant === "string-dictionary") {
+				if (primitiveTypeVariant === "dictionary-list") {
+					patchUiSchema(
+						(prev) =>
+							syncDictionaryFieldUiAtPointer(
+								prev as Record<string, unknown>,
+								selectedPointer,
+								{ multiple: false },
+							) as UiSchema,
+						{ recordHistory: false },
+					);
+					updateField(buildDictionaryMultiSchemaPatch(false), {
+						recordHistory: false,
+					});
+				} else if (
+					primitiveTypeVariant === "integer" ||
+					primitiveTypeVariant === "number" ||
+					primitiveTypeVariant === "boolean"
+				) {
+					patchUiSchema(
+						(prev) =>
+							clearDictionaryFieldBindingAtPointer(
+								prev as Record<string, unknown>,
+								selectedPointer,
+							) as UiSchema,
+						{ recordHistory: false },
+					);
+					updateField({ type: "string" }, { recordHistory: false });
+				}
+				return;
+			}
+
+			patchUiSchema(
+				(prev) =>
+					clearDictionaryFieldBindingAtPointer(
+						prev as Record<string, unknown>,
+						selectedPointer,
+					) as UiSchema,
+				{ recordHistory: false },
+			);
+			updateField(buildDictionaryMultiSchemaPatch(false), {
+				recordHistory: false,
+			});
+			updateField(
+				{ type: nextVariant as FieldTypePreset },
+				{
+					recordHistory: false,
+				},
+			);
+		},
+		[
+			selectedPointer,
+			recordDraftHistory,
+			patchUiSchema,
+			updateField,
+			primitiveTypeVariant,
+		],
+	);
+
 	const layoutGridColumns =
 		typeof leafUiOptions?.gridColumns === "number"
 			? leafUiOptions.gridColumns
@@ -119,24 +462,75 @@ export function SchemaPropertiesPanel() {
 		typeof leafUiBranch?.["ui:placeholder"] === "string"
 			? leafUiBranch["ui:placeholder"]
 			: "";
+	const uiTooltip =
+		typeof leafUiOptions?.tooltip === "string" ? leafUiOptions.tooltip : "";
 
-	const patchSectionUi = (patch: Record<string, unknown>) => {
-		if (!selectedPointer) return;
-		setUiSchema(
-			(prev) =>
-				patchUiOptionsAtPointer(
-					prev as Record<string, unknown>,
-					selectedPointer,
-					patch,
-				) as UiSchema,
-		);
-	};
+	const patchSectionUi = useCallback(
+		(patch: Record<string, unknown>) => {
+			if (!selectedPointer) return;
+			patchUiSchema(
+				(prev) =>
+					patchUiOptionsAtPointer(
+						prev as Record<string, unknown>,
+						selectedPointer,
+						patch,
+					) as UiSchema,
+			);
+		},
+		[patchUiSchema, selectedPointer],
+	);
+
+	const titleDraft = useBufferedDraftText({
+		externalValue:
+			typeof resolvedField?.title === "string" ? resolvedField.title : "",
+		onRecordHistory: recordDraftHistory,
+		onCommit: (title) => commitFieldPatch({ title }),
+	});
+
+	const descriptionDraft = useBufferedDraftText({
+		externalValue: (resolvedField?.description as string) ?? "",
+		onRecordHistory: recordDraftHistory,
+		onCommit: (description) => commitFieldPatch({ description }),
+	});
+
+	const placeholderDraft = useBufferedDraftText({
+		externalValue: uiPlaceholder,
+		onRecordHistory: recordDraftHistory,
+		onCommit: (value) => {
+			if (!selectedPointer) return;
+			patchUiSchema(
+				(prev) =>
+					setUiPlaceholderAtPointer(
+						prev as Record<string, unknown>,
+						selectedPointer,
+						value,
+					) as UiSchema,
+				{ recordHistory: false },
+			);
+		},
+	});
+
+	const tooltipDraft = useBufferedDraftText({
+		externalValue: uiTooltip,
+		onRecordHistory: recordDraftHistory,
+		onCommit: (value) => {
+			if (!selectedPointer) return;
+			patchUiSchema(
+				(prev) =>
+					setUiTooltipAtPointer(
+						prev as Record<string, unknown>,
+						selectedPointer,
+						value,
+					) as UiSchema,
+				{ recordHistory: false },
+			);
+		},
+	});
 
 	const showObjectLayout =
 		fieldKind === "object" || fieldKind === "arch-object";
 	const showLayoutOptions = fieldKind === "layout";
-	const showArrayOptions =
-		fieldKind === "array" || fieldKind === "arch-array";
+	const showArrayOptions = fieldKind === "array" || fieldKind === "arch-array";
 	const showPlaceholderField =
 		fieldKind === "primitive" ||
 		showArrayOptions ||
@@ -144,10 +538,7 @@ export function SchemaPropertiesPanel() {
 	const workArch = isWorkArchComponent(archComponent);
 
 	return (
-		<PanelChrome
-			dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.properties}
-			description="JSON Schema и UI Schema выбранного узла."
-		>
+		<PanelChrome embedded dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.properties}>
 			{monacoError ? (
 				<Alert severity="error" sx={{ mb: 1 }}>
 					{monacoError}
@@ -159,201 +550,123 @@ export function SchemaPropertiesPanel() {
 				</Typography>
 			) : (
 				<>
-					<Flex alignItems="center" justifyContent="space-between" gap={1}>
+					<Box
+						sx={{
+							mb: 2,
+							pb: 1.5,
+							borderBottom: 1,
+							borderColor: "divider",
+						}}
+					>
 						<Typography variant="caption" color="text.secondary">
 							Путь: <code>{selectedPointer}</code>
 						</Typography>
-						<Button
-							size="small"
-							color="error"
-							variant="outlined"
-							startIcon={<DeleteOutlineIcon fontSize="small" />}
-							onClick={() => handleDeleteField()}
-							sx={{ flexShrink: 0 }}
-						>
-							Удалить
-						</Button>
-					</Flex>
-					<Spacer />
-
-					{archComponent ? (
-						<>
-							<Typography variant="caption" color="text.secondary" display="block">
-								Тип блока
-							</Typography>
+						{archComponent ? (
 							<Chip
 								size="small"
 								label={V2_ARCH_COMPONENT_LABELS[archComponent]}
-								sx={{ mb: 1 }}
+								sx={{ mt: 0.75 }}
 							/>
-						</>
-					) : null}
+						) : null}
+					</Box>
 
-					<TextField
-						fullWidth
-						size="small"
-						label="Подпись (title)"
-						value={resolvedField?.title ?? ""}
-						onChange={(e) => updateField({ title: e.target.value })}
-					/>
-					<Spacer />
-
-					<TextField
-						fullWidth
-						size="small"
-						multiline
-						minRows={2}
-						label="Описание"
-						value={(resolvedField?.description as string) ?? ""}
-						onChange={(e) => updateField({ description: e.target.value })}
-					/>
-					<Spacer />
-
-					{showPlaceholderField ? (
-						<>
-							<TextField
-								fullWidth
-								size="small"
-								label="Подсказка в поле (placeholder)"
-								value={uiPlaceholder}
-								onChange={(e) => {
-									if (!selectedPointer) return;
-									setUiSchema(
-										(prev) =>
-											setUiPlaceholderAtPointer(
-												prev as Record<string, unknown>,
-												selectedPointer,
-												e.target.value,
-											) as UiSchema,
-									);
-								}}
-								helperText="Текст в пустом поле в превью и анкете. Очистите, чтобы убрать подсказку."
-							/>
-							<Spacer />
-						</>
-					) : null}
-
-					{fieldKind === "primitive" ? (
-						isDictionaryMultiField(resolvedField, leafUiOptions) ? (
-							<TextField
-								fullWidth
-								size="small"
-								label="Тип поля"
-								value="Справочник (множественный выбор)"
-								disabled
-							/>
-						) : (
-							<TextField
-								select
-								fullWidth
-								size="small"
-								label="Тип поля"
-								value={
-									(Array.isArray(resolvedField?.type)
-										? resolvedField!.type.join(",")
-										: resolvedField?.type) ?? "string"
-								}
-								onChange={(e) => {
-									updateField({ type: e.target.value as FieldTypePreset });
-								}}
-								helperText="integer — целые; number — дробные. При смене типа несовместимые ключи удаляются."
-							>
-								{FIELD_PRESETS.filter((fp) =>
-									["string", "number", "integer", "boolean"].includes(
-										fp.id as string,
-									),
-								).map((fp) => (
-									<MenuItem key={`${fp.id}`} value={`${fp.id}`}>
-										{fp.title}
-									</MenuItem>
-								))}
-							</TextField>
-						)
-					) : showArrayOptions ? (
+					<PropertiesSection title="Подписи">
 						<TextField
 							fullWidth
 							size="small"
-							label="Тип поля"
-							value="Массив (список)"
-							disabled
-							helperText={
-								arrayItemsLabel
-									? `Элемент списка: ${arrayItemsLabel}`
-									: undefined
+							label="Подпись (title)"
+							value={titleDraft.value}
+							onChange={(e) => titleDraft.onChange(e.target.value)}
+							onBlur={titleDraft.onBlur}
+						/>
+						<TextField
+							fullWidth
+							size="small"
+							multiline
+							minRows={2}
+							label="Описание"
+							value={descriptionDraft.value}
+							onChange={(e) => descriptionDraft.onChange(e.target.value)}
+							onBlur={descriptionDraft.onBlur}
+						/>
+					</PropertiesSection>
+
+					<PropertiesSection title="Тип и схема">
+						<FieldTypeControl
+							fieldKind={fieldKind}
+							primitiveTypeVariant={primitiveTypeVariant}
+							onPrimitiveTypeChange={handlePrimitiveTypeChange}
+							arrayItemsLabel={arrayItemsLabel}
+						/>
+						<FormControlLabel
+							control={
+								<Checkbox
+									checked={isRequired}
+									onChange={(e) => handleToggleRequired(e.target.checked)}
+								/>
 							}
+							label="Обязательное"
 						/>
-					) : showLayoutOptions ? (
-						<TextField
-							fullWidth
-							size="small"
-							label="Тип поля"
-							value="Разметка (сетка полей)"
-							disabled
-						/>
-					) : fieldKind === "general-uncertainty" ? (
-						<TextField
-							fullWidth
-							size="small"
-							label="Тип поля"
-							value="Расчёт общей неопределённости"
-							disabled
-							helperText="Кнопка открывает модалку расчёта; данные сохраняются в uncertaintyCalculation"
-						/>
-					) : showObjectLayout ? (
-						<TextField
-							fullWidth
-							size="small"
-							label="Тип поля"
-							value="Группа (object)"
-							disabled
-						/>
-					) : null}
+					</PropertiesSection>
 
-					<Spacer />
-
-					<FormControlLabel
-						control={
-							<Checkbox
-								checked={isRequired}
-								onChange={(e) => handleToggleRequired(e.target.checked)}
+					<PropertiesSection title="В форме анкеты">
+						{showPlaceholderField ? (
+							<>
+								<TextField
+									fullWidth
+									size="small"
+									label="Плейсхолдер"
+									value={placeholderDraft.value}
+									onChange={(e) => placeholderDraft.onChange(e.target.value)}
+									onBlur={placeholderDraft.onBlur}
+									helperText="Текст в пустом поле в превью и анкете."
+								/>
+								<TextField
+									fullWidth
+									size="small"
+									multiline
+									minRows={2}
+									label="Подсказка"
+									value={tooltipDraft.value}
+									onChange={(e) => tooltipDraft.onChange(e.target.value)}
+									onBlur={tooltipDraft.onBlur}
+									helperText="Иконка ℹ рядом с подписью поля; текст — в нативной подсказке при наведении."
+								/>
+							</>
+						) : null}
+						<Box>
+							<FormControlLabel
+								control={
+									<Checkbox
+										checked={isHiddenInForm}
+										onChange={(e) => {
+											if (!selectedPointer) return;
+											patchUiSchema(
+												(prev) =>
+													setUiHiddenAtPointer(
+														prev as Record<string, unknown>,
+														selectedPointer,
+														e.target.checked,
+													) as UiSchema,
+											);
+										}}
+									/>
+								}
+								label="Скрыть в форме анкеты"
 							/>
-						}
-						label="Обязательное"
-					/>
-
-					<Spacer />
-
-					<FormControlLabel
-						control={
-							<Checkbox
-								checked={isHiddenInForm}
-								onChange={(e) => {
-									if (!selectedPointer) return;
-									setUiSchema(
-										(prev) =>
-											setUiHiddenAtPointer(
-												prev as Record<string, unknown>,
-												selectedPointer,
-												e.target.checked,
-											) as UiSchema,
-									);
-								}}
-							/>
-						}
-						label="Скрыть в форме анкеты"
-					/>
-					<Typography
-						variant="caption"
-						color="text.secondary"
-						display="block"
-						sx={{ mt: -0.5, mb: 1 }}
-					>
-						Поле не показывается в превью и анкете; на холсте — чип «Скрыто».
-					</Typography>
+							<Typography
+								variant="caption"
+								color="text.secondary"
+								display="block"
+								sx={{ mt: -0.5, pl: 4 }}
+							>
+								Поле не показывается в превью и анкете; на холсте — чип «Скрыто».
+							</Typography>
+						</Box>
+					</PropertiesSection>
 
 					{showLayoutOptions ? (
-						<>
-							<Spacer />
+						<PropertiesSection title="Разметка">
 							<TextField
 								select
 								fullWidth
@@ -373,7 +686,6 @@ export function SchemaPropertiesPanel() {
 									</MenuItem>
 								))}
 							</TextField>
-							<Spacer />
 							<FormControlLabel
 								control={
 									<Checkbox
@@ -387,112 +699,129 @@ export function SchemaPropertiesPanel() {
 								}
 								label="Без заголовка"
 							/>
-							<Spacer />
-							<Typography variant="caption" fontWeight={600}>
-								Поля в разметке ({groupChildFields.length})
-							</Typography>
-							{groupChildFields.length === 0 ? (
-								<Typography variant="caption" color="text.secondary">
-									Перетащите поля внутрь блока разметки на холсте.
+							<Box>
+								<Typography variant="caption" fontWeight={600} display="block">
+									Поля в разметке ({groupChildFields.length})
 								</Typography>
-							) : (
-								<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mb: 1 }}>
-									{groupChildFields.map((child) => (
-										<Box key={child.key}>
-											<Typography variant="body2" component="span">
-												{child.title}
-											</Typography>
-											<Typography
-												variant="caption"
-												color="text.secondary"
-												sx={{ ml: 0.5 }}
-											>
-												({child.key} · {ruSchemaTypeLabel(child.typeLabel)})
-											</Typography>
-										</Box>
-									))}
-								</Box>
-							)}
-						</>
+								<GroupChildFieldsList
+									fields={groupChildFields}
+									emptyHint="Перетащите поля внутрь блока разметки на холсте."
+								/>
+							</Box>
+						</PropertiesSection>
 					) : null}
 
 					{showObjectLayout ? (
 						<>
-							<Spacer />
-							<TextField
-								select
-								fullWidth
-								size="small"
-								label="Роль секции"
-								value={sectionUiOptions.sectionRole ?? ""}
-								onChange={(e) =>
-									patchSectionUi({
-										sectionRole: (e.target.value ||
-											undefined) as V2AnketaSectionRole,
-									})
-								}
-								helperText="main — главная панель; subsection — подсекция стрима"
-							>
-								<MenuItem value="">
-									<em>Авто</em>
-								</MenuItem>
-								{V2_ANKETA_SECTION_ROLE_VALUES.map((role) => (
-									<MenuItem key={role} value={role}>
-										{role}
+							<PropertiesSection title="Секция">
+								<TextField
+									select
+									fullWidth
+									size="small"
+									label="Роль секции"
+									value={sectionUiOptions.sectionRole ?? ""}
+									onChange={(e) =>
+										patchSectionUi({
+											sectionRole: (e.target.value ||
+												undefined) as V2AnketaSectionRole,
+										})
+									}
+									helperText="main — главная панель; subsection — подсекция стрима"
+								>
+									<MenuItem value="">
+										<em>Авто</em>
 									</MenuItem>
-								))}
-							</TextField>
-							<Spacer />
-							<FormControlLabel
-								control={
-									<Checkbox
-										checked={sectionUiOptions.defaultExpanded ?? false}
-										onChange={(e) =>
-											patchSectionUi({
-												defaultExpanded: e.target.checked,
-											})
-										}
-									/>
-								}
-								label="Развёрнута по умолчанию"
-							/>
-							<Spacer />
-							<FormControlLabel
-								control={
-									<Checkbox
-										checked={sectionUiOptions.groupActivatable ?? false}
-										onChange={(e) =>
-											patchSectionUi({
-												groupActivatable: e.target.checked || undefined,
-												...(e.target.checked
-													? {}
-													: {
-															groupActive: undefined,
-														}),
-											})
-										}
-									/>
-								}
-								label="Можно активировать и деактивировать"
-							/>
-							{sectionUiOptions.groupActivatable ? (
+									{V2_ANKETA_SECTION_ROLE_VALUES.map((role) => (
+										<MenuItem key={role} value={role}>
+											{role}
+										</MenuItem>
+									))}
+								</TextField>
+								<TextField
+									select
+									fullWidth
+									size="small"
+									label="Раздел workflow (workflowSectionId)"
+									value={sectionUiOptions.workflowSectionId ?? ""}
+									onChange={(e) =>
+										patchSectionUi({
+											workflowSectionId: (e.target.value ||
+												undefined) as V2AnketaMainSectionId,
+										})
+									}
+									helperText="Чип статуса и кнопка завершения — при роли main или при явном выборе раздела. «Авто» — по ключу на корне (generalInfo, detailInfo, …)."
+								>
+									<MenuItem value="">
+										<em>Авто (по ключу на корне)</em>
+									</MenuItem>
+									{V2_ANKETA_MAIN_SECTION_IDS.map((id) => (
+										<MenuItem key={id} value={id}>
+											{V2_ANKETA_MAIN_SECTION_TITLES[id]} ({id})
+										</MenuItem>
+									))}
+								</TextField>
+								<TextField
+									fullWidth
+									size="small"
+									label="Подпись под заголовком (sectionCaption)"
+									value={sectionUiOptions.sectionCaption ?? ""}
+									onChange={(e) =>
+										patchSectionUi({
+											sectionCaption: e.target.value.trim() || undefined,
+										})
+									}
+									helperText="Отображается под заголовком секции в превью анкеты"
+								/>
+							</PropertiesSection>
+
+							<PropertiesSection title="Панель">
 								<FormControlLabel
 									control={
 										<Checkbox
-											checked={sectionUiOptions.groupActive !== false}
+											checked={sectionUiOptions.defaultExpanded ?? false}
 											onChange={(e) =>
 												patchSectionUi({
-													groupActive: e.target.checked,
+													defaultExpanded: e.target.checked,
 												})
 											}
 										/>
 									}
-									label="Активна по умолчанию"
+									label="Развёрнута по умолчанию"
 								/>
-							) : null}
-							{fieldKind === "arch-object" ? (
-								<>
-									<Spacer />
+								<FormControlLabel
+									control={
+										<Checkbox
+											checked={sectionUiOptions.groupActivatable ?? false}
+											onChange={(e) =>
+												patchSectionUi({
+													groupActivatable: e.target.checked || undefined,
+													...(e.target.checked
+														? {}
+														: {
+																groupActive: undefined,
+															}),
+												})
+											}
+										/>
+									}
+									label="Можно активировать и деактивировать"
+								/>
+								{sectionUiOptions.groupActivatable ? (
+									<FormControlLabel
+										control={
+											<Checkbox
+												checked={sectionUiOptions.groupActive !== false}
+												onChange={(e) =>
+													patchSectionUi({
+														groupActive: e.target.checked,
+													})
+												}
+											/>
+										}
+										label="Активна по умолчанию"
+									/>
+								) : null}
+								{fieldKind === "arch-object" ? (
 									<FormControlLabel
 										control={
 											<Checkbox
@@ -506,85 +835,27 @@ export function SchemaPropertiesPanel() {
 										}
 										label="Счётчик заполненных в заголовке"
 									/>
-								</>
-							) : null}
-							<Spacer />
-							<TextField
-								select
-								fullWidth
-								size="small"
-								label="Раздел workflow (workflowSectionId)"
-								value={sectionUiOptions.workflowSectionId ?? ""}
-								onChange={(e) =>
-									patchSectionUi({
-										workflowSectionId: (e.target.value ||
-											undefined) as V2AnketaMainSectionId,
-									})
-								}
-								helperText="Чип статуса и кнопка завершения — при роли main или при явном выборе раздела. «Авто» — по ключу на корне (generalInfo, detailInfo, …)."
+								) : null}
+							</PropertiesSection>
+
+							<PropertiesSection
+								title={`Вложенные поля (${groupChildFields.length})`}
 							>
-								<MenuItem value="">
-									<em>Авто (по ключу на корне)</em>
-								</MenuItem>
-								{V2_ANKETA_MAIN_SECTION_IDS.map((id) => (
-									<MenuItem key={id} value={id}>
-										{V2_ANKETA_MAIN_SECTION_TITLES[id]} ({id})
-									</MenuItem>
-								))}
-							</TextField>
-							<Spacer />
-							<TextField
-								fullWidth
-								size="small"
-								label="Подпись под заголовком (sectionCaption)"
-								value={sectionUiOptions.sectionCaption ?? ""}
-								onChange={(e) =>
-									patchSectionUi({
-										sectionCaption: e.target.value.trim() || undefined,
-									})
-								}
-								helperText="Отображается под заголовком секции в превью анкеты"
-							/>
-							<Spacer />
-							<Typography variant="caption" fontWeight={600}>
-								Поля в группе ({groupChildFields.length})
-							</Typography>
-							{groupChildFields.length === 0 ? (
-								<Typography variant="caption" color="text.secondary">
-									Перетащите поле внутрь группы на холсте.
-								</Typography>
-							) : (
-								<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mb: 1 }}>
-									{groupChildFields.map((child) => (
-										<Box key={child.key}>
-											<Typography variant="body2" component="span">
-												{child.title}
-											</Typography>
-											<Typography
-												variant="caption"
-												color="text.secondary"
-												sx={{ ml: 0.5 }}
-											>
-												({child.key} · {ruSchemaTypeLabel(child.typeLabel)})
-											</Typography>
-										</Box>
-									))}
-								</Box>
-							)}
-							{isCustomUiGroup ? (
-								<Typography variant="caption" color="info.main" display="block">
-									Кастомная UI-конфигурация: {customUiGroupSummary}
-								</Typography>
-							) : null}
+								<GroupChildFieldsList
+									fields={groupChildFields}
+									emptyHint="Перетащите поле внутрь группы на холсте."
+								/>
+								{isCustomUiGroup ? (
+									<Typography variant="caption" color="info.main" display="block">
+										Кастомная UI-конфигурация: {customUiGroupSummary}
+									</Typography>
+								) : null}
+							</PropertiesSection>
 						</>
 					) : null}
 
 					{showArrayOptions ? (
-						<>
-							<Spacer />
-							<Typography variant="caption" fontWeight={600} display="block">
-								Список
-							</Typography>
+						<PropertiesSection title="Список">
 							<FormControlLabel
 								control={
 									<Checkbox
@@ -639,153 +910,180 @@ export function SchemaPropertiesPanel() {
 								label="Можно менять порядок строк"
 							/>
 							{workArch && archComponent === "typicalWork" ? (
-								<Typography variant="caption" color="text.secondary" display="block">
+								<Typography variant="caption" color="text.secondary">
 									Типовые работы генерируются автоматически — добавление и
 									удаление отключены.
 								</Typography>
 							) : null}
-						</>
-					) : null}
-
-					<Divider sx={{ my: 1.5 }} />
-
-					{canBindDictionary ? (
-						<>
-							<FuzzyAutocomplete<V2DictionaryDto>
-								options={v2Dictionaries}
-								value={
-									v2Dictionaries.find(
-										(d) => d.code === currentDictionaryCode,
-									) ?? null
-								}
-								onChange={(d) =>
-									handleDictionaryCodeChange(d?.code ?? "")
-								}
-								getOptionLabel={(d) => `${d.code} — ${d.name}`}
-								getOptionValue={(d) => d.code}
-								label="Справочник"
-								placeholder="Не привязан"
-								error={dictionaryBindingMissing}
-								noMatchesText="Совпадений нет"
-								helperText="В форме поле отображается как выпадающий список значений справочника"
-							/>
-							{currentDictionaryCode ? (
-								<FormControlLabel
-									sx={{ mt: 0.5, display: "block" }}
-									control={
-										<Checkbox
-											checked={dictionaryMultiple}
-											onChange={(e) => {
-												const checked = e.target.checked;
-												if (!selectedPointer) return;
-												setUiSchema(
-													(prev) =>
-														syncDictionaryFieldUiAtPointer(
-															prev as Record<string, unknown>,
-															selectedPointer,
-															{ multiple: checked },
-														) as UiSchema,
-												);
-												updateField(
-													buildDictionaryMultiSchemaPatch(checked),
-												);
-											}}
-										/>
-									}
-									label="Множественный выбор"
-								/>
+							{hasArrayObjectItems ? (
+								<Box sx={{ mt: 1.5 }}>
+									<Typography
+										variant="caption"
+										fontWeight={600}
+										display="block"
+										sx={{ mb: 0.5 }}
+									>
+										Поля элемента списка ({arrayItemChildFields.length})
+									</Typography>
+									<GroupChildFieldsList
+										fields={arrayItemChildFields}
+										emptyHint="Перетащите поле из палитры на блок списка на холсте. Стоковые поля пресета удалить нельзя."
+										onSelectField={(key) => {
+											if (!selectedPointer) return;
+											setSelectedPointer(`${selectedPointer}/items/${key}`);
+										}}
+									/>
+								</Box>
 							) : null}
-						</>
-					) : fieldKind === "primitive" ? (
-						<Typography variant="caption" color="text.secondary">
-							Справочники доступны только для полей типа «строка».
-						</Typography>
-					) : fieldKind === "object" ||
-					  fieldKind === "arch-object" ||
-					  fieldKind === "layout" ? (
-						<Typography variant="caption" color="text.secondary">
-							Справочник задаётся на вложенных строковых полях группы.
-						</Typography>
+						</PropertiesSection>
 					) : null}
 
-					<Divider sx={{ my: 1.5 }} />
+					<Divider sx={{ mb: 2 }} />
 
-					<Typography variant="caption" fontWeight={600}>
-						Влияет на это поле ({rulesForSelectedExact.length})
-					</Typography>
-					<Flex gap={0.5} sx={{ flexWrap: "wrap", mb: 1 }}>
-						{rulesForSelectedExact.length === 0 ? (
+					<PropertiesSection title="Справочник">
+						{canBindDictionary ? (
+							<>
+								<FuzzyAutocomplete<V2DictionaryDto>
+									options={v2Dictionaries}
+									value={
+										v2Dictionaries.find(
+											(d) => d.code === currentDictionaryCode,
+										) ?? null
+									}
+									onChange={(d) => handleDictionaryCodeChange(d?.code ?? "")}
+									getOptionLabel={(d) => `${d.code} — ${d.name}`}
+									getOptionValue={(d) => d.code}
+									label="Справочник"
+									placeholder="Не привязан"
+									error={dictionaryBindingMissing}
+									noMatchesText="Совпадений нет"
+									helperText="В форме поле отображается как выпадающий список значений справочника"
+								/>
+								{currentDictionaryCode ? (
+									<FormControlLabel
+										control={
+											<Checkbox
+												checked={dictionaryMultiple}
+												onChange={(e) => {
+													const checked = e.target.checked;
+													if (!selectedPointer) return;
+													recordDraftHistory();
+													patchUiSchema(
+														(prev) =>
+															syncDictionaryFieldUiAtPointer(
+																prev as Record<string, unknown>,
+																selectedPointer,
+																{ multiple: checked },
+															) as UiSchema,
+														{ recordHistory: false },
+													);
+													updateField(buildDictionaryMultiSchemaPatch(checked), {
+														recordHistory: false,
+													});
+												}}
+											/>
+										}
+										label="Множественный выбор"
+									/>
+								) : null}
+							</>
+						) : fieldKind === "primitive" ? (
 							<Typography variant="caption" color="text.secondary">
-								Правил, меняющих это поле, нет.
+								Справочники доступны только для полей типа «строка».
+							</Typography>
+						) : fieldKind === "object" ||
+							fieldKind === "arch-object" ||
+							fieldKind === "layout" ? (
+							<Typography variant="caption" color="text.secondary">
+								Справочник задаётся на вложенных строковых полях группы.
 							</Typography>
 						) : null}
-						{rulesForSelectedExact.map((r) => (
-							<Chip
-								key={r.id}
-								size="small"
-								variant="outlined"
-								label={`${ruleKindLabel(r.kind)}${
-									r.description ? ` · ${r.description}` : ""
-								}`}
-								onClick={() => openLogicTabWithRule(r.id)}
-							/>
-						))}
-					</Flex>
+					</PropertiesSection>
 
-					<Typography variant="caption" fontWeight={600}>
-						Зависят от этого поля ({rulesWhereSelectedIsDependency.length})
-					</Typography>
-					<Flex gap={0.5} sx={{ flexWrap: "wrap", mb: 1 }}>
-						{rulesWhereSelectedIsDependency.length === 0 ? (
-							<Typography variant="caption" color="text.secondary">
-								Поле не используется как источник в правилах.
-							</Typography>
-						) : null}
-						{rulesWhereSelectedIsDependency.map((r) => (
-							<Chip
-								key={r.id}
-								size="small"
-								variant="outlined"
-								color="info"
-								label={`${ruleKindLabel(r.kind)} → ${normalizeJsonPointer(
-									r.targetPath,
-								)}`}
-								onClick={() => openLogicTabWithRule(r.id)}
-							/>
-						))}
-					</Flex>
+					<Divider sx={{ mb: 2 }} />
 
-					{resolvedField?.type === "object" ? (
-						<>
-							<Typography variant="caption" fontWeight={600}>
-								Правила на вложенные ({rulesForSelectedSubtree.length})
+					<PropertiesSection title="Логика">
+						<Box>
+							<Typography variant="caption" fontWeight={600} display="block">
+								Влияет на это поле ({rulesForSelectedExact.length})
 							</Typography>
-							<Flex gap={0.5} sx={{ flexWrap: "wrap", mb: 1 }}>
-								{rulesForSelectedSubtree.map((r) => (
+							<Flex gap={0.5} sx={{ flexWrap: "wrap", mt: 0.5 }}>
+								{rulesForSelectedExact.length === 0 ? (
+									<Typography variant="caption" color="text.secondary">
+										Правил, меняющих это поле, нет.
+									</Typography>
+								) : null}
+								{rulesForSelectedExact.map((r) => (
 									<Chip
 										key={r.id}
 										size="small"
 										variant="outlined"
-										color="secondary"
-										label={`${ruleKindLabel(r.kind)} → ${normalizeJsonPointer(r.targetPath)}`}
+										label={`${ruleKindLabel(r.kind)}${
+											r.description ? ` · ${r.description}` : ""
+										}`}
 										onClick={() => openLogicTabWithRule(r.id)}
 									/>
 								))}
 							</Flex>
-						</>
-					) : null}
+						</Box>
 
-					<Button
-						size="small"
-						variant="outlined"
-						onClick={() => {
-							if (!selectedPointer) return;
-							addRuleForTargetPath(selectedPointer);
-							setMainTab("logic");
-						}}
-					>
-						Добавить правило
-					</Button>
+						<Box>
+							<Typography variant="caption" fontWeight={600} display="block">
+								Зависят от этого поля ({rulesWhereSelectedIsDependency.length})
+							</Typography>
+							<Flex gap={0.5} sx={{ flexWrap: "wrap", mt: 0.5 }}>
+								{rulesWhereSelectedIsDependency.length === 0 ? (
+									<Typography variant="caption" color="text.secondary">
+										Поле не используется как источник в правилах.
+									</Typography>
+								) : null}
+								{rulesWhereSelectedIsDependency.map((r) => (
+									<Chip
+										key={r.id}
+										size="small"
+										variant="outlined"
+										color="info"
+										label={`${ruleKindLabel(r.kind)} → ${normalizeJsonPointer(
+											r.targetPath,
+										)}`}
+										onClick={() => openLogicTabWithRule(r.id)}
+									/>
+								))}
+							</Flex>
+						</Box>
+
+						{resolvedField?.type === "object" ? (
+							<Box>
+								<Typography variant="caption" fontWeight={600} display="block">
+									Правила на вложенные ({rulesForSelectedSubtree.length})
+								</Typography>
+								<Flex gap={0.5} sx={{ flexWrap: "wrap", mt: 0.5 }}>
+									{rulesForSelectedSubtree.map((r) => (
+										<Chip
+											key={r.id}
+											size="small"
+											variant="outlined"
+											color="secondary"
+											label={`${ruleKindLabel(r.kind)} → ${normalizeJsonPointer(r.targetPath)}`}
+											onClick={() => openLogicTabWithRule(r.id)}
+										/>
+									))}
+								</Flex>
+							</Box>
+						) : null}
+
+						<Button
+							size="small"
+							variant="outlined"
+							onClick={() => {
+								if (!selectedPointer) return;
+								addRuleForTargetPath(selectedPointer);
+								setMainTab("logic");
+							}}
+						>
+							Добавить правило
+						</Button>
+					</PropertiesSection>
 				</>
 			)}
 		</PanelChrome>

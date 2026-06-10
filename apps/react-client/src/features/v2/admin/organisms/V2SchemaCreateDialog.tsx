@@ -19,7 +19,11 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { toast } from "@react-client/common/toasts";
-import { EMPTY_JSON_SCHEMA } from "@react-client/features/v2/admin_constructor/utils/coerceV2TemplateSnapshot";
+import { buildEmptyV2AnketaTemplateSnapshot } from "@smart-anketa/api-contract";
+import {
+	coerceJsonSchema,
+	coerceUiSchema,
+} from "@react-client/features/v2/admin_constructor/utils/coerceV2TemplateSnapshot";
 import { pathForAdminV2Template } from "@react-client/routing/common/pathHelpers";
 import { useState } from "react";
 import { useNavigate } from "react-router";
@@ -70,11 +74,12 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 			});
 
 			if (initialKind === "empty") {
+				const emptySnapshot = buildEmptyV2AnketaTemplateSnapshot();
 				await createVersion.mutateAsync({
 					templateId: created.id,
 					dto: {
-						jsonSchema: structuredClone(EMPTY_JSON_SCHEMA),
-						uiSchema: {},
+						jsonSchema: coerceJsonSchema(emptySnapshot.jsonSchema),
+						uiSchema: coerceUiSchema(emptySnapshot.uiSchema),
 						logic: { rules: [] },
 						dictionariesSnapshot: { referencedDictionaryCodes: [] },
 						releaseNotes: "Пустой черновик",

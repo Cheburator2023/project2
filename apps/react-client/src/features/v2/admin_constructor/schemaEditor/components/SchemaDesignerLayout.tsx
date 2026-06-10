@@ -7,13 +7,12 @@ import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
 import { useSchemaEditor } from "../SchemaEditorContext";
-import { SchemaPropertiesPanel } from "../panels/SchemaPropertiesPanel";
+import { SchemaPropertiesPanelColumn } from "../panels/SchemaPropertiesPanel";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { SchemaCanvasPanel, SchemaPalettePanel } from "./SchemaCanvasDnd";
 import { SchemaPaletteDragLayer } from "./SchemaPaletteDragLayer";
 
 const PALETTE_WIDTH = 250;
-const PROPERTIES_WIDTH = 300;
 
 function DesignerSidebarHeader({
 	title,
@@ -135,36 +134,23 @@ export function SchemaDesignerLayout() {
 			</Box>
 
 			{showProperties ? (
-				<Box
-					data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.panelProperties}
-					sx={{
-						flexShrink: 0,
-						width: PROPERTIES_WIDTH,
-						display: "flex",
-						flexDirection: "column",
-						minHeight: 0,
-						borderLeft: 1,
-						borderColor: "divider",
-						bgcolor: "background.default",
-					}}
-				>
-					<DesignerSidebarHeader
-						title="Свойства"
-						action={
-							<IconButton
-								size="small"
-								title="Закрыть и снять выделение"
-								onClick={() => setSelectedPointer(null)}
-								aria-label="Закрыть свойства"
-							>
-								<CloseIcon fontSize="small" />
-							</IconButton>
-						}
-					/>
-					<Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-						<SchemaPropertiesPanel />
-					</Box>
-				</Box>
+				<SchemaPropertiesPanelColumn
+					header={
+						<DesignerSidebarHeader
+							title="Свойства"
+							action={
+								<IconButton
+									size="small"
+									title="Закрыть и снять выделение"
+									onClick={() => setSelectedPointer(null)}
+									aria-label="Закрыть свойства"
+								>
+									<CloseIcon fontSize="small" />
+								</IconButton>
+							}
+						/>
+					}
+				/>
 			) : null}
 			</Box>
 		</>

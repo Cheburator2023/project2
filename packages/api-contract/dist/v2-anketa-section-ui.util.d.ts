@@ -26,6 +26,8 @@ export type V2AnketaSectionUiOptions = {
     /** Подпись под заголовком главной секции (caption). */
     sectionCaption?: string;
     hidden?: boolean;
+    /** Системный блок (мета, workflow, данные расчётов) — не редактируется в анкете. */
+    system?: boolean;
     /** Тип арх. компонента (глоссарий §3.4) для разметки и dev-подсветки. */
     archComponent?: V2ArchComponentType;
     /** Группу можно включать/выключать в форме (кнопка в шапке секции). */

@@ -69,4 +69,75 @@ describe("anketaSchemaAtPath modal slices", () => {
 		);
 		expect(slice?.schema.properties?.name).toBeDefined();
 	});
+
+	it("follows ui:order when it differs from jsonSchema property order", () => {
+		const ui = structuredClone(snapshot.uiSchema) as UiSchema;
+		const modelServiceUi = (
+			(ui as Record<string, unknown>).generalInfo as Record<string, unknown>
+		).modelService as Record<string, unknown>;
+		modelServiceUi["ui:order"] = [
+			"pirmBlock",
+			"pkNewType",
+			"workType",
+			"modelClass",
+			"controlTypes",
+			"deployChannels",
+			"pkRecalibration",
+			"pkOtherChannel",
+			"pkRework",
+			"pkRegulatory",
+		];
+
+		const slice = getObjectSchemaSliceForModal(
+			snapshot.jsonSchema,
+			ui,
+			"generalInfo.modelService",
+		);
+
+		expect(Object.keys(slice!.schema.properties!).slice(0, 2)).toEqual([
+			"pirmBlock",
+			"pkNewType",
+		]);
+	});
+
+	it("preserves ui:order in object modal slice", () => {
+		const expectedOrder = (
+			(snapshot.uiSchema as Record<string, unknown>).generalInfo as Record<
+				string,
+				unknown
+			>
+		).modelService as Record<string, unknown>;
+		const uiOrder = expectedOrder["ui:order"] as string[];
+
+		const slice = getObjectSchemaSliceForModal(
+			snapshot.jsonSchema,
+			snapshot.uiSchema,
+			"generalInfo.modelService",
+		);
+
+		expect(Object.keys(slice!.schema.properties!)).toEqual(uiOrder);
+		expect((slice!.uiSchema as Record<string, unknown>)["ui:order"]).toEqual(
+			uiOrder,
+		);
+	});
+
+	it("drops hidden keys from ui:order in modal slice", () => {
+		const ui = setUiHiddenAtPointer(
+			structuredClone(snapshot.uiSchema) as Record<string, unknown>,
+			"/generalInfo/modelService/workType",
+			true,
+		) as UiSchema;
+
+		const slice = getObjectSchemaSliceForModal(
+			snapshot.jsonSchema,
+			ui,
+			"generalInfo.modelService",
+		);
+		const order = (slice!.uiSchema as Record<string, unknown>)[
+			"ui:order"
+		] as string[];
+
+		expect(order).not.toContain("workType");
+		expect(Object.keys(slice!.schema.properties!)).toEqual(order);
+	});
 });

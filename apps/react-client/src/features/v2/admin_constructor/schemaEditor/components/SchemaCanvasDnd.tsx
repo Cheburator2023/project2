@@ -12,6 +12,7 @@ import UndoIcon from "@mui/icons-material/Undo";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import Divider from "@mui/material/Divider";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -39,7 +40,6 @@ import {
 	readV2AnketaSectionUiOptions,
 	resolveV2AnketaArchComponent,
 	resolveV2AnketaCanvasUiKind,
-	V2_ARCH_COMPONENT_LABELS,
 	type V2AnketaCanvasUiKind,
 	type V2ArchComponentType,
 } from "@smart-anketa/api-contract";
@@ -57,22 +57,32 @@ import {
 	ARCH_COMPONENT_PRESETS,
 	CALCULATION_FIELD_PRESETS,
 	CANVAS_HIDDEN_CHIP_COLOR,
+	CANVAS_SYSTEM_CHIP_COLOR,
 	CANVAS_UTILITY_CHIP_COLOR,
+	resolveCanvasTypeChipColor,
 	FIELD_PRESETS,
 	LAYOUT_PRESETS,
 	WORK_COMPONENT_PRESETS,
 	type PalettePreset,
-	ruSchemaTypeLabel,
 } from "../constants";
+import {
+	resolveCanvasCategoryChips,
+	resolveCanvasFieldTypeChipLabel,
+	type CanvasCategoryChip as CanvasCategoryChipModel,
+} from "../propertiesFieldKind";
 import { useSchemaEditor } from "../SchemaEditorContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "./PanelChrome";
 import { SchemaCanvasPlaceholder } from "./SchemaCanvasPlaceholder";
+import { isCanvasStockField } from "../canvasStockFields";
 import {
 	buildPaletteDragNode,
 	buildSchemaCanvasTree,
+	clampCanvasInsertIndex,
 	getPresetIdFromPaletteDragSource,
+	isCanvasSystemField,
 	isPaletteDragSource,
+	listCanvasEditableChildKeys,
 	PALETTE_DRAG_TYPE,
 	resolveCanvasDropTarget,
 	SCHEMA_CANVAS_ROOT_ID,
@@ -91,18 +101,18 @@ const CANVAS_TREE_DRAGGING_CLASS = "schema-canvas-tree-dragging";
 const CANVAS_TREE_PLACEHOLDER_CLASS = "schema-canvas-tree-placeholder";
 const CANVAS_TREE_ROOT_CLASS = "schema-canvas-tree-root";
 
-function ArchComponentChip({ arch }: { arch: V2ArchComponentType }) {
-	const color = ARCH_COMPONENT_CHIP_COLORS[arch];
+function CanvasCategoryChipView({ chip }: { chip: CanvasCategoryChipModel }) {
 	return (
 		<Chip
 			size="small"
-			label={V2_ARCH_COMPONENT_LABELS[arch]}
+			label={chip.label}
+			title={chip.title}
 			variant="filled"
 			sx={{
 				height: 20,
-				bgcolor: alpha(color, 0.12),
-				color,
-				border: `1px solid ${alpha(color, 0.35)}`,
+				bgcolor: alpha(chip.color, 0.12),
+				color: chip.color,
+				border: `1px solid ${alpha(chip.color, 0.35)}`,
 				"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem", fontWeight: 600 },
 			}}
 		/>
@@ -111,12 +121,17 @@ function ArchComponentChip({ arch }: { arch: V2ArchComponentType }) {
 
 const CANVAS_UI_KIND_LABELS: Record<V2AnketaCanvasUiKind, string> = {
 	hidden: "Скрыто",
-	utility: "Системное",
+	utility: "Служебное",
+	system: "Системное",
 };
 
 function CanvasUiKindChip({ kind }: { kind: V2AnketaCanvasUiKind }) {
 	const color =
-		kind === "hidden" ? CANVAS_HIDDEN_CHIP_COLOR : CANVAS_UTILITY_CHIP_COLOR;
+		kind === "hidden"
+			? CANVAS_HIDDEN_CHIP_COLOR
+			: kind === "system"
+				? CANVAS_SYSTEM_CHIP_COLOR
+				: CANVAS_UTILITY_CHIP_COLOR;
 	return (
 		<Chip
 			size="small"
@@ -285,16 +300,24 @@ function SchemaCanvasFieldRow({
 		duplicateCanvasField,
 	} = useSchemaEditor();
 
-	if (node.data?.kind === "array-items-section") {
+	if (node.data?.kind === "system-divider") {
 		return (
 			<Box
+				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasSystemDivider}
 				sx={{
-					pl: `${depth * DEPTH_INDENT_PX}px`,
-					py: 0.5,
-					pr: 1,
+					mx: 1,
+					my: 1.5,
+					display: "flex",
+					flexDirection: "column",
+					gap: 0.75,
 				}}
 			>
-				<Typography variant="caption" color="text.secondary" fontWeight={600}>
+				<Divider />
+				<Typography
+					variant="caption"
+					color="text.secondary"
+					sx={{ px: 0.5, fontWeight: 600 }}
+				>
 					{node.text}
 				</Typography>
 			</Box>
@@ -315,19 +338,7 @@ function SchemaCanvasFieldRow({
 		? listOrderedChildKeys(jsonSchema, `${fieldPointer}/items`, uiSchema)
 		: [];
 
-	const typeLabel =
-		typeof schemaNode?.type === "string"
-			? schemaNode.type
-			: Array.isArray(schemaNode?.type)
-				? schemaNode.type.join(" | ")
-				: "?";
-
 	const uiBranch = readUiSchemaBranchAtPointer(uiSchema, fieldPointer);
-	const uiWidget =
-		typeof uiBranch?.["ui:widget"] === "string" ? uiBranch["ui:widget"] : "";
-	const isGeneralUncertainty =
-		uiWidget === "GeneralUncertaintyWidget" ||
-		uiWidget === "V2UncertaintyModalWidget";
 	const uiOptions =
 		uiBranch?.["ui:options"] &&
 		typeof uiBranch["ui:options"] === "object" &&
@@ -340,14 +351,22 @@ function SchemaCanvasFieldRow({
 		isGroup &&
 		sectionUiOptions.groupActivatable &&
 		sectionUiOptions.groupActive === false;
-	const archComponent = resolveV2AnketaArchComponent(uiBranch);
 	const canvasUiKind = resolveV2AnketaCanvasUiKind(uiBranch);
+	const isSystemField = canvasUiKind === "system";
+	const isStockField = isCanvasStockField(uiSchema, fieldPointer);
+	const { label: typeChipLabel, colorKey: typeChipColorKey } =
+		resolveCanvasFieldTypeChipLabel(schemaNode, uiBranch);
+	const typeChipColor = resolveCanvasTypeChipColor(typeChipColorKey);
+	const categoryChips = resolveCanvasCategoryChips(schemaNode, uiBranch);
+
 	const canvasUiColor =
 		canvasUiKind === "hidden"
 			? CANVAS_HIDDEN_CHIP_COLOR
-			: canvasUiKind === "utility"
-				? CANVAS_UTILITY_CHIP_COLOR
-				: undefined;
+			: canvasUiKind === "system"
+				? CANVAS_SYSTEM_CHIP_COLOR
+				: canvasUiKind === "utility"
+					? CANVAS_UTILITY_CHIP_COLOR
+					: undefined;
 
 	const showExpand = hasChild && node.data?.kind === "field";
 
@@ -382,7 +401,7 @@ function SchemaCanvasFieldRow({
 								: "background.paper",
 				boxShadow: isDragging ? 3 : 0,
 				opacity: isDragging ? 0.55 : groupInactive ? 0.55 : 1,
-				cursor: "grab",
+				cursor: isSystemField ? "default" : "grab",
 			}}
 		>
 			{showExpand ? (
@@ -426,24 +445,55 @@ function SchemaCanvasFieldRow({
 					</Typography>
 					<Chip
 						size="small"
-						label={
-							isLayoutGroup
-								? "разметка"
-								: isGeneralUncertainty
-									? "неопределённость"
-									: ruSchemaTypeLabel(typeLabel)
-						}
-						variant="outlined"
-						sx={{ height: 20 }}
+						label={typeChipLabel}
+						variant="filled"
+						sx={{
+							height: 20,
+							...(typeChipColor
+								? {
+										bgcolor: alpha(typeChipColor, 0.12),
+										color: typeChipColor,
+										border: `1px solid ${alpha(typeChipColor, 0.35)}`,
+									}
+								: {
+										bgcolor: alpha(theme.palette.text.secondary, 0.08),
+										color: "text.secondary",
+										border: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
+									}),
+							"& .MuiChip-label": {
+								px: 0.75,
+								fontSize: "0.65rem",
+								fontWeight: 600,
+							},
+						}}
 					/>
-					{archComponent ? <ArchComponentChip arch={archComponent} /> : null}
+					{categoryChips.map((chip) => (
+						<CanvasCategoryChipView key={chip.label} chip={chip} />
+					))}
 					{canvasUiKind ? <CanvasUiKindChip kind={canvasUiKind} /> : null}
+					{isStockField ? (
+						<Chip
+							size="small"
+							label="стоковое"
+							variant="outlined"
+							sx={{
+								height: 20,
+								"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem" },
+							}}
+						/>
+					) : null}
 					{isGroup ? (
 						<Chip
 							size="small"
 							label={`${childKeys.length} полей`}
-							variant="outlined"
-							sx={{ height: 20 }}
+							variant="filled"
+							sx={{
+								height: 20,
+								bgcolor: alpha(theme.palette.info.main, 0.1),
+								color: "info.main",
+								border: `1px solid ${alpha(theme.palette.info.main, 0.3)}`,
+								"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem" },
+							}}
 						/>
 					) : null}
 					{groupInactive ? (
@@ -459,8 +509,14 @@ function SchemaCanvasFieldRow({
 						<Chip
 							size="small"
 							label={`${itemFieldKeys.length} полей элемента`}
-							variant="outlined"
-							sx={{ height: 20 }}
+							variant="filled"
+							sx={{
+								height: 20,
+								bgcolor: alpha(theme.palette.warning.main, 0.1),
+								color: "warning.dark",
+								border: `1px solid ${alpha(theme.palette.warning.main, 0.35)}`,
+								"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem" },
+							}}
 						/>
 					) : null}
 				</Box>
@@ -503,38 +559,42 @@ function SchemaCanvasFieldRow({
 					<PowerSettingsNewIcon fontSize="small" />
 				</IconButton>
 			) : null}
-			<IconButton
-				size="small"
-				title="Дублировать поле"
-				aria-label="Дублировать поле"
-				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasDuplicateField}
-				tabIndex={selected ? 0 : -1}
-				onClick={(e) => {
-					e.stopPropagation();
-					duplicateCanvasField(fieldPointer);
-				}}
-				sx={{ flexShrink: 0 }}
-			>
-				<ContentCopyIcon fontSize="small" />
-			</IconButton>
-			<IconButton
-				size="small"
-				color="error"
-				title="Удалить поле"
-				aria-label="Удалить поле"
-				tabIndex={selected ? 0 : -1}
-				onClick={(e) => {
-					e.stopPropagation();
-					onRequestDelete({
-						pointer: fieldPointer,
-						label: node.text,
-						hasChildren: hasChild,
-					});
-				}}
-				sx={{ flexShrink: 0 }}
-			>
-				<DeleteOutlineIcon fontSize="small" />
-			</IconButton>
+			{!isSystemField && !isStockField ? (
+				<>
+					<IconButton
+						size="small"
+						title="Дублировать поле"
+						aria-label="Дублировать поле"
+						data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasDuplicateField}
+						tabIndex={selected ? 0 : -1}
+						onClick={(e) => {
+							e.stopPropagation();
+							duplicateCanvasField(fieldPointer);
+						}}
+						sx={{ flexShrink: 0 }}
+					>
+						<ContentCopyIcon fontSize="small" />
+					</IconButton>
+					<IconButton
+						size="small"
+						color="error"
+						title="Удалить поле"
+						aria-label="Удалить поле"
+						tabIndex={selected ? 0 : -1}
+						onClick={(e) => {
+							e.stopPropagation();
+							onRequestDelete({
+								pointer: fieldPointer,
+								label: node.text,
+								hasChildren: hasChild,
+							});
+						}}
+						sx={{ flexShrink: 0 }}
+					>
+						<DeleteOutlineIcon fontSize="small" />
+					</IconButton>
+				</>
+			) : null}
 		</Box>
 	);
 }
@@ -546,7 +606,7 @@ function PalettePresetRow({ preset }: { preset: PalettePreset }) {
 		uiSchema,
 		setSelectedPointer,
 	} = useSchemaEditor();
-	const rootCount = listOrderedChildKeys(jsonSchema, "/", uiSchema).length;
+	const rootCount = listCanvasEditableChildKeys(jsonSchema, "/", uiSchema).length;
 	const isArch = preset.section === "arch" || preset.section === "works";
 	const archType = isArch ? (preset.chipLabel as V2ArchComponentType) : null;
 	const archColor = archType ? ARCH_COMPONENT_CHIP_COLORS[archType] : undefined;
@@ -758,11 +818,33 @@ export function SchemaCanvasPanel({
 		</Box>
 	);
 
+	const isSystemDropBlocked = useCallback(
+		(dropTarget?: NodeModel<SchemaCanvasNodeData>) => {
+			if (!dropTarget?.data) return false;
+			if (dropTarget.data.kind === "system-divider") return true;
+			if (dropTarget.data.kind !== "field") return false;
+			return isCanvasSystemField(uiSchema, dropTarget.data.fieldPointer);
+		},
+		[uiSchema],
+	);
+
 	const handleDrop = useCallback(
 		(
 			_newTree: NodeModel<SchemaCanvasNodeData>[],
 			options: DropOptions<SchemaCanvasNodeData>,
 		) => {
+			const { parentPointer, index: rawIndex } = resolveCanvasDropTarget(
+				options,
+				SCHEMA_CANVAS_ROOT_ID,
+				jsonSchema,
+			);
+			const index = clampCanvasInsertIndex(
+				jsonSchema,
+				parentPointer,
+				uiSchema,
+				rawIndex,
+			);
+
 			if (options.monitor.getItemType() === PALETTE_DRAG_TYPE) {
 				const presetId = getPresetIdFromPaletteDragSource(
 					options.monitor.getItem(),
@@ -770,7 +852,6 @@ export function SchemaCanvasPanel({
 				if (!presetId) return;
 				const preset = presetById.get(presetId);
 				if (!preset) return;
-				const { parentPointer, index } = resolveCanvasDropTarget(options);
 				handleAddFieldPresetAtParent(
 					parentPointer,
 					preset.make(),
@@ -783,24 +864,48 @@ export function SchemaCanvasPanel({
 
 			const dragSource = options.dragSource;
 			if (dragSource?.data?.kind !== "field") return;
+			if (isCanvasSystemField(uiSchema, dragSource.data.fieldPointer)) return;
 
-			const { parentPointer, index } = resolveCanvasDropTarget(options);
 			moveCanvasField(dragSource.data.fieldPointer, parentPointer, index);
 		},
-		[handleAddFieldPresetAtParent, moveCanvasField, presetById],
+		[
+			handleAddFieldPresetAtParent,
+			jsonSchema,
+			moveCanvasField,
+			presetById,
+			uiSchema,
+		],
 	);
 
 	const canDrop = useCallback(
 		(
 			_tree: NodeModel<SchemaCanvasNodeData>[],
-			{
-				dragSource,
-				dropTarget,
-				dropTargetId,
-			}: DropOptions<SchemaCanvasNodeData>,
+			options: DropOptions<SchemaCanvasNodeData>,
 		) => {
-			if (dragSource?.data?.kind === "array-items-section") {
+			const { dragSource, dropTarget, dropTargetId } = options;
+
+			if (
+				dragSource?.data?.kind === "field" &&
+				isCanvasSystemField(uiSchema, dragSource.data.fieldPointer)
+			) {
 				return false;
+			}
+
+			if (isSystemDropBlocked(dropTarget)) {
+				return false;
+			}
+
+			const stockDrag =
+				dragSource?.data?.kind === "field" &&
+				isCanvasStockField(uiSchema, dragSource.data.fieldPointer);
+
+			if (stockDrag) {
+				const { parentPointer: targetParent } = resolveCanvasDropTarget(
+					options,
+					SCHEMA_CANVAS_ROOT_ID,
+					jsonSchema,
+				);
+				return targetParent === dragSource.data?.parentPointer;
 			}
 
 			if (isPaletteDragSource(dragSource)) {
@@ -820,12 +925,16 @@ export function SchemaCanvasPanel({
 
 			return undefined;
 		},
-		[],
+		[isSystemDropBlocked, jsonSchema, uiSchema],
 	);
 
-	const canDrag = useCallback((node?: NodeModel<SchemaCanvasNodeData>) => {
-		return node?.data?.kind === "field";
-	}, []);
+	const canDrag = useCallback(
+		(node?: NodeModel<SchemaCanvasNodeData>) => {
+			if (node?.data?.kind !== "field") return false;
+			return !isCanvasSystemField(uiSchema, node.data.fieldPointer);
+		},
+		[uiSchema],
+	);
 
 	const theme = useTheme();
 

@@ -1,6 +1,8 @@
 import {
 	listV2AnketaHiddenRootKeys,
+	resolveV2AnketaCanvasUiKind,
 	resolveV2AnketaEditorBindings,
+	schemaHasUncertaintyModalWidget,
 } from "@smart-anketa/api-contract";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -62,5 +64,18 @@ describe("resolveV2AnketaEditorBindings", () => {
 		expect(bindings.bodyHiddenDotPaths).toEqual(
 			expect.arrayContaining(["generalInfo.modelService.workType"]),
 		);
+	});
+
+	it("marks system roots and uncertainty modal widget in default snapshot", () => {
+		expect(
+			resolveV2AnketaCanvasUiKind(snapshot.uiSchema.uncertaintyCalculation),
+		).toBe("system");
+		expect(
+			resolveV2AnketaCanvasUiKind(
+				(snapshot.uiSchema.generalInfo as Record<string, unknown>)
+					.overallUncertaintyModal,
+			),
+		).toBeNull();
+		expect(schemaHasUncertaintyModalWidget(snapshot.uiSchema)).toBe(true);
 	});
 });

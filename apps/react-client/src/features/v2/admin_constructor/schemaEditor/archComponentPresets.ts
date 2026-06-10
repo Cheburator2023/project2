@@ -23,6 +23,53 @@ const DEPLOY_CHANNEL_ITEMS = [
 
 export type ArchComponentPresetDef = V2ArchComponentPresetDef;
 
+/** Справочник ProПро: тип работ для нетиповой задачи. */
+export const ATYPICAL_WORK_TYPE_DICTIONARY_CODE =
+	"v2.method.14.тип_работ_для_нетиповой_работы_пропро";
+
+export const ATYPICAL_WORK_TYPE_LABELS = [
+	"Архитектурная задача",
+	"Линейная деятельность",
+	"Новая функциональность",
+	"Сопровождение",
+	"Технический долг",
+] as const;
+
+const ATYPICAL_WORK_ITEM_PROPERTIES: RJSFSchema["properties"] = {
+	name: { type: "string", title: "Задача" },
+	workType: { type: "string", title: "Тип работ" },
+	estimateHoursPerDay: { type: "number", title: "Оценка ч/д" },
+	coefficient: { type: "number", title: "Коэф.", default: 1.5 },
+	total: { type: "number", title: "Итог", readOnly: true },
+	includeInCalculation: {
+		type: "boolean",
+		title: "Включить в расчёт",
+		default: true,
+	},
+};
+
+const ATYPICAL_WORK_ITEMS_UI_BRANCH: Record<string, unknown> = {
+	items: {
+		"ui:order": [
+			"name",
+			"workType",
+			"estimateHoursPerDay",
+			"coefficient",
+			"total",
+			"includeInCalculation",
+		],
+		name: { "ui:widget": "text" },
+		workType: {
+			"ui:widget": "select",
+			"ui:options": { dictionaryCode: ATYPICAL_WORK_TYPE_DICTIONARY_CODE },
+		},
+		estimateHoursPerDay: { "ui:widget": "text" },
+		coefficient: { "ui:widget": "text" },
+		total: { "ui:widget": "text", "ui:readonly": true },
+		includeInCalculation: { "ui:widget": "checkbox" },
+	},
+};
+
 /** Пресеты арх. компонентов, которых нет в дефолтном снепшоте анкеты. */
 const MANUAL_ARCH_COMPONENT_PRESET_DEFS: Pick<
 	Record<V2ArchComponentType, ArchComponentPresetDef>,
@@ -123,28 +170,7 @@ const MANUAL_ARCH_COMPONENT_PRESET_DEFS: Pick<
 				type: "object",
 				title: "Нетиповая задача",
 				required: ["name"],
-				properties: {
-					name: { type: "string", title: "Задача" },
-					estimateHoursPerDay: {
-						type: "number",
-						title: "Оценка ч/д",
-					},
-					coefficient: {
-						type: "number",
-						title: "Коэф.",
-						default: 1.5,
-					},
-					total: {
-						type: "number",
-						title: "Итог",
-						readOnly: true,
-					},
-					includeInCalculation: {
-						type: "boolean",
-						title: "Включить в расчёт",
-						default: true,
-					},
-				},
+				properties: ATYPICAL_WORK_ITEM_PROPERTIES,
 			},
 		}),
 		uiOptions: {
@@ -153,6 +179,7 @@ const MANUAL_ARCH_COMPONENT_PRESET_DEFS: Pick<
 			removable: true,
 			orderable: false,
 		},
+		uiBranch: ATYPICAL_WORK_ITEMS_UI_BRANCH,
 	},
 };
 

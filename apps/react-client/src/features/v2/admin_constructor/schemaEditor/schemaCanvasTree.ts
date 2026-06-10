@@ -1,18 +1,24 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { DropOptions, NodeModel } from "@minoru/react-dnd-treeview";
+import { resolveV2AnketaCanvasUiKind } from "@smart-anketa/api-contract";
 import {
 	getObjectItemsSchema,
 	isObjectFieldGroup,
 	listOrderedChildKeys,
+	readUiSchemaBranchAtPointer,
 	resolveSchemaNode,
 } from "../utils/schemaMutators";
 import { pointerSegments } from "../utils/schemaPaths";
 
 export const SCHEMA_CANVAS_ROOT_ID = "schema-root";
+export const SCHEMA_CANVAS_SYSTEM_DIVIDER_ID = "schema-canvas-system-divider";
 export const PALETTE_DRAG_TYPE = "schema-editor-palette-preset";
 export const ARRAY_ITEMS_NODE_SUFFIX = "/@items";
 
-export type SchemaCanvasNodeKind = "field" | "array-items-section";
+export type SchemaCanvasNodeKind =
+	| "field"
+	| "array-items-section"
+	| "system-divider";
 
 export type SchemaCanvasNodeData = {
 	kind: SchemaCanvasNodeKind;
@@ -21,6 +27,70 @@ export type SchemaCanvasNodeData = {
 	/** Путь родителя в JSON Schema для ui:order (/, /group, /arr/items). */
 	parentPointer: string;
 };
+
+/** Порядок на холсте: системные узлы (`ui:options.system`) — в конце списка. */
+export function listCanvasOrderedChildKeys(
+	jsonSchema: RJSFSchema,
+	parentPointer: string,
+	uiSchema?: UiSchema | Record<string, unknown>,
+): string[] {
+	const keys = listOrderedChildKeys(jsonSchema, parentPointer, uiSchema);
+	if (!uiSchema) return keys;
+
+	const primary: string[] = [];
+	const system: string[] = [];
+
+	for (const key of keys) {
+		const fieldPointer =
+			parentPointer === "/" ? `/${key}` : `${parentPointer}/${key}`;
+		const branch = readUiSchemaBranchAtPointer(uiSchema, fieldPointer);
+		if (resolveV2AnketaCanvasUiKind(branch) === "system") {
+			system.push(key);
+		} else {
+			primary.push(key);
+		}
+	}
+
+	return [...primary, ...system];
+}
+
+export function isCanvasSystemField(
+	uiSchema: UiSchema | Record<string, unknown> | undefined,
+	fieldPointer: string,
+): boolean {
+	const branch = readUiSchemaBranchAtPointer(uiSchema, fieldPointer);
+	return resolveV2AnketaCanvasUiKind(branch) === "system";
+}
+
+/** Редактируемые дочерние ключи (без `ui:options.system`). */
+export function listCanvasEditableChildKeys(
+	jsonSchema: RJSFSchema,
+	parentPointer: string,
+	uiSchema?: UiSchema | Record<string, unknown>,
+): string[] {
+	return listCanvasOrderedChildKeys(jsonSchema, parentPointer, uiSchema).filter(
+		(key) => {
+			const fieldPointer =
+				parentPointer === "/" ? `/${key}` : `${parentPointer}/${key}`;
+			return !isCanvasSystemField(uiSchema, fieldPointer);
+		},
+	);
+}
+
+/** Ограничивает индекс вставки зоной редактируемых полей (до системных). */
+export function clampCanvasInsertIndex(
+	jsonSchema: RJSFSchema,
+	parentPointer: string,
+	uiSchema: UiSchema | Record<string, unknown> | undefined,
+	index: number,
+): number {
+	const editableCount = listCanvasEditableChildKeys(
+		jsonSchema,
+		parentPointer,
+		uiSchema,
+	).length;
+	return Math.max(0, Math.min(index, editableCount));
+}
 
 export type PaletteDragItem = {
 	type: typeof PALETTE_DRAG_TYPE;
@@ -101,7 +171,7 @@ export function collectGroupOrders(
 	parentPointer = "/",
 ): Record<string, string[]> {
 	const groupId = groupIdFromParentPointer(parentPointer);
-	const keys = listOrderedChildKeys(schema, parentPointer, uiSchema);
+	const keys = listCanvasOrderedChildKeys(schema, parentPointer, uiSchema);
 	const result: Record<string, string[]> = { [groupId]: keys };
 
 	for (const key of keys) {
@@ -136,11 +206,33 @@ function appendFieldNodes(
 	parentPointer: string,
 	parentNodeId: string,
 ): void {
-	const keys = listOrderedChildKeys(jsonSchema, parentPointer, uiSchema);
+	const keys = listCanvasOrderedChildKeys(jsonSchema, parentPointer, uiSchema);
+	let systemDividerInserted = false;
 
 	for (const key of keys) {
 		const fieldPointer =
 			parentPointer === "/" ? `/${key}` : `${parentPointer}/${key}`;
+
+		if (
+			parentPointer === "/" &&
+			!systemDividerInserted &&
+			isCanvasSystemField(uiSchema, fieldPointer)
+		) {
+			systemDividerInserted = true;
+			nodes.push({
+				id: SCHEMA_CANVAS_SYSTEM_DIVIDER_ID,
+				parent: parentNodeId,
+				text: "Системные данные — не редактируются в конструкторе",
+				droppable: false,
+				data: {
+					kind: "system-divider",
+					fieldPointer: "",
+					fieldKey: "",
+					parentPointer: "/",
+				},
+			});
+		}
+
 		const node = resolveSchemaNode(jsonSchema, pointerSegments(fieldPointer));
 		const isGroup = isObjectFieldGroup(node);
 		const arrayItems = isGroup ? undefined : getObjectItemsSchema(node);
@@ -149,7 +241,7 @@ function appendFieldNodes(
 			id: fieldPointer,
 			parent: parentNodeId,
 			text: fieldTitle(node, key),
-			droppable: isGroup,
+			droppable: isGroup || Boolean(arrayItems),
 			data: {
 				kind: "field",
 				fieldPointer,
@@ -163,26 +255,13 @@ function appendFieldNodes(
 		}
 
 		if (arrayItems) {
-			const sectionId = arrayItemsSectionId(fieldPointer);
 			const itemsParentPointer = `${fieldPointer}/items`;
-			nodes.push({
-				id: sectionId,
-				parent: fieldPointer,
-				text: "Поля элемента массива",
-				droppable: true,
-				data: {
-					kind: "array-items-section",
-					fieldPointer: sectionId,
-					fieldKey: "",
-					parentPointer: itemsParentPointer,
-				},
-			});
 			appendFieldNodes(
 				nodes,
 				jsonSchema,
 				uiSchema,
 				itemsParentPointer,
-				sectionId,
+				fieldPointer,
 			);
 		}
 	}
@@ -212,6 +291,7 @@ function siblingFieldKeys(
 
 export function treeToGroupOrders(
 	tree: NodeModel<SchemaCanvasNodeData>[],
+	jsonSchema?: RJSFSchema,
 	rootId: string = SCHEMA_CANVAS_ROOT_ID,
 ): Record<string, string[]> {
 	const orders: Record<string, string[]> = {
@@ -219,13 +299,19 @@ export function treeToGroupOrders(
 	};
 
 	for (const node of tree) {
-		if (node.data?.kind === "array-items-section") {
-			const groupId = groupIdFromParentPointer(node.data.parentPointer);
-			orders[groupId] = siblingFieldKeys(tree, node.id);
-			continue;
-		}
 		if (node.data?.kind === "field" && node.droppable) {
-			const groupId = groupIdFromParentPointer(node.data.fieldPointer);
+			const fieldPointer = node.data.fieldPointer;
+			let groupParentPointer = fieldPointer;
+			if (jsonSchema) {
+				const schemaNode = resolveSchemaNode(
+					jsonSchema,
+					pointerSegments(fieldPointer),
+				);
+				if (getObjectItemsSchema(schemaNode)) {
+					groupParentPointer = `${fieldPointer}/items`;
+				}
+			}
+			const groupId = groupIdFromParentPointer(groupParentPointer);
 			orders[groupId] = siblingFieldKeys(tree, node.id);
 		}
 	}
@@ -237,6 +323,7 @@ export function treeToGroupOrders(
 export function resolveCanvasDropTarget(
 	options: DropOptions<SchemaCanvasNodeData>,
 	rootId: string = SCHEMA_CANVAS_ROOT_ID,
+	jsonSchema?: RJSFSchema,
 ): { parentPointer: string; index: number } {
 	const { dropTargetId, dropTarget, relativeIndex } = options;
 	const index = relativeIndex ?? 0;
@@ -250,7 +337,14 @@ export function resolveCanvasDropTarget(
 	}
 
 	if (dropTarget?.droppable && dropTarget.data?.kind === "field") {
-		return { parentPointer: dropTarget.data.fieldPointer, index };
+		const fieldPointer = dropTarget.data.fieldPointer;
+		if (jsonSchema) {
+			const node = resolveSchemaNode(jsonSchema, pointerSegments(fieldPointer));
+			if (getObjectItemsSchema(node)) {
+				return { parentPointer: `${fieldPointer}/items`, index };
+			}
+		}
+		return { parentPointer: fieldPointer, index };
 	}
 
 	if (dropTarget?.data?.kind === "field") {

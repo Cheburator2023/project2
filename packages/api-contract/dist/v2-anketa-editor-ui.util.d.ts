@@ -1,6 +1,6 @@
 import { type V2ArchComponentType } from "./v2-anketa-section-ui.util";
 export type V2AnketaModalKind = "dataSource" | "modelService" | "modelServiceBlock" | "nonStandardTask" | "rjsfObject";
-export type V2AnketaCanvasUiKind = "hidden" | "utility";
+export type V2AnketaCanvasUiKind = "hidden" | "utility" | "system";
 export type V2AnketaEditorBindings = {
     /** Корневые ключи uiSchema, не показываемые в теле RJSF-формы. */
     hiddenRootKeys: string[];
@@ -13,7 +13,9 @@ export type V2AnketaEditorBindings = {
 };
 /** Скрытое поле/секция (ui:widget hidden, ui:hidden или ui:options.hidden). */
 export declare function isV2AnketaHiddenUiNode(uiNode: unknown): boolean;
-/** Метка на холсте конструктора: скрытая или системная (readonly-блок, panel). */
+/** Есть ли в uiSchema поле с виджетом модалки неопределённости. */
+export declare function schemaHasUncertaintyModalWidget(uiSchema: Record<string, unknown>): boolean;
+/** Метка на холсте конструктора: скрытая, системная или служебная. */
 export declare function resolveV2AnketaCanvasUiKind(uiNode: unknown): V2AnketaCanvasUiKind | null;
 export declare function isV2AnketaModalObjectArch(arch: V2ArchComponentType | null): boolean;
 /** Корневые поля анкеты, помеченные hidden в uiSchema. */

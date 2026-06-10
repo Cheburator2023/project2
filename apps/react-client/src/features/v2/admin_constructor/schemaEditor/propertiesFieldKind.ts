@@ -1,6 +1,15 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { V2ArchComponentType } from "@smart-anketa/api-contract";
-import { resolveV2AnketaArchComponent } from "@smart-anketa/api-contract";
+import {
+	resolveV2AnketaArchComponent,
+	V2_ARCH_COMPONENT_LABELS,
+} from "@smart-anketa/api-contract";
+import {
+	ARCH_COMPONENT_CHIP_COLORS,
+	CANVAS_CATEGORY_CHIP_COLORS,
+	ruSchemaTypeLabel,
+	type PrimitiveFieldTypeVariant,
+} from "./constants";
 import { pointerSegments } from "../utils/schemaPaths";
 import {
 	getObjectItemsSchema,
@@ -58,6 +67,116 @@ export function isDictionaryMultiField(
 	if (resolveSchemaNodeType(resolvedField) !== "array") return false;
 	const items = resolvedField?.items as RJSFSchema | undefined;
 	return resolveSchemaNodeType(items) === "string";
+}
+
+export function isDictionaryStringField(
+	resolvedField: RJSFSchema | undefined,
+	uiOptions: Record<string, unknown> | undefined,
+	uiWidget?: string,
+): boolean {
+	if (resolveSchemaNodeType(resolvedField) !== "string") return false;
+	const dictionaryCode =
+		typeof uiOptions?.dictionaryCode === "string"
+			? uiOptions.dictionaryCode.trim()
+			: "";
+	return dictionaryCode.length > 0 || uiWidget === "select";
+}
+
+export function resolvePrimitiveFieldTypeVariant(
+	resolvedField: RJSFSchema | undefined,
+	uiOptions: Record<string, unknown> | undefined,
+	uiWidget?: string,
+): PrimitiveFieldTypeVariant {
+	if (isDictionaryMultiField(resolvedField, uiOptions)) {
+		return "dictionary-list";
+	}
+	if (isDictionaryStringField(resolvedField, uiOptions, uiWidget)) {
+		return "string-dictionary";
+	}
+	const type = resolveSchemaNodeType(resolvedField);
+	if (
+		type === "integer" ||
+		type === "number" ||
+		type === "boolean" ||
+		type === "string"
+	) {
+		return type;
+	}
+	return "string";
+}
+
+export function resolveCanvasFieldTypeChipLabel(
+	resolvedField: RJSFSchema | undefined,
+	uiBranch: Record<string, unknown> | undefined,
+): { label: string; colorKey: string } {
+	const uiOptions = readLeafUiOptions(uiBranch);
+	const uiWidget =
+		typeof uiBranch?.["ui:widget"] === "string" ? uiBranch["ui:widget"] : "";
+
+	if (isDictionaryMultiField(resolvedField, uiOptions)) {
+		return { label: "справочник·список", colorKey: "dictionary-list" };
+	}
+	if (isDictionaryStringField(resolvedField, uiOptions, uiWidget)) {
+		return { label: "строка·справочник", colorKey: "string-dictionary" };
+	}
+
+	const type =
+		typeof resolvedField?.type === "string"
+			? resolvedField.type
+			: Array.isArray(resolvedField?.type)
+				? resolvedField.type.join(" | ")
+				: "?";
+
+	return { label: ruSchemaTypeLabel(type), colorKey: type };
+}
+
+export type CanvasCategoryChip = {
+	label: string;
+	title?: string;
+	color: string;
+};
+
+/** Категорийные чипы холста: арх компонент, работы, разметка и т.д. */
+export function resolveCanvasCategoryChips(
+	resolvedField: RJSFSchema | undefined,
+	uiBranch: Record<string, unknown> | undefined,
+): CanvasCategoryChip[] {
+	const chips: CanvasCategoryChip[] = [];
+	const uiOptions = readLeafUiOptions(uiBranch);
+	const uiWidget =
+		typeof uiBranch?.["ui:widget"] === "string" ? uiBranch["ui:widget"] : "";
+	const arch = resolveV2AnketaArchComponent(uiBranch);
+
+	if (isLayoutGroupUi(uiOptions)) {
+		chips.push({
+			label: "разметка",
+			color: CANVAS_CATEGORY_CHIP_COLORS.layout,
+		});
+	}
+	if (isGeneralUncertaintyField(uiWidget, resolvedField)) {
+		chips.push({
+			label: "расчёт",
+			title: "Расчёт общей неопределённости",
+			color: CANVAS_CATEGORY_CHIP_COLORS.calculation,
+		});
+	}
+	if (arch) {
+		if (isWorkArchComponent(arch)) {
+			chips.push({
+				label: "работы",
+				title: V2_ARCH_COMPONENT_LABELS[arch],
+				color: ARCH_COMPONENT_CHIP_COLORS[arch],
+			});
+		} else {
+			chips.push({
+				label: "арх компонент",
+				title: V2_ARCH_COMPONENT_LABELS[arch],
+				color: ARCH_COMPONENT_CHIP_COLORS[arch],
+			});
+		}
+	}
+
+	return chips;
 }
 
 export function isGeneralUncertaintyField(

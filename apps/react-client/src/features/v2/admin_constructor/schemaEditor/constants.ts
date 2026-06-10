@@ -11,11 +11,38 @@ import {
 } from "./fieldTypePresets";
 
 /** Цвета чипов арх. компонентов в конструкторе (как в dev-подсветке анкеты). */
-/** Подсветка скрытых секций на холсте конструктора. */
+/** Подсветка скрытых полей на холсте конструктора. */
 export const CANVAS_HIDDEN_CHIP_COLOR = "#64748B";
 
-/** Подсветка системных/readonly-секций (summary, panel, …). */
+/** Подсветка системных секций (meta, workflow, данные расчётов). */
+export const CANVAS_SYSTEM_CHIP_COLOR = "#6366F1";
+
+/** Подсветка служебных readonly-секций (summary, panel, …). */
 export const CANVAS_UTILITY_CHIP_COLOR = "#94A3B8";
+
+/** Цвета чипов категорий элементов на холсте (не JSON Schema type). */
+export const CANVAS_CATEGORY_CHIP_COLORS = {
+	layout: "#9333EA",
+	calculation: "#C026D3",
+} as const;
+
+/** Цвета чипов типов полей на холсте. */
+export const CANVAS_TYPE_CHIP_COLORS: Record<string, string> = {
+	string: "#0D9488",
+	"string-dictionary": "#0F766E",
+	"dictionary-list": "#B45309",
+	integer: "#4F46E5",
+	number: "#4F46E5",
+	boolean: "#DB2777",
+	object: "#0284C7",
+	array: "#EA580C",
+};
+
+export function resolveCanvasTypeChipColor(
+	typeChipLabel: string,
+): string | undefined {
+	return CANVAS_TYPE_CHIP_COLORS[typeChipLabel];
+}
 
 export const ARCH_COMPONENT_CHIP_COLORS: Record<V2ArchComponentType, string> = {
 	modelService: "#7C3AED",
@@ -131,6 +158,19 @@ export const FIELD_PRESETS: PalettePreset[] = [
 		make: () => ({ type: "boolean", title: "Логический" }),
 	},
 ];
+
+/** Варианты примитивного типа в панели свойств (включая справочники). */
+export const PRIMITIVE_FIELD_TYPE_OPTIONS = [
+	{ id: "string", title: "Строка" },
+	{ id: "string-dictionary", title: "Строка / справочник" },
+	{ id: "dictionary-list", title: "Справочник / список" },
+	...FIELD_PRESETS.filter((fp) =>
+		["integer", "number", "boolean"].includes(fp.id as string),
+	).map((fp) => ({ id: fp.id as string, title: fp.title })),
+] as const;
+
+export type PrimitiveFieldTypeVariant =
+	(typeof PRIMITIVE_FIELD_TYPE_OPTIONS)[number]["id"];
 
 export const LAYOUT_PRESETS: PalettePreset[] = [
 	{

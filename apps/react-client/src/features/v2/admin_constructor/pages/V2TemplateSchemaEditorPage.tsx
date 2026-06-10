@@ -11,6 +11,7 @@ import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
 import { V2TemplateVersionHeaderControls } from "@react-client/features/v2/admin_constructor/molecules/V2TemplateVersionHeaderControls";
@@ -173,8 +174,15 @@ export const V2TemplateSchemaEditorPage = () => {
 								data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnActivate}
 								title="Опубликует черновик при необходимости и сделает версию актуальной схемой системы"
 								onClick={headerActions.onActivateAsCurrent}
+								startIcon={
+									headerActions.activatePending ? (
+										<CircularProgress size={16} color="inherit" />
+									) : undefined
+								}
 							>
-								Сделать актуальной
+								{headerActions.activatePending
+									? "Публикация…"
+									: "Сделать актуальной"}
 							</Button>
 						) : null}
 						<Button
@@ -182,8 +190,13 @@ export const V2TemplateSchemaEditorPage = () => {
 							disabled={headerActions.savePending}
 							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnSave}
 							onClick={headerActions.onSave}
+							startIcon={
+								headerActions.savePending ? (
+									<CircularProgress size={16} color="inherit" />
+								) : undefined
+							}
 						>
-							Сохранить
+							{headerActions.savePending ? "Сохранение…" : "Сохранить"}
 						</Button>
 					</Flex>
 				) : null}

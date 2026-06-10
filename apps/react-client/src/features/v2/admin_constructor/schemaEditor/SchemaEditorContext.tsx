@@ -101,7 +101,15 @@ export type SchemaEditorContextValue = {
 	canRedoDraft: boolean;
 	undoDraft: () => void;
 	redoDraft: () => void;
-	updateField: (patch: Partial<RJSFSchema>) => void;
+	recordDraftHistory: () => void;
+	updateField: (
+		patch: Partial<RJSFSchema>,
+		options?: { recordHistory?: boolean },
+	) => void;
+	patchUiSchema: (
+		updater: (prev: UiSchema) => UiSchema,
+		options?: { recordHistory?: boolean },
+	) => void;
 	handleDeleteField: (pointer?: string | null) => void;
 	handleToggleRequired: (checked: boolean) => void;
 	handleWidgetChange: (widget: string) => void;
@@ -121,6 +129,8 @@ export type SchemaEditorContextValue = {
 	currentWidget: string;
 	isObjectGroup: boolean;
 	groupChildFields: Array<{ key: string; title: string; typeLabel: string }>;
+	hasArrayObjectItems: boolean;
+	arrayItemChildFields: Array<{ key: string; title: string; typeLabel: string }>;
 	isCustomUiGroup: boolean;
 	customUiGroupSummary: string | null;
 	canBindDictionary: boolean;

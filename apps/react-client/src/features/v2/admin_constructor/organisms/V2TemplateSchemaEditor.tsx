@@ -23,6 +23,10 @@ import type {
 	CreateV2TemplateVersionRequestDto,
 	V2LogicRuleDto,
 } from "@smart-anketa/api-contract";
+import {
+	buildEmptyV2AnketaTemplateSnapshot,
+	resolveV2AnketaCanvasUiKind,
+} from "@smart-anketa/api-contract";
 import { evaluateRuleLive } from "../schemaEditor/panels/logicPanel/helpers";
 import { nanoid } from "nanoid";
 import { Box, Button, Typography } from "@mui/material";
@@ -30,6 +34,7 @@ import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useBrowserRouterNavigationBlocker } from "../hooks/useBrowserRouterNavigationBlocker";
+import { clampCanvasInsertIndex } from "../schemaEditor/schemaCanvasTree";
 import { SchemaEditorProvider } from "../schemaEditor/SchemaEditorContext";
 import type { SchemaEditorContextValue } from "../schemaEditor/SchemaEditorContext";
 import type { SchemaEditorMainTab } from "../schemaEditor/types";
@@ -73,6 +78,7 @@ import {
 	duplicateFieldAtPointer,
 	insertChildPropertyAt,
 	insertKeyToUiOrderAtPointer,
+	getObjectItemsSchema,
 	isObjectFieldGroup,
 	listOrderedChildKeys,
 	listSchemaFields,
@@ -82,6 +88,7 @@ import {
 	patchUiOptionsAtPointer,
 	removePropertyAtPointer,
 	removeUiSchemaAtPointer,
+	readUiSchemaBranchAtPointer,
 	reorderRootProperties,
 	resolveSchemaNode,
 	setUiDictionaryCodeAtPointer,
@@ -94,6 +101,7 @@ import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoade
 import { V2TemplateSaveDialog } from "./V2TemplateSaveDialog";
 import { SchemaEditorLeaveDialog } from "./SchemaEditorLeaveDialog";
 import type { V2TemplateStatus } from "@smart-anketa/api-contract";
+import { isCanvasStockField } from "../schemaEditor/canvasStockFields";
 import {
 	readSchemaEditorLocalDraft,
 	schemaEditorDraftSnapshotsEqual,
@@ -259,6 +267,7 @@ export const V2TemplateSchemaEditor = ({
 
 	const baselineSnapshotRef = useRef<SchemaEditorDraftSnapshot | null>(null);
 	const draftHydratedVersionIdRef = useRef<string | null>(null);
+	const skipLeaveGuardRef = useRef(false);
 
 	const selectedRule =
 		logic.rules.find((r) => r.id === selectedRuleId) ?? logic.rules[0];
@@ -491,17 +500,26 @@ export const V2TemplateSchemaEditor = ({
 	]);
 
 	const blocker = useBrowserRouterNavigationBlocker(
-		({ currentLocation, nextLocation }) =>
-			hasUnsavedChanges &&
-			(currentLocation.pathname !== nextLocation.pathname ||
-				currentLocation.search !== nextLocation.search),
+		({ currentLocation, nextLocation }) => {
+			if (skipLeaveGuardRef.current) return false;
+			return (
+				hasUnsavedChanges &&
+				(currentLocation.pathname !== nextLocation.pathname ||
+					currentLocation.search !== nextLocation.search)
+			);
+		},
 	);
 
 	useEffect(() => {
+		if (!hasUnsavedChanges) {
+			setLeaveDialogOpen(false);
+			if (blocker.state === "blocked") blocker.reset();
+			return;
+		}
 		if (blocker.state === "blocked") {
 			setLeaveDialogOpen(true);
 		}
-	}, [blocker.state]);
+	}, [blocker.state, blocker.reset, hasUnsavedChanges]);
 
 	useEffect(() => {
 		if (!hasUnsavedChanges) return;
@@ -701,9 +719,10 @@ export const V2TemplateSchemaEditor = ({
 	}, [logic.rules, selectedPointer]);
 
 	const handleCreateDraft = async (mode: "empty" | "current") => {
+		const emptySnapshot = buildEmptyV2AnketaTemplateSnapshot();
 		const emptyDto: CreateV2TemplateVersionRequestDto = {
-			jsonSchema: structuredClone(EMPTY_JSON_SCHEMA),
-			uiSchema: {},
+			jsonSchema: coerceJsonSchema(emptySnapshot.jsonSchema),
+			uiSchema: coerceUiSchema(emptySnapshot.uiSchema),
 			logic: { rules: [] },
 			dictionariesSnapshot: { referencedDictionaryCodes: [] },
 			releaseNotes: "Новый черновик",
@@ -770,15 +789,31 @@ export const V2TemplateSchemaEditor = ({
 	);
 
 	const persistVersionInUrl = useCallback(
-		(versionId: string) => {
-			if (onVersionIdChange) {
-				onVersionIdChange(versionId);
+		(versionId: string, options?: { skipLeaveGuard?: boolean }) => {
+			const apply = () => {
+				if (onVersionIdChange) {
+					onVersionIdChange(versionId);
+					return;
+				}
+				const path = isAdminEditor
+					? pathForAdminV2Template(templateId, versionId)
+					: pathForPlaygroundV2Template(templateId, versionId);
+				navigate(path, { replace: true });
+			};
+
+			if (!options?.skipLeaveGuard) {
+				apply();
 				return;
 			}
-			const path = isAdminEditor
-				? pathForAdminV2Template(templateId, versionId)
-				: pathForPlaygroundV2Template(templateId, versionId);
-			navigate(path, { replace: true });
+
+			skipLeaveGuardRef.current = true;
+			try {
+				apply();
+			} finally {
+				window.setTimeout(() => {
+					skipLeaveGuardRef.current = false;
+				}, 0);
+			}
 		},
 		[isAdminEditor, navigate, onVersionIdChange, templateId],
 	);
@@ -795,6 +830,7 @@ export const V2TemplateSchemaEditor = ({
 			await refetchVersions();
 			setSaveDialogOpen(false);
 			commitBaselineToCurrent();
+			setLeaveDialogOpen(false);
 
 			if (isAdminEditor) {
 				toast.success(`Версия v${activeVersion.versionNumber} сохранена`);
@@ -830,7 +866,8 @@ export const V2TemplateSchemaEditor = ({
 				});
 				await refetchVersions();
 				setSaveDialogOpen(false);
-				persistVersionInUrl(created.id);
+				commitBaselineToCurrent();
+				persistVersionInUrl(created.id, { skipLeaveGuard: true });
 
 				if (isAdminEditor) {
 					toast.success(`Создан черновик v${created.versionNumber}`);
@@ -846,6 +883,7 @@ export const V2TemplateSchemaEditor = ({
 		},
 		[
 			activeVersion?.id,
+			commitBaselineToCurrent,
 			createVersion,
 			isAdminEditor,
 			persistVersionInUrl,
@@ -872,8 +910,8 @@ export const V2TemplateSchemaEditor = ({
 				versionId: activeVersion.id,
 			});
 			await refetchVersions();
-			persistVersionInUrl(activated.id);
 			commitBaselineToCurrent();
+			persistVersionInUrl(activated.id, { skipLeaveGuard: true });
 
 			if (isAdminEditor) {
 				toast.success(
@@ -1046,6 +1084,35 @@ export const V2TemplateSchemaEditor = ({
 		);
 	}, [isObjectGroup, jsonSchema, selectedPointer, uiSchema]);
 
+	const hasArrayObjectItems = Boolean(
+		resolvedField && getObjectItemsSchema(resolvedField),
+	);
+
+	const arrayItemChildFields = useMemo(() => {
+		if (!hasArrayObjectItems || !selectedPointer) return [];
+		const itemsPointer = `${selectedPointer}/items`;
+		return listOrderedChildKeys(jsonSchema, itemsPointer, uiSchema).map(
+			(key) => {
+				const childPointer = `${itemsPointer}/${key}`;
+				const child = resolveSchemaNode(
+					jsonSchema,
+					pointerSegments(childPointer),
+				);
+				const typeLabel =
+					typeof child?.type === "string"
+						? child.type
+						: Array.isArray(child?.type)
+							? child.type.join(" | ")
+							: "?";
+				return {
+					key,
+					title: typeof child?.title === "string" ? child.title : key,
+					typeLabel,
+				};
+			},
+		);
+	}, [hasArrayObjectItems, jsonSchema, selectedPointer, uiSchema]);
+
 	const leafUiOptions = readLeafUiOptions(leafUiBranch);
 
 	const customUiOptionEntries = leafUiOptions
@@ -1117,12 +1184,18 @@ export const V2TemplateSchemaEditor = ({
 		) => {
 			const key = `field_${nanoid(8)}`;
 			const parentSegs = pointerSegments(parentPointer);
+			const safeIndex = clampCanvasInsertIndex(
+				jsonSchema,
+				parentPointer,
+				uiSchema,
+				index,
+			);
 			const next = insertChildPropertyAt(
 				jsonSchema,
 				parentSegs,
 				key,
 				preset,
-				index,
+				safeIndex,
 			);
 			if (next) {
 				pushDraftHistory();
@@ -1135,7 +1208,7 @@ export const V2TemplateSchemaEditor = ({
 						prev as Record<string, unknown>,
 						parentPointer,
 						key,
-						index,
+						safeIndex,
 					);
 					if (uiOptions && Object.keys(uiOptions).length > 0) {
 						nextUi = patchUiOptionsAtPointer(
@@ -1155,7 +1228,7 @@ export const V2TemplateSchemaEditor = ({
 				});
 			}
 		},
-		[jsonSchema, pushDraftHistory],
+		[jsonSchema, uiSchema, pushDraftHistory],
 	);
 
 	const handleAddFieldPresetAt = useCallback(
@@ -1253,9 +1326,19 @@ export const V2TemplateSchemaEditor = ({
 		[jsonSchema, uiSchema, pushDraftHistory],
 	);
 
+	const recordDraftHistory = useCallback(() => {
+		pushDraftHistory();
+	}, [pushDraftHistory]);
+
 	const updateField = useCallback(
-		(patch: Partial<RJSFSchema>) => {
+		(
+			patch: Partial<RJSFSchema>,
+			options?: { recordHistory?: boolean },
+		) => {
 			if (!selectedPointer) return;
+			if (options?.recordHistory !== false) {
+				pushDraftHistory();
+			}
 			const segs = pointerSegments(selectedPointer);
 			let effectivePatch = patch;
 
@@ -1269,7 +1352,6 @@ export const V2TemplateSchemaEditor = ({
 			try {
 				const next = updatePropertyAtPointer(jsonSchema, segs, effectivePatch);
 				if (next) {
-					listSchemaFields(next, "/", 0, uiSchema);
 					setJsonSchema(next);
 					setMonacoError(null);
 				} else {
@@ -1285,13 +1367,33 @@ export const V2TemplateSchemaEditor = ({
 				);
 			}
 		},
-		[jsonSchema, selectedPointer, resolvedField, uiSchema, setMonacoError],
+		[jsonSchema, selectedPointer, resolvedField, pushDraftHistory],
+	);
+
+	const patchUiSchema = useCallback(
+		(
+			updater: (prev: UiSchema) => UiSchema,
+			options?: { recordHistory?: boolean },
+		) => {
+			if (options?.recordHistory !== false) {
+				pushDraftHistory();
+			}
+			setUiSchema(updater);
+		},
+		[pushDraftHistory],
 	);
 
 	const handleDeleteField = useCallback(
 		(pointer?: string | null) => {
 			const targetPointer = pointer ?? selectedPointer;
 			if (!targetPointer) return;
+			pushDraftHistory();
+			const uiBranch = readUiSchemaBranchAtPointer(
+				uiSchema as Record<string, unknown>,
+				targetPointer,
+			);
+			if (resolveV2AnketaCanvasUiKind(uiBranch) === "system") return;
+			if (isCanvasStockField(uiSchema, targetPointer)) return;
 			const segs = pointerSegments(targetPointer);
 			const next = removePropertyAtPointer(jsonSchema, segs);
 			if (next) {
@@ -1321,12 +1423,13 @@ export const V2TemplateSchemaEditor = ({
 				setSelectedPointer(null);
 			}
 		},
-		[jsonSchema, selectedPointer],
+		[jsonSchema, selectedPointer, uiSchema, pushDraftHistory],
 	);
 
 	const handleToggleRequired = useCallback(
 		(checked: boolean) => {
 			if (!selectedPointer) return;
+			pushDraftHistory();
 			const next = toggleRequiredAtPointer(
 				jsonSchema,
 				selectedPointer,
@@ -1334,12 +1437,13 @@ export const V2TemplateSchemaEditor = ({
 			);
 			if (next) setJsonSchema(next);
 		},
-		[jsonSchema, selectedPointer],
+		[jsonSchema, selectedPointer, pushDraftHistory],
 	);
 
 	const handleWidgetChange = useCallback(
 		(widget: string) => {
 			if (!selectedPointer) return;
+			pushDraftHistory();
 			const nextUi = setUiWidgetAtPointer(
 				uiSchema as Record<string, unknown>,
 				selectedPointer,
@@ -1347,12 +1451,13 @@ export const V2TemplateSchemaEditor = ({
 			);
 			setUiSchema(nextUi as UiSchema);
 		},
-		[selectedPointer, uiSchema],
+		[selectedPointer, uiSchema, pushDraftHistory],
 	);
 
 	const handleDictionaryCodeChange = useCallback(
 		(code: string) => {
 			if (!selectedPointer) return;
+			pushDraftHistory();
 			const trimmed = code.trim();
 			const nextUi = setUiDictionaryCodeAtPointer(
 				uiSchema as Record<string, unknown>,
@@ -1373,7 +1478,14 @@ export const V2TemplateSchemaEditor = ({
 				if (next) setJsonSchema(next);
 			}
 		},
-		[selectedPointer, uiSchema, jsonSchema, resolvedField, leafUiOptions],
+		[
+			selectedPointer,
+			uiSchema,
+			jsonSchema,
+			resolvedField,
+			leafUiOptions,
+			pushDraftHistory,
+		],
 	);
 
 	const addRuleForTargetPath = useCallback((rawTarget: string) => {
@@ -1542,7 +1654,9 @@ export const V2TemplateSchemaEditor = ({
 			canRedoDraft: draftFuture.length > 0,
 			undoDraft,
 			redoDraft,
+			recordDraftHistory,
 			updateField,
+			patchUiSchema,
 			handleDeleteField,
 			handleToggleRequired,
 			handleWidgetChange,
@@ -1559,6 +1673,8 @@ export const V2TemplateSchemaEditor = ({
 			currentWidget,
 			isObjectGroup,
 			groupChildFields,
+			hasArrayObjectItems,
+			arrayItemChildFields,
 			isCustomUiGroup,
 			customUiGroupSummary,
 			canBindDictionary,
@@ -1614,7 +1730,9 @@ export const V2TemplateSchemaEditor = ({
 			draftFuture.length,
 			undoDraft,
 			redoDraft,
+			recordDraftHistory,
 			updateField,
+			patchUiSchema,
 			handleDeleteField,
 			handleToggleRequired,
 			handleWidgetChange,
@@ -1631,6 +1749,8 @@ export const V2TemplateSchemaEditor = ({
 			currentWidget,
 			isObjectGroup,
 			groupChildFields,
+			hasArrayObjectItems,
+			arrayItemChildFields,
 			isCustomUiGroup,
 			customUiGroupSummary,
 			canBindDictionary,
@@ -1690,7 +1810,7 @@ export const V2TemplateSchemaEditor = ({
 
 	const leaveDialog = (
 		<SchemaEditorLeaveDialog
-			open={leaveDialogOpen}
+			open={leaveDialogOpen && hasUnsavedChanges}
 			onStay={() => {
 				setLeaveDialogOpen(false);
 				if (blocker.state === "blocked") blocker.reset();

@@ -1,4 +1,7 @@
-import { resolveSchemaNode } from "@react-client/features/v2/admin_constructor/utils/schemaMutators";
+import {
+	listOrderedChildKeys,
+	resolveSchemaNode,
+} from "@react-client/features/v2/admin_constructor/utils/schemaMutators";
 import { isV2AnketaHiddenUiNode } from "@smart-anketa/api-contract";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 
@@ -24,12 +27,14 @@ function readUiAtPath(
 	return current as UiSchema;
 }
 
-function filterVisibleObjectKeys(
+function listVisibleOrderedChildKeys(
 	properties: RJSFSchema["properties"] | undefined,
 	uiSlice: UiSchema,
 ): string[] {
 	if (!properties || typeof properties !== "object") return [];
-	return Object.keys(properties).filter(
+	const props = properties as Record<string, RJSFSchema>;
+	const wrapper: RJSFSchema = { type: "object", properties: props };
+	return listOrderedChildKeys(wrapper, "/", uiSlice).filter(
 		(key) => !isV2AnketaHiddenUiNode(uiSlice[key]),
 	);
 }
@@ -41,7 +46,7 @@ function buildFilteredObjectSlice(
 ): RJSFSchema | null {
 	const props = node.properties as Record<string, RJSFSchema> | undefined;
 	if (!props) return null;
-	const visibleKeys = filterVisibleObjectKeys(props, uiSlice);
+	const visibleKeys = listVisibleOrderedChildKeys(props, uiSlice);
 	if (visibleKeys.length === 0) return null;
 	const properties = Object.fromEntries(
 		visibleKeys.map((key) => [key, props[key]!]),
@@ -60,11 +65,23 @@ function buildFilteredUiSlice(
 	visibleKeys: string[],
 ): UiSchema {
 	const uiRecord = uiSlice as Record<string, unknown>;
+	const visibleSet = new Set(visibleKeys);
 	const filtered: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(uiRecord)) {
-		if (key.startsWith("ui:") || visibleKeys.includes(key)) {
+		if (key.startsWith("ui:")) {
+			if (key === "ui:order" && Array.isArray(value)) {
+				const ordered = (value as string[]).filter((k) => visibleSet.has(k));
+				const rest = visibleKeys.filter((k) => !ordered.includes(k));
+				filtered[key] = [...ordered, ...rest];
+			} else {
+				filtered[key] = value;
+			}
+		} else if (visibleSet.has(key)) {
 			filtered[key] = value;
 		}
+	}
+	if (!filtered["ui:order"]) {
+		filtered["ui:order"] = visibleKeys;
 	}
 	return filtered as UiSchema;
 }
@@ -88,11 +105,7 @@ export function getObjectUiSlice(
 	rootUi: UiSchema,
 	path: string,
 ): UiSchema {
-	const branch = readUiAtPath(rootUi, path);
-	if (!branch) return {};
-	const { ["ui:order"]: _order, ["ui:options"]: _options, ...rest } =
-		branch as Record<string, unknown>;
-	return rest as UiSchema;
+	return readUiAtPath(rootUi, path) ?? {};
 }
 
 export function getArrayItemSchemaSlice(
@@ -120,9 +133,7 @@ export function getArrayItemUiSlice(
 	const branch = readUiAtPath(rootUi, arrayPath);
 	const itemsBranch = branch?.items as UiSchema | undefined;
 	if (!itemsBranch || typeof itemsBranch !== "object") return {};
-	const { ["ui:order"]: _order, ["ui:options"]: _options, ...rest } =
-		itemsBranch as Record<string, unknown>;
-	return rest as UiSchema;
+	return itemsBranch;
 }
 
 /** Схема объекта для модалки: без полей с ui:hidden. */
@@ -135,9 +146,12 @@ export function getObjectSchemaSliceForModal(
 	const node = resolveSchemaNode(rootSchema, dotPathToSegments(path));
 	if (!node || node.type !== "object") return null;
 	const uiSlice = getObjectUiSlice(rootUi, path);
+	const props = node.properties as Record<string, RJSFSchema> | undefined;
+	if (!props) return null;
+	const visibleKeys = listVisibleOrderedChildKeys(props, uiSlice);
+	if (visibleKeys.length === 0) return null;
 	const schema = buildFilteredObjectSlice(node, uiSlice, options);
 	if (!schema?.properties) return null;
-	const visibleKeys = Object.keys(schema.properties);
 	return {
 		schema,
 		uiSchema: buildFilteredUiSlice(uiSlice, visibleKeys),
@@ -157,9 +171,12 @@ export function getArrayItemSchemaSliceForModal(
 	]);
 	if (!node || node.type !== "object") return null;
 	const uiSlice = getArrayItemUiSlice(rootUi, arrayPath);
+	const props = node.properties as Record<string, RJSFSchema> | undefined;
+	if (!props) return null;
+	const visibleKeys = listVisibleOrderedChildKeys(props, uiSlice);
+	if (visibleKeys.length === 0) return null;
 	const schema = buildFilteredObjectSlice(node, uiSlice, options);
 	if (!schema?.properties) return null;
-	const visibleKeys = Object.keys(schema.properties);
 	return {
 		schema,
 		uiSchema: buildFilteredUiSlice(uiSlice, visibleKeys),

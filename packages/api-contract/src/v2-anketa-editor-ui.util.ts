@@ -11,7 +11,7 @@ export type V2AnketaModalKind =
 	| "nonStandardTask"
 	| "rjsfObject";
 
-export type V2AnketaCanvasUiKind = "hidden" | "utility";
+export type V2AnketaCanvasUiKind = "hidden" | "utility" | "system";
 
 const MODAL_OBJECT_ARCH_COMPONENTS: readonly V2ArchComponentType[] = [
 	"modelService",
@@ -104,10 +104,28 @@ export function isV2AnketaHiddenUiNode(uiNode: unknown): boolean {
 	return readV2AnketaSectionUiOptions(uiNode).hidden === true;
 }
 
-/** Метка на холсте конструктора: скрытая или системная (readonly-блок, panel). */
+/** Есть ли в uiSchema поле с виджетом модалки неопределённости. */
+export function schemaHasUncertaintyModalWidget(
+	uiSchema: Record<string, unknown>,
+): boolean {
+	const walk = (node: unknown): boolean => {
+		const rec = readRecord(node);
+		if (!rec) return false;
+		if (rec["ui:widget"] === "V2UncertaintyModalWidget") return true;
+		for (const [key, value] of Object.entries(rec)) {
+			if (key.startsWith("ui:")) continue;
+			if (walk(value)) return true;
+		}
+		return false;
+	};
+	return walk(uiSchema);
+}
+
+/** Метка на холсте конструктора: скрытая, системная или служебная. */
 export function resolveV2AnketaCanvasUiKind(
 	uiNode: unknown,
 ): V2AnketaCanvasUiKind | null {
+	if (readUiOptions(uiNode).system === true) return "system";
 	if (isV2AnketaHiddenUiNode(uiNode)) return "hidden";
 	if (readUiOptions(uiNode).layoutGroup === true) return "utility";
 	const opts = readV2AnketaSectionUiOptions(uiNode);

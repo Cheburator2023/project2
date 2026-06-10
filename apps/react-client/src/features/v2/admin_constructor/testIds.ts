@@ -29,6 +29,7 @@ export const V2_TEMPLATE_EDIT_TEST_IDS = {
 	canvasCollapseAll: "canvasCollapseAll",
 	canvasDropZone: "canvasDropZone",
 	canvasFieldRow: "canvasFieldRow",
+	canvasSystemDivider: "canvasSystemDivider",
 	canvasDuplicateField: "canvasDuplicateField",
 	canvasDeleteConfirm: "canvasDeleteConfirm",
 	canvasDeleteConfirmSubmit: "canvasDeleteConfirmSubmit",

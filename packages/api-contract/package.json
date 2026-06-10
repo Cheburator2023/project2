@@ -14,7 +14,8 @@
 		}
 	},
 	"scripts": {
-		"build": "rm -rf dist && npm run build:dts && npm run build:cjs && npm run build:esm",
+		"build": "rm -rf dist && npm run build:dts && npm run build:cjs && npm run build:esm && npm run build:assets",
+		"build:assets": "cp src/v2-anketa-system-scaffold.snapshot.json dist/esm/ && cp src/v2-anketa-system-scaffold.snapshot.json dist/cjs/",
 		"build:dts": "tsc -p tsconfig.dts.json",
 		"build:cjs": "tsc -p tsconfig.cjs.json",
 		"build:esm": "tsc -p tsconfig.esm.json",

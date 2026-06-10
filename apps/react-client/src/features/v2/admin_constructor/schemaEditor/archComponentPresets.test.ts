@@ -35,6 +35,7 @@ describe("ARCH_COMPONENT_PRESET_DEFS", () => {
 		dataProcess: "detailInfo.dataProcess",
 		dataMart: "detailInfo.dataMart",
 		model: "detailInfo.model",
+		atypicalWork: "detailInfo.detailAtypicalTasks",
 	} as const;
 
 	for (const [arch, dotPath] of Object.entries(cases)) {

@@ -149,6 +149,10 @@
 						"title": "Необходимость пилота",
 						"enum": ["Требуется MVP", "Не требуется"]
 					},
+					"overallUncertaintyModal": {
+						"type": "string",
+						"title": "Расчёт общей неопределённости"
+					},
 					"modelService": {
 						"type": "object",
 						"title": "Модельный сервис",
@@ -275,17 +279,12 @@
 								}
 							}
 						}
-					},
-					"channels": {
-						"type": "string",
-						"title": "Каналы внедрения (legacy)",
-						"enum": ["Требуется", "Не требуется"]
 					}
 				}
 			},
 			"uncertaintyCalculation": {
 				"type": "object",
-				"title": "Расчёт общей неопределённости",
+				"title": "Данные расчёта неопределённости",
 				"properties": {
 					"initiativeTimeline": {
 						"type": "string",
@@ -734,6 +733,10 @@
 									"type": "string",
 									"title": "Задача"
 								},
+								"workType": {
+									"type": "string",
+									"title": "Тип работ"
+								},
 								"estimateHoursPerDay": {
 									"type": "number",
 									"title": "Оценка ч/д"
@@ -967,6 +970,10 @@
 									"type": "string",
 									"title": "Задача"
 								},
+								"workType": {
+									"type": "string",
+									"title": "Тип работ"
+								},
 								"estimateHoursPerDay": {
 									"type": "number",
 									"title": "Оценка ч/д"
@@ -1033,6 +1040,10 @@
 									"type": "string",
 									"title": "Задача"
 								},
+								"workType": {
+									"type": "string",
+									"title": "Тип работ"
+								},
 								"estimateHoursPerDay": {
 									"type": "number",
 									"title": "Оценка ч/д"
@@ -1084,7 +1095,8 @@
 	"uiSchema": {
 		"meta": {
 			"ui:options": {
-				"hidden": true
+				"hidden": true,
+				"system": true
 			},
 			"ui:order": ["id", "name", "version", "status"],
 			"id": {
@@ -1114,10 +1126,10 @@
 				"prePromEval",
 				"prodNeed",
 				"integrEval",
-				"overallUncertainty",
 				"pilotNeed",
 				"modelService",
-				"channels"
+				"overallUncertaintyModal",
+				"overallUncertainty"
 			],
 			"calcName": {
 				"ui:widget": "text",
@@ -1145,12 +1157,15 @@
 				"ui:widget": "select",
 				"ui:placeholder": "Сложность постановки"
 			},
-			"channels": {
-				"ui:widget": "hidden"
+			"overallUncertaintyModal": {
+				"ui:widget": "V2UncertaintyModalWidget"
 			},
 			"overallUncertainty": {
 				"ui:widget": "hidden",
-				"ui:help": "Редактируется через кнопку «Рассчитать общую неопределённость» в разделе"
+				"ui:options": {
+					"system": true
+				},
+				"ui:help": "Итоговое значение; заполняется из модалки расчёта неопределённости"
 			},
 			"createIS": {
 				"ui:widget": "select",
@@ -1232,7 +1247,8 @@
 		},
 		"uncertaintyCalculation": {
 			"ui:options": {
-				"hidden": true
+				"hidden": true,
+				"system": true
 			},
 			"ui:order": [
 				"initiativeTimeline",
@@ -1318,15 +1334,14 @@
 				"ui:options": {
 					"sectionRole": "flat"
 				},
-				"ui:order": [
-					"streamsOutsideDADM",
-					"streamNames"
-				],
+				"ui:description": "Поле «Названия стримов» появляется только при включённой галочке «Стримы вне ДАДМ» (правило visibility в логике шаблона).",
+				"ui:order": ["streamsOutsideDADM", "streamNames"],
 				"streamsOutsideDADM": {
 					"ui:widget": "checkbox"
 				},
 				"streamNames": {
-					"ui:widget": "text"
+					"ui:widget": "text",
+					"ui:placeholder": "Введите названия стримов"
 				}
 			},
 			"sourceSystems": {
@@ -1457,16 +1472,50 @@
 			},
 			"detailAtypicalTasks": {
 				"ui:options": {
+					"archComponent": "atypicalWork",
 					"addable": true,
 					"removable": true,
 					"orderable": false
+				},
+				"items": {
+					"ui:order": [
+						"name",
+						"workType",
+						"estimateHoursPerDay",
+						"coefficient",
+						"total",
+						"includeInCalculation"
+					],
+					"name": {
+						"ui:widget": "text"
+					},
+					"workType": {
+						"ui:widget": "select",
+						"ui:options": {
+							"dictionaryCode": "v2.method.14.тип_работ_для_нетиповой_работы_пропро"
+						}
+					},
+					"estimateHoursPerDay": {
+						"ui:widget": "text"
+					},
+					"coefficient": {
+						"ui:widget": "text"
+					},
+					"total": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					},
+					"includeInCalculation": {
+						"ui:widget": "checkbox"
+					}
 				}
 			}
 		},
 		"summary": {
 			"ui:readonly": true,
 			"ui:options": {
-				"hidden": true
+				"hidden": true,
+				"system": true
 			},
 			"ui:order": [
 				"baseScoreStream",
@@ -1543,26 +1592,28 @@
 			}
 		},
 		"ui:order": [
-			"workflow",
-			"groupActivation",
-			"meta",
 			"generalInfo",
-			"uncertaintyCalculation",
 			"detailInfo",
 			"streamDataSources",
 			"streamModelControl",
 			"streamDigitalAgents",
 			"streamStreamingData",
+			"workflow",
+			"groupActivation",
+			"meta",
+			"uncertaintyCalculation",
 			"summary"
 		],
 		"workflow": {
 			"ui:options": {
-				"hidden": true
+				"hidden": true,
+				"system": true
 			}
 		},
 		"groupActivation": {
 			"ui:options": {
-				"hidden": true
+				"hidden": true,
+				"system": true
 			}
 		},
 		"streamDataSources": {
@@ -1603,6 +1654,7 @@
 			},
 			"atypicalTasks": {
 				"ui:options": {
+					"archComponent": "atypicalWork",
 					"orderable": false,
 					"addable": true,
 					"removable": true
@@ -1610,6 +1662,7 @@
 				"items": {
 					"ui:order": [
 						"name",
+						"workType",
 						"estimateHoursPerDay",
 						"coefficient",
 						"total",
@@ -1617,6 +1670,12 @@
 					],
 					"name": {
 						"ui:widget": "text"
+					},
+					"workType": {
+						"ui:widget": "select",
+						"ui:options": {
+							"dictionaryCode": "v2.method.14.тип_работ_для_нетиповой_работы_пропро"
+						}
 					},
 					"estimateHoursPerDay": {
 						"ui:widget": "text"
@@ -1650,6 +1709,7 @@
 		"streamModelControl": {
 			"atypicalTasks": {
 				"ui:options": {
+					"archComponent": "atypicalWork",
 					"orderable": false,
 					"addable": true,
 					"removable": true
@@ -1657,6 +1717,7 @@
 				"items": {
 					"ui:order": [
 						"name",
+						"workType",
 						"estimateHoursPerDay",
 						"coefficient",
 						"total",
@@ -1664,6 +1725,12 @@
 					],
 					"name": {
 						"ui:widget": "text"
+					},
+					"workType": {
+						"ui:widget": "select",
+						"ui:options": {
+							"dictionaryCode": "v2.method.14.тип_работ_для_нетиповой_работы_пропро"
+						}
 					},
 					"estimateHoursPerDay": {
 						"ui:widget": "text"

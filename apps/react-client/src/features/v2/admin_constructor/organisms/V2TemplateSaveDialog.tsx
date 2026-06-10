@@ -1,4 +1,6 @@
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -6,7 +8,6 @@ import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import TextField from "@mui/material/TextField";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { Spacer } from "@react-client/common/primitives/Spacer";
 import type { V2TemplateStatus } from "@smart-anketa/api-contract";
 import { useEffect, useState } from "react";
 
@@ -59,11 +60,36 @@ export function V2TemplateSaveDialog({
 		void onSaveInPlace();
 	};
 
+	const handleClose = () => {
+		if (savePending) return;
+		onClose();
+	};
+
 	return (
 		<>
-			<Dialog open={open && !confirmInPlaceOpen} onClose={onClose} maxWidth="sm" fullWidth>
+			<Dialog
+				open={open && !confirmInPlaceOpen}
+				onClose={handleClose}
+				maxWidth="sm"
+				fullWidth
+			>
 				<DialogTitle>Сохранение схемы</DialogTitle>
-				<DialogContent>
+				<DialogContent sx={{ position: "relative" }}>
+					{savePending ? (
+						<Box
+							sx={{
+								position: "absolute",
+								inset: 0,
+								zIndex: 1,
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								bgcolor: "rgba(255, 255, 255, 0.72)",
+							}}
+						>
+							<CircularProgress size={36} />
+						</Box>
+					) : null}
 					<DialogContentText sx={{ mb: 2 }}>
 						Версия v{versionNumber} (
 						{V2_TEMPLATE_VERSION_STATUS_RU[versionStatus] ?? versionStatus}
@@ -82,53 +108,80 @@ export function V2TemplateSaveDialog({
 						/>
 					</Flex>
 				</DialogContent>
-				<DialogActions sx={{ flexDirection: "column", alignItems: "stretch", px: 3, pb: 2 }}>
+				<DialogActions
+					sx={{ flexDirection: "column", alignItems: "stretch", px: 3, pb: 2 }}
+				>
 					<Flex gap={6} justifyContent="flex-end">
-					<Button onClick={onClose} disabled={savePending}>
-						Отмена
-					</Button>
+						<Button onClick={handleClose} disabled={savePending}>
+							Отмена
+						</Button>
 
-					<Button
-						variant="outlined"
-						disabled={savePending || !canSaveInPlace}
-						onClick={handleSaveInPlaceClick}
-					>
-						Сохранить в этой версии
-					</Button>
+						<Button
+							variant="outlined"
+							disabled={savePending || !canSaveInPlace}
+							onClick={handleSaveInPlaceClick}
+							startIcon={
+								savePending ? (
+									<CircularProgress size={16} color="inherit" />
+								) : undefined
+							}
+						>
+							{savePending ? "Сохранение…" : "Сохранить в этой версии"}
+						</Button>
 
-					<Button
-						variant="contained"
-						disabled={savePending}
-						onClick={() => void onSaveAsNewVersion(releaseNotes.trim())}
-					>
-						Новая версия (черновик)
-					</Button>
-
-					{!canSaveInPlace ? (
-						<DialogContentText variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-							Опубликованную или архивную версию можно изменить только через создание
-							нового черновика.
-						</DialogContentText>
-					) : null}
+						<Button
+							variant="contained"
+							disabled={savePending}
+							onClick={() => void onSaveAsNewVersion(releaseNotes.trim())}
+							startIcon={
+								savePending ? (
+									<CircularProgress size={16} color="inherit" />
+								) : undefined
+							}
+						>
+							{savePending ? "Сохранение…" : "Новая версия (черновик)"}
+						</Button>
 					</Flex>
 				</DialogActions>
 			</Dialog>
 
 			<Dialog
 				open={confirmInPlaceOpen}
-				onClose={() => setConfirmInPlaceOpen(false)}
+				onClose={() => {
+					if (savePending) return;
+					setConfirmInPlaceOpen(false);
+				}}
 				maxWidth="xs"
 				fullWidth
 			>
 				<DialogTitle>Перезаписать актуальную версию?</DialogTitle>
-				<DialogContent>
+				<DialogContent sx={{ position: "relative" }}>
+					{savePending ? (
+						<Box
+							sx={{
+								position: "absolute",
+								inset: 0,
+								zIndex: 1,
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								bgcolor: "rgba(255, 255, 255, 0.72)",
+							}}
+						>
+							<CircularProgress size={32} />
+						</Box>
+					) : null}
 					<DialogContentText>
-						Версия v{versionNumber} является актуальной схемой системы. Сохранение
-						перезапишет её содержимое без публикации новой версии. Продолжить?
+						Версия v{versionNumber} является актуальной схемой системы.
+						Сохранение перезапишет её содержимое без публикации новой версии.
+						Продолжить?
 					</DialogContentText>
 				</DialogContent>
 				<DialogActions>
-					<Button onClick={() => setConfirmInPlaceOpen(false)} disabled={savePending}>
+					<Button
+						onClick={() => setConfirmInPlaceOpen(false)}
+						disabled={savePending}
+					>
 						Отмена
 					</Button>
 					<Button
@@ -136,8 +189,13 @@ export function V2TemplateSaveDialog({
 						color="warning"
 						disabled={savePending}
 						onClick={handleConfirmInPlace}
+						startIcon={
+							savePending ? (
+								<CircularProgress size={16} color="inherit" />
+							) : undefined
+						}
 					>
-						Сохранить в этой версии
+						{savePending ? "Сохранение…" : "Сохранить в этой версии"}
 					</Button>
 				</DialogActions>
 			</Dialog>

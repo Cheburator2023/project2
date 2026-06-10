@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isV2AnketaHiddenUiNode = isV2AnketaHiddenUiNode;
+exports.schemaHasUncertaintyModalWidget = schemaHasUncertaintyModalWidget;
 exports.resolveV2AnketaCanvasUiKind = resolveV2AnketaCanvasUiKind;
 exports.isV2AnketaModalObjectArch = isV2AnketaModalObjectArch;
 exports.listV2AnketaHiddenRootKeys = listV2AnketaHiddenRootKeys;
@@ -77,8 +78,28 @@ function isV2AnketaHiddenUiNode(uiNode) {
         return true;
     return (0, v2_anketa_section_ui_util_1.readV2AnketaSectionUiOptions)(uiNode).hidden === true;
 }
-/** Метка на холсте конструктора: скрытая или системная (readonly-блок, panel). */
+/** Есть ли в uiSchema поле с виджетом модалки неопределённости. */
+function schemaHasUncertaintyModalWidget(uiSchema) {
+    const walk = (node) => {
+        const rec = readRecord(node);
+        if (!rec)
+            return false;
+        if (rec["ui:widget"] === "V2UncertaintyModalWidget")
+            return true;
+        for (const [key, value] of Object.entries(rec)) {
+            if (key.startsWith("ui:"))
+                continue;
+            if (walk(value))
+                return true;
+        }
+        return false;
+    };
+    return walk(uiSchema);
+}
+/** Метка на холсте конструктора: скрытая, системная или служебная. */
 function resolveV2AnketaCanvasUiKind(uiNode) {
+    if (readUiOptions(uiNode).system === true)
+        return "system";
     if (isV2AnketaHiddenUiNode(uiNode))
         return "hidden";
     if (readUiOptions(uiNode).layoutGroup === true)

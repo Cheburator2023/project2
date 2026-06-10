@@ -10,13 +10,12 @@ import {
 	readUiSchemaBranchAtPointer,
 	resolveSchemaNode,
 } from "../../utils/schemaMutators";
-import {
-	resolveV2AnketaArchComponent,
-	resolveV2AnketaCanvasUiKind,
-	V2_ARCH_COMPONENT_LABELS,
-} from "@smart-anketa/api-contract";
+import { resolveV2AnketaCanvasUiKind } from "@smart-anketa/api-contract";
 import { pointerSegments } from "../../utils/schemaPaths";
-import { ruSchemaTypeLabel } from "../constants";
+import {
+	resolveCanvasCategoryChips,
+	resolveCanvasFieldTypeChipLabel,
+} from "../propertiesFieldKind";
 import { useSchemaEditor } from "../SchemaEditorContext";
 import type { SchemaFieldRow } from "../types";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
@@ -76,16 +75,21 @@ export function SchemaFieldTreePanel({ embedded = false }: { embedded?: boolean 
 		const node = resolveSchemaNode(jsonSchema, segs);
 		const title = typeof node?.title === "string" ? node.title : item.label;
 		const uiBranch = readUiSchemaBranchAtPointer(uiSchema, item.id);
-		const arch = resolveV2AnketaArchComponent(uiBranch);
 		const canvasKind = resolveV2AnketaCanvasUiKind(uiBranch);
-		const archSuffix = arch ? ` · ${V2_ARCH_COMPONENT_LABELS[arch]}` : "";
+		const categorySuffix = resolveCanvasCategoryChips(node, uiBranch)
+			.map((chip) => chip.label)
+			.join(" · ");
 		const kindSuffix =
 			canvasKind === "hidden"
 				? " · Скрыто"
-				: canvasKind === "utility"
+				: canvasKind === "system"
 					? " · Системное"
-					: "";
-		return `${title} · ${ruSchemaTypeLabel(item.typeLabel)}${archSuffix}${kindSuffix}`;
+					: canvasKind === "utility"
+						? " · Служебное"
+						: "";
+		const { label: typeLabel } = resolveCanvasFieldTypeChipLabel(node, uiBranch);
+		const categoryPart = categorySuffix ? ` · ${categorySuffix}` : "";
+		return `${title} · ${typeLabel}${categoryPart}${kindSuffix}`;
 	};
 
 	return (

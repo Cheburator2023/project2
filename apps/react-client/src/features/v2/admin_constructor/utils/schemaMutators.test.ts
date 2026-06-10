@@ -13,6 +13,7 @@ import {
 	moveUiSchemaBranchAtPointer,
 	setUiDictionaryCodeAtPointer,
 	setUiPlaceholderAtPointer,
+	setUiTooltipAtPointer,
 	syncDictionaryFieldUiAtPointer,
 	isObjectFieldGroup,
 	listOrderedChildKeys,
@@ -513,6 +514,95 @@ describe("duplicateFieldAtPointer", () => {
 			(copyUi.child1 as Record<string, unknown>)["ui:widget"],
 		).toBe("textarea");
 	});
+
+	it("resets dictionary bindings in copied field", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				status: {
+					type: "string",
+					title: "Статус",
+					enum: ["open", "closed"],
+					enumNames: ["Открыт", "Закрыт"],
+				},
+			},
+		};
+		const ui: UiSchema = {
+			status: {
+				"ui:widget": "select",
+				"ui:options": { dictionaryCode: "v2.test.status" },
+			},
+		};
+
+		const result = duplicateFieldAtPointer(
+			schema,
+			ui as Record<string, unknown>,
+			"/status",
+			"status_copy",
+		);
+
+		const copySchema = (result!.schema.properties as Record<string, RJSFSchema>)
+			.status_copy;
+		expect(copySchema.enum).toBeUndefined();
+		expect(copySchema.enumNames).toBeUndefined();
+
+		const copyUi = result!.ui.status_copy as Record<string, unknown>;
+		expect(copyUi["ui:widget"]).toBeUndefined();
+		expect(copyUi["ui:options"]).toBeUndefined();
+	});
+
+	it("resets dictionary bindings in nested copied group fields", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				group1: {
+					type: "object",
+					properties: {
+						tag: {
+							type: "array",
+							items: {
+								type: "string",
+								enum: ["a", "b"],
+							},
+							uniqueItems: true,
+						},
+					},
+				},
+			},
+		};
+		const ui: UiSchema = {
+			group1: {
+				tag: {
+					"ui:widget": "select",
+					"ui:options": {
+						dictionaryCode: "v2.test.tags",
+						multiple: true,
+					},
+				},
+			},
+		};
+
+		const result = duplicateFieldAtPointer(
+			schema,
+			ui as Record<string, unknown>,
+			"/group1",
+			"group1_copy",
+		);
+
+		const copyTag = (
+			(result!.schema.properties as Record<string, RJSFSchema>).group1_copy
+				.properties as Record<string, RJSFSchema>
+		).tag;
+		expect((copyTag.items as RJSFSchema).enum).toBeUndefined();
+
+		const copyTagUi = (
+			(result!.ui.group1_copy as Record<string, unknown>).tag as Record<
+				string,
+				unknown
+			>
+		)["ui:options"];
+		expect(copyTagUi).toBeUndefined();
+	});
 });
 
 describe("setUiPlaceholderAtPointer", () => {
@@ -546,6 +636,43 @@ describe("setUiPlaceholderAtPointer", () => {
 					| Record<string, unknown>
 					| undefined
 			)?.["ui:placeholder"],
+		).toBeUndefined();
+	});
+});
+
+describe("setUiTooltipAtPointer", () => {
+	it("sets and clears ui:options.tooltip on a field branch", () => {
+		const ui: UiSchema = {
+			generalInfo: {
+				title: { "ui:widget": "text" },
+			},
+		};
+
+		const withTooltip = setUiTooltipAtPointer(
+			ui as Record<string, unknown>,
+			"/generalInfo/title",
+			"Подсказка для поля",
+		);
+		expect(
+			(
+				(
+					(withTooltip.generalInfo as Record<string, unknown>)
+						.title as Record<string, unknown>
+				)["ui:options"] as Record<string, unknown>
+			).tooltip,
+		).toBe("Подсказка для поля");
+
+		const cleared = setUiTooltipAtPointer(
+			withTooltip,
+			"/generalInfo/title",
+			"  ",
+		);
+		expect(
+			(
+				(cleared.generalInfo as Record<string, unknown>).title as
+					| Record<string, unknown>
+					| undefined
+			)?.["ui:options"],
 		).toBeUndefined();
 	});
 });
