@@ -17,11 +17,7 @@ import { V2TemplateVersionHeaderControls } from "@react-client/features/v2/admin
 import { v2TemplateVersionChipLabel } from "@react-client/features/v2/admin_constructor/utils/v2TemplateVersionLabels";
 import { useCallback, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
-import {
-	V2_TEMPLATE_VERSION_QUERY,
-	pathForAdminV2TemplateRead,
-	pathForPlaygroundV2TemplateRead,
-} from "@react-client/routing/common/pathHelpers";
+import { V2_TEMPLATE_VERSION_QUERY } from "@react-client/routing/common/pathHelpers";
 import { commonRoutes as routes } from "@react-client/routing/common/routes";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 
@@ -140,10 +136,12 @@ export const V2TemplateSchemaEditorPage = () => {
 							variant="outlined"
 							startIcon={<OpenInNewIcon />}
 							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnPreview}
+							disabled={!headerActions.getExternalPreviewPath()}
+							title="Открывает форму с текущим черновиком из браузера, без сохранения на сервер"
 							onClick={() => {
-								const path = isAdminContext
-									? pathForAdminV2TemplateRead(templateId, versionId)
-									: pathForPlaygroundV2TemplateRead(templateId, versionId);
+								headerActions.flushLocalDraft();
+								const path = headerActions.getExternalPreviewPath();
+								if (!path) return;
 								window.open(
 									`${window.location.origin}${path}`,
 									"_blank",

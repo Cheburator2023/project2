@@ -20,6 +20,47 @@ describe("buildSelectOptions", () => {
 		]);
 	});
 
+	it("maps RJSF enumOptions codes to schema.enumNames labels", () => {
+		const schema: RJSFSchema = {
+			type: "string",
+			enum: ["dept_a", "dept_b"],
+			enumNames: ["Департамент A", "Департамент B"],
+		};
+
+		expect(
+			buildSelectOptions(
+				{
+					enumOptions: [
+						{ value: "dept_a", label: "dept_a" },
+						{ value: "dept_b", label: "dept_b" },
+					],
+				},
+				schema,
+			),
+		).toEqual([
+			{ value: "dept_a", label: "Департамент A" },
+			{ value: "dept_b", label: "Департамент B" },
+		]);
+	});
+
+	it("prefers ui:options.enumNames over schema when RJSF rebuilds enumOptions", () => {
+		expect(
+			buildSelectOptions(
+				{
+					enumNames: ["Подпись A", "Подпись B"],
+					enumOptions: [
+						{ value: "a", label: "a" },
+						{ value: "b", label: "b" },
+					],
+				},
+				{ type: "string", enum: ["a", "b"], enumNames: ["Alpha", "Beta"] },
+			),
+		).toEqual([
+			{ value: "a", label: "Подпись A" },
+			{ value: "b", label: "Подпись B" },
+		]);
+	});
+
 	it("falls back to schema enumNames when enumOptions are absent", () => {
 		const schema: RJSFSchema = {
 			type: "string",

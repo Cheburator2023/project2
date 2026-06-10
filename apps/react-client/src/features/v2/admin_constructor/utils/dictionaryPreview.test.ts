@@ -123,6 +123,7 @@ describe("dictionary preview merge", () => {
 					{ value: "a", label: "Alpha" },
 					{ value: "b", label: "Beta" },
 				],
+				enumNames: ["Alpha", "Beta"],
 			},
 		});
 	});

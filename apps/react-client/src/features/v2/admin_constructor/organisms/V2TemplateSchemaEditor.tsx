@@ -13,7 +13,9 @@ import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { toast } from "@react-client/common/toasts";
 import {
 	pathForAdminV2Template,
+	pathForAdminV2TemplateRead,
 	pathForPlaygroundV2Template,
+	pathForPlaygroundV2TemplateRead,
 } from "@react-client/routing/common/pathHelpers";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
@@ -27,6 +29,7 @@ import { Box, Button, Typography } from "@mui/material";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { useBrowserRouterNavigationBlocker } from "../hooks/useBrowserRouterNavigationBlocker";
 import { SchemaEditorProvider } from "../schemaEditor/SchemaEditorContext";
 import type { SchemaEditorContextValue } from "../schemaEditor/SchemaEditorContext";
 import type { SchemaEditorMainTab } from "../schemaEditor/types";
@@ -89,7 +92,15 @@ import {
 } from "../utils/schemaMutators";
 import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
 import { V2TemplateSaveDialog } from "./V2TemplateSaveDialog";
+import { SchemaEditorLeaveDialog } from "./SchemaEditorLeaveDialog";
 import type { V2TemplateStatus } from "@smart-anketa/api-contract";
+import {
+	readSchemaEditorLocalDraft,
+	schemaEditorDraftSnapshotsEqual,
+	snapshotFromTemplateVersion,
+	writeSchemaEditorLocalDraft,
+	type SchemaEditorDraftSnapshot,
+} from "../utils/schemaEditorLocalDraft";
 
 function readUiBranch(
 	uiSchema: UiSchema | Record<string, unknown>,
@@ -127,6 +138,9 @@ export type V2EditorHeaderActions = {
 	savePending: boolean;
 	activatePending: boolean;
 	canActivateAsCurrent: boolean;
+	hasUnsavedChanges: boolean;
+	flushLocalDraft: () => void;
+	getExternalPreviewPath: () => string | null;
 };
 
 export type V2SchemaEditorLayoutMode = "dock" | "logic-only";
@@ -240,6 +254,11 @@ export const V2TemplateSchemaEditor = ({
 	const [depsDraft, setDepsDraft] = useState("");
 	const [monacoError, setMonacoError] = useState<string | null>(null);
 	const [logicPathPick, setLogicPathPick] = useState<string>("");
+	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+	const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+
+	const baselineSnapshotRef = useRef<SchemaEditorDraftSnapshot | null>(null);
+	const draftHydratedVersionIdRef = useRef<string | null>(null);
 
 	const selectedRule =
 		logic.rules.find((r) => r.id === selectedRuleId) ?? logic.rules[0];
@@ -354,29 +373,161 @@ export const V2TemplateSchemaEditor = ({
 		});
 	}, [template, activeVersion, isSystemCurrent, onHeaderMetaChange]);
 
+	const currentDraftSnapshot = useCallback(
+		(): SchemaEditorDraftSnapshot => ({
+			jsonSchema,
+			uiSchema,
+			logic,
+			formData,
+		}),
+		[jsonSchema, uiSchema, logic, formData],
+	);
+
+	const applyDraftSnapshotToEditor = useCallback(
+		(snapshot: SchemaEditorDraftSnapshot) => {
+			setJsonSchema(snapshot.jsonSchema);
+			setUiSchema(snapshot.uiSchema);
+			setLogic(snapshot.logic);
+			setFormData(snapshot.formData);
+			setSchemaMonacoText(JSON.stringify(snapshot.jsonSchema, null, 2));
+			setUiMonacoText(JSON.stringify(snapshot.uiSchema, null, 2));
+			setMonacoError(null);
+		},
+		[],
+	);
+
+	const flushLocalDraft = useCallback(() => {
+		if (!activeVersion?.id) return;
+		writeSchemaEditorLocalDraft(
+			templateId,
+			activeVersion.id,
+			currentDraftSnapshot(),
+		);
+	}, [activeVersion?.id, currentDraftSnapshot, templateId]);
+
+	const syncDirtyFlag = useCallback(() => {
+		const baseline = baselineSnapshotRef.current;
+		if (!baseline) {
+			setHasUnsavedChanges(false);
+			return;
+		}
+		setHasUnsavedChanges(
+			!schemaEditorDraftSnapshotsEqual(currentDraftSnapshot(), baseline),
+		);
+	}, [currentDraftSnapshot]);
+
+	const commitBaselineToCurrent = useCallback(() => {
+		const snap = currentDraftSnapshot();
+		baselineSnapshotRef.current = snap;
+		if (activeVersion?.id) {
+			writeSchemaEditorLocalDraft(templateId, activeVersion.id, snap);
+		}
+		setHasUnsavedChanges(false);
+	}, [activeVersion?.id, currentDraftSnapshot, templateId]);
+
 	useEffect(() => {
 		if (!activeVersion?.id) {
+			draftHydratedVersionIdRef.current = null;
+			baselineSnapshotRef.current = null;
+			setHasUnsavedChanges(false);
 			return;
 		}
 
-		const nextSchema = coerceJsonSchema(activeVersion.jsonSchema);
-		const nextUi = stripUiObjectFieldTemplatesFromUi(
-			coerceUiSchema(activeVersion.uiSchema, nextSchema) as Record<
-				string,
-				unknown
-			>,
-		) as UiSchema;
-		setJsonSchema(nextSchema);
-		setUiSchema(nextUi);
-		setLogic(coerceLogicGraph(activeVersion.logic));
+		if (draftHydratedVersionIdRef.current === activeVersion.id) return;
 
-		setSchemaMonacoText(JSON.stringify(nextSchema, null, 2));
-		setUiMonacoText(JSON.stringify(nextUi, null, 2));
+		const serverSnapshot = snapshotFromTemplateVersion(activeVersion);
+		baselineSnapshotRef.current = serverSnapshot;
+
+		const localDraft = readSchemaEditorLocalDraft(templateId, activeVersion.id);
+		const snapshotToApply = localDraft ?? serverSnapshot;
+
+		applyDraftSnapshotToEditor(snapshotToApply);
 		setDraftPast([]);
 		setDraftFuture([]);
+		draftHydratedVersionIdRef.current = activeVersion.id;
 
-		setFormData({});
-	}, [activeVersion?.id]);
+		if (
+			localDraft &&
+			!schemaEditorDraftSnapshotsEqual(localDraft, serverSnapshot)
+		) {
+			if (isAdminEditor) {
+				toast.info("Восстановлен несохранённый черновик из локального хранилища");
+			}
+		}
+
+		setHasUnsavedChanges(
+			!schemaEditorDraftSnapshotsEqual(snapshotToApply, serverSnapshot),
+		);
+	}, [
+		activeVersion,
+		applyDraftSnapshotToEditor,
+		isAdminEditor,
+		templateId,
+	]);
+
+	useEffect(() => {
+		if (!activeVersion?.id) return;
+		if (draftHydratedVersionIdRef.current !== activeVersion.id) return;
+
+		const timer = window.setTimeout(() => {
+			writeSchemaEditorLocalDraft(
+				templateId,
+				activeVersion.id,
+				currentDraftSnapshot(),
+			);
+			syncDirtyFlag();
+		}, 400);
+
+		return () => window.clearTimeout(timer);
+	}, [
+		jsonSchema,
+		uiSchema,
+		logic,
+		formData,
+		activeVersion?.id,
+		currentDraftSnapshot,
+		syncDirtyFlag,
+		templateId,
+	]);
+
+	const blocker = useBrowserRouterNavigationBlocker(
+		({ currentLocation, nextLocation }) =>
+			hasUnsavedChanges &&
+			(currentLocation.pathname !== nextLocation.pathname ||
+				currentLocation.search !== nextLocation.search),
+	);
+
+	useEffect(() => {
+		if (blocker.state === "blocked") {
+			setLeaveDialogOpen(true);
+		}
+	}, [blocker.state]);
+
+	useEffect(() => {
+		if (!hasUnsavedChanges) return;
+		const onBeforeUnload = (event: BeforeUnloadEvent) => {
+			event.preventDefault();
+		};
+		window.addEventListener("beforeunload", onBeforeUnload);
+		return () => window.removeEventListener("beforeunload", onBeforeUnload);
+	}, [hasUnsavedChanges]);
+
+	const getExternalPreviewPath = useCallback(() => {
+		if (!activeVersion?.id) return null;
+		flushLocalDraft();
+		return isAdminEditor
+			? pathForAdminV2TemplateRead(templateId, activeVersion.id, {
+					localDraft: true,
+				})
+			: pathForPlaygroundV2TemplateRead(templateId, activeVersion.id, {
+					localDraft: true,
+				});
+	}, [
+		activeVersion?.id,
+		flushLocalDraft,
+		isAdminEditor,
+		templateId,
+	]);
 
 	const cycles = useMemo(
 		() => dependencyCycleWarnings(logic.rules),
@@ -643,6 +794,7 @@ export const V2TemplateSchemaEditor = ({
 			});
 			await refetchVersions();
 			setSaveDialogOpen(false);
+			commitBaselineToCurrent();
 
 			if (isAdminEditor) {
 				toast.success(`Версия v${activeVersion.versionNumber} сохранена`);
@@ -662,6 +814,7 @@ export const V2TemplateSchemaEditor = ({
 		templateId,
 		updateVersion,
 		versionSnapshotDto,
+		commitBaselineToCurrent,
 	]);
 
 	const handleSaveAsNewVersion = useCallback(
@@ -720,6 +873,7 @@ export const V2TemplateSchemaEditor = ({
 			});
 			await refetchVersions();
 			persistVersionInUrl(activated.id);
+			commitBaselineToCurrent();
 
 			if (isAdminEditor) {
 				toast.success(
@@ -743,6 +897,7 @@ export const V2TemplateSchemaEditor = ({
 		templateId,
 		updateVersion,
 		versionSnapshotDto,
+		commitBaselineToCurrent,
 	]);
 
 	const activateAsCurrentRef = useRef(handleActivateAsCurrent);
@@ -765,10 +920,16 @@ export const V2TemplateSchemaEditor = ({
 				activateVersion.isPending ||
 				(activeVersion.status === "draft" && updateVersion.isPending),
 			canActivateAsCurrent: isAdminEditor && !isSystemCurrent,
+			hasUnsavedChanges,
+			flushLocalDraft,
+			getExternalPreviewPath,
 		});
 	}, [
 		activeVersion,
 		activateVersion.isPending,
+		flushLocalDraft,
+		getExternalPreviewPath,
+		hasUnsavedChanges,
 		isAdminEditor,
 		isSystemCurrent,
 		onHeaderActionsChange,
@@ -1527,6 +1688,20 @@ export const V2TemplateSchemaEditor = ({
 		);
 	}
 
+	const leaveDialog = (
+		<SchemaEditorLeaveDialog
+			open={leaveDialogOpen}
+			onStay={() => {
+				setLeaveDialogOpen(false);
+				if (blocker.state === "blocked") blocker.reset();
+			}}
+			onLeave={() => {
+				setLeaveDialogOpen(false);
+				if (blocker.state === "blocked") blocker.proceed();
+			}}
+		/>
+	);
+
 	if (layoutMode === "logic-only") {
 		return (
 			<>
@@ -1545,6 +1720,7 @@ export const V2TemplateSchemaEditor = ({
 						onSaveInPlace={handleSaveInPlace}
 					/>
 				) : null}
+				{leaveDialog}
 			</>
 		);
 	}
@@ -1595,6 +1771,7 @@ export const V2TemplateSchemaEditor = ({
 					onSaveInPlace={handleSaveInPlace}
 				/>
 			) : null}
+			{leaveDialog}
 		</SchemaEditorProvider>
 	);
 };

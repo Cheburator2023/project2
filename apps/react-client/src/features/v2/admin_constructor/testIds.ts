@@ -32,6 +32,8 @@ export const V2_TEMPLATE_EDIT_TEST_IDS = {
 	canvasDuplicateField: "canvasDuplicateField",
 	canvasDeleteConfirm: "canvasDeleteConfirm",
 	canvasDeleteConfirmSubmit: "canvasDeleteConfirmSubmit",
+	editorLeaveConfirm: "editorLeaveConfirm",
+	editorLeaveConfirmSubmit: "editorLeaveConfirmSubmit",
 	fieldTree: "fieldTree",
 	properties: "properties",
 	jsonEditor: "jsonEditor",

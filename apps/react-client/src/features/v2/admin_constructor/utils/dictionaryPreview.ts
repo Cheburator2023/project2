@@ -217,6 +217,7 @@ export function mergeDictionaryOptionsIntoPreviewUiSchema(
 			binding.pointer,
 			{
 				enumOptions: buildEnumOptionsPair(pair),
+				enumNames: pair.enumNames,
 				multiple: binding.multiple ? true : undefined,
 			},
 		) as UiSchema;
