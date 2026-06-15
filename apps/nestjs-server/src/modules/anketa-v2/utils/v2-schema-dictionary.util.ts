@@ -39,6 +39,45 @@ function enumStrings(node: Record<string, unknown>): string[] {
 	return raw.filter((v): v is string => typeof v === "string" && v.length > 0);
 }
 
+/** Лимит колонки v2_dictionary_item.code (varchar 100). */
+export const V2_DICTIONARY_ITEM_CODE_MAX_LEN = 100;
+
+/** Короткий стабильный code для элемента enum-справочника схемы; label остаётся полным. */
+export function schemaDictionaryItemCode(
+	label: string,
+	index: number,
+	seen: Set<string>,
+): string {
+	const trimmed = label.trim();
+	const numbered = trimmed.match(/^(\d+)\.\s/);
+	if (numbered) {
+		const code = numbered[1]!;
+		if (!seen.has(code)) {
+			seen.add(code);
+			return code;
+		}
+	}
+
+	const slug = trimmed
+		.toLowerCase()
+		.replace(/[^a-zа-я0-9]+/gi, "_")
+		.replace(/^_+|_+$/g, "")
+		.slice(0, V2_DICTIONARY_ITEM_CODE_MAX_LEN - 4);
+
+	let code = slug || `item_${index + 1}`;
+	let suffix = 0;
+	while (seen.has(code)) {
+		suffix++;
+		const base = (slug || "item").slice(
+			0,
+			V2_DICTIONARY_ITEM_CODE_MAX_LEN - String(suffix).length - 1,
+		);
+		code = `${base}_${suffix}`;
+	}
+	seen.add(code);
+	return code;
+}
+
 /**
  * Собирает все поля JSON Schema с `enum` (включая вложенные object и items массивов).
  */
@@ -110,19 +149,22 @@ export function buildDefaultDictionariesFromJsonSchema(
 ): V2DefaultDictionaryDef[] {
 	return extractEnumFieldsFromJsonSchema(schema)
 		.filter((f) => !methodologyDictionaryByName(f.title))
-		.map((f) => ({
-			code: f.dictionaryCode,
-			name: f.title,
-			description: `Заводской справочник для поля ${f.pointer}`,
-			category: "Схема",
-			fieldPointer: f.pointer,
-			items: f.enumValues.map((label, order) => ({
-				code: label,
-				label,
-				order,
-				payload: { fieldPointer: f.pointer },
-			})),
-		}));
+		.map((f) => {
+			const seen = new Set<string>();
+			return {
+				code: f.dictionaryCode,
+				name: f.title,
+				description: `Заводской справочник для поля ${f.pointer}`,
+				category: "Схема",
+				fieldPointer: f.pointer,
+				items: f.enumValues.map((label, order) => ({
+					code: schemaDictionaryItemCode(label, order, seen),
+					label,
+					order,
+					payload: { fieldPointer: f.pointer },
+				})),
+			};
+		});
 }
 
 function pointerSegments(pointer: string): string[] {

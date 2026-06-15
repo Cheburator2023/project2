@@ -38,7 +38,27 @@ export class V2DictionarySeedService implements OnModuleInit {
 			});
 
 			if (existing) {
-				skipped++;
+				const itemCount = await this.itemRepository.count({
+					where: { dictionaryId: existing.id },
+				});
+				if (itemCount === 0 && def.items.length > 0) {
+					await this.itemRepository.save(
+						def.items.map((item) =>
+							this.itemRepository.create({
+								dictionaryId: existing.id,
+								code: item.code,
+								label: item.label,
+								order: item.order,
+								isActive: true,
+								parentCode: null,
+								payload: item.payload ?? null,
+							}),
+						),
+					);
+					created++;
+				} else {
+					skipped++;
+				}
 				continue;
 			}
 

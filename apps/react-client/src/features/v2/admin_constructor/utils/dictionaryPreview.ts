@@ -24,9 +24,12 @@ export function parseDictionaryJsonToEnumPair(data: unknown): {
 		const row = it as Record<string, unknown>;
 		const code = row.code;
 		if (typeof code !== "string" || !code.trim()) continue;
-		enums.push(code);
 		const label = row.label;
-		enumNames.push(typeof label === "string" && label.trim() ? label : code);
+		// В formData/jsonSchema хранится полный label (enum из схемы), code — короткий ключ в БД.
+		const value =
+			typeof label === "string" && label.trim() ? label.trim() : code.trim();
+		enums.push(value);
+		enumNames.push(value);
 	}
 	if (!enums.length) return null;
 	return { enums, enumNames };
