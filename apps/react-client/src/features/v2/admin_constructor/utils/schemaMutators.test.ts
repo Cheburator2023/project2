@@ -551,6 +551,52 @@ describe("duplicateFieldAtPointer", () => {
 		expect(copyUi["ui:options"]).toBeUndefined();
 	});
 
+	it("strips workflowSectionId from duplicated panel so workflow is independent", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				streamDataSources: {
+					type: "object",
+					properties: {
+						platformStream1: {
+							type: "object",
+							title: "Платформенный стрим",
+							properties: {
+								name: { type: "string", title: "Название" },
+							},
+						},
+					},
+				},
+			},
+		};
+		const ui: UiSchema = {
+			streamDataSources: {
+				"ui:order": ["platformStream1"],
+				platformStream1: {
+					"ui:options": {
+						workflowSectionId: "streamDataSources",
+						groupActivatable: true,
+					},
+					name: { "ui:widget": "text" },
+				},
+			},
+		};
+
+		const result = duplicateFieldAtPointer(
+			schema,
+			ui as Record<string, unknown>,
+			"/streamDataSources/platformStream1",
+			"platformStream1_copy",
+		);
+
+		const copyUi = (
+			(result!.ui.streamDataSources as Record<string, unknown>)
+				.platformStream1_copy as Record<string, unknown>
+		)["ui:options"] as Record<string, unknown> | undefined;
+		expect(copyUi?.workflowSectionId).toBeUndefined();
+		expect(copyUi?.groupActivatable).toBe(true);
+	});
+
 	it("resets dictionary bindings in nested copied group fields", () => {
 		const schema: RJSFSchema = {
 			type: "object",

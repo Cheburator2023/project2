@@ -57,6 +57,8 @@ export type SchemaEditorContextValue = {
 	setSchemaMonacoText: (v: string) => void;
 	uiMonacoText: string;
 	setUiMonacoText: (v: string) => void;
+	logicMonacoText: string;
+	setLogicMonacoText: (v: string) => void;
 	monacoError: string | null;
 	setMonacoError: (v: string | null) => void;
 	syncMonacoApply: () => void;

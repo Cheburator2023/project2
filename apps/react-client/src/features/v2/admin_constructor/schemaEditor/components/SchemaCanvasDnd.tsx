@@ -793,28 +793,26 @@ export function SchemaCanvasPanel({
 			>
 				<RedoIcon fontSize="small" />
 			</IconButton>
-			<Button
+			<IconButton
 				size="small"
-				variant="outlined"
-				startIcon={<UnfoldMoreIcon fontSize="small" />}
 				disabled={!hasExpandableNodes}
 				onClick={handleExpandAll}
 				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasExpandAll}
-				title="Раскрыть все группы на холсте"
+				aria-label="Раскрыть все группы на холсте"
+				title="Раскрыть все"
 			>
-				Раскрыть все
-			</Button>
-			<Button
+				<UnfoldMoreIcon fontSize="small" />
+			</IconButton>
+			<IconButton
 				size="small"
-				variant="outlined"
-				startIcon={<UnfoldLessIcon fontSize="small" />}
 				disabled={!hasExpandableNodes}
 				onClick={handleCollapseAll}
 				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasCollapseAll}
-				title="Свернуть все группы на холсте"
+				aria-label="Свернуть все группы на холсте"
+				title="Свернуть все"
 			>
-				Свернуть все
-			</Button>
+				<UnfoldLessIcon fontSize="small" />
+			</IconButton>
 		</Box>
 	);
 

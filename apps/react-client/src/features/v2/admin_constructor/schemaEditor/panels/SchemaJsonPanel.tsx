@@ -60,6 +60,8 @@ export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 		setSchemaMonacoText,
 		uiMonacoText,
 		setUiMonacoText,
+		logicMonacoText,
+		setLogicMonacoText,
 		monacoError,
 		syncMonacoApply,
 		reloadMonacoFromState,
@@ -73,7 +75,7 @@ export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 			fillHeight={fillHeight}
 			dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.jsonEditor}
 			title="Редактор JSON"
-			description="Прямое редактирование JSON Schema и UI Schema. Изменения попадают в конструктор только после «Применить»; «Сбросить» откатывает текст к текущему состоянию."
+			description="Прямое редактирование JSON Schema, UI Schema и правил JsonLogic. Изменения попадают в конструктор только после «Применить»; «Сбросить» откатывает текст к текущему состоянию."
 			actions={
 				<Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
 					<Button size="small" variant="contained" onClick={syncMonacoApply}>
@@ -109,9 +111,11 @@ export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 					title="Подсказка по JSON-редактору"
 				>
 					Чтобы убрать поле из схемы, удалите его из JSON Schema и связанный
-					узел в UI Schema, затем нажмите «Применить». Таблица параметров
-					компонента в модалках анкеты — отдельный слой; её нельзя править
-					только через JSON, если поля скрыты ui:options.hidden.
+					узел в UI Schema, затем нажмите «Применить». JSON Logic — объект{" "}
+					<code>{`{ "rules": [...] }`}</code> с правилами видимости,
+					обязательности и валидации. Таблица параметров компонента в модалках
+					анкеты — отдельный слой; её нельзя править только через JSON, если
+					поля скрыты ui:options.hidden.
 				</Typography>
 				<Box
 					data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.jsonEditors}
@@ -119,7 +123,11 @@ export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 						flex: fillHeight ? 1 : undefined,
 						minHeight: fillHeight ? 0 : 360,
 						display: "grid",
-						gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+						gridTemplateColumns: {
+							xs: "1fr",
+							md: "1fr 1fr",
+							xl: "1fr 1fr 1fr",
+						},
 						gridTemplateRows: fillHeight ? "1fr" : undefined,
 						gap: 2,
 						overflow: "hidden",
@@ -134,6 +142,11 @@ export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 						label="UI Schema"
 						value={uiMonacoText}
 						onChange={setUiMonacoText}
+					/>
+					<JsonEditorColumn
+						label="JSON Logic"
+						value={logicMonacoText}
+						onChange={setLogicMonacoText}
 					/>
 				</Box>
 			</Box>

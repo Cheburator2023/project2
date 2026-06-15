@@ -2,16 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
 	normalizeSchemaEditorDraftSnapshot,
 	schemaEditorDraftSnapshotsEqual,
-	schemaEditorLocalDraftStorageKey,
 } from "./schemaEditorLocalDraft";
 
-describe("schemaEditorLocalDraft", () => {
-	it("builds stable storage key per template and version", () => {
-		expect(schemaEditorLocalDraftStorageKey("tpl-1", "ver-1")).toBe(
-			"smart-anketa:v2-schema-editor-draft:tpl-1:ver-1",
-		);
-	});
-
+describe("schemaEditorDraftSnapshot", () => {
 	it("compares normalized draft snapshots", () => {
 		const a = normalizeSchemaEditorDraftSnapshot({
 			jsonSchema: { type: "object", properties: { a: { type: "string" } } },

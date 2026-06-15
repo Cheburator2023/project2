@@ -1056,6 +1056,8 @@ function stripDictionaryBindingsFromUiBranch(
 		delete cleaned.enumOptions;
 		delete cleaned.enumNames;
 		delete cleaned.hidden;
+		// Копия панели — отдельный workflow по pathKey, не общий раздел с оригиналом.
+		delete cleaned.workflowSectionId;
 		if (Object.keys(cleaned).length === 0) {
 			delete next["ui:options"];
 		} else {

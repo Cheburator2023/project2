@@ -1,8 +1,13 @@
 import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import { V2AnketaFormWithModals } from "@react-client/features/v2/anketaCRUD/organisms/V2AnketaFormWithModals";
+import { useCallback } from "react";
 import { useSchemaEditorAnketaEngine } from "../../hooks/useSchemaEditorAnketaEngine";
 import { V2FormWithEvaluationLayout } from "../../organisms/V2FormWithEvaluationLayout";
+import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
+import { createResetSchemaEditorPreviewFormData } from "../../utils/previewFormReset";
 import { SchemaEditorPanelErrorBoundary } from "../components/SchemaEditorPanelErrorBoundary";
 import { useSchemaEditor } from "../SchemaEditorContext";
 import { PanelChrome } from "../components/PanelChrome";
@@ -14,14 +19,38 @@ export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean })
 		calculationLoading,
 		calculationError,
 		logicValidationIssueCount,
+		previewUiSchema,
+		setFormData,
 	} = useSchemaEditor();
+
+	const handleResetPreview = useCallback(() => {
+		setFormData(createResetSchemaEditorPreviewFormData(previewUiSchema));
+	}, [previewUiSchema, setFormData]);
+
+	const resetButton = (
+		<Button
+			size="small"
+			variant="outlined"
+			onClick={handleResetPreview}
+			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.previewReset}
+			title="Очистить значения полей, статусы workflow и активацию групп"
+		>
+			Сброс
+		</Button>
+	);
 
 	return (
 		<PanelChrome
 			embedded={embedded}
 			title="Превью анкеты"
 			description="Тестовые значения для проверки логики и справочников."
+			actions={embedded ? undefined : resetButton}
 		>
+			{embedded ? (
+				<Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+					{resetButton}
+				</Box>
+			) : null}
 			{dictionaryEnumsLoading ? (
 				<Alert severity="info" sx={{ mb: 1 }}>
 					Загрузка справочников…

@@ -138,9 +138,8 @@ export const V2TemplateSchemaEditorPage = () => {
 							startIcon={<OpenInNewIcon />}
 							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnPreview}
 							disabled={!headerActions.getExternalPreviewPath()}
-							title="Открывает форму с текущим черновиком из браузера, без сохранения на сервер"
+							title="Открывает предпросмотр сохранённой версии на сервере"
 							onClick={() => {
-								headerActions.flushLocalDraft();
 								const path = headerActions.getExternalPreviewPath();
 								if (!path) return;
 								window.open(

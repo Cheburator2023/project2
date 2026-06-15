@@ -103,10 +103,8 @@ import { SchemaEditorLeaveDialog } from "./SchemaEditorLeaveDialog";
 import type { V2TemplateStatus } from "@smart-anketa/api-contract";
 import { isCanvasStockField } from "../schemaEditor/canvasStockFields";
 import {
-	readSchemaEditorLocalDraft,
 	schemaEditorDraftSnapshotsEqual,
 	snapshotFromTemplateVersion,
-	writeSchemaEditorLocalDraft,
 	type SchemaEditorDraftSnapshot,
 } from "../utils/schemaEditorLocalDraft";
 
@@ -147,7 +145,6 @@ export type V2EditorHeaderActions = {
 	activatePending: boolean;
 	canActivateAsCurrent: boolean;
 	hasUnsavedChanges: boolean;
-	flushLocalDraft: () => void;
 	getExternalPreviewPath: () => string | null;
 };
 
@@ -249,6 +246,9 @@ export const V2TemplateSchemaEditor = ({
 		JSON.stringify(EMPTY_JSON_SCHEMA, null, 2),
 	);
 	const [uiMonacoText, setUiMonacoText] = useState("{}");
+	const [logicMonacoText, setLogicMonacoText] = useState(
+		JSON.stringify({ rules: [] }, null, 2),
+	);
 	const [draftPast, setDraftPast] = useState<DraftHistorySnapshot[]>([]);
 	const [draftFuture, setDraftFuture] = useState<DraftHistorySnapshot[]>([]);
 
@@ -400,19 +400,11 @@ export const V2TemplateSchemaEditor = ({
 			setFormData(snapshot.formData);
 			setSchemaMonacoText(JSON.stringify(snapshot.jsonSchema, null, 2));
 			setUiMonacoText(JSON.stringify(snapshot.uiSchema, null, 2));
+			setLogicMonacoText(JSON.stringify(snapshot.logic, null, 2));
 			setMonacoError(null);
 		},
 		[],
 	);
-
-	const flushLocalDraft = useCallback(() => {
-		if (!activeVersion?.id) return;
-		writeSchemaEditorLocalDraft(
-			templateId,
-			activeVersion.id,
-			currentDraftSnapshot(),
-		);
-	}, [activeVersion?.id, currentDraftSnapshot, templateId]);
 
 	const syncDirtyFlag = useCallback(() => {
 		const baseline = baselineSnapshotRef.current;
@@ -426,13 +418,9 @@ export const V2TemplateSchemaEditor = ({
 	}, [currentDraftSnapshot]);
 
 	const commitBaselineToCurrent = useCallback(() => {
-		const snap = currentDraftSnapshot();
-		baselineSnapshotRef.current = snap;
-		if (activeVersion?.id) {
-			writeSchemaEditorLocalDraft(templateId, activeVersion.id, snap);
-		}
+		baselineSnapshotRef.current = currentDraftSnapshot();
 		setHasUnsavedChanges(false);
-	}, [activeVersion?.id, currentDraftSnapshot, templateId]);
+	}, [currentDraftSnapshot]);
 
 	useEffect(() => {
 		if (!activeVersion?.id) {
@@ -447,31 +435,14 @@ export const V2TemplateSchemaEditor = ({
 		const serverSnapshot = snapshotFromTemplateVersion(activeVersion);
 		baselineSnapshotRef.current = serverSnapshot;
 
-		const localDraft = readSchemaEditorLocalDraft(templateId, activeVersion.id);
-		const snapshotToApply = localDraft ?? serverSnapshot;
-
-		applyDraftSnapshotToEditor(snapshotToApply);
+		applyDraftSnapshotToEditor(serverSnapshot);
 		setDraftPast([]);
 		setDraftFuture([]);
 		draftHydratedVersionIdRef.current = activeVersion.id;
-
-		if (
-			localDraft &&
-			!schemaEditorDraftSnapshotsEqual(localDraft, serverSnapshot)
-		) {
-			if (isAdminEditor) {
-				toast.info("Восстановлен несохранённый черновик из локального хранилища");
-			}
-		}
-
-		setHasUnsavedChanges(
-			!schemaEditorDraftSnapshotsEqual(snapshotToApply, serverSnapshot),
-		);
+		setHasUnsavedChanges(false);
 	}, [
 		activeVersion,
 		applyDraftSnapshotToEditor,
-		isAdminEditor,
-		templateId,
 	]);
 
 	useEffect(() => {
@@ -479,11 +450,6 @@ export const V2TemplateSchemaEditor = ({
 		if (draftHydratedVersionIdRef.current !== activeVersion.id) return;
 
 		const timer = window.setTimeout(() => {
-			writeSchemaEditorLocalDraft(
-				templateId,
-				activeVersion.id,
-				currentDraftSnapshot(),
-			);
 			syncDirtyFlag();
 		}, 400);
 
@@ -494,9 +460,7 @@ export const V2TemplateSchemaEditor = ({
 		logic,
 		formData,
 		activeVersion?.id,
-		currentDraftSnapshot,
 		syncDirtyFlag,
-		templateId,
 	]);
 
 	const blocker = useBrowserRouterNavigationBlocker(
@@ -532,20 +496,10 @@ export const V2TemplateSchemaEditor = ({
 
 	const getExternalPreviewPath = useCallback(() => {
 		if (!activeVersion?.id) return null;
-		flushLocalDraft();
 		return isAdminEditor
-			? pathForAdminV2TemplateRead(templateId, activeVersion.id, {
-					localDraft: true,
-				})
-			: pathForPlaygroundV2TemplateRead(templateId, activeVersion.id, {
-					localDraft: true,
-				});
-	}, [
-		activeVersion?.id,
-		flushLocalDraft,
-		isAdminEditor,
-		templateId,
-	]);
+			? pathForAdminV2TemplateRead(templateId, activeVersion.id)
+			: pathForPlaygroundV2TemplateRead(templateId, activeVersion.id);
+	}, [activeVersion?.id, isAdminEditor, templateId]);
 
 	const cycles = useMemo(
 		() => dependencyCycleWarnings(logic.rules),
@@ -959,13 +913,11 @@ export const V2TemplateSchemaEditor = ({
 				(activeVersion.status === "draft" && updateVersion.isPending),
 			canActivateAsCurrent: isAdminEditor && !isSystemCurrent,
 			hasUnsavedChanges,
-			flushLocalDraft,
 			getExternalPreviewPath,
 		});
 	}, [
 		activeVersion,
 		activateVersion.isPending,
-		flushLocalDraft,
 		getExternalPreviewPath,
 		hasUnsavedChanges,
 		isAdminEditor,
@@ -978,6 +930,7 @@ export const V2TemplateSchemaEditor = ({
 	const syncMonacoApply = () => {
 		let parsedSchema: unknown;
 		let parsedUi: unknown;
+		let parsedLogic: unknown;
 
 		try {
 			parsedSchema = JSON.parse(schemaMonacoText);
@@ -993,6 +946,13 @@ export const V2TemplateSchemaEditor = ({
 			return;
 		}
 
+		try {
+			parsedLogic = JSON.parse(logicMonacoText);
+		} catch {
+			setMonacoError("JSON Logic: некорректный JSON");
+			return;
+		}
+
 		if (!parsedSchema || typeof parsedSchema !== "object" || Array.isArray(parsedSchema)) {
 			setMonacoError("JSON Schema: ожидается объект");
 			return;
@@ -1003,14 +963,22 @@ export const V2TemplateSchemaEditor = ({
 			return;
 		}
 
+		if (!parsedLogic || typeof parsedLogic !== "object" || Array.isArray(parsedLogic)) {
+			setMonacoError("JSON Logic: ожидается объект с массивом rules");
+			return;
+		}
+
 		try {
 			const nextSchema = coerceJsonSchema(parsedSchema);
 			const nextUi = coerceUiSchema(parsedUi, nextSchema);
+			const nextLogic = coerceLogicGraph(parsedLogic);
 			listSchemaFields(nextSchema, "/", 0, nextUi);
 			setJsonSchema(nextSchema);
 			setUiSchema(nextUi);
+			setLogic(nextLogic);
 			setSchemaMonacoText(JSON.stringify(nextSchema, null, 2));
 			setUiMonacoText(JSON.stringify(nextUi, null, 2));
+			setLogicMonacoText(JSON.stringify(nextLogic, null, 2));
 			setMonacoError(null);
 		} catch (error) {
 			setMonacoError(
@@ -1024,6 +992,7 @@ export const V2TemplateSchemaEditor = ({
 	const reloadMonacoFromState = () => {
 		setSchemaMonacoText(JSON.stringify(jsonSchema, null, 2));
 		setUiMonacoText(JSON.stringify(uiSchema, null, 2));
+		setLogicMonacoText(JSON.stringify(logic, null, 2));
 		setMonacoError(null);
 	};
 
@@ -1626,6 +1595,8 @@ export const V2TemplateSchemaEditor = ({
 			setSchemaMonacoText,
 			uiMonacoText,
 			setUiMonacoText,
+			logicMonacoText,
+			setLogicMonacoText,
 			monacoError,
 			setMonacoError,
 			syncMonacoApply,
@@ -1709,6 +1680,7 @@ export const V2TemplateSchemaEditor = ({
 			legacyStageEvaluation,
 			schemaMonacoText,
 			uiMonacoText,
+			logicMonacoText,
 			monacoError,
 			selectedRuleId,
 			selectedRule,
