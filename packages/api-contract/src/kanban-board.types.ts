@@ -93,6 +93,26 @@ export interface UpdateKanbanBoardTaskRequestDto {
 	content?: KanbanBoardTaskContent;
 }
 
+export interface KanbanBoardColumnDto {
+	id: string;
+	boardId: string;
+	title: string;
+	color: string;
+	sortOrder: number;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface CreateKanbanBoardColumnRequestDto {
+	title: string;
+	color?: string;
+}
+
+export interface UpdateKanbanBoardColumnRequestDto {
+	title?: string;
+	color?: string;
+}
+
 export const KANBAN_BOARD_STOCK_PROJECTS = [
 	{ code: "sum", name: "SUM", description: "Стоковый проект SUM" },
 	{ code: "sum-rm", name: "SUM-RM", description: "Стоковый проект SUM-RM" },
@@ -135,6 +155,37 @@ export const KANBAN_BOARD_COLUMN_COLORS: Record<KanbanBoardStatusId, string> = {
 	review: "#7c3aed",
 	done: "#16a34a",
 };
+
+export const KANBAN_BOARD_DEFAULT_COLUMN_COLORS = [
+	"#64748b",
+	"#2563eb",
+	"#d97706",
+	"#7c3aed",
+	"#16a34a",
+	"#db2777",
+	"#0891b2",
+	"#ca8a04",
+	"#4f46e5",
+	"#059669",
+] as const;
+
+export function pickKanbanBoardColumnColor(sortOrder: number): string {
+	return KANBAN_BOARD_DEFAULT_COLUMN_COLORS[
+		sortOrder % KANBAN_BOARD_DEFAULT_COLUMN_COLORS.length
+	];
+}
+
+export function defaultKanbanBoardColumns(
+	boardId: string,
+): Omit<KanbanBoardColumnDto, "createdAt" | "updatedAt">[] {
+	return KANBAN_BOARD_STATUSES.map((status, sortOrder) => ({
+		id: status.id,
+		boardId,
+		title: status.title,
+		color: KANBAN_BOARD_COLUMN_COLORS[status.id],
+		sortOrder,
+	}));
+}
 
 export interface KanbanBoardColumnContent {
 	color: string;

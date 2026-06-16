@@ -11,10 +11,12 @@ import { alpha } from "@mui/material/styles";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	fromBoardData,
+	normalizeKanbanBoardData,
 	toBoardData,
+	type KanbanBoardColumnDto,
 	type KanbanBoardData,
-	type KanbanBoardStatusId,
 	type KanbanBoardTaskContent,
+	type KanbanBoardTaskRecord,
 } from "@smart-anketa/api-contract";
 import { Kanban, dropHandler } from "react-kanban-kit";
 import type { BoardData, BoardItem } from "react-kanban-kit";
@@ -23,6 +25,7 @@ import { useNavigate, useParams } from "react-router";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/common/navigation/organisms/Header";
+import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import {
 	downloadBlob,
 	kanbanBoardExportBoardSnapshot,
@@ -30,20 +33,28 @@ import {
 	kanbanBoardImportBoardSnapshot,
 	kanbanBoardSaveBoardTasks,
 	useKanbanBoardBoards,
+	useKanbanBoardColumns,
 	useKanbanBoardConfig,
+	useCreateKanbanBoardColumn,
+	useDeleteKanbanBoardColumn,
+	useUpdateKanbanBoardColumn,
 	type KanbanBoardImportResult,
 } from "@react-client/common/api/queries/kanban-board";
+import {
+	KanbanColumnAddTaskFooter,
+	KanbanColumnAdder,
+	KanbanColumnHeader,
+	getKanbanColumnColor,
+} from "@react-client/features/kanban-board/components/KanbanBoardColumnChrome";
 import {
 	kanbanTaskCreatePath,
 	kanbanTaskEditPath,
 } from "@react-client/features/kanban-board/kanban-task-paths";
 
-const emptyBoard = (): KanbanBoardData => toBoardData([]);
-
-function getColumnColor(column: BoardItem): string {
-	const color = column.content?.color;
-	return typeof color === "string" && color ? color : "#94a3b8";
-}
+const buildBoardData = (
+	tasks: Parameters<typeof toBoardData>[0],
+	columns: KanbanBoardColumnDto[],
+): KanbanBoardData => toBoardData(tasks, columns);
 
 function TaskCardContent({
 	title,
@@ -112,98 +123,55 @@ function TaskCardContent({
 	);
 }
 
-function KanbanColumnHeader({ column }: { column: BoardItem }) {
-	const color = getColumnColor(column);
-
-	return (
-		<Box
-			sx={{
-				px: 1,
-				py: 0.75,
-				borderBottom: 2,
-				borderColor: color,
-				bgcolor: alpha(color, 0.08),
-			}}
-		>
-			<Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
-				<Typography variant="subtitle2" fontWeight={700} sx={{ color }}>
-					{column.title}
-				</Typography>
-				<Chip
-					size="small"
-					label={column.totalChildrenCount}
-					sx={{
-						height: 22,
-						bgcolor: alpha(color, 0.14),
-						color,
-						border: `1px solid ${alpha(color, 0.3)}`,
-					}}
-				/>
-			</Stack>
-		</Box>
-	);
-}
-
-function ColumnAddTaskFooter({
-	column,
-	disabled,
-	onAdd,
-}: {
-	column: BoardItem;
-	disabled: boolean;
-	onAdd: (columnId: string) => void;
-}) {
-	const color = getColumnColor(column);
-
-	return (
-		<Button
-			fullWidth
-			size="small"
-			startIcon={<AddIcon fontSize="small" />}
-			disabled={disabled}
-			onClick={() => onAdd(column.id)}
-			sx={{
-				justifyContent: "flex-start",
-				color,
-				mt: 0.5,
-				px: 1,
-				py: 0.75,
-			}}
-		>
-			Добавить задачу
-		</Button>
-	);
-}
-
 export function KanbanBoardPage() {
 	const { boardId = "" } = useParams<{ boardId: string }>();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const fileInputRef = useRef<HTMLInputElement>(null);
-	const [board, setBoard] = useState<KanbanBoardData>(emptyBoard);
+	const [board, setBoard] = useState<KanbanBoardData | null>(null);
 	const [importError, setImportError] = useState<string | null>(null);
 
 	const configQuery = useKanbanBoardConfig();
 	const boardsQuery = useKanbanBoardBoards();
+	const columnsQuery = useKanbanBoardColumns(boardId);
+	const createColumn = useCreateKanbanBoardColumn();
+	const updateColumn = useUpdateKanbanBoardColumn();
+	const deleteColumn = useDeleteKanbanBoardColumn();
 	const boardMeta = boardsQuery.data?.find((item) => item.id === boardId);
 
 	const tasksQuery = useQuery({
 		queryKey: ["kanbanBoardTasks", boardId],
 		enabled: Boolean(boardId),
-		queryFn: async ({ signal }) => {
-			const tasks = await kanbanBoardGetBoardTasks(boardId, signal);
-			return toBoardData(tasks);
-		},
+		queryFn: async ({ signal }) => kanbanBoardGetBoardTasks(boardId, signal),
 	});
 
 	const standId = configQuery.data?.standId ?? "local-dev";
-	const isReady = tasksQuery.isSuccess && Boolean(boardId);
+	const isReady =
+		tasksQuery.isSuccess && columnsQuery.isSuccess && Boolean(boardId);
+
+	const columnsSignature = (columnsQuery.data ?? [])
+		.map((column) => `${column.id}:${column.title}:${column.color}:${column.sortOrder}`)
+		.join("|");
 
 	useEffect(() => {
-		if (tasksQuery.data) {
-			setBoard(tasksQuery.data);
-		}
-	}, [tasksQuery.data]);
+		setBoard(null);
+	}, [boardId]);
+
+	useEffect(() => {
+		if (!columnsQuery.data || !tasksQuery.isSuccess) return;
+		setBoard(buildBoardData(tasksQuery.data ?? [], columnsQuery.data));
+	}, [boardId, columnsSignature, columnsQuery.data, tasksQuery.isSuccess]);
+
+	const getColumns = useCallback(
+		() =>
+			queryClient.getQueryData<KanbanBoardColumnDto[]>([
+				"kanbanBoardColumns",
+				boardId,
+			]) ??
+			columnsQuery.data ??
+			[],
+		[boardId, columnsQuery.data, queryClient],
+	);
 
 	const saveMutation = useMutation({
 		mutationFn: (nextBoard: KanbanBoardData) => {
@@ -214,9 +182,21 @@ export function KanbanBoardPage() {
 			return kanbanBoardSaveBoardTasks(boardId, localRows);
 		},
 		onSuccess: (tasks) => {
-			const nextBoard = toBoardData(tasks);
-			queryClient.setQueryData(["kanbanBoardTasks", boardId], nextBoard);
-			setBoard(nextBoard);
+			queryClient.setQueryData(["kanbanBoardTasks", boardId], tasks);
+			const columns = getColumns();
+			if (columns.length) {
+				setBoard(buildBoardData(tasks, columns));
+			}
+		},
+		onError: () => {
+			const tasks = queryClient.getQueryData<KanbanBoardTaskRecord[]>([
+				"kanbanBoardTasks",
+				boardId,
+			]);
+			const columns = getColumns();
+			if (tasks && columns.length) {
+				setBoard(buildBoardData(tasks, columns));
+			}
 		},
 	});
 
@@ -232,9 +212,9 @@ export function KanbanBoardPage() {
 		mutationFn: (file: File) => kanbanBoardImportBoardSnapshot(boardId, file),
 		onSuccess: (result: KanbanBoardImportResult) => {
 			setImportError(null);
-			const nextBoard = toBoardData(result.tasks);
+			const nextBoard = buildBoardData(result.tasks, getColumns());
 			setBoard(nextBoard);
-			queryClient.setQueryData(["kanbanBoardTasks", boardId], nextBoard);
+			queryClient.setQueryData(["kanbanBoardTasks", boardId], result.tasks);
 		},
 		onError: (
 			error: Error & { response?: { data?: Record<string, string> } },
@@ -258,20 +238,49 @@ export function KanbanBoardPage() {
 		[saveMutation],
 	);
 
+	const defaultColumnId = columnsQuery.data?.[0]?.id ?? "backlog";
+
 	const openCreateTask = useCallback(
-		(columnId = "backlog") => {
-			navigate(
-				kanbanTaskCreatePath(boardId, columnId as KanbanBoardStatusId),
-			);
+		(columnId = defaultColumnId) => {
+			navigate(kanbanTaskCreatePath(boardId, columnId));
 		},
-		[boardId, navigate],
+		[boardId, defaultColumnId, navigate],
 	);
 
-	const isBoardBusy = !isReady || saveMutation.isPending;
+	const handleRenameColumn = useCallback(
+		(columnId: string, title: string) => {
+			if (!boardId) return;
+			updateColumn.mutate({ boardId, columnId, data: { title } });
+		},
+		[boardId, updateColumn],
+	);
+
+	const handleDeleteColumn = useCallback(
+		(columnId: string) => {
+			if (!boardId) return;
+			deleteColumn.mutate({ boardId, columnId });
+		},
+		[boardId, deleteColumn],
+	);
+
+	const handleAddColumn = useCallback(
+		(title: string) => {
+			if (!boardId) return;
+			createColumn.mutate({ boardId, data: { title } });
+		},
+		[boardId, createColumn],
+	);
+
+	const isColumnBusy =
+		createColumn.isPending ||
+		updateColumn.isPending ||
+		deleteColumn.isPending;
+	const isBoardBusy = !isReady || !board || isColumnBusy;
+	const isSavingBoard = saveMutation.isPending;
 
 	const renderListFooter = useCallback(
 		(column: BoardItem) => (
-			<ColumnAddTaskFooter
+			<KanbanColumnAddTaskFooter
 				column={column}
 				disabled={isBoardBusy}
 				onAdd={openCreateTask}
@@ -281,13 +290,31 @@ export function KanbanBoardPage() {
 	);
 
 	const renderColumnHeader = useCallback(
-		(column: BoardItem) => <KanbanColumnHeader column={column} />,
-		[],
+		(column: BoardItem) => (
+			<KanbanColumnHeader
+				column={column}
+				disabled={isBoardBusy}
+				onRename={handleRenameColumn}
+				onDelete={handleDeleteColumn}
+			/>
+		),
+		[handleDeleteColumn, handleRenameColumn, isBoardBusy],
+	);
+
+	const renderColumnAdder = useCallback(
+		() => (
+			<KanbanColumnAdder
+				disabled={isBoardBusy}
+				isPending={createColumn.isPending}
+				onAdd={handleAddColumn}
+			/>
+		),
+		[createColumn.isPending, handleAddColumn, isBoardBusy],
 	);
 
 	const columnStyle = useCallback(
 		(column: BoardItem) => {
-			const color = getColumnColor(column);
+			const color = getKanbanColumnColor(column);
 			return {
 				background: `color-mix(in srgb, ${color}, transparent 92%)`,
 			};
@@ -348,7 +375,7 @@ export function KanbanBoardPage() {
 							<Button
 								startIcon={<AddIcon />}
 								variant="contained"
-								onClick={() => openCreateTask("backlog")}
+								onClick={() => openCreateTask(defaultColumnId)}
 								disabled={isBoardBusy}
 							>
 								Добавить задачу
@@ -398,13 +425,36 @@ export function KanbanBoardPage() {
 							Не удалось сохранить изменения
 						</Alert>
 					) : null}
+					{columnsQuery.isError ? (
+						<Alert severity="error" sx={{ flexShrink: 0 }}>
+							Не удалось загрузить колонки
+						</Alert>
+					) : null}
+					{createColumn.isError ? (
+						<Alert severity="error" sx={{ flexShrink: 0 }}>
+							Не удалось добавить колонку
+						</Alert>
+					) : null}
+					{updateColumn.isError ? (
+						<Alert severity="error" sx={{ flexShrink: 0 }}>
+							Не удалось переименовать колонку
+						</Alert>
+					) : null}
+					{deleteColumn.isError ? (
+						<Alert severity="error" sx={{ flexShrink: 0 }}>
+							{apiErrorMessage(deleteColumn.error)}
+						</Alert>
+					) : null}
 
 					<Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-						<Kanban
-							dataSource={board as BoardData}
+						{board ? (
+							<Kanban
+								dataSource={board as BoardData}
 							rootStyle={{ height: "100%" }}
 							cardsGap={8}
 							renderColumnHeader={renderColumnHeader}
+							renderColumnAdder={renderColumnAdder}
+							allowColumnAdder={!isBoardBusy}
 							columnStyle={columnStyle}
 							renderListFooter={renderListFooter}
 							allowListFooter={() => !isBoardBusy}
@@ -424,17 +474,20 @@ export function KanbanBoardPage() {
 												data.content as KanbanBoardTaskContent | undefined
 											}
 											origin={(data as KanbanBoardData[string]).origin}
-											columnColor={getColumnColor(column)}
+											columnColor={getKanbanColumnColor(column)}
 										/>
 									),
 								},
 							}}
-							onCardMove={(move) =>
-								persistBoard(
+							onCardMove={(move) => {
+								if (isSavingBoard) return;
+								const nextBoard = normalizeKanbanBoardData(
 									dropHandler(move, board as BoardData) as KanbanBoardData,
-								)
-							}
+								);
+								persistBoard(nextBoard);
+							}}
 						/>
+						) : null}
 					</Box>
 				</Stack>
 			</Card>

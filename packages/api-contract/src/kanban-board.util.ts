@@ -1,20 +1,34 @@
 import {
+	type KanbanBoardColumnDto,
 	type KanbanBoardData,
-	KANBAN_BOARD_COLUMN_COLORS,
-	KANBAN_BOARD_STATUSES,
 	type KanbanBoardTaskContent,
 	type KanbanBoardTaskRecord,
+	defaultKanbanBoardColumns,
 } from "./kanban-board.types";
 
-export function toBoardData(rows: KanbanBoardTaskRecord[]): KanbanBoardData {
-	const byStatus = new Map<string, KanbanBoardTaskRecord[]>();
-	for (const status of KANBAN_BOARD_STATUSES) {
-		byStatus.set(status.id, []);
+export function toBoardData(
+	rows: KanbanBoardTaskRecord[],
+	columns: KanbanBoardColumnDto[],
+): KanbanBoardData {
+	const effectiveColumns =
+		columns.length > 0 ? columns : defaultKanbanBoardColumns("board");
+	const sortedColumns = [...effectiveColumns].sort(
+		(a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title),
+	);
+	const columnIds = new Set(sortedColumns.map((column) => column.id));
+	const fallbackColumnId = sortedColumns[0]?.id ?? "backlog";
+
+	const byColumn = new Map<string, KanbanBoardTaskRecord[]>();
+	for (const column of sortedColumns) {
+		byColumn.set(column.id, []);
 	}
 	for (const task of rows) {
-		(byStatus.get(task.parentId) ?? []).push(task);
+		const columnId = columnIds.has(task.parentId)
+			? task.parentId
+			: fallbackColumnId;
+		(byColumn.get(columnId) ?? []).push(task);
 	}
-	for (const tasks of byStatus.values()) {
+	for (const tasks of byColumn.values()) {
 		tasks.sort((a, b) => a.position - b.position);
 	}
 
@@ -23,26 +37,26 @@ export function toBoardData(rows: KanbanBoardTaskRecord[]): KanbanBoardData {
 			id: "root",
 			title: "Root",
 			parentId: null,
-			children: KANBAN_BOARD_STATUSES.map((status) => status.id),
-			totalChildrenCount: KANBAN_BOARD_STATUSES.length,
+			children: sortedColumns.map((column) => column.id),
+			totalChildrenCount: sortedColumns.length,
 		},
 	};
 
-	for (const status of KANBAN_BOARD_STATUSES) {
-		const tasks = byStatus.get(status.id) ?? [];
-		board[status.id] = {
-			id: status.id,
-			title: status.title,
+	for (const column of sortedColumns) {
+		const tasks = byColumn.get(column.id) ?? [];
+		board[column.id] = {
+			id: column.id,
+			title: column.title,
 			parentId: "root",
 			children: tasks.map((task) => task.id),
 			totalChildrenCount: tasks.length,
-			content: { color: KANBAN_BOARD_COLUMN_COLORS[status.id] },
+			content: { color: column.color },
 		};
 		for (const task of tasks) {
 			board[task.id] = {
 				id: task.id,
 				title: task.content.title,
-				parentId: status.id,
+				parentId: column.id,
 				children: [],
 				totalChildrenCount: 0,
 				type: "card",
@@ -55,6 +69,32 @@ export function toBoardData(rows: KanbanBoardTaskRecord[]): KanbanBoardData {
 	return board;
 }
 
+export function normalizeKanbanBoardData(board: KanbanBoardData): KanbanBoardData {
+	const next: KanbanBoardData = { ...board, root: { ...board.root } };
+
+	for (const columnId of board.root.children) {
+		const column = board[columnId];
+		if (!column) continue;
+
+		const childCount = column.children.length;
+		next[columnId] = {
+			...column,
+			totalChildrenCount: childCount,
+		};
+
+		for (const cardId of column.children) {
+			const card = board[cardId];
+			if (!card) continue;
+			next[cardId] = {
+				...card,
+				parentId: columnId,
+			};
+		}
+	}
+
+	return next;
+}
+
 export function fromBoardData(
 	board: KanbanBoardData,
 	stand: string,
@@ -62,8 +102,9 @@ export function fromBoardData(
 	boardId: string,
 ): KanbanBoardTaskRecord[] {
 	const out: KanbanBoardTaskRecord[] = [];
-	for (const status of KANBAN_BOARD_STATUSES) {
-		const column = board[status.id];
+	const columnIds = board.root?.children ?? [];
+	for (const columnId of columnIds) {
+		const column = board[columnId];
 		if (!column) continue;
 		column.children.forEach((cardId, position) => {
 			const node = board[cardId];
@@ -71,7 +112,7 @@ export function fromBoardData(
 			out.push({
 				id: node.id,
 				boardId,
-				parentId: status.id,
+				parentId: columnId,
 				position,
 				content: node.content as KanbanBoardTaskContent,
 				origin: node.origin ?? stand,

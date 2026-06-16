@@ -1,9 +1,8 @@
-import type { KanbanBoardStatusId } from "@smart-anketa/api-contract";
+export function kanbanBoardPath(boardId: string) {
+	return `/tracker/boards/${boardId}`;
+}
 
-export function kanbanTaskCreatePath(
-	boardId: string,
-	column: KanbanBoardStatusId = "backlog",
-) {
+export function kanbanTaskCreatePath(boardId: string, column = "backlog") {
 	const params = new URLSearchParams({ column });
 	return `/tracker/boards/${boardId}/tasks/new?${params.toString()}`;
 }

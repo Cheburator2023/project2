@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { boardsEquivalent, fromBoardData, toBoardData, } from "@smart-anketa/api-contract";
+import { boardsEquivalent, defaultKanbanBoardColumns, fromBoardData, toBoardData, } from "@smart-anketa/api-contract";
+const boardColumns = defaultKanbanBoardColumns("board-1").map((column) => ({
+    ...column,
+    createdAt: "2026-06-16T12:00:00.000Z",
+    updatedAt: "2026-06-16T12:00:00.000Z",
+}));
 const sampleBoard = () => ({
     root: {
         id: "root",
@@ -58,7 +63,7 @@ describe("kanban board mapping", () => {
     it("preserves board structure in fromBoardData → toBoardData cycle", () => {
         const board = sampleBoard();
         const rows = fromBoardData(board, "local-dev", "2026-06-16T12:00:00.000Z", "board-1");
-        const restored = toBoardData(rows);
+        const restored = toBoardData(rows, boardColumns);
         expect(boardsEquivalent(board, restored)).toBe(true);
     });
 });

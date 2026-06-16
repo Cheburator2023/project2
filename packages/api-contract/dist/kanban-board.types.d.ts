@@ -82,6 +82,23 @@ export interface UpdateKanbanBoardTaskRequestDto {
     position?: number;
     content?: KanbanBoardTaskContent;
 }
+export interface KanbanBoardColumnDto {
+    id: string;
+    boardId: string;
+    title: string;
+    color: string;
+    sortOrder: number;
+    createdAt: string;
+    updatedAt: string;
+}
+export interface CreateKanbanBoardColumnRequestDto {
+    title: string;
+    color?: string;
+}
+export interface UpdateKanbanBoardColumnRequestDto {
+    title?: string;
+    color?: string;
+}
 export declare const KANBAN_BOARD_STOCK_PROJECTS: readonly [{
     readonly code: "sum";
     readonly name: "SUM";
@@ -125,6 +142,9 @@ export declare const KANBAN_BOARD_STATUSES: readonly [{
 }];
 export type KanbanBoardStatusId = (typeof KANBAN_BOARD_STATUSES)[number]["id"];
 export declare const KANBAN_BOARD_COLUMN_COLORS: Record<KanbanBoardStatusId, string>;
+export declare const KANBAN_BOARD_DEFAULT_COLUMN_COLORS: readonly ["#64748b", "#2563eb", "#d97706", "#7c3aed", "#16a34a", "#db2777", "#0891b2", "#ca8a04", "#4f46e5", "#059669"];
+export declare function pickKanbanBoardColumnColor(sortOrder: number): string;
+export declare function defaultKanbanBoardColumns(boardId: string): Omit<KanbanBoardColumnDto, "createdAt" | "updatedAt">[];
 export interface KanbanBoardColumnContent {
     color: string;
 }

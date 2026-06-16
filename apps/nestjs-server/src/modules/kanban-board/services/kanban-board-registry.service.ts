@@ -7,18 +7,24 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ulid } from "ulid";
 import {
+	KANBAN_BOARD_COLUMN_COLORS,
 	KANBAN_BOARD_STATUSES,
+	pickKanbanBoardColumnColor,
 	type CreateKanbanBoardBoardRequestDto,
+	type CreateKanbanBoardColumnRequestDto,
 	type CreateKanbanBoardProjectRequestDto,
 	type CreateKanbanBoardTaskRequestDto,
 	type KanbanBoardBoardDto,
+	type KanbanBoardColumnDto,
 	type KanbanBoardProjectDto,
 	type KanbanBoardTaskRegistryDto,
 	type UpdateKanbanBoardBoardRequestDto,
+	type UpdateKanbanBoardColumnRequestDto,
 	type UpdateKanbanBoardProjectRequestDto,
 	type UpdateKanbanBoardTaskRequestDto,
 } from "@smart-anketa/api-contract";
 import { KanbanBoardEntity } from "../entities/kanban-board.entity";
+import { KanbanBoardColumnEntity } from "../entities/kanban-board-column.entity";
 import { KanbanBoardProjectEntity } from "../entities/kanban-board-project.entity";
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
 import { KanbanBoardService } from "./kanban-board.service";
@@ -30,6 +36,8 @@ export class KanbanBoardRegistryService {
 		private readonly projectRepository: Repository<KanbanBoardProjectEntity>,
 		@InjectRepository(KanbanBoardEntity)
 		private readonly boardRepository: Repository<KanbanBoardEntity>,
+		@InjectRepository(KanbanBoardColumnEntity)
+		private readonly columnRepository: Repository<KanbanBoardColumnEntity>,
 		@InjectRepository(KanbanBoardTaskEntity)
 		private readonly taskRepository: Repository<KanbanBoardTaskEntity>,
 		private readonly kanbanBoardService: KanbanBoardService,
@@ -140,7 +148,85 @@ export class KanbanBoardRegistryService {
 		});
 		entity.project = project;
 		await this.boardRepository.save(entity);
+		await this.seedDefaultColumns(entity.id);
 		return this.toBoardDto(entity, new Map([[entity.id, 0]]));
+	}
+
+	async findBoardColumns(boardId: string): Promise<KanbanBoardColumnDto[]> {
+		await this.ensureBoardExists(boardId);
+		let columns = await this.columnRepository.find({
+			where: { boardId },
+			order: { sortOrder: "ASC", title: "ASC" },
+		});
+		if (!columns.length) {
+			await this.seedDefaultColumns(boardId);
+			columns = await this.columnRepository.find({
+				where: { boardId },
+				order: { sortOrder: "ASC", title: "ASC" },
+			});
+		}
+		return columns.map((column) => this.toColumnDto(column));
+	}
+
+	async createColumn(
+		boardId: string,
+		dto: CreateKanbanBoardColumnRequestDto,
+	): Promise<KanbanBoardColumnDto> {
+		await this.ensureBoardExists(boardId);
+		const title = dto.title.trim();
+		if (!title) {
+			throw new BadRequestException("Название колонки обязательно");
+		}
+
+		const maxSortOrder = await this.columnRepository
+			.createQueryBuilder("column")
+			.select("MAX(column.sort_order)", "max")
+			.where("column.board_id = :boardId", { boardId })
+			.getRawOne<{ max: string | null }>();
+		const sortOrder = Number(maxSortOrder?.max ?? -1) + 1;
+		const color = dto.color?.trim() || pickKanbanBoardColumnColor(sortOrder);
+
+		const entity = this.columnRepository.create({
+			id: ulid(),
+			boardId,
+			title,
+			color,
+			sortOrder,
+		});
+		await this.columnRepository.save(entity);
+		return this.toColumnDto(entity);
+	}
+
+	async updateColumn(
+		boardId: string,
+		columnId: string,
+		dto: UpdateKanbanBoardColumnRequestDto,
+	): Promise<KanbanBoardColumnDto> {
+		const column = await this.ensureColumnOnBoard(boardId, columnId);
+		if (dto.title !== undefined) {
+			const title = dto.title.trim();
+			if (!title) {
+				throw new BadRequestException("Название колонки обязательно");
+			}
+			column.title = title;
+		}
+		if (dto.color !== undefined) {
+			const color = dto.color.trim();
+			if (color) column.color = color;
+		}
+		await this.columnRepository.save(column);
+		return this.toColumnDto(column);
+	}
+
+	async deleteColumn(boardId: string, columnId: string): Promise<void> {
+		await this.ensureColumnOnBoard(boardId, columnId);
+		const taskCount = await this.taskRepository.count({
+			where: { boardId, parentId: columnId },
+		});
+		if (taskCount > 0) {
+			throw new BadRequestException("Нельзя удалить колонку с задачами");
+		}
+		await this.columnRepository.delete({ boardId, id: columnId });
 	}
 
 	async updateBoard(
@@ -184,8 +270,11 @@ export class KanbanBoardRegistryService {
 			relations: { board: { project: true } },
 			order: { updatedAt: "DESC" },
 		});
+		const columnTitles = await this.loadColumnTitleMap(
+			rows.map((row) => row.boardId),
+		);
 
-		return rows.map((row) => this.toTaskRegistryDto(row));
+		return rows.map((row) => this.toTaskRegistryDto(row, columnTitles));
 	}
 
 	async createTask(
@@ -196,6 +285,7 @@ export class KanbanBoardRegistryService {
 			relations: { project: true },
 		});
 		if (!board) throw new NotFoundException("Доска не найдена");
+		await this.ensureColumnOnBoard(dto.boardId, dto.parentId);
 
 		const position =
 			dto.position ??
@@ -214,7 +304,8 @@ export class KanbanBoardRegistryService {
 		});
 		entity.board = board;
 		await this.taskRepository.save(entity);
-		return this.toTaskRegistryDto(entity);
+		const columnTitles = await this.loadColumnTitleMap([entity.boardId]);
+		return this.toTaskRegistryDto(entity, columnTitles);
 	}
 
 	async updateTask(
@@ -236,17 +327,70 @@ export class KanbanBoardRegistryService {
 			task.boardId = dto.boardId;
 			task.board = board;
 		}
+		const nextParentId = dto.parentId ?? task.parentId;
+		await this.ensureColumnOnBoard(task.boardId, nextParentId);
 		if (dto.parentId !== undefined) task.parentId = dto.parentId;
 		if (dto.position !== undefined) task.position = dto.position;
 		if (dto.content !== undefined) task.content = dto.content;
 		task.updatedAt = new Date().toISOString();
 
 		await this.taskRepository.save(task);
-		return this.toTaskRegistryDto(task);
+		const columnTitles = await this.loadColumnTitleMap([task.boardId]);
+		return this.toTaskRegistryDto(task, columnTitles);
 	}
 
 	async deleteTask(id: string): Promise<void> {
 		await this.kanbanBoardService.deleteTask(id);
+	}
+
+	private async ensureBoardExists(boardId: string): Promise<KanbanBoardEntity> {
+		const board = await this.boardRepository.findOne({ where: { id: boardId } });
+		if (!board) throw new NotFoundException("Доска не найдена");
+		return board;
+	}
+
+	private async ensureColumnOnBoard(
+		boardId: string,
+		columnId: string,
+	): Promise<KanbanBoardColumnEntity> {
+		const column = await this.columnRepository.findOne({
+			where: { id: columnId, boardId },
+		});
+		if (!column) {
+			throw new BadRequestException("Колонка не найдена на доске");
+		}
+		return column;
+	}
+
+	private async seedDefaultColumns(boardId: string): Promise<void> {
+		for (const [index, status] of KANBAN_BOARD_STATUSES.entries()) {
+			const existing = await this.columnRepository.findOne({
+				where: { id: status.id, boardId },
+			});
+			if (existing) continue;
+
+			await this.columnRepository.save(
+				this.columnRepository.create({
+					id: status.id,
+					boardId,
+					title: status.title,
+					color: KANBAN_BOARD_COLUMN_COLORS[status.id],
+					sortOrder: index,
+				}),
+			);
+		}
+	}
+
+	private toColumnDto(column: KanbanBoardColumnEntity): KanbanBoardColumnDto {
+		return {
+			id: column.id,
+			boardId: column.boardId,
+			title: column.title,
+			color: column.color,
+			sortOrder: column.sortOrder,
+			createdAt: column.createdAt.toISOString(),
+			updatedAt: column.updatedAt.toISOString(),
+		};
 	}
 
 	private toProjectDto(
@@ -286,8 +430,8 @@ export class KanbanBoardRegistryService {
 
 	private toTaskRegistryDto(
 		task: KanbanBoardTaskEntity,
+		columnTitles: Map<string, string> = new Map(),
 	): KanbanBoardTaskRegistryDto {
-		const status = KANBAN_BOARD_STATUSES.find((item) => item.id === task.parentId);
 		return {
 			id: task.id,
 			boardId: task.boardId,
@@ -301,7 +445,25 @@ export class KanbanBoardRegistryService {
 			boardSlug: task.board?.slug ?? "",
 			boardName: task.board?.name ?? "",
 			title: task.content.title,
-			statusTitle: status?.title ?? task.parentId,
+			statusTitle:
+				columnTitles.get(`${task.boardId}:${task.parentId}`) ?? task.parentId,
 		};
+	}
+
+	private async loadColumnTitleMap(
+		boardIds: string[],
+	): Promise<Map<string, string>> {
+		const uniqueBoardIds = [...new Set(boardIds)];
+		if (!uniqueBoardIds.length) return new Map();
+
+		const columns = await this.columnRepository
+			.createQueryBuilder("column")
+			.where("column.board_id IN (:...boardIds)", { boardIds: uniqueBoardIds })
+			.getMany();
+		const titleByBoardColumn = new Map<string, string>();
+		for (const column of columns) {
+			titleByBoardColumn.set(`${column.boardId}:${column.id}`, column.title);
+		}
+		return titleByBoardColumn;
 	}
 }

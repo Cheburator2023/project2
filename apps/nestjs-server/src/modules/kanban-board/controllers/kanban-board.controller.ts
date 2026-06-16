@@ -23,13 +23,16 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import type {
 	CreateKanbanBoardBoardRequestDto,
+	CreateKanbanBoardColumnRequestDto,
 	CreateKanbanBoardProjectRequestDto,
 	CreateKanbanBoardTaskRequestDto,
 	KanbanBoardBoardDto,
+	KanbanBoardColumnDto,
 	KanbanBoardProjectDto,
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
 	UpdateKanbanBoardBoardRequestDto,
+	UpdateKanbanBoardColumnRequestDto,
 	UpdateKanbanBoardProjectRequestDto,
 	UpdateKanbanBoardTaskRequestDto,
 } from "@smart-anketa/api-contract";
@@ -103,6 +106,38 @@ export class KanbanBoardController {
 	@Delete("boards/:id")
 	async deleteBoard(@Param("id") id: string): Promise<void> {
 		return this.registryService.deleteBoard(id);
+	}
+
+	@Get("boards/:boardId/columns")
+	async findBoardColumns(
+		@Param("boardId") boardId: string,
+	): Promise<KanbanBoardColumnDto[]> {
+		return this.registryService.findBoardColumns(boardId);
+	}
+
+	@Post("boards/:boardId/columns")
+	async createColumn(
+		@Param("boardId") boardId: string,
+		@Body() dto: CreateKanbanBoardColumnRequestDto,
+	): Promise<KanbanBoardColumnDto> {
+		return this.registryService.createColumn(boardId, dto);
+	}
+
+	@Put("boards/:boardId/columns/:columnId")
+	async updateColumn(
+		@Param("boardId") boardId: string,
+		@Param("columnId") columnId: string,
+		@Body() dto: UpdateKanbanBoardColumnRequestDto,
+	): Promise<KanbanBoardColumnDto> {
+		return this.registryService.updateColumn(boardId, columnId, dto);
+	}
+
+	@Delete("boards/:boardId/columns/:columnId")
+	async deleteColumn(
+		@Param("boardId") boardId: string,
+		@Param("columnId") columnId: string,
+	): Promise<void> {
+		return this.registryService.deleteColumn(boardId, columnId);
 	}
 
 	@Get("tasks/registry")

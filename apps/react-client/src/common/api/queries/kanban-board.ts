@@ -1,14 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
 	CreateKanbanBoardBoardRequestDto,
+	CreateKanbanBoardColumnRequestDto,
 	CreateKanbanBoardProjectRequestDto,
 	CreateKanbanBoardTaskRequestDto,
 	KanbanBoardBoardDto,
+	KanbanBoardColumnDto,
 	KanbanBoardData,
 	KanbanBoardProjectDto,
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
 	UpdateKanbanBoardBoardRequestDto,
+	UpdateKanbanBoardColumnRequestDto,
 	UpdateKanbanBoardProjectRequestDto,
 	UpdateKanbanBoardTaskRequestDto,
 } from "@smart-anketa/api-contract";
@@ -32,6 +35,7 @@ export interface KanbanBoardImportResult {
 const invalidateTracker = (queryClient: ReturnType<typeof useQueryClient>) => {
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardProjects"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardBoards"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardColumns"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasksRegistry"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasks"] });
 };
@@ -214,6 +218,87 @@ export const useDeleteKanbanBoardTask = () => {
 	});
 };
 
+export const kanbanBoardGetBoardColumns = (
+	boardId: string,
+	signal?: AbortSignal,
+) =>
+	apiClient<KanbanBoardColumnDto[]>({
+		url: `/kanban-board/boards/${boardId}/columns`,
+		method: "GET",
+		signal,
+	});
+
+export const useKanbanBoardColumns = (boardId: string) =>
+	useQuery({
+		queryKey: ["kanbanBoardColumns", boardId],
+		enabled: Boolean(boardId),
+		queryFn: ({ signal }) => kanbanBoardGetBoardColumns(boardId, signal),
+	});
+
+export const useCreateKanbanBoardColumn = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			boardId,
+			data,
+		}: {
+			boardId: string;
+			data: CreateKanbanBoardColumnRequestDto;
+		}) =>
+			apiClient<KanbanBoardColumnDto>({
+				url: `/kanban-board/boards/${boardId}/columns`,
+				method: "POST",
+				data,
+			}),
+		onSuccess: (_column, { boardId }) => {
+			queryClient.invalidateQueries({ queryKey: ["kanbanBoardColumns", boardId] });
+		},
+	});
+};
+
+export const useUpdateKanbanBoardColumn = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			boardId,
+			columnId,
+			data,
+		}: {
+			boardId: string;
+			columnId: string;
+			data: UpdateKanbanBoardColumnRequestDto;
+		}) =>
+			apiClient<KanbanBoardColumnDto>({
+				url: `/kanban-board/boards/${boardId}/columns/${columnId}`,
+				method: "PUT",
+				data,
+			}),
+		onSuccess: (_column, { boardId }) => {
+			queryClient.invalidateQueries({ queryKey: ["kanbanBoardColumns", boardId] });
+		},
+	});
+};
+
+export const useDeleteKanbanBoardColumn = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			boardId,
+			columnId,
+		}: {
+			boardId: string;
+			columnId: string;
+		}) =>
+			apiClient<void>({
+				url: `/kanban-board/boards/${boardId}/columns/${columnId}`,
+				method: "DELETE",
+			}),
+		onSuccess: (_result, { boardId }) => {
+			queryClient.invalidateQueries({ queryKey: ["kanbanBoardColumns", boardId] });
+		},
+	});
+};
+
 export const kanbanBoardGetBoardTasks = (boardId: string, signal?: AbortSignal) =>
 	apiClient<KanbanBoardTaskRecord[]>({
 		url: `/kanban-board/boards/${boardId}/tasks`,
@@ -266,4 +351,4 @@ export const downloadBlob = (blob: Blob, filename: string) => {
 	URL.revokeObjectURL(url);
 };
 
-export type { KanbanBoardData, KanbanBoardTaskRecord };
+export type { KanbanBoardColumnDto, KanbanBoardData, KanbanBoardTaskRecord };

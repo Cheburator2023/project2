@@ -1,13 +1,20 @@
-import { KANBAN_BOARD_COLUMN_COLORS, KANBAN_BOARD_STATUSES, } from "./kanban-board.types";
-export function toBoardData(rows) {
-    const byStatus = new Map();
-    for (const status of KANBAN_BOARD_STATUSES) {
-        byStatus.set(status.id, []);
+import { defaultKanbanBoardColumns, } from "./kanban-board.types";
+export function toBoardData(rows, columns) {
+    const effectiveColumns = columns.length > 0 ? columns : defaultKanbanBoardColumns("board");
+    const sortedColumns = [...effectiveColumns].sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title));
+    const columnIds = new Set(sortedColumns.map((column) => column.id));
+    const fallbackColumnId = sortedColumns[0]?.id ?? "backlog";
+    const byColumn = new Map();
+    for (const column of sortedColumns) {
+        byColumn.set(column.id, []);
     }
     for (const task of rows) {
-        (byStatus.get(task.parentId) ?? []).push(task);
+        const columnId = columnIds.has(task.parentId)
+            ? task.parentId
+            : fallbackColumnId;
+        (byColumn.get(columnId) ?? []).push(task);
     }
-    for (const tasks of byStatus.values()) {
+    for (const tasks of byColumn.values()) {
         tasks.sort((a, b) => a.position - b.position);
     }
     const board = {
@@ -15,25 +22,25 @@ export function toBoardData(rows) {
             id: "root",
             title: "Root",
             parentId: null,
-            children: KANBAN_BOARD_STATUSES.map((status) => status.id),
-            totalChildrenCount: KANBAN_BOARD_STATUSES.length,
+            children: sortedColumns.map((column) => column.id),
+            totalChildrenCount: sortedColumns.length,
         },
     };
-    for (const status of KANBAN_BOARD_STATUSES) {
-        const tasks = byStatus.get(status.id) ?? [];
-        board[status.id] = {
-            id: status.id,
-            title: status.title,
+    for (const column of sortedColumns) {
+        const tasks = byColumn.get(column.id) ?? [];
+        board[column.id] = {
+            id: column.id,
+            title: column.title,
             parentId: "root",
             children: tasks.map((task) => task.id),
             totalChildrenCount: tasks.length,
-            content: { color: KANBAN_BOARD_COLUMN_COLORS[status.id] },
+            content: { color: column.color },
         };
         for (const task of tasks) {
             board[task.id] = {
                 id: task.id,
                 title: task.content.title,
-                parentId: status.id,
+                parentId: column.id,
                 children: [],
                 totalChildrenCount: 0,
                 type: "card",
@@ -44,10 +51,34 @@ export function toBoardData(rows) {
     }
     return board;
 }
+export function normalizeKanbanBoardData(board) {
+    const next = { ...board, root: { ...board.root } };
+    for (const columnId of board.root.children) {
+        const column = board[columnId];
+        if (!column)
+            continue;
+        const childCount = column.children.length;
+        next[columnId] = {
+            ...column,
+            totalChildrenCount: childCount,
+        };
+        for (const cardId of column.children) {
+            const card = board[cardId];
+            if (!card)
+                continue;
+            next[cardId] = {
+                ...card,
+                parentId: columnId,
+            };
+        }
+    }
+    return next;
+}
 export function fromBoardData(board, stand, now, boardId) {
     const out = [];
-    for (const status of KANBAN_BOARD_STATUSES) {
-        const column = board[status.id];
+    const columnIds = board.root?.children ?? [];
+    for (const columnId of columnIds) {
+        const column = board[columnId];
         if (!column)
             continue;
         column.children.forEach((cardId, position) => {
@@ -57,7 +88,7 @@ export function fromBoardData(board, stand, now, boardId) {
             out.push({
                 id: node.id,
                 boardId,
-                parentId: status.id,
+                parentId: columnId,
                 position,
                 content: node.content,
                 origin: node.origin ?? stand,

@@ -8,18 +8,10 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 import {
-	KANBAN_BOARD_COLUMN_COLORS,
-	KANBAN_BOARD_STATUSES,
-	type KanbanBoardStatusId,
 	type KanbanBoardTaskContent,
 } from "@smart-anketa/api-contract";
 import { useEffect, useMemo, useState } from "react";
-import {
-	Link as RouterLink,
-	useNavigate,
-	useParams,
-	useSearchParams,
-} from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
@@ -28,11 +20,12 @@ import {
 	kanbanBoardGetBoardTasks,
 	useCreateKanbanBoardTask,
 	useKanbanBoardBoards,
+	useKanbanBoardColumns,
 	useUpdateKanbanBoardTask,
 } from "@react-client/common/api/queries/kanban-board";
 import {
 	isKanbanTaskCreateRoute,
-	kanbanTaskEditPath,
+	kanbanBoardPath,
 } from "@react-client/features/kanban-board/kanban-task-paths";
 import { TrackerMarkdownEditor } from "@react-client/features/kanban-board/components/TrackerMarkdownEditor";
 import { useQuery } from "@tanstack/react-query";
@@ -44,18 +37,20 @@ const PRIORITY_OPTIONS = [
 	{ value: "high", label: "high" },
 ] as const;
 
-const DEFAULT_STATUS: KanbanBoardStatusId = "backlog";
+const DEFAULT_COLUMN_ID = "backlog";
 
 type Props = {
 	mode?: "create" | "edit";
 };
 
-function parseColumnParam(value: string | null): KanbanBoardStatusId {
-	if (!value) return DEFAULT_STATUS;
-	return (
-		KANBAN_BOARD_STATUSES.find((status) => status.id === value)?.id ??
-		DEFAULT_STATUS
-	);
+function parseColumnParam(
+	value: string | null,
+	columns: { id: string }[],
+): string {
+	if (!value) {
+		return columns[0]?.id ?? DEFAULT_COLUMN_ID;
+	}
+	return columns.find((column) => column.id === value)?.id ?? columns[0]?.id ?? DEFAULT_COLUMN_ID;
 }
 
 export function KanbanTaskPage({ mode }: Props = {}) {
@@ -70,8 +65,19 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const boardIdFromQuery = searchParams.get("boardId") ?? "";
 	const boardId = boardIdParam || boardIdFromQuery;
 
+	const [selectedBoardId, setSelectedBoardId] = useState(boardId);
+	const [title, setTitle] = useState("");
+	const [parentId, setParentId] = useState(DEFAULT_COLUMN_ID);
+	const [priority, setPriority] = useState("");
+	const [assignee, setAssignee] = useState("");
+	const [description, setDescription] = useState("");
+
 	const boardsQuery = useKanbanBoardBoards();
 	const boardMeta = boardsQuery.data?.find((item) => item.id === boardId);
+
+	const effectiveBoardId = boardId || selectedBoardId;
+	const columnsQuery = useKanbanBoardColumns(effectiveBoardId);
+	const columns = columnsQuery.data ?? [];
 
 	const tasksQuery = useQuery({
 		queryKey: ["kanbanBoardTasks", boardId],
@@ -87,15 +93,6 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const createTask = useCreateKanbanBoardTask();
 	const updateTask = useUpdateKanbanBoardTask();
 
-	const [selectedBoardId, setSelectedBoardId] = useState(boardId);
-	const [title, setTitle] = useState("");
-	const [parentId, setParentId] = useState<KanbanBoardStatusId>(
-		parseColumnParam(searchParams.get("column")),
-	);
-	const [priority, setPriority] = useState("");
-	const [assignee, setAssignee] = useState("");
-	const [description, setDescription] = useState("");
-
 	useEffect(() => {
 		if (boardId) {
 			setSelectedBoardId(boardId);
@@ -103,19 +100,39 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	}, [boardId]);
 
 	useEffect(() => {
+		if (!columns.length) return;
+		if (isCreate) {
+			setParentId(parseColumnParam(searchParams.get("column"), columns));
+			return;
+		}
+		if (task) {
+			setParentId(
+				columns.some((column) => column.id === task.parentId)
+					? task.parentId
+					: columns[0].id,
+			);
+		}
+	}, [columns, isCreate, searchParams, task]);
+
+	useEffect(() => {
+		if (!isCreate || boardIdParam) return;
+		if (!columns.length) return;
+		setParentId((current) =>
+			columns.some((column) => column.id === current) ? current : columns[0].id,
+		);
+	}, [boardIdParam, columns, isCreate, selectedBoardId]);
+
+	useEffect(() => {
 		if (isCreate || !task) return;
 		setTitle(task.content.title);
-		setParentId(task.parentId as KanbanBoardStatusId);
 		setPriority(task.content.priority ?? "");
 		setAssignee(task.content.assignee ?? "");
 		setDescription(task.content.description ?? "");
 	}, [isCreate, task]);
 
-	const effectiveBoardId = boardId || selectedBoardId;
-	const columnColor = KANBAN_BOARD_COLUMN_COLORS[parentId];
-	const statusTitle =
-		KANBAN_BOARD_STATUSES.find((status) => status.id === parentId)?.title ??
-		parentId;
+	const selectedColumn = columns.find((column) => column.id === parentId);
+	const columnColor = selectedColumn?.color ?? "#94a3b8";
+	const statusTitle = selectedColumn?.title ?? parentId;
 
 	const buildContent = (): KanbanBoardTaskContent | null => {
 		if (!title.trim()) return null;
@@ -134,14 +151,12 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		if (!content || !effectiveBoardId) return;
 
 		if (isCreate) {
-			const created = await createTask.mutateAsync({
+			await createTask.mutateAsync({
 				boardId: effectiveBoardId,
 				parentId,
 				content,
 			});
-			navigate(kanbanTaskEditPath(created.boardId, created.id), {
-				replace: true,
-			});
+			navigate(kanbanBoardPath(effectiveBoardId));
 			return;
 		}
 
@@ -154,11 +169,8 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				content,
 			},
 		});
+		navigate(kanbanBoardPath(effectiveBoardId));
 	};
-
-	const backPath = effectiveBoardId
-		? `/tracker/boards/${effectiveBoardId}`
-		: "/tracker/tasks";
 
 	const isSaving = createTask.isPending || updateTask.isPending;
 	const showForm = isCreate || Boolean(task);
@@ -268,14 +280,13 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 									select
 									label="Колонка"
 									value={parentId}
-									onChange={(event) =>
-										setParentId(event.target.value as KanbanBoardStatusId)
-									}
+									onChange={(event) => setParentId(event.target.value)}
 									fullWidth
+									disabled={columnsQuery.isLoading || !columns.length}
 								>
-									{KANBAN_BOARD_STATUSES.map((status) => (
-										<MenuItem key={status.id} value={status.id}>
-											{status.title}
+									{columns.map((column) => (
+										<MenuItem key={column.id} value={column.id}>
+											{column.title}
 										</MenuItem>
 									))}
 								</TextField>

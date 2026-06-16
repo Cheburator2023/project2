@@ -27,6 +27,30 @@ export const KANBAN_BOARD_COLUMN_COLORS = {
     review: "#7c3aed",
     done: "#16a34a",
 };
+export const KANBAN_BOARD_DEFAULT_COLUMN_COLORS = [
+    "#64748b",
+    "#2563eb",
+    "#d97706",
+    "#7c3aed",
+    "#16a34a",
+    "#db2777",
+    "#0891b2",
+    "#ca8a04",
+    "#4f46e5",
+    "#059669",
+];
+export function pickKanbanBoardColumnColor(sortOrder) {
+    return KANBAN_BOARD_DEFAULT_COLUMN_COLORS[sortOrder % KANBAN_BOARD_DEFAULT_COLUMN_COLORS.length];
+}
+export function defaultKanbanBoardColumns(boardId) {
+    return KANBAN_BOARD_STATUSES.map((status, sortOrder) => ({
+        id: status.id,
+        boardId,
+        title: status.title,
+        color: KANBAN_BOARD_COLUMN_COLORS[status.id],
+        sortOrder,
+    }));
+}
 /** @deprecated use KANBAN_BOARD_SCHEMA_VERSION */
 export const TASK_TRACKER_SCHEMA_VERSION = KANBAN_BOARD_SCHEMA_VERSION;
 /** @deprecated use KANBAN_BOARD_STATUSES */
