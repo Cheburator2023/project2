@@ -49,6 +49,8 @@
 		"date-fns": "2.30.0",
 		"html-to-image": "1.11.11",
 		"nanoid": "5.0.2",
+		"react-kanban-kit": "0.0.2-beta.7",
+		"ulid": "2.3.0",
 		"pretty-bytes": "6.1.1",
 		"@xyflow/react": "12.1.1",
 		"@smart-anketa/json-logic-ts": "*",

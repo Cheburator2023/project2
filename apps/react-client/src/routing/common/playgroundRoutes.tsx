@@ -1,6 +1,7 @@
 import type { RouteObject } from "react-router";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
 import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
+import { TaskTrackerPage } from "@react-client/features/task-tracker/pages/TaskTrackerPage";
 import { V2TemplateLogicPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplateLogicPage";
 import { V2TemplatePreviewPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplatePreviewPage";
 import { V2TemplateSchemaEditorPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplateSchemaEditorPage";
@@ -17,6 +18,10 @@ export function playgroundRoutes({
 		element: <MainLayout onLogout={onLogout} />,
 		children: [
 			{ index: true, element: <PlaygroundPage /> },
+			{
+				path: "tasks",
+				element: <TaskTrackerPage />,
+			},
 			{
 				path: "v2/templates/:templateId/read",
 				element: <V2TemplatePreviewPage />,

@@ -6,6 +6,7 @@ import { CalculationModule } from "./modules/calculation/calculation.module";
 import { DocsModule } from "./modules/docs/docs.module";
 import { QuestionnaireModule } from "./modules/questionnaire/questionnaire.module";
 import { AnketaV2Module } from "./modules/anketa-v2/anketa-v2.module";
+import { TaskTrackerModule } from "./modules/task-tracker/task-tracker.module";
 import { DatabaseModule } from "./shared/database/database.module";
 import { GodModeGuard } from "./shared/keycloak/god-mode.guard";
 import { KeycloakModule } from "./shared/keycloak/keycloak.module";
@@ -27,6 +28,7 @@ import { RetryInterceptor } from "./shared/interceptors/retry.interceptor";
 		DocsModule,
 		QuestionnaireModule,
 		AnketaV2Module,
+		TaskTrackerModule,
 		MiddlewareModule,
 	],
 	providers: [
