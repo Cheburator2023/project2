@@ -73,6 +73,7 @@ import {
 import { useSchemaEditor } from "../SchemaEditorContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "./PanelChrome";
+import { SchemaCanvasFieldSearch } from "./SchemaCanvasFieldSearch";
 import { SchemaCanvasPlaceholder } from "./SchemaCanvasPlaceholder";
 import { isCanvasStockField } from "../canvasStockFields";
 import {
@@ -373,6 +374,7 @@ function SchemaCanvasFieldRow({
 	return (
 		<Box
 			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasFieldRow}
+			data-canvas-field-pointer={fieldPointer}
 			onClick={() => setSelectedPointer(fieldPointer)}
 			sx={{
 				display: "flex",
@@ -771,8 +773,8 @@ export function SchemaCanvasPanel({
 		treeRef.current?.closeAll();
 	}, []);
 
-	const canvasExpandActions = (
-		<Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
+	const canvasToolbarActions = (
+		<Box sx={{ display: "flex", gap: 0.5, flexShrink: 0, alignItems: "center" }}>
 			<IconButton
 				size="small"
 				disabled={!canUndoDraft}
@@ -793,6 +795,7 @@ export function SchemaCanvasPanel({
 			>
 				<RedoIcon fontSize="small" />
 			</IconButton>
+			<SchemaCanvasFieldSearch treeData={treeData} treeRef={treeRef} />
 			<IconButton
 				size="small"
 				disabled={!hasExpandableNodes}
@@ -942,7 +945,7 @@ export function SchemaCanvasPanel({
 			dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.canvas}
 			title="Холст полей"
 			description="Корневые поля, группы и поля элементов массива. Перетаскивайте для изменения порядка."
-			actions={embedded ? undefined : canvasExpandActions}
+			actions={embedded ? undefined : canvasToolbarActions}
 		>
 			<Box
 				sx={{
@@ -964,7 +967,7 @@ export function SchemaCanvasPanel({
 							flexShrink: 0,
 						}}
 					>
-						{canvasExpandActions}
+						{canvasToolbarActions}
 					</Box>
 				) : null}
 				<Box

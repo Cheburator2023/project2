@@ -25,6 +25,7 @@ export const V2_TEMPLATE_EDIT_TEST_IDS = {
 	canvas: "canvas",
 	canvasUndo: "canvasUndo",
 	canvasRedo: "canvasRedo",
+	canvasSearch: "canvasSearch",
 	canvasExpandAll: "canvasExpandAll",
 	canvasCollapseAll: "canvasCollapseAll",
 	canvasDropZone: "canvasDropZone",

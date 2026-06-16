@@ -19,12 +19,16 @@ export const inputsCustomizations: Components<Theme> = {
 		styleOverrides: {
 			root: ({ theme }): any => ({
 				position: "fixed !important",
-				top: "50% !important",
-				left: "50% !important",
-				transform: "translate(-50%, -50%) !important",
-				maxHeight: "80vh",
-				maxWidth: "90vw",
+				top: "0% !important",
+				left: "0% !important",
+				transform: "translate(-0%, -0%) !important",
+				height: "100vh !important",
+				width: "100vw !important",
 				zIndex: 1300,
+				display: "flex",
+				justifyContent: "center",
+				alignItems: "center",
+
 				"&::before": {
 					content: '""',
 					position: "fixed",
