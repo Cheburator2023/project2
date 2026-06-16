@@ -3,6 +3,7 @@ import { Navigate } from "react-router";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
 import { KanbanBoardPage } from "@react-client/features/kanban-board/pages/KanbanBoardPage";
 import { KanbanTaskPage } from "@react-client/features/kanban-board/pages/KanbanTaskPage";
+import { TrackerAssigneesPage } from "@react-client/features/tracker/pages/TrackerAssigneesPage";
 import { TrackerBoardsPage } from "@react-client/features/tracker/pages/TrackerBoardsPage";
 import { TrackerProjectsPage } from "@react-client/features/tracker/pages/TrackerProjectsPage";
 import { TrackerTasksPage } from "@react-client/features/tracker/pages/TrackerTasksPage";
@@ -21,6 +22,7 @@ export function trackerRoutes({
 			{ path: "projects", element: <TrackerProjectsPage /> },
 			{ path: "boards", element: <TrackerBoardsPage /> },
 			{ path: "tasks", element: <TrackerTasksPage /> },
+			{ path: "assignees", element: <TrackerAssigneesPage /> },
 			{ path: "tasks/new", element: <KanbanTaskPage mode="create" /> },
 			{ path: "boards/:boardId", element: <KanbanBoardPage /> },
 			{ path: "boards/:boardId/tasks/:taskId", element: <KanbanTaskPage /> },

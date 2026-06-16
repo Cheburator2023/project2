@@ -24,6 +24,7 @@ import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react
 import { useNavigate, useParams } from "react-router";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import {
@@ -333,6 +334,10 @@ export function KanbanBoardPage() {
 		return <Alert severity="warning">Не указана доска</Alert>;
 	}
 
+	const boardSubtitle = boardMeta
+		? `${boardMeta.projectCode} / ${boardMeta.name} (${boardMeta.slug}) · стенд ${standId}`
+		: `${boardId} · стенд ${standId}`;
+
 	return (
 		<Flex
 			flexDirection="column"
@@ -341,7 +346,55 @@ export function KanbanBoardPage() {
 			sx={{ height: "100%" }}
 			data-test-id="kanban-board-page"
 		>
-			<Header />
+			<Header
+				leadingAccessory={
+					<Typography variant="body2" color="text.secondary" noWrap>
+						{boardSubtitle}
+					</Typography>
+				}
+			>
+				<Flex gap={1} wrap="wrap" alignItems="center">
+					<Spacer />
+					<Button
+						startIcon={<AddIcon />}
+						variant="contained"
+						size="small"
+						onClick={() => openCreateTask(defaultColumnId)}
+						disabled={isBoardBusy}
+					>
+						Добавить задачу
+					</Button>
+					<Button
+						startIcon={<DownloadIcon />}
+						variant="outlined"
+						size="small"
+						onClick={() => exportMutation.mutate()}
+						disabled={exportMutation.isPending}
+					>
+						Экспорт XLSX
+					</Button>
+					<Button
+						startIcon={<PublishIcon />}
+						variant="outlined"
+						size="small"
+						onClick={() => fileInputRef.current?.click()}
+						disabled={importMutation.isPending}
+					>
+						Импорт XLSX
+					</Button>
+					<input
+						ref={fileInputRef}
+						type="file"
+						accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+						hidden
+						onChange={(event) => {
+							const file = event.target.files?.[0];
+							event.target.value = "";
+							if (file) importMutation.mutate(file);
+						}}
+					/>
+				</Flex>
+			</Header>
 			<Card
 				sx={{
 					p: 2,
@@ -356,60 +409,6 @@ export function KanbanBoardPage() {
 					spacing={2}
 					sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}
 				>
-					<Stack
-						direction={{ xs: "column", md: "row" }}
-						justifyContent="space-between"
-						alignItems={{ xs: "stretch", md: "center" }}
-						spacing={1.5}
-						sx={{ flexShrink: 0 }}
-					>
-						<div>
-							<Typography variant="body2" color="text.secondary">
-								{boardMeta
-									? `${boardMeta.projectCode} / ${boardMeta.name} (${boardMeta.slug})`
-									: boardId}{" "}
-								· стенд {standId}
-							</Typography>
-						</div>
-						<Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-							<Button
-								startIcon={<AddIcon />}
-								variant="contained"
-								onClick={() => openCreateTask(defaultColumnId)}
-								disabled={isBoardBusy}
-							>
-								Добавить задачу
-							</Button>
-							<Button
-								startIcon={<DownloadIcon />}
-								variant="outlined"
-								onClick={() => exportMutation.mutate()}
-								disabled={exportMutation.isPending}
-							>
-								Экспорт XLSX
-							</Button>
-							<Button
-								startIcon={<PublishIcon />}
-								variant="outlined"
-								onClick={() => fileInputRef.current?.click()}
-								disabled={importMutation.isPending}
-							>
-								Импорт XLSX
-							</Button>
-							<input
-								ref={fileInputRef}
-								type="file"
-								accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-								hidden
-								onChange={(event) => {
-									const file = event.target.files?.[0];
-									event.target.value = "";
-									if (file) importMutation.mutate(file);
-								}}
-							/>
-						</Stack>
-					</Stack>
-
 					{importError ? (
 						<Alert severity="error" sx={{ flexShrink: 0 }}>
 							{importError}

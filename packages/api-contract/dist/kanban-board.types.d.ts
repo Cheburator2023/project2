@@ -99,6 +99,25 @@ export interface UpdateKanbanBoardColumnRequestDto {
     title?: string;
     color?: string;
 }
+export interface KanbanBoardAssigneeDto {
+    id: string;
+    code: string;
+    name: string;
+    email: string | null;
+    taskCount: number;
+    createdAt: string;
+    updatedAt: string;
+}
+export interface CreateKanbanBoardAssigneeRequestDto {
+    code: string;
+    name: string;
+    email?: string | null;
+}
+export interface UpdateKanbanBoardAssigneeRequestDto {
+    code?: string;
+    name?: string;
+    email?: string | null;
+}
 export declare const KANBAN_BOARD_STOCK_PROJECTS: readonly [{
     readonly code: "sum";
     readonly name: "SUM";

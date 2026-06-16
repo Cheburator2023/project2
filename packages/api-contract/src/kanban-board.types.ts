@@ -113,6 +113,28 @@ export interface UpdateKanbanBoardColumnRequestDto {
 	color?: string;
 }
 
+export interface KanbanBoardAssigneeDto {
+	id: string;
+	code: string;
+	name: string;
+	email: string | null;
+	taskCount: number;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface CreateKanbanBoardAssigneeRequestDto {
+	code: string;
+	name: string;
+	email?: string | null;
+}
+
+export interface UpdateKanbanBoardAssigneeRequestDto {
+	code?: string;
+	name?: string;
+	email?: string | null;
+}
+
 export const KANBAN_BOARD_STOCK_PROJECTS = [
 	{ code: "sum", name: "SUM", description: "Стоковый проект SUM" },
 	{ code: "sum-rm", name: "SUM-RM", description: "Стоковый проект SUM-RM" },

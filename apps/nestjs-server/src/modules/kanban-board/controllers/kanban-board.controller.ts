@@ -22,15 +22,18 @@ import {
 } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import type {
+	CreateKanbanBoardAssigneeRequestDto,
 	CreateKanbanBoardBoardRequestDto,
 	CreateKanbanBoardColumnRequestDto,
 	CreateKanbanBoardProjectRequestDto,
 	CreateKanbanBoardTaskRequestDto,
+	KanbanBoardAssigneeDto,
 	KanbanBoardBoardDto,
 	KanbanBoardColumnDto,
 	KanbanBoardProjectDto,
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
+	UpdateKanbanBoardAssigneeRequestDto,
 	UpdateKanbanBoardBoardRequestDto,
 	UpdateKanbanBoardColumnRequestDto,
 	UpdateKanbanBoardProjectRequestDto,
@@ -81,6 +84,31 @@ export class KanbanBoardController {
 	@Delete("projects/:id")
 	async deleteProject(@Param("id") id: string): Promise<void> {
 		return this.registryService.deleteProject(id);
+	}
+
+	@Get("assignees")
+	async findAllAssignees(): Promise<KanbanBoardAssigneeDto[]> {
+		return this.registryService.findAllAssignees();
+	}
+
+	@Post("assignees")
+	async createAssignee(
+		@Body() dto: CreateKanbanBoardAssigneeRequestDto,
+	): Promise<KanbanBoardAssigneeDto> {
+		return this.registryService.createAssignee(dto);
+	}
+
+	@Put("assignees/:id")
+	async updateAssignee(
+		@Param("id") id: string,
+		@Body() dto: UpdateKanbanBoardAssigneeRequestDto,
+	): Promise<KanbanBoardAssigneeDto> {
+		return this.registryService.updateAssignee(id, dto);
+	}
+
+	@Delete("assignees/:id")
+	async deleteAssignee(@Param("id") id: string): Promise<void> {
+		return this.registryService.deleteAssignee(id);
 	}
 
 	@Get("boards")

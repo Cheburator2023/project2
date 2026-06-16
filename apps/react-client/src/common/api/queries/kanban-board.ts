@@ -1,15 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
+	CreateKanbanBoardAssigneeRequestDto,
 	CreateKanbanBoardBoardRequestDto,
 	CreateKanbanBoardColumnRequestDto,
 	CreateKanbanBoardProjectRequestDto,
 	CreateKanbanBoardTaskRequestDto,
+	KanbanBoardAssigneeDto,
 	KanbanBoardBoardDto,
 	KanbanBoardColumnDto,
 	KanbanBoardData,
 	KanbanBoardProjectDto,
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
+	UpdateKanbanBoardAssigneeRequestDto,
 	UpdateKanbanBoardBoardRequestDto,
 	UpdateKanbanBoardColumnRequestDto,
 	UpdateKanbanBoardProjectRequestDto,
@@ -36,6 +39,7 @@ const invalidateTracker = (queryClient: ReturnType<typeof useQueryClient>) => {
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardProjects"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardBoards"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardColumns"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardAssignees"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasksRegistry"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasks"] });
 };
@@ -102,6 +106,61 @@ export const useDeleteKanbanBoardProject = () => {
 		mutationFn: (id: string) =>
 			apiClient<void>({
 				url: `/kanban-board/projects/${id}`,
+				method: "DELETE",
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useKanbanBoardAssignees = () =>
+	useQuery({
+		queryKey: ["kanbanBoardAssignees"],
+		queryFn: ({ signal }) =>
+			apiClient<KanbanBoardAssigneeDto[]>({
+				url: "/kanban-board/assignees",
+				method: "GET",
+				signal,
+			}),
+	});
+
+export const useCreateKanbanBoardAssignee = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (data: CreateKanbanBoardAssigneeRequestDto) =>
+			apiClient<KanbanBoardAssigneeDto>({
+				url: "/kanban-board/assignees",
+				method: "POST",
+				data,
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useUpdateKanbanBoardAssignee = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			id,
+			data,
+		}: {
+			id: string;
+			data: UpdateKanbanBoardAssigneeRequestDto;
+		}) =>
+			apiClient<KanbanBoardAssigneeDto>({
+				url: `/kanban-board/assignees/${id}`,
+				method: "PUT",
+				data,
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useDeleteKanbanBoardAssignee = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) =>
+			apiClient<void>({
+				url: `/kanban-board/assignees/${id}`,
 				method: "DELETE",
 			}),
 		onSuccess: () => invalidateTracker(queryClient),

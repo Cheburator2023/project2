@@ -10,20 +10,24 @@ import {
 	KANBAN_BOARD_COLUMN_COLORS,
 	KANBAN_BOARD_STATUSES,
 	pickKanbanBoardColumnColor,
+	type CreateKanbanBoardAssigneeRequestDto,
 	type CreateKanbanBoardBoardRequestDto,
 	type CreateKanbanBoardColumnRequestDto,
 	type CreateKanbanBoardProjectRequestDto,
 	type CreateKanbanBoardTaskRequestDto,
+	type KanbanBoardAssigneeDto,
 	type KanbanBoardBoardDto,
 	type KanbanBoardColumnDto,
 	type KanbanBoardProjectDto,
 	type KanbanBoardTaskRegistryDto,
+	type UpdateKanbanBoardAssigneeRequestDto,
 	type UpdateKanbanBoardBoardRequestDto,
 	type UpdateKanbanBoardColumnRequestDto,
 	type UpdateKanbanBoardProjectRequestDto,
 	type UpdateKanbanBoardTaskRequestDto,
 } from "@smart-anketa/api-contract";
 import { KanbanBoardEntity } from "../entities/kanban-board.entity";
+import { KanbanBoardAssigneeEntity } from "../entities/kanban-board-assignee.entity";
 import { KanbanBoardColumnEntity } from "../entities/kanban-board-column.entity";
 import { KanbanBoardProjectEntity } from "../entities/kanban-board-project.entity";
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
@@ -38,6 +42,8 @@ export class KanbanBoardRegistryService {
 		private readonly boardRepository: Repository<KanbanBoardEntity>,
 		@InjectRepository(KanbanBoardColumnEntity)
 		private readonly columnRepository: Repository<KanbanBoardColumnEntity>,
+		@InjectRepository(KanbanBoardAssigneeEntity)
+		private readonly assigneeRepository: Repository<KanbanBoardAssigneeEntity>,
 		@InjectRepository(KanbanBoardTaskEntity)
 		private readonly taskRepository: Repository<KanbanBoardTaskEntity>,
 		private readonly kanbanBoardService: KanbanBoardService,
@@ -110,6 +116,75 @@ export class KanbanBoardRegistryService {
 			throw new BadRequestException("Стоковый проект нельзя удалить");
 		}
 		await this.projectRepository.remove(project);
+	}
+
+	async findAllAssignees(): Promise<KanbanBoardAssigneeDto[]> {
+		const assignees = await this.assigneeRepository.find({
+			order: { name: "ASC" },
+		});
+		const taskCounts = await this.countTasksByAssigneeName();
+		return assignees.map((assignee) =>
+			this.toAssigneeDto(assignee, taskCounts),
+		);
+	}
+
+	async createAssignee(
+		dto: CreateKanbanBoardAssigneeRequestDto,
+	): Promise<KanbanBoardAssigneeDto> {
+		const code = dto.code.trim();
+		const name = dto.name.trim();
+		if (!code || !name) {
+			throw new BadRequestException("Код и имя обязательны");
+		}
+
+		const entity = this.assigneeRepository.create({
+			id: ulid(),
+			code,
+			name,
+			email: dto.email?.trim() || null,
+		});
+		await this.assigneeRepository.save(entity);
+		return this.toAssigneeDto(entity, new Map());
+	}
+
+	async updateAssignee(
+		id: string,
+		dto: UpdateKanbanBoardAssigneeRequestDto,
+	): Promise<KanbanBoardAssigneeDto> {
+		const assignee = await this.assigneeRepository.findOne({ where: { id } });
+		if (!assignee) throw new NotFoundException("Исполнитель не найден");
+
+		const previousName = assignee.name;
+		if (dto.code !== undefined) assignee.code = dto.code.trim();
+		if (dto.name !== undefined) assignee.name = dto.name.trim();
+		if (dto.email !== undefined) {
+			assignee.email = dto.email?.trim() || null;
+		}
+		if (!assignee.code || !assignee.name) {
+			throw new BadRequestException("Код и имя обязательны");
+		}
+
+		await this.assigneeRepository.save(assignee);
+		if (dto.name !== undefined && assignee.name !== previousName) {
+			await this.renameAssigneeInTasks(previousName, assignee.name);
+		}
+
+		const taskCounts = await this.countTasksByAssigneeName();
+		return this.toAssigneeDto(assignee, taskCounts);
+	}
+
+	async deleteAssignee(id: string): Promise<void> {
+		const assignee = await this.assigneeRepository.findOne({ where: { id } });
+		if (!assignee) throw new NotFoundException("Исполнитель не найден");
+
+		const taskCount = await this.countTasksWithAssigneeName(assignee.name);
+		if (taskCount > 0) {
+			throw new BadRequestException(
+				"Нельзя удалить исполнителя, назначенного на задачи",
+			);
+		}
+
+		await this.assigneeRepository.remove(assignee);
 	}
 
 	async findAllBoards(): Promise<KanbanBoardBoardDto[]> {
@@ -465,5 +540,55 @@ export class KanbanBoardRegistryService {
 			titleByBoardColumn.set(`${column.boardId}:${column.id}`, column.title);
 		}
 		return titleByBoardColumn;
+	}
+
+	private toAssigneeDto(
+		assignee: KanbanBoardAssigneeEntity,
+		taskCounts: Map<string, number>,
+	): KanbanBoardAssigneeDto {
+		return {
+			id: assignee.id,
+			code: assignee.code,
+			name: assignee.name,
+			email: assignee.email,
+			taskCount: taskCounts.get(assignee.name) ?? 0,
+			createdAt: assignee.createdAt.toISOString(),
+			updatedAt: assignee.updatedAt.toISOString(),
+		};
+	}
+
+	private async countTasksByAssigneeName(): Promise<Map<string, number>> {
+		const rows = await this.taskRepository
+			.createQueryBuilder("task")
+			.select("task.content->>'assignee'", "assigneeName")
+			.addSelect("COUNT(*)", "count")
+			.where("task.content->>'assignee' IS NOT NULL")
+			.andWhere("task.content->>'assignee' <> ''")
+			.groupBy("task.content->>'assignee'")
+			.getRawMany<{ assigneeName: string; count: string }>();
+
+		return new Map(rows.map((row) => [row.assigneeName, Number(row.count)]));
+	}
+
+	private async countTasksWithAssigneeName(name: string): Promise<number> {
+		return this.taskRepository
+			.createQueryBuilder("task")
+			.where("task.content->>'assignee' = :name", { name })
+			.getCount();
+	}
+
+	private async renameAssigneeInTasks(
+		oldName: string,
+		newName: string,
+	): Promise<void> {
+		const tasks = await this.taskRepository
+			.createQueryBuilder("task")
+			.where("task.content->>'assignee' = :oldName", { oldName })
+			.getMany();
+
+		for (const task of tasks) {
+			task.content = { ...task.content, assignee: newName };
+			await this.taskRepository.save(task);
+		}
 	}
 }

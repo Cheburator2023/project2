@@ -19,6 +19,7 @@ import { Header } from "@react-client/common/navigation/organisms/Header";
 import {
 	kanbanBoardGetBoardTasks,
 	useCreateKanbanBoardTask,
+	useKanbanBoardAssignees,
 	useKanbanBoardBoards,
 	useKanbanBoardColumns,
 	useUpdateKanbanBoardTask,
@@ -73,6 +74,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [description, setDescription] = useState("");
 
 	const boardsQuery = useKanbanBoardBoards();
+	const assigneesQuery = useKanbanBoardAssignees();
 	const boardMeta = boardsQuery.data?.find((item) => item.id === boardId);
 
 	const effectiveBoardId = boardId || selectedBoardId;
@@ -307,11 +309,20 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 									))}
 								</TextField>
 								<TextField
+									select
 									label="Исполнитель"
 									value={assignee}
 									onChange={(event) => setAssignee(event.target.value)}
 									fullWidth
-								/>
+								>
+									<MenuItem value="">—</MenuItem>
+									{(assigneesQuery.data ?? []).map((item) => (
+										<MenuItem key={item.id} value={item.name}>
+											{item.name}
+											{item.email ? ` (${item.email})` : ""}
+										</MenuItem>
+									))}
+								</TextField>
 							</Stack>
 							<Box sx={{ flex: 1, minHeight: 360 }}>
 								<Typography variant="subtitle2" sx={{ mb: 1 }}>
