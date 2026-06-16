@@ -98,12 +98,13 @@ export function TrackerBoardsPage() {
 					name: "slug",
 					label: "Slug",
 					required: true,
-					helperText: "Уникален в рамках проекта, например main",
+					autoGenerate: "brd",
+					helperText: "Генерируется автоматически, можно изменить",
 				},
 				{ name: "description", label: "Описание", type: "multiline" },
 				{ name: "sortOrder", label: "Порядок", type: "number" },
 			]}
-			getInitialFormValues={(row) =>
+			getInitialFormValues={(row): any =>
 				row
 					? {
 							projectId: row.projectId,
@@ -122,7 +123,9 @@ export function TrackerBoardsPage() {
 				},
 			]}
 			deleteDialogTitle="Удаление досок"
-			deleteDialogText={(count) => `Удалить ${count} доск(и/у)? Задачи на них тоже удалятся.`}
+			deleteDialogText={(count) =>
+				`Удалить ${count} доск(и/у)? Задачи на них тоже удалятся.`
+			}
 			onCreate={async (values) => {
 				await createBoard.mutateAsync({
 					projectId: values.projectId,

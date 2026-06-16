@@ -12,10 +12,12 @@ import { useEffect, useState } from "react";
 export type TrackerFormField = {
 	name: string;
 	label: string;
-	type?: "text" | "number" | "select" | "multiline";
+	type?: "text" | "number" | "select" | "multiline" | "date";
 	required?: boolean;
 	options?: { value: string; label: string }[];
 	helperText?: string;
+	/** Префикс автогенерируемого кода при создании записи */
+	autoGenerate?: string;
 };
 
 type Props = {
@@ -69,7 +71,13 @@ export function TrackerFormDialog({
 								required={field.required}
 								multiline={field.type === "multiline"}
 								minRows={field.type === "multiline" ? 2 : undefined}
-								type={field.type === "number" ? "number" : "text"}
+								type={
+									field.type === "number"
+										? "number"
+										: field.type === "date"
+											? "date"
+											: "text"
+								}
 								select={field.type === "select"}
 								helperText={field.helperText}
 								value={values[field.name] ?? ""}

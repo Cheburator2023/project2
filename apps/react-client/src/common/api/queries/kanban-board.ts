@@ -4,18 +4,27 @@ import type {
 	CreateKanbanBoardBoardRequestDto,
 	CreateKanbanBoardColumnRequestDto,
 	CreateKanbanBoardProjectRequestDto,
+	CreateKanbanBoardSprintRequestDto,
+	CreateKanbanBoardStreamRequestDto,
+	CreateKanbanBoardSupersprintRequestDto,
 	CreateKanbanBoardTaskRequestDto,
 	KanbanBoardAssigneeDto,
 	KanbanBoardBoardDto,
 	KanbanBoardColumnDto,
 	KanbanBoardData,
 	KanbanBoardProjectDto,
+	KanbanBoardSprintDto,
+	KanbanBoardStreamDto,
+	KanbanBoardSupersprintDto,
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
 	UpdateKanbanBoardAssigneeRequestDto,
 	UpdateKanbanBoardBoardRequestDto,
 	UpdateKanbanBoardColumnRequestDto,
 	UpdateKanbanBoardProjectRequestDto,
+	UpdateKanbanBoardSprintRequestDto,
+	UpdateKanbanBoardStreamRequestDto,
+	UpdateKanbanBoardSupersprintRequestDto,
 	UpdateKanbanBoardTaskRequestDto,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "../helpers/apiClient";
@@ -40,6 +49,9 @@ const invalidateTracker = (queryClient: ReturnType<typeof useQueryClient>) => {
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardBoards"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardColumns"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardAssignees"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardSupersprints"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardSprints"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardStreams"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasksRegistry"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasks"] });
 };
@@ -167,6 +179,171 @@ export const useDeleteKanbanBoardAssignee = () => {
 	});
 };
 
+export const useKanbanBoardSupersprints = () =>
+	useQuery({
+		queryKey: ["kanbanBoardSupersprints"],
+		queryFn: ({ signal }) =>
+			apiClient<KanbanBoardSupersprintDto[]>({
+				url: "/kanban-board/supersprints",
+				method: "GET",
+				signal,
+			}),
+	});
+
+export const useCreateKanbanBoardSupersprint = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (data: CreateKanbanBoardSupersprintRequestDto) =>
+			apiClient<KanbanBoardSupersprintDto>({
+				url: "/kanban-board/supersprints",
+				method: "POST",
+				data,
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useUpdateKanbanBoardSupersprint = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			id,
+			data,
+		}: {
+			id: string;
+			data: UpdateKanbanBoardSupersprintRequestDto;
+		}) =>
+			apiClient<KanbanBoardSupersprintDto>({
+				url: `/kanban-board/supersprints/${id}`,
+				method: "PUT",
+				data,
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useDeleteKanbanBoardSupersprint = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) =>
+			apiClient<void>({
+				url: `/kanban-board/supersprints/${id}`,
+				method: "DELETE",
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useKanbanBoardSprints = () =>
+	useQuery({
+		queryKey: ["kanbanBoardSprints"],
+		queryFn: ({ signal }) =>
+			apiClient<KanbanBoardSprintDto[]>({
+				url: "/kanban-board/sprints",
+				method: "GET",
+				signal,
+			}),
+	});
+
+export const useCreateKanbanBoardSprint = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (data: CreateKanbanBoardSprintRequestDto) =>
+			apiClient<KanbanBoardSprintDto>({
+				url: "/kanban-board/sprints",
+				method: "POST",
+				data,
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useUpdateKanbanBoardSprint = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			id,
+			data,
+		}: {
+			id: string;
+			data: UpdateKanbanBoardSprintRequestDto;
+		}) =>
+			apiClient<KanbanBoardSprintDto>({
+				url: `/kanban-board/sprints/${id}`,
+				method: "PUT",
+				data,
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useDeleteKanbanBoardSprint = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) =>
+			apiClient<void>({
+				url: `/kanban-board/sprints/${id}`,
+				method: "DELETE",
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useKanbanBoardStreams = () =>
+	useQuery({
+		queryKey: ["kanbanBoardStreams"],
+		queryFn: ({ signal }) =>
+			apiClient<KanbanBoardStreamDto[]>({
+				url: "/kanban-board/streams",
+				method: "GET",
+				signal,
+			}),
+	});
+
+export const useCreateKanbanBoardStream = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (data: CreateKanbanBoardStreamRequestDto) =>
+			apiClient<KanbanBoardStreamDto>({
+				url: "/kanban-board/streams",
+				method: "POST",
+				data,
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useUpdateKanbanBoardStream = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			id,
+			data,
+		}: {
+			id: string;
+			data: UpdateKanbanBoardStreamRequestDto;
+		}) =>
+			apiClient<KanbanBoardStreamDto>({
+				url: `/kanban-board/streams/${id}`,
+				method: "PUT",
+				data,
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useDeleteKanbanBoardStream = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) =>
+			apiClient<void>({
+				url: `/kanban-board/streams/${id}`,
+				method: "DELETE",
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
 export const useKanbanBoardBoards = () =>
 	useQuery({
 		queryKey: ["kanbanBoardBoards"],
@@ -231,6 +408,30 @@ export const useKanbanBoardTasksRegistry = () =>
 				method: "GET",
 				signal,
 			}),
+	});
+
+export const kanbanBoardExportTasksRegistry = (signal?: AbortSignal) =>
+	apiClient<Blob>({
+		url: "/kanban-board/tasks/registry/export",
+		method: "GET",
+		signal,
+		responseType: "blob",
+	});
+
+export const kanbanBoardExportSprintsRegistry = (signal?: AbortSignal) =>
+	apiClient<Blob>({
+		url: "/kanban-board/sprints/export",
+		method: "GET",
+		signal,
+		responseType: "blob",
+	});
+
+export const kanbanBoardExportSupersprintsRegistry = (signal?: AbortSignal) =>
+	apiClient<Blob>({
+		url: "/kanban-board/supersprints/export",
+		method: "GET",
+		signal,
+		responseType: "blob",
 	});
 
 export const useCreateKanbanBoardTask = () => {

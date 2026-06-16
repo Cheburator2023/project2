@@ -1,3 +1,23 @@
+export const KANBAN_BOARD_TASK_TYPES = [
+    { id: "epic", title: "Эпик" },
+    { id: "story", title: "История" },
+    { id: "task", title: "Задача" },
+    { id: "bug", title: "Баг" },
+    { id: "subtask", title: "Подзадача" },
+];
+export const KANBAN_BOARD_WORK_TYPES = [
+    { id: "architecture", title: "Архитектурная задача" },
+    { id: "linear", title: "Линейная деятельность" },
+    { id: "feature", title: "Новая функциональность" },
+    { id: "support", title: "Сопровождение" },
+    { id: "tech_debt", title: "Технический долг" },
+];
+export function kanbanBoardTaskTypeTitle(id) {
+    return KANBAN_BOARD_TASK_TYPES.find((item) => item.id === id)?.title ?? id ?? "";
+}
+export function kanbanBoardWorkTypeTitle(id) {
+    return KANBAN_BOARD_WORK_TYPES.find((item) => item.id === id)?.title ?? id ?? "";
+}
 export const KANBAN_BOARD_STOCK_PROJECTS = [
     { code: "sum", name: "SUM", description: "Стоковый проект SUM" },
     { code: "sum-rm", name: "SUM-RM", description: "Стоковый проект SUM-RM" },

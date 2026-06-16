@@ -23,25 +23,31 @@ export function TrackerProjectChips({
 	projectCode,
 	projectName,
 }: ProjectChipFields) {
-	if (!projectCode && !projectName) {
+	const code = projectCode?.trim();
+	const name = projectName?.trim();
+
+	if (!code && !name) {
 		return null;
 	}
 
+	const labels = [code].filter(
+		(value, index, array): value is string =>
+			Boolean(value) &&
+			array.findIndex(
+				(item) => item?.trim().toLowerCase() === value?.toLowerCase(),
+			) === index,
+	);
+
 	return (
 		<TrackerRegistryChipCell>
-			{projectCode ? (
+			{labels.map((label) => (
 				<TrackerRegistryChip
-					label={projectCode}
-					color="info"
-					title={`Код проекта: ${projectCode}`}
+					key={label}
+					label={label}
+					color={label === code ? "info" : undefined}
+					title={label === code ? `Код проекта: ${label}` : `Проект: ${label}`}
 				/>
-			) : null}
-			{projectName ? (
-				<TrackerRegistryChip
-					label={projectName}
-					title={`Проект: ${projectName}`}
-				/>
-			) : null}
+			))}
 		</TrackerRegistryChipCell>
 	);
 }
@@ -65,12 +71,6 @@ export function TrackerBoardChips({ boardSlug, boardName }: BoardChipFields) {
 					title={`Slug доски: ${boardSlug}`}
 				/>
 			) : null}
-			{boardName ? (
-				<TrackerRegistryChip
-					label={boardName}
-					title={`Доска: ${boardName}`}
-				/>
-			) : null}
 		</TrackerRegistryChipCell>
 	);
 }
@@ -78,7 +78,15 @@ export function TrackerBoardChips({ boardSlug, boardName }: BoardChipFields) {
 export const trackerProjectFilterText = ({
 	projectCode,
 	projectName,
-}: ProjectChipFields) => [projectCode, projectName].filter(Boolean).join(" ");
+}: ProjectChipFields) => {
+	const code = projectCode?.trim();
+	const name = projectName?.trim();
+	if (!code && !name) return "";
+	if (code && name && code.toLowerCase() === name.toLowerCase()) {
+		return name;
+	}
+	return [code, name].filter(Boolean).join(" ");
+};
 
 export const trackerBoardFilterText = ({
 	boardSlug,

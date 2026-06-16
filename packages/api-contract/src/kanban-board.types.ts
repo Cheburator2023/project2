@@ -4,7 +4,50 @@ export interface KanbanBoardTaskContent {
 	priority?: "low" | "medium" | "high";
 	assignee?: string;
 	tags?: string[];
+	/** @deprecated use estimatePd */
 	estimate?: number;
+	taskType?: KanbanBoardTaskTypeId;
+	workType?: KanbanBoardWorkTypeId;
+	/** Оценка в человеко-днях */
+	estimatePd?: number;
+	/** YYYY-MM-DD */
+	dueDate?: string;
+	/** Родительская задача (ручной ввод) */
+	parentTask?: string;
+	sprintId?: string;
+	streamCustomer?: string;
+}
+
+export const KANBAN_BOARD_TASK_TYPES = [
+	{ id: "epic", title: "Эпик" },
+	{ id: "story", title: "История" },
+	{ id: "task", title: "Задача" },
+	{ id: "bug", title: "Баг" },
+	{ id: "subtask", title: "Подзадача" },
+] as const;
+
+export type KanbanBoardTaskTypeId = (typeof KANBAN_BOARD_TASK_TYPES)[number]["id"];
+
+export const KANBAN_BOARD_WORK_TYPES = [
+	{ id: "architecture", title: "Архитектурная задача" },
+	{ id: "linear", title: "Линейная деятельность" },
+	{ id: "feature", title: "Новая функциональность" },
+	{ id: "support", title: "Сопровождение" },
+	{ id: "tech_debt", title: "Технический долг" },
+] as const;
+
+export type KanbanBoardWorkTypeId = (typeof KANBAN_BOARD_WORK_TYPES)[number]["id"];
+
+export function kanbanBoardTaskTypeTitle(
+	id?: KanbanBoardTaskTypeId | string,
+): string {
+	return KANBAN_BOARD_TASK_TYPES.find((item) => item.id === id)?.title ?? id ?? "";
+}
+
+export function kanbanBoardWorkTypeTitle(
+	id?: KanbanBoardWorkTypeId | string,
+): string {
+	return KANBAN_BOARD_WORK_TYPES.find((item) => item.id === id)?.title ?? id ?? "";
 }
 
 export interface KanbanBoardTaskRecord {
@@ -49,6 +92,13 @@ export interface KanbanBoardTaskRegistryDto extends KanbanBoardTaskRecord {
 	boardName: string;
 	title: string;
 	statusTitle: string;
+	taskTypeTitle: string;
+	workTypeTitle: string;
+	estimatePd?: number;
+	dueDate?: string;
+	parentTask?: string;
+	sprintTitle?: string;
+	streamCustomer?: string;
 }
 
 export interface CreateKanbanBoardProjectRequestDto {
@@ -133,6 +183,89 @@ export interface UpdateKanbanBoardAssigneeRequestDto {
 	code?: string;
 	name?: string;
 	email?: string | null;
+}
+
+export interface KanbanBoardSupersprintDto {
+	id: string;
+	code: string;
+	name: string;
+	description: string | null;
+	startDate: string;
+	endDate: string | null;
+	sprintCount: number;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface CreateKanbanBoardSupersprintRequestDto {
+	code: string;
+	name: string;
+	description?: string | null;
+	startDate: string;
+	endDate?: string | null;
+}
+
+export interface UpdateKanbanBoardSupersprintRequestDto {
+	code?: string;
+	name?: string;
+	description?: string | null;
+	startDate?: string;
+	endDate?: string | null;
+}
+
+export interface KanbanBoardSprintDto {
+	id: string;
+	supersprintId: string | null;
+	supersprintCode: string;
+	supersprintName: string;
+	code: string;
+	name: string;
+	description: string | null;
+	startDate: string;
+	endDate: string | null;
+	taskCount: number;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface CreateKanbanBoardSprintRequestDto {
+	supersprintId?: string | null;
+	code: string;
+	name: string;
+	description?: string | null;
+	startDate: string;
+	endDate?: string | null;
+}
+
+export interface UpdateKanbanBoardSprintRequestDto {
+	supersprintId?: string | null;
+	code?: string;
+	name?: string;
+	description?: string | null;
+	startDate?: string;
+	endDate?: string | null;
+}
+
+export interface KanbanBoardStreamDto {
+	id: string;
+	code: string;
+	name: string;
+	description: string | null;
+	taskCount: number;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface CreateKanbanBoardStreamRequestDto {
+	code: string;
+	name: string;
+	description?: string | null;
+}
+
+export interface UpdateKanbanBoardStreamRequestDto {
+	code?: string;
+	name?: string;
+	description?: string | null;
 }
 
 export const KANBAN_BOARD_STOCK_PROJECTS = [

@@ -10,6 +10,7 @@ import {
 	trackerProjectFilterText,
 } from "@react-client/features/tracker/components/TrackerRegistryChipCell";
 import { TrackerRegistryPage } from "@react-client/features/tracker/components/TrackerRegistryPage";
+import { TrackerRegistryExportButton } from "@react-client/features/tracker/components/TrackerRegistryExportButton";
 import { trackerDateFormatter } from "@react-client/features/tracker/components/TrackerRegistryGrid";
 import { kanbanTaskEditPath } from "@react-client/features/kanban-board/kanban-task-paths";
 import type { KanbanBoardTaskRegistryDto } from "@smart-anketa/api-contract";
@@ -65,6 +66,18 @@ export function TrackerTasksPage() {
 					) : null,
 			},
 			{ field: "statusTitle", headerName: "Статус", width: 130 },
+			{ field: "taskTypeTitle", headerName: "Тип", width: 110 },
+			{ field: "workTypeTitle", headerName: "Тип работ", minWidth: 180, flex: 1 },
+			{
+				field: "estimatePd",
+				headerName: "Оценка, чд",
+				width: 110,
+				type: "numericColumn",
+			},
+			{ field: "dueDate", headerName: "Срок", width: 120 },
+			{ field: "parentTask", headerName: "Родитель", minWidth: 140, flex: 0.8 },
+			{ field: "sprintTitle", headerName: "Спринт", minWidth: 140, flex: 0.8 },
+			{ field: "streamCustomer", headerName: "Стрим", minWidth: 140, flex: 0.8 },
 			{ field: "origin", headerName: "Стенд", width: 120 },
 			{
 				field: "updatedAt",
@@ -94,6 +107,7 @@ export function TrackerTasksPage() {
 					await deleteTask.mutateAsync(row.id);
 				}
 			}}
+			extraActions={<TrackerRegistryExportButton kind="tasks" />}
 		/>
 	);
 }

@@ -11,6 +11,7 @@ import { alpha } from "@mui/material/styles";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	fromBoardData,
+	kanbanBoardTaskTypeTitle,
 	normalizeKanbanBoardData,
 	toBoardData,
 	type KanbanBoardColumnDto,
@@ -95,7 +96,12 @@ function TaskCardContent({
 						{displayTitle}
 					</Typography>
 				) : null}
-				{content?.priority || content?.assignee || origin ? (
+				{content?.priority ||
+				content?.assignee ||
+				content?.taskType ||
+				content?.estimatePd ||
+				content?.dueDate ||
+				origin ? (
 					<Stack
 						direction="row"
 						spacing={0.5}
@@ -103,11 +109,24 @@ function TaskCardContent({
 						useFlexGap
 						alignItems="center"
 					>
+						{content?.taskType ? (
+							<Chip
+								size="small"
+								variant="outlined"
+								label={kanbanBoardTaskTypeTitle(content.taskType)}
+							/>
+						) : null}
 						{content?.priority ? (
 							<Chip size="small" label={content.priority} />
 						) : null}
 						{content?.assignee ? (
 							<Chip size="small" variant="outlined" label={content.assignee} />
+						) : null}
+						{content?.estimatePd !== undefined ? (
+							<Chip size="small" variant="outlined" label={`${content.estimatePd} чд`} />
+						) : null}
+						{content?.dueDate ? (
+							<Chip size="small" variant="outlined" label={content.dueDate} />
 						) : null}
 						{origin ? (
 							<Chip

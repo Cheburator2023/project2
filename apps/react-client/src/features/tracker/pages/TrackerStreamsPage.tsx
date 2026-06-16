@@ -1,26 +1,25 @@
 import type { ColDef } from "ag-grid-community";
 import {
-	useCreateKanbanBoardAssignee,
-	useDeleteKanbanBoardAssignee,
-	useKanbanBoardAssignees,
-	useUpdateKanbanBoardAssignee,
+	useCreateKanbanBoardStream,
+	useDeleteKanbanBoardStream,
+	useKanbanBoardStreams,
+	useUpdateKanbanBoardStream,
 } from "@react-client/common/api/queries/kanban-board";
 import { TrackerRegistryPage } from "@react-client/features/tracker/components/TrackerRegistryPage";
 import { trackerDateFormatter } from "@react-client/features/tracker/components/TrackerRegistryGrid";
-import type { KanbanBoardAssigneeDto } from "@smart-anketa/api-contract";
+import type { KanbanBoardStreamDto } from "@smart-anketa/api-contract";
 import { useMemo } from "react";
 
-export function TrackerAssigneesPage() {
-	const { data = [], isLoading } = useKanbanBoardAssignees();
-	const createAssignee = useCreateKanbanBoardAssignee();
-	const updateAssignee = useUpdateKanbanBoardAssignee();
-	const deleteAssignee = useDeleteKanbanBoardAssignee();
+export function TrackerStreamsPage() {
+	const { data = [], isLoading } = useKanbanBoardStreams();
+	const createStream = useCreateKanbanBoardStream();
+	const updateStream = useUpdateKanbanBoardStream();
+	const deleteStream = useDeleteKanbanBoardStream();
 
-	const columnDefs = useMemo<ColDef<KanbanBoardAssigneeDto>[]>(
+	const columnDefs = useMemo<ColDef<KanbanBoardStreamDto>[]>(
 		() => [
 			{ field: "code", headerName: "Код", flex: 1, minWidth: 120 },
-			{ field: "name", headerName: "Имя", flex: 1.2, minWidth: 160 },
-			{ field: "email", headerName: "Email", flex: 1.2, minWidth: 180 },
+			{ field: "name", headerName: "Стрим-заказчик", flex: 1.2, minWidth: 180 },
 			{
 				field: "taskCount",
 				headerName: "Задач",
@@ -39,9 +38,9 @@ export function TrackerAssigneesPage() {
 
 	return (
 		<TrackerRegistryPage
-			title="исполнитель"
-			createLabel="Создать исполнителя"
-			searchPlaceholder="Поиск по коду, имени, email…"
+			title="стрим"
+			createLabel="Создать стрим"
+			searchPlaceholder="Поиск по коду, названию…"
 			rowData={data}
 			columnDefs={columnDefs}
 			loading={isLoading}
@@ -50,46 +49,46 @@ export function TrackerAssigneesPage() {
 					name: "code",
 					label: "Код",
 					required: true,
-					autoGenerate: "usr",
+					autoGenerate: "str",
 					helperText: "Генерируется автоматически, можно изменить",
 				},
-				{ name: "name", label: "Имя", required: true },
-				{ name: "email", label: "Email" },
+				{ name: "name", label: "Стрим-заказчик", required: true },
+				{ name: "description", label: "Описание", type: "multiline" },
 			]}
 			getInitialFormValues={(row) =>
 				row
 					? {
 							code: row.code,
 							name: row.name,
-							email: row.email ?? "",
+							description: row.description ?? "",
 						}
 					: {}
 			}
 			canDelete={(row) => row.taskCount === 0}
-			deleteDialogTitle="Удаление исполнителей"
+			deleteDialogTitle="Удаление стримов"
 			deleteDialogText={(count) =>
-				`Удалить ${count} исполнител(я/ей)? Исполнителей с задачами удалить нельзя.`
+				`Удалить ${count} стрим(а/ов)? Стримы, указанные в задачах, удалить нельзя.`
 			}
 			onCreate={async (values) => {
-				await createAssignee.mutateAsync({
+				await createStream.mutateAsync({
 					code: values.code,
 					name: values.name,
-					email: values.email || null,
+					description: values.description || null,
 				});
 			}}
 			onUpdate={async (row, values) => {
-				await updateAssignee.mutateAsync({
+				await updateStream.mutateAsync({
 					id: row.id,
 					data: {
 						code: values.code,
 						name: values.name,
-						email: values.email || null,
+						description: values.description || null,
 					},
 				});
 			}}
 			onDelete={async (rows) => {
 				for (const row of rows) {
-					await deleteAssignee.mutateAsync(row.id);
+					await deleteStream.mutateAsync(row.id);
 				}
 			}}
 		/>

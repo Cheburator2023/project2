@@ -103,6 +103,27 @@ export const commonRoutes = {
 		showInNavbar: true,
 		navbar: { group: "tracker", order: 3 },
 	},
+	trackerSupersprints: {
+		rootPath: "/tracker/supersprints",
+		name: "Суперспринты",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "tracker", order: 4 },
+	},
+	trackerSprints: {
+		rootPath: "/tracker/sprints",
+		name: "Спринты",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "tracker", order: 5 },
+	},
+	trackerStreams: {
+		rootPath: "/tracker/streams",
+		name: "Стримы",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "tracker", order: 6 },
+	},
 	trackerTaskCreate: {
 		rootPath: "/tracker/tasks/new",
 		name: "Новая задача",

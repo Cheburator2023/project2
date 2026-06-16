@@ -1,8 +1,30 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TASK_STATUSES = exports.TASK_TRACKER_SCHEMA_VERSION = exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS = exports.KANBAN_BOARD_COLUMN_COLORS = exports.KANBAN_BOARD_STATUSES = exports.KANBAN_BOARD_SCHEMA_VERSION = exports.KANBAN_BOARD_STOCK_PROJECTS = void 0;
+exports.TASK_STATUSES = exports.TASK_TRACKER_SCHEMA_VERSION = exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS = exports.KANBAN_BOARD_COLUMN_COLORS = exports.KANBAN_BOARD_STATUSES = exports.KANBAN_BOARD_SCHEMA_VERSION = exports.KANBAN_BOARD_STOCK_PROJECTS = exports.KANBAN_BOARD_WORK_TYPES = exports.KANBAN_BOARD_TASK_TYPES = void 0;
+exports.kanbanBoardTaskTypeTitle = kanbanBoardTaskTypeTitle;
+exports.kanbanBoardWorkTypeTitle = kanbanBoardWorkTypeTitle;
 exports.pickKanbanBoardColumnColor = pickKanbanBoardColumnColor;
 exports.defaultKanbanBoardColumns = defaultKanbanBoardColumns;
+exports.KANBAN_BOARD_TASK_TYPES = [
+    { id: "epic", title: "Эпик" },
+    { id: "story", title: "История" },
+    { id: "task", title: "Задача" },
+    { id: "bug", title: "Баг" },
+    { id: "subtask", title: "Подзадача" },
+];
+exports.KANBAN_BOARD_WORK_TYPES = [
+    { id: "architecture", title: "Архитектурная задача" },
+    { id: "linear", title: "Линейная деятельность" },
+    { id: "feature", title: "Новая функциональность" },
+    { id: "support", title: "Сопровождение" },
+    { id: "tech_debt", title: "Технический долг" },
+];
+function kanbanBoardTaskTypeTitle(id) {
+    return exports.KANBAN_BOARD_TASK_TYPES.find((item) => item.id === id)?.title ?? id ?? "";
+}
+function kanbanBoardWorkTypeTitle(id) {
+    return exports.KANBAN_BOARD_WORK_TYPES.find((item) => item.id === id)?.title ?? id ?? "";
+}
 exports.KANBAN_BOARD_STOCK_PROJECTS = [
     { code: "sum", name: "SUM", description: "Стоковый проект SUM" },
     { code: "sum-rm", name: "SUM-RM", description: "Стоковый проект SUM-RM" },

@@ -4,8 +4,55 @@ export interface KanbanBoardTaskContent {
     priority?: "low" | "medium" | "high";
     assignee?: string;
     tags?: string[];
+    /** @deprecated use estimatePd */
     estimate?: number;
+    taskType?: KanbanBoardTaskTypeId;
+    workType?: KanbanBoardWorkTypeId;
+    /** Оценка в человеко-днях */
+    estimatePd?: number;
+    /** YYYY-MM-DD */
+    dueDate?: string;
+    /** Родительская задача (ручной ввод) */
+    parentTask?: string;
+    sprintId?: string;
+    streamCustomer?: string;
 }
+export declare const KANBAN_BOARD_TASK_TYPES: readonly [{
+    readonly id: "epic";
+    readonly title: "Эпик";
+}, {
+    readonly id: "story";
+    readonly title: "История";
+}, {
+    readonly id: "task";
+    readonly title: "Задача";
+}, {
+    readonly id: "bug";
+    readonly title: "Баг";
+}, {
+    readonly id: "subtask";
+    readonly title: "Подзадача";
+}];
+export type KanbanBoardTaskTypeId = (typeof KANBAN_BOARD_TASK_TYPES)[number]["id"];
+export declare const KANBAN_BOARD_WORK_TYPES: readonly [{
+    readonly id: "architecture";
+    readonly title: "Архитектурная задача";
+}, {
+    readonly id: "linear";
+    readonly title: "Линейная деятельность";
+}, {
+    readonly id: "feature";
+    readonly title: "Новая функциональность";
+}, {
+    readonly id: "support";
+    readonly title: "Сопровождение";
+}, {
+    readonly id: "tech_debt";
+    readonly title: "Технический долг";
+}];
+export type KanbanBoardWorkTypeId = (typeof KANBAN_BOARD_WORK_TYPES)[number]["id"];
+export declare function kanbanBoardTaskTypeTitle(id?: KanbanBoardTaskTypeId | string): string;
+export declare function kanbanBoardWorkTypeTitle(id?: KanbanBoardWorkTypeId | string): string;
 export interface KanbanBoardTaskRecord {
     id: string;
     boardId: string;
@@ -45,6 +92,13 @@ export interface KanbanBoardTaskRegistryDto extends KanbanBoardTaskRecord {
     boardName: string;
     title: string;
     statusTitle: string;
+    taskTypeTitle: string;
+    workTypeTitle: string;
+    estimatePd?: number;
+    dueDate?: string;
+    parentTask?: string;
+    sprintTitle?: string;
+    streamCustomer?: string;
 }
 export interface CreateKanbanBoardProjectRequestDto {
     code: string;
@@ -117,6 +171,80 @@ export interface UpdateKanbanBoardAssigneeRequestDto {
     code?: string;
     name?: string;
     email?: string | null;
+}
+export interface KanbanBoardSupersprintDto {
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    startDate: string;
+    endDate: string | null;
+    sprintCount: number;
+    createdAt: string;
+    updatedAt: string;
+}
+export interface CreateKanbanBoardSupersprintRequestDto {
+    code: string;
+    name: string;
+    description?: string | null;
+    startDate: string;
+    endDate?: string | null;
+}
+export interface UpdateKanbanBoardSupersprintRequestDto {
+    code?: string;
+    name?: string;
+    description?: string | null;
+    startDate?: string;
+    endDate?: string | null;
+}
+export interface KanbanBoardSprintDto {
+    id: string;
+    supersprintId: string | null;
+    supersprintCode: string;
+    supersprintName: string;
+    code: string;
+    name: string;
+    description: string | null;
+    startDate: string;
+    endDate: string | null;
+    taskCount: number;
+    createdAt: string;
+    updatedAt: string;
+}
+export interface CreateKanbanBoardSprintRequestDto {
+    supersprintId?: string | null;
+    code: string;
+    name: string;
+    description?: string | null;
+    startDate: string;
+    endDate?: string | null;
+}
+export interface UpdateKanbanBoardSprintRequestDto {
+    supersprintId?: string | null;
+    code?: string;
+    name?: string;
+    description?: string | null;
+    startDate?: string;
+    endDate?: string | null;
+}
+export interface KanbanBoardStreamDto {
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    taskCount: number;
+    createdAt: string;
+    updatedAt: string;
+}
+export interface CreateKanbanBoardStreamRequestDto {
+    code: string;
+    name: string;
+    description?: string | null;
+}
+export interface UpdateKanbanBoardStreamRequestDto {
+    code?: string;
+    name?: string;
+    description?: string | null;
 }
 export declare const KANBAN_BOARD_STOCK_PROJECTS: readonly [{
     readonly code: "sum";

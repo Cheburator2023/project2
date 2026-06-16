@@ -9,6 +9,8 @@ import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 import {
 	type KanbanBoardTaskContent,
+	KANBAN_BOARD_TASK_TYPES,
+	KANBAN_BOARD_WORK_TYPES,
 } from "@smart-anketa/api-contract";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
@@ -22,6 +24,8 @@ import {
 	useKanbanBoardAssignees,
 	useKanbanBoardBoards,
 	useKanbanBoardColumns,
+	useKanbanBoardSprints,
+	useKanbanBoardStreams,
 	useUpdateKanbanBoardTask,
 } from "@react-client/common/api/queries/kanban-board";
 import {
@@ -71,10 +75,19 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [parentId, setParentId] = useState(DEFAULT_COLUMN_ID);
 	const [priority, setPriority] = useState("");
 	const [assignee, setAssignee] = useState("");
+	const [taskType, setTaskType] = useState("");
+	const [workType, setWorkType] = useState("");
+	const [estimatePd, setEstimatePd] = useState("");
+	const [dueDate, setDueDate] = useState("");
+	const [parentTask, setParentTask] = useState("");
+	const [sprintId, setSprintId] = useState("");
+	const [streamCustomer, setStreamCustomer] = useState("");
 	const [description, setDescription] = useState("");
 
 	const boardsQuery = useKanbanBoardBoards();
 	const assigneesQuery = useKanbanBoardAssignees();
+	const sprintsQuery = useKanbanBoardSprints();
+	const streamsQuery = useKanbanBoardStreams();
 	const boardMeta = boardsQuery.data?.find((item) => item.id === boardId);
 
 	const effectiveBoardId = boardId || selectedBoardId;
@@ -129,6 +142,15 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		setTitle(task.content.title);
 		setPriority(task.content.priority ?? "");
 		setAssignee(task.content.assignee ?? "");
+		setTaskType(task.content.taskType ?? "");
+		setWorkType(task.content.workType ?? "");
+		setEstimatePd(
+			task.content.estimatePd !== undefined ? String(task.content.estimatePd) : "",
+		);
+		setDueDate(task.content.dueDate ?? "");
+		setParentTask(task.content.parentTask ?? "");
+		setSprintId(task.content.sprintId ?? "");
+		setStreamCustomer(task.content.streamCustomer ?? "");
 		setDescription(task.content.description ?? "");
 	}, [isCreate, task]);
 
@@ -138,6 +160,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 
 	const buildContent = (): KanbanBoardTaskContent | null => {
 		if (!title.trim()) return null;
+		const parsedEstimate = estimatePd.trim() ? Number(estimatePd) : undefined;
 		return {
 			title: title.trim(),
 			description: description || undefined,
@@ -145,6 +168,20 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				? (priority as KanbanBoardTaskContent["priority"])
 				: undefined,
 			assignee: assignee.trim() || undefined,
+			taskType: taskType
+				? (taskType as KanbanBoardTaskContent["taskType"])
+				: undefined,
+			workType: workType
+				? (workType as KanbanBoardTaskContent["workType"])
+				: undefined,
+			estimatePd:
+				parsedEstimate !== undefined && !Number.isNaN(parsedEstimate)
+					? parsedEstimate
+					: undefined,
+			dueDate: dueDate.trim() || undefined,
+			parentTask: parentTask.trim() || undefined,
+			sprintId: sprintId || undefined,
+			streamCustomer: streamCustomer.trim() || undefined,
 		};
 	};
 
@@ -320,6 +357,89 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 										<MenuItem key={item.id} value={item.name}>
 											{item.name}
 											{item.email ? ` (${item.email})` : ""}
+										</MenuItem>
+									))}
+								</TextField>
+							</Stack>
+							<Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+								<TextField
+									select
+									label="Тип задачи"
+									value={taskType}
+									onChange={(event) => setTaskType(event.target.value)}
+									fullWidth
+								>
+									<MenuItem value="">—</MenuItem>
+									{KANBAN_BOARD_TASK_TYPES.map((option) => (
+										<MenuItem key={option.id} value={option.id}>
+											{option.title}
+										</MenuItem>
+									))}
+								</TextField>
+								<TextField
+									select
+									label="Тип работ"
+									value={workType}
+									onChange={(event) => setWorkType(event.target.value)}
+									fullWidth
+								>
+									<MenuItem value="">—</MenuItem>
+									{KANBAN_BOARD_WORK_TYPES.map((option) => (
+										<MenuItem key={option.id} value={option.id}>
+											{option.title}
+										</MenuItem>
+									))}
+								</TextField>
+								<TextField
+									label="Оценка, чд"
+									type="number"
+									value={estimatePd}
+									onChange={(event) => setEstimatePd(event.target.value)}
+									fullWidth
+									inputProps={{ min: 0, step: 0.5 }}
+								/>
+							</Stack>
+							<Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+								<TextField
+									label="Срок исполнения"
+									type="date"
+									value={dueDate}
+									onChange={(event) => setDueDate(event.target.value)}
+									fullWidth
+									InputLabelProps={{ shrink: true }}
+								/>
+								<TextField
+									label="Родительская задача"
+									value={parentTask}
+									onChange={(event) => setParentTask(event.target.value)}
+									fullWidth
+									placeholder="Ключ или название родительской задачи"
+								/>
+								<TextField
+									select
+									label="Спринт"
+									value={sprintId}
+									onChange={(event) => setSprintId(event.target.value)}
+									fullWidth
+								>
+									<MenuItem value="">—</MenuItem>
+									{(sprintsQuery.data ?? []).map((item) => (
+										<MenuItem key={item.id} value={item.id}>
+											{item.code} — {item.name}
+										</MenuItem>
+									))}
+								</TextField>
+								<TextField
+									select
+									label="Стрим-заказчик"
+									value={streamCustomer}
+									onChange={(event) => setStreamCustomer(event.target.value)}
+									fullWidth
+								>
+									<MenuItem value="">—</MenuItem>
+									{(streamsQuery.data ?? []).map((item) => (
+										<MenuItem key={item.id} value={item.name}>
+											{item.name}
 										</MenuItem>
 									))}
 								</TextField>

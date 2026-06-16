@@ -26,17 +26,26 @@ import type {
 	CreateKanbanBoardBoardRequestDto,
 	CreateKanbanBoardColumnRequestDto,
 	CreateKanbanBoardProjectRequestDto,
+	CreateKanbanBoardSprintRequestDto,
+	CreateKanbanBoardStreamRequestDto,
+	CreateKanbanBoardSupersprintRequestDto,
 	CreateKanbanBoardTaskRequestDto,
 	KanbanBoardAssigneeDto,
 	KanbanBoardBoardDto,
 	KanbanBoardColumnDto,
 	KanbanBoardProjectDto,
+	KanbanBoardSprintDto,
+	KanbanBoardStreamDto,
+	KanbanBoardSupersprintDto,
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
 	UpdateKanbanBoardAssigneeRequestDto,
 	UpdateKanbanBoardBoardRequestDto,
 	UpdateKanbanBoardColumnRequestDto,
 	UpdateKanbanBoardProjectRequestDto,
+	UpdateKanbanBoardSprintRequestDto,
+	UpdateKanbanBoardStreamRequestDto,
+	UpdateKanbanBoardSupersprintRequestDto,
 	UpdateKanbanBoardTaskRequestDto,
 } from "@smart-anketa/api-contract";
 import type { Response } from "express";
@@ -111,6 +120,81 @@ export class KanbanBoardController {
 		return this.registryService.deleteAssignee(id);
 	}
 
+	@Get("supersprints")
+	async findAllSupersprints(): Promise<KanbanBoardSupersprintDto[]> {
+		return this.registryService.findAllSupersprints();
+	}
+
+	@Post("supersprints")
+	async createSupersprint(
+		@Body() dto: CreateKanbanBoardSupersprintRequestDto,
+	): Promise<KanbanBoardSupersprintDto> {
+		return this.registryService.createSupersprint(dto);
+	}
+
+	@Put("supersprints/:id")
+	async updateSupersprint(
+		@Param("id") id: string,
+		@Body() dto: UpdateKanbanBoardSupersprintRequestDto,
+	): Promise<KanbanBoardSupersprintDto> {
+		return this.registryService.updateSupersprint(id, dto);
+	}
+
+	@Delete("supersprints/:id")
+	async deleteSupersprint(@Param("id") id: string): Promise<void> {
+		return this.registryService.deleteSupersprint(id);
+	}
+
+	@Get("sprints")
+	async findAllSprints(): Promise<KanbanBoardSprintDto[]> {
+		return this.registryService.findAllSprints();
+	}
+
+	@Post("sprints")
+	async createSprint(
+		@Body() dto: CreateKanbanBoardSprintRequestDto,
+	): Promise<KanbanBoardSprintDto> {
+		return this.registryService.createSprint(dto);
+	}
+
+	@Put("sprints/:id")
+	async updateSprint(
+		@Param("id") id: string,
+		@Body() dto: UpdateKanbanBoardSprintRequestDto,
+	): Promise<KanbanBoardSprintDto> {
+		return this.registryService.updateSprint(id, dto);
+	}
+
+	@Delete("sprints/:id")
+	async deleteSprint(@Param("id") id: string): Promise<void> {
+		return this.registryService.deleteSprint(id);
+	}
+
+	@Get("streams")
+	async findAllStreams(): Promise<KanbanBoardStreamDto[]> {
+		return this.registryService.findAllStreams();
+	}
+
+	@Post("streams")
+	async createStream(
+		@Body() dto: CreateKanbanBoardStreamRequestDto,
+	): Promise<KanbanBoardStreamDto> {
+		return this.registryService.createStream(dto);
+	}
+
+	@Put("streams/:id")
+	async updateStream(
+		@Param("id") id: string,
+		@Body() dto: UpdateKanbanBoardStreamRequestDto,
+	): Promise<KanbanBoardStreamDto> {
+		return this.registryService.updateStream(id, dto);
+	}
+
+	@Delete("streams/:id")
+	async deleteStream(@Param("id") id: string): Promise<void> {
+		return this.registryService.deleteStream(id);
+	}
+
 	@Get("boards")
 	async findAllBoards(): Promise<KanbanBoardBoardDto[]> {
 		return this.registryService.findAllBoards();
@@ -171,6 +255,75 @@ export class KanbanBoardController {
 	@Get("tasks/registry")
 	async findTasksRegistry(): Promise<KanbanBoardTaskRegistryDto[]> {
 		return this.registryService.findAllTasksRegistry();
+	}
+
+	@Get("tasks/registry/export")
+	@ApiResponse({
+		status: HttpStatus.OK,
+		content: {
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+				schema: { type: "string", format: "binary" },
+			},
+		},
+	})
+	async exportTasksRegistry(@Res() res: Response): Promise<void> {
+		const buffer = await this.registryService.exportTasksRegistryXlsx();
+		const date = new Date().toISOString().slice(0, 10);
+		res.setHeader(
+			"Content-Type",
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		);
+		res.setHeader(
+			"Content-Disposition",
+			`attachment; filename=tracker-tasks-${date}.xlsx`,
+		);
+		res.end(buffer);
+	}
+
+	@Get("sprints/export")
+	@ApiResponse({
+		status: HttpStatus.OK,
+		content: {
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+				schema: { type: "string", format: "binary" },
+			},
+		},
+	})
+	async exportSprintsRegistry(@Res() res: Response): Promise<void> {
+		const buffer = await this.registryService.exportSprintsRegistryXlsx();
+		const date = new Date().toISOString().slice(0, 10);
+		res.setHeader(
+			"Content-Type",
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		);
+		res.setHeader(
+			"Content-Disposition",
+			`attachment; filename=tracker-sprints-${date}.xlsx`,
+		);
+		res.end(buffer);
+	}
+
+	@Get("supersprints/export")
+	@ApiResponse({
+		status: HttpStatus.OK,
+		content: {
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+				schema: { type: "string", format: "binary" },
+			},
+		},
+	})
+	async exportSupersprintsRegistry(@Res() res: Response): Promise<void> {
+		const buffer = await this.registryService.exportSupersprintsRegistryXlsx();
+		const date = new Date().toISOString().slice(0, 10);
+		res.setHeader(
+			"Content-Type",
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		);
+		res.setHeader(
+			"Content-Disposition",
+			`attachment; filename=tracker-supersprints-${date}.xlsx`,
+		);
+		res.end(buffer);
 	}
 
 	@Post("tasks")

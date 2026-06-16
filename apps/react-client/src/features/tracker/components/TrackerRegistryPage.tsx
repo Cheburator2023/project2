@@ -19,6 +19,7 @@ import {
 	TrackerFormDialog,
 	type TrackerFormField,
 } from "./TrackerFormDialog";
+import { buildTrackerCreateFormValues } from "../trackerAutoCode";
 
 type Props<TRow extends object> = {
 	title: string;
@@ -67,6 +68,9 @@ export function TrackerRegistryPage<TRow extends object>({
 	const [selected, setSelected] = useState<TRow[]>([]);
 	const [formOpen, setFormOpen] = useState(false);
 	const [editingRow, setEditingRow] = useState<TRow | null>(null);
+	const [createFormValues, setCreateFormValues] = useState<Record<string, string>>(
+		{},
+	);
 	const [pendingDelete, setPendingDelete] = useState<TRow[] | null>(null);
 	const [isSaving, setIsSaving] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
@@ -78,6 +82,19 @@ export function TrackerRegistryPage<TRow extends object>({
 
 	const useFormDialog = !onCreateClick && !onEditClick;
 
+	const openCreateForm = () => {
+		setEditingRow(null);
+		setCreateFormValues(
+			buildTrackerCreateFormValues(formFields, getInitialFormValues?.(null) ?? {}),
+		);
+		setFormOpen(true);
+	};
+
+	const openEditForm = (row: TRow) => {
+		setEditingRow(row);
+		setFormOpen(true);
+	};
+
 	const allContextActions = useMemo<TrackerRegistryContextAction<TRow>[]>(
 		() => [
 			{
@@ -87,8 +104,7 @@ export function TrackerRegistryPage<TRow extends object>({
 						onEditClick(row);
 						return;
 					}
-					setEditingRow(row);
-					setFormOpen(true);
+					openEditForm(row);
 				},
 			},
 			...contextActions,
@@ -152,8 +168,7 @@ export function TrackerRegistryPage<TRow extends object>({
 								onCreateClick();
 								return;
 							}
-							setEditingRow(null);
-							setFormOpen(true);
+							openCreateForm();
 						}}
 					>
 						{createLabel}
@@ -185,7 +200,11 @@ export function TrackerRegistryPage<TRow extends object>({
 					open={formOpen}
 					title={editingRow ? `Редактирование: ${title}` : `Новый: ${title}`}
 					fields={formFields}
-					initialValues={getInitialFormValues?.(editingRow)}
+					initialValues={
+						editingRow
+							? getInitialFormValues?.(editingRow)
+							: createFormValues
+					}
 					isSubmitting={isSaving}
 					onClose={() => {
 						setFormOpen(false);

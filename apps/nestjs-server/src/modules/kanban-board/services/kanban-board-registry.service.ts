@@ -9,29 +9,48 @@ import { ulid } from "ulid";
 import {
 	KANBAN_BOARD_COLUMN_COLORS,
 	KANBAN_BOARD_STATUSES,
+	kanbanBoardTaskTypeTitle,
+	kanbanBoardWorkTypeTitle,
 	pickKanbanBoardColumnColor,
 	type CreateKanbanBoardAssigneeRequestDto,
 	type CreateKanbanBoardBoardRequestDto,
 	type CreateKanbanBoardColumnRequestDto,
 	type CreateKanbanBoardProjectRequestDto,
+	type CreateKanbanBoardSprintRequestDto,
+	type CreateKanbanBoardStreamRequestDto,
+	type CreateKanbanBoardSupersprintRequestDto,
 	type CreateKanbanBoardTaskRequestDto,
 	type KanbanBoardAssigneeDto,
 	type KanbanBoardBoardDto,
 	type KanbanBoardColumnDto,
 	type KanbanBoardProjectDto,
+	type KanbanBoardSprintDto,
+	type KanbanBoardStreamDto,
+	type KanbanBoardSupersprintDto,
+	type KanbanBoardTaskContent,
 	type KanbanBoardTaskRegistryDto,
 	type UpdateKanbanBoardAssigneeRequestDto,
 	type UpdateKanbanBoardBoardRequestDto,
 	type UpdateKanbanBoardColumnRequestDto,
 	type UpdateKanbanBoardProjectRequestDto,
+	type UpdateKanbanBoardSprintRequestDto,
+	type UpdateKanbanBoardStreamRequestDto,
+	type UpdateKanbanBoardSupersprintRequestDto,
 	type UpdateKanbanBoardTaskRequestDto,
 } from "@smart-anketa/api-contract";
 import { KanbanBoardEntity } from "../entities/kanban-board.entity";
 import { KanbanBoardAssigneeEntity } from "../entities/kanban-board-assignee.entity";
 import { KanbanBoardColumnEntity } from "../entities/kanban-board-column.entity";
 import { KanbanBoardProjectEntity } from "../entities/kanban-board-project.entity";
+import { KanbanBoardSprintEntity } from "../entities/kanban-board-sprint.entity";
+import { KanbanBoardStreamEntity } from "../entities/kanban-board-stream.entity";
+import { KanbanBoardSupersprintEntity } from "../entities/kanban-board-supersprint.entity";
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
 import { KanbanBoardService } from "./kanban-board.service";
+import {
+	exportTasksRegistryWorkbook,
+	exportTasksRegistryXlsx,
+} from "../utils/kanban-board-registry-export.util";
 
 @Injectable()
 export class KanbanBoardRegistryService {
@@ -44,6 +63,12 @@ export class KanbanBoardRegistryService {
 		private readonly columnRepository: Repository<KanbanBoardColumnEntity>,
 		@InjectRepository(KanbanBoardAssigneeEntity)
 		private readonly assigneeRepository: Repository<KanbanBoardAssigneeEntity>,
+		@InjectRepository(KanbanBoardSupersprintEntity)
+		private readonly supersprintRepository: Repository<KanbanBoardSupersprintEntity>,
+		@InjectRepository(KanbanBoardSprintEntity)
+		private readonly sprintRepository: Repository<KanbanBoardSprintEntity>,
+		@InjectRepository(KanbanBoardStreamEntity)
+		private readonly streamRepository: Repository<KanbanBoardStreamEntity>,
 		@InjectRepository(KanbanBoardTaskEntity)
 		private readonly taskRepository: Repository<KanbanBoardTaskEntity>,
 		private readonly kanbanBoardService: KanbanBoardService,
@@ -185,6 +210,249 @@ export class KanbanBoardRegistryService {
 		}
 
 		await this.assigneeRepository.remove(assignee);
+	}
+
+	async findAllSupersprints(): Promise<KanbanBoardSupersprintDto[]> {
+		const supersprints = await this.supersprintRepository.find({
+			order: { startDate: "DESC", name: "ASC" },
+		});
+		const sprintCounts = await this.sprintRepository
+			.createQueryBuilder("sprint")
+			.select("sprint.supersprint_id", "supersprintId")
+			.addSelect("COUNT(*)", "count")
+			.where("sprint.supersprint_id IS NOT NULL")
+			.groupBy("sprint.supersprint_id")
+			.getRawMany<{ supersprintId: string; count: string }>();
+		const countMap = new Map(
+			sprintCounts.map((row) => [row.supersprintId, Number(row.count)]),
+		);
+
+		return supersprints.map((item) => this.toSupersprintDto(item, countMap));
+	}
+
+	async createSupersprint(
+		dto: CreateKanbanBoardSupersprintRequestDto,
+	): Promise<KanbanBoardSupersprintDto> {
+		const code = dto.code.trim();
+		const name = dto.name.trim();
+		const startDate = dto.startDate.trim();
+		if (!code || !name || !startDate) {
+			throw new BadRequestException("Код, название и дата начала обязательны");
+		}
+
+		const entity = this.supersprintRepository.create({
+			id: ulid(),
+			code,
+			name,
+			description: dto.description?.trim() || null,
+			startDate,
+			endDate: dto.endDate?.trim() || null,
+		});
+		await this.supersprintRepository.save(entity);
+		return this.toSupersprintDto(entity, new Map());
+	}
+
+	async updateSupersprint(
+		id: string,
+		dto: UpdateKanbanBoardSupersprintRequestDto,
+	): Promise<KanbanBoardSupersprintDto> {
+		const supersprint = await this.supersprintRepository.findOne({ where: { id } });
+		if (!supersprint) throw new NotFoundException("Суперспринт не найден");
+
+		if (dto.code !== undefined) supersprint.code = dto.code.trim();
+		if (dto.name !== undefined) supersprint.name = dto.name.trim();
+		if (dto.description !== undefined) {
+			supersprint.description = dto.description?.trim() || null;
+		}
+		if (dto.startDate !== undefined) supersprint.startDate = dto.startDate.trim();
+		if (dto.endDate !== undefined) {
+			supersprint.endDate = dto.endDate?.trim() || null;
+		}
+		if (!supersprint.code || !supersprint.name || !supersprint.startDate) {
+			throw new BadRequestException("Код, название и дата начала обязательны");
+		}
+
+		await this.supersprintRepository.save(supersprint);
+		const sprintCount = await this.sprintRepository.count({
+			where: { supersprintId: supersprint.id },
+		});
+		return this.toSupersprintDto(
+			supersprint,
+			new Map([[supersprint.id, sprintCount]]),
+		);
+	}
+
+	async deleteSupersprint(id: string): Promise<void> {
+		const supersprint = await this.supersprintRepository.findOne({ where: { id } });
+		if (!supersprint) throw new NotFoundException("Суперспринт не найден");
+
+		const sprintCount = await this.sprintRepository.count({
+			where: { supersprintId: id },
+		});
+		if (sprintCount > 0) {
+			throw new BadRequestException(
+				"Нельзя удалить суперспринт со связанными спринтами",
+			);
+		}
+
+		await this.supersprintRepository.remove(supersprint);
+	}
+
+	async findAllSprints(): Promise<KanbanBoardSprintDto[]> {
+		const sprints = await this.sprintRepository.find({
+			relations: { supersprint: true },
+			order: { startDate: "DESC", name: "ASC" },
+		});
+		const taskCounts = await this.countTasksBySprintId();
+		return sprints.map((sprint) => this.toSprintDto(sprint, taskCounts));
+	}
+
+	async createSprint(
+		dto: CreateKanbanBoardSprintRequestDto,
+	): Promise<KanbanBoardSprintDto> {
+		const code = dto.code.trim();
+		const name = dto.name.trim();
+		const startDate = dto.startDate.trim();
+		if (!code || !name || !startDate) {
+			throw new BadRequestException("Код, название и дата начала обязательны");
+		}
+
+		let supersprint: KanbanBoardSupersprintEntity | null = null;
+		if (dto.supersprintId) {
+			supersprint = await this.supersprintRepository.findOne({
+				where: { id: dto.supersprintId },
+			});
+			if (!supersprint) throw new NotFoundException("Суперспринт не найден");
+		}
+
+		const entity = this.sprintRepository.create({
+			id: ulid(),
+			supersprintId: supersprint?.id ?? null,
+			code,
+			name,
+			description: dto.description?.trim() || null,
+			startDate,
+			endDate: dto.endDate?.trim() || null,
+		});
+		entity.supersprint = supersprint;
+		await this.sprintRepository.save(entity);
+		return this.toSprintDto(entity, new Map());
+	}
+
+	async updateSprint(
+		id: string,
+		dto: UpdateKanbanBoardSprintRequestDto,
+	): Promise<KanbanBoardSprintDto> {
+		const sprint = await this.sprintRepository.findOne({
+			where: { id },
+			relations: { supersprint: true },
+		});
+		if (!sprint) throw new NotFoundException("Спринт не найден");
+
+		if (dto.supersprintId !== undefined) {
+			if (dto.supersprintId) {
+				const supersprint = await this.supersprintRepository.findOne({
+					where: { id: dto.supersprintId },
+				});
+				if (!supersprint) throw new NotFoundException("Суперспринт не найден");
+				sprint.supersprintId = supersprint.id;
+				sprint.supersprint = supersprint;
+			} else {
+				sprint.supersprintId = null;
+				sprint.supersprint = null;
+			}
+		}
+		if (dto.code !== undefined) sprint.code = dto.code.trim();
+		if (dto.name !== undefined) sprint.name = dto.name.trim();
+		if (dto.description !== undefined) {
+			sprint.description = dto.description?.trim() || null;
+		}
+		if (dto.startDate !== undefined) sprint.startDate = dto.startDate.trim();
+		if (dto.endDate !== undefined) sprint.endDate = dto.endDate?.trim() || null;
+		if (!sprint.code || !sprint.name || !sprint.startDate) {
+			throw new BadRequestException("Код, название и дата начала обязательны");
+		}
+
+		await this.sprintRepository.save(sprint);
+		const taskCounts = await this.countTasksBySprintId();
+		return this.toSprintDto(sprint, taskCounts);
+	}
+
+	async deleteSprint(id: string): Promise<void> {
+		const sprint = await this.sprintRepository.findOne({ where: { id } });
+		if (!sprint) throw new NotFoundException("Спринт не найден");
+
+		const taskCount = await this.countTasksWithSprintId(id);
+		if (taskCount > 0) {
+			throw new BadRequestException("Нельзя удалить спринт с задачами");
+		}
+
+		await this.sprintRepository.remove(sprint);
+	}
+
+	async findAllStreams(): Promise<KanbanBoardStreamDto[]> {
+		const streams = await this.streamRepository.find({
+			order: { name: "ASC" },
+		});
+		const taskCounts = await this.countTasksByStreamName();
+		return streams.map((stream) => this.toStreamDto(stream, taskCounts));
+	}
+
+	async createStream(
+		dto: CreateKanbanBoardStreamRequestDto,
+	): Promise<KanbanBoardStreamDto> {
+		const code = dto.code.trim();
+		const name = dto.name.trim();
+		if (!code || !name) {
+			throw new BadRequestException("Код и название обязательны");
+		}
+
+		const entity = this.streamRepository.create({
+			id: ulid(),
+			code,
+			name,
+			description: dto.description?.trim() || null,
+		});
+		await this.streamRepository.save(entity);
+		return this.toStreamDto(entity, new Map());
+	}
+
+	async updateStream(
+		id: string,
+		dto: UpdateKanbanBoardStreamRequestDto,
+	): Promise<KanbanBoardStreamDto> {
+		const stream = await this.streamRepository.findOne({ where: { id } });
+		if (!stream) throw new NotFoundException("Стрим не найден");
+
+		const previousName = stream.name;
+		if (dto.code !== undefined) stream.code = dto.code.trim();
+		if (dto.name !== undefined) stream.name = dto.name.trim();
+		if (dto.description !== undefined) {
+			stream.description = dto.description?.trim() || null;
+		}
+		if (!stream.code || !stream.name) {
+			throw new BadRequestException("Код и название обязательны");
+		}
+
+		await this.streamRepository.save(stream);
+		if (dto.name !== undefined && stream.name !== previousName) {
+			await this.renameStreamInTasks(previousName, stream.name);
+		}
+
+		const taskCounts = await this.countTasksByStreamName();
+		return this.toStreamDto(stream, taskCounts);
+	}
+
+	async deleteStream(id: string): Promise<void> {
+		const stream = await this.streamRepository.findOne({ where: { id } });
+		if (!stream) throw new NotFoundException("Стрим не найден");
+
+		const taskCount = await this.countTasksWithStreamName(stream.name);
+		if (taskCount > 0) {
+			throw new BadRequestException("Нельзя удалить стрим, указанный в задачах");
+		}
+
+		await this.streamRepository.remove(stream);
 	}
 
 	async findAllBoards(): Promise<KanbanBoardBoardDto[]> {
@@ -348,8 +616,78 @@ export class KanbanBoardRegistryService {
 		const columnTitles = await this.loadColumnTitleMap(
 			rows.map((row) => row.boardId),
 		);
+		const sprintTitles = await this.loadSprintTitleMap(
+			rows
+				.map((row) => row.content.sprintId)
+				.filter((value): value is string => Boolean(value)),
+		);
 
-		return rows.map((row) => this.toTaskRegistryDto(row, columnTitles));
+		return rows.map((row) => this.toTaskRegistryDto(row, columnTitles, sprintTitles));
+	}
+
+	async exportTasksRegistryXlsx(): Promise<Buffer> {
+		const tasks = await this.findAllTasksRegistry();
+		return exportTasksRegistryXlsx(tasks);
+	}
+
+	async exportSprintsRegistryXlsx(): Promise<Buffer> {
+		const [sprints, tasks] = await Promise.all([
+			this.findAllSprints(),
+			this.findAllTasksRegistry(),
+		]);
+		const tasksBySprintId = new Map<string, KanbanBoardTaskRegistryDto[]>();
+		for (const task of tasks) {
+			const sprintId = task.content.sprintId;
+			if (!sprintId) continue;
+			const bucket = tasksBySprintId.get(sprintId) ?? [];
+			bucket.push(task);
+			tasksBySprintId.set(sprintId, bucket);
+		}
+
+		const sheets = sprints.map((sprint) => ({
+			name: `${sprint.code} — ${sprint.name}`,
+			tasks: tasksBySprintId.get(sprint.id) ?? [],
+		}));
+
+		return exportTasksRegistryWorkbook(sheets);
+	}
+
+	async exportSupersprintsRegistryXlsx(): Promise<Buffer> {
+		const [supersprints, sprints, tasks] = await Promise.all([
+			this.findAllSupersprints(),
+			this.findAllSprints(),
+			this.findAllTasksRegistry(),
+		]);
+
+		const sprintIdsBySupersprintId = new Map<string, string[]>();
+		for (const sprint of sprints) {
+			if (!sprint.supersprintId) continue;
+			const bucket = sprintIdsBySupersprintId.get(sprint.supersprintId) ?? [];
+			bucket.push(sprint.id);
+			sprintIdsBySupersprintId.set(sprint.supersprintId, bucket);
+		}
+
+		const tasksBySprintId = new Map<string, KanbanBoardTaskRegistryDto[]>();
+		for (const task of tasks) {
+			const sprintId = task.content.sprintId;
+			if (!sprintId) continue;
+			const bucket = tasksBySprintId.get(sprintId) ?? [];
+			bucket.push(task);
+			tasksBySprintId.set(sprintId, bucket);
+		}
+
+		const sheets = supersprints.map((supersprint) => {
+			const sprintIds = sprintIdsBySupersprintId.get(supersprint.id) ?? [];
+			const supersprintTasks = sprintIds.flatMap(
+				(sprintId) => tasksBySprintId.get(sprintId) ?? [],
+			);
+			return {
+				name: `${supersprint.code} — ${supersprint.name}`,
+				tasks: supersprintTasks,
+			};
+		});
+
+		return exportTasksRegistryWorkbook(sheets);
 	}
 
 	async createTask(
@@ -368,19 +706,24 @@ export class KanbanBoardRegistryService {
 				where: { boardId: dto.boardId, parentId: dto.parentId },
 			}));
 
+		const content = await this.validateTaskContent(dto.content);
+
 		const entity = this.taskRepository.create({
 			id: ulid(),
 			boardId: dto.boardId,
 			parentId: dto.parentId,
 			position,
-			content: dto.content,
+			content,
 			origin: this.kanbanBoardService.getStandId(),
 			updatedAt: new Date().toISOString(),
 		});
 		entity.board = board;
 		await this.taskRepository.save(entity);
 		const columnTitles = await this.loadColumnTitleMap([entity.boardId]);
-		return this.toTaskRegistryDto(entity, columnTitles);
+		const sprintTitles = await this.loadSprintTitleMap(
+			content.sprintId ? [content.sprintId] : [],
+		);
+		return this.toTaskRegistryDto(entity, columnTitles, sprintTitles);
 	}
 
 	async updateTask(
@@ -406,12 +749,17 @@ export class KanbanBoardRegistryService {
 		await this.ensureColumnOnBoard(task.boardId, nextParentId);
 		if (dto.parentId !== undefined) task.parentId = dto.parentId;
 		if (dto.position !== undefined) task.position = dto.position;
-		if (dto.content !== undefined) task.content = dto.content;
+		if (dto.content !== undefined) {
+			task.content = await this.validateTaskContent(dto.content);
+		}
 		task.updatedAt = new Date().toISOString();
 
 		await this.taskRepository.save(task);
 		const columnTitles = await this.loadColumnTitleMap([task.boardId]);
-		return this.toTaskRegistryDto(task, columnTitles);
+		const sprintTitles = await this.loadSprintTitleMap(
+			task.content.sprintId ? [task.content.sprintId] : [],
+		);
+		return this.toTaskRegistryDto(task, columnTitles, sprintTitles);
 	}
 
 	async deleteTask(id: string): Promise<void> {
@@ -506,22 +854,33 @@ export class KanbanBoardRegistryService {
 	private toTaskRegistryDto(
 		task: KanbanBoardTaskEntity,
 		columnTitles: Map<string, string> = new Map(),
+		sprintTitles: Map<string, string> = new Map(),
 	): KanbanBoardTaskRegistryDto {
+		const { content } = task;
 		return {
 			id: task.id,
 			boardId: task.boardId,
 			parentId: task.parentId,
 			position: task.position,
-			content: task.content,
+			content,
 			origin: task.origin,
 			updatedAt: task.updatedAt,
 			projectCode: task.board?.project?.code ?? "",
 			projectName: task.board?.project?.name ?? "",
 			boardSlug: task.board?.slug ?? "",
 			boardName: task.board?.name ?? "",
-			title: task.content.title,
+			title: content.title,
 			statusTitle:
 				columnTitles.get(`${task.boardId}:${task.parentId}`) ?? task.parentId,
+			taskTypeTitle: kanbanBoardTaskTypeTitle(content.taskType),
+			workTypeTitle: kanbanBoardWorkTypeTitle(content.workType),
+			estimatePd: content.estimatePd,
+			dueDate: content.dueDate,
+			parentTask: content.parentTask,
+			sprintTitle: content.sprintId
+				? sprintTitles.get(content.sprintId) ?? content.sprintId
+				: undefined,
+			streamCustomer: content.streamCustomer,
 		};
 	}
 
@@ -588,6 +947,138 @@ export class KanbanBoardRegistryService {
 
 		for (const task of tasks) {
 			task.content = { ...task.content, assignee: newName };
+			await this.taskRepository.save(task);
+		}
+	}
+
+	private toSupersprintDto(
+		supersprint: KanbanBoardSupersprintEntity,
+		countMap: Map<string, number>,
+	): KanbanBoardSupersprintDto {
+		return {
+			id: supersprint.id,
+			code: supersprint.code,
+			name: supersprint.name,
+			description: supersprint.description,
+			startDate: supersprint.startDate,
+			endDate: supersprint.endDate,
+			sprintCount: countMap.get(supersprint.id) ?? 0,
+			createdAt: supersprint.createdAt.toISOString(),
+			updatedAt: supersprint.updatedAt.toISOString(),
+		};
+	}
+
+	private toSprintDto(
+		sprint: KanbanBoardSprintEntity,
+		taskCounts: Map<string, number>,
+	): KanbanBoardSprintDto {
+		return {
+			id: sprint.id,
+			supersprintId: sprint.supersprintId,
+			supersprintCode: sprint.supersprint?.code ?? "",
+			supersprintName: sprint.supersprint?.name ?? "",
+			code: sprint.code,
+			name: sprint.name,
+			description: sprint.description,
+			startDate: sprint.startDate,
+			endDate: sprint.endDate,
+			taskCount: taskCounts.get(sprint.id) ?? 0,
+			createdAt: sprint.createdAt.toISOString(),
+			updatedAt: sprint.updatedAt.toISOString(),
+		};
+	}
+
+	private toStreamDto(
+		stream: KanbanBoardStreamEntity,
+		taskCounts: Map<string, number>,
+	): KanbanBoardStreamDto {
+		return {
+			id: stream.id,
+			code: stream.code,
+			name: stream.name,
+			description: stream.description,
+			taskCount: taskCounts.get(stream.name) ?? 0,
+			createdAt: stream.createdAt.toISOString(),
+			updatedAt: stream.updatedAt.toISOString(),
+		};
+	}
+
+	private async validateTaskContent(
+		content: KanbanBoardTaskContent,
+	): Promise<KanbanBoardTaskContent> {
+		if (content.sprintId) {
+			const sprint = await this.sprintRepository.findOne({
+				where: { id: content.sprintId },
+			});
+			if (!sprint) {
+				throw new BadRequestException("Спринт не найден");
+			}
+		}
+		return content;
+	}
+
+	private async loadSprintTitleMap(sprintIds: string[]): Promise<Map<string, string>> {
+		const uniqueIds = [...new Set(sprintIds)];
+		if (!uniqueIds.length) return new Map();
+
+		const sprints = await this.sprintRepository
+			.createQueryBuilder("sprint")
+			.where("sprint.id IN (:...sprintIds)", { sprintIds: uniqueIds })
+			.getMany();
+		return new Map(sprints.map((sprint) => [sprint.id, sprint.name]));
+	}
+
+	private async countTasksBySprintId(): Promise<Map<string, number>> {
+		const rows = await this.taskRepository
+			.createQueryBuilder("task")
+			.select("task.content->>'sprintId'", "sprintId")
+			.addSelect("COUNT(*)", "count")
+			.where("task.content->>'sprintId' IS NOT NULL")
+			.andWhere("task.content->>'sprintId' <> ''")
+			.groupBy("task.content->>'sprintId'")
+			.getRawMany<{ sprintId: string; count: string }>();
+
+		return new Map(rows.map((row) => [row.sprintId, Number(row.count)]));
+	}
+
+	private async countTasksWithSprintId(sprintId: string): Promise<number> {
+		return this.taskRepository
+			.createQueryBuilder("task")
+			.where("task.content->>'sprintId' = :sprintId", { sprintId })
+			.getCount();
+	}
+
+	private async countTasksByStreamName(): Promise<Map<string, number>> {
+		const rows = await this.taskRepository
+			.createQueryBuilder("task")
+			.select("task.content->>'streamCustomer'", "streamName")
+			.addSelect("COUNT(*)", "count")
+			.where("task.content->>'streamCustomer' IS NOT NULL")
+			.andWhere("task.content->>'streamCustomer' <> ''")
+			.groupBy("task.content->>'streamCustomer'")
+			.getRawMany<{ streamName: string; count: string }>();
+
+		return new Map(rows.map((row) => [row.streamName, Number(row.count)]));
+	}
+
+	private async countTasksWithStreamName(name: string): Promise<number> {
+		return this.taskRepository
+			.createQueryBuilder("task")
+			.where("task.content->>'streamCustomer' = :name", { name })
+			.getCount();
+	}
+
+	private async renameStreamInTasks(
+		oldName: string,
+		newName: string,
+	): Promise<void> {
+		const tasks = await this.taskRepository
+			.createQueryBuilder("task")
+			.where("task.content->>'streamCustomer' = :oldName", { oldName })
+			.getMany();
+
+		for (const task of tasks) {
+			task.content = { ...task.content, streamCustomer: newName };
 			await this.taskRepository.save(task);
 		}
 	}
