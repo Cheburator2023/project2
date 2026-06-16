@@ -1,7 +1,7 @@
+import { Navigate } from "react-router";
 import type { RouteObject } from "react-router";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
 import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
-import { TaskTrackerPage } from "@react-client/features/task-tracker/pages/TaskTrackerPage";
 import { V2TemplateLogicPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplateLogicPage";
 import { V2TemplatePreviewPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplatePreviewPage";
 import { V2TemplateSchemaEditorPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplateSchemaEditorPage";
@@ -19,8 +19,12 @@ export function playgroundRoutes({
 		children: [
 			{ index: true, element: <PlaygroundPage /> },
 			{
+				path: "kanban-board",
+				element: <Navigate to="/tracker/boards" replace />,
+			},
+			{
 				path: "tasks",
-				element: <TaskTrackerPage />,
+				element: <Navigate to="/tracker/tasks" replace />,
 			},
 			{
 				path: "v2/templates/:templateId/read",

@@ -2,6 +2,7 @@ import { Navigate } from "react-router";
 import type { RouteObject } from "react-router";
 import { adminLegacyRedirects, adminRoutes } from "./adminRoutes";
 import { playgroundRoutes } from "./playgroundRoutes";
+import { trackerRoutes } from "./trackerRoutes";
 import { commonRoutes } from "./routes";
 
 export { adminRoutes, adminLegacyRedirects } from "./adminRoutes";
@@ -17,6 +18,7 @@ export function commonAppRoutes({
 }): RouteObject[] {
 	return [
 		adminRoutes({ onLogout }),
+		trackerRoutes({ onLogout }),
 		playgroundRoutes({ onLogout }),
 		...adminLegacyRedirects(),
 		{
