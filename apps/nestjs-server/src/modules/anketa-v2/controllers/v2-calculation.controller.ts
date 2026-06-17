@@ -31,6 +31,8 @@ export class V2CalculationController {
 			versionId,
 		);
 		const logic = body.rulesOverride ?? version.logic;
-		return this.calculationService.evaluate(logic, body.formData ?? {});
+		return this.calculationService.evaluate(logic, body.formData ?? {}, {
+			templateVersionId: version.id,
+		});
 	}
 }

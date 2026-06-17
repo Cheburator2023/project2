@@ -19,6 +19,18 @@ import { V2CalculationController } from "./controllers/v2-calculation.controller
 import { V2CalculationService } from "./services/v2-calculation.service";
 import { V2QuestionnaireService } from "./services/v2-questionnaire.service";
 import { V2QuestionnaireController } from "./controllers/v2-questionnaire.controller";
+import { V2TypicalWorkEntity } from "./entities/v2-typical-work.entity";
+import { V2TypicalWorkNormEntity } from "./entities/v2-typical-work-norm.entity";
+import { V2TypicalWorkRuleEntity } from "./entities/v2-typical-work-rule.entity";
+import { V2TypicalWorkLaborCoefficientEntity } from "./entities/v2-typical-work-labor-coefficient.entity";
+import { V2TypicalWorkVersionConfigEntity } from "./entities/v2-typical-work-version-config.entity";
+import {
+	V2TypicalWorkSeedService,
+	V2TypicalWorkService,
+} from "./services/v2-typical-work.service";
+import { V2TypicalWorkWriteService } from "./services/v2-typical-work-write.service";
+import { V2TypicalWorkRuntimeService } from "./services/v2-typical-work-runtime.service";
+import { V2TypicalWorkController } from "./controllers/v2-typical-work.controller";
 
 @Module({
 	imports: [
@@ -29,6 +41,11 @@ import { V2QuestionnaireController } from "./controllers/v2-questionnaire.contro
 			V2DictionaryEntity,
 			V2DictionaryItemEntity,
 			V2QuestionnaireEntity,
+			V2TypicalWorkEntity,
+			V2TypicalWorkNormEntity,
+			V2TypicalWorkRuleEntity,
+			V2TypicalWorkLaborCoefficientEntity,
+			V2TypicalWorkVersionConfigEntity,
 		]),
 	],
 	controllers: [
@@ -38,6 +55,7 @@ import { V2QuestionnaireController } from "./controllers/v2-questionnaire.contro
 		V2AuditController,
 		V2CalculationController,
 		V2QuestionnaireController,
+		V2TypicalWorkController,
 	],
 	providers: [
 		V2TemplateService,
@@ -47,6 +65,10 @@ import { V2QuestionnaireController } from "./controllers/v2-questionnaire.contro
 		V2AuditService,
 		V2CalculationService,
 		V2QuestionnaireService,
+		V2TypicalWorkSeedService,
+		V2TypicalWorkService,
+		V2TypicalWorkWriteService,
+		V2TypicalWorkRuntimeService,
 	],
 	exports: [
 		V2TemplateService,
@@ -55,6 +77,8 @@ import { V2QuestionnaireController } from "./controllers/v2-questionnaire.contro
 		V2AuditService,
 		V2CalculationService,
 		V2QuestionnaireService,
+		V2TypicalWorkService,
+		V2TypicalWorkRuntimeService,
 	],
 })
 export class AnketaV2Module {}

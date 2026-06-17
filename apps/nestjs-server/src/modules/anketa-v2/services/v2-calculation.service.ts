@@ -23,6 +23,7 @@ import {
 } from "./v2-json-logic";
 import { applyLegacySummaryToFormData } from "./v2-legacy-stage-evaluation";
 import { evaluateLogicValidationRules } from "./v2-logic-validation";
+import { V2TypicalWorkRuntimeService } from "./v2-typical-work-runtime.service";
 import { migrateV2AnketaFormData } from "../utils/v2-form-data-migration.util";
 
 type ComputedPayload = {
@@ -44,6 +45,7 @@ type RowComputedPayload = {
 
 type TaskTriggerPayload = {
 	mode?: "generated_rows";
+	worksCatalog?: boolean;
 	taskCode?: string;
 	label?: string;
 	hint?: string;
@@ -278,6 +280,7 @@ export class V2CalculationService {
 	constructor(
 		private readonly versionService: V2TemplateVersionService,
 		private readonly templateService: V2TemplateService,
+		private readonly workRuntime: V2TypicalWorkRuntimeService,
 	) {}
 
 	/** Получить версию шаблона (по id или текущую опубликованную). */
@@ -305,7 +308,16 @@ export class V2CalculationService {
 	evaluate(
 		logic: V2LogicGraphDto,
 		formData: Record<string, unknown>,
-	): V2CalculationResultDto {
+		options?: { templateVersionId?: string | null },
+	): Promise<V2CalculationResultDto> {
+		return this.evaluateAsync(logic, formData, options);
+	}
+
+	private async evaluateAsync(
+		logic: V2LogicGraphDto,
+		formData: Record<string, unknown>,
+		options?: { templateVersionId?: string | null },
+	): Promise<V2CalculationResultDto> {
 		const rules = logic?.rules ?? [];
 		const rowComputed = rules.filter((r) => r.kind === "row_computed");
 		const computed = rules.filter((r) => r.kind === "computed");
@@ -316,7 +328,11 @@ export class V2CalculationService {
 		// 1) task_trigger/generated_rows — материализуем автозадачи до расчёта строк.
 		for (const rule of taskTriggers) {
 			if (!isCalculationPathActive(liveData, rule.targetPath)) continue;
-			liveData = this.applyGeneratedRows(rule, liveData);
+			liveData = await this.applyGeneratedRows(
+				rule,
+				liveData,
+				options?.templateVersionId ?? null,
+			);
 		}
 
 		// 2) row_computed — пишем per-row значения.
@@ -403,10 +419,11 @@ export class V2CalculationService {
 		return writeByDotPath(data, arrayPath, next);
 	}
 
-	private applyGeneratedRows(
+	private async applyGeneratedRows(
 		rule: V2LogicRuleDto,
 		data: Record<string, unknown>,
-	): Record<string, unknown> {
+		templateVersionId: string | null,
+	): Promise<Record<string, unknown>> {
 		const payload = (rule.payload ?? {}) as TaskTriggerPayload;
 		if (payload.mode !== "generated_rows") return data;
 		const sourceArrayPath = payload.sourceArrayPath?.trim();
@@ -433,49 +450,79 @@ export class V2CalculationService {
 			data,
 			outputArrayPath,
 		);
-		const generated = sourceRows.flatMap((row, sourceIndex) => {
-			// Строки-источники могут быть объектами (системы-источники) или строками
-			// (мультиселект, напр. виды контроля) — строку оборачиваем для match.
-			const source =
-				row && typeof row === "object" && !Array.isArray(row)
-					? (row as Record<string, unknown>)
-					: typeof row === "string"
-						? { value: row, controlType: row, name: row }
-						: {};
-			const sourceForMatch = { ...source, sourceCount, sourceIndex };
-			const coefficientContext = mergeTypicalCoefficientContext(
-				streamLocalParams,
-				sourceForMatch,
-			);
-			const sourceName =
-				typeof source.name === "string" && source.name.trim()
-					? source.name.trim()
-					: `Источник ${sourceIndex + 1}`;
+		const atDate = new Date().toISOString().slice(0, 10);
 
-			return (payload.tasks ?? [])
-				.filter((task) => rowMatches(sourceForMatch, task.match))
-				.map((task) => ({
-					taskCode: task.taskCode,
-					name: task.name ?? task.label ?? task.taskCode ?? "Типовая работа",
-					workType:
-						typeof task.workType === "string" && task.workType.trim()
-							? task.workType.trim()
-							: "—",
-					reason: task.reason
-						? `${sourceName}: ${task.reason}`
-						: `${sourceName}: параметр источника`,
-					estimateHoursPerDay: task.estimateHoursPerDay ?? 0,
-					coefficient: resolveGeneratedTaskCoefficient(
-						task,
-						coefficientContext,
-						sourceCount,
-						payload.coefficientLogic,
-					),
-					sourceComponent: "Источник данных",
-					sourceName,
-					generatedByRuleId: rule.id,
-				}));
-		});
+		const generated = (
+			await Promise.all(
+				sourceRows.map(async (row, sourceIndex) => {
+					const source =
+						row && typeof row === "object" && !Array.isArray(row)
+							? (row as Record<string, unknown>)
+							: typeof row === "string"
+								? { value: row, controlType: row, name: row }
+								: {};
+					const sourceForMatch = { ...source, sourceCount, sourceIndex };
+					const coefficientContext = mergeTypicalCoefficientContext(
+						streamLocalParams,
+						sourceForMatch,
+					);
+					const sourceName =
+						typeof source.name === "string" && source.name.trim()
+							? source.name.trim()
+							: `Источник ${sourceIndex + 1}`;
+
+					const taskDefs = payload.worksCatalog
+						? await this.workRuntime.buildSourceCatalogTasks(
+								sourceForMatch,
+								templateVersionId,
+								atDate,
+							)
+						: (payload.tasks ?? [])
+								.filter((task) => rowMatches(sourceForMatch, task.match))
+								.map((task) => ({
+									taskCode: task.taskCode ?? "",
+									name: task.name ?? task.label ?? task.taskCode ?? "Типовая работа",
+									workType:
+										typeof task.workType === "string" && task.workType.trim()
+											? task.workType.trim()
+											: "—",
+									reason: task.reason ?? `${sourceName}: параметр источника`,
+									estimateHoursPerDay: task.estimateHoursPerDay ?? 0,
+									coefficient: resolveGeneratedTaskCoefficient(
+										task,
+										coefficientContext,
+										sourceCount,
+										payload.coefficientLogic,
+									),
+									match: task.match ?? {},
+									workId: task.taskCode ?? "",
+								}));
+
+					return taskDefs.map((task) => ({
+						taskCode: task.taskCode,
+						name: task.name,
+						workType: task.workType,
+						reason: task.reason
+							? `${sourceName}: ${task.reason}`
+							: `${sourceName}: параметр источника`,
+						estimateHoursPerDay: task.estimateHoursPerDay,
+						coefficient: payload.worksCatalog
+							? task.coefficient
+							: typeof task.coefficient === "number"
+								? task.coefficient
+								: resolveGeneratedTaskCoefficient(
+										task as (typeof payload.tasks)[number],
+										coefficientContext,
+										sourceCount,
+										payload.coefficientLogic,
+									),
+						sourceComponent: "Источник данных",
+						sourceName,
+						generatedByRuleId: rule.id,
+					}));
+				}),
+			)
+		).flat();
 
 		return writeByDotPath(data, outputArrayPath, generated);
 	}

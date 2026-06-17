@@ -146,6 +146,7 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 		payload: {
 			...UNIFIED,
 			mode: "generated_rows",
+			worksCatalog: true,
 			sourceArrayPath: "streamDataSources.sourceSystems",
 			outputArrayPath: "streamDataSources.sourceTypicalTasks",
 			taskCode: "IND_SOURCE_TASKS",

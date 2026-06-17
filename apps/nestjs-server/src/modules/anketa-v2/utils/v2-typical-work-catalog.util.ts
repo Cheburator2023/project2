@@ -1,0 +1,67 @@
+import {
+	dictionaryByName,
+	V2_DOC_CATALOG,
+	type V2CatalogTypicalWork,
+} from "../constants/v2-doc-catalog";
+
+export function slugParamCode(name: string): string {
+	return name
+		.toLowerCase()
+		.replace(/[^a-zа-я0-9]+/gi, "_")
+		.replace(/^_+|_+$/g, "")
+		.slice(0, 80);
+}
+
+export function normalizeArchComponentType(raw: string): string {
+	const value = raw.trim();
+	if (value.includes("Витрина") || value.includes("Объект")) {
+		return "Объект / Витрина данных";
+	}
+	if (value.includes("Процесс")) {
+		return "Процесс обработки данных";
+	}
+	if (value.includes("Система")) {
+		return "Система-источник";
+	}
+	if (value.includes("Модельный")) {
+		return "Модельный сервис";
+	}
+	if (value === "Модель") {
+		return "Модель";
+	}
+	return value;
+}
+
+export function buildCatalogWorkKey(component: string, name: string): string {
+	return `${normalizeArchComponentType(component)}|${name.trim()}`;
+}
+
+export function groupCatalogWorks(): Map<string, V2CatalogTypicalWork[]> {
+	const groups = new Map<string, V2CatalogTypicalWork[]>();
+	for (const row of V2_DOC_CATALOG.typicalWorks) {
+		const key = buildCatalogWorkKey(row.component, row.name);
+		const list = groups.get(key) ?? [];
+		list.push(row);
+		groups.set(key, list);
+	}
+	return groups;
+}
+
+export function inferTriggerValueLabel(
+	paramName: string,
+	stream: string,
+): string | null {
+	const lower = paramName.toLowerCase();
+	if (lower.includes("тип источника")) {
+		if (stream.includes("Внутренний")) return "Внутренний";
+		if (stream.includes("Внешний")) return "Внешний";
+	}
+	return null;
+}
+
+export function dictionaryValuesForParam(paramName: string) {
+	const dict = dictionaryByName(paramName);
+	return dict?.values ?? [];
+}
+
+export const DEFAULT_NORM_VALID_FROM = "2025-01-01";

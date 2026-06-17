@@ -40,6 +40,7 @@ export type ComputedRulePayload = {
 
 export type TaskTriggerPayload = {
 	mode?: "generated_rows";
+	worksCatalog?: boolean;
 	taskCode?: string;
 	label?: string;
 	hint?: string;

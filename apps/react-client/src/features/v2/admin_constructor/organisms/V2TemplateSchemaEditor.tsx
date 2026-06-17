@@ -32,7 +32,7 @@ import { nanoid } from "nanoid";
 import { Box, Button, Typography } from "@mui/material";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useBrowserRouterNavigationBlocker } from "../hooks/useBrowserRouterNavigationBlocker";
 import { clampCanvasInsertIndex } from "../schemaEditor/schemaCanvasTree";
 import { SchemaEditorProvider } from "../schemaEditor/SchemaEditorContext";
@@ -47,6 +47,10 @@ import {
 } from "../schemaEditor/propertiesFieldKind";
 import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayout";
 import { SchemaLogicPanel } from "../schemaEditor/panels/SchemaLogicPanel";
+import {
+	LogicWorkspaceShell,
+} from "../schemaEditor/panels/typicalWorksPanel/TypicalWorksPanel";
+import { LOGIC_TAB_QUERY } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
 import { useDebouncedV2Calculation } from "../hooks/useDebouncedV2Calculation";
@@ -183,6 +187,25 @@ export const V2TemplateSchemaEditor = ({
 	onHeaderActionsChange,
 }: V2TemplateSchemaEditorProps) => {
 	const navigate = useNavigate();
+	const [searchParams, setSearchParams] = useSearchParams();
+	const logicWorkspaceTab =
+		searchParams.get(LOGIC_TAB_QUERY) === "dependencies" ||
+		searchParams.get(LOGIC_TAB_QUERY) === "jsonlogic"
+			? (searchParams.get(LOGIC_TAB_QUERY) as "dependencies" | "jsonlogic")
+			: "works";
+	const setLogicWorkspaceTab = useCallback(
+		(tab: "works" | "dependencies" | "jsonlogic") => {
+			setSearchParams(
+				(prev) => {
+					const next = new URLSearchParams(prev);
+					next.set(LOGIC_TAB_QUERY, tab);
+					return next;
+				},
+				{ replace: true },
+			);
+		},
+		[setSearchParams],
+	);
 	const isAdminEditor = wording === "adminSchema";
 
 	const {
@@ -1798,7 +1821,11 @@ export const V2TemplateSchemaEditor = ({
 		return (
 			<>
 				<SchemaEditorProvider value={editorContext}>
-					<SchemaLogicPanel embedded />
+					<LogicWorkspaceShell
+						tab={logicWorkspaceTab}
+						onTabChange={setLogicWorkspaceTab}
+						jsonLogicPanel={<SchemaLogicPanel embedded />}
+					/>
 				</SchemaEditorProvider>
 				{activeVersion ? (
 					<V2TemplateSaveDialog
