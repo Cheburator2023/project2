@@ -36,7 +36,10 @@
 		"sync:arch-presets": "node ./scripts/sync-v2-arch-component-presets.mjs",
 		"sync:v2-params-from-csv": "node ./scripts/sync-v2-params-from-csv.mjs",
 		"migrate:v2-binary-booleans": "node ./scripts/migrate-v2-binary-enums-to-boolean.mjs",
-		"strip:boolean-schema-defaults": "node ./scripts/strip-boolean-schema-defaults.mjs"
+		"strip:boolean-schema-defaults": "node ./scripts/strip-boolean-schema-defaults.mjs",
+		"docker:build:base": "docker build -f Dockerfile -t ubi8-base-smart-anketa-ui:local .",
+		"docker:build:frontend": "docker build -f apps/react-client/Dockerfile -t smart-anketa-frontend:local apps/react-client",
+		"docker:build:api": "docker build -f apps/nestjs-server/Dockerfile -t smart-anketa-api:local apps/nestjs-server"
 	},
 	"lint-staged": {
 		"*.{ts,tsx}": [
