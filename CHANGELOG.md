@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.17.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.16.0...v1.17.0) (2026-06-17)
+
+
+### Features
+
+* integrate Kanban board features and update dependencies ([267cdad](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/267cdadfae155e05d9ce012164f0bb87d89b562a))
+
 # [1.16.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.15.0...v1.16.0) (2026-06-17)
 
 
