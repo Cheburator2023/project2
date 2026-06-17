@@ -1,5 +1,70 @@
 # Semantic Versioning Changelog
 
+# [1.16.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.15.0...v1.16.0) (2026-06-17)
+
+
+### Bug Fixes
+
+* correct dev outline condition in ArchComponentDevOutline ([8af73b3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/8af73b339c64a42e3e423b3caf618428b3c14f2b))
+* disable dev outline highlighting in ArchComponentDevOutline ([5cfd117](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5cfd1170aaac3db6a297d9bd4e8e610e66106ab1))
+* update type reference for autoCloseTimeout and improve path segment handling ([9b321e5](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9b321e5fbfe0e6d31675aafe6e10709d0ed6a7ac))
+* данные для датагрида ввиде дерева ([2901a40](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/2901a402e2c20dadd3a467323aa3e42bd2e75ff2))
+
+
+### Features
+
+* add hideTitle option for layout groups in schema editor ([fdf6957](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/fdf6957ac8b96ea06ca0149c07284af5b69be982))
+* add layout synchronization script and enhance UI schema options ([c645ea2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/c645ea2ccddf445da4180408d7c20e2059641d58))
+* add selectFieldOptions utility and tests for enhanced select field handling ([e812315](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/e812315e45651530cfbde5d597f17e6357dc547d))
+* add synchronization script and enhance schema definitions ([7e7469f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/7e7469f1dbda5150b271fb715f7fcbacf706c6b8))
+* add ui:placeholder functionality to schema properties panel ([2fa244c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/2fa244c6d772e6885aa4e4ec26b5c0710bf04cc6))
+* add V2 Questionnaire seed service and demo data ([76deaba](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/76deaba71a0203aeebbb3fc00a356e2910f8dbfe))
+* design v2 final card ([0b1be32](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0b1be324a92da86273edad95682c3303f5c833b5))
+* design v2 modals ([0f52132](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0f5213298b202b3a257885224c614a2da9329129))
+* enhance authentication flow and modal management in V2 ([876e884](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/876e8844b8f5623207f047920b0290c52ce770e7))
+* enhance dictionary handling and UI components for improved user experience ([18d7bd3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/18d7bd3b1e9501bd505d2bf446185f20d9718a46))
+* enhance Header component with fixed positioning and dynamic layout adjustments ([e181232](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/e1812328e1db0263b30f45a635fdf2527f403f71))
+* enhance Header component with responsive layout and dynamic spacer ([c82ee7b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/c82ee7b33b0cb0a9160796f4e003bca93891da11))
+* enhance schema editor with logic handling and reset functionality ([a776acb](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a776acbfbdbbce5ab8f27b8dad19af0c72e97c10))
+* enhance schema editor with system field handling and UI improvements ([1d78cea](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/1d78ceaf66cb0501696d342927192ea6a511cb9c))
+* enhance schema handling and UI components for improved functionality ([59ee77c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/59ee77c62c5e5da22c72f8760a6aeb865d68ad2e))
+* enhance template version management and editor functionality ([1a20855](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/1a20855cee2efb02e2b955ce3674e816b1acc0e0))
+* enhance V2 anketa form and schema management ([d9ffb59](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/d9ffb595bc6ec7b93d315b03d06a50e5078eac96))
+* enhance V2 anketa schema and UI management ([a9ce3d3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a9ce3d3127e54780e9c9e19e549cc36911a6e56c))
+* enhance V2 anketa schema editor and UI components ([43b018b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/43b018bea9f0610c974fc70f3b23af681c81ce7e))
+* enhance V2 anketa schema with new fields and utility functions ([2a34c96](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/2a34c96ac194c798d3b279db5ddba9b1df659225))
+* enhance V2 calculation service with manual parameters and coefficient logic ([d4110b8](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/d4110b8438e1506070a0df4bab855208e7a56ac2))
+* enhance V2 dictionary management and catalog generation ([9235e5c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9235e5cbda8f1a77177d67d68e0741af6d391189))
+* enhance V2 Questionnaire grid functionality and presets ([0154aac](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0154aacf41c5a480635fec406e026aa09eb9d793))
+* enhance V2 Questionnaire management with bulk delete and test seeding ([b259e10](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/b259e10693180de2944d8d3f86ca278cb6c1b822))
+* enhance V2CalculationService with validation logic and legacy evaluation ([474c07c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/474c07c870192d4883d025e83c4958f8e7c18ed8))
+* enhance V2Questionnaire service and UI components for improved questionnaire management ([67e1f2c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/67e1f2c7cdd69c69ea8766a28b8b2f6af46c1102))
+* enhance V2Template components and schema handling ([da3380a](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/da3380ad0df6cb8ef36a9c7c1a2c7cb1b46af7ec))
+* enhance V2TemplateService and UI components for improved questionnaire management ([dda369c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/dda369c72d947ff37572702b7951d9de62ce93f0))
+* implement canvas field search functionality in schema editor ([93b970b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/93b970b8332be237931ed9323644d4854ba19ce8))
+* implement canvas undo/redo functionality and enhance schema editing experience ([39e3c0b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/39e3c0bade464de0f72ad300d8f5559211c642b2))
+* implement delete confirmation dialog for schema canvas fields ([5d72af3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5d72af3d1ae5e6ac64c99c28184ac9e01cfdad35))
+* implement group activation functionality in V2Anketa schema and UI components ([b832144](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/b8321440158f9c7c9f9fdd87136f55ae442d27d7))
+* implement navigation blocker and unsaved changes dialog in schema editor ([1001aa3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/1001aa32e04d873d297342aa804696b8039cd1df))
+* implement V2 Questionnaire module with CRUD operations and database migration ([5485582](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5485582debd63166b691d63fbd585965637bb871))
+* integrate @minoru/react-dnd-treeview for enhanced drag-and-drop functionality ([09faa24](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/09faa24844a6400d395279ed7ff9f22f50efe0a4))
+* integrate MFE authentication synchronization and token management ([322d67c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/322d67cae8a66a3a034f90dcc3ad7f4ac322c6b8))
+* introduce binary boolean schema utilities and enhance schema handling ([5048685](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/504868544674c6ed5feb28a95cedda7b7d0e31f8))
+* refactor ([3ca1e16](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3ca1e165272f124f8c409fd2b13002de252f4b92))
+* refactor schema editor components for improved clarity and functionality ([60c434d](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/60c434daf476c6089d1a45631a654d0ddb32945e))
+* update schema definitions and introduce new fields in v2-default-anketa and presets ([6ae9ca9](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6ae9ca910c17bd3a3f944720f1061558bef9d2d9))
+* добавлен модуль анкет с поддержкой версий и аудита ([ce77d10](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ce77d1067bdf8a0bd0ee60f308c638646deb3cf5))
+* добавлен модуль документации базы данных с интерактивной визуализацией схемы ([cf5dad2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/cf5dad2e6ab3791ae23ea9a9b12ddb22ec50d527))
+* добавлены действия для сохранения и публикации в редакторе шаблонов ([5aa5cbf](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5aa5cbf9fbc71d0b22f05bbc31f67b97f616fbd9))
+* добавлены новые документы и диаграммы для V2 ([6d09cb0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6d09cb0f31a9466e809d4733871c7af1e1ae7827))
+* добавлены новые компоненты для управления словарями и схемами ([ed6853d](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ed6853d6050cacc344652e00ff95883e8ff1cc06))
+* добавлены новые функции для работы с анкетами и словарями ([fd50dfd](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/fd50dfdacf272c65cefad84352d4e3be8147d94b))
+* добавлены новые функции для работы с версиями шаблонов и восстановлением ([4bd24fa](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4bd24faa0a41acae675b52e366ad4aefb754aa67))
+* добавлены новые функции для работы со словарями и миграции базы данных ([f932efc](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f932efc8894bb28a36a944686f2996c4e0ae0844))
+* добавлены новые функции для расчета и обработки анкет ([7e12575](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/7e125758ff878459b3fd5eb07d43166c619f4cba))
+* добавлены новые функции и компоненты для редактора шаблонов ([6db2446](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6db2446cc123769bfe9ed33c1eac677f1fc666e9))
+* обновление зависимостей и добавление нового функционала для обработки JsonLogic ([9367d72](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9367d727b21004444e2e44cbeabd5bf84bcd898c))
+
 # [1.15.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.14.2...v1.15.0) (2025-09-23)
 
 
