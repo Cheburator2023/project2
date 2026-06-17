@@ -2,15 +2,20 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
-import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 import {
-	type KanbanBoardTaskContent,
+	KANBAN_BOARD_ASSIGNEE_ROLES,
 	KANBAN_BOARD_TASK_TYPES,
 	KANBAN_BOARD_WORK_TYPES,
+	kanbanBoardPriorityColor,
+	kanbanBoardTaskAssignees,
+	kanbanBoardTaskTypeColor,
+	kanbanBoardWorkTypeColor,
+	type KanbanBoardAssigneeRoleId,
+	type KanbanBoardTaskContent,
 } from "@smart-anketa/api-contract";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
@@ -28,6 +33,7 @@ import {
 	useKanbanBoardStreams,
 	useUpdateKanbanBoardTask,
 } from "@react-client/common/api/queries/kanban-board";
+import { KanbanTaskMultiSelectField, KanbanTaskSelectField } from "@react-client/features/kanban-board/components/KanbanTaskSelectField";
 import {
 	isKanbanTaskCreateRoute,
 	kanbanBoardPath,
@@ -36,13 +42,16 @@ import { TrackerMarkdownEditor } from "@react-client/features/kanban-board/compo
 import { useQuery } from "@tanstack/react-query";
 
 const PRIORITY_OPTIONS = [
-	{ value: "", label: "—" },
-	{ value: "low", label: "low" },
-	{ value: "medium", label: "medium" },
-	{ value: "high", label: "high" },
+	{ value: "low", label: "low", color: kanbanBoardPriorityColor("low") },
+	{ value: "medium", label: "medium", color: kanbanBoardPriorityColor("medium") },
+	{ value: "high", label: "high", color: kanbanBoardPriorityColor("high") },
 ] as const;
 
 const DEFAULT_COLUMN_ID = "backlog";
+const BOARD_SELECT_COLOR = "#6366f1";
+const ASSIGNEE_SELECT_COLOR = "#2563eb";
+const SPRINT_SELECT_COLOR = "#0891b2";
+const STREAM_SELECT_COLOR = "#7c3aed";
 
 type Props = {
 	mode?: "create" | "edit";
@@ -74,12 +83,14 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [title, setTitle] = useState("");
 	const [parentId, setParentId] = useState(DEFAULT_COLUMN_ID);
 	const [priority, setPriority] = useState("");
-	const [assignee, setAssignee] = useState("");
+	const [assignees, setAssignees] = useState<string[]>([]);
+	const [assigneeRole, setAssigneeRole] = useState("");
 	const [taskType, setTaskType] = useState("");
 	const [workType, setWorkType] = useState("");
 	const [estimatePd, setEstimatePd] = useState("");
 	const [dueDate, setDueDate] = useState("");
 	const [parentTask, setParentTask] = useState("");
+	const [customer, setCustomer] = useState("");
 	const [sprintId, setSprintId] = useState("");
 	const [streamCustomer, setStreamCustomer] = useState("");
 	const [description, setDescription] = useState("");
@@ -93,6 +104,86 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const effectiveBoardId = boardId || selectedBoardId;
 	const columnsQuery = useKanbanBoardColumns(effectiveBoardId);
 	const columns = columnsQuery.data ?? [];
+
+	const boardOptions = useMemo(
+		() =>
+			(boardsQuery.data ?? []).map((board) => ({
+				value: board.id,
+				label: `${board.projectCode}/${board.slug} — ${board.name}`,
+				color: BOARD_SELECT_COLOR,
+			})),
+		[boardsQuery.data],
+	);
+
+	const columnOptions = useMemo(
+		() =>
+			columns.map((column) => ({
+				value: column.id,
+				label: column.title,
+				color: column.color,
+			})),
+		[columns],
+	);
+
+	const assigneeOptions = useMemo(
+		() =>
+			(assigneesQuery.data ?? []).map((item) => ({
+				value: item.name,
+				label: item.email ? `${item.name} (${item.email})` : item.name,
+				color: ASSIGNEE_SELECT_COLOR,
+			})),
+		[assigneesQuery.data],
+	);
+
+	const assigneeRoleOptions = useMemo(
+		() =>
+			KANBAN_BOARD_ASSIGNEE_ROLES.map((role: (typeof KANBAN_BOARD_ASSIGNEE_ROLES)[number]) => ({
+				value: role.id,
+				label: role.title,
+				color: role.color,
+			})),
+		[],
+	);
+
+	const taskTypeOptions = useMemo(
+		() =>
+			KANBAN_BOARD_TASK_TYPES.map((option) => ({
+				value: option.id,
+				label: option.title,
+				color: kanbanBoardTaskTypeColor(option.id),
+			})),
+		[],
+	);
+
+	const workTypeOptions = useMemo(
+		() =>
+			KANBAN_BOARD_WORK_TYPES.map((option) => ({
+				value: option.id,
+				label: option.title,
+				color: kanbanBoardWorkTypeColor(option.id),
+			})),
+		[],
+	);
+
+	const sprintOptions = useMemo(
+		() =>
+			(sprintsQuery.data ?? []).map((item) => ({
+				value: item.id,
+				label: `${item.code} — ${item.name}`,
+				color: SPRINT_SELECT_COLOR,
+			})),
+		[sprintsQuery.data],
+	);
+
+	const streamOptions = useMemo(
+		() =>
+			(streamsQuery.data ?? []).map((item) => ({
+				value: item.name,
+				label: item.name,
+				color: STREAM_SELECT_COLOR,
+			})),
+		[streamsQuery.data],
+	);
 
 	const tasksQuery = useQuery({
 		queryKey: ["kanbanBoardTasks", boardId],
@@ -141,7 +232,8 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		if (isCreate || !task) return;
 		setTitle(task.content.title);
 		setPriority(task.content.priority ?? "");
-		setAssignee(task.content.assignee ?? "");
+		setAssignees(kanbanBoardTaskAssignees(task.content));
+		setAssigneeRole(task.content.assigneeRole ?? "");
 		setTaskType(task.content.taskType ?? "");
 		setWorkType(task.content.workType ?? "");
 		setEstimatePd(
@@ -149,6 +241,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		);
 		setDueDate(task.content.dueDate ?? "");
 		setParentTask(task.content.parentTask ?? "");
+		setCustomer(task.content.customer ?? "");
 		setSprintId(task.content.sprintId ?? "");
 		setStreamCustomer(task.content.streamCustomer ?? "");
 		setDescription(task.content.description ?? "");
@@ -167,7 +260,10 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			priority: priority
 				? (priority as KanbanBoardTaskContent["priority"])
 				: undefined,
-			assignee: assignee.trim() || undefined,
+			assignees: assignees.length ? assignees : undefined,
+			assigneeRole: assigneeRole
+				? (assigneeRole as KanbanBoardAssigneeRoleId)
+				: undefined,
 			taskType: taskType
 				? (taskType as KanbanBoardTaskContent["taskType"])
 				: undefined,
@@ -180,6 +276,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 					: undefined,
 			dueDate: dueDate.trim() || undefined,
 			parentTask: parentTask.trim() || undefined,
+			customer: customer.trim() || undefined,
 			sprintId: sprintId || undefined,
 			streamCustomer: streamCustomer.trim() || undefined,
 		};
@@ -291,20 +388,14 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 					{showForm ? (
 						<Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
 							{showBoardPicker ? (
-								<TextField
-									select
+								<KanbanTaskSelectField
 									label="Доска"
 									value={selectedBoardId}
-									onChange={(event) => setSelectedBoardId(event.target.value)}
+									options={boardOptions}
+									onChange={setSelectedBoardId}
 									required
 									fullWidth
-								>
-									{(boardsQuery.data ?? []).map((board) => (
-										<MenuItem key={board.id} value={board.id}>
-											{board.projectCode}/{board.slug} — {board.name}
-										</MenuItem>
-									))}
-								</TextField>
+								/>
 							) : null}
 							<TextField
 								label="Заголовок"
@@ -315,81 +406,55 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 								autoFocus={isCreate}
 							/>
 							<Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-								<TextField
-									select
+								<KanbanTaskSelectField
 									label="Колонка"
 									value={parentId}
-									onChange={(event) => setParentId(event.target.value)}
-									fullWidth
+									options={columnOptions}
+									onChange={setParentId}
 									disabled={columnsQuery.isLoading || !columns.length}
-								>
-									{columns.map((column) => (
-										<MenuItem key={column.id} value={column.id}>
-											{column.title}
-										</MenuItem>
-									))}
-								</TextField>
-								<TextField
-									select
+									fullWidth
+								/>
+								<KanbanTaskSelectField
 									label="Приоритет"
 									value={priority}
-									onChange={(event) => setPriority(event.target.value)}
+									options={PRIORITY_OPTIONS.map((option) => ({
+										value: option.value,
+										label: option.label,
+										color: option.color,
+									}))}
+									onChange={setPriority}
 									fullWidth
-								>
-									{PRIORITY_OPTIONS.map((option) => (
-										<MenuItem
-											key={option.value || "empty"}
-											value={option.value}
-										>
-											{option.label}
-										</MenuItem>
-									))}
-								</TextField>
-								<TextField
-									select
-									label="Исполнитель"
-									value={assignee}
-									onChange={(event) => setAssignee(event.target.value)}
+								/>
+								<KanbanTaskMultiSelectField
+									label="Исполнители"
+									value={assignees}
+									options={assigneeOptions}
+									onChange={setAssignees}
 									fullWidth
-								>
-									<MenuItem value="">—</MenuItem>
-									{(assigneesQuery.data ?? []).map((item) => (
-										<MenuItem key={item.id} value={item.name}>
-											{item.name}
-											{item.email ? ` (${item.email})` : ""}
-										</MenuItem>
-									))}
-								</TextField>
+								/>
+								<KanbanTaskSelectField
+									label="Роль исполнителя"
+									value={assigneeRole}
+									options={assigneeRoleOptions}
+									onChange={setAssigneeRole}
+									fullWidth
+								/>
 							</Stack>
 							<Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-								<TextField
-									select
+								<KanbanTaskSelectField
 									label="Тип задачи"
 									value={taskType}
-									onChange={(event) => setTaskType(event.target.value)}
+									options={taskTypeOptions}
+									onChange={setTaskType}
 									fullWidth
-								>
-									<MenuItem value="">—</MenuItem>
-									{KANBAN_BOARD_TASK_TYPES.map((option) => (
-										<MenuItem key={option.id} value={option.id}>
-											{option.title}
-										</MenuItem>
-									))}
-								</TextField>
-								<TextField
-									select
+								/>
+								<KanbanTaskSelectField
 									label="Тип работ"
 									value={workType}
-									onChange={(event) => setWorkType(event.target.value)}
+									options={workTypeOptions}
+									onChange={setWorkType}
 									fullWidth
-								>
-									<MenuItem value="">—</MenuItem>
-									{KANBAN_BOARD_WORK_TYPES.map((option) => (
-										<MenuItem key={option.id} value={option.id}>
-											{option.title}
-										</MenuItem>
-									))}
-								</TextField>
+								/>
 								<TextField
 									label="Оценка, чд"
 									type="number"
@@ -416,33 +481,26 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 									placeholder="Ключ или название родительской задачи"
 								/>
 								<TextField
-									select
+									label="Заказчик"
+									value={customer}
+									onChange={(event) => setCustomer(event.target.value)}
+									fullWidth
+									placeholder="Заказчик задачи"
+								/>
+								<KanbanTaskSelectField
 									label="Спринт"
 									value={sprintId}
-									onChange={(event) => setSprintId(event.target.value)}
+									options={sprintOptions}
+									onChange={setSprintId}
 									fullWidth
-								>
-									<MenuItem value="">—</MenuItem>
-									{(sprintsQuery.data ?? []).map((item) => (
-										<MenuItem key={item.id} value={item.id}>
-											{item.code} — {item.name}
-										</MenuItem>
-									))}
-								</TextField>
-								<TextField
-									select
+								/>
+								<KanbanTaskSelectField
 									label="Стрим-заказчик"
 									value={streamCustomer}
-									onChange={(event) => setStreamCustomer(event.target.value)}
+									options={streamOptions}
+									onChange={setStreamCustomer}
 									fullWidth
-								>
-									<MenuItem value="">—</MenuItem>
-									{(streamsQuery.data ?? []).map((item) => (
-										<MenuItem key={item.id} value={item.name}>
-											{item.name}
-										</MenuItem>
-									))}
-								</TextField>
+								/>
 							</Stack>
 							<Box sx={{ flex: 1, minHeight: 360 }}>
 								<Typography variant="subtitle2" sx={{ mb: 1 }}>

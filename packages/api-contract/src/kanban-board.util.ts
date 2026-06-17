@@ -123,6 +123,22 @@ export function fromBoardData(
 	return out;
 }
 
+export function kanbanBoardTaskAssignees(
+	content: Pick<KanbanBoardTaskContent, "assignee" | "assignees">,
+): string[] {
+	if (content.assignees?.length) {
+		return [...new Set(content.assignees.map((item) => item.trim()).filter(Boolean))];
+	}
+	const legacyAssignee = content.assignee?.trim();
+	return legacyAssignee ? [legacyAssignee] : [];
+}
+
+export function kanbanBoardTaskAssigneesTitle(
+	content: Pick<KanbanBoardTaskContent, "assignee" | "assignees">,
+): string {
+	return kanbanBoardTaskAssignees(content).join(", ");
+}
+
 export function boardsEquivalent(
 	left: KanbanBoardData,
 	right: KanbanBoardData,
@@ -132,7 +148,7 @@ export function boardsEquivalent(
 	if (leftRows.length !== rightRows.length) return false;
 
 	const sortKey = (row: KanbanBoardTaskRecord) =>
-		`${row.id}:${row.parentId}:${row.position}:${row.content.title}:${row.content.description ?? ""}:${row.content.priority ?? ""}:${row.content.assignee ?? ""}`;
+		`${row.id}:${row.parentId}:${row.position}:${row.content.title}:${row.content.description ?? ""}:${row.content.priority ?? ""}:${kanbanBoardTaskAssigneesTitle(row.content)}`;
 	const leftKeys = leftRows.map(sortKey).sort();
 	const rightKeys = rightRows.map(sortKey).sort();
 	return leftKeys.every((key, index) => key === rightKeys[index]);

@@ -2,7 +2,10 @@ export interface KanbanBoardTaskContent {
     title: string;
     description?: string;
     priority?: "low" | "medium" | "high";
+    /** @deprecated use assignees */
     assignee?: string;
+    assignees?: string[];
+    assigneeRole?: KanbanBoardAssigneeRoleId;
     tags?: string[];
     /** @deprecated use estimatePd */
     estimate?: number;
@@ -14,6 +17,8 @@ export interface KanbanBoardTaskContent {
     dueDate?: string;
     /** Родительская задача (ручной ввод) */
     parentTask?: string;
+    /** Заказчик (ручной ввод) */
+    customer?: string;
     sprintId?: string;
     streamCustomer?: string;
 }
@@ -53,6 +58,48 @@ export declare const KANBAN_BOARD_WORK_TYPES: readonly [{
 export type KanbanBoardWorkTypeId = (typeof KANBAN_BOARD_WORK_TYPES)[number]["id"];
 export declare function kanbanBoardTaskTypeTitle(id?: KanbanBoardTaskTypeId | string): string;
 export declare function kanbanBoardWorkTypeTitle(id?: KanbanBoardWorkTypeId | string): string;
+export declare const KANBAN_BOARD_ASSIGNEE_ROLES: readonly [{
+    readonly id: "developer";
+    readonly title: "Разработчик";
+    readonly color: "#2563eb";
+}, {
+    readonly id: "analyst";
+    readonly title: "Аналитик";
+    readonly color: "#7c3aed";
+}, {
+    readonly id: "qa";
+    readonly title: "QA";
+    readonly color: "#059669";
+}, {
+    readonly id: "devops";
+    readonly title: "DevOps";
+    readonly color: "#ea580c";
+}, {
+    readonly id: "designer";
+    readonly title: "Дизайнер";
+    readonly color: "#db2777";
+}, {
+    readonly id: "architect";
+    readonly title: "Архитектор";
+    readonly color: "#0891b2";
+}, {
+    readonly id: "pm";
+    readonly title: "Менеджер";
+    readonly color: "#ca8a04";
+}, {
+    readonly id: "lead";
+    readonly title: "Тимлид";
+    readonly color: "#4f46e5";
+}];
+export type KanbanBoardAssigneeRoleId = (typeof KANBAN_BOARD_ASSIGNEE_ROLES)[number]["id"];
+export declare function kanbanBoardAssigneeRoleTitle(id?: KanbanBoardAssigneeRoleId | string): string;
+export declare function kanbanBoardAssigneeRoleColor(id?: KanbanBoardAssigneeRoleId | string): string;
+export declare const KANBAN_BOARD_TASK_TYPE_COLORS: Record<KanbanBoardTaskTypeId, string>;
+export declare const KANBAN_BOARD_WORK_TYPE_COLORS: Record<KanbanBoardWorkTypeId, string>;
+export declare const KANBAN_BOARD_PRIORITY_COLORS: Record<NonNullable<KanbanBoardTaskContent["priority"]>, string>;
+export declare function kanbanBoardTaskTypeColor(id?: KanbanBoardTaskTypeId | string): string;
+export declare function kanbanBoardWorkTypeColor(id?: KanbanBoardWorkTypeId | string): string;
+export declare function kanbanBoardPriorityColor(priority?: KanbanBoardTaskContent["priority"] | string): string;
 export interface KanbanBoardTaskRecord {
     id: string;
     boardId: string;
@@ -94,9 +141,13 @@ export interface KanbanBoardTaskRegistryDto extends KanbanBoardTaskRecord {
     statusTitle: string;
     taskTypeTitle: string;
     workTypeTitle: string;
+    assigneeTitle: string;
+    assignees: string[];
+    assigneeRoleTitle: string;
     estimatePd?: number;
     dueDate?: string;
     parentTask?: string;
+    customer?: string;
     sprintTitle?: string;
     streamCustomer?: string;
 }

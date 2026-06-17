@@ -4,14 +4,12 @@ import PublishIcon from "@mui/icons-material/Publish";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	fromBoardData,
-	kanbanBoardTaskTypeTitle,
 	normalizeKanbanBoardData,
 	toBoardData,
 	type KanbanBoardColumnDto,
@@ -19,6 +17,8 @@ import {
 	type KanbanBoardTaskContent,
 	type KanbanBoardTaskRecord,
 } from "@smart-anketa/api-contract";
+import { KanbanTaskContentChips } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
+import { kanbanBoardTaskAssignees } from "@smart-anketa/api-contract";
 import { Kanban, dropHandler } from "react-kanban-kit";
 import type { BoardData, BoardItem } from "react-kanban-kit";
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
@@ -97,8 +97,11 @@ function TaskCardContent({
 					</Typography>
 				) : null}
 				{content?.priority ||
-				content?.assignee ||
+				(content && kanbanBoardTaskAssignees(content).length > 0) ||
+				content?.assigneeRole ||
 				content?.taskType ||
+				content?.workType ||
+				content?.streamCustomer ||
 				content?.estimatePd ||
 				content?.dueDate ||
 				origin ? (
@@ -109,33 +112,7 @@ function TaskCardContent({
 						useFlexGap
 						alignItems="center"
 					>
-						{content?.taskType ? (
-							<Chip
-								size="small"
-								variant="outlined"
-								label={kanbanBoardTaskTypeTitle(content.taskType)}
-							/>
-						) : null}
-						{content?.priority ? (
-							<Chip size="small" label={content.priority} />
-						) : null}
-						{content?.assignee ? (
-							<Chip size="small" variant="outlined" label={content.assignee} />
-						) : null}
-						{content?.estimatePd !== undefined ? (
-							<Chip size="small" variant="outlined" label={`${content.estimatePd} чд`} />
-						) : null}
-						{content?.dueDate ? (
-							<Chip size="small" variant="outlined" label={content.dueDate} />
-						) : null}
-						{origin ? (
-							<Chip
-								size="small"
-								variant="outlined"
-								color="info"
-								label={origin}
-							/>
-						) : null}
+						<KanbanTaskContentChips content={content} origin={origin} />
 					</Stack>
 				) : null}
 			</Stack>

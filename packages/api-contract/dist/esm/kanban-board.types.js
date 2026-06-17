@@ -18,6 +18,56 @@ export function kanbanBoardTaskTypeTitle(id) {
 export function kanbanBoardWorkTypeTitle(id) {
     return KANBAN_BOARD_WORK_TYPES.find((item) => item.id === id)?.title ?? id ?? "";
 }
+export const KANBAN_BOARD_ASSIGNEE_ROLES = [
+    { id: "developer", title: "Разработчик", color: "#2563eb" },
+    { id: "analyst", title: "Аналитик", color: "#7c3aed" },
+    { id: "qa", title: "QA", color: "#059669" },
+    { id: "devops", title: "DevOps", color: "#ea580c" },
+    { id: "designer", title: "Дизайнер", color: "#db2777" },
+    { id: "architect", title: "Архитектор", color: "#0891b2" },
+    { id: "pm", title: "Менеджер", color: "#ca8a04" },
+    { id: "lead", title: "Тимлид", color: "#4f46e5" },
+];
+export function kanbanBoardAssigneeRoleTitle(id) {
+    return KANBAN_BOARD_ASSIGNEE_ROLES.find((item) => item.id === id)?.title ?? id ?? "";
+}
+export function kanbanBoardAssigneeRoleColor(id) {
+    return (KANBAN_BOARD_ASSIGNEE_ROLES.find((item) => item.id === id)?.color ?? "#64748b");
+}
+export const KANBAN_BOARD_TASK_TYPE_COLORS = {
+    epic: "#9333ea",
+    story: "#2563eb",
+    task: "#64748b",
+    bug: "#dc2626",
+    subtask: "#94a3b8",
+};
+export const KANBAN_BOARD_WORK_TYPE_COLORS = {
+    architecture: "#0891b2",
+    linear: "#64748b",
+    feature: "#16a34a",
+    support: "#ca8a04",
+    tech_debt: "#ea580c",
+};
+export const KANBAN_BOARD_PRIORITY_COLORS = {
+    low: "#16a34a",
+    medium: "#ca8a04",
+    high: "#dc2626",
+};
+export function kanbanBoardTaskTypeColor(id) {
+    if (!id)
+        return "#64748b";
+    return (KANBAN_BOARD_TASK_TYPE_COLORS[id] ?? "#64748b");
+}
+export function kanbanBoardWorkTypeColor(id) {
+    if (!id)
+        return "#64748b";
+    return (KANBAN_BOARD_WORK_TYPE_COLORS[id] ?? "#64748b");
+}
+export function kanbanBoardPriorityColor(priority) {
+    if (!priority)
+        return "#64748b";
+    return (KANBAN_BOARD_PRIORITY_COLORS[priority] ?? "#64748b");
+}
 export const KANBAN_BOARD_STOCK_PROJECTS = [
     { code: "sum", name: "SUM", description: "Стоковый проект SUM" },
     { code: "sum-rm", name: "SUM-RM", description: "Стоковый проект SUM-RM" },

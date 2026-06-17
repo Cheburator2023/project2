@@ -9,6 +9,16 @@ import {
 	trackerBoardFilterText,
 	trackerProjectFilterText,
 } from "@react-client/features/tracker/components/TrackerRegistryChipCell";
+import {
+	TrackerTaskAssigneesChips,
+	TrackerTaskAssigneeRoleChip,
+	TrackerTaskOriginChip,
+	TrackerTaskSprintChip,
+	TrackerTaskStatusChip,
+	TrackerTaskStreamChip,
+	TrackerTaskTypeChip,
+	TrackerTaskWorkTypeChip,
+} from "@react-client/features/tracker/components/TrackerTaskFieldChips";
 import { TrackerRegistryPage } from "@react-client/features/tracker/components/TrackerRegistryPage";
 import { TrackerRegistryExportButton } from "@react-client/features/tracker/components/TrackerRegistryExportButton";
 import { trackerDateFormatter } from "@react-client/features/tracker/components/TrackerRegistryGrid";
@@ -65,9 +75,70 @@ export function TrackerTasksPage() {
 						/>
 					) : null,
 			},
-			{ field: "statusTitle", headerName: "Статус", width: 130 },
-			{ field: "taskTypeTitle", headerName: "Тип", width: 110 },
-			{ field: "workTypeTitle", headerName: "Тип работ", minWidth: 180, flex: 1 },
+			{
+				colId: "status",
+				headerName: "Статус",
+				width: 130,
+				valueGetter: (params) => params.data?.statusTitle ?? "",
+				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
+					params.data ? (
+						<TrackerTaskStatusChip
+							statusId={params.data.parentId}
+							statusTitle={params.data.statusTitle}
+						/>
+					) : null,
+			},
+			{
+				colId: "taskType",
+				headerName: "Тип",
+				width: 110,
+				valueGetter: (params) => params.data?.taskTypeTitle ?? "",
+				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
+					params.data ? (
+						<TrackerTaskTypeChip
+							taskType={params.data.content.taskType}
+							taskTypeTitle={params.data.taskTypeTitle}
+						/>
+					) : null,
+			},
+			{
+				colId: "workType",
+				headerName: "Тип работ",
+				minWidth: 180,
+				flex: 1,
+				valueGetter: (params) => params.data?.workTypeTitle ?? "",
+				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
+					params.data ? (
+						<TrackerTaskWorkTypeChip
+							workType={params.data.content.workType}
+							workTypeTitle={params.data.workTypeTitle}
+						/>
+					) : null,
+			},
+			{
+				colId: "assignee",
+				headerName: "Исполнители",
+				minWidth: 160,
+				flex: 0.9,
+				valueGetter: (params) => params.data?.assigneeTitle ?? "",
+				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
+					params.data ? (
+						<TrackerTaskAssigneesChips assignees={params.data.assignees} />
+					) : null,
+			},
+			{
+				colId: "assigneeRole",
+				headerName: "Роль",
+				width: 120,
+				valueGetter: (params) => params.data?.assigneeRoleTitle ?? "",
+				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
+					params.data ? (
+						<TrackerTaskAssigneeRoleChip
+							assigneeRole={params.data.content.assigneeRole}
+							assigneeRoleTitle={params.data.assigneeRoleTitle}
+						/>
+					) : null,
+			},
 			{
 				field: "estimatePd",
 				headerName: "Оценка, чд",
@@ -76,9 +147,37 @@ export function TrackerTasksPage() {
 			},
 			{ field: "dueDate", headerName: "Срок", width: 120 },
 			{ field: "parentTask", headerName: "Родитель", minWidth: 140, flex: 0.8 },
-			{ field: "sprintTitle", headerName: "Спринт", minWidth: 140, flex: 0.8 },
-			{ field: "streamCustomer", headerName: "Стрим", minWidth: 140, flex: 0.8 },
-			{ field: "origin", headerName: "Стенд", width: 120 },
+			{ field: "customer", headerName: "Заказчик", minWidth: 140, flex: 0.8 },
+			{
+				colId: "sprint",
+				headerName: "Спринт",
+				minWidth: 140,
+				flex: 0.8,
+				valueGetter: (params) => params.data?.sprintTitle ?? "",
+				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
+					params.data ? (
+						<TrackerTaskSprintChip sprintTitle={params.data.sprintTitle} />
+					) : null,
+			},
+			{
+				colId: "stream",
+				headerName: "Стрим",
+				minWidth: 140,
+				flex: 0.8,
+				valueGetter: (params) => params.data?.streamCustomer ?? "",
+				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
+					params.data ? (
+						<TrackerTaskStreamChip streamCustomer={params.data.streamCustomer} />
+					) : null,
+			},
+			{
+				colId: "origin",
+				headerName: "Стенд",
+				width: 120,
+				valueGetter: (params) => params.data?.origin ?? "",
+				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
+					params.data ? <TrackerTaskOriginChip origin={params.data.origin} /> : null,
+			},
 			{
 				field: "updatedAt",
 				headerName: "Обновлено",

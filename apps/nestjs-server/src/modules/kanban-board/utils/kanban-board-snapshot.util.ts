@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import * as ExcelJS from "exceljs";
 import {
 	KANBAN_BOARD_SCHEMA_VERSION,
+	kanbanBoardTaskAssigneesTitle,
 	type KanbanBoardSnapshotMeta,
 	type KanbanBoardTaskRecord,
 } from "@smart-anketa/api-contract";
@@ -60,7 +61,7 @@ export async function exportXlsx(
 			title: task.content.title,
 			description: task.content.description ?? "",
 			priority: task.content.priority ?? "",
-			assignee: task.content.assignee ?? "",
+			assignee: kanbanBoardTaskAssigneesTitle(task.content),
 			updatedAt: task.updatedAt,
 			json: JSON.stringify(task),
 		});

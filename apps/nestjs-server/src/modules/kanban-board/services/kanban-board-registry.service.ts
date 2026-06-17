@@ -9,6 +9,9 @@ import { ulid } from "ulid";
 import {
 	KANBAN_BOARD_COLUMN_COLORS,
 	KANBAN_BOARD_STATUSES,
+	kanbanBoardAssigneeRoleTitle,
+	kanbanBoardTaskAssignees,
+	kanbanBoardTaskAssigneesTitle,
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeTitle,
 	pickKanbanBoardColumnColor,
@@ -874,9 +877,13 @@ export class KanbanBoardRegistryService {
 				columnTitles.get(`${task.boardId}:${task.parentId}`) ?? task.parentId,
 			taskTypeTitle: kanbanBoardTaskTypeTitle(content.taskType),
 			workTypeTitle: kanbanBoardWorkTypeTitle(content.workType),
+			assigneeTitle: kanbanBoardTaskAssigneesTitle(content),
+			assignees: kanbanBoardTaskAssignees(content),
+			assigneeRoleTitle: kanbanBoardAssigneeRoleTitle(content.assigneeRole),
 			estimatePd: content.estimatePd,
 			dueDate: content.dueDate,
 			parentTask: content.parentTask,
+			customer: content.customer,
 			sprintTitle: content.sprintId
 				? sprintTitles.get(content.sprintId) ?? content.sprintId
 				: undefined,
@@ -917,36 +924,38 @@ export class KanbanBoardRegistryService {
 	}
 
 	private async countTasksByAssigneeName(): Promise<Map<string, number>> {
-		const rows = await this.taskRepository
-			.createQueryBuilder("task")
-			.select("task.content->>'assignee'", "assigneeName")
-			.addSelect("COUNT(*)", "count")
-			.where("task.content->>'assignee' IS NOT NULL")
-			.andWhere("task.content->>'assignee' <> ''")
-			.groupBy("task.content->>'assignee'")
-			.getRawMany<{ assigneeName: string; count: string }>();
-
-		return new Map(rows.map((row) => [row.assigneeName, Number(row.count)]));
+		const tasks = await this.taskRepository.find();
+		const counts = new Map<string, number>();
+		for (const task of tasks) {
+			for (const assigneeName of kanbanBoardTaskAssignees(task.content)) {
+				counts.set(assigneeName, (counts.get(assigneeName) ?? 0) + 1);
+			}
+		}
+		return counts;
 	}
 
 	private async countTasksWithAssigneeName(name: string): Promise<number> {
-		return this.taskRepository
-			.createQueryBuilder("task")
-			.where("task.content->>'assignee' = :name", { name })
-			.getCount();
+		const tasks = await this.taskRepository.find();
+		return tasks.filter((task) =>
+			kanbanBoardTaskAssignees(task.content).includes(name),
+		).length;
 	}
 
 	private async renameAssigneeInTasks(
 		oldName: string,
 		newName: string,
 	): Promise<void> {
-		const tasks = await this.taskRepository
-			.createQueryBuilder("task")
-			.where("task.content->>'assignee' = :oldName", { oldName })
-			.getMany();
+		const tasks = await this.taskRepository.find();
 
 		for (const task of tasks) {
-			task.content = { ...task.content, assignee: newName };
+			const assignees = kanbanBoardTaskAssignees(task.content);
+			if (!assignees.includes(oldName)) continue;
+
+			const nextAssignees = assignees.map((item) =>
+				item === oldName ? newName : item,
+			);
+			const { assignee: _legacyAssignee, ...rest } = task.content;
+			task.content = { ...rest, assignees: nextAssignees };
 			await this.taskRepository.save(task);
 		}
 	}

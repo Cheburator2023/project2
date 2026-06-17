@@ -98,12 +98,22 @@ export function fromBoardData(board, stand, now, boardId) {
     }
     return out;
 }
+export function kanbanBoardTaskAssignees(content) {
+    if (content.assignees?.length) {
+        return [...new Set(content.assignees.map((item) => item.trim()).filter(Boolean))];
+    }
+    const legacyAssignee = content.assignee?.trim();
+    return legacyAssignee ? [legacyAssignee] : [];
+}
+export function kanbanBoardTaskAssigneesTitle(content) {
+    return kanbanBoardTaskAssignees(content).join(", ");
+}
 export function boardsEquivalent(left, right) {
     const leftRows = fromBoardData(left, "stand", "1970-01-01T00:00:00.000Z", "board");
     const rightRows = fromBoardData(right, "stand", "1970-01-01T00:00:00.000Z", "board");
     if (leftRows.length !== rightRows.length)
         return false;
-    const sortKey = (row) => `${row.id}:${row.parentId}:${row.position}:${row.content.title}:${row.content.description ?? ""}:${row.content.priority ?? ""}:${row.content.assignee ?? ""}`;
+    const sortKey = (row) => `${row.id}:${row.parentId}:${row.position}:${row.content.title}:${row.content.description ?? ""}:${row.content.priority ?? ""}:${kanbanBoardTaskAssigneesTitle(row.content)}`;
     const leftKeys = leftRows.map(sortKey).sort();
     const rightKeys = rightRows.map(sortKey).sort();
     return leftKeys.every((key, index) => key === rightKeys[index]);

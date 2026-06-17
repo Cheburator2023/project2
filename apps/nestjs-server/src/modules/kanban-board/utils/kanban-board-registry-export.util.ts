@@ -1,5 +1,6 @@
 import * as ExcelJS from "exceljs";
 import type { KanbanBoardTaskRegistryDto } from "@smart-anketa/api-contract";
+import { kanbanBoardTaskAssignees } from "@smart-anketa/api-contract";
 
 const UNASSIGNED_ASSIGNEE = "— без исполнителя —";
 
@@ -10,9 +11,12 @@ const TASK_EXPORT_COLUMNS = [
 	{ header: "Статус", key: "status", width: 16 },
 	{ header: "Тип", key: "taskType", width: 14 },
 	{ header: "Тип работ", key: "workType", width: 24 },
+	{ header: "Исполнитель", key: "assignee", width: 18 },
+	{ header: "Роль", key: "assigneeRole", width: 16 },
 	{ header: "Оценка, чд", key: "estimatePd", width: 12 },
 	{ header: "Срок", key: "dueDate", width: 12 },
 	{ header: "Родитель", key: "parentTask", width: 24 },
+	{ header: "Заказчик", key: "customer", width: 20 },
 	{ header: "Спринт", key: "sprint", width: 20 },
 	{ header: "Стрим", key: "stream", width: 20 },
 	{ header: "Стенд", key: "origin", width: 12 },
@@ -24,10 +28,18 @@ export function groupTasksByAssignee(
 ): Map<string, KanbanBoardTaskRegistryDto[]> {
 	const groups = new Map<string, KanbanBoardTaskRegistryDto[]>();
 	for (const task of tasks) {
-		const assignee = task.content.assignee?.trim() || UNASSIGNED_ASSIGNEE;
-		const bucket = groups.get(assignee) ?? [];
-		bucket.push(task);
-		groups.set(assignee, bucket);
+		const assignees = kanbanBoardTaskAssignees(task.content);
+		if (!assignees.length) {
+			const bucket = groups.get(UNASSIGNED_ASSIGNEE) ?? [];
+			bucket.push(task);
+			groups.set(UNASSIGNED_ASSIGNEE, bucket);
+			continue;
+		}
+		for (const assignee of assignees) {
+			const bucket = groups.get(assignee) ?? [];
+			bucket.push(task);
+			groups.set(assignee, bucket);
+		}
 	}
 	return groups;
 }
@@ -69,9 +81,12 @@ function taskToExportRow(task: KanbanBoardTaskRegistryDto): Record<string, strin
 		status: task.statusTitle,
 		taskType: task.taskTypeTitle,
 		workType: task.workTypeTitle,
+		assignee: task.assigneeTitle,
+		assigneeRole: task.assigneeRoleTitle,
 		estimatePd: task.estimatePd ?? "",
 		dueDate: task.dueDate ?? "",
 		parentTask: task.parentTask ?? "",
+		customer: task.customer ?? "",
 		sprint: task.sprintTitle ?? "",
 		stream: task.streamCustomer ?? "",
 		origin: task.origin,

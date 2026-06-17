@@ -23,6 +23,9 @@ function task(
 		statusTitle: "Backlog",
 		taskTypeTitle: "",
 		workTypeTitle: "",
+		assigneeTitle: "",
+		assignees: [],
+		assigneeRoleTitle: "",
 		...overrides,
 	};
 }
@@ -30,9 +33,9 @@ function task(
 describe("kanban-board-registry-export.util", () => {
 	it("groups tasks by assignee with unassigned bucket last", () => {
 		const groups = groupTasksByAssignee([
-			task({ id: "1", content: { title: "A", assignee: "Bob" } }),
+			task({ id: "1", content: { title: "A", assignees: ["Bob"] } }),
 			task({ id: "2", content: { title: "B" } }),
-			task({ id: "3", content: { title: "C", assignee: "Alice" } }),
+			task({ id: "3", content: { title: "C", assignees: ["Alice", "Bob"] } }),
 		]);
 
 		expect(sortAssigneeGroupKeys([...groups.keys()])).toEqual([
@@ -41,6 +44,7 @@ describe("kanban-board-registry-export.util", () => {
 			"— без исполнителя —",
 		]);
 		expect(groups.get("Alice")).toHaveLength(1);
+		expect(groups.get("Bob")).toHaveLength(2);
 		expect(groups.get("— без исполнителя —")).toHaveLength(1);
 	});
 

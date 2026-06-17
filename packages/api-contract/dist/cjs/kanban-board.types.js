@@ -1,8 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TASK_STATUSES = exports.TASK_TRACKER_SCHEMA_VERSION = exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS = exports.KANBAN_BOARD_COLUMN_COLORS = exports.KANBAN_BOARD_STATUSES = exports.KANBAN_BOARD_SCHEMA_VERSION = exports.KANBAN_BOARD_STOCK_PROJECTS = exports.KANBAN_BOARD_WORK_TYPES = exports.KANBAN_BOARD_TASK_TYPES = void 0;
+exports.TASK_STATUSES = exports.TASK_TRACKER_SCHEMA_VERSION = exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS = exports.KANBAN_BOARD_COLUMN_COLORS = exports.KANBAN_BOARD_STATUSES = exports.KANBAN_BOARD_SCHEMA_VERSION = exports.KANBAN_BOARD_STOCK_PROJECTS = exports.KANBAN_BOARD_PRIORITY_COLORS = exports.KANBAN_BOARD_WORK_TYPE_COLORS = exports.KANBAN_BOARD_TASK_TYPE_COLORS = exports.KANBAN_BOARD_ASSIGNEE_ROLES = exports.KANBAN_BOARD_WORK_TYPES = exports.KANBAN_BOARD_TASK_TYPES = void 0;
 exports.kanbanBoardTaskTypeTitle = kanbanBoardTaskTypeTitle;
 exports.kanbanBoardWorkTypeTitle = kanbanBoardWorkTypeTitle;
+exports.kanbanBoardAssigneeRoleTitle = kanbanBoardAssigneeRoleTitle;
+exports.kanbanBoardAssigneeRoleColor = kanbanBoardAssigneeRoleColor;
+exports.kanbanBoardTaskTypeColor = kanbanBoardTaskTypeColor;
+exports.kanbanBoardWorkTypeColor = kanbanBoardWorkTypeColor;
+exports.kanbanBoardPriorityColor = kanbanBoardPriorityColor;
 exports.pickKanbanBoardColumnColor = pickKanbanBoardColumnColor;
 exports.defaultKanbanBoardColumns = defaultKanbanBoardColumns;
 exports.KANBAN_BOARD_TASK_TYPES = [
@@ -24,6 +29,56 @@ function kanbanBoardTaskTypeTitle(id) {
 }
 function kanbanBoardWorkTypeTitle(id) {
     return exports.KANBAN_BOARD_WORK_TYPES.find((item) => item.id === id)?.title ?? id ?? "";
+}
+exports.KANBAN_BOARD_ASSIGNEE_ROLES = [
+    { id: "developer", title: "Разработчик", color: "#2563eb" },
+    { id: "analyst", title: "Аналитик", color: "#7c3aed" },
+    { id: "qa", title: "QA", color: "#059669" },
+    { id: "devops", title: "DevOps", color: "#ea580c" },
+    { id: "designer", title: "Дизайнер", color: "#db2777" },
+    { id: "architect", title: "Архитектор", color: "#0891b2" },
+    { id: "pm", title: "Менеджер", color: "#ca8a04" },
+    { id: "lead", title: "Тимлид", color: "#4f46e5" },
+];
+function kanbanBoardAssigneeRoleTitle(id) {
+    return exports.KANBAN_BOARD_ASSIGNEE_ROLES.find((item) => item.id === id)?.title ?? id ?? "";
+}
+function kanbanBoardAssigneeRoleColor(id) {
+    return (exports.KANBAN_BOARD_ASSIGNEE_ROLES.find((item) => item.id === id)?.color ?? "#64748b");
+}
+exports.KANBAN_BOARD_TASK_TYPE_COLORS = {
+    epic: "#9333ea",
+    story: "#2563eb",
+    task: "#64748b",
+    bug: "#dc2626",
+    subtask: "#94a3b8",
+};
+exports.KANBAN_BOARD_WORK_TYPE_COLORS = {
+    architecture: "#0891b2",
+    linear: "#64748b",
+    feature: "#16a34a",
+    support: "#ca8a04",
+    tech_debt: "#ea580c",
+};
+exports.KANBAN_BOARD_PRIORITY_COLORS = {
+    low: "#16a34a",
+    medium: "#ca8a04",
+    high: "#dc2626",
+};
+function kanbanBoardTaskTypeColor(id) {
+    if (!id)
+        return "#64748b";
+    return (exports.KANBAN_BOARD_TASK_TYPE_COLORS[id] ?? "#64748b");
+}
+function kanbanBoardWorkTypeColor(id) {
+    if (!id)
+        return "#64748b";
+    return (exports.KANBAN_BOARD_WORK_TYPE_COLORS[id] ?? "#64748b");
+}
+function kanbanBoardPriorityColor(priority) {
+    if (!priority)
+        return "#64748b";
+    return (exports.KANBAN_BOARD_PRIORITY_COLORS[priority] ?? "#64748b");
 }
 exports.KANBAN_BOARD_STOCK_PROJECTS = [
     { code: "sum", name: "SUM", description: "Стоковый проект SUM" },
