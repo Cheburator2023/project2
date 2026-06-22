@@ -12,7 +12,6 @@ interface GlobalSettingsState {
 	setGridApi: (api: GridApi | null) => void;
 	setUser: (user?: T_KEYCLOAK_USER) => void;
 	setConfigMap: (configMap?: T_CONFIG_MAP) => void;
-	onLogout?: () => void;
 }
 
 export const useGlobalSettingsStore = create<GlobalSettingsState>()(
@@ -22,7 +21,6 @@ export const useGlobalSettingsStore = create<GlobalSettingsState>()(
 			gridApi: null,
 			user: undefined,
 			configMap: undefined,
-			onLogout: () => {},
 			toggleSideMenu: () =>
 				set((state) => ({ isSideMenuVisible: !state.isSideMenuVisible })),
 			setGridApi: (api: GridApi | null) => set({ gridApi: api }),
@@ -31,6 +29,9 @@ export const useGlobalSettingsStore = create<GlobalSettingsState>()(
 		}),
 		{
 			name: "useGlobalSettings-storage",
+			partialize: (state) => ({
+				isSideMenuVisible: state.isSideMenuVisible,
+			}),
 		},
 	),
 );

@@ -1,6 +1,7 @@
 import { createBridgeComponent } from "@module-federation/bridge-react/v19";
 import { AuthProvider } from "@react-client/common/providers/AuthProvider";
 import { useUserStore } from "@react-client/common/store/userStore";
+import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { globalStyles } from "@react-client/theme/GlobalStyle";
 import { Permission, Role } from "@react-client/types/roles";
 import { useEffect } from "react";
@@ -10,10 +11,13 @@ import { syncMfeAuthFromHost } from "@react-client/common/auth/syncMfeAuth";
 import { normalizeMfeUrlIfNeeded } from "@react-client/routing/basename";
 import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
 import { useDeepEffect } from "@react-client/common/hooks/useDeepEffect";
+
 type TKeycloakLike = {
 	logout: () => void;
 	login: () => void;
+	authenticated?: boolean;
 } & Record<string, unknown>;
+
 declare global {
 	interface Window {
 		__SMART_ANKETA_MFE_DEBUG__?: {
@@ -45,7 +49,6 @@ const MfeRoot = (props: Props) => {
 	normalizeMfeUrlIfNeeded();
 	syncMfeAuthFromHost(props);
 
-	console.log("MfeRoot >> props:", props);
 	window.__SMART_ANKETA_MFE_DEBUG__ = {
 		mountedAt: new Date().toISOString(),
 		hasToken: Boolean(props.token),
@@ -57,23 +60,34 @@ const MfeRoot = (props: Props) => {
 		if (props?.urlConfig) {
 			window.urlConfig = props.urlConfig;
 			window.keycloak = props.keycloak;
-			window.user = props.user;
 		}
-		if (props?.token) {
-			window.token = props.token;
-		}
+		window.user = props.user;
+		window.token = props.token;
 		syncMfeAuthFromHost(props);
 	}, [props]);
 
 	const { user } = props;
+	const { setUser } = useGlobalSettingsStore();
 	const { setUsername, setGroups, setRoles, setPermissions } = useUserStore();
 
 	useEffect(() => {
-		if (user?.preferred_username) {
-			setUsername(user?.preferred_username);
+		setUser(user);
+	}, [user, setUser]);
+
+	useEffect(() => {
+		if (!user) {
+			setUsername("");
+			setGroups([]);
+			setRoles([]);
+			setPermissions([]);
+			return;
 		}
 
-		if (user?.groups) {
+		if (user.preferred_username) {
+			setUsername(user.preferred_username);
+		}
+
+		if (user.groups) {
 			setGroups(user.groups);
 
 			const roles = user.groups.filter((group) =>
@@ -82,7 +96,7 @@ const MfeRoot = (props: Props) => {
 			setRoles(roles);
 		}
 
-		if (user?.realm_access?.roles) {
+		if (user.realm_access?.roles) {
 			const permissions = user.realm_access.roles.filter((permission) =>
 				Object.values(Permission).includes(permission as Permission),
 			) as Permission[];
@@ -90,9 +104,7 @@ const MfeRoot = (props: Props) => {
 			setPermissions(permissions);
 		}
 	}, [
-		user?.preferred_username,
-		user?.groups,
-		user?.realm_access?.roles,
+		user,
 		setUsername,
 		setGroups,
 		setRoles,
@@ -100,7 +112,12 @@ const MfeRoot = (props: Props) => {
 	]);
 
 	return (
-		<AuthProvider token={props.token} keycloak={props.keycloak}>
+		<AuthProvider
+			token={props.token}
+			keycloak={props.keycloak}
+			user={props.user}
+			onLogout={props.onLogout}
+		>
 			{globalStyles}
 
 			{props?.urlConfig && props?.keycloak ? (

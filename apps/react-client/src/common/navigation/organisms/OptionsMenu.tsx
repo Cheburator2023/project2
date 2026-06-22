@@ -13,7 +13,6 @@ import {
 	useV2DataTransferActions,
 	V2DataTransferMenuItems,
 } from "@react-client/common/navigation/organisms/V2DataTransferMenu";
-import { useAuthStore } from "@react-client/common/store/authStore";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -39,13 +38,9 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 	};
 
 	const handleLogout = () => {
-		onLogout?.();
 		setAnchorEl(null);
-		useAuthStore.getState().setAccessToken(null);
-		queryClient.removeQueries();
 		queryClient.clear();
-		queryClient.invalidateQueries();
-		window.location.reload();
+		onLogout?.();
 	};
 
 	return (
@@ -91,7 +86,7 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 					</>
 				) : null}
 				<MenuItem
-					onClick={handleClose}
+					onClick={handleLogout}
 					sx={{
 						[`& .${listItemIconClasses.root}`]: {
 							ml: "auto",
@@ -100,10 +95,7 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 					}}
 					data-test-id="options-menu--MenuItem-0"
 				>
-					<ListItemText
-						onClick={handleLogout}
-						data-test-id="options-menu--ListItemText-0"
-					>
+					<ListItemText data-test-id="options-menu--ListItemText-0">
 						Выйти
 					</ListItemText>
 					<ListItemIcon data-test-id="options-menu--ListItemIcon-0">

@@ -1,4 +1,4 @@
-import { syncMfeAuthFromHost } from "@react-client/common/auth/syncMfeAuth";
+import { ensureKeycloakSession, syncMfeAuthFromHost } from "@react-client/common/auth/syncMfeAuth";
 import type { MfeAuthHostProps } from "@react-client/common/auth/syncMfeAuth";
 import { useAuthStore } from "../store/authStore";
 import { useLayoutEffect } from "react";
@@ -13,17 +13,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 	godMode: propGodMode,
 	token,
 	keycloak,
+	user,
+	onLogout,
 }) => {
 	const setAccessToken = useAuthStore((state) => state.setAccessToken);
 	const GOD_MODE = process?.env?.NO_ROLES === "true" || propGodMode;
+	const hostProps = { token, keycloak, user, onLogout };
 
 	useLayoutEffect(() => {
 		if (GOD_MODE) {
 			setAccessToken("god-mode-token");
 			return;
 		}
-		syncMfeAuthFromHost({ token, keycloak });
-	}, [GOD_MODE, token, keycloak, setAccessToken]);
+
+		syncMfeAuthFromHost(hostProps);
+		ensureKeycloakSession(hostProps);
+	}, [GOD_MODE, token, keycloak, user, onLogout, setAccessToken]);
 
 	if (GOD_MODE) return <>{children}</>;
 	return children;

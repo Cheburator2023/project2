@@ -7,6 +7,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { ErrorBoundary } from "@react-client/common/errors/ErrorBoundary";
 import { ErrorPage } from "@react-client/common/errors/pages/ErrorPage";
+import { performMfeLogout } from "@react-client/common/auth/syncMfeAuth";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { Toaster } from "@react-client/common/toasts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -79,14 +80,11 @@ const App: React.FC<LayoutProps> = (props) => {
 	const { setUser, setConfigMap } = useGlobalSettingsStore();
 
 	const onLogoutHandler = () => {
-		keycloak?.logout();
-		onLogout?.();
+		performMfeLogout({ keycloak, onLogout });
 	};
 
 	useEffect(() => {
-		if (!isEmpty(user)) {
-			setUser(user);
-		}
+		setUser(isEmpty(user) ? undefined : user);
 	}, [user, setUser]);
 
 	useEffect(() => {

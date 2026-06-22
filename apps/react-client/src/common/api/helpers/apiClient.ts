@@ -1,4 +1,5 @@
 import {
+	ensureKeycloakSession,
 	refreshHostAccessToken,
 	resolveFreshAccessToken,
 } from "@react-client/common/auth/syncMfeAuth";
@@ -8,7 +9,6 @@ import axios, {
 	type AxiosRequestConfig,
 	type AxiosResponse,
 } from "axios";
-import { useAuthStore } from "../../store/authStore";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
@@ -79,7 +79,7 @@ axiosInstance.interceptors.response.use(
 		try {
 			const nextToken = await queueTokenRefresh();
 			if (!nextToken) {
-				useAuthStore.getState().setAccessToken(null);
+				ensureKeycloakSession();
 				return Promise.reject(error);
 			}
 
@@ -89,7 +89,7 @@ axiosInstance.interceptors.response.use(
 			};
 			return axiosInstance(originalRequest);
 		} catch (refreshError) {
-			useAuthStore.getState().setAccessToken(null);
+			ensureKeycloakSession();
 			return Promise.reject(refreshError);
 		}
 	},

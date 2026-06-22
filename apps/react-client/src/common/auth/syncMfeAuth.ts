@@ -1,15 +1,21 @@
+import { clearMfeAuthState } from "@react-client/common/auth/clearMfeAuthState";
 import { useAuthStore } from "@react-client/common/store/authStore";
 
 export type MfeAuthHostProps = {
 	token?: string;
+	user?: unknown;
 	keycloak?: unknown;
+	onLogout?: () => void;
 };
 
 type KeycloakLike = {
 	token?: string;
 	accessToken?: string;
 	idToken?: string;
+	authenticated?: boolean;
 	updateToken?: (minValidity?: number) => Promise<boolean>;
+	login?: (options?: { redirectUri?: string }) => Promise<void> | void;
+	logout?: (options?: { redirectUri?: string }) => Promise<void> | void;
 };
 
 function asKeycloak(value: unknown): KeycloakLike | null {
@@ -19,7 +25,7 @@ function asKeycloak(value: unknown): KeycloakLike | null {
 
 function tokenFromKeycloak(keycloak: unknown): string | null {
 	const kc = asKeycloak(keycloak);
-	if (!kc) return null;
+	if (!kc || kc.authenticated === false) return null;
 	for (const key of ["token", "accessToken", "idToken"] as const) {
 		const value = kc[key];
 		if (typeof value === "string" && value.trim()) return value.trim();
@@ -38,17 +44,32 @@ function readCookieToken(): string | null {
 	}
 }
 
-function resolveKeycloakInstance(props?: MfeAuthHostProps | null): KeycloakLike | null {
+export function resolveKeycloakInstance(
+	props?: MfeAuthHostProps | null,
+): KeycloakLike | null {
 	return (
 		asKeycloak(props?.keycloak) ??
 		(typeof window !== "undefined" ? asKeycloak(window.keycloak) : null)
 	);
 }
 
+export function isKeycloakSessionActive(
+	keycloak: unknown | null | undefined,
+): boolean {
+	const kc = asKeycloak(keycloak);
+	if (!kc) return true;
+	return kc.authenticated !== false;
+}
+
 /** JWT с host (props / window / keycloak / cookie). */
 export function resolveHostAccessToken(
 	props?: MfeAuthHostProps | null,
 ): string | null {
+	const keycloak = resolveKeycloakInstance(props);
+	if (keycloak && keycloak.authenticated === false) {
+		return null;
+	}
+
 	const fromProps = props?.token?.trim();
 	if (fromProps) return fromProps;
 
@@ -56,6 +77,10 @@ export function resolveHostAccessToken(
 	if (fromKeycloak) return fromKeycloak;
 
 	if (typeof window !== "undefined") {
+		if (keycloak && keycloak.authenticated === false) {
+			return null;
+		}
+
 		const winToken = window.token?.trim();
 		if (winToken) return winToken;
 
@@ -78,6 +103,12 @@ export function resolveFreshAccessToken(
 		}
 		return hostToken;
 	}
+
+	if (!isKeycloakSessionActive(resolveKeycloakInstance(props))) {
+		useAuthStore.getState().setAccessToken(null);
+		return null;
+	}
+
 	return useAuthStore.getState().accessToken;
 }
 
@@ -86,6 +117,11 @@ export async function refreshHostAccessToken(
 	props?: MfeAuthHostProps | null,
 ): Promise<string | null> {
 	const keycloak = resolveKeycloakInstance(props);
+	if (keycloak?.authenticated === false) {
+		clearMfeAuthState();
+		return null;
+	}
+
 	if (keycloak?.updateToken) {
 		try {
 			await keycloak.updateToken(30);
@@ -108,7 +144,7 @@ export async function refreshHostAccessToken(
 		return token;
 	}
 
-	useAuthStore.getState().setAccessToken(null);
+	clearMfeAuthState();
 	return null;
 }
 
@@ -117,5 +153,47 @@ export function syncMfeAuthFromHost(
 	props?: MfeAuthHostProps | null,
 ): string | null {
 	const token = resolveFreshAccessToken(props);
+	if (!token && !isKeycloakSessionActive(resolveKeycloakInstance(props))) {
+		clearMfeAuthState();
+	}
 	return token;
+}
+
+/** Редирект на login Keycloak, если сессия host завершена. */
+export function ensureKeycloakSession(
+	props?: MfeAuthHostProps | null,
+): void {
+	const keycloak = resolveKeycloakInstance(props);
+	if (!keycloak?.login) return;
+
+	if (keycloak.authenticated === false) {
+		clearMfeAuthState();
+		void keycloak.login();
+		return;
+	}
+
+	const hasHostToken = Boolean(props?.token?.trim());
+	const hasHostUser = Boolean(props?.user);
+	const hasKeycloakToken = Boolean(tokenFromKeycloak(keycloak));
+
+	if (!hasHostToken && !hasHostUser && !hasKeycloakToken) {
+		clearMfeAuthState();
+		void keycloak.login();
+	}
+}
+
+/** Полный logout: чистим локальное состояние и отдаём управление Keycloak. */
+export function performMfeLogout(props?: MfeAuthHostProps | null): void {
+	clearMfeAuthState();
+	props?.onLogout?.();
+
+	const keycloak = resolveKeycloakInstance(props);
+	if (keycloak?.logout) {
+		void keycloak.logout();
+		return;
+	}
+
+	if (typeof window !== "undefined") {
+		window.location.reload();
+	}
 }
