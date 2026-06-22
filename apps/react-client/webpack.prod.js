@@ -7,6 +7,8 @@ const { DefinePlugin } = webpack;
 const common = require("./webpack.common.js");
 const APP_NAME = "smartAnketa";
 
+console.log("🐸 Pepe said >> IAM HERE");
+
 const git_revision = require("child_process")
 	.execSync('git show --format="short" -s')
 	.toString()
