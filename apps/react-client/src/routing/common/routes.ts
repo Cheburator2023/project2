@@ -77,14 +77,14 @@ export const commonRoutes = {
 		showInNavbar: true,
 		navbar: { group: "dev", order: 0 },
 	},
-	taskTracker: {
-		rootPath: "/playground/tasks",
-		name: "Таск-трекер",
-		devOnly: true,
-		disabled: false,
-		showInNavbar: true,
-		navbar: { group: "dev", order: 1 },
-	},
+	// taskTracker: {
+	// 	rootPath: "/playground/tasks",
+	// 	name: "Таск-трекер",
+	// 	devOnly: true,
+	// 	disabled: false,
+	// 	showInNavbar: true,
+	// 	navbar: { group: "dev", order: 1 },
+	// },
 	playgroundV2: {
 		rootPath: "/playground/v2",
 		name: "V2",

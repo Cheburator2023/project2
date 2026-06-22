@@ -4,18 +4,24 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { Flex } from "@react-client/common/primitives/Flex";
 import {
 	useBulkDeleteV2Dictionaries,
 	useBulkResetV2Dictionaries,
 } from "@react-client/common/api/queries/v2-templates";
+import { Header } from "@react-client/common/navigation/organisms/Header";
+import { V2AdminButton } from "@react-client/features/v2/admin/atoms/V2AdminButton";
 import { V2DictionaryBulkResultDialog } from "@react-client/features/v2/admin/organisms/V2DictionaryBulkResultDialog";
 import { V2DictionaryCreateDialog } from "@react-client/features/v2/admin/organisms/V2DictionaryCreateDialog";
+import type { V2DictionaryHeaderState } from "@react-client/features/v2/admin/organisms/V2DictionaryDetail";
 import { V2DictionaryWorkspace } from "@react-client/features/v2/admin/organisms/V2DictionaryWorkspace";
 import {
 	canDeleteV2Dictionary,
 	canResetV2Dictionary,
 } from "@react-client/features/v2/admin/organisms/V2DictionaryList";
+import { commonRoutes as routes } from "@react-client/routing/common/routes";
 import type {
 	BulkDeleteV2DictionariesResultDto,
 	BulkResetV2DictionariesResultDto,
@@ -39,6 +45,11 @@ export function AdminV2DictionariesPage() {
 	const [createOpen, setCreateOpen] = useState(false);
 	const [pending, setPending] = useState<PendingBulk | null>(null);
 	const [bulkResult, setBulkResult] = useState<BulkResultState | null>(null);
+	const [selectedDictionary, setSelectedDictionary] =
+		useState<V2DictionaryDto | null>(null);
+	const [detailHeader, setDetailHeader] = useState<V2DictionaryHeaderState | null>(
+		null,
+	);
 
 	const bulkDelete = useBulkDeleteV2Dictionaries();
 	const bulkReset = useBulkResetV2Dictionaries();
@@ -88,9 +99,128 @@ export function AdminV2DictionariesPage() {
 		? pending.rows.filter(canResetV2Dictionary).length
 		: 0;
 
+	const canDeleteSelected =
+		selectedDictionary !== null && canDeleteV2Dictionary(selectedDictionary);
+	const canResetSelected =
+		selectedDictionary !== null && canResetV2Dictionary(selectedDictionary);
+
 	return (
-		<Flex flexDirection="column" flexGrow={1} minHeight="0" sx={{ height: "100%" }}>
-			<V2DictionaryWorkspace onCreateRequest={() => setCreateOpen(true)} />
+		<Flex
+			flexDirection="column"
+			flexGrow={1}
+			minHeight="0"
+			sx={{ height: "100%" }}
+		>
+			<Header
+				title={detailHeader?.title ?? routes.adminV2Dictionaries.name}
+				leadingAccessory={
+					detailHeader ? (
+						<Typography
+							component="span"
+							variant="caption"
+							sx={{ fontFamily: "monospace", color: "text.secondary" }}
+						>
+							{detailHeader.code}
+						</Typography>
+					) : undefined
+				}
+			>
+				<Stack
+					direction="row"
+					spacing={1}
+					alignItems="center"
+					flexWrap="wrap"
+					useFlexGap
+				>
+					{detailHeader ? (
+						<>
+							{!detailHeader.isEditing ? (
+								<Button
+									variant="outlined"
+									onClick={detailHeader.onStartEdit}
+								>
+									Редактировать
+								</Button>
+							) : (
+								<>
+									<Button
+										variant="text"
+										onClick={detailHeader.onCancelEdit}
+										disabled={detailHeader.savePending}
+									>
+										Отмена
+									</Button>
+									<V2AdminButton
+										onClick={detailHeader.onSave}
+										disabled={detailHeader.savePending}
+									>
+										{detailHeader.savePending ? "Сохранение…" : "Сохранить"}
+									</V2AdminButton>
+								</>
+							)}
+						</>
+					) : null}
+					<V2AdminButton onClick={() => setCreateOpen(true)}>
+						Создать справочник
+					</V2AdminButton>
+					<Button
+						variant="outlined"
+						color="warning"
+						disabled={!canResetSelected || bulkReset.isPending}
+						title={
+							selectedDictionary && !canResetSelected
+								? "Сброс доступен только для заводских справочников"
+								: undefined
+						}
+						onClick={() =>
+							selectedDictionary &&
+							setPending({ kind: "reset", rows: [selectedDictionary] })
+						}
+					>
+						Сбросить к заводским
+					</Button>
+					<div
+						title={
+							selectedDictionary && !canDeleteSelected
+								? "Нельзя удалить заводской или используемый в схемах справочник"
+								: undefined
+						}
+					>
+						<V2AdminButton
+							color="error"
+							variant="outlined"
+							disabled={!canDeleteSelected || bulkDelete.isPending}
+							onClick={() =>
+								selectedDictionary &&
+								setPending({ kind: "delete", rows: [selectedDictionary] })
+							}
+						>
+							Удалить
+						</V2AdminButton>
+					</div>
+				</Stack>
+			</Header>
+
+			{bulkDelete.isError ? (
+				<Typography color="error" variant="body2" sx={{ py: 0.5 }}>
+					{bulkDelete.error?.message ?? "Не удалось удалить справочники"}
+				</Typography>
+			) : null}
+			{bulkReset.isError ? (
+				<Typography color="error" variant="body2" sx={{ py: 0.5 }}>
+					{bulkReset.error?.message ?? "Не удалось сбросить справочники"}
+				</Typography>
+			) : null}
+
+			<Flex flexDirection="column" flexGrow={1} minHeight="0" sx={{ overflow: "hidden" }}>
+				<V2DictionaryWorkspace
+					showListCreateButton={false}
+					onCreateRequest={() => setCreateOpen(true)}
+					onSelectedDictionaryChange={setSelectedDictionary}
+					onHeaderChange={setDetailHeader}
+				/>
+			</Flex>
+
 			<V2DictionaryCreateDialog
 				open={createOpen}
 				onClose={() => setCreateOpen(false)}
@@ -115,8 +245,8 @@ export function AdminV2DictionariesPage() {
 							</>
 						) : (
 							<>
-								Сброс для {resettableCount} заводских из {pending?.rows.length ?? 0}{" "}
-								выбранных.
+								Сброс для {resettableCount} заводских из{" "}
+								{pending?.rows.length ?? 0} выбранных.
 							</>
 						)}
 					</DialogContentText>

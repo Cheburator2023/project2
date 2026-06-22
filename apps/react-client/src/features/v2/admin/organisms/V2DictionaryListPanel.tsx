@@ -2,6 +2,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { Card } from "@react-client/common/muiCustom/Card";
 import type { V2DictionaryDto } from "@smart-anketa/api-contract";
 
 type V2DictionaryListPanelProps = {
@@ -10,7 +11,8 @@ type V2DictionaryListPanelProps = {
 	quickFilter: string;
 	onQuickFilterChange: (value: string) => void;
 	onSelect: (id: string) => void;
-	onCreate: () => void;
+	onCreate?: () => void;
+	showCreateButton?: boolean;
 };
 
 function dictStatusBadge(row: V2DictionaryDto): {
@@ -50,6 +52,7 @@ export function V2DictionaryListPanel({
 	onQuickFilterChange,
 	onSelect,
 	onCreate,
+	showCreateButton = true,
 }: V2DictionaryListPanelProps) {
 	const q = quickFilter.trim().toLowerCase();
 	const filtered = items.filter((row) => {
@@ -62,18 +65,7 @@ export function V2DictionaryListPanel({
 	});
 
 	return (
-		<Box
-			sx={{
-				width: 430,
-				flexShrink: 0,
-				borderRight: "1px solid #e6e8ee",
-				bgcolor: "#fff",
-				display: "flex",
-				flexDirection: "column",
-				minHeight: 0,
-				height: "100%",
-			}}
-		>
+		<Card padding="0" overflow="hidden" height="100%" width="430px">
 			<Box
 				sx={{
 					p: "14px 16px",
@@ -97,22 +89,24 @@ export function V2DictionaryListPanel({
 						},
 					}}
 				/>
-				<Button
-					onClick={onCreate}
-					sx={{
-						flexShrink: 0,
-						textTransform: "none",
-						height: 34,
-						px: 1.6,
-						borderRadius: "8px",
-						bgcolor: "#1c2333",
-						color: "#fff",
-						fontSize: 12.5,
-						fontWeight: 600,
-					}}
-				>
-					Создать
-				</Button>
+				{showCreateButton && onCreate ? (
+					<Button
+						onClick={onCreate}
+						sx={{
+							flexShrink: 0,
+							textTransform: "none",
+							height: 34,
+							px: 1.6,
+							borderRadius: "8px",
+							bgcolor: "#1c2333",
+							color: "#fff",
+							fontSize: 12.5,
+							fontWeight: 600,
+						}}
+					>
+						Создать
+					</Button>
+				) : null}
 			</Box>
 			<Typography
 				sx={{
@@ -187,6 +181,6 @@ export function V2DictionaryListPanel({
 					);
 				})}
 			</Box>
-		</Box>
+		</Card>
 	);
 }

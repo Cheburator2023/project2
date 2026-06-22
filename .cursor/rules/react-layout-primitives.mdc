@@ -1,0 +1,51 @@
+---
+description: Layout в react-client — Flex, Card, Spacer из репозитория
+globs: apps/react-client/**/*.tsx
+alwaysApply: true
+---
+
+# Layout-примитивы react-client
+
+Для вёрстки в `apps/react-client` используй связку **Flex → Card → Spacer**, а не сырые MUI `Box` / `Stack` / `Paper` для структуры страницы.
+
+## Импорты
+
+```tsx
+import { Flex } from "@react-client/common/primitives/Flex";
+import { Card } from "@react-client/common/muiCustom/Card";
+import { Spacer } from "@react-client/common/primitives/Spacer";
+```
+
+## Когда что
+
+| Задача | Компонент |
+|--------|-----------|
+| Колонки/строки, выравнивание, `gap`, `flexGrow` | `Flex` |
+| Панель, карточка, боковая колонка, outlined-блок | `Card` |
+| Вертикальный/горизонтальный отступ между блоками | `Spacer` (`space` / `height`) |
+
+## Примеры
+
+```tsx
+// ✅ Страница: колонка + карточка-контент
+<Flex flexDirection="column" flexGrow={1} minHeight="0" height="100%">
+  <Header>...</Header>
+  <Spacer space={8} />
+  <Card padding="0" height="100%" overflow="hidden">
+  <Flex flexDirection="column" gap={12} height="100%">
+    ...
+  </Flex>
+  </Card>
+</Flex>
+
+// ❌ Не для структуры
+<Box sx={{ display: "flex", flexDirection: "column" }} />
+<Stack spacing={2} />
+<Paper variant="outlined" />
+```
+
+## Исключения
+
+- Внутри `Flex` / `Card` допустимы MUI-контролы (`TextField`, `Button`, `Typography` и т.д.).
+- `Box` — только для мелких одноразовых стилей внутри примитивов, если `Flex`/`Card` не подходят.
+- Не подменять `Spacer` на `sx={{ mb: 2 }}` между крупными секциями — предпочитай `Spacer`.

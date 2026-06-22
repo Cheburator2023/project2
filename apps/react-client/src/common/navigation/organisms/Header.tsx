@@ -129,7 +129,10 @@ export function Header({
 								</IconButton>
 							)}
 							{title ? (
-								<b>{title}</b>
+								<Flex gap={1} alignItems="baseline" minWidth={0}>
+									<b>{title}</b>
+									{leadingAccessory}
+								</Flex>
 							) : (
 								<>
 									<NavbarBreadcrumbs data-test-id="header--NavbarBreadcrumbs-0" />

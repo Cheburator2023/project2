@@ -90,7 +90,8 @@ export function V2DictionaryDetail({
 }) {
 	const { mode } = useColorScheme();
 
-	const { data: dictionary, isLoading: dictLoading } = useV2Dictionary(dictionaryId);
+	const { data: dictionary, isLoading: dictLoading } =
+		useV2Dictionary(dictionaryId);
 	const { data: items = [], isLoading: itemsLoading } =
 		useV2DictionaryItems(dictionaryId);
 	const { data: usages = [], isLoading: usagesLoading } =
@@ -106,7 +107,9 @@ export function V2DictionaryDetail({
 	const [description, setDescription] = useState("");
 
 	const [itemDialogOpen, setItemDialogOpen] = useState(false);
-	const [editingItem, setEditingItem] = useState<V2DictionaryItemDto | null>(null);
+	const [editingItem, setEditingItem] = useState<V2DictionaryItemDto | null>(
+		null,
+	);
 	const [itemForm, setItemForm] = useState<ItemFormState>(emptyItemForm);
 
 	useEffect(() => {
@@ -190,9 +193,8 @@ export function V2DictionaryDetail({
 	handleCancelEditRef.current = handleCancelEdit;
 
 	useEffect(() => {
-		if (!dictionary || layout === "workspace") {
-			if (layout === "workspace") onHeaderChange?.(null);
-			else if (!dictionary) onHeaderChange?.(null);
+		if (!dictionary) {
+			onHeaderChange?.(null);
 			return;
 		}
 
@@ -212,7 +214,6 @@ export function V2DictionaryDetail({
 		isEditing,
 		saveMetaPending,
 		onHeaderChange,
-		layout,
 	]);
 
 	const openAddItem = () => {
@@ -304,11 +305,17 @@ export function V2DictionaryDetail({
 						"&:hover": { bgcolor: "#fafbfc" },
 					}}
 				>
-					<Typography sx={{ fontFamily: "monospace", fontSize: 12, color: "#2f6bd8" }}>
+					<Typography
+						sx={{ fontFamily: "monospace", fontSize: 12, color: "#2f6bd8" }}
+					>
 						{row.code}
 					</Typography>
-					<Typography sx={{ fontSize: 13, color: "#28303f" }}>{row.label}</Typography>
-					<Typography sx={{ fontSize: 13, color: "#6b7484" }}>{row.order}</Typography>
+					<Typography sx={{ fontSize: 13, color: "#28303f" }}>
+						{row.label}
+					</Typography>
+					<Typography sx={{ fontSize: 13, color: "#6b7484" }}>
+						{row.order}
+					</Typography>
 					<Box
 						sx={{
 							width: 30,
@@ -356,44 +363,20 @@ export function V2DictionaryDetail({
 	return (
 		<Flex
 			flexDirection="column"
-			gap={2}
+			gap={layout === "workspace" ? 1.5 : 2}
 			sx={{
-				p: layout === "workspace" ? "22px 26px" : 1,
 				minHeight: 0,
 				flexGrow: 1,
 				height: layout === "workspace" ? "100%" : undefined,
 				overflow: layout === "workspace" ? "auto" : undefined,
 			}}
 		>
-			{layout === "workspace" ? (
-				<Box
-					sx={{
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "space-between",
-						mb: 0.5,
-					}}
-				>
-					<Typography sx={{ fontSize: 19, fontWeight: 800, color: "#1d2435" }}>
-						{dictionary.name}
-					</Typography>
-					<Button
-						size="small"
-						variant="outlined"
-						onClick={() => setIsEditing((v) => !v)}
-						sx={{ textTransform: "none", borderRadius: "8px" }}
-					>
-						{isEditing ? "Готово" : "Редактировать"}
-					</Button>
-				</Box>
-			) : null}
-
 			<Box
 				sx={{
-					bgcolor: "#fff",
-					border: "1px solid #e6e8ee",
-					borderRadius: "12px",
-					p: layout === "workspace" ? "17px 19px" : 0,
+					bgcolor: layout === "workspace" ? "#fff" : undefined,
+					border: layout === "workspace" ? "1px solid #e6e8ee" : undefined,
+					borderRadius: layout === "workspace" ? "12px" : undefined,
+					p: layout === "workspace" ? "12px 14px" : 0,
 				}}
 			>
 				{layout === "page" ? (
@@ -446,7 +429,8 @@ export function V2DictionaryDetail({
 							{dictionary.code}
 						</Box>
 						<Typography sx={{ fontSize: 11, color: "#cf7a2a", mb: 1.75 }}>
-							Код меняется только при создании; по нему поле привязывается в uiSchema
+							Код меняется только при создании; по нему поле привязывается в
+							uiSchema
 						</Typography>
 						<Typography sx={{ fontSize: 12, color: "#6b7484", mb: 0.5 }}>
 							Название
@@ -471,36 +455,27 @@ export function V2DictionaryDetail({
 							disabled={!isEditing}
 							onChange={(e) => setDescription(e.target.value)}
 						/>
-						{isEditing ? (
-							<Flex gap={1} sx={{ mt: 1.5 }}>
-								<Button size="small" onClick={handleCancelEdit}>
-									Отмена
-								</Button>
-								<Button
-									size="small"
-									variant="contained"
-									disabled={saveMetaPending}
-									onClick={() => void handleSaveMeta()}
-								>
-									Сохранить
-								</Button>
-							</Flex>
-						) : null}
 					</>
 				)}
 				{defaultFieldPointer && layout === "page" ? (
-					<Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-						Заводская привязка к полю схемы: <code>{String(defaultFieldPointer)}</code>
+					<Typography
+						variant="caption"
+						color="text.secondary"
+						display="block"
+						sx={{ mt: 1 }}
+					>
+						Заводская привязка к полю схемы:{" "}
+						<code>{String(defaultFieldPointer)}</code>
 					</Typography>
 				) : null}
 			</Box>
 
 			<Box
 				sx={{
-					bgcolor: "#fff",
-					border: "1px solid #e6e8ee",
-					borderRadius: "12px",
-					p: layout === "workspace" ? "17px 19px" : 0,
+					bgcolor: layout === "workspace" ? "#fff" : undefined,
+					border: layout === "workspace" ? "1px solid #e6e8ee" : undefined,
+					borderRadius: layout === "workspace" ? "12px" : undefined,
+					p: layout === "workspace" ? "12px 14px" : 0,
 				}}
 			>
 				{layout === "workspace" ? (
@@ -513,7 +488,9 @@ export function V2DictionaryDetail({
 								mb: 0.6,
 							}}
 						>
-							<Typography sx={{ fontSize: 14, fontWeight: 700, color: "#1d2435" }}>
+							<Typography
+								sx={{ fontSize: 14, fontWeight: 700, color: "#1d2435" }}
+							>
 								Элементы справочника
 							</Typography>
 							<Button
@@ -542,8 +519,14 @@ export function V2DictionaryDetail({
 								Добавить элемент
 							</Button>
 						</Flex>
-						<Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-							В анкете и в JSON Logic сохраняется код элемента; подпись — для отображения.
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							display="block"
+							sx={{ mb: 1 }}
+						>
+							В анкете и в JSON Logic сохраняется код элемента; подпись — для
+							отображения.
 						</Typography>
 						<GridWrapper>
 							<AgGridReact<V2DictionaryItemDto>
@@ -569,12 +552,12 @@ export function V2DictionaryDetail({
 						bgcolor: "#fff",
 						border: "1px solid #e6e8ee",
 						borderRadius: "12px",
-						p: "15px 17px",
+						p: "12px 14px",
 					}}
 				>
 					<Typography sx={{ fontSize: 12, color: "#8a93a3", mb: 1 }}>
-						Поля с <code>ui:options.dictionaryCode = {dictionary.code}</code> в версиях
-						шаблонов
+						Поля с <code>ui:options.dictionaryCode = {dictionary.code}</code> в
+						версиях шаблонов
 					</Typography>
 					{usagesLoading ? (
 						<Typography variant="body2" color="text.secondary">
@@ -599,73 +582,80 @@ export function V2DictionaryDetail({
 					)}
 				</Box>
 			) : (
-			<Card>
-				<Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-					Поля с <code>ui:options.dictionaryCode = {dictionary.code}</code> во всех версиях
-					шаблонов. Актуальная опубликованная версия отмечена чипом.
-				</Typography>
-
-				{usagesLoading ? (
-					<Typography variant="body2" color="text.secondary">
-						Поиск привязок…
+				<Card>
+					<Typography
+						variant="caption"
+						color="text.secondary"
+						display="block"
+						sx={{ mb: 1 }}
+					>
+						Поля с <code>ui:options.dictionaryCode = {dictionary.code}</code> во
+						всех версиях шаблонов. Актуальная опубликованная версия отмечена
+						чипом.
 					</Typography>
-				) : usages.length === 0 ? (
-					<Alert severity="info">
-						Ни одна версия схемы не ссылается на этот справочник. Привяжите код в конструкторе
-						схемы (блок «Справочник V2» у поля) или выполните сброс к заводской схеме.
-					</Alert>
-				) : (
-					<>
-						<Flex gap={0.5} wrap="wrap" sx={{ mb: 1 }}>
-							{usages.map((u) => (
-								<Chip
-									key={`${u.versionId}-${u.fieldPointer}`}
-									size="small"
-									variant="outlined"
-									color={u.isCurrentPublished ? "success" : "default"}
-									label={`${u.templateCode} · ${u.fieldPointer}`}
-								/>
-							))}
-						</Flex>
-						<Box sx={{ minHeight: 220 }}>
-							<GridWrapper>
-							<AgGridReact<V2DictionaryFieldUsageDto>
-								theme={gridTheme}
-								icons={agGridIconSet}
-								rowData={usages}
-								columnDefs={usageColumns}
-								localeText={AG_GRID_LOCALE_RU}
-								defaultColDef={{ sortable: true, resizable: true }}
-							/>
-							</GridWrapper>
-						</Box>
-						<Divider sx={{ my: 1 }} />
-						<Typography variant="caption" color="text.secondary">
-							Переход к редактору схемы:
+
+					{usagesLoading ? (
+						<Typography variant="body2" color="text.secondary">
+							Поиск привязок…
 						</Typography>
-						<Flex gap={1} wrap="wrap" sx={{ mt: 0.5 }}>
-							{[
-								...new Map(
-									usages.map((u) => [
-										u.templateId,
-										{ id: u.templateId, name: u.templateName },
-									]),
-								).values(),
-							].map((t) => (
-								<Link
-									key={t.id}
-									component={RouterLink}
-									to={pathForAdminV2Template(t.id)}
-									underline="hover"
-									variant="body2"
-								>
-									{t.name}
-								</Link>
-							))}
-						</Flex>
-					</>
-				)}
-			</Card>
+					) : usages.length === 0 ? (
+						<Alert severity="info">
+							Ни одна версия схемы не ссылается на этот справочник. Привяжите
+							код в конструкторе схемы (блок «Справочник V2» у поля) или
+							выполните сброс к заводской схеме.
+						</Alert>
+					) : (
+						<>
+							<Flex gap={0.5} wrap="wrap" sx={{ mb: 1 }}>
+								{usages.map((u) => (
+									<Chip
+										key={`${u.versionId}-${u.fieldPointer}`}
+										size="small"
+										variant="outlined"
+										color={u.isCurrentPublished ? "success" : "default"}
+										label={`${u.templateCode} · ${u.fieldPointer}`}
+									/>
+								))}
+							</Flex>
+							<Box sx={{ minHeight: 220 }}>
+								<GridWrapper>
+									<AgGridReact<V2DictionaryFieldUsageDto>
+										theme={gridTheme}
+										icons={agGridIconSet}
+										rowData={usages}
+										columnDefs={usageColumns}
+										localeText={AG_GRID_LOCALE_RU}
+										defaultColDef={{ sortable: true, resizable: true }}
+									/>
+								</GridWrapper>
+							</Box>
+							<Divider sx={{ my: 1 }} />
+							<Typography variant="caption" color="text.secondary">
+								Переход к редактору схемы:
+							</Typography>
+							<Flex gap={1} wrap="wrap" sx={{ mt: 0.5 }}>
+								{[
+									...new Map(
+										usages.map((u) => [
+											u.templateId,
+											{ id: u.templateId, name: u.templateName },
+										]),
+									).values(),
+								].map((t) => (
+									<Link
+										key={t.id}
+										component={RouterLink}
+										to={pathForAdminV2Template(t.id)}
+										underline="hover"
+										variant="body2"
+									>
+										{t.name}
+									</Link>
+								))}
+							</Flex>
+						</>
+					)}
+				</Card>
 			)}
 
 			<Dialog
@@ -684,7 +674,9 @@ export function V2DictionaryDetail({
 						fullWidth
 						disabled={Boolean(editingItem)}
 						value={itemForm.code}
-						onChange={(e) => setItemForm((f) => ({ ...f, code: e.target.value }))}
+						onChange={(e) =>
+							setItemForm((f) => ({ ...f, code: e.target.value }))
+						}
 						helperText="Значение в данных анкеты и в условиях JSON Logic"
 					/>
 					<TextField
@@ -692,7 +684,9 @@ export function V2DictionaryDetail({
 						label="Подпись"
 						fullWidth
 						value={itemForm.label}
-						onChange={(e) => setItemForm((f) => ({ ...f, label: e.target.value }))}
+						onChange={(e) =>
+							setItemForm((f) => ({ ...f, label: e.target.value }))
+						}
 					/>
 					<TextField
 						margin="dense"

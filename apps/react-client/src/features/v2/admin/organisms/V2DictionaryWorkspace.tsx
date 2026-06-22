@@ -1,24 +1,38 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { useV2Dictionaries } from "@react-client/common/api/queries/v2-templates";
+import type { V2DictionaryDto } from "@smart-anketa/api-contract";
 import { useEffect, useState } from "react";
-import { V2DictionaryDetail } from "./V2DictionaryDetail";
+import {
+	V2DictionaryDetail,
+	type V2DictionaryHeaderState,
+} from "./V2DictionaryDetail";
 import { V2DictionaryListPanel } from "./V2DictionaryListPanel";
+import { Flex } from "@react-client/common/primitives/Flex";
 
 type V2DictionaryWorkspaceProps = {
 	initialDictionaryId?: string | null;
-	onCreateRequest: () => void;
+	onCreateRequest?: () => void;
+	showListCreateButton?: boolean;
+	onSelectedDictionaryChange?: (dictionary: V2DictionaryDto | null) => void;
+	onHeaderChange?: (state: V2DictionaryHeaderState | null) => void;
 };
 
 export function V2DictionaryWorkspace({
 	initialDictionaryId,
 	onCreateRequest,
+	showListCreateButton = true,
+	onSelectedDictionaryChange,
+	onHeaderChange,
 }: V2DictionaryWorkspaceProps) {
 	const { data: dictionaries = [], isLoading } = useV2Dictionaries();
 	const [selectedId, setSelectedId] = useState<string | null>(
 		initialDictionaryId ?? null,
 	);
 	const [quickFilter, setQuickFilter] = useState("");
+
+	const selectedDictionary =
+		dictionaries.find((d) => d.id === selectedId) ?? null;
 
 	useEffect(() => {
 		if (initialDictionaryId) setSelectedId(initialDictionaryId);
@@ -34,6 +48,10 @@ export function V2DictionaryWorkspace({
 		}
 	}, [dictionaries, selectedId]);
 
+	useEffect(() => {
+		onSelectedDictionaryChange?.(selectedDictionary);
+	}, [onSelectedDictionaryChange, selectedDictionary]);
+
 	if (isLoading) {
 		return (
 			<Typography variant="body2" sx={{ p: 2 }}>
@@ -43,7 +61,7 @@ export function V2DictionaryWorkspace({
 	}
 
 	return (
-		<Box sx={{ display: "flex", height: "100%", minHeight: 0 }}>
+		<Flex flexDirection="row" height="100%" minHeight="0" gap={12}>
 			<V2DictionaryListPanel
 				items={dictionaries}
 				selectedId={selectedId}
@@ -51,13 +69,15 @@ export function V2DictionaryWorkspace({
 				onQuickFilterChange={setQuickFilter}
 				onSelect={setSelectedId}
 				onCreate={onCreateRequest}
+				showCreateButton={showListCreateButton}
 			/>
-			<Box sx={{ flex: 1, minWidth: 0, minHeight: 0, overflow: "hidden" }}>
+			<Flex flexGrow={1} minHeight="0" sx={{ overflow: "hidden" }} gap={1}>
 				{selectedId ? (
 					<V2DictionaryDetail
 						key={selectedId}
 						dictionaryId={selectedId}
 						layout="workspace"
+						onHeaderChange={onHeaderChange}
 					/>
 				) : (
 					<Box
@@ -72,7 +92,7 @@ export function V2DictionaryWorkspace({
 						Выберите справочник слева
 					</Box>
 				)}
-			</Box>
-		</Box>
+			</Flex>
+		</Flex>
 	);
 }

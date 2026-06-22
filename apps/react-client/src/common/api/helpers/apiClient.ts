@@ -46,6 +46,17 @@ axiosInstance.interceptors.request.use(
 		if (token) {
 			config.headers.Authorization = `Bearer ${token}`;
 		}
+
+		// FormData: убрать дефолтный application/json, иначе multer не видит файл
+		if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+			const headers = config.headers;
+			if (headers && typeof (headers as { delete?: (k: string) => void }).delete === "function") {
+				(headers as { delete: (k: string) => void }).delete("Content-Type");
+			} else if (headers && typeof headers === "object") {
+				delete (headers as Record<string, unknown>)["Content-Type"];
+			}
+		}
+
 		return config;
 	},
 	(error) => {
@@ -92,6 +103,7 @@ export const apiClient = async <T>({
 	headers,
 	responseType,
 	signal,
+	timeout,
 }: {
 	url: string;
 	method: string;
@@ -100,6 +112,7 @@ export const apiClient = async <T>({
 	headers?: any;
 	responseType?: string;
 	signal?: AbortSignal;
+	timeout?: number;
 }): Promise<T> => {
 	const config: AxiosRequestConfig = {
 		url,
@@ -109,6 +122,7 @@ export const apiClient = async <T>({
 		headers,
 		responseType: responseType as any,
 		signal,
+		timeout,
 	};
 
 	const response = await axiosInstance(config);

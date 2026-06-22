@@ -31,6 +31,8 @@ import {
 import { V2TypicalWorkWriteService } from "./services/v2-typical-work-write.service";
 import { V2TypicalWorkRuntimeService } from "./services/v2-typical-work-runtime.service";
 import { V2TypicalWorkController } from "./controllers/v2-typical-work.controller";
+import { V2DataTransferController } from "./controllers/v2-data-transfer.controller";
+import { V2DataTransferService } from "./services/v2-data-transfer.service";
 
 @Module({
 	imports: [
@@ -56,6 +58,7 @@ import { V2TypicalWorkController } from "./controllers/v2-typical-work.controlle
 		V2CalculationController,
 		V2QuestionnaireController,
 		V2TypicalWorkController,
+		V2DataTransferController,
 	],
 	providers: [
 		V2TemplateService,
@@ -69,6 +72,7 @@ import { V2TypicalWorkController } from "./controllers/v2-typical-work.controlle
 		V2TypicalWorkService,
 		V2TypicalWorkWriteService,
 		V2TypicalWorkRuntimeService,
+		V2DataTransferService,
 	],
 	exports: [
 		V2TemplateService,
