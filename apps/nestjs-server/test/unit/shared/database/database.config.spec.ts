@@ -39,4 +39,18 @@ describe("database.config", () => {
 		expect(opts.host).toBe("localhost");
 		expect(opts.port).toBe(5432);
 	});
+
+	it("disables synchronize in production even when DB_SYNCHRONIZE=true", () => {
+		const opts: any = getTypeOrmModuleOptions(
+			buildCfg({ NODE_ENV: "production", DB_SYNCHRONIZE: true }),
+		);
+		expect(opts.synchronize).toBe(false);
+	});
+
+	it("treats DB_SYNCHRONIZE=false string as disabled", () => {
+		const opts: any = getTypeOrmModuleOptions(
+			buildCfg({ DB_SYNCHRONIZE: "false" }),
+		);
+		expect(opts.synchronize).toBe(false);
+	});
 });

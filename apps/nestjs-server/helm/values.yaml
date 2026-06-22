@@ -68,6 +68,8 @@ env:
  DB_PORT: 5432
  DB_NAME: sumd
  NODE_ENV: production
+ DB_SYNCHRONIZE: "false"
+ DB_MIGRATIONS_RUN: "true"
  KEYCLOAK_URL: https://keycloak-sumd.sumd.dk1-sumd01.innodev.local/auth/
  KEYCLOAK_REALMS: cym
  KEYCLOAK_CLIENT: frontend

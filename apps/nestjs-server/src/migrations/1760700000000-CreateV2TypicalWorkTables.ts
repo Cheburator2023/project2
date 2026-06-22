@@ -7,7 +7,7 @@ export class CreateV2TypicalWorkTables1760700000000
 
 	public async up(queryRunner: QueryRunner): Promise<void> {
 		await queryRunner.query(`
-			CREATE TABLE v2_typical_work (
+			CREATE TABLE IF NOT EXISTS v2_typical_work (
 				id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 				name varchar(255) NOT NULL,
 				arch_component_type varchar(100) NOT NULL,
@@ -20,7 +20,7 @@ export class CreateV2TypicalWorkTables1760700000000
 		`);
 
 		await queryRunner.query(`
-			CREATE TABLE v2_typical_work_norm (
+			CREATE TABLE IF NOT EXISTS v2_typical_work_norm (
 				id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 				work_id uuid NOT NULL REFERENCES v2_typical_work(id) ON DELETE CASCADE,
 				stream_executor varchar(120) NOT NULL,
@@ -33,7 +33,7 @@ export class CreateV2TypicalWorkTables1760700000000
 		`);
 
 		await queryRunner.query(`
-			CREATE TABLE v2_typical_work_rule (
+			CREATE TABLE IF NOT EXISTS v2_typical_work_rule (
 				id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 				work_id uuid NOT NULL REFERENCES v2_typical_work(id) ON DELETE CASCADE,
 				stream_executor varchar(120) NOT NULL,
@@ -48,7 +48,7 @@ export class CreateV2TypicalWorkTables1760700000000
 		`);
 
 		await queryRunner.query(`
-			CREATE TABLE v2_typical_work_labor_coefficient (
+			CREATE TABLE IF NOT EXISTS v2_typical_work_labor_coefficient (
 				id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 				work_id uuid NOT NULL REFERENCES v2_typical_work(id) ON DELETE CASCADE,
 				stream_executor varchar(120) NOT NULL,
@@ -64,7 +64,7 @@ export class CreateV2TypicalWorkTables1760700000000
 		`);
 
 		await queryRunner.query(`
-			CREATE TABLE v2_typical_work_version_config (
+			CREATE TABLE IF NOT EXISTS v2_typical_work_version_config (
 				id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 				template_version_id uuid NOT NULL REFERENCES v2_template_version(id) ON DELETE CASCADE,
 				work_id uuid NOT NULL REFERENCES v2_typical_work(id) ON DELETE CASCADE,
@@ -78,21 +78,49 @@ export class CreateV2TypicalWorkTables1760700000000
 			)
 		`);
 
-		await queryRunner.query(
+		await this.ensureIndex(
+			queryRunner,
+			"idx_v2_typical_work_arch_component",
 			`CREATE INDEX idx_v2_typical_work_arch_component ON v2_typical_work(arch_component_type)`,
 		);
-		await queryRunner.query(
+		await this.ensureIndex(
+			queryRunner,
+			"idx_v2_typical_work_norm_work_stream",
 			`CREATE INDEX idx_v2_typical_work_norm_work_stream ON v2_typical_work_norm(work_id, stream_executor)`,
 		);
-		await queryRunner.query(
+		await this.ensureIndex(
+			queryRunner,
+			"idx_v2_typical_work_rule_work_stream",
 			`CREATE INDEX idx_v2_typical_work_rule_work_stream ON v2_typical_work_rule(work_id, stream_executor)`,
 		);
-		await queryRunner.query(
+		await this.ensureIndex(
+			queryRunner,
+			"idx_v2_typical_work_labor_work_stream",
 			`CREATE INDEX idx_v2_typical_work_labor_work_stream ON v2_typical_work_labor_coefficient(work_id, stream_executor)`,
 		);
-		await queryRunner.query(
+		await this.ensureIndex(
+			queryRunner,
+			"idx_v2_typical_work_version_config_version",
 			`CREATE INDEX idx_v2_typical_work_version_config_version ON v2_typical_work_version_config(template_version_id)`,
 		);
+	}
+
+	private async ensureIndex(
+		queryRunner: QueryRunner,
+		indexName: string,
+		createSql: string,
+	): Promise<void> {
+		const indexes = await queryRunner.query(
+			`
+			SELECT indexname FROM pg_indexes
+			WHERE indexname = $1
+		`,
+			[indexName],
+		);
+
+		if (indexes.length === 0) {
+			await queryRunner.query(createSql);
+		}
 	}
 
 	public async down(queryRunner: QueryRunner): Promise<void> {

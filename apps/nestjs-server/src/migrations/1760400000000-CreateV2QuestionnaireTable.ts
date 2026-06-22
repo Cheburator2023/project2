@@ -5,11 +5,15 @@ export class CreateV2QuestionnaireTable1760400000000
 {
 	public async up(queryRunner: QueryRunner): Promise<void> {
 		await queryRunner.query(`
-			CREATE TYPE v2_questionnaire_status_enum AS ENUM ('active', 'archived')
+			DO $$ BEGIN
+				CREATE TYPE v2_questionnaire_status_enum AS ENUM ('active', 'archived');
+			EXCEPTION
+				WHEN duplicate_object THEN NULL;
+			END $$;
 		`);
 
 		await queryRunner.query(`
-			CREATE TABLE v2_questionnaire (
+			CREATE TABLE IF NOT EXISTS v2_questionnaire (
 				id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 				calc_name varchar(255) NOT NULL DEFAULT 'Новая анкета',
 				status v2_questionnaire_status_enum NOT NULL DEFAULT 'active',
@@ -33,12 +37,34 @@ export class CreateV2QuestionnaireTable1760400000000
 			)
 		`);
 
-		await queryRunner.query(`
-			CREATE INDEX idx_v2_questionnaire_series_id ON v2_questionnaire(series_id)
-		`);
-		await queryRunner.query(`
-			CREATE INDEX idx_v2_questionnaire_template_id ON v2_questionnaire(template_id)
-		`);
+		await this.ensureIndex(
+			queryRunner,
+			"idx_v2_questionnaire_series_id",
+			`CREATE INDEX idx_v2_questionnaire_series_id ON v2_questionnaire(series_id)`,
+		);
+		await this.ensureIndex(
+			queryRunner,
+			"idx_v2_questionnaire_template_id",
+			`CREATE INDEX idx_v2_questionnaire_template_id ON v2_questionnaire(template_id)`,
+		);
+	}
+
+	private async ensureIndex(
+		queryRunner: QueryRunner,
+		indexName: string,
+		createSql: string,
+	): Promise<void> {
+		const indexes = await queryRunner.query(
+			`
+			SELECT indexname FROM pg_indexes
+			WHERE indexname = $1
+		`,
+			[indexName],
+		);
+
+		if (indexes.length === 0) {
+			await queryRunner.query(createSql);
+		}
 	}
 
 	public async down(queryRunner: QueryRunner): Promise<void> {

@@ -19,6 +19,28 @@ const getDatabaseConfig = (configService: ConfigService): DatabaseConfig => ({
 	database: configService.get<string>("DB_NAME", "calculation_db"),
 });
 
+const readEnvFlag = (
+	configService: ConfigService,
+	key: string,
+	defaultValue: boolean,
+): boolean => {
+	const raw = configService.get<string | boolean | undefined>(key);
+	if (raw === undefined || raw === null || raw === "") {
+		return defaultValue;
+	}
+	if (typeof raw === "boolean") {
+		return raw;
+	}
+	return raw === "true" || raw === "1";
+};
+
+const resolveSynchronize = (configService: ConfigService): boolean => {
+	if (configService.get<string>("NODE_ENV") === "production") {
+		return false;
+	}
+	return readEnvFlag(configService, "DB_SYNCHRONIZE", false);
+};
+
 export const getTypeOrmModuleOptions = (
 	configService: ConfigService,
 ): TypeOrmModuleOptions => {
@@ -29,10 +51,10 @@ export const getTypeOrmModuleOptions = (
 		...dbConfig,
 		entities: [join(__dirname, "../../**/*.entity{.ts,.js}")],
 		migrations: [join(__dirname, "../../migrations/*{.ts,.js}")],
-		migrationsRun: configService.get<boolean>("DB_MIGRATIONS_RUN", true),
-		synchronize: configService.get<boolean>("DB_SYNCHRONIZE", false),
-		logging: configService.get<boolean>("LOGGING", true),
-		autoLoadEntities: configService.get<boolean>("AUTO_LOAD_ENTITIES", false),
+		migrationsRun: readEnvFlag(configService, "DB_MIGRATIONS_RUN", true),
+		synchronize: resolveSynchronize(configService),
+		logging: readEnvFlag(configService, "LOGGING", true),
+		autoLoadEntities: readEnvFlag(configService, "AUTO_LOAD_ENTITIES", false),
 	};
 };
 
@@ -46,8 +68,8 @@ export const getDataSourceOptions = (
 		...dbConfig,
 		entities: [join(__dirname, "../../**/*.entity{.ts,.js}")],
 		migrations: [join(__dirname, "../../migrations/*{.ts,.js}")],
-		migrationsRun: configService.get<boolean>("DB_MIGRATIONS_RUN", true),
-		synchronize: configService.get<boolean>("DB_SYNCHRONIZE", false),
-		logging: configService.get<boolean>("LOGGING", true),
+		migrationsRun: readEnvFlag(configService, "DB_MIGRATIONS_RUN", true),
+		synchronize: resolveSynchronize(configService),
+		logging: readEnvFlag(configService, "LOGGING", true),
 	};
 };

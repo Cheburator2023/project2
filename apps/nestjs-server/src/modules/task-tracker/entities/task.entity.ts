@@ -1,7 +1,7 @@
 import { Column, Entity, Index, PrimaryColumn } from "typeorm";
 import type { TaskContent } from "@smart-anketa/api-contract";
 
-@Entity("tasks")
+@Entity({ name: "task_tracker_task" })
 export class TaskEntity {
 	@PrimaryColumn("varchar", { length: 26 })
 	id!: string;
