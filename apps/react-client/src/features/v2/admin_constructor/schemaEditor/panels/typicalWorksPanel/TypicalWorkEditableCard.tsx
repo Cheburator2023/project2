@@ -1,18 +1,18 @@
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
+import ClickAwayListener from "@mui/material/ClickAwayListener";
 import FormControl from "@mui/material/FormControl";
 import IconButton from "@mui/material/IconButton";
 import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
+import Popper from "@mui/material/Popper";
 import Select from "@mui/material/Select";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
-import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -34,9 +34,16 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@react-client/common/toasts";
 import { TypicalWorkFormulaLockedDialog } from "./TypicalWorkFormulaLockedDialog";
+import { TypicalWorkNormsSection } from "./TypicalWorkNormsSection";
+import { TypicalWorkTriggersSection } from "./TypicalWorkTriggersSection";
 import { WorkFormulaEditor } from "./WorkFormulaEditor";
 import { computeTriggerStatus } from "./typicalWorkPatchErrors";
-import { triggerStatusColors, triggerStatusLabel } from "./typicalWorksUi";
+import {
+	recommendedStreamsForComponent,
+	streamColor,
+	streamDisplayLabel,
+} from "./typicalWorksAreas";
+import { ARCH_COMPONENT_DOT, archComponentShortLabel } from "./typicalWorksUi";
 import {
 	cardToPatchDto,
 	useDebouncedTypicalWorkSave,
@@ -102,6 +109,8 @@ export function TypicalWorkEditableCard({
 	const [draft, setDraft] = useState<V2TypicalWorkCardDto | null>(null);
 	const [formulaLockedOpen, setFormulaLockedOpen] = useState(false);
 	const [addParamCode, setAddParamCode] = useState("");
+	const [streamMenuOpen, setStreamMenuOpen] = useState(false);
+	const streamAnchorRef = useRef<HTMLButtonElement>(null);
 	const pendingRetryRef = useRef(false);
 	const {
 		status,
@@ -205,52 +214,270 @@ export function TypicalWorkEditableCard({
 	}
 
 	if (!draft) {
-		return <Alert severity="info" sx={{ m: 2 }}>Выберите работу в дереве слева.</Alert>;
+		return (
+			<Alert severity="info" sx={{ m: 2 }}>
+				Выберите работу в списке слева.
+			</Alert>
+		);
 	}
 
-	const statusColors = triggerStatusColors(draft.triggerStatus);
+	const compDot = ARCH_COMPONENT_DOT[draft.archComponentType] ?? "#94a3b8";
+	const recommended = recommendedStreamsForComponent(draft.archComponentType);
+	const otherStreams = availableStreams.filter(
+		(s) => !recommended.includes(streamDisplayLabel(s)),
+	);
+	const saveDot =
+		status === "error" ? "#c62828" : status === "dirty" || status === "saving" ? "#b5791f" : "#1f8a4d";
 
 	return (
-		<Box sx={{ flex: 1, overflow: "auto", p: 2 }}>
+		<Box sx={{ flex: 1, overflow: "auto", px: 2.75, py: 2.25, minWidth: 0 }}>
 			<TypicalWorkFormulaLockedDialog
 				open={formulaLockedOpen}
 				pending={createVersion.isPending}
 				onClose={() => setFormulaLockedOpen(false)}
 				onCreateDraft={() => void handleCreateDraftForFormula()}
 			/>
-			<Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center", mb: 2 }}>
+			<Box
+				sx={{
+					display: "flex",
+					alignItems: "flex-start",
+					gap: 1.5,
+					flexWrap: "wrap",
+					mb: 1.75,
+				}}
+			>
 				<Box sx={{ flex: 1, minWidth: 240 }}>
+					<Typography sx={{ fontSize: 11.5, color: "#8a93a3", mb: 0.4 }}>
+						Типовая работа · справочник
+					</Typography>
 					<TextField
-						size="small"
+						variant="standard"
 						fullWidth
-						label="Название работы"
 						value={draft.name}
 						onChange={(e) => commitDraft({ ...draft, name: e.target.value })}
+						InputProps={{
+							disableUnderline: true,
+							sx: {
+								fontSize: 19,
+								fontWeight: 800,
+								color: "#1d2435",
+								lineHeight: 1.25,
+							},
+						}}
 					/>
-					<Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 0.75 }}>
-						<Chip size="small" label={draft.archComponentType} />
-						{draft.workType ? <Chip size="small" variant="outlined" label={draft.workType} /> : null}
+					<Box
+						sx={{
+							display: "flex",
+							alignItems: "center",
+							gap: 1,
+							mt: 0.9,
+							flexWrap: "wrap",
+						}}
+					>
+						<Box
+							sx={{
+								display: "inline-flex",
+								alignItems: "center",
+								gap: 0.75,
+								height: 22,
+								px: 1.25,
+								borderRadius: "7px",
+								bgcolor: "#eef4ff",
+								color: compDot,
+								fontSize: 11,
+								fontWeight: 700,
+							}}
+						>
+							<Box
+								sx={{
+									width: 7,
+									height: 7,
+									borderRadius: "2px",
+									bgcolor: compDot,
+								}}
+							/>
+							{archComponentShortLabel(draft.archComponentType)}
+						</Box>
+						<Box
+							sx={{
+								display: "inline-flex",
+								alignItems: "center",
+								gap: 0.75,
+								fontSize: 11.5,
+								color: status === "error" ? "#c62828" : "#1f8a4d",
+							}}
+						>
+							<Box
+								sx={{
+									width: 7,
+									height: 7,
+									borderRadius: "50%",
+									bgcolor: saveDot,
+								}}
+							/>
+							{saveStatusLabel(status)}
+						</Box>
+						{status === "error" ? (
+							<Button size="small" onClick={retry}>
+								Повторить
+							</Button>
+						) : null}
 					</Box>
 				</Box>
-				<FormControl size="small" sx={{ minWidth: 220 }}>
-					<InputLabel id="work-stream-label">Стрим-исполнитель</InputLabel>
-					<Select
-						labelId="work-stream-label"
-						label="Стрим-исполнитель"
-						value={streamExecutor ?? ""}
-						onChange={(e) => onStreamChange(String(e.target.value))}
+
+				<Box sx={{ position: "relative", minWidth: 230 }}>
+					<Typography
+						sx={{
+							fontSize: 10.5,
+							fontWeight: 700,
+							letterSpacing: "0.04em",
+							textTransform: "uppercase",
+							color: "#aab1c0",
+							mb: 0.75,
+						}}
 					>
-						{availableStreams.map((stream) => (
-							<MenuItem key={stream} value={stream}>{stream}</MenuItem>
-						))}
-					</Select>
-				</FormControl>
-				<Typography variant="caption" color={status === "error" ? "error.main" : "text.secondary"}>
-					{saveStatusLabel(status)}
-				</Typography>
-				{status === "error" ? (
-					<Button size="small" onClick={retry}>Повторить</Button>
-				) : null}
+						Стрим-исполнитель
+					</Typography>
+					<Button
+						ref={streamAnchorRef}
+						onClick={() => setStreamMenuOpen((v) => !v)}
+						sx={{
+							textTransform: "none",
+							width: "100%",
+							height: 36,
+							justifyContent: "flex-start",
+							gap: 1,
+							border: "1px solid #dfe2ea",
+							borderRadius: "9px",
+							bgcolor: "#fff",
+							color: "#1d2435",
+							fontWeight: 600,
+							fontSize: 13,
+						}}
+					>
+						<Box
+							sx={{
+								width: 8,
+								height: 8,
+								borderRadius: "2px",
+								bgcolor: streamColor(streamExecutor ?? ""),
+							}}
+						/>
+						<Typography component="span" sx={{ flex: 1, textAlign: "left" }}>
+							{streamExecutor ? streamDisplayLabel(streamExecutor) : "—"}
+						</Typography>
+						<Typography component="span" sx={{ color: "#aab1c0", fontSize: 11 }}>
+							▾
+						</Typography>
+					</Button>
+					<Popper
+						open={streamMenuOpen}
+						anchorEl={streamAnchorRef.current}
+						placement="bottom-start"
+						sx={{ zIndex: 30, width: streamAnchorRef.current?.offsetWidth }}
+					>
+						<ClickAwayListener onClickAway={() => setStreamMenuOpen(false)}>
+							<Paper
+								elevation={8}
+								sx={{
+									mt: 0.5,
+									borderRadius: "10px",
+									border: "1px solid #e1e5ec",
+									p: 0.75,
+									maxHeight: 280,
+									overflow: "auto",
+								}}
+							>
+								<Typography
+									sx={{
+										fontSize: 10,
+										fontWeight: 700,
+										color: "#aab1c0",
+										px: 1,
+										py: 0.5,
+										textTransform: "uppercase",
+									}}
+								>
+									Рекомендованные для компонента
+								</Typography>
+								{availableStreams
+									.filter((s) =>
+										recommended.includes(streamDisplayLabel(s)),
+									)
+									.map((stream) => (
+										<MenuItem
+											key={`rec-${stream}`}
+											selected={streamExecutor === stream}
+											onClick={() => {
+												onStreamChange(stream);
+												setStreamMenuOpen(false);
+											}}
+											sx={{ borderRadius: 1, py: 1 }}
+										>
+											<Box
+												sx={{
+													width: 8,
+													height: 8,
+													borderRadius: "2px",
+													bgcolor: streamColor(stream),
+													mr: 1,
+												}}
+											/>
+											{streamDisplayLabel(stream)}
+											{stream !== streamDisplayLabel(stream) ? (
+												<Typography
+													component="span"
+													sx={{ ml: 0.75, fontSize: 11, color: "#8a93a3" }}
+												>
+													({stream})
+												</Typography>
+											) : null}
+										</MenuItem>
+									))}
+								{otherStreams.length > 0 ? (
+									<>
+										<Typography
+											sx={{
+												fontSize: 10,
+												fontWeight: 700,
+												color: "#aab1c0",
+												px: 1,
+												py: 0.5,
+												mt: 0.5,
+												borderTop: "1px solid #f0f1f5",
+												textTransform: "uppercase",
+											}}
+										>
+											Остальные стримы
+										</Typography>
+										{otherStreams.map((stream) => (
+											<MenuItem
+												key={`oth-${stream}`}
+												selected={streamExecutor === stream}
+												onClick={() => {
+													onStreamChange(stream);
+													setStreamMenuOpen(false);
+												}}
+												sx={{ borderRadius: 1, py: 1 }}
+											>
+												<Box
+													sx={{
+														width: 8,
+														height: 8,
+														borderRadius: "2px",
+														bgcolor: streamColor(stream),
+														mr: 1,
+													}}
+												/>
+												{streamDisplayLabel(stream)}
+											</MenuItem>
+										))}
+									</>
+								) : null}
+							</Paper>
+						</ClickAwayListener>
+					</Popper>
+				</Box>
 			</Box>
 
 			{errorMessage ? <Alert severity="error" sx={{ mb: 2 }}>{errorMessage}</Alert> : null}
@@ -278,232 +505,86 @@ export function TypicalWorkEditableCard({
 					Выберите стрим-исполнителя, чтобы задать условия, коэффициенты и нормы.
 				</Alert>
 			) : (
-				<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-					<Paper variant="outlined" sx={{ p: 1.5 }}>
-						<Typography variant="subtitle2" fontWeight={700} gutterBottom>
-							Условия появления работы
-						</Typography>
-						<Chip
-							size="small"
-							label={
-								draft.triggerStatus === "appears"
-									? `Работа появляется (${draft.rules.length} условий, И)`
-									: triggerStatusLabel(draft.triggerStatus)
-							}
-							sx={{ mb: 1, bgcolor: statusColors.bg, color: statusColors.color, fontWeight: 600 }}
-						/>
-						<Table size="small">
-							<TableHead>
-								<TableRow>
-									<TableCell>Параметр</TableCell>
-									<TableCell>Оператор</TableCell>
-									<TableCell>Значение</TableCell>
-									<TableCell width={48} />
-								</TableRow>
-							</TableHead>
-							<TableBody>
-								{draft.rules.map((rule, index) => {
-									const param = paramOptions.find((p) => p.code === rule.paramCode);
-									return (
-										<TableRow key={rule.id ?? index}>
-											<TableCell>
-												<Select
-													size="small"
-													fullWidth
-													value={rule.paramCode}
-													onChange={(e) => {
-														const code = String(e.target.value);
-														const picked = paramOptions.find((p) => p.code === code);
-														const nextRules = [...draft.rules];
-														nextRules[index] = {
-															...rule,
-															paramCode: code,
-															paramName: picked?.name ?? code,
-															valueLabel: null,
-															valueCode: null,
-														};
-														commitDraft({ ...draft, rules: nextRules });
-													}}
-												>
-													{paramOptions.map((p) => (
-														<MenuItem key={p.code} value={p.code}>{p.name}</MenuItem>
-													))}
-												</Select>
-											</TableCell>
-											<TableCell>
-												<Select
-													size="small"
-													value={rule.operator}
-													onChange={(e) => {
-														const nextRules = [...draft.rules];
-														nextRules[index] = { ...rule, operator: e.target.value as typeof rule.operator };
-														commitDraft({ ...draft, rules: nextRules });
-													}}
-												>
-													<MenuItem value="=">=</MenuItem>
-													<MenuItem value="!=">≠</MenuItem>
-												</Select>
-											</TableCell>
-											<TableCell>
-												<Select
-													size="small"
-													fullWidth
-													value={rule.valueCode ?? ""}
-													onChange={(e) => {
-														const code = String(e.target.value);
-														const value = param?.values.find((v) => v.code === code);
-														const nextRules = [...draft.rules];
-														nextRules[index] = {
-															...rule,
-															valueCode: code,
-															valueLabel: value?.label ?? code,
-														};
-														commitDraft({ ...draft, rules: nextRules });
-													}}
-												>
-													{(param?.values ?? []).map((v) => (
-														<MenuItem key={v.code} value={v.code}>{v.label}</MenuItem>
-													))}
-												</Select>
-											</TableCell>
-											<TableCell>
-												<IconButton
-													size="small"
-													aria-label="Удалить условие"
-													onClick={() =>
-														commitDraft({
-															...draft,
-															rules: draft.rules.filter((_, i) => i !== index),
-														})
-													}
-												>
-													<DeleteOutlineIcon fontSize="small" />
-												</IconButton>
-											</TableCell>
-										</TableRow>
-									);
-								})}
-							</TableBody>
-						</Table>
-						<Button
-							size="small"
-							sx={{ mt: 1 }}
-							onClick={() =>
-								commitDraft({
-									...draft,
-									rules: [
-										...draft.rules,
-										{
-											id: `new-${Date.now()}`,
-											streamExecutor: draft.streamExecutor,
-											paramCode: paramOptions[0]?.code ?? "",
-											paramName: paramOptions[0]?.name ?? null,
-											operator: "=",
-											valueCode: null,
-											valueLabel: null,
-										},
-									],
-								})
-							}
-						>
-							+ Условие
-						</Button>
-					</Paper>
+				<Box sx={{ display: "flex", flexDirection: "column", gap: 0 }}>
+					<TypicalWorkNormsSection
+						norms={draft.norms}
+						streamExecutor={streamExecutor}
+						formatDate={formatDate}
+						parseDateInput={parseDateInput}
+						onChange={(norms) => commitDraft({ ...draft, norms })}
+					/>
 
-					<Paper variant="outlined" sx={{ p: 1.5 }}>
-						<Typography variant="subtitle2" fontWeight={700} gutterBottom>Нормы трудозатрат</Typography>
-						<Table size="small">
-							<TableHead>
-								<TableRow>
-									<TableCell>Норма</TableCell>
-									<TableCell>Начало</TableCell>
-									<TableCell>Окончание</TableCell>
-									<TableCell width={48} />
-								</TableRow>
-							</TableHead>
-							<TableBody>
-								{draft.norms.map((norm, index) => (
-									<TableRow key={norm.id ?? index}>
-										<TableCell>
-											<TextField
-												size="small"
-												type="number"
-												value={norm.normValue}
-												onChange={(e) => {
-													const next = [...draft.norms];
-													next[index] = { ...norm, normValue: Number(e.target.value.replace(",", ".")) };
-													commitDraft({ ...draft, norms: next });
-												}}
-											/>
-										</TableCell>
-										<TableCell>
-											<TextField
-												size="small"
-												placeholder="ДД.ММ.ГГГГ"
-												value={formatDate(norm.validFrom)}
-												onChange={(e) => {
-													const next = [...draft.norms];
-													next[index] = { ...norm, validFrom: parseDateInput(e.target.value) };
-													commitDraft({ ...draft, norms: next });
-												}}
-											/>
-										</TableCell>
-										<TableCell>
-											<TextField
-												size="small"
-												placeholder="ДД.ММ.ГГГГ"
-												value={formatDate(norm.validTo)}
-												onChange={(e) => {
-													const next = [...draft.norms];
-													next[index] = {
-														...norm,
-														validTo: e.target.value.trim() ? parseDateInput(e.target.value) : null,
-													};
-													commitDraft({ ...draft, norms: next });
-												}}
-											/>
-										</TableCell>
-										<TableCell>
-											<IconButton
-												size="small"
-												aria-label="Удалить норму"
-												onClick={() =>
-													commitDraft({ ...draft, norms: draft.norms.filter((_, i) => i !== index) })
-												}
-											>
-												<DeleteOutlineIcon fontSize="small" />
-											</IconButton>
-										</TableCell>
-									</TableRow>
-								))}
-							</TableBody>
-						</Table>
-						<Button
-							size="small"
-							sx={{ mt: 1 }}
-							onClick={() =>
-								commitDraft({
-									...draft,
-									norms: [
-										...draft.norms,
-										{
-											id: `new-${Date.now()}`,
-											streamExecutor: draft.streamExecutor,
-											normValue: 1,
-											validFrom: new Date().toISOString().slice(0, 10),
-											validTo: null,
-										},
-									],
-								})
-							}
-						>
-							+ Норма
-						</Button>
-					</Paper>
+					<TypicalWorkTriggersSection
+						rules={draft.rules}
+						triggerStatus={draft.triggerStatus}
+						archComponentType={draft.archComponentType}
+						paramOptions={paramOptions}
+						streamExecutor={streamExecutor ?? draft.streamExecutor}
+						onChange={(rules) => commitDraft({ ...draft, rules })}
+					/>
 
-					<Paper variant="outlined" sx={{ p: 1.5 }}>
-						<Typography variant="subtitle2" fontWeight={700} gutterBottom>
-							Параметры трудоёмкости
+					<Box
+						sx={{
+							bgcolor: "#fff",
+							border: "1px solid #e6e8ee",
+							borderRadius: "12px",
+							p: "15px 17px",
+							mb: 1.5,
+						}}
+					>
+						<Box
+							sx={{
+								display: "flex",
+								alignItems: "center",
+								gap: 1.1,
+								mb: 0.6,
+								flexWrap: "wrap",
+							}}
+						>
+							<Typography sx={{ fontSize: 13.5, fontWeight: 700, color: "#1d2435" }}>
+								Параметры трудоёмкости
+							</Typography>
+							{unusedLaborParams.length > 0 ? (
+								<Button
+									size="small"
+									onClick={() => {
+										const picked = unusedLaborParams[0];
+										if (!picked) return;
+										const newGroup = {
+											paramCode: picked.code,
+											paramName: picked.name,
+											coefficients: picked.values.map((v) => ({
+												id: `new-${Date.now()}-${v.code}`,
+												streamExecutor: draft.streamExecutor,
+												paramCode: picked.code,
+												paramName: picked.name,
+												valueCode: v.code,
+												valueLabel: v.label,
+												coefficient: 1,
+											})),
+										};
+										commitDraft({
+											...draft,
+											laborParams: [...draft.laborParams, newGroup],
+										});
+									}}
+									sx={{
+										ml: "auto",
+										textTransform: "none",
+										height: 28,
+										border: "1px solid #dfe2ea",
+										borderRadius: "7px",
+										color: "#384152",
+									}}
+								>
+									+ Параметр
+								</Button>
+							) : null}
+						</Box>
+						<Typography sx={{ fontSize: 11.5, color: "#8a93a3", mb: 1.5 }}>
+							Коэффициенты в разрезе стрима «
+							{streamDisplayLabel(streamExecutor)}». Редактируются по каждому
+							значению; используются в формуле как множители.
 						</Typography>
 						{draft.laborParams.length === 0 ? (
 							<Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -511,9 +592,33 @@ export function TypicalWorkEditableCard({
 							</Typography>
 						) : (
 							draft.laborParams.map((group) => (
-								<Box key={group.paramCode} sx={{ mb: 1.5 }}>
-									<Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-										<Typography variant="body2" fontWeight={600}>
+								<Box
+									key={group.paramCode}
+									sx={{
+										border: "1px solid #eef0f4",
+										borderRadius: "10px",
+										p: "11px 12px",
+										mb: 1.25,
+									}}
+								>
+									<Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.25 }}>
+										<Box
+											sx={{
+												display: "inline-flex",
+												alignItems: "center",
+												height: 19,
+												px: 0.9,
+												borderRadius: "5px",
+												bgcolor: "#eef4ff",
+												color: "#2f6bd8",
+												fontSize: 10.5,
+												fontWeight: 700,
+												fontFamily: "monospace",
+											}}
+										>
+											{group.paramCode}
+										</Box>
+										<Typography sx={{ flex: 1, fontSize: 12.5, fontWeight: 700 }}>
 											{group.paramName ?? group.paramCode}
 										</Typography>
 										<IconButton
@@ -614,9 +719,9 @@ export function TypicalWorkEditableCard({
 								</Button>
 							</Box>
 						) : null}
-					</Paper>
+					</Box>
 
-					<Paper variant="outlined" sx={{ p: 1.5 }}>
+					<Paper variant="outlined" sx={{ p: 1.5, borderRadius: "12px" }}>
 						<Typography variant="subtitle2" fontWeight={700} gutterBottom>Конструктор формулы</Typography>
 						<WorkFormulaEditor
 							formula={draft.formula}

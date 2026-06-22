@@ -56,6 +56,8 @@ export function inferTriggerValueLabel(
 		if (stream.includes("Внутренний")) return "Внутренний";
 		if (stream.includes("Внешний")) return "Внешний";
 	}
+	const control = paramName.match(/Вид контроля:\s*([A-ZА-Я0-9]+)/i);
+	if (control?.[1]) return control[1].toUpperCase();
 	return null;
 }
 

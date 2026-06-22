@@ -1,16 +1,86 @@
 import { setGroupActivationAtPath } from "@smart-anketa/api-contract";
+import {
+	CONTROL_TYPICAL_TASKS,
+	SOURCE_TYPICAL_TASKS,
+} from "../../../../src/modules/anketa-v2/constants/v2-source-works.builder";
 import { V2_DEFAULT_LOGIC_GRAPH } from "../../../../src/modules/anketa-v2/constants/v2-default-logic";
 import { V2CalculationService } from "../../../../src/modules/anketa-v2/services/v2-calculation.service";
+import type {
+	BuildCatalogTasksParams,
+	V2TypicalWorkRuntimeService,
+} from "../../../../src/modules/anketa-v2/services/v2-typical-work-runtime.service";
 import {
 	applyJsonLogic,
 	isJsonLogicTruthy,
 } from "../../../../src/modules/anketa-v2/services/v2-json-logic";
 
-describe("V2CalculationService", () => {
-	const service = new V2CalculationService(null as never, null as never);
+/** Имитация справочника БД для unit-тестов без PostgreSQL. */
+function createStubWorkRuntime(): V2TypicalWorkRuntimeService {
+	return {
+		buildCatalogTasks: async (params: BuildCatalogTasksParams) => {
+			if (params.archComponentType === "Система-источник") {
+				const type = String(params.source.type ?? "");
+				return SOURCE_TYPICAL_TASKS.filter(
+					(t) => !type || t.match.type === type,
+				).map((t) => ({
+					taskCode: t.taskCode,
+					name: t.name,
+					workType: t.workType,
+					reason: t.reason,
+					estimateHoursPerDay: t.estimateHoursPerDay,
+					coefficient: 1,
+					match: t.match,
+					workId: t.taskCode,
+				}));
+			}
+			if (params.archComponentType === "Модельный сервис") {
+				const label = String(
+					params.source.value ?? params.source.controlType ?? "",
+				);
+				return CONTROL_TYPICAL_TASKS.filter((t) => {
+					const code = String(t.match.controlType ?? "");
+					return (
+						label.includes(`[${code}]`) ||
+						label === code ||
+						label.includes(code)
+					);
+				}).map((t) => ({
+					taskCode: t.taskCode,
+					name: t.name,
+					workType: t.workType,
+					reason: t.reason,
+					estimateHoursPerDay: t.estimateHoursPerDay,
+					coefficient: 1,
+					match: t.match,
+					workId: t.taskCode,
+				}));
+			}
+			return [];
+		},
+		buildSourceCatalogTasks: async (source, templateVersionId, atDate) => {
+			const type = String(source.type ?? "");
+			const stream =
+				type === "Внешний" ? "ИД. Внешний" : "ИД. Внутренний";
+			return createStubWorkRuntime().buildCatalogTasks({
+				archComponentType: "Система-источник",
+				streamExecutor: stream,
+				source,
+				templateVersionId,
+				atDate,
+			});
+		},
+	} as unknown as V2TypicalWorkRuntimeService;
+}
 
-	it("applies row_computed totals on atypicalTasks rows", () => {
-		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+describe("V2CalculationService", () => {
+	const service = new V2CalculationService(
+		null as never,
+		null as never,
+		createStubWorkRuntime(),
+	);
+
+	it("applies row_computed totals on atypicalTasks rows", async () => {
+		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
 			streamModelControl: {
 				atypicalTasks: [
 					{ estimateHoursPerDay: 2, coefficient: 1.5 },
@@ -29,7 +99,7 @@ describe("V2CalculationService", () => {
 		expect(tasks[1]?.total).toBe(2);
 	});
 
-	it("skips rules under inactive activatable groups", () => {
+	it("skips rules under inactive activatable groups", async () => {
 		const inactive = setGroupActivationAtPath(
 			{
 				streamModelControl: {
@@ -39,7 +109,7 @@ describe("V2CalculationService", () => {
 			"streamModelControl",
 			false,
 		);
-		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, inactive);
+		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, inactive);
 		const tasks = (
 			result.formData.streamModelControl as {
 				atypicalTasks: Array<{ total?: number }>;
@@ -48,7 +118,7 @@ describe("V2CalculationService", () => {
 		expect(tasks[0]?.total).toBeUndefined();
 	});
 
-	it("computes unified Total = typicalTotal + atypicalTotal (ФТ-026)", () => {
+	it("computes unified Total = typicalTotal + atypicalTotal (ФТ-026)", async () => {
 		const summaryOnlyGraph = {
 			rules: V2_DEFAULT_LOGIC_GRAPH.rules.filter((r) =>
 				["unified-typical-total", "unified-atypical-total", "unified-grand-total"].includes(
@@ -56,13 +126,16 @@ describe("V2CalculationService", () => {
 				),
 			),
 		};
-		const result = service.evaluate(summaryOnlyGraph, {
+		const result = await service.evaluate(summaryOnlyGraph, {
 			streamDataSources: {
 				sourceTypicalTasks: [{ total: 3 }],
 				atypicalTasks: [{ total: 8, includeInCalculation: true }],
 			},
+			detailInfo: { detailTypicalTasks: [] },
+			generalInfo: {
+				modelService: { controlTypicalTasks: [] },
+			},
 			streamModelControl: {
-				control: { controlTypicalTasks: [] },
 				atypicalTasks: [{ total: 5, includeInCalculation: false }],
 			},
 		});
@@ -82,8 +155,8 @@ describe("V2CalculationService", () => {
 		).toBeGreaterThan(0);
 	});
 
-	it("generates internal source typical works from catalog with real norms", () => {
-		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+	it("generates internal source typical works from catalog with real norms", async () => {
+		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
 			streamDataSources: {
 				sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
 			},
@@ -105,8 +178,8 @@ describe("V2CalculationService", () => {
 		expect(streamDataSources.sourceTypicalTasks.some((t) => t.total === 3)).toBe(true);
 	});
 
-	it("migrates detailInfo.sourceSystems before source typical works generation", () => {
-		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+	it("migrates detailInfo.sourceSystems before source typical works generation", async () => {
+		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
 			detailInfo: {
 				sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
 			},
@@ -118,8 +191,8 @@ describe("V2CalculationService", () => {
 		expect(streamDataSources.sourceTypicalTasks.length).toBeGreaterThan(0);
 	});
 
-	it("uses stream localParams for coefficient when source row has no weights (ФТ-024)", () => {
-		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+	it("uses stream localParams for coefficient when source row has no weights (ФТ-024)", async () => {
+		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
 			streamDataSources: {
 				localParams: {
 					domainComplexity: "Высокая",
@@ -134,8 +207,8 @@ describe("V2CalculationService", () => {
 		expect(streamDataSources.sourceTypicalTasks[0]?.coefficient).toBeCloseTo(1.875);
 	});
 
-	it("applies multiplicative group coefficient from dictionary weights (ФТ-024)", () => {
-		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+	it("applies multiplicative group coefficient from dictionary weights (ФТ-024)", async () => {
+		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
 			streamDataSources: {
 				sourceSystems: [
 					{
@@ -151,17 +224,15 @@ describe("V2CalculationService", () => {
 		const streamDataSources = result.formData.streamDataSources as {
 			sourceTypicalTasks: Array<{ name: string; total: number; coefficient: number }>;
 		};
-		// Высокая ×1.5 × Большое ×1.25 = 1.875
 		expect(streamDataSources.sourceTypicalTasks[0]?.coefficient).toBeCloseTo(1.875);
 		const analysis = streamDataSources.sourceTypicalTasks.find((t) =>
 			t.name.includes("Анализ Данных"),
 		);
-		// норматив 3 × 1.875 = 5.625
 		expect(analysis?.total).toBeCloseTo(5.625);
 	});
 
-	it("generates external source works (stage 214+) for external type", () => {
-		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+	it("generates external source works (stage 214+) for external type", async () => {
+		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
 			streamDataSources: {
 				sourceSystems: [{ name: "Внешний поставщик", type: "Внешний" }],
 			},
@@ -175,31 +246,34 @@ describe("V2CalculationService", () => {
 		).toBe(true);
 	});
 
-	it("generates control-model works from selected control types", () => {
-		const result = service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
-			streamModelControl: {
-				control: {
+	it("generates control-model works from selected control types", async () => {
+		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+			generalInfo: {
+				modelService: {
 					modelClass: "Розничные бизнес-модели",
-					controlTypes: ["КД", "ОК"],
+					controlTypes: [
+						"Качество модельных данных [КД]",
+						"Оперативный контроль [ОК]",
+					],
 				},
 			},
 		});
-		const control = (
-			result.formData.streamModelControl as {
-				control: { controlTypicalTasks: Array<{ name: string }> };
+		const modelService = (
+			result.formData.generalInfo as {
+				modelService: { controlTypicalTasks: Array<{ name: string }> };
 			}
-		).control;
-		expect(control.controlTypicalTasks).toHaveLength(2);
+		).modelService;
+		expect(modelService.controlTypicalTasks).toHaveLength(2);
 		expect(
-			control.controlTypicalTasks.some((t) => t.name.includes("[КД]")),
+			modelService.controlTypicalTasks.some((t) => t.name.includes("[КД]")),
 		).toBe(true);
 		expect(
-			control.controlTypicalTasks.some((t) => t.name.includes("[ОК]")),
+			modelService.controlTypicalTasks.some((t) => t.name.includes("[ОК]")),
 		).toBe(true);
 	});
 
-	it("returns validationIssues when validation rule condition is false", () => {
-		const result = service.evaluate(
+	it("returns validationIssues when validation rule condition is false", async () => {
+		const result = await service.evaluate(
 			{
 				rules: [
 					{
@@ -224,8 +298,8 @@ describe("V2CalculationService", () => {
 		);
 	});
 
-	it("skips validation on fields hidden by visibility", () => {
-		const result = service.evaluate(
+	it("skips validation on fields hidden by visibility", async () => {
+		const result = await service.evaluate(
 			{
 				rules: [
 					{
@@ -251,9 +325,8 @@ describe("V2CalculationService", () => {
 		expect(result.validationIssues).toHaveLength(0);
 	});
 
-	it("runs legacy v1 stage engine for non-unified graphs (back-compat)", () => {
-		// Граф без флага calcModel: "unified" → legacy v1-движок этапов работает.
-		const result = service.evaluate(
+	it("runs legacy v1 stage engine for non-unified graphs (back-compat)", async () => {
+		const result = await service.evaluate(
 			{ rules: [] },
 			{
 				detailInfo: { parameters: { modelsCount: 1, algorithmType: "NLP" } },

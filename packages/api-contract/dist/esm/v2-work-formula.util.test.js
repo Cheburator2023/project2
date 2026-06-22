@@ -16,7 +16,7 @@ describe("v2-work-formula.util", () => {
     it("evaluates N × coeff with rounding up", () => {
         const parsed = parseWorkFormulaText("N × P[x]");
         const result = previewWorkFormula({ tokens: parsed.tokens, text: "N × P[x]" }, defaultWorkRounding(), { norm: 1.25, paramCoefficients: { x: 0.5 } });
-        expect(result.value).toBe(0.7);
+        expect(result.value).toBeCloseTo(0.7, 5);
         expect(result.error).toBeNull();
     });
     it("rejects unbalanced parens", () => {

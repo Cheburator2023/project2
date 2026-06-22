@@ -104,6 +104,10 @@ export type V2TypicalWorkListItemDto = {
 	triggerStatus: V2WorkTriggerStatus;
 	currentNorm: number | null;
 	streams: string[];
+	/** Действующая норма на сегодня по каждому назначенному стриму (ключ — streamExecutor в БД). */
+	normsByStream?: Record<string, number | null>;
+	/** Число параметров трудоёмкости по стриму (ключ — streamExecutor в БД). */
+	laborParamCountByStream?: Record<string, number>;
 };
 
 export type V2TypicalWorkListResponseDto = {
@@ -185,6 +189,17 @@ export type CreateV2TypicalWorkRequestDto = {
 export type V2TypicalWorkFieldErrorDto = {
 	path: string;
 	message: string;
+};
+
+export type V2TypicalWorkQuestionnaireUsageDto = {
+	questionnaireId: string;
+	calcName: string;
+	version: string;
+};
+
+export type V2DeleteTypicalWorkConflictDto = {
+	code: "WORK_IN_USE";
+	usedInQuestionnaireVersions: V2TypicalWorkQuestionnaireUsageDto[];
 };
 
 export type V2TypicalWorkParameterValueDto = {

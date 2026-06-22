@@ -198,17 +198,21 @@ export class V2TypicalWorkService {
 		});
 
 		const workIds = works.map((w) => w.id);
-		const [norms, rules] = await Promise.all([
+		const [norms, rules, laborRows] = await Promise.all([
 			workIds.length
 				? this.normRepository.find({ where: { workId: In(workIds) } })
 				: [],
 			workIds.length
 				? this.ruleRepository.find({ where: { workId: In(workIds) } })
 				: [],
+			workIds.length
+				? this.laborRepository.find({ where: { workId: In(workIds) } })
+				: [],
 		]);
 
 		const normsByWork = groupBy(norms, (n) => n.workId);
 		const rulesByWork = groupBy(rules, (r) => r.workId);
+		const laborByWork = groupBy(laborRows, (r) => r.workId);
 		const atDate = todayIsoDate();
 		const streamFilter = query.streamExecutor?.trim();
 
@@ -221,9 +225,11 @@ export class V2TypicalWorkService {
 			.map((work) => {
 				const workNorms = normsByWork.get(work.id) ?? [];
 				const workRules = rulesByWork.get(work.id) ?? [];
+				const workLabor = laborByWork.get(work.id) ?? [];
 				const streams = unique([
 					...workNorms.map((n) => n.streamExecutor),
 					...workRules.map((r) => r.streamExecutor),
+					...workLabor.map((l) => l.streamExecutor),
 				]);
 
 				const streamForStatus =
@@ -232,8 +238,23 @@ export class V2TypicalWorkService {
 						: streams[0] ?? streamFilter ?? "";
 
 				const normsDto = workNorms.map(mapNormEntity);
+				const normsByStream: Record<string, number | null> = {};
+				const laborParamCountByStream: Record<string, number> = {};
+				for (const stream of streams) {
+					normsByStream[stream] = resolveActiveNormOnDate(
+						normsDto,
+						stream,
+						atDate,
+					);
+					const paramCodes = new Set(
+						workLabor
+							.filter((row) => row.streamExecutor === stream)
+							.map((row) => row.paramCode),
+					);
+					laborParamCountByStream[stream] = paramCodes.size;
+				}
 				const currentNorm = streamForStatus
-					? resolveActiveNormOnDate(normsDto, streamForStatus, atDate)
+					? normsByStream[streamForStatus] ?? null
 					: null;
 
 				return {
@@ -248,6 +269,8 @@ export class V2TypicalWorkService {
 					),
 					currentNorm,
 					streams,
+					normsByStream,
+					laborParamCountByStream,
 				};
 			})
 			.filter((item) =>

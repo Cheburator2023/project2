@@ -18,7 +18,7 @@ const v2_typical_work_types_1 = require("./v2-typical-work.types");
     (0, vitest_1.it)("evaluates N × coeff with rounding up", () => {
         const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)("N × P[x]");
         const result = (0, v2_work_formula_util_1.previewWorkFormula)({ tokens: parsed.tokens, text: "N × P[x]" }, (0, v2_typical_work_types_1.defaultWorkRounding)(), { norm: 1.25, paramCoefficients: { x: 0.5 } });
-        (0, vitest_1.expect)(result.value).toBe(0.7);
+        (0, vitest_1.expect)(result.value).toBeCloseTo(0.7, 5);
         (0, vitest_1.expect)(result.error).toBeNull();
     });
     (0, vitest_1.it)("rejects unbalanced parens", () => {

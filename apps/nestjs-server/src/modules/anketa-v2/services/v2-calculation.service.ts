@@ -12,7 +12,15 @@ import type {
 import {
 	isCalculationPathActive,
 	mergeTypicalCoefficientContext,
+	parseParamDependencyGraphFromLogic,
+	filterCoefficientLogicForHiddenFields,
+	resolveHiddenParamCodesForSource,
+	resolveHiddenSourceFieldKeys,
 	readStreamLocalParamsForTypicalOutput,
+	resolveStreamFromSourceType,
+	resolveStreamsFromSourceSystems,
+	type V2ParamDependencyGraph,
+	type V2ParamDefLike,
 } from "@smart-anketa/api-contract";
 import { V2TemplateService } from "./v2-template.service";
 import { V2TemplateVersionService } from "./v2-template-version.service";
@@ -25,6 +33,7 @@ import { applyLegacySummaryToFormData } from "./v2-legacy-stage-evaluation";
 import { evaluateLogicValidationRules } from "./v2-logic-validation";
 import { V2TypicalWorkRuntimeService } from "./v2-typical-work-runtime.service";
 import { migrateV2AnketaFormData } from "../utils/v2-form-data-migration.util";
+import { listCatalogParamDefs } from "../utils/v2-catalog-param-defs.util";
 
 type ComputedPayload = {
 	role?: V2CalculationRole;
@@ -46,10 +55,26 @@ type RowComputedPayload = {
 type TaskTriggerPayload = {
 	mode?: "generated_rows";
 	worksCatalog?: boolean;
+	/** Тип арх. компонента в справочнике типовых работ. */
+	worksCatalogArchComponent?: string;
+	/**
+	 * Стрим-исполнитель для норм/триггеров:
+	 * - `fromSourceType` — из поля `type` строки (Система-источник)
+	 * - `fromSourceSystems` — все стримы из sourceSystems (объекты витрины/процесса)
+	 * - иначе — фиксированное имя стрима
+	 */
+	worksCatalogStream?: string;
+	/** Источник — массив (по умолчанию). */
+	sourceArrayPath?: string;
+	/** Источник — один объект (витрина, процесс). */
+	sourceObjectPath?: string;
+	/** Доп. контекст для коэффициентов (напр. modelService при controlTypes). */
+	sourceContextPaths?: string[];
+	/** `append` — дописать к output; `replace` — заменить (по умолчанию). */
+	outputMode?: "append" | "replace";
 	taskCode?: string;
 	label?: string;
 	hint?: string;
-	sourceArrayPath?: string;
 	outputArrayPath?: string;
 	/**
 	 * ФТ-024: единый коэффициент группы для всех работ компонента — произведение
@@ -319,6 +344,8 @@ export class V2CalculationService {
 		options?: { templateVersionId?: string | null },
 	): Promise<V2CalculationResultDto> {
 		const rules = logic?.rules ?? [];
+		const paramGraph = parseParamDependencyGraphFromLogic(rules);
+		const paramDefs = listCatalogParamDefs();
 		const rowComputed = rules.filter((r) => r.kind === "row_computed");
 		const computed = rules.filter((r) => r.kind === "computed");
 		const taskTriggers = rules.filter((r) => r.kind === "task_trigger");
@@ -332,6 +359,8 @@ export class V2CalculationService {
 				rule,
 				liveData,
 				options?.templateVersionId ?? null,
+				paramGraph,
+				paramDefs,
 			);
 		}
 
@@ -423,12 +452,15 @@ export class V2CalculationService {
 		rule: V2LogicRuleDto,
 		data: Record<string, unknown>,
 		templateVersionId: string | null,
+		paramGraph: V2ParamDependencyGraph,
+		paramDefs: V2ParamDefLike[],
 	): Promise<Record<string, unknown>> {
 		const payload = (rule.payload ?? {}) as TaskTriggerPayload;
 		if (payload.mode !== "generated_rows") return data;
-		const sourceArrayPath = payload.sourceArrayPath?.trim();
 		const outputArrayPath = payload.outputArrayPath?.trim();
-		if (!sourceArrayPath || !outputArrayPath || !payload.tasks?.length) {
+		const usesCatalog = Boolean(payload.worksCatalog);
+		const hasStaticTasks = (payload.tasks?.length ?? 0) > 0;
+		if (!outputArrayPath || (!usesCatalog && !hasStaticTasks)) {
 			return data;
 		}
 
@@ -440,17 +472,28 @@ export class V2CalculationService {
 		} catch {
 			passes = false;
 		}
-		if (!passes) return writeByDotPath(data, outputArrayPath, []);
+		if (!passes) {
+			return payload.outputMode === "append"
+				? data
+				: writeByDotPath(data, outputArrayPath, []);
+		}
 
-		const sourceRows = readByDotPath(data, sourceArrayPath);
-		if (!Array.isArray(sourceRows)) return writeByDotPath(data, outputArrayPath, []);
+		const sourceRows = this.resolveGeneratedRowSources(data, payload);
+		if (sourceRows.length === 0) {
+			return payload.outputMode === "append"
+				? data
+				: writeByDotPath(data, outputArrayPath, []);
+		}
 
 		const sourceCount = sourceRows.length;
 		const streamLocalParams = readStreamLocalParamsForTypicalOutput(
 			data,
 			outputArrayPath,
 		);
+		const extraContext = this.readSourceContextPaths(data, payload.sourceContextPaths);
 		const atDate = new Date().toISOString().slice(0, 10);
+		const archComponent =
+			payload.worksCatalogArchComponent?.trim() ?? "Система-источник";
 
 		const generated = (
 			await Promise.all(
@@ -461,22 +504,60 @@ export class V2CalculationService {
 							: typeof row === "string"
 								? { value: row, controlType: row, name: row }
 								: {};
-					const sourceForMatch = { ...source, sourceCount, sourceIndex };
+					const sourceForMatch = {
+						...extraContext,
+						...source,
+						sourceCount,
+						sourceIndex,
+					};
 					const coefficientContext = mergeTypicalCoefficientContext(
 						streamLocalParams,
 						sourceForMatch,
 					);
+					const hiddenParamCodes = resolveHiddenParamCodesForSource(
+						paramGraph,
+						sourceForMatch,
+						paramDefs,
+					);
+					const hiddenSourceFields = resolveHiddenSourceFieldKeys(
+						hiddenParamCodes,
+						paramDefs,
+						sourceForMatch,
+					);
+					const coefficientLogic = payload.coefficientLogic
+						? filterCoefficientLogicForHiddenFields(
+								payload.coefficientLogic,
+								hiddenSourceFields,
+							)
+						: undefined;
 					const sourceName =
 						typeof source.name === "string" && source.name.trim()
 							? source.name.trim()
-							: `Источник ${sourceIndex + 1}`;
+							: typeof source.value === "string" && source.value.trim()
+								? source.value.trim()
+								: `Компонент ${sourceIndex + 1}`;
 
-					const taskDefs = payload.worksCatalog
-						? await this.workRuntime.buildSourceCatalogTasks(
-								sourceForMatch,
-								templateVersionId,
-								atDate,
-							)
+					const streams = this.resolveWorksCatalogStreams(
+						payload,
+						sourceForMatch,
+						data,
+					);
+
+					const taskDefs = usesCatalog
+						? (
+								await Promise.all(
+									streams.map((streamExecutor) =>
+										this.workRuntime.buildCatalogTasks({
+											archComponentType: archComponent,
+											streamExecutor,
+											source: sourceForMatch,
+											templateVersionId,
+											atDate,
+											hiddenParamCodes,
+										}),
+									),
+								)
+							).flat()
 						: (payload.tasks ?? [])
 								.filter((task) => rowMatches(sourceForMatch, task.match))
 								.map((task) => ({
@@ -492,39 +573,99 @@ export class V2CalculationService {
 										task,
 										coefficientContext,
 										sourceCount,
-										payload.coefficientLogic,
+										coefficientLogic,
 									),
 									match: task.match ?? {},
 									workId: task.taskCode ?? "",
 								}));
 
-					return taskDefs.map((task) => ({
-						taskCode: task.taskCode,
-						name: task.name,
-						workType: task.workType,
-						reason: task.reason
-							? `${sourceName}: ${task.reason}`
-							: `${sourceName}: параметр источника`,
-						estimateHoursPerDay: task.estimateHoursPerDay,
-						coefficient: payload.worksCatalog
-							? task.coefficient
-							: typeof task.coefficient === "number"
-								? task.coefficient
-								: resolveGeneratedTaskCoefficient(
-										task as (typeof payload.tasks)[number],
-										coefficientContext,
-										sourceCount,
-										payload.coefficientLogic,
-									),
-						sourceComponent: "Источник данных",
-						sourceName,
-						generatedByRuleId: rule.id,
-					}));
+					return taskDefs.map((task) => {
+						const catalogCoeff =
+							typeof task.coefficient === "number" ? task.coefficient : 1;
+						const coefficient = usesCatalog
+							? resolveGeneratedTaskCoefficient(
+									{ coefficient: catalogCoeff },
+									coefficientContext,
+									sourceCount,
+									coefficientLogic,
+								)
+							: (typeof task.coefficient === "number" ? task.coefficient : 1);
+
+						return {
+							taskCode: task.taskCode,
+							name: task.name,
+							workType: task.workType,
+							reason: task.reason
+								? `${sourceName}: ${task.reason}`
+								: `${sourceName}: параметр источника`,
+							estimateHoursPerDay: task.estimateHoursPerDay,
+							coefficient,
+							sourceComponent: archComponent,
+							sourceName,
+							generatedByRuleId: rule.id,
+						};
+					});
 				}),
 			)
 		).flat();
 
+		if (payload.outputMode === "append") {
+			const existing = readByDotPath(data, outputArrayPath);
+			const merged = [
+				...(Array.isArray(existing) ? existing : []),
+				...generated,
+			];
+			return writeByDotPath(data, outputArrayPath, merged);
+		}
+
 		return writeByDotPath(data, outputArrayPath, generated);
+	}
+
+	private resolveGeneratedRowSources(
+		data: Record<string, unknown>,
+		payload: TaskTriggerPayload,
+	): unknown[] {
+		const objectPath = payload.sourceObjectPath?.trim();
+		if (objectPath) {
+			const obj = readByDotPath(data, objectPath);
+			if (!obj || typeof obj !== "object" || Array.isArray(obj)) return [];
+			return [obj];
+		}
+		const arrayPath = payload.sourceArrayPath?.trim();
+		if (!arrayPath) return [];
+		const rows = readByDotPath(data, arrayPath);
+		return Array.isArray(rows) ? rows : [];
+	}
+
+	private readSourceContextPaths(
+		data: Record<string, unknown>,
+		paths: string[] | undefined,
+	): Record<string, unknown> {
+		if (!paths?.length) return {};
+		const merged: Record<string, unknown> = {};
+		for (const path of paths) {
+			const value = readByDotPath(data, path.trim());
+			if (value && typeof value === "object" && !Array.isArray(value)) {
+				Object.assign(merged, value as Record<string, unknown>);
+			}
+		}
+		return merged;
+	}
+
+	private resolveWorksCatalogStreams(
+		payload: TaskTriggerPayload,
+		source: Record<string, unknown>,
+		data: Record<string, unknown>,
+	): string[] {
+		const mode = payload.worksCatalogStream?.trim() ?? "fromSourceType";
+		if (mode === "fromSourceType") {
+			const stream = resolveStreamFromSourceType(source);
+			return stream ? [stream] : [];
+		}
+		if (mode === "fromSourceSystems") {
+			return resolveStreamsFromSourceSystems(data);
+		}
+		return [mode];
 	}
 
 	private applyComputed(

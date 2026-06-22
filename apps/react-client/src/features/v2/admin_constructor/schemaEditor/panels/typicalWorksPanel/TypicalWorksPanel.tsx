@@ -1,7 +1,6 @@
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
@@ -16,21 +15,41 @@ import {
 	useV2TypicalWorksList,
 } from "@react-client/common/api/queries/v2-works";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
+import { parseTypicalWorkDeleteError } from "./typicalWorkPatchErrors";
 import { V2_TEMPLATE_VERSION_QUERY } from "@react-client/routing/common/pathHelpers";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { toast } from "@react-client/common/toasts";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../../testIds";
 import { CreateTypicalWorkDialog } from "./CreateTypicalWorkDialog";
+import { AssignWorkFromCatalogDialog } from "./AssignWorkFromCatalogDialog";
+import { LogicWorksToolbar } from "./LogicWorksToolbar";
 import { TypicalWorkEditableCard } from "./TypicalWorkEditableCard";
 import { ParameterDependenciesPanel } from "./ParameterDependenciesPanel";
+import { TypicalWorksCatalogView } from "./TypicalWorksCatalogView";
+import { TypicalWorksEmptyState } from "./TypicalWorksEmptyState";
+import { TypicalWorksMatrixView } from "./TypicalWorksMatrixView";
 import { TypicalWorksTreeSidebar } from "./TypicalWorksTreeSidebar";
+import {
+	type LogicWorksScope,
+	type LogicWorksViewMode,
+	pickStreamForScope,
+	resolveScopeStreams,
+	scopeLabel,
+	scopeSubtitle,
+	workAssignedToScope,
+} from "./typicalWorksAreas";
 import {
 	DEFAULT_WORK_STREAMS,
 	groupWorksByArchComponent,
 	pickDefaultStream,
 	storeWorkStream,
 } from "./typicalWorksUi";
+
+const DEFAULT_SCOPE: LogicWorksScope = {
+	kind: "stream",
+	stream: "Источники данных",
+};
 
 export function TypicalWorksPanel() {
 	const { templateId = "" } = useParams<{ templateId: string }>();
@@ -43,23 +62,32 @@ export function TypicalWorksPanel() {
 
 	const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
 	const [streamExecutor, setStreamExecutor] = useState<string | null>(null);
-	const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(
-		{},
-	);
-	const [viewMode] = useState<"tree" | "table" | "cards">("tree");
+	const [viewMode, setViewMode] = useState<LogicWorksViewMode>("streams");
+	const [scope, setScope] = useState<LogicWorksScope>(DEFAULT_SCOPE);
 	const [createOpen, setCreateOpen] = useState(false);
+	const [assignOpen, setAssignOpen] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState<V2TypicalWorkListItemDto | null>(
 		null,
 	);
+	const [deleteUsageConflict, setDeleteUsageConflict] = useState<
+		ReturnType<typeof parseTypicalWorkDeleteError>
+	>(null);
+
+	const scopeStreams = useMemo(() => resolveScopeStreams(scope), [scope]);
+
+	const assignedWorks = useMemo(() => {
+		const items = data?.items ?? [];
+		return items.filter((item) => workAssignedToScope(item.streams, scopeStreams));
+	}, [data?.items, scopeStreams]);
 
 	const groups = useMemo(
-		() => groupWorksByArchComponent(data?.items ?? []),
-		[data?.items],
+		() => groupWorksByArchComponent(assignedWorks),
+		[assignedWorks],
 	);
 
 	const selectedListItem = useMemo(
-		() => data?.items.find((item) => item.id === selectedWorkId) ?? null,
-		[data?.items, selectedWorkId],
+		() => assignedWorks.find((item) => item.id === selectedWorkId) ?? null,
+		[assignedWorks, selectedWorkId],
 	);
 
 	const availableStreams = useMemo(() => {
@@ -67,19 +95,35 @@ export function TypicalWorksPanel() {
 		return [...DEFAULT_WORK_STREAMS];
 	}, [selectedListItem]);
 
+	const scopeIsGroup = scope.kind === "group";
+
+	const openWorkInStreamsView = (workId: string, stream: string) => {
+		setViewMode("streams");
+		setSelectedWorkId(workId);
+		setStreamExecutor(stream);
+		storeWorkStream(workId, stream);
+	};
+
 	useEffect(() => {
-		if (!selectedWorkId && data?.items.length) {
-			setSelectedWorkId(data.items[0]?.id ?? null);
+		if (!assignedWorks.length) {
+			setSelectedWorkId(null);
+			return;
 		}
-	}, [data?.items, selectedWorkId]);
+		if (!selectedWorkId || !assignedWorks.some((w) => w.id === selectedWorkId)) {
+			setSelectedWorkId(assignedWorks[0]?.id ?? null);
+		}
+	}, [assignedWorks, selectedWorkId]);
 
 	useEffect(() => {
 		if (!selectedListItem) {
 			setStreamExecutor(null);
 			return;
 		}
-		setStreamExecutor(pickDefaultStream(selectedListItem) ?? DEFAULT_WORK_STREAMS[0]);
-	}, [selectedListItem]);
+		const preferred = pickDefaultStream(selectedListItem);
+		setStreamExecutor(
+			pickStreamForScope(selectedListItem.streams, scopeStreams, preferred),
+		);
+	}, [selectedListItem, scopeStreams]);
 
 	const {
 		data: card,
@@ -121,20 +165,33 @@ export function TypicalWorksPanel() {
 		}
 	};
 
-	const handleDeleteWork = async () => {
+	const handleDeleteWork = async (confirm = false) => {
 		if (!deleteTarget) return;
 		try {
-			await deleteWork.mutateAsync(deleteTarget.id);
+			await deleteWork.mutateAsync({ workId: deleteTarget.id, confirm });
 			if (selectedWorkId === deleteTarget.id) {
 				setSelectedWorkId(null);
 			}
 			setDeleteTarget(null);
+			setDeleteUsageConflict(null);
 			toast.success("Работа удалена");
 		} catch (err) {
+			if (!confirm) {
+				const conflict = parseTypicalWorkDeleteError(err);
+				if (conflict) {
+					setDeleteUsageConflict(conflict);
+					return;
+				}
+			}
 			toast.error("Не удалось удалить работу", {
 				description: apiErrorMessage(err),
 			});
 		}
+	};
+
+	const openDeleteDialog = (work: V2TypicalWorkListItemDto) => {
+		setDeleteUsageConflict(null);
+		setDeleteTarget(work);
 	};
 
 	if (isLoading) {
@@ -165,83 +222,93 @@ export function TypicalWorksPanel() {
 					minHeight: 0,
 				}}
 			>
-				<Box
-					sx={{
-						flexShrink: 0,
-						px: 2,
-						py: 1,
-						borderBottom: 1,
-						borderColor: "divider",
-						bgcolor: "background.paper",
-						display: "flex",
-						alignItems: "center",
-						gap: 1.5,
+				<LogicWorksToolbar
+					viewMode={viewMode}
+					scope={scope}
+					onViewModeChange={setViewMode}
+					onScopeChange={(next) => {
+						setScope(next);
+						setSelectedWorkId(null);
 					}}
-				>
-					<Typography variant="body2" color="text.secondary">
-						<b>{data?.total ?? 0}</b> работ · сгруппированы по арх. компоненту
-					</Typography>
-					<Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1 }}>
-						<Typography variant="body2" color="text.secondary">
-							Вид:
-						</Typography>
-						<Chip
-							size="small"
-							color={viewMode === "tree" ? "primary" : "default"}
-							label="Дерево"
-						/>
-						<Chip
-							size="small"
-							variant="outlined"
-							label="Таблица"
-							title="Будет реализовано позже"
-							sx={{ opacity: 0.55 }}
-						/>
-						<Chip
-							size="small"
-							variant="outlined"
-							label="Карточки"
-							title="Будет реализовано позже"
-							sx={{ opacity: 0.55 }}
+					onCreateWork={() => setCreateOpen(true)}
+				/>
+
+				{viewMode === "matrix" ? (
+					<Box sx={{ flex: 1, minHeight: 0 }}>
+						<TypicalWorksMatrixView
+							works={data?.items ?? []}
+							templateVersionId={templateVersionId}
+							onOpenWork={openWorkInStreamsView}
 						/>
 					</Box>
-				</Box>
+				) : null}
 
-				<Box sx={{ flex: 1, minHeight: 0, display: "flex" }}>
-					<TypicalWorksTreeSidebar
-						groups={groups}
-						selectedWorkId={selectedWorkId}
-						collapsedGroups={collapsedGroups}
-						streamFilter={streamExecutor}
-						onToggleGroup={(archComponentType) =>
-							setCollapsedGroups((prev) => ({
-								...prev,
-								[archComponentType]: !prev[archComponentType],
-							}))
-						}
-						onSelectWork={setSelectedWorkId}
-						onCreateWork={() => setCreateOpen(true)}
-						onDeleteWork={setDeleteTarget}
-					/>
-					<TypicalWorkEditableCard
-						card={card}
-						loading={cardLoading}
-						error={
-							cardError instanceof Error
-								? cardError.message
-								: cardError
-									? String(cardError)
-									: null
-						}
-						availableStreams={availableStreams}
-						streamExecutor={streamExecutor}
-						templateId={templateId}
-						templateVersionId={templateVersionId}
-						onStreamChange={handleStreamChange}
-						onVersionChange={handleVersionChange}
-					/>
-				</Box>
+				{viewMode === "catalog" ? (
+					<Box sx={{ flex: 1, minHeight: 0 }}>
+						<TypicalWorksCatalogView
+							works={data?.items ?? []}
+							onAssign={() => setAssignOpen(true)}
+							onCreateWork={() => setCreateOpen(true)}
+						/>
+					</Box>
+				) : null}
+
+				{viewMode === "streams" ? (
+					<Box sx={{ flex: 1, minHeight: 0, display: "flex" }}>
+						{assignedWorks.length === 0 ? (
+							<TypicalWorksEmptyState
+								areaTitle={scopeLabel(scope)}
+								onCreateWork={() => setCreateOpen(true)}
+							/>
+						) : (
+							<>
+								<TypicalWorksTreeSidebar
+									groups={groups}
+									selectedWorkId={selectedWorkId}
+									onSelectWork={setSelectedWorkId}
+									onAssignFromCatalog={() => setAssignOpen(true)}
+									onDeleteWork={openDeleteDialog}
+									scopeIsGroup={scopeIsGroup}
+									scopeStreams={scopeStreams}
+									assignedCount={assignedWorks.length}
+									scopeSubtitle={scopeSubtitle(scope)}
+								/>
+								<TypicalWorkEditableCard
+									card={card}
+									loading={cardLoading}
+									error={
+										cardError instanceof Error
+											? cardError.message
+											: cardError
+												? String(cardError)
+												: null
+									}
+									availableStreams={availableStreams}
+									streamExecutor={streamExecutor}
+									templateId={templateId}
+									templateVersionId={templateVersionId}
+									onStreamChange={handleStreamChange}
+									onVersionChange={handleVersionChange}
+								/>
+							</>
+						)}
+					</Box>
+				) : null}
 			</Box>
+
+			<AssignWorkFromCatalogDialog
+				open={assignOpen}
+				scope={scope}
+				scopeStreams={scopeStreams}
+				works={data?.items ?? []}
+				templateVersionId={templateVersionId}
+				onClose={() => setAssignOpen(false)}
+				onAssigned={(workId, stream) => openWorkInStreamsView(workId, stream)}
+				onCreateNew={() => {
+					setAssignOpen(false);
+					setCreateOpen(true);
+				}}
+			/>
 
 			<CreateTypicalWorkDialog
 				open={createOpen}
@@ -252,28 +319,62 @@ export function TypicalWorksPanel() {
 
 			<Dialog
 				open={Boolean(deleteTarget)}
-				onClose={() => (deleteWork.isPending ? undefined : setDeleteTarget(null))}
+				onClose={() => {
+					if (deleteWork.isPending) return;
+					setDeleteTarget(null);
+					setDeleteUsageConflict(null);
+				}}
 				maxWidth="xs"
 				fullWidth
 			>
-				<DialogTitle>Удалить работу?</DialogTitle>
+				<DialogTitle>
+					{deleteUsageConflict ? "Работа используется в анкетах" : "Удалить работу?"}
+				</DialogTitle>
 				<DialogContent>
-					<Typography variant="body2" color="text.secondary">
-						«{deleteTarget?.name}» будет удалена из глобального справочника без
-						возможности восстановления.
-					</Typography>
+					{deleteUsageConflict ? (
+						<>
+							<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+								«{deleteTarget?.name}» учтена в версиях анкет. Удаление затронет
+								сохранённые данные в этих версиях.
+							</Typography>
+							<Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+								{deleteUsageConflict.usedInQuestionnaireVersions.map((usage) => (
+									<Typography
+										key={`${usage.questionnaireId}-${usage.version}`}
+										component="li"
+										variant="body2"
+										color="text.secondary"
+										sx={{ mb: 0.5 }}
+									>
+										{usage.calcName} (версия {usage.version})
+									</Typography>
+								))}
+							</Box>
+						</>
+					) : (
+						<Typography variant="body2" color="text.secondary">
+							«{deleteTarget?.name}» будет удалена из глобального справочника без
+							возможности восстановления.
+						</Typography>
+					)}
 				</DialogContent>
 				<DialogActions>
-					<Button onClick={() => setDeleteTarget(null)} disabled={deleteWork.isPending}>
+					<Button
+						onClick={() => {
+							setDeleteTarget(null);
+							setDeleteUsageConflict(null);
+						}}
+						disabled={deleteWork.isPending}
+					>
 						Отмена
 					</Button>
 					<Button
 						color="error"
 						variant="contained"
 						disabled={deleteWork.isPending}
-						onClick={() => void handleDeleteWork()}
+						onClick={() => void handleDeleteWork(Boolean(deleteUsageConflict))}
 					>
-						Удалить
+						{deleteUsageConflict ? "Удалить всё равно" : "Удалить"}
 					</Button>
 				</DialogActions>
 			</Dialog>
@@ -331,16 +432,27 @@ export function LogicWorkspaceShell({
 					}}
 				>
 					{segments.map((segment) => (
-						<Chip
+						<Box
 							key={segment.id}
-							label={segment.label}
+							component="button"
+							type="button"
 							title={segment.hint}
-							clickable
-							color={tab === segment.id ? "primary" : "default"}
-							variant={tab === segment.id ? "filled" : "outlined"}
 							onClick={() => onTabChange(segment.id)}
-							sx={{ border: "none" }}
-						/>
+							sx={{
+								border: "none",
+								cursor: "pointer",
+								fontFamily: "inherit",
+								px: 1.75,
+								py: 0.75,
+								borderRadius: "7px",
+								fontSize: "12.5px",
+								fontWeight: 600,
+								bgcolor: tab === segment.id ? "#1c2333" : "transparent",
+								color: tab === segment.id ? "#fff" : "#5b6577",
+							}}
+						>
+							{segment.label}
+						</Box>
 					))}
 				</Box>
 				<Typography variant="caption" color="text.secondary">

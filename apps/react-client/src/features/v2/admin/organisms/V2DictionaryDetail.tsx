@@ -82,9 +82,11 @@ const emptyItemForm = (): ItemFormState => ({
 export function V2DictionaryDetail({
 	dictionaryId,
 	onHeaderChange,
+	layout = "page",
 }: {
 	dictionaryId: string;
 	onHeaderChange?: (state: V2DictionaryHeaderState | null) => void;
+	layout?: "page" | "workspace";
 }) {
 	const { mode } = useColorScheme();
 
@@ -188,8 +190,9 @@ export function V2DictionaryDetail({
 	handleCancelEditRef.current = handleCancelEdit;
 
 	useEffect(() => {
-		if (!dictionary) {
-			onHeaderChange?.(null);
+		if (!dictionary || layout === "workspace") {
+			if (layout === "workspace") onHeaderChange?.(null);
+			else if (!dictionary) onHeaderChange?.(null);
 			return;
 		}
 
@@ -209,6 +212,7 @@ export function V2DictionaryDetail({
 		isEditing,
 		saveMetaPending,
 		onHeaderChange,
+		layout,
 	]);
 
 	const openAddItem = () => {
@@ -261,6 +265,78 @@ export function V2DictionaryDetail({
 		setItemDialogOpen(false);
 	};
 
+	const workspaceItemsTable = (
+		<Box sx={{ mt: 1.5 }}>
+			<Box
+				sx={{
+					display: "grid",
+					gridTemplateColumns: "1fr 1fr 80px 70px 40px",
+					gap: 1.25,
+					px: 0.5,
+					pb: 1,
+					fontSize: 11,
+					fontWeight: 700,
+					color: "#aab1c0",
+					textTransform: "uppercase",
+					letterSpacing: "0.04em",
+					borderBottom: "1px solid #eef0f4",
+				}}
+			>
+				<span>Код</span>
+				<span>Подпись</span>
+				<span>Порядок</span>
+				<span>Активен</span>
+				<span />
+			</Box>
+			{items.map((row) => (
+				<Box
+					key={row.id}
+					onClick={() => openEditItem(row)}
+					sx={{
+						display: "grid",
+						gridTemplateColumns: "1fr 1fr 80px 70px 40px",
+						gap: 1.25,
+						alignItems: "center",
+						py: 1.25,
+						px: 0.5,
+						borderBottom: "1px solid #f3f4f8",
+						cursor: "pointer",
+						"&:hover": { bgcolor: "#fafbfc" },
+					}}
+				>
+					<Typography sx={{ fontFamily: "monospace", fontSize: 12, color: "#2f6bd8" }}>
+						{row.code}
+					</Typography>
+					<Typography sx={{ fontSize: 13, color: "#28303f" }}>{row.label}</Typography>
+					<Typography sx={{ fontSize: 13, color: "#6b7484" }}>{row.order}</Typography>
+					<Box
+						sx={{
+							width: 30,
+							height: 18,
+							borderRadius: "10px",
+							bgcolor: row.isActive ? "#2f6bd8" : "#d2d7e0",
+							position: "relative",
+						}}
+					>
+						<Box
+							sx={{
+								position: "absolute",
+								top: 2,
+								right: row.isActive ? 2 : "auto",
+								left: row.isActive ? "auto" : 2,
+								width: 14,
+								height: 14,
+								borderRadius: "50%",
+								bgcolor: "#fff",
+							}}
+						/>
+					</Box>
+					<Typography sx={{ fontSize: 12, color: "#aab1c0" }}>✎</Typography>
+				</Box>
+			))}
+		</Box>
+	);
+
 	if (dictLoading || !dictionary) {
 		return (
 			<Typography variant="body2" sx={{ p: 2 }}>
@@ -278,68 +354,251 @@ export function V2DictionaryDetail({
 	})();
 
 	return (
-		<Flex flexDirection="column" gap={2} sx={{ p: 1, minHeight: 0, flexGrow: 1 }}>
-			<Card>
-				<TextField
-					label="Код"
-					size="small"
-					fullWidth
-					value={dictionary.code}
-					disabled
-					helperText="Код меняется только при создании; по нему поле привязывается в uiSchema"
-					sx={{ mb: 2 }}
-				/>
-				<TextField
-					label="Название"
-					size="small"
-					fullWidth
-					value={name}
-					disabled={!isEditing}
-					onChange={(e) => setName(e.target.value)}
-					sx={{ mb: 2 }}
-				/>
-				<TextField
-					label="Описание"
-					size="small"
-					fullWidth
-					multiline
-					minRows={2}
-					value={description}
-					disabled={!isEditing}
-					onChange={(e) => setDescription(e.target.value)}
-				/>
-				{defaultFieldPointer ? (
+		<Flex
+			flexDirection="column"
+			gap={2}
+			sx={{
+				p: layout === "workspace" ? "22px 26px" : 1,
+				minHeight: 0,
+				flexGrow: 1,
+				height: layout === "workspace" ? "100%" : undefined,
+				overflow: layout === "workspace" ? "auto" : undefined,
+			}}
+		>
+			{layout === "workspace" ? (
+				<Box
+					sx={{
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "space-between",
+						mb: 0.5,
+					}}
+				>
+					<Typography sx={{ fontSize: 19, fontWeight: 800, color: "#1d2435" }}>
+						{dictionary.name}
+					</Typography>
+					<Button
+						size="small"
+						variant="outlined"
+						onClick={() => setIsEditing((v) => !v)}
+						sx={{ textTransform: "none", borderRadius: "8px" }}
+					>
+						{isEditing ? "Готово" : "Редактировать"}
+					</Button>
+				</Box>
+			) : null}
+
+			<Box
+				sx={{
+					bgcolor: "#fff",
+					border: "1px solid #e6e8ee",
+					borderRadius: "12px",
+					p: layout === "workspace" ? "17px 19px" : 0,
+				}}
+			>
+				{layout === "page" ? (
+					<Card sx={{ boxShadow: "none", border: "none" }}>
+						<TextField
+							label="Код"
+							size="small"
+							fullWidth
+							value={dictionary.code}
+							disabled
+							helperText="Код меняется только при создании; по нему поле привязывается в uiSchema"
+							sx={{ mb: 2 }}
+						/>
+						<TextField
+							label="Название"
+							size="small"
+							fullWidth
+							value={name}
+							disabled={!isEditing}
+							onChange={(e) => setName(e.target.value)}
+							sx={{ mb: 2 }}
+						/>
+						<TextField
+							label="Описание"
+							size="small"
+							fullWidth
+							multiline
+							minRows={2}
+							value={description}
+							disabled={!isEditing}
+							onChange={(e) => setDescription(e.target.value)}
+						/>
+					</Card>
+				) : (
+					<>
+						<Typography sx={{ fontSize: 12, color: "#6b7484", mb: 0.5 }}>
+							Код
+						</Typography>
+						<Box
+							sx={{
+								border: "1px solid #dfe2ea",
+								borderRadius: "8px",
+								p: "9px 11px",
+								fontFamily: "monospace",
+								fontSize: 12.5,
+								color: "#2f6bd8",
+								mb: 0.6,
+							}}
+						>
+							{dictionary.code}
+						</Box>
+						<Typography sx={{ fontSize: 11, color: "#cf7a2a", mb: 1.75 }}>
+							Код меняется только при создании; по нему поле привязывается в uiSchema
+						</Typography>
+						<Typography sx={{ fontSize: 12, color: "#6b7484", mb: 0.5 }}>
+							Название
+						</Typography>
+						<TextField
+							size="small"
+							fullWidth
+							value={name}
+							disabled={!isEditing}
+							onChange={(e) => setName(e.target.value)}
+							sx={{ mb: 1.75 }}
+						/>
+						<Typography sx={{ fontSize: 12, color: "#6b7484", mb: 0.5 }}>
+							Описание
+						</Typography>
+						<TextField
+							size="small"
+							fullWidth
+							multiline
+							minRows={2}
+							value={description}
+							disabled={!isEditing}
+							onChange={(e) => setDescription(e.target.value)}
+						/>
+						{isEditing ? (
+							<Flex gap={1} sx={{ mt: 1.5 }}>
+								<Button size="small" onClick={handleCancelEdit}>
+									Отмена
+								</Button>
+								<Button
+									size="small"
+									variant="contained"
+									disabled={saveMetaPending}
+									onClick={() => void handleSaveMeta()}
+								>
+									Сохранить
+								</Button>
+							</Flex>
+						) : null}
+					</>
+				)}
+				{defaultFieldPointer && layout === "page" ? (
 					<Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
 						Заводская привязка к полю схемы: <code>{String(defaultFieldPointer)}</code>
 					</Typography>
 				) : null}
-			</Card>
+			</Box>
 
-			<Card>
-				<Flex justifyContent="flex-end" alignItems="center" sx={{ mb: 1 }}>
-					<Button size="small" variant="outlined" onClick={openAddItem}>
-						Добавить элемент
-					</Button>
-				</Flex>
-				<Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-					В анкете и в JSON Logic сохраняется код элемента; подпись — для отображения.
-				</Typography>
-				<GridWrapper>
-					<AgGridReact<V2DictionaryItemDto>
-						theme={gridTheme}
-						icons={agGridIconSet}
-						rowData={items}
-						columnDefs={itemColumns}
-						loading={itemsLoading}
-						onRowDoubleClicked={(e) => {
-							if (e.data) openEditItem(e.data);
-						}}
-						localeText={AG_GRID_LOCALE_RU}
-						defaultColDef={{ sortable: true, resizable: true }}
-					/>
-				</GridWrapper>
-			</Card>
+			<Box
+				sx={{
+					bgcolor: "#fff",
+					border: "1px solid #e6e8ee",
+					borderRadius: "12px",
+					p: layout === "workspace" ? "17px 19px" : 0,
+				}}
+			>
+				{layout === "workspace" ? (
+					<>
+						<Box
+							sx={{
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "space-between",
+								mb: 0.6,
+							}}
+						>
+							<Typography sx={{ fontSize: 14, fontWeight: 700, color: "#1d2435" }}>
+								Элементы справочника
+							</Typography>
+							<Button
+								size="small"
+								onClick={openAddItem}
+								sx={{
+									textTransform: "none",
+									height: 30,
+									border: "1px solid #dfe2ea",
+									borderRadius: "8px",
+								}}
+							>
+								+ Добавить элемент
+							</Button>
+						</Box>
+						<Typography sx={{ fontSize: 11.5, color: "#8a93a3", mb: 1.5 }}>
+							В анкете и в JSON Logic сохраняется код элемента; подпись — для
+							отображения.
+						</Typography>
+						{workspaceItemsTable}
+					</>
+				) : (
+					<Card sx={{ boxShadow: "none", border: "none" }}>
+						<Flex justifyContent="flex-end" alignItems="center" sx={{ mb: 1 }}>
+							<Button size="small" variant="outlined" onClick={openAddItem}>
+								Добавить элемент
+							</Button>
+						</Flex>
+						<Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+							В анкете и в JSON Logic сохраняется код элемента; подпись — для отображения.
+						</Typography>
+						<GridWrapper>
+							<AgGridReact<V2DictionaryItemDto>
+								theme={gridTheme}
+								icons={agGridIconSet}
+								rowData={items}
+								columnDefs={itemColumns}
+								loading={itemsLoading}
+								onRowDoubleClicked={(e) => {
+									if (e.data) openEditItem(e.data);
+								}}
+								localeText={AG_GRID_LOCALE_RU}
+								defaultColDef={{ sortable: true, resizable: true }}
+							/>
+						</GridWrapper>
+					</Card>
+				)}
+			</Box>
 
+			{layout === "workspace" ? (
+				<Box
+					sx={{
+						bgcolor: "#fff",
+						border: "1px solid #e6e8ee",
+						borderRadius: "12px",
+						p: "15px 17px",
+					}}
+				>
+					<Typography sx={{ fontSize: 12, color: "#8a93a3", mb: 1 }}>
+						Поля с <code>ui:options.dictionaryCode = {dictionary.code}</code> в версиях
+						шаблонов
+					</Typography>
+					{usagesLoading ? (
+						<Typography variant="body2" color="text.secondary">
+							Поиск привязок…
+						</Typography>
+					) : usages.length === 0 ? (
+						<Alert severity="info">
+							Ни одна версия схемы не ссылается на этот справочник.
+						</Alert>
+					) : (
+						<Flex gap={0.5} wrap="wrap">
+							{usages.map((u) => (
+								<Chip
+									key={`${u.versionId}-${u.fieldPointer}`}
+									size="small"
+									variant="outlined"
+									color={u.isCurrentPublished ? "success" : "default"}
+									label={`${u.templateCode} · ${u.fieldPointer}`}
+								/>
+							))}
+						</Flex>
+					)}
+				</Box>
+			) : (
 			<Card>
 				<Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
 					Поля с <code>ui:options.dictionaryCode = {dictionary.code}</code> во всех версиях
@@ -407,6 +666,7 @@ export function V2DictionaryDetail({
 					</>
 				)}
 			</Card>
+			)}
 
 			<Dialog
 				open={itemDialogOpen}

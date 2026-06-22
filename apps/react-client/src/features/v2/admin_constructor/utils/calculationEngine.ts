@@ -41,6 +41,11 @@ export type ComputedRulePayload = {
 export type TaskTriggerPayload = {
 	mode?: "generated_rows";
 	worksCatalog?: boolean;
+	worksCatalogArchComponent?: string;
+	worksCatalogStream?: string;
+	sourceObjectPath?: string;
+	sourceContextPaths?: string[];
+	outputMode?: "append" | "replace";
 	taskCode?: string;
 	label?: string;
 	hint?: string;
@@ -436,6 +441,10 @@ function applyGeneratedRows(
 ): Record<string, unknown> {
 	const payload = (rule.payload ?? {}) as TaskTriggerPayload;
 	if (payload.mode !== "generated_rows") return data;
+	if (payload.worksCatalog) {
+		// Справочник БД — только серверный POST /calculate (см. useDebouncedV2Calculation).
+		return data;
+	}
 	const sourceArrayPath = payload.sourceArrayPath?.trim();
 	const outputArrayPath = payload.outputArrayPath?.trim();
 	if (!sourceArrayPath || !outputArrayPath || !payload.tasks?.length) return data;

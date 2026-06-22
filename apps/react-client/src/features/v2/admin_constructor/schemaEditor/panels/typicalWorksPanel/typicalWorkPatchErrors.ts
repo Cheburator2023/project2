@@ -1,5 +1,9 @@
 import type { AxiosError } from "axios";
-import type { V2TypicalWorkFieldErrorDto, V2WorkTriggerStatus } from "@smart-anketa/api-contract";
+import type {
+	V2DeleteTypicalWorkConflictDto,
+	V2TypicalWorkFieldErrorDto,
+	V2WorkTriggerStatus,
+} from "@smart-anketa/api-contract";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 
 export const WORK_ARCH_COMPONENT_TYPES = [
@@ -32,6 +36,19 @@ export function parseTypicalWorkPatchError(error: unknown): TypicalWorkPatchErro
 	}
 
 	return { message, code, fieldErrors };
+}
+
+export function parseTypicalWorkDeleteError(
+	error: unknown,
+): V2DeleteTypicalWorkConflictDto | null {
+	const ax = error as AxiosError<V2DeleteTypicalWorkConflictDto & { message?: string }>;
+	const data = ax.response?.data;
+	if (data?.code !== "WORK_IN_USE") return null;
+	if (!Array.isArray(data.usedInQuestionnaireVersions)) return null;
+	return {
+		code: "WORK_IN_USE",
+		usedInQuestionnaireVersions: data.usedInQuestionnaireVersions,
+	};
 }
 
 export function computeTriggerStatus(

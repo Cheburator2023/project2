@@ -1,6 +1,11 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { V2LogicRuleDto } from "@smart-anketa/api-contract";
 import {
+	evaluateParamDependencyRulesForSource,
+	isParamDependencyLogicRule,
+	type V2ParamDependencyCondition,
+} from "@smart-anketa/api-contract";
+import {
 	applyLogic,
 	type JsonLogicValue,
 } from "@react-client/features/v2/jsonLogicBuilder";
@@ -138,6 +143,51 @@ function deleteUiLeafKey(
 	return next;
 }
 
+function readDotPath(data: Record<string, unknown>, path: string): unknown {
+	return path.split(".").reduce<unknown>((cur, key) => {
+		if (!cur || typeof cur !== "object" || Array.isArray(cur)) return undefined;
+		return (cur as Record<string, unknown>)[key];
+	}, data);
+}
+
+function paramDefsFromDependencyRules(
+	rules: V2ParamDependencyCondition[],
+): Array<{ code: string; name: string }> {
+	const codes = new Set<string>();
+	for (const rule of rules) codes.add(rule.sourceParamCode);
+	return [...codes].map((code) => ({ code, name: code }));
+}
+
+function evaluateParamDependencyVisibilityForItems(
+	rule: V2LogicRuleDto,
+	liveData: Record<string, unknown>,
+	pointer: string[],
+): boolean | null {
+	if (!isParamDependencyLogicRule(rule)) return null;
+	const itemsIdx = pointer.indexOf("items");
+	if (itemsIdx < 0 || itemsIdx >= pointer.length - 1) return null;
+
+	const payload = rule.payload as Record<string, unknown> | undefined;
+	const depRules = payload?.rules;
+	if (!Array.isArray(depRules) || depRules.length === 0) return null;
+
+	const arrayVar = pointer.slice(0, itemsIdx).join(".");
+	const arrayData = readDotPath(liveData, arrayVar);
+	if (!Array.isArray(arrayData) || arrayData.length === 0) return false;
+
+	const paramDefs = paramDefsFromDependencyRules(
+		depRules as V2ParamDependencyCondition[],
+	);
+	return arrayData.some((row) => {
+		if (!row || typeof row !== "object" || Array.isArray(row)) return false;
+		return evaluateParamDependencyRulesForSource(
+			depRules as V2ParamDependencyCondition[],
+			row as Record<string, unknown>,
+			paramDefs,
+		);
+	});
+}
+
 /**
  * Превью для RJSF: статические схемы + результат правил **visibility**, **required** и **hint**
  * над текущим `formData`.
@@ -215,7 +265,17 @@ export function derivePreviewSchemas(
 		}
 
 		if (rule.kind === "visibility") {
-			if (!passes) {
+			const perRowVisible = evaluateParamDependencyVisibilityForItems(
+				rule,
+				liveData,
+				segs,
+			);
+			const visible =
+				perRowVisible !== null
+					? perRowVisible
+					: passes;
+
+			if (!visible) {
 				previewUiRaw = mergeUiLeaf(previewUiRaw, pointer, {
 					"ui:hidden": true,
 				});

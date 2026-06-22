@@ -3,6 +3,7 @@ import type {
 	PatchV2TypicalWorkRequestDto,
 	V2TypicalWorkCardDto,
 } from "@smart-anketa/api-contract";
+import { collectTypicalWorkPatchValidationErrors } from "@smart-anketa/api-contract";
 import { usePatchV2TypicalWork } from "@react-client/common/api/queries/v2-works";
 import { parseTypicalWorkPatchError } from "./typicalWorkPatchErrors";
 import {
@@ -33,19 +34,25 @@ export function useDebouncedTypicalWorkSave(
 
 	const flush = useCallback(async () => {
 		if (!workId || !pendingRef.current) return;
-		const dto = pendingRef.current;
+		const dto = {
+			...pendingRef.current,
+			templateVersionId:
+				templateVersionIdRef.current ?? pendingRef.current.templateVersionId,
+		};
+		const validationErrors = collectTypicalWorkPatchValidationErrors(dto);
+		if (validationErrors.length > 0) {
+			const message = validationErrors
+				.map((e) => `${e.path}: ${e.message}`)
+				.join("; ");
+			setStatus("error");
+			setErrorMessage(message);
+			return;
+		}
 		pendingRef.current = null;
 		setStatus("saving");
 		setErrorMessage(null);
 		try {
-			await patch.mutateAsync({
-				workId,
-				dto: {
-					...dto,
-					templateVersionId:
-						templateVersionIdRef.current ?? dto.templateVersionId,
-				},
-			});
+			await patch.mutateAsync({ workId, dto });
 			await clearBufferedTypicalWorkPatch(workId);
 			setBufferedRestore(false);
 			setStatus("saved");
@@ -63,11 +70,7 @@ export function useDebouncedTypicalWorkSave(
 			setErrorMessage(parsed.message);
 			await saveBufferedTypicalWorkPatch({
 				workId,
-				dto: {
-					...dto,
-					templateVersionId:
-						templateVersionIdRef.current ?? dto.templateVersionId,
-				},
+				dto,
 				savedAt: new Date().toISOString(),
 				errorMessage: parsed.message,
 			});

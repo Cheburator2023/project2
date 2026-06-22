@@ -7,7 +7,6 @@ import { buildBooleanVisibilityRule } from "@smart-anketa/api-contract";
 import {
 	CONTROL_TYPICAL_TASKS,
 	SOURCE_GROUP_COEFFICIENT_LOGIC,
-	SOURCE_TYPICAL_TASKS,
 } from "./v2-source-works.builder";
 
 /**
@@ -36,9 +35,17 @@ const SUM_SOURCE_TYPICAL_TOTAL: V2JsonLogicValue = {
 	],
 };
 
+const SUM_DETAIL_TYPICAL_TOTAL: V2JsonLogicValue = {
+	reduce: [
+		{ var: "detailInfo.detailTypicalTasks" },
+		{ "+": [{ var: "accumulator" }, { max: [0, { var: "current.total" }] }] },
+		0,
+	],
+};
+
 const SUM_CONTROL_TYPICAL_TOTAL: V2JsonLogicValue = {
 	reduce: [
-		{ var: "streamModelControl.control.controlTypicalTasks" },
+		{ var: "generalInfo.modelService.controlTypicalTasks" },
 		{ "+": [{ var: "accumulator" }, { max: [0, { var: "current.total" }] }] },
 		0,
 	],
@@ -137,7 +144,21 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 		description: "Расчёт total строки нетиповых работ.",
 	}),
 
-	// --- Триггер типовых работ по источникам (каталог, реальные нормативы) ---
+	rule("default-row-detail-typical-task-total", {
+		kind: "row_computed",
+		targetPath: "/detailInfo/detailTypicalTasks",
+		dependencies: [],
+		condition: ROW_TASK_TOTAL,
+		payload: {
+			arrayPath: "detailInfo.detailTypicalTasks",
+			fieldVar: "total",
+			label: "Per-row итог типовой работы (детализация)",
+			formulaHint: "row.total = норматив (ч/д) × коэффициент.",
+		},
+		description: "Итог строки типовых работ витрины/процесса.",
+	}),
+
+	// --- Триггер типовых работ по источникам (справочник БД) -------------------
 	rule("unified-source-typical-works", {
 		kind: "task_trigger",
 		targetPath: "/streamDataSources/sourceTypicalTasks",
@@ -147,54 +168,110 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 			...UNIFIED,
 			mode: "generated_rows",
 			worksCatalog: true,
+			worksCatalogArchComponent: "Система-источник",
+			worksCatalogStream: "fromSourceType",
 			sourceArrayPath: "streamDataSources.sourceSystems",
 			outputArrayPath: "streamDataSources.sourceTypicalTasks",
 			taskCode: "IND_SOURCE_TASKS",
 			label: "Типовые работы (стрим «Источники данных»)",
 			hint:
-				"Глоссарий «Справочник типовых работ»: при добавлении компонента «Система-источник» " +
-				"тип источника (внутренний/внешний) подтягивает типовые работы этапов из работы.csv " +
-				"с нормативами; коэффициент группы = произведение весов параметров источника (ФТ-024).",
+				"Справочник типовых работ (БД): при добавлении «Система-источник» " +
+				"тип источника подтягивает работы с нормативами и формулами версии шаблона; " +
+				"коэффициент группы = произведение весов параметров источника (ФТ-024).",
 			coefficientLogic: SOURCE_GROUP_COEFFICIENT_LOGIC,
-			tasks: SOURCE_TYPICAL_TASKS,
+			tasks: [],
 		},
 		description:
-			"ФТ-024/027: генерация типовых работ компонента «Система-источник» из каталога.",
+			"ФТ-024/027: генерация типовых работ «Система-источник» из справочника БД.",
+	}),
+
+	rule("unified-datamart-typical-works", {
+		kind: "task_trigger",
+		targetPath: "/detailInfo/detailTypicalTasks",
+		dependencies: [
+			"/detailInfo/dataMart",
+			"/streamDataSources/sourceSystems",
+		],
+		condition: true,
+		payload: {
+			...UNIFIED,
+			mode: "generated_rows",
+			worksCatalog: true,
+			worksCatalogArchComponent: "Объект / Витрина данных",
+			worksCatalogStream: "fromSourceSystems",
+			sourceObjectPath: "detailInfo.dataMart",
+			outputArrayPath: "detailInfo.detailTypicalTasks",
+			outputMode: "append",
+			taskCode: "DATAMART_TASKS",
+			label: "Типовые работы (Объект / Витрина данных)",
+			hint: "Справочник БД: работы арх. компонента «Объект / Витрина данных» по стримам источников.",
+			tasks: [],
+		},
+		description: "Генерация типовых работ витрины из справочника БД.",
+	}),
+
+	rule("unified-dataprocess-typical-works", {
+		kind: "task_trigger",
+		targetPath: "/detailInfo/detailTypicalTasks",
+		dependencies: [
+			"/detailInfo/dataProcess",
+			"/streamDataSources/sourceSystems",
+		],
+		condition: true,
+		payload: {
+			...UNIFIED,
+			mode: "generated_rows",
+			worksCatalog: true,
+			worksCatalogArchComponent: "Процесс обработки данных",
+			worksCatalogStream: "fromSourceSystems",
+			sourceObjectPath: "detailInfo.dataProcess",
+			outputArrayPath: "detailInfo.detailTypicalTasks",
+			outputMode: "append",
+			taskCode: "DATAPROC_TASKS",
+			label: "Типовые работы (Процесс обработки данных)",
+			hint: "Справочник БД: работы арх. компонента «Процесс обработки данных».",
+			tasks: [],
+		},
+		description: "Генерация типовых работ процесса из справочника БД.",
 	}),
 
 	rule("unified-control-row-total", {
 		kind: "row_computed",
-		targetPath: "/streamModelControl/control/controlTypicalTasks",
+		targetPath: "/generalInfo/modelService/controlTypicalTasks",
 		dependencies: [],
 		condition: ROW_TASK_TOTAL,
 		payload: {
-			arrayPath: "streamModelControl.control.controlTypicalTasks",
+			arrayPath: "generalInfo.modelService.controlTypicalTasks",
 			fieldVar: "total",
 			label: "Per-row итог работы контроля моделей",
 			formulaHint:
-				"row.total = норматив контроля (ч/д, справочник №40) × коэффициент.",
+				"row.total = норматив контроля (ч/д) × коэффициент.",
 		},
 		description: "ФТ-024: итог строки работы контроля моделей.",
 	}),
 
 	rule("unified-control-typical-works", {
 		kind: "task_trigger",
-		targetPath: "/streamModelControl/control/controlTypicalTasks",
-		dependencies: ["/streamModelControl/control/controlTypes"],
+		targetPath: "/generalInfo/modelService/controlTypicalTasks",
+		dependencies: ["/generalInfo/modelService/controlTypes"],
 		condition: true,
 		payload: {
 			...UNIFIED,
 			mode: "generated_rows",
-			sourceArrayPath: "streamModelControl.control.controlTypes",
-			outputArrayPath: "streamModelControl.control.controlTypicalTasks",
+			worksCatalog: true,
+			worksCatalogArchComponent: "Модельный сервис",
+			worksCatalogStream: "Контроль моделей",
+			sourceArrayPath: "generalInfo.modelService.controlTypes",
+			sourceContextPaths: ["generalInfo.modelService", "streamModelControl.localParams"],
+			outputArrayPath: "generalInfo.modelService.controlTypicalTasks",
 			taskCode: "CONTROL_TASKS",
 			label: "Типовые работы (стрим «Контроль моделей»)",
 			hint:
-				"Глоссарий «Контроль модели»: выбранные виды контроля (справочник №3) " +
-				"подтягивают работы. Нормативы ч/д — из матрицы №40 по классу модели (задаёт методолог).",
+				"Справочник БД: выбранные виды контроля подтягивают работы «Модельный сервис» " +
+				"с нормативами и формулами версии шаблона.",
 			tasks: CONTROL_TYPICAL_TASKS,
 		},
-		description: "Контроль моделей: генерация работ по выбранным видам контроля.",
+		description: "Контроль моделей: генерация работ из справочника БД.",
 	}),
 
 	// --- Единая итоговая калькуляция (ФТ-026) --------------------------------
@@ -203,10 +280,15 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 		targetPath: "/summary/typicalTotal",
 		dependencies: [
 			"/streamDataSources/sourceTypicalTasks",
-			"/streamModelControl/control/controlTypicalTasks",
+			"/detailInfo/detailTypicalTasks",
+			"/generalInfo/modelService/controlTypicalTasks",
 		],
 		condition: {
-			"+": [SUM_SOURCE_TYPICAL_TOTAL, SUM_CONTROL_TYPICAL_TOTAL],
+			"+": [
+				SUM_SOURCE_TYPICAL_TOTAL,
+				SUM_DETAIL_TYPICAL_TOTAL,
+				SUM_CONTROL_TYPICAL_TOTAL,
+			],
 		},
 		payload: {
 			...UNIFIED,
@@ -214,7 +296,7 @@ export const V2_DEFAULT_LOGIC_RULES: V2LogicRuleDto[] = [
 			role: "typical_total",
 			label: "Сумма по типовым работам",
 			formulaHint:
-				"Σ источники + Σ контроль моделей (sourceTypicalTasks + controlTypicalTasks).",
+				"Σ источники + Σ витрина/процесс + Σ контроль моделей.",
 		},
 		description: "ФТ-026: сумма итоговых оценок типовых работ.",
 	}),

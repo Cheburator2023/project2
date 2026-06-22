@@ -87,7 +87,7 @@ export function V2AnketaFormWithModals({
 		) : undefined;
 
 		return mergeAnketaFormContext(anketaFormContextProp, {
-			formData: anketaFormContextProp?.formData ?? engine.formData,
+			formData: anketaFormContextProp?.formData ?? engine.displayFormData,
 			previewSchema:
 				anketaFormContextProp?.previewSchema ?? engine.previewSchema,
 			previewUiSchema:
@@ -135,7 +135,6 @@ export function V2AnketaFormWithModals({
 		});
 	}, [
 		anketaFormContextProp,
-		engine.formData,
 		engine.displayFormData,
 		effectiveReadOnly,
 		showUncertaintySlot,

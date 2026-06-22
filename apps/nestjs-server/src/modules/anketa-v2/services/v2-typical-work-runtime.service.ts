@@ -2,17 +2,21 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
 import {
+	CONTROL_MODELS_STREAM,
 	defaultWorkFormula,
 	defaultWorkRounding,
 	previewWorkFormula,
 	resolveActiveNormOnDate,
+	resolveLaborCoefficient,
+	resolveStreamFromSourceType,
+	typicalWorkRulesMatchSource,
+	type TypicalWorkRuleLike,
 } from "@smart-anketa/api-contract";
 import { V2TypicalWorkLaborCoefficientEntity } from "../entities/v2-typical-work-labor-coefficient.entity";
 import { V2TypicalWorkNormEntity } from "../entities/v2-typical-work-norm.entity";
 import { V2TypicalWorkRuleEntity } from "../entities/v2-typical-work-rule.entity";
 import { V2TypicalWorkVersionConfigEntity } from "../entities/v2-typical-work-version-config.entity";
 import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
-import { slugParamCode } from "../utils/v2-typical-work-catalog.util";
 
 export type CatalogGeneratedTask = {
 	taskCode: string;
@@ -25,11 +29,14 @@ export type CatalogGeneratedTask = {
 	workId: string;
 };
 
-const SOURCE_TYPE_FIELD = "type";
-
-const STREAM_BY_SOURCE_TYPE: Record<string, string> = {
-	Внутренний: "ИД. Внутренний",
-	Внешний: "ИД. Внешний",
+export type BuildCatalogTasksParams = {
+	archComponentType: string;
+	streamExecutor: string;
+	source: Record<string, unknown>;
+	templateVersionId: string | null;
+	atDate: string;
+	/** Параметры, скрытые зависимостями — не участвуют в формуле. */
+	hiddenParamCodes?: ReadonlySet<string>;
 };
 
 function decimalToNumber(value: string | number | null | undefined): number {
@@ -37,32 +44,25 @@ function decimalToNumber(value: string | number | null | undefined): number {
 	return typeof value === "number" ? value : Number(value);
 }
 
-function ruleMatchesSource(
-	rule: V2TypicalWorkRuleEntity,
-	source: Record<string, unknown>,
-): boolean {
-	const field = slugParamCode(rule.paramName ?? rule.paramCode);
-	const actual =
-		source.type ??
-		source[field] ??
-		source[rule.paramCode];
-	const expected = rule.valueLabel ?? rule.valueCode;
-	if (expected == null) return false;
-
-	switch (rule.operator) {
-		case "!=":
-			return String(actual) !== String(expected);
-		case ">=":
-			return Number(actual) >= Number(expected);
-		case "<=":
-			return Number(actual) <= Number(expected);
-		case ">":
-			return Number(actual) > Number(expected);
-		case "<":
-			return Number(actual) < Number(expected);
-		default:
-			return String(actual) === String(expected);
+function groupBy<T>(items: T[], keyFn: (item: T) => string): Map<string, T[]> {
+	const map = new Map<string, T[]>();
+	for (const item of items) {
+		const key = keyFn(item);
+		const list = map.get(key) ?? [];
+		list.push(item);
+		map.set(key, list);
 	}
+	return map;
+}
+
+function mapRuleEntity(rule: V2TypicalWorkRuleEntity): TypicalWorkRuleLike {
+	return {
+		paramCode: rule.paramCode,
+		paramName: rule.paramName,
+		operator: rule.operator,
+		valueCode: rule.valueCode,
+		valueLabel: rule.valueLabel,
+	};
 }
 
 @Injectable()
@@ -80,17 +80,32 @@ export class V2TypicalWorkRuntimeService {
 		private readonly versionConfigRepository: Repository<V2TypicalWorkVersionConfigEntity>,
 	) {}
 
+	/** @deprecated Используйте {@link buildCatalogTasks}. */
 	async buildSourceCatalogTasks(
 		source: Record<string, unknown>,
 		templateVersionId: string | null,
 		atDate: string,
 	): Promise<CatalogGeneratedTask[]> {
-		const sourceType = String(source[SOURCE_TYPE_FIELD] ?? "").trim();
-		const stream = STREAM_BY_SOURCE_TYPE[sourceType];
+		const stream = resolveStreamFromSourceType(source);
 		if (!stream) return [];
+		return this.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: stream,
+			source,
+			templateVersionId,
+			atDate,
+		});
+	}
+
+	async buildCatalogTasks(
+		params: BuildCatalogTasksParams,
+	): Promise<CatalogGeneratedTask[]> {
+		const stream = params.streamExecutor.trim();
+		const archComponentType = params.archComponentType.trim();
+		if (!stream || !archComponentType) return [];
 
 		const works = await this.workRepository.find({
-			where: { archComponentType: "Система-источник" },
+			where: { archComponentType },
 		});
 		if (!works.length) return [];
 
@@ -105,9 +120,9 @@ export class V2TypicalWorkRuntimeService {
 			this.laborRepository.find({
 				where: { workId: In(workIds), streamExecutor: stream },
 			}),
-			templateVersionId
+			params.templateVersionId
 				? this.versionConfigRepository.find({
-						where: { workId: In(workIds), templateVersionId },
+						where: { workId: In(workIds), templateVersionId: params.templateVersionId },
 					})
 				: Promise.resolve([]),
 		]);
@@ -120,9 +135,8 @@ export class V2TypicalWorkRuntimeService {
 		const tasks: CatalogGeneratedTask[] = [];
 
 		for (const work of works) {
-			const workRules = rulesByWork.get(work.id) ?? [];
-			if (workRules.length === 0) continue;
-			if (!workRules.every((rule) => ruleMatchesSource(rule, source))) continue;
+			const workRules = (rulesByWork.get(work.id) ?? []).map(mapRuleEntity);
+			if (!typicalWorkRulesMatchSource(workRules, params.source)) continue;
 
 			const workNorms = normsByWork.get(work.id) ?? [];
 			const normValue = resolveActiveNormOnDate(
@@ -133,7 +147,7 @@ export class V2TypicalWorkRuntimeService {
 					validTo: n.validTo,
 				})),
 				stream,
-				atDate,
+				params.atDate,
 			);
 			if (normValue == null) continue;
 
@@ -160,8 +174,15 @@ export class V2TypicalWorkRuntimeService {
 
 			const paramCoefficients: Record<string, number> = {};
 			for (const row of laborByWork.get(work.id) ?? []) {
-				const actual = source[row.paramCode];
-				if (row.valueLabel != null && String(actual) === row.valueLabel) {
+				if (params.hiddenParamCodes?.has(row.paramCode)) continue;
+				if (
+					resolveLaborCoefficient(
+						params.source,
+						row.paramCode,
+						row.valueCode,
+						row.valueLabel,
+					)
+				) {
 					paramCoefficients[row.paramCode] = decimalToNumber(row.coefficient);
 				}
 			}
@@ -184,7 +205,7 @@ export class V2TypicalWorkRuntimeService {
 				reason: `${work.name} · ${stream}`,
 				estimateHoursPerDay: normValue,
 				coefficient,
-				match: { type: sourceType },
+				match: { archComponentType, stream },
 				workId: work.id,
 			});
 		}
@@ -193,13 +214,4 @@ export class V2TypicalWorkRuntimeService {
 	}
 }
 
-function groupBy<T>(items: T[], keyFn: (item: T) => string): Map<string, T[]> {
-	const map = new Map<string, T[]>();
-	for (const item of items) {
-		const key = keyFn(item);
-		const list = map.get(key) ?? [];
-		list.push(item);
-		map.set(key, list);
-	}
-	return map;
-}
+export { CONTROL_MODELS_STREAM };

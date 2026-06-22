@@ -1,5 +1,4 @@
 import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -10,22 +9,19 @@ import {
 	useBulkDeleteV2Dictionaries,
 	useBulkResetV2Dictionaries,
 } from "@react-client/common/api/queries/v2-templates";
-import { V2AdminButton } from "@react-client/features/v2/admin/atoms/V2AdminButton";
 import { V2DictionaryBulkResultDialog } from "@react-client/features/v2/admin/organisms/V2DictionaryBulkResultDialog";
 import { V2DictionaryCreateDialog } from "@react-client/features/v2/admin/organisms/V2DictionaryCreateDialog";
+import { V2DictionaryWorkspace } from "@react-client/features/v2/admin/organisms/V2DictionaryWorkspace";
 import {
 	canDeleteV2Dictionary,
 	canResetV2Dictionary,
-	V2DictionaryList,
 } from "@react-client/features/v2/admin/organisms/V2DictionaryList";
-import { Header } from "@react-client/common/navigation/organisms/Header";
 import type {
 	BulkDeleteV2DictionariesResultDto,
 	BulkResetV2DictionariesResultDto,
 	V2DictionaryDto,
 } from "@smart-anketa/api-contract";
-import { useCallback, useMemo, useState } from "react";
-import { Spacer } from "@react-client/common/primitives/Spacer";
+import { useCallback, useState } from "react";
 
 type PendingBulk = { kind: "delete" | "reset"; rows: V2DictionaryDto[] };
 
@@ -41,22 +37,11 @@ type BulkResultState =
 
 export function AdminV2DictionariesPage() {
 	const [createOpen, setCreateOpen] = useState(false);
-	const [selected, setSelected] = useState<V2DictionaryDto[]>([]);
 	const [pending, setPending] = useState<PendingBulk | null>(null);
 	const [bulkResult, setBulkResult] = useState<BulkResultState | null>(null);
-	const [quickFilter, setQuickFilter] = useState("");
 
 	const bulkDelete = useBulkDeleteV2Dictionaries();
 	const bulkReset = useBulkResetV2Dictionaries();
-
-	const resettableSelected = useMemo(
-		() => selected.filter(canResetV2Dictionary),
-		[selected],
-	);
-	const deletableCount = useMemo(
-		() => selected.filter(canDeleteV2Dictionary).length,
-		[selected],
-	);
 
 	const runBulkDelete = useCallback(
 		(rows: V2DictionaryDto[]) => {
@@ -67,7 +52,6 @@ export function AdminV2DictionariesPage() {
 					onSuccess: (result) => {
 						setPending(null);
 						setBulkResult({ kind: "delete", result });
-						setSelected([]);
 					},
 				},
 			);
@@ -97,62 +81,16 @@ export function AdminV2DictionariesPage() {
 		else runBulkReset(pending.rows);
 	}, [pending, runBulkDelete, runBulkReset]);
 
+	const deletableCount = pending
+		? pending.rows.filter(canDeleteV2Dictionary).length
+		: 0;
+	const resettableCount = pending
+		? pending.rows.filter(canResetV2Dictionary).length
+		: 0;
+
 	return (
-		<Flex flexDirection="column" flexGrow={1} minHeight="0">
-			<Header>
-				<Flex gap={1} wrap="wrap" alignItems="center">
-					<TextField
-						size="small"
-						placeholder="Поиск по коду, названию, категории…"
-						value={quickFilter}
-						onChange={(e) => setQuickFilter(e.target.value)}
-						sx={{
-							width: { xs: "100%", sm: 320 },
-							maxWidth: 420,
-							flexShrink: 0,
-						}}
-						inputProps={{ "aria-label": "Поиск справочников" }}
-					/>
-					<Spacer />
-					<V2AdminButton onClick={() => setCreateOpen(true)}>
-						Создать справочник
-					</V2AdminButton>
-					<Button
-						variant="outlined"
-						color="warning"
-						disabled={
-							!resettableSelected.length ||
-							bulkReset.isPending ||
-							bulkDelete.isPending
-						}
-						onClick={() => setPending({ kind: "reset", rows: selected })}
-					>
-						Сбросить по умолчанию
-						{resettableSelected.length ? ` (${resettableSelected.length})` : ""}
-					</Button>
-					<V2AdminButton
-						color="error"
-						variant="outlined"
-						disabled={
-							!selected.length || bulkDelete.isPending || bulkReset.isPending
-						}
-						onClick={() => setPending({ kind: "delete", rows: selected })}
-					>
-						Удалить выбранные
-						{selected.length ? ` (${selected.length})` : ""}
-					</V2AdminButton>
-				</Flex>
-			</Header>
-			<V2DictionaryList
-				quickFilter={quickFilter}
-				onSelectionChange={setSelected}
-				onDeleteRequest={(rows: V2DictionaryDto[]) =>
-					setPending({ kind: "delete", rows })
-				}
-				onResetRequest={(rows: V2DictionaryDto[]) =>
-					setPending({ kind: "reset", rows })
-				}
-			/>
+		<Flex flexDirection="column" flexGrow={1} minHeight="0" sx={{ height: "100%" }}>
+			<V2DictionaryWorkspace onCreateRequest={() => setCreateOpen(true)} />
 			<V2DictionaryCreateDialog
 				open={createOpen}
 				onClose={() => setCreateOpen(false)}
@@ -177,9 +115,8 @@ export function AdminV2DictionariesPage() {
 							</>
 						) : (
 							<>
-								Сброс для {resettableSelected.length} заводских из{" "}
-								{pending?.rows.length ?? 0} выбранных. Элементы вернутся к
-								эталонным значениям; остальные будут пропущены.
+								Сброс для {resettableCount} заводских из {pending?.rows.length ?? 0}{" "}
+								выбранных.
 							</>
 						)}
 					</DialogContentText>

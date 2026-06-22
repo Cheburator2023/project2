@@ -82,6 +82,53 @@ export function pickDefaultStream(
 	return work.streams[0] ?? null;
 }
 
+export type NormPeriodStatus = "active" | "archive" | "future";
+
+export function normPeriodStatus(
+	validFrom: string,
+	validTo: string | null,
+	atDate: string,
+): NormPeriodStatus {
+	const day = atDate.slice(0, 10);
+	const from = validFrom.slice(0, 10);
+	const to = validTo?.slice(0, 10) ?? null;
+	if (day < from) return "future";
+	if (to && day > to) return "archive";
+	return "active";
+}
+
+export function normStatusLabel(status: NormPeriodStatus): string {
+	switch (status) {
+		case "active":
+			return "активна";
+		case "future":
+			return "будущая";
+		default:
+			return "архив";
+	}
+}
+
+export function normStatusColors(status: NormPeriodStatus): {
+	bg: string;
+	color: string;
+	rowBg: string;
+} {
+	switch (status) {
+		case "active":
+			return { bg: "#e7f6ec", color: "#1f8a4d", rowBg: "#f6fcf8" };
+		case "future":
+			return { bg: "#eef4ff", color: "#2f6bd8", rowBg: "#fafcff" };
+		default:
+			return { bg: "#eef1f6", color: "#8a93a3", rowBg: "transparent" };
+	}
+}
+
+export function archComponentShortLabel(archComponentType: string): string {
+	if (archComponentType === "Система-источник") return "СИСТЕМА-ИСТОЧНИК";
+	if (archComponentType === "Объект / Витрина данных") return "ОБЪЕКТ ДАННЫХ";
+	return archComponentType.toUpperCase();
+}
+
 export function roundingModeLabel(mode: string): string {
 	switch (mode) {
 		case "CEIL":

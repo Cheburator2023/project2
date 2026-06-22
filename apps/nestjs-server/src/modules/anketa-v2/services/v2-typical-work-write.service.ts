@@ -29,6 +29,7 @@ import {
 	validateWorkName,
 } from "@smart-anketa/api-contract";
 import { V2_DOC_CATALOG } from "../constants/v2-doc-catalog";
+import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import { V2TypicalWorkLaborCoefficientEntity } from "../entities/v2-typical-work-labor-coefficient.entity";
 import { V2TypicalWorkNormEntity } from "../entities/v2-typical-work-norm.entity";
@@ -61,6 +62,8 @@ export class V2TypicalWorkWriteService {
 		private readonly versionConfigRepository: Repository<V2TypicalWorkVersionConfigEntity>,
 		@InjectRepository(V2TemplateVersionEntity)
 		private readonly templateVersionRepository: Repository<V2TemplateVersionEntity>,
+		@InjectRepository(V2QuestionnaireEntity)
+		private readonly questionnaireRepository: Repository<V2QuestionnaireEntity>,
 		private readonly typicalWorkService: V2TypicalWorkService,
 	) {}
 
@@ -123,10 +126,37 @@ export class V2TypicalWorkWriteService {
 		};
 	}
 
-	async deleteWork(workId: string): Promise<void> {
+	async deleteWork(workId: string, confirm = false): Promise<void> {
 		const work = await this.workRepository.findOne({ where: { id: workId } });
 		if (!work) throw new NotFoundException(`Typical work ${workId} not found`);
+
+		const usedInQuestionnaireVersions =
+			await this.findQuestionnaireUsages(workId);
+		if (usedInQuestionnaireVersions.length > 0 && !confirm) {
+			throw new ConflictException({
+				code: "WORK_IN_USE",
+				message:
+					"Работа учтена в версиях анкет. Подтвердите удаление, если нужно удалить безвозвратно.",
+				usedInQuestionnaireVersions,
+			});
+		}
+
 		await this.workRepository.delete(workId);
+	}
+
+	private async findQuestionnaireUsages(workId: string) {
+		const rows = await this.questionnaireRepository
+			.createQueryBuilder("q")
+			.where("q.form_data::text LIKE :needle", { needle: `%${workId}%` })
+			.orderBy("q.updated_at", "DESC")
+			.limit(20)
+			.getMany();
+
+		return rows.map((row) => ({
+			questionnaireId: row.id,
+			calcName: row.calcName,
+			version: row.version,
+		}));
 	}
 
 	async patchWork(workId: string, dto: PatchV2TypicalWorkRequestDto) {
@@ -147,7 +177,11 @@ export class V2TypicalWorkWriteService {
 		}
 
 		if (dto.norms) {
-			errors.push(...validateNormInputs(dto.norms, stream));
+			errors.push(
+				...validateNormInputs(dto.norms, stream, {
+					coverageDate: new Date().toISOString().slice(0, 10),
+				}),
+			);
 		}
 
 		if (dto.laborCoefficients) {
@@ -159,9 +193,17 @@ export class V2TypicalWorkWriteService {
 					),
 				);
 			});
-			const paramCounts = new Map<string, number>();
-			for (const row of dto.laborCoefficients) {
-				paramCounts.set(row.paramCode, (paramCounts.get(row.paramCode) ?? 0) + 1);
+			const seen = new Set<string>();
+			for (const [index, row] of dto.laborCoefficients.entries()) {
+				const key = `${row.paramCode}|${row.valueCode ?? ""}`;
+				if (seen.has(key)) {
+					errors.push({
+						path: `laborCoefficients[${index}]`,
+						message:
+							"Дублируется комбинация (параметр, значение) для стрима",
+					});
+				}
+				seen.add(key);
 			}
 		}
 

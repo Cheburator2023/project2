@@ -1,16 +1,36 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.countActiveNormsOnDate = countActiveNormsOnDate;
 exports.validateNormInputs = validateNormInputs;
 exports.validateRoundingInput = validateRoundingInput;
 exports.validateCoefficientValue = validateCoefficientValue;
 exports.validateWorkName = validateWorkName;
 exports.collectAllowedParamCodes = collectAllowedParamCodes;
 exports.validateFormulaAgainstParams = validateFormulaAgainstParams;
+exports.collectTypicalWorkPatchValidationErrors = collectTypicalWorkPatchValidationErrors;
+const v2_work_formula_util_1 = require("./v2-work-formula.util");
 function parseIsoDay(value) {
     const day = value.slice(0, 10);
     return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
 }
-function validateNormInputs(norms, streamExecutor) {
+/** Сколько норм действуют на указанную дату (после базовой валидации периодов). */
+function countActiveNormsOnDate(norms, atDate) {
+    const day = atDate.slice(0, 10);
+    let count = 0;
+    for (const norm of norms) {
+        const from = parseIsoDay(norm.validFrom);
+        if (!from)
+            continue;
+        const to = norm.validTo ? parseIsoDay(norm.validTo) : null;
+        if (day < from)
+            continue;
+        if (to && day > to)
+            continue;
+        count++;
+    }
+    return count;
+}
+function validateNormInputs(norms, streamExecutor, options) {
     const issues = [];
     norms.forEach((norm, index) => {
         const base = `norms[${index}]`;
@@ -68,6 +88,22 @@ function validateNormInputs(norms, streamExecutor) {
             }
         }
     }
+    const coverageDate = options?.coverageDate;
+    if (coverageDate && norms.length > 0) {
+        const activeCount = countActiveNormsOnDate(norms, coverageDate);
+        if (activeCount === 0) {
+            issues.push({
+                path: "norms",
+                message: `На дату ${coverageDate.slice(0, 10)} нет действующей нормы для стрима «${streamExecutor}»`,
+            });
+        }
+        else if (activeCount > 1) {
+            issues.push({
+                path: "norms",
+                message: `На дату ${coverageDate.slice(0, 10)} действует более одной нормы для стрима «${streamExecutor}»`,
+            });
+        }
+    }
     return issues;
 }
 function validateRoundingInput(rounding) {
@@ -105,8 +141,42 @@ function validateWorkName(name) {
 function collectAllowedParamCodes(laborInputs) {
     return new Set(laborInputs.map((l) => l.paramCode));
 }
-const v2_work_formula_util_1 = require("./v2-work-formula.util");
 function validateFormulaAgainstParams(tokens, allowedParamCodes) {
     const err = (0, v2_work_formula_util_1.validateWorkFormulaTokens)(tokens, allowedParamCodes);
     return err ? [{ path: "formula", message: err }] : [];
+}
+/** Клиентская валидация PATCH типовой работы перед автосохранением. */
+function collectTypicalWorkPatchValidationErrors(dto, options) {
+    const issues = [];
+    const stream = dto.streamExecutor?.trim() ?? "";
+    const coverageDate = options?.coverageDate ?? new Date().toISOString().slice(0, 10);
+    if (dto.name !== undefined) {
+        issues.push(...validateWorkName(dto.name));
+    }
+    if (dto.norms && stream) {
+        issues.push(...validateNormInputs(dto.norms, stream, { coverageDate }));
+    }
+    if (dto.laborCoefficients) {
+        dto.laborCoefficients.forEach((row, index) => {
+            issues.push(...validateCoefficientValue(row.coefficient, `laborCoefficients[${index}].coefficient`));
+        });
+        const seen = new Set();
+        for (const [index, row] of dto.laborCoefficients.entries()) {
+            const key = `${row.paramCode}|${row.valueCode ?? ""}`;
+            if (seen.has(key)) {
+                issues.push({
+                    path: `laborCoefficients[${index}]`,
+                    message: "Дублируется комбинация (параметр, значение) для стрима",
+                });
+            }
+            seen.add(key);
+        }
+    }
+    if (dto.rounding) {
+        issues.push(...validateRoundingInput(dto.rounding));
+    }
+    if (dto.formula && dto.laborCoefficients) {
+        issues.push(...validateFormulaAgainstParams(dto.formula.tokens, collectAllowedParamCodes(dto.laborCoefficients)));
+    }
+    return issues;
 }

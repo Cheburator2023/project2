@@ -48,6 +48,12 @@ const TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
 		render: (item) => text(item, "name"),
 	},
 	{
+		key: "sourceName",
+		header: "Объект",
+		width: "1fr",
+		render: (item) => text(item, "sourceName"),
+	},
+	{
 		key: "workType",
 		header: "Тип работ",
 		width: "1.1fr",
@@ -351,7 +357,7 @@ export const ANKETA_ARRAY_TABLE_COLUMNS: Record<
 	"detailInfo.detailAtypicalTasks": ATYPICAL_WORK_COLUMNS,
 	"streamDataSources.sourceTypicalTasks": TYPICAL_WORK_COLUMNS,
 	"streamDataSources.atypicalTasks": ATYPICAL_WORK_COLUMNS,
-	"streamModelControl.control.controlTypicalTasks": TYPICAL_WORK_COLUMNS,
+	"generalInfo.modelService.controlTypicalTasks": TYPICAL_WORK_COLUMNS,
 	"streamModelControl.atypicalTasks": ATYPICAL_WORK_COLUMNS,
 };
 
@@ -413,6 +419,58 @@ export function getArrayTableColumns(
 			path
 		] ?? null
 	);
+}
+
+const TYPICAL_WORK_ARRAY_PATHS = new Set([
+	"detailInfo.detailTypicalTasks",
+	"streamDataSources.sourceTypicalTasks",
+	"generalInfo.modelService.controlTypicalTasks",
+]);
+
+export function isTypicalWorkArrayPath(path: string): boolean {
+	return TYPICAL_WORK_ARRAY_PATHS.has(path);
+}
+
+export function sumTypicalWorkTotals(
+	items: Record<string, unknown>[],
+): number | null {
+	let sum = 0;
+	let hasValue = false;
+	for (const item of items) {
+		const raw = item.total;
+		const num =
+			typeof raw === "number"
+				? raw
+				: typeof raw === "string" && raw.trim()
+					? Number(raw.replace(",", "."))
+					: NaN;
+		if (!Number.isFinite(num)) continue;
+		sum += num;
+		hasValue = true;
+	}
+	return hasValue ? sum : null;
+}
+
+export function collectTypicalWorkSourceNames(
+	items: Record<string, unknown>[],
+): string[] {
+	const names = new Set<string>();
+	for (const item of items) {
+		const raw = item.sourceName;
+		if (typeof raw === "string" && raw.trim()) names.add(raw.trim());
+	}
+	return [...names].sort((a, b) => a.localeCompare(b, "ru"));
+}
+
+export function filterTypicalWorkItems(
+	items: Record<string, unknown>[],
+	sourceNameFilter: string | null,
+): Record<string, unknown>[] {
+	if (!sourceNameFilter) return items;
+	return items.filter((item) => {
+		const raw = item.sourceName;
+		return typeof raw === "string" && raw.trim() === sourceNameFilter;
+	});
 }
 
 export function getArrayAtPath(

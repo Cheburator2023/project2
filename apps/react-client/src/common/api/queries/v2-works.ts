@@ -134,14 +134,22 @@ export const useCreateV2TypicalWork = () => {
 	});
 };
 
+export type DeleteV2TypicalWorkVariables = {
+	workId: string;
+	confirm?: boolean;
+};
+
 export const useDeleteV2TypicalWork = () => {
 	const queryClient = useQueryClient();
-	return useMutation<void, Error, string>({
-		mutationFn: (workId) =>
-			apiClient({
-				url: `/v2/works/${workId}`,
+	return useMutation<void, Error, DeleteV2TypicalWorkVariables>({
+		mutationFn: ({ workId, confirm }) => {
+			const qs =
+				confirm === true ? "?confirm=true" : "";
+			return apiClient({
+				url: `/v2/works/${workId}${qs}`,
 				method: "DELETE",
-			}),
+			});
+		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
 		},

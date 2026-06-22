@@ -212,7 +212,7 @@ export function V2AnketaSchemaForm({
 	const formContext = useMemo((): AnketaFormContextValue => {
 		const base = anketaFormContext ?? {};
 		return mergeAnketaFormContext(base, {
-			formData: engine.formData,
+			formData: engine.displayFormData,
 			previewSchema: engine.previewSchema,
 			previewUiSchema: engine.previewUiSchema,
 			workflow,
@@ -235,7 +235,7 @@ export function V2AnketaSchemaForm({
 		readOnly,
 		disabled,
 		handleToggleGroupActivation,
-		engine.formData,
+		engine.displayFormData,
 		engine.version?.id,
 		modalBindings,
 		workflow,

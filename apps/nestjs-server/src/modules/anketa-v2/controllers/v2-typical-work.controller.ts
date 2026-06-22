@@ -104,7 +104,18 @@ export class V2TypicalWorkController {
 	@Delete(":id")
 	@HttpCode(HttpStatus.NO_CONTENT)
 	@ApiOperation({ summary: "Удалить типовую работу" })
-	async delete(@Param("id", ParseUUIDPipe) id: string): Promise<void> {
-		return this.typicalWorkWriteService.deleteWork(id);
+	@ApiQuery({
+		name: "confirm",
+		required: false,
+		description: "Подтвердить удаление при использовании в анкетах",
+	})
+	async delete(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Query("confirm") confirm?: string,
+	): Promise<void> {
+		return this.typicalWorkWriteService.deleteWork(
+			id,
+			confirm === "true" || confirm === "1",
+		);
 	}
 }
