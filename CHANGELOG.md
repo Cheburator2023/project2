@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.21.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.20.0...v1.21.0) (2026-06-22)
+
+
+### Features
+
+* enhance authentication flow and state management ([54f6192](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/54f619201dae2f12e0577be135ef0af3f666bd19))
+
 # [1.20.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.19.0...v1.20.0) (2026-06-22)
 
 
