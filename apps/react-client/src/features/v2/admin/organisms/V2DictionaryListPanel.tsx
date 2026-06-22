@@ -1,9 +1,41 @@
-import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { styled, useColorScheme } from "@mui/material/styles";
 import { Card } from "@react-client/common/muiCustom/Card";
+import { Flex } from "@react-client/common/primitives/Flex";
+import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import {
+	agGridCustomMUITheme,
+	agGridCustomMUIThemeDark,
+} from "@react-client/theme/ag-grid/agGridCustomTheme";
+import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 import type { V2DictionaryDto } from "@smart-anketa/api-contract";
+import {
+	AllCommunityModule,
+	ClientSideRowModelModule,
+	type ColDef,
+	type ICellRendererParams,
+	ModuleRegistry,
+} from "ag-grid-community";
+import { AgGridReact } from "ag-grid-react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+
+ModuleRegistry.registerModules([AllCommunityModule, ClientSideRowModelModule]);
+
+/** ag-grid требует явную высоту контейнера — flex:1 + min-height:0 в колонке */
+const AgGridHost = styled("div")`
+	flex: 1 1 auto;
+	min-height: 0;
+	width: 100%;
+	height: 100%;
+
+	& > div {
+		width: 100%;
+		height: 100%;
+	}
+`;
 
 type V2DictionaryListPanelProps = {
 	items: V2DictionaryDto[];
@@ -15,34 +47,22 @@ type V2DictionaryListPanelProps = {
 	showCreateButton?: boolean;
 };
 
-function dictStatusBadge(row: V2DictionaryDto): {
-	label: string;
-	bg: string;
-	color: string;
-	border: string;
-} {
-	if (row.isDefault) {
-		return {
-			label: "Заводской",
-			bg: "#eef4ff",
-			color: "#2f6bd8",
-			border: "#cfe0f8",
-		};
-	}
-	if (row.isInUse) {
-		return {
-			label: "В схемах",
-			bg: "#fdf3e0",
-			color: "#b5791f",
-			border: "#f0e3c8",
-		};
-	}
-	return {
-		label: "Свободный",
-		bg: "#eef1f6",
-		color: "#8a93a3",
-		border: "#e1e4ea",
-	};
+function flagsCellRenderer(p: ICellRendererParams<V2DictionaryDto>) {
+	const row = p.data;
+	if (!row) return null;
+	return (
+		<Flex gap={0.5} wrap="wrap" alignItems="center">
+			{row.isDefault ? (
+				<Chip size="small" label="Заводской" variant="outlined" color="info" />
+			) : null}
+			{row.isInUse ? (
+				<Chip size="small" label="В схемах" variant="outlined" color="warning" />
+			) : null}
+			{!row.isDefault && !row.isInUse ? (
+				<Chip size="small" label="Свободный" variant="outlined" />
+			) : null}
+		</Flex>
+	);
 }
 
 export function V2DictionaryListPanel({
@@ -54,133 +74,151 @@ export function V2DictionaryListPanel({
 	onCreate,
 	showCreateButton = true,
 }: V2DictionaryListPanelProps) {
-	const q = quickFilter.trim().toLowerCase();
-	const filtered = items.filter((row) => {
-		if (!q) return true;
-		return (
-			row.code.toLowerCase().includes(q) ||
-			row.name.toLowerCase().includes(q) ||
-			(row.category ?? "").toLowerCase().includes(q)
-		);
-	});
+	const { mode } = useColorScheme();
+	const gridRef = useRef<AgGridReact<V2DictionaryDto>>(null);
+
+	const gridTheme =
+		mode === "light" || mode === undefined
+			? agGridCustomMUITheme
+			: agGridCustomMUIThemeDark;
+
+	const columnDefs = useMemo<ColDef<V2DictionaryDto>[]>(
+		() => [
+			{ field: "code", headerName: "Код", flex: 1, minWidth: 110 },
+			{ field: "name", headerName: "Название", flex: 1.4, minWidth: 120 },
+			{
+				colId: "flags",
+				headerName: "Статус",
+				width: 130,
+				sortable: false,
+				filter: false,
+				cellRenderer: flagsCellRenderer,
+			},
+		],
+		[],
+	);
+
+	const defaultColDef = useMemo<ColDef>(
+		() => ({
+			sortable: true,
+			resizable: true,
+			minWidth: 72,
+		}),
+		[],
+	);
+
+	useEffect(() => {
+		gridRef.current?.api?.setGridOption("quickFilterText", quickFilter);
+	}, [quickFilter]);
+
+	useEffect(() => {
+		const api = gridRef.current?.api;
+		if (!api) return;
+
+		api.deselectAll();
+		if (!selectedId) return;
+
+		api.forEachNode((node) => {
+			if (node.data?.id === selectedId) {
+				node.setSelected(true);
+				api.ensureNodeVisible(node, "middle");
+			}
+		});
+	}, [selectedId, items]);
+
+	const handleSelectionChanged = useCallback(() => {
+		const row = gridRef.current?.api?.getSelectedRows()[0];
+		if (row?.id) onSelect(row.id);
+	}, [onSelect]);
 
 	return (
-		<Card padding="0" overflow="hidden" height="100%" width="430px">
-			<Box
-				sx={{
-					p: "14px 16px",
-					borderBottom: "1px solid #eef0f4",
+		<Card
+			padding="0"
+			overflow="hidden"
+			height="100%"
+			width="100%"
+			sx={{
+				display: "flex",
+				flexDirection: "column",
+				minHeight: 0,
+				"& > div": {
 					display: "flex",
-					gap: 1.1,
-					alignItems: "center",
-				}}
-			>
-				<TextField
-					size="small"
-					fullWidth
-					placeholder="Поиск по коду, названию…"
-					value={quickFilter}
-					onChange={(e) => onQuickFilterChange(e.target.value)}
+					flexDirection: "column",
+					flex: 1,
+					minHeight: 0,
+					height: "100%",
+					overflow: "hidden",
+				},
+			}}
+		>
+			<Flex flexDirection="column" flexGrow={1} minHeight="0" height="100%">
+				<Flex
+					gap={1}
+					alignItems="center"
+					padding="12px 14px"
 					sx={{
-						"& .MuiInputBase-root": {
-							height: 34,
-							fontSize: 12.5,
-							borderRadius: "8px",
-						},
+						borderBottom: "1px solid",
+						borderColor: "divider",
+						flexShrink: 0,
 					}}
-				/>
-				{showCreateButton && onCreate ? (
-					<Button
-						onClick={onCreate}
+				>
+					<TextField
+						size="small"
+						fullWidth
+						placeholder="Поиск…"
+						value={quickFilter}
+						onChange={(e) => onQuickFilterChange(e.target.value)}
 						sx={{
-							flexShrink: 0,
-							textTransform: "none",
-							height: 34,
-							px: 1.6,
-							borderRadius: "8px",
-							bgcolor: "#1c2333",
-							color: "#fff",
-							fontSize: 12.5,
-							fontWeight: 600,
+							"& .MuiInputBase-root": {
+								height: 34,
+								fontSize: 12.5,
+							},
 						}}
-					>
-						Создать
-					</Button>
-				) : null}
-			</Box>
-			<Typography
-				sx={{
-					px: 2,
-					py: 1.1,
-					fontSize: 12,
-					color: "#8a93a3",
-					borderBottom: "1px solid #f3f4f8",
-				}}
-			>
-				<b style={{ color: "#1d2435" }}>{items.length}</b> справочников
-			</Typography>
-			<Box sx={{ flex: 1, overflowY: "auto" }}>
-				{filtered.map((row) => {
-					const selected = row.id === selectedId;
-					const status = dictStatusBadge(row);
-					return (
-						<Box
-							key={row.id}
-							onClick={() => onSelect(row.id)}
+					/>
+					{showCreateButton && onCreate ? (
+						<Button
+							onClick={onCreate}
+							variant="contained"
 							sx={{
-								p: "10px 16px",
-								borderBottom: "1px solid #f3f4f8",
-								cursor: "pointer",
-								bgcolor: selected ? "#eef4ff" : "#fff",
-								"&:hover": { bgcolor: selected ? "#eef4ff" : "#fafbfc" },
+								flexShrink: 0,
+								textTransform: "none",
+								height: 34,
+								px: 1.5,
+								whiteSpace: "nowrap",
 							}}
 						>
-							<Box
-								sx={{
-									display: "flex",
-									alignItems: "center",
-									gap: 1,
-									mb: 0.4,
-								}}
-							>
-								<Typography
-									sx={{
-										flex: 1,
-										fontFamily: "monospace",
-										fontSize: 11.5,
-										color: "#2f6bd8",
-										overflow: "hidden",
-										textOverflow: "ellipsis",
-										whiteSpace: "nowrap",
-									}}
-								>
-									{row.code}
-								</Typography>
-								<Box
-									sx={{
-										display: "inline-flex",
-										alignItems: "center",
-										height: 18,
-										px: 0.9,
-										borderRadius: "5px",
-										bgcolor: status.bg,
-										color: status.color,
-										border: `1px solid ${status.border}`,
-										fontSize: 10,
-										fontWeight: 600,
-										flexShrink: 0,
-									}}
-								>
-									{status.label}
-								</Box>
-							</Box>
-							<Typography sx={{ fontSize: 13, color: "#28303f" }}>
-								{row.name}
-							</Typography>
-						</Box>
-					);
-				})}
-			</Box>
+							Создать
+						</Button>
+					) : null}
+				</Flex>
+				<Typography
+					variant="caption"
+					color="text.secondary"
+					sx={{ px: 1.75, py: 0.75, flexShrink: 0 }}
+				>
+					<b>{items.length}</b> справочников
+				</Typography>
+				<AgGridHost>
+					<AgGridReact<V2DictionaryDto>
+						ref={gridRef}
+						theme={gridTheme}
+						icons={agGridIconSet}
+						rowData={items}
+						columnDefs={columnDefs}
+						defaultColDef={defaultColDef}
+						localeText={AG_GRID_LOCALE_RU}
+						getRowId={(p) => p.data.id}
+						rowSelection={{ mode: "singleRow", enableClickSelection: true }}
+						onSelectionChanged={handleSelectionChanged}
+						suppressCellFocus
+						suppressMovableColumns
+						headerHeight={32}
+						rowHeight={36}
+						suppressCsvExport
+						suppressExcelExport
+					/>
+				</AgGridHost>
+			</Flex>
 		</Card>
 	);
 }
