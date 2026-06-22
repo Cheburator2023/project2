@@ -1,5 +1,14 @@
 # Semantic Versioning Changelog
 
+# [1.18.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.17.0...v1.18.0) (2026-06-22)
+
+
+### Features
+
+* add detailed task information and analytics data for architecture components ([bd4c7fa](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/bd4c7fac6a635778ea6f64ec92765326525b083f))
+* enhance typical work management with new features and improvements ([6aa0520](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6aa0520abc495bdb3b43b52b49b21f55f9f0a68e))
+* implement typical work management features in the anketa-v2 module ([be47d13](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/be47d13ef70fd6b03c3e0ddbc5fe728e58473183))
+
 # [1.17.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.16.0...v1.17.0) (2026-06-17)
 
 
