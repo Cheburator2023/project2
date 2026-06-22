@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="sa-data.js"></script>
+<script src="sa-formulas.js"></script>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%}
+  body{font-family:'Manrope',-apple-system,'Segoe UI',Roboto,sans-serif;background:#eceef3;color:#1d2435;-webkit-font-smoothing:antialiased}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#cdd2dc;border-radius:8px;border:2px solid #eceef3}
+  ::-webkit-scrollbar-track{background:transparent}
+  .nv:hover{background:#f1f3f7}
+  .rw:hover{background:#f6f8fb}
+  .tb:hover{color:#1d2435}
+  .gb:hover{background:#f4f6f9}
+  .seg:hover{color:#1d2435}
+</style>
+</helmet>
+<div style="display:flex;flex-direction:row;height:100vh;width:100%;overflow:hidden">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside style="width:218px;flex-shrink:0;background:#fff;border-right:1px solid #e6e8ee;display:flex;flex-direction:column;overflow-y:auto">
+    <div style="padding:20px 18px 18px;font-family:'Manrope';font-weight:800;font-size:16px;letter-spacing:.02em;border-bottom:1px solid #f0f1f5">
+      <span style="color:#1d2435">SUM</span><span style="color:#2f6bd8">СМАРТ</span><span style="color:#1d2435">_АНКЕТА</span>
+    </div>
+    <div style="padding:14px 10px">
+      <div style="padding:8px 10px 6px;font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#aab1c0">Калькулятор v2</div>
+      <div class="nv" style="padding:8px 10px;border-radius:8px;font-size:13.5px;color:#5b6577;cursor:pointer">Реестр анкет v2</div>
+      <div class="nv" style="padding:8px 10px;border-radius:8px;font-size:13.5px;color:#5b6577;cursor:pointer">Создание анкеты</div>
+      <div style="padding:14px 10px 6px;font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#aab1c0">Калькулятор v1</div>
+      <div class="nv" style="padding:8px 10px;border-radius:8px;font-size:13.5px;color:#5b6577;cursor:pointer">Реестр анкет v1</div>
+      <div style="padding:14px 10px 6px;font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#aab1c0">Администрирование</div>
+      <div class="nv" onClick="{{ goSchemas }}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;font-size:13.5px;cursor:pointer;background:{{ navSchemasBg }};color:{{ navSchemasFg }};font-weight:{{ navSchemasW }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Схемы
+      </div>
+      <div class="nv" onClick="{{ goEditor }}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;font-size:13.5px;cursor:pointer;background:{{ navEditorBg }};color:{{ navEditorFg }};font-weight:{{ navEditorW }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Редактор схемы
+      </div>
+      <div class="nv" style="padding:8px 10px;border-radius:8px;font-size:13.5px;color:#5b6577;cursor:pointer">Справка</div>
+      <div class="nv" onClick="{{ goDicts }}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;font-size:13.5px;cursor:pointer;background:{{ navDictsBg }};color:{{ navDictsFg }};font-weight:{{ navDictsW }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
+        Словари
+      </div>
+    </div>
+    <div style="margin-top:auto;padding:14px;border-top:1px solid #f0f1f5;display:flex;align-items:center;gap:9px">
+      <div style="width:28px;height:28px;border-radius:50%;background:#e7edf8;color:#2f6bd8;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">t</div>
+      <div style="font-size:12px;color:#6b7484;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">test_ds_lead test_…</div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN COLUMN ============ -->
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+
+    <!-- TOPBAR -->
+    <header style="height:54px;flex-shrink:0;background:#fff;border-bottom:1px solid #e6e8ee;display:flex;align-items:center;gap:12px;padding:0 18px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7a838f" stroke-width="2" style="cursor:pointer"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7a838f" stroke-width="2" style="cursor:pointer"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+      <div style="display:flex;align-items:center;gap:7px;font-size:13.5px;color:#8a93a3">
+        <span class="tb" style="cursor:pointer">Администрирование</span>
+        <span style="color:#c3c9d4">›</span>
+        <span class="tb" onClick="{{ crumbClick }}" style="cursor:pointer;color:{{ crumb1Fg }}">{{ crumb1 }}</span>
+        <sc-if value="{{ hasCrumb2 }}" hint-placeholder-val="{{ true }}">
+          <span style="color:#c3c9d4">›</span>
+          <span style="color:#1d2435;font-weight:600">{{ crumb2 }}</span>
+        </sc-if>
+        <sc-if value="{{ isEditor }}" hint-placeholder-val="{{ true }}">
+          <span style="display:inline-flex;align-items:center;height:21px;padding:0 9px;border-radius:6px;background:#e7f6ec;color:#1f8a4d;font-size:11px;font-weight:700;border:1px solid #c3e7cf;margin-left:4px">v28 · Опубликована · актуальная</span>
+        </sc-if>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:9px">
+        <sc-if value="{{ isEditor }}" hint-placeholder-val="{{ true }}">
+          <div class="gb" style="display:flex;align-items:center;gap:6px;height:34px;padding:0 11px;border:1px solid #dfe2ea;border-radius:8px;font-size:12.5px;color:#5b6577;cursor:pointer">v28 · Опубликована ▾</div>
+          <button class="gb" style="display:flex;align-items:center;gap:6px;height:34px;padding:0 13px;border:1px solid #dfe2ea;border-radius:8px;background:#fff;font-size:13px;color:#384152;cursor:pointer;font-family:inherit">Предпросмотр</button>
+          <button class="gb" style="display:flex;align-items:center;gap:6px;height:34px;padding:0 13px;border:1px solid #dfe2ea;border-radius:8px;background:#fff;font-size:13px;color:#384152;cursor:pointer;font-family:inherit">Логика</button>
+          <button style="height:34px;padding:0 16px;border:none;border-radius:8px;background:#1c2333;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Сохранить</button>
+        </sc-if>
+        <div style="width:34px;height:34px;border:1px solid #dfe2ea;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7a838f" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </div>
+      </div>
+    </header>
+
+    <!-- EDITOR TABS -->
+    <sc-if value="{{ isEditor }}" hint-placeholder-val="{{ true }}">
+      <div style="height:44px;flex-shrink:0;background:#fff;border-bottom:1px solid #e6e8ee;display:flex;align-items:stretch;padding:0 18px;gap:2px">
+        <div class="seg" onClick="{{ tabParamsClick }}" style="display:flex;align-items:center;padding:0 14px;font-size:13.5px;cursor:pointer;color:{{ tabParamsFg }};font-weight:{{ tabParamsW }};border-bottom:2px solid {{ tabParamsBd }}">Конструктор · Параметры</div>
+        <div class="seg" onClick="{{ tabLogicClick }}" style="display:flex;align-items:center;padding:0 14px;font-size:13.5px;cursor:pointer;color:{{ tabLogicFg }};font-weight:{{ tabLogicW }};border-bottom:2px solid {{ tabLogicBd }}">Логика</div>
+        <div class="seg" style="display:flex;align-items:center;padding:0 14px;font-size:13.5px;cursor:pointer;color:#8a93a3">Редактор JSON</div>
+        <div class="seg" style="display:flex;align-items:center;padding:0 14px;font-size:13.5px;cursor:pointer;color:#8a93a3">Граф связей</div>
+      </div>
+    </sc-if>
+
+    <!-- ===================== CONTENT AREA ===================== -->
+    <div style="flex:1;overflow:hidden;position:relative">
+
+      <!-- ===== SCREEN: ПАРАМЕТРЫ (Конструктор) ===== -->
+      <sc-if value="{{ showParams }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;height:100%">
+
+        <!-- palette -->
+        <div style="width:222px;flex-shrink:0;background:#fff;border-right:1px solid #e6e8ee;overflow-y:auto;padding:14px 12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 10px"><span style="font-size:12.5px;font-weight:700;color:#3a4252">Типы полей</span><span style="color:#aab1c0">‹</span></div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#aab1c0;padding:6px 4px">Примитивные типы</div>
+          <div class="rw" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e9ebf1;border-radius:8px;margin-bottom:5px;font-size:13px;cursor:grab"><span style="color:#c3c9d4">⠿</span>Строка</div>
+          <div class="rw" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e9ebf1;border-radius:8px;margin-bottom:5px;font-size:13px;cursor:grab"><span style="color:#c3c9d4">⠿</span>Строка / справочник</div>
+          <div class="rw" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e9ebf1;border-radius:8px;margin-bottom:5px;font-size:13px;cursor:grab"><span style="color:#c3c9d4">⠿</span>Целое</div>
+          <div class="rw" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e9ebf1;border-radius:8px;margin-bottom:5px;font-size:13px;cursor:grab"><span style="color:#c3c9d4">⠿</span>Число</div>
+          <div class="rw" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e9ebf1;border-radius:8px;margin-bottom:5px;font-size:13px;cursor:grab"><span style="color:#c3c9d4">⠿</span>Да / нет</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#aab1c0;padding:12px 4px 6px">Разметка</div>
+          <div class="rw" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e9ebf1;border-radius:8px;margin-bottom:5px;font-size:13px;cursor:grab"><span style="color:#c3c9d4">⠿</span>Объект (группа)</div>
+          <div class="rw" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e9ebf1;border-radius:8px;margin-bottom:5px;font-size:13px;cursor:grab"><span style="color:#c3c9d4">⠿</span>Разметка</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#aab1c0;padding:12px 4px 6px">Арх. компоненты</div>
+          <div class="rw" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e3d9f6;border-radius:8px;margin-bottom:5px;font-size:13px;color:#7c5cd6;cursor:grab"><span style="opacity:.5">⠿</span>Модельный сервис</div>
+          <div class="rw" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #d3e0f7;border-radius:8px;margin-bottom:5px;font-size:13px;color:#3b6fd4;cursor:grab"><span style="opacity:.5">⠿</span>Модели</div>
+          <div class="rw" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #c9ece6;border-radius:8px;margin-bottom:5px;font-size:13px;color:#119e8f;cursor:grab"><span style="opacity:.5">⠿</span>Система-источник</div>
+          <div class="rw" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #f3e2c7;border-radius:8px;margin-bottom:5px;font-size:13px;color:#d2851f;cursor:grab"><span style="opacity:.5">⠿</span>Объект / Витрина данных</div>
+          <div class="rw" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #d3e0f7;border-radius:8px;margin-bottom:5px;font-size:13px;color:#3b82c4;cursor:grab"><span style="opacity:.5">⠿</span>Процесс обработки данных</div>
+        </div>
+
+        <!-- tree -->
+        <div style="flex:1;overflow-y:auto;padding:16px 20px;min-width:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="font-size:13px;color:#6b7484">Структура анкеты · <b style="color:#1d2435">{{ paramCount }}</b> параметров в <b style="color:#1d2435">{{ blockCount }}</b> блоках</div>
+            <div style="display:flex;gap:8px">
+              <button class="gb" onClick="{{ expandAll }}" style="height:32px;padding:0 12px;border:1px solid #dfe2ea;border-radius:8px;background:#fff;font-size:12.5px;color:#384152;cursor:pointer;font-family:inherit">Раскрыть все</button>
+              <button class="gb" onClick="{{ collapseAll }}" style="height:32px;padding:0 12px;border:1px solid #dfe2ea;border-radius:8px;background:#fff;font-size:12.5px;color:#384152;cursor:pointer;font-family:inherit">Свернуть все</button>
+            </div>
+          </div>
+
+          <sc-for list="{{ paramTree }}" as="blk" hint-placeholder-count="3">
+            <div style="margin-bottom:10px">
+              <div class="rw" onClick="{{ blk.toggle }}" style="display:flex;align-items:center;gap:9px;padding:11px 12px;background:#f3f5f9;border:1px solid #e6e8ee;border-radius:9px;cursor:pointer">
+                <span style="display:inline-block;transition:transform .15s;transform:rotate({{ blk.rot }});color:#9aa2b1">▸</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a93a3" stroke-width="2"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2Z"/></svg>
+                <span style="font-size:14px;font-weight:700;color:#1d2435">{{ blk.name }}</span>
+                <span style="display:inline-flex;align-items:center;height:19px;padding:0 8px;border-radius:6px;background:#e8ebf1;color:#6b7484;font-size:11px;font-weight:600">{{ blk.count }} полей</span>
+              </div>
+              <sc-if value="{{ blk.open }}" hint-placeholder-val="{{ true }}">
+                <div style="padding:6px 0 0 14px">
+                  <sc-for list="{{ blk.sections }}" as="sec" hint-placeholder-count="2">
+                    <div style="margin:6px 0 6px 6px;border-left:2px solid #ebedf2;padding-left:12px">
+                      <div class="rw" onClick="{{ sec.toggle }}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer">
+                        <span style="display:inline-block;transform:rotate({{ sec.rot }});color:#b3bac6;font-size:11px">▸</span>
+                        <span style="width:8px;height:8px;border-radius:3px;background:{{ sec.color }}"></span>
+                        <span style="font-size:13px;font-weight:600;color:#3a4252">{{ sec.short }}</span>
+                        <span style="font-size:11.5px;color:#aab1c0">{{ sec.count }}</span>
+                      </div>
+                      <sc-if value="{{ sec.open }}" hint-placeholder-val="{{ true }}">
+                        <div>
+                          <sc-for list="{{ sec.params }}" as="p" hint-placeholder-count="3">
+                            <div class="rw" onClick="{{ p.select }}" style="display:flex;align-items:center;gap:10px;padding:9px 11px;margin:2px 0;border-radius:8px;cursor:pointer;background:{{ p.bg }};border:1px solid {{ p.bd }}">
+                              <span style="color:#cfd4de;font-size:13px">⠿</span>
+                              <span style="font-size:13.5px;color:#28303f;flex-shrink:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.name }}</span>
+                              <span style="display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:6px;background:{{ p.chipBg }};color:{{ p.chipFg }};font-size:11px;font-weight:600;flex-shrink:0">{{ p.typeLabel }}</span>
+                              <span class="mono" style="font-size:11px;color:#aab1c0;flex-shrink:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.code }}</span>
+                              <span style="margin-left:auto;display:flex;gap:10px;flex-shrink:0;color:#c3c9d4">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dca0a0" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                              </span>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- properties -->
+        <div style="width:300px;flex-shrink:0;background:#fff;border-left:1px solid #e6e8ee;overflow-y:auto;padding:16px 16px 28px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="font-size:13px;font-weight:700;color:#3a4252">Свойства</span><span style="color:#aab1c0;cursor:pointer">✕</span></div>
+          <div class="mono" style="font-size:11px;color:#2f6bd8;background:#f4f7fc;border:1px solid #e1e9f6;border-radius:7px;padding:7px 9px;margin-bottom:16px;word-break:break-all">{{ selParam.code }}</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#aab1c0;margin-bottom:8px">Подписи</div>
+          <label style="font-size:12px;color:#6b7484;display:block;margin-bottom:4px">Подпись (title)</label>
+          <div style="border:1px solid #dfe2ea;border-radius:8px;padding:9px 11px;font-size:13.5px;color:#1d2435;margin-bottom:12px">{{ selParam.name }}</div>
+          <label style="font-size:12px;color:#6b7484;display:block;margin-bottom:4px">Описание</label>
+          <div style="border:1px solid #dfe2ea;border-radius:8px;padding:9px 11px;font-size:12.5px;color:#6b7484;margin-bottom:18px;min-height:54px">{{ selParam.desc }}</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#aab1c0;margin-bottom:8px">Тип и схема</div>
+          <label style="font-size:12px;color:#6b7484;display:block;margin-bottom:4px">Тип поля</label>
+          <div style="border:1px solid #dfe2ea;border-radius:8px;padding:9px 11px;font-size:13.5px;color:#1d2435;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">{{ selParam.typeFull }}<span style="color:#aab1c0">▾</span></div>
+          <sc-if value="{{ selParam.isDict }}" hint-placeholder-val="{{ true }}">
+            <div style="border:1px dashed #dbe4f4;background:#f8fafd;border-radius:8px;padding:10px;margin-bottom:8px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span style="font-size:11.5px;font-weight:600;color:#5b6577">Справочник · {{ selParam.valCount }} знач.</span><span style="font-size:11px;color:#2f6bd8;cursor:pointer">Открыть →</span></div>
+              <sc-for list="{{ selParam.vals }}" as="v" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:#3a4252;padding:3px 0"><span style="width:5px;height:5px;border-radius:50%;background:#c3c9d4"></span>{{ v.t }}</div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <div style="display:flex;align-items:center;gap:8px;margin:14px 0 4px"><span style="width:16px;height:16px;border:1.5px solid #c3c9d4;border-radius:4px"></span><span style="font-size:13px;color:#3a4252">Обязательное</span></div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#aab1c0;margin:18px 0 8px">В форме анкеты</div>
+          <label style="font-size:12px;color:#6b7484;display:block;margin-bottom:4px">Плейсхолдер</label>
+          <div style="border:1px solid #dfe2ea;border-radius:8px;padding:9px 11px;font-size:12.5px;color:#aab1c0;margin-bottom:12px">Текст в пустом поле…</div>
+          <label style="font-size:12px;color:#6b7484;display:block;margin-bottom:4px">Подсказка</label>
+          <div style="border:1px solid #dfe2ea;border-radius:8px;padding:9px 11px;font-size:12.5px;color:#6b7484;min-height:40px">{{ selParam.hint }}</div>
+        </div>
+
+      </div>
+      </sc-if>
+
+      <!-- ===== SCREEN: ЛОГИКА ===== -->
+      <sc-if value="{{ showLogic }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;height:100%">
+
+        <!-- sub-mode switcher -->
+        <div style="flex-shrink:0;background:#fff;border-bottom:1px solid #e6e8ee;padding:10px 20px;display:flex;align-items:center;gap:14px">
+          <div style="display:flex;background:#f1f3f7;border:1px solid #e6e8ee;border-radius:9px;padding:3px;gap:2px">
+            <div class="seg" onClick="{{ lmWorksClick }}" style="padding:6px 14px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;color:{{ lmWorksFg }};background:{{ lmWorksBg }}">Типовые работы</div>
+            <div class="seg" onClick="{{ lmDepsClick }}" style="padding:6px 14px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;color:{{ lmDepsFg }};background:{{ lmDepsBg }}">Зависимости параметров</div>
+          </div>
+          <div style="font-size:12px;color:#8a93a3">{{ lmHint }}</div>
+        </div>
+
+        <div style="flex:1;overflow:hidden">
+
+          <!-- ===== MODE: ТИПОВЫЕ РАБОТЫ ===== -->
+          <sc-if value="{{ showLogicWorks }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;height:100%;min-height:0">
+
+            <!-- ВЕРХНИЙ БАР: вид + область (стрим/группа) -->
+            <div style="flex-shrink:0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 18px;border-bottom:1px solid #e6e8ee;background:#fff">
+              <div style="display:flex;background:#f1f3f7;border:1px solid #e6e8ee;border-radius:9px;padding:2px;gap:2px">
+                <span onClick="{{ wv.setStreams }}" class="seg" style="padding:6px 13px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;background:{{ wv.vsStreamsBg }};color:{{ wv.vsStreamsFg }}">По стримам</span>
+                <span onClick="{{ wv.setMatrix }}" class="seg" style="padding:6px 13px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;background:{{ wv.vsMatrixBg }};color:{{ wv.vsMatrixFg }}">Матрица</span>
+                <span onClick="{{ wv.setCatalog }}" class="seg" style="padding:6px 13px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;background:{{ wv.vsCatalogBg }};color:{{ wv.vsCatalogFg }}">Справочник работ</span>
+              </div>
+              <sc-if value="{{ wv.isStreams }}" hint-placeholder-val="{{ true }}">
+                <div style="position:relative">
+                  <div onClick="{{ wv.toggleGroupPicker }}" class="gb" style="display:flex;align-items:center;gap:9px;height:36px;padding:0 13px;border:1px solid #dfe2ea;border-radius:9px;background:#fff;cursor:pointer;min-width:240px">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7a838f" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+                    <span style="font-size:11px;color:#8a93a3">Область:</span>
+                    <span style="flex:1;font-size:13px;color:#1d2435;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ wv.scopeLabel }}</span>
+                    <span style="color:#aab1c0;font-size:11px">▾</span>
+                  </div>
+                  <sc-if value="{{ wv.groupPickerOpen }}" hint-placeholder-val="{{ true }}">
+                    <div style="position:absolute;z-index:40;top:42px;left:0;width:320px;background:#fff;border:1px solid #e1e5ec;border-radius:11px;box-shadow:0 14px 34px rgba(20,30,60,.16);padding:7px;max-height:380px;overflow-y:auto">
+                      <div style="font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#aab1c0;padding:6px 9px 5px">Группы стримов (ролёвка)</div>
+                      <sc-for list="{{ wv.groups }}" as="g" hint-placeholder-count="3">
+                        <div onClick="{{ g.set }}" class="rw" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;cursor:pointer;background:{{ g.bg }}">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c5cd6" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                          <div style="flex:1"><div style="font-size:12.5px;color:#1d2435;font-weight:600">{{ g.name }}</div><div style="font-size:10.5px;color:#aab1c0">{{ g.sub }}</div></div>
+                          <sc-if value="{{ g.on }}" hint-placeholder-val="{{ true }}"><span style="color:#2f6bd8;font-size:14px">✓</span></sc-if>
+                        </div>
+                      </sc-for>
+                      <div style="font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#aab1c0;padding:9px 9px 5px;border-top:1px solid #f0f1f5;margin-top:5px">Отдельные стримы</div>
+                      <sc-for list="{{ wv.streams }}" as="s" hint-placeholder-count="4">
+                        <div onClick="{{ s.set }}" class="rw" style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;background:{{ s.bg }}">
+                          <span style="width:8px;height:8px;border-radius:2px;background:{{ s.dot }}"></span>
+                          <span style="flex:1;font-size:12.5px;color:#28303f">{{ s.name }}</span>
+                          <sc-if value="{{ s.on }}" hint-placeholder-val="{{ true }}"><span style="color:#2f6bd8;font-size:13px">✓</span></sc-if>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+              <button onClick="{{ addWork.open2 }}" style="margin-left:auto;height:36px;padding:0 14px;border:1px solid #dfe2ea;border-radius:9px;background:#fff;font-size:12.5px;color:#384152;cursor:pointer;font-family:inherit;font-weight:600">+ Работа в справочник</button>
+            </div>
+
+            <div style="flex:1;overflow:hidden;min-height:0">
+
+              <!-- ===== ВИД: ПО СТРИМАМ ===== -->
+              <sc-if value="{{ wv.isStreams }}" hint-placeholder-val="{{ true }}">
+                <!-- пусто -->
+                <sc-if value="{{ streamEmpty }}" hint-placeholder-val="{{ true }}">
+                  <div style="height:100%;display:flex;align-items:center;justify-content:center;padding:30px">
+                    <div style="max-width:440px;text-align:center">
+                      <div style="width:64px;height:64px;border-radius:16px;background:#eef2f8;display:flex;align-items:center;justify-content:center;margin:0 auto 18px">
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#8a93a3" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h8M8 17h5"/></svg>
+                      </div>
+                      <div style="font-size:17px;font-weight:800;color:#1d2435;margin-bottom:8px">Для «{{ streamHdr.title }}» ещё нет работ</div>
+                      <div style="font-size:13px;color:#6b7484;line-height:1.5;margin-bottom:20px">Типовые работы хранятся в общем справочнике. Выберите нужные и назначьте на эту область — у каждой работы будут свои нормативы и логика именно для этого стрима.</div>
+                      <div style="display:flex;gap:9px;justify-content:center;flex-wrap:wrap">
+                        <button onClick="{{ addCat.openFromEmpty }}" style="height:40px;padding:0 18px;border:none;border-radius:9px;background:#1c2333;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Добавить из справочника</button>
+                        <button onClick="{{ addWork.open2 }}" style="height:40px;padding:0 16px;border:1px solid #dfe2ea;border-radius:9px;background:#fff;font-size:13px;color:#384152;cursor:pointer;font-family:inherit">Создать новую работу</button>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
+                <!-- со списком -->
+                <sc-if value="{{ streamHas }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;height:100%;min-height:0">
+                  <div style="width:330px;flex-shrink:0;border-right:1px solid #e6e8ee;background:#fff;display:flex;flex-direction:column">
+                    <div style="padding:11px 14px;border-bottom:1px solid #eef0f4;display:flex;align-items:center;justify-content:space-between">
+                      <div><div style="font-size:12.5px;font-weight:700;color:#1d2435">Работы области</div><div style="font-size:10.5px;color:#8a93a3;margin-top:2px">{{ streamHdr.count }} назначено · {{ streamHdr.sub }}</div></div>
+                      <button onClick="{{ addCat.openTop }}" style="height:27px;padding:0 10px;border:none;border-radius:7px;background:#1c2333;color:#fff;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit">+ Из справочника</button>
+                    </div>
+                    <div style="flex:1;overflow-y:auto;padding:8px">
+                      <sc-for list="{{ streamWorks }}" as="c" hint-placeholder-count="3">
+                        <div style="margin-bottom:8px">
+                          <div style="display:flex;align-items:center;gap:7px;padding:6px 8px 5px"><span style="width:8px;height:8px;border-radius:2px;background:{{ c.color }}"></span><span style="flex:1;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:#8a93a3">{{ c.short }}</span><span style="font-size:10.5px;color:#aab1c0">{{ c.count }}</span></div>
+                          <sc-for list="{{ c.works }}" as="w" hint-placeholder-count="3">
+                            <div class="rw" onClick="{{ w.select }}" style="padding:8px 9px;margin:2px 0;border-radius:8px;cursor:pointer;background:{{ w.bg }};border:1px solid {{ w.bd }}">
+                              <div style="display:flex;align-items:center;gap:8px">
+                                <span style="flex:1;font-size:12px;color:#28303f;line-height:1.3">{{ w.name }}</span>
+                                <span class="mono" style="font-size:12.5px;font-weight:800;color:#1d2435;flex-shrink:0">{{ w.value }}</span>
+                              </div>
+                              <div style="display:flex;align-items:center;gap:5px;margin-top:5px;flex-wrap:wrap">
+                                <sc-if value="{{ w.streamShow }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:4px;height:16px;padding:0 6px;border-radius:5px;background:#eef4ff;color:#2f6bd8;font-size:9.5px;font-weight:600"><span style="width:5px;height:5px;border-radius:2px;background:{{ w.streamDot }}"></span>{{ w.stream }}</span></sc-if>
+                                <span style="display:inline-flex;align-items:center;height:16px;padding:0 6px;border-radius:5px;background:{{ w.trigBg }};color:{{ w.trigFg }};font-size:9.5px;font-weight:700">{{ w.trigBadge }}</span>
+                                <span style="display:inline-flex;align-items:center;height:16px;padding:0 6px;border-radius:5px;background:{{ w.labBg }};color:{{ w.labFg }};font-size:9.5px;font-weight:600">{{ w.labBadge }}</span>
+                              </div>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div style="flex:1;overflow-y:auto;padding:18px 22px 30px;min-width:0">
+                <!-- ШАПКА -->
+                <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+                  <div style="flex:1;min-width:240px">
+                    <div style="font-size:11.5px;color:#8a93a3;margin-bottom:3px">Типовая работа · справочник</div>
+                    <div style="font-size:19px;font-weight:800;color:#1d2435;line-height:1.25">{{ lgCur.name }}</div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap">
+                      <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:7px;background:{{ lgCur.compBg }};color:{{ lgCur.compFg }};font-size:11px;font-weight:700"><span style="width:7px;height:7px;border-radius:2px;background:{{ lgCur.compFg }}"></span>{{ lgCur.compShort }}</span>
+                      <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:{{ lgCur.saveFg }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ lgCur.saveDot }}"></span>{{ lgCur.saveText }}</span>
+                    </div>
+                  </div>
+                  <!-- стрим-исполнитель: выпадающий список -->
+                  <div style="position:relative;min-width:230px">
+                    <div style="font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#aab1c0;margin-bottom:6px">Стрим-исполнитель</div>
+                    <div onClick="{{ lgCur.toggleStreamMenu }}" class="gb" style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid #dfe2ea;border-radius:9px;background:#fff;cursor:pointer">
+                      <span style="width:8px;height:8px;border-radius:2px;background:{{ lgCur.streamDot }}"></span>
+                      <span style="flex:1;font-size:13px;color:#1d2435;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ lgCur.curStream }}</span>
+                      <span style="color:#aab1c0;font-size:11px">▾</span>
+                    </div>
+                    <sc-if value="{{ lgCur.streamMenuOpen }}" hint-placeholder-val="{{ true }}">
+                      <div style="position:absolute;z-index:30;top:62px;left:0;right:0;background:#fff;border:1px solid #e1e5ec;border-radius:10px;box-shadow:0 12px 30px rgba(20,30,60,.14);padding:6px;max-height:280px;overflow-y:auto">
+                        <div style="font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#aab1c0;padding:6px 8px 4px">Рекомендованные для компонента</div>
+                        <sc-for list="{{ lgCur.streamRec }}" as="s" hint-placeholder-count="2">
+                          <div onClick="{{ s.set }}" class="rw" style="display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:7px;cursor:pointer;background:{{ s.bg }}">
+                            <span style="width:8px;height:8px;border-radius:2px;background:{{ s.dot }}"></span>
+                            <span style="flex:1;font-size:12.5px;color:#28303f">{{ s.name }}</span>
+                            <sc-if value="{{ s.on }}" hint-placeholder-val="{{ true }}"><span style="color:#2f6bd8;font-size:13px">✓</span></sc-if>
+                          </div>
+                        </sc-for>
+                        <div style="font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#aab1c0;padding:8px 8px 4px;border-top:1px solid #f0f1f5;margin-top:4px">Остальные стримы</div>
+                        <sc-for list="{{ lgCur.streamOther }}" as="s" hint-placeholder-count="3">
+                          <div onClick="{{ s.set }}" class="rw" style="display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:7px;cursor:pointer;background:{{ s.bg }}">
+                            <span style="width:8px;height:8px;border-radius:2px;background:{{ s.dot }}"></span>
+                            <span style="flex:1;font-size:12.5px;color:#28303f">{{ s.name }}</span>
+                            <sc-if value="{{ s.on }}" hint-placeholder-val="{{ true }}"><span style="color:#2f6bd8;font-size:13px">✓</span></sc-if>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+
+                <!-- НОРМЫ ТРУДОЗАТРАТ (историчность) -->
+                <div style="background:#fff;border:1px solid #e6e8ee;border-radius:12px;padding:15px 17px;margin-bottom:12px">
+                  <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;flex-wrap:wrap">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d2435" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+                    <span style="font-size:13.5px;font-weight:700;color:#1d2435">Нормы трудозатрат</span>
+                    <span style="font-size:11px;color:#8a93a3">— для стрима «{{ lgCur.curStream }}», с историчностью</span>
+                    <button onClick="{{ lgCur.addNorm }}" style="margin-left:auto;height:28px;padding:0 11px;border:1px solid #dfe2ea;border-radius:7px;background:#fff;font-size:12px;color:#384152;cursor:pointer;font-family:inherit">+ Норма</button>
+                  </div>
+                  <div style="font-size:11.5px;color:#8a93a3;margin-bottom:12px">На дату расчёта выбирается норма из действующего периода. Активная на сегодня — подсвечена и используется как N в формуле.</div>
+                  <div style="display:grid;grid-template-columns:120px 1fr 1fr 90px 30px;gap:10px;padding:0 2px 7px;font-size:10.5px;font-weight:700;color:#aab1c0;text-transform:uppercase;letter-spacing:.03em">
+                    <span>Норма, чел.-дн.</span><span>Дата начала</span><span>Дата окончания</span><span>Статус</span><span></span>
+                  </div>
+                  <sc-for list="{{ lgCur.norms }}" as="n" hint-placeholder-count="2">
+                    <div style="display:grid;grid-template-columns:120px 1fr 1fr 90px 30px;gap:10px;align-items:center;padding:7px 2px;border-top:1px solid #f0f1f5;background:{{ n.rowBg }};border-radius:7px">
+                      <input type="number" step="0.01" min="0" value="{{ n.value }}" onInput="{{ n.valInput }}" class="mono" style="height:30px;border:1px solid #dfe2ea;border-radius:7px;padding:0 9px;font-size:13px;font-weight:700;color:#1d2435;font-family:'JetBrains Mono',monospace;text-align:right" />
+                      <input type="text" value="{{ n.from }}" onInput="{{ n.fromInput }}" class="mono" style="height:30px;border:1px solid #dfe2ea;border-radius:7px;padding:0 9px;font-size:12.5px;color:#3a4252;font-family:'JetBrains Mono',monospace" />
+                      <input type="text" value="{{ n.to }}" placeholder="до отмены" onInput="{{ n.toInput }}" class="mono" style="height:30px;border:1px solid #dfe2ea;border-radius:7px;padding:0 9px;font-size:12.5px;color:#3a4252;font-family:'JetBrains Mono',monospace" />
+                      <span style="display:inline-flex;align-items:center;height:21px;padding:0 8px;border-radius:6px;background:{{ n.badgeBg }};color:{{ n.badgeFg }};font-size:10.5px;font-weight:700">{{ n.badge }}</span>
+                      <span onClick="{{ n.remove }}" class="rw" style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;color:#c2554c;cursor:pointer;font-size:13px">✕</span>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <!-- УСЛОВИЯ ПОЯВЛЕНИЯ (триггеры без оператора) -->
+                <div style="background:#fff;border:1px solid #e6e8ee;border-radius:12px;padding:15px 17px;margin-bottom:12px">
+                  <div style="display:flex;align-items:center;gap:9px;margin-bottom:11px;flex-wrap:wrap">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#cf7a2a" stroke-width="2"><path d="m13 2-3 7h4l-3 7"/><circle cx="12" cy="12" r="10"/></svg>
+                    <span style="font-size:13.5px;font-weight:700;color:#1d2435">Условия появления работы</span>
+                    <button onClick="{{ lgCur.toggleTrigPicker }}" style="margin-left:auto;height:28px;padding:0 10px;border:1px solid #dfe2ea;border-radius:7px;background:#fff;font-size:12px;color:#384152;cursor:pointer;font-family:inherit">+ Параметр-триггер</button>
+                  </div>
+                  <!-- статус-плашка -->
+                  <div style="display:flex;align-items:center;gap:11px;border-radius:10px;padding:11px 13px;margin-bottom:12px;background:{{ lgCur.statusBg }};border:1px solid {{ lgCur.statusBd }}">
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:{{ lgCur.statusIconBg }};color:#fff;font-size:14px;font-weight:700">{{ lgCur.statusIcon }}</span>
+                    <div style="flex:1">
+                      <div style="font-size:13px;font-weight:700;color:{{ lgCur.statusFg }}">{{ lgCur.statusTitle }}</div>
+                      <div style="font-size:11.5px;color:#6b7484;margin-top:1px">{{ lgCur.statusSub }}</div>
+                    </div>
+                  </div>
+                  <sc-if value="{{ lgCur.trigPickerOpen }}" hint-placeholder-val="{{ true }}">
+                    <div style="border:1px solid #e1e9f6;background:#f6f9fe;border-radius:10px;padding:10px 11px;margin-bottom:12px">
+                      <div style="font-size:11px;font-weight:700;color:#2f6bd8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Параметр компонента «{{ lgCur.compShort }}»</div>
+                      <div style="display:flex;flex-wrap:wrap;gap:6px;max-height:140px;overflow-y:auto">
+                        <sc-for list="{{ lgCur.trigPickItems }}" as="i" hint-placeholder-count="4">
+                          <span onClick="{{ i.add }}" class="rw" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #dfe2ea;background:#fff;border-radius:8px;font-size:12px;color:#3a4252;cursor:pointer">{{ i.label }}<span style="font-size:10px;color:#aab1c0">{{ i.typeLabel }}</span></span>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ lgCur.hasTrig }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;flex-direction:column;gap:10px">
+                    <sc-for list="{{ lgCur.triggers }}" as="t" hint-placeholder-count="1">
+                      <div style="border:1px solid #f0e3d2;background:#fdf8f1;border-radius:11px;padding:11px 12px">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">
+                          <span style="font-size:12.5px;color:#1d2435;font-weight:700;line-height:1.25;flex:1">{{ t.pLabel }}</span>
+                          <span onClick="{{ t.remove }}" class="rw" style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;color:#c2554c;cursor:pointer;font-size:13px">✕</span>
+                        </div>
+                        <div style="font-size:11px;color:#9a7b52;margin-bottom:7px">Работа появляется, если ответ — одно из выбранных значений:</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px">
+                          <sc-for list="{{ t.chips }}" as="c" hint-placeholder-count="3">
+                            <span onClick="{{ c.toggle }}" class="rw" style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:{{ c.w }};background:{{ c.bg }};color:{{ c.fg }};border:1px solid {{ c.bd }}"><span style="font-size:12px">{{ c.mark }}</span>{{ c.v }}</span>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-for>
+                    <div style="font-size:11px;color:#8a93a3;padding:2px">Несколько параметров-триггеров объединяются по <b>И</b> — работа появляется, когда выполнены все.</div>
+                  </div>
+                  </sc-if>
+                </div>
+
+                <!-- ПАРАМЕТРЫ ТРУДОЁМКОСТИ -->
+                <div style="background:#fff;border:1px solid #e6e8ee;border-radius:12px;padding:15px 17px;margin-bottom:12px">
+                  <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;flex-wrap:wrap">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1f8a4d" stroke-width="2"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+                    <span style="font-size:13.5px;font-weight:700;color:#1d2435">Параметры трудоёмкости</span>
+                    <button onClick="{{ lgCur.toggleLaborPicker }}" style="margin-left:auto;height:28px;padding:0 10px;border:1px solid #dfe2ea;border-radius:7px;background:#fff;font-size:12px;color:#384152;cursor:pointer;font-family:inherit">+ Параметр</button>
+                  </div>
+                  <div style="font-size:11.5px;color:#8a93a3;margin-bottom:12px">Коэффициенты в разрезе стрима «{{ lgCur.curStream }}». Редактируются по каждому значению; используются в формуле как множители.</div>
+                  <sc-if value="{{ lgCur.laborPickerOpen }}" hint-placeholder-val="{{ true }}">
+                    <div style="border:1px solid #cfe9d8;background:#f4faf6;border-radius:10px;padding:10px 11px;margin-bottom:12px">
+                      <div style="font-size:11px;font-weight:700;color:#1f8a4d;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Справочный параметр компонента</div>
+                      <div style="display:flex;flex-wrap:wrap;gap:6px;max-height:140px;overflow-y:auto">
+                        <sc-for list="{{ lgCur.laborPickItems }}" as="i" hint-placeholder-count="4">
+                          <span onClick="{{ i.add }}" class="rw" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #dfe2ea;background:#fff;border-radius:8px;font-size:12px;color:#3a4252;cursor:pointer">{{ i.label }}</span>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ lgCur.hasLabor }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;flex-direction:column;gap:11px">
+                    <sc-for list="{{ lgCur.labor }}" as="l" hint-placeholder-count="2">
+                      <div style="border:1px solid #eef0f4;border-radius:10px;padding:11px 12px">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                          <span class="mono" style="display:inline-flex;align-items:center;height:19px;padding:0 7px;border-radius:5px;background:#eef4ff;color:#2f6bd8;font-size:10.5px;font-weight:700">{{ l.code }}</span>
+                          <span style="flex:1;font-size:12.5px;font-weight:600;color:#3a4252">{{ l.label }}</span>
+                          <span onClick="{{ l.remove }}" class="rw" style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;color:#c2554c;cursor:pointer;font-size:13px">✕</span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:5px">
+                          <sc-for list="{{ l.rows }}" as="r" hint-placeholder-count="3">
+                            <div onClick="{{ r.select }}" class="rw" style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:8px;cursor:pointer;background:{{ r.rowBg }}">
+                              <span style="width:7px;height:7px;border-radius:50%;background:{{ r.dot }}"></span>
+                              <span style="flex:1;font-size:12px;color:#3a4252">{{ r.v }}</span>
+                              <span style="font-size:11px;color:#aab1c0">коэф.</span>
+                              <input type="number" step="0.05" value="{{ r.coef }}" onInput="{{ r.coefInput }}" onClick="{{ r.stop }}" class="mono" style="width:68px;height:28px;border:1px solid #dfe2ea;border-radius:7px;padding:0 8px;font-size:12.5px;font-weight:700;color:#1f8a4d;font-family:'JetBrains Mono',monospace;text-align:right" />
+                            </div>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  </sc-if>
+                  <sc-if value="{{ lgCur.noLabor }}" hint-placeholder-val="{{ true }}">
+                    <div style="font-size:12.5px;color:#8a93a3">Параметры трудоёмкости не заданы — норма используется как есть.</div>
+                  </sc-if>
+                </div>
+
+                <!-- КАЛЬКУЛЯТОР ФОРМУЛЫ (единый: операнды + работа + округление-обёртка) -->
+                <div style="background:#fff;border:1px solid #e6e8ee;border-radius:12px;padding:15px 17px;margin-bottom:12px">
+                  <div style="display:flex;align-items:center;gap:9px;margin-bottom:11px;flex-wrap:wrap">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2f6bd8" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
+                    <span style="font-size:13.5px;font-weight:700;color:#1d2435">Калькулятор формулы</span>
+                    <span style="display:inline-flex;align-items:center;height:20px;padding:0 9px;border-radius:6px;background:#eef4ff;color:#2f6bd8;font-size:11px;font-weight:700">{{ lgCur.kindLabel }}</span>
+                    <div style="margin-left:auto;display:flex;background:#f1f3f7;border:1px solid #e6e8ee;border-radius:8px;padding:2px;gap:2px">
+                      <span onClick="{{ lgCur.fmVisual }}" class="seg" style="padding:4px 10px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;color:{{ lgCur.fmVisFg }};background:{{ lgCur.fmVisBg }}">Визуально</span>
+                      <span onClick="{{ lgCur.fmManual }}" class="seg" style="padding:4px 10px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;color:{{ lgCur.fmManFg }};background:{{ lgCur.fmManBg }}">Вручную</span>
+                    </div>
+                  </div>
+
+                  <sc-if value="{{ lgCur.fmIsVisual }}" hint-placeholder-val="{{ true }}">
+                  <div>
+                    <!-- выражение в обёртке округления -->
+                    <div style="display:flex;align-items:stretch;gap:0;background:#f8fafc;border:1px solid #eef0f4;border-radius:10px;padding:0;margin-bottom:10px;overflow:hidden">
+                      <div onClick="{{ lgCur.cycleRound }}" class="gb" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0 12px;background:#eef2f8;border-right:1px solid #e3e7ef;cursor:pointer;min-width:62px">
+                        <span class="mono" style="font-size:20px;font-weight:700;color:#5b6577;line-height:1">{{ lgCur.roundOpen }}</span>
+                        <span style="font-size:9px;color:#8a93a3">{{ lgCur.roundTag }}</span>
+                      </div>
+                      <div style="flex:1;display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:13px">
+                        <sc-for list="{{ lgCur.tokens }}" as="t" hint-placeholder-count="3">
+                          <sc-if value="{{ t.isOp }}" hint-placeholder-val="{{ true }}">
+                            <span onClick="{{ t.cycle }}" class="mono rw" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;background:#1c2333;color:#fff;font-size:15px;font-weight:700;cursor:pointer">{{ t.op }}</span>
+                          </sc-if>
+                          <sc-if value="{{ t.isParen }}" hint-placeholder-val="{{ true }}">
+                            <span onClick="{{ t.remove }}" class="mono rw" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:30px;border-radius:7px;background:#fff;border:1px solid #d7c4a0;color:#b5791f;font-size:18px;font-weight:700;cursor:pointer">{{ t.paren }}</span>
+                          </sc-if>
+                          <sc-if value="{{ t.isOperand }}" hint-placeholder-val="{{ true }}">
+                            <span onClick="{{ t.remove }}" class="rw" style="display:inline-flex;flex-direction:column;gap:1px;padding:6px 10px;border-radius:9px;background:{{ t.chipBg }};border:1px solid {{ t.chipBd }};cursor:pointer">
+                              <span style="font-size:12px;font-weight:600;color:{{ t.chipFg }};line-height:1.15">{{ t.main }}</span>
+                              <span class="mono" style="font-size:10px;color:{{ t.subFg }}">{{ t.sub }}</span>
+                            </span>
+                          </sc-if>
+                        </sc-for>
+                        <span onClick="{{ lgCur.cycleRound }}" class="mono gb" style="display:inline-flex;align-items:center;height:30px;padding:0 6px;color:#9aa2b1;font-size:18px;cursor:pointer;margin-left:auto">{{ lgCur.roundClose }}</span>
+                      </div>
+                    </div>
+                    <!-- округление: режим + шаг (инлайн под выражением) -->
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+                      <span style="font-size:11px;color:#8a93a3">Округление результата:</span>
+                      <div style="display:flex;background:#f1f3f7;border:1px solid #e6e8ee;border-radius:8px;padding:2px;gap:2px">
+                        <sc-for list="{{ lgCur.roundModes }}" as="m" hint-placeholder-count="4">
+                          <span onClick="{{ m.set }}" class="seg" style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;color:{{ m.fg }};background:{{ m.bg }}">{{ m.label }}</span>
+                        </sc-for>
+                      </div>
+                      <sc-if value="{{ lgCur.roundStepOn }}" hint-placeholder-val="{{ true }}">
+                        <span style="font-size:11px;color:#8a93a3">шаг</span>
+                        <input type="number" step="0.05" min="0" value="{{ lgCur.roundStep }}" onInput="{{ lgCur.roundStepInput }}" class="mono" style="width:70px;height:28px;border:1px solid #dfe2ea;border-radius:7px;padding:0 8px;font-size:12px;color:#1d2435;font-family:'JetBrains Mono',monospace;text-align:right" />
+                      </sc-if>
+                    </div>
+                    <!-- палитра операндов -->
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">
+                      <span style="font-size:11px;color:#8a93a3;align-self:center">Добавить:</span>
+                      <span onClick="{{ lgCur.insN }}" class="rw" style="display:inline-flex;align-items:center;height:27px;padding:0 10px;border:1px solid #dfe2ea;background:#fff;border-radius:7px;font-size:11.5px;color:#3a4252;cursor:pointer">Норма N</span>
+                      <span onClick="{{ lgCur.insCoef }}" class="rw" style="display:inline-flex;align-items:center;height:27px;padding:0 10px;border:1px solid #cfe9d8;background:#f4faf6;border-radius:7px;font-size:11.5px;color:#1f8a4d;cursor:pointer">коэф. параметра ▾</span>
+                      <span onClick="{{ lgCur.insWork }}" class="rw" style="display:inline-flex;align-items:center;height:27px;padding:0 10px;border:1px solid #e3d9f6;background:#faf6ff;border-radius:7px;font-size:11.5px;color:#7c5cd6;cursor:pointer">значение работы ▾</span>
+                      <span onClick="{{ lgCur.insNum }}" class="rw" style="display:inline-flex;align-items:center;height:27px;padding:0 10px;border:1px solid #dfe2ea;background:#fff;border-radius:7px;font-size:11.5px;color:#3a4252;cursor:pointer">число</span>
+                      <span onClick="{{ lgCur.insOp }}" class="rw mono" style="display:inline-flex;align-items:center;height:27px;padding:0 11px;border:1px solid #dfe2ea;background:#fff;border-radius:7px;font-size:13px;color:#1c2333;cursor:pointer">× оператор</span>
+                      <span onClick="{{ lgCur.insLp }}" class="rw mono" style="display:inline-flex;align-items:center;height:27px;padding:0 11px;border:1px solid #d7c4a0;background:#fff;border-radius:7px;font-size:14px;color:#b5791f;cursor:pointer">(</span>
+                      <span onClick="{{ lgCur.insRp }}" class="rw mono" style="display:inline-flex;align-items:center;height:27px;padding:0 11px;border:1px solid #d7c4a0;background:#fff;border-radius:7px;font-size:14px;color:#b5791f;cursor:pointer">)</span>
+                      <span onClick="{{ lgCur.fmClear }}" class="rw" style="display:inline-flex;align-items:center;height:27px;padding:0 10px;border:1px solid #f0d6d3;background:#fff;border-radius:7px;font-size:11.5px;color:#c2554c;cursor:pointer">очистить</span>
+                    </div>
+                    <!-- меню: коэффициент параметра -->
+                    <sc-if value="{{ lgCur.coefMenuOpen }}" hint-placeholder-val="{{ true }}">
+                      <div style="border:1px solid #cfe9d8;background:#f4faf6;border-radius:10px;padding:10px 11px;margin-bottom:6px">
+                        <div style="font-size:11px;font-weight:700;color:#1f8a4d;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Вставить коэффициент параметра</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px">
+                          <sc-for list="{{ lgCur.coefMenu }}" as="i" hint-placeholder-count="2">
+                            <span onClick="{{ i.add }}" class="rw" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #dfe2ea;background:#fff;border-radius:8px;font-size:12px;color:#3a4252;cursor:pointer"><span class="mono" style="font-size:10.5px;color:#2f6bd8">{{ i.code }}</span>{{ i.label }}</span>
+                          </sc-for>
+                          <sc-if value="{{ lgCur.coefMenuEmpty }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px;color:#aab1c0">Сначала добавьте параметр трудоёмкости</span></sc-if>
+                        </div>
+                      </div>
+                    </sc-if>
+                    <!-- меню: значение работы (транзитив) -->
+                    <sc-if value="{{ lgCur.workMenuOpen }}" hint-placeholder-val="{{ true }}">
+                      <div style="border:1px solid #e3d9f6;background:#faf6ff;border-radius:10px;padding:10px 11px;margin-bottom:6px">
+                        <div style="font-size:11px;font-weight:700;color:#7c5cd6;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Сослаться на значение другой работы (транзитивно)</div>
+                        <input type="text" value="{{ lgCur.refQuery }}" onInput="{{ lgCur.refSearch }}" placeholder="поиск работы…" style="width:100%;height:32px;border:1px solid #dfe2ea;border-radius:8px;padding:0 11px;font-size:12.5px;color:#1d2435;box-sizing:border-box;margin-bottom:9px" />
+                        <div style="display:flex;flex-direction:column;gap:3px;max-height:180px;overflow-y:auto">
+                          <sc-for list="{{ lgCur.refList }}" as="i" hint-placeholder-count="5">
+                            <span onClick="{{ i.pick }}" class="rw" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;cursor:pointer">
+                              <span style="width:7px;height:7px;border-radius:2px;background:{{ i.color }}"></span>
+                              <span style="flex:1;font-size:12px;color:#28303f">{{ i.name }}</span>
+                              <span style="font-size:10.5px;color:#aab1c0">{{ i.comp }}</span>
+                            </span>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ lgCur.isPureTransitive }}" hint-placeholder-val="{{ true }}">
+                      <div style="font-size:11px;color:#7c5cd6;background:#faf6ff;border:1px solid #ece4f8;border-radius:8px;padding:8px 11px">Чистая транзитивная формула: значение целиком копируется из выбранной работы. Норма и коэффициенты не влияют. Циклы запрещены.</div>
+                    </sc-if>
+                  </div>
+                  </sc-if>
+
+                  <sc-if value="{{ lgCur.fmIsManual }}" hint-placeholder-val="{{ true }}">
+                  <div>
+                    <input type="text" value="{{ lgCur.manualText }}" onChange="{{ lgCur.manualApply }}" placeholder="напр. N × P[Сложность] × ( 1 + 0.5 )" style="width:100%;height:40px;border:1px solid {{ lgCur.manualBd }};border-radius:9px;padding:0 13px;font-size:14px;color:#1d2435;font-family:'JetBrains Mono',monospace;box-sizing:border-box" />
+                    <div style="font-size:11px;color:#8a93a3;margin-top:8px;line-height:1.6"><b>N</b> — норма · <b>P[Имя]</b> или <b>k1…kn</b> — коэффициенты · <b>[Работа: Имя]</b> — значение другой работы · операторы <b class="mono">× ÷ + −</b> · скобки <b class="mono">( )</b>.<sc-for list="{{ lgCur.legend }}" as="g" hint-placeholder-count="2"><br /><span class="mono" style="color:#2f6bd8">{{ g.code }}</span> = {{ g.label }}</sc-for></div>
+                    <sc-if value="{{ lgCur.manualError }}" hint-placeholder-val="{{ true }}"><div style="margin-top:8px;font-size:11.5px;color:#c2554c">⚠ {{ lgCur.manualErrText }}</div></sc-if>
+                  </div>
+                  </sc-if>
+
+                  <!-- результат -->
+                  <div style="display:flex;align-items:center;gap:14px;background:#1c2333;border-radius:11px;padding:14px 18px;flex-wrap:wrap;margin-top:12px">
+                    <div class="mono" style="font-size:12.5px;color:#9aa6bd;line-height:1.7;flex:1;min-width:230px">
+                      <div>{{ lgCur.substLine }}</div>
+                      <div>= {{ lgCur.raw }} <span style="color:#6b7589">→ {{ lgCur.roundLabel }}</span></div>
+                    </div>
+                    <div style="margin-left:auto;font-size:28px;font-weight:800;color:#fff">{{ lgCur.value }} <span style="font-size:12px;font-weight:600;color:#9aa6bd">чел.-дн.</span></div>
+                  </div>
+                  <sc-if value="{{ lgCur.hasAnswers }}" hint-placeholder-val="{{ true }}">
+                  <div style="background:#f4f7fc;border:1px solid #e1e9f6;border-radius:10px;padding:11px 13px;margin-top:10px">
+                    <div style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#7e93b8;margin-bottom:9px">Подставить ответы анкеты (предпросмотр)</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:14px">
+                      <sc-for list="{{ lgAnswers }}" as="a" hint-placeholder-count="2">
+                        <div style="min-width:150px">
+                          <div style="font-size:11.5px;color:#5b6577;margin-bottom:5px">{{ a.label }}</div>
+                          <div style="display:flex;flex-wrap:wrap;gap:4px">
+                            <sc-for list="{{ a.opts }}" as="o" hint-placeholder-count="2">
+                              <span onClick="{{ o.set }}" style="display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:7px;font-size:11px;cursor:pointer;background:{{ o.bg }};color:{{ o.fg }};border:1px solid {{ o.bd }};font-weight:{{ o.w }}">{{ o.t }}</span>
+                            </sc-for>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                  </sc-if>
+                  <sc-if value="{{ lgCur.normMissing }}" hint-placeholder-val="{{ true }}">
+                    <div style="margin-top:10px;font-size:11.5px;color:#c2554c">⚠ На текущую дату не задана действующая норма для стрима «{{ lgCur.curStream }}».</div>
+                  </sc-if>
+                </div>
+                  </div>
+                </div>
+                </sc-if>
+              </sc-if>
+
+              <!-- ===== ВИД: МАТРИЦА ===== -->
+              <sc-if value="{{ wv.isMatrix }}" hint-placeholder-val="{{ true }}">
+                <div style="height:100%;overflow:auto;padding:16px 18px">
+                  <div style="font-size:12px;color:#6b7484;margin-bottom:12px">Строки — типовые работы справочника, столбцы — стримы. В ячейке норматив на сегодня и статус условий; пустая ячейка — назначить работу на стрим.</div>
+                  <div style="display:inline-block;min-width:100%;border:1px solid #e6e8ee;border-radius:12px;overflow:hidden;background:#fff">
+                    <div style="display:flex;background:#f6f8fb;border-bottom:1px solid #e6e8ee">
+                      <div style="width:280px;flex-shrink:0;padding:10px 14px;font-size:11px;font-weight:700;color:#8a93a3;text-transform:uppercase;letter-spacing:.03em;border-right:1px solid #eef0f4">Типовая работа</div>
+                      <sc-for list="{{ mx.streams }}" as="s" hint-placeholder-count="5">
+                        <div style="width:108px;flex-shrink:0;padding:10px 8px;text-align:center;border-right:1px solid #eef0f4">
+                          <span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;color:#5b6577;line-height:1.2"><span style="width:7px;height:7px;border-radius:2px;background:{{ s.dot }};flex-shrink:0"></span>{{ s.short }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <sc-for list="{{ mx.rows }}" as="r" hint-placeholder-count="8">
+                      <div class="rw" style="display:flex;border-bottom:1px solid #f3f4f8">
+                        <div style="width:280px;flex-shrink:0;padding:9px 14px;border-right:1px solid #eef0f4">
+                          <div style="font-size:12px;color:#28303f;line-height:1.3">{{ r.name }}</div>
+                          <div style="display:flex;align-items:center;gap:5px;margin-top:3px"><span style="width:6px;height:6px;border-radius:2px;background:{{ r.compColor }}"></span><span style="font-size:10px;color:#aab1c0">{{ r.comp }}</span></div>
+                        </div>
+                        <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="5">
+                          <div style="width:108px;flex-shrink:0;border-right:1px solid #eef0f4;display:flex;align-items:center;justify-content:center;padding:6px">
+                            <sc-if value="{{ c.on }}" hint-placeholder-val="{{ true }}">
+                              <span onClick="{{ c.open }}" class="rw" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:8px;background:{{ c.bg }};border:1px solid #e6e8ee;cursor:pointer"><span style="width:7px;height:7px;border-radius:50%;background:{{ c.dot }}"></span><span class="mono" style="font-size:12px;font-weight:700;color:#1d2435">{{ c.value }}</span></span>
+                            </sc-if>
+                            <sc-if value="{{ c.off }}" hint-placeholder-val="{{ true }}">
+                              <span onClick="{{ c.assign }}" class="rw" style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:1px dashed #d2d7e0;color:#b3bac6;cursor:pointer;font-size:15px">+</span>
+                            </sc-if>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+
+              <!-- ===== ВИД: СПРАВОЧНИК ===== -->
+              <sc-if value="{{ wv.isCatalog }}" hint-placeholder-val="{{ true }}">
+                <div style="height:100%;overflow-y:auto;padding:16px 20px 30px">
+                  <div style="display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-bottom:14px">
+                    <div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid #dfe2ea;border-radius:9px;background:#fff;flex:1;max-width:360px">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#aab1c0" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                      <input type="text" value="{{ cat.query }}" onInput="{{ cat.search }}" placeholder="Поиск типовой работы…" style="flex:1;border:none;outline:none;font-size:13px;color:#1d2435;background:transparent" />
+                    </div>
+                    <div style="font-size:12px;color:#8a93a3"><b style="color:#1d2435">{{ cat.count }}</b> работ в справочнике</div>
+                    <button onClick="{{ addWork.open2 }}" style="margin-left:auto;height:36px;padding:0 15px;border:none;border-radius:9px;background:#1c2333;color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">+ Новая работа</button>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+                    <sc-for list="{{ cat.comps }}" as="c" hint-placeholder-count="4">
+                      <span onClick="{{ c.set }}" class="seg" style="display:inline-flex;align-items:center;height:28px;padding:0 11px;border-radius:8px;font-size:11.5px;cursor:pointer;font-weight:600;background:{{ c.on ? '#1c2333' : '#fff' }};color:{{ c.on ? '#fff' : '#5b6577' }};border:1px solid {{ c.on ? '#1c2333' : '#dfe2ea' }}">{{ c.name }}</span>
+                    </sc-for>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px">
+                    <sc-for list="{{ cat.rows }}" as="w" hint-placeholder-count="6">
+                      <div style="background:#fff;border:1px solid #e6e8ee;border-radius:12px;padding:14px 15px;display:flex;flex-direction:column;gap:9px">
+                        <div style="display:flex;align-items:flex-start;gap:8px">
+                          <span style="font-size:13.5px;font-weight:700;color:#1d2435;line-height:1.3;flex:1">{{ w.name }}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+                          <span style="display:inline-flex;align-items:center;gap:6px;height:21px;padding:0 9px;border-radius:6px;background:{{ w.compColor }}1f;color:{{ w.compColor }};font-size:10.5px;font-weight:700"><span style="width:6px;height:6px;border-radius:2px;background:{{ w.compColor }}"></span>{{ w.comp }}</span>
+                          <span style="display:inline-flex;align-items:center;height:21px;padding:0 9px;border-radius:6px;background:{{ w.asnBg }};color:{{ w.asnFg }};font-size:10.5px;font-weight:600">{{ w.asnText }}</span>
+                        </div>
+                        <div style="font-size:11.5px;color:#8a93a3;line-height:1.45;min-height:16px">{{ w.desc }}</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:5px">
+                          <sc-for list="{{ w.streams }}" as="s" hint-placeholder-count="2">
+                            <span style="display:inline-flex;align-items:center;gap:5px;height:19px;padding:0 7px;border-radius:5px;background:#f1f3f7;font-size:10px;color:#5b6577"><span style="width:5px;height:5px;border-radius:2px;background:{{ s.dot }}"></span>{{ s.name }}</span>
+                          </sc-for>
+                        </div>
+                        <button onClick="{{ w.assign }}" style="margin-top:2px;height:32px;border:1px solid #dfe2ea;border-radius:8px;background:#fff;font-size:12px;color:#384152;cursor:pointer;font-family:inherit;font-weight:600">Назначить на стрим →</button>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+
+            </div>
+
+            <!-- ===== МОДАЛКА: ДОБАВИТЬ ИЗ СПРАВОЧНИКА ===== -->
+            <sc-if value="{{ addCat.open }}" hint-placeholder-val="{{ true }}">
+              <div onClick="{{ addCat.cancel }}" style="position:fixed;inset:0;z-index:80;background:rgba(20,28,46,.4);display:flex;align-items:center;justify-content:center;padding:24px">
+                <div onClick="{{ addCat.stop }}" style="width:640px;max-width:100%;max-height:86vh;background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.3);display:flex;flex-direction:column;overflow:hidden">
+                  <div style="padding:17px 20px;border-bottom:1px solid #eef0f4">
+                    <div style="font-size:16px;font-weight:800;color:#1d2435">Добавить работы из справочника</div>
+                    <div style="font-size:12px;color:#8a93a3;margin-top:3px">Назначить на: <b style="color:#3a4252">{{ addCat.scopeLabel }}</b></div>
+                  </div>
+                  <div style="padding:14px 20px 8px;display:flex;gap:9px;flex-wrap:wrap;align-items:center">
+                    <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 11px;border:1px solid #dfe2ea;border-radius:8px;flex:1;min-width:200px">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aab1c0" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                      <input type="text" value="{{ addCat.query }}" onInput="{{ addCat.search }}" placeholder="Поиск работы…" style="flex:1;border:none;outline:none;font-size:13px;color:#1d2435;background:transparent" />
+                    </div>
+                  </div>
+                  <div style="padding:0 20px 8px;display:flex;flex-wrap:wrap;gap:6px">
+                    <sc-for list="{{ addCat.comps }}" as="c" hint-placeholder-count="4">
+                      <span onClick="{{ c.set }}" class="seg" style="display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;background:{{ c.on ? '#eef4ff' : '#fff' }};color:{{ c.on ? '#2f6bd8' : '#5b6577' }};border:1px solid {{ c.on ? '#bcd3f5' : '#dfe2ea' }}">{{ c.name }}</span>
+                    </sc-for>
+                  </div>
+                  <div style="flex:1;overflow-y:auto;padding:6px 14px 14px">
+                    <sc-for list="{{ addCat.items }}" as="i" hint-placeholder-count="6">
+                      <div onClick="{{ i.add }}" class="rw" style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;cursor:pointer;border:1px solid #f0f1f5;margin-bottom:6px">
+                        <div style="flex:1;min-width:0">
+                          <div style="font-size:13px;color:#1d2435;font-weight:600;line-height:1.3">{{ i.name }}</div>
+                          <div style="display:flex;align-items:center;gap:7px;margin-top:4px"><span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:#5b6577"><span style="width:6px;height:6px;border-radius:2px;background:{{ i.compColor }}"></span>{{ i.comp }}</span><span style="font-size:10.5px;color:#aab1c0">· {{ i.asnText }}</span></div>
+                        </div>
+                        <span style="display:inline-flex;align-items:center;justify-content:center;height:30px;padding:0 13px;border-radius:8px;background:#eef4ff;color:#2f6bd8;font-size:12px;font-weight:700">Назначить</span>
+                      </div>
+                    </sc-for>
+                    <sc-if value="{{ addCat.empty }}" hint-placeholder-val="{{ true }}">
+                      <div style="text-align:center;padding:30px 10px;color:#aab1c0;font-size:13px">Все подходящие работы уже назначены. <span onClick="{{ addCat.openNew }}" style="color:#2f6bd8;cursor:pointer;font-weight:600">Создать новую работу</span></div>
+                    </sc-if>
+                  </div>
+                  <div style="padding:13px 20px;border-top:1px solid #eef0f4;display:flex;align-items:center;gap:10px">
+                    <button onClick="{{ addCat.openNew }}" style="height:36px;padding:0 14px;border:1px solid #dfe2ea;border-radius:8px;background:#fff;font-size:12.5px;color:#384152;cursor:pointer;font-family:inherit">+ Создать новую работу</button>
+                    <button onClick="{{ addCat.cancel }}" style="margin-left:auto;height:36px;padding:0 16px;border:1px solid #dfe2ea;border-radius:8px;background:#fff;font-size:13px;color:#384152;cursor:pointer;font-family:inherit">Закрыть</button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+          </sc-if>
+
+          <!-- ===== MODE: ЗАВИСИМОСТИ ПАРАМЕТРОВ ===== -->
+          <sc-if value="{{ showLogicDeps }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;height:100%">
+
+            <!-- LEFT: список полей -->
+            <div style="width:290px;flex-shrink:0;border-right:1px solid #e6e8ee;background:#fff;display:flex;flex-direction:column">
+              <div style="padding:12px 15px;border-bottom:1px solid #eef0f4">
+                <div style="font-size:13px;font-weight:700;color:#1d2435">Параметры схемы</div>
+                <div style="font-size:11.5px;color:#8a93a3;margin-top:3px">{{ depCount }} полей · {{ depDepCount }} зависимых</div>
+              </div>
+              <div style="flex:1;overflow-y:auto;padding:8px">
+                <sc-for list="{{ depFields }}" as="f" hint-placeholder-count="6">
+                  <div class="rw" onClick="{{ f.select }}" style="padding:9px 11px;margin:2px 0;border-radius:9px;cursor:pointer;background:{{ f.bg }};border:1px solid {{ f.bd }}">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="flex:1;font-size:12.5px;color:#28303f;line-height:1.3">{{ f.label }}</span>
+                      <sc-if value="{{ f.isDep }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:5px;background:#eef4ff;color:#2f6bd8;font-size:10px;font-weight:700;flex-shrink:0">зависимое</span></sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <!-- RIGHT: редактор + предпросмотр -->
+            <div style="flex:1;overflow-y:auto;padding:18px 20px 30px;min-width:0">
+              <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start">
+
+                <div style="flex:1 1 360px;min-width:310px">
+                  <div style="font-size:11.5px;color:#8a93a3;margin-bottom:3px">Поле анкеты</div>
+                  <div style="font-size:18px;font-weight:800;color:#1d2435;margin-bottom:16px">{{ depSel.label }}</div>
+                  <sc-if value="{{ depSel.isDep }}" hint-placeholder-val="{{ true }}">
+                  <div style="background:#fff;border:1px solid #e6e8ee;border-radius:12px;padding:16px 18px;margin-bottom:14px">
+                    <div style="font-size:13.5px;font-weight:700;color:#1d2435;margin-bottom:5px">Показывать поле, когда выполнены ВСЕ условия</div>
+                    <div style="font-size:11.5px;color:#8a93a3;margin-bottom:14px">Любое условие перестаёт выполняться — поле скрывается и не участвует в расчёте.</div>
+                    <sc-for list="{{ depSel.rules }}" as="r" hint-placeholder-count="1">
+                      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px">
+                        <span style="font-size:11px;color:#aab1c0;width:16px">{{ r.n }}</span>
+                        <span style="display:inline-flex;align-items:center;height:32px;padding:0 12px;border:1px solid #dfe2ea;background:#f6f8fb;border-radius:8px;font-size:12px;color:#1d2435;font-weight:600">{{ r.pLabel }}</span>
+                        <span style="display:inline-flex;align-items:center;height:32px;padding:0 11px;border:1px solid #e1e9f6;background:#eef4ff;border-radius:8px;font-size:13px;font-weight:700;color:#2f6bd8">{{ r.op }}</span>
+                        <span style="display:inline-flex;align-items:center;height:32px;padding:0 12px;border:1px solid #f0d9a8;background:#fdf3e0;border-radius:8px;font-size:12px;font-weight:600;color:#b5791f">{{ r.v }}</span>
+                        <span style="color:#c3c9d4;cursor:pointer;font-size:13px">✕</span>
+                      </div>
+                    </sc-for>
+                    <button style="margin-top:4px;height:34px;padding:0 13px;border:1px dashed #cfd6e2;border-radius:9px;background:#fff;font-size:12.5px;color:#5b6577;cursor:pointer;font-family:inherit">+ Добавить условие (И)</button>
+                  </div>
+                  </sc-if>
+                  <sc-if value="{{ depSel.noDep }}" hint-placeholder-val="{{ true }}">
+                  <div style="background:#fff;border:1px solid #e6e8ee;border-radius:12px;padding:16px 18px;margin-bottom:14px">
+                    <div style="font-size:13px;color:#6b7484;line-height:1.5">Поле показывается всегда. Добавьте условие, чтобы оно управлялось ответом на другой параметр.</div>
+                    <button style="margin-top:12px;height:34px;padding:0 13px;border:1px dashed #cfd6e2;border-radius:9px;background:#fff;font-size:12.5px;color:#5b6577;cursor:pointer;font-family:inherit">+ Сделать зависимым</button>
+                  </div>
+                  </sc-if>
+                  <div style="background:#f4f7fc;border:1px solid #e1e9f6;border-radius:11px;padding:13px 15px">
+                    <div style="font-size:12px;color:#3a4252;line-height:1.55">В JSON-схеме это <span class="mono" style="color:#2f6bd8">rules → showWhen</span>. Скрытое поле исключается и из формул трудоёмкости.</div>
+                  </div>
+                </div>
+
+                <div style="flex:1 1 300px;min-width:285px;background:#fafbfd;border:1px solid #e6e8ee;border-radius:12px;padding:15px 16px">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2f6bd8" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg>
+                    <span style="font-size:13px;font-weight:700;color:#1d2435">Предпросмотр · живой</span>
+                  </div>
+                  <div style="font-size:11.5px;color:#8a93a3;margin-bottom:13px;line-height:1.45">Отвечайте — зависимые поля появляются и скрываются. Видно {{ depVisibleCount }} из {{ depCount }}.</div>
+                  <sc-for list="{{ depPreview }}" as="f" hint-placeholder-count="5">
+                    <div style="background:#fff;border:1px solid {{ f.cardBd }};border-radius:10px;padding:11px 12px;margin-bottom:9px">
+                      <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+                        <span style="flex:1;font-size:12.5px;font-weight:600;color:#3a4252;line-height:1.3">{{ f.label }}</span>
+                        <sc-if value="{{ f.appeared }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;height:17px;padding:0 7px;border-radius:5px;background:#e7f6ec;color:#1f8a4d;font-size:9.5px;font-weight:700">появилось</span></sc-if>
+                      </div>
+                      <div style="display:flex;flex-wrap:wrap;gap:5px">
+                        <sc-for list="{{ f.opts }}" as="o" hint-placeholder-count="2">
+                          <span onClick="{{ o.set }}" style="display:inline-flex;align-items:center;height:25px;padding:0 9px;border-radius:7px;font-size:11.5px;cursor:pointer;background:{{ o.bg }};color:{{ o.fg }};border:1px solid {{ o.bd }};font-weight:{{ o.w }}">{{ o.t }}</span>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ depHasHidden }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px dashed #d8dde6;border-radius:10px;color:#aab1c0;font-size:11.5px">Скрыто полей: {{ depHiddenCount }} — условия не выполнены</div>
+                  </sc-if>
+                </div>
+
+              </div>
+            </div>
+          </div>
+          </sc-if>
+
+        </div>
+
+        <!-- ===== МОДАЛКА: ДОБАВИТЬ ТИПОВУЮ РАБОТУ ===== -->
+        <sc-if value="{{ addWork.open }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ addWork.cancel }}" style="position:absolute;inset:0;z-index:60;background:rgba(20,28,48,.42);display:flex;align-items:flex-start;justify-content:center;padding-top:64px">
+            <div onClick="{{ addWork.stop }}" style="width:560px;max-width:92%;background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.28);overflow:hidden">
+              <div style="display:flex;align-items:center;gap:10px;padding:17px 22px;border-bottom:1px solid #eef0f4">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d2435" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/></svg>
+                <span style="font-size:16px;font-weight:800;color:#1d2435">Новая типовая работа</span>
+                <span onClick="{{ addWork.cancel }}" class="rw" style="margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;color:#8a93a3;cursor:pointer;font-size:16px">✕</span>
+              </div>
+              <div style="padding:20px 22px;max-height:62vh;overflow-y:auto">
+                <label style="font-size:12px;font-weight:700;color:#5b6577;display:block;margin-bottom:6px">Название в смарт-анкете</label>
+                <input type="text" value="{{ addWork.name }}" onInput="{{ addWork.nameInput }}" placeholder="напр. Исследование источника / поиск данных" style="width:100%;height:40px;border:1px solid #dfe2ea;border-radius:9px;padding:0 13px;font-size:14px;color:#1d2435;box-sizing:border-box;margin-bottom:18px" />
+
+                <label style="font-size:12px;font-weight:700;color:#5b6577;display:block;margin-bottom:8px">Архитектурный компонент</label>
+                <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px">
+                  <sc-for list="{{ addWork.comps }}" as="c" hint-placeholder-count="4">
+                    <span onClick="{{ c.set }}" class="rw" style="display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:9px;cursor:pointer;font-size:12.5px;font-weight:600;background:{{ c.bg }};color:{{ c.fg }};border:1px solid {{ c.bd }}"><span style="width:8px;height:8px;border-radius:2px;background:{{ c.color }}"></span>{{ c.name }}</span>
+                  </sc-for>
+                </div>
+
+                <label style="font-size:12px;font-weight:700;color:#5b6577;display:block;margin-bottom:8px">Стрим-исполнитель</label>
+                <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px">
+                  <sc-for list="{{ addWork.streams }}" as="s" hint-placeholder-count="3">
+                    <span onClick="{{ s.set }}" class="rw" style="display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:{{ s.w }};background:{{ s.bg }};color:{{ s.fg }};border:1px solid {{ s.bd }}">{{ s.name }}</span>
+                  </sc-for>
+                </div>
+
+                <label style="font-size:12px;font-weight:700;color:#5b6577;display:block;margin-bottom:6px">Стартовый норматив, чел.-дн.</label>
+                <input type="number" step="0.1" min="0" value="{{ addWork.norm }}" onInput="{{ addWork.normInput }}" class="mono" style="width:140px;height:38px;border:1px solid #dfe2ea;border-radius:9px;padding:0 12px;font-size:14px;font-weight:700;color:#1d2435;font-family:'JetBrains Mono',monospace;text-align:right" />
+                <div style="font-size:11.5px;color:#8a93a3;margin-top:8px;line-height:1.5">Создаётся норма, действующая с текущей даты. Триггеры, параметры трудоёмкости и формулу можно задать в карточке после создания.</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:15px 22px;border-top:1px solid #eef0f4;background:#fafbfd">
+                <span style="font-size:11.5px;color:#8a93a3">Работа добавится в выбранный архитектурный компонент</span>
+                <button onClick="{{ addWork.cancel }}" style="margin-left:auto;height:38px;padding:0 16px;border:1px solid #dfe2ea;border-radius:9px;background:#fff;font-size:13px;color:#384152;cursor:pointer;font-family:inherit">Отмена</button>
+                <button onClick="{{ addWork.save }}" style="height:38px;padding:0 18px;border:none;border-radius:9px;background:{{ addWork.saveBg }};color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Создать работу</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+      </sc-if>
+
+<!-- ===== SCREEN: СЛОВАРИ ===== -->
+      <sc-if value="{{ isDicts }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;height:100%">
+        <!-- list -->
+        <div style="width:430px;flex-shrink:0;border-right:1px solid #e6e8ee;background:#fff;display:flex;flex-direction:column">
+          <div style="padding:14px 16px;border-bottom:1px solid #eef0f4;display:flex;gap:9px;align-items:center">
+            <div style="flex:1;display:flex;align-items:center;gap:8px;height:34px;padding:0 11px;border:1px solid #dfe2ea;border-radius:8px;color:#aab1c0;font-size:12.5px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>Поиск по коду, названию…
+            </div>
+            <button style="height:34px;padding:0 13px;border:none;border-radius:8px;background:#1c2333;color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">Создать</button>
+          </div>
+          <div style="padding:9px 16px;font-size:12px;color:#8a93a3;border-bottom:1px solid #f3f4f8"><b style="color:#1d2435">{{ dictCount }}</b> справочников</div>
+          <div style="flex:1;overflow-y:auto">
+            <sc-for list="{{ dictRows }}" as="d" hint-placeholder-count="8">
+              <div class="rw" onClick="{{ d.open }}" style="padding:10px 16px;border-bottom:1px solid #f3f4f8;cursor:pointer;background:{{ d.rowBg }}">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+                  <span class="mono" style="font-size:11.5px;color:#2f6bd8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">{{ d.code }}</span>
+                  <span style="display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:5px;background:{{ d.stBg }};color:{{ d.stFg }};border:1px solid {{ d.stBd }};font-size:10px;font-weight:600;flex-shrink:0">{{ d.status }}</span>
+                </div>
+                <div style="font-size:13px;color:#28303f">{{ d.name }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <!-- detail -->
+        <div style="flex:1;overflow-y:auto;padding:22px 26px;min-width:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+            <div style="font-size:19px;font-weight:800;color:#1d2435">{{ selDict.name }}</div>
+            <button style="height:34px;padding:0 14px;border:1px solid #dfe2ea;border-radius:8px;background:#fff;font-size:13px;color:#384152;cursor:pointer;font-family:inherit">Редактировать</button>
+          </div>
+          <div style="background:#fff;border:1px solid #e6e8ee;border-radius:12px;padding:17px 19px;margin-bottom:16px">
+            <label style="font-size:12px;color:#6b7484;display:block;margin-bottom:4px">Код</label>
+            <div class="mono" style="border:1px solid #dfe2ea;border-radius:8px;padding:9px 11px;font-size:12.5px;color:#2f6bd8;margin-bottom:5px">{{ selDict.code }}</div>
+            <div style="font-size:11px;color:#cf7a2a;margin-bottom:14px">Код меняется только при создании; по нему поле привязывается в uiSchema</div>
+            <label style="font-size:12px;color:#6b7484;display:block;margin-bottom:4px">Название</label>
+            <div style="border:1px solid #dfe2ea;border-radius:8px;padding:9px 11px;font-size:13.5px;color:#1d2435;margin-bottom:14px">{{ selDict.name }}</div>
+            <label style="font-size:12px;color:#6b7484;display:block;margin-bottom:4px">Описание</label>
+            <div style="border:1px solid #dfe2ea;border-radius:8px;padding:9px 11px;font-size:12.5px;color:#6b7484;min-height:42px">{{ selDict.desc }}</div>
+          </div>
+          <div style="background:#fff;border:1px solid #e6e8ee;border-radius:12px;padding:17px 19px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+              <span style="font-size:14px;font-weight:700;color:#1d2435">Элементы справочника</span>
+              <button style="height:30px;padding:0 12px;border:1px solid #dfe2ea;border-radius:8px;background:#fff;font-size:12px;color:#384152;cursor:pointer;font-family:inherit">+ Добавить элемент</button>
+            </div>
+            <div style="font-size:11.5px;color:#8a93a3;margin-bottom:12px">В анкете и в JSON Logic сохраняется код элемента; подпись — для отображения.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 80px 70px;gap:10px;padding:0 4px 8px;font-size:11px;font-weight:700;color:#aab1c0;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #eef0f4">
+              <span>Код</span><span>Подпись</span><span>Порядок</span><span>Активен</span>
+            </div>
+            <sc-for list="{{ selDict.vals }}" as="v" hint-placeholder-count="3">
+              <div style="display:grid;grid-template-columns:1fr 1fr 80px 70px;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid #f3f4f8">
+                <span class="mono" style="font-size:12px;color:#2f6bd8">{{ v.code }}</span>
+                <span style="font-size:13px;color:#28303f">{{ v.label }}</span>
+                <span style="font-size:13px;color:#6b7484">{{ v.ord }}</span>
+                <span><span style="display:inline-block;width:30px;height:18px;border-radius:10px;background:#2f6bd8;position:relative"><span style="position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#fff"></span></span></span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ===== SCREEN: СХЕМЫ (Версии) ===== -->
+      <sc-if value="{{ isSchemas }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;height:100%">
+        <div style="flex:1;overflow-y:auto;padding:18px 22px;min-width:0">
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px">
+            <div style="font-size:13px;color:#6b7484;margin-right:auto">Реестр шаблонов (схем) и их версий</div>
+            <button style="height:34px;padding:0 13px;border:1px solid #dfe2ea;border-radius:8px;background:#fff;font-size:12.5px;color:#384152;cursor:pointer;font-family:inherit">Сбросить к заводской</button>
+            <button style="height:34px;padding:0 16px;border:none;border-radius:8px;background:#1c2333;color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">Добавить схему</button>
+          </div>
+          <div style="background:#fff;border:1px solid #e6e8ee;border-radius:12px;overflow:hidden">
+            <div style="display:grid;grid-template-columns:2fr 150px 110px 130px 150px 120px;gap:12px;padding:11px 16px;background:#f6f8fb;border-bottom:1px solid #e6e8ee;font-size:11px;font-weight:700;color:#8a93a3;text-transform:uppercase;letter-spacing:.04em">
+              <span>Схема / версия</span><span>Актуальная</span><span>№ версии</span><span>Статус версии</span><span>Опубликована</span><span>Изменение</span>
+            </div>
+            <sc-for list="{{ schemaRows }}" as="r" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:2fr 150px 110px 130px 150px 120px;gap:12px;align-items:center;padding:11px 16px;border-bottom:1px solid #f3f4f8;background:{{ r.bg }}">
+                <span style="display:flex;align-items:center;gap:8px;padding-left:{{ r.indent }}">
+                  <sc-if value="{{ r.isParent }}" hint-placeholder-val="{{ true }}"><span style="color:#9aa2b1">▾</span></sc-if>
+                  <span style="font-size:13px;color:#28303f;font-weight:{{ r.w }}">{{ r.name }}</span>
+                </span>
+                <span>
+                  <sc-if value="{{ r.actual }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;height:20px;padding:0 9px;border-radius:6px;background:#e7f6ec;color:#1f8a4d;border:1px solid #c3e7cf;font-size:10.5px;font-weight:700">Актуальная №28</span></sc-if>
+                </span>
+                <span style="font-size:13px;color:#6b7484">{{ r.ver }}</span>
+                <span><sc-if value="{{ r.hasStatus }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;height:20px;padding:0 9px;border-radius:6px;background:{{ r.stBg }};color:{{ r.stFg }};font-size:10.5px;font-weight:600">{{ r.status }}</span></sc-if></span>
+                <span style="font-size:12px;color:#6b7484">{{ r.date }}</span>
+                <span><sc-if value="{{ r.hasKind }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;height:19px;padding:0 8px;border-radius:6px;background:{{ r.kindBg }};color:{{ r.kindFg }};font-size:10.5px;font-weight:600">{{ r.kind }}</span></sc-if></span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <!-- versioning rules side panel -->
+        <div style="width:300px;flex-shrink:0;border-left:1px solid #e6e8ee;background:#fff;padding:18px 18px;overflow-y:auto">
+          <div style="font-size:14px;font-weight:700;color:#1d2435;margin-bottom:12px">Правила версий</div>
+          <div style="background:#f4f7fc;border:1px solid #e1e9f6;border-radius:10px;padding:12px 13px;margin-bottom:11px">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="display:inline-flex;align-items:center;height:19px;padding:0 8px;border-radius:6px;background:#e9f0fb;color:#2f6bd8;font-size:10.5px;font-weight:700">МАЖОРНАЯ +1</span></div>
+            <div style="font-size:12.5px;color:#3a4252;line-height:1.5">Изменилась <b>структура</b> шаблона: добавлены/удалены параметры, блоки, типовые работы.</div>
+          </div>
+          <div style="background:#f3f9f5;border:1px solid #c7e8d3;border-radius:10px;padding:12px 13px;margin-bottom:16px">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="display:inline-flex;align-items:center;height:19px;padding:0 8px;border-radius:6px;background:#e7f6ec;color:#1f8a4d;font-size:10.5px;font-weight:700">МИНОРНАЯ +0.1</span></div>
+            <div style="font-size:12.5px;color:#3a4252;line-height:1.5">Изменилась только <b>формула</b> расчёта или коэффициенты — структура та же.</div>
+          </div>
+          <div style="font-size:12px;color:#6b7484;line-height:1.55;border-top:1px solid #f0f1f5;padding-top:13px">Все версии анкет строятся на одной версии шаблона. Активной может быть только одна — последняя опубликованная.</div>
+        </div>
+      </div>
+      </sc-if>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#2f6bd8&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    this.state = {
+      view:'editor', tab:'params',
+      closedBlocks:{}, closedSecs:{}, selKey:null,
+      closedStreams:{}, closedComps:{}, selWork:null, openRows:{},
+      wApr:'A', fApr:'A', selDict:0,
+      answers:{}, logicMode:'works', fmMode:'visual', coefMenu:false, workMenu:false, streamMenu:false, manualErr:null, manualDraft:null, manualWid:null, lgSel:'w0', edits:{}, streamSel:{}, extraWorks:[], saveState:'saved', addWorkOpen:false, awName:'', awComp:null, awStream:null, awNorm:1.0, refPicker:false, refQuery:'', lgAns:{}, trigPick:false, laborPick:false, closedLgComps:{}, depSel:'', depAns:{},
+    };
+  }
+  componentDidMount(){ if(!window.SA_DATA) setTimeout(()=>this.forceUpdate(),80); }
+
+  D(){ return window.SA_DATA || {params:[],works:[]}; }
+
+  // ---- helpers ----
+  shortSec(s){ return (s||'').replace('Арх. Компонент.','Арх.').replace('Арх. компонент.','Арх.').trim(); }
+  secColor(s){ s=s||''; if(s.includes('Модельный'))return '#7c5cd6'; if(s.includes('Модел'))return '#3b6fd4'; if(s.includes('Система'))return '#119e8f'; if(s.includes('Объект'))return '#d2851f'; if(s.includes('Процесс'))return '#3b82c4'; if(s.includes('Параметры'))return '#6b7484'; return '#9aa2b1'; }
+  typeMeta(t){ return ({bool:{l:'Да / нет',full:'Да / нет',bg:'#eef1f6',fg:'#5b6577'},dict:{l:'Справочник',full:'Строка / справочник',bg:'#e9f0fb',fg:'#2f6bd8'},number:{l:'Число',full:'Число',bg:'#eaf6ef',fg:'#1f8a4d'},string:{l:'Строка',full:'Строка',bg:'#f3eefb',fg:'#7c5cd6'}})[t]||{l:'Строка',full:'Строка',bg:'#eef1f6',fg:'#5b6577'}; }
+  translit(s){ const m={а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'i',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'c',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya',' ':''}; let o='',up=false; for(const ch of (s||'').toLowerCase()){ if(ch===' '||ch==='/'||ch===','){up=true;continue;} const r=m[ch]!==undefined?m[ch]:(/[a-z0-9]/.test(ch)?ch:''); if(up&&r){o+=r.charAt(0).toUpperCase()+r.slice(1);up=false;} else o+=r; } return o.slice(0,22); }
+  blockCode(b){ return ({'Детальная Информация':'detailInfo','Общая информация':'generalInfo','Источники данных':'streamDataSources','Контроль моделей':'streamModelControl','Прочее':'other'})[b]||'block'; }
+
+  // ---- param tree ----
+  buildTree(){
+    const D=this.D(); const blocks=[]; const bmap={};
+    D.params.forEach((p,i)=>{
+      if(!bmap[p.block]){ bmap[p.block]={name:p.block,secs:{},order:[]}; blocks.push(bmap[p.block]); }
+      const b=bmap[p.block];
+      if(!b.secs[p.section]){ b.secs[p.section]={name:p.section,params:[]}; b.order.push(p.section); }
+      b.secs[p.section].params.push({...p,idx:i});
+    });
+    return blocks.map(b=>({...b, secList:b.order.map(s=>b.secs[s])}));
+  }
+  keyOf(p){ return p.block+'|'+p.section+'|'+p.name+'|'+p.idx; }
+
+  // ---- demo works ----
+  TRIG(){ return [
+    {n:'Тип работ', v:['Разработка','Доработка']},
+    {n:'Сложность реализации', v:['Высокая','Средняя','Низкая']},
+    {n:'Наличие конфиденциальных данных', v:['Да','Нет']},
+    {n:'Требуется хэширование/ шифрование', v:['Да','Нет']},
+    {n:'Пилот', v:['Первичный','Повторный']},
+    {n:'Тип системы-источника', v:['Внутренний','Внешний']},
+    {n:'Каналы внедрения', v:['Онлайн','Стриминг','LLM']},
+  ]; }
+  LAB(){ return [
+    {n:'Количество сущностей (исходных таблиц)', v:'Крупное (15-20)', coef:0.5},
+    {n:'Количество метрик', v:'> 20', coef:0.3},
+    {n:'Объем изменений в ТИС', v:'Большое (20-25)', coef:0.6},
+    {n:'Сложность предметной области', v:'Высокая', coef:0.4},
+  ]; }
+  buildWorks(){
+    if(this._works) return this._works;
+    const D=this.D(); const T=this.TRIG(), L=this.LAB();
+    this._works = D.works.map((w,i)=>{
+      const o={...w,id:i,triggers:[],labor:[]};
+      if(i%4===1){ const t=T[i%T.length]; o.triggers.push({id:'g'+i,conds:[{p:t.n,c:w.component,v:t.v[i%t.v.length]}]}); }
+      if(i%13===4){ const a=T[(i+1)%T.length],b=T[(i+4)%T.length]; o.triggers.push({id:'h'+i,conds:[{p:a.n,c:w.component,v:a.v[0]},{p:b.n,c:w.component,v:b.v[1%b.v.length]}]}); }
+      if(i%6===2){ const l=L[i%L.length]; o.labor.push({p:l.n,v:l.v,coef:l.coef}); }
+      o.base=w.norm; o.eff=+(w.norm*o.labor.reduce((a,x)=>a*(1+x.coef),1)).toFixed(2);
+      return o;
+    });
+    return this._works;
+  }
+  worksTree(){
+    const ws=this.buildWorks(); const streams=[]; const sm={};
+    ws.forEach(w=>{ if(!sm[w.stream]){sm[w.stream]={name:w.stream,comps:{},order:[]};streams.push(sm[w.stream]);} const s=sm[w.stream]; if(!s.comps[w.component]){s.comps[w.component]={name:w.component,works:[]};s.order.push(w.component);} s.comps[w.component].works.push(w); });
+    return streams.map(s=>({...s,compList:s.order.map(c=>s.comps[c])}));
+  }
+  defWork(){ const ws=this.buildWorks(); return ws.find(w=>w.triggers.length&&w.labor.length)||ws[0]; }
+  curWork(){ const ws=this.buildWorks(); if(this.state.selWork==null) return this.defWork(); return ws.find(w=>w.id===this.state.selWork)||this.defWork(); }
+
+  // ---- dicts ----
+  buildDicts(){
+    if(this._dicts) return this._dicts;
+    const D=this.D(); const out=[]; const seen={};
+    D.params.filter(p=>p.type==='dict').forEach(p=>{
+      const code='v2.'+this.blockCode(p.block)+'.'+this.translit(p.name);
+      if(seen[code]) return; seen[code]=1;
+      out.push({code,name:p.name,cat:'Схема',status:(out.length%3===0?'factory':'inschemas'),vals:p.values});
+    });
+    this._dicts=out; return out;
+  }
+
+  // ---- formula model ----
+  formula(){
+    return {
+      name:'Норматив трудозатрат · «Поиск и анализ источника(ов) и данных»',
+      result: 6.34,
+      terms:[
+        {id:'t1', kind:'base', label:'Базовый норматив работы', val:'2.7 чел.-дн.', factors:[
+          {label:'Сложность предметной области', kind:'param', map:[['Низкая','×1.0'],['Средняя','×1.3'],['Высокая','×1.6']], cur:'Высокая ×1.6'},
+          {label:'Количество сущностей', kind:'param', map:[['Точечное','×1.0'],['Среднее','×1.3'],['Крупное','×1.5']], cur:'Крупное ×1.5'},
+        ]},
+        {id:'t2', kind:'add', label:'Надбавка · конфиденциальные данные', val:'+0.6', factors:[
+          {label:'Наличие конф. данных = Да', kind:'cond', map:[['Нет','×0'],['Да','×1']], cur:'Да ×1'},
+        ]},
+        {id:'t3', kind:'trans', label:'Транзитивная ссылка', val:'= Тип системы-источника', factors:[
+          {label:'→ ref: detailInfo.sourceType.coef', kind:'ref', map:[['Внутренний','0.3'],['Внешний','0.8']], cur:'Внешний → 0.8'},
+        ]},
+      ],
+    };
+  }
+
+  renderVals(){
+    const st=this.state, A=this.props.accent||'#2f6bd8';
+    const view=st.view, isEditor=view==='editor';
+    const tab=st.tab;
+    const D=this.D();
+
+    // ---- param tree render ----
+    const tree=this.buildTree();
+    const selKey=st.selKey;
+    let selParamObj=null;
+    const paramTree=tree.map(b=>{
+      const open=!st.closedBlocks[b.name];
+      const sections=b.secList.map(s=>{
+        const sopen=!st.closedSecs[b.name+'|'+s.name];
+        const params=s.params.map(p=>{
+          const tm=this.typeMeta(p.type);
+          const k=this.keyOf(p);
+          const sel = selKey? selKey===k : false;
+          if(sel) selParamObj=p;
+          return {
+            name:p.name, typeLabel:tm.l, chipBg:tm.bg, chipFg:tm.fg,
+            code: this.blockCode(p.block)+'.'+this.translit(p.name),
+            bg: sel?'#eef4ff':'#fff', bd: sel?'#bcd3f5':'transparent',
+            select: ()=>this.setState({selKey:k}),
+          };
+        });
+        return { short:this.shortSec(s.name), color:this.secColor(s.name), count:s.params.length,
+          open:sopen, rot: sopen?'90deg':'0deg',
+          toggle:()=>{ const c={...st.closedSecs}; const kk=b.name+'|'+s.name; c[kk]?delete c[kk]:c[kk]=1; this.setState({closedSecs:c}); },
+          params };
+      });
+      return { name:b.name, count:b.params? b.params.length : b.secList.reduce((a,s)=>a+s.params.length,0),
+        open, rot: open?'90deg':'0deg',
+        toggle:()=>{ const c={...st.closedBlocks}; c[b.name]?delete c[b.name]:c[b.name]=1; this.setState({closedBlocks:c}); },
+        sections };
+    });
+    // default selection
+    if(!selParamObj){ const first=tree[0]&&tree[0].secList[0]&&tree[0].secList[0].params.find(p=>p.type==='dict'); selParamObj = first || (tree[0]&&tree[0].secList[0]&&tree[0].secList[0].params[0]); }
+    const selTm=selParamObj?this.typeMeta(selParamObj.type):this.typeMeta('string');
+    const selParam = selParamObj ? {
+      name:selParamObj.name, code:'/'+this.blockCode(selParamObj.block)+'/'+this.translit(selParamObj.name),
+      desc:'Параметр блока «'+selParamObj.block+'», раздел «'+this.shortSec(selParamObj.section)+'».',
+      typeFull:selTm.full, isDict:selParamObj.type==='dict', valCount:(selParamObj.values||[]).length,
+      vals:(selParamObj.values||[]).map(v=>({t:v})),
+      hint:'Подсказка ⓘ рядом с подписью поля; показывается при наведении в анкете.',
+    } : {name:'',code:'',desc:'',typeFull:'',isDict:false,valCount:0,vals:[],hint:''};
+
+    const cnt=D.params.length, blkCnt=tree.length;
+
+    // ---- nav styling ----
+    const navOn={bg:'#eef0f4',fg:'#1d2435',w:700}, navOff={bg:'transparent',fg:'#5b6577',w:500};
+    const ns = view==='schemas'?navOn:navOff, ne = isEditor?navOn:navOff, nd = view==='dicts'?navOn:navOff;
+
+    // crumbs
+    let crumb1='Схемы', crumb2='', hasCrumb2=false;
+    if(view==='dicts'){ crumb1='Словари'; }
+    else if(isEditor){ crumb1='Схемы'; crumb2='Редактор · Новая схема'; hasCrumb2=true; }
+    else { crumb1='Схемы'; }
+
+    // tab styling
+    const tOn={fg:'#1d2435',w:700,bd:'#1c2333'}, tOff={fg:'#8a93a3',w:500,bd:'transparent'};
+    const tp=tab==='params'?tOn:tOff, tl=tab==='logic'?tOn:tOff;
+
+    // ---- works render ----
+    const wtree=this.worksTree();
+    const cur=this.curWork();
+    const worksStreams=wtree.map(s=>{
+      const sopen=!st.closedStreams[s.name];
+      return { name:s.name, count:s.compList.reduce((a,c)=>a+c.works.length,0), open:sopen, rot:sopen?'90deg':'0deg',
+        toggle:()=>{const c={...st.closedStreams};c[s.name]?delete c[s.name]:c[s.name]=1;this.setState({closedStreams:c});},
+        comps:s.compList.map(c=>{
+          const copen=!st.closedComps[s.name+'|'+c.name];
+          return { short:this.shortSec(c.name), color:this.secColor(c.name), count:c.works.length, open:copen, rot:copen?'90deg':'0deg',
+            toggle:()=>{const cc={...st.closedComps};const kk=s.name+'|'+c.name;cc[kk]?delete cc[kk]:cc[kk]=1;this.setState({closedComps:cc});},
+            works:c.works.map(w=>{
+              const sel=cur&&cur.id===w.id;
+              const rowOpen=!!st.openRows[w.id];
+              const hasT=w.triggers.length>0, hasL=w.labor.length>0;
+              return { name:w.name, base:w.base, eff:w.eff, hasTrig:hasT, hasLab:hasL, noTrig:!hasT, noLab:!hasL, plain:!hasT&&!hasL,
+                trigCount:w.triggers.length, labCount:w.labor.length,
+                bg:sel?'#eef4ff':'#fff', bd:sel?'#bcd3f5':'#eef0f4',
+                trigBadge: w.triggers.length? 'триггеров: '+w.triggers.length : 'базовая',
+                trigBadgeBg: w.triggers.length?'#fef0e6':'#eef1f6', trigBadgeFg:w.triggers.length?'#cf7a2a':'#8a93a3',
+                effChanged: w.eff!==w.base, effFg: w.eff!==w.base?'#1f8a4d':'#6b7484',
+                cardTop: hasT?'#e0922f':(hasL?'#1f8a4d':'#dfe2ea'),
+                select:()=>this.setState({selWork:w.id}),
+                rowOpen, rot2:rowOpen?'90deg':'0deg',
+                toggleRow:()=>{const o={...st.openRows};o[w.id]?delete o[w.id]:o[w.id]=1;this.setState({openRows:o});},
+                triggers:w.triggers.map((g,gi)=>({label:'Условие '+(gi+1)+(g.conds.length>1?' (одновременно)':''), conds:g.conds.map(cd=>({p:cd.p,c:this.shortSec(cd.c),v:cd.v}))})),
+                labor:w.labor.map(l=>({p:l.p,v:l.v,coef:'+'+(l.coef*100)+'%'})),
+              };
+            }) };
+        }) };
+    });
+    // current work detail
+    const curDetail = cur ? {
+      name:cur.name, stream:cur.stream, comp:this.shortSec(cur.component), base:cur.base, eff:cur.eff,
+      hasTrig:cur.triggers.length>0, hasLab:cur.labor.length>0, noTrig:cur.triggers.length===0, noLab:cur.labor.length===0, effChanged:cur.eff!==cur.base,
+      triggers:cur.triggers.map((g,gi)=>({label:'Условие появления '+(gi+1), multi:g.conds.length>1, conds:g.conds.map(cd=>({p:cd.p,c:this.shortSec(cd.c),v:cd.v}))})),
+      labor:cur.labor.map(l=>({p:l.p,v:l.v,coef:'+'+(l.coef*100)+'%'})),
+    } : null;
+    const wApr=st.wApr;
+    const segOn={fg:'#fff',bg:A}, segOff={fg:'#5b6577',bg:'transparent'};
+    const wsA=wApr==='A'?segOn:segOff, wsB=wApr==='B'?segOn:segOff, wsC=wApr==='C'?segOn:segOff;
+
+    // ---- dicts ----
+    const dicts=this.buildDicts();
+    const dictRows=dicts.map((d,i)=>({ code:d.code, name:d.name, cat:d.cat,
+      status:d.status==='factory'?'Заводской':'В схемах',
+      stBg:d.status==='factory'?'#eaf1fd':'#fdf3e0', stFg:d.status==='factory'?'#2f6bd8':'#b5791f', stBd:d.status==='factory'?'#cfe0f8':'#f0d9a8',
+      sel:i===st.selDict, rowBg:i===st.selDict?'#eef4ff':'#fff',
+      open:()=>this.setState({selDict:i}) }));
+    const sd=dicts[st.selDict]||dicts[0]||{code:'',name:'',vals:[]};
+    const selDict={ code:sd.code, name:sd.name, desc:'Заводской справочник для поля /'+sd.code.replace(/\./g,'/'),
+      vals:(sd.vals||[]).map((v,i)=>({code:v,label:v,ord:i})) };
+    const dictCount=dicts.length;
+
+    // ---- schemas / versions ----
+    const mkRow=(o)=>({ name:o.name, ver:o.ver||'', status:o.status||'', date:o.date||'', kind:o.kind||'',
+      bg:o.bg||'#fff', indent:o.indent||'0px', isParent:!!o.parent, w:o.parent?700:500,
+      actual:!!o.actual, hasStatus:!!o.status, hasKind:!!o.kind,
+      stBg:o.status==='Опубликована'?'#e7f6ec':(o.status==='Черновик'?'#eef1f6':'#fdf3e0'),
+      stFg:o.status==='Опубликована'?'#1f8a4d':(o.status==='Черновик'?'#8a93a3':'#b5791f'),
+      kindBg:o.kind==='мажор'?'#e9f0fb':'#e7f6ec', kindFg:o.kind==='мажор'?'#2f6bd8':'#1f8a4d' });
+    const schemaRows=[
+      mkRow({name:'Новая схема (7)', parent:true, status:'', actual:true}),
+      mkRow({name:'Версия 28', indent:'22px', ver:'28', status:'Опубликована', date:'11.06.2026', kind:'минор', bg:'#f3f9f5'}),
+      mkRow({name:'Версия 27', indent:'22px', ver:'27', status:'Опубликована', date:'11.06.2026', kind:'минор'}),
+      mkRow({name:'Версия 26', indent:'22px', ver:'26', status:'Опубликована', date:'11.06.2026', kind:'мажор'}),
+      mkRow({name:'Версия 25', indent:'22px', ver:'25', status:'Опубликована', date:'11.06.2026', kind:'минор'}),
+      mkRow({name:'супер новая (1)', parent:true, status:''}),
+      mkRow({name:'Версия 1', indent:'22px', ver:'1', status:'Черновик', date:'—', kind:'мажор'}),
+      mkRow({name:'Схема снепшот полная (1)', parent:true, status:''}),
+      mkRow({name:'Версия 3', indent:'22px', ver:'3', status:'Опубликована', date:'09.06.2026', kind:'мажор'}),
+    ];
+
+    function corder2(catalog,getW,LG){ const seen={},out=[]; catalog.forEach(w0=>{ const w=getW(w0); if(!seen[w.component]){seen[w.component]=1;out.push(w.component);} }); return out; }
+    // ================= ЛОГИКА (редакция v6: справочник + назначения) =================
+    if(window.SA_LOGIC_BUILD && !window.SA_LOGIC) window.SA_LOGIC_BUILD();
+    const LG=window.SA_LOGIC, EV=window.SA_EVAL;
+    const compColor=(s)=>{ s=s||''; if(s.includes('Модельный'))return '#7c5cd6'; if(s.includes('Модел'))return '#3b6fd4'; if(s.includes('Систем'))return '#119e8f'; if(s.includes('Объект'))return '#d2851f'; if(s.includes('Процесс'))return '#3b82c4'; return '#6b7484'; };
+    const streamColor=(s)=>{ s=s||''; if(s.includes('Контроль')||s.includes('Модельн'))return '#7c5cd6'; if(s.includes('Источник')||s.includes('Витрин'))return '#1f8a4d'; if(s.includes('Интеграц')||s.includes('Архитект'))return '#d2851f'; return '#2f6bd8'; };
+    const SLn=(s,n)=>{ s=s||''; n=n||30; return s.length>n? s.slice(0,n-1)+'…':s; };
+    const opsC=['×','÷','+','−'];
+    let lgTree=[], lgCount=0, lgAnswers=[];
+    let wv={ view:'streams', isStreams:true, isMatrix:false, isCatalog:false,
+      setStreams:()=>{}, setMatrix:()=>{}, setCatalog:()=>{},
+      vsStreamsBg:'#1c2333', vsStreamsFg:'#fff', vsMatrixBg:'transparent', vsMatrixFg:'#5b6577', vsCatalogBg:'transparent', vsCatalogFg:'#5b6577',
+      scope:[], scopeLabel:'', isGroup:false, picker:[], groupPickerOpen:false, toggleGroupPicker:()=>{} };
+    let streamEmpty=false, streamWorks=[], streamHdr={ title:'', sub:'', count:0 };
+    let mx={ streams:[], rows:[] };
+    let cat={ rows:[], count:0 };
+    let lgCur={ name:'',compShort:'',compBg:'#eef4ff',compFg:'#2f6bd8',curStream:'',streamDot:'#2f6bd8',streamMenuOpen:false,streamRec:[],streamOther:[],
+      saveText:'Сохранено',saveFg:'#1f8a4d',saveDot:'#1f8a4d',norms:[],
+      hasTrig:false,noTrig:true,triggers:[],trigPickerOpen:false,trigPickItems:[],
+      statusBg:'#eef1f6',statusBd:'#e1e4ea',statusIcon:'•',statusIconBg:'#aab1c0',statusFg:'#5b6577',statusTitle:'',statusSub:'',
+      hasLabor:false,noLabor:true,labor:[],laborPickerOpen:false,laborPickItems:[],
+      kindLabel:'',tokens:[],roundModes:[],roundStep:0.1,roundStepOn:true,roundLabel:'',roundOpen:'⌈',roundClose:'⌉',roundTag:'вверх',
+      substLine:'',raw:0,value:0,hasAnswers:false,normMissing:false,
+      fmIsVisual:true,fmIsManual:false,manualText:'',manualError:false,manualErrText:'',legend:[],
+      coefMenuOpen:false,coefMenu:[],coefMenuEmpty:true,workMenuOpen:false,refQuery:'',refList:[],isPureTransitive:false };
+    let depFields=[], depSelV={isDep:false,noDep:true,rules:[],label:''}, depPreview=[], depCount=0, depDepCount=0, depVisibleCount=0, depHiddenCount=0, depHasHidden=false;
+    let addCat={open:false}, addWork={open:false};
+
+    if(LG&&EV){
+      const P=LG.params, edits=st.edits||{}, ans=st.lgAns||{}, streamSel=st.streamSel||{};
+      const extraWorks=st.extraWorks||[];
+      const catalog=LG.catalog.concat(extraWorks);
+      const getW=(w)=> edits[w.id] ? edits[w.id] : w;
+      const setW=(wid, next)=>{ this.setState(s=>({ edits:{...(s.edits||{}), [wid]:next}, saveState:'saving' })); clearTimeout(this._saveT); this._saveT=setTimeout(()=>this.setState({saveState:'saved'}),650); };
+
+      // ---- область просмотра: стрим или группа ----
+      const view=st.wvView||'streams';
+      const groupId=st.viewGroup||null;
+      const group= groupId? LG.GROUPS.find(g=>g.id===groupId) : null;
+      const viewStream= st.viewStream || LG.STREAMS[0];
+      const scopeStreams = group? group.streams.slice() : [viewStream];
+      const scopeLabel = group? group.name : viewStream;
+
+      // ---- значения всех работ ----
+      const results={};
+      const wl=catalog.map(getW);
+      const cur1=(w)=> (group? (scopeStreams.find(s=>EV.isAssigned(w,s))||scopeStreams[0]) : viewStream);
+      const curStreamOf=(w)=>{ if(group){ const sel=streamSel[w.id]; if(sel && scopeStreams.indexOf(sel)>=0 && EV.isAssigned(w,sel)) return sel; return scopeStreams.find(s=>EV.isAssigned(w,s))||scopeStreams[0]; } return viewStream; };
+      wl.forEach(w=>{ if(!EV.hasWorkRef(w,curStreamOf(w))) results[w.id]=EV.evalWork(w,curStreamOf(w),P,ans).value; });
+      wl.forEach(w=>{ if(EV.hasWorkRef(w,curStreamOf(w))) results[w.id]=EV.evalWork(w,curStreamOf(w),P,ans,results).value; });
+
+      // ---- верхний бар: переключатель видов + селектор стрима/группы ----
+      const mkVS=(v)=>({ on:view===v });
+      wv={ view, isStreams:view==='streams', isMatrix:view==='matrix', isCatalog:view==='catalog',
+        setStreams:()=>this.setState({wvView:'streams'}), setMatrix:()=>this.setState({wvView:'matrix'}), setCatalog:()=>this.setState({wvView:'catalog'}),
+        vsStreamsBg:view==='streams'?'#1c2333':'transparent', vsStreamsFg:view==='streams'?'#fff':'#5b6577',
+        vsMatrixBg:view==='matrix'?'#1c2333':'transparent', vsMatrixFg:view==='matrix'?'#fff':'#5b6577',
+        vsCatalogBg:view==='catalog'?'#1c2333':'transparent', vsCatalogFg:view==='catalog'?'#fff':'#5b6577',
+        scopeLabel, isGroup:!!group, groupPickerOpen:!!st.scopeMenu, toggleGroupPicker:()=>this.setState(s=>({scopeMenu:!s.scopeMenu})),
+        groups:LG.GROUPS.map(g=>({ name:g.name, sub:g.streams.length+' стрима', on:groupId===g.id, bg:groupId===g.id?'#eef4ff':'#fff', set:()=>this.setState({viewGroup:g.id, scopeMenu:false, lgSel:null}) })),
+        streams:LG.STREAMS.map(s=>({ name:s, dot:streamColor(s), on:!group&&viewStream===s, bg:(!group&&viewStream===s)?'#eef4ff':'#fff', set:()=>this.setState({viewGroup:null, viewStream:s, scopeMenu:false, lgSel:null}) })) };
+
+      // ================= ВИД: ПО СТРИМАМ =================
+      const assignedWorks=catalog.filter(w0=>{ const w=getW(w0); return scopeStreams.some(s=>EV.isAssigned(w,s)); });
+      streamEmpty=assignedWorks.length===0;
+      streamHdr={ title:scopeLabel, sub: group? ('группа · '+scopeStreams.length+' стрима') : 'стрим-исполнитель', count:assignedWorks.length };
+      const mkRow=(w0)=>{ const w=getW(w0); const cs2=curStreamOf(w); const sel=st.lgSel===w.id; const ts=EV.trigState(w,cs2,P,ans);
+        return { name:w.name, comp:w.component, compColor:compColor(w.component), value:results[w.id], stream:cs2, streamShow:group, streamDot:streamColor(cs2),
+          select:()=>this.setState({lgSel:w.id, trigPick:false, laborPick:false, coefMenu:false, workMenu:false, streamMenu:false}),
+          bg:sel?'#eef4ff':'#fff', bd:sel?'#bcd3f5':'transparent',
+          trigBadge: ts.empty?'без триггеров':(ts.appears?'появляется':'скрыта'), trigBg: ts.empty?'#fdf3e0':(ts.appears?'#e7f6ec':'#f6eceb'), trigFg: ts.empty?'#b5791f':(ts.appears?'#1f8a4d':'#c2554c'),
+          labBadge:(EV.streamData(w,cs2).labor.length)?('коэф.: '+EV.streamData(w,cs2).labor.length):'без коэф.', labBg:(EV.streamData(w,cs2).labor.length)?'#eaf6ef':'#eef1f6', labFg:(EV.streamData(w,cs2).labor.length)?'#1f8a4d':'#8a93a3' };
+      };
+      // группировка списка по арх. компоненту
+      const cm={}, corder=[];
+      assignedWorks.forEach(w0=>{ const w=getW(w0); if(!cm[w.component]){cm[w.component]={works:[]};corder.push(w.component);} cm[w.component].works.push(w0); });
+      streamWorks=corder.map(cn=>({ short:cn, color:compColor(cn), count:cm[cn].works.length, works:cm[cn].works.map(mkRow) }));
+
+      // ================= ВИД: МАТРИЦА =================
+      const mxStreams=LG.STREAMS;
+      mx={ streams:mxStreams.map(s=>({ name:s, short:SLn(s,16), dot:streamColor(s) })),
+        rows: catalog.map(w0=>{ const w=getW(w0);
+          return { name:w.name, comp:w.component, compColor:compColor(w.component),
+            cells: mxStreams.map(s=>{ const on=EV.isAssigned(w,s);
+              if(!on) return { on:false, off:true, assign:()=>{ const nw=JSON.parse(JSON.stringify(w)); nw.byStream[s]=LG.defStreamData((EV.normValue(w,EV.assignedStreams(w)[0])||1),true); setW(w.id,nw); this.setState({wvView:'streams', viewGroup:null, viewStream:s, lgSel:w.id}); } };
+              const ts=EV.trigState(w,s,P,ans); const v=EV.evalWork(w,s,P,ans,results).value;
+              return { on:true, off:false, value:v, dot: ts.empty?'#e0922f':(ts.appears?'#1f8a4d':'#c2554c'), bg:'#f3f9f5',
+                open:()=>this.setState({wvView:'streams', viewGroup:null, viewStream:s, lgSel:w.id}) }; }) };
+        }) };
+
+      // ================= ВИД: СПРАВОЧНИК =================
+      const catQuery=(st.catQuery||'').toLowerCase();
+      const catComp=st.catComp||'all';
+      cat={ count:catalog.length,
+        comps:[{name:'Все',val:'all',on:catComp==='all',set:()=>this.setState({catComp:'all'})}].concat(corder2(catalog,getW,LG).map(c=>({ name:LG.normComp(c), val:c, on:catComp===c, set:()=>this.setState({catComp:c}) }))),
+        query:st.catQuery||'', search:(e)=>this.setState({catQuery:e.target.value}),
+        rows: catalog.filter(w0=>{ const w=getW(w0); return (catComp==='all'||w.component===catComp) && w.name.toLowerCase().includes(catQuery); }).map(w0=>{ const w=getW(w0); const asn=EV.assignedStreams(w);
+          return { name:w.name, comp:w.component, compColor:compColor(w.component), desc:w.desc||'',
+            asnCount:asn.length, asnText: asn.length? ('назначена · '+asn.length+(asn.length===1?' стрим':' стрима')) : 'не назначена', asnBg:asn.length?'#eaf6ef':'#fdf3e0', asnFg:asn.length?'#1f8a4d':'#b5791f',
+            streams: asn.slice(0,4).map(s=>({ name:SLn(s,18), dot:streamColor(s) })),
+            assign:()=>this.setState({addCatOpen:true, addCatTarget:w.id}) }; }) };
+
+      // ---- модалка: добавить из справочника (назначить на текущий стрим/группу) ----
+      const acQuery=(st.acQuery||'').toLowerCase();
+      const acComp=st.acComp||'all';
+      const targetStreams = group? scopeStreams : [viewStream];
+      const acAvail=catalog.filter(w0=>{ const w=getW(w0); const notAll = !targetStreams.every(s=>EV.isAssigned(w,s)); return notAll && (acComp==='all'||w.component===acComp) && w.name.toLowerCase().includes(acQuery); });
+      addCat={ open:!!st.addCatOpen, stop:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); },
+        scopeLabel, isGroup:!!group, streamsText: targetStreams.join(', '),
+        query:st.acQuery||'', search:(e)=>this.setState({acQuery:e.target.value}),
+        comps:[{name:'Все компоненты',val:'all',on:acComp==='all',set:()=>this.setState({acComp:'all'})}].concat(corder2(catalog,getW,LG).map(c=>({ name:LG.normComp(c), val:c, on:acComp===c, set:()=>this.setState({acComp:c}) }))),
+        items:acAvail.map(w0=>{ const w=getW(w0); const asn=EV.assignedStreams(w);
+          return { name:w.name, comp:w.component, compColor:compColor(w.component), desc:SLn(w.desc||'',70), asnText:asn.length?('уже на '+asn.length+' стр.'):'свободна',
+            add:()=>{ const nw=JSON.parse(JSON.stringify(w)); const baseN=(EV.normValue(w,asn[0])||1); targetStreams.forEach(s=>{ if(!EV.isAssigned(nw,s)) nw.byStream[s]=LG.defStreamData(baseN,true); }); setW(w.id,nw); this.setState({addCatOpen:false, acQuery:'', lgSel:w.id}); } }; }),
+        empty:acAvail.length===0,
+        openFromEmpty:()=>this.setState({addCatOpen:true, acQuery:''}), openTop:()=>this.setState({addCatOpen:true, acQuery:''}),
+        openNew:()=>this.setState({addCatOpen:false, addWorkOpen:true, awName:'', awComp:(corder2(catalog,getW,LG)[0]||'Система-источник'), awNorm:1.0}),
+        cancel:()=>this.setState({addCatOpen:false, acQuery:''}) };
+
+      // ---- выбранная работа (карточка) ----
+      const selId = st.lgSel || (assignedWorks[0]&&assignedWorks[0].id) || catalog[0].id;
+      const w0=catalog.find(x=>x.id===selId)||catalog[0];
+      const w=getW(w0);
+      const cs2=curStreamOf(w);
+      const sd=EV.streamData(w,cs2);
+      const ev=EV.evalWork(w,cs2,P,ans,results); const ts=EV.trigState(w,cs2,P,ans); const kind=EV.kindOf(w,cs2);
+      const pool=LG.paramsForComponent(w.component);
+
+      const ensureStream=(nw,s)=>{ if(!nw.byStream[s]) nw.byStream[s]=LG.defStreamData(1,false); };
+      const mutSD=(fn)=>{ const nw=JSON.parse(JSON.stringify(w)); ensureStream(nw,cs2); fn(nw.byStream[cs2],nw); setW(w.id,nw); };
+      const setFormula=(tokens)=>{ const nw=JSON.parse(JSON.stringify(w)); ensureStream(nw,cs2); nw.byStream[cs2].formula={tokens}; setW(w.id,nw); };
+      const setRound=(r)=>{ const nw=JSON.parse(JSON.stringify(w)); ensureStream(nw,cs2); nw.byStream[cs2].round={...nw.byStream[cs2].round,...r}; setW(w.id,nw); };
+
+      // стрим-меню в карточке: назначенные стримы + назначить новый
+      const assigned=EV.assignedStreams(w);
+      const mkStreamItem=(s,assignedNow)=>({ name:s, dot:streamColor(s), on:s===cs2, bg:s===cs2?'#eef4ff':'#fff',
+        set:()=>{ if(!assignedNow){ const nw=JSON.parse(JSON.stringify(w)); nw.byStream[s]=LG.defStreamData((EV.normValue(w,assigned[0])||1),true); setW(w.id,nw); } this.setState(st2=>({streamSel:{...(st2.streamSel||{}),[w.id]:s}, streamMenu:false, viewGroup:null, viewStream:s})); } });
+      const streamRec=assigned.map(s=>mkStreamItem(s,true));
+      const streamOther=LG.STREAMS.filter(s=>assigned.indexOf(s)<0).map(s=>mkStreamItem(s,false));
+
+      const activeN=EV.activeNorm(sd.norms);
+      const norms=sd.norms.map((n,ni)=>{ const isActive=activeN&&activeN.id===n.id;
+        return { value:n.value, from:n.from, to:n.to, rowBg:isActive?'#f3f9f5':'transparent', badge:isActive?'активна':'архив', badgeBg:isActive?'#e7f6ec':'#eef1f6', badgeFg:isActive?'#1f8a4d':'#8a93a3',
+          valInput:(e)=>{ const v=parseFloat(e.target.value); if(isNaN(v))return; mutSD(d=>{ d.norms[ni].value=v; }); },
+          fromInput:(e)=>{ const val=e.target.value; mutSD(d=>{ d.norms[ni].from=val; }); },
+          toInput:(e)=>{ const val=e.target.value; mutSD(d=>{ d.norms[ni].to=val; }); },
+          remove:()=>mutSD(d=>{ d.norms.splice(ni,1); }) };
+      });
+
+      const triggers=sd.triggers.map((t,ti)=>{ const p=P[t.p];
+        return { pLabel:p?p.label:t.p, remove:()=>mutSD(d=>{ d.triggers.splice(ti,1); }),
+          chips:(p?p.values:[]).map(rv=>{ const on=(t.vals||[]).indexOf(rv.v)>=0;
+            return { v:rv.v, mark:on?'☑':'☐', w:on?700:500, bg:on?'#fef0e0':'#fff', fg:on?'#b5791f':'#5b6577', bd:on?'#f0d9a8':'#dfe2ea',
+              toggle:()=>mutSD(d=>{ const arr=d.triggers[ti].vals||[]; const idx=arr.indexOf(rv.v); if(idx>=0) arr.splice(idx,1); else arr.push(rv.v); d.triggers[ti].vals=arr; }) }; }) };
+      });
+      const usedTrig=sd.triggers.map(t=>t.p);
+      const trigPickItems=pool.filter(id=>usedTrig.indexOf(id)<0).map(id=>{ const p=P[id];
+        return { label:SLn(p.label), typeLabel:p.type==='bool'?'да/нет':'справочник',
+          add:()=>{ mutSD(d=>{ d.triggers.push({id:'t'+Date.now(),p:id,vals:[p.values[0]?p.values[0].v:'']}); }); this.setState({trigPick:false}); } };
+      });
+      const statusTitle = ts.empty? 'Без триггеров — работа не появится в анкете'
+        : (ts.appears? ('Работа появляется в анкете ('+ts.count+(ts.count===1?' условие':' условия')+')') : 'Условия заданы, но при текущих ответах не выполнены');
+      const statusSub = ts.empty? 'добавьте параметр-триггер, иначе работа исключается из расчёта'
+        : (ts.appears? 'все условия выполнены' : 'отметьте подходящие значения параметров');
+      const statusIcon = ts.empty?'!':(ts.appears?'✓':'✕');
+      const statusIconBg = ts.empty?'#e0922f':(ts.appears?'#1f8a4d':'#c2554c');
+
+      const labor=sd.labor.map((l,li)=>{ const p=P[l.p]; if(!p) return {label:l.p,code:'k'+(li+1),rows:[],remove:()=>{}}; const cur=EV.ans(ans,p);
+        return { label:p.label, code:'k'+(li+1), remove:()=>mutSD(d=>{ d.labor.splice(li,1); }),
+          rows:p.values.map((rv,ri)=>{ const on=rv.v===cur;
+            return { v:rv.v, coef:rv.coef, rowBg:on?'#f3f9f5':'transparent', dot:on?'#1f8a4d':'#d2d7e0',
+              select:()=>this.setState(s=>({lgAns:{...(s.lgAns||{}),[p.id]:rv.v}})), stop:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); },
+              coefInput:(e)=>{ const v=parseFloat(e.target.value); if(isNaN(v))return; p.values[ri].coef=v; this.forceUpdate(); } }; }) };
+      });
+      const laborIds=sd.labor.map(l=>l.p);
+      const laborPickItems=pool.filter(id=>P[id].type==='dict' && laborIds.indexOf(id)<0).map(id=>{ const p=P[id]; return { label:SLn(p.label), add:()=>{ mutSD(d=>{ d.labor.push({id:'l'+Date.now(),p:id}); }); this.setState({laborPick:false}); } }; });
+
+      const opColor={N:{bg:'#1c2333',fg:'#fff',bd:'#1c2333',sub:'#9aa6bd'},coef:{bg:'#eaf6ef',fg:'#1f8a4d',bd:'#cfe9d8',sub:'#5aa97c'},num:{bg:'#eef1f6',fg:'#3a4252',bd:'#e1e4ea',sub:'#9aa2b1'},work:{bg:'#faf6ff',fg:'#7c5cd6',bd:'#e3d9f6',sub:'#a98fd8'}};
+      const fTokens=EV.formulaOf(w,cs2);
+      const chipFor=(tok)=>{ if(tok.t==='N'){ const nv=EV.normValue(w,cs2); return {main:'Норма N', sub:(nv==null?'—':String(nv)), c:opColor.N}; }
+        if(tok.t==='num') return {main:'число', sub:String(tok.val), c:opColor.num};
+        if(tok.t==='coef'){ const p=P[tok.p]; const idx=laborIds.indexOf(tok.p); const a=p?EV.ans(ans,p):''; const cf=p?EV.coefOf(ans,p):1; return {main:(idx>=0?('k'+(idx+1)+' · '):'')+SLn(p?p.label:tok.p,16), sub:(a||'—')+' → '+cf, c:opColor.coef}; }
+        if(tok.t==='work'){ const rw=catalog.find(x=>x.id===tok.ref); return {main:'Работа: '+SLn(rw?rw.name:tok.ref,16), sub:'= '+(results[tok.ref]!=null?results[tok.ref]:'—'), c:opColor.work}; }
+        return {main:'?',sub:'',c:opColor.num}; };
+      const setTokens=(tokens)=>setFormula(tokens);
+      const tokens=fTokens.map((tok,idx)=>{
+        if(tok.t==='op') return { isOp:true,isParen:false,isOperand:false, op:tok.op, cycle:()=>setTokens(fTokens.map((x,j)=>j===idx?{...x,op:opsC[(opsC.indexOf(tok.op)+1)%opsC.length]}:x)) };
+        if(tok.t==='lp'||tok.t==='rp') return { isOp:false,isParen:true,isOperand:false, paren:tok.t==='lp'?'(':')', remove:()=>setTokens(fTokens.filter((x,j)=>j!==idx)) };
+        const ch=chipFor(tok);
+        return { isOp:false,isParen:false,isOperand:true, main:ch.main, sub:ch.sub, chipBg:ch.c.bg, chipFg:ch.c.fg, chipBd:ch.c.bd, subFg:ch.c.sub, remove:()=>setTokens(fTokens.filter((x,j)=>j!==idx)) };
+      });
+      const append=(tok)=>setTokens([...fTokens, tok]);
+      const coefMenu=sd.labor.map((l,li)=>{ const p=P[l.p]; return { code:'k'+(li+1), label:SLn(p?p.label:l.p), add:()=>{ append({t:'coef',p:l.p}); this.setState({coefMenu:false}); } }; });
+      const refQuery=(st.refQuery||'').toLowerCase();
+      const refList=catalog.filter(x=>x.id!==w.id && x.name.toLowerCase().includes(refQuery)).slice(0,40).map(x=>({ name:SLn(x.name,40), comp:LG.normComp(x.component), color:compColor(x.component), pick:()=>{ append({t:'work',ref:x.id}); this.setState({workMenu:false, refQuery:''}); } }));
+
+      const roundMode=(sd.round&&sd.round.mode)||'CEIL'; const roundStep=(sd.round&&sd.round.step)||0.1;
+      const rmDefs=[['CEIL','вверх'],['FLOOR','вниз'],['ROUND','матем.'],['NONE','без']];
+      const roundModes=rmDefs.map(([m,lbl])=>({ label:lbl, set:()=>setRound({mode:m, step:roundStep}), bg:roundMode===m?A:'transparent', fg:roundMode===m?'#fff':'#5b6577' }));
+      const roundOpen = roundMode==='CEIL'?'⌈':roundMode==='FLOOR'?'⌊':roundMode==='ROUND'?'[':'';
+      const roundClose= roundMode==='CEIL'?'⌉':roundMode==='FLOOR'?'⌋':roundMode==='ROUND'?']':'';
+      const roundTag  = roundMode==='CEIL'?'вверх':roundMode==='FLOOR'?'вниз':roundMode==='ROUND'?'матем.':'без';
+      const roundLabel= roundMode==='NONE'?'без округл.': (roundMode==='CEIL'?'⌈ ':roundMode==='FLOOR'?'⌊ ':'≈ ')+roundStep+(roundMode==='CEIL'?' ⌉':roundMode==='FLOOR'?' ⌋':'');
+      const cycleRound=()=>{ const order=['CEIL','FLOOR','ROUND','NONE']; const ni=(order.indexOf(roundMode)+1)%order.length; setRound({mode:order[ni], step:roundStep}); };
+
+      const ansC=(on)=> on?{bg:A,fg:'#fff',bd:A,w:700}:{bg:'#fff',fg:'#5b6577',bd:'#dfe2ea',w:500};
+      lgAnswers=sd.labor.map(l=>{ const p=P[l.p]; if(!p) return null; const cur=EV.ans(ans,p);
+        return { label:SLn(p.label), opts:p.values.map(rv=>{ const on=rv.v===cur; const c=ansC(on); return { t:rv.v, bg:c.bg,fg:c.fg,bd:c.bd,w:c.w, set:()=>this.setState(s=>({lgAns:{...(s.lgAns||{}),[p.id]:rv.v}})) }; }) };
+      }).filter(Boolean);
+
+      let substLine=EV.stringify(w,cs2,P)
+        .replace(/\[Работа: ([^\]]+)\]/g,(m,nm)=>{ const rw=catalog.find(x=>x.name===nm); return rw&&results[rw.id]!=null? (''+results[rw.id]) : m; })
+        .replace(/P\[([^\]]+)\]/g,(m,nm)=>{ const id=Object.keys(P).find(k=>P[k].label===nm); const p=P[id]; return p?(''+EV.coefOf(ans,p)):m; })
+        .replace(/(^|[^A-Za-zА-Яа-я])N([^A-Za-zА-Яа-я]|$)/, (m,a2,b2)=>{ const nv=EV.normValue(w,cs2); return a2+(nv==null?'N':nv)+b2; });
+
+      const fmMode=st.fmMode||'visual';
+      const manualText=(st.manualDraft!=null && st.manualWid===w.id)? st.manualDraft : EV.stringify(w,cs2,P).replace(/P\[([^\]]+)\]/g,(m,nm)=>{ const idx=sd.labor.findIndex(l=>P[l.p]&&P[l.p].label===nm); return idx>=0?'k'+(idx+1):m; });
+      const legend=sd.labor.map((l,li)=>({ code:'k'+(li+1), label:P[l.p]?P[l.p].label:l.p }));
+      const saveState=st.saveState||'saved';
+
+      lgCur={ name:w.name, compShort:w.component, compBg:compColor(w.component)+'1f', compFg:compColor(w.component),
+        curStream:cs2, streamDot:streamColor(cs2), streamMenuOpen:!!st.streamMenu, toggleStreamMenu:()=>this.setState(s=>({streamMenu:!s.streamMenu})), streamRec, streamOther,
+        saveText: saveState==='saving'?'Сохранение…':(saveState==='error'?'Ошибка':'Сохранено'), saveFg: saveState==='error'?'#c2554c':(saveState==='saving'?'#b5791f':'#1f8a4d'), saveDot: saveState==='error'?'#c2554c':(saveState==='saving'?'#e0922f':'#1f8a4d'),
+        norms, addNorm:()=>mutSD(d=>{ d.norms.push({id:'n'+Date.now(),value:1,from:'01.01.2026',to:''}); }),
+        hasTrig:ts.count>0, noTrig:ts.count===0, triggers, trigPickerOpen:!!st.trigPick, trigPickItems, toggleTrigPicker:()=>this.setState(s=>({trigPick:!s.trigPick, laborPick:false})),
+        statusBg: ts.empty?'#fdf6ec':(ts.appears?'#f3f9f5':'#fdf3f2'), statusBd: ts.empty?'#f3e2c4':(ts.appears?'#cfe8d8':'#f3d6d2'), statusIcon, statusIconBg, statusFg: ts.empty?'#b5791f':(ts.appears?'#1f8a4d':'#c2554c'), statusTitle, statusSub,
+        hasLabor:labor.length>0, noLabor:labor.length===0, labor, laborPickerOpen:!!st.laborPick, laborPickItems, toggleLaborPicker:()=>this.setState(s=>({laborPick:!s.laborPick, trigPick:false})),
+        kindLabel:kind, tokens,
+        roundModes, roundStep, roundStepOn:roundMode!=='NONE', roundStepInput:(e)=>{ const v=parseFloat(e.target.value); if(isNaN(v))return; setRound({step:v}); }, roundLabel, roundOpen, roundClose, roundTag, cycleRound,
+        substLine, raw:ev.raw, value:(EV.normValue(w,cs2)==null && !EV.hasWorkRef(w,cs2))?'—':ev.value, normMissing:(EV.normValue(w,cs2)==null && !EV.hasWorkRef(w,cs2) && fTokens.some(t=>t.t==='N')),
+        hasAnswers:lgAnswers.length>0,
+        fmIsVisual:fmMode!=='manual', fmIsManual:fmMode==='manual', fmVisFg:fmMode!=='manual'?'#fff':'#5b6577', fmVisBg:fmMode!=='manual'?A:'transparent', fmManFg:fmMode==='manual'?'#fff':'#5b6577', fmManBg:fmMode==='manual'?A:'transparent',
+        fmVisual:()=>this.setState({fmMode:'visual'}), fmManual:()=>this.setState({fmMode:'manual', manualDraft:null}),
+        insN:()=>append({t:'N'}), insNum:()=>append({t:'num',val:1}), insOp:()=>append({t:'op',op:'×'}), insLp:()=>append({t:'lp'}), insRp:()=>append({t:'rp'}),
+        insCoef:()=>this.setState(s=>({coefMenu:!s.coefMenu, workMenu:false})), coefMenuOpen:!!st.coefMenu, coefMenu, coefMenuEmpty:coefMenu.length===0,
+        insWork:()=>this.setState(s=>({workMenu:!s.workMenu, coefMenu:false})), workMenuOpen:!!st.workMenu, refQuery:st.refQuery||'', refSearch:(e)=>this.setState({refQuery:e.target.value}), refList,
+        isPureTransitive:EV.isPureTransitive(w,cs2),
+        fmClear:()=>setTokens([{t:'N'}]),
+        manualText, manualBd: st.manualErr?'#e0a59f':'#dfe2ea', manualError:!!st.manualErr, manualErrText:st.manualErr||'', legend,
+        manualApply:(e)=>{ const str=e.target.value; const res=EV.parse?EV.parse(str, sd.labor.map(l=>l.p), P):{tokens:[],errors:['парсер недоступен']}; if(res.errors&&res.errors.length) this.setState({manualErr:res.errors.join('; '), manualDraft:str, manualWid:w.id}); else { setFormula(res.tokens); this.setState({manualErr:null, manualDraft:null}); } } };
+
+      // модалка: новая работа в справочник
+      const compsList2=corder2(catalog,getW,LG);
+      const awComp=st.awComp||compsList2[0]||'Система-источник';
+      addWork={ open:!!st.addWorkOpen, stop:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); },
+        name:st.awName||'', comps:compsList2.map(c=>({ name:LG.normComp(c), on:c===awComp, color:compColor(c), bg:c===awComp?compColor(c)+'1f':'#fff', fg:c===awComp?compColor(c):'#5b6577', bd:c===awComp?compColor(c):'#dfe2ea', set:()=>this.setState({awComp:c}) })),
+        streams:LG.STREAMS.map(s=>{ const on=s===(st.awStream||LG.recommendFor(awComp)[0]); return { name:s, on, w:on?700:500, bg:on?A:'#fff', fg:on?'#fff':'#5b6577', bd:on?A:'#dfe2ea', set:()=>this.setState({awStream:s}) }; }),
+        nameInput:(e)=>this.setState({awName:e.target.value}),
+        norm:st.awNorm!=null?st.awNorm:1.0, normInput:(e)=>{ const v=parseFloat(e.target.value); this.setState({awNorm:isNaN(v)?0:v}); },
+        canSave:(st.awName||'').trim().length>0, saveBg:(st.awName||'').trim().length>0?'#1c2333':'#aab1c0',
+        open2:()=>this.setState({addWorkOpen:true, awName:'', awComp:compsList2[0], awStream:LG.recommendFor(compsList2[0]||'')[0], awNorm:1.0}),
+        cancel:()=>this.setState({addWorkOpen:false}),
+        save:()=>{ const nm=(st.awName||'').trim(); if(!nm) return; const stream=st.awStream||LG.recommendFor(awComp)[0]; const nv=st.awNorm!=null?st.awNorm:1; const id='wx'+Date.now();
+          const byStream={}; byStream[stream]=LG.defStreamData(nv,true);
+          const nw={ id, name:nm, component:awComp, desc:'Новая типовая работа.', recommend:LG.recommendFor(awComp), byStream };
+          this.setState(s=>({ extraWorks:[...(s.extraWorks||[]), nw], addWorkOpen:false, wvView:'streams', viewGroup:null, viewStream:stream, lgSel:id, saveState:'saving' })); clearTimeout(this._saveT); this._saveT=setTimeout(()=>this.setState({saveState:'saved'}),650); } };
+
+      // зависимости
+      const allKeys=Object.keys(P).filter(k=>P[k].type==='bool'||P[k].type==='dict');
+      const fieldKeys=allKeys.slice(0,9);
+      const depsRT=[];
+      if(fieldKeys[2]&&fieldKeys[0]) depsRT.push({target:fieldKeys[2], conds:[{p:fieldKeys[0], op:'=', v:P[fieldKeys[0]].values[0].v}]});
+      if(fieldKeys[4]&&fieldKeys[1]) depsRT.push({target:fieldKeys[4], conds:[{p:fieldKeys[1], op:'=', v:P[fieldKeys[1]].values[0].v}]});
+      const da=st.depAns||{}; const ansObj={}; fieldKeys.forEach(k=>ansObj[k]=(da[k]!=null?da[k]:P[k].cur));
+      const isDepKey=k=> depsRT.some(d=>d.target===k);
+      const depVis=k=>{ const rules=depsRT.filter(d=>d.target===k); if(!rules.length) return true; return rules.every(d=>d.conds.every(c=>{ const a=ansObj[c.p]; return c.op==='='? a===c.v : a!==c.v; })); };
+      depCount=fieldKeys.length; depDepCount=depsRT.length;
+      const dsel = fieldKeys.indexOf(st.depSel)>=0? st.depSel : (depsRT[0]?depsRT[0].target:fieldKeys[0]);
+      depFields=fieldKeys.map(k=>{ const sel=dsel===k; return { label:SLn(P[k].label), isDep:isDepKey(k), bg:sel?'#eef4ff':'#fff', bd:sel?'#bcd3f5':'transparent', select:()=>this.setState({depSel:k}) }; });
+      const conds=[]; depsRT.filter(d=>d.target===dsel).forEach(d=>d.conds.forEach(c=>conds.push(c)));
+      depSelV={ label:P[dsel]?P[dsel].label:'', isDep:conds.length>0, noDep:conds.length===0, rules:conds.map((c,i)=>({ n:(i+1)+'.', pLabel:SLn(P[c.p].label), op:c.op, v:c.v })) };
+      const optC=(on)=> on?{bg:A,fg:'#fff',bd:A,w:700}:{bg:'#fff',fg:'#5b6577',bd:'#dfe2ea',w:500};
+      const vis=fieldKeys.filter(depVis); depVisibleCount=vis.length; depHiddenCount=depCount-vis.length; depHasHidden=depHiddenCount>0;
+      depPreview=vis.map(k=>{ const cur=ansObj[k]; const appeared=isDepKey(k);
+        return { label:SLn(P[k].label), appeared, cardBd:appeared?'#cfe3d3':'#e6e8ee',
+          opts:P[k].values.map(rv=>{ const on=rv.v===cur; const c=optC(on); return { t:rv.v, bg:c.bg,fg:c.fg,bd:c.bd,w:c.w, set:()=>this.setState(s=>({depAns:{...(s.depAns||{}),[k]:rv.v}})) }; }) };
+      });
+    }
+
+    // ---- formula ----
+    const F=this.formula();
+    const fApr=st.fApr;
+    const fsA=fApr==='A'?segOn:segOff, fsB=fApr==='B'?segOn:segOff, fsC=fApr==='C'?segOn:segOff;
+    const fterms=F.terms.map(t=>({ label:t.label, val:t.val, kind:t.kind,
+      opSign: t.kind==='add'?'+':(t.kind==='trans'?'⊕':'×'),
+      kindLabel: t.kind==='base'?'множитель':(t.kind==='add'?'слагаемое':'транзитивная'),
+      kindBg: t.kind==='base'?'#e9f0fb':(t.kind==='add'?'#eaf6ef':'#f3eefb'),
+      kindFg: t.kind==='base'?'#2f6bd8':(t.kind==='add'?'#1f8a4d':'#7c5cd6'),
+      factors:t.factors.map(f=>({label:f.label, cur:f.cur, map:f.map.map(m=>({k:m[0],val:m[1]}))})) }));
+
+    return {
+      accent:A,
+      lmHint: st.logicMode==='deps'?'Параметр показывает или скрывает другой параметр':'Норматив · триггеры появления · параметры трудоёмкости · формула',
+      // логика: режимы
+      lmWorksClick:()=>this.setState({logicMode:'works'}), lmDepsClick:()=>this.setState({logicMode:'deps'}),
+      lmWorksBg: st.logicMode!=='deps'?A:'transparent', lmWorksFg: st.logicMode!=='deps'?'#fff':'#5b6577',
+      lmDepsBg: st.logicMode==='deps'?A:'transparent', lmDepsFg: st.logicMode==='deps'?'#fff':'#5b6577',
+      lgTree, lgCount, lgCur, lgAnswers, addWork,
+      wv, streamEmpty, streamHas:!streamEmpty, streamWorks, streamHdr, mx, cat, addCat,
+      // зависимости параметров
+      depFields, depSel:depSelV, depPreview, depCount, depDepCount, depVisibleCount, depHiddenCount, depHasHidden,
+      // nav
+      goSchemas:()=>this.setState({view:'schemas'}), goEditor:()=>this.setState({view:'editor'}), goDicts:()=>this.setState({view:'dicts'}),
+      navSchemasBg:ns.bg, navSchemasFg:ns.fg, navSchemasW:ns.w,
+      navEditorBg:ne.bg, navEditorFg:ne.fg, navEditorW:ne.w,
+      navDictsBg:nd.bg, navDictsFg:nd.fg, navDictsW:nd.w,
+      isEditor, showParams:isEditor&&tab==='params', showLogic:isEditor&&tab==='logic', showLogicWorks:isEditor&&tab==='logic'&&st.logicMode!=='deps', showLogicDeps:isEditor&&tab==='logic'&&st.logicMode==='deps',
+      isSchemas:view==='schemas', isDicts:view==='dicts',
+      crumb1, crumb2, hasCrumb2, crumb1Fg: hasCrumb2?'#8a93a3':'#1d2435', crumbClick:()=>this.setState({view:'schemas'}),
+      // tabs
+      tabParamsClick:()=>this.setState({tab:'params'}), tabLogicClick:()=>this.setState({tab:'logic'}),
+      tabParamsFg:tp.fg,tabParamsW:tp.w,tabParamsBd:tp.bd, tabLogicFg:tl.fg,tabLogicW:tl.w,tabLogicBd:tl.bd,
+      // params
+      paramTree, selParam, paramCount:cnt, blockCount:blkCnt,
+      expandAll:()=>this.setState({closedBlocks:{},closedSecs:{}}),
+      collapseAll:()=>{ const cb={},cs={}; this.buildTree().forEach(b=>{cb[b.name]=1; b.secList.forEach(s=>cs[b.name+'|'+s.name]=1);}); this.setState({closedBlocks:cb,closedSecs:cs}); },
+      // works
+      worksStreams, curDetail,
+      wApr, setWA:()=>this.setState({wApr:'A'}), setWB:()=>this.setState({wApr:'B'}), setWC:()=>this.setState({wApr:'C'}),
+      wsAFg:wsA.fg,wsABg:wsA.bg, wsBFg:wsB.fg,wsBBg:wsB.bg, wsCFg:wsC.fg,wsCBg:wsC.bg,
+      isWA:wApr==='A', isWB:wApr==='B', isWC:wApr==='C',
+      worksCount:this.buildWorks().length,
+      // dicts
+      dictRows, selDict, dictCount,
+      // schemas
+      schemaRows,
+      // formula
+      formulaName:F.name, formulaResult:F.result, fterms,
+      fApr, setFA:()=>this.setState({fApr:'A'}), setFB:()=>this.setState({fApr:'B'}), setFC:()=>this.setState({fApr:'C'}),
+      fsAFg:fsA.fg,fsABg:fsA.bg, fsBFg:fsB.fg,fsBBg:fsB.bg, fsCFg:fsC.fg,fsCBg:fsC.bg,
+      isFA:fApr==='A', isFB:fApr==='B', isFC:fApr==='C',
+    };
+  }
+}
+</script>
+</body>
+</html>

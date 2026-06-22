@@ -41,6 +41,7 @@ export const V2_TEMPLATE_EDIT_TEST_IDS = {
 	jsonEditor: "jsonEditor",
 	jsonEditors: "jsonEditors",
 	logicEditor: "logicEditor",
+	typicalWorksPanel: "typicalWorksPanel",
 	previewEmbed: "previewEmbed",
 	previewReset: "previewReset",
 	noDraft: "noDraft",

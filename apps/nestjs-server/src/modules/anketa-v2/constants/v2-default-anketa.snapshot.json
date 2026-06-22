@@ -298,6 +298,47 @@
 							"field_Y7z2a__S": {
 								"type": "boolean",
 								"title": "Необходимость поддержки проведения пилота"
+							},
+							"controlTypicalTasks": {
+								"type": "array",
+								"title": "Типовые работы контроля моделей",
+								"readOnly": true,
+								"items": {
+									"type": "object",
+									"title": "Типовая работа контроля модели",
+									"properties": {
+										"name": {
+											"type": "string",
+											"title": "Наименование",
+											"readOnly": true
+										},
+										"workType": {
+											"type": "string",
+											"title": "Тип работ",
+											"readOnly": true
+										},
+										"reason": {
+											"type": "string",
+											"title": "Причина",
+											"readOnly": true
+										},
+										"estimateHoursPerDay": {
+											"type": "number",
+											"title": "Базовая оценка (ч/д)",
+											"readOnly": true
+										},
+										"coefficient": {
+											"type": "number",
+											"title": "Коэф.",
+											"readOnly": true
+										},
+										"total": {
+											"type": "number",
+											"title": "Итог",
+											"readOnly": true
+										}
+									}
+								}
 							}
 						}
 					}
@@ -1549,6 +1590,7 @@
 					"deployChannels",
 					"modelClass",
 					"controlTypes",
+					"controlTypicalTasks",
 					"workType",
 					"pkRegulatory",
 					"field_imxB4YEd",
@@ -1611,6 +1653,13 @@
 				},
 				"field_Y7z2a__S": {
 					"ui:widget": "checkbox"
+				},
+				"controlTypicalTasks": {
+					"ui:options": {
+						"addable": false,
+						"removable": false,
+						"orderable": false
+					}
 				}
 			},
 			"prePromEval": {

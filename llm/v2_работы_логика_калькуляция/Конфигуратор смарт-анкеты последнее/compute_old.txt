@@ -1,0 +1,218 @@
+    // ================= ЛОГИКА (редакция v5) =================
+    if(window.SA_LOGIC_BUILD && !window.SA_LOGIC) window.SA_LOGIC_BUILD();
+    const LG=window.SA_LOGIC, EV=window.SA_EVAL;
+    const compColor=(s)=>{ s=s||''; if(s.includes('Модельный'))return '#7c5cd6'; if(s.includes('Модел'))return '#3b6fd4'; if(s.includes('Систем'))return '#119e8f'; if(s.includes('Объект'))return '#d2851f'; if(s.includes('Процесс'))return '#3b82c4'; return '#6b7484'; };
+    const streamColor=(s)=>{ s=s||''; if(s.includes('Контроль')||s.includes('Модельн'))return '#7c5cd6'; if(s.includes('Источник')||s.includes('Витрин'))return '#1f8a4d'; if(s.includes('Интеграц')||s.includes('Архитект'))return '#d2851f'; return '#2f6bd8'; };
+    const SLn=(s,n)=>{ s=s||''; n=n||30; return s.length>n? s.slice(0,n-1)+'…':s; };
+    const opsC=['×','÷','+','−'];
+    let lgTree=[], lgCount=0, lgAnswers=[];
+    let lgCur={ name:'',compShort:'',compBg:'#eef4ff',compFg:'#2f6bd8',curStream:'',streamDot:'#2f6bd8',streamMenuOpen:false,streamRec:[],streamOther:[],
+      saveText:'Сохранено',saveFg:'#1f8a4d',saveDot:'#1f8a4d',norms:[],
+      hasTrig:false,noTrig:true,triggers:[],trigPickerOpen:false,trigPickItems:[],
+      statusBg:'#eef1f6',statusBd:'#e1e4ea',statusIcon:'•',statusIconBg:'#aab1c0',statusFg:'#5b6577',statusTitle:'',statusSub:'',
+      hasLabor:false,noLabor:true,labor:[],laborPickerOpen:false,laborPickItems:[],
+      kindLabel:'',tokens:[],roundModes:[],roundStep:0.1,roundStepOn:true,roundLabel:'',roundOpen:'⌈',roundClose:'⌉',roundTag:'вверх',
+      substLine:'',raw:0,value:0,hasAnswers:false,normMissing:false,
+      fmIsVisual:true,fmIsManual:false,manualText:'',manualError:false,manualErrText:'',legend:[],
+      coefMenuOpen:false,coefMenu:[],coefMenuEmpty:true,workMenuOpen:false,refQuery:'',refList:[],isPureTransitive:false };
+    let depFields=[], depSelV={isDep:false,noDep:true,rules:[],label:''}, depPreview=[], depCount=0, depDepCount=0, depVisibleCount=0, depHiddenCount=0, depHasHidden=false;
+    let addWork={open:false};
+
+    if(LG&&EV){
+      const P=LG.params, edits=st.edits||{}, ans=st.lgAns||{}, streamSel=st.streamSel||{};
+      const extraWorks=st.extraWorks||[];
+      const allWorks=LG.works.concat(extraWorks);
+      const getW=(w)=> edits[w.id] ? edits[w.id] : w;
+      const setW=(wid, next)=>{ this.setState(s=>({ edits:{...(s.edits||{}), [wid]:next}, saveState:'saving' })); clearTimeout(this._saveT); this._saveT=setTimeout(()=>this.setState({saveState:'saved'}),650); };
+      const curStreamOf=(w)=> streamSel[w.id] || w.defaultStream || (w.recommend&&w.recommend[0]) || LG.STREAMS[0];
+      lgCount=allWorks.length;
+
+      const results={};
+      const wl=allWorks.map(getW);
+      wl.forEach(w=>{ if(!EV.hasWorkRef(w)) results[w.id]=EV.evalWork(w,curStreamOf(w),P,ans).value; });
+      wl.forEach(w=>{ if(EV.hasWorkRef(w)) results[w.id]=EV.evalWork(w,curStreamOf(w),P,ans,results).value; });
+
+      // дерево по архитектурным компонентам
+      const cm={}, corder=[];
+      allWorks.forEach(w0=>{ const w=getW(w0); if(!cm[w.component]){cm[w.component]={name:w.component,works:[]};corder.push(w.component);} cm[w.component].works.push(w0); });
+      const mkRow=(w0)=>{ const w=getW(w0); const cs2=curStreamOf(w); const sel=st.lgSel===w.id; const ts=EV.trigState(w,cs2,P,ans);
+        return { name:w.name, value:results[w.id], select:()=>this.setState({lgSel:w.id, trigPick:false, laborPick:false, coefMenu:false, workMenu:false, streamMenu:false}),
+          bg:sel?'#eef4ff':'#fff', bd:sel?'#bcd3f5':'transparent',
+          trigBadge: ts.empty?'без триггеров':(ts.appears?'появляется':'скрыта'), trigBg: ts.empty?'#fdf3e0':(ts.appears?'#e7f6ec':'#f6eceb'), trigFg: ts.empty?'#b5791f':(ts.appears?'#1f8a4d':'#c2554c'),
+          labBadge:(w.byStream[cs2]&&w.byStream[cs2].labor.length)?('коэф.: '+w.byStream[cs2].labor.length):'—', labBg:(w.byStream[cs2]&&w.byStream[cs2].labor.length)?'#eaf6ef':'#eef1f6', labFg:(w.byStream[cs2]&&w.byStream[cs2].labor.length)?'#1f8a4d':'#8a93a3' };
+      };
+      lgTree=corder.map(cn=>{ const c=cm[cn]; const open=!st.closedLgComps[cn];
+        return { short:cn, color:compColor(cn), count:c.works.length, open, rot:open?'90deg':'0deg',
+          toggle:()=>{ const m={...st.closedLgComps}; m[cn]?delete m[cn]:m[cn]=1; this.setState({closedLgComps:m}); },
+          works:c.works.map(mkRow) };
+      });
+
+      // выбранная работа
+      const w0=allWorks.find(x=>x.id===st.lgSel)||allWorks[0];
+      const w=getW(w0);
+      const cs2=curStreamOf(w);
+      const sd=EV.streamData(w,cs2);
+      const ev=EV.evalWork(w,cs2,P,ans,results); const ts=EV.trigState(w,cs2,P,ans); const kind=EV.kindOf(w);
+      const pool=LG.paramsForComponent(w.component);
+
+      const ensureStream=(nw,s)=>{ if(!nw.byStream[s]) nw.byStream[s]=LG.defStreamData(1,false); };
+      const mutSD=(fn)=>{ const nw=JSON.parse(JSON.stringify(w)); ensureStream(nw,cs2); fn(nw.byStream[cs2],nw); setW(w.id,nw); };
+      const setFormula=(tokens)=>{ const nw=JSON.parse(JSON.stringify(w)); nw.formula={tokens}; setW(w.id,nw); };
+      const setRound=(r)=>{ const nw=JSON.parse(JSON.stringify(w)); nw.round={...nw.round,...r}; setW(w.id,nw); };
+
+      // стрим-меню
+      const rec=(w.recommend||LG.recommendFor(w.component));
+      const mkStreamItem=(s)=>({ name:s, dot:streamColor(s), on:s===cs2, bg:s===cs2?'#eef4ff':'#fff',
+        set:()=>{ this.setState(st2=>({streamSel:{...(st2.streamSel||{}),[w.id]:s}, streamMenu:false})); } });
+      const streamRec=rec.map(mkStreamItem);
+      const streamOther=LG.STREAMS.filter(s=>rec.indexOf(s)<0).map(mkStreamItem);
+
+      // нормы
+      const activeN=EV.activeNorm(sd.norms);
+      const norms=sd.norms.map((n,ni)=>{ const isActive=activeN&&activeN.id===n.id;
+        return { value:n.value, from:n.from, to:n.to, rowBg:isActive?'#f3f9f5':'transparent', badge:isActive?'активна':'архив', badgeBg:isActive?'#e7f6ec':'#eef1f6', badgeFg:isActive?'#1f8a4d':'#8a93a3',
+          valInput:(e)=>{ const v=parseFloat(e.target.value); if(isNaN(v))return; mutSD(d=>{ d.norms[ni].value=v; }); },
+          fromInput:(e)=>{ const val=e.target.value; mutSD(d=>{ d.norms[ni].from=val; }); },
+          toInput:(e)=>{ const val=e.target.value; mutSD(d=>{ d.norms[ni].to=val; }); },
+          remove:()=>mutSD(d=>{ d.norms.splice(ni,1); }) };
+      });
+
+      // триггеры (чипы значений)
+      const triggers=sd.triggers.map((t,ti)=>{ const p=P[t.p];
+        return { pLabel:p?p.label:t.p,
+          remove:()=>mutSD(d=>{ d.triggers.splice(ti,1); }),
+          chips:(p?p.values:[]).map(rv=>{ const on=(t.vals||[]).indexOf(rv.v)>=0;
+            return { v:rv.v, mark:on?'☑':'☐', w:on?700:500, bg:on?'#fef0e0':'#fff', fg:on?'#b5791f':'#5b6577', bd:on?'#f0d9a8':'#dfe2ea',
+              toggle:()=>mutSD(d=>{ const arr=d.triggers[ti].vals||[]; const idx=arr.indexOf(rv.v); if(idx>=0) arr.splice(idx,1); else arr.push(rv.v); d.triggers[ti].vals=arr; }) }; }) };
+      });
+      const usedTrig=sd.triggers.map(t=>t.p);
+      const trigPickItems=pool.filter(id=>usedTrig.indexOf(id)<0).map(id=>{ const p=P[id];
+        return { label:SLn(p.label), typeLabel:p.type==='bool'?'да/нет':'справочник',
+          add:()=>{ mutSD(d=>{ d.triggers.push({id:'t'+Date.now(),p:id,vals:[p.values[0]?p.values[0].v:'']}); }); this.setState({trigPick:false}); } };
+      });
+      const statusTitle = ts.empty? 'Без триггеров — работа не появится в анкете'
+        : (ts.appears? ('Работа появляется в анкете при текущих ответах') : 'Условия заданы, но при текущих ответах не выполнены');
+      const unmet = sd.triggers.filter(c=>{ const p=P[c.p]; if(!p) return true; const a=EV.ans(ans,p); return (c.vals||[]).indexOf(a)<0; });
+      const statusSub = ts.empty? 'добавьте параметр-триггер и отметьте значения, при которых работа нужна'
+        : (ts.appears? ('условий: '+ts.count+', все выполнены') : ('не выполнено: '+unmet.map(c=>P[c.p]?SLn(P[c.p].label,22):'').filter(Boolean).join(', ')));
+      const statusIcon = ts.empty?'!':(ts.appears?'✓':'✕'); const statusIconBg = ts.empty?'#e0922f':(ts.appears?'#1f8a4d':'#c2554c');
+
+      // параметры трудоёмкости
+      const labor=sd.labor.map((l,li)=>{ const p=P[l.p]; if(!p) return {label:l.p,code:'k'+(li+1),rows:[],remove:()=>{}}; const cur=EV.ans(ans,p);
+        return { label:p.label, code:'k'+(li+1), remove:()=>mutSD(d=>{ d.labor.splice(li,1); }),
+          rows:p.values.map((rv,ri)=>{ const on=rv.v===cur;
+            return { v:rv.v, coef:rv.coef, rowBg:on?'#f3f9f5':'transparent', dot:on?'#1f8a4d':'#d2d7e0',
+              select:()=>this.setState(s=>({lgAns:{...(s.lgAns||{}),[p.id]:rv.v}})), stop:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); },
+              coefInput:(e)=>{ const v=parseFloat(e.target.value); if(isNaN(v))return; p.values[ri].coef=v; this.forceUpdate(); } };
+          }) };
+      });
+      const laborIds=sd.labor.map(l=>l.p);
+      const laborPickItems=pool.filter(id=>P[id].type==='dict' && laborIds.indexOf(id)<0).map(id=>{ const p=P[id]; return { label:SLn(p.label), add:()=>{ mutSD(d=>{ d.labor.push({id:'l'+Date.now(),p:id}); }); this.setState({laborPick:false}); } }; });
+
+      // формула tokens
+      const fTokens=(w.formula&&w.formula.tokens)?w.formula.tokens:[{t:'N'}];
+      const chipFor=(tok)=>{ if(tok.t==='N'){ const nv=EV.normValue(w,cs2); return {main:'Норма N', sub:(nv==null?'—':String(nv)), bg:'#1c2333',fg:'#fff',bd:'#1c2333',subFg:'#9aa6bd'}; }
+        if(tok.t==='num') return {main:'число', sub:String(tok.val), bg:'#eef1f6',fg:'#3a4252',bd:'#e1e4ea',subFg:'#9aa2b1'};
+        if(tok.t==='coef'){ const p=P[tok.p]; const idx=laborIds.indexOf(tok.p); const a=p?EV.ans(ans,p):''; const cf=p?EV.coefOf(ans,p):1; return {main:(idx>=0?('k'+(idx+1)+' · '):'')+(p?SLn(p.label,18):tok.p), sub:(a||'—')+' → '+cf, bg:'#eaf6ef',fg:'#1f8a4d',bd:'#cfe9d8',subFg:'#5aa97c'}; }
+        if(tok.t==='work'){ const rw=allWorks.find(x=>x.id===tok.ref); const rv=results[tok.ref]; return {main:'Работа: '+SLn(rw?rw.name:tok.ref,18), sub:'= '+(rv==null?'—':rv), bg:'#f3eefb',fg:'#7c5cd6',bd:'#e3d9f6',subFg:'#a98fd8'}; }
+        return {main:'?',sub:'',bg:'#eef1f6',fg:'#3a4252',bd:'#e1e4ea',subFg:'#9aa2b1'}; };
+      const setTokens=(toks)=>setFormula(toks);
+      const tokens=fTokens.map((tok,idx)=>{
+        if(tok.t==='op') return { isOp:true,isParen:false,isOperand:false, op:tok.op, cycle:()=>setTokens(fTokens.map((x,j)=>j===idx?{...x,op:opsC[(opsC.indexOf(tok.op)+1)%opsC.length]}:x)) };
+        if(tok.t==='lp'||tok.t==='rp') return { isOp:false,isParen:true,isOperand:false, paren:tok.t==='lp'?'(':')', remove:()=>setTokens(fTokens.filter((x,j)=>j!==idx)) };
+        const ch=chipFor(tok);
+        return { isOp:false,isParen:false,isOperand:true, main:ch.main, sub:ch.sub, chipBg:ch.bg, chipFg:ch.fg, chipBd:ch.bd, subFg:ch.subFg, remove:()=>setTokens(fTokens.filter((x,j)=>j!==idx)) };
+      });
+      const append=(tok)=>setTokens([...fTokens, tok]);
+      const coefMenu=sd.labor.map((l,li)=>{ const p=P[l.p]; return { code:'k'+(li+1), label:SLn(p?p.label:l.p), add:()=>{ append({t:'coef',p:l.p}); this.setState({coefMenu:false}); } }; });
+
+      // меню «значение работы»
+      const refQuery=(st.refQuery||'').toLowerCase();
+      const refList=allWorks.filter(x=>x.id!==w.id && x.name.toLowerCase().includes(refQuery)).slice(0,40).map(x=>({ name:SLn(x.name,40), comp:LG.normComp(x.component), color:compColor(x.component), pick:()=>{ append({t:'work',ref:x.id}); this.setState({workMenu:false, refQuery:''}); } }));
+
+      // округление (обёртка + режимы)
+      const roundMode=(w.round&&w.round.mode)||'CEIL'; const roundStep=(w.round&&w.round.step)||0.1;
+      const rmDefs=[['CEIL','вверх'],['FLOOR','вниз'],['ROUND','матем.'],['NONE','без']];
+      const roundModes=rmDefs.map(([m,lbl])=>({ label:lbl, set:()=>setRound({mode:m, step:roundStep}), bg:roundMode===m?A:'transparent', fg:roundMode===m?'#fff':'#5b6577' }));
+      const roundOpen = roundMode==='CEIL'?'⌈':roundMode==='FLOOR'?'⌊':roundMode==='ROUND'?'[':'';
+      const roundClose= roundMode==='CEIL'?'⌉':roundMode==='FLOOR'?'⌋':roundMode==='ROUND'?']':'';
+      const roundTag  = roundMode==='CEIL'?'вверх':roundMode==='FLOOR'?'вниз':roundMode==='ROUND'?'матем.':'без';
+      const roundLabel= roundMode==='NONE'?'без округл.': (roundMode==='CEIL'?'⌈ ':roundMode==='FLOOR'?'⌊ ':'≈ ')+roundStep+(roundMode==='CEIL'?' ⌉':roundMode==='FLOOR'?' ⌋':'');
+      const cycleRound=()=>{ const order=['CEIL','FLOOR','ROUND','NONE']; const ni=(order.indexOf(roundMode)+1)%order.length; setRound({mode:order[ni], step:roundStep}); };
+
+      // ответы превью
+      const ansC=(on)=> on?{bg:A,fg:'#fff',bd:A,w:700}:{bg:'#fff',fg:'#5b6577',bd:'#dfe2ea',w:500};
+      lgAnswers=sd.labor.map(l=>{ const p=P[l.p]; if(!p) return null; const cur=EV.ans(ans,p);
+        return { label:SLn(p.label), opts:p.values.map(rv=>{ const on=rv.v===cur; const c=ansC(on); return { t:rv.v, bg:c.bg,fg:c.fg,bd:c.bd,w:c.w, set:()=>this.setState(s=>({lgAns:{...(s.lgAns||{}),[p.id]:rv.v}})) }; }) };
+      }).filter(Boolean);
+
+      // строка подстановки
+      let substLine=EV.stringify(w,P)
+        .replace(/\[Работа: ([^\]]+)\]/g,(m,nm)=>{ const rw=allWorks.find(x=>x.name===nm); return rw&&results[rw.id]!=null? (''+results[rw.id]) : m; })
+        .replace(/P\[([^\]]+)\]/g,(m,nm)=>{ const id=Object.keys(P).find(k=>P[k].label===nm); const p=P[id]; return p?(''+EV.coefOf(ans,p)):m; })
+        .replace(/(^|[^A-Za-zА-Яа-я])N([^A-Za-zА-Яа-я]|$)/, (m,a2,b2)=>{ const nv=EV.normValue(w,cs2); return a2+(nv==null?'N':nv)+b2; });
+
+      const fmMode=st.fmMode||'visual';
+      const manualText=(st.manualDraft!=null && st.manualWid===w.id)? st.manualDraft : EV.stringify(w,P).replace(/P\[([^\]]+)\]/g,(m,nm)=>{ const idx=sd.labor.findIndex(l=>P[l.p]&&P[l.p].label===nm); return idx>=0?'k'+(idx+1):m; });
+      const legend=sd.labor.map((l,li)=>({ code:'k'+(li+1), label:P[l.p]?P[l.p].label:l.p }));
+      const saveState=st.saveState||'saved';
+
+      lgCur={ name:w.name, compShort:w.component, compBg:compColor(w.component)+'1f', compFg:compColor(w.component),
+        curStream:cs2, streamDot:streamColor(cs2), streamMenuOpen:!!st.streamMenu, toggleStreamMenu:()=>this.setState(s=>({streamMenu:!s.streamMenu})), streamRec, streamOther,
+        saveText: saveState==='saving'?'Сохранение…':(saveState==='error'?'Ошибка':'Сохранено'), saveFg: saveState==='error'?'#c2554c':(saveState==='saving'?'#b5791f':'#1f8a4d'), saveDot: saveState==='error'?'#c2554c':(saveState==='saving'?'#e0922f':'#1f8a4d'),
+        norms, addNorm:()=>mutSD(d=>{ d.norms.push({id:'n'+Date.now(),value:1,from:'01.01.2026',to:''}); }),
+        hasTrig:ts.count>0, noTrig:ts.count===0, triggers, trigPickerOpen:!!st.trigPick, trigPickItems, toggleTrigPicker:()=>this.setState(s=>({trigPick:!s.trigPick, laborPick:false})),
+        statusBg: ts.empty?'#fdf6ec':(ts.appears?'#f3f9f5':'#fdf3f2'), statusBd: ts.empty?'#f3e2c4':(ts.appears?'#cfe8d8':'#f3d6d2'), statusIcon, statusIconBg, statusFg: ts.empty?'#b5791f':(ts.appears?'#1f8a4d':'#c2554c'), statusTitle, statusSub,
+        hasLabor:labor.length>0, noLabor:labor.length===0, labor, laborPickerOpen:!!st.laborPick, laborPickItems, toggleLaborPicker:()=>this.setState(s=>({laborPick:!s.laborPick, trigPick:false})),
+        kindLabel:kind, tokens,
+        roundModes, roundStep, roundStepOn:roundMode!=='NONE', roundStepInput:(e)=>{ const v=parseFloat(e.target.value); if(isNaN(v))return; setRound({step:v}); }, roundLabel, roundOpen, roundClose, roundTag, cycleRound,
+        substLine, raw:ev.raw, value:(EV.normValue(w,cs2)==null && !EV.hasWorkRef(w))?'—':ev.value, normMissing:(EV.normValue(w,cs2)==null && !EV.hasWorkRef(w) && fTokens.some(t=>t.t==='N')),
+        hasAnswers:lgAnswers.length>0,
+        fmIsVisual:fmMode!=='manual', fmIsManual:fmMode==='manual', fmVisFg:fmMode!=='manual'?'#fff':'#5b6577', fmVisBg:fmMode!=='manual'?A:'transparent', fmManFg:fmMode==='manual'?'#fff':'#5b6577', fmManBg:fmMode==='manual'?A:'transparent',
+        fmVisual:()=>this.setState({fmMode:'visual'}), fmManual:()=>this.setState({fmMode:'manual', manualDraft:null}),
+        insN:()=>append({t:'N'}), insNum:()=>append({t:'num',val:1}), insOp:()=>append({t:'op',op:'×'}), insLp:()=>append({t:'lp'}), insRp:()=>append({t:'rp'}),
+        insCoef:()=>this.setState(s=>({coefMenu:!s.coefMenu, workMenu:false})), coefMenuOpen:!!st.coefMenu, coefMenu, coefMenuEmpty:coefMenu.length===0,
+        insWork:()=>this.setState(s=>({workMenu:!s.workMenu, coefMenu:false})), workMenuOpen:!!st.workMenu, refQuery:st.refQuery||'', refSearch:(e)=>this.setState({refQuery:e.target.value}), refList,
+        isPureTransitive:EV.isPureTransitive(w),
+        fmClear:()=>setTokens([{t:'N'}]),
+        manualText, manualBd: st.manualErr?'#e0a59f':'#dfe2ea', manualError:!!st.manualErr, manualErrText:st.manualErr||'', legend,
+        manualApply:(e)=>{ const str=e.target.value; const res=EV.parse?EV.parse(str, sd.labor.map(l=>l.p), P):{tokens:[],errors:['парсер недоступен']}; if(res.errors&&res.errors.length) this.setState({manualErr:res.errors.join('; '), manualDraft:str, manualWid:w.id}); else { setFormula(res.tokens); this.setState({manualErr:null, manualDraft:null}); } } };
+
+      // модалка добавления работы
+      const compsList=corder.slice();
+      const awComp=st.awComp||compsList[0]||'Система-источник';
+      addWork={ open:!!st.addWorkOpen, stop:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); },
+        name:st.awName||'', comps:compsList.map(c=>({ name:c, on:c===awComp, color:compColor(c), bg:c===awComp?compColor(c)+'1f':'#fff', fg:c===awComp?compColor(c):'#5b6577', bd:c===awComp?compColor(c):'#dfe2ea', set:()=>this.setState({awComp:c}) })),
+        streams:LG.STREAMS.map(s=>{ const on=s===(st.awStream||LG.recommendFor(awComp)[0]); return { name:s, on, w:on?700:500, bg:on?A:'#fff', fg:on?'#fff':'#5b6577', bd:on?A:'#dfe2ea', set:()=>this.setState({awStream:s}) }; }),
+        nameInput:(e)=>this.setState({awName:e.target.value}),
+        norm:st.awNorm!=null?st.awNorm:1.0, normInput:(e)=>{ const v=parseFloat(e.target.value); this.setState({awNorm:isNaN(v)?0:v}); },
+        canSave:(st.awName||'').trim().length>0, saveBg:(st.awName||'').trim().length>0?'#1c2333':'#aab1c0',
+        open2:()=>this.setState({addWorkOpen:true, awName:'', awComp:compsList[0], awStream:LG.recommendFor(compsList[0]||'')[0], awNorm:1.0}),
+        cancel:()=>this.setState({addWorkOpen:false}),
+        save:()=>{ const nm=(st.awName||'').trim(); if(!nm) return; const stream=st.awStream||LG.recommendFor(awComp)[0]; const nv=st.awNorm!=null?st.awNorm:1; const id='wx'+Date.now();
+          const byStream={}; byStream[stream]=LG.defStreamData(nv,true);
+          const nw={ id, name:nm, component:awComp, recommend:LG.recommendFor(awComp), defaultStream:stream, byStream, formula:{tokens:[{t:'N'}]}, round:{mode:'CEIL',step:0.1} };
+          this.setState(s=>({ extraWorks:[...(s.extraWorks||[]), nw], addWorkOpen:false, lgSel:id, saveState:'saving' })); clearTimeout(this._saveT); this._saveT=setTimeout(()=>this.setState({saveState:'saved'}),650); } };
+
+      // зависимости
+      const allKeys=Object.keys(P).filter(k=>P[k].type==='bool'||P[k].type==='dict');
+      const fieldKeys=allKeys.slice(0,9);
+      const depsRT=[];
+      if(fieldKeys[2]&&fieldKeys[0]) depsRT.push({target:fieldKeys[2], conds:[{p:fieldKeys[0], op:'=', v:P[fieldKeys[0]].values[0].v}]});
+      if(fieldKeys[4]&&fieldKeys[1]) depsRT.push({target:fieldKeys[4], conds:[{p:fieldKeys[1], op:'=', v:P[fieldKeys[1]].values[0].v}]});
+      const da=st.depAns||{}; const ansObj={}; fieldKeys.forEach(k=>ansObj[k]=(da[k]!=null?da[k]:P[k].cur));
+      const isDepKey=k=> depsRT.some(d=>d.target===k);
+      const depVis=k=>{ const rules=depsRT.filter(d=>d.target===k); if(!rules.length) return true; return rules.every(d=>d.conds.every(c=>{ const a=ansObj[c.p]; return c.op==='='? a===c.v : a!==c.v; })); };
+      depCount=fieldKeys.length; depDepCount=depsRT.length;
+      const dsel = fieldKeys.indexOf(st.depSel)>=0? st.depSel : (depsRT[0]?depsRT[0].target:fieldKeys[0]);
+      depFields=fieldKeys.map(k=>{ const sel=dsel===k; return { label:SLn(P[k].label), isDep:isDepKey(k), bg:sel?'#eef4ff':'#fff', bd:sel?'#bcd3f5':'transparent', select:()=>this.setState({depSel:k}) }; });
+      const conds=[]; depsRT.filter(d=>d.target===dsel).forEach(d=>d.conds.forEach(c=>conds.push(c)));
+      depSelV={ label:P[dsel]?P[dsel].label:'', isDep:conds.length>0, noDep:conds.length===0, rules:conds.map((c,i)=>({ n:(i+1)+'.', pLabel:SLn(P[c.p].label), op:c.op, v:c.v })) };
+      const optC=(on)=> on?{bg:A,fg:'#fff',bd:A,w:700}:{bg:'#fff',fg:'#5b6577',bd:'#dfe2ea',w:500};
+      const vis=fieldKeys.filter(depVis); depVisibleCount=vis.length; depHiddenCount=depCount-vis.length; depHasHidden=depHiddenCount>0;
+      depPreview=vis.map(k=>{ const cur=ansObj[k]; const appeared=isDepKey(k);
+        return { label:SLn(P[k].label), appeared, cardBd:appeared?'#cfe3d3':'#e6e8ee',
+          opts:P[k].values.map(rv=>{ const on=rv.v===cur; const c=optC(on); return { t:rv.v, bg:c.bg,fg:c.fg,bd:c.bd,w:c.w, set:()=>this.setState(s=>({depAns:{...(s.depAns||{}),[k]:rv.v}})) }; }) };
+      });
+    }
+

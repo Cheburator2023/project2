@@ -14,10 +14,18 @@ import {
 import { readAnketaFormContext } from "../utils/anketaFormContext";
 import {
 	arrayTableShowsRowActions,
+	collectTypicalWorkSourceNames,
+	filterTypicalWorkItems,
 	getArrayAtPath,
+	isTypicalWorkArrayPath,
 	resolveArrayTableColumns,
+	sumTypicalWorkTotals,
 	type AnketaArrayTableColumn,
 } from "../utils/anketaModalArrayTableConfig";
+import { useMemo, useState } from "react";
+import MenuItem from "@mui/material/MenuItem";
+import Select from "@mui/material/Select";
+import FormControl from "@mui/material/FormControl";
 
 type Props = {
 	pathKey: string;
@@ -108,6 +116,27 @@ export function AnketaModalArrayTable({
 	const items = getArrayAtPath(ctx.formData ?? {}, pathKey);
 	const readOnly = ctx.anketaReadOnly;
 	const showRowActions = arrayTableShowsRowActions(pathKey, formContext);
+	const isTypicalWorks = isTypicalWorkArrayPath(pathKey);
+	const sourceNames = useMemo(
+		() => (isTypicalWorks ? collectTypicalWorkSourceNames(items) : []),
+		[isTypicalWorks, items],
+	);
+	const [sourceNameFilter, setSourceNameFilter] = useState<string | null>(null);
+	const visibleItems = useMemo(() => {
+		if (!isTypicalWorks || sourceNames.length <= 1) return items;
+		return filterTypicalWorkItems(items, sourceNameFilter);
+	}, [isTypicalWorks, items, sourceNameFilter, sourceNames.length]);
+	const typicalTotal = isTypicalWorks ? sumTypicalWorkTotals(visibleItems) : null;
+	const displayColumns = useMemo(() => {
+		if (!columns) return null;
+		if (!isTypicalWorks) return columns;
+		const hasSource = items.some(
+			(item) =>
+				typeof item.sourceName === "string" && item.sourceName.trim().length > 0,
+		);
+		if (hasSource) return columns;
+		return columns.filter((col) => col.key !== "sourceName");
+	}, [columns, isTypicalWorks, items]);
 
 	const tableTestId = anketaMoleculeTestIdForPath(
 		ANKETA_MOLECULE_TEST_IDS.arrayTable,
@@ -115,7 +144,7 @@ export function AnketaModalArrayTable({
 	);
 
 	// Fallback for paths without a column config (e.g., custom constructor schemas)
-	if (!columns) {
+	if (!displayColumns) {
 		return (
 			<Box data-test-id={tableTestId} sx={{ minWidth: 0 }}>
 				<Stack direction="row" spacing={0.75} alignItems="baseline" mb={1.5}>
@@ -210,7 +239,8 @@ export function AnketaModalArrayTable({
 					color="text.secondary"
 					data-test-id={ANKETA_MOLECULE_TEST_IDS.arrayTableCount}
 				>
-					({items.length})
+					({visibleItems.length}
+					{visibleItems.length !== items.length ? ` из ${items.length}` : ""})
 				</Typography>
 			</Stack>
 			{sectionHint ? (
@@ -224,7 +254,28 @@ export function AnketaModalArrayTable({
 				</Typography>
 			) : null}
 
-			{items.length > 0 ? (
+			{isTypicalWorks && sourceNames.length > 1 ? (
+				<FormControl size="small" sx={{ mb: 1.5, minWidth: 220 }}>
+					<Select
+						value={sourceNameFilter ?? ""}
+						displayEmpty
+						onChange={(e) =>
+							setSourceNameFilter(
+								e.target.value ? String(e.target.value) : null,
+							)
+						}
+					>
+						<MenuItem value="">Все объекты</MenuItem>
+						{sourceNames.map((name) => (
+							<MenuItem key={name} value={name}>
+								{name}
+							</MenuItem>
+						))}
+					</Select>
+				</FormControl>
+			) : null}
+
+			{visibleItems.length > 0 ? (
 				<Box
 					data-test-id={`${tableTestId}--scroll`}
 					sx={{ minWidth: 0, overflowX: "auto" }}
@@ -233,14 +284,14 @@ export function AnketaModalArrayTable({
 						data-test-id={`${tableTestId}--columns-header`}
 						sx={{
 							display: "grid",
-							gridTemplateColumns: gridTemplate(columns, showRowActions),
+							gridTemplateColumns: gridTemplate(displayColumns, showRowActions),
 							gap: 1,
 							px: 1.5,
 							py: 0.75,
 							minWidth: showRowActions ? 720 : 640,
 						}}
 					>
-						{columns.map((column) => (
+						{displayColumns.map((column) => (
 							<Typography
 								key={column.key}
 								variant="caption"
@@ -258,14 +309,14 @@ export function AnketaModalArrayTable({
 						data-test-id={`${tableTestId}--body`}
 						sx={{ minWidth: showRowActions ? 720 : 640 }}
 					>
-						{items.map((item, index) => (
+						{visibleItems.map((item, index) => (
 							<Box
 								key={`${pathKey}-${index}`}
 								data-test-id={`${tableTestId}--row--${index}`}
 								sx={{
 									display: "grid",
 									gridTemplateColumns: gridTemplate(
-										columns,
+										displayColumns,
 										showRowActions,
 									),
 									gap: 1,
@@ -278,7 +329,7 @@ export function AnketaModalArrayTable({
 									borderColor: "divider",
 								}}
 							>
-								{columns.map((column) => (
+								{displayColumns.map((column) => (
 									<CellValue
 										key={column.key}
 										column={column}
@@ -327,9 +378,35 @@ export function AnketaModalArrayTable({
 				<ListEmptyPlaceholder
 					data-test-id={`${tableTestId}--empty`}
 				>
-					Нет записей
+					{readOnly && isTypicalWorks
+						? "Типовые работы появятся после расчёта анкеты"
+						: "Нет записей"}
 				</ListEmptyPlaceholder>
 			)}
+
+			{typicalTotal != null ? (
+				<Box
+					sx={{
+						mt: 1.5,
+						display: "flex",
+						justifyContent: "flex-end",
+						alignItems: "center",
+						gap: 1,
+					}}
+					data-test-id={`${tableTestId}--total`}
+				>
+					<Typography variant="body2" color="text.secondary">
+						Итого по типовым работам:
+					</Typography>
+					<Typography
+						variant="subtitle1"
+						fontWeight={800}
+						sx={{ fontFamily: "monospace" }}
+					>
+						{typicalTotal} ч/д
+					</Typography>
+				</Box>
+			) : null}
 		</Box>
 	);
 }

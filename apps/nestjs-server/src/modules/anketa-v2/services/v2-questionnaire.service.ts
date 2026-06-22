@@ -223,9 +223,10 @@ export class V2QuestionnaireService {
 
 		for (const spec of V2_TEST_QUESTIONNAIRE_SEED_SPECS) {
 			const raw = buildTestQuestionnaireFormData(jsonSchema, spec.variant);
-			const evaluated = this.calculationService.evaluate(
+			const evaluated = await this.calculationService.evaluate(
 				{ rules: logic?.rules ?? [] } as never,
 				raw,
+				{ templateVersionId: version.id },
 			);
 			const formData = migrateV2AnketaFormData(evaluated.formData);
 			const dto = await this.create(
