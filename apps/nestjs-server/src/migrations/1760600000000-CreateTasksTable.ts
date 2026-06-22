@@ -3,7 +3,7 @@ import { MigrationInterface, QueryRunner } from "typeorm";
 export class CreateTasksTable1760600000000 implements MigrationInterface {
 	public async up(queryRunner: QueryRunner): Promise<void> {
 		await queryRunner.query(`
-			CREATE TABLE tasks (
+			CREATE TABLE IF NOT EXISTS tasks (
 				id varchar(26) PRIMARY KEY,
 				parent_id varchar(64) NOT NULL,
 				position integer NOT NULL,
@@ -14,10 +14,10 @@ export class CreateTasksTable1760600000000 implements MigrationInterface {
 		`);
 
 		await queryRunner.query(`
-			CREATE INDEX idx_tasks_parent_id ON tasks(parent_id)
+			CREATE INDEX IF NOT EXISTS idx_tasks_parent_id ON tasks(parent_id)
 		`);
 		await queryRunner.query(`
-			CREATE INDEX idx_tasks_origin ON tasks(origin)
+			CREATE INDEX IF NOT EXISTS idx_tasks_origin ON tasks(origin)
 		`);
 	}
 
