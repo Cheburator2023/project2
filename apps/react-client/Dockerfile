@@ -1,11 +1,17 @@
 # Сборка поверх базового образа ubi8-base-smart-anketa-ui (корневой Dockerfile).
-# В базе уже лежит /app с монорепо и node_modules — COPY из build context не нужен.
+# База содержит node_modules; исходники подмешиваем из build context, иначе CI
+# собирает код из зафиксированного в базе снимка и кеширует RUN без инвалидации.
 #
-# CI: docker build . -f Dockerfile -t smart-anketa-frontend:tag
+# CI: docker build . -f apps/react-client/Dockerfile -t smart-anketa-frontend:tag
 
 FROM docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-ui:v3.1.0 AS build-deps
 
 WORKDIR /app
+
+COPY apps/react-client /app/apps/react-client
+COPY packages/api-contract /app/packages/api-contract
+COPY packages/json-logic-ts /app/packages/json-logic-ts
+COPY packages/ag-grid-enterprise /app/packages/ag-grid-enterprise
 
 RUN npm --prefix packages/api-contract run build \
 	&& npm --prefix packages/json-logic-ts run build
