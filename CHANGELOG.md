@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+# [1.19.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.18.0...v1.19.0) (2026-06-22)
+
+
+### Features
+
+* add dictionary list panel width management and enhance V2Dictionary components ([095a5e4](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/095a5e4e7c3df0c9b563f81c7836e039b722efcd))
+* implement v2 data transfer functionality in the anketa-v2 module ([73cd963](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/73cd963f95663c3847594ee05cd152593f2ca7dc))
+
 # [1.18.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.17.0...v1.18.0) (2026-06-22)
 
 
