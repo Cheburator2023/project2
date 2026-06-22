@@ -1,9 +1,11 @@
 # Сборка поверх базового образа ubi8-base-smart-anketa-ui (корневой Dockerfile).
-# База содержит node_modules; исходники подмешиваем из build context.
 #
-# Поддерживаются оба CI-варианта (автоопределение layout в RUN ниже):
-#   docker build . -f apps/react-client/Dockerfile          # контекст = корень монорепо
-#   docker build . -f Dockerfile                            # контекст = apps/react-client
+# Dev (контекст = корень монорепо):
+#   docker build . -f apps/react-client/Dockerfile
+#
+# Transfer (контекст = apps/react-client) — перед сборкой:
+#   sh scripts/stage-docker-ci-packages.sh react-client api-contract json-logic-ts ag-grid-enterprise
+#   docker build . -f Dockerfile
 
 FROM docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-ui:v3.1.0 AS build-deps
 
@@ -18,9 +20,17 @@ RUN set -eux; \
 		cp -a /tmp/build-context/packages/ag-grid-enterprise/. /app/packages/ag-grid-enterprise/; \
 	elif [ -f /tmp/build-context/package.json ]; then \
 		cp -a /tmp/build-context/. /app/apps/react-client/; \
+		if [ ! -d /tmp/build-context/.ci-packages/api-contract ]; then \
+			echo "ERROR: app-only build is missing apps/react-client/.ci-packages/" >&2; \
+			echo "Run: sh scripts/stage-docker-ci-packages.sh react-client api-contract json-logic-ts ag-grid-enterprise" >&2; \
+			echo "Or build from monorepo root: docker build . -f apps/react-client/Dockerfile" >&2; \
+			exit 1; \
+		fi; \
+		cp -a /tmp/build-context/.ci-packages/api-contract/. /app/packages/api-contract/; \
+		cp -a /tmp/build-context/.ci-packages/json-logic-ts/. /app/packages/json-logic-ts/; \
+		cp -a /tmp/build-context/.ci-packages/ag-grid-enterprise/. /app/packages/ag-grid-enterprise/; \
 	else \
 		echo "Unsupported Docker build context for react-client." >&2; \
-		echo "Use monorepo root or apps/react-client as build context." >&2; \
 		exit 1; \
 	fi; \
 	rm -rf /tmp/build-context

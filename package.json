@@ -38,10 +38,12 @@
 		"migrate:v2-binary-booleans": "node ./scripts/migrate-v2-binary-enums-to-boolean.mjs",
 		"strip:boolean-schema-defaults": "node ./scripts/strip-boolean-schema-defaults.mjs",
 		"docker:build:base": "docker build -f Dockerfile -t ubi8-base-smart-anketa-ui:local .",
+		"docker:stage-packages:api": "sh scripts/stage-docker-ci-packages.sh nestjs-server api-contract json-logic-ts",
+		"docker:stage-packages:frontend": "sh scripts/stage-docker-ci-packages.sh react-client api-contract json-logic-ts ag-grid-enterprise",
 		"docker:build:frontend": "docker build -f apps/react-client/Dockerfile -t smart-anketa-frontend:local .",
-		"docker:build:frontend:app": "docker build -f Dockerfile -t smart-anketa-frontend:local apps/react-client",
+		"docker:build:frontend:app": "npm run docker:stage-packages:frontend && docker build -f Dockerfile -t smart-anketa-frontend:local apps/react-client",
 		"docker:build:api": "docker build -f apps/nestjs-server/Dockerfile -t smart-anketa-api:local .",
-		"docker:build:api:app": "docker build -f Dockerfile -t smart-anketa-api:local apps/nestjs-server"
+		"docker:build:api:app": "npm run docker:stage-packages:api && docker build -f Dockerfile -t smart-anketa-api:local apps/nestjs-server"
 	},
 	"lint-staged": {
 		"*.{ts,tsx}": [

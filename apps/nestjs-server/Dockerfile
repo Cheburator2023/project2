@@ -1,10 +1,14 @@
 # Сборка поверх базового образа ubi8-base-smart-anketa-ui (корневой Dockerfile).
 # База содержит node_modules; исходники подмешиваем из build context.
-# Тег базы должен совпадать с apps/react-client/Dockerfile и корневым Dockerfile.
 #
-# Поддерживаются оба CI-варианта (автоопределение layout в RUN ниже):
-#   docker build . -f apps/nestjs-server/Dockerfile           # контекст = корень монорепо
-#   docker build . -f Dockerfile                              # контекст = apps/nestjs-server
+# Dev (контекст = корень монорепо):
+#   docker build . -f apps/nestjs-server/Dockerfile
+#
+# Transfer (контекст = apps/nestjs-server) — перед сборкой нужны packages в .ci-packages:
+#   sh scripts/stage-docker-ci-packages.sh nestjs-server api-contract json-logic-ts
+#   docker build . -f Dockerfile
+#
+# Альтернатива transfer: projDir = корень репо, dockerfilePath = apps/nestjs-server/Dockerfile
 
 ARG BASE_IMAGE=docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-ui:v3.1.0
 FROM ${BASE_IMAGE} AS build-deps
@@ -19,9 +23,16 @@ RUN set -eux; \
 		cp -a /tmp/build-context/packages/json-logic-ts/. /app/packages/json-logic-ts/; \
 	elif [ -f /tmp/build-context/package.json ]; then \
 		cp -a /tmp/build-context/. /app/apps/nestjs-server/; \
+		if [ ! -d /tmp/build-context/.ci-packages/api-contract ]; then \
+			echo "ERROR: app-only build is missing apps/nestjs-server/.ci-packages/" >&2; \
+			echo "Run: sh scripts/stage-docker-ci-packages.sh nestjs-server api-contract json-logic-ts" >&2; \
+			echo "Or build from monorepo root: docker build . -f apps/nestjs-server/Dockerfile" >&2; \
+			exit 1; \
+		fi; \
+		cp -a /tmp/build-context/.ci-packages/api-contract/. /app/packages/api-contract/; \
+		cp -a /tmp/build-context/.ci-packages/json-logic-ts/. /app/packages/json-logic-ts/; \
 	else \
 		echo "Unsupported Docker build context for nestjs-server." >&2; \
-		echo "Use monorepo root or apps/nestjs-server as build context." >&2; \
 		exit 1; \
 	fi; \
 	rm -rf /tmp/build-context
