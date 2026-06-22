@@ -66,3 +66,32 @@ const v2_typical_work_validation_util_1 = require("./v2-typical-work-validation.
         (0, vitest_1.expect)(issues).toHaveLength(0);
     });
 });
+(0, vitest_1.describe)("computeWorkTriggerStatus", () => {
+    const catalog = [
+        {
+            code: "complexity",
+            values: [
+                { code: "low", label: "Низкая" },
+                { code: "high", label: "Высокая" },
+            ],
+        },
+    ];
+    (0, vitest_1.it)("marks unknown param as invalid", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.computeWorkTriggerStatus)([
+            {
+                paramCode: "missing",
+                valueCode: "low",
+                valueLabel: "Низкая",
+            },
+        ], catalog)).toBe("invalid");
+    });
+    (0, vitest_1.it)("marks stale value as invalid", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.computeWorkTriggerStatus)([
+            {
+                paramCode: "complexity",
+                valueCode: "removed",
+                valueLabel: "Удалённое",
+            },
+        ], catalog)).toBe("invalid");
+    });
+});

@@ -10,6 +10,7 @@ import type {
 } from "@smart-anketa/api-contract";
 import { useMemo, useState } from "react";
 import { archComponentShortLabel } from "./typicalWorksUi";
+import { isWorkTriggerGroupInvalid } from "./typicalWorkPatchErrors";
 
 type TypicalWorkTriggersSectionProps = {
 	rules: V2TypicalWorkRuleDto[];
@@ -72,6 +73,18 @@ export function TypicalWorkTriggersSection({
 	);
 
 	const pickerItems = paramOptions.filter((p) => !usedParamCodes.has(p.code));
+
+	const catalogForValidation = useMemo(
+		() =>
+			paramOptions.map((param) => ({
+				code: param.code,
+				values: param.values.map((value) => ({
+					code: value.code,
+					label: value.label,
+				})),
+			})),
+		[paramOptions],
+	);
 
 	const grouped = useMemo(() => {
 		const map = new Map<string, V2TypicalWorkRuleDto[]>();
@@ -270,15 +283,25 @@ export function TypicalWorkTriggersSection({
 						const param =
 							paramOptions.find((p) => p.code === paramCode) ??
 							paramOptions.find((p) => p.name === paramRules[0]?.paramName);
+						const groupInvalid = isWorkTriggerGroupInvalid(
+							paramCode,
+							paramRules,
+							catalogForValidation,
+						);
 						const selectedCodes = new Set(
 							paramRules.map((r) => r.valueCode).filter(Boolean),
+						);
+						const staleRules = paramRules.filter(
+							(rule) =>
+								rule.valueCode &&
+								!param?.values.some((value) => value.code === rule.valueCode),
 						);
 						return (
 							<Box
 								key={paramCode}
 								sx={{
-									border: "1px solid #f0e3d2",
-									bgcolor: "#fdf8f1",
+									border: `1px solid ${groupInvalid ? "#f5c6c6" : "#f0e3d2"}`,
+									bgcolor: groupInvalid ? "#fff5f5" : "#fdf8f1",
 									borderRadius: "11px",
 									p: "11px 12px",
 								}}
@@ -314,6 +337,37 @@ export function TypicalWorkTriggersSection({
 								<Typography sx={{ fontSize: 11, color: "#9a7b52", mb: 0.9 }}>
 									Работа появляется, если ответ — одно из выбранных значений:
 								</Typography>
+								{groupInvalid ? (
+									<Typography sx={{ fontSize: 11.5, color: "#c62828", mb: 0.9 }}>
+										{!param
+											? "Параметр удалён из каталога — обновите условия"
+											: "Выбраны значения, которых больше нет в каталоге"}
+									</Typography>
+								) : null}
+								{staleRules.length > 0 ? (
+									<Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 0.9 }}>
+										{staleRules.map((rule) => (
+											<Box
+												key={rule.id}
+												sx={{
+													display: "inline-flex",
+													alignItems: "center",
+													height: 30,
+													px: 1.4,
+													borderRadius: "8px",
+													fontSize: 12,
+													fontWeight: 600,
+													bgcolor: "#fdecec",
+													color: "#c62828",
+													border: "1px solid #f5c6c6",
+												}}
+												title="Значение удалено из каталога"
+											>
+												{rule.valueLabel ?? rule.valueCode}
+											</Box>
+										))}
+									</Box>
+								) : null}
 								<Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
 									{(param?.values ?? []).map((value) => {
 										const selected = selectedCodes.has(value.code);

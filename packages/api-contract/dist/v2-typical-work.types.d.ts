@@ -18,6 +18,8 @@ export type V2WorkFormulaToken = {
     kind: "param_coeff";
     paramCode: string;
     paramName?: string;
+    /** F-03: ссылка на удалённый параметр трудоёмкости */
+    invalid?: boolean;
 } | {
     kind: "number";
     value: number;

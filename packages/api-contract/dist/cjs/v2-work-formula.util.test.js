@@ -37,4 +37,18 @@ const v2_typical_work_types_1 = require("./v2-typical-work.types");
         ]);
         (0, vitest_1.expect)(err).toMatch(/оператор/i);
     });
+    (0, vitest_1.it)("marks removed labor param invalid and blocks preview", () => {
+        const tokens = (0, v2_work_formula_util_1.markFormulaParamInvalid)([
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            { kind: "param_coeff", paramCode: "x", paramName: "Сложность" },
+        ], "x");
+        (0, vitest_1.expect)((0, v2_work_formula_util_1.isParamUsedInFormula)(tokens, "x")).toBe(false);
+        (0, vitest_1.expect)((0, v2_work_formula_util_1.validateWorkFormulaTokens)(tokens, {
+            allowedParamCodes: new Set(),
+            allowInvalidParamRefs: true,
+        })).toBeNull();
+        const result = (0, v2_work_formula_util_1.evaluateWorkFormula)({ tokens, text: "N × P[Сложность]?" }, { norm: 1, paramCoefficients: {} });
+        (0, vitest_1.expect)(result.error).toMatch(/удалён/i);
+    });
 });

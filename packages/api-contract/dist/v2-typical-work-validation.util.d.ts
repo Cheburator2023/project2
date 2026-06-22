@@ -1,4 +1,4 @@
-import type { PatchV2TypicalWorkRequestDto, V2TypicalWorkNormInputDto, V2TypicalWorkRoundingDto, V2WorkFormulaToken } from "./v2-typical-work.types";
+import type { PatchV2TypicalWorkRequestDto, V2TypicalWorkNormInputDto, V2TypicalWorkRoundingDto, V2WorkFormulaToken, V2WorkTriggerStatus } from "./v2-typical-work.types";
 export type ValidationIssue = {
     path: string;
     message: string;
@@ -22,3 +22,18 @@ export type CollectPatchValidationOptions = {
 };
 /** Клиентская валидация PATCH типовой работы перед автосохранением. */
 export declare function collectTypicalWorkPatchValidationErrors(dto: PatchV2TypicalWorkRequestDto, options?: CollectPatchValidationOptions): ValidationIssue[];
+export type WorkTriggerStatusRuleInput = {
+    paramCode: string;
+    valueCode: string | null;
+    valueLabel: string | null;
+};
+export type WorkTriggerStatusCatalogParam = {
+    code: string;
+    values: Array<{
+        code: string;
+        label: string;
+    }>;
+};
+/** F-03: статус триггеров с учётом актуальности параметров каталога */
+export declare function computeWorkTriggerStatus(rules: WorkTriggerStatusRuleInput[], catalog?: WorkTriggerStatusCatalogParam[]): V2WorkTriggerStatus;
+export declare function isWorkTriggerGroupInvalid(paramCode: string, rules: WorkTriggerStatusRuleInput[], catalog: WorkTriggerStatusCatalogParam[]): boolean;

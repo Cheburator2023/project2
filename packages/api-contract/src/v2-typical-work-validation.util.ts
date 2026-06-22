@@ -3,6 +3,7 @@ import type {
 	V2TypicalWorkNormInputDto,
 	V2TypicalWorkRoundingDto,
 	V2WorkFormulaToken,
+	V2WorkTriggerStatus,
 } from "./v2-typical-work.types";
 import { validateWorkFormulaTokens } from "./v2-work-formula.util";
 
@@ -171,7 +172,10 @@ export function validateFormulaAgainstParams(
 	tokens: V2WorkFormulaToken[],
 	allowedParamCodes: Set<string>,
 ): ValidationIssue[] {
-	const err = validateWorkFormulaTokens(tokens, allowedParamCodes);
+	const err = validateWorkFormulaTokens(tokens, {
+		allowedParamCodes,
+		allowInvalidParamRefs: true,
+	});
 	return err ? [{ path: "formula", message: err }] : [];
 }
 
@@ -235,4 +239,53 @@ export function collectTypicalWorkPatchValidationErrors(
 	}
 
 	return issues;
+}
+
+export type WorkTriggerStatusRuleInput = {
+	paramCode: string;
+	valueCode: string | null;
+	valueLabel: string | null;
+};
+
+export type WorkTriggerStatusCatalogParam = {
+	code: string;
+	values: Array<{ code: string; label: string }>;
+};
+
+/** F-03: статус триггеров с учётом актуальности параметров каталога */
+export function computeWorkTriggerStatus(
+	rules: WorkTriggerStatusRuleInput[],
+	catalog?: WorkTriggerStatusCatalogParam[],
+): V2WorkTriggerStatus {
+	if (rules.length === 0) return "no_triggers";
+	if (rules.some((rule) => !rule.valueLabel || !rule.valueCode)) return "invalid";
+	if (!catalog?.length) return "appears";
+
+	const catalogByCode = new Map(catalog.map((param) => [param.code, param]));
+	for (const rule of rules) {
+		const param = catalogByCode.get(rule.paramCode);
+		if (!param) return "invalid";
+		const valueExists = param.values.some(
+			(value) =>
+				value.code === rule.valueCode || value.label === rule.valueLabel,
+		);
+		if (!valueExists) return "invalid";
+	}
+	return "appears";
+}
+
+export function isWorkTriggerGroupInvalid(
+	paramCode: string,
+	rules: WorkTriggerStatusRuleInput[],
+	catalog: WorkTriggerStatusCatalogParam[],
+): boolean {
+	const param = catalog.find((item) => item.code === paramCode);
+	if (!param) return true;
+	return rules.some((rule) => {
+		if (!rule.valueCode || !rule.valueLabel) return true;
+		return !param.values.some(
+			(value) =>
+				value.code === rule.valueCode || value.label === rule.valueLabel,
+		);
+	});
 }

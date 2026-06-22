@@ -31,7 +31,9 @@ export function tokensToText(tokens: V2WorkFormulaToken[]): string {
 				case "norm":
 					return "N";
 				case "param_coeff":
-					return `P[${token.paramName ?? token.paramCode}]`;
+					return token.invalid
+						? `P[${token.paramName ?? token.paramCode}]?`
+						: `P[${token.paramName ?? token.paramCode}]`;
 				case "number":
 					return String(token.value);
 				case "operator":
@@ -153,10 +155,42 @@ export function parseWorkFormulaText(text: string): {
 	return { tokens, error: null };
 }
 
+export type ValidateWorkFormulaTokenOptions = {
+	allowedParamCodes?: Set<string>;
+	/** Разрешить сохранение формулы с помеченными invalid ссылками на параметры */
+	allowInvalidParamRefs?: boolean;
+};
+
+export function isParamUsedInFormula(
+	tokens: V2WorkFormulaToken[],
+	paramCode: string,
+): boolean {
+	return tokens.some(
+		(token) =>
+			token.kind === "param_coeff" &&
+			token.paramCode === paramCode &&
+			!token.invalid,
+	);
+}
+
+export function markFormulaParamInvalid(
+	tokens: V2WorkFormulaToken[],
+	paramCode: string,
+): V2WorkFormulaToken[] {
+	return tokens.map((token) =>
+		token.kind === "param_coeff" && token.paramCode === paramCode
+			? { ...token, invalid: true }
+			: token,
+	);
+}
+
 export function validateWorkFormulaTokens(
 	tokens: V2WorkFormulaToken[],
-	allowedParamCodes?: Set<string>,
+	options?: Set<string> | ValidateWorkFormulaTokenOptions,
 ): string | null {
+	const opts: ValidateWorkFormulaTokenOptions =
+		options instanceof Set ? { allowedParamCodes: options } : (options ?? {});
+	const { allowedParamCodes, allowInvalidParamRefs = false } = opts;
 	if (tokens.length === 0) return "Формула не может быть пустой";
 
 	let balance = 0;
@@ -191,6 +225,13 @@ export function validateWorkFormulaTokens(
 		}
 
 		if (token.kind === "param_coeff") {
+			if (token.invalid) {
+				if (allowInvalidParamRefs) {
+					expectOperand = false;
+					continue;
+				}
+				return `Параметр «${token.paramName ?? token.paramCode}» удалён из блока параметров трудоёмкости`;
+			}
 			if (allowedParamCodes && !allowedParamCodes.has(token.paramCode)) {
 				return `Параметр «${token.paramName ?? token.paramCode}» отсутствует в блоке параметров трудоёмкости`;
 			}
@@ -258,6 +299,14 @@ export function evaluateWorkFormula(
 		}
 		if (token.kind === "param_coeff") {
 			if (!expectOperand) return { symbolic, expanded: "", value: null, error: "Ожидался оператор" };
+			if (token.invalid) {
+				return {
+					symbolic,
+					expanded: "",
+					value: null,
+					error: `Параметр «${token.paramName ?? token.paramCode}» удалён из блока параметров трудоёмкости`,
+				};
+			}
 			const coeff = ctx.paramCoefficients[token.paramCode];
 			if (coeff == null || !Number.isFinite(coeff)) {
 				return {

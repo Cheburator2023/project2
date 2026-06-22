@@ -18,7 +18,13 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import type { V2TypicalWorkCardDto } from "@smart-anketa/api-contract";
-import { previewWorkFormula, resolveActiveNormOnDate } from "@smart-anketa/api-contract";
+import {
+	isParamUsedInFormula,
+	markFormulaParamInvalid,
+	previewWorkFormula,
+	resolveActiveNormOnDate,
+	tokensToText,
+} from "@smart-anketa/api-contract";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { useCreateV2TemplateVersion } from "@react-client/common/api/queries/v2-templates";
@@ -34,6 +40,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@react-client/common/toasts";
 import { TypicalWorkFormulaLockedDialog } from "./TypicalWorkFormulaLockedDialog";
+import { RemoveLaborParamDialog } from "./RemoveLaborParamDialog";
 import { TypicalWorkNormsSection } from "./TypicalWorkNormsSection";
 import { TypicalWorkTriggersSection } from "./TypicalWorkTriggersSection";
 import { WorkFormulaEditor } from "./WorkFormulaEditor";
@@ -109,6 +116,10 @@ export function TypicalWorkEditableCard({
 	const [draft, setDraft] = useState<V2TypicalWorkCardDto | null>(null);
 	const [formulaLockedOpen, setFormulaLockedOpen] = useState(false);
 	const [addParamCode, setAddParamCode] = useState("");
+	const [laborDeleteTarget, setLaborDeleteTarget] = useState<{
+		paramCode: string;
+		paramName: string;
+	} | null>(null);
 	const [streamMenuOpen, setStreamMenuOpen] = useState(false);
 	const streamAnchorRef = useRef<HTMLButtonElement>(null);
 	const pendingRetryRef = useRef(false);
@@ -160,10 +171,34 @@ export function TypicalWorkEditableCard({
 	const commitDraft = (next: V2TypicalWorkCardDto) => {
 		const withStatus = {
 			...next,
-			triggerStatus: computeTriggerStatus(next.rules),
+			triggerStatus: computeTriggerStatus(next.rules, paramOptions),
 		};
 		setDraft(withStatus);
 		scheduleSave(cardToPatchDto(withStatus, templateVersionId));
+	};
+
+	const removeLaborParam = (paramCode: string) => {
+		if (!draft) return;
+		const nextLabor = draft.laborParams.filter((g) => g.paramCode !== paramCode);
+		const nextTokens = markFormulaParamInvalid(draft.formula.tokens, paramCode);
+		commitDraft({
+			...draft,
+			laborParams: nextLabor,
+			formula: {
+				...draft.formula,
+				tokens: nextTokens,
+				text: tokensToText(nextTokens),
+			},
+		});
+	};
+
+	const requestRemoveLaborParam = (paramCode: string, paramName: string) => {
+		if (!draft) return;
+		if (isParamUsedInFormula(draft.formula.tokens, paramCode)) {
+			setLaborDeleteTarget({ paramCode, paramName });
+			return;
+		}
+		removeLaborParam(paramCode);
 	};
 
 	const handleCreateDraftForFormula = async () => {
@@ -236,6 +271,16 @@ export function TypicalWorkEditableCard({
 				pending={createVersion.isPending}
 				onClose={() => setFormulaLockedOpen(false)}
 				onCreateDraft={() => void handleCreateDraftForFormula()}
+			/>
+			<RemoveLaborParamDialog
+				open={Boolean(laborDeleteTarget)}
+				paramName={laborDeleteTarget?.paramName ?? ""}
+				onClose={() => setLaborDeleteTarget(null)}
+				onConfirm={() => {
+					if (!laborDeleteTarget) return;
+					removeLaborParam(laborDeleteTarget.paramCode);
+					setLaborDeleteTarget(null);
+				}}
 			/>
 			<Box
 				sx={{
@@ -626,12 +671,10 @@ export function TypicalWorkEditableCard({
 											aria-label="Удалить параметр"
 											title="Удалить параметр"
 											onClick={() =>
-												commitDraft({
-													...draft,
-													laborParams: draft.laborParams.filter(
-														(g) => g.paramCode !== group.paramCode,
-													),
-												})
+												requestRemoveLaborParam(
+													group.paramCode,
+													group.paramName ?? group.paramCode,
+												)
 											}
 										>
 											<DeleteOutlineIcon fontSize="small" />

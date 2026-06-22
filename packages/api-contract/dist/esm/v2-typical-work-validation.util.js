@@ -132,7 +132,10 @@ export function collectAllowedParamCodes(laborInputs) {
     return new Set(laborInputs.map((l) => l.paramCode));
 }
 export function validateFormulaAgainstParams(tokens, allowedParamCodes) {
-    const err = validateWorkFormulaTokens(tokens, allowedParamCodes);
+    const err = validateWorkFormulaTokens(tokens, {
+        allowedParamCodes,
+        allowInvalidParamRefs: true,
+    });
     return err ? [{ path: "formula", message: err }] : [];
 }
 /** Клиентская валидация PATCH типовой работы перед автосохранением. */
@@ -169,4 +172,33 @@ export function collectTypicalWorkPatchValidationErrors(dto, options) {
         issues.push(...validateFormulaAgainstParams(dto.formula.tokens, collectAllowedParamCodes(dto.laborCoefficients)));
     }
     return issues;
+}
+/** F-03: статус триггеров с учётом актуальности параметров каталога */
+export function computeWorkTriggerStatus(rules, catalog) {
+    if (rules.length === 0)
+        return "no_triggers";
+    if (rules.some((rule) => !rule.valueLabel || !rule.valueCode))
+        return "invalid";
+    if (!catalog?.length)
+        return "appears";
+    const catalogByCode = new Map(catalog.map((param) => [param.code, param]));
+    for (const rule of rules) {
+        const param = catalogByCode.get(rule.paramCode);
+        if (!param)
+            return "invalid";
+        const valueExists = param.values.some((value) => value.code === rule.valueCode || value.label === rule.valueLabel);
+        if (!valueExists)
+            return "invalid";
+    }
+    return "appears";
+}
+export function isWorkTriggerGroupInvalid(paramCode, rules, catalog) {
+    const param = catalog.find((item) => item.code === paramCode);
+    if (!param)
+        return true;
+    return rules.some((rule) => {
+        if (!rule.valueCode || !rule.valueLabel)
+            return true;
+        return !param.values.some((value) => value.code === rule.valueCode || value.label === rule.valueLabel);
+    });
 }

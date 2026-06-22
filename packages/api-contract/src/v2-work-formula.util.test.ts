@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
 	applyWorkRounding,
 	evaluateWorkFormula,
+	isParamUsedInFormula,
+	markFormulaParamInvalid,
 	parseWorkFormulaText,
 	previewWorkFormula,
 	validateWorkFormulaTokens,
@@ -50,5 +52,28 @@ describe("v2-work-formula.util", () => {
 			{ kind: "number", value: 1 },
 		]);
 		expect(err).toMatch(/оператор/i);
+	});
+
+	it("marks removed labor param invalid and blocks preview", () => {
+		const tokens = markFormulaParamInvalid(
+			[
+				{ kind: "norm" },
+				{ kind: "operator", op: "*" },
+				{ kind: "param_coeff", paramCode: "x", paramName: "Сложность" },
+			],
+			"x",
+		);
+		expect(isParamUsedInFormula(tokens, "x")).toBe(false);
+		expect(
+			validateWorkFormulaTokens(tokens, {
+				allowedParamCodes: new Set<string>(),
+				allowInvalidParamRefs: true,
+			}),
+		).toBeNull();
+		const result = evaluateWorkFormula(
+			{ tokens, text: "N × P[Сложность]?" },
+			{ norm: 1, paramCoefficients: {} },
+		);
+		expect(result.error).toMatch(/удалён/i);
 	});
 });

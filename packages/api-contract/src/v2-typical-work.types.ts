@@ -46,7 +46,13 @@ export type V2WorkFormulaOperatorToken = "+" | "-" | "*" | "/";
 
 export type V2WorkFormulaToken =
 	| { kind: "norm" }
-	| { kind: "param_coeff"; paramCode: string; paramName?: string }
+	| {
+			kind: "param_coeff";
+			paramCode: string;
+			paramName?: string;
+			/** F-03: ссылка на удалённый параметр трудоёмкости */
+			invalid?: boolean;
+	  }
 	| { kind: "number"; value: number }
 	| { kind: "operator"; op: V2WorkFormulaOperatorToken }
 	| { kind: "paren_open" }

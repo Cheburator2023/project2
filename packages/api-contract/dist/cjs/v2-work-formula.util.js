@@ -2,6 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.tokensToText = tokensToText;
 exports.parseWorkFormulaText = parseWorkFormulaText;
+exports.isParamUsedInFormula = isParamUsedInFormula;
+exports.markFormulaParamInvalid = markFormulaParamInvalid;
 exports.validateWorkFormulaTokens = validateWorkFormulaTokens;
 exports.evaluateWorkFormula = evaluateWorkFormula;
 exports.applyWorkRounding = applyWorkRounding;
@@ -19,7 +21,9 @@ function tokensToText(tokens) {
             case "norm":
                 return "N";
             case "param_coeff":
-                return `P[${token.paramName ?? token.paramCode}]`;
+                return token.invalid
+                    ? `P[${token.paramName ?? token.paramCode}]?`
+                    : `P[${token.paramName ?? token.paramCode}]`;
             case "number":
                 return String(token.value);
             case "operator":
@@ -129,7 +133,19 @@ function parseWorkFormulaText(text) {
     }
     return { tokens, error: null };
 }
-function validateWorkFormulaTokens(tokens, allowedParamCodes) {
+function isParamUsedInFormula(tokens, paramCode) {
+    return tokens.some((token) => token.kind === "param_coeff" &&
+        token.paramCode === paramCode &&
+        !token.invalid);
+}
+function markFormulaParamInvalid(tokens, paramCode) {
+    return tokens.map((token) => token.kind === "param_coeff" && token.paramCode === paramCode
+        ? { ...token, invalid: true }
+        : token);
+}
+function validateWorkFormulaTokens(tokens, options) {
+    const opts = options instanceof Set ? { allowedParamCodes: options } : (options ?? {});
+    const { allowedParamCodes, allowInvalidParamRefs = false } = opts;
     if (tokens.length === 0)
         return "Формула не может быть пустой";
     let balance = 0;
@@ -164,6 +180,13 @@ function validateWorkFormulaTokens(tokens, allowedParamCodes) {
             return `Ожидался оператор на позиции ${idx + 1}`;
         }
         if (token.kind === "param_coeff") {
+            if (token.invalid) {
+                if (allowInvalidParamRefs) {
+                    expectOperand = false;
+                    continue;
+                }
+                return `Параметр «${token.paramName ?? token.paramCode}» удалён из блока параметров трудоёмкости`;
+            }
             if (allowedParamCodes && !allowedParamCodes.has(token.paramCode)) {
                 return `Параметр «${token.paramName ?? token.paramCode}» отсутствует в блоке параметров трудоёмкости`;
             }
@@ -224,6 +247,14 @@ function evaluateWorkFormula(formula, ctx) {
         if (token.kind === "param_coeff") {
             if (!expectOperand)
                 return { symbolic, expanded: "", value: null, error: "Ожидался оператор" };
+            if (token.invalid) {
+                return {
+                    symbolic,
+                    expanded: "",
+                    value: null,
+                    error: `Параметр «${token.paramName ?? token.paramCode}» удалён из блока параметров трудоёмкости`,
+                };
+            }
             const coeff = ctx.paramCoefficients[token.paramCode];
             if (coeff == null || !Number.isFinite(coeff)) {
                 return {

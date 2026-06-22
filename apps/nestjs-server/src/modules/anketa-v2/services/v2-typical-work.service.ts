@@ -13,6 +13,7 @@ import type {
 import {
 	defaultWorkFormula,
 	defaultWorkRounding,
+	computeWorkTriggerStatus,
 	resolveActiveNormOnDate,
 } from "@smart-anketa/api-contract";
 import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
@@ -28,6 +29,7 @@ import {
 	normalizeArchComponentType,
 	slugParamCode,
 } from "../utils/v2-typical-work-catalog.util";
+import { listTriggerStatusCatalog } from "../utils/v2-catalog-param-defs.util";
 
 function decimalToNumber(value: string | number | null | undefined): number {
 	if (value === null || value === undefined) return 0;
@@ -366,12 +368,22 @@ function unique(values: string[]): string[] {
 }
 
 function resolveTriggerStatus(
-	rules: Pick<V2TypicalWorkRuleEntity, "valueLabel">[],
+	rules: Pick<
+		V2TypicalWorkRuleEntity,
+		"paramCode" | "valueCode" | "valueLabel"
+	>[],
 ): V2WorkTriggerStatus {
-	if (rules.length === 0) return "no_triggers";
-	if (rules.some((r) => !r.valueLabel)) return "invalid";
-	return "appears";
+	return computeWorkTriggerStatus(
+		rules.map((rule) => ({
+			paramCode: rule.paramCode,
+			valueCode: rule.valueCode,
+			valueLabel: rule.valueLabel,
+		})),
+		triggerStatusCatalog,
+	);
 }
+
+const triggerStatusCatalog = listTriggerStatusCatalog();
 
 function mapNormEntity(entity: V2TypicalWorkNormEntity): V2TypicalWorkNormDto {
 	return {

@@ -2,8 +2,10 @@ import type { AxiosError } from "axios";
 import type {
 	V2DeleteTypicalWorkConflictDto,
 	V2TypicalWorkFieldErrorDto,
+	V2TypicalWorkParameterDto,
 	V2WorkTriggerStatus,
 } from "@smart-anketa/api-contract";
+import { computeWorkTriggerStatus, isWorkTriggerGroupInvalid } from "@smart-anketa/api-contract";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 
 export const WORK_ARCH_COMPONENT_TYPES = [
@@ -52,9 +54,23 @@ export function parseTypicalWorkDeleteError(
 }
 
 export function computeTriggerStatus(
-	rules: Array<{ valueLabel: string | null }>,
+	rules: Array<{
+		paramCode: string;
+		valueCode: string | null;
+		valueLabel: string | null;
+	}>,
+	catalog?: V2TypicalWorkParameterDto[],
 ): V2WorkTriggerStatus {
-	if (rules.length === 0) return "no_triggers";
-	if (rules.some((rule) => !rule.valueLabel)) return "invalid";
-	return "appears";
+	return computeWorkTriggerStatus(
+		rules,
+		catalog?.map((param) => ({
+			code: param.code,
+			values: param.values.map((value) => ({
+				code: value.code,
+				label: value.label,
+			})),
+		})),
+	);
 }
+
+export { isWorkTriggerGroupInvalid };

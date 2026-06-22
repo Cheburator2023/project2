@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countActiveNormsOnDate, validateNormInputs, } from "./v2-typical-work-validation.util";
+import { countActiveNormsOnDate, computeWorkTriggerStatus, validateNormInputs, } from "./v2-typical-work-validation.util";
 describe("validateNormInputs coverage", () => {
     it("requires exactly one active norm on coverage date", () => {
         const norms = [
@@ -62,5 +62,34 @@ describe("validateNormInputs coverage", () => {
             coverageDate: "2025-06-01",
         });
         expect(issues).toHaveLength(0);
+    });
+});
+describe("computeWorkTriggerStatus", () => {
+    const catalog = [
+        {
+            code: "complexity",
+            values: [
+                { code: "low", label: "Низкая" },
+                { code: "high", label: "Высокая" },
+            ],
+        },
+    ];
+    it("marks unknown param as invalid", () => {
+        expect(computeWorkTriggerStatus([
+            {
+                paramCode: "missing",
+                valueCode: "low",
+                valueLabel: "Низкая",
+            },
+        ], catalog)).toBe("invalid");
+    });
+    it("marks stale value as invalid", () => {
+        expect(computeWorkTriggerStatus([
+            {
+                paramCode: "complexity",
+                valueCode: "removed",
+                valueLabel: "Удалённое",
+            },
+        ], catalog)).toBe("invalid");
     });
 });

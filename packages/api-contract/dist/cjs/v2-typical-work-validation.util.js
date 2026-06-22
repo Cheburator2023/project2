@@ -8,6 +8,8 @@ exports.validateWorkName = validateWorkName;
 exports.collectAllowedParamCodes = collectAllowedParamCodes;
 exports.validateFormulaAgainstParams = validateFormulaAgainstParams;
 exports.collectTypicalWorkPatchValidationErrors = collectTypicalWorkPatchValidationErrors;
+exports.computeWorkTriggerStatus = computeWorkTriggerStatus;
+exports.isWorkTriggerGroupInvalid = isWorkTriggerGroupInvalid;
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
 function parseIsoDay(value) {
     const day = value.slice(0, 10);
@@ -142,7 +144,10 @@ function collectAllowedParamCodes(laborInputs) {
     return new Set(laborInputs.map((l) => l.paramCode));
 }
 function validateFormulaAgainstParams(tokens, allowedParamCodes) {
-    const err = (0, v2_work_formula_util_1.validateWorkFormulaTokens)(tokens, allowedParamCodes);
+    const err = (0, v2_work_formula_util_1.validateWorkFormulaTokens)(tokens, {
+        allowedParamCodes,
+        allowInvalidParamRefs: true,
+    });
     return err ? [{ path: "formula", message: err }] : [];
 }
 /** Клиентская валидация PATCH типовой работы перед автосохранением. */
@@ -179,4 +184,33 @@ function collectTypicalWorkPatchValidationErrors(dto, options) {
         issues.push(...validateFormulaAgainstParams(dto.formula.tokens, collectAllowedParamCodes(dto.laborCoefficients)));
     }
     return issues;
+}
+/** F-03: статус триггеров с учётом актуальности параметров каталога */
+function computeWorkTriggerStatus(rules, catalog) {
+    if (rules.length === 0)
+        return "no_triggers";
+    if (rules.some((rule) => !rule.valueLabel || !rule.valueCode))
+        return "invalid";
+    if (!catalog?.length)
+        return "appears";
+    const catalogByCode = new Map(catalog.map((param) => [param.code, param]));
+    for (const rule of rules) {
+        const param = catalogByCode.get(rule.paramCode);
+        if (!param)
+            return "invalid";
+        const valueExists = param.values.some((value) => value.code === rule.valueCode || value.label === rule.valueLabel);
+        if (!valueExists)
+            return "invalid";
+    }
+    return "appears";
+}
+function isWorkTriggerGroupInvalid(paramCode, rules, catalog) {
+    const param = catalog.find((item) => item.code === paramCode);
+    if (!param)
+        return true;
+    return rules.some((rule) => {
+        if (!rule.valueCode || !rule.valueLabel)
+            return true;
+        return !param.values.some((value) => value.code === rule.valueCode || value.label === rule.valueLabel);
+    });
 }

@@ -17,6 +17,7 @@ import type {
 import {
 	parseWorkFormulaText,
 	tokensToText,
+	validateWorkFormulaTokens,
 } from "@smart-anketa/api-contract";
 import { useMemo, useState } from "react";
 
@@ -48,6 +49,16 @@ export function WorkFormulaEditor({
 				name: group.paramName ?? group.paramCode,
 			})),
 		[laborParams],
+	);
+
+	const laborParamCodes = useMemo(
+		() => new Set(laborParams.map((group) => group.paramCode)),
+		[laborParams],
+	);
+
+	const formulaError = useMemo(
+		() => validateWorkFormulaTokens(formula.tokens),
+		[formula.tokens],
 	);
 
 	const appendToken = (token: V2WorkFormulaToken) => {
@@ -92,13 +103,19 @@ export function WorkFormulaEditor({
 			{mode === "visual" ? (
 				<>
 					<Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 1 }}>
-						{formula.tokens.map((token, index) => (
+						{formula.tokens.map((token, index) => {
+							const isInvalidParam =
+								token.kind === "param_coeff" &&
+								(Boolean(token.invalid) || !laborParamCodes.has(token.paramCode));
+							return (
 							<Chip
 								key={`${token.kind}-${index}`}
 								size="small"
+								color={isInvalidParam ? "error" : "default"}
+								variant={isInvalidParam ? "outlined" : "filled"}
 								label={
 									token.kind === "param_coeff"
-										? `P[${token.paramName ?? token.paramCode}]`
+										? `P[${token.paramName ?? token.paramCode}]${token.invalid ? " ?" : ""}`
 										: token.kind === "norm"
 											? "N"
 											: token.kind === "number"
@@ -109,9 +126,20 @@ export function WorkFormulaEditor({
 														? "("
 														: ")"
 								}
+								title={
+									isInvalidParam
+										? "Параметр удалён из блока трудоёмкости — исправьте формулу"
+										: undefined
+								}
 							/>
-						))}
+							);
+						})}
 					</Box>
+					{formulaError ? (
+						<Alert severity="error" sx={{ mb: 1 }}>
+							{formulaError}
+						</Alert>
+					) : null}
 					{!readOnly ? (
 						<Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
 							<Button size="small" variant="outlined" onClick={() => appendToken({ kind: "norm" })}>
