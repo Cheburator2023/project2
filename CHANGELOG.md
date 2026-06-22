@@ -1,5 +1,21 @@
 # Semantic Versioning Changelog
 
+# [1.20.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.19.0...v1.20.0) (2026-06-22)
+
+
+### Bug Fixes
+
+* add console log for debugging in webpack.prod.js ([047d1f0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/047d1f05244d1a9695abe3a9f44aae46cb239b0c))
+* update CreateTasksTable migration to ensure table and indexes are created if not exists ([3544d3f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3544d3fe2e3aa275c2d40eb422e50a7af2bfb95d))
+* update Dockerfile and package.json for API build context ([46fbbff](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/46fbbff33330202d06e8001d65d7600de8b182f1))
+* update Dockerfile and package.json for frontend build context ([c2800a2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/c2800a2dd029e017d1d1b456a05906f2c400418f))
+
+
+### Features
+
+* enhance database configuration and migrations for task tracking ([d3f244e](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/d3f244e93f7356c356c3c42288da3efb831bdf01))
+* enhance trigger status management in typical work module ([c197010](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/c1970101b758569ac4d89c65c8bcc509307a07a7))
+
 # [1.19.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.18.0...v1.19.0) (2026-06-22)
 
 
