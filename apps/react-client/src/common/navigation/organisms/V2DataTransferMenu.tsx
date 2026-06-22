@@ -1,5 +1,3 @@
-import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
@@ -7,7 +5,6 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import MenuItem from "@mui/material/MenuItem";
 import Radio from "@mui/material/Radio";
@@ -113,9 +110,7 @@ export function useV2DataTransferActions() {
 					</Typography>
 					<RadioGroup
 						value={importMode}
-						onChange={(e) =>
-							setImportMode(e.target.value as V2DataImportMode)
-						}
+						onChange={(e) => setImportMode(e.target.value as V2DataImportMode)}
 					>
 						<FormControlLabel
 							value="merge"
@@ -182,15 +177,9 @@ export function V2DataTransferMenuItems({
 				<ListItemText
 					primary={exportPending ? "Выгрузка v2…" : "Выгрузить данные v2"}
 				/>
-				<ListItemIcon sx={{ ml: "auto", minWidth: 0 }}>
-					<CloudDownloadIcon fontSize="small" />
-				</ListItemIcon>
 			</MenuItem>
 			<MenuItem onClick={onImport}>
 				<ListItemText primary="Загрузить данные v2" />
-				<ListItemIcon sx={{ ml: "auto", minWidth: 0 }}>
-					<CloudUploadIcon fontSize="small" />
-				</ListItemIcon>
 			</MenuItem>
 		</>
 	);
