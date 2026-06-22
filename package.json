@@ -39,7 +39,7 @@
 		"strip:boolean-schema-defaults": "node ./scripts/strip-boolean-schema-defaults.mjs",
 		"docker:build:base": "docker build -f Dockerfile -t ubi8-base-smart-anketa-ui:local .",
 		"docker:build:frontend": "docker build -f apps/react-client/Dockerfile -t smart-anketa-frontend:local .",
-		"docker:build:api": "docker build -f apps/nestjs-server/Dockerfile -t smart-anketa-api:local apps/nestjs-server"
+		"docker:build:api": "docker build -f apps/nestjs-server/Dockerfile -t smart-anketa-api:local ."
 	},
 	"lint-staged": {
 		"*.{ts,tsx}": [
