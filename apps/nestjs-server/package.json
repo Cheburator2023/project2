@@ -43,8 +43,7 @@
 		"nest-keycloak-connect": "2.0.0-alpha.1",
 		"pg": "8.14.1",
 		"reflect-metadata": "0.2.2",
-		"typeorm": "0.3.21",
-		"ulid": "2.3.0"
+		"typeorm": "0.3.21"
 	},
 	"devDependencies": {
 		"@types/express": "5.0.1",
