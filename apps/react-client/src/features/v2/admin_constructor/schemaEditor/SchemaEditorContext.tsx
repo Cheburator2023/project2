@@ -14,6 +14,8 @@ import type {
 	SchemaEditorMainTab,
 	SchemaFieldRow,
 } from "./types";
+import type { SchemaEditorDraftSnapshot } from "../utils/schemaEditorLocalDraft";
+import type { SchemaFieldChangeInfo } from "./schemaFieldTreeChanges";
 
 export type SchemaEditorContextValue = {
 	templateId: string;
@@ -33,6 +35,8 @@ export type SchemaEditorContextValue = {
 	setSelectedPointer: (pointer: string | null) => void;
 
 	treeRows: SchemaFieldRow[];
+	baselineSnapshot: SchemaEditorDraftSnapshot | null;
+	fieldChangeByPointer: Map<string, SchemaFieldChangeInfo>;
 	fieldPathHints: FieldPathHint[];
 	rootFieldKeys: string[];
 

@@ -1175,12 +1175,12 @@ export function listSchemaFields(
 
 		rows.push({ pointer, depth, key, typeLabel });
 
-		if (isObjectFieldGroup(sub) && Object.keys(sub.properties ?? {}).length > 0) {
+		if (isObjectFieldGroup(sub)) {
 			rows.push(...listSchemaFields(sub, pointer, depth + 1, uiSchema));
 		}
 
 		const itemsObj = getObjectItemsSchema(sub);
-		if (itemsObj && Object.keys(itemsObj.properties ?? {}).length > 0) {
+		if (itemsObj) {
 			rows.push(
 				...listSchemaFields(itemsObj, `${pointer}/items`, depth + 1, uiSchema),
 			);

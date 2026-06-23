@@ -295,6 +295,7 @@ function SchemaCanvasFieldRow({
 	const {
 		jsonSchema,
 		uiSchema,
+		fieldChangeByPointer,
 		selectedPointer,
 		setSelectedPointer,
 		setUiSchema,
@@ -327,6 +328,7 @@ function SchemaCanvasFieldRow({
 
 	const fieldPointer = node.data?.fieldPointer ?? String(node.id);
 	const fieldKey = node.data?.fieldKey ?? "";
+	const isChanged = fieldChangeByPointer.has(fieldPointer);
 	const segs = pointerSegments(fieldPointer);
 	const schemaNode = resolveSchemaNode(jsonSchema, segs);
 	const selected = selectedPointer === fieldPointer;
@@ -391,16 +393,20 @@ function SchemaCanvasFieldRow({
 					? theme.palette.primary.main
 					: selected
 						? "primary.main"
-						: "divider",
+						: isChanged
+							? theme.palette.warning.main
+							: "divider",
 				bgcolor: isDropTarget
 					? alpha(theme.palette.primary.main, 0.14)
 					: selected
 						? alpha(theme.palette.primary.main, 0.08)
-						: canvasUiColor
-							? alpha(canvasUiColor, 0.08)
-							: isGroup
-								? alpha(theme.palette.info.main, 0.03)
-								: "background.paper",
+						: isChanged
+							? alpha(theme.palette.warning.main, 0.12)
+							: canvasUiColor
+								? alpha(canvasUiColor, 0.08)
+								: isGroup
+									? alpha(theme.palette.info.main, 0.03)
+									: "background.paper",
 				boxShadow: isDragging ? 3 : 0,
 				opacity: isDragging ? 0.55 : groupInactive ? 0.55 : 1,
 				cursor: isSystemField ? "default" : "grab",
@@ -478,6 +484,18 @@ function SchemaCanvasFieldRow({
 							size="small"
 							label="стоковое"
 							variant="outlined"
+							sx={{
+								height: 20,
+								"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem" },
+							}}
+						/>
+					) : null}
+					{isChanged ? (
+						<Chip
+							size="small"
+							label="изменено"
+							variant="outlined"
+							color="warning"
 							sx={{
 								height: 20,
 								"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem" },

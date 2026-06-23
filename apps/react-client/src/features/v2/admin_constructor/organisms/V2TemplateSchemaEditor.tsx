@@ -47,9 +47,7 @@ import {
 } from "../schemaEditor/propertiesFieldKind";
 import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayout";
 import { SchemaLogicPanel } from "../schemaEditor/panels/SchemaLogicPanel";
-import {
-	LogicWorkspaceShell,
-} from "../schemaEditor/panels/typicalWorksPanel/TypicalWorksPanel";
+import { LogicWorkspaceShell } from "../schemaEditor/panels/typicalWorksPanel/TypicalWorksPanel";
 import { LOGIC_TAB_QUERY } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
@@ -107,6 +105,7 @@ import { V2TemplateSaveDialog } from "./V2TemplateSaveDialog";
 import { SchemaEditorLeaveDialog } from "./SchemaEditorLeaveDialog";
 import type { V2TemplateStatus } from "@smart-anketa/api-contract";
 import { isCanvasStockField } from "../schemaEditor/canvasStockFields";
+import { buildSchemaFieldChangeMap } from "../schemaEditor/schemaFieldTreeChanges";
 import {
 	schemaEditorDraftSnapshotsEqual,
 	snapshotFromTemplateVersion,
@@ -290,6 +289,8 @@ export const V2TemplateSchemaEditor = ({
 	const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 
 	const baselineSnapshotRef = useRef<SchemaEditorDraftSnapshot | null>(null);
+	const [baselineSnapshot, setBaselineSnapshot] =
+		useState<SchemaEditorDraftSnapshot | null>(null);
 	const draftHydratedVersionIdRef = useRef<string | null>(null);
 	const skipLeaveGuardRef = useRef(false);
 
@@ -349,7 +350,9 @@ export const V2TemplateSchemaEditor = ({
 				uiSchema: structuredClone(uiSchema),
 				selectedPointer,
 			};
-			setDraftFuture((future) => [current, ...future].slice(0, DRAFT_HISTORY_LIMIT));
+			setDraftFuture((future) =>
+				[current, ...future].slice(0, DRAFT_HISTORY_LIMIT),
+			);
 			applyDraftSnapshot(previous);
 			return past.slice(0, -1);
 		});
@@ -386,7 +389,8 @@ export const V2TemplateSchemaEditor = ({
 	}, [isAdminEditor, versionsLoadError, versionsError]);
 
 	useEffect(() => {
-		if (!isAdminEditor || !activeVersionLoadError || !activeVersionError) return;
+		if (!isAdminEditor || !activeVersionLoadError || !activeVersionError)
+			return;
 		toast.error("Не удалось загрузить версию схемы", {
 			description: apiErrorMessage(activeVersionError),
 		});
@@ -442,7 +446,9 @@ export const V2TemplateSchemaEditor = ({
 	}, [currentDraftSnapshot]);
 
 	const commitBaselineToCurrent = useCallback(() => {
-		baselineSnapshotRef.current = currentDraftSnapshot();
+		const snapshot = currentDraftSnapshot();
+		baselineSnapshotRef.current = snapshot;
+		setBaselineSnapshot(snapshot);
 		setHasUnsavedChanges(false);
 	}, [currentDraftSnapshot]);
 
@@ -450,6 +456,7 @@ export const V2TemplateSchemaEditor = ({
 		if (!activeVersion?.id) {
 			draftHydratedVersionIdRef.current = null;
 			baselineSnapshotRef.current = null;
+			setBaselineSnapshot(null);
 			setHasUnsavedChanges(false);
 			return;
 		}
@@ -458,16 +465,14 @@ export const V2TemplateSchemaEditor = ({
 
 		const serverSnapshot = snapshotFromTemplateVersion(activeVersion);
 		baselineSnapshotRef.current = serverSnapshot;
+		setBaselineSnapshot(serverSnapshot);
 
 		applyDraftSnapshotToEditor(serverSnapshot);
 		setDraftPast([]);
 		setDraftFuture([]);
 		draftHydratedVersionIdRef.current = activeVersion.id;
 		setHasUnsavedChanges(false);
-	}, [
-		activeVersion,
-		applyDraftSnapshotToEditor,
-	]);
+	}, [activeVersion, applyDraftSnapshotToEditor]);
 
 	useEffect(() => {
 		if (!activeVersion?.id) return;
@@ -478,14 +483,7 @@ export const V2TemplateSchemaEditor = ({
 		}, 400);
 
 		return () => window.clearTimeout(timer);
-	}, [
-		jsonSchema,
-		uiSchema,
-		logic,
-		formData,
-		activeVersion?.id,
-		syncDirtyFlag,
-	]);
+	}, [jsonSchema, uiSchema, logic, formData, activeVersion?.id, syncDirtyFlag]);
 
 	const blocker = useBrowserRouterNavigationBlocker(
 		({ currentLocation, nextLocation }) => {
@@ -509,14 +507,14 @@ export const V2TemplateSchemaEditor = ({
 		}
 	}, [blocker.state, blocker.reset, hasUnsavedChanges]);
 
-	useEffect(() => {
-		if (!hasUnsavedChanges) return;
-		const onBeforeUnload = (event: BeforeUnloadEvent) => {
-			event.preventDefault();
-		};
-		window.addEventListener("beforeunload", onBeforeUnload);
-		return () => window.removeEventListener("beforeunload", onBeforeUnload);
-	}, [hasUnsavedChanges]);
+	// useEffect(() => {
+	// 	if (!hasUnsavedChanges) return;
+	// 	const onBeforeUnload = (event: BeforeUnloadEvent) => {
+	// 		event.preventDefault();
+	// 	};
+	// 	window.addEventListener("beforeunload", onBeforeUnload);
+	// 	return () => window.removeEventListener("beforeunload", onBeforeUnload);
+	// }, [hasUnsavedChanges]);
 
 	const getExternalPreviewPath = useCallback(() => {
 		if (!activeVersion?.id) return null;
@@ -534,6 +532,14 @@ export const V2TemplateSchemaEditor = ({
 		() => listSchemaFields(jsonSchema, "/", 0, uiSchema),
 		[jsonSchema, uiSchema],
 	);
+
+	const fieldChangeByPointer = useMemo(() => {
+		if (!baselineSnapshot) return new Map();
+		return buildSchemaFieldChangeMap(baselineSnapshot, {
+			jsonSchema,
+			uiSchema,
+		});
+	}, [baselineSnapshot, jsonSchema, uiSchema]);
 
 	const rootFieldKeys = useMemo(
 		() => Object.keys((jsonSchema.properties ?? {}) as Record<string, unknown>),
@@ -603,19 +609,16 @@ export const V2TemplateSchemaEditor = ({
 				jsonSchema,
 				enumMapByCode,
 			),
-		[
-			logicPreviewPack.previewUiSchema,
-			uiSchema,
-			jsonSchema,
-			enumMapByCode,
-		],
+		[logicPreviewPack.previewUiSchema, uiSchema, jsonSchema, enumMapByCode],
 	);
 	const calculationItems = logicPreviewPack.calculationItems;
 	const taskTriggerItems = logicPreviewPack.taskTriggerItems;
 	const liveFormData = logicPreviewPack.liveFormData;
 	const logicExtraErrors = logicPreviewPack.extraErrors;
-	const logicValidationIssueCount = logicPreviewPack.logicValidationIssues.length;
-	const legacyStageEvaluation = mappedCalculation?.legacyStageEvaluation ?? null;
+	const logicValidationIssueCount =
+		logicPreviewPack.logicValidationIssues.length;
+	const legacyStageEvaluation =
+		mappedCalculation?.legacyStageEvaluation ?? null;
 
 	const fieldPathHints = useMemo(() => {
 		const ui = uiSchema as Record<string, unknown>;
@@ -761,8 +764,7 @@ export const V2TemplateSchemaEditor = ({
 			) as UiSchema,
 			logic,
 			dictionariesSnapshot: {
-				referencedDictionaryCodes:
-					collectDictionaryCodesFromUiSchema(uiSchema),
+				referencedDictionaryCodes: collectDictionaryCodesFromUiSchema(uiSchema),
 			},
 		}),
 		[jsonSchema, logic, uiSchema],
@@ -921,8 +923,7 @@ export const V2TemplateSchemaEditor = ({
 	const activateAsCurrentRef = useRef(handleActivateAsCurrent);
 	activateAsCurrentRef.current = handleActivateAsCurrent;
 
-	const savePending =
-		updateVersion.isPending || createVersion.isPending;
+	const savePending = updateVersion.isPending || createVersion.isPending;
 
 	useEffect(() => {
 		if (!activeVersion) {
@@ -979,7 +980,11 @@ export const V2TemplateSchemaEditor = ({
 			return;
 		}
 
-		if (!parsedSchema || typeof parsedSchema !== "object" || Array.isArray(parsedSchema)) {
+		if (
+			!parsedSchema ||
+			typeof parsedSchema !== "object" ||
+			Array.isArray(parsedSchema)
+		) {
 			setMonacoError("JSON Schema: ожидается объект");
 			return;
 		}
@@ -989,7 +994,11 @@ export const V2TemplateSchemaEditor = ({
 			return;
 		}
 
-		if (!parsedLogic || typeof parsedLogic !== "object" || Array.isArray(parsedLogic)) {
+		if (
+			!parsedLogic ||
+			typeof parsedLogic !== "object" ||
+			Array.isArray(parsedLogic)
+		) {
 			setMonacoError("JSON Logic: ожидается объект с массивом rules");
 			return;
 		}
@@ -1206,18 +1215,10 @@ export const V2TemplateSchemaEditor = ({
 						safeIndex,
 					);
 					if (uiOptions && Object.keys(uiOptions).length > 0) {
-						nextUi = patchUiOptionsAtPointer(
-							nextUi,
-							childPointer,
-							uiOptions,
-						);
+						nextUi = patchUiOptionsAtPointer(nextUi, childPointer, uiOptions);
 					}
 					if (uiBranch && Object.keys(uiBranch).length > 0) {
-						nextUi = mergeUiBranchAtPointer(
-							nextUi,
-							childPointer,
-							uiBranch,
-						);
+						nextUi = mergeUiBranchAtPointer(nextUi, childPointer, uiBranch);
 					}
 					return nextUi as UiSchema;
 				});
@@ -1326,10 +1327,7 @@ export const V2TemplateSchemaEditor = ({
 	}, [pushDraftHistory]);
 
 	const updateField = useCallback(
-		(
-			patch: Partial<RJSFSchema>,
-			options?: { recordHistory?: boolean },
-		) => {
+		(patch: Partial<RJSFSchema>, options?: { recordHistory?: boolean }) => {
 			if (!selectedPointer) return;
 			if (options?.recordHistory !== false) {
 				pushDraftHistory();
@@ -1350,9 +1348,7 @@ export const V2TemplateSchemaEditor = ({
 					setJsonSchema(next);
 					setMonacoError(null);
 				} else {
-					setMonacoError(
-						`Не удалось обновить поле по пути ${selectedPointer}`,
-					);
+					setMonacoError(`Не удалось обновить поле по пути ${selectedPointer}`);
 				}
 			} catch (error) {
 				setMonacoError(
@@ -1578,8 +1574,7 @@ export const V2TemplateSchemaEditor = ({
 					: null;
 		return (
 			<Typography variant="caption" color="text.secondary">
-				Значение условия на данных превью:{" "}
-				<code>{JSON.stringify(raw)}</code>
+				Значение условия на данных превью: <code>{JSON.stringify(raw)}</code>
 			</Typography>
 		);
 	}, [formData, liveFormData, selectedRule]);
@@ -1600,6 +1595,8 @@ export const V2TemplateSchemaEditor = ({
 			selectedPointer,
 			setSelectedPointer,
 			treeRows,
+			baselineSnapshot,
+			fieldChangeByPointer,
 			fieldPathHints,
 			rootFieldKeys,
 			v2Dictionaries,
@@ -1687,6 +1684,8 @@ export const V2TemplateSchemaEditor = ({
 			formData,
 			selectedPointer,
 			treeRows,
+			baselineSnapshot,
+			fieldChangeByPointer,
 			fieldPathHints,
 			rootFieldKeys,
 			v2Dictionaries,
@@ -1763,9 +1762,11 @@ export const V2TemplateSchemaEditor = ({
 	if (!template || activeVersionLoading) {
 		return (
 			<Typography component="div">
-				{wording === "adminSchema"
-					? <FullScreenLoader />
-					: "Шаблон не найден или загрузка..."}
+				{wording === "adminSchema" ? (
+					<FullScreenLoader />
+				) : (
+					"Шаблон не найден или загрузка..."
+				)}
 			</Typography>
 		);
 	}
