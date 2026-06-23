@@ -11,7 +11,7 @@ http://ricostacruz.com/cheatsheets/umdjs.html
   } else {
     root.jsonLogic = factory();
   }
-}(this, function() {
+}(globalThis, function() {
   "use strict";
   /* globals console:false */
 

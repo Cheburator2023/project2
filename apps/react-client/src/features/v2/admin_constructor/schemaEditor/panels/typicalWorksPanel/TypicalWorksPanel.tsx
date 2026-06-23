@@ -29,6 +29,7 @@ import { ParameterDependenciesPanel } from "./ParameterDependenciesPanel";
 import { TypicalWorksCatalogView } from "./TypicalWorksCatalogView";
 import { TypicalWorksEmptyState } from "./TypicalWorksEmptyState";
 import { TypicalWorksMatrixView } from "./TypicalWorksMatrixView";
+import { TypicalWorkParametersCatalogView } from "./TypicalWorkParametersCatalogView";
 import { TypicalWorksTreeSidebar } from "./TypicalWorksTreeSidebar";
 import {
 	type LogicWorksScope,
@@ -62,7 +63,31 @@ export function TypicalWorksPanel() {
 
 	const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
 	const [streamExecutor, setStreamExecutor] = useState<string | null>(null);
-	const [viewMode, setViewMode] = useState<LogicWorksViewMode>("streams");
+	const [viewMode, setViewMode] = useState<LogicWorksViewMode>(() => {
+		try {
+			const stored = sessionStorage.getItem("v2-works-view-mode");
+			if (
+				stored === "streams" ||
+				stored === "matrix" ||
+				stored === "catalog" ||
+				stored === "parameters"
+			) {
+				return stored;
+			}
+		} catch {
+			// ignore
+		}
+		return "streams";
+	});
+
+	const handleViewModeChange = (mode: LogicWorksViewMode) => {
+		setViewMode(mode);
+		try {
+			sessionStorage.setItem("v2-works-view-mode", mode);
+		} catch {
+			// ignore
+		}
+	};
 	const [scope, setScope] = useState<LogicWorksScope>(DEFAULT_SCOPE);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [assignOpen, setAssignOpen] = useState(false);
@@ -222,11 +247,11 @@ export function TypicalWorksPanel() {
 					minHeight: 0,
 				}}
 			>
-				<LogicWorksToolbar
-					viewMode={viewMode}
-					scope={scope}
-					onViewModeChange={setViewMode}
-					onScopeChange={(next) => {
+			<LogicWorksToolbar
+				viewMode={viewMode}
+				scope={scope}
+				onViewModeChange={handleViewModeChange}
+				onScopeChange={(next) => {
 						setScope(next);
 						setSelectedWorkId(null);
 					}}
@@ -250,6 +275,12 @@ export function TypicalWorksPanel() {
 							onAssign={() => setAssignOpen(true)}
 							onCreateWork={() => setCreateOpen(true)}
 						/>
+					</Box>
+				) : null}
+
+				{viewMode === "parameters" ? (
+					<Box sx={{ flex: 1, minHeight: 0 }}>
+						<TypicalWorkParametersCatalogView />
 					</Box>
 				) : null}
 

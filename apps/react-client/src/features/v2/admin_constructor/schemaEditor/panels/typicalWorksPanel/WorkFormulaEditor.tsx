@@ -30,6 +30,17 @@ type WorkFormulaEditorProps = {
 	readOnly?: boolean;
 };
 
+function formulaTokenLabel(token: V2WorkFormulaToken): string {
+	if (token.kind === "param_coeff") {
+		return `P[${token.paramName ?? token.paramCode}]${token.invalid ? " ?" : ""}`;
+	}
+	if (token.kind === "norm") return "N";
+	if (token.kind === "number") return String(token.value);
+	if (token.kind === "operator") return token.op;
+	if (token.kind === "paren_open") return "(";
+	return ")";
+}
+
 export function WorkFormulaEditor({
 	formula,
 	rounding,
@@ -41,6 +52,7 @@ export function WorkFormulaEditor({
 	const [mode, setMode] = useState<"visual" | "manual">("visual");
 	const [manualText, setManualText] = useState(formula.text);
 	const [parseError, setParseError] = useState<string | null>(null);
+	const [numberInput, setNumberInput] = useState("");
 
 	const paramOptions = useMemo(
 		() =>
@@ -64,6 +76,26 @@ export function WorkFormulaEditor({
 	const appendToken = (token: V2WorkFormulaToken) => {
 		const nextTokens = [...formula.tokens, token];
 		onFormulaChange({ tokens: nextTokens, text: tokensToText(nextTokens) });
+	};
+
+	const commitTokens = (tokens: V2WorkFormulaToken[]) => {
+		onFormulaChange({ tokens, text: tokensToText(tokens) });
+	};
+
+	const removeToken = (index: number) => {
+		commitTokens(formula.tokens.filter((_, idx) => idx !== index));
+	};
+
+	const moveToken = (index: number, direction: -1 | 1) => {
+		const nextIndex = index + direction;
+		if (nextIndex < 0 || nextIndex >= formula.tokens.length) return;
+		const nextTokens = [...formula.tokens];
+		const current = nextTokens[index];
+		const target = nextTokens[nextIndex];
+		if (!current || !target) return;
+		nextTokens[index] = target;
+		nextTokens[nextIndex] = current;
+		commitTokens(nextTokens);
 	};
 
 	const switchToVisual = () => {
@@ -108,30 +140,60 @@ export function WorkFormulaEditor({
 								token.kind === "param_coeff" &&
 								(Boolean(token.invalid) || !laborParamCodes.has(token.paramCode));
 							return (
-							<Chip
-								key={`${token.kind}-${index}`}
-								size="small"
-								color={isInvalidParam ? "error" : "default"}
-								variant={isInvalidParam ? "outlined" : "filled"}
-								label={
-									token.kind === "param_coeff"
-										? `P[${token.paramName ?? token.paramCode}]${token.invalid ? " ?" : ""}`
-										: token.kind === "norm"
-											? "N"
-											: token.kind === "number"
-												? String(token.value)
-												: token.kind === "operator"
-													? token.op
-													: token.kind === "paren_open"
-														? "("
-														: ")"
-								}
-								title={
-									isInvalidParam
-										? "Параметр удалён из блока трудоёмкости — исправьте формулу"
-										: undefined
-								}
-							/>
+								<Box
+									key={`${token.kind}-${index}`}
+									sx={{
+										display: "inline-flex",
+										alignItems: "center",
+										gap: 0.25,
+										border: readOnly ? "none" : "1px solid #e6e8ee",
+										borderRadius: "999px",
+										pr: readOnly ? 0 : 0.4,
+									}}
+								>
+									<Chip
+										size="small"
+										color={isInvalidParam ? "error" : "default"}
+										variant={isInvalidParam ? "outlined" : "filled"}
+										label={formulaTokenLabel(token)}
+										title={
+											isInvalidParam
+												? "Параметр удалён из блока трудоёмкости — исправьте формулу"
+												: undefined
+										}
+									/>
+									{!readOnly ? (
+										<>
+											<Button
+												size="small"
+												disabled={index === 0}
+												title="Сдвинуть токен влево"
+												onClick={() => moveToken(index, -1)}
+												sx={{ minWidth: 22, px: 0.3, fontSize: 11 }}
+											>
+												←
+											</Button>
+											<Button
+												size="small"
+												disabled={index === formula.tokens.length - 1}
+												title="Сдвинуть токен вправо"
+												onClick={() => moveToken(index, 1)}
+												sx={{ minWidth: 22, px: 0.3, fontSize: 11 }}
+											>
+												→
+											</Button>
+											<Button
+												size="small"
+												color="error"
+												title="Удалить токен"
+												onClick={() => removeToken(index)}
+												sx={{ minWidth: 22, px: 0.3, fontSize: 11 }}
+											>
+												×
+											</Button>
+										</>
+									) : null}
+								</Box>
 							);
 						})}
 					</Box>
@@ -174,29 +236,51 @@ export function WorkFormulaEditor({
 									))}
 								</Select>
 							</FormControl>
-							{(["+", "-", "*", "/"] as const).map((op) => (
-								<Button
-									key={op}
-									size="small"
-									variant="outlined"
-									onClick={() => appendToken({ kind: "operator", op })}
-								>
-									{op}
-								</Button>
-							))}
-							<Button size="small" variant="outlined" onClick={() => appendToken({ kind: "paren_open" })}>
-								(
+						{(["+", "-", "*", "/"] as const).map((op) => (
+							<Button
+								key={op}
+								size="small"
+								variant="outlined"
+								onClick={() => appendToken({ kind: "operator", op })}
+							>
+								{op}
 							</Button>
-							<Button size="small" variant="outlined" onClick={() => appendToken({ kind: "paren_close" })}>
-								)
-							</Button>
+						))}
+						<Button size="small" variant="outlined" onClick={() => appendToken({ kind: "paren_open" })}>
+							(
+						</Button>
+						<Button size="small" variant="outlined" onClick={() => appendToken({ kind: "paren_close" })}>
+							)
+						</Button>
+						<Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+							<TextField
+								size="small"
+								type="number"
+								placeholder="0"
+								value={numberInput}
+								onChange={(e) => setNumberInput(e.target.value)}
+								inputProps={{ step: "any", style: { width: 64, padding: "4px 8px" } }}
+								sx={{ "& .MuiInputBase-root": { height: 30 } }}
+							/>
 							<Button
 								size="small"
-								color="warning"
-								onClick={() => onFormulaChange({ tokens: [{ kind: "norm" }], text: "N" })}
+								variant="outlined"
+								disabled={numberInput === "" || Number.isNaN(Number(numberInput))}
+								onClick={() => {
+									appendToken({ kind: "number", value: Number(numberInput) });
+									setNumberInput("");
+								}}
 							>
-								Очистить
+								Число
 							</Button>
+						</Box>
+						<Button
+							size="small"
+							color="warning"
+							onClick={() => onFormulaChange({ tokens: [{ kind: "norm" }], text: "N" })}
+						>
+							Очистить
+						</Button>
 						</Box>
 					) : null}
 				</>

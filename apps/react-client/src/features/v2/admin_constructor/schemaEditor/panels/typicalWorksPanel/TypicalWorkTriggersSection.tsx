@@ -1,13 +1,17 @@
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
+import MenuItem from "@mui/material/MenuItem";
+import Select from "@mui/material/Select";
 import Typography from "@mui/material/Typography";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import type {
 	V2TypicalWorkParameterDto,
 	V2TypicalWorkRuleDto,
+	V2WorkRuleOperator,
 	V2WorkTriggerStatus,
 } from "@smart-anketa/api-contract";
+import { V2_WORK_RULE_OPERATOR_VALUES } from "@smart-anketa/api-contract";
 import { useMemo, useState } from "react";
 import { archComponentShortLabel } from "./typicalWorksUi";
 import { isWorkTriggerGroupInvalid } from "./typicalWorkPatchErrors";
@@ -19,6 +23,15 @@ type TypicalWorkTriggersSectionProps = {
 	paramOptions: V2TypicalWorkParameterDto[];
 	streamExecutor: string;
 	onChange: (rules: V2TypicalWorkRuleDto[]) => void;
+};
+
+const OPERATOR_LABELS: Record<V2WorkRuleOperator, string> = {
+	"=": "=",
+	"!=": "≠",
+	">=": "≥",
+	"<=": "≤",
+	">": ">",
+	"<": "<",
 };
 
 function triggerBanner(status: V2WorkTriggerStatus, ruleCount: number) {
@@ -49,8 +62,8 @@ function triggerBanner(status: V2WorkTriggerStatus, ruleCount: number) {
 				border: "#f0e3c8",
 				iconBg: "#b5791f",
 				icon: "•",
-				title: "Триггеры не заданы",
-				sub: "работа всегда появляется в анкете",
+				title: "Без триггеров — работа не появится в анкете",
+				sub: "добавьте хотя бы одно условие, чтобы работа участвовала в расчёте",
 				fg: "#b5791f",
 			};
 	}
@@ -111,6 +124,8 @@ export function TypicalWorkTriggersSection({
 			return;
 		}
 		const withoutParam = rules.filter((r) => r.paramCode !== param.code);
+		const currentOperator =
+			rules.find((r) => r.paramCode === param.code)?.operator ?? "=";
 		onChange([
 			...withoutParam,
 			{
@@ -118,7 +133,7 @@ export function TypicalWorkTriggersSection({
 				streamExecutor,
 				paramCode: param.code,
 				paramName: param.name,
-				operator: "=",
+				operator: currentOperator,
 				valueCode,
 				valueLabel,
 			},
@@ -127,6 +142,17 @@ export function TypicalWorkTriggersSection({
 
 	const removeParam = (paramCode: string) => {
 		onChange(rules.filter((r) => r.paramCode !== paramCode));
+	};
+
+	const updateParamOperator = (
+		paramCode: string,
+		operator: V2WorkRuleOperator,
+	) => {
+		onChange(
+			rules.map((rule) =>
+				rule.paramCode === paramCode ? { ...rule, operator } : rule,
+			),
+		);
 	};
 
 	const addParam = (param: V2TypicalWorkParameterDto) => {
@@ -335,8 +361,46 @@ export function TypicalWorkTriggersSection({
 									</IconButton>
 								</Box>
 								<Typography sx={{ fontSize: 11, color: "#9a7b52", mb: 0.9 }}>
-									Работа появляется, если ответ — одно из выбранных значений:
+									Работа появляется, если ответ соответствует условию:
 								</Typography>
+								<Box
+									sx={{
+										display: "flex",
+										alignItems: "center",
+										gap: 1,
+										mb: 1,
+										flexWrap: "wrap",
+									}}
+								>
+									<Typography sx={{ fontSize: 11.5, color: "#6b7484" }}>
+										Оператор
+									</Typography>
+								<Select
+									size="small"
+									value={paramRules[0]?.operator ?? "="}
+									onChange={(event) =>
+										updateParamOperator(
+											paramCode,
+											event.target.value as V2WorkRuleOperator,
+										)
+									}
+									sx={{
+										height: 30,
+										minWidth: 76,
+										bgcolor: "#fff",
+										"& .MuiSelect-select": { py: 0.4, fontSize: 12 },
+									}}
+								>
+									{V2_WORK_RULE_OPERATOR_VALUES.filter((op) => {
+										if (op === "=" || op === "!=") return true;
+										return param?.numeric === true;
+									}).map((operator) => (
+										<MenuItem key={operator} value={operator}>
+											{OPERATOR_LABELS[operator]}
+										</MenuItem>
+									))}
+									</Select>
+								</Box>
 								{groupInvalid ? (
 									<Typography sx={{ fontSize: 11.5, color: "#c62828", mb: 0.9 }}>
 										{!param

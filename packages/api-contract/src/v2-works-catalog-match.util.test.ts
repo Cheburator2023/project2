@@ -55,4 +55,21 @@ describe("v2-works-catalog-match.util", () => {
 		];
 		expect(typicalWorkRulesMatchSource(rules, { type: "Внутренний" })).toBe(true);
 	});
+
+	it("does not match works without triggers", () => {
+		expect(typicalWorkRulesMatchSource([], { type: "Внутренний" })).toBe(false);
+	});
+
+	it("matches numeric comparison operators", () => {
+		const rule = {
+			paramCode: "metric_count",
+			paramName: "Количество метрик",
+			operator: ">=",
+			valueCode: "10",
+			valueLabel: "10",
+		};
+
+		expect(typicalWorkRulesMatchSource([rule], { metric_count: 12 })).toBe(true);
+		expect(typicalWorkRulesMatchSource([rule], { metric_count: 8 })).toBe(false);
+	});
 });

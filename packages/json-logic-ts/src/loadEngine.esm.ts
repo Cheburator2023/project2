@@ -1,5 +1,5 @@
-import logicModule from "./logic.js";
 import type { JsonLogicEngine } from "./types";
+import "./logic.js";
 
 function unwrapEngine(mod: unknown): JsonLogicEngine {
 	if (
@@ -21,4 +21,6 @@ function unwrapEngine(mod: unknown): JsonLogicEngine {
 }
 
 /** Bundler/browser-safe loader (no node:module). */
-export const jsonLogic = unwrapEngine(logicModule);
+export const jsonLogic = unwrapEngine(
+	(globalThis as typeof globalThis & { jsonLogic?: unknown }).jsonLogic,
+);

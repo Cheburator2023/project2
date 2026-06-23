@@ -7,10 +7,16 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import type {
 	CreateV2TypicalWorkRequestDto,
+	CreateV2TypicalWorkParameterRequestDto,
+	CreateV2TypicalWorkParameterValueRequestDto,
 	PatchV2TypicalWorkRequestDto,
+	UpdateV2TypicalWorkParameterRequestDto,
+	UpdateV2TypicalWorkParameterValueRequestDto,
 	V2ParameterDependencyListResponseDto,
 	V2TypicalWorkFieldErrorDto,
+	V2TypicalWorkParameterDto,
 	V2TypicalWorkParameterListResponseDto,
+	V2TypicalWorkParameterValueDto,
 	V2TypicalWorkPreviewRequestDto,
 	V2TypicalWorkPreviewResponseDto,
 } from "@smart-anketa/api-contract";
@@ -63,12 +69,55 @@ export class V2TypicalWorkWriteService {
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
 	) {}
 
-	listParameters(): Promise<V2TypicalWorkParameterListResponseDto> {
-		return this.paramCatalogService.listParameters();
+	listParameters(includeInactive = false): Promise<V2TypicalWorkParameterListResponseDto> {
+		return this.paramCatalogService.listParameters(
+			undefined,
+			includeInactive,
+		);
 	}
 
 	listParameterDependencies(): Promise<V2ParameterDependencyListResponseDto> {
 		return this.paramCatalogService.listParameterDependencies();
+	}
+
+	createParameter(
+		dto: CreateV2TypicalWorkParameterRequestDto,
+	): Promise<V2TypicalWorkParameterDto> {
+		return this.paramCatalogService.createParameter(dto);
+	}
+
+	updateParameter(
+		code: string,
+		dto: UpdateV2TypicalWorkParameterRequestDto,
+	): Promise<V2TypicalWorkParameterDto> {
+		return this.paramCatalogService.updateParameter(code, dto);
+	}
+
+	deleteParameter(code: string): Promise<void> {
+		return this.paramCatalogService.deleteParameter(code);
+	}
+
+	createParameterValue(
+		paramCode: string,
+		dto: CreateV2TypicalWorkParameterValueRequestDto,
+	): Promise<V2TypicalWorkParameterValueDto> {
+		return this.paramCatalogService.createParameterValue(paramCode, dto);
+	}
+
+	updateParameterValue(
+		paramCode: string,
+		valueCode: string,
+		dto: UpdateV2TypicalWorkParameterValueRequestDto,
+	): Promise<V2TypicalWorkParameterValueDto> {
+		return this.paramCatalogService.updateParameterValue(
+			paramCode,
+			valueCode,
+			dto,
+		);
+	}
+
+	deleteParameterValue(paramCode: string, valueCode: string): Promise<void> {
+		return this.paramCatalogService.deleteParameterValue(paramCode, valueCode);
 	}
 
 	async createWork(dto: CreateV2TypicalWorkRequestDto) {

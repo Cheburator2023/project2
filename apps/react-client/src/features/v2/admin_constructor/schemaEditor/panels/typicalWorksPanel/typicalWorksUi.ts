@@ -20,7 +20,7 @@ export function triggerStatusLabel(status: V2WorkTriggerStatus): string {
 		case "appears":
 			return "появляется";
 		case "no_triggers":
-			return "без триггеров";
+			return "без триггеров — не появится";
 		case "invalid":
 			return "невалидно";
 	}

@@ -14,11 +14,17 @@ import {
 import { ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 import type {
 	CreateV2TypicalWorkRequestDto,
+	CreateV2TypicalWorkParameterRequestDto,
+	CreateV2TypicalWorkParameterValueRequestDto,
 	PatchV2TypicalWorkRequestDto,
+	UpdateV2TypicalWorkParameterRequestDto,
+	UpdateV2TypicalWorkParameterValueRequestDto,
 	V2ParameterDependencyListResponseDto,
 	V2TypicalWorkCardDto,
 	V2TypicalWorkListResponseDto,
+	V2TypicalWorkParameterDto,
 	V2TypicalWorkParameterListResponseDto,
+	V2TypicalWorkParameterValueDto,
 	V2TypicalWorkPreviewRequestDto,
 	V2TypicalWorkPreviewResponseDto,
 } from "@smart-anketa/api-contract";
@@ -49,8 +55,70 @@ export class V2TypicalWorkController {
 
 	@Get("parameters/catalog")
 	@ApiOperation({ summary: "Глобальный справочник параметров для условий и коэффициентов" })
-	listParameters(): Promise<V2TypicalWorkParameterListResponseDto> {
-		return this.typicalWorkWriteService.listParameters();
+	@ApiQuery({ name: "includeInactive", required: false })
+	listParameters(
+		@Query("includeInactive") includeInactive?: string,
+	): Promise<V2TypicalWorkParameterListResponseDto> {
+		return this.typicalWorkWriteService.listParameters(
+			includeInactive === "true" || includeInactive === "1",
+		);
+	}
+
+	@Post("parameters")
+	@ApiOperation({ summary: "Создать параметр типовых работ" })
+	createParameter(
+		@Body() dto: CreateV2TypicalWorkParameterRequestDto,
+	): Promise<V2TypicalWorkParameterDto> {
+		return this.typicalWorkWriteService.createParameter(dto);
+	}
+
+	@Patch("parameters/:code")
+	@ApiOperation({ summary: "Обновить параметр типовых работ" })
+	updateParameter(
+		@Param("code") code: string,
+		@Body() dto: UpdateV2TypicalWorkParameterRequestDto,
+	): Promise<V2TypicalWorkParameterDto> {
+		return this.typicalWorkWriteService.updateParameter(code, dto);
+	}
+
+	@Delete("parameters/:code")
+	@HttpCode(HttpStatus.NO_CONTENT)
+	@ApiOperation({ summary: "Удалить параметр типовых работ" })
+	deleteParameter(@Param("code") code: string): Promise<void> {
+		return this.typicalWorkWriteService.deleteParameter(code);
+	}
+
+	@Post("parameters/:code/values")
+	@ApiOperation({ summary: "Создать значение параметра типовых работ" })
+	createParameterValue(
+		@Param("code") code: string,
+		@Body() dto: CreateV2TypicalWorkParameterValueRequestDto,
+	): Promise<V2TypicalWorkParameterValueDto> {
+		return this.typicalWorkWriteService.createParameterValue(code, dto);
+	}
+
+	@Patch("parameters/:code/values/:valueCode")
+	@ApiOperation({ summary: "Обновить значение параметра типовых работ" })
+	updateParameterValue(
+		@Param("code") code: string,
+		@Param("valueCode") valueCode: string,
+		@Body() dto: UpdateV2TypicalWorkParameterValueRequestDto,
+	): Promise<V2TypicalWorkParameterValueDto> {
+		return this.typicalWorkWriteService.updateParameterValue(
+			code,
+			valueCode,
+			dto,
+		);
+	}
+
+	@Delete("parameters/:code/values/:valueCode")
+	@HttpCode(HttpStatus.NO_CONTENT)
+	@ApiOperation({ summary: "Удалить значение параметра типовых работ" })
+	deleteParameterValue(
+		@Param("code") code: string,
+		@Param("valueCode") valueCode: string,
+	): Promise<void> {
+		return this.typicalWorkWriteService.deleteParameterValue(code, valueCode);
 	}
 
 	@Get("parameters/dependencies")

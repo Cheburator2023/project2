@@ -1,11 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
 	CreateV2TypicalWorkRequestDto,
+	CreateV2TypicalWorkParameterRequestDto,
+	CreateV2TypicalWorkParameterValueRequestDto,
 	PatchV2TypicalWorkRequestDto,
+	UpdateV2TypicalWorkParameterRequestDto,
+	UpdateV2TypicalWorkParameterValueRequestDto,
 	V2ParameterDependencyListResponseDto,
 	V2TypicalWorkCardDto,
 	V2TypicalWorkListResponseDto,
+	V2TypicalWorkParameterDto,
 	V2TypicalWorkParameterListResponseDto,
+	V2TypicalWorkParameterValueDto,
 	V2TypicalWorkPreviewRequestDto,
 	V2TypicalWorkPreviewResponseDto,
 } from "@smart-anketa/api-contract";
@@ -60,12 +66,14 @@ export const useV2TypicalWorkCard = (
 	});
 };
 
-export const useV2WorkParametersCatalog = () =>
+export const useV2WorkParametersCatalog = (options?: { includeInactive?: boolean }) =>
 	useQuery<V2TypicalWorkParameterListResponseDto>({
-		queryKey: ["v2-works", "parameters"],
+		queryKey: ["v2-works", "parameters", options?.includeInactive === true],
 		queryFn: () =>
 			apiClient({
-				url: "/v2/works/parameters/catalog",
+				url: `/v2/works/parameters/catalog${
+					options?.includeInactive ? "?includeInactive=true" : ""
+				}`,
 				method: "GET",
 			}),
 		staleTime: 60_000,
@@ -81,6 +89,110 @@ export const useV2ParameterDependencies = () =>
 			}),
 		staleTime: 60_000,
 	});
+
+function invalidateV2WorkParameterCatalog(queryClient: ReturnType<typeof useQueryClient>) {
+	queryClient.invalidateQueries({ queryKey: ["v2-works"] });
+}
+
+export const useCreateV2WorkParameter = () => {
+	const queryClient = useQueryClient();
+	return useMutation<
+		V2TypicalWorkParameterDto,
+		Error,
+		CreateV2TypicalWorkParameterRequestDto
+	>({
+		mutationFn: (dto) =>
+			apiClient({
+				url: "/v2/works/parameters",
+				method: "POST",
+				data: dto,
+			}),
+		onSuccess: () => invalidateV2WorkParameterCatalog(queryClient),
+	});
+};
+
+export const useUpdateV2WorkParameter = () => {
+	const queryClient = useQueryClient();
+	return useMutation<
+		V2TypicalWorkParameterDto,
+		Error,
+		{ code: string; dto: UpdateV2TypicalWorkParameterRequestDto }
+	>({
+		mutationFn: ({ code, dto }) =>
+			apiClient({
+				url: `/v2/works/parameters/${encodeURIComponent(code)}`,
+				method: "PATCH",
+				data: dto,
+			}),
+		onSuccess: () => invalidateV2WorkParameterCatalog(queryClient),
+	});
+};
+
+export const useDeleteV2WorkParameter = () => {
+	const queryClient = useQueryClient();
+	return useMutation<void, Error, string>({
+		mutationFn: (code) =>
+			apiClient({
+				url: `/v2/works/parameters/${encodeURIComponent(code)}`,
+				method: "DELETE",
+			}),
+		onSuccess: () => invalidateV2WorkParameterCatalog(queryClient),
+	});
+};
+
+export const useCreateV2WorkParameterValue = () => {
+	const queryClient = useQueryClient();
+	return useMutation<
+		V2TypicalWorkParameterValueDto,
+		Error,
+		{ paramCode: string; dto: CreateV2TypicalWorkParameterValueRequestDto }
+	>({
+		mutationFn: ({ paramCode, dto }) =>
+			apiClient({
+				url: `/v2/works/parameters/${encodeURIComponent(paramCode)}/values`,
+				method: "POST",
+				data: dto,
+			}),
+		onSuccess: () => invalidateV2WorkParameterCatalog(queryClient),
+	});
+};
+
+export const useUpdateV2WorkParameterValue = () => {
+	const queryClient = useQueryClient();
+	return useMutation<
+		V2TypicalWorkParameterValueDto,
+		Error,
+		{
+			paramCode: string;
+			valueCode: string;
+			dto: UpdateV2TypicalWorkParameterValueRequestDto;
+		}
+	>({
+		mutationFn: ({ paramCode, valueCode, dto }) =>
+			apiClient({
+				url: `/v2/works/parameters/${encodeURIComponent(
+					paramCode,
+				)}/values/${encodeURIComponent(valueCode)}`,
+				method: "PATCH",
+				data: dto,
+			}),
+		onSuccess: () => invalidateV2WorkParameterCatalog(queryClient),
+	});
+};
+
+export const useDeleteV2WorkParameterValue = () => {
+	const queryClient = useQueryClient();
+	return useMutation<void, Error, { paramCode: string; valueCode: string }>({
+		mutationFn: ({ paramCode, valueCode }) =>
+			apiClient({
+				url: `/v2/works/parameters/${encodeURIComponent(
+					paramCode,
+				)}/values/${encodeURIComponent(valueCode)}`,
+				method: "DELETE",
+			}),
+		onSuccess: () => invalidateV2WorkParameterCatalog(queryClient),
+	});
+};
 
 export const usePatchV2TypicalWork = () => {
 	const queryClient = useQueryClient();

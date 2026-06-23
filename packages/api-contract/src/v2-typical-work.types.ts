@@ -209,6 +209,7 @@ export type V2DeleteTypicalWorkConflictDto = {
 };
 
 export type V2TypicalWorkParameterValueDto = {
+	id: string;
 	code: string;
 	label: string;
 	coefficient: number | null;
@@ -218,14 +219,47 @@ export type V2TypicalWorkParameterValueDto = {
 };
 
 export type V2TypicalWorkParameterDto = {
+	id: string;
 	code: string;
 	name: string;
 	description: string | null;
+	/** true, если все значения параметра — числа (отображается как числовая шкала, доступны операторы >, <, ≥, ≤) */
+	numeric?: boolean;
 	values: V2TypicalWorkParameterValueDto[];
 };
 
 export type V2TypicalWorkParameterListResponseDto = {
 	items: V2TypicalWorkParameterDto[];
+};
+
+export type CreateV2TypicalWorkParameterRequestDto = {
+	code?: string | null;
+	name: string;
+	description?: string | null;
+};
+
+export type UpdateV2TypicalWorkParameterRequestDto = {
+	code?: string;
+	name?: string;
+	description?: string | null;
+};
+
+export type CreateV2TypicalWorkParameterValueRequestDto = {
+	code?: string | null;
+	label: string;
+	coefficient?: number | null;
+	sortOrder?: number | null;
+	validFrom: string;
+	validTo?: string | null;
+};
+
+export type UpdateV2TypicalWorkParameterValueRequestDto = {
+	code?: string;
+	label?: string;
+	coefficient?: number | null;
+	sortOrder?: number | null;
+	validFrom?: string;
+	validTo?: string | null;
 };
 
 export type V2ParameterDependencyDto = {

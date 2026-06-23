@@ -27,6 +27,7 @@ const VIEW_SEGMENTS: Array<{ id: LogicWorksViewMode; label: string }> = [
 	{ id: "streams", label: "По стримам" },
 	{ id: "matrix", label: "Матрица" },
 	{ id: "catalog", label: "Справочник работ" },
+	{ id: "parameters", label: "Параметры" },
 ];
 
 function SegmentBar({

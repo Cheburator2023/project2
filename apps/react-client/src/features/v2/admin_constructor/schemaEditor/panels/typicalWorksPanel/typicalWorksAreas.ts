@@ -1,6 +1,6 @@
 /** Стримы и группы — как в макете аналитика (sa-formulas.js). */
 
-export type LogicWorksViewMode = "streams" | "matrix" | "catalog";
+export type LogicWorksViewMode = "streams" | "matrix" | "catalog" | "parameters";
 
 export type LogicWorksScope =
 	| { kind: "stream"; stream: string }

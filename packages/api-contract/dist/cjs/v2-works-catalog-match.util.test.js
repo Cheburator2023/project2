@@ -41,4 +41,18 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
         ];
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, { type: "Внутренний" })).toBe(true);
     });
+    (0, vitest_1.it)("does not match works without triggers", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)([], { type: "Внутренний" })).toBe(false);
+    });
+    (0, vitest_1.it)("matches numeric comparison operators", () => {
+        const rule = {
+            paramCode: "metric_count",
+            paramName: "Количество метрик",
+            operator: ">=",
+            valueCode: "10",
+            valueLabel: "10",
+        };
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)([rule], { metric_count: 12 })).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)([rule], { metric_count: 8 })).toBe(false);
+    });
 });

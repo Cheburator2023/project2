@@ -3,6 +3,11 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
 import FormControl from "@mui/material/FormControl";
 import IconButton from "@mui/material/IconButton";
 import InputLabel from "@mui/material/InputLabel";
@@ -48,6 +53,7 @@ import { WorkFormulaEditor } from "./WorkFormulaEditor";
 import {
 	computeTriggerStatus,
 	isWorkCoefficientValueAvailable,
+	WORK_ARCH_COMPONENT_TYPES,
 } from "./typicalWorkPatchErrors";
 import {
 	recommendedStreamsForComponent,
@@ -124,6 +130,9 @@ export function TypicalWorkEditableCard({
 		paramCode: string;
 		paramName: string;
 	} | null>(null);
+	const [pendingArchComponentType, setPendingArchComponentType] = useState<
+		string | null
+	>(null);
 	const [streamMenuOpen, setStreamMenuOpen] = useState(false);
 	const streamAnchorRef = useRef<HTMLButtonElement>(null);
 	const pendingRetryRef = useRef(false);
@@ -229,6 +238,20 @@ export function TypicalWorkEditableCard({
 		removeLaborParam(paramCode);
 	};
 
+	const requestArchComponentTypeChange = (archComponentType: string) => {
+		if (!draft || archComponentType === draft.archComponentType) return;
+		setPendingArchComponentType(archComponentType);
+	};
+
+	const confirmArchComponentTypeChange = () => {
+		if (!draft || !pendingArchComponentType) return;
+		commitDraft({
+			...draft,
+			archComponentType: pendingArchComponentType,
+		});
+		setPendingArchComponentType(null);
+	};
+
 	const handleCreateDraftForFormula = async () => {
 		if (!templateId || !templateVersionId) return;
 		try {
@@ -312,6 +335,38 @@ export function TypicalWorkEditableCard({
 					setLaborDeleteTarget(null);
 				}}
 			/>
+			<Dialog
+				open={pendingArchComponentType != null}
+				onClose={() => setPendingArchComponentType(null)}
+				maxWidth="sm"
+				fullWidth
+			>
+				<DialogTitle>Изменить тип архитектурного компонента?</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						Смена типа может повлиять на список рекомендованных стримов,
+						условия появления и параметры трудоёмкости. После подтверждения
+						карточка будет сохранена с новым типом:
+						{" "}
+						<b>{pendingArchComponentType}</b>.
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button
+						onClick={() => setPendingArchComponentType(null)}
+						sx={{ textTransform: "none" }}
+					>
+						Отмена
+					</Button>
+					<Button
+						variant="contained"
+						onClick={confirmArchComponentTypeChange}
+						sx={{ textTransform: "none" }}
+					>
+						Изменить
+					</Button>
+				</DialogActions>
+			</Dialog>
 			<Box
 				sx={{
 					display: "flex",
@@ -349,30 +404,48 @@ export function TypicalWorkEditableCard({
 							flexWrap: "wrap",
 						}}
 					>
-						<Box
-							sx={{
-								display: "inline-flex",
-								alignItems: "center",
-								gap: 0.75,
-								height: 22,
-								px: 1.25,
-								borderRadius: "7px",
-								bgcolor: "#eef4ff",
-								color: compDot,
-								fontSize: 11,
-								fontWeight: 700,
-							}}
-						>
-							<Box
+						<FormControl size="small" sx={{ minWidth: 190 }}>
+							<Select
+								value={draft.archComponentType}
+								onChange={(event) =>
+									requestArchComponentTypeChange(String(event.target.value))
+								}
+								renderValue={(value) => (
+									<Box
+										sx={{
+											display: "inline-flex",
+											alignItems: "center",
+											gap: 0.75,
+											color: compDot,
+											fontSize: 11,
+											fontWeight: 700,
+										}}
+									>
+										<Box
+											sx={{
+												width: 7,
+												height: 7,
+												borderRadius: "2px",
+												bgcolor: compDot,
+											}}
+										/>
+										{archComponentShortLabel(String(value))}
+									</Box>
+								)}
 								sx={{
-									width: 7,
-									height: 7,
-									borderRadius: "2px",
-									bgcolor: compDot,
+									height: 28,
+									bgcolor: "#eef4ff",
+									borderRadius: "7px",
+									"& .MuiSelect-select": { py: 0.25 },
 								}}
-							/>
-							{archComponentShortLabel(draft.archComponentType)}
-						</Box>
+							>
+								{WORK_ARCH_COMPONENT_TYPES.map((type) => (
+									<MenuItem key={type} value={type}>
+										{type}
+									</MenuItem>
+								))}
+							</Select>
+						</FormControl>
 						<Box
 							sx={{
 								display: "inline-flex",

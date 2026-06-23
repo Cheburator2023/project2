@@ -1,12 +1,17 @@
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import type { V2TypicalWorkNormDto } from "@smart-anketa/api-contract";
 import { validateNormInputs } from "@smart-anketa/api-contract";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { streamDisplayLabel } from "./typicalWorksAreas";
 import {
 	normPeriodStatus,
@@ -52,6 +57,7 @@ export function TypicalWorkNormsSection({
 	onChange,
 }: TypicalWorkNormsSectionProps) {
 	const today = new Date().toISOString().slice(0, 10);
+	const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
 	const streamNorms = norms.filter((n) => n.streamExecutor === streamExecutor);
 	const streamNormIndices = streamNorms.map((norm) => norms.indexOf(norm));
 
@@ -79,16 +85,36 @@ export function TypicalWorkNormsSection({
 		[streamNormIndices, validationIssues],
 	);
 
+	const deleteTarget =
+		deleteIndex == null ? null : (norms[deleteIndex] ?? null);
+
+	const requestDeleteNorm = (index: number) => {
+		const norm = norms[index];
+		if (!norm) return;
+		if (String(norm.id).startsWith("new-")) {
+			onChange(norms.filter((_, i) => i !== index));
+			return;
+		}
+		setDeleteIndex(index);
+	};
+
+	const confirmDeleteNorm = () => {
+		if (deleteIndex == null) return;
+		onChange(norms.filter((_, i) => i !== deleteIndex));
+		setDeleteIndex(null);
+	};
+
 	return (
-		<Box
-			sx={{
-				bgcolor: "#fff",
-				border: "1px solid #e6e8ee",
-				borderRadius: "12px",
-				p: "15px 17px",
-				mb: 1.5,
-			}}
-		>
+		<>
+			<Box
+				sx={{
+					bgcolor: "#fff",
+					border: "1px solid #e6e8ee",
+					borderRadius: "12px",
+					p: "15px 17px",
+					mb: 1.5,
+				}}
+			>
 			<Box
 				sx={{
 					display: "flex",
@@ -270,7 +296,7 @@ export function TypicalWorkNormsSection({
 								<IconButton
 									size="small"
 									aria-label="Удалить норму"
-									onClick={() => onChange(norms.filter((_, i) => i !== index))}
+									onClick={() => requestDeleteNorm(index)}
 									sx={{ color: "#c2554c", mt: 0.5 }}
 								>
 									<DeleteOutlineIcon fontSize="small" />
@@ -287,6 +313,39 @@ export function TypicalWorkNormsSection({
 					);
 				})
 			)}
-		</Box>
+			</Box>
+			<Dialog
+				open={deleteTarget != null}
+				onClose={() => setDeleteIndex(null)}
+				maxWidth="sm"
+				fullWidth
+			>
+				<DialogTitle>Удалить норму трудозатрат?</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						Норма могла использоваться в уже сохранённых версиях анкеты. После
+						удаления расчёт для периода{" "}
+						<b>
+							{deleteTarget?.validFrom}
+							{deleteTarget?.validTo ? ` — ${deleteTarget.validTo}` : " — без даты окончания"}
+						</b>{" "}
+						будет выполняться без этой записи.
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setDeleteIndex(null)} sx={{ textTransform: "none" }}>
+						Отмена
+					</Button>
+					<Button
+						color="error"
+						variant="contained"
+						onClick={confirmDeleteNorm}
+						sx={{ textTransform: "none" }}
+					>
+						Удалить
+					</Button>
+				</DialogActions>
+			</Dialog>
+		</>
 	);
 }
