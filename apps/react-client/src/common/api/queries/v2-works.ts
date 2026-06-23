@@ -267,3 +267,17 @@ export const useDeleteV2TypicalWork = () => {
 		},
 	});
 };
+
+export const useBackfillV2TypicalWorkCalculationLogic = () => {
+	const queryClient = useQueryClient();
+	return useMutation<{ updated: number; skipped: number }, Error, void>({
+		mutationFn: () =>
+			apiClient({
+				url: "/v2/works/calculation-logic/backfill",
+				method: "POST",
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
+		},
+	});
+};

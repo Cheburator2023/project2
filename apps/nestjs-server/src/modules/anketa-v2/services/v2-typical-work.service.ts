@@ -15,6 +15,7 @@ import {
 	defaultWorkFormula,
 	defaultWorkRounding,
 	computeWorkTriggerStatus,
+	parseStoredTypicalWorkCalculationLogic,
 	resolveActiveNormOnDate,
 } from "@smart-anketa/api-contract";
 import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
@@ -363,6 +364,9 @@ export class V2TypicalWorkService {
 								: decimalToNumber(versionConfig.roundingStep),
 					}
 				: defaultWorkRounding(),
+			calculationLogic: versionConfig
+				? parseStoredTypicalWorkCalculationLogic(versionConfig.calculationLogic)
+				: null,
 		};
 	}
 }

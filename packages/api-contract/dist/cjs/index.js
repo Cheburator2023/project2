@@ -31,6 +31,7 @@ __exportStar(require("./v2-typical-works.util"), exports);
 __exportStar(require("./v2-works-catalog-match.util"), exports);
 __exportStar(require("./v2-typical-work.types"), exports);
 __exportStar(require("./v2-work-formula.util"), exports);
+__exportStar(require("./v2-typical-work-jsonlogic.util"), exports);
 __exportStar(require("./v2-typical-work-validation.util"), exports);
 __exportStar(require("./v2-anketa-ui-layout.util"), exports);
 __exportStar(require("./v2-group-activation.util"), exports);

@@ -135,6 +135,14 @@ export class V2TypicalWorkController {
 		return this.typicalWorkWriteService.createWork(dto);
 	}
 
+	@Post("calculation-logic/backfill")
+	@ApiOperation({
+		summary: "Скомпилировать JsonLogic для всех сохранённых формул version_config",
+	})
+	async backfillCalculationLogic(): Promise<{ updated: number; skipped: number }> {
+		return this.typicalWorkWriteService.backfillCalculationLogic();
+	}
+
 	@Get(":id")
 	@ApiOperation({ summary: "Карточка типовой работы для стрима" })
 	@ApiQuery({ name: "streamExecutor", required: true })

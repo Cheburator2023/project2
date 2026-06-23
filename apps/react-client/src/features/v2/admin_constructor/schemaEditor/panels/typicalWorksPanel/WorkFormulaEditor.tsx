@@ -12,9 +12,12 @@ import type {
 	V2TypicalWorkFormulaDto,
 	V2TypicalWorkLaborParamGroupDto,
 	V2TypicalWorkRoundingDto,
+	V2TypicalWorkRuleDto,
+	V2TypicalWorkStoredCalculationLogicDto,
 	V2WorkFormulaToken,
 } from "@smart-anketa/api-contract";
 import {
+	compileTypicalWorkCalculationLogic,
 	parseWorkFormulaText,
 	tokensToText,
 	validateWorkFormulaTokens,
@@ -25,6 +28,8 @@ type WorkFormulaEditorProps = {
 	formula: V2TypicalWorkFormulaDto;
 	rounding: V2TypicalWorkRoundingDto;
 	laborParams: V2TypicalWorkLaborParamGroupDto[];
+	rules: V2TypicalWorkRuleDto[];
+	storedCalculationLogic?: V2TypicalWorkStoredCalculationLogicDto | null;
 	onFormulaChange: (formula: V2TypicalWorkFormulaDto) => void;
 	onRoundingChange: (rounding: V2TypicalWorkRoundingDto) => void;
 	readOnly?: boolean;
@@ -45,11 +50,13 @@ export function WorkFormulaEditor({
 	formula,
 	rounding,
 	laborParams,
+	rules,
+	storedCalculationLogic,
 	onFormulaChange,
 	onRoundingChange,
 	readOnly = false,
 }: WorkFormulaEditorProps) {
-	const [mode, setMode] = useState<"visual" | "manual">("visual");
+	const [mode, setMode] = useState<"visual" | "manual" | "jsonlogic">("visual");
 	const [manualText, setManualText] = useState(formula.text);
 	const [parseError, setParseError] = useState<string | null>(null);
 	const [numberInput, setNumberInput] = useState("");
@@ -72,6 +79,33 @@ export function WorkFormulaEditor({
 		() => validateWorkFormulaTokens(formula.tokens),
 		[formula.tokens],
 	);
+
+	const ruleRows = useMemo(
+		() =>
+			rules.map((rule) => ({
+				paramCode: rule.paramCode,
+				paramName: rule.paramName,
+				operator: rule.operator,
+				valueCode: rule.valueCode,
+				valueLabel: rule.valueLabel,
+			})),
+		[rules],
+	);
+
+	const liveCalculationLogic = useMemo(
+		() =>
+			compileTypicalWorkCalculationLogic({
+				formula,
+				rounding,
+				rules: ruleRows,
+			}),
+		[formula, rounding, ruleRows],
+	);
+
+	const jsonLogicText = useMemo(() => {
+		if (!liveCalculationLogic) return null;
+		return JSON.stringify(liveCalculationLogic, null, 2);
+	}, [liveCalculationLogic]);
 
 	const appendToken = (token: V2WorkFormulaToken) => {
 		const nextTokens = [...formula.tokens, token];
@@ -130,9 +164,48 @@ export function WorkFormulaEditor({
 					}}
 					clickable
 				/>
+				<Chip
+					label="JsonLogic"
+					color={mode === "jsonlogic" ? "primary" : "default"}
+					onClick={() => setMode("jsonlogic")}
+					clickable
+				/>
 			</Box>
 
-			{mode === "visual" ? (
+			{mode === "jsonlogic" ? (
+				<>
+					{formulaError ? (
+						<Alert severity="error" sx={{ mb: 1 }}>
+							{formulaError}
+						</Alert>
+					) : null}
+					{jsonLogicText ? (
+						<TextField
+							size="small"
+							fullWidth
+							multiline
+							minRows={10}
+							value={jsonLogicText}
+							InputProps={{ readOnly: true }}
+							sx={{
+								"& textarea": {
+									fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+									fontSize: 12,
+								},
+							}}
+						/>
+					) : (
+						<Alert severity="warning">
+							Не удалось скомпилировать JsonLogic — проверьте формулу и округление.
+						</Alert>
+					)}
+					<Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+						{storedCalculationLogic?.result
+							? "В БД сохранён только result; include собирается из текущих условий."
+							: "JsonLogic будет сохранён после следующего автосохранения карточки."}
+					</Typography>
+				</>
+			) : mode === "visual" ? (
 				<>
 					<Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 1 }}>
 						{formula.tokens.map((token, index) => {

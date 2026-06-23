@@ -15,6 +15,7 @@ export * from "./v2-typical-works.util";
 export * from "./v2-works-catalog-match.util";
 export * from "./v2-typical-work.types";
 export * from "./v2-work-formula.util";
+export * from "./v2-typical-work-jsonlogic.util";
 export * from "./v2-typical-work-validation.util";
 export * from "./v2-anketa-ui-layout.util";
 export * from "./v2-group-activation.util";

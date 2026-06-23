@@ -37,6 +37,9 @@ export class V2TypicalWorkVersionConfigEntity {
 	})
 	roundingStep: string | null;
 
+	@Column({ name: "calculation_logic", type: "jsonb", nullable: true })
+	calculationLogic: unknown;
+
 	@CreateDateColumn({ name: "created_at", type: "timestamptz" })
 	createdAt: Date;
 

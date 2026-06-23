@@ -122,6 +122,13 @@ export type V2TypicalWorkListResponseDto = {
 	archComponentTypes: string[];
 };
 
+import type { V2JsonLogicValue } from "./v2-template.types";
+
+export type V2TypicalWorkStoredCalculationLogicDto = {
+	version: 1;
+	result: V2JsonLogicValue;
+};
+
 export type V2TypicalWorkCardDto = {
 	id: string;
 	name: string;
@@ -134,6 +141,8 @@ export type V2TypicalWorkCardDto = {
 	laborParams: V2TypicalWorkLaborParamGroupDto[];
 	formula: V2TypicalWorkFormulaDto;
 	rounding: V2TypicalWorkRoundingDto;
+	/** Скомпилированная JsonLogic-формула (result); include собирается из rules при расчёте. */
+	calculationLogic?: V2TypicalWorkStoredCalculationLogicDto | null;
 };
 
 export type V2TypicalWorkPreviewRequestDto = {

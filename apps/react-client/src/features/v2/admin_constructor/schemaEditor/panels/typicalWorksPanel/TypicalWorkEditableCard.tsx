@@ -24,9 +24,10 @@ import Typography from "@mui/material/Typography";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import type { V2TypicalWorkCardDto } from "@smart-anketa/api-contract";
 import {
+	compileStoredTypicalWorkResultLogic,
 	isParamUsedInFormula,
 	markFormulaParamInvalid,
-	previewWorkFormula,
+	previewTypicalWorkCalculation,
 	resolveActiveNormOnDate,
 	tokensToText,
 } from "@smart-anketa/api-contract";
@@ -198,10 +199,12 @@ export function TypicalWorkEditableCard({
 			);
 			if (first) coeffs[group.paramCode] = first.coefficient;
 		}
-		const result = previewWorkFormula(draft.formula, draft.rounding, {
-			norm,
-			paramCoefficients: coeffs,
-		});
+		const result = previewTypicalWorkCalculation(
+			compileStoredTypicalWorkResultLogic(draft.formula, draft.rounding) ??
+				draft.calculationLogic,
+			{ formula: draft.formula, rounding: draft.rounding },
+			{ norm, paramCoefficients: coeffs },
+		);
 		return { error: result.error, value: result.value, expanded: result.expanded };
 	}, [draft, streamExecutor, coefficientCatalog]);
 
@@ -921,6 +924,8 @@ export function TypicalWorkEditableCard({
 							formula={draft.formula}
 							rounding={draft.rounding}
 							laborParams={draft.laborParams}
+							rules={draft.rules}
+							storedCalculationLogic={draft.calculationLogic}
 							onFormulaChange={(formula) => commitDraft({ ...draft, formula })}
 							onRoundingChange={(rounding) => commitDraft({ ...draft, rounding })}
 						/>

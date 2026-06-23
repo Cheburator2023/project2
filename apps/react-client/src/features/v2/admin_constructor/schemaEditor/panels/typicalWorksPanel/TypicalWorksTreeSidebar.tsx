@@ -37,7 +37,7 @@ function laborBadgeForWork(
 ): { label: string; bg: string; color: string } {
 	const count =
 		streamForRow && work.laborParamCountByStream
-			? work.laborParamCountByStream[streamForRow] ?? 0
+			? (work.laborParamCountByStream[streamForRow] ?? 0)
 			: 0;
 	if (count > 0) {
 		return { label: `коэф.: ${count}`, bg: "#eaf6ef", color: "#1f8a4d" };
@@ -79,7 +79,9 @@ export function TypicalWorksTreeSidebar({
 				}}
 			>
 				<Box>
-					<Typography sx={{ fontSize: 12.5, fontWeight: 700, color: "#1d2435" }}>
+					<Typography
+						sx={{ fontSize: 12.5, fontWeight: 700, color: "#1d2435" }}
+					>
 						Работы области
 					</Typography>
 					<Typography sx={{ fontSize: 10.5, color: "#8a93a3", mt: 0.25 }}>
@@ -100,7 +102,7 @@ export function TypicalWorksTreeSidebar({
 						minWidth: 0,
 					}}
 				>
-					+ Из справочника
+					+
 				</Button>
 			</Box>
 

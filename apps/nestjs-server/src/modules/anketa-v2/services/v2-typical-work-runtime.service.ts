@@ -6,7 +6,8 @@ import {
 	defaultWorkFormula,
 	defaultWorkRounding,
 	isWorkCoefficientValueAvailable,
-	previewWorkFormula,
+	parseStoredTypicalWorkCalculationLogic,
+	previewTypicalWorkCalculation,
 	resolveActiveNormOnDate,
 	resolveLaborCoefficient,
 	resolveStreamFromSourceType,
@@ -202,10 +203,11 @@ export class V2TypicalWorkRuntimeService {
 				}
 			}
 
-			const preview = previewWorkFormula(formula, rounding, {
-				norm: normValue,
-				paramCoefficients,
-			});
+			const preview = previewTypicalWorkCalculation(
+				parseStoredTypicalWorkCalculationLogic(config?.calculationLogic),
+				{ formula, rounding },
+				{ norm: normValue, paramCoefficients },
+			);
 			const total = preview.value ?? normValue;
 
 			let coefficient = 1;

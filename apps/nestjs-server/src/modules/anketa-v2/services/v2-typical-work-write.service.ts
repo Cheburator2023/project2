@@ -22,10 +22,11 @@ import type {
 } from "@smart-anketa/api-contract";
 import {
 	collectAllowedParamCodes,
+	compileStoredTypicalWorkResultLogic,
 	defaultWorkFormula,
 	defaultWorkRounding,
 	isWorkCoefficientValueAvailable,
-	previewWorkFormula,
+	previewTypicalWorkCalculation,
 	resolveActiveNormOnDate,
 	tokensToText,
 	validateCoefficientValue,
@@ -331,17 +332,30 @@ export class V2TypicalWorkWriteService {
 		}
 
 		if (touchesFormula && dto.templateVersionId) {
-			const formula = dto.formula ?? defaultWorkFormula();
-			const rounding = dto.rounding ?? defaultWorkRounding();
 			const existing = await this.versionConfigRepository.findOne({
 				where: { workId, templateVersionId: dto.templateVersionId },
 			});
+			const formula =
+				dto.formula ??
+				(existing
+					? {
+							tokens: Array.isArray(existing.formula)
+								? (existing.formula as ReturnType<
+										typeof defaultWorkFormula
+									>["tokens"])
+								: defaultWorkFormula().tokens,
+							text: existing.formulaText ?? defaultWorkFormula().text,
+						}
+					: defaultWorkFormula());
+			const rounding = dto.rounding ?? defaultWorkRounding();
+			const compiled = compileStoredTypicalWorkResultLogic(formula, rounding);
 			const payload = {
 				formula: formula.tokens,
 				formulaText: formula.text || tokensToText(formula.tokens),
 				roundingMode: rounding.mode,
 				roundingStep:
 					rounding.mode === "NONE" ? null : String(rounding.step ?? 0.1),
+				calculationLogic: compiled,
 			};
 			if (existing) {
 				Object.assign(existing, payload);
@@ -408,10 +422,11 @@ export class V2TypicalWorkWriteService {
 			}
 		}
 
-		const evaluated = previewWorkFormula(card.formula, card.rounding, {
-			norm,
-			paramCoefficients,
-		});
+		const evaluated = previewTypicalWorkCalculation(
+			card.calculationLogic,
+			{ formula: card.formula, rounding: card.rounding },
+			{ norm, paramCoefficients },
+		);
 
 		return {
 			formulaSymbolic: evaluated.symbolic,
@@ -419,5 +434,39 @@ export class V2TypicalWorkWriteService {
 			result: evaluated.value,
 			error: evaluated.error,
 		};
+	}
+
+	async backfillCalculationLogic(): Promise<{ updated: number; skipped: number }> {
+		const configs = await this.versionConfigRepository.find();
+		let updated = 0;
+		let skipped = 0;
+
+		for (const config of configs) {
+			const formula = {
+				tokens: Array.isArray(config.formula)
+					? (config.formula as ReturnType<typeof defaultWorkFormula>["tokens"])
+					: defaultWorkFormula().tokens,
+				text: config.formulaText ?? defaultWorkFormula().text,
+			};
+			const rounding = {
+				mode: config.roundingMode as ReturnType<
+					typeof defaultWorkRounding
+				>["mode"],
+				step:
+					config.roundingStep == null
+						? null
+						: Number(config.roundingStep),
+			};
+			const compiled = compileStoredTypicalWorkResultLogic(formula, rounding);
+			if (!compiled) {
+				skipped++;
+				continue;
+			}
+			config.calculationLogic = compiled;
+			await this.versionConfigRepository.save(config);
+			updated++;
+		}
+
+		return { updated, skipped };
 	}
 }
