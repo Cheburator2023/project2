@@ -15,6 +15,19 @@ import {
 	slugParamCode,
 } from "../utils/v2-typical-work-catalog.util";
 
+function uniqueParamValueCode(label: string, seen: Set<string>): string {
+	const base = slugParamCode(label) || "value";
+	let code = base.slice(0, 120);
+	let counter = 2;
+	while (seen.has(code)) {
+		const suffix = `_${counter}`;
+		code = `${base.slice(0, 120 - suffix.length)}${suffix}`;
+		counter++;
+	}
+	seen.add(code);
+	return code;
+}
+
 @Injectable()
 export class V2TypicalWorkParamCatalogService implements OnModuleInit {
 	private readonly logger = new Logger(V2TypicalWorkParamCatalogService.name);
@@ -51,10 +64,12 @@ export class V2TypicalWorkParamCatalogService implements OnModuleInit {
 			});
 			if (existingValueCount > 0) continue;
 
-			const values = dict.values.map((value, index) =>
-				this.valueRepository.create({
+			const seenValueCodes = new Set<string>();
+			const values = dict.values.map((value, index) => {
+				const code = uniqueParamValueCode(value.label, seenValueCodes);
+				return this.valueRepository.create({
 					paramId: param!.id,
-					code: slugParamCode(value.label),
+					code,
 					label: value.label,
 					coefficient:
 						value.coeff == null || !Number.isFinite(value.coeff)
@@ -63,8 +78,8 @@ export class V2TypicalWorkParamCatalogService implements OnModuleInit {
 					sortOrder: index,
 					validFrom: DEFAULT_NORM_VALID_FROM,
 					validTo: null,
-				}),
-			);
+				});
+			});
 			if (values.length > 0) {
 				await this.valueRepository.save(values);
 			}
