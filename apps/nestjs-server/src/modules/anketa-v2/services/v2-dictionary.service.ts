@@ -4,7 +4,7 @@ import {
 	ConflictException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import { V2DictionaryEntity } from "../entities/v2-dictionary.entity";
 import { V2DictionaryItemEntity } from "../entities/v2-dictionary-item.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
@@ -19,8 +19,10 @@ import {
 import type {
 	BulkDeleteV2DictionariesResultDto,
 	BulkResetV2DictionariesResultDto,
+	BulkV2DictionaryJsonResponseDto,
 	V2DictionaryBulkFailureDto,
 	V2DictionaryFieldUsageDto,
+	V2DictionaryJsonSnapshotDto,
 } from "@smart-anketa/api-contract";
 import type {
 	CreateV2DictionaryDto,
@@ -381,6 +383,55 @@ export class V2DictionaryService {
 			order: { order: "ASC", code: "ASC" },
 		});
 
+		return this.toDictionaryJsonSnapshot(dictionary, items);
+	}
+
+	async getDictionariesAsJsonBulk(
+		codes: string[],
+	): Promise<BulkV2DictionaryJsonResponseDto> {
+		const uniqueCodes = [
+			...new Set(
+				codes
+					.filter((code) => typeof code === "string")
+					.map((code) => code.trim())
+					.filter(Boolean),
+			),
+		];
+		if (uniqueCodes.length === 0) return {};
+
+		const dictionaries = await this.dictionaryRepository.find({
+			where: { code: In(uniqueCodes) },
+		});
+		if (dictionaries.length === 0) return {};
+
+		const dictionaryIds = dictionaries.map((dictionary) => dictionary.id);
+		const items = await this.itemRepository.find({
+			where: { dictionaryId: In(dictionaryIds), isActive: true },
+			order: { order: "ASC", code: "ASC" },
+		});
+
+		const itemsByDictionaryId = new Map<string, V2DictionaryItemEntity[]>();
+		for (const item of items) {
+			const bucket = itemsByDictionaryId.get(item.dictionaryId) ?? [];
+			bucket.push(item);
+			itemsByDictionaryId.set(item.dictionaryId, bucket);
+		}
+
+		const result: BulkV2DictionaryJsonResponseDto = {};
+		for (const dictionary of dictionaries) {
+			result[dictionary.code] = this.toDictionaryJsonSnapshot(
+				dictionary,
+				itemsByDictionaryId.get(dictionary.id) ?? [],
+			);
+		}
+
+		return result;
+	}
+
+	private toDictionaryJsonSnapshot(
+		dictionary: Pick<V2DictionaryEntity, "code" | "name">,
+		items: V2DictionaryItemEntity[],
+	): V2DictionaryJsonSnapshotDto {
 		return {
 			code: dictionary.code,
 			name: dictionary.name,

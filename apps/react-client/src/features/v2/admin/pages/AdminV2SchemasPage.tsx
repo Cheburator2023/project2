@@ -9,6 +9,9 @@ import Typography from "@mui/material/Typography";
 import {
 	useBulkDeleteV2TemplateVersions,
 	useDeleteV2Template,
+	invalidateV2TemplatesList,
+	invalidateV2TemplateVersions,
+	removeV2TemplateFromCache,
 	useResetV2TemplateToDefault,
 	useRestoreV2Template,
 	useRestoreV2TemplateVersions,
@@ -35,8 +38,10 @@ import type {
 } from "@smart-anketa/api-contract";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function AdminV2SchemasPage() {
+	const queryClient = useQueryClient();
 	const resetMutation = useResetV2TemplateToDefault();
 	const seedMutation = useSeedV2TestQuestionnaires();
 	const bulkDeleteVersions = useBulkDeleteV2TemplateVersions();
@@ -110,6 +115,8 @@ export function AdminV2SchemasPage() {
 			versions: V2TemplateVersionDto[];
 		}[] = [];
 		const restoreTemplateSnapshots: V2TemplateDeleteSnapshotDto[] = [];
+		const affectedTemplateIds = new Set<string>();
+		const deletedTemplateIds = new Set<string>();
 
 		const trackVersionDeleteResult = (result: {
 			deletedVersionIds: string[];
@@ -133,13 +140,20 @@ export function AdminV2SchemasPage() {
 				if (tpl.currentVersionId) {
 					const result = await bulkDeleteVersions.mutateAsync({
 						templateId: tpl.id,
+						skipCacheRefresh: true,
 					});
+					affectedTemplateIds.add(tpl.id);
 					trackVersionDeleteResult(result, tpl.id);
 				} else {
 					try {
-						const snapshot = await deleteTemplate.mutateAsync(tpl.id);
+						const snapshot = await deleteTemplate.mutateAsync({
+							id: tpl.id,
+							skipCacheRefresh: true,
+						});
 						deletedTemplateCount += 1;
 						deletedVersionCount += snapshot.versions.length;
+						deletedTemplateIds.add(tpl.id);
+						affectedTemplateIds.add(tpl.id);
 						restoreTemplateSnapshots.push(snapshot);
 					} catch (error) {
 						templateErrors.push(
@@ -167,8 +181,23 @@ export function AdminV2SchemasPage() {
 				const result = await bulkDeleteVersions.mutateAsync({
 					templateId,
 					versionIds,
+					skipCacheRefresh: true,
 				});
+				affectedTemplateIds.add(templateId);
 				trackVersionDeleteResult(result, templateId);
+			}
+
+			void invalidateV2TemplatesList(queryClient);
+			for (const templateId of affectedTemplateIds) {
+				if (deletedTemplateIds.has(templateId)) {
+					void removeV2TemplateFromCache(queryClient, templateId);
+				} else {
+					void invalidateV2TemplateVersions(queryClient, templateId);
+					void queryClient.invalidateQueries({
+						queryKey: ["v2-templates", templateId],
+						exact: true,
+					});
+				}
 			}
 
 			setConfirmBulkDeleteOpen(false);
@@ -238,6 +267,7 @@ export function AdminV2SchemasPage() {
 	}, [
 		bulkDeleteVersions,
 		deleteTemplate,
+		queryClient,
 		restoreTemplate,
 		restoreVersions,
 		selectedRows,

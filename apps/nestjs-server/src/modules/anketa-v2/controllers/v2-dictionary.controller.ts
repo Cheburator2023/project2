@@ -21,6 +21,7 @@ import {
 	CreateV2DictionaryItemDto,
 	UpdateV2DictionaryItemDto,
 	BulkV2DictionaryIdsDto,
+	BulkV2DictionaryJsonDto,
 } from "../dto";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
 
@@ -88,6 +89,15 @@ export class V2DictionaryController {
 	async findByCode(@Param("code") code: string): Promise<V2DictionaryResponseDto> {
 		const dictionary = await this.dictionaryService.findByCode(code);
 		return this.toResponseDto(dictionary);
+	}
+
+	@Post("json/bulk")
+	@ApiOperation({ summary: "Получить несколько справочников в формате JSON" })
+	@ApiResponse({ status: 200 })
+	async getAsJsonBulk(
+		@Body() dto: BulkV2DictionaryJsonDto,
+	): Promise<Record<string, unknown>> {
+		return this.dictionaryService.getDictionariesAsJsonBulk(dto.codes);
 	}
 
 	@Get("json/:code")

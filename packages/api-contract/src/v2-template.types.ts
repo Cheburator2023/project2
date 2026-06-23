@@ -199,6 +199,26 @@ export type BulkResetV2DictionariesResultDto = {
 	failed: V2DictionaryBulkFailureDto[];
 };
 
+export type BulkV2DictionaryCodesRequestDto = {
+	codes: string[];
+};
+
+export type V2DictionaryJsonSnapshotDto = {
+	code: string;
+	name: string;
+	items: Array<{
+		code: string;
+		label: string;
+		parentCode: string | null;
+		payload: Record<string, unknown> | null;
+	}>;
+};
+
+export type BulkV2DictionaryJsonResponseDto = Record<
+	string,
+	V2DictionaryJsonSnapshotDto
+>;
+
 export type V2DictionaryItemDto = {
 	id: string;
 	dictionaryId: string;

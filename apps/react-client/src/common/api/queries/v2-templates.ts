@@ -1,6 +1,5 @@
 import {
 	useMutation,
-	useQueries,
 	useQuery,
 	useQueryClient,
 	type QueryClient,
@@ -23,6 +22,7 @@ import type {
 	V2DictionaryItemDto,
 	BulkDeleteV2DictionariesResultDto,
 	BulkResetV2DictionariesResultDto,
+	BulkV2DictionaryJsonResponseDto,
 	V2BulkDeleteTemplateVersionsResultDto,
 	V2TemplateAuditDto,
 	V2TemplateDeleteSnapshotDto,
@@ -33,6 +33,67 @@ import { useMemo } from "react";
 
 import { parseDictionaryJsonToEnumPair } from "@react-client/features/v2/admin_constructor/utils/dictionaryPreview";
 import { apiClient } from "../helpers/apiClient";
+
+export type DeleteV2TemplateInput =
+	| string
+	| { id: string; skipCacheRefresh?: boolean };
+
+export type BulkDeleteV2TemplateVersionsInput = {
+	templateId: string;
+	versionIds?: string[];
+	skipCacheRefresh?: boolean;
+};
+
+function resolveDeleteTemplateInput(input: DeleteV2TemplateInput): {
+	id: string;
+	skipCacheRefresh: boolean;
+} {
+	if (typeof input === "string") {
+		return { id: input, skipCacheRefresh: false };
+	}
+	return {
+		id: input.id,
+		skipCacheRefresh: input.skipCacheRefresh ?? false,
+	};
+}
+
+export function invalidateV2TemplatesList(queryClient: QueryClient) {
+	return queryClient.invalidateQueries({
+		queryKey: ["v2-templates"],
+		exact: true,
+	});
+}
+
+export function invalidateV2TemplateVersions(
+	queryClient: QueryClient,
+	templateId: string,
+) {
+	return queryClient.invalidateQueries({
+		queryKey: ["v2-templates", templateId, "versions"],
+	});
+}
+
+export function removeV2TemplateFromCache(
+	queryClient: QueryClient,
+	templateId: string,
+) {
+	return queryClient.removeQueries({ queryKey: ["v2-templates", templateId] });
+}
+
+/** Обновить список шаблонов и версии затронутых шаблонов без лишних refetch. */
+export function invalidateV2TemplateRegistry(
+	queryClient: QueryClient,
+	templateIds: string[] = [],
+) {
+	void invalidateV2TemplatesList(queryClient);
+	for (const templateId of [...new Set(templateIds)]) {
+		void invalidateV2TemplateVersions(queryClient, templateId);
+		void queryClient.invalidateQueries({
+			queryKey: ["v2-templates", templateId],
+			exact: true,
+		});
+	}
+}
 
 // Templates
 export const useV2Templates = () => {
@@ -81,7 +142,7 @@ export const useCreateV2Template = () => {
 				data: dto,
 			}),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
+			void invalidateV2TemplatesList(queryClient);
 		},
 	});
 };
@@ -101,7 +162,7 @@ export const useUpdateV2Template = () => {
 				data: dto,
 			}),
 		onSuccess: (_, { id }) => {
-			queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
+			void invalidateV2TemplatesList(queryClient);
 			queryClient.invalidateQueries({ queryKey: ["v2-templates", id] });
 		},
 	});
@@ -110,14 +171,19 @@ export const useUpdateV2Template = () => {
 export const useDeleteV2Template = () => {
 	const queryClient = useQueryClient();
 
-	return useMutation<V2TemplateDeleteSnapshotDto, Error, string>({
-		mutationFn: (id) =>
-			apiClient<V2TemplateDeleteSnapshotDto>({
+	return useMutation<V2TemplateDeleteSnapshotDto, Error, DeleteV2TemplateInput>({
+		mutationFn: (input) => {
+			const { id } = resolveDeleteTemplateInput(input);
+			return apiClient<V2TemplateDeleteSnapshotDto>({
 				url: `/v2/templates/${id}`,
 				method: "DELETE",
-			}),
-		onSettled: () => {
-			refreshV2TemplateRegistry(queryClient);
+			});
+		},
+		onSettled: (_, __, input) => {
+			const { id, skipCacheRefresh } = resolveDeleteTemplateInput(input);
+			if (skipCacheRefresh) return;
+			void invalidateV2TemplatesList(queryClient);
+			void removeV2TemplateFromCache(queryClient, id);
 		},
 	});
 };
@@ -133,7 +199,7 @@ export const useRestoreV2Template = () => {
 				data: snapshot,
 			}),
 		onSuccess: (_, snapshot) => {
-			queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
+			void invalidateV2TemplatesList(queryClient);
 			queryClient.invalidateQueries({
 				queryKey: ["v2-templates", snapshot.template.id, "versions"],
 			});
@@ -147,7 +213,7 @@ export const useBulkDeleteV2TemplateVersions = () => {
 	return useMutation<
 		V2BulkDeleteTemplateVersionsResultDto,
 		Error,
-		{ templateId: string; versionIds?: string[] }
+		BulkDeleteV2TemplateVersionsInput
 	>({
 		mutationFn: ({ templateId, versionIds }) =>
 			apiClient<V2BulkDeleteTemplateVersionsResultDto>({
@@ -155,8 +221,9 @@ export const useBulkDeleteV2TemplateVersions = () => {
 				method: "POST",
 				data: versionIds?.length ? { versionIds } : {},
 			}),
-		onSettled: () => {
-			refreshV2TemplateRegistry(queryClient);
+		onSettled: (_, __, { templateId, skipCacheRefresh }) => {
+			if (skipCacheRefresh) return;
+			invalidateV2TemplateRegistry(queryClient, [templateId]);
 		},
 	});
 };
@@ -222,7 +289,7 @@ export const useCreateV2TemplateVersionFromDefault = () => {
 				method: "POST",
 			}),
 		onSuccess: (_, templateId) => {
-			queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
+			void invalidateV2TemplatesList(queryClient);
 			queryClient.invalidateQueries({
 				queryKey: ["v2-templates", templateId, "versions"],
 			});
@@ -303,7 +370,7 @@ export const usePublishV2TemplateVersion = () => {
 				data: dto,
 			}),
 		onSuccess: (_, { templateId, versionId }) => {
-			queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
+			void invalidateV2TemplatesList(queryClient);
 			queryClient.invalidateQueries({
 				queryKey: ["v2-templates", templateId, "versions"],
 			});
@@ -361,9 +428,8 @@ export const useRollbackV2TemplateVersion = () => {
 	});
 };
 
-function refreshV2TemplateRegistry(queryClient: QueryClient) {
-	void queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
-	void queryClient.refetchQueries({ queryKey: ["v2-templates"] });
+function refreshV2TemplateRegistry(queryClient: QueryClient, templateId: string) {
+	invalidateV2TemplateRegistry(queryClient, [templateId]);
 }
 
 export const useActivateV2TemplateVersionAsCurrent = () => {
@@ -379,8 +445,8 @@ export const useActivateV2TemplateVersionAsCurrent = () => {
 				url: `/v2/templates/${templateId}/versions/${versionId}/activate-as-current`,
 				method: "POST",
 			}),
-		onSettled: () => {
-			refreshV2TemplateRegistry(queryClient);
+		onSettled: (_, __, { templateId }) => {
+			refreshV2TemplateRegistry(queryClient, templateId);
 			queryClient.invalidateQueries({ queryKey: ["v2-audit"] });
 		},
 	});
@@ -397,7 +463,7 @@ export const useResetV2TemplateToDefault = () => {
 			}),
 		onSuccess: (_, templateId) => {
 			queryClient.invalidateQueries({ queryKey: ["v2-audit"] });
-			queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
+			void invalidateV2TemplatesList(queryClient);
 			queryClient.invalidateQueries({ queryKey: ["v2-templates", templateId] });
 			queryClient.invalidateQueries({
 				queryKey: ["v2-templates", templateId, "versions"],
@@ -710,7 +776,7 @@ export const useV2DictionaryAsJson = (code: string) => {
 	});
 };
 
-/** Параллельная загрузка enum для всех указанных кодов словарников (превью V2). */
+/** Загрузка enum для всех указанных кодов словарников одним bulk-запросом. */
 export const useV2DictionaryEnumsMaps = (dictionaryCodes: string[]) => {
 	const uniqueSorted = useMemo(
 		() =>
@@ -724,35 +790,34 @@ export const useV2DictionaryEnumsMaps = (dictionaryCodes: string[]) => {
 		[dictionaryCodes],
 	);
 
-	const queries = useQueries({
-		queries: uniqueSorted.map((code) => ({
-			queryKey: ["v2-dictionaries", "json", code] as const,
-			queryFn: () =>
-				apiClient<Record<string, unknown>>({
-					url: `/v2/dictionaries/json/${encodeURIComponent(code)}`,
-					method: "GET",
-				}),
-			enabled: !!code,
-			staleTime: 30_000,
-		})),
+	const { data, isPending } = useQuery<BulkV2DictionaryJsonResponseDto>({
+		queryKey: ["v2-dictionaries", "json", "bulk", uniqueSorted],
+		queryFn: () =>
+			apiClient<BulkV2DictionaryJsonResponseDto>({
+				url: "/v2/dictionaries/json/bulk",
+				method: "POST",
+				data: { codes: uniqueSorted },
+			}),
+		enabled: uniqueSorted.length > 0,
+		staleTime: 5 * 60_000,
 	});
 
-	const enumMapByCode: Record<
-		string,
-		{ enums: string[]; enumNames: string[] }
-	> = {};
-	for (let i = 0; i < uniqueSorted.length; i++) {
-		const code = uniqueSorted[i]!;
-		const row = queries[i];
-		if (row?.data) {
-			const parsed = parseDictionaryJsonToEnumPair(row.data);
-			if (parsed) enumMapByCode[code] = parsed;
+	const enumMapByCode = useMemo(() => {
+		const result: Record<
+			string,
+			{ enums: string[]; enumNames: string[] }
+		> = {};
+		if (!data) return result;
+		for (const code of uniqueSorted) {
+			const snapshot = data[code];
+			if (!snapshot) continue;
+			const parsed = parseDictionaryJsonToEnumPair(snapshot);
+			if (parsed) result[code] = parsed;
 		}
-	}
+		return result;
+	}, [data, uniqueSorted]);
 
-	const isLoading = queries.some((q) => q.isPending);
-
-	return { enumMapByCode, isLoading, uniqueSorted };
+	return { enumMapByCode, isLoading: isPending, uniqueSorted };
 };
 
 // Audit
