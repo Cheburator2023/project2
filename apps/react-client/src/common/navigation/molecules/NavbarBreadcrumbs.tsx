@@ -121,6 +121,10 @@ export function NavbarBreadcrumbs() {
 			return [commonRoutes.playground.name];
 		}
 
+		if (pathname.startsWith(commonRoutes.settings.rootPath)) {
+			return [commonRoutes.settings.name];
+		}
+
 		if (pathname === "/v2" || pathname === "/v2/") {
 			return ["Калькулятор v2", v2Routes.home.name];
 		}

@@ -1,21 +1,18 @@
-import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import Divider from "@mui/material/Divider";
 import { dividerClasses } from "@mui/material/Divider";
 import { listClasses } from "@mui/material/List";
-import ListItemIcon, { listItemIconClasses } from "@mui/material/ListItemIcon";
+import { listItemIconClasses } from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Menu from "@mui/material/Menu";
 import MuiMenuItem from "@mui/material/MenuItem";
 import { paperClasses } from "@mui/material/Paper";
 import { styled } from "@mui/material/styles";
-import {
-	useV2DataTransferActions,
-	V2DataTransferMenuItems,
-} from "@react-client/common/navigation/organisms/V2DataTransferMenu";
-import { usePermissions } from "@react-client/hooks/usePermissions";
+import { isDevLikeEnvironment } from "@react-client/common/constants/dev";
+import { commonRoutes } from "@react-client/routing/common/routes";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 
 import { MenuButton } from "../../../common/navigation/molecules/MenuButton";
 
@@ -26,8 +23,8 @@ const MenuItem = styled(MuiMenuItem)({
 export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 	const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 	const queryClient = useQueryClient();
-	const { canAccessAdminPanel } = usePermissions();
-	const v2Transfer = useV2DataTransferActions();
+	const navigate = useNavigate();
+	const showSettings = isDevLikeEnvironment();
 
 	const open = Boolean(anchorEl);
 	const handleClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -35,6 +32,11 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 	};
 	const handleClose = () => {
 		setAnchorEl(null);
+	};
+
+	const handleOpenSettings = () => {
+		setAnchorEl(null);
+		navigate(commonRoutes.settings.rootPath);
 	};
 
 	const handleLogout = () => {
@@ -45,7 +47,6 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 
 	return (
 		<>
-			{v2Transfer.importDialog}
 			<MenuButton
 				aria-label="Open menu"
 				onClick={handleClick}
@@ -75,13 +76,16 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 				}}
 				data-test-id="options-menu--Menu-0"
 			>
-				{canAccessAdminPanel ? (
+				{showSettings ? (
 					<>
-						<V2DataTransferMenuItems
-							onExport={v2Transfer.onExport}
-							onImport={v2Transfer.onImport}
-							exportPending={v2Transfer.exportMutation.isPending}
-						/>
+						<MenuItem
+							onClick={handleOpenSettings}
+							data-test-id="options-menu--MenuItem-settings"
+						>
+							<ListItemText data-test-id="options-menu--ListItemText-settings">
+								Настройки
+							</ListItemText>
+						</MenuItem>
 						<Divider />
 					</>
 				) : null}
@@ -98,12 +102,6 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 					<ListItemText data-test-id="options-menu--ListItemText-0">
 						Выйти
 					</ListItemText>
-					<ListItemIcon data-test-id="options-menu--ListItemIcon-0">
-						<LogoutRoundedIcon
-							fontSize="small"
-							data-test-id="options-menu--LogoutRoundedIcon-0"
-						/>
-					</ListItemIcon>
 				</MenuItem>
 			</Menu>
 		</>

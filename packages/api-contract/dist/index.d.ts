@@ -1,3 +1,5 @@
+export * from "./app-info.types";
+export * from "./changelog-version.util";
 export * from "./calculation.constants";
 export * from "./calculation.types";
 export * from "./coefficient.types";

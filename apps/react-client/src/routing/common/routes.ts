@@ -7,6 +7,11 @@ export const navbarGroups = {
 
 /** Общие маршруты: админка v2 (контент) и playground. Не привязаны к /v1 или /v2. */
 export const commonRoutes = {
+	settings: {
+		rootPath: "/settings",
+		name: "Настройки",
+		disabled: false,
+	},
 	admin: {
 		rootPath: "/admin",
 		name: "Администрирование",

@@ -5,8 +5,6 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import ListItemText from "@mui/material/ListItemText";
-import MenuItem from "@mui/material/MenuItem";
 import Radio from "@mui/material/Radio";
 import RadioGroup from "@mui/material/RadioGroup";
 import Typography from "@mui/material/Typography";
@@ -160,27 +158,4 @@ export function useV2DataTransferActions() {
 		onExport: () => exportMutation.mutate(),
 		onImport: openImportPicker,
 	};
-}
-
-export function V2DataTransferMenuItems({
-	onExport,
-	onImport,
-	exportPending,
-}: {
-	onExport: () => void;
-	onImport: () => void;
-	exportPending: boolean;
-}) {
-	return (
-		<>
-			<MenuItem onClick={onExport} disabled={exportPending}>
-				<ListItemText
-					primary={exportPending ? "Выгрузка v2…" : "Выгрузить данные v2"}
-				/>
-			</MenuItem>
-			<MenuItem onClick={onImport}>
-				<ListItemText primary="Загрузить данные v2" />
-			</MenuItem>
-		</>
-	);
 }

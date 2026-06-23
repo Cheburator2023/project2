@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { APP_GUARD, APP_INTERCEPTOR, Reflector } from "@nestjs/core";
 import { AuthGuard, ResourceGuard, RoleGuard } from "nest-keycloak-connect";
+import { AppInfoModule } from "./modules/app-info/app-info.module";
 import { CalculationModule } from "./modules/calculation/calculation.module";
 import { DocsModule } from "./modules/docs/docs.module";
 import { QuestionnaireModule } from "./modules/questionnaire/questionnaire.module";
@@ -24,6 +25,7 @@ import { RetryInterceptor } from "./shared/interceptors/retry.interceptor";
 		}),
 		DatabaseModule,
 		KeycloakModule,
+		AppInfoModule,
 		CalculationModule,
 		DocsModule,
 		QuestionnaireModule,
