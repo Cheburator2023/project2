@@ -23,6 +23,7 @@ export const AnketaPreviewPageV2 = () => {
 				? {
 						templateId: formPackage.questionnaire.templateId,
 						versionId: formPackage.questionnaire.boundTemplateVersionId,
+						instanceId: formPackage.questionnaire.id,
 						initialFormData: formPackage.questionnaire.formData,
 						initialJsonSchema: formPackage.jsonSchema,
 						initialUiSchema: formPackage.uiSchema,

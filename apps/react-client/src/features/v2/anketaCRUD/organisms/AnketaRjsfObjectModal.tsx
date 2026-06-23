@@ -13,7 +13,7 @@ import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { v2AnketaFormTemplates } from "@react-client/features/v2/admin_constructor/templates/v2PreviewFormTemplates";
 import { v2AnketaFormWidgets } from "@react-client/features/v2/admin_constructor/templates/v2PreviewFormWidgets";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Props = {
 	open: boolean;
@@ -64,9 +64,14 @@ export function AnketaRjsfObjectModal({
 		[formSchema, formUiSchema],
 	);
 
+	// Снимок значений берём только при открытии модалки. Иначе перерендер
+	// родителя (новый ref defaultValues) затирал бы текущие правки пользователя.
+	const wasOpenRef = useRef(false);
 	useEffect(() => {
-		if (!open) return;
-		setFormData(defaultValues ?? {});
+		if (open && !wasOpenRef.current) {
+			setFormData(defaultValues ?? {});
+		}
+		wasOpenRef.current = open;
 	}, [open, defaultValues]);
 
 	return (

@@ -9,6 +9,7 @@ import type {
 	V2TypicalWorkNormDto,
 	V2TypicalWorkRuleDto,
 	V2WorkTriggerStatus,
+	WorkTriggerStatusCatalogParam,
 } from "@smart-anketa/api-contract";
 import {
 	defaultWorkFormula,
@@ -23,13 +24,12 @@ import { V2TypicalWorkLaborCoefficientEntity } from "../entities/v2-typical-work
 import { V2TypicalWorkVersionConfigEntity } from "../entities/v2-typical-work-version-config.entity";
 import {
 	DEFAULT_NORM_VALID_FROM,
-	dictionaryValuesForParam,
 	groupCatalogWorks,
 	inferTriggerValueLabel,
 	normalizeArchComponentType,
 	slugParamCode,
 } from "../utils/v2-typical-work-catalog.util";
-import { listTriggerStatusCatalog } from "../utils/v2-catalog-param-defs.util";
+import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
 
 function decimalToNumber(value: string | number | null | undefined): number {
 	if (value === null || value === undefined) return 0;
@@ -53,6 +53,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		private readonly ruleRepository: Repository<V2TypicalWorkRuleEntity>,
 		@InjectRepository(V2TypicalWorkLaborCoefficientEntity)
 		private readonly laborRepository: Repository<V2TypicalWorkLaborCoefficientEntity>,
+		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
 	) {}
 
 	async onModuleInit(): Promise<void> {
@@ -65,6 +66,9 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 	}
 
 	async seedFromDocCatalog(): Promise<void> {
+		await this.paramCatalogService.ensureSeededFromDocCatalog();
+		const paramCatalog = await this.paramCatalogService.listParameters();
+		const paramsByName = new Map(paramCatalog.items.map((p) => [p.name, p]));
 		const groups = groupCatalogWorks();
 		let created = 0;
 
@@ -130,7 +134,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 					const trimmed = paramName.trim();
 					if (!trimmed) continue;
 					const paramCode = slugParamCode(trimmed);
-					const dictValues = dictionaryValuesForParam(trimmed);
+					const dictValues = paramsByName.get(trimmed)?.values ?? [];
 
 					if (dictValues.length === 0) {
 						const laborKey = `${stream}|${paramCode}|`;
@@ -162,7 +166,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 								paramName: trimmed,
 								valueCode: slugParamCode(value.label),
 								valueLabel: value.label,
-								coefficient: String(value.coeff ?? 1),
+								coefficient: String(value.coefficient ?? 1),
 							}),
 						);
 					}
@@ -189,6 +193,7 @@ export class V2TypicalWorkService {
 		private readonly laborRepository: Repository<V2TypicalWorkLaborCoefficientEntity>,
 		@InjectRepository(V2TypicalWorkVersionConfigEntity)
 		private readonly versionConfigRepository: Repository<V2TypicalWorkVersionConfigEntity>,
+		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
 	) {}
 
 	async listWorks(query: {
@@ -216,6 +221,8 @@ export class V2TypicalWorkService {
 		const rulesByWork = groupBy(rules, (r) => r.workId);
 		const laborByWork = groupBy(laborRows, (r) => r.workId);
 		const atDate = todayIsoDate();
+		const triggerStatusCatalog =
+			await this.paramCatalogService.listTriggerStatusCatalog(atDate);
 		const streamFilter = query.streamExecutor?.trim();
 
 		const items: V2TypicalWorkListItemDto[] = works
@@ -268,6 +275,8 @@ export class V2TypicalWorkService {
 						workRules.filter((r) =>
 							streamForStatus ? r.streamExecutor === streamForStatus : true,
 						),
+						triggerStatusCatalog,
+						atDate,
 					),
 					currentNorm,
 					streams,
@@ -320,6 +329,8 @@ export class V2TypicalWorkService {
 		]);
 
 		const laborParams = groupLaborByParam(laborRows.map(mapLaborEntity));
+		const triggerStatusCatalog =
+			await this.paramCatalogService.listTriggerStatusCatalog(todayIsoDate());
 
 		return {
 			id: work.id,
@@ -327,7 +338,11 @@ export class V2TypicalWorkService {
 			archComponentType: work.archComponentType,
 			workType: work.workType,
 			streamExecutor: stream,
-			triggerStatus: resolveTriggerStatus(rules),
+			triggerStatus: resolveTriggerStatus(
+				rules,
+				triggerStatusCatalog,
+				todayIsoDate(),
+			),
 			norms: norms.map(mapNormEntity),
 			rules: rules.map(mapRuleEntity),
 			laborParams,
@@ -372,6 +387,8 @@ function resolveTriggerStatus(
 		V2TypicalWorkRuleEntity,
 		"paramCode" | "valueCode" | "valueLabel"
 	>[],
+	triggerStatusCatalog: WorkTriggerStatusCatalogParam[],
+	atDate: string,
 ): V2WorkTriggerStatus {
 	return computeWorkTriggerStatus(
 		rules.map((rule) => ({
@@ -380,10 +397,9 @@ function resolveTriggerStatus(
 			valueLabel: rule.valueLabel,
 		})),
 		triggerStatusCatalog,
+		atDate,
 	);
 }
-
-const triggerStatusCatalog = listTriggerStatusCatalog();
 
 function mapNormEntity(entity: V2TypicalWorkNormEntity): V2TypicalWorkNormDto {
 	return {

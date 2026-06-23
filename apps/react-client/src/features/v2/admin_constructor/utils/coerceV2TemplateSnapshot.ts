@@ -1,6 +1,11 @@
 import type { UiSchema } from "@rjsf/utils";
 import type { RJSFSchema } from "@rjsf/utils";
-import type { V2LogicGraphDto, V2LogicRuleDto } from "@smart-anketa/api-contract";
+import type {
+	V2DictionariesSnapshotDto,
+	V2LogicGraphDto,
+	V2LogicRuleDto,
+	V2TemplateSnapshotDto,
+} from "@smart-anketa/api-contract";
 import { enrichAnketaLayoutUiSchema } from "@smart-anketa/api-contract";
 
 export const EMPTY_JSON_SCHEMA: RJSFSchema = {
@@ -90,4 +95,32 @@ export function coerceLogicGraph(input: unknown): V2LogicGraphDto {
 	if (!Array.isArray(raw)) return { rules: [] };
 	const rules = raw.filter(isLogicRule);
 	return { rules };
+}
+
+export function coerceDictionariesSnapshot(
+	input: unknown,
+): V2DictionariesSnapshotDto | null {
+	if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+	const raw = (input as { referencedDictionaryCodes?: unknown })
+		.referencedDictionaryCodes;
+	return {
+		referencedDictionaryCodes: Array.isArray(raw)
+			? raw.filter((code): code is string => typeof code === "string")
+			: [],
+	};
+}
+
+export function coerceTemplateSnapshot(input: {
+	jsonSchema?: unknown;
+	uiSchema?: unknown;
+	logic?: unknown;
+	dictionariesSnapshot?: unknown;
+}): V2TemplateSnapshotDto {
+	const jsonSchema = coerceJsonSchema(input.jsonSchema);
+	return {
+		jsonSchema,
+		uiSchema: coerceUiSchema(input.uiSchema, jsonSchema),
+		logic: coerceLogicGraph(input.logic),
+		dictionariesSnapshot: coerceDictionariesSnapshot(input.dictionariesSnapshot),
+	};
 }

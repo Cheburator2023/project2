@@ -387,7 +387,10 @@ export function V2QuestionnaireList() {
 	);
 
 	const getRowId = useCallback(
-		(p: { data: V2QuestionnaireGridRow }) => `version:${p.data.id}`,
+		(p: { data: V2QuestionnaireGridRow }) =>
+			p.data.rowKind === "series"
+				? `series:${p.data.seriesId}`
+				: `version:${p.data.id}`,
 		[],
 	);
 

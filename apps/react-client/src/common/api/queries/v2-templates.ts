@@ -545,6 +545,7 @@ export const useDeleteV2Dictionary = () => {
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries"] });
+			queryClient.removeQueries({ queryKey: ["v2-dictionaries", "json"] });
 		},
 	});
 };
@@ -561,7 +562,7 @@ export const useBulkDeleteV2Dictionaries = () => {
 			}),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries"] });
-			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries", "json"] });
+			queryClient.removeQueries({ queryKey: ["v2-dictionaries", "json"] });
 		},
 	});
 };
@@ -598,6 +599,7 @@ export const useResetV2DictionaryToDefault = () => {
 			queryClient.invalidateQueries({
 				queryKey: ["v2-dictionaries", id, "items"],
 			});
+			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries", "json"] });
 		},
 	});
 };

@@ -123,6 +123,8 @@ export function useDebouncedTypicalWorkSave(
 		if (pendingRef.current) void flush();
 	}, [flush]);
 
+	const hasPending = useCallback(() => pendingRef.current !== null, []);
+
 	const discardBuffer = useCallback(async () => {
 		if (!workId) return;
 		pendingRef.current = null;
@@ -139,7 +141,7 @@ export function useDebouncedTypicalWorkSave(
 		scheduleSave,
 		retry,
 		discardBuffer,
-		hasPending: () => pendingRef.current !== null,
+		hasPending,
 		flushPending: flush,
 	};
 }

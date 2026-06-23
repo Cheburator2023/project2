@@ -11,8 +11,13 @@ import {
 } from "react";
 import { getObjectAtPath } from "../utils/anketaArchObjectTableConfig";
 import { getArrayAtPath } from "../utils/anketaModalArrayTableConfig";
+import { getObjectUiSlice } from "../utils/anketaSchemaAtPath";
 import type { AnketaModalKind } from "../utils/anketaFormModalPaths";
-import type { V2AnketaEditorBindings } from "@smart-anketa/api-contract";
+import {
+	resolveV2AnketaArchComponent,
+	type V2AnketaEditorBindings,
+} from "@smart-anketa/api-contract";
+import { ATYPICAL_WORK_NEW_ROW_DEFAULTS } from "@react-client/features/v2/admin_constructor/schemaEditor/archComponentPresets";
 import {
 	appendAtFormPath,
 	clearObjectAtFormPath,
@@ -195,7 +200,7 @@ export function AnketaFormModals({
 			const values =
 				activeModal.editIndex != null
 					? ((items[activeModal.editIndex] as Record<string, unknown>) ?? {})
-					: {};
+					: newArrayRowDefaults(previewUiSchema, activeModal.path);
 			const parentNode = resolveSchemaNodeTitle(
 				previewSchema,
 				activeModal.path,
@@ -336,6 +341,22 @@ export function AnketaFormModals({
 			) : null}
 		</>
 	);
+}
+
+/**
+ * Значения по умолчанию для НОВОЙ строки массива. Раньше их подставлял RJSF из
+ * schema `default`, но это «портило» существующий снепшот, поэтому дефолты сняты
+ * со схемы и применяются явно только при создании строки.
+ */
+function newArrayRowDefaults(
+	previewUiSchema: UiSchema,
+	path: string,
+): Record<string, unknown> {
+	const arch = resolveV2AnketaArchComponent(
+		getObjectUiSlice(previewUiSchema, path),
+	);
+	if (arch === "atypicalWork") return { ...ATYPICAL_WORK_NEW_ROW_DEFAULTS };
+	return {};
 }
 
 function resolveSchemaNodeTitle(

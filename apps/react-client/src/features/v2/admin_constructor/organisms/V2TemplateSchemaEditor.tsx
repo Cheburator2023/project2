@@ -64,6 +64,7 @@ import {
 import {
 	EMPTY_JSON_SCHEMA,
 	coerceJsonSchema,
+	coerceDictionariesSnapshot,
 	coerceLogicGraph,
 	coerceUiSchema,
 } from "../utils/coerceV2TemplateSnapshot";
@@ -714,7 +715,7 @@ export const V2TemplateSchemaEditor = ({
 					uiSchema: unknown;
 					logic: unknown;
 					versionNumber: number;
-					dictionariesSnapshot?: Record<string, unknown> | null;
+					dictionariesSnapshot?: unknown;
 				}>({
 					url: `/v2/templates/${templateId}/versions/${template.currentVersionId}`,
 					method: "GET",
@@ -724,7 +725,9 @@ export const V2TemplateSchemaEditor = ({
 					jsonSchema: coerceJsonSchema(v.jsonSchema),
 					uiSchema: coerceUiSchema(v.uiSchema),
 					logic: coerceLogicGraph(v.logic),
-					dictionariesSnapshot: v.dictionariesSnapshot ?? null,
+					dictionariesSnapshot: coerceDictionariesSnapshot(
+						v.dictionariesSnapshot,
+					),
 					releaseNotes: `Копия опубликованной v${v.versionNumber}`,
 				};
 			}

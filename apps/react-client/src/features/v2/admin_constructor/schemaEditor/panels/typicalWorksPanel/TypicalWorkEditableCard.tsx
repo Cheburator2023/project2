@@ -33,6 +33,7 @@ import {
 	useV2WorkParametersCatalog,
 } from "@react-client/common/api/queries/v2-works";
 import {
+	coerceDictionariesSnapshot,
 	coerceJsonSchema,
 	coerceLogicGraph,
 	coerceUiSchema,
@@ -44,7 +45,10 @@ import { RemoveLaborParamDialog } from "./RemoveLaborParamDialog";
 import { TypicalWorkNormsSection } from "./TypicalWorkNormsSection";
 import { TypicalWorkTriggersSection } from "./TypicalWorkTriggersSection";
 import { WorkFormulaEditor } from "./WorkFormulaEditor";
-import { computeTriggerStatus } from "./typicalWorkPatchErrors";
+import {
+	computeTriggerStatus,
+	isWorkCoefficientValueAvailable,
+} from "./typicalWorkPatchErrors";
 import {
 	recommendedStreamsForComponent,
 	streamColor,
@@ -131,13 +135,22 @@ export function TypicalWorkEditableCard({
 		retry,
 		discardBuffer,
 		flushPending,
+		hasPending,
 	} = useDebouncedTypicalWorkSave(card?.id ?? null, templateVersionId, {
 		onFormulaLocked: () => setFormulaLockedOpen(true),
 	});
 
+	const lastSyncedCardKeyRef = useRef<string | null>(null);
 	useEffect(() => {
-		if (card) setDraft(structuredClone(card));
-	}, [card]);
+		if (!card) return;
+		const cardKey = `${card.id}::${card.streamExecutor}::${templateVersionId ?? ""}`;
+		const isNewCard = cardKey !== lastSyncedCardKeyRef.current;
+		// Не перетираем несохранённые правки при фоновом рефетче того же card
+		// (autosave инвалидирует query → возвращает новый объект с теми же данными).
+		if (!isNewCard && hasPending()) return;
+		lastSyncedCardKeyRef.current = cardKey;
+		setDraft(structuredClone(card));
+	}, [card, templateVersionId, hasPending]);
 
 	useEffect(() => {
 		if (pendingRetryRef.current && templateVersionId) {
@@ -151,6 +164,18 @@ export function TypicalWorkEditableCard({
 		(p) => !draft?.laborParams.some((g) => g.paramCode === p.code),
 	);
 
+	const coefficientCatalog = useMemo(
+		() =>
+			paramOptions.map((param) => ({
+				code: param.code,
+				values: param.values.map((value) => ({
+					code: value.code,
+					label: value.label,
+				})),
+			})),
+		[paramOptions],
+	);
+
 	const previewLocal = useMemo(() => {
 		if (!draft || !streamExecutor) return null;
 		const today = new Date().toISOString().slice(0, 10);
@@ -158,7 +183,10 @@ export function TypicalWorkEditableCard({
 		if (norm == null) return { error: "На текущую дату не задана действующая норма", value: null };
 		const coeffs: Record<string, number> = {};
 		for (const group of draft.laborParams) {
-			const first = group.coefficients[0];
+			// §578: значения, удалённые из справочника, не участвуют в расчёте.
+			const first = group.coefficients.find((row) =>
+				isWorkCoefficientValueAvailable(row, coefficientCatalog),
+			);
 			if (first) coeffs[group.paramCode] = first.coefficient;
 		}
 		const result = previewWorkFormula(draft.formula, draft.rounding, {
@@ -166,7 +194,7 @@ export function TypicalWorkEditableCard({
 			paramCoefficients: coeffs,
 		});
 		return { error: result.error, value: result.value, expanded: result.expanded };
-	}, [draft, streamExecutor]);
+	}, [draft, streamExecutor, coefficientCatalog]);
 
 	const commitDraft = (next: V2TypicalWorkCardDto) => {
 		const withStatus = {
@@ -208,7 +236,7 @@ export function TypicalWorkEditableCard({
 				jsonSchema: unknown;
 				uiSchema: unknown;
 				logic: unknown;
-				dictionariesSnapshot: Record<string, unknown> | null;
+				dictionariesSnapshot: unknown;
 				versionNumber: number;
 			}>({
 				url: `/v2/templates/${templateId}/versions/${templateVersionId}`,
@@ -220,7 +248,9 @@ export function TypicalWorkEditableCard({
 					jsonSchema: coerceJsonSchema(version.jsonSchema),
 					uiSchema: coerceUiSchema(version.uiSchema),
 					logic: coerceLogicGraph(version.logic),
-					dictionariesSnapshot: version.dictionariesSnapshot,
+					dictionariesSnapshot: coerceDictionariesSnapshot(
+						version.dictionariesSnapshot,
+					),
 					releaseNotes: `Черновик для редактирования формулы работ (из v${version.versionNumber})`,
 					parentVersionId: templateVersionId,
 				},
@@ -682,9 +712,56 @@ export function TypicalWorkEditableCard({
 									</Box>
 									<Table size="small">
 										<TableBody>
-											{group.coefficients.map((row, index) => (
+											{group.coefficients.map((row, index) => {
+											const valueAvailable = isWorkCoefficientValueAvailable(
+												row,
+												coefficientCatalog,
+											);
+											return (
 												<TableRow key={row.id ?? index}>
-													<TableCell>{row.valueLabel ?? "—"}</TableCell>
+													<TableCell>
+														<Box
+															sx={{
+																display: "flex",
+																alignItems: "center",
+																gap: 0.75,
+																flexWrap: "wrap",
+															}}
+														>
+															<Typography
+																component="span"
+																sx={{
+																	fontSize: 13,
+																	color: valueAvailable ? "inherit" : "#c62828",
+																	textDecoration: valueAvailable
+																		? "none"
+																		: "line-through",
+																}}
+															>
+																{row.valueLabel ?? "—"}
+															</Typography>
+															{valueAvailable ? null : (
+																<Box
+																	component="span"
+																	title="Значение удалено из справочника — коэффициент исключён из расчёта"
+																	sx={{
+																		display: "inline-flex",
+																		alignItems: "center",
+																		height: 20,
+																		px: 0.9,
+																		borderRadius: "6px",
+																		fontSize: 11,
+																		fontWeight: 600,
+																		bgcolor: "#fdecec",
+																		color: "#c62828",
+																		border: "1px solid #f5c6c6",
+																	}}
+																>
+																	Значение недоступно
+																</Box>
+															)}
+														</Box>
+													</TableCell>
 													<TableCell>
 														<TextField
 															size="small"
@@ -707,7 +784,8 @@ export function TypicalWorkEditableCard({
 														/>
 													</TableCell>
 												</TableRow>
-											))}
+											);
+											})}
 										</TableBody>
 									</Table>
 								</Box>

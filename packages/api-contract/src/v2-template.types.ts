@@ -96,6 +96,18 @@ export type V2UiSchemaDto = Record<string, unknown>;
  */
 export type V2JsonSchemaDto = Record<string, unknown>;
 
+export type V2DictionariesSnapshotDto = {
+	/** Коды справочников, зафиксированные в версии шаблона. */
+	referencedDictionaryCodes: string[];
+};
+
+export type V2TemplateSnapshotDto = {
+	jsonSchema: V2JsonSchemaDto;
+	uiSchema: V2UiSchemaDto;
+	logic: V2LogicGraphDto;
+	dictionariesSnapshot: V2DictionariesSnapshotDto | null;
+};
+
 export type V2TemplateDto = {
 	id: string;
 	code: string;
@@ -117,7 +129,7 @@ export type V2TemplateVersionDto = {
 	jsonSchema: V2JsonSchemaDto;
 	uiSchema: V2UiSchemaDto;
 	logic: V2LogicGraphDto;
-	dictionariesSnapshot: Record<string, unknown> | null;
+	dictionariesSnapshot: V2DictionariesSnapshotDto | null;
 	releaseNotes: string | null;
 	parentVersionId: string | null;
 	createdAt: string;
@@ -230,7 +242,7 @@ export type CreateV2TemplateVersionRequestDto = {
 	jsonSchema: V2JsonSchemaDto;
 	uiSchema?: V2UiSchemaDto;
 	logic?: V2LogicGraphDto;
-	dictionariesSnapshot?: Record<string, unknown> | null;
+	dictionariesSnapshot?: V2DictionariesSnapshotDto | null;
 	releaseNotes?: string | null;
 	parentVersionId?: string | null;
 };
@@ -239,7 +251,7 @@ export type UpdateV2TemplateVersionRequestDto = {
 	jsonSchema?: V2JsonSchemaDto;
 	uiSchema?: V2UiSchemaDto;
 	logic?: V2LogicGraphDto;
-	dictionariesSnapshot?: Record<string, unknown> | null;
+	dictionariesSnapshot?: V2DictionariesSnapshotDto | null;
 	releaseNotes?: string | null;
 };
 

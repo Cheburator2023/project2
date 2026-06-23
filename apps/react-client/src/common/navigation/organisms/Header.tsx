@@ -129,7 +129,7 @@ export function Header({
 								</IconButton>
 							)}
 							{title ? (
-								<Flex gap={1} alignItems="baseline" minWidth={0}>
+								<Flex gap={1} alignItems="baseline" minWidth="0">
 									<b>{title}</b>
 									{leadingAccessory}
 								</Flex>

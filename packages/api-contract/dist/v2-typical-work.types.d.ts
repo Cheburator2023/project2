@@ -166,6 +166,9 @@ export type V2TypicalWorkParameterValueDto = {
     code: string;
     label: string;
     coefficient: number | null;
+    sortOrder: number;
+    validFrom: string;
+    validTo: string | null;
 };
 export type V2TypicalWorkParameterDto = {
     code: string;

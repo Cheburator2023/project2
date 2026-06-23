@@ -32,8 +32,12 @@ describe("anketaSchemaAtPath modal slices", () => {
 
 	it("reflects title changes from editor jsonSchema", () => {
 		const schema = structuredClone(snapshot.jsonSchema);
-		const workType = (schema.properties as Record<string, RJSFSchema>)
-			.generalInfo!.properties!.modelService!.properties!.workType as RJSFSchema;
+		const workType = (
+			(
+				(schema.properties as Record<string, RJSFSchema>).generalInfo!
+					.properties as Record<string, RJSFSchema>
+			).modelService!.properties as Record<string, RJSFSchema>
+		).workType as RJSFSchema;
 		workType.title = "Новый тип работ";
 
 		const slice = getObjectSchemaSliceForModal(

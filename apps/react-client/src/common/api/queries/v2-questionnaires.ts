@@ -42,6 +42,9 @@ export const useV2QuestionnaireFormPackage = (id: string) =>
 				method: "GET",
 			}),
 		enabled: !!id,
+		// Снепшот гидрируется из form-package; рефетч по фокусу окна давал бы новую
+		// ссылку и затирал бы правки/открытую модалку в анкете.
+		refetchOnWindowFocus: false,
 	});
 
 export const useCreateV2Questionnaire = () => {

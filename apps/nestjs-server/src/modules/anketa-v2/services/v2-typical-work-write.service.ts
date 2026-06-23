@@ -4,12 +4,11 @@ import {
 	NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, Repository } from "typeorm";
+import { Repository } from "typeorm";
 import type {
 	CreateV2TypicalWorkRequestDto,
 	PatchV2TypicalWorkRequestDto,
 	V2ParameterDependencyListResponseDto,
-	V2TypicalWorkCardDto,
 	V2TypicalWorkFieldErrorDto,
 	V2TypicalWorkParameterListResponseDto,
 	V2TypicalWorkPreviewRequestDto,
@@ -19,6 +18,7 @@ import {
 	collectAllowedParamCodes,
 	defaultWorkFormula,
 	defaultWorkRounding,
+	isWorkCoefficientValueAvailable,
 	previewWorkFormula,
 	resolveActiveNormOnDate,
 	tokensToText,
@@ -28,7 +28,6 @@ import {
 	validateRoundingInput,
 	validateWorkName,
 } from "@smart-anketa/api-contract";
-import { V2_DOC_CATALOG } from "../constants/v2-doc-catalog";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import { V2TypicalWorkLaborCoefficientEntity } from "../entities/v2-typical-work-labor-coefficient.entity";
@@ -40,12 +39,8 @@ import {
 	normalizeArchComponentType,
 	slugParamCode,
 } from "../utils/v2-typical-work-catalog.util";
+import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
 import { V2TypicalWorkService } from "./v2-typical-work.service";
-
-function decimalToNumber(value: string | number | null | undefined): number {
-	if (value === null || value === undefined) return 0;
-	return typeof value === "number" ? value : Number(value);
-}
 
 @Injectable()
 export class V2TypicalWorkWriteService {
@@ -65,36 +60,15 @@ export class V2TypicalWorkWriteService {
 		@InjectRepository(V2QuestionnaireEntity)
 		private readonly questionnaireRepository: Repository<V2QuestionnaireEntity>,
 		private readonly typicalWorkService: V2TypicalWorkService,
+		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
 	) {}
 
-	listParameters(): V2TypicalWorkParameterListResponseDto {
-		const items = V2_DOC_CATALOG.dictionaries.map((dict) => ({
-			code: slugParamCode(dict.name),
-			name: dict.name,
-			description: dict.comments?.trim() || dict.attributes?.trim() || null,
-			values: dict.values.map((v) => ({
-				code: slugParamCode(v.label),
-				label: v.label,
-				coefficient: v.coeff,
-			})),
-		}));
-		return { items };
+	listParameters(): Promise<V2TypicalWorkParameterListResponseDto> {
+		return this.paramCatalogService.listParameters();
 	}
 
-	listParameterDependencies(): V2ParameterDependencyListResponseDto {
-		const items = V2_DOC_CATALOG.dictionaries
-			.filter((dict) => dict.attributes?.trim() || dict.comments?.trim())
-			.map((dict) => ({
-				paramCode: slugParamCode(dict.name),
-				paramName: dict.name,
-				dependsOnParamCode: null,
-				dependsOnParamName: null,
-				description: [dict.attributes, dict.comments]
-					.filter(Boolean)
-					.join(" · ")
-					.trim() || null,
-			}));
-		return { items };
+	listParameterDependencies(): Promise<V2ParameterDependencyListResponseDto> {
+		return this.paramCatalogService.listParameterDependencies();
 	}
 
 	async createWork(dto: CreateV2TypicalWorkRequestDto) {
@@ -361,9 +335,15 @@ export class V2TypicalWorkWriteService {
 			};
 		}
 
+		const coefficientValueCatalog =
+			await this.paramCatalogService.listTriggerStatusCatalog(atDate);
 		const paramCoefficients: Record<string, number> = {};
 		for (const group of card.laborParams) {
 			for (const row of group.coefficients) {
+				// §578: значение, удалённое из справочника, исключается из расчёта.
+				if (!isWorkCoefficientValueAvailable(row, coefficientValueCatalog, atDate)) {
+					continue;
+				}
 				const answer = dto.answers?.[group.paramCode];
 				if (answer && row.valueCode === answer) {
 					paramCoefficients[group.paramCode] = row.coefficient;

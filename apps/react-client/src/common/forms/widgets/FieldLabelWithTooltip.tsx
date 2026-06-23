@@ -43,7 +43,7 @@ export function InlineLabelWithTooltip({
 	if (!text) return <>{label}</>;
 
 	return (
-		<Flex gap={0.5} alignItems="center" component="span">
+		<Flex gap={0.5} alignItems="center" as="span">
 			<span>{label}</span>
 			<div title={text}>
 				<InfoOutlineIcon sx={{ fontSize: 16, color: "#88888877" }} />

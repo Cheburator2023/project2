@@ -37,13 +37,23 @@ const ATYPICAL_WORK_ITEM_PROPERTIES: RJSFSchema["properties"] = {
 	name: { type: "string", title: "Задача" },
 	workType: { type: "string", title: "Тип работ" },
 	estimateHoursPerDay: { type: "number", title: "Оценка ч/д" },
-	coefficient: { type: "number", title: "Коэф.", default: 1.5 },
+	coefficient: { type: "number", title: "Коэф." },
 	total: { type: "number", title: "Итог", readOnly: true },
 	includeInCalculation: {
 		type: "boolean",
 		title: "Включить в расчёт",
-		default: true,
 	},
+};
+
+/**
+ * Значения по умолчанию для НОВОЙ строки нетиповой работы. Применяются явно при
+ * создании строки (см. AnketaFormModals), а НЕ через schema `default` — иначе
+ * RJSF подставляет их в недостающие ключи существующего снепшота и «портит»
+ * сохранённые значения (нарушение snapshot-as-source-of-truth).
+ */
+export const ATYPICAL_WORK_NEW_ROW_DEFAULTS: Record<string, unknown> = {
+	coefficient: 1.5,
+	includeInCalculation: true,
 };
 
 const ATYPICAL_WORK_ITEMS_UI_BRANCH: Record<string, unknown> = {

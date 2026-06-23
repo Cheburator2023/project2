@@ -136,7 +136,7 @@ export const ModalExample = () => {
                 onSubmit={handleNonStandardTaskSubmit}
                 defaultValues={{
                     name: "Разработка кастомного дашборда мониторинга",
-                    reason: "Отсутствие возможности визуализации",
+                    workType: "Новая функциональность",
                     estimateHours: "12",
                     coefficient: "1.50",
                     includeInCalculation: true,

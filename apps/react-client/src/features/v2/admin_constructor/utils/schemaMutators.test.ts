@@ -524,7 +524,7 @@ describe("duplicateFieldAtPointer", () => {
 					title: "Статус",
 					enum: ["open", "closed"],
 					enumNames: ["Открыт", "Закрыт"],
-				},
+				} as RJSFSchema,
 			},
 		};
 		const ui: UiSchema = {

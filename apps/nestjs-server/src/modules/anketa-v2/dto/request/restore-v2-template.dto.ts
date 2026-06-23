@@ -13,6 +13,7 @@ import {
 	ValidateNested,
 } from "class-validator";
 import type {
+	V2DictionariesSnapshotDto,
 	V2JsonSchemaDto,
 	V2LogicGraphDto,
 	V2TemplateDeleteSnapshotDto,
@@ -106,7 +107,7 @@ export class RestoreV2TemplateVersionItemDto {
 	@ApiProperty({ required: false, nullable: true })
 	@IsOptional()
 	@IsObject()
-	dictionariesSnapshot: Record<string, unknown> | null;
+	dictionariesSnapshot: V2DictionariesSnapshotDto | null;
 
 	@ApiProperty({ required: false, nullable: true })
 	@IsOptional()

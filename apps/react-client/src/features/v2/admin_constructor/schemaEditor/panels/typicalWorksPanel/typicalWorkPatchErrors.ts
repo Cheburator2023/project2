@@ -5,7 +5,11 @@ import type {
 	V2TypicalWorkParameterDto,
 	V2WorkTriggerStatus,
 } from "@smart-anketa/api-contract";
-import { computeWorkTriggerStatus, isWorkTriggerGroupInvalid } from "@smart-anketa/api-contract";
+import {
+	computeWorkTriggerStatus,
+	isWorkCoefficientValueAvailable,
+	isWorkTriggerGroupInvalid,
+} from "@smart-anketa/api-contract";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 
 export const WORK_ARCH_COMPONENT_TYPES = [
@@ -73,4 +77,4 @@ export function computeTriggerStatus(
 	);
 }
 
-export { isWorkTriggerGroupInvalid };
+export { isWorkCoefficientValueAvailable, isWorkTriggerGroupInvalid };

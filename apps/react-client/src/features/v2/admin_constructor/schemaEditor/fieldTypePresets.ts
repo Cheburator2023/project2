@@ -1,6 +1,6 @@
 import type { RJSFSchema } from "@rjsf/utils";
 
-const GENERAL_UNCERTAINTY_ITEM_PROPERTIES: RJSFSchema["properties"] = {
+const GENERAL_UNCERTAINTY_ITEM_PROPERTIES: Record<string, RJSFSchema> = {
 	type: {
 		type: "string",
 		enum: [

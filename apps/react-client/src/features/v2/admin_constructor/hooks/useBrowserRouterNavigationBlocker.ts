@@ -1,6 +1,6 @@
 import {
 	type Location,
-	type NavigationType,
+	NavigationType,
 	type Path,
 	UNSAFE_NavigationContext as NavigationContext,
 	parsePath,
@@ -167,7 +167,7 @@ export function useBrowserRouterNavigationBlocker(
 			const [to] = args;
 			const nextLocation = toNextLocation(to, locationRef.current);
 			if (
-				tryBlock("PUSH", nextLocation, () => {
+				tryBlock(NavigationType.Push, nextLocation, () => {
 					originalPush(...args);
 				})
 			) {
@@ -180,7 +180,7 @@ export function useBrowserRouterNavigationBlocker(
 			const [to] = args;
 			const nextLocation = toNextLocation(to, locationRef.current);
 			if (
-				tryBlock("REPLACE", nextLocation, () => {
+				tryBlock(NavigationType.Replace, nextLocation, () => {
 					originalReplace(...args);
 				})
 			) {
@@ -195,7 +195,7 @@ export function useBrowserRouterNavigationBlocker(
 			const nextLocation = readWindowLocation();
 			const currentLocation = locationRef.current;
 			if (
-				!tryBlock("POP", nextLocation, () => {
+				!tryBlock(NavigationType.Pop, nextLocation, () => {
 					originalReplace({
 						pathname: nextLocation.pathname,
 						search: nextLocation.search,

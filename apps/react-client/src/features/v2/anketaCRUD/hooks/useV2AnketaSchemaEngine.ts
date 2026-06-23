@@ -21,7 +21,7 @@ import { readSummaryFromFormData } from "@react-client/features/v2/admin_constru
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { mergeAnketaDisplayFormData } from "../utils/mergeAnketaDisplayFormData";
 import { ensureAnketaFormDataWithWorkflow } from "./useAnketaWorkflow";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	ensureGroupActivationDefaults,
 	type V2LogicGraphDto,
@@ -30,6 +30,8 @@ import {
 export type V2AnketaSchemaEngineSource = {
 	templateId: string;
 	versionId: string | null;
+	/** Стабильный id анкеты — ключ одноразовой гидрации (см. эффект ниже). */
+	instanceId?: string;
 	initialFormData?: Record<string, unknown>;
 	initialJsonSchema?: Record<string, unknown>;
 	initialUiSchema?: Record<string, unknown>;
@@ -55,12 +57,23 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		ensureAnketaFormDataWithWorkflow(source?.initialFormData ?? {}),
 	);
 
+	// Гидрируем снепшот ОДИН раз на стабильную идентичность (id анкеты / версии),
+	// а не на ссылку source.initialFormData. Иначе рефетч form-package (после
+	// сохранения или window-focus) даёт новую ссылку и затирает правки/открытую
+	// модалку. Ключ меняется при загрузке другой анкеты/версии — тогда гидрация
+	// повторяется. Паттерн как в schemaEditor (ParameterDependenciesPanel).
+	const hydratedKeyRef = useRef<string | null>(null);
+
 	useEffect(() => {
+		const hydrationKey = source?.instanceId ?? version?.id ?? null;
+		if (!hydrationKey || hydratedKeyRef.current === hydrationKey) return;
+
 		if (source?.initialJsonSchema && source.initialUiSchema && source.initialLogic) {
 			setJsonSchema(coerceJsonSchema(source.initialJsonSchema));
 			setUiSchema(coerceUiSchema(source.initialUiSchema, source.initialJsonSchema));
 			setLogic(coerceLogicGraph(source.initialLogic));
 			setFormData(ensureAnketaFormDataWithWorkflow(source.initialFormData ?? {}));
+			hydratedKeyRef.current = hydrationKey;
 			return;
 		}
 		if (!version?.id) return;
@@ -70,13 +83,8 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		if (source?.initialFormData) {
 			setFormData(ensureAnketaFormDataWithWorkflow(source.initialFormData));
 		}
-	}, [
-		version?.id,
-		source?.initialFormData,
-		source?.initialJsonSchema,
-		source?.initialUiSchema,
-		source?.initialLogic,
-	]);
+		hydratedKeyRef.current = hydrationKey;
+	}, [version, source]);
 
 	useEffect(() => {
 		if (!uiSchema || Object.keys(uiSchema).length === 0) return;

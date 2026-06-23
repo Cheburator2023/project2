@@ -49,13 +49,13 @@ export class V2TypicalWorkController {
 
 	@Get("parameters/catalog")
 	@ApiOperation({ summary: "Глобальный справочник параметров для условий и коэффициентов" })
-	listParameters(): V2TypicalWorkParameterListResponseDto {
+	listParameters(): Promise<V2TypicalWorkParameterListResponseDto> {
 		return this.typicalWorkWriteService.listParameters();
 	}
 
 	@Get("parameters/dependencies")
 	@ApiOperation({ summary: "Зависимости параметров (методологический каталог)" })
-	listDependencies(): V2ParameterDependencyListResponseDto {
+	listDependencies(): Promise<V2ParameterDependencyListResponseDto> {
 		return this.typicalWorkWriteService.listParameterDependencies();
 	}
 

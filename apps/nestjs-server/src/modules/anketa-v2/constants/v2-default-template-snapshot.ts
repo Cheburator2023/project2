@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type {
+	V2DictionariesSnapshotDto,
 	V2JsonSchemaDto,
 	V2LogicGraphDto,
 	V2UiSchemaDto,
@@ -97,7 +98,7 @@ export const V2_DEFAULT_TEMPLATE_SNAPSHOT = {
 	logic: V2_DEFAULT_LOGIC_GRAPH satisfies V2LogicGraphDto,
 	dictionariesSnapshot: {
 		referencedDictionaryCodes: V2_DEFAULT_REFERENCED_DICTIONARY_CODES,
-	},
+	} satisfies V2DictionariesSnapshotDto,
 	releaseNotes:
 		"Заводская схема V2 (анкета калькуляции разработки моделей; эталон из llm-парса макетов)",
 };

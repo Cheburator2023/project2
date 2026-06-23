@@ -1,4 +1,5 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
+import type { V2TemplateSnapshotDto } from "./v2-template.types";
 import scaffoldSnapshot from "./v2-anketa-system-scaffold.snapshot.json";
 
 export const V2_ANKETA_SYSTEM_ROOT_KEYS = [
@@ -33,9 +34,9 @@ export function buildV2AnketaSystemScaffold(): {
 }
 
 /** Пустой редактируемый шаблон: только предсозданные системные секции. */
-export function buildEmptyV2AnketaTemplateSnapshot(): {
-	jsonSchema: RJSFSchema;
-	uiSchema: UiSchema;
-} {
+export function buildEmptyV2AnketaTemplateSnapshot(): Pick<
+	V2TemplateSnapshotDto,
+	"jsonSchema" | "uiSchema"
+> {
 	return buildV2AnketaSystemScaffold();
 }

@@ -8,6 +8,7 @@ import {
 } from "class-validator";
 import type {
 	CreateV2TemplateVersionRequestDto,
+	V2DictionariesSnapshotDto,
 	V2JsonSchemaDto,
 	V2LogicGraphDto,
 	V2UiSchemaDto,
@@ -34,7 +35,7 @@ export class CreateV2TemplateVersionDto
 	@ApiProperty({ required: false })
 	@IsOptional()
 	@IsObject()
-	dictionariesSnapshot?: Record<string, unknown> | null;
+	dictionariesSnapshot?: V2DictionariesSnapshotDto | null;
 
 	@ApiProperty({ required: false })
 	@IsOptional()

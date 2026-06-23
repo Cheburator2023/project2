@@ -32,8 +32,33 @@ export type WorkTriggerStatusCatalogParam = {
     values: Array<{
         code: string;
         label: string;
+        validFrom?: string | null;
+        validTo?: string | null;
     }>;
 };
+export declare function isTypicalWorkParameterValueActiveOnDate(value: {
+    validFrom?: string | null;
+    validTo?: string | null;
+}, atDate: string): boolean;
+export declare function filterTypicalWorkParameterValuesActiveOnDate<T extends {
+    validFrom?: string | null;
+    validTo?: string | null;
+}>(values: T[], atDate: string): T[];
 /** F-03: статус триггеров с учётом актуальности параметров каталога */
-export declare function computeWorkTriggerStatus(rules: WorkTriggerStatusRuleInput[], catalog?: WorkTriggerStatusCatalogParam[]): V2WorkTriggerStatus;
-export declare function isWorkTriggerGroupInvalid(paramCode: string, rules: WorkTriggerStatusRuleInput[], catalog: WorkTriggerStatusCatalogParam[]): boolean;
+export declare function computeWorkTriggerStatus(rules: WorkTriggerStatusRuleInput[], catalog?: WorkTriggerStatusCatalogParam[], atDate?: string): V2WorkTriggerStatus;
+export declare function isWorkTriggerGroupInvalid(paramCode: string, rules: WorkTriggerStatusRuleInput[], catalog: WorkTriggerStatusCatalogParam[], atDate?: string): boolean;
+export type WorkCoefficientRowInput = {
+    paramCode: string;
+    valueCode: string | null;
+    valueLabel: string | null;
+};
+/**
+ * F-03 §578: значение коэффициента трудоёмкости доступно, только если оно
+ * присутствует в активном глобальном справочнике значений параметра. Если
+ * значение удалено — коэффициент исключается из расчёта и помечается в UI
+ * меткой «Значение недоступно» (сохранение не блокируется).
+ *
+ * Строки-флаги без значения (valueCode/valueLabel = null) задают «параметр
+ * присутствует» и не ссылаются на словарь — они всегда доступны.
+ */
+export declare function isWorkCoefficientValueAvailable(row: WorkCoefficientRowInput, catalog: WorkTriggerStatusCatalogParam[], atDate?: string): boolean;

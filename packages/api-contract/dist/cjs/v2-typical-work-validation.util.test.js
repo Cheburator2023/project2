@@ -94,4 +94,79 @@ const v2_typical_work_validation_util_1 = require("./v2-typical-work-validation.
             },
         ], catalog)).toBe("invalid");
     });
+    (0, vitest_1.it)("marks expired value as invalid for calculation date", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.computeWorkTriggerStatus)([
+            {
+                paramCode: "complexity",
+                valueCode: "old",
+                valueLabel: "Старое",
+            },
+        ], [
+            {
+                code: "complexity",
+                values: [
+                    {
+                        code: "old",
+                        label: "Старое",
+                        validFrom: "2024-01-01",
+                        validTo: "2024-12-31",
+                    },
+                ],
+            },
+        ], "2025-06-01")).toBe("invalid");
+    });
+});
+(0, vitest_1.describe)("isWorkCoefficientValueAvailable (F-03 §578)", () => {
+    const catalog = [
+        {
+            code: "complexity",
+            values: [
+                { code: "low", label: "Низкая" },
+                { code: "high", label: "Высокая" },
+            ],
+        },
+    ];
+    (0, vitest_1.it)("treats an existing dictionary value as available", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.isWorkCoefficientValueAvailable)({ paramCode: "complexity", valueCode: "low", valueLabel: "Низкая" }, catalog)).toBe(true);
+    });
+    (0, vitest_1.it)("matches by label when the code was re-slugged", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.isWorkCoefficientValueAvailable)({ paramCode: "complexity", valueCode: "stale", valueLabel: "Высокая" }, catalog)).toBe(true);
+    });
+    (0, vitest_1.it)("excludes a coefficient whose value was deleted from the dictionary", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.isWorkCoefficientValueAvailable)({
+            paramCode: "complexity",
+            valueCode: "removed",
+            valueLabel: "Удалённое",
+        }, catalog)).toBe(false);
+    });
+    (0, vitest_1.it)("excludes a coefficient whose whole parameter is gone", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.isWorkCoefficientValueAvailable)({ paramCode: "missing", valueCode: "low", valueLabel: "Низкая" }, catalog)).toBe(false);
+    });
+    (0, vitest_1.it)("keeps presence-flag rows (no value) available — no dictionary to delete from", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.isWorkCoefficientValueAvailable)({ paramCode: "flag", valueCode: null, valueLabel: null }, catalog)).toBe(true);
+    });
+    (0, vitest_1.it)("excludes an expired value on calculation date", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.isWorkCoefficientValueAvailable)({ paramCode: "complexity", valueCode: "old", valueLabel: "Старое" }, [
+            {
+                code: "complexity",
+                values: [
+                    {
+                        code: "old",
+                        label: "Старое",
+                        validFrom: "2024-01-01",
+                        validTo: "2024-12-31",
+                    },
+                ],
+            },
+        ], "2025-06-01")).toBe(false);
+    });
+});
+(0, vitest_1.describe)("isTypicalWorkParameterValueActiveOnDate", () => {
+    (0, vitest_1.it)("checks inclusive validFrom/validTo window", () => {
+        const value = { validFrom: "2025-01-01", validTo: "2025-12-31" };
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.isTypicalWorkParameterValueActiveOnDate)(value, "2024-12-31")).toBe(false);
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.isTypicalWorkParameterValueActiveOnDate)(value, "2025-01-01")).toBe(true);
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.isTypicalWorkParameterValueActiveOnDate)(value, "2025-12-31")).toBe(true);
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.isTypicalWorkParameterValueActiveOnDate)(value, "2026-01-01")).toBe(false);
+    });
 });

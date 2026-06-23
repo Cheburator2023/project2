@@ -24,12 +24,15 @@ import { V2TypicalWorkNormEntity } from "./entities/v2-typical-work-norm.entity"
 import { V2TypicalWorkRuleEntity } from "./entities/v2-typical-work-rule.entity";
 import { V2TypicalWorkLaborCoefficientEntity } from "./entities/v2-typical-work-labor-coefficient.entity";
 import { V2TypicalWorkVersionConfigEntity } from "./entities/v2-typical-work-version-config.entity";
+import { V2TypicalWorkParamEntity } from "./entities/v2-typical-work-param.entity";
+import { V2TypicalWorkParamValueEntity } from "./entities/v2-typical-work-param-value.entity";
 import {
 	V2TypicalWorkSeedService,
 	V2TypicalWorkService,
 } from "./services/v2-typical-work.service";
 import { V2TypicalWorkWriteService } from "./services/v2-typical-work-write.service";
 import { V2TypicalWorkRuntimeService } from "./services/v2-typical-work-runtime.service";
+import { V2TypicalWorkParamCatalogService } from "./services/v2-typical-work-param-catalog.service";
 import { V2TypicalWorkController } from "./controllers/v2-typical-work.controller";
 import { V2DataTransferController } from "./controllers/v2-data-transfer.controller";
 import { V2DataTransferService } from "./services/v2-data-transfer.service";
@@ -48,6 +51,8 @@ import { V2DataTransferService } from "./services/v2-data-transfer.service";
 			V2TypicalWorkRuleEntity,
 			V2TypicalWorkLaborCoefficientEntity,
 			V2TypicalWorkVersionConfigEntity,
+			V2TypicalWorkParamEntity,
+			V2TypicalWorkParamValueEntity,
 		]),
 	],
 	controllers: [
@@ -72,6 +77,7 @@ import { V2DataTransferService } from "./services/v2-data-transfer.service";
 		V2TypicalWorkService,
 		V2TypicalWorkWriteService,
 		V2TypicalWorkRuntimeService,
+		V2TypicalWorkParamCatalogService,
 		V2DataTransferService,
 	],
 	exports: [
@@ -83,6 +89,7 @@ import { V2DataTransferService } from "./services/v2-data-transfer.service";
 		V2QuestionnaireService,
 		V2TypicalWorkService,
 		V2TypicalWorkRuntimeService,
+		V2TypicalWorkParamCatalogService,
 	],
 })
 export class AnketaV2Module {}

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
 	countActiveNormsOnDate,
 	computeWorkTriggerStatus,
+	isWorkCoefficientValueAvailable,
+	isTypicalWorkParameterValueActiveOnDate,
 	validateNormInputs,
 } from "./v2-typical-work-validation.util";
 
@@ -116,5 +118,134 @@ describe("computeWorkTriggerStatus", () => {
 				catalog,
 			),
 		).toBe("invalid");
+	});
+
+	it("marks expired value as invalid for calculation date", () => {
+		expect(
+			computeWorkTriggerStatus(
+				[
+					{
+						paramCode: "complexity",
+						valueCode: "old",
+						valueLabel: "Старое",
+					},
+				],
+				[
+					{
+						code: "complexity",
+						values: [
+							{
+								code: "old",
+								label: "Старое",
+								validFrom: "2024-01-01",
+								validTo: "2024-12-31",
+							},
+						],
+					},
+				],
+				"2025-06-01",
+			),
+		).toBe("invalid");
+	});
+});
+
+describe("isWorkCoefficientValueAvailable (F-03 §578)", () => {
+	const catalog = [
+		{
+			code: "complexity",
+			values: [
+				{ code: "low", label: "Низкая" },
+				{ code: "high", label: "Высокая" },
+			],
+		},
+	];
+
+	it("treats an existing dictionary value as available", () => {
+		expect(
+			isWorkCoefficientValueAvailable(
+				{ paramCode: "complexity", valueCode: "low", valueLabel: "Низкая" },
+				catalog,
+			),
+		).toBe(true);
+	});
+
+	it("matches by label when the code was re-slugged", () => {
+		expect(
+			isWorkCoefficientValueAvailable(
+				{ paramCode: "complexity", valueCode: "stale", valueLabel: "Высокая" },
+				catalog,
+			),
+		).toBe(true);
+	});
+
+	it("excludes a coefficient whose value was deleted from the dictionary", () => {
+		expect(
+			isWorkCoefficientValueAvailable(
+				{
+					paramCode: "complexity",
+					valueCode: "removed",
+					valueLabel: "Удалённое",
+				},
+				catalog,
+			),
+		).toBe(false);
+	});
+
+	it("excludes a coefficient whose whole parameter is gone", () => {
+		expect(
+			isWorkCoefficientValueAvailable(
+				{ paramCode: "missing", valueCode: "low", valueLabel: "Низкая" },
+				catalog,
+			),
+		).toBe(false);
+	});
+
+	it("keeps presence-flag rows (no value) available — no dictionary to delete from", () => {
+		expect(
+			isWorkCoefficientValueAvailable(
+				{ paramCode: "flag", valueCode: null, valueLabel: null },
+				catalog,
+			),
+		).toBe(true);
+	});
+
+	it("excludes an expired value on calculation date", () => {
+		expect(
+			isWorkCoefficientValueAvailable(
+				{ paramCode: "complexity", valueCode: "old", valueLabel: "Старое" },
+				[
+					{
+						code: "complexity",
+						values: [
+							{
+								code: "old",
+								label: "Старое",
+								validFrom: "2024-01-01",
+								validTo: "2024-12-31",
+							},
+						],
+					},
+				],
+				"2025-06-01",
+			),
+		).toBe(false);
+	});
+});
+
+describe("isTypicalWorkParameterValueActiveOnDate", () => {
+	it("checks inclusive validFrom/validTo window", () => {
+		const value = { validFrom: "2025-01-01", validTo: "2025-12-31" };
+		expect(isTypicalWorkParameterValueActiveOnDate(value, "2024-12-31")).toBe(
+			false,
+		);
+		expect(isTypicalWorkParameterValueActiveOnDate(value, "2025-01-01")).toBe(
+			true,
+		);
+		expect(isTypicalWorkParameterValueActiveOnDate(value, "2025-12-31")).toBe(
+			true,
+		);
+		expect(isTypicalWorkParameterValueActiveOnDate(value, "2026-01-01")).toBe(
+			false,
+		);
 	});
 });

@@ -8,8 +8,11 @@ exports.validateWorkName = validateWorkName;
 exports.collectAllowedParamCodes = collectAllowedParamCodes;
 exports.validateFormulaAgainstParams = validateFormulaAgainstParams;
 exports.collectTypicalWorkPatchValidationErrors = collectTypicalWorkPatchValidationErrors;
+exports.isTypicalWorkParameterValueActiveOnDate = isTypicalWorkParameterValueActiveOnDate;
+exports.filterTypicalWorkParameterValuesActiveOnDate = filterTypicalWorkParameterValuesActiveOnDate;
 exports.computeWorkTriggerStatus = computeWorkTriggerStatus;
 exports.isWorkTriggerGroupInvalid = isWorkTriggerGroupInvalid;
+exports.isWorkCoefficientValueAvailable = isWorkCoefficientValueAvailable;
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
 function parseIsoDay(value) {
     const day = value.slice(0, 10);
@@ -185,8 +188,21 @@ function collectTypicalWorkPatchValidationErrors(dto, options) {
     }
     return issues;
 }
+function isTypicalWorkParameterValueActiveOnDate(value, atDate) {
+    const day = atDate.slice(0, 10);
+    const from = value.validFrom ? parseIsoDay(value.validFrom) : null;
+    const to = value.validTo ? parseIsoDay(value.validTo) : null;
+    if (from && day < from)
+        return false;
+    if (to && day > to)
+        return false;
+    return true;
+}
+function filterTypicalWorkParameterValuesActiveOnDate(values, atDate) {
+    return values.filter((value) => isTypicalWorkParameterValueActiveOnDate(value, atDate));
+}
 /** F-03: статус триггеров с учётом актуальности параметров каталога */
-function computeWorkTriggerStatus(rules, catalog) {
+function computeWorkTriggerStatus(rules, catalog, atDate) {
     if (rules.length === 0)
         return "no_triggers";
     if (rules.some((rule) => !rule.valueLabel || !rule.valueCode))
@@ -198,19 +214,39 @@ function computeWorkTriggerStatus(rules, catalog) {
         const param = catalogByCode.get(rule.paramCode);
         if (!param)
             return "invalid";
-        const valueExists = param.values.some((value) => value.code === rule.valueCode || value.label === rule.valueLabel);
+        const valueExists = param.values.some((value) => (value.code === rule.valueCode || value.label === rule.valueLabel) &&
+            (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
         if (!valueExists)
             return "invalid";
     }
     return "appears";
 }
-function isWorkTriggerGroupInvalid(paramCode, rules, catalog) {
+function isWorkTriggerGroupInvalid(paramCode, rules, catalog, atDate) {
     const param = catalog.find((item) => item.code === paramCode);
     if (!param)
         return true;
     return rules.some((rule) => {
         if (!rule.valueCode || !rule.valueLabel)
             return true;
-        return !param.values.some((value) => value.code === rule.valueCode || value.label === rule.valueLabel);
+        return !param.values.some((value) => (value.code === rule.valueCode || value.label === rule.valueLabel) &&
+            (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
     });
+}
+/**
+ * F-03 §578: значение коэффициента трудоёмкости доступно, только если оно
+ * присутствует в активном глобальном справочнике значений параметра. Если
+ * значение удалено — коэффициент исключается из расчёта и помечается в UI
+ * меткой «Значение недоступно» (сохранение не блокируется).
+ *
+ * Строки-флаги без значения (valueCode/valueLabel = null) задают «параметр
+ * присутствует» и не ссылаются на словарь — они всегда доступны.
+ */
+function isWorkCoefficientValueAvailable(row, catalog, atDate) {
+    if (row.valueCode == null && row.valueLabel == null)
+        return true;
+    const param = catalog.find((item) => item.code === row.paramCode);
+    if (!param)
+        return false;
+    return param.values.some((value) => (value.code === row.valueCode || value.label === row.valueLabel) &&
+        (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
 }

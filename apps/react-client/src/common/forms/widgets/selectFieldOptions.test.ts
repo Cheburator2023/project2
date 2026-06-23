@@ -81,7 +81,7 @@ describe("buildSelectOptions", () => {
 				type: "string",
 				enum: ["x", "y"],
 				enumNames: ["Икс", "Игрек"],
-			},
+			} as RJSFSchema,
 		};
 
 		expect(buildSelectOptions(undefined, schema)).toEqual([

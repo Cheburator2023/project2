@@ -5,6 +5,7 @@ import {
 	CONTROL_MODELS_STREAM,
 	defaultWorkFormula,
 	defaultWorkRounding,
+	isWorkCoefficientValueAvailable,
 	previewWorkFormula,
 	resolveActiveNormOnDate,
 	resolveLaborCoefficient,
@@ -17,6 +18,7 @@ import { V2TypicalWorkNormEntity } from "../entities/v2-typical-work-norm.entity
 import { V2TypicalWorkRuleEntity } from "../entities/v2-typical-work-rule.entity";
 import { V2TypicalWorkVersionConfigEntity } from "../entities/v2-typical-work-version-config.entity";
 import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
+import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
 
 export type CatalogGeneratedTask = {
 	taskCode: string;
@@ -78,6 +80,7 @@ export class V2TypicalWorkRuntimeService {
 		private readonly laborRepository: Repository<V2TypicalWorkLaborCoefficientEntity>,
 		@InjectRepository(V2TypicalWorkVersionConfigEntity)
 		private readonly versionConfigRepository: Repository<V2TypicalWorkVersionConfigEntity>,
+		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
 	) {}
 
 	/** @deprecated Используйте {@link buildCatalogTasks}. */
@@ -131,6 +134,8 @@ export class V2TypicalWorkRuntimeService {
 		const rulesByWork = groupBy(rules, (r) => r.workId);
 		const laborByWork = groupBy(labor, (l) => l.workId);
 		const configByWork = new Map(configs.map((c) => [c.workId, c]));
+		const coefficientValueCatalog =
+			await this.paramCatalogService.listTriggerStatusCatalog(params.atDate);
 
 		const tasks: CatalogGeneratedTask[] = [];
 
@@ -175,6 +180,16 @@ export class V2TypicalWorkRuntimeService {
 			const paramCoefficients: Record<string, number> = {};
 			for (const row of laborByWork.get(work.id) ?? []) {
 				if (params.hiddenParamCodes?.has(row.paramCode)) continue;
+				// §578: коэффициент на удалённое значение параметра исключается из расчёта.
+				if (
+					!isWorkCoefficientValueAvailable(
+						row,
+						coefficientValueCatalog,
+						params.atDate,
+					)
+				) {
+					continue;
+				}
 				if (
 					resolveLaborCoefficient(
 						params.source,

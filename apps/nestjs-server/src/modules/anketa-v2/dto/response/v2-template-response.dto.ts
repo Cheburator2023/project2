@@ -8,6 +8,7 @@ import type {
 	V2TemplateStatus,
 	V2TemplateAuditAction,
 	V2LogicGraphDto,
+	V2DictionariesSnapshotDto,
 } from "@smart-anketa/api-contract";
 import { V2_TEMPLATE_AUDIT_ACTION_VALUES } from "@smart-anketa/api-contract";
 
@@ -66,7 +67,7 @@ export class V2TemplateVersionResponseDto implements V2TemplateVersionDto {
 	logic: V2LogicGraphDto;
 
 	@ApiProperty({ required: false })
-	dictionariesSnapshot: Record<string, unknown> | null;
+	dictionariesSnapshot: V2DictionariesSnapshotDto | null;
 
 	@ApiProperty({ required: false })
 	releaseNotes: string | null;

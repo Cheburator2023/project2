@@ -1,4 +1,5 @@
 import type {
+	V2DictionariesSnapshotDto,
 	V2JsonSchemaDto,
 	V2LogicGraphDto,
 	V2TemplateStatus,
@@ -53,7 +54,7 @@ export class V2TemplateVersionEntity {
 	logic: V2LogicGraphDto;
 
 	@Column({ name: "dictionaries_snapshot", type: "jsonb", nullable: true })
-	dictionariesSnapshot: Record<string, unknown> | null;
+	dictionariesSnapshot: V2DictionariesSnapshotDto | null;
 
 	@Column({ name: "release_notes", type: "text", nullable: true })
 	releaseNotes: string | null;

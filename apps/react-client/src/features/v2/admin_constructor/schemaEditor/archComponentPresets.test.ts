@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { RJSFSchema } from "@rjsf/utils";
-import { ARCH_COMPONENT_PRESET_DEFS } from "./archComponentPresets";
+import {
+	ARCH_COMPONENT_PRESET_DEFS,
+	ATYPICAL_WORK_NEW_ROW_DEFAULTS,
+} from "./archComponentPresets";
 
 const snapshotPath = join(
 	import.meta.dirname,
@@ -45,4 +48,20 @@ describe("ARCH_COMPONENT_PRESET_DEFS", () => {
 			expect(propertyKeys(preset).sort()).toEqual(propertyKeys(expected).sort());
 		});
 	}
+
+	// snapshot-as-source-of-truth: у нетиповой работы НЕ должно быть schema
+	// `default`, иначе RJSF подставит их в недостающие ключи существующего
+	// снепшота. Дефолты для новой строки задаются явно.
+	it("у нетиповой работы нет schema default (значения новой строки заданы явно)", () => {
+		const itemProps = (
+			ARCH_COMPONENT_PRESET_DEFS.atypicalWork.make().items as RJSFSchema
+		).properties as Record<string, RJSFSchema>;
+		for (const field of Object.values(itemProps)) {
+			expect(field.default).toBeUndefined();
+		}
+		expect(ATYPICAL_WORK_NEW_ROW_DEFAULTS).toEqual({
+			coefficient: 1.5,
+			includeInCalculation: true,
+		});
+	});
 });
