@@ -3,6 +3,13 @@
 	"version": "2.0.5",
 	"private": true,
 	"description": "Typed json-logic-js engine for Smart Anketa (V2 rules)",
+	"sideEffects": [
+		"./logic.js",
+		"./dist/esm/logic.js",
+		"./dist/cjs/logic.js",
+		"./dist/esm/loadEngine.esm.js",
+		"./dist/cjs/loadEngine.cjs.js"
+	],
 	"main": "./dist/cjs/index.js",
 	"module": "./dist/esm/index.js",
 	"types": "./dist/index.d.ts",
@@ -18,7 +25,7 @@
 		"build": "rm -rf dist && npm run build:dts && npm run build:cjs && npm run build:esm",
 		"build:dts": "tsc -p tsconfig.dts.json",
 		"build:cjs": "tsc -p tsconfig.cjs.json && cp logic.js dist/cjs/logic.js && mv dist/cjs/index.cjs.js dist/cjs/index.js",
-		"build:esm": "tsc -p tsconfig.esm.json && cp logic.js dist/esm/logic.js && perl -0pi -e 's/}\\(this, function\\(\\) \\{/}(globalThis, function() {/' dist/esm/logic.js && mv dist/esm/index.esm.js dist/esm/index.js",
+		"build:esm": "tsc -p tsconfig.esm.json && cp logic.js dist/esm/logic.js && node scripts/patch-logic-for-esm.mjs && mv dist/esm/index.esm.js dist/esm/index.js",
 		"lint": "echo noop"
 	},
 	"devDependencies": {

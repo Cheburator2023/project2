@@ -8,9 +8,15 @@ const TS_CONFIG_PATH = path.resolve(__dirname, "./tsconfig.json");
 const PUBLIC_PATH = process.env.PUBLIC_PATH || undefined;
 const isDev = process.env.NODE_ENV === "development";
 const APP_NAME = "smartAnketa";
+const JSON_LOGIC_TS_ENTRY = path.resolve(
+	__dirname,
+	"../../packages/json-logic-ts/dist/esm/index.js",
+);
 
 const ALIAS = {
 	"@react-client": `${SRC_DIR}`,
+	// Webpack: ESM+browser-safe entry (CJS loadEngine uses node:module/createRequire).
+	"@smart-anketa/json-logic-ts": JSON_LOGIC_TS_ENTRY,
 };
 
 module.exports = {
@@ -40,6 +46,10 @@ module.exports = {
 	resolve: {
 		alias: ALIAS,
 		extensions: [".ts", ".tsx", ".js", ".jsx"],
+		// ESM packages in monorepo (json-logic-ts) use explicit .js extensions.
+		extensionAlias: {
+			".js": [".js", ".ts", ".tsx"],
+		},
 		fallback: {
 			url: false,
 			path: false,

@@ -4,12 +4,12 @@ Using a Universal Module Loader that should be browser, require, and AMD friendl
 http://ricostacruz.com/cheatsheets/umdjs.html
 */
 ;(function(root, factory) {
+  var engine = factory();
+  root.jsonLogic = engine;
   if (typeof define === "function" && define.amd) {
-    define(factory);
-  } else if (typeof exports === "object") {
-    module.exports = factory();
-  } else {
-    root.jsonLogic = factory();
+    define(function() { return engine; });
+  } else if (typeof exports === "object" && typeof module !== "undefined") {
+    module.exports = engine;
   }
 }(globalThis, function() {
   "use strict";

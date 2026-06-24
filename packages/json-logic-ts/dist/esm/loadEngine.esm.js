@@ -1,4 +1,4 @@
-import "./logic.js";
+import logicModule from "./logic.js";
 function unwrapEngine(mod) {
     if (mod &&
         typeof mod === "object" &&
@@ -14,4 +14,5 @@ function unwrapEngine(mod) {
     throw new Error("@smart-anketa/json-logic-ts: failed to load logic.js");
 }
 /** Bundler/browser-safe loader (no node:module). */
-export const jsonLogic = unwrapEngine(globalThis.jsonLogic);
+export const jsonLogic = unwrapEngine(globalThis.jsonLogic ??
+    logicModule);
