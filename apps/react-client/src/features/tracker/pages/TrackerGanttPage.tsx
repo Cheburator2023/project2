@@ -7,9 +7,9 @@ import {
 	useKanbanBoardSprints,
 } from "@react-client/common/api/queries/kanban-board";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { TrackerGanttChart } from "@react-client/features/tracker/gantt/TrackerGanttChart";
+import "@react-client/features/tracker/gantt/trackerGantt.css";
 import type { TrackerGanttFilters } from "@react-client/features/tracker/gantt/trackerGanttModel";
 import {
 	TRACKER_GANTT_SCALE_PRESET_DEFAULT,
@@ -48,12 +48,15 @@ export function TrackerGanttPage() {
 	);
 
 	return (
-		<Flex
-			flexDirection="column"
-			flexGrow={1}
-			minHeight="0"
-			minWidth="0"
-			width="100%"
+		<Box
+			className="tracker-gantt-page-root"
+			sx={{
+				display: "flex",
+				flexDirection: "column",
+				minHeight: 0,
+				minWidth: 0,
+				width: "100%",
+			}}
 		>
 			<Header title="Диаграмма Ганта">
 				<Flex gap={8} wrap="wrap" alignItems="center">
@@ -114,7 +117,9 @@ export function TrackerGanttPage() {
 						<Select
 							value={scalePresetId}
 							onChange={(event) =>
-								setScalePresetId(event.target.value as TrackerGanttScalePresetId)
+								setScalePresetId(
+									event.target.value as TrackerGanttScalePresetId,
+								)
 							}
 						>
 							{TRACKER_GANTT_SCALE_PRESETS.map((preset) => (
@@ -126,25 +131,18 @@ export function TrackerGanttPage() {
 					</FormControl>
 				</Flex>
 			</Header>
-			<Spacer space={8} />
 			<Box
+				className="tracker-gantt-page-chart"
 				sx={{
-					flexGrow: 1,
-					minHeight: 0,
 					minWidth: 0,
 					width: "100%",
 					maxWidth: "100%",
-					overflow: "hidden",
 					display: "flex",
 					flexDirection: "column",
-					px: 0.5,
-					pb: 1,
 				}}
 			>
-				<Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: "hidden" }}>
-					<TrackerGanttChart filters={filters} scalePresetId={scalePresetId} />
-				</Box>
+				<TrackerGanttChart filters={filters} scalePresetId={scalePresetId} />
 			</Box>
-		</Flex>
+		</Box>
 	);
 }

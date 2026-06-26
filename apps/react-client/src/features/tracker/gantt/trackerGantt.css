@@ -1,26 +1,68 @@
-/* Контейнер: ширина ограничена viewport, скролл — внутри Gantt. */
-.tracker-gantt-shell {
-	width: 100%;
-	max-width: 100%;
-	min-width: 0;
+/* Контейнер: фиксированная высота страницы, скролл внутри Gantt. */
+.tracker-gantt-page-root {
+	height: calc(100dvh - 16px);
+	max-height: calc(100dvh - 16px);
 	overflow: hidden;
 }
 
-.tracker-gantt-shell .tracker-gantt-body {
-	width: 100%;
-	max-width: 100%;
-	min-width: 0;
+.tracker-gantt-page-chart {
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
 }
 
-.tracker-gantt-shell .tracker-gantt-body > [class*="wx-"] {
+.tracker-gantt-shell {
 	width: 100%;
 	max-width: 100%;
-	min-width: 0;
 	height: 100%;
+	max-height: 100%;
+	min-width: 0;
 	min-height: 0;
+	overflow: hidden;
+	border: 1px solid var(--wx-gantt-border, rgba(0, 0, 0, 0.12));
+	border-radius: 8px;
+	background: var(--tracker-gantt-shell-bg, transparent);
 	display: flex;
 	flex-direction: column;
+}
+
+.tracker-gantt-shell .tracker-gantt-body {
+	position: relative;
 	flex: 1;
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.tracker-gantt-shell .tracker-gantt-body-inner {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.tracker-gantt-shell .tracker-gantt-body-inner > [class*="wx-"] {
+	flex: 1;
+	min-width: 0;
+	min-height: 0;
+	height: 100%;
+	max-height: 100%;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.tracker-gantt-shell .tracker-gantt-body-inner > [class*="wx-"] > .tracker-gantt-toolbar,
+.tracker-gantt-shell .tracker-gantt-body-inner > [class*="wx-"] > .tracker-gantt-viewport {
+	min-height: 0;
+}
+
+.tracker-gantt-shell .tracker-gantt-toolbar {
+	flex-shrink: 0;
+	min-width: 0;
 	overflow: hidden;
 }
 
@@ -31,16 +73,29 @@
 	min-height: 0;
 	width: 100%;
 	max-width: 100%;
+	max-height: 100%;
 	overflow: hidden;
-	border: 1px solid var(--wx-gantt-border, rgba(0, 0, 0, 0.12));
-	border-radius: 4px;
+	border-radius: 8px;
 }
 
 .tracker-gantt-shell .tracker-gantt-viewport > [class*="wx-"] {
 	width: 100%;
 	max-width: 100%;
-	min-width: 0;
 	height: 100%;
+	max-height: 100%;
+	min-width: 0;
 	min-height: 0;
 	overflow: hidden;
+	border-radius: 8px;
+}
+
+.tracker-gantt-shell .tracker-gantt-viewport [class*="wx-gantt"] {
+	height: 100%;
+	max-height: 100%;
+	min-height: 0;
+	overflow: auto;
+}
+
+.tracker-gantt-shell .tracker-gantt-footer {
+	flex-shrink: 0;
 }

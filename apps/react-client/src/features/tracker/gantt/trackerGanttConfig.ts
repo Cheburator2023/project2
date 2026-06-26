@@ -9,3 +9,7 @@ export const TRACKER_GANTT_COLUMNS: IColumnConfig[] = [
 export const TRACKER_GANTT_GRID_WIDTH = 320;
 export const TRACKER_GANTT_TIMELINE_PADDING_DAYS = 7;
 export const TRACKER_GANTT_MAX_TIMELINE_DAYS = 90;
+
+/** MainLayout padding: 8px сверху и снизу. */
+export const TRACKER_GANTT_PAGE_HEIGHT = "calc(100dvh - 16px)";
+export const TRACKER_GANTT_BORDER_RADIUS = 8;
