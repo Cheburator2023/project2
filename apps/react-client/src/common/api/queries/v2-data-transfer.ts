@@ -1,5 +1,5 @@
 import { apiClient } from "../helpers/apiClient";
-import { downloadBlob } from "./task-tracker";
+import { downloadBlob } from "./kanban-board";
 
 export type V2DataImportMode = "merge" | "replace";
 

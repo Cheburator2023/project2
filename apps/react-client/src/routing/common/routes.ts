@@ -2,6 +2,7 @@ import type { AppRouteConfig } from "./types";
 
 export const navbarGroups = {
 	adminV2: { title: "Администрирование" },
+	tracker: { title: "Трекер" },
 	dev: { title: "Разработка" },
 } as const;
 
@@ -74,6 +75,78 @@ export const commonRoutes = {
 		shortName: "Логика",
 		disabled: false,
 	},
+	tracker: {
+		rootPath: "/tracker",
+		name: "Трекер",
+		disabled: false,
+	},
+	trackerProjects: {
+		rootPath: "/tracker/projects",
+		name: "Проекты",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "tracker", order: 0 },
+	},
+	trackerBoards: {
+		rootPath: "/tracker/boards",
+		name: "Доски",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "tracker", order: 1 },
+	},
+	trackerTasks: {
+		rootPath: "/tracker/tasks",
+		name: "Задачи",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "tracker", order: 2 },
+	},
+	trackerAssignees: {
+		rootPath: "/tracker/assignees",
+		name: "Исполнители",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "tracker", order: 3 },
+	},
+	trackerSupersprints: {
+		rootPath: "/tracker/supersprints",
+		name: "Суперспринты",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "tracker", order: 4 },
+	},
+	trackerSprints: {
+		rootPath: "/tracker/sprints",
+		name: "Спринты",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "tracker", order: 5 },
+	},
+	trackerStreams: {
+		rootPath: "/tracker/streams",
+		name: "Стримы",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "tracker", order: 6 },
+	},
+	trackerTaskCreate: {
+		rootPath: "/tracker/tasks/new",
+		name: "Новая задача",
+		shortName: "Новая задача",
+		disabled: false,
+	},
+	trackerBoardView: {
+		rootPath: "/tracker/boards/:boardId",
+		name: "Kanban-доска",
+		shortName: "Доска",
+		disabled: false,
+	},
+	trackerBoardTask: {
+		rootPath: "/tracker/boards/:boardId/tasks/:taskId",
+		name: "Задача",
+		shortName: "Задача",
+		disabled: false,
+	},
 	playground: {
 		name: "Песочница",
 		rootPath: "/playground",
@@ -82,14 +155,12 @@ export const commonRoutes = {
 		showInNavbar: true,
 		navbar: { group: "dev", order: 0 },
 	},
-	// taskTracker: {
-	// 	rootPath: "/playground/tasks",
-	// 	name: "Таск-трекер",
-	// 	devOnly: true,
-	// 	disabled: false,
-	// 	showInNavbar: true,
-	// 	navbar: { group: "dev", order: 1 },
-	// },
+	kanbanBoard: {
+		rootPath: "/playground/kanban-board",
+		name: "Kanban-доска (legacy)",
+		devOnly: true,
+		disabled: true,
+	},
 	playgroundV2: {
 		rootPath: "/playground/v2",
 		name: "V2",

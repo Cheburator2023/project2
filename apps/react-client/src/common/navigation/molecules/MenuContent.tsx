@@ -25,6 +25,13 @@ const getAdminNavbarItems = () =>
 		.filter((r) => !r.disabled)
 		.sort((a, b) => (a.navbar?.order ?? 0) - (b.navbar?.order ?? 0));
 
+const getTrackerNavbarItems = () =>
+	(Object.values(commonRoutes) as AppRouteConfig[])
+		.filter((r) => r.showInNavbar)
+		.filter((r) => r.navbar?.group === "tracker")
+		.filter((r) => !r.disabled)
+		.sort((a, b) => (a.navbar?.order ?? 0) - (b.navbar?.order ?? 0));
+
 const getDevNavbarItems = () =>
 	(Object.values(commonRoutes) as AppRouteConfig[])
 		.filter((r) => r.showInNavbar)
@@ -145,6 +152,19 @@ export function MenuContent() {
 					homeLabel={v1Routes.home.name}
 					homePath={V1_PREFIX}
 					nestedItems={getV1MainNestedItems()}
+					pathname={pathname}
+					onNavigate={go}
+				/>
+
+				<Divider sx={{ my: 1 }} />
+
+				<NavSection
+					title={commonNavbarGroups.tracker.title}
+					homeLabel={commonRoutes.trackerProjects.name}
+					homePath={commonRoutes.trackerProjects.rootPath}
+					nestedItems={getTrackerNavbarItems().filter(
+						(route) => route.rootPath !== commonRoutes.trackerProjects.rootPath,
+					)}
 					pathname={pathname}
 					onNavigate={go}
 				/>
