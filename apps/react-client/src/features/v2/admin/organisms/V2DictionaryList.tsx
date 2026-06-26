@@ -4,16 +4,15 @@ import MenuItem from "@mui/material/MenuItem";
 import { styled, useColorScheme } from "@mui/material/styles";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
+import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import { useV2Dictionaries } from "@react-client/common/api/queries/v2-templates";
 import type { V2DictionaryDto } from "@smart-anketa/api-contract";
 import {
-	AllCommunityModule,
-	ClientSideRowModelModule,
 	type CellContextMenuEvent,
 	type ColDef,
 	type ICellRendererParams,
 	type SelectionChangedEvent,
-	ModuleRegistry,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { pathForAdminV2Dictionary } from "@react-client/routing/common/pathHelpers";
@@ -25,7 +24,7 @@ import {
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 
-ModuleRegistry.registerModules([AllCommunityModule, ClientSideRowModelModule]);
+registerAgGridTableModules();
 
 const GridWrapper = styled(Flex)`
 	width: 100%;
@@ -64,6 +63,7 @@ export const V2DictionaryList = ({
 	const { mode } = useColorScheme();
 	const { data: dictionaries, isLoading } = useV2Dictionaries();
 	const gridRef = useRef<AgGridReact<V2DictionaryDto>>(null);
+	const gridPersistence = useAgGridColumnPersistence("v2.dictionaries");
 
 	useEffect(() => {
 		gridRef.current?.api?.setGridOption("quickFilterText", quickFilter);
@@ -185,6 +185,15 @@ export const V2DictionaryList = ({
 					checkboxes: true,
 					headerCheckbox: true,
 					enableClickSelection: false,
+				}}
+				sideBar={gridPersistence.sideBar}
+				onGridReady={gridPersistence.onGridReady}
+				onColumnMoved={(event) => gridPersistence.onColumnMoved(event.api)}
+				onColumnVisible={(event) => gridPersistence.onColumnVisible(event.api)}
+				onColumnPinned={(event) => gridPersistence.onColumnPinned(event.api)}
+				onSortChanged={(event) => gridPersistence.onSortChanged(event.api)}
+				onColumnResized={(event) => {
+					if (event.finished) gridPersistence.onColumnResized(event.api);
 				}}
 				onSelectionChanged={(e: SelectionChangedEvent<V2DictionaryDto>) => {
 					onSelectionChange?.(e.api.getSelectedRows());

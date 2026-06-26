@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
+import * as ExcelJS from "exceljs";
 import { DataSource, Repository } from "typeorm";
 import type { KanbanBoardTaskRecord } from "@smart-anketa/api-contract";
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
+import {
+	isSnapshotWorkbook,
+} from "../utils/kanban-board-planning-import.util";
 import {
 	assertSnapshotImportable,
 	exportXlsx,
@@ -14,6 +18,15 @@ export {
 	SnapshotIntegrityError,
 	SnapshotSchemaError,
 } from "../utils/kanban-board-snapshot.util";
+
+export class PlanningImportNotSupportedError extends Error {
+	constructor() {
+		super(
+			"Импорт таблицы планирования доступен на странице «Все задачи». На доске поддерживается только снапшот XLSX.",
+		);
+		this.name = "PlanningImportNotSupportedError";
+	}
+}
 
 @Injectable()
 export class KanbanBoardService {
@@ -132,17 +145,77 @@ export class KanbanBoardService {
 	): Promise<{
 		meta: Awaited<ReturnType<typeof importXlsx>>["meta"];
 		tasks: KanbanBoardTaskRecord[];
+		importFormat: "snapshot";
+		warnings: string[];
 	}> {
+		const workbook = new ExcelJS.Workbook();
+		await workbook.xlsx.load(buf);
+		if (!isSnapshotWorkbook(workbook)) {
+			throw new PlanningImportNotSupportedError();
+		}
+
+		const { meta, payload } = await importXlsx(buf);
+		assertSnapshotImportable(meta, payload);
+		const normalized = payload.map((task) => ({ ...task, boardId }));
+
+		await this.replaceBoardTasksFromImport(boardId, meta.sourceStand, normalized);
+
+		return {
+			meta,
+			tasks: await this.findByBoard(boardId),
+			importFormat: "snapshot",
+			warnings: [],
+		};
+	}
+
+	async importSnapshot(buf: Buffer): Promise<{
+		meta: Awaited<ReturnType<typeof importXlsx>>["meta"];
+		tasks: KanbanBoardTaskRecord[];
+		importFormat: "snapshot";
+		warnings: string[];
+	}> {
+		const workbook = new ExcelJS.Workbook();
+		await workbook.xlsx.load(buf);
+		if (!isSnapshotWorkbook(workbook)) {
+			throw new PlanningImportNotSupportedError();
+		}
+
 		const { meta, payload } = await importXlsx(buf);
 		assertSnapshotImportable(meta, payload);
 
-		const normalized = payload.map((task) => ({ ...task, boardId }));
+		const normalized = payload.map((task) => ({
+			...task,
+			boardId: task.boardId || KanbanBoardService.DEFAULT_BOARD_ID,
+		}));
 
+		await this.replaceStandTasksFromImport(meta.sourceStand, normalized);
+
+		return {
+			meta,
+			tasks: await this.findAll(),
+			importFormat: "snapshot",
+			warnings: [],
+		};
+	}
+
+	async replaceBoardTasksForImport(
+		boardId: string,
+		sourceStand: string,
+		normalized: KanbanBoardTaskRecord[],
+	): Promise<void> {
+		await this.replaceBoardTasksFromImport(boardId, sourceStand, normalized);
+	}
+
+	private async replaceBoardTasksFromImport(
+		boardId: string,
+		sourceStand: string,
+		normalized: KanbanBoardTaskRecord[],
+	): Promise<void> {
 		await this.dataSource.transaction(async (manager) => {
 			const repo = manager.getRepository(KanbanBoardTaskEntity);
 			const incoming = new Set(normalized.map((task) => task.id));
 			const existing = await repo.find({
-				where: { boardId, origin: meta.sourceStand },
+				where: { boardId, origin: sourceStand },
 			});
 			const stale = existing.filter((row) => !incoming.has(row.id));
 			if (stale.length) {
@@ -153,37 +226,25 @@ export class KanbanBoardService {
 				await repo.save(this.fromRecord(task));
 			}
 		});
-
-		return { meta, tasks: await this.findByBoard(boardId) };
 	}
 
-	async importSnapshot(buf: Buffer): Promise<{
-		meta: Awaited<ReturnType<typeof importXlsx>>["meta"];
-		tasks: KanbanBoardTaskRecord[];
-	}> {
-		const { meta, payload } = await importXlsx(buf);
-		assertSnapshotImportable(meta, payload);
-
+	private async replaceStandTasksFromImport(
+		sourceStand: string,
+		normalized: KanbanBoardTaskRecord[],
+	): Promise<void> {
 		await this.dataSource.transaction(async (manager) => {
 			const repo = manager.getRepository(KanbanBoardTaskEntity);
-			const incoming = new Set(payload.map((task) => task.id));
-			const existing = await repo.find({ where: { origin: meta.sourceStand } });
+			const incoming = new Set(normalized.map((task) => task.id));
+			const existing = await repo.find({ where: { origin: sourceStand } });
 			const stale = existing.filter((row) => !incoming.has(row.id));
 			if (stale.length) {
 				await repo.remove(stale);
 			}
 
-			for (const task of payload) {
-				await repo.save(
-					this.fromRecord({
-						...task,
-						boardId: task.boardId || KanbanBoardService.DEFAULT_BOARD_ID,
-					}),
-				);
+			for (const task of normalized) {
+				await repo.save(this.fromRecord(task));
 			}
 		});
-
-		return { meta, tasks: await this.findAll() };
 	}
 
 	private toRecord(entity: KanbanBoardTaskEntity): KanbanBoardTaskRecord {

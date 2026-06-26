@@ -3,23 +3,31 @@ import { Flex } from "@react-client/common/primitives/Flex";
 
 export const ILL_404 = () => {
 	return (
-		<Flex position="relative" data-test-id="--Flex-0">
-			<Flex data-test-id="--Flex-1">
-				<Typography
-					variant="h1"
-					position={"absolute"}
-					left={"50%"}
-					fontSize={"150px"}
-					color="#6380c1"
-					data-test-id="--Typography-0"
-				>
-					<b data-test-id="--b-0">404</b>
-				</Typography>
-			</Flex>
+		<Flex
+			position="relative"
+			alignItems="center"
+			justifyContent="center"
+			width="100%"
+			maxWidth="400"
+			data-test-id="--Flex-0"
+		>
+			<Typography
+				variant="h1"
+				position="absolute"
+				top="8%"
+				left="50%"
+				sx={{ transform: "translateX(-50%)", lineHeight: 1, userSelect: "none" }}
+				fontSize={{ xs: "96px", sm: "128px" }}
+				color="#6380c1"
+				data-test-id="--Typography-0"
+			>
+				<b data-test-id="--b-0">404</b>
+			</Typography>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
-				width="397.5"
-				height="334.5"
+				width="100%"
+				height="auto"
+				style={{ maxWidth: 397.5, display: "block" }}
 				viewBox="0 0 797.5 834.5"
 				role="img"
 				data-test-id="--svg-0"

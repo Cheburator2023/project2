@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TASK_STATUSES = exports.TASK_TRACKER_SCHEMA_VERSION = exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS = exports.KANBAN_BOARD_COLUMN_COLORS = exports.KANBAN_BOARD_STATUSES = exports.KANBAN_BOARD_SCHEMA_VERSION = exports.KANBAN_BOARD_STOCK_PROJECTS = exports.KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD = exports.KANBAN_BOARD_PRIORITY_COLORS = exports.KANBAN_BOARD_WORK_TYPE_COLORS = exports.KANBAN_BOARD_TASK_TYPE_COLORS = exports.KANBAN_BOARD_ASSIGNEE_ROLES = exports.KANBAN_BOARD_WORK_TYPES = exports.KANBAN_BOARD_TASK_TYPES = exports.KANBAN_BOARD_ROLE_ESTIMATE_FIELDS = exports.KANBAN_BOARD_PRIORITIES = void 0;
+exports.TASK_STATUSES = exports.TASK_TRACKER_SCHEMA_VERSION = exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS = exports.KANBAN_BOARD_COLUMN_COLORS = exports.KANBAN_BOARD_STATUSES = exports.KANBAN_BOARD_SCHEMA_VERSION = exports.KANBAN_BOARD_HEAP_BOARD_SLUG = exports.KANBAN_BOARD_HEAP_BOARD_ID = exports.KANBAN_BOARD_STOCK_PROJECTS = exports.KANBAN_BOARD_STOCK_CUSTOMERS = exports.KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD = exports.KANBAN_BOARD_PRIORITY_COLORS = exports.KANBAN_BOARD_WORK_TYPE_COLORS = exports.KANBAN_BOARD_TASK_TYPE_COLORS = exports.KANBAN_BOARD_ASSIGNEE_ROLES = exports.KANBAN_BOARD_WORK_TYPES = exports.KANBAN_BOARD_TASK_TYPES = exports.KANBAN_BOARD_ROLE_ESTIMATE_FIELDS = exports.KANBAN_BOARD_PRIORITIES = void 0;
 exports.kanbanBoardTaskTypeTitle = kanbanBoardTaskTypeTitle;
 exports.kanbanBoardWorkTypeTitle = kanbanBoardWorkTypeTitle;
 exports.kanbanBoardAssigneeRoleTitle = kanbanBoardAssigneeRoleTitle;
@@ -100,6 +100,12 @@ function kanbanBoardPriorityColor(priority) {
     return exports.KANBAN_BOARD_PRIORITY_COLORS[priority] ?? "#64748b";
 }
 exports.KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD = 9;
+exports.KANBAN_BOARD_STOCK_CUSTOMERS = [
+    { code: "dadm", name: "ДАДМ" },
+    { code: "umrv", name: "УМРВ" },
+    { code: "ib", name: "ИБ" },
+    { code: "dpsis", name: "ДПСИС" },
+];
 exports.KANBAN_BOARD_STOCK_PROJECTS = [
     { code: "sum", name: "SUM", description: "Стоковый проект SUM" },
     { code: "sum-rm", name: "SUM-RM", description: "Стоковый проект SUM-RM" },
@@ -114,6 +120,9 @@ exports.KANBAN_BOARD_STOCK_PROJECTS = [
         description: "Стоковый проект Smart Anketa",
     },
 ];
+/** Доска «Куча» — задачи без привязки к рабочей доске (импорт, черновики). */
+exports.KANBAN_BOARD_HEAP_BOARD_ID = "01J000000000000000000015";
+exports.KANBAN_BOARD_HEAP_BOARD_SLUG = "heap";
 exports.KANBAN_BOARD_SCHEMA_VERSION = 1;
 exports.KANBAN_BOARD_STATUSES = [
     { id: "backlog", title: "Бэклог" },

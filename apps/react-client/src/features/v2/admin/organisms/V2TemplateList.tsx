@@ -14,6 +14,8 @@ import { toastWithUndo } from "@react-client/features/v2/admin/utils/v2UndoToast
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
+import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import {
 	pathForAdminV2Template,
 	pathForAdminV2TemplateHistory,
@@ -24,8 +26,6 @@ import type {
 	V2TemplateVersionDto,
 } from "@smart-anketa/api-contract";
 import {
-	AllCommunityModule,
-	ClientSideRowModelModule,
 	type ColDef,
 	type GetContextMenuItemsParams,
 	type GridReadyEvent,
@@ -46,9 +46,8 @@ import { agGridCustomMUITheme, agGridCustomMUIThemeDark } from "@react-client/th
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 
 
+registerAgGridTableModules();
 ModuleRegistry.registerModules([
-	AllCommunityModule,
-	ClientSideRowModelModule,
 	TreeDataModule,
 	ContextMenuModule,
 	...(process.env.NODE_ENV !== "production" ? [ValidationModule] : []),
@@ -150,6 +149,7 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 	}, [templates]);
 
 	const gridRef = useRef<AgGridReact<V2SchemaGridRow>>(null);
+	const gridPersistence = useAgGridColumnPersistence("v2.templates");
 
 	useImperativeHandle(ref, () => ({
 		clearSelection: () => {
@@ -605,8 +605,9 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 	);
 
 	const onGridReady = useCallback((e: GridReadyEvent<V2SchemaGridRow>) => {
+		gridPersistence.onGridReady(e);
 		e.api.expandAll();
-	}, []);
+	}, [gridPersistence]);
 
 	const loadingCombined = templatesLoading || versionsLoading;
 
@@ -636,6 +637,14 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 				getRowStyle={getRowStyle}
 				getContextMenuItems={getContextMenuItems}
 				onGridReady={onGridReady}
+				sideBar={gridPersistence.sideBar}
+				onColumnMoved={(event) => gridPersistence.onColumnMoved(event.api)}
+				onColumnVisible={(event) => gridPersistence.onColumnVisible(event.api)}
+				onColumnPinned={(event) => gridPersistence.onColumnPinned(event.api)}
+				onSortChanged={(event) => gridPersistence.onSortChanged(event.api)}
+				onColumnResized={(event) => {
+					if (event.finished) gridPersistence.onColumnResized(event.api);
+				}}
 				loading={loadingCombined}
 				pagination
 				paginationPageSize={50}

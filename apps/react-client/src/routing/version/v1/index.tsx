@@ -10,7 +10,7 @@ import { AnketaPreviewPage } from "@react-client/features/v1/anketaCRUD/pages/An
 import { AnketaCreatePage } from "@react-client/features/v1/anketaCRUD/pages/AnketaCreatePage";
 import { AnketaClonePage } from "@react-client/features/v1/anketaCRUD/pages/AnketaClonePage";
 import { routes } from "@react-client/routing/version/v1/routes";
-import { Page404 } from "@react-client/routing/version/v1/Page404";
+import { Page404 } from "@react-client/routing/common/Page404";
 
 export const v1Routes = ({ onLogout }: { onLogout?: () => void }) => {
 	return {

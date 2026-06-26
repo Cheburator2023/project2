@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boardsEquivalent, defaultKanbanBoardColumns, fromBoardData, kanbanBoardEffectiveEstimatePd, kanbanBoardEffectiveSprintCapacityPd, kanbanBoardRoleEstimatesTotal, normalizeKanbanBoardTaskContent, toBoardData, } from "@smart-anketa/api-contract";
+import { boardsEquivalent, defaultKanbanBoardColumns, fromBoardData, kanbanBoardEffectiveEstimatePd, kanbanBoardEffectiveSprintCapacityPd, kanbanBoardRoleEstimatesTotal, kanbanBoardTaskAssigneeRoles, normalizeKanbanBoardTaskContent, toBoardData, } from "@smart-anketa/api-contract";
 const boardColumns = defaultKanbanBoardColumns("board-1").map((column) => ({
     ...column,
     createdAt: "2026-06-16T12:00:00.000Z",
@@ -92,5 +92,14 @@ describe("kanban board sprint capacity", () => {
             sprintCapacityPd: null,
             defaultSprintCapacityPd: 9,
         })).toBe(9);
+    });
+});
+describe("kanban board task assignee roles", () => {
+    it("collects unique roles from assignees on task", () => {
+        const roleByName = new Map([
+            ["Alice", "analyst"],
+            ["Bob", "developer"],
+        ]);
+        expect(kanbanBoardTaskAssigneeRoles({ assignees: ["Alice", "Bob", "Alice"] }, roleByName)).toEqual(["analyst", "developer"]);
     });
 });

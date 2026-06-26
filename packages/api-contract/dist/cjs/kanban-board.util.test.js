@@ -96,3 +96,12 @@ const sampleBoard = () => ({
         })).toBe(9);
     });
 });
+(0, vitest_1.describe)("kanban board task assignee roles", () => {
+    (0, vitest_1.it)("collects unique roles from assignees on task", () => {
+        const roleByName = new Map([
+            ["Alice", "analyst"],
+            ["Bob", "developer"],
+        ]);
+        (0, vitest_1.expect)((0, api_contract_1.kanbanBoardTaskAssigneeRoles)({ assignees: ["Alice", "Bob", "Alice"] }, roleByName)).toEqual(["analyst", "developer"]);
+    });
+});

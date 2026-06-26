@@ -13,15 +13,14 @@ import { V2AdminButton } from "@react-client/features/v2/admin/atoms/V2AdminButt
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
 	TrackerRegistryGrid,
+	type TrackerRegistryBulkContextAction,
 	type TrackerRegistryContextAction,
 } from "./TrackerRegistryGrid";
-import {
-	TrackerFormDialog,
-	type TrackerFormField,
-} from "./TrackerFormDialog";
+import { TrackerFormDialog, type TrackerFormField } from "./TrackerFormDialog";
 import { buildTrackerCreateFormValues } from "../trackerAutoCode";
 
 type Props<TRow extends object> = {
+	gridStateKey: string;
 	title: string;
 	createLabel: string;
 	searchPlaceholder: string;
@@ -31,6 +30,8 @@ type Props<TRow extends object> = {
 	formFields?: TrackerFormField[];
 	getInitialFormValues?: (row: TRow | null) => Record<string, string>;
 	contextActions?: TrackerRegistryContextAction<TRow>[];
+	bulkContextActions?: TrackerRegistryBulkContextAction<TRow>[];
+	selectionActions?: (selected: TRow[]) => ReactNode;
 	onRowDoubleClick?: (row: TRow) => void;
 	onCreateClick?: () => void;
 	onEditClick?: (row: TRow) => void;
@@ -44,6 +45,7 @@ type Props<TRow extends object> = {
 };
 
 export function TrackerRegistryPage<TRow extends object>({
+	gridStateKey,
 	title,
 	createLabel,
 	searchPlaceholder,
@@ -53,6 +55,8 @@ export function TrackerRegistryPage<TRow extends object>({
 	formFields = [],
 	getInitialFormValues,
 	contextActions = [],
+	bulkContextActions = [],
+	selectionActions,
 	onRowDoubleClick,
 	onCreateClick,
 	onEditClick,
@@ -68,9 +72,9 @@ export function TrackerRegistryPage<TRow extends object>({
 	const [selected, setSelected] = useState<TRow[]>([]);
 	const [formOpen, setFormOpen] = useState(false);
 	const [editingRow, setEditingRow] = useState<TRow | null>(null);
-	const [createFormValues, setCreateFormValues] = useState<Record<string, string>>(
-		{},
-	);
+	const [createFormValues, setCreateFormValues] = useState<
+		Record<string, string>
+	>({});
 	const [pendingDelete, setPendingDelete] = useState<TRow[] | null>(null);
 	const [isSaving, setIsSaving] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
@@ -85,7 +89,10 @@ export function TrackerRegistryPage<TRow extends object>({
 	const openCreateForm = () => {
 		setEditingRow(null);
 		setCreateFormValues(
-			buildTrackerCreateFormValues(formFields, getInitialFormValues?.(null) ?? {}),
+			buildTrackerCreateFormValues(
+				formFields,
+				getInitialFormValues?.(null) ?? {},
+			),
 		);
 		setFormOpen(true);
 	};
@@ -163,7 +170,7 @@ export function TrackerRegistryPage<TRow extends object>({
 	return (
 		<Flex flexDirection="column" flexGrow={1} minHeight="0">
 			<Header>
-				<Flex gap={1} wrap="wrap" alignItems="center">
+				<Flex gap={6} wrap="wrap" alignItems="center">
 					<TextField
 						size="small"
 						placeholder={searchPlaceholder}
@@ -176,6 +183,7 @@ export function TrackerRegistryPage<TRow extends object>({
 						}}
 					/>
 					<Spacer />
+					{selectionActions?.(selected)}
 					{extraActions}
 					<V2AdminButton
 						onClick={() => {
@@ -201,6 +209,7 @@ export function TrackerRegistryPage<TRow extends object>({
 			</Header>
 
 			<TrackerRegistryGrid
+				gridStateKey={gridStateKey}
 				rowData={rowData}
 				columnDefs={columnDefs}
 				loading={loading}
@@ -208,6 +217,7 @@ export function TrackerRegistryPage<TRow extends object>({
 				onSelectionChange={setSelected}
 				onRowDoubleClick={handleRowDoubleClick}
 				contextActions={allContextActions}
+				bulkContextActions={bulkContextActions}
 			/>
 
 			{useFormDialog ? (
@@ -216,9 +226,7 @@ export function TrackerRegistryPage<TRow extends object>({
 					title={editingRow ? `Редактирование: ${title}` : `Новый: ${title}`}
 					fields={formFields}
 					initialValues={
-						editingRow
-							? getInitialFormValues?.(editingRow)
-							: createFormValues
+						editingRow ? getInitialFormValues?.(editingRow) : createFormValues
 					}
 					isSubmitting={isSaving}
 					onClose={() => {
@@ -229,7 +237,10 @@ export function TrackerRegistryPage<TRow extends object>({
 				/>
 			) : null}
 
-			<Dialog open={pendingDelete !== null} onClose={() => setPendingDelete(null)}>
+			<Dialog
+				open={pendingDelete !== null}
+				onClose={() => setPendingDelete(null)}
+			>
 				<DialogTitle>{deleteDialogTitle}</DialogTitle>
 				<DialogContent>
 					<DialogContentText>

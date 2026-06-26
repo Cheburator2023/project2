@@ -3,24 +3,24 @@ import MenuItem from "@mui/material/MenuItem";
 import { styled, useColorScheme } from "@mui/material/styles";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
+import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import {
 	agGridCustomMUITheme,
 	agGridCustomMUIThemeDark,
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 import {
-	AllCommunityModule,
-	ClientSideRowModelModule,
 	type CellContextMenuEvent,
 	type CellValueChangedEvent,
 	type ColDef,
+	type GridApi,
 	type SelectionChangedEvent,
-	ModuleRegistry,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-ModuleRegistry.registerModules([AllCommunityModule, ClientSideRowModelModule]);
+registerAgGridTableModules();
 
 const GridWrapper = styled(Flex)`
 	width: 100%;
@@ -44,7 +44,14 @@ export type TrackerRegistryContextAction<TRow> = {
 	onClick: (row: TRow) => void;
 };
 
+export type TrackerRegistryBulkContextAction<TRow> = {
+	label: string;
+	disabled?: (rows: TRow[]) => boolean;
+	onClick: (rows: TRow[]) => void;
+};
+
 type Props<TRow extends object> = {
+	gridStateKey: string;
 	rowData: TRow[];
 	columnDefs: ColDef<TRow>[];
 	loading?: boolean;
@@ -53,9 +60,11 @@ type Props<TRow extends object> = {
 	onRowDoubleClick?: (row: TRow) => void;
 	onCellValueChanged?: (row: TRow, field: string, value: unknown) => void;
 	contextActions?: TrackerRegistryContextAction<TRow>[];
+	bulkContextActions?: TrackerRegistryBulkContextAction<TRow>[];
 };
 
 export function TrackerRegistryGrid<TRow extends object>({
+	gridStateKey,
 	rowData,
 	columnDefs,
 	loading = false,
@@ -64,13 +73,24 @@ export function TrackerRegistryGrid<TRow extends object>({
 	onRowDoubleClick,
 	onCellValueChanged,
 	contextActions = [],
+	bulkContextActions = [],
 }: Props<TRow>) {
 	const { mode } = useColorScheme();
 	const gridRef = useRef<AgGridReact<TRow>>(null);
+	const {
+		sideBar,
+		onGridReady,
+		onColumnMoved,
+		onColumnVisible,
+		onColumnPinned,
+		onSortChanged,
+		onColumnResized,
+	} = useAgGridColumnPersistence(gridStateKey);
 	const [menuState, setMenuState] = useState<{
 		mouseX: number;
 		mouseY: number;
 		row: TRow;
+		rows: TRow[];
 	} | null>(null);
 
 	useEffect(() => {
@@ -84,20 +104,33 @@ export function TrackerRegistryGrid<TRow extends object>({
 
 	const closeMenu = useCallback(() => setMenuState(null), []);
 
+	const handleColumnStateChange = useCallback(
+		(api: GridApi) => {
+			onColumnMoved(api);
+		},
+		[onColumnMoved],
+	);
+
 	const handleCellContextMenu = useCallback(
 		(event: CellContextMenuEvent<TRow>) => {
-			if (!contextActions.length) return;
+			if (!contextActions.length && !bulkContextActions.length) return;
 			event.event?.preventDefault();
 			const native = event.event as MouseEvent | undefined;
 			const data = event.node?.data;
 			if (!native || !data || !("clientX" in native)) return;
+			const selectedRows = gridRef.current?.api?.getSelectedRows() ?? [];
+			const targetRows =
+				selectedRows.includes(data) && selectedRows.length > 1
+					? selectedRows
+					: [data];
 			setMenuState({
 				mouseX: native.clientX + 2,
 				mouseY: native.clientY - 6,
 				row: data,
+				rows: targetRows,
 			});
 		},
-		[contextActions.length],
+		[bulkContextActions.length, contextActions.length],
 	);
 
 	return (
@@ -124,6 +157,15 @@ export function TrackerRegistryGrid<TRow extends object>({
 					headerCheckbox: true,
 					enableClickSelection: false,
 				}}
+				sideBar={sideBar}
+				onGridReady={onGridReady}
+				onColumnMoved={(event) => handleColumnStateChange(event.api)}
+				onColumnVisible={(event) => onColumnVisible(event.api)}
+				onColumnPinned={(event) => onColumnPinned(event.api)}
+				onSortChanged={(event) => onSortChanged(event.api)}
+				onColumnResized={(event) => {
+					if (event.finished) onColumnResized(event.api);
+				}}
 				onSelectionChanged={(event: SelectionChangedEvent<TRow>) => {
 					onSelectionChange?.(event.api.getSelectedRows());
 				}}
@@ -142,9 +184,11 @@ export function TrackerRegistryGrid<TRow extends object>({
 				singleClickEdit
 				suppressCsvExport
 				suppressExcelExport
-				preventDefaultOnContextMenu={contextActions.length > 0}
+				preventDefaultOnContextMenu={
+					contextActions.length > 0 || bulkContextActions.length > 0
+				}
 			/>
-			{contextActions.length > 0 ? (
+			{contextActions.length > 0 || bulkContextActions.length > 0 ? (
 				<Menu
 					open={menuState !== null}
 					onClose={closeMenu}
@@ -155,6 +199,27 @@ export function TrackerRegistryGrid<TRow extends object>({
 							: undefined
 					}
 				>
+					{bulkContextActions.map((action) => (
+						<MenuItem
+							key={`bulk:${action.label}`}
+							disabled={
+								menuState
+									? Boolean(action.disabled?.(menuState.rows))
+									: true
+							}
+							onClick={() => {
+								if (menuState && !action.disabled?.(menuState.rows)) {
+									action.onClick(menuState.rows);
+									closeMenu();
+								}
+							}}
+						>
+							{action.label}
+							{menuState && menuState.rows.length > 1
+								? ` (${menuState.rows.length})`
+								: ""}
+						</MenuItem>
+					))}
 					{contextActions.map((action) => (
 						<MenuItem
 							key={action.label}

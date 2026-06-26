@@ -24,12 +24,18 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import {
+	applyAgGridColumnState,
+	clearAgGridColumnState,
+	saveAgGridColumnState,
+} from "@react-client/common/tableStuff/agGridColumnState";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
 import type { V2QuestionnaireGridRow, V2QuestionnaireVersionRow } from "../types/v2QuestionnaireGrid.types";
 import {
 	AllCommunityModule,
 	ClientSideRowModelModule,
 	type GetContextMenuItemsParams,
+	type GridApi,
 	type GridReadyEvent,
 	type MenuItemDef,
 	type RowDoubleClickedEvent,
@@ -95,6 +101,7 @@ const GridWrapper = styled(Flex)`
 `;
 
 const GRID_PRESETS_STORAGE_KEY = "smart_anketa:v2-questionnaire-grid-presets";
+const GRID_COLUMN_STATE_KEY = "v2.questionnaires";
 
 const GRID_SETTINGS_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none">
 <path d="M10.255 4.18806C9.84269 5.17755 8.68655 5.62456 7.71327 5.17535C6.10289 4.4321 4.4321 6.10289 5.17535 7.71327C5.62456 8.68655 5.17755 9.84269 4.18806 10.255C2.63693 10.9013 2.63693 13.0987 4.18806 13.745C5.17755 14.1573 5.62456 15.3135 5.17535 16.2867C4.4321 17.8971 6.10289 19.5679 7.71327 18.8246C8.68655 18.3754 9.84269 18.8224 10.255 19.8119C10.9013 21.3631 13.0987 21.3631 13.745 19.8119C14.1573 18.8224 15.3135 18.3754 16.2867 18.8246C17.8971 19.5679 19.5679 17.8971 18.8246 16.2867C18.3754 15.3135 18.8224 14.1573 19.8119 13.745C21.3631 13.0987 21.3631 10.9013 19.8119 10.255C18.8224 9.84269 18.3754 8.68655 18.8246 7.71327C19.5679 6.10289 17.8971 4.4321 16.2867 5.17535C15.3135 5.62456 14.1573 5.17755 13.745 4.18806C13.0987 2.63693 10.9013 2.63693 10.255 4.18806Z" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -185,6 +192,7 @@ function GridPresetToolPanel({ api }: { api: PresetGridApi }) {
 	};
 
 	const resetGridState = () => {
+		clearAgGridColumnState(GRID_COLUMN_STATE_KEY);
 		const allInformationPreset = getFactoryGridPreset(
 			FACTORY_PRESET_IDS.allInformation,
 		);
@@ -399,6 +407,13 @@ export function V2QuestionnaireList() {
 		if (basicPreset) {
 			applyQuestionnaireGridPreset(e.api, basicPreset);
 		}
+		applyAgGridColumnState(GRID_COLUMN_STATE_KEY, (state) => {
+			e.api.applyColumnState({ state, applyOrder: true });
+		});
+	}, []);
+
+	const persistColumnState = useCallback((api: GridApi) => {
+		saveAgGridColumnState(GRID_COLUMN_STATE_KEY, api.getColumnState());
 	}, []);
 
 	const getContextMenuItems = useCallback(
@@ -532,6 +547,13 @@ export function V2QuestionnaireList() {
 					onRowDoubleClicked={onRowDoubleClicked}
 					getContextMenuItems={getContextMenuItems}
 					onGridReady={onGridReady}
+					onColumnMoved={(event) => persistColumnState(event.api)}
+					onColumnVisible={(event) => persistColumnState(event.api)}
+					onColumnPinned={(event) => persistColumnState(event.api)}
+					onSortChanged={(event) => persistColumnState(event.api)}
+					onColumnResized={(event) => {
+						if (event.finished) persistColumnState(event.api);
+					}}
 					loading={isLoading}
 					rowSelection={
 						canAccessAdminPanel

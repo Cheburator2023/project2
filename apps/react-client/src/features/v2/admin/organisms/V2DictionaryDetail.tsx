@@ -15,6 +15,8 @@ import { styled, useColorScheme } from "@mui/material/styles";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
+import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import {
 	useCreateV2DictionaryItem,
 	useDeleteV2DictionaryItem,
@@ -28,12 +30,7 @@ import type {
 	V2DictionaryFieldUsageDto,
 	V2DictionaryItemDto,
 } from "@smart-anketa/api-contract";
-import {
-	AllCommunityModule,
-	ClientSideRowModelModule,
-	type ColDef,
-	ModuleRegistry,
-} from "ag-grid-community";
+import { type ColDef } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink } from "react-router";
@@ -55,7 +52,7 @@ export type V2DictionaryHeaderState = {
 	onSave: () => void;
 };
 
-ModuleRegistry.registerModules([AllCommunityModule, ClientSideRowModelModule]);
+registerAgGridTableModules();
 
 const GridWrapper = styled(Box)`
 	width: 100%;
@@ -89,6 +86,10 @@ export function V2DictionaryDetail({
 	layout?: "page" | "workspace";
 }) {
 	const { mode } = useColorScheme();
+	const itemsGridPersistence = useAgGridColumnPersistence("v2.dictionary.items");
+	const usageGridPersistence = useAgGridColumnPersistence(
+		"v2.dictionary.field-usage",
+	);
 
 	const { data: dictionary, isLoading: dictLoading } =
 		useV2Dictionary(dictionaryId);
@@ -540,6 +541,25 @@ export function V2DictionaryDetail({
 								}}
 								localeText={AG_GRID_LOCALE_RU}
 								defaultColDef={{ sortable: true, resizable: true }}
+								sideBar={itemsGridPersistence.sideBar}
+								onGridReady={itemsGridPersistence.onGridReady}
+								onColumnMoved={(event) =>
+									itemsGridPersistence.onColumnMoved(event.api)
+								}
+								onColumnVisible={(event) =>
+									itemsGridPersistence.onColumnVisible(event.api)
+								}
+								onColumnPinned={(event) =>
+									itemsGridPersistence.onColumnPinned(event.api)
+								}
+								onSortChanged={(event) =>
+									itemsGridPersistence.onSortChanged(event.api)
+								}
+								onColumnResized={(event) => {
+									if (event.finished) {
+										itemsGridPersistence.onColumnResized(event.api);
+									}
+								}}
 							/>
 						</GridWrapper>
 					</Card>
@@ -626,6 +646,25 @@ export function V2DictionaryDetail({
 										columnDefs={usageColumns}
 										localeText={AG_GRID_LOCALE_RU}
 										defaultColDef={{ sortable: true, resizable: true }}
+										sideBar={usageGridPersistence.sideBar}
+										onGridReady={usageGridPersistence.onGridReady}
+										onColumnMoved={(event) =>
+											usageGridPersistence.onColumnMoved(event.api)
+										}
+										onColumnVisible={(event) =>
+											usageGridPersistence.onColumnVisible(event.api)
+										}
+										onColumnPinned={(event) =>
+											usageGridPersistence.onColumnPinned(event.api)
+										}
+										onSortChanged={(event) =>
+											usageGridPersistence.onSortChanged(event.api)
+										}
+										onColumnResized={(event) => {
+											if (event.finished) {
+												usageGridPersistence.onColumnResized(event.api);
+											}
+										}}
 									/>
 								</GridWrapper>
 							</Box>

@@ -21,5 +21,6 @@ export enum Permission {
 	ANKETA_EDIT_CALCULATION = "anketa_edit_calculation",
 	ANKETA_EXPORT_REPORTS = "anketa_export_reports",
 	ANKETA_ADMIN_PANEL = "anketa_admin_panel",
+	DEVELOPER = "developer",
 }
 export type UserPermissions = Permission[];

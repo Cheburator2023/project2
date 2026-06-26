@@ -64,6 +64,7 @@ export function TrackerAssigneesPage() {
 
 	return (
 		<TrackerRegistryPage
+			gridStateKey="tracker.assignees"
 			title="исполнитель"
 			createLabel="Создать исполнителя"
 			searchPlaceholder="Поиск по коду, имени, email…"

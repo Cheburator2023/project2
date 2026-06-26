@@ -10,6 +10,7 @@ import { alpha } from "@mui/material/styles";
 import { format, isValid, parseISO } from "date-fns";
 import {
 	KANBAN_BOARD_PRIORITIES,
+	KANBAN_BOARD_HEAP_BOARD_ID,
 	KANBAN_BOARD_TASK_TYPES,
 	KANBAN_BOARD_WORK_TYPES,
 	kanbanBoardPriorityColor,
@@ -35,12 +36,16 @@ import {
 	useKanbanBoardAssignees,
 	useKanbanBoardBoards,
 	useKanbanBoardColumns,
+	useKanbanBoardCustomers,
 	useKanbanBoardSprints,
 	useKanbanBoardStreams,
 	useKanbanBoardTasksRegistry,
 	useUpdateKanbanBoardTask,
 } from "@react-client/common/api/queries/kanban-board";
-import { KanbanTaskMultiSelectField, KanbanTaskSelectField } from "@react-client/features/kanban-board/components/KanbanTaskSelectField";
+import {
+	KanbanTaskMultiSelectField,
+	KanbanTaskSelectField,
+} from "@react-client/features/kanban-board/components/KanbanTaskSelectField";
 import { KanbanRoleEstimatesFields } from "@react-client/features/kanban-board/components/KanbanRoleEstimatesFields";
 import {
 	isKanbanTaskCreateRoute,
@@ -60,6 +65,7 @@ const BOARD_SELECT_COLOR = "#6366f1";
 const ASSIGNEE_SELECT_COLOR = "#2563eb";
 const SPRINT_SELECT_COLOR = "#0891b2";
 const STREAM_SELECT_COLOR = "#7c3aed";
+const CUSTOMER_SELECT_COLOR = "#0d9488";
 
 const parseDueDate = (value: string): Date | null => {
 	if (!value.trim()) return null;
@@ -83,7 +89,9 @@ const formatParentTaskLabel = (task: KanbanBoardTaskRegistryDto): string => {
 	return `${prefix}${task.title} — ${task.projectCode}/${task.boardSlug}`;
 };
 
-const toParentTaskOption = (task: KanbanBoardTaskRegistryDto): ParentTaskOption => ({
+const toParentTaskOption = (
+	task: KanbanBoardTaskRegistryDto,
+): ParentTaskOption => ({
 	id: task.id,
 	label: formatParentTaskLabel(task),
 });
@@ -99,7 +107,11 @@ function parseColumnParam(
 	if (!value) {
 		return columns[0]?.id ?? DEFAULT_COLUMN_ID;
 	}
-	return columns.find((column) => column.id === value)?.id ?? columns[0]?.id ?? DEFAULT_COLUMN_ID;
+	return (
+		columns.find((column) => column.id === value)?.id ??
+		columns[0]?.id ??
+		DEFAULT_COLUMN_ID
+	);
 }
 
 export function KanbanTaskPage({ mode }: Props = {}) {
@@ -124,7 +136,9 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [taskType, setTaskType] = useState("");
 	const [workType, setWorkType] = useState("");
 	const [estimatePd, setEstimatePd] = useState("");
-	const [roleEstimates, setRoleEstimates] = useState<KanbanBoardRoleEstimates>({});
+	const [roleEstimates, setRoleEstimates] = useState<KanbanBoardRoleEstimates>(
+		{},
+	);
 	const [dueDate, setDueDate] = useState("");
 	const [parentTask, setParentTask] = useState("");
 	const [customer, setCustomer] = useState("");
@@ -137,6 +151,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const assigneesQuery = useKanbanBoardAssignees();
 	const sprintsQuery = useKanbanBoardSprints();
 	const streamsQuery = useKanbanBoardStreams();
+	const customersQuery = useKanbanBoardCustomers();
 	const tasksRegistryQuery = useKanbanBoardTasksRegistry();
 	const boardMeta = boardsQuery.data?.find((item) => item.id === boardId);
 
@@ -225,6 +240,16 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		[streamsQuery.data],
 	);
 
+	const customerOptions = useMemo(
+		() =>
+			(customersQuery.data ?? []).map((item) => ({
+				value: item.name,
+				label: `${item.code} — ${item.name}`,
+				color: CUSTOMER_SELECT_COLOR,
+			})),
+		[customersQuery.data],
+	);
+
 	const parentTaskOptions = useMemo(
 		() =>
 			(tasksRegistryQuery.data ?? [])
@@ -258,8 +283,12 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	useEffect(() => {
 		if (boardId) {
 			setSelectedBoardId(boardId);
+			return;
 		}
-	}, [boardId]);
+		if (isCreate) {
+			setSelectedBoardId(KANBAN_BOARD_HEAP_BOARD_ID);
+		}
+	}, [boardId, isCreate]);
 
 	useEffect(() => {
 		if (!columns.length) return;
@@ -298,7 +327,9 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		setTaskType(task.content.taskType ?? "");
 		setWorkType(task.content.workType ?? "");
 		setEstimatePd(
-			task.content.estimatePd !== undefined ? String(task.content.estimatePd) : "",
+			task.content.estimatePd !== undefined
+				? String(task.content.estimatePd)
+				: "",
 		);
 		setRoleEstimates(task.content.roleEstimates ?? {});
 		setDueDate(task.content.dueDate ?? "");
@@ -329,7 +360,9 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 
 	const buildContent = (): KanbanBoardTaskContent | null => {
 		if (!title.trim()) return null;
-		const parsedBacklog = backlogNumber.trim() ? Number(backlogNumber) : undefined;
+		const parsedBacklog = backlogNumber.trim()
+			? Number(backlogNumber)
+			: undefined;
 		const parsedEstimate = estimatePd.trim() ? Number(estimatePd) : undefined;
 		return normalizeKanbanBoardTaskContent({
 			title: title.trim(),
@@ -349,7 +382,9 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			workType: workType
 				? (workType as KanbanBoardTaskContent["workType"])
 				: undefined,
-			roleEstimates: Object.keys(roleEstimates).length ? roleEstimates : undefined,
+			roleEstimates: Object.keys(roleEstimates).length
+				? roleEstimates
+				: undefined,
 			estimatePd:
 				parsedEstimate !== undefined && !Number.isNaN(parsedEstimate)
 					? parsedEstimate
@@ -420,7 +455,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 					</Typography>
 				}
 			>
-				<Flex gap={1} wrap="wrap" alignItems="center">
+				<Flex gap={6} wrap="wrap" alignItems="center">
 					<Chip
 						size="small"
 						label={isCreate ? "Создание" : statusTitle}
@@ -599,12 +634,12 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 									disabled={tasksRegistryQuery.isLoading}
 									size="medium"
 								/>
-								<TextField
+								<KanbanTaskSelectField
 									label="Заказчик"
 									value={customer}
-									onChange={(event) => setCustomer(event.target.value)}
+									options={customerOptions}
+									onChange={setCustomer}
 									fullWidth
-									placeholder="Заказчик задачи"
 								/>
 								<KanbanTaskSelectField
 									label="Спринт"

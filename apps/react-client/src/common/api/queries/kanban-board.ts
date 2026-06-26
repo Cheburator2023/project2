@@ -1,8 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
+	AssignKanbanBoardTasksToBoardRequestDto,
+	AssignKanbanBoardTasksToBoardResultDto,
 	CreateKanbanBoardAssigneeRequestDto,
 	CreateKanbanBoardBoardRequestDto,
 	CreateKanbanBoardColumnRequestDto,
+	CreateKanbanBoardCustomerRequestDto,
 	CreateKanbanBoardProjectRequestDto,
 	CreateKanbanBoardSprintRequestDto,
 	CreateKanbanBoardStreamRequestDto,
@@ -11,7 +14,9 @@ import type {
 	KanbanBoardAssigneeDto,
 	KanbanBoardBoardDto,
 	KanbanBoardColumnDto,
+	KanbanBoardCustomerDto,
 	KanbanBoardData,
+	KanbanBoardPlanningImportResultDto,
 	KanbanBoardProjectDto,
 	KanbanBoardSprintDto,
 	KanbanBoardSettingsDto,
@@ -22,6 +27,7 @@ import type {
 	UpdateKanbanBoardAssigneeRequestDto,
 	UpdateKanbanBoardBoardRequestDto,
 	UpdateKanbanBoardColumnRequestDto,
+	UpdateKanbanBoardCustomerRequestDto,
 	UpdateKanbanBoardProjectRequestDto,
 	UpdateKanbanBoardSettingsRequestDto,
 	UpdateKanbanBoardSprintRequestDto,
@@ -44,6 +50,8 @@ export interface KanbanBoardImportResult {
 		sha256: string;
 	};
 	tasks: KanbanBoardTaskRecord[];
+	importFormat?: "snapshot" | "planning";
+	warnings?: string[];
 }
 
 const invalidateTracker = (queryClient: ReturnType<typeof useQueryClient>) => {
@@ -51,6 +59,7 @@ const invalidateTracker = (queryClient: ReturnType<typeof useQueryClient>) => {
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardBoards"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardColumns"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardAssignees"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardCustomers"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardSupersprints"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardSprints"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardStreams"] });
@@ -176,6 +185,61 @@ export const useDeleteKanbanBoardAssignee = () => {
 		mutationFn: (id: string) =>
 			apiClient<void>({
 				url: `/kanban-board/assignees/${id}`,
+				method: "DELETE",
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useKanbanBoardCustomers = () =>
+	useQuery({
+		queryKey: ["kanbanBoardCustomers"],
+		queryFn: ({ signal }) =>
+			apiClient<KanbanBoardCustomerDto[]>({
+				url: "/kanban-board/customers",
+				method: "GET",
+				signal,
+			}),
+	});
+
+export const useCreateKanbanBoardCustomer = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (data: CreateKanbanBoardCustomerRequestDto) =>
+			apiClient<KanbanBoardCustomerDto>({
+				url: "/kanban-board/customers",
+				method: "POST",
+				data,
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useUpdateKanbanBoardCustomer = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			id,
+			data,
+		}: {
+			id: string;
+			data: UpdateKanbanBoardCustomerRequestDto;
+		}) =>
+			apiClient<KanbanBoardCustomerDto>({
+				url: `/kanban-board/customers/${id}`,
+				method: "PUT",
+				data,
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useDeleteKanbanBoardCustomer = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) =>
+			apiClient<void>({
+				url: `/kanban-board/customers/${id}`,
 				method: "DELETE",
 			}),
 		onSuccess: () => invalidateTracker(queryClient),
@@ -502,6 +566,54 @@ export const useDeleteKanbanBoardTask = () => {
 				method: "DELETE",
 			}),
 		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const kanbanBoardImportPlanningTasks = async (
+	file: File,
+	signal?: AbortSignal,
+): Promise<KanbanBoardPlanningImportResultDto> => {
+	const formData = new FormData();
+	formData.append("file", file);
+	return apiClient<KanbanBoardPlanningImportResultDto>({
+		url: "/kanban-board/tasks/import-planning",
+		method: "POST",
+		data: formData,
+		signal,
+		timeout: 120_000,
+	});
+};
+
+export const useKanbanBoardImportPlanningTasks = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (file: File) => kanbanBoardImportPlanningTasks(file),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const kanbanBoardAssignTasksToBoard = (
+	data: AssignKanbanBoardTasksToBoardRequestDto,
+	signal?: AbortSignal,
+) =>
+	apiClient<AssignKanbanBoardTasksToBoardResultDto>({
+		url: "/kanban-board/tasks/assign-board",
+		method: "POST",
+		data,
+		signal,
+	});
+
+export const useAssignKanbanBoardTasksToBoard = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (data: AssignKanbanBoardTasksToBoardRequestDto) =>
+			kanbanBoardAssignTasksToBoard(data),
+		onSuccess: (_result, variables) => {
+			invalidateTracker(queryClient);
+			queryClient.invalidateQueries({
+				queryKey: ["kanbanBoardTasks", variables.boardId],
+			});
+		},
 	});
 };
 

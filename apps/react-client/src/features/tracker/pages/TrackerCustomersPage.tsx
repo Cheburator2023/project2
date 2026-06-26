@@ -1,25 +1,25 @@
 import type { ColDef } from "ag-grid-community";
 import {
-	useCreateKanbanBoardStream,
-	useDeleteKanbanBoardStream,
-	useKanbanBoardStreams,
-	useUpdateKanbanBoardStream,
+	useCreateKanbanBoardCustomer,
+	useDeleteKanbanBoardCustomer,
+	useKanbanBoardCustomers,
+	useUpdateKanbanBoardCustomer,
 } from "@react-client/common/api/queries/kanban-board";
 import { TrackerRegistryPage } from "@react-client/features/tracker/components/TrackerRegistryPage";
 import { trackerDateFormatter } from "@react-client/features/tracker/components/TrackerRegistryGrid";
-import type { KanbanBoardStreamDto } from "@smart-anketa/api-contract";
+import type { KanbanBoardCustomerDto } from "@smart-anketa/api-contract";
 import { useMemo } from "react";
 
-export function TrackerStreamsPage() {
-	const { data = [], isLoading } = useKanbanBoardStreams();
-	const createStream = useCreateKanbanBoardStream();
-	const updateStream = useUpdateKanbanBoardStream();
-	const deleteStream = useDeleteKanbanBoardStream();
+export function TrackerCustomersPage() {
+	const { data = [], isLoading } = useKanbanBoardCustomers();
+	const createCustomer = useCreateKanbanBoardCustomer();
+	const updateCustomer = useUpdateKanbanBoardCustomer();
+	const deleteCustomer = useDeleteKanbanBoardCustomer();
 
-	const columnDefs = useMemo<ColDef<KanbanBoardStreamDto>[]>(
+	const columnDefs = useMemo<ColDef<KanbanBoardCustomerDto>[]>(
 		() => [
 			{ field: "code", headerName: "Код", flex: 1, minWidth: 120 },
-			{ field: "name", headerName: "Стрим-заказчик", flex: 1.2, minWidth: 180 },
+			{ field: "name", headerName: "Заказчик", flex: 1.2, minWidth: 160 },
 			{
 				field: "taskCount",
 				headerName: "Задач",
@@ -38,9 +38,9 @@ export function TrackerStreamsPage() {
 
 	return (
 		<TrackerRegistryPage
-			gridStateKey="tracker.streams"
-			title="стрим"
-			createLabel="Создать стрим"
+			gridStateKey="tracker.customers"
+			title="заказчик"
+			createLabel="Создать заказчика"
 			searchPlaceholder="Поиск по коду, названию…"
 			rowData={data}
 			columnDefs={columnDefs}
@@ -50,10 +50,10 @@ export function TrackerStreamsPage() {
 					name: "code",
 					label: "Код",
 					required: true,
-					autoGenerate: "str",
+					autoGenerate: "cus",
 					helperText: "Генерируется автоматически, можно изменить",
 				},
-				{ name: "name", label: "Стрим-заказчик", required: true },
+				{ name: "name", label: "Заказчик", required: true },
 				{ name: "description", label: "Описание", type: "multiline" },
 			]}
 			getInitialFormValues={(row) =>
@@ -66,19 +66,19 @@ export function TrackerStreamsPage() {
 					: {}
 			}
 			canDelete={(row) => row.taskCount === 0}
-			deleteDialogTitle="Удаление стримов"
+			deleteDialogTitle="Удаление заказчиков"
 			deleteDialogText={(count) =>
-				`Удалить ${count} стрим(а/ов)? Стримы, указанные в задачах, удалить нельзя.`
+				`Удалить ${count} заказчик(а/ов)? Заказчиков, указанных в задачах, удалить нельзя.`
 			}
 			onCreate={async (values) => {
-				await createStream.mutateAsync({
+				await createCustomer.mutateAsync({
 					code: values.code,
 					name: values.name,
 					description: values.description || null,
 				});
 			}}
 			onUpdate={async (row, values) => {
-				await updateStream.mutateAsync({
+				await updateCustomer.mutateAsync({
 					id: row.id,
 					data: {
 						code: values.code,
@@ -89,7 +89,7 @@ export function TrackerStreamsPage() {
 			}}
 			onDelete={async (rows) => {
 				for (const row of rows) {
-					await deleteStream.mutateAsync(row.id);
+					await deleteCustomer.mutateAsync(row.id);
 				}
 			}}
 		/>

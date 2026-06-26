@@ -65,6 +65,7 @@ export function TrackerProjectsPage() {
 
 	return (
 		<TrackerRegistryPage
+			gridStateKey="tracker.projects"
 			title="проект"
 			createLabel="Создать проект"
 			searchPlaceholder="Поиск по коду, названию, описанию…"

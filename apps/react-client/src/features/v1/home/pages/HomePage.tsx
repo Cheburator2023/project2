@@ -9,13 +9,13 @@ import type { CalculationResponseDto } from "@smart-anketa/api-contract";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import { toast } from "@react-client/common/toasts";
 import { _columnDefs } from "@react-client/features/v1/home/colDefs";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { SearchInput } from "@react-client/common/navigation/organisms/SearchInput";
 import { GridFilterModel } from "@react-client/types/agGridFilterModel";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
-import { FiltersToolPanelModule } from "ag-grid-enterprise";
 
 // import { AllEnterpriseModule } from "ag-grid-enterprise";
 import {
@@ -37,14 +37,15 @@ import {
 	ValidationModule,
 	ValueFormatterParams,
 	RowDoubleClickedEvent,
-	SideBarDef,
 } from "ag-grid-community";
 import {
 	ColumnMenuModule,
 	ColumnsToolPanelModule,
 	ContextMenuModule,
 	ExcelExportModule,
+	FiltersToolPanelModule,
 	SetFilterModule,
+	SideBarModule,
 } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -102,6 +103,7 @@ ModuleRegistry.registerModules([
 	NumberFilterModule,
 	ExcelExportModule,
 	FiltersToolPanelModule,
+	SideBarModule,
 	...(process.env.NODE_ENV !== "production" ? [ValidationModule] : []),
 ]);
 
@@ -213,6 +215,7 @@ export const HomeTemplete = ({
 	const [hoveredRowId, _setHoveredRowId] = useState("");
 	const { setGridApi } = useGlobalSettingsStore();
 	const gridRef = useRef<AgGridReact>(null);
+	const gridPersistence = useAgGridColumnPersistence("v1.home.calculations");
 	const { mode } = useColorScheme();
 	const [params] = useSearchParams();
 	const isInDefaultCompareMode = params.get("isInCompareMode") === "true";
@@ -462,6 +465,7 @@ export const HomeTemplete = ({
 	};
 
 	const onGridReady = (params: GridReadyEvent<any, any>) => {
+		gridPersistence.onGridReady(params);
 		console.log("Grid is ready, setting API in Zustand store.");
 		params.api.setFilterModel({
 			status: {
@@ -515,27 +519,6 @@ export const HomeTemplete = ({
 	}>(() => {
 		return agGridIconSet;
 	}, []);
-
-	const _sideBarProps: SideBarDef | string | string[] | boolean | null = {
-		toolPanels: [
-			{
-				id: "columns",
-				labelDefault: "Columns",
-				labelKey: "columns",
-				iconKey: "columns",
-				toolPanel: "agColumnsToolPanel",
-			},
-			{
-				id: "filters",
-				labelDefault: "Filters",
-				labelKey: "filters",
-				iconKey: "filter",
-				toolPanel: "agFiltersToolPanel",
-			},
-		],
-		defaultToolPanel: undefined,
-		// hiddenByDefault: true,
-	};
 
 	return (
 		<div data-test-id="home-page--div-0">
@@ -617,8 +600,14 @@ export const HomeTemplete = ({
 					defaultColDef={defaultColDef}
 					// initialFilterModel={initialFilterModel as any}
 					onFilterChanged={onFilterChanged}
-					// sideBar={sideBarProps}
-					sideBar={false}
+					sideBar={gridPersistence.sideBar}
+					onColumnMoved={(event) => gridPersistence.onColumnMoved(event.api)}
+					onColumnVisible={(event) => gridPersistence.onColumnVisible(event.api)}
+					onColumnPinned={(event) => gridPersistence.onColumnPinned(event.api)}
+					onSortChanged={(event) => gridPersistence.onSortChanged(event.api)}
+					onColumnResized={(event) => {
+						if (event.finished) gridPersistence.onColumnResized(event.api);
+					}}
 					pagination={true}
 					paginationPageSize={100}
 					localeText={AG_GRID_LOCALE_RU}

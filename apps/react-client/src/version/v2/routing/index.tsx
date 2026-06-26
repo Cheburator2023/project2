@@ -4,7 +4,7 @@ import { AnketaCreatePage } from "@react-client/features/v1/anketaCRUD/pages/Ank
 import { AnketaNewVersionPage } from "@react-client/features/v1/anketaCRUD/pages/AnketaNewVersionPage";
 import { AnketaClonePage } from "@react-client/features/v1/anketaCRUD/pages/AnketaClonePage";
 import { routes } from "@react-client/routing/version/v2/routes";
-import { Page404 } from "@react-client/routing/version/v2/Page404";
+import { Page404 } from "@react-client/routing/common/Page404";
 import { AnketaPreviewPageV2 } from "@react-client/features/v2/anketaCRUD/pages/AnketaPreviewPageV2";
 import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard";
 import { V2RegistryPage } from "@react-client/features/v2/home/pages/V2RegistryPage";

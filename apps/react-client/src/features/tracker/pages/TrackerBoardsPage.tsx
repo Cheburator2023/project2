@@ -79,6 +79,7 @@ export function TrackerBoardsPage() {
 
 	return (
 		<TrackerRegistryPage
+			gridStateKey="tracker.boards"
 			title="доска"
 			createLabel="Создать доску"
 			searchPlaceholder="Поиск по проекту, названию, slug…"

@@ -4,11 +4,13 @@ import {
 	NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import { ulid } from "ulid";
 import {
 	KANBAN_BOARD_COLUMN_COLORS,
+	KANBAN_BOARD_HEAP_BOARD_ID,
 	KANBAN_BOARD_STATUSES,
+	defaultKanbanBoardColumns,
 	kanbanBoardAssigneeRoleTitle,
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardEffectiveSprintCapacityPd,
@@ -20,7 +22,12 @@ import {
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeTitle,
 	isKanbanBoardAssigneeRoleId,
+	normalizeKanbanBoardTaskContent,
 	pickKanbanBoardColumnColor,
+	type KanbanBoardPlanningImportResultDto,
+	type AssignKanbanBoardTasksToBoardRequestDto,
+	type AssignKanbanBoardTasksToBoardResultDto,
+	type CreateKanbanBoardCustomerRequestDto,
 	type CreateKanbanBoardAssigneeRequestDto,
 	type CreateKanbanBoardBoardRequestDto,
 	type CreateKanbanBoardColumnRequestDto,
@@ -29,6 +36,7 @@ import {
 	type CreateKanbanBoardStreamRequestDto,
 	type CreateKanbanBoardSupersprintRequestDto,
 	type CreateKanbanBoardTaskRequestDto,
+	type KanbanBoardCustomerDto,
 	type KanbanBoardAssigneeDto,
 	type KanbanBoardAssigneeRoleId,
 	type KanbanBoardBoardDto,
@@ -39,7 +47,9 @@ import {
 	type KanbanBoardStreamDto,
 	type KanbanBoardSupersprintDto,
 	type KanbanBoardTaskContent,
+	type KanbanBoardTaskRecord,
 	type KanbanBoardTaskRegistryDto,
+	type UpdateKanbanBoardCustomerRequestDto,
 	type UpdateKanbanBoardAssigneeRequestDto,
 	type UpdateKanbanBoardBoardRequestDto,
 	type UpdateKanbanBoardColumnRequestDto,
@@ -56,6 +66,7 @@ import { KanbanBoardColumnEntity } from "../entities/kanban-board-column.entity"
 import { KanbanBoardProjectEntity } from "../entities/kanban-board-project.entity";
 import { KanbanBoardSprintEntity } from "../entities/kanban-board-sprint.entity";
 import { KanbanBoardStreamEntity } from "../entities/kanban-board-stream.entity";
+import { KanbanBoardCustomerEntity } from "../entities/kanban-board-customer.entity";
 import { KanbanBoardSupersprintEntity } from "../entities/kanban-board-supersprint.entity";
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
 import {
@@ -67,6 +78,20 @@ import {
 	exportTasksRegistryWorkbook,
 	exportTasksRegistryXlsx,
 } from "../utils/kanban-board-registry-export.util";
+import { importPlanningXlsx } from "../utils/kanban-board-planning-import.util";
+import type { PlanningImportResult } from "../utils/kanban-board-planning-import.util";
+import {
+	buildAssigneeImportCode,
+	buildCustomerImportCode,
+	matchAssigneeByName,
+	matchCustomerByText,
+	matchSprintByText,
+	matchStreamByText,
+	resolveBestStatusColumnId,
+	resolveTaskTypeIdFromText,
+	resolveWorkTypeIdFromText,
+} from "../utils/kanban-board-planning-import-registry.util";
+import { buildMeta } from "../utils/kanban-board-snapshot.util";
 
 @Injectable()
 export class KanbanBoardRegistryService {
@@ -85,6 +110,8 @@ export class KanbanBoardRegistryService {
 		private readonly sprintRepository: Repository<KanbanBoardSprintEntity>,
 		@InjectRepository(KanbanBoardStreamEntity)
 		private readonly streamRepository: Repository<KanbanBoardStreamEntity>,
+		@InjectRepository(KanbanBoardCustomerEntity)
+		private readonly customerRepository: Repository<KanbanBoardCustomerEntity>,
 		@InjectRepository(KanbanBoardTaskEntity)
 		private readonly taskRepository: Repository<KanbanBoardTaskEntity>,
 		@InjectRepository(KanbanBoardSettingsEntity)
@@ -531,6 +558,73 @@ export class KanbanBoardRegistryService {
 		await this.streamRepository.remove(stream);
 	}
 
+	async findAllCustomers(): Promise<KanbanBoardCustomerDto[]> {
+		const customers = await this.customerRepository.find({
+			order: { name: "ASC" },
+		});
+		const taskCounts = await this.countTasksByCustomerName();
+		return customers.map((customer) => this.toCustomerDto(customer, taskCounts));
+	}
+
+	async createCustomer(
+		dto: CreateKanbanBoardCustomerRequestDto,
+	): Promise<KanbanBoardCustomerDto> {
+		const code = dto.code.trim();
+		const name = dto.name.trim();
+		if (!code || !name) {
+			throw new BadRequestException("Код и название обязательны");
+		}
+
+		const entity = this.customerRepository.create({
+			id: ulid(),
+			code,
+			name,
+			description: dto.description?.trim() || null,
+		});
+		await this.customerRepository.save(entity);
+		return this.toCustomerDto(entity, new Map());
+	}
+
+	async updateCustomer(
+		id: string,
+		dto: UpdateKanbanBoardCustomerRequestDto,
+	): Promise<KanbanBoardCustomerDto> {
+		const customer = await this.customerRepository.findOne({ where: { id } });
+		if (!customer) throw new NotFoundException("Заказчик не найден");
+
+		const previousName = customer.name;
+		if (dto.code !== undefined) customer.code = dto.code.trim();
+		if (dto.name !== undefined) customer.name = dto.name.trim();
+		if (dto.description !== undefined) {
+			customer.description = dto.description?.trim() || null;
+		}
+		if (!customer.code || !customer.name) {
+			throw new BadRequestException("Код и название обязательны");
+		}
+
+		await this.customerRepository.save(customer);
+		if (dto.name !== undefined && customer.name !== previousName) {
+			await this.renameCustomerInTasks(previousName, customer.name);
+		}
+
+		const taskCounts = await this.countTasksByCustomerName();
+		return this.toCustomerDto(customer, taskCounts);
+	}
+
+	async deleteCustomer(id: string): Promise<void> {
+		const customer = await this.customerRepository.findOne({ where: { id } });
+		if (!customer) throw new NotFoundException("Заказчик не найден");
+
+		const taskCount = await this.countTasksWithCustomerName(customer.name);
+		if (taskCount > 0) {
+			throw new BadRequestException(
+				"Нельзя удалить заказчика, указанного в задачах",
+			);
+		}
+
+		await this.customerRepository.remove(customer);
+	}
+
 	async findAllBoards(): Promise<KanbanBoardBoardDto[]> {
 		const boards = await this.boardRepository.find({
 			relations: { project: true },
@@ -704,6 +798,232 @@ export class KanbanBoardRegistryService {
 		);
 	}
 
+	async importPlanningTasks(
+		buf: Buffer,
+	): Promise<KanbanBoardPlanningImportResultDto> {
+		const standId = this.kanbanBoardService.getStandId();
+		const boardId = KANBAN_BOARD_HEAP_BOARD_ID;
+		const columns = await this.loadBoardColumnsForImport(boardId);
+		const planning = await importPlanningXlsx(buf, {
+			boardId,
+			standId,
+			columns,
+		});
+		const enriched = await this.enrichPlanningImport(planning, columns);
+		await this.kanbanBoardService.replaceBoardTasksForImport(
+			boardId,
+			standId,
+			enriched.tasks,
+		);
+
+		return {
+			meta: buildMeta(enriched.tasks, standId),
+			importFormat: "planning",
+			warnings: enriched.warnings,
+			importedCount: enriched.tasks.length,
+		};
+	}
+
+	private async loadBoardColumnsForImport(
+		boardId: string,
+	): Promise<{ id: string; title: string }[]> {
+		const rows = await this.columnRepository.find({
+			where: { boardId },
+			order: { sortOrder: "ASC" },
+		});
+		if (rows.length) {
+			return rows.map((column) => ({ id: column.id, title: column.title }));
+		}
+		return defaultKanbanBoardColumns(boardId).map((column) => ({
+			id: column.id,
+			title: column.title,
+		}));
+	}
+
+	private async enrichPlanningImport(
+		planning: PlanningImportResult,
+		columns: { id: string; title: string }[],
+	): Promise<{ tasks: KanbanBoardTaskRecord[]; warnings: string[] }> {
+		const warnings = [...planning.warnings];
+		const [assigneeRows, sprintRows, streamRows, customerRows] = await Promise.all([
+			this.assigneeRepository.find({ order: { name: "ASC" } }),
+			this.sprintRepository.find({ order: { code: "ASC" } }),
+			this.streamRepository.find({ order: { name: "ASC" } }),
+			this.customerRepository.find({ order: { name: "ASC" } }),
+		]);
+
+		const assigneeCache = assigneeRows.map((item) => ({
+			id: item.id,
+			name: item.name,
+			code: item.code,
+		}));
+		const takenCodes = new Set(
+			assigneeRows.map((item) => item.code.trim().toLowerCase()),
+		);
+
+		const resolveAssignee = async (raw: string): Promise<string | undefined> => {
+			const trimmed = raw.trim();
+			if (!trimmed) return undefined;
+
+			const matched = matchAssigneeByName(trimmed, assigneeCache);
+			if (matched) return matched.name;
+
+			const code = buildAssigneeImportCode(trimmed, takenCodes);
+			const entity = await this.assigneeRepository.save(
+				this.assigneeRepository.create({
+					id: ulid(),
+					code,
+					name: trimmed,
+					email: null,
+					role: null,
+					sprintCapacityPd: null,
+				}),
+			);
+			assigneeCache.push({
+				id: entity.id,
+				name: entity.name,
+				code: entity.code,
+			});
+			warnings.push(`Добавлен исполнитель в справочник: ${trimmed}`);
+			return entity.name;
+		};
+
+		const sprintRefs = sprintRows.map((item) => ({
+			id: item.id,
+			code: item.code,
+			name: item.name,
+		}));
+		const streamRefs = streamRows.map((item) => ({
+			id: item.id,
+			code: item.code,
+			name: item.name,
+		}));
+		const customerCache = customerRows.map((item) => ({
+			id: item.id,
+			name: item.name,
+			code: item.code,
+		}));
+		const takenCustomerCodes = new Set(
+			customerRows.map((item) => item.code.trim().toLowerCase()),
+		);
+
+		const resolveCustomer = async (raw: string): Promise<string | undefined> => {
+			const trimmed = raw.trim();
+			if (!trimmed) return undefined;
+
+			const matched = matchCustomerByText(trimmed, customerCache);
+			if (matched) return matched.name;
+
+			const code = buildCustomerImportCode(trimmed, takenCustomerCodes);
+			const entity = await this.customerRepository.save(
+				this.customerRepository.create({
+					id: ulid(),
+					code,
+					name: trimmed,
+					description: null,
+				}),
+			);
+			customerCache.push({
+				id: entity.id,
+				name: entity.name,
+				code: entity.code,
+			});
+			warnings.push(`Добавлен заказчик в справочник: ${trimmed}`);
+			return entity.name;
+		};
+
+		const tasks: KanbanBoardTaskRecord[] = [];
+		for (const task of planning.payload) {
+			const hints = planning.hintsByTaskId[task.id] ?? {};
+			const rawAssignees = kanbanBoardTaskAssignees(task.content);
+			const resolvedAssignees: string[] = [];
+
+			for (const name of rawAssignees) {
+				const canonical = await resolveAssignee(name);
+				if (canonical && !resolvedAssignees.includes(canonical)) {
+					resolvedAssignees.push(canonical);
+				}
+			}
+
+			let currentAssignee: string | undefined;
+			if (task.content.currentAssignee?.trim()) {
+				currentAssignee =
+					(await resolveAssignee(task.content.currentAssignee)) ?? undefined;
+			} else if (resolvedAssignees.length === 1) {
+				currentAssignee = resolvedAssignees[0];
+			}
+
+			const content = normalizeKanbanBoardTaskContent({
+				...task.content,
+				assignees: resolvedAssignees.length ? resolvedAssignees : undefined,
+				currentAssignee,
+			});
+
+			if (content.customer?.trim()) {
+				content.customer =
+					(await resolveCustomer(content.customer)) ?? undefined;
+			}
+
+			if (hints.taskTypeText) {
+				const taskType = resolveTaskTypeIdFromText(hints.taskTypeText);
+				if (taskType) {
+					content.taskType = taskType;
+				} else {
+					warnings.push(
+						`Тип задачи «${hints.taskTypeText}» не найден в справочнике — поле пропущено`,
+					);
+				}
+			}
+
+			if (hints.workTypeText) {
+				const workType = resolveWorkTypeIdFromText(hints.workTypeText);
+				if (workType) {
+					content.workType = workType;
+				} else {
+					warnings.push(
+						`Тип работ «${hints.workTypeText}» не найден в справочнике — поле пропущено`,
+					);
+				}
+			}
+
+			if (hints.sprintText) {
+				const sprint = matchSprintByText(hints.sprintText, sprintRefs);
+				if (sprint) {
+					content.sprintId = sprint.id;
+				} else {
+					warnings.push(
+						`Спринт «${hints.sprintText}» не найден в справочнике — поле пропущено`,
+					);
+				}
+			}
+
+			if (hints.streamText) {
+				const stream = matchStreamByText(hints.streamText, streamRefs);
+				if (stream) {
+					content.streamCustomer = stream.name;
+				} else {
+					warnings.push(
+						`Стрим «${hints.streamText}» не найден в справочнике — поле пропущено`,
+					);
+				}
+			}
+
+			let parentId = task.parentId;
+			if (hints.statusText) {
+				const resolved = resolveBestStatusColumnId(hints.statusText, columns);
+				parentId = resolved.columnId;
+			}
+
+			tasks.push({
+				...task,
+				parentId,
+				content: normalizeKanbanBoardTaskContent(content),
+			});
+		}
+
+		return { tasks, warnings };
+	}
+
 	async exportTasksRegistryXlsx(): Promise<Buffer> {
 		const [tasks, assignees, settings] = await Promise.all([
 			this.findAllTasksRegistry(),
@@ -869,6 +1189,119 @@ export class KanbanBoardRegistryService {
 
 	async deleteTask(id: string): Promise<void> {
 		await this.kanbanBoardService.deleteTask(id);
+	}
+
+	async assignTasksToBoard(
+		dto: AssignKanbanBoardTasksToBoardRequestDto,
+	): Promise<AssignKanbanBoardTasksToBoardResultDto> {
+		const taskIds = [...new Set(dto.taskIds?.filter(Boolean) ?? [])];
+		if (!taskIds.length) {
+			throw new BadRequestException("Не выбраны задачи");
+		}
+		if (!dto.boardId?.trim()) {
+			throw new BadRequestException("Не указана доска");
+		}
+
+		const board = await this.boardRepository.findOne({
+			where: { id: dto.boardId },
+		});
+		if (!board) throw new NotFoundException("Доска не найдена");
+
+		let targetColumns = await this.columnRepository.find({
+			where: { boardId: dto.boardId },
+			order: { sortOrder: "ASC" },
+		});
+		if (!targetColumns.length) {
+			await this.seedDefaultColumns(dto.boardId);
+			targetColumns = await this.columnRepository.find({
+				where: { boardId: dto.boardId },
+				order: { sortOrder: "ASC" },
+			});
+		}
+
+		const tasks = await this.taskRepository.find({
+			where: { id: In(taskIds) },
+		});
+		if (!tasks.length) {
+			throw new NotFoundException("Задачи не найдены");
+		}
+
+		const sourceColumnTitles = await this.loadColumnTitleMap(
+			tasks.map((task) => task.boardId),
+		);
+		const positionByColumn = new Map<string, number>();
+		for (const column of targetColumns) {
+			const count = await this.taskRepository.count({
+				where: { boardId: dto.boardId, parentId: column.id },
+			});
+			positionByColumn.set(column.id, count);
+		}
+
+		let updatedCount = 0;
+		let skippedCount = 0;
+		const now = new Date().toISOString();
+		const toSave: KanbanBoardTaskEntity[] = [];
+
+		for (const task of tasks) {
+			if (task.boardId === dto.boardId) {
+				skippedCount += 1;
+				continue;
+			}
+
+			const sourceColumnTitle =
+				sourceColumnTitles.get(`${task.boardId}:${task.parentId}`) ??
+				KANBAN_BOARD_STATUSES.find((status) => status.id === task.parentId)
+					?.title ??
+				task.parentId;
+			const targetColumnId = this.resolveTargetColumnId(
+				targetColumns,
+				task.parentId,
+				sourceColumnTitle,
+			);
+			const position = positionByColumn.get(targetColumnId) ?? 0;
+			positionByColumn.set(targetColumnId, position + 1);
+
+			task.boardId = dto.boardId;
+			task.parentId = targetColumnId;
+			task.position = position;
+			task.updatedAt = now;
+			toSave.push(task);
+			updatedCount += 1;
+		}
+
+		if (toSave.length) {
+			await this.taskRepository.save(toSave);
+		}
+
+		return {
+			boardId: dto.boardId,
+			updatedCount,
+			skippedCount,
+		};
+	}
+
+	private resolveTargetColumnId(
+		targetColumns: KanbanBoardColumnEntity[],
+		sourceColumnId: string,
+		sourceColumnTitle: string,
+	): string {
+		if (targetColumns.some((column) => column.id === sourceColumnId)) {
+			return sourceColumnId;
+		}
+
+		const normalizedTitle = sourceColumnTitle.trim().toLowerCase();
+		const byTitle = targetColumns.find(
+			(column) => column.title.trim().toLowerCase() === normalizedTitle,
+		);
+		if (byTitle) return byTitle.id;
+
+		const byPartial = targetColumns.find((column) => {
+			const title = column.title.trim().toLowerCase();
+			return title.includes(normalizedTitle) || normalizedTitle.includes(title);
+		});
+		if (byPartial) return byPartial.id;
+
+		return targetColumns[0]?.id ?? KANBAN_BOARD_STATUSES[0].id;
 	}
 
 	private async ensureBoardExists(boardId: string): Promise<KanbanBoardEntity> {
@@ -1197,6 +1630,21 @@ export class KanbanBoardRegistryService {
 		};
 	}
 
+	private toCustomerDto(
+		customer: KanbanBoardCustomerEntity,
+		taskCounts: Map<string, number>,
+	): KanbanBoardCustomerDto {
+		return {
+			id: customer.id,
+			code: customer.code,
+			name: customer.name,
+			description: customer.description,
+			taskCount: taskCounts.get(customer.name) ?? 0,
+			createdAt: customer.createdAt.toISOString(),
+			updatedAt: customer.updatedAt.toISOString(),
+		};
+	}
+
 	private async validateTaskContent(
 		content: KanbanBoardTaskContent,
 	): Promise<KanbanBoardTaskContent> {
@@ -1281,6 +1729,41 @@ export class KanbanBoardRegistryService {
 
 		for (const task of tasks) {
 			task.content = { ...task.content, streamCustomer: newName };
+			await this.taskRepository.save(task);
+		}
+	}
+
+	private async countTasksByCustomerName(): Promise<Map<string, number>> {
+		const rows = await this.taskRepository
+			.createQueryBuilder("task")
+			.select("task.content->>'customer'", "customerName")
+			.addSelect("COUNT(*)", "count")
+			.where("task.content->>'customer' IS NOT NULL")
+			.andWhere("task.content->>'customer' <> ''")
+			.groupBy("task.content->>'customer'")
+			.getRawMany<{ customerName: string; count: string }>();
+
+		return new Map(rows.map((row) => [row.customerName, Number(row.count)]));
+	}
+
+	private async countTasksWithCustomerName(name: string): Promise<number> {
+		return this.taskRepository
+			.createQueryBuilder("task")
+			.where("task.content->>'customer' = :name", { name })
+			.getCount();
+	}
+
+	private async renameCustomerInTasks(
+		oldName: string,
+		newName: string,
+	): Promise<void> {
+		const tasks = await this.taskRepository
+			.createQueryBuilder("task")
+			.where("task.content->>'customer' = :oldName", { oldName })
+			.getMany();
+
+		for (const task of tasks) {
+			task.content = { ...task.content, customer: newName };
 			await this.taskRepository.save(task);
 		}
 	}

@@ -58,6 +58,7 @@ export function TrackerSupersprintsPage() {
 
 	return (
 		<TrackerRegistryPage
+			gridStateKey="tracker.supersprints"
 			title="суперспринт"
 			createLabel="Создать суперспринт"
 			searchPlaceholder="Поиск по коду, названию…"

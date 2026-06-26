@@ -7,7 +7,6 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
-import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { alpha, styled, useColorScheme, useTheme } from "@mui/material/styles";
 import {
@@ -18,6 +17,8 @@ import {
 } from "@react-client/common/api/queries/v2-templates";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
+import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import { auditActionRu } from "@react-client/features/v2/admin/utils/auditActionRu";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { commonRoutes as routes } from "@react-client/routing/common/routes";
@@ -26,8 +27,6 @@ import type {
 	V2TemplateAuditDto,
 } from "@smart-anketa/api-contract";
 import {
-	AllCommunityModule,
-	ClientSideRowModelModule,
 	type ColDef,
 	type GetContextMenuItemsParams,
 	type RowClassParams,
@@ -43,11 +42,8 @@ import {
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 
-ModuleRegistry.registerModules([
-	AllCommunityModule,
-	ClientSideRowModelModule,
-	ContextMenuModule,
-]);
+registerAgGridTableModules();
+ModuleRegistry.registerModules([ContextMenuModule]);
 
 const GridWrapper = styled(Flex)`
 	& > div {
@@ -73,6 +69,7 @@ export function AdminV2TemplateHistoryPage() {
 	const activateVersion = useActivateV2TemplateVersionAsCurrent();
 
 	const gridRef = useRef<AgGridReact<V2TemplateAuditDto>>(null);
+	const gridPersistence = useAgGridColumnPersistence("v2.template-history");
 	const [confirmOpen, setConfirmOpen] = useState(false);
 
 	const getRowStyle = useCallback(
@@ -259,6 +256,17 @@ export function AdminV2TemplateHistoryPage() {
 						pagination
 						paginationPageSize={50}
 						localeText={AG_GRID_LOCALE_RU}
+						sideBar={gridPersistence.sideBar}
+						onGridReady={gridPersistence.onGridReady}
+						onColumnMoved={(event) => gridPersistence.onColumnMoved(event.api)}
+						onColumnVisible={(event) =>
+							gridPersistence.onColumnVisible(event.api)
+						}
+						onColumnPinned={(event) => gridPersistence.onColumnPinned(event.api)}
+						onSortChanged={(event) => gridPersistence.onSortChanged(event.api)}
+						onColumnResized={(event) => {
+							if (event.finished) gridPersistence.onColumnResized(event.api);
+						}}
 						suppressCsvExport
 						suppressExcelExport
 						preventDefaultOnContextMenu

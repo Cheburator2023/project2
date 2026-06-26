@@ -87,6 +87,7 @@ export function TrackerSprintsPage() {
 
 	return (
 		<TrackerRegistryPage
+			gridStateKey="tracker.sprints"
 			title="спринт"
 			createLabel="Создать спринт"
 			searchPlaceholder="Поиск по коду, названию, суперспринту…"

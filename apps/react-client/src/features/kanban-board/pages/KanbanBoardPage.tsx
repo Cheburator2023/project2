@@ -20,10 +20,20 @@ import {
 	type KanbanBoardTaskRecord,
 } from "@smart-anketa/api-contract";
 import { KanbanTaskContentChips } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
-import { kanbanBoardTaskAssigneeRoles, kanbanBoardTaskAssignees } from "@smart-anketa/api-contract";
+import {
+	kanbanBoardTaskAssigneeRoles,
+	kanbanBoardTaskAssignees,
+} from "@smart-anketa/api-contract";
 import { Kanban, dropHandler } from "react-kanban-kit";
 import type { BoardData, BoardItem } from "react-kanban-kit";
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type MouseEvent,
+} from "react";
 import { useNavigate, useParams } from "react-router";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
@@ -166,7 +176,10 @@ export function KanbanBoardPage() {
 		tasksQuery.isSuccess && columnsQuery.isSuccess && Boolean(boardId);
 
 	const columnsSignature = (columnsQuery.data ?? [])
-		.map((column) => `${column.id}:${column.title}:${column.color}:${column.sortOrder}`)
+		.map(
+			(column) =>
+				`${column.id}:${column.title}:${column.color}:${column.sortOrder}`,
+		)
 		.join("|");
 
 	useEffect(() => {
@@ -288,9 +301,7 @@ export function KanbanBoardPage() {
 	);
 
 	const isColumnBusy =
-		createColumn.isPending ||
-		updateColumn.isPending ||
-		deleteColumn.isPending;
+		createColumn.isPending || updateColumn.isPending || deleteColumn.isPending;
 	const isBoardBusy = !isReady || !board || isColumnBusy;
 	const isSavingBoard = saveMutation.isPending;
 
@@ -328,15 +339,12 @@ export function KanbanBoardPage() {
 		[createColumn.isPending, handleAddColumn, isBoardBusy],
 	);
 
-	const columnStyle = useCallback(
-		(column: BoardItem) => {
-			const color = getKanbanColumnColor(column);
-			return {
-				background: `color-mix(in srgb, ${color}, transparent 92%)`,
-			};
-		},
-		[],
-	);
+	const columnStyle = useCallback((column: BoardItem) => {
+		const color = getKanbanColumnColor(column);
+		return {
+			background: `color-mix(in srgb, ${color}, transparent 92%)`,
+		};
+	}, []);
 
 	const handleCardClick = useCallback(
 		(_event: MouseEvent<HTMLDivElement>, card: BoardItem) => {
@@ -368,7 +376,7 @@ export function KanbanBoardPage() {
 					</Typography>
 				}
 			>
-				<Flex gap={1} wrap="wrap" alignItems="center">
+				<Flex gap={6} wrap="wrap" alignItems="center">
 					<Spacer />
 					<Button
 						startIcon={<AddIcon />}
@@ -420,10 +428,7 @@ export function KanbanBoardPage() {
 					overflow: "hidden",
 				}}
 			>
-				<Stack
-					spacing={2}
-					sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}
-				>
+				<Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
 					{importError ? (
 						<Alert severity="error" sx={{ flexShrink: 0 }}>
 							{importError}
@@ -464,44 +469,44 @@ export function KanbanBoardPage() {
 						{board ? (
 							<Kanban
 								dataSource={board as BoardData}
-							rootStyle={{ height: "100%" }}
-							cardsGap={8}
-							renderColumnHeader={renderColumnHeader}
-							renderColumnAdder={renderColumnAdder}
-							allowColumnAdder={!isBoardBusy}
-							columnStyle={columnStyle}
-							renderListFooter={renderListFooter}
-							allowListFooter={() => !isBoardBusy}
-							onCardClick={handleCardClick}
-							configMap={{
-								card: {
-									render: ({
-										data,
-										column,
-									}: {
-										data: BoardItem;
-										column: BoardItem;
-									}) => (
-										<TaskCardContent
-											title={data.title}
-											content={
-												data.content as KanbanBoardTaskContent | undefined
-											}
-											origin={(data as KanbanBoardData[string]).origin}
-											columnColor={getKanbanColumnColor(column)}
-											assigneeRoleByName={assigneeRoleByName}
-										/>
-									),
-								},
-							}}
-							onCardMove={(move) => {
-								if (isSavingBoard) return;
-								const nextBoard = normalizeKanbanBoardData(
-									dropHandler(move, board as BoardData) as KanbanBoardData,
-								);
-								persistBoard(nextBoard);
-							}}
-						/>
+								rootStyle={{ height: "100%" }}
+								cardsGap={8}
+								renderColumnHeader={renderColumnHeader}
+								renderColumnAdder={renderColumnAdder}
+								allowColumnAdder={!isBoardBusy}
+								columnStyle={columnStyle}
+								renderListFooter={renderListFooter}
+								allowListFooter={() => !isBoardBusy}
+								onCardClick={handleCardClick}
+								configMap={{
+									card: {
+										render: ({
+											data,
+											column,
+										}: {
+											data: BoardItem;
+											column: BoardItem;
+										}) => (
+											<TaskCardContent
+												title={data.title}
+												content={
+													data.content as KanbanBoardTaskContent | undefined
+												}
+												origin={(data as KanbanBoardData[string]).origin}
+												columnColor={getKanbanColumnColor(column)}
+												assigneeRoleByName={assigneeRoleByName}
+											/>
+										),
+									},
+								}}
+								onCardMove={(move) => {
+									if (isSavingBoard) return;
+									const nextBoard = normalizeKanbanBoardData(
+										dropHandler(move, board as BoardData) as KanbanBoardData,
+									);
+									persistBoard(nextBoard);
+								}}
+							/>
 						) : null}
 					</Box>
 				</Stack>

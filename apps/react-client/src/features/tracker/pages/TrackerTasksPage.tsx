@@ -1,5 +1,6 @@
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import {
+	useAssignKanbanBoardTasksToBoard,
 	useDeleteKanbanBoardTask,
 	useKanbanBoardTasksRegistry,
 } from "@react-client/common/api/queries/kanban-board";
@@ -21,21 +22,41 @@ import {
 	TrackerTaskTypeChip,
 	TrackerTaskWorkTypeChip,
 } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
+import { TrackerAssignTasksToBoardDialog } from "@react-client/features/tracker/components/TrackerAssignTasksToBoardDialog";
 import { TrackerRegistryPage } from "@react-client/features/tracker/components/TrackerRegistryPage";
 import { TrackerRegistryExportButton } from "@react-client/features/tracker/components/TrackerRegistryExportButton";
+import { TrackerRegistryImportButton } from "@react-client/features/tracker/components/TrackerRegistryImportButton";
 import { trackerDateFormatter } from "@react-client/features/tracker/components/TrackerRegistryGrid";
+import { V2AdminButton } from "@react-client/features/v2/admin/atoms/V2AdminButton";
 import { kanbanTaskEditPath } from "@react-client/features/kanban-board/kanban-task-paths";
 import type { KanbanBoardTaskRegistryDto } from "@smart-anketa/api-contract";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 
 export function TrackerTasksPage() {
 	const navigate = useNavigate();
 	const { data = [], isLoading } = useKanbanBoardTasksRegistry();
 	const deleteTask = useDeleteKanbanBoardTask();
+	const assignToBoard = useAssignKanbanBoardTasksToBoard();
+	const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+	const [assignTaskIds, setAssignTaskIds] = useState<string[]>([]);
 
 	const openTask = (row: KanbanBoardTaskRegistryDto) => {
 		navigate(kanbanTaskEditPath(row.boardId, row.id));
+	};
+
+	const openAssignDialog = useCallback((rows: KanbanBoardTaskRegistryDto[]) => {
+		setAssignTaskIds(rows.map((row) => row.id));
+		setAssignDialogOpen(true);
+	}, []);
+
+	const confirmAssignToBoard = async (boardId: string) => {
+		await assignToBoard.mutateAsync({
+			taskIds: assignTaskIds,
+			boardId,
+		});
+		setAssignDialogOpen(false);
+		setAssignTaskIds([]);
 	};
 
 	const columnDefs = useMemo<ColDef<KanbanBoardTaskRegistryDto>[]>(
@@ -236,25 +257,68 @@ export function TrackerTasksPage() {
 		[],
 	);
 
+	const bulkContextActions = useMemo(
+		() => [
+			{
+				label: "Добавить на доску",
+				disabled: (rows: KanbanBoardTaskRegistryDto[]) => !rows.length,
+				onClick: (rows: KanbanBoardTaskRegistryDto[]) => openAssignDialog(rows),
+			},
+		],
+		[openAssignDialog],
+	);
+
 	return (
-		<TrackerRegistryPage
-			title="задача"
-			createLabel="Создать задачу"
-			searchPlaceholder="Поиск по заголовку, проекту, доске…"
-			rowData={data}
-			columnDefs={columnDefs}
-			loading={isLoading}
-			onCreateClick={() => navigate("/tracker/tasks/new")}
-			onEditClick={openTask}
-			onRowDoubleClick={openTask}
-			deleteDialogTitle="Удаление задач"
-			deleteDialogText={(count) => `Удалить ${count} задач(и)?`}
-			onDelete={async (rows) => {
-				for (const row of rows) {
-					await deleteTask.mutateAsync(row.id);
+		<>
+			<TrackerRegistryPage
+				gridStateKey="tracker.tasks"
+				title="задача"
+				createLabel="Создать задачу"
+				searchPlaceholder="Поиск по заголовку, проекту, доске…"
+				rowData={data}
+				columnDefs={columnDefs}
+				loading={isLoading}
+				onCreateClick={() => navigate("/tracker/tasks/new")}
+				onEditClick={openTask}
+				onRowDoubleClick={openTask}
+				deleteDialogTitle="Удаление задач"
+				deleteDialogText={(count) => `Удалить ${count} задач(и)?`}
+				onDelete={async (rows) => {
+					for (const row of rows) {
+						await deleteTask.mutateAsync(row.id);
+					}
+				}}
+				bulkContextActions={bulkContextActions}
+				selectionActions={(selected) =>
+					selected.length ? (
+						<V2AdminButton
+							variant="outlined"
+							onClick={() =>
+								openAssignDialog(selected as KanbanBoardTaskRegistryDto[])
+							}
+						>
+							Добавить на доску ({selected.length})
+						</V2AdminButton>
+					) : null
 				}
-			}}
-			extraActions={<TrackerRegistryExportButton kind="tasks" />}
-		/>
+				extraActions={
+					<>
+						<TrackerRegistryImportButton />
+						<TrackerRegistryExportButton kind="tasks" />
+					</>
+				}
+			/>
+
+			<TrackerAssignTasksToBoardDialog
+				open={assignDialogOpen}
+				taskCount={assignTaskIds.length}
+				isSubmitting={assignToBoard.isPending}
+				onClose={() => {
+					setAssignDialogOpen(false);
+					setAssignTaskIds([]);
+				}}
+				onConfirm={(boardId) => void confirmAssignToBoard(boardId)}
+			/>
+		</>
 	);
 }

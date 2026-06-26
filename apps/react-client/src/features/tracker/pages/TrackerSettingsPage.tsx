@@ -16,6 +16,10 @@ import {
 } from "@react-client/common/api/queries/kanban-board";
 import { TrackerRegistryGrid } from "@react-client/features/tracker/components/TrackerRegistryGrid";
 import {
+	clearAgGridColumnStates,
+	TRACKER_AG_GRID_STATE_KEYS,
+} from "@react-client/common/tableStuff/agGridColumnState";
+import {
 	KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD,
 	type KanbanBoardAssigneeDto,
 } from "@smart-anketa/api-contract";
@@ -39,6 +43,7 @@ export function TrackerSettingsPage() {
 		String(KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD),
 	);
 	const [saveError, setSaveError] = useState<string | null>(null);
+	const [gridResetNotice, setGridResetNotice] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (settings) {
@@ -110,6 +115,13 @@ export function TrackerSettingsPage() {
 		});
 	};
 
+	const handleResetGridColumns = () => {
+		clearAgGridColumnStates(TRACKER_AG_GRID_STATE_KEYS);
+		setGridResetNotice(
+			"Настройки колонок сброшены. Обновите открытые страницы реестров или откройте их заново.",
+		);
+	};
+
 	return (
 		<Flex flexDirection="column" flexGrow={1} minHeight="0">
 			<Header title="Настройки трекера" />
@@ -145,6 +157,26 @@ export function TrackerSettingsPage() {
 					</Stack>
 				</Card>
 
+				<Card padding="20px">
+					<Stack spacing={2} maxWidth={560}>
+						<Typography variant="h6">Таблицы реестров</Typography>
+						<Typography variant="body2" color="text.secondary">
+							Порядок и набор колонок сохраняются в браузере автоматически.
+							Сброс вернёт таблицы к исходному виду на всех страницах трекера.
+						</Typography>
+						<Button
+							variant="outlined"
+							onClick={handleResetGridColumns}
+							sx={{ alignSelf: "flex-start" }}
+						>
+							Сбросить колонки всех таблиц
+						</Button>
+						{gridResetNotice ? (
+							<Alert severity="info">{gridResetNotice}</Alert>
+						) : null}
+					</Stack>
+				</Card>
+
 				<Card padding="20px" sx={{ flex: 1, minHeight: 0, display: "flex" }}>
 					<Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
 						<Flex alignItems="baseline" gap={2} wrap="wrap">
@@ -156,6 +188,7 @@ export function TrackerSettingsPage() {
 						</Flex>
 						<Flex flex={1} minHeight={360}>
 							<TrackerRegistryGrid
+								gridStateKey="tracker.settings-assignees"
 								rowData={assignees}
 								columnDefs={columnDefs}
 								loading={assigneesLoading}

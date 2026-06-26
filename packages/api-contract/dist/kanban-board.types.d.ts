@@ -376,6 +376,38 @@ export interface UpdateKanbanBoardStreamRequestDto {
     name?: string;
     description?: string | null;
 }
+export interface KanbanBoardCustomerDto {
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    taskCount: number;
+    createdAt: string;
+    updatedAt: string;
+}
+export interface CreateKanbanBoardCustomerRequestDto {
+    code: string;
+    name: string;
+    description?: string | null;
+}
+export interface UpdateKanbanBoardCustomerRequestDto {
+    code?: string;
+    name?: string;
+    description?: string | null;
+}
+export declare const KANBAN_BOARD_STOCK_CUSTOMERS: readonly [{
+    readonly code: "dadm";
+    readonly name: "ДАДМ";
+}, {
+    readonly code: "umrv";
+    readonly name: "УМРВ";
+}, {
+    readonly code: "ib";
+    readonly name: "ИБ";
+}, {
+    readonly code: "dpsis";
+    readonly name: "ДПСИС";
+}];
 export declare const KANBAN_BOARD_STOCK_PROJECTS: readonly [{
     readonly code: "sum";
     readonly name: "SUM";
@@ -393,6 +425,24 @@ export declare const KANBAN_BOARD_STOCK_PROJECTS: readonly [{
     readonly name: "Smart Anketa";
     readonly description: "Стоковый проект Smart Anketa";
 }];
+/** Доска «Куча» — задачи без привязки к рабочей доске (импорт, черновики). */
+export declare const KANBAN_BOARD_HEAP_BOARD_ID = "01J000000000000000000015";
+export declare const KANBAN_BOARD_HEAP_BOARD_SLUG = "heap";
+export interface AssignKanbanBoardTasksToBoardRequestDto {
+    taskIds: string[];
+    boardId: string;
+}
+export interface AssignKanbanBoardTasksToBoardResultDto {
+    boardId: string;
+    updatedCount: number;
+    skippedCount: number;
+}
+export interface KanbanBoardPlanningImportResultDto {
+    meta: KanbanBoardSnapshotMeta;
+    importFormat: "planning";
+    warnings: string[];
+    importedCount: number;
+}
 export interface KanbanBoardSnapshotMeta {
     schemaVersion: number;
     sourceStand: string;

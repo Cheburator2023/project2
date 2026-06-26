@@ -87,6 +87,12 @@ export function kanbanBoardPriorityColor(priority) {
     return KANBAN_BOARD_PRIORITY_COLORS[priority] ?? "#64748b";
 }
 export const KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD = 9;
+export const KANBAN_BOARD_STOCK_CUSTOMERS = [
+    { code: "dadm", name: "ДАДМ" },
+    { code: "umrv", name: "УМРВ" },
+    { code: "ib", name: "ИБ" },
+    { code: "dpsis", name: "ДПСИС" },
+];
 export const KANBAN_BOARD_STOCK_PROJECTS = [
     { code: "sum", name: "SUM", description: "Стоковый проект SUM" },
     { code: "sum-rm", name: "SUM-RM", description: "Стоковый проект SUM-RM" },
@@ -101,6 +107,9 @@ export const KANBAN_BOARD_STOCK_PROJECTS = [
         description: "Стоковый проект Smart Anketa",
     },
 ];
+/** Доска «Куча» — задачи без привязки к рабочей доске (импорт, черновики). */
+export const KANBAN_BOARD_HEAP_BOARD_ID = "01J000000000000000000015";
+export const KANBAN_BOARD_HEAP_BOARD_SLUG = "heap";
 export const KANBAN_BOARD_SCHEMA_VERSION = 1;
 export const KANBAN_BOARD_STATUSES = [
     { id: "backlog", title: "Бэклог" },

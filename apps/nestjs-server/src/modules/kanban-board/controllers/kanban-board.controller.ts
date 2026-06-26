@@ -22,6 +22,9 @@ import {
 } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import type {
+	AssignKanbanBoardTasksToBoardRequestDto,
+	AssignKanbanBoardTasksToBoardResultDto,
+	CreateKanbanBoardCustomerRequestDto,
 	CreateKanbanBoardAssigneeRequestDto,
 	CreateKanbanBoardBoardRequestDto,
 	CreateKanbanBoardColumnRequestDto,
@@ -30,16 +33,19 @@ import type {
 	CreateKanbanBoardStreamRequestDto,
 	CreateKanbanBoardSupersprintRequestDto,
 	CreateKanbanBoardTaskRequestDto,
+	KanbanBoardCustomerDto,
 	KanbanBoardAssigneeDto,
 	KanbanBoardBoardDto,
 	KanbanBoardColumnDto,
 	KanbanBoardProjectDto,
+	KanbanBoardPlanningImportResultDto,
 	KanbanBoardSprintDto,
 	KanbanBoardSettingsDto,
 	KanbanBoardStreamDto,
 	KanbanBoardSupersprintDto,
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
+	UpdateKanbanBoardCustomerRequestDto,
 	UpdateKanbanBoardAssigneeRequestDto,
 	UpdateKanbanBoardBoardRequestDto,
 	UpdateKanbanBoardColumnRequestDto,
@@ -54,6 +60,7 @@ import type { Response } from "express";
 import { KanbanBoardRegistryService } from "../services/kanban-board-registry.service";
 import {
 	KanbanBoardService,
+	PlanningImportNotSupportedError,
 	SnapshotIntegrityError,
 	SnapshotSchemaError,
 } from "../services/kanban-board.service";
@@ -209,6 +216,31 @@ export class KanbanBoardController {
 		return this.registryService.deleteStream(id);
 	}
 
+	@Get("customers")
+	async findAllCustomers(): Promise<KanbanBoardCustomerDto[]> {
+		return this.registryService.findAllCustomers();
+	}
+
+	@Post("customers")
+	async createCustomer(
+		@Body() dto: CreateKanbanBoardCustomerRequestDto,
+	): Promise<KanbanBoardCustomerDto> {
+		return this.registryService.createCustomer(dto);
+	}
+
+	@Put("customers/:id")
+	async updateCustomer(
+		@Param("id") id: string,
+		@Body() dto: UpdateKanbanBoardCustomerRequestDto,
+	): Promise<KanbanBoardCustomerDto> {
+		return this.registryService.updateCustomer(id, dto);
+	}
+
+	@Delete("customers/:id")
+	async deleteCustomer(@Param("id") id: string): Promise<void> {
+		return this.registryService.deleteCustomer(id);
+	}
+
 	@Get("boards")
 	async findAllBoards(): Promise<KanbanBoardBoardDto[]> {
 		return this.registryService.findAllBoards();
@@ -360,6 +392,29 @@ export class KanbanBoardController {
 		return this.registryService.deleteTask(id);
 	}
 
+	@Post("tasks/import-planning")
+	@UseInterceptors(FileInterceptor("file"))
+	@ApiConsumes("multipart/form-data")
+	async importPlanningTasks(
+		@UploadedFile() file?: { buffer: Buffer },
+	): Promise<KanbanBoardPlanningImportResultDto> {
+		if (!file?.buffer?.length) {
+			throw new BadRequestException("Файл не передан");
+		}
+		try {
+			return await this.registryService.importPlanningTasks(file.buffer);
+		} catch (error) {
+			this.rethrowImportError(error);
+		}
+	}
+
+	@Post("tasks/assign-board")
+	async assignTasksToBoard(
+		@Body() dto: AssignKanbanBoardTasksToBoardRequestDto,
+	): Promise<AssignKanbanBoardTasksToBoardResultDto> {
+		return this.registryService.assignTasksToBoard(dto);
+	}
+
 	@Get("boards/:boardId/tasks")
 	async findBoardTasks(
 		@Param("boardId") boardId: string,
@@ -493,6 +548,9 @@ export class KanbanBoardController {
 			});
 		}
 		if (error instanceof SnapshotSchemaError) {
+			throw new BadRequestException(error.message);
+		}
+		if (error instanceof PlanningImportNotSupportedError) {
 			throw new BadRequestException(error.message);
 		}
 		if (error instanceof Error) {

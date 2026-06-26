@@ -7,7 +7,7 @@ import { AnketaPreviewPage } from "@react-client/features/v1/anketaCRUD/pages/An
 import { HomePage } from "@react-client/features/v1/home/pages/HomePage";
 import { Navigate, Route } from "react-router";
 import { routes } from "@react-client/routing/version/v1/routes";
-import { Page404 } from "@react-client/routing/version/v1/Page404";
+import { Page404 } from "@react-client/routing/common/Page404";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
 
 export const v1Routes = ({ onLogout }: { onLogout?: () => void }) => {

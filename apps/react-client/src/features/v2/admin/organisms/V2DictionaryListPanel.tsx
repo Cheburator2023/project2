@@ -6,6 +6,8 @@ import { styled, useColorScheme } from "@mui/material/styles";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
+import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import {
 	agGridCustomMUITheme,
 	agGridCustomMUIThemeDark,
@@ -13,16 +15,13 @@ import {
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 import type { V2DictionaryDto } from "@smart-anketa/api-contract";
 import {
-	AllCommunityModule,
-	ClientSideRowModelModule,
 	type ColDef,
 	type ICellRendererParams,
-	ModuleRegistry,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
-ModuleRegistry.registerModules([AllCommunityModule, ClientSideRowModelModule]);
+registerAgGridTableModules();
 
 /** ag-grid требует явную высоту контейнера — flex:1 + min-height:0 в колонке */
 const AgGridHost = styled("div")`
@@ -76,6 +75,7 @@ export function V2DictionaryListPanel({
 }: V2DictionaryListPanelProps) {
 	const { mode } = useColorScheme();
 	const gridRef = useRef<AgGridReact<V2DictionaryDto>>(null);
+	const gridPersistence = useAgGridColumnPersistence("v2.dictionaries.panel");
 
 	const gridTheme =
 		mode === "light" || mode === undefined
@@ -210,8 +210,18 @@ export function V2DictionaryListPanel({
 						getRowId={(p) => p.data.id}
 						rowSelection={{ mode: "singleRow", enableClickSelection: true }}
 						onSelectionChanged={handleSelectionChanged}
+						sideBar={gridPersistence.sideBar}
+						onGridReady={gridPersistence.onGridReady}
+						onColumnMoved={(event) => gridPersistence.onColumnMoved(event.api)}
+						onColumnVisible={(event) =>
+							gridPersistence.onColumnVisible(event.api)
+						}
+						onColumnPinned={(event) => gridPersistence.onColumnPinned(event.api)}
+						onSortChanged={(event) => gridPersistence.onSortChanged(event.api)}
+						onColumnResized={(event) => {
+							if (event.finished) gridPersistence.onColumnResized(event.api);
+						}}
 						suppressCellFocus
-						suppressMovableColumns
 						headerHeight={32}
 						rowHeight={36}
 						suppressCsvExport
