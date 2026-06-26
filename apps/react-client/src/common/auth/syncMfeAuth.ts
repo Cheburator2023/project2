@@ -1,5 +1,9 @@
 import { clearMfeAuthState } from "@react-client/common/auth/clearMfeAuthState";
 import { useAuthStore } from "@react-client/common/store/authStore";
+import {
+	isGodModeAccessToken,
+	isNoRolesGodMode,
+} from "@react-client/common/auth/godMode";
 
 export type MfeAuthHostProps = {
 	token?: string;
@@ -109,7 +113,13 @@ export function resolveFreshAccessToken(
 		return null;
 	}
 
-	return useAuthStore.getState().accessToken;
+	const stored = useAuthStore.getState().accessToken;
+	if (isGodModeAccessToken(stored) && !isNoRolesGodMode()) {
+		useAuthStore.getState().setAccessToken(null);
+		return null;
+	}
+
+	return stored;
 }
 
 /** Просит Keycloak обновить access token и кладёт результат в store. */

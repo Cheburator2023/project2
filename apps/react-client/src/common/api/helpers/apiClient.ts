@@ -3,6 +3,10 @@ import {
 	refreshHostAccessToken,
 	resolveFreshAccessToken,
 } from "@react-client/common/auth/syncMfeAuth";
+import {
+	isGodModeAccessToken,
+	isNoRolesGodMode,
+} from "@react-client/common/auth/godMode";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import axios, {
 	type AxiosError,
@@ -43,7 +47,7 @@ axiosInstance.interceptors.request.use(
 			: configMap?.SMART_ANKETA_API || API_BASE_URL;
 
 		const token = resolveFreshAccessToken();
-		if (token) {
+		if (token && (!isGodModeAccessToken(token) || isNoRolesGodMode())) {
 			config.headers.Authorization = `Bearer ${token}`;
 		}
 
@@ -71,6 +75,10 @@ axiosInstance.interceptors.response.use(
 		const status = error.response?.status;
 
 		if (status !== 401 || !originalRequest || originalRequest._authRetry) {
+			return Promise.reject(error);
+		}
+
+		if (isNoRolesGodMode()) {
 			return Promise.reject(error);
 		}
 

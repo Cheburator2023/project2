@@ -1,35 +1,37 @@
 import { ensureKeycloakSession, syncMfeAuthFromHost } from "@react-client/common/auth/syncMfeAuth";
+import {
+	GOD_MODE_ACCESS_TOKEN,
+	isNoRolesGodMode,
+} from "@react-client/common/auth/godMode";
 import type { MfeAuthHostProps } from "@react-client/common/auth/syncMfeAuth";
 import { useAuthStore } from "../store/authStore";
 import { useLayoutEffect } from "react";
 
 interface AuthProviderProps extends MfeAuthHostProps {
 	children: React.ReactNode;
-	godMode?: boolean;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({
 	children,
-	godMode: propGodMode,
 	token,
 	keycloak,
 	user,
 	onLogout,
 }) => {
 	const setAccessToken = useAuthStore((state) => state.setAccessToken);
-	const GOD_MODE = process?.env?.NO_ROLES === "true" || propGodMode;
+	const godMode = isNoRolesGodMode();
 	const hostProps = { token, keycloak, user, onLogout };
 
 	useLayoutEffect(() => {
-		if (GOD_MODE) {
-			setAccessToken("god-mode-token");
+		if (godMode) {
+			setAccessToken(GOD_MODE_ACCESS_TOKEN);
 			return;
 		}
 
 		syncMfeAuthFromHost(hostProps);
 		ensureKeycloakSession(hostProps);
-	}, [GOD_MODE, token, keycloak, user, onLogout, setAccessToken]);
+	}, [godMode, token, keycloak, user, onLogout, setAccessToken]);
 
-	if (GOD_MODE) return <>{children}</>;
+	if (godMode) return <>{children}</>;
 	return children;
 };

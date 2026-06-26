@@ -1,12 +1,8 @@
-import {
-	Permission,
-	Role,
-	UserPermissions,
-	UserRoles,
-} from "@react-client/types/roles";
+import { Permission, Role, UserPermissions, UserRoles } from "@react-client/types/roles";
+import { isNoRolesGodMode } from "@react-client/common/auth/godMode";
 import { create, StoreApi, UseBoundStore } from "zustand";
 
-const NO_ROLES_FOR_DEV = process?.env?.NO_ROLES;
+const NO_ROLES_FOR_DEV = isNoRolesGodMode();
 
 interface UserStoreState {
 	username: string | null;
