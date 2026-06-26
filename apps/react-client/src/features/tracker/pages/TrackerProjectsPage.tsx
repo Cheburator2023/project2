@@ -11,6 +11,7 @@ import {
 } from "@react-client/features/tracker/components/TrackerRegistryChipCell";
 import { TrackerRegistryPage } from "@react-client/features/tracker/components/TrackerRegistryPage";
 import { trackerDateFormatter } from "@react-client/features/tracker/components/TrackerRegistryGrid";
+import { TRACKER_EMPTY_FORM_VALUES } from "@react-client/features/tracker/trackerAutoCode";
 import type { KanbanBoardProjectDto } from "@smart-anketa/api-contract";
 import { useMemo } from "react";
 
@@ -90,7 +91,7 @@ export function TrackerProjectsPage() {
 							name: row.name,
 							description: row.description ?? "",
 						}
-					: {}
+					: TRACKER_EMPTY_FORM_VALUES
 			}
 			canDelete={(row) => !row.isStock}
 			deleteDialogTitle="Удаление проектов"

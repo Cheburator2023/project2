@@ -1,6 +1,7 @@
 import type { RouteObject } from "react-router";
 import { Navigate } from "react-router";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
+import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard";
 import { KanbanBoardPage } from "@react-client/features/kanban-board/pages/KanbanBoardPage";
 import { KanbanTaskPage } from "@react-client/features/kanban-board/pages/KanbanTaskPage";
 import { TrackerCustomersPage } from "@react-client/features/tracker/pages/TrackerCustomersPage";
@@ -21,7 +22,14 @@ export function trackerRoutes({
 }): RouteObject {
 	return {
 		path: commonRoutes.tracker.rootPath,
-		element: <MainLayout onLogout={onLogout} />,
+		element: (
+			<PermissionGuard
+				check={(p) => p.canAccessTracker}
+				message="У вас нет прав на доступ к трекеру задач"
+			>
+				<MainLayout onLogout={onLogout} />
+			</PermissionGuard>
+		),
 		children: [
 			{ index: true, element: <Navigate to="projects" replace /> },
 			{ path: "projects", element: <TrackerProjectsPage /> },

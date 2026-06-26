@@ -7,6 +7,7 @@ import {
 } from "@react-client/common/api/queries/kanban-board";
 import { TrackerRegistryPage } from "@react-client/features/tracker/components/TrackerRegistryPage";
 import { trackerDateFormatter } from "@react-client/features/tracker/components/TrackerRegistryGrid";
+import { TRACKER_EMPTY_FORM_VALUES } from "@react-client/features/tracker/trackerAutoCode";
 import {
 	KANBAN_BOARD_ASSIGNEE_ROLES,
 	isKanbanBoardAssigneeRoleId,
@@ -106,7 +107,7 @@ export function TrackerAssigneesPage() {
 									? ""
 									: String(row.sprintCapacityPd),
 						}
-					: {}
+					: TRACKER_EMPTY_FORM_VALUES
 			}
 			canDelete={(row) => row.taskCount === 0}
 			deleteDialogTitle="Удаление исполнителей"

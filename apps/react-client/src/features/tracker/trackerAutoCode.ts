@@ -19,3 +19,5 @@ export function buildTrackerCreateFormValues(
 	}
 	return next;
 }
+
+export const TRACKER_EMPTY_FORM_VALUES: Record<string, string> = {};

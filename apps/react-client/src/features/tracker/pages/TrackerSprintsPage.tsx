@@ -9,6 +9,7 @@ import {
 import { TrackerRegistryPage } from "@react-client/features/tracker/components/TrackerRegistryPage";
 import { TrackerRegistryExportButton } from "@react-client/features/tracker/components/TrackerRegistryExportButton";
 import { trackerDateFormatter } from "@react-client/features/tracker/components/TrackerRegistryGrid";
+import { TRACKER_EMPTY_FORM_VALUES } from "@react-client/features/tracker/trackerAutoCode";
 import type { KanbanBoardSprintDto } from "@smart-anketa/api-contract";
 import { useMemo } from "react";
 
@@ -105,7 +106,7 @@ export function TrackerSprintsPage() {
 							startDate: row.startDate,
 							endDate: row.endDate ?? "",
 						}
-					: {}
+					: TRACKER_EMPTY_FORM_VALUES
 			}
 			canDelete={(row) => row.taskCount === 0}
 			deleteDialogTitle="Удаление спринтов"

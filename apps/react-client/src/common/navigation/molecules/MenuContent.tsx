@@ -6,6 +6,7 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
 import { IS_DEV } from "@react-client/common/constants/dev";
+import { usePermissions } from "@react-client/hooks/usePermissions";
 import {
 	commonRoutes,
 	navbarGroups as commonNavbarGroups,
@@ -127,6 +128,7 @@ function NavSection({
 export function MenuContent() {
 	const navigate = useNavigate();
 	const { pathname } = useLocation();
+	const { canAccessTracker } = usePermissions();
 
 	const go = (path: string) => navigate(path);
 
@@ -156,18 +158,23 @@ export function MenuContent() {
 					onNavigate={go}
 				/>
 
-				<Divider sx={{ my: 1 }} />
+				{canAccessTracker ? (
+					<>
+						<Divider sx={{ my: 1 }} />
 
-				<NavSection
-					title={commonNavbarGroups.tracker.title}
-					homeLabel={commonRoutes.trackerProjects.name}
-					homePath={commonRoutes.trackerProjects.rootPath}
-					nestedItems={getTrackerNavbarItems().filter(
-						(route) => route.rootPath !== commonRoutes.trackerProjects.rootPath,
-					)}
-					pathname={pathname}
-					onNavigate={go}
-				/>
+						<NavSection
+							title={commonNavbarGroups.tracker.title}
+							homeLabel={commonRoutes.trackerProjects.name}
+							homePath={commonRoutes.trackerProjects.rootPath}
+							nestedItems={getTrackerNavbarItems().filter(
+								(route) =>
+									route.rootPath !== commonRoutes.trackerProjects.rootPath,
+							)}
+							pathname={pathname}
+							onNavigate={go}
+						/>
+					</>
+				) : null}
 
 				<Divider sx={{ my: 1 }} />
 

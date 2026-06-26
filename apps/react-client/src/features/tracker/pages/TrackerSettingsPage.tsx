@@ -126,7 +126,7 @@ export function TrackerSettingsPage() {
 		<Flex flexDirection="column" flexGrow={1} minHeight="0">
 			<Header title="Настройки трекера" />
 			<Spacer space={8} />
-			<Flex flexDirection="column" gap={2} flex={1} minHeight={0} sx={{ px: 1 }}>
+			<Flex flexDirection="column" gap={2} flexGrow={1} minHeight="0" sx={{ px: 1 }}>
 				<Card padding="20px">
 					<Stack spacing={2} maxWidth={480}>
 						<Typography variant="h6">Планирование спринта</Typography>
@@ -186,7 +186,7 @@ export function TrackerSettingsPage() {
 								значение — используется ёмкость по умолчанию.
 							</Typography>
 						</Flex>
-						<Flex flex={1} minHeight={360}>
+						<Flex flexGrow={1} minHeight="360px">
 							<TrackerRegistryGrid
 								gridStateKey="tracker.settings-assignees"
 								rowData={assignees}

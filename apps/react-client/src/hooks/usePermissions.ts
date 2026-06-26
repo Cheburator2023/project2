@@ -14,5 +14,8 @@ export const usePermissions = () => {
 		canEditCalculation: hasPermission(Permission.ANKETA_EDIT_CALCULATION),
 		canExportReports: hasPermission(Permission.ANKETA_EXPORT_REPORTS),
 		canAccessAdminPanel: hasPermission(Permission.ANKETA_ADMIN_PANEL),
+		canAccessTracker:
+			hasPermission(Permission.DEVELOPER) ||
+			hasPermission(Permission.ANKETA_ADMIN_PANEL),
 	};
 };
