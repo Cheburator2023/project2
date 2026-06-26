@@ -10,10 +10,16 @@ import {
 	KANBAN_BOARD_COLUMN_COLORS,
 	KANBAN_BOARD_STATUSES,
 	kanbanBoardAssigneeRoleTitle,
+	kanbanBoardEffectiveEstimatePd,
+	kanbanBoardEffectiveSprintCapacityPd,
+	kanbanBoardPriorityTitle,
+	kanbanBoardTaskAssigneeRoles,
+	kanbanBoardTaskAssigneeRoleTitles,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskAssigneesTitle,
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeTitle,
+	isKanbanBoardAssigneeRoleId,
 	pickKanbanBoardColumnColor,
 	type CreateKanbanBoardAssigneeRequestDto,
 	type CreateKanbanBoardBoardRequestDto,
@@ -24,10 +30,12 @@ import {
 	type CreateKanbanBoardSupersprintRequestDto,
 	type CreateKanbanBoardTaskRequestDto,
 	type KanbanBoardAssigneeDto,
+	type KanbanBoardAssigneeRoleId,
 	type KanbanBoardBoardDto,
 	type KanbanBoardColumnDto,
 	type KanbanBoardProjectDto,
 	type KanbanBoardSprintDto,
+	type KanbanBoardSettingsDto,
 	type KanbanBoardStreamDto,
 	type KanbanBoardSupersprintDto,
 	type KanbanBoardTaskContent,
@@ -36,6 +44,7 @@ import {
 	type UpdateKanbanBoardBoardRequestDto,
 	type UpdateKanbanBoardColumnRequestDto,
 	type UpdateKanbanBoardProjectRequestDto,
+	type UpdateKanbanBoardSettingsRequestDto,
 	type UpdateKanbanBoardSprintRequestDto,
 	type UpdateKanbanBoardStreamRequestDto,
 	type UpdateKanbanBoardSupersprintRequestDto,
@@ -49,6 +58,10 @@ import { KanbanBoardSprintEntity } from "../entities/kanban-board-sprint.entity"
 import { KanbanBoardStreamEntity } from "../entities/kanban-board-stream.entity";
 import { KanbanBoardSupersprintEntity } from "../entities/kanban-board-supersprint.entity";
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
+import {
+	KANBAN_BOARD_SETTINGS_DEFAULT_ID,
+	KanbanBoardSettingsEntity,
+} from "../entities/kanban-board-settings.entity";
 import { KanbanBoardService } from "./kanban-board.service";
 import {
 	exportTasksRegistryWorkbook,
@@ -74,8 +87,34 @@ export class KanbanBoardRegistryService {
 		private readonly streamRepository: Repository<KanbanBoardStreamEntity>,
 		@InjectRepository(KanbanBoardTaskEntity)
 		private readonly taskRepository: Repository<KanbanBoardTaskEntity>,
+		@InjectRepository(KanbanBoardSettingsEntity)
+		private readonly settingsRepository: Repository<KanbanBoardSettingsEntity>,
 		private readonly kanbanBoardService: KanbanBoardService,
 	) {}
+
+	async getSettings(): Promise<KanbanBoardSettingsDto> {
+		const settings = await this.ensureSettings();
+		return this.toSettingsDto(settings);
+	}
+
+	async updateSettings(
+		dto: UpdateKanbanBoardSettingsRequestDto,
+	): Promise<KanbanBoardSettingsDto> {
+		const settings = await this.ensureSettings();
+		if (dto.defaultSprintCapacityPd !== undefined) {
+			if (
+				Number.isNaN(dto.defaultSprintCapacityPd) ||
+				dto.defaultSprintCapacityPd < 0
+			) {
+				throw new BadRequestException(
+					"Ёмкость спринта по умолчанию должна быть неотрицательным числом",
+				);
+			}
+			settings.defaultSprintCapacityPd = String(dto.defaultSprintCapacityPd);
+		}
+		await this.settingsRepository.save(settings);
+		return this.toSettingsDto(settings);
+	}
 
 	async findAllProjects(): Promise<KanbanBoardProjectDto[]> {
 		const projects = await this.projectRepository.find({
@@ -147,12 +186,14 @@ export class KanbanBoardRegistryService {
 	}
 
 	async findAllAssignees(): Promise<KanbanBoardAssigneeDto[]> {
-		const assignees = await this.assigneeRepository.find({
-			order: { name: "ASC" },
-		});
+		const [assignees, settings] = await Promise.all([
+			this.assigneeRepository.find({ order: { name: "ASC" } }),
+			this.ensureSettings(),
+		]);
 		const taskCounts = await this.countTasksByAssigneeName();
+		const defaultCapacity = this.parseNumeric(settings.defaultSprintCapacityPd);
 		return assignees.map((assignee) =>
-			this.toAssigneeDto(assignee, taskCounts),
+			this.toAssigneeDto(assignee, taskCounts, defaultCapacity),
 		);
 	}
 
@@ -170,9 +211,19 @@ export class KanbanBoardRegistryService {
 			code,
 			name,
 			email: dto.email?.trim() || null,
+			role: this.normalizeAssigneeRole(dto.role),
+			sprintCapacityPd:
+				dto.sprintCapacityPd === undefined || dto.sprintCapacityPd === null
+					? null
+					: String(dto.sprintCapacityPd),
 		});
 		await this.assigneeRepository.save(entity);
-		return this.toAssigneeDto(entity, new Map());
+		const settings = await this.ensureSettings();
+		return this.toAssigneeDto(
+			entity,
+			new Map(),
+			this.parseNumeric(settings.defaultSprintCapacityPd),
+		);
 	}
 
 	async updateAssignee(
@@ -188,6 +239,23 @@ export class KanbanBoardRegistryService {
 		if (dto.email !== undefined) {
 			assignee.email = dto.email?.trim() || null;
 		}
+		if (dto.role !== undefined) {
+			assignee.role = this.normalizeAssigneeRole(dto.role);
+		}
+		if (dto.sprintCapacityPd !== undefined) {
+			if (dto.sprintCapacityPd === null) {
+				assignee.sprintCapacityPd = null;
+			} else if (
+				Number.isNaN(dto.sprintCapacityPd) ||
+				dto.sprintCapacityPd < 0
+			) {
+				throw new BadRequestException(
+					"Ёмкость спринта должна быть неотрицательным числом",
+				);
+			} else {
+				assignee.sprintCapacityPd = String(dto.sprintCapacityPd);
+			}
+		}
 		if (!assignee.code || !assignee.name) {
 			throw new BadRequestException("Код и имя обязательны");
 		}
@@ -198,7 +266,12 @@ export class KanbanBoardRegistryService {
 		}
 
 		const taskCounts = await this.countTasksByAssigneeName();
-		return this.toAssigneeDto(assignee, taskCounts);
+		const settings = await this.ensureSettings();
+		return this.toAssigneeDto(
+			assignee,
+			taskCounts,
+			this.parseNumeric(settings.defaultSprintCapacityPd),
+		);
 	}
 
 	async deleteAssignee(id: string): Promise<void> {
@@ -624,13 +697,30 @@ export class KanbanBoardRegistryService {
 				.map((row) => row.content.sprintId)
 				.filter((value): value is string => Boolean(value)),
 		);
+		const assigneeRoleByName = await this.loadAssigneeRoleByNameMap();
 
-		return rows.map((row) => this.toTaskRegistryDto(row, columnTitles, sprintTitles));
+		return rows.map((row) =>
+			this.toTaskRegistryDto(row, columnTitles, sprintTitles, assigneeRoleByName),
+		);
 	}
 
 	async exportTasksRegistryXlsx(): Promise<Buffer> {
-		const tasks = await this.findAllTasksRegistry();
-		return exportTasksRegistryXlsx(tasks);
+		const [tasks, assignees, settings] = await Promise.all([
+			this.findAllTasksRegistry(),
+			this.findAllAssignees(),
+			this.ensureSettings(),
+		]);
+		const defaultCapacity = this.parseNumeric(settings.defaultSprintCapacityPd);
+		const capacityByName = new Map(
+			assignees.map((item) => [
+				item.name,
+				kanbanBoardEffectiveSprintCapacityPd({
+					sprintCapacityPd: item.sprintCapacityPd,
+					defaultSprintCapacityPd: defaultCapacity,
+				}),
+			]),
+		);
+		return exportTasksRegistryXlsx(tasks, capacityByName);
 	}
 
 	async exportSprintsRegistryXlsx(): Promise<Buffer> {
@@ -726,7 +816,13 @@ export class KanbanBoardRegistryService {
 		const sprintTitles = await this.loadSprintTitleMap(
 			content.sprintId ? [content.sprintId] : [],
 		);
-		return this.toTaskRegistryDto(entity, columnTitles, sprintTitles);
+		const assigneeRoleByName = await this.loadAssigneeRoleByNameMap();
+		return this.toTaskRegistryDto(
+			entity,
+			columnTitles,
+			sprintTitles,
+			assigneeRoleByName,
+		);
 	}
 
 	async updateTask(
@@ -762,7 +858,13 @@ export class KanbanBoardRegistryService {
 		const sprintTitles = await this.loadSprintTitleMap(
 			task.content.sprintId ? [task.content.sprintId] : [],
 		);
-		return this.toTaskRegistryDto(task, columnTitles, sprintTitles);
+		const assigneeRoleByName = await this.loadAssigneeRoleByNameMap();
+		return this.toTaskRegistryDto(
+			task,
+			columnTitles,
+			sprintTitles,
+			assigneeRoleByName,
+		);
 	}
 
 	async deleteTask(id: string): Promise<void> {
@@ -858,8 +960,14 @@ export class KanbanBoardRegistryService {
 		task: KanbanBoardTaskEntity,
 		columnTitles: Map<string, string> = new Map(),
 		sprintTitles: Map<string, string> = new Map(),
+		assigneeRoleByName: ReadonlyMap<string, KanbanBoardAssigneeRoleId | null> = new Map(),
 	): KanbanBoardTaskRegistryDto {
 		const { content } = task;
+		const assigneeRoles = kanbanBoardTaskAssigneeRoles(content, assigneeRoleByName);
+		const assigneeRoleTitles = kanbanBoardTaskAssigneeRoleTitles(
+			content,
+			assigneeRoleByName,
+		);
 		return {
 			id: task.id,
 			boardId: task.boardId,
@@ -879,7 +987,15 @@ export class KanbanBoardRegistryService {
 			workTypeTitle: kanbanBoardWorkTypeTitle(content.workType),
 			assigneeTitle: kanbanBoardTaskAssigneesTitle(content),
 			assignees: kanbanBoardTaskAssignees(content),
-			assigneeRoleTitle: kanbanBoardAssigneeRoleTitle(content.assigneeRole),
+			currentAssigneeTitle: content.currentAssignee?.trim() ?? "",
+			assigneeRoles,
+			assigneeRoleTitles,
+			assigneeRoleTitle: assigneeRoleTitles.join(", "),
+			backlogNumber: content.backlogNumber,
+			priorityTitle: kanbanBoardPriorityTitle(content.priority),
+			sprintOutcome: content.sprintOutcome,
+			roleEstimates: content.roleEstimates,
+			effectiveEstimatePd: kanbanBoardEffectiveEstimatePd(content),
 			estimatePd: content.estimatePd,
 			dueDate: content.dueDate,
 			parentTask: content.parentTask,
@@ -911,16 +1027,58 @@ export class KanbanBoardRegistryService {
 	private toAssigneeDto(
 		assignee: KanbanBoardAssigneeEntity,
 		taskCounts: Map<string, number>,
+		defaultSprintCapacityPd: number,
 	): KanbanBoardAssigneeDto {
+		const sprintCapacityPd =
+			assignee.sprintCapacityPd === null
+				? null
+				: this.parseNumeric(assignee.sprintCapacityPd);
+		const role = isKanbanBoardAssigneeRoleId(assignee.role) ? assignee.role : null;
 		return {
 			id: assignee.id,
 			code: assignee.code,
 			name: assignee.name,
 			email: assignee.email,
+			role,
+			roleTitle: kanbanBoardAssigneeRoleTitle(role ?? undefined),
+			sprintCapacityPd,
+			effectiveSprintCapacityPd: kanbanBoardEffectiveSprintCapacityPd({
+				sprintCapacityPd,
+				defaultSprintCapacityPd,
+			}),
 			taskCount: taskCounts.get(assignee.name) ?? 0,
 			createdAt: assignee.createdAt.toISOString(),
 			updatedAt: assignee.updatedAt.toISOString(),
 		};
+	}
+
+	private toSettingsDto(
+		settings: KanbanBoardSettingsEntity,
+	): KanbanBoardSettingsDto {
+		return {
+			defaultSprintCapacityPd: this.parseNumeric(settings.defaultSprintCapacityPd),
+			updatedAt: settings.updatedAt.toISOString(),
+		};
+	}
+
+	private async ensureSettings(): Promise<KanbanBoardSettingsEntity> {
+		let settings = await this.settingsRepository.findOne({
+			where: { id: KANBAN_BOARD_SETTINGS_DEFAULT_ID },
+		});
+		if (!settings) {
+			settings = this.settingsRepository.create({
+				id: KANBAN_BOARD_SETTINGS_DEFAULT_ID,
+				defaultSprintCapacityPd: "9",
+			});
+			await this.settingsRepository.save(settings);
+		}
+		return settings;
+	}
+
+	private parseNumeric(value: string | number | null | undefined): number {
+		if (value === null || value === undefined || value === "") return 0;
+		const parsed = Number(value);
+		return Number.isNaN(parsed) ? 0 : parsed;
 	}
 
 	private async countTasksByAssigneeName(): Promise<Map<string, number>> {
@@ -954,10 +1112,37 @@ export class KanbanBoardRegistryService {
 			const nextAssignees = assignees.map((item) =>
 				item === oldName ? newName : item,
 			);
-			const { assignee: _legacyAssignee, ...rest } = task.content;
-			task.content = { ...rest, assignees: nextAssignees };
+			const { assignee: _legacyAssignee, assigneeRole: _legacyRole, ...rest } =
+				task.content;
+			const currentAssignee =
+				task.content.currentAssignee === oldName
+					? newName
+					: task.content.currentAssignee;
+			task.content = { ...rest, assignees: nextAssignees, currentAssignee };
 			await this.taskRepository.save(task);
 		}
+	}
+
+	private normalizeAssigneeRole(
+		role: string | null | undefined,
+	): KanbanBoardAssigneeRoleId | null {
+		if (role === undefined || role === null || role === "") return null;
+		if (!isKanbanBoardAssigneeRoleId(role)) {
+			throw new BadRequestException("Неизвестная роль исполнителя");
+		}
+		return role;
+	}
+
+	private async loadAssigneeRoleByNameMap(): Promise<
+		Map<string, KanbanBoardAssigneeRoleId | null>
+	> {
+		const assignees = await this.assigneeRepository.find();
+		return new Map(
+			assignees.map((item) => [
+				item.name,
+				isKanbanBoardAssigneeRoleId(item.role) ? item.role : null,
+			]),
+		);
 	}
 
 	private toSupersprintDto(
@@ -1023,7 +1208,15 @@ export class KanbanBoardRegistryService {
 				throw new BadRequestException("Спринт не найден");
 			}
 		}
-		return content;
+		const assignees = kanbanBoardTaskAssignees(content);
+		const currentAssignee = content.currentAssignee?.trim();
+		if (currentAssignee && !assignees.includes(currentAssignee)) {
+			throw new BadRequestException(
+				"Текущий исполнитель должен быть среди исполнителей задачи",
+			);
+		}
+		const { assigneeRole: _legacyRole, ...rest } = content;
+		return rest;
 	}
 
 	private async loadSprintTitleMap(sprintIds: string[]): Promise<Map<string, string>> {

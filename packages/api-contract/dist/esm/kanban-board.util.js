@@ -1,4 +1,4 @@
-import { defaultKanbanBoardColumns, } from "./kanban-board.types";
+import { defaultKanbanBoardColumns, KANBAN_BOARD_ASSIGNEE_ROLES, KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD, kanbanBoardAssigneeRoleTitle, } from "./kanban-board.types";
 export function toBoardData(rows, columns) {
     const effectiveColumns = columns.length > 0 ? columns : defaultKanbanBoardColumns("board");
     const sortedColumns = [...effectiveColumns].sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title));
@@ -107,6 +107,70 @@ export function kanbanBoardTaskAssignees(content) {
 }
 export function kanbanBoardTaskAssigneesTitle(content) {
     return kanbanBoardTaskAssignees(content).join(", ");
+}
+const KANBAN_BOARD_ASSIGNEE_ROLE_IDS = new Set(KANBAN_BOARD_ASSIGNEE_ROLES.map((item) => item.id));
+export function isKanbanBoardAssigneeRoleId(value) {
+    return Boolean(value && KANBAN_BOARD_ASSIGNEE_ROLE_IDS.has(value));
+}
+export function kanbanBoardAssigneeRoleByName(assignees) {
+    return new Map(assignees.map((item) => [item.name, item.role]));
+}
+/** Уникальные роли исполнителей задачи по справочнику. */
+export function kanbanBoardTaskAssigneeRoles(content, roleByAssigneeName) {
+    const roles = new Set();
+    for (const name of kanbanBoardTaskAssignees(content)) {
+        const role = roleByAssigneeName.get(name);
+        if (role)
+            roles.add(role);
+    }
+    return [...roles];
+}
+export function kanbanBoardTaskAssigneeRoleTitles(content, roleByAssigneeName) {
+    return kanbanBoardTaskAssigneeRoles(content, roleByAssigneeName).map((role) => kanbanBoardAssigneeRoleTitle(role));
+}
+export function kanbanBoardRoleEstimatesTotal(roleEstimates) {
+    if (!roleEstimates)
+        return undefined;
+    let sum = 0;
+    let hasValue = false;
+    for (const value of Object.values(roleEstimates)) {
+        if (value === undefined || value === null || Number.isNaN(value))
+            continue;
+        sum += value;
+        hasValue = true;
+    }
+    return hasValue ? sum : undefined;
+}
+/** Итоговая оценка: сумма по ролям или явное estimatePd. */
+export function kanbanBoardEffectiveEstimatePd(content) {
+    return kanbanBoardRoleEstimatesTotal(content.roleEstimates) ?? content.estimatePd;
+}
+export function kanbanBoardEffectiveSprintCapacityPd(input) {
+    if (input.sprintCapacityPd !== undefined &&
+        input.sprintCapacityPd !== null &&
+        !Number.isNaN(input.sprintCapacityPd)) {
+        return input.sprintCapacityPd;
+    }
+    const fallback = input.defaultSprintCapacityPd ?? KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD;
+    return fallback;
+}
+/** Нормализует content: проставляет estimatePd из roleEstimates, убирает пустые роли. */
+export function normalizeKanbanBoardTaskContent(content) {
+    const next = { ...content };
+    if (next.roleEstimates) {
+        const cleaned = {};
+        for (const [key, value] of Object.entries(next.roleEstimates)) {
+            if (value !== undefined && value !== null && !Number.isNaN(value)) {
+                cleaned[key] = value;
+            }
+        }
+        next.roleEstimates = Object.keys(cleaned).length ? cleaned : undefined;
+    }
+    const roleTotal = kanbanBoardRoleEstimatesTotal(next.roleEstimates);
+    if (roleTotal !== undefined) {
+        next.estimatePd = roleTotal;
+    }
+    return next;
 }
 export function boardsEquivalent(left, right) {
     const leftRows = fromBoardData(left, "stand", "1970-01-01T00:00:00.000Z", "board");

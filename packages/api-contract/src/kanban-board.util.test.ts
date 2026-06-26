@@ -3,6 +3,11 @@ import {
 	boardsEquivalent,
 	defaultKanbanBoardColumns,
 	fromBoardData,
+	kanbanBoardEffectiveEstimatePd,
+	kanbanBoardEffectiveSprintCapacityPd,
+	kanbanBoardRoleEstimatesTotal,
+	kanbanBoardTaskAssigneeRoles,
+	normalizeKanbanBoardTaskContent,
 	toBoardData,
 	type KanbanBoardData,
 } from "@smart-anketa/api-contract";
@@ -74,5 +79,55 @@ describe("kanban board mapping", () => {
 		const rows = fromBoardData(board, "local-dev", "2026-06-16T12:00:00.000Z", "board-1");
 		const restored = toBoardData(rows, boardColumns);
 		expect(boardsEquivalent(board, restored)).toBe(true);
+	});
+});
+
+describe("kanban board role estimates", () => {
+	it("sums role estimates and normalizes estimatePd", () => {
+		expect(
+			kanbanBoardRoleEstimatesTotal({
+				analyst: 0.5,
+				developer: 2,
+				qa: 0.5,
+			}),
+		).toBe(3);
+		const normalized = normalizeKanbanBoardTaskContent({
+			title: "Task",
+			roleEstimates: { developer: 2, qa: 1 },
+		});
+		expect(normalized.estimatePd).toBe(3);
+		expect(kanbanBoardEffectiveEstimatePd(normalized)).toBe(3);
+	});
+});
+
+describe("kanban board sprint capacity", () => {
+	it("uses individual capacity or default", () => {
+		expect(
+			kanbanBoardEffectiveSprintCapacityPd({
+				sprintCapacityPd: 6,
+				defaultSprintCapacityPd: 9,
+			}),
+		).toBe(6);
+		expect(
+			kanbanBoardEffectiveSprintCapacityPd({
+				sprintCapacityPd: null,
+				defaultSprintCapacityPd: 9,
+			}),
+		).toBe(9);
+	});
+});
+
+describe("kanban board task assignee roles", () => {
+	it("collects unique roles from assignees on task", () => {
+		const roleByName = new Map([
+			["Alice", "analyst" as const],
+			["Bob", "developer" as const],
+		]);
+		expect(
+			kanbanBoardTaskAssigneeRoles(
+				{ assignees: ["Alice", "Bob", "Alice"] },
+				roleByName,
+			),
+		).toEqual(["analyst", "developer"]);
 	});
 });

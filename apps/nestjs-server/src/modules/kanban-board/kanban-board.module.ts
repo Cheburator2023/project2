@@ -8,6 +8,7 @@ import { KanbanBoardAssigneeEntity } from "./entities/kanban-board-assignee.enti
 import { KanbanBoardSupersprintEntity } from "./entities/kanban-board-supersprint.entity";
 import { KanbanBoardSprintEntity } from "./entities/kanban-board-sprint.entity";
 import { KanbanBoardStreamEntity } from "./entities/kanban-board-stream.entity";
+import { KanbanBoardSettingsEntity } from "./entities/kanban-board-settings.entity";
 import { KanbanBoardController } from "./controllers/kanban-board.controller";
 import { KanbanBoardService } from "./services/kanban-board.service";
 import { KanbanBoardRegistryService } from "./services/kanban-board-registry.service";
@@ -23,6 +24,7 @@ import { KanbanBoardRegistryService } from "./services/kanban-board-registry.ser
 			KanbanBoardSprintEntity,
 			KanbanBoardStreamEntity,
 			KanbanBoardTaskEntity,
+			KanbanBoardSettingsEntity,
 		]),
 	],
 	controllers: [KanbanBoardController],

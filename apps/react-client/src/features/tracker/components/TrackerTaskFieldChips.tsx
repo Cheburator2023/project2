@@ -2,12 +2,16 @@ import {
 	KANBAN_BOARD_COLUMN_COLORS,
 	kanbanBoardAssigneeRoleColor,
 	kanbanBoardAssigneeRoleTitle,
+	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardPriorityColor,
+	kanbanBoardPriorityTitle,
+	kanbanBoardTaskAssigneeRoles,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskTypeColor,
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeColor,
 	kanbanBoardWorkTypeTitle,
+	type KanbanBoardAssigneeRoleId,
 	type KanbanBoardStatusId,
 	type KanbanBoardTaskContent,
 } from "@smart-anketa/api-contract";
@@ -68,6 +72,25 @@ export function TrackerTaskTypeChip({
 	);
 }
 
+export function TrackerTaskPriorityChip({
+	priority,
+	priorityTitle,
+}: {
+	priority?: KanbanBoardTaskContent["priority"];
+	priorityTitle?: string;
+}) {
+	const label = priorityTitle ?? kanbanBoardPriorityTitle(priority);
+	if (!label) return null;
+	return (
+		<TrackerRegistryChipCell>
+			<KanbanTaskFieldChip
+				label={label}
+				color={kanbanBoardPriorityColor(priority)}
+			/>
+		</TrackerRegistryChipCell>
+	);
+}
+
 export function TrackerTaskWorkTypeChip({
 	workType,
 	workTypeTitle,
@@ -114,7 +137,7 @@ export function TrackerTaskAssigneeRoleChip({
 	assigneeRole,
 	assigneeRoleTitle,
 }: {
-	assigneeRole?: KanbanBoardTaskContent["assigneeRole"];
+	assigneeRole?: KanbanBoardAssigneeRoleId;
 	assigneeRoleTitle?: string;
 }) {
 	if (!assigneeRoleTitle) return null;
@@ -123,6 +146,43 @@ export function TrackerTaskAssigneeRoleChip({
 			<KanbanTaskFieldChip
 				label={assigneeRoleTitle}
 				color={kanbanBoardAssigneeRoleColor(assigneeRole)}
+			/>
+		</TrackerRegistryChipCell>
+	);
+}
+
+export function TrackerTaskAssigneeRolesChips({
+	assigneeRoles,
+	assigneeRoleTitles,
+}: {
+	assigneeRoles?: KanbanBoardAssigneeRoleId[];
+	assigneeRoleTitles?: string[];
+}) {
+	if (!assigneeRoleTitles?.length) return null;
+	return (
+		<TrackerRegistryChipCell>
+			{assigneeRoleTitles.map((title, index) => (
+				<KanbanTaskFieldChip
+					key={`${title}-${index}`}
+					label={title}
+					color={kanbanBoardAssigneeRoleColor(assigneeRoles?.[index])}
+				/>
+			))}
+		</TrackerRegistryChipCell>
+	);
+}
+
+export function TrackerTaskCurrentAssigneeChip({
+	currentAssigneeTitle,
+}: {
+	currentAssigneeTitle?: string;
+}) {
+	if (!currentAssigneeTitle) return null;
+	return (
+		<TrackerRegistryChipCell>
+			<KanbanTaskFieldChip
+				label={currentAssigneeTitle}
+				color={LIST_FIELD_COLORS.assignee}
 			/>
 		</TrackerRegistryChipCell>
 	);
@@ -158,9 +218,11 @@ export function TrackerTaskOriginChip({ origin }: { origin?: string }) {
 export function KanbanTaskContentChips({
 	content,
 	origin,
+	assigneeRoleByName,
 }: {
 	content?: KanbanBoardTaskContent;
 	origin?: string;
+	assigneeRoleByName?: ReadonlyMap<string, KanbanBoardAssigneeRoleId | null>;
 }) {
 	if (!content) return null;
 
@@ -182,23 +244,28 @@ export function KanbanTaskContentChips({
 	if (content.priority) {
 		chips.push({
 			value: "priority",
-			label: content.priority,
+			label: kanbanBoardPriorityTitle(content.priority),
 			color: kanbanBoardPriorityColor(content.priority),
 		});
 	}
 	for (const assignee of kanbanBoardTaskAssignees(content)) {
+		if (content.currentAssignee?.trim() && assignee !== content.currentAssignee.trim()) {
+			continue;
+		}
 		chips.push({
 			value: `assignee:${assignee}`,
 			label: assignee,
 			color: LIST_FIELD_COLORS.assignee,
 		});
 	}
-	if (content.assigneeRole) {
-		chips.push({
-			value: "assigneeRole",
-			label: kanbanBoardAssigneeRoleTitle(content.assigneeRole),
-			color: kanbanBoardAssigneeRoleColor(content.assigneeRole),
-		});
+	if (assigneeRoleByName) {
+		for (const role of kanbanBoardTaskAssigneeRoles(content, assigneeRoleByName)) {
+			chips.push({
+				value: `assigneeRole:${role}`,
+				label: kanbanBoardAssigneeRoleTitle(role),
+				color: kanbanBoardAssigneeRoleColor(role),
+			});
+		}
 	}
 	if (content.streamCustomer) {
 		chips.push({
@@ -215,7 +282,7 @@ export function KanbanTaskContentChips({
 		});
 	}
 
-	if (!chips.length && content.estimatePd === undefined && !content.dueDate) {
+	if (!chips.length && kanbanBoardEffectiveEstimatePd(content) === undefined && !content.dueDate) {
 		return null;
 	}
 
@@ -224,9 +291,9 @@ export function KanbanTaskContentChips({
 			{chips.map((chip) => (
 				<KanbanTaskFieldChip key={chip.value} label={chip.label} color={chip.color} />
 			))}
-			{content.estimatePd !== undefined ? (
+			{kanbanBoardEffectiveEstimatePd(content) !== undefined ? (
 				<KanbanTaskFieldChip
-					label={`${content.estimatePd} чд`}
+					label={`${kanbanBoardEffectiveEstimatePd(content)} чд`}
 					color="#64748b"
 					outlined
 				/>

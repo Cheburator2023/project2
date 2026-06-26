@@ -10,18 +10,20 @@ import { alpha } from "@mui/material/styles";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	fromBoardData,
+	kanbanBoardAssigneeRoleByName,
 	normalizeKanbanBoardData,
 	toBoardData,
+	type KanbanBoardAssigneeRoleId,
 	type KanbanBoardColumnDto,
 	type KanbanBoardData,
 	type KanbanBoardTaskContent,
 	type KanbanBoardTaskRecord,
 } from "@smart-anketa/api-contract";
 import { KanbanTaskContentChips } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
-import { kanbanBoardTaskAssignees } from "@smart-anketa/api-contract";
+import { kanbanBoardTaskAssigneeRoles, kanbanBoardTaskAssignees } from "@smart-anketa/api-contract";
 import { Kanban, dropHandler } from "react-kanban-kit";
 import type { BoardData, BoardItem } from "react-kanban-kit";
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
@@ -37,6 +39,7 @@ import {
 	useKanbanBoardBoards,
 	useKanbanBoardColumns,
 	useKanbanBoardConfig,
+	useKanbanBoardAssignees,
 	useCreateKanbanBoardColumn,
 	useDeleteKanbanBoardColumn,
 	useUpdateKanbanBoardColumn,
@@ -63,13 +66,19 @@ function TaskCardContent({
 	content,
 	origin,
 	columnColor,
+	assigneeRoleByName,
 }: {
 	title?: string;
 	content?: KanbanBoardTaskContent;
 	origin?: string;
 	columnColor: string;
+	assigneeRoleByName?: ReadonlyMap<string, KanbanBoardAssigneeRoleId | null>;
 }) {
 	const displayTitle = title ?? content?.title;
+	const hasRoleChips =
+		content && assigneeRoleByName
+			? kanbanBoardTaskAssigneeRoles(content, assigneeRoleByName).length > 0
+			: false;
 
 	return (
 		<Box
@@ -98,7 +107,8 @@ function TaskCardContent({
 				) : null}
 				{content?.priority ||
 				(content && kanbanBoardTaskAssignees(content).length > 0) ||
-				content?.assigneeRole ||
+				content?.currentAssignee ||
+				hasRoleChips ||
 				content?.taskType ||
 				content?.workType ||
 				content?.streamCustomer ||
@@ -112,7 +122,11 @@ function TaskCardContent({
 						useFlexGap
 						alignItems="center"
 					>
-						<KanbanTaskContentChips content={content} origin={origin} />
+						<KanbanTaskContentChips
+							content={content}
+							origin={origin}
+							assigneeRoleByName={assigneeRoleByName}
+						/>
 					</Stack>
 				) : null}
 			</Stack>
@@ -131,6 +145,11 @@ export function KanbanBoardPage() {
 	const configQuery = useKanbanBoardConfig();
 	const boardsQuery = useKanbanBoardBoards();
 	const columnsQuery = useKanbanBoardColumns(boardId);
+	const assigneesQuery = useKanbanBoardAssignees();
+	const assigneeRoleByName = useMemo(
+		() => kanbanBoardAssigneeRoleByName(assigneesQuery.data ?? []),
+		[assigneesQuery.data],
+	);
 	const createColumn = useCreateKanbanBoardColumn();
 	const updateColumn = useUpdateKanbanBoardColumn();
 	const deleteColumn = useDeleteKanbanBoardColumn();
@@ -470,6 +489,7 @@ export function KanbanBoardPage() {
 											}
 											origin={(data as KanbanBoardData[string]).origin}
 											columnColor={getKanbanColumnColor(column)}
+											assigneeRoleByName={assigneeRoleByName}
 										/>
 									),
 								},

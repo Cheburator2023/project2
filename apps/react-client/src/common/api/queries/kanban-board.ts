@@ -14,6 +14,7 @@ import type {
 	KanbanBoardData,
 	KanbanBoardProjectDto,
 	KanbanBoardSprintDto,
+	KanbanBoardSettingsDto,
 	KanbanBoardStreamDto,
 	KanbanBoardSupersprintDto,
 	KanbanBoardTaskRecord,
@@ -22,6 +23,7 @@ import type {
 	UpdateKanbanBoardBoardRequestDto,
 	UpdateKanbanBoardColumnRequestDto,
 	UpdateKanbanBoardProjectRequestDto,
+	UpdateKanbanBoardSettingsRequestDto,
 	UpdateKanbanBoardSprintRequestDto,
 	UpdateKanbanBoardStreamRequestDto,
 	UpdateKanbanBoardSupersprintRequestDto,
@@ -52,6 +54,7 @@ const invalidateTracker = (queryClient: ReturnType<typeof useQueryClient>) => {
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardSupersprints"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardSprints"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardStreams"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardSettings"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasksRegistry"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasks"] });
 };
@@ -174,6 +177,30 @@ export const useDeleteKanbanBoardAssignee = () => {
 			apiClient<void>({
 				url: `/kanban-board/assignees/${id}`,
 				method: "DELETE",
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useKanbanBoardSettings = () =>
+	useQuery({
+		queryKey: ["kanbanBoardSettings"],
+		queryFn: ({ signal }) =>
+			apiClient<KanbanBoardSettingsDto>({
+				url: "/kanban-board/settings",
+				method: "GET",
+				signal,
+			}),
+	});
+
+export const useUpdateKanbanBoardSettings = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (data: UpdateKanbanBoardSettingsRequestDto) =>
+			apiClient<KanbanBoardSettingsDto>({
+				url: "/kanban-board/settings",
+				method: "PUT",
+				data,
 			}),
 		onSuccess: () => invalidateTracker(queryClient),
 	});

@@ -35,6 +35,7 @@ import type {
 	KanbanBoardColumnDto,
 	KanbanBoardProjectDto,
 	KanbanBoardSprintDto,
+	KanbanBoardSettingsDto,
 	KanbanBoardStreamDto,
 	KanbanBoardSupersprintDto,
 	KanbanBoardTaskRecord,
@@ -43,6 +44,7 @@ import type {
 	UpdateKanbanBoardBoardRequestDto,
 	UpdateKanbanBoardColumnRequestDto,
 	UpdateKanbanBoardProjectRequestDto,
+	UpdateKanbanBoardSettingsRequestDto,
 	UpdateKanbanBoardSprintRequestDto,
 	UpdateKanbanBoardStreamRequestDto,
 	UpdateKanbanBoardSupersprintRequestDto,
@@ -118,6 +120,18 @@ export class KanbanBoardController {
 	@Delete("assignees/:id")
 	async deleteAssignee(@Param("id") id: string): Promise<void> {
 		return this.registryService.deleteAssignee(id);
+	}
+
+	@Get("settings")
+	async getSettings(): Promise<KanbanBoardSettingsDto> {
+		return this.registryService.getSettings();
+	}
+
+	@Put("settings")
+	async updateSettings(
+		@Body() dto: UpdateKanbanBoardSettingsRequestDto,
+	): Promise<KanbanBoardSettingsDto> {
+		return this.registryService.updateSettings(dto);
 	}
 
 	@Get("supersprints")

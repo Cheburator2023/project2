@@ -11,8 +11,10 @@ import {
 } from "@react-client/features/tracker/components/TrackerRegistryChipCell";
 import {
 	TrackerTaskAssigneesChips,
-	TrackerTaskAssigneeRoleChip,
+	TrackerTaskAssigneeRolesChips,
+	TrackerTaskCurrentAssigneeChip,
 	TrackerTaskOriginChip,
+	TrackerTaskPriorityChip,
 	TrackerTaskSprintChip,
 	TrackerTaskStatusChip,
 	TrackerTaskStreamChip,
@@ -38,7 +40,26 @@ export function TrackerTasksPage() {
 
 	const columnDefs = useMemo<ColDef<KanbanBoardTaskRegistryDto>[]>(
 		() => [
+			{
+				field: "backlogNumber",
+				headerName: "№",
+				width: 64,
+				type: "numericColumn",
+			},
 			{ field: "title", headerName: "Заголовок", flex: 1.2, minWidth: 180 },
+			{
+				colId: "priority",
+				headerName: "Приоритет",
+				width: 110,
+				valueGetter: (params) => params.data?.priorityTitle ?? "",
+				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
+					params.data ? (
+						<TrackerTaskPriorityChip
+							priority={params.data.content.priority}
+							priorityTitle={params.data.priorityTitle}
+						/>
+					) : null,
+			},
 			{
 				colId: "project",
 				headerName: "Проект",
@@ -127,27 +148,54 @@ export function TrackerTasksPage() {
 					) : null,
 			},
 			{
-				colId: "assigneeRole",
-				headerName: "Роль",
-				width: 120,
-				valueGetter: (params) => params.data?.assigneeRoleTitle ?? "",
+				colId: "currentAssignee",
+				headerName: "Текущий исполнитель",
+				minWidth: 150,
+				flex: 0.8,
+				valueGetter: (params) => params.data?.currentAssigneeTitle ?? "",
 				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
 					params.data ? (
-						<TrackerTaskAssigneeRoleChip
-							assigneeRole={params.data.content.assigneeRole}
-							assigneeRoleTitle={params.data.assigneeRoleTitle}
+						<TrackerTaskCurrentAssigneeChip
+							currentAssigneeTitle={params.data.currentAssigneeTitle}
 						/>
 					) : null,
 			},
 			{
-				field: "estimatePd",
-				headerName: "Оценка, чд",
-				width: 110,
-				type: "numericColumn",
+				colId: "assigneeRole",
+				headerName: "Роли",
+				minWidth: 140,
+				flex: 0.8,
+				valueGetter: (params) => params.data?.assigneeRoleTitle ?? "",
+				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
+					params.data ? (
+						<TrackerTaskAssigneeRolesChips
+							assigneeRoles={params.data.assigneeRoles}
+							assigneeRoleTitles={params.data.assigneeRoleTitles}
+						/>
+					) : null,
 			},
-			{ field: "dueDate", headerName: "Срок", width: 120 },
+			{
+				field: "customer",
+				headerName: "Заказчик",
+				minWidth: 100,
+				width: 110,
+			},
+			{
+				field: "sprintOutcome",
+				headerName: "Результат спринта",
+				minWidth: 160,
+				flex: 0.9,
+			},
+			{
+				field: "effectiveEstimatePd",
+				headerName: "Итого, чд",
+				width: 100,
+				type: "numericColumn",
+				valueGetter: (params) =>
+					params.data?.effectiveEstimatePd ?? params.data?.estimatePd,
+			},
+			{ field: "dueDate", headerName: "Срок", width: 130 },
 			{ field: "parentTask", headerName: "Родитель", minWidth: 140, flex: 0.8 },
-			{ field: "customer", headerName: "Заказчик", minWidth: 140, flex: 0.8 },
 			{
 				colId: "sprint",
 				headerName: "Спринт",

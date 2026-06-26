@@ -1,27 +1,67 @@
+/** Оценка трудоёмкости по ролям, чд — как в таблице планирования менеджеров. */
+export interface KanbanBoardRoleEstimates {
+	analyst?: number;
+	developer?: number;
+	qa?: number;
+	debug?: number;
+	devops?: number;
+	architect?: number;
+}
+
 export interface KanbanBoardTaskContent {
 	title: string;
 	description?: string;
-	priority?: "low" | "medium" | "high";
+	priority?: KanbanBoardPriorityId;
+	/** № п/п в бэклоге (для родительских задач) */
+	backlogNumber?: number;
 	/** @deprecated use assignees */
 	assignee?: string;
 	assignees?: string[];
+	/** Текущий исполнитель (кто ведёт задачу сейчас) */
+	currentAssignee?: string;
+	/** @deprecated роль берётся из справочника исполнителей */
 	assigneeRole?: KanbanBoardAssigneeRoleId;
 	tags?: string[];
 	/** @deprecated use estimatePd */
 	estimate?: number;
 	taskType?: KanbanBoardTaskTypeId;
 	workType?: KanbanBoardWorkTypeId;
-	/** Оценка в человеко-днях */
+	/** Оценка в человеко-днях (итог или ручной ввод) */
 	estimatePd?: number;
-	/** YYYY-MM-DD */
+	/** Детализация оценки по ролям; при сохранении сумма попадает в estimatePd */
+	roleEstimates?: KanbanBoardRoleEstimates;
+	/** YYYY-MM-DD или произвольная метка срока */
 	dueDate?: string;
 	/** Родительская задача (ручной ввод) */
 	parentTask?: string;
 	/** Заказчик (ручной ввод) */
 	customer?: string;
+	/** Ожидаемый результат спринта */
+	sprintOutcome?: string;
 	sprintId?: string;
 	streamCustomer?: string;
 }
+
+export const KANBAN_BOARD_PRIORITIES = [
+	{ id: "high", title: "Высокий" },
+	{ id: "medium", title: "Средний" },
+	{ id: "low", title: "Низкий" },
+	{ id: "hold", title: "Холд" },
+] as const;
+
+export type KanbanBoardPriorityId = (typeof KANBAN_BOARD_PRIORITIES)[number]["id"];
+
+export const KANBAN_BOARD_ROLE_ESTIMATE_FIELDS = [
+	{ key: "analyst", title: "Аналитик" },
+	{ key: "developer", title: "Разработчик" },
+	{ key: "qa", title: "Тестировщик" },
+	{ key: "debug", title: "Отладка" },
+	{ key: "devops", title: "DevOps" },
+	{ key: "architect", title: "Архитектор" },
+] as const satisfies ReadonlyArray<{
+	key: keyof KanbanBoardRoleEstimates;
+	title: string;
+}>;
 
 export const KANBAN_BOARD_TASK_TYPES = [
 	{ id: "epic", title: "Эпик" },
@@ -99,14 +139,18 @@ export const KANBAN_BOARD_WORK_TYPE_COLORS: Record<KanbanBoardWorkTypeId, string
 	tech_debt: "#ea580c",
 };
 
-export const KANBAN_BOARD_PRIORITY_COLORS: Record<
-	NonNullable<KanbanBoardTaskContent["priority"]>,
-	string
-> = {
+export const KANBAN_BOARD_PRIORITY_COLORS: Record<KanbanBoardPriorityId, string> = {
 	low: "#16a34a",
 	medium: "#ca8a04",
 	high: "#dc2626",
+	hold: "#78716c",
 };
+
+export function kanbanBoardPriorityTitle(
+	id?: KanbanBoardPriorityId | string,
+): string {
+	return KANBAN_BOARD_PRIORITIES.find((item) => item.id === id)?.title ?? id ?? "";
+}
 
 export function kanbanBoardTaskTypeColor(id?: KanbanBoardTaskTypeId | string): string {
 	if (!id) return "#64748b";
@@ -123,14 +167,10 @@ export function kanbanBoardWorkTypeColor(id?: KanbanBoardWorkTypeId | string): s
 }
 
 export function kanbanBoardPriorityColor(
-	priority?: KanbanBoardTaskContent["priority"] | string,
+	priority?: KanbanBoardPriorityId | string,
 ): string {
 	if (!priority) return "#64748b";
-	return (
-		KANBAN_BOARD_PRIORITY_COLORS[
-			priority as NonNullable<KanbanBoardTaskContent["priority"]>
-		] ?? "#64748b"
-	);
+	return KANBAN_BOARD_PRIORITY_COLORS[priority as KanbanBoardPriorityId] ?? "#64748b";
 }
 
 export interface KanbanBoardTaskRecord {
@@ -179,7 +219,16 @@ export interface KanbanBoardTaskRegistryDto extends KanbanBoardTaskRecord {
 	workTypeTitle: string;
 	assigneeTitle: string;
 	assignees: string[];
+	currentAssigneeTitle: string;
+	assigneeRoles: KanbanBoardAssigneeRoleId[];
+	assigneeRoleTitles: string[];
+	/** @deprecated используйте assigneeRoleTitles */
 	assigneeRoleTitle: string;
+	backlogNumber?: number;
+	priorityTitle?: string;
+	sprintOutcome?: string;
+	roleEstimates?: KanbanBoardRoleEstimates;
+	effectiveEstimatePd?: number;
 	estimatePd?: number;
 	dueDate?: string;
 	parentTask?: string;
@@ -250,11 +299,28 @@ export interface UpdateKanbanBoardColumnRequestDto {
 	color?: string;
 }
 
+export const KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD = 9;
+
+export interface KanbanBoardSettingsDto {
+	defaultSprintCapacityPd: number;
+	updatedAt: string;
+}
+
+export interface UpdateKanbanBoardSettingsRequestDto {
+	defaultSprintCapacityPd?: number;
+}
+
 export interface KanbanBoardAssigneeDto {
 	id: string;
 	code: string;
 	name: string;
 	email: string | null;
+	role: KanbanBoardAssigneeRoleId | null;
+	roleTitle: string;
+	/** Индивидуальная ёмкость спринта, чд; null — используется значение по умолчанию */
+	sprintCapacityPd: number | null;
+	/** Ёмкость с учётом настройки по умолчанию */
+	effectiveSprintCapacityPd: number;
 	taskCount: number;
 	createdAt: string;
 	updatedAt: string;
@@ -264,12 +330,16 @@ export interface CreateKanbanBoardAssigneeRequestDto {
 	code: string;
 	name: string;
 	email?: string | null;
+	role?: KanbanBoardAssigneeRoleId | null;
+	sprintCapacityPd?: number | null;
 }
 
 export interface UpdateKanbanBoardAssigneeRequestDto {
 	code?: string;
 	name?: string;
 	email?: string | null;
+	role?: KanbanBoardAssigneeRoleId | null;
+	sprintCapacityPd?: number | null;
 }
 
 export interface KanbanBoardSupersprintDto {

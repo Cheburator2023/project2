@@ -69,3 +69,30 @@ const sampleBoard = () => ({
         (0, vitest_1.expect)((0, api_contract_1.boardsEquivalent)(board, restored)).toBe(true);
     });
 });
+(0, vitest_1.describe)("kanban board role estimates", () => {
+    (0, vitest_1.it)("sums role estimates and normalizes estimatePd", () => {
+        (0, vitest_1.expect)((0, api_contract_1.kanbanBoardRoleEstimatesTotal)({
+            analyst: 0.5,
+            developer: 2,
+            qa: 0.5,
+        })).toBe(3);
+        const normalized = (0, api_contract_1.normalizeKanbanBoardTaskContent)({
+            title: "Task",
+            roleEstimates: { developer: 2, qa: 1 },
+        });
+        (0, vitest_1.expect)(normalized.estimatePd).toBe(3);
+        (0, vitest_1.expect)((0, api_contract_1.kanbanBoardEffectiveEstimatePd)(normalized)).toBe(3);
+    });
+});
+(0, vitest_1.describe)("kanban board sprint capacity", () => {
+    (0, vitest_1.it)("uses individual capacity or default", () => {
+        (0, vitest_1.expect)((0, api_contract_1.kanbanBoardEffectiveSprintCapacityPd)({
+            sprintCapacityPd: 6,
+            defaultSprintCapacityPd: 9,
+        })).toBe(6);
+        (0, vitest_1.expect)((0, api_contract_1.kanbanBoardEffectiveSprintCapacityPd)({
+            sprintCapacityPd: null,
+            defaultSprintCapacityPd: 9,
+        })).toBe(9);
+    });
+});

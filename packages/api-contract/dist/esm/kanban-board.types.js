@@ -1,3 +1,17 @@
+export const KANBAN_BOARD_PRIORITIES = [
+    { id: "high", title: "Высокий" },
+    { id: "medium", title: "Средний" },
+    { id: "low", title: "Низкий" },
+    { id: "hold", title: "Холд" },
+];
+export const KANBAN_BOARD_ROLE_ESTIMATE_FIELDS = [
+    { key: "analyst", title: "Аналитик" },
+    { key: "developer", title: "Разработчик" },
+    { key: "qa", title: "Тестировщик" },
+    { key: "debug", title: "Отладка" },
+    { key: "devops", title: "DevOps" },
+    { key: "architect", title: "Архитектор" },
+];
 export const KANBAN_BOARD_TASK_TYPES = [
     { id: "epic", title: "Эпик" },
     { id: "story", title: "История" },
@@ -52,7 +66,11 @@ export const KANBAN_BOARD_PRIORITY_COLORS = {
     low: "#16a34a",
     medium: "#ca8a04",
     high: "#dc2626",
+    hold: "#78716c",
 };
+export function kanbanBoardPriorityTitle(id) {
+    return KANBAN_BOARD_PRIORITIES.find((item) => item.id === id)?.title ?? id ?? "";
+}
 export function kanbanBoardTaskTypeColor(id) {
     if (!id)
         return "#64748b";
@@ -66,8 +84,9 @@ export function kanbanBoardWorkTypeColor(id) {
 export function kanbanBoardPriorityColor(priority) {
     if (!priority)
         return "#64748b";
-    return (KANBAN_BOARD_PRIORITY_COLORS[priority] ?? "#64748b");
+    return KANBAN_BOARD_PRIORITY_COLORS[priority] ?? "#64748b";
 }
+export const KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD = 9;
 export const KANBAN_BOARD_STOCK_PROJECTS = [
     { code: "sum", name: "SUM", description: "Стоковый проект SUM" },
     { code: "sum-rm", name: "SUM-RM", description: "Стоковый проект SUM-RM" },

@@ -1,9 +1,14 @@
 import {
+	type KanbanBoardAssigneeRoleId,
 	type KanbanBoardColumnDto,
 	type KanbanBoardData,
+	type KanbanBoardRoleEstimates,
 	type KanbanBoardTaskContent,
 	type KanbanBoardTaskRecord,
 	defaultKanbanBoardColumns,
+	KANBAN_BOARD_ASSIGNEE_ROLES,
+	KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD,
+	kanbanBoardAssigneeRoleTitle,
 } from "./kanban-board.types";
 
 export function toBoardData(
@@ -137,6 +142,108 @@ export function kanbanBoardTaskAssigneesTitle(
 	content: Pick<KanbanBoardTaskContent, "assignee" | "assignees">,
 ): string {
 	return kanbanBoardTaskAssignees(content).join(", ");
+}
+
+const KANBAN_BOARD_ASSIGNEE_ROLE_IDS = new Set<string>(
+	KANBAN_BOARD_ASSIGNEE_ROLES.map((item) => item.id),
+);
+
+export function isKanbanBoardAssigneeRoleId(
+	value: string | null | undefined,
+): value is KanbanBoardAssigneeRoleId {
+	return Boolean(value && KANBAN_BOARD_ASSIGNEE_ROLE_IDS.has(value));
+}
+
+export function kanbanBoardAssigneeRoleByName(
+	assignees: ReadonlyArray<{
+		name: string;
+		role: KanbanBoardAssigneeRoleId | null;
+	}>,
+): Map<string, KanbanBoardAssigneeRoleId | null> {
+	return new Map(assignees.map((item) => [item.name, item.role]));
+}
+
+/** Уникальные роли исполнителей задачи по справочнику. */
+export function kanbanBoardTaskAssigneeRoles(
+	content: Pick<KanbanBoardTaskContent, "assignee" | "assignees">,
+	roleByAssigneeName: ReadonlyMap<string, KanbanBoardAssigneeRoleId | null | undefined>,
+): KanbanBoardAssigneeRoleId[] {
+	const roles = new Set<KanbanBoardAssigneeRoleId>();
+	for (const name of kanbanBoardTaskAssignees(content)) {
+		const role = roleByAssigneeName.get(name);
+		if (role) roles.add(role);
+	}
+	return [...roles];
+}
+
+export function kanbanBoardTaskAssigneeRoleTitles(
+	content: Pick<KanbanBoardTaskContent, "assignee" | "assignees">,
+	roleByAssigneeName: ReadonlyMap<string, KanbanBoardAssigneeRoleId | null | undefined>,
+): string[] {
+	return kanbanBoardTaskAssigneeRoles(content, roleByAssigneeName).map((role) =>
+		kanbanBoardAssigneeRoleTitle(role),
+	);
+}
+
+export function kanbanBoardRoleEstimatesTotal(
+	roleEstimates?: KanbanBoardRoleEstimates,
+): number | undefined {
+	if (!roleEstimates) return undefined;
+	let sum = 0;
+	let hasValue = false;
+	for (const value of Object.values(roleEstimates)) {
+		if (value === undefined || value === null || Number.isNaN(value)) continue;
+		sum += value;
+		hasValue = true;
+	}
+	return hasValue ? sum : undefined;
+}
+
+/** Итоговая оценка: сумма по ролям или явное estimatePd. */
+export function kanbanBoardEffectiveEstimatePd(
+	content: Pick<KanbanBoardTaskContent, "estimatePd" | "roleEstimates">,
+): number | undefined {
+	return kanbanBoardRoleEstimatesTotal(content.roleEstimates) ?? content.estimatePd;
+}
+
+export function kanbanBoardEffectiveSprintCapacityPd(input: {
+	sprintCapacityPd?: number | null;
+	defaultSprintCapacityPd?: number;
+}): number {
+	if (
+		input.sprintCapacityPd !== undefined &&
+		input.sprintCapacityPd !== null &&
+		!Number.isNaN(input.sprintCapacityPd)
+	) {
+		return input.sprintCapacityPd;
+	}
+	const fallback =
+		input.defaultSprintCapacityPd ?? KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD;
+	return fallback;
+}
+
+/** Нормализует content: проставляет estimatePd из roleEstimates, убирает пустые роли. */
+export function normalizeKanbanBoardTaskContent(
+	content: KanbanBoardTaskContent,
+): KanbanBoardTaskContent {
+	const next: KanbanBoardTaskContent = { ...content };
+	if (next.roleEstimates) {
+		const cleaned: KanbanBoardRoleEstimates = {};
+		for (const [key, value] of Object.entries(next.roleEstimates) as [
+			keyof KanbanBoardRoleEstimates,
+			number | undefined,
+		][]) {
+			if (value !== undefined && value !== null && !Number.isNaN(value)) {
+				cleaned[key] = value;
+			}
+		}
+		next.roleEstimates = Object.keys(cleaned).length ? cleaned : undefined;
+	}
+	const roleTotal = kanbanBoardRoleEstimatesTotal(next.roleEstimates);
+	if (roleTotal !== undefined) {
+		next.estimatePd = roleTotal;
+	}
+	return next;
 }
 
 export function boardsEquivalent(

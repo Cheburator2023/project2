@@ -12,6 +12,7 @@ import {
 	AllCommunityModule,
 	ClientSideRowModelModule,
 	type CellContextMenuEvent,
+	type CellValueChangedEvent,
 	type ColDef,
 	type SelectionChangedEvent,
 	ModuleRegistry,
@@ -50,6 +51,7 @@ type Props<TRow extends object> = {
 	quickFilter?: string;
 	onSelectionChange?: (rows: TRow[]) => void;
 	onRowDoubleClick?: (row: TRow) => void;
+	onCellValueChanged?: (row: TRow, field: string, value: unknown) => void;
 	contextActions?: TrackerRegistryContextAction<TRow>[];
 };
 
@@ -60,6 +62,7 @@ export function TrackerRegistryGrid<TRow extends object>({
 	quickFilter = "",
 	onSelectionChange,
 	onRowDoubleClick,
+	onCellValueChanged,
 	contextActions = [],
 }: Props<TRow>) {
 	const { mode } = useColorScheme();
@@ -128,6 +131,15 @@ export function TrackerRegistryGrid<TRow extends object>({
 				onRowDoubleClicked={(event) => {
 					if (event.data) onRowDoubleClick?.(event.data);
 				}}
+				onCellValueChanged={(event: CellValueChangedEvent<TRow>) => {
+					if (!event.data || !event.colDef.field) return;
+					onCellValueChanged?.(
+						event.data,
+						event.colDef.field,
+						event.newValue,
+					);
+				}}
+				singleClickEdit
 				suppressCsvExport
 				suppressExcelExport
 				preventDefaultOnContextMenu={contextActions.length > 0}

@@ -7,8 +7,17 @@ import {
 } from "@react-client/common/api/queries/kanban-board";
 import { TrackerRegistryPage } from "@react-client/features/tracker/components/TrackerRegistryPage";
 import { trackerDateFormatter } from "@react-client/features/tracker/components/TrackerRegistryGrid";
-import type { KanbanBoardAssigneeDto } from "@smart-anketa/api-contract";
+import {
+	KANBAN_BOARD_ASSIGNEE_ROLES,
+	isKanbanBoardAssigneeRoleId,
+	type KanbanBoardAssigneeDto,
+} from "@smart-anketa/api-contract";
 import { useMemo } from "react";
+
+const parseAssigneeRole = (
+	value: string,
+): KanbanBoardAssigneeDto["role"] =>
+	isKanbanBoardAssigneeRoleId(value) ? value : null;
 
 export function TrackerAssigneesPage() {
 	const { data = [], isLoading } = useKanbanBoardAssignees();
@@ -16,11 +25,27 @@ export function TrackerAssigneesPage() {
 	const updateAssignee = useUpdateKanbanBoardAssignee();
 	const deleteAssignee = useDeleteKanbanBoardAssignee();
 
+	const roleOptions = useMemo(
+		() =>
+			KANBAN_BOARD_ASSIGNEE_ROLES.map((role) => ({
+				value: role.id,
+				label: role.title,
+			})),
+		[],
+	);
+
 	const columnDefs = useMemo<ColDef<KanbanBoardAssigneeDto>[]>(
 		() => [
 			{ field: "code", headerName: "Код", flex: 1, minWidth: 120 },
 			{ field: "name", headerName: "Имя", flex: 1.2, minWidth: 160 },
+			{ field: "roleTitle", headerName: "Роль", width: 130 },
 			{ field: "email", headerName: "Email", flex: 1.2, minWidth: 180 },
+			{
+				field: "effectiveSprintCapacityPd",
+				headerName: "Ёмкость, чд",
+				width: 110,
+				type: "numericColumn",
+			},
 			{
 				field: "taskCount",
 				headerName: "Задач",
@@ -55,6 +80,18 @@ export function TrackerAssigneesPage() {
 				},
 				{ name: "name", label: "Имя", required: true },
 				{ name: "email", label: "Email" },
+				{
+					name: "role",
+					label: "Роль",
+					type: "select",
+					options: [{ value: "", label: "—" }, ...roleOptions],
+				},
+				{
+					name: "sprintCapacityPd",
+					label: "Ёмкость спринта, чд",
+					type: "number",
+					helperText: "Пусто — используется значение из настроек трекера",
+				},
 			]}
 			getInitialFormValues={(row) =>
 				row
@@ -62,6 +99,11 @@ export function TrackerAssigneesPage() {
 							code: row.code,
 							name: row.name,
 							email: row.email ?? "",
+							role: row.role ?? "",
+							sprintCapacityPd:
+								row.sprintCapacityPd === null
+									? ""
+									: String(row.sprintCapacityPd),
 						}
 					: {}
 			}
@@ -75,6 +117,10 @@ export function TrackerAssigneesPage() {
 					code: values.code,
 					name: values.name,
 					email: values.email || null,
+					role: parseAssigneeRole(values.role),
+					sprintCapacityPd: values.sprintCapacityPd.trim()
+						? Number(values.sprintCapacityPd)
+						: null,
 				});
 			}}
 			onUpdate={async (row, values) => {
@@ -84,6 +130,10 @@ export function TrackerAssigneesPage() {
 						code: values.code,
 						name: values.name,
 						email: values.email || null,
+						role: parseAssigneeRole(values.role),
+						sprintCapacityPd: values.sprintCapacityPd.trim()
+							? Number(values.sprintCapacityPd)
+							: null,
 					},
 				});
 			}}

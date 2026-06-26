@@ -5,21 +5,27 @@ import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { alpha } from "@mui/material/styles";
+import { format, isValid, parseISO } from "date-fns";
 import {
-	KANBAN_BOARD_ASSIGNEE_ROLES,
+	KANBAN_BOARD_PRIORITIES,
 	KANBAN_BOARD_TASK_TYPES,
 	KANBAN_BOARD_WORK_TYPES,
 	kanbanBoardPriorityColor,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskTypeColor,
 	kanbanBoardWorkTypeColor,
-	type KanbanBoardAssigneeRoleId,
+	normalizeKanbanBoardTaskContent,
+	kanbanBoardRoleEstimatesTotal,
+	type KanbanBoardRoleEstimates,
 	type KanbanBoardTaskContent,
+	type KanbanBoardTaskRegistryDto,
 } from "@smart-anketa/api-contract";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { Card } from "@react-client/common/muiCustom/Card";
+import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Header } from "@react-client/common/navigation/organisms/Header";
@@ -31,9 +37,11 @@ import {
 	useKanbanBoardColumns,
 	useKanbanBoardSprints,
 	useKanbanBoardStreams,
+	useKanbanBoardTasksRegistry,
 	useUpdateKanbanBoardTask,
 } from "@react-client/common/api/queries/kanban-board";
 import { KanbanTaskMultiSelectField, KanbanTaskSelectField } from "@react-client/features/kanban-board/components/KanbanTaskSelectField";
+import { KanbanRoleEstimatesFields } from "@react-client/features/kanban-board/components/KanbanRoleEstimatesFields";
 import {
 	isKanbanTaskCreateRoute,
 	kanbanBoardPath,
@@ -41,17 +49,44 @@ import {
 import { TrackerMarkdownEditor } from "@react-client/features/kanban-board/components/TrackerMarkdownEditor";
 import { useQuery } from "@tanstack/react-query";
 
-const PRIORITY_OPTIONS = [
-	{ value: "low", label: "low", color: kanbanBoardPriorityColor("low") },
-	{ value: "medium", label: "medium", color: kanbanBoardPriorityColor("medium") },
-	{ value: "high", label: "high", color: kanbanBoardPriorityColor("high") },
-] as const;
+const PRIORITY_OPTIONS = KANBAN_BOARD_PRIORITIES.map((option) => ({
+	value: option.id,
+	label: option.title,
+	color: kanbanBoardPriorityColor(option.id),
+}));
 
 const DEFAULT_COLUMN_ID = "backlog";
 const BOARD_SELECT_COLOR = "#6366f1";
 const ASSIGNEE_SELECT_COLOR = "#2563eb";
 const SPRINT_SELECT_COLOR = "#0891b2";
 const STREAM_SELECT_COLOR = "#7c3aed";
+
+const parseDueDate = (value: string): Date | null => {
+	if (!value.trim()) return null;
+	const parsed = parseISO(value.trim());
+	return isValid(parsed) ? parsed : null;
+};
+
+const formatDueDate = (value: Date | null): string => {
+	if (!value || !isValid(value)) return "";
+	return format(value, "yyyy-MM-dd");
+};
+
+type ParentTaskOption = {
+	id: string;
+	label: string;
+};
+
+const formatParentTaskLabel = (task: KanbanBoardTaskRegistryDto): string => {
+	const prefix =
+		task.backlogNumber !== undefined ? `#${task.backlogNumber} ` : "";
+	return `${prefix}${task.title} — ${task.projectCode}/${task.boardSlug}`;
+};
+
+const toParentTaskOption = (task: KanbanBoardTaskRegistryDto): ParentTaskOption => ({
+	id: task.id,
+	label: formatParentTaskLabel(task),
+});
 
 type Props = {
 	mode?: "create" | "edit";
@@ -81,16 +116,19 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 
 	const [selectedBoardId, setSelectedBoardId] = useState(boardId);
 	const [title, setTitle] = useState("");
+	const [backlogNumber, setBacklogNumber] = useState("");
 	const [parentId, setParentId] = useState(DEFAULT_COLUMN_ID);
 	const [priority, setPriority] = useState("");
 	const [assignees, setAssignees] = useState<string[]>([]);
-	const [assigneeRole, setAssigneeRole] = useState("");
+	const [currentAssignee, setCurrentAssignee] = useState("");
 	const [taskType, setTaskType] = useState("");
 	const [workType, setWorkType] = useState("");
 	const [estimatePd, setEstimatePd] = useState("");
+	const [roleEstimates, setRoleEstimates] = useState<KanbanBoardRoleEstimates>({});
 	const [dueDate, setDueDate] = useState("");
 	const [parentTask, setParentTask] = useState("");
 	const [customer, setCustomer] = useState("");
+	const [sprintOutcome, setSprintOutcome] = useState("");
 	const [sprintId, setSprintId] = useState("");
 	const [streamCustomer, setStreamCustomer] = useState("");
 	const [description, setDescription] = useState("");
@@ -99,6 +137,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const assigneesQuery = useKanbanBoardAssignees();
 	const sprintsQuery = useKanbanBoardSprints();
 	const streamsQuery = useKanbanBoardStreams();
+	const tasksRegistryQuery = useKanbanBoardTasksRegistry();
 	const boardMeta = boardsQuery.data?.find((item) => item.id === boardId);
 
 	const effectiveBoardId = boardId || selectedBoardId;
@@ -129,21 +168,22 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		() =>
 			(assigneesQuery.data ?? []).map((item) => ({
 				value: item.name,
-				label: item.email ? `${item.name} (${item.email})` : item.name,
+				label: item.roleTitle
+					? `${item.name} — ${item.roleTitle}${item.email ? ` (${item.email})` : ""}`
+					: item.email
+						? `${item.name} (${item.email})`
+						: item.name,
 				color: ASSIGNEE_SELECT_COLOR,
 			})),
 		[assigneesQuery.data],
 	);
 
-	const assigneeRoleOptions = useMemo(
-		() =>
-			KANBAN_BOARD_ASSIGNEE_ROLES.map((role: (typeof KANBAN_BOARD_ASSIGNEE_ROLES)[number]) => ({
-				value: role.id,
-				label: role.title,
-				color: role.color,
-			})),
-		[],
-	);
+	const currentAssigneeOptions = useMemo(() => {
+		const pool = assignees.length
+			? assigneeOptions.filter((option) => assignees.includes(option.value))
+			: assigneeOptions;
+		return pool;
+	}, [assigneeOptions, assignees]);
 
 	const taskTypeOptions = useMemo(
 		() =>
@@ -184,6 +224,22 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			})),
 		[streamsQuery.data],
 	);
+
+	const parentTaskOptions = useMemo(
+		() =>
+			(tasksRegistryQuery.data ?? [])
+				.filter((row) => row.id !== taskId)
+				.map(toParentTaskOption),
+		[tasksRegistryQuery.data, taskId],
+	);
+
+	const selectedParentTask = useMemo((): ParentTaskOption | null => {
+		if (!parentTask) return null;
+		const row = (tasksRegistryQuery.data ?? []).find(
+			(item) => item.id === parentTask || item.title === parentTask,
+		);
+		return row ? toParentTaskOption(row) : null;
+	}, [parentTask, tasksRegistryQuery.data]);
 
 	const tasksQuery = useQuery({
 		queryKey: ["kanbanBoardTasks", boardId],
@@ -231,21 +287,41 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	useEffect(() => {
 		if (isCreate || !task) return;
 		setTitle(task.content.title);
+		setBacklogNumber(
+			task.content.backlogNumber !== undefined
+				? String(task.content.backlogNumber)
+				: "",
+		);
 		setPriority(task.content.priority ?? "");
 		setAssignees(kanbanBoardTaskAssignees(task.content));
-		setAssigneeRole(task.content.assigneeRole ?? "");
+		setCurrentAssignee(task.content.currentAssignee ?? "");
 		setTaskType(task.content.taskType ?? "");
 		setWorkType(task.content.workType ?? "");
 		setEstimatePd(
 			task.content.estimatePd !== undefined ? String(task.content.estimatePd) : "",
 		);
+		setRoleEstimates(task.content.roleEstimates ?? {});
 		setDueDate(task.content.dueDate ?? "");
 		setParentTask(task.content.parentTask ?? "");
 		setCustomer(task.content.customer ?? "");
+		setSprintOutcome(task.content.sprintOutcome ?? "");
 		setSprintId(task.content.sprintId ?? "");
 		setStreamCustomer(task.content.streamCustomer ?? "");
 		setDescription(task.content.description ?? "");
 	}, [isCreate, task]);
+
+	useEffect(() => {
+		if (currentAssignee && !assignees.includes(currentAssignee)) {
+			setCurrentAssignee("");
+		}
+	}, [assignees, currentAssignee]);
+
+	useEffect(() => {
+		const total = kanbanBoardRoleEstimatesTotal(roleEstimates);
+		if (total !== undefined) {
+			setEstimatePd(String(total));
+		}
+	}, [roleEstimates]);
 
 	const selectedColumn = columns.find((column) => column.id === parentId);
 	const columnColor = selectedColumn?.color ?? "#94a3b8";
@@ -253,23 +329,27 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 
 	const buildContent = (): KanbanBoardTaskContent | null => {
 		if (!title.trim()) return null;
+		const parsedBacklog = backlogNumber.trim() ? Number(backlogNumber) : undefined;
 		const parsedEstimate = estimatePd.trim() ? Number(estimatePd) : undefined;
-		return {
+		return normalizeKanbanBoardTaskContent({
 			title: title.trim(),
 			description: description || undefined,
+			backlogNumber:
+				parsedBacklog !== undefined && !Number.isNaN(parsedBacklog)
+					? parsedBacklog
+					: undefined,
 			priority: priority
 				? (priority as KanbanBoardTaskContent["priority"])
 				: undefined,
 			assignees: assignees.length ? assignees : undefined,
-			assigneeRole: assigneeRole
-				? (assigneeRole as KanbanBoardAssigneeRoleId)
-				: undefined,
+			currentAssignee: currentAssignee.trim() || undefined,
 			taskType: taskType
 				? (taskType as KanbanBoardTaskContent["taskType"])
 				: undefined,
 			workType: workType
 				? (workType as KanbanBoardTaskContent["workType"])
 				: undefined,
+			roleEstimates: Object.keys(roleEstimates).length ? roleEstimates : undefined,
 			estimatePd:
 				parsedEstimate !== undefined && !Number.isNaN(parsedEstimate)
 					? parsedEstimate
@@ -277,9 +357,10 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			dueDate: dueDate.trim() || undefined,
 			parentTask: parentTask.trim() || undefined,
 			customer: customer.trim() || undefined,
+			sprintOutcome: sprintOutcome.trim() || undefined,
 			sprintId: sprintId || undefined,
 			streamCustomer: streamCustomer.trim() || undefined,
-		};
+		});
 	};
 
 	const handleSave = async () => {
@@ -397,14 +478,24 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 									fullWidth
 								/>
 							) : null}
-							<TextField
-								label="Заголовок"
-								value={title}
-								onChange={(event) => setTitle(event.target.value)}
-								required
-								fullWidth
-								autoFocus={isCreate}
-							/>
+							<Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+								<TextField
+									label="№ в бэклоге"
+									type="number"
+									value={backlogNumber}
+									onChange={(event) => setBacklogNumber(event.target.value)}
+									sx={{ maxWidth: 140 }}
+									inputProps={{ min: 0, step: 1 }}
+								/>
+								<TextField
+									label="Заголовок"
+									value={title}
+									onChange={(event) => setTitle(event.target.value)}
+									required
+									fullWidth
+									autoFocus={isCreate}
+								/>
+							</Stack>
 							<Stack direction={{ xs: "column", md: "row" }} spacing={2}>
 								<KanbanTaskSelectField
 									label="Колонка"
@@ -433,10 +524,11 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 									fullWidth
 								/>
 								<KanbanTaskSelectField
-									label="Роль исполнителя"
-									value={assigneeRole}
-									options={assigneeRoleOptions}
-									onChange={setAssigneeRole}
+									label="Текущий исполнитель"
+									value={currentAssignee}
+									options={currentAssigneeOptions}
+									onChange={setCurrentAssignee}
+									disabled={!currentAssigneeOptions.length}
 									fullWidth
 								/>
 							</Stack>
@@ -456,29 +548,56 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 									fullWidth
 								/>
 								<TextField
-									label="Оценка, чд"
+									label="Оценка, чд (итого)"
 									type="number"
 									value={estimatePd}
 									onChange={(event) => setEstimatePd(event.target.value)}
 									fullWidth
 									inputProps={{ min: 0, step: 0.5 }}
+									helperText="Заполняется автоматически из оценок по ролям"
 								/>
 							</Stack>
+							<KanbanRoleEstimatesFields
+								value={roleEstimates}
+								onChange={setRoleEstimates}
+							/>
 							<Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-								<TextField
-									label="Срок исполнения"
-									type="date"
-									value={dueDate}
-									onChange={(event) => setDueDate(event.target.value)}
-									fullWidth
-									InputLabelProps={{ shrink: true }}
+								<DatePicker
+									label="Срок / плановая дата"
+									value={parseDueDate(dueDate)}
+									onChange={(value) => setDueDate(formatDueDate(value))}
+									slotProps={{
+										textField: { fullWidth: true },
+										field: { clearable: true },
+									}}
 								/>
-								<TextField
+								<FuzzyAutocomplete<ParentTaskOption>
 									label="Родительская задача"
-									value={parentTask}
-									onChange={(event) => setParentTask(event.target.value)}
-									fullWidth
-									placeholder="Ключ или название родительской задачи"
+									options={parentTaskOptions}
+									value={selectedParentTask}
+									onChange={(option) => {
+										if (!option) {
+											setParentTask("");
+											return;
+										}
+										const row = (tasksRegistryQuery.data ?? []).find(
+											(item) => item.id === option.id,
+										);
+										setParentTask(row?.title ?? option.label);
+									}}
+									getOptionLabel={(option) => option.label}
+									getOptionValue={(option) => option.id}
+									emptyLabel="— без родителя —"
+									searchPlaceholder="Поиск по задачам…"
+									noMatchesText="Задачи не найдены"
+									placeholder="Выберите родительскую задачу"
+									helperText={
+										parentTask && !selectedParentTask
+											? `Текущее значение не найдено в реестре: ${parentTask}`
+											: undefined
+									}
+									disabled={tasksRegistryQuery.isLoading}
+									size="medium"
 								/>
 								<TextField
 									label="Заказчик"
@@ -502,6 +621,15 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 									fullWidth
 								/>
 							</Stack>
+							<TextField
+								label="Ожидаемый результат спринта"
+								value={sprintOutcome}
+								onChange={(event) => setSprintOutcome(event.target.value)}
+								fullWidth
+								multiline
+								minRows={5}
+								placeholder="Релиз, ПСИ, ошибки устранены, готовность к демо…"
+							/>
 							<Box sx={{ flex: 1, minHeight: 360 }}>
 								<Typography variant="subtitle2" sx={{ mb: 1 }}>
 									Описание (Markdown, Mermaid)

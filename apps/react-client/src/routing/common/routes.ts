@@ -129,6 +129,13 @@ export const commonRoutes = {
 		showInNavbar: true,
 		navbar: { group: "tracker", order: 6 },
 	},
+	trackerSettings: {
+		rootPath: "/tracker/settings",
+		name: "Настройки",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "tracker", order: 7 },
+	},
 	trackerTaskCreate: {
 		rootPath: "/tracker/tasks/new",
 		name: "Новая задача",

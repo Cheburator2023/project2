@@ -10,7 +10,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { V2AdminButton } from "@react-client/features/v2/admin/atoms/V2AdminButton";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
 	TrackerRegistryGrid,
 	type TrackerRegistryContextAction,
@@ -90,10 +90,25 @@ export function TrackerRegistryPage<TRow extends object>({
 		setFormOpen(true);
 	};
 
-	const openEditForm = (row: TRow) => {
+	const openEditForm = useCallback((row: TRow) => {
 		setEditingRow(row);
 		setFormOpen(true);
-	};
+	}, []);
+
+	const handleRowDoubleClick = useCallback(
+		(row: TRow) => {
+			if (onRowDoubleClick) {
+				onRowDoubleClick(row);
+				return;
+			}
+			if (onEditClick) {
+				onEditClick(row);
+				return;
+			}
+			openEditForm(row);
+		},
+		[onRowDoubleClick, onEditClick, openEditForm],
+	);
 
 	const allContextActions = useMemo<TrackerRegistryContextAction<TRow>[]>(
 		() => [
@@ -114,7 +129,7 @@ export function TrackerRegistryPage<TRow extends object>({
 				onClick: (row) => setPendingDelete([row]),
 			},
 		],
-		[contextActions, canDelete, onEditClick],
+		[contextActions, canDelete, onEditClick, openEditForm],
 	);
 
 	const handleSubmit = async (values: Record<string, string>) => {
@@ -191,7 +206,7 @@ export function TrackerRegistryPage<TRow extends object>({
 				loading={loading}
 				quickFilter={quickFilter}
 				onSelectionChange={setSelected}
-				onRowDoubleClick={onRowDoubleClick}
+				onRowDoubleClick={handleRowDoubleClick}
 				contextActions={allContextActions}
 			/>
 

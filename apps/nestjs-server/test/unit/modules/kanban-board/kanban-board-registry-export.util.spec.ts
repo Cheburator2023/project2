@@ -25,6 +25,9 @@ function task(
 		workTypeTitle: "",
 		assigneeTitle: "",
 		assignees: [],
+		currentAssigneeTitle: "",
+		assigneeRoles: [],
+		assigneeRoleTitles: [],
 		assigneeRoleTitle: "",
 		...overrides,
 	};
