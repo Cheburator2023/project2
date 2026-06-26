@@ -69,6 +69,7 @@ export const viteCommonConfig = ({
 					"react-dnd",
 					"react-dnd-html5-backend",
 					"@minoru/react-dnd-treeview",
+					"@svar-ui/react-gantt",
 				],
 			},
 			build: {

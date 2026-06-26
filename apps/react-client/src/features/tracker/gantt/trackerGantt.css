@@ -1,0 +1,46 @@
+/* Контейнер: ширина ограничена viewport, скролл — внутри Gantt. */
+.tracker-gantt-shell {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.tracker-gantt-shell .tracker-gantt-body {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+}
+
+.tracker-gantt-shell .tracker-gantt-body > [class*="wx-"] {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	height: 100%;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	overflow: hidden;
+}
+
+.tracker-gantt-shell .tracker-gantt-viewport {
+	position: relative;
+	flex: 1;
+	min-width: 0;
+	min-height: 0;
+	width: 100%;
+	max-width: 100%;
+	overflow: hidden;
+	border: 1px solid var(--wx-gantt-border, rgba(0, 0, 0, 0.12));
+	border-radius: 4px;
+}
+
+.tracker-gantt-shell .tracker-gantt-viewport > [class*="wx-"] {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	height: 100%;
+	min-height: 0;
+	overflow: hidden;
+}

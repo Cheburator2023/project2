@@ -4,6 +4,7 @@ import { MainLayout } from "@react-client/common/layouts/MainLayout";
 import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard";
 import { KanbanBoardPage } from "@react-client/features/kanban-board/pages/KanbanBoardPage";
 import { KanbanTaskPage } from "@react-client/features/kanban-board/pages/KanbanTaskPage";
+import { TrackerGanttPage } from "@react-client/features/tracker/pages/TrackerGanttPage";
 import { TrackerCustomersPage } from "@react-client/features/tracker/pages/TrackerCustomersPage";
 import { TrackerAssigneesPage } from "@react-client/features/tracker/pages/TrackerAssigneesPage";
 import { TrackerBoardsPage } from "@react-client/features/tracker/pages/TrackerBoardsPage";
@@ -35,6 +36,7 @@ export function trackerRoutes({
 			{ path: "projects", element: <TrackerProjectsPage /> },
 			{ path: "boards", element: <TrackerBoardsPage /> },
 			{ path: "tasks", element: <TrackerTasksPage /> },
+			{ path: "gantt", element: <TrackerGanttPage /> },
 			{ path: "assignees", element: <TrackerAssigneesPage /> },
 			{ path: "customers", element: <TrackerCustomersPage /> },
 			{ path: "supersprints", element: <TrackerSupersprintsPage /> },
