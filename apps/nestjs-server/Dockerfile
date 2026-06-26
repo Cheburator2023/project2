@@ -10,7 +10,7 @@
 #
 # Альтернатива transfer: projDir = корень репо, dockerfilePath = apps/nestjs-server/Dockerfile
 
-ARG BASE_IMAGE=docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-ui:v3.1.0
+ARG BASE_IMAGE=docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-ui:v3.2.0
 FROM ${BASE_IMAGE} AS build-deps
 
 WORKDIR /app
