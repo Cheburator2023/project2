@@ -145,7 +145,7 @@ export const ModelServiceModal = ({
           />
 
           <FormControl fullWidth>
-            <SelectWithPlaceholder
+            <SelectWithPlaceholder<string[]>
               placeholder="Канал внедрения"
               multiple
               value={values.channels}

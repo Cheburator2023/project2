@@ -17,6 +17,7 @@ import {
 	Typography,
 } from "@mui/material";
 import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
+import { AnketaSectionAccordion } from "@react-client/features/v2/anketaCRUD/molecules/AnketaSectionAccordion";
 
 const systems = [
 	{

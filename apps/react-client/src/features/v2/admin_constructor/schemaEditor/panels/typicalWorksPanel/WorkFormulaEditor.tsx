@@ -166,7 +166,7 @@ export function WorkFormulaEditor({
 
 	return (
 		<Flex flexDirection="column" gap={12} data-test-id={TID.workFormulaEditor}>
-			<Flex gap={8} flexWrap="wrap">
+			<Flex gap={8} wrap="wrap">
 				<Chip
 					label="Визуально"
 					data-test-id={TID.workFormulaVisualMode}
@@ -198,7 +198,7 @@ export function WorkFormulaEditor({
 							borderRadius: "10px",
 						}}
 					>
-						<Flex flexWrap="wrap" gap={8} alignItems="center" minHeight={40}>
+						<Flex wrap="wrap" gap={8} alignItems="center" minHeight="40px">
 							{formula.tokens.length === 0 ? (
 								<Typography variant="body2" color="text.secondary">
 									Добавьте элементы формулы
@@ -278,7 +278,7 @@ export function WorkFormulaEditor({
 					) : null}
 
 					{!readOnly ? (
-						<Flex flexWrap="wrap" gap={8} alignItems="center">
+						<Flex wrap="wrap" gap={8} alignItems="center">
 							<Button
 								size="small"
 								variant="outlined"
@@ -402,11 +402,11 @@ export function WorkFormulaEditor({
 				</>
 			)}
 
-			<Flex alignItems="center" gap={12} flexWrap="wrap">
+			<Flex alignItems="center" gap={12} wrap="wrap">
 				<Typography variant="body2" fontWeight={600} color="text.secondary">
 					Округлять до
 				</Typography>
-				<Flex gap={6} flexWrap="wrap">
+				<Flex gap={6} wrap="wrap">
 					{ROUNDING_OPTIONS.map((option) => (
 						<Chip
 							key={option.mode}
@@ -455,9 +455,9 @@ export function WorkFormulaEditor({
 					justifyContent="space-between"
 					alignItems="center"
 					gap={12}
-					flexWrap="wrap"
+					wrap="wrap"
 				>
-					<Flex flexDirection="column" gap={4} minWidth={0}>
+					<Flex flexDirection="column" gap={4} minWidth="0">
 						<Typography variant="caption" sx={{ color: "#94a3b8" }}>
 							Общая формула норматива
 						</Typography>

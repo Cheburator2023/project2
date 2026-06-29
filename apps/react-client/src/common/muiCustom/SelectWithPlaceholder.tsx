@@ -10,10 +10,10 @@ export function isSelectValueEmpty(selected: unknown): boolean {
 	);
 }
 
-export function renderSelectPlaceholderValue(
-	selected: unknown,
+export function renderSelectPlaceholderValue<T>(
+	selected: T,
 	placeholder: string,
-	renderSelected?: (selected: unknown) => React.ReactNode,
+	renderSelected?: (selected: T) => React.ReactNode,
 ): React.ReactNode {
 	if (isSelectValueEmpty(selected)) {
 		return (
@@ -25,20 +25,20 @@ export function renderSelectPlaceholderValue(
 	return renderSelected ? renderSelected(selected) : String(selected);
 }
 
-export type SelectWithPlaceholderProps = SelectProps & {
+export type SelectWithPlaceholderProps<T = string> = SelectProps<T> & {
 	placeholder: string;
-	renderSelected?: (selected: unknown) => React.ReactNode;
+	renderSelected?: (selected: T) => React.ReactNode;
 };
 
-export function SelectWithPlaceholder({
+export function SelectWithPlaceholder<T = string>({
 	placeholder,
 	renderSelected,
 	renderValue,
 	displayEmpty,
 	...props
-}: SelectWithPlaceholderProps) {
+}: SelectWithPlaceholderProps<T>) {
 	return (
-		<Select
+		<Select<T>
 			displayEmpty={displayEmpty ?? true}
 			renderValue={
 				renderValue ??
