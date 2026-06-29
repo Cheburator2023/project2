@@ -10,15 +10,17 @@ import {
   DialogTitle,
   FormControl,
   IconButton,
-  InputLabel,
   ListItemText,
   MenuItem,
-  Select,
   SelectChangeEvent,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
+import {
+  SelectWithPlaceholder,
+  renderSelectPlaceholderValue,
+} from "@react-client/common/muiCustom/SelectWithPlaceholder";
 
 type Option = {
   value: string;
@@ -113,10 +115,12 @@ export const ModelServiceModal = ({
     onSubmit(values);
   };
 
-  const renderValue = (selected: string[]) =>
-    selected
-      .map((value) => channelMap.get(value) ?? value)
-      .join(", ");
+  const renderValue = (selected: string[]) => {
+    if (selected.length === 0) {
+      return renderSelectPlaceholderValue(selected, "Канал внедрения");
+    }
+    return selected.map((value) => channelMap.get(value) ?? value).join(", ");
+  };
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
@@ -141,13 +145,11 @@ export const ModelServiceModal = ({
           />
 
           <FormControl fullWidth>
-            <InputLabel id="model-service-channels-label">Канал внедрения</InputLabel>
-            <Select
-              labelId="model-service-channels-label"
+            <SelectWithPlaceholder
+              placeholder="Канал внедрения"
               multiple
               value={values.channels}
               onChange={handleChannelsChange}
-              label="Канал внедрения"
               renderValue={renderValue}
               MenuProps={{ PaperProps: { sx: { maxHeight: 320 } } }}
             >
@@ -157,7 +159,7 @@ export const ModelServiceModal = ({
                   <ListItemText primary={option.label} />
                 </MenuItem>
               ))}
-            </Select>
+            </SelectWithPlaceholder>
           </FormControl>
 
           <SelectField
@@ -214,18 +216,21 @@ type SelectFieldProps = {
 function SelectField({ label, value, options, onChange }: SelectFieldProps) {
   return (
     <FormControl fullWidth>
-      <InputLabel>{label}</InputLabel>
-      <Select
+      <SelectWithPlaceholder
+        placeholder={label}
         value={value}
-        label={label}
         onChange={(event) => onChange(event.target.value)}
+        renderSelected={(selected) =>
+          options.find((option) => option.value === selected)?.label ??
+          String(selected)
+        }
       >
         {options.map((option) => (
           <MenuItem key={option.value} value={option.value}>
             {option.label}
           </MenuItem>
         ))}
-      </Select>
+      </SelectWithPlaceholder>
     </FormControl>
   );
 }

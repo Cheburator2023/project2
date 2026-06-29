@@ -3,10 +3,9 @@ import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
-import Select from "@mui/material/Select";
+import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -91,10 +90,8 @@ export function TypicalWorkCardView({
 				</Box>
 
 				<FormControl size="small" sx={{ minWidth: 220 }}>
-					<InputLabel id="work-stream-label">Стрим-исполнитель</InputLabel>
-					<Select
-						labelId="work-stream-label"
-						label="Стрим-исполнитель"
+					<SelectWithPlaceholder
+						placeholder="Стрим-исполнитель"
 						value={streamExecutor ?? ""}
 						onChange={(e) => onStreamChange(String(e.target.value))}
 					>
@@ -103,7 +100,7 @@ export function TypicalWorkCardView({
 								{stream}
 							</MenuItem>
 						))}
-					</Select>
+					</SelectWithPlaceholder>
 				</FormControl>
 			</Box>
 

@@ -5,10 +5,9 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
-import Select from "@mui/material/Select";
 import TextField from "@mui/material/TextField";
+import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 import { WORK_ARCH_COMPONENT_TYPES } from "./typicalWorkPatchErrors";
 
 type CreateTypicalWorkDialogProps = {
@@ -52,10 +51,8 @@ export function CreateTypicalWorkDialog({
 					helperText="1–255 символов"
 				/>
 				<FormControl fullWidth>
-					<InputLabel id="create-work-arch-label">Тип арх. компонента</InputLabel>
-					<Select
-						labelId="create-work-arch-label"
-						label="Тип арх. компонента"
+					<SelectWithPlaceholder
+						placeholder="Тип арх. компонента"
 						value={archComponentType}
 						onChange={(e) => setArchComponentType(String(e.target.value))}
 					>
@@ -64,7 +61,7 @@ export function CreateTypicalWorkDialog({
 								{type}
 							</MenuItem>
 						))}
-					</Select>
+					</SelectWithPlaceholder>
 				</FormControl>
 			</DialogContent>
 			<DialogActions>

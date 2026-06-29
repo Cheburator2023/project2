@@ -10,11 +10,11 @@ import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import FormControl from "@mui/material/FormControl";
 import IconButton from "@mui/material/IconButton";
-import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
 import Select from "@mui/material/Select";
+import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -841,10 +841,8 @@ export function TypicalWorkEditableCard({
 						{unusedLaborParams.length > 0 ? (
 							<Box sx={{ display: "flex", gap: 1, alignItems: "center", mt: 1 }}>
 								<FormControl size="small" sx={{ minWidth: 220 }}>
-									<InputLabel id="add-labor-param-label">Параметр</InputLabel>
-									<Select
-										labelId="add-labor-param-label"
-										label="Параметр"
+									<SelectWithPlaceholder
+										placeholder="Параметр"
 										value={addParamCode}
 										onChange={(e) => setAddParamCode(String(e.target.value))}
 									>
@@ -853,7 +851,7 @@ export function TypicalWorkEditableCard({
 												{p.name}
 											</MenuItem>
 										))}
-									</Select>
+									</SelectWithPlaceholder>
 								</FormControl>
 								<Button
 									size="small"

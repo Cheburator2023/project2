@@ -6,10 +6,8 @@ import {
 	Chip,
 	FormControl,
 	Grid,
-	InputLabel,
 	Link,
 	MenuItem,
-	Select,
 	Table,
 	TableBody,
 	TableCell,
@@ -18,7 +16,7 @@ import {
 	TableRow,
 	Typography,
 } from "@mui/material";
-import { AnketaSectionAccordion } from "@react-client/features/v2/anketaCRUD/molecules/AnketaSectionAccordion";
+import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 
 const systems = [
 	{
@@ -57,39 +55,53 @@ export function DetailedInfo() {
 			<Grid container spacing={2} mb={3} sx={{ width: "100%", maxWidth: "100%", minWidth: 0 }}>
 				<Grid size={{ xs: 12, sm: 6 }}>
 					<FormControl fullWidth size="small">
-						<InputLabel>Параметр 1</InputLabel>
-						<Select defaultValue="x0.75" label="Параметр 1">
+						<SelectWithPlaceholder
+							placeholder="Параметр 1"
+							defaultValue="x0.75"
+							renderSelected={(selected) => {
+								if (selected === "x0.75") return "×0.75";
+								if (selected === "x1") return "×1";
+								return "×1.25";
+							}}
+						>
 							<MenuItem value="x0.75">×0.75</MenuItem>
 							<MenuItem value="x1">×1</MenuItem>
 							<MenuItem value="x1.25">×1.25</MenuItem>
-						</Select>
+						</SelectWithPlaceholder>
 					</FormControl>
 				</Grid>
 				<Grid size={{ xs: 12, sm: 6 }}>
 					<FormControl fullWidth size="small">
-						<InputLabel>Параметр 2</InputLabel>
-						<Select defaultValue="none" label="Параметр 2">
+						<SelectWithPlaceholder
+							placeholder="Параметр 2"
+							defaultValue="none"
+							renderSelected={(selected) =>
+								selected === "required" ? "Требуется" : "Не требуется"
+							}
+						>
 							<MenuItem value="none">Не требуется</MenuItem>
 							<MenuItem value="required">Требуется</MenuItem>
-						</Select>
+						</SelectWithPlaceholder>
 					</FormControl>
 				</Grid>
 				<Grid size={{ xs: 12, sm: 6 }}>
 					<FormControl fullWidth size="small">
-						<InputLabel>Параметр 3</InputLabel>
-						<Select defaultValue="+10%" label="Параметр 3">
+						<SelectWithPlaceholder placeholder="Параметр 3" defaultValue="+10%">
 							<MenuItem value="+10%">+10%</MenuItem>
 							<MenuItem value="+20%">+20%</MenuItem>
-						</Select>
+						</SelectWithPlaceholder>
 					</FormControl>
 				</Grid>
 				<Grid size={{ xs: 12, sm: 6 }}>
 					<FormControl fullWidth size="small">
-						<InputLabel>Параметр 4</InputLabel>
-						<Select defaultValue="yes" label="Параметр 4">
+						<SelectWithPlaceholder
+							placeholder="Параметр 4"
+							defaultValue="yes"
+							renderSelected={(selected) => (selected === "yes" ? "Да" : "Нет")}
+						>
 							<MenuItem value="yes">Да</MenuItem>
 							<MenuItem value="no">Нет</MenuItem>
-						</Select>
+						</SelectWithPlaceholder>
 					</FormControl>
 				</Grid>
 			</Grid>

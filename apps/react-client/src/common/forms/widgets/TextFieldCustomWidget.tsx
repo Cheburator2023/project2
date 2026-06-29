@@ -148,6 +148,8 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 	const tooltipText = normalizeUiTooltip(options?.tooltip);
 	const isMultiple = options?.multiple;
 	const noDelete = options?.noDelete;
+	const fieldTitle = label || schema?.title;
+	const selectPlaceholder = placeholder || fieldTitle;
 
 	const isFuzzy = isSelect & isMultiple;
 
@@ -187,10 +189,9 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 		return (
 			<TextFieldCustom
 				value={value}
-				label={label || schema?.title}
+				title={tooltipText || undefined}
 				onChange={_handleChangeMult as any}
 				id={id}
-				// title={value}
 				required={required}
 				disabled={isDisabled}
 				autoFocus={autofocus}
@@ -199,7 +200,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 				slotProps={{
 					select: {
 						multiple: true,
-						displayEmpty: !!placeholder,
+						displayEmpty: !!selectPlaceholder,
 						MenuProps: {
 							disablePortal: false,
 							PaperProps: {
@@ -235,8 +236,10 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 								event.preventDefault();
 							};
 
-							if (selected.length === 0 && placeholder) {
-								return <div style={{ opacity: 0.4 }}>{placeholder}</div>;
+							if (selected.length === 0 && selectPlaceholder) {
+								return (
+									<div style={{ opacity: 0.4 }}>{selectPlaceholder}</div>
+								);
 							}
 
 							return (
@@ -262,7 +265,6 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 							);
 						},
 					},
-					inputLabel: { shrink: true },
 					input: {
 						endAdornment: isSelect &&
 							!isEqual(initialValue, props.value) &&
@@ -280,27 +282,6 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 								</InputAdornment>
 							),
 					},
-				}}
-				slots={{
-					inputLabel: (props) =>
-						tooltipText ? (
-							<Flex gap={6} position="relative">
-								<InputLabel {...props} title="" />
-								<div title={tooltipText}>
-									<InfoOutlineIcon
-										sx={{
-											scale: 0.8,
-											color: "#88888877",
-											position: "absolute",
-											top: "-4px",
-											right: "0",
-										}}
-									/>
-								</div>
-							</Flex>
-						) : (
-							<InputLabel {...props} />
-						),
 				}}
 				{...options}
 			>
@@ -492,8 +473,8 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 	return (
 		<TextFieldCustom
 			id={id}
-			title={valToTitle}
-			label={label || schema?.title}
+			title={isSelect ? tooltipText || valToTitle : valToTitle}
+			label={isSelect ? undefined : fieldTitle}
 			value={value}
 			required={required}
 			disabled={isDisabled}
@@ -502,7 +483,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			onChange={_onChange}
 			onBlur={_onBlur}
 			onFocus={_onFocus}
-			placeholder={placeholder}
+			placeholder={isSelect ? undefined : placeholder}
 			mask={options?.mask}
 			replacement={options?.replacement}
 			prefix={options?.prefix}
@@ -516,11 +497,11 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			}}
 			slotProps={{
 				select: {
-					displayEmpty: !!placeholder,
+					displayEmpty: isSelect && !!selectPlaceholder,
 					renderValue: (selected: unknown) => {
 						if (selected == null || selected === "") {
-							return placeholder ? (
-								<span style={{ opacity: 0.4 }}>{placeholder}</span>
+							return selectPlaceholder ? (
+								<span style={{ opacity: 0.4 }}>{selectPlaceholder}</span>
 							) : (
 								""
 							);
@@ -531,7 +512,6 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 						disablePortal: false,
 					},
 				},
-				inputLabel: { shrink: true },
 				input: {
 					endAdornment: isSelect &&
 						!isEqual(initialValue, props.value) &&
@@ -549,27 +529,6 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 							</InputAdornment>
 						),
 				},
-			}}
-			slots={{
-				inputLabel: (props) =>
-					tooltipText ? (
-						<Flex gap={6} position="relative">
-							<InputLabel {...props} title="" />
-							<div title={tooltipText}>
-								<InfoOutlineIcon
-									sx={{
-										scale: 0.8,
-										color: "#88888877",
-										position: "absolute",
-										top: "-4px",
-										right: "0",
-									}}
-								/>
-							</div>
-						</Flex>
-					) : (
-						<InputLabel {...props} />
-					),
 			}}
 			{...options}
 		>

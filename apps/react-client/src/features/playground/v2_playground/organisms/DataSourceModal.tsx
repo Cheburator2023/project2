@@ -9,13 +9,12 @@ import {
   DialogTitle,
   FormControl,
   IconButton,
-  InputLabel,
   MenuItem,
-  Select,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
+import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 
 type Option = {
   value: string;
@@ -223,14 +222,21 @@ type SelectFieldProps = {
 const SelectField = ({ label, value, options, onChange }: SelectFieldProps) => {
   return (
     <FormControl fullWidth>
-      <InputLabel>{label}</InputLabel>
-      <Select value={value} label={label} onChange={(event) => onChange(event.target.value)}>
+      <SelectWithPlaceholder
+        placeholder={label}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        renderSelected={(selected) =>
+          options.find((option) => option.value === selected)?.label ??
+          String(selected)
+        }
+      >
         {options.map((option) => (
           <MenuItem key={option.value} value={option.value}>
             {option.label}
           </MenuItem>
         ))}
-      </Select>
+      </SelectWithPlaceholder>
     </FormControl>
   );
 };

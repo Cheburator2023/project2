@@ -4,10 +4,10 @@ import {
 	InputAdornment,
 	InputLabel,
 	MenuItem,
-	Select,
 	Stack,
 	Typography,
 } from "@mui/material";
+import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { useAnketaCRUDFormsStore } from "@react-client/features/v1/anketaCRUD/stores/useAnketaCRUDFormsStore";
@@ -154,7 +154,8 @@ export const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 						<Typography variant="subtitle2" gutterBottom>
 							Модель {index + 1}
 						</Typography>
-						<Select
+						<SelectWithPlaceholder
+							placeholder="Тип алгоритма"
 							value={value?.[index]?.algorithmType || ""}
 							onChange={(e) => handleAlgorithmChange(index, e.target.value)}
 							error={hasError}
@@ -203,7 +204,7 @@ export const AlgorithmComplexityWidget: React.FC<WidgetProps> = (props) => {
 									</MenuItem>
 								);
 							})}
-						</Select>
+						</SelectWithPlaceholder>
 					</FormControl>
 				))}
 		</Stack>

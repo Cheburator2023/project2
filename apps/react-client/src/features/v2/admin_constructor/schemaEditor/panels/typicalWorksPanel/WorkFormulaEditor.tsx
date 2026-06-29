@@ -2,11 +2,10 @@ import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
-import Select from "@mui/material/Select";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 import type {
 	V2TypicalWorkFormulaDto,
 	V2TypicalWorkLaborParamGroupDto,
@@ -289,10 +288,8 @@ export function WorkFormulaEditor({
 								Норма H
 							</Button>
 							<FormControl size="small" sx={{ minWidth: 180 }}>
-								<InputLabel id="formula-param-label">Коэф. параметров</InputLabel>
-								<Select
-									labelId="formula-param-label"
-									label="Коэф. параметров"
+								<SelectWithPlaceholder
+									placeholder="Коэф. параметров"
 									value=""
 									data-test-id={TID.workFormulaParamSelect}
 									disabled={paramOptions.length === 0}
@@ -316,7 +313,7 @@ export function WorkFormulaEditor({
 											{param.name}
 										</MenuItem>
 									))}
-								</Select>
+								</SelectWithPlaceholder>
 							</FormControl>
 							{(["+", "-", "*", "/"] as const).map((op) => (
 								<Button

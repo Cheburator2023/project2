@@ -24,8 +24,8 @@ import {
 } from "../utils/anketaModalArrayTableConfig";
 import { useMemo, useState } from "react";
 import MenuItem from "@mui/material/MenuItem";
-import Select from "@mui/material/Select";
 import FormControl from "@mui/material/FormControl";
+import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 
 type Props = {
 	pathKey: string;
@@ -256,13 +256,16 @@ export function AnketaModalArrayTable({
 
 			{isTypicalWorks && sourceNames.length > 1 ? (
 				<FormControl size="small" sx={{ mb: 1.5, minWidth: 220 }}>
-					<Select
+					<SelectWithPlaceholder
+						placeholder="Объект"
 						value={sourceNameFilter ?? ""}
-						displayEmpty
 						onChange={(e) =>
 							setSourceNameFilter(
 								e.target.value ? String(e.target.value) : null,
 							)
+						}
+						renderSelected={(selected) =>
+							selected ? String(selected) : "Все объекты"
 						}
 					>
 						<MenuItem value="">Все объекты</MenuItem>
@@ -271,7 +274,7 @@ export function AnketaModalArrayTable({
 								{name}
 							</MenuItem>
 						))}
-					</Select>
+					</SelectWithPlaceholder>
 				</FormControl>
 			) : null}
 

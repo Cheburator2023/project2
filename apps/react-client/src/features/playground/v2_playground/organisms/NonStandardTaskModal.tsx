@@ -13,14 +13,13 @@ import {
   Divider,
   FormControl,
   IconButton,
-  InputLabel,
-  Select,
   MenuItem,
   Stack,
   Switch,
   TextField,
   Typography,
 } from "@mui/material";
+import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 
 type Option = {
   value: string;
@@ -118,10 +117,9 @@ export const NonStandardTaskModal = ({
           />
 
           <FormControl fullWidth>
-            <InputLabel>Тип работ</InputLabel>
-            <Select
+            <SelectWithPlaceholder
+              placeholder="Тип работ"
               value={values.workType}
-              label="Тип работ"
               onChange={(event) =>
                 setValues((prev) => ({ ...prev, workType: event.target.value }))
               }
@@ -131,7 +129,7 @@ export const NonStandardTaskModal = ({
                   {label}
                 </MenuItem>
               ))}
-            </Select>
+            </SelectWithPlaceholder>
           </FormControl>
 
           <TextField
@@ -144,12 +142,15 @@ export const NonStandardTaskModal = ({
           />
 
           <FormControl fullWidth>
-            <InputLabel>Коэффициент</InputLabel>
-            <Select
+            <SelectWithPlaceholder
+              placeholder="Коэффициент"
               value={values.coefficient}
-              label="Коэффициент"
               onChange={(event) =>
                 setValues((prev) => ({ ...prev, coefficient: event.target.value }))
+              }
+              renderSelected={(selected) =>
+                COEFFICIENT_OPTIONS.find((option) => option.value === selected)
+                  ?.label ?? String(selected)
               }
             >
               {COEFFICIENT_OPTIONS.map((option) => (
@@ -157,7 +158,7 @@ export const NonStandardTaskModal = ({
                   {option.label}
                 </MenuItem>
               ))}
-            </Select>
+            </SelectWithPlaceholder>
           </FormControl>
 
           <Divider sx={{ mt: 1, mb: 0.5 }} />

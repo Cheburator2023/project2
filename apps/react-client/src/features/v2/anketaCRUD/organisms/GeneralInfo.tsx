@@ -3,11 +3,10 @@ import {
 	Button,
 	Divider,
 	FormControl,
-	InputLabel,
 	MenuItem,
-	Select,
 	Typography,
 } from "@mui/material";
+import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 import { AnketaSectionAccordion } from "@react-client/features/v2/anketaCRUD/molecules/AnketaSectionAccordion";
 import { TableItem } from "@react-client/features/v2/anketaCRUD/organisms/TableItem";
 import { useState } from "react";
@@ -41,47 +40,52 @@ export const GeneralInfo = () => {
 			>
 				<Box sx={formGridSx}>
 					<FormControl fullWidth size="small">
-						<InputLabel shrink>Сложность постановки</InputLabel>
-						<Select
-							label="Сложность постановки"
+						<SelectWithPlaceholder
+							placeholder="Сложность постановки"
 							value={complexity}
 							onChange={(e) => setComplexity(e.target.value)}
+							renderSelected={(selected) => {
+								if (selected === "1") return "1 — Низкая ×1.00";
+								if (selected === "2") return "2 — Средняя ×1.25";
+								return "3 — Повышенная ×1.50";
+							}}
 						>
 							<MenuItem value="1">1 — Низкая ×1.00</MenuItem>
 							<MenuItem value="2">2 — Средняя ×1.25</MenuItem>
 							<MenuItem value="3">3 — Повышенная ×1.50</MenuItem>
-						</Select>
+						</SelectWithPlaceholder>
 					</FormControl>
 
 					<FormControl fullWidth size="small">
-						<InputLabel shrink>Необходимость пилота</InputLabel>
-						<Select
-							label="Необходимость пилота"
+						<SelectWithPlaceholder
+							placeholder="Необходимость пилота"
 							value={pilotRequired}
 							onChange={(e) => setPilotRequired(e.target.value)}
 						>
 							<MenuItem value="Требуется MVP">Требуется MVP</MenuItem>
 							<MenuItem value="Не требуется">Не требуется</MenuItem>
-						</Select>
+						</SelectWithPlaceholder>
 					</FormControl>
 
 					<FormControl fullWidth size="small">
-						<InputLabel shrink>Требуется создание ИС</InputLabel>
-						<Select label="Требуется создание ИС" value="Нет" disabled>
+						<SelectWithPlaceholder
+							placeholder="Требуется создание ИС"
+							value="Нет"
+							disabled
+						>
 							<MenuItem value="Нет">Нет</MenuItem>
-						</Select>
+						</SelectWithPlaceholder>
 					</FormControl>
 
 					<FormControl fullWidth size="small">
-						<InputLabel shrink>Требуется создание сервиса</InputLabel>
-						<Select
-							label="Требуется создание сервиса"
+						<SelectWithPlaceholder
+							placeholder="Требуется создание сервиса"
 							value={serviceCreation}
 							onChange={(e) => setServiceCreation(e.target.value)}
 						>
 							<MenuItem value="Да">Да</MenuItem>
 							<MenuItem value="Нет">Нет</MenuItem>
-						</Select>
+						</SelectWithPlaceholder>
 					</FormControl>
 				</Box>
 

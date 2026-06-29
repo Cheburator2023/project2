@@ -1,6 +1,6 @@
 import FormControl from "@mui/material/FormControl";
 import MenuItem from "@mui/material/MenuItem";
-import Select from "@mui/material/Select";
+import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 import {
 	useV2Templates,
 	useV2TemplateVersions,
@@ -37,12 +37,21 @@ export function V2TemplateVersionHeaderControls({
 	return (
 		<Flex gap={1} alignItems="center" wrap="wrap">
 			<FormControl size="small" sx={{ minWidth: 220 }}>
-				<Select
-					labelId="v2-template-version-select-label"
-					label="Версия схемы"
+				<SelectWithPlaceholder
+					placeholder="Версия схемы"
 					value={versionId ?? ""}
 					onChange={(e) => onVersionIdChange(String(e.target.value))}
 					disabled={!sortedVersions.length}
+					renderSelected={(selected) => {
+						const version = sortedVersions.find((v) => v.id === selected);
+						return version
+							? v2TemplateVersionChipLabel(
+									version.versionNumber,
+									version.status,
+									version.id === systemCurrentVersionId,
+								)
+							: String(selected);
+					}}
 				>
 					{sortedVersions.map((v) => (
 						<MenuItem key={v.id} value={v.id}>
@@ -53,7 +62,7 @@ export function V2TemplateVersionHeaderControls({
 							)}
 						</MenuItem>
 					))}
-				</Select>
+				</SelectWithPlaceholder>
 			</FormControl>
 		</Flex>
 	);
