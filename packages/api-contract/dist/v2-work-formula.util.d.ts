@@ -10,6 +10,8 @@ export type WorkFormulaEvalResult = {
     error: string | null;
 };
 export declare function tokensToText(tokens: V2WorkFormulaToken[]): string;
+/** Краткая запись для блока «Общая формула норматива» (H, Кэф-П1, …). */
+export declare function formatWorkFormulaGeneralSummary(tokens: V2WorkFormulaToken[], paramOrder: readonly string[]): string;
 export declare function parseWorkFormulaText(text: string): {
     tokens: V2WorkFormulaToken[];
     error: string | null;

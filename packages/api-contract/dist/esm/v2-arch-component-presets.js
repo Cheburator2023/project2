@@ -4,89 +4,53 @@ const SNAPSHOT_ARCH_PRESETS = {
         "schema": {
             "type": "object",
             "title": "Модельный сервис",
+            "required": [
+                "field_dEVFQVQn"
+            ],
             "properties": {
-                "deployChannels": {
-                    "type": "array",
-                    "title": "Каналы внедрения",
-                    "items": {
-                        "type": "string",
-                        "enum": [
-                            "Не требуется",
-                            "Батч",
-                            "Батч+загрузка данных потребителю",
-                            "Батч+Онлайн",
-                            "Онлайн",
-                            "Онлайн GPU",
-                            "Стриминг",
-                            "Мобильные устройства",
-                            "LLM",
-                            "Гео-сервисы",
-                            "Внедрение в облаке",
-                            "Графовая платформа"
-                        ]
-                    },
-                    "uniqueItems": true
-                },
-                "modelClass": {
-                    "type": "string",
-                    "title": "Класс модели",
-                    "enum": [
-                        "Розничные регуляторные модели",
-                        "Розничные бизнес-модели",
-                        "Розничные модели CRM",
-                        "Розничные модели Collection",
-                        "Корпоративные регуляторные модели",
-                        "Корпоративные бизнес-модели",
-                        "Прочие корпоративные модели",
-                        "Модели финансового моделирования",
-                        "Модели цифровых помощников"
-                    ]
-                },
-                "controlTypes": {
-                    "type": "array",
-                    "title": "Вид контроля",
-                    "items": {
-                        "type": "string",
-                        "enum": [
-                            "Качество модельных данных [КД]",
-                            "Технический контроль [ТМ]",
-                            "Оперативный контроль [ОК]",
-                            "Аналитический контроль [АК]",
-                            "Контроль модельных значений [КМЗ]",
-                            "Оценка влияния моделей [ОВ]"
-                        ]
-                    },
-                    "uniqueItems": true
-                },
                 "workType": {
-                    "type": "string",
-                    "title": "Тип работ: Калибровка",
                     "enum": [
                         "Разработка",
-                        "Внедрение",
                         "Доработка",
-                        "Калибровка"
-                    ]
+                        "Настройка"
+                    ],
+                    "type": "string",
+                    "title": "Тип работ"
+                },
+                "modelClass": {
+                    "enum": [
+                        "1",
+                        "2",
+                        "3",
+                        "4",
+                        "5",
+                        "6",
+                        "7",
+                        "8",
+                        "9"
+                    ],
+                    "type": "string",
+                    "title": "Класс моделей"
+                },
+                "prePromEval": {
+                    "type": "boolean",
+                    "title": "Необходимость поддержки проведения пилота"
                 },
                 "pkRegulatory": {
                     "type": "boolean",
-                    "title": "ПВР/Регуляторный"
+                    "title": "ПВР/Регуляторная"
                 },
-                "field_imxB4YEd": {
-                    "type": "boolean",
-                    "title": "Первичное подключение ИС к РЕПО"
+                "field_4IL7OStC": {
+                    "enum": [
+                        "Да",
+                        "Нет"
+                    ],
+                    "type": "string",
+                    "title": "Способ загрузки данных в BI-систему"
                 },
-                "field_kkbRs50S": {
-                    "type": "boolean",
-                    "title": "Хранение артефактов в РЕПО"
-                },
-                "field_r66ph-79": {
-                    "type": "boolean",
-                    "title": "Перекладка артефактов между контурами посредством РЕПО"
-                },
-                "field_Y2S_XRAQ": {
-                    "type": "boolean",
-                    "title": "Использование данных СХК через РЕПО"
+                "field_F7nK-We5": {
+                    "type": "string",
+                    "title": "Тип БД для BI-системы"
                 },
                 "field_JcKtx9Mg": {
                     "type": "boolean",
@@ -96,39 +60,62 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "type": "boolean",
                     "title": "Требуется визуализация результатов работы модельного сервиса"
                 },
-                "field_F7nK-We5": {
+                "field_SvNx6iEq": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "Вид контроля",
+                    "uniqueItems": true
+                },
+                "field_Y2S_XRAQ": {
                     "type": "boolean",
-                    "title": "Тип БД для BI-системы"
+                    "title": "Использование данных СХК через РЕПО"
                 },
-                "field_4IL7OStC": {
+                "field_dEVFQVQn": {
                     "type": "string",
-                    "title": "Способ загрузки данных в BI-систему",
-                    "enum": [
-                        "Ручной",
-                        "Автоматизированный"
-                    ]
+                    "title": "Название модельного сервиса"
                 },
-                "field_zNF-O2fH": {
+                "field_imxB4YEd": {
+                    "type": "boolean",
+                    "title": "Первичное подключение ИС к РЕПО"
+                },
+                "field_jUm5syZf": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "Каналы внедрения",
+                    "uniqueItems": true
+                },
+                "field_kkbRs50S": {
+                    "type": "boolean",
+                    "title": "Хранение артефактов в РЕПО"
+                },
+                "field_o_HRj6VO": {
                     "type": "boolean",
                     "title": "Необходимость пилота (MVP)"
                 },
-                "field_Y7z2a__S": {
+                "field_r66ph-79": {
                     "type": "boolean",
-                    "title": "Необходимость поддержки проведения пилота"
+                    "title": "Перекладка артефактов между контурами посредством РЕПО"
                 }
             }
         },
         "uiOptions": {
-            "archComponent": "modelService",
             "sectionRole": "subsection",
+            "archComponent": "modelService",
             "showFilledCount": true
         },
         "uiBranch": {
             "ui:order": [
-                "deployChannels",
-                "modelClass",
-                "controlTypes",
+                "field_dEVFQVQn",
                 "workType",
+                "modelClass",
+                "field_jUm5syZf",
+                "field_SvNx6iEq",
+                "field_o_HRj6VO",
+                "prePromEval",
                 "pkRegulatory",
                 "field_imxB4YEd",
                 "field_kkbRs50S",
@@ -137,61 +124,97 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "field_JcKtx9Mg",
                 "field_KzzDtkB0",
                 "field_F7nK-We5",
-                "field_4IL7OStC",
-                "field_zNF-O2fH",
-                "field_Y7z2a__S"
+                "field_4IL7OStC"
             ],
             "workType": {
-                "ui:widget": "select"
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.generalInfo.modelService.workType"
+                },
+                "ui:placeholder": "Тип работ"
             },
             "modelClass": {
-                "ui:widget": "select"
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.method.2.класс_моделей"
+                },
+                "ui:placeholder": "Класс моделей"
             },
-            "controlTypes": {
-                "ui:widget": "text"
-            },
-            "deployChannels": {
-                "ui:widget": "text"
+            "prePromEval": {
+                "ui:placeholder": "Необходимость поддержки проведения пилота"
             },
             "pkRegulatory": {
-                "ui:widget": "checkbox"
+                "ui:options": {},
+                "ui:placeholder": "ПВР/Регуляторная"
             },
             "field_4IL7OStC": {
-                "ui:widget": "select"
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "Способ загрузки данных в BI-систему"
+                },
+                "ui:placeholder": "Способ загрузки данных в BI-систему"
             },
             "field_F7nK-We5": {
-                "ui:widget": "checkbox"
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.modelserviceiInfo.bidbtype"
+                },
+                "ui:placeholder": "Тип БД для BI-системы"
             },
             "field_JcKtx9Mg": {
-                "ui:widget": "checkbox"
+                "ui:options": {},
+                "ui:placeholder": "Требуется оркестратор"
             },
             "field_KzzDtkB0": {
-                "ui:widget": "checkbox"
+                "ui:options": {},
+                "ui:placeholder": "Требуется визуализация результатов работы модельного сервиса"
+            },
+            "field_SvNx6iEq": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "multiple": true,
+                    "dictionaryCode": "v2.method.3.вид_контроля"
+                },
+                "ui:placeholder": "Вид контроля"
             },
             "field_Y2S_XRAQ": {
-                "ui:widget": "checkbox"
+                "ui:options": {},
+                "ui:placeholder": "Использование данных СХК через РЕПО"
+            },
+            "field_dEVFQVQn": {
+                "ui:placeholder": "Название модельного сервиса"
             },
             "field_imxB4YEd": {
-                "ui:widget": "checkbox"
+                "ui:options": {},
+                "ui:placeholder": "Первичное подключение ИС к РЕПО"
+            },
+            "field_jUm5syZf": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "multiple": true,
+                    "dictionaryCode": "v2.method.4.канал_внедрения"
+                },
+                "ui:placeholder": "Каналы внедрения"
             },
             "field_kkbRs50S": {
-                "ui:widget": "checkbox"
+                "ui:options": {},
+                "ui:placeholder": "Хранение артефактов в РЕПО"
+            },
+            "field_o_HRj6VO": {
+                "ui:options": {
+                    "tooltip": "Применяется в случае, если требуется создать прототип модели, которую Заказчик планирует апробировать перед выносом в пром. Длительность пилота ограничена 6 месяцами. Блокируется при выборе 'Да' в поле 'Модель разработана?"
+                },
+                "ui:placeholder": "Необходимость пилота"
             },
             "field_r66ph-79": {
-                "ui:widget": "checkbox"
-            },
-            "field_zNF-O2fH": {
-                "ui:widget": "checkbox"
-            },
-            "field_Y7z2a__S": {
-                "ui:widget": "checkbox"
+                "ui:options": {},
+                "ui:placeholder": "Перекладка артефактов между контурами посредством РЕПО"
             }
         }
     },
     "sourceSystem": {
         "schema": {
             "type": "array",
-            "title": "Системы источники",
             "items": {
                 "type": "object",
                 "title": "Система источник",
@@ -203,343 +226,440 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "type": "string",
                         "title": "Название источника"
                     },
-                    "field_RFcOprSG": {
-                        "type": "boolean",
-                        "title": "Наличие реплики в DAPP"
-                    },
-                    "field_wf7CHiVI": {
-                        "type": "string",
-                        "title": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик",
-                        "enum": [
-                            "Неизвестно",
-                            "Да",
-                            "Нет"
-                        ]
-                    },
-                    "field_HuOLfL4K": {
-                        "type": "string",
-                        "title": "Риск появления дополнительных систем-источников",
-                        "enum": [
-                            "Неизвестно",
-                            "Да",
-                            "Нет"
-                        ]
-                    },
-                    "field_bHwz9vwn": {
-                        "type": "string",
-                        "title": "Необходим новый тракт данных от источника",
-                        "enum": [
-                            "Неизвестно",
-                            "Высокая",
-                            "Средняя",
-                            "Низкая"
-                        ]
-                    },
-                    "field_fJ_7OdE7": {
-                        "type": "boolean",
-                        "title": "Необходимо подтвердить возможность интеграции"
-                    },
                     "type": {
-                        "type": "string",
-                        "title": "Тип системы-источника",
                         "enum": [
                             "Внутренний",
                             "Внешний"
-                        ]
-                    },
-                    "domainComplexity": {
+                        ],
                         "type": "string",
-                        "title": "Сложность предметной области",
-                        "enum": [
-                            "Низкая",
-                            "Средняя",
-                            "Высокая"
-                        ]
+                        "title": "Тип системы-источника"
                     },
-                    "entityVolume": {
-                        "type": "string",
-                        "title": "Количество сущностей (исходных таблиц)",
-                        "enum": [
-                            "Неизвестно",
-                            "Точечное (1-4)",
-                            "Малое (5-9)",
-                            "Среднее (9-15)",
-                            "Крупное (15-20)",
-                            "Большое (20-25)",
-                            "Масштабное (25+)"
-                        ]
-                    },
-                    "field_nE73kPQl": {
-                        "type": "string",
-                        "title": "Детализация и ясность запроса постановки задачи",
-                        "enum": [
-                            "Низкая",
-                            "Средняя",
-                            "Высокая"
-                        ]
-                    },
-                    "nda": {
-                        "type": "string",
-                        "title": "NDA",
-                        "enum": [
-                            "Неизвестно",
-                            "Стандартная",
-                            "Нестандартная"
-                        ]
-                    },
-                    "field_p4zxdNZG": {
-                        "type": "string",
-                        "title": "Наличие конфиденциальных данных",
-                        "enum": [
-                            "Неизвестно",
-                            "Да",
-                            "Нет"
-                        ]
-                    },
-                    "field_4jxR0E0m": {
-                        "type": "string",
-                        "title": "Пилот",
-                        "enum": [
-                            "Нет",
-                            "Первичный",
-                            "Повторный"
-                        ]
-                    },
-                    "field_DBFG7kIN": {
-                        "type": "string",
-                        "title": "Наличие юридического основания для пилота",
-                        "enum": [
-                            "Неизвестно",
-                            "Да",
-                            "Нет"
-                        ]
-                    },
-                    "field_vqqlHbU6": {
-                        "type": "string",
-                        "title": "Требуется хэширование/ шифрование?",
-                        "enum": [
-                            "Неизвестно",
-                            "Да",
-                            "Нет"
-                        ]
-                    },
-                    "field_K2ioHD8d": {
-                        "type": "string",
-                        "title": "Режим обмена данными",
-                        "enum": [
-                            "Неизвестен",
-                            "Одностороний",
-                            "Двусторонний"
-                        ]
-                    },
-                    "field_1ANadh7U": {
-                        "type": "string",
-                        "title": "Тип загрузки данных",
-                        "enum": [
-                            "Однократный",
-                            "Регламентный"
-                        ]
-                    },
-                    "field_3a0vme2u": {
-                        "type": "string",
-                        "title": "Предусмотрено проведение конкурса?",
-                        "enum": [
-                            "Неизвестно",
-                            "Да",
-                            "Нет"
-                        ]
+                    "field_-EGYyyJF": {
+                        "type": "boolean",
+                        "title": "Необходим новый тракт данных от источника"
                     },
                     "field_-t8JSf3p": {
-                        "type": "string",
-                        "title": "Форма договора",
                         "enum": [
-                            "Неизвестно",
-                            "Стандартная",
-                            "Нестандартная"
-                        ]
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Форма договора"
                     },
-                    "field_DJJtx7nX": {
-                        "type": "boolean",
-                        "title": "Требуется разметка данных источника"
+                    "field_1ANadh7U": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Тип загрузки данных"
                     },
                     "field_1bl3dfSX": {
                         "type": "boolean",
                         "title": "Требуется новая модель для автоматической разметки данных"
                     },
-                    "field_wuYlhnu0": {
-                        "type": "boolean",
-                        "title": "Сложность настройки шаблона разметки данных"
+                    "field_3a0vme2u": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Предусмотрено проведение конкурса"
                     },
                     "field_4Gff93vI": {
                         "type": "boolean",
                         "title": "Требуется подготовка сырых данных для загрузки в ИС 1860"
                     },
-                    "field_F8GPVM7R": {
+                    "field_4jxR0E0m": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Пилот"
+                    },
+                    "field_61bkBs0m": {
                         "type": "boolean",
+                        "title": "Требуется регламентный импорт/экспорт данных или отчетности в/из ИС 1860"
+                    },
+                    "field_8pFvwc-v": {
+                        "type": "boolean",
+                        "title": "Наличие реплики в DAPP"
+                    },
+                    "field_9BXQE8SI": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Режим обмена данными"
+                    },
+                    "field_AKLVuyFy": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Наличие конфиденциальных данных"
+                    },
+                    "field_DBFG7kIN": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Наличие юридического основания для пилота"
+                    },
+                    "field_DJJtx7nX": {
+                        "type": "boolean",
+                        "title": "Требуется разметка данных источника"
+                    },
+                    "field_F8GPVM7R": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
                         "title": "Размер модели разметки данных"
+                    },
+                    "field_HuOLfL4K": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Риск появления дополнительных систем-источников"
+                    },
+                    "field_L1lRlgf1": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Сложность реализации"
                     },
                     "field_TvqjyIO-": {
                         "type": "boolean",
                         "title": "Требуется донастройка ИС 1860 под выбранную модель разметки данных"
                     },
                     "field_VX7y3PsB": {
-                        "type": "boolean",
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
                         "title": "Сложность конфигурации модели разметки данных"
                     },
-                    "field_bylzUFPM": {
+                    "field_WgK6lIS-": {
                         "type": "boolean",
-                        "title": "Требуется регламентный импорт/экспорт данных или отчетности в/из ИС 1860"
+                        "title": "Требуется ручная обработка результатов автоматизированной разметки данных"
                     },
-                    "field_L1lRlgf1": {
+                    "field_Y_K0Hy0e": {
                         "type": "string",
-                        "title": "Сложность реализации",
-                        "enum": [
-                            "Неизвестно",
-                            "Высокая",
-                            "Средняя",
-                            "Низкая"
-                        ]
+                        "title": "Количество сущностей (исходных таблиц)"
+                    },
+                    "field_d3OCFyaC": {
+                        "type": "string",
+                        "title": "Сложность предметной области"
+                    },
+                    "field_fJ_7OdE7": {
+                        "type": "boolean",
+                        "title": "Необходимо подтвердить возможность интеграции"
                     },
                     "field_lDw9gG39": {
                         "type": "boolean",
                         "title": "Требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
                     },
-                    "field_WgK6lIS-": {
+                    "field_lzP44Urx": {
                         "type": "boolean",
-                        "title": "Требуется ручная обработка результатов автоматизированной разметки данных"
+                        "title": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик"
+                    },
+                    "field_nE73kPQl": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Детализация и ясность запроса постановки задачи"
+                    },
+                    "field_tpROQBf5": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "NDA"
+                    },
+                    "field_vqqlHbU6": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Требуется хэширование/ шифрование"
+                    },
+                    "field_wf7CHiVI": {
+                        "enum": [
+                            "Точечное",
+                            "Малое",
+                            "Среднее",
+                            "Большое",
+                            "Масштабное"
+                        ],
+                        "type": "string",
+                        "title": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик"
+                    },
+                    "field_whHc-OoW": {
+                        "type": "boolean",
+                        "title": "Риск появления дополнительных систем-источников"
+                    },
+                    "field_wuYlhnu0": {
+                        "type": "string",
+                        "title": "Сложность настройки шаблона разметки данных"
                     }
                 }
-            }
+            },
+            "title": "Системы источники"
         },
         "uiOptions": {
-            "orderable": false,
             "addable": true,
+            "orderable": false,
             "removable": true,
             "archComponent": "sourceSystem"
         },
         "uiBranch": {
             "items": {
                 "name": {
-                    "ui:widget": "text"
+                    "ui:widget": "text",
+                    "ui:options": {
+                        "tooltip": "Заполняется при отсутствии витрин с агрегатами/широких витрин с агрегатами/широких витрин на регламенте в области ответственности модельного стрима, при необходимости поиска данных, указывается количество внутренних (в т.ч. в ответственности другого стрима) и внешних источников данных"
+                    },
+                    "ui:placeholder": "Название источника"
                 },
                 "type": {
-                    "ui:widget": "select"
-                },
-                "domainComplexity": {
-                    "ui:widget": "select"
-                },
-                "entityVolume": {
-                    "ui:widget": "select"
-                },
-                "nda": {
-                    "ui:widget": "select"
-                },
-                "field_RFcOprSG": {
-                    "ui:widget": "checkbox"
-                },
-                "field_bHwz9vwn": {
-                    "ui:widget": "select"
-                },
-                "field_fJ_7OdE7": {
-                    "ui:widget": "checkbox"
-                },
-                "field_nE73kPQl": {
-                    "ui:widget": "select"
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.detailInfo.sourceSystems.items.type"
+                    }
                 },
                 "ui:order": [
                     "name",
-                    "field_RFcOprSG",
-                    "field_wf7CHiVI",
-                    "field_HuOLfL4K",
-                    "field_bHwz9vwn",
-                    "field_fJ_7OdE7",
                     "type",
-                    "domainComplexity",
-                    "entityVolume",
+                    "field_8pFvwc-v",
+                    "field_lzP44Urx",
+                    "field_whHc-OoW",
+                    "field_-EGYyyJF",
+                    "field_fJ_7OdE7",
+                    "field_d3OCFyaC",
+                    "field_Y_K0Hy0e",
                     "field_nE73kPQl",
-                    "nda",
-                    "field_p4zxdNZG",
+                    "field_HuOLfL4K",
+                    "field_wf7CHiVI",
+                    "field_tpROQBf5",
+                    "field_AKLVuyFy",
                     "field_4jxR0E0m",
                     "field_DBFG7kIN",
                     "field_vqqlHbU6",
-                    "field_K2ioHD8d",
+                    "field_9BXQE8SI",
                     "field_1ANadh7U",
                     "field_3a0vme2u",
                     "field_-t8JSf3p",
                     "field_DJJtx7nX",
+                    "field_F8GPVM7R",
                     "field_1bl3dfSX",
                     "field_wuYlhnu0",
                     "field_4Gff93vI",
-                    "field_F8GPVM7R",
                     "field_TvqjyIO-",
                     "field_VX7y3PsB",
-                    "field_bylzUFPM",
+                    "field_61bkBs0m",
                     "field_L1lRlgf1",
                     "field_lDw9gG39",
                     "field_WgK6lIS-"
                 ],
-                "field_wf7CHiVI": {
-                    "ui:widget": "select"
-                },
-                "field_HuOLfL4K": {
-                    "ui:widget": "select"
-                },
-                "field_p4zxdNZG": {
-                    "ui:widget": "select"
-                },
-                "field_4jxR0E0m": {
-                    "ui:widget": "select"
-                },
-                "field_DBFG7kIN": {
-                    "ui:widget": "select"
-                },
-                "field_vqqlHbU6": {
-                    "ui:widget": "select"
-                },
-                "field_K2ioHD8d": {
-                    "ui:widget": "select"
-                },
-                "field_1ANadh7U": {
-                    "ui:widget": "select"
-                },
-                "field_3a0vme2u": {
-                    "ui:widget": "select"
+                "field_-EGYyyJF": {
+                    "ui:options": {},
+                    "ui:placeholder": "Необходим новый тракт данных от источника"
                 },
                 "field_-t8JSf3p": {
-                    "ui:widget": "select"
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.detailInfo.sourceSystems.items.field_-t8JSf3p"
+                    }
                 },
-                "field_DJJtx7nX": {
-                    "ui:widget": "checkbox"
+                "field_1ANadh7U": {
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.detailInfo.sourceSystems.items.field_1ANadh7U"
+                    }
                 },
                 "field_1bl3dfSX": {
-                    "ui:widget": "checkbox"
+                    "ui:options": {}
                 },
-                "field_wuYlhnu0": {
-                    "ui:widget": "checkbox"
+                "field_3a0vme2u": {
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.detailInfo.sourceSystems.items.field_3a0vme2u"
+                    }
                 },
                 "field_4Gff93vI": {
-                    "ui:widget": "checkbox"
+                    "ui:options": {}
                 },
-                "field_F8GPVM7R": {
-                    "ui:widget": "checkbox"
+                "field_4jxR0E0m": {
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.detailInfo.sourceSystems.items.field_4jxR0E0m"
+                    }
                 },
-                "field_TvqjyIO-": {
-                    "ui:widget": "checkbox"
+                "field_61bkBs0m": {
+                    "ui:options": {}
                 },
-                "field_VX7y3PsB": {
-                    "ui:widget": "checkbox"
+                "field_8pFvwc-v": {
+                    "ui:placeholder": "Наличие реплики в DAPP"
                 },
-                "field_bylzUFPM": {
-                    "ui:widget": "checkbox"
+                "field_9BXQE8SI": {
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.detailInfo.sourceSystems.items.field_K2ioHD8d"
+                    }
+                },
+                "field_AKLVuyFy": {
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.detailInfo.sourceSystems.items.field_p4zxdNZG"
+                    }
+                },
+                "field_DBFG7kIN": {
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.detailInfo.sourceSystems.items.field_DBFG7kIN"
+                    }
+                },
+                "field_DJJtx7nX": {
+                    "ui:options": {}
+                },
+                "field_HuOLfL4K": {
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "Риск появления дополнительных систем-источников"
+                    }
                 },
                 "field_L1lRlgf1": {
-                    "ui:widget": "select"
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.detailInfo.sourceSystems.items.field_L1lRlgf1"
+                    }
                 },
-                "field_lDw9gG39": {
-                    "ui:widget": "checkbox"
+                "field_TvqjyIO-": {
+                    "ui:options": {}
+                },
+                "field_VX7y3PsB": {
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.detailInfo.sourceSystems.items.field_VX7y3PsB"
+                    }
                 },
                 "field_WgK6lIS-": {
-                    "ui:widget": "checkbox"
+                    "ui:options": {}
+                },
+                "field_Y_K0Hy0e": {
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.method.28.объ_м_запроса_по_сущностям"
+                    }
+                },
+                "field_d3OCFyaC": {
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.method.27.сложность_предметной_области"
+                    }
+                },
+                "field_fJ_7OdE7": {
+                    "ui:options": {},
+                    "ui:placeholder": "Необходимо подтвердить возможность интеграции"
+                },
+                "field_lDw9gG39": {
+                    "ui:options": {}
+                },
+                "field_lzP44Urx": {
+                    "ui:options": {},
+                    "ui:placeholder": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик"
+                },
+                "field_nE73kPQl": {
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.method.29.детализация_и_ясность_запроса_rds"
+                    }
+                },
+                "field_tpROQBf5": {
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "tooltip": "Соглашение о неразглашении",
+                        "dictionaryCode": "v2.detailInfo.sourceSystems.items.nda"
+                    }
+                },
+                "field_vqqlHbU6": {
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.detailInfo.sourceSystems.items.field_HMnqITVb"
+                    }
+                },
+                "field_wf7CHiVI": {
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.detailInfo.sourceSystems.items.field_wf7CHiVI"
+                    }
+                },
+                "field_whHc-OoW": {
+                    "ui:options": {},
+                    "ui:placeholder": "Риск появления дополнительных систем-источников"
+                },
+                "field_wuYlhnu0": {
+                    "ui:widget": "select",
+                    "ui:options": {
+                        "dictionaryCode": "v2.detailInfo.sourceSystems.items.field_wuYlhnu0"
+                    }
                 }
             }
         }
@@ -549,105 +669,132 @@ const SNAPSHOT_ARCH_PRESETS = {
             "type": "object",
             "title": "Процессы обработки данных",
             "properties": {
-                "implComplexity": {
-                    "type": "string",
-                    "title": "Сложность реализации",
-                    "enum": [
-                        "Неизвестно",
-                        "Высокая",
-                        "Средняя",
-                        "Низкая"
-                    ]
-                },
-                "workType": {
-                    "type": "string",
-                    "title": "Тип работ",
-                    "enum": [
-                        "Разработка",
-                        "Доработка"
-                    ]
-                },
                 "deliveryMode": {
-                    "type": "string",
-                    "title": "Способ предоставления данных заказчику",
                     "enum": [
-                        "Неизвестно",
-                        "Непосредственно",
-                        "Опосредованно"
-                    ]
-                },
-                "field_G9cgk2fq": {
+                        "Напрямую",
+                        "Опосредованно",
+                        "Неизвестно"
+                    ],
                     "type": "string",
-                    "title": "Наличие конфиденциальных данных",
-                    "enum": [
-                        "Неизвестно",
-                        "Да",
-                        "Нет"
-                    ]
+                    "title": "Способ предоставления данных заказчику"
                 },
                 "field_C6oqyTPh": {
-                    "type": "string",
-                    "title": "Требуется хэширование/ шифрование",
                     "enum": [
-                        "Неизвестно",
                         "Да",
                         "Нет"
-                    ]
-                },
-                "field_R3Lx-csF": {
+                    ],
                     "type": "string",
-                    "title": "Двусторонний обмен данными",
-                    "enum": [
-                        "Неизвестно",
-                        "Да",
-                        "Нет"
-                    ]
+                    "title": "Требуется хэширование/ шифрование"
                 },
                 "field_HgUCNn6E": {
-                    "type": "string",
-                    "title": "Тип процесса обработки данных",
                     "enum": [
-                        "Пакетный",
-                        "Потоковый"
-                    ]
+                        "Да",
+                        "Нет"
+                    ],
+                    "type": "string",
+                    "title": "Тип процесса обработки данных"
+                },
+                "field_It-B8PfV": {
+                    "type": "string",
+                    "title": "Название процесса"
+                },
+                "field_R3Lx-csF": {
+                    "enum": [
+                        "Да",
+                        "Нет"
+                    ],
+                    "type": "string",
+                    "title": "Двусторонний обмен данными"
+                },
+                "field_UEzs5Q87": {
+                    "enum": [
+                        "Низкая",
+                        "Средняя",
+                        "Высокая",
+                        "Неизвестно"
+                    ],
+                    "type": "string",
+                    "title": "Сложность реализации"
+                },
+                "field_yJ51GkCR": {
+                    "enum": [
+                        "Разработка",
+                        "Доработка",
+                        "Настройка"
+                    ],
+                    "type": "string",
+                    "title": "Тип работ"
+                },
+                "confidentialData": {
+                    "enum": [
+                        "Да",
+                        "Нет"
+                    ],
+                    "type": "string",
+                    "title": "Наличие конфиденциальных данных"
                 }
             }
         },
         "uiOptions": {
-            "archComponent": "dataProcess",
             "sectionRole": "subsection",
+            "archComponent": "dataProcess",
             "showFilledCount": true
         },
         "uiBranch": {
-            "field_C6oqyTPh": {
-                "ui:widget": "select"
-            },
-            "field_HgUCNn6E": {
-                "ui:widget": "select"
-            },
-            "field_R3Lx-csF": {
-                "ui:widget": "select"
-            },
             "ui:order": [
-                "implComplexity",
-                "workType",
+                "field_It-B8PfV",
+                "field_yJ51GkCR",
                 "deliveryMode",
-                "field_G9cgk2fq",
+                "field_UEzs5Q87",
+                "confidentialData",
                 "field_C6oqyTPh",
                 "field_R3Lx-csF",
                 "field_HgUCNn6E"
             ],
-            "implComplexity": {
-                "ui:widget": "select"
-            },
-            "workType": {
-                "ui:widget": "select"
-            },
             "deliveryMode": {
-                "ui:widget": "select"
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.dataProcess.deliveryMode"
+                }
             },
-            "field_G9cgk2fq": {
-                "ui:widget": "select"
+            "field_C6oqyTPh": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.dataProcess.field_C6oqyTPh"
+                }
+            },
+            "field_HgUCNn6E": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.dataProcess.field_HgUCNn6E"
+                }
+            },
+            "field_It-B8PfV": {
+                "ui:placeholder": "Название процесса"
+            },
+            "field_R3Lx-csF": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.dataProcess.field_R3Lx-csF"
+                }
+            },
+            "field_UEzs5Q87": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.dataProcess.implComplexity"
+                }
+            },
+            "field_yJ51GkCR": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.dataProcess.workType"
+                }
+            },
+            "confidentialData": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.dataProcess.confidentialData"
+                }
             }
         }
     },
@@ -656,419 +803,305 @@ const SNAPSHOT_ARCH_PRESETS = {
             "type": "object",
             "title": "Объект / Витрина данных",
             "properties": {
-                "field_xva1dRvW": {
-                    "type": "boolean",
-                    "title": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик"
+                "workType": {
+                    "enum": [
+                        "Разработка",
+                        "Доработка",
+                        "Настройка"
+                    ],
+                    "type": "string",
+                    "title": "Тип работ"
+                },
+                "metricsCount": {
+                    "type": "number",
+                    "title": "Количество признаков"
+                },
+                "field_0uV7wafS": {
+                    "enum": [
+                        "Да",
+                        "Нет"
+                    ],
+                    "type": "string",
+                    "title": "Требуется хэширование/ шифрование"
+                },
+                "field_28IPlEQu": {
+                    "type": "number",
+                    "title": "Количество метрик"
+                },
+                "field_46LCnfWo": {
+                    "enum": [
+                        "До 20",
+                        "20–50",
+                        "Более 50"
+                    ],
+                    "type": "string",
+                    "title": "Сложность реализации"
                 },
                 "field_Ad1msOl7": {
                     "type": "boolean",
                     "title": "Необходима продуктивизация"
                 },
-                "metricsCount": {
-                    "type": "number",
-                    "title": "Количество метрик"
-                },
-                "workType": {
-                    "type": "string",
-                    "title": "Тип работ",
-                    "enum": [
-                        "Не требуется",
-                        "Разработка",
-                        "Доработка"
-                    ]
-                },
-                "deliveryMode": {
-                    "type": "string",
-                    "title": "Способ предоставления данных заказчику",
-                    "enum": [
-                        "Неизвестно",
-                        "Непосредственно",
-                        "Опосредованно"
-                    ]
-                },
-                "field_qI2JSr--": {
-                    "type": "string",
-                    "title": "Отсутствует?",
-                    "enum": [
-                        "Неизвестно",
-                        "Да",
-                        "Нет"
-                    ]
-                },
-                "field_46LCnfWo": {
-                    "type": "string",
-                    "title": "Сложность реализации",
-                    "enum": [
-                        "Неизвестно",
-                        "Высокая",
-                        "Средняя",
-                        "Низкая"
-                    ]
-                },
                 "field_L-WWLDWY": {
-                    "type": "string",
-                    "title": "Наличие конфиденциальных данных",
                     "enum": [
-                        "Неизвестно",
                         "Да",
                         "Нет"
-                    ]
-                },
-                "field_0uV7wafS": {
+                    ],
                     "type": "string",
-                    "title": "Требуется хэширование/ шифрование",
-                    "enum": [
-                        "Неизвестно",
-                        "Да",
-                        "Нет"
-                    ]
+                    "title": "Наличие конфиденциальных данных"
                 },
                 "field_N9LFD6Hu": {
-                    "type": "string",
-                    "title": "Двусторонний обмен данными",
                     "enum": [
-                        "Неизвестно",
                         "Да",
                         "Нет"
-                    ]
+                    ],
+                    "type": "string",
+                    "title": "Двусторонний обмен данными"
                 },
-                "field_lovKvLZc": {
-                    "type": "boolean",
-                    "title": "Реализуется в Хранилище признаков"
+                "field_Q8DGJNTn": {
+                    "type": "number",
+                    "title": "Количество контролей качества признаков"
+                },
+                "field_fRuMuWtn": {
+                    "enum": [
+                        "Да",
+                        "Нет"
+                    ],
+                    "type": "string",
+                    "title": "Способ предоставления данных заказчику"
                 },
                 "field_hIM0c5gG": {
                     "type": "boolean",
                     "title": "Содержит сырые данные"
                 },
-                "field_w_EN6lWe": {
-                    "type": "boolean",
-                    "title": "Требуется парсинг сырых данных"
-                },
-                "featuresCount": {
-                    "type": "number",
-                    "title": "Количество признаков"
-                },
                 "field_le47srI7": {
-                    "type": "string",
-                    "title": "Слой хранения",
                     "enum": [
-                        "Холодный",
-                        "Теплый",
-                        "Горячий",
-                        "Потоковый"
-                    ]
+                        "Да",
+                        "Нет"
+                    ],
+                    "type": "string",
+                    "title": "Слой хранения"
+                },
+                "field_lovKvLZc": {
+                    "type": "boolean",
+                    "title": "Реализуется в Хранилище признаков"
                 },
                 "field_rZeUo8a_": {
                     "type": "boolean",
                     "title": "Требуется контроль качества Признаков"
                 },
-                "field_Q8DGJNTn": {
+                "field_w_EN6lWe": {
                     "type": "boolean",
-                    "title": "Количество Контролей качества Признаков"
+                    "title": "Требуется парсинг сырых данных"
                 },
-                "field_Iw77UzvX": {
+                "field_xva1dRvW": {
                     "type": "boolean",
-                    "title": "Синхронизировать с ИД, использовать единый параметр"
+                    "title": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик"
                 },
-                "field_qea3tBuA": {
-                    "type": "boolean",
-                    "title": "Необходимость продуктивизации"
+                "field_zApubb5V": {
+                    "type": "string",
+                    "title": "Название объекта/витрины данных"
                 }
             }
         },
         "uiOptions": {
-            "archComponent": "dataMart",
             "sectionRole": "subsection",
+            "archComponent": "dataMart",
             "showFilledCount": true
         },
         "uiBranch": {
-            "field_0uV7wafS": {
-                "ui:widget": "select"
-            },
-            "field_Ad1msOl7": {
-                "ui:widget": "checkbox"
-            },
-            "field_L-WWLDWY": {
-                "ui:widget": "select"
-            },
-            "field_N9LFD6Hu": {
-                "ui:widget": "select"
-            },
-            "field_Q8DGJNTn": {
-                "ui:widget": "checkbox"
-            },
-            "field_le47srI7": {
-                "ui:widget": "select"
-            },
-            "field_rZeUo8a_": {
-                "ui:widget": "checkbox"
-            },
-            "field_xva1dRvW": {
-                "ui:widget": "checkbox"
-            },
             "ui:order": [
-                "field_xva1dRvW",
-                "field_Ad1msOl7",
-                "metricsCount",
+                "field_zApubb5V",
                 "workType",
-                "deliveryMode",
-                "field_qI2JSr--",
-                "field_46LCnfWo",
-                "field_L-WWLDWY",
-                "field_0uV7wafS",
-                "field_N9LFD6Hu",
                 "field_lovKvLZc",
                 "field_hIM0c5gG",
                 "field_w_EN6lWe",
-                "featuresCount",
+                "metricsCount",
+                "field_46LCnfWo",
                 "field_le47srI7",
                 "field_rZeUo8a_",
                 "field_Q8DGJNTn",
-                "field_Iw77UzvX",
-                "field_qea3tBuA"
+                "field_xva1dRvW",
+                "field_Ad1msOl7",
+                "field_28IPlEQu",
+                "field_fRuMuWtn",
+                "field_L-WWLDWY",
+                "field_0uV7wafS",
+                "field_N9LFD6Hu"
             ],
-            "metricsCount": {
-                "ui:widget": "updown"
-            },
             "workType": {
-                "ui:widget": "select"
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.dataMart.workType"
+                }
             },
-            "deliveryMode": {
-                "ui:widget": "select"
+            "metricsCount": {
+                "ui:options": {}
             },
-            "field_qI2JSr--": {
-                "ui:widget": "select"
+            "field_0uV7wafS": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.dataMart.field_0uV7wafS"
+                }
+            },
+            "field_28IPlEQu": {
+                "ui:options": {}
             },
             "field_46LCnfWo": {
-                "ui:widget": "select"
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.dataMart.field_46LCnfWo"
+                }
             },
-            "field_lovKvLZc": {
-                "ui:widget": "checkbox"
+            "field_Ad1msOl7": {
+                "ui:options": {}
+            },
+            "field_L-WWLDWY": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.dataMart.field_L-WWLDWY"
+                }
+            },
+            "field_N9LFD6Hu": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.dataMart.field_N9LFD6Hu"
+                }
+            },
+            "field_Q8DGJNTn": {
+                "ui:options": {}
+            },
+            "field_fRuMuWtn": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.dataMart.deliveryMode"
+                }
             },
             "field_hIM0c5gG": {
-                "ui:widget": "checkbox"
+                "ui:options": {}
+            },
+            "field_le47srI7": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.dataMart.field_le47srI7"
+                }
+            },
+            "field_lovKvLZc": {
+                "ui:options": {}
+            },
+            "field_rZeUo8a_": {
+                "ui:options": {}
             },
             "field_w_EN6lWe": {
-                "ui:widget": "checkbox"
+                "ui:options": {}
             },
-            "featuresCount": {
-                "ui:widget": "updown"
-            },
-            "field_Iw77UzvX": {
-                "ui:widget": "checkbox"
-            },
-            "field_qea3tBuA": {
-                "ui:widget": "checkbox"
+            "field_xva1dRvW": {
+                "ui:options": {}
             }
         }
     },
     "model": {
         "schema": {
             "type": "object",
-            "title": "Модели",
+            "title": "Модель",
             "properties": {
-                "modelsList": {
-                    "type": "array",
-                    "title": "Список моделей",
-                    "items": {
-                        "type": "object",
-                        "title": "Модель",
-                        "required": [
-                            "name"
-                        ],
-                        "properties": {
-                            "name": {
-                                "type": "string",
-                                "title": "Название модели"
-                            },
-                            "class": {
-                                "type": "string",
-                                "title": "Класс",
-                                "enum": [
-                                    "Розничный бизнес",
-                                    "Корпоративный бизнес",
-                                    "Прочий"
-                                ]
-                            },
-                            "taskType": {
-                                "type": "string",
-                                "title": "Тип задачи",
-                                "enum": [
-                                    "Бинарная классификация",
-                                    "Многоклассовая классификация",
-                                    "Регрессия",
-                                    "Кластеризация",
-                                    "Ранжирование"
-                                ]
-                            },
-                            "algorithm": {
-                                "type": "string",
-                                "title": "Алгоритм",
-                                "enum": [
-                                    "Табличные данные",
-                                    "Временные ряды",
-                                    "NLP",
-                                    "CV",
-                                    "RL"
-                                ]
-                            },
-                            "autoML": {
-                                "type": "boolean",
-                                "title": "Auto ML"
-                            },
-                            "role": {
-                                "type": "string",
-                                "title": "Роль",
-                                "enum": [
-                                    "Оркестратор",
-                                    "Подчинённая",
-                                    "Независимая"
-                                ]
-                            },
-                            "trainingSources": {
-                                "type": "array",
-                                "title": "Витрины источников",
-                                "items": {
-                                    "type": "string"
-                                }
-                            },
-                            "applicationSources": {
-                                "type": "array",
-                                "title": "Витрины применения",
-                                "items": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                },
-                "modelRole": {
-                    "type": "string",
-                    "title": "Роль модели",
-                    "enum": [
-                        "Обычная",
-                        "Оркестратор"
-                    ]
-                },
-                "autoMLNeed": {
+                "autoML": {
                     "type": "boolean",
                     "title": "Необходимость AutoML"
                 },
-                "field_9W8BzAKb": {
-                    "type": "boolean",
-                    "title": "АвтоМЛ: встраивание внешнего кода"
-                },
-                "field_aKQrdZUU": {
-                    "type": "boolean",
-                    "title": "АвтоМЛ: требуется преобразование данных"
-                },
-                "field_TStAwALi": {
-                    "type": "boolean",
-                    "title": "АвтоМЛ: требуется постановка на регламент"
-                },
-                "field_Da3ks0Pr": {
-                    "type": "boolean",
-                    "title": "АвтоМЛ: требуется новая библиотека"
-                },
-                "algorithmComplexity": {
+                "workType": {
+                    "enum": [
+                        "Обучение",
+                        "Дообучение",
+                        "Калибровка"
+                    ],
                     "type": "string",
-                    "title": "Сложность алгоритма / тип ML задачи",
+                    "title": "Тип работ"
+                },
+                "algorithmType": {
                     "enum": [
                         "Табличные данные",
-                        "Текстовая аналитика — Классические модели",
-                        "Текстовая аналитика — LLM",
-                        "Аудио аналитика",
-                        "Оптимизационная задача",
-                        "Гео-аналитика",
-                        "Графовая аналитика"
-                    ]
+                        "Временные ряды",
+                        "NLP",
+                        "CV",
+                        "RL"
+                    ],
+                    "type": "string",
+                    "title": "Сложность алгоритма / тип ML задачи"
+                },
+                "field_58TkWuwu": {
+                    "type": "boolean",
+                    "title": "AutoML: встраивание внешнего кода"
+                },
+                "field_CeBkWcQc": {
+                    "type": "boolean",
+                    "title": "AutoML: требуется преобразование данных"
+                },
+                "field_S23CbRXp": {
+                    "type": "boolean",
+                    "title": "AutoML: требуется постановка на регламент"
+                },
+                "field_S41Rqt5E": {
+                    "type": "boolean",
+                    "title": "AutoML: требуется новая библиотека"
+                },
+                "field_VbI-0aiT": {
+                    "type": "string",
+                    "title": "Роль модели"
+                },
+                "field_atxiq-UM": {
+                    "type": "string",
+                    "title": "Название модели"
                 }
             }
         },
-        "uiOptions": {
-            "archComponent": "model",
-            "sectionRole": "subsection",
-            "showFilledCount": true
-        },
+        "uiOptions": {},
         "uiBranch": {
-            "modelsList": {
-                "ui:options": {
-                    "orderable": false,
-                    "addable": true,
-                    "removable": true
-                },
-                "items": {
-                    "name": {
-                        "ui:widget": "text"
-                    },
-                    "class": {
-                        "ui:widget": "select"
-                    },
-                    "taskType": {
-                        "ui:widget": "select"
-                    },
-                    "algorithm": {
-                        "ui:widget": "select"
-                    },
-                    "autoML": {
-                        "ui:widget": "checkbox"
-                    },
-                    "role": {
-                        "ui:widget": "select"
-                    },
-                    "trainingSources": {
-                        "ui:options": {
-                            "orderable": false,
-                            "addable": true,
-                            "removable": true
-                        },
-                        "items": {
-                            "ui:widget": "text"
-                        }
-                    },
-                    "applicationSources": {
-                        "ui:options": {
-                            "orderable": false,
-                            "addable": true,
-                            "removable": true
-                        },
-                        "items": {
-                            "ui:widget": "text"
-                        }
-                    }
-                }
+            "autoML": {
+                "ui:options": {}
             },
             "ui:order": [
-                "modelsList",
-                "modelRole",
-                "autoMLNeed",
-                "field_9W8BzAKb",
-                "field_aKQrdZUU",
-                "field_TStAwALi",
-                "field_Da3ks0Pr",
-                "algorithmComplexity"
+                "field_atxiq-UM",
+                "workType",
+                "field_VbI-0aiT",
+                "algorithmType",
+                "autoML",
+                "field_S41Rqt5E",
+                "field_S23CbRXp",
+                "field_CeBkWcQc",
+                "field_58TkWuwu"
             ],
-            "autoMLNeed": {
-                "ui:widget": "checkbox"
+            "workType": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.detailInfo.model.workType"
+                }
             },
-            "field_9W8BzAKb": {
-                "ui:widget": "checkbox"
+            "algorithmType": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "tooltip": "По умолчанию применяется один тип алгоритма: >1 возможно для каскада или ансамблей моделей, если в одном решении используется комбинация алгоритмов/типов ML задач (т.е. для всех моделей/подмоделей решения может быть задействован один тип алгоритма). Заполняем вложенный список алгоритмов по типу данных, алгоритмов ML и инфраструктуры, участвующей во внедрении решения:\n\n· Табличные данные — любой ML-алгоритм (в т.ч. без учителя)\n· Текстовая аналитика — Классические модели — алгоритмы для текста (кроме LLM)\n· Текстовая аналитика — LLM — LLM для текста\n· Аудиоаналитика — алгоритмы для звука (аудио, видео)\n· Компьютерное зрение — CV — алгоритмы для изображений (аудио, видео)\n· Оптимизационная задача — модельный оптимизатор или эвристики\n· ГЕОаналитика — требуется платформа геоаналитики\n· Графовая аналитика — требуется графовая платформа",
+                    "dictionaryCode": "v2.detailInfo.model.algorithmType"
+                }
             },
-            "field_aKQrdZUU": {
-                "ui:widget": "checkbox"
+            "field_58TkWuwu": {
+                "ui:options": {}
             },
-            "field_TStAwALi": {
-                "ui:widget": "checkbox"
+            "field_CeBkWcQc": {
+                "ui:options": {}
             },
-            "field_Da3ks0Pr": {
-                "ui:widget": "checkbox"
+            "field_S23CbRXp": {
+                "ui:options": {}
             },
-            "algorithmComplexity": {
-                "ui:widget": "select"
+            "field_S41Rqt5E": {
+                "ui:options": {}
             },
-            "modelRole": {
-                "ui:widget": "select"
-            }
+            "field_VbI-0aiT": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "dictionaryCode": "v2.method.13.роль_модели"
+                }
+            },
+            "field_atxiq-UM": {}
         }
     }
 };

@@ -17,26 +17,44 @@ const outPath = join(root, "packages/api-contract/src/v2-arch-component-presets.
 const snap = JSON.parse(readFileSync(snapshotPath, "utf-8"));
 
 const SNAPSHOT_ARCH_PATHS = {
-	modelService: "generalInfo.modelService",
-	sourceSystem: "detailInfo.sourceSystems",
-	dataProcess: "detailInfo.dataProcess",
-	dataMart: "detailInfo.dataMart",
-	model: "detailInfo.model",
+	modelService: { schema: "generalInfo.modelService", ui: "generalInfo.modelService" },
+	sourceSystem: { schema: "detailInfo.sourceSystems", ui: "detailInfo.sourceSystems" },
+	dataProcess: { schema: "detailInfo.dataProcess", ui: "detailInfo.dataProcess" },
+	dataMart: { schema: "detailInfo.dataMart", ui: "detailInfo.dataMart" },
+	/** v35: «Модели» — массив `modelsList`, пресет = schema/ui элемента строки. */
+	model: {
+		schema: "detailInfo.modelsList",
+		ui: "detailInfo.modelsList",
+		leaf: "items",
+	},
 };
 
-function getSchema(dot) {
+function getSchema(pathDef) {
+	const { schema, leaf } =
+		typeof pathDef === "string" ? { schema: pathDef, leaf: undefined } : pathDef;
 	let cur = snap.jsonSchema;
-	for (const s of dot.split(".")) cur = cur.properties[s];
-	return cur;
+	for (const s of schema.split(".")) {
+		cur = cur?.properties?.[s];
+		if (!cur) return undefined;
+	}
+	return leaf ? cur[leaf] : cur;
 }
 
-function getUi(dot) {
+function getUi(pathDef) {
+	const { ui, leaf } =
+		typeof pathDef === "string" ? { ui: pathDef, leaf: undefined } : pathDef;
 	let cur = snap.uiSchema;
-	for (const s of dot.split(".")) cur = cur[s];
-	return cur;
+	for (const s of ui.split(".")) {
+		cur = cur?.[s];
+		if (!cur) return undefined;
+	}
+	return leaf ? cur[leaf] : cur;
 }
 
 function stripUiRoot(ui) {
+	if (!ui || typeof ui !== "object" || Array.isArray(ui)) {
+		return { uiOptions: {}, uiBranch: undefined };
+	}
 	const clone = structuredClone(ui);
 	const uiOptions = clone["ui:options"] ?? {};
 	delete clone["ui:options"];

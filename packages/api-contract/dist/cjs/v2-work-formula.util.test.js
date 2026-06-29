@@ -4,10 +4,19 @@ const vitest_1 = require("vitest");
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
 const v2_typical_work_types_1 = require("./v2-typical-work.types");
 (0, vitest_1.describe)("v2-work-formula.util", () => {
-    (0, vitest_1.it)("parses N × P[param]", () => {
+    (0, vitest_1.it)("parses H × P[param]", () => {
+        const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)("H × P[Сложность]");
+        (0, vitest_1.expect)(parsed.error).toBeNull();
+        (0, vitest_1.expect)(parsed.tokens).toHaveLength(3);
+    });
+    (0, vitest_1.it)("parses legacy N × P[param]", () => {
         const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)("N × P[Сложность]");
         (0, vitest_1.expect)(parsed.error).toBeNull();
         (0, vitest_1.expect)(parsed.tokens).toHaveLength(3);
+    });
+    (0, vitest_1.it)("formats general summary with Кэф-П indices", () => {
+        const tokens = (0, v2_work_formula_util_1.parseWorkFormulaText)("H * P[a]").tokens;
+        (0, vitest_1.expect)((0, v2_work_formula_util_1.formatWorkFormulaGeneralSummary)(tokens, ["a"])).toBe("H * Кэф-П1");
     });
     (0, vitest_1.it)("evaluates norm only", () => {
         const formula = (0, v2_typical_work_types_1.defaultWorkFormula)();

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.tokensToText = tokensToText;
+exports.formatWorkFormulaGeneralSummary = formatWorkFormulaGeneralSummary;
 exports.parseWorkFormulaText = parseWorkFormulaText;
 exports.isParamUsedInFormula = isParamUsedInFormula;
 exports.markFormulaParamInvalid = markFormulaParamInvalid;
@@ -19,7 +20,7 @@ function tokensToText(tokens) {
         .map((token) => {
         switch (token.kind) {
             case "norm":
-                return "N";
+                return "H";
             case "param_coeff":
                 return token.invalid
                     ? `P[${token.paramName ?? token.paramCode}]?`
@@ -28,6 +29,44 @@ function tokensToText(tokens) {
                 return String(token.value);
             case "operator":
                 return OP_SYMBOL[token.op] ?? token.op;
+            case "paren_open":
+                return "(";
+            case "paren_close":
+                return ")";
+            default:
+                return "";
+        }
+    })
+        .join(" ")
+        .replace(/\(\s+/g, "(")
+        .replace(/\s+\)/g, ")")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+const GENERAL_OP_SYMBOL = {
+    "+": "+",
+    "-": "−",
+    "*": "*",
+    "/": "/",
+};
+/** Краткая запись для блока «Общая формула норматива» (H, Кэф-П1, …). */
+function formatWorkFormulaGeneralSummary(tokens, paramOrder) {
+    const indexByCode = new Map(paramOrder.map((code, index) => [code, index + 1]));
+    return tokens
+        .map((token) => {
+        switch (token.kind) {
+            case "norm":
+                return "H";
+            case "param_coeff": {
+                const idx = indexByCode.get(token.paramCode);
+                if (idx != null)
+                    return `Кэф-П${idx}`;
+                return `Кэф[${token.paramName ?? token.paramCode}]`;
+            }
+            case "number":
+                return String(token.value);
+            case "operator":
+                return GENERAL_OP_SYMBOL[token.op] ?? token.op;
             case "paren_open":
                 return "(";
             case "paren_close":
@@ -72,7 +111,7 @@ function parseWorkFormulaText(text) {
         if (i >= input.length)
             break;
         const ch = input[i] ?? "";
-        if (ch === "N" || ch === "n") {
+        if (ch === "N" || ch === "n" || ch === "H" || ch === "h") {
             if (/[A-Za-zА-Яа-я0-9_]/.test(input[i + 1] ?? "")) {
                 return { tokens: [], error: `Неизвестный токен на позиции ${i + 1}` };
             }

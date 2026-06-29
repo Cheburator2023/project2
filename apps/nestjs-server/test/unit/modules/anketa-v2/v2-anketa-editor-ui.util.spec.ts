@@ -24,7 +24,13 @@ describe("resolveV2AnketaEditorBindings", () => {
 		);
 
 		expect(listV2AnketaHiddenRootKeys(snapshot.uiSchema)).toEqual(
-			expect.arrayContaining(["workflow", "meta", "uncertaintyCalculation", "summary"]),
+			expect.arrayContaining([
+				"workflow",
+				"meta",
+				"uncertaintyCalculation",
+				"summary",
+				"groupActivation",
+			]),
 		);
 		expect(bindings.hiddenRootKeys).toEqual(
 			expect.arrayContaining(["workflow", "meta"]),
@@ -33,10 +39,9 @@ describe("resolveV2AnketaEditorBindings", () => {
 		expect(bindings.modalArrayPaths).toEqual(
 			expect.arrayContaining([
 				"detailInfo.sourceSystems",
-				"detailInfo.model.modelsList",
-				"detailInfo.detailAtypicalTasks",
-				"streamDataSources.atypicalTasks",
-				"streamModelControl.atypicalTasks",
+				"detailInfo.modelsList",
+				"streamDataSources.field_eCyDEFw3",
+				"streamModelControl.field_QkVbhG-_",
 			]),
 		);
 
@@ -44,7 +49,6 @@ describe("resolveV2AnketaEditorBindings", () => {
 			expect.arrayContaining([
 				"detailInfo.detailTypicalTasks",
 				"streamDataSources.sourceTypicalTasks",
-				"generalInfo.modelService.controlTypicalTasks",
 			]),
 		);
 
@@ -67,16 +71,10 @@ describe("resolveV2AnketaEditorBindings", () => {
 		);
 	});
 
-	it("marks system roots and uncertainty modal widget in default snapshot", () => {
+	it("marks uncertainty section as hidden in v35 default snapshot", () => {
 		expect(
 			resolveV2AnketaCanvasUiKind(snapshot.uiSchema.uncertaintyCalculation),
-		).toBe("system");
-		expect(
-			resolveV2AnketaCanvasUiKind(
-				(snapshot.uiSchema.generalInfo as Record<string, unknown>)
-					.overallUncertaintyModal,
-			),
-		).toBeNull();
-		expect(schemaHasUncertaintyModalWidget(snapshot.uiSchema)).toBe(true);
+		).toBe("hidden");
+		expect(schemaHasUncertaintyModalWidget(snapshot.uiSchema)).toBe(false);
 	});
 });

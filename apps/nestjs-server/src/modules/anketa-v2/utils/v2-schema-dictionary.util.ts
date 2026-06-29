@@ -167,6 +167,55 @@ export function buildDefaultDictionariesFromJsonSchema(
 		});
 }
 
+/** `v2.detailInfo.foo` → `/detailInfo/foo` */
+export function dictionaryCodeToSchemaPointer(code: string): string {
+	const trimmed = code.trim();
+	if (!trimmed.startsWith("v2.")) return "/";
+	return `/${trimmed.slice(3).replace(/\./g, "/")}`;
+}
+
+/**
+ * Справочники, привязанные в uiSchema через dictionaryCode, но не попавшие в
+ * extractEnumFieldsFromJsonSchema (другой путь / legacy-код).
+ */
+export function buildDictionariesFromUiSchemaReferences(
+	schema: V2JsonSchemaDto,
+	uiSchema: V2UiSchemaDto,
+	existingCodes: ReadonlySet<string>,
+	allowlist?: ReadonlySet<string>,
+): V2DefaultDictionaryDef[] {
+	const out: V2DefaultDictionaryDef[] = [];
+	for (const code of collectDictionaryCodesFromUiSchema(uiSchema)) {
+		if (existingCodes.has(code)) continue;
+		if (allowlist && !allowlist.has(code)) continue;
+		const pointer = dictionaryCodeToSchemaPointer(code);
+		const node = resolveSchemaAtPointer(schema, pointer);
+		if (!node) continue;
+		const enums = enumStrings(node);
+		if (enums.length === 0) continue;
+		const title =
+			typeof node.title === "string" && node.title.trim()
+				? node.title.trim()
+				: code.split(".").pop() ?? code;
+		if (methodologyDictionaryByName(title)) continue;
+		const seen = new Set<string>();
+		out.push({
+			code,
+			name: title,
+			description: `Заводской справочник (uiSchema) для ${pointer}`,
+			category: "Схема",
+			fieldPointer: pointer,
+			items: enums.map((label, order) => ({
+				code: schemaDictionaryItemCode(label, order, seen),
+				label,
+				order,
+				payload: { fieldPointer: pointer },
+			})),
+		});
+	}
+	return out;
+}
+
 function pointerSegments(pointer: string): string[] {
 	return normalizePointer(pointer).replace(/^\//, "").split("/").filter(Boolean);
 }

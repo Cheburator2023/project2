@@ -2,9 +2,9 @@ const path = require("node:path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const ModuleFederationPlugin =
 	require("webpack").container.ModuleFederationPlugin;
+const browserslistToEsbuild = require("browserslist-to-esbuild").default;
 
 const SRC_DIR = path.join(__dirname, "./src");
-const TS_CONFIG_PATH = path.resolve(__dirname, "./tsconfig.json");
 const PUBLIC_PATH = process.env.PUBLIC_PATH || undefined;
 const isDev = process.env.NODE_ENV === "development";
 const APP_NAME = "smartAnketa";
@@ -12,6 +12,7 @@ const JSON_LOGIC_TS_ENTRY = path.resolve(
 	__dirname,
 	"../../packages/json-logic-ts/dist/esm/index.js",
 );
+const NODE_MODULES_DIR = path.resolve(__dirname, "../../node_modules");
 
 const ALIAS = {
 	"@react-client": `${SRC_DIR}`,
@@ -19,6 +20,44 @@ const ALIAS = {
 	"@smart-anketa/json-logic-ts": JSON_LOGIC_TS_ENTRY,
 };
 
+const tsRule = isDev
+	? {
+			test: /\.tsx?$/,
+			loader: "babel-loader",
+			options: {
+				cacheDirectory: true,
+				cacheCompression: false,
+				presets: [
+					"@babel/preset-env",
+					["@babel/preset-react", { runtime: "automatic" }],
+					"@babel/preset-typescript",
+					"react-refresh/babel",
+				],
+			},
+			exclude: /node_modules/,
+		}
+	: [
+			{
+				test: /\.tsx$/,
+				loader: "esbuild-loader",
+				options: {
+					loader: "tsx",
+					target: browserslistToEsbuild(),
+				},
+				exclude: /node_modules/,
+			},
+			{
+				test: /\.ts$/,
+				loader: "esbuild-loader",
+				options: {
+					loader: "ts",
+					target: browserslistToEsbuild(),
+				},
+				exclude: /node_modules/,
+			},
+		];
+
+/** @type {import('webpack').Configuration} */
 module.exports = {
 	entry: {
 		app: "./src/index",
@@ -43,6 +82,15 @@ module.exports = {
 		publicPath: PUBLIC_PATH,
 		clean: true,
 	},
+	cache: {
+		type: "filesystem",
+		buildDependencies: {
+			config: [__filename],
+		},
+	},
+	snapshot: {
+		managedPaths: [NODE_MODULES_DIR],
+	},
 	resolve: {
 		alias: ALIAS,
 		extensions: [".ts", ".tsx", ".js", ".jsx"],
@@ -57,26 +105,7 @@ module.exports = {
 	},
 	module: {
 		rules: [
-			// {
-			// 	test: /bootstrap\.tsx$/,
-			// 	loader: "bundle-loader",
-			// 	options: {
-			// 		lazy: true,
-			// 	},
-			// },
-			{
-				test: /\.tsx?$/,
-				loader: "babel-loader",
-				options: {
-					presets: [
-						"@babel/preset-env",
-						["@babel/preset-react", { runtime: "automatic" }],
-						"@babel/preset-typescript",
-						...(isDev ? ["react-refresh/babel"] : []),
-					],
-				},
-				exclude: /node_modules/,
-			},
+			...(Array.isArray(tsRule) ? tsRule : [tsRule]),
 			{
 				test: /\.svg$/i,
 				issuer: /\.[jt]sx?$/,

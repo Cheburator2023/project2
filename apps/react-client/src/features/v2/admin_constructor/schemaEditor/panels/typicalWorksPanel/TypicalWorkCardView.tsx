@@ -14,12 +14,8 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import type { V2TypicalWorkCardDto } from "@smart-anketa/api-contract";
-import { resolveActiveNormOnDate } from "@smart-anketa/api-contract";
-import {
-	roundingModeLabel,
-	triggerStatusColors,
-	triggerStatusLabel,
-} from "./typicalWorksUi";
+import { WorkFormulaEditor } from "./WorkFormulaEditor";
+import { triggerStatusColors } from "./typicalWorksUi";
 
 type TypicalWorkCardViewProps = {
 	card: V2TypicalWorkCardDto | undefined;
@@ -70,8 +66,6 @@ export function TypicalWorkCardView({
 	}
 
 	const statusColors = triggerStatusColors(card.triggerStatus);
-	const today = new Date().toISOString().slice(0, 10);
-	const activeNorm = resolveActiveNormOnDate(card.norms, card.streamExecutor, today);
 
 	return (
 		<Box sx={{ flex: 1, overflow: "auto", p: 2 }}>
@@ -235,52 +229,18 @@ export function TypicalWorkCardView({
 						)}
 					</Paper>
 
-					<Paper variant="outlined" sx={{ p: 1.5 }}>
+					<Paper variant="outlined" sx={{ p: 1.5, borderRadius: "12px" }}>
 						<Typography variant="subtitle2" fontWeight={700} gutterBottom>
-							Конструктор формулы
+							Калькулятор формулы
 						</Typography>
-						<Typography
-							variant="body2"
-							sx={{ fontFamily: "monospace", bgcolor: "action.hover", p: 1, borderRadius: 1 }}
-						>
-							{card.formula.text}
-						</Typography>
-						<Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
-							Редактирование формулы — в следующей итерации.
-						</Typography>
-					</Paper>
-
-					<Paper variant="outlined" sx={{ p: 1.5 }}>
-						<Typography variant="subtitle2" fontWeight={700} gutterBottom>
-							Округление
-						</Typography>
-						<Typography variant="body2">
-							{roundingModeLabel(card.rounding.mode)}
-							{card.rounding.mode !== "NONE" && card.rounding.step != null
-								? ` · шаг ${card.rounding.step}`
-								: ""}
-						</Typography>
-					</Paper>
-
-					<Paper variant="outlined" sx={{ p: 1.5, bgcolor: "#f8fafc" }}>
-						<Typography variant="subtitle2" fontWeight={700} gutterBottom>
-							Превью результата
-						</Typography>
-						<Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
-							<Typography variant="body2" color="text.secondary">
-								{card.formula.text}
-								{activeNorm != null ? ` → норма ${activeNorm}` : ""}
-							</Typography>
-							<Typography variant="h6" fontWeight={800} sx={{ fontFamily: "monospace" }}>
-								{activeNorm ?? "—"}
-							</Typography>
-						</Box>
-						{activeNorm == null ? (
-							<Typography variant="caption" color="error.main" sx={{ mt: 0.5, display: "block" }}>
-								На текущую дату не задана действующая норма для стрима{" "}
-								{card.streamExecutor}
-							</Typography>
-						) : null}
+						<WorkFormulaEditor
+							formula={card.formula}
+							rounding={card.rounding}
+							laborParams={card.laborParams}
+							onFormulaChange={() => undefined}
+							onRoundingChange={() => undefined}
+							readOnly
+						/>
 					</Paper>
 				</Box>
 			)}

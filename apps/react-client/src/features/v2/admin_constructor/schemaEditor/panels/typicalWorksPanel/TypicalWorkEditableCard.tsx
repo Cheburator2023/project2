@@ -24,20 +24,14 @@ import Typography from "@mui/material/Typography";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import type { V2TypicalWorkCardDto } from "@smart-anketa/api-contract";
 import {
-	compileStoredTypicalWorkResultLogic,
 	isParamUsedInFormula,
 	markFormulaParamInvalid,
-	previewTypicalWorkCalculation,
-	resolveActiveNormOnDate,
 	tokensToText,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { useCreateV2TemplateVersion } from "@react-client/common/api/queries/v2-templates";
-import {
-	usePreviewV2TypicalWork,
-	useV2WorkParametersCatalog,
-} from "@react-client/common/api/queries/v2-works";
+import { useV2WorkParametersCatalog } from "@react-client/common/api/queries/v2-works";
 import {
 	coerceDictionariesSnapshot,
 	coerceJsonSchema,
@@ -122,7 +116,6 @@ export function TypicalWorkEditableCard({
 	onVersionChange,
 }: TypicalWorkEditableCardProps) {
 	const { data: paramCatalog } = useV2WorkParametersCatalog();
-	const previewMutation = usePreviewV2TypicalWork();
 	const createVersion = useCreateV2TemplateVersion();
 	const [draft, setDraft] = useState<V2TypicalWorkCardDto | null>(null);
 	const [formulaLockedOpen, setFormulaLockedOpen] = useState(false);
@@ -185,28 +178,6 @@ export function TypicalWorkEditableCard({
 			})),
 		[paramOptions],
 	);
-
-	const previewLocal = useMemo(() => {
-		if (!draft || !streamExecutor) return null;
-		const today = new Date().toISOString().slice(0, 10);
-		const norm = resolveActiveNormOnDate(draft.norms, streamExecutor, today);
-		if (norm == null) return { error: "На текущую дату не задана действующая норма", value: null };
-		const coeffs: Record<string, number> = {};
-		for (const group of draft.laborParams) {
-			// §578: значения, удалённые из справочника, не участвуют в расчёте.
-			const first = group.coefficients.find((row) =>
-				isWorkCoefficientValueAvailable(row, coefficientCatalog),
-			);
-			if (first) coeffs[group.paramCode] = first.coefficient;
-		}
-		const result = previewTypicalWorkCalculation(
-			compileStoredTypicalWorkResultLogic(draft.formula, draft.rounding) ??
-				draft.calculationLogic,
-			{ formula: draft.formula, rounding: draft.rounding },
-			{ norm, paramCoefficients: coeffs },
-		);
-		return { error: result.error, value: result.value, expanded: result.expanded };
-	}, [draft, streamExecutor, coefficientCatalog]);
 
 	const commitDraft = (next: V2TypicalWorkCardDto) => {
 		const withStatus = {
@@ -919,52 +890,16 @@ export function TypicalWorkEditableCard({
 					</Box>
 
 					<Paper variant="outlined" sx={{ p: 1.5, borderRadius: "12px" }}>
-						<Typography variant="subtitle2" fontWeight={700} gutterBottom>Конструктор формулы</Typography>
+						<Typography variant="subtitle2" fontWeight={700} gutterBottom>
+							Калькулятор формулы
+						</Typography>
 						<WorkFormulaEditor
 							formula={draft.formula}
 							rounding={draft.rounding}
 							laborParams={draft.laborParams}
-							rules={draft.rules}
-							storedCalculationLogic={draft.calculationLogic}
 							onFormulaChange={(formula) => commitDraft({ ...draft, formula })}
 							onRoundingChange={(rounding) => commitDraft({ ...draft, rounding })}
 						/>
-					</Paper>
-
-					<Paper variant="outlined" sx={{ p: 1.5, bgcolor: "#f8fafc" }}>
-						<Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-							<Typography variant="subtitle2" fontWeight={700}>Превью результата</Typography>
-							<Button
-								size="small"
-								variant="outlined"
-								disabled={previewMutation.isPending}
-								onClick={() => {
-									if (!draft.id || !streamExecutor) return;
-									previewMutation.mutate({
-										workId: draft.id,
-										dto: { streamExecutor },
-									});
-								}}
-							>
-								Сверить с сервером
-							</Button>
-						</Box>
-						<Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, mt: 1 }}>
-							<Typography variant="body2" color="text.secondary">
-								{previewLocal?.expanded ?? draft.formula.text}
-								{previewLocal?.error ? ` · ${previewLocal.error}` : ""}
-							</Typography>
-							<Typography variant="h6" fontWeight={800} sx={{ fontFamily: "monospace" }}>
-								{previewMutation.data?.result ?? previewLocal?.value ?? "—"}
-							</Typography>
-						</Box>
-						{previewMutation.data && previewLocal?.value != null &&
-						previewMutation.data.result != null &&
-						Math.abs(previewMutation.data.result - previewLocal.value) > 0.0001 ? (
-							<Alert severity="warning" sx={{ mt: 1 }}>
-								Расхождение клиент/сервер: {previewLocal.value} vs {previewMutation.data.result}
-							</Alert>
-						) : null}
 					</Paper>
 				</Box>
 			)}

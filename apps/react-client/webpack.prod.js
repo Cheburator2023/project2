@@ -2,14 +2,14 @@ const { merge } = require("webpack-merge");
 const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const webpack = require("webpack");
-const TerserPlugin = require("terser-webpack-plugin");
-const HtmlWebpackPlugin = require("html-webpack-plugin");
+const { EsbuildPlugin } = require("esbuild-loader");
+const browserslistToEsbuild = require("browserslist-to-esbuild").default;
 
 const { DefinePlugin } = webpack;
 const common = require("./webpack.common.js");
 const APP_NAME = "smartAnketa";
 
-const git_revision = require("child_process")
+const git_revision = require("node:child_process")
 	.execSync('git show --format="short" -s')
 	.toString()
 	.trim();
@@ -23,9 +23,17 @@ const changelog_version_match = changelog_content.match(
 const app_version = changelog_version_match?.[1] ?? "0.0.0";
 
 module.exports = merge(common, {
-	mode: "development",
+	mode: "production",
+	// Дешёвые source maps: строки оригинальных файлов, без column mapping.
 	devtool: "cheap-module-source-map",
 	optimization: {
+		minimize: true,
+		minimizer: [
+			new EsbuildPlugin({
+				target: browserslistToEsbuild(),
+				css: true,
+			}),
+		],
 		splitChunks: {
 			chunks: "async",
 			cacheGroups: {
@@ -41,14 +49,10 @@ module.exports = merge(common, {
 		moduleIds: "deterministic",
 		chunkIds: "deterministic",
 		usedExports: true,
-		sideEffects: false,
-		concatenateModules: false,
+		sideEffects: true,
+		concatenateModules: true,
 	},
 	plugins: [
-		new HtmlWebpackPlugin({
-			template: "./public/index.html",
-			excludeChunks: [APP_NAME],
-		}),
 		new DefinePlugin({
 			"process.env": {},
 			"process.env.MOCKED_REQUESTS": JSON.stringify(

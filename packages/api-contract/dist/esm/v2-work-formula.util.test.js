@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { applyWorkRounding, evaluateWorkFormula, isParamUsedInFormula, markFormulaParamInvalid, parseWorkFormulaText, previewWorkFormula, validateWorkFormulaTokens, } from "./v2-work-formula.util";
+import { applyWorkRounding, evaluateWorkFormula, formatWorkFormulaGeneralSummary, isParamUsedInFormula, markFormulaParamInvalid, parseWorkFormulaText, previewWorkFormula, validateWorkFormulaTokens, } from "./v2-work-formula.util";
 import { defaultWorkFormula, defaultWorkRounding } from "./v2-typical-work.types";
 describe("v2-work-formula.util", () => {
-    it("parses N × P[param]", () => {
+    it("parses H × P[param]", () => {
+        const parsed = parseWorkFormulaText("H × P[Сложность]");
+        expect(parsed.error).toBeNull();
+        expect(parsed.tokens).toHaveLength(3);
+    });
+    it("parses legacy N × P[param]", () => {
         const parsed = parseWorkFormulaText("N × P[Сложность]");
         expect(parsed.error).toBeNull();
         expect(parsed.tokens).toHaveLength(3);
+    });
+    it("formats general summary with Кэф-П indices", () => {
+        const tokens = parseWorkFormulaText("H * P[a]").tokens;
+        expect(formatWorkFormulaGeneralSummary(tokens, ["a"])).toBe("H * Кэф-П1");
     });
     it("evaluates norm only", () => {
         const formula = defaultWorkFormula();

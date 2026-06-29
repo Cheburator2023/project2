@@ -306,7 +306,7 @@ export function resolveActiveNormOnDate(
 }
 
 export function defaultWorkFormula(): V2TypicalWorkFormulaDto {
-	return { tokens: [{ kind: "norm" }], text: "N" };
+	return { tokens: [{ kind: "norm" }], text: "H" };
 }
 
 export function defaultWorkRounding(): V2TypicalWorkRoundingDto {

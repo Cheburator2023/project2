@@ -17,7 +17,11 @@ import {
 	computeWorkTriggerStatus,
 	parseStoredTypicalWorkCalculationLogic,
 	resolveActiveNormOnDate,
+	compileStoredTypicalWorkResultLogic,
+	tokensToText,
 } from "@smart-anketa/api-contract";
+import { V35_FACTORY_TEMPLATE_VERSION_ID } from "../constants/v35-factory-template-version";
+import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
 import { V2TypicalWorkNormEntity } from "../entities/v2-typical-work-norm.entity";
 import { V2TypicalWorkRuleEntity } from "../entities/v2-typical-work-rule.entity";
@@ -54,6 +58,10 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		private readonly ruleRepository: Repository<V2TypicalWorkRuleEntity>,
 		@InjectRepository(V2TypicalWorkLaborCoefficientEntity)
 		private readonly laborRepository: Repository<V2TypicalWorkLaborCoefficientEntity>,
+		@InjectRepository(V2TypicalWorkVersionConfigEntity)
+		private readonly versionConfigRepository: Repository<V2TypicalWorkVersionConfigEntity>,
+		@InjectRepository(V2TemplateVersionEntity)
+		private readonly templateVersionRepository: Repository<V2TemplateVersionEntity>,
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
 	) {}
 
@@ -61,9 +69,11 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		const count = await this.workRepository.count();
 		if (count > 0) {
 			this.logger.log(`Typical works catalog already seeded (${count} works)`);
+			await this.ensureFactoryVersionConfigs();
 			return;
 		}
 		await this.seedFromDocCatalog();
+		await this.ensureFactoryVersionConfigs();
 	}
 
 	async seedFromDocCatalog(): Promise<void> {
@@ -178,6 +188,49 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		}
 
 		this.logger.log(`Seeded ${created} typical works from doc catalog`);
+	}
+
+	/** Дефолтная формула H для всех работ на эталонной версии v35 (worksCatalog). */
+	async ensureFactoryVersionConfigs(): Promise<void> {
+		const version = await this.templateVersionRepository.findOne({
+			where: { id: V35_FACTORY_TEMPLATE_VERSION_ID },
+		});
+		if (!version) return;
+
+		const works = await this.workRepository.find();
+		if (works.length === 0) return;
+
+		const existing = await this.versionConfigRepository.find({
+			where: { templateVersionId: V35_FACTORY_TEMPLATE_VERSION_ID },
+		});
+		const existingWorkIds = new Set(existing.map((row) => row.workId));
+		const formula = defaultWorkFormula();
+		const rounding = defaultWorkRounding();
+		const compiled = compileStoredTypicalWorkResultLogic(formula, rounding);
+		let created = 0;
+
+		for (const work of works) {
+			if (existingWorkIds.has(work.id)) continue;
+			await this.versionConfigRepository.save(
+				this.versionConfigRepository.create({
+					workId: work.id,
+					templateVersionId: V35_FACTORY_TEMPLATE_VERSION_ID,
+					formula: formula.tokens,
+					formulaText: formula.text || tokensToText(formula.tokens),
+					roundingMode: rounding.mode,
+					roundingStep:
+						rounding.mode === "NONE" ? null : String(rounding.step ?? 0.1),
+					calculationLogic: compiled,
+				}),
+			);
+			created++;
+		}
+
+		if (created > 0) {
+			this.logger.log(
+				`Seeded ${created} typical work version configs for factory v35`,
+			);
+		}
 	}
 }
 

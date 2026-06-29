@@ -11,22 +11,24 @@ import type {
 import {
 	applyDictionaryBindingsToUiSchema,
 	buildDefaultDictionariesFromJsonSchema,
+	buildDictionariesFromUiSchemaReferences,
 	buildDictionaryBindingsFromSchema,
 	collectDictionaryCodesFromUiSchema,
 } from "../utils/v2-schema-dictionary.util";
+import { V35_FACTORY_DICTIONARY_CODE_SET } from "./v35-factory-dictionary-codes";
 import { enrichAnketaLayoutUiSchema } from "../utils/v2-anketa-ui-layout.util";
-import { V2_DEFAULT_LOGIC_GRAPH } from "./v2-default-logic";
 
 /**
- * Эталон схемы по макетам (PNG в `llm/v2_docs/figma/`).
- * Структурный источник: `llm/v2_docs/anketa-schema_default_parser_by_llm.json`
- * Файл рядом с этим модулем: `v2-default-anketa.snapshot.json` (копия эталона для рантайма).
+ * Эталон схемы: шаблон «Новая схема» v35 (экспорт smart-anketa-v2).
+ * Файл рядом с этим модулем: `v2-default-anketa.snapshot.json`.
+ * Обновление: `npm run sync:v35-factory-snapshot` (из apps/nestjs-server).
  */
 const SNAPSHOT_FILENAME = "v2-default-anketa.snapshot.json";
 
 type SnapshotFile = {
 	jsonSchema?: unknown;
 	uiSchema?: unknown;
+	logic?: unknown;
 };
 
 function resolveSnapshotPath(): string {
@@ -84,9 +86,25 @@ const uiSchema = enrichAnketaLayoutUiSchema(
 	jsonSchema,
 );
 
-/** Заводские справочники (коды и элементы из enum полей эталонной схемы). */
-export const V2_DEFAULT_DICTIONARIES =
-	buildDefaultDictionariesFromJsonSchema(jsonSchema);
+const logic =
+	typeof file.logic === "object" &&
+	file.logic !== null &&
+	!Array.isArray(file.logic)
+		? (file.logic as V2LogicGraphDto)
+		: ({ rules: [] } satisfies V2LogicGraphDto);
+
+/** Заводские справочники (enum схемы + ui-only привязки из uiSchema). */
+const schemaDictionaries = buildDefaultDictionariesFromJsonSchema(jsonSchema);
+const uiReferencedDictionaries = buildDictionariesFromUiSchemaReferences(
+	jsonSchema,
+	uiSchema,
+	new Set(schemaDictionaries.map((d) => d.code)),
+	V35_FACTORY_DICTIONARY_CODE_SET,
+);
+export const V2_DEFAULT_DICTIONARIES = [
+	...schemaDictionaries,
+	...uiReferencedDictionaries,
+];
 
 /** Коды справочников, привязанных к заводской uiSchema. */
 export const V2_DEFAULT_REFERENCED_DICTIONARY_CODES =
@@ -95,10 +113,10 @@ export const V2_DEFAULT_REFERENCED_DICTIONARY_CODES =
 export const V2_DEFAULT_TEMPLATE_SNAPSHOT = {
 	jsonSchema,
 	uiSchema,
-	logic: V2_DEFAULT_LOGIC_GRAPH satisfies V2LogicGraphDto,
+	logic,
 	dictionariesSnapshot: {
 		referencedDictionaryCodes: V2_DEFAULT_REFERENCED_DICTIONARY_CODES,
 	} satisfies V2DictionariesSnapshotDto,
 	releaseNotes:
-		"Заводская схема V2 (анкета калькуляции разработки моделей; эталон из llm-парса макетов)",
+		"Заводская схема V2 — эталон шаблона «Новая схема» v35 (smart-anketa-v2 export)",
 };

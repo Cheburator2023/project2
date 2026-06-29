@@ -5,9 +5,13 @@ export default defineConfig(async () => {
 	return {
 		plugins: [tsconfigPaths()],
 		test: {
-			environment: "node",
 			globals: true,
-			include: ["src/**/*.test.ts"],
+			include: ["src/**/*.test.{ts,tsx}"],
+			setupFiles: ["src/test/setup-vitest.ts"],
+			environmentMatchGlobs: [
+				["src/**/*.test.tsx", "happy-dom"],
+				["src/**/*.test.ts", "node"],
+			],
 		},
 	};
 });

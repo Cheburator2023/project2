@@ -1,6 +1,8 @@
 import type { V2JsonSchemaDto } from "@smart-anketa/api-contract";
 import { V2_ORGANIZATIONAL_DICTIONARIES } from "./v2-default-organizational-dictionaries";
 import { V2_METHODOLOGY_DICTIONARIES } from "./v2-methodology-dictionaries";
+import { V35_FACTORY_DICTIONARY_CODE_SET } from "./v35-factory-dictionary-codes";
+import { V35_UI_ONLY_DICTIONARIES } from "./v35-ui-only-dictionaries";
 import type { V2DefaultDictionaryDef } from "../utils/v2-schema-dictionary.util";
 import {
 	extractEnumFieldsFromJsonSchema,
@@ -27,15 +29,78 @@ export function filterSchemaDefaultDictionaries(
 	return schemaDicts.filter((d) => !METHODOLOGY_BY_NAME.has(d.name));
 }
 
+function buildUnfilteredDefaultDictionaries(
+	schemaDicts: V2DefaultDictionaryDef[],
+): V2DefaultDictionaryDef[] {
+	const byCode = new Map<string, V2DefaultDictionaryDef>();
+	for (const def of [
+		...filterSchemaDefaultDictionaries(schemaDicts),
+		...V2_ORGANIZATIONAL_DICTIONARIES,
+		...V2_METHODOLOGY_DICTIONARIES,
+		...V35_UI_ONLY_DICTIONARIES,
+	]) {
+		byCode.set(def.code, def);
+	}
+	return [...byCode.values()];
+}
+
+function filterByV35Allowlist(
+	dicts: V2DefaultDictionaryDef[],
+): V2DefaultDictionaryDef[] {
+	return dicts.filter((d) => V35_FACTORY_DICTIONARY_CODE_SET.has(d.code));
+}
+
 /** Все заводские справочники: схема + методология (не удаляемые, со сбросом). */
 export function buildAllDefaultDictionaries(
 	schemaDicts: V2DefaultDictionaryDef[],
 ): V2DefaultDictionaryDef[] {
-	return [
-		...filterSchemaDefaultDictionaries(schemaDicts),
-		...V2_ORGANIZATIONAL_DICTIONARIES,
-		...V2_METHODOLOGY_DICTIONARIES,
-	];
+	return filterByV35Allowlist(buildUnfilteredDefaultDictionaries(schemaDicts));
+}
+
+/** Коды заводских справочников до фильтра v35 (для очистки устаревших в БД). */
+export function buildLegacyFactoryDictionaryCodes(
+	schemaDicts: V2DefaultDictionaryDef[],
+): string[] {
+	return buildUnfilteredDefaultDictionaries(schemaDicts).map((d) => d.code);
+}
+
+export function isLegacyFactoryDictionaryCode(
+	code: string,
+	legacyCodes: Set<string>,
+): boolean {
+	if (legacyCodes.has(code) || code.startsWith("v2.method.")) {
+		return true;
+	}
+
+	return code.startsWith("v2.");
+}
+
+const FACTORY_DICTIONARY_CATEGORIES = new Set([
+	"Схема",
+	"Методология",
+	"Организационный",
+]);
+
+export function isObsoleteFactoryDictionary(
+	dictionary: {
+		code: string;
+		category: string | null;
+		description: string | null;
+	},
+	legacyCodes: Set<string>,
+): boolean {
+	if (isLegacyFactoryDictionaryCode(dictionary.code, legacyCodes)) {
+		return true;
+	}
+
+	if (
+		dictionary.category &&
+		FACTORY_DICTIONARY_CATEGORIES.has(dictionary.category)
+	) {
+		return true;
+	}
+
+	return Boolean(dictionary.description?.includes("Заводской"));
 }
 
 export function findDefaultDictionaryDef(

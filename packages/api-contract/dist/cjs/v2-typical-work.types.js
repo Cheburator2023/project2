@@ -52,7 +52,7 @@ function resolveActiveNormOnDate(norms, streamExecutor, atDate) {
     return matching[0]?.normValue ?? null;
 }
 function defaultWorkFormula() {
-    return { tokens: [{ kind: "norm" }], text: "N" };
+    return { tokens: [{ kind: "norm" }], text: "H" };
 }
 function defaultWorkRounding() {
     return { mode: "CEIL", step: 0.1 };

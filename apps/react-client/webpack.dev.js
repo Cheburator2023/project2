@@ -24,7 +24,6 @@ const app_version = changelog_version_match?.[1] ?? "0.0.0";
 module.exports = merge(common, {
 	mode: "development",
 	devtool: "cheap-module-source-map",
-	cache: false,
 	optimization: {
 		minimize: false,
 	},
@@ -43,7 +42,8 @@ module.exports = merge(common, {
 		}),
 	],
 	watchOptions: {
-		poll: 10000,
+		// poll только если файловая система не шлёт события (Docker/VM)
+		...(process.env.WEBPACK_POLL ? { poll: Number(process.env.WEBPACK_POLL) || 1000 } : {}),
 		ignored: /node_modules/,
 	},
 	devServer: {

@@ -16,10 +16,17 @@ const snapshot = JSON.parse(readFileSync(snapshotPath, "utf-8")) as {
 	jsonSchema: RJSFSchema;
 };
 
-function schemaAt(dot: string): RJSFSchema {
+type SchemaPath = string | { path: string; leaf?: string };
+
+function schemaAt(def: SchemaPath): RJSFSchema {
+	const { path, leaf } =
+		typeof def === "string" ? { path: def, leaf: undefined } : def;
 	let cur: RJSFSchema = snapshot.jsonSchema;
-	for (const seg of dot.split(".")) {
+	for (const seg of path.split(".")) {
 		cur = (cur.properties as Record<string, RJSFSchema>)[seg]!;
+	}
+	if (leaf) {
+		cur = (cur as Record<string, RJSFSchema>)[leaf] as RJSFSchema;
 	}
 	return cur;
 }
@@ -37,8 +44,8 @@ describe("ARCH_COMPONENT_PRESET_DEFS", () => {
 		sourceSystem: "detailInfo.sourceSystems",
 		dataProcess: "detailInfo.dataProcess",
 		dataMart: "detailInfo.dataMart",
-		model: "detailInfo.model",
-		atypicalWork: "detailInfo.detailAtypicalTasks",
+		model: { path: "detailInfo.modelsList", leaf: "items" },
+		atypicalWork: "detailInfo.field_npwqpBHt",
 	} as const;
 
 	for (const [arch, dotPath] of Object.entries(cases)) {

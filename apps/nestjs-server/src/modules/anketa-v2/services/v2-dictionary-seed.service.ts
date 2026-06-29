@@ -2,8 +2,16 @@ import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { V2_ALL_DEFAULT_DICTIONARIES } from "../constants/v2-default-dictionary-codes";
-import { supersededSchemaDictionaryCodes } from "../constants/v2-default-dictionaries.registry";
-import { V2_DEFAULT_TEMPLATE_SNAPSHOT } from "../constants/v2-default-template-snapshot";
+import { V35_FACTORY_DICTIONARY_CODE_SET } from "../constants/v35-factory-dictionary-codes";
+import {
+	buildLegacyFactoryDictionaryCodes,
+	isObsoleteFactoryDictionary,
+	supersededSchemaDictionaryCodes,
+} from "../constants/v2-default-dictionaries.registry";
+import {
+	V2_DEFAULT_DICTIONARIES,
+	V2_DEFAULT_TEMPLATE_SNAPSHOT,
+} from "../constants/v2-default-template-snapshot";
 import { V2DictionaryItemEntity } from "../entities/v2-dictionary-item.entity";
 import { V2DictionaryEntity } from "../entities/v2-dictionary.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
@@ -24,6 +32,7 @@ export class V2DictionarySeedService implements OnModuleInit {
 
 	async onModuleInit(): Promise<void> {
 		await this.removeSupersededDuplicates();
+		await this.removeObsoleteFactoryDictionaries();
 		await this.ensureDefaultDictionaries();
 		await this.syncDefaultMetadata();
 	}
@@ -137,6 +146,39 @@ export class V2DictionarySeedService implements OnModuleInit {
 		if (removed > 0) {
 			this.logger.log(
 				`Удалены дубли enum-справочников схемы (заменены методологией): ${removed}`,
+			);
+		}
+	}
+
+	/** Удаляет заводские справочники, не входящие в allowlist v35. */
+	async removeObsoleteFactoryDictionaries(): Promise<void> {
+		const versions = await this.versionRepository.find({
+			select: ["id", "uiSchema"],
+		});
+		const codesInUse = collectAllDictionaryCodesInUse(versions);
+		const legacyCodes = new Set(
+			buildLegacyFactoryDictionaryCodes(V2_DEFAULT_DICTIONARIES),
+		);
+		const dictionaries = await this.dictionaryRepository.find({
+			select: ["id", "code", "category", "description"],
+		});
+		let removed = 0;
+
+		for (const dictionary of dictionaries) {
+			if (V35_FACTORY_DICTIONARY_CODE_SET.has(dictionary.code)) continue;
+			if (codesInUse.has(dictionary.code)) continue;
+			if (!isObsoleteFactoryDictionary(dictionary, legacyCodes)) {
+				continue;
+			}
+
+			await this.itemRepository.delete({ dictionaryId: dictionary.id });
+			await this.dictionaryRepository.remove(dictionary);
+			removed++;
+		}
+
+		if (removed > 0) {
+			this.logger.log(
+				`Удалены заводские справочники вне allowlist v35: ${removed}`,
 			);
 		}
 	}

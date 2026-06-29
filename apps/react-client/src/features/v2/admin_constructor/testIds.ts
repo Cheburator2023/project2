@@ -46,6 +46,15 @@ export const V2_TEMPLATE_EDIT_TEST_IDS = {
 	previewReset: "previewReset",
 	noDraft: "noDraft",
 	panelChromeHeader: "panelChromeHeader",
+	workFormulaEditor: "workFormulaEditor",
+	workFormulaGeneralSummary: "workFormulaGeneralSummary",
+	workFormulaVisualMode: "workFormulaVisualMode",
+	workFormulaManualMode: "workFormulaManualMode",
+	workFormulaAddNorm: "workFormulaAddNorm",
+	workFormulaClear: "workFormulaClear",
+	workFormulaApplyManual: "workFormulaApplyManual",
+	workFormulaManualInput: "workFormulaManualInput",
+	workFormulaParamSelect: "workFormulaParamSelect",
 } as const;
 
 /** data-test-id для отдельной страницы логики (/logic). */

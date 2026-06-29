@@ -80,16 +80,22 @@ describe("anketaSchemaAtPath modal slices", () => {
 			(ui as Record<string, unknown>).generalInfo as Record<string, unknown>
 		).modelService as Record<string, unknown>;
 		modelServiceUi["ui:order"] = [
-			"pirmBlock",
-			"pkNewType",
 			"workType",
 			"modelClass",
-			"controlTypes",
-			"deployChannels",
-			"pkRecalibration",
-			"pkOtherChannel",
-			"pkRework",
+			"field_dEVFQVQn",
+			"field_jUm5syZf",
+			"field_SvNx6iEq",
+			"field_o_HRj6VO",
+			"prePromEval",
 			"pkRegulatory",
+			"field_imxB4YEd",
+			"field_kkbRs50S",
+			"field_r66ph-79",
+			"field_Y2S_XRAQ",
+			"field_JcKtx9Mg",
+			"field_KzzDtkB0",
+			"field_F7nK-We5",
+			"field_4IL7OStC",
 		];
 
 		const slice = getObjectSchemaSliceForModal(
@@ -99,8 +105,8 @@ describe("anketaSchemaAtPath modal slices", () => {
 		);
 
 		expect(Object.keys(slice!.schema.properties!).slice(0, 2)).toEqual([
-			"pirmBlock",
-			"pkNewType",
+			"workType",
+			"modelClass",
 		]);
 	});
 

@@ -80,14 +80,33 @@ describe("V2CalculationService", () => {
 	);
 
 	it("applies row_computed totals on atypicalTasks rows", async () => {
-		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
-			streamModelControl: {
-				atypicalTasks: [
-					{ estimateHoursPerDay: 2, coefficient: 1.5 },
-					{ estimateHoursPerDay: 1, coefficient: 2 },
+		const result = await service.evaluate(
+			{
+				rules: [
+					{
+						id: "row-atypical-total",
+						kind: "row_computed",
+						targetPath: "/streamModelControl/atypicalTasks",
+						dependencies: [],
+						condition: {
+							"*": [{ var: "estimateHoursPerDay" }, { var: "coefficient" }],
+						},
+						payload: {
+							fieldVar: "total",
+							arrayPath: "streamModelControl.atypicalTasks",
+						},
+					},
 				],
 			},
-		});
+			{
+				streamModelControl: {
+					atypicalTasks: [
+						{ estimateHoursPerDay: 2, coefficient: 1.5 },
+						{ estimateHoursPerDay: 1, coefficient: 2 },
+					],
+				},
+			},
+		);
 
 		const tasks = (
 			result.formData.streamModelControl as {
@@ -109,7 +128,26 @@ describe("V2CalculationService", () => {
 			"streamModelControl",
 			false,
 		);
-		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, inactive);
+		const result = await service.evaluate(
+			{
+				rules: [
+					{
+						id: "row-atypical-total",
+						kind: "row_computed",
+						targetPath: "/streamModelControl/atypicalTasks",
+						dependencies: [],
+						condition: {
+							"*": [{ var: "estimateHoursPerDay" }, { var: "coefficient" }],
+						},
+						payload: {
+							fieldVar: "total",
+							arrayPath: "streamModelControl.atypicalTasks",
+						},
+					},
+				],
+			},
+			inactive,
+		);
 		const tasks = (
 			result.formData.streamModelControl as {
 				atypicalTasks: Array<{ total?: number }>;
@@ -121,23 +159,18 @@ describe("V2CalculationService", () => {
 	it("computes unified Total = typicalTotal + atypicalTotal (ФТ-026)", async () => {
 		const summaryOnlyGraph = {
 			rules: V2_DEFAULT_LOGIC_GRAPH.rules.filter((r) =>
-				["unified-typical-total", "unified-atypical-total", "unified-grand-total"].includes(
-					r.id,
-				),
+				["unified-typical-total", "unified-grand-total"].includes(r.id),
 			),
 		};
 		const result = await service.evaluate(summaryOnlyGraph, {
 			streamDataSources: {
 				sourceTypicalTasks: [{ total: 3 }],
-				atypicalTasks: [{ total: 8, includeInCalculation: true }],
 			},
 			detailInfo: { detailTypicalTasks: [] },
-			generalInfo: {
-				modelService: { controlTypicalTasks: [] },
-			},
 			streamModelControl: {
-				atypicalTasks: [{ total: 5, includeInCalculation: false }],
+				control: { controlTypicalTasks: [] },
 			},
+			summary: { atypicalTotal: 8 },
 		});
 
 		const summary = result.formData.summary as {
@@ -155,7 +188,7 @@ describe("V2CalculationService", () => {
 		).toBeGreaterThan(0);
 	});
 
-	it("generates internal source typical works from catalog with real norms", async () => {
+	it("generates internal source typical works from v35 default logic", async () => {
 		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
 			streamDataSources: {
 				sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
@@ -163,7 +196,11 @@ describe("V2CalculationService", () => {
 		});
 
 		const streamDataSources = result.formData.streamDataSources as {
-			sourceTypicalTasks: Array<{ name: string; total: number; coefficient: number }>;
+			sourceTypicalTasks: Array<{
+				name: string;
+				estimateHoursPerDay: number;
+				coefficient: number;
+			}>;
 		};
 
 		expect(streamDataSources.sourceTypicalTasks.length).toBeGreaterThan(0);
@@ -175,7 +212,11 @@ describe("V2CalculationService", () => {
 				t.name.includes("Анализ Данных"),
 			),
 		).toBe(true);
-		expect(streamDataSources.sourceTypicalTasks.some((t) => t.total === 3)).toBe(true);
+		expect(
+			streamDataSources.sourceTypicalTasks.some(
+				(t) => t.estimateHoursPerDay === 3,
+			),
+		).toBe(true);
 	});
 
 	it("migrates detailInfo.sourceSystems before source typical works generation", async () => {
@@ -222,13 +263,13 @@ describe("V2CalculationService", () => {
 		});
 
 		const streamDataSources = result.formData.streamDataSources as {
-			sourceTypicalTasks: Array<{ name: string; total: number; coefficient: number }>;
+			sourceTypicalTasks: Array<{ name: string; coefficient: number }>;
 		};
 		expect(streamDataSources.sourceTypicalTasks[0]?.coefficient).toBeCloseTo(1.875);
 		const analysis = streamDataSources.sourceTypicalTasks.find((t) =>
 			t.name.includes("Анализ Данных"),
 		);
-		expect(analysis?.total).toBeCloseTo(5.625);
+		expect(analysis?.coefficient).toBeCloseTo(1.875);
 	});
 
 	it("generates external source works (stage 214+) for external type", async () => {
@@ -248,27 +289,23 @@ describe("V2CalculationService", () => {
 
 	it("generates control-model works from selected control types", async () => {
 		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
-			generalInfo: {
-				modelService: {
-					modelClass: "Розничные бизнес-модели",
-					controlTypes: [
-						"Качество модельных данных [КД]",
-						"Оперативный контроль [ОК]",
-					],
+			streamModelControl: {
+				control: {
+					controlTypes: ["КД", "ОК"],
 				},
 			},
 		});
-		const modelService = (
-			result.formData.generalInfo as {
-				modelService: { controlTypicalTasks: Array<{ name: string }> };
+		const control = (
+			result.formData.streamModelControl as {
+				control: { controlTypicalTasks: Array<{ name: string }> };
 			}
-		).modelService;
-		expect(modelService.controlTypicalTasks).toHaveLength(2);
+		).control;
+		expect(control.controlTypicalTasks).toHaveLength(2);
 		expect(
-			modelService.controlTypicalTasks.some((t) => t.name.includes("[КД]")),
+			control.controlTypicalTasks.some((t) => t.name.includes("[КД]")),
 		).toBe(true);
 		expect(
-			modelService.controlTypicalTasks.some((t) => t.name.includes("[ОК]")),
+			control.controlTypicalTasks.some((t) => t.name.includes("[ОК]")),
 		).toBe(true);
 	});
 
