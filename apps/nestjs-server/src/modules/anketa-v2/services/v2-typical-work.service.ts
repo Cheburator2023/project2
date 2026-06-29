@@ -20,7 +20,7 @@ import {
 	compileStoredTypicalWorkResultLogic,
 	tokensToText,
 } from "@smart-anketa/api-contract";
-import { V35_FACTORY_TEMPLATE_VERSION_ID } from "../constants/v35-factory-template-version";
+import { FACTORY_TEMPLATE_VERSION_ID } from "../constants/factory-template-version";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
 import { V2TypicalWorkNormEntity } from "../entities/v2-typical-work-norm.entity";
@@ -190,10 +190,10 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		this.logger.log(`Seeded ${created} typical works from doc catalog`);
 	}
 
-	/** Дефолтная формула H для всех работ на эталонной версии v35 (worksCatalog). */
+	/** Дефолтная формула H для всех работ на эталонной версии шаблона (worksCatalog). */
 	async ensureFactoryVersionConfigs(): Promise<void> {
 		const version = await this.templateVersionRepository.findOne({
-			where: { id: V35_FACTORY_TEMPLATE_VERSION_ID },
+			where: { id: FACTORY_TEMPLATE_VERSION_ID },
 		});
 		if (!version) return;
 
@@ -201,7 +201,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		if (works.length === 0) return;
 
 		const existing = await this.versionConfigRepository.find({
-			where: { templateVersionId: V35_FACTORY_TEMPLATE_VERSION_ID },
+			where: { templateVersionId: FACTORY_TEMPLATE_VERSION_ID },
 		});
 		const existingWorkIds = new Set(existing.map((row) => row.workId));
 		const formula = defaultWorkFormula();
@@ -214,7 +214,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			await this.versionConfigRepository.save(
 				this.versionConfigRepository.create({
 					workId: work.id,
-					templateVersionId: V35_FACTORY_TEMPLATE_VERSION_ID,
+					templateVersionId: FACTORY_TEMPLATE_VERSION_ID,
 					formula: formula.tokens,
 					formulaText: formula.text || tokensToText(formula.tokens),
 					roundingMode: rounding.mode,
@@ -228,7 +228,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 
 		if (created > 0) {
 			this.logger.log(
-				`Seeded ${created} typical work version configs for factory v35`,
+				`Seeded ${created} typical work version configs for factory template`,
 			);
 		}
 	}

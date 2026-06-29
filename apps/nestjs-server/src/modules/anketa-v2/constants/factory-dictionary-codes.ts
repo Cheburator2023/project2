@@ -1,9 +1,9 @@
 /**
- * Справочники, используемые в шаблоне «Новая схема» v35
- * (`llm/v2_работы_логика_калькуляция/v35-dictionaries-and-parameters.md`).
+ * Справочники заводского шаблона «Новая схема»
+ * (`llm/v2_работы_логика_калькуляция/factory-dictionaries-and-parameters.md`).
  * Заводской seed и защита от удаления — только этот набор.
  */
-export const V35_FACTORY_DICTIONARY_CODES = [
+export const FACTORY_DICTIONARY_CODES = [
 	"Риск появления дополнительных систем-источников",
 	"Способ загрузки данных в BI-систему",
 	"v2.dataObjects.applicationSources.items.development",
@@ -77,6 +77,6 @@ export const V35_FACTORY_DICTIONARY_CODES = [
 	"v2.workflow.sections.streamModelControl",
 ] as const;
 
-export const V35_FACTORY_DICTIONARY_CODE_SET = new Set<string>(
-	V35_FACTORY_DICTIONARY_CODES,
+export const FACTORY_DICTIONARY_CODE_SET = new Set<string>(
+	FACTORY_DICTIONARY_CODES,
 );

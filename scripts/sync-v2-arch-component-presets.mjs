@@ -21,7 +21,7 @@ const SNAPSHOT_ARCH_PATHS = {
 	sourceSystem: { schema: "detailInfo.sourceSystems", ui: "detailInfo.sourceSystems" },
 	dataProcess: { schema: "detailInfo.dataProcess", ui: "detailInfo.dataProcess" },
 	dataMart: { schema: "detailInfo.dataMart", ui: "detailInfo.dataMart" },
-	/** v35: «Модели» — массив `modelsList`, пресет = schema/ui элемента строки. */
+	/** «Модели» — массив `modelsList`, пресет = schema/ui элемента строки. */
 	model: {
 		schema: "detailInfo.modelsList",
 		ui: "detailInfo.modelsList",

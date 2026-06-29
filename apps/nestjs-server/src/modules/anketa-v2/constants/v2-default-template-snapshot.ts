@@ -15,13 +15,13 @@ import {
 	buildDictionaryBindingsFromSchema,
 	collectDictionaryCodesFromUiSchema,
 } from "../utils/v2-schema-dictionary.util";
-import { V35_FACTORY_DICTIONARY_CODE_SET } from "./v35-factory-dictionary-codes";
+import { FACTORY_DICTIONARY_CODE_SET } from "./factory-dictionary-codes";
 import { enrichAnketaLayoutUiSchema } from "../utils/v2-anketa-ui-layout.util";
 
 /**
- * Эталон схемы: шаблон «Новая схема» v35 (экспорт smart-anketa-v2).
+ * Эталон схемы: заводской шаблон «Новая схема» (экспорт smart-anketa-v2).
  * Файл рядом с этим модулем: `v2-default-anketa.snapshot.json`.
- * Обновление: `npm run sync:v35-factory-snapshot` (из apps/nestjs-server).
+ * Обновление: `npm run sync:factory-snapshot` (из apps/nestjs-server).
  */
 const SNAPSHOT_FILENAME = "v2-default-anketa.snapshot.json";
 
@@ -99,7 +99,7 @@ const uiReferencedDictionaries = buildDictionariesFromUiSchemaReferences(
 	jsonSchema,
 	uiSchema,
 	new Set(schemaDictionaries.map((d) => d.code)),
-	V35_FACTORY_DICTIONARY_CODE_SET,
+	FACTORY_DICTIONARY_CODE_SET,
 );
 export const V2_DEFAULT_DICTIONARIES = [
 	...schemaDictionaries,
@@ -118,5 +118,5 @@ export const V2_DEFAULT_TEMPLATE_SNAPSHOT = {
 		referencedDictionaryCodes: V2_DEFAULT_REFERENCED_DICTIONARY_CODES,
 	} satisfies V2DictionariesSnapshotDto,
 	releaseNotes:
-		"Заводская схема V2 — эталон шаблона «Новая схема» v35 (smart-anketa-v2 export)",
+		"Заводская схема V2 — эталон шаблона «Новая схема» (smart-anketa-v2 export)",
 };

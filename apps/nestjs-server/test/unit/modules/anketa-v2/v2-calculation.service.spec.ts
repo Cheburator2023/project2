@@ -188,7 +188,7 @@ describe("V2CalculationService", () => {
 		).toBeGreaterThan(0);
 	});
 
-	it("generates internal source typical works from v35 default logic", async () => {
+	it("generates internal source typical works from factory default logic", async () => {
 		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
 			streamDataSources: {
 				sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],

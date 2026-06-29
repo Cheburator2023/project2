@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { V2_ALL_DEFAULT_DICTIONARIES } from "../constants/v2-default-dictionary-codes";
-import { V35_FACTORY_DICTIONARY_CODE_SET } from "../constants/v35-factory-dictionary-codes";
+import { FACTORY_DICTIONARY_CODE_SET } from "../constants/factory-dictionary-codes";
 import {
 	buildLegacyFactoryDictionaryCodes,
 	isObsoleteFactoryDictionary,
@@ -150,7 +150,7 @@ export class V2DictionarySeedService implements OnModuleInit {
 		}
 	}
 
-	/** Удаляет заводские справочники, не входящие в allowlist v35. */
+	/** Удаляет заводские справочники, не входящие в factory allowlist. */
 	async removeObsoleteFactoryDictionaries(): Promise<void> {
 		const versions = await this.versionRepository.find({
 			select: ["id", "uiSchema"],
@@ -165,7 +165,7 @@ export class V2DictionarySeedService implements OnModuleInit {
 		let removed = 0;
 
 		for (const dictionary of dictionaries) {
-			if (V35_FACTORY_DICTIONARY_CODE_SET.has(dictionary.code)) continue;
+			if (FACTORY_DICTIONARY_CODE_SET.has(dictionary.code)) continue;
 			if (codesInUse.has(dictionary.code)) continue;
 			if (!isObsoleteFactoryDictionary(dictionary, legacyCodes)) {
 				continue;
@@ -178,7 +178,7 @@ export class V2DictionarySeedService implements OnModuleInit {
 
 		if (removed > 0) {
 			this.logger.log(
-				`Удалены заводские справочники вне allowlist v35: ${removed}`,
+				`Удалены заводские справочники вне factory allowlist: ${removed}`,
 			);
 		}
 	}

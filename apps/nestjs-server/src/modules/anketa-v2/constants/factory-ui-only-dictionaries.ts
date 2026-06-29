@@ -10,7 +10,8 @@ function uiOnlyDictionary(
 	return {
 		code,
 		name,
-		description: "Заводской справочник v35 (поле string/select без enum в jsonSchema)",
+		description:
+			"Заводской справочник (поле string/select без enum в jsonSchema)",
 		category: "Схема",
 		items: labels.map((label, order) => ({
 			code: schemaDictionaryItemCode(label, order, seen),
@@ -20,8 +21,8 @@ function uiOnlyDictionary(
 	};
 }
 
-/** Справочники v35, привязанные в uiSchema, но без enum в jsonSchema. */
-export const V35_UI_ONLY_DICTIONARIES: V2DefaultDictionaryDef[] = [
+/** Справочники, привязанные в uiSchema, но без enum в jsonSchema. */
+export const FACTORY_UI_ONLY_DICTIONARIES: V2DefaultDictionaryDef[] = [
 	uiOnlyDictionary(
 		"v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
 		"Сложность настройки шаблона разметки данных",

@@ -9,7 +9,7 @@
 		"build": "nest build",
 		"build:doc-catalog": "tsx scripts/build-v2-doc-catalog.ts",
 		"sync:anketa-snapshot-layout": "tsx scripts/sync-v2-anketa-snapshot-layout.ts",
-		"sync:v35-factory-snapshot": "node scripts/sync-v35-factory-snapshot.mjs && npm run sync:anketa-snapshot-layout && node ../../scripts/sync-v2-arch-component-presets.mjs",
+		"sync:factory-snapshot": "node scripts/sync-factory-snapshot.mjs && npm run sync:anketa-snapshot-layout && node ../../scripts/sync-v2-arch-component-presets.mjs",
 		"patch:works-catalog-logic": "node scripts/patch-works-catalog-logic.mjs",
 		"start": "NODE_ENV=production tsx dist/main",
 		"start:debug": "nest start --debug --watch",

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Синхронизирует dictionaryCode в uiSchema с путями v35 (modelsList вместо model).
+ * Синхронизирует dictionaryCode в uiSchema с актуальными путями схемы (modelsList вместо model).
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -13,7 +13,7 @@ const snapshotPath = join(
 );
 const allowlistPath = join(
 	root,
-	"src/modules/anketa-v2/constants/v35-factory-dictionary-codes.ts",
+	"src/modules/anketa-v2/constants/factory-dictionary-codes.ts",
 );
 
 const REPLACEMENTS = [

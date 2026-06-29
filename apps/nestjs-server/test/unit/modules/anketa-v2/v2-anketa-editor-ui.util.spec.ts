@@ -71,7 +71,7 @@ describe("resolveV2AnketaEditorBindings", () => {
 		);
 	});
 
-	it("marks uncertainty section as hidden in v35 default snapshot", () => {
+	it("marks uncertainty section as hidden in factory default snapshot", () => {
 		expect(
 			resolveV2AnketaCanvasUiKind(snapshot.uiSchema.uncertaintyCalculation),
 		).toBe("hidden");
