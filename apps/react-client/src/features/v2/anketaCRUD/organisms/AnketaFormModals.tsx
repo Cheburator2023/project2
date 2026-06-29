@@ -38,13 +38,13 @@ const RISK_FIELD_TO_MODAL: Record<string, string> = {
 	defectsInSolution: "solution_defects",
 	adjacentProjectsImpact: "adjacent_projects",
 	laborCostIncrease: "labor_growth",
-	contractorMisconduct: "contractor_issues",
+	thirdPartyNegligence: "contractor_risk",
 	staffShortage: "staff_shortage",
-	sanctionsRisk: "sanctions",
-	controlGaps: "control_gaps",
-	regulatoryChanges: "regulatory",
-	systemUnderutilization: "underutilization",
-	itArchitectureChanges: "architecture",
+	sanctions: "sanctions",
+	controlProceduresLack: "lack_of_controls",
+	regulatoryChanges: "regulatory_changes",
+	isNotUsedAfterProject: "post_project_usage",
+	itArchitectureChanges: "target_architecture",
 };
 
 const RISK_FIELD_FROM_MODAL = Object.fromEntries(

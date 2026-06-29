@@ -33,6 +33,7 @@ import {
 	resetWorkflowForCopy,
 } from "../utils/v2-form-data-migration.util";
 import { normalizeV2AnketaWorkflow } from "../utils/v2-anketa-workflow.util";
+import { buildV2QuestionnaireRegistryXlsx } from "../utils/v2-questionnaire-registry-export.util";
 
 type TUserLike = {
 	given_name?: string;
@@ -60,6 +61,11 @@ export class V2QuestionnaireService {
 			order: { createdAt: "DESC" },
 		});
 		return Promise.all(rows.map((row) => this.toDto(row)));
+	}
+
+	async exportRegistryXlsx(): Promise<Buffer> {
+		const rows = await this.findAll();
+		return buildV2QuestionnaireRegistryXlsx(rows);
 	}
 
 	async findOne(id: string): Promise<V2QuestionnaireDto> {

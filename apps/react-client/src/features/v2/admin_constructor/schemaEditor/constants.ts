@@ -163,7 +163,7 @@ export const FIELD_PRESETS: PalettePreset[] = [
 export const PRIMITIVE_FIELD_TYPE_OPTIONS = [
 	{ id: "string", title: "Строка" },
 	{ id: "string-dictionary", title: "Строка / справочник" },
-	{ id: "dictionary-list", title: "Справочник / список" },
+	{ id: "dictionary-list", title: "Мультисправочник" },
 	...FIELD_PRESETS.filter((fp) =>
 		["integer", "number", "boolean"].includes(fp.id as string),
 	).map((fp) => ({ id: fp.id as string, title: fp.title })),

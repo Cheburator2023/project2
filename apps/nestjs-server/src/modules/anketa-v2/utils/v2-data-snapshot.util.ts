@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { V2DataTransferSection } from "@smart-anketa/api-contract";
 
 export const V2_DATA_SNAPSHOT_FORMAT_VERSION = 1;
 
@@ -20,6 +21,8 @@ export interface V2DataSnapshotMeta {
 		typicalWorkVersionConfigs: number;
 		questionnaires: number;
 	};
+	/** Какие разделы включены в снапшот (если не задано — все). */
+	sections?: V2DataTransferSection[];
 }
 
 export interface V2DataSnapshotPayload {
@@ -66,6 +69,7 @@ export function hashV2DataPayload(payload: V2DataSnapshotPayload): string {
 export function buildV2DataSnapshot(
 	payload: V2DataSnapshotPayload,
 	exportedAt = new Date().toISOString(),
+	sections?: V2DataTransferSection[],
 ): V2DataSnapshot {
 	const sha256 = hashV2DataPayload(payload);
 	return {
@@ -73,6 +77,7 @@ export function buildV2DataSnapshot(
 			formatVersion: V2_DATA_SNAPSHOT_FORMAT_VERSION,
 			exportedAt,
 			sha256,
+			...(sections?.length ? { sections: [...sections] } : {}),
 			counts: {
 				dictionaries: payload.dictionaries.length,
 				dictionaryItems: payload.dictionaryItems.length,

@@ -34,7 +34,7 @@ export const commonRoutes = {
 	},
 	adminV2Dictionaries: {
 		rootPath: "/admin/dictionaries",
-		name: "Словари",
+		name: "Справочники",
 		disabled: false,
 		showInNavbar: true,
 		navbar: { group: "adminV2", order: 5 },

@@ -3,12 +3,15 @@ import {
 	Controller,
 	Get,
 	HttpCode,
+	HttpStatus,
 	Param,
 	ParseUUIDPipe,
 	Patch,
 	Post,
+	Res,
 } from "@nestjs/common";
-import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import type { Response } from "express";
 import type {
 	BulkDeleteV2QuestionnairesResultDto,
 	SeedV2TestQuestionnairesResultDto,
@@ -59,6 +62,30 @@ export class V2QuestionnaireController {
 			body.templateId,
 			user as never,
 		);
+	}
+
+	@Get("export/xlsx")
+	@ApiOperation({ summary: "Выгрузка всех анкет v2 реестра в XLSX" })
+	@ApiResponse({
+		status: HttpStatus.OK,
+		content: {
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+				schema: { type: "string", format: "binary" },
+			},
+		},
+	})
+	async exportRegistryXlsx(@Res() res: Response): Promise<void> {
+		const buffer = await this.questionnaireService.exportRegistryXlsx();
+		const date = new Date().toISOString().slice(0, 10);
+		res.setHeader(
+			"Content-Type",
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		);
+		res.setHeader(
+			"Content-Disposition",
+			`attachment; filename=v2-questionnaires-${date}.xlsx`,
+		);
+		res.end(buffer);
 	}
 
 	@Get(":id")

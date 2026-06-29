@@ -27,6 +27,9 @@ import {
 	SnapshotSchemaError,
 	V2DataTransferService,
 } from "../services/v2-data-transfer.service";
+import {
+	parseV2DataTransferSections,
+} from "@smart-anketa/api-contract";
 import type { V2DataImportMode } from "../utils/v2-data-snapshot.util";
 
 @ApiBearerAuth("JWT-auth")
@@ -42,6 +45,12 @@ export class V2DataTransferController {
 		description:
 			"Выгружает шаблоны, справочники, типовые работы и анкеты в JSON-снапшот для переноса между стендами. Аудит v2 не включается.",
 	})
+	@ApiQuery({
+		name: "sections",
+		required: false,
+		description:
+			"Разделы через запятую: templates, dictionaries, typicalWorks, questionnaires. По умолчанию — все.",
+	})
 	@ApiResponse({
 		status: HttpStatus.OK,
 		content: {
@@ -50,8 +59,12 @@ export class V2DataTransferController {
 			},
 		},
 	})
-	async exportSnapshot(@Res() res: Response): Promise<void> {
-		const buffer = await this.transferService.exportSnapshot();
+	async exportSnapshot(
+		@Res() res: Response,
+		@Query("sections") sectionsRaw?: string,
+	): Promise<void> {
+		const sections = parseV2DataTransferSections(sectionsRaw);
+		const buffer = await this.transferService.exportSnapshot(sections);
 		const date = new Date().toISOString().slice(0, 10);
 		res.setHeader("Content-Type", "application/json; charset=utf-8");
 		res.setHeader(
@@ -72,6 +85,12 @@ export class V2DataTransferController {
 		description:
 			"merge — добавить новые записи, пропустить конфликты по code/catalogKey/readableId; replace — полностью заменить данные v2 (кроме аудита)",
 	})
+	@ApiQuery({
+		name: "sections",
+		required: false,
+		description:
+			"Разделы через запятую: templates, dictionaries, typicalWorks, questionnaires. По умолчанию — все.",
+	})
 	@ApiBody({
 		schema: {
 			type: "object",
@@ -84,6 +103,7 @@ export class V2DataTransferController {
 	async importSnapshot(
 		@UploadedFile() file?: { buffer: Buffer },
 		@Query("mode") mode?: string,
+		@Query("sections") sectionsRaw?: string,
 	) {
 		if (!file?.buffer?.length) {
 			throw new BadRequestException("Файл не передан");
@@ -91,11 +111,13 @@ export class V2DataTransferController {
 
 		const importMode: V2DataImportMode =
 			mode === "replace" ? "replace" : "merge";
+		const sections = parseV2DataTransferSections(sectionsRaw);
 
 		try {
 			return await this.transferService.importSnapshot(
 				file.buffer,
 				importMode,
+				sections,
 			);
 		} catch (error) {
 			if (error instanceof SnapshotIntegrityError) {

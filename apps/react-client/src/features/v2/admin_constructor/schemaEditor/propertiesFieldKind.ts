@@ -114,7 +114,7 @@ export function resolveCanvasFieldTypeChipLabel(
 		typeof uiBranch?.["ui:widget"] === "string" ? uiBranch["ui:widget"] : "";
 
 	if (isDictionaryMultiField(resolvedField, uiOptions)) {
-		return { label: "справочник·список", colorKey: "dictionary-list" };
+		return { label: "мультисправочник", colorKey: "dictionary-list" };
 	}
 	if (isDictionaryStringField(resolvedField, uiOptions, uiWidget)) {
 		return { label: "строка·справочник", colorKey: "string-dictionary" };

@@ -109,15 +109,22 @@ export function SettingsPage() {
 								</Typography>
 							</Flex>
 							<Alert severity="info">
-								Аудит v2 при импорте не переносится. Режим полной замены удаляет
-								текущие данные v2 на стенде.
+								Аудит v2 при импорте не переносится. Режим замены удаляет только
+								выбранные разделы на стенде.
 							</Alert>
+							<Flex flexDirection="column" gap={8}>
+								<Typography variant="subtitle2">Разделы для выгрузки и загрузки</Typography>
+								{v2Transfer.sectionCheckboxes}
+							</Flex>
 							<Flex gap={12} wrap="wrap">
 								<Button
 									variant="contained"
 									startIcon={<DownloadRoundedIcon />}
 									onClick={v2Transfer.onExport}
-									disabled={v2Transfer.exportMutation.isPending}
+									disabled={
+										v2Transfer.exportMutation.isPending ||
+										!v2Transfer.sectionsSelected
+									}
 								>
 									{v2Transfer.exportMutation.isPending
 										? "Выгрузка…"
@@ -127,6 +134,7 @@ export function SettingsPage() {
 									variant="outlined"
 									startIcon={<UploadRoundedIcon />}
 									onClick={v2Transfer.onImport}
+									disabled={!v2Transfer.sectionsSelected}
 								>
 									Загрузить данные v2
 								</Button>

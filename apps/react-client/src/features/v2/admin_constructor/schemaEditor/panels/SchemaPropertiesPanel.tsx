@@ -162,7 +162,7 @@ function FieldTypeControl({
 				onChange={(e) =>
 					onPrimitiveTypeChange(e.target.value as PrimitiveFieldTypeVariant)
 				}
-				helperText="Справочник / список — мультиселект; при смене типа привязка справочника сбрасывается."
+				helperText="Мультисправочник — мультиселект; при смене типа привязка справочника сбрасывается."
 			>
 				{PRIMITIVE_FIELD_TYPE_OPTIONS.map((option) => (
 					<MenuItem key={option.id} value={option.id}>

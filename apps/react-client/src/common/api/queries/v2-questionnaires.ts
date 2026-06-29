@@ -129,3 +129,11 @@ export const useSeedV2TestQuestionnaires = () => {
 		onSuccess: () => qc.invalidateQueries({ queryKey: ROOT_KEY }),
 	});
 };
+
+export const v2QuestionnairesExportXlsx = (signal?: AbortSignal) =>
+	apiClient<Blob>({
+		url: "/v2/questionnaires/export/xlsx",
+		method: "GET",
+		signal,
+		responseType: "blob",
+	});

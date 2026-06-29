@@ -20,7 +20,7 @@ describe("resolveCanvasFieldTypeChipLabel", () => {
 		});
 	});
 
-	it("labels dictionary multi-select as справочник·список", () => {
+	it("labels dictionary multi-select as мультисправочник", () => {
 		const schema: RJSFSchema = {
 			type: "array",
 			items: { type: "string" },
@@ -32,7 +32,7 @@ describe("resolveCanvasFieldTypeChipLabel", () => {
 		};
 
 		expect(resolveCanvasFieldTypeChipLabel(schema, ui)).toEqual({
-			label: "справочник·список",
+			label: "мультисправочник",
 			colorKey: "dictionary-list",
 		});
 	});

@@ -1886,7 +1886,10 @@
 					"sectionRole": "flat"
 				},
 				"streamNames": {
-					"ui:widget": "text"
+					"ui:widget": "text",
+					"ui:options": {
+						"enabledWhenVar": "detailInfo.parameters.streamsOutsideDADM"
+					}
 				},
 				"streamsOutsideDADM": {
 					"ui:widget": "checkbox"

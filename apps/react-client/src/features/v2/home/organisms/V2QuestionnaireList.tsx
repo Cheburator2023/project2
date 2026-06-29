@@ -1,3 +1,4 @@
+import DownloadIcon from "@mui/icons-material/Download";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import {
@@ -17,7 +18,9 @@ import {
 import {
 	useBulkDeleteV2Questionnaires,
 	useV2Questionnaires,
+	v2QuestionnairesExportXlsx,
 } from "@react-client/common/api/queries/v2-questionnaires";
+import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
@@ -321,6 +324,7 @@ export function V2QuestionnaireList() {
 		V2QuestionnaireVersionRow[]
 	>([]);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [isExporting, setIsExporting] = useState(false);
 
 	const gridTheme =
 		mode === "light" || mode === undefined
@@ -444,6 +448,21 @@ export function V2QuestionnaireList() {
 		[navigate],
 	);
 
+	const handleExportXlsx = useCallback(async () => {
+		setIsExporting(true);
+		try {
+			const blob = await v2QuestionnairesExportXlsx();
+			const date = new Date().toISOString().slice(0, 10);
+			downloadBlob(blob, `v2-questionnaires-${date}.xlsx`);
+		} catch (err) {
+			toast.error("Ошибка экспорта", {
+				description: apiErrorMessage(err),
+			});
+		} finally {
+			setIsExporting(false);
+		}
+	}, []);
+
 	const runBulkDelete = useCallback(() => {
 		const ids = selectedVersions.map((row) => row.id);
 		if (!ids.length) return;
@@ -478,6 +497,15 @@ export function V2QuestionnaireList() {
 		<div>
 			<Header>
 				<Stack direction="row" spacing={1} alignItems="center">
+					<Button
+						variant="outlined"
+						size="small"
+						startIcon={<DownloadIcon />}
+						disabled={isExporting || isLoading}
+						onClick={() => void handleExportXlsx()}
+					>
+						{isExporting ? "Экспорт…" : "Экспорт XLSX"}
+					</Button>
 					{canAccessAdminPanel ? (
 						<Button
 							variant="outlined"

@@ -32,9 +32,9 @@ export function AdminV2DictionaryDetailPage() {
 					<Flex gap={1} alignItems="center" minWidth="0">
 						<IconButton
 							size="small"
-							title="К списку справочников"
+							title="К справочникам"
 							onClick={() => navigate(routes.adminV2Dictionaries.rootPath)}
-							aria-label="К списку справочников"
+							aria-label="К справочникам"
 						>
 							<ArrowBackIcon />
 						</IconButton>

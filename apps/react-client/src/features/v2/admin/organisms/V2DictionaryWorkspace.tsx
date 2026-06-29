@@ -30,7 +30,7 @@ function DictionarySplitResizeHandle({
 		<Flex
 			role="separator"
 			aria-orientation="vertical"
-			aria-label="Изменить ширину списка справочников"
+			aria-label="Изменить ширину панели справочников"
 			title="Потяните, чтобы изменить ширину"
 			onMouseDown={onResizeStart}
 			flexShrink={0}

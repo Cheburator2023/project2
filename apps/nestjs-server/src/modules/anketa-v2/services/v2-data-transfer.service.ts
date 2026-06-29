@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import type { V2DataTransferSection } from "@smart-anketa/api-contract";
+import { V2_DATA_TRANSFER_DEFAULT_SECTIONS } from "@smart-anketa/api-contract";
 import { DataSource, Repository } from "typeorm";
 import { V2DictionaryEntity } from "../entities/v2-dictionary.entity";
 import { V2DictionaryItemEntity } from "../entities/v2-dictionary-item.entity";
@@ -54,28 +56,82 @@ export class V2DataTransferService {
 		private readonly questionnaireRepo: Repository<V2QuestionnaireEntity>,
 	) {}
 
-	async exportSnapshot(): Promise<Buffer> {
-		const payload = await this.loadPayload();
-		const snapshot = buildV2DataSnapshot(payload);
+	async exportSnapshot(
+		sections: V2DataTransferSection[] = V2_DATA_TRANSFER_DEFAULT_SECTIONS,
+	): Promise<Buffer> {
+		const payload = await this.loadPayload(sections);
+		const snapshot = buildV2DataSnapshot(payload, undefined, sections);
 		return Buffer.from(JSON.stringify(snapshot, null, 2), "utf8");
 	}
 
 	async importSnapshot(
 		buffer: Buffer,
 		mode: V2DataImportMode,
+		sections: V2DataTransferSection[] = V2_DATA_TRANSFER_DEFAULT_SECTIONS,
 	): Promise<{ meta: V2DataSnapshot["meta"]; stats: V2DataImportStats }> {
 		const snapshot = parseV2DataSnapshot(buffer);
 		assertV2DataSnapshotIntegrity(snapshot);
 
 		const stats =
 			mode === "replace"
-				? await this.importReplace(snapshot)
-				: await this.importMerge(snapshot);
+				? await this.importReplace(snapshot, sections)
+				: await this.importMerge(snapshot, sections);
 
 		return { meta: snapshot.meta, stats };
 	}
 
-	private async loadPayload(): Promise<V2DataSnapshotPayload> {
+	private includes(
+		sections: readonly V2DataTransferSection[],
+		section: V2DataTransferSection,
+	): boolean {
+		return sections.includes(section);
+	}
+
+	private filterSnapshotBySections(
+		snapshot: V2DataSnapshot,
+		sections: readonly V2DataTransferSection[],
+	): V2DataSnapshot {
+		return {
+			...snapshot,
+			dictionaries: this.includes(sections, "dictionaries")
+				? snapshot.dictionaries
+				: [],
+			dictionaryItems: this.includes(sections, "dictionaries")
+				? snapshot.dictionaryItems
+				: [],
+			templates: this.includes(sections, "templates")
+				? snapshot.templates
+				: [],
+			templateVersions: this.includes(sections, "templates")
+				? snapshot.templateVersions
+				: [],
+			typicalWorks: this.includes(sections, "typicalWorks")
+				? snapshot.typicalWorks
+				: [],
+			typicalWorkNorms: this.includes(sections, "typicalWorks")
+				? snapshot.typicalWorkNorms
+				: [],
+			typicalWorkRules: this.includes(sections, "typicalWorks")
+				? snapshot.typicalWorkRules
+				: [],
+			typicalWorkLaborCoefficients: this.includes(
+				sections,
+				"typicalWorks",
+			)
+				? snapshot.typicalWorkLaborCoefficients
+				: [],
+			typicalWorkVersionConfigs: this.includes(sections, "typicalWorks")
+				? snapshot.typicalWorkVersionConfigs
+				: [],
+			questionnaires: this.includes(sections, "questionnaires")
+				? snapshot.questionnaires
+				: [],
+		};
+	}
+
+	private async loadPayload(
+		sections: readonly V2DataTransferSection[],
+	): Promise<V2DataSnapshotPayload> {
 		const [
 			dictionaries,
 			dictionaryItems,
@@ -88,16 +144,36 @@ export class V2DataTransferService {
 			typicalWorkVersionConfigs,
 			questionnaires,
 		] = await Promise.all([
-			this.dictionaryRepo.find(),
-			this.dictionaryItemRepo.find(),
-			this.templateRepo.find(),
-			this.templateVersionRepo.find(),
-			this.typicalWorkRepo.find(),
-			this.typicalWorkNormRepo.find(),
-			this.typicalWorkRuleRepo.find(),
-			this.typicalWorkLaborCoeffRepo.find(),
-			this.typicalWorkVersionConfigRepo.find(),
-			this.questionnaireRepo.find(),
+			this.includes(sections, "dictionaries")
+				? this.dictionaryRepo.find()
+				: Promise.resolve([]),
+			this.includes(sections, "dictionaries")
+				? this.dictionaryItemRepo.find()
+				: Promise.resolve([]),
+			this.includes(sections, "templates")
+				? this.templateRepo.find()
+				: Promise.resolve([]),
+			this.includes(sections, "templates")
+				? this.templateVersionRepo.find()
+				: Promise.resolve([]),
+			this.includes(sections, "typicalWorks")
+				? this.typicalWorkRepo.find()
+				: Promise.resolve([]),
+			this.includes(sections, "typicalWorks")
+				? this.typicalWorkNormRepo.find()
+				: Promise.resolve([]),
+			this.includes(sections, "typicalWorks")
+				? this.typicalWorkRuleRepo.find()
+				: Promise.resolve([]),
+			this.includes(sections, "typicalWorks")
+				? this.typicalWorkLaborCoeffRepo.find()
+				: Promise.resolve([]),
+			this.includes(sections, "typicalWorks")
+				? this.typicalWorkVersionConfigRepo.find()
+				: Promise.resolve([]),
+			this.includes(sections, "questionnaires")
+				? this.questionnaireRepo.find()
+				: Promise.resolve([]),
 		]);
 
 		return {
@@ -147,27 +223,39 @@ export class V2DataTransferService {
 
 	private async importReplace(
 		snapshot: V2DataSnapshot,
+		sections: readonly V2DataTransferSection[],
 	): Promise<V2DataImportStats> {
 		const stats = this.emptyStats("replace");
+		const filtered = this.filterSnapshotBySections(snapshot, sections);
 
 		await this.dataSource.transaction(async (manager) => {
-			await manager.query(
-				`UPDATE v2_questionnaire SET parent_questionnaire_id = NULL`,
-			);
-			await manager.query(`UPDATE v2_template SET current_version_id = NULL`);
+			if (this.includes(sections, "questionnaires")) {
+				await manager.query(
+					`UPDATE v2_questionnaire SET parent_questionnaire_id = NULL`,
+				);
+				await manager.delete(V2QuestionnaireEntity, {});
+			}
 
-			await manager.delete(V2QuestionnaireEntity, {});
-			await manager.delete(V2TypicalWorkVersionConfigEntity, {});
-			await manager.delete(V2TypicalWorkNormEntity, {});
-			await manager.delete(V2TypicalWorkRuleEntity, {});
-			await manager.delete(V2TypicalWorkLaborCoefficientEntity, {});
-			await manager.delete(V2TypicalWorkEntity, {});
-			await manager.delete(V2TemplateVersionEntity, {});
-			await manager.delete(V2TemplateEntity, {});
-			await manager.delete(V2DictionaryItemEntity, {});
-			await manager.delete(V2DictionaryEntity, {});
+			if (this.includes(sections, "typicalWorks")) {
+				await manager.delete(V2TypicalWorkVersionConfigEntity, {});
+				await manager.delete(V2TypicalWorkNormEntity, {});
+				await manager.delete(V2TypicalWorkRuleEntity, {});
+				await manager.delete(V2TypicalWorkLaborCoefficientEntity, {});
+				await manager.delete(V2TypicalWorkEntity, {});
+			}
 
-			await this.insertAll(manager, snapshot, stats, { skipExisting: false });
+			if (this.includes(sections, "templates")) {
+				await manager.query(`UPDATE v2_template SET current_version_id = NULL`);
+				await manager.delete(V2TemplateVersionEntity, {});
+				await manager.delete(V2TemplateEntity, {});
+			}
+
+			if (this.includes(sections, "dictionaries")) {
+				await manager.delete(V2DictionaryItemEntity, {});
+				await manager.delete(V2DictionaryEntity, {});
+			}
+
+			await this.insertAll(manager, filtered, stats, { skipExisting: false });
 		});
 
 		return stats;
@@ -175,11 +263,13 @@ export class V2DataTransferService {
 
 	private async importMerge(
 		snapshot: V2DataSnapshot,
+		sections: readonly V2DataTransferSection[],
 	): Promise<V2DataImportStats> {
 		const stats = this.emptyStats("merge");
+		const filtered = this.filterSnapshotBySections(snapshot, sections);
 
 		await this.dataSource.transaction(async (manager) => {
-			await this.insertAll(manager, snapshot, stats, { skipExisting: true });
+			await this.insertAll(manager, filtered, stats, { skipExisting: true });
 		});
 
 		return stats;

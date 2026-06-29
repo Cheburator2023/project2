@@ -29,6 +29,8 @@ import {
 	buildSelectOptions,
 	selectLabelForValue,
 } from "./selectFieldOptions";
+import { resolveFieldEnabledWhen } from "./fieldEnabledWhen";
+import { normalizeUiTooltip } from "@smart-anketa/api-contract";
 
 // Вспомогательная функция для преобразования indexes в matches
 const indexesToMatches = (
@@ -138,7 +140,12 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 	const isSelect =
 		optionsForSelect.length > 0 || options?.select || props?.select;
 	const allowCustomInput = options?.freeSolo || options?.allowCustomInput;
-	const isDisabled = disabled || readonly;
+	const fieldEnabled = resolveFieldEnabledWhen(
+		props.formContext?.formData,
+		options as Record<string, unknown> | undefined,
+	);
+	const isDisabled = disabled || readonly || !fieldEnabled;
+	const tooltipText = normalizeUiTooltip(options?.tooltip);
 	const isMultiple = options?.multiple;
 	const noDelete = options?.noDelete;
 
@@ -276,10 +283,10 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 				}}
 				slots={{
 					inputLabel: (props) =>
-						options?.tooltip ? (
+						tooltipText ? (
 							<Flex gap={6} position="relative">
 								<InputLabel {...props} title="" />
-								<div title={options?.tooltip}>
+								<div title={tooltipText}>
 									<InfoOutlineIcon
 										sx={{
 											scale: 0.8,
@@ -455,10 +462,10 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 						}}
 						slots={{
 							inputLabel: (props) =>
-								options?.tooltip ? (
+								tooltipText ? (
 									<Flex gap={6} position="relative">
 										<InputLabel {...props} />
-										<div title={options?.tooltip}>
+										<div title={tooltipText}>
 											<InfoOutlineIcon
 												sx={{
 													scale: 0.8,
@@ -545,10 +552,10 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			}}
 			slots={{
 				inputLabel: (props) =>
-					options?.tooltip ? (
+					tooltipText ? (
 						<Flex gap={6} position="relative">
 							<InputLabel {...props} title="" />
-							<div title={options?.tooltip}>
+							<div title={tooltipText}>
 								<InfoOutlineIcon
 									sx={{
 										scale: 0.8,
