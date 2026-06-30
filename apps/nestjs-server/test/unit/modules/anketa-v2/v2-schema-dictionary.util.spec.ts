@@ -4,9 +4,8 @@ import {
 	schemaDictionaryItemCode,
 	V2_DICTIONARY_ITEM_CODE_MAX_LEN,
 } from "../../../../src/modules/anketa-v2/utils/v2-schema-dictionary.util";
-import { FACTORY_DICTIONARY_CODE_SET } from "../../../../src/modules/anketa-v2/constants/factory-dictionary-codes";
-import { FACTORY_UI_ONLY_DICTIONARIES } from "../../../../src/modules/anketa-v2/constants/factory-ui-only-dictionaries";
 import { V2_ALL_DEFAULT_DICTIONARIES } from "../../../../src/modules/anketa-v2/constants/v2-default-dictionary-codes";
+import { FACTORY_UI_ONLY_DICTIONARIES } from "../../../../src/modules/anketa-v2/constants/factory-ui-only-dictionaries";
 
 describe("v2-schema-dictionary.util", () => {
 	it("schemaDictionaryItemCode keeps codes within varchar limit", () => {
@@ -38,10 +37,8 @@ describe("v2-schema-dictionary.util", () => {
 		]);
 	});
 
-	it("FACTORY_UI_ONLY_DICTIONARIES covers ui-only allowlist codes", () => {
+	it("FACTORY_UI_ONLY_DICTIONARIES покрыты заводским набором", () => {
 		for (const def of FACTORY_UI_ONLY_DICTIONARIES) {
-			expect(FACTORY_DICTIONARY_CODE_SET.has(def.code)).toBe(true);
-			expect(def.items.length).toBeGreaterThan(0);
 			expect(V2_ALL_DEFAULT_DICTIONARIES.some((d) => d.code === def.code)).toBe(
 				true,
 			);

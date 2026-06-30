@@ -1,7 +1,6 @@
 import type { V2JsonSchemaDto } from "@smart-anketa/api-contract";
 import { V2_ORGANIZATIONAL_DICTIONARIES } from "./v2-default-organizational-dictionaries";
 import { V2_METHODOLOGY_DICTIONARIES } from "./v2-methodology-dictionaries";
-import { FACTORY_DICTIONARY_CODE_SET } from "./factory-dictionary-codes";
 import { FACTORY_UI_ONLY_DICTIONARIES } from "./factory-ui-only-dictionaries";
 import type { V2DefaultDictionaryDef } from "../utils/v2-schema-dictionary.util";
 import {
@@ -44,17 +43,11 @@ function buildUnfilteredDefaultDictionaries(
 	return [...byCode.values()];
 }
 
-function filterByFactoryAllowlist(
-	dicts: V2DefaultDictionaryDef[],
-): V2DefaultDictionaryDef[] {
-	return dicts.filter((d) => FACTORY_DICTIONARY_CODE_SET.has(d.code));
-}
-
 /** Все заводские справочники: схема + методология (не удаляемые, со сбросом). */
 export function buildAllDefaultDictionaries(
 	schemaDicts: V2DefaultDictionaryDef[],
 ): V2DefaultDictionaryDef[] {
-	return filterByFactoryAllowlist(buildUnfilteredDefaultDictionaries(schemaDicts));
+	return buildUnfilteredDefaultDictionaries(schemaDicts);
 }
 
 /** Коды заводских справочников до фильтра allowlist (для очистки устаревших в БД). */

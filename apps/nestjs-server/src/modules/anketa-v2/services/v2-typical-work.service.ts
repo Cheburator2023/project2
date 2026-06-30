@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException, OnModuleInit } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, Repository } from "typeorm";
+import { IsNull, Not, In, Repository } from "typeorm";
 import type {
 	V2TypicalWorkCardDto,
 	V2TypicalWorkLaborCoefficientDto,
@@ -28,8 +28,8 @@ import {
 	normalizeStoredFormula,
 	termsToTokenFormula,
 } from "@smart-anketa/api-contract";
-import { FACTORY_TEMPLATE_VERSION_ID } from "../constants/factory-template-version";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
+import { V2TemplateEntity } from "../entities/v2-template.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
 import { V2TypicalWorkNormEntity } from "../entities/v2-typical-work-norm.entity";
@@ -73,6 +73,8 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		private readonly versionConfigRepository: Repository<V2TypicalWorkVersionConfigEntity>,
 		@InjectRepository(V2TemplateVersionEntity)
 		private readonly templateVersionRepository: Repository<V2TemplateVersionEntity>,
+		@InjectRepository(V2TemplateEntity)
+		private readonly templateRepository: Repository<V2TemplateEntity>,
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
 	) {}
 
@@ -201,10 +203,17 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		this.logger.log(`Seeded ${created} typical works from doc catalog`);
 	}
 
-	/** Дефолтная формула H для всех работ на эталонной версии шаблона (worksCatalog). */
+	/** Дефолтная формула H для всех работ на текущей опубликованной версии шаблона. */
 	async ensureFactoryVersionConfigs(): Promise<void> {
+		const activeTemplate = await this.templateRepository.findOne({
+			where: { currentVersionId: Not(IsNull()) },
+			order: { updatedAt: "DESC" },
+		});
+		const templateVersionId = activeTemplate?.currentVersionId;
+		if (!templateVersionId) return;
+
 		const version = await this.templateVersionRepository.findOne({
-			where: { id: FACTORY_TEMPLATE_VERSION_ID },
+			where: { id: templateVersionId },
 		});
 		if (!version) return;
 
@@ -212,7 +221,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		if (works.length === 0) return;
 
 		const existing = await this.versionConfigRepository.find({
-			where: { templateVersionId: FACTORY_TEMPLATE_VERSION_ID },
+			where: { templateVersionId },
 		});
 		const existingWorkIds = new Set(existing.map((row) => row.workId));
 		const formula = defaultWorkFormula();
@@ -225,7 +234,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			await this.versionConfigRepository.save(
 				this.versionConfigRepository.create({
 					workId: work.id,
-					templateVersionId: FACTORY_TEMPLATE_VERSION_ID,
+					templateVersionId,
 					formula: formula.tokens,
 					formulaText: formula.text || tokensToText(formula.tokens),
 					roundingMode: rounding.mode,
@@ -239,7 +248,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 
 		if (created > 0) {
 			this.logger.log(
-				`Seeded ${created} typical work version configs for factory template`,
+				`Seeded ${created} typical work version configs for template version ${templateVersionId}`,
 			);
 		}
 	}

@@ -9,19 +9,15 @@ import type {
 } from "@smart-anketa/api-contract";
 
 import {
-	applyDictionaryBindingsToUiSchema,
 	buildDefaultDictionariesFromJsonSchema,
 	buildDictionariesFromUiSchemaReferences,
-	buildDictionaryBindingsFromSchema,
 	collectDictionaryCodesFromUiSchema,
 } from "../utils/v2-schema-dictionary.util";
-import { FACTORY_DICTIONARY_CODE_SET } from "./factory-dictionary-codes";
-import { enrichAnketaLayoutUiSchema } from "../utils/v2-anketa-ui-layout.util";
 
 /**
- * Эталон схемы: заводской шаблон «Новая схема» (экспорт smart-anketa-v2).
- * Файл рядом с этим модулем: `v2-default-anketa.snapshot.json`.
- * Обновление: `npm run sync:factory-snapshot` (из apps/nestjs-server).
+ * Эталон схемы: заводской шаблон «Новая схема», версия 35 (export smart-anketa-v2).
+ * Файл: `v2-default-anketa.snapshot.json` — копия v35 без изменений.
+ * Обновление: `npm run sync:factory-snapshot -- /path/to/export.json` (из apps/nestjs-server).
  */
 const SNAPSHOT_FILENAME = "v2-default-anketa.snapshot.json";
 
@@ -29,26 +25,11 @@ type SnapshotFile = {
 	jsonSchema?: unknown;
 	uiSchema?: unknown;
 	logic?: unknown;
+	dictionariesSnapshot?: V2DictionariesSnapshotDto;
 };
 
 function resolveSnapshotPath(): string {
-	const local = join(__dirname, SNAPSHOT_FILENAME);
-	try {
-		readFileSync(local);
-		return local;
-	} catch {
-		return join(
-			__dirname,
-			"..",
-			"..",
-			"..",
-			"..",
-			"modules",
-			"anketa-v2",
-			"constants",
-			SNAPSHOT_FILENAME,
-		);
-	}
+	return join(__dirname, SNAPSHOT_FILENAME);
 }
 
 function loadSnapshotPayload(): SnapshotFile {
@@ -57,49 +38,59 @@ function loadSnapshotPayload(): SnapshotFile {
 	return JSON.parse(raw) as SnapshotFile;
 }
 
-function stripDraft07Schema(schema: Record<string, unknown>): V2JsonSchemaDto {
-	const { $schema: _omit, ...rest } = schema;
-	return rest as V2JsonSchemaDto;
+function asJsonSchema(value: unknown): V2JsonSchemaDto {
+	if (value && typeof value === "object" && !Array.isArray(value)) {
+		const { $schema: _omit, ...rest } = value as Record<string, unknown>;
+		return rest as V2JsonSchemaDto;
+	}
+	return { type: "object", properties: {} };
+}
+
+function asUiSchema(value: unknown): V2UiSchemaDto {
+	if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+		return structuredClone(value) as V2UiSchemaDto;
+	}
+	return {};
+}
+
+function asLogic(value: unknown): V2LogicGraphDto {
+	if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+		return value as V2LogicGraphDto;
+	}
+	return { rules: [] };
 }
 
 const file = loadSnapshotPayload();
-const rawSchema =
-	file.jsonSchema &&
-	typeof file.jsonSchema === "object" &&
-	!Array.isArray(file.jsonSchema)
-		? (file.jsonSchema as Record<string, unknown>)
-		: { type: "object", properties: {} };
 
-const jsonSchema = stripDraft07Schema(rawSchema);
+/** Как в v35 export — без applyDictionaryBindings / enrichAnketaLayout. */
+export const V2_DEFAULT_TEMPLATE_SNAPSHOT = {
+	jsonSchema: asJsonSchema(file.jsonSchema),
+	uiSchema: asUiSchema(file.uiSchema),
+	logic: asLogic(file.logic),
+	dictionariesSnapshot: (file.dictionariesSnapshot ??
+		({
+			referencedDictionaryCodes: collectDictionaryCodesFromUiSchema(
+				asUiSchema(file.uiSchema),
+			),
+		} satisfies V2DictionariesSnapshotDto)) as V2DictionariesSnapshotDto,
+	releaseNotes:
+		"Заводская схема V2 — эталон шаблона «Новая схема» (export smart-anketa-v2, v35)",
+};
 
-const rawUi =
-	typeof file.uiSchema === "object" &&
-	file.uiSchema !== null &&
-	!Array.isArray(file.uiSchema)
-		? structuredClone(file.uiSchema)
-		: {};
+const { jsonSchema, uiSchema, dictionariesSnapshot } =
+	V2_DEFAULT_TEMPLATE_SNAPSHOT;
 
-const dictionaryBindings = buildDictionaryBindingsFromSchema(jsonSchema);
-
-const uiSchema = enrichAnketaLayoutUiSchema(
-	applyDictionaryBindingsToUiSchema(rawUi as V2UiSchemaDto, dictionaryBindings),
-	jsonSchema,
-);
-
-const logic =
-	typeof file.logic === "object" &&
-	file.logic !== null &&
-	!Array.isArray(file.logic)
-		? (file.logic as V2LogicGraphDto)
-		: ({ rules: [] } satisfies V2LogicGraphDto);
-
-/** Заводские справочники (enum схемы + ui-only привязки из uiSchema). */
+/** Заводские справочники (enum схемы + ui-only привязки из uiSchema v35). */
 const schemaDictionaries = buildDefaultDictionariesFromJsonSchema(jsonSchema);
+const uiDictionaryAllowlist = dictionariesSnapshot.referencedDictionaryCodes
+	?.length
+	? new Set(dictionariesSnapshot.referencedDictionaryCodes)
+	: undefined;
 const uiReferencedDictionaries = buildDictionariesFromUiSchemaReferences(
 	jsonSchema,
 	uiSchema,
 	new Set(schemaDictionaries.map((d) => d.code)),
-	FACTORY_DICTIONARY_CODE_SET,
+	uiDictionaryAllowlist,
 );
 export const V2_DEFAULT_DICTIONARIES = [
 	...schemaDictionaries,
@@ -108,15 +99,5 @@ export const V2_DEFAULT_DICTIONARIES = [
 
 /** Коды справочников, привязанных к заводской uiSchema. */
 export const V2_DEFAULT_REFERENCED_DICTIONARY_CODES =
+	dictionariesSnapshot.referencedDictionaryCodes ??
 	collectDictionaryCodesFromUiSchema(uiSchema);
-
-export const V2_DEFAULT_TEMPLATE_SNAPSHOT = {
-	jsonSchema,
-	uiSchema,
-	logic,
-	dictionariesSnapshot: {
-		referencedDictionaryCodes: V2_DEFAULT_REFERENCED_DICTIONARY_CODES,
-	} satisfies V2DictionariesSnapshotDto,
-	releaseNotes:
-		"Заводская схема V2 — эталон шаблона «Новая схема» (smart-anketa-v2 export)",
-};

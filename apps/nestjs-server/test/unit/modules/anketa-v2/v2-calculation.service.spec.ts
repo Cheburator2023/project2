@@ -3,7 +3,7 @@ import {
 	CONTROL_TYPICAL_TASKS,
 	SOURCE_TYPICAL_TASKS,
 } from "../../../../src/modules/anketa-v2/constants/v2-source-works.builder";
-import { V2_DEFAULT_LOGIC_GRAPH } from "../../../../src/modules/anketa-v2/constants/v2-default-logic";
+import { V2_DEFAULT_TEMPLATE_SNAPSHOT } from "../../../../src/modules/anketa-v2/constants/v2-default-template-snapshot";
 import { V2CalculationService } from "../../../../src/modules/anketa-v2/services/v2-calculation.service";
 import type {
 	BuildCatalogTasksParams,
@@ -158,7 +158,7 @@ describe("V2CalculationService", () => {
 
 	it("computes unified Total = typicalTotal + atypicalTotal (ФТ-026)", async () => {
 		const summaryOnlyGraph = {
-			rules: V2_DEFAULT_LOGIC_GRAPH.rules.filter((r) =>
+			rules: V2_DEFAULT_TEMPLATE_SNAPSHOT.logic.rules.filter((r) =>
 				["unified-typical-total", "unified-grand-total"].includes(r.id),
 			),
 		};
@@ -189,7 +189,7 @@ describe("V2CalculationService", () => {
 	});
 
 	it("generates internal source typical works from factory default logic", async () => {
-		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
 			streamDataSources: {
 				sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
 			},
@@ -220,7 +220,7 @@ describe("V2CalculationService", () => {
 	});
 
 	it("migrates detailInfo.sourceSystems before source typical works generation", async () => {
-		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
 			detailInfo: {
 				sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
 			},
@@ -233,7 +233,7 @@ describe("V2CalculationService", () => {
 	});
 
 	it("uses stream localParams for coefficient when source row has no weights (ФТ-024)", async () => {
-		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
 			streamDataSources: {
 				localParams: {
 					domainComplexity: "Высокая",
@@ -249,7 +249,7 @@ describe("V2CalculationService", () => {
 	});
 
 	it("applies multiplicative group coefficient from dictionary weights (ФТ-024)", async () => {
-		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
 			streamDataSources: {
 				sourceSystems: [
 					{
@@ -273,7 +273,7 @@ describe("V2CalculationService", () => {
 	});
 
 	it("generates external source works (stage 214+) for external type", async () => {
-		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
 			streamDataSources: {
 				sourceSystems: [{ name: "Внешний поставщик", type: "Внешний" }],
 			},
@@ -288,7 +288,7 @@ describe("V2CalculationService", () => {
 	});
 
 	it("generates control-model works from selected control types", async () => {
-		const result = await service.evaluate(V2_DEFAULT_LOGIC_GRAPH, {
+		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
 			streamModelControl: {
 				control: {
 					controlTypes: ["КД", "ОК"],

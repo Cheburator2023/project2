@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { V2_ALL_DEFAULT_DICTIONARIES } from "../constants/v2-default-dictionary-codes";
-import { FACTORY_DICTIONARY_CODE_SET } from "../constants/factory-dictionary-codes";
+import { isV2DefaultDictionaryCode } from "../constants/v2-default-dictionary-codes";
 import {
 	buildLegacyFactoryDictionaryCodes,
 	isObsoleteFactoryDictionary,
@@ -165,7 +165,7 @@ export class V2DictionarySeedService implements OnModuleInit {
 		let removed = 0;
 
 		for (const dictionary of dictionaries) {
-			if (FACTORY_DICTIONARY_CODE_SET.has(dictionary.code)) continue;
+			if (isV2DefaultDictionaryCode(dictionary.code)) continue;
 			if (codesInUse.has(dictionary.code)) continue;
 			if (!isObsoleteFactoryDictionary(dictionary, legacyCodes)) {
 				continue;

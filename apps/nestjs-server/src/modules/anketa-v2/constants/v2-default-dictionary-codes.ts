@@ -3,9 +3,7 @@ import {
 	buildAllDefaultDictionaries,
 	findDefaultDictionaryDef,
 } from "./v2-default-dictionaries.registry";
-import { FACTORY_DICTIONARY_CODE_SET } from "./factory-dictionary-codes";
-
-/** Все заводские справочники (схема без дублей + методология), только factory allowlist. */
+/** Все заводские справочники (схема без дублей + методология). */
 export const V2_ALL_DEFAULT_DICTIONARIES = buildAllDefaultDictionaries(
 	V2_DEFAULT_DICTIONARIES,
 );
@@ -15,7 +13,7 @@ export const V2_DEFAULT_DICTIONARY_CODES: readonly string[] =
 	V2_ALL_DEFAULT_DICTIONARIES.map((d) => d.code);
 
 export function isV2DefaultDictionaryCode(code: string): boolean {
-	return FACTORY_DICTIONARY_CODE_SET.has(code);
+	return V2_ALL_DEFAULT_DICTIONARIES.some((d) => d.code === code);
 }
 
 export function findV2DefaultDictionaryDef(code: string) {
