@@ -10,28 +10,77 @@ function repo<T>(rows: T[]): MockRepository<T> {
 	};
 }
 
+const WORK_WITH_TRIGGER = "11111111-1111-1111-1111-111111111111";
+const WORK_WITHOUT_TRIGGERS = "22222222-2222-2222-2222-222222222222";
+const STREAM = "ИД. Внутренний";
+
+const DEFAULT_ASSIGNMENTS = [
+	{
+		id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+		workId: WORK_WITH_TRIGGER,
+		streamExecutor: STREAM,
+		isActive: true,
+	},
+	{
+		id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+		workId: WORK_WITHOUT_TRIGGERS,
+		streamExecutor: STREAM,
+		isActive: true,
+	},
+];
+
 function createService({
 	rules,
+	assignments = DEFAULT_ASSIGNMENTS,
+	laborParams = [],
+	versionConfigs = [],
 }: {
 	rules: Array<{
 		workId: string;
 		streamExecutor: string;
 		paramCode: string;
 		paramName: string | null;
-		operator: "=" | "!=" | ">=" | "<=" | ">" | "<";
+		operator: string;
 		valueCode: string | null;
 		valueLabel: string | null;
+		valueCodes?: Array<{ code: string; label: string | null }> | null;
+	}>;
+	assignments?: Array<{
+		id: string;
+		workId: string;
+		streamExecutor: string;
+		isActive: boolean;
+	}>;
+	laborParams?: Array<{
+		workId: string;
+		streamExecutor: string;
+		paramCode: string;
+		kind: string;
+		anyOfValueCodes?: string[] | null;
+		anyOfValueLabels?: string[] | null;
+		coeffOn?: string;
+		coeffOff?: string;
+	}>;
+	versionConfigs?: Array<{
+		workId: string;
+		streamExecutor: string;
+		templateVersionId: string;
+		formula: unknown;
+		formulaText: string | null;
+		roundingMode: string;
+		roundingStep: string | null;
+		calculationLogic: unknown;
 	}>;
 }) {
 	const workRepository = repo([
 		{
-			id: "11111111-1111-1111-1111-111111111111",
+			id: WORK_WITH_TRIGGER,
 			name: "Работа с триггером",
 			workType: "Типовая",
 			archComponentType: "Система-источник",
 		},
 		{
-			id: "22222222-2222-2222-2222-222222222222",
+			id: WORK_WITHOUT_TRIGGERS,
 			name: "Работа без триггеров",
 			workType: "Типовая",
 			archComponentType: "Система-источник",
@@ -39,15 +88,15 @@ function createService({
 	]);
 	const normRepository = repo([
 		{
-			workId: "11111111-1111-1111-1111-111111111111",
-			streamExecutor: "ИД. Внутренний",
+			workId: WORK_WITH_TRIGGER,
+			streamExecutor: STREAM,
 			normValue: "2",
 			validFrom: "2025-01-01",
 			validTo: null,
 		},
 		{
-			workId: "22222222-2222-2222-2222-222222222222",
-			streamExecutor: "ИД. Внутренний",
+			workId: WORK_WITHOUT_TRIGGERS,
+			streamExecutor: STREAM,
 			normValue: "3",
 			validFrom: "2025-01-01",
 			validTo: null,
@@ -55,7 +104,9 @@ function createService({
 	]);
 	const ruleRepository = repo(rules);
 	const laborRepository = repo([]);
-	const versionConfigRepository = repo([]);
+	const laborParamRepository = repo(laborParams);
+	const assignmentRepository = repo(assignments);
+	const versionConfigRepository = repo(versionConfigs);
 	const paramCatalogService = {
 		listTriggerStatusCatalog: jest.fn(async () => []),
 	};
@@ -65,6 +116,8 @@ function createService({
 		normRepository as never,
 		ruleRepository as never,
 		laborRepository as never,
+		laborParamRepository as never,
+		assignmentRepository as never,
 		versionConfigRepository as never,
 		paramCatalogService as never,
 	);
@@ -75,8 +128,8 @@ describe("V2TypicalWorkRuntimeService", () => {
 		const service = createService({
 			rules: [
 				{
-					workId: "11111111-1111-1111-1111-111111111111",
-					streamExecutor: "ИД. Внутренний",
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
 					paramCode: "type",
 					paramName: "Тип источника",
 					operator: "=",
@@ -88,31 +141,56 @@ describe("V2TypicalWorkRuntimeService", () => {
 
 		const matched = await service.buildCatalogTasks({
 			archComponentType: "Система-источник",
-			streamExecutor: "ИД. Внутренний",
+			streamExecutor: STREAM,
 			source: { type: "Внутренний" },
 			templateVersionId: null,
 			atDate: "2025-06-01",
 		});
 		const notMatched = await service.buildCatalogTasks({
 			archComponentType: "Система-источник",
-			streamExecutor: "ИД. Внутренний",
+			streamExecutor: STREAM,
 			source: { type: "Внешний" },
 			templateVersionId: null,
 			atDate: "2025-06-01",
 		});
 
-		expect(matched.map((task) => task.workId)).toEqual([
-			"11111111-1111-1111-1111-111111111111",
-		]);
+		expect(matched.map((task) => task.workId)).toEqual([WORK_WITH_TRIGGER]);
 		expect(notMatched).toEqual([]);
+	});
+
+	it("returns empty when work is not assigned to stream", async () => {
+		const service = createService({
+			rules: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "type",
+					paramName: "Тип источника",
+					operator: "=",
+					valueCode: null,
+					valueLabel: "Внутренний",
+				},
+			],
+			assignments: [],
+		});
+
+		const tasks = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			templateVersionId: null,
+			atDate: "2025-06-01",
+		});
+
+		expect(tasks).toEqual([]);
 	});
 
 	it("supports numeric trigger operators in runtime task generation", async () => {
 		const service = createService({
 			rules: [
 				{
-					workId: "11111111-1111-1111-1111-111111111111",
-					streamExecutor: "ИД. Внутренний",
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
 					paramCode: "metricCount",
 					paramName: "Количество метрик",
 					operator: ">=",
@@ -124,14 +202,14 @@ describe("V2TypicalWorkRuntimeService", () => {
 
 		const matched = await service.buildCatalogTasks({
 			archComponentType: "Система-источник",
-			streamExecutor: "ИД. Внутренний",
+			streamExecutor: STREAM,
 			source: { metricCount: 12 },
 			templateVersionId: null,
 			atDate: "2025-06-01",
 		});
 		const notMatched = await service.buildCatalogTasks({
 			archComponentType: "Система-источник",
-			streamExecutor: "ИД. Внутренний",
+			streamExecutor: STREAM,
 			source: { metricCount: 8 },
 			templateVersionId: null,
 			atDate: "2025-06-01",
@@ -139,5 +217,101 @@ describe("V2TypicalWorkRuntimeService", () => {
 
 		expect(matched).toHaveLength(1);
 		expect(notMatched).toHaveLength(0);
+	});
+
+	it("supports in / not_in trigger operators", async () => {
+		const service = createService({
+			rules: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "region",
+					paramName: "Регион",
+					operator: "in",
+					valueCode: null,
+					valueLabel: null,
+					valueCodes: [
+						{ code: "eu", label: "Европа" },
+						{ code: "us", label: "США" },
+					],
+				},
+			],
+		});
+
+		const matched = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { region: "eu" },
+			templateVersionId: null,
+			atDate: "2025-06-01",
+		});
+		const excluded = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { region: "asia" },
+			templateVersionId: null,
+			atDate: "2025-06-01",
+		});
+
+		expect(matched).toHaveLength(1);
+		expect(excluded).toHaveLength(0);
+	});
+
+	it("applies labor any-of coefficient in runtime calculation", async () => {
+		const service = createService({
+			rules: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "type",
+					paramName: "Тип",
+					operator: "=",
+					valueCode: null,
+					valueLabel: "Внутренний",
+				},
+			],
+			laborParams: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "flag",
+					kind: "any_of",
+					anyOfValueCodes: ["yes"],
+					anyOfValueLabels: ["Да"],
+					coeffOn: "2",
+					coeffOff: "1",
+				},
+			],
+			versionConfigs: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					templateVersionId: "tpl-v1",
+					formula: [{ kind: "norm" }, { kind: "param_coeff", paramCode: "flag" }],
+					formulaText: null,
+					roundingMode: "none",
+					roundingStep: null,
+					calculationLogic: null,
+				},
+			],
+		});
+
+		const on = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний", flag: "yes" },
+			templateVersionId: "tpl-v1",
+			atDate: "2025-06-01",
+		});
+		const off = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний", flag: "no" },
+			templateVersionId: "tpl-v1",
+			atDate: "2025-06-01",
+		});
+
+		expect(on[0]?.coefficient).toBe(2);
+		expect(off[0]?.coefficient).toBe(1);
 	});
 });

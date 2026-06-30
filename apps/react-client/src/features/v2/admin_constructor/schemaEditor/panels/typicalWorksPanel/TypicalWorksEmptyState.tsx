@@ -5,11 +5,13 @@ import Typography from "@mui/material/Typography";
 type TypicalWorksEmptyStateProps = {
 	areaTitle: string;
 	onCreateWork: () => void;
+	onAssignFromCatalog: () => void;
 };
 
 export function TypicalWorksEmptyState({
 	areaTitle,
 	onCreateWork,
+	onAssignFromCatalog,
 }: TypicalWorksEmptyStateProps) {
 	return (
 		<Box
@@ -57,6 +59,19 @@ export function TypicalWorksEmptyState({
 						flexWrap: "wrap",
 					}}
 				>
+					<Button
+						variant="outlined"
+						onClick={onAssignFromCatalog}
+						sx={{
+							textTransform: "none",
+							height: 40,
+							px: 2.25,
+							borderRadius: "9px",
+							fontWeight: 600,
+						}}
+					>
+						Добавить из каталога
+					</Button>
 					<Button
 						variant="contained"
 						onClick={onCreateWork}

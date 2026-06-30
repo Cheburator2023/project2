@@ -6,6 +6,11 @@ import type {
 	V2TypicalWorkLaborCoefficientDto,
 	V2TypicalWorkListItemDto,
 	V2TypicalWorkListResponseDto,
+	V2TypicalWorkAssignmentListResponseDto,
+	V2TypicalWorkAssignmentListItemDto,
+	V2TypicalWorkAssignmentStatusDto,
+	V2TypicalWorkFormulaBadgeDto,
+	V2TypicalWorkCatalogListResponseDto,
 	V2TypicalWorkNormDto,
 	V2TypicalWorkRuleDto,
 	V2WorkTriggerStatus,
@@ -19,13 +24,19 @@ import {
 	resolveActiveNormOnDate,
 	compileStoredTypicalWorkResultLogic,
 	tokensToText,
+	computeFormulaBadge,
+	normalizeStoredFormula,
+	termsToTokenFormula,
 } from "@smart-anketa/api-contract";
 import { FACTORY_TEMPLATE_VERSION_ID } from "../constants/factory-template-version";
+import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
 import { V2TypicalWorkNormEntity } from "../entities/v2-typical-work-norm.entity";
 import { V2TypicalWorkRuleEntity } from "../entities/v2-typical-work-rule.entity";
 import { V2TypicalWorkLaborCoefficientEntity } from "../entities/v2-typical-work-labor-coefficient.entity";
+import { V2TypicalWorkLaborParamEntity } from "../entities/v2-typical-work-labor-param.entity";
+import { V2TypicalWorkAssignmentEntity } from "../entities/v2-typical-work-assignment.entity";
 import { V2TypicalWorkVersionConfigEntity } from "../entities/v2-typical-work-version-config.entity";
 import {
 	DEFAULT_NORM_VALID_FROM,
@@ -245,10 +256,131 @@ export class V2TypicalWorkService {
 		private readonly ruleRepository: Repository<V2TypicalWorkRuleEntity>,
 		@InjectRepository(V2TypicalWorkLaborCoefficientEntity)
 		private readonly laborRepository: Repository<V2TypicalWorkLaborCoefficientEntity>,
+		@InjectRepository(V2TypicalWorkLaborParamEntity)
+		private readonly laborParamRepository: Repository<V2TypicalWorkLaborParamEntity>,
+		@InjectRepository(V2TypicalWorkAssignmentEntity)
+		private readonly assignmentRepository: Repository<V2TypicalWorkAssignmentEntity>,
+		@InjectRepository(V2QuestionnaireEntity)
+		private readonly questionnaireRepository: Repository<V2QuestionnaireEntity>,
 		@InjectRepository(V2TypicalWorkVersionConfigEntity)
 		private readonly versionConfigRepository: Repository<V2TypicalWorkVersionConfigEntity>,
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
 	) {}
+
+	async listCatalog(): Promise<V2TypicalWorkCatalogListResponseDto> {
+		const works = await this.workRepository.find({
+			order: { archComponentType: "ASC", name: "ASC" },
+		});
+		const workIds = works.map((w) => w.id);
+		const assignments = workIds.length
+			? await this.assignmentRepository.find({ where: { workId: In(workIds) } })
+			: [];
+		const assignmentsByWork = groupBy(assignments, (a) => a.workId);
+		const streamsByWork = new Map<string, Set<string>>();
+		for (const a of assignments) {
+			const set = streamsByWork.get(a.workId) ?? new Set<string>();
+			set.add(a.streamExecutor);
+			streamsByWork.set(a.workId, set);
+		}
+
+		const items = works.map((work) => ({
+			id: work.id,
+			name: work.name,
+			archComponentType: work.archComponentType,
+			workType: work.workType,
+			streams: [...(streamsByWork.get(work.id) ?? [])],
+			assignmentCount: assignmentsByWork.get(work.id)?.length ?? 0,
+		}));
+
+		return { total: items.length, items };
+	}
+
+	async listAssignments(query: {
+		workId?: string;
+		streamExecutor?: string;
+		archComponentType?: string;
+		templateVersionId?: string;
+	}): Promise<V2TypicalWorkAssignmentListResponseDto> {
+		const assignments = await this.assignmentRepository.find({
+			order: { streamExecutor: "ASC" },
+		});
+		if (assignments.length === 0) return { total: 0, items: [] };
+
+		const workIds = unique(assignments.map((a) => a.workId));
+		const works = await this.workRepository.find({ where: { id: In(workIds) } });
+		const workById = new Map(works.map((w) => [w.id, w]));
+		const atDate = todayIsoDate();
+		const triggerStatusCatalog =
+			await this.paramCatalogService.listTriggerStatusCatalog(atDate);
+
+		const rules = await this.ruleRepository.find({
+			where: { workId: In(workIds) },
+		});
+		const rulesByKey = groupBy(rules, (r) => `${r.workId}|${r.streamExecutor}`);
+
+		const items: V2TypicalWorkAssignmentListItemDto[] = [];
+		for (const assignment of assignments) {
+			const work = workById.get(assignment.workId);
+			if (!work) continue;
+			if (query.workId && assignment.workId !== query.workId) continue;
+			if (
+				query.streamExecutor &&
+				assignment.streamExecutor !== query.streamExecutor.trim()
+			) {
+				continue;
+			}
+			if (
+				query.archComponentType &&
+				work.archComponentType !== query.archComponentType
+			) {
+				continue;
+			}
+
+			let formulaBadge: V2TypicalWorkFormulaBadgeDto | undefined;
+			if (query.templateVersionId) {
+				const config = await this.versionConfigRepository.findOne({
+					where: {
+						workId: assignment.workId,
+						templateVersionId: query.templateVersionId,
+						streamExecutor: assignment.streamExecutor,
+					},
+				});
+				if (config) {
+					const terms = normalizeStoredFormula(config.formula, config.formulaText);
+					formulaBadge = computeFormulaBadge(terms.terms);
+				}
+			}
+
+			const assignmentRules =
+				rulesByKey.get(`${assignment.workId}|${assignment.streamExecutor}`) ?? [];
+
+			items.push({
+				id: assignment.id,
+				workId: assignment.workId,
+				workName: work.name,
+				archComponentType: work.archComponentType,
+				streamExecutor: assignment.streamExecutor,
+				isActive: assignment.isActive,
+				formulaBadge,
+				triggerStatus: resolveTriggerStatus(
+					assignmentRules,
+					triggerStatusCatalog,
+					atDate,
+				),
+			});
+		}
+
+		return { total: items.length, items };
+	}
+
+	async countSchemaUsages(workId: string): Promise<number> {
+		const rows = await this.questionnaireRepository
+			.createQueryBuilder("q")
+			.select("DISTINCT q.bound_template_version_id", "versionId")
+			.where("q.form_data::text LIKE :needle", { needle: `%${workId}%` })
+			.getRawMany<{ versionId: string }>();
+		return rows.filter((row) => row.versionId).length;
+	}
 
 	async listWorks(query: {
 		archComponentType?: string;
@@ -259,7 +391,7 @@ export class V2TypicalWorkService {
 		});
 
 		const workIds = works.map((w) => w.id);
-		const [norms, rules, laborRows] = await Promise.all([
+		const [norms, rules, laborRows, assignments] = await Promise.all([
 			workIds.length
 				? this.normRepository.find({ where: { workId: In(workIds) } })
 				: [],
@@ -269,11 +401,15 @@ export class V2TypicalWorkService {
 			workIds.length
 				? this.laborRepository.find({ where: { workId: In(workIds) } })
 				: [],
+			workIds.length
+				? this.assignmentRepository.find({ where: { workId: In(workIds) } })
+				: [],
 		]);
 
 		const normsByWork = groupBy(norms, (n) => n.workId);
 		const rulesByWork = groupBy(rules, (r) => r.workId);
 		const laborByWork = groupBy(laborRows, (r) => r.workId);
+		const assignmentsByWork = groupBy(assignments, (a) => a.workId);
 		const atDate = todayIsoDate();
 		const triggerStatusCatalog =
 			await this.paramCatalogService.listTriggerStatusCatalog(atDate);
@@ -289,7 +425,9 @@ export class V2TypicalWorkService {
 				const workNorms = normsByWork.get(work.id) ?? [];
 				const workRules = rulesByWork.get(work.id) ?? [];
 				const workLabor = laborByWork.get(work.id) ?? [];
+				const workAssignments = assignmentsByWork.get(work.id) ?? [];
 				const streams = unique([
+					...workAssignments.map((a) => a.streamExecutor),
 					...workNorms.map((n) => n.streamExecutor),
 					...workRules.map((r) => r.streamExecutor),
 					...workLabor.map((l) => l.streamExecutor),
@@ -325,6 +463,7 @@ export class V2TypicalWorkService {
 					name: work.name,
 					archComponentType: work.archComponentType,
 					workType: work.workType,
+					assignmentStatus: resolveAssignmentStatus(workAssignments),
 					triggerStatus: resolveTriggerStatus(
 						workRules.filter((r) =>
 							streamForStatus ? r.streamExecutor === streamForStatus : true,
@@ -364,27 +503,45 @@ export class V2TypicalWorkService {
 		}
 
 		const stream = streamExecutor.trim();
-		const [norms, rules, laborRows, versionConfig] = await Promise.all([
+		const [norms, rules, laborRows, laborParams, assignment, versionConfig] =
+			await Promise.all([
 			this.normRepository.find({
 				where: { workId, streamExecutor: stream },
 				order: { validFrom: "ASC" },
 			}),
 			this.ruleRepository.find({
 				where: { workId, streamExecutor: stream },
+				order: { sortOrder: "ASC" },
 			}),
 			this.laborRepository.find({
 				where: { workId, streamExecutor: stream },
 			}),
+			this.laborParamRepository.find({
+				where: { workId, streamExecutor: stream },
+			}),
+			this.assignmentRepository.findOne({
+				where: { workId, streamExecutor: stream },
+			}),
 			templateVersionId
 				? this.versionConfigRepository.findOne({
-						where: { workId, templateVersionId },
+						where: { workId, templateVersionId, streamExecutor: stream },
 					})
 				: Promise.resolve(null),
 		]);
 
-		const laborParams = groupLaborByParam(laborRows.map(mapLaborEntity));
+		const laborParamsGrouped = groupLaborByParam(
+			laborRows.map(mapLaborEntity),
+			laborParams,
+		);
+		const termsFormula = versionConfig
+			? normalizeStoredFormula(
+					versionConfig.formula,
+					versionConfig.formulaText,
+				)
+			: normalizeStoredFormula(null);
 		const triggerStatusCatalog =
 			await this.paramCatalogService.listTriggerStatusCatalog(todayIsoDate());
+		const usedOnSchemasCount = await this.countSchemaUsages(workId);
 
 		return {
 			id: work.id,
@@ -392,6 +549,13 @@ export class V2TypicalWorkService {
 			archComponentType: work.archComponentType,
 			workType: work.workType,
 			streamExecutor: stream,
+			assignmentId: assignment?.id ?? null,
+			assignmentStatus: resolveAssignmentStatus(
+				assignment ? [assignment] : [],
+				usedOnSchemasCount,
+			),
+			usedOnSchemasCount,
+			formulaBadge: computeFormulaBadge(termsFormula.terms),
 			triggerStatus: resolveTriggerStatus(
 				rules,
 				triggerStatusCatalog,
@@ -399,14 +563,10 @@ export class V2TypicalWorkService {
 			),
 			norms: norms.map(mapNormEntity),
 			rules: rules.map(mapRuleEntity),
-			laborParams,
+			laborParams: laborParamsGrouped,
+			formulaTerms: termsFormula,
 			formula: versionConfig
-				? {
-						tokens: Array.isArray(versionConfig.formula)
-							? (versionConfig.formula as V2TypicalWorkCardDto["formula"]["tokens"])
-							: defaultWorkFormula().tokens,
-						text: versionConfig.formulaText ?? defaultWorkFormula().text,
-					}
+				? termsToTokenFormula(termsFormula)
 				: defaultWorkFormula(),
 			rounding: versionConfig
 				? {
@@ -439,10 +599,19 @@ function unique(values: string[]): string[] {
 	return [...new Set(values.filter(Boolean))];
 }
 
+function resolveAssignmentStatus(
+	assignments: Pick<V2TypicalWorkAssignmentEntity, "id">[],
+	usedOnSchemasCount = 0,
+): V2TypicalWorkAssignmentStatusDto {
+	if (assignments.length === 0) return "unassigned";
+	if (usedOnSchemasCount > 0) return "used_on_schemas";
+	return "free";
+}
+
 function resolveTriggerStatus(
 	rules: Pick<
 		V2TypicalWorkRuleEntity,
-		"paramCode" | "valueCode" | "valueLabel"
+		"paramCode" | "paramName" | "operator" | "valueCode" | "valueLabel" | "valueCodes"
 	>[],
 	triggerStatusCatalog: WorkTriggerStatusCatalogParam[],
 	atDate: string,
@@ -450,8 +619,11 @@ function resolveTriggerStatus(
 	return computeWorkTriggerStatus(
 		rules.map((rule) => ({
 			paramCode: rule.paramCode,
+			paramName: rule.paramName,
+			operator: rule.operator,
 			valueCode: rule.valueCode,
 			valueLabel: rule.valueLabel,
+			values: rule.valueCodes ?? undefined,
 		})),
 		triggerStatusCatalog,
 		atDate,
@@ -477,6 +649,8 @@ function mapRuleEntity(entity: V2TypicalWorkRuleEntity): V2TypicalWorkRuleDto {
 		operator: entity.operator as V2TypicalWorkRuleDto["operator"],
 		valueCode: entity.valueCode,
 		valueLabel: entity.valueLabel,
+		values: entity.valueCodes ?? undefined,
+		sortOrder: entity.sortOrder,
 	};
 }
 
@@ -496,6 +670,7 @@ function mapLaborEntity(
 
 function groupLaborByParam(
 	rows: V2TypicalWorkLaborCoefficientDto[],
+	headers: V2TypicalWorkLaborParamEntity[],
 ): V2TypicalWorkCardDto["laborParams"] {
 	const groups = new Map<string, V2TypicalWorkCardDto["laborParams"][number]>();
 	for (const row of rows) {
@@ -507,7 +682,39 @@ function groupLaborByParam(
 		groups.set(row.paramCode, {
 			paramCode: row.paramCode,
 			paramName: row.paramName,
+			kind: "by_value",
 			coefficients: [row],
+		});
+	}
+	for (const header of headers) {
+		const existing = groups.get(header.paramCode);
+		const kind = header.kind === "any_of" ? "any_of" : "by_value";
+		if (existing) {
+			existing.kind = kind;
+			if (kind === "any_of") {
+				existing.anyOf = {
+					valueCodes: header.anyOfValueCodes ?? [],
+					valueLabels: header.anyOfValueLabels ?? [],
+					coeffOn: decimalToNumber(header.coeffOn),
+					coeffOff: decimalToNumber(header.coeffOff),
+				};
+			}
+			continue;
+		}
+		groups.set(header.paramCode, {
+			paramCode: header.paramCode,
+			paramName: header.paramName,
+			kind,
+			coefficients: [],
+			anyOf:
+				kind === "any_of"
+					? {
+							valueCodes: header.anyOfValueCodes ?? [],
+							valueLabels: header.anyOfValueLabels ?? [],
+							coeffOn: decimalToNumber(header.coeffOn),
+							coeffOff: decimalToNumber(header.coeffOff),
+						}
+					: null,
 		});
 	}
 	return [...groups.values()];

@@ -14,6 +14,8 @@ exports.computeWorkTriggerStatus = computeWorkTriggerStatus;
 exports.isWorkTriggerGroupInvalid = isWorkTriggerGroupInvalid;
 exports.isWorkCoefficientValueAvailable = isWorkCoefficientValueAvailable;
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
+const v2_work_terms_formula_util_1 = require("./v2-work-terms-formula.util");
+const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
 function parseIsoDay(value) {
     const day = value.slice(0, 10);
     return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
@@ -164,6 +166,17 @@ function collectTypicalWorkPatchValidationErrors(dto, options) {
     if (dto.norms && stream) {
         issues.push(...validateNormInputs(dto.norms, stream, { coverageDate }));
     }
+    if (dto.laborParams) {
+        for (const [index, group] of dto.laborParams.entries()) {
+            if (group.kind === "any_of" && group.anyOf) {
+                issues.push(...validateCoefficientValue(group.anyOf.coeffOn, `laborParams[${index}].anyOf.coeffOn`));
+                issues.push(...validateCoefficientValue(group.anyOf.coeffOff, `laborParams[${index}].anyOf.coeffOff`));
+            }
+            for (const [rowIndex, row] of (group.coefficients ?? []).entries()) {
+                issues.push(...validateCoefficientValue(row.coefficient, `laborParams[${index}].coefficients[${rowIndex}].coefficient`));
+            }
+        }
+    }
     if (dto.laborCoefficients) {
         dto.laborCoefficients.forEach((row, index) => {
             issues.push(...validateCoefficientValue(row.coefficient, `laborCoefficients[${index}].coefficient`));
@@ -183,6 +196,19 @@ function collectTypicalWorkPatchValidationErrors(dto, options) {
     if (dto.rounding) {
         issues.push(...validateRoundingInput(dto.rounding));
     }
+    if (dto.formulaTerms) {
+        const termsError = (0, v2_work_terms_formula_util_1.validateTermsFormula)(dto.formulaTerms.terms);
+        if (termsError) {
+            issues.push({ path: "formulaTerms", message: termsError });
+        }
+    }
+    if (dto.formulaTerms && dto.laborParams) {
+        const tokens = dto.formula?.tokens ?? (0, v2_work_terms_formula_util_1.termsToTokenFormula)(dto.formulaTerms).tokens;
+        const allowed = collectAllowedParamCodes(dto.laborParams.flatMap((g) => (g.coefficients ?? []).length
+            ? (g.coefficients ?? [])
+            : [{ paramCode: g.paramCode }]));
+        issues.push(...validateFormulaAgainstParams(tokens, allowed));
+    }
     if (dto.formula && dto.laborCoefficients) {
         issues.push(...validateFormulaAgainstParams(dto.formula.tokens, collectAllowedParamCodes(dto.laborCoefficients)));
     }
@@ -201,36 +227,66 @@ function isTypicalWorkParameterValueActiveOnDate(value, atDate) {
 function filterTypicalWorkParameterValuesActiveOnDate(values, atDate) {
     return values.filter((value) => isTypicalWorkParameterValueActiveOnDate(value, atDate));
 }
-/** F-03: статус триггеров с учётом актуальности параметров каталога */
-function computeWorkTriggerStatus(rules, catalog, atDate) {
+function isRuleInputInvalid(rule, catalog, atDate) {
+    const operator = rule.operator ?? "=";
+    if (operator === "in" || operator === "not_in") {
+        const values = rule.values?.length
+            ? rule.values
+            : rule.valueCode
+                ? [{ code: rule.valueCode, label: rule.valueLabel }]
+                : [];
+        if (values.length === 0)
+            return true;
+        const param = catalog.find((item) => item.code === rule.paramCode);
+        if (!param)
+            return true;
+        return values.some((value) => {
+            if (!value.code || !value.label)
+                return true;
+            return !param.values.some((catalogValue) => (catalogValue.code === value.code ||
+                catalogValue.label === value.label) &&
+                (!atDate ||
+                    isTypicalWorkParameterValueActiveOnDate(catalogValue, atDate)));
+        });
+    }
+    if (!rule.valueLabel || !rule.valueCode)
+        return true;
+    const param = catalog.find((item) => item.code === rule.paramCode);
+    if (!param)
+        return true;
+    return !param.values.some((value) => (value.code === rule.valueCode || value.label === rule.valueLabel) &&
+        (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
+}
+/** F-03/v4: статус триггеров с учётом каталога и (опционально) черновика ответов. */
+function computeWorkTriggerStatus(rules, catalog, atDate, draftSource) {
     if (rules.length === 0)
         return "no_triggers";
-    if (rules.some((rule) => !rule.valueLabel || !rule.valueCode))
+    if (catalog?.length) {
+        for (const rule of rules) {
+            if (isRuleInputInvalid(rule, catalog, atDate))
+                return "invalid";
+        }
+    }
+    else if (rules.some((rule) => !rule.valueCode && !rule.values?.length)) {
         return "invalid";
-    if (!catalog?.length)
-        return "appears";
-    const catalogByCode = new Map(catalog.map((param) => [param.code, param]));
-    for (const rule of rules) {
-        const param = catalogByCode.get(rule.paramCode);
-        if (!param)
-            return "invalid";
-        const valueExists = param.values.some((value) => (value.code === rule.valueCode || value.label === rule.valueLabel) &&
-            (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
-        if (!valueExists)
-            return "invalid";
+    }
+    if (draftSource) {
+        const matchRules = rules.map((rule) => ({
+            paramCode: rule.paramCode,
+            paramName: rule.paramName ?? null,
+            operator: rule.operator ?? "=",
+            valueCode: rule.valueCode,
+            valueLabel: rule.valueLabel,
+            values: rule.values,
+        }));
+        return (0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(matchRules, draftSource)
+            ? "appears"
+            : "hidden";
     }
     return "appears";
 }
 function isWorkTriggerGroupInvalid(paramCode, rules, catalog, atDate) {
-    const param = catalog.find((item) => item.code === paramCode);
-    if (!param)
-        return true;
-    return rules.some((rule) => {
-        if (!rule.valueCode || !rule.valueLabel)
-            return true;
-        return !param.values.some((value) => (value.code === rule.valueCode || value.label === rule.valueLabel) &&
-            (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
-    });
+    return rules.some((rule) => isRuleInputInvalid({ ...rule, paramCode }, catalog, atDate));
 }
 /**
  * F-03 §578: значение коэффициента трудоёмкости доступно, только если оно

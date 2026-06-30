@@ -6,6 +6,8 @@ import type {
 	V2WorkTriggerStatus,
 } from "./v2-typical-work.types";
 import { validateWorkFormulaTokens } from "./v2-work-formula.util";
+import { validateTermsFormula, termsToTokenFormula } from "./v2-work-terms-formula.util";
+import { typicalWorkRulesMatchSource } from "./v2-works-catalog-match.util";
 
 export type ValidationIssue = { path: string; message: string };
 
@@ -203,6 +205,33 @@ export function collectTypicalWorkPatchValidationErrors(
 		);
 	}
 
+	if (dto.laborParams) {
+		for (const [index, group] of dto.laborParams.entries()) {
+			if (group.kind === "any_of" && group.anyOf) {
+				issues.push(
+					...validateCoefficientValue(
+						group.anyOf.coeffOn,
+						`laborParams[${index}].anyOf.coeffOn`,
+					),
+				);
+				issues.push(
+					...validateCoefficientValue(
+						group.anyOf.coeffOff,
+						`laborParams[${index}].anyOf.coeffOff`,
+					),
+				);
+			}
+			for (const [rowIndex, row] of (group.coefficients ?? []).entries()) {
+				issues.push(
+					...validateCoefficientValue(
+						row.coefficient,
+						`laborParams[${index}].coefficients[${rowIndex}].coefficient`,
+					),
+				);
+			}
+		}
+	}
+
 	if (dto.laborCoefficients) {
 		dto.laborCoefficients.forEach((row, index) => {
 			issues.push(
@@ -229,6 +258,25 @@ export function collectTypicalWorkPatchValidationErrors(
 		issues.push(...validateRoundingInput(dto.rounding));
 	}
 
+	if (dto.formulaTerms) {
+		const termsError = validateTermsFormula(dto.formulaTerms.terms);
+		if (termsError) {
+			issues.push({ path: "formulaTerms", message: termsError });
+		}
+	}
+
+	if (dto.formulaTerms && dto.laborParams) {
+		const tokens = dto.formula?.tokens ?? termsToTokenFormula(dto.formulaTerms).tokens;
+		const allowed = collectAllowedParamCodes(
+			dto.laborParams.flatMap((g) =>
+				(g.coefficients ?? []).length
+					? (g.coefficients ?? [])
+					: [{ paramCode: g.paramCode }],
+			),
+		);
+		issues.push(...validateFormulaAgainstParams(tokens, allowed));
+	}
+
 	if (dto.formula && dto.laborCoefficients) {
 		issues.push(
 			...validateFormulaAgainstParams(
@@ -243,8 +291,11 @@ export function collectTypicalWorkPatchValidationErrors(
 
 export type WorkTriggerStatusRuleInput = {
 	paramCode: string;
+	paramName?: string | null;
+	operator?: string;
 	valueCode: string | null;
 	valueLabel: string | null;
+	values?: Array<{ code: string; label: string | null }>;
 };
 
 export type WorkTriggerStatusCatalogParam = {
@@ -277,27 +328,74 @@ export function filterTypicalWorkParameterValuesActiveOnDate<
 	);
 }
 
-/** F-03: статус триггеров с учётом актуальности параметров каталога */
+function isRuleInputInvalid(
+	rule: WorkTriggerStatusRuleInput,
+	catalog: WorkTriggerStatusCatalogParam[],
+	atDate?: string,
+): boolean {
+	const operator = rule.operator ?? "=";
+	if (operator === "in" || operator === "not_in") {
+		const values = rule.values?.length
+			? rule.values
+			: rule.valueCode
+				? [{ code: rule.valueCode, label: rule.valueLabel }]
+				: [];
+		if (values.length === 0) return true;
+		const param = catalog.find((item) => item.code === rule.paramCode);
+		if (!param) return true;
+		return values.some((value) => {
+			if (!value.code || !value.label) return true;
+			return !param.values.some(
+				(catalogValue) =>
+					(catalogValue.code === value.code ||
+						catalogValue.label === value.label) &&
+					(!atDate ||
+						isTypicalWorkParameterValueActiveOnDate(catalogValue, atDate)),
+			);
+		});
+	}
+
+	if (!rule.valueLabel || !rule.valueCode) return true;
+	const param = catalog.find((item) => item.code === rule.paramCode);
+	if (!param) return true;
+	return !param.values.some(
+		(value) =>
+			(value.code === rule.valueCode || value.label === rule.valueLabel) &&
+			(!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)),
+	);
+}
+
+/** F-03/v4: статус триггеров с учётом каталога и (опционально) черновика ответов. */
 export function computeWorkTriggerStatus(
 	rules: WorkTriggerStatusRuleInput[],
 	catalog?: WorkTriggerStatusCatalogParam[],
 	atDate?: string,
+	draftSource?: Record<string, unknown>,
 ): V2WorkTriggerStatus {
 	if (rules.length === 0) return "no_triggers";
-	if (rules.some((rule) => !rule.valueLabel || !rule.valueCode)) return "invalid";
-	if (!catalog?.length) return "appears";
 
-	const catalogByCode = new Map(catalog.map((param) => [param.code, param]));
-	for (const rule of rules) {
-		const param = catalogByCode.get(rule.paramCode);
-		if (!param) return "invalid";
-		const valueExists = param.values.some(
-			(value) =>
-				(value.code === rule.valueCode || value.label === rule.valueLabel) &&
-				(!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)),
-		);
-		if (!valueExists) return "invalid";
+	if (catalog?.length) {
+		for (const rule of rules) {
+			if (isRuleInputInvalid(rule, catalog, atDate)) return "invalid";
+		}
+	} else if (rules.some((rule) => !rule.valueCode && !rule.values?.length)) {
+		return "invalid";
 	}
+
+	if (draftSource) {
+		const matchRules = rules.map((rule) => ({
+			paramCode: rule.paramCode,
+			paramName: rule.paramName ?? null,
+			operator: rule.operator ?? "=",
+			valueCode: rule.valueCode,
+			valueLabel: rule.valueLabel,
+			values: rule.values,
+		}));
+		return typicalWorkRulesMatchSource(matchRules, draftSource)
+			? "appears"
+			: "hidden";
+	}
+
 	return "appears";
 }
 
@@ -307,16 +405,7 @@ export function isWorkTriggerGroupInvalid(
 	catalog: WorkTriggerStatusCatalogParam[],
 	atDate?: string,
 ): boolean {
-	const param = catalog.find((item) => item.code === paramCode);
-	if (!param) return true;
-	return rules.some((rule) => {
-		if (!rule.valueCode || !rule.valueLabel) return true;
-		return !param.values.some(
-			(value) =>
-				(value.code === rule.valueCode || value.label === rule.valueLabel) &&
-				(!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)),
-		);
-	});
+	return rules.some((rule) => isRuleInputInvalid({ ...rule, paramCode }, catalog, atDate));
 }
 
 export type WorkCoefficientRowInput = {

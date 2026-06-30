@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
 	countActiveNormsOnDate,
+	collectTypicalWorkPatchValidationErrors,
 	computeWorkTriggerStatus,
 	isWorkCoefficientValueAvailable,
 	isTypicalWorkParameterValueActiveOnDate,
 	validateNormInputs,
 } from "./v2-typical-work-validation.util";
+import { tokensToTermsFormula } from "./v2-work-terms-formula.util";
 
 describe("validateNormInputs coverage", () => {
 	it("requires exactly one active norm on coverage date", () => {
@@ -147,6 +149,23 @@ describe("computeWorkTriggerStatus", () => {
 			),
 		).toBe("invalid");
 	});
+
+	it("returns hidden when draft answers do not satisfy triggers", () => {
+		expect(
+			computeWorkTriggerStatus(
+				[
+					{
+						paramCode: "complexity",
+						valueCode: "high",
+						valueLabel: "Высокая",
+					},
+				],
+				catalog,
+				undefined,
+				{ complexity: "low" },
+			),
+		).toBe("hidden");
+	});
 });
 
 describe("isWorkCoefficientValueAvailable (F-03 §578)", () => {
@@ -229,6 +248,55 @@ describe("isWorkCoefficientValueAvailable (F-03 §578)", () => {
 				"2025-06-01",
 			),
 		).toBe(false);
+	});
+});
+
+describe("collectTypicalWorkPatchValidationErrors", () => {
+	it("validates formulaTerms and laborParams any-of coefficients", () => {
+		const issues = collectTypicalWorkPatchValidationErrors({
+			streamExecutor: "ИД. Внутренний",
+			formulaTerms: tokensToTermsFormula({
+				tokens: [{ kind: "norm" }, { kind: "param_coeff", paramCode: "p1" }],
+				text: "H × P1",
+			}),
+			laborParams: [
+				{
+					paramCode: "p1",
+					kind: "any_of",
+					anyOf: {
+						valueCodes: ["a"],
+						valueLabels: ["A"],
+						coeffOn: -1,
+						coeffOff: 1,
+					},
+				},
+			],
+		});
+
+		expect(issues).toContainEqual(
+			expect.objectContaining({
+				path: "laborParams[0].anyOf.coeffOn",
+			}),
+		);
+	});
+
+	it("reports unknown param in formulaTerms against laborParams", () => {
+		const issues = collectTypicalWorkPatchValidationErrors({
+			streamExecutor: "ИД. Внутренний",
+			formulaTerms: tokensToTermsFormula({
+				tokens: [{ kind: "norm" }, { kind: "param_coeff", paramCode: "missing" }],
+				text: "H × missing",
+			}),
+			laborParams: [
+				{
+					paramCode: "p1",
+					kind: "by_value",
+					coefficients: [{ paramCode: "p1", valueCode: "a", valueLabel: "A", coefficient: 1 }],
+				},
+			],
+		});
+
+		expect(issues.some((i) => i.path === "formula" || i.path === "formulaTerms")).toBe(true);
 	});
 });
 

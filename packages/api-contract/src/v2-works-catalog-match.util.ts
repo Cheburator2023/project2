@@ -12,6 +12,7 @@ export type TypicalWorkRuleLike = {
 	operator: string;
 	valueCode: string | null;
 	valueLabel: string | null;
+	values?: Array<{ code: string; label: string | null }>;
 };
 
 export function resolveStreamFromSourceType(
@@ -115,6 +116,22 @@ function compareRuleValue(
 	}
 }
 
+function compareRuleValuesSet(
+	actual: unknown,
+	expectedCodes: string[],
+	expectedLabels: string[],
+	operator: string,
+): boolean {
+	const actualStr = String(actual ?? "");
+	const matches = expectedCodes.some(
+		(code, index) =>
+			actualStr === code ||
+			actualStr === (expectedLabels[index] ?? "") ||
+			actualStr === String(expectedLabels[index] ?? ""),
+	);
+	return operator === "not_in" ? !matches : matches;
+}
+
 /** Все условия работы (логическое И) против контекста строки/объекта анкеты. */
 export function typicalWorkRulesMatchSource(
 	rules: TypicalWorkRuleLike[],
@@ -137,6 +154,20 @@ export function typicalWorkRulesMatchSource(
 		}
 
 		const actual = readSourceField(source, rule.paramCode, rule.paramName);
+		if (rule.operator === "in" || rule.operator === "not_in") {
+			const values = rule.values?.length
+				? rule.values
+				: rule.valueCode
+					? [{ code: rule.valueCode, label: rule.valueLabel }]
+					: [];
+			if (values.length === 0) return false;
+			return compareRuleValuesSet(
+				actual,
+				values.map((v) => v.code),
+				values.map((v) => v.label ?? ""),
+				rule.operator,
+			);
+		}
 		if (rule.valueLabel == null && rule.valueCode == null) {
 			return actual !== undefined && actual !== null && actual !== "";
 		}
@@ -161,4 +192,25 @@ export function resolveLaborCoefficient(
 	}
 	if (valueCode != null && String(actual) === valueCode) return true;
 	return false;
+}
+
+export function resolveLaborAnyOfCoefficient(
+	source: Record<string, unknown>,
+	paramCode: string,
+	anyOf: {
+		valueCodes: string[];
+		valueLabels: string[];
+		coeffOn: number;
+		coeffOff: number;
+	},
+): number {
+	const actual = readSourceField(source, paramCode, null);
+	const actualStr = String(actual ?? "");
+	const matches = anyOf.valueCodes.some(
+		(code, index) =>
+			actualStr === code ||
+			actualStr === (anyOf.valueLabels[index] ?? "") ||
+			actualStr === String(anyOf.valueLabels[index] ?? ""),
+	);
+	return matches ? anyOf.coeffOn : anyOf.coeffOff;
 }

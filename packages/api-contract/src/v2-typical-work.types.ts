@@ -11,6 +11,8 @@ export const V2_WORK_RULE_OPERATOR_VALUES = [
 	"<=",
 	">",
 	"<",
+	"in",
+	"not_in",
 ] as const;
 
 export type V2WorkRuleOperator = (typeof V2_WORK_RULE_OPERATOR_VALUES)[number];
@@ -26,6 +28,7 @@ export type V2WorkRoundingMode = (typeof V2_WORK_ROUNDING_MODE_VALUES)[number];
 
 export const V2_WORK_TRIGGER_STATUS_VALUES = [
 	"appears",
+	"hidden",
 	"no_triggers",
 	"invalid",
 ] as const;
@@ -66,6 +69,11 @@ export type V2TypicalWorkNormDto = {
 	validTo: string | null;
 };
 
+export type V2TypicalWorkRuleValueDto = {
+	code: string;
+	label: string | null;
+};
+
 export type V2TypicalWorkRuleDto = {
 	id: string;
 	streamExecutor: string;
@@ -74,6 +82,9 @@ export type V2TypicalWorkRuleDto = {
 	operator: V2WorkRuleOperator;
 	valueCode: string | null;
 	valueLabel: string | null;
+	/** Множество значений для in / not_in (anyof). */
+	values?: V2TypicalWorkRuleValueDto[];
+	sortOrder?: number;
 };
 
 export type V2TypicalWorkLaborCoefficientDto = {
@@ -86,10 +97,20 @@ export type V2TypicalWorkLaborCoefficientDto = {
 	coefficient: number;
 };
 
+export type V2TypicalWorkLaborAnyOfDto = {
+	valueCodes: string[];
+	valueLabels: string[];
+	coeffOn: number;
+	coeffOff: number;
+};
+
 export type V2TypicalWorkLaborParamGroupDto = {
 	paramCode: string;
 	paramName: string | null;
+	/** by_value — коэффициент на каждое значение; any_of — on/off по множеству. */
+	kind?: "by_value" | "any_of";
 	coefficients: V2TypicalWorkLaborCoefficientDto[];
+	anyOf?: V2TypicalWorkLaborAnyOfDto | null;
 };
 
 export type V2TypicalWorkFormulaDto = {
@@ -102,12 +123,27 @@ export type V2TypicalWorkRoundingDto = {
 	step: number | null;
 };
 
+export type V2TypicalWorkAssignmentStatusDto =
+	| "unassigned"
+	| "free"
+	| "used_on_schemas";
+
+export type V2TypicalWorkFormulaBadgeDto =
+	| "none"
+	| "multiplier"
+	| "additive"
+	| "mixed"
+	| "transitive";
+
 export type V2TypicalWorkListItemDto = {
 	id: string;
 	name: string;
 	archComponentType: string;
 	workType: string | null;
 	triggerStatus: V2WorkTriggerStatus;
+	assignmentStatus?: V2TypicalWorkAssignmentStatusDto;
+	formulaBadge?: V2TypicalWorkFormulaBadgeDto;
+	usedOnSchemasCount?: number;
 	currentNorm: number | null;
 	streams: string[];
 	/** Действующая норма на сегодня по каждому назначенному стриму (ключ — streamExecutor в БД). */
@@ -123,6 +159,37 @@ export type V2TypicalWorkListResponseDto = {
 };
 
 import type { V2JsonLogicValue } from "./v2-template.types";
+import type { V2TypicalWorkFormulaTermsDto } from "./v2-typical-work-v4.types";
+
+export type V2TypicalWorkCatalogItemDto = {
+	id: string;
+	name: string;
+	archComponentType: string;
+	workType: string | null;
+	streams: string[];
+	assignmentCount: number;
+};
+
+export type V2TypicalWorkCatalogListResponseDto = {
+	total: number;
+	items: V2TypicalWorkCatalogItemDto[];
+};
+
+export type V2TypicalWorkAssignmentListItemDto = {
+	id: string;
+	workId: string;
+	workName: string;
+	archComponentType: string;
+	streamExecutor: string;
+	isActive: boolean;
+	formulaBadge?: V2TypicalWorkFormulaBadgeDto;
+	triggerStatus?: V2WorkTriggerStatus;
+};
+
+export type V2TypicalWorkAssignmentListResponseDto = {
+	total: number;
+	items: V2TypicalWorkAssignmentListItemDto[];
+};
 
 export type V2TypicalWorkStoredCalculationLogicDto = {
 	version: 1;
@@ -135,11 +202,16 @@ export type V2TypicalWorkCardDto = {
 	archComponentType: string;
 	workType: string | null;
 	streamExecutor: string;
+	assignmentId?: string | null;
+	assignmentStatus?: V2TypicalWorkAssignmentStatusDto;
+	formulaBadge?: V2TypicalWorkFormulaBadgeDto;
+	usedOnSchemasCount?: number;
 	triggerStatus: V2WorkTriggerStatus;
 	norms: V2TypicalWorkNormDto[];
 	rules: V2TypicalWorkRuleDto[];
 	laborParams: V2TypicalWorkLaborParamGroupDto[];
 	formula: V2TypicalWorkFormulaDto;
+	formulaTerms?: V2TypicalWorkFormulaTermsDto;
 	rounding: V2TypicalWorkRoundingDto;
 	/** Скомпилированная JsonLogic-формула (result); include собирается из rules при расчёте. */
 	calculationLogic?: V2TypicalWorkStoredCalculationLogicDto | null;
@@ -156,6 +228,7 @@ export type V2TypicalWorkPreviewResponseDto = {
 	formulaExpanded: string;
 	result: number | null;
 	error: string | null;
+	triggerStatus?: V2WorkTriggerStatus;
 };
 
 export type V2TypicalWorkNormInputDto = {
@@ -172,6 +245,8 @@ export type V2TypicalWorkRuleInputDto = {
 	operator: V2WorkRuleOperator;
 	valueCode?: string | null;
 	valueLabel?: string | null;
+	values?: V2TypicalWorkRuleValueDto[];
+	sortOrder?: number;
 };
 
 export type V2TypicalWorkLaborCoefficientInputDto = {
@@ -183,6 +258,14 @@ export type V2TypicalWorkLaborCoefficientInputDto = {
 	coefficient: number;
 };
 
+export type V2TypicalWorkLaborParamInputDto = {
+	paramCode: string;
+	paramName?: string | null;
+	kind?: "by_value" | "any_of";
+	coefficients?: V2TypicalWorkLaborCoefficientInputDto[];
+	anyOf?: V2TypicalWorkLaborAnyOfDto | null;
+};
+
 export type PatchV2TypicalWorkRequestDto = {
 	streamExecutor: string;
 	templateVersionId?: string;
@@ -191,7 +274,9 @@ export type PatchV2TypicalWorkRequestDto = {
 	norms?: V2TypicalWorkNormInputDto[];
 	rules?: V2TypicalWorkRuleInputDto[];
 	laborCoefficients?: V2TypicalWorkLaborCoefficientInputDto[];
+	laborParams?: V2TypicalWorkLaborParamInputDto[];
 	formula?: V2TypicalWorkFormulaDto;
+	formulaTerms?: V2TypicalWorkFormulaTermsDto;
 	rounding?: V2TypicalWorkRoundingDto;
 };
 
@@ -199,6 +284,23 @@ export type CreateV2TypicalWorkRequestDto = {
 	name: string;
 	archComponentType: string;
 	workType?: string | null;
+	/** v4: стрим первого назначения (обязателен при создании из области). */
+	streamExecutor?: string;
+	/** v4: стартовая норма первого назначения, чел.-дн. */
+	starterNormValue?: number;
+};
+
+export type CreateV2TypicalWorkAssignmentRequestDto = {
+	workId: string;
+	streamExecutor: string;
+};
+
+export type V2TypicalWorkAssignmentDto = {
+	id: string;
+	workId: string;
+	archComponentType: string;
+	streamExecutor: string;
+	isActive: boolean;
 };
 
 export type V2TypicalWorkFieldErrorDto = {

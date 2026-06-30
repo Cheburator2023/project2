@@ -2,8 +2,15 @@ import {
 	defaultWorkFormula,
 	defaultWorkRounding,
 	type PatchV2TypicalWorkRequestDto,
-	type V2TypicalWorkListItemDto,
 } from "@smart-anketa/api-contract";
+
+/** Минимальные поля работы для назначения на стрим (список или каталог). */
+export type WorkStreamsRef = {
+	id: string;
+	streams: string[];
+	normsByStream?: Record<string, number | null>;
+	currentNorm?: number | null;
+};
 import { pickDbStreamForLogicStream } from "./typicalWorksAreas";
 
 export function buildAssignWorkPatch(
@@ -21,7 +28,7 @@ export function buildAssignWorkPatch(
 	};
 }
 
-export function inferBaseNormValue(work: V2TypicalWorkListItemDto): number {
+export function inferBaseNormValue(work: WorkStreamsRef): number {
 	for (const stream of work.streams) {
 		const norm = work.normsByStream?.[stream];
 		if (typeof norm === "number" && norm > 0) return norm;
@@ -33,7 +40,7 @@ export function inferBaseNormValue(work: V2TypicalWorkListItemDto): number {
 }
 
 export function targetStreamsForAssign(
-	work: V2TypicalWorkListItemDto,
+	work: WorkStreamsRef,
 	scopeStreams: string[],
 	logicStream?: string,
 ): string[] {

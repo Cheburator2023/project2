@@ -3,18 +3,26 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
 import {
 	CONTROL_MODELS_STREAM,
+	applyWorkRounding,
 	defaultWorkFormula,
 	defaultWorkRounding,
+	evaluateTermsFormula,
 	isWorkCoefficientValueAvailable,
+	normalizeStoredFormula,
 	parseStoredTypicalWorkCalculationLogic,
 	previewTypicalWorkCalculation,
 	resolveActiveNormOnDate,
+	resolveLaborAnyOfCoefficient,
 	resolveLaborCoefficient,
 	resolveStreamFromSourceType,
+	termsToTokenFormula,
 	typicalWorkRulesMatchSource,
 	type TypicalWorkRuleLike,
+	type V2TypicalWorkRoundingDto,
 } from "@smart-anketa/api-contract";
+import { V2TypicalWorkAssignmentEntity } from "../entities/v2-typical-work-assignment.entity";
 import { V2TypicalWorkLaborCoefficientEntity } from "../entities/v2-typical-work-labor-coefficient.entity";
+import { V2TypicalWorkLaborParamEntity } from "../entities/v2-typical-work-labor-param.entity";
 import { V2TypicalWorkNormEntity } from "../entities/v2-typical-work-norm.entity";
 import { V2TypicalWorkRuleEntity } from "../entities/v2-typical-work-rule.entity";
 import { V2TypicalWorkVersionConfigEntity } from "../entities/v2-typical-work-version-config.entity";
@@ -38,7 +46,23 @@ export type BuildCatalogTasksParams = {
 	source: Record<string, unknown>;
 	templateVersionId: string | null;
 	atDate: string;
-	/** Параметры, скрытые зависимостями — не участвуют в формуле. */
+	hiddenParamCodes?: ReadonlySet<string>;
+};
+
+type RuntimeWorkContext = {
+	work: V2TypicalWorkEntity;
+	stream: string;
+	atDate: string;
+	source: Record<string, unknown>;
+	normValue: number;
+	rules: TypicalWorkRuleLike[];
+	laborRows: V2TypicalWorkLaborCoefficientEntity[];
+	laborParams: V2TypicalWorkLaborParamEntity[];
+	config: V2TypicalWorkVersionConfigEntity | undefined;
+	assignmentByWorkId: Map<string, V2TypicalWorkAssignmentEntity>;
+	coefficientValueCatalog: Awaited<
+		ReturnType<V2TypicalWorkParamCatalogService["listTriggerStatusCatalog"]>
+	>;
 	hiddenParamCodes?: ReadonlySet<string>;
 };
 
@@ -65,6 +89,68 @@ function mapRuleEntity(rule: V2TypicalWorkRuleEntity): TypicalWorkRuleLike {
 		operator: rule.operator,
 		valueCode: rule.valueCode,
 		valueLabel: rule.valueLabel,
+		values: rule.valueCodes ?? undefined,
+	};
+}
+
+function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, number> {
+	const paramCoefficients: Record<string, number> = {};
+	const laborParamsByCode = new Map(
+		ctx.laborParams.map((row) => [row.paramCode, row]),
+	);
+
+	for (const header of ctx.laborParams) {
+		if (ctx.hiddenParamCodes?.has(header.paramCode)) continue;
+		if (header.kind === "any_of") {
+			paramCoefficients[header.paramCode] = resolveLaborAnyOfCoefficient(
+				ctx.source,
+				header.paramCode,
+				{
+					valueCodes: header.anyOfValueCodes ?? [],
+					valueLabels: header.anyOfValueLabels ?? [],
+					coeffOn: decimalToNumber(header.coeffOn),
+					coeffOff: decimalToNumber(header.coeffOff),
+				},
+			);
+		}
+	}
+
+	for (const row of ctx.laborRows) {
+		if (ctx.hiddenParamCodes?.has(row.paramCode)) continue;
+		const header = laborParamsByCode.get(row.paramCode);
+		if (header?.kind === "any_of") continue;
+
+		if (
+			!isWorkCoefficientValueAvailable(
+				row,
+				ctx.coefficientValueCatalog,
+				ctx.atDate,
+			)
+		) {
+			continue;
+		}
+		if (
+			resolveLaborCoefficient(
+				ctx.source,
+				row.paramCode,
+				row.valueCode,
+				row.valueLabel,
+			)
+		) {
+			paramCoefficients[row.paramCode] = decimalToNumber(row.coefficient);
+		}
+	}
+
+	return paramCoefficients;
+}
+
+function resolveRounding(
+	config: V2TypicalWorkVersionConfigEntity | undefined,
+): V2TypicalWorkRoundingDto {
+	if (!config) return defaultWorkRounding();
+	return {
+		mode: config.roundingMode as V2TypicalWorkRoundingDto["mode"],
+		step: config.roundingStep == null ? null : decimalToNumber(config.roundingStep),
 	};
 }
 
@@ -79,12 +165,15 @@ export class V2TypicalWorkRuntimeService {
 		private readonly ruleRepository: Repository<V2TypicalWorkRuleEntity>,
 		@InjectRepository(V2TypicalWorkLaborCoefficientEntity)
 		private readonly laborRepository: Repository<V2TypicalWorkLaborCoefficientEntity>,
+		@InjectRepository(V2TypicalWorkLaborParamEntity)
+		private readonly laborParamRepository: Repository<V2TypicalWorkLaborParamEntity>,
+		@InjectRepository(V2TypicalWorkAssignmentEntity)
+		private readonly assignmentRepository: Repository<V2TypicalWorkAssignmentEntity>,
 		@InjectRepository(V2TypicalWorkVersionConfigEntity)
 		private readonly versionConfigRepository: Repository<V2TypicalWorkVersionConfigEntity>,
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
 	) {}
 
-	/** @deprecated Используйте {@link buildCatalogTasks}. */
 	async buildSourceCatalogTasks(
 		source: Record<string, unknown>,
 		templateVersionId: string | null,
@@ -108,13 +197,20 @@ export class V2TypicalWorkRuntimeService {
 		const archComponentType = params.archComponentType.trim();
 		if (!stream || !archComponentType) return [];
 
+		const assignments = await this.assignmentRepository.find({
+			where: { streamExecutor: stream, isActive: true },
+		});
+		const assignedWorkIds = new Set(assignments.map((a) => a.workId));
+		if (assignedWorkIds.size === 0) return [];
+
 		const works = await this.workRepository.find({
 			where: { archComponentType },
 		});
-		if (!works.length) return [];
+		const eligibleWorks = works.filter((w) => assignedWorkIds.has(w.id));
+		if (!eligibleWorks.length) return [];
 
-		const workIds = works.map((w) => w.id);
-		const [norms, rules, labor, configs] = await Promise.all([
+		const workIds = eligibleWorks.map((w) => w.id);
+		const [norms, rules, labor, laborParams, configs] = await Promise.all([
 			this.normRepository.find({
 				where: { workId: In(workIds), streamExecutor: stream },
 			}),
@@ -124,9 +220,16 @@ export class V2TypicalWorkRuntimeService {
 			this.laborRepository.find({
 				where: { workId: In(workIds), streamExecutor: stream },
 			}),
+			this.laborParamRepository.find({
+				where: { workId: In(workIds), streamExecutor: stream },
+			}),
 			params.templateVersionId
 				? this.versionConfigRepository.find({
-						where: { workId: In(workIds), templateVersionId: params.templateVersionId },
+						where: {
+							workId: In(workIds),
+							templateVersionId: params.templateVersionId,
+							streamExecutor: stream,
+						},
 					})
 				: Promise.resolve([]),
 		]);
@@ -134,16 +237,17 @@ export class V2TypicalWorkRuntimeService {
 		const normsByWork = groupBy(norms, (n) => n.workId);
 		const rulesByWork = groupBy(rules, (r) => r.workId);
 		const laborByWork = groupBy(labor, (l) => l.workId);
+		const laborParamsByWork = groupBy(laborParams, (l) => l.workId);
 		const configByWork = new Map(configs.map((c) => [c.workId, c]));
+		const assignmentByWorkId = new Map(
+			assignments.map((a) => [a.workId, a]),
+		);
+		const assignmentById = new Map(assignments.map((a) => [a.id, a]));
 		const coefficientValueCatalog =
 			await this.paramCatalogService.listTriggerStatusCatalog(params.atDate);
 
-		const tasks: CatalogGeneratedTask[] = [];
-
-		for (const work of works) {
-			const workRules = (rulesByWork.get(work.id) ?? []).map(mapRuleEntity);
-			if (!typicalWorkRulesMatchSource(workRules, params.source)) continue;
-
+		const contexts = new Map<string, RuntimeWorkContext>();
+		for (const work of eligibleWorks) {
 			const workNorms = normsByWork.get(work.id) ?? [];
 			const normValue = resolveActiveNormOnDate(
 				workNorms.map((n) => ({
@@ -157,73 +261,91 @@ export class V2TypicalWorkRuntimeService {
 			);
 			if (normValue == null) continue;
 
-			const config = configByWork.get(work.id);
-			const formula = config
-				? {
-						tokens: Array.isArray(config.formula)
-							? (config.formula as ReturnType<typeof defaultWorkFormula>["tokens"])
-							: defaultWorkFormula().tokens,
-						text: config.formulaText ?? "N",
-					}
-				: defaultWorkFormula();
-			const rounding = config
-				? {
-						mode: config.roundingMode as ReturnType<
-							typeof defaultWorkRounding
-						>["mode"],
-						step:
-							config.roundingStep == null
-								? null
-								: decimalToNumber(config.roundingStep),
-					}
-				: defaultWorkRounding();
+			const workRules = (rulesByWork.get(work.id) ?? []).map(mapRuleEntity);
+			if (!typicalWorkRulesMatchSource(workRules, params.source)) continue;
 
-			const paramCoefficients: Record<string, number> = {};
-			for (const row of laborByWork.get(work.id) ?? []) {
-				if (params.hiddenParamCodes?.has(row.paramCode)) continue;
-				// §578: коэффициент на удалённое значение параметра исключается из расчёта.
-				if (
-					!isWorkCoefficientValueAvailable(
-						row,
-						coefficientValueCatalog,
-						params.atDate,
-					)
-				) {
-					continue;
-				}
-				if (
-					resolveLaborCoefficient(
-						params.source,
-						row.paramCode,
-						row.valueCode,
-						row.valueLabel,
-					)
-				) {
-					paramCoefficients[row.paramCode] = decimalToNumber(row.coefficient);
+			contexts.set(work.id, {
+				work,
+				stream,
+				atDate: params.atDate,
+				source: params.source,
+				normValue,
+				rules: workRules,
+				laborRows: laborByWork.get(work.id) ?? [],
+				laborParams: laborParamsByWork.get(work.id) ?? [],
+				config: configByWork.get(work.id),
+				assignmentByWorkId,
+				coefficientValueCatalog,
+				hiddenParamCodes: params.hiddenParamCodes,
+			});
+		}
+
+		const memo = new Map<string, number>();
+		const visiting = new Set<string>();
+
+		const computeTotal = (workId: string): number | null => {
+			if (memo.has(workId)) return memo.get(workId) ?? null;
+			if (visiting.has(workId)) return null;
+			const ctx = contexts.get(workId);
+			if (!ctx) return null;
+
+			visiting.add(workId);
+			const paramCoefficients = resolveParamCoefficients(ctx);
+			const rounding = resolveRounding(ctx.config);
+			const terms = ctx.config
+				? normalizeStoredFormula(ctx.config.formula, ctx.config.formulaText)
+				: normalizeStoredFormula(null);
+
+			const transitive = terms.terms.find((t) => t.kind === "transitive");
+			let raw: number | null;
+			if (transitive?.sourceAssignmentId) {
+				const sourceAssignment = assignmentById.get(transitive.sourceAssignmentId);
+				raw = sourceAssignment
+					? computeTotal(sourceAssignment.workId)
+					: null;
+			} else {
+				raw = evaluateTermsFormula({
+					terms: terms.terms,
+					baseNorm: ctx.normValue,
+					resolveFactorCoeff: (code) => paramCoefficients[code] ?? 1,
+				});
+				if (raw == null) {
+					const formula = termsToTokenFormula(terms);
+					const preview = previewTypicalWorkCalculation(
+						parseStoredTypicalWorkCalculationLogic(ctx.config?.calculationLogic),
+						{ formula, rounding },
+						{ norm: ctx.normValue, paramCoefficients },
+					);
+					raw = preview.value ?? ctx.normValue;
 				}
 			}
 
-			const preview = previewTypicalWorkCalculation(
-				parseStoredTypicalWorkCalculationLogic(config?.calculationLogic),
-				{ formula, rounding },
-				{ norm: normValue, paramCoefficients },
-			);
-			const total = preview.value ?? normValue;
+			visiting.delete(workId);
+			if (raw == null) return null;
+			const total = applyWorkRounding(raw, rounding);
+			memo.set(workId, total);
+			return total;
+		};
+
+		const tasks: CatalogGeneratedTask[] = [];
+		for (const [workId, ctx] of contexts) {
+			const total = computeTotal(workId);
+			if (total == null) continue;
 
 			let coefficient = 1;
-			if (normValue > 0) {
-				coefficient = total / normValue;
+			if (ctx.normValue > 0) {
+				coefficient = total / ctx.normValue;
 			}
 
 			tasks.push({
-				taskCode: `CAT_${work.id.slice(0, 8)}`,
-				name: work.name,
-				workType: work.workType?.trim() || "—",
-				reason: `${work.name} · ${stream}`,
-				estimateHoursPerDay: normValue,
+				taskCode: `CAT_${workId.slice(0, 8)}`,
+				name: ctx.work.name,
+				workType: ctx.work.workType?.trim() || "—",
+				reason: `${ctx.work.name} · ${stream}`,
+				estimateHoursPerDay: ctx.normValue,
 				coefficient,
 				match: { archComponentType, stream },
-				workId: work.id,
+				workId,
 			});
 		}
 

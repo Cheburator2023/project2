@@ -6,6 +6,7 @@ exports.resolveStreamsFromSourceSystems = resolveStreamsFromSourceSystems;
 exports.readTypicalWorkSourceField = readTypicalWorkSourceField;
 exports.typicalWorkRulesMatchSource = typicalWorkRulesMatchSource;
 exports.resolveLaborCoefficient = resolveLaborCoefficient;
+exports.resolveLaborAnyOfCoefficient = resolveLaborAnyOfCoefficient;
 /** Стрим-исполнитель по типу системы-источника в анкете. */
 exports.STREAM_BY_SOURCE_TYPE = {
     Внутренний: "ИД. Внутренний",
@@ -95,6 +96,13 @@ function compareRuleValue(actual, expected, operator) {
             return actualStr === expectedStr;
     }
 }
+function compareRuleValuesSet(actual, expectedCodes, expectedLabels, operator) {
+    const actualStr = String(actual ?? "");
+    const matches = expectedCodes.some((code, index) => actualStr === code ||
+        actualStr === (expectedLabels[index] ?? "") ||
+        actualStr === String(expectedLabels[index] ?? ""));
+    return operator === "not_in" ? !matches : matches;
+}
 /** Все условия работы (логическое И) против контекста строки/объекта анкеты. */
 function typicalWorkRulesMatchSource(rules, source) {
     if (rules.length === 0)
@@ -110,6 +118,16 @@ function typicalWorkRulesMatchSource(rules, source) {
             return rule.operator === "!=" ? !matches : matches;
         }
         const actual = readSourceField(source, rule.paramCode, rule.paramName);
+        if (rule.operator === "in" || rule.operator === "not_in") {
+            const values = rule.values?.length
+                ? rule.values
+                : rule.valueCode
+                    ? [{ code: rule.valueCode, label: rule.valueLabel }]
+                    : [];
+            if (values.length === 0)
+                return false;
+            return compareRuleValuesSet(actual, values.map((v) => v.code), values.map((v) => v.label ?? ""), rule.operator);
+        }
         if (rule.valueLabel == null && rule.valueCode == null) {
             return actual !== undefined && actual !== null && actual !== "";
         }
@@ -132,4 +150,12 @@ function resolveLaborCoefficient(source, paramCode, valueCode, valueLabel) {
     if (valueCode != null && String(actual) === valueCode)
         return true;
     return false;
+}
+function resolveLaborAnyOfCoefficient(source, paramCode, anyOf) {
+    const actual = readSourceField(source, paramCode, null);
+    const actualStr = String(actual ?? "");
+    const matches = anyOf.valueCodes.some((code, index) => actualStr === code ||
+        actualStr === (anyOf.valueLabels[index] ?? "") ||
+        actualStr === String(anyOf.valueLabels[index] ?? ""));
+    return matches ? anyOf.coeffOn : anyOf.coeffOff;
 }

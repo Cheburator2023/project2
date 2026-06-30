@@ -12,6 +12,7 @@ import {
 	useCreateV2TypicalWork,
 	useDeleteV2TypicalWork,
 	useV2TypicalWorkCard,
+	useV2TypicalWorksCatalog,
 	useV2TypicalWorksList,
 } from "@react-client/common/api/queries/v2-works";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
@@ -58,6 +59,7 @@ export function TypicalWorksPanel() {
 	const templateVersionId = searchParams.get(V2_TEMPLATE_VERSION_QUERY);
 
 	const { data, isLoading, error } = useV2TypicalWorksList();
+	const { data: catalogData } = useV2TypicalWorksCatalog();
 	const createWork = useCreateV2TypicalWork();
 	const deleteWork = useDeleteV2TypicalWork();
 
@@ -176,12 +178,26 @@ export function TypicalWorksPanel() {
 	const handleCreateWork = async (payload: {
 		name: string;
 		archComponentType: string;
+		streamExecutor?: string;
+		starterNormValue?: number;
 	}) => {
 		try {
-			const created = await createWork.mutateAsync(payload);
+			const created = await createWork.mutateAsync({
+				name: payload.name,
+				archComponentType: payload.archComponentType,
+				streamExecutor: payload.streamExecutor ?? scopeStreams[0],
+				starterNormValue: payload.starterNormValue,
+			});
 			setCreateOpen(false);
 			setSelectedWorkId(created.id);
-			setStreamExecutor(DEFAULT_WORK_STREAMS[0]);
+			const stream =
+				created.streamExecutor ||
+				payload.streamExecutor ||
+				scopeStreams[0] ||
+				DEFAULT_WORK_STREAMS[0];
+			setStreamExecutor(stream);
+			storeWorkStream(created.id, stream);
+			setViewMode("streams");
 			toast.success("Работа создана");
 		} catch (err) {
 			toast.error("Не удалось создать работу", {
@@ -271,7 +287,7 @@ export function TypicalWorksPanel() {
 				{viewMode === "catalog" ? (
 					<Box sx={{ flex: 1, minHeight: 0 }}>
 						<TypicalWorksCatalogView
-							works={data?.items ?? []}
+							works={catalogData?.items ?? []}
 							onAssign={() => setAssignOpen(true)}
 							onCreateWork={() => setCreateOpen(true)}
 						/>
@@ -290,6 +306,7 @@ export function TypicalWorksPanel() {
 							<TypicalWorksEmptyState
 								areaTitle={scopeLabel(scope)}
 								onCreateWork={() => setCreateOpen(true)}
+								onAssignFromCatalog={() => setAssignOpen(true)}
 							/>
 						) : (
 							<>
@@ -331,7 +348,7 @@ export function TypicalWorksPanel() {
 				open={assignOpen}
 				scope={scope}
 				scopeStreams={scopeStreams}
-				works={data?.items ?? []}
+				works={catalogData?.items ?? []}
 				templateVersionId={templateVersionId}
 				onClose={() => setAssignOpen(false)}
 				onAssigned={(workId, stream) => openWorkInStreamsView(workId, stream)}
@@ -344,6 +361,7 @@ export function TypicalWorksPanel() {
 			<CreateTypicalWorkDialog
 				open={createOpen}
 				pending={createWork.isPending}
+				defaultStreamExecutor={scopeStreams[0] ?? null}
 				onClose={() => setCreateOpen(false)}
 				onSubmit={handleCreateWork}
 			/>

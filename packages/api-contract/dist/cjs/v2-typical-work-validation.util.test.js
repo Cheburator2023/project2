@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const vitest_1 = require("vitest");
 const v2_typical_work_validation_util_1 = require("./v2-typical-work-validation.util");
+const v2_work_terms_formula_util_1 = require("./v2-work-terms-formula.util");
 (0, vitest_1.describe)("validateNormInputs coverage", () => {
     (0, vitest_1.it)("requires exactly one active norm on coverage date", () => {
         const norms = [
@@ -115,6 +116,15 @@ const v2_typical_work_validation_util_1 = require("./v2-typical-work-validation.
             },
         ], "2025-06-01")).toBe("invalid");
     });
+    (0, vitest_1.it)("returns hidden when draft answers do not satisfy triggers", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.computeWorkTriggerStatus)([
+            {
+                paramCode: "complexity",
+                valueCode: "high",
+                valueLabel: "Высокая",
+            },
+        ], catalog, undefined, { complexity: "low" })).toBe("hidden");
+    });
 });
 (0, vitest_1.describe)("isWorkCoefficientValueAvailable (F-03 §578)", () => {
     const catalog = [
@@ -159,6 +169,49 @@ const v2_typical_work_validation_util_1 = require("./v2-typical-work-validation.
                 ],
             },
         ], "2025-06-01")).toBe(false);
+    });
+});
+(0, vitest_1.describe)("collectTypicalWorkPatchValidationErrors", () => {
+    (0, vitest_1.it)("validates formulaTerms and laborParams any-of coefficients", () => {
+        const issues = (0, v2_typical_work_validation_util_1.collectTypicalWorkPatchValidationErrors)({
+            streamExecutor: "ИД. Внутренний",
+            formulaTerms: (0, v2_work_terms_formula_util_1.tokensToTermsFormula)({
+                tokens: [{ kind: "norm" }, { kind: "param_coeff", paramCode: "p1" }],
+                text: "H × P1",
+            }),
+            laborParams: [
+                {
+                    paramCode: "p1",
+                    kind: "any_of",
+                    anyOf: {
+                        valueCodes: ["a"],
+                        valueLabels: ["A"],
+                        coeffOn: -1,
+                        coeffOff: 1,
+                    },
+                },
+            ],
+        });
+        (0, vitest_1.expect)(issues).toContainEqual(vitest_1.expect.objectContaining({
+            path: "laborParams[0].anyOf.coeffOn",
+        }));
+    });
+    (0, vitest_1.it)("reports unknown param in formulaTerms against laborParams", () => {
+        const issues = (0, v2_typical_work_validation_util_1.collectTypicalWorkPatchValidationErrors)({
+            streamExecutor: "ИД. Внутренний",
+            formulaTerms: (0, v2_work_terms_formula_util_1.tokensToTermsFormula)({
+                tokens: [{ kind: "norm" }, { kind: "param_coeff", paramCode: "missing" }],
+                text: "H × missing",
+            }),
+            laborParams: [
+                {
+                    paramCode: "p1",
+                    kind: "by_value",
+                    coefficients: [{ paramCode: "p1", valueCode: "a", valueLabel: "A", coefficient: 1 }],
+                },
+            ],
+        });
+        (0, vitest_1.expect)(issues.some((i) => i.path === "formula" || i.path === "formulaTerms")).toBe(true);
     });
 });
 (0, vitest_1.describe)("isTypicalWorkParameterValueActiveOnDate", () => {

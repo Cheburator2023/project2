@@ -19,6 +19,8 @@ export function triggerStatusLabel(status: V2WorkTriggerStatus): string {
 	switch (status) {
 		case "appears":
 			return "появляется";
+		case "hidden":
+			return "скрыта";
 		case "no_triggers":
 			return "без триггеров — не появится";
 		case "invalid":
@@ -33,6 +35,8 @@ export function triggerStatusColors(status: V2WorkTriggerStatus): {
 	switch (status) {
 		case "appears":
 			return { bg: "#e7f6ec", color: "#1f8a4d" };
+		case "hidden":
+			return { bg: "#eef1f6", color: "#5b6577" };
 		case "invalid":
 			return { bg: "#fdecec", color: "#c62828" };
 		default:
@@ -141,5 +145,38 @@ export function roundingModeLabel(mode: string): string {
 			return "без округления";
 		default:
 			return mode;
+	}
+}
+
+export function assignmentStatusLabel(
+	status: import("@smart-anketa/api-contract").V2TypicalWorkAssignmentStatusDto | undefined,
+	count = 0,
+): string {
+	switch (status) {
+		case "unassigned":
+			return "не назначена";
+		case "used_on_schemas":
+			return count > 0 ? `уже на ${count} схемах` : "уже на схемах";
+		case "free":
+			return "свободна";
+		default:
+			return "";
+	}
+}
+
+export function formulaBadgeLabel(
+	badge: import("@smart-anketa/api-contract").V2TypicalWorkFormulaBadgeDto | undefined,
+): string {
+	switch (badge) {
+		case "multiplier":
+			return "коэф.: множитель";
+		case "additive":
+			return "коэф.: слагаемое";
+		case "mixed":
+			return "коэф.: смеш.";
+		case "transitive":
+			return "транзитивная";
+		default:
+			return "без коэф.";
 	}
 }

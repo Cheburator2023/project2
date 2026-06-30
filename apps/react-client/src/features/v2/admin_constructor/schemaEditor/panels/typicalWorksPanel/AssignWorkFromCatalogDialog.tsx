@@ -7,8 +7,11 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import type { V2TypicalWorkListItemDto } from "@smart-anketa/api-contract";
-import { usePatchV2TypicalWork } from "@react-client/common/api/queries/v2-works";
+import type { V2TypicalWorkCatalogItemDto } from "@smart-anketa/api-contract";
+import {
+	useCreateV2TypicalWorkAssignment,
+	usePatchV2TypicalWork,
+} from "@react-client/common/api/queries/v2-works";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { useMemo, useState } from "react";
 import { toast } from "@react-client/common/toasts";
@@ -24,7 +27,7 @@ type AssignWorkFromCatalogDialogProps = {
 	open: boolean;
 	scope: LogicWorksScope;
 	scopeStreams: string[];
-	works: V2TypicalWorkListItemDto[];
+	works: V2TypicalWorkCatalogItemDto[];
 	templateVersionId: string | null;
 	onClose: () => void;
 	onAssigned: (workId: string, streamExecutor: string) => void;
@@ -41,6 +44,7 @@ export function AssignWorkFromCatalogDialog({
 	onAssigned,
 	onCreateNew,
 }: AssignWorkFromCatalogDialogProps) {
+	const createAssignment = useCreateV2TypicalWorkAssignment();
 	const patch = usePatchV2TypicalWork();
 	const [query, setQuery] = useState("");
 	const [archFilter, setArchFilter] = useState<string>("all");
@@ -62,13 +66,17 @@ export function AssignWorkFromCatalogDialog({
 		});
 	}, [archFilter, query, scopeStreams, works]);
 
-	const handleAssign = async (work: V2TypicalWorkListItemDto) => {
+	const handleAssign = async (work: V2TypicalWorkCatalogItemDto) => {
 		const streams = targetStreamsForAssign(work, scopeStreams);
 		if (!streams.length) return;
 		setPending(true);
 		try {
 			const baseNorm = inferBaseNormValue(work);
 			for (const streamExecutor of streams) {
+				await createAssignment.mutateAsync({
+					workId: work.id,
+					streamExecutor,
+				});
 				await patch.mutateAsync({
 					workId: work.id,
 					dto: {
@@ -148,7 +156,7 @@ export function AssignWorkFromCatalogDialog({
 					) : (
 						items.map((work) => {
 							const dot = ARCH_COMPONENT_DOT[work.archComponentType] ?? "#94a3b8";
-							const assignedCount = work.streams.length;
+							const assignedCount = work.assignmentCount;
 							return (
 								<Box
 									key={work.id}

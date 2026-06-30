@@ -2,13 +2,13 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import type { V2TypicalWorkListItemDto } from "@smart-anketa/api-contract";
+import type { V2TypicalWorkCatalogItemDto } from "@smart-anketa/api-contract";
 import { useMemo, useState } from "react";
 import { ARCH_COMPONENT_DOT } from "./typicalWorksUi";
 import { shortenStreamLabel, streamColor, streamDisplayLabel } from "./typicalWorksAreas";
 
 type TypicalWorksCatalogViewProps = {
-	works: V2TypicalWorkListItemDto[];
+	works: V2TypicalWorkCatalogItemDto[];
 	onAssign: (workId: string) => void;
 	onCreateWork: () => void;
 };
@@ -116,7 +116,7 @@ export function TypicalWorksCatalogView({
 			>
 				{rows.map((work) => {
 					const dot = ARCH_COMPONENT_DOT[work.archComponentType] ?? "#94a3b8";
-					const assigned = work.streams.length > 0;
+					const assigned = work.assignmentCount > 0;
 					return (
 						<Box
 							key={work.id}
@@ -165,7 +165,7 @@ export function TypicalWorksCatalogView({
 									}}
 								>
 									{assigned
-										? `назначена · ${work.streams.length} ${work.streams.length === 1 ? "стрим" : "стрима"}`
+										? `назначена · ${work.assignmentCount} ${work.assignmentCount === 1 ? "стрим" : "стрима"}`
 										: "не назначена"}
 								</Box>
 							</Box>

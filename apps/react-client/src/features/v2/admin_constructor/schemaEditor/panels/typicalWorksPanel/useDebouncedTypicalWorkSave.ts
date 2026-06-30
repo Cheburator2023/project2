@@ -168,9 +168,14 @@ export function cardToPatchDto(
 			operator: rule.operator,
 			valueCode: rule.valueCode,
 			valueLabel: rule.valueLabel,
+			values: rule.values,
+			sortOrder: rule.sortOrder,
 		})),
-		laborCoefficients: card.laborParams.flatMap((group) =>
-			group.coefficients.map((row) => ({
+		laborParams: card.laborParams.map((group) => ({
+			paramCode: group.paramCode,
+			paramName: group.paramName,
+			kind: group.kind ?? "by_value",
+			coefficients: group.coefficients.map((row) => ({
 				id: row.id,
 				paramCode: group.paramCode,
 				paramName: group.paramName,
@@ -178,8 +183,10 @@ export function cardToPatchDto(
 				valueLabel: row.valueLabel,
 				coefficient: row.coefficient,
 			})),
-		),
+			anyOf: group.anyOf ?? null,
+		})),
 		formula: card.formula,
+		formulaTerms: card.formulaTerms,
 		rounding: card.rounding,
 	};
 }

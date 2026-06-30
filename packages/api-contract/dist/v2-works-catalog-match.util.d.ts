@@ -7,6 +7,10 @@ export type TypicalWorkRuleLike = {
     operator: string;
     valueCode: string | null;
     valueLabel: string | null;
+    values?: Array<{
+        code: string;
+        label: string | null;
+    }>;
 };
 export declare function resolveStreamFromSourceType(source: Record<string, unknown>): string | null;
 /** Стримы, представленные в `streamDataSources.sourceSystems`. */
@@ -16,3 +20,9 @@ export declare function readTypicalWorkSourceField(source: Record<string, unknow
 /** Все условия работы (логическое И) против контекста строки/объекта анкеты. */
 export declare function typicalWorkRulesMatchSource(rules: TypicalWorkRuleLike[], source: Record<string, unknown>): boolean;
 export declare function resolveLaborCoefficient(source: Record<string, unknown>, paramCode: string, valueCode: string | null, valueLabel: string | null): boolean;
+export declare function resolveLaborAnyOfCoefficient(source: Record<string, unknown>, paramCode: string, anyOf: {
+    valueCodes: string[];
+    valueLabels: string[];
+    coeffOn: number;
+    coeffOff: number;
+}): number;

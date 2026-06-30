@@ -25,7 +25,7 @@ export class V2TypicalWorkRuleEntity {
 	@Column({ name: "param_name", type: "varchar", length: 255, nullable: true })
 	paramName: string | null;
 
-	@Column({ type: "varchar", length: 10, default: "=" })
+	@Column({ type: "varchar", length: 20, default: "=" })
 	operator: string;
 
 	@Column({ name: "value_code", type: "varchar", length: 120, nullable: true })
@@ -33,6 +33,12 @@ export class V2TypicalWorkRuleEntity {
 
 	@Column({ name: "value_label", type: "varchar", length: 255, nullable: true })
 	valueLabel: string | null;
+
+	@Column({ name: "value_codes", type: "jsonb", nullable: true })
+	valueCodes: Array<{ code: string; label: string | null }> | null;
+
+	@Column({ name: "sort_order", type: "int", default: 0 })
+	sortOrder: number;
 
 	@CreateDateColumn({ name: "created_at", type: "timestamptz" })
 	createdAt: Date;

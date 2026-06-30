@@ -23,6 +23,8 @@ import { V2TypicalWorkEntity } from "./entities/v2-typical-work.entity";
 import { V2TypicalWorkNormEntity } from "./entities/v2-typical-work-norm.entity";
 import { V2TypicalWorkRuleEntity } from "./entities/v2-typical-work-rule.entity";
 import { V2TypicalWorkLaborCoefficientEntity } from "./entities/v2-typical-work-labor-coefficient.entity";
+import { V2TypicalWorkLaborParamEntity } from "./entities/v2-typical-work-labor-param.entity";
+import { V2TypicalWorkAssignmentEntity } from "./entities/v2-typical-work-assignment.entity";
 import { V2TypicalWorkVersionConfigEntity } from "./entities/v2-typical-work-version-config.entity";
 import { V2TypicalWorkParamEntity } from "./entities/v2-typical-work-param.entity";
 import { V2TypicalWorkParamValueEntity } from "./entities/v2-typical-work-param-value.entity";
@@ -50,6 +52,8 @@ import { V2DataTransferService } from "./services/v2-data-transfer.service";
 			V2TypicalWorkNormEntity,
 			V2TypicalWorkRuleEntity,
 			V2TypicalWorkLaborCoefficientEntity,
+			V2TypicalWorkLaborParamEntity,
+			V2TypicalWorkAssignmentEntity,
 			V2TypicalWorkVersionConfigEntity,
 			V2TypicalWorkParamEntity,
 			V2TypicalWorkParamValueEntity,

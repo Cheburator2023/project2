@@ -14,8 +14,67 @@ import type {
 	V2TypicalWorkParameterValueDto,
 	V2TypicalWorkPreviewRequestDto,
 	V2TypicalWorkPreviewResponseDto,
+	V2TypicalWorkCatalogListResponseDto,
+	V2TypicalWorkAssignmentListResponseDto,
+	CreateV2TypicalWorkAssignmentRequestDto,
+	V2TypicalWorkAssignmentDto,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "../helpers/apiClient";
+
+export const useV2TypicalWorksCatalog = () =>
+	useQuery<V2TypicalWorkCatalogListResponseDto>({
+		queryKey: ["v2-works", "catalog"],
+		queryFn: () =>
+			apiClient({
+				url: "/v2/works/catalog",
+				method: "GET",
+			}),
+	});
+
+export const useV2TypicalWorkAssignments = (params?: {
+	workId?: string;
+	streamExecutor?: string;
+	archComponentType?: string;
+	templateVersionId?: string | null;
+}) => {
+	const search = new URLSearchParams();
+	if (params?.workId) search.set("workId", params.workId);
+	if (params?.streamExecutor) search.set("streamExecutor", params.streamExecutor);
+	if (params?.archComponentType) search.set("archComponentType", params.archComponentType);
+	if (params?.templateVersionId) search.set("templateVersionId", params.templateVersionId);
+	const qs = search.toString();
+
+	return useQuery<V2TypicalWorkAssignmentListResponseDto>({
+		queryKey: [
+			"v2-works",
+			"assignments",
+			params?.workId ?? "",
+			params?.streamExecutor ?? "",
+			params?.archComponentType ?? "",
+			params?.templateVersionId ?? "",
+		],
+		queryFn: () =>
+			apiClient({
+				url: `/v2/works/assignments/list${qs ? `?${qs}` : ""}`,
+				method: "GET",
+			}),
+	});
+};
+
+export const useCreateV2TypicalWorkAssignment = () => {
+	const queryClient = useQueryClient();
+	return useMutation<V2TypicalWorkAssignmentDto, Error, CreateV2TypicalWorkAssignmentRequestDto>({
+		mutationFn: (dto) =>
+			apiClient({
+				url: "/v2/works/assignments",
+				method: "POST",
+				data: dto,
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
+		},
+	});
+};
 
 export const useV2TypicalWorksList = (params?: {
 	archComponentType?: string;

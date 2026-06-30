@@ -27,6 +27,10 @@ import type {
 	V2TypicalWorkParameterValueDto,
 	V2TypicalWorkPreviewRequestDto,
 	V2TypicalWorkPreviewResponseDto,
+	CreateV2TypicalWorkAssignmentRequestDto,
+	V2TypicalWorkAssignmentDto,
+	V2TypicalWorkCatalogListResponseDto,
+	V2TypicalWorkAssignmentListResponseDto,
 } from "@smart-anketa/api-contract";
 import { V2TypicalWorkService } from "../services/v2-typical-work.service";
 import { V2TypicalWorkWriteService } from "../services/v2-typical-work-write.service";
@@ -38,6 +42,32 @@ export class V2TypicalWorkController {
 		private readonly typicalWorkService: V2TypicalWorkService,
 		private readonly typicalWorkWriteService: V2TypicalWorkWriteService,
 	) {}
+
+	@Get("catalog")
+	@ApiOperation({ summary: "Каталог типовых работ (реестровые поля)" })
+	listCatalog(): Promise<V2TypicalWorkCatalogListResponseDto> {
+		return this.typicalWorkService.listCatalog();
+	}
+
+	@Get("assignments/list")
+	@ApiOperation({ summary: "Назначения работ на области" })
+	@ApiQuery({ name: "workId", required: false })
+	@ApiQuery({ name: "streamExecutor", required: false })
+	@ApiQuery({ name: "archComponentType", required: false })
+	@ApiQuery({ name: "templateVersionId", required: false })
+	listAssignments(
+		@Query("workId") workId?: string,
+		@Query("streamExecutor") streamExecutor?: string,
+		@Query("archComponentType") archComponentType?: string,
+		@Query("templateVersionId") templateVersionId?: string,
+	): Promise<V2TypicalWorkAssignmentListResponseDto> {
+		return this.typicalWorkService.listAssignments({
+			workId,
+			streamExecutor,
+			archComponentType,
+			templateVersionId,
+		});
+	}
 
 	@Get()
 	@ApiOperation({ summary: "Список типовых работ (F-03)" })
@@ -125,6 +155,28 @@ export class V2TypicalWorkController {
 	@ApiOperation({ summary: "Зависимости параметров (методологический каталог)" })
 	listDependencies(): Promise<V2ParameterDependencyListResponseDto> {
 		return this.typicalWorkWriteService.listParameterDependencies();
+	}
+
+	@Post("assignments")
+	@ApiOperation({ summary: "Назначить работу на область (стрим)" })
+	createAssignment(
+		@Body() dto: CreateV2TypicalWorkAssignmentRequestDto,
+	): Promise<V2TypicalWorkAssignmentDto> {
+		return this.typicalWorkWriteService.createAssignment(dto);
+	}
+
+	@Delete("assignments/:assignmentId")
+	@HttpCode(HttpStatus.NO_CONTENT)
+	@ApiOperation({ summary: "Снять назначение работы с области" })
+	@ApiQuery({ name: "confirm", required: false })
+	deleteAssignment(
+		@Param("assignmentId", ParseUUIDPipe) assignmentId: string,
+		@Query("confirm") confirm?: string,
+	): Promise<void> {
+		return this.typicalWorkWriteService.deleteAssignment(
+			assignmentId,
+			confirm === "true" || confirm === "1",
+		);
 	}
 
 	@Post()

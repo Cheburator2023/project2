@@ -8,7 +8,7 @@ import {
 } from "typeorm";
 
 @Entity({ name: "v2_typical_work_version_config" })
-@Index(["templateVersionId", "workId"], { unique: true })
+@Index(["templateVersionId", "workId", "streamExecutor"], { unique: true })
 export class V2TypicalWorkVersionConfigEntity {
 	@PrimaryGeneratedColumn("uuid")
 	id: string;
@@ -18,6 +18,9 @@ export class V2TypicalWorkVersionConfigEntity {
 
 	@Column({ name: "work_id", type: "uuid" })
 	workId: string;
+
+	@Column({ name: "stream_executor", type: "varchar", length: 120, default: "" })
+	streamExecutor: string;
 
 	@Column({ type: "jsonb", default: [] })
 	formula: unknown;

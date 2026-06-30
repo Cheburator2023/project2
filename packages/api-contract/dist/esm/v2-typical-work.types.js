@@ -10,6 +10,8 @@ export const V2_WORK_RULE_OPERATOR_VALUES = [
     "<=",
     ">",
     "<",
+    "in",
+    "not_in",
 ];
 export const V2_WORK_ROUNDING_MODE_VALUES = [
     "CEIL",
@@ -19,6 +21,7 @@ export const V2_WORK_ROUNDING_MODE_VALUES = [
 ];
 export const V2_WORK_TRIGGER_STATUS_VALUES = [
     "appears",
+    "hidden",
     "no_triggers",
     "invalid",
 ];

@@ -120,6 +120,8 @@ export function TypicalWorkCardView({
 							label={
 								card.triggerStatus === "appears"
 									? `Работа появляется в анкете, когда выполнены все условия (${card.rules.length})`
+									: card.triggerStatus === "hidden"
+										? "Работа скрыта — триггеры не выполнены при текущих ответах"
 									: card.triggerStatus === "invalid"
 										? "Условие невалидно — работа не появится"
 										: "Без триггеров — работа не появится в анкете"

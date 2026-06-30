@@ -32,6 +32,8 @@ const OPERATOR_LABELS: Record<V2WorkRuleOperator, string> = {
 	"<=": "≤",
 	">": ">",
 	"<": "<",
+	in: "∈",
+	not_in: "∉",
 };
 
 function triggerBanner(status: V2WorkTriggerStatus, ruleCount: number) {
@@ -55,6 +57,16 @@ function triggerBanner(status: V2WorkTriggerStatus, ruleCount: number) {
 				title: "Условия заданы некорректно",
 				sub: "проверьте параметры-триггеры",
 				fg: "#c62828",
+			};
+		case "hidden":
+			return {
+				bg: "#eef1f6",
+				border: "#dfe2ea",
+				iconBg: "#5b6577",
+				icon: "–",
+				title: "Работа скрыта при текущих ответах",
+				sub: "есть триггеры, но условия не выполнены",
+				fg: "#5b6577",
 			};
 		default:
 			return {
@@ -115,6 +127,43 @@ export function TypicalWorkTriggersSection({
 		valueLabel: string,
 		selected: boolean,
 	) => {
+		const operator = paramRulesOperator(rules, param.code);
+		const isAnyOf = operator === "in" || operator === "not_in";
+
+		if (isAnyOf) {
+			const current = rules.find((r) => r.paramCode === param.code);
+			const currentValues = current?.values?.length
+				? current.values
+				: current?.valueCode
+					? [{ code: current.valueCode, label: current.valueLabel }]
+					: [];
+			const nextValues = selected
+				? currentValues.filter((v) => v.code !== valueCode)
+				: [...currentValues, { code: valueCode, label: valueLabel }];
+			const withoutParam = rules.filter((r) => r.paramCode !== param.code);
+			if (nextValues.length === 0) {
+				onChange(withoutParam);
+				return;
+			}
+			onChange([
+				...withoutParam,
+				{
+					id: current?.id ?? `new-${Date.now()}`,
+					streamExecutor,
+					paramCode: param.code,
+					paramName: param.name,
+					operator,
+					valueCode: null,
+					valueLabel: null,
+					values: nextValues.map((v) => ({
+						code: v.code,
+						label: v.label ?? null,
+					})),
+				},
+			]);
+			return;
+		}
+
 		if (selected) {
 			onChange(
 				rules.filter(
@@ -315,7 +364,8 @@ export function TypicalWorkTriggersSection({
 							catalogForValidation,
 						);
 						const selectedCodes = new Set(
-							paramRules.map((r) => r.valueCode).filter(Boolean),
+							(paramRules[0]?.values?.map((v) => v.code) ??
+								paramRules.map((r) => r.valueCode)).filter(Boolean),
 						);
 						const staleRules = paramRules.filter(
 							(rule) =>
@@ -392,6 +442,9 @@ export function TypicalWorkTriggersSection({
 									}}
 								>
 									{V2_WORK_RULE_OPERATOR_VALUES.filter((op) => {
+										if (op === "in" || op === "not_in") {
+											return param?.numeric !== true;
+										}
 										if (op === "=" || op === "!=") return true;
 										return param?.numeric === true;
 									}).map((operator) => (
@@ -482,4 +535,11 @@ export function TypicalWorkTriggersSection({
 			) : null}
 		</Box>
 	);
+}
+
+function paramRulesOperator(
+	rules: V2TypicalWorkRuleDto[],
+	paramCode: string,
+): V2WorkRuleOperator {
+	return rules.find((r) => r.paramCode === paramCode)?.operator ?? "=";
 }

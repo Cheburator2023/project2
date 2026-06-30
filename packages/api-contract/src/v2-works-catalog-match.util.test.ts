@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	resolveLaborAnyOfCoefficient,
 	resolveStreamFromSourceType,
 	resolveStreamsFromSourceSystems,
 	typicalWorkRulesMatchSource,
@@ -71,5 +72,54 @@ describe("v2-works-catalog-match.util", () => {
 
 		expect(typicalWorkRulesMatchSource([rule], { metric_count: 12 })).toBe(true);
 		expect(typicalWorkRulesMatchSource([rule], { metric_count: 8 })).toBe(false);
+	});
+
+	it("matches in / not_in operators with value sets", () => {
+		const rule = {
+			paramCode: "region",
+			paramName: "Регион",
+			operator: "in",
+			valueCode: null,
+			valueLabel: null,
+			values: [
+				{ code: "eu", label: "Европа" },
+				{ code: "us", label: "США" },
+			],
+		};
+
+		expect(typicalWorkRulesMatchSource([rule], { region: "eu" })).toBe(true);
+		expect(typicalWorkRulesMatchSource([rule], { region: "Европа" })).toBe(true);
+		expect(typicalWorkRulesMatchSource([rule], { region: "asia" })).toBe(false);
+
+		const notIn = { ...rule, operator: "not_in" };
+		expect(typicalWorkRulesMatchSource([notIn], { region: "asia" })).toBe(true);
+		expect(typicalWorkRulesMatchSource([notIn], { region: "eu" })).toBe(false);
+	});
+
+	it("resolves labor any-of coefficient", () => {
+		expect(
+			resolveLaborAnyOfCoefficient(
+				{ flag: "yes" },
+				"flag",
+				{
+					valueCodes: ["yes"],
+					valueLabels: ["Да"],
+					coeffOn: 2,
+					coeffOff: 0.5,
+				},
+			),
+		).toBe(2);
+		expect(
+			resolveLaborAnyOfCoefficient(
+				{ flag: "no" },
+				"flag",
+				{
+					valueCodes: ["yes"],
+					valueLabels: ["Да"],
+					coeffOn: 2,
+					coeffOff: 0.5,
+				},
+			),
+		).toBe(0.5);
 	});
 });

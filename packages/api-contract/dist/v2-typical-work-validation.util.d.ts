@@ -24,8 +24,14 @@ export type CollectPatchValidationOptions = {
 export declare function collectTypicalWorkPatchValidationErrors(dto: PatchV2TypicalWorkRequestDto, options?: CollectPatchValidationOptions): ValidationIssue[];
 export type WorkTriggerStatusRuleInput = {
     paramCode: string;
+    paramName?: string | null;
+    operator?: string;
     valueCode: string | null;
     valueLabel: string | null;
+    values?: Array<{
+        code: string;
+        label: string | null;
+    }>;
 };
 export type WorkTriggerStatusCatalogParam = {
     code: string;
@@ -44,8 +50,8 @@ export declare function filterTypicalWorkParameterValuesActiveOnDate<T extends {
     validFrom?: string | null;
     validTo?: string | null;
 }>(values: T[], atDate: string): T[];
-/** F-03: статус триггеров с учётом актуальности параметров каталога */
-export declare function computeWorkTriggerStatus(rules: WorkTriggerStatusRuleInput[], catalog?: WorkTriggerStatusCatalogParam[], atDate?: string): V2WorkTriggerStatus;
+/** F-03/v4: статус триггеров с учётом каталога и (опционально) черновика ответов. */
+export declare function computeWorkTriggerStatus(rules: WorkTriggerStatusRuleInput[], catalog?: WorkTriggerStatusCatalogParam[], atDate?: string, draftSource?: Record<string, unknown>): V2WorkTriggerStatus;
 export declare function isWorkTriggerGroupInvalid(paramCode: string, rules: WorkTriggerStatusRuleInput[], catalog: WorkTriggerStatusCatalogParam[], atDate?: string): boolean;
 export type WorkCoefficientRowInput = {
     paramCode: string;

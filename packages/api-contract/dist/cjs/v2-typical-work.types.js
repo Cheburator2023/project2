@@ -16,6 +16,8 @@ exports.V2_WORK_RULE_OPERATOR_VALUES = [
     "<=",
     ">",
     "<",
+    "in",
+    "not_in",
 ];
 exports.V2_WORK_ROUNDING_MODE_VALUES = [
     "CEIL",
@@ -25,6 +27,7 @@ exports.V2_WORK_ROUNDING_MODE_VALUES = [
 ];
 exports.V2_WORK_TRIGGER_STATUS_VALUES = [
     "appears",
+    "hidden",
     "no_triggers",
     "invalid",
 ];
