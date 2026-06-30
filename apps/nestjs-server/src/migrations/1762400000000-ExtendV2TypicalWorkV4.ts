@@ -82,6 +82,23 @@ export class ExtendV2TypicalWorkV41762400000000 implements MigrationInterface {
 			END $$
 		`);
 
+		// 1) Перенос legacy-строк (stream_executor='') на первый стрим назначения in-place.
+		await queryRunner.query(`
+			UPDATE v2_typical_work_version_config vc
+			SET stream_executor = COALESCE(
+				(
+					SELECT stream_executor
+					FROM v2_typical_work_assignment a
+					WHERE a.work_id = vc.work_id
+					ORDER BY a.stream_executor
+					LIMIT 1
+				),
+				''
+			)
+			WHERE vc.stream_executor = ''
+		`);
+
+		// 2) Копируем конфиг только на остальные стримы, где строки ещё нет.
 		await queryRunner.query(`
 			INSERT INTO v2_typical_work_version_config (
 				template_version_id, work_id, stream_executor, formula, formula_text,
@@ -100,24 +117,24 @@ export class ExtendV2TypicalWorkV41762400000000 implements MigrationInterface {
 				now()
 			FROM v2_typical_work_version_config vc
 			JOIN v2_typical_work_assignment a ON a.work_id = vc.work_id
-			WHERE vc.stream_executor = ''
-			  AND a.stream_executor <> ''
-			ON CONFLICT DO NOTHING
+			WHERE a.stream_executor <> vc.stream_executor
+			  AND NOT EXISTS (
+				SELECT 1
+				FROM v2_typical_work_version_config existing
+				WHERE existing.template_version_id = vc.template_version_id
+				  AND existing.work_id = vc.work_id
+				  AND existing.stream_executor = a.stream_executor
+			  )
 		`);
 
+		// На случай частично применённой старой версии миграции — убираем дубликаты.
 		await queryRunner.query(`
-			UPDATE v2_typical_work_version_config vc
-			SET stream_executor = COALESCE(
-				(
-					SELECT stream_executor
-					FROM v2_typical_work_assignment a
-					WHERE a.work_id = vc.work_id
-					ORDER BY a.stream_executor
-					LIMIT 1
-				),
-				''
-			)
-			WHERE vc.stream_executor = ''
+			DELETE FROM v2_typical_work_version_config vc
+			USING v2_typical_work_version_config dup
+			WHERE vc.ctid < dup.ctid
+			  AND vc.template_version_id = dup.template_version_id
+			  AND vc.work_id = dup.work_id
+			  AND vc.stream_executor = dup.stream_executor
 		`);
 
 		await queryRunner.query(`
