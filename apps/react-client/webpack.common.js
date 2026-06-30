@@ -2,7 +2,7 @@ const path = require("node:path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const ModuleFederationPlugin =
 	require("webpack").container.ModuleFederationPlugin;
-const browserslistToEsbuild = require("browserslist-to-esbuild").default;
+const browserslistToEsbuild = require("./webpack-browserslist-target.cjs");
 
 const SRC_DIR = path.join(__dirname, "./src");
 const PUBLIC_PATH = process.env.PUBLIC_PATH || undefined;

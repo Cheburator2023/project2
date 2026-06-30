@@ -3,7 +3,7 @@ const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const webpack = require("webpack");
 const { EsbuildPlugin } = require("esbuild-loader");
-const browserslistToEsbuild = require("browserslist-to-esbuild").default;
+const browserslistToEsbuild = require("./webpack-browserslist-target.cjs");
 
 const { DefinePlugin } = webpack;
 const common = require("./webpack.common.js");
