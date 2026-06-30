@@ -7,7 +7,7 @@
 #   sh scripts/stage-docker-ci-packages.sh react-client api-contract json-logic-ts ag-grid-enterprise
 #   docker build . -f Dockerfile
 
-FROM docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-ui:v3.2.0 AS build-deps
+FROM docker.repo-ci.sfera.inno.local/sumd-docker-lib/ubi8-base-smart-anketa-ui:v3.3.3 AS build-deps
 
 WORKDIR /app
 
