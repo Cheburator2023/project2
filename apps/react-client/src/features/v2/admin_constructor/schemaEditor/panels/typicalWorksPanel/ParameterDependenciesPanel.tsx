@@ -1,3 +1,5 @@
+import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
+import { selectDisableTypeaheadMenuProps } from "@react-client/common/muiCustom/selectDisableTypeahead";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -312,19 +314,27 @@ export function ParameterDependenciesPanel() {
 											<Typography sx={{ fontSize: 11, color: "#aab1c0", width: 16 }}>
 												{index + 1}.
 											</Typography>
-											<Select
-												size="small"
-												value={rule.sourceParamCode}
-												onChange={(e) => {
-													const code = String(e.target.value);
-													const p = params.find((x) => x.code === code);
-													const v = p?.values[0];
+											<Box sx={{ minWidth: 180, flex: "1 1 180px" }}>
+												<FuzzyAutocomplete
+													size="small"
+													allowEmpty={false}
+													options={params.filter(
+														(p) => p.code !== selected?.code,
+													)}
+												value={
+													params.find(
+														(p) => p.code === rule.sourceParamCode,
+													) ?? null
+												}
+												onChange={(p) => {
+													if (!p) return;
+													const v = p.values[0];
 													commitRules(
 														selectedRules.map((r) =>
 															r.id === rule.id
 																? {
 																		...r,
-																		sourceParamCode: code,
+																		sourceParamCode: p.code,
 																		valueCode: v?.code ?? "",
 																		valueLabel: v?.label ?? "",
 																	}
@@ -332,19 +342,15 @@ export function ParameterDependenciesPanel() {
 														),
 													);
 												}}
-												sx={{ minWidth: 180 }}
-											>
-												{params
-													.filter((p) => p.code !== selected?.code)
-													.map((p) => (
-														<MenuItem key={p.code} value={p.code}>
-															{p.name}
-														</MenuItem>
-													))}
-											</Select>
+												getOptionLabel={(p) => p.name}
+												getOptionValue={(p) => p.code}
+												searchPlaceholder="Поиск параметра…"
+												/>
+											</Box>
 											<Select
 												size="small"
 												value={rule.operator}
+												MenuProps={selectDisableTypeaheadMenuProps()}
 												onChange={(e) =>
 													commitRules(
 														selectedRules.map((r) =>
@@ -362,34 +368,35 @@ export function ParameterDependenciesPanel() {
 												<MenuItem value="=">=</MenuItem>
 												<MenuItem value="!=">≠</MenuItem>
 											</Select>
-											<Select
-												size="small"
-												value={rule.valueCode}
-												onChange={(e) => {
-													const code = String(e.target.value);
-													const v = source?.values.find(
-														(x) => x.code === code,
-													);
+											<Box sx={{ minWidth: 120, flex: "1 1 120px" }}>
+												<FuzzyAutocomplete
+													size="small"
+													allowEmpty={false}
+													options={source?.values ?? []}
+												value={
+													source?.values.find(
+														(v) => v.code === rule.valueCode,
+													) ?? null
+												}
+												onChange={(v) => {
+													if (!v) return;
 													commitRules(
 														selectedRules.map((r) =>
 															r.id === rule.id
 																? {
 																		...r,
-																		valueCode: code,
-																		valueLabel: v?.label ?? code,
+																		valueCode: v.code,
+																		valueLabel: v.label ?? v.code,
 																	}
 																: r,
 														),
 													);
 												}}
-												sx={{ minWidth: 120 }}
-											>
-												{(source?.values ?? []).map((v) => (
-													<MenuItem key={v.code} value={v.code}>
-														{v.label}
-													</MenuItem>
-												))}
-											</Select>
+												getOptionLabel={(v) => v.label}
+												getOptionValue={(v) => v.code}
+												searchPlaceholder="Поиск значения…"
+												/>
+											</Box>
 											<Button
 												size="small"
 												color="error"

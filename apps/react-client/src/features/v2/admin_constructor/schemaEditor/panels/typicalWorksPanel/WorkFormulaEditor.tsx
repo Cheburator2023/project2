@@ -298,6 +298,7 @@ export function WorkFormulaEditor({
 											? "Сначала добавьте параметр в блок «Параметры трудоёмкости»"
 											: undefined
 									}
+									disableTypeahead
 									onChange={(e) => {
 										const code = String(e.target.value);
 										const param = paramOptions.find((p) => p.code === code);

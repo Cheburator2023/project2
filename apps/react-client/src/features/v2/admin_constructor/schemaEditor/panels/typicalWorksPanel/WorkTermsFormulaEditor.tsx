@@ -211,6 +211,7 @@ export function WorkTermsFormulaEditor({
 									placeholder="Работа-источник"
 									value={term.sourceAssignmentId ?? ""}
 									disabled={readOnly}
+									disableTypeahead
 									onChange={(e) => {
 										const assignmentId = String(e.target.value);
 										const source = transitiveSources.find(
@@ -270,6 +271,7 @@ export function WorkTermsFormulaEditor({
 											<SelectWithPlaceholder
 												placeholder="+ Фактор"
 												value=""
+												disableTypeahead
 												onChange={(e) => addFactor(term.id, String(e.target.value))}
 											>
 												{paramOptions

@@ -49,9 +49,10 @@ import { TypicalWorkFormulaLockedDialog } from "./TypicalWorkFormulaLockedDialog
 import { RemoveLaborParamDialog } from "./RemoveLaborParamDialog";
 import { TypicalWorkNormsSection } from "./TypicalWorkNormsSection";
 import { TypicalWorkTriggersSection } from "./TypicalWorkTriggersSection";
+import { TypicalWorkFormulaPreview } from "./TypicalWorkFormulaPreview";
 import {
-	ensureFormulaTerms,
 	WorkTermsFormulaEditor,
+	ensureFormulaTerms,
 	type TransitiveSourceOption,
 } from "./WorkTermsFormulaEditor";
 import {
@@ -156,6 +157,16 @@ export function TypicalWorkEditableCard({
 	});
 
 	const lastSyncedCardKeyRef = useRef<string | null>(null);
+	const [previewRefreshToken, setPreviewRefreshToken] = useState(0);
+	const prevSaveStatusRef = useRef<SaveStatus>("idle");
+
+	useEffect(() => {
+		if (prevSaveStatusRef.current !== "saved" && status === "saved") {
+			setPreviewRefreshToken((n) => n + 1);
+		}
+		prevSaveStatusRef.current = status;
+	}, [status]);
+
 	useEffect(() => {
 		if (!card) return;
 		const cardKey = `${card.id}::${card.streamExecutor}::${templateVersionId ?? ""}`;
@@ -1108,6 +1119,7 @@ export function TypicalWorkEditableCard({
 									<SelectWithPlaceholder
 										placeholder="Параметр"
 										value={addParamCode}
+										disableTypeahead
 										onChange={(e) => setAddParamCode(String(e.target.value))}
 									>
 										{unusedLaborParams.map((p) => (
@@ -1168,6 +1180,16 @@ export function TypicalWorkEditableCard({
 								});
 							}}
 							onRoundingChange={(rounding) => commitDraft({ ...draft, rounding })}
+						/>
+						<TypicalWorkFormulaPreview
+							workId={draft.id}
+							streamExecutor={draft.streamExecutor}
+							laborParams={draft.laborParams}
+							rules={draft.rules}
+							paramCatalog={paramCatalog?.items ?? []}
+							localFormulaText={ensureFormulaTerms(draft).text}
+							refreshToken={previewRefreshToken}
+							isSaving={status === "saving"}
 						/>
 					</Paper>
 				</Box>

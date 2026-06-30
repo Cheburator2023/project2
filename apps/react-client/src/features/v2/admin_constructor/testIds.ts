@@ -55,6 +55,9 @@ export const V2_TEMPLATE_EDIT_TEST_IDS = {
 	workFormulaApplyManual: "workFormulaApplyManual",
 	workFormulaManualInput: "workFormulaManualInput",
 	workFormulaParamSelect: "workFormulaParamSelect",
+	workFormulaPreview: "workFormulaPreview",
+	workFormulaPreviewSymbolic: "workFormulaPreviewSymbolic",
+	workFormulaPreviewResult: "workFormulaPreviewResult",
 } as const;
 
 /** data-test-id для отдельной страницы логики (/logic). */
