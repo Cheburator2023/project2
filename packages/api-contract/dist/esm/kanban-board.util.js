@@ -1,4 +1,4 @@
-import { defaultKanbanBoardColumns, KANBAN_BOARD_ASSIGNEE_ROLES, KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD, kanbanBoardAssigneeRoleTitle, } from "./kanban-board.types";
+import { defaultKanbanBoardColumns, KANBAN_BOARD_ASSIGNEE_ROLES, KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD, KANBAN_BOARD_SUBTASK_STATUSES, kanbanBoardAssigneeRoleTitle, kanbanBoardSubtaskIsDone, } from "./kanban-board.types";
 export function toBoardData(rows, columns) {
     const effectiveColumns = columns.length > 0 ? columns : defaultKanbanBoardColumns("board");
     const sortedColumns = [...effectiveColumns].sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title));
@@ -154,9 +154,42 @@ export function kanbanBoardEffectiveSprintCapacityPd(input) {
     const fallback = input.defaultSprintCapacityPd ?? KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD;
     return fallback;
 }
+/** Нормализует чеклист подзадач: убирает пустые строки, сохраняет порядок. */
+export function normalizeKanbanBoardSubtasks(items) {
+    if (!items?.length)
+        return undefined;
+    const cleaned = items
+        .map((item) => {
+        const status = normalizeKanbanBoardSubtaskStatus(item);
+        return {
+            id: item.id.trim(),
+            text: item.text.trim(),
+            status,
+        };
+    })
+        .filter((item) => item.id && item.text);
+    return cleaned.length ? cleaned : undefined;
+}
+function normalizeKanbanBoardSubtaskStatus(item) {
+    if (item.status &&
+        KANBAN_BOARD_SUBTASK_STATUSES.some((entry) => entry.id === item.status)) {
+        return item.status;
+    }
+    if (item.done)
+        return "done";
+    return "next_up";
+}
+export function kanbanBoardSubtasksProgress(content) {
+    const items = content?.subtasks;
+    if (!items?.length)
+        return undefined;
+    const done = items.filter((item) => kanbanBoardSubtaskIsDone(item)).length;
+    return { done, total: items.length };
+}
 /** Нормализует content: проставляет estimatePd из roleEstimates, убирает пустые роли. */
 export function normalizeKanbanBoardTaskContent(content) {
     const next = { ...content };
+    next.subtasks = normalizeKanbanBoardSubtasks(next.subtasks);
     if (next.roleEstimates) {
         const cleaned = {};
         for (const [key, value] of Object.entries(next.roleEstimates)) {

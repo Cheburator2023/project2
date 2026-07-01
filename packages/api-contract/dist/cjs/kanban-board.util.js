@@ -12,6 +12,8 @@ exports.kanbanBoardTaskAssigneeRoleTitles = kanbanBoardTaskAssigneeRoleTitles;
 exports.kanbanBoardRoleEstimatesTotal = kanbanBoardRoleEstimatesTotal;
 exports.kanbanBoardEffectiveEstimatePd = kanbanBoardEffectiveEstimatePd;
 exports.kanbanBoardEffectiveSprintCapacityPd = kanbanBoardEffectiveSprintCapacityPd;
+exports.normalizeKanbanBoardSubtasks = normalizeKanbanBoardSubtasks;
+exports.kanbanBoardSubtasksProgress = kanbanBoardSubtasksProgress;
 exports.normalizeKanbanBoardTaskContent = normalizeKanbanBoardTaskContent;
 exports.boardsEquivalent = boardsEquivalent;
 const kanban_board_types_1 = require("./kanban-board.types");
@@ -170,9 +172,42 @@ function kanbanBoardEffectiveSprintCapacityPd(input) {
     const fallback = input.defaultSprintCapacityPd ?? kanban_board_types_1.KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD;
     return fallback;
 }
+/** Нормализует чеклист подзадач: убирает пустые строки, сохраняет порядок. */
+function normalizeKanbanBoardSubtasks(items) {
+    if (!items?.length)
+        return undefined;
+    const cleaned = items
+        .map((item) => {
+        const status = normalizeKanbanBoardSubtaskStatus(item);
+        return {
+            id: item.id.trim(),
+            text: item.text.trim(),
+            status,
+        };
+    })
+        .filter((item) => item.id && item.text);
+    return cleaned.length ? cleaned : undefined;
+}
+function normalizeKanbanBoardSubtaskStatus(item) {
+    if (item.status &&
+        kanban_board_types_1.KANBAN_BOARD_SUBTASK_STATUSES.some((entry) => entry.id === item.status)) {
+        return item.status;
+    }
+    if (item.done)
+        return "done";
+    return "next_up";
+}
+function kanbanBoardSubtasksProgress(content) {
+    const items = content?.subtasks;
+    if (!items?.length)
+        return undefined;
+    const done = items.filter((item) => (0, kanban_board_types_1.kanbanBoardSubtaskIsDone)(item)).length;
+    return { done, total: items.length };
+}
 /** Нормализует content: проставляет estimatePd из roleEstimates, убирает пустые роли. */
 function normalizeKanbanBoardTaskContent(content) {
     const next = { ...content };
+    next.subtasks = normalizeKanbanBoardSubtasks(next.subtasks);
     if (next.roleEstimates) {
         const cleaned = {};
         for (const [key, value] of Object.entries(next.roleEstimates)) {

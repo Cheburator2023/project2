@@ -18,8 +18,10 @@ import {
 	kanbanBoardTaskTypeColor,
 	kanbanBoardWorkTypeColor,
 	normalizeKanbanBoardTaskContent,
+	normalizeKanbanBoardSubtasks,
 	kanbanBoardRoleEstimatesTotal,
 	type KanbanBoardRoleEstimates,
+	type KanbanBoardSubtaskItem,
 	type KanbanBoardTaskContent,
 	type KanbanBoardTaskRegistryDto,
 } from "@smart-anketa/api-contract";
@@ -47,6 +49,7 @@ import {
 	KanbanTaskSelectField,
 } from "@react-client/features/kanban-board/components/KanbanTaskSelectField";
 import { KanbanRoleEstimatesFields } from "@react-client/features/kanban-board/components/KanbanRoleEstimatesFields";
+import { KanbanSubtasksChecklist } from "@react-client/features/kanban-board/components/KanbanSubtasksChecklist";
 import {
 	isKanbanTaskCreateRoute,
 	kanbanBoardPath,
@@ -146,6 +149,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [sprintId, setSprintId] = useState("");
 	const [streamCustomer, setStreamCustomer] = useState("");
 	const [description, setDescription] = useState("");
+	const [subtasks, setSubtasks] = useState<KanbanBoardSubtaskItem[]>([]);
 
 	const boardsQuery = useKanbanBoardBoards();
 	const assigneesQuery = useKanbanBoardAssignees();
@@ -339,6 +343,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		setSprintId(task.content.sprintId ?? "");
 		setStreamCustomer(task.content.streamCustomer ?? "");
 		setDescription(task.content.description ?? "");
+		setSubtasks(normalizeKanbanBoardSubtasks(task.content.subtasks) ?? []);
 	}, [isCreate, task]);
 
 	useEffect(() => {
@@ -395,6 +400,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			sprintOutcome: sprintOutcome.trim() || undefined,
 			sprintId: sprintId || undefined,
 			streamCustomer: streamCustomer.trim() || undefined,
+			subtasks: subtasks.length ? subtasks : undefined,
 		});
 	};
 
@@ -656,6 +662,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 									fullWidth
 								/>
 							</Stack>
+							<Spacer space={12} />
 							<TextField
 								label="Ожидаемый результат спринта"
 								value={sprintOutcome}
@@ -665,6 +672,16 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 								minRows={5}
 								placeholder="Релиз, ПСИ, ошибки устранены, готовность к демо…"
 							/>
+							<Spacer space={12} />
+
+							<KanbanSubtasksChecklist
+								items={subtasks}
+								onChange={setSubtasks}
+								disabled={isSaving}
+							/>
+
+							<Spacer space={12} />
+
 							<Box sx={{ flex: 1, minHeight: 360 }}>
 								<Typography variant="subtitle2" sx={{ mb: 1 }}>
 									Описание (Markdown, Mermaid)

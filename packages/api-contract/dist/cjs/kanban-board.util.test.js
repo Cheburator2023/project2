@@ -12,8 +12,8 @@ const sampleBoard = () => ({
         id: "root",
         title: "Root",
         parentId: null,
-        children: ["backlog", "todo", "in_progress", "review", "done"],
-        totalChildrenCount: 5,
+        children: ["backlog", "todo", "in_progress", "review", "qa", "done"],
+        totalChildrenCount: 6,
     },
     backlog: {
         id: "backlog",
@@ -39,6 +39,13 @@ const sampleBoard = () => ({
     review: {
         id: "review",
         title: "Ревью",
+        parentId: "root",
+        children: [],
+        totalChildrenCount: 0,
+    },
+    qa: {
+        id: "qa",
+        title: "QA",
         parentId: "root",
         children: [],
         totalChildrenCount: 0,
@@ -96,12 +103,36 @@ const sampleBoard = () => ({
         })).toBe(9);
     });
 });
-(0, vitest_1.describe)("kanban board task assignee roles", () => {
-    (0, vitest_1.it)("collects unique roles from assignees on task", () => {
-        const roleByName = new Map([
-            ["Alice", "analyst"],
-            ["Bob", "developer"],
+(0, vitest_1.describe)("kanban board subtasks", () => {
+    (0, vitest_1.it)("normalizes and counts progress", () => {
+        const normalized = (0, api_contract_1.normalizeKanbanBoardSubtasks)([
+            { id: "a", text: " One ", done: true },
+            { id: "b", text: "", done: false },
+            { id: "c", text: "Two", done: false },
         ]);
-        (0, vitest_1.expect)((0, api_contract_1.kanbanBoardTaskAssigneeRoles)({ assignees: ["Alice", "Bob", "Alice"] }, roleByName)).toEqual(["analyst", "developer"]);
+        (0, vitest_1.expect)(normalized).toEqual([
+            { id: "a", text: "One", status: "done" },
+            { id: "c", text: "Two", status: "next_up" },
+        ]);
+        (0, vitest_1.expect)((0, api_contract_1.kanbanBoardSubtasksProgress)({ subtasks: normalized })).toEqual({
+            done: 1,
+            total: 2,
+        });
+    });
+    (0, vitest_1.it)("keeps explicit status", () => {
+        const normalized = (0, api_contract_1.normalizeKanbanBoardSubtasks)([
+            { id: "a", text: "Review", status: "in_review" },
+        ]);
+        (0, vitest_1.expect)(normalized).toEqual([
+            { id: "a", text: "Review", status: "in_review" },
+        ]);
+    });
+    (0, vitest_1.it)("keeps qa status", () => {
+        const normalized = (0, api_contract_1.normalizeKanbanBoardSubtasks)([
+            { id: "a", text: "Check regression", status: "qa" },
+        ]);
+        (0, vitest_1.expect)(normalized).toEqual([
+            { id: "a", text: "Check regression", status: "qa" },
+        ]);
     });
 });

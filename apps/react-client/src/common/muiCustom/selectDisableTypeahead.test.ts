@@ -11,7 +11,7 @@ describe("selectDisableTypeaheadMenuProps", () => {
 			metaKey: false,
 			altKey: false,
 			stopPropagation: stop,
-		} as unknown as React.KeyboardEvent;
+		} as unknown as React.KeyboardEvent<HTMLUListElement>;
 		props.MenuListProps?.onKeyDown?.(event);
 		expect(stop).toHaveBeenCalled();
 	});
@@ -25,7 +25,7 @@ describe("selectDisableTypeaheadMenuProps", () => {
 			metaKey: false,
 			altKey: false,
 			stopPropagation: stop,
-		} as unknown as React.KeyboardEvent;
+		} as unknown as React.KeyboardEvent<HTMLUListElement>;
 		props.MenuListProps?.onKeyDown?.(event);
 		expect(stop).not.toHaveBeenCalled();
 	});

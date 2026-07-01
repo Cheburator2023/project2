@@ -34,5 +34,8 @@ describe("kanban board planning import registry util", () => {
 		expect(resolveBestStatusColumnId("На проверке", COLUMNS).columnId).toBe(
 			"review",
 		);
+		expect(resolveBestStatusColumnId("Тестирование", COLUMNS).columnId).toBe(
+			"qa",
+		);
 	});
 });

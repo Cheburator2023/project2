@@ -7,6 +7,39 @@ export interface KanbanBoardRoleEstimates {
     devops?: number;
     architect?: number;
 }
+export interface KanbanBoardSubtaskItem {
+    id: string;
+    text: string;
+    /** После normalize всегда задан; legacy-данные могут приходить только с done */
+    status?: KanbanBoardSubtaskStatusId;
+    /** @deprecated используйте status === "done" */
+    done?: boolean;
+}
+export declare const KANBAN_BOARD_SUBTASK_STATUSES: readonly [{
+    readonly id: "next_up";
+    readonly title: "Следующая";
+}, {
+    readonly id: "in_progress";
+    readonly title: "В работе";
+}, {
+    readonly id: "in_review";
+    readonly title: "На ревью";
+}, {
+    readonly id: "qa";
+    readonly title: "QA";
+}, {
+    readonly id: "done";
+    readonly title: "Готово";
+}, {
+    readonly id: "skipped";
+    readonly title: "Пропущена";
+}];
+export type KanbanBoardSubtaskStatusId = (typeof KANBAN_BOARD_SUBTASK_STATUSES)[number]["id"];
+export declare const KANBAN_BOARD_SUBTASK_STATUS_COLORS: Record<KanbanBoardSubtaskStatusId, string>;
+export declare function kanbanBoardSubtaskStatusTitle(id?: KanbanBoardSubtaskStatusId | string): string;
+export declare function kanbanBoardSubtaskStatusColor(status?: KanbanBoardSubtaskStatusId | string): string;
+export declare function kanbanBoardSubtaskIsDone(item: Pick<KanbanBoardSubtaskItem, "status" | "done">): boolean;
+export declare function kanbanBoardSubtaskDefaultStatus(): KanbanBoardSubtaskStatusId;
 export interface KanbanBoardTaskContent {
     title: string;
     description?: string;
@@ -39,6 +72,8 @@ export interface KanbanBoardTaskContent {
     sprintOutcome?: string;
     sprintId?: string;
     streamCustomer?: string;
+    /** Чеклист подзадач внутри карточки */
+    subtasks?: KanbanBoardSubtaskItem[];
 }
 export declare const KANBAN_BOARD_PRIORITIES: readonly [{
     readonly id: "high";
@@ -464,6 +499,9 @@ export declare const KANBAN_BOARD_STATUSES: readonly [{
     readonly id: "review";
     readonly title: "Ревью";
 }, {
+    readonly id: "qa";
+    readonly title: "QA";
+}, {
     readonly id: "done";
     readonly title: "Готово";
 }];
@@ -511,6 +549,9 @@ export declare const TASK_STATUSES: readonly [{
 }, {
     readonly id: "review";
     readonly title: "Ревью";
+}, {
+    readonly id: "qa";
+    readonly title: "QA";
 }, {
     readonly id: "done";
     readonly title: "Готово";

@@ -1,4 +1,4 @@
-import { type KanbanBoardAssigneeRoleId, type KanbanBoardColumnDto, type KanbanBoardData, type KanbanBoardRoleEstimates, type KanbanBoardTaskContent, type KanbanBoardTaskRecord } from "./kanban-board.types";
+import { type KanbanBoardAssigneeRoleId, type KanbanBoardColumnDto, type KanbanBoardData, type KanbanBoardRoleEstimates, type KanbanBoardSubtaskItem, type KanbanBoardTaskContent, type KanbanBoardTaskRecord } from "./kanban-board.types";
 export declare function toBoardData(rows: KanbanBoardTaskRecord[], columns: KanbanBoardColumnDto[]): KanbanBoardData;
 export declare function normalizeKanbanBoardData(board: KanbanBoardData): KanbanBoardData;
 export declare function fromBoardData(board: KanbanBoardData, stand: string, now: string, boardId: string): KanbanBoardTaskRecord[];
@@ -19,6 +19,12 @@ export declare function kanbanBoardEffectiveSprintCapacityPd(input: {
     sprintCapacityPd?: number | null;
     defaultSprintCapacityPd?: number;
 }): number;
+/** Нормализует чеклист подзадач: убирает пустые строки, сохраняет порядок. */
+export declare function normalizeKanbanBoardSubtasks(items: KanbanBoardSubtaskItem[] | undefined): KanbanBoardSubtaskItem[] | undefined;
+export declare function kanbanBoardSubtasksProgress(content: Pick<KanbanBoardTaskContent, "subtasks"> | undefined): {
+    done: number;
+    total: number;
+} | undefined;
 /** Нормализует content: проставляет estimatePd из roleEstimates, убирает пустые роли. */
 export declare function normalizeKanbanBoardTaskContent(content: KanbanBoardTaskContent): KanbanBoardTaskContent;
 export declare function boardsEquivalent(left: KanbanBoardData, right: KanbanBoardData): boolean;

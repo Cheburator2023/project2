@@ -216,7 +216,7 @@ export function TypicalWorkFormulaPreview({
 								<Typography sx={{ fontSize: 12, fontWeight: 600, mb: 0.5 }}>
 									{param.name}
 								</Typography>
-								<Flex flexWrap="wrap" gap={6}>
+								<Flex wrap="wrap" gap={6}>
 									{param.values.map((value) => {
 										const on = value.code === current;
 										return (

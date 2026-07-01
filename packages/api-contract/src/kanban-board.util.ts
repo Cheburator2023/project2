@@ -3,12 +3,16 @@ import {
 	type KanbanBoardColumnDto,
 	type KanbanBoardData,
 	type KanbanBoardRoleEstimates,
+	type KanbanBoardSubtaskItem,
+	type KanbanBoardSubtaskStatusId,
 	type KanbanBoardTaskContent,
 	type KanbanBoardTaskRecord,
 	defaultKanbanBoardColumns,
 	KANBAN_BOARD_ASSIGNEE_ROLES,
 	KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD,
+	KANBAN_BOARD_SUBTASK_STATUSES,
 	kanbanBoardAssigneeRoleTitle,
+	kanbanBoardSubtaskIsDone,
 } from "./kanban-board.types";
 
 export function toBoardData(
@@ -222,11 +226,52 @@ export function kanbanBoardEffectiveSprintCapacityPd(input: {
 	return fallback;
 }
 
+/** Нормализует чеклист подзадач: убирает пустые строки, сохраняет порядок. */
+export function normalizeKanbanBoardSubtasks(
+	items: KanbanBoardSubtaskItem[] | undefined,
+): KanbanBoardSubtaskItem[] | undefined {
+	if (!items?.length) return undefined;
+	const cleaned = items
+		.map((item) => {
+			const status = normalizeKanbanBoardSubtaskStatus(item);
+			return {
+				id: item.id.trim(),
+				text: item.text.trim(),
+				status,
+			};
+		})
+		.filter((item) => item.id && item.text);
+	return cleaned.length ? cleaned : undefined;
+}
+
+function normalizeKanbanBoardSubtaskStatus(
+	item: Pick<KanbanBoardSubtaskItem, "status" | "done">,
+): KanbanBoardSubtaskStatusId {
+	if (
+		item.status &&
+		KANBAN_BOARD_SUBTASK_STATUSES.some((entry) => entry.id === item.status)
+	) {
+		return item.status;
+	}
+	if (item.done) return "done";
+	return "next_up";
+}
+
+export function kanbanBoardSubtasksProgress(
+	content: Pick<KanbanBoardTaskContent, "subtasks"> | undefined,
+): { done: number; total: number } | undefined {
+	const items = content?.subtasks;
+	if (!items?.length) return undefined;
+	const done = items.filter((item) => kanbanBoardSubtaskIsDone(item)).length;
+	return { done, total: items.length };
+}
+
 /** Нормализует content: проставляет estimatePd из roleEstimates, убирает пустые роли. */
 export function normalizeKanbanBoardTaskContent(
 	content: KanbanBoardTaskContent,
 ): KanbanBoardTaskContent {
 	const next: KanbanBoardTaskContent = { ...content };
+	next.subtasks = normalizeKanbanBoardSubtasks(next.subtasks);
 	if (next.roleEstimates) {
 		const cleaned: KanbanBoardRoleEstimates = {};
 		for (const [key, value] of Object.entries(next.roleEstimates) as [

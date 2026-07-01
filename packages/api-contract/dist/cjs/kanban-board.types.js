@@ -1,6 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TASK_STATUSES = exports.TASK_TRACKER_SCHEMA_VERSION = exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS = exports.KANBAN_BOARD_COLUMN_COLORS = exports.KANBAN_BOARD_STATUSES = exports.KANBAN_BOARD_SCHEMA_VERSION = exports.KANBAN_BOARD_HEAP_BOARD_SLUG = exports.KANBAN_BOARD_HEAP_BOARD_ID = exports.KANBAN_BOARD_STOCK_PROJECTS = exports.KANBAN_BOARD_STOCK_CUSTOMERS = exports.KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD = exports.KANBAN_BOARD_PRIORITY_COLORS = exports.KANBAN_BOARD_WORK_TYPE_COLORS = exports.KANBAN_BOARD_TASK_TYPE_COLORS = exports.KANBAN_BOARD_ASSIGNEE_ROLES = exports.KANBAN_BOARD_WORK_TYPES = exports.KANBAN_BOARD_TASK_TYPES = exports.KANBAN_BOARD_ROLE_ESTIMATE_FIELDS = exports.KANBAN_BOARD_PRIORITIES = void 0;
+exports.TASK_STATUSES = exports.TASK_TRACKER_SCHEMA_VERSION = exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS = exports.KANBAN_BOARD_COLUMN_COLORS = exports.KANBAN_BOARD_STATUSES = exports.KANBAN_BOARD_SCHEMA_VERSION = exports.KANBAN_BOARD_HEAP_BOARD_SLUG = exports.KANBAN_BOARD_HEAP_BOARD_ID = exports.KANBAN_BOARD_STOCK_PROJECTS = exports.KANBAN_BOARD_STOCK_CUSTOMERS = exports.KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD = exports.KANBAN_BOARD_PRIORITY_COLORS = exports.KANBAN_BOARD_WORK_TYPE_COLORS = exports.KANBAN_BOARD_TASK_TYPE_COLORS = exports.KANBAN_BOARD_ASSIGNEE_ROLES = exports.KANBAN_BOARD_WORK_TYPES = exports.KANBAN_BOARD_TASK_TYPES = exports.KANBAN_BOARD_ROLE_ESTIMATE_FIELDS = exports.KANBAN_BOARD_PRIORITIES = exports.KANBAN_BOARD_SUBTASK_STATUS_COLORS = exports.KANBAN_BOARD_SUBTASK_STATUSES = void 0;
+exports.kanbanBoardSubtaskStatusTitle = kanbanBoardSubtaskStatusTitle;
+exports.kanbanBoardSubtaskStatusColor = kanbanBoardSubtaskStatusColor;
+exports.kanbanBoardSubtaskIsDone = kanbanBoardSubtaskIsDone;
+exports.kanbanBoardSubtaskDefaultStatus = kanbanBoardSubtaskDefaultStatus;
 exports.kanbanBoardTaskTypeTitle = kanbanBoardTaskTypeTitle;
 exports.kanbanBoardWorkTypeTitle = kanbanBoardWorkTypeTitle;
 exports.kanbanBoardAssigneeRoleTitle = kanbanBoardAssigneeRoleTitle;
@@ -11,6 +15,41 @@ exports.kanbanBoardWorkTypeColor = kanbanBoardWorkTypeColor;
 exports.kanbanBoardPriorityColor = kanbanBoardPriorityColor;
 exports.pickKanbanBoardColumnColor = pickKanbanBoardColumnColor;
 exports.defaultKanbanBoardColumns = defaultKanbanBoardColumns;
+exports.KANBAN_BOARD_SUBTASK_STATUSES = [
+    { id: "next_up", title: "Следующая" },
+    { id: "in_progress", title: "В работе" },
+    { id: "in_review", title: "На ревью" },
+    { id: "qa", title: "QA" },
+    { id: "done", title: "Готово" },
+    { id: "skipped", title: "Пропущена" },
+];
+exports.KANBAN_BOARD_SUBTASK_STATUS_COLORS = {
+    next_up: "#7c3aed",
+    in_progress: "#2563eb",
+    in_review: "#ca8a04",
+    qa: "#0891b2",
+    done: "#16a34a",
+    skipped: "#64748b",
+};
+function kanbanBoardSubtaskStatusTitle(id) {
+    return (exports.KANBAN_BOARD_SUBTASK_STATUSES.find((item) => item.id === id)?.title ??
+        id ??
+        "");
+}
+function kanbanBoardSubtaskStatusColor(status) {
+    if (!status)
+        return "#64748b";
+    return (exports.KANBAN_BOARD_SUBTASK_STATUS_COLORS[status] ??
+        "#64748b");
+}
+function kanbanBoardSubtaskIsDone(item) {
+    if (item.status)
+        return item.status === "done";
+    return Boolean(item.done);
+}
+function kanbanBoardSubtaskDefaultStatus() {
+    return "next_up";
+}
 exports.KANBAN_BOARD_PRIORITIES = [
     { id: "high", title: "Высокий" },
     { id: "medium", title: "Средний" },
@@ -40,10 +79,10 @@ exports.KANBAN_BOARD_WORK_TYPES = [
     { id: "tech_debt", title: "Технический долг" },
 ];
 function kanbanBoardTaskTypeTitle(id) {
-    return exports.KANBAN_BOARD_TASK_TYPES.find((item) => item.id === id)?.title ?? id ?? "";
+    return (exports.KANBAN_BOARD_TASK_TYPES.find((item) => item.id === id)?.title ?? id ?? "");
 }
 function kanbanBoardWorkTypeTitle(id) {
-    return exports.KANBAN_BOARD_WORK_TYPES.find((item) => item.id === id)?.title ?? id ?? "";
+    return (exports.KANBAN_BOARD_WORK_TYPES.find((item) => item.id === id)?.title ?? id ?? "");
 }
 exports.KANBAN_BOARD_ASSIGNEE_ROLES = [
     { id: "developer", title: "Разработчик", color: "#2563eb" },
@@ -56,10 +95,13 @@ exports.KANBAN_BOARD_ASSIGNEE_ROLES = [
     { id: "lead", title: "Тимлид", color: "#4f46e5" },
 ];
 function kanbanBoardAssigneeRoleTitle(id) {
-    return exports.KANBAN_BOARD_ASSIGNEE_ROLES.find((item) => item.id === id)?.title ?? id ?? "";
+    return (exports.KANBAN_BOARD_ASSIGNEE_ROLES.find((item) => item.id === id)?.title ??
+        id ??
+        "");
 }
 function kanbanBoardAssigneeRoleColor(id) {
-    return (exports.KANBAN_BOARD_ASSIGNEE_ROLES.find((item) => item.id === id)?.color ?? "#64748b");
+    return (exports.KANBAN_BOARD_ASSIGNEE_ROLES.find((item) => item.id === id)?.color ??
+        "#64748b");
 }
 exports.KANBAN_BOARD_TASK_TYPE_COLORS = {
     epic: "#9333ea",
@@ -82,7 +124,7 @@ exports.KANBAN_BOARD_PRIORITY_COLORS = {
     hold: "#78716c",
 };
 function kanbanBoardPriorityTitle(id) {
-    return exports.KANBAN_BOARD_PRIORITIES.find((item) => item.id === id)?.title ?? id ?? "";
+    return (exports.KANBAN_BOARD_PRIORITIES.find((item) => item.id === id)?.title ?? id ?? "");
 }
 function kanbanBoardTaskTypeColor(id) {
     if (!id)
@@ -97,7 +139,7 @@ function kanbanBoardWorkTypeColor(id) {
 function kanbanBoardPriorityColor(priority) {
     if (!priority)
         return "#64748b";
-    return exports.KANBAN_BOARD_PRIORITY_COLORS[priority] ?? "#64748b";
+    return (exports.KANBAN_BOARD_PRIORITY_COLORS[priority] ?? "#64748b");
 }
 exports.KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD = 9;
 exports.KANBAN_BOARD_STOCK_CUSTOMERS = [
@@ -129,6 +171,7 @@ exports.KANBAN_BOARD_STATUSES = [
     { id: "todo", title: "К выполнению" },
     { id: "in_progress", title: "В работе" },
     { id: "review", title: "Ревью" },
+    { id: "qa", title: "QA" },
     { id: "done", title: "Готово" },
 ];
 exports.KANBAN_BOARD_COLUMN_COLORS = {
@@ -136,6 +179,7 @@ exports.KANBAN_BOARD_COLUMN_COLORS = {
     todo: "#2563eb",
     in_progress: "#d97706",
     review: "#7c3aed",
+    qa: "#0891b2",
     done: "#16a34a",
 };
 exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS = [

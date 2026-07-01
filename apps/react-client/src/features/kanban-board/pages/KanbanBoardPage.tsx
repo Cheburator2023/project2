@@ -18,12 +18,10 @@ import {
 	type KanbanBoardData,
 	type KanbanBoardTaskContent,
 	type KanbanBoardTaskRecord,
-} from "@smart-anketa/api-contract";
-import { KanbanTaskContentChips } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
-import {
 	kanbanBoardTaskAssigneeRoles,
 	kanbanBoardTaskAssignees,
 } from "@smart-anketa/api-contract";
+import { KanbanTaskContentChips } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
 import { Kanban, dropHandler } from "react-kanban-kit";
 import type { BoardData, BoardItem } from "react-kanban-kit";
 import {
@@ -65,6 +63,7 @@ import {
 	kanbanTaskCreatePath,
 	kanbanTaskEditPath,
 } from "@react-client/features/kanban-board/kanban-task-paths";
+import { KanbanTaskCardSubtasks } from "@react-client/features/kanban-board/components/KanbanSubtasksChecklist";
 
 const buildBoardData = (
 	tasks: Parameters<typeof toBoardData>[0],
@@ -72,28 +71,49 @@ const buildBoardData = (
 ): KanbanBoardData => toBoardData(tasks, columns);
 
 function TaskCardContent({
+	taskId,
+	boardId,
+	parentId,
 	title,
 	content,
 	origin,
 	columnColor,
 	assigneeRoleByName,
+	isBoardBusy,
+	onContentUpdated,
 }: {
+	taskId: string;
+	boardId: string;
+	parentId: string;
 	title?: string;
 	content?: KanbanBoardTaskContent;
 	origin?: string;
 	columnColor: string;
 	assigneeRoleByName?: ReadonlyMap<string, KanbanBoardAssigneeRoleId | null>;
+	isBoardBusy?: boolean;
+	onContentUpdated: (taskId: string, content: KanbanBoardTaskContent) => void;
 }) {
 	const displayTitle = title ?? content?.title;
 	const hasRoleChips =
 		content && assigneeRoleByName
 			? kanbanBoardTaskAssigneeRoles(content, assigneeRoleByName).length > 0
 			: false;
+	const hasMetaChips =
+		content?.priority ||
+		(content && kanbanBoardTaskAssignees(content).length > 0) ||
+		content?.currentAssignee ||
+		hasRoleChips ||
+		content?.taskType ||
+		content?.workType ||
+		content?.streamCustomer ||
+		content?.estimatePd ||
+		content?.dueDate ||
+		origin;
 
 	return (
 		<Box
 			sx={{
-				p: 1.25,
+				p: 1,
 				minWidth: 0,
 				borderRadius: 1,
 				border: 1,
@@ -105,26 +125,17 @@ function TaskCardContent({
 				cursor: "pointer",
 			}}
 		>
-			<Stack spacing={0.75}>
+			<Stack spacing={0.5}>
 				{displayTitle ? (
 					<Typography
 						variant="subtitle2"
 						fontWeight={600}
-						sx={{ wordBreak: "break-word" }}
+						sx={{ wordBreak: "break-word", lineHeight: 1.35 }}
 					>
 						{displayTitle}
 					</Typography>
 				) : null}
-				{content?.priority ||
-				(content && kanbanBoardTaskAssignees(content).length > 0) ||
-				content?.currentAssignee ||
-				hasRoleChips ||
-				content?.taskType ||
-				content?.workType ||
-				content?.streamCustomer ||
-				content?.estimatePd ||
-				content?.dueDate ||
-				origin ? (
+				{hasMetaChips ? (
 					<Stack
 						direction="row"
 						spacing={0.5}
@@ -138,6 +149,16 @@ function TaskCardContent({
 							assigneeRoleByName={assigneeRoleByName}
 						/>
 					</Stack>
+				) : null}
+				{content ? (
+					<KanbanTaskCardSubtasks
+						taskId={taskId}
+						boardId={boardId}
+						parentId={parentId}
+						content={content}
+						onContentUpdated={onContentUpdated}
+						isSaving={isBoardBusy}
+					/>
 				) : null}
 			</Stack>
 		</Box>
@@ -353,6 +374,22 @@ export function KanbanBoardPage() {
 		[boardId, navigate],
 	);
 
+	const handleTaskContentUpdated = useCallback(
+		(taskId: string, content: KanbanBoardTaskContent) => {
+			setBoard((prev) => {
+				if (!prev?.[taskId]) return prev;
+				return {
+					...prev,
+					[taskId]: {
+						...prev[taskId],
+						content,
+					},
+				};
+			});
+		},
+		[],
+	);
+
 	if (!boardId) {
 		return <Alert severity="warning">Не указана доска</Alert>;
 	}
@@ -488,6 +525,9 @@ export function KanbanBoardPage() {
 											column: BoardItem;
 										}) => (
 											<TaskCardContent
+												taskId={data.id}
+												boardId={boardId}
+												parentId={data.parentId ?? column.id}
 												title={data.title}
 												content={
 													data.content as KanbanBoardTaskContent | undefined
@@ -495,6 +535,8 @@ export function KanbanBoardPage() {
 												origin={(data as KanbanBoardData[string]).origin}
 												columnColor={getKanbanColumnColor(column)}
 												assigneeRoleByName={assigneeRoleByName}
+												isBoardBusy={isBoardBusy}
+												onContentUpdated={handleTaskContentUpdated}
 											/>
 										),
 									},

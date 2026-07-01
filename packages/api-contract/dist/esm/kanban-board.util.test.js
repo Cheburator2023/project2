@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boardsEquivalent, defaultKanbanBoardColumns, fromBoardData, kanbanBoardEffectiveEstimatePd, kanbanBoardEffectiveSprintCapacityPd, kanbanBoardRoleEstimatesTotal, kanbanBoardTaskAssigneeRoles, normalizeKanbanBoardTaskContent, toBoardData, } from "@smart-anketa/api-contract";
+import { boardsEquivalent, defaultKanbanBoardColumns, fromBoardData, kanbanBoardEffectiveEstimatePd, kanbanBoardEffectiveSprintCapacityPd, kanbanBoardRoleEstimatesTotal, normalizeKanbanBoardTaskContent, normalizeKanbanBoardSubtasks, kanbanBoardSubtasksProgress, toBoardData, } from "@smart-anketa/api-contract";
 const boardColumns = defaultKanbanBoardColumns("board-1").map((column) => ({
     ...column,
     createdAt: "2026-06-16T12:00:00.000Z",
@@ -10,8 +10,8 @@ const sampleBoard = () => ({
         id: "root",
         title: "Root",
         parentId: null,
-        children: ["backlog", "todo", "in_progress", "review", "done"],
-        totalChildrenCount: 5,
+        children: ["backlog", "todo", "in_progress", "review", "qa", "done"],
+        totalChildrenCount: 6,
     },
     backlog: {
         id: "backlog",
@@ -37,6 +37,13 @@ const sampleBoard = () => ({
     review: {
         id: "review",
         title: "Ревью",
+        parentId: "root",
+        children: [],
+        totalChildrenCount: 0,
+    },
+    qa: {
+        id: "qa",
+        title: "QA",
         parentId: "root",
         children: [],
         totalChildrenCount: 0,
@@ -94,12 +101,36 @@ describe("kanban board sprint capacity", () => {
         })).toBe(9);
     });
 });
-describe("kanban board task assignee roles", () => {
-    it("collects unique roles from assignees on task", () => {
-        const roleByName = new Map([
-            ["Alice", "analyst"],
-            ["Bob", "developer"],
+describe("kanban board subtasks", () => {
+    it("normalizes and counts progress", () => {
+        const normalized = normalizeKanbanBoardSubtasks([
+            { id: "a", text: " One ", done: true },
+            { id: "b", text: "", done: false },
+            { id: "c", text: "Two", done: false },
         ]);
-        expect(kanbanBoardTaskAssigneeRoles({ assignees: ["Alice", "Bob", "Alice"] }, roleByName)).toEqual(["analyst", "developer"]);
+        expect(normalized).toEqual([
+            { id: "a", text: "One", status: "done" },
+            { id: "c", text: "Two", status: "next_up" },
+        ]);
+        expect(kanbanBoardSubtasksProgress({ subtasks: normalized })).toEqual({
+            done: 1,
+            total: 2,
+        });
+    });
+    it("keeps explicit status", () => {
+        const normalized = normalizeKanbanBoardSubtasks([
+            { id: "a", text: "Review", status: "in_review" },
+        ]);
+        expect(normalized).toEqual([
+            { id: "a", text: "Review", status: "in_review" },
+        ]);
+    });
+    it("keeps qa status", () => {
+        const normalized = normalizeKanbanBoardSubtasks([
+            { id: "a", text: "Check regression", status: "qa" },
+        ]);
+        expect(normalized).toEqual([
+            { id: "a", text: "Check regression", status: "qa" },
+        ]);
     });
 });

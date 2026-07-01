@@ -8,6 +8,70 @@ export interface KanbanBoardRoleEstimates {
 	architect?: number;
 }
 
+export interface KanbanBoardSubtaskItem {
+	id: string;
+	text: string;
+	/** После normalize всегда задан; legacy-данные могут приходить только с done */
+	status?: KanbanBoardSubtaskStatusId;
+	/** @deprecated используйте status === "done" */
+	done?: boolean;
+}
+
+export const KANBAN_BOARD_SUBTASK_STATUSES = [
+	{ id: "next_up", title: "Следующая" },
+	{ id: "in_progress", title: "В работе" },
+	{ id: "in_review", title: "На ревью" },
+	{ id: "qa", title: "QA" },
+	{ id: "done", title: "Готово" },
+	{ id: "skipped", title: "Пропущена" },
+] as const;
+
+export type KanbanBoardSubtaskStatusId =
+	(typeof KANBAN_BOARD_SUBTASK_STATUSES)[number]["id"];
+
+export const KANBAN_BOARD_SUBTASK_STATUS_COLORS: Record<
+	KanbanBoardSubtaskStatusId,
+	string
+> = {
+	next_up: "#7c3aed",
+	in_progress: "#2563eb",
+	in_review: "#ca8a04",
+	qa: "#0891b2",
+	done: "#16a34a",
+	skipped: "#64748b",
+};
+
+export function kanbanBoardSubtaskStatusTitle(
+	id?: KanbanBoardSubtaskStatusId | string,
+): string {
+	return (
+		KANBAN_BOARD_SUBTASK_STATUSES.find((item) => item.id === id)?.title ??
+		id ??
+		""
+	);
+}
+
+export function kanbanBoardSubtaskStatusColor(
+	status?: KanbanBoardSubtaskStatusId | string,
+): string {
+	if (!status) return "#64748b";
+	return (
+		KANBAN_BOARD_SUBTASK_STATUS_COLORS[status as KanbanBoardSubtaskStatusId] ??
+		"#64748b"
+	);
+}
+
+export function kanbanBoardSubtaskIsDone(
+	item: Pick<KanbanBoardSubtaskItem, "status" | "done">,
+): boolean {
+	if (item.status) return item.status === "done";
+	return Boolean(item.done);
+}
+
+export function kanbanBoardSubtaskDefaultStatus(): KanbanBoardSubtaskStatusId {
+	return "next_up";
+}
+
 export interface KanbanBoardTaskContent {
 	title: string;
 	description?: string;
@@ -40,6 +104,8 @@ export interface KanbanBoardTaskContent {
 	sprintOutcome?: string;
 	sprintId?: string;
 	streamCustomer?: string;
+	/** Чеклист подзадач внутри карточки */
+	subtasks?: KanbanBoardSubtaskItem[];
 }
 
 export const KANBAN_BOARD_PRIORITIES = [
@@ -49,7 +115,8 @@ export const KANBAN_BOARD_PRIORITIES = [
 	{ id: "hold", title: "Холд" },
 ] as const;
 
-export type KanbanBoardPriorityId = (typeof KANBAN_BOARD_PRIORITIES)[number]["id"];
+export type KanbanBoardPriorityId =
+	(typeof KANBAN_BOARD_PRIORITIES)[number]["id"];
 
 export const KANBAN_BOARD_ROLE_ESTIMATE_FIELDS = [
 	{ key: "analyst", title: "Аналитик" },
@@ -71,7 +138,8 @@ export const KANBAN_BOARD_TASK_TYPES = [
 	{ id: "subtask", title: "Подзадача" },
 ] as const;
 
-export type KanbanBoardTaskTypeId = (typeof KANBAN_BOARD_TASK_TYPES)[number]["id"];
+export type KanbanBoardTaskTypeId =
+	(typeof KANBAN_BOARD_TASK_TYPES)[number]["id"];
 
 export const KANBAN_BOARD_WORK_TYPES = [
 	{ id: "architecture", title: "Архитектурная задача" },
@@ -81,18 +149,23 @@ export const KANBAN_BOARD_WORK_TYPES = [
 	{ id: "tech_debt", title: "Технический долг" },
 ] as const;
 
-export type KanbanBoardWorkTypeId = (typeof KANBAN_BOARD_WORK_TYPES)[number]["id"];
+export type KanbanBoardWorkTypeId =
+	(typeof KANBAN_BOARD_WORK_TYPES)[number]["id"];
 
 export function kanbanBoardTaskTypeTitle(
 	id?: KanbanBoardTaskTypeId | string,
 ): string {
-	return KANBAN_BOARD_TASK_TYPES.find((item) => item.id === id)?.title ?? id ?? "";
+	return (
+		KANBAN_BOARD_TASK_TYPES.find((item) => item.id === id)?.title ?? id ?? ""
+	);
 }
 
 export function kanbanBoardWorkTypeTitle(
 	id?: KanbanBoardWorkTypeId | string,
 ): string {
-	return KANBAN_BOARD_WORK_TYPES.find((item) => item.id === id)?.title ?? id ?? "";
+	return (
+		KANBAN_BOARD_WORK_TYPES.find((item) => item.id === id)?.title ?? id ?? ""
+	);
 }
 
 export const KANBAN_BOARD_ASSIGNEE_ROLES = [
@@ -112,18 +185,26 @@ export type KanbanBoardAssigneeRoleId =
 export function kanbanBoardAssigneeRoleTitle(
 	id?: KanbanBoardAssigneeRoleId | string,
 ): string {
-	return KANBAN_BOARD_ASSIGNEE_ROLES.find((item) => item.id === id)?.title ?? id ?? "";
+	return (
+		KANBAN_BOARD_ASSIGNEE_ROLES.find((item) => item.id === id)?.title ??
+		id ??
+		""
+	);
 }
 
 export function kanbanBoardAssigneeRoleColor(
 	id?: KanbanBoardAssigneeRoleId | string,
 ): string {
 	return (
-		KANBAN_BOARD_ASSIGNEE_ROLES.find((item) => item.id === id)?.color ?? "#64748b"
+		KANBAN_BOARD_ASSIGNEE_ROLES.find((item) => item.id === id)?.color ??
+		"#64748b"
 	);
 }
 
-export const KANBAN_BOARD_TASK_TYPE_COLORS: Record<KanbanBoardTaskTypeId, string> = {
+export const KANBAN_BOARD_TASK_TYPE_COLORS: Record<
+	KanbanBoardTaskTypeId,
+	string
+> = {
 	epic: "#9333ea",
 	story: "#2563eb",
 	task: "#64748b",
@@ -131,7 +212,10 @@ export const KANBAN_BOARD_TASK_TYPE_COLORS: Record<KanbanBoardTaskTypeId, string
 	subtask: "#94a3b8",
 };
 
-export const KANBAN_BOARD_WORK_TYPE_COLORS: Record<KanbanBoardWorkTypeId, string> = {
+export const KANBAN_BOARD_WORK_TYPE_COLORS: Record<
+	KanbanBoardWorkTypeId,
+	string
+> = {
 	architecture: "#0891b2",
 	linear: "#64748b",
 	feature: "#16a34a",
@@ -139,7 +223,10 @@ export const KANBAN_BOARD_WORK_TYPE_COLORS: Record<KanbanBoardWorkTypeId, string
 	tech_debt: "#ea580c",
 };
 
-export const KANBAN_BOARD_PRIORITY_COLORS: Record<KanbanBoardPriorityId, string> = {
+export const KANBAN_BOARD_PRIORITY_COLORS: Record<
+	KanbanBoardPriorityId,
+	string
+> = {
 	low: "#16a34a",
 	medium: "#ca8a04",
 	high: "#dc2626",
@@ -149,17 +236,23 @@ export const KANBAN_BOARD_PRIORITY_COLORS: Record<KanbanBoardPriorityId, string>
 export function kanbanBoardPriorityTitle(
 	id?: KanbanBoardPriorityId | string,
 ): string {
-	return KANBAN_BOARD_PRIORITIES.find((item) => item.id === id)?.title ?? id ?? "";
+	return (
+		KANBAN_BOARD_PRIORITIES.find((item) => item.id === id)?.title ?? id ?? ""
+	);
 }
 
-export function kanbanBoardTaskTypeColor(id?: KanbanBoardTaskTypeId | string): string {
+export function kanbanBoardTaskTypeColor(
+	id?: KanbanBoardTaskTypeId | string,
+): string {
 	if (!id) return "#64748b";
 	return (
 		KANBAN_BOARD_TASK_TYPE_COLORS[id as KanbanBoardTaskTypeId] ?? "#64748b"
 	);
 }
 
-export function kanbanBoardWorkTypeColor(id?: KanbanBoardWorkTypeId | string): string {
+export function kanbanBoardWorkTypeColor(
+	id?: KanbanBoardWorkTypeId | string,
+): string {
 	if (!id) return "#64748b";
 	return (
 		KANBAN_BOARD_WORK_TYPE_COLORS[id as KanbanBoardWorkTypeId] ?? "#64748b"
@@ -170,7 +263,9 @@ export function kanbanBoardPriorityColor(
 	priority?: KanbanBoardPriorityId | string,
 ): string {
 	if (!priority) return "#64748b";
-	return KANBAN_BOARD_PRIORITY_COLORS[priority as KanbanBoardPriorityId] ?? "#64748b";
+	return (
+		KANBAN_BOARD_PRIORITY_COLORS[priority as KanbanBoardPriorityId] ?? "#64748b"
+	);
 }
 
 export interface KanbanBoardTaskRecord {
@@ -506,6 +601,7 @@ export const KANBAN_BOARD_STATUSES = [
 	{ id: "todo", title: "К выполнению" },
 	{ id: "in_progress", title: "В работе" },
 	{ id: "review", title: "Ревью" },
+	{ id: "qa", title: "QA" },
 	{ id: "done", title: "Готово" },
 ] as const;
 
@@ -516,6 +612,7 @@ export const KANBAN_BOARD_COLUMN_COLORS: Record<KanbanBoardStatusId, string> = {
 	todo: "#2563eb",
 	in_progress: "#d97706",
 	review: "#7c3aed",
+	qa: "#0891b2",
 	done: "#16a34a",
 };
 

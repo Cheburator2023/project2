@@ -23,8 +23,8 @@ const buildBoard = (): KanbanBoardData => ({
 		id: "root",
 		title: "Root",
 		parentId: null,
-		children: ["backlog", "todo", "in_progress", "review", "done"],
-		totalChildrenCount: 5,
+		children: ["backlog", "todo", "in_progress", "review", "qa", "done"],
+		totalChildrenCount: 6,
 	},
 	backlog: {
 		id: "backlog",
@@ -50,6 +50,13 @@ const buildBoard = (): KanbanBoardData => ({
 	review: {
 		id: "review",
 		title: "Ревью",
+		parentId: "root",
+		children: [],
+		totalChildrenCount: 0,
+	},
+	qa: {
+		id: "qa",
+		title: "QA",
 		parentId: "root",
 		children: [],
 		totalChildrenCount: 0,

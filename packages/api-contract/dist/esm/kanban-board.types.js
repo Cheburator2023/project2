@@ -1,3 +1,38 @@
+export const KANBAN_BOARD_SUBTASK_STATUSES = [
+    { id: "next_up", title: "Следующая" },
+    { id: "in_progress", title: "В работе" },
+    { id: "in_review", title: "На ревью" },
+    { id: "qa", title: "QA" },
+    { id: "done", title: "Готово" },
+    { id: "skipped", title: "Пропущена" },
+];
+export const KANBAN_BOARD_SUBTASK_STATUS_COLORS = {
+    next_up: "#7c3aed",
+    in_progress: "#2563eb",
+    in_review: "#ca8a04",
+    qa: "#0891b2",
+    done: "#16a34a",
+    skipped: "#64748b",
+};
+export function kanbanBoardSubtaskStatusTitle(id) {
+    return (KANBAN_BOARD_SUBTASK_STATUSES.find((item) => item.id === id)?.title ??
+        id ??
+        "");
+}
+export function kanbanBoardSubtaskStatusColor(status) {
+    if (!status)
+        return "#64748b";
+    return (KANBAN_BOARD_SUBTASK_STATUS_COLORS[status] ??
+        "#64748b");
+}
+export function kanbanBoardSubtaskIsDone(item) {
+    if (item.status)
+        return item.status === "done";
+    return Boolean(item.done);
+}
+export function kanbanBoardSubtaskDefaultStatus() {
+    return "next_up";
+}
 export const KANBAN_BOARD_PRIORITIES = [
     { id: "high", title: "Высокий" },
     { id: "medium", title: "Средний" },
@@ -27,10 +62,10 @@ export const KANBAN_BOARD_WORK_TYPES = [
     { id: "tech_debt", title: "Технический долг" },
 ];
 export function kanbanBoardTaskTypeTitle(id) {
-    return KANBAN_BOARD_TASK_TYPES.find((item) => item.id === id)?.title ?? id ?? "";
+    return (KANBAN_BOARD_TASK_TYPES.find((item) => item.id === id)?.title ?? id ?? "");
 }
 export function kanbanBoardWorkTypeTitle(id) {
-    return KANBAN_BOARD_WORK_TYPES.find((item) => item.id === id)?.title ?? id ?? "";
+    return (KANBAN_BOARD_WORK_TYPES.find((item) => item.id === id)?.title ?? id ?? "");
 }
 export const KANBAN_BOARD_ASSIGNEE_ROLES = [
     { id: "developer", title: "Разработчик", color: "#2563eb" },
@@ -43,10 +78,13 @@ export const KANBAN_BOARD_ASSIGNEE_ROLES = [
     { id: "lead", title: "Тимлид", color: "#4f46e5" },
 ];
 export function kanbanBoardAssigneeRoleTitle(id) {
-    return KANBAN_BOARD_ASSIGNEE_ROLES.find((item) => item.id === id)?.title ?? id ?? "";
+    return (KANBAN_BOARD_ASSIGNEE_ROLES.find((item) => item.id === id)?.title ??
+        id ??
+        "");
 }
 export function kanbanBoardAssigneeRoleColor(id) {
-    return (KANBAN_BOARD_ASSIGNEE_ROLES.find((item) => item.id === id)?.color ?? "#64748b");
+    return (KANBAN_BOARD_ASSIGNEE_ROLES.find((item) => item.id === id)?.color ??
+        "#64748b");
 }
 export const KANBAN_BOARD_TASK_TYPE_COLORS = {
     epic: "#9333ea",
@@ -69,7 +107,7 @@ export const KANBAN_BOARD_PRIORITY_COLORS = {
     hold: "#78716c",
 };
 export function kanbanBoardPriorityTitle(id) {
-    return KANBAN_BOARD_PRIORITIES.find((item) => item.id === id)?.title ?? id ?? "";
+    return (KANBAN_BOARD_PRIORITIES.find((item) => item.id === id)?.title ?? id ?? "");
 }
 export function kanbanBoardTaskTypeColor(id) {
     if (!id)
@@ -84,7 +122,7 @@ export function kanbanBoardWorkTypeColor(id) {
 export function kanbanBoardPriorityColor(priority) {
     if (!priority)
         return "#64748b";
-    return KANBAN_BOARD_PRIORITY_COLORS[priority] ?? "#64748b";
+    return (KANBAN_BOARD_PRIORITY_COLORS[priority] ?? "#64748b");
 }
 export const KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD = 9;
 export const KANBAN_BOARD_STOCK_CUSTOMERS = [
@@ -116,6 +154,7 @@ export const KANBAN_BOARD_STATUSES = [
     { id: "todo", title: "К выполнению" },
     { id: "in_progress", title: "В работе" },
     { id: "review", title: "Ревью" },
+    { id: "qa", title: "QA" },
     { id: "done", title: "Готово" },
 ];
 export const KANBAN_BOARD_COLUMN_COLORS = {
@@ -123,6 +162,7 @@ export const KANBAN_BOARD_COLUMN_COLORS = {
     todo: "#2563eb",
     in_progress: "#d97706",
     review: "#7c3aed",
+    qa: "#0891b2",
     done: "#16a34a",
 };
 export const KANBAN_BOARD_DEFAULT_COLUMN_COLORS = [

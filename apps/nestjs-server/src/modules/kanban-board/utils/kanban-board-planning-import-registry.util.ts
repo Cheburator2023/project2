@@ -59,7 +59,11 @@ const STATUS_ALIASES: Record<string, string> = {
 	review: "review",
 	"на проверке": "review",
 	"code review": "review",
-	тестирование: "review",
+	qa: "qa",
+	"qa testing": "qa",
+	тестирование: "qa",
+	uat: "qa",
+	"на тестировании": "qa",
 };
 
 export function scoreStatusColumnMatch(
