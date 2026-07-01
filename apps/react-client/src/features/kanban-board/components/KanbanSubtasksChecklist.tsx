@@ -342,6 +342,12 @@ export function KanbanSubtasksChecklist({
 									disabled={disabled}
 									multiline={!compact}
 									maxRows={compact ? 1 : 3}
+									inputProps={{
+										title:
+											compact && item.text.trim()
+												? item.text
+												: undefined,
+									}}
 									sx={{
 										flex: 1,
 										minWidth: 0,
@@ -354,6 +360,13 @@ export function KanbanSubtasksChecklist({
 										color: isDone ? "text.secondary" : "text.primary",
 										"& .MuiInputBase-input": {
 											p: "0 10px!important",
+											...(compact
+												? {
+														overflow: "hidden",
+														textOverflow: "ellipsis",
+														whiteSpace: "nowrap",
+													}
+												: {}),
 										},
 									}}
 								/>
