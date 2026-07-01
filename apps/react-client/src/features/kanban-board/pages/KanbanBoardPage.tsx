@@ -116,10 +116,10 @@ function TaskCardContent({
 				p: 1,
 				minWidth: 0,
 				borderRadius: 1,
-				border: 1,
+				border: 3,
 				borderColor: alpha(columnColor, 0.35),
-				borderTopWidth: 3,
-				borderTopColor: columnColor,
+				// borderTopWidth: 3,
+				// borderTopColor: columnColor,
 				bgcolor: "background.paper",
 				boxShadow: 1,
 				cursor: "pointer",
@@ -403,7 +403,10 @@ export function KanbanBoardPage() {
 			flexDirection="column"
 			flexGrow={1}
 			minHeight="0"
-			sx={{ height: "100%" }}
+			minWidth="0"
+			maxWidth="100%"
+			width="100%"
+			sx={{ height: "100%", overflow: "hidden", boxSizing: "border-box" }}
 			data-test-id="kanban-board-page"
 		>
 			<Header
@@ -456,57 +459,121 @@ export function KanbanBoardPage() {
 				</Flex>
 			</Header>
 			<Card
+				overflow="hidden"
 				sx={{
 					p: 2,
 					flex: 1,
 					minHeight: 0,
+					minWidth: 0,
+					width: "100%",
+					maxWidth: "100%",
 					display: "flex",
 					flexDirection: "column",
 					overflow: "hidden",
+					boxSizing: "border-box",
+					"& > div": {
+						display: "flex",
+						flexDirection: "column",
+						flex: 1,
+						minHeight: 0,
+						minWidth: 0,
+						width: "100%",
+						maxWidth: "100%",
+						overflow: "hidden",
+					},
 				}}
 			>
-				<Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-					{importError ? (
-						<Alert severity="error" sx={{ flexShrink: 0 }}>
-							{importError}
-						</Alert>
-					) : null}
-					{tasksQuery.isError ? (
-						<Alert severity="error" sx={{ flexShrink: 0 }}>
-							Не удалось загрузить задачи
-						</Alert>
-					) : null}
-					{saveMutation.isError ? (
-						<Alert severity="error" sx={{ flexShrink: 0 }}>
-							Не удалось сохранить изменения
-						</Alert>
-					) : null}
-					{columnsQuery.isError ? (
-						<Alert severity="error" sx={{ flexShrink: 0 }}>
-							Не удалось загрузить колонки
-						</Alert>
-					) : null}
-					{createColumn.isError ? (
-						<Alert severity="error" sx={{ flexShrink: 0 }}>
-							Не удалось добавить колонку
-						</Alert>
-					) : null}
-					{updateColumn.isError ? (
-						<Alert severity="error" sx={{ flexShrink: 0 }}>
-							Не удалось переименовать колонку
-						</Alert>
-					) : null}
-					{deleteColumn.isError ? (
-						<Alert severity="error" sx={{ flexShrink: 0 }}>
-							{apiErrorMessage(deleteColumn.error)}
-						</Alert>
-					) : null}
+				{(importError ||
+					tasksQuery.isError ||
+					saveMutation.isError ||
+					columnsQuery.isError ||
+					createColumn.isError ||
+					updateColumn.isError ||
+					deleteColumn.isError) && (
+					<Stack spacing={2} sx={{ flexShrink: 0, mb: 2 }}>
+						{importError ? <Alert severity="error">{importError}</Alert> : null}
+						{tasksQuery.isError ? (
+							<Alert severity="error">Не удалось загрузить задачи</Alert>
+						) : null}
+						{saveMutation.isError ? (
+							<Alert severity="error">Не удалось сохранить изменения</Alert>
+						) : null}
+						{columnsQuery.isError ? (
+							<Alert severity="error">Не удалось загрузить колонки</Alert>
+						) : null}
+						{createColumn.isError ? (
+							<Alert severity="error">Не удалось добавить колонку</Alert>
+						) : null}
+						{updateColumn.isError ? (
+							<Alert severity="error">Не удалось переименовать колонку</Alert>
+						) : null}
+						{deleteColumn.isError ? (
+							<Alert severity="error">
+								{apiErrorMessage(deleteColumn.error)}
+							</Alert>
+						) : null}
+					</Stack>
+				)}
 
-					<Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+				<Box
+					data-test-id="kanban-board-page-content"
+					sx={{
+						flex: 1,
+						minHeight: 0,
+						minWidth: 0,
+						width: "100%",
+						maxWidth: "100%",
+						overflow: "auto",
+						boxSizing: "border-box",
+					}}
+				>
+					<Box
+						sx={{
+							display: "inline-block",
+							verticalAlign: "top",
+							minWidth: "100%",
+							minHeight: "100%",
+							boxSizing: "border-box",
+							"& .rkk-board": {
+								overflow: "visible",
+								height: "auto",
+								minHeight: "100%",
+								width: "max-content",
+								minWidth: "100%",
+								alignItems: "flex-start",
+							},
+							"& .rkk-column-outer": {
+								height: "auto",
+								alignSelf: "stretch",
+							},
+							"& .rkk-column-outer .rkk-column": {
+								height: "auto",
+								minHeight: "100%",
+								overflow: "visible",
+							},
+							"& .rkk-column-outer .rkk-column-wrapper": {
+								maxHeight: "none",
+							},
+							"& .rkk-column-content": {
+								height: "auto",
+								flex: "none",
+								minHeight: "unset",
+							},
+							"& .rkk-column-content-list": {
+								height: "auto",
+								overflow: "visible",
+							},
+						}}
+					>
 						{board ? (
 							<Kanban
 								dataSource={board as BoardData}
-								rootStyle={{ height: "100%" }}
+								rootStyle={{
+									height: "auto",
+									minHeight: "100%",
+									width: "max-content",
+									minWidth: "100%",
+								}}
 								cardsGap={8}
 								renderColumnHeader={renderColumnHeader}
 								renderColumnAdder={renderColumnAdder}
@@ -551,7 +618,7 @@ export function KanbanBoardPage() {
 							/>
 						) : null}
 					</Box>
-				</Stack>
+				</Box>
 			</Card>
 		</Flex>
 	);

@@ -3,6 +3,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import Box from "@mui/material/Box";
 import Checkbox from "@mui/material/Checkbox";
+import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import InputBase from "@mui/material/InputBase";
 import Menu from "@mui/material/Menu";
@@ -48,6 +49,8 @@ type ChecklistProps = {
 	onCommit?: (items: KanbanBoardSubtaskItem[]) => void;
 	disabled?: boolean;
 	compact?: boolean;
+	/** Сворачиваемый блок (карточка на доске) */
+	collapsible?: boolean;
 	/** Не открывать карточку при клике по чеклисту на доске */
 	stopCardClick?: boolean;
 };
@@ -173,9 +176,11 @@ export function KanbanSubtasksChecklist({
 	onCommit,
 	disabled = false,
 	compact = false,
+	collapsible = false,
 	stopCardClick = false,
 }: ChecklistProps) {
 	const [draft, setDraft] = useState("");
+	const [expanded, setExpanded] = useState(false);
 	const progress = kanbanBoardSubtasksProgress({ subtasks: items });
 	const checkboxSlot = compact ? CHECKBOX_SLOT.compact : CHECKBOX_SLOT.default;
 	const rowMinHeight = compact
@@ -263,38 +268,88 @@ export function KanbanSubtasksChecklist({
 	const stopIfNeeded = (event: MouseEvent) =>
 		stopCardNavigation(event, stopCardClick);
 
-	return (
-		<Stack
-			spacing={compact ? 0.375 : 0.75}
-			onClick={stopIfNeeded}
+	const toggleExpanded = (event: MouseEvent) => {
+		stopIfNeeded(event);
+		setExpanded((value) => !value);
+	};
+
+	const header = collapsible ? (
+		<Box
+			component="button"
+			type="button"
+			onClick={toggleExpanded}
 			onMouseDown={stopIfNeeded}
-			sx={{ minWidth: 0 }}
+			title={expanded ? "Скрыть подзадачи" : "Показать подзадачи"}
+			aria-expanded={expanded}
+			sx={{
+				display: "flex",
+				alignItems: "center",
+				gap: 0.375,
+				width: "100%",
+				p: 0,
+				border: "none",
+				bgcolor: "transparent",
+				color: "text.secondary",
+				cursor: "pointer",
+				textAlign: "left",
+				minHeight: 20,
+			}}
 		>
-			<Stack
-				direction="row"
-				alignItems="center"
-				justifyContent="space-between"
-				sx={{ minHeight: 18, gap: 1 }}
+			<KeyboardArrowDownIcon
+				sx={{
+					fontSize: 16,
+					flexShrink: 0,
+					transform: expanded ? "rotate(0deg)" : "rotate(-90deg)",
+					transition: "transform 0.15s ease",
+				}}
+			/>
+			<Typography
+				variant="caption"
+				fontWeight={600}
+				color="inherit"
+				sx={{ fontSize: "0.6875rem", flex: 1 }}
 			>
+				Подзадачи
+			</Typography>
+			{progress ? (
 				<Typography
 					variant="caption"
-					fontWeight={600}
-					color="text.secondary"
-					sx={{ fontSize: compact ? "0.6875rem" : "0.75rem" }}
+					color="inherit"
+					sx={{ fontSize: "0.6875rem", flexShrink: 0, opacity: 0.85 }}
 				>
-					Подзадачи
+					{progress.done}/{progress.total}
 				</Typography>
-				{progress ? (
-					<Typography
-						variant="caption"
-						color="text.secondary"
-						sx={{ fontSize: compact ? "0.6875rem" : "0.75rem", flexShrink: 0 }}
-					>
-						{progress.done}/{progress.total}
-					</Typography>
-				) : null}
-			</Stack>
+			) : null}
+		</Box>
+	) : (
+		<Stack
+			direction="row"
+			alignItems="center"
+			justifyContent="space-between"
+			sx={{ minHeight: 18, gap: 1 }}
+		>
+			<Typography
+				variant="caption"
+				fontWeight={600}
+				color="text.secondary"
+				sx={{ fontSize: compact ? "0.6875rem" : "0.75rem" }}
+			>
+				Подзадачи
+			</Typography>
+			{progress ? (
+				<Typography
+					variant="caption"
+					color="text.secondary"
+					sx={{ fontSize: compact ? "0.6875rem" : "0.75rem", flexShrink: 0 }}
+				>
+					{progress.done}/{progress.total}
+				</Typography>
+			) : null}
+		</Stack>
+	);
 
+	const body = (
+		<Stack spacing={compact ? 0.375 : 0.75} sx={{ minWidth: 0, pt: collapsible ? 0.375 : 0 }}>
 			{items.length ? (
 				<Flex gap={12} flexDirection="column">
 					{items.map((item) => {
@@ -450,6 +505,24 @@ export function KanbanSubtasksChecklist({
 			</Stack>
 		</Stack>
 	);
+
+	return (
+		<Stack
+			spacing={0}
+			onClick={stopIfNeeded}
+			onMouseDown={stopIfNeeded}
+			sx={{ minWidth: 0 }}
+		>
+			{header}
+			{collapsible ? (
+				<Collapse in={expanded} timeout="auto" unmountOnExit={false}>
+					{body}
+				</Collapse>
+			) : (
+				body
+			)}
+		</Stack>
+	);
 }
 
 type CardProps = {
@@ -494,11 +567,15 @@ export function KanbanTaskCardSubtasks({
 		});
 	};
 
+	if (!items.length) {
+		return null;
+	}
+
 	return (
 		<Box
 			sx={{
 				mt: 0.25,
-				pt: 0.625,
+				pt: 0.5,
 				borderTop: "1px solid",
 				borderColor: "divider",
 			}}
@@ -511,6 +588,7 @@ export function KanbanTaskCardSubtasks({
 				}}
 				disabled={busy}
 				compact
+				collapsible
 				stopCardClick
 			/>
 		</Box>
