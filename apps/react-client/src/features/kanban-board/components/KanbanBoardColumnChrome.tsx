@@ -51,8 +51,9 @@ export function KanbanColumnHeader({
 			sx={{
 				px: 1,
 				py: 0.75,
-				borderBottom: 2,
+				borderBottom: 0,
 				borderColor: color,
+				borderRadius: "4px",
 				bgcolor: alpha(color, 0.08),
 			}}
 		>
@@ -109,9 +110,7 @@ export function KanbanColumnHeader({
 					disabled={disabled || hasTasks}
 					onClick={() => onDelete(column.id)}
 					title={
-						hasTasks
-							? "Нельзя удалить колонку с задачами"
-							: "Удалить колонку"
+						hasTasks ? "Нельзя удалить колонку с задачами" : "Удалить колонку"
 					}
 					aria-label="Удалить колонку"
 					sx={{ color: hasTasks ? "text.disabled" : "text.secondary" }}

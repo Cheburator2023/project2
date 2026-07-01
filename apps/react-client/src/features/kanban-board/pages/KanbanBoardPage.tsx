@@ -192,9 +192,13 @@ export function KanbanBoardPage() {
 		queryFn: async ({ signal }) => kanbanBoardGetBoardTasks(boardId, signal),
 	});
 
-	const standId = configQuery.data?.standId ?? "local-dev";
+	const standId = configQuery.data?.standId;
 	const isReady =
-		tasksQuery.isSuccess && columnsQuery.isSuccess && Boolean(boardId);
+		tasksQuery.isSuccess &&
+		columnsQuery.isSuccess &&
+		configQuery.isSuccess &&
+		Boolean(boardId) &&
+		Boolean(standId);
 
 	const columnsSignature = (columnsQuery.data ?? [])
 		.map(
@@ -225,11 +229,17 @@ export function KanbanBoardPage() {
 
 	const saveMutation = useMutation({
 		mutationFn: (nextBoard: KanbanBoardData) => {
+			if (!standId) {
+				throw new Error("Не загружен standId трекера");
+			}
 			const now = new Date().toISOString();
-			const localRows = fromBoardData(nextBoard, standId, now, boardId).filter(
-				(task) => task.origin === standId,
+			const rows = fromBoardData(nextBoard, standId, now, boardId).map(
+				(task) => ({
+					...task,
+					origin: standId,
+				}),
 			);
-			return kanbanBoardSaveBoardTasks(boardId, localRows);
+			return kanbanBoardSaveBoardTasks(boardId, rows);
 		},
 		onSuccess: (tasks) => {
 			queryClient.setQueryData(["kanbanBoardTasks", boardId], tasks);
@@ -395,8 +405,8 @@ export function KanbanBoardPage() {
 	}
 
 	const boardSubtitle = boardMeta
-		? `${boardMeta.projectCode} / ${boardMeta.name} (${boardMeta.slug}) · стенд ${standId}`
-		: `${boardId} · стенд ${standId}`;
+		? `${boardMeta.projectCode} / ${boardMeta.name} (${boardMeta.slug}) · стенд ${standId ?? "…"}`
+		: `${boardId} · стенд ${standId ?? "…"}`;
 
 	return (
 		<Flex
@@ -461,7 +471,7 @@ export function KanbanBoardPage() {
 			<Card
 				overflow="hidden"
 				sx={{
-					p: 2,
+					p: "4px",
 					flex: 1,
 					minHeight: 0,
 					minWidth: 0,
@@ -550,6 +560,7 @@ export function KanbanBoardPage() {
 								height: "auto",
 								minHeight: "100%",
 								overflow: "visible",
+								borderRadius: "4px",
 							},
 							"& .rkk-column-outer .rkk-column-wrapper": {
 								maxHeight: "none",
@@ -609,7 +620,7 @@ export function KanbanBoardPage() {
 									},
 								}}
 								onCardMove={(move) => {
-									if (isSavingBoard) return;
+									if (isSavingBoard || !standId) return;
 									const nextBoard = normalizeKanbanBoardData(
 										dropHandler(move, board as BoardData) as KanbanBoardData,
 									);
