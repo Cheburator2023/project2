@@ -260,7 +260,7 @@ function FormulaRibbonGap({
 			onClick={
 				readOnly
 					? undefined
-					: (event) => {
+					: (event: React.MouseEvent<HTMLButtonElement>) => {
 							event.stopPropagation();
 							onClick();
 						}

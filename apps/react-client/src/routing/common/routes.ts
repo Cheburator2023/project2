@@ -164,19 +164,19 @@ export const commonRoutes = {
 		navbar: { group: "tracker", order: 9 },
 	},
 	trackerTaskCreate: {
-		rootPath: "/tracker/tasks/new",
+		rootPath: "/tracker/task/new",
 		name: "Новая задача",
 		shortName: "Новая задача",
 		disabled: false,
 	},
 	trackerBoardView: {
-		rootPath: "/tracker/boards/:boardId",
+		rootPath: "/tracker/board/:boardKey",
 		name: "Kanban-доска",
 		shortName: "Доска",
 		disabled: false,
 	},
 	trackerBoardTask: {
-		rootPath: "/tracker/boards/:boardId/tasks/:taskId",
+		rootPath: "/tracker/task/:taskKey",
 		name: "Задача",
 		shortName: "Задача",
 		disabled: false,

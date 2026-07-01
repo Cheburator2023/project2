@@ -20,6 +20,8 @@ import {
 	type KanbanBoardTaskRecord,
 	kanbanBoardTaskAssigneeRoles,
 	kanbanBoardTaskAssignees,
+	formatKanbanTaskKey,
+	normalizeTrackerCode,
 } from "@smart-anketa/api-contract";
 import { KanbanTaskContentChips } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
 import { Kanban, dropHandler } from "react-kanban-kit";
@@ -165,7 +167,7 @@ function TaskCardContent({
 }
 
 export function KanbanBoardPage() {
-	const { boardId = "" } = useParams<{ boardId: string }>();
+	const { boardKey = "" } = useParams<{ boardKey: string }>();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -174,7 +176,13 @@ export function KanbanBoardPage() {
 
 	const configQuery = useKanbanBoardConfig();
 	const boardsQuery = useKanbanBoardBoards();
-	const columnsQuery = useKanbanBoardColumns(boardId);
+	const boardMeta = boardsQuery.data?.find(
+		(item) =>
+			item.boardKey === normalizeTrackerCode(boardKey) ||
+			item.id === boardKey,
+	);
+	const boardApiRef = boardMeta?.boardKey ?? normalizeTrackerCode(boardKey);
+	const columnsQuery = useKanbanBoardColumns(boardApiRef);
 	const assigneesQuery = useKanbanBoardAssignees();
 	const assigneeRoleByName = useMemo(
 		() => kanbanBoardAssigneeRoleByName(assigneesQuery.data ?? []),
@@ -183,20 +191,23 @@ export function KanbanBoardPage() {
 	const createColumn = useCreateKanbanBoardColumn();
 	const updateColumn = useUpdateKanbanBoardColumn();
 	const deleteColumn = useDeleteKanbanBoardColumn();
-	const boardMeta = boardsQuery.data?.find((item) => item.id === boardId);
 
 	const tasksQuery = useQuery({
-		queryKey: ["kanbanBoardTasks", boardId],
-		enabled: Boolean(boardId),
-		queryFn: async ({ signal }) => kanbanBoardGetBoardTasks(boardId, signal),
+		queryKey: ["kanbanBoardTasks", boardApiRef],
+		enabled: Boolean(boardApiRef),
+		queryFn: async ({ signal }) => kanbanBoardGetBoardTasks(boardApiRef, signal),
 	});
+
+	const resolvedBoardId =
+		boardMeta?.id ?? tasksQuery.data?.[0]?.boardId ?? "";
 
 	const standId = configQuery.data?.standId;
 	const isReady =
 		tasksQuery.isSuccess &&
 		columnsQuery.isSuccess &&
 		configQuery.isSuccess &&
-		Boolean(boardId) &&
+		Boolean(boardApiRef) &&
+		Boolean(resolvedBoardId) &&
 		Boolean(standId);
 
 	const columnsSignature = (columnsQuery.data ?? [])
@@ -208,40 +219,43 @@ export function KanbanBoardPage() {
 
 	useEffect(() => {
 		setBoard(null);
-	}, [boardId]);
+	}, [boardApiRef]);
 
 	useEffect(() => {
 		if (!columnsQuery.data || !tasksQuery.isSuccess) return;
 		setBoard(buildBoardData(tasksQuery.data ?? [], columnsQuery.data));
-	}, [boardId, columnsSignature, columnsQuery.data, tasksQuery.isSuccess]);
+	}, [boardApiRef, columnsSignature, columnsQuery.data, tasksQuery.isSuccess]);
 
 	const getColumns = useCallback(
 		() =>
 			queryClient.getQueryData<KanbanBoardColumnDto[]>([
 				"kanbanBoardColumns",
-				boardId,
+				boardApiRef,
 			]) ??
 			columnsQuery.data ??
 			[],
-		[boardId, columnsQuery.data, queryClient],
+		[boardApiRef, columnsQuery.data, queryClient],
 	);
 
 	const saveMutation = useMutation({
 		mutationFn: (nextBoard: KanbanBoardData) => {
-			if (!standId) {
+			if (!standId || !resolvedBoardId) {
 				throw new Error("Не загружен standId трекера");
 			}
 			const now = new Date().toISOString();
-			const rows = fromBoardData(nextBoard, standId, now, boardId).map(
-				(task) => ({
-					...task,
-					origin: standId,
-				}),
-			);
-			return kanbanBoardSaveBoardTasks(boardId, rows);
+			const rows = fromBoardData(
+				nextBoard,
+				standId,
+				now,
+				resolvedBoardId,
+			).map((task) => ({
+				...task,
+				origin: standId,
+			}));
+			return kanbanBoardSaveBoardTasks(boardApiRef, rows);
 		},
 		onSuccess: (tasks) => {
-			queryClient.setQueryData(["kanbanBoardTasks", boardId], tasks);
+			queryClient.setQueryData(["kanbanBoardTasks", boardApiRef], tasks);
 			const columns = getColumns();
 			if (columns.length) {
 				setBoard(buildBoardData(tasks, columns));
@@ -250,7 +264,7 @@ export function KanbanBoardPage() {
 		onError: () => {
 			const tasks = queryClient.getQueryData<KanbanBoardTaskRecord[]>([
 				"kanbanBoardTasks",
-				boardId,
+				boardApiRef,
 			]);
 			const columns = getColumns();
 			if (tasks && columns.length) {
@@ -260,20 +274,24 @@ export function KanbanBoardPage() {
 	});
 
 	const exportMutation = useMutation({
-		mutationFn: () => kanbanBoardExportBoardSnapshot(boardId),
+		mutationFn: () => kanbanBoardExportBoardSnapshot(boardApiRef),
 		onSuccess: (blob) => {
 			const date = new Date().toISOString().slice(0, 10);
-			downloadBlob(blob, `kanban-board-${boardId}-${standId}-${date}.xlsx`);
+			downloadBlob(
+				blob,
+				`kanban-board-${boardApiRef}-${standId}-${date}.xlsx`,
+			);
 		},
 	});
 
 	const importMutation = useMutation({
-		mutationFn: (file: File) => kanbanBoardImportBoardSnapshot(boardId, file),
+		mutationFn: (file: File) =>
+			kanbanBoardImportBoardSnapshot(boardApiRef, file),
 		onSuccess: (result: KanbanBoardImportResult) => {
 			setImportError(null);
 			const nextBoard = buildBoardData(result.tasks, getColumns());
 			setBoard(nextBoard);
-			queryClient.setQueryData(["kanbanBoardTasks", boardId], result.tasks);
+			queryClient.setQueryData(["kanbanBoardTasks", boardApiRef], result.tasks);
 		},
 		onError: (
 			error: Error & { response?: { data?: Record<string, string> } },
@@ -301,33 +319,33 @@ export function KanbanBoardPage() {
 
 	const openCreateTask = useCallback(
 		(columnId = defaultColumnId) => {
-			navigate(kanbanTaskCreatePath(boardId, columnId));
+			navigate(kanbanTaskCreatePath(boardMeta?.boardKey ?? boardKey, columnId));
 		},
-		[boardId, defaultColumnId, navigate],
+		[boardKey, boardMeta?.boardKey, navigate],
 	);
 
 	const handleRenameColumn = useCallback(
 		(columnId: string, title: string) => {
-			if (!boardId) return;
-			updateColumn.mutate({ boardId, columnId, data: { title } });
+			if (!boardApiRef) return;
+			updateColumn.mutate({ boardId: boardApiRef, columnId, data: { title } });
 		},
-		[boardId, updateColumn],
+		[boardApiRef, updateColumn],
 	);
 
 	const handleDeleteColumn = useCallback(
 		(columnId: string) => {
-			if (!boardId) return;
-			deleteColumn.mutate({ boardId, columnId });
+			if (!boardApiRef) return;
+			deleteColumn.mutate({ boardId: boardApiRef, columnId });
 		},
-		[boardId, deleteColumn],
+		[boardApiRef, deleteColumn],
 	);
 
 	const handleAddColumn = useCallback(
 		(title: string) => {
-			if (!boardId) return;
-			createColumn.mutate({ boardId, data: { title } });
+			if (!boardApiRef) return;
+			createColumn.mutate({ boardId: boardApiRef, data: { title } });
 		},
-		[boardId, createColumn],
+		[boardApiRef, createColumn],
 	);
 
 	const isColumnBusy =
@@ -368,9 +386,17 @@ export function KanbanBoardPage() {
 
 	const handleCardClick = useCallback(
 		(_event: MouseEvent<HTMLDivElement>, card: BoardItem) => {
-			navigate(kanbanTaskEditPath(boardId, card.id));
+			const task = tasksQuery.data?.find((item) => item.id === card.id);
+			const projectCode = boardMeta?.projectCode;
+			if (task?.taskNumber && projectCode) {
+				navigate(
+					kanbanTaskEditPath(
+						formatKanbanTaskKey(projectCode, task.taskNumber),
+					),
+				);
+			}
 		},
-		[boardId, navigate],
+		[boardMeta?.projectCode, navigate, tasksQuery.data],
 	);
 
 	const handleTaskContentUpdated = useCallback(
@@ -389,13 +415,22 @@ export function KanbanBoardPage() {
 		[],
 	);
 
-	if (!boardId) {
-		return <Alert severity="warning">Не указана доска</Alert>;
+	if (boardsQuery.isLoading) {
+		return <Alert severity="info">Загрузка доски…</Alert>;
+	}
+
+	if (
+		boardsQuery.isSuccess &&
+		boardKey &&
+		columnsQuery.isError &&
+		tasksQuery.isError
+	) {
+		return <Alert severity="warning">Доска «{boardKey}» не найдена</Alert>;
 	}
 
 	const boardSubtitle = boardMeta
-		? `${boardMeta.projectCode} / ${boardMeta.name} (${boardMeta.slug}) · стенд ${standId ?? "…"}`
-		: `${boardId} · стенд ${standId ?? "…"}`;
+		? `${boardMeta.boardKey} · ${boardMeta.name} · стенд ${standId ?? "…"}`
+		: `${boardKey} · стенд ${standId ?? "…"}`;
 
 	return (
 		<Flex
@@ -591,7 +626,7 @@ export function KanbanBoardPage() {
 										}) => (
 											<TaskCardContent
 												taskId={data.id}
-												boardId={boardId}
+												boardId={resolvedBoardId}
 												parentId={data.parentId ?? column.id}
 												title={data.title}
 												content={

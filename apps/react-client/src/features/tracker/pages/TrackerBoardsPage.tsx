@@ -15,6 +15,7 @@ import { trackerDateFormatter } from "@react-client/features/tracker/components/
 import type { KanbanBoardBoardDto } from "@smart-anketa/api-contract";
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
+import { trackerBoardPath } from "@react-client/features/kanban-board/kanban-task-paths";
 
 export function TrackerBoardsPage() {
 	const navigate = useNavigate();
@@ -54,6 +55,7 @@ export function TrackerBoardsPage() {
 					) : null,
 			},
 			{ field: "name", headerName: "Доска", flex: 1.2, minWidth: 160 },
+			{ field: "boardKey", headerName: "Ключ", width: 140 },
 			{ field: "slug", headerName: "Slug", width: 120 },
 			{
 				field: "taskCount",
@@ -116,11 +118,11 @@ export function TrackerBoardsPage() {
 						}
 					: { sortOrder: "0" }
 			}
-			onRowDoubleClick={(row) => navigate(`/tracker/boards/${row.id}`)}
+			onRowDoubleClick={(row) => navigate(trackerBoardPath(row.boardKey))}
 			contextActions={[
 				{
 					label: "Открыть kanban",
-					onClick: (row) => navigate(`/tracker/boards/${row.id}`),
+					onClick: (row) => navigate(trackerBoardPath(row.boardKey)),
 				},
 			]}
 			deleteDialogTitle="Удаление досок"

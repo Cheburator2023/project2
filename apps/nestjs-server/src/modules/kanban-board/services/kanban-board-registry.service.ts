@@ -23,6 +23,11 @@ import {
 	kanbanBoardWorkTypeTitle,
 	isKanbanBoardAssigneeRoleId,
 	normalizeKanbanBoardTaskContent,
+	normalizeTrackerCode,
+	formatKanbanBoardKey,
+	formatKanbanTaskKey,
+	parseKanbanBoardKey,
+	parseKanbanTaskKey,
 	pickKanbanBoardColumnColor,
 	type KanbanBoardPlanningImportResultDto,
 	type AssignKanbanBoardTasksToBoardRequestDto,
@@ -163,7 +168,7 @@ export class KanbanBoardRegistryService {
 	async createProject(
 		dto: CreateKanbanBoardProjectRequestDto,
 	): Promise<KanbanBoardProjectDto> {
-		const code = dto.code.trim();
+		const code = normalizeTrackerCode(dto.code);
 		const name = dto.name.trim();
 		if (!code || !name) {
 			throw new BadRequestException("Код и название обязательны");
@@ -190,7 +195,9 @@ export class KanbanBoardRegistryService {
 			throw new BadRequestException("Нельзя менять код стокового проекта");
 		}
 
-		if (dto.code !== undefined) project.code = dto.code.trim();
+		if (dto.code !== undefined) {
+			project.code = normalizeTrackerCode(dto.code);
+		}
 		if (dto.name !== undefined) project.name = dto.name.trim();
 		if (dto.description !== undefined) {
 			project.description = dto.description?.trim() || null;
@@ -227,7 +234,7 @@ export class KanbanBoardRegistryService {
 	async createAssignee(
 		dto: CreateKanbanBoardAssigneeRequestDto,
 	): Promise<KanbanBoardAssigneeDto> {
-		const code = dto.code.trim();
+		const code = normalizeTrackerCode(dto.code);
 		const name = dto.name.trim();
 		if (!code || !name) {
 			throw new BadRequestException("Код и имя обязательны");
@@ -261,7 +268,7 @@ export class KanbanBoardRegistryService {
 		if (!assignee) throw new NotFoundException("Исполнитель не найден");
 
 		const previousName = assignee.name;
-		if (dto.code !== undefined) assignee.code = dto.code.trim();
+		if (dto.code !== undefined) assignee.code = normalizeTrackerCode(dto.code);
 		if (dto.name !== undefined) assignee.name = dto.name.trim();
 		if (dto.email !== undefined) {
 			assignee.email = dto.email?.trim() || null;
@@ -336,7 +343,7 @@ export class KanbanBoardRegistryService {
 	async createSupersprint(
 		dto: CreateKanbanBoardSupersprintRequestDto,
 	): Promise<KanbanBoardSupersprintDto> {
-		const code = dto.code.trim();
+		const code = normalizeTrackerCode(dto.code);
 		const name = dto.name.trim();
 		const startDate = dto.startDate.trim();
 		if (!code || !name || !startDate) {
@@ -362,7 +369,9 @@ export class KanbanBoardRegistryService {
 		const supersprint = await this.supersprintRepository.findOne({ where: { id } });
 		if (!supersprint) throw new NotFoundException("Суперспринт не найден");
 
-		if (dto.code !== undefined) supersprint.code = dto.code.trim();
+		if (dto.code !== undefined) {
+			supersprint.code = normalizeTrackerCode(dto.code);
+		}
 		if (dto.name !== undefined) supersprint.name = dto.name.trim();
 		if (dto.description !== undefined) {
 			supersprint.description = dto.description?.trim() || null;
@@ -413,7 +422,7 @@ export class KanbanBoardRegistryService {
 	async createSprint(
 		dto: CreateKanbanBoardSprintRequestDto,
 	): Promise<KanbanBoardSprintDto> {
-		const code = dto.code.trim();
+		const code = normalizeTrackerCode(dto.code);
 		const name = dto.name.trim();
 		const startDate = dto.startDate.trim();
 		if (!code || !name || !startDate) {
@@ -465,7 +474,7 @@ export class KanbanBoardRegistryService {
 				sprint.supersprint = null;
 			}
 		}
-		if (dto.code !== undefined) sprint.code = dto.code.trim();
+		if (dto.code !== undefined) sprint.code = normalizeTrackerCode(dto.code);
 		if (dto.name !== undefined) sprint.name = dto.name.trim();
 		if (dto.description !== undefined) {
 			sprint.description = dto.description?.trim() || null;
@@ -504,7 +513,7 @@ export class KanbanBoardRegistryService {
 	async createStream(
 		dto: CreateKanbanBoardStreamRequestDto,
 	): Promise<KanbanBoardStreamDto> {
-		const code = dto.code.trim();
+		const code = normalizeTrackerCode(dto.code);
 		const name = dto.name.trim();
 		if (!code || !name) {
 			throw new BadRequestException("Код и название обязательны");
@@ -528,7 +537,7 @@ export class KanbanBoardRegistryService {
 		if (!stream) throw new NotFoundException("Стрим не найден");
 
 		const previousName = stream.name;
-		if (dto.code !== undefined) stream.code = dto.code.trim();
+		if (dto.code !== undefined) stream.code = normalizeTrackerCode(dto.code);
 		if (dto.name !== undefined) stream.name = dto.name.trim();
 		if (dto.description !== undefined) {
 			stream.description = dto.description?.trim() || null;
@@ -569,7 +578,7 @@ export class KanbanBoardRegistryService {
 	async createCustomer(
 		dto: CreateKanbanBoardCustomerRequestDto,
 	): Promise<KanbanBoardCustomerDto> {
-		const code = dto.code.trim();
+		const code = normalizeTrackerCode(dto.code);
 		const name = dto.name.trim();
 		if (!code || !name) {
 			throw new BadRequestException("Код и название обязательны");
@@ -593,7 +602,7 @@ export class KanbanBoardRegistryService {
 		if (!customer) throw new NotFoundException("Заказчик не найден");
 
 		const previousName = customer.name;
-		if (dto.code !== undefined) customer.code = dto.code.trim();
+		if (dto.code !== undefined) customer.code = normalizeTrackerCode(dto.code);
 		if (dto.name !== undefined) customer.name = dto.name.trim();
 		if (dto.description !== undefined) {
 			customer.description = dto.description?.trim() || null;
@@ -643,6 +652,34 @@ export class KanbanBoardRegistryService {
 		return boards.map((board) => this.toBoardDto(board, countMap));
 	}
 
+	async resolveBoardId(ref: string): Promise<string> {
+		const board = await this.findBoardEntityByRef(ref);
+		return board.id;
+	}
+
+	async findBoardByRef(ref: string): Promise<KanbanBoardBoardDto> {
+		const board = await this.findBoardEntityByRef(ref);
+		const taskCount = await this.taskRepository.count({
+			where: { boardId: board.id },
+		});
+		return this.toBoardDto(board, new Map([[board.id, taskCount]]));
+	}
+
+	async findTaskByRef(ref: string): Promise<KanbanBoardTaskRegistryDto> {
+		const task = await this.findTaskEntityByRef(ref);
+		const columnTitles = await this.loadColumnTitleMap([task.boardId]);
+		const sprintTitles = await this.loadSprintTitleMap(
+			task.content.sprintId ? [task.content.sprintId] : [],
+		);
+		const assigneeRoleByName = await this.loadAssigneeRoleByNameMap();
+		return this.toTaskRegistryDto(
+			task,
+			columnTitles,
+			sprintTitles,
+			assigneeRoleByName,
+		);
+	}
+
 	async createBoard(
 		dto: CreateKanbanBoardBoardRequestDto,
 	): Promise<KanbanBoardBoardDto> {
@@ -655,7 +692,7 @@ export class KanbanBoardRegistryService {
 			id: ulid(),
 			projectId: dto.projectId,
 			name: dto.name.trim(),
-			slug: dto.slug.trim(),
+			slug: normalizeTrackerCode(dto.slug),
 			description: dto.description?.trim() || null,
 			sortOrder: dto.sortOrder ?? 0,
 		});
@@ -761,7 +798,9 @@ export class KanbanBoardRegistryService {
 			board.project = project;
 		}
 		if (dto.name !== undefined) board.name = dto.name.trim();
-		if (dto.slug !== undefined) board.slug = dto.slug.trim();
+		if (dto.slug !== undefined) {
+			board.slug = normalizeTrackerCode(dto.slug);
+		}
 		if (dto.description !== undefined) {
 			board.description = dto.description?.trim() || null;
 		}
@@ -1120,10 +1159,13 @@ export class KanbanBoardRegistryService {
 			}));
 
 		const content = await this.validateTaskContent(dto.content);
+		const taskNumber = await this.allocateTaskNumber(board.projectId);
 
 		const entity = this.taskRepository.create({
 			id: ulid(),
 			boardId: dto.boardId,
+			projectId: board.projectId,
+			taskNumber,
 			parentId: dto.parentId,
 			position,
 			content,
@@ -1161,6 +1203,11 @@ export class KanbanBoardRegistryService {
 				relations: { project: true },
 			});
 			if (!board) throw new NotFoundException("Доска не найдена");
+			if (board.projectId !== task.projectId) {
+				throw new BadRequestException(
+					"Нельзя переносить задачу на доску другого проекта",
+				);
+			}
 			task.boardId = dto.boardId;
 			task.board = board;
 		}
@@ -1204,6 +1251,7 @@ export class KanbanBoardRegistryService {
 
 		const board = await this.boardRepository.findOne({
 			where: { id: dto.boardId },
+			relations: { project: true },
 		});
 		if (!board) throw new NotFoundException("Доска не найдена");
 
@@ -1247,6 +1295,10 @@ export class KanbanBoardRegistryService {
 				skippedCount += 1;
 				continue;
 			}
+			if (task.projectId !== board.projectId) {
+				skippedCount += 1;
+				continue;
+			}
 
 			const sourceColumnTitle =
 				sourceColumnTitles.get(`${task.boardId}:${task.parentId}`) ??
@@ -1262,6 +1314,7 @@ export class KanbanBoardRegistryService {
 			positionByColumn.set(targetColumnId, position + 1);
 
 			task.boardId = dto.boardId;
+			task.projectId = board.projectId;
 			task.parentId = targetColumnId;
 			task.position = position;
 			task.updatedAt = now;
@@ -1302,6 +1355,153 @@ export class KanbanBoardRegistryService {
 		if (byPartial) return byPartial.id;
 
 		return targetColumns[0]?.id ?? KANBAN_BOARD_STATUSES[0].id;
+	}
+
+	async ensureTaskIdentities(
+		boardId: string,
+		tasks: KanbanBoardTaskRecord[],
+	): Promise<KanbanBoardTaskRecord[]> {
+		const board = await this.ensureBoardExists(boardId);
+		const existingRows = await this.taskRepository.find({
+			where: { projectId: board.projectId },
+			select: ["id", "taskNumber"],
+		});
+		const existingById = new Map(
+			existingRows.map((row) => [row.id, row.taskNumber]),
+		);
+		let nextNumber = existingRows.reduce(
+			(max, row) => Math.max(max, row.taskNumber),
+			0,
+		);
+
+		return tasks.map((task) => {
+			const preserved = existingById.get(task.id);
+			if (preserved != null) {
+				return {
+					...task,
+					boardId,
+					projectId: board.projectId,
+					taskNumber: preserved,
+				};
+			}
+			if (task.taskNumber != null && task.projectId === board.projectId) {
+				nextNumber = Math.max(nextNumber, task.taskNumber);
+				return {
+					...task,
+					boardId,
+					projectId: board.projectId,
+				};
+			}
+			nextNumber += 1;
+			return {
+				...task,
+				boardId,
+				projectId: board.projectId,
+				taskNumber: nextNumber,
+			};
+		});
+	}
+
+	private async allocateTaskNumber(projectId: string): Promise<number> {
+		const result = await this.taskRepository
+			.createQueryBuilder("task")
+			.select("MAX(task.task_number)", "max")
+			.where("task.project_id = :projectId", { projectId })
+			.getRawOne<{ max: string | null }>();
+		return Number(result?.max ?? 0) + 1;
+	}
+
+	private async listProjectCodes(): Promise<string[]> {
+		const rows = await this.projectRepository.find({ select: ["code"] });
+		return rows.map((row) => row.code);
+	}
+
+	private async findProjectByNormalizedCode(
+		code: string,
+	): Promise<KanbanBoardProjectEntity | null> {
+		const normalized = normalizeTrackerCode(code);
+		return this.projectRepository
+			.createQueryBuilder("project")
+			.where("UPPER(TRIM(project.code)) = :code", { code: normalized })
+			.getOne();
+	}
+
+	private async findBoardByProjectIdAndNormalizedSlug(
+		projectId: string,
+		slug: string,
+	): Promise<KanbanBoardEntity | null> {
+		const normalizedSlug = normalizeTrackerCode(slug);
+		const boards = await this.boardRepository.find({
+			where: { projectId },
+			relations: { project: true },
+		});
+		return (
+			boards.find(
+				(board) => normalizeTrackerCode(board.slug) === normalizedSlug,
+			) ?? null
+		);
+	}
+
+	private async findBoardEntityByRef(ref: string): Promise<KanbanBoardEntity> {
+		const trimmed = ref.trim();
+
+		const byId = await this.boardRepository.findOne({
+			where: { id: trimmed },
+			relations: { project: true },
+		});
+		if (byId) return byId;
+
+		const parsed = parseKanbanBoardKey(trimmed, await this.listProjectCodes());
+		if (!parsed) {
+			throw new NotFoundException("Доска не найдена");
+		}
+
+		const project = await this.findProjectByNormalizedCode(parsed.projectCode);
+		if (!project) throw new NotFoundException("Доска не найдена");
+
+		const board = await this.findBoardByProjectIdAndNormalizedSlug(
+			project.id,
+			parsed.boardSlug,
+		);
+		if (!board) throw new NotFoundException("Доска не найдена");
+		return board;
+	}
+
+	private async findTaskEntityByRef(ref: string): Promise<KanbanBoardTaskEntity> {
+		const trimmed = ref.trim();
+
+		const byId = await this.taskRepository.findOne({
+			where: { id: trimmed },
+			relations: { board: { project: true }, project: true },
+		});
+		if (byId) return byId;
+
+		const parsed = parseKanbanTaskKey(trimmed);
+		if (!parsed) throw new NotFoundException("Задача не найдена");
+
+		const byBoardProject = await this.taskRepository
+			.createQueryBuilder("task")
+			.innerJoinAndSelect("task.board", "board")
+			.innerJoinAndSelect("board.project", "project")
+			.leftJoinAndSelect("task.project", "taskProject")
+			.where("UPPER(TRIM(project.code)) = :projectCode", {
+				projectCode: parsed.projectCode,
+			})
+			.andWhere("task.task_number = :taskNumber", {
+				taskNumber: parsed.taskNumber,
+			})
+			.getOne();
+		if (byBoardProject) return byBoardProject;
+
+		const project = await this.findProjectByNormalizedCode(parsed.projectCode);
+		if (!project) throw new NotFoundException("Задача не найдена");
+
+		const task = await this.taskRepository.findOne({
+			where: { projectId: project.id, taskNumber: parsed.taskNumber },
+			relations: { board: { project: true }, project: true },
+		});
+		if (!task) throw new NotFoundException("Задача не найдена");
+		return task;
 	}
 
 	private async ensureBoardExists(boardId: string): Promise<KanbanBoardEntity> {
@@ -1374,11 +1574,13 @@ export class KanbanBoardRegistryService {
 		board: KanbanBoardEntity,
 		countMap: Map<string, number>,
 	): KanbanBoardBoardDto {
+		const projectCode = board.project?.code ?? "";
 		return {
 			id: board.id,
 			projectId: board.projectId,
-			projectCode: board.project?.code ?? "",
+			projectCode,
 			projectName: board.project?.name ?? "",
+			boardKey: formatKanbanBoardKey(projectCode, board.slug),
 			name: board.name,
 			slug: board.slug,
 			description: board.description,
@@ -1396,6 +1598,8 @@ export class KanbanBoardRegistryService {
 		assigneeRoleByName: ReadonlyMap<string, KanbanBoardAssigneeRoleId | null> = new Map(),
 	): KanbanBoardTaskRegistryDto {
 		const { content } = task;
+		const projectCode = task.board?.project?.code ?? task.project?.code ?? "";
+		const boardSlug = task.board?.slug ?? "";
 		const assigneeRoles = kanbanBoardTaskAssigneeRoles(content, assigneeRoleByName);
 		const assigneeRoleTitles = kanbanBoardTaskAssigneeRoleTitles(
 			content,
@@ -1404,15 +1608,19 @@ export class KanbanBoardRegistryService {
 		return {
 			id: task.id,
 			boardId: task.boardId,
+			projectId: task.projectId,
+			taskNumber: task.taskNumber,
 			parentId: task.parentId,
 			position: task.position,
 			content,
 			origin: task.origin,
 			updatedAt: task.updatedAt,
-			projectCode: task.board?.project?.code ?? "",
-			projectName: task.board?.project?.name ?? "",
-			boardSlug: task.board?.slug ?? "",
+			projectCode,
+			projectName: task.board?.project?.name ?? task.project?.name ?? "",
+			taskKey: formatKanbanTaskKey(projectCode, task.taskNumber),
+			boardSlug,
 			boardName: task.board?.name ?? "",
+			boardKey: formatKanbanBoardKey(projectCode, boardSlug),
 			title: content.title,
 			statusTitle:
 				columnTitles.get(`${task.boardId}:${task.parentId}`) ?? task.parentId,

@@ -698,9 +698,30 @@ export const useDeleteKanbanBoardColumn = () => {
 	});
 };
 
-export const kanbanBoardGetBoardTasks = (boardId: string, signal?: AbortSignal) =>
+export const kanbanBoardGetTaskByRef = (ref: string, signal?: AbortSignal) =>
+	apiClient<KanbanBoardTaskRegistryDto>({
+		url: `/kanban-board/tasks/ref/${encodeURIComponent(ref)}`,
+		method: "GET",
+		signal,
+	});
+
+export const useKanbanBoardTaskByRef = (ref: string | undefined) =>
+	useQuery({
+		queryKey: ["kanbanBoardTaskRef", ref],
+		enabled: Boolean(ref),
+		queryFn: ({ signal }) => kanbanBoardGetTaskByRef(ref!, signal),
+	});
+
+export const kanbanBoardGetBoardByRef = (ref: string, signal?: AbortSignal) =>
+	apiClient<KanbanBoardBoardDto>({
+		url: `/kanban-board/boards/ref/${encodeURIComponent(ref)}`,
+		method: "GET",
+		signal,
+	});
+
+export const kanbanBoardGetBoardTasks = (boardRef: string, signal?: AbortSignal) =>
 	apiClient<KanbanBoardTaskRecord[]>({
-		url: `/kanban-board/boards/${boardId}/tasks`,
+		url: `/kanban-board/boards/${boardRef}/tasks`,
 		method: "GET",
 		signal,
 	});

@@ -1,10 +1,15 @@
 import { ulid } from "ulid";
+import { normalizeTrackerCode } from "@smart-anketa/api-contract";
 
-/** Короткий уникальный код для реестров трекера (можно отредактировать перед сохранением). */
+/** Короткий уникальный код для реестров трекера (UPPERCASE, можно отредактировать). */
 export function generateTrackerAutoCode(prefix: string): string {
-	const normalizedPrefix = prefix.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
-	const suffix = ulid().slice(-8).toLowerCase();
+	const normalizedPrefix = normalizeTrackerCode(prefix).replace(/[^A-Z0-9]+/g, "-");
+	const suffix = ulid().slice(-8).toUpperCase();
 	return normalizedPrefix ? `${normalizedPrefix}-${suffix}` : suffix;
+}
+
+export function normalizeTrackerFormCode(value: string): string {
+	return normalizeTrackerCode(value);
 }
 
 export function buildTrackerCreateFormValues(

@@ -13,8 +13,12 @@ import { TrackerSettingsPage } from "@react-client/features/tracker/pages/Tracke
 import { TrackerSprintsPage } from "@react-client/features/tracker/pages/TrackerSprintsPage";
 import { TrackerStreamsPage } from "@react-client/features/tracker/pages/TrackerStreamsPage";
 import { TrackerSupersprintsPage } from "@react-client/features/tracker/pages/TrackerSupersprintsPage";
-import { TrackerTasksPage } from "@react-client/features/tracker/pages/TrackerTasksPage";
+import {
+	TrackerLegacyBoardRedirect,
+	TrackerLegacyTaskRedirect,
+} from "@react-client/features/tracker/components/TrackerLegacyRedirects";
 import { commonRoutes } from "./routes";
+import { TrackerTasksPage } from "@react-client/features/tracker/pages/TrackerTasksPage";
 
 export function trackerRoutes({
 	onLogout,
@@ -44,8 +48,18 @@ export function trackerRoutes({
 			{ path: "streams", element: <TrackerStreamsPage /> },
 			{ path: "settings", element: <TrackerSettingsPage /> },
 			{ path: "tasks/new", element: <KanbanTaskPage mode="create" /> },
-			{ path: "boards/:boardId", element: <KanbanBoardPage /> },
-			{ path: "boards/:boardId/tasks/:taskId", element: <KanbanTaskPage /> },
+			{ path: "task/new", element: <KanbanTaskPage mode="create" /> },
+			{ path: "board/:boardKey", element: <KanbanBoardPage /> },
+			{
+				path: "board/:boardKey/task/new",
+				element: <KanbanTaskPage mode="create" />,
+			},
+			{ path: "task/:taskKey", element: <KanbanTaskPage /> },
+			{ path: "boards/:boardId", element: <TrackerLegacyBoardRedirect /> },
+			{
+				path: "boards/:boardId/tasks/:taskId",
+				element: <TrackerLegacyTaskRedirect />,
+			},
 		],
 	};
 }

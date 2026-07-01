@@ -29,6 +29,10 @@ function task(
 		assigneeRoles: [],
 		assigneeRoleTitles: [],
 		assigneeRoleTitle: "",
+		projectId: "project-1",
+		taskNumber: 1,
+		taskKey: "PRJ-1",
+		boardKey: "PRJ",
 		...overrides,
 	};
 }

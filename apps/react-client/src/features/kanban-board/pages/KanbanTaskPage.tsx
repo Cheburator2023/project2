@@ -33,7 +33,6 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import {
-	kanbanBoardGetBoardTasks,
 	useCreateKanbanBoardTask,
 	useKanbanBoardAssignees,
 	useKanbanBoardBoards,
@@ -41,6 +40,7 @@ import {
 	useKanbanBoardCustomers,
 	useKanbanBoardSprints,
 	useKanbanBoardStreams,
+	useKanbanBoardTaskByRef,
 	useKanbanBoardTasksRegistry,
 	useUpdateKanbanBoardTask,
 } from "@react-client/common/api/queries/kanban-board";
@@ -53,9 +53,10 @@ import { KanbanSubtasksChecklist } from "@react-client/features/kanban-board/com
 import {
 	isKanbanTaskCreateRoute,
 	kanbanBoardPath,
+	trackerTaskPath,
 } from "@react-client/features/kanban-board/kanban-task-paths";
+import { normalizeTrackerCode } from "@smart-anketa/api-contract";
 import { TrackerMarkdownEditor } from "@react-client/features/kanban-board/components/TrackerMarkdownEditor";
-import { useQuery } from "@tanstack/react-query";
 
 const PRIORITY_OPTIONS = KANBAN_BOARD_PRIORITIES.map((option) => ({
 	value: option.id,
@@ -87,9 +88,7 @@ type ParentTaskOption = {
 };
 
 const formatParentTaskLabel = (task: KanbanBoardTaskRegistryDto): string => {
-	const prefix =
-		task.backlogNumber !== undefined ? `#${task.backlogNumber} ` : "";
-	return `${prefix}${task.title} — ${task.projectCode}/${task.boardSlug}`;
+	return `${task.taskKey} · ${task.title}`;
 };
 
 const toParentTaskOption = (
@@ -120,16 +119,35 @@ function parseColumnParam(
 export function KanbanTaskPage({ mode }: Props = {}) {
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
-	const { boardId: boardIdParam = "", taskId = "" } = useParams<{
-		boardId?: string;
-		taskId?: string;
+	const { boardKey: boardKeyParam = "", taskKey = "" } = useParams<{
+		boardKey?: string;
+		taskKey?: string;
 	}>();
 
-	const isCreate = mode === "create" || isKanbanTaskCreateRoute(taskId ?? "");
-	const boardIdFromQuery = searchParams.get("boardId") ?? "";
-	const boardId = boardIdParam || boardIdFromQuery;
+	const isCreate = mode === "create" || isKanbanTaskCreateRoute(taskKey ?? "");
+	const boardKeyFromQuery = searchParams.get("board") ?? "";
+	const boardKey = boardKeyParam || boardKeyFromQuery;
 
-	const [selectedBoardId, setSelectedBoardId] = useState(boardId);
+	const taskByRefQuery = useKanbanBoardTaskByRef(
+		!isCreate && taskKey ? taskKey : undefined,
+	);
+	const taskId = taskByRefQuery.data?.id ?? "";
+	const boardIdFromTask = taskByRefQuery.data?.boardId ?? "";
+	const boardIdFromQuery = searchParams.get("boardId") ?? "";
+
+	const boardsQuery = useKanbanBoardBoards();
+	const boardMetaFromKey = boardsQuery.data?.find(
+		(item) =>
+			item.boardKey === normalizeTrackerCode(boardKey) ||
+			item.id === boardKey,
+	);
+	const boardId =
+		boardIdFromTask ||
+		boardIdFromQuery ||
+		boardMetaFromKey?.id ||
+		"";
+
+	const [selectedBoardId, setSelectedBoardId] = useState("");
 	const [title, setTitle] = useState("");
 	const [backlogNumber, setBacklogNumber] = useState("");
 	const [parentId, setParentId] = useState(DEFAULT_COLUMN_ID);
@@ -151,23 +169,30 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [description, setDescription] = useState("");
 	const [subtasks, setSubtasks] = useState<KanbanBoardSubtaskItem[]>([]);
 
-	const boardsQuery = useKanbanBoardBoards();
 	const assigneesQuery = useKanbanBoardAssignees();
 	const sprintsQuery = useKanbanBoardSprints();
 	const streamsQuery = useKanbanBoardStreams();
 	const customersQuery = useKanbanBoardCustomers();
 	const tasksRegistryQuery = useKanbanBoardTasksRegistry();
-	const boardMeta = boardsQuery.data?.find((item) => item.id === boardId);
 
 	const effectiveBoardId = boardId || selectedBoardId;
-	const columnsQuery = useKanbanBoardColumns(effectiveBoardId);
+	const boardMeta =
+		boardsQuery.data?.find((item) => item.id === effectiveBoardId) ??
+		boardMetaFromKey ??
+		taskByRefQuery.data;
+	const boardApiRef =
+		taskByRefQuery.data?.boardKey ??
+		boardMetaFromKey?.boardKey ??
+		boardMeta?.boardKey ??
+		normalizeTrackerCode(boardKey);
+	const columnsQuery = useKanbanBoardColumns(boardApiRef || effectiveBoardId);
 	const columns = columnsQuery.data ?? [];
 
 	const boardOptions = useMemo(
 		() =>
 			(boardsQuery.data ?? []).map((board) => ({
 				value: board.id,
-				label: `${board.projectCode}/${board.slug} — ${board.name}`,
+				label: `${board.boardKey} — ${board.name}`,
 				color: BOARD_SELECT_COLOR,
 			})),
 		[boardsQuery.data],
@@ -270,19 +295,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		return row ? toParentTaskOption(row) : null;
 	}, [parentTask, tasksRegistryQuery.data]);
 
-	const tasksQuery = useQuery({
-		queryKey: ["kanbanBoardTasks", boardId],
-		enabled: Boolean(boardId) && !isCreate,
-		queryFn: ({ signal }) => kanbanBoardGetBoardTasks(boardId, signal),
-	});
-
-	const task = useMemo(
-		() => tasksQuery.data?.find((item) => item.id === taskId),
-		[tasksQuery.data, taskId],
-	);
-
-	const createTask = useCreateKanbanBoardTask();
-	const updateTask = useUpdateKanbanBoardTask();
+	const task = taskByRefQuery.data;
 
 	useEffect(() => {
 		if (boardId) {
@@ -310,12 +323,15 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	}, [columns, isCreate, searchParams, task]);
 
 	useEffect(() => {
-		if (!isCreate || boardIdParam) return;
+		if (!isCreate || boardKeyParam) return;
 		if (!columns.length) return;
 		setParentId((current) =>
 			columns.some((column) => column.id === current) ? current : columns[0].id,
 		);
-	}, [boardIdParam, columns, isCreate, selectedBoardId]);
+	}, [boardKeyParam, columns, isCreate, selectedBoardId]);
+
+	const createTask = useCreateKanbanBoardTask();
+	const updateTask = useUpdateKanbanBoardTask();
 
 	useEffect(() => {
 		if (isCreate || !task) return;
@@ -409,12 +425,12 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		if (!content || !effectiveBoardId) return;
 
 		if (isCreate) {
-			await createTask.mutateAsync({
+			const created = await createTask.mutateAsync({
 				boardId: effectiveBoardId,
 				parentId,
 				content,
 			});
-			navigate(kanbanBoardPath(effectiveBoardId));
+			navigate(trackerTaskPath(created.taskKey));
 			return;
 		}
 
@@ -427,22 +443,28 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				content,
 			},
 		});
-		navigate(kanbanBoardPath(effectiveBoardId));
+		navigate(
+			kanbanBoardPath(
+				boardMeta && "boardKey" in boardMeta
+					? boardMeta.boardKey
+					: task.boardKey,
+			),
+		);
 	};
 
 	const isSaving = createTask.isPending || updateTask.isPending;
 	const showForm = isCreate || Boolean(task);
-	const showBoardPicker = isCreate && !boardIdParam;
+	const showBoardPicker = isCreate && !boardKeyParam && !boardKeyFromQuery;
 	const boardSubtitle = boardMeta
-		? `${boardMeta.projectCode} / ${boardMeta.name}`
-		: effectiveBoardId || "Новая задача";
+		? `${boardMeta.boardKey} · ${"name" in boardMeta ? boardMeta.name : boardMeta.boardName}`
+		: boardKey || "Новая задача";
 	const saveDisabled =
 		!title.trim() ||
 		!effectiveBoardId ||
-		(!isCreate && tasksQuery.isLoading) ||
+		(!isCreate && taskByRefQuery.isLoading) ||
 		isSaving;
 
-	if (!isCreate && !taskId) {
+	if (!isCreate && !taskKey) {
 		return <Alert severity="warning">Не указана задача</Alert>;
 	}
 
@@ -493,10 +515,10 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				}}
 			>
 				<Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-					{!isCreate && tasksQuery.isError ? (
+					{!isCreate && taskByRefQuery.isError ? (
 						<Alert severity="error">Не удалось загрузить задачу</Alert>
 					) : null}
-					{!isCreate && tasksQuery.isSuccess && !task ? (
+					{!isCreate && taskByRefQuery.isSuccess && !task ? (
 						<Alert severity="warning">Задача не найдена</Alert>
 					) : null}
 					{createTask.isError || updateTask.isError ? (

@@ -246,6 +246,13 @@ export class KanbanBoardController {
 		return this.registryService.findAllBoards();
 	}
 
+	@Get("boards/ref/:ref")
+	async findBoardByRef(
+		@Param("ref") ref: string,
+	): Promise<KanbanBoardBoardDto> {
+		return this.registryService.findBoardByRef(ref);
+	}
+
 	@Post("boards")
 	async createBoard(
 		@Body() dto: CreateKanbanBoardBoardRequestDto,
@@ -270,7 +277,9 @@ export class KanbanBoardController {
 	async findBoardColumns(
 		@Param("boardId") boardId: string,
 	): Promise<KanbanBoardColumnDto[]> {
-		return this.registryService.findBoardColumns(boardId);
+		return this.registryService.findBoardColumns(
+			await this.registryService.resolveBoardId(boardId),
+		);
 	}
 
 	@Post("boards/:boardId/columns")
@@ -278,7 +287,9 @@ export class KanbanBoardController {
 		@Param("boardId") boardId: string,
 		@Body() dto: CreateKanbanBoardColumnRequestDto,
 	): Promise<KanbanBoardColumnDto> {
-		return this.registryService.createColumn(boardId, dto);
+		const resolvedBoardId =
+			await this.registryService.resolveBoardId(boardId);
+		return this.registryService.createColumn(resolvedBoardId, dto);
 	}
 
 	@Put("boards/:boardId/columns/:columnId")
@@ -287,7 +298,13 @@ export class KanbanBoardController {
 		@Param("columnId") columnId: string,
 		@Body() dto: UpdateKanbanBoardColumnRequestDto,
 	): Promise<KanbanBoardColumnDto> {
-		return this.registryService.updateColumn(boardId, columnId, dto);
+		const resolvedBoardId =
+			await this.registryService.resolveBoardId(boardId);
+		return this.registryService.updateColumn(
+			resolvedBoardId,
+			columnId,
+			dto,
+		);
 	}
 
 	@Delete("boards/:boardId/columns/:columnId")
@@ -295,12 +312,21 @@ export class KanbanBoardController {
 		@Param("boardId") boardId: string,
 		@Param("columnId") columnId: string,
 	): Promise<void> {
-		return this.registryService.deleteColumn(boardId, columnId);
+		const resolvedBoardId =
+			await this.registryService.resolveBoardId(boardId);
+		return this.registryService.deleteColumn(resolvedBoardId, columnId);
 	}
 
 	@Get("tasks/registry")
 	async findTasksRegistry(): Promise<KanbanBoardTaskRegistryDto[]> {
 		return this.registryService.findAllTasksRegistry();
+	}
+
+	@Get("tasks/ref/:ref")
+	async findTaskByRef(
+		@Param("ref") ref: string,
+	): Promise<KanbanBoardTaskRegistryDto> {
+		return this.registryService.findTaskByRef(ref);
 	}
 
 	@Get("tasks/registry/export")
@@ -419,7 +445,9 @@ export class KanbanBoardController {
 	async findBoardTasks(
 		@Param("boardId") boardId: string,
 	): Promise<KanbanBoardTaskRecord[]> {
-		return this.kanbanBoardService.findByBoard(boardId);
+		const resolvedBoardId =
+			await this.registryService.resolveBoardId(boardId);
+		return this.kanbanBoardService.findByBoard(resolvedBoardId);
 	}
 
 	@Put("boards/:boardId/tasks")
@@ -430,7 +458,9 @@ export class KanbanBoardController {
 		if (!Array.isArray(tasks)) {
 			throw new BadRequestException("Ожидается массив задач");
 		}
-		return this.kanbanBoardService.saveBoardTasks(boardId, tasks);
+		const resolvedBoardId =
+			await this.registryService.resolveBoardId(boardId);
+		return this.kanbanBoardService.saveBoardTasks(resolvedBoardId, tasks);
 	}
 
 	@Get("tasks")
@@ -461,7 +491,10 @@ export class KanbanBoardController {
 		@Param("boardId") boardId: string,
 		@Res() res: Response,
 	): Promise<void> {
-		const buffer = await this.kanbanBoardService.exportBoardSnapshot(boardId);
+		const resolvedBoardId =
+			await this.registryService.resolveBoardId(boardId);
+		const buffer =
+			await this.kanbanBoardService.exportBoardSnapshot(resolvedBoardId);
 		const date = new Date().toISOString().slice(0, 10);
 		const standId = this.kanbanBoardService.getStandId();
 		res.setHeader(
@@ -485,9 +518,11 @@ export class KanbanBoardController {
 		if (!file?.buffer?.length) {
 			throw new BadRequestException("Файл не передан");
 		}
+		const resolvedBoardId =
+			await this.registryService.resolveBoardId(boardId);
 		try {
 			return await this.kanbanBoardService.importBoardSnapshot(
-				boardId,
+				resolvedBoardId,
 				file.buffer,
 			);
 		} catch (error) {

@@ -5,6 +5,7 @@ import * as ExcelJS from "exceljs";
 import { DataSource, Repository } from "typeorm";
 import type { KanbanBoardTaskRecord } from "@smart-anketa/api-contract";
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
+import { KanbanBoardEntity } from "../entities/kanban-board.entity";
 import {
 	isSnapshotWorkbook,
 } from "../utils/kanban-board-planning-import.util";
@@ -35,6 +36,8 @@ export class KanbanBoardService {
 	constructor(
 		@InjectRepository(KanbanBoardTaskEntity)
 		private readonly taskRepository: Repository<KanbanBoardTaskEntity>,
+		@InjectRepository(KanbanBoardEntity)
+		private readonly boardRepository: Repository<KanbanBoardEntity>,
 		private readonly dataSource: DataSource,
 		private readonly configService: ConfigService,
 	) {}
@@ -83,10 +86,11 @@ export class KanbanBoardService {
 			origin: standId,
 			updatedAt: now,
 		}));
+		const prepared = await this.ensureTaskIdentities(boardId, normalized);
 
 		await this.dataSource.transaction(async (manager) => {
 			const repo = manager.getRepository(KanbanBoardTaskEntity);
-			const incoming = new Set(normalized.map((task) => task.id));
+			const incoming = new Set(prepared.map((task) => task.id));
 			const existing = await repo.find({
 				where: { boardId, origin: standId },
 			});
@@ -95,7 +99,7 @@ export class KanbanBoardService {
 				await repo.remove(stale);
 			}
 
-			for (const task of normalized) {
+			for (const task of prepared) {
 				await repo.save(this.fromRecord(task));
 			}
 		});
@@ -211,9 +215,10 @@ export class KanbanBoardService {
 		sourceStand: string,
 		normalized: KanbanBoardTaskRecord[],
 	): Promise<void> {
+		const prepared = await this.ensureTaskIdentities(boardId, normalized);
 		await this.dataSource.transaction(async (manager) => {
 			const repo = manager.getRepository(KanbanBoardTaskEntity);
-			const incoming = new Set(normalized.map((task) => task.id));
+			const incoming = new Set(prepared.map((task) => task.id));
 			const existing = await repo.find({
 				where: { boardId, origin: sourceStand },
 			});
@@ -222,7 +227,7 @@ export class KanbanBoardService {
 				await repo.remove(stale);
 			}
 
-			for (const task of normalized) {
+			for (const task of prepared) {
 				await repo.save(this.fromRecord(task));
 			}
 		});
@@ -251,6 +256,8 @@ export class KanbanBoardService {
 		return {
 			id: entity.id,
 			boardId: entity.boardId,
+			projectId: entity.projectId,
+			taskNumber: entity.taskNumber,
 			parentId: entity.parentId,
 			position: entity.position,
 			content: entity.content,
@@ -263,11 +270,60 @@ export class KanbanBoardService {
 		const entity = new KanbanBoardTaskEntity();
 		entity.id = record.id;
 		entity.boardId = record.boardId;
+		entity.projectId = record.projectId ?? "";
+		entity.taskNumber = record.taskNumber ?? 0;
 		entity.parentId = record.parentId;
 		entity.position = record.position;
 		entity.content = record.content;
 		entity.origin = record.origin;
 		entity.updatedAt = record.updatedAt;
 		return entity;
+	}
+
+	private async ensureTaskIdentities(
+		boardId: string,
+		tasks: KanbanBoardTaskRecord[],
+	): Promise<KanbanBoardTaskRecord[]> {
+		const board = await this.boardRepository.findOne({ where: { id: boardId } });
+		if (!board) throw new NotFoundException("Доска не найдена");
+
+		const existingRows = await this.taskRepository.find({
+			where: { projectId: board.projectId },
+			select: ["id", "taskNumber"],
+		});
+		const existingById = new Map(
+			existingRows.map((row) => [row.id, row.taskNumber]),
+		);
+		let nextNumber = existingRows.reduce(
+			(max, row) => Math.max(max, row.taskNumber),
+			0,
+		);
+
+		return tasks.map((task) => {
+			const preserved = existingById.get(task.id);
+			if (preserved != null) {
+				return {
+					...task,
+					boardId,
+					projectId: board.projectId,
+					taskNumber: preserved,
+				};
+			}
+			if (task.taskNumber != null && task.projectId === board.projectId) {
+				nextNumber = Math.max(nextNumber, task.taskNumber);
+				return {
+					...task,
+					boardId,
+					projectId: board.projectId,
+				};
+			}
+			nextNumber += 1;
+			return {
+				...task,
+				boardId,
+				projectId: board.projectId,
+				taskNumber: nextNumber,
+			};
+		});
 	}
 }

@@ -16,6 +16,7 @@ import {
 export type TrackerGanttTaskMeta = {
 	trackerKind: "sprint" | "task";
 	trackerTaskId?: string;
+	trackerTaskKey?: string;
 	trackerBoardId?: string;
 	projectCode?: string;
 	sprintId?: string | null;
@@ -192,6 +193,7 @@ function buildTaskRow(task: KanbanBoardTaskRegistryDto): ITask & TrackerGanttTas
 		progress: 0,
 		trackerKind: "task",
 		trackerTaskId: task.id,
+		trackerTaskKey: task.taskKey,
 		trackerBoardId: task.boardId,
 		projectCode: task.projectCode,
 		sprintId,

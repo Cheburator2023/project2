@@ -19,12 +19,11 @@ export function getTrackerGanttTaskEditPath(
 ): string | null {
 	if (
 		row.trackerKind !== "task" ||
-		!row.trackerTaskId ||
-		!row.trackerBoardId
+		!row.trackerTaskKey
 	) {
 		return null;
 	}
-	return kanbanTaskEditPath(row.trackerBoardId, row.trackerTaskId);
+	return kanbanTaskEditPath(row.trackerTaskKey);
 }
 
 export function canOpenTrackerGanttTask(id: TID): boolean {

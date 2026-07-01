@@ -8,6 +8,15 @@ import MenuItem from "@mui/material/MenuItem";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useEffect, useState } from "react";
+import { normalizeTrackerFormCode } from "@react-client/features/tracker/trackerAutoCode";
+
+function isTrackerCodeField(field: TrackerFormField): boolean {
+	return (
+		field.autoGenerate != null ||
+		field.name === "code" ||
+		field.name === "slug"
+	);
+}
 
 export type TrackerFormField = {
 	name: string;
@@ -81,12 +90,16 @@ export function TrackerFormDialog({
 								select={field.type === "select"}
 								helperText={field.helperText}
 								value={values[field.name] ?? ""}
-								onChange={(event) =>
+								onChange={(event) => {
+									const raw = event.target.value;
+									const next = isTrackerCodeField(field)
+										? normalizeTrackerFormCode(raw)
+										: raw;
 									setValues((prev) => ({
 										...prev,
-										[field.name]: event.target.value,
-									}))
-								}
+										[field.name]: next,
+									}));
+								}}
 							>
 								{field.type === "select"
 									? field.options?.map((option) => (

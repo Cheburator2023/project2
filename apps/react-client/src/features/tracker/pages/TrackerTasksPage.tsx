@@ -28,7 +28,10 @@ import { TrackerRegistryExportButton } from "@react-client/features/tracker/comp
 import { TrackerRegistryImportButton } from "@react-client/features/tracker/components/TrackerRegistryImportButton";
 import { trackerDateFormatter } from "@react-client/features/tracker/components/TrackerRegistryGrid";
 import { V2AdminButton } from "@react-client/features/v2/admin/atoms/V2AdminButton";
-import { kanbanTaskEditPath } from "@react-client/features/kanban-board/kanban-task-paths";
+import {
+	kanbanTaskEditPath,
+	trackerStandaloneTaskCreatePath,
+} from "@react-client/features/kanban-board/kanban-task-paths";
 import type { KanbanBoardTaskRegistryDto } from "@smart-anketa/api-contract";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
@@ -42,7 +45,7 @@ export function TrackerTasksPage() {
 	const [assignTaskIds, setAssignTaskIds] = useState<string[]>([]);
 
 	const openTask = (row: KanbanBoardTaskRegistryDto) => {
-		navigate(kanbanTaskEditPath(row.boardId, row.id));
+		navigate(kanbanTaskEditPath(row.taskKey));
 	};
 
 	const openAssignDialog = useCallback((rows: KanbanBoardTaskRegistryDto[]) => {
@@ -62,9 +65,14 @@ export function TrackerTasksPage() {
 	const columnDefs = useMemo<ColDef<KanbanBoardTaskRegistryDto>[]>(
 		() => [
 			{
+				field: "taskKey",
+				headerName: "Ключ",
+				width: 120,
+			},
+			{
 				field: "backlogNumber",
-				headerName: "№",
-				width: 64,
+				headerName: "№ бэклога",
+				width: 96,
 				type: "numericColumn",
 			},
 			{ field: "title", headerName: "Заголовок", flex: 1.2, minWidth: 180 },
@@ -278,7 +286,7 @@ export function TrackerTasksPage() {
 				rowData={data}
 				columnDefs={columnDefs}
 				loading={isLoading}
-				onCreateClick={() => navigate("/tracker/tasks/new")}
+				onCreateClick={() => navigate(trackerStandaloneTaskCreatePath())}
 				onEditClick={openTask}
 				onRowDoubleClick={openTask}
 				deleteDialogTitle="Удаление задач"

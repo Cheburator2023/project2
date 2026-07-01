@@ -271,6 +271,10 @@ export function kanbanBoardPriorityColor(
 export interface KanbanBoardTaskRecord {
 	id: string;
 	boardId: string;
+	/** Заполняется сервером; при сохранении доски может отсутствовать у новых карточек. */
+	projectId?: string;
+	/** Номер задачи в рамках проекта (ключ PROJECT-N); выдаётся сервером. */
+	taskNumber?: number;
 	parentId: string;
 	position: number;
 	content: KanbanBoardTaskContent;
@@ -294,6 +298,8 @@ export interface KanbanBoardBoardDto {
 	projectId: string;
 	projectCode: string;
 	projectName: string;
+	/** Читаемый ключ доски для URL (/tracker/board/…). */
+	boardKey: string;
 	name: string;
 	slug: string;
 	description: string | null;
@@ -304,10 +310,15 @@ export interface KanbanBoardBoardDto {
 }
 
 export interface KanbanBoardTaskRegistryDto extends KanbanBoardTaskRecord {
+	projectId: string;
+	taskNumber: number;
 	projectCode: string;
 	projectName: string;
+	/** Читаемый ключ задачи для URL (/tracker/task/…). */
+	taskKey: string;
 	boardSlug: string;
 	boardName: string;
+	boardKey: string;
 	title: string;
 	statusTitle: string;
 	taskTypeTitle: string;

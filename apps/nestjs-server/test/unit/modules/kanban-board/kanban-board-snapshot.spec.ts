@@ -86,6 +86,7 @@ const buildBoard = (): KanbanBoardData => ({
 });
 
 const BOARD_ID = "01J000000000000000000014";
+const PROJECT_ID = "01J000000000000000000004";
 
 const BOARD_COLUMNS = defaultKanbanBoardColumns(BOARD_ID).map((column) => ({
 	...column,
@@ -157,6 +158,8 @@ describe("KanbanBoardService importSnapshot", () => {
 			{
 				id: "01JABCDEFGHJKMNPQRSTVWXYZ0",
 				boardId: BOARD_ID,
+				projectId: PROJECT_ID,
+				taskNumber: 1,
 				parentId: "backlog",
 				position: 0,
 				content: { title: "Старая версия" },
@@ -166,6 +169,8 @@ describe("KanbanBoardService importSnapshot", () => {
 			{
 				id: "01JSTALE00000000000000000",
 				boardId: BOARD_ID,
+				projectId: PROJECT_ID,
+				taskNumber: 2,
 				parentId: "todo",
 				position: 0,
 				content: { title: "Удалить меня" },
@@ -175,6 +180,8 @@ describe("KanbanBoardService importSnapshot", () => {
 			{
 				id: "01JLOCAL00000000000000000",
 				boardId: BOARD_ID,
+				projectId: PROJECT_ID,
+				taskNumber: 3,
 				parentId: "todo",
 				position: 0,
 				content: { title: "Локальная задача другого стенда" },
@@ -210,8 +217,16 @@ describe("KanbanBoardService importSnapshot", () => {
 			),
 		} as unknown as DataSource;
 
+		const boardRepo = {
+			findOne: jest.fn(async () => ({
+				id: BOARD_ID,
+				projectId: PROJECT_ID,
+			})),
+		} as unknown as Repository<import("../../../../src/modules/kanban-board/entities/kanban-board.entity").KanbanBoardEntity>;
+
 		const service = new KanbanBoardService(
 			repo,
+			boardRepo,
 			dataSource,
 			{ get: () => "local-dev" } as any,
 		);
