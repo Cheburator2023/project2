@@ -54,7 +54,6 @@ import {
 	type KanbanBoardImportResult,
 } from "@react-client/common/api/queries/kanban-board";
 import {
-	KanbanColumnAddTaskFooter,
 	KanbanColumnAdder,
 	KanbanColumnHeader,
 	getKanbanColumnColor,
@@ -336,17 +335,6 @@ export function KanbanBoardPage() {
 	const isBoardBusy = !isReady || !board || isColumnBusy;
 	const isSavingBoard = saveMutation.isPending;
 
-	const renderListFooter = useCallback(
-		(column: BoardItem) => (
-			<KanbanColumnAddTaskFooter
-				column={column}
-				disabled={isBoardBusy}
-				onAdd={openCreateTask}
-			/>
-		),
-		[isBoardBusy, openCreateTask],
-	);
-
 	const renderColumnHeader = useCallback(
 		(column: BoardItem) => (
 			<KanbanColumnHeader
@@ -354,9 +342,10 @@ export function KanbanBoardPage() {
 				disabled={isBoardBusy}
 				onRename={handleRenameColumn}
 				onDelete={handleDeleteColumn}
+				onAddTask={openCreateTask}
 			/>
 		),
-		[handleDeleteColumn, handleRenameColumn, isBoardBusy],
+		[handleDeleteColumn, handleRenameColumn, isBoardBusy, openCreateTask],
 	);
 
 	const renderColumnAdder = useCallback(
@@ -590,8 +579,6 @@ export function KanbanBoardPage() {
 								renderColumnAdder={renderColumnAdder}
 								allowColumnAdder={!isBoardBusy}
 								columnStyle={columnStyle}
-								renderListFooter={renderListFooter}
-								allowListFooter={() => !isBoardBusy}
 								onCardClick={handleCardClick}
 								configMap={{
 									card: {

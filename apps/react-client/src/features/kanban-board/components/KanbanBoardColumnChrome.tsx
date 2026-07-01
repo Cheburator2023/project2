@@ -21,11 +21,13 @@ export function KanbanColumnHeader({
 	disabled,
 	onRename,
 	onDelete,
+	onAddTask,
 }: {
 	column: BoardItem;
 	disabled: boolean;
 	onRename: (columnId: string, title: string) => void;
 	onDelete: (columnId: string) => void;
+	onAddTask?: (columnId: string) => void;
 }) {
 	const color = getKanbanColumnColor(column);
 	const [editing, setEditing] = useState(false);
@@ -50,7 +52,8 @@ export function KanbanColumnHeader({
 		<Box
 			sx={{
 				px: 1,
-				py: 0.75,
+				pt: 0.75,
+				pb: onAddTask ? 0.5 : 0.75,
 				borderBottom: 0,
 				borderColor: color,
 				borderRadius: "4px",
@@ -128,6 +131,25 @@ export function KanbanColumnHeader({
 					}}
 				/>
 			</Stack>
+			{onAddTask ? (
+				<Button
+					fullWidth
+					size="small"
+					startIcon={<AddIcon fontSize="small" />}
+					disabled={disabled}
+					onClick={() => onAddTask(column.id)}
+					sx={{
+						justifyContent: "flex-start",
+						color,
+						mt: 0.5,
+						px: 0.5,
+						py: 0.5,
+						minHeight: 28,
+					}}
+				>
+					Добавить задачу
+				</Button>
+			) : null}
 		</Box>
 	);
 }
@@ -222,36 +244,5 @@ export function KanbanColumnAdder({
 				</Button>
 			)}
 		</Box>
-	);
-}
-
-export function KanbanColumnAddTaskFooter({
-	column,
-	disabled,
-	onAdd,
-}: {
-	column: BoardItem;
-	disabled: boolean;
-	onAdd: (columnId: string) => void;
-}) {
-	const color = getKanbanColumnColor(column);
-
-	return (
-		<Button
-			fullWidth
-			size="small"
-			startIcon={<AddIcon fontSize="small" />}
-			disabled={disabled}
-			onClick={() => onAdd(column.id)}
-			sx={{
-				justifyContent: "flex-start",
-				color,
-				mt: 0.5,
-				px: 1,
-				py: 0.75,
-			}}
-		>
-			Добавить задачу
-		</Button>
 	);
 }
