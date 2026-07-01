@@ -21,6 +21,7 @@ import { V2_TEMPLATE_VERSION_QUERY } from "@react-client/routing/common/pathHelp
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { toast } from "@react-client/common/toasts";
+import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../../testIds";
 import { CreateTypicalWorkDialog } from "./CreateTypicalWorkDialog";
 import { AssignWorkFromCatalogDialog } from "./AssignWorkFromCatalogDialog";
@@ -30,7 +31,6 @@ import { ParameterDependenciesPanel } from "./ParameterDependenciesPanel";
 import { TypicalWorksCatalogView } from "./TypicalWorksCatalogView";
 import { TypicalWorksEmptyState } from "./TypicalWorksEmptyState";
 import { TypicalWorksMatrixView } from "./TypicalWorksMatrixView";
-import { TypicalWorkParametersCatalogView } from "./TypicalWorkParametersCatalogView";
 import { TypicalWorksTreeSidebar } from "./TypicalWorksTreeSidebar";
 import {
 	type LogicWorksScope,
@@ -71,10 +71,12 @@ export function TypicalWorksPanel() {
 			if (
 				stored === "streams" ||
 				stored === "matrix" ||
-				stored === "catalog" ||
-				stored === "parameters"
+				stored === "catalog"
 			) {
 				return stored;
+			}
+			if (stored === "parameters") {
+				return "streams";
 			}
 		} catch {
 			// ignore
@@ -294,12 +296,6 @@ export function TypicalWorksPanel() {
 					</Box>
 				) : null}
 
-				{viewMode === "parameters" ? (
-					<Box sx={{ flex: 1, minHeight: 0 }}>
-						<TypicalWorkParametersCatalogView />
-					</Box>
-				) : null}
-
 				{viewMode === "streams" ? (
 					<Box sx={{ flex: 1, minHeight: 0, display: "flex" }}>
 						{assignedWorks.length === 0 ? (
@@ -323,6 +319,7 @@ export function TypicalWorksPanel() {
 								/>
 								<TypicalWorkEditableCard
 									card={card}
+									fallbackArchComponentType={selectedListItem?.archComponentType}
 									loading={cardLoading}
 									error={
 										cardError instanceof Error
@@ -437,22 +434,25 @@ export type LogicWorkspaceShellProps = {
 	jsonLogicPanel: React.ReactNode;
 };
 
+const LOGIC_WORKSPACE_SEGMENTS: Array<{
+	id: V2LogicWorkspaceTab;
+	label: string;
+	title?: string;
+}> = [
+	{ id: "works", label: "Типовые работы" },
+	{
+		id: "dependencies",
+		label: "Зависимости параметров",
+		title: "Связи значений параметров между собой",
+	},
+	{ id: "jsonlogic", label: "JsonLogic" },
+];
+
 export function LogicWorkspaceShell({
 	tab,
 	onTabChange,
 	jsonLogicPanel,
 }: LogicWorkspaceShellProps) {
-	const segments: Array<{ id: V2LogicWorkspaceTab; label: string; hint?: string }> =
-		[
-			{ id: "works", label: "Типовые работы" },
-			{
-				id: "dependencies",
-				label: "Зависимости параметров",
-				hint: "Связи значений параметров между собой",
-			},
-			{ id: "jsonlogic", label: "JsonLogic" },
-		];
-
 	return (
 		<Box sx={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
 			<Box
@@ -469,41 +469,11 @@ export function LogicWorkspaceShell({
 					flexWrap: "wrap",
 				}}
 			>
-				<Box
-					sx={{
-						display: "inline-flex",
-						p: 0.4,
-						gap: 0.25,
-						borderRadius: 1.25,
-						border: 1,
-						borderColor: "divider",
-						bgcolor: "action.hover",
-					}}
-				>
-					{segments.map((segment) => (
-						<Box
-							key={segment.id}
-							component="button"
-							type="button"
-							title={segment.hint}
-							onClick={() => onTabChange(segment.id)}
-							sx={{
-								border: "none",
-								cursor: "pointer",
-								fontFamily: "inherit",
-								px: 1.75,
-								py: 0.75,
-								borderRadius: "7px",
-								fontSize: "12.5px",
-								fontWeight: 600,
-								bgcolor: tab === segment.id ? "#1c2333" : "transparent",
-								color: tab === segment.id ? "#fff" : "#5b6577",
-							}}
-						>
-							{segment.label}
-						</Box>
-					))}
-				</Box>
+				<SegmentBar
+					segments={LOGIC_WORKSPACE_SEGMENTS}
+					value={tab}
+					onChange={onTabChange}
+				/>
 				<Typography variant="caption" color="text.secondary">
 					{tab === "works"
 						? "Норматив · триггеры появления · параметры трудоёмкости · формула"

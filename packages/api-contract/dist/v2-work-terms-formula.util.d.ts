@@ -1,4 +1,4 @@
-import type { V2TypicalWorkFormulaDto, V2TypicalWorkFormulaBadgeDto } from "./v2-typical-work.types";
+import type { V2TypicalWorkFormulaDto, V2TypicalWorkFormulaBadgeDto, V2WorkFormulaToken } from "./v2-typical-work.types";
 import type { V2TypicalWorkFormulaTermsDto, V2WorkFormulaTermDto } from "./v2-typical-work-v4.types";
 export declare function createTermId(prefix?: string): string;
 export declare function defaultBaseNormTerm(): V2WorkFormulaTermDto;
@@ -16,8 +16,11 @@ export declare function evaluateTermsFormula(params: {
     resolveFactorCoeff: (paramCode: string) => number;
     resolveTransitive?: (sourceAssignmentId: string) => number | null;
 }): number | null;
-/** Конвертация terms → token-формула для JsonLogic (без транзитивных ссылок). */
+/** Конвертация terms → token-формула для JsonLogic. */
 export declare function termsToTokenFormula(termsDto: V2TypicalWorkFormulaTermsDto): V2TypicalWorkFormulaDto;
+/** Синхронизация formulaTerms из token-формулы (для автосохранения). */
+export declare function syncTermsFromTokenFormula(formula: V2TypicalWorkFormulaDto): V2TypicalWorkFormulaTermsDto;
+export declare function computeFormulaBadgeFromTokens(tokens: V2WorkFormulaToken[]): V2TypicalWorkFormulaBadgeDto;
 export declare function buildTransitiveEdges(assignments: Array<{
     id: string;
     terms?: V2WorkFormulaTermDto[];

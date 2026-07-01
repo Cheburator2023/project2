@@ -14,7 +14,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
 import Select from "@mui/material/Select";
-import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
+import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -22,21 +22,25 @@ import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import type { V2TypicalWorkCardDto } from "@smart-anketa/api-contract";
+import type { V2TypicalWorkCardDto, V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
 import {
 	isParamUsedInFormula,
 	markFormulaParamInvalid,
-	termsToTokenFormula,
+	syncTermsFromTokenFormula,
 	tokensToText,
-	computeFormulaBadge,
+	computeFormulaBadgeFromTokens,
+	resolveActiveNormOnDate,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { useCreateV2TemplateVersion } from "@react-client/common/api/queries/v2-templates";
+import { useV2TypicalWorkAssignments } from "@react-client/common/api/queries/v2-works";
+import { useSchemaEditor } from "../../SchemaEditorContext";
 import {
-	useV2TypicalWorkAssignments,
-	useV2WorkParametersCatalog,
-} from "@react-client/common/api/queries/v2-works";
+	buildSchemaWorkParameters,
+	resolveEffectiveWorkArchComponentType,
+	schemaWorkParameterEmptyPickerMessage,
+} from "./schemaWorkParameters";
 import {
 	coerceDictionariesSnapshot,
 	coerceJsonSchema,
@@ -49,12 +53,8 @@ import { TypicalWorkFormulaLockedDialog } from "./TypicalWorkFormulaLockedDialog
 import { RemoveLaborParamDialog } from "./RemoveLaborParamDialog";
 import { TypicalWorkNormsSection } from "./TypicalWorkNormsSection";
 import { TypicalWorkTriggersSection } from "./TypicalWorkTriggersSection";
-import { TypicalWorkFormulaPreview } from "./TypicalWorkFormulaPreview";
-import {
-	WorkTermsFormulaEditor,
-	ensureFormulaTerms,
-	type TransitiveSourceOption,
-} from "./WorkTermsFormulaEditor";
+import { WorkFormulaEditor } from "./WorkFormulaEditor";
+import { ensureFormulaTerms } from "./WorkTermsFormulaEditor";
 import {
 	computeTriggerStatus,
 	isWorkCoefficientValueAvailable,
@@ -65,7 +65,14 @@ import {
 	streamColor,
 	streamDisplayLabel,
 } from "./typicalWorksAreas";
-import { ARCH_COMPONENT_DOT, archComponentShortLabel, assignmentStatusLabel, formulaBadgeLabel, roundingModeLabel, triggerStatusLabel } from "./typicalWorksUi";
+import {
+	ARCH_COMPONENT_DOT,
+	archComponentShortLabel,
+	assignmentStatusLabel,
+	formulaBadgeLabel,
+	roundingModeLabel,
+	triggerStatusLabel,
+} from "./typicalWorksUi";
 import {
 	cardToPatchDto,
 	useDebouncedTypicalWorkSave,
@@ -80,6 +87,7 @@ type TypicalWorkEditableCardProps = {
 	streamExecutor: string | null;
 	templateId: string;
 	templateVersionId: string | null;
+	fallbackArchComponentType?: string | null;
 	onStreamChange: (stream: string) => void;
 	onVersionChange: (versionId: string) => void;
 };
@@ -114,6 +122,19 @@ function parseDateInput(value: string): string {
 	return trimmed;
 }
 
+function resolveLaborParamOption(
+	paramOptions: V2TypicalWorkParameterDto[],
+	paramCode: string,
+	paramName?: string | null,
+): V2TypicalWorkParameterDto | undefined {
+	return (
+		paramOptions.find((p) => p.code === paramCode) ??
+		(paramName
+			? paramOptions.find((p) => p.name === paramName)
+			: undefined)
+	);
+}
+
 export function TypicalWorkEditableCard({
 	card,
 	loading,
@@ -122,17 +143,19 @@ export function TypicalWorkEditableCard({
 	streamExecutor,
 	templateId,
 	templateVersionId,
+	fallbackArchComponentType,
 	onStreamChange,
 	onVersionChange,
 }: TypicalWorkEditableCardProps) {
-	const { data: paramCatalog } = useV2WorkParametersCatalog();
+	const { fieldPathHints, uiSchema, jsonSchema, enumMapByCode } =
+		useSchemaEditor();
 	const { data: assignmentsList } = useV2TypicalWorkAssignments({
 		templateVersionId,
 	});
 	const createVersion = useCreateV2TemplateVersion();
 	const [draft, setDraft] = useState<V2TypicalWorkCardDto | null>(null);
 	const [formulaLockedOpen, setFormulaLockedOpen] = useState(false);
-	const [addParamCode, setAddParamCode] = useState("");
+	const [laborPickerKey, setLaborPickerKey] = useState(0);
 	const [laborDeleteTarget, setLaborDeleteTarget] = useState<{
 		paramCode: string;
 		paramName: string;
@@ -157,15 +180,6 @@ export function TypicalWorkEditableCard({
 	});
 
 	const lastSyncedCardKeyRef = useRef<string | null>(null);
-	const [previewRefreshToken, setPreviewRefreshToken] = useState(0);
-	const prevSaveStatusRef = useRef<SaveStatus>("idle");
-
-	useEffect(() => {
-		if (prevSaveStatusRef.current !== "saved" && status === "saved") {
-			setPreviewRefreshToken((n) => n + 1);
-		}
-		prevSaveStatusRef.current = status;
-	}, [status]);
 
 	useEffect(() => {
 		if (!card) return;
@@ -181,7 +195,7 @@ export function TypicalWorkEditableCard({
 		});
 	}, [card, templateVersionId, hasPending]);
 
-	const transitiveSources = useMemo((): TransitiveSourceOption[] => {
+	const transitiveSources = useMemo(() => {
 		return (assignmentsList?.items ?? [])
 			.filter((item) => item.id !== draft?.assignmentId)
 			.map((item) => ({
@@ -189,8 +203,15 @@ export function TypicalWorkEditableCard({
 				workId: item.workId,
 				workName: item.workName,
 				streamExecutor: item.streamExecutor,
+				archComponentType: item.archComponentType,
 			}));
 	}, [assignmentsList?.items, draft?.assignmentId]);
+
+	const activeNormValue = useMemo(() => {
+		if (!draft) return null;
+		const today = new Date().toISOString().slice(0, 10);
+		return resolveActiveNormOnDate(draft.norms, draft.streamExecutor, today);
+	}, [draft]);
 
 	useEffect(() => {
 		if (pendingRetryRef.current && templateVersionId) {
@@ -199,39 +220,104 @@ export function TypicalWorkEditableCard({
 		}
 	}, [flushPending, templateVersionId]);
 
-	const paramOptions = paramCatalog?.items ?? [];
-	const unusedLaborParams = paramOptions.filter(
+	const effectiveArchComponentType = useMemo(
+		() =>
+			resolveEffectiveWorkArchComponentType(
+				draft?.archComponentType,
+				card?.archComponentType,
+				fallbackArchComponentType,
+			),
+		[
+			card?.archComponentType,
+			draft?.archComponentType,
+			fallbackArchComponentType,
+		],
+	);
+
+	const paramOptions = useMemo(
+		() =>
+			buildSchemaWorkParameters({
+				archComponentType: effectiveArchComponentType,
+				fieldPathHints,
+				uiSchema: uiSchema as Record<string, unknown>,
+				jsonSchema,
+				enumMapByCode,
+			}),
+		[
+			effectiveArchComponentType,
+			enumMapByCode,
+			fieldPathHints,
+			jsonSchema,
+			uiSchema,
+		],
+	);
+	const laborParamOptions = useMemo(
+		() => paramOptions.filter((p) => p.values.length > 0),
+		[paramOptions],
+	);
+	const unusedLaborParams = laborParamOptions.filter(
 		(p) => !draft?.laborParams.some((g) => g.paramCode === p.code),
+	);
+	const laborPickerHint = schemaWorkParameterEmptyPickerMessage(
+		effectiveArchComponentType,
+		fieldPathHints.length,
+		draft?.laborParams.length ?? 0,
 	);
 
 	const coefficientCatalog = useMemo(
 		() =>
-			paramOptions.map((param) => ({
+			laborParamOptions.map((param) => ({
 				code: param.code,
 				values: param.values.map((value) => ({
 					code: value.code,
 					label: value.label,
 				})),
 			})),
-		[paramOptions],
+		[laborParamOptions],
 	);
 
 	const commitDraft = (next: V2TypicalWorkCardDto) => {
-		const formulaTerms = next.formulaTerms ?? ensureFormulaTerms(next);
+		const formula = next.formula;
+		const formulaTerms = syncTermsFromTokenFormula(formula);
 		const withDerived = {
 			...next,
+			formula,
 			formulaTerms,
-			formula: next.formula ?? termsToTokenFormula(formulaTerms),
-			formulaBadge: computeFormulaBadge(formulaTerms.terms),
+			formulaBadge: computeFormulaBadgeFromTokens(formula.tokens),
 			triggerStatus: computeTriggerStatus(next.rules, paramOptions),
 		};
 		setDraft(withDerived);
 		scheduleSave(cardToPatchDto(withDerived, templateVersionId));
 	};
 
+	const addLaborParam = (picked: V2TypicalWorkParameterDto) => {
+		if (!draft) return;
+		const newGroup = {
+			paramCode: picked.code,
+			paramName: picked.name,
+			kind: "by_value" as const,
+			coefficients: picked.values.map((v) => ({
+				id: `new-${Date.now()}-${v.code}`,
+				streamExecutor: draft.streamExecutor,
+				paramCode: picked.code,
+				paramName: picked.name,
+				valueCode: v.code,
+				valueLabel: v.label,
+				coefficient: 1,
+			})),
+		};
+		commitDraft({
+			...draft,
+			laborParams: [...draft.laborParams, newGroup],
+		});
+		setLaborPickerKey((key) => key + 1);
+	};
+
 	const removeLaborParam = (paramCode: string) => {
 		if (!draft) return;
-		const nextLabor = draft.laborParams.filter((g) => g.paramCode !== paramCode);
+		const nextLabor = draft.laborParams.filter(
+			(g) => g.paramCode !== paramCode,
+		);
 		const nextTokens = markFormulaParamInvalid(draft.formula.tokens, paramCode);
 		commitDraft({
 			...draft,
@@ -313,7 +399,11 @@ export function TypicalWorkEditableCard({
 	}
 
 	if (error) {
-		return <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>;
+		return (
+			<Alert severity="error" sx={{ m: 2 }}>
+				{error}
+			</Alert>
+		);
 	}
 
 	if (!draft) {
@@ -330,7 +420,11 @@ export function TypicalWorkEditableCard({
 		(s) => !recommended.includes(streamDisplayLabel(s)),
 	);
 	const saveDot =
-		status === "error" ? "#c62828" : status === "dirty" || status === "saving" ? "#b5791f" : "#1f8a4d";
+		status === "error"
+			? "#c62828"
+			: status === "dirty" || status === "saving"
+				? "#b5791f"
+				: "#1f8a4d";
 
 	return (
 		<Box sx={{ flex: 1, overflow: "auto", px: 2.75, py: 2.25, minWidth: 0 }}>
@@ -359,11 +453,9 @@ export function TypicalWorkEditableCard({
 				<DialogTitle>Изменить тип архитектурного компонента?</DialogTitle>
 				<DialogContent>
 					<DialogContentText>
-						Смена типа может повлиять на список рекомендованных стримов,
-						условия появления и параметры трудоёмкости. После подтверждения
-						карточка будет сохранена с новым типом:
-						{" "}
-						<b>{pendingArchComponentType}</b>.
+						Смена типа может повлиять на список рекомендованных стримов, условия
+						появления и параметры трудоёмкости. После подтверждения карточка
+						будет сохранена с новым типом: <b>{pendingArchComponentType}</b>.
 					</DialogContentText>
 				</DialogContent>
 				<DialogActions>
@@ -600,7 +692,10 @@ export function TypicalWorkEditableCard({
 						<Typography component="span" sx={{ flex: 1, textAlign: "left" }}>
 							{streamExecutor ? streamDisplayLabel(streamExecutor) : "—"}
 						</Typography>
-						<Typography component="span" sx={{ color: "#aab1c0", fontSize: 11 }}>
+						<Typography
+							component="span"
+							sx={{ color: "#aab1c0", fontSize: 11 }}
+						>
 							▾
 						</Typography>
 					</Button>
@@ -635,9 +730,7 @@ export function TypicalWorkEditableCard({
 									Рекомендованные для компонента
 								</Typography>
 								{availableStreams
-									.filter((s) =>
-										recommended.includes(streamDisplayLabel(s)),
-									)
+									.filter((s) => recommended.includes(streamDisplayLabel(s)))
 									.map((stream) => (
 										<MenuItem
 											key={`rec-${stream}`}
@@ -714,7 +807,11 @@ export function TypicalWorkEditableCard({
 				</Box>
 			</Box>
 
-			{errorMessage ? <Alert severity="error" sx={{ mb: 2 }}>{errorMessage}</Alert> : null}
+			{errorMessage ? (
+				<Alert severity="error" sx={{ mb: 2 }}>
+					{errorMessage}
+				</Alert>
+			) : null}
 			{bufferedRestore ? (
 				<Alert
 					severity="warning"
@@ -736,7 +833,8 @@ export function TypicalWorkEditableCard({
 
 			{!streamExecutor ? (
 				<Alert severity="info">
-					Выберите стрим-исполнителя, чтобы задать условия, коэффициенты и нормы.
+					Выберите стрим-исполнителя, чтобы задать условия, коэффициенты и
+					нормы.
 				</Alert>
 			) : (
 				<Box sx={{ display: "flex", flexDirection: "column", gap: 0 }}>
@@ -751,7 +849,8 @@ export function TypicalWorkEditableCard({
 					<TypicalWorkTriggersSection
 						rules={draft.rules}
 						triggerStatus={draft.triggerStatus}
-						archComponentType={draft.archComponentType}
+						archComponentType={effectiveArchComponentType}
+						schemaFieldCount={fieldPathHints.length}
 						paramOptions={paramOptions}
 						streamExecutor={streamExecutor ?? draft.streamExecutor}
 						onChange={(rules) => commitDraft({ ...draft, rules })}
@@ -769,51 +868,59 @@ export function TypicalWorkEditableCard({
 						<Box
 							sx={{
 								display: "flex",
-								alignItems: "center",
+								alignItems: "flex-start",
 								gap: 1.1,
 								mb: 0.6,
 								flexWrap: "wrap",
 							}}
 						>
-							<Typography sx={{ fontSize: 13.5, fontWeight: 700, color: "#1d2435" }}>
+							<Typography
+								sx={{ fontSize: 13.5, fontWeight: 700, color: "#1d2435", pt: 0.75 }}
+							>
 								Параметры трудоёмкости
 							</Typography>
-							{unusedLaborParams.length > 0 ? (
-								<Button
-									size="small"
-									onClick={() => {
-										const picked = unusedLaborParams[0];
-										if (!picked) return;
-										const newGroup = {
-											paramCode: picked.code,
-											paramName: picked.name,
-											coefficients: picked.values.map((v) => ({
-												id: `new-${Date.now()}-${v.code}`,
-												streamExecutor: draft.streamExecutor,
-												paramCode: picked.code,
-												paramName: picked.name,
-												valueCode: v.code,
-												valueLabel: v.label,
-												coefficient: 1,
-											})),
-										};
-										commitDraft({
-											...draft,
-											laborParams: [...draft.laborParams, newGroup],
-										});
+							<Box
+								sx={{
+									ml: "auto",
+									minWidth: 280,
+									maxWidth: 420,
+									flex: "1 1 280px",
+								}}
+							>
+								<FuzzyAutocomplete<V2TypicalWorkParameterDto>
+									key={laborPickerKey}
+									data-test-id="labor-param-kind-select"
+									options={unusedLaborParams}
+									value={null}
+									onChange={(param) => {
+										if (!param) return;
+										addLaborParam(param);
 									}}
-									sx={{
-										ml: "auto",
-										textTransform: "none",
-										height: 28,
-										border: "1px solid #dfe2ea",
-										borderRadius: "7px",
-										color: "#384152",
-									}}
-								>
-									+ Параметр
-								</Button>
-							) : null}
+									getOptionLabel={(param) => param.name}
+									getOptionValue={(param) => param.code}
+									getOptionSecondaryText={(param) =>
+										param.description ?? undefined
+									}
+									label="Параметр трудоёмкости"
+									placeholder="Выберите поле схемы…"
+									emptyLabel="Выберите поле схемы…"
+									searchPlaceholder="поиск параметра…"
+									noMatchesText="Параметры не найдены"
+									allowEmpty
+									disabled={unusedLaborParams.length === 0}
+									helperText={
+										unusedLaborParams.length === 0 ? laborPickerHint : undefined
+									}
+									statusAlert={
+										unusedLaborParams.length === 0
+											? {
+													severity: "info",
+													message: laborPickerHint,
+												}
+											: null
+									}
+								/>
+							</Box>
 						</Box>
 						<Typography sx={{ fontSize: 11.5, color: "#8a93a3", mb: 1.5 }}>
 							Коэффициенты в разрезе стрима «
@@ -822,10 +929,16 @@ export function TypicalWorkEditableCard({
 						</Typography>
 						{draft.laborParams.length === 0 ? (
 							<Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-								Параметры трудоёмкости не заданы — норма используется как есть.
+								Параметры трудоёмкости не заданы — норма используется как есть
 							</Typography>
 						) : (
-							draft.laborParams.map((group) => (
+							draft.laborParams.map((group) => {
+								const paramMeta = resolveLaborParamOption(
+									laborParamOptions,
+									group.paramCode,
+									group.paramName,
+								);
+								return (
 								<Box
 									key={group.paramCode}
 									sx={{
@@ -835,7 +948,14 @@ export function TypicalWorkEditableCard({
 										mb: 1.25,
 									}}
 								>
-									<Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.25 }}>
+									<Box
+										sx={{
+											display: "flex",
+											alignItems: "center",
+											gap: 1,
+											mb: 1.25,
+										}}
+									>
 										<Box
 											sx={{
 												display: "inline-flex",
@@ -852,16 +972,23 @@ export function TypicalWorkEditableCard({
 										>
 											{group.paramCode}
 										</Box>
-										<Typography sx={{ flex: 1, fontSize: 12.5, fontWeight: 700 }}>
-											{group.paramName ?? group.paramCode}
+										<Typography
+											sx={{ flex: 1, fontSize: 12.5, fontWeight: 700 }}
+										>
+											{paramMeta?.name ?? group.paramName ?? group.paramCode}
 										</Typography>
 										<Select
 											size="small"
+											data-test-id="labor-param-mode-select"
 											value={group.kind ?? "by_value"}
 											onChange={(event) => {
-												const kind = event.target.value as "by_value" | "any_of";
-												const param = paramOptions.find(
-													(p) => p.code === group.paramCode,
+												const kind = event.target.value as
+													| "by_value"
+													| "any_of";
+												const param = resolveLaborParamOption(
+													laborParamOptions,
+													group.paramCode,
+													group.paramName,
 												);
 												const nextGroups = draft.laborParams.map((g) => {
 													if (g.paramCode !== group.paramCode) return g;
@@ -919,15 +1046,26 @@ export function TypicalWorkEditableCard({
 									</Box>
 									{group.kind === "any_of" ? (
 										<Box>
-											<Typography sx={{ fontSize: 11.5, color: "#6b7484", mb: 1 }}>
-												Коэффициент on применяется, если ответ ∈ выбранным значениям;
-												off — иначе.
+											<Typography
+												sx={{ fontSize: 11.5, color: "#6b7484", mb: 1 }}
+											>
+												Коэффициент on применяется, если ответ ∈ выбранным
+												значениям; off — иначе.
 											</Typography>
-											<Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 1 }}>
-												{(paramOptions.find((p) => p.code === group.paramCode)?.values ??
-													[]
+											<Box
+												sx={{
+													display: "flex",
+													flexWrap: "wrap",
+													gap: 0.75,
+													mb: 1,
+												}}
+											>
+												{(
+													paramMeta?.values ?? []
 												).map((value) => {
-													const selected = group.anyOf?.valueCodes.includes(value.code);
+													const selected = group.anyOf?.valueCodes.includes(
+														value.code,
+													);
 													return (
 														<Box
 															key={value.code}
@@ -941,7 +1079,9 @@ export function TypicalWorkEditableCard({
 																	coeffOff: 1,
 																};
 																const valueCodes = selected
-																	? current.valueCodes.filter((c) => c !== value.code)
+																	? current.valueCodes.filter(
+																			(c) => c !== value.code,
+																		)
 																	: [...current.valueCodes, value.code];
 																const valueLabels = selected
 																	? current.valueLabels.filter(
@@ -961,7 +1101,10 @@ export function TypicalWorkEditableCard({
 																			}
 																		: g,
 																);
-																commitDraft({ ...draft, laborParams: nextGroups });
+																commitDraft({
+																	...draft,
+																	laborParams: nextGroups,
+																});
 															}}
 															sx={{
 																border: `1px solid ${selected ? "#e8c9a0" : "#dfe2ea"}`,
@@ -1031,165 +1174,112 @@ export function TypicalWorkEditableCard({
 											</Box>
 										</Box>
 									) : (
-									<Table size="small">
-										<TableBody>
-											{group.coefficients.map((row, index) => {
-											const valueAvailable = isWorkCoefficientValueAvailable(
-												row,
-												coefficientCatalog,
-											);
-											return (
-												<TableRow key={row.id ?? index}>
-													<TableCell>
-														<Box
-															sx={{
-																display: "flex",
-																alignItems: "center",
-																gap: 0.75,
-																flexWrap: "wrap",
-															}}
-														>
-															<Typography
-																component="span"
-																sx={{
-																	fontSize: 13,
-																	color: valueAvailable ? "inherit" : "#c62828",
-																	textDecoration: valueAvailable
-																		? "none"
-																		: "line-through",
-																}}
-															>
-																{row.valueLabel ?? "—"}
-															</Typography>
-															{valueAvailable ? null : (
+										<Table size="small">
+											<TableBody>
+												{group.coefficients.map((row, index) => {
+													const valueAvailable =
+														isWorkCoefficientValueAvailable(
+															row,
+															coefficientCatalog,
+														);
+													return (
+														<TableRow key={row.id ?? index}>
+															<TableCell>
 																<Box
-																	component="span"
-																	title="Значение удалено из справочника — коэффициент исключён из расчёта"
 																	sx={{
-																		display: "inline-flex",
+																		display: "flex",
 																		alignItems: "center",
-																		height: 20,
-																		px: 0.9,
-																		borderRadius: "6px",
-																		fontSize: 11,
-																		fontWeight: 600,
-																		bgcolor: "#fdecec",
-																		color: "#c62828",
-																		border: "1px solid #f5c6c6",
+																		gap: 0.75,
+																		flexWrap: "wrap",
 																	}}
 																>
-																	Значение недоступно
+																	<Typography
+																		component="span"
+																		sx={{
+																			fontSize: 13,
+																			color: valueAvailable
+																				? "inherit"
+																				: "#c62828",
+																			textDecoration: valueAvailable
+																				? "none"
+																				: "line-through",
+																		}}
+																	>
+																		{row.valueLabel ?? "—"}
+																	</Typography>
+																	{valueAvailable ? null : (
+																		<Box
+																			component="span"
+																			title="Значение удалено из справочника — коэффициент исключён из расчёта"
+																			sx={{
+																				display: "inline-flex",
+																				alignItems: "center",
+																				height: 20,
+																				px: 0.9,
+																				borderRadius: "6px",
+																				fontSize: 11,
+																				fontWeight: 600,
+																				bgcolor: "#fdecec",
+																				color: "#c62828",
+																				border: "1px solid #f5c6c6",
+																			}}
+																		>
+																			Значение недоступно
+																		</Box>
+																	)}
 																</Box>
-															)}
-														</Box>
-													</TableCell>
-													<TableCell>
-														<TextField
-															size="small"
-															type="number"
-															value={row.coefficient}
-															onChange={(e) => {
-																const nextGroups = draft.laborParams.map((g) => {
-																	if (g.paramCode !== group.paramCode) return g;
-																	const coeffs = [...g.coefficients];
-																	coeffs[index] = {
-																		...row,
-																		coefficient: Number(
-																			e.target.value.replace(",", "."),
-																		),
-																	};
-																	return { ...g, coefficients: coeffs };
-																});
-																commitDraft({ ...draft, laborParams: nextGroups });
-															}}
-														/>
-													</TableCell>
-												</TableRow>
-											);
-											})}
-										</TableBody>
-									</Table>
+															</TableCell>
+															<TableCell>
+																<TextField
+																	size="small"
+																	type="number"
+																	value={row.coefficient}
+																	onChange={(e) => {
+																		const nextGroups = draft.laborParams.map(
+																			(g) => {
+																				if (g.paramCode !== group.paramCode)
+																					return g;
+																				const coeffs = [...g.coefficients];
+																				coeffs[index] = {
+																					...row,
+																					coefficient: Number(
+																						e.target.value.replace(",", "."),
+																					),
+																				};
+																				return { ...g, coefficients: coeffs };
+																			},
+																		);
+																		commitDraft({
+																			...draft,
+																			laborParams: nextGroups,
+																		});
+																	}}
+																/>
+															</TableCell>
+														</TableRow>
+													);
+												})}
+											</TableBody>
+										</Table>
 									)}
 								</Box>
-							))
+								);
+							})
 						)}
-						{unusedLaborParams.length > 0 ? (
-							<Box sx={{ display: "flex", gap: 1, alignItems: "center", mt: 1 }}>
-								<FormControl size="small" sx={{ minWidth: 220 }}>
-									<SelectWithPlaceholder
-										placeholder="Параметр"
-										value={addParamCode}
-										disableTypeahead
-										onChange={(e) => setAddParamCode(String(e.target.value))}
-									>
-										{unusedLaborParams.map((p) => (
-											<MenuItem key={p.code} value={p.code}>
-												{p.name}
-											</MenuItem>
-										))}
-									</SelectWithPlaceholder>
-								</FormControl>
-								<Button
-									size="small"
-									disabled={!addParamCode}
-									onClick={() => {
-										const picked = unusedLaborParams.find(
-											(p) => p.code === addParamCode,
-										);
-										if (!picked) return;
-										const newGroup = {
-											paramCode: picked.code,
-											paramName: picked.name,
-											coefficients: picked.values.map((v) => ({
-												id: `new-${Date.now()}-${v.code}`,
-												streamExecutor: draft.streamExecutor,
-												paramCode: picked.code,
-												paramName: picked.name,
-												valueCode: v.code,
-												valueLabel: v.label,
-												coefficient: 1,
-											})),
-										};
-										commitDraft({
-											...draft,
-											laborParams: [...draft.laborParams, newGroup],
-										});
-										setAddParamCode("");
-									}}
-								>
-									+ Параметр
-								</Button>
-							</Box>
-						) : null}
 					</Box>
 
 					<Paper variant="outlined" sx={{ p: 1.5, borderRadius: "12px" }}>
-						<Typography variant="subtitle2" fontWeight={700} gutterBottom>
-							Конструктор формулы
-						</Typography>
-						<WorkTermsFormulaEditor
-							formulaTerms={ensureFormulaTerms(draft)}
+						<WorkFormulaEditor
+							formula={draft.formula}
 							rounding={draft.rounding}
 							laborParams={draft.laborParams}
+							normValue={activeNormValue}
+							currentAssignmentId={draft.assignmentId}
 							transitiveSources={transitiveSources}
-							onFormulaTermsChange={(formulaTerms) => {
-								commitDraft({
-									...draft,
-									formulaTerms,
-									formula: termsToTokenFormula(formulaTerms),
-								});
-							}}
-							onRoundingChange={(rounding) => commitDraft({ ...draft, rounding })}
-						/>
-						<TypicalWorkFormulaPreview
-							workId={draft.id}
-							streamExecutor={draft.streamExecutor}
-							laborParams={draft.laborParams}
-							rules={draft.rules}
-							paramCatalog={paramCatalog?.items ?? []}
-							localFormulaText={ensureFormulaTerms(draft).text}
-							refreshToken={previewRefreshToken}
-							isSaving={status === "saving"}
+							onFormulaChange={(formula) => commitDraft({ ...draft, formula })}
+							onRoundingChange={(rounding) =>
+								commitDraft({ ...draft, rounding })
+							}
 						/>
 					</Paper>
 				</Box>

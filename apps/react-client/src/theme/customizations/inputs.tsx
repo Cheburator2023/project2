@@ -501,6 +501,9 @@ export const inputsCustomizations: Components<Theme> = {
 					opacity: 0.7,
 					color: gray[500],
 				},
+				"&:focus": {
+					outline: "none",
+				},
 			},
 		},
 	},
@@ -524,8 +527,9 @@ export const inputsCustomizations: Components<Theme> = {
 					borderColor: gray[400],
 				},
 				[`&.${outlinedInputClasses.focused}`]: {
-					outline: `2px auto ${alpha(brand[500], 0.5)}`,
+					outline: "none",
 					borderColor: brand[400],
+					boxShadow: "none",
 				},
 				...theme.applyStyles("dark", {
 					"&:hover": {

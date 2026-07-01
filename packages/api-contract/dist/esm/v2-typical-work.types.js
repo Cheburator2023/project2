@@ -49,7 +49,7 @@ export function resolveActiveNormOnDate(norms, streamExecutor, atDate) {
     return matching[0]?.normValue ?? null;
 }
 export function defaultWorkFormula() {
-    return { tokens: [{ kind: "norm" }], text: "H" };
+    return { tokens: [{ kind: "norm" }], text: "N" };
 }
 export function defaultWorkRounding() {
     return { mode: "CEIL", step: 0.1 };

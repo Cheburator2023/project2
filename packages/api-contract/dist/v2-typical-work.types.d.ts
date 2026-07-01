@@ -21,6 +21,16 @@ export type V2WorkFormulaToken = {
     /** F-03: ссылка на удалённый параметр трудоёмкости */
     invalid?: boolean;
 } | {
+    kind: "param_anyof";
+    paramCode: string;
+    paramName?: string;
+    invalid?: boolean;
+} | {
+    kind: "work_ref";
+    assignmentId: string;
+    workName?: string;
+    invalid?: boolean;
+} | {
     kind: "number";
     value: number;
 } | {

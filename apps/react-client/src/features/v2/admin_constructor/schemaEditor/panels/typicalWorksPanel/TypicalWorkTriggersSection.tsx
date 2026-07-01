@@ -1,5 +1,4 @@
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
@@ -12,14 +11,16 @@ import type {
 	V2WorkTriggerStatus,
 } from "@smart-anketa/api-contract";
 import { V2_WORK_RULE_OPERATOR_VALUES } from "@smart-anketa/api-contract";
+import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { useMemo, useState } from "react";
-import { archComponentShortLabel } from "./typicalWorksUi";
 import { isWorkTriggerGroupInvalid } from "./typicalWorkPatchErrors";
+import { schemaWorkParameterEmptyPickerMessage } from "./schemaWorkParameters";
 
 type TypicalWorkTriggersSectionProps = {
 	rules: V2TypicalWorkRuleDto[];
 	triggerStatus: V2WorkTriggerStatus;
 	archComponentType: string;
+	schemaFieldCount?: number;
 	paramOptions: V2TypicalWorkParameterDto[];
 	streamExecutor: string;
 	onChange: (rules: V2TypicalWorkRuleDto[]) => void;
@@ -85,16 +86,23 @@ export function TypicalWorkTriggersSection({
 	rules,
 	triggerStatus,
 	archComponentType,
+	schemaFieldCount = 0,
 	paramOptions,
 	streamExecutor,
 	onChange,
 }: TypicalWorkTriggersSectionProps) {
-	const [pickerOpen, setPickerOpen] = useState(false);
+	const [pickerKey, setPickerKey] = useState(0);
 	const banner = triggerBanner(triggerStatus, rules.length);
 
 	const usedParamCodes = useMemo(
 		() => new Set(rules.map((r) => r.paramCode)),
 		[rules],
+	);
+
+	const emptyPickerHint = schemaWorkParameterEmptyPickerMessage(
+		archComponentType,
+		schemaFieldCount,
+		usedParamCodes.size,
 	);
 
 	const pickerItems = paramOptions.filter((p) => !usedParamCodes.has(p.code));
@@ -218,7 +226,7 @@ export function TypicalWorkTriggersSection({
 				valueLabel: firstValue?.label ?? null,
 			},
 		]);
-		setPickerOpen(false);
+		setPickerKey((key) => key + 1);
 	};
 
 	return (
@@ -234,29 +242,48 @@ export function TypicalWorkTriggersSection({
 			<Box
 				sx={{
 					display: "flex",
-					alignItems: "center",
+					alignItems: "flex-start",
 					gap: 1.1,
 					mb: 1.4,
 					flexWrap: "wrap",
 				}}
 			>
-				<Typography sx={{ fontSize: 13.5, fontWeight: 700, color: "#1d2435" }}>
+				<Typography
+					sx={{ fontSize: 13.5, fontWeight: 700, color: "#1d2435", pt: 0.75 }}
+				>
 					Условия появления работы
 				</Typography>
-				<Button
-					size="small"
-					onClick={() => setPickerOpen((v) => !v)}
-					sx={{
-						ml: "auto",
-						textTransform: "none",
-						height: 28,
-						border: "1px solid #dfe2ea",
-						borderRadius: "7px",
-						color: "#384152",
-					}}
-				>
-					+ Параметр-триггер
-				</Button>
+				<Box sx={{ ml: "auto", minWidth: 280, maxWidth: 420, flex: "1 1 280px" }}>
+					<FuzzyAutocomplete<V2TypicalWorkParameterDto>
+						key={pickerKey}
+						data-test-id="trig-picker-items"
+						options={pickerItems}
+						value={null}
+						onChange={(param) => {
+							if (!param) return;
+							addParam(param);
+						}}
+						getOptionLabel={(param) => param.name}
+						getOptionValue={(param) => param.code}
+						getOptionSecondaryText={(param) => param.description ?? undefined}
+						label="Параметр-триггер"
+						placeholder="Выберите поле схемы…"
+						emptyLabel="Выберите поле схемы…"
+						searchPlaceholder="поиск параметра…"
+						noMatchesText="Параметры не найдены"
+						allowEmpty
+						disabled={pickerItems.length === 0}
+						helperText={pickerItems.length === 0 ? emptyPickerHint : undefined}
+						statusAlert={
+							pickerItems.length === 0
+								? {
+										severity: "info",
+										message: emptyPickerHint,
+									}
+								: null
+						}
+					/>
+				</Box>
 			</Box>
 
 			<Box
@@ -298,60 +325,6 @@ export function TypicalWorkTriggersSection({
 				</Box>
 			</Box>
 
-			{pickerOpen ? (
-				<Box
-					sx={{
-						border: "1px solid #e1e9f6",
-						bgcolor: "#f6f9fe",
-						borderRadius: "10px",
-						p: "10px 11px",
-						mb: 1.5,
-					}}
-				>
-					<Typography
-						sx={{
-							fontSize: 11,
-							fontWeight: 700,
-							color: "#2f6bd8",
-							textTransform: "uppercase",
-							letterSpacing: "0.04em",
-							mb: 1,
-						}}
-					>
-						Параметр компонента «{archComponentShortLabel(archComponentType)}»
-					</Typography>
-					<Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
-						{pickerItems.length === 0 ? (
-							<Typography sx={{ fontSize: 12, color: "#8a93a3" }}>
-								Все доступные параметры уже добавлены.
-							</Typography>
-						) : (
-							pickerItems.map((param) => (
-								<Box
-									key={param.code}
-									component="button"
-									type="button"
-									onClick={() => addParam(param)}
-									sx={{
-										border: "1px solid #dfe2ea",
-										bgcolor: "#fff",
-										borderRadius: "8px",
-										px: 1.25,
-										py: 0.75,
-										cursor: "pointer",
-										fontFamily: "inherit",
-										fontSize: 12,
-										color: "#3a4252",
-									}}
-								>
-									{param.name}
-								</Box>
-							))
-						)}
-					</Box>
-				</Box>
-			) : null}
-
 			{grouped.length > 0 ? (
 				<Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
 					{grouped.map(([paramCode, paramRules]) => {
@@ -364,8 +337,10 @@ export function TypicalWorkTriggersSection({
 							catalogForValidation,
 						);
 						const selectedCodes = new Set(
-							(paramRules[0]?.values?.map((v) => v.code) ??
-								paramRules.map((r) => r.valueCode)).filter(Boolean),
+							(
+								paramRules[0]?.values?.map((v) => v.code) ??
+								paramRules.map((r) => r.valueCode)
+							).filter(Boolean),
 						);
 						const staleRules = paramRules.filter(
 							(rule) =>
@@ -425,44 +400,53 @@ export function TypicalWorkTriggersSection({
 									<Typography sx={{ fontSize: 11.5, color: "#6b7484" }}>
 										Оператор
 									</Typography>
-								<Select
-									size="small"
-									value={paramRules[0]?.operator ?? "="}
-									onChange={(event) =>
-										updateParamOperator(
-											paramCode,
-											event.target.value as V2WorkRuleOperator,
-										)
-									}
-									sx={{
-										height: 30,
-										minWidth: 76,
-										bgcolor: "#fff",
-										"& .MuiSelect-select": { py: 0.4, fontSize: 12 },
-									}}
-								>
-									{V2_WORK_RULE_OPERATOR_VALUES.filter((op) => {
-										if (op === "in" || op === "not_in") {
-											return param?.numeric !== true;
+									<Select
+										size="small"
+										value={paramRules[0]?.operator ?? "="}
+										onChange={(event) =>
+											updateParamOperator(
+												paramCode,
+												event.target.value as V2WorkRuleOperator,
+											)
 										}
-										if (op === "=" || op === "!=") return true;
-										return param?.numeric === true;
-									}).map((operator) => (
-										<MenuItem key={operator} value={operator}>
-											{OPERATOR_LABELS[operator]}
-										</MenuItem>
-									))}
+										sx={{
+											height: 30,
+											minWidth: 76,
+											bgcolor: "#fff",
+											"& .MuiSelect-select": { py: 0.4, fontSize: 12 },
+										}}
+									>
+										{V2_WORK_RULE_OPERATOR_VALUES.filter((op) => {
+											if (op === "in" || op === "not_in") {
+												return param?.numeric !== true;
+											}
+											if (op === "=" || op === "!=") return true;
+											return param?.numeric === true;
+										}).map((operator) => (
+											<MenuItem key={operator} value={operator}>
+												{OPERATOR_LABELS[operator]}
+											</MenuItem>
+										))}
 									</Select>
 								</Box>
 								{groupInvalid ? (
-									<Typography sx={{ fontSize: 11.5, color: "#c62828", mb: 0.9 }}>
+									<Typography
+										sx={{ fontSize: 11.5, color: "#c62828", mb: 0.9 }}
+									>
 										{!param
-											? "Параметр удалён из каталога — обновите условия"
-											: "Выбраны значения, которых больше нет в каталоге"}
+											? "Поле удалено из схемы — обновите условия"
+											: "Выбраны значения, которых больше нет в схеме"}
 									</Typography>
 								) : null}
 								{staleRules.length > 0 ? (
-									<Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 0.9 }}>
+									<Box
+										sx={{
+											display: "flex",
+											flexWrap: "wrap",
+											gap: 0.75,
+											mb: 0.9,
+										}}
+									>
 										{staleRules.map((rule) => (
 											<Box
 												key={rule.id}
@@ -478,7 +462,7 @@ export function TypicalWorkTriggersSection({
 													color: "#c62828",
 													border: "1px solid #f5c6c6",
 												}}
-												title="Значение удалено из каталога"
+												title="Значение удалено из схемы"
 											>
 												{rule.valueLabel ?? rule.valueCode}
 											</Box>
@@ -495,12 +479,7 @@ export function TypicalWorkTriggersSection({
 												type="button"
 												onClick={() => {
 													if (!param) return;
-													toggleValue(
-														param,
-														value.code,
-														value.label,
-														selected,
-													);
+													toggleValue(param, value.code, value.label, selected);
 												}}
 												sx={{
 													display: "inline-flex",

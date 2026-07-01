@@ -39,6 +39,19 @@ export const commonRoutes = {
 		showInNavbar: true,
 		navbar: { group: "adminV2", order: 5 },
 	},
+	adminV2TypicalWorks: {
+		rootPath: "/admin/typical-works",
+		name: "Типовые работы",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "adminV2", order: 6 },
+	},
+	adminV2TypicalWorkDetail: {
+		rootPath: "/admin/typical-works/:workId",
+		name: "Типовая работа",
+		shortName: "Типовая работа",
+		disabled: false,
+	},
 	adminV2DictionaryDetail: {
 		rootPath: "/admin/dictionaries/:dictionaryId",
 		name: "Справочник",

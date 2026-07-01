@@ -1176,13 +1176,13 @@ export function listSchemaFields(
 		rows.push({ pointer, depth, key, typeLabel });
 
 		if (isObjectFieldGroup(sub)) {
-			rows.push(...listSchemaFields(sub, pointer, depth + 1, uiSchema));
+			rows.push(...listSchemaFields(schema, pointer, depth + 1, uiSchema));
 		}
 
 		const itemsObj = getObjectItemsSchema(sub);
 		if (itemsObj) {
 			rows.push(
-				...listSchemaFields(itemsObj, `${pointer}/items`, depth + 1, uiSchema),
+				...listSchemaFields(schema, `${pointer}/items`, depth + 1, uiSchema),
 			);
 		}
 	}

@@ -13,8 +13,8 @@ describe("v2-work-formula.util", () => {
         expect(parsed.tokens).toHaveLength(3);
     });
     it("formats general summary with Кэф-П indices", () => {
-        const tokens = parseWorkFormulaText("H * P[a]").tokens;
-        expect(formatWorkFormulaGeneralSummary(tokens, ["a"])).toBe("H * Кэф-П1");
+        const tokens = parseWorkFormulaText("N * P[a]").tokens;
+        expect(formatWorkFormulaGeneralSummary(tokens, ["a"])).toBe("N * Кэф-П1");
     });
     it("evaluates norm only", () => {
         const formula = defaultWorkFormula();

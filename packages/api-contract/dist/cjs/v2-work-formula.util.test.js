@@ -15,8 +15,8 @@ const v2_typical_work_types_1 = require("./v2-typical-work.types");
         (0, vitest_1.expect)(parsed.tokens).toHaveLength(3);
     });
     (0, vitest_1.it)("formats general summary with Кэф-П indices", () => {
-        const tokens = (0, v2_work_formula_util_1.parseWorkFormulaText)("H * P[a]").tokens;
-        (0, vitest_1.expect)((0, v2_work_formula_util_1.formatWorkFormulaGeneralSummary)(tokens, ["a"])).toBe("H * Кэф-П1");
+        const tokens = (0, v2_work_formula_util_1.parseWorkFormulaText)("N * P[a]").tokens;
+        (0, vitest_1.expect)((0, v2_work_formula_util_1.formatWorkFormulaGeneralSummary)(tokens, ["a"])).toBe("N * Кэф-П1");
     });
     (0, vitest_1.it)("evaluates norm only", () => {
         const formula = (0, v2_typical_work_types_1.defaultWorkFormula)();

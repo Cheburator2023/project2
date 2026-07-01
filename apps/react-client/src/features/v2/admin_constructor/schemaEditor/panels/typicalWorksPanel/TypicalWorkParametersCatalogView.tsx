@@ -90,9 +90,8 @@ export function TypicalWorkParametersCatalogView() {
 	const params = data?.items ?? [];
 	const [selectedCode, setSelectedCode] = useState<string | null>(null);
 	const [query, setQuery] = useState("");
-	const [paramDraft, setParamDraft] = useState<ParameterDraft>(
-		emptyParameterDraft,
-	);
+	const [paramDraft, setParamDraft] =
+		useState<ParameterDraft>(emptyParameterDraft);
 	const [newValueDraft, setNewValueDraft] = useState<ValueDraft>(() =>
 		valueToDraft(),
 	);
@@ -170,7 +169,9 @@ export function TypicalWorkParametersCatalogView() {
 
 	const removeParam = async () => {
 		if (!selectedParam) return;
-		if (!window.confirm(`Удалить параметр «${selectedParam.name}» со значениями?`)) {
+		if (
+			!window.confirm(`Удалить параметр «${selectedParam.name}» со значениями?`)
+		) {
 			return;
 		}
 		try {
@@ -202,7 +203,7 @@ export function TypicalWorkParametersCatalogView() {
 					<Typography sx={{ color: "#8a93a3", fontSize: 12 }}>
 						{params.length}
 					</Typography>
-					<Button
+					{/* <Button
 						size="small"
 						onClick={() => {
 							setSelectedCode(null);
@@ -211,7 +212,7 @@ export function TypicalWorkParametersCatalogView() {
 						sx={{ ml: "auto", textTransform: "none" }}
 					>
 						+ Параметр
-					</Button>
+					</Button> */}
 				</Flex>
 				<Spacer space={10} />
 				<TextField
@@ -386,7 +387,10 @@ function ParameterValueRow({
 			validTo: string | null;
 		};
 	}) => Promise<unknown>;
-	onDelete: (variables: { paramCode: string; valueCode: string }) => Promise<unknown>;
+	onDelete: (variables: {
+		paramCode: string;
+		valueCode: string;
+	}) => Promise<unknown>;
 }) {
 	const [draft, setDraft] = useState<ValueDraft>(() => valueToDraft(value));
 
@@ -430,11 +434,23 @@ function ParameterValueRow({
 
 	return (
 		<Flex alignItems="center" gap={1} wrap="wrap">
-			<ValueFields draft={draft} onChange={setDraft} status={activeValueLabel(value)} />
-			<Button size="small" onClick={() => void save()} sx={{ textTransform: "none" }}>
+			<ValueFields
+				draft={draft}
+				onChange={setDraft}
+				status={activeValueLabel(value)}
+			/>
+			<Button
+				size="small"
+				onClick={() => void save()}
+				sx={{ textTransform: "none" }}
+			>
 				Сохранить
 			</Button>
-			<IconButton size="small" title="Удалить значение" onClick={() => void remove()}>
+			<IconButton
+				size="small"
+				title="Удалить значение"
+				onClick={() => void remove()}
+			>
 				<DeleteOutlineIcon fontSize="small" />
 			</IconButton>
 		</Flex>
@@ -477,7 +493,8 @@ function ValueFields({
 	onChange: (draft: ValueDraft) => void;
 	status: string;
 }) {
-	const patch = (partial: Partial<ValueDraft>) => onChange({ ...draft, ...partial });
+	const patch = (partial: Partial<ValueDraft>) =>
+		onChange({ ...draft, ...partial });
 
 	return (
 		<>

@@ -1,11 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.isTransitiveOnlyFormula = isTransitiveOnlyFormula;
+exports.hasWorkRefToken = hasWorkRefToken;
+exports.isParamToken = isParamToken;
 exports.tokensToText = tokensToText;
 exports.formatWorkFormulaGeneralSummary = formatWorkFormulaGeneralSummary;
 exports.parseWorkFormulaText = parseWorkFormulaText;
+exports.validateWorkFormulaTokens = validateWorkFormulaTokens;
 exports.isParamUsedInFormula = isParamUsedInFormula;
 exports.markFormulaParamInvalid = markFormulaParamInvalid;
-exports.validateWorkFormulaTokens = validateWorkFormulaTokens;
 exports.evaluateWorkFormula = evaluateWorkFormula;
 exports.applyWorkRounding = applyWorkRounding;
 exports.previewWorkFormula = previewWorkFormula;
@@ -15,16 +18,33 @@ const OP_SYMBOL = {
     "*": "×",
     "/": "÷",
 };
+function isTransitiveOnlyFormula(tokens) {
+    return tokens.length === 1 && tokens[0]?.kind === "work_ref";
+}
+function hasWorkRefToken(tokens) {
+    return tokens.some((token) => token.kind === "work_ref");
+}
+function isParamToken(token) {
+    return token.kind === "param_coeff" || token.kind === "param_anyof";
+}
 function tokensToText(tokens) {
     return tokens
         .map((token) => {
         switch (token.kind) {
             case "norm":
-                return "H";
+                return "N";
             case "param_coeff":
                 return token.invalid
-                    ? `P[${token.paramName ?? token.paramCode}]?`
-                    : `P[${token.paramName ?? token.paramCode}]`;
+                    ? `коэф(${token.paramCode})?`
+                    : `коэф(${token.paramCode})`;
+            case "param_anyof":
+                return token.invalid
+                    ? `anyof(${token.paramCode})?`
+                    : `anyof(${token.paramCode})`;
+            case "work_ref":
+                return token.invalid
+                    ? `работа(${token.assignmentId})?`
+                    : `работа(${token.assignmentId})`;
             case "number":
                 return String(token.value);
             case "operator":
@@ -49,20 +69,24 @@ const GENERAL_OP_SYMBOL = {
     "*": "*",
     "/": "/",
 };
-/** Краткая запись для блока «Общая формула норматива» (H, Кэф-П1, …). */
+/** Краткая запись для блока «Общая формула норматива» (N, Кэф-П1, …). */
 function formatWorkFormulaGeneralSummary(tokens, paramOrder) {
     const indexByCode = new Map(paramOrder.map((code, index) => [code, index + 1]));
     return tokens
         .map((token) => {
         switch (token.kind) {
             case "norm":
-                return "H";
-            case "param_coeff": {
+                return "N";
+            case "param_coeff":
+            case "param_anyof": {
                 const idx = indexByCode.get(token.paramCode);
+                const prefix = token.kind === "param_anyof" ? "Any-П" : "Кэф-П";
                 if (idx != null)
-                    return `Кэф-П${idx}`;
-                return `Кэф[${token.paramName ?? token.paramCode}]`;
+                    return `${prefix}${idx}`;
+                return `${prefix}[${token.paramName ?? token.paramCode}]`;
             }
+            case "work_ref":
+                return token.workName ? `→${token.workName}` : "→работа";
             case "number":
                 return String(token.value);
             case "operator":
@@ -104,13 +128,75 @@ function parseWorkFormulaText(text) {
         const value = Number(raw);
         if (!Number.isFinite(value))
             return null;
+        if (value < 0)
+            return null;
         return { kind: "number", value };
+    };
+    const readFunctionCall = (fnName) => {
+        const start = i;
+        const nameLen = fnName.length;
+        if (input.slice(i, i + nameLen).toLowerCase() !== fnName.toLowerCase())
+            return null;
+        i += nameLen;
+        skipWs();
+        if (input[i] !== "(") {
+            i = start;
+            return null;
+        }
+        i++;
+        skipWs();
+        const idStart = i;
+        while (i < input.length && /[A-Za-zА-Яа-я0-9_\-]/.test(input[i] ?? ""))
+            i++;
+        const id = input.slice(idStart, i).trim();
+        skipWs();
+        if (input[i] !== ")") {
+            i = start;
+            return null;
+        }
+        i++;
+        if (!id) {
+            i = start;
+            return null;
+        }
+        if (fnName.toLowerCase() === "anyof") {
+            return { kind: "param_anyof", id };
+        }
+        if (fnName.toLowerCase() === "работа") {
+            return { kind: "work_ref", id };
+        }
+        return { kind: "param_coeff", id };
     };
     while (i < input.length) {
         skipWs();
         if (i >= input.length)
             break;
         const ch = input[i] ?? "";
+        if (input.slice(i, i + 8).toLowerCase() === "норма_n" ||
+            input.slice(i, i + 7).toLowerCase() === "norma_n") {
+            tokens.push({ kind: "norm" });
+            i += input.slice(i, i + 8).toLowerCase() === "норма_n" ? 8 : 7;
+            continue;
+        }
+        const fnCall = readFunctionCall("коэф") ??
+            readFunctionCall("anyof") ??
+            readFunctionCall("работа");
+        if (fnCall) {
+            if (fnCall.kind === "work_ref") {
+                tokens.push({
+                    kind: "work_ref",
+                    assignmentId: fnCall.id,
+                });
+            }
+            else {
+                tokens.push({
+                    kind: fnCall.kind,
+                    paramCode: fnCall.id,
+                    paramName: fnCall.id,
+                });
+            }
+            continue;
+        }
         if (ch === "N" || ch === "n" || ch === "H" || ch === "h") {
             if (/[A-Za-zА-Яа-я0-9_]/.test(input[i + 1] ?? "")) {
                 return { tokens: [], error: `Неизвестный токен на позиции ${i + 1}` };
@@ -172,21 +258,28 @@ function parseWorkFormulaText(text) {
     }
     return { tokens, error: null };
 }
-function isParamUsedInFormula(tokens, paramCode) {
-    return tokens.some((token) => token.kind === "param_coeff" &&
-        token.paramCode === paramCode &&
-        !token.invalid);
-}
-function markFormulaParamInvalid(tokens, paramCode) {
-    return tokens.map((token) => token.kind === "param_coeff" && token.paramCode === paramCode
-        ? { ...token, invalid: true }
-        : token);
-}
 function validateWorkFormulaTokens(tokens, options) {
     const opts = options instanceof Set ? { allowedParamCodes: options } : (options ?? {});
-    const { allowedParamCodes, allowInvalidParamRefs = false } = opts;
-    if (tokens.length === 0)
-        return "Формула не может быть пустой";
+    const { allowedParamCodes, allowInvalidParamRefs = false, strictTransitiveExclusive = true, } = opts;
+    if (tokens.length === 0) {
+        return "Формула не может быть пустой — добавьте хотя бы один токен";
+    }
+    const workRefCount = tokens.filter((token) => token.kind === "work_ref").length;
+    if (strictTransitiveExclusive && workRefCount > 0) {
+        if (tokens.length > 1) {
+            return "Ссылка на значение работы должна быть единственным элементом формулы";
+        }
+        if (workRefCount !== 1) {
+            return "Ссылка на значение работы должна быть единственным элементом формулы";
+        }
+    }
+    if (isTransitiveOnlyFormula(tokens)) {
+        const ref = tokens[0];
+        if (ref?.kind === "work_ref" && ref.invalid) {
+            return "Значение недоступно";
+        }
+        return null;
+    }
     let balance = 0;
     let expectOperand = true;
     for (let idx = 0; idx < tokens.length; idx++) {
@@ -202,10 +295,10 @@ function validateWorkFormulaTokens(tokens, options) {
         }
         if (token.kind === "paren_close") {
             if (expectOperand)
-                return `Несбалансированные скобки на позиции ${idx + 1}`;
+                return "Проверьте скобки в формуле";
             balance--;
             if (balance < 0)
-                return `Несбалансированные скобки на позиции ${idx + 1}`;
+                return "Проверьте скобки в формуле";
             expectOperand = false;
             continue;
         }
@@ -218,7 +311,10 @@ function validateWorkFormulaTokens(tokens, options) {
         if (!expectOperand) {
             return `Ожидался оператор на позиции ${idx + 1}`;
         }
-        if (token.kind === "param_coeff") {
+        if (token.kind === "number" && token.value < 0) {
+            return "Число должно быть неотрицательным — используйте оператор «−» для вычитания";
+        }
+        if (isParamToken(token)) {
             if (token.invalid) {
                 if (allowInvalidParamRefs) {
                     expectOperand = false;
@@ -230,14 +326,38 @@ function validateWorkFormulaTokens(tokens, options) {
                 return `Параметр «${token.paramName ?? token.paramCode}» отсутствует в блоке параметров трудоёмкости`;
             }
         }
+        if (token.kind === "work_ref" && token.invalid) {
+            return "Значение недоступно";
+        }
         expectOperand = false;
     }
     if (balance !== 0)
-        return "Несбалансированные скобки";
+        return "Проверьте скобки в формуле";
     if (expectOperand && tokens.length > 0) {
         return "Выражение не может заканчиваться оператором";
     }
+    // Деление на ноль (константа-делитель = 0)
+    for (let idx = 0; idx < tokens.length - 2; idx++) {
+        const op = tokens[idx + 1];
+        const divisor = tokens[idx + 2];
+        if (op?.kind === "operator" &&
+            op.op === "/" &&
+            divisor?.kind === "number" &&
+            divisor.value === 0) {
+            return "Деление на ноль недопустимо";
+        }
+    }
     return null;
+}
+function isParamUsedInFormula(tokens, paramCode) {
+    return tokens.some((token) => isParamToken(token) &&
+        token.paramCode === paramCode &&
+        !token.invalid);
+}
+function markFormulaParamInvalid(tokens, paramCode) {
+    return tokens.map((token) => isParamToken(token) && token.paramCode === paramCode
+        ? { ...token, invalid: true }
+        : token);
 }
 function evaluateWorkFormula(formula, ctx) {
     const symbolic = formula.text || tokensToText(formula.tokens);
@@ -283,7 +403,7 @@ function evaluateWorkFormula(formula, ctx) {
             expectOperand = false;
             continue;
         }
-        if (token.kind === "param_coeff") {
+        if (token.kind === "param_coeff" || token.kind === "param_anyof") {
             if (!expectOperand)
                 return { symbolic, expanded: "", value: null, error: "Ожидался оператор" };
             if (token.invalid) {
@@ -307,6 +427,14 @@ function evaluateWorkFormula(formula, ctx) {
             labels.push(String(coeff));
             expectOperand = false;
             continue;
+        }
+        if (token.kind === "work_ref") {
+            return {
+                symbolic,
+                expanded: "",
+                value: null,
+                error: "Транзитивная ссылка вычисляется отдельно",
+            };
         }
         if (token.kind === "paren_open") {
             if (!expectOperand)

@@ -66,6 +66,11 @@ function tokenToJsonLogicLeaf(token: V2WorkFormulaToken): V2JsonLogicValue | nul
 		case "param_coeff":
 			if (token.invalid) return null;
 			return { var: `coeff.${token.paramCode}` };
+		case "param_anyof":
+			if (token.invalid) return null;
+			return { var: `coeff.${token.paramCode}` };
+		case "work_ref":
+			return null;
 		default:
 			return null;
 	}
@@ -94,7 +99,12 @@ export function compileWorkFormulaTokensToJsonLogic(
 	};
 
 	for (const token of tokens) {
-		if (token.kind === "norm" || token.kind === "number" || token.kind === "param_coeff") {
+		if (
+			token.kind === "norm" ||
+			token.kind === "number" ||
+			token.kind === "param_coeff" ||
+			token.kind === "param_anyof"
+		) {
 			const leaf = tokenToJsonLogicLeaf(token);
 			if (leaf == null) return null;
 			values.push(leaf);

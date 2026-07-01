@@ -40,6 +40,12 @@ export const pathForAdminV2Dictionary = (dictionaryId: string) =>
 		encodeURIComponent(dictionaryId),
 	);
 
+export const pathForAdminV2TypicalWork = (workId: string) =>
+	commonRoutes.adminV2TypicalWorkDetail.rootPath.replace(
+		":workId",
+		encodeURIComponent(workId),
+	);
+
 export const pathForAdminV2TemplateHistory = (templateId: string) =>
 	commonRoutes.adminV2TemplateHistory.rootPath.replace(
 		":templateId",

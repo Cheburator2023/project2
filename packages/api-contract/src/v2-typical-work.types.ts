@@ -56,6 +56,18 @@ export type V2WorkFormulaToken =
 			/** F-03: ссылка на удалённый параметр трудоёмкости */
 			invalid?: boolean;
 	  }
+	| {
+			kind: "param_anyof";
+			paramCode: string;
+			paramName?: string;
+			invalid?: boolean;
+	  }
+	| {
+			kind: "work_ref";
+			assignmentId: string;
+			workName?: string;
+			invalid?: boolean;
+	  }
 	| { kind: "number"; value: number }
 	| { kind: "operator"; op: V2WorkFormulaOperatorToken }
 	| { kind: "paren_open" }
@@ -408,7 +420,7 @@ export function resolveActiveNormOnDate(
 }
 
 export function defaultWorkFormula(): V2TypicalWorkFormulaDto {
-	return { tokens: [{ kind: "norm" }], text: "H" };
+	return { tokens: [{ kind: "norm" }], text: "N" };
 }
 
 export function defaultWorkRounding(): V2TypicalWorkRoundingDto {

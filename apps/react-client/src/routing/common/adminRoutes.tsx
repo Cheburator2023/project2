@@ -5,6 +5,8 @@ import { MainLayout } from "@react-client/common/layouts/MainLayout";
 import { AdminLayout } from "@react-client/features/v2/admin/layouts/AdminLayout";
 import { AdminV2DictionariesPage } from "@react-client/features/v2/admin/pages/AdminV2DictionariesPage";
 import { AdminV2DictionaryDetailPage } from "@react-client/features/v2/admin/pages/AdminV2DictionaryDetailPage";
+import { AdminV2TypicalWorksPage } from "@react-client/features/v2/admin/pages/AdminV2TypicalWorksPage";
+import { AdminV2TypicalWorkDetailPage } from "@react-client/features/v2/admin/pages/AdminV2TypicalWorkDetailPage";
 import { AdminV2GuidePage } from "@react-client/features/v2/admin/pages/AdminV2GuidePage";
 import { AdminV2HistoryPage } from "@react-client/features/v2/admin/pages/AdminV2HistoryPage";
 import { AdminV2SchemasPage } from "@react-client/features/v2/admin/pages/AdminV2SchemasPage";
@@ -41,6 +43,11 @@ function adminChildRoutes(): RouteObject[] {
 				{
 					path: "dictionaries/:dictionaryId",
 					element: <AdminV2DictionaryDetailPage />,
+				},
+				{ path: "typical-works", element: <AdminV2TypicalWorksPage /> },
+				{
+					path: "typical-works/:workId",
+					element: <AdminV2TypicalWorkDetailPage />,
 				},
 				{ path: "history", element: <AdminV2HistoryPage /> },
 				{

@@ -8,6 +8,7 @@ import type {
 	V2WorkFormulaFactorDto,
 	V2WorkFormulaTermDto,
 } from "./v2-typical-work-v4.types";
+import { isTransitiveOnlyFormula, tokensToText } from "./v2-work-formula.util";
 
 export function createTermId(prefix = "term"): string {
 	return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -146,12 +147,20 @@ export function validateTermsFormula(
 	terms: V2WorkFormulaTermDto[],
 ): string | null {
 	const sorted = sortTerms(terms);
+	const transitive = sorted.filter((t) => t.kind === "transitive");
+
+	if (transitive.length === 1 && sorted.length === 1) {
+		const term = transitive[0];
+		if (!term?.sourceAssignmentId && !term?.sourceWorkId) {
+			return "Укажите работу-источник для транзитивной ссылки";
+		}
+		return null;
+	}
+
 	const baseCount = sorted.filter((t) => t.kind === "base_norm").length;
 	if (baseCount !== 1) {
 		return "В формуле должен быть ровно один член «Базовый норматив работы»";
 	}
-
-	const transitive = sorted.filter((t) => t.kind === "transitive");
 	const others = sorted.filter(
 		(t) => t.kind !== "transitive" && t.kind !== "base_norm",
 	);
@@ -280,14 +289,21 @@ export function evaluateTermsFormula(params: {
 	return product + sum;
 }
 
-/** Конвертация terms → token-формула для JsonLogic (без транзитивных ссылок). */
+/** Конвертация terms → token-формула для JsonLogic. */
 export function termsToTokenFormula(
 	termsDto: V2TypicalWorkFormulaTermsDto,
 ): V2TypicalWorkFormulaDto {
 	const sorted = sortTerms(termsDto.terms);
-	if (sorted.some((t) => t.kind === "transitive")) {
+	const transitive = sorted.find((t) => t.kind === "transitive");
+	if (transitive?.sourceAssignmentId) {
 		return {
-			tokens: [{ kind: "norm" }],
+			tokens: [
+				{
+					kind: "work_ref",
+					assignmentId: transitive.sourceAssignmentId,
+					workName: transitive.sourceWorkName ?? undefined,
+				},
+			],
 			text: termsDto.text || formatTermsSummary(sorted),
 		};
 	}
@@ -343,6 +359,47 @@ export function termsToTokenFormula(
 		tokens: tokens.length ? tokens : [{ kind: "norm" }],
 		text: termsDto.text || formatTermsSummary(sorted),
 	};
+}
+
+/** Синхронизация formulaTerms из token-формулы (для автосохранения). */
+export function syncTermsFromTokenFormula(
+	formula: V2TypicalWorkFormulaDto,
+): V2TypicalWorkFormulaTermsDto {
+	if (isTransitiveOnlyFormula(formula.tokens)) {
+		const ref = formula.tokens[0];
+		if (ref?.kind === "work_ref") {
+			const terms: V2WorkFormulaTermDto[] = [
+				{
+					id: createTermId("trans"),
+					kind: "transitive",
+					title: "Транзитивная ссылка",
+					order: 0,
+					factors: [],
+					sourceAssignmentId: ref.assignmentId,
+					sourceWorkName: ref.workName ?? null,
+					sourceWorkId: null,
+				},
+			];
+			return {
+				version: 2,
+				terms,
+				text: formula.text || formatTermsSummary(terms),
+			};
+		}
+	}
+
+	return {
+		version: 2,
+		terms: [defaultBaseNormTerm()],
+		text: formula.text || tokensToText(formula.tokens),
+	};
+}
+
+export function computeFormulaBadgeFromTokens(
+	tokens: V2WorkFormulaToken[],
+): V2TypicalWorkFormulaBadgeDto {
+	if (isTransitiveOnlyFormula(tokens)) return "transitive";
+	return computeFormulaBadge(syncTermsFromTokenFormula({ tokens, text: "" }).terms);
 }
 
 export function buildTransitiveEdges(

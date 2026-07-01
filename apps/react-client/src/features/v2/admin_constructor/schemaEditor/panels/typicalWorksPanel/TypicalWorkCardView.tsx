@@ -13,6 +13,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import type { V2TypicalWorkCardDto } from "@smart-anketa/api-contract";
+import { resolveActiveNormOnDate } from "@smart-anketa/api-contract";
 import { WorkFormulaEditor } from "./WorkFormulaEditor";
 import { triggerStatusColors } from "./typicalWorksUi";
 
@@ -122,9 +123,9 @@ export function TypicalWorkCardView({
 									? `Работа появляется в анкете, когда выполнены все условия (${card.rules.length})`
 									: card.triggerStatus === "hidden"
 										? "Работа скрыта — триггеры не выполнены при текущих ответах"
-									: card.triggerStatus === "invalid"
-										? "Условие невалидно — работа не появится"
-										: "Без триггеров — работа не появится в анкете"
+										: card.triggerStatus === "invalid"
+											? "Условие невалидно — работа не появится"
+											: "Без триггеров — работа не появится в анкете"
 							}
 							sx={{
 								mb: 1,
@@ -157,7 +158,11 @@ export function TypicalWorkCardView({
 								</TableBody>
 							</Table>
 						)}
-						<Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							sx={{ mt: 1, display: "block" }}
+						>
 							Условия объединяются логическим И — работа появляется, когда
 							выполнены все.
 						</Typography>
@@ -229,13 +234,15 @@ export function TypicalWorkCardView({
 					</Paper>
 
 					<Paper variant="outlined" sx={{ p: 1.5, borderRadius: "12px" }}>
-						<Typography variant="subtitle2" fontWeight={700} gutterBottom>
-							Калькулятор формулы
-						</Typography>
 						<WorkFormulaEditor
 							formula={card.formula}
 							rounding={card.rounding}
 							laborParams={card.laborParams}
+							normValue={resolveActiveNormOnDate(
+								card.norms,
+								card.streamExecutor,
+								new Date().toISOString().slice(0, 10),
+							)}
 							onFormulaChange={() => undefined}
 							onRoundingChange={() => undefined}
 							readOnly

@@ -140,7 +140,7 @@ export function roundingModeLabel(mode: string): string {
 		case "FLOOR":
 			return "вниз";
 		case "ROUND":
-			return "математическое";
+			return "матем.";
 		case "NONE":
 			return "без округления";
 		default:

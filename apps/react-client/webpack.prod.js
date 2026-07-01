@@ -24,14 +24,15 @@ const app_version = changelog_version_match?.[1] ?? "0.0.0";
 
 module.exports = merge(common, {
 	mode: "production",
-	// Дешёвые source maps: строки оригинальных файлов, без column mapping.
-	devtool: "cheap-module-source-map",
+	// Полные source maps: отдельные .map, оригинальные файлы, строки и колонки.
+	devtool: "source-map",
 	optimization: {
 		minimize: true,
 		minimizer: [
 			new EsbuildPlugin({
 				target: browserslistToEsbuild(),
 				css: true,
+				sourcemap: true,
 			}),
 		],
 		splitChunks: {

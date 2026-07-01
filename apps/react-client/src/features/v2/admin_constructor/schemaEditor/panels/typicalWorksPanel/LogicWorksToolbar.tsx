@@ -9,7 +9,9 @@ import Typography from "@mui/material/Typography";
 import { useBackfillV2TypicalWorkCalculationLogic } from "@react-client/common/api/queries/v2-works";
 import { isDevLikeEnvironment } from "@react-client/common/constants/dev";
 import { toast } from "@react-client/common/toasts";
+import { commonRoutes as routes } from "@react-client/routing/common/routes";
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router";
 import {
 	LOGIC_EXECUTOR_STREAMS,
 	LOGIC_STREAM_GROUPS,
@@ -17,6 +19,7 @@ import {
 	type LogicWorksViewMode,
 	scopeLabel,
 } from "./typicalWorksAreas";
+import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
 
 type LogicWorksToolbarProps = {
 	viewMode: LogicWorksViewMode;
@@ -30,54 +33,7 @@ const VIEW_SEGMENTS: Array<{ id: LogicWorksViewMode; label: string }> = [
 	{ id: "streams", label: "По стримам" },
 	{ id: "matrix", label: "Матрица" },
 	{ id: "catalog", label: "Справочник работ" },
-	{ id: "parameters", label: "Параметры" },
 ];
-
-function SegmentBar({
-	active,
-	onChange,
-}: {
-	active: LogicWorksViewMode;
-	onChange: (mode: LogicWorksViewMode) => void;
-}) {
-	return (
-		<Box
-			sx={{
-				display: "inline-flex",
-				p: "2px",
-				gap: "2px",
-				borderRadius: "9px",
-				border: "1px solid #e6e8ee",
-				bgcolor: "#f1f3f7",
-			}}
-		>
-			{VIEW_SEGMENTS.map((segment) => {
-				const selected = active === segment.id;
-				return (
-					<Box
-						key={segment.id}
-						component="button"
-						type="button"
-						onClick={() => onChange(segment.id)}
-						sx={{
-							border: "none",
-							cursor: "pointer",
-							fontFamily: "inherit",
-							padding: "6px 13px",
-							borderRadius: "7px",
-							fontSize: "12.5px",
-							fontWeight: 600,
-							bgcolor: selected ? "#1c2333" : "transparent",
-							color: selected ? "#fff" : "#5b6577",
-						}}
-					>
-						{segment.label}
-					</Box>
-				);
-			})}
-		</Box>
-	);
-}
 
 export function LogicWorksToolbar({
 	viewMode,
@@ -86,6 +42,7 @@ export function LogicWorksToolbar({
 	onScopeChange,
 	onCreateWork,
 }: LogicWorksToolbarProps) {
+	const navigate = useNavigate();
 	const anchorRef = useRef<HTMLButtonElement>(null);
 	const [pickerOpen, setPickerOpen] = useState(false);
 	const backfillMutation = useBackfillV2TypicalWorkCalculationLogic();
@@ -105,7 +62,11 @@ export function LogicWorksToolbar({
 				bgcolor: "#fff",
 			}}
 		>
-			<SegmentBar active={viewMode} onChange={onViewModeChange} />
+			<SegmentBar
+				segments={VIEW_SEGMENTS}
+				value={viewMode}
+				onChange={onViewModeChange}
+			/>
 
 			{viewMode === "streams" ? (
 				<>
@@ -302,6 +263,24 @@ export function LogicWorksToolbar({
 					{backfillMutation.isPending ? "Backfill…" : "Backfill JsonLogic"}
 				</Button>
 			) : null}
+
+			<Button
+				onClick={() => navigate(routes.adminV2TypicalWorks.rootPath)}
+				title="Создание, удаление и параметры трудоёмкости — в разделе администрирования"
+				sx={{
+					textTransform: "none",
+					height: 36,
+					px: 1.25,
+					border: "1px solid #dfe2ea",
+					borderRadius: "9px",
+					bgcolor: "#fff",
+					color: "#5b6577",
+					fontSize: "12px",
+					fontWeight: 600,
+				}}
+			>
+				Администрирование
+			</Button>
 
 			<Button
 				onClick={onCreateWork}

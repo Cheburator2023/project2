@@ -59,6 +59,32 @@ describe("listSchemaFields", () => {
 			"summary",
 		]);
 	});
+
+	it("walks nested object properties", () => {
+		const schema = {
+			type: "object",
+			properties: {
+				generalInfo: {
+					type: "object",
+					properties: {
+						modelService: {
+							type: "object",
+							properties: {
+								workType: { type: "string", title: "Тип работ" },
+							},
+						},
+					},
+				},
+			},
+		} as const;
+
+		const rows = listSchemaFields(schema, "/", 0);
+		expect(rows.map((r) => r.pointer)).toEqual([
+			"/generalInfo",
+			"/generalInfo/modelService",
+			"/generalInfo/modelService/workType",
+		]);
+	});
 });
 
 describe("buildFieldTypeTransitionPatch", () => {
