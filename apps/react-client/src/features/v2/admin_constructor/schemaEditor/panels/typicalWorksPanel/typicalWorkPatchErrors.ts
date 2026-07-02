@@ -9,7 +9,13 @@ import {
 	computeWorkTriggerStatus,
 	isWorkCoefficientValueAvailable,
 	isWorkTriggerGroupInvalid,
+	typicalWorkRulesMatchSource,
+	type WorkTriggerStatusCatalogParam,
 } from "@smart-anketa/api-contract";
+import {
+	resolveSchemaParamForTriggerRule,
+	type TriggerRuleLike,
+} from "./schemaWorkParameters";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 
 export const WORK_ARCH_COMPONENT_TYPES = [
@@ -91,26 +97,9 @@ export function parseTypicalWorkDeleteError(
 	};
 }
 
-export function computeTriggerStatus(
-	rules: Array<{
-		paramCode: string;
-		paramName?: string | null;
-		operator?: string;
-		valueCode: string | null;
-		valueLabel: string | null;
-		values?: Array<{ code: string; label: string | null }>;
-	}>,
-	catalog?: V2TypicalWorkParameterDto[],
-): V2WorkTriggerStatus {
-	return computeWorkTriggerStatus(
-		rules,
-		methodologyCatalogFromParameters(catalog),
-	);
-}
-
 export function methodologyCatalogFromParameters(
 	params: V2TypicalWorkParameterDto[] | undefined,
-) {
+): WorkTriggerStatusCatalogParam[] | undefined {
 	return params?.map((param) => ({
 		code: param.code,
 		values: param.values.map((value) => ({
@@ -120,6 +109,73 @@ export function methodologyCatalogFromParameters(
 			validTo: value.validTo,
 		})),
 	}));
+}
+
+/** Каталог для проверки триггера: поле схемы → его values; seed/CSV → методологический справочник. */
+export function catalogForTriggerRuleGroup(
+	rule: TriggerRuleLike,
+	paramOptions: V2TypicalWorkParameterDto[],
+	methodologyCatalog: V2TypicalWorkParameterDto[],
+): WorkTriggerStatusCatalogParam[] {
+	const schemaParam = resolveSchemaParamForTriggerRule(rule, paramOptions);
+	if (schemaParam) {
+		return methodologyCatalogFromParameters([schemaParam]) ?? [];
+	}
+	return (
+		methodologyCatalogFromParameters(methodologyCatalog) ??
+		methodologyCatalogFromParameters(paramOptions) ??
+		[]
+	);
+}
+
+export function computeTriggerStatus(
+	rules: Array<{
+		paramCode: string;
+		paramName?: string | null;
+		operator?: string;
+		valueCode: string | null;
+		valueLabel: string | null;
+		values?: Array<{ code: string; label: string | null }>;
+	}>,
+	schemaParams?: V2TypicalWorkParameterDto[],
+	methodologyParams?: V2TypicalWorkParameterDto[],
+	draftSource?: Record<string, unknown>,
+): V2WorkTriggerStatus {
+	if (rules.length === 0) return "no_triggers";
+
+	const schemaList = schemaParams ?? [];
+	const methodologyList = methodologyParams ?? [];
+
+	for (const rule of rules) {
+		const catalog = catalogForTriggerRuleGroup(
+			rule,
+			schemaList,
+			methodologyList,
+		);
+		if (
+			isWorkTriggerGroupInvalid(rule.paramCode, [rule], catalog)
+		) {
+			return "invalid";
+		}
+	}
+
+	if (draftSource) {
+		return typicalWorkRulesMatchSource(
+			rules.map((rule) => ({
+				paramCode: rule.paramCode,
+				paramName: rule.paramName ?? null,
+				operator: rule.operator ?? "=",
+				valueCode: rule.valueCode,
+				valueLabel: rule.valueLabel,
+				values: rule.values,
+			})),
+			draftSource,
+		)
+			? "appears"
+			: "hidden";
+	}
+
+	return computeWorkTriggerStatus(rules, undefined);
 }
 
 export { isWorkCoefficientValueAvailable, isWorkTriggerGroupInvalid };

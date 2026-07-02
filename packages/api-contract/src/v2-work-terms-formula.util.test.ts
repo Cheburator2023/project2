@@ -3,6 +3,8 @@ import {
 	computeFormulaBadge,
 	defaultTermsFormula,
 	evaluateTermsFormula,
+	syncTermsFromTokenFormula,
+	termsToTokenFormula,
 	tokensToTermsFormula,
 	validateTermsFormula,
 } from "./v2-work-terms-formula.util";
@@ -33,5 +35,26 @@ describe("v2-work-terms-formula", () => {
 			resolveFactorCoeff: (code) => (code === "p1" ? 2 : 1),
 		});
 		expect(value).toBe(20);
+	});
+
+	it("converts N + constant to additive term and round-trips tokens", () => {
+		const source = {
+			tokens: [
+				{ kind: "norm" as const },
+				{ kind: "operator" as const, op: "+" as const },
+				{ kind: "number" as const, value: 2.5 },
+			],
+			text: "N + 2.5",
+		};
+		const terms = tokensToTermsFormula(source);
+		expect(terms.terms).toHaveLength(2);
+		expect(terms.terms[1]?.kind).toBe("additive");
+		expect(terms.terms[1]?.baseValue).toBe(2.5);
+
+		const roundTrip = termsToTokenFormula(terms);
+		expect(roundTrip.tokens).toEqual(source.tokens);
+
+		const synced = syncTermsFromTokenFormula(source);
+		expect(synced.terms[1]?.baseValue).toBe(2.5);
 	});
 });

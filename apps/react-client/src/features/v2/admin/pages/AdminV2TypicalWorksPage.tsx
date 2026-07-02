@@ -147,29 +147,6 @@ export function AdminV2TypicalWorksPage() {
 
 					{view === "works" ? (
 						<>
-							{detailHeader ? (
-								!detailHeader.isEditing ? (
-									<Button variant="outlined" onClick={detailHeader.onStartEdit}>
-										Редактировать
-									</Button>
-								) : (
-									<>
-										<Button
-											variant="text"
-											onClick={detailHeader.onCancelEdit}
-											disabled={detailHeader.savePending}
-										>
-											Отмена
-										</Button>
-										<V2AdminButton
-											onClick={detailHeader.onSave}
-											disabled={detailHeader.savePending}
-										>
-											{detailHeader.savePending ? "Сохранение…" : "Сохранить"}
-										</V2AdminButton>
-									</>
-								)
-							) : null}
 							<V2AdminButton onClick={() => setCreateOpen(true)}>
 								Создать работу
 							</V2AdminButton>

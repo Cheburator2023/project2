@@ -27,4 +27,22 @@ const v2_work_terms_formula_util_1 = require("./v2-work-terms-formula.util");
         });
         (0, vitest_1.expect)(value).toBe(20);
     });
+    (0, vitest_1.it)("converts N + constant to additive term and round-trips tokens", () => {
+        const source = {
+            tokens: [
+                { kind: "norm" },
+                { kind: "operator", op: "+" },
+                { kind: "number", value: 2.5 },
+            ],
+            text: "N + 2.5",
+        };
+        const terms = (0, v2_work_terms_formula_util_1.tokensToTermsFormula)(source);
+        (0, vitest_1.expect)(terms.terms).toHaveLength(2);
+        (0, vitest_1.expect)(terms.terms[1]?.kind).toBe("additive");
+        (0, vitest_1.expect)(terms.terms[1]?.baseValue).toBe(2.5);
+        const roundTrip = (0, v2_work_terms_formula_util_1.termsToTokenFormula)(terms);
+        (0, vitest_1.expect)(roundTrip.tokens).toEqual(source.tokens);
+        const synced = (0, v2_work_terms_formula_util_1.syncTermsFromTokenFormula)(source);
+        (0, vitest_1.expect)(synced.terms[1]?.baseValue).toBe(2.5);
+    });
 });

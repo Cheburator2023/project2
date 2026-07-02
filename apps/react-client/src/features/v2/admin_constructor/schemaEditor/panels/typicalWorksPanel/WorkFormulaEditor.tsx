@@ -673,13 +673,17 @@ export function WorkFormulaEditor({
 													onChange={(e) => setNumberDraft(e.target.value)}
 													onClick={(event) => event.stopPropagation()}
 													onBlur={() => {
-														const value = Number(numberDraft.replace(",", "."));
+														const value = Number(
+															numberDraft.replace(",", "."),
+														);
 														if (Number.isFinite(value) && value >= 0) {
 															updateTokenAt(index, {
 																kind: "number",
 																value,
 															});
 															setCursor(index + 1);
+														} else {
+															setNumberDraft(String(token.value));
 														}
 														setEditingNumberIndex(null);
 													}}

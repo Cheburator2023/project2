@@ -7,7 +7,6 @@ import type { ColDef, ValueParserParams } from "ag-grid-community";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { Spacer } from "@react-client/common/primitives/Spacer";
 import {
 	useKanbanBoardAssignees,
 	useKanbanBoardSettings,
@@ -33,7 +32,8 @@ const parseCapacity = (value: unknown): number | null => {
 };
 
 export function TrackerSettingsPage() {
-	const { data: settings, isLoading: settingsLoading } = useKanbanBoardSettings();
+	const { data: settings, isLoading: settingsLoading } =
+		useKanbanBoardSettings();
 	const { data: assignees = [], isLoading: assigneesLoading } =
 		useKanbanBoardAssignees();
 	const updateSettings = useUpdateKanbanBoardSettings();
@@ -125,14 +125,13 @@ export function TrackerSettingsPage() {
 	return (
 		<Flex flexDirection="column" flexGrow={1} minHeight="0">
 			<Header title="Настройки трекера" />
-			<Spacer space={8} />
-			<Flex flexDirection="column" gap={2} flexGrow={1} minHeight="0" sx={{ px: 1 }}>
+			<Flex flexDirection="column" gap={2} flexGrow={1} minHeight="0">
 				<Card padding="20px">
 					<Stack spacing={2} maxWidth={480}>
 						<Typography variant="h6">Планирование спринта</Typography>
 						<Typography variant="body2" color="text.secondary">
-							Ёмкость по умолчанию для новых исполнителей и для тех, у кого
-							не задано индивидуальное значение (как колонка «9» в Excel).
+							Ёмкость по умолчанию для новых исполнителей и для тех, у кого не
+							задано индивидуальное значение (как колонка «9» в Excel).
 						</Typography>
 						<Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
 							<TextField
@@ -174,31 +173,6 @@ export function TrackerSettingsPage() {
 						{gridResetNotice ? (
 							<Alert severity="info">{gridResetNotice}</Alert>
 						) : null}
-					</Stack>
-				</Card>
-
-				<Card padding="20px" sx={{ flex: 1, minHeight: 0, display: "flex" }}>
-					<Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
-						<Flex alignItems="baseline" gap={2} wrap="wrap">
-							<Typography variant="h6">Ёмкость исполнителей</Typography>
-							<Typography variant="body2" color="text.secondary">
-								Кликните по ячейке «Ёмкость, чд» для редактирования. Пустое
-								значение — используется ёмкость по умолчанию.
-							</Typography>
-						</Flex>
-						<Flex flexGrow={1} minHeight="360px">
-							<TrackerRegistryGrid
-								gridStateKey="tracker.settings-assignees"
-								rowData={assignees}
-								columnDefs={columnDefs}
-								loading={assigneesLoading}
-								onCellValueChanged={(row, field, value) => {
-									if (field === "sprintCapacityPd") {
-										void handleCapacityChange(row, value);
-									}
-								}}
-							/>
-						</Flex>
 					</Stack>
 				</Card>
 			</Flex>

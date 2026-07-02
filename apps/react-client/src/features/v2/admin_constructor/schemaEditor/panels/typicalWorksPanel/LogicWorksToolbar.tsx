@@ -14,34 +14,17 @@ import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import {
 	LOGIC_EXECUTOR_STREAMS,
-	LOGIC_STREAM_GROUPS,
 	type LogicWorksScope,
-	type LogicWorksViewMode,
 	scopeLabel,
+	streamColor,
 } from "./typicalWorksAreas";
-import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
 
 type LogicWorksToolbarProps = {
-	viewMode: LogicWorksViewMode;
 	scope: LogicWorksScope;
-	onViewModeChange: (mode: LogicWorksViewMode) => void;
 	onScopeChange: (scope: LogicWorksScope) => void;
-	onCreateWork: () => void;
 };
 
-const VIEW_SEGMENTS: Array<{ id: LogicWorksViewMode; label: string }> = [
-	{ id: "streams", label: "По стримам" },
-	{ id: "matrix", label: "Матрица" },
-	{ id: "catalog", label: "Справочник работ" },
-];
-
-export function LogicWorksToolbar({
-	viewMode,
-	scope,
-	onViewModeChange,
-	onScopeChange,
-	onCreateWork,
-}: LogicWorksToolbarProps) {
+export function LogicWorksToolbar({ scope, onScopeChange }: LogicWorksToolbarProps) {
 	const navigate = useNavigate();
 	const anchorRef = useRef<HTMLButtonElement>(null);
 	const [pickerOpen, setPickerOpen] = useState(false);
@@ -62,173 +45,112 @@ export function LogicWorksToolbar({
 				bgcolor: "#fff",
 			}}
 		>
-			<SegmentBar
-				segments={VIEW_SEGMENTS}
-				value={viewMode}
-				onChange={onViewModeChange}
-			/>
-
-			{viewMode === "streams" ? (
-				<>
-					<Button
-						ref={anchorRef}
-						onClick={() => setPickerOpen((v) => !v)}
+			<Button
+				ref={anchorRef}
+				onClick={() => setPickerOpen((v) => !v)}
+				sx={{
+					textTransform: "none",
+					height: 36,
+					minWidth: 240,
+					px: 1.5,
+					border: "1px solid #dfe2ea",
+					borderRadius: "9px",
+					bgcolor: "#fff",
+					color: "#1d2435",
+					justifyContent: "flex-start",
+					gap: 1,
+				}}
+			>
+				<Typography component="span" sx={{ fontSize: 11, color: "#8a93a3" }}>
+					Область:
+				</Typography>
+				<Typography
+					component="span"
+					sx={{
+						flex: 1,
+						fontSize: 13,
+						fontWeight: 600,
+						textAlign: "left",
+						overflow: "hidden",
+						textOverflow: "ellipsis",
+						whiteSpace: "nowrap",
+					}}
+				>
+					{scopeLabel(scope)}
+				</Typography>
+				<Typography component="span" sx={{ fontSize: 11, color: "#aab1c0" }}>
+					▾
+				</Typography>
+			</Button>
+			<Popper
+				open={pickerOpen}
+				anchorEl={anchorRef.current}
+				placement="bottom-start"
+				sx={{ zIndex: 40 }}
+			>
+				<ClickAwayListener onClickAway={() => setPickerOpen(false)}>
+					<Paper
+						elevation={8}
 						sx={{
-							textTransform: "none",
-							height: 36,
-							minWidth: 240,
-							px: 1.5,
-							border: "1px solid #dfe2ea",
-							borderRadius: "9px",
-							bgcolor: "#fff",
-							color: "#1d2435",
-							justifyContent: "flex-start",
-							gap: 1,
+							mt: 0.75,
+							width: 320,
+							maxHeight: 380,
+							overflow: "auto",
+							borderRadius: "11px",
+							border: "1px solid #e1e5ec",
+							p: 0.9,
 						}}
 					>
-						<Typography component="span" sx={{ fontSize: 11, color: "#8a93a3" }}>
-							Область:
-						</Typography>
 						<Typography
-							component="span"
 							sx={{
-								flex: 1,
-								fontSize: 13,
-								fontWeight: 600,
-								textAlign: "left",
-								overflow: "hidden",
-								textOverflow: "ellipsis",
-								whiteSpace: "nowrap",
+								fontSize: 10,
+								fontWeight: 700,
+								letterSpacing: "0.04em",
+								textTransform: "uppercase",
+								color: "#aab1c0",
+								px: 1.1,
+								py: 0.75,
 							}}
 						>
-							{scopeLabel(scope)}
+							Стрим-исполнитель
 						</Typography>
-						<Typography component="span" sx={{ fontSize: 11, color: "#aab1c0" }}>
-							▾
-						</Typography>
-					</Button>
-					<Popper
-						open={pickerOpen}
-						anchorEl={anchorRef.current}
-						placement="bottom-start"
-						sx={{ zIndex: 40 }}
-					>
-						<ClickAwayListener onClickAway={() => setPickerOpen(false)}>
-							<Paper
-								elevation={8}
-								sx={{
-									mt: 0.75,
-									width: 320,
-									maxHeight: 380,
-									overflow: "auto",
-									borderRadius: "11px",
-									border: "1px solid #e1e5ec",
-									p: 0.9,
-								}}
-							>
-								<Typography
-									sx={{
-										fontSize: 10,
-										fontWeight: 700,
-										letterSpacing: "0.04em",
-										textTransform: "uppercase",
-										color: "#aab1c0",
-										px: 1.1,
-										py: 0.75,
-									}}
-								>
-									Группы стримов (ролёвка)
-								</Typography>
-								<MenuList dense disablePadding>
-									{LOGIC_STREAM_GROUPS.map((group) => {
-										const selected =
-											scope.kind === "group" && scope.groupId === group.id;
-										return (
-											<MenuItem
-												key={group.id}
-												selected={selected}
-												onClick={() => {
-													onScopeChange({ kind: "group", groupId: group.id });
-													setPickerOpen(false);
-												}}
-												sx={{ borderRadius: 1, py: 1 }}
-											>
-												<Box sx={{ flex: 1, minWidth: 0 }}>
-													<Typography sx={{ fontSize: 12.5, fontWeight: 600 }}>
-														{group.name}
-													</Typography>
-													<Typography sx={{ fontSize: 10.5, color: "#aab1c0" }}>
-														{group.streams.length} стрима
-													</Typography>
-												</Box>
-												{selected ? (
-													<Typography sx={{ color: "#2f6bd8", fontSize: 14 }}>
-														✓
-													</Typography>
-												) : null}
-											</MenuItem>
-										);
-									})}
-								</MenuList>
-								<Typography
-									sx={{
-										fontSize: 10,
-										fontWeight: 700,
-										letterSpacing: "0.04em",
-										textTransform: "uppercase",
-										color: "#aab1c0",
-										px: 1.1,
-										py: 0.75,
-										mt: 0.5,
-										borderTop: "1px solid #f0f1f5",
-									}}
-								>
-									Отдельные стримы
-								</Typography>
-								<MenuList dense disablePadding>
-									{LOGIC_EXECUTOR_STREAMS.map((stream) => {
-										const selected =
-											scope.kind === "stream" && scope.stream === stream;
-										return (
-											<MenuItem
-												key={stream}
-												selected={selected}
-												onClick={() => {
-													onScopeChange({ kind: "stream", stream });
-													setPickerOpen(false);
-												}}
-												sx={{ borderRadius: 1, py: 0.9 }}
-											>
-												<Box
-													sx={{
-														width: 8,
-														height: 8,
-														borderRadius: "2px",
-														bgcolor: stream.includes("Источник")
-															? "#1f8a4d"
-															: stream.includes("Контроль")
-																? "#7c5cd6"
-																: "#2f6bd8",
-														mr: 1,
-													}}
-												/>
-												<Typography sx={{ flex: 1, fontSize: 12.5 }}>
-													{stream}
-												</Typography>
-												{selected ? (
-													<Typography sx={{ color: "#2f6bd8", fontSize: 13 }}>
-														✓
-													</Typography>
-												) : null}
-											</MenuItem>
-										);
-									})}
-								</MenuList>
-							</Paper>
-						</ClickAwayListener>
-					</Popper>
-				</>
-			) : null}
+						<MenuList dense disablePadding>
+							{LOGIC_EXECUTOR_STREAMS.map((stream) => {
+								const selected = scope.stream === stream;
+								return (
+									<MenuItem
+										key={stream}
+										selected={selected}
+										onClick={() => {
+											onScopeChange({ kind: "stream", stream });
+											setPickerOpen(false);
+										}}
+										sx={{ borderRadius: 1, py: 0.9 }}
+									>
+										<Box
+											sx={{
+												width: 8,
+												height: 8,
+												borderRadius: "2px",
+												bgcolor: streamColor(stream),
+												mr: 1,
+											}}
+										/>
+										<Typography sx={{ flex: 1, fontSize: 12.5 }}>
+											{stream}
+										</Typography>
+										{selected ? (
+											<Typography sx={{ color: "#2f6bd8", fontSize: 13 }}>
+												✓
+											</Typography>
+										) : null}
+									</MenuItem>
+								);
+							})}
+						</MenuList>
+					</Paper>
+				</ClickAwayListener>
+			</Popper>
 
 			<Box sx={{ flexGrow: 1 }} />
 
@@ -280,23 +202,6 @@ export function LogicWorksToolbar({
 				}}
 			>
 				Администрирование
-			</Button>
-
-			<Button
-				onClick={onCreateWork}
-				sx={{
-					textTransform: "none",
-					height: 36,
-					px: 1.75,
-					border: "1px solid #dfe2ea",
-					borderRadius: "9px",
-					bgcolor: "#fff",
-					color: "#384152",
-					fontSize: "12.5px",
-					fontWeight: 600,
-				}}
-			>
-				+ Работа в справочник
 			</Button>
 		</Box>
 	);

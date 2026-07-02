@@ -8,7 +8,7 @@ import type {
 	V2WorkFormulaFactorDto,
 	V2WorkFormulaTermDto,
 } from "./v2-typical-work-v4.types";
-import { isTransitiveOnlyFormula, tokensToText } from "./v2-work-formula.util";
+import { isTransitiveOnlyFormula, isParamToken, tokensToText } from "./v2-work-formula.util";
 
 export function createTermId(prefix = "term"): string {
 	return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -44,35 +44,205 @@ export function isTermsFormulaPayload(
 	);
 }
 
-export function tokensToTermsFormula(
-	formula: V2TypicalWorkFormulaDto,
-): V2TypicalWorkFormulaTermsDto {
-	const terms: V2WorkFormulaTermDto[] = [defaultBaseNormTerm()];
-	let order = 1;
+function factorFromParamToken(
+	token: Extract<V2WorkFormulaToken, { kind: "param_coeff" | "param_anyof" }>,
+	order: number,
+): V2WorkFormulaFactorDto {
+	return {
+		id: createTermId("factor"),
+		paramCode: token.paramCode,
+		paramName: token.paramName ?? null,
+		order,
+	};
+}
 
-	for (const token of formula.tokens) {
-		if (token.kind === "param_coeff") {
-			const factor: V2WorkFormulaFactorDto = {
-				id: createTermId("factor"),
-				paramCode: token.paramCode,
-				paramName: token.paramName ?? null,
-				order: 0,
-			};
+function splitTokensByAdditiveOps(tokens: V2WorkFormulaToken[]): V2WorkFormulaToken[][] {
+	const segments: V2WorkFormulaToken[][] = [];
+	let current: V2WorkFormulaToken[] = [];
+	let depth = 0;
+
+	for (const token of tokens) {
+		if (token.kind === "paren_open") {
+			depth++;
+			current.push(token);
+			continue;
+		}
+		if (token.kind === "paren_close") {
+			depth--;
+			current.push(token);
+			continue;
+		}
+		if (depth === 0 && token.kind === "operator" && token.op === "+") {
+			segments.push(current);
+			current = [];
+			continue;
+		}
+		current.push(token);
+	}
+	segments.push(current);
+	return segments.filter((segment) => segment.length > 0);
+}
+
+function parseMultSegment(
+	segment: V2WorkFormulaToken[],
+	startOrder: number,
+): { terms: V2WorkFormulaTermDto[]; nextOrder: number } {
+	const terms: V2WorkFormulaTermDto[] = [];
+	let order = startOrder;
+
+	if (segment[0]?.kind !== "norm") {
+		return { terms: [defaultBaseNormTerm()], nextOrder: startOrder + 1 };
+	}
+
+	const baseTerm = defaultBaseNormTerm();
+	baseTerm.order = order++;
+	terms.push(baseTerm);
+
+	let i = 1;
+	while (i < segment.length) {
+		const direct = segment[i];
+		if (isParamToken(direct)) {
 			terms.push({
 				id: createTermId("mult"),
 				kind: "multiplier",
-				title: token.paramName ?? token.paramCode,
+				title: direct.paramName ?? direct.paramCode,
 				order: order++,
 				baseValue: 1,
-				factors: [factor],
+				factors: [factorFromParamToken(direct, 0)],
 			});
+			i += 1;
+			continue;
 		}
+
+		const op = segment[i];
+		if (op?.kind !== "operator" || (op.op !== "*" && op.op !== "/")) break;
+		const operand = segment[i + 1];
+		if (!operand) break;
+
+		if (operand.kind === "number") {
+			terms.push({
+				id: createTermId("mult"),
+				kind: "multiplier",
+				title: `× ${operand.value}`,
+				order: order++,
+				baseValue: operand.value,
+				factors: [],
+			});
+			i += 2;
+			continue;
+		}
+
+		if (isParamToken(operand)) {
+			terms.push({
+				id: createTermId("mult"),
+				kind: "multiplier",
+				title: operand.paramName ?? operand.paramCode,
+				order: order++,
+				baseValue: 1,
+				factors: [factorFromParamToken(operand, 0)],
+			});
+			i += 2;
+			continue;
+		}
+
+		break;
+	}
+
+	return { terms, nextOrder: order };
+}
+
+function parseAddSegment(
+	segment: V2WorkFormulaToken[],
+	order: number,
+): V2WorkFormulaTermDto {
+	let i = 0;
+	let baseValue = 1;
+	const factors: V2WorkFormulaFactorDto[] = [];
+	let title = "Слагаемое";
+
+	if (segment[0]?.kind === "number") {
+		baseValue = segment[0].value;
+		title = `+ ${baseValue}`;
+		i = 1;
+	} else if (isParamToken(segment[0])) {
+		factors.push(factorFromParamToken(segment[0], 0));
+		title = segment[0].paramName ?? segment[0].paramCode;
+		i = 1;
+	}
+
+	while (i < segment.length) {
+		const op = segment[i];
+		if (op?.kind !== "operator" || op.op !== "*") break;
+		const operand = segment[i + 1];
+		if (!operand) break;
+
+		if (operand.kind === "number") {
+			baseValue *= operand.value;
+			title = `+ ${baseValue}`;
+			i += 2;
+			continue;
+		}
+		if (isParamToken(operand)) {
+			factors.push(factorFromParamToken(operand, factors.length));
+			i += 2;
+			continue;
+		}
+		break;
+	}
+
+	return {
+		id: createTermId("add"),
+		kind: "additive",
+		title,
+		order,
+		baseValue,
+		factors,
+	};
+}
+
+export function tokensToTermsFormula(
+	formula: V2TypicalWorkFormulaDto,
+): V2TypicalWorkFormulaTermsDto {
+	if (isTransitiveOnlyFormula(formula.tokens)) {
+		const ref = formula.tokens[0];
+		if (ref?.kind === "work_ref") {
+			const terms: V2WorkFormulaTermDto[] = [
+				{
+					id: createTermId("trans"),
+					kind: "transitive",
+					title: "Транзитивная ссылка",
+					order: 0,
+					factors: [],
+					sourceAssignmentId: ref.assignmentId,
+					sourceWorkName: ref.workName ?? null,
+					sourceWorkId: null,
+				},
+			];
+			return {
+				version: 2,
+				terms,
+				text: formula.text || formatTermsSummary(terms),
+			};
+		}
+	}
+
+	const segments = splitTokensByAdditiveOps(formula.tokens);
+	if (segments.length === 0) {
+		return defaultTermsFormula();
+	}
+
+	const multParsed = parseMultSegment(segments[0] ?? [], 0);
+	const terms = [...multParsed.terms];
+	let order = multParsed.nextOrder;
+
+	for (let segIdx = 1; segIdx < segments.length; segIdx++) {
+		terms.push(parseAddSegment(segments[segIdx] ?? [], order++));
 	}
 
 	return {
 		version: 2,
 		terms,
-		text: formatTermsSummary(terms),
+		text: formula.text || formatTermsSummary(terms),
 	};
 }
 
@@ -325,8 +495,17 @@ export function termsToTokenFormula(
 			tokens.push({ kind: "operator", op: prefixOp });
 		}
 		const base = term.baseValue ?? 1;
+		const hasFactors = term.factors.length > 0;
+
+		if (term.kind === "additive" && !hasFactors) {
+			tokens.push({ kind: "number", value: base });
+			return;
+		}
+
 		if (term.kind !== "base_norm" && base !== 1) {
-			if (tokens.length > 1) tokens.push({ kind: "operator", op: "*" });
+			if (tokens.length > 1 && term.kind === "multiplier") {
+				tokens.push({ kind: "operator", op: "*" });
+			}
 			tokens.push({ kind: "number", value: base });
 		}
 		for (const [index, factor] of term.factors.entries()) {
@@ -388,11 +567,7 @@ export function syncTermsFromTokenFormula(
 		}
 	}
 
-	return {
-		version: 2,
-		terms: [defaultBaseNormTerm()],
-		text: formula.text || tokensToText(formula.tokens),
-	};
+	return tokensToTermsFormula(formula);
 }
 
 export function computeFormulaBadgeFromTokens(

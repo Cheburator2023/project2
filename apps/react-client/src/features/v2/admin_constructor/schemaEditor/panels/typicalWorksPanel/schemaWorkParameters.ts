@@ -17,7 +17,6 @@ import {
 	WORK_ARCH_COMPONENT_TYPES,
 	resolveCanonicalWorkArchComponentType,
 } from "./typicalWorkPatchErrors";
-import { archComponentShortLabel } from "./typicalWorksUi";
 import {
 	resolveArchComponentAtPointer,
 	resolveSchemaNodeType,
@@ -47,36 +46,20 @@ export function resolveEffectiveWorkArchComponentType(
 }
 
 export function schemaWorkParameterEmptyPickerMessage(
-	archComponentType: string,
 	schemaFieldCount: number,
 	usedParamCodesSize: number,
+	availableCount: number,
 	allUsedMessage?: string,
 ): string {
-	const archLabel =
-		archComponentShortLabel(
-			resolveEffectiveWorkArchComponentType(archComponentType),
-		) || "не указан";
-
-	if (usedParamCodesSize > 0) {
-		return (
-			allUsedMessage ??
-			`Все параметры компонента «${archLabel}» уже добавлены`
-		);
-	}
-
-	if (!resolveEffectiveWorkArchComponentType(archComponentType)) {
-		return "У работы не указан тип арх. компонента — задайте его в шапке карточки";
-	}
-
-	if (!resolveWorkArchSchemaType(archComponentType)) {
-		return `Тип «${archLabel}» не сопоставлен с арх. компонентом схемы`;
+	if (usedParamCodesSize > 0 && availableCount === 0) {
+		return allUsedMessage ?? "Все подходящие параметры схемы уже добавлены";
 	}
 
 	if (schemaFieldCount === 0) {
 		return "Схема шаблона ещё не загружена или пуста";
 	}
 
-	return `В схеме нет полей для компонента «${archLabel}» с выбором значений (enum, справочник, boolean)`;
+	return "В схеме нет полей с выбором значений (enum, справочник, boolean, число)";
 }
 
 export function resolveWorkArchSchemaType(
@@ -188,31 +171,61 @@ function isArchComponentLeafField(
 	return true;
 }
 
+function schemaParamCodeFromHint(
+	hint: FieldPathHint,
+	usedCodes: Set<string>,
+): string {
+	if (!usedCodes.has(hint.key)) {
+		usedCodes.add(hint.key);
+		return hint.key;
+	}
+	const base = (hint.varPath ?? hint.pointer.replace(/^\//, "").replace(/\//g, "_"))
+		.replace(/[^\wа-яА-Я]+/gi, "_")
+		.replace(/^_+|_+$/g, "")
+		.slice(0, 80);
+	let code = base || hint.key;
+	let suffix = 2;
+	while (usedCodes.has(code)) {
+		const tail = `_${suffix}`;
+		code = `${base.slice(0, 80 - tail.length)}${tail}`;
+		suffix++;
+	}
+	usedCodes.add(code);
+	return code;
+}
+
+function schemaParamDescription(
+	hint: FieldPathHint,
+	uiSchema: Record<string, unknown> | undefined,
+): string {
+	const fieldArch = resolveArchComponentAtPointer(uiSchema, hint.pointer);
+	const archLabel = fieldArch
+		? (V2_ARCH_COMPONENT_LABELS[fieldArch as V2ArchComponentType] ?? fieldArch)
+		: null;
+	const path = hint.varPath || hint.pointer;
+	return archLabel ? `${archLabel} · ${path}` : path;
+}
+
 export type BuildSchemaWorkParametersInput = {
-	archComponentType: string;
+	/** Не используется для фильтрации — оставлен для совместимости вызовов. */
+	archComponentType?: string;
 	fieldPathHints: FieldPathHint[];
 	uiSchema: Record<string, unknown> | undefined;
 	jsonSchema: RJSFSchema;
 	enumMapByCode: Record<string, EnumMapEntry>;
 };
 
-/** Параметры типовой работы из полей схемы анкеты (те же, что в конструкторе). */
+/** Все параметры типовой работы из полей схемы анкеты (без фильтра по arch-компоненту). */
 export function buildSchemaWorkParameters({
-	archComponentType,
 	fieldPathHints,
 	uiSchema,
 	jsonSchema,
 	enumMapByCode,
 }: BuildSchemaWorkParametersInput): V2TypicalWorkParameterDto[] {
-	const normalizedArch = resolveEffectiveWorkArchComponentType(archComponentType);
-	const targetArch = resolveWorkArchSchemaType(normalizedArch);
-	if (!targetArch) return [];
-
 	const params: V2TypicalWorkParameterDto[] = [];
+	const usedCodes = new Set<string>();
 
 	for (const hint of fieldPathHints) {
-		const fieldArch = resolveArchComponentAtPointer(uiSchema, hint.pointer);
-		if (fieldArch !== targetArch) continue;
 		if (!isArchComponentLeafField(hint.pointer, jsonSchema)) continue;
 
 		const node = resolveSchemaNode(jsonSchema, pointerSegments(hint.pointer));
@@ -227,9 +240,10 @@ export function buildSchemaWorkParameters({
 				: previewValues.length > 0
 					? previewValues
 					: schemaValues.values;
-		const numeric = dictionaryValues.length > 0 || previewValues.length > 0
-			? false
-			: schemaValues.numeric;
+		const numeric =
+			dictionaryValues.length > 0 || previewValues.length > 0
+				? false
+				: schemaValues.numeric;
 
 		if (values.length === 0 && !numeric) continue;
 
@@ -238,9 +252,9 @@ export function buildSchemaWorkParameters({
 
 		params.push({
 			id: `schema:${hint.pointer}`,
-			code: hint.key,
+			code: schemaParamCodeFromHint(hint, usedCodes),
 			name,
-			description: hint.varPath || hint.pointer,
+			description: schemaParamDescription(hint, uiSchema),
 			numeric,
 			values,
 		});

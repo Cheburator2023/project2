@@ -19,8 +19,8 @@ import {
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { useMemo, useState } from "react";
 import {
+	catalogForTriggerRuleGroup,
 	isWorkTriggerGroupInvalid,
-	methodologyCatalogFromParameters,
 } from "./typicalWorkPatchErrors";
 import {
 	resolveSchemaParamForTriggerRule,
@@ -30,7 +30,6 @@ import {
 type TypicalWorkTriggersSectionProps = {
 	rules: V2TypicalWorkRuleDto[];
 	triggerStatus: V2WorkTriggerStatus;
-	archComponentType: string;
 	schemaFieldCount?: number;
 	paramOptions: V2TypicalWorkParameterDto[];
 	methodologyCatalog?: V2TypicalWorkParameterDto[];
@@ -97,7 +96,6 @@ function triggerBanner(status: V2WorkTriggerStatus, ruleCount: number) {
 export function TypicalWorkTriggersSection({
 	rules,
 	triggerStatus,
-	archComponentType,
 	schemaFieldCount = 0,
 	paramOptions,
 	methodologyCatalog = [],
@@ -112,20 +110,15 @@ export function TypicalWorkTriggersSection({
 		[rules],
 	);
 
-	const emptyPickerHint = schemaWorkParameterEmptyPickerMessage(
-		archComponentType,
-		schemaFieldCount,
-		usedParamCodes.size,
+	const pickerItems = useMemo(
+		() => paramOptions.filter((p) => !usedParamCodes.has(p.code)),
+		[paramOptions, usedParamCodes],
 	);
 
-	const pickerItems = paramOptions.filter((p) => !usedParamCodes.has(p.code));
-
-	const catalogForValidation = useMemo(
-		() =>
-			methodologyCatalogFromParameters(methodologyCatalog) ??
-			methodologyCatalogFromParameters(paramOptions) ??
-			[],
-		[methodologyCatalog, paramOptions],
+	const emptyPickerHint = schemaWorkParameterEmptyPickerMessage(
+		schemaFieldCount,
+		usedParamCodes.size,
+		pickerItems.length,
 	);
 
 	const grouped = useMemo(() => {
@@ -348,10 +341,15 @@ export function TypicalWorkTriggersSection({
 						const isKnownPseudoTrigger =
 							isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName) ||
 							isControlTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName);
+						const validationCatalog = catalogForTriggerRuleGroup(
+							ruleSeed,
+							paramOptions,
+							methodologyCatalog,
+						);
 						const groupInvalid = isWorkTriggerGroupInvalid(
-							paramCode,
+							param?.code ?? paramCode,
 							paramRules,
-							catalogForValidation,
+							validationCatalog,
 						);
 						const selectedCodes = new Set(
 							(
@@ -373,7 +371,7 @@ export function TypicalWorkTriggersSection({
 							return isWorkTriggerGroupInvalid(
 								paramCode,
 								[rule],
-								catalogForValidation,
+								validationCatalog,
 							);
 						});
 						const displayName =

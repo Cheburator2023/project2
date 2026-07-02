@@ -24,6 +24,7 @@ import {
 	resolveActiveNormOnDate,
 	compileStoredTypicalWorkResultLogic,
 	tokensToText,
+	parseWorkFormulaText,
 	computeFormulaBadge,
 	normalizeStoredFormula,
 	termsToTokenFormula,
@@ -50,6 +51,20 @@ import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalo
 function decimalToNumber(value: string | number | null | undefined): number {
 	if (value === null || value === undefined) return 0;
 	return typeof value === "number" ? value : Number(value);
+}
+
+function resolveCardTokenFormula(
+	termsFormula: ReturnType<typeof normalizeStoredFormula>,
+	formulaText: string | null | undefined,
+): ReturnType<typeof defaultWorkFormula> {
+	const trimmed = formulaText?.trim();
+	if (trimmed) {
+		const parsed = parseWorkFormulaText(trimmed);
+		if (!parsed.error && parsed.tokens.length > 0) {
+			return { tokens: parsed.tokens, text: trimmed };
+		}
+	}
+	return termsToTokenFormula(termsFormula);
 }
 
 function todayIsoDate(): string {
@@ -548,6 +563,9 @@ export class V2TypicalWorkService {
 					versionConfig.formulaText,
 				)
 			: normalizeStoredFormula(null);
+		const tokenFormula = versionConfig
+			? resolveCardTokenFormula(termsFormula, versionConfig.formulaText)
+			: defaultWorkFormula();
 		const triggerStatusCatalog =
 			await this.paramCatalogService.listTriggerStatusCatalog(todayIsoDate());
 		const usedOnSchemasCount = await this.countSchemaUsages(workId);
@@ -574,9 +592,7 @@ export class V2TypicalWorkService {
 			rules: rules.map(mapRuleEntity),
 			laborParams: laborParamsGrouped,
 			formulaTerms: termsFormula,
-			formula: versionConfig
-				? termsToTokenFormula(termsFormula)
-				: defaultWorkFormula(),
+			formula: tokenFormula,
 			rounding: versionConfig
 				? {
 						mode: versionConfig.roundingMode as V2TypicalWorkCardDto["rounding"]["mode"],

@@ -73,7 +73,6 @@ describe("buildSchemaWorkParameters", () => {
 
 	it("returns schema fields for matching arch component with dictionary values", () => {
 		const params = buildSchemaWorkParameters({
-			archComponentType: "Система-источник",
 			fieldPathHints: hints,
 			uiSchema,
 			jsonSchema,
@@ -85,13 +84,44 @@ describe("buildSchemaWorkParameters", () => {
 			},
 		});
 
-		expect(params).toHaveLength(1);
-		expect(params[0]?.code).toBe("type");
-		expect(params[0]?.name).toBe("Тип системы-источника");
-		expect(params[0]?.values.map((v) => v.label)).toEqual([
+		const typeParam = params.find((p) => p.code === "type");
+		expect(typeParam).toBeDefined();
+		expect(typeParam?.name).toBe("Тип системы-источника");
+		expect(typeParam?.values.map((v) => v.label)).toEqual([
 			"Внутренний",
 			"Внешний",
 		]);
+	});
+
+	it("includes fields from all arch components in the schema", () => {
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: hints,
+			uiSchema,
+			jsonSchema: {
+				...jsonSchema,
+				properties: {
+					...jsonSchema.properties,
+					other: {
+						type: "array",
+						items: {
+							type: "object",
+							properties: {
+								flag: { type: "boolean", title: "Чужой блок" },
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {
+				"v2.detailInfo.sourceSystems.items.type": {
+					enums: ["internal", "external"],
+					enumNames: ["Внутренний", "Внешний"],
+				},
+			},
+		});
+
+		expect(params.some((p) => p.code === "type")).toBe(true);
+		expect(params.some((p) => p.code === "flag")).toBe(true);
 	});
 
 	it("includes object arch-component fields without /items/ path", () => {
@@ -107,7 +137,6 @@ describe("buildSchemaWorkParameters", () => {
 		];
 
 		const params = buildSchemaWorkParameters({
-			archComponentType: "Модельный сервис",
 			fieldPathHints: modelHints,
 			uiSchema: {
 				generalInfo: {

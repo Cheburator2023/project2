@@ -247,19 +247,12 @@ export function TypicalWorkEditableCard({
 	const paramOptions = useMemo(
 		() =>
 			buildSchemaWorkParameters({
-				archComponentType: effectiveArchComponentType,
 				fieldPathHints,
 				uiSchema: uiSchema as Record<string, unknown>,
 				jsonSchema,
 				enumMapByCode,
 			}),
-		[
-			effectiveArchComponentType,
-			enumMapByCode,
-			fieldPathHints,
-			jsonSchema,
-			uiSchema,
-		],
+		[enumMapByCode, fieldPathHints, jsonSchema, uiSchema],
 	);
 	const laborParamOptions = useMemo(
 		() => paramOptions.filter((p) => p.values.length > 0),
@@ -269,9 +262,9 @@ export function TypicalWorkEditableCard({
 		(p) => !draft?.laborParams.some((g) => g.paramCode === p.code),
 	);
 	const laborPickerHint = schemaWorkParameterEmptyPickerMessage(
-		effectiveArchComponentType,
 		fieldPathHints.length,
 		draft?.laborParams.length ?? 0,
+		unusedLaborParams.length,
 	);
 
 	const coefficientCatalog = useMemo(
@@ -296,7 +289,8 @@ export function TypicalWorkEditableCard({
 			formulaBadge: computeFormulaBadgeFromTokens(formula.tokens),
 			triggerStatus: computeTriggerStatus(
 				next.rules,
-				methodologyCatalog.length > 0 ? methodologyCatalog : paramOptions,
+				paramOptions,
+				methodologyCatalog,
 			),
 		};
 		setDraft(withDerived);
@@ -510,7 +504,7 @@ export function TypicalWorkEditableCard({
 			>
 				<Box sx={{ flex: 1, minWidth: 240 }}>
 					<Typography sx={{ fontSize: 11.5, color: "#8a93a3", mb: 0.4 }}>
-						Типовая работа · справочник
+						Типовая работа
 					</Typography>
 					<TextField
 						variant="standard"
@@ -874,7 +868,6 @@ export function TypicalWorkEditableCard({
 					<TypicalWorkTriggersSection
 						rules={draft.rules}
 						triggerStatus={draft.triggerStatus}
-						archComponentType={effectiveArchComponentType}
 						schemaFieldCount={fieldPathHints.length}
 						paramOptions={paramOptions}
 						methodologyCatalog={methodologyCatalog}
