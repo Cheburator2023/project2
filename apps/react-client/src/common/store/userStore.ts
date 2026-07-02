@@ -1,4 +1,9 @@
-import { Permission, Role, UserPermissions, UserRoles } from "@react-client/types/roles";
+import {
+	Permission,
+	Role,
+	UserPermissions,
+	UserRoles,
+} from "@react-client/types/roles";
 import { isNoRolesGodMode } from "@react-client/common/auth/godMode";
 import { create, StoreApi, UseBoundStore } from "zustand";
 
@@ -15,6 +20,7 @@ interface UserStoreState {
 	setPermissions: (permissions: UserPermissions) => void;
 	hasRole: (role: Role) => boolean;
 	hasPermission: (permission: Permission) => boolean;
+	hasPermissions: (permissionList: Permission[]) => boolean;
 }
 
 export const useUserStore: UseBoundStore<StoreApi<UserStoreState>> =
@@ -34,5 +40,11 @@ export const useUserStore: UseBoundStore<StoreApi<UserStoreState>> =
 		hasPermission: (permission: Permission) => {
 			const { permissions } = useUserStore.getState();
 			return NO_ROLES_FOR_DEV ? true : permissions.includes(permission);
+		},
+		hasPermissions: (permissionList: Permission[]) => {
+			const { permissions } = useUserStore.getState();
+			return NO_ROLES_FOR_DEV
+				? true
+				: permissionList.some((permission) => permissions.includes(permission));
 		},
 	}));

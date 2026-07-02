@@ -318,7 +318,7 @@ export function V2QuestionnaireList() {
 	const { mode } = useColorScheme();
 	const navigate = useNavigate();
 	const gridRef = useRef<AgGridReact<V2QuestionnaireGridRow>>(null);
-	const { canAccessAdminPanel } = usePermissions();
+	const { canAccessAdminPanel, canCreateCalculation, canExportReports } = usePermissions();
 	const bulkDelete = useBulkDeleteV2Questionnaires();
 	const [selectedVersions, setSelectedVersions] = useState<
 		V2QuestionnaireVersionRow[]
@@ -497,15 +497,17 @@ export function V2QuestionnaireList() {
 		<div>
 			<Header>
 				<Stack direction="row" spacing={1} alignItems="center">
-					<Button
-						variant="outlined"
-						size="small"
-						startIcon={<DownloadIcon />}
-						disabled={isExporting || isLoading}
-						onClick={() => void handleExportXlsx()}
-					>
-						{isExporting ? "Экспорт…" : "Экспорт XLSX"}
-					</Button>
+					{canExportReports && (
+						<Button
+							variant="outlined"
+							size="small"
+							startIcon={<DownloadIcon />}
+							disabled={isExporting || isLoading}
+							onClick={() => void handleExportXlsx()}
+						>
+							{isExporting ? "Экспорт…" : "Экспорт XLSX"}
+						</Button>
+					)}
 					{canAccessAdminPanel ? (
 						<Button
 							variant="outlined"
@@ -518,16 +520,18 @@ export function V2QuestionnaireList() {
 							Удалить выбранные ({selectedVersions.length})
 						</Button>
 					) : null}
-					<Button
-						variant="contained"
-						size="small"
-						startIcon={<AddIcon />}
-						onClick={() =>
-							navigate(`/v2/${v2Routes.calculationCreate.rootPath}`)
-						}
-					>
-						Создать анкету
-					</Button>
+					{canCreateCalculation && (
+						<Button
+							variant="contained"
+							size="small"
+							startIcon={<AddIcon />}
+							onClick={() =>
+								navigate(`/v2/${v2Routes.calculationCreate.rootPath}`)
+							}
+						>
+							Создать анкету
+						</Button>
+					)}
 				</Stack>
 			</Header>
 			<Dialog
