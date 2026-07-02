@@ -1,6 +1,6 @@
 import { validateWorkFormulaTokens } from "./v2-work-formula.util";
 import { validateTermsFormula, termsToTokenFormula } from "./v2-work-terms-formula.util";
-import { typicalWorkRulesMatchSource } from "./v2-works-catalog-match.util";
+import { catalogValueMatchesTriggerRule, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, resolveTriggerStatusCatalogParam, typicalWorkRulesMatchSource, } from "./v2-works-catalog-match.util";
 function parseIsoDay(value) {
     const day = value.slice(0, 10);
     return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
@@ -222,24 +222,32 @@ function isRuleInputInvalid(rule, catalog, atDate) {
                 : [];
         if (values.length === 0)
             return true;
-        const param = catalog.find((item) => item.code === rule.paramCode);
+        const param = resolveTriggerStatusCatalogParam(rule, catalog);
         if (!param)
             return true;
         return values.some((value) => {
             if (!value.code || !value.label)
                 return true;
-            return !param.values.some((catalogValue) => (catalogValue.code === value.code ||
-                catalogValue.label === value.label) &&
+            return !param.values.some((catalogValue) => catalogValueMatchesTriggerRule(catalogValue, {
+                ...rule,
+                valueCode: value.code,
+                valueLabel: value.label,
+            }) &&
                 (!atDate ||
                     isTypicalWorkParameterValueActiveOnDate(catalogValue, atDate)));
         });
     }
-    if (!rule.valueLabel || !rule.valueCode)
-        return true;
-    const param = catalog.find((item) => item.code === rule.paramCode);
+    if (isPresenceOnlyTriggerRule(rule)) {
+        if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName))
+            return false;
+        if (isControlTypeTriggerParam(rule.paramCode, rule.paramName))
+            return false;
+        return resolveTriggerStatusCatalogParam(rule, catalog) === undefined;
+    }
+    const param = resolveTriggerStatusCatalogParam(rule, catalog);
     if (!param)
         return true;
-    return !param.values.some((value) => (value.code === rule.valueCode || value.label === rule.valueLabel) &&
+    return !param.values.some((value) => catalogValueMatchesTriggerRule(value, rule) &&
         (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
 }
 /** F-03/v4: статус триггеров с учётом каталога и (опционально) черновика ответов. */
@@ -252,7 +260,7 @@ export function computeWorkTriggerStatus(rules, catalog, atDate, draftSource) {
                 return "invalid";
         }
     }
-    else if (rules.some((rule) => !rule.valueCode && !rule.values?.length)) {
+    else if (rules.some((rule) => !rule.paramCode?.trim())) {
         return "invalid";
     }
     if (draftSource) {

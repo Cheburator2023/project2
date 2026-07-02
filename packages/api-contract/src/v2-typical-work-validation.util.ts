@@ -7,7 +7,14 @@ import type {
 } from "./v2-typical-work.types";
 import { validateWorkFormulaTokens } from "./v2-work-formula.util";
 import { validateTermsFormula, termsToTokenFormula } from "./v2-work-terms-formula.util";
-import { typicalWorkRulesMatchSource } from "./v2-works-catalog-match.util";
+import {
+	catalogValueMatchesTriggerRule,
+	isControlTypeTriggerParam,
+	isPresenceOnlyTriggerRule,
+	isSourceTypeTriggerParam,
+	resolveTriggerStatusCatalogParam,
+	typicalWorkRulesMatchSource,
+} from "./v2-works-catalog-match.util";
 
 export type ValidationIssue = { path: string; message: string };
 
@@ -341,26 +348,34 @@ function isRuleInputInvalid(
 				? [{ code: rule.valueCode, label: rule.valueLabel }]
 				: [];
 		if (values.length === 0) return true;
-		const param = catalog.find((item) => item.code === rule.paramCode);
+		const param = resolveTriggerStatusCatalogParam(rule, catalog);
 		if (!param) return true;
 		return values.some((value) => {
 			if (!value.code || !value.label) return true;
 			return !param.values.some(
 				(catalogValue) =>
-					(catalogValue.code === value.code ||
-						catalogValue.label === value.label) &&
+					catalogValueMatchesTriggerRule(catalogValue, {
+						...rule,
+						valueCode: value.code,
+						valueLabel: value.label,
+					}) &&
 					(!atDate ||
 						isTypicalWorkParameterValueActiveOnDate(catalogValue, atDate)),
 			);
 		});
 	}
 
-	if (!rule.valueLabel || !rule.valueCode) return true;
-	const param = catalog.find((item) => item.code === rule.paramCode);
+	if (isPresenceOnlyTriggerRule(rule)) {
+		if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName)) return false;
+		if (isControlTypeTriggerParam(rule.paramCode, rule.paramName)) return false;
+		return resolveTriggerStatusCatalogParam(rule, catalog) === undefined;
+	}
+
+	const param = resolveTriggerStatusCatalogParam(rule, catalog);
 	if (!param) return true;
 	return !param.values.some(
 		(value) =>
-			(value.code === rule.valueCode || value.label === rule.valueLabel) &&
+			catalogValueMatchesTriggerRule(value, rule) &&
 			(!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)),
 	);
 }
@@ -378,7 +393,7 @@ export function computeWorkTriggerStatus(
 		for (const rule of rules) {
 			if (isRuleInputInvalid(rule, catalog, atDate)) return "invalid";
 		}
-	} else if (rules.some((rule) => !rule.valueCode && !rule.values?.length)) {
+	} else if (rules.some((rule) => !rule.paramCode?.trim())) {
 		return "invalid";
 	}
 

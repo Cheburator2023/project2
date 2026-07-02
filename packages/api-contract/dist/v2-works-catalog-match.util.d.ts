@@ -17,6 +17,40 @@ export declare function resolveStreamFromSourceType(source: Record<string, unkno
 export declare function resolveStreamsFromSourceSystems(data: Record<string, unknown>): string[];
 /** Читает значение параметра из контекста строки/объекта анкеты. */
 export declare function readTypicalWorkSourceField(source: Record<string, unknown>, paramCode: string, paramName: string | null): unknown;
+export declare function extractControlCode(label: string): string | null;
+export type TriggerStatusCatalogParamLike = {
+    code: string;
+    values: Array<{
+        code: string;
+        label: string;
+        validFrom?: string | null;
+        validTo?: string | null;
+    }>;
+};
+export declare function isSourceTypeTriggerParam(paramCode: string, paramName: string | null | undefined): boolean;
+export declare function isControlTypeTriggerParam(paramCode: string, paramName: string | null | undefined): boolean;
+export declare function isPresenceOnlyTriggerRule(rule: {
+    valueCode: string | null;
+    valueLabel: string | null;
+    values?: Array<{
+        code: string;
+        label: string | null;
+    }>;
+}): boolean;
+/** Сопоставляет правило триггера с параметром глобального справочника (алиасы CSV → каталог). */
+export declare function resolveTriggerStatusCatalogParam(rule: {
+    paramCode: string;
+    paramName?: string | null;
+}, catalog: TriggerStatusCatalogParamLike[]): TriggerStatusCatalogParamLike | undefined;
+export declare function catalogValueMatchesTriggerRule(catalogValue: {
+    code: string;
+    label: string;
+}, rule: {
+    paramCode: string;
+    paramName?: string | null;
+    valueCode: string | null;
+    valueLabel: string | null;
+}): boolean;
 /** Все условия работы (логическое И) против контекста строки/объекта анкеты. */
 export declare function typicalWorkRulesMatchSource(rules: TypicalWorkRuleLike[], source: Record<string, unknown>): boolean;
 export declare function resolveLaborCoefficient(source: Record<string, unknown>, paramCode: string, valueCode: string | null, valueLabel: string | null): boolean;

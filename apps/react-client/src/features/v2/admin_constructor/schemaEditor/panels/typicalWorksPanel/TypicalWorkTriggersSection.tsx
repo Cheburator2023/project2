@@ -10,11 +10,22 @@ import type {
 	V2WorkRuleOperator,
 	V2WorkTriggerStatus,
 } from "@smart-anketa/api-contract";
-import { V2_WORK_RULE_OPERATOR_VALUES } from "@smart-anketa/api-contract";
+import {
+	V2_WORK_RULE_OPERATOR_VALUES,
+	catalogValueMatchesTriggerRule,
+	isControlTypeTriggerParam,
+	isSourceTypeTriggerParam,
+} from "@smart-anketa/api-contract";
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { useMemo, useState } from "react";
-import { isWorkTriggerGroupInvalid } from "./typicalWorkPatchErrors";
-import { schemaWorkParameterEmptyPickerMessage } from "./schemaWorkParameters";
+import {
+	isWorkTriggerGroupInvalid,
+	methodologyCatalogFromParameters,
+} from "./typicalWorkPatchErrors";
+import {
+	resolveSchemaParamForTriggerRule,
+	schemaWorkParameterEmptyPickerMessage,
+} from "./schemaWorkParameters";
 
 type TypicalWorkTriggersSectionProps = {
 	rules: V2TypicalWorkRuleDto[];
@@ -22,6 +33,7 @@ type TypicalWorkTriggersSectionProps = {
 	archComponentType: string;
 	schemaFieldCount?: number;
 	paramOptions: V2TypicalWorkParameterDto[];
+	methodologyCatalog?: V2TypicalWorkParameterDto[];
 	streamExecutor: string;
 	onChange: (rules: V2TypicalWorkRuleDto[]) => void;
 };
@@ -88,6 +100,7 @@ export function TypicalWorkTriggersSection({
 	archComponentType,
 	schemaFieldCount = 0,
 	paramOptions,
+	methodologyCatalog = [],
 	streamExecutor,
 	onChange,
 }: TypicalWorkTriggersSectionProps) {
@@ -109,14 +122,10 @@ export function TypicalWorkTriggersSection({
 
 	const catalogForValidation = useMemo(
 		() =>
-			paramOptions.map((param) => ({
-				code: param.code,
-				values: param.values.map((value) => ({
-					code: value.code,
-					label: value.label,
-				})),
-			})),
-		[paramOptions],
+			methodologyCatalogFromParameters(methodologyCatalog) ??
+			methodologyCatalogFromParameters(paramOptions) ??
+			[],
+		[methodologyCatalog, paramOptions],
 	);
 
 	const grouped = useMemo(() => {
@@ -328,9 +337,17 @@ export function TypicalWorkTriggersSection({
 			{grouped.length > 0 ? (
 				<Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
 					{grouped.map(([paramCode, paramRules]) => {
-						const param =
-							paramOptions.find((p) => p.code === paramCode) ??
-							paramOptions.find((p) => p.name === paramRules[0]?.paramName);
+						const ruleSeed = {
+							paramCode,
+							paramName: paramRules[0]?.paramName ?? null,
+						};
+						const param = resolveSchemaParamForTriggerRule(
+							ruleSeed,
+							paramOptions,
+						);
+						const isKnownPseudoTrigger =
+							isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName) ||
+							isControlTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName);
 						const groupInvalid = isWorkTriggerGroupInvalid(
 							paramCode,
 							paramRules,
@@ -342,11 +359,28 @@ export function TypicalWorkTriggersSection({
 								paramRules.map((r) => r.valueCode)
 							).filter(Boolean),
 						);
-						const staleRules = paramRules.filter(
-							(rule) =>
-								rule.valueCode &&
-								!param?.values.some((value) => value.code === rule.valueCode),
-						);
+						const staleRules = paramRules.filter((rule) => {
+							if (!rule.valueCode && !rule.valueLabel) return false;
+							if (param) {
+								return !param.values.some((value) =>
+									catalogValueMatchesTriggerRule(value, {
+										...ruleSeed,
+										valueCode: rule.valueCode,
+										valueLabel: rule.valueLabel,
+									}),
+								);
+							}
+							return isWorkTriggerGroupInvalid(
+								paramCode,
+								[rule],
+								catalogForValidation,
+							);
+						});
+						const displayName =
+							param?.name ??
+							(isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName)
+								? "Тип источника данных"
+								: (paramRules[0]?.paramName ?? paramCode));
 						return (
 							<Box
 								key={paramCode}
@@ -374,7 +408,7 @@ export function TypicalWorkTriggersSection({
 											lineHeight: 1.25,
 										}}
 									>
-										{param?.name ?? paramRules[0]?.paramName ?? paramCode}
+										{displayName}
 									</Typography>
 									<IconButton
 										size="small"
@@ -433,9 +467,9 @@ export function TypicalWorkTriggersSection({
 									<Typography
 										sx={{ fontSize: 11.5, color: "#c62828", mb: 0.9 }}
 									>
-										{!param
+										{!param && !isKnownPseudoTrigger
 											? "Поле удалено из схемы — обновите условия"
-											: "Выбраны значения, которых больше нет в схеме"}
+											: "Выбраны значения, которых больше нет в справочнике"}
 									</Typography>
 								) : null}
 								{staleRules.length > 0 ? (
@@ -471,7 +505,15 @@ export function TypicalWorkTriggersSection({
 								) : null}
 								<Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
 									{(param?.values ?? []).map((value) => {
-										const selected = selectedCodes.has(value.code);
+										const selected =
+											selectedCodes.has(value.code) ||
+											paramRules.some((rule) =>
+												catalogValueMatchesTriggerRule(value, {
+													...ruleSeed,
+													valueCode: rule.valueCode,
+													valueLabel: rule.valueLabel,
+												}),
+											);
 										return (
 											<Box
 												key={value.code}

@@ -84,11 +84,111 @@ function readSourceField(
 	return readTypicalWorkSourceField(source, paramCode, paramName);
 }
 
-function extractControlCode(label: string): string | null {
+export function extractControlCode(label: string): string | null {
 	const bracket = label.match(/\[([A-ZА-Я0-9]+)\]/i);
 	if (bracket?.[1]) return bracket[1].toUpperCase();
 	const param = label.match(/Вид контроля:\s*([A-ZА-Я0-9]+)/i);
 	return param?.[1]?.toUpperCase() ?? null;
+}
+
+export type TriggerStatusCatalogParamLike = {
+	code: string;
+	values: Array<{
+		code: string;
+		label: string;
+		validFrom?: string | null;
+		validTo?: string | null;
+	}>;
+};
+
+export function isSourceTypeTriggerParam(
+	paramCode: string,
+	paramName: string | null | undefined,
+): boolean {
+	const name = paramName?.toLowerCase() ?? "";
+	return name.includes("тип источника") || paramCode.includes("тип_источника");
+}
+
+export function isControlTypeTriggerParam(
+	paramCode: string,
+	paramName: string | null | undefined,
+): boolean {
+	const label = paramName ?? paramCode;
+	return /вид контроля/i.test(label);
+}
+
+export function isPresenceOnlyTriggerRule(rule: {
+	valueCode: string | null;
+	valueLabel: string | null;
+	values?: Array<{ code: string; label: string | null }>;
+}): boolean {
+	return (
+		rule.valueCode == null &&
+		rule.valueLabel == null &&
+		(!rule.values || rule.values.length === 0)
+	);
+}
+
+/** Сопоставляет правило триггера с параметром глобального справочника (алиасы CSV → каталог). */
+export function resolveTriggerStatusCatalogParam(
+	rule: { paramCode: string; paramName?: string | null },
+	catalog: TriggerStatusCatalogParamLike[],
+): TriggerStatusCatalogParamLike | undefined {
+	const direct = catalog.find((item) => item.code === rule.paramCode);
+	if (direct) return direct;
+
+	const paramName = rule.paramName?.trim();
+	if (paramName) {
+		const bySlug = catalog.find((item) => item.code === slugParamCode(paramName));
+		if (bySlug) return bySlug;
+	}
+
+	if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName)) {
+		return catalog.find(
+			(item) => item.code === slugParamCode("Тип источника данных"),
+		);
+	}
+
+	if (isControlTypeTriggerParam(rule.paramCode, rule.paramName)) {
+		return catalog.find((item) => item.code === slugParamCode("Вид контроля"));
+	}
+
+	return undefined;
+}
+
+export function catalogValueMatchesTriggerRule(
+	catalogValue: { code: string; label: string },
+	rule: {
+		paramCode: string;
+		paramName?: string | null;
+		valueCode: string | null;
+		valueLabel: string | null;
+	},
+): boolean {
+	if (rule.valueCode && catalogValue.code === rule.valueCode) return true;
+	if (rule.valueLabel && catalogValue.label === rule.valueLabel) return true;
+	if (rule.valueLabel) {
+		const labelUpper = catalogValue.label.toUpperCase();
+		const ruleUpper = rule.valueLabel.toUpperCase();
+		if (
+			labelUpper.startsWith(`${ruleUpper} —`) ||
+			labelUpper.startsWith(`${ruleUpper} -`)
+		) {
+			return true;
+		}
+	}
+
+	const controlCode = extractControlCode(rule.paramName ?? rule.paramCode);
+	if (controlCode) {
+		const labelUpper = catalogValue.label.toUpperCase();
+		return (
+			labelUpper.startsWith(`${controlCode} —`) ||
+			labelUpper.startsWith(`${controlCode} -`) ||
+			labelUpper.startsWith(controlCode)
+		);
+	}
+
+	return false;
 }
 
 function compareRuleValue(

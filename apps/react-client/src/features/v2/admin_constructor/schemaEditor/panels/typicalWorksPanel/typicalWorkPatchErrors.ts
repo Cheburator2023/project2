@@ -20,6 +20,40 @@ export const WORK_ARCH_COMPONENT_TYPES = [
 	"Модельный сервис",
 ] as const;
 
+export const DEFAULT_WORK_ARCH_COMPONENT_TYPE = WORK_ARCH_COMPONENT_TYPES[0];
+
+/** Как на бэкенде (`normalizeArchComponentType`) — CSV/legacy → канонический тип. */
+export function normalizeWorkArchComponentType(raw: string): string {
+	const value = raw.trim();
+	if (!value) return "";
+	if (value.includes("Витрина") || value.includes("Объект")) {
+		return "Объект / Витрина данных";
+	}
+	if (value.includes("Процесс")) {
+		return "Процесс обработки данных";
+	}
+	if (value.includes("Система")) {
+		return "Система-источник";
+	}
+	if (value.includes("Модельный")) {
+		return "Модельный сервис";
+	}
+	if (value === "Модель") {
+		return "Модель";
+	}
+	return value;
+}
+
+export function resolveCanonicalWorkArchComponentType(
+	...candidates: Array<string | null | undefined>
+): string {
+	for (const candidate of candidates) {
+		const normalized = normalizeWorkArchComponentType(candidate ?? "");
+		if (normalized) return normalized;
+	}
+	return "";
+}
+
 export type TypicalWorkPatchError = {
 	message: string;
 	code: string | null;
@@ -60,21 +94,32 @@ export function parseTypicalWorkDeleteError(
 export function computeTriggerStatus(
 	rules: Array<{
 		paramCode: string;
+		paramName?: string | null;
+		operator?: string;
 		valueCode: string | null;
 		valueLabel: string | null;
+		values?: Array<{ code: string; label: string | null }>;
 	}>,
 	catalog?: V2TypicalWorkParameterDto[],
 ): V2WorkTriggerStatus {
 	return computeWorkTriggerStatus(
 		rules,
-		catalog?.map((param) => ({
-			code: param.code,
-			values: param.values.map((value) => ({
-				code: value.code,
-				label: value.label,
-			})),
-		})),
+		methodologyCatalogFromParameters(catalog),
 	);
+}
+
+export function methodologyCatalogFromParameters(
+	params: V2TypicalWorkParameterDto[] | undefined,
+) {
+	return params?.map((param) => ({
+		code: param.code,
+		values: param.values.map((value) => ({
+			code: value.code,
+			label: value.label,
+			validFrom: value.validFrom,
+			validTo: value.validTo,
+		})),
+	}));
 }
 
 export { isWorkCoefficientValueAvailable, isWorkTriggerGroupInvalid };

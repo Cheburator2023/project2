@@ -10,7 +10,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 import { DEFAULT_WORK_STREAMS } from "./typicalWorksUi";
-import { WORK_ARCH_COMPONENT_TYPES } from "./typicalWorkPatchErrors";
+import { WORK_ARCH_COMPONENT_TYPES, DEFAULT_WORK_ARCH_COMPONENT_TYPE } from "./typicalWorkPatchErrors";
 
 export type CreateTypicalWorkDialogPayload = {
 	name: string;
@@ -41,7 +41,7 @@ export function CreateTypicalWorkDialog({
 	const isCreate = mode === "create";
 	const [name, setName] = useState("");
 	const [archComponentType, setArchComponentType] = useState<string>(
-		defaultArchComponentType ?? WORK_ARCH_COMPONENT_TYPES[0],
+		defaultArchComponentType ?? DEFAULT_WORK_ARCH_COMPONENT_TYPE,
 	);
 	const [streamExecutor, setStreamExecutor] = useState<string>(
 		defaultStreamExecutor ?? DEFAULT_WORK_STREAMS[0],

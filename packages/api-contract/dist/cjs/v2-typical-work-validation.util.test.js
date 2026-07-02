@@ -125,6 +125,55 @@ const v2_work_terms_formula_util_1 = require("./v2-work-terms-formula.util");
             },
         ], catalog, undefined, { complexity: "low" })).toBe("hidden");
     });
+    (0, vitest_1.it)("accepts seeded source-type triggers from CSV aliases", () => {
+        const docCatalog = [
+            {
+                code: "тип_источника_данных",
+                values: [
+                    { code: "внутренний", label: "Внутренний" },
+                    { code: "внешний", label: "Внешний" },
+                ],
+            },
+        ];
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.computeWorkTriggerStatus)([
+            {
+                paramCode: "тип_источника_внутренний",
+                paramName: "Тип источника (внутренний)",
+                valueCode: "внутренний",
+                valueLabel: "Внутренний",
+            },
+        ], docCatalog)).toBe("appears");
+    });
+    (0, vitest_1.it)("accepts presence-only trigger rules when param exists in catalog", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.computeWorkTriggerStatus)([
+            {
+                paramCode: "complexity",
+                paramName: "Сложность",
+                valueCode: null,
+                valueLabel: null,
+            },
+        ], catalog)).toBe("appears");
+    });
+    (0, vitest_1.it)("accepts control-type triggers with short value codes", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.computeWorkTriggerStatus)([
+            {
+                paramCode: "вид_контроля_кд",
+                paramName: "Вид контроля: КД",
+                valueCode: "кд",
+                valueLabel: "КД",
+            },
+        ], [
+            {
+                code: "вид_контроля",
+                values: [
+                    {
+                        code: "кд",
+                        label: "КД — Качество модельных данных",
+                    },
+                ],
+            },
+        ])).toBe("appears");
+    });
 });
 (0, vitest_1.describe)("isWorkCoefficientValueAvailable (F-03 §578)", () => {
     const catalog = [

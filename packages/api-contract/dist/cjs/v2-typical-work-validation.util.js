@@ -237,24 +237,32 @@ function isRuleInputInvalid(rule, catalog, atDate) {
                 : [];
         if (values.length === 0)
             return true;
-        const param = catalog.find((item) => item.code === rule.paramCode);
+        const param = (0, v2_works_catalog_match_util_1.resolveTriggerStatusCatalogParam)(rule, catalog);
         if (!param)
             return true;
         return values.some((value) => {
             if (!value.code || !value.label)
                 return true;
-            return !param.values.some((catalogValue) => (catalogValue.code === value.code ||
-                catalogValue.label === value.label) &&
+            return !param.values.some((catalogValue) => (0, v2_works_catalog_match_util_1.catalogValueMatchesTriggerRule)(catalogValue, {
+                ...rule,
+                valueCode: value.code,
+                valueLabel: value.label,
+            }) &&
                 (!atDate ||
                     isTypicalWorkParameterValueActiveOnDate(catalogValue, atDate)));
         });
     }
-    if (!rule.valueLabel || !rule.valueCode)
-        return true;
-    const param = catalog.find((item) => item.code === rule.paramCode);
+    if ((0, v2_works_catalog_match_util_1.isPresenceOnlyTriggerRule)(rule)) {
+        if ((0, v2_works_catalog_match_util_1.isSourceTypeTriggerParam)(rule.paramCode, rule.paramName))
+            return false;
+        if ((0, v2_works_catalog_match_util_1.isControlTypeTriggerParam)(rule.paramCode, rule.paramName))
+            return false;
+        return (0, v2_works_catalog_match_util_1.resolveTriggerStatusCatalogParam)(rule, catalog) === undefined;
+    }
+    const param = (0, v2_works_catalog_match_util_1.resolveTriggerStatusCatalogParam)(rule, catalog);
     if (!param)
         return true;
-    return !param.values.some((value) => (value.code === rule.valueCode || value.label === rule.valueLabel) &&
+    return !param.values.some((value) => (0, v2_works_catalog_match_util_1.catalogValueMatchesTriggerRule)(value, rule) &&
         (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
 }
 /** F-03/v4: статус триггеров с учётом каталога и (опционально) черновика ответов. */
@@ -267,7 +275,7 @@ function computeWorkTriggerStatus(rules, catalog, atDate, draftSource) {
                 return "invalid";
         }
     }
-    else if (rules.some((rule) => !rule.valueCode && !rule.values?.length)) {
+    else if (rules.some((rule) => !rule.paramCode?.trim())) {
         return "invalid";
     }
     if (draftSource) {

@@ -166,6 +166,74 @@ describe("computeWorkTriggerStatus", () => {
 			),
 		).toBe("hidden");
 	});
+
+	it("accepts seeded source-type triggers from CSV aliases", () => {
+		const docCatalog = [
+			{
+				code: "тип_источника_данных",
+				values: [
+					{ code: "внутренний", label: "Внутренний" },
+					{ code: "внешний", label: "Внешний" },
+				],
+			},
+		];
+
+		expect(
+			computeWorkTriggerStatus(
+				[
+					{
+						paramCode: "тип_источника_внутренний",
+						paramName: "Тип источника (внутренний)",
+						valueCode: "внутренний",
+						valueLabel: "Внутренний",
+					},
+				],
+				docCatalog,
+			),
+		).toBe("appears");
+	});
+
+	it("accepts presence-only trigger rules when param exists in catalog", () => {
+		expect(
+			computeWorkTriggerStatus(
+				[
+					{
+						paramCode: "complexity",
+						paramName: "Сложность",
+						valueCode: null,
+						valueLabel: null,
+					},
+				],
+				catalog,
+			),
+		).toBe("appears");
+	});
+
+	it("accepts control-type triggers with short value codes", () => {
+		expect(
+			computeWorkTriggerStatus(
+				[
+					{
+						paramCode: "вид_контроля_кд",
+						paramName: "Вид контроля: КД",
+						valueCode: "кд",
+						valueLabel: "КД",
+					},
+				],
+				[
+					{
+						code: "вид_контроля",
+						values: [
+							{
+								code: "кд",
+								label: "КД — Качество модельных данных",
+							},
+						],
+					},
+				],
+			),
+		).toBe("appears");
+	});
 });
 
 describe("isWorkCoefficientValueAvailable (F-03 §578)", () => {

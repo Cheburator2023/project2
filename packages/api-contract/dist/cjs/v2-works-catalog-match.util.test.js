@@ -88,4 +88,37 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
             coeffOff: 0.5,
         })).toBe(0.5);
     });
+    (0, vitest_1.it)("resolves CSV trigger aliases to catalog params", () => {
+        const catalog = [
+            {
+                code: "тип_источника_данных",
+                values: [
+                    { code: "внутренний", label: "Внутренний" },
+                    { code: "внешний", label: "Внешний" },
+                ],
+            },
+            {
+                code: "вид_контроля",
+                values: [
+                    { code: "кд", label: "КД — Качество модельных данных" },
+                ],
+            },
+        ];
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveTriggerStatusCatalogParam)({
+            paramCode: "тип_источника_внутренний",
+            paramName: "Тип источника (внутренний)",
+        }, catalog)?.code).toBe("тип_источника_данных");
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveTriggerStatusCatalogParam)({
+            paramCode: "вид_контроля_кд",
+            paramName: "Вид контроля: КД",
+        }, catalog)?.code).toBe("вид_контроля");
+    });
+    (0, vitest_1.it)("matches control catalog labels by short code", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.catalogValueMatchesTriggerRule)({ code: "кд", label: "КД — Качество модельных данных" }, {
+            paramCode: "вид_контроля_кд",
+            paramName: "Вид контроля: КД",
+            valueCode: "кд",
+            valueLabel: "КД",
+        })).toBe(true);
+    });
 });

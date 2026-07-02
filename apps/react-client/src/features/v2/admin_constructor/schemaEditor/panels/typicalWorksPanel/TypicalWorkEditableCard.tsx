@@ -34,7 +34,7 @@ import {
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { useCreateV2TemplateVersion } from "@react-client/common/api/queries/v2-templates";
-import { useV2TypicalWorkAssignments } from "@react-client/common/api/queries/v2-works";
+import { useV2TypicalWorkAssignments, useV2WorkParametersCatalog } from "@react-client/common/api/queries/v2-works";
 import { useSchemaEditor } from "../../SchemaEditorContext";
 import {
 	buildSchemaWorkParameters,
@@ -57,7 +57,9 @@ import { WorkFormulaEditor } from "./WorkFormulaEditor";
 import { ensureFormulaTerms } from "./WorkTermsFormulaEditor";
 import {
 	computeTriggerStatus,
+	DEFAULT_WORK_ARCH_COMPONENT_TYPE,
 	isWorkCoefficientValueAvailable,
+	resolveCanonicalWorkArchComponentType,
 	WORK_ARCH_COMPONENT_TYPES,
 } from "./typicalWorkPatchErrors";
 import {
@@ -152,6 +154,7 @@ export function TypicalWorkEditableCard({
 	const { data: assignmentsList } = useV2TypicalWorkAssignments({
 		templateVersionId,
 	});
+	const { data: methodologyCatalogData } = useV2WorkParametersCatalog();
 	const createVersion = useCreateV2TemplateVersion();
 	const [draft, setDraft] = useState<V2TypicalWorkCardDto | null>(null);
 	const [formulaLockedOpen, setFormulaLockedOpen] = useState(false);
@@ -180,6 +183,7 @@ export function TypicalWorkEditableCard({
 	});
 
 	const lastSyncedCardKeyRef = useRef<string | null>(null);
+	const defaultedArchKeyRef = useRef<string | null>(null);
 
 	useEffect(() => {
 		if (!card) return;
@@ -189,6 +193,7 @@ export function TypicalWorkEditableCard({
 		// (autosave инвалидирует query → возвращает новый объект с теми же данными).
 		if (!isNewCard && hasPending()) return;
 		lastSyncedCardKeyRef.current = cardKey;
+		if (isNewCard) defaultedArchKeyRef.current = null;
 		setDraft({
 			...structuredClone(card),
 			formulaTerms: ensureFormulaTerms(card),
@@ -232,6 +237,11 @@ export function TypicalWorkEditableCard({
 			draft?.archComponentType,
 			fallbackArchComponentType,
 		],
+	);
+
+	const methodologyCatalog = useMemo(
+		() => methodologyCatalogData?.items ?? [],
+		[methodologyCatalogData?.items],
 	);
 
 	const paramOptions = useMemo(
@@ -284,11 +294,26 @@ export function TypicalWorkEditableCard({
 			formula,
 			formulaTerms,
 			formulaBadge: computeFormulaBadgeFromTokens(formula.tokens),
-			triggerStatus: computeTriggerStatus(next.rules, paramOptions),
+			triggerStatus: computeTriggerStatus(
+				next.rules,
+				methodologyCatalog.length > 0 ? methodologyCatalog : paramOptions,
+			),
 		};
 		setDraft(withDerived);
 		scheduleSave(cardToPatchDto(withDerived, templateVersionId));
 	};
+
+	useEffect(() => {
+		if (!draft || !card) return;
+		if (resolveCanonicalWorkArchComponentType(draft.archComponentType)) return;
+		const cardKey = `${card.id}::${card.streamExecutor}`;
+		if (defaultedArchKeyRef.current === cardKey) return;
+		defaultedArchKeyRef.current = cardKey;
+		commitDraft({
+			...draft,
+			archComponentType: DEFAULT_WORK_ARCH_COMPONENT_TYPE,
+		});
+	}, [card, draft]);
 
 	const addLaborParam = (picked: V2TypicalWorkParameterDto) => {
 		if (!draft) return;
@@ -414,8 +439,8 @@ export function TypicalWorkEditableCard({
 		);
 	}
 
-	const compDot = ARCH_COMPONENT_DOT[draft.archComponentType] ?? "#94a3b8";
-	const recommended = recommendedStreamsForComponent(draft.archComponentType);
+	const compDot = ARCH_COMPONENT_DOT[effectiveArchComponentType] ?? "#94a3b8";
+	const recommended = recommendedStreamsForComponent(effectiveArchComponentType);
 	const otherStreams = availableStreams.filter(
 		(s) => !recommended.includes(streamDisplayLabel(s)),
 	);
@@ -513,7 +538,7 @@ export function TypicalWorkEditableCard({
 					>
 						<FormControl size="small" sx={{ minWidth: 190 }}>
 							<Select
-								value={draft.archComponentType}
+								value={effectiveArchComponentType}
 								onChange={(event) =>
 									requestArchComponentTypeChange(String(event.target.value))
 								}
@@ -852,6 +877,7 @@ export function TypicalWorkEditableCard({
 						archComponentType={effectiveArchComponentType}
 						schemaFieldCount={fieldPathHints.length}
 						paramOptions={paramOptions}
+						methodologyCatalog={methodologyCatalog}
 						streamExecutor={streamExecutor ?? draft.streamExecutor}
 						onChange={(rules) => commitDraft({ ...draft, rules })}
 					/>

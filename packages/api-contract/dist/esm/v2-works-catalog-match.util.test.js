@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveLaborAnyOfCoefficient, resolveStreamFromSourceType, resolveStreamsFromSourceSystems, typicalWorkRulesMatchSource, } from "./v2-works-catalog-match.util";
+import { catalogValueMatchesTriggerRule, resolveLaborAnyOfCoefficient, resolveStreamFromSourceType, resolveStreamsFromSourceSystems, resolveTriggerStatusCatalogParam, typicalWorkRulesMatchSource, } from "./v2-works-catalog-match.util";
 describe("v2-works-catalog-match.util", () => {
     it("resolves stream from source type", () => {
         expect(resolveStreamFromSourceType({ type: "Внутренний" })).toBe("ИД. Внутренний");
@@ -85,5 +85,38 @@ describe("v2-works-catalog-match.util", () => {
             coeffOn: 2,
             coeffOff: 0.5,
         })).toBe(0.5);
+    });
+    it("resolves CSV trigger aliases to catalog params", () => {
+        const catalog = [
+            {
+                code: "тип_источника_данных",
+                values: [
+                    { code: "внутренний", label: "Внутренний" },
+                    { code: "внешний", label: "Внешний" },
+                ],
+            },
+            {
+                code: "вид_контроля",
+                values: [
+                    { code: "кд", label: "КД — Качество модельных данных" },
+                ],
+            },
+        ];
+        expect(resolveTriggerStatusCatalogParam({
+            paramCode: "тип_источника_внутренний",
+            paramName: "Тип источника (внутренний)",
+        }, catalog)?.code).toBe("тип_источника_данных");
+        expect(resolveTriggerStatusCatalogParam({
+            paramCode: "вид_контроля_кд",
+            paramName: "Вид контроля: КД",
+        }, catalog)?.code).toBe("вид_контроля");
+    });
+    it("matches control catalog labels by short code", () => {
+        expect(catalogValueMatchesTriggerRule({ code: "кд", label: "КД — Качество модельных данных" }, {
+            paramCode: "вид_контроля_кд",
+            paramName: "Вид контроля: КД",
+            valueCode: "кд",
+            valueLabel: "КД",
+        })).toBe(true);
     });
 });

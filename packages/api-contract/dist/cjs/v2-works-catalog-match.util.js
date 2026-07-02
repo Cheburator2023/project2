@@ -4,6 +4,12 @@ exports.CONTROL_MODELS_STREAM = exports.STREAM_BY_SOURCE_TYPE = void 0;
 exports.resolveStreamFromSourceType = resolveStreamFromSourceType;
 exports.resolveStreamsFromSourceSystems = resolveStreamsFromSourceSystems;
 exports.readTypicalWorkSourceField = readTypicalWorkSourceField;
+exports.extractControlCode = extractControlCode;
+exports.isSourceTypeTriggerParam = isSourceTypeTriggerParam;
+exports.isControlTypeTriggerParam = isControlTypeTriggerParam;
+exports.isPresenceOnlyTriggerRule = isPresenceOnlyTriggerRule;
+exports.resolveTriggerStatusCatalogParam = resolveTriggerStatusCatalogParam;
+exports.catalogValueMatchesTriggerRule = catalogValueMatchesTriggerRule;
 exports.typicalWorkRulesMatchSource = typicalWorkRulesMatchSource;
 exports.resolveLaborCoefficient = resolveLaborCoefficient;
 exports.resolveLaborAnyOfCoefficient = resolveLaborAnyOfCoefficient;
@@ -75,6 +81,60 @@ function extractControlCode(label) {
         return bracket[1].toUpperCase();
     const param = label.match(/Вид контроля:\s*([A-ZА-Я0-9]+)/i);
     return param?.[1]?.toUpperCase() ?? null;
+}
+function isSourceTypeTriggerParam(paramCode, paramName) {
+    const name = paramName?.toLowerCase() ?? "";
+    return name.includes("тип источника") || paramCode.includes("тип_источника");
+}
+function isControlTypeTriggerParam(paramCode, paramName) {
+    const label = paramName ?? paramCode;
+    return /вид контроля/i.test(label);
+}
+function isPresenceOnlyTriggerRule(rule) {
+    return (rule.valueCode == null &&
+        rule.valueLabel == null &&
+        (!rule.values || rule.values.length === 0));
+}
+/** Сопоставляет правило триггера с параметром глобального справочника (алиасы CSV → каталог). */
+function resolveTriggerStatusCatalogParam(rule, catalog) {
+    const direct = catalog.find((item) => item.code === rule.paramCode);
+    if (direct)
+        return direct;
+    const paramName = rule.paramName?.trim();
+    if (paramName) {
+        const bySlug = catalog.find((item) => item.code === slugParamCode(paramName));
+        if (bySlug)
+            return bySlug;
+    }
+    if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName)) {
+        return catalog.find((item) => item.code === slugParamCode("Тип источника данных"));
+    }
+    if (isControlTypeTriggerParam(rule.paramCode, rule.paramName)) {
+        return catalog.find((item) => item.code === slugParamCode("Вид контроля"));
+    }
+    return undefined;
+}
+function catalogValueMatchesTriggerRule(catalogValue, rule) {
+    if (rule.valueCode && catalogValue.code === rule.valueCode)
+        return true;
+    if (rule.valueLabel && catalogValue.label === rule.valueLabel)
+        return true;
+    if (rule.valueLabel) {
+        const labelUpper = catalogValue.label.toUpperCase();
+        const ruleUpper = rule.valueLabel.toUpperCase();
+        if (labelUpper.startsWith(`${ruleUpper} —`) ||
+            labelUpper.startsWith(`${ruleUpper} -`)) {
+            return true;
+        }
+    }
+    const controlCode = extractControlCode(rule.paramName ?? rule.paramCode);
+    if (controlCode) {
+        const labelUpper = catalogValue.label.toUpperCase();
+        return (labelUpper.startsWith(`${controlCode} —`) ||
+            labelUpper.startsWith(`${controlCode} -`) ||
+            labelUpper.startsWith(controlCode));
+    }
+    return false;
 }
 function compareRuleValue(actual, expected, operator) {
     if (expected == null)

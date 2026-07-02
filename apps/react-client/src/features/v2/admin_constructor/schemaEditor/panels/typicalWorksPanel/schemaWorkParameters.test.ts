@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { RJSFSchema } from "@rjsf/utils";
-import { buildSchemaWorkParameters } from "./schemaWorkParameters";
+import type { V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
+import {
+	buildSchemaWorkParameters,
+	resolveSchemaParamForTriggerRule,
+} from "./schemaWorkParameters";
 import type { FieldPathHint } from "../../types";
 
 describe("buildSchemaWorkParameters", () => {
@@ -142,5 +146,47 @@ describe("buildSchemaWorkParameters", () => {
 			"Разработка",
 			"Доработка",
 		]);
+	});
+});
+
+describe("resolveSchemaParamForTriggerRule", () => {
+	const schemaParams: V2TypicalWorkParameterDto[] = [
+		{
+			id: "schema:type",
+			code: "type",
+			name: "Тип системы-источника",
+			description: "streamDataSources.sourceSystems[].type",
+			values: [
+				{
+					id: "v1",
+					code: "internal",
+					label: "Внутренний",
+					coefficient: null,
+					sortOrder: 0,
+					validFrom: "2025-01-01",
+					validTo: null,
+				},
+				{
+					id: "v2",
+					code: "external",
+					label: "Внешний",
+					coefficient: null,
+					sortOrder: 1,
+					validFrom: "2025-01-01",
+					validTo: null,
+				},
+			],
+		},
+	];
+
+	it("maps CSV source-type trigger alias to schema `type` field", () => {
+		const param = resolveSchemaParamForTriggerRule(
+			{
+				paramCode: "тип_источника_внешний",
+				paramName: "Тип источника (внешний)",
+			},
+			schemaParams,
+		);
+		expect(param?.code).toBe("type");
 	});
 });

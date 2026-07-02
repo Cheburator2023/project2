@@ -25,6 +25,10 @@ import { TypicalWorkParametersCatalogView } from "@react-client/features/v2/admi
 import {
 	parseTypicalWorkDeleteError,
 } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorkPatchErrors";
+import { resolveEffectiveWorkArchComponentType } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/schemaWorkParameters";
+import {
+	archComponentShortLabel,
+} from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import type { CreateTypicalWorkDialogPayload } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/CreateTypicalWorkDialog";
 import { pathForAdminV2TypicalWork } from "@react-client/routing/common/pathHelpers";
 import { commonRoutes as routes } from "@react-client/routing/common/routes";
@@ -119,7 +123,11 @@ export function AdminV2TypicalWorksPage() {
 							variant="caption"
 							sx={{ color: "text.secondary" }}
 						>
-							{detailHeader.archComponentType}
+							{archComponentShortLabel(
+								resolveEffectiveWorkArchComponentType(
+									detailHeader.archComponentType,
+								),
+							)}
 						</Typography>
 					) : undefined
 				}

@@ -12,7 +12,8 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { usePatchV2TypicalWork } from "@react-client/common/api/queries/v2-works";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { toast } from "@react-client/common/toasts";
-import { WORK_ARCH_COMPONENT_TYPES } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorkPatchErrors";
+import { WORK_ARCH_COMPONENT_TYPES, DEFAULT_WORK_ARCH_COMPONENT_TYPE } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorkPatchErrors";
+import { resolveEffectiveWorkArchComponentType } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/schemaWorkParameters";
 import {
 	assignmentStatusLabel,
 	DEFAULT_WORK_STREAMS,
@@ -48,7 +49,9 @@ export function V2TypicalWorkDetail({
 	patchRef.current = patch;
 	const [isEditing, setIsEditing] = useState(false);
 	const [name, setName] = useState(work.name);
-	const [archComponentType, setArchComponentType] = useState(work.archComponentType);
+	const [archComponentType, setArchComponentType] = useState(
+		work.archComponentType || DEFAULT_WORK_ARCH_COMPONENT_TYPE,
+	);
 
 	const patchStream = useMemo(
 		() => work.streams[0] ?? DEFAULT_WORK_STREAMS[0],
@@ -57,7 +60,9 @@ export function V2TypicalWorkDetail({
 
 	useEffect(() => {
 		setName(work.name);
-		setArchComponentType(work.archComponentType);
+		setArchComponentType(
+			work.archComponentType || DEFAULT_WORK_ARCH_COMPONENT_TYPE,
+		);
 		setIsEditing(false);
 	}, [work.id, work.name, work.archComponentType]);
 
@@ -97,7 +102,9 @@ export function V2TypicalWorkDetail({
 			onStartEdit: () => setIsEditing(true),
 			onCancelEdit: () => {
 				setName(work.name);
-				setArchComponentType(work.archComponentType);
+				setArchComponentType(
+			work.archComponentType || DEFAULT_WORK_ARCH_COMPONENT_TYPE,
+		);
 				setIsEditing(false);
 			},
 			onSave: () => void handleSaveRef.current(),
@@ -158,7 +165,7 @@ export function V2TypicalWorkDetail({
 								{work.name}
 							</Typography>
 							<Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-								{work.archComponentType}
+								{resolveEffectiveWorkArchComponentType(work.archComponentType)}
 							</Typography>
 						</>
 					)}

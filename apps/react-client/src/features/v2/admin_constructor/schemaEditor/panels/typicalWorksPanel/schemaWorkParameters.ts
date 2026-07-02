@@ -3,13 +3,20 @@ import type { V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
 import {
 	V2_ARCH_COMPONENT_LABELS,
 	type V2ArchComponentType,
+	extractControlCode,
+	isControlTypeTriggerParam,
+	isSourceTypeTriggerParam,
 } from "@smart-anketa/api-contract";
 import {
 	isObjectFieldGroup,
 	resolveSchemaNode,
 } from "@react-client/features/v2/admin_constructor/utils/schemaMutators";
 import { pointerSegments } from "@react-client/features/v2/admin_constructor/utils/schemaPaths";
-import { WORK_ARCH_COMPONENT_TYPES } from "./typicalWorkPatchErrors";
+import {
+	DEFAULT_WORK_ARCH_COMPONENT_TYPE,
+	WORK_ARCH_COMPONENT_TYPES,
+	resolveCanonicalWorkArchComponentType,
+} from "./typicalWorkPatchErrors";
 import { archComponentShortLabel } from "./typicalWorksUi";
 import {
 	resolveArchComponentAtPointer,
@@ -33,11 +40,10 @@ const WORK_ARCH_TO_SCHEMA_ARCH: Record<string, V2ArchComponentType> = {
 export function resolveEffectiveWorkArchComponentType(
 	...candidates: Array<string | null | undefined>
 ): string {
-	for (const candidate of candidates) {
-		const trimmed = candidate?.trim();
-		if (trimmed) return trimmed;
-	}
-	return "";
+	return (
+		resolveCanonicalWorkArchComponentType(...candidates) ||
+		DEFAULT_WORK_ARCH_COMPONENT_TYPE
+	);
 }
 
 export function schemaWorkParameterEmptyPickerMessage(
@@ -242,4 +248,46 @@ export function buildSchemaWorkParameters({
 
 	params.sort((a, b) => a.name.localeCompare(b.name, "ru"));
 	return params;
+}
+
+export type TriggerRuleLike = {
+	paramCode: string;
+	paramName?: string | null;
+};
+
+/** CSV/seed-триггер → поле схемы анкеты (алиас «Тип источника (внешний)» → `type`). */
+export function resolveSchemaParamForTriggerRule(
+	rule: TriggerRuleLike,
+	paramOptions: V2TypicalWorkParameterDto[],
+): V2TypicalWorkParameterDto | undefined {
+	const direct =
+		paramOptions.find((param) => param.code === rule.paramCode) ??
+		(rule.paramName
+			? paramOptions.find((param) => param.name === rule.paramName)
+			: undefined);
+	if (direct) return direct;
+
+	const paramLabel = rule.paramName ?? rule.paramCode;
+
+	if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName)) {
+		return (
+			paramOptions.find((param) => param.code === "type") ??
+			paramOptions.find((param) => /тип.*источник/i.test(param.name))
+		);
+	}
+
+	if (isControlTypeTriggerParam(rule.paramCode, rule.paramName)) {
+		const controlCode = extractControlCode(paramLabel);
+		if (controlCode) {
+			const byCode = paramOptions.find(
+				(param) =>
+					param.name.toUpperCase().includes(controlCode) ||
+					param.description?.toUpperCase().includes(controlCode),
+			);
+			if (byCode) return byCode;
+		}
+		return paramOptions.find((param) => /вид контроля/i.test(param.name));
+	}
+
+	return undefined;
 }
