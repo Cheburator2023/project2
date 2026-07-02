@@ -6,14 +6,20 @@ import type {
 	V2WorkTriggerStatus,
 } from "@smart-anketa/api-contract";
 import {
-	computeWorkTriggerStatus,
 	isWorkCoefficientValueAvailable,
 	isWorkTriggerGroupInvalid,
 	typicalWorkRulesMatchSource,
+	catalogValueMatchesTriggerRule,
+	isPresenceOnlyTriggerRule,
+	isSourceTypeTriggerParam,
+	isControlTypeTriggerParam,
+	isTypicalWorkParameterValueActiveOnDate,
+	resolveTriggerStatusCatalogParam,
 	type WorkTriggerStatusCatalogParam,
 } from "@smart-anketa/api-contract";
 import {
 	resolveSchemaParamForTriggerRule,
+	triggerRuleGroupKey,
 	type TriggerRuleLike,
 } from "./schemaWorkParameters";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
@@ -111,6 +117,256 @@ export function methodologyCatalogFromParameters(
 	}));
 }
 
+export type TriggerValidationIssue = {
+	paramCode: string;
+	paramName: string;
+	message: string;
+};
+
+const OPERATOR_HUMAN: Record<string, string> = {
+	"=": "=",
+	"!=": "≠",
+	">=": "≥",
+	"<=": "≤",
+	">": ">",
+	"<": "<",
+	in: "∈",
+	not_in: "∉",
+};
+
+function groupRulesByTriggerKey<
+	T extends TriggerRuleLike,
+>(rules: T[], paramOptions: V2TypicalWorkParameterDto[]): Map<string, T[]> {
+	const map = new Map<string, T[]>();
+	for (const rule of rules) {
+		const key = triggerRuleGroupKey(rule, paramOptions);
+		const list = map.get(key) ?? [];
+		list.push(rule);
+		map.set(key, list);
+	}
+	return map;
+}
+
+function collectValuesForGroup(
+	paramRules: Array<{
+		valueCode: string | null;
+		valueLabel: string | null;
+		values?: Array<{ code: string; label: string | null }>;
+	}>,
+) {
+	const head = paramRules[0];
+	if (head?.values?.length) return head.values;
+	return paramRules
+		.filter((rule) => rule.valueCode || rule.valueLabel)
+		.map((rule) => ({
+			code: rule.valueCode ?? "",
+			label: rule.valueLabel,
+		}));
+}
+
+export function collectTriggerValidationIssues(
+	rules: Array<{
+		paramCode: string;
+		paramName?: string | null;
+		operator?: string;
+		valueCode: string | null;
+		valueLabel: string | null;
+		values?: Array<{ code: string; label: string | null }>;
+	}>,
+	schemaParams: V2TypicalWorkParameterDto[] = [],
+	methodologyParams: V2TypicalWorkParameterDto[] = [],
+	atDate?: string,
+): TriggerValidationIssue[] {
+	const issues: TriggerValidationIssue[] = [];
+	const grouped = groupRulesByTriggerKey(rules, schemaParams);
+
+	for (const [groupKey, paramRules] of grouped) {
+		const ruleSeed = {
+			paramCode: paramRules[0]?.paramCode ?? groupKey,
+			paramName: paramRules[0]?.paramName ?? null,
+		};
+		const schemaParam =
+			schemaParams.find((param) => param.code === groupKey) ??
+			resolveSchemaParamForTriggerRule(ruleSeed, schemaParams);
+		const displayName =
+			schemaParam?.name ??
+			(isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName)
+				? "Тип источника данных"
+				: (paramRules[0]?.paramName ?? groupKey));
+		const catalog = catalogForTriggerRuleGroup(
+			ruleSeed,
+			schemaParams,
+			methodologyParams,
+		);
+		const knownPseudo =
+			isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName) ||
+			isControlTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName);
+
+		if (
+			!isWorkTriggerGroupInvalid(groupKey, paramRules, catalog, atDate)
+		) {
+			continue;
+		}
+
+		if (!schemaParam && !knownPseudo) {
+			const inCatalog = resolveTriggerStatusCatalogParam(ruleSeed, catalog);
+			if (!inCatalog) {
+				issues.push({
+					paramCode: groupKey,
+					paramName: displayName,
+					message: `Параметр «${displayName}» (код ${groupKey}) не найден в схеме шаблона и не сопоставлен со справочником`,
+				});
+				continue;
+			}
+		}
+
+		const operator = paramRules[0]?.operator ?? "=";
+		const catalogParam = resolveTriggerStatusCatalogParam(ruleSeed, catalog);
+
+		if (operator === "in" || operator === "not_in") {
+			const values = collectValuesForGroup(paramRules);
+			if (values.length === 0) {
+				issues.push({
+					paramCode: groupKey,
+					paramName: displayName,
+					message: `«${displayName}»: не выбрано ни одного значения (оператор ${OPERATOR_HUMAN[operator] ?? operator})`,
+				});
+				continue;
+			}
+			if (!catalogParam) {
+				issues.push({
+					paramCode: groupKey,
+					paramName: displayName,
+					message: `«${displayName}»: параметр отсутствует в каталоге значений`,
+				});
+				continue;
+			}
+			for (const value of values) {
+				const label = value.label ?? value.code;
+				const matches = catalogParam.values.some(
+					(catalogValue) =>
+						catalogValueMatchesTriggerRule(catalogValue, {
+							...ruleSeed,
+							valueCode: value.code,
+							valueLabel: value.label,
+						}) &&
+						(!atDate ||
+							isTypicalWorkParameterValueActiveOnDate(catalogValue, atDate)),
+				);
+				if (!matches) {
+					issues.push({
+						paramCode: groupKey,
+						paramName: displayName,
+						message: `«${displayName}»: значение «${label}» отсутствует в схеме или недоступно на текущую дату`,
+					});
+				}
+			}
+			continue;
+		}
+
+		if (isPresenceOnlyTriggerRule(paramRules[0] ?? { valueCode: null, valueLabel: null })) {
+			issues.push({
+				paramCode: groupKey,
+				paramName: displayName,
+				message: `«${displayName}»: условие «поле заполнено», но параметр не найден в каталоге`,
+			});
+			continue;
+		}
+
+		for (const rule of paramRules) {
+			const label = rule.valueLabel ?? rule.valueCode ?? "—";
+			if (!rule.valueCode && !rule.valueLabel) {
+				issues.push({
+					paramCode: groupKey,
+					paramName: displayName,
+					message: `«${displayName}»: не задано значение для оператора ${OPERATOR_HUMAN[operator] ?? operator}`,
+				});
+				continue;
+			}
+			if (!catalogParam) {
+				issues.push({
+					paramCode: groupKey,
+					paramName: displayName,
+					message: `«${displayName}»: параметр отсутствует в каталоге значений`,
+				});
+				continue;
+			}
+			if (
+				catalogParam.values.length === 0 &&
+				(rule.operator === ">=" ||
+					rule.operator === "<=" ||
+					rule.operator === ">" ||
+					rule.operator === "<" ||
+					rule.operator === "=" ||
+					rule.operator === "!=")
+			) {
+				if (Number.isNaN(Number(label))) {
+					issues.push({
+						paramCode: groupKey,
+						paramName: displayName,
+						message: `«${displayName}»: для числового поля нужен порог (число), указано «${label}»`,
+					});
+				}
+				continue;
+			}
+			const matches = catalogParam.values.some(
+				(catalogValue) =>
+					catalogValueMatchesTriggerRule(catalogValue, rule) &&
+					(!atDate ||
+						isTypicalWorkParameterValueActiveOnDate(catalogValue, atDate)),
+			);
+			if (!matches) {
+				issues.push({
+					paramCode: groupKey,
+					paramName: displayName,
+					message: `«${displayName}»: значение «${label}» отсутствует в схеме или недоступно на текущую дату`,
+				});
+			}
+		}
+	}
+
+	return issues;
+}
+
+export function analyzeTriggerRules(
+	rules: Parameters<typeof computeTriggerStatus>[0],
+	schemaParams?: V2TypicalWorkParameterDto[],
+	methodologyParams?: V2TypicalWorkParameterDto[],
+	draftSource?: Record<string, unknown>,
+	atDate?: string,
+): { status: V2WorkTriggerStatus; issues: TriggerValidationIssue[] } {
+	if (rules.length === 0) {
+		return { status: "no_triggers", issues: [] };
+	}
+
+	const issues = collectTriggerValidationIssues(
+		rules,
+		schemaParams,
+		methodologyParams,
+		atDate,
+	);
+	if (issues.length > 0) {
+		return { status: "invalid", issues };
+	}
+
+	if (draftSource) {
+		const match = typicalWorkRulesMatchSource(
+			rules.map((rule) => ({
+				paramCode: rule.paramCode,
+				paramName: rule.paramName ?? null,
+				operator: rule.operator ?? "=",
+				valueCode: rule.valueCode,
+				valueLabel: rule.valueLabel,
+				values: rule.values,
+			})),
+			draftSource,
+		);
+		return { status: match ? "appears" : "hidden", issues: [] };
+	}
+
+	return { status: "appears", issues: [] };
+}
+
 /** Каталог для проверки триггера: поле схемы → его values; seed/CSV → методологический справочник. */
 export function catalogForTriggerRuleGroup(
 	rule: TriggerRuleLike,
@@ -140,42 +396,15 @@ export function computeTriggerStatus(
 	schemaParams?: V2TypicalWorkParameterDto[],
 	methodologyParams?: V2TypicalWorkParameterDto[],
 	draftSource?: Record<string, unknown>,
+	atDate?: string,
 ): V2WorkTriggerStatus {
-	if (rules.length === 0) return "no_triggers";
-
-	const schemaList = schemaParams ?? [];
-	const methodologyList = methodologyParams ?? [];
-
-	for (const rule of rules) {
-		const catalog = catalogForTriggerRuleGroup(
-			rule,
-			schemaList,
-			methodologyList,
-		);
-		if (
-			isWorkTriggerGroupInvalid(rule.paramCode, [rule], catalog)
-		) {
-			return "invalid";
-		}
-	}
-
-	if (draftSource) {
-		return typicalWorkRulesMatchSource(
-			rules.map((rule) => ({
-				paramCode: rule.paramCode,
-				paramName: rule.paramName ?? null,
-				operator: rule.operator ?? "=",
-				valueCode: rule.valueCode,
-				valueLabel: rule.valueLabel,
-				values: rule.values,
-			})),
-			draftSource,
-		)
-			? "appears"
-			: "hidden";
-	}
-
-	return computeWorkTriggerStatus(rules, undefined);
+	return analyzeTriggerRules(
+		rules,
+		schemaParams,
+		methodologyParams,
+		draftSource,
+		atDate,
+	).status;
 }
 
 export { isWorkCoefficientValueAvailable, isWorkTriggerGroupInvalid };

@@ -22,7 +22,7 @@ import {
 import { useSchemaEditor } from "../SchemaEditorContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "../components/PanelChrome";
-import { normalizeJsonPointer } from "../../utils/schemaPaths";
+import { normalizeJsonPointer, pointerSegments } from "../../utils/schemaPaths";
 import {
 	buildDictionaryMultiSchemaPatch,
 	clearDictionaryFieldBindingAtPointer,
@@ -35,12 +35,16 @@ import {
 import {
 	isV2AnketaHiddenUiNode,
 	readV2AnketaSectionUiOptions,
+	resolveV2AnketaStreamBlockOptions,
 	V2_ANKETA_MAIN_SECTION_IDS,
 	V2_ANKETA_MAIN_SECTION_TITLES,
 	V2_ANKETA_SECTION_ROLE_VALUES,
 	V2_ARCH_COMPONENT_LABELS,
+	V2_EXECUTOR_STREAM_LABELS,
+	V2_EXECUTOR_STREAMS_DICTIONARY_CODE,
 	type V2AnketaMainSectionId,
 	type V2AnketaSectionRole,
+	type V2ExecutorStreamLabel,
 } from "@smart-anketa/api-contract";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { ReactNode } from "react";
@@ -529,6 +533,25 @@ export function SchemaPropertiesPanel() {
 
 	const showObjectLayout =
 		fieldKind === "object" || fieldKind === "arch-object";
+	const isRootLevelBlock = useMemo(() => {
+		if (!selectedPointer) return false;
+		return pointerSegments(selectedPointer).length === 1;
+	}, [selectedPointer]);
+	const rootBlockKey = useMemo(() => {
+		if (!selectedPointer) return "";
+		return pointerSegments(selectedPointer)[0] ?? "";
+	}, [selectedPointer]);
+	const streamBlockOptions = useMemo(
+		() => resolveV2AnketaStreamBlockOptions(leafUiBranch, rootBlockKey),
+		[leafUiBranch, rootBlockKey],
+	);
+	const showStreamBlockOptions =
+		showObjectLayout &&
+		isRootLevelBlock &&
+		!sectionUiOptions.system &&
+		!["generalInfo", "detailInfo", "summary", "meta", "groupActivation", "workflow"].includes(
+			rootBlockKey,
+		);
 	const showLayoutOptions = fieldKind === "layout";
 	const showArrayOptions = fieldKind === "array" || fieldKind === "arch-array";
 	const showPlaceholderField =
@@ -708,6 +731,64 @@ export function SchemaPropertiesPanel() {
 									emptyHint="Перетащите поля внутрь блока разметки на холсте."
 								/>
 							</Box>
+						</PropertiesSection>
+					) : null}
+
+					{showStreamBlockOptions ? (
+						<PropertiesSection title="Стримовый блок">
+							<FormControlLabel
+								control={
+									<Checkbox
+										checked={streamBlockOptions.streamBlock}
+										onChange={(e) => {
+											if (e.target.checked) {
+												patchSectionUi({
+													streamBlock: true,
+													streamExecutor:
+														streamBlockOptions.streamExecutor ??
+														sectionUiOptions.streamExecutor ??
+														V2_EXECUTOR_STREAM_LABELS[0],
+													sectionRole:
+														sectionUiOptions.sectionRole ?? "main",
+												});
+												return;
+											}
+											patchSectionUi({
+												streamBlock: false,
+												streamExecutor: undefined,
+											});
+										}}
+									/>
+								}
+								label="Стримовый блок (платформенный / поддерживающий стрим)"
+							/>
+							{streamBlockOptions.streamBlock ? (
+								<TextField
+									select
+									fullWidth
+									size="small"
+									label="Стрим-исполнитель"
+									value={
+										sectionUiOptions.streamExecutor ??
+										streamBlockOptions.streamExecutor ??
+										""
+									}
+									onChange={(e) =>
+										patchSectionUi({
+											streamBlock: true,
+											streamExecutor: (e.target.value ||
+												undefined) as V2ExecutorStreamLabel,
+										})
+									}
+									helperText={`Справочник ${V2_EXECUTOR_STREAMS_DICTIONARY_CODE}. Используется в логике типовых работ и ролевке секций.`}
+								>
+									{V2_EXECUTOR_STREAM_LABELS.map((stream) => (
+										<MenuItem key={stream} value={stream}>
+											{stream}
+										</MenuItem>
+									))}
+								</TextField>
+							) : null}
 						</PropertiesSection>
 					) : null}
 

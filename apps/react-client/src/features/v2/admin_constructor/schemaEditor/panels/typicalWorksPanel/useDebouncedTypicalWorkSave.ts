@@ -150,41 +150,54 @@ export function cardToPatchDto(
 	card: V2TypicalWorkCardDto,
 	templateVersionId: string | null,
 ): PatchV2TypicalWorkRequestDto {
+	const stream = card.streamExecutor.trim();
 	return {
-		streamExecutor: card.streamExecutor,
+		streamExecutor: stream,
 		templateVersionId: templateVersionId ?? undefined,
 		name: card.name,
 		archComponentType: card.archComponentType,
-		norms: card.norms.map((norm) => ({
-			id: norm.id,
-			normValue: norm.normValue,
-			validFrom: norm.validFrom,
-			validTo: norm.validTo,
-		})),
-		rules: card.rules.map((rule) => ({
-			id: rule.id,
-			paramCode: rule.paramCode,
-			paramName: rule.paramName,
-			operator: rule.operator,
-			valueCode: rule.valueCode,
-			valueLabel: rule.valueLabel,
-			values: rule.values,
-			sortOrder: rule.sortOrder,
-		})),
-		laborParams: card.laborParams.map((group) => ({
-			paramCode: group.paramCode,
-			paramName: group.paramName,
-			kind: group.kind ?? "by_value",
-			coefficients: group.coefficients.map((row) => ({
-				id: row.id,
+		norms: card.norms
+			.filter((norm) => norm.streamExecutor === stream)
+			.map((norm) => ({
+				id: norm.id,
+				normValue: norm.normValue,
+				validFrom: norm.validFrom,
+				validTo: norm.validTo,
+			})),
+		rules: card.rules
+			.filter((rule) => rule.streamExecutor === stream)
+			.map((rule) => ({
+				id: rule.id,
+				paramCode: rule.paramCode,
+				paramName: rule.paramName,
+				operator: rule.operator,
+				valueCode: rule.valueCode,
+				valueLabel: rule.valueLabel,
+				values: rule.values,
+				sortOrder: rule.sortOrder,
+			})),
+		laborParams: card.laborParams
+			.filter(
+				(group) =>
+					group.coefficients.length === 0 ||
+					group.coefficients.every((row) => row.streamExecutor === stream),
+			)
+			.map((group) => ({
 				paramCode: group.paramCode,
 				paramName: group.paramName,
-				valueCode: row.valueCode,
-				valueLabel: row.valueLabel,
-				coefficient: row.coefficient,
+				kind: group.kind ?? "by_value",
+				coefficients: group.coefficients
+					.filter((row) => row.streamExecutor === stream)
+					.map((row) => ({
+						id: row.id,
+						paramCode: group.paramCode,
+						paramName: group.paramName,
+						valueCode: row.valueCode,
+						valueLabel: row.valueLabel,
+						coefficient: row.coefficient,
+					})),
+				anyOf: group.anyOf ?? null,
 			})),
-			anyOf: group.anyOf ?? null,
-		})),
 		formula: card.formula,
 		formulaTerms: card.formulaTerms,
 		rounding: card.rounding,

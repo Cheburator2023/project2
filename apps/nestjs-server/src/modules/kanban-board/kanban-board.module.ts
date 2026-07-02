@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { KanbanBoardTaskEntity } from "./entities/kanban-board-task.entity";
+import { KanbanBoardTaskImageEntity } from "./entities/kanban-board-task-image.entity";
 import { KanbanBoardProjectEntity } from "./entities/kanban-board-project.entity";
 import { KanbanBoardEntity } from "./entities/kanban-board.entity";
 import { KanbanBoardColumnEntity } from "./entities/kanban-board-column.entity";
@@ -13,6 +14,8 @@ import { KanbanBoardSettingsEntity } from "./entities/kanban-board-settings.enti
 import { KanbanBoardController } from "./controllers/kanban-board.controller";
 import { KanbanBoardService } from "./services/kanban-board.service";
 import { KanbanBoardRegistryService } from "./services/kanban-board-registry.service";
+import { KanbanBoardTaskImageService } from "./services/kanban-board-task-image.service";
+import { KanbanBoardTaskImageCleanupService } from "./services/kanban-board-task-image-cleanup.service";
 
 @Module({
 	imports: [
@@ -26,11 +29,21 @@ import { KanbanBoardRegistryService } from "./services/kanban-board-registry.ser
 			KanbanBoardCustomerEntity,
 			KanbanBoardStreamEntity,
 			KanbanBoardTaskEntity,
+			KanbanBoardTaskImageEntity,
 			KanbanBoardSettingsEntity,
 		]),
 	],
 	controllers: [KanbanBoardController],
-	providers: [KanbanBoardService, KanbanBoardRegistryService],
-	exports: [KanbanBoardService, KanbanBoardRegistryService],
+	providers: [
+		KanbanBoardService,
+		KanbanBoardRegistryService,
+		KanbanBoardTaskImageService,
+		KanbanBoardTaskImageCleanupService,
+	],
+	exports: [
+		KanbanBoardService,
+		KanbanBoardRegistryService,
+		KanbanBoardTaskImageService,
+	],
 })
 export class KanbanBoardModule {}

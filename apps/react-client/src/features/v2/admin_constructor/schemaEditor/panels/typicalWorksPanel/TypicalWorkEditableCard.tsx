@@ -56,6 +56,7 @@ import { TypicalWorkTriggersSection } from "./TypicalWorkTriggersSection";
 import { WorkFormulaEditor } from "./WorkFormulaEditor";
 import { ensureFormulaTerms } from "./WorkTermsFormulaEditor";
 import {
+	analyzeTriggerRules,
 	computeTriggerStatus,
 	DEFAULT_WORK_ARCH_COMPONENT_TYPE,
 	isWorkCoefficientValueAvailable,
@@ -279,19 +280,30 @@ export function TypicalWorkEditableCard({
 		[laborParamOptions],
 	);
 
+	const triggerAnalysis = useMemo(
+		() =>
+			analyzeTriggerRules(
+				draft?.rules ?? [],
+				paramOptions,
+				methodologyCatalog,
+			),
+		[draft?.rules, methodologyCatalog, paramOptions],
+	);
+
 	const commitDraft = (next: V2TypicalWorkCardDto) => {
 		const formula = next.formula;
 		const formulaTerms = syncTermsFromTokenFormula(formula);
+		const nextTrigger = analyzeTriggerRules(
+			next.rules,
+			paramOptions,
+			methodologyCatalog,
+		);
 		const withDerived = {
 			...next,
 			formula,
 			formulaTerms,
 			formulaBadge: computeFormulaBadgeFromTokens(formula.tokens),
-			triggerStatus: computeTriggerStatus(
-				next.rules,
-				paramOptions,
-				methodologyCatalog,
-			),
+			triggerStatus: nextTrigger.status,
 		};
 		setDraft(withDerived);
 		scheduleSave(cardToPatchDto(withDerived, templateVersionId));
@@ -633,7 +645,7 @@ export function TypicalWorkEditableCard({
 								fontWeight: 600,
 							}}
 						>
-							{triggerStatusLabel(draft.triggerStatus)}
+							{triggerStatusLabel(triggerAnalysis.status)}
 						</Box>
 						<Box
 							component="span"
@@ -867,7 +879,8 @@ export function TypicalWorkEditableCard({
 
 					<TypicalWorkTriggersSection
 						rules={draft.rules}
-						triggerStatus={draft.triggerStatus}
+						triggerStatus={triggerAnalysis.status}
+						validationIssues={triggerAnalysis.issues}
 						schemaFieldCount={fieldPathHints.length}
 						paramOptions={paramOptions}
 						methodologyCatalog={methodologyCatalog}

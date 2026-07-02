@@ -68,7 +68,8 @@ function buildFieldTreeLabel(
 	const title = typeof node?.title === "string" ? node.title : item.label;
 	const uiBranch = readUiSchemaBranchAtPointer(uiSchema, item.id);
 	const canvasKind = resolveV2AnketaCanvasUiKind(uiBranch);
-	const categorySuffix = resolveCanvasCategoryChips(node, uiBranch)
+	const rootKey = segs.length === 1 ? segs[0] : undefined;
+	const categorySuffix = resolveCanvasCategoryChips(node, uiBranch, rootKey)
 		.map((chip) => chip.label)
 		.join(" · ");
 	const kindSuffix =

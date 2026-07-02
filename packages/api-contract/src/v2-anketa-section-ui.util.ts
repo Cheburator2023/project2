@@ -1,4 +1,9 @@
 import {
+	inferLegacyStreamExecutorForBlockKey,
+	isV2ExecutorStreamLabel,
+	type V2ExecutorStreamLabel,
+} from "./v2-executor-streams.util";
+import {
 	V2_ANKETA_MAIN_SECTION_IDS,
 	type V2AnketaMainSectionId,
 } from "./v2-anketa-workflow.types";
@@ -79,6 +84,10 @@ export type V2AnketaSectionUiOptions = {
 	groupActive?: boolean;
 	/** Блок разметки: не показывать заголовок (для layoutGroup по умолчанию true). */
 	hideTitle?: boolean;
+	/** Корневой блок платформенного/поддерживающего стрима. */
+	streamBlock?: boolean;
+	/** Стрим-исполнитель из справочника (ДАДМ, ПиРМ, …). */
+	streamExecutor?: V2ExecutorStreamLabel;
 };
 
 const STREAM_SECTION_IDS = V2_ANKETA_MAIN_SECTION_IDS.filter((id) =>
@@ -133,7 +142,53 @@ export function readV2AnketaSectionUiOptions(
 				: opts.hideTitle === true
 					? true
 					: undefined,
+		streamBlock:
+			opts.streamBlock === true
+				? true
+				: opts.streamBlock === false
+					? false
+					: undefined,
+		streamExecutor: (() => {
+			if (typeof opts.streamExecutor !== "string") return undefined;
+			const trimmed = opts.streamExecutor.trim();
+			return isV2ExecutorStreamLabel(trimmed) ? trimmed : undefined;
+		})(),
 	};
+}
+
+export type V2AnketaStreamBlockOptions = {
+	streamBlock: boolean;
+	streamExecutor: V2ExecutorStreamLabel | null;
+};
+
+/** Явная или legacy-привязка корневого блока к стриму-исполнителю. */
+export function resolveV2AnketaStreamBlockOptions(
+	uiNode: unknown,
+	blockKey?: string,
+): V2AnketaStreamBlockOptions {
+	const opts = readV2AnketaSectionUiOptions(uiNode);
+	if (opts.streamBlock === false) {
+		return { streamBlock: false, streamExecutor: null };
+	}
+	if (opts.streamBlock === true) {
+		return {
+			streamBlock: true,
+			streamExecutor: opts.streamExecutor ?? null,
+		};
+	}
+	const legacy =
+		blockKey != null ? inferLegacyStreamExecutorForBlockKey(blockKey) : null;
+	if (legacy) {
+		return { streamBlock: true, streamExecutor: legacy };
+	}
+	return { streamBlock: false, streamExecutor: null };
+}
+
+export function isV2AnketaStreamBlockRoot(
+	uiNode: unknown,
+	blockKey?: string,
+): boolean {
+	return resolveV2AnketaStreamBlockOptions(uiNode, blockKey).streamBlock;
 }
 
 /** Тип арх. компонента секции из ui:options, либо null. */
@@ -194,11 +249,13 @@ export function resolveV2AnketaSectionRole(
 
 	const root = path[0] ?? "";
 	if (path.length === 1 && isV2AnketaMainSectionId(root)) return "main";
-	if (
-		path.length === 2 &&
-		isV2AnketaStreamSectionId(root)
-	) {
-		return "subsection";
+	if (path.length === 2) {
+		if (
+			isV2AnketaStreamSectionId(root) ||
+			inferLegacyStreamExecutorForBlockKey(root)
+		) {
+			return "subsection";
+		}
 	}
 	if (path.length === 1) return "panel";
 	return "flat";

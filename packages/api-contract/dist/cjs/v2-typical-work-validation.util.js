@@ -262,6 +262,20 @@ function isRuleInputInvalid(rule, catalog, atDate) {
     const param = (0, v2_works_catalog_match_util_1.resolveTriggerStatusCatalogParam)(rule, catalog);
     if (!param)
         return true;
+    const threshold = rule.valueLabel ?? rule.valueCode;
+    if (param.values.length === 0 &&
+        threshold != null &&
+        String(threshold).trim() !== "" &&
+        (operator === "=" ||
+            operator === "!=" ||
+            operator === ">=" ||
+            operator === "<=" ||
+            operator === ">" ||
+            operator === "<")) {
+        if (operator === "=" || operator === "!=")
+            return false;
+        return Number.isNaN(Number(threshold));
+    }
     return !param.values.some((value) => (0, v2_works_catalog_match_util_1.catalogValueMatchesTriggerRule)(value, rule) &&
         (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
 }
@@ -270,9 +284,17 @@ function computeWorkTriggerStatus(rules, catalog, atDate, draftSource) {
     if (rules.length === 0)
         return "no_triggers";
     if (catalog?.length) {
+        const grouped = new Map();
         for (const rule of rules) {
-            if (isRuleInputInvalid(rule, catalog, atDate))
+            const key = (0, v2_works_catalog_match_util_1.triggerRuleCatalogGroupKey)(rule, catalog);
+            const list = grouped.get(key) ?? [];
+            list.push(rule);
+            grouped.set(key, list);
+        }
+        for (const [groupKey, groupRules] of grouped) {
+            if (isWorkTriggerGroupInvalid(groupKey, groupRules, catalog, atDate)) {
                 return "invalid";
+            }
         }
     }
     else if (rules.some((rule) => !rule.paramCode?.trim())) {

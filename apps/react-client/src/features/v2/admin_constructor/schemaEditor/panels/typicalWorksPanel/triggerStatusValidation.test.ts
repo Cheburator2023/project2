@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
 import {
 	catalogForTriggerRuleGroup,
+	analyzeTriggerRules,
 	computeTriggerStatus,
 } from "./typicalWorkPatchErrors";
 
@@ -70,7 +71,7 @@ describe("trigger status validation for schema-picked params", () => {
 
 	it("marks boolean schema trigger as appears when value is valid", () => {
 		expect(
-			computeTriggerStatus(
+			analyzeTriggerRules(
 				[
 					{
 						paramCode: "field_8pFvwc-v",
@@ -82,6 +83,82 @@ describe("trigger status validation for schema-picked params", () => {
 				[schemaParam],
 				methodologyCatalog,
 			),
-		).toBe("appears");
+		).toEqual({ status: "appears", issues: [] });
+	});
+
+	it("reports explicit issue when backend-style methodology catalog rejects schema param", () => {
+		const result = analyzeTriggerRules(
+			[
+				{
+					paramCode: "field_8pFvwc-v",
+					paramName: "Наличие реплики в DAPP",
+					valueCode: "false",
+					valueLabel: "Нет",
+				},
+			],
+			[],
+			methodologyCatalog,
+		);
+		expect(result.status).toBe("invalid");
+		expect(result.issues[0]?.message).toContain("Наличие реплики в DAPP");
+	});
+
+	it("validates «Тип системы-источника» against schema type field", () => {
+		const sourceTypeParam: V2TypicalWorkParameterDto = {
+			id: "schema:type",
+			code: "type",
+			name: "Тип системы-источника",
+			description: null,
+			values: [
+				{
+					id: "v1",
+					code: "internal",
+					label: "Внутренний",
+					coefficient: null,
+					sortOrder: 0,
+					validFrom: "2025-01-01",
+					validTo: null,
+				},
+				{
+					id: "v2",
+					code: "external",
+					label: "Внешний",
+					coefficient: null,
+					sortOrder: 1,
+					validFrom: "2025-01-01",
+					validTo: null,
+				},
+			],
+		};
+
+		expect(
+			analyzeTriggerRules(
+				[
+					{
+						paramCode: "type",
+						paramName: "Тип системы-источника",
+						valueCode: "external",
+						valueLabel: "Внешний",
+					},
+				],
+				[sourceTypeParam],
+				methodologyCatalog,
+			),
+		).toEqual({ status: "appears", issues: [] });
+
+		expect(
+			analyzeTriggerRules(
+				[
+					{
+						paramCode: "тип_системы_источника",
+						paramName: "Тип системы-источника",
+						valueCode: "external",
+						valueLabel: "Внешний",
+					},
+				],
+				[sourceTypeParam],
+				methodologyCatalog,
+			),
+		).toEqual({ status: "appears", issues: [] });
 	});
 });

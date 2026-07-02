@@ -113,6 +113,26 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
             paramName: "Вид контроля: КД",
         }, catalog)?.code).toBe("вид_контроля");
     });
+    (0, vitest_1.it)("resolves schema `type` catalog for «Тип системы-источника» trigger", () => {
+        const schemaCatalog = [
+            {
+                code: "type",
+                values: [
+                    { code: "internal", label: "Внутренний" },
+                    { code: "external", label: "Внешний" },
+                ],
+            },
+        ];
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.isSourceTypeTriggerParam)("тип_системы_источника", "Тип системы-источника")).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveTriggerStatusCatalogParam)({
+            paramCode: "тип_системы_источника",
+            paramName: "Тип системы-источника",
+        }, schemaCatalog)?.code).toBe("type");
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.triggerRuleCatalogGroupKey)({
+            paramCode: "тип_системы_источника",
+            paramName: "Тип системы-источника",
+        }, schemaCatalog)).toBe("type");
+    });
     (0, vitest_1.it)("matches control catalog labels by short code", () => {
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.catalogValueMatchesTriggerRule)({ code: "кд", label: "КД — Качество модельных данных" }, {
             paramCode: "вид_контроля_кд",

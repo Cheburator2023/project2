@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.V2_ANKETA_STREAM_SECTION_IDS = exports.V2_ARCH_COMPONENT_LABELS = exports.V2_ARCH_COMPONENT_TYPES = exports.V2_ANKETA_SECTION_ROLE_VALUES = void 0;
 exports.isV2ArchComponentType = isV2ArchComponentType;
 exports.readV2AnketaSectionUiOptions = readV2AnketaSectionUiOptions;
+exports.resolveV2AnketaStreamBlockOptions = resolveV2AnketaStreamBlockOptions;
+exports.isV2AnketaStreamBlockRoot = isV2AnketaStreamBlockRoot;
 exports.resolveV2AnketaArchComponent = resolveV2AnketaArchComponent;
 exports.isV2AnketaMainSectionId = isV2AnketaMainSectionId;
 exports.isV2AnketaStreamSectionId = isV2AnketaStreamSectionId;
@@ -10,6 +12,7 @@ exports.resolveV2AnketaSectionRole = resolveV2AnketaSectionRole;
 exports.resolveV2AnketaDefaultExpanded = resolveV2AnketaDefaultExpanded;
 exports.resolveV2AnketaWorkflowSectionId = resolveV2AnketaWorkflowSectionId;
 exports.resolveV2AnketaSectionTitleVariant = resolveV2AnketaSectionTitleVariant;
+const v2_executor_streams_util_1 = require("./v2-executor-streams.util");
 const v2_anketa_workflow_types_1 = require("./v2-anketa-workflow.types");
 exports.V2_ANKETA_SECTION_ROLE_VALUES = [
     "main",
@@ -92,7 +95,39 @@ function readV2AnketaSectionUiOptions(uiNode) {
             : opts.hideTitle === true
                 ? true
                 : undefined,
+        streamBlock: opts.streamBlock === true
+            ? true
+            : opts.streamBlock === false
+                ? false
+                : undefined,
+        streamExecutor: (() => {
+            if (typeof opts.streamExecutor !== "string")
+                return undefined;
+            const trimmed = opts.streamExecutor.trim();
+            return (0, v2_executor_streams_util_1.isV2ExecutorStreamLabel)(trimmed) ? trimmed : undefined;
+        })(),
     };
+}
+/** Явная или legacy-привязка корневого блока к стриму-исполнителю. */
+function resolveV2AnketaStreamBlockOptions(uiNode, blockKey) {
+    const opts = readV2AnketaSectionUiOptions(uiNode);
+    if (opts.streamBlock === false) {
+        return { streamBlock: false, streamExecutor: null };
+    }
+    if (opts.streamBlock === true) {
+        return {
+            streamBlock: true,
+            streamExecutor: opts.streamExecutor ?? null,
+        };
+    }
+    const legacy = blockKey != null ? (0, v2_executor_streams_util_1.inferLegacyStreamExecutorForBlockKey)(blockKey) : null;
+    if (legacy) {
+        return { streamBlock: true, streamExecutor: legacy };
+    }
+    return { streamBlock: false, streamExecutor: null };
+}
+function isV2AnketaStreamBlockRoot(uiNode, blockKey) {
+    return resolveV2AnketaStreamBlockOptions(uiNode, blockKey).streamBlock;
 }
 /** Тип арх. компонента секции из ui:options, либо null. */
 function resolveV2AnketaArchComponent(uiNode) {
@@ -129,9 +164,11 @@ function resolveV2AnketaSectionRole(uiNode, path) {
     const root = path[0] ?? "";
     if (path.length === 1 && isV2AnketaMainSectionId(root))
         return "main";
-    if (path.length === 2 &&
-        isV2AnketaStreamSectionId(root)) {
-        return "subsection";
+    if (path.length === 2) {
+        if (isV2AnketaStreamSectionId(root) ||
+            (0, v2_executor_streams_util_1.inferLegacyStreamExecutorForBlockKey)(root)) {
+            return "subsection";
+        }
     }
     if (path.length === 1)
         return "panel";

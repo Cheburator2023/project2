@@ -41,6 +41,7 @@ import {
 	useKanbanBoardSprints,
 	useKanbanBoardStreams,
 	useKanbanBoardTaskByRef,
+	useKanbanBoardTaskImages,
 	useKanbanBoardTasksRegistry,
 	useUpdateKanbanBoardTask,
 } from "@react-client/common/api/queries/kanban-board";
@@ -50,6 +51,7 @@ import {
 } from "@react-client/features/kanban-board/components/KanbanTaskSelectField";
 import { KanbanRoleEstimatesFields } from "@react-client/features/kanban-board/components/KanbanRoleEstimatesFields";
 import { KanbanSubtasksChecklist } from "@react-client/features/kanban-board/components/KanbanSubtasksChecklist";
+import { KanbanTaskImagesSection } from "@react-client/features/kanban-board/components/KanbanTaskImagesSection";
 import {
 	isKanbanTaskCreateRoute,
 	kanbanBoardPath,
@@ -132,6 +134,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		!isCreate && taskKey ? taskKey : undefined,
 	);
 	const taskId = taskByRefQuery.data?.id ?? "";
+	const taskImagesQuery = useKanbanBoardTaskImages(!isCreate ? taskId : undefined);
 	const boardIdFromTask = taskByRefQuery.data?.boardId ?? "";
 	const boardIdFromQuery = searchParams.get("boardId") ?? "";
 
@@ -296,6 +299,10 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	}, [parentTask, tasksRegistryQuery.data]);
 
 	const task = taskByRefQuery.data;
+	const taskImages =
+		taskImagesQuery.data ??
+		task?.content.images ??
+		[];
 
 	useEffect(() => {
 		if (boardId) {
@@ -417,6 +424,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			sprintId: sprintId || undefined,
 			streamCustomer: streamCustomer.trim() || undefined,
 			subtasks: subtasks.length ? subtasks : undefined,
+			images: taskImages.length ? taskImages : undefined,
 		});
 	};
 
@@ -701,6 +709,20 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 								onChange={setSubtasks}
 								disabled={isSaving}
 							/>
+
+							<Spacer space={12} />
+
+							{!isCreate && taskId ? (
+								<KanbanTaskImagesSection
+									taskId={taskId}
+									images={taskImages}
+									disabled={isSaving}
+								/>
+							) : isCreate ? (
+								<Alert severity="info">
+									Изображения можно прикрепить после создания задачи
+								</Alert>
+							) : null}
 
 							<Spacer space={12} />
 

@@ -1,3 +1,4 @@
+import { type V2ExecutorStreamLabel } from "./v2-executor-streams.util";
 import { type V2AnketaMainSectionId } from "./v2-anketa-workflow.types";
 export declare const V2_ANKETA_SECTION_ROLE_VALUES: readonly ["main", "subsection", "panel", "flat"];
 export type V2AnketaSectionRole = (typeof V2_ANKETA_SECTION_ROLE_VALUES)[number];
@@ -36,9 +37,20 @@ export type V2AnketaSectionUiOptions = {
     groupActive?: boolean;
     /** Блок разметки: не показывать заголовок (для layoutGroup по умолчанию true). */
     hideTitle?: boolean;
+    /** Корневой блок платформенного/поддерживающего стрима. */
+    streamBlock?: boolean;
+    /** Стрим-исполнитель из справочника (ДАДМ, ПиРМ, …). */
+    streamExecutor?: V2ExecutorStreamLabel;
 };
 declare const STREAM_SECTION_IDS: V2AnketaMainSectionId[];
 export declare function readV2AnketaSectionUiOptions(uiNode: unknown): V2AnketaSectionUiOptions;
+export type V2AnketaStreamBlockOptions = {
+    streamBlock: boolean;
+    streamExecutor: V2ExecutorStreamLabel | null;
+};
+/** Явная или legacy-привязка корневого блока к стриму-исполнителю. */
+export declare function resolveV2AnketaStreamBlockOptions(uiNode: unknown, blockKey?: string): V2AnketaStreamBlockOptions;
+export declare function isV2AnketaStreamBlockRoot(uiNode: unknown, blockKey?: string): boolean;
 /** Тип арх. компонента секции из ui:options, либо null. */
 export declare function resolveV2AnketaArchComponent(uiNode: unknown): V2ArchComponentType | null;
 export declare function isV2AnketaMainSectionId(value: string): value is V2AnketaMainSectionId;

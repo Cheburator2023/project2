@@ -272,6 +272,31 @@ export function normalizeKanbanBoardTaskContent(
 ): KanbanBoardTaskContent {
 	const next: KanbanBoardTaskContent = { ...content };
 	next.subtasks = normalizeKanbanBoardSubtasks(next.subtasks);
+	if (content.images !== undefined) {
+		if (content.images.length) {
+			next.images = content.images
+				.filter(
+					(item) =>
+						item &&
+						typeof item.id === "string" &&
+						typeof item.name === "string" &&
+						Number.isFinite(item.width) &&
+						Number.isFinite(item.height),
+				)
+				.map((item) => ({
+					id: item.id,
+					name: item.name.trim().slice(0, 255) || "image",
+					width: Math.max(0, Math.round(item.width)),
+					height: Math.max(0, Math.round(item.height)),
+					fullByteSize: Math.max(0, Math.round(item.fullByteSize ?? 0)),
+					thumbByteSize: Math.max(0, Math.round(item.thumbByteSize ?? 0)),
+					createdAt: item.createdAt ?? new Date().toISOString(),
+				}));
+			if (!next.images.length) next.images = undefined;
+		} else {
+			next.images = undefined;
+		}
+	}
 	if (next.roleEstimates) {
 		const cleaned: KanbanBoardRoleEstimates = {};
 		for (const [key, value] of Object.entries(next.roleEstimates) as [

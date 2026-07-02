@@ -9,6 +9,7 @@ exports.isSourceTypeTriggerParam = isSourceTypeTriggerParam;
 exports.isControlTypeTriggerParam = isControlTypeTriggerParam;
 exports.isPresenceOnlyTriggerRule = isPresenceOnlyTriggerRule;
 exports.resolveTriggerStatusCatalogParam = resolveTriggerStatusCatalogParam;
+exports.triggerRuleCatalogGroupKey = triggerRuleCatalogGroupKey;
 exports.catalogValueMatchesTriggerRule = catalogValueMatchesTriggerRule;
 exports.typicalWorkRulesMatchSource = typicalWorkRulesMatchSource;
 exports.resolveLaborCoefficient = resolveLaborCoefficient;
@@ -63,7 +64,8 @@ function readTypicalWorkSourceField(source, paramCode, paramName) {
             return source[slug];
     }
     if (source.type !== undefined &&
-        (paramCode === "type" || paramName?.toLowerCase().includes("тип источника"))) {
+        (paramCode === "type" ||
+            isSourceTypeTriggerParam(paramCode, paramName))) {
         return source.type;
     }
     if (source.controlType !== undefined)
@@ -84,7 +86,14 @@ function extractControlCode(label) {
 }
 function isSourceTypeTriggerParam(paramCode, paramName) {
     const name = paramName?.toLowerCase() ?? "";
-    return name.includes("тип источника") || paramCode.includes("тип_источника");
+    const code = paramCode.toLowerCase();
+    if (code === "type")
+        return true;
+    if (/тип[_\s-]*(системы[_\s-]*)?источник/i.test(name))
+        return true;
+    if (/тип[_\s-]*(системы[_\s-]*)?источник/i.test(code))
+        return true;
+    return name.includes("тип источника") || code.includes("тип_источника");
 }
 function isControlTypeTriggerParam(paramCode, paramName) {
     const label = paramName ?? paramCode;
@@ -107,12 +116,24 @@ function resolveTriggerStatusCatalogParam(rule, catalog) {
             return bySlug;
     }
     if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName)) {
-        return catalog.find((item) => item.code === slugParamCode("Тип источника данных"));
+        return (catalog.find((item) => item.code === "type") ??
+            catalog.find((item) => item.code === slugParamCode("Тип системы-источника")) ??
+            catalog.find((item) => item.code === slugParamCode("Тип источника данных")) ??
+            catalog.find((item) => item.values.some((value) => value.label === "Внутренний" || value.label === "Внешний")));
     }
     if (isControlTypeTriggerParam(rule.paramCode, rule.paramName)) {
         return catalog.find((item) => item.code === slugParamCode("Вид контроля"));
     }
     return undefined;
+}
+/** Канонический ключ группы триггеров при проверке по каталогу (legacy alias → `type`). */
+function triggerRuleCatalogGroupKey(rule, catalog) {
+    const resolved = resolveTriggerStatusCatalogParam(rule, catalog);
+    if (resolved)
+        return resolved.code;
+    if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName))
+        return "type";
+    return rule.paramCode;
 }
 function catalogValueMatchesTriggerRule(catalogValue, rule) {
     if (rule.valueCode && catalogValue.code === rule.valueCode)

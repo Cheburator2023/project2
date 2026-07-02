@@ -42,6 +42,11 @@ export declare function resolveTriggerStatusCatalogParam(rule: {
     paramCode: string;
     paramName?: string | null;
 }, catalog: TriggerStatusCatalogParamLike[]): TriggerStatusCatalogParamLike | undefined;
+/** Канонический ключ группы триггеров при проверке по каталогу (legacy alias → `type`). */
+export declare function triggerRuleCatalogGroupKey(rule: {
+    paramCode: string;
+    paramName?: string | null;
+}, catalog: TriggerStatusCatalogParamLike[]): string;
 export declare function catalogValueMatchesTriggerRule(catalogValue: {
     code: string;
     label: string;

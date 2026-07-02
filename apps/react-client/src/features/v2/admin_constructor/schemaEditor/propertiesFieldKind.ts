@@ -2,6 +2,7 @@ import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { V2ArchComponentType } from "@smart-anketa/api-contract";
 import {
 	resolveV2AnketaArchComponent,
+	resolveV2AnketaStreamBlockOptions,
 	V2_ARCH_COMPONENT_LABELS,
 } from "@smart-anketa/api-contract";
 import {
@@ -140,12 +141,22 @@ export type CanvasCategoryChip = {
 export function resolveCanvasCategoryChips(
 	resolvedField: RJSFSchema | undefined,
 	uiBranch: Record<string, unknown> | undefined,
+	blockKey?: string,
 ): CanvasCategoryChip[] {
 	const chips: CanvasCategoryChip[] = [];
 	const uiOptions = readLeafUiOptions(uiBranch);
 	const uiWidget =
 		typeof uiBranch?.["ui:widget"] === "string" ? uiBranch["ui:widget"] : "";
 	const arch = resolveV2AnketaArchComponent(uiBranch);
+	const streamBlock = resolveV2AnketaStreamBlockOptions(uiBranch, blockKey);
+
+	if (streamBlock.streamBlock && streamBlock.streamExecutor) {
+		chips.push({
+			label: streamBlock.streamExecutor,
+			title: "Стримовый блок",
+			color: "#2563eb",
+		});
+	}
 
 	if (isLayoutGroupUi(uiOptions)) {
 		chips.push({

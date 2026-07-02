@@ -74,7 +74,25 @@ export interface KanbanBoardTaskContent {
     streamCustomer?: string;
     /** Чеклист подзадач внутри карточки */
     subtasks?: KanbanBoardSubtaskItem[];
+    /** Прикреплённые изображения (метаданные; файлы — отдельное хранилище) */
+    images?: KanbanBoardTaskImageRef[];
 }
+/** Метаданные изображения в content задачи */
+export interface KanbanBoardTaskImageRef {
+    id: string;
+    name: string;
+    width: number;
+    height: number;
+    fullByteSize: number;
+    thumbByteSize: number;
+    createdAt: string;
+}
+export type KanbanBoardTaskImageDto = KanbanBoardTaskImageRef;
+/** Макс. размер full-изображения после сжатия на клиенте, байт. */
+export declare const KANBAN_BOARD_TASK_IMAGE_MAX_FULL_BYTES: number;
+/** Срок хранения вложений у задач в колонке «Готово», дней. */
+export declare const KANBAN_BOARD_TASK_IMAGE_DONE_RETENTION_DAYS = 7;
+export declare const KANBAN_BOARD_DONE_COLUMN_ID: "done";
 export declare const KANBAN_BOARD_PRIORITIES: readonly [{
     readonly id: "high";
     readonly title: "Высокий";

@@ -1,3 +1,4 @@
+import { inferLegacyStreamExecutorForBlockKey, isV2ExecutorStreamLabel, } from "./v2-executor-streams.util";
 import { V2_ANKETA_MAIN_SECTION_IDS, } from "./v2-anketa-workflow.types";
 export const V2_ANKETA_SECTION_ROLE_VALUES = [
     "main",
@@ -79,7 +80,39 @@ export function readV2AnketaSectionUiOptions(uiNode) {
             : opts.hideTitle === true
                 ? true
                 : undefined,
+        streamBlock: opts.streamBlock === true
+            ? true
+            : opts.streamBlock === false
+                ? false
+                : undefined,
+        streamExecutor: (() => {
+            if (typeof opts.streamExecutor !== "string")
+                return undefined;
+            const trimmed = opts.streamExecutor.trim();
+            return isV2ExecutorStreamLabel(trimmed) ? trimmed : undefined;
+        })(),
     };
+}
+/** Явная или legacy-привязка корневого блока к стриму-исполнителю. */
+export function resolveV2AnketaStreamBlockOptions(uiNode, blockKey) {
+    const opts = readV2AnketaSectionUiOptions(uiNode);
+    if (opts.streamBlock === false) {
+        return { streamBlock: false, streamExecutor: null };
+    }
+    if (opts.streamBlock === true) {
+        return {
+            streamBlock: true,
+            streamExecutor: opts.streamExecutor ?? null,
+        };
+    }
+    const legacy = blockKey != null ? inferLegacyStreamExecutorForBlockKey(blockKey) : null;
+    if (legacy) {
+        return { streamBlock: true, streamExecutor: legacy };
+    }
+    return { streamBlock: false, streamExecutor: null };
+}
+export function isV2AnketaStreamBlockRoot(uiNode, blockKey) {
+    return resolveV2AnketaStreamBlockOptions(uiNode, blockKey).streamBlock;
 }
 /** Тип арх. компонента секции из ui:options, либо null. */
 export function resolveV2AnketaArchComponent(uiNode) {
@@ -116,9 +149,11 @@ export function resolveV2AnketaSectionRole(uiNode, path) {
     const root = path[0] ?? "";
     if (path.length === 1 && isV2AnketaMainSectionId(root))
         return "main";
-    if (path.length === 2 &&
-        isV2AnketaStreamSectionId(root)) {
-        return "subsection";
+    if (path.length === 2) {
+        if (isV2AnketaStreamSectionId(root) ||
+            inferLegacyStreamExecutorForBlockKey(root)) {
+            return "subsection";
+        }
     }
     if (path.length === 1)
         return "panel";

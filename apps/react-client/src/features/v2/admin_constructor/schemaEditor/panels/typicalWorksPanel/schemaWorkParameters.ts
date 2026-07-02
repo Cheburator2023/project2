@@ -269,6 +269,33 @@ export type TriggerRuleLike = {
 	paramName?: string | null;
 };
 
+/** Канонический ключ группы триггеров (объединяет legacy paramCode и поле схемы `type`). */
+export function triggerRuleGroupKey(
+	rule: TriggerRuleLike,
+	paramOptions: V2TypicalWorkParameterDto[],
+): string {
+	const resolved = resolveSchemaParamForTriggerRule(rule, paramOptions);
+	if (resolved) return resolved.code;
+	if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName)) return "type";
+	return rule.paramCode;
+}
+
+export function filterRulesByGroupKey<
+	T extends TriggerRuleLike & { id?: string },
+>(rules: T[], groupKey: string, paramOptions: V2TypicalWorkParameterDto[]): T[] {
+	return rules.filter(
+		(rule) => triggerRuleGroupKey(rule, paramOptions) === groupKey,
+	);
+}
+
+export function excludeRulesByGroupKey<
+	T extends TriggerRuleLike,
+>(rules: T[], groupKey: string, paramOptions: V2TypicalWorkParameterDto[]): T[] {
+	return rules.filter(
+		(rule) => triggerRuleGroupKey(rule, paramOptions) !== groupKey,
+	);
+}
+
 /** CSV/seed-триггер → поле схемы анкеты (алиас «Тип источника (внешний)» → `type`). */
 export function resolveSchemaParamForTriggerRule(
 	rule: TriggerRuleLike,
