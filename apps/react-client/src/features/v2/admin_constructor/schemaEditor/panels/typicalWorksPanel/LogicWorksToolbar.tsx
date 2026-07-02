@@ -6,9 +6,6 @@ import MenuList from "@mui/material/MenuList";
 import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
 import Typography from "@mui/material/Typography";
-import { useBackfillV2TypicalWorkCalculationLogic } from "@react-client/common/api/queries/v2-works";
-import { isDevLikeEnvironment } from "@react-client/common/constants/dev";
-import { toast } from "@react-client/common/toasts";
 import { commonRoutes as routes } from "@react-client/routing/common/routes";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
@@ -24,12 +21,13 @@ type LogicWorksToolbarProps = {
 	onScopeChange: (scope: LogicWorksScope) => void;
 };
 
-export function LogicWorksToolbar({ scope, onScopeChange }: LogicWorksToolbarProps) {
+export function LogicWorksToolbar({
+	scope,
+	onScopeChange,
+}: LogicWorksToolbarProps) {
 	const navigate = useNavigate();
 	const anchorRef = useRef<HTMLButtonElement>(null);
 	const [pickerOpen, setPickerOpen] = useState(false);
-	const backfillMutation = useBackfillV2TypicalWorkCalculationLogic();
-	const showBackfill = isDevLikeEnvironment();
 
 	return (
 		<Box
@@ -154,39 +152,7 @@ export function LogicWorksToolbar({ scope, onScopeChange }: LogicWorksToolbarPro
 
 			<Box sx={{ flexGrow: 1 }} />
 
-			{showBackfill ? (
-				<Button
-					disabled={backfillMutation.isPending}
-					title="Скомпилировать JsonLogic result для всех version_config без пересохранения карточек"
-					onClick={() => {
-						backfillMutation.mutate(undefined, {
-							onSuccess: ({ updated, skipped }) => {
-								toast.success(
-									`JsonLogic: обновлено ${updated}, пропущено ${skipped}`,
-								);
-							},
-							onError: (error) => {
-								toast.error(error.message || "Не удалось выполнить backfill");
-							},
-						});
-					}}
-					sx={{
-						textTransform: "none",
-						height: 36,
-						px: 1.25,
-						border: "1px solid #dfe2ea",
-						borderRadius: "9px",
-						bgcolor: "#fff",
-						color: "#5b6577",
-						fontSize: "12px",
-						fontWeight: 600,
-					}}
-				>
-					{backfillMutation.isPending ? "Backfill…" : "Backfill JsonLogic"}
-				</Button>
-			) : null}
-
-			<Button
+			{/* <Button
 				onClick={() => navigate(routes.adminV2TypicalWorks.rootPath)}
 				title="Создание, удаление и параметры трудоёмкости — в разделе администрирования"
 				sx={{
@@ -202,7 +168,7 @@ export function LogicWorksToolbar({ scope, onScopeChange }: LogicWorksToolbarPro
 				}}
 			>
 				Администрирование
-			</Button>
+			</Button> */}
 		</Box>
 	);
 }

@@ -1,4 +1,5 @@
 import { readTypicalWorkSourceField, typicalWorkRulesMatchSource, } from "./v2-works-catalog-match.util";
+import { defaultWorkFormula, defaultWorkRounding, } from "./v2-typical-work.types";
 import { applyWorkRounding, previewWorkFormula, tokensToText, validateWorkFormulaTokens, } from "./v2-work-formula.util";
 const OP_SYMBOL = {
     "+": "+",
@@ -397,6 +398,30 @@ export function assembleTypicalWorkCalculationLogic(stored, rules, fallback) {
         rounding: fallback.rounding,
         rules,
     });
+}
+/** Собирает JsonLogic result из сохранённой формулы version_config. */
+export function compileCalculationLogicFromVersionConfig(config) {
+    const fallback = defaultWorkFormula();
+    const formulaTokens = Array.isArray(config.formula)
+        ? config.formula
+        : fallback.tokens;
+    const formula = {
+        tokens: formulaTokens,
+        text: config.formulaText?.trim() ||
+            tokensToText(formulaTokens) ||
+            fallback.text,
+    };
+    const rounding = {
+        mode: config.roundingMode ||
+            defaultWorkRounding().mode,
+        step: config.roundingStep == null || config.roundingStep === ""
+            ? null
+            : Number(config.roundingStep),
+    };
+    return compileStoredTypicalWorkResultLogic(formula, rounding);
+}
+export function needsCalculationLogicBackfill(raw) {
+    return parseStoredTypicalWorkCalculationLogic(raw) === null;
 }
 export function parseStoredTypicalWorkCalculationLogic(raw) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw))

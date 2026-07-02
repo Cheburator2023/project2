@@ -10,8 +10,11 @@ exports.evaluateTypicalWorkResultJsonLogic = evaluateTypicalWorkResultJsonLogic;
 exports.evaluateTypicalWorkCalculation = evaluateTypicalWorkCalculation;
 exports.previewTypicalWorkCalculation = previewTypicalWorkCalculation;
 exports.assembleTypicalWorkCalculationLogic = assembleTypicalWorkCalculationLogic;
+exports.compileCalculationLogicFromVersionConfig = compileCalculationLogicFromVersionConfig;
+exports.needsCalculationLogicBackfill = needsCalculationLogicBackfill;
 exports.parseStoredTypicalWorkCalculationLogic = parseStoredTypicalWorkCalculationLogic;
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
+const v2_typical_work_types_1 = require("./v2-typical-work.types");
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
 const OP_SYMBOL = {
     "+": "+",
@@ -410,6 +413,30 @@ function assembleTypicalWorkCalculationLogic(stored, rules, fallback) {
         rounding: fallback.rounding,
         rules,
     });
+}
+/** Собирает JsonLogic result из сохранённой формулы version_config. */
+function compileCalculationLogicFromVersionConfig(config) {
+    const fallback = (0, v2_typical_work_types_1.defaultWorkFormula)();
+    const formulaTokens = Array.isArray(config.formula)
+        ? config.formula
+        : fallback.tokens;
+    const formula = {
+        tokens: formulaTokens,
+        text: config.formulaText?.trim() ||
+            (0, v2_work_formula_util_1.tokensToText)(formulaTokens) ||
+            fallback.text,
+    };
+    const rounding = {
+        mode: config.roundingMode ||
+            (0, v2_typical_work_types_1.defaultWorkRounding)().mode,
+        step: config.roundingStep == null || config.roundingStep === ""
+            ? null
+            : Number(config.roundingStep),
+    };
+    return compileStoredTypicalWorkResultLogic(formula, rounding);
+}
+function needsCalculationLogicBackfill(raw) {
+    return parseStoredTypicalWorkCalculationLogic(raw) === null;
 }
 function parseStoredTypicalWorkCalculationLogic(raw) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw))

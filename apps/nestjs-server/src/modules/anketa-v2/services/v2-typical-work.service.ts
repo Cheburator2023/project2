@@ -20,6 +20,8 @@ import {
 	defaultWorkFormula,
 	defaultWorkRounding,
 	computeWorkTriggerStatus,
+	compileCalculationLogicFromVersionConfig,
+	needsCalculationLogicBackfill,
 	parseStoredTypicalWorkCalculationLogic,
 	resolveActiveNormOnDate,
 	compileStoredTypicalWorkResultLogic,
@@ -570,6 +572,22 @@ export class V2TypicalWorkService {
 			await this.paramCatalogService.listTriggerStatusCatalog(todayIsoDate());
 		const usedOnSchemasCount = await this.countSchemaUsages(workId);
 
+		let calculationLogic = versionConfig
+			? parseStoredTypicalWorkCalculationLogic(versionConfig.calculationLogic)
+			: null;
+		if (
+			versionConfig &&
+			templateVersionId &&
+			needsCalculationLogicBackfill(versionConfig.calculationLogic)
+		) {
+			const compiled = compileCalculationLogicFromVersionConfig(versionConfig);
+			if (compiled) {
+				versionConfig.calculationLogic = compiled;
+				await this.versionConfigRepository.save(versionConfig);
+				calculationLogic = compiled;
+			}
+		}
+
 		return {
 			id: work.id,
 			name: work.name,
@@ -602,9 +620,7 @@ export class V2TypicalWorkService {
 								: decimalToNumber(versionConfig.roundingStep),
 					}
 				: defaultWorkRounding(),
-			calculationLogic: versionConfig
-				? parseStoredTypicalWorkCalculationLogic(versionConfig.calculationLogic)
-				: null,
+			calculationLogic,
 		};
 	}
 }

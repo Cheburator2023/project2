@@ -11,6 +11,10 @@ import type {
 	V2WorkFormulaToken,
 } from "./v2-typical-work.types";
 import {
+	defaultWorkFormula,
+	defaultWorkRounding,
+} from "./v2-typical-work.types";
+import {
 	applyWorkRounding,
 	previewWorkFormula,
 	tokensToText,
@@ -516,6 +520,44 @@ export function assembleTypicalWorkCalculationLogic(
 		rounding: fallback.rounding,
 		rules,
 	});
+}
+
+export type VersionConfigFormulaLike = {
+	formula: unknown;
+	formulaText?: string | null;
+	roundingMode: string;
+	roundingStep?: string | number | null;
+};
+
+/** Собирает JsonLogic result из сохранённой формулы version_config. */
+export function compileCalculationLogicFromVersionConfig(
+	config: VersionConfigFormulaLike,
+): V2TypicalWorkStoredCalculationLogicDto | null {
+	const fallback = defaultWorkFormula();
+	const formulaTokens = Array.isArray(config.formula)
+		? (config.formula as V2WorkFormulaToken[])
+		: fallback.tokens;
+	const formula: V2TypicalWorkFormulaDto = {
+		tokens: formulaTokens,
+		text:
+			config.formulaText?.trim() ||
+			tokensToText(formulaTokens) ||
+			fallback.text,
+	};
+	const rounding: V2TypicalWorkRoundingDto = {
+		mode:
+			(config.roundingMode as V2TypicalWorkRoundingDto["mode"]) ||
+			defaultWorkRounding().mode,
+		step:
+			config.roundingStep == null || config.roundingStep === ""
+				? null
+				: Number(config.roundingStep),
+	};
+	return compileStoredTypicalWorkResultLogic(formula, rounding);
+}
+
+export function needsCalculationLogicBackfill(raw: unknown): boolean {
+	return parseStoredTypicalWorkCalculationLogic(raw) === null;
 }
 
 export function parseStoredTypicalWorkCalculationLogic(
