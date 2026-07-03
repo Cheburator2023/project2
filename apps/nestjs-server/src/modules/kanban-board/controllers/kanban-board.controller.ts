@@ -8,8 +8,10 @@ import {
 	Param,
 	Post,
 	Put,
+	Query,
 	Res,
 	UploadedFile,
+	UploadedFiles,
 	UseInterceptors,
 } from "@nestjs/common";
 import {
@@ -20,7 +22,7 @@ import {
 	ApiResponse,
 	ApiTags,
 } from "@nestjs/swagger";
-import { FileInterceptor } from "@nestjs/platform-express";
+import { FileInterceptor, FileFieldsInterceptor } from "@nestjs/platform-express";
 import type {
 	AssignKanbanBoardTasksToBoardRequestDto,
 	AssignKanbanBoardTasksToBoardResultDto,
@@ -45,6 +47,7 @@ import type {
 	KanbanBoardSupersprintDto,
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
+	KanbanBoardTaskImageDto,
 	UpdateKanbanBoardCustomerRequestDto,
 	UpdateKanbanBoardAssigneeRequestDto,
 	UpdateKanbanBoardBoardRequestDto,
@@ -58,6 +61,7 @@ import type {
 } from "@smart-anketa/api-contract";
 import type { Response } from "express";
 import { KanbanBoardRegistryService } from "../services/kanban-board-registry.service";
+import { KanbanBoardTaskImageService } from "../services/kanban-board-task-image.service";
 import {
 	KanbanBoardService,
 	PlanningImportNotSupportedError,
@@ -72,6 +76,7 @@ export class KanbanBoardController {
 	constructor(
 		private readonly kanbanBoardService: KanbanBoardService,
 		private readonly registryService: KanbanBoardRegistryService,
+		private readonly taskImageService: KanbanBoardTaskImageService,
 	) {}
 
 	@Get("config")
@@ -416,6 +421,73 @@ export class KanbanBoardController {
 	@Delete("tasks/:id")
 	async deleteTask(@Param("id") id: string): Promise<void> {
 		return this.registryService.deleteTask(id);
+	}
+
+	@Get("tasks/:taskId/images")
+	async listTaskImages(
+		@Param("taskId") taskId: string,
+	): Promise<KanbanBoardTaskImageDto[]> {
+		return this.taskImageService.listForTask(taskId);
+	}
+
+	@Post("tasks/:taskId/images")
+	@UseInterceptors(
+		FileFieldsInterceptor([
+			{ name: "full", maxCount: 1 },
+			{ name: "thumb", maxCount: 1 },
+		]),
+	)
+	@ApiConsumes("multipart/form-data")
+	async uploadTaskImage(
+		@Param("taskId") taskId: string,
+		@UploadedFiles()
+		files: {
+			full?: Array<{ buffer: Buffer; originalname?: string; mimetype?: string }>;
+			thumb?: Array<{ buffer: Buffer }>;
+		},
+		@Body()
+		body: {
+			name?: string;
+			width?: string;
+			height?: string;
+			mimeType?: string;
+		},
+	): Promise<KanbanBoardTaskImageDto> {
+		const full = files.full?.[0];
+		const thumb = files.thumb?.[0];
+		if (!full?.buffer?.length || !thumb?.buffer?.length) {
+			throw new BadRequestException("Передайте full и thumb");
+		}
+		return this.taskImageService.upload(taskId, {
+			originalName: body.name ?? full.originalname ?? "image",
+			mimeType: body.mimeType ?? full.mimetype ?? "image/webp",
+			width: Number(body.width),
+			height: Number(body.height),
+			full: full.buffer,
+			thumb: thumb.buffer,
+		});
+	}
+
+	@Get("tasks/:taskId/images/:imageId")
+	async getTaskImage(
+		@Param("taskId") taskId: string,
+		@Param("imageId") imageId: string,
+		@Query("variant") variantRaw: string | undefined,
+		@Res() res: Response,
+	): Promise<void> {
+		const variant = variantRaw === "thumb" ? "thumb" : "full";
+		const file = await this.taskImageService.readFile(taskId, imageId, variant);
+		res.setHeader("Content-Type", file.mimeType);
+		res.setHeader("Cache-Control", "private, max-age=86400");
+		res.end(file.buffer);
+	}
+
+	@Delete("tasks/:taskId/images/:imageId")
+	async deleteTaskImage(
+		@Param("taskId") taskId: string,
+		@Param("imageId") imageId: string,
+	): Promise<void> {
+		return this.taskImageService.delete(taskId, imageId);
 	}
 
 	@Post("tasks/import-planning")

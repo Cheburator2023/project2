@@ -2386,6 +2386,8 @@
 				"field_eCyDEFw3"
 			],
 			"ui:options": {
+				"streamBlock": true,
+				"streamExecutor": "ПиРМ",
 				"sectionRole": "main",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
 				"defaultExpanded": false,
@@ -2492,6 +2494,8 @@
 				"field_eCyDEFw3"
 			],
 			"ui:options": {
+				"streamBlock": true,
+				"streamExecutor": "ДАДМ",
 				"sectionRole": "main",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
 				"defaultExpanded": false
@@ -2544,6 +2548,8 @@
 				"field_eCyDEFw3"
 			],
 			"ui:options": {
+				"streamBlock": true,
+				"streamExecutor": "Источники данных",
 				"sectionRole": "main",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
 				"defaultExpanded": false,
@@ -2668,6 +2674,8 @@
 				"field_QkVbhG-_"
 			],
 			"ui:options": {
+				"streamBlock": true,
+				"streamExecutor": "Контроль моделей",
 				"sectionRole": "main",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
 				"defaultExpanded": false,
@@ -2802,6 +2810,8 @@
 				"field_r8nz3JWH"
 			],
 			"ui:options": {
+				"streamBlock": true,
+				"streamExecutor": "Цифровые агенты",
 				"groupActive": false,
 				"sectionRole": "panel",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
@@ -2867,6 +2877,8 @@
 				"field_2l6A7K3g"
 			],
 			"ui:options": {
+				"streamBlock": true,
+				"streamExecutor": "Потоковые данные",
 				"groupActive": false,
 				"sectionRole": "panel",
 				"sectionCaption": "Платформенные и поддерживающие стримы",

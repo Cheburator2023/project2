@@ -20,10 +20,13 @@ import {
 	defaultWorkFormula,
 	defaultWorkRounding,
 	computeWorkTriggerStatus,
+	compileCalculationLogicFromVersionConfig,
+	needsCalculationLogicBackfill,
 	parseStoredTypicalWorkCalculationLogic,
 	resolveActiveNormOnDate,
 	compileStoredTypicalWorkResultLogic,
 	tokensToText,
+	parseWorkFormulaText,
 	computeFormulaBadge,
 	normalizeStoredFormula,
 	termsToTokenFormula,
@@ -50,6 +53,20 @@ import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalo
 function decimalToNumber(value: string | number | null | undefined): number {
 	if (value === null || value === undefined) return 0;
 	return typeof value === "number" ? value : Number(value);
+}
+
+function resolveCardTokenFormula(
+	termsFormula: ReturnType<typeof normalizeStoredFormula>,
+	formulaText: string | null | undefined,
+): ReturnType<typeof defaultWorkFormula> {
+	const trimmed = formulaText?.trim();
+	if (trimmed) {
+		const parsed = parseWorkFormulaText(trimmed);
+		if (!parsed.error && parsed.tokens.length > 0) {
+			return { tokens: parsed.tokens, text: trimmed };
+		}
+	}
+	return termsToTokenFormula(termsFormula);
 }
 
 function todayIsoDate(): string {
@@ -548,9 +565,28 @@ export class V2TypicalWorkService {
 					versionConfig.formulaText,
 				)
 			: normalizeStoredFormula(null);
+		const tokenFormula = versionConfig
+			? resolveCardTokenFormula(termsFormula, versionConfig.formulaText)
+			: defaultWorkFormula();
 		const triggerStatusCatalog =
 			await this.paramCatalogService.listTriggerStatusCatalog(todayIsoDate());
 		const usedOnSchemasCount = await this.countSchemaUsages(workId);
+
+		let calculationLogic = versionConfig
+			? parseStoredTypicalWorkCalculationLogic(versionConfig.calculationLogic)
+			: null;
+		if (
+			versionConfig &&
+			templateVersionId &&
+			needsCalculationLogicBackfill(versionConfig.calculationLogic)
+		) {
+			const compiled = compileCalculationLogicFromVersionConfig(versionConfig);
+			if (compiled) {
+				versionConfig.calculationLogic = compiled;
+				await this.versionConfigRepository.save(versionConfig);
+				calculationLogic = compiled;
+			}
+		}
 
 		return {
 			id: work.id,
@@ -574,9 +610,7 @@ export class V2TypicalWorkService {
 			rules: rules.map(mapRuleEntity),
 			laborParams: laborParamsGrouped,
 			formulaTerms: termsFormula,
-			formula: versionConfig
-				? termsToTokenFormula(termsFormula)
-				: defaultWorkFormula(),
+			formula: tokenFormula,
 			rounding: versionConfig
 				? {
 						mode: versionConfig.roundingMode as V2TypicalWorkCardDto["rounding"]["mode"],
@@ -586,9 +620,7 @@ export class V2TypicalWorkService {
 								: decimalToNumber(versionConfig.roundingStep),
 					}
 				: defaultWorkRounding(),
-			calculationLogic: versionConfig
-				? parseStoredTypicalWorkCalculationLogic(versionConfig.calculationLogic)
-				: null,
+			calculationLogic,
 		};
 	}
 }

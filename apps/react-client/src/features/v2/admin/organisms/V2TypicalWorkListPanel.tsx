@@ -3,22 +3,30 @@ import Chip from "@mui/material/Chip";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { styled, useColorScheme } from "@mui/material/styles";
+import { usePatchV2TypicalWork } from "@react-client/common/api/queries/v2-works";
+import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
 import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
+import { toast } from "@react-client/common/toasts";
+import {
+	WORK_ARCH_COMPONENT_TYPES,
+} from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorkPatchErrors";
+import { resolveEffectiveWorkArchComponentType } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/schemaWorkParameters";
+import { DEFAULT_WORK_STREAMS } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import {
 	agGridCustomMUITheme,
 	agGridCustomMUIThemeDark,
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
-import {
-	formulaBadgeLabel,
-	triggerStatusLabel,
-} from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import type { V2TypicalWorkListItemDto } from "@smart-anketa/api-contract";
-import { type ColDef, type ICellRendererParams } from "ag-grid-community";
+import {
+	type CellValueChangedEvent,
+	type ColDef,
+	type ICellRendererParams,
+} from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router";
@@ -52,40 +60,26 @@ function streamsCellRenderer(p: ICellRendererParams<V2TypicalWorkListItemDto>) {
 	const streams = p.data?.streams ?? [];
 	if (streams.length === 0) {
 		return (
-			<Chip size="small" label="не назначена" variant="outlined" sx={{ opacity: 0.7 }} />
+			<Typography variant="caption" color="text.disabled">
+				не назначена
+			</Typography>
 		);
 	}
 	return (
 		<Flex gap={0.5} wrap="wrap" alignItems="center">
 			{streams.slice(0, 2).map((stream) => (
-				<Chip key={stream} size="small" label={stream} variant="outlined" />
+				<Chip
+					key={stream}
+					size="small"
+					label={stream}
+					variant="outlined"
+					sx={{ opacity: 0.75, fontSize: 11 }}
+				/>
 			))}
 			{streams.length > 2 ? (
-				<Typography variant="caption" color="text.secondary">
+				<Typography variant="caption" color="text.disabled">
 					+{streams.length - 2}
 				</Typography>
-			) : null}
-		</Flex>
-	);
-}
-
-function statusCellRenderer(p: ICellRendererParams<V2TypicalWorkListItemDto>) {
-	const row = p.data;
-	if (!row) return null;
-	return (
-		<Flex gap={0.5} wrap="wrap" alignItems="center">
-			<Chip
-				size="small"
-				label={triggerStatusLabel(row.triggerStatus)}
-				variant="outlined"
-			/>
-			{row.formulaBadge ? (
-				<Chip
-					size="small"
-					label={formulaBadgeLabel(row.formulaBadge)}
-					variant="outlined"
-					color="info"
-				/>
 			) : null}
 		</Flex>
 	);
@@ -104,20 +98,47 @@ export function V2TypicalWorkListPanel({
 	const { mode } = useColorScheme();
 	const gridRef = useRef<AgGridReact<V2TypicalWorkListItemDto>>(null);
 	const gridPersistence = useAgGridColumnPersistence("v2.typical-works.panel");
+	const patch = usePatchV2TypicalWork();
+	const patchRef = useRef(patch);
+	patchRef.current = patch;
 
 	const gridTheme =
 		mode === "light" || mode === undefined
 			? agGridCustomMUITheme
 			: agGridCustomMUIThemeDark;
 
+	const archComponentValues = useMemo(
+		() => WORK_ARCH_COMPONENT_TYPES.map((type) => type),
+		[],
+	);
+
 	const columnDefs = useMemo<ColDef<V2TypicalWorkListItemDto>[]>(
 		() => [
-			{ field: "name", headerName: "Название", flex: 1.4, minWidth: 140 },
+			{
+				field: "name",
+				headerName: "Название",
+				flex: 1.6,
+				minWidth: 160,
+				editable: true,
+				cellEditor: "agTextCellEditor",
+			},
 			{
 				field: "archComponentType",
 				headerName: "Тип компонента",
 				flex: 1.2,
-				minWidth: 120,
+				minWidth: 140,
+				editable: true,
+				cellEditor: "agSelectCellEditor",
+				cellEditorParams: { values: archComponentValues },
+				valueFormatter: (p) =>
+					resolveEffectiveWorkArchComponentType(String(p.value ?? "")),
+			},
+			{
+				field: "workType",
+				headerName: "Тип работы",
+				flex: 0.9,
+				minWidth: 100,
+				valueFormatter: (p) => (p.value ? String(p.value) : "—"),
 			},
 			{
 				colId: "streams",
@@ -128,23 +149,8 @@ export function V2TypicalWorkListPanel({
 				filter: false,
 				cellRenderer: streamsCellRenderer,
 			},
-			{
-				field: "currentNorm",
-				headerName: "Норма",
-				width: 88,
-				valueFormatter: (p) =>
-					p.value == null ? "—" : String(p.value),
-			},
-			{
-				colId: "status",
-				headerName: "Статус",
-				width: 150,
-				sortable: false,
-				filter: false,
-				cellRenderer: statusCellRenderer,
-			},
 		],
-		[],
+		[archComponentValues],
 	);
 
 	const defaultColDef = useMemo<ColDef>(
@@ -153,6 +159,44 @@ export function V2TypicalWorkListPanel({
 			resizable: true,
 			minWidth: 72,
 		}),
+		[],
+	);
+
+	const onCellValueChanged = useCallback(
+		async (event: CellValueChangedEvent<V2TypicalWorkListItemDto>) => {
+			const work = event.data;
+			const field = event.colDef.field;
+			if (!work || (field !== "name" && field !== "archComponentType")) return;
+			if (event.newValue === event.oldValue) return;
+
+			const patchStream = work.streams[0] ?? DEFAULT_WORK_STREAMS[0];
+			const dto: {
+				streamExecutor: string;
+				name?: string;
+				archComponentType?: string;
+			} = { streamExecutor: patchStream };
+
+			if (field === "name") {
+				const trimmed = String(event.newValue ?? "").trim();
+				if (!trimmed) {
+					toast.error("Укажите название работы");
+					event.node.setDataValue("name", event.oldValue);
+					return;
+				}
+				dto.name = trimmed;
+			} else {
+				dto.archComponentType = String(event.newValue ?? "");
+			}
+
+			try {
+				await patchRef.current.mutateAsync({ workId: work.id, dto });
+			} catch (error) {
+				event.node.setDataValue(field, event.oldValue);
+				toast.error("Не удалось сохранить работу", {
+					description: apiErrorMessage(error),
+				});
+			}
+		},
 		[],
 	);
 
@@ -197,6 +241,9 @@ export function V2TypicalWorkListPanel({
 						</Button>
 					) : null}
 				</Flex>
+				<Typography variant="caption" color="text.secondary">
+					Название и тип компонента редактируются по клику в ячейке
+				</Typography>
 				<AgGridHost>
 					<AgGridReact<V2TypicalWorkListItemDto>
 						ref={gridRef}
@@ -207,11 +254,14 @@ export function V2TypicalWorkListPanel({
 						defaultColDef={defaultColDef}
 						localeText={AG_GRID_LOCALE_RU}
 						rowSelection={{ mode: "singleRow", checkboxes: false }}
+						singleClickEdit
+						stopEditingWhenCellsLoseFocus
 						suppressCellFocus
 						onRowClicked={onRowClicked}
 						onRowDoubleClicked={(event) => {
 							if (event.data?.id) navigate(pathForAdminV2TypicalWork(event.data.id));
 						}}
+						onCellValueChanged={onCellValueChanged}
 						getRowId={(params) => params.data.id}
 						sideBar={gridPersistence.sideBar}
 						onGridReady={gridPersistence.onGridReady}

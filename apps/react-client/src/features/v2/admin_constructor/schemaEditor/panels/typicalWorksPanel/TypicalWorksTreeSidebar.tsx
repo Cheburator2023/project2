@@ -4,17 +4,7 @@ import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import type { V2TypicalWorkListItemDto } from "@smart-anketa/api-contract";
-import {
-	ARCH_COMPONENT_DOT,
-	archComponentShortLabel,
-	triggerStatusColors,
-	triggerStatusLabel,
-} from "./typicalWorksUi";
-import {
-	pickStreamForScope,
-	streamColor,
-	streamDisplayLabel,
-} from "./typicalWorksAreas";
+import { ARCH_COMPONENT_DOT, archComponentShortLabel } from "./typicalWorksUi";
 
 type TypicalWorksTreeSidebarProps = {
 	groups: Array<{
@@ -25,25 +15,9 @@ type TypicalWorksTreeSidebarProps = {
 	onSelectWork: (workId: string) => void;
 	onAssignFromCatalog: () => void;
 	onDeleteWork: (work: V2TypicalWorkListItemDto) => void;
-	scopeIsGroup: boolean;
-	scopeStreams: string[];
 	assignedCount: number;
 	scopeSubtitle: string;
 };
-
-function laborBadgeForWork(
-	work: V2TypicalWorkListItemDto,
-	streamForRow: string | null,
-): { label: string; bg: string; color: string } {
-	const count =
-		streamForRow && work.laborParamCountByStream
-			? (work.laborParamCountByStream[streamForRow] ?? 0)
-			: 0;
-	if (count > 0) {
-		return { label: `коэф.: ${count}`, bg: "#eaf6ef", color: "#1f8a4d" };
-	}
-	return { label: "без коэф.", bg: "#eef1f6", color: "#8a93a3" };
-}
 
 export function TypicalWorksTreeSidebar({
 	groups,
@@ -51,8 +25,6 @@ export function TypicalWorksTreeSidebar({
 	onSelectWork,
 	onAssignFromCatalog,
 	onDeleteWork,
-	scopeIsGroup,
-	scopeStreams,
 	assignedCount,
 	scopeSubtitle,
 }: TypicalWorksTreeSidebarProps) {
@@ -149,17 +121,6 @@ export function TypicalWorksTreeSidebar({
 
 							{group.works.map((work) => {
 								const selected = work.id === selectedWorkId;
-								const statusColors = triggerStatusColors(work.triggerStatus);
-								const streamForRow = pickStreamForScope(
-									work.streams,
-									scopeStreams,
-									null,
-								);
-								const lab = laborBadgeForWork(work, streamForRow);
-								const trigLabel =
-									work.triggerStatus === "appears"
-										? "появляется"
-										: triggerStatusLabel(work.triggerStatus);
 
 								return (
 									<Box
@@ -181,31 +142,21 @@ export function TypicalWorksTreeSidebar({
 										<Box
 											sx={{
 												display: "flex",
-												alignItems: "center",
+												alignItems: "flex-start",
 												gap: 1,
 											}}
 										>
-											<Typography
-												sx={{
-													flex: 1,
-													fontSize: 12,
-													color: "#28303f",
-													lineHeight: 1.3,
-												}}
-											>
-												{work.name}
-											</Typography>
-											<Typography
-												sx={{
-													fontSize: 12.5,
-													fontWeight: 800,
-													color: "#1d2435",
-													fontFamily: "monospace",
-													flexShrink: 0,
-												}}
-											>
-												{work.currentNorm ?? "—"}
-											</Typography>
+											<Box sx={{ flex: 1, minWidth: 0 }}>
+												<Typography
+													sx={{
+														fontSize: 12,
+														color: "#28303f",
+														lineHeight: 1.3,
+													}}
+												>
+													{work.name}
+												</Typography>
+											</Box>
 											<IconButton
 												size="small"
 												aria-label="Удалить работу"
@@ -218,71 +169,6 @@ export function TypicalWorksTreeSidebar({
 											>
 												<DeleteOutlineIcon fontSize="small" />
 											</IconButton>
-										</Box>
-										<Box
-											sx={{
-												display: "flex",
-												flexWrap: "wrap",
-												gap: 0.6,
-												mt: 0.65,
-											}}
-										>
-											{scopeIsGroup && streamForRow ? (
-												<Box
-													sx={{
-														display: "inline-flex",
-														alignItems: "center",
-														gap: 0.5,
-														height: 16,
-														px: 0.75,
-														borderRadius: "5px",
-														bgcolor: "#eef4ff",
-														color: "#2f6bd8",
-														fontSize: 9.5,
-														fontWeight: 600,
-													}}
-												>
-													<Box
-														sx={{
-															width: 5,
-															height: 5,
-															borderRadius: "2px",
-															bgcolor: streamColor(streamForRow),
-														}}
-													/>
-													{streamDisplayLabel(streamForRow)}
-												</Box>
-											) : null}
-											<Box
-												sx={{
-													display: "inline-flex",
-													alignItems: "center",
-													height: 16,
-													px: 0.75,
-													borderRadius: "5px",
-													bgcolor: statusColors.bg,
-													color: statusColors.color,
-													fontSize: 9.5,
-													fontWeight: 700,
-												}}
-											>
-												{trigLabel}
-											</Box>
-											<Box
-												sx={{
-													display: "inline-flex",
-													alignItems: "center",
-													height: 16,
-													px: 0.75,
-													borderRadius: "5px",
-													bgcolor: lab.bg,
-													color: lab.color,
-													fontSize: 9.5,
-													fontWeight: 600,
-												}}
-											>
-												{lab.label}
-											</Box>
 										</Box>
 									</Box>
 								);

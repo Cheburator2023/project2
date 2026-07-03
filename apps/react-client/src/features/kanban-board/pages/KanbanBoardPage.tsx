@@ -65,6 +65,7 @@ import {
 	kanbanTaskEditPath,
 } from "@react-client/features/kanban-board/kanban-task-paths";
 import { KanbanTaskCardSubtasks } from "@react-client/features/kanban-board/components/KanbanSubtasksChecklist";
+import { KanbanTaskImagesSection } from "@react-client/features/kanban-board/components/KanbanTaskImagesSection";
 
 const buildBoardData = (
 	tasks: Parameters<typeof toBoardData>[0],
@@ -159,6 +160,13 @@ function TaskCardContent({
 						content={content}
 						onContentUpdated={onContentUpdated}
 						isSaving={isBoardBusy}
+					/>
+				) : null}
+				{content?.images?.length ? (
+					<KanbanTaskImagesSection
+						taskId={taskId}
+						images={content.images}
+						compact
 					/>
 				) : null}
 			</Stack>

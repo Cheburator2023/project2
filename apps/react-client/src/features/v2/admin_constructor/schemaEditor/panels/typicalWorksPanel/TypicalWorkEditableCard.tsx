@@ -56,6 +56,7 @@ import { TypicalWorkTriggersSection } from "./TypicalWorkTriggersSection";
 import { WorkFormulaEditor } from "./WorkFormulaEditor";
 import { ensureFormulaTerms } from "./WorkTermsFormulaEditor";
 import {
+	analyzeTriggerRules,
 	computeTriggerStatus,
 	DEFAULT_WORK_ARCH_COMPONENT_TYPE,
 	isWorkCoefficientValueAvailable,
@@ -247,19 +248,12 @@ export function TypicalWorkEditableCard({
 	const paramOptions = useMemo(
 		() =>
 			buildSchemaWorkParameters({
-				archComponentType: effectiveArchComponentType,
 				fieldPathHints,
 				uiSchema: uiSchema as Record<string, unknown>,
 				jsonSchema,
 				enumMapByCode,
 			}),
-		[
-			effectiveArchComponentType,
-			enumMapByCode,
-			fieldPathHints,
-			jsonSchema,
-			uiSchema,
-		],
+		[enumMapByCode, fieldPathHints, jsonSchema, uiSchema],
 	);
 	const laborParamOptions = useMemo(
 		() => paramOptions.filter((p) => p.values.length > 0),
@@ -269,9 +263,9 @@ export function TypicalWorkEditableCard({
 		(p) => !draft?.laborParams.some((g) => g.paramCode === p.code),
 	);
 	const laborPickerHint = schemaWorkParameterEmptyPickerMessage(
-		effectiveArchComponentType,
 		fieldPathHints.length,
 		draft?.laborParams.length ?? 0,
+		unusedLaborParams.length,
 	);
 
 	const coefficientCatalog = useMemo(
@@ -286,18 +280,30 @@ export function TypicalWorkEditableCard({
 		[laborParamOptions],
 	);
 
+	const triggerAnalysis = useMemo(
+		() =>
+			analyzeTriggerRules(
+				draft?.rules ?? [],
+				paramOptions,
+				methodologyCatalog,
+			),
+		[draft?.rules, methodologyCatalog, paramOptions],
+	);
+
 	const commitDraft = (next: V2TypicalWorkCardDto) => {
 		const formula = next.formula;
 		const formulaTerms = syncTermsFromTokenFormula(formula);
+		const nextTrigger = analyzeTriggerRules(
+			next.rules,
+			paramOptions,
+			methodologyCatalog,
+		);
 		const withDerived = {
 			...next,
 			formula,
 			formulaTerms,
 			formulaBadge: computeFormulaBadgeFromTokens(formula.tokens),
-			triggerStatus: computeTriggerStatus(
-				next.rules,
-				methodologyCatalog.length > 0 ? methodologyCatalog : paramOptions,
-			),
+			triggerStatus: nextTrigger.status,
 		};
 		setDraft(withDerived);
 		scheduleSave(cardToPatchDto(withDerived, templateVersionId));
@@ -510,7 +516,7 @@ export function TypicalWorkEditableCard({
 			>
 				<Box sx={{ flex: 1, minWidth: 240 }}>
 					<Typography sx={{ fontSize: 11.5, color: "#8a93a3", mb: 0.4 }}>
-						Типовая работа · справочник
+						Типовая работа
 					</Typography>
 					<TextField
 						variant="standard"
@@ -639,7 +645,7 @@ export function TypicalWorkEditableCard({
 								fontWeight: 600,
 							}}
 						>
-							{triggerStatusLabel(draft.triggerStatus)}
+							{triggerStatusLabel(triggerAnalysis.status)}
 						</Box>
 						<Box
 							component="span"
@@ -873,8 +879,8 @@ export function TypicalWorkEditableCard({
 
 					<TypicalWorkTriggersSection
 						rules={draft.rules}
-						triggerStatus={draft.triggerStatus}
-						archComponentType={effectiveArchComponentType}
+						triggerStatus={triggerAnalysis.status}
+						validationIssues={triggerAnalysis.issues}
 						schemaFieldCount={fieldPathHints.length}
 						paramOptions={paramOptions}
 						methodologyCatalog={methodologyCatalog}

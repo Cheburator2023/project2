@@ -1,5 +1,8 @@
 import { V2_ANKETA_MAIN_SECTION_IDS } from "./v2-anketa-workflow.types";
-import { V2_ANKETA_STREAM_SECTION_IDS } from "./v2-anketa-section-ui.util";
+import {
+	readV2AnketaSectionUiOptions,
+	resolveV2AnketaStreamBlockOptions,
+} from "./v2-anketa-section-ui.util";
 import type { V2JsonSchemaDto, V2UiSchemaDto } from "./v2-template.types";
 
 function readRecord(value: unknown): Record<string, unknown> | undefined {
@@ -68,12 +71,36 @@ export function enrichAnketaLayoutUiSchema(
 		});
 	}
 
-	for (const streamId of V2_ANKETA_STREAM_SECTION_IDS) {
+	for (const streamId of V2_ANKETA_MAIN_SECTION_IDS.filter((id) =>
+		id.startsWith("stream"),
+	)) {
 		if (!rootProps[streamId]) continue;
 		const streamProps = readSchemaProperties(rootProps[streamId]);
 		for (const [key, childSchema] of Object.entries(streamProps)) {
 			if (readSchemaType(childSchema) !== "object") continue;
 			const node = ensureUiNode(ui, [streamId, key]);
+			mergeUiOptions(node, {
+				sectionRole: "subsection",
+				showFilledCount: true,
+			});
+		}
+	}
+
+	for (const [blockKey, blockSchema] of Object.entries(rootProps)) {
+		if (readSchemaType(blockSchema) !== "object") continue;
+		const blockUi = ensureUiNode(ui, [blockKey]);
+		const streamBlock = resolveV2AnketaStreamBlockOptions(blockUi, blockKey);
+		if (!streamBlock.streamBlock) continue;
+		mergeUiOptions(blockUi, {
+			streamBlock: true,
+			...(streamBlock.streamExecutor
+				? { streamExecutor: streamBlock.streamExecutor }
+				: {}),
+		});
+		const blockProps = readSchemaProperties(blockSchema);
+		for (const [key, childSchema] of Object.entries(blockProps)) {
+			if (readSchemaType(childSchema) !== "object") continue;
+			const node = ensureUiNode(ui, [blockKey, key]);
 			mergeUiOptions(node, {
 				sectionRole: "subsection",
 				showFilledCount: true,

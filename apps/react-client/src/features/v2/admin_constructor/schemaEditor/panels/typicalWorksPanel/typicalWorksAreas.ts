@@ -1,61 +1,30 @@
-/** Стримы и группы — как в макете аналитика (sa-formulas.js). */
+/** Стримы-исполнители в редакторе логики типовых работ. */
 
-export type LogicWorksViewMode = "streams" | "matrix" | "catalog" | "parameters";
+import {
+	V2_DB_STREAM_TO_EXECUTOR_AREA,
+	V2_EXECUTOR_STREAM_LABELS,
+	type V2ExecutorStreamLabel,
+} from "@smart-anketa/api-contract";
 
-export type LogicWorksScope =
-	| { kind: "stream"; stream: string }
-	| { kind: "group"; groupId: string };
+export type LogicWorksScope = { kind: "stream"; stream: string };
 
-export const LOGIC_EXECUTOR_STREAMS = [
-	"Источники данных",
-	"Витрины данных",
-	"Интеграции",
-	"Контроль моделей",
-	"ПиРМ (правила и развитие модели)",
-	"Модельный сервис",
-	"Сопровождение и поддержка",
-	"Архитектура данных",
-] as const;
+export const LOGIC_EXECUTOR_STREAMS = V2_EXECUTOR_STREAM_LABELS;
 
-export const LOGIC_STREAM_GROUPS = [
-	{
-		id: "g_data",
-		name: "Данные (ИД + Витрины + Интеграции)",
-		streams: ["Источники данных", "Витрины данных", "Интеграции"],
-	},
-	{
-		id: "g_model",
-		name: "Моделирование (КМ + ПиРМ + МС)",
-		streams: [
-			"Контроль моделей",
-			"ПиРМ (правила и развитие модели)",
-			"Модельный сервис",
-		],
-	},
-	{
-		id: "g_ops",
-		name: "Эксплуатация (Сопровождение + Арх.)",
-		streams: ["Сопровождение и поддержка", "Архитектура данных"],
-	},
-] as const;
-
-/** Имена стримов в БД → бизнес-область в UI. */
-const DB_STREAM_TO_AREA: Record<string, string> = {
-	"ИД. Внутренний": "Источники данных",
-	"ИД. Внешний": "Источники данных",
-};
+/** Имена стримов в БД → область в UI (для сопоставления с существующими назначениями). */
+const DB_STREAM_TO_AREA: Record<string, string> = V2_DB_STREAM_TO_EXECUTOR_AREA;
 
 const AREA_TO_DB_STREAMS: Record<string, string[]> = {
 	"Источники данных": ["ИД. Внутренний", "ИД. Внешний", "Источники данных"],
+	ПиРМ: ["ПиРМ", "ПиРМ (правила и развитие модели)"],
 };
 
 export const ARCH_COMPONENT_RECOMMENDED_STREAMS: Record<string, string[]> = {
-	"Система-источник": ["Источники данных", "ПиРМ (правила и развитие модели)"],
-	"Объект / Витрина данных": ["Источники данных", "Витрины данных"],
-	"Объект данных": ["Источники данных", "Витрины данных"],
-	"Процесс обработки данных": ["Источники данных", "Интеграции"],
-	Модель: ["Контроль моделей", "ПиРМ (правила и развитие модели)"],
-	"Модельный сервис": ["Модельный сервис", "Сопровождение и поддержка"],
+	"Система-источник": ["Источники данных", "ПиРМ"],
+	"Объект / Витрина данных": ["Источники данных", "ДАДМ"],
+	"Объект данных": ["Источники данных", "ДАДМ"],
+	"Процесс обработки данных": ["Источники данных", "Потоковые данные"],
+	Модель: ["Контроль моделей", "ПиРМ"],
+	"Модельный сервис": ["ДАДМ", "Цифровые агенты"],
 };
 
 export function streamDisplayLabel(stream: string): string {
@@ -67,31 +36,14 @@ export function streamAreaKey(stream: string): string {
 }
 
 export function resolveScopeStreams(scope: LogicWorksScope): string[] {
-	if (scope.kind === "group") {
-		const group = LOGIC_STREAM_GROUPS.find((g) => g.id === scope.groupId);
-		if (!group) return [];
-		return group.streams.flatMap(
-			(s) => AREA_TO_DB_STREAMS[s] ?? [s],
-		);
-	}
 	return AREA_TO_DB_STREAMS[scope.stream] ?? [scope.stream];
 }
 
 export function scopeLabel(scope: LogicWorksScope): string {
-	if (scope.kind === "group") {
-		return (
-			LOGIC_STREAM_GROUPS.find((g) => g.id === scope.groupId)?.name ??
-			"Группа стримов"
-		);
-	}
 	return scope.stream;
 }
 
-export function scopeSubtitle(scope: LogicWorksScope): string {
-	if (scope.kind === "group") {
-		const group = LOGIC_STREAM_GROUPS.find((g) => g.id === scope.groupId);
-		return group ? `группа · ${group.streams.length} стрима` : "группа";
-	}
+export function scopeSubtitle(_scope: LogicWorksScope): string {
 	return "стрим-исполнитель";
 }
 
@@ -122,20 +74,19 @@ export function pickStreamForScope(
 
 export function streamColor(stream: string): string {
 	const label = streamDisplayLabel(stream);
-	if (label.includes("Контроль") || label.includes("Модельн")) return "#7c5cd6";
-	if (label.includes("Источник") || label.includes("Витрин")) return "#1f8a4d";
-	if (label.includes("Интеграц") || label.includes("Архитект")) return "#d2851f";
-	return "#2f6bd8";
+	if (label === "ДАДМ") return "#2f6bd8";
+	if (label === "ПиРМ") return "#e07b16";
+	if (label.includes("Контроль")) return "#7c5cd6";
+	if (label.includes("Источник")) return "#1f8a4d";
+	if (label.includes("Цифровые агент")) return "#8b5cf6";
+	if (label.includes("Потоков")) return "#0ea5e9";
+	return "#64748b";
 }
 
 export function recommendedStreamsForComponent(
 	archComponentType: string,
 ): string[] {
-	return (
-		ARCH_COMPONENT_RECOMMENDED_STREAMS[archComponentType] ?? [
-			"ПиРМ (правила и развитие модели)",
-		]
-	);
+	return ARCH_COMPONENT_RECOMMENDED_STREAMS[archComponentType] ?? ["ПиРМ"];
 }
 
 export function isWorkAssignedToLogicStream(
@@ -165,3 +116,5 @@ export function shortenStreamLabel(stream: string, max = 16): string {
 	const label = streamDisplayLabel(stream);
 	return label.length > max ? `${label.slice(0, max - 1)}…` : label;
 }
+
+export type { V2ExecutorStreamLabel };

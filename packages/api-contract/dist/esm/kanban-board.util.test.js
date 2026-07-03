@@ -88,6 +88,31 @@ describe("kanban board role estimates", () => {
         expect(normalized.estimatePd).toBe(3);
         expect(kanbanBoardEffectiveEstimatePd(normalized)).toBe(3);
     });
+    it("preserves images when images field is omitted on update", () => {
+        const withImages = normalizeKanbanBoardTaskContent({
+            title: "Task",
+            images: [
+                {
+                    id: "img1",
+                    name: "shot.png",
+                    width: 100,
+                    height: 50,
+                    fullByteSize: 1000,
+                    thumbByteSize: 200,
+                    createdAt: "2026-06-16T12:00:00.000Z",
+                },
+            ],
+        });
+        const updated = normalizeKanbanBoardTaskContent({
+            title: "Task updated",
+            images: withImages.images,
+        });
+        expect(updated.images).toHaveLength(1);
+        const titleOnly = normalizeKanbanBoardTaskContent({
+            title: "Task updated again",
+        });
+        expect(titleOnly.images).toBeUndefined();
+    });
 });
 describe("kanban board sprint capacity", () => {
     it("uses individual capacity or default", () => {

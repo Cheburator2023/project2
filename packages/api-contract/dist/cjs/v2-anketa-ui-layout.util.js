@@ -55,7 +55,7 @@ function enrichAnketaLayoutUiSchema(uiSchema, jsonSchema) {
             ...(sectionId === "detailInfo" ? { titleVariant: "h5" } : {}),
         });
     }
-    for (const streamId of v2_anketa_section_ui_util_1.V2_ANKETA_STREAM_SECTION_IDS) {
+    for (const streamId of v2_anketa_workflow_types_1.V2_ANKETA_MAIN_SECTION_IDS.filter((id) => id.startsWith("stream"))) {
         if (!rootProps[streamId])
             continue;
         const streamProps = readSchemaProperties(rootProps[streamId]);
@@ -63,6 +63,30 @@ function enrichAnketaLayoutUiSchema(uiSchema, jsonSchema) {
             if (readSchemaType(childSchema) !== "object")
                 continue;
             const node = ensureUiNode(ui, [streamId, key]);
+            mergeUiOptions(node, {
+                sectionRole: "subsection",
+                showFilledCount: true,
+            });
+        }
+    }
+    for (const [blockKey, blockSchema] of Object.entries(rootProps)) {
+        if (readSchemaType(blockSchema) !== "object")
+            continue;
+        const blockUi = ensureUiNode(ui, [blockKey]);
+        const streamBlock = (0, v2_anketa_section_ui_util_1.resolveV2AnketaStreamBlockOptions)(blockUi, blockKey);
+        if (!streamBlock.streamBlock)
+            continue;
+        mergeUiOptions(blockUi, {
+            streamBlock: true,
+            ...(streamBlock.streamExecutor
+                ? { streamExecutor: streamBlock.streamExecutor }
+                : {}),
+        });
+        const blockProps = readSchemaProperties(blockSchema);
+        for (const [key, childSchema] of Object.entries(blockProps)) {
+            if (readSchemaType(childSchema) !== "object")
+                continue;
+            const node = ensureUiNode(ui, [blockKey, key]);
             mergeUiOptions(node, {
                 sectionRole: "subsection",
                 showFilledCount: true,

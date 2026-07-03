@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compileTypicalWorkCalculationLogic, compileTypicalWorkTriggerRulesToJsonLogic, compileWorkFormulaTokensToJsonLogic, evaluateTypicalWorkCalculation, evaluateTypicalWorkJsonLogicValue, evaluateTypicalWorkResultJsonLogic, previewTypicalWorkCalculation, } from "./v2-typical-work-jsonlogic.util";
+import { compileCalculationLogicFromVersionConfig, compileTypicalWorkCalculationLogic, compileTypicalWorkTriggerRulesToJsonLogic, compileWorkFormulaTokensToJsonLogic, evaluateTypicalWorkCalculation, evaluateTypicalWorkJsonLogicValue, evaluateTypicalWorkResultJsonLogic, needsCalculationLogicBackfill, previewTypicalWorkCalculation, } from "./v2-typical-work-jsonlogic.util";
 import { defaultWorkFormula, defaultWorkRounding } from "./v2-typical-work.types";
 import { parseWorkFormulaText, previewWorkFormula } from "./v2-work-formula.util";
 describe("v2-typical-work-jsonlogic.util", () => {
@@ -86,5 +86,18 @@ describe("v2-typical-work-jsonlogic.util", () => {
     it("evaluates roundStep op", () => {
         const result = evaluateTypicalWorkJsonLogicValue({ roundStep: [{ var: "norm" }, "CEIL", 0.1] }, { norm: 1.25 });
         expect(result).toBeCloseTo(1.3, 5);
+    });
+    it("compiles version_config formula when calculationLogic is missing", () => {
+        const formula = defaultWorkFormula();
+        const compiled = compileCalculationLogicFromVersionConfig({
+            formula: formula.tokens,
+            formulaText: formula.text,
+            roundingMode: "NONE",
+            roundingStep: null,
+        });
+        expect(compiled?.version).toBe(1);
+        expect(compiled?.result).toBeTruthy();
+        expect(needsCalculationLogicBackfill(null)).toBe(true);
+        expect(needsCalculationLogicBackfill(compiled)).toBe(false);
     });
 });

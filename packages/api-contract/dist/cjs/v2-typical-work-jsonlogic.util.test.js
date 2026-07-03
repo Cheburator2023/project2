@@ -89,4 +89,17 @@ const v2_work_formula_util_1 = require("./v2-work-formula.util");
         const result = (0, v2_typical_work_jsonlogic_util_1.evaluateTypicalWorkJsonLogicValue)({ roundStep: [{ var: "norm" }, "CEIL", 0.1] }, { norm: 1.25 });
         (0, vitest_1.expect)(result).toBeCloseTo(1.3, 5);
     });
+    (0, vitest_1.it)("compiles version_config formula when calculationLogic is missing", () => {
+        const formula = (0, v2_typical_work_types_1.defaultWorkFormula)();
+        const compiled = (0, v2_typical_work_jsonlogic_util_1.compileCalculationLogicFromVersionConfig)({
+            formula: formula.tokens,
+            formulaText: formula.text,
+            roundingMode: "NONE",
+            roundingStep: null,
+        });
+        (0, vitest_1.expect)(compiled?.version).toBe(1);
+        (0, vitest_1.expect)(compiled?.result).toBeTruthy();
+        (0, vitest_1.expect)((0, v2_typical_work_jsonlogic_util_1.needsCalculationLogicBackfill)(null)).toBe(true);
+        (0, vitest_1.expect)((0, v2_typical_work_jsonlogic_util_1.needsCalculationLogicBackfill)(compiled)).toBe(false);
+    });
 });

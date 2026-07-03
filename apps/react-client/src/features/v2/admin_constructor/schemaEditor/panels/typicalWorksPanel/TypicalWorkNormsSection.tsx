@@ -33,6 +33,29 @@ function isoDateValue(value: string | null): string {
 	return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : "";
 }
 
+function dayBefore(isoDay: string): string | null {
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDay)) return null;
+	const date = new Date(`${isoDay}T12:00:00.000Z`);
+	if (Number.isNaN(date.getTime())) return null;
+	date.setUTCDate(date.getUTCDate() - 1);
+	return date.toISOString().slice(0, 10);
+}
+
+function closeOpenNormPeriodsBefore(
+	norms: V2TypicalWorkNormDto[],
+	streamExecutor: string,
+	nextValidFrom: string,
+): V2TypicalWorkNormDto[] {
+	const closeBefore = dayBefore(nextValidFrom);
+	if (!closeBefore) return norms;
+	return norms.map((norm) => {
+		if (norm.streamExecutor !== streamExecutor || norm.validTo) return norm;
+		const from = isoDateValue(norm.validFrom);
+		if (!from || from > closeBefore) return norm;
+		return { ...norm, validTo: closeBefore };
+	});
+}
+
 function normIssuesByLocalIndex(
 	issues: Array<{ path: string; message: string }>,
 	streamNormIndices: number[],
@@ -132,9 +155,14 @@ export function TypicalWorkNormsSection({
 				</Typography>
 				<Button
 					size="small"
-					onClick={() =>
+					onClick={() => {
+						const closed = closeOpenNormPeriodsBefore(
+							norms,
+							streamExecutor,
+							today,
+						);
 						onChange([
-							...norms,
+							...closed,
 							{
 								id: `new-${Date.now()}`,
 								streamExecutor,
@@ -142,8 +170,8 @@ export function TypicalWorkNormsSection({
 								validFrom: today,
 								validTo: null,
 							},
-						])
-					}
+						]);
+					}}
 					sx={{
 						ml: "auto",
 						textTransform: "none",

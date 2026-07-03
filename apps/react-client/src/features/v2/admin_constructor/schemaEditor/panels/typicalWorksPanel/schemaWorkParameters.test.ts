@@ -4,6 +4,8 @@ import type { V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
 import {
 	buildSchemaWorkParameters,
 	resolveSchemaParamForTriggerRule,
+	triggerRuleGroupKey,
+	excludeRulesByGroupKey,
 } from "./schemaWorkParameters";
 import type { FieldPathHint } from "../../types";
 
@@ -73,7 +75,6 @@ describe("buildSchemaWorkParameters", () => {
 
 	it("returns schema fields for matching arch component with dictionary values", () => {
 		const params = buildSchemaWorkParameters({
-			archComponentType: "Система-источник",
 			fieldPathHints: hints,
 			uiSchema,
 			jsonSchema,
@@ -85,13 +86,44 @@ describe("buildSchemaWorkParameters", () => {
 			},
 		});
 
-		expect(params).toHaveLength(1);
-		expect(params[0]?.code).toBe("type");
-		expect(params[0]?.name).toBe("Тип системы-источника");
-		expect(params[0]?.values.map((v) => v.label)).toEqual([
+		const typeParam = params.find((p) => p.code === "type");
+		expect(typeParam).toBeDefined();
+		expect(typeParam?.name).toBe("Тип системы-источника");
+		expect(typeParam?.values.map((v) => v.label)).toEqual([
 			"Внутренний",
 			"Внешний",
 		]);
+	});
+
+	it("includes fields from all arch components in the schema", () => {
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: hints,
+			uiSchema,
+			jsonSchema: {
+				...jsonSchema,
+				properties: {
+					...jsonSchema.properties,
+					other: {
+						type: "array",
+						items: {
+							type: "object",
+							properties: {
+								flag: { type: "boolean", title: "Чужой блок" },
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {
+				"v2.detailInfo.sourceSystems.items.type": {
+					enums: ["internal", "external"],
+					enumNames: ["Внутренний", "Внешний"],
+				},
+			},
+		});
+
+		expect(params.some((p) => p.code === "type")).toBe(true);
+		expect(params.some((p) => p.code === "flag")).toBe(true);
 	});
 
 	it("includes object arch-component fields without /items/ path", () => {
@@ -107,7 +139,6 @@ describe("buildSchemaWorkParameters", () => {
 		];
 
 		const params = buildSchemaWorkParameters({
-			archComponentType: "Модельный сервис",
 			fieldPathHints: modelHints,
 			uiSchema: {
 				generalInfo: {
@@ -189,4 +220,82 @@ describe("resolveSchemaParamForTriggerRule", () => {
 		);
 		expect(param?.code).toBe("type");
 	});
+
+	it("maps «Тип системы-источника» legacy slug to schema `type` field", () => {
+		const param = resolveSchemaParamForTriggerRule(
+			{
+				paramCode: slugFromName("Тип системы-источника"),
+				paramName: "Тип системы-источника",
+			},
+			schemaParams,
+		);
+		expect(param?.code).toBe("type");
+	});
 });
+
+describe("triggerRuleGroupKey", () => {
+	const schemaParams: V2TypicalWorkParameterDto[] = [
+		{
+			id: "schema:type",
+			code: "type",
+			name: "Тип системы-источника",
+			description: null,
+			values: [
+				{
+					id: "v1",
+					code: "internal",
+					label: "Внутренний",
+					coefficient: null,
+					sortOrder: 0,
+					validFrom: "2025-01-01",
+					validTo: null,
+				},
+				{
+					id: "v2",
+					code: "external",
+					label: "Внешний",
+					coefficient: null,
+					sortOrder: 1,
+					validFrom: "2025-01-01",
+					validTo: null,
+				},
+			],
+		},
+	];
+
+	it("merges legacy and schema param codes into one group", () => {
+		const legacy = {
+			paramCode: "тип_системы_источника",
+			paramName: "Тип системы-источника",
+		};
+		const schema = { paramCode: "type", paramName: "Тип системы-источника" };
+		expect(triggerRuleGroupKey(legacy, schemaParams)).toBe("type");
+		expect(triggerRuleGroupKey(schema, schemaParams)).toBe("type");
+	});
+
+	it("excludeRulesByGroupKey removes all aliases in the group", () => {
+		const rules = [
+			{
+				paramCode: "type",
+				paramName: "Тип системы-источника",
+				valueCode: "external",
+				valueLabel: "Внешний",
+			},
+			{
+				paramCode: "тип_системы_источника",
+				paramName: "Тип системы-источника",
+				valueCode: "internal",
+				valueLabel: "Внутренний",
+			},
+		];
+		const next = excludeRulesByGroupKey(rules, "type", schemaParams);
+		expect(next).toHaveLength(0);
+	});
+});
+
+function slugFromName(name: string): string {
+	return name
+		.toLowerCase()
+		.replace(/[^\wа-я]+/gi, "_")
+		.replace(/^_+|_+$/g, "");
+}

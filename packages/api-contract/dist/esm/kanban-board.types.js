@@ -33,6 +33,11 @@ export function kanbanBoardSubtaskIsDone(item) {
 export function kanbanBoardSubtaskDefaultStatus() {
     return "next_up";
 }
+/** Макс. размер full-изображения после сжатия на клиенте, байт. */
+export const KANBAN_BOARD_TASK_IMAGE_MAX_FULL_BYTES = 2 * 1024 * 1024;
+/** Срок хранения вложений у задач в колонке «Готово», дней. */
+export const KANBAN_BOARD_TASK_IMAGE_DONE_RETENTION_DAYS = 7;
+export const KANBAN_BOARD_DONE_COLUMN_ID = "done";
 export const KANBAN_BOARD_PRIORITIES = [
     { id: "high", title: "Высокий" },
     { id: "medium", title: "Средний" },

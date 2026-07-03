@@ -67,7 +67,8 @@ export function readTypicalWorkSourceField(
 	}
 	if (
 		source.type !== undefined &&
-		(paramCode === "type" || paramName?.toLowerCase().includes("тип источника"))
+		(paramCode === "type" ||
+			isSourceTypeTriggerParam(paramCode, paramName))
 	) {
 		return source.type;
 	}
@@ -106,7 +107,11 @@ export function isSourceTypeTriggerParam(
 	paramName: string | null | undefined,
 ): boolean {
 	const name = paramName?.toLowerCase() ?? "";
-	return name.includes("тип источника") || paramCode.includes("тип_источника");
+	const code = paramCode.toLowerCase();
+	if (code === "type") return true;
+	if (/тип[_\s-]*(системы[_\s-]*)?источник/i.test(name)) return true;
+	if (/тип[_\s-]*(системы[_\s-]*)?источник/i.test(code)) return true;
+	return name.includes("тип источника") || code.includes("тип_источника");
 }
 
 export function isControlTypeTriggerParam(
@@ -144,8 +149,19 @@ export function resolveTriggerStatusCatalogParam(
 	}
 
 	if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName)) {
-		return catalog.find(
-			(item) => item.code === slugParamCode("Тип источника данных"),
+		return (
+			catalog.find((item) => item.code === "type") ??
+			catalog.find(
+				(item) => item.code === slugParamCode("Тип системы-источника"),
+			) ??
+			catalog.find(
+				(item) => item.code === slugParamCode("Тип источника данных"),
+			) ??
+			catalog.find((item) =>
+				item.values.some(
+					(value) => value.label === "Внутренний" || value.label === "Внешний",
+				),
+			)
 		);
 	}
 
@@ -154,6 +170,17 @@ export function resolveTriggerStatusCatalogParam(
 	}
 
 	return undefined;
+}
+
+/** Канонический ключ группы триггеров при проверке по каталогу (legacy alias → `type`). */
+export function triggerRuleCatalogGroupKey(
+	rule: { paramCode: string; paramName?: string | null },
+	catalog: TriggerStatusCatalogParamLike[],
+): string {
+	const resolved = resolveTriggerStatusCatalogParam(rule, catalog);
+	if (resolved) return resolved.code;
+	if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName)) return "type";
+	return rule.paramCode;
 }
 
 export function catalogValueMatchesTriggerRule(

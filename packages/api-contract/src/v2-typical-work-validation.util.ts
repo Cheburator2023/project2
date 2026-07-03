@@ -13,6 +13,7 @@ import {
 	isPresenceOnlyTriggerRule,
 	isSourceTypeTriggerParam,
 	resolveTriggerStatusCatalogParam,
+	triggerRuleCatalogGroupKey,
 	typicalWorkRulesMatchSource,
 } from "./v2-works-catalog-match.util";
 
@@ -373,6 +374,23 @@ function isRuleInputInvalid(
 
 	const param = resolveTriggerStatusCatalogParam(rule, catalog);
 	if (!param) return true;
+
+	const threshold = rule.valueLabel ?? rule.valueCode;
+	if (
+		param.values.length === 0 &&
+		threshold != null &&
+		String(threshold).trim() !== "" &&
+		(operator === "=" ||
+			operator === "!=" ||
+			operator === ">=" ||
+			operator === "<=" ||
+			operator === ">" ||
+			operator === "<")
+	) {
+		if (operator === "=" || operator === "!=") return false;
+		return Number.isNaN(Number(threshold));
+	}
+
 	return !param.values.some(
 		(value) =>
 			catalogValueMatchesTriggerRule(value, rule) &&
@@ -390,8 +408,17 @@ export function computeWorkTriggerStatus(
 	if (rules.length === 0) return "no_triggers";
 
 	if (catalog?.length) {
+		const grouped = new Map<string, WorkTriggerStatusRuleInput[]>();
 		for (const rule of rules) {
-			if (isRuleInputInvalid(rule, catalog, atDate)) return "invalid";
+			const key = triggerRuleCatalogGroupKey(rule, catalog);
+			const list = grouped.get(key) ?? [];
+			list.push(rule);
+			grouped.set(key, list);
+		}
+		for (const [groupKey, groupRules] of grouped) {
+			if (isWorkTriggerGroupInvalid(groupKey, groupRules, catalog, atDate)) {
+				return "invalid";
+			}
 		}
 	} else if (rules.some((rule) => !rule.paramCode?.trim())) {
 		return "invalid";

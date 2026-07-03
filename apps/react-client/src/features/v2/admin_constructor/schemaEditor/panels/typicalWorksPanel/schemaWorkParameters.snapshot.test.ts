@@ -64,9 +64,8 @@ describe("buildSchemaWorkParameters on default snapshot", () => {
 		).toBe(true);
 	});
 
-	it("returns params for Модельный сервис", () => {
+	it("returns params for Модельный сервис fields from snapshot", () => {
 		const params = buildSchemaWorkParameters({
-			archComponentType: "Модельный сервис",
 			fieldPathHints: hints,
 			uiSchema: snapshot.uiSchema,
 			jsonSchema: snapshot.jsonSchema,
@@ -76,15 +75,19 @@ describe("buildSchemaWorkParameters on default snapshot", () => {
 		expect(params.some((p) => p.code === "workType")).toBe(true);
 	});
 
-	it("returns params for each work arch component type", () => {
-		const types = [
+	it("returns the same schema-wide param set for any work arch type", () => {
+		const base = buildSchemaWorkParameters({
+			fieldPathHints: hints,
+			uiSchema: snapshot.uiSchema,
+			jsonSchema: snapshot.jsonSchema,
+			enumMapByCode: {},
+		});
+
+		for (const archComponentType of [
 			"Система-источник",
 			"Объект / Витрина данных",
-			"Процесс обработки данных",
 			"Модельный сервис",
-		] as const;
-
-		for (const archComponentType of types) {
+		]) {
 			const params = buildSchemaWorkParameters({
 				archComponentType,
 				fieldPathHints: hints,
@@ -92,7 +95,7 @@ describe("buildSchemaWorkParameters on default snapshot", () => {
 				jsonSchema: snapshot.jsonSchema,
 				enumMapByCode: {},
 			});
-			expect(params.length, archComponentType).toBeGreaterThan(0);
+			expect(params.length, archComponentType).toBe(base.length);
 		}
 	});
 });

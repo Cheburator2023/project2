@@ -23,6 +23,7 @@ import type {
 	V2TypicalWorkPreviewResponseDto,
 } from "@smart-anketa/api-contract";
 import {
+	compileCalculationLogicFromVersionConfig,
 	collectAllowedParamCodes,
 	compileStoredTypicalWorkResultLogic,
 	computeWorkTriggerStatus,
@@ -31,6 +32,7 @@ import {
 	detectTransitiveCycle,
 	evaluateTermsFormula,
 	isWorkCoefficientValueAvailable,
+	needsCalculationLogicBackfill,
 	normalizeStoredFormula,
 	previewTypicalWorkCalculation,
 	resolveActiveNormOnDate,
@@ -603,6 +605,14 @@ export class V2TypicalWorkWriteService {
 			}
 		}
 
+		if (dto.templateVersionId) {
+			await this.ensureVersionConfigCalculationLogic(
+				workId,
+				stream,
+				dto.templateVersionId,
+			);
+		}
+
 		return this.typicalWorkService.getWorkCard(
 			workId,
 			stream,
@@ -737,22 +747,11 @@ export class V2TypicalWorkWriteService {
 		let skipped = 0;
 
 		for (const config of configs) {
-			const formula = {
-				tokens: Array.isArray(config.formula)
-					? (config.formula as ReturnType<typeof defaultWorkFormula>["tokens"])
-					: defaultWorkFormula().tokens,
-				text: config.formulaText ?? defaultWorkFormula().text,
-			};
-			const rounding = {
-				mode: config.roundingMode as ReturnType<
-					typeof defaultWorkRounding
-				>["mode"],
-				step:
-					config.roundingStep == null
-						? null
-						: Number(config.roundingStep),
-			};
-			const compiled = compileStoredTypicalWorkResultLogic(formula, rounding);
+			if (!needsCalculationLogicBackfill(config.calculationLogic)) {
+				skipped++;
+				continue;
+			}
+			const compiled = compileCalculationLogicFromVersionConfig(config);
 			if (!compiled) {
 				skipped++;
 				continue;
@@ -763,6 +762,21 @@ export class V2TypicalWorkWriteService {
 		}
 
 		return { updated, skipped };
+	}
+
+	private async ensureVersionConfigCalculationLogic(
+		workId: string,
+		streamExecutor: string,
+		templateVersionId: string,
+	): Promise<void> {
+		const config = await this.versionConfigRepository.findOne({
+			where: { workId, streamExecutor, templateVersionId },
+		});
+		if (!config || !needsCalculationLogicBackfill(config.calculationLogic)) return;
+		const compiled = compileCalculationLogicFromVersionConfig(config);
+		if (!compiled) return;
+		config.calculationLogic = compiled;
+		await this.versionConfigRepository.save(config);
 	}
 }
 

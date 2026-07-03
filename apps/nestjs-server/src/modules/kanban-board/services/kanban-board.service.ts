@@ -4,6 +4,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import * as ExcelJS from "exceljs";
 import { DataSource, Repository } from "typeorm";
 import type { KanbanBoardTaskRecord } from "@smart-anketa/api-contract";
+import { normalizeKanbanBoardTaskContent } from "@smart-anketa/api-contract";
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
 import { KanbanBoardEntity } from "../entities/kanban-board.entity";
 import {
@@ -99,7 +100,19 @@ export class KanbanBoardService {
 				await repo.remove(stale);
 			}
 
+			const existingById = new Map(existing.map((row) => [row.id, row]));
+
 			for (const task of prepared) {
+				const prev = existingById.get(task.id);
+				if (prev?.content) {
+					task.content = normalizeKanbanBoardTaskContent({
+						...prev.content,
+						...task.content,
+						...(task.content.images !== undefined
+							? { images: task.content.images }
+							: { images: prev.content.images }),
+					});
+				}
 				await repo.save(this.fromRecord(task));
 			}
 		});

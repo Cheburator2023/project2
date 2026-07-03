@@ -1,6 +1,6 @@
 import { validateWorkFormulaTokens } from "./v2-work-formula.util";
 import { validateTermsFormula, termsToTokenFormula } from "./v2-work-terms-formula.util";
-import { catalogValueMatchesTriggerRule, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, resolveTriggerStatusCatalogParam, typicalWorkRulesMatchSource, } from "./v2-works-catalog-match.util";
+import { catalogValueMatchesTriggerRule, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, typicalWorkRulesMatchSource, } from "./v2-works-catalog-match.util";
 function parseIsoDay(value) {
     const day = value.slice(0, 10);
     return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
@@ -247,6 +247,20 @@ function isRuleInputInvalid(rule, catalog, atDate) {
     const param = resolveTriggerStatusCatalogParam(rule, catalog);
     if (!param)
         return true;
+    const threshold = rule.valueLabel ?? rule.valueCode;
+    if (param.values.length === 0 &&
+        threshold != null &&
+        String(threshold).trim() !== "" &&
+        (operator === "=" ||
+            operator === "!=" ||
+            operator === ">=" ||
+            operator === "<=" ||
+            operator === ">" ||
+            operator === "<")) {
+        if (operator === "=" || operator === "!=")
+            return false;
+        return Number.isNaN(Number(threshold));
+    }
     return !param.values.some((value) => catalogValueMatchesTriggerRule(value, rule) &&
         (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
 }
@@ -255,9 +269,17 @@ export function computeWorkTriggerStatus(rules, catalog, atDate, draftSource) {
     if (rules.length === 0)
         return "no_triggers";
     if (catalog?.length) {
+        const grouped = new Map();
         for (const rule of rules) {
-            if (isRuleInputInvalid(rule, catalog, atDate))
+            const key = triggerRuleCatalogGroupKey(rule, catalog);
+            const list = grouped.get(key) ?? [];
+            list.push(rule);
+            grouped.set(key, list);
+        }
+        for (const [groupKey, groupRules] of grouped) {
+            if (isWorkTriggerGroupInvalid(groupKey, groupRules, catalog, atDate)) {
                 return "invalid";
+            }
         }
     }
     else if (rules.some((rule) => !rule.paramCode?.trim())) {

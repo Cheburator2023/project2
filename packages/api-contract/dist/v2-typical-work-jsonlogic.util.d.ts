@@ -59,4 +59,13 @@ export declare function assembleTypicalWorkCalculationLogic(stored: Pick<V2Typic
     formula: V2TypicalWorkFormulaDto;
     rounding: V2TypicalWorkRoundingDto;
 }): V2TypicalWorkCalculationLogicDto | null;
+export type VersionConfigFormulaLike = {
+    formula: unknown;
+    formulaText?: string | null;
+    roundingMode: string;
+    roundingStep?: string | number | null;
+};
+/** Собирает JsonLogic result из сохранённой формулы version_config. */
+export declare function compileCalculationLogicFromVersionConfig(config: VersionConfigFormulaLike): V2TypicalWorkStoredCalculationLogicDto | null;
+export declare function needsCalculationLogicBackfill(raw: unknown): boolean;
 export declare function parseStoredTypicalWorkCalculationLogic(raw: unknown): V2TypicalWorkStoredCalculationLogicDto | null;

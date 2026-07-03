@@ -360,7 +360,7 @@ function SchemaCanvasFieldRow({
 	const { label: typeChipLabel, colorKey: typeChipColorKey } =
 		resolveCanvasFieldTypeChipLabel(schemaNode, uiBranch);
 	const typeChipColor = resolveCanvasTypeChipColor(typeChipColorKey);
-	const categoryChips = resolveCanvasCategoryChips(schemaNode, uiBranch);
+	const categoryChips = resolveCanvasCategoryChips(schemaNode, uiBranch, fieldKey);
 
 	const canvasUiColor =
 		canvasUiKind === "hidden"

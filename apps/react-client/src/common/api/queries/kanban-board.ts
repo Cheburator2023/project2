@@ -24,6 +24,7 @@ import type {
 	KanbanBoardSupersprintDto,
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
+	KanbanBoardTaskImageDto,
 	UpdateKanbanBoardAssigneeRequestDto,
 	UpdateKanbanBoardBoardRequestDto,
 	UpdateKanbanBoardColumnRequestDto,
@@ -711,6 +712,111 @@ export const useKanbanBoardTaskByRef = (ref: string | undefined) =>
 		enabled: Boolean(ref),
 		queryFn: ({ signal }) => kanbanBoardGetTaskByRef(ref!, signal),
 	});
+
+export const kanbanBoardListTaskImages = (
+	taskId: string,
+	signal?: AbortSignal,
+) =>
+	apiClient<KanbanBoardTaskImageDto[]>({
+		url: `/kanban-board/tasks/${taskId}/images`,
+		method: "GET",
+		signal,
+	});
+
+export const useKanbanBoardTaskImages = (taskId: string | undefined) =>
+	useQuery({
+		queryKey: ["kanbanBoardTaskImages", taskId],
+		enabled: Boolean(taskId),
+		queryFn: ({ signal }) => kanbanBoardListTaskImages(taskId!, signal),
+	});
+
+export const kanbanBoardFetchTaskImageBlob = (
+	taskId: string,
+	imageId: string,
+	variant: "full" | "thumb" = "full",
+	signal?: AbortSignal,
+) =>
+	apiClient<Blob>({
+		url: `/kanban-board/tasks/${taskId}/images/${imageId}`,
+		method: "GET",
+		params: { variant },
+		responseType: "blob",
+		signal,
+	});
+
+export type KanbanBoardTaskImageUploadPayload = {
+	name: string;
+	mimeType: string;
+	width: number;
+	height: number;
+	full: Blob;
+	thumb: Blob;
+};
+
+export const kanbanBoardUploadTaskImage = async (
+	taskId: string,
+	prepared: KanbanBoardTaskImageUploadPayload,
+	signal?: AbortSignal,
+): Promise<KanbanBoardTaskImageDto> => {
+	const formData = new FormData();
+	formData.append("full", prepared.full, "full");
+	formData.append("thumb", prepared.thumb, "thumb");
+	formData.append("name", prepared.name);
+	formData.append("mimeType", prepared.mimeType);
+	formData.append("width", String(prepared.width));
+	formData.append("height", String(prepared.height));
+	return apiClient<KanbanBoardTaskImageDto>({
+		url: `/kanban-board/tasks/${taskId}/images`,
+		method: "POST",
+		data: formData,
+		signal,
+		timeout: 120_000,
+	});
+};
+
+export const useUploadKanbanBoardTaskImage = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			taskId,
+			prepared,
+		}: {
+			taskId: string;
+			prepared: KanbanBoardTaskImageUploadPayload;
+		}) => kanbanBoardUploadTaskImage(taskId, prepared),
+		onSuccess: (_image, { taskId }) => {
+			invalidateTracker(queryClient);
+			queryClient.invalidateQueries({
+				queryKey: ["kanbanBoardTaskImages", taskId],
+			});
+			queryClient.invalidateQueries({ queryKey: ["kanbanBoardTaskRef"] });
+		},
+	});
+};
+
+export const useDeleteKanbanBoardTaskImage = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			taskId,
+			imageId,
+		}: {
+			taskId: string;
+			imageId: string;
+		}) =>
+			apiClient<void>({
+				url: `/kanban-board/tasks/${taskId}/images/${imageId}`,
+				method: "DELETE",
+			}),
+		onSuccess: (_result, { taskId }) => {
+			invalidateTracker(queryClient);
+			queryClient.invalidateQueries({
+				queryKey: ["kanbanBoardTaskImages", taskId],
+			});
+			queryClient.invalidateQueries({ queryKey: ["kanbanBoardTaskRef"] });
+		},
+	});
+};
 
 export const kanbanBoardGetBoardByRef = (ref: string, signal?: AbortSignal) =>
 	apiClient<KanbanBoardBoardDto>({

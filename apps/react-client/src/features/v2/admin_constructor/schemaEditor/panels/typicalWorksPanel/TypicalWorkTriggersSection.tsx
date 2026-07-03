@@ -19,18 +19,22 @@ import {
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { useMemo, useState } from "react";
 import {
+	catalogForTriggerRuleGroup,
 	isWorkTriggerGroupInvalid,
-	methodologyCatalogFromParameters,
+	type TriggerValidationIssue,
 } from "./typicalWorkPatchErrors";
 import {
+	excludeRulesByGroupKey,
+	filterRulesByGroupKey,
 	resolveSchemaParamForTriggerRule,
 	schemaWorkParameterEmptyPickerMessage,
+	triggerRuleGroupKey,
 } from "./schemaWorkParameters";
 
 type TypicalWorkTriggersSectionProps = {
 	rules: V2TypicalWorkRuleDto[];
 	triggerStatus: V2WorkTriggerStatus;
-	archComponentType: string;
+	validationIssues?: TriggerValidationIssue[];
 	schemaFieldCount?: number;
 	paramOptions: V2TypicalWorkParameterDto[];
 	methodologyCatalog?: V2TypicalWorkParameterDto[];
@@ -49,7 +53,11 @@ const OPERATOR_LABELS: Record<V2WorkRuleOperator, string> = {
 	not_in: "∉",
 };
 
-function triggerBanner(status: V2WorkTriggerStatus, ruleCount: number) {
+function triggerBanner(
+	status: V2WorkTriggerStatus,
+	ruleCount: number,
+	issues: TriggerValidationIssue[] = [],
+) {
 	switch (status) {
 		case "appears":
 			return {
@@ -68,7 +76,10 @@ function triggerBanner(status: V2WorkTriggerStatus, ruleCount: number) {
 				iconBg: "#c62828",
 				icon: "!",
 				title: "Условия заданы некорректно",
-				sub: "проверьте параметры-триггеры",
+				sub:
+					issues.length > 0
+						? issues.map((item) => item.message).join(" · ")
+						: "проверьте параметры-триггеры",
 				fg: "#c62828",
 			};
 		case "hidden":
@@ -97,7 +108,7 @@ function triggerBanner(status: V2WorkTriggerStatus, ruleCount: number) {
 export function TypicalWorkTriggersSection({
 	rules,
 	triggerStatus,
-	archComponentType,
+	validationIssues = [],
 	schemaFieldCount = 0,
 	paramOptions,
 	methodologyCatalog = [],
@@ -105,50 +116,48 @@ export function TypicalWorkTriggersSection({
 	onChange,
 }: TypicalWorkTriggersSectionProps) {
 	const [pickerKey, setPickerKey] = useState(0);
-	const banner = triggerBanner(triggerStatus, rules.length);
+	const banner = triggerBanner(triggerStatus, rules.length, validationIssues);
 
-	const usedParamCodes = useMemo(
-		() => new Set(rules.map((r) => r.paramCode)),
-		[rules],
+	const usedGroupKeys = useMemo(
+		() => new Set(rules.map((r) => triggerRuleGroupKey(r, paramOptions))),
+		[rules, paramOptions],
+	);
+
+	const pickerItems = useMemo(
+		() => paramOptions.filter((p) => !usedGroupKeys.has(p.code)),
+		[paramOptions, usedGroupKeys],
 	);
 
 	const emptyPickerHint = schemaWorkParameterEmptyPickerMessage(
-		archComponentType,
 		schemaFieldCount,
-		usedParamCodes.size,
-	);
-
-	const pickerItems = paramOptions.filter((p) => !usedParamCodes.has(p.code));
-
-	const catalogForValidation = useMemo(
-		() =>
-			methodologyCatalogFromParameters(methodologyCatalog) ??
-			methodologyCatalogFromParameters(paramOptions) ??
-			[],
-		[methodologyCatalog, paramOptions],
+		usedGroupKeys.size,
+		pickerItems.length,
 	);
 
 	const grouped = useMemo(() => {
 		const map = new Map<string, V2TypicalWorkRuleDto[]>();
 		for (const rule of rules) {
-			const list = map.get(rule.paramCode) ?? [];
+			const key = triggerRuleGroupKey(rule, paramOptions);
+			const list = map.get(key) ?? [];
 			list.push(rule);
-			map.set(rule.paramCode, list);
+			map.set(key, list);
 		}
 		return [...map.entries()];
-	}, [rules]);
+	}, [rules, paramOptions]);
 
 	const toggleValue = (
+		groupKey: string,
 		param: V2TypicalWorkParameterDto,
 		valueCode: string,
 		valueLabel: string,
 		selected: boolean,
 	) => {
-		const operator = paramRulesOperator(rules, param.code);
+		const operator = paramRulesOperator(rules, groupKey, paramOptions);
 		const isAnyOf = operator === "in" || operator === "not_in";
 
 		if (isAnyOf) {
-			const current = rules.find((r) => r.paramCode === param.code);
+			const groupRules = filterRulesByGroupKey(rules, groupKey, paramOptions);
+			const current = groupRules[0];
 			const currentValues = current?.values?.length
 				? current.values
 				: current?.valueCode
@@ -157,13 +166,13 @@ export function TypicalWorkTriggersSection({
 			const nextValues = selected
 				? currentValues.filter((v) => v.code !== valueCode)
 				: [...currentValues, { code: valueCode, label: valueLabel }];
-			const withoutParam = rules.filter((r) => r.paramCode !== param.code);
+			const withoutGroup = excludeRulesByGroupKey(rules, groupKey, paramOptions);
 			if (nextValues.length === 0) {
-				onChange(withoutParam);
+				onChange(withoutGroup);
 				return;
 			}
 			onChange([
-				...withoutParam,
+				...withoutGroup,
 				{
 					id: current?.id ?? `new-${Date.now()}`,
 					streamExecutor,
@@ -184,16 +193,20 @@ export function TypicalWorkTriggersSection({
 		if (selected) {
 			onChange(
 				rules.filter(
-					(r) => !(r.paramCode === param.code && r.valueCode === valueCode),
+					(r) =>
+						!(
+							triggerRuleGroupKey(r, paramOptions) === groupKey &&
+							r.valueCode === valueCode
+						),
 				),
 			);
 			return;
 		}
-		const withoutParam = rules.filter((r) => r.paramCode !== param.code);
+		const withoutGroup = excludeRulesByGroupKey(rules, groupKey, paramOptions);
 		const currentOperator =
-			rules.find((r) => r.paramCode === param.code)?.operator ?? "=";
+			filterRulesByGroupKey(rules, groupKey, paramOptions)[0]?.operator ?? "=";
 		onChange([
-			...withoutParam,
+			...withoutGroup,
 			{
 				id: `new-${Date.now()}-${valueCode}`,
 				streamExecutor,
@@ -206,17 +219,19 @@ export function TypicalWorkTriggersSection({
 		]);
 	};
 
-	const removeParam = (paramCode: string) => {
-		onChange(rules.filter((r) => r.paramCode !== paramCode));
+	const removeParam = (groupKey: string) => {
+		onChange(excludeRulesByGroupKey(rules, groupKey, paramOptions));
 	};
 
 	const updateParamOperator = (
-		paramCode: string,
+		groupKey: string,
 		operator: V2WorkRuleOperator,
 	) => {
 		onChange(
 			rules.map((rule) =>
-				rule.paramCode === paramCode ? { ...rule, operator } : rule,
+				triggerRuleGroupKey(rule, paramOptions) === groupKey
+					? { ...rule, operator }
+					: rule,
 			),
 		);
 	};
@@ -331,27 +346,48 @@ export function TypicalWorkTriggersSection({
 					<Typography sx={{ fontSize: 11.5, color: "#6b7484", mt: 0.15 }}>
 						{banner.sub}
 					</Typography>
+					{triggerStatus === "invalid" && validationIssues.length > 1 ? (
+						<Box
+							component="ul"
+							sx={{
+								m: "6px 0 0",
+								pl: 2.2,
+								fontSize: 11.5,
+								color: "#6b7484",
+							}}
+						>
+							{validationIssues.map((issue) => (
+								<Box component="li" key={`${issue.paramCode}-${issue.message}`}>
+									{issue.message}
+								</Box>
+							))}
+						</Box>
+					) : null}
 				</Box>
 			</Box>
 
 			{grouped.length > 0 ? (
 				<Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
-					{grouped.map(([paramCode, paramRules]) => {
+					{grouped.map(([groupKey, paramRules]) => {
 						const ruleSeed = {
-							paramCode,
+							paramCode: paramRules[0]?.paramCode ?? groupKey,
 							paramName: paramRules[0]?.paramName ?? null,
 						};
-						const param = resolveSchemaParamForTriggerRule(
-							ruleSeed,
-							paramOptions,
-						);
+						const param =
+							paramOptions.find((item) => item.code === groupKey) ??
+							resolveSchemaParamForTriggerRule(ruleSeed, paramOptions);
 						const isKnownPseudoTrigger =
 							isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName) ||
 							isControlTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName);
+						const validationCatalog = catalogForTriggerRuleGroup(
+							ruleSeed,
+							paramOptions,
+							methodologyCatalog,
+						);
 						const groupInvalid = isWorkTriggerGroupInvalid(
-							paramCode,
+							groupKey,
 							paramRules,
-							catalogForValidation,
+							validationCatalog,
 						);
 						const selectedCodes = new Set(
 							(
@@ -371,19 +407,19 @@ export function TypicalWorkTriggersSection({
 								);
 							}
 							return isWorkTriggerGroupInvalid(
-								paramCode,
+								groupKey,
 								[rule],
-								catalogForValidation,
+								validationCatalog,
 							);
 						});
 						const displayName =
 							param?.name ??
 							(isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName)
 								? "Тип источника данных"
-								: (paramRules[0]?.paramName ?? paramCode));
+								: (paramRules[0]?.paramName ?? groupKey));
 						return (
 							<Box
-								key={paramCode}
+								key={groupKey}
 								sx={{
 									border: `1px solid ${groupInvalid ? "#f5c6c6" : "#f0e3d2"}`,
 									bgcolor: groupInvalid ? "#fff5f5" : "#fdf8f1",
@@ -413,7 +449,7 @@ export function TypicalWorkTriggersSection({
 									<IconButton
 										size="small"
 										aria-label="Удалить триггер"
-										onClick={() => removeParam(paramCode)}
+										onClick={() => removeParam(groupKey)}
 										sx={{ color: "#c2554c" }}
 									>
 										<DeleteOutlineIcon fontSize="small" />
@@ -439,7 +475,7 @@ export function TypicalWorkTriggersSection({
 										value={paramRules[0]?.operator ?? "="}
 										onChange={(event) =>
 											updateParamOperator(
-												paramCode,
+												groupKey,
 												event.target.value as V2WorkRuleOperator,
 											)
 										}
@@ -521,7 +557,13 @@ export function TypicalWorkTriggersSection({
 												type="button"
 												onClick={() => {
 													if (!param) return;
-													toggleValue(param, value.code, value.label, selected);
+													toggleValue(
+														groupKey,
+														param,
+														value.code,
+														value.label,
+														selected,
+													);
 												}}
 												sx={{
 													display: "inline-flex",
@@ -560,7 +602,10 @@ export function TypicalWorkTriggersSection({
 
 function paramRulesOperator(
 	rules: V2TypicalWorkRuleDto[],
-	paramCode: string,
+	groupKey: string,
+	paramOptions: V2TypicalWorkParameterDto[],
 ): V2WorkRuleOperator {
-	return rules.find((r) => r.paramCode === paramCode)?.operator ?? "=";
+	return (
+		filterRulesByGroupKey(rules, groupKey, paramOptions)[0]?.operator ?? "="
+	);
 }

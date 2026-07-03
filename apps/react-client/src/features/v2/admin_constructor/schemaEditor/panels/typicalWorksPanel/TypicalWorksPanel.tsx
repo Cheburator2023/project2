@@ -28,13 +28,10 @@ import { AssignWorkFromCatalogDialog } from "./AssignWorkFromCatalogDialog";
 import { LogicWorksToolbar } from "./LogicWorksToolbar";
 import { TypicalWorkEditableCard } from "./TypicalWorkEditableCard";
 import { ParameterDependenciesPanel } from "./ParameterDependenciesPanel";
-import { TypicalWorksCatalogView } from "./TypicalWorksCatalogView";
 import { TypicalWorksEmptyState } from "./TypicalWorksEmptyState";
-import { TypicalWorksMatrixView } from "./TypicalWorksMatrixView";
 import { TypicalWorksTreeSidebar } from "./TypicalWorksTreeSidebar";
 import {
 	type LogicWorksScope,
-	type LogicWorksViewMode,
 	pickStreamForScope,
 	resolveScopeStreams,
 	scopeLabel,
@@ -65,33 +62,6 @@ export function TypicalWorksPanel() {
 
 	const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
 	const [streamExecutor, setStreamExecutor] = useState<string | null>(null);
-	const [viewMode, setViewMode] = useState<LogicWorksViewMode>(() => {
-		try {
-			const stored = sessionStorage.getItem("v2-works-view-mode");
-			if (
-				stored === "streams" ||
-				stored === "matrix" ||
-				stored === "catalog"
-			) {
-				return stored;
-			}
-			if (stored === "parameters") {
-				return "streams";
-			}
-		} catch {
-			// ignore
-		}
-		return "streams";
-	});
-
-	const handleViewModeChange = (mode: LogicWorksViewMode) => {
-		setViewMode(mode);
-		try {
-			sessionStorage.setItem("v2-works-view-mode", mode);
-		} catch {
-			// ignore
-		}
-	};
 	const [scope, setScope] = useState<LogicWorksScope>(DEFAULT_SCOPE);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [assignOpen, setAssignOpen] = useState(false);
@@ -124,10 +94,7 @@ export function TypicalWorksPanel() {
 		return [...DEFAULT_WORK_STREAMS];
 	}, [selectedListItem]);
 
-	const scopeIsGroup = scope.kind === "group";
-
 	const openWorkInStreamsView = (workId: string, stream: string) => {
-		setViewMode("streams");
 		setSelectedWorkId(workId);
 		setStreamExecutor(stream);
 		storeWorkStream(workId, stream);
@@ -199,7 +166,6 @@ export function TypicalWorksPanel() {
 				DEFAULT_WORK_STREAMS[0];
 			setStreamExecutor(stream);
 			storeWorkStream(created.id, stream);
-			setViewMode("streams");
 			toast.success("Работа создана");
 		} catch (err) {
 			toast.error("Не удалось создать работу", {
@@ -266,79 +232,52 @@ export function TypicalWorksPanel() {
 				}}
 			>
 			<LogicWorksToolbar
-				viewMode={viewMode}
 				scope={scope}
-				onViewModeChange={handleViewModeChange}
 				onScopeChange={(next) => {
-						setScope(next);
-						setSelectedWorkId(null);
-					}}
-					onCreateWork={() => setCreateOpen(true)}
-				/>
+					setScope(next);
+					setSelectedWorkId(null);
+				}}
+			/>
 
-				{viewMode === "matrix" ? (
-					<Box sx={{ flex: 1, minHeight: 0 }}>
-						<TypicalWorksMatrixView
-							works={data?.items ?? []}
+			<Box sx={{ flex: 1, minHeight: 0, display: "flex" }}>
+				{assignedWorks.length === 0 ? (
+					<TypicalWorksEmptyState
+						areaTitle={scopeLabel(scope)}
+						onCreateWork={() => setCreateOpen(true)}
+						onAssignFromCatalog={() => setAssignOpen(true)}
+					/>
+				) : (
+					<>
+						<TypicalWorksTreeSidebar
+							groups={groups}
+							selectedWorkId={selectedWorkId}
+							onSelectWork={setSelectedWorkId}
+							onAssignFromCatalog={() => setAssignOpen(true)}
+							onDeleteWork={openDeleteDialog}
+							assignedCount={assignedWorks.length}
+							scopeSubtitle={scopeSubtitle(scope)}
+						/>
+						<TypicalWorkEditableCard
+							card={card}
+							fallbackArchComponentType={selectedListItem?.archComponentType}
+							loading={cardLoading}
+							error={
+								cardError instanceof Error
+									? cardError.message
+									: cardError
+										? String(cardError)
+										: null
+							}
+							availableStreams={availableStreams}
+							streamExecutor={streamExecutor}
+							templateId={templateId}
 							templateVersionId={templateVersionId}
-							onOpenWork={openWorkInStreamsView}
+							onStreamChange={handleStreamChange}
+							onVersionChange={handleVersionChange}
 						/>
-					</Box>
-				) : null}
-
-				{viewMode === "catalog" ? (
-					<Box sx={{ flex: 1, minHeight: 0 }}>
-						<TypicalWorksCatalogView
-							works={catalogData?.items ?? []}
-							onAssign={() => setAssignOpen(true)}
-							onCreateWork={() => setCreateOpen(true)}
-						/>
-					</Box>
-				) : null}
-
-				{viewMode === "streams" ? (
-					<Box sx={{ flex: 1, minHeight: 0, display: "flex" }}>
-						{assignedWorks.length === 0 ? (
-							<TypicalWorksEmptyState
-								areaTitle={scopeLabel(scope)}
-								onCreateWork={() => setCreateOpen(true)}
-								onAssignFromCatalog={() => setAssignOpen(true)}
-							/>
-						) : (
-							<>
-								<TypicalWorksTreeSidebar
-									groups={groups}
-									selectedWorkId={selectedWorkId}
-									onSelectWork={setSelectedWorkId}
-									onAssignFromCatalog={() => setAssignOpen(true)}
-									onDeleteWork={openDeleteDialog}
-									scopeIsGroup={scopeIsGroup}
-									scopeStreams={scopeStreams}
-									assignedCount={assignedWorks.length}
-									scopeSubtitle={scopeSubtitle(scope)}
-								/>
-								<TypicalWorkEditableCard
-									card={card}
-									fallbackArchComponentType={selectedListItem?.archComponentType}
-									loading={cardLoading}
-									error={
-										cardError instanceof Error
-											? cardError.message
-											: cardError
-												? String(cardError)
-												: null
-									}
-									availableStreams={availableStreams}
-									streamExecutor={streamExecutor}
-									templateId={templateId}
-									templateVersionId={templateVersionId}
-									onStreamChange={handleStreamChange}
-									onVersionChange={handleVersionChange}
-								/>
-							</>
-						)}
-					</Box>
-				) : null}
+					</>
+				)}
+			</Box>
 			</Box>
 
 			<AssignWorkFromCatalogDialog

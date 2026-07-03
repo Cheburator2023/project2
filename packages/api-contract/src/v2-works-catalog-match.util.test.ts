@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
 	catalogValueMatchesTriggerRule,
+	isSourceTypeTriggerParam,
 	resolveLaborAnyOfCoefficient,
 	resolveStreamFromSourceType,
 	resolveStreamsFromSourceSystems,
 	resolveTriggerStatusCatalogParam,
+	triggerRuleCatalogGroupKey,
 	typicalWorkRulesMatchSource,
 } from "./v2-works-catalog-match.util";
 
@@ -161,6 +163,42 @@ describe("v2-works-catalog-match.util", () => {
 				catalog,
 			)?.code,
 		).toBe("вид_контроля");
+	});
+
+	it("resolves schema `type` catalog for «Тип системы-источника» trigger", () => {
+		const schemaCatalog = [
+			{
+				code: "type",
+				values: [
+					{ code: "internal", label: "Внутренний" },
+					{ code: "external", label: "Внешний" },
+				],
+			},
+		];
+
+		expect(
+			isSourceTypeTriggerParam("тип_системы_источника", "Тип системы-источника"),
+		).toBe(true);
+
+		expect(
+			resolveTriggerStatusCatalogParam(
+				{
+					paramCode: "тип_системы_источника",
+					paramName: "Тип системы-источника",
+				},
+				schemaCatalog,
+			)?.code,
+		).toBe("type");
+
+		expect(
+			triggerRuleCatalogGroupKey(
+				{
+					paramCode: "тип_системы_источника",
+					paramName: "Тип системы-источника",
+				},
+				schemaCatalog,
+			),
+		).toBe("type");
 	});
 
 	it("matches control catalog labels by short code", () => {

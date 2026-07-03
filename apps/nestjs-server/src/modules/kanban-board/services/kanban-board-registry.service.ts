@@ -97,6 +97,7 @@ import {
 	resolveWorkTypeIdFromText,
 } from "../utils/kanban-board-planning-import-registry.util";
 import { buildMeta } from "../utils/kanban-board-snapshot.util";
+import { KanbanBoardTaskImageService } from "./kanban-board-task-image.service";
 
 @Injectable()
 export class KanbanBoardRegistryService {
@@ -122,6 +123,7 @@ export class KanbanBoardRegistryService {
 		@InjectRepository(KanbanBoardSettingsEntity)
 		private readonly settingsRepository: Repository<KanbanBoardSettingsEntity>,
 		private readonly kanbanBoardService: KanbanBoardService,
+		private readonly taskImageService: KanbanBoardTaskImageService,
 	) {}
 
 	async getSettings(): Promise<KanbanBoardSettingsDto> {
@@ -667,6 +669,7 @@ export class KanbanBoardRegistryService {
 
 	async findTaskByRef(ref: string): Promise<KanbanBoardTaskRegistryDto> {
 		const task = await this.findTaskEntityByRef(ref);
+		await this.repairTaskImagesContent(task);
 		const columnTitles = await this.loadColumnTitleMap([task.boardId]);
 		const sprintTitles = await this.loadSprintTitleMap(
 			task.content.sprintId ? [task.content.sprintId] : [],
@@ -1216,7 +1219,16 @@ export class KanbanBoardRegistryService {
 		if (dto.parentId !== undefined) task.parentId = dto.parentId;
 		if (dto.position !== undefined) task.position = dto.position;
 		if (dto.content !== undefined) {
-			task.content = await this.validateTaskContent(dto.content);
+			const mergedContent: KanbanBoardTaskContent = {
+				...task.content,
+				...dto.content,
+				...(dto.content.images !== undefined
+					? { images: dto.content.images }
+					: { images: task.content.images }),
+			};
+			task.content = await this.validateTaskContent(
+				normalizeKanbanBoardTaskContent(mergedContent),
+			);
 		}
 		task.updatedAt = new Date().toISOString();
 
@@ -1851,6 +1863,17 @@ export class KanbanBoardRegistryService {
 			createdAt: customer.createdAt.toISOString(),
 			updatedAt: customer.updatedAt.toISOString(),
 		};
+	}
+
+	private async repairTaskImagesContent(task: KanbanBoardTaskEntity): Promise<void> {
+		if (task.content.images?.length) return;
+		const images = await this.taskImageService.listForTask(task.id);
+		if (!images.length) return;
+		task.content = normalizeKanbanBoardTaskContent({
+			...task.content,
+			images,
+		});
+		await this.taskRepository.save(task);
 	}
 
 	private async validateTaskContent(

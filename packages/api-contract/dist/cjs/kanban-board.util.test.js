@@ -90,6 +90,31 @@ const sampleBoard = () => ({
         (0, vitest_1.expect)(normalized.estimatePd).toBe(3);
         (0, vitest_1.expect)((0, api_contract_1.kanbanBoardEffectiveEstimatePd)(normalized)).toBe(3);
     });
+    (0, vitest_1.it)("preserves images when images field is omitted on update", () => {
+        const withImages = (0, api_contract_1.normalizeKanbanBoardTaskContent)({
+            title: "Task",
+            images: [
+                {
+                    id: "img1",
+                    name: "shot.png",
+                    width: 100,
+                    height: 50,
+                    fullByteSize: 1000,
+                    thumbByteSize: 200,
+                    createdAt: "2026-06-16T12:00:00.000Z",
+                },
+            ],
+        });
+        const updated = (0, api_contract_1.normalizeKanbanBoardTaskContent)({
+            title: "Task updated",
+            images: withImages.images,
+        });
+        (0, vitest_1.expect)(updated.images).toHaveLength(1);
+        const titleOnly = (0, api_contract_1.normalizeKanbanBoardTaskContent)({
+            title: "Task updated again",
+        });
+        (0, vitest_1.expect)(titleOnly.images).toBeUndefined();
+    });
 });
 (0, vitest_1.describe)("kanban board sprint capacity", () => {
     (0, vitest_1.it)("uses individual capacity or default", () => {

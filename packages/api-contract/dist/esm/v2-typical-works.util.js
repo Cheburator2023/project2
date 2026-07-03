@@ -1,15 +1,29 @@
+import { resolveV2AnketaStreamBlockOptions } from "./v2-anketa-section-ui.util";
+import { inferLegacyStreamExecutorForBlockKey } from "./v2-executor-streams.util";
 function readRecord(value) {
     return value && typeof value === "object" && !Array.isArray(value)
         ? value
         : undefined;
 }
+function isStreamBlockDataRoot(streamKey, uiSchema) {
+    if (streamKey === "streamDataSources" || streamKey === "streamModelControl") {
+        return true;
+    }
+    if (uiSchema) {
+        const branch = readRecord(uiSchema[streamKey]);
+        if (resolveV2AnketaStreamBlockOptions(branch, streamKey).streamBlock) {
+            return true;
+        }
+    }
+    return inferLegacyStreamExecutorForBlockKey(streamKey) != null;
+}
 /**
- * `localParams` стрима для массива типовых работ (`streamDataSources.*` /
- * `streamModelControl.*`).
+ * `localParams` стрима для массива типовых работ (любой блок с `streamBlock` /
+ * legacy `streamDataSources` / `streamModelControl`).
  */
-export function readStreamLocalParamsForTypicalOutput(data, outputArrayPath) {
+export function readStreamLocalParamsForTypicalOutput(data, outputArrayPath, uiSchema) {
     const streamKey = outputArrayPath.split(".")[0]?.trim();
-    if (streamKey !== "streamDataSources" && streamKey !== "streamModelControl") {
+    if (!streamKey || !isStreamBlockDataRoot(streamKey, uiSchema)) {
         return {};
     }
     const stream = readRecord(data[streamKey]);

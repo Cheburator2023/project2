@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+	compileCalculationLogicFromVersionConfig,
 	compileTypicalWorkCalculationLogic,
 	compileTypicalWorkTriggerRulesToJsonLogic,
 	compileWorkFormulaTokensToJsonLogic,
 	evaluateTypicalWorkCalculation,
 	evaluateTypicalWorkJsonLogicValue,
 	evaluateTypicalWorkResultJsonLogic,
+	needsCalculationLogicBackfill,
 	previewTypicalWorkCalculation,
 } from "./v2-typical-work-jsonlogic.util";
 import { defaultWorkFormula, defaultWorkRounding } from "./v2-typical-work.types";
@@ -114,5 +116,19 @@ describe("v2-typical-work-jsonlogic.util", () => {
 			{ norm: 1.25 },
 		);
 		expect(result).toBeCloseTo(1.3, 5);
+	});
+
+	it("compiles version_config formula when calculationLogic is missing", () => {
+		const formula = defaultWorkFormula();
+		const compiled = compileCalculationLogicFromVersionConfig({
+			formula: formula.tokens,
+			formulaText: formula.text,
+			roundingMode: "NONE",
+			roundingStep: null,
+		});
+		expect(compiled?.version).toBe(1);
+		expect(compiled?.result).toBeTruthy();
+		expect(needsCalculationLogicBackfill(null)).toBe(true);
+		expect(needsCalculationLogicBackfill(compiled)).toBe(false);
 	});
 });

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TASK_STATUSES = exports.TASK_TRACKER_SCHEMA_VERSION = exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS = exports.KANBAN_BOARD_COLUMN_COLORS = exports.KANBAN_BOARD_STATUSES = exports.KANBAN_BOARD_SCHEMA_VERSION = exports.KANBAN_BOARD_HEAP_BOARD_SLUG = exports.KANBAN_BOARD_HEAP_BOARD_ID = exports.KANBAN_BOARD_STOCK_PROJECTS = exports.KANBAN_BOARD_STOCK_CUSTOMERS = exports.KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD = exports.KANBAN_BOARD_PRIORITY_COLORS = exports.KANBAN_BOARD_WORK_TYPE_COLORS = exports.KANBAN_BOARD_TASK_TYPE_COLORS = exports.KANBAN_BOARD_ASSIGNEE_ROLES = exports.KANBAN_BOARD_WORK_TYPES = exports.KANBAN_BOARD_TASK_TYPES = exports.KANBAN_BOARD_ROLE_ESTIMATE_FIELDS = exports.KANBAN_BOARD_PRIORITIES = exports.KANBAN_BOARD_SUBTASK_STATUS_COLORS = exports.KANBAN_BOARD_SUBTASK_STATUSES = void 0;
+exports.TASK_STATUSES = exports.TASK_TRACKER_SCHEMA_VERSION = exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS = exports.KANBAN_BOARD_COLUMN_COLORS = exports.KANBAN_BOARD_STATUSES = exports.KANBAN_BOARD_SCHEMA_VERSION = exports.KANBAN_BOARD_HEAP_BOARD_SLUG = exports.KANBAN_BOARD_HEAP_BOARD_ID = exports.KANBAN_BOARD_STOCK_PROJECTS = exports.KANBAN_BOARD_STOCK_CUSTOMERS = exports.KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD = exports.KANBAN_BOARD_PRIORITY_COLORS = exports.KANBAN_BOARD_WORK_TYPE_COLORS = exports.KANBAN_BOARD_TASK_TYPE_COLORS = exports.KANBAN_BOARD_ASSIGNEE_ROLES = exports.KANBAN_BOARD_WORK_TYPES = exports.KANBAN_BOARD_TASK_TYPES = exports.KANBAN_BOARD_ROLE_ESTIMATE_FIELDS = exports.KANBAN_BOARD_PRIORITIES = exports.KANBAN_BOARD_DONE_COLUMN_ID = exports.KANBAN_BOARD_TASK_IMAGE_DONE_RETENTION_DAYS = exports.KANBAN_BOARD_TASK_IMAGE_MAX_FULL_BYTES = exports.KANBAN_BOARD_SUBTASK_STATUS_COLORS = exports.KANBAN_BOARD_SUBTASK_STATUSES = void 0;
 exports.kanbanBoardSubtaskStatusTitle = kanbanBoardSubtaskStatusTitle;
 exports.kanbanBoardSubtaskStatusColor = kanbanBoardSubtaskStatusColor;
 exports.kanbanBoardSubtaskIsDone = kanbanBoardSubtaskIsDone;
@@ -50,6 +50,11 @@ function kanbanBoardSubtaskIsDone(item) {
 function kanbanBoardSubtaskDefaultStatus() {
     return "next_up";
 }
+/** Макс. размер full-изображения после сжатия на клиенте, байт. */
+exports.KANBAN_BOARD_TASK_IMAGE_MAX_FULL_BYTES = 2 * 1024 * 1024;
+/** Срок хранения вложений у задач в колонке «Готово», дней. */
+exports.KANBAN_BOARD_TASK_IMAGE_DONE_RETENTION_DAYS = 7;
+exports.KANBAN_BOARD_DONE_COLUMN_ID = "done";
 exports.KANBAN_BOARD_PRIORITIES = [
     { id: "high", title: "Высокий" },
     { id: "medium", title: "Средний" },
