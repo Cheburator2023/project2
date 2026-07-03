@@ -25,6 +25,8 @@ import type {
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
 	KanbanBoardTaskImageDto,
+	KanbanBoardHistoryDto,
+	KanbanBoardHistoryOverviewDto,
 	UpdateKanbanBoardAssigneeRequestDto,
 	UpdateKanbanBoardBoardRequestDto,
 	UpdateKanbanBoardColumnRequestDto,
@@ -823,6 +825,36 @@ export const kanbanBoardGetBoardByRef = (ref: string, signal?: AbortSignal) =>
 		url: `/kanban-board/boards/ref/${encodeURIComponent(ref)}`,
 		method: "GET",
 		signal,
+	});
+
+export const kanbanBoardGetBoardHistory = (
+	boardRef: string,
+	signal?: AbortSignal,
+) =>
+	apiClient<KanbanBoardHistoryDto>({
+		url: `/kanban-board/boards/${encodeURIComponent(boardRef)}/history`,
+		method: "GET",
+		signal,
+	});
+
+export const kanbanBoardGetHistoryOverview = (signal?: AbortSignal) =>
+	apiClient<KanbanBoardHistoryOverviewDto>({
+		url: "/kanban-board/history/overview",
+		method: "GET",
+		signal,
+	});
+
+export const useKanbanBoardHistory = (boardRef: string | undefined) =>
+	useQuery({
+		queryKey: ["kanbanBoardHistory", boardRef],
+		enabled: Boolean(boardRef),
+		queryFn: ({ signal }) => kanbanBoardGetBoardHistory(boardRef!, signal),
+	});
+
+export const useKanbanBoardHistoryOverview = () =>
+	useQuery({
+		queryKey: ["kanbanBoardHistoryOverview"],
+		queryFn: ({ signal }) => kanbanBoardGetHistoryOverview(signal),
 	});
 
 export const kanbanBoardGetBoardTasks = (boardRef: string, signal?: AbortSignal) =>

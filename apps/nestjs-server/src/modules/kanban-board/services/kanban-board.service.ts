@@ -4,9 +4,13 @@ import { InjectRepository } from "@nestjs/typeorm";
 import * as ExcelJS from "exceljs";
 import { DataSource, Repository } from "typeorm";
 import type { KanbanBoardTaskRecord } from "@smart-anketa/api-contract";
-import { normalizeKanbanBoardTaskContent } from "@smart-anketa/api-contract";
+import {
+	formatKanbanTaskKey,
+	normalizeKanbanBoardTaskContent,
+} from "@smart-anketa/api-contract";
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
 import { KanbanBoardEntity } from "../entities/kanban-board.entity";
+import { KanbanBoardHistoryService } from "./kanban-board-history.service";
 import {
 	isSnapshotWorkbook,
 } from "../utils/kanban-board-planning-import.util";
@@ -41,6 +45,7 @@ export class KanbanBoardService {
 		private readonly boardRepository: Repository<KanbanBoardEntity>,
 		private readonly dataSource: DataSource,
 		private readonly configService: ConfigService,
+		private readonly historyService: KanbanBoardHistoryService,
 	) {}
 
 	getStandId(): string {
@@ -78,6 +83,7 @@ export class KanbanBoardService {
 	async saveBoardTasks(
 		boardId: string,
 		tasks: KanbanBoardTaskRecord[],
+		createdBy?: string | null,
 	): Promise<KanbanBoardTaskRecord[]> {
 		const standId = this.getStandId();
 		const now = new Date().toISOString();
@@ -89,18 +95,28 @@ export class KanbanBoardService {
 		}));
 		const prepared = await this.ensureTaskIdentities(boardId, normalized);
 
+		const board = await this.boardRepository.findOne({
+			where: { id: boardId },
+			relations: { project: true },
+		});
+		const existing = await this.taskRepository.find({
+			where: { boardId, origin: standId },
+			relations: { board: { project: true }, project: true },
+		});
+		const existingById = new Map(existing.map((row) => [row.id, row]));
+		const columnTitles = await this.historyService.loadColumnTitleMap([boardId]);
+		const columnTitle = this.historyService.columnTitleResolver(
+			columnTitles,
+			boardId,
+		);
+
 		await this.dataSource.transaction(async (manager) => {
 			const repo = manager.getRepository(KanbanBoardTaskEntity);
 			const incoming = new Set(prepared.map((task) => task.id));
-			const existing = await repo.find({
-				where: { boardId, origin: standId },
-			});
 			const stale = existing.filter((row) => !incoming.has(row.id));
 			if (stale.length) {
 				await repo.remove(stale);
 			}
-
-			const existingById = new Map(existing.map((row) => [row.id, row]));
 
 			for (const task of prepared) {
 				const prev = existingById.get(task.id);
@@ -116,6 +132,68 @@ export class KanbanBoardService {
 				await repo.save(this.fromRecord(task));
 			}
 		});
+
+		for (const task of prepared) {
+			const prev = existingById.get(task.id);
+			const after = this.historyService.snapshotFromTask({
+				parentId: task.parentId,
+				position: task.position,
+				boardId: task.boardId,
+				content: task.content,
+			});
+			if (!prev) {
+				const taskKey = board?.project?.code
+					? formatKanbanTaskKey(board.project.code, task.taskNumber ?? 0)
+					: task.id;
+				await this.historyService.logTaskChanges({
+					boardId,
+					taskId: task.id,
+					taskKey,
+					taskTitle: task.content.title,
+					changes: [
+						{
+							field: "created",
+							label: "Создание",
+							from: null,
+							to: task.content.title,
+						},
+					],
+					createdBy,
+				});
+				continue;
+			}
+			const before = this.historyService.snapshotFromTask(prev);
+			await this.historyService.logTaskDiff({
+				boardId,
+				taskId: task.id,
+				taskKey: this.historyService.formatTaskKey(prev),
+				taskTitle: after.content.title,
+				before,
+				after,
+				columnTitle,
+				createdBy,
+			});
+		}
+
+		for (const removed of existing.filter(
+			(row) => !prepared.some((task) => task.id === row.id),
+		)) {
+			await this.historyService.logTaskChanges({
+				boardId,
+				taskId: removed.id,
+				taskKey: this.historyService.formatTaskKey(removed),
+				taskTitle: removed.content.title,
+				changes: [
+					{
+						field: "deleted",
+						label: "Удаление",
+						from: removed.content.title,
+						to: null,
+					},
+				],
+				createdBy,
+			});
+		}
 
 		return this.findByBoard(boardId);
 	}

@@ -19,6 +19,7 @@ import {
 } from "@react-client/features/tracker/components/TrackerLegacyRedirects";
 import { commonRoutes } from "./routes";
 import { TrackerTasksPage } from "@react-client/features/tracker/pages/TrackerTasksPage";
+import { TrackerBoardHistoryPage } from "@react-client/features/tracker/pages/TrackerBoardHistoryPage";
 
 export function trackerRoutes({
 	onLogout,
@@ -47,9 +48,14 @@ export function trackerRoutes({
 			{ path: "sprints", element: <TrackerSprintsPage /> },
 			{ path: "streams", element: <TrackerStreamsPage /> },
 			{ path: "settings", element: <TrackerSettingsPage /> },
+			{ path: "history", element: <TrackerBoardHistoryPage /> },
 			{ path: "tasks/new", element: <KanbanTaskPage mode="create" /> },
 			{ path: "task/new", element: <KanbanTaskPage mode="create" /> },
 			{ path: "board/:boardKey", element: <KanbanBoardPage /> },
+			{
+				path: "board/:boardKey/history",
+				element: <TrackerBoardHistoryPage />,
+			},
 			{
 				path: "board/:boardKey/task/new",
 				element: <KanbanTaskPage mode="create" />,

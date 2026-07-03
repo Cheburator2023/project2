@@ -557,6 +557,49 @@ export type KanbanBoardData = {
     root: KanbanBoardItem;
     [key: string]: KanbanBoardItem;
 };
+/** Снимок задачи для сравнения в истории изменений. */
+export interface KanbanBoardTaskHistorySnapshot {
+    parentId: string;
+    position: number;
+    boardId: string;
+    content: KanbanBoardTaskContent;
+}
+export interface KanbanBoardTaskChangeItem {
+    field: string;
+    label: string;
+    from: string | null;
+    to: string | null;
+}
+export interface KanbanBoardTaskHistoryEntryDto {
+    id: string;
+    boardId: string;
+    taskId: string;
+    taskKey: string;
+    taskTitle: string;
+    changes: KanbanBoardTaskChangeItem[];
+    createdAt: string;
+    createdBy: string | null;
+}
+export interface KanbanBoardHistoryDayGroupDto {
+    date: string;
+    entries: KanbanBoardTaskHistoryEntryDto[];
+}
+export interface KanbanBoardHistoryDto {
+    boardId: string;
+    boardKey: string;
+    boardName: string;
+    days: KanbanBoardHistoryDayGroupDto[];
+}
+export interface KanbanBoardHistoryPreviewDto {
+    boardId: string;
+    boardKey: string;
+    boardName: string;
+    entries: KanbanBoardTaskHistoryEntryDto[];
+}
+export interface KanbanBoardHistoryOverviewDto {
+    previewLimit: number;
+    boards: KanbanBoardHistoryPreviewDto[];
+}
 /** @deprecated use KanbanBoardTaskContent */
 export type TaskContent = KanbanBoardTaskContent;
 /** @deprecated use KanbanBoardTaskRecord */

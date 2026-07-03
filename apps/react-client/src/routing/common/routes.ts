@@ -163,6 +163,19 @@ export const commonRoutes = {
 		showInNavbar: true,
 		navbar: { group: "tracker", order: 9 },
 	},
+	trackerHistory: {
+		rootPath: "/tracker/history",
+		name: "История",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "tracker", order: 10 },
+	},
+	trackerBoardHistory: {
+		rootPath: "/tracker/board/:boardKey/history",
+		name: "История доски",
+		shortName: "История",
+		disabled: false,
+	},
 	trackerTaskCreate: {
 		rootPath: "/tracker/task/new",
 		name: "Новая задача",

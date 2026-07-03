@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { V2TypicalWorkCardDto } from "@smart-anketa/api-contract";
+import {
+	defaultWorkFormula,
+	type V2TypicalWorkCardDto,
+} from "@smart-anketa/api-contract";
 import { cardToPatchDto } from "./useDebouncedTypicalWorkSave";
 
 describe("cardToPatchDto", () => {
@@ -47,7 +50,7 @@ describe("cardToPatchDto", () => {
 			},
 		],
 		laborParams: [],
-		formula: { tokens: [] },
+		formula: defaultWorkFormula(),
 		rounding: { mode: "NONE", step: null },
 	};
 

@@ -9,6 +9,11 @@ export function trackerBoardPath(board: Pick<KanbanBoardBoardDto, "boardKey"> | 
 	return `/tracker/board/${encodeURIComponent(key)}`;
 }
 
+export function trackerBoardHistoryPath(boardKey?: string) {
+	if (!boardKey?.trim()) return "/tracker/history";
+	return `/tracker/board/${encodeURIComponent(normalizeTrackerCode(boardKey))}/history`;
+}
+
 export function trackerTaskPath(
 	task: Pick<KanbanBoardTaskRegistryDto, "taskKey"> | string,
 ) {

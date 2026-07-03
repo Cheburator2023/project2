@@ -16,6 +16,8 @@ import { KanbanBoardService } from "./services/kanban-board.service";
 import { KanbanBoardRegistryService } from "./services/kanban-board-registry.service";
 import { KanbanBoardTaskImageService } from "./services/kanban-board-task-image.service";
 import { KanbanBoardTaskImageCleanupService } from "./services/kanban-board-task-image-cleanup.service";
+import { KanbanBoardTaskHistoryEntity } from "./entities/kanban-board-task-history.entity";
+import { KanbanBoardHistoryService } from "./services/kanban-board-history.service";
 
 @Module({
 	imports: [
@@ -31,6 +33,7 @@ import { KanbanBoardTaskImageCleanupService } from "./services/kanban-board-task
 			KanbanBoardTaskEntity,
 			KanbanBoardTaskImageEntity,
 			KanbanBoardSettingsEntity,
+			KanbanBoardTaskHistoryEntity,
 		]),
 	],
 	controllers: [KanbanBoardController],
@@ -39,11 +42,13 @@ import { KanbanBoardTaskImageCleanupService } from "./services/kanban-board-task
 		KanbanBoardRegistryService,
 		KanbanBoardTaskImageService,
 		KanbanBoardTaskImageCleanupService,
+		KanbanBoardHistoryService,
 	],
 	exports: [
 		KanbanBoardService,
 		KanbanBoardRegistryService,
 		KanbanBoardTaskImageService,
+		KanbanBoardHistoryService,
 	],
 })
 export class KanbanBoardModule {}

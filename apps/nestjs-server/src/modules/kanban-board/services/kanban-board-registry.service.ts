@@ -98,6 +98,7 @@ import {
 } from "../utils/kanban-board-planning-import-registry.util";
 import { buildMeta } from "../utils/kanban-board-snapshot.util";
 import { KanbanBoardTaskImageService } from "./kanban-board-task-image.service";
+import { KanbanBoardHistoryService } from "./kanban-board-history.service";
 
 @Injectable()
 export class KanbanBoardRegistryService {
@@ -124,6 +125,7 @@ export class KanbanBoardRegistryService {
 		private readonly settingsRepository: Repository<KanbanBoardSettingsEntity>,
 		private readonly kanbanBoardService: KanbanBoardService,
 		private readonly taskImageService: KanbanBoardTaskImageService,
+		private readonly historyService: KanbanBoardHistoryService,
 	) {}
 
 	async getSettings(): Promise<KanbanBoardSettingsDto> {
@@ -1147,6 +1149,7 @@ export class KanbanBoardRegistryService {
 
 	async createTask(
 		dto: CreateKanbanBoardTaskRequestDto,
+		createdBy?: string | null,
 	): Promise<KanbanBoardTaskRegistryDto> {
 		const board = await this.boardRepository.findOne({
 			where: { id: dto.boardId },
@@ -1177,6 +1180,21 @@ export class KanbanBoardRegistryService {
 		});
 		entity.board = board;
 		await this.taskRepository.save(entity);
+		await this.historyService.logTaskChanges({
+			boardId: entity.boardId,
+			taskId: entity.id,
+			taskKey: formatKanbanTaskKey(board.project?.code ?? "", taskNumber),
+			taskTitle: content.title,
+			changes: [
+				{
+					field: "created",
+					label: "Создание",
+					from: null,
+					to: content.title,
+				},
+			],
+			createdBy,
+		});
 		const columnTitles = await this.loadColumnTitleMap([entity.boardId]);
 		const sprintTitles = await this.loadSprintTitleMap(
 			content.sprintId ? [content.sprintId] : [],
@@ -1193,12 +1211,22 @@ export class KanbanBoardRegistryService {
 	async updateTask(
 		id: string,
 		dto: UpdateKanbanBoardTaskRequestDto,
+		createdBy?: string | null,
 	): Promise<KanbanBoardTaskRegistryDto> {
 		const task = await this.taskRepository.findOne({
 			where: { id },
 			relations: { board: { project: true } },
 		});
 		if (!task) throw new NotFoundException("Задача не найдена");
+
+		const before = this.historyService.snapshotFromTask(task);
+		const columnTitles = await this.historyService.loadColumnTitleMap([
+			task.boardId,
+		]);
+		const columnTitle = this.historyService.columnTitleResolver(
+			columnTitles,
+			task.boardId,
+		);
 
 		if (dto.boardId !== undefined) {
 			const board = await this.boardRepository.findOne({
@@ -1233,20 +1261,50 @@ export class KanbanBoardRegistryService {
 		task.updatedAt = new Date().toISOString();
 
 		await this.taskRepository.save(task);
-		const columnTitles = await this.loadColumnTitleMap([task.boardId]);
+		await this.historyService.logTaskDiff({
+			boardId: task.boardId,
+			taskId: task.id,
+			taskKey: this.historyService.formatTaskKey(task),
+			taskTitle: task.content.title,
+			before,
+			after: this.historyService.snapshotFromTask(task),
+			columnTitle,
+			createdBy,
+		});
+		const columnTitlesForDto = await this.loadColumnTitleMap([task.boardId]);
 		const sprintTitles = await this.loadSprintTitleMap(
 			task.content.sprintId ? [task.content.sprintId] : [],
 		);
 		const assigneeRoleByName = await this.loadAssigneeRoleByNameMap();
 		return this.toTaskRegistryDto(
 			task,
-			columnTitles,
+			columnTitlesForDto,
 			sprintTitles,
 			assigneeRoleByName,
 		);
 	}
 
-	async deleteTask(id: string): Promise<void> {
+	async deleteTask(id: string, createdBy?: string | null): Promise<void> {
+		const task = await this.taskRepository.findOne({
+			where: { id },
+			relations: { board: { project: true } },
+		});
+		if (!task) throw new NotFoundException("Задача не найдена");
+		await this.historyService.logTaskChanges({
+			boardId: task.boardId,
+			taskId: task.id,
+			taskKey: this.historyService.formatTaskKey(task),
+			taskTitle: task.content.title,
+			changes: [
+				{
+					field: "deleted",
+					label: "Удаление",
+					from: task.content.title,
+					to: null,
+				},
+			],
+			createdBy,
+		});
 		await this.kanbanBoardService.deleteTask(id);
 	}
 

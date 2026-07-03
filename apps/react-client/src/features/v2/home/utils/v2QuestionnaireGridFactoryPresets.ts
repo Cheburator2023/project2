@@ -1,7 +1,7 @@
 import type { ColDef, ColGroupDef, ColumnState } from "ag-grid-community";
+import { registryFormColumnId } from "@smart-anketa/api-contract";
 import type { V2QuestionnaireGridRow } from "../types/v2QuestionnaireGrid.types";
 import { buildV2QuestionnaireColumnDefs } from "./v2QuestionnaireGridColumns";
-import { formPathColId } from "./v2QuestionnaireGridValue";
 
 export const FACTORY_PRESET_IDS = {
 	default: "factory:default",
@@ -33,7 +33,7 @@ export type QuestionnaireGridPresetApi = {
 const PRIMARY_NAME_COL_ID = "calcName";
 
 function pathCol(path: string): string {
-	return formPathColId(path);
+	return registryFormColumnId(path);
 }
 
 function collectLeafColumnIds(
@@ -82,12 +82,22 @@ function buildColumnState(
 	}));
 }
 
-function buildAllColumnsVisibleState(): ColumnState[] {
-	return buildColumnState(getAllGridColumnIds(), [
-		PRIMARY_NAME_COL_ID,
-		...getAllGridColumnIds(),
-	]);
-}
+/** Базовый вид реестра анкет по умолчанию. */
+const DEFAULT_REGISTRY_VISIBLE = [
+	PRIMARY_NAME_COL_ID,
+	"readableId",
+	"createdAt",
+	pathCol("generalInfo.businessCustomer"),
+	pathCol("generalInfo.implementationStream"),
+	"version",
+	"workflowGlobalStatus",
+	"workflowSection.generalInfo",
+	"workflowSection.detailInfo",
+	"workflowSection.streamDataSources",
+	"workflowSection.streamModelControl",
+	pathCol("summary.total"),
+	"updatedAt",
+];
 
 /** Сбрасывает фильтры/сортировку и применяет преднастройку колонок. */
 export function applyQuestionnaireGridPreset(
@@ -111,59 +121,62 @@ export function applyQuestionnaireGridPreset(
 	api.refreshHeader?.();
 }
 
-export function getFactoryGridPreset(id: string): FactoryGridPreset | undefined {
-	return FACTORY_GRID_PRESETS.find((preset) => preset.id === id);
+export function getAllGridColumnIds(
+	jsonSchema?: Record<string, unknown>,
+	uiSchema?: Record<string, unknown>,
+): string[] {
+	return collectLeafColumnIds(
+		buildV2QuestionnaireColumnDefs(jsonSchema, uiSchema),
+	);
 }
 
-/** Базовый вид реестра анкет по умолчанию. */
-const DEFAULT_REGISTRY_VISIBLE = [
-	PRIMARY_NAME_COL_ID,
-	"readableId",
-	"createdAt",
-	pathCol("generalInfo.businessCustomer"),
-	pathCol("generalInfo.implementationStream"),
-	"version",
-	"workflowGlobalStatus",
-	"workflowSection.generalInfo",
-	"workflowSection.detailInfo",
-	"workflowSection.streamDataSources",
-	"workflowSection.streamModelControl",
-	pathCol("summary.total"),
-	"updatedAt",
-];
+function buildFactoryPresets(
+	jsonSchema?: Record<string, unknown>,
+	uiSchema?: Record<string, unknown>,
+): FactoryGridPreset[] {
+	const allIds = getAllGridColumnIds(jsonSchema, uiSchema);
+	return [
+		{
+			id: FACTORY_PRESET_IDS.default,
+			name: "Базовый",
+			description:
+				"ID, название, даты, заказчик, стрим, версия, статусы разделов и общая стоимость.",
+			builtIn: true,
+			columnState: buildColumnState(allIds, DEFAULT_REGISTRY_VISIBLE),
+			filterModel: null,
+		},
+		{
+			id: FACTORY_PRESET_IDS.allInformation,
+			name: "Вся информация",
+			description:
+				"Все колонки анкеты: реестр, разделы, итоговая оценка и расчёты.",
+			builtIn: true,
+			columnState: buildColumnState(allIds, [PRIMARY_NAME_COL_ID, ...allIds]),
+			filterModel: null,
+		},
+	];
+}
 
-let cachedAllColumnIds: string[] | null = null;
+export function getFactoryGridPresets(
+	jsonSchema?: Record<string, unknown>,
+	uiSchema?: Record<string, unknown>,
+): FactoryGridPreset[] {
+	return buildFactoryPresets(jsonSchema, uiSchema);
+}
 
-export function getAllGridColumnIds(): string[] {
-	if (!cachedAllColumnIds) {
-		cachedAllColumnIds = collectLeafColumnIds(buildV2QuestionnaireColumnDefs());
-	}
-	return cachedAllColumnIds;
+export function getFactoryGridPreset(
+	id: string,
+	jsonSchema?: Record<string, unknown>,
+	uiSchema?: Record<string, unknown>,
+): FactoryGridPreset | undefined {
+	return getFactoryGridPresets(jsonSchema, uiSchema).find(
+		(preset) => preset.id === id,
+	);
 }
 
 export function isFactoryPresetId(id: string): boolean {
 	return (Object.values(FACTORY_PRESET_IDS) as string[]).includes(id);
 }
 
-export const FACTORY_GRID_PRESETS: FactoryGridPreset[] = [
-	{
-		id: FACTORY_PRESET_IDS.default,
-		name: "Базовый",
-		description:
-			"ID, название, даты, заказчик, стрим, версия, статусы разделов и общая стоимость.",
-		builtIn: true,
-		columnState: buildColumnState(
-			getAllGridColumnIds(),
-			DEFAULT_REGISTRY_VISIBLE,
-		),
-		filterModel: null,
-	},
-	{
-		id: FACTORY_PRESET_IDS.allInformation,
-		name: "Вся информация",
-		description: "Все колонки анкеты: реестр, разделы, итоговая оценка и расчёты.",
-		builtIn: true,
-		columnState: buildAllColumnsVisibleState(),
-		filterModel: null,
-	},
-];
+/** @deprecated используйте getFactoryGridPresets(schema) */
+export const FACTORY_GRID_PRESETS: FactoryGridPreset[] = buildFactoryPresets();
