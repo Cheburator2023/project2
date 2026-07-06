@@ -28,6 +28,8 @@ import type {
 	V2TemplateDeleteSnapshotDto,
 	V2TemplateDto,
 	V2TemplateVersionDto,
+	UpdateV2FactorySnapshotSettingDto,
+	V2FactorySnapshotSettingDto,
 } from "@smart-anketa/api-contract";
 import { useMemo } from "react";
 
@@ -818,6 +820,38 @@ export const useV2DictionaryEnumsMaps = (dictionaryCodes: string[]) => {
 	}, [data, uniqueSorted]);
 
 	return { enumMapByCode, isLoading: isPending, uniqueSorted };
+};
+
+export const useV2FactorySnapshotSetting = () => {
+	return useQuery<V2FactorySnapshotSettingDto>({
+		queryKey: ["v2-factory-snapshot"],
+		queryFn: () =>
+			apiClient<V2FactorySnapshotSettingDto>({
+				url: "/v2/factory-snapshot",
+				method: "GET",
+			}),
+		staleTime: 30_000,
+	});
+};
+
+export const useUpdateV2FactorySnapshotSetting = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation<
+		V2FactorySnapshotSettingDto,
+		Error,
+		UpdateV2FactorySnapshotSettingDto
+	>({
+		mutationFn: (dto) =>
+			apiClient<V2FactorySnapshotSettingDto>({
+				url: "/v2/factory-snapshot",
+				method: "PUT",
+				data: dto,
+			}),
+		onSuccess: (data) => {
+			queryClient.setQueryData(["v2-factory-snapshot"], data);
+		},
+	});
 };
 
 // Audit

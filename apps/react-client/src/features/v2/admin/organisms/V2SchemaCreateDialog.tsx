@@ -14,6 +14,7 @@ import {
 	useCreateV2Template,
 	useCreateV2TemplateVersion,
 	useCreateV2TemplateVersionFromDefault,
+	useV2FactorySnapshotSetting,
 } from "@react-client/common/api/queries/v2-templates";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { Flex } from "@react-client/common/primitives/Flex";
@@ -40,6 +41,16 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 	const createTemplate = useCreateV2Template();
 	const createVersion = useCreateV2TemplateVersion();
 	const createFromDefault = useCreateV2TemplateVersionFromDefault();
+	const { data: factorySetting } = useV2FactorySnapshotSetting();
+
+	const factorySourceHint =
+		factorySetting?.source === "template" && factorySetting.templateName
+			? `схема «${factorySetting.templateName}»${
+					factorySetting.versionNumber != null
+						? ` v${factorySetting.versionNumber}`
+						: ""
+				}`
+			: "встроенный JSON-снимок";
 
 	const [name, setName] = useState("Новая схема");
 	const [description, setDescription] = useState("Краткое описание для админки");
@@ -145,8 +156,8 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 											Заводская схема
 										</Typography>
 										<Typography variant="caption" color="text.secondary">
-											Эталон анкеты калькуляции (поля и UI из встроенного
-											снимка). Создаётся черновик для редактирования.
+											Эталон анкеты ({factorySourceHint}). Создаётся
+											черновик для редактирования.
 										</Typography>
 									</Flex>
 								}

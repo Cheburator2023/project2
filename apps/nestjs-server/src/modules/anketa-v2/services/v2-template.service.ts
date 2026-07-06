@@ -11,6 +11,7 @@ import { V2TemplateEntity } from "../entities/v2-template.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import type { CreateV2TemplateDto, UpdateV2TemplateDto } from "../dto";
 import { V2AuditService } from "./v2-audit.service";
+import { V2FactorySnapshotService } from "./v2-factory-snapshot.service";
 import {
 	buildTemplateDeleteSnapshot,
 	mapV2TemplateToDto,
@@ -27,6 +28,7 @@ export class V2TemplateService {
 		@InjectRepository(V2QuestionnaireEntity)
 		private readonly questionnaireRepository: Repository<V2QuestionnaireEntity>,
 		private readonly auditService: V2AuditService,
+		private readonly factorySnapshotService: V2FactorySnapshotService,
 	) {}
 
 	private async resolveRebindTargetVersionId(
@@ -280,6 +282,10 @@ export class V2TemplateService {
 
 		const snapshot = buildTemplateDeleteSnapshot(template, versions);
 
+		await this.factorySnapshotService.clearTemplateReferenceIfMatches({
+			templateId: id,
+		});
+
 		await this.templateRepository.manager.transaction(async (em) => {
 			await em.delete(V2QuestionnaireEntity, { templateId: id });
 			await this.auditService.deleteForTemplate(id);
@@ -420,6 +426,13 @@ export class V2TemplateService {
 			);
 			await em.delete(V2TemplateVersionEntity, { id: In(deleteIds) });
 		});
+
+		for (const versionId of deleteIds) {
+			await this.factorySnapshotService.clearTemplateReferenceIfMatches({
+				templateId,
+				versionId,
+			});
+		}
 
 		return {
 			deletedVersionIds: deleteIds,

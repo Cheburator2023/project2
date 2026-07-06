@@ -19,6 +19,12 @@ import { Spacer } from "@react-client/common/primitives/Spacer";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
 import { useSchemaConstructorSettings } from "@react-client/common/settings/schemaConstructorSettings";
+import {
+	useUpdateV2FactorySnapshotSetting,
+	useV2FactorySnapshotSetting,
+} from "@react-client/common/api/queries/v2-templates";
+import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
+import { toast } from "@react-client/common/toasts";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 
 function VersionRow({
@@ -68,6 +74,8 @@ export function SettingsPage() {
 	const { canAccessAdminPanel } = usePermissions();
 	const { hideSystemFields, setHideSystemFields } = useSchemaConstructorSettings();
 	const backendVersionQuery = useAppVersionQuery();
+	const { data: factorySetting } = useV2FactorySnapshotSetting();
+	const resetFactorySnapshot = useUpdateV2FactorySnapshotSetting();
 	const v2Transfer = useV2DataTransferActions();
 
 	return (
@@ -130,6 +138,47 @@ export function SettingsPage() {
 
 					{canAccessAdminPanel ? (
 						<>
+							<Divider />
+							<Flex flexDirection="column" gap={8}>
+								<Typography variant="h6">Заводской эталон v2</Typography>
+								<Typography variant="body2" color="text.secondary">
+									Источник снимка для «Создать схему → Заводская» и «Сбросить к
+									заводской». Встроенный JSON в репозитории не удаляется.
+								</Typography>
+							</Flex>
+							<Typography variant="body2">
+								{factorySetting?.source === "template" &&
+								factorySetting.templateName
+									? `Сейчас: схема «${factorySetting.templateName}»${
+											factorySetting.versionNumber != null
+												? `, версия ${factorySetting.versionNumber}`
+												: ""
+										}`
+									: "Сейчас: встроенный JSON-снимок из репозитория"}
+							</Typography>
+							<Button
+								variant="outlined"
+								disabled={
+									factorySetting?.source === "builtin" ||
+									resetFactorySnapshot.isPending
+								}
+								onClick={() =>
+									resetFactorySnapshot.mutate(
+										{ source: "builtin" },
+										{
+											onSuccess: () =>
+												toast.success("Восстановлен встроенный заводской эталон"),
+											onError: (err) =>
+												toast.error("Не удалось сбросить эталон", {
+													description: apiErrorMessage(err),
+												}),
+										},
+									)
+								}
+							>
+								Вернуть встроенный эталон
+							</Button>
+
 							<Divider />
 							<Flex flexDirection="column" gap={8}>
 								<Typography variant="h6">Данные v2</Typography>

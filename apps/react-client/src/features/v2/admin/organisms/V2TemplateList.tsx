@@ -21,6 +21,7 @@ import {
 	pathForAdminV2TemplateHistory,
 } from "@react-client/routing/common/pathHelpers";
 import type {
+	V2FactorySnapshotSettingDto,
 	V2TemplateDto,
 	V2TemplateStatus,
 	V2TemplateVersionDto,
@@ -116,6 +117,7 @@ export function splitSelectedSchemaRows(rows: V2SchemaGridRow[]): {
 
 type V2TemplateListProps = {
 	onSelectionChange?: (rows: V2SchemaGridRow[]) => void;
+	factorySnapshot?: V2FactorySnapshotSettingDto | null;
 };
 
 export type V2TemplateListHandle = {
@@ -126,7 +128,7 @@ const dateFmt = (v: unknown) =>
 	v ? new Date(String(v)).toLocaleString("ru-RU") : "";
 
 export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListProps>(
-	function V2TemplateList({ onSelectionChange }, ref) {
+	function V2TemplateList({ onSelectionChange, factorySnapshot }, ref) {
 	const theme = useTheme();
 	const { mode } = useColorScheme();
 	const navigate = useNavigate();
@@ -525,6 +527,51 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 				},
 			},
 			{
+				colId: "factoryChip",
+				headerName: "Заводской эталон",
+				minWidth: 150,
+				maxWidth: 180,
+				sortable: false,
+				filter: false,
+				floatingFilter: false,
+				cellRenderer: (p: ICellRendererParams<V2SchemaGridRow>) => {
+					if (!factorySnapshot || factorySnapshot.source !== "template") {
+						return null;
+					}
+					const d = p.data;
+					if (!d) return null;
+					if (
+						d.rowKind === "version" &&
+						factorySnapshot.versionId &&
+						d.id === factorySnapshot.versionId
+					) {
+						return (
+							<Chip
+								size="small"
+								color="info"
+								variant="outlined"
+								label="Эталон"
+							/>
+						);
+					}
+					if (
+						d.rowKind === "template" &&
+						d.id === factorySnapshot.templateId &&
+						!factorySnapshot.versionId
+					) {
+						return (
+							<Chip
+								size="small"
+								color="info"
+								variant="outlined"
+								label="Эталон"
+							/>
+						);
+					}
+					return null;
+				},
+			},
+			{
 				colId: "entityId",
 				field: "id",
 				headerName: "Идентификатор",
@@ -601,7 +648,7 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 					p.data?.rowKind === "template" ? dateFmt(p.data.updatedAt) : "",
 			},
 		],
-		[],
+		[factorySnapshot],
 	);
 
 	const onGridReady = useCallback((e: GridReadyEvent<V2SchemaGridRow>) => {

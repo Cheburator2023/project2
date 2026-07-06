@@ -13,9 +13,7 @@ import type {
 	PublishV2TemplateVersionDto,
 	RollbackV2TemplateVersionDto,
 } from "../dto";
-import {
-	V2_DEFAULT_TEMPLATE_SNAPSHOT,
-} from "../constants/v2-default-template-snapshot";
+import { V2FactorySnapshotService } from "./v2-factory-snapshot.service";
 import type { V2TemplateStatus } from "@smart-anketa/api-contract";
 
 @Injectable()
@@ -26,6 +24,7 @@ export class V2TemplateVersionService {
 		@InjectRepository(V2TemplateEntity)
 		private readonly templateRepository: Repository<V2TemplateEntity>,
 		private readonly templateService: V2TemplateService,
+		private readonly factorySnapshotService: V2FactorySnapshotService,
 	) {}
 
 	async findAll(templateId: string): Promise<V2TemplateVersionEntity[]> {
@@ -180,7 +179,7 @@ export class V2TemplateVersionService {
 		templateId: string,
 		userId: string | null,
 	): Promise<V2TemplateVersionEntity> {
-		const snap = V2_DEFAULT_TEMPLATE_SNAPSHOT;
+		const snap = await this.factorySnapshotService.getEffectiveSnapshot();
 		return this.create(
 			templateId,
 			{
@@ -199,7 +198,7 @@ export class V2TemplateVersionService {
 		templateId: string,
 		userId: string | null,
 	): Promise<V2TemplateVersionEntity> {
-		const snap = V2_DEFAULT_TEMPLATE_SNAPSHOT;
+		const snap = await this.factorySnapshotService.getEffectiveSnapshot();
 		const draft = await this.create(
 			templateId,
 			{
@@ -359,6 +358,11 @@ export class V2TemplateVersionService {
 				`Only draft versions can be deleted. Current status: ${version.status}`,
 			);
 		}
+
+		await this.factorySnapshotService.clearTemplateReferenceIfMatches({
+			versionId: version.id,
+			templateId: version.templateId,
+		});
 
 		await this.versionRepository.remove(version);
 	}
