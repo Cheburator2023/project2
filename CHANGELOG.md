@@ -1,5 +1,7 @@
 # Semantic Versioning Changelog
 
+## [1.22.1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.22.0...v1.22.1) (2026-07-06)
+
 # [1.22.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.21.2...v1.22.0) (2026-07-06)
 
 
