@@ -22,11 +22,15 @@ export function resolveStreamFromSourceType(
 	return STREAM_BY_SOURCE_TYPE[sourceType] ?? null;
 }
 
-/** Стримы, представленные в `streamDataSources.sourceSystems`. */
+/** Стримы, представленные в системах-источниках анкеты (v5: `detailInfo`). */
 export function resolveStreamsFromSourceSystems(
 	data: Record<string, unknown>,
 ): string[] {
-	const systems = readDotPath(data, "streamDataSources.sourceSystems");
+	const canonical = readDotPath(data, "detailInfo.sourceSystems");
+	const legacy = readDotPath(data, "streamDataSources.sourceSystems");
+	const systems = Array.isArray(canonical) && canonical.length > 0
+		? canonical
+		: legacy;
 	if (!Array.isArray(systems) || systems.length === 0) {
 		return [STREAM_BY_SOURCE_TYPE.Внутренний];
 	}

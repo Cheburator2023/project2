@@ -1,0 +1,9 @@
+import type { V2LogicGraphDto, V2LogicRuleDto } from "./v2-template.types";
+/** Канонические пути v5: источники в detailInfo, вывод — в stream-блоки. */
+export declare const V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
+export declare const V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = "streamDataSources.sourceTypicalTasks";
+export declare const V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_Khn6-HAW";
+export declare function buildSourceTypicalWorksCatalogRule(): V2LogicRuleDto;
+export declare function buildControlTypicalWorksCatalogRule(): V2LogicRuleDto;
+/** Заменяет устаревшие static-tasks правила на каталог работ с путями схемы v5. */
+export declare function patchV2TypicalWorksLogicRules(logic: V2LogicGraphDto): V2LogicGraphDto;

@@ -24,6 +24,7 @@ import { ensureAnketaFormDataWithWorkflow } from "./useAnketaWorkflow";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	ensureGroupActivationDefaults,
+	patchV2TypicalWorksLogicRules,
 	type V2LogicGraphDto,
 } from "@smart-anketa/api-contract";
 
@@ -52,7 +53,9 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 
 	const [jsonSchema, setJsonSchema] = useState<RJSFSchema>(EMPTY_JSON_SCHEMA);
 	const [uiSchema, setUiSchema] = useState<UiSchema>({});
-	const [logic, setLogic] = useState(coerceLogicGraph(undefined));
+	const [logic, setLogic] = useState(() =>
+		coerceLogicGraph(patchV2TypicalWorksLogicRules(coerceLogicGraph(undefined))),
+	);
 	const [formData, setFormData] = useState<Record<string, unknown>>(() =>
 		ensureAnketaFormDataWithWorkflow(source?.initialFormData ?? {}),
 	);
@@ -71,7 +74,13 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		if (source?.initialJsonSchema && source.initialUiSchema && source.initialLogic) {
 			setJsonSchema(coerceJsonSchema(source.initialJsonSchema));
 			setUiSchema(coerceUiSchema(source.initialUiSchema, source.initialJsonSchema));
-			setLogic(coerceLogicGraph(source.initialLogic));
+			setLogic(
+				coerceLogicGraph(
+					patchV2TypicalWorksLogicRules(
+						coerceLogicGraph(source.initialLogic),
+					),
+				),
+			);
 			setFormData(ensureAnketaFormDataWithWorkflow(source.initialFormData ?? {}));
 			hydratedKeyRef.current = hydrationKey;
 			return;
@@ -79,7 +88,11 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		if (!version?.id) return;
 		setJsonSchema(coerceJsonSchema(version.jsonSchema));
 		setUiSchema(coerceUiSchema(version.uiSchema, version.jsonSchema));
-		setLogic(coerceLogicGraph(version.logic));
+		setLogic(
+			coerceLogicGraph(
+				patchV2TypicalWorksLogicRules(coerceLogicGraph(version.logic)),
+			),
+		);
 		if (source?.initialFormData) {
 			setFormData(ensureAnketaFormDataWithWorkflow(source.initialFormData));
 		}
@@ -167,8 +180,9 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 			mergeAnketaDisplayFormData(
 				formData,
 				mappedCalculation?.liveFormData,
+				uiSchema as Record<string, unknown>,
 			),
-		[formData, mappedCalculation?.liveFormData],
+		[formData, mappedCalculation?.liveFormData, uiSchema],
 	);
 	const summary = readSummaryFromFormData(displayFormData);
 

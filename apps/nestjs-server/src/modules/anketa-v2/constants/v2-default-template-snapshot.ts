@@ -7,6 +7,7 @@ import type {
 	V2LogicGraphDto,
 	V2UiSchemaDto,
 } from "@smart-anketa/api-contract";
+import { patchV2TypicalWorksLogicRules } from "@smart-anketa/api-contract";
 
 import {
 	buildDefaultDictionariesFromJsonSchema,
@@ -66,7 +67,7 @@ const file = loadSnapshotPayload();
 export const V2_DEFAULT_TEMPLATE_SNAPSHOT = {
 	jsonSchema: asJsonSchema(file.jsonSchema),
 	uiSchema: asUiSchema(file.uiSchema),
-	logic: asLogic(file.logic),
+	logic: patchV2TypicalWorksLogicRules(asLogic(file.logic)),
 	dictionariesSnapshot: (file.dictionariesSnapshot ??
 		({
 			referencedDictionaryCodes: collectDictionaryCodesFromUiSchema(

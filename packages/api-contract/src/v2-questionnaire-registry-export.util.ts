@@ -5,8 +5,6 @@ import {
 	type V2RegistrySchemaColumnOptions,
 } from "./v2-questionnaire-registry-columns.util";
 
-export type { V2RegistryExportColumn, V2RegistrySchemaColumnOptions };
-
 export function formatV2RegistryExportCellValue(value: unknown): string {
 	if (value == null || value === "") return "";
 	if (typeof value === "boolean") return value ? "Да" : "Нет";

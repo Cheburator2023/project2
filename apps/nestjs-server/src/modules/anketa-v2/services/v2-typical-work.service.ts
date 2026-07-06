@@ -96,14 +96,33 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 	) {}
 
 	async onModuleInit(): Promise<void> {
+		await this.paramCatalogService.ensureSeededFromDocCatalog();
+		await this.purgeDocCatalogSeededWorks();
 		const count = await this.workRepository.count();
 		if (count > 0) {
-			this.logger.log(`Typical works catalog already seeded (${count} works)`);
+			this.logger.log(
+				`Typical works catalog: ${count} works (auto-seed from doc catalog disabled)`,
+			);
 			await this.ensureFactoryVersionConfigs();
 			return;
 		}
-		await this.seedFromDocCatalog();
-		await this.ensureFactoryVersionConfigs();
+		this.logger.log(
+			"Typical works catalog is empty — add works via constructor Logic or admin panel",
+		);
+	}
+
+	/** Удаляет работы, автоматически залитые из doc-каталога (catalog_key), чтобы каталог начинался с нуля. */
+	async purgeDocCatalogSeededWorks(): Promise<void> {
+		const legacy = await this.workRepository.find({
+			where: { catalogKey: Not(IsNull()) },
+		});
+		if (legacy.length === 0) return;
+
+		const ids = legacy.map((row) => row.id);
+		await this.workRepository.delete(ids);
+		this.logger.log(
+			`Purged ${legacy.length} doc-catalog typical works — use constructor Logic to add works`,
+		);
 	}
 
 	async seedFromDocCatalog(): Promise<void> {

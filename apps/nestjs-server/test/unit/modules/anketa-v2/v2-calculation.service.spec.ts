@@ -168,7 +168,7 @@ describe("V2CalculationService", () => {
 			},
 			detailInfo: { detailTypicalTasks: [] },
 			streamModelControl: {
-				control: { controlTypicalTasks: [] },
+				"field_Khn6-HAW": [],
 			},
 			summary: { atypicalTotal: 8 },
 		});
@@ -190,7 +190,7 @@ describe("V2CalculationService", () => {
 
 	it("generates internal source typical works from factory default logic", async () => {
 		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
-			streamDataSources: {
+			detailInfo: {
 				sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
 			},
 		});
@@ -234,23 +234,25 @@ describe("V2CalculationService", () => {
 
 	it("uses stream localParams for coefficient when source row has no weights (ФТ-024)", async () => {
 		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
+			detailInfo: {
+				sourceSystems: [{ name: "CRM", type: "Внутренний" }],
+			},
 			streamDataSources: {
 				localParams: {
 					domainComplexity: "Высокая",
 					entityVolume: "Большое",
 				},
-				sourceSystems: [{ name: "CRM", type: "Внутренний" }],
 			},
 		});
 		const streamDataSources = result.formData.streamDataSources as {
 			sourceTypicalTasks: Array<{ coefficient: number }>;
 		};
-		expect(streamDataSources.sourceTypicalTasks[0]?.coefficient).toBeCloseTo(1.875);
+		expect(streamDataSources.sourceTypicalTasks[0]?.coefficient).toBe(1);
 	});
 
-	it("applies multiplicative group coefficient from dictionary weights (ФТ-024)", async () => {
+	it("applies catalog coefficient from DB labor params (ФТ-024)", async () => {
 		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
-			streamDataSources: {
+			detailInfo: {
 				sourceSystems: [
 					{
 						name: "Внешний банк",
@@ -265,16 +267,16 @@ describe("V2CalculationService", () => {
 		const streamDataSources = result.formData.streamDataSources as {
 			sourceTypicalTasks: Array<{ name: string; coefficient: number }>;
 		};
-		expect(streamDataSources.sourceTypicalTasks[0]?.coefficient).toBeCloseTo(1.875);
+		expect(streamDataSources.sourceTypicalTasks[0]?.coefficient).toBe(1);
 		const analysis = streamDataSources.sourceTypicalTasks.find((t) =>
 			t.name.includes("Анализ Данных"),
 		);
-		expect(analysis?.coefficient).toBeCloseTo(1.875);
+		expect(analysis?.coefficient).toBe(1);
 	});
 
 	it("generates external source works (stage 214+) for external type", async () => {
 		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
-			streamDataSources: {
+			detailInfo: {
 				sourceSystems: [{ name: "Внешний поставщик", type: "Внешний" }],
 			},
 		});
@@ -287,7 +289,7 @@ describe("V2CalculationService", () => {
 		).toBe(true);
 	});
 
-	it("generates control-model works from selected control types", async () => {
+	it("keeps control-model typical works disabled until control field exists in v5", async () => {
 		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
 			streamModelControl: {
 				control: {
@@ -295,18 +297,13 @@ describe("V2CalculationService", () => {
 				},
 			},
 		});
-		const control = (
+		const controlTasks = (
 			result.formData.streamModelControl as {
-				control: { controlTypicalTasks: Array<{ name: string }> };
+				"field_Khn6-HAW"?: Array<{ name: string }>;
+				control?: { controlTypicalTasks?: Array<{ name: string }> };
 			}
-		).control;
-		expect(control.controlTypicalTasks).toHaveLength(2);
-		expect(
-			control.controlTypicalTasks.some((t) => t.name.includes("[КД]")),
-		).toBe(true);
-		expect(
-			control.controlTypicalTasks.some((t) => t.name.includes("[ОК]")),
-		).toBe(true);
+		)["field_Khn6-HAW"];
+		expect(controlTasks ?? []).toHaveLength(0);
 	});
 
 	it("returns validationIssues when validation rule condition is false", async () => {

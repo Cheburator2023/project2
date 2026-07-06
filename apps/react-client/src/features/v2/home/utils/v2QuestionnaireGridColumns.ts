@@ -31,15 +31,16 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 	const filter = agFilterForValueType(leaf.valueType);
 
 	if (leaf.kind === "sectionStatus" && leaf.sectionId) {
+		const sectionId = leaf.sectionId;
 		return {
 			colId: leaf.id,
 			headerName: leaf.header,
 			minWidth,
 			resizable: true,
 			filter: "agSetColumnFilter",
-			cellRenderer: v2WorkflowSectionStatusCell(leaf.sectionId),
+			cellRenderer: v2WorkflowSectionStatusCell(sectionId),
 			valueGetter: (p) =>
-				resolveVersionRow(p.data)?.workflowSectionStatuses?.[leaf.sectionId!] ??
+				resolveVersionRow(p.data)?.workflowSectionStatuses?.[sectionId] ??
 				null,
 		};
 	}

@@ -1,9 +1,16 @@
+import {
+	collectGeneratedTypicalWorkArrayPaths,
+	V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
+	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+} from "@smart-anketa/api-contract";
+
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
 	return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-const GENERATED_TYPICAL_WORK_ARRAY_PATHS = [
-	"streamDataSources.sourceTypicalTasks",
+const FALLBACK_GENERATED_TYPICAL_WORK_ARRAY_PATHS = [
+	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+	V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
 	"detailInfo.detailTypicalTasks",
 	"generalInfo.modelService.controlTypicalTasks",
 ] as const;
@@ -54,6 +61,15 @@ function deepMergeRecords(
 	return next;
 }
 
+function resolveGeneratedTypicalWorkPaths(
+	uiSchema?: Record<string, unknown>,
+): string[] {
+	const dynamic = uiSchema
+		? collectGeneratedTypicalWorkArrayPaths(uiSchema)
+		: [];
+	return [...new Set([...FALLBACK_GENERATED_TYPICAL_WORK_ARRAY_PATHS, ...dynamic])];
+}
+
 /**
  * Данные для RJSF: результат калькуляции + актуальный ввод пользователя
  * (модалки пишут в `formData`, таблицы читают те же пути).
@@ -61,15 +77,14 @@ function deepMergeRecords(
 export function mergeAnketaDisplayFormData(
 	formData: Record<string, unknown>,
 	liveFormData?: Record<string, unknown>,
+	uiSchema?: Record<string, unknown>,
 ): Record<string, unknown> {
 	if (!liveFormData || Object.keys(liveFormData).length === 0) {
 		return formData;
 	}
 	let merged = deepMergeRecords(liveFormData, formData);
 
-	// Эти массивы генерируются калькуляцией и read-only в анкете. Если в сохранённых
-	// данных остались старые строки, показываем актуальный результат /calculate.
-	for (const path of GENERATED_TYPICAL_WORK_ARRAY_PATHS) {
+	for (const path of resolveGeneratedTypicalWorkPaths(uiSchema)) {
 		const liveValue = readAtPath(liveFormData, path);
 		if (Array.isArray(liveValue)) {
 			merged = writeAtPath(merged, path, liveValue);

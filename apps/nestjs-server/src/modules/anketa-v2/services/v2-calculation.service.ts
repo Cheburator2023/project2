@@ -14,11 +14,13 @@ import {
 	mergeTypicalCoefficientContext,
 	parseParamDependencyGraphFromLogic,
 	filterCoefficientLogicForHiddenFields,
+	patchV2TypicalWorksLogicRules,
 	resolveHiddenParamCodesForSource,
 	resolveHiddenSourceFieldKeys,
 	readStreamLocalParamsForTypicalOutput,
 	resolveStreamFromSourceType,
 	resolveStreamsFromSourceSystems,
+	V2_SOURCE_SYSTEMS_ARRAY_PATH,
 	type V2ParamDependencyGraph,
 	type V2ParamDefLike,
 } from "@smart-anketa/api-contract";
@@ -343,7 +345,7 @@ export class V2CalculationService {
 		formData: Record<string, unknown>,
 		options?: { templateVersionId?: string | null },
 	): Promise<V2CalculationResultDto> {
-		const rules = logic?.rules ?? [];
+		const rules = patchV2TypicalWorksLogicRules(logic)?.rules ?? [];
 		const paramGraph = parseParamDependencyGraphFromLogic(rules);
 		const paramDefs = listCatalogParamDefs();
 		const rowComputed = rules.filter((r) => r.kind === "row_computed");
@@ -633,7 +635,21 @@ export class V2CalculationService {
 		}
 		const arrayPath = payload.sourceArrayPath?.trim();
 		if (!arrayPath) return [];
+
 		const rows = readByDotPath(data, arrayPath);
+		if (Array.isArray(rows) && rows.length > 0) return rows;
+
+		if (
+			arrayPath === "streamDataSources.sourceSystems" ||
+			arrayPath === V2_SOURCE_SYSTEMS_ARRAY_PATH ||
+			payload.worksCatalog
+		) {
+			const canonical = readByDotPath(data, V2_SOURCE_SYSTEMS_ARRAY_PATH);
+			if (Array.isArray(canonical) && canonical.length > 0) return canonical;
+			const legacy = readByDotPath(data, "streamDataSources.sourceSystems");
+			if (Array.isArray(legacy) && legacy.length > 0) return legacy;
+		}
+
 		return Array.isArray(rows) ? rows : [];
 	}
 

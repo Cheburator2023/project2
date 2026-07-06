@@ -13,7 +13,7 @@ export type TypicalWorkRuleLike = {
     }>;
 };
 export declare function resolveStreamFromSourceType(source: Record<string, unknown>): string | null;
-/** Стримы, представленные в `streamDataSources.sourceSystems`. */
+/** Стримы, представленные в системах-источниках анкеты (v5: `detailInfo`). */
 export declare function resolveStreamsFromSourceSystems(data: Record<string, unknown>): string[];
 /** Читает значение параметра из контекста строки/объекта анкеты. */
 export declare function readTypicalWorkSourceField(source: Record<string, unknown>, paramCode: string, paramName: string | null): unknown;
