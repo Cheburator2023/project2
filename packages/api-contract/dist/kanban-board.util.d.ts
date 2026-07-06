@@ -28,3 +28,4 @@ export declare function kanbanBoardSubtasksProgress(content: Pick<KanbanBoardTas
 /** Нормализует content: проставляет estimatePd из roleEstimates, убирает пустые роли. */
 export declare function normalizeKanbanBoardTaskContent(content: KanbanBoardTaskContent): KanbanBoardTaskContent;
 export declare function boardsEquivalent(left: KanbanBoardData, right: KanbanBoardData): boolean;
+export declare function resolveKanbanBoardLegacyColumnId(columnId: string, validIds?: ReadonlySet<string>): string;

@@ -345,7 +345,7 @@ export function KanbanBoardPage() {
 		});
 	}, []);
 
-	const defaultColumnId = columnsQuery.data?.[0]?.id ?? "backlog";
+	const defaultColumnId = columnsQuery.data?.[0]?.id ?? "todo";
 
 	const openCreateTask = useCallback(
 		(columnId = defaultColumnId) => {

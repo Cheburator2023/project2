@@ -5,67 +5,39 @@ const boardColumns = defaultKanbanBoardColumns("board-1").map((column) => ({
     createdAt: "2026-06-16T12:00:00.000Z",
     updatedAt: "2026-06-16T12:00:00.000Z",
 }));
-const sampleBoard = () => ({
-    root: {
-        id: "root",
-        title: "Root",
-        parentId: null,
-        children: ["backlog", "todo", "in_progress", "review", "qa", "done"],
-        totalChildrenCount: 6,
-    },
-    backlog: {
-        id: "backlog",
-        title: "Бэклог",
-        parentId: "root",
-        children: ["task-1"],
-        totalChildrenCount: 1,
-    },
-    todo: {
-        id: "todo",
-        title: "К выполнению",
-        parentId: "root",
-        children: [],
-        totalChildrenCount: 0,
-    },
-    in_progress: {
-        id: "in_progress",
-        title: "В работе",
-        parentId: "root",
-        children: [],
-        totalChildrenCount: 0,
-    },
-    review: {
-        id: "review",
-        title: "Ревью",
-        parentId: "root",
-        children: [],
-        totalChildrenCount: 0,
-    },
-    qa: {
-        id: "qa",
-        title: "QA",
-        parentId: "root",
-        children: [],
-        totalChildrenCount: 0,
-    },
-    done: {
-        id: "done",
-        title: "Готово",
-        parentId: "root",
-        children: [],
-        totalChildrenCount: 0,
-    },
-    "task-1": {
+function sampleBoard() {
+    const columns = defaultKanbanBoardColumns("board-1");
+    const columnIds = columns.map((column) => column.id);
+    const board = {
+        root: {
+            id: "root",
+            title: "Root",
+            parentId: null,
+            children: columnIds,
+            totalChildrenCount: columnIds.length,
+        },
+    };
+    for (const column of columns) {
+        board[column.id] = {
+            id: column.id,
+            title: column.title,
+            parentId: "root",
+            children: column.id === "todo" ? ["task-1"] : [],
+            totalChildrenCount: column.id === "todo" ? 1 : 0,
+        };
+    }
+    board["task-1"] = {
         id: "task-1",
         title: "Demo",
-        parentId: "backlog",
+        parentId: "todo",
         children: [],
         totalChildrenCount: 0,
         type: "card",
         content: { title: "Demo", priority: "medium" },
         origin: "local-dev",
-    },
-});
+    };
+    return board;
+}
 describe("kanban board mapping", () => {
     it("preserves board structure in fromBoardData → toBoardData cycle", () => {
         const board = sampleBoard();

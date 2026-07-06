@@ -32,10 +32,10 @@ describe("kanban board planning import registry util", () => {
 		expect(resolveBestStatusColumnId("В очереди", COLUMNS).columnId).toBe("todo");
 		expect(resolveBestStatusColumnId("Готово", COLUMNS).columnId).toBe("done");
 		expect(resolveBestStatusColumnId("На проверке", COLUMNS).columnId).toBe(
-			"review",
+			"review_wip",
 		);
 		expect(resolveBestStatusColumnId("Тестирование", COLUMNS).columnId).toBe(
-			"qa",
+			"review_wip",
 		);
 	});
 });

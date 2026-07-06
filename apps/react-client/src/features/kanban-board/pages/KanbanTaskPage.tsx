@@ -66,7 +66,7 @@ const PRIORITY_OPTIONS = KANBAN_BOARD_PRIORITIES.map((option) => ({
 	color: kanbanBoardPriorityColor(option.id),
 }));
 
-const DEFAULT_COLUMN_ID = "backlog";
+const DEFAULT_COLUMN_ID = "todo";
 const BOARD_SELECT_COLOR = "#6366f1";
 const ASSIGNEE_SELECT_COLOR = "#2563eb";
 const SPRINT_SELECT_COLOR = "#0891b2";

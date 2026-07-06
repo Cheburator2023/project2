@@ -37,6 +37,7 @@ import type {
 	UpdateKanbanBoardStreamRequestDto,
 	UpdateKanbanBoardSupersprintRequestDto,
 	UpdateKanbanBoardTaskRequestDto,
+	ResetKanbanBoardColumnsResultDto,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "../helpers/apiClient";
 
@@ -698,6 +699,18 @@ export const useDeleteKanbanBoardColumn = () => {
 		onSuccess: (_result, { boardId }) => {
 			queryClient.invalidateQueries({ queryKey: ["kanbanBoardColumns", boardId] });
 		},
+	});
+};
+
+export const useResetKanbanBoardColumnsToDefault = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: () =>
+			apiClient<ResetKanbanBoardColumnsResultDto>({
+				url: "/kanban-board/columns/reset-default",
+				method: "POST",
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
 	});
 };
 

@@ -18,60 +18,35 @@ import {
 	SnapshotSchemaError,
 } from "../../../../src/modules/kanban-board/utils/kanban-board-snapshot.util";
 
-const buildBoard = (): KanbanBoardData => ({
-	root: {
-		id: "root",
-		title: "Root",
-		parentId: null,
-		children: ["backlog", "todo", "in_progress", "review", "qa", "done"],
-		totalChildrenCount: 6,
-	},
-	backlog: {
-		id: "backlog",
-		title: "Бэклог",
-		parentId: "root",
-		children: ["01JABCDEFGHJKMNPQRSTVWXYZ0"],
-		totalChildrenCount: 1,
-	},
-	todo: {
-		id: "todo",
-		title: "К выполнению",
-		parentId: "root",
-		children: [],
-		totalChildrenCount: 0,
-	},
-	in_progress: {
-		id: "in_progress",
-		title: "В работе",
-		parentId: "root",
-		children: [],
-		totalChildrenCount: 0,
-	},
-	review: {
-		id: "review",
-		title: "Ревью",
-		parentId: "root",
-		children: [],
-		totalChildrenCount: 0,
-	},
-	qa: {
-		id: "qa",
-		title: "QA",
-		parentId: "root",
-		children: [],
-		totalChildrenCount: 0,
-	},
-	done: {
-		id: "done",
-		title: "Готово",
-		parentId: "root",
-		children: [],
-		totalChildrenCount: 0,
-	},
-	"01JABCDEFGHJKMNPQRSTVWXYZ0": {
+const BOARD_ID = "01J000000000000000000014";
+const PROJECT_ID = "01J000000000000000000004";
+
+const buildBoard = (): KanbanBoardData => {
+	const columns = defaultKanbanBoardColumns(BOARD_ID);
+	const columnIds = columns.map((column) => column.id);
+	const board: KanbanBoardData = {
+		root: {
+			id: "root",
+			title: "Root",
+			parentId: null,
+			children: columnIds,
+			totalChildrenCount: columnIds.length,
+		},
+	};
+	for (const column of columns) {
+		board[column.id] = {
+			id: column.id,
+			title: column.title,
+			parentId: "root",
+			children:
+				column.id === "input_buffer" ? ["01JABCDEFGHJKMNPQRSTVWXYZ0"] : [],
+			totalChildrenCount: column.id === "input_buffer" ? 1 : 0,
+		};
+	}
+	board["01JABCDEFGHJKMNPQRSTVWXYZ0"] = {
 		id: "01JABCDEFGHJKMNPQRSTVWXYZ0",
 		title: "Первая задача",
-		parentId: "backlog",
+		parentId: "input_buffer",
 		children: [],
 		totalChildrenCount: 0,
 		type: "card",
@@ -82,11 +57,9 @@ const buildBoard = (): KanbanBoardData => ({
 			assignee: "Alice",
 		},
 		origin: "stand-a",
-	},
-});
-
-const BOARD_ID = "01J000000000000000000014";
-const PROJECT_ID = "01J000000000000000000004";
+	};
+	return board;
+};
 
 const BOARD_COLUMNS = defaultKanbanBoardColumns(BOARD_ID).map((column) => ({
 	...column,
@@ -160,7 +133,7 @@ describe("KanbanBoardService importSnapshot", () => {
 				boardId: BOARD_ID,
 				projectId: PROJECT_ID,
 				taskNumber: 1,
-				parentId: "backlog",
+				parentId: "input_buffer",
 				position: 0,
 				content: { title: "Старая версия" },
 				origin: stand,

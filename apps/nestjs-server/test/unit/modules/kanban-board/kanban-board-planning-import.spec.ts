@@ -154,7 +154,7 @@ describe("kanban board planning import", () => {
 
 		expect(parsed.payload).toHaveLength(1);
 		expect(parsed.payload[0].content.title).toBe("Smoke task");
-		expect(parsed.payload[0].parentId).toBe("in_progress");
+		expect(parsed.payload[0].parentId).toBe("dev_wip");
 		expect(parsed.payload[0].content.priority).toBe("high");
 		expect(parsed.payload[0].content.roleEstimates?.developer).toBe(3);
 	});

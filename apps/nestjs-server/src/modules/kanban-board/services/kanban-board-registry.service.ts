@@ -7,10 +7,11 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
 import { ulid } from "ulid";
 import {
-	KANBAN_BOARD_COLUMN_COLORS,
 	KANBAN_BOARD_HEAP_BOARD_ID,
 	KANBAN_BOARD_STATUSES,
+	ResetKanbanBoardColumnsResultDto,
 	defaultKanbanBoardColumns,
+	resolveKanbanBoardLegacyColumnId,
 	kanbanBoardAssigneeRoleTitle,
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardEffectiveSprintCapacityPd,
@@ -782,6 +783,95 @@ export class KanbanBoardRegistryService {
 			throw new BadRequestException("Нельзя удалить колонку с задачами");
 		}
 		await this.columnRepository.delete({ boardId, id: columnId });
+	}
+
+	async resetBoardColumnsToDefault(
+		boardId: string,
+	): Promise<KanbanBoardColumnDto[]> {
+		await this.ensureBoardExists(boardId);
+		await this.applyDefaultColumnsToBoard(boardId);
+		return this.findBoardColumns(boardId);
+	}
+
+	async resetAllBoardColumnsToDefault(): Promise<ResetKanbanBoardColumnsResultDto> {
+		const boards = await this.boardRepository.find({
+			order: { sortOrder: "ASC", name: "ASC" },
+		});
+		let movedTaskCount = 0;
+		const boardResults: ResetKanbanBoardColumnsResultDto["boards"] = [];
+
+		for (const board of boards) {
+			const result = await this.applyDefaultColumnsToBoard(board.id);
+			movedTaskCount += result.movedTaskCount;
+			boardResults.push({
+				boardId: board.id,
+				boardName: board.name,
+				columnCount: result.columnCount,
+			});
+		}
+
+		return {
+			boardCount: boards.length,
+			movedTaskCount,
+			boards: boardResults,
+		};
+	}
+
+	private async applyDefaultColumnsToBoard(
+		boardId: string,
+	): Promise<{ movedTaskCount: number; columnCount: number }> {
+		const defaults = defaultKanbanBoardColumns(boardId);
+		const defaultIds = new Set(defaults.map((column) => column.id));
+
+		return this.columnRepository.manager.transaction(async (manager) => {
+			const columnRepo = manager.getRepository(KanbanBoardColumnEntity);
+			const taskRepo = manager.getRepository(KanbanBoardTaskEntity);
+
+			const existingColumns = await columnRepo.find({ where: { boardId } });
+			const tasks = await taskRepo.find({ where: { boardId } });
+			let movedTaskCount = 0;
+
+			for (const task of tasks) {
+				const nextParentId = resolveKanbanBoardLegacyColumnId(
+					task.parentId,
+					defaultIds,
+				);
+				if (task.parentId !== nextParentId) {
+					task.parentId = nextParentId;
+					await taskRepo.save(task);
+					movedTaskCount += 1;
+				}
+			}
+
+			const obsoleteIds = existingColumns
+				.map((column) => column.id)
+				.filter((id) => !defaultIds.has(id));
+			if (obsoleteIds.length) {
+				await columnRepo.delete({ boardId, id: In(obsoleteIds) });
+			}
+
+			for (const def of defaults) {
+				const existing = existingColumns.find((column) => column.id === def.id);
+				if (existing) {
+					existing.title = def.title;
+					existing.color = def.color;
+					existing.sortOrder = def.sortOrder;
+					await columnRepo.save(existing);
+				} else {
+					await columnRepo.save(
+						columnRepo.create({
+							id: def.id,
+							boardId: def.boardId,
+							title: def.title,
+							color: def.color,
+							sortOrder: def.sortOrder,
+						}),
+					);
+				}
+			}
+
+			return { movedTaskCount, columnCount: defaults.length };
+		});
 	}
 
 	async updateBoard(
@@ -1594,19 +1684,19 @@ export class KanbanBoardRegistryService {
 	}
 
 	private async seedDefaultColumns(boardId: string): Promise<void> {
-		for (const [index, status] of KANBAN_BOARD_STATUSES.entries()) {
+		for (const column of defaultKanbanBoardColumns(boardId)) {
 			const existing = await this.columnRepository.findOne({
-				where: { id: status.id, boardId },
+				where: { id: column.id, boardId },
 			});
 			if (existing) continue;
 
 			await this.columnRepository.save(
 				this.columnRepository.create({
-					id: status.id,
-					boardId,
-					title: status.title,
-					color: KANBAN_BOARD_COLUMN_COLORS[status.id],
-					sortOrder: index,
+					id: column.id,
+					boardId: column.boardId,
+					title: column.title,
+					color: column.color,
+					sortOrder: column.sortOrder,
 				}),
 			);
 		}

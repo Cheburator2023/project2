@@ -16,12 +16,13 @@ exports.normalizeKanbanBoardSubtasks = normalizeKanbanBoardSubtasks;
 exports.kanbanBoardSubtasksProgress = kanbanBoardSubtasksProgress;
 exports.normalizeKanbanBoardTaskContent = normalizeKanbanBoardTaskContent;
 exports.boardsEquivalent = boardsEquivalent;
+exports.resolveKanbanBoardLegacyColumnId = resolveKanbanBoardLegacyColumnId;
 const kanban_board_types_1 = require("./kanban-board.types");
 function toBoardData(rows, columns) {
     const effectiveColumns = columns.length > 0 ? columns : (0, kanban_board_types_1.defaultKanbanBoardColumns)("board");
     const sortedColumns = [...effectiveColumns].sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title));
     const columnIds = new Set(sortedColumns.map((column) => column.id));
-    const fallbackColumnId = sortedColumns[0]?.id ?? "backlog";
+    const fallbackColumnId = sortedColumns[0]?.id ?? kanban_board_types_1.KANBAN_BOARD_STATUSES[0].id;
     const byColumn = new Map();
     for (const column of sortedColumns) {
         byColumn.set(column.id, []);
@@ -256,4 +257,13 @@ function boardsEquivalent(left, right) {
     const leftKeys = leftRows.map(sortKey).sort();
     const rightKeys = rightRows.map(sortKey).sort();
     return leftKeys.every((key, index) => key === rightKeys[index]);
+}
+function resolveKanbanBoardLegacyColumnId(columnId, validIds) {
+    const mapped = kanban_board_types_1.KANBAN_BOARD_LEGACY_COLUMN_ID_MAP[columnId] ?? columnId;
+    if (validIds && !validIds.has(mapped)) {
+        return validIds.has(kanban_board_types_1.KANBAN_BOARD_INPUT_BUFFER_COLUMN_ID)
+            ? kanban_board_types_1.KANBAN_BOARD_INPUT_BUFFER_COLUMN_ID
+            : (kanban_board_types_1.KANBAN_BOARD_STATUSES[0]?.id ?? mapped);
+    }
+    return mapped;
 }

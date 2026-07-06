@@ -41,6 +41,7 @@ import type {
 	KanbanBoardColumnDto,
 	KanbanBoardProjectDto,
 	KanbanBoardPlanningImportResultDto,
+	ResetKanbanBoardColumnsResultDto,
 	KanbanBoardSprintDto,
 	KanbanBoardSettingsDto,
 	KanbanBoardStreamDto,
@@ -157,6 +158,24 @@ export class KanbanBoardController {
 		@Body() dto: UpdateKanbanBoardSettingsRequestDto,
 	): Promise<KanbanBoardSettingsDto> {
 		return this.registryService.updateSettings(dto);
+	}
+
+	@Post("columns/reset-default")
+	@ApiOperation({
+		summary: "Применить заводской набор колонок ко всем доскам",
+	})
+	async resetAllBoardColumnsToDefault(): Promise<ResetKanbanBoardColumnsResultDto> {
+		return this.registryService.resetAllBoardColumnsToDefault();
+	}
+
+	@Post("boards/:boardId/columns/reset-default")
+	@ApiOperation({ summary: "Применить заводской набор колонок к доске" })
+	async resetBoardColumnsToDefault(
+		@Param("boardId") boardId: string,
+	): Promise<KanbanBoardColumnDto[]> {
+		const resolvedBoardId =
+			await this.registryService.resolveBoardId(boardId);
+		return this.registryService.resetBoardColumnsToDefault(resolvedBoardId);
 	}
 
 	@Get("supersprints")

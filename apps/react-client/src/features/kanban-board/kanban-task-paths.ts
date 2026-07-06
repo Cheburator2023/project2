@@ -21,7 +21,7 @@ export function trackerTaskPath(
 	return `/tracker/task/${encodeURIComponent(key)}`;
 }
 
-export function trackerTaskCreatePath(boardKey: string, column = "backlog") {
+export function trackerTaskCreatePath(boardKey: string, column = "todo") {
 	const params = new URLSearchParams({ column });
 	return `/tracker/board/${encodeURIComponent(boardKey)}/task/new?${params.toString()}`;
 }
@@ -51,7 +51,7 @@ export function kanbanTaskEditPath(
 }
 
 /** @deprecated используйте trackerTaskCreatePath */
-export function kanbanTaskCreatePath(boardKey: string, column = "backlog") {
+export function kanbanTaskCreatePath(boardKey: string, column = "todo") {
 	return trackerTaskCreatePath(boardKey, column);
 }
 
