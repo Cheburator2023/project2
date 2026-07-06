@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.22.2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.22.1...v1.22.2) (2026-07-06)
+
+
+### Bug Fixes
+
+* update isDevLikeEnvironment function to include 'test' hostname check ([5136d6b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5136d6bc048c9894bd9ecbb855c3b1861d0435c3))
+
 ## [1.22.1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.22.0...v1.22.1) (2026-07-06)
 
 # [1.22.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.21.2...v1.22.0) (2026-07-06)
