@@ -2,6 +2,7 @@ import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import {
 	buildSchemaCanvasTree,
 	SCHEMA_CANVAS_ROOT_ID,
+	type SchemaCanvasTreeOptions,
 } from "./schemaCanvasTree";
 
 export type SchemaFieldTreeNode = {
@@ -15,8 +16,9 @@ export type SchemaFieldTreeNode = {
 export function buildSchemaFieldTreeModel(
 	jsonSchema: RJSFSchema,
 	uiSchema?: UiSchema | Record<string, unknown>,
+	options?: SchemaCanvasTreeOptions,
 ): SchemaFieldTreeNode[] {
-	const flat = buildSchemaCanvasTree(jsonSchema, uiSchema);
+	const flat = buildSchemaCanvasTree(jsonSchema, uiSchema, options);
 	const fieldNodes = flat.filter((node) => node.data?.kind === "field");
 
 	const nodeById = new Map<string, SchemaFieldTreeNode>();
@@ -67,8 +69,9 @@ export function collectSchemaFieldTreeNodeIds(
 export function collectSchemaFieldPointerIds(
 	jsonSchema: RJSFSchema,
 	uiSchema?: UiSchema | Record<string, unknown>,
+	options?: SchemaCanvasTreeOptions,
 ): string[] {
-	return buildSchemaCanvasTree(jsonSchema, uiSchema)
+	return buildSchemaCanvasTree(jsonSchema, uiSchema, options)
 		.filter((node) => node.data?.kind === "field")
 		.map((node) => String(node.id));
 }

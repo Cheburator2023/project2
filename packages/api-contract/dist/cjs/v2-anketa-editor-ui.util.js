@@ -1,13 +1,18 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.isV2AnketaSystemRootKey = exports.V2_ANKETA_SYSTEM_ROOT_KEYS = void 0;
 exports.isV2AnketaHiddenUiNode = isV2AnketaHiddenUiNode;
 exports.schemaHasUncertaintyModalWidget = schemaHasUncertaintyModalWidget;
 exports.resolveV2AnketaCanvasUiKind = resolveV2AnketaCanvasUiKind;
+exports.isV2AnketaSystemRootPointer = isV2AnketaSystemRootPointer;
 exports.isV2AnketaModalObjectArch = isV2AnketaModalObjectArch;
 exports.listV2AnketaHiddenRootKeys = listV2AnketaHiddenRootKeys;
 exports.resolveV2AnketaEditorBindings = resolveV2AnketaEditorBindings;
 exports.modalKindForPathFromBindings = modalKindForPathFromBindings;
 const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
+const v2_anketa_system_scaffold_util_1 = require("./v2-anketa-system-scaffold.util");
+Object.defineProperty(exports, "isV2AnketaSystemRootKey", { enumerable: true, get: function () { return v2_anketa_system_scaffold_util_1.isV2AnketaSystemRootKey; } });
+Object.defineProperty(exports, "V2_ANKETA_SYSTEM_ROOT_KEYS", { enumerable: true, get: function () { return v2_anketa_system_scaffold_util_1.V2_ANKETA_SYSTEM_ROOT_KEYS; } });
 const MODAL_OBJECT_ARCH_COMPONENTS = [
     "modelService",
     "dataProcess",
@@ -97,7 +102,10 @@ function schemaHasUncertaintyModalWidget(uiSchema) {
     return walk(uiSchema);
 }
 /** Метка на холсте конструктора: скрытая, системная или служебная. */
-function resolveV2AnketaCanvasUiKind(uiNode) {
+function resolveV2AnketaCanvasUiKind(uiNode, options) {
+    if (options?.fieldPointer && isV2AnketaSystemRootPointer(options.fieldPointer)) {
+        return "system";
+    }
     if (readUiOptions(uiNode).system === true)
         return "system";
     if (isV2AnketaHiddenUiNode(uiNode))
@@ -112,6 +120,10 @@ function resolveV2AnketaCanvasUiKind(uiNode) {
         return "utility";
     }
     return null;
+}
+function isV2AnketaSystemRootPointer(fieldPointer) {
+    const key = fieldPointer.split("/").filter(Boolean)[0];
+    return key != null && (0, v2_anketa_system_scaffold_util_1.isV2AnketaSystemRootKey)(key);
 }
 function isV2AnketaModalObjectArch(arch) {
     return (arch !== null &&

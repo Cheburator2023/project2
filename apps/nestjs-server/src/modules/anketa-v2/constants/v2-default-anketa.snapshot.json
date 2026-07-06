@@ -1064,10 +1064,6 @@
 					}
 				}
 			},
-			"field_wnafNBEl": {
-				"type": "string",
-				"title": "Поле справочника"
-			},
 			"groupActivation": {
 				"type": "object",
 				"title": "Активность групп",
@@ -1676,8 +1672,7 @@
 			"streamModelControl",
 			"streamDigitalAgents",
 			"streamStreamingData",
-			"summary",
-			"field_wnafNBEl"
+			"summary"
 		],
 		"workflow": {
 			"sections": {

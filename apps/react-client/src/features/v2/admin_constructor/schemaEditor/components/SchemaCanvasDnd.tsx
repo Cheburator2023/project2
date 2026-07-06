@@ -26,6 +26,7 @@ import {
 	type NodeModel,
 	type TreeMethods,
 } from "@minoru/react-dnd-treeview";
+import { useSchemaConstructorSettings } from "@react-client/common/settings/schemaConstructorSettings";
 import {
 	useCallback,
 	useEffect,
@@ -354,7 +355,7 @@ function SchemaCanvasFieldRow({
 		isGroup &&
 		sectionUiOptions.groupActivatable &&
 		sectionUiOptions.groupActive === false;
-	const canvasUiKind = resolveV2AnketaCanvasUiKind(uiBranch);
+	const canvasUiKind = resolveV2AnketaCanvasUiKind(uiBranch, { fieldPointer });
 	const isSystemField = canvasUiKind === "system";
 	const isStockField = isCanvasStockField(uiSchema, fieldPointer);
 	const { label: typeChipLabel, colorKey: typeChipColorKey } =
@@ -742,6 +743,7 @@ export function SchemaCanvasPanel({
 		undoDraft,
 		redoDraft,
 	} = useSchemaEditor();
+	const { hideSystemFields } = useSchemaConstructorSettings();
 	const treeRef = useRef<TreeMethods>(null);
 	const [deleteConfirm, setDeleteConfirm] =
 		useState<CanvasDeleteConfirmState | null>(null);
@@ -771,8 +773,11 @@ export function SchemaCanvasPanel({
 	);
 
 	const treeData = useMemo(
-		() => buildSchemaCanvasTree(jsonSchema, uiSchema),
-		[jsonSchema, uiSchema],
+		() =>
+			buildSchemaCanvasTree(jsonSchema, uiSchema, {
+				hideSystemFields,
+			}),
+		[jsonSchema, uiSchema, hideSystemFields],
 	);
 
 	const hasExpandableNodes = useMemo(

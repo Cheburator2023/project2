@@ -1,6 +1,9 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { DropOptions, NodeModel } from "@minoru/react-dnd-treeview";
-import { resolveV2AnketaCanvasUiKind } from "@smart-anketa/api-contract";
+import {
+	isV2AnketaSystemRootPointer,
+	resolveV2AnketaCanvasUiKind,
+} from "@smart-anketa/api-contract";
 import {
 	getObjectItemsSchema,
 	isObjectFieldGroup,
@@ -28,11 +31,17 @@ export type SchemaCanvasNodeData = {
 	parentPointer: string;
 };
 
+export type SchemaCanvasTreeOptions = {
+	/** Не показывать поля с `ui:options.system` на холсте DnD. */
+	hideSystemFields?: boolean;
+};
+
 /** Порядок на холсте: системные узлы (`ui:options.system`) — в конце списка. */
 export function listCanvasOrderedChildKeys(
 	jsonSchema: RJSFSchema,
 	parentPointer: string,
 	uiSchema?: UiSchema | Record<string, unknown>,
+	options?: SchemaCanvasTreeOptions,
 ): string[] {
 	const keys = listOrderedChildKeys(jsonSchema, parentPointer, uiSchema);
 	if (!uiSchema) return keys;
@@ -44,13 +53,14 @@ export function listCanvasOrderedChildKeys(
 		const fieldPointer =
 			parentPointer === "/" ? `/${key}` : `${parentPointer}/${key}`;
 		const branch = readUiSchemaBranchAtPointer(uiSchema, fieldPointer);
-		if (resolveV2AnketaCanvasUiKind(branch) === "system") {
+		if (resolveV2AnketaCanvasUiKind(branch, { fieldPointer }) === "system") {
 			system.push(key);
 		} else {
 			primary.push(key);
 		}
 	}
 
+	if (options?.hideSystemFields) return primary;
 	return [...primary, ...system];
 }
 
@@ -58,8 +68,9 @@ export function isCanvasSystemField(
 	uiSchema: UiSchema | Record<string, unknown> | undefined,
 	fieldPointer: string,
 ): boolean {
+	if (isV2AnketaSystemRootPointer(fieldPointer)) return true;
 	const branch = readUiSchemaBranchAtPointer(uiSchema, fieldPointer);
-	return resolveV2AnketaCanvasUiKind(branch) === "system";
+	return resolveV2AnketaCanvasUiKind(branch, { fieldPointer }) === "system";
 }
 
 /** Редактируемые дочерние ключи (без `ui:options.system`). */
@@ -67,14 +78,18 @@ export function listCanvasEditableChildKeys(
 	jsonSchema: RJSFSchema,
 	parentPointer: string,
 	uiSchema?: UiSchema | Record<string, unknown>,
+	options?: SchemaCanvasTreeOptions,
 ): string[] {
-	return listCanvasOrderedChildKeys(jsonSchema, parentPointer, uiSchema).filter(
-		(key) => {
-			const fieldPointer =
-				parentPointer === "/" ? `/${key}` : `${parentPointer}/${key}`;
-			return !isCanvasSystemField(uiSchema, fieldPointer);
-		},
-	);
+	return listCanvasOrderedChildKeys(
+		jsonSchema,
+		parentPointer,
+		uiSchema,
+		options,
+	).filter((key) => {
+		const fieldPointer =
+			parentPointer === "/" ? `/${key}` : `${parentPointer}/${key}`;
+		return !isCanvasSystemField(uiSchema, fieldPointer);
+	});
 }
 
 /** Ограничивает индекс вставки зоной редактируемых полей (до системных). */
@@ -169,9 +184,10 @@ export function collectGroupOrders(
 	schema: RJSFSchema,
 	uiSchema?: UiSchema,
 	parentPointer = "/",
+	options?: SchemaCanvasTreeOptions,
 ): Record<string, string[]> {
 	const groupId = groupIdFromParentPointer(parentPointer);
-	const keys = listCanvasOrderedChildKeys(schema, parentPointer, uiSchema);
+	const keys = listCanvasOrderedChildKeys(schema, parentPointer, uiSchema, options);
 	const result: Record<string, string[]> = { [groupId]: keys };
 
 	for (const key of keys) {
@@ -179,13 +195,16 @@ export function collectGroupOrders(
 			parentPointer === "/" ? `/${key}` : `${parentPointer.replace(/\/$/, "")}/${key}`;
 		const node = resolveSchemaNode(schema, pointerSegments(childPointer));
 		if (isObjectFieldGroup(node)) {
-			Object.assign(result, collectGroupOrders(schema, uiSchema, childPointer));
+			Object.assign(
+				result,
+				collectGroupOrders(schema, uiSchema, childPointer, options),
+			);
 		}
 		const itemsObj = getObjectItemsSchema(node);
 		if (itemsObj && Object.keys(itemsObj.properties ?? {}).length > 0) {
 			Object.assign(
 				result,
-				collectGroupOrders(schema, uiSchema, `${childPointer}/items`),
+				collectGroupOrders(schema, uiSchema, `${childPointer}/items`, options),
 			);
 		}
 	}
@@ -205,15 +224,27 @@ function appendFieldNodes(
 	uiSchema: UiSchema | undefined,
 	parentPointer: string,
 	parentNodeId: string,
+	options?: SchemaCanvasTreeOptions,
 ): void {
-	const keys = listCanvasOrderedChildKeys(jsonSchema, parentPointer, uiSchema);
+	const keys = listCanvasOrderedChildKeys(
+		jsonSchema,
+		parentPointer,
+		uiSchema,
+		options,
+	);
+	const hideSystemFields = options?.hideSystemFields === true;
 	let systemDividerInserted = false;
 
 	for (const key of keys) {
 		const fieldPointer =
 			parentPointer === "/" ? `/${key}` : `${parentPointer}/${key}`;
 
+		if (hideSystemFields && isCanvasSystemField(uiSchema, fieldPointer)) {
+			continue;
+		}
+
 		if (
+			!hideSystemFields &&
 			parentPointer === "/" &&
 			!systemDividerInserted &&
 			isCanvasSystemField(uiSchema, fieldPointer)
@@ -251,7 +282,14 @@ function appendFieldNodes(
 		});
 
 		if (isGroup) {
-			appendFieldNodes(nodes, jsonSchema, uiSchema, fieldPointer, fieldPointer);
+			appendFieldNodes(
+				nodes,
+				jsonSchema,
+				uiSchema,
+				fieldPointer,
+				fieldPointer,
+				options,
+			);
 		}
 
 		if (arrayItems) {
@@ -262,6 +300,7 @@ function appendFieldNodes(
 				uiSchema,
 				itemsParentPointer,
 				fieldPointer,
+				options,
 			);
 		}
 	}
@@ -270,9 +309,10 @@ function appendFieldNodes(
 export function buildSchemaCanvasTree(
 	jsonSchema: RJSFSchema,
 	uiSchema?: UiSchema,
+	options?: SchemaCanvasTreeOptions,
 ): NodeModel<SchemaCanvasNodeData>[] {
 	const nodes: NodeModel<SchemaCanvasNodeData>[] = [];
-	appendFieldNodes(nodes, jsonSchema, uiSchema, "/", SCHEMA_CANVAS_ROOT_ID);
+	appendFieldNodes(nodes, jsonSchema, uiSchema, "/", SCHEMA_CANVAS_ROOT_ID, options);
 	return nodes;
 }
 

@@ -1383,7 +1383,7 @@ export const V2TemplateSchemaEditor = ({
 				uiSchema as Record<string, unknown>,
 				targetPointer,
 			);
-			if (resolveV2AnketaCanvasUiKind(uiBranch) === "system") return;
+			if (resolveV2AnketaCanvasUiKind(uiBranch, { fieldPointer: targetPointer }) === "system") return;
 			if (isCanvasStockField(uiSchema, targetPointer)) return;
 			const segs = pointerSegments(targetPointer);
 			const next = removePropertyAtPointer(jsonSchema, segs);

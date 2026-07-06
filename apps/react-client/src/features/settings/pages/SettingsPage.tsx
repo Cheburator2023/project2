@@ -16,6 +16,9 @@ import {
 } from "@react-client/common/app/buildInfo";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Switch from "@mui/material/Switch";
+import { useSchemaConstructorSettings } from "@react-client/common/settings/schemaConstructorSettings";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 
 function VersionRow({
@@ -63,6 +66,7 @@ function VersionRow({
 
 export function SettingsPage() {
 	const { canAccessAdminPanel } = usePermissions();
+	const { hideSystemFields, setHideSystemFields } = useSchemaConstructorSettings();
 	const backendVersionQuery = useAppVersionQuery();
 	const v2Transfer = useV2DataTransferActions();
 
@@ -97,6 +101,32 @@ export function SettingsPage() {
 							error={backendVersionQuery.isError}
 						/>
 					</Flex>
+
+					<Divider />
+
+					<Flex flexDirection="column" gap={8}>
+						<Typography variant="h6">Конструктор схемы</Typography>
+						<Typography variant="body2" color="text.secondary">
+							Настройки редактора шаблона v2 (холст DnD и дерево полей).
+						</Typography>
+					</Flex>
+					<FormControlLabel
+						control={
+							<Switch
+								checked={hideSystemFields}
+								onChange={(_, checked) => setHideSystemFields(checked)}
+								inputProps={{
+									"aria-label": "Скрывать системные поля в конструкторе схемы",
+								}}
+							/>
+						}
+						label="Скрывать системные поля"
+					/>
+					<Typography variant="body2" color="text.secondary">
+						Workflow, summary и другие секции с пометкой «системное» не
+						отображаются на холсте и в дереве полей. Порядок и данные в схеме
+						сохраняются.
+					</Typography>
 
 					{canAccessAdminPanel ? (
 						<>

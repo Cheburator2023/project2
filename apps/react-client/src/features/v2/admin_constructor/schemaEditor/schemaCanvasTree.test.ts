@@ -210,6 +210,56 @@ describe("buildSchemaCanvasTree system divider", () => {
 			"/meta",
 		]);
 	});
+
+	it("omits system fields and divider when hideSystemFields is enabled", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				generalInfo: { type: "object", properties: {} },
+				meta: { type: "object", properties: {} },
+			},
+		};
+		const ui: UiSchema = {
+			"ui:order": ["generalInfo", "meta"],
+			meta: { "ui:options": { hidden: true, system: true } },
+		};
+
+		const tree = buildSchemaCanvasTree(schema, ui, { hideSystemFields: true });
+		const rootChildren = tree
+			.filter((node) => node.parent === SCHEMA_CANVAS_ROOT_ID)
+			.map((node) => String(node.id));
+
+		expect(rootChildren).toEqual(["/generalInfo"]);
+		expect(tree.some((node) => node.id === "/meta")).toBe(false);
+	});
+
+	it("hides canonical system roots without ui:options.system (factory v5)", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				generalInfo: { type: "object", properties: {} },
+				workflow: { type: "object", properties: { globalStatus: { type: "string" } } },
+				meta: { type: "object", properties: { name: { type: "string" } } },
+				summary: { type: "object", properties: {} },
+			},
+		};
+		const ui: UiSchema = {
+			"ui:order": ["workflow", "meta", "generalInfo", "summary"],
+			workflow: { "ui:options": { hidden: true } },
+			meta: { "ui:options": { hidden: true } },
+			summary: { "ui:options": { hidden: true } },
+		};
+
+		const tree = buildSchemaCanvasTree(schema, ui, { hideSystemFields: true });
+		const rootChildren = tree
+			.filter((node) => node.parent === SCHEMA_CANVAS_ROOT_ID)
+			.map((node) => String(node.id));
+
+		expect(rootChildren).toEqual(["/generalInfo"]);
+		expect(tree.some((node) => String(node.id).startsWith("/workflow"))).toBe(
+			false,
+		);
+	});
 });
 
 describe("listCanvasEditableChildKeys", () => {

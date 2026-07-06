@@ -6,6 +6,10 @@ export const V2_ANKETA_SYSTEM_ROOT_KEYS = [
     "uncertaintyCalculation",
     "summary",
 ];
+const SYSTEM_ROOT_KEY_SET = new Set(V2_ANKETA_SYSTEM_ROOT_KEYS);
+export function isV2AnketaSystemRootKey(key) {
+    return SYSTEM_ROOT_KEY_SET.has(key);
+}
 const scaffoldJsonSchemaProperties = scaffoldSnapshot.jsonSchemaProperties;
 const scaffoldUiSchema = scaffoldSnapshot.uiSchema;
 /** Канонический scaffold скрытых системных корневых секций анкеты. */

@@ -1,4 +1,6 @@
 import { readV2AnketaSectionUiOptions, resolveV2AnketaArchComponent, } from "./v2-anketa-section-ui.util";
+import { isV2AnketaSystemRootKey, V2_ANKETA_SYSTEM_ROOT_KEYS, } from "./v2-anketa-system-scaffold.util";
+export { V2_ANKETA_SYSTEM_ROOT_KEYS, isV2AnketaSystemRootKey };
 const MODAL_OBJECT_ARCH_COMPONENTS = [
     "modelService",
     "dataProcess",
@@ -88,7 +90,10 @@ export function schemaHasUncertaintyModalWidget(uiSchema) {
     return walk(uiSchema);
 }
 /** Метка на холсте конструктора: скрытая, системная или служебная. */
-export function resolveV2AnketaCanvasUiKind(uiNode) {
+export function resolveV2AnketaCanvasUiKind(uiNode, options) {
+    if (options?.fieldPointer && isV2AnketaSystemRootPointer(options.fieldPointer)) {
+        return "system";
+    }
     if (readUiOptions(uiNode).system === true)
         return "system";
     if (isV2AnketaHiddenUiNode(uiNode))
@@ -103,6 +108,10 @@ export function resolveV2AnketaCanvasUiKind(uiNode) {
         return "utility";
     }
     return null;
+}
+export function isV2AnketaSystemRootPointer(fieldPointer) {
+    const key = fieldPointer.split("/").filter(Boolean)[0];
+    return key != null && isV2AnketaSystemRootKey(key);
 }
 export function isV2AnketaModalObjectArch(arch) {
     return (arch !== null &&
