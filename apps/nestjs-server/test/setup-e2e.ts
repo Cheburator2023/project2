@@ -1,36 +1,25 @@
 /**
  * Общий setup для e2e-тестов.
- * Создаёт NestJS-приложение с реальной БД PostgreSQL (креды из .env).
+ * Создаёт NestJS-приложение с реальной БД PostgreSQL (креды из process.env / .env).
  * Keycloak-авторизация отключена через NO_ROLES=true (GodModeGuard пропускает все запросы).
- * synchronize:true — автоматическая синхронизация схемы перед тестами.
- * Приложение создаётся единожды для всех сюитов (вызов getApp()).
+ * Схема БД — через миграции (как в dev/prod), без synchronize.
  */
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { TypeOrmModule } from "@nestjs/typeorm";
 import { AppModule } from "../src/app.module";
 
 let app: INestApplication;
 
+jest.setTimeout(120_000);
+
 beforeAll(async () => {
-	// Отключаем проверку Keycloak ролей и SSL-валидацию для e2e-окружения
 	process.env.NO_ROLES = "true";
 	process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+	process.env.DB_SYNCHRONIZE = "false";
+	process.env.DB_MIGRATIONS_RUN = "true";
 
 	const moduleFixture = await Test.createTestingModule({
-		imports: [
-			TypeOrmModule.forRoot({
-				type: "postgres",
-				host: process.env.DB_HOST || "localhost",
-				port: Number.parseInt(process.env.DB_PORT || "5432", 10),
-				username: process.env.DB_USERNAME || "postgres",
-				password: process.env.DB_PASSWORD || "postgres",
-				database: process.env.DB_NAME || "sumd",
-				entities: ["src/**/*.entity{.ts,.js}"],
-				synchronize: true,
-			}),
-			AppModule,
-		],
+		imports: [AppModule],
 	}).compile();
 
 	app = moduleFixture.createNestApplication();
@@ -38,7 +27,14 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-	await app.close();
+	if (app) {
+		await app.close();
+	}
 });
 
-export const getApp = (): INestApplication => app;
+export const getApp = (): INestApplication => {
+	if (!app) {
+		throw new Error("E2E app is not initialized — beforeAll failed");
+	}
+	return app;
+};
