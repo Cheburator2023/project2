@@ -26,6 +26,7 @@ import {
 import {
 	excludeRulesByGroupKey,
 	filterRulesByGroupKey,
+	isSchemaTextualParam,
 	resolveSchemaParamForTriggerRule,
 	schemaParamDisplayName,
 	schemaParamRuleName,
@@ -541,6 +542,15 @@ export function TypicalWorkTriggersSection({
 											</Box>
 										))}
 									</Box>
+								) : null}
+								{param && (param.values.length === 0 || isSchemaTextualParam(param)) ? (
+									<Typography sx={{ fontSize: 11.5, color: "#6b7484", mb: 0.9 }}>
+										{isSchemaTextualParam(param)
+											? "Работа появляется, если поле заполнено (любое непустое значение)."
+											: param.numeric
+												? "Задайте порог в условии через операторы сравнения."
+												: "Условие «поле заполнено» — значение не выбирается."}
+									</Typography>
 								) : null}
 								<Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
 									{(param?.values ?? []).map((value) => {

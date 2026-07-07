@@ -21,6 +21,10 @@ const NO_ROLES = process.env.NO_ROLES;
 
 const ROOT_DIR = path.resolve(__dirname, "./");
 const DIST_DIR = path.resolve(ROOT_DIR, "./dist");
+const JSON_LOGIC_TS_ENTRY = path.resolve(
+	ROOT_DIR,
+	"../../packages/json-logic-ts/dist/esm/index.js",
+);
 
 const proxyList = {
 	dev: "https://example.com",
@@ -41,6 +45,58 @@ const changelog_version_match = changelog_content.match(
 	/^#{1,3}\s+\[(\d+\.\d+\.\d+)\]/m,
 );
 const app_version = changelog_version_match?.[1] ?? "0.0.0";
+
+function resolveVendorChunk(id: string): string | undefined {
+	if (!id.includes("node_modules")) {
+		return undefined;
+	}
+
+	if (
+		/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(
+			id,
+		)
+	) {
+		return "react-vendor";
+	}
+
+	if (/[\\/]node_modules[\\/]@mui[\\/]/.test(id)) {
+		return "mui-vendor";
+	}
+
+	if (/[\\/]node_modules[\\/]@tanstack[\\/]/.test(id)) {
+		return "query-vendor";
+	}
+
+	if (
+		/[\\/]node_modules[\\/](@monaco-editor|monaco-editor|mermaid|ag-grid-|@xyflow|@svar-ui)[\\/]/.test(
+			id,
+		)
+	) {
+		return "heavy-vendor";
+	}
+
+	return undefined;
+}
+
+/** UMD logic.js has no ESM default export — required for Rollup prod build. */
+function jsonLogicEsmInteropPlugin() {
+	const logicPath = path.resolve(
+		ROOT_DIR,
+		"../../packages/json-logic-ts/dist/esm/logic.js",
+	);
+
+	return {
+		name: "json-logic-esm-interop",
+		transform(code: string, id: string) {
+			if (id === logicPath) {
+				return {
+					code: `${code}\nexport default globalThis.jsonLogic;`,
+					map: null,
+				};
+			}
+		},
+	};
+}
 
 export const viteCommonConfig = ({
 	appName,
@@ -72,16 +128,25 @@ export const viteCommonConfig = ({
 					"@svar-ui/react-gantt",
 				],
 			},
+			resolve: {
+				alias: {
+					"@smart-anketa/json-logic-ts": JSON_LOGIC_TS_ENTRY,
+				},
+			},
 			build: {
 				target: browserslistToEsbuild(),
+				cssCodeSplit: true,
+				chunkSizeWarningLimit: 1200,
 				commonjsOptions: { transformMixedEsModules: true },
 				rollupOptions: {
 					output: {
 						dir: DIST_DIR,
 						strict: false,
 						entryFileNames: "[name].js",
-						manualChunks: {
-							react: ["react", "react-dom", "react-router-dom"],
+						chunkFileNames: "chunks/[name]-[hash].js",
+						assetFileNames: "assets/[name]-[hash][extname]",
+						manualChunks(id) {
+							return resolveVendorChunk(id);
 						},
 					},
 				},
@@ -94,6 +159,7 @@ export const viteCommonConfig = ({
 			// },
 
 			plugins: [
+				jsonLogicEsmInteropPlugin(),
 				// {
 				//   name: 'deep-index',
 				//   configureServer(server) {

@@ -3,6 +3,7 @@ import type { RJSFSchema } from "@rjsf/utils";
 import type { V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
 import {
 	buildSchemaWorkParameters,
+	isSchemaLaborParamCandidate,
 	resolveSchemaParamForTriggerRule,
 	triggerRuleGroupKey,
 	excludeRulesByGroupKey,
@@ -322,6 +323,56 @@ describe("buildSchemaWorkParameters", () => {
 			"v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
 		);
 		expect(param?.values).toEqual([]);
+	});
+
+	it("includes plain string schema fields without enum or dictionary", () => {
+		const stringHints: FieldPathHint[] = [
+			{
+				pointer: "/detailInfo/dataMart/description",
+				key: "description",
+				title: "Описание витрины",
+				varPath: "detailInfo.dataMart.description",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: stringHints,
+			uiSchema: {
+				detailInfo: {
+					dataMart: {
+						"ui:options": { archComponent: "dataMart" },
+					},
+				},
+			},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					detailInfo: {
+						type: "object",
+						properties: {
+							dataMart: {
+								type: "object",
+								properties: {
+									description: {
+										type: "string",
+										title: "Описание витрины",
+									},
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {},
+		});
+
+		const description = params.find((p) => p.code === "description");
+		expect(description).toBeDefined();
+		expect(description?.textual).toBe(true);
+		expect(description?.values).toEqual([]);
+		expect(isSchemaLaborParamCandidate(description!)).toBe(true);
 	});
 });
 

@@ -1,10 +1,12 @@
 import { Navigate } from "react-router";
 import type { RouteObject } from "react-router";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
-import { PlaygroundPage } from "@react-client/features/playground/PlaygroundPage";
-import { V2TemplateLogicPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplateLogicPage";
-import { V2TemplatePreviewPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplatePreviewPage";
-import { V2TemplateSchemaEditorPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplateSchemaEditorPage";
+import {
+	PlaygroundPage,
+	V2TemplateLogicPage,
+	V2TemplatePreviewPage,
+	V2TemplateSchemaEditorPage,
+} from "@react-client/routing/lazyPages";
 import { commonRoutes } from "./routes";
 
 /** Playground: `/playground` и вложенные v2-экраны конструктора. */

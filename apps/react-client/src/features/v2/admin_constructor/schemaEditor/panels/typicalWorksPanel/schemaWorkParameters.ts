@@ -61,18 +61,33 @@ export function schemaWorkParameterEmptyPickerMessage(
 		return "Схема шаблона ещё не загружена или пуста";
 	}
 
-	return "В схеме нет полей с выбором значений (enum, справочник, boolean, число). Дождитесь загрузки словарников.";
+	return "В схеме нет полей, пригодных для параметров (enum, справочник, boolean, число, строка). Дождитесь загрузки словарников.";
+}
+
+export type SchemaBuiltWorkParameterDto = V2TypicalWorkParameterDto & {
+	/** Свободный ввод (type: string без enum/справочника). */
+	textual?: boolean;
+};
+
+export function isSchemaTextualParam(
+	param: Pick<
+		SchemaBuiltWorkParameterDto,
+		"values" | "numeric" | "dictionaryCode" | "textual"
+	>,
+): boolean {
+	return param.textual === true;
 }
 
 export function isSchemaLaborParamCandidate(
 	param: Pick<
-		V2TypicalWorkParameterDto,
-		"values" | "numeric" | "dictionaryCode"
+		SchemaBuiltWorkParameterDto,
+		"values" | "numeric" | "dictionaryCode" | "textual"
 	>,
 ): boolean {
 	return (
 		param.values.length > 0 ||
 		param.numeric === true ||
+		isSchemaTextualParam(param) ||
 		Boolean(param.dictionaryCode?.trim())
 	);
 }
@@ -126,9 +141,12 @@ function valuesFromDictionary(
 	);
 }
 
-function valuesFromSchemaNode(
-	node: RJSFSchema | undefined,
-): Pick<V2TypicalWorkParameterDto, "values" | "numeric"> {
+type SchemaNodeValues = Pick<
+	SchemaBuiltWorkParameterDto,
+	"values" | "numeric" | "textual"
+>;
+
+function valuesFromSchemaNode(node: RJSFSchema | undefined): SchemaNodeValues {
 	if (!node) return { values: [] };
 
 	const enumValues = Array.isArray(node.enum)
@@ -160,6 +178,10 @@ function valuesFromSchemaNode(
 
 	if (type === "number" || type === "integer") {
 		return { values: [], numeric: true };
+	}
+
+	if (type === "string") {
+		return { values: [], textual: true };
 	}
 
 	return { values: [] };
@@ -229,9 +251,10 @@ function normalizeParamTitle(title: string): string {
 }
 
 function valueSignature(
-	param: Pick<V2TypicalWorkParameterDto, "numeric" | "values">,
+	param: Pick<SchemaBuiltWorkParameterDto, "numeric" | "textual" | "values">,
 ): string {
 	if (param.numeric) return "numeric";
+	if (param.textual) return "textual";
 	return param.values
 		.map((value) => `${value.code}::${value.label}`)
 		.sort()
@@ -250,14 +273,14 @@ function mergeParameterValues(
 	return [...merged.values()].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
-type BuiltSchemaParam = V2TypicalWorkParameterDto & {
+type BuiltSchemaParam = SchemaBuiltWorkParameterDto & {
 	pointer: string;
 	dictionaryCode?: string;
 };
 
 function dedupeSchemaWorkParameters(
 	params: BuiltSchemaParam[],
-): V2TypicalWorkParameterDto[] {
+): SchemaBuiltWorkParameterDto[] {
 	const groups = new Map<string, BuiltSchemaParam[]>();
 
 	for (const param of params) {
@@ -267,7 +290,7 @@ function dedupeSchemaWorkParameters(
 		groups.set(groupKey, list);
 	}
 
-	const deduped: V2TypicalWorkParameterDto[] = [];
+	const deduped: SchemaBuiltWorkParameterDto[] = [];
 
 	for (const group of groups.values()) {
 		const sorted = [...group].sort((a, b) =>
@@ -295,6 +318,7 @@ function dedupeSchemaWorkParameters(
 			sourceKeys: alternateKeys.length > 0 ? alternateKeys : undefined,
 			dictionaryCode,
 			numeric: primary.numeric,
+			textual: primary.textual,
 			values: sorted.reduce(
 				(acc, item) => mergeParameterValues(acc, item.values),
 				primary.values,
@@ -324,7 +348,7 @@ export function buildSchemaWorkParameters({
 	uiSchema,
 	jsonSchema,
 	enumMapByCode,
-}: BuildSchemaWorkParametersInput): V2TypicalWorkParameterDto[] {
+}: BuildSchemaWorkParametersInput): SchemaBuiltWorkParameterDto[] {
 	const params: BuiltSchemaParam[] = [];
 	const usedCodes = new Set<string>();
 
@@ -347,9 +371,15 @@ export function buildSchemaWorkParameters({
 			dictionaryValues.length > 0 || previewValues.length > 0
 				? false
 				: schemaValues.numeric;
+		const textual =
+			dictionaryValues.length > 0 ||
+			previewValues.length > 0 ||
+			schemaValues.textual !== true
+				? undefined
+				: true;
 		const dictionaryCode = hint.dictionaryCode?.trim() || undefined;
 
-		if (values.length === 0 && !numeric && !dictionaryCode) continue;
+		if (values.length === 0 && !numeric && !dictionaryCode && !textual) continue;
 
 		const name = (hint.title ?? hint.key).trim();
 		if (!name) continue;
@@ -362,6 +392,7 @@ export function buildSchemaWorkParameters({
 			description: schemaParamDescription(hint, uiSchema),
 			dictionaryCode,
 			numeric,
+			textual,
 			values,
 			pointer: hint.pointer,
 		});

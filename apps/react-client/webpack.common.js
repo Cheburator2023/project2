@@ -31,8 +31,8 @@ const tsRule = isDev
 					"@babel/preset-env",
 					["@babel/preset-react", { runtime: "automatic" }],
 					"@babel/preset-typescript",
-					"react-refresh/babel",
 				],
+				plugins: ["react-refresh/babel"],
 			},
 			exclude: /node_modules/,
 		}
@@ -78,6 +78,7 @@ module.exports = {
 	],
 	output: {
 		filename: "[name].bundle.js",
+		chunkFilename: "[name].[contenthash:8].chunk.js",
 		path: path.resolve(__dirname, "dist"),
 		publicPath: PUBLIC_PATH,
 		clean: true,

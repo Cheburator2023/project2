@@ -39,6 +39,7 @@ import { useSchemaEditor } from "../../SchemaEditorContext";
 import {
 	buildSchemaWorkParameters,
 	isSchemaLaborParamCandidate,
+	isSchemaTextualParam,
 	resolveEffectiveWorkArchComponentType,
 	schemaWorkParameterEmptyPickerMessage,
 } from "./schemaWorkParameters";
@@ -325,6 +326,7 @@ export function TypicalWorkEditableCard({
 		if (!draft) return;
 		const useAnyOf =
 			picked.numeric ||
+			isSchemaTextualParam(picked) ||
 			(Boolean(picked.dictionaryCode) && picked.values.length === 0);
 		const newGroup = useAnyOf
 			? {

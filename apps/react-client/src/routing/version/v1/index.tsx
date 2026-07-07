@@ -1,16 +1,17 @@
 import { Navigate, Route } from "react-router";
 
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
-
-import { HomePage } from "@react-client/features/v1/home/pages/HomePage";
 import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard";
-import { CompareReportsPage } from "@react-client/features/v1/anketaCompare/pages/CompareReportsPage";
-import { AnketaNewVersionPage } from "@react-client/features/v1/anketaCRUD/pages/AnketaNewVersionPage";
-import { AnketaPreviewPage } from "@react-client/features/v1/anketaCRUD/pages/AnketaPreviewPage";
-import { AnketaCreatePage } from "@react-client/features/v1/anketaCRUD/pages/AnketaCreatePage";
-import { AnketaClonePage } from "@react-client/features/v1/anketaCRUD/pages/AnketaClonePage";
 import { routes } from "@react-client/routing/version/v1/routes";
-import { Page404 } from "@react-client/routing/common/Page404";
+import {
+	AnketaClonePage,
+	AnketaCreatePage,
+	AnketaNewVersionPage,
+	AnketaPreviewPage,
+	CompareReportsPage,
+	HomePage,
+	Page404,
+} from "@react-client/routing/lazyPages";
 
 export const v1Routes = ({ onLogout }: { onLogout?: () => void }) => {
 	return {

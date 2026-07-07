@@ -2,18 +2,20 @@ import { Navigate, useLocation, useParams } from "react-router";
 import type { RouteObject } from "react-router";
 import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
-import { AdminLayout } from "@react-client/features/v2/admin/layouts/AdminLayout";
-import { AdminV2DictionariesPage } from "@react-client/features/v2/admin/pages/AdminV2DictionariesPage";
-import { AdminV2DictionaryDetailPage } from "@react-client/features/v2/admin/pages/AdminV2DictionaryDetailPage";
-import { AdminV2TypicalWorksPage } from "@react-client/features/v2/admin/pages/AdminV2TypicalWorksPage";
-import { AdminV2TypicalWorkDetailPage } from "@react-client/features/v2/admin/pages/AdminV2TypicalWorkDetailPage";
-import { AdminV2GuidePage } from "@react-client/features/v2/admin/pages/AdminV2GuidePage";
-import { AdminV2HistoryPage } from "@react-client/features/v2/admin/pages/AdminV2HistoryPage";
-import { AdminV2SchemasPage } from "@react-client/features/v2/admin/pages/AdminV2SchemasPage";
-import { AdminV2TemplateHistoryPage } from "@react-client/features/v2/admin/pages/AdminV2TemplateHistoryPage";
-import { V2TemplateLogicPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplateLogicPage";
-import { V2TemplatePreviewPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplatePreviewPage";
-import { V2TemplateSchemaEditorPage } from "@react-client/features/v2/admin_constructor/pages/V2TemplateSchemaEditorPage";
+import {
+	AdminLayout,
+	AdminV2DictionariesPage,
+	AdminV2DictionaryDetailPage,
+	AdminV2GuidePage,
+	AdminV2HistoryPage,
+	AdminV2SchemasPage,
+	AdminV2TemplateHistoryPage,
+	AdminV2TypicalWorkDetailPage,
+	AdminV2TypicalWorksPage,
+	V2TemplateLogicPage,
+	V2TemplatePreviewPage,
+	V2TemplateSchemaEditorPage,
+} from "@react-client/routing/lazyPages";
 import { commonRoutes } from "./routes";
 
 function adminChildRoutes(): RouteObject[] {

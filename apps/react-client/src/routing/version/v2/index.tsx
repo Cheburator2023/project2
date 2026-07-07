@@ -1,11 +1,14 @@
 import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
-import { AnketaCreatePageV2 } from "@react-client/features/v2/anketaCRUD/pages/AnketaCreatePageV2";
 import { routes } from "@react-client/routing/version/v2/routes";
-import { Page404 } from "@react-client/routing/common/Page404";
-import { AnketaPreviewPageV2 } from "@react-client/features/v2/anketaCRUD/pages/AnketaPreviewPageV2";
-import { AnketaNewVersionPageV2 } from "@react-client/features/v2/anketaCRUD/pages/AnketaNewVersionPageV2";
-import { V2RegistryPage } from "@react-client/version/v2/src/features/home/pages/V2RegistryPage";
+import {
+	AnketaCreatePageV2,
+	AnketaNewVersionPageV2,
+	AnketaPreviewPageV2,
+	Page404,
+	V2RegistryPage,
+} from "@react-client/routing/lazyPages";
+
 export const v2Routes = ({ onLogout }: { onLogout?: () => void }) => {
 	return {
 		path: "/v2",
