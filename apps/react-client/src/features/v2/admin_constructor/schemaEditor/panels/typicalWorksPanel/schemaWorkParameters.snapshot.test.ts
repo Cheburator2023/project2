@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { RJSFSchema } from "@rjsf/utils";
 import { describe, expect, it } from "vitest";
-import { listSchemaFields } from "@react-client/features/v2/admin_constructor/utils/schemaMutators";
+import { listSchemaFields, resolveSchemaNode } from "@react-client/features/v2/admin_constructor/utils/schemaMutators";
 import { pointerSegments } from "@react-client/features/v2/admin_constructor/utils/schemaPaths";
 import { resolveArchComponentAtPointer } from "../../propertiesFieldKind";
 import { buildSchemaWorkParameters } from "./schemaWorkParameters";
@@ -26,6 +26,8 @@ function buildHints(snapshot: Snapshot) {
 	return listSchemaFields(snapshot.jsonSchema, "/", 0, snapshot.uiSchema).map(
 		(row) => {
 			const segs = pointerSegments(row.pointer);
+			const node = resolveSchemaNode(snapshot.jsonSchema, segs);
+			const title = typeof node?.title === "string" ? node.title : null;
 			let cur: unknown = snapshot.uiSchema;
 			for (const s of segs) {
 				cur = (cur as Record<string, unknown>)?.[s];
@@ -39,7 +41,7 @@ function buildHints(snapshot: Snapshot) {
 			return {
 				pointer: row.pointer,
 				key: row.key,
-				title: null as string | null,
+				title,
 				varPath: row.pointer,
 				dictionaryCode,
 				codesPreview: null as string[] | null,
@@ -72,7 +74,26 @@ describe("buildSchemaWorkParameters on default snapshot", () => {
 			enumMapByCode: {},
 		});
 		expect(params.length).toBeGreaterThan(0);
-		expect(params.some((p) => p.code === "workType")).toBe(true);
+		expect(params.some((p) => p.name === "Тип работ")).toBe(true);
+	});
+
+	it("returns metrics count for dataMart even when work arch is source system", () => {
+		const params = buildSchemaWorkParameters({
+			archComponentType: "Система-источник",
+			fieldPathHints: hints,
+			uiSchema: snapshot.uiSchema,
+			jsonSchema: snapshot.jsonSchema,
+			enumMapByCode: {},
+		});
+
+		expect(
+			params.some(
+				(p) =>
+					p.name === "Количество метрик" ||
+					p.code === "field_28IPlEQu" ||
+					p.code === "metricsCount",
+			),
+		).toBe(true);
 	});
 
 	it("returns the same schema-wide param set for any work arch type", () => {

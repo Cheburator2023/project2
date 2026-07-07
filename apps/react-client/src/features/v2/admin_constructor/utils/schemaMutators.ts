@@ -590,7 +590,10 @@ export function listChildKeys(
 
 export function isObjectFieldGroup(node: RJSFSchema | undefined): boolean {
 	if (!node) return false;
-	return node.type === "object";
+	const type = node.type;
+	if (typeof type === "string") return type === "object";
+	if (Array.isArray(type)) return type.includes("object");
+	return Boolean(node.properties);
 }
 
 function collectPropertyNodes(

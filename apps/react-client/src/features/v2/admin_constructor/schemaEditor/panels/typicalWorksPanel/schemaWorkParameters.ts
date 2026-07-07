@@ -61,7 +61,20 @@ export function schemaWorkParameterEmptyPickerMessage(
 		return "Схема шаблона ещё не загружена или пуста";
 	}
 
-	return "В схеме нет полей с выбором значений (enum, справочник, boolean, число)";
+	return "В схеме нет полей с выбором значений (enum, справочник, boolean, число). Дождитесь загрузки словарников.";
+}
+
+export function isSchemaLaborParamCandidate(
+	param: Pick<
+		V2TypicalWorkParameterDto,
+		"values" | "numeric" | "dictionaryCode"
+	>,
+): boolean {
+	return (
+		param.values.length > 0 ||
+		param.numeric === true ||
+		Boolean(param.dictionaryCode?.trim())
+	);
 }
 
 export function resolveWorkArchSchemaType(
@@ -167,7 +180,10 @@ function isArchComponentLeafField(
 ): boolean {
 	const node = resolveSchemaNode(jsonSchema, pointerSegments(pointer));
 	const type = resolveSchemaNodeType(node);
-	if (!type) return false;
+	if (!type) {
+		if (Array.isArray(node?.enum) && node.enum.length > 0) return true;
+		return node?.const !== undefined;
+	}
 	if (type === "array") return false;
 	if (type === "object" && node && isObjectFieldGroup(node)) return false;
 	return true;
@@ -236,6 +252,7 @@ function mergeParameterValues(
 
 type BuiltSchemaParam = V2TypicalWorkParameterDto & {
 	pointer: string;
+	dictionaryCode?: string;
 };
 
 function dedupeSchemaWorkParameters(
@@ -262,6 +279,10 @@ function dedupeSchemaWorkParameters(
 		const keysSuffix =
 			alternateKeys.length > 0 ? ` · keys:${alternateKeys.join(",")}` : "";
 
+		const dictionaryCode =
+			sorted.find((item) => item.dictionaryCode)?.dictionaryCode ??
+			primary.dictionaryCode;
+
 		deduped.push({
 			id: primary.id,
 			code: primary.code,
@@ -272,6 +293,7 @@ function dedupeSchemaWorkParameters(
 					? keysSuffix.slice(3)
 					: null,
 			sourceKeys: alternateKeys.length > 0 ? alternateKeys : undefined,
+			dictionaryCode,
 			numeric: primary.numeric,
 			values: sorted.reduce(
 				(acc, item) => mergeParameterValues(acc, item.values),
@@ -284,18 +306,11 @@ function dedupeSchemaWorkParameters(
 	return deduped;
 }
 
-function hintMatchesArchComponent(
-	hint: FieldPathHint,
-	uiSchema: Record<string, unknown> | undefined,
-	targetArch: V2ArchComponentType | null,
-): boolean {
-	if (!targetArch) return true;
-	const fieldArch = resolveArchComponentAtPointer(uiSchema, hint.pointer);
-	return fieldArch === targetArch;
-}
-
 export type BuildSchemaWorkParametersInput = {
-	/** Фильтр полей по arch-компоненту работы (Система-источник → sourceSystem и т.д.). */
+	/**
+	 * Тип арх. компонента работы (для подсказок в UI).
+	 * Не фильтрует поля: параметры берутся из live-схемы конструктора целиком.
+	 */
 	archComponentType?: string;
 	fieldPathHints: FieldPathHint[];
 	uiSchema: Record<string, unknown> | undefined;
@@ -305,20 +320,15 @@ export type BuildSchemaWorkParametersInput = {
 
 /** Параметры типовой работы из полей схемы анкеты. */
 export function buildSchemaWorkParameters({
-	archComponentType,
 	fieldPathHints,
 	uiSchema,
 	jsonSchema,
 	enumMapByCode,
 }: BuildSchemaWorkParametersInput): V2TypicalWorkParameterDto[] {
-	const targetArch = archComponentType
-		? resolveWorkArchSchemaType(archComponentType)
-		: null;
 	const params: BuiltSchemaParam[] = [];
 	const usedCodes = new Set<string>();
 
 	for (const hint of fieldPathHints) {
-		if (!hintMatchesArchComponent(hint, uiSchema, targetArch)) continue;
 		if (!isArchComponentLeafField(hint.pointer, jsonSchema)) continue;
 
 		const node = resolveSchemaNode(jsonSchema, pointerSegments(hint.pointer));
@@ -337,8 +347,9 @@ export function buildSchemaWorkParameters({
 			dictionaryValues.length > 0 || previewValues.length > 0
 				? false
 				: schemaValues.numeric;
+		const dictionaryCode = hint.dictionaryCode?.trim() || undefined;
 
-		if (values.length === 0 && !numeric) continue;
+		if (values.length === 0 && !numeric && !dictionaryCode) continue;
 
 		const name = (hint.title ?? hint.key).trim();
 		if (!name) continue;
@@ -349,6 +360,7 @@ export function buildSchemaWorkParameters({
 			code,
 			name,
 			description: schemaParamDescription(hint, uiSchema),
+			dictionaryCode,
 			numeric,
 			values,
 			pointer: hint.pointer,

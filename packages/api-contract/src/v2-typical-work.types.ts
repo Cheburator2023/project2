@@ -348,6 +348,8 @@ export type V2TypicalWorkParameterDto = {
 	description: string | null;
 	/** Альтернативные ключи поля в данных анкеты (дубликаты title в схеме). */
 	sourceKeys?: string[];
+	/** Привязка к словарнику в uiSchema (значения подгружаются асинхронно). */
+	dictionaryCode?: string;
 	/** true, если все значения параметра — числа (отображается как числовая шкала, доступны операторы >, <, ≥, ≤) */
 	numeric?: boolean;
 	values: V2TypicalWorkParameterValueDto[];

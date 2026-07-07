@@ -95,36 +95,39 @@ describe("buildSchemaWorkParameters", () => {
 		]);
 	});
 
-	it("includes only fields from matching arch component when filtered", () => {
+	it("includes fields from all arch components even when work arch type is passed", () => {
+		const extendedSchema = {
+			...jsonSchema,
+			properties: {
+				...jsonSchema.properties,
+				other: {
+					type: "array",
+					items: {
+						type: "object",
+						properties: {
+							flag: { type: "boolean", title: "Чужой блок" },
+						},
+					},
+				},
+			},
+		} as RJSFSchema;
+		const enumMapByCode = {
+			"v2.detailInfo.sourceSystems.items.type": {
+				enums: ["internal", "external"],
+				enumNames: ["Внутренний", "Внешний"],
+			},
+		};
+
 		const params = buildSchemaWorkParameters({
 			archComponentType: "Система-источник",
 			fieldPathHints: hints,
 			uiSchema,
-			jsonSchema: {
-				...jsonSchema,
-				properties: {
-					...jsonSchema.properties,
-					other: {
-						type: "array",
-						items: {
-							type: "object",
-							properties: {
-								flag: { type: "boolean", title: "Чужой блок" },
-							},
-						},
-					},
-				},
-			} as RJSFSchema,
-			enumMapByCode: {
-				"v2.detailInfo.sourceSystems.items.type": {
-					enums: ["internal", "external"],
-					enumNames: ["Внутренний", "Внешний"],
-				},
-			},
+			jsonSchema: extendedSchema,
+			enumMapByCode,
 		});
 
 		expect(params.some((p) => p.code === "type")).toBe(true);
-		expect(params.some((p) => p.code === "flag")).toBe(false);
+		expect(params.some((p) => p.code === "flag")).toBe(true);
 	});
 
 	it("includes fields from all arch components when filter is omitted", () => {
@@ -156,6 +159,55 @@ describe("buildSchemaWorkParameters", () => {
 
 		expect(params.some((p) => p.code === "type")).toBe(true);
 		expect(params.some((p) => p.code === "flag")).toBe(true);
+	});
+
+	it("includes numeric schema fields without enum values", () => {
+		const numericHints: FieldPathHint[] = [
+			{
+				pointer: "/detailInfo/dataMart/metricsCount",
+				key: "metricsCount",
+				title: "Количество метрик",
+				varPath: "detailInfo.dataMart.metricsCount",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: numericHints,
+			uiSchema: {
+				detailInfo: {
+					dataMart: {
+						"ui:options": { archComponent: "dataMart" },
+					},
+				},
+			},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					detailInfo: {
+						type: "object",
+						properties: {
+							dataMart: {
+								type: "object",
+								properties: {
+									metricsCount: {
+										type: "number",
+										title: "Количество метрик",
+									},
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {},
+		});
+
+		const metrics = params.find((p) => p.code === "metricsCount");
+		expect(metrics).toBeDefined();
+		expect(metrics?.numeric).toBe(true);
+		expect(metrics?.values).toEqual([]);
 	});
 
 	it("includes object arch-component fields without /items/ path", () => {
@@ -209,6 +261,67 @@ describe("buildSchemaWorkParameters", () => {
 			"Разработка",
 			"Доработка",
 		]);
+	});
+
+	it("includes dictionary-bound fields without inline enum when dictionary is not loaded", () => {
+		const hints: FieldPathHint[] = [
+			{
+				pointer: "/detailInfo/sourceSystems/items/field_wuYlhnu0",
+				key: "field_wuYlhnu0",
+				title: "Сложность настройки шаблона",
+				varPath: "detailInfo.sourceSystems[].field_wuYlhnu0",
+				dictionaryCode: "v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: hints,
+			uiSchema: {
+				detailInfo: {
+					sourceSystems: {
+						items: {
+							field_wuYlhnu0: {
+								"ui:options": {
+									dictionaryCode:
+										"v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
+								},
+							},
+						},
+					},
+				},
+			},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					detailInfo: {
+						type: "object",
+						properties: {
+							sourceSystems: {
+								type: "array",
+								items: {
+									type: "object",
+									properties: {
+										field_wuYlhnu0: {
+											type: "string",
+											title: "Сложность настройки шаблона",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {},
+		});
+
+		const param = params.find((p) => p.code === "field_wuYlhnu0");
+		expect(param).toBeDefined();
+		expect(param?.dictionaryCode).toBe(
+			"v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
+		);
+		expect(param?.values).toEqual([]);
 	});
 });
 

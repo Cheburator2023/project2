@@ -38,6 +38,7 @@ import { useV2TypicalWorkAssignments, useV2WorkParametersCatalog } from "@react-
 import { useSchemaEditor } from "../../SchemaEditorContext";
 import {
 	buildSchemaWorkParameters,
+	isSchemaLaborParamCandidate,
 	resolveEffectiveWorkArchComponentType,
 	schemaWorkParameterEmptyPickerMessage,
 } from "./schemaWorkParameters";
@@ -57,7 +58,6 @@ import { WorkFormulaEditor } from "./WorkFormulaEditor";
 import { ensureFormulaTerms } from "./WorkTermsFormulaEditor";
 import {
 	analyzeTriggerRules,
-	computeTriggerStatus,
 	DEFAULT_WORK_ARCH_COMPONENT_TYPE,
 	isWorkCoefficientValueAvailable,
 	resolveCanonicalWorkArchComponentType,
@@ -248,16 +248,15 @@ export function TypicalWorkEditableCard({
 	const paramOptions = useMemo(
 		() =>
 			buildSchemaWorkParameters({
-				archComponentType: effectiveArchComponentType,
 				fieldPathHints,
 				uiSchema: uiSchema as Record<string, unknown>,
 				jsonSchema,
 				enumMapByCode,
 			}),
-		[enumMapByCode, effectiveArchComponentType, fieldPathHints, jsonSchema, uiSchema],
+		[enumMapByCode, fieldPathHints, jsonSchema, uiSchema],
 	);
 	const laborParamOptions = useMemo(
-		() => paramOptions.filter((p) => p.values.length > 0 || p.numeric),
+		() => paramOptions.filter(isSchemaLaborParamCandidate),
 		[paramOptions],
 	);
 	const unusedLaborParams = laborParamOptions.filter(
@@ -324,20 +323,36 @@ export function TypicalWorkEditableCard({
 
 	const addLaborParam = (picked: V2TypicalWorkParameterDto) => {
 		if (!draft) return;
-		const newGroup = {
-			paramCode: picked.code,
-			paramName: picked.name,
-			kind: "by_value" as const,
-			coefficients: picked.values.map((v) => ({
-				id: `new-${Date.now()}-${v.code}`,
-				streamExecutor: draft.streamExecutor,
-				paramCode: picked.code,
-				paramName: picked.name,
-				valueCode: v.code,
-				valueLabel: v.label,
-				coefficient: 1,
-			})),
-		};
+		const useAnyOf =
+			picked.numeric ||
+			(Boolean(picked.dictionaryCode) && picked.values.length === 0);
+		const newGroup = useAnyOf
+			? {
+					paramCode: picked.code,
+					paramName: picked.name,
+					kind: "any_of" as const,
+					coefficients: [],
+					anyOf: {
+						valueCodes: [],
+						valueLabels: [],
+						coeffOn: 1,
+						coeffOff: 1,
+					},
+				}
+			: {
+					paramCode: picked.code,
+					paramName: picked.name,
+					kind: "by_value" as const,
+					coefficients: picked.values.map((v) => ({
+						id: `new-${Date.now()}-${v.code}`,
+						streamExecutor: draft.streamExecutor,
+						paramCode: picked.code,
+						paramName: picked.name,
+						valueCode: v.code,
+						valueLabel: v.label,
+						coefficient: 1,
+					})),
+				};
 		commitDraft({
 			...draft,
 			laborParams: [...draft.laborParams, newGroup],
