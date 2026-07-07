@@ -67,6 +67,8 @@ export const V2_TEMPLATE_EDIT_TEST_IDS = {
 	workFormulaTransitiveSearch: "workFormulaTransitiveSearch",
 	workFormulaAnyOfSelect: "workFormulaAnyOfSelect",
 	workFormulaAnyOfPanel: "workFormulaAnyOfPanel",
+	workFormulaOperatorChip: "workFormulaOperatorChip",
+	workFormulaOperatorSelect: "workFormulaOperatorSelect",
 	workFormulaPreview: "workFormulaPreview",
 	workFormulaPreviewSymbolic: "workFormulaPreviewSymbolic",
 	workFormulaPreviewResult: "workFormulaPreviewResult",

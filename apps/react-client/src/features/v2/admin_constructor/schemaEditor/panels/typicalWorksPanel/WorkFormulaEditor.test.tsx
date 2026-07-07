@@ -282,6 +282,29 @@ describe("WorkFormulaEditor (ui)", () => {
 		expect(screen.queryByText("2")).not.toBeInTheDocument();
 	});
 
+	it("changes operator inline in the ribbon", async () => {
+		const user = userEvent.setup();
+		renderEditor({
+			initialFormula: {
+				tokens: [
+					{ kind: "norm" },
+					{ kind: "operator", op: "*" },
+					{ kind: "number", value: 2 },
+				],
+				text: "N × 2",
+			},
+		});
+
+		const ribbon = screen.getByTestId(TID.workFormulaRibbon);
+		await user.click(screen.getByTestId(TID.workFormulaOperatorChip));
+		const picker = within(ribbon).getByTestId(TID.workFormulaOperatorSelect);
+		await user.click(within(picker).getByRole("button", { name: "+" }));
+
+		expect(screen.getByTestId(TID.workFormulaGeneralSummary)).toHaveTextContent(
+			"N + 2",
+		);
+	});
+
 	it("read-only hides editing controls", () => {
 		renderEditor({ readOnly: true });
 		expect(screen.queryByTestId(TID.workFormulaAddNorm)).not.toBeInTheDocument();

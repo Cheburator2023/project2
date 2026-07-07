@@ -131,6 +131,8 @@ function tokenChipColors(token: V2WorkFormulaToken): {
 			return { bg: "#f5f3ff", color: "#6d28d9", border: "#ddd6fe" };
 		case "number":
 			return { bg: "#f8fafc", color: "#334155", border: "#e2e8f0" };
+		case "operator":
+			return { bg: "#f8fafc", color: "#334155", border: "#e2e8f0" };
 		default:
 			return { bg: "#fff", color: "#334155", border: "#e2e8f0" };
 	}
@@ -223,9 +225,7 @@ function tokenDisplayLabel(
 		case "number":
 			return { title: String(token.value) };
 		case "operator":
-			if (token.op === "*") return { title: "×" };
-			if (token.op === "/") return { title: "÷" };
-			return { title: token.op };
+			return { title: operatorSymbol(token.op) };
 		case "paren_open":
 			return { title: "(" };
 		case "paren_close":
@@ -248,6 +248,17 @@ const FORMULA_MODE_SEGMENTS = [
 	},
 ];
 
+const FORMULA_OPERATOR_OPTIONS = [
+	{ op: "*" as const, label: "×" },
+	{ op: "/" as const, label: "÷" },
+	{ op: "+" as const, label: "+" },
+	{ op: "-" as const, label: "−" },
+] as const;
+
+function operatorSymbol(op: "+" | "-" | "*" | "/"): string {
+	return FORMULA_OPERATOR_OPTIONS.find((option) => option.op === op)?.label ?? op;
+}
+
 function FormulaRibbonCursor() {
 	return (
 		<Box
@@ -255,11 +266,11 @@ function FormulaRibbonCursor() {
 			sx={{
 				width: 2,
 				height: 36,
-				bgcolor: "#2563eb",
+				bgcolor: "#000",
 				borderRadius: 1,
 				flexShrink: 0,
-				animation: "blink 1s step-end infinite",
-				"@keyframes blink": {
+				animation: "formulaCaretBlink 1s step-end infinite",
+				"@keyframes formulaCaretBlink": {
 					"50%": { opacity: 0 },
 				},
 			}}
@@ -269,22 +280,24 @@ function FormulaRibbonCursor() {
 
 function FormulaRibbonGap({
 	active,
+	showCursor,
 	readOnly,
 	onClick,
 }: {
 	active: boolean;
+	showCursor: boolean;
 	readOnly: boolean;
 	onClick: () => void;
 }) {
 	return (
 		<Box
-			component={readOnly ? "span" : "button"}
-			type={readOnly ? undefined : "button"}
+			component="span"
+			role={readOnly ? undefined : "button"}
 			aria-label={active ? "Позиция вставки" : undefined}
 			onClick={
 				readOnly
 					? undefined
-					: (event: React.MouseEvent<HTMLButtonElement>) => {
+					: (event: React.MouseEvent<HTMLSpanElement>) => {
 							event.stopPropagation();
 							onClick();
 						}
@@ -303,12 +316,9 @@ function FormulaRibbonGap({
 				cursor: readOnly ? "default" : "text",
 				fontFamily: "inherit",
 				outline: "none",
-				"&:focus-visible": {
-					outline: "none",
-				},
 			}}
 		>
-			{active && !readOnly ? <FormulaRibbonCursor /> : null}
+			{showCursor ? <FormulaRibbonCursor /> : null}
 		</Box>
 	);
 }
@@ -333,11 +343,24 @@ export function WorkFormulaEditor({
 	const [editingNumberIndex, setEditingNumberIndex] = useState<number | null>(
 		null,
 	);
+	const [editingOperatorIndex, setEditingOperatorIndex] = useState<number | null>(
+		null,
+	);
 	const [numberDraft, setNumberDraft] = useState("");
 	const [paramPickerKey, setParamPickerKey] = useState(0);
 	const [anyOfPickerKey, setAnyOfPickerKey] = useState(0);
 	const [workPickerKey, setWorkPickerKey] = useState(0);
+	const [isRibbonFocused, setIsRibbonFocused] = useState(false);
 	const ribbonRef = useRef<HTMLDivElement>(null);
+
+	const showRibbonCursor = !readOnly && isRibbonFocused;
+
+	const handleRibbonBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+		const next = event.relatedTarget;
+		if (next instanceof Node && event.currentTarget.contains(next)) return;
+		setIsRibbonFocused(false);
+		setEditingOperatorIndex(null);
+	};
 
 	const focusRibbon = useCallback(() => {
 		ribbonRef.current?.focus();
@@ -345,6 +368,8 @@ export function WorkFormulaEditor({
 
 	const setCursor = useCallback(
 		(index: number) => {
+			setEditingNumberIndex(null);
+			setEditingOperatorIndex(null);
 			setCursorIndex(Math.max(0, Math.min(index, formula.tokens.length)));
 			focusRibbon();
 		},
@@ -495,6 +520,14 @@ export function WorkFormulaEditor({
 		) {
 			setEditingNumberIndex(editingNumberIndex - 1);
 		}
+		if (editingOperatorIndex === deletedIndex) {
+			setEditingOperatorIndex(null);
+		} else if (
+			editingOperatorIndex != null &&
+			editingOperatorIndex > deletedIndex
+		) {
+			setEditingOperatorIndex(editingOperatorIndex - 1);
+		}
 	};
 
 	const updateTokenAt = (index: number, token: V2WorkFormulaToken) => {
@@ -538,6 +571,11 @@ export function WorkFormulaEditor({
 
 	const handleRibbonKeyDown = (event: React.KeyboardEvent) => {
 		if (readOnly) return;
+		if (event.key === "Escape") {
+			setEditingNumberIndex(null);
+			setEditingOperatorIndex(null);
+			return;
+		}
 		if (event.key === "ArrowLeft") {
 			event.preventDefault();
 			setCursorIndex((prev) => Math.max(0, prev - 1));
@@ -629,6 +667,8 @@ export function WorkFormulaEditor({
 					<Box
 						ref={ribbonRef}
 						tabIndex={readOnly ? -1 : 0}
+						onFocus={() => setIsRibbonFocused(true)}
+						onBlur={handleRibbonBlur}
 						onKeyDown={handleRibbonKeyDown}
 						onClick={(event) => {
 							if (readOnly || event.target !== event.currentTarget) return;
@@ -659,6 +699,7 @@ export function WorkFormulaEditor({
 							<>
 								<FormulaRibbonGap
 									active={cursorIndex === 0}
+									showCursor={showRibbonCursor && cursorIndex === 0}
 									readOnly={readOnly}
 									onClick={() => setCursor(0)}
 								/>
@@ -690,21 +731,35 @@ export function WorkFormulaEditor({
 								const isWarningParam = isIncompleteAnyOf && !isInvalidParam;
 								const isEditingNumber =
 									editingNumberIndex === index && token.kind === "number";
+								const isEditingOperator =
+									editingOperatorIndex === index && token.kind === "operator";
+								const isOperator = token.kind === "operator";
 
 								return (
 									<Fragment key={`${token.kind}-${index}`}>
 										<FormulaRibbonGap
 											active={cursorIndex === index}
+											showCursor={showRibbonCursor && cursorIndex === index}
 											readOnly={readOnly}
 											onClick={() => setCursor(index)}
 										/>
 										<Box
+											data-test-id={
+												isOperator ? TID.workFormulaOperatorChip : undefined
+											}
 											onClick={(event) => {
 												event.stopPropagation();
 												setCursor(index + 1);
-												if (token.kind === "number" && !readOnly) {
+												if (readOnly) return;
+												if (token.kind === "number") {
+													setEditingOperatorIndex(null);
 													setEditingNumberIndex(index);
 													setNumberDraft(String(token.value));
+													return;
+												}
+												if (token.kind === "operator") {
+													setEditingNumberIndex(null);
+													setEditingOperatorIndex(index);
 												}
 											}}
 											title={
@@ -712,15 +767,17 @@ export function WorkFormulaEditor({
 													? "Параметр удалён из блока трудоёмкости — исправьте формулу"
 													: isWarningParam
 														? "Any-of без выбранных значений — отметьте множество в карточке параметра"
-														: undefined
+														: isOperator && !readOnly
+															? "Сменить оператор"
+															: undefined
 											}
 											sx={{
 												display: "inline-flex",
 												flexDirection: "column",
 												alignItems: "center",
 												justifyContent: "center",
-												minWidth: token.kind === "norm" ? 72 : 48,
-												px: 1,
+												minWidth: isOperator ? 32 : token.kind === "norm" ? 72 : 48,
+												px: isOperator ? 0.5 : 1,
 												py: 0.5,
 												borderRadius: "8px",
 												border: `1px solid ${
@@ -788,6 +845,35 @@ export function WorkFormulaEditor({
 													}}
 													sx={FORMULA_INLINE_NUMBER_FIELD_SX}
 												/>
+											) : isEditingOperator && token.kind === "operator" ? (
+												<Flex
+													gap={0.25}
+													data-test-id={TID.workFormulaOperatorSelect}
+													onClick={(event) => event.stopPropagation()}
+												>
+													{FORMULA_OPERATOR_OPTIONS.map(({ op, label }) => (
+														<Button
+															key={op}
+															size="small"
+															variant={token.op === op ? "contained" : "text"}
+															onClick={() => {
+																updateTokenAt(index, { kind: "operator", op });
+																setEditingOperatorIndex(null);
+																setCursor(index + 1);
+																focusRibbon();
+															}}
+															sx={{
+																minWidth: 28,
+																px: 0.5,
+																fontSize: 14,
+																fontWeight: 700,
+																lineHeight: 1.2,
+															}}
+														>
+															{label}
+														</Button>
+													))}
+												</Flex>
 											) : (
 												<>
 													<Typography
@@ -828,6 +914,9 @@ export function WorkFormulaEditor({
 						{formula.tokens.length > 0 ? (
 							<FormulaRibbonGap
 								active={cursorIndex === formula.tokens.length}
+								showCursor={
+									showRibbonCursor && cursorIndex === formula.tokens.length
+								}
 								readOnly={readOnly}
 								onClick={() => setCursor(formula.tokens.length)}
 							/>
@@ -1085,7 +1174,7 @@ export function WorkFormulaEditor({
 											color: "#334155",
 										}}
 									>
-										{op === "*" ? "×" : op === "/" ? "÷" : op}
+										{operatorSymbol(op)}
 									</Button>
 								))}
 								<Button
