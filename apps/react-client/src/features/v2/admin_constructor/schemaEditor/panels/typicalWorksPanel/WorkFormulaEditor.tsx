@@ -416,6 +416,10 @@ export function WorkFormulaEditor({
 		() => new Set(laborParams.map((g) => g.paramCode)),
 		[laborParams],
 	);
+	console.log(
+		"🐸 Pepe said >> WorkFormulaEditor >> laborParamCodes:",
+		laborParamCodes,
+	);
 
 	const isLaborFormulaParam = useCallback(
 		(token: V2WorkFormulaToken) => {
@@ -425,8 +429,7 @@ export function WorkFormulaEditor({
 			return laborParams.some(
 				(group) =>
 					group.paramCode === token.paramCode ||
-					(token.paramName != null &&
-						group.paramName === token.paramName) ||
+					(token.paramName != null && group.paramName === token.paramName) ||
 					(token.paramName != null && group.paramCode === token.paramName),
 			);
 		},
@@ -667,10 +670,7 @@ export function WorkFormulaEditor({
 								const label = tokenDisplayLabel(token, normValue);
 								const anyOfValueCount =
 									token.kind === "param_anyof"
-										? resolveLaborAnyOfValueCount(
-												laborParams,
-												token.paramCode,
-											)
+										? resolveLaborAnyOfValueCount(laborParams, token.paramCode)
 										: 0;
 								const isIncompleteAnyOf =
 									token.kind === "param_anyof" && anyOfValueCount === 0;
@@ -749,9 +749,7 @@ export function WorkFormulaEditor({
 													onChange={(e) => setNumberDraft(e.target.value)}
 													onClick={(event) => event.stopPropagation()}
 													onBlur={() => {
-														const value = Number(
-															numberDraft.replace(",", "."),
-														);
+														const value = Number(numberDraft.replace(",", "."));
 														if (Number.isFinite(value) && value >= 0) {
 															updateTokenAt(index, {
 																kind: "number",
@@ -895,135 +893,152 @@ export function WorkFormulaEditor({
 							>
 								<Box>
 									<Typography
-										sx={{ fontSize: 11, color: "#64748b", fontWeight: 600, mb: 0.5 }}
+										sx={{
+											fontSize: 11,
+											color: "#64748b",
+											fontWeight: 600,
+											mb: 0.5,
+										}}
 									>
 										По значениям
 									</Typography>
 									<FuzzyAutocomplete<ParamOption>
-									key={`param-${paramPickerKey}`}
-									data-test-id={TID.workFormulaParamSelect}
-									options={paramByValueOptions}
-									value={null}
-									onChange={(param) => {
-										if (!param) return;
-										insertToken({
-											kind: "param_coeff",
-											paramCode: param.code,
-											paramName: param.name,
-										});
-										setParamPickerKey((key) => key + 1);
-									}}
-									getOptionLabel={(param) => param.name}
-									getOptionValue={(param) => param.code}
-									getOptionSecondaryText={() =>
-										"отдельный коэффициент на каждое значение"
-									}
-									placeholder="Коэф. по значениям…"
-									emptyLabel="Коэф. по значениям…"
-									searchPlaceholder="Поиск (режим «По значениям»)…"
-									noMatchesText="Параметры не найдены"
-									allowEmpty
-									size="small"
-									disabled={arithmeticLocked}
-									textFieldSx={FORMULA_PICKER_FIELD_SX.paramCoeff}
-									statusAlert={
-										paramByValueOptions.length === 0
-											? {
-													severity: "info",
-													message:
-														"Добавьте параметр с режимом «По значениям» в блок «Параметры трудоёмкости»",
-												}
-											: null
-									}
-								/>
+										key={`param-${paramPickerKey}`}
+										data-test-id={TID.workFormulaParamSelect}
+										options={paramByValueOptions}
+										value={null}
+										onChange={(param) => {
+											if (!param) return;
+											insertToken({
+												kind: "param_coeff",
+												paramCode: param.code,
+												paramName: param.name,
+											});
+											setParamPickerKey((key) => key + 1);
+										}}
+										getOptionLabel={(param) => param.name}
+										getOptionValue={(param) => param.code}
+										getOptionSecondaryText={() =>
+											"отдельный коэффициент на каждое значение"
+										}
+										placeholder="Коэф. по значениям…"
+										emptyLabel="Коэф. по значениям…"
+										searchPlaceholder="Поиск (режим «По значениям»)…"
+										noMatchesText="Параметры не найдены"
+										allowEmpty
+										size="small"
+										disabled={arithmeticLocked}
+										textFieldSx={FORMULA_PICKER_FIELD_SX.paramCoeff}
+										statusAlert={
+											paramByValueOptions.length === 0
+												? {
+														severity: "info",
+														message:
+															"Добавьте параметр с режимом «По значениям» в блок «Параметры трудоёмкости»",
+													}
+												: null
+										}
+									/>
 								</Box>
 								<Box>
 									<Typography
-										sx={{ fontSize: 11, color: "#64748b", fontWeight: 600, mb: 0.5 }}
+										sx={{
+											fontSize: 11,
+											color: "#64748b",
+											fontWeight: 600,
+											mb: 0.5,
+										}}
 									>
 										Транзитив
 									</Typography>
 									<FuzzyAutocomplete<TransitiveSourceOption>
-									key={
-										isTransitiveOnlyFormula(formula.tokens)
-											? `work-selected-${selectedWorkRef?.assignmentId ?? "none"}`
-											: `work-${workPickerKey}`
-									}
-									data-test-id={TID.workFormulaWorkRefSelect}
-									options={availableWorkSources}
-									value={
-										isTransitiveOnlyFormula(formula.tokens)
-											? selectedWorkRef
-											: null
-									}
-									onChange={handleWorkRefSelect}
-									getOptionLabel={(source) => source.workName}
-									getOptionValue={(source) => source.assignmentId}
-									getOptionSecondaryText={(source) => source.archComponentType}
-									placeholder="Выберите значение работы…"
-									emptyLabel="Выберите значение работы…"
-									searchPlaceholder="Поиск значения работы…"
-									noMatchesText="Работы не найдены"
-									allowEmpty={!isTransitiveOnlyFormula(formula.tokens)}
-									size="small"
-									textFieldSx={FORMULA_PICKER_FIELD_SX.workRef}
-								/>
+										key={
+											isTransitiveOnlyFormula(formula.tokens)
+												? `work-selected-${selectedWorkRef?.assignmentId ?? "none"}`
+												: `work-${workPickerKey}`
+										}
+										data-test-id={TID.workFormulaWorkRefSelect}
+										options={availableWorkSources}
+										value={
+											isTransitiveOnlyFormula(formula.tokens)
+												? selectedWorkRef
+												: null
+										}
+										onChange={handleWorkRefSelect}
+										getOptionLabel={(source) => source.workName}
+										getOptionValue={(source) => source.assignmentId}
+										getOptionSecondaryText={(source) =>
+											source.archComponentType
+										}
+										placeholder="Выберите значение работы…"
+										emptyLabel="Выберите значение работы…"
+										searchPlaceholder="Поиск значения работы…"
+										noMatchesText="Работы не найдены"
+										allowEmpty={!isTransitiveOnlyFormula(formula.tokens)}
+										size="small"
+										textFieldSx={FORMULA_PICKER_FIELD_SX.workRef}
+									/>
 								</Box>
 								<Box>
 									<Typography
-										sx={{ fontSize: 11, color: "#64748b", fontWeight: 600, mb: 0.5 }}
+										sx={{
+											fontSize: 11,
+											color: "#64748b",
+											fontWeight: 600,
+											mb: 0.5,
+										}}
 									>
 										Any-of
 									</Typography>
 									<FuzzyAutocomplete<ParamOption>
-									key={`anyof-${anyOfPickerKey}`}
-									data-test-id={TID.workFormulaAnyOfSelect}
-									options={paramAnyOfOptions}
-									value={null}
-									onChange={(param) => {
-										if (!param) return;
-										insertToken({
-											kind: "param_anyof",
-											paramCode: param.code,
-											paramName: param.name,
-										});
-										setAnyOfPickerKey((key) => key + 1);
-									}}
-									getOptionLabel={(param) => param.name}
-									getOptionValue={(param) => param.code}
-									getOptionSecondaryText={(param) => {
-										const count = param.anyOfValueCount ?? 0;
-										if (count === 0) {
-											return "значения не выбраны — отметьте в карточке параметра";
-										}
-										return `${count} ${count === 1 ? "значение" : count < 5 ? "значения" : "значений"} в множестве`;
-									}}
-									placeholder="Any-of параметр…"
-									emptyLabel="Any-of параметр…"
-									searchPlaceholder="Поиск (режим Any-of)…"
-									noMatchesText="Any-of параметры не найдены"
-									allowEmpty
-									size="small"
-									disabled={arithmeticLocked}
-									textFieldSx={FORMULA_PICKER_FIELD_SX.paramAnyOf}
-									statusAlert={
-										anyOfLaborParamCount === 0
-											? {
-													severity: "info",
-													message:
-														"Добавьте параметр с режимом Any-of в блок «Параметры трудоёмкости»",
-												}
-											: paramAnyOfOptions.every(
-														(param) => (param.anyOfValueCount ?? 0) === 0,
-													)
+										key={`anyof-${anyOfPickerKey}`}
+										data-test-id={TID.workFormulaAnyOfSelect}
+										options={paramAnyOfOptions}
+										value={null}
+										onChange={(param) => {
+											if (!param) return;
+											insertToken({
+												kind: "param_anyof",
+												paramCode: param.code,
+												paramName: param.name,
+											});
+											setAnyOfPickerKey((key) => key + 1);
+										}}
+										getOptionLabel={(param) => param.name}
+										getOptionValue={(param) => param.code}
+										getOptionSecondaryText={(param) => {
+											const count = param.anyOfValueCount ?? 0;
+											if (count === 0) {
+												return "значения не выбраны — отметьте в карточке параметра";
+											}
+											return `${count} ${count === 1 ? "значение" : count < 5 ? "значения" : "значений"} в множестве`;
+										}}
+										placeholder="Any-of параметр…"
+										emptyLabel="Any-of параметр…"
+										searchPlaceholder="Поиск (режим Any-of)…"
+										noMatchesText="Any-of параметры не найдены"
+										allowEmpty
+										size="small"
+										disabled={arithmeticLocked}
+										textFieldSx={FORMULA_PICKER_FIELD_SX.paramAnyOf}
+										statusAlert={
+											anyOfLaborParamCount === 0
 												? {
-														severity: "warning",
+														severity: "info",
 														message:
-															"Any-of параметры есть, но множества значений пусты — отметьте значения в карточке; в формулу можно добавить заранее",
+															"Добавьте параметр с режимом Any-of в блок «Параметры трудоёмкости»",
 													}
-												: null
-									}
-								/>
+												: paramAnyOfOptions.every(
+															(param) => (param.anyOfValueCount ?? 0) === 0,
+														)
+													? {
+															severity: "warning",
+															message:
+																"Any-of параметры есть, но множества значений пусты — отметьте значения в карточке; в формулу можно добавить заранее",
+														}
+													: null
+										}
+									/>
 								</Box>
 							</Box>
 							<Flex alignItems="center" gap={6} wrap="wrap">

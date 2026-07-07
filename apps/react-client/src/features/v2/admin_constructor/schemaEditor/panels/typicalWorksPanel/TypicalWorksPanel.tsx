@@ -12,7 +12,6 @@ import {
 	useCreateV2TypicalWork,
 	useDeleteV2TypicalWork,
 	useV2TypicalWorkCard,
-	useV2TypicalWorksCatalog,
 	useV2TypicalWorksList,
 } from "@react-client/common/api/queries/v2-works";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
@@ -58,7 +57,6 @@ export function TypicalWorksPanel() {
 	const { data, isLoading, error } = useV2TypicalWorksList({
 		templateId,
 	});
-	const { data: catalogData } = useV2TypicalWorksCatalog({ templateId });
 	const createWork = useCreateV2TypicalWork();
 	const deleteWork = useDeleteV2TypicalWork();
 
@@ -287,7 +285,7 @@ export function TypicalWorksPanel() {
 				open={assignOpen}
 				scope={scope}
 				scopeStreams={scopeStreams}
-				works={catalogData?.items ?? []}
+				templateId={templateId}
 				templateVersionId={templateVersionId}
 				onClose={() => setAssignOpen(false)}
 				onAssigned={(workId, stream) => openWorkInStreamsView(workId, stream)}

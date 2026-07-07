@@ -401,6 +401,18 @@ export class V2TypicalWorkWriteService {
 		if (dto.archComponentType !== undefined) {
 			work.archComponentType = normalizeArchComponentType(dto.archComponentType);
 		}
+		if (dto.templateId !== undefined) {
+			const requested = dto.templateId?.trim() || null;
+			if (requested) {
+				if (work.templateId && work.templateId !== requested) {
+					throw new ConflictException({
+						code: "WORK_TEMPLATE_MISMATCH",
+						message: "Работа уже привязана к другой схеме",
+					});
+				}
+				work.templateId = requested;
+			}
+		}
 		await this.workRepository.save(work);
 		await this.ensureAssignment(workId, stream);
 

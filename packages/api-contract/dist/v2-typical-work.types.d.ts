@@ -216,6 +216,8 @@ export type V2TypicalWorkLaborParamInputDto = {
 export type PatchV2TypicalWorkRequestDto = {
     streamExecutor: string;
     templateVersionId?: string;
+    /** Привязать работу к схеме (только если ещё не привязана к другой). */
+    templateId?: string | null;
     name?: string;
     archComponentType?: string;
     norms?: V2TypicalWorkNormInputDto[];

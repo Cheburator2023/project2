@@ -21,8 +21,6 @@ export function buildAssignWorkPatch(
 	return {
 		streamExecutor,
 		norms: [{ normValue: baseNormValue, validFrom: today, validTo: null }],
-		rules: [],
-		laborCoefficients: [],
 		formula: defaultWorkFormula(),
 		rounding: defaultWorkRounding(),
 	};

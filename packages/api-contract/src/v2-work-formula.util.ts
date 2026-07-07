@@ -90,7 +90,9 @@ export function formatWorkFormulaGeneralSummary(
 	tokens: V2WorkFormulaToken[],
 	paramOrder: readonly string[],
 ): string {
-	const indexByCode = new Map(paramOrder.map((code, index) => [code, index + 1]));
+	const indexByCode = new Map(
+		paramOrder.map((code, index) => [code, index + 1]),
+	);
 	return tokens
 		.map((token) => {
 			switch (token.kind) {
@@ -154,10 +156,14 @@ export function parseWorkFormulaText(text: string): {
 
 	const readFunctionCall = (
 		fnName: string,
-	): { kind: "param_coeff" | "param_anyof" | "work_ref"; id: string } | null => {
+	): {
+		kind: "param_coeff" | "param_anyof" | "work_ref";
+		id: string;
+	} | null => {
 		const start = i;
 		const nameLen = fnName.length;
-		if (input.slice(i, i + nameLen).toLowerCase() !== fnName.toLowerCase()) return null;
+		if (input.slice(i, i + nameLen).toLowerCase() !== fnName.toLowerCase())
+			return null;
 		i += nameLen;
 		skipWs();
 		if (input[i] !== "(") {
@@ -243,7 +249,10 @@ export function parseWorkFormulaText(text: string): {
 		if (ch === "P" && input[i + 1] === "[") {
 			const close = input.indexOf("]", i + 2);
 			if (close < 0) {
-				return { tokens: [], error: `Незакрытая ссылка P[…] на позиции ${i + 1}` };
+				return {
+					tokens: [],
+					error: `Незакрытая ссылка P[…] на позиции ${i + 1}`,
+				};
 			}
 			const inner = input.slice(i + 2, close).trim();
 			if (!inner) {
@@ -271,11 +280,7 @@ export function parseWorkFormulaText(text: string): {
 
 		if ("+-×÷*/".includes(ch)) {
 			const op =
-				ch === "×"
-					? "*"
-					: ch === "÷"
-						? "/"
-						: (ch as "+" | "-" | "*" | "/");
+				ch === "×" ? "*" : ch === "÷" ? "/" : (ch as "+" | "-" | "*" | "/");
 			tokens.push({ kind: "operator", op });
 			i++;
 			continue;
@@ -290,10 +295,15 @@ export function parseWorkFormulaText(text: string): {
 			continue;
 		}
 
-		return { tokens: [], error: `Неизвестный символ «${ch}» на позиции ${i + 1}` };
+		return {
+			tokens: [],
+			error: `Неизвестный символ «${ch}» на позиции ${i + 1}`,
+		};
 	}
 
 	const validation = validateWorkFormulaTokens(tokens);
+	console.log(validation);
+
 	if (validation) {
 		return { tokens: [], error: validation };
 	}
@@ -360,7 +370,9 @@ export function validateWorkFormulaTokens(
 		return "Формула не может быть пустой — добавьте хотя бы один токен";
 	}
 
-	const workRefCount = tokens.filter((token) => token.kind === "work_ref").length;
+	const workRefCount = tokens.filter(
+		(token) => token.kind === "work_ref",
+	).length;
 	if (strictTransitiveExclusive && workRefCount > 0) {
 		if (tokens.length > 1) {
 			return "Ссылка на значение работы должна быть единственным элементом формулы";
@@ -467,9 +479,7 @@ export function isParamUsedInFormula(
 ): boolean {
 	return tokens.some(
 		(token) =>
-			isParamToken(token) &&
-			token.paramCode === paramCode &&
-			!token.invalid,
+			isParamToken(token) && token.paramCode === paramCode && !token.invalid,
 	);
 }
 
@@ -490,6 +500,7 @@ export function evaluateWorkFormula(
 ): WorkFormulaEvalResult {
 	const symbolic = formula.text || tokensToText(formula.tokens);
 	const validation = validateWorkFormulaTokens(formula.tokens);
+	console.log(validation);
 	if (validation) {
 		return { symbolic, expanded: "", value: null, error: validation };
 	}
@@ -497,8 +508,11 @@ export function evaluateWorkFormula(
 	const values: number[] = [];
 	const labels: string[] = [];
 	let expectOperand = true;
-	const opStack: Array<{ prec: number; fn: (a: number, b: number) => number; sym: string }> =
-		[];
+	const opStack: Array<{
+		prec: number;
+		fn: (a: number, b: number) => number;
+		sym: string;
+	}> = [];
 
 	const applyTop = (): string | null => {
 		const op = opStack.pop();
@@ -510,7 +524,8 @@ export function evaluateWorkFormula(
 			return "Некорректное выражение";
 		}
 		const result = op.fn(a, b);
-		if (!Number.isFinite(result)) return "Деление на ноль или некорректный результат";
+		if (!Number.isFinite(result))
+			return "Деление на ноль или некорректный результат";
 		values.push(result);
 		labels.push(`(${la} ${op.sym} ${lb})`);
 		return null;
@@ -520,21 +535,39 @@ export function evaluateWorkFormula(
 
 	for (const token of formula.tokens) {
 		if (token.kind === "norm") {
-			if (!expectOperand) return { symbolic, expanded: "", value: null, error: "Ожидался оператор" };
+			if (!expectOperand)
+				return {
+					symbolic,
+					expanded: "",
+					value: null,
+					error: "Ожидался оператор",
+				};
 			values.push(ctx.norm);
 			labels.push(String(ctx.norm));
 			expectOperand = false;
 			continue;
 		}
 		if (token.kind === "number") {
-			if (!expectOperand) return { symbolic, expanded: "", value: null, error: "Ожидался оператор" };
+			if (!expectOperand)
+				return {
+					symbolic,
+					expanded: "",
+					value: null,
+					error: "Ожидался оператор",
+				};
 			values.push(token.value);
 			labels.push(String(token.value));
 			expectOperand = false;
 			continue;
 		}
 		if (token.kind === "param_coeff" || token.kind === "param_anyof") {
-			if (!expectOperand) return { symbolic, expanded: "", value: null, error: "Ожидался оператор" };
+			if (!expectOperand)
+				return {
+					symbolic,
+					expanded: "",
+					value: null,
+					error: "Ожидался оператор",
+				};
 			if (token.invalid) {
 				return {
 					symbolic,
@@ -566,7 +599,13 @@ export function evaluateWorkFormula(
 			};
 		}
 		if (token.kind === "paren_open") {
-			if (!expectOperand) return { symbolic, expanded: "", value: null, error: "Ожидался оператор перед «(»" };
+			if (!expectOperand)
+				return {
+					symbolic,
+					expanded: "",
+					value: null,
+					error: "Ожидался оператор перед «(»",
+				};
 			opStack.push({ prec: -1, fn: () => 0, sym: "(" });
 			continue;
 		}
@@ -576,14 +615,25 @@ export function evaluateWorkFormula(
 				if (err) return { symbolic, expanded: "", value: null, error: err };
 			}
 			if (opStack.length === 0) {
-				return { symbolic, expanded: "", value: null, error: "Несбалансированные скобки" };
+				return {
+					symbolic,
+					expanded: "",
+					value: null,
+					error: "Несбалансированные скобки",
+				};
 			}
 			opStack.pop();
 			expectOperand = false;
 			continue;
 		}
 		if (token.kind === "operator") {
-			if (expectOperand) return { symbolic, expanded: "", value: null, error: "Лишний оператор" };
+			if (expectOperand)
+				return {
+					symbolic,
+					expanded: "",
+					value: null,
+					error: "Лишний оператор",
+				};
 			const p = prec(token.op);
 			while (
 				opStack.length > 0 &&
@@ -612,14 +662,24 @@ export function evaluateWorkFormula(
 
 	while (opStack.length > 0) {
 		if (opStack[opStack.length - 1]?.sym === "(") {
-			return { symbolic, expanded: "", value: null, error: "Несбалансированные скобки" };
+			return {
+				symbolic,
+				expanded: "",
+				value: null,
+				error: "Несбалансированные скобки",
+			};
 		}
 		const err = applyTop();
 		if (err) return { symbolic, expanded: "", value: null, error: err };
 	}
 
 	if (values.length !== 1) {
-		return { symbolic, expanded: "", value: null, error: "Некорректное выражение" };
+		return {
+			symbolic,
+			expanded: "",
+			value: null,
+			error: "Некорректное выражение",
+		};
 	}
 
 	return {
