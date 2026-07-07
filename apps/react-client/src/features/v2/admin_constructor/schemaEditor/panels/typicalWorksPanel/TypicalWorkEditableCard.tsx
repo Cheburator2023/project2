@@ -41,6 +41,7 @@ import {
 	isSchemaLaborParamCandidate,
 	isSchemaTextualParam,
 	resolveEffectiveWorkArchComponentType,
+	schemaLaborParamPickerCaption,
 	schemaWorkParameterEmptyPickerMessage,
 } from "./schemaWorkParameters";
 import {
@@ -949,7 +950,7 @@ export function TypicalWorkEditableCard({
 									getOptionLabel={(param) => param.name}
 									getOptionValue={(param) => param.code}
 									getOptionSecondaryText={(param) =>
-										param.description ?? undefined
+										schemaLaborParamPickerCaption(param)
 									}
 									label="Параметр трудоёмкости"
 									placeholder="Выберите поле схемы…"

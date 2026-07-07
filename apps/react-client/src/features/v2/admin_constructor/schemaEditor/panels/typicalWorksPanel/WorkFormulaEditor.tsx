@@ -64,7 +64,18 @@ type WorkFormulaEditorProps = {
 type ParamOption = {
 	code: string;
 	name: string;
+	/** Число отмеченных значений в множестве any-of (только для any-of пикера). */
+	anyOfValueCount?: number;
 };
+
+function resolveLaborAnyOfValueCount(
+	laborParams: V2TypicalWorkLaborParamGroupDto[],
+	paramCode: string,
+): number {
+	const group = laborParams.find((g) => g.paramCode === paramCode);
+	if (!group || group.kind !== "any_of") return 0;
+	return group.anyOf?.valueCodes.length ?? 0;
+}
 
 const ROUNDING_OPTIONS: {
 	mode: V2TypicalWorkRoundingDto["mode"];
@@ -188,7 +199,7 @@ function tokenDisplayLabel(
 			};
 		case "param_anyof":
 			return {
-				title: "одно из значений",
+				title: "any-of",
 				subtitle: token.paramName ?? token.paramCode,
 			};
 		case "work_ref":
@@ -344,13 +355,17 @@ export function WorkFormulaEditor({
 	const paramAnyOfOptions = useMemo(
 		(): ParamOption[] =>
 			laborParams
-				.filter(
-					(g) => g.kind === "any_of" && (g.anyOf?.valueCodes.length ?? 0) > 0,
-				)
+				.filter((g) => g.kind === "any_of")
 				.map((g) => ({
 					code: g.paramCode,
 					name: g.paramName ?? g.paramCode,
+					anyOfValueCount: g.anyOf?.valueCodes.length ?? 0,
 				})),
+		[laborParams],
+	);
+
+	const anyOfLaborParamCount = useMemo(
+		() => laborParams.filter((g) => g.kind === "any_of").length,
 		[laborParams],
 	);
 
@@ -614,11 +629,21 @@ export function WorkFormulaEditor({
 							formula.tokens.map((token, index) => {
 								const colors = tokenChipColors(token);
 								const label = tokenDisplayLabel(token, normValue);
+								const anyOfValueCount =
+									token.kind === "param_anyof"
+										? resolveLaborAnyOfValueCount(
+												laborParams,
+												token.paramCode,
+											)
+										: 0;
+								const isIncompleteAnyOf =
+									token.kind === "param_anyof" && anyOfValueCount === 0;
 								const isInvalidParam =
 									(token.kind === "param_coeff" ||
 										token.kind === "param_anyof") &&
 									(Boolean(token.invalid) ||
 										!laborParamCodes.has(token.paramCode));
+								const isWarningParam = isIncompleteAnyOf && !isInvalidParam;
 								const isEditingNumber =
 									editingNumberIndex === index && token.kind === "number";
 
@@ -641,7 +666,9 @@ export function WorkFormulaEditor({
 											title={
 												isInvalidParam
 													? "Параметр удалён из блока трудоёмкости — исправьте формулу"
-													: undefined
+													: isWarningParam
+														? "Any-of без выбранных значений — отметьте множество в карточке параметра"
+														: undefined
 											}
 											sx={{
 												display: "inline-flex",
@@ -652,9 +679,23 @@ export function WorkFormulaEditor({
 												px: 1,
 												py: 0.5,
 												borderRadius: "8px",
-												border: `1px solid ${isInvalidParam ? "#fca5a5" : colors.border}`,
-												bgcolor: isInvalidParam ? "#fef2f2" : colors.bg,
-												color: isInvalidParam ? "#b91c1c" : colors.color,
+												border: `1px solid ${
+													isInvalidParam
+														? "#fca5a5"
+														: isWarningParam
+															? "#fdba74"
+															: colors.border
+												}`,
+												bgcolor: isInvalidParam
+													? "#fef2f2"
+													: isWarningParam
+														? "#fff7ed"
+														: colors.bg,
+												color: isInvalidParam
+													? "#b91c1c"
+													: isWarningParam
+														? "#c2410c"
+														: colors.color,
 												cursor: readOnly ? "default" : "pointer",
 												userSelect: "none",
 												flexShrink: 0,
@@ -730,7 +771,9 @@ export function WorkFormulaEditor({
 																whiteSpace: "nowrap",
 															}}
 														>
-															{label.subtitle}
+															{isWarningParam
+																? `${label.subtitle} · нет значений`
+																: label.subtitle}
 														</Typography>
 													) : null}
 												</>
@@ -815,7 +858,13 @@ export function WorkFormulaEditor({
 									mb: 1.5,
 								}}
 							>
-								<FuzzyAutocomplete<ParamOption>
+								<Box>
+									<Typography
+										sx={{ fontSize: 11, color: "#64748b", fontWeight: 600, mb: 0.5 }}
+									>
+										По значениям
+									</Typography>
+									<FuzzyAutocomplete<ParamOption>
 									key={`param-${paramPickerKey}`}
 									data-test-id={TID.workFormulaParamSelect}
 									options={paramByValueOptions}
@@ -831,10 +880,12 @@ export function WorkFormulaEditor({
 									}}
 									getOptionLabel={(param) => param.name}
 									getOptionValue={(param) => param.code}
-									// label="коэф. параметра"
-									placeholder="Выберите коэффициент параметра…"
-									emptyLabel="Выберите коэффициент параметра…"
-									searchPlaceholder="Поиск коэффициента параметра…"
+									getOptionSecondaryText={() =>
+										"отдельный коэффициент на каждое значение"
+									}
+									placeholder="Коэф. по значениям…"
+									emptyLabel="Коэф. по значениям…"
+									searchPlaceholder="Поиск (режим «По значениям»)…"
 									noMatchesText="Параметры не найдены"
 									allowEmpty
 									size="small"
@@ -845,12 +896,19 @@ export function WorkFormulaEditor({
 											? {
 													severity: "info",
 													message:
-														"Добавьте параметр в блок «Параметры трудоёмкости» текущего стрима",
+														"Добавьте параметр с режимом «По значениям» в блок «Параметры трудоёмкости»",
 												}
 											: null
 									}
 								/>
-								<FuzzyAutocomplete<TransitiveSourceOption>
+								</Box>
+								<Box>
+									<Typography
+										sx={{ fontSize: 11, color: "#64748b", fontWeight: 600, mb: 0.5 }}
+									>
+										Транзитив
+									</Typography>
+									<FuzzyAutocomplete<TransitiveSourceOption>
 									key={
 										isTransitiveOnlyFormula(formula.tokens)
 											? `work-selected-${selectedWorkRef?.assignmentId ?? "none"}`
@@ -875,7 +933,14 @@ export function WorkFormulaEditor({
 									size="small"
 									textFieldSx={FORMULA_PICKER_FIELD_SX.workRef}
 								/>
-								<FuzzyAutocomplete<ParamOption>
+								</Box>
+								<Box>
+									<Typography
+										sx={{ fontSize: 11, color: "#64748b", fontWeight: 600, mb: 0.5 }}
+									>
+										Any-of
+									</Typography>
+									<FuzzyAutocomplete<ParamOption>
 									key={`anyof-${anyOfPickerKey}`}
 									data-test-id={TID.workFormulaAnyOfSelect}
 									options={paramAnyOfOptions}
@@ -891,24 +956,40 @@ export function WorkFormulaEditor({
 									}}
 									getOptionLabel={(param) => param.name}
 									getOptionValue={(param) => param.code}
-									placeholder="Выберите одно из значений…"
-									emptyLabel="Выберите одно из значений…"
-									searchPlaceholder="Поиск одного из значений…"
-									noMatchesText="Одно из значений не найдено"
+									getOptionSecondaryText={(param) => {
+										const count = param.anyOfValueCount ?? 0;
+										if (count === 0) {
+											return "значения не выбраны — отметьте в карточке параметра";
+										}
+										return `${count} ${count === 1 ? "значение" : count < 5 ? "значения" : "значений"} в множестве`;
+									}}
+									placeholder="Any-of параметр…"
+									emptyLabel="Any-of параметр…"
+									searchPlaceholder="Поиск (режим Any-of)…"
+									noMatchesText="Any-of параметры не найдены"
 									allowEmpty
 									size="small"
 									disabled={arithmeticLocked}
 									textFieldSx={FORMULA_PICKER_FIELD_SX.paramAnyOf}
 									statusAlert={
-										paramAnyOfOptions.length === 0
+										anyOfLaborParamCount === 0
 											? {
 													severity: "info",
 													message:
-														"Нужен параметр any-of с непустым множеством значений в блоке «Параметры трудоёмкости»",
+														"Добавьте параметр с режимом Any-of в блок «Параметры трудоёмкости»",
 												}
-											: null
+											: paramAnyOfOptions.every(
+														(param) => (param.anyOfValueCount ?? 0) === 0,
+													)
+												? {
+														severity: "warning",
+														message:
+															"Any-of параметры есть, но множества значений пусты — отметьте значения в карточке; в формулу можно добавить заранее",
+													}
+												: null
 									}
 								/>
+								</Box>
 							</Box>
 							<Flex alignItems="center" gap={6} wrap="wrap">
 								<Button

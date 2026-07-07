@@ -4,6 +4,7 @@ import type { V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
 import {
 	buildSchemaWorkParameters,
 	isSchemaLaborParamCandidate,
+	schemaLaborParamPickerCaption,
 	resolveSchemaParamForTriggerRule,
 	triggerRuleGroupKey,
 	excludeRulesByGroupKey,
@@ -373,6 +374,65 @@ describe("buildSchemaWorkParameters", () => {
 		expect(description?.textual).toBe(true);
 		expect(description?.values).toEqual([]);
 		expect(isSchemaLaborParamCandidate(description!)).toBe(true);
+	});
+});
+
+describe("schemaLaborParamPickerCaption", () => {
+	it("warns that any-of is useless for plain string fields", () => {
+		expect(
+			schemaLaborParamPickerCaption({
+				id: "1",
+				code: "note",
+				name: "Заметка",
+				description: null,
+				textual: true,
+				values: [],
+			}),
+		).toMatch(/Any-of без справочника обычно бесполезен/i);
+	});
+
+	it("warns that any-of is useless for numeric fields without dictionary", () => {
+		expect(
+			schemaLaborParamPickerCaption({
+				id: "2",
+				code: "count",
+				name: "Количество",
+				description: null,
+				numeric: true,
+				values: [],
+			}),
+		).toMatch(/Any-of обычно бесполезен/i);
+	});
+
+	it("notes dictionary fields work for both modes", () => {
+		expect(
+			schemaLaborParamPickerCaption({
+				id: "3",
+				code: "type",
+				name: "Тип",
+				description: null,
+				values: [
+					{
+						id: "v1",
+						code: "a",
+						label: "A",
+						coefficient: null,
+						sortOrder: 0,
+						validFrom: "2025-01-01",
+						validTo: null,
+					},
+					{
+						id: "v2",
+						code: "b",
+						label: "B",
+						coefficient: null,
+						sortOrder: 1,
+						validFrom: "2025-01-01",
+						validTo: null,
+					},
+				],
+			}),
+		).toMatch(/2 значения.*По значениям.*Any-of/i);
 	});
 });
 

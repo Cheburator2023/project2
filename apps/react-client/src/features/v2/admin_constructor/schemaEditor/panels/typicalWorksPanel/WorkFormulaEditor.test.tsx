@@ -88,7 +88,7 @@ describe("WorkFormulaEditor (ui)", () => {
 			"combobox",
 		);
 		await user.click(paramSelect);
-		await user.click(screen.getByRole("option", { name: "Сложность" }));
+		await user.click(screen.getByRole("option", { name: /Сложность/ }));
 
 		expect(screen.getByTestId(TID.workFormulaGeneralSummary)).toHaveTextContent(
 			/N.*Кэф-П1/,
@@ -169,8 +169,44 @@ describe("WorkFormulaEditor (ui)", () => {
 		await user.click(paramSelect);
 
 		expect(
-			screen.getByText(/Добавьте параметр в блок «Параметры трудоёмкости»/),
+			screen.getByText(/Добавьте параметр с режимом «По значениям»/),
 		).toBeInTheDocument();
+	});
+
+	it("lists any-of params before values are selected and warns in picker", async () => {
+		const user = userEvent.setup();
+		renderEditor({
+			laborParams: [
+				{
+					paramCode: "flag",
+					paramName: "Флаг",
+					kind: "any_of",
+					coefficients: [],
+					anyOf: {
+						valueCodes: [],
+						valueLabels: [],
+						coeffOn: 1,
+						coeffOff: 0.5,
+					},
+				},
+			],
+		});
+
+		const anyOfSelect = within(
+			screen.getByTestId(TID.workFormulaAnyOfSelect),
+		).getByRole("combobox");
+		await user.click(anyOfSelect);
+
+		expect(screen.getByRole("option", { name: /Флаг/ })).toBeInTheDocument();
+		expect(
+			screen.getByText(/множества значений пусты/i),
+		).toBeInTheDocument();
+
+		await user.click(screen.getByRole("option", { name: /Флаг/ }));
+
+		const ribbon = screen.getByTestId(TID.workFormulaRibbon);
+		expect(within(ribbon).getByText("any-of")).toBeInTheDocument();
+		expect(within(ribbon).getByText(/нет значений/i)).toBeInTheDocument();
 	});
 
 	it("inserts operator after clicked token", async () => {

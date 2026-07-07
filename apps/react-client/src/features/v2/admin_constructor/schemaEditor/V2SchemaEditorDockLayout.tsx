@@ -16,6 +16,7 @@ import {
 	MAIN_DOCK_PANEL_ID,
 } from "./constants";
 import { SchemaEditorDockHeaderRightActions } from "./SchemaEditorDockHeaderActions";
+import { SchemaEditorDndProvider } from "./components/SchemaEditorDndProvider";
 import { useSchemaEditorDock } from "./SchemaEditorDockContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { workspacePanelComponents } from "./workspacePanels";
@@ -95,39 +96,41 @@ export function V2SchemaEditorDockLayout() {
 	}, [registerDockApi]);
 
 	return (
-		<Box
-			ref={containerRef}
-			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.dockLayout}
-			sx={{
-				height: "100%",
-				width: "100%",
-				minHeight: 0,
-				overflow: "hidden",
-				"& .dv-root": { height: "100%", width: "100%" },
-				"& .dv-grid-view": { height: "100%" },
-				"& .dv-groupview > .dv-content-container": {
+		<SchemaEditorDndProvider>
+			<Box
+				ref={containerRef}
+				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.dockLayout}
+				sx={{
+					height: "100%",
+					width: "100%",
 					minHeight: 0,
 					overflow: "hidden",
-				},
-				"& .dv-pane-container.dv-animated .dv-view": {
-					transition: "none",
-				},
-				"& .dv-right-actions-container": {
-					display: "flex",
-					alignItems: "center",
-				},
-			}}
-		>
-			<DockviewReact
-				theme={dockTheme}
-				components={workspacePanelComponents}
-				defaultTabComponent={DockTabNoClose}
-				rightHeaderActionsComponent={SchemaEditorDockHeaderRightActions}
-				floatingGroupBounds="boundedWithinViewport"
-				popoutUrl="/popout.html"
-				disableAutoResizing
-				onReady={onReady}
-			/>
-		</Box>
+					"& .dv-root": { height: "100%", width: "100%" },
+					"& .dv-grid-view": { height: "100%" },
+					"& .dv-groupview > .dv-content-container": {
+						minHeight: 0,
+						overflow: "hidden",
+					},
+					"& .dv-pane-container.dv-animated .dv-view": {
+						transition: "none",
+					},
+					"& .dv-right-actions-container": {
+						display: "flex",
+						alignItems: "center",
+					},
+				}}
+			>
+				<DockviewReact
+					theme={dockTheme}
+					components={workspacePanelComponents}
+					defaultTabComponent={DockTabNoClose}
+					rightHeaderActionsComponent={SchemaEditorDockHeaderRightActions}
+					floatingGroupBounds="boundedWithinViewport"
+					popoutUrl="/popout.html"
+					disableAutoResizing
+					onReady={onReady}
+				/>
+			</Box>
+		</SchemaEditorDndProvider>
 	);
 }

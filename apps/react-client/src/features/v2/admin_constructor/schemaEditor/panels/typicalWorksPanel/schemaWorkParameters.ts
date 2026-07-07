@@ -92,6 +92,37 @@ export function isSchemaLaborParamCandidate(
 	);
 }
 
+function pluralSchemaValuesRu(count: number): string {
+	if (count % 10 === 1 && count % 100 !== 11) return `${count} значение`;
+	if (
+		count % 10 >= 2 &&
+		count % 10 <= 4 &&
+		(count % 100 < 12 || count % 100 > 14)
+	) {
+		return `${count} значения`;
+	}
+	return `${count} значений`;
+}
+
+/** Подсказка в селекте «Параметр трудоёмкости» — какой режим уместен. */
+export function schemaLaborParamPickerCaption(
+	param: SchemaBuiltWorkParameterDto,
+): string {
+	if (isSchemaTextualParam(param)) {
+		return "Свободная строка — Any-of без справочника обычно бесполезен; лучше «По значениям»";
+	}
+	if (param.numeric && param.values.length === 0) {
+		return "Число без справочника — Any-of обычно бесполезен; для формулы чаще «По значениям»";
+	}
+	if (param.values.length > 0) {
+		return `${pluralSchemaValuesRu(param.values.length)} · подходит «По значениям» и Any-of`;
+	}
+	if (param.dictionaryCode) {
+		return "Справочник — дождитесь загрузки значений; Any-of заработает после выбора множества";
+	}
+	return "Нет дискретных значений — Any-of, скорее всего, не подойдёт";
+}
+
 export function resolveWorkArchSchemaType(
 	archComponentType: string,
 ): V2ArchComponentType | null {
