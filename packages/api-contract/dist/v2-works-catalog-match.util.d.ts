@@ -1,3 +1,5 @@
+import { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
+export { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamNameSourceKeys, };
 /** Стрим-исполнитель по типу системы-источника в анкете. */
 export declare const STREAM_BY_SOURCE_TYPE: Record<string, string>;
 export declare const CONTROL_MODELS_STREAM = "\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C \u043C\u043E\u0434\u0435\u043B\u0435\u0439";
@@ -58,10 +60,10 @@ export declare function catalogValueMatchesTriggerRule(catalogValue: {
 }): boolean;
 /** Все условия работы (логическое И) против контекста строки/объекта анкеты. */
 export declare function typicalWorkRulesMatchSource(rules: TypicalWorkRuleLike[], source: Record<string, unknown>): boolean;
-export declare function resolveLaborCoefficient(source: Record<string, unknown>, paramCode: string, valueCode: string | null, valueLabel: string | null): boolean;
+export declare function resolveLaborCoefficient(source: Record<string, unknown>, paramCode: string, valueCode: string | null, valueLabel: string | null, paramName?: string | null): boolean;
 export declare function resolveLaborAnyOfCoefficient(source: Record<string, unknown>, paramCode: string, anyOf: {
     valueCodes: string[];
     valueLabels: string[];
     coeffOn: number;
     coeffOff: number;
-}): number;
+}, paramName?: string | null): number;

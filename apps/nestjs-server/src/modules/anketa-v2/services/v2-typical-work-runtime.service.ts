@@ -111,6 +111,7 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 					coeffOn: decimalToNumber(header.coeffOn),
 					coeffOff: decimalToNumber(header.coeffOff),
 				},
+				header.paramName,
 			);
 		}
 	}
@@ -135,6 +136,7 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 				row.paramCode,
 				row.valueCode,
 				row.valueLabel,
+				row.paramName,
 			)
 		) {
 			paramCoefficients[row.paramCode] = decimalToNumber(row.coefficient);

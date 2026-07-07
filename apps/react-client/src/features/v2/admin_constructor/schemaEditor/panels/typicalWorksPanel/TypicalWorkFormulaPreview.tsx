@@ -64,8 +64,12 @@ export function buildDefaultPreviewAnswers(
 			answers[rule.paramCode] = rule.valueCode;
 			continue;
 		}
+		if (rule.valueLabel) {
+			answers[rule.paramCode] = rule.valueLabel;
+			continue;
+		}
 		if (rule.values?.length) {
-			answers[rule.paramCode] = rule.values[0]?.code ?? "";
+			answers[rule.paramCode] = rule.values[0]?.code ?? rule.values[0]?.label ?? "";
 		}
 	}
 

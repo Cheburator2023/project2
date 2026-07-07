@@ -49,12 +49,12 @@ export function tokensToText(tokens: V2WorkFormulaToken[]): string {
 					return "N";
 				case "param_coeff":
 					return token.invalid
-						? `коэф(${token.paramCode})?`
-						: `коэф(${token.paramCode})`;
+						? `коэф(${token.paramName ?? token.paramCode})?`
+						: `коэф(${token.paramName ?? token.paramCode})`;
 				case "param_anyof":
 					return token.invalid
-						? `anyof(${token.paramCode})?`
-						: `anyof(${token.paramCode})`;
+						? `anyof(${token.paramName ?? token.paramCode})?`
+						: `anyof(${token.paramName ?? token.paramCode})`;
 				case "work_ref":
 					return token.invalid
 						? `работа(${token.assignmentId})?`

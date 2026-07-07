@@ -248,15 +248,16 @@ export function TypicalWorkEditableCard({
 	const paramOptions = useMemo(
 		() =>
 			buildSchemaWorkParameters({
+				archComponentType: effectiveArchComponentType,
 				fieldPathHints,
 				uiSchema: uiSchema as Record<string, unknown>,
 				jsonSchema,
 				enumMapByCode,
 			}),
-		[enumMapByCode, fieldPathHints, jsonSchema, uiSchema],
+		[enumMapByCode, effectiveArchComponentType, fieldPathHints, jsonSchema, uiSchema],
 	);
 	const laborParamOptions = useMemo(
-		() => paramOptions.filter((p) => p.values.length > 0),
+		() => paramOptions.filter((p) => p.values.length > 0 || p.numeric),
 		[paramOptions],
 	);
 	const unusedLaborParams = laborParamOptions.filter(

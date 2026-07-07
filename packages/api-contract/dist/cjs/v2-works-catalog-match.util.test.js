@@ -29,6 +29,51 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
         })).toBe(true);
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, { value: "Технический [ТМ]" })).toBe(false);
     });
+    (0, vitest_1.it)("matches source type trigger by value code", () => {
+        const rules = [
+            {
+                paramCode: "type",
+                paramName: "Тип системы-источника",
+                operator: "=",
+                valueCode: "external",
+                valueLabel: "Внешний",
+            },
+        ];
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, { type: "external" })).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, { type: "Внешний" })).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, { type: "internal" })).toBe(false);
+    });
+    (0, vitest_1.it)("reads source field from encoded paramName aliases", () => {
+        const rules = [
+            {
+                paramCode: "field_primary",
+                paramName: "Сложность @ field_alt|field_other",
+                operator: "=",
+                valueCode: "high",
+                valueLabel: "Высокая",
+            },
+        ];
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, {
+            field_alt: "high",
+        })).toBe(true);
+    });
+    (0, vitest_1.it)("matches schema field trigger by label when rule stores dictionary code", () => {
+        const rules = [
+            {
+                paramCode: "field_nE73kPQl",
+                paramName: "Детализация и ясность запроса постановки задачи",
+                operator: "=",
+                valueCode: "Точечное",
+                valueLabel: "Точечное",
+            },
+        ];
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, {
+            field_nE73kPQl: "Точечное",
+        })).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, {
+            field_nE73kPQl: "Масштабное",
+        })).toBe(false);
+    });
     (0, vitest_1.it)("matches source type trigger", () => {
         const rules = [
             {

@@ -4,8 +4,10 @@ import {
 	V2_ARCH_COMPONENT_LABELS,
 	type V2ArchComponentType,
 	extractControlCode,
+	formatParamNameWithSourceKeys,
 	isControlTypeTriggerParam,
 	isSourceTypeTriggerParam,
+	stripParamNameSourceKeys,
 } from "@smart-anketa/api-contract";
 import {
 	isObjectFieldGroup,
@@ -206,8 +208,94 @@ function schemaParamDescription(
 	return archLabel ? `${archLabel} · ${path}` : path;
 }
 
+function normalizeParamTitle(title: string): string {
+	return title.trim().toLocaleLowerCase("ru");
+}
+
+function valueSignature(
+	param: Pick<V2TypicalWorkParameterDto, "numeric" | "values">,
+): string {
+	if (param.numeric) return "numeric";
+	return param.values
+		.map((value) => `${value.code}::${value.label}`)
+		.sort()
+		.join("|");
+}
+
+function mergeParameterValues(
+	left: V2TypicalWorkParameterDto["values"],
+	right: V2TypicalWorkParameterDto["values"],
+): V2TypicalWorkParameterDto["values"] {
+	const merged = new Map<string, V2TypicalWorkParameterDto["values"][number]>();
+	for (const value of [...left, ...right]) {
+		const key = `${value.code}::${value.label}`;
+		if (!merged.has(key)) merged.set(key, value);
+	}
+	return [...merged.values()].sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+type BuiltSchemaParam = V2TypicalWorkParameterDto & {
+	pointer: string;
+};
+
+function dedupeSchemaWorkParameters(
+	params: BuiltSchemaParam[],
+): V2TypicalWorkParameterDto[] {
+	const groups = new Map<string, BuiltSchemaParam[]>();
+
+	for (const param of params) {
+		const groupKey = `${normalizeParamTitle(param.name)}::${valueSignature(param)}`;
+		const list = groups.get(groupKey) ?? [];
+		list.push(param);
+		groups.set(groupKey, list);
+	}
+
+	const deduped: V2TypicalWorkParameterDto[] = [];
+
+	for (const group of groups.values()) {
+		const sorted = [...group].sort((a, b) =>
+			a.pointer.localeCompare(b.pointer, "ru"),
+		);
+		const primary = sorted[0]!;
+		const allCodes = sorted.map((item) => item.code);
+		const alternateKeys = allCodes.filter((code) => code !== primary.code);
+		const keysSuffix =
+			alternateKeys.length > 0 ? ` · keys:${alternateKeys.join(",")}` : "";
+
+		deduped.push({
+			id: primary.id,
+			code: primary.code,
+			name: primary.name,
+			description: primary.description
+				? `${primary.description}${keysSuffix}`
+				: keysSuffix
+					? keysSuffix.slice(3)
+					: null,
+			sourceKeys: alternateKeys.length > 0 ? alternateKeys : undefined,
+			numeric: primary.numeric,
+			values: sorted.reduce(
+				(acc, item) => mergeParameterValues(acc, item.values),
+				primary.values,
+			),
+		});
+	}
+
+	deduped.sort((a, b) => a.name.localeCompare(b.name, "ru"));
+	return deduped;
+}
+
+function hintMatchesArchComponent(
+	hint: FieldPathHint,
+	uiSchema: Record<string, unknown> | undefined,
+	targetArch: V2ArchComponentType | null,
+): boolean {
+	if (!targetArch) return true;
+	const fieldArch = resolveArchComponentAtPointer(uiSchema, hint.pointer);
+	return fieldArch === targetArch;
+}
+
 export type BuildSchemaWorkParametersInput = {
-	/** Не используется для фильтрации — оставлен для совместимости вызовов. */
+	/** Фильтр полей по arch-компоненту работы (Система-источник → sourceSystem и т.д.). */
 	archComponentType?: string;
 	fieldPathHints: FieldPathHint[];
 	uiSchema: Record<string, unknown> | undefined;
@@ -215,17 +303,22 @@ export type BuildSchemaWorkParametersInput = {
 	enumMapByCode: Record<string, EnumMapEntry>;
 };
 
-/** Все параметры типовой работы из полей схемы анкеты (без фильтра по arch-компоненту). */
+/** Параметры типовой работы из полей схемы анкеты. */
 export function buildSchemaWorkParameters({
+	archComponentType,
 	fieldPathHints,
 	uiSchema,
 	jsonSchema,
 	enumMapByCode,
 }: BuildSchemaWorkParametersInput): V2TypicalWorkParameterDto[] {
-	const params: V2TypicalWorkParameterDto[] = [];
+	const targetArch = archComponentType
+		? resolveWorkArchSchemaType(archComponentType)
+		: null;
+	const params: BuiltSchemaParam[] = [];
 	const usedCodes = new Set<string>();
 
 	for (const hint of fieldPathHints) {
+		if (!hintMatchesArchComponent(hint, uiSchema, targetArch)) continue;
 		if (!isArchComponentLeafField(hint.pointer, jsonSchema)) continue;
 
 		const node = resolveSchemaNode(jsonSchema, pointerSegments(hint.pointer));
@@ -250,18 +343,29 @@ export function buildSchemaWorkParameters({
 		const name = (hint.title ?? hint.key).trim();
 		if (!name) continue;
 
+		const code = schemaParamCodeFromHint(hint, usedCodes);
 		params.push({
 			id: `schema:${hint.pointer}`,
-			code: schemaParamCodeFromHint(hint, usedCodes),
+			code,
 			name,
 			description: schemaParamDescription(hint, uiSchema),
 			numeric,
 			values,
+			pointer: hint.pointer,
 		});
 	}
 
-	params.sort((a, b) => a.name.localeCompare(b.name, "ru"));
-	return params;
+	return dedupeSchemaWorkParameters(params);
+}
+
+export function schemaParamRuleName(param: V2TypicalWorkParameterDto): string {
+	return formatParamNameWithSourceKeys(param.name, param.sourceKeys);
+}
+
+export function schemaParamDisplayName(
+	paramName: string | null | undefined,
+): string {
+	return stripParamNameSourceKeys(paramName);
 }
 
 export type TriggerRuleLike = {

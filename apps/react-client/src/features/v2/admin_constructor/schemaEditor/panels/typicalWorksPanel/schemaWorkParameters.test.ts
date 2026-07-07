@@ -95,7 +95,39 @@ describe("buildSchemaWorkParameters", () => {
 		]);
 	});
 
-	it("includes fields from all arch components in the schema", () => {
+	it("includes only fields from matching arch component when filtered", () => {
+		const params = buildSchemaWorkParameters({
+			archComponentType: "Система-источник",
+			fieldPathHints: hints,
+			uiSchema,
+			jsonSchema: {
+				...jsonSchema,
+				properties: {
+					...jsonSchema.properties,
+					other: {
+						type: "array",
+						items: {
+							type: "object",
+							properties: {
+								flag: { type: "boolean", title: "Чужой блок" },
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {
+				"v2.detailInfo.sourceSystems.items.type": {
+					enums: ["internal", "external"],
+					enumNames: ["Внутренний", "Внешний"],
+				},
+			},
+		});
+
+		expect(params.some((p) => p.code === "type")).toBe(true);
+		expect(params.some((p) => p.code === "flag")).toBe(false);
+	});
+
+	it("includes fields from all arch components when filter is omitted", () => {
 		const params = buildSchemaWorkParameters({
 			fieldPathHints: hints,
 			uiSchema,

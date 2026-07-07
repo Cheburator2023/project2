@@ -1,3 +1,15 @@
+import {
+	formatParamNameWithSourceKeys,
+	parseParamNameSourceKeys,
+	stripParamNameSourceKeys,
+} from "./v2-work-param-source-keys.util";
+
+export {
+	formatParamNameWithSourceKeys,
+	parseParamNameSourceKeys,
+	stripParamNameSourceKeys,
+};
+
 /** Стрим-исполнитель по типу системы-источника в анкете. */
 export const STREAM_BY_SOURCE_TYPE: Record<string, string> = {
 	Внутренний: "ИД. Внутренний",
@@ -65,8 +77,18 @@ export function readTypicalWorkSourceField(
 	paramName: string | null,
 ): unknown {
 	if (paramCode in source) return source[paramCode];
+
+	const { displayName, sourceKeys } = parseParamNameSourceKeys(paramName);
+	for (const key of sourceKeys) {
+		if (key in source) return source[key];
+	}
+
+	if (displayName) {
+		const slug = slugParamCode(displayName);
+		if (slug in source) return source[slug];
+	}
 	if (paramName) {
-		const slug = slugParamCode(paramName);
+		const slug = slugParamCode(stripParamNameSourceKeys(paramName));
 		if (slug in source) return source[slug];
 	}
 	if (
@@ -247,6 +269,39 @@ function compareRuleValue(
 	}
 }
 
+function scalarRuleValueMatches(
+	actual: unknown,
+	rule: Pick<TypicalWorkRuleLike, "valueCode" | "valueLabel" | "operator">,
+): boolean {
+	const candidates = [rule.valueCode, rule.valueLabel].filter(
+		(value): value is string =>
+			value != null && String(value).trim() !== "",
+	);
+	if (candidates.length === 0) return false;
+
+	if ([">=", "<=", ">", "<"].includes(rule.operator)) {
+		return compareRuleValue(
+			actual,
+			rule.valueCode ?? rule.valueLabel,
+			rule.operator,
+		);
+	}
+
+	const actualStr = String(actual ?? "");
+	const matches = candidates.some((candidate) => {
+		if (actualStr === candidate) return true;
+		if (typeof actual === "boolean") {
+			const norm = candidate.trim().toLowerCase();
+			if (norm === "да" && actual === true) return true;
+			if (norm === "нет" && actual === false) return true;
+		}
+		return false;
+	});
+
+	if (rule.operator === "!=") return !matches;
+	return matches;
+}
+
 function compareRuleValuesSet(
 	actual: unknown,
 	expectedCodes: string[],
@@ -271,7 +326,8 @@ export function typicalWorkRulesMatchSource(
 	if (rules.length === 0) return false;
 
 	return rules.every((rule) => {
-		const paramName = rule.paramName ?? rule.paramCode;
+		const paramName =
+			stripParamNameSourceKeys(rule.paramName) || rule.paramCode;
 		const controlCode = extractControlCode(paramName);
 		if (controlCode) {
 			const rowText = String(
@@ -302,7 +358,7 @@ export function typicalWorkRulesMatchSource(
 		if (rule.valueLabel == null && rule.valueCode == null) {
 			return actual !== undefined && actual !== null && actual !== "";
 		}
-		return compareRuleValue(actual, rule.valueLabel ?? rule.valueCode, rule.operator);
+		return scalarRuleValueMatches(actual, rule);
 	});
 }
 
@@ -311,8 +367,9 @@ export function resolveLaborCoefficient(
 	paramCode: string,
 	valueCode: string | null,
 	valueLabel: string | null,
+	paramName: string | null = null,
 ): boolean {
-	const actual = readSourceField(source, paramCode, null);
+	const actual = readSourceField(source, paramCode, paramName);
 	if (valueLabel != null) {
 		if (String(actual) === valueLabel) return true;
 		if (typeof actual === "boolean") {
@@ -334,8 +391,9 @@ export function resolveLaborAnyOfCoefficient(
 		coeffOn: number;
 		coeffOff: number;
 	},
+	paramName: string | null = null,
 ): number {
-	const actual = readSourceField(source, paramCode, null);
+	const actual = readSourceField(source, paramCode, paramName);
 	const actualStr = String(actual ?? "");
 	const matches = anyOf.valueCodes.some(
 		(code, index) =>

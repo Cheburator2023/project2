@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CONTROL_MODELS_STREAM = exports.STREAM_BY_SOURCE_TYPE = void 0;
+exports.CONTROL_MODELS_STREAM = exports.STREAM_BY_SOURCE_TYPE = exports.stripParamNameSourceKeys = exports.parseParamNameSourceKeys = exports.formatParamNameWithSourceKeys = void 0;
 exports.resolveStreamFromSourceType = resolveStreamFromSourceType;
 exports.resolveStreamsFromSourceSystems = resolveStreamsFromSourceSystems;
 exports.readTypicalWorkSourceField = readTypicalWorkSourceField;
@@ -14,6 +14,10 @@ exports.catalogValueMatchesTriggerRule = catalogValueMatchesTriggerRule;
 exports.typicalWorkRulesMatchSource = typicalWorkRulesMatchSource;
 exports.resolveLaborCoefficient = resolveLaborCoefficient;
 exports.resolveLaborAnyOfCoefficient = resolveLaborAnyOfCoefficient;
+const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
+Object.defineProperty(exports, "formatParamNameWithSourceKeys", { enumerable: true, get: function () { return v2_work_param_source_keys_util_1.formatParamNameWithSourceKeys; } });
+Object.defineProperty(exports, "parseParamNameSourceKeys", { enumerable: true, get: function () { return v2_work_param_source_keys_util_1.parseParamNameSourceKeys; } });
+Object.defineProperty(exports, "stripParamNameSourceKeys", { enumerable: true, get: function () { return v2_work_param_source_keys_util_1.stripParamNameSourceKeys; } });
 /** Стрим-исполнитель по типу системы-источника в анкете. */
 exports.STREAM_BY_SOURCE_TYPE = {
     Внутренний: "ИД. Внутренний",
@@ -62,8 +66,18 @@ function slugParamCode(name) {
 function readTypicalWorkSourceField(source, paramCode, paramName) {
     if (paramCode in source)
         return source[paramCode];
+    const { displayName, sourceKeys } = (0, v2_work_param_source_keys_util_1.parseParamNameSourceKeys)(paramName);
+    for (const key of sourceKeys) {
+        if (key in source)
+            return source[key];
+    }
+    if (displayName) {
+        const slug = slugParamCode(displayName);
+        if (slug in source)
+            return source[slug];
+    }
     if (paramName) {
-        const slug = slugParamCode(paramName);
+        const slug = slugParamCode((0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(paramName));
         if (slug in source)
             return source[slug];
     }
@@ -181,6 +195,30 @@ function compareRuleValue(actual, expected, operator) {
             return actualStr === expectedStr;
     }
 }
+function scalarRuleValueMatches(actual, rule) {
+    const candidates = [rule.valueCode, rule.valueLabel].filter((value) => value != null && String(value).trim() !== "");
+    if (candidates.length === 0)
+        return false;
+    if ([">=", "<=", ">", "<"].includes(rule.operator)) {
+        return compareRuleValue(actual, rule.valueCode ?? rule.valueLabel, rule.operator);
+    }
+    const actualStr = String(actual ?? "");
+    const matches = candidates.some((candidate) => {
+        if (actualStr === candidate)
+            return true;
+        if (typeof actual === "boolean") {
+            const norm = candidate.trim().toLowerCase();
+            if (norm === "да" && actual === true)
+                return true;
+            if (norm === "нет" && actual === false)
+                return true;
+        }
+        return false;
+    });
+    if (rule.operator === "!=")
+        return !matches;
+    return matches;
+}
 function compareRuleValuesSet(actual, expectedCodes, expectedLabels, operator) {
     const actualStr = String(actual ?? "");
     const matches = expectedCodes.some((code, index) => actualStr === code ||
@@ -193,7 +231,7 @@ function typicalWorkRulesMatchSource(rules, source) {
     if (rules.length === 0)
         return false;
     return rules.every((rule) => {
-        const paramName = rule.paramName ?? rule.paramCode;
+        const paramName = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(rule.paramName) || rule.paramCode;
         const controlCode = extractControlCode(paramName);
         if (controlCode) {
             const rowText = String(source.value ?? source.controlType ?? source.name ?? "");
@@ -216,11 +254,11 @@ function typicalWorkRulesMatchSource(rules, source) {
         if (rule.valueLabel == null && rule.valueCode == null) {
             return actual !== undefined && actual !== null && actual !== "";
         }
-        return compareRuleValue(actual, rule.valueLabel ?? rule.valueCode, rule.operator);
+        return scalarRuleValueMatches(actual, rule);
     });
 }
-function resolveLaborCoefficient(source, paramCode, valueCode, valueLabel) {
-    const actual = readSourceField(source, paramCode, null);
+function resolveLaborCoefficient(source, paramCode, valueCode, valueLabel, paramName = null) {
+    const actual = readSourceField(source, paramCode, paramName);
     if (valueLabel != null) {
         if (String(actual) === valueLabel)
             return true;
@@ -236,8 +274,8 @@ function resolveLaborCoefficient(source, paramCode, valueCode, valueLabel) {
         return true;
     return false;
 }
-function resolveLaborAnyOfCoefficient(source, paramCode, anyOf) {
-    const actual = readSourceField(source, paramCode, null);
+function resolveLaborAnyOfCoefficient(source, paramCode, anyOf, paramName = null) {
+    const actual = readSourceField(source, paramCode, paramName);
     const actualStr = String(actual ?? "");
     const matches = anyOf.valueCodes.some((code, index) => actualStr === code ||
         actualStr === (anyOf.valueLabels[index] ?? "") ||

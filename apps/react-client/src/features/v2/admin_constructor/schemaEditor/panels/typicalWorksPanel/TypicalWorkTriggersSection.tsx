@@ -27,6 +27,8 @@ import {
 	excludeRulesByGroupKey,
 	filterRulesByGroupKey,
 	resolveSchemaParamForTriggerRule,
+	schemaParamDisplayName,
+	schemaParamRuleName,
 	schemaWorkParameterEmptyPickerMessage,
 	triggerRuleGroupKey,
 } from "./schemaWorkParameters";
@@ -177,7 +179,7 @@ export function TypicalWorkTriggersSection({
 					id: current?.id ?? `new-${Date.now()}`,
 					streamExecutor,
 					paramCode: param.code,
-					paramName: param.name,
+					paramName: schemaParamRuleName(param),
 					operator,
 					valueCode: null,
 					valueLabel: null,
@@ -211,7 +213,7 @@ export function TypicalWorkTriggersSection({
 				id: `new-${Date.now()}-${valueCode}`,
 				streamExecutor,
 				paramCode: param.code,
-				paramName: param.name,
+				paramName: schemaParamRuleName(param),
 				operator: currentOperator,
 				valueCode,
 				valueLabel,
@@ -244,7 +246,7 @@ export function TypicalWorkTriggersSection({
 				id: `new-${Date.now()}`,
 				streamExecutor,
 				paramCode: param.code,
-				paramName: param.name,
+				paramName: schemaParamRuleName(param),
 				operator: "=",
 				valueCode: firstValue?.code ?? null,
 				valueLabel: firstValue?.label ?? null,
@@ -416,7 +418,8 @@ export function TypicalWorkTriggersSection({
 							param?.name ??
 							(isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName)
 								? "Тип источника данных"
-								: (paramRules[0]?.paramName ?? groupKey));
+								: schemaParamDisplayName(paramRules[0]?.paramName) ||
+									groupKey);
 						return (
 							<Box
 								key={groupKey}

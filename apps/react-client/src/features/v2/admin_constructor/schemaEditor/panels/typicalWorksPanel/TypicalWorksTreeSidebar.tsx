@@ -19,6 +19,15 @@ type TypicalWorksTreeSidebarProps = {
 	scopeSubtitle: string;
 };
 
+function workDisplayName(
+	work: V2TypicalWorkListItemDto,
+	works: V2TypicalWorkListItemDto[],
+): string {
+	const duplicates = works.filter((item) => item.name === work.name).length;
+	if (duplicates <= 1) return work.name;
+	return `${work.name} · ${work.id.slice(0, 8)}`;
+}
+
 export function TypicalWorksTreeSidebar({
 	groups,
 	selectedWorkId,
@@ -28,6 +37,8 @@ export function TypicalWorksTreeSidebar({
 	assignedCount,
 	scopeSubtitle,
 }: TypicalWorksTreeSidebarProps) {
+	const allWorks = groups.flatMap((group) => group.works);
+
 	return (
 		<Box
 			sx={{
@@ -154,7 +165,7 @@ export function TypicalWorksTreeSidebar({
 														lineHeight: 1.3,
 													}}
 												>
-													{work.name}
+													{workDisplayName(work, allWorks)}
 												</Typography>
 											</Box>
 											<IconButton

@@ -1,3 +1,5 @@
+import { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamNameSourceKeys, } from "./v2-work-param-source-keys.util";
+export { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamNameSourceKeys, };
 /** Стрим-исполнитель по типу системы-источника в анкете. */
 export const STREAM_BY_SOURCE_TYPE = {
     Внутренний: "ИД. Внутренний",
@@ -46,8 +48,18 @@ function slugParamCode(name) {
 export function readTypicalWorkSourceField(source, paramCode, paramName) {
     if (paramCode in source)
         return source[paramCode];
+    const { displayName, sourceKeys } = parseParamNameSourceKeys(paramName);
+    for (const key of sourceKeys) {
+        if (key in source)
+            return source[key];
+    }
+    if (displayName) {
+        const slug = slugParamCode(displayName);
+        if (slug in source)
+            return source[slug];
+    }
     if (paramName) {
-        const slug = slugParamCode(paramName);
+        const slug = slugParamCode(stripParamNameSourceKeys(paramName));
         if (slug in source)
             return source[slug];
     }
@@ -165,6 +177,30 @@ function compareRuleValue(actual, expected, operator) {
             return actualStr === expectedStr;
     }
 }
+function scalarRuleValueMatches(actual, rule) {
+    const candidates = [rule.valueCode, rule.valueLabel].filter((value) => value != null && String(value).trim() !== "");
+    if (candidates.length === 0)
+        return false;
+    if ([">=", "<=", ">", "<"].includes(rule.operator)) {
+        return compareRuleValue(actual, rule.valueCode ?? rule.valueLabel, rule.operator);
+    }
+    const actualStr = String(actual ?? "");
+    const matches = candidates.some((candidate) => {
+        if (actualStr === candidate)
+            return true;
+        if (typeof actual === "boolean") {
+            const norm = candidate.trim().toLowerCase();
+            if (norm === "да" && actual === true)
+                return true;
+            if (norm === "нет" && actual === false)
+                return true;
+        }
+        return false;
+    });
+    if (rule.operator === "!=")
+        return !matches;
+    return matches;
+}
 function compareRuleValuesSet(actual, expectedCodes, expectedLabels, operator) {
     const actualStr = String(actual ?? "");
     const matches = expectedCodes.some((code, index) => actualStr === code ||
@@ -177,7 +213,7 @@ export function typicalWorkRulesMatchSource(rules, source) {
     if (rules.length === 0)
         return false;
     return rules.every((rule) => {
-        const paramName = rule.paramName ?? rule.paramCode;
+        const paramName = stripParamNameSourceKeys(rule.paramName) || rule.paramCode;
         const controlCode = extractControlCode(paramName);
         if (controlCode) {
             const rowText = String(source.value ?? source.controlType ?? source.name ?? "");
@@ -200,11 +236,11 @@ export function typicalWorkRulesMatchSource(rules, source) {
         if (rule.valueLabel == null && rule.valueCode == null) {
             return actual !== undefined && actual !== null && actual !== "";
         }
-        return compareRuleValue(actual, rule.valueLabel ?? rule.valueCode, rule.operator);
+        return scalarRuleValueMatches(actual, rule);
     });
 }
-export function resolveLaborCoefficient(source, paramCode, valueCode, valueLabel) {
-    const actual = readSourceField(source, paramCode, null);
+export function resolveLaborCoefficient(source, paramCode, valueCode, valueLabel, paramName = null) {
+    const actual = readSourceField(source, paramCode, paramName);
     if (valueLabel != null) {
         if (String(actual) === valueLabel)
             return true;
@@ -220,8 +256,8 @@ export function resolveLaborCoefficient(source, paramCode, valueCode, valueLabel
         return true;
     return false;
 }
-export function resolveLaborAnyOfCoefficient(source, paramCode, anyOf) {
-    const actual = readSourceField(source, paramCode, null);
+export function resolveLaborAnyOfCoefficient(source, paramCode, anyOf, paramName = null) {
+    const actual = readSourceField(source, paramCode, paramName);
     const actualStr = String(actual ?? "");
     const matches = anyOf.valueCodes.some((code, index) => actualStr === code ||
         actualStr === (anyOf.valueLabels[index] ?? "") ||

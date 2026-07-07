@@ -346,6 +346,8 @@ export type V2TypicalWorkParameterDto = {
 	code: string;
 	name: string;
 	description: string | null;
+	/** Альтернативные ключи поля в данных анкеты (дубликаты title в схеме). */
+	sourceKeys?: string[];
 	/** true, если все значения параметра — числа (отображается как числовая шкала, доступны операторы >, <, ≥, ≤) */
 	numeric?: boolean;
 	values: V2TypicalWorkParameterValueDto[];

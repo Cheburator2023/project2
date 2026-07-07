@@ -668,6 +668,7 @@ export class V2TypicalWorkWriteService {
 					answerSource,
 					group.paramCode,
 					group.anyOf,
+					group.paramName,
 				);
 				continue;
 			}
