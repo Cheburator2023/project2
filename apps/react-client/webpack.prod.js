@@ -36,50 +36,28 @@ module.exports = merge(common, {
 			}),
 		],
 		splitChunks: {
-			chunks: "all",
-			maxInitialRequests: 25,
+			// MF: не трогаем initial/container — только async-чанки от lazy routes.
+			chunks: "async",
 			maxAsyncRequests: 30,
 			cacheGroups: {
-				reactVendor: {
-					test: /[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/,
-					name: "react-vendor",
-					chunks: "all",
-					priority: 40,
-					enforce: true,
-				},
-				muiVendor: {
-					test: /[\\/]node_modules[\\/]@mui[\\/]/,
-					name: "mui-vendor",
-					chunks: "all",
-					priority: 30,
-				},
-				queryVendor: {
-					test: /[\\/]node_modules[\\/]@tanstack[\\/]/,
-					name: "query-vendor",
-					chunks: "all",
-					priority: 25,
-				},
 				heavyVendor: {
 					test: /[\\/]node_modules[\\/](@monaco-editor|monaco-editor|mermaid|ag-grid-|@xyflow|@svar-ui)[\\/]/,
 					name: "heavy-vendor",
 					chunks: "async",
 					priority: 20,
+					enforce: true,
 				},
 				vendors: {
 					test: /[\\/]node_modules[\\/]/,
 					name: "vendors",
 					chunks: "initial",
 					priority: 10,
-					reuseExistingChunk: true,
-				},
-				default: {
-					minChunks: 2,
-					priority: -20,
-					reuseExistingChunk: true,
+					enforce: true,
 				},
 			},
 		},
-		runtimeChunk: "single",
+		// MF remote: runtime должен быть внутри container-чанков, не в отдельном файле.
+		runtimeChunk: false,
 		moduleIds: "deterministic",
 		chunkIds: "deterministic",
 		usedExports: true,
