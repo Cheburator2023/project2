@@ -40,4 +40,38 @@ describe("v2-default-typical-works-logic.util", () => {
         });
         expect(patched.rules.some((rule) => rule.id === "unified-source-typical-works")).toBe(false);
     });
+    it("injects source catalog rule when schema has source systems and typical tasks block", () => {
+        const patched = patchV2TypicalWorksLogicRules({ rules: [] }, {
+            jsonSchema: {
+                type: "object",
+                properties: {
+                    detailInfo: {
+                        type: "object",
+                        properties: {
+                            sourceSystems: { type: "array", items: { type: "object" } },
+                        },
+                    },
+                    streamDataSources: {
+                        type: "object",
+                        properties: {
+                            sourceTypicalTasks: {
+                                type: "array",
+                                items: { type: "object" },
+                            },
+                        },
+                    },
+                },
+            },
+            uiSchema: {
+                streamDataSources: {
+                    sourceTypicalTasks: {
+                        "ui:options": { archComponent: "typicalWork" },
+                    },
+                },
+            },
+        });
+        const rule = patched.rules.find((r) => r.id === "unified-source-typical-works");
+        expect(rule).toBeDefined();
+        expect((rule?.payload).worksCatalog).toBe(true);
+    });
 });

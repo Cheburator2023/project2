@@ -456,6 +456,19 @@ export type WorkCoefficientRowInput = {
 	valueLabel: string | null;
 };
 
+export type WorkCoefficientCatalogParam = WorkTriggerStatusCatalogParam & {
+	sourceKeys?: string[];
+};
+
+export function resolveWorkCoefficientCatalogParam(
+	catalog: WorkCoefficientCatalogParam[],
+	paramCode: string,
+): WorkCoefficientCatalogParam | undefined {
+	const direct = catalog.find((item) => item.code === paramCode);
+	if (direct) return direct;
+	return catalog.find((item) => item.sourceKeys?.includes(paramCode));
+}
+
 /**
  * F-03 §578: значение коэффициента трудоёмкости доступно, только если оно
  * присутствует в активном глобальном справочнике значений параметра. Если
@@ -467,11 +480,11 @@ export type WorkCoefficientRowInput = {
  */
 export function isWorkCoefficientValueAvailable(
 	row: WorkCoefficientRowInput,
-	catalog: WorkTriggerStatusCatalogParam[],
+	catalog: WorkCoefficientCatalogParam[],
 	atDate?: string,
 ): boolean {
 	if (row.valueCode == null && row.valueLabel == null) return true;
-	const param = catalog.find((item) => item.code === row.paramCode);
+	const param = resolveWorkCoefficientCatalogParam(catalog, row.paramCode);
 	if (!param) return false;
 	return param.values.some(
 		(value) =>

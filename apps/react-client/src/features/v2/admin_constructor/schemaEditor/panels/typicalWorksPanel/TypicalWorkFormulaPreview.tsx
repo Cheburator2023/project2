@@ -7,6 +7,7 @@ import type {
 	V2TypicalWorkRuleDto,
 	V2WorkTriggerStatus,
 } from "@smart-anketa/api-contract";
+import { parseParamNameSourceKeys } from "@smart-anketa/api-contract";
 import { usePreviewV2TypicalWork } from "@react-client/common/api/queries/v2-works";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { Card } from "@react-client/common/muiCustom/Card";
@@ -59,17 +60,20 @@ export function buildDefaultPreviewAnswers(
 	}
 
 	for (const rule of rules) {
-		if (answers[rule.paramCode]) continue;
-		if (rule.valueCode) {
-			answers[rule.paramCode] = rule.valueCode;
-			continue;
+		const value =
+			rule.valueCode ??
+			rule.valueLabel ??
+			rule.values?.[0]?.code ??
+			rule.values?.[0]?.label ??
+			"";
+		if (!value) continue;
+
+		const keys = new Set<string>([rule.paramCode]);
+		for (const key of parseParamNameSourceKeys(rule.paramName).sourceKeys) {
+			keys.add(key);
 		}
-		if (rule.valueLabel) {
-			answers[rule.paramCode] = rule.valueLabel;
-			continue;
-		}
-		if (rule.values?.length) {
-			answers[rule.paramCode] = rule.values[0]?.code ?? rule.values[0]?.label ?? "";
+		for (const key of keys) {
+			if (!answers[key]) answers[key] = value;
 		}
 	}
 

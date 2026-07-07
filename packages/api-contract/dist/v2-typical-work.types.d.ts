@@ -230,6 +230,8 @@ export type CreateV2TypicalWorkRequestDto = {
     name: string;
     archComponentType: string;
     workType?: string | null;
+    /** Схема-владелец работы (обязательна при создании из конструктора). */
+    templateId?: string | null;
     /** v4: стрим первого назначения (обязателен при создании из области). */
     streamExecutor?: string;
     /** v4: стартовая норма первого назначения, чел.-дн. */

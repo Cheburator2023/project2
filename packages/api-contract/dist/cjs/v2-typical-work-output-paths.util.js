@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.collectGeneratedTypicalWorkArrayPaths = collectGeneratedTypicalWorkArrayPaths;
+exports.jsonSchemaHasResolvablePath = jsonSchemaHasResolvablePath;
 const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
 function readRecord(value) {
     return value && typeof value === "object" && !Array.isArray(value)
@@ -23,4 +24,22 @@ function collectGeneratedTypicalWorkArrayPaths(uiSchema, prefix = "") {
         paths.push(...collectGeneratedTypicalWorkArrayPaths(branch[key], prefix ? `${prefix}.${key}` : key));
     }
     return [...new Set(paths)];
+}
+/** Есть ли в jsonSchema узел по dot-пути (только `properties`, без $ref). */
+function jsonSchemaHasResolvablePath(jsonSchema, dotPath) {
+    const root = readRecord(jsonSchema);
+    if (!root)
+        return false;
+    const segments = dotPath.split(".").filter(Boolean);
+    let node = root;
+    for (const segment of segments) {
+        const obj = readRecord(node);
+        if (!obj)
+            return false;
+        const properties = readRecord(obj.properties);
+        if (!properties || !(segment in properties))
+            return false;
+        node = properties[segment];
+    }
+    return true;
 }

@@ -25,6 +25,10 @@ export class V2TypicalWorkEntity {
 	@Column({ name: "catalog_key", type: "varchar", length: 160, nullable: true })
 	catalogKey: string | null;
 
+	@Index()
+	@Column({ name: "template_id", type: "uuid", nullable: true })
+	templateId: string | null;
+
 	@CreateDateColumn({ name: "created_at", type: "timestamptz" })
 	createdAt: Date;
 

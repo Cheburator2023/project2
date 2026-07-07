@@ -281,6 +281,25 @@ function normalizeParamTitle(title: string): string {
 	return title.trim().toLocaleLowerCase("ru");
 }
 
+/** Единый параметр «Тип работ» встречается в нескольких arch-блоках с разными ключами. */
+const CROSS_SCHEMA_PARAM_TITLES = new Set(["тип работ"]);
+
+function dedupeGroupKey(param: BuiltSchemaParam): string {
+	const title = normalizeParamTitle(param.name);
+	if (CROSS_SCHEMA_PARAM_TITLES.has(title)) {
+		return `title::${title}`;
+	}
+	return `${title}::${valueSignature(param)}`;
+}
+
+function preferPrimarySchemaParam(a: BuiltSchemaParam, b: BuiltSchemaParam): number {
+	if (a.code === "workType") return -1;
+	if (b.code === "workType") return 1;
+	if (a.code === "type" && b.code !== "workType") return -1;
+	if (b.code === "type" && a.code !== "workType") return 1;
+	return a.pointer.localeCompare(b.pointer, "ru");
+}
+
 function valueSignature(
 	param: Pick<SchemaBuiltWorkParameterDto, "numeric" | "textual" | "values">,
 ): string {
@@ -315,7 +334,7 @@ function dedupeSchemaWorkParameters(
 	const groups = new Map<string, BuiltSchemaParam[]>();
 
 	for (const param of params) {
-		const groupKey = `${normalizeParamTitle(param.name)}::${valueSignature(param)}`;
+		const groupKey = dedupeGroupKey(param);
 		const list = groups.get(groupKey) ?? [];
 		list.push(param);
 		groups.set(groupKey, list);
@@ -324,9 +343,7 @@ function dedupeSchemaWorkParameters(
 	const deduped: SchemaBuiltWorkParameterDto[] = [];
 
 	for (const group of groups.values()) {
-		const sorted = [...group].sort((a, b) =>
-			a.pointer.localeCompare(b.pointer, "ru"),
-		);
+		const sorted = [...group].sort(preferPrimarySchemaParam);
 		const primary = sorted[0]!;
 		const allCodes = sorted.map((item) => item.code);
 		const alternateKeys = allCodes.filter((code) => code !== primary.code);
@@ -430,6 +447,39 @@ export function buildSchemaWorkParameters({
 	}
 
 	return dedupeSchemaWorkParameters(params);
+}
+
+/** Находит параметр схемы по коду, алиасу (sourceKeys) или имени. */
+export function findSchemaWorkParameter(
+	paramOptions: V2TypicalWorkParameterDto[],
+	paramCode: string,
+	paramName?: string | null,
+): V2TypicalWorkParameterDto | undefined {
+	const direct = paramOptions.find((param) => param.code === paramCode);
+	if (direct) return direct;
+
+	const byAlias = paramOptions.find((param) =>
+		param.sourceKeys?.includes(paramCode),
+	);
+	if (byAlias) return byAlias;
+
+	if (paramName?.trim()) {
+		const name = paramName.trim();
+		return paramOptions.find((param) => param.name === name);
+	}
+
+	return undefined;
+}
+
+export function isSchemaLaborParamUsed(
+	laborParams: Array<{ paramCode: string }>,
+	param: Pick<V2TypicalWorkParameterDto, "code" | "sourceKeys">,
+): boolean {
+	return laborParams.some(
+		(group) =>
+			group.paramCode === param.code ||
+			param.sourceKeys?.includes(group.paramCode),
+	);
 }
 
 export function schemaParamRuleName(param: V2TypicalWorkParameterDto): string {

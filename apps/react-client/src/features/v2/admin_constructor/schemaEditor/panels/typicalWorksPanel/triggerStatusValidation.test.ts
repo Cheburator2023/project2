@@ -69,7 +69,7 @@ describe("trigger status validation for schema-picked params", () => {
 		expect(catalog[0]?.values.map((v) => v.label)).toEqual(["Да", "Нет"]);
 	});
 
-	it("marks boolean schema trigger as appears when value is valid", () => {
+	it("marks boolean schema trigger as configured when preview source is missing", () => {
 		expect(
 			analyzeTriggerRules(
 				[
@@ -83,7 +83,25 @@ describe("trigger status validation for schema-picked params", () => {
 				[schemaParam],
 				methodologyCatalog,
 			),
-		).toEqual({ status: "appears", issues: [] });
+		).toEqual({ status: "hidden", issues: [], previewState: "none" });
+	});
+
+	it("marks boolean schema trigger as appears when preview source matches", () => {
+		expect(
+			analyzeTriggerRules(
+				[
+					{
+						paramCode: "field_8pFvwc-v",
+						paramName: "Наличие реплики в DAPP",
+						valueCode: "false",
+						valueLabel: "Нет",
+					},
+				],
+				[schemaParam],
+				methodologyCatalog,
+				{ "field_8pFvwc-v": "false" },
+			),
+		).toEqual({ status: "appears", issues: [], previewState: "matched" });
 	});
 
 	it("reports explicit issue when backend-style methodology catalog rejects schema param", () => {
@@ -144,7 +162,23 @@ describe("trigger status validation for schema-picked params", () => {
 				[sourceTypeParam],
 				methodologyCatalog,
 			),
-		).toEqual({ status: "appears", issues: [] });
+		).toEqual({ status: "hidden", issues: [], previewState: "none" });
+
+		expect(
+			analyzeTriggerRules(
+				[
+					{
+						paramCode: "type",
+						paramName: "Тип системы-источника",
+						valueCode: "external",
+						valueLabel: "Внешний",
+					},
+				],
+				[sourceTypeParam],
+				methodologyCatalog,
+				{ type: "Внешний" },
+			),
+		).toEqual({ status: "appears", issues: [], previewState: "matched" });
 
 		expect(
 			analyzeTriggerRules(
@@ -159,6 +193,6 @@ describe("trigger status validation for schema-picked params", () => {
 				[sourceTypeParam],
 				methodologyCatalog,
 			),
-		).toEqual({ status: "appears", issues: [] });
+		).toEqual({ status: "hidden", issues: [], previewState: "none" });
 	});
 });

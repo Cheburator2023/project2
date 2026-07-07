@@ -8,6 +8,7 @@ import {
 } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { V2CalculationResultDto } from "@smart-anketa/api-contract";
+import { patchV2TypicalWorksLogicRules } from "@smart-anketa/api-contract";
 import { CalculateV2TemplateDto } from "../dto";
 import { V2CalculationService } from "../services/v2-calculation.service";
 
@@ -30,9 +31,16 @@ export class V2CalculationController {
 			templateId,
 			versionId,
 		);
-		const logic = body.rulesOverride ?? version.logic;
+		const logic = patchV2TypicalWorksLogicRules(
+			body.rulesOverride ?? version.logic,
+			{
+				jsonSchema: body.jsonSchema ?? version.jsonSchema,
+				uiSchema: body.uiSchema ?? version.uiSchema,
+			},
+		);
 		return this.calculationService.evaluate(logic, body.formData ?? {}, {
 			templateVersionId: version.id,
+			templateId: version.templateId,
 		});
 	}
 }

@@ -308,4 +308,7 @@ export type V2CalculateRequestDto = {
     formData: Record<string, unknown>;
     /** Опционально: переопределить правила для предпросмотра расчёта в админке. */
     rulesOverride?: V2LogicGraphDto;
+    /** Опционально: схема для авто-подключения каталога типовых работ (предпросмотр в редакторе). */
+    jsonSchema?: Record<string, unknown>;
+    uiSchema?: Record<string, unknown>;
 };

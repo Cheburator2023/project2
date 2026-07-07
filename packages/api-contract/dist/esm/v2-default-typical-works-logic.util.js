@@ -1,3 +1,4 @@
+import { collectGeneratedTypicalWorkArrayPaths, jsonSchemaHasResolvablePath, } from "./v2-typical-work-output-paths.util";
 /** Канонические пути v5: источники в detailInfo, вывод — в stream-блоки. */
 export const V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
 export const V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = "streamDataSources.sourceTypicalTasks";
@@ -75,10 +76,20 @@ function patchTypicalWorksPathsDeep(value) {
     }
     return value;
 }
+/** Схема содержит блок типовых работ источников и массив систем-источников. */
+export function schemaSupportsSourceTypicalWorksCatalog(jsonSchema, uiSchema) {
+    const hasSourceTypicalOutput = jsonSchemaHasResolvablePath(jsonSchema, V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH) ||
+        collectGeneratedTypicalWorkArrayPaths(uiSchema).includes(V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH);
+    if (!hasSourceTypicalOutput)
+        return false;
+    return (jsonSchemaHasResolvablePath(jsonSchema, V2_SOURCE_SYSTEMS_ARRAY_PATH) ||
+        jsonSchemaHasResolvablePath(jsonSchema, "streamDataSources.sourceSystems"));
+}
 /** Заменяет устаревшие static-tasks правила на каталог работ с путями схемы v5. */
-export function patchV2TypicalWorksLogicRules(logic) {
+export function patchV2TypicalWorksLogicRules(logic, options) {
     const rules = logic?.rules ?? [];
-    const hasSourceRule = rules.some((rule) => rule.id === "unified-source-typical-works");
+    const hasSourceRule = rules.some((rule) => rule.id === "unified-source-typical-works") ||
+        schemaSupportsSourceTypicalWorksCatalog(options?.jsonSchema, options?.uiSchema);
     const hasControlRule = rules.some((rule) => rule.id === "unified-control-typical-works");
     const patched = [];
     if (hasSourceRule)

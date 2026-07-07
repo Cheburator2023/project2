@@ -375,6 +375,90 @@ describe("buildSchemaWorkParameters", () => {
 		expect(description?.values).toEqual([]);
 		expect(isSchemaLaborParamCandidate(description!)).toBe(true);
 	});
+
+	it("merges duplicate «Тип работ» fields across arch blocks into one param", () => {
+		const hints: FieldPathHint[] = [
+			{
+				pointer: "/detailInfo/model/workType",
+				key: "workType",
+				title: "Тип работ",
+				varPath: "detailInfo.model.workType",
+				dictionaryCode: null,
+				codesPreview: ["Разработка", "Доработка", "Настройка"],
+			},
+			{
+				pointer: "/detailInfo/dataMart/items/workType",
+				key: "field_yJ5IGkCR",
+				title: "Тип работ",
+				varPath: "detailInfo.dataMart[].workType",
+				dictionaryCode: null,
+				codesPreview: ["Разработка", "Доработка"],
+			},
+			{
+				pointer: "/generalInfo/modelService/workType",
+				key: "workType",
+				title: "Тип работ",
+				varPath: "generalInfo.modelService.workType",
+				dictionaryCode: null,
+				codesPreview: ["Разработка", "Доработка", "Настройка", "Сопровождение"],
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: hints,
+			uiSchema: {},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					detailInfo: {
+						type: "object",
+						properties: {
+							model: {
+								type: "object",
+								properties: {
+									workType: { type: "string", title: "Тип работ" },
+								},
+							},
+							dataMart: {
+								type: "array",
+								items: {
+									type: "object",
+									properties: {
+										workType: { type: "string", title: "Тип работ" },
+									},
+								},
+							},
+						},
+					},
+					generalInfo: {
+						type: "object",
+						properties: {
+							modelService: {
+								type: "object",
+								properties: {
+									workType: { type: "string", title: "Тип работ" },
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {},
+		});
+
+		const workTypes = params.filter((p) => p.name === "Тип работ");
+		expect(workTypes).toHaveLength(1);
+		expect(workTypes[0]?.code).toBe("workType");
+		expect(workTypes[0]?.sourceKeys).toContain("field_yJ5IGkCR");
+		expect(workTypes[0]?.values.map((v) => v.label)).toEqual(
+			expect.arrayContaining([
+				"Разработка",
+				"Доработка",
+				"Настройка",
+				"Сопровождение",
+			]),
+		);
+	});
 });
 
 describe("schemaLaborParamPickerCaption", () => {

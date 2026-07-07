@@ -303,6 +303,12 @@ export function computeWorkTriggerStatus(rules, catalog, atDate, draftSource) {
 export function isWorkTriggerGroupInvalid(paramCode, rules, catalog, atDate) {
     return rules.some((rule) => isRuleInputInvalid({ ...rule, paramCode }, catalog, atDate));
 }
+export function resolveWorkCoefficientCatalogParam(catalog, paramCode) {
+    const direct = catalog.find((item) => item.code === paramCode);
+    if (direct)
+        return direct;
+    return catalog.find((item) => item.sourceKeys?.includes(paramCode));
+}
 /**
  * F-03 §578: значение коэффициента трудоёмкости доступно, только если оно
  * присутствует в активном глобальном справочнике значений параметра. Если
@@ -315,7 +321,7 @@ export function isWorkTriggerGroupInvalid(paramCode, rules, catalog, atDate) {
 export function isWorkCoefficientValueAvailable(row, catalog, atDate) {
     if (row.valueCode == null && row.valueLabel == null)
         return true;
-    const param = catalog.find((item) => item.code === row.paramCode);
+    const param = resolveWorkCoefficientCatalogParam(catalog, row.paramCode);
     if (!param)
         return false;
     return param.values.some((value) => (value.code === row.valueCode || value.label === row.valueLabel) &&

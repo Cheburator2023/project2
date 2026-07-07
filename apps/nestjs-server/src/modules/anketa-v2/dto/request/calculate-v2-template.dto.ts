@@ -6,7 +6,7 @@ import type {
 } from "@smart-anketa/api-contract";
 
 export class CalculateV2TemplateDto implements V2CalculateRequestDto {
-	@ApiProperty({ type: "object", additionalProperties: true })
+	@ApiProperty({ additionalProperties: true })
 	@IsObject()
 	formData: Record<string, unknown>;
 
@@ -14,4 +14,14 @@ export class CalculateV2TemplateDto implements V2CalculateRequestDto {
 	@IsOptional()
 	@IsObject()
 	rulesOverride?: V2LogicGraphDto;
+
+	@ApiProperty({ required: false, additionalProperties: true })
+	@IsOptional()
+	@IsObject()
+	jsonSchema?: Record<string, unknown>;
+
+	@ApiProperty({ required: false, additionalProperties: true })
+	@IsOptional()
+	@IsObject()
+	uiSchema?: Record<string, unknown>;
 }

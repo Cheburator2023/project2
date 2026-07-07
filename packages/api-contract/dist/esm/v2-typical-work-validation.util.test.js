@@ -217,6 +217,22 @@ describe("isWorkCoefficientValueAvailable (F-03 §578)", () => {
             },
         ], "2025-06-01")).toBe(false);
     });
+    it("resolves labor coefficients saved under schema alias codes", () => {
+        expect(isWorkCoefficientValueAvailable({
+            paramCode: "field_yJ5IGkCR",
+            valueCode: "Разработка",
+            valueLabel: "Разработка",
+        }, [
+            {
+                code: "workType",
+                sourceKeys: ["field_yJ5IGkCR"],
+                values: [
+                    { code: "Разработка", label: "Разработка" },
+                    { code: "Доработка", label: "Доработка" },
+                ],
+            },
+        ])).toBe(true);
+    });
 });
 describe("collectTypicalWorkPatchValidationErrors", () => {
     it("validates formulaTerms and laborParams any-of coefficients", () => {

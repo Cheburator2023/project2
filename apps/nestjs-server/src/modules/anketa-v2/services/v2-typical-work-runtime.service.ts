@@ -45,6 +45,7 @@ export type BuildCatalogTasksParams = {
 	streamExecutor: string;
 	source: Record<string, unknown>;
 	templateVersionId: string | null;
+	templateId?: string | null;
 	atDate: string;
 	hiddenParamCodes?: ReadonlySet<string>;
 };
@@ -206,7 +207,12 @@ export class V2TypicalWorkRuntimeService {
 		if (assignedWorkIds.size === 0) return [];
 
 		const works = await this.workRepository.find({
-			where: { archComponentType },
+			where: {
+				archComponentType,
+				...(params.templateId
+					? { templateId: params.templateId }
+					: {}),
+			},
 		});
 		const eligibleWorks = works.filter((w) => assignedWorkIds.has(w.id));
 		if (!eligibleWorks.length) return [];

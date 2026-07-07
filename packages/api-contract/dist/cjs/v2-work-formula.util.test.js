@@ -14,6 +14,19 @@ const v2_typical_work_types_1 = require("./v2-typical-work.types");
         (0, vitest_1.expect)(parsed.error).toBeNull();
         (0, vitest_1.expect)(parsed.tokens).toHaveLength(3);
     });
+    (0, vitest_1.it)("parses norm word and coeff with spaces in param name", () => {
+        const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)("норма × коэф(Сложность реализации)");
+        (0, vitest_1.expect)(parsed.error).toBeNull();
+        (0, vitest_1.expect)(parsed.tokens).toEqual([
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_coeff",
+                paramCode: "Сложность реализации",
+                paramName: "Сложность реализации",
+            },
+        ]);
+    });
     (0, vitest_1.it)("formats general summary with Кэф-П indices", () => {
         const tokens = (0, v2_work_formula_util_1.parseWorkFormulaText)("N * P[a]").tokens;
         (0, vitest_1.expect)((0, v2_work_formula_util_1.formatWorkFormulaGeneralSummary)(tokens, ["a"])).toBe("N * Кэф-П1");

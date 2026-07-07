@@ -1,4 +1,13 @@
 import type { V2LogicGraphDto, V2LogicRuleDto } from "./v2-template.types";
+import {
+	collectGeneratedTypicalWorkArrayPaths,
+	jsonSchemaHasResolvablePath,
+} from "./v2-typical-work-output-paths.util";
+
+export type PatchV2TypicalWorksLogicOptions = {
+	jsonSchema?: unknown;
+	uiSchema?: unknown;
+};
 
 /** Канонические пути v5: источники в detailInfo, вывод — в stream-блоки. */
 export const V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
@@ -92,12 +101,39 @@ function patchTypicalWorksPathsDeep(value: unknown): unknown {
 	return value;
 }
 
+/** Схема содержит блок типовых работ источников и массив систем-источников. */
+export function schemaSupportsSourceTypicalWorksCatalog(
+	jsonSchema?: unknown,
+	uiSchema?: unknown,
+): boolean {
+	const hasSourceTypicalOutput =
+		jsonSchemaHasResolvablePath(
+			jsonSchema,
+			V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+		) ||
+		collectGeneratedTypicalWorkArrayPaths(uiSchema).includes(
+			V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+		);
+	if (!hasSourceTypicalOutput) return false;
+
+	return (
+		jsonSchemaHasResolvablePath(jsonSchema, V2_SOURCE_SYSTEMS_ARRAY_PATH) ||
+		jsonSchemaHasResolvablePath(jsonSchema, "streamDataSources.sourceSystems")
+	);
+}
+
 /** Заменяет устаревшие static-tasks правила на каталог работ с путями схемы v5. */
 export function patchV2TypicalWorksLogicRules(
 	logic: V2LogicGraphDto,
+	options?: PatchV2TypicalWorksLogicOptions,
 ): V2LogicGraphDto {
 	const rules = logic?.rules ?? [];
-	const hasSourceRule = rules.some((rule) => rule.id === "unified-source-typical-works");
+	const hasSourceRule =
+		rules.some((rule) => rule.id === "unified-source-typical-works") ||
+		schemaSupportsSourceTypicalWorksCatalog(
+			options?.jsonSchema,
+			options?.uiSchema,
+		);
 	const hasControlRule = rules.some(
 		(rule) => rule.id === "unified-control-typical-works",
 	);

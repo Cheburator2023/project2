@@ -167,9 +167,8 @@ export function parseWorkFormulaText(text: string): {
 		i++;
 		skipWs();
 		const idStart = i;
-		while (i < input.length && /[A-Za-zА-Яа-я0-9_\-]/.test(input[i] ?? "")) i++;
+		while (i < input.length && input[i] !== ")") i++;
 		const id = input.slice(idStart, i).trim();
-		skipWs();
 		if (input[i] !== ")") {
 			i = start;
 			return null;
@@ -199,6 +198,16 @@ export function parseWorkFormulaText(text: string): {
 		) {
 			tokens.push({ kind: "norm" });
 			i += input.slice(i, i + 8).toLowerCase() === "норма_n" ? 8 : 7;
+			continue;
+		}
+
+		const normWord = input.slice(i, i + 5).toLowerCase();
+		if (
+			(normWord === "норма" || normWord === "norma") &&
+			!/[A-Za-zА-Яа-я0-9_]/.test(input[i + 5] ?? "")
+		) {
+			tokens.push({ kind: "norm" });
+			i += 5;
 			continue;
 		}
 

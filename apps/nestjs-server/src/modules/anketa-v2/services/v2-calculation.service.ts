@@ -335,7 +335,7 @@ export class V2CalculationService {
 	evaluate(
 		logic: V2LogicGraphDto,
 		formData: Record<string, unknown>,
-		options?: { templateVersionId?: string | null },
+		options?: { templateVersionId?: string | null; templateId?: string | null },
 	): Promise<V2CalculationResultDto> {
 		return this.evaluateAsync(logic, formData, options);
 	}
@@ -343,7 +343,7 @@ export class V2CalculationService {
 	private async evaluateAsync(
 		logic: V2LogicGraphDto,
 		formData: Record<string, unknown>,
-		options?: { templateVersionId?: string | null },
+		options?: { templateVersionId?: string | null; templateId?: string | null },
 	): Promise<V2CalculationResultDto> {
 		const rules = patchV2TypicalWorksLogicRules(logic)?.rules ?? [];
 		const paramGraph = parseParamDependencyGraphFromLogic(rules);
@@ -361,6 +361,7 @@ export class V2CalculationService {
 				rule,
 				liveData,
 				options?.templateVersionId ?? null,
+				options?.templateId ?? null,
 				paramGraph,
 				paramDefs,
 			);
@@ -454,6 +455,7 @@ export class V2CalculationService {
 		rule: V2LogicRuleDto,
 		data: Record<string, unknown>,
 		templateVersionId: string | null,
+		templateId: string | null,
 		paramGraph: V2ParamDependencyGraph,
 		paramDefs: V2ParamDefLike[],
 	): Promise<Record<string, unknown>> {
@@ -554,6 +556,7 @@ export class V2CalculationService {
 											streamExecutor,
 											source: sourceForMatch,
 											templateVersionId,
+											templateId,
 											atDate,
 											hiddenParamCodes,
 										}),

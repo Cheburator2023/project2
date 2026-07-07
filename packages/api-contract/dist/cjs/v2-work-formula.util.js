@@ -146,10 +146,9 @@ function parseWorkFormulaText(text) {
         i++;
         skipWs();
         const idStart = i;
-        while (i < input.length && /[A-Za-zА-Яа-я0-9_\-]/.test(input[i] ?? ""))
+        while (i < input.length && input[i] !== ")")
             i++;
         const id = input.slice(idStart, i).trim();
-        skipWs();
         if (input[i] !== ")") {
             i = start;
             return null;
@@ -176,6 +175,13 @@ function parseWorkFormulaText(text) {
             input.slice(i, i + 7).toLowerCase() === "norma_n") {
             tokens.push({ kind: "norm" });
             i += input.slice(i, i + 8).toLowerCase() === "норма_n" ? 8 : 7;
+            continue;
+        }
+        const normWord = input.slice(i, i + 5).toLowerCase();
+        if ((normWord === "норма" || normWord === "norma") &&
+            !/[A-Za-zА-Яа-я0-9_]/.test(input[i + 5] ?? "")) {
+            tokens.push({ kind: "norm" });
+            i += 5;
             continue;
         }
         const fnCall = readFunctionCall("коэф") ??
@@ -258,6 +264,37 @@ function parseWorkFormulaText(text) {
     }
     return { tokens, error: null };
 }
+const WORK_FORMULA_OPERATORS_HINT = "+, −, ×, ÷";
+function describeWorkFormulaTokenLabel(token) {
+    switch (token.kind) {
+        case "norm":
+            return "N";
+        case "param_coeff":
+            return `коэф(${token.paramName ?? token.paramCode})`;
+        case "param_anyof":
+            return `anyof(${token.paramName ?? token.paramCode})`;
+        case "work_ref":
+            return token.workName
+                ? `работа(${token.workName})`
+                : `работа(${token.assignmentId})`;
+        case "number":
+            return String(token.value);
+        case "operator":
+            return OP_SYMBOL[token.op] ?? token.op;
+        case "paren_open":
+            return "(";
+        case "paren_close":
+            return ")";
+        default:
+            return "?";
+    }
+}
+function formatWorkFormulaTokenPosition(tokens, idx) {
+    const token = tokens[idx];
+    if (!token)
+        return `позиция ${idx + 1} из ${tokens.length}`;
+    return `токен ${idx + 1} из ${tokens.length} («${describeWorkFormulaTokenLabel(token)}»)`;
+}
 function validateWorkFormulaTokens(tokens, options) {
     const opts = options instanceof Set ? { allowedParamCodes: options } : (options ?? {});
     const { allowedParamCodes, allowInvalidParamRefs = false, strictTransitiveExclusive = true, } = opts;
@@ -287,8 +324,10 @@ function validateWorkFormulaTokens(tokens, options) {
         if (!token)
             continue;
         if (token.kind === "paren_open") {
-            if (!expectOperand)
-                return `Ожидался оператор перед «(», позиция ${idx + 1}`;
+            if (!expectOperand) {
+                const prev = tokens[idx - 1];
+                return `Между «${prev ? describeWorkFormulaTokenLabel(prev) : "операндом"}» и «(» (${formatWorkFormulaTokenPosition(tokens, idx)}) нужен оператор (${WORK_FORMULA_OPERATORS_HINT})`;
+            }
             balance++;
             expectOperand = true;
             continue;
@@ -303,13 +342,15 @@ function validateWorkFormulaTokens(tokens, options) {
             continue;
         }
         if (token.kind === "operator") {
-            if (expectOperand)
-                return `Лишний оператор на позиции ${idx + 1}`;
+            if (expectOperand) {
+                return `Лишний оператор «${OP_SYMBOL[token.op] ?? token.op}» (${formatWorkFormulaTokenPosition(tokens, idx)}): перед ним ожидался операнд (N, число, коэф/anyof параметра)`;
+            }
             expectOperand = true;
             continue;
         }
         if (!expectOperand) {
-            return `Ожидался оператор на позиции ${idx + 1}`;
+            const prev = tokens[idx - 1];
+            return `Между «${prev ? describeWorkFormulaTokenLabel(prev) : "операндом"}» и «${describeWorkFormulaTokenLabel(token)}» (${formatWorkFormulaTokenPosition(tokens, idx)}) нужен оператор (${WORK_FORMULA_OPERATORS_HINT}) — два операнда подряд без знака`;
         }
         if (token.kind === "number" && token.value < 0) {
             return "Число должно быть неотрицательным — используйте оператор «−» для вычитания";

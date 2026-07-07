@@ -3,7 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = exports.V2_SOURCE_SYSTEMS_ARRAY_PATH = void 0;
 exports.buildSourceTypicalWorksCatalogRule = buildSourceTypicalWorksCatalogRule;
 exports.buildControlTypicalWorksCatalogRule = buildControlTypicalWorksCatalogRule;
+exports.schemaSupportsSourceTypicalWorksCatalog = schemaSupportsSourceTypicalWorksCatalog;
 exports.patchV2TypicalWorksLogicRules = patchV2TypicalWorksLogicRules;
+const v2_typical_work_output_paths_util_1 = require("./v2-typical-work-output-paths.util");
 /** Канонические пути v5: источники в detailInfo, вывод — в stream-блоки. */
 exports.V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
 exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = "streamDataSources.sourceTypicalTasks";
@@ -81,10 +83,20 @@ function patchTypicalWorksPathsDeep(value) {
     }
     return value;
 }
+/** Схема содержит блок типовых работ источников и массив систем-источников. */
+function schemaSupportsSourceTypicalWorksCatalog(jsonSchema, uiSchema) {
+    const hasSourceTypicalOutput = (0, v2_typical_work_output_paths_util_1.jsonSchemaHasResolvablePath)(jsonSchema, exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH) ||
+        (0, v2_typical_work_output_paths_util_1.collectGeneratedTypicalWorkArrayPaths)(uiSchema).includes(exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH);
+    if (!hasSourceTypicalOutput)
+        return false;
+    return ((0, v2_typical_work_output_paths_util_1.jsonSchemaHasResolvablePath)(jsonSchema, exports.V2_SOURCE_SYSTEMS_ARRAY_PATH) ||
+        (0, v2_typical_work_output_paths_util_1.jsonSchemaHasResolvablePath)(jsonSchema, "streamDataSources.sourceSystems"));
+}
 /** Заменяет устаревшие static-tasks правила на каталог работ с путями схемы v5. */
-function patchV2TypicalWorksLogicRules(logic) {
+function patchV2TypicalWorksLogicRules(logic, options) {
     const rules = logic?.rules ?? [];
-    const hasSourceRule = rules.some((rule) => rule.id === "unified-source-typical-works");
+    const hasSourceRule = rules.some((rule) => rule.id === "unified-source-typical-works") ||
+        schemaSupportsSourceTypicalWorksCatalog(options?.jsonSchema, options?.uiSchema);
     const hasControlRule = rules.some((rule) => rule.id === "unified-control-typical-works");
     const patched = [];
     if (hasSourceRule)

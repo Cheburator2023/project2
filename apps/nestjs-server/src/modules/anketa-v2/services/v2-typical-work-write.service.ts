@@ -150,6 +150,7 @@ export class V2TypicalWorkWriteService {
 				archComponentType,
 				workType: dto.workType?.trim() || null,
 				catalogKey: null,
+				templateId: dto.templateId?.trim() || null,
 			}),
 		);
 

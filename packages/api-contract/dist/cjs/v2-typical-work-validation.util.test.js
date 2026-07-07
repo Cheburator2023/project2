@@ -219,6 +219,22 @@ const v2_work_terms_formula_util_1 = require("./v2-work-terms-formula.util");
             },
         ], "2025-06-01")).toBe(false);
     });
+    (0, vitest_1.it)("resolves labor coefficients saved under schema alias codes", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.isWorkCoefficientValueAvailable)({
+            paramCode: "field_yJ5IGkCR",
+            valueCode: "Разработка",
+            valueLabel: "Разработка",
+        }, [
+            {
+                code: "workType",
+                sourceKeys: ["field_yJ5IGkCR"],
+                values: [
+                    { code: "Разработка", label: "Разработка" },
+                    { code: "Доработка", label: "Доработка" },
+                ],
+            },
+        ])).toBe(true);
+    });
 });
 (0, vitest_1.describe)("collectTypicalWorkPatchValidationErrors", () => {
     (0, vitest_1.it)("validates formulaTerms and laborParams any-of coefficients", () => {

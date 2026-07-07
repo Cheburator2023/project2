@@ -54,7 +54,12 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 	const [jsonSchema, setJsonSchema] = useState<RJSFSchema>(EMPTY_JSON_SCHEMA);
 	const [uiSchema, setUiSchema] = useState<UiSchema>({});
 	const [logic, setLogic] = useState(() =>
-		coerceLogicGraph(patchV2TypicalWorksLogicRules(coerceLogicGraph(undefined))),
+		coerceLogicGraph(
+			patchV2TypicalWorksLogicRules(coerceLogicGraph(undefined), {
+				jsonSchema: source?.initialJsonSchema,
+				uiSchema: source?.initialUiSchema,
+			}),
+		),
 	);
 	const [formData, setFormData] = useState<Record<string, unknown>>(() =>
 		ensureAnketaFormDataWithWorkflow(source?.initialFormData ?? {}),
@@ -78,6 +83,10 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 				coerceLogicGraph(
 					patchV2TypicalWorksLogicRules(
 						coerceLogicGraph(source.initialLogic),
+						{
+							jsonSchema: source.initialJsonSchema,
+							uiSchema: source.initialUiSchema,
+						},
 					),
 				),
 			);
@@ -90,7 +99,10 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		setUiSchema(coerceUiSchema(version.uiSchema, version.jsonSchema));
 		setLogic(
 			coerceLogicGraph(
-				patchV2TypicalWorksLogicRules(coerceLogicGraph(version.logic)),
+				patchV2TypicalWorksLogicRules(coerceLogicGraph(version.logic), {
+					jsonSchema: version.jsonSchema,
+					uiSchema: version.uiSchema,
+				}),
 			),
 		);
 		if (source?.initialFormData) {
@@ -121,6 +133,8 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		versionId: version?.id ?? explicitVersionId,
 		formData,
 		rulesOverride: logic,
+		jsonSchema: jsonSchema as Record<string, unknown>,
+		uiSchema: uiSchema as Record<string, unknown>,
 		enabled: Boolean(templateId && (version?.id ?? explicitVersionId)),
 	});
 

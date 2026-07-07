@@ -45,8 +45,13 @@ export class V2TypicalWorkController {
 
 	@Get("catalog")
 	@ApiOperation({ summary: "Каталог типовых работ (реестровые поля)" })
-	listCatalog(): Promise<V2TypicalWorkCatalogListResponseDto> {
-		return this.typicalWorkService.listCatalog();
+	@ApiQuery({ name: "templateId", required: false })
+	listCatalog(
+		@Query("templateId") templateId?: string,
+	): Promise<V2TypicalWorkCatalogListResponseDto> {
+		return this.typicalWorkService.listCatalog(
+			templateId ? { templateId } : undefined,
+		);
 	}
 
 	@Get("assignments/list")
@@ -73,13 +78,16 @@ export class V2TypicalWorkController {
 	@ApiOperation({ summary: "Список типовых работ (F-03)" })
 	@ApiQuery({ name: "archComponentType", required: false })
 	@ApiQuery({ name: "streamExecutor", required: false })
+	@ApiQuery({ name: "templateId", required: false })
 	async list(
 		@Query("archComponentType") archComponentType?: string,
 		@Query("streamExecutor") streamExecutor?: string,
+		@Query("templateId") templateId?: string,
 	): Promise<V2TypicalWorkListResponseDto> {
 		return this.typicalWorkService.listWorks({
 			archComponentType,
 			streamExecutor,
+			templateId,
 		});
 	}
 

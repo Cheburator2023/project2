@@ -309,11 +309,29 @@ export class V2TypicalWorkService {
 		private readonly questionnaireRepository: Repository<V2QuestionnaireEntity>,
 		@InjectRepository(V2TypicalWorkVersionConfigEntity)
 		private readonly versionConfigRepository: Repository<V2TypicalWorkVersionConfigEntity>,
+		@InjectRepository(V2TemplateVersionEntity)
+		private readonly templateVersionRepository: Repository<V2TemplateVersionEntity>,
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
 	) {}
 
-	async listCatalog(): Promise<V2TypicalWorkCatalogListResponseDto> {
+	private async resolveTemplateIdFilter(
+		query: { templateId?: string; templateVersionId?: string },
+	): Promise<string | undefined> {
+		if (query.templateId?.trim()) return query.templateId.trim();
+		if (!query.templateVersionId?.trim()) return undefined;
+		const version = await this.templateVersionRepository.findOne({
+			where: { id: query.templateVersionId.trim() },
+			select: ["id", "templateId"],
+		});
+		return version?.templateId;
+	}
+
+	async listCatalog(query?: {
+		templateId?: string;
+	}): Promise<V2TypicalWorkCatalogListResponseDto> {
+		const templateId = query?.templateId?.trim();
 		const works = await this.workRepository.find({
+			where: templateId ? { templateId } : {},
 			order: { archComponentType: "ASC", name: "ASC" },
 		});
 		const workIds = works.map((w) => w.id);
@@ -345,7 +363,9 @@ export class V2TypicalWorkService {
 		streamExecutor?: string;
 		archComponentType?: string;
 		templateVersionId?: string;
+		templateId?: string;
 	}): Promise<V2TypicalWorkAssignmentListResponseDto> {
+		const templateId = await this.resolveTemplateIdFilter(query);
 		const assignments = await this.assignmentRepository.find({
 			order: { streamExecutor: "ASC" },
 		});
@@ -367,6 +387,7 @@ export class V2TypicalWorkService {
 		for (const assignment of assignments) {
 			const work = workById.get(assignment.workId);
 			if (!work) continue;
+			if (templateId && work.templateId !== templateId) continue;
 			if (query.workId && assignment.workId !== query.workId) continue;
 			if (
 				query.streamExecutor &&
@@ -430,8 +451,11 @@ export class V2TypicalWorkService {
 	async listWorks(query: {
 		archComponentType?: string;
 		streamExecutor?: string;
+		templateId?: string;
 	}): Promise<V2TypicalWorkListResponseDto> {
+		const templateId = query.templateId?.trim();
 		const works = await this.workRepository.find({
+			where: templateId ? { templateId } : {},
 			order: { archComponentType: "ASC", name: "ASC" },
 		});
 

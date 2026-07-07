@@ -12,6 +12,19 @@ describe("v2-work-formula.util", () => {
         expect(parsed.error).toBeNull();
         expect(parsed.tokens).toHaveLength(3);
     });
+    it("parses norm word and coeff with spaces in param name", () => {
+        const parsed = parseWorkFormulaText("норма × коэф(Сложность реализации)");
+        expect(parsed.error).toBeNull();
+        expect(parsed.tokens).toEqual([
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_coeff",
+                paramCode: "Сложность реализации",
+                paramName: "Сложность реализации",
+            },
+        ]);
+    });
     it("formats general summary with Кэф-П indices", () => {
         const tokens = parseWorkFormulaText("N * P[a]").tokens;
         expect(formatWorkFormulaGeneralSummary(tokens, ["a"])).toBe("N * Кэф-П1");

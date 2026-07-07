@@ -92,6 +92,17 @@ function formatNormValue(value: number | null): string {
 	return String(value);
 }
 
+function isFormulaOperandToken(token: V2WorkFormulaToken): boolean {
+	return (
+		token.kind === "norm" ||
+		token.kind === "number" ||
+		token.kind === "param_coeff" ||
+		token.kind === "param_anyof" ||
+		token.kind === "work_ref" ||
+		token.kind === "paren_close"
+	);
+}
+
 function insertTokenAt(
 	tokens: V2WorkFormulaToken[],
 	index: number,
@@ -406,6 +417,22 @@ export function WorkFormulaEditor({
 		[laborParams],
 	);
 
+	const isLaborFormulaParam = useCallback(
+		(token: V2WorkFormulaToken) => {
+			if (token.kind !== "param_coeff" && token.kind !== "param_anyof") {
+				return false;
+			}
+			return laborParams.some(
+				(group) =>
+					group.paramCode === token.paramCode ||
+					(token.paramName != null &&
+						group.paramName === token.paramName) ||
+					(token.paramName != null && group.paramCode === token.paramName),
+			);
+		},
+		[laborParams],
+	);
+
 	const paramOrder = useMemo(
 		() => laborParams.map((g) => g.paramCode),
 		[laborParams],
@@ -441,8 +468,17 @@ export function WorkFormulaEditor({
 
 	const insertToken = (token: V2WorkFormulaToken) => {
 		if (readOnly) return;
-		const next = insertTokenAt(formula.tokens, cursorIndex, token);
-		commitTokens(next, cursorIndex + 1);
+		let index = cursorIndex;
+		let tokens = formula.tokens;
+		if (isFormulaOperandToken(token)) {
+			const prev = tokens[index - 1];
+			if (prev && isFormulaOperandToken(prev)) {
+				tokens = insertTokenAt(tokens, index, { kind: "operator", op: "*" });
+				index += 1;
+			}
+		}
+		const next = insertTokenAt(tokens, index, token);
+		commitTokens(next, index + 1);
 	};
 
 	const removeTokenAt = (deletedIndex: number) => {
@@ -641,8 +677,7 @@ export function WorkFormulaEditor({
 								const isInvalidParam =
 									(token.kind === "param_coeff" ||
 										token.kind === "param_anyof") &&
-									(Boolean(token.invalid) ||
-										!laborParamCodes.has(token.paramCode));
+									(Boolean(token.invalid) || !isLaborFormulaParam(token));
 								const isWarningParam = isIncompleteAnyOf && !isInvalidParam;
 								const isEditingNumber =
 									editingNumberIndex === index && token.kind === "number";

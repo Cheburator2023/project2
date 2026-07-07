@@ -32,3 +32,25 @@ export function collectGeneratedTypicalWorkArrayPaths(
 
 	return [...new Set(paths)];
 }
+
+/** Есть ли в jsonSchema узел по dot-пути (только `properties`, без $ref). */
+export function jsonSchemaHasResolvablePath(
+	jsonSchema: unknown,
+	dotPath: string,
+): boolean {
+	const root = readRecord(jsonSchema);
+	if (!root) return false;
+
+	const segments = dotPath.split(".").filter(Boolean);
+	let node: unknown = root;
+
+	for (const segment of segments) {
+		const obj = readRecord(node);
+		if (!obj) return false;
+		const properties = readRecord(obj.properties);
+		if (!properties || !(segment in properties)) return false;
+		node = properties[segment];
+	}
+
+	return true;
+}

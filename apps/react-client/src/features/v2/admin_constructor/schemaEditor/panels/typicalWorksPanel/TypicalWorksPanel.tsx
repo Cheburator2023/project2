@@ -55,8 +55,10 @@ export function TypicalWorksPanel() {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const templateVersionId = searchParams.get(V2_TEMPLATE_VERSION_QUERY);
 
-	const { data, isLoading, error } = useV2TypicalWorksList();
-	const { data: catalogData } = useV2TypicalWorksCatalog();
+	const { data, isLoading, error } = useV2TypicalWorksList({
+		templateId,
+	});
+	const { data: catalogData } = useV2TypicalWorksCatalog({ templateId });
 	const createWork = useCreateV2TypicalWork();
 	const deleteWork = useDeleteV2TypicalWork();
 
@@ -154,6 +156,7 @@ export function TypicalWorksPanel() {
 			const created = await createWork.mutateAsync({
 				name: payload.name,
 				archComponentType: payload.archComponentType,
+				templateId,
 				streamExecutor: payload.streamExecutor ?? scopeStreams[0],
 				starterNormValue: payload.starterNormValue,
 			});

@@ -36,9 +36,12 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import { useCreateV2TemplateVersion } from "@react-client/common/api/queries/v2-templates";
 import { useV2TypicalWorkAssignments, useV2WorkParametersCatalog } from "@react-client/common/api/queries/v2-works";
 import { useSchemaEditor } from "../../SchemaEditorContext";
+import { resolvePreviewSourceRowForTypicalWork } from "./typicalWorkTriggerPreview";
 import {
 	buildSchemaWorkParameters,
+	findSchemaWorkParameter,
 	isSchemaLaborParamCandidate,
+	isSchemaLaborParamUsed,
 	isSchemaTextualParam,
 	resolveEffectiveWorkArchComponentType,
 	schemaLaborParamPickerCaption,
@@ -132,12 +135,7 @@ function resolveLaborParamOption(
 	paramCode: string,
 	paramName?: string | null,
 ): V2TypicalWorkParameterDto | undefined {
-	return (
-		paramOptions.find((p) => p.code === paramCode) ??
-		(paramName
-			? paramOptions.find((p) => p.name === paramName)
-			: undefined)
-	);
+	return findSchemaWorkParameter(paramOptions, paramCode, paramName);
 }
 
 export function TypicalWorkEditableCard({
@@ -152,7 +150,7 @@ export function TypicalWorkEditableCard({
 	onStreamChange,
 	onVersionChange,
 }: TypicalWorkEditableCardProps) {
-	const { fieldPathHints, uiSchema, jsonSchema, enumMapByCode } =
+	const { fieldPathHints, uiSchema, jsonSchema, enumMapByCode, liveFormData } =
 		useSchemaEditor();
 	const { data: assignmentsList } = useV2TypicalWorkAssignments({
 		templateVersionId,
@@ -262,7 +260,7 @@ export function TypicalWorkEditableCard({
 		[paramOptions],
 	);
 	const unusedLaborParams = laborParamOptions.filter(
-		(p) => !draft?.laborParams.some((g) => g.paramCode === p.code),
+		(p) => !draft?.laborParams.some((g) => isSchemaLaborParamUsed([g], p)),
 	);
 	const laborPickerHint = schemaWorkParameterEmptyPickerMessage(
 		fieldPathHints.length,
@@ -274,6 +272,7 @@ export function TypicalWorkEditableCard({
 		() =>
 			laborParamOptions.map((param) => ({
 				code: param.code,
+				sourceKeys: param.sourceKeys,
 				values: param.values.map((value) => ({
 					code: value.code,
 					label: value.label,
@@ -282,14 +281,24 @@ export function TypicalWorkEditableCard({
 		[laborParamOptions],
 	);
 
+	const previewSourceRow = useMemo(
+		() =>
+			resolvePreviewSourceRowForTypicalWork(
+				liveFormData,
+				draft?.streamExecutor ?? streamExecutor,
+			),
+		[draft?.streamExecutor, liveFormData, streamExecutor],
+	);
+
 	const triggerAnalysis = useMemo(
 		() =>
 			analyzeTriggerRules(
 				draft?.rules ?? [],
 				paramOptions,
 				methodologyCatalog,
+				previewSourceRow,
 			),
-		[draft?.rules, methodologyCatalog, paramOptions],
+		[draft?.rules, methodologyCatalog, paramOptions, previewSourceRow],
 	);
 
 	const commitDraft = (next: V2TypicalWorkCardDto) => {
@@ -299,6 +308,7 @@ export function TypicalWorkEditableCard({
 			next.rules,
 			paramOptions,
 			methodologyCatalog,
+			previewSourceRow,
 		);
 		const withDerived = {
 			...next,
@@ -899,6 +909,7 @@ export function TypicalWorkEditableCard({
 					<TypicalWorkTriggersSection
 						rules={draft.rules}
 						triggerStatus={triggerAnalysis.status}
+						triggerPreviewState={triggerAnalysis.previewState}
 						validationIssues={triggerAnalysis.issues}
 						schemaFieldCount={fieldPathHints.length}
 						paramOptions={paramOptions}

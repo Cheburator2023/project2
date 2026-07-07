@@ -1,4 +1,4 @@
-import { setGroupActivationAtPath } from "@smart-anketa/api-contract";
+import { setGroupActivationAtPath, patchV2TypicalWorksLogicRules } from "@smart-anketa/api-contract";
 import {
 	CONTROL_TYPICAL_TASKS,
 	SOURCE_TYPICAL_TASKS,
@@ -217,6 +217,25 @@ describe("V2CalculationService", () => {
 				(t) => t.estimateHoursPerDay === 3,
 			),
 		).toBe(true);
+	});
+
+	it("auto-injects catalog logic for new schema with source infrastructure", async () => {
+		const result = await service.evaluate(
+			patchV2TypicalWorksLogicRules({ rules: [] }, {
+				jsonSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema,
+				uiSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema,
+			}),
+			{
+				detailInfo: {
+					sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
+				},
+			},
+		);
+
+		const streamDataSources = result.formData.streamDataSources as {
+			sourceTypicalTasks: Array<{ name: string }>;
+		};
+		expect(streamDataSources.sourceTypicalTasks.length).toBeGreaterThan(0);
 	});
 
 	it("migrates detailInfo.sourceSystems before source typical works generation", async () => {

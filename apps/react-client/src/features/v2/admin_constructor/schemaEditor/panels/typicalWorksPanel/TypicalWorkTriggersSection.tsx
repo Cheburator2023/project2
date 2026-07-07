@@ -21,6 +21,7 @@ import { useMemo, useState } from "react";
 import {
 	catalogForTriggerRuleGroup,
 	isWorkTriggerGroupInvalid,
+	type TriggerPreviewState,
 	type TriggerValidationIssue,
 } from "./typicalWorkPatchErrors";
 import {
@@ -37,6 +38,7 @@ import {
 type TypicalWorkTriggersSectionProps = {
 	rules: V2TypicalWorkRuleDto[];
 	triggerStatus: V2WorkTriggerStatus;
+	triggerPreviewState?: TriggerPreviewState;
 	validationIssues?: TriggerValidationIssue[];
 	schemaFieldCount?: number;
 	paramOptions: V2TypicalWorkParameterDto[];
@@ -60,7 +62,20 @@ function triggerBanner(
 	status: V2WorkTriggerStatus,
 	ruleCount: number,
 	issues: TriggerValidationIssue[] = [],
+	previewState: TriggerPreviewState = "none",
 ) {
+	if (status === "hidden" && previewState === "none" && ruleCount > 0) {
+		return {
+			bg: "#eef4ff",
+			border: "#d4e2f7",
+			iconBg: "#2f6bd8",
+			icon: "i",
+			title: `Условия настроены (${ruleCount} ${ruleCount === 1 ? "условие" : "условия"})`,
+			sub: "заполните систему-источник в превью анкеты — тогда проверим появление работы",
+			fg: "#2f6bd8",
+		};
+	}
+
 	switch (status) {
 		case "appears":
 			return {
@@ -69,7 +84,7 @@ function triggerBanner(
 				iconBg: "#1f8a4d",
 				icon: "✓",
 				title: `Работа появляется в анкете (${ruleCount} ${ruleCount === 1 ? "условие" : "условия"})`,
-				sub: "все условия выполнены",
+				sub: "все условия выполнены для источника в превью",
 				fg: "#1f8a4d",
 			};
 		case "invalid":
@@ -111,6 +126,7 @@ function triggerBanner(
 export function TypicalWorkTriggersSection({
 	rules,
 	triggerStatus,
+	triggerPreviewState = "none",
 	validationIssues = [],
 	schemaFieldCount = 0,
 	paramOptions,
@@ -119,7 +135,12 @@ export function TypicalWorkTriggersSection({
 	onChange,
 }: TypicalWorkTriggersSectionProps) {
 	const [pickerKey, setPickerKey] = useState(0);
-	const banner = triggerBanner(triggerStatus, rules.length, validationIssues);
+	const banner = triggerBanner(
+		triggerStatus,
+		rules.length,
+		validationIssues,
+		triggerPreviewState,
+	);
 
 	const usedGroupKeys = useMemo(
 		() => new Set(rules.map((r) => triggerRuleGroupKey(r, paramOptions))),

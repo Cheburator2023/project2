@@ -563,6 +563,8 @@ export const V2TemplateSchemaEditor = ({
 		versionId: activeVersion?.id,
 		formData,
 		rulesOverride: logic,
+		jsonSchema: jsonSchema as Record<string, unknown>,
+		uiSchema: uiSchema as Record<string, unknown>,
 		enabled: Boolean(activeVersion?.id),
 	});
 
