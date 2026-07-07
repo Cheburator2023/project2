@@ -195,8 +195,16 @@ export function TypicalWorkEditableCard({
 		if (!isNewCard && hasPending()) return;
 		lastSyncedCardKeyRef.current = cardKey;
 		if (isNewCard) defaultedArchKeyRef.current = null;
+		const formula =
+			card.formula.tokens.length > 0
+				? {
+						tokens: card.formula.tokens,
+						text: tokensToText(card.formula.tokens),
+					}
+				: card.formula;
 		setDraft({
 			...structuredClone(card),
+			formula,
 			formulaTerms: ensureFormulaTerms(card),
 		});
 	}, [card, templateVersionId, hasPending]);

@@ -20,6 +20,8 @@ import {
 	formatWorkFormulaGeneralSummary,
 	hasWorkRefToken,
 	isTransitiveOnlyFormula,
+	isWorkFormulaLaborParamKnown,
+	normalizeWorkFormulaLaborParamTokens,
 	parseWorkFormulaText,
 	tokensToText,
 	validateWorkFormulaTokens,
@@ -412,13 +414,13 @@ export function WorkFormulaEditor({
 		);
 	}, [availableWorkSources, formula.tokens]);
 
-	const laborParamCodes = useMemo(
-		() => new Set(laborParams.map((g) => g.paramCode)),
+	const laborParamRefs = useMemo(
+		() =>
+			laborParams.map((group) => ({
+				paramCode: group.paramCode,
+				paramName: group.paramName,
+			})),
 		[laborParams],
-	);
-	console.log(
-		"🐸 Pepe said >> WorkFormulaEditor >> laborParamCodes:",
-		laborParamCodes,
 	);
 
 	const isLaborFormulaParam = useCallback(
@@ -426,14 +428,9 @@ export function WorkFormulaEditor({
 			if (token.kind !== "param_coeff" && token.kind !== "param_anyof") {
 				return false;
 			}
-			return laborParams.some(
-				(group) =>
-					group.paramCode === token.paramCode ||
-					(token.paramName != null && group.paramName === token.paramName) ||
-					(token.paramName != null && group.paramCode === token.paramName),
-			);
+			return isWorkFormulaLaborParamKnown(token, laborParamRefs);
 		},
-		[laborParams],
+		[laborParamRefs],
 	);
 
 	const paramOrder = useMemo(
@@ -444,10 +441,10 @@ export function WorkFormulaEditor({
 	const formulaError = useMemo(
 		() =>
 			validateWorkFormulaTokens(formula.tokens, {
-				allowedParamCodes: laborParamCodes,
+				laborParams: laborParamRefs,
 				allowInvalidParamRefs: true,
 			}),
-		[formula.tokens, laborParamCodes],
+		[formula.tokens, laborParamRefs],
 	);
 
 	const generalSummary = useMemo(
@@ -512,12 +509,24 @@ export function WorkFormulaEditor({
 			setParseError(parsed.error);
 			return;
 		}
+		const normalized = normalizeWorkFormulaLaborParamTokens(
+			parsed.tokens,
+			laborParamRefs,
+		);
+		const validation = validateWorkFormulaTokens(normalized, {
+			laborParams: laborParamRefs,
+			allowInvalidParamRefs: true,
+		});
+		if (validation) {
+			setParseError(validation);
+			return;
+		}
 		setParseError(null);
 		onFormulaChange({
-			tokens: parsed.tokens,
-			text: tokensToText(parsed.tokens),
+			tokens: normalized,
+			text: tokensToText(normalized),
 		});
-		setCursorIndex(parsed.tokens.length);
+		setCursorIndex(normalized.length);
 		setMode("visual");
 	};
 
@@ -604,7 +613,7 @@ export function WorkFormulaEditor({
 					readOnly={readOnly}
 					onChange={(nextMode) => {
 						if (nextMode === "manual") {
-							setManualText(formula.text || tokensToText(formula.tokens));
+							setManualText(tokensToText(formula.tokens));
 							setParseError(null);
 							setMode("manual");
 							return;

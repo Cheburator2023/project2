@@ -41,6 +41,61 @@ export function isParamToken(
 	return token.kind === "param_coeff" || token.kind === "param_anyof";
 }
 
+export type WorkFormulaLaborParamRef = {
+	paramCode: string;
+	paramName?: string | null;
+};
+
+/** Сопоставление токена формулы с параметром из блока трудоёмкости (код или подпись). */
+export function workFormulaLaborParamMatches(
+	token: { paramCode: string; paramName?: string | null },
+	group: WorkFormulaLaborParamRef,
+): boolean {
+	return (
+		group.paramCode === token.paramCode ||
+		(token.paramName != null && group.paramName === token.paramName) ||
+		(token.paramName != null && group.paramCode === token.paramName) ||
+		(group.paramName != null && group.paramName === token.paramCode)
+	);
+}
+
+export function isWorkFormulaLaborParamKnown(
+	token: Extract<V2WorkFormulaToken, { kind: "param_coeff" | "param_anyof" }>,
+	laborParams: readonly WorkFormulaLaborParamRef[],
+): boolean {
+	return laborParams.some((group) => workFormulaLaborParamMatches(token, group));
+}
+
+export function normalizeWorkFormulaLaborParamTokens(
+	tokens: V2WorkFormulaToken[],
+	laborParams: readonly WorkFormulaLaborParamRef[],
+): V2WorkFormulaToken[] {
+	return tokens.map((token) => {
+		if (token.kind !== "param_coeff" && token.kind !== "param_anyof") {
+			return token;
+		}
+		const group = laborParams.find((g) => workFormulaLaborParamMatches(token, g));
+		if (!group) return token;
+		return {
+			...token,
+			paramCode: group.paramCode,
+			paramName: group.paramName ?? group.paramCode,
+		};
+	});
+}
+
+function formatWorkFormulaParamRef(
+	paramCode: string,
+	paramName?: string | null,
+): string {
+	const code = paramCode.trim();
+	const name = paramName?.trim();
+	if (name && /[()"']/.test(name)) {
+		return `"${name.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+	}
+	return code || name || "";
+}
+
 export function tokensToText(tokens: V2WorkFormulaToken[]): string {
 	return tokens
 		.map((token) => {
@@ -49,12 +104,12 @@ export function tokensToText(tokens: V2WorkFormulaToken[]): string {
 					return "N";
 				case "param_coeff":
 					return token.invalid
-						? `коэф(${token.paramName ?? token.paramCode})?`
-						: `коэф(${token.paramName ?? token.paramCode})`;
+						? `коэф(${formatWorkFormulaParamRef(token.paramCode, token.paramName)})?`
+						: `коэф(${formatWorkFormulaParamRef(token.paramCode, token.paramName)})`;
 				case "param_anyof":
 					return token.invalid
-						? `anyof(${token.paramName ?? token.paramCode})?`
-						: `anyof(${token.paramName ?? token.paramCode})`;
+						? `anyof(${formatWorkFormulaParamRef(token.paramCode, token.paramName)})?`
+						: `anyof(${formatWorkFormulaParamRef(token.paramCode, token.paramName)})`;
 				case "work_ref":
 					return token.invalid
 						? `работа(${token.assignmentId})?`
@@ -154,6 +209,47 @@ export function parseWorkFormulaText(text: string): {
 		return { kind: "number", value };
 	};
 
+	const readFormulaParamRef = (
+		refStart: number,
+	): { value: string; nextIndex: number } | null => {
+		let pos = refStart;
+		const quote = input[pos];
+		if (quote === '"' || quote === "'") {
+			pos++;
+			let value = "";
+			while (pos < input.length) {
+				const ch = input[pos] ?? "";
+				if (ch === "\\" && pos + 1 < input.length) {
+					value += input[pos + 1] ?? "";
+					pos += 2;
+					continue;
+				}
+				if (ch === quote) {
+					pos++;
+					return { value, nextIndex: pos };
+				}
+				value += ch;
+				pos++;
+			}
+			return null;
+		}
+
+		const valueStart = pos;
+		let depth = 0;
+		while (pos < input.length) {
+			const ch = input[pos] ?? "";
+			if (ch === "(") depth++;
+			else if (ch === ")") {
+				if (depth === 0) break;
+				depth--;
+			}
+			pos++;
+		}
+		const value = input.slice(valueStart, pos).trim();
+		if (!value) return null;
+		return { value, nextIndex: pos };
+	};
+
 	const readFunctionCall = (
 		fnName: string,
 	): {
@@ -172,9 +268,14 @@ export function parseWorkFormulaText(text: string): {
 		}
 		i++;
 		skipWs();
-		const idStart = i;
-		while (i < input.length && input[i] !== ")") i++;
-		const id = input.slice(idStart, i).trim();
+		const ref = readFormulaParamRef(i);
+		if (!ref) {
+			i = start;
+			return null;
+		}
+		const id = ref.value;
+		i = ref.nextIndex;
+		skipWs();
 		if (input[i] !== ")") {
 			i = start;
 			return null;
@@ -302,7 +403,6 @@ export function parseWorkFormulaText(text: string): {
 	}
 
 	const validation = validateWorkFormulaTokens(tokens);
-	console.log(validation);
 
 	if (validation) {
 		return { tokens: [], error: validation };
@@ -349,6 +449,7 @@ function formatWorkFormulaTokenPosition(
 
 export type ValidateWorkFormulaTokenOptions = {
 	allowedParamCodes?: Set<string>;
+	laborParams?: readonly WorkFormulaLaborParamRef[];
 	/** Разрешить сохранение формулы с помеченными invalid ссылками на параметры */
 	allowInvalidParamRefs?: boolean;
 	/** Строгая политика: транзитивная ссылка — единственный элемент */
@@ -363,6 +464,7 @@ export function validateWorkFormulaTokens(
 		options instanceof Set ? { allowedParamCodes: options } : (options ?? {});
 	const {
 		allowedParamCodes,
+		laborParams,
 		allowInvalidParamRefs = false,
 		strictTransitiveExclusive = true,
 	} = opts;
@@ -439,7 +541,13 @@ export function validateWorkFormulaTokens(
 				}
 				return `Параметр «${token.paramName ?? token.paramCode}» удалён из блока параметров трудоёмкости`;
 			}
-			if (allowedParamCodes && !allowedParamCodes.has(token.paramCode)) {
+			const laborAllowed =
+				laborParams && laborParams.length > 0
+					? isWorkFormulaLaborParamKnown(token, laborParams)
+					: allowedParamCodes
+						? allowedParamCodes.has(token.paramCode)
+						: true;
+			if (!laborAllowed) {
 				return `Параметр «${token.paramName ?? token.paramCode}» отсутствует в блоке параметров трудоёмкости`;
 			}
 		}

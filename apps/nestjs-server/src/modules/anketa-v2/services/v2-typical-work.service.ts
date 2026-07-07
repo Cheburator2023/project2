@@ -63,7 +63,7 @@ function resolveCardTokenFormula(
 	if (trimmed) {
 		const parsed = parseWorkFormulaText(trimmed);
 		if (!parsed.error && parsed.tokens.length > 0) {
-			return { tokens: parsed.tokens, text: trimmed };
+			return { tokens: parsed.tokens, text: tokensToText(parsed.tokens) };
 		}
 	}
 	return termsToTokenFormula(termsFormula);

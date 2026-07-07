@@ -47,6 +47,61 @@ const v2_typical_work_types_1 = require("./v2-typical-work.types");
         const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)("( N × 2");
         (0, vitest_1.expect)(parsed.error).toMatch(/скобк/i);
     });
+    (0, vitest_1.it)("round-trips param names with parentheses in коэф()", () => {
+        const tokens = [
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_coeff",
+                paramCode: "field_sphere",
+                paramName: "Базовая оценка по стриму (СФЕРА)",
+            },
+        ];
+        const text = (0, v2_work_formula_util_1.tokensToText)(tokens);
+        (0, vitest_1.expect)(text).toContain('"Базовая оценка по стриму (СФЕРА)"');
+        const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)(text);
+        (0, vitest_1.expect)(parsed.error).toBeNull();
+        (0, vitest_1.expect)(parsed.tokens).toEqual([
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_coeff",
+                paramCode: "Базовая оценка по стриму (СФЕРА)",
+                paramName: "Базовая оценка по стриму (СФЕРА)",
+            },
+        ]);
+        const laborParams = [
+            {
+                paramCode: "field_sphere",
+                paramName: "Базовая оценка по стриму (СФЕРА)",
+            },
+        ];
+        const normalized = (0, v2_work_formula_util_1.normalizeWorkFormulaLaborParamTokens)(parsed.tokens, laborParams);
+        (0, vitest_1.expect)((0, v2_work_formula_util_1.validateWorkFormulaTokens)(normalized, {
+            laborParams,
+            allowInvalidParamRefs: true,
+        })).toBeNull();
+    });
+    (0, vitest_1.it)("accepts labor param matched by display name, not only code", () => {
+        const tokens = [
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_coeff",
+                paramCode: "field_sphere",
+                paramName: "Базовая оценка по стриму (СФЕРА)",
+            },
+        ];
+        (0, vitest_1.expect)((0, v2_work_formula_util_1.validateWorkFormulaTokens)(tokens, {
+            laborParams: [
+                {
+                    paramCode: "field_sphere",
+                    paramName: "Базовая оценка по стриму (СФЕРА)",
+                },
+            ],
+            allowInvalidParamRefs: true,
+        })).toBeNull();
+    });
     (0, vitest_1.it)("applyWorkRounding NONE keeps raw value", () => {
         (0, vitest_1.expect)((0, v2_work_formula_util_1.applyWorkRounding)(1.23, { mode: "NONE", step: null })).toBe(1.23);
     });

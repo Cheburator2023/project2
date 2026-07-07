@@ -130,6 +130,43 @@ describe("WorkFormulaEditor (ui)", () => {
 		);
 	});
 
+	it("round-trips visual → manual → visual with param names containing parentheses", async () => {
+		const user = userEvent.setup();
+		const paramName = "Базовая оценка по стриму (СФЕРА)";
+		renderEditor({
+			laborParams: [
+				{
+					paramCode: "field_sphere",
+					paramName,
+					kind: "by_value",
+					coefficients: [],
+				},
+			],
+			initialFormula: {
+				tokens: [
+					{ kind: "norm" },
+					{ kind: "operator", op: "*" },
+					{
+						kind: "param_coeff",
+						paramCode: "field_sphere",
+						paramName,
+					},
+				],
+				// устаревший текст с неэкранированными скобками в имени
+				text: `N × коэф(${paramName})`,
+			},
+		});
+
+		await user.click(screen.getByTestId(TID.workFormulaManualMode));
+		await user.click(screen.getByTestId(TID.workFormulaVisualMode));
+
+		expect(screen.queryByText(/Проверьте скобки/i)).not.toBeInTheDocument();
+		expect(screen.queryByText(/отсутствует в блоке/i)).not.toBeInTheDocument();
+		expect(screen.getByTestId(TID.workFormulaGeneralSummary).textContent).toMatch(
+			/Кэф-П1/,
+		);
+	});
+
 	it("switches rounding mode via segment bar", async () => {
 		const user = userEvent.setup();
 		renderEditor();

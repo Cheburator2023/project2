@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyWorkRounding, evaluateWorkFormula, formatWorkFormulaGeneralSummary, isParamUsedInFormula, markFormulaParamInvalid, parseWorkFormulaText, previewWorkFormula, validateWorkFormulaTokens, } from "./v2-work-formula.util";
+import { applyWorkRounding, evaluateWorkFormula, formatWorkFormulaGeneralSummary, isParamUsedInFormula, markFormulaParamInvalid, normalizeWorkFormulaLaborParamTokens, parseWorkFormulaText, previewWorkFormula, tokensToText, validateWorkFormulaTokens, } from "./v2-work-formula.util";
 import { defaultWorkFormula, defaultWorkRounding } from "./v2-typical-work.types";
 describe("v2-work-formula.util", () => {
     it("parses H × P[param]", () => {
@@ -44,6 +44,61 @@ describe("v2-work-formula.util", () => {
     it("rejects unbalanced parens", () => {
         const parsed = parseWorkFormulaText("( N × 2");
         expect(parsed.error).toMatch(/скобк/i);
+    });
+    it("round-trips param names with parentheses in коэф()", () => {
+        const tokens = [
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_coeff",
+                paramCode: "field_sphere",
+                paramName: "Базовая оценка по стриму (СФЕРА)",
+            },
+        ];
+        const text = tokensToText(tokens);
+        expect(text).toContain('"Базовая оценка по стриму (СФЕРА)"');
+        const parsed = parseWorkFormulaText(text);
+        expect(parsed.error).toBeNull();
+        expect(parsed.tokens).toEqual([
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_coeff",
+                paramCode: "Базовая оценка по стриму (СФЕРА)",
+                paramName: "Базовая оценка по стриму (СФЕРА)",
+            },
+        ]);
+        const laborParams = [
+            {
+                paramCode: "field_sphere",
+                paramName: "Базовая оценка по стриму (СФЕРА)",
+            },
+        ];
+        const normalized = normalizeWorkFormulaLaborParamTokens(parsed.tokens, laborParams);
+        expect(validateWorkFormulaTokens(normalized, {
+            laborParams,
+            allowInvalidParamRefs: true,
+        })).toBeNull();
+    });
+    it("accepts labor param matched by display name, not only code", () => {
+        const tokens = [
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_coeff",
+                paramCode: "field_sphere",
+                paramName: "Базовая оценка по стриму (СФЕРА)",
+            },
+        ];
+        expect(validateWorkFormulaTokens(tokens, {
+            laborParams: [
+                {
+                    paramCode: "field_sphere",
+                    paramName: "Базовая оценка по стриму (СФЕРА)",
+                },
+            ],
+            allowInvalidParamRefs: true,
+        })).toBeNull();
     });
     it("applyWorkRounding NONE keeps raw value", () => {
         expect(applyWorkRounding(1.23, { mode: "NONE", step: null })).toBe(1.23);
