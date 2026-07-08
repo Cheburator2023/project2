@@ -105,9 +105,12 @@ function pluralSchemaValuesRu(count: number): string {
 	return `${count} значений`;
 }
 
-/** Подсказка в селекте «Параметр трудоёмкости» — какой режим уместен. */
-export function schemaLaborParamPickerCaption(
-	param: SchemaBuiltWorkParameterDto,
+/** Подсказка о режиме коэффициента в селекте «Параметр трудоёмкости». */
+function schemaLaborParamModeHint(
+	param: Pick<
+		SchemaBuiltWorkParameterDto,
+		"values" | "numeric" | "dictionaryCode" | "textual"
+	>,
 ): string {
 	if (isSchemaTextualParam(param)) {
 		return "Свободная строка — Any-of без справочника обычно бесполезен; лучше «По значениям»";
@@ -122,6 +125,15 @@ export function schemaLaborParamPickerCaption(
 		return "Справочник — дождитесь загрузки значений; Any-of заработает после выбора множества";
 	}
 	return "Нет дискретных значений — Any-of, скорее всего, не подойдёт";
+}
+
+/** Подсказка в селекте «Параметр трудоёмкости» — путь к полю и уместный режим. */
+export function schemaLaborParamPickerCaption(
+	param: SchemaBuiltWorkParameterDto,
+): string {
+	const path = param.description?.trim();
+	const modeHint = schemaLaborParamModeHint(param);
+	return path ? `${path} · ${modeHint}` : modeHint;
 }
 
 export function resolveWorkArchSchemaType(

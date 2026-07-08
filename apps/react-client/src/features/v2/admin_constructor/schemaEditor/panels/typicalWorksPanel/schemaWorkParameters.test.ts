@@ -678,6 +678,30 @@ describe("schemaLaborParamPickerCaption", () => {
 			}),
 		).toMatch(/2 значения.*По значениям.*Any-of/i);
 	});
+
+	it("includes schema field path before mode hint", () => {
+		expect(
+			schemaLaborParamPickerCaption({
+				id: "schema:field",
+				code: "field_8pFvwc-v",
+				name: "Наличие реплики в DAPP",
+				description: "streamDataSources.sourceSystems[].field_8pFvwc-v",
+				values: [
+					{
+						id: "v-true",
+						code: "true",
+						label: "Да",
+						coefficient: null,
+						sortOrder: 0,
+						validFrom: "2025-01-01",
+						validTo: null,
+					},
+				],
+			}),
+		).toBe(
+			"streamDataSources.sourceSystems[].field_8pFvwc-v · 1 значение · подходит «По значениям» и Any-of",
+		);
+	});
 });
 
 describe("resolveSchemaParamForTriggerRule", () => {
