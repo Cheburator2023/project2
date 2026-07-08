@@ -6,20 +6,20 @@ exports.buildControlTypicalWorksCatalogRule = buildControlTypicalWorksCatalogRul
 exports.schemaSupportsSourceTypicalWorksCatalog = schemaSupportsSourceTypicalWorksCatalog;
 exports.patchV2TypicalWorksLogicRules = patchV2TypicalWorksLogicRules;
 const v2_typical_work_output_paths_util_1 = require("./v2-typical-work-output-paths.util");
+Object.defineProperty(exports, "V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH", { enumerable: true, get: function () { return v2_typical_work_output_paths_util_1.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH; } });
 /** Канонические пути v5: источники в detailInfo, вывод — в stream-блоки. */
 exports.V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
-exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = "streamDataSources.sourceTypicalTasks";
 exports.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_Khn6-HAW";
-function buildSourceTypicalWorksCatalogRule() {
+function buildSourceTypicalWorksCatalogRule(outputArrayPath = v2_typical_work_output_paths_util_1.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH) {
     return {
         id: "unified-source-typical-works",
         kind: "task_trigger",
-        targetPath: `/${exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH.replace(/\./g, "/")}`,
+        targetPath: `/${outputArrayPath.replace(/\./g, "/")}`,
         condition: true,
         description: "ФТ-024: типовые работы «Система-источник» из справочника работ (назначения + триггеры).",
         dependencies: [`/${exports.V2_SOURCE_SYSTEMS_ARRAY_PATH.replace(/\./g, "/")}`],
         payload: {
-            hint: "При заполнении систем-источников подтягиваются типовые работы из справочника для стрима (Внутренний/Внешний). Работы настраиваются в конструкторе → Логика.",
+            hint: "При заполнении систем-источников подтягиваются типовые работы из справочника (стрим «Источники данных»). Появление работ управляется их триггерами. Настройка — в конструкторе → Логика.",
             mode: "generated_rows",
             label: "Типовые работы (стрим «Источники данных»)",
             worksCatalog: true,
@@ -27,7 +27,7 @@ function buildSourceTypicalWorksCatalogRule() {
             worksCatalogStream: "fromSourceType",
             taskCode: "CATALOG_SOURCE_TASKS",
             calcModel: "unified",
-            outputArrayPath: exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+            outputArrayPath,
             sourceArrayPath: exports.V2_SOURCE_SYSTEMS_ARRAY_PATH,
         },
     };
@@ -85,9 +85,7 @@ function patchTypicalWorksPathsDeep(value) {
 }
 /** Схема содержит блок типовых работ источников и массив систем-источников. */
 function schemaSupportsSourceTypicalWorksCatalog(jsonSchema, uiSchema) {
-    const hasSourceTypicalOutput = (0, v2_typical_work_output_paths_util_1.jsonSchemaHasResolvablePath)(jsonSchema, exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH) ||
-        (0, v2_typical_work_output_paths_util_1.collectGeneratedTypicalWorkArrayPaths)(uiSchema).includes(exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH);
-    if (!hasSourceTypicalOutput)
+    if (!(0, v2_typical_work_output_paths_util_1.resolveSourceTypicalWorksOutputPath)(jsonSchema, uiSchema))
         return false;
     return ((0, v2_typical_work_output_paths_util_1.jsonSchemaHasResolvablePath)(jsonSchema, exports.V2_SOURCE_SYSTEMS_ARRAY_PATH) ||
         (0, v2_typical_work_output_paths_util_1.jsonSchemaHasResolvablePath)(jsonSchema, "streamDataSources.sourceSystems"));
@@ -99,8 +97,10 @@ function patchV2TypicalWorksLogicRules(logic, options) {
         schemaSupportsSourceTypicalWorksCatalog(options?.jsonSchema, options?.uiSchema);
     const hasControlRule = rules.some((rule) => rule.id === "unified-control-typical-works");
     const patched = [];
-    if (hasSourceRule)
-        patched.push(buildSourceTypicalWorksCatalogRule());
+    const sourceOutputPath = (0, v2_typical_work_output_paths_util_1.resolveSourceTypicalWorksOutputPath)(options?.jsonSchema, options?.uiSchema);
+    if (hasSourceRule) {
+        patched.push(buildSourceTypicalWorksCatalogRule(sourceOutputPath ?? v2_typical_work_output_paths_util_1.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH));
+    }
     if (hasControlRule)
         patched.push(buildControlTypicalWorksCatalogRule());
     const rest = rules

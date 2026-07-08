@@ -10,7 +10,7 @@ import Typography from "@mui/material/Typography";
 import { styled, useColorScheme } from "@mui/material/styles";
 import type { V2TypicalWorkListItemDto } from "@smart-anketa/api-contract";
 import {
-	useCreateV2TypicalWorkAssignment,
+	useCopyV2TypicalWork,
 	usePatchV2TypicalWork,
 	useV2TypicalWorksList,
 } from "@react-client/common/api/queries/v2-works";
@@ -28,11 +28,6 @@ import { AgGridReact } from "ag-grid-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@react-client/common/toasts";
 import { scopeLabel, type LogicWorksScope } from "./typicalWorksAreas";
-import {
-	buildAssignWorkPatch,
-	inferBaseNormValue,
-	targetStreamsForAssign,
-} from "./typicalWorksAssignment";
 
 registerAgGridTableModules();
 
@@ -49,7 +44,6 @@ const AgGridHost = styled("div")`
 type AssignWorkFromRegistryDialogProps = {
 	open: boolean;
 	scope: LogicWorksScope;
-	scopeStreams: string[];
 	templateId: string;
 	templateVersionId: string | null;
 	onClose: () => void;
@@ -60,7 +54,6 @@ type AssignWorkFromRegistryDialogProps = {
 export function AssignWorkFromCatalogDialog({
 	open,
 	scope,
-	scopeStreams,
 	templateId,
 	templateVersionId,
 	onClose,
@@ -71,9 +64,10 @@ export function AssignWorkFromCatalogDialog({
 	const gridRef = useRef<AgGridReact<V2TypicalWorkListItemDto>>(null);
 	const [query, setQuery] = useState("");
 	const [pending, setPending] = useState(false);
+	const [decision, setDecision] = useState<V2TypicalWorkListItemDto | null>(null);
 
 	const { data, isLoading, error } = useV2TypicalWorksList();
-	const createAssignment = useCreateV2TypicalWorkAssignment();
+	const copyWork = useCopyV2TypicalWork();
 	const patch = usePatchV2TypicalWork();
 
 	const items = data?.items ?? [];
@@ -104,14 +98,12 @@ export function AssignWorkFromCatalogDialog({
 				valueFormatter: (p) => p.value?.trim() || "—",
 			},
 			{
-				field: "streams",
-				headerName: "Стримы",
+				colId: "template",
+				headerName: "Схема",
 				flex: 1.1,
 				minWidth: 150,
-				valueFormatter: (p) =>
-					Array.isArray(p.value) && p.value.length > 0
-						? p.value.join(", ")
-						: "не назначена",
+				valueGetter: (p) =>
+					p.data?.templateName?.trim() || "— (глобальная)",
 			},
 		],
 		[],
@@ -120,6 +112,7 @@ export function AssignWorkFromCatalogDialog({
 	useEffect(() => {
 		if (!open) return;
 		setQuery("");
+		setDecision(null);
 	}, [open]);
 
 	useEffect(() => {
@@ -128,58 +121,84 @@ export function AssignWorkFromCatalogDialog({
 		api.setGridOption("quickFilterText", query.trim());
 	}, [query]);
 
-	const handleAssign = useCallback(
+	const bindToSchema = useCallback(
 		async (work: V2TypicalWorkListItemDto) => {
-			const streams = targetStreamsForAssign(work, scopeStreams);
-			if (!streams.length) {
-				toast.info("Работа уже назначена на эту область");
-				return;
-			}
 			setPending(true);
 			try {
-				const baseNorm = inferBaseNormValue(work);
-				for (const streamExecutor of streams) {
-					await createAssignment.mutateAsync({
-						workId: work.id,
-						streamExecutor,
-					});
-					await patch.mutateAsync({
-						workId: work.id,
-						dto: {
-							...buildAssignWorkPatch(streamExecutor, baseNorm),
-							templateVersionId: templateVersionId ?? undefined,
-							templateId: templateId || undefined,
-						},
-					});
-				}
-				toast.success(`«${work.name}» добавлена в схему`);
-				onAssigned(work.id, streams[0] ?? work.streams[0] ?? "");
+				await patch.mutateAsync({
+					workId: work.id,
+					dto: {
+						streamExecutor: scope.stream,
+						templateVersionId: templateVersionId ?? undefined,
+						templateId: templateId || undefined,
+					},
+				});
+				toast.success(`«${work.name}» привязана к схеме`);
+				onAssigned(work.id, scope.stream);
+				setDecision(null);
 				onClose();
 			} catch (err) {
-				toast.error("Не удалось добавить работу из реестра", {
+				toast.error("Не удалось привязать работу к схеме", {
 					description: apiErrorMessage(err),
 				});
 			} finally {
 				setPending(false);
 			}
 		},
-		[
-			createAssignment,
-			onAssigned,
-			onClose,
-			patch,
-			scopeStreams,
-			templateId,
-			templateVersionId,
-		],
+		[onAssigned, onClose, patch, scope.stream, templateId, templateVersionId],
+	);
+
+	const copyToSchema = useCallback(
+		async (work: V2TypicalWorkListItemDto) => {
+			setPending(true);
+			try {
+				const copy = await copyWork.mutateAsync({
+					workId: work.id,
+					dto: {
+						templateId: templateId || undefined,
+						streamExecutor: scope.stream,
+					},
+				});
+				toast.success(`Создана копия «${copy.name}»`);
+				onAssigned(copy.id, copy.streamExecutor || scope.stream);
+				setDecision(null);
+				onClose();
+			} catch (err) {
+				toast.error("Не удалось создать копию работы", {
+					description: apiErrorMessage(err),
+				});
+			} finally {
+				setPending(false);
+			}
+		},
+		[copyWork, onAssigned, onClose, scope.stream, templateId],
+	);
+
+	const handleRowSelect = useCallback(
+		(work: V2TypicalWorkListItemDto) => {
+			if (pending) return;
+			const owner = work.templateId ?? null;
+			if (owner && templateId && owner === templateId) {
+				toast.info("Работа уже в этой схеме");
+				onAssigned(work.id, work.streams[0] ?? scope.stream);
+				onClose();
+				return;
+			}
+			setDecision(work);
+		},
+		[pending, templateId, onAssigned, onClose, scope.stream],
 	);
 
 	const onRowClicked = useCallback(
 		(event: RowClickedEvent<V2TypicalWorkListItemDto>) => {
-			if (pending || !event.data) return;
-			void handleAssign(event.data);
+			if (!event.data) return;
+			handleRowSelect(event.data);
 		},
-		[handleAssign, pending],
+		[handleRowSelect],
+	);
+
+	const decisionOwnedByOther = Boolean(
+		decision?.templateId && decision.templateId !== templateId,
 	);
 
 	return (
@@ -268,6 +287,52 @@ export function AssignWorkFromCatalogDialog({
 					Закрыть
 				</Button>
 			</DialogActions>
+
+			<Dialog
+				open={Boolean(decision)}
+				onClose={pending ? undefined : () => setDecision(null)}
+				maxWidth="xs"
+				fullWidth
+			>
+				<DialogTitle sx={{ fontWeight: 800 }}>
+					Добавить «{decision?.name}»
+				</DialogTitle>
+				<DialogContent>
+					<Typography variant="body2" color="text.secondary">
+						{decisionOwnedByOther
+							? `Работа принадлежит схеме «${decision?.templateName ?? "другая схема"}». Перепривязка недоступна — создайте копию для текущей схемы.`
+							: "Работа не привязана к схеме. Привяжите её к текущей схеме или создайте независимую копию."}
+					</Typography>
+				</DialogContent>
+				<DialogActions sx={{ px: 3, pb: 2 }}>
+					<Button onClick={() => setDecision(null)} disabled={pending}>
+						Отмена
+					</Button>
+					<Box sx={{ flex: 1 }} />
+					{pending ? <CircularProgress size={20} sx={{ mr: 1 }} /> : null}
+					{!decisionOwnedByOther ? (
+						<Button
+							variant="outlined"
+							disabled={pending}
+							onClick={() => decision && void copyToSchema(decision)}
+						>
+							Сделать копию
+						</Button>
+					) : null}
+					<Button
+						variant="contained"
+						disabled={pending}
+						onClick={() =>
+							decision &&
+							void (decisionOwnedByOther
+								? copyToSchema(decision)
+								: bindToSchema(decision))
+						}
+					>
+						{decisionOwnedByOther ? "Сделать копию" : "Привязать к схеме"}
+					</Button>
+				</DialogActions>
+			</Dialog>
 		</Dialog>
 	);
 }

@@ -21,6 +21,19 @@ const ARCH_COMPONENT_COLORS: Record<V2ArchComponentType, string> = {
 /** Подсветка включена только в dev-сборке. */
 export const ARCH_DEV_OUTLINE_ENABLED = false;
 
+const PREVIEW_OUTLINE_ARCH_COMPONENTS = new Set<V2ArchComponentType>([
+	"typicalWork",
+	"atypicalWork",
+]);
+
+function shouldRenderArchOutline(
+	archComponent: V2ArchComponentType,
+	previewMode?: boolean,
+): boolean {
+	if (ARCH_DEV_OUTLINE_ENABLED) return true;
+	return Boolean(previewMode && PREVIEW_OUTLINE_ARCH_COMPONENTS.has(archComponent));
+}
+
 /**
  * Обводит группу/массив как арх. компонент в dev-режиме: цветная пунктирная
  * рамка + бейдж-сноска с названием (как выделение слоёв в figma/miro).
@@ -29,9 +42,15 @@ export const ARCH_DEV_OUTLINE_ENABLED = false;
 export function ArchComponentDevOutline({
 	archComponent,
 	children,
+	previewMode = false,
+	badgeSuffix,
 }: {
 	archComponent: V2ArchComponentType | null | undefined;
 	children: ReactNode;
+	/** В превью конструктора/анкеты — показывать рамку для блоков работ. */
+	previewMode?: boolean;
+	/** Дополнение к бейджу (например, название типовой работы). */
+	badgeSuffix?: string;
 }) {
 	if (!archComponent) {
 		return <>{children}</>;
@@ -39,8 +58,11 @@ export function ArchComponentDevOutline({
 
 	const color = ARCH_COMPONENT_COLORS[archComponent];
 	const label = V2_ARCH_COMPONENT_LABELS[archComponent];
+	const badgeLabel = badgeSuffix?.trim()
+		? `◆ Арх. компонент · ${label} · ${badgeSuffix.trim()}`
+		: `◆ Арх. компонент · ${label}`;
 
-	return ARCH_DEV_OUTLINE_ENABLED ? (
+	return shouldRenderArchOutline(archComponent, previewMode) ? (
 		<Box
 			sx={{
 				position: "relative",
@@ -74,7 +96,7 @@ export function ArchComponentDevOutline({
 					userSelect: "none",
 				}}
 			>
-				◆ Арх. компонент · {label}
+				{badgeLabel}
 			</Box>
 			{children}
 		</Box>

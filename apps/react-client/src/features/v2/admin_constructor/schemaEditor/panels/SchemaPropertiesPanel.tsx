@@ -49,6 +49,13 @@ import {
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
+import { useParams, useSearchParams } from "react-router";
+import { useV2TypicalWorksList } from "@react-client/common/api/queries/v2-works";
+import {
+	LOGIC_TAB_QUERY,
+	NEW_WORK_QUERY,
+	WORK_ID_QUERY,
+} from "./typicalWorksPanel/typicalWorksUi";
 import { useBufferedDraftText } from "../hooks/useBufferedDraftText";
 import { usePropertiesPanelWidth } from "../hooks/usePropertiesPanelWidth";
 import {
@@ -342,6 +349,28 @@ export function SchemaPropertiesPanel() {
 	const archComponent = useMemo(
 		() => resolveArchComponentAtPointer(uiSchema, selectedPointer ?? ""),
 		[uiSchema, selectedPointer],
+	);
+	const isTypicalWorkBlock = archComponent === "typicalWork";
+	const { templateId = "" } = useParams<{ templateId: string }>();
+	const [, setSearchParams] = useSearchParams();
+	const { data: typicalWorksData } = useV2TypicalWorksList({
+		templateId: isTypicalWorkBlock ? templateId : null,
+	});
+	const typicalWorks = typicalWorksData?.items ?? [];
+	const openTypicalWorksTab = useCallback(
+		(workId?: string, opts?: { create?: boolean }) => {
+			setSearchParams((prev) => {
+				const next = new URLSearchParams(prev);
+				next.set(LOGIC_TAB_QUERY, "works");
+				if (workId) next.set(WORK_ID_QUERY, workId);
+				else next.delete(WORK_ID_QUERY);
+				if (opts?.create) next.set(NEW_WORK_QUERY, "1");
+				else next.delete(NEW_WORK_QUERY);
+				return next;
+			});
+			setMainTab("logic");
+		},
+		[setSearchParams, setMainTab],
 	);
 	const uiWidget = useMemo(
 		() =>
@@ -1080,6 +1109,54 @@ export function SchemaPropertiesPanel() {
 							</Typography>
 						) : null}
 					</PropertiesSection>
+
+					{isTypicalWorkBlock ? (
+						<>
+							<Divider sx={{ mb: 2 }} />
+
+							<PropertiesSection title="Типовые работы">
+								<Typography variant="caption" color="text.secondary">
+									Работы появляются в этом блоке при срабатывании их
+									триггеров. Настройка — во вкладке «Логика».
+								</Typography>
+								{typicalWorks.length === 0 ? (
+									<Typography
+										variant="caption"
+										color="text.secondary"
+										sx={{ display: "block", mt: 0.5 }}
+									>
+										Пока нет типовых работ.
+									</Typography>
+								) : (
+									<Flex gap={0.5} sx={{ flexWrap: "wrap", mt: 0.5 }}>
+										{typicalWorks.map((w) => (
+											<Chip
+												key={w.id}
+												size="small"
+												variant="outlined"
+												label={
+													w.archComponentType
+														? `${w.name} · ${w.archComponentType}`
+														: w.name
+												}
+												onClick={() => openTypicalWorksTab(w.id)}
+											/>
+										))}
+									</Flex>
+								)}
+								<Button
+									size="small"
+									variant="outlined"
+									sx={{ mt: 1 }}
+									onClick={() =>
+										openTypicalWorksTab(undefined, { create: true })
+									}
+								>
+									Добавить типовую работу
+								</Button>
+							</PropertiesSection>
+						</>
+					) : null}
 
 					<Divider sx={{ mb: 2 }} />
 

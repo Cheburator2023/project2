@@ -1,7 +1,8 @@
 import type { V2LogicGraphDto, V2LogicRuleDto } from "./v2-template.types";
 import {
-	collectGeneratedTypicalWorkArrayPaths,
 	jsonSchemaHasResolvablePath,
+	resolveSourceTypicalWorksOutputPath,
+	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
 } from "./v2-typical-work-output-paths.util";
 
 export type PatchV2TypicalWorksLogicOptions = {
@@ -11,23 +12,24 @@ export type PatchV2TypicalWorksLogicOptions = {
 
 /** Канонические пути v5: источники в detailInfo, вывод — в stream-блоки. */
 export const V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
-export const V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH =
-	"streamDataSources.sourceTypicalTasks";
+export { V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH };
 export const V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH =
 	"streamModelControl.field_Khn6-HAW";
 
-export function buildSourceTypicalWorksCatalogRule(): V2LogicRuleDto {
+export function buildSourceTypicalWorksCatalogRule(
+	outputArrayPath: string = V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+): V2LogicRuleDto {
 	return {
 		id: "unified-source-typical-works",
 		kind: "task_trigger",
-		targetPath: `/${V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH.replace(/\./g, "/")}`,
+		targetPath: `/${outputArrayPath.replace(/\./g, "/")}`,
 		condition: true,
 		description:
 			"ФТ-024: типовые работы «Система-источник» из справочника работ (назначения + триггеры).",
 		dependencies: [`/${V2_SOURCE_SYSTEMS_ARRAY_PATH.replace(/\./g, "/")}`],
 		payload: {
 			hint:
-				"При заполнении систем-источников подтягиваются типовые работы из справочника для стрима (Внутренний/Внешний). Работы настраиваются в конструкторе → Логика.",
+				"При заполнении систем-источников подтягиваются типовые работы из справочника (стрим «Источники данных»). Появление работ управляется их триггерами. Настройка — в конструкторе → Логика.",
 			mode: "generated_rows",
 			label: "Типовые работы (стрим «Источники данных»)",
 			worksCatalog: true,
@@ -35,7 +37,7 @@ export function buildSourceTypicalWorksCatalogRule(): V2LogicRuleDto {
 			worksCatalogStream: "fromSourceType",
 			taskCode: "CATALOG_SOURCE_TASKS",
 			calcModel: "unified",
-			outputArrayPath: V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+			outputArrayPath,
 			sourceArrayPath: V2_SOURCE_SYSTEMS_ARRAY_PATH,
 		},
 	};
@@ -106,15 +108,7 @@ export function schemaSupportsSourceTypicalWorksCatalog(
 	jsonSchema?: unknown,
 	uiSchema?: unknown,
 ): boolean {
-	const hasSourceTypicalOutput =
-		jsonSchemaHasResolvablePath(
-			jsonSchema,
-			V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
-		) ||
-		collectGeneratedTypicalWorkArrayPaths(uiSchema).includes(
-			V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
-		);
-	if (!hasSourceTypicalOutput) return false;
+	if (!resolveSourceTypicalWorksOutputPath(jsonSchema, uiSchema)) return false;
 
 	return (
 		jsonSchemaHasResolvablePath(jsonSchema, V2_SOURCE_SYSTEMS_ARRAY_PATH) ||
@@ -138,7 +132,17 @@ export function patchV2TypicalWorksLogicRules(
 		(rule) => rule.id === "unified-control-typical-works",
 	);
 	const patched: V2LogicRuleDto[] = [];
-	if (hasSourceRule) patched.push(buildSourceTypicalWorksCatalogRule());
+	const sourceOutputPath = resolveSourceTypicalWorksOutputPath(
+		options?.jsonSchema,
+		options?.uiSchema,
+	);
+	if (hasSourceRule) {
+		patched.push(
+			buildSourceTypicalWorksCatalogRule(
+				sourceOutputPath ?? V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+			),
+		);
+	}
 	if (hasControlRule) patched.push(buildControlTypicalWorksCatalogRule());
 	const rest = rules
 		.filter((rule) => !PATCHED_RULE_IDS.has(rule.id))

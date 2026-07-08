@@ -26,8 +26,13 @@ export function useSchemaEditorAnketaEngine(): V2AnketaSchemaEngine {
 	);
 
 	const displayFormData = useMemo(
-		() => mergeAnketaDisplayFormData(previewFormData, liveFormData),
-		[previewFormData, liveFormData],
+		() =>
+			mergeAnketaDisplayFormData(
+				previewFormData,
+				liveFormData,
+				previewUiSchema as Record<string, unknown> | undefined,
+			),
+		[previewFormData, liveFormData, previewUiSchema],
 	);
 
 	return useMemo(

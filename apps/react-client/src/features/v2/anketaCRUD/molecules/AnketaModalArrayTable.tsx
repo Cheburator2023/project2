@@ -14,12 +14,14 @@ import {
 import { readAnketaFormContext } from "../utils/anketaFormContext";
 import {
 	arrayTableShowsRowActions,
+	adjustTypicalWorkTableColumns,
 	collectTypicalWorkSourceNames,
 	filterTypicalWorkItems,
 	getArrayAtPath,
 	isTypicalWorkArrayPath,
 	resolveArrayTableColumns,
 	sumTypicalWorkTotals,
+	typicalWorkItemDisplayName,
 	type AnketaArrayTableColumn,
 } from "../utils/anketaModalArrayTableConfig";
 import { useMemo, useState } from "react";
@@ -116,7 +118,10 @@ export function AnketaModalArrayTable({
 	const items = getArrayAtPath(ctx.formData ?? {}, pathKey);
 	const readOnly = ctx.anketaReadOnly;
 	const showRowActions = arrayTableShowsRowActions(pathKey, formContext);
-	const isTypicalWorks = isTypicalWorkArrayPath(pathKey);
+	const isTypicalWorks = isTypicalWorkArrayPath(
+		pathKey,
+		ctx.previewUiSchema as Record<string, unknown> | undefined,
+	);
 	const sourceNames = useMemo(
 		() => (isTypicalWorks ? collectTypicalWorkSourceNames(items) : []),
 		[isTypicalWorks, items],
@@ -130,12 +135,7 @@ export function AnketaModalArrayTable({
 	const displayColumns = useMemo(() => {
 		if (!columns) return null;
 		if (!isTypicalWorks) return columns;
-		const hasSource = items.some(
-			(item) =>
-				typeof item.sourceName === "string" && item.sourceName.trim().length > 0,
-		);
-		if (hasSource) return columns;
-		return columns.filter((col) => col.key !== "sourceName");
+		return adjustTypicalWorkTableColumns(columns, items);
 	}, [columns, isTypicalWorks, items]);
 
 	const tableTestId = anketaMoleculeTestIdForPath(
@@ -317,13 +317,9 @@ export function AnketaModalArrayTable({
 								key={`${pathKey}-${index}`}
 								data-test-id={`${tableTestId}--row--${index}`}
 								sx={{
-									display: "grid",
-									gridTemplateColumns: gridTemplate(
-										displayColumns,
-										showRowActions,
-									),
-									gap: 1,
-									alignItems: "center",
+									display: "flex",
+									flexDirection: "column",
+									gap: 0.75,
 									px: 1.5,
 									py: 1.25,
 									bgcolor: "grey.50",
@@ -332,47 +328,70 @@ export function AnketaModalArrayTable({
 									borderColor: "divider",
 								}}
 							>
-								{displayColumns.map((column) => (
-									<CellValue
-										key={column.key}
-										column={column}
-										value={
-											column.render
-												? column.render(item)
-												: String(item[column.field ?? column.key] ?? "—")
-										}
-									/>
-								))}
-								{showRowActions ? (
-									<Stack
-										direction="row"
-										spacing={0.25}
-										justifyContent="flex-end"
+								{isTypicalWorks ? (
+									<Typography
+										variant="subtitle2"
+										fontWeight={700}
+										data-test-id={`${tableTestId}--row-title--${index}`}
+										sx={{ minWidth: 0 }}
 									>
-										<IconButton
-											size="small"
-											disabled={readOnly}
-											title="Редактировать"
-											data-test-id={`${tableTestId}--edit--${index}`}
-											onClick={() =>
-												ctx.openAnketaModal?.(pathKey, index)
-											}
-										>
-											<EditOutlinedIcon fontSize="small" />
-										</IconButton>
-										<IconButton
-											size="small"
-											disabled={readOnly}
-											title="Удалить"
-											data-test-id={`${tableTestId}--delete--${index}`}
-											onClick={() =>
-												ctx.deleteAnketaArrayItem?.(pathKey, index)
-											}
-										>
-											<DeleteOutlineIcon fontSize="small" />
-										</IconButton>
-									</Stack>
+										{typicalWorkItemDisplayName(item, index)}
+									</Typography>
 								) : null}
+								<Box
+									sx={{
+										display: "grid",
+										gridTemplateColumns: gridTemplate(
+											displayColumns,
+											showRowActions,
+										),
+										gap: 1,
+										alignItems: "center",
+										minWidth: showRowActions ? 720 : 640,
+									}}
+								>
+									{displayColumns.map((column) => (
+										<CellValue
+											key={column.key}
+											column={column}
+											value={
+												column.render
+													? column.render(item)
+													: String(item[column.field ?? column.key] ?? "—")
+											}
+										/>
+									))}
+									{showRowActions ? (
+										<Stack
+											direction="row"
+											spacing={0.25}
+											justifyContent="flex-end"
+										>
+											<IconButton
+												size="small"
+												disabled={readOnly}
+												title="Редактировать"
+												data-test-id={`${tableTestId}--edit--${index}`}
+												onClick={() =>
+													ctx.openAnketaModal?.(pathKey, index)
+												}
+											>
+												<EditOutlinedIcon fontSize="small" />
+											</IconButton>
+											<IconButton
+												size="small"
+												disabled={readOnly}
+												title="Удалить"
+												data-test-id={`${tableTestId}--delete--${index}`}
+												onClick={() =>
+													ctx.deleteAnketaArrayItem?.(pathKey, index)
+												}
+											>
+												<DeleteOutlineIcon fontSize="small" />
+											</IconButton>
+										</Stack>
+									) : null}
+								</Box>
 							</Box>
 						))}
 					</Stack>
@@ -381,8 +400,8 @@ export function AnketaModalArrayTable({
 				<ListEmptyPlaceholder
 					data-test-id={`${tableTestId}--empty`}
 				>
-					{readOnly && isTypicalWorks
-						? "Типовые работы появятся после расчёта анкеты"
+					{isTypicalWorks
+						? "Типовые работы появятся при срабатывании триггеров"
 						: "Нет записей"}
 				</ListEmptyPlaceholder>
 			)}

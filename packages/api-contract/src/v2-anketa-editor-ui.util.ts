@@ -180,6 +180,7 @@ function isReadonlyGeneratedArray(
 	uiNode: unknown,
 	schemaNode: Record<string, unknown> | undefined,
 ): boolean {
+	if (resolveV2AnketaArchComponent(uiNode) === "typicalWork") return true;
 	if (isUiReadonly(uiNode)) return true;
 	if (schemaNode?.readOnly === true) return true;
 	const { addable, removable } = readArrayToolbar(uiNode);

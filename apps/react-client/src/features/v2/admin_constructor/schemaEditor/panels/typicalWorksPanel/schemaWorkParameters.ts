@@ -7,6 +7,7 @@ import {
 	formatParamNameWithSourceKeys,
 	isControlTypeTriggerParam,
 	isSourceTypeTriggerParam,
+	isV2AnketaSystemRootKey,
 	stripParamNameSourceKeys,
 } from "@smart-anketa/api-contract";
 import {
@@ -277,105 +278,50 @@ function schemaParamDescription(
 	return archLabel ? `${archLabel} · ${path}` : path;
 }
 
-function normalizeParamTitle(title: string): string {
-	return title.trim().toLocaleLowerCase("ru");
-}
-
-/** Единый параметр «Тип работ» встречается в нескольких arch-блоках с разными ключами. */
-const CROSS_SCHEMA_PARAM_TITLES = new Set(["тип работ"]);
-
-function dedupeGroupKey(param: BuiltSchemaParam): string {
-	const title = normalizeParamTitle(param.name);
-	if (CROSS_SCHEMA_PARAM_TITLES.has(title)) {
-		return `title::${title}`;
-	}
-	return `${title}::${valueSignature(param)}`;
-}
-
-function preferPrimarySchemaParam(a: BuiltSchemaParam, b: BuiltSchemaParam): number {
-	if (a.code === "workType") return -1;
-	if (b.code === "workType") return 1;
-	if (a.code === "type" && b.code !== "workType") return -1;
-	if (b.code === "type" && a.code !== "workType") return 1;
-	return a.pointer.localeCompare(b.pointer, "ru");
-}
-
-function valueSignature(
-	param: Pick<SchemaBuiltWorkParameterDto, "numeric" | "textual" | "values">,
-): string {
-	if (param.numeric) return "numeric";
-	if (param.textual) return "textual";
-	return param.values
-		.map((value) => `${value.code}::${value.label}`)
-		.sort()
-		.join("|");
-}
-
-function mergeParameterValues(
-	left: V2TypicalWorkParameterDto["values"],
-	right: V2TypicalWorkParameterDto["values"],
-): V2TypicalWorkParameterDto["values"] {
-	const merged = new Map<string, V2TypicalWorkParameterDto["values"][number]>();
-	for (const value of [...left, ...right]) {
-		const key = `${value.code}::${value.label}`;
-		if (!merged.has(key)) merged.set(key, value);
-	}
-	return [...merged.values()].sort((a, b) => a.sortOrder - b.sortOrder);
-}
-
 type BuiltSchemaParam = SchemaBuiltWorkParameterDto & {
 	pointer: string;
 	dictionaryCode?: string;
 };
 
-function dedupeSchemaWorkParameters(
+/**
+ * Параметры схемы НЕ дедуплицируются по названию: одинаковое имя на разных путях
+ * (например «Тип работ» в разных арх-блоках) — это разные поля схемы. Работа
+ * настраивается в контексте конкретного поля; путь-источник виден в описании.
+ */
+function finalizeSchemaWorkParameters(
 	params: BuiltSchemaParam[],
 ): SchemaBuiltWorkParameterDto[] {
-	const groups = new Map<string, BuiltSchemaParam[]>();
+	return params
+		.map((param) => ({
+			id: param.id,
+			code: param.code,
+			name: param.name,
+			description: param.description,
+			dictionaryCode: param.dictionaryCode,
+			numeric: param.numeric,
+			textual: param.textual,
+			values: param.values,
+		}))
+		.sort((a, b) => a.name.localeCompare(b.name, "ru"));
+}
 
-	for (const param of params) {
-		const groupKey = dedupeGroupKey(param);
-		const list = groups.get(groupKey) ?? [];
-		list.push(param);
-		groups.set(groupKey, list);
-	}
+/** Поле внутри блока-результата «Типовые/Нетиповые работы» — не параметр источника. */
+function isWorkResultBlockField(
+	uiSchema: Record<string, unknown> | undefined,
+	pointer: string,
+): boolean {
+	const arch = resolveArchComponentAtPointer(uiSchema, pointer);
+	return arch === "typicalWork" || arch === "atypicalWork";
+}
 
-	const deduped: SchemaBuiltWorkParameterDto[] = [];
-
-	for (const group of groups.values()) {
-		const sorted = [...group].sort(preferPrimarySchemaParam);
-		const primary = sorted[0]!;
-		const allCodes = sorted.map((item) => item.code);
-		const alternateKeys = allCodes.filter((code) => code !== primary.code);
-		const keysSuffix =
-			alternateKeys.length > 0 ? ` · keys:${alternateKeys.join(",")}` : "";
-
-		const dictionaryCode =
-			sorted.find((item) => item.dictionaryCode)?.dictionaryCode ??
-			primary.dictionaryCode;
-
-		deduped.push({
-			id: primary.id,
-			code: primary.code,
-			name: primary.name,
-			description: primary.description
-				? `${primary.description}${keysSuffix}`
-				: keysSuffix
-					? keysSuffix.slice(3)
-					: null,
-			sourceKeys: alternateKeys.length > 0 ? alternateKeys : undefined,
-			dictionaryCode,
-			numeric: primary.numeric,
-			textual: primary.textual,
-			values: sorted.reduce(
-				(acc, item) => mergeParameterValues(acc, item.values),
-				primary.values,
-			),
-		});
-	}
-
-	deduped.sort((a, b) => a.name.localeCompare(b.name, "ru"));
-	return deduped;
+/**
+ * Поле системного scaffold-а (meta/summary/workflow/uncertaintyCalculation/
+ * groupActivation) добавляется в каждую схему автоматически и не относится к
+ * параметрам работы — исключаем из пикера.
+ */
+function isSystemScaffoldField(pointer: string): boolean {
+	const [root] = pointerSegments(pointer);
+	return Boolean(root) && isV2AnketaSystemRootKey(root);
 }
 
 export type BuildSchemaWorkParametersInput = {
@@ -401,7 +347,9 @@ export function buildSchemaWorkParameters({
 	const usedCodes = new Set<string>();
 
 	for (const hint of fieldPathHints) {
+		if (isSystemScaffoldField(hint.pointer)) continue;
 		if (!isArchComponentLeafField(hint.pointer, jsonSchema)) continue;
+		if (isWorkResultBlockField(uiSchema, hint.pointer)) continue;
 
 		const node = resolveSchemaNode(jsonSchema, pointerSegments(hint.pointer));
 		const dictionaryValues = hint.dictionaryCode
@@ -446,7 +394,7 @@ export function buildSchemaWorkParameters({
 		});
 	}
 
-	return dedupeSchemaWorkParameters(params);
+	return finalizeSchemaWorkParameters(params);
 }
 
 /** Находит параметр схемы по коду, алиасу (sourceKeys) или имени. */

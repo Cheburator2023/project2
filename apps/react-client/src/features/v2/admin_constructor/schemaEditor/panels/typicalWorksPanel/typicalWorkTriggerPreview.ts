@@ -1,7 +1,4 @@
-import {
-	resolveStreamFromSourceType,
-	V2_SOURCE_SYSTEMS_ARRAY_PATH,
-} from "@smart-anketa/api-contract";
+import { V2_SOURCE_SYSTEMS_ARRAY_PATH } from "@smart-anketa/api-contract";
 
 function readDotPath(data: Record<string, unknown>, path: string): unknown {
 	return path.split(".").reduce<unknown>((cur, key) => {
@@ -28,22 +25,15 @@ function readSourceSystemRows(
 	);
 }
 
-/** Строка системы-источника из превью анкеты для проверки триггеров работы. */
+/**
+ * Строка системы-источника из превью анкеты для проверки триггеров работы.
+ * Разделение внутр/внеш убрано — берём первую систему-источник (гейтинг по типу
+ * теперь выполняют триггеры самой работы).
+ */
 export function resolvePreviewSourceRowForTypicalWork(
 	formData: Record<string, unknown> | undefined | null,
-	streamExecutor: string | null | undefined,
 ): Record<string, unknown> | undefined {
 	if (!formData) return undefined;
-	const stream = streamExecutor?.trim() ?? "";
 	const rows = readSourceSystemRows(formData);
-	if (rows.length === 0) return undefined;
-
-	if (stream) {
-		const matched = rows.find(
-			(row) => resolveStreamFromSourceType(row) === stream,
-		);
-		if (matched) return matched;
-	}
-
 	return rows[0];
 }

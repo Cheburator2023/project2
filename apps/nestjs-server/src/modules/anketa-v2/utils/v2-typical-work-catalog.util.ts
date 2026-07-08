@@ -1,8 +1,18 @@
+import { V2_SOURCE_STREAM } from "@smart-anketa/api-contract";
 import {
 	dictionaryByName,
 	V2_DOC_CATALOG,
 	type V2CatalogTypicalWork,
 } from "../constants/v2-doc-catalog";
+
+/** Legacy-стримы источников (разделение внутр/внеш убрано). */
+const LEGACY_SOURCE_STREAMS = new Set(["ИД. Внутренний", "ИД. Внешний"]);
+
+/** Каталожный стрим → канонический: источники схлопнуты в единый стрим. */
+export function canonicalizeWorkStream(stream: string): string {
+	const trimmed = stream.trim();
+	return LEGACY_SOURCE_STREAMS.has(trimmed) ? V2_SOURCE_STREAM : trimmed;
+}
 
 export function slugParamCode(name: string): string {
 	return name

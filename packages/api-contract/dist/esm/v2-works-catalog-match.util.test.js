@@ -1,16 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { catalogValueMatchesTriggerRule, isSourceTypeTriggerParam, resolveLaborAnyOfCoefficient, resolveStreamFromSourceType, resolveStreamsFromSourceSystems, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, typicalWorkRulesMatchSource, } from "./v2-works-catalog-match.util";
+import { catalogValueMatchesTriggerRule, isSourceTypeTriggerParam, resolveLaborAnyOfCoefficient, resolveStreamFromSourceType, resolveStreamsFromSourceSystems, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, typicalWorkRulesMatchSource, V2_SOURCE_STREAM, } from "./v2-works-catalog-match.util";
 describe("v2-works-catalog-match.util", () => {
-    it("resolves stream from source type", () => {
-        expect(resolveStreamFromSourceType({ type: "Внутренний" })).toBe("ИД. Внутренний");
-        expect(resolveStreamFromSourceType({ type: "Внешний" })).toBe("ИД. Внешний");
+    it("resolves the unified source stream for any source row", () => {
+        // Разделение внутр/внеш убрано: любой источник → единый стрим.
+        expect(resolveStreamFromSourceType({ type: "Внутренний" })).toBe(V2_SOURCE_STREAM);
+        expect(resolveStreamFromSourceType({ type: "Внешний" })).toBe(V2_SOURCE_STREAM);
+        expect(resolveStreamFromSourceType({})).toBe(V2_SOURCE_STREAM);
     });
-    it("collects streams from source systems", () => {
+    it("collects the unified source stream from source systems", () => {
         expect(resolveStreamsFromSourceSystems({
             streamDataSources: {
                 sourceSystems: [{ type: "Внутренний" }, { type: "Внешний" }],
             },
-        })).toEqual(["ИД. Внутренний", "ИД. Внешний"]);
+        })).toEqual([V2_SOURCE_STREAM]);
     });
     it("matches control type by bracket label", () => {
         const rules = [

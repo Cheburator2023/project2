@@ -9,7 +9,7 @@ import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type {
 	ArrayFieldTemplateProps,
 	FieldPathId,
@@ -27,7 +27,9 @@ import {
 } from "@react-client/features/v2/anketaCRUD/utils/anketaFormContext";
 import {
 	countSubsectionFilledItems,
+	getArrayAtPath,
 	getValueAtPath,
+	typicalWorkItemDisplayName,
 } from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
 import {
 	V2_ANKETA_SECTION_COMPLETE_LABELS,
@@ -575,14 +577,32 @@ export function V2PreviewArrayFieldTemplate({
 		anketaModalArrayPaths,
 		anketaCompactArrayTablePaths,
 		anketaReadOnly,
+		formData,
 	} = readAnketaFormContext(registry.formContext);
 	const archComponent = resolveV2AnketaArchComponent(uiSchema);
+	const pathKey = fieldPathId?.path?.join(".") ?? "";
+	const typicalWorkBadgeSuffix = useMemo(() => {
+		if (archComponent !== "typicalWork" || !pathKey) return undefined;
+		const items = getArrayAtPath(formData ?? {}, pathKey);
+		const names = [
+			...new Set(
+				items.map((item, index) => typicalWorkItemDisplayName(item, index)),
+			),
+		];
+		if (names.length === 0) return undefined;
+		if (names.length === 1) return names[0];
+		const preview = names.slice(0, 3).join(", ");
+		return names.length > 3 ? `${preview}…` : preview;
+	}, [archComponent, formData, pathKey]);
 	const wrapArch = (node: ReactNode): ReactNode => (
-		<ArchComponentDevOutline archComponent={archComponent}>
+		<ArchComponentDevOutline
+			archComponent={archComponent}
+			previewMode={archComponent === "typicalWork"}
+			badgeSuffix={typicalWorkBadgeSuffix}
+		>
 			{node}
 		</ArchComponentDevOutline>
 	);
-	const pathKey = fieldPathId?.path?.join(".") ?? "";
 	const lastSegment = fieldPathId?.path?.at(-1);
 	const fieldKey: string =
 		typeof lastSegment === "string" || typeof lastSegment === "number"
@@ -591,7 +611,8 @@ export function V2PreviewArrayFieldTemplate({
 	const useCompactTable = Boolean(
 		pathKey &&
 			((anketaCompactArrayTablePaths?.has(pathKey) ?? false) ||
-				isModalEditableArrayField(archComponent, fieldKey)),
+				isModalEditableArrayField(archComponent, fieldKey) ||
+				archComponent === "typicalWork"),
 	);
 	const useModalAdd = Boolean(
 		pathKey &&
@@ -766,7 +787,10 @@ export function V2PreviewObjectFieldTemplate({
 	);
 	const archComponent = resolveV2AnketaArchComponent(uiSchema);
 	const wrapArch = (node: ReactNode): ReactNode => (
-		<ArchComponentDevOutline archComponent={archComponent}>
+		<ArchComponentDevOutline
+			archComponent={archComponent}
+			previewMode={archComponent === "typicalWork"}
+		>
 			{node}
 		</ArchComponentDevOutline>
 	);

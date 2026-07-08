@@ -108,6 +108,10 @@ export type V2TypicalWorkListItemDto = {
     usedOnSchemasCount?: number;
     currentNorm: number | null;
     streams: string[];
+    /** Схема-владелец работы (null — глобальная работа реестра). */
+    templateId?: string | null;
+    /** Имя схемы-владельца для отображения (null — глобальная). */
+    templateName?: string | null;
     /** Действующая норма на сегодня по каждому назначенному стриму (ключ — streamExecutor в БД). */
     normsByStream?: Record<string, number | null>;
     /** Число параметров трудоёмкости по стриму (ключ — streamExecutor в БД). */
@@ -242,6 +246,14 @@ export type CreateV2TypicalWorkRequestDto = {
 export type CreateV2TypicalWorkAssignmentRequestDto = {
     workId: string;
     streamExecutor: string;
+};
+export type CopyV2TypicalWorkRequestDto = {
+    /** Схема-владелец копии (null — глобальная работа). */
+    templateId?: string | null;
+    /** Стрим-исполнитель, на который назначить копию. */
+    streamExecutor?: string | null;
+    /** Имя копии; по умолчанию «<имя оригинала> (копия)». */
+    name?: string | null;
 };
 export type V2TypicalWorkAssignmentDto = {
     id: string;

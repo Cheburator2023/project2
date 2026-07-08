@@ -2,6 +2,7 @@ import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { AnketaCompactArrayTablePath } from "./anketaFormModalPaths";
 import { getArrayItemSchemaSliceForModal } from "./anketaSchemaAtPath";
 import { readAnketaFormContext } from "./anketaFormContext";
+import { collectGeneratedTypicalWorkArrayPaths } from "@smart-anketa/api-contract";
 
 export type AnketaArrayTableColumn = {
 	key: string;
@@ -427,8 +428,13 @@ const TYPICAL_WORK_ARRAY_PATHS = new Set([
 	"generalInfo.modelService.controlTypicalTasks",
 ]);
 
-export function isTypicalWorkArrayPath(path: string): boolean {
-	return TYPICAL_WORK_ARRAY_PATHS.has(path);
+export function isTypicalWorkArrayPath(
+	path: string,
+	uiSchema?: Record<string, unknown>,
+): boolean {
+	if (TYPICAL_WORK_ARRAY_PATHS.has(path)) return true;
+	if (!uiSchema) return false;
+	return collectGeneratedTypicalWorkArrayPaths(uiSchema).includes(path);
 }
 
 export function sumTypicalWorkTotals(
@@ -470,6 +476,31 @@ export function filterTypicalWorkItems(
 	return items.filter((item) => {
 		const raw = item.sourceName;
 		return typeof raw === "string" && raw.trim() === sourceNameFilter;
+	});
+}
+
+export function typicalWorkItemDisplayName(
+	item: Record<string, unknown>,
+	fallbackIndex: number,
+): string {
+	const raw = item.name;
+	if (typeof raw === "string" && raw.trim()) return raw.trim();
+	return `Работа ${fallbackIndex + 1}`;
+}
+
+/** Колонки таблицы типовых работ: имя — в заголовке карточки строки. */
+export function adjustTypicalWorkTableColumns(
+	columns: AnketaArrayTableColumn[],
+	items: Record<string, unknown>[],
+): AnketaArrayTableColumn[] {
+	const hasSource = items.some(
+		(item) =>
+			typeof item.sourceName === "string" && item.sourceName.trim().length > 0,
+	);
+	return columns.filter((col) => {
+		if (col.key === "name") return false;
+		if (col.key === "sourceName" && !hasSource) return false;
+		return true;
 	});
 }
 

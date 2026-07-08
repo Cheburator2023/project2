@@ -61,6 +61,8 @@ type WorkFormulaEditorProps = {
 	onFormulaChange: (formula: V2TypicalWorkFormulaDto) => void;
 	onRoundingChange: (rounding: V2TypicalWorkRoundingDto) => void;
 	readOnly?: boolean;
+	/** Читаемое имя параметра по коду (для подписи чипов формулы). */
+	resolveParamName?: (paramCode: string, paramName?: string | null) => string;
 };
 
 type ParamOption = {
@@ -200,9 +202,21 @@ const FORMULA_PICKER_FIELD_SX = {
 	),
 } as const;
 
+/** Подпись чипа параметра: читаемое имя + код (id), если имя известно и отличается. */
+function formatParamSubtitle(
+	name: string | null | undefined,
+	paramCode: string,
+): string {
+	const trimmed = name?.trim();
+	return trimmed && trimmed !== paramCode
+		? `${trimmed} · ${paramCode}`
+		: paramCode;
+}
+
 function tokenDisplayLabel(
 	token: V2WorkFormulaToken,
 	normValue: number | null,
+	resolveParamName?: (paramCode: string, paramName?: string | null) => string,
 ): { title: string; subtitle?: string } {
 	switch (token.kind) {
 		case "norm":
@@ -210,12 +224,20 @@ function tokenDisplayLabel(
 		case "param_coeff":
 			return {
 				title: "коэф. параметра",
-				subtitle: token.paramName ?? token.paramCode,
+				subtitle: formatParamSubtitle(
+					resolveParamName?.(token.paramCode, token.paramName) ??
+						token.paramName,
+					token.paramCode,
+				),
 			};
 		case "param_anyof":
 			return {
 				title: "any-of",
-				subtitle: token.paramName ?? token.paramCode,
+				subtitle: formatParamSubtitle(
+					resolveParamName?.(token.paramCode, token.paramName) ??
+						token.paramName,
+					token.paramCode,
+				),
 			};
 		case "work_ref":
 			return {
@@ -334,6 +356,7 @@ export function WorkFormulaEditor({
 	onFormulaChange,
 	onRoundingChange,
 	readOnly = false,
+	resolveParamName,
 }: WorkFormulaEditorProps) {
 	const [mode, setMode] = useState<"visual" | "manual">("visual");
 	const [manualText, setManualText] = useState(formula.text);
@@ -717,7 +740,11 @@ export function WorkFormulaEditor({
 						) : (
 							formula.tokens.map((token, index) => {
 								const colors = tokenChipColors(token);
-								const label = tokenDisplayLabel(token, normValue);
+								const label = tokenDisplayLabel(
+									token,
+									normValue,
+									resolveParamName,
+								);
 								const anyOfValueCount =
 									token.kind === "param_anyof"
 										? resolveLaborAnyOfValueCount(laborParams, token.paramCode)
@@ -769,7 +796,11 @@ export function WorkFormulaEditor({
 														? "Any-of без выбранных значений — отметьте множество в карточке параметра"
 														: isOperator && !readOnly
 															? "Сменить оператор"
-															: undefined
+															: (token.kind === "param_coeff" ||
+																		token.kind === "param_anyof") &&
+																  label.subtitle
+																? label.subtitle
+																: undefined
 											}
 											sx={{
 												display: "inline-flex",

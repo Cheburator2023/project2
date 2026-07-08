@@ -49,22 +49,14 @@ describe("v2-default-typical-works-logic.util", () => {
                         type: "object",
                         properties: {
                             sourceSystems: { type: "array", items: { type: "object" } },
-                        },
-                    },
-                    streamDataSources: {
-                        type: "object",
-                        properties: {
-                            sourceTypicalTasks: {
-                                type: "array",
-                                items: { type: "object" },
-                            },
+                            myTypicalTasks: { type: "array", items: { type: "object" } },
                         },
                     },
                 },
             },
             uiSchema: {
-                streamDataSources: {
-                    sourceTypicalTasks: {
+                detailInfo: {
+                    myTypicalTasks: {
                         "ui:options": { archComponent: "typicalWork" },
                     },
                 },
@@ -72,6 +64,9 @@ describe("v2-default-typical-works-logic.util", () => {
         });
         const rule = patched.rules.find((r) => r.id === "unified-source-typical-works");
         expect(rule).toBeDefined();
-        expect((rule?.payload).worksCatalog).toBe(true);
+        const payload = rule?.payload;
+        expect(payload.worksCatalog).toBe(true);
+        expect(payload.outputArrayPath).toBe("detailInfo.myTypicalTasks");
+        expect(rule?.targetPath).toBe("/detailInfo/myTypicalTasks");
     });
 });

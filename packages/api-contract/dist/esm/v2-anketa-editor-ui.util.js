@@ -131,6 +131,8 @@ export function listV2AnketaHiddenRootKeys(uiSchema) {
     return hidden;
 }
 function isReadonlyGeneratedArray(uiNode, schemaNode) {
+    if (resolveV2AnketaArchComponent(uiNode) === "typicalWork")
+        return true;
     if (isUiReadonly(uiNode))
         return true;
     if (schemaNode?.readOnly === true)

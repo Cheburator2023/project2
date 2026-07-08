@@ -99,13 +99,15 @@ export function isWorkAssignedToLogicStream(
 	);
 }
 
+/**
+ * Стрим для нового назначения. Разделение внутр/внеш убрано — назначаем на
+ * канонический стрим области (её метка == имя стрима в БД), а не на legacy-стримы.
+ */
 export function pickDbStreamForLogicStream(
 	logicStream: string,
-	workStreams: string[],
+	_workStreams: string[],
 ): string {
-	const dbStreams = AREA_TO_DB_STREAMS[logicStream] ?? [logicStream];
-	const unassigned = dbStreams.find((s) => !workStreams.includes(s));
-	return unassigned ?? dbStreams[0] ?? logicStream;
+	return logicStream;
 }
 
 export function resolveDbStreamsForScope(scopeStreams: string[]): string[] {

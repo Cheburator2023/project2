@@ -1,41 +1,45 @@
 import { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamNameSourceKeys, } from "./v2-work-param-source-keys.util";
 export { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamNameSourceKeys, };
-/** Стрим-исполнитель по типу системы-источника в анкете. */
+/** Единый стрим-исполнитель для типовых работ систем-источников. */
+export const V2_SOURCE_STREAM = "Источники данных";
+/**
+ * Legacy-маппинг «тип источника → стрим». Больше НЕ используется для
+ * маршрутизации (разделение внутр/внеш убрано): все источники идут в
+ * единый стрим `V2_SOURCE_STREAM`. Оставлен только для чтения старых меток.
+ */
 export const STREAM_BY_SOURCE_TYPE = {
     Внутренний: "ИД. Внутренний",
     Внешний: "ИД. Внешний",
 };
+const SOURCE_TYPE_CODE_ALIASES = {
+    internal: "Внутренний",
+    внутренний: "Внутренний",
+    external: "Внешний",
+    внешний: "Внешний",
+};
+/** Нормализует код/метку типа источника к канонической русской метке. */
+export function normalizeSourceTypeLabel(raw) {
+    const value = String(raw ?? "").trim();
+    if (!value)
+        return null;
+    if (value in STREAM_BY_SOURCE_TYPE) {
+        return value;
+    }
+    const alias = SOURCE_TYPE_CODE_ALIASES[value.toLowerCase()];
+    return alias ?? null;
+}
 export const CONTROL_MODELS_STREAM = "Контроль моделей";
-export function resolveStreamFromSourceType(source) {
-    const sourceType = String(source.type ?? "").trim();
-    return STREAM_BY_SOURCE_TYPE[sourceType] ?? null;
+/**
+ * Стрим-исполнитель строки-источника. Разделение внутр/внеш убрано —
+ * любой источник маршрутизируется в единый стрим `V2_SOURCE_STREAM`.
+ * Тип источника (`type`) остаётся обычным триггером работы.
+ */
+export function resolveStreamFromSourceType(_source) {
+    return V2_SOURCE_STREAM;
 }
-/** Стримы, представленные в системах-источниках анкеты (v5: `detailInfo`). */
-export function resolveStreamsFromSourceSystems(data) {
-    const canonical = readDotPath(data, "detailInfo.sourceSystems");
-    const legacy = readDotPath(data, "streamDataSources.sourceSystems");
-    const systems = Array.isArray(canonical) && canonical.length > 0
-        ? canonical
-        : legacy;
-    if (!Array.isArray(systems) || systems.length === 0) {
-        return [STREAM_BY_SOURCE_TYPE.Внутренний];
-    }
-    const streams = new Set();
-    for (const row of systems) {
-        if (!row || typeof row !== "object" || Array.isArray(row))
-            continue;
-        const stream = resolveStreamFromSourceType(row);
-        if (stream)
-            streams.add(stream);
-    }
-    return streams.size > 0 ? [...streams] : [STREAM_BY_SOURCE_TYPE.Внутренний];
-}
-function readDotPath(data, path) {
-    return path.split(".").reduce((cur, key) => {
-        if (!cur || typeof cur !== "object" || Array.isArray(cur))
-            return undefined;
-        return cur[key];
-    }, data);
+/** Стрим(ы) типовых работ для систем-источников анкеты — всегда единый. */
+export function resolveStreamsFromSourceSystems(_data) {
+    return [V2_SOURCE_STREAM];
 }
 function slugParamCode(name) {
     return name

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CONTROL_MODELS_STREAM = exports.STREAM_BY_SOURCE_TYPE = exports.stripParamNameSourceKeys = exports.parseParamNameSourceKeys = exports.formatParamNameWithSourceKeys = void 0;
+exports.CONTROL_MODELS_STREAM = exports.STREAM_BY_SOURCE_TYPE = exports.V2_SOURCE_STREAM = exports.stripParamNameSourceKeys = exports.parseParamNameSourceKeys = exports.formatParamNameWithSourceKeys = void 0;
+exports.normalizeSourceTypeLabel = normalizeSourceTypeLabel;
 exports.resolveStreamFromSourceType = resolveStreamFromSourceType;
 exports.resolveStreamsFromSourceSystems = resolveStreamsFromSourceSystems;
 exports.readTypicalWorkSourceField = readTypicalWorkSourceField;
@@ -18,42 +19,46 @@ const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.ut
 Object.defineProperty(exports, "formatParamNameWithSourceKeys", { enumerable: true, get: function () { return v2_work_param_source_keys_util_1.formatParamNameWithSourceKeys; } });
 Object.defineProperty(exports, "parseParamNameSourceKeys", { enumerable: true, get: function () { return v2_work_param_source_keys_util_1.parseParamNameSourceKeys; } });
 Object.defineProperty(exports, "stripParamNameSourceKeys", { enumerable: true, get: function () { return v2_work_param_source_keys_util_1.stripParamNameSourceKeys; } });
-/** Стрим-исполнитель по типу системы-источника в анкете. */
+/** Единый стрим-исполнитель для типовых работ систем-источников. */
+exports.V2_SOURCE_STREAM = "Источники данных";
+/**
+ * Legacy-маппинг «тип источника → стрим». Больше НЕ используется для
+ * маршрутизации (разделение внутр/внеш убрано): все источники идут в
+ * единый стрим `V2_SOURCE_STREAM`. Оставлен только для чтения старых меток.
+ */
 exports.STREAM_BY_SOURCE_TYPE = {
     Внутренний: "ИД. Внутренний",
     Внешний: "ИД. Внешний",
 };
+const SOURCE_TYPE_CODE_ALIASES = {
+    internal: "Внутренний",
+    внутренний: "Внутренний",
+    external: "Внешний",
+    внешний: "Внешний",
+};
+/** Нормализует код/метку типа источника к канонической русской метке. */
+function normalizeSourceTypeLabel(raw) {
+    const value = String(raw ?? "").trim();
+    if (!value)
+        return null;
+    if (value in exports.STREAM_BY_SOURCE_TYPE) {
+        return value;
+    }
+    const alias = SOURCE_TYPE_CODE_ALIASES[value.toLowerCase()];
+    return alias ?? null;
+}
 exports.CONTROL_MODELS_STREAM = "Контроль моделей";
-function resolveStreamFromSourceType(source) {
-    const sourceType = String(source.type ?? "").trim();
-    return exports.STREAM_BY_SOURCE_TYPE[sourceType] ?? null;
+/**
+ * Стрим-исполнитель строки-источника. Разделение внутр/внеш убрано —
+ * любой источник маршрутизируется в единый стрим `V2_SOURCE_STREAM`.
+ * Тип источника (`type`) остаётся обычным триггером работы.
+ */
+function resolveStreamFromSourceType(_source) {
+    return exports.V2_SOURCE_STREAM;
 }
-/** Стримы, представленные в системах-источниках анкеты (v5: `detailInfo`). */
-function resolveStreamsFromSourceSystems(data) {
-    const canonical = readDotPath(data, "detailInfo.sourceSystems");
-    const legacy = readDotPath(data, "streamDataSources.sourceSystems");
-    const systems = Array.isArray(canonical) && canonical.length > 0
-        ? canonical
-        : legacy;
-    if (!Array.isArray(systems) || systems.length === 0) {
-        return [exports.STREAM_BY_SOURCE_TYPE.Внутренний];
-    }
-    const streams = new Set();
-    for (const row of systems) {
-        if (!row || typeof row !== "object" || Array.isArray(row))
-            continue;
-        const stream = resolveStreamFromSourceType(row);
-        if (stream)
-            streams.add(stream);
-    }
-    return streams.size > 0 ? [...streams] : [exports.STREAM_BY_SOURCE_TYPE.Внутренний];
-}
-function readDotPath(data, path) {
-    return path.split(".").reduce((cur, key) => {
-        if (!cur || typeof cur !== "object" || Array.isArray(cur))
-            return undefined;
-        return cur[key];
-    }, data);
+/** Стрим(ы) типовых работ для систем-источников анкеты — всегда единый. */
+function resolveStreamsFromSourceSystems(_data) {
+    return [exports.V2_SOURCE_STREAM];
 }
 function slugParamCode(name) {
     return name

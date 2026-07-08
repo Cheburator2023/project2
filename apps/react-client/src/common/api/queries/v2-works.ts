@@ -17,6 +17,7 @@ import type {
 	V2TypicalWorkCatalogListResponseDto,
 	V2TypicalWorkAssignmentListResponseDto,
 	CreateV2TypicalWorkAssignmentRequestDto,
+	CopyV2TypicalWorkRequestDto,
 	V2TypicalWorkAssignmentDto,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "../helpers/apiClient";
@@ -307,6 +308,25 @@ export const usePreviewV2TypicalWork = () =>
 				data: dto,
 			}),
 	});
+
+export const useCopyV2TypicalWork = () => {
+	const queryClient = useQueryClient();
+	return useMutation<
+		V2TypicalWorkCardDto,
+		Error,
+		{ workId: string; dto: CopyV2TypicalWorkRequestDto }
+	>({
+		mutationFn: ({ workId, dto }) =>
+			apiClient({
+				url: `/v2/works/${workId}/copy`,
+				method: "POST",
+				data: dto,
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
+		},
+	});
+};
 
 export const useCreateV2TypicalWork = () => {
 	const queryClient = useQueryClient();

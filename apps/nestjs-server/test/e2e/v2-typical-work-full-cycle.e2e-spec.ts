@@ -4,8 +4,10 @@ import { getApp } from "test/setup-e2e";
 
 jest.setTimeout(120_000);
 
-const STREAM_INTERNAL = "ИД. Внутренний";
-const STREAM_EXTERNAL = "ИД. Внешний";
+// Разделение внутр/внеш убрано: источники в едином стриме «Источники данных».
+// Тип источника остаётся обычным триггером работы (см. PATCH ниже).
+const STREAM_INTERNAL = "Источники данных";
+const STREAM_EXTERNAL = "Контроль моделей";
 const ARCH_SOURCE = "Система-источник";
 
 /**

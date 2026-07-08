@@ -488,10 +488,12 @@ export const V2TemplateSchemaEditor = ({
 	const blocker = useBrowserRouterNavigationBlocker(
 		({ currentLocation, nextLocation }) => {
 			if (skipLeaveGuardRef.current) return false;
+			// Панели/вкладки/версии редактора переключаются через query-параметры на
+			// том же маршруте — это не уход со страницы, предупреждаем только при
+			// смене pathname.
 			return (
 				hasUnsavedChanges &&
-				(currentLocation.pathname !== nextLocation.pathname ||
-					currentLocation.search !== nextLocation.search)
+				currentLocation.pathname !== nextLocation.pathname
 			);
 		},
 	);

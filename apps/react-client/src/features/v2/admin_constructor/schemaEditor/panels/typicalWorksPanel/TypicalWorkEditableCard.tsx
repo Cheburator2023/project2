@@ -53,7 +53,7 @@ import {
 	coerceLogicGraph,
 	coerceUiSchema,
 } from "../../../utils/coerceV2TemplateSnapshot";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@react-client/common/toasts";
 import { TypicalWorkFormulaLockedDialog } from "./TypicalWorkFormulaLockedDialog";
 import { RemoveLaborParamDialog } from "./RemoveLaborParamDialog";
@@ -267,6 +267,13 @@ export function TypicalWorkEditableCard({
 		() => paramOptions.filter(isSchemaLaborParamCandidate),
 		[paramOptions],
 	);
+	const resolveFormulaParamName = useCallback(
+		(paramCode: string, paramName?: string | null) =>
+			findSchemaWorkParameter(paramOptions, paramCode, paramName)?.name ??
+			paramName ??
+			paramCode,
+		[paramOptions],
+	);
 	const unusedLaborParams = laborParamOptions.filter(
 		(p) => !draft?.laborParams.some((g) => isSchemaLaborParamUsed([g], p)),
 	);
@@ -290,12 +297,8 @@ export function TypicalWorkEditableCard({
 	);
 
 	const previewSourceRow = useMemo(
-		() =>
-			resolvePreviewSourceRowForTypicalWork(
-				liveFormData,
-				draft?.streamExecutor ?? streamExecutor,
-			),
-		[draft?.streamExecutor, liveFormData, streamExecutor],
+		() => resolvePreviewSourceRowForTypicalWork(liveFormData),
+		[liveFormData],
 	);
 
 	const triggerAnalysis = useMemo(
@@ -1350,6 +1353,7 @@ export function TypicalWorkEditableCard({
 							onRoundingChange={(rounding) =>
 								commitDraft({ ...draft, rounding })
 							}
+							resolveParamName={resolveFormulaParamName}
 						/>
 					</Paper>
 				</Box>

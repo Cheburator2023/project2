@@ -376,7 +376,7 @@ describe("buildSchemaWorkParameters", () => {
 		expect(isSchemaLaborParamCandidate(description!)).toBe(true);
 	});
 
-	it("merges duplicate «Тип работ» fields across arch blocks into one param", () => {
+	it("keeps same-named «Тип работ» fields on different paths as separate params", () => {
 		const hints: FieldPathHint[] = [
 			{
 				pointer: "/detailInfo/model/workType",
@@ -447,17 +447,177 @@ describe("buildSchemaWorkParameters", () => {
 		});
 
 		const workTypes = params.filter((p) => p.name === "Тип работ");
-		expect(workTypes).toHaveLength(1);
-		expect(workTypes[0]?.code).toBe("workType");
-		expect(workTypes[0]?.sourceKeys).toContain("field_yJ5IGkCR");
-		expect(workTypes[0]?.values.map((v) => v.label)).toEqual(
-			expect.arrayContaining([
-				"Разработка",
-				"Доработка",
-				"Настройка",
-				"Сопровождение",
-			]),
-		);
+		expect(workTypes).toHaveLength(3);
+		const codes = workTypes.map((p) => p.code);
+		expect(new Set(codes).size).toBe(3);
+		expect(codes).toContain("field_yJ5IGkCR");
+	});
+
+	it("excludes system scaffold fields (meta/summary/workflow/…)", () => {
+		const scaffoldHints: FieldPathHint[] = [
+			{
+				pointer: "/summary/total",
+				key: "total",
+				title: "Итоговая оценка трудоёмкости (Total), ч/д",
+				varPath: "summary.total",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+			{
+				pointer: "/meta/version",
+				key: "version",
+				title: "Версия",
+				varPath: "meta.version",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+			{
+				pointer: "/uncertaintyCalculation/riskGroup/sanctions",
+				key: "sanctions",
+				title: "Введение санкционных мер",
+				varPath: "uncertaintyCalculation.riskGroup.sanctions",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+			{
+				pointer: "/detailInfo/dataMart/description",
+				key: "description",
+				title: "Описание витрины",
+				varPath: "detailInfo.dataMart.description",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: scaffoldHints,
+			uiSchema: {},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					summary: {
+						type: "object",
+						properties: { total: { type: "number", title: "Total" } },
+					},
+					meta: {
+						type: "object",
+						properties: { version: { type: "string", title: "Версия" } },
+					},
+					uncertaintyCalculation: {
+						type: "object",
+						properties: {
+							riskGroup: {
+								type: "object",
+								properties: {
+									sanctions: { type: "boolean", title: "Санкции" },
+								},
+							},
+						},
+					},
+					detailInfo: {
+						type: "object",
+						properties: {
+							dataMart: {
+								type: "object",
+								properties: {
+									description: {
+										type: "string",
+										title: "Описание витрины",
+									},
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {},
+		});
+
+		expect(params.some((p) => p.code === "total")).toBe(false);
+		expect(params.some((p) => p.code === "version")).toBe(false);
+		expect(params.some((p) => p.code === "sanctions")).toBe(false);
+		// Обычные поля схемы остаются доступными.
+		expect(params.some((p) => p.code === "description")).toBe(true);
+	});
+
+	it("excludes fields inside typical/atypical work result blocks", () => {
+		const workBlockHints: FieldPathHint[] = [
+			{
+				pointer: "/streamDataSources/sourceTypicalTasks/items/estimateHoursPerDay",
+				key: "estimateHoursPerDay",
+				title: "Базовая оценка (ч/д)",
+				varPath: "streamDataSources.sourceTypicalTasks[].estimateHoursPerDay",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+			{
+				pointer: "/detailInfo/sourceSystems/items/entityVolume",
+				key: "entityVolume",
+				title: "Объём по сущностям",
+				varPath: "detailInfo.sourceSystems[].entityVolume",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: workBlockHints,
+			uiSchema: {
+				streamDataSources: {
+					sourceTypicalTasks: {
+						"ui:options": { archComponent: "typicalWork" },
+					},
+				},
+				detailInfo: {
+					sourceSystems: {
+						"ui:options": { archComponent: "sourceSystem" },
+					},
+				},
+			},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					streamDataSources: {
+						type: "object",
+						properties: {
+							sourceTypicalTasks: {
+								type: "array",
+								items: {
+									type: "object",
+									properties: {
+										estimateHoursPerDay: {
+											type: "number",
+											title: "Базовая оценка (ч/д)",
+										},
+									},
+								},
+							},
+						},
+					},
+					detailInfo: {
+						type: "object",
+						properties: {
+							sourceSystems: {
+								type: "array",
+								items: {
+									type: "object",
+									properties: {
+										entityVolume: {
+											type: "number",
+											title: "Объём по сущностям",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {},
+		});
+
+		expect(params.some((p) => p.code === "estimateHoursPerDay")).toBe(false);
+		expect(params.some((p) => p.code === "entityVolume")).toBe(true);
 	});
 });
 

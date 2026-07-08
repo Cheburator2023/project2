@@ -51,22 +51,14 @@ const v2_default_typical_works_logic_util_1 = require("./v2-default-typical-work
                         type: "object",
                         properties: {
                             sourceSystems: { type: "array", items: { type: "object" } },
-                        },
-                    },
-                    streamDataSources: {
-                        type: "object",
-                        properties: {
-                            sourceTypicalTasks: {
-                                type: "array",
-                                items: { type: "object" },
-                            },
+                            myTypicalTasks: { type: "array", items: { type: "object" } },
                         },
                     },
                 },
             },
             uiSchema: {
-                streamDataSources: {
-                    sourceTypicalTasks: {
+                detailInfo: {
+                    myTypicalTasks: {
                         "ui:options": { archComponent: "typicalWork" },
                     },
                 },
@@ -74,6 +66,9 @@ const v2_default_typical_works_logic_util_1 = require("./v2-default-typical-work
         });
         const rule = patched.rules.find((r) => r.id === "unified-source-typical-works");
         (0, vitest_1.expect)(rule).toBeDefined();
-        (0, vitest_1.expect)((rule?.payload).worksCatalog).toBe(true);
+        const payload = rule?.payload;
+        (0, vitest_1.expect)(payload.worksCatalog).toBe(true);
+        (0, vitest_1.expect)(payload.outputArrayPath).toBe("detailInfo.myTypicalTasks");
+        (0, vitest_1.expect)(rule?.targetPath).toBe("/detailInfo/myTypicalTasks");
     });
 });

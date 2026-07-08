@@ -2,7 +2,7 @@ import { INestApplication } from "@nestjs/common";
 import * as request from "supertest";
 import { getApp } from "test/setup-e2e";
 
-const STREAM = "ИД. Внутренний";
+const STREAM = "Источники данных";
 
 /**
  * E2e: типовые работы — создание, норма, превью расчёта по формуле H.

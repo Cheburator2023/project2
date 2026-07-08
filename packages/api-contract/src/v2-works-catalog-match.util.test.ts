@@ -8,24 +8,29 @@ import {
 	resolveTriggerStatusCatalogParam,
 	triggerRuleCatalogGroupKey,
 	typicalWorkRulesMatchSource,
+	V2_SOURCE_STREAM,
 } from "./v2-works-catalog-match.util";
 
 describe("v2-works-catalog-match.util", () => {
-	it("resolves stream from source type", () => {
+	it("resolves the unified source stream for any source row", () => {
+		// Разделение внутр/внеш убрано: любой источник → единый стрим.
 		expect(resolveStreamFromSourceType({ type: "Внутренний" })).toBe(
-			"ИД. Внутренний",
+			V2_SOURCE_STREAM,
 		);
-		expect(resolveStreamFromSourceType({ type: "Внешний" })).toBe("ИД. Внешний");
+		expect(resolveStreamFromSourceType({ type: "Внешний" })).toBe(
+			V2_SOURCE_STREAM,
+		);
+		expect(resolveStreamFromSourceType({})).toBe(V2_SOURCE_STREAM);
 	});
 
-	it("collects streams from source systems", () => {
+	it("collects the unified source stream from source systems", () => {
 		expect(
 			resolveStreamsFromSourceSystems({
 				streamDataSources: {
 					sourceSystems: [{ type: "Внутренний" }, { type: "Внешний" }],
 				},
 			}),
-		).toEqual(["ИД. Внутренний", "ИД. Внешний"]);
+		).toEqual([V2_SOURCE_STREAM]);
 	});
 
 	it("matches control type by bracket label", () => {

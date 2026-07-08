@@ -1,5 +1,8 @@
 import { resolveV2AnketaArchComponent } from "./v2-anketa-section-ui.util";
 
+export const V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH =
+	"streamDataSources.sourceTypicalTasks";
+
 function readRecord(value: unknown): Record<string, unknown> | undefined {
 	return value && typeof value === "object" && !Array.isArray(value)
 		? (value as Record<string, unknown>)
@@ -31,6 +34,29 @@ export function collectGeneratedTypicalWorkArrayPaths(
 	}
 
 	return [...new Set(paths)];
+}
+
+/** Путь вывода типовых работ «Система-источник» по схеме (канонический или пользовательский). */
+export function resolveSourceTypicalWorksOutputPath(
+	jsonSchema?: unknown,
+	uiSchema?: unknown,
+): string | null {
+	if (
+		jsonSchemaHasResolvablePath(jsonSchema, V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH)
+	) {
+		return V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH;
+	}
+
+	const generated = collectGeneratedTypicalWorkArrayPaths(uiSchema);
+	const streamPath = generated.find((path) =>
+		path.startsWith("streamDataSources."),
+	);
+	if (streamPath) return streamPath;
+
+	const detailPath = generated.find((path) => path.startsWith("detailInfo."));
+	if (detailPath) return detailPath;
+
+	return generated[0] ?? null;
 }
 
 /** Есть ли в jsonSchema узел по dot-пути (только `properties`, без $ref). */

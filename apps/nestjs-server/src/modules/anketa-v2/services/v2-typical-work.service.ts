@@ -42,6 +42,7 @@ import { V2TypicalWorkLaborParamEntity } from "../entities/v2-typical-work-labor
 import { V2TypicalWorkAssignmentEntity } from "../entities/v2-typical-work-assignment.entity";
 import { V2TypicalWorkVersionConfigEntity } from "../entities/v2-typical-work-version-config.entity";
 import {
+	canonicalizeWorkStream,
 	DEFAULT_NORM_VALID_FROM,
 	groupCatalogWorks,
 	inferTriggerValueLabel,
@@ -150,7 +151,8 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			const seenLaborKeys = new Set<string>();
 
 			for (const row of rows) {
-				const stream = row.stream.trim();
+				const originalStream = row.stream.trim();
+				const stream = canonicalizeWorkStream(originalStream);
 
 				if (row.norm !== null) {
 					const normKey = `${stream}|${row.norm}`;
@@ -176,7 +178,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 					if (seenRuleKeys.has(ruleKey)) continue;
 					seenRuleKeys.add(ruleKey);
 
-					const valueLabel = inferTriggerValueLabel(trimmed, stream);
+					const valueLabel = inferTriggerValueLabel(trimmed, originalStream);
 					await this.ruleRepository.save(
 						this.ruleRepository.create({
 							workId: work.id,
@@ -311,6 +313,8 @@ export class V2TypicalWorkService {
 		private readonly versionConfigRepository: Repository<V2TypicalWorkVersionConfigEntity>,
 		@InjectRepository(V2TemplateVersionEntity)
 		private readonly templateVersionRepository: Repository<V2TemplateVersionEntity>,
+		@InjectRepository(V2TemplateEntity)
+		private readonly templateRepository: Repository<V2TemplateEntity>,
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
 	) {}
 
@@ -479,6 +483,13 @@ export class V2TypicalWorkService {
 		const rulesByWork = groupBy(rules, (r) => r.workId);
 		const laborByWork = groupBy(laborRows, (r) => r.workId);
 		const assignmentsByWork = groupBy(assignments, (a) => a.workId);
+		const templateIds = unique(
+			works.map((w) => w.templateId).filter((id): id is string => Boolean(id)),
+		);
+		const templates = templateIds.length
+			? await this.templateRepository.find({ where: { id: In(templateIds) } })
+			: [];
+		const templateNameById = new Map(templates.map((t) => [t.id, t.name]));
 		const atDate = todayIsoDate();
 		const triggerStatusCatalog =
 			await this.paramCatalogService.listTriggerStatusCatalog(atDate);
@@ -542,6 +553,10 @@ export class V2TypicalWorkService {
 					),
 					currentNorm,
 					streams,
+					templateId: work.templateId,
+					templateName: work.templateId
+						? templateNameById.get(work.templateId) ?? null
+						: null,
 					normsByStream,
 					laborParamCountByStream,
 				};

@@ -28,6 +28,7 @@ import type {
 	V2TypicalWorkPreviewRequestDto,
 	V2TypicalWorkPreviewResponseDto,
 	CreateV2TypicalWorkAssignmentRequestDto,
+	CopyV2TypicalWorkRequestDto,
 	V2TypicalWorkAssignmentDto,
 	V2TypicalWorkCatalogListResponseDto,
 	V2TypicalWorkAssignmentListResponseDto,
@@ -226,6 +227,15 @@ export class V2TypicalWorkController {
 		@Body() dto: PatchV2TypicalWorkRequestDto,
 	): Promise<V2TypicalWorkCardDto> {
 		return this.typicalWorkWriteService.patchWork(id, dto);
+	}
+
+	@Post(":id/copy")
+	@ApiOperation({ summary: "Скопировать типовую работу (глубокий клон) в схему" })
+	async copy(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Body() dto: CopyV2TypicalWorkRequestDto,
+	): Promise<V2TypicalWorkCardDto> {
+		return this.typicalWorkWriteService.copyWork(id, dto);
 	}
 
 	@Post(":id/preview")

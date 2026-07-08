@@ -1,11 +1,15 @@
-import type {
-	V2TypicalWorkListItemDto,
-	V2WorkTriggerStatus,
+import {
+	V2_SOURCE_STREAM,
+	type V2TypicalWorkListItemDto,
+	type V2WorkTriggerStatus,
 } from "@smart-anketa/api-contract";
 
 export const LOGIC_TAB_QUERY = "logicTab";
+export const WORK_ID_QUERY = "workId";
+export const NEW_WORK_QUERY = "newWork";
 
-export const DEFAULT_WORK_STREAMS = ["ИД. Внутренний", "ИД. Внешний"] as const;
+/** Разделение внутр/внеш убрано — источники в едином стриме. */
+export const DEFAULT_WORK_STREAMS = [V2_SOURCE_STREAM] as const;
 
 export const ARCH_COMPONENT_DOT: Record<string, string> = {
 	"Система-источник": "#119e8f",

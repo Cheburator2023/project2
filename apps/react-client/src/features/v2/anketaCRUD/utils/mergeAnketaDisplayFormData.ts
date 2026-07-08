@@ -70,6 +70,41 @@ function resolveGeneratedTypicalWorkPaths(
 	return [...new Set([...FALLBACK_GENERATED_TYPICAL_WORK_ARRAY_PATHS, ...dynamic])];
 }
 
+function fanOutTypicalWorkLiveData(
+	merged: Record<string, unknown>,
+	liveFormData: Record<string, unknown>,
+	paths: string[],
+): Record<string, unknown> {
+	let sourcePath: string | null = null;
+	let sourceValue: unknown[] | null = null;
+
+	for (const path of paths) {
+		const liveValue = readAtPath(liveFormData, path);
+		if (!Array.isArray(liveValue)) continue;
+		if (liveValue.length > 0) {
+			sourcePath = path;
+			sourceValue = liveValue;
+			break;
+		}
+		if (!sourcePath) {
+			sourcePath = path;
+			sourceValue = liveValue;
+		}
+	}
+
+	if (!sourcePath || !sourceValue) return merged;
+
+	let next = merged;
+	for (const path of paths) {
+		if (path === sourcePath) continue;
+		const current = readAtPath(next, path);
+		if (!Array.isArray(current) || current.length === 0) {
+			next = writeAtPath(next, path, sourceValue);
+		}
+	}
+	return next;
+}
+
 /**
  * Данные для RJSF: результат калькуляции + актуальный ввод пользователя
  * (модалки пишут в `formData`, таблицы читают те же пути).
@@ -83,13 +118,14 @@ export function mergeAnketaDisplayFormData(
 		return formData;
 	}
 	let merged = deepMergeRecords(liveFormData, formData);
+	const generatedPaths = resolveGeneratedTypicalWorkPaths(uiSchema);
 
-	for (const path of resolveGeneratedTypicalWorkPaths(uiSchema)) {
+	for (const path of generatedPaths) {
 		const liveValue = readAtPath(liveFormData, path);
 		if (Array.isArray(liveValue)) {
 			merged = writeAtPath(merged, path, liveValue);
 		}
 	}
 
-	return merged;
+	return fanOutTypicalWorkLiveData(merged, liveFormData, generatedPaths);
 }
