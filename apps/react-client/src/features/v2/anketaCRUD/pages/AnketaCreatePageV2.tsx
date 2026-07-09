@@ -33,7 +33,6 @@ export const AnketaCreatePageV2 = () => {
 	const engine = useV2AnketaSchemaEngine(source);
 
 	const onSave = () => {
-		debugger
 		if (!activeTemplate?.currentVersionId) {
 			toast.error("Нет опубликованной актуальной схемы для создания анкеты");
 			return;

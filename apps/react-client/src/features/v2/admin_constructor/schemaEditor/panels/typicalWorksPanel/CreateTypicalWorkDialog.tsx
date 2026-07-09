@@ -10,11 +10,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { V2_SOURCE_STREAM } from "@smart-anketa/api-contract";
 import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
-import {
-	WORK_ARCH_COMPONENT_TYPES,
-	DEFAULT_WORK_ARCH_COMPONENT_TYPE,
-	DEFAULT_WORK_ARCH_COMPONENT_TYPE_2
-} from "./typicalWorkPatchErrors";
+import { WORK_ARCH_COMPONENT_TYPES, DEFAULT_WORK_ARCH_COMPONENT_TYPE } from "./typicalWorkPatchErrors";
 
 export type CreateTypicalWorkDialogPayload = {
 	name: string;
@@ -45,7 +41,7 @@ export function CreateTypicalWorkDialog({
 	const isCreate = mode === "create";
 	const [name, setName] = useState("");
 	const [archComponentType, setArchComponentType] = useState<string>(
-		defaultArchComponentType ?? DEFAULT_WORK_ARCH_COMPONENT_TYPE_2,
+		defaultArchComponentType ?? DEFAULT_WORK_ARCH_COMPONENT_TYPE,
 	);
 	const [streamExecutor, setStreamExecutor] = useState<string>(
 		defaultStreamExecutor ?? V2_SOURCE_STREAM,
