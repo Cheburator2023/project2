@@ -14,7 +14,7 @@ import axios, {
 	type AxiosResponse,
 } from "axios";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
+const API_BASE_URL = process.env.REACT_APP_API_URL || "https://sum-shell-sumd.sumd.dk1-sumd01.innodev.local/proxy/smart-anketa-api";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 

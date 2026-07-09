@@ -33,6 +33,7 @@ export const WORK_ARCH_COMPONENT_TYPES = [
 ] as const;
 
 export const DEFAULT_WORK_ARCH_COMPONENT_TYPE = WORK_ARCH_COMPONENT_TYPES[0];
+export const DEFAULT_WORK_ARCH_COMPONENT_TYPE_2 = WORK_ARCH_COMPONENT_TYPES[4];
 
 /** Как на бэкенде (`normalizeArchComponentType`) — CSV/legacy → канонический тип. */
 export function normalizeWorkArchComponentType(raw: string): string {
