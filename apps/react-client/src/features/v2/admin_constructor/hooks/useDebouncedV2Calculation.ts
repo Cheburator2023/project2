@@ -1,5 +1,6 @@
 import { useCalculateV2Template } from "@react-client/common/api/queries/v2-templates";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
+import { IS_DEV } from "@react-client/common/constants/dev";
 import type {
 	V2CalculationResultDto,
 	V2LogicGraphDto,
@@ -41,6 +42,13 @@ export function useDebouncedV2Calculation({
 
 		const requestId = ++requestIdRef.current;
 		const timer = window.setTimeout(() => {
+			if (IS_DEV) {
+				console.debug("[anketa-calc] POST /calculate", {
+					templateId,
+					versionId,
+					formDataKeys: Object.keys(formData),
+				});
+			}
 			void mutateAsync({
 				templateId,
 				versionId,

@@ -1,4 +1,4 @@
-import { setGroupActivationAtPath, patchV2TypicalWorksLogicRules } from "@smart-anketa/api-contract";
+import { setGroupActivationAtPath, patchV2AnketaCalculationLogicRules } from "@smart-anketa/api-contract";
 import {
 	CONTROL_TYPICAL_TASKS,
 	SOURCE_TYPICAL_TASKS,
@@ -221,7 +221,7 @@ describe("V2CalculationService", () => {
 
 	it("auto-injects catalog logic for new schema with source infrastructure", async () => {
 		const result = await service.evaluate(
-			patchV2TypicalWorksLogicRules({ rules: [] }, {
+			patchV2AnketaCalculationLogicRules({ rules: [] }, {
 				jsonSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema,
 				uiSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema,
 			}),
@@ -279,7 +279,7 @@ describe("V2CalculationService", () => {
 		);
 
 		const result = await streamOnlyService.evaluate(
-			patchV2TypicalWorksLogicRules(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
+			patchV2AnketaCalculationLogicRules(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
 				jsonSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema,
 				uiSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema,
 			}),
@@ -327,7 +327,7 @@ describe("V2CalculationService", () => {
 		);
 
 		const result = await streamOnlyService.evaluate(
-			patchV2TypicalWorksLogicRules(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
+			patchV2AnketaCalculationLogicRules(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
 				jsonSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema,
 				uiSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema,
 			}),
@@ -550,6 +550,125 @@ describe("V2CalculationService", () => {
 		expect(result.legacyStageEvaluation?.source).toBe("v1_stages");
 		expect(summary.detailedCalculation.length).toBeGreaterThan(0);
 		expect(summary.platformStreams).toHaveLength(3);
+	});
+
+	it("computes atypical work row totals and summary.atypicalTotal", async () => {
+		const uiSchema = {
+			detailInfo: {
+				field_npwqpBHt: {
+					"ui:options": { archComponent: "atypicalWork" },
+				},
+			},
+		};
+		const result = await service.evaluate(
+			patchV2AnketaCalculationLogicRules({ rules: [] }, { uiSchema }),
+			{
+				detailInfo: {
+					field_npwqpBHt: [
+						{
+							name: "a",
+							estimateHoursPerDay: 100,
+							coefficient: 1.5,
+							includeInCalculation: true,
+						},
+						{
+							name: "b",
+							estimateHoursPerDay: 666,
+							coefficient: 10.5,
+							includeInCalculation: true,
+						},
+					],
+				},
+				generalInfo: { implementationStream: "РБ (КМБ и КСБ)" },
+			},
+			{ uiSchema },
+		);
+
+		const detailInfo = result.formData.detailInfo as {
+			field_npwqpBHt: Array<{ total: number }>;
+		};
+		expect(detailInfo.field_npwqpBHt[0]?.total).toBe(150);
+		expect(detailInfo.field_npwqpBHt[1]?.total).toBe(6993);
+
+		const summary = result.formData.summary as {
+			atypicalTotal: number;
+			scoreWithComplexityCoeff: number;
+			detailedCalculation: Array<{
+				stageName: string;
+				complexityCoeff: number | null;
+			}>;
+		};
+		expect(summary.atypicalTotal).toBe(7143);
+		expect(
+			result.items.find((item) => item.ruleId === "unified-atypical-total")?.value,
+		).toBe(7143);
+		const atypicalRow = summary.detailedCalculation.find(
+			(row) => row.stageName === "Нетиповые задачи",
+		);
+		expect(atypicalRow?.complexityCoeff).toBe(7143);
+		expect(summary.scoreWithComplexityCoeff).toBeGreaterThan(7143);
+	});
+
+	it("snapshot: complexity and modelsList change legacy scoreWithComplexityCoeff", async () => {
+		const { jsonSchema, uiSchema, logic } = V2_DEFAULT_TEMPLATE_SNAPSHOT;
+		const baseline = await service.evaluate(logic, {
+			generalInfo: { complexity: "1 — Низкая ×1.00" },
+		}, { jsonSchema, uiSchema });
+
+		const richer = await service.evaluate(logic, {
+			generalInfo: {
+				complexity: "4 — Высокая ×2.00",
+				modelService: [{ field_o_HRj6VO: true, field_jUm5syZf: ["Онлайн"] }],
+			},
+			detailInfo: {
+				modelsList: [{ algorithmType: "CV", autoML: true }],
+				sourceSystems: [{ name: "src-1", type: "Внутренний" }],
+			},
+			uncertaintyCalculation: {
+				field_QCwwo5c5: 10,
+				riskGroup: { sanctions: "Высокий" },
+			},
+		}, { jsonSchema, uiSchema });
+
+		const baselineSummary = baseline.formData.summary as {
+			scoreWithComplexityCoeff: number;
+		};
+		const richerSummary = richer.formData.summary as {
+			scoreWithComplexityCoeff: number;
+		};
+		expect(richerSummary.scoreWithComplexityCoeff).toBeGreaterThan(
+			baselineSummary.scoreWithComplexityCoeff,
+		);
+	});
+
+	it("parses string atypical coefficients in row_computed", async () => {
+		const uiSchema = {
+			detailInfo: {
+				field_npwqpBHt: {
+					"ui:options": { archComponent: "atypicalWork" },
+				},
+			},
+		};
+		const result = await service.evaluate(
+			patchV2AnketaCalculationLogicRules({ rules: [] }, { uiSchema }),
+			{
+				detailInfo: {
+					field_npwqpBHt: [
+						{
+							name: "str-coeff",
+							estimateHoursPerDay: "10",
+							coefficient: "×1.5",
+							includeInCalculation: true,
+						},
+					],
+				},
+			},
+			{ uiSchema },
+		);
+		const rows = (result.formData.detailInfo as {
+			field_npwqpBHt: Array<{ total: number }>;
+		}).field_npwqpBHt;
+		expect(rows[0]?.total).toBe(15);
 	});
 });
 

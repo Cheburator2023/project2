@@ -120,7 +120,13 @@ describe("v2-default-typical-works-logic.util", () => {
                     id: "unified-typical-total",
                     kind: "computed",
                     targetPath: "/summary/typicalTotal",
-                    condition: true,
+                    condition: {
+                        reduce: [
+                            { var: "streamDataSources.sourceTypicalTasks" },
+                            { "+": [{ var: "accumulator" }, { var: "current.total" }] },
+                            0,
+                        ],
+                    },
                     dependencies: [
                         "/streamDataSources/sourceTypicalTasks",
                         "/streamModelControl/control/controlTypicalTasks",
@@ -133,5 +139,50 @@ describe("v2-default-typical-works-logic.util", () => {
             "/streamDataSources/sourceTypicalTasks",
             "/streamModelControl/field_Khn6-HAW",
         ]);
+    });
+    it("patches unified-typical-total to custom typicalWork output path from uiSchema", () => {
+        const customPath = "streamDataSources.field_SId8TZKZ";
+        const patched = patchV2TypicalWorksLogicRules({
+            rules: [
+                {
+                    id: "unified-typical-total",
+                    kind: "computed",
+                    targetPath: "/summary/typicalTotal",
+                    condition: {
+                        reduce: [
+                            { var: "streamDataSources.sourceTypicalTasks" },
+                            { "+": [{ var: "accumulator" }, { var: "current.total" }] },
+                            0,
+                        ],
+                    },
+                    dependencies: ["/streamDataSources/sourceTypicalTasks"],
+                },
+            ],
+        }, {
+            jsonSchema: {
+                type: "object",
+                properties: {
+                    streamDataSources: {
+                        type: "object",
+                        properties: {
+                            field_SId8TZKZ: { type: "array", items: { type: "object" } },
+                        },
+                    },
+                },
+            },
+            uiSchema: {
+                streamDataSources: {
+                    field_SId8TZKZ: {
+                        "ui:options": { archComponent: "typicalWork" },
+                    },
+                },
+            },
+        });
+        const rule = patched.rules.find((r) => r.id === "unified-typical-total");
+        expect(rule?.dependencies).toEqual([
+            "/streamDataSources/field_SId8TZKZ",
+        ]);
+        expect(JSON.stringify(rule?.condition)).toContain(customPath);
+        expect(JSON.stringify(rule?.condition)).not.toContain("streamDataSources.sourceTypicalTasks");
     });
 });

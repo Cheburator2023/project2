@@ -129,7 +129,8 @@ export function archObjectListRowLabel(
 			if (value && value !== "—") return value;
 		}
 	}
-	const name = item.name ?? item.field_dEVFQVQn ?? item.field_It-B8PfV;
+	const name =
+		item.name ?? item.field_dEVFQVQn ?? item["field_It-B8PfV"];
 	if (name != null && String(name).trim()) return String(name);
 	return `Запись ${index + 1}`;
 }

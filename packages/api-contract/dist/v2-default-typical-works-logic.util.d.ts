@@ -1,5 +1,7 @@
 import type { V2LogicGraphDto, V2LogicRuleDto } from "./v2-template.types";
 import { V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH } from "./v2-typical-work-output-paths.util";
+/** Заменяет dot-путь в JsonLogic (`{"var": "a.b.c"}` и вложенные узлы). */
+export declare function replaceDotPathInJsonLogic(value: unknown, oldPath: string, newPath: string): unknown;
 export type PatchV2TypicalWorksLogicOptions = {
     jsonSchema?: unknown;
     uiSchema?: unknown;

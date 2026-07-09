@@ -36,6 +36,7 @@ __exportStar(require("./v2-arch-component-presets"), exports);
 __exportStar(require("./v2-anketa-editor-ui.util"), exports);
 __exportStar(require("./v2-typical-works.util"), exports);
 __exportStar(require("./v2-default-typical-works-logic.util"), exports);
+__exportStar(require("./v2-atypical-works-logic.util"), exports);
 __exportStar(require("./v2-works-catalog-match.util"), exports);
 __exportStar(require("./v2-typical-work.types"), exports);
 __exportStar(require("./v2-typical-work-v4.types"), exports);

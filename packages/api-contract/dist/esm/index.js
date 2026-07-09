@@ -20,6 +20,7 @@ export * from "./v2-arch-component-presets";
 export * from "./v2-anketa-editor-ui.util";
 export * from "./v2-typical-works.util";
 export * from "./v2-default-typical-works-logic.util";
+export * from "./v2-atypical-works-logic.util";
 export * from "./v2-works-catalog-match.util";
 export * from "./v2-typical-work.types";
 export * from "./v2-typical-work-v4.types";

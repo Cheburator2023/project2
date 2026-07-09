@@ -23,10 +23,12 @@ import { mergeAnketaDisplayFormData } from "../utils/mergeAnketaDisplayFormData"
 import { ensureAnketaFormDataWithWorkflow } from "./useAnketaWorkflow";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+	collectGeneratedTypicalWorkArrayPaths,
 	ensureGroupActivationDefaults,
-	patchV2TypicalWorksLogicRules,
+	patchV2AnketaCalculationLogicRules,
 	type V2LogicGraphDto,
 } from "@smart-anketa/api-contract";
+import { IS_DEV } from "@react-client/common/constants/dev";
 
 export type V2AnketaSchemaEngineSource = {
 	templateId: string;
@@ -55,7 +57,7 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 	const [uiSchema, setUiSchema] = useState<UiSchema>({});
 	const [logic, setLogic] = useState(() =>
 		coerceLogicGraph(
-			patchV2TypicalWorksLogicRules(coerceLogicGraph(undefined), {
+			patchV2AnketaCalculationLogicRules(coerceLogicGraph(undefined), {
 				jsonSchema: source?.initialJsonSchema,
 				uiSchema: source?.initialUiSchema,
 			}),
@@ -81,7 +83,7 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 			setUiSchema(coerceUiSchema(source.initialUiSchema, source.initialJsonSchema));
 			setLogic(
 				coerceLogicGraph(
-					patchV2TypicalWorksLogicRules(
+					patchV2AnketaCalculationLogicRules(
 						coerceLogicGraph(source.initialLogic),
 						{
 							jsonSchema: source.initialJsonSchema,
@@ -99,7 +101,7 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		setUiSchema(coerceUiSchema(version.uiSchema, version.jsonSchema));
 		setLogic(
 			coerceLogicGraph(
-				patchV2TypicalWorksLogicRules(coerceLogicGraph(version.logic), {
+				patchV2AnketaCalculationLogicRules(coerceLogicGraph(version.logic), {
 					jsonSchema: version.jsonSchema,
 					uiSchema: version.uiSchema,
 				}),
@@ -200,6 +202,51 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 	);
 	const summary = readSummaryFromFormData(displayFormData);
 
+	const calculationItems = mappedCalculation?.calculationItems ?? [];
+	const taskTriggerItems = mappedCalculation?.taskTriggerItems ?? [];
+
+	useEffect(() => {
+		if (!IS_DEV) return;
+		if (!calculationResult) return;
+
+		const typicalPaths = collectGeneratedTypicalWorkArrayPaths(uiSchema);
+		const typicalRows = typicalPaths.map((path) => ({
+			path,
+			rows: path.split(".").reduce<unknown>((cur, key) => {
+				if (!cur || typeof cur !== "object" || Array.isArray(cur)) {
+					return undefined;
+				}
+				return (cur as Record<string, unknown>)[key];
+			}, mappedCalculation?.liveFormData),
+		}));
+
+		console.groupCollapsed(
+			`[anketa-calc] ${new Date().toISOString()} · template=${templateId}`,
+		);
+		console.log("request.formData", formData);
+		console.log("response.formData.summary", calculationResult.formData?.summary);
+		console.log("display.summary", summary);
+		console.log("items", calculationItems);
+		console.log("taskTriggers", taskTriggerItems);
+		console.log("typicalWorkPaths", typicalRows);
+		console.log("legacyStageEvaluation", mappedCalculation?.legacyStageEvaluation);
+		if (calculationError) {
+			console.warn("error", calculationError);
+		}
+		console.groupEnd();
+	}, [
+		calculationResult,
+		calculationItems,
+		taskTriggerItems,
+		summary,
+		formData,
+		templateId,
+		uiSchema,
+		mappedCalculation?.liveFormData,
+		mappedCalculation?.legacyStageEvaluation,
+		calculationError,
+	]);
+
 	return {
 		template,
 		version,
@@ -207,6 +254,11 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		dictionaryEnumsLoading,
 		calculationLoading,
 		calculationError,
+		calculationResult,
+		calculationItems,
+		taskTriggerItems,
+		calculationLiveFormData: mappedCalculation?.liveFormData,
+		logicRules: logic.rules,
 		logicValidationIssueCount: logicPreviewPack.logicValidationIssues.length,
 		logicExtraErrors: logicPreviewPack.extraErrors,
 		previewSchema,

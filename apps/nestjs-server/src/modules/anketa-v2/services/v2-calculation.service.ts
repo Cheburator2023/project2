@@ -14,7 +14,7 @@ import {
 	mergeTypicalCoefficientContext,
 	parseParamDependencyGraphFromLogic,
 	filterCoefficientLogicForHiddenFields,
-	patchV2TypicalWorksLogicRules,
+	patchV2AnketaCalculationLogicRules,
 	hasTypicalWorkStreamTriggerContext,
 	isFilledTypicalWorkSourceRow,
 	readTypicalWorksStreamTriggerContext,
@@ -23,12 +23,14 @@ import {
 	readStreamLocalParamsForTypicalOutput,
 	resolveStreamFromSourceType,
 	resolveStreamsFromSourceSystems,
+	resolveSourceTypicalWorksOutputPath,
 	V2_SOURCE_SYSTEMS_ARRAY_PATH,
 	type V2ParamDependencyGraph,
 	type V2ParamDefLike,
 } from "@smart-anketa/api-contract";
 import { V2TemplateService } from "./v2-template.service";
 import { V2TemplateVersionService } from "./v2-template-version.service";
+import { parseFormNumber } from "../utils/v2-form-number.util";
 import {
 	applyJsonLogic,
 	isJsonLogicTruthy,
@@ -359,7 +361,7 @@ export class V2CalculationService {
 		},
 	): Promise<V2CalculationResultDto> {
 		const rules =
-			patchV2TypicalWorksLogicRules(logic, {
+			patchV2AnketaCalculationLogicRules(logic, {
 				jsonSchema: options?.jsonSchema,
 				uiSchema: options?.uiSchema,
 			})?.rules ?? [];
@@ -423,7 +425,14 @@ export class V2CalculationService {
 
 		// Legacy E2E + платформенные стримы: таблицы «Подробный расчёт» / «Платформенные стримы».
 		// При unified merge через spread не затирает total/typicalTotal/atypicalTotal.
-		const legacy = applyLegacySummaryToFormData(liveData);
+		const sourceTypicalWorksPath = resolveSourceTypicalWorksOutputPath(
+			options?.jsonSchema,
+			options?.uiSchema,
+		);
+		const legacy = applyLegacySummaryToFormData(liveData, {
+			sourceTypicalWorksPath,
+			uiSchema: options?.uiSchema,
+		});
 		liveData = legacy.formData;
 		const legacyStageEvaluation = legacy.legacyStageEvaluation;
 
@@ -454,12 +463,18 @@ export class V2CalculationService {
 				row && typeof row === "object" && !Array.isArray(row)
 					? (row as Record<string, unknown>)
 					: {};
+			const normalizedRow = { ...rowObj };
+			for (const key of ["estimateHoursPerDay", "coefficient", "total"] as const) {
+				if (!(key in normalizedRow)) continue;
+				const parsed = parseFormNumber(normalizedRow[key]);
+				if (parsed !== null) normalizedRow[key] = parsed;
+			}
 			let computed: unknown;
 			try {
 				computed = applyJsonLogic(rule.condition as V2JsonLogicValue, {
 					...data,
-					...rowObj,
-					_row: rowObj,
+					...normalizedRow,
+					_row: normalizedRow,
 				});
 			} catch {
 				computed = null;

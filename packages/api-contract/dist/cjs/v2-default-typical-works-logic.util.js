@@ -1,12 +1,59 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = exports.V2_SOURCE_SYSTEMS_ARRAY_PATH = void 0;
+exports.replaceDotPathInJsonLogic = replaceDotPathInJsonLogic;
 exports.buildSourceTypicalWorksCatalogRule = buildSourceTypicalWorksCatalogRule;
 exports.buildControlTypicalWorksCatalogRule = buildControlTypicalWorksCatalogRule;
 exports.schemaSupportsSourceTypicalWorksCatalog = schemaSupportsSourceTypicalWorksCatalog;
 exports.patchV2TypicalWorksLogicRules = patchV2TypicalWorksLogicRules;
 const v2_typical_work_output_paths_util_1 = require("./v2-typical-work-output-paths.util");
 Object.defineProperty(exports, "V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH", { enumerable: true, get: function () { return v2_typical_work_output_paths_util_1.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH; } });
+/** Заменяет dot-путь в JsonLogic (`{"var": "a.b.c"}` и вложенные узлы). */
+function replaceDotPathInJsonLogic(value, oldPath, newPath) {
+    if (oldPath === newPath)
+        return value;
+    if (value === null || value === undefined)
+        return value;
+    if (typeof value === "string") {
+        return value === oldPath ? newPath : value;
+    }
+    if (Array.isArray(value)) {
+        return value.map((item) => replaceDotPathInJsonLogic(item, oldPath, newPath));
+    }
+    if (typeof value === "object") {
+        const next = {};
+        for (const [key, child] of Object.entries(value)) {
+            if (key === "var") {
+                if (typeof child === "string" && child === oldPath) {
+                    next[key] = newPath;
+                    continue;
+                }
+                if (Array.isArray(child) && child[0] === oldPath) {
+                    next[key] = [newPath, ...child.slice(1)];
+                    continue;
+                }
+            }
+            next[key] = replaceDotPathInJsonLogic(child, oldPath, newPath);
+        }
+        return next;
+    }
+    return value;
+}
+function patchUnifiedTypicalTotalRule(rule, sourceOutputPath) {
+    if (rule.id !== "unified-typical-total")
+        return rule;
+    if (!sourceOutputPath ||
+        sourceOutputPath === v2_typical_work_output_paths_util_1.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH) {
+        return rule;
+    }
+    const oldSlash = `/${v2_typical_work_output_paths_util_1.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH.replace(/\./g, "/")}`;
+    const newSlash = `/${sourceOutputPath.replace(/\./g, "/")}`;
+    return {
+        ...rule,
+        condition: replaceDotPathInJsonLogic(rule.condition, v2_typical_work_output_paths_util_1.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH, sourceOutputPath),
+        dependencies: (rule.dependencies ?? []).map((dep) => dep === oldSlash ? newSlash : dep),
+    };
+}
 /** Канонические пути v5: источники в detailInfo, вывод — в stream-блоки. */
 exports.V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
 exports.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_Khn6-HAW";
@@ -119,6 +166,6 @@ function patchV2TypicalWorksLogicRules(logic, options) {
         patched.push(buildControlTypicalWorksCatalogRule());
     const rest = rules
         .filter((rule) => !PATCHED_RULE_IDS.has(rule.id))
-        .map((rule) => patchLegacyRowTotalRule(patchTypicalWorksPathsDeep(rule)));
+        .map((rule) => patchUnifiedTypicalTotalRule(patchLegacyRowTotalRule(patchTypicalWorksPathsDeep(rule)), sourceOutputPath));
     return { ...logic, rules: [...rest, ...patched] };
 }

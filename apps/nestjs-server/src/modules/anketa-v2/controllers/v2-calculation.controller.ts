@@ -8,7 +8,7 @@ import {
 } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { V2CalculationResultDto } from "@smart-anketa/api-contract";
-import { patchV2TypicalWorksLogicRules } from "@smart-anketa/api-contract";
+import { patchV2AnketaCalculationLogicRules } from "@smart-anketa/api-contract";
 import { CalculateV2TemplateDto } from "../dto";
 import { V2CalculationService } from "../services/v2-calculation.service";
 
@@ -31,7 +31,7 @@ export class V2CalculationController {
 			templateId,
 			versionId,
 		);
-		const logic = patchV2TypicalWorksLogicRules(
+		const logic = patchV2AnketaCalculationLogicRules(
 			body.rulesOverride ?? version.logic,
 			{
 				jsonSchema: body.jsonSchema ?? version.jsonSchema,

@@ -1,4 +1,50 @@
 import { resolveSourceTypicalWorksOutputPath, V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH, } from "./v2-typical-work-output-paths.util";
+/** Заменяет dot-путь в JsonLogic (`{"var": "a.b.c"}` и вложенные узлы). */
+export function replaceDotPathInJsonLogic(value, oldPath, newPath) {
+    if (oldPath === newPath)
+        return value;
+    if (value === null || value === undefined)
+        return value;
+    if (typeof value === "string") {
+        return value === oldPath ? newPath : value;
+    }
+    if (Array.isArray(value)) {
+        return value.map((item) => replaceDotPathInJsonLogic(item, oldPath, newPath));
+    }
+    if (typeof value === "object") {
+        const next = {};
+        for (const [key, child] of Object.entries(value)) {
+            if (key === "var") {
+                if (typeof child === "string" && child === oldPath) {
+                    next[key] = newPath;
+                    continue;
+                }
+                if (Array.isArray(child) && child[0] === oldPath) {
+                    next[key] = [newPath, ...child.slice(1)];
+                    continue;
+                }
+            }
+            next[key] = replaceDotPathInJsonLogic(child, oldPath, newPath);
+        }
+        return next;
+    }
+    return value;
+}
+function patchUnifiedTypicalTotalRule(rule, sourceOutputPath) {
+    if (rule.id !== "unified-typical-total")
+        return rule;
+    if (!sourceOutputPath ||
+        sourceOutputPath === V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH) {
+        return rule;
+    }
+    const oldSlash = `/${V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH.replace(/\./g, "/")}`;
+    const newSlash = `/${sourceOutputPath.replace(/\./g, "/")}`;
+    return {
+        ...rule,
+        condition: replaceDotPathInJsonLogic(rule.condition, V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH, sourceOutputPath),
+        dependencies: (rule.dependencies ?? []).map((dep) => dep === oldSlash ? newSlash : dep),
+    };
+}
 /** Канонические пути v5: источники в detailInfo, вывод — в stream-блоки. */
 export const V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
 export { V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH };
@@ -112,6 +158,6 @@ export function patchV2TypicalWorksLogicRules(logic, options) {
         patched.push(buildControlTypicalWorksCatalogRule());
     const rest = rules
         .filter((rule) => !PATCHED_RULE_IDS.has(rule.id))
-        .map((rule) => patchLegacyRowTotalRule(patchTypicalWorksPathsDeep(rule)));
+        .map((rule) => patchUnifiedTypicalTotalRule(patchLegacyRowTotalRule(patchTypicalWorksPathsDeep(rule)), sourceOutputPath));
     return { ...logic, rules: [...rest, ...patched] };
 }

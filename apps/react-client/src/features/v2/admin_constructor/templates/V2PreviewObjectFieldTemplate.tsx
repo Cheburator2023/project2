@@ -51,6 +51,7 @@ import {
 } from "@smart-anketa/api-contract";
 import { isGeneralUncertaintyField } from "../schemaEditor/propertiesFieldKind";
 import { ArchComponentDevOutline } from "./ArchComponentDevOutline";
+import { AnketaCalculationDevHint } from "@react-client/features/v2/anketaCRUD/molecules/AnketaCalculationDevHint";
 import type { AnketaFormContextValue } from "@react-client/features/v2/anketaCRUD/utils/anketaFormContext";
 
 function shouldUseArchObjectModal(
@@ -402,6 +403,7 @@ function FlatSectionHeader({
 	pathKey,
 	readOnly,
 	onToggleGroupActivation,
+	formContext,
 }: {
 	sectionTitle: string;
 	sectionCaption?: string;
@@ -412,6 +414,7 @@ function FlatSectionHeader({
 	pathKey?: string;
 	readOnly?: boolean;
 	onToggleGroupActivation?: (pathKey: string, active: boolean) => void;
+	formContext?: unknown;
 }) {
 	const inactive = groupActivatable && !groupActive;
 	const textDimSx = inactive ? { opacity: 0.55 } : undefined;
@@ -476,6 +479,9 @@ function FlatSectionHeader({
 					{sectionDescription}
 				</Typography>
 			) : null}
+			{pathKey ? (
+				<AnketaCalculationDevHint pathKey={pathKey} formContext={formContext} />
+			) : null}
 		</>
 	);
 }
@@ -527,9 +533,13 @@ function ObjectFieldsGrid({
 	properties,
 	schema,
 	uiSchema,
+	parentPathKey,
+	formContext,
 }: Pick<ObjectFieldTemplateProps, "properties"> & {
 	schema: RJSFSchema;
 	uiSchema: UiSchema | undefined;
+	parentPathKey?: string;
+	formContext?: unknown;
 }) {
 	const layoutColumns = readLayoutGridColumns(uiSchema);
 	const visibleProperties = properties.filter(
@@ -556,6 +566,12 @@ function ObjectFieldsGrid({
 						sx={{ minWidth: 0 }}
 					>
 						{element.content}
+						{parentPathKey ? (
+							<AnketaCalculationDevHint
+								pathKey={`${parentPathKey}.${element.name}`}
+								formContext={formContext}
+							/>
+						) : null}
 					</Grid>
 				);
 			})}
@@ -650,6 +666,10 @@ export function V2PreviewArrayFieldTemplate({
 					pathKey={pathKey}
 					sectionTitle={sectionTitle}
 					sectionHint={sectionHint}
+					formContext={registry.formContext}
+				/>
+				<AnketaCalculationDevHint
+					pathKey={pathKey}
 					formContext={registry.formContext}
 				/>
 				{showAddButton ? (
@@ -844,6 +864,8 @@ export function V2PreviewObjectFieldTemplate({
 					properties={visibleProperties}
 					schema={schemaNode}
 					uiSchema={uiSchema as UiSchema | undefined}
+					parentPathKey={pathKey || undefined}
+					formContext={registry.formContext}
 				/>
 			) : null}
 			{sectionSlot ? <Box sx={{ mt: 2 }}>{sectionSlot}</Box> : null}
@@ -983,6 +1005,7 @@ export function V2PreviewObjectFieldTemplate({
 					sectionUiOptions.hideTitle ? undefined : sectionDescription
 				}
 				hideTitle={sectionUiOptions.hideTitle}
+				formContext={registry.formContext}
 				{...groupActivationProps}
 			/>
 		);

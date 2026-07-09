@@ -5,6 +5,12 @@ import type {
 	V2AnketaWorkflowDto,
 } from "@smart-anketa/api-contract";
 
+import type {
+	CalculationItem,
+	TaskTriggerItem,
+} from "@react-client/features/v2/admin_constructor/utils/calculationEngine";
+import type { PathCalculationInfluence } from "./anketaCalculationDev.util";
+
 export type AnketaFormContextValue = {
 	/**
 	 * Данные для отображения в UI (RJSF + кастомные таблицы/модалки).
@@ -35,6 +41,11 @@ export type AnketaFormContextValue = {
 	isMainSectionLocked?: (sectionId: V2AnketaMainSectionId) => boolean;
 	/** Включить/выключить опциональную группу (путь в formData, напр. streamDigitalAgents). */
 	onToggleGroupActivation?: (pathKey: string, active: boolean) => void;
+	/** IS_DEV: индекс влияния полей на POST /calculate. */
+	devCalculationInfluence?: Map<string, PathCalculationInfluence>;
+	devCalculationItems?: CalculationItem[];
+	devTaskTriggerItems?: TaskTriggerItem[];
+	devCalculationLoading?: boolean;
 };
 
 export function readAnketaFormContext(
