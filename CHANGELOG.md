@@ -1,5 +1,30 @@
 # Semantic Versioning Changelog
 
+# [1.23.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.22.2...v1.23.0) (2026-07-09)
+
+
+### Bug Fixes
+
+* сохранение типовой задачи ([f813742](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f8137429d5434840f402c227a7487d339abd4692))
+* сохранение типовой задачи ([837abc0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/837abc01d034b786942717da23476e5e0142e8f4))
+* сохранение типовой задачи ([65fe504](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/65fe5046e7ee7523335e33eb8f1859060f492ea3))
+
+
+### Features
+
+* add legacy schema tests and enhance schema work parameters handling ([ab8bf63](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ab8bf634c961bdfd7257537be887a4b8520de8c1))
+* enhance FuzzyAutocomplete with substring search functionality ([31f6523](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/31f65230bd0e99851ea86487f39bf6d10a530f77))
+* enhance routing and schema handling in React client ([bfc71ed](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/bfc71ede6afb70a4eca20a6c0ea9757744dc651e))
+* enhance schema labor parameter handling with new caption logic ([79d52af](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/79d52afc0456e1bec08fd796bbbba97548b6d2cc))
+* enhance typical work assignment logic and UI components ([6c031c2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6c031c2845eb8c943280ec6ed01fa1adaa9a58d0))
+* enhance typical works logic and schema handling ([e6bb676](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/e6bb67676b72c4f1126aa82ff7c12fecc1d16b84))
+* enhance work formula editor with operator handling ([fcf1e5b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/fcf1e5bb88dd2f9478d901075bd35965f4bb0132))
+* enhance work formula handling and validation ([9cf2d0b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9cf2d0bcf45ca97f3a15c6c503783c9544d45311))
+* implement migration to collapse legacy source streams into a unified stream ([52e2250](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/52e225023af8c17b67e08e9412f1eb5801334576))
+* integrate FullScreenLoader and enhance schema editor components ([9bca3bb](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9bca3bb3ae7f9d67c360b18aa6cc30bb1de72855))
+* update default anketa snapshot with new archComponent attribute ([b748841](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/b7488410a0e7bd162452b6e6192be5776f922035))
+* update webpack configuration for improved module federation and chunk handling ([342c69b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/342c69b807b21896f1af92d7ca746cee743121d7))
+
 ## [1.22.2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.22.1...v1.22.2) (2026-07-06)
 
 
