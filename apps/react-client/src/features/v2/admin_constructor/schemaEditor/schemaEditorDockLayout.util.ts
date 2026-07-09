@@ -6,7 +6,7 @@ import {
 import { WORKSPACE_PANEL_IDS } from "./workspacePanels";
 
 export const SCHEMA_EDITOR_DOCK_LAYOUT_STORAGE_KEY =
-	"v2.schemaEditor.dockLayout.v1";
+	"v2.schemaEditor.dockLayout.v2";
 
 const KNOWN_PANEL_IDS = new Set<string>(WORKSPACE_PANEL_IDS);
 

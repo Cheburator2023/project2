@@ -8,10 +8,8 @@ import {
 	CALCULATION_PANEL_ID,
 	DOCK_PANEL_HEADINGS,
 	RELATIONS_PANEL_ID,
-	SCHEMA_TREE_PANEL_ID,
 } from "./constants";
 import { SchemaDesignerLayout } from "./components/SchemaDesignerLayout";
-import { SchemaFieldTreePanel } from "./components/SchemaFieldTree";
 import { useSchemaEditor } from "./SchemaEditorContext";
 import { SchemaCalculationPanel } from "./panels/SchemaCalculationPanel";
 import { SchemaRelationsPanel } from "./panels/SchemaRelationsPanel";
@@ -27,7 +25,6 @@ export const WORKSPACE_PANEL_IDS = DOCK_PANEL_HEADINGS.map(([id]) => id);
 export {
 	CALCULATION_PANEL_ID,
 	RELATIONS_PANEL_ID,
-	SCHEMA_TREE_PANEL_ID,
 } from "./constants";
 
 function PanelHost({
@@ -77,14 +74,6 @@ export function DesignerWorkspacePanel(_props: IDockviewPanelProps) {
 		<PanelHost dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.panelDesigner}>
 			<CyclesWarning />
 			<SchemaDesignerLayout />
-		</PanelHost>
-	);
-}
-
-export function SchemaTreeDockPanel(_props: IDockviewPanelProps) {
-	return (
-		<PanelHost dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.panelSchemaTree}>
-			<SchemaFieldTreePanel embedded />
 		</PanelHost>
 	);
 }
@@ -170,7 +159,6 @@ export const workspacePanelComponents = {
 	json: JsonWorkspacePanel,
 	logic: LogicWorkspacePanel,
 	preview: PreviewWorkspacePanel,
-	[SCHEMA_TREE_PANEL_ID]: SchemaTreeDockPanel,
 	[CALCULATION_PANEL_ID]: CalculationDockPanel,
 	[RELATIONS_PANEL_ID]: RelationsDockPanel,
 } as const;

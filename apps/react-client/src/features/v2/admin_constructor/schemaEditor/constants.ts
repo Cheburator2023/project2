@@ -70,13 +70,12 @@ export const SCHEMA_TREE_PANEL_ID = "schema-tree";
 export const RELATIONS_PANEL_ID = "relations";
 export const CALCULATION_PANEL_ID = "calculation";
 
-/** Все вкладки дока на одном уровне; первая — главная (конструктор). */
+/** Вкладки дока; первая — главная (конструктор). Дерево схемы — в палитре/холсте конструктора. */
 export const DOCK_PANEL_HEADINGS = [
 	[MAIN_DOCK_PANEL_ID, "Конструктор"],
 	["json", "Редактор JSON"],
 	["logic", "Логика"],
 	["preview", "Превью"],
-	[SCHEMA_TREE_PANEL_ID, "Дерево схемы"],
 	[RELATIONS_PANEL_ID, "Граф связей"],
 	[CALCULATION_PANEL_ID, "Калькуляция"],
 ] as const;

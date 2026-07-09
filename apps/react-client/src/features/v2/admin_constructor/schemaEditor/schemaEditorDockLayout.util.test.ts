@@ -85,7 +85,6 @@ describe("schemaEditorDockLayout.util", () => {
 			"json",
 			"logic",
 			"preview",
-			"schema-tree",
 			"relations",
 			"calculation",
 		]);
