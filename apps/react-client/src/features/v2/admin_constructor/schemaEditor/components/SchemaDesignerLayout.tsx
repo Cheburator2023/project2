@@ -10,6 +10,7 @@ import { useSchemaEditor } from "../SchemaEditorContext";
 import { SchemaPropertiesPanelColumn } from "../panels/SchemaPropertiesPanel";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { SchemaCanvasPanel, SchemaPalettePanel } from "./SchemaCanvasDnd";
+import { SchemaEditorDndProvider } from "./SchemaEditorDndProvider";
 import { SchemaPaletteDragLayer } from "./SchemaPaletteDragLayer";
 
 const PALETTE_WIDTH = 250;
@@ -55,7 +56,7 @@ export function SchemaDesignerLayout() {
 	const showProperties = Boolean(selectedPointer);
 
 	return (
-		<>
+		<SchemaEditorDndProvider>
 			<SchemaPaletteDragLayer />
 			<Box
 				sx={{
@@ -153,6 +154,6 @@ export function SchemaDesignerLayout() {
 				/>
 			) : null}
 			</Box>
-		</>
+		</SchemaEditorDndProvider>
 	);
 }
