@@ -1,9 +1,10 @@
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import type { V2LogicRuleDto } from "@smart-anketa/api-contract";
+import { patchV2AnketaCalculationLogicRules } from "@smart-anketa/api-contract";
 import { rule as jsonRule } from "@react-client/features/v2/jsonLogicBuilder";
 import { nanoid } from "nanoid";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { normalizeJsonPointer } from "../../utils/schemaPaths";
 import { PanelChrome } from "../components/PanelChrome";
 import { useSchemaEditor } from "../SchemaEditorContext";
@@ -84,6 +85,8 @@ export function SchemaLogicPanel({ embedded = false }: { embedded?: boolean }) {
 		logic,
 		setLogic,
 		formData,
+		jsonSchema,
+		uiSchema,
 		addRule,
 		fieldPathHints,
 		logicPathPick,
@@ -99,6 +102,37 @@ export function SchemaLogicPanel({ embedded = false }: { embedded?: boolean }) {
 		removeSelectedRule,
 		previewEvalNote,
 	} = useSchemaEditor();
+
+	const effectiveRules = useMemo(
+		() =>
+			patchV2AnketaCalculationLogicRules(logic, { jsonSchema, uiSchema }).rules ??
+			[],
+		[logic, jsonSchema, uiSchema],
+	);
+
+	const storedRuleIds = useMemo(
+		() => new Set(logic.rules.map((rule) => rule.id)),
+		[logic.rules],
+	);
+
+	const autoInjectedRuleCount = useMemo(
+		() => effectiveRules.filter((rule) => !storedRuleIds.has(rule.id)).length,
+		[effectiveRules, storedRuleIds],
+	);
+
+	const displaySelectedRule = useMemo((): V2LogicRuleDto | undefined => {
+		if (selectedRuleId) {
+			return (
+				effectiveRules.find((rule) => rule.id === selectedRuleId) ??
+				selectedRule
+			);
+		}
+		return selectedRule;
+	}, [effectiveRules, selectedRule, selectedRuleId]);
+
+	const isAutoInjectedSelected = Boolean(
+		displaySelectedRule && !storedRuleIds.has(displaySelectedRule.id),
+	);
 
 	const resolveTargetPath = useCallback(() => {
 		return normalizeJsonPointer(
@@ -199,6 +233,16 @@ export function SchemaLogicPanel({ embedded = false }: { embedded?: boolean }) {
 				</Alert>
 			) : null}
 
+			{autoInjectedRuleCount > 0 ? (
+				<Alert severity="info" sx={{ mb: 2 }}>
+					При расчёте и в превью автоматически добавляется {autoInjectedRuleCount}{" "}
+					{autoInjectedRuleCount === 1 ? "правило" : "правил"} для типовых и
+					нетиповых работ по блокам схемы (например, «Стрим Источники данных»).
+					Они отображаются в списке, но не сохраняются в шаблон до явного
+					сохранения схемы с полным набором правил из заводского снимка.
+				</Alert>
+			) : null}
+
 			<Box
 				sx={{
 					display: "grid",
@@ -210,7 +254,7 @@ export function SchemaLogicPanel({ embedded = false }: { embedded?: boolean }) {
 				}}
 			>
 				<LogicRulesSidebar
-					rules={logic.rules}
+					rules={effectiveRules}
 					fieldPathHints={fieldPathHints}
 					selectedRuleId={selectedRuleId ?? undefined}
 					onSelect={setSelectedRuleId}
@@ -221,9 +265,17 @@ export function SchemaLogicPanel({ embedded = false }: { embedded?: boolean }) {
 				/>
 
 				<Box sx={{ minWidth: 0, minHeight: 0, overflow: "auto" }}>
-					{selectedRule ? (
+					{isAutoInjectedSelected && displaySelectedRule ? (
+						<Alert severity="info" sx={{ mb: 2 }}>
+							Правило добавлено автоматически по пресетам блоков схемы. Для
+							редактирования сохраните его в шаблон (создайте копию через
+							«Дублировать» у сохранённого правила того же типа) или откройте
+							заводской снимок с полной логикой.
+						</Alert>
+					) : null}
+					{displaySelectedRule && !isAutoInjectedSelected ? (
 						<LogicRuleDetailEditor
-							selectedRule={selectedRule}
+							selectedRule={displaySelectedRule}
 							fieldPathHints={fieldPathHints}
 							formData={formData}
 							logicPathPick={logicPathPick}
@@ -237,9 +289,23 @@ export function SchemaLogicPanel({ embedded = false }: { embedded?: boolean }) {
 							onDuplicate={duplicateRule}
 							onReplaceSelected={replaceSelectedRule}
 						/>
+					) : isAutoInjectedSelected && displaySelectedRule ? (
+						<Box
+							component="pre"
+							sx={{
+								m: 0,
+								p: 2,
+								fontSize: 12,
+								overflow: "auto",
+								bgcolor: "action.hover",
+								borderRadius: 1,
+							}}
+						>
+							{JSON.stringify(displaySelectedRule, null, 2)}
+						</Box>
 					) : (
 						<Alert severity="info">
-							{logic.rules.length === 0
+							{effectiveRules.length === 0
 								? "Правил пока нет — нажмите «Новое правило» в списке слева."
 								: "Выберите правило в списке слева или создайте новое."}
 						</Alert>

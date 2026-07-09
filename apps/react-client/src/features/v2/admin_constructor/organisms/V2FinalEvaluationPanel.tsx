@@ -65,6 +65,23 @@ function deviationColor(value: number | null | undefined): string | undefined {
 	return undefined;
 }
 
+/** Unified-итоги (типовые + нетиповые): показываем, если есть ненулевые значения. */
+function hasNonZeroUnifiedTotals(summary: V2SummaryFormSlice): boolean {
+	return (
+		(summary.total ?? 0) > 0 ||
+		(summary.typicalTotal ?? 0) > 0 ||
+		(summary.atypicalTotal ?? 0) > 0
+	);
+}
+
+function hasLegacyHeadline(summary: V2SummaryFormSlice): boolean {
+	return (
+		summary.baseScoreStream !== undefined ||
+		summary.scoreWithComplexityCoeff !== undefined ||
+		summary.deviationFromBaseline !== undefined
+	);
+}
+
 type Props = {
 	summary?: V2SummaryFormSlice | null;
 	isLoading?: boolean;
@@ -83,15 +100,16 @@ export function V2FinalEvaluationPanel({
 }: Props) {
 	const rows = summary?.detailedCalculation ?? [];
 	const platformRows = summary?.platformStreams ?? [];
-	const hasUnified =
-		summary &&
-		(summary.total !== undefined ||
-			summary.typicalTotal !== undefined ||
-			summary.atypicalTotal !== undefined);
+	const showUnifiedHeadline = Boolean(
+		summary && hasNonZeroUnifiedTotals(summary),
+	);
+	const showLegacyHeadline = Boolean(
+		summary && hasLegacyHeadline(summary) && !showUnifiedHeadline,
+	);
 	const hasData =
 		summary &&
-		(hasUnified ||
-			summary.baseScoreStream !== undefined ||
+		(showUnifiedHeadline ||
+			showLegacyHeadline ||
 			rows.length > 0 ||
 			platformRows.length > 0);
 
@@ -145,7 +163,7 @@ export function V2FinalEvaluationPanel({
 				) : null}
 
 				<Stack spacing={2}>
-					{hasUnified ? (
+					{showUnifiedHeadline ? (
 						<>
 							<Metric
 								label="Итоговая трудоёмкость (ч/д):"
@@ -160,7 +178,7 @@ export function V2FinalEvaluationPanel({
 								value={formatNum(summary?.atypicalTotal)}
 							/>
 						</>
-					) : (
+					) : showLegacyHeadline ? (
 						<>
 							<Metric
 								label="Базовая оценка по стриму (СФЕРА):"
@@ -176,7 +194,7 @@ export function V2FinalEvaluationPanel({
 								valueColor={deviationColor(summary?.deviationFromBaseline)}
 							/>
 						</>
-					)}
+					) : null}
 				</Stack>
 			</Paper>
 
