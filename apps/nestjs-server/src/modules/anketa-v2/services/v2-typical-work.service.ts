@@ -87,6 +87,8 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		private readonly ruleRepository: Repository<V2TypicalWorkRuleEntity>,
 		@InjectRepository(V2TypicalWorkLaborCoefficientEntity)
 		private readonly laborRepository: Repository<V2TypicalWorkLaborCoefficientEntity>,
+		@InjectRepository(V2TypicalWorkAssignmentEntity)
+		private readonly assignmentRepository: Repository<V2TypicalWorkAssignmentEntity>,
 		@InjectRepository(V2TypicalWorkVersionConfigEntity)
 		private readonly versionConfigRepository: Repository<V2TypicalWorkVersionConfigEntity>,
 		@InjectRepository(V2TemplateVersionEntity)
@@ -239,6 +241,238 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		}
 
 		this.logger.log(`Seeded ${created} typical works from doc catalog`);
+	}
+
+	/**
+	 * При создании схемы из заводского снимка — копирует полный набор типовых работ
+	 * из doc-каталога в реестр схемы (даже без норм/триггеров: работа + назначение на стрим).
+	 */
+	async seedTemplateTypicalWorksFromDocCatalog(
+		templateId: string,
+		templateVersionId: string,
+	): Promise<number> {
+		const trimmedTemplateId = templateId.trim();
+		const trimmedVersionId = templateVersionId.trim();
+		if (!trimmedTemplateId || !trimmedVersionId) return 0;
+
+		const existingCount = await this.workRepository.count({
+			where: { templateId: trimmedTemplateId },
+		});
+		if (existingCount > 0) {
+			await this.ensureTemplateVersionConfigs(
+				trimmedTemplateId,
+				trimmedVersionId,
+			);
+			return 0;
+		}
+
+		await this.paramCatalogService.ensureSeededFromDocCatalog();
+		const paramCatalog = await this.paramCatalogService.listParameters();
+		const paramsByName = new Map(paramCatalog.items.map((p) => [p.name, p]));
+		const groups = groupCatalogWorks();
+		let created = 0;
+
+		for (const [, rows] of groups) {
+			const first = rows[0];
+			if (!first) continue;
+
+			const work = await this.workRepository.save(
+				this.workRepository.create({
+					name: first.name.trim(),
+					archComponentType: normalizeArchComponentType(first.component),
+					workType: first.workType?.trim() || null,
+					catalogKey: null,
+					templateId: trimmedTemplateId,
+				}),
+			);
+
+			const seenNormKeys = new Set<string>();
+			const seenRuleKeys = new Set<string>();
+			const seenLaborKeys = new Set<string>();
+			const streams = new Set<string>();
+
+			for (const row of rows) {
+				const originalStream = row.stream.trim();
+				const stream = canonicalizeWorkStream(originalStream);
+				streams.add(stream);
+				await this.ensureWorkStreamAssignment(work.id, stream);
+
+				if (row.norm !== null) {
+					const normKey = `${stream}|${row.norm}`;
+					if (!seenNormKeys.has(normKey)) {
+						seenNormKeys.add(normKey);
+						await this.normRepository.save(
+							this.normRepository.create({
+								workId: work.id,
+								streamExecutor: stream,
+								normValue: String(row.norm),
+								validFrom: DEFAULT_NORM_VALID_FROM,
+								validTo: null,
+							}),
+						);
+					}
+				}
+
+				for (const paramName of row.triggerParams) {
+					const trimmed = paramName.trim();
+					if (!trimmed) continue;
+					const paramCode = slugParamCode(trimmed);
+					const ruleKey = `${stream}|${paramCode}`;
+					if (seenRuleKeys.has(ruleKey)) continue;
+					seenRuleKeys.add(ruleKey);
+
+					const valueLabel = inferTriggerValueLabel(trimmed, originalStream);
+					await this.ruleRepository.save(
+						this.ruleRepository.create({
+							workId: work.id,
+							streamExecutor: stream,
+							paramCode,
+							paramName: trimmed,
+							operator: "=",
+							valueCode: valueLabel ? slugParamCode(valueLabel) : null,
+							valueLabel,
+						}),
+					);
+				}
+
+				for (const paramName of row.laborParams) {
+					const trimmed = paramName.trim();
+					if (!trimmed) continue;
+					const paramCode = slugParamCode(trimmed);
+					const dictValues = paramsByName.get(trimmed)?.values ?? [];
+
+					if (dictValues.length === 0) {
+						const laborKey = `${stream}|${paramCode}|`;
+						if (seenLaborKeys.has(laborKey)) continue;
+						seenLaborKeys.add(laborKey);
+						await this.laborRepository.save(
+							this.laborRepository.create({
+								workId: work.id,
+								streamExecutor: stream,
+								paramCode,
+								paramName: trimmed,
+								valueCode: null,
+								valueLabel: null,
+								coefficient: "1",
+							}),
+						);
+						continue;
+					}
+
+					for (const value of dictValues) {
+						const laborKey = `${stream}|${paramCode}|${value.label}`;
+						if (seenLaborKeys.has(laborKey)) continue;
+						seenLaborKeys.add(laborKey);
+						await this.laborRepository.save(
+							this.laborRepository.create({
+								workId: work.id,
+								streamExecutor: stream,
+								paramCode,
+								paramName: trimmed,
+								valueCode: slugParamCode(value.label),
+								valueLabel: value.label,
+								coefficient: String(value.coefficient ?? 1),
+							}),
+						);
+					}
+				}
+			}
+
+			for (const stream of streams) {
+				await this.ensureWorkVersionConfig(
+					work.id,
+					trimmedVersionId,
+					stream,
+				);
+			}
+
+			created++;
+		}
+
+		if (created > 0) {
+			this.logger.log(
+				`Seeded ${created} template typical works for template ${trimmedTemplateId}`,
+			);
+		}
+
+		return created;
+	}
+
+	private async ensureWorkStreamAssignment(
+		workId: string,
+		streamExecutor: string,
+	): Promise<void> {
+		const stream = streamExecutor.trim();
+		if (!stream) return;
+
+		const existing = await this.assignmentRepository.findOne({
+			where: { workId, streamExecutor: stream },
+		});
+		if (existing) return;
+
+		await this.assignmentRepository.save(
+			this.assignmentRepository.create({
+				workId,
+				streamExecutor: stream,
+				isActive: true,
+			}),
+		);
+	}
+
+	private async ensureWorkVersionConfig(
+		workId: string,
+		templateVersionId: string,
+		streamExecutor: string,
+	): Promise<void> {
+		const stream = streamExecutor.trim();
+		const existing = await this.versionConfigRepository.findOne({
+			where: { workId, templateVersionId, streamExecutor: stream },
+		});
+		if (existing) return;
+
+		const formula = defaultWorkFormula();
+		const rounding = defaultWorkRounding();
+		const compiled = compileStoredTypicalWorkResultLogic(formula, rounding);
+
+		await this.versionConfigRepository.save(
+			this.versionConfigRepository.create({
+				workId,
+				templateVersionId,
+				streamExecutor: stream,
+				formula: formula.tokens,
+				formulaText: formula.text || tokensToText(formula.tokens),
+				roundingMode: rounding.mode,
+				roundingStep:
+					rounding.mode === "NONE" ? null : String(rounding.step ?? 0.1),
+				calculationLogic: compiled,
+			}),
+		);
+	}
+
+	private async ensureTemplateVersionConfigs(
+		templateId: string,
+		templateVersionId: string,
+	): Promise<void> {
+		const works = await this.workRepository.find({ where: { templateId } });
+		if (works.length === 0) return;
+
+		const workIds = works.map((work) => work.id);
+		const assignments = await this.assignmentRepository.find({
+			where: { workId: In(workIds) },
+		});
+		const assignmentsByWork = new Map<string, string[]>();
+		for (const assignment of assignments) {
+			const list = assignmentsByWork.get(assignment.workId) ?? [];
+			list.push(assignment.streamExecutor);
+			assignmentsByWork.set(assignment.workId, list);
+		}
+
+		for (const work of works) {
+			const streams = assignmentsByWork.get(work.id) ?? [];
+			for (const stream of streams) {
+				await this.ensureWorkVersionConfig(work.id, templateVersionId, stream);
+			}
+		}
 	}
 
 	/** Дефолтная формула H для всех работ на текущей опубликованной версии шаблона. */

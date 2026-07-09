@@ -14,6 +14,7 @@ import type {
 	RollbackV2TemplateVersionDto,
 } from "../dto";
 import { V2FactorySnapshotService } from "./v2-factory-snapshot.service";
+import { V2TypicalWorkSeedService } from "./v2-typical-work.service";
 import type { V2TemplateStatus } from "@smart-anketa/api-contract";
 
 @Injectable()
@@ -25,6 +26,7 @@ export class V2TemplateVersionService {
 		private readonly templateRepository: Repository<V2TemplateEntity>,
 		private readonly templateService: V2TemplateService,
 		private readonly factorySnapshotService: V2FactorySnapshotService,
+		private readonly typicalWorkSeedService: V2TypicalWorkSeedService,
 	) {}
 
 	async findAll(templateId: string): Promise<V2TemplateVersionEntity[]> {
@@ -180,7 +182,7 @@ export class V2TemplateVersionService {
 		userId: string | null,
 	): Promise<V2TemplateVersionEntity> {
 		const snap = await this.factorySnapshotService.getEffectiveSnapshot();
-		return this.create(
+		const version = await this.create(
 			templateId,
 			{
 				jsonSchema: structuredClone(snap.jsonSchema),
@@ -192,6 +194,11 @@ export class V2TemplateVersionService {
 			},
 			userId,
 		);
+		await this.typicalWorkSeedService.seedTemplateTypicalWorksFromDocCatalog(
+			templateId,
+			version.id,
+		);
+		return version;
 	}
 
 	async resetToDefault(
@@ -211,10 +218,14 @@ export class V2TemplateVersionService {
 			},
 			userId,
 		);
+		await this.typicalWorkSeedService.seedTemplateTypicalWorksFromDocCatalog(
+			templateId,
+			draft.id,
+		);
 
 		const published = await this.publish(draft.id, {}, userId);
 
-		await this.create(
+		const editingDraft = await this.create(
 			templateId,
 			{
 				jsonSchema: structuredClone(published.jsonSchema),
@@ -225,6 +236,10 @@ export class V2TemplateVersionService {
 				parentVersionId: published.id,
 			},
 			userId,
+		);
+		await this.typicalWorkSeedService.seedTemplateTypicalWorksFromDocCatalog(
+			templateId,
+			editingDraft.id,
 		);
 
 		return published;

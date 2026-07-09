@@ -1,7 +1,7 @@
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import type { V2LogicRuleDto } from "@smart-anketa/api-contract";
-import { patchV2AnketaCalculationLogicRules } from "@smart-anketa/api-contract";
+import { resolveEffectiveLogicRules } from "../../utils/schemaEditorEffectiveLogic";
 import { rule as jsonRule } from "@react-client/features/v2/jsonLogicBuilder";
 import { nanoid } from "nanoid";
 import { useCallback, useEffect, useMemo } from "react";
@@ -104,9 +104,7 @@ export function SchemaLogicPanel({ embedded = false }: { embedded?: boolean }) {
 	} = useSchemaEditor();
 
 	const effectiveRules = useMemo(
-		() =>
-			patchV2AnketaCalculationLogicRules(logic, { jsonSchema, uiSchema }).rules ??
-			[],
+		() => resolveEffectiveLogicRules(logic, jsonSchema, uiSchema),
 		[logic, jsonSchema, uiSchema],
 	);
 

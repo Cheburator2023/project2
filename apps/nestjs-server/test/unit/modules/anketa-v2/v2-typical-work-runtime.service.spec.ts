@@ -314,4 +314,31 @@ describe("V2TypicalWorkRuntimeService", () => {
 		expect(on[0]?.coefficient).toBe(2);
 		expect(off[0]?.coefficient).toBe(1);
 	});
+
+	it("falls back to global catalog works when template has no own works", async () => {
+		const service = createService({
+			rules: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "type",
+					paramName: "Тип источника",
+					operator: "eq",
+					valueCode: "internal",
+					valueLabel: "Внутренний",
+				},
+			],
+		});
+
+		const tasks = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			templateId: "new-empty-template",
+			templateVersionId: null,
+			atDate: "2025-06-01",
+		});
+
+		expect(tasks.length).toBeGreaterThan(0);
+	});
 });

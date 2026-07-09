@@ -14,7 +14,7 @@ import type {
 	V2LogicGraphDto,
 	V2UiSchemaDto,
 } from "@smart-anketa/api-contract";
-import { patchV2TypicalWorksLogicRules } from "@smart-anketa/api-contract";
+import { patchV2AnketaCalculationLogicRules } from "@smart-anketa/api-contract";
 import { V2_DEFAULT_TEMPLATE_SNAPSHOT } from "../constants/v2-default-template-snapshot";
 import { V2FactorySnapshotSettingEntity } from "../entities/v2-factory-snapshot-setting.entity";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
@@ -185,8 +185,12 @@ export class V2FactorySnapshotService {
 		return {
 			jsonSchema: structuredClone(version.jsonSchema),
 			uiSchema: structuredClone(version.uiSchema ?? {}),
-			logic: patchV2TypicalWorksLogicRules(
+			logic: patchV2AnketaCalculationLogicRules(
 				structuredClone(version.logic ?? { rules: [] }),
+				{
+					jsonSchema: structuredClone(version.jsonSchema),
+					uiSchema: structuredClone(version.uiSchema ?? {}),
+				},
 			),
 			dictionariesSnapshot: structuredClone(
 				version.dictionariesSnapshot ?? { referencedDictionaryCodes: [] },

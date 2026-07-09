@@ -60,14 +60,14 @@ export function TypicalWorksPanel() {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const templateVersionId = searchParams.get(V2_TEMPLATE_VERSION_QUERY);
 
+	const { jsonSchema, uiSchema, setSelectedPointer, handleAddFieldPresetAtParent } =
+		useSchemaEditor();
+
 	const { data, isLoading, error } = useV2TypicalWorksList({
 		templateId,
 	});
 	const createWork = useCreateV2TypicalWork();
 	const deleteWork = useDeleteV2TypicalWork();
-
-	const { jsonSchema, uiSchema, setSelectedPointer, handleAddFieldPresetAtParent } =
-		useSchemaEditor();
 
 	/** Дуплекс логика→конструктор: гарантирует блок «Типовые работы» на холсте и выделяет его. */
 	const ensureTypicalWorkBlockOnCanvas = useCallback(() => {

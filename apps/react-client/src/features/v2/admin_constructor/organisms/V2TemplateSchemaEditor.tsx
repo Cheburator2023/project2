@@ -111,6 +111,12 @@ import {
 	snapshotFromTemplateVersion,
 	type SchemaEditorDraftSnapshot,
 } from "../utils/schemaEditorLocalDraft";
+import {
+	resolveEffectiveLogicRules,
+	resolveRulesForSelectedExact,
+	resolveRulesForSelectedSubtree,
+	resolveRulesWhereSelectedIsDependency,
+} from "../utils/schemaEditorEffectiveLogic";
 
 function readUiBranch(
 	uiSchema: UiSchema | Record<string, unknown>,
@@ -677,31 +683,36 @@ export const V2TemplateSchemaEditor = ({
 		return m;
 	}, [v2Dictionaries]);
 
-	const rulesForSelectedExact = useMemo(() => {
-		if (selectedPointer === null) return [];
-		const np = normalizeJsonPointer(selectedPointer);
-		return logic.rules.filter((r) => normalizeJsonPointer(r.targetPath) === np);
-	}, [logic.rules, selectedPointer]);
+	const effectiveLogicRules = useMemo(
+		() => resolveEffectiveLogicRules(logic, jsonSchema, uiSchema),
+		[logic, jsonSchema, uiSchema],
+	);
 
-	const rulesWhereSelectedIsDependency = useMemo(() => {
-		if (selectedPointer === null) return [];
-		const np = normalizeJsonPointer(selectedPointer);
-		return logic.rules.filter((r) =>
-			r.dependencies.some((d) => normalizeJsonPointer(d) === np),
-		);
-	}, [logic.rules, selectedPointer]);
+	const rulesForSelectedExact = useMemo(
+		() =>
+			resolveRulesForSelectedExact(
+				effectiveLogicRules,
+				selectedPointer,
+				uiSchema,
+				jsonSchema,
+			),
+		[effectiveLogicRules, selectedPointer, uiSchema, jsonSchema],
+	);
 
-	const rulesForSelectedSubtree = useMemo(() => {
-		if (selectedPointer === null) return [];
-		const np = normalizeJsonPointer(selectedPointer);
-		if (np === "/") return [];
-		const pref = `${np}/`;
-		return logic.rules.filter((r) => {
-			const tp = normalizeJsonPointer(r.targetPath);
-			if (tp === np) return false;
-			return tp.startsWith(pref);
-		});
-	}, [logic.rules, selectedPointer]);
+	const rulesWhereSelectedIsDependency = useMemo(
+		() =>
+			resolveRulesWhereSelectedIsDependency(
+				effectiveLogicRules,
+				selectedPointer,
+			),
+		[effectiveLogicRules, selectedPointer],
+	);
+
+	const rulesForSelectedSubtree = useMemo(
+		() =>
+			resolveRulesForSelectedSubtree(effectiveLogicRules, selectedPointer),
+		[effectiveLogicRules, selectedPointer],
+	);
 
 	const handleCreateDraft = async (mode: "empty" | "current") => {
 		const emptySnapshot = buildEmptyV2AnketaTemplateSnapshot();
@@ -1504,10 +1515,14 @@ export const V2TemplateSchemaEditor = ({
 		addRuleForTargetPath(selectedPointer ?? "/");
 	}, [addRuleForTargetPath, selectedPointer]);
 
-	const openLogicTabWithRule = useCallback((ruleId: string) => {
-		setMainTab("logic");
-		setSelectedRuleId(ruleId);
-	}, []);
+	const openLogicTabWithRule = useCallback(
+		(ruleId: string) => {
+			setMainTab("logic");
+			setLogicWorkspaceTab("jsonlogic");
+			setSelectedRuleId(ruleId);
+		},
+		[setLogicWorkspaceTab],
+	);
 
 	const updateRulePatch = useCallback(
 		(patch: Partial<V2LogicRuleDto>) => {

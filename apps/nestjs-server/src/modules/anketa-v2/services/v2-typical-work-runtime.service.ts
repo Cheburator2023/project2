@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, Repository } from "typeorm";
+import { In, IsNull, Repository } from "typeorm";
 import {
 	CONTROL_MODELS_STREAM,
 	applyWorkRounding,
@@ -208,7 +208,7 @@ export class V2TypicalWorkRuntimeService {
 		const assignedWorkIds = new Set(assignments.map((a) => a.workId));
 		if (assignedWorkIds.size === 0) return [];
 
-		const works = await this.workRepository.find({
+		let works = await this.workRepository.find({
 			where: {
 				archComponentType,
 				...(params.templateId
@@ -216,6 +216,11 @@ export class V2TypicalWorkRuntimeService {
 					: {}),
 			},
 		});
+		if (!works.length && params.templateId) {
+			works = await this.workRepository.find({
+				where: { archComponentType, templateId: IsNull() },
+			});
+		}
 		const eligibleWorks = works.filter((w) => assignedWorkIds.has(w.id));
 		if (!eligibleWorks.length) return [];
 
