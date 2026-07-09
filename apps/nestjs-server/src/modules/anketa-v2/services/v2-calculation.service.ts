@@ -596,6 +596,11 @@ export class V2CalculationService {
 								)
 							: (typeof task.coefficient === "number" ? task.coefficient : 1);
 
+						const catalogTotal =
+							"total" in task && typeof task.total === "number"
+								? task.total
+								: task.estimateHoursPerDay * coefficient;
+
 						return {
 							taskCode: task.taskCode,
 							name: task.name,
@@ -605,6 +610,7 @@ export class V2CalculationService {
 								: `${sourceName}: параметр источника`,
 							estimateHoursPerDay: task.estimateHoursPerDay,
 							coefficient,
+							total: catalogTotal,
 							sourceComponent: archComponent,
 							sourceName,
 							generatedByRuleId: rule.id,

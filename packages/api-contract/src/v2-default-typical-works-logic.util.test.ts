@@ -86,4 +86,48 @@ describe("v2-default-typical-works-logic.util", () => {
 		expect(payload.outputArrayPath).toBe("detailInfo.myTypicalTasks");
 		expect(rule?.targetPath).toBe("/detailInfo/myTypicalTasks");
 	});
+
+	it("migrates legacy visibility row-total rules to row_computed", () => {
+		const patched = patchV2TypicalWorksLogicRules({
+			rules: [
+				{
+					id: "default-row-source-typical-task-total",
+					kind: "visibility",
+					targetPath: "/streamDataSources/sourceTypicalTasks",
+					dependencies: [],
+					condition: { "*": [{ var: "estimateHoursPerDay" }, { var: "coefficient" }] },
+					payload: {
+						fieldVar: "total",
+						arrayPath: "streamDataSources.sourceTypicalTasks",
+					},
+				},
+			],
+		});
+		const rule = patched.rules.find(
+			(r) => r.id === "default-row-source-typical-task-total",
+		);
+		expect(rule?.kind).toBe("row_computed");
+	});
+
+	it("patches slash-format legacy control typical tasks paths", () => {
+		const patched = patchV2TypicalWorksLogicRules({
+			rules: [
+				{
+					id: "unified-typical-total",
+					kind: "computed",
+					targetPath: "/summary/typicalTotal",
+					condition: true,
+					dependencies: [
+						"/streamDataSources/sourceTypicalTasks",
+						"/streamModelControl/control/controlTypicalTasks",
+					],
+				},
+			],
+		});
+		const rule = patched.rules.find((r) => r.id === "unified-typical-total");
+		expect(rule?.dependencies).toEqual([
+			"/streamDataSources/sourceTypicalTasks",
+			"/streamModelControl/field_Khn6-HAW",
+		]);
+	});
 });

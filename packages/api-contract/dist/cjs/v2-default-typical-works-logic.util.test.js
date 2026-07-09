@@ -71,4 +71,44 @@ const v2_default_typical_works_logic_util_1 = require("./v2-default-typical-work
         (0, vitest_1.expect)(payload.outputArrayPath).toBe("detailInfo.myTypicalTasks");
         (0, vitest_1.expect)(rule?.targetPath).toBe("/detailInfo/myTypicalTasks");
     });
+    (0, vitest_1.it)("migrates legacy visibility row-total rules to row_computed", () => {
+        const patched = (0, v2_default_typical_works_logic_util_1.patchV2TypicalWorksLogicRules)({
+            rules: [
+                {
+                    id: "default-row-source-typical-task-total",
+                    kind: "visibility",
+                    targetPath: "/streamDataSources/sourceTypicalTasks",
+                    dependencies: [],
+                    condition: { "*": [{ var: "estimateHoursPerDay" }, { var: "coefficient" }] },
+                    payload: {
+                        fieldVar: "total",
+                        arrayPath: "streamDataSources.sourceTypicalTasks",
+                    },
+                },
+            ],
+        });
+        const rule = patched.rules.find((r) => r.id === "default-row-source-typical-task-total");
+        (0, vitest_1.expect)(rule?.kind).toBe("row_computed");
+    });
+    (0, vitest_1.it)("patches slash-format legacy control typical tasks paths", () => {
+        const patched = (0, v2_default_typical_works_logic_util_1.patchV2TypicalWorksLogicRules)({
+            rules: [
+                {
+                    id: "unified-typical-total",
+                    kind: "computed",
+                    targetPath: "/summary/typicalTotal",
+                    condition: true,
+                    dependencies: [
+                        "/streamDataSources/sourceTypicalTasks",
+                        "/streamModelControl/control/controlTypicalTasks",
+                    ],
+                },
+            ],
+        });
+        const rule = patched.rules.find((r) => r.id === "unified-typical-total");
+        (0, vitest_1.expect)(rule?.dependencies).toEqual([
+            "/streamDataSources/sourceTypicalTasks",
+            "/streamModelControl/field_Khn6-HAW",
+        ]);
+    });
 });

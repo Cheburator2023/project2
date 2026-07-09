@@ -36,6 +36,8 @@ export type CatalogGeneratedTask = {
 	reason: string;
 	estimateHoursPerDay: number;
 	coefficient: number;
+	/** Итог по формуле работы (чел.-дн.), до записи в анкету. */
+	total: number;
 	match: Record<string, unknown>;
 	workId: string;
 };
@@ -364,6 +366,7 @@ export class V2TypicalWorkRuntimeService {
 				reason: `${ctx.work.name} · ${stream}`,
 				estimateHoursPerDay: ctx.normValue,
 				coefficient,
+				total,
 				match: { archComponentType, stream },
 				workId,
 			});

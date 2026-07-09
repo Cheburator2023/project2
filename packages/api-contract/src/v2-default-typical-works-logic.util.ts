@@ -72,6 +72,9 @@ const PATCHED_RULE_IDS = new Set([
 
 const LEGACY_CONTROL_TYPICAL_TASKS_PATH =
 	"streamModelControl.control.controlTypicalTasks";
+const LEGACY_CONTROL_TYPICAL_TASKS_SLASH_PATH =
+	"/streamModelControl/control/controlTypicalTasks";
+const LEGACY_CONTROL_TYPICAL_TASKS_SLASH_REPLACEMENT = `/${V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH.replace(/\./g, "/")}`;
 
 function patchTypicalWorksPathsDeep(value: unknown): unknown {
 	if (typeof value === "string") {
@@ -80,6 +83,12 @@ function patchTypicalWorksPathsDeep(value: unknown): unknown {
 			next = next.replaceAll(
 				LEGACY_CONTROL_TYPICAL_TASKS_PATH,
 				V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
+			);
+		}
+		if (next.includes(LEGACY_CONTROL_TYPICAL_TASKS_SLASH_PATH)) {
+			next = next.replaceAll(
+				LEGACY_CONTROL_TYPICAL_TASKS_SLASH_PATH,
+				LEGACY_CONTROL_TYPICAL_TASKS_SLASH_REPLACEMENT,
 			);
 		}
 		if (next === "streamDataSources.sourceSystems") {
@@ -101,6 +110,17 @@ function patchTypicalWorksPathsDeep(value: unknown): unknown {
 		return next;
 	}
 	return value;
+}
+
+/** Legacy: правило per-row total ошибочно сохранено как visibility. */
+function patchLegacyRowTotalRule(rule: V2LogicRuleDto): V2LogicRuleDto {
+	if (rule.kind !== "visibility") return rule;
+	const payload = rule.payload as Record<string, unknown> | undefined;
+	if (payload?.fieldVar !== "total") return rule;
+	if (typeof payload.arrayPath !== "string" || !payload.arrayPath.trim()) {
+		return rule;
+	}
+	return { ...rule, kind: "row_computed" };
 }
 
 /** Схема содержит блок типовых работ источников и массив систем-источников. */
@@ -146,6 +166,10 @@ export function patchV2TypicalWorksLogicRules(
 	if (hasControlRule) patched.push(buildControlTypicalWorksCatalogRule());
 	const rest = rules
 		.filter((rule) => !PATCHED_RULE_IDS.has(rule.id))
-		.map((rule) => patchTypicalWorksPathsDeep(rule) as V2LogicRuleDto);
+		.map((rule) =>
+			patchLegacyRowTotalRule(
+				patchTypicalWorksPathsDeep(rule) as V2LogicRuleDto,
+			),
+		);
 	return { ...logic, rules: [...rest, ...patched] };
 }

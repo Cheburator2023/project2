@@ -151,7 +151,9 @@ export function AnketaFormShell({
 
 	const anketaFormContext = useMemo((): AnketaFormContextValue => {
 		return {
-			formData: engine.formData,
+			// Таблицы типовых работ читают formContext.formData, а не RJSF formData.
+			// displayFormData содержит сгенерированные строки и расчёт с сервера.
+			formData: engine.displayFormData,
 			previewSchema: engine.previewSchema,
 			previewUiSchema: engine.previewUiSchema,
 			workflow,
@@ -162,7 +164,7 @@ export function AnketaFormShell({
 			schemaEditorPreview: false,
 		};
 	}, [
-		engine.formData,
+		engine.displayFormData,
 		engine.previewSchema,
 		engine.previewUiSchema,
 		effectiveReadOnly,

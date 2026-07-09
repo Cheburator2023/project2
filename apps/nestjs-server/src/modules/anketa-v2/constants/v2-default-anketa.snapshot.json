@@ -3070,7 +3070,7 @@
 		"rules": [
 			{
 				"id": "default-row-source-typical-task-total",
-				"kind": "visibility",
+				"kind": "row_computed",
 				"payload": {
 					"label": "Per-row итог типовой работы источника (ФТ-024)",
 					"fieldVar": "total",
@@ -3110,7 +3110,7 @@
 						}
 					]
 				},
-				"targetPath": "/streamModelControl/control/controlTypicalTasks",
+				"targetPath": "/streamModelControl/field_Khn6-HAW",
 				"description": "ФТ-024: итог строки работы контроля моделей.",
 				"dependencies": []
 			},
@@ -3122,7 +3122,7 @@
 					"role": "typical_total",
 					"label": "Сумма по типовым работам",
 					"calcModel": "unified",
-					"formulaHint": "Σ источники + Σ контроль моделей (sourceTypicalTasks + controlTypicalTasks)."
+					"formulaHint": "Σ источники + Σ контроль моделей (sourceTypicalTasks + field_Khn6-HAW)."
 				},
 				"condition": {
 					"+": [
@@ -3178,7 +3178,7 @@
 				"description": "ФТ-026: сумма итоговых оценок типовых работ.",
 				"dependencies": [
 					"/streamDataSources/sourceTypicalTasks",
-					"/streamModelControl/control/controlTypicalTasks"
+					"/streamModelControl/field_Khn6-HAW"
 				]
 			},
 			{
