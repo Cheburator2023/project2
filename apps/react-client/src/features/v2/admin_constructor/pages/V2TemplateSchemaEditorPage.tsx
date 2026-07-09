@@ -16,19 +16,13 @@ import Typography from "@mui/material/Typography";
 import { V2TemplateVersionHeaderControls } from "@react-client/features/v2/admin_constructor/molecules/V2TemplateVersionHeaderControls";
 import { v2TemplateVersionChipLabel } from "@react-client/features/v2/admin_constructor/utils/v2TemplateVersionLabels";
 import { useCallback, useState } from "react";
-import {
-	useLocation,
-	useNavigate,
-	useParams,
-	useSearchParams,
-} from "react-router";
+import { useLocation, useParams, useSearchParams } from "react-router";
 import { V2_TEMPLATE_VERSION_QUERY } from "@react-client/routing/common/pathHelpers";
 import { commonRoutes as routes } from "@react-client/routing/common/routes";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 
 export const V2TemplateSchemaEditorPage = () => {
 	const { templateId } = useParams<{ templateId: string }>();
-	const navigate = useNavigate();
 	const { pathname } = useLocation();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const versionId = searchParams.get(V2_TEMPLATE_VERSION_QUERY);
@@ -61,12 +55,6 @@ export const V2TemplateSchemaEditorPage = () => {
 		},
 		[],
 	);
-
-	const listHref =
-		pathname.includes(`${routes.admin.rootPath}/`) ||
-		pathname.startsWith(routes.admin.rootPath)
-			? routes.adminV2Schemas.rootPath
-			: routes.playground.rootPath;
 
 	const isAdminContext =
 		pathname.includes(`${routes.admin.rootPath}/`) ||

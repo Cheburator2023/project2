@@ -610,6 +610,24 @@ function RelationsFlowInner() {
 		void runElkLayout().then((layouted) => commitLayout(layouted));
 	}, [runElkLayout, commitLayout]);
 
+	const flowContainerRef = useRef<HTMLDivElement | null>(null);
+	const [flowReady, setFlowReady] = useState(false);
+
+	useEffect(() => {
+		const el = flowContainerRef.current;
+		if (!el) return;
+
+		const update = () => {
+			const { width, height } = el.getBoundingClientRect();
+			setFlowReady(width > 0 && height > 0);
+		};
+
+		update();
+		const observer = new ResizeObserver(update);
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, []);
+
 	const onNodeDragStop = useCallback(() => {
 		setNodes((nds) => resolveCollisions(nds, COLLISION_DRAG));
 	}, [setNodes]);
@@ -680,7 +698,14 @@ function RelationsFlowInner() {
 
 	return (
 		<RelationsGraphActionsContext.Provider value={relationsGraphActions}>
-			<Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+			<Box
+				sx={{
+					height: "100%",
+					minHeight: 0,
+					display: "flex",
+					flexDirection: "column",
+				}}
+			>
 				<Stack
 					spacing={1}
 					sx={{
@@ -779,13 +804,18 @@ function RelationsFlowInner() {
 				</Stack>
 
 				<Box
+					ref={flowContainerRef}
 					sx={{
 						flex: 1,
 						minHeight: 240,
+						width: "100%",
+						height: "100%",
+						position: "relative",
 						"& .react-flow__edge-path": { strokeLinecap: "round" },
 						"& .react-flow__node": { overflow: "visible" },
 					}}
 				>
+					{flowReady ? (
 					<ReactFlow
 						nodes={nodes}
 						edges={edges}
@@ -814,6 +844,8 @@ function RelationsFlowInner() {
 							style: { strokeWidth: 2 },
 						}}
 						style={{
+							width: "100%",
+							height: "100%",
 							background:
 								theme.palette.mode === "dark"
 									? theme.palette.grey[900]
@@ -828,6 +860,7 @@ function RelationsFlowInner() {
 							nodeColor={(n) => minimapNodeColor(n, theme)}
 						/>
 					</ReactFlow>
+					) : null}
 				</Box>
 
 				<Menu
@@ -840,96 +873,104 @@ function RelationsFlowInner() {
 							: undefined
 					}
 				>
-					{contextMenu?.nodeType === "field" && contextMenu.field ? (
-						<>
-							<MenuItem
-								onClick={() => {
-									graphActions.openFieldInLogic(contextMenu.field!.pointer);
-									closeMenu();
-								}}
-							>
-								<ListItemIcon>
-									<OpenInNewIcon fontSize="small" />
-								</ListItemIcon>
-								<ListItemText>Открыть в логике</ListItemText>
-							</MenuItem>
-							<MenuItem
-								onClick={() => {
-									graphActions.selectField(contextMenu.field!.pointer);
-									closeMenu();
-								}}
-							>
-								<ListItemText inset>Выделить поле</ListItemText>
-							</MenuItem>
-							<MenuItem
-								onClick={() => {
-									graphActions.copyText(contextMenu.field!.pointer);
-									closeMenu();
-								}}
-							>
-								<ListItemIcon>
-									<ContentCopyIcon fontSize="small" />
-								</ListItemIcon>
-								<ListItemText>Копировать JSON Pointer</ListItemText>
-							</MenuItem>
-							<MenuItem
-								onClick={() => {
-									graphActions.copyText(contextMenu.field!.varPath);
-									closeMenu();
-								}}
-							>
-								<ListItemIcon>
-									<ContentCopyIcon fontSize="small" />
-								</ListItemIcon>
-								<ListItemText>Копировать var</ListItemText>
-							</MenuItem>
-						</>
-					) : null}
-					{contextMenu?.nodeType === "rule" && contextMenu.rule ? (
-						<>
-							<MenuItem
-								onClick={() => {
-									graphActions.openRuleInLogic(contextMenu.rule!.ruleId);
-									closeMenu();
-								}}
-							>
-								<ListItemIcon>
-									<OpenInNewIcon fontSize="small" />
-								</ListItemIcon>
-								<ListItemText>Открыть в логике</ListItemText>
-							</MenuItem>
-							<MenuItem
-								onClick={() => {
-									graphActions.selectRule(contextMenu.rule!.ruleId);
-									closeMenu();
-								}}
-							>
-								<ListItemText inset>Выделить правило</ListItemText>
-							</MenuItem>
-							<MenuItem
-								onClick={() => {
-									graphActions.duplicateRule(contextMenu.rule!.ruleId);
-									closeMenu();
-								}}
-							>
-								<ListItemIcon>
-									<FileCopyOutlinedIcon fontSize="small" />
-								</ListItemIcon>
-								<ListItemText>Дублировать правило</ListItemText>
-							</MenuItem>
-							<MenuItem
-								onClick={() => {
-									graphActions.removeRule(contextMenu.rule!.ruleId);
-									closeMenu();
-								}}
-							>
-								<ListItemIcon>
-									<DeleteOutlineIcon fontSize="small" color="warning" />
-								</ListItemIcon>
-								<ListItemText>Удалить правило</ListItemText>
-							</MenuItem>
-						</>
-					) : null}
+					{contextMenu?.nodeType === "field" && contextMenu.field
+						? [
+								<MenuItem
+									key="field-open"
+									onClick={() => {
+										graphActions.openFieldInLogic(contextMenu.field!.pointer);
+										closeMenu();
+									}}
+								>
+									<ListItemIcon>
+										<OpenInNewIcon fontSize="small" />
+									</ListItemIcon>
+									<ListItemText>Открыть в логике</ListItemText>
+								</MenuItem>,
+								<MenuItem
+									key="field-select"
+									onClick={() => {
+										graphActions.selectField(contextMenu.field!.pointer);
+										closeMenu();
+									}}
+								>
+									<ListItemText inset>Выделить поле</ListItemText>
+								</MenuItem>,
+								<MenuItem
+									key="field-copy-pointer"
+									onClick={() => {
+										graphActions.copyText(contextMenu.field!.pointer);
+										closeMenu();
+									}}
+								>
+									<ListItemIcon>
+										<ContentCopyIcon fontSize="small" />
+									</ListItemIcon>
+									<ListItemText>Копировать JSON Pointer</ListItemText>
+								</MenuItem>,
+								<MenuItem
+									key="field-copy-var"
+									onClick={() => {
+										graphActions.copyText(contextMenu.field!.varPath);
+										closeMenu();
+									}}
+								>
+									<ListItemIcon>
+										<ContentCopyIcon fontSize="small" />
+									</ListItemIcon>
+									<ListItemText>Копировать var</ListItemText>
+								</MenuItem>,
+							]
+						: null}
+					{contextMenu?.nodeType === "rule" && contextMenu.rule
+						? [
+								<MenuItem
+									key="rule-open"
+									onClick={() => {
+										graphActions.openRuleInLogic(contextMenu.rule!.ruleId);
+										closeMenu();
+									}}
+								>
+									<ListItemIcon>
+										<OpenInNewIcon fontSize="small" />
+									</ListItemIcon>
+									<ListItemText>Открыть в логике</ListItemText>
+								</MenuItem>,
+								<MenuItem
+									key="rule-select"
+									onClick={() => {
+										graphActions.selectRule(contextMenu.rule!.ruleId);
+										closeMenu();
+									}}
+								>
+									<ListItemText inset>Выделить правило</ListItemText>
+								</MenuItem>,
+								<MenuItem
+									key="rule-duplicate"
+									onClick={() => {
+										graphActions.duplicateRule(contextMenu.rule!.ruleId);
+										closeMenu();
+									}}
+								>
+									<ListItemIcon>
+										<FileCopyOutlinedIcon fontSize="small" />
+									</ListItemIcon>
+									<ListItemText>Дублировать правило</ListItemText>
+								</MenuItem>,
+								<MenuItem
+									key="rule-remove"
+									onClick={() => {
+										graphActions.removeRule(contextMenu.rule!.ruleId);
+										closeMenu();
+									}}
+								>
+									<ListItemIcon>
+										<DeleteOutlineIcon fontSize="small" color="warning" />
+									</ListItemIcon>
+									<ListItemText>Удалить правило</ListItemText>
+								</MenuItem>,
+							]
+						: null}
 				</Menu>
 			</Box>
 		</RelationsGraphActionsContext.Provider>

@@ -25,12 +25,45 @@ import {
 import { WidgetProps } from "@rjsf/utils";
 import { isEqual } from "lodash-es";
 import { fuzzySearch, highlightMatches } from "@react-client/utils/fuzzySearch";
-import {
-	buildSelectOptions,
-	selectLabelForValue,
-} from "./selectFieldOptions";
+import { buildSelectOptions, selectLabelForValue } from "./selectFieldOptions";
 import { resolveFieldEnabledWhen } from "./fieldEnabledWhen";
 import { normalizeUiTooltip } from "@smart-anketa/api-contract";
+
+const RJSF_WIDGET_OPTION_KEYS = new Set([
+	"enumOptions",
+	"enumNames",
+	"defaultEnums",
+	"select",
+	"tooltip",
+	"multiple",
+	"noDelete",
+	"reset",
+	"freeSolo",
+	"allowCustomInput",
+	"valToTitle",
+	"enabledWhen",
+	"rows",
+	"minRows",
+	"maxRows",
+	"multiline",
+	"mask",
+	"replacement",
+	"prefix",
+	"dictionaryCode",
+	"widget",
+	"inputType",
+]);
+
+function textFieldPassthroughOptions(
+	options: WidgetProps["options"] | undefined,
+): Record<string, unknown> {
+	if (!options) return {};
+	return Object.fromEntries(
+		Object.entries(options).filter(
+			([key]) => !RJSF_WIDGET_OPTION_KEYS.has(key),
+		),
+	);
+}
 
 // Вспомогательная функция для преобразования indexes в matches
 const indexesToMatches = (
@@ -137,8 +170,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 	};
 
 	const optionsForSelect = buildSelectOptions(options, schema);
-	const isSelect =
-		optionsForSelect.length > 0 || options?.select || props?.select;
+	const isSelect = optionsForSelect.length > 0;
 	const allowCustomInput = options?.freeSolo || options?.allowCustomInput;
 	const fieldEnabled = resolveFieldEnabledWhen(
 		props.formContext?.formData,
@@ -151,7 +183,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 	const fieldTitle = label || schema?.title;
 	const selectPlaceholder = placeholder || fieldTitle;
 
-	const isFuzzy = isSelect & isMultiple;
+	const isFuzzy = isSelect && isMultiple;
 
 	const fuzzyMatches =
 		isFuzzy && searchTerm.trim()
@@ -175,7 +207,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 					fuzzyMatch: null,
 				}));
 
-	if (isSelect & isMultiple) {
+	if (isSelect && isMultiple) {
 		const _handleChangeMult = (event: SelectChangeEvent) => {
 			const {
 				target: { value },
@@ -188,7 +220,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 
 		return (
 			<TextFieldCustom
-				value={value}
+				value={Array.isArray(value) ? value : value != null ? [value] : []}
 				title={tooltipText || undefined}
 				onChange={_handleChangeMult as any}
 				id={id}
@@ -237,9 +269,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 							};
 
 							if (selected.length === 0 && selectPlaceholder) {
-								return (
-									<div style={{ opacity: 0.4 }}>{selectPlaceholder}</div>
-								);
+								return <div style={{ opacity: 0.4 }}>{selectPlaceholder}</div>;
 							}
 
 							return (
@@ -283,7 +313,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 							),
 					},
 				}}
-				{...options}
+				{...textFieldPassthroughOptions(options)}
 			>
 				<Box
 					sx={{
@@ -475,7 +505,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			id={id}
 			title={isSelect ? tooltipText || valToTitle : valToTitle}
 			label={isSelect ? undefined : fieldTitle}
-			value={value}
+			value={isSelect ? (value ?? "") : value}
 			required={required}
 			disabled={isDisabled}
 			autoFocus={autofocus}
@@ -530,7 +560,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 						),
 				},
 			}}
-			{...options}
+			{...textFieldPassthroughOptions(options)}
 		>
 			{/* {optionsForSelect.length > 0 &&
 				initialValue !== props.value &&

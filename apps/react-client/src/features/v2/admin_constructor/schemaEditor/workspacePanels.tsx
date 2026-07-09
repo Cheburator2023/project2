@@ -149,7 +149,9 @@ export function CalculationDockPanel(_props: IDockviewPanelProps) {
 export function RelationsDockPanel(_props: IDockviewPanelProps) {
 	return (
 		<PanelHost dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.panelRelations}>
-			<SchemaRelationsPanel embedded />
+			<Box sx={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex" }}>
+				<SchemaRelationsPanel embedded />
+			</Box>
 		</PanelHost>
 	);
 }

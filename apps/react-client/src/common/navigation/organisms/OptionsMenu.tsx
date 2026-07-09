@@ -76,19 +76,20 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 				}}
 				data-test-id="options-menu--Menu-0"
 			>
-				{showSettings ? (
-					<>
-						<MenuItem
-							onClick={handleOpenSettings}
-							data-test-id="options-menu--MenuItem-settings"
-						>
-							<ListItemText data-test-id="options-menu--ListItemText-settings">
-								Настройки
-							</ListItemText>
-						</MenuItem>
-						<Divider />
-					</>
-				) : null}
+				{showSettings
+					? [
+							<MenuItem
+								key="settings"
+								onClick={handleOpenSettings}
+								data-test-id="options-menu--MenuItem-settings"
+							>
+								<ListItemText data-test-id="options-menu--ListItemText-settings">
+									Настройки
+								</ListItemText>
+							</MenuItem>,
+							<Divider key="settings-divider" />,
+						]
+					: null}
 				<MenuItem
 					onClick={handleLogout}
 					sx={{
