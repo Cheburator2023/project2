@@ -286,6 +286,8 @@ export function AnketaFormModals({
 		editIndex: number | undefined,
 		values: Record<string, unknown>,
 	) => {
+		console.log('handleRjsfArrayModalSubmit onSubmit')
+		debugger
 		onFormDataChange((prev) => {
 			const updated =
 				editIndex == null
@@ -326,6 +328,8 @@ export function AnketaFormModals({
 					defaultValues={rjsfModalSlice.values}
 					onClose={closeModal}
 					onSubmit={(values) => {
+						console.log('AnketaRjsfObjectModal onSubmit')
+						debugger
 						if (activeModal?.kind !== "rjsfObject") return;
 						if (rjsfModalSlice.isArrayModal) {
 							handleRjsfArrayModalSubmit(
