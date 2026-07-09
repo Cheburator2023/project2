@@ -13,10 +13,12 @@ import {
 } from "./testIds";
 import { readAnketaFormContext } from "../utils/anketaFormContext";
 import {
-	getObjectAtPath,
-	isArchObjectFilled,
 	resolveObjectTableColumns,
 } from "../utils/anketaArchObjectTableConfig";
+import {
+	archObjectListRowLabel,
+	readArchObjectListAtPath,
+} from "../utils/anketaArchObjectListPaths";
 
 type Props = {
 	pathKey: string;
@@ -35,8 +37,7 @@ export function AnketaArchObjectPanel({
 		ctx.previewSchema,
 		ctx.previewUiSchema,
 	);
-	const item = getObjectAtPath(ctx.formData ?? {}, pathKey);
-	const filled = isArchObjectFilled(item);
+	const items = readArchObjectListAtPath(ctx.formData ?? {}, pathKey);
 	const readOnly = ctx.anketaReadOnly;
 
 	const addLabel = `Добавить ${sectionTitle.toLowerCase()}`;
@@ -45,14 +46,14 @@ export function AnketaArchObjectPanel({
 		pathKey,
 	);
 
-	const rowActions = (
+	const rowActions = (index: number) => (
 		<Stack direction="row" spacing={0.25} justifyContent="flex-end">
 			<IconButton
 				size="small"
 				disabled={readOnly}
 				title="Редактировать"
-				data-test-id={`${panelTestId}--edit`}
-				onClick={() => ctx.openAnketaModal?.(pathKey)}
+				data-test-id={`${panelTestId}--edit-${index}`}
+				onClick={() => ctx.openAnketaModal?.(pathKey, index)}
 			>
 				<EditOutlinedIcon fontSize="small" />
 			</IconButton>
@@ -60,8 +61,8 @@ export function AnketaArchObjectPanel({
 				size="small"
 				disabled={readOnly}
 				title="Удалить"
-				data-test-id={`${panelTestId}--delete`}
-				onClick={() => ctx.deleteAnketaObject?.(pathKey)}
+				data-test-id={`${panelTestId}--delete-${index}`}
+				onClick={() => ctx.deleteAnketaArrayItem?.(pathKey, index)}
 			>
 				<DeleteOutlineIcon fontSize="small" />
 			</IconButton>
@@ -70,51 +71,56 @@ export function AnketaArchObjectPanel({
 
 	return (
 		<Box data-test-id={panelTestId} sx={{ minWidth: 0 }}>
-			{filled ? (
-				<Box
-					data-test-id={`${panelTestId}--row`}
-					sx={{
-						display: "grid",
-						gridTemplateColumns: columns
-							? `repeat(${columns.length}, 1fr) 72px`
-							: "1fr 72px",
-						gap: 1,
-						alignItems: "center",
-						px: 1.5,
-						py: 1.25,
-						bgcolor: "grey.50",
-						borderRadius: 1.5,
-						border: "1px solid",
-						borderColor: "divider",
-						minWidth: 0,
-						overflowX: "auto",
-					}}
-				>
-					{columns ? (
-						columns.map((column) => (
-							<Box key={column.key} minWidth={0}>
-								<Typography variant="caption" color="text.secondary">
-									{column.header}
+			{items.length > 0 ? (
+				<Stack spacing={1}>
+					{items.map((item, index) => (
+						<Box
+							key={`${pathKey}-${index}`}
+							data-test-id={`${panelTestId}--row-${index}`}
+							sx={{
+								display: "grid",
+								gridTemplateColumns: columns
+									? `repeat(${columns.length}, 1fr) 72px`
+									: "1fr 72px",
+								gap: 1,
+								alignItems: "center",
+								px: 1.5,
+								py: 1.25,
+								bgcolor: "grey.50",
+								borderRadius: 1.5,
+								border: "1px solid",
+								borderColor: "divider",
+								minWidth: 0,
+								overflowX: "auto",
+							}}
+						>
+							{columns ? (
+								columns.map((column) => (
+									<Box key={column.key} minWidth={0}>
+										<Typography variant="caption" color="text.secondary">
+											{column.header}
+										</Typography>
+										<Typography
+											variant="body2"
+											sx={{
+												overflow: "hidden",
+												textOverflow: "ellipsis",
+												whiteSpace: "nowrap",
+											}}
+										>
+											{column.render(item)}
+										</Typography>
+									</Box>
+								))
+							) : (
+								<Typography variant="body2" color="text.secondary">
+									{archObjectListRowLabel(item, columns, index)}
 								</Typography>
-								<Typography
-									variant="body2"
-									sx={{
-										overflow: "hidden",
-										textOverflow: "ellipsis",
-										whiteSpace: "nowrap",
-									}}
-								>
-									{column.render(item)}
-								</Typography>
-							</Box>
-						))
-					) : (
-						<Typography variant="body2" color="text.secondary">
-							Заполнено
-						</Typography>
-					)}
-					{rowActions}
-				</Box>
+							)}
+							{rowActions(index)}
+						</Box>
+					))}
+				</Stack>
 			) : (
 				<ListEmptyPlaceholder data-test-id={`${panelTestId}--empty`}>
 					Нет записей

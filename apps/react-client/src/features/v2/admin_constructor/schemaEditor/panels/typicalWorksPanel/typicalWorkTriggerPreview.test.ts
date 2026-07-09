@@ -20,4 +20,48 @@ describe("resolvePreviewSourceRowForTypicalWork", () => {
 			resolvePreviewSourceRowForTypicalWork({ detailInfo: {} }),
 		).toBeUndefined();
 	});
+
+	it("falls back to stream-level fields when sourceSystems is empty", () => {
+		expect(
+			resolvePreviewSourceRowForTypicalWork({
+				streamDataSources: {
+					groupKirilla: { field_room: "Кухня" },
+				},
+			}),
+		).toEqual({ field_room: "Кухня" });
+	});
+
+	it("ignores empty sourceSystems row and uses stream-level fields", () => {
+		expect(
+			resolvePreviewSourceRowForTypicalWork({
+				detailInfo: {
+					sourceSystems: [{}],
+				},
+				streamDataSources: {
+					groupKirilla: { field_room: "Кухня" },
+				},
+			}),
+		).toEqual({ field_room: "Кухня" });
+	});
+
+	it("uses root-level trigger fields for minimal schemas", () => {
+		const uiSchema = {
+			field_SId8TZKZ: { "ui:options": { archComponent: "typicalWork" } },
+		};
+		const jsonSchema = {
+			type: "object",
+			properties: {
+				field_KQX2OsDx: { type: "string" },
+				field_SId8TZKZ: { type: "array", items: { type: "object" } },
+			},
+		};
+
+		expect(
+			resolvePreviewSourceRowForTypicalWork(
+				{ field_KQX2OsDx: "Непосредственно" },
+				uiSchema,
+				jsonSchema,
+			),
+		).toEqual({ field_KQX2OsDx: "Непосредственно" });
+	});
 });

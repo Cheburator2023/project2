@@ -10,6 +10,7 @@ export const V2_TEMPLATE_EDIT_TEST_IDS = {
 	btnActivate: "btnActivate",
 	schemaEditor: "schemaEditor",
 	dockLayout: "dockLayout",
+	dockLayoutReset: "dockLayoutReset",
 	panelPalette: "panelPalette",
 	panelProperties: "panelProperties",
 	panelDesigner: "panelDesigner",

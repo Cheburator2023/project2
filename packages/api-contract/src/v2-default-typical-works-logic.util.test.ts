@@ -87,6 +87,38 @@ describe("v2-default-typical-works-logic.util", () => {
 		expect(rule?.targetPath).toBe("/detailInfo/myTypicalTasks");
 	});
 
+	it("injects source catalog rule for root-level typicalWork block without sourceSystems", () => {
+		const patched = patchV2TypicalWorksLogicRules(
+			{ rules: [] },
+			{
+				jsonSchema: {
+					type: "object",
+					properties: {
+						field_KQX2OsDx: { type: "string", title: "Поле справочника" },
+						field_SId8TZKZ: {
+							type: "array",
+							items: { type: "object" },
+							title: "Типовые работы",
+						},
+					},
+				},
+				uiSchema: {
+					field_SId8TZKZ: {
+						"ui:options": { archComponent: "typicalWork" },
+					},
+				},
+			},
+		);
+
+		const rule = patched.rules.find(
+			(r) => r.id === "unified-source-typical-works",
+		);
+		expect(rule).toBeDefined();
+		const payload = rule?.payload as Record<string, unknown>;
+		expect(payload.outputArrayPath).toBe("field_SId8TZKZ");
+		expect(rule?.targetPath).toBe("/field_SId8TZKZ");
+	});
+
 	it("migrates legacy visibility row-total rules to row_computed", () => {
 		const patched = patchV2TypicalWorksLogicRules({
 			rules: [

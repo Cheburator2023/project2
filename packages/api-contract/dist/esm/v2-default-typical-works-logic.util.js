@@ -1,4 +1,4 @@
-import { jsonSchemaHasResolvablePath, resolveSourceTypicalWorksOutputPath, V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH, } from "./v2-typical-work-output-paths.util";
+import { resolveSourceTypicalWorksOutputPath, V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH, } from "./v2-typical-work-output-paths.util";
 /** Канонические пути v5: источники в detailInfo, вывод — в stream-блоки. */
 export const V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
 export { V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH };
@@ -93,12 +93,9 @@ function patchLegacyRowTotalRule(rule) {
     }
     return { ...rule, kind: "row_computed" };
 }
-/** Схема содержит блок типовых работ источников и массив систем-источников. */
+/** Схема содержит блок типовых работ (archComponent: typicalWork) — достаточно для каталога. */
 export function schemaSupportsSourceTypicalWorksCatalog(jsonSchema, uiSchema) {
-    if (!resolveSourceTypicalWorksOutputPath(jsonSchema, uiSchema))
-        return false;
-    return (jsonSchemaHasResolvablePath(jsonSchema, V2_SOURCE_SYSTEMS_ARRAY_PATH) ||
-        jsonSchemaHasResolvablePath(jsonSchema, "streamDataSources.sourceSystems"));
+    return Boolean(resolveSourceTypicalWorksOutputPath(jsonSchema, uiSchema));
 }
 /** Заменяет устаревшие static-tasks правила на каталог работ с путями схемы v5. */
 export function patchV2TypicalWorksLogicRules(logic, options) {

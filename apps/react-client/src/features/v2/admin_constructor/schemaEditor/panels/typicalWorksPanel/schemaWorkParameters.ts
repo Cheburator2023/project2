@@ -313,6 +313,7 @@ function finalizeSchemaWorkParameters(
 			numeric: param.numeric,
 			textual: param.textual,
 			values: param.values,
+			sourceKeys: [param.code],
 		}))
 		.sort((a, b) => a.name.localeCompare(b.name, "ru"));
 }

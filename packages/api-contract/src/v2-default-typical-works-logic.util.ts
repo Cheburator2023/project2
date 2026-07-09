@@ -1,6 +1,5 @@
 import type { V2LogicGraphDto, V2LogicRuleDto } from "./v2-template.types";
 import {
-	jsonSchemaHasResolvablePath,
 	resolveSourceTypicalWorksOutputPath,
 	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
 } from "./v2-typical-work-output-paths.util";
@@ -123,17 +122,12 @@ function patchLegacyRowTotalRule(rule: V2LogicRuleDto): V2LogicRuleDto {
 	return { ...rule, kind: "row_computed" };
 }
 
-/** Схема содержит блок типовых работ источников и массив систем-источников. */
+/** Схема содержит блок типовых работ (archComponent: typicalWork) — достаточно для каталога. */
 export function schemaSupportsSourceTypicalWorksCatalog(
 	jsonSchema?: unknown,
 	uiSchema?: unknown,
 ): boolean {
-	if (!resolveSourceTypicalWorksOutputPath(jsonSchema, uiSchema)) return false;
-
-	return (
-		jsonSchemaHasResolvablePath(jsonSchema, V2_SOURCE_SYSTEMS_ARRAY_PATH) ||
-		jsonSchemaHasResolvablePath(jsonSchema, "streamDataSources.sourceSystems")
-	);
+	return Boolean(resolveSourceTypicalWorksOutputPath(jsonSchema, uiSchema));
 }
 
 /** Заменяет устаревшие static-tasks правила на каталог работ с путями схемы v5. */

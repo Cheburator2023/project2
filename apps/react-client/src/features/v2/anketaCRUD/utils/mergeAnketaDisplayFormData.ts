@@ -3,6 +3,7 @@ import {
 	V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
 	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
 } from "@smart-anketa/api-contract";
+import { ANKETA_ARCH_OBJECT_LIST_PATHS } from "./anketaArchObjectListPaths";
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
 	return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -70,6 +71,18 @@ function resolveGeneratedTypicalWorkPaths(
 	return [...new Set([...FALLBACK_GENERATED_TYPICAL_WORK_ARRAY_PATHS, ...dynamic])];
 }
 
+/** Не затирать pseudo-array арх. блока (modelService и т.п.) при записи вложенных generated paths. */
+function shouldSkipGeneratedPathWrite(
+	data: Record<string, unknown>,
+	path: string,
+): boolean {
+	for (const archPath of ANKETA_ARCH_OBJECT_LIST_PATHS) {
+		if (path === archPath || !path.startsWith(`${archPath}.`)) continue;
+		return Array.isArray(readAtPath(data, archPath));
+	}
+	return false;
+}
+
 function fanOutTypicalWorkLiveData(
 	merged: Record<string, unknown>,
 	liveFormData: Record<string, unknown>,
@@ -97,6 +110,7 @@ function fanOutTypicalWorkLiveData(
 	let next = merged;
 	for (const path of paths) {
 		if (path === sourcePath) continue;
+		if (shouldSkipGeneratedPathWrite(next, path)) continue;
 		const current = readAtPath(next, path);
 		if (!Array.isArray(current) || current.length === 0) {
 			next = writeAtPath(next, path, sourceValue);
@@ -118,9 +132,17 @@ export function mergeAnketaDisplayFormData(
 		return formData;
 	}
 	let merged = deepMergeRecords(liveFormData, formData);
+
+	// Итоговая оценка и «Подробный расчёт» — только с сервера; в formData часто лежит устаревший snapshot.
+	const liveSummary = readAtPath(liveFormData, "summary");
+	if (isPlainRecord(liveSummary)) {
+		merged = writeAtPath(merged, "summary", liveSummary);
+	}
+
 	const generatedPaths = resolveGeneratedTypicalWorkPaths(uiSchema);
 
 	for (const path of generatedPaths) {
+		if (shouldSkipGeneratedPathWrite(merged, path)) continue;
 		const liveValue = readAtPath(liveFormData, path);
 		if (Array.isArray(liveValue)) {
 			merged = writeAtPath(merged, path, liveValue);

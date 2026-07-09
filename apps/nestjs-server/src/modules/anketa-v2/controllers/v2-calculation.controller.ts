@@ -41,6 +41,8 @@ export class V2CalculationController {
 		return this.calculationService.evaluate(logic, body.formData ?? {}, {
 			templateVersionId: version.id,
 			templateId: version.templateId,
+			jsonSchema: body.jsonSchema ?? version.jsonSchema,
+			uiSchema: body.uiSchema ?? version.uiSchema,
 		});
 	}
 }

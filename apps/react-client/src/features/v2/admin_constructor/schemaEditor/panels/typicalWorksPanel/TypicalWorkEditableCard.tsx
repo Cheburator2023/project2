@@ -36,6 +36,7 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import { useCreateV2TemplateVersion } from "@react-client/common/api/queries/v2-templates";
 import { useV2TypicalWorkAssignments, useV2WorkParametersCatalog } from "@react-client/common/api/queries/v2-works";
 import { useSchemaEditor } from "../../SchemaEditorContext";
+import { mergeAnketaDisplayFormData } from "@react-client/features/v2/anketaCRUD/utils/mergeAnketaDisplayFormData";
 import { resolvePreviewSourceRowForTypicalWork } from "./typicalWorkTriggerPreview";
 import {
 	buildSchemaWorkParameters,
@@ -150,7 +151,7 @@ export function TypicalWorkEditableCard({
 	onStreamChange,
 	onVersionChange,
 }: TypicalWorkEditableCardProps) {
-	const { fieldPathHints, uiSchema, jsonSchema, enumMapByCode, liveFormData } =
+	const { fieldPathHints, uiSchema, jsonSchema, enumMapByCode, formData, liveFormData } =
 		useSchemaEditor();
 	const { data: assignmentsList } = useV2TypicalWorkAssignments({
 		templateVersionId,
@@ -296,9 +297,24 @@ export function TypicalWorkEditableCard({
 		[laborParamOptions],
 	);
 
+	const previewFormDataForTriggers = useMemo(
+		() =>
+			mergeAnketaDisplayFormData(
+				formData,
+				liveFormData,
+				uiSchema as Record<string, unknown> | undefined,
+			),
+		[formData, liveFormData, uiSchema],
+	);
+
 	const previewSourceRow = useMemo(
-		() => resolvePreviewSourceRowForTypicalWork(liveFormData),
-		[liveFormData],
+		() =>
+			resolvePreviewSourceRowForTypicalWork(
+				previewFormDataForTriggers,
+				uiSchema as Record<string, unknown> | undefined,
+				jsonSchema as Record<string, unknown> | undefined,
+			),
+		[previewFormDataForTriggers, uiSchema, jsonSchema],
 	);
 
 	const triggerAnalysis = useMemo(

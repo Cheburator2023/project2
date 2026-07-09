@@ -32,6 +32,10 @@ import {
 	typicalWorkItemDisplayName,
 } from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
 import {
+	readArchObjectListAtPath,
+	isAnketaArchObjectListPath,
+} from "@react-client/features/v2/anketaCRUD/utils/anketaArchObjectListPaths";
+import {
 	V2_ANKETA_SECTION_COMPLETE_LABELS,
 	isV2AnketaHiddenUiNode,
 	isV2AnketaModalObjectArch,
@@ -932,7 +936,9 @@ export function V2PreviewObjectFieldTemplate({
 	if (sectionRole === "subsection") {
 		const formData = anketaCtx.formData ?? {};
 		const count = sectionUiOptions.showFilledCount
-			? countSubsectionFilledItems(getValueAtPath(formData, pathKey))
+			? isAnketaArchObjectListPath(pathKey)
+				? readArchObjectListAtPath(formData, pathKey).length
+				: countSubsectionFilledItems(getValueAtPath(formData, pathKey))
 			: undefined;
 
 		return wrapArch(

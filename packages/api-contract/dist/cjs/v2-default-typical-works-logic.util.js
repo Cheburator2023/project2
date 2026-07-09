@@ -100,12 +100,9 @@ function patchLegacyRowTotalRule(rule) {
     }
     return { ...rule, kind: "row_computed" };
 }
-/** Схема содержит блок типовых работ источников и массив систем-источников. */
+/** Схема содержит блок типовых работ (archComponent: typicalWork) — достаточно для каталога. */
 function schemaSupportsSourceTypicalWorksCatalog(jsonSchema, uiSchema) {
-    if (!(0, v2_typical_work_output_paths_util_1.resolveSourceTypicalWorksOutputPath)(jsonSchema, uiSchema))
-        return false;
-    return ((0, v2_typical_work_output_paths_util_1.jsonSchemaHasResolvablePath)(jsonSchema, exports.V2_SOURCE_SYSTEMS_ARRAY_PATH) ||
-        (0, v2_typical_work_output_paths_util_1.jsonSchemaHasResolvablePath)(jsonSchema, "streamDataSources.sourceSystems"));
+    return Boolean((0, v2_typical_work_output_paths_util_1.resolveSourceTypicalWorksOutputPath)(jsonSchema, uiSchema));
 }
 /** Заменяет устаревшие static-tasks правила на каталог работ с путями схемы v5. */
 function patchV2TypicalWorksLogicRules(logic, options) {

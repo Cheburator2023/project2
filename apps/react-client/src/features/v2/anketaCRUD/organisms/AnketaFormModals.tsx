@@ -10,6 +10,13 @@ import {
 	type MutableRefObject,
 } from "react";
 import { getObjectAtPath } from "../utils/anketaArchObjectTableConfig";
+import {
+	appendArchObjectListItem,
+	isAnketaArchObjectListPath,
+	readArchObjectListAtPath,
+	removeArchObjectListItem,
+	updateArchObjectListItem,
+} from "../utils/anketaArchObjectListPaths";
 import { getArrayAtPath } from "../utils/anketaModalArrayTableConfig";
 import { getObjectUiSlice } from "../utils/anketaSchemaAtPath";
 import type { AnketaModalKind } from "../utils/anketaFormModalPaths";
@@ -152,9 +159,12 @@ export function AnketaFormModals({
 
 	const deleteArrayItem = useCallback(
 		(path: string, index: number) => {
-			onFormDataChange((prev) =>
-				touchSectionForPathInFormData(removeAtFormPath(prev, path, index), path),
-			);
+			onFormDataChange((prev) => {
+				const updated = isAnketaArchObjectListPath(path)
+					? removeArchObjectListItem(prev, path, index)
+					: removeAtFormPath(prev, path, index);
+				return touchSectionForPathInFormData(updated, path);
+			});
 		},
 		[onFormDataChange],
 	);
@@ -186,17 +196,28 @@ export function AnketaFormModals({
 	const rjsfModalSlice = useMemo(() => {
 		if (!activeModal || activeModal.kind !== "rjsfObject") return null;
 
-		const isArrayModal = modalArrayPathSet.has(activeModal.path);
+		const isArchObjectListModal = isAnketaArchObjectListPath(activeModal.path);
+		const isArrayModal =
+			modalArrayPathSet.has(activeModal.path) || isArchObjectListModal;
 
 		if (isArrayModal) {
-			const slice = getArrayItemSchemaSliceForModal(
-				previewSchema,
-				previewUiSchema,
-				activeModal.path,
-				{ omitTitle: true },
-			);
+			const slice = isArchObjectListModal
+				? getObjectSchemaSliceForModal(
+						previewSchema,
+						previewUiSchema,
+						activeModal.path,
+						{ omitTitle: true },
+					)
+				: getArrayItemSchemaSliceForModal(
+						previewSchema,
+						previewUiSchema,
+						activeModal.path,
+						{ omitTitle: true },
+					);
 			if (!slice) return null;
-			const items = getArrayAtPath(formData, activeModal.path);
+			const items = isArchObjectListModal
+				? readArchObjectListAtPath(formData, activeModal.path)
+				: getArrayAtPath(formData, activeModal.path);
 			const values =
 				activeModal.editIndex != null
 					? ((items[activeModal.editIndex] as Record<string, unknown>) ?? {})
@@ -287,8 +308,11 @@ export function AnketaFormModals({
 		values: Record<string, unknown>,
 	) => {
 		onFormDataChange((prev) => {
-			const updated =
-				editIndex == null
+			const updated = isAnketaArchObjectListPath(path)
+				? editIndex == null
+					? appendArchObjectListItem(prev, path, values)
+					: updateArchObjectListItem(prev, path, editIndex, values)
+				: editIndex == null
 					? appendAtFormPath(prev, path, values)
 					: updateAtFormPath(prev, path, editIndex, values);
 			return touchSectionForPathInFormData(updated, path);

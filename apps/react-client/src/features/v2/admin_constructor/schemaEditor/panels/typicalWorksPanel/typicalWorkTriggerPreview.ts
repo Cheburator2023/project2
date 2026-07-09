@@ -1,4 +1,11 @@
-import { V2_SOURCE_SYSTEMS_ARRAY_PATH } from "@smart-anketa/api-contract";
+import {
+	hasTypicalWorkStreamTriggerContext,
+	isFilledTypicalWorkSourceRow,
+	readTypicalWorksStreamTriggerContext,
+	resolveSourceTypicalWorksOutputPath,
+	V2_SOURCE_SYSTEMS_ARRAY_PATH,
+	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+} from "@smart-anketa/api-contract";
 
 function readDotPath(data: Record<string, unknown>, path: string): unknown {
 	return path.split(".").reduce<unknown>((cur, key) => {
@@ -26,14 +33,27 @@ function readSourceSystemRows(
 }
 
 /**
- * Строка системы-источника из превью анкеты для проверки триггеров работы.
- * Разделение внутр/внеш убрано — берём первую систему-источник (гейтинг по типу
- * теперь выполняют триггеры самой работы).
+ * Контекст анкеты для проверки триггеров работы в превью конструктора.
+ * Сначала строка системы-источника; если её нет — поля стрима или корня формы.
  */
 export function resolvePreviewSourceRowForTypicalWork(
 	formData: Record<string, unknown> | undefined | null,
+	uiSchema?: Record<string, unknown>,
+	jsonSchema?: Record<string, unknown>,
 ): Record<string, unknown> | undefined {
 	if (!formData) return undefined;
-	const rows = readSourceSystemRows(formData);
-	return rows[0];
+	const filledRow = readSourceSystemRows(formData).find(isFilledTypicalWorkSourceRow);
+	if (filledRow) return filledRow;
+
+	const outputPath =
+		resolveSourceTypicalWorksOutputPath(jsonSchema, uiSchema) ??
+		V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH;
+	const triggerContext = readTypicalWorksStreamTriggerContext(
+		formData,
+		outputPath,
+		uiSchema,
+	);
+	return hasTypicalWorkStreamTriggerContext(triggerContext)
+		? triggerContext
+		: undefined;
 }

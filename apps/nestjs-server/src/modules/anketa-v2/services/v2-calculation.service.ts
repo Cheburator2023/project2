@@ -15,6 +15,9 @@ import {
 	parseParamDependencyGraphFromLogic,
 	filterCoefficientLogicForHiddenFields,
 	patchV2TypicalWorksLogicRules,
+	hasTypicalWorkStreamTriggerContext,
+	isFilledTypicalWorkSourceRow,
+	readTypicalWorksStreamTriggerContext,
 	resolveHiddenParamCodesForSource,
 	resolveHiddenSourceFieldKeys,
 	readStreamLocalParamsForTypicalOutput,
@@ -335,7 +338,12 @@ export class V2CalculationService {
 	evaluate(
 		logic: V2LogicGraphDto,
 		formData: Record<string, unknown>,
-		options?: { templateVersionId?: string | null; templateId?: string | null },
+		options?: {
+			templateVersionId?: string | null;
+			templateId?: string | null;
+			jsonSchema?: unknown;
+			uiSchema?: unknown;
+		},
 	): Promise<V2CalculationResultDto> {
 		return this.evaluateAsync(logic, formData, options);
 	}
@@ -343,9 +351,18 @@ export class V2CalculationService {
 	private async evaluateAsync(
 		logic: V2LogicGraphDto,
 		formData: Record<string, unknown>,
-		options?: { templateVersionId?: string | null; templateId?: string | null },
+		options?: {
+			templateVersionId?: string | null;
+			templateId?: string | null;
+			jsonSchema?: unknown;
+			uiSchema?: unknown;
+		},
 	): Promise<V2CalculationResultDto> {
-		const rules = patchV2TypicalWorksLogicRules(logic)?.rules ?? [];
+		const rules =
+			patchV2TypicalWorksLogicRules(logic, {
+				jsonSchema: options?.jsonSchema,
+				uiSchema: options?.uiSchema,
+			})?.rules ?? [];
 		const paramGraph = parseParamDependencyGraphFromLogic(rules);
 		const paramDefs = listCatalogParamDefs();
 		const rowComputed = rules.filter((r) => r.kind === "row_computed");
@@ -364,6 +381,7 @@ export class V2CalculationService {
 				options?.templateId ?? null,
 				paramGraph,
 				paramDefs,
+				options?.uiSchema as Record<string, unknown> | undefined,
 			);
 		}
 
@@ -458,6 +476,7 @@ export class V2CalculationService {
 		templateId: string | null,
 		paramGraph: V2ParamDependencyGraph,
 		paramDefs: V2ParamDefLike[],
+		uiSchema?: Record<string, unknown>,
 	): Promise<Record<string, unknown>> {
 		const payload = (rule.payload ?? {}) as TaskTriggerPayload;
 		if (payload.mode !== "generated_rows") return data;
@@ -482,17 +501,23 @@ export class V2CalculationService {
 				: writeByDotPath(data, outputArrayPath, []);
 		}
 
-		const sourceRows = this.resolveGeneratedRowSources(data, payload);
+		const sourceRows = this.resolveGeneratedRowSources(data, payload, uiSchema);
 		if (sourceRows.length === 0) {
 			return payload.outputMode === "append"
 				? data
 				: writeByDotPath(data, outputArrayPath, []);
 		}
 
+		const streamTriggerContext = readTypicalWorksStreamTriggerContext(
+			data,
+			outputArrayPath,
+			uiSchema,
+		);
 		const sourceCount = sourceRows.length;
 		const streamLocalParams = readStreamLocalParamsForTypicalOutput(
 			data,
 			outputArrayPath,
+			uiSchema,
 		);
 		const extraContext = this.readSourceContextPaths(data, payload.sourceContextPaths);
 		const atDate = new Date().toISOString().slice(0, 10);
@@ -509,7 +534,9 @@ export class V2CalculationService {
 								? { value: row, controlType: row, name: row }
 								: {};
 					const sourceForMatch = {
+						...streamTriggerContext,
 						...extraContext,
+						...streamLocalParams,
 						...source,
 						sourceCount,
 						sourceIndex,
@@ -635,6 +662,7 @@ export class V2CalculationService {
 	private resolveGeneratedRowSources(
 		data: Record<string, unknown>,
 		payload: TaskTriggerPayload,
+		uiSchema?: Record<string, unknown>,
 	): unknown[] {
 		const objectPath = payload.sourceObjectPath?.trim();
 		if (objectPath) {
@@ -643,23 +671,54 @@ export class V2CalculationService {
 			return [obj];
 		}
 		const arrayPath = payload.sourceArrayPath?.trim();
-		if (!arrayPath) return [];
+		const outputPath = payload.outputArrayPath?.trim();
+		const referencePath = outputPath || arrayPath || "";
 
-		const rows = readByDotPath(data, arrayPath);
-		if (Array.isArray(rows) && rows.length > 0) return rows;
+		if (arrayPath) {
+			const filledFromPath = this.readFilledSourceSystemRows(
+				readByDotPath(data, arrayPath),
+			);
+			if (filledFromPath.length > 0) return filledFromPath;
 
-		if (
-			arrayPath === "streamDataSources.sourceSystems" ||
-			arrayPath === V2_SOURCE_SYSTEMS_ARRAY_PATH ||
-			payload.worksCatalog
-		) {
-			const canonical = readByDotPath(data, V2_SOURCE_SYSTEMS_ARRAY_PATH);
-			if (Array.isArray(canonical) && canonical.length > 0) return canonical;
-			const legacy = readByDotPath(data, "streamDataSources.sourceSystems");
-			if (Array.isArray(legacy) && legacy.length > 0) return legacy;
+			if (
+				arrayPath === "streamDataSources.sourceSystems" ||
+				arrayPath === V2_SOURCE_SYSTEMS_ARRAY_PATH ||
+				payload.worksCatalog
+			) {
+				const canonical = this.readFilledSourceSystemRows(
+					readByDotPath(data, V2_SOURCE_SYSTEMS_ARRAY_PATH),
+				);
+				if (canonical.length > 0) return canonical;
+				const legacy = this.readFilledSourceSystemRows(
+					readByDotPath(data, "streamDataSources.sourceSystems"),
+				);
+				if (legacy.length > 0) return legacy;
+			}
 		}
 
-		return Array.isArray(rows) ? rows : [];
+		if (payload.worksCatalog && referencePath) {
+			const streamContext = readTypicalWorksStreamTriggerContext(
+				data,
+				referencePath,
+				uiSchema,
+			);
+			if (hasTypicalWorkStreamTriggerContext(streamContext)) {
+				return [streamContext];
+			}
+		}
+
+		return Array.isArray(readByDotPath(data, arrayPath ?? "")) ? [] : [];
+	}
+
+	private readFilledSourceSystemRows(rows: unknown): Record<string, unknown>[] {
+		if (!Array.isArray(rows)) return [];
+		return rows.filter(
+			(row): row is Record<string, unknown> =>
+				row != null &&
+				typeof row === "object" &&
+				!Array.isArray(row) &&
+				isFilledTypicalWorkSourceRow(row as Record<string, unknown>),
+		);
 	}
 
 	private readSourceContextPaths(

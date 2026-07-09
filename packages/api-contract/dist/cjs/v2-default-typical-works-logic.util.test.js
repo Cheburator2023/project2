@@ -71,6 +71,31 @@ const v2_default_typical_works_logic_util_1 = require("./v2-default-typical-work
         (0, vitest_1.expect)(payload.outputArrayPath).toBe("detailInfo.myTypicalTasks");
         (0, vitest_1.expect)(rule?.targetPath).toBe("/detailInfo/myTypicalTasks");
     });
+    (0, vitest_1.it)("injects source catalog rule for root-level typicalWork block without sourceSystems", () => {
+        const patched = (0, v2_default_typical_works_logic_util_1.patchV2TypicalWorksLogicRules)({ rules: [] }, {
+            jsonSchema: {
+                type: "object",
+                properties: {
+                    field_KQX2OsDx: { type: "string", title: "Поле справочника" },
+                    field_SId8TZKZ: {
+                        type: "array",
+                        items: { type: "object" },
+                        title: "Типовые работы",
+                    },
+                },
+            },
+            uiSchema: {
+                field_SId8TZKZ: {
+                    "ui:options": { archComponent: "typicalWork" },
+                },
+            },
+        });
+        const rule = patched.rules.find((r) => r.id === "unified-source-typical-works");
+        (0, vitest_1.expect)(rule).toBeDefined();
+        const payload = rule?.payload;
+        (0, vitest_1.expect)(payload.outputArrayPath).toBe("field_SId8TZKZ");
+        (0, vitest_1.expect)(rule?.targetPath).toBe("/field_SId8TZKZ");
+    });
     (0, vitest_1.it)("migrates legacy visibility row-total rules to row_computed", () => {
         const patched = (0, v2_default_typical_works_logic_util_1.patchV2TypicalWorksLogicRules)({
             rules: [

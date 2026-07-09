@@ -251,6 +251,158 @@ describe("V2CalculationService", () => {
 		expect(streamDataSources.sourceTypicalTasks.length).toBeGreaterThan(0);
 	});
 
+	it("evaluates catalog triggers from stream-level fields without sourceSystems", async () => {
+		let capturedSource: Record<string, unknown> | undefined;
+		const runtime = {
+			buildCatalogTasks: async (params: BuildCatalogTasksParams) => {
+				capturedSource = params.source;
+				return [
+					{
+						taskCode: "kirill-work",
+						name: "Работа Кирилла",
+						workType: "Разработка",
+						reason: "test",
+						estimateHoursPerDay: 5,
+						coefficient: 1,
+						total: 5,
+						match: {},
+						workId: "kirill-work",
+					},
+				];
+			},
+		} as unknown as V2TypicalWorkRuntimeService;
+
+		const streamOnlyService = new V2CalculationService(
+			null as never,
+			null as never,
+			runtime,
+		);
+
+		const result = await streamOnlyService.evaluate(
+			patchV2TypicalWorksLogicRules(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
+				jsonSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema,
+				uiSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema,
+			}),
+			{
+				streamDataSources: {
+					groupKirilla: { field_dropdown: "Кухня" },
+				},
+			},
+		);
+
+		expect(capturedSource?.field_dropdown).toBe("Кухня");
+		const tasks = (
+			result.formData.streamDataSources as {
+				sourceTypicalTasks: Array<{ name: string }>;
+			}
+		).sourceTypicalTasks;
+		expect(tasks.some((t) => t.name === "Работа Кирилла")).toBe(true);
+	});
+
+	it("ignores empty sourceSystems rows and uses stream-level triggers", async () => {
+		let capturedSource: Record<string, unknown> | undefined;
+		const runtime = {
+			buildCatalogTasks: async (params: BuildCatalogTasksParams) => {
+				capturedSource = params.source;
+				return [
+					{
+						taskCode: "kirill-work",
+						name: "Работа Кирилла",
+						workType: "Разработка",
+						reason: "test",
+						estimateHoursPerDay: 5,
+						coefficient: 1,
+						total: 5,
+						match: {},
+						workId: "kirill-work",
+					},
+				];
+			},
+		} as unknown as V2TypicalWorkRuntimeService;
+
+		const streamOnlyService = new V2CalculationService(
+			null as never,
+			null as never,
+			runtime,
+		);
+
+		const result = await streamOnlyService.evaluate(
+			patchV2TypicalWorksLogicRules(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
+				jsonSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema,
+				uiSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema,
+			}),
+			{
+				detailInfo: {
+					sourceSystems: [{}],
+				},
+				streamDataSources: {
+					groupKirilla: { field_dropdown: "Кухня" },
+				},
+			},
+		);
+
+		expect(capturedSource?.field_dropdown).toBe("Кухня");
+		const tasks = (
+			result.formData.streamDataSources as {
+				sourceTypicalTasks: Array<{ name: string }>;
+			}
+		).sourceTypicalTasks;
+		expect(tasks.some((t) => t.name === "Работа Кирилла")).toBe(true);
+	});
+
+	it("injects catalog rule and reads root-level triggers for minimal test schema", async () => {
+		let capturedSource: Record<string, unknown> | undefined;
+		const runtime = {
+			buildCatalogTasks: async (params: BuildCatalogTasksParams) => {
+				capturedSource = params.source;
+				return [
+					{
+						taskCode: "root-trigger-work",
+						name: "Работа по справочнику",
+						workType: "Разработка",
+						reason: "test",
+						estimateHoursPerDay: 3,
+						coefficient: 1,
+						total: 3,
+						match: {},
+						workId: "root-trigger-work",
+					},
+				];
+			},
+		} as unknown as V2TypicalWorkRuntimeService;
+
+		const service = new V2CalculationService(
+			null as never,
+			null as never,
+			runtime,
+		);
+
+		const minimalJsonSchema = {
+			type: "object",
+			properties: {
+				field_KQX2OsDx: { type: "string" },
+				field_SId8TZKZ: { type: "array", items: { type: "object" } },
+			},
+		};
+		const minimalUiSchema = {
+			field_SId8TZKZ: { "ui:options": { archComponent: "typicalWork" } },
+		};
+
+		const result = await service.evaluate(
+			{ rules: [] },
+			{ field_KQX2OsDx: "Непосредственно" },
+			{ jsonSchema: minimalJsonSchema, uiSchema: minimalUiSchema },
+		);
+
+		expect(result.taskTriggers.some((t) => t.ruleId === "unified-source-typical-works")).toBe(
+			true,
+		);
+		expect(capturedSource?.field_KQX2OsDx).toBe("Непосредственно");
+		const tasks = (result.formData as { field_SId8TZKZ: Array<{ name: string }> })
+			.field_SId8TZKZ;
+		expect(tasks.some((t) => t.name === "Работа по справочнику")).toBe(true);
+	});
+
 	it("uses stream localParams for coefficient when source row has no weights (ФТ-024)", async () => {
 		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
 			detailInfo: {

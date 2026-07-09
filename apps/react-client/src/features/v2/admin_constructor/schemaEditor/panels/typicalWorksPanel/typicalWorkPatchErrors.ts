@@ -15,6 +15,7 @@ import {
 	isControlTypeTriggerParam,
 	isTypicalWorkParameterValueActiveOnDate,
 	resolveTriggerStatusCatalogParam,
+	formatParamNameWithSourceKeys,
 	type WorkTriggerStatusCatalogParam,
 } from "@smart-anketa/api-contract";
 import {
@@ -357,14 +358,24 @@ export function analyzeTriggerRules(
 
 	if (draftSource) {
 		const match = typicalWorkRulesMatchSource(
-			rules.map((rule) => ({
-				paramCode: rule.paramCode,
-				paramName: rule.paramName ?? null,
-				operator: rule.operator ?? "=",
-				valueCode: rule.valueCode,
-				valueLabel: rule.valueLabel,
-				values: rule.values,
-			})),
+			rules.map((rule) => {
+				const resolved = schemaParams?.length
+					? resolveSchemaParamForTriggerRule(rule, schemaParams)
+					: undefined;
+				return {
+					paramCode: resolved?.code ?? rule.paramCode,
+					paramName: resolved
+						? formatParamNameWithSourceKeys(
+								resolved.name,
+								resolved.sourceKeys,
+							)
+						: (rule.paramName ?? null),
+					operator: rule.operator ?? "=",
+					valueCode: rule.valueCode,
+					valueLabel: rule.valueLabel,
+					values: rule.values,
+				};
+			}),
 			draftSource,
 		);
 		return {
