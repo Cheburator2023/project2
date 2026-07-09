@@ -4,6 +4,7 @@ import { In, Repository, type EntityManager } from "typeorm";
 import type {
 	V2BulkDeleteTemplateVersionsResultDto,
 	V2TemplateDeleteSnapshotDto,
+	V2TemplateRegistryListResponseDto,
 	V2TemplateVersionDto,
 } from "@smart-anketa/api-contract";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
@@ -16,6 +17,7 @@ import {
 	buildTemplateDeleteSnapshot,
 	mapV2TemplateToDto,
 	mapV2TemplateVersionToDto,
+	mapV2TemplateVersionSummaryToDto,
 } from "../utils/v2-template-mapper.util";
 
 @Injectable()
@@ -153,6 +155,46 @@ export class V2TemplateService {
 			relations: ["currentVersion"],
 			order: { createdAt: "DESC" },
 		});
+	}
+
+	/** Реестр схем: шаблоны + краткие версии одним запросом (без тяжёлых snapshot-полей). */
+	async findRegistryList(): Promise<V2TemplateRegistryListResponseDto> {
+		await this.repairDuplicateCurrentTemplates();
+
+		const templates = await this.templateRepository.find({
+			order: { createdAt: "DESC" },
+		});
+		if (templates.length === 0) {
+			return { items: [] };
+		}
+
+		const templateIds = templates.map((template) => template.id);
+		const versions = await this.versionRepository.find({
+			where: { templateId: In(templateIds) },
+			select: {
+				id: true,
+				templateId: true,
+				versionNumber: true,
+				status: true,
+				releaseNotes: true,
+				publishedAt: true,
+			},
+			order: { versionNumber: "DESC" },
+		});
+
+		const versionsByTemplate = new Map<string, ReturnType<typeof mapV2TemplateVersionSummaryToDto>[]>();
+		for (const version of versions) {
+			const list = versionsByTemplate.get(version.templateId) ?? [];
+			list.push(mapV2TemplateVersionSummaryToDto(version));
+			versionsByTemplate.set(version.templateId, list);
+		}
+
+		return {
+			items: templates.map((template) => ({
+				...mapV2TemplateToDto(template),
+				versions: versionsByTemplate.get(template.id) ?? [],
+			})),
+		};
 	}
 
 	/**

@@ -44,6 +44,36 @@ export class V2TemplateResponseDto implements V2TemplateDto {
 	updatedBy: string | null;
 }
 
+export class V2TemplateVersionSummaryResponseDto {
+	@ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000" })
+	id: string;
+
+	@ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000" })
+	templateId: string;
+
+	@ApiProperty({ example: 1 })
+	versionNumber: number;
+
+	@ApiProperty({ enum: ["draft", "published", "archived"] })
+	status: V2TemplateStatus;
+
+	@ApiProperty({ required: false })
+	releaseNotes: string | null;
+
+	@ApiProperty({ required: false })
+	publishedAt: string | null;
+}
+
+export class V2TemplateRegistryItemResponseDto extends V2TemplateResponseDto {
+	@ApiProperty({ type: [V2TemplateVersionSummaryResponseDto] })
+	versions: V2TemplateVersionSummaryResponseDto[];
+}
+
+export class V2TemplateRegistryListResponseDto {
+	@ApiProperty({ type: [V2TemplateRegistryItemResponseDto] })
+	items: V2TemplateRegistryItemResponseDto[];
+}
+
 export class V2TemplateVersionResponseDto implements V2TemplateVersionDto {
 	@ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000" })
 	id: string;

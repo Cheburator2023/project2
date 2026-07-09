@@ -6,12 +6,11 @@ import {
 	useDeleteV2Template,
 	useRestoreV2Template,
 	useRestoreV2TemplateVersions,
-	useV2Templates,
+	useV2TemplateRegistry,
 } from "@react-client/common/api/queries/v2-templates";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { toast } from "@react-client/common/toasts";
 import { toastWithUndo } from "@react-client/features/v2/admin/utils/v2UndoToast";
-import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
@@ -24,7 +23,7 @@ import type {
 	V2FactorySnapshotSettingDto,
 	V2TemplateDto,
 	V2TemplateStatus,
-	V2TemplateVersionDto,
+	V2TemplateVersionSummaryDto,
 } from "@smart-anketa/api-contract";
 import {
 	type ColDef,
@@ -40,7 +39,6 @@ import {
 } from "ag-grid-community";
 import { ContextMenuModule, TreeDataModule } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
-import { useQueries } from "@tanstack/react-query";
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from "react";
 import { useNavigate } from "react-router";
 import { agGridCustomMUITheme, agGridCustomMUIThemeDark } from "@react-client/theme/ag-grid/agGridCustomTheme";
@@ -77,7 +75,7 @@ export type V2SchemaGridTemplateRow = V2TemplateDto & {
 	children: V2SchemaGridVersionRow[];
 };
 
-export type V2SchemaGridVersionRow = V2TemplateVersionDto & {
+export type V2SchemaGridVersionRow = V2TemplateVersionSummaryDto & {
 	rowKind: "version";
 	displayLabel: string;
 	templateCurrentVersionId: string | null;
@@ -138,7 +136,8 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 			? agGridCustomMUITheme
 			: agGridCustomMUIThemeDark;
 
-	const { data: templates, isLoading: templatesLoading } = useV2Templates();
+	const { data: registry, isLoading: registryLoading } = useV2TemplateRegistry();
+	const templates = registry?.items;
 	const deleteTemplate = useDeleteV2Template();
 	const restoreTemplate = useRestoreV2Template();
 	const bulkDeleteVersions = useBulkDeleteV2TemplateVersions();
@@ -159,34 +158,19 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 		},
 	}));
 
-	const versionQueries = useQueries({
-		queries: (templates ?? []).map((t) => ({
-			queryKey: ["v2-templates", t.id, "versions"],
-			queryFn: () =>
-				apiClient<V2TemplateVersionDto[]>({
-					url: `/v2/templates/${t.id}/versions`,
-					method: "GET",
-				}),
-			enabled: !!templates?.length,
-			staleTime: 30_000,
-		})),
-	});
-
-	const versionsLoading = versionQueries.some((q) => q.isLoading);
-
 	const treeRowData = useMemo<V2SchemaGridTemplateRow[]>(() => {
 		if (!templates?.length) return [];
 
-		return templates.map((t, idx) => {
-			const versions = versionQueries[idx]?.data ?? [];
+		return templates.map((t) => {
+			const { versions, ...template } = t;
 			const sorted = [...versions].sort(
 				(a, b) => b.versionNumber - a.versionNumber,
 			);
 
 			return {
-				...t,
+				...template,
 				rowKind: "template",
-				displayLabel: t.name,
+				displayLabel: template.name,
 				children: sorted.map((v) => ({
 					...v,
 					rowKind: "version",
@@ -195,7 +179,7 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 				})),
 			};
 		});
-	}, [templates, versionQueries]);
+	}, [templates]);
 
 	const openEditor = useCallback(
 		(templateId: string, versionId?: string | null) => {
@@ -207,15 +191,13 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 	const resolveDefaultVersionId = useCallback(
 		(templateId: string): string | null => {
 			const t = templates?.find((x) => x.id === templateId);
-			const idx = templates?.findIndex((x) => x.id === templateId) ?? -1;
-			const vers = idx >= 0 ? (versionQueries[idx]?.data ?? []) : [];
-			const latestDraft = vers
+			const latestDraft = (t?.versions ?? [])
 				.filter((v) => v.status === "draft")
 				.sort((a, b) => b.versionNumber - a.versionNumber)[0];
 			if (latestDraft?.id) return latestDraft.id;
 			return t?.currentVersionId ?? null;
 		},
-		[templates, versionQueries],
+		[templates],
 	);
 
 	const handleDeleteTemplate = useCallback(
@@ -656,7 +638,7 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 		e.api.expandAll();
 	}, [gridPersistence]);
 
-	const loadingCombined = templatesLoading || versionsLoading;
+	const loadingCombined = registryLoading;
 
 	return (
 		<GridWrapper>

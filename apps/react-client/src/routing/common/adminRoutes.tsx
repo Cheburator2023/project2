@@ -12,10 +12,10 @@ import {
 	AdminV2TemplateHistoryPage,
 	AdminV2TypicalWorkDetailPage,
 	AdminV2TypicalWorksPage,
-	V2TemplateLogicPage,
 	V2TemplatePreviewPage,
 	V2TemplateSchemaEditorPage,
 } from "@react-client/routing/lazyPages";
+import { RedirectV2TemplateLogicToEdit } from "./RedirectV2TemplateLogicToEdit";
 import { commonRoutes } from "./routes";
 
 function adminChildRoutes(): RouteObject[] {
@@ -58,7 +58,7 @@ function adminChildRoutes(): RouteObject[] {
 				},
 				{
 					path: "templates/:templateId/logic",
-					element: <V2TemplateLogicPage />,
+					element: <RedirectV2TemplateLogicToEdit />,
 				},
 				{
 					path: "templates/:templateId/edit",
@@ -165,7 +165,7 @@ export function adminLegacyRedirects(): RouteObject[] {
 		},
 		{
 			path: "/admin/v2/templates/:templateId/logic",
-			element: <LegacyAdminTemplateRedirect suffix="/logic" />,
+			element: <RedirectV2TemplateLogicToEdit />,
 		},
 		{
 			path: "/admin/v2/templates/:templateId/edit",

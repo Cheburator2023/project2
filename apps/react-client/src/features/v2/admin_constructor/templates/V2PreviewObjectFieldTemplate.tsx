@@ -9,7 +9,7 @@ import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode, type SyntheticEvent } from "react";
 import type {
 	ArrayFieldTemplateProps,
 	FieldPathId,
@@ -212,14 +212,27 @@ function GroupActivationHeaderButton({
 	readOnly?: boolean;
 	onToggle?: (pathKey: string, active: boolean) => void;
 }) {
+	const handleActivate = (e: SyntheticEvent) => {
+		if (readOnly) return;
+		e.stopPropagation();
+		onToggle?.(pathKey, !active);
+	};
+
 	return (
 		<Button
+			component="div"
+			role="button"
+			tabIndex={readOnly ? -1 : 0}
 			size="small"
 			variant={active ? "outlined" : "contained"}
 			disabled={readOnly}
-			onClick={(e) => {
-				e.stopPropagation();
-				onToggle?.(pathKey, !active);
+			onClick={handleActivate}
+			onKeyDown={(e) => {
+				if (readOnly) return;
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					handleActivate(e);
+				}
 			}}
 			sx={{ flexShrink: 0, textTransform: "none", opacity: 1 }}
 		>

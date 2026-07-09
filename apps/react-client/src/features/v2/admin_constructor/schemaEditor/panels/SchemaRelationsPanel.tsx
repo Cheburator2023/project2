@@ -44,7 +44,6 @@ import type { V2LogicRuleDto } from "@smart-anketa/api-contract";
 import { normalizeJsonPointer } from "../../utils/schemaPaths";
 import { ruleKindLabel } from "../constants";
 import { useSchemaEditor } from "../SchemaEditorContext";
-import { openV2TemplateLogicPage } from "../../utils/v2TemplateLogicPaths";
 import { layoutRelationsGraphWithElk } from "./layoutRelationsGraphElk";
 import {
 	buildRelationsGraph,
@@ -443,7 +442,6 @@ type ContextMenuState = {
 function RelationsFlowInner() {
 	const theme = useTheme();
 	const {
-		templateId,
 		fieldPathHints,
 		logic,
 		setLogic,
@@ -452,24 +450,24 @@ function RelationsFlowInner() {
 		setSelectedPointer,
 		setSelectedRuleId,
 		cycles,
+		openLogicTabWithRule,
+		openLogicTabWithPointer,
 	} = useSchemaEditor();
 
 	const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
 	const openFieldInLogic = useCallback(
 		(pointer: string) => {
-			setSelectedPointer(pointer);
-			openV2TemplateLogicPage({ templateId, pointer });
+			openLogicTabWithPointer(pointer);
 		},
-		[setSelectedPointer, templateId],
+		[openLogicTabWithPointer],
 	);
 
 	const openRuleInLogic = useCallback(
 		(ruleId: string) => {
-			setSelectedRuleId(ruleId);
-			openV2TemplateLogicPage({ templateId, ruleId });
+			openLogicTabWithRule(ruleId);
 		},
-		[setSelectedRuleId, templateId],
+		[openLogicTabWithRule],
 	);
 
 	const relationsGraphActions = useMemo(

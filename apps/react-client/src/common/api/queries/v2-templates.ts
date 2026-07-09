@@ -27,6 +27,7 @@ import type {
 	V2TemplateAuditDto,
 	V2TemplateDeleteSnapshotDto,
 	V2TemplateDto,
+	V2TemplateRegistryListResponseDto,
 	V2TemplateVersionDto,
 	UpdateV2FactorySnapshotSettingDto,
 	V2FactorySnapshotSettingDto,
@@ -60,9 +61,12 @@ function resolveDeleteTemplateInput(input: DeleteV2TemplateInput): {
 }
 
 export function invalidateV2TemplatesList(queryClient: QueryClient) {
-	return queryClient.invalidateQueries({
+	void queryClient.invalidateQueries({
 		queryKey: ["v2-templates"],
 		exact: true,
+	});
+	void queryClient.invalidateQueries({
+		queryKey: ["v2-templates", "registry"],
 	});
 }
 
@@ -98,6 +102,18 @@ export function invalidateV2TemplateRegistry(
 }
 
 // Templates
+export const useV2TemplateRegistry = () => {
+	return useQuery<V2TemplateRegistryListResponseDto>({
+		queryKey: ["v2-templates", "registry"],
+		queryFn: () =>
+			apiClient<V2TemplateRegistryListResponseDto>({
+				url: "/v2/templates/registry",
+				method: "GET",
+			}),
+		staleTime: 30_000,
+	});
+};
+
 export const useV2Templates = () => {
 	return useQuery<V2TemplateDto[]>({
 		queryKey: ["v2-templates"],

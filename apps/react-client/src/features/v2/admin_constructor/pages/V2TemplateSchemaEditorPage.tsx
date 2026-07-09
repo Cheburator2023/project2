@@ -6,8 +6,7 @@ import {
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "@react-client/features/v2/admin_constructor/testIds";
-import { openV2TemplateLogicPage } from "@react-client/features/v2/admin_constructor/utils/v2TemplateLogicPaths";
-import AccountTreeIcon from "@mui/icons-material/AccountTree";
+import { toAbsoluteAppUrl } from "@react-client/routing/basename";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -17,7 +16,12 @@ import Typography from "@mui/material/Typography";
 import { V2TemplateVersionHeaderControls } from "@react-client/features/v2/admin_constructor/molecules/V2TemplateVersionHeaderControls";
 import { v2TemplateVersionChipLabel } from "@react-client/features/v2/admin_constructor/utils/v2TemplateVersionLabels";
 import { useCallback, useState } from "react";
-import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
+import {
+	useLocation,
+	useNavigate,
+	useParams,
+	useSearchParams,
+} from "react-router";
 import { V2_TEMPLATE_VERSION_QUERY } from "@react-client/routing/common/pathHelpers";
 import { commonRoutes as routes } from "@react-client/routing/common/routes";
 import { Spacer } from "@react-client/common/primitives/Spacer";
@@ -28,6 +32,8 @@ export const V2TemplateSchemaEditorPage = () => {
 	const { pathname } = useLocation();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const versionId = searchParams.get(V2_TEMPLATE_VERSION_QUERY);
+	const initialRuleId = searchParams.get("ruleId");
+	const initialPointer = searchParams.get("pointer");
 
 	const setVersionId = useCallback(
 		(id: string) => {
@@ -44,18 +50,21 @@ export const V2TemplateSchemaEditorPage = () => {
 	);
 
 	const [headerMeta, setHeaderMeta] = useState<V2EditorHeaderMeta | null>(null);
-	const [headerActions, setHeaderActions] = useState<V2EditorHeaderActions | null>(
-		null,
-	);
+	const [headerActions, setHeaderActions] =
+		useState<V2EditorHeaderActions | null>(null);
 	const onHeaderMetaChange = useCallback((m: V2EditorHeaderMeta | null) => {
 		setHeaderMeta(m);
 	}, []);
-	const onHeaderActionsChange = useCallback((a: V2EditorHeaderActions | null) => {
-		setHeaderActions(a);
-	}, []);
+	const onHeaderActionsChange = useCallback(
+		(a: V2EditorHeaderActions | null) => {
+			setHeaderActions(a);
+		},
+		[],
+	);
 
 	const listHref =
-		pathname.includes(`${routes.admin.rootPath}/`) || pathname.startsWith(routes.admin.rootPath)
+		pathname.includes(`${routes.admin.rootPath}/`) ||
+		pathname.startsWith(routes.admin.rootPath)
 			? routes.adminV2Schemas.rootPath
 			: routes.playground.rootPath;
 
@@ -86,125 +95,123 @@ export const V2TemplateSchemaEditorPage = () => {
 		>
 			<Box data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.header}>
 				<Header
-				leadingAccessory={
-					headerMeta ? (
+					leadingAccessory={
+						headerMeta ? (
+							<Flex
+								gap={1}
+								alignItems="center"
+								wrap="wrap"
+								minWidth="0"
+								data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.headerMeta}
+							>
+								<Typography
+									variant="subtitle2"
+									component="span"
+									fontWeight={600}
+									noWrap
+								>
+									{headerMeta.title}
+								</Typography>
+								<Spacer space={1} />
+								<Chip
+									size="small"
+									variant="outlined"
+									color={
+										headerMeta.status === "published"
+											? "success"
+											: headerMeta.status === "draft"
+												? "warning"
+												: "default"
+									}
+									label={v2TemplateVersionChipLabel(
+										headerMeta.versionNumber,
+										headerMeta.status,
+										headerMeta.isSystemCurrent,
+									)}
+								/>
+							</Flex>
+						) : null
+					}
+				>
+					{headerActions ? (
 						<Flex
-							gap={1}
+							gap={4}
 							alignItems="center"
 							wrap="wrap"
-							minWidth="0"
-							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.headerMeta}
+							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.headerActions}
 						>
-							<Typography variant="subtitle2" component="span" fontWeight={600} noWrap>
-								{headerMeta.title}
-							</Typography>
-							<Spacer space={1} />
-							<Chip
-								size="small"
-								variant="outlined"
-								color={
-									headerMeta.status === "published"
-										? "success"
-										: headerMeta.status === "draft"
-											? "warning"
-											: "default"
-								}
-								label={v2TemplateVersionChipLabel(
-									headerMeta.versionNumber,
-									headerMeta.status,
-									headerMeta.isSystemCurrent,
-								)}
-							/>
-						</Flex>
-					) : null
-				}
-			>
-				{headerActions ? (
-					<Flex
-						gap={4}
-						alignItems="center"
-						wrap="wrap"
-						data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.headerActions}
-					>
-						{isAdminContext ? (
-							<V2TemplateVersionHeaderControls
-								templateId={templateId}
-								versionId={versionId}
-								onVersionIdChange={setVersionId}
-							/>
-						) : null}
-						<Button
-							variant="outlined"
-							startIcon={<OpenInNewIcon />}
-							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnPreview}
-							disabled={!headerActions.getExternalPreviewPath()}
-							title="Открывает предпросмотр сохранённой версии на сервере"
-							onClick={() => {
-								const path = headerActions.getExternalPreviewPath();
-								if (!path) return;
-								window.open(
-									`${window.location.origin}${path}`,
-									"_blank",
-									"noopener,noreferrer",
-								);
-							}}
-						>
-							Предпросмотр
-						</Button>
-						<Button
-							variant="outlined"
-							startIcon={<AccountTreeIcon />}
-							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnLogic}
-							onClick={() =>
-								openV2TemplateLogicPage({
-									templateId,
-									versionId,
-									pathname,
-								})
-							}
-						>
-							Логика
-						</Button>
-
-						{isAdminContext && headerActions.canActivateAsCurrent ? (
+							{isAdminContext ? (
+								<V2TemplateVersionHeaderControls
+									templateId={templateId}
+									versionId={versionId}
+									onVersionIdChange={setVersionId}
+								/>
+							) : null}
 							<Button
 								variant="outlined"
-								disabled={headerActions.activatePending}
-								data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnActivate}
-								title="Опубликует черновик при необходимости и сделает версию актуальной схемой системы"
-								onClick={headerActions.onActivateAsCurrent}
+								startIcon={<OpenInNewIcon />}
+								data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnPreview}
+								disabled={!headerActions.getExternalPreviewPath()}
+								title="Открывает предпросмотр сохранённой версии на сервере"
+								onClick={() => {
+									const path = headerActions.getExternalPreviewPath();
+									if (!path) return;
+									window.open(
+										toAbsoluteAppUrl(path),
+										"_blank",
+										"noopener,noreferrer",
+									);
+								}}
+							>
+								Превью
+							</Button>
+
+							{isAdminContext && headerActions.canActivateAsCurrent ? (
+								<Button
+									variant="outlined"
+									disabled={headerActions.activatePending}
+									data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnActivate}
+									title="Опубликует черновик при необходимости и сделает версию актуальной схемой системы"
+									onClick={headerActions.onActivateAsCurrent}
+									startIcon={
+										headerActions.activatePending ? (
+											<CircularProgress size={16} color="inherit" />
+										) : undefined
+									}
+								>
+									{headerActions.activatePending
+										? "Публикация…"
+										: "Сделать актуальной"}
+								</Button>
+							) : null}
+							<Button
+								variant="contained"
+								disabled={headerActions.savePending}
+								data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnSave}
+								onClick={headerActions.onSave}
 								startIcon={
-									headerActions.activatePending ? (
+									headerActions.savePending ? (
 										<CircularProgress size={16} color="inherit" />
 									) : undefined
 								}
 							>
-								{headerActions.activatePending
-									? "Публикация…"
-									: "Сделать актуальной"}
+								{headerActions.savePending ? "Сохранение…" : "Сохранить"}
 							</Button>
-						) : null}
-						<Button
-							variant="contained"
-							disabled={headerActions.savePending}
-							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnSave}
-							onClick={headerActions.onSave}
-							startIcon={
-								headerActions.savePending ? (
-									<CircularProgress size={16} color="inherit" />
-								) : undefined
-							}
-						>
-							{headerActions.savePending ? "Сохранение…" : "Сохранить"}
-						</Button>
-					</Flex>
-				) : null}
+						</Flex>
+					) : null}
 				</Header>
 			</Box>
-			<Flex flexDirection="column" flexGrow={1} minHeight="0" sx={{ minHeight: 480 }}>
+			<Flex
+				flexDirection="column"
+				flexGrow={1}
+				minHeight="0"
+				sx={{ minHeight: 480 }}
+			>
 				<V2TemplateSchemaEditor
 					templateId={templateId}
 					initialVersionId={versionId}
+					initialRuleId={initialRuleId}
+					initialPointer={initialPointer}
 					onVersionIdChange={setVersionId}
 					wording={isAdminContext ? "adminSchema" : "playgroundTemplate"}
 					onHeaderMetaChange={onHeaderMetaChange}

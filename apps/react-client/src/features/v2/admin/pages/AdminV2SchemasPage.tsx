@@ -17,7 +17,7 @@ import {
 	useRestoreV2TemplateVersions,
 	useUpdateV2FactorySnapshotSetting,
 	useV2FactorySnapshotSetting,
-	useV2Templates,
+	useV2TemplateRegistry,
 } from "@react-client/common/api/queries/v2-templates";
 import { useSeedV2TestQuestionnaires } from "@react-client/common/api/queries/v2-questionnaires";
 import { toast } from "@react-client/common/toasts";
@@ -50,7 +50,8 @@ export function AdminV2SchemasPage() {
 	const deleteTemplate = useDeleteV2Template();
 	const restoreTemplate = useRestoreV2Template();
 	const restoreVersions = useRestoreV2TemplateVersions();
-	const { data: templates } = useV2Templates();
+	const { data: registry } = useV2TemplateRegistry();
+	const templates = registry?.items;
 	const { data: factorySetting } = useV2FactorySnapshotSetting();
 	const setFactorySnapshot = useUpdateV2FactorySnapshotSetting();
 	const listRef = useRef<V2TemplateListHandle>(null);

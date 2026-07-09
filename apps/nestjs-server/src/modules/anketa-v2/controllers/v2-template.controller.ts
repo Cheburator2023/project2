@@ -15,6 +15,7 @@ import { V2TemplateService } from "../services/v2-template.service";
 import { V2AuditService } from "../services/v2-audit.service";
 import {
 	V2TemplateResponseDto,
+	V2TemplateRegistryListResponseDto,
 	CreateV2TemplateDto,
 	UpdateV2TemplateDto,
 	RestoreV2TemplateDto,
@@ -36,6 +37,17 @@ export class V2TemplateController {
 	async findAll(): Promise<V2TemplateResponseDto[]> {
 		const templates = await this.templateService.findAll();
 		return templates.map((t) => this.toResponseDto(t));
+	}
+
+	@Get("registry")
+	@ApiOperation({
+		summary: "Реестр схем",
+		description:
+			"Шаблоны с кратким списком версий (без jsonSchema/uiSchema/logic) для таблицы админки.",
+	})
+	@ApiResponse({ status: 200, type: V2TemplateRegistryListResponseDto })
+	async findRegistry(): Promise<V2TemplateRegistryListResponseDto> {
+		return this.templateService.findRegistryList();
 	}
 
 	@Post("restore")

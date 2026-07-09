@@ -161,13 +161,6 @@ export const V2TemplatePreviewPage = lazyPage(
 		),
 	"V2TemplatePreviewPage",
 );
-export const V2TemplateLogicPage = lazyPage(
-	() =>
-		import(
-			/* webpackChunkName: "page-template-logic" */ "@react-client/features/v2/admin_constructor/pages/V2TemplateLogicPage"
-		),
-	"V2TemplateLogicPage",
-);
 export const V2TemplateSchemaEditorPage = lazyPage(
 	() =>
 		import(
