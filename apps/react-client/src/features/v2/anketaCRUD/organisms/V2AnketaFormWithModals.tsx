@@ -23,13 +23,15 @@ type Props = {
 	readOnly?: boolean;
 	/** Доп. корневые ключи, скрываемые поверх uiSchema (редко). */
 	hiddenTopLevelFields?: string[];
-	anketaFormContext?: AnketaFormContextValue;
+	anketaFormContext?: Partial<
+		Omit<AnketaFormContextValue, "formData" | "previewSchema" | "previewUiSchema">
+	>;
 	/** Слот «Рассчитать общую неопределённость» в generalInfo (режим анкеты). */
 	showUncertaintySlot?: boolean;
 	"data-test-id"?: string;
 };
 
-/** RJSF-форма анкеты + модалки; один вход для страницы анкеты и превью в админке. */
+/** RJSF-форма анкеты + модалки; единый вход для превью конструктора и страниц анкеты. */
 export function V2AnketaFormWithModals({
 	engine,
 	readOnly = false,
@@ -87,50 +89,26 @@ export function V2AnketaFormWithModals({
 		) : undefined;
 
 		return mergeAnketaFormContext(anketaFormContextProp, {
-			formData: anketaFormContextProp?.formData ?? engine.displayFormData,
-			previewSchema:
-				anketaFormContextProp?.previewSchema ?? engine.previewSchema,
-			previewUiSchema:
-				anketaFormContextProp?.previewUiSchema ?? engine.previewUiSchema,
-			workflow: anketaFormContextProp?.workflow ?? workflow,
-			onCompleteMainSection:
-				anketaFormContextProp?.onCompleteMainSection ?? completeMainSection,
-			onCompletePanelSection:
-				anketaFormContextProp?.onCompletePanelSection ??
-				completePanelSectionByPath,
-			onTouchMainSection:
-				anketaFormContextProp?.onTouchMainSection ?? touchMainSection,
-			isMainSectionLocked:
-				anketaFormContextProp?.isMainSectionLocked ?? isSectionLocked,
-			objectFieldSlots: {
-				...anketaFormContextProp?.objectFieldSlots,
-				...(uncertaintySlot ? { generalInfo: uncertaintySlot } : {}),
-			},
-			openAnketaModal:
-				anketaFormContextProp?.openAnketaModal ??
-				((path, editIndex) =>
-					modalControlsRef.current.openArrayModal(path, editIndex)),
-			openUncertaintyModal:
-				anketaFormContextProp?.openUncertaintyModal ??
-				(() => modalControlsRef.current.openUncertaintyModal()),
-			deleteAnketaArrayItem:
-				anketaFormContextProp?.deleteAnketaArrayItem ??
-				((path, index) =>
-					modalControlsRef.current.deleteArrayItem(path, index)),
-			deleteAnketaObject:
-				anketaFormContextProp?.deleteAnketaObject ??
-				((path) => modalControlsRef.current.deleteObject(path)),
-			anketaModalArrayPaths:
-				anketaFormContextProp?.anketaModalArrayPaths ??
-				modalBindingSets.modalArrayPathSet,
-			anketaCompactArrayTablePaths:
-				anketaFormContextProp?.anketaCompactArrayTablePaths ??
-				modalBindingSets.compactArrayTablePathSet,
-			anketaModalObjectPaths:
-				anketaFormContextProp?.anketaModalObjectPaths ??
-				modalBindingSets.modalObjectPathSet,
-			anketaReadOnly:
-				anketaFormContextProp?.anketaReadOnly ?? effectiveReadOnly,
+			formData: engine.displayFormData,
+			previewSchema: engine.previewSchema,
+			previewUiSchema: engine.previewUiSchema,
+			workflow,
+			onCompleteMainSection: completeMainSection,
+			onCompletePanelSection: completePanelSectionByPath,
+			onTouchMainSection: touchMainSection,
+			isMainSectionLocked: isSectionLocked,
+			objectFieldSlots: uncertaintySlot ? { generalInfo: uncertaintySlot } : undefined,
+			openAnketaModal: (path, editIndex) =>
+				modalControlsRef.current.openArrayModal(path, editIndex),
+			openUncertaintyModal: () =>
+				modalControlsRef.current.openUncertaintyModal(),
+			deleteAnketaArrayItem: (path, index) =>
+				modalControlsRef.current.deleteArrayItem(path, index),
+			deleteAnketaObject: (path) => modalControlsRef.current.deleteObject(path),
+			anketaModalArrayPaths: modalBindingSets.modalArrayPathSet,
+			anketaCompactArrayTablePaths: modalBindingSets.compactArrayTablePathSet,
+			anketaModalObjectPaths: modalBindingSets.modalObjectPathSet,
+			anketaReadOnly: effectiveReadOnly,
 			schemaEditorPreview: anketaFormContextProp?.schemaEditorPreview,
 		});
 	}, [

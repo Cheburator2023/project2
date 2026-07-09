@@ -6,6 +6,11 @@ import type {
 } from "@smart-anketa/api-contract";
 
 export type AnketaFormContextValue = {
+	/**
+	 * Данные для отображения в UI (RJSF + кастомные таблицы/модалки).
+	 * Всегда `engine.displayFormData` — с учётом серверной калькуляции и merge.
+	 * Не подменять сырым `engine.formData`: иначе пропадут типовые работы и итоги.
+	 */
 	formData?: Record<string, unknown>;
 	/** Актуальные схемы превью (для арх. таблиц и модалок). */
 	previewSchema?: RJSFSchema;
@@ -60,14 +65,19 @@ export function objectFieldSlot(
 /**
  * Merge form context layers without accidentally replacing defined caller values.
  * `objectFieldSlots` are additive because shells often contribute page-level slots.
+ *
+ * `formData` всегда берётся из `fallback` (displayFormData движка) — оболочки страниц
+ * не могут подменить его сырыми данными анкеты.
  */
 export function mergeAnketaFormContext(
 	base: AnketaFormContextValue | undefined,
 	fallback: AnketaFormContextValue,
 ): AnketaFormContextValue {
+	const { formData: _baseFormData, ...baseRest } = base ?? {};
 	return {
 		...fallback,
-		...base,
+		...baseRest,
+		formData: fallback.formData,
 		objectFieldSlots: {
 			...base?.objectFieldSlots,
 			...fallback.objectFieldSlots,

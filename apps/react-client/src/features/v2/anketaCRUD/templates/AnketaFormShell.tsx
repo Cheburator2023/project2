@@ -150,12 +150,8 @@ export function AnketaFormShell({
 	]);
 
 	const anketaFormContext = useMemo((): AnketaFormContextValue => {
+		// Только page-level overrides; formData/schema/ui берёт V2AnketaFormWithModals из engine.
 		return {
-			// Таблицы типовых работ читают formContext.formData, а не RJSF formData.
-			// displayFormData содержит сгенерированные строки и расчёт с сервера.
-			formData: engine.displayFormData,
-			previewSchema: engine.previewSchema,
-			previewUiSchema: engine.previewUiSchema,
 			workflow,
 			onCompleteMainSection: completeMainSection,
 			onTouchMainSection: touchMainSection,
@@ -164,9 +160,6 @@ export function AnketaFormShell({
 			schemaEditorPreview: false,
 		};
 	}, [
-		engine.displayFormData,
-		engine.previewSchema,
-		engine.previewUiSchema,
 		effectiveReadOnly,
 		workflow,
 		completeMainSection,

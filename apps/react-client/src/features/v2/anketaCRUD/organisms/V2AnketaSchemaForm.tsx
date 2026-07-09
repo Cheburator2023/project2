@@ -37,7 +37,9 @@ type Props = {
 	engine?: V2AnketaSchemaEngine;
 	readOnly?: boolean;
 	hiddenTopLevelFields?: string[];
-	anketaFormContext?: AnketaFormContextValue;
+	anketaFormContext?: Partial<
+		Omit<AnketaFormContextValue, "formData" | "previewSchema" | "previewUiSchema">
+	>;
 	modalBindings?: AnketaFormModalBindingSets;
 	"data-test-id"?: string;
 };
