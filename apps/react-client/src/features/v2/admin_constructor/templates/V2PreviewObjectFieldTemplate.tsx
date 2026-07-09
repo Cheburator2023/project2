@@ -51,7 +51,6 @@ import {
 } from "@smart-anketa/api-contract";
 import { isGeneralUncertaintyField } from "../schemaEditor/propertiesFieldKind";
 import { ArchComponentDevOutline } from "./ArchComponentDevOutline";
-import { AnketaCalculationDevHint } from "@react-client/features/v2/anketaCRUD/molecules/AnketaCalculationDevHint";
 import type { AnketaFormContextValue } from "@react-client/features/v2/anketaCRUD/utils/anketaFormContext";
 
 function shouldUseArchObjectModal(
@@ -385,7 +384,9 @@ function SectionPanelAccordion({
 						</>
 					) : null}
 					{canExpand && completeButton ? (
-						<Box sx={{ mt: canExpand ? 2 : 0, opacity: 1 }}>{completeButton}</Box>
+						<Box sx={{ mt: canExpand ? 2 : 0, opacity: 1 }}>
+							{completeButton}
+						</Box>
 					) : null}
 				</AccordionDetails>
 			) : null}
@@ -479,9 +480,9 @@ function FlatSectionHeader({
 					{sectionDescription}
 				</Typography>
 			) : null}
-			{pathKey ? (
+			{/* {pathKey ? (
 				<AnketaCalculationDevHint pathKey={pathKey} formContext={formContext} />
-			) : null}
+			) : null} */}
 		</>
 	);
 }
@@ -566,12 +567,12 @@ function ObjectFieldsGrid({
 						sx={{ minWidth: 0 }}
 					>
 						{element.content}
-						{parentPathKey ? (
+						{/* {parentPathKey ? (
 							<AnketaCalculationDevHint
 								pathKey={`${parentPathKey}.${element.name}`}
 								formContext={formContext}
 							/>
-						) : null}
+						) : null} */}
 					</Grid>
 				);
 			})}
@@ -668,10 +669,10 @@ export function V2PreviewArrayFieldTemplate({
 					sectionHint={sectionHint}
 					formContext={registry.formContext}
 				/>
-				<AnketaCalculationDevHint
+				{/* <AnketaCalculationDevHint
 					pathKey={pathKey}
 					formContext={registry.formContext}
-				/>
+				/> */}
 				{showAddButton ? (
 					<Box mt={2} data-test-id={`add_modal_button_compact_table`}>
 						<Button
@@ -899,11 +900,12 @@ export function V2PreviewObjectFieldTemplate({
 					? (workflow.sections[workflowSectionIdResolved] ?? "Создано")
 					: "Создано"
 		: "Создано";
-	const workflowLocked = usesMainSectionWorkflow && workflowSectionIdResolved
-		? anketaReadOnly ||
-			isMainSectionLocked?.(workflowSectionIdResolved) ||
-			workflow?.globalStatus === "Заполнено"
-		: anketaReadOnly || workflow?.globalStatus === "Заполнено";
+	const workflowLocked =
+		usesMainSectionWorkflow && workflowSectionIdResolved
+			? anketaReadOnly ||
+				isMainSectionLocked?.(workflowSectionIdResolved) ||
+				workflow?.globalStatus === "Заполнено"
+			: anketaReadOnly || workflow?.globalStatus === "Заполнено";
 	const workflowCompleteButtonLabel =
 		hasExplicitWorkflowSectionId && workflowSectionIdResolved
 			? V2_ANKETA_SECTION_COMPLETE_LABELS[workflowSectionIdResolved]
@@ -920,23 +922,24 @@ export function V2PreviewObjectFieldTemplate({
 	const workflowStatusChip = showWorkflowChrome ? (
 		<AnketaSectionStatusChip kind="section" status={sectionStatus} />
 	) : null;
-	const workflowCompleteButton = groupActivatable && !groupActive ? null : canCompleteWorkflow ? (
-		<Button
-			variant="contained"
-			onClick={() => {
-				if (usesPanelPathWorkflow && panelWorkflowPathKey) {
-					onCompletePanelSection?.(panelWorkflowPathKey);
-					return;
-				}
-				if (workflowSectionIdResolved) {
-					onCompleteMainSection?.(workflowSectionIdResolved);
-				}
-			}}
-			sx={{ textTransform: "uppercase", fontWeight: 600 }}
-		>
-			{workflowCompleteButtonLabel}
-		</Button>
-	) : null;
+	const workflowCompleteButton =
+		groupActivatable && !groupActive ? null : canCompleteWorkflow ? (
+			<Button
+				variant="contained"
+				onClick={() => {
+					if (usesPanelPathWorkflow && panelWorkflowPathKey) {
+						onCompletePanelSection?.(panelWorkflowPathKey);
+						return;
+					}
+					if (workflowSectionIdResolved) {
+						onCompleteMainSection?.(workflowSectionIdResolved);
+					}
+				}}
+				sx={{ textTransform: "uppercase", fontWeight: 600 }}
+			>
+				{workflowCompleteButtonLabel}
+			</Button>
+		) : null;
 
 	if (showWorkflowChrome) {
 		return wrapArch(
