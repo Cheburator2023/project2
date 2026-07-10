@@ -145,6 +145,20 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveLaborAnyOfCoefficient)({ field_checkbox: true }, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(1.5);
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveLaborAnyOfCoefficient)({ field_checkbox: false }, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(0.5);
     });
+    (0, vitest_1.it)("matches boolean checkbox trigger by label and code", () => {
+        const rules = [
+            {
+                paramCode: "field_cb",
+                paramName: "Чекбокс @ field_cb",
+                operator: "=",
+                valueCode: "true",
+                valueLabel: "Да",
+            },
+        ];
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, { field_cb: true })).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, { field_cb: false })).toBe(false);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)([{ ...rules[0], operator: "!=" }], { field_cb: false })).toBe(true);
+    });
     (0, vitest_1.it)("resolves CSV trigger aliases to catalog params", () => {
         const catalog = [
             {

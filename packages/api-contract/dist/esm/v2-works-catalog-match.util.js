@@ -182,25 +182,14 @@ function compareRuleValue(actual, expected, operator) {
     }
 }
 function scalarRuleValueMatches(actual, rule) {
-    const candidates = [rule.valueCode, rule.valueLabel].filter((value) => value != null && String(value).trim() !== "");
-    if (candidates.length === 0)
-        return false;
     if ([">=", "<=", ">", "<"].includes(rule.operator)) {
         return compareRuleValue(actual, rule.valueCode ?? rule.valueLabel, rule.operator);
     }
-    const actualStr = String(actual ?? "");
-    const matches = candidates.some((candidate) => {
-        if (actualStr === candidate)
-            return true;
-        if (typeof actual === "boolean") {
-            const norm = candidate.trim().toLowerCase();
-            if (norm === "да" && actual === true)
-                return true;
-            if (norm === "нет" && actual === false)
-                return true;
-        }
+    const hasValue = (rule.valueCode != null && String(rule.valueCode).trim() !== "") ||
+        (rule.valueLabel != null && String(rule.valueLabel).trim() !== "");
+    if (!hasValue)
         return false;
-    });
+    const matches = laborValueMatches(actual, rule.valueCode, rule.valueLabel);
     if (rule.operator === "!=")
         return !matches;
     return matches;

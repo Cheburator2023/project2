@@ -41,6 +41,7 @@ import {
 	useState,
 } from "react";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import { TypicalWorkValueMatchingInfo } from "./typicalWorkValueMatchingHelp";
 
 export type TransitiveSourceOption = {
 	assignmentId: string;
@@ -1009,6 +1010,7 @@ export function WorkFormulaEditor({
 							>
 								Добавить:
 							</Typography>
+							<TypicalWorkValueMatchingInfo variant="formula" />
 							<Box
 								sx={{
 									display: "grid",

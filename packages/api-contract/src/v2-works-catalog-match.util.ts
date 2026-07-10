@@ -284,12 +284,6 @@ function scalarRuleValueMatches(
 	actual: unknown,
 	rule: Pick<TypicalWorkRuleLike, "valueCode" | "valueLabel" | "operator">,
 ): boolean {
-	const candidates = [rule.valueCode, rule.valueLabel].filter(
-		(value): value is string =>
-			value != null && String(value).trim() !== "",
-	);
-	if (candidates.length === 0) return false;
-
 	if ([">=", "<=", ">", "<"].includes(rule.operator)) {
 		return compareRuleValue(
 			actual,
@@ -298,17 +292,12 @@ function scalarRuleValueMatches(
 		);
 	}
 
-	const actualStr = String(actual ?? "");
-	const matches = candidates.some((candidate) => {
-		if (actualStr === candidate) return true;
-		if (typeof actual === "boolean") {
-			const norm = candidate.trim().toLowerCase();
-			if (norm === "да" && actual === true) return true;
-			if (norm === "нет" && actual === false) return true;
-		}
-		return false;
-	});
+	const hasValue =
+		(rule.valueCode != null && String(rule.valueCode).trim() !== "") ||
+		(rule.valueLabel != null && String(rule.valueLabel).trim() !== "");
+	if (!hasValue) return false;
 
+	const matches = laborValueMatches(actual, rule.valueCode, rule.valueLabel);
 	if (rule.operator === "!=") return !matches;
 	return matches;
 }

@@ -143,6 +143,20 @@ describe("v2-works-catalog-match.util", () => {
         expect(resolveLaborAnyOfCoefficient({ field_checkbox: true }, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(1.5);
         expect(resolveLaborAnyOfCoefficient({ field_checkbox: false }, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(0.5);
     });
+    it("matches boolean checkbox trigger by label and code", () => {
+        const rules = [
+            {
+                paramCode: "field_cb",
+                paramName: "Чекбокс @ field_cb",
+                operator: "=",
+                valueCode: "true",
+                valueLabel: "Да",
+            },
+        ];
+        expect(typicalWorkRulesMatchSource(rules, { field_cb: true })).toBe(true);
+        expect(typicalWorkRulesMatchSource(rules, { field_cb: false })).toBe(false);
+        expect(typicalWorkRulesMatchSource([{ ...rules[0], operator: "!=" }], { field_cb: false })).toBe(true);
+    });
     it("resolves CSV trigger aliases to catalog params", () => {
         const catalog = [
             {

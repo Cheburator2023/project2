@@ -34,6 +34,7 @@ import {
 	schemaWorkParameterEmptyPickerMessage,
 	triggerRuleGroupKey,
 } from "./schemaWorkParameters";
+import { TypicalWorkValueMatchingInfo } from "./typicalWorkValueMatchingHelp";
 
 type TypicalWorkTriggersSectionProps = {
 	rules: V2TypicalWorkRuleDto[];
@@ -333,6 +334,8 @@ export function TypicalWorkTriggersSection({
 					/>
 				</Box>
 			</Box>
+
+			<TypicalWorkValueMatchingInfo variant="triggers" />
 
 			<Box
 				sx={{

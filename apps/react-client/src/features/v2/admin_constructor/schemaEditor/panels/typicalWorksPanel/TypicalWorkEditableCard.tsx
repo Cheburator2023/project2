@@ -88,6 +88,7 @@ import {
 	useDebouncedTypicalWorkSave,
 	type SaveStatus,
 } from "./useDebouncedTypicalWorkSave";
+import { TypicalWorkValueMatchingInfo } from "./typicalWorkValueMatchingHelp";
 
 type TypicalWorkEditableCardProps = {
 	card: V2TypicalWorkCardDto | undefined;
@@ -1013,11 +1014,11 @@ export function TypicalWorkEditableCard({
 								/>
 							</Box>
 						</Box>
-						<Typography sx={{ fontSize: 11.5, color: "#8a93a3", mb: 1.5 }}>
+						<Typography sx={{ fontSize: 11.5, color: "#8a93a3", mb: 1 }}>
 							Коэффициенты в разрезе стрима «
-							{streamDisplayLabel(streamExecutor)}». Редактируются по каждому
-							значению; используются в формуле как множители.
+							{streamDisplayLabel(streamExecutor)}».
 						</Typography>
+						<TypicalWorkValueMatchingInfo variant="labor" sx={{ mb: 1.5 }} />
 						{draft.laborParams.length === 0 ? (
 							<Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
 								Параметры трудоёмкости не заданы — норма используется как есть
