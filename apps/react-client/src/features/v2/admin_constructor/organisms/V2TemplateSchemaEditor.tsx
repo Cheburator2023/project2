@@ -47,7 +47,11 @@ import {
 	readLeafUiOptions,
 } from "../schemaEditor/propertiesFieldKind";
 import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayout";
-import { LOGIC_TAB_QUERY } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
+import {
+	BIND_POINTER_QUERY,
+	LOGIC_TAB_QUERY,
+	NEW_WORK_QUERY,
+} from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
 import { useDebouncedV2Calculation } from "../hooks/useDebouncedV2Calculation";
@@ -1212,9 +1216,22 @@ export const V2TemplateSchemaEditor = ({
 					}
 					return nextUi as UiSchema;
 				});
+				if (uiOptions?.archComponent === "typicalWork") {
+					setMainTab("logic");
+					setSearchParams(
+						(prev) => {
+							const nextParams = new URLSearchParams(prev);
+							nextParams.set(LOGIC_TAB_QUERY, "works");
+							nextParams.set(NEW_WORK_QUERY, "1");
+							nextParams.set(BIND_POINTER_QUERY, childPointer);
+							return nextParams;
+						},
+						{ replace: true },
+					);
+				}
 			}
 		},
-		[jsonSchema, uiSchema, pushDraftHistory],
+		[jsonSchema, uiSchema, pushDraftHistory, setSearchParams],
 	);
 
 	const handleAddFieldPresetAt = useCallback(

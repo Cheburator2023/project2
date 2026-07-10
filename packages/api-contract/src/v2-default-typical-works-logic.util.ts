@@ -1,5 +1,6 @@
 import type { V2JsonLogicValue, V2LogicGraphDto, V2LogicRuleDto } from "./v2-template.types";
 import {
+	collectTypicalWorkBlockBindings,
 	resolveSourceTypicalWorksOutputPath,
 	V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
 	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
@@ -77,30 +78,45 @@ export const V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
 export { V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH };
 export { V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH };
 
+export function typicalWorksCatalogRuleId(outputArrayPath: string): string {
+	return `typical-works-catalog-${outputArrayPath.replace(/\./g, "-")}`;
+}
+
 export function buildSourceTypicalWorksCatalogRule(
 	outputArrayPath: string = V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+	options?: { boundWorkIds?: string[] | undefined },
 ): V2LogicRuleDto {
+	const boundWorkIds = options?.boundWorkIds;
+	const hasExplicitBinding = boundWorkIds !== undefined;
+	const enabled =
+		!hasExplicitBinding || (boundWorkIds?.length ?? 0) > 0;
+
+	const payload: Record<string, unknown> = {
+		hint:
+			"При заполнении систем-источников подтягиваются типовые работы из справочника (стрим «Источники данных»). Появление работ управляется их триггерами. Настройка — в конструкторе → Логика.",
+		mode: "generated_rows",
+		label: "Типовые работы (стрим «Источники данных»)",
+		worksCatalog: true,
+		worksCatalogArchComponent: "Система-источник",
+		worksCatalogStream: "fromSourceType",
+		taskCode: "CATALOG_SOURCE_TASKS",
+		calcModel: "unified",
+		outputArrayPath,
+		sourceArrayPath: V2_SOURCE_SYSTEMS_ARRAY_PATH,
+	};
+	if (hasExplicitBinding) {
+		payload.allowedWorkIds = boundWorkIds ?? [];
+	}
+
 	return {
-		id: "unified-source-typical-works",
+		id: typicalWorksCatalogRuleId(outputArrayPath),
 		kind: "task_trigger",
 		targetPath: `/${outputArrayPath.replace(/\./g, "/")}`,
-		condition: true,
+		condition: enabled,
 		description:
 			"ФТ-024: типовые работы «Система-источник» из справочника работ (назначения + триггеры).",
 		dependencies: [`/${V2_SOURCE_SYSTEMS_ARRAY_PATH.replace(/\./g, "/")}`],
-		payload: {
-			hint:
-				"При заполнении систем-источников подтягиваются типовые работы из справочника (стрим «Источники данных»). Появление работ управляется их триггерами. Настройка — в конструкторе → Логика.",
-			mode: "generated_rows",
-			label: "Типовые работы (стрим «Источники данных»)",
-			worksCatalog: true,
-			worksCatalogArchComponent: "Система-источник",
-			worksCatalogStream: "fromSourceType",
-			taskCode: "CATALOG_SOURCE_TASKS",
-			calcModel: "unified",
-			outputArrayPath,
-			sourceArrayPath: V2_SOURCE_SYSTEMS_ARRAY_PATH,
-		},
+		payload,
 	};
 }
 
@@ -130,6 +146,12 @@ const PATCHED_RULE_IDS = new Set([
 	"unified-source-typical-works",
 	"unified-control-typical-works",
 ]);
+
+function isPatchedTypicalWorksCatalogRule(rule: V2LogicRuleDto): boolean {
+	return (
+		PATCHED_RULE_IDS.has(rule.id) || rule.id.startsWith("typical-works-catalog-")
+	);
+}
 
 const LEGACY_CONTROL_TYPICAL_TASKS_PATH =
 	"streamModelControl.control.controlTypicalTasks";
@@ -198,8 +220,12 @@ export function patchV2TypicalWorksLogicRules(
 	options?: PatchV2TypicalWorksLogicOptions,
 ): V2LogicGraphDto {
 	const rules = logic?.rules ?? [];
+	const bindings = options?.uiSchema
+		? collectTypicalWorkBlockBindings(options.uiSchema)
+		: [];
 	const hasSourceRule =
-		rules.some((rule) => rule.id === "unified-source-typical-works") ||
+		rules.some((rule) => isPatchedTypicalWorksCatalogRule(rule)) ||
+		bindings.length > 0 ||
 		schemaSupportsSourceTypicalWorksCatalog(
 			options?.jsonSchema,
 			options?.uiSchema,
@@ -212,16 +238,27 @@ export function patchV2TypicalWorksLogicRules(
 		options?.jsonSchema,
 		options?.uiSchema,
 	);
+
 	if (hasSourceRule) {
-		patched.push(
-			buildSourceTypicalWorksCatalogRule(
-				sourceOutputPath ?? V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
-			),
-		);
+		if (bindings.length > 0) {
+			for (const binding of bindings) {
+				patched.push(
+					buildSourceTypicalWorksCatalogRule(binding.outputPath, {
+						boundWorkIds: binding.boundWorkIds,
+					}),
+				);
+			}
+		} else {
+			patched.push(
+				buildSourceTypicalWorksCatalogRule(
+					sourceOutputPath ?? V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+				),
+			);
+		}
 	}
 	if (hasControlRule) patched.push(buildControlTypicalWorksCatalogRule());
 	const rest = rules
-		.filter((rule) => !PATCHED_RULE_IDS.has(rule.id))
+		.filter((rule) => !isPatchedTypicalWorksCatalogRule(rule))
 		.map((rule) =>
 			patchUnifiedTypicalTotalRule(
 				patchLegacyRowTotalRule(

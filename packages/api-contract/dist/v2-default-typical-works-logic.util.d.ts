@@ -10,7 +10,10 @@ export type PatchV2TypicalWorksLogicOptions = {
 export declare const V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
 export { V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH };
 export { V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH };
-export declare function buildSourceTypicalWorksCatalogRule(outputArrayPath?: string): V2LogicRuleDto;
+export declare function typicalWorksCatalogRuleId(outputArrayPath: string): string;
+export declare function buildSourceTypicalWorksCatalogRule(outputArrayPath?: string, options?: {
+    boundWorkIds?: string[] | undefined;
+}): V2LogicRuleDto;
 export declare function buildControlTypicalWorksCatalogRule(): V2LogicRuleDto;
 /** Схема содержит блок типовых работ (archComponent: typicalWork) — достаточно для каталога. */
 export declare function schemaSupportsSourceTypicalWorksCatalog(jsonSchema?: unknown, uiSchema?: unknown): boolean;

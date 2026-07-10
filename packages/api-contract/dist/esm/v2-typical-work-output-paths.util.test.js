@@ -25,4 +25,20 @@ describe("v2-typical-work-output-paths.util", () => {
         expect(next.detailInfo.detailTypicalTasks).toEqual([]);
         expect(next.streamModelControl["field_Khn6-HAW"]).toEqual([]);
     });
+    it("does not clear sibling typicalWork blocks when replacing one output path", () => {
+        const staleRow = { name: "stale", total: 10 };
+        const activeRow = { name: "active", total: 20 };
+        const next = clearStaleGeneratedTypicalWorkPaths({
+            field_a: [activeRow],
+            field_b: [staleRow],
+            streamDataSources: { sourceTypicalTasks: [staleRow] },
+        }, "field_a", {
+            field_a: { "ui:options": { archComponent: "typicalWork" } },
+            field_b: { "ui:options": { archComponent: "typicalWork" } },
+        });
+        expect(next.field_a[0]?.name).toBe("active");
+        expect(next.field_b[0]?.name).toBe("stale");
+        expect(next.streamDataSources
+            .sourceTypicalTasks).toEqual([]);
+    });
 });

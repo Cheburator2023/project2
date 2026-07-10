@@ -50,6 +50,8 @@ export type BuildCatalogTasksParams = {
 	templateId?: string | null;
 	atDate: string;
 	hiddenParamCodes?: ReadonlySet<string>;
+	/** Ограничение списка работ блока typicalWork; undefined — все назначенные. */
+	allowedWorkIds?: readonly string[];
 };
 
 type RuntimeWorkContext = {
@@ -230,7 +232,16 @@ export class V2TypicalWorkRuntimeService {
 		const eligibleWorks = works.filter((w) => assignedWorkIds.has(w.id));
 		if (!eligibleWorks.length) return [];
 
-		const workIds = eligibleWorks.map((w) => w.id);
+		const allowedWorkIds = params.allowedWorkIds;
+		const filteredWorks =
+			allowedWorkIds === undefined
+				? eligibleWorks
+				: allowedWorkIds.length === 0
+					? []
+					: eligibleWorks.filter((w) => allowedWorkIds.includes(w.id));
+		if (!filteredWorks.length) return [];
+
+		const workIds = filteredWorks.map((w) => w.id);
 		const [norms, rules, labor, laborParams, allConfigs] = await Promise.all([
 			this.normRepository.find({
 				where: { workId: In(workIds), streamExecutor: stream },
@@ -270,7 +281,7 @@ export class V2TypicalWorkRuntimeService {
 			await this.paramCatalogService.listTriggerStatusCatalog(params.atDate);
 
 		const contexts = new Map<string, RuntimeWorkContext>();
-		for (const work of eligibleWorks) {
+		for (const work of filteredWorks) {
 			const workNorms = normsByWork.get(work.id) ?? [];
 			const normValue = resolveActiveNormOnDate(
 				workNorms.map((n) => ({

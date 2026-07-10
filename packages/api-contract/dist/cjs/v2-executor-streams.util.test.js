@@ -39,3 +39,51 @@ const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
         (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveV2AnketaStreamBlockOptions)(undefined, "streamModelControl")).toEqual({ streamBlock: true, streamExecutor: "Контроль моделей" });
     });
 });
+(0, vitest_1.describe)("collectExecutorStreamBlocks", () => {
+    (0, vitest_1.it)("lists explicit and legacy root stream blocks", () => {
+        const blocks = (0, v2_anketa_section_ui_util_1.collectExecutorStreamBlocks)({
+            field_dadm: {
+                "ui:options": { streamBlock: true, streamExecutor: "ДАДМ" },
+            },
+            streamDataSources: {},
+        });
+        (0, vitest_1.expect)(blocks.map((b) => b.streamExecutor).sort()).toEqual([
+            "ДАДМ",
+            "Источники данных",
+        ]);
+    });
+    (0, vitest_1.it)("detects stream presence for logic labels and legacy db names", () => {
+        const uiSchema = {
+            field_src: {
+                "ui:options": {
+                    streamBlock: true,
+                    streamExecutor: "Источники данных",
+                },
+            },
+        };
+        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.isExecutorStreamPresentInSchema)(uiSchema, "Источники данных")).toBe(true);
+        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.isExecutorStreamPresentInSchema)(uiSchema, "ИД. Внутренний")).toBe(true);
+        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.isExecutorStreamPresentInSchema)(uiSchema, "ДАДМ")).toBe(false);
+    });
+    (0, vitest_1.it)("resolves stream for typicalWork block from explicit option or root stream", () => {
+        const uiSchema = {
+            field_stream: {
+                "ui:options": {
+                    streamBlock: true,
+                    streamExecutor: "ПиРМ",
+                },
+                field_tasks: {
+                    "ui:options": { archComponent: "typicalWork" },
+                },
+            },
+            field_root: {
+                "ui:options": {
+                    archComponent: "typicalWork",
+                    streamExecutor: "ДАДМ",
+                },
+            },
+        };
+        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveStreamExecutorForTypicalWorkOutputPath)(uiSchema, "field_stream.field_tasks")).toBe("ПиРМ");
+        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveStreamExecutorForTypicalWorkOutputPath)(uiSchema, "field_root")).toBe("ДАДМ");
+    });
+});

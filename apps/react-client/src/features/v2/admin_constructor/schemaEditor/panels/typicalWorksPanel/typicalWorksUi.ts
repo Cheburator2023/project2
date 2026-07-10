@@ -7,6 +7,7 @@ import {
 export const LOGIC_TAB_QUERY = "logicTab";
 export const WORK_ID_QUERY = "workId";
 export const NEW_WORK_QUERY = "newWork";
+export const BIND_POINTER_QUERY = "bindPointer";
 
 /** Разделение внутр/внеш убрано — источники в едином стриме. */
 export const DEFAULT_WORK_STREAMS = [V2_SOURCE_STREAM] as const;

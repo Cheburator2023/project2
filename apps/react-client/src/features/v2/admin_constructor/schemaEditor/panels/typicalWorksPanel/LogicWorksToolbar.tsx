@@ -6,15 +6,16 @@ import MenuList from "@mui/material/MenuList";
 import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
 import Typography from "@mui/material/Typography";
-import { commonRoutes as routes } from "@react-client/routing/common/routes";
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router";
 import {
 	LOGIC_EXECUTOR_STREAMS,
 	type LogicWorksScope,
 	scopeLabel,
 	streamColor,
 } from "./typicalWorksAreas";
+import { useSchemaEditor } from "../../SchemaEditorContext";
+import { isExecutorStreamPresentInSchema } from "@smart-anketa/api-contract";
+import { ExecutorStreamMenuRow } from "./ExecutorStreamPresenceLabel";
 
 type LogicWorksToolbarProps = {
 	scope: LogicWorksScope;
@@ -25,9 +26,10 @@ export function LogicWorksToolbar({
 	scope,
 	onScopeChange,
 }: LogicWorksToolbarProps) {
-	const navigate = useNavigate();
+	const { uiSchema } = useSchemaEditor();
 	const anchorRef = useRef<HTMLButtonElement>(null);
 	const [pickerOpen, setPickerOpen] = useState(false);
+	const scopePresent = isExecutorStreamPresentInSchema(uiSchema, scope.stream);
 
 	return (
 		<Box
@@ -80,6 +82,16 @@ export function LogicWorksToolbar({
 					▾
 				</Typography>
 			</Button>
+			<Typography
+				component="span"
+				sx={{
+					fontSize: 11,
+					color: scopePresent ? "#1f8a4d" : "#c62828",
+					fontWeight: 600,
+				}}
+			>
+				{scopePresent ? "стрим в схеме" : "стрим не в схеме"}
+			</Typography>
 			<Popper
 				open={pickerOpen}
 				anchorEl={anchorRef.current}
@@ -115,6 +127,10 @@ export function LogicWorksToolbar({
 						<MenuList dense disablePadding>
 							{LOGIC_EXECUTOR_STREAMS.map((stream) => {
 								const selected = scope.stream === stream;
+								const present = isExecutorStreamPresentInSchema(
+									uiSchema,
+									stream,
+								);
 								return (
 									<MenuItem
 										key={stream}
@@ -125,23 +141,12 @@ export function LogicWorksToolbar({
 										}}
 										sx={{ borderRadius: 1, py: 0.9 }}
 									>
-										<Box
-											sx={{
-												width: 8,
-												height: 8,
-												borderRadius: "2px",
-												bgcolor: streamColor(stream),
-												mr: 1,
-											}}
+										<ExecutorStreamMenuRow
+											stream={stream}
+											color={streamColor(stream)}
+											present={present}
+											selected={selected}
 										/>
-										<Typography sx={{ flex: 1, fontSize: 12.5 }}>
-											{stream}
-										</Typography>
-										{selected ? (
-											<Typography sx={{ color: "#2f6bd8", fontSize: 13 }}>
-												✓
-											</Typography>
-										) : null}
 									</MenuItem>
 								);
 							})}

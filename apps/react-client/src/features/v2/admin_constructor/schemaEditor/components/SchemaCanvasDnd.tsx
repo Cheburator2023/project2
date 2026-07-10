@@ -73,6 +73,7 @@ import {
 } from "../propertiesFieldKind";
 import { useParams } from "react-router";
 import { useV2TypicalWorksList } from "@react-client/common/api/queries/v2-works";
+import { resolveEffectiveBoundWorkIds } from "../typicalWorkBlockBinding";
 import { useSchemaEditor } from "../SchemaEditorContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "./PanelChrome";
@@ -284,7 +285,8 @@ function SchemaCanvasFieldRow({
 	hasChild,
 	onToggle,
 	onRequestDelete,
-	typicalWorkTitleSuffix,
+	typicalWorkNameById,
+	allTypicalWorkIds,
 }: {
 	node: NodeModel<SchemaCanvasNodeData>;
 	depth: number;
@@ -294,8 +296,8 @@ function SchemaCanvasFieldRow({
 	hasChild: boolean;
 	onToggle: () => void;
 	onRequestDelete: (state: CanvasDeleteConfirmState) => void;
-	/** Названия типовых работ схемы — добавляются в заголовок блока typicalWork. */
-	typicalWorkTitleSuffix?: string;
+	typicalWorkNameById: Map<string, string>;
+	allTypicalWorkIds: string[];
 }) {
 	const theme = useTheme();
 	const {
@@ -379,8 +381,33 @@ function SchemaCanvasFieldRow({
 
 	const showExpand = hasChild && node.data?.kind === "field";
 
+	const typicalWorkTitleSuffix = useMemo(() => {
+		if (sectionUiOptions.archComponent !== "typicalWork") return "";
+		const ids = resolveEffectiveBoundWorkIds(
+			uiSchema,
+			fieldPointer,
+			allTypicalWorkIds,
+		);
+		const names = [
+			...new Set(
+				ids
+					.map((id) => typicalWorkNameById.get(id)?.trim())
+					.filter((name): name is string => Boolean(name)),
+			),
+		];
+		if (names.length === 0) return "";
+		const preview = names.slice(0, 3).join(", ");
+		return names.length > 3 ? `${preview}…` : preview;
+	}, [
+		sectionUiOptions.archComponent,
+		uiSchema,
+		fieldPointer,
+		allTypicalWorkIds,
+		typicalWorkNameById,
+	]);
+
 	const rowTitle =
-		sectionUiOptions.archComponent === "typicalWork" && typicalWorkTitleSuffix
+		typicalWorkTitleSuffix
 			? `${node.text} · ${typicalWorkTitleSuffix}`
 			: node.text;
 
@@ -756,18 +783,17 @@ export function SchemaCanvasPanel({
 	const { hideSystemFields } = useSchemaConstructorSettings();
 	const { templateId = "" } = useParams<{ templateId: string }>();
 	const { data: worksData } = useV2TypicalWorksList({ templateId });
-	const typicalWorkTitleSuffix = useMemo(() => {
-		const names = [
-			...new Set(
-				(worksData?.items ?? [])
-					.map((work) => work.name?.trim())
-					.filter((name): name is string => Boolean(name)),
-			),
-		];
-		if (names.length === 0) return "";
-		const preview = names.slice(0, 3).join(", ");
-		return names.length > 3 ? `${preview}…` : preview;
+	const typicalWorkNameById = useMemo(() => {
+		const map = new Map<string, string>();
+		for (const work of worksData?.items ?? []) {
+			if (work.name?.trim()) map.set(work.id, work.name.trim());
+		}
+		return map;
 	}, [worksData?.items]);
+	const allTypicalWorkIds = useMemo(
+		() => [...typicalWorkNameById.keys()],
+		[typicalWorkNameById],
+	);
 	const treeRef = useRef<TreeMethods>(null);
 	const [deleteConfirm, setDeleteConfirm] =
 		useState<CanvasDeleteConfirmState | null>(null);
@@ -1117,7 +1143,8 @@ export function SchemaCanvasPanel({
 							hasChild={hasChild}
 							onToggle={onToggle}
 							onRequestDelete={handleRequestDelete}
-							typicalWorkTitleSuffix={typicalWorkTitleSuffix}
+							typicalWorkNameById={typicalWorkNameById}
+							allTypicalWorkIds={allTypicalWorkIds}
 						/>
 					)}
 				/>

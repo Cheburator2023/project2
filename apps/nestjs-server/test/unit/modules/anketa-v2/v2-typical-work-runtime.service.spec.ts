@@ -169,6 +169,51 @@ describe("V2TypicalWorkRuntimeService", () => {
 		expect(notMatched).toEqual([]);
 	});
 
+	it("filters catalog tasks by allowedWorkIds when block binding is set", async () => {
+		const service = createService({
+			rules: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "type",
+					paramName: "Тип источника",
+					operator: "=",
+					valueCode: "internal",
+					valueLabel: "Внутренний",
+				},
+			],
+		});
+
+		const allowed = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			templateVersionId: null,
+			atDate: "2025-06-01",
+			allowedWorkIds: [WORK_WITH_TRIGGER],
+		});
+		const blocked = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			templateVersionId: null,
+			atDate: "2025-06-01",
+			allowedWorkIds: [WORK_WITHOUT_TRIGGERS],
+		});
+		const empty = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			templateVersionId: null,
+			atDate: "2025-06-01",
+			allowedWorkIds: [],
+		});
+
+		expect(allowed.map((task) => task.workId)).toEqual([WORK_WITH_TRIGGER]);
+		expect(blocked).toEqual([]);
+		expect(empty).toEqual([]);
+	});
+
 	it("returns empty when work is not assigned to stream", async () => {
 		const service = createService({
 			rules: [

@@ -51,6 +51,21 @@ export type V2AnketaStreamBlockOptions = {
 /** Явная или legacy-привязка корневого блока к стриму-исполнителю. */
 export declare function resolveV2AnketaStreamBlockOptions(uiNode: unknown, blockKey?: string): V2AnketaStreamBlockOptions;
 export declare function isV2AnketaStreamBlockRoot(uiNode: unknown, blockKey?: string): boolean;
+export type ExecutorStreamBlockRef = {
+    blockKey: string;
+    pointer: string;
+    streamExecutor: V2ExecutorStreamLabel;
+};
+/** Корневые стримовые блоки анкеты из uiSchema. */
+export declare function collectExecutorStreamBlocks(uiSchema: unknown): ExecutorStreamBlockRef[];
+export declare function collectPresentExecutorStreamLabels(uiSchema: unknown): Set<V2ExecutorStreamLabel>;
+/** Есть ли в конструкторе корневой streamBlock для стрима (legacy-имена БД → область UI). */
+export declare function isExecutorStreamPresentInSchema(uiSchema: unknown, stream: string): boolean;
+/**
+ * Стрим-исполнитель для блока typicalWork: явный ui:options.streamExecutor,
+ * иначе стрим корневого streamBlock по пути вывода.
+ */
+export declare function resolveStreamExecutorForTypicalWorkOutputPath(uiSchema: unknown, outputPath: string): V2ExecutorStreamLabel | null;
 /** Тип арх. компонента секции из ui:options, либо null. */
 export declare function resolveV2AnketaArchComponent(uiNode: unknown): V2ArchComponentType | null;
 export declare function isV2AnketaMainSectionId(value: string): value is V2AnketaMainSectionId;

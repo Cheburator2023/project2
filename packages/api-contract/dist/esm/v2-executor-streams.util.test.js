@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { inferLegacyStreamExecutorForBlockKey, isV2ExecutorStreamLabel, V2_EXECUTOR_STREAM_LABELS, } from "./v2-executor-streams.util";
-import { resolveV2AnketaStreamBlockOptions, readV2AnketaSectionUiOptions, } from "./v2-anketa-section-ui.util";
+import { collectExecutorStreamBlocks, isExecutorStreamPresentInSchema, resolveV2AnketaStreamBlockOptions, readV2AnketaSectionUiOptions, resolveStreamExecutorForTypicalWorkOutputPath, } from "./v2-anketa-section-ui.util";
 describe("v2-executor-streams.util", () => {
     it("lists six executor stream labels", () => {
         expect(V2_EXECUTOR_STREAM_LABELS).toEqual([
@@ -35,5 +35,53 @@ describe("resolveV2AnketaStreamBlockOptions", () => {
     });
     it("infers legacy stream blocks without explicit flag", () => {
         expect(resolveV2AnketaStreamBlockOptions(undefined, "streamModelControl")).toEqual({ streamBlock: true, streamExecutor: "Контроль моделей" });
+    });
+});
+describe("collectExecutorStreamBlocks", () => {
+    it("lists explicit and legacy root stream blocks", () => {
+        const blocks = collectExecutorStreamBlocks({
+            field_dadm: {
+                "ui:options": { streamBlock: true, streamExecutor: "ДАДМ" },
+            },
+            streamDataSources: {},
+        });
+        expect(blocks.map((b) => b.streamExecutor).sort()).toEqual([
+            "ДАДМ",
+            "Источники данных",
+        ]);
+    });
+    it("detects stream presence for logic labels and legacy db names", () => {
+        const uiSchema = {
+            field_src: {
+                "ui:options": {
+                    streamBlock: true,
+                    streamExecutor: "Источники данных",
+                },
+            },
+        };
+        expect(isExecutorStreamPresentInSchema(uiSchema, "Источники данных")).toBe(true);
+        expect(isExecutorStreamPresentInSchema(uiSchema, "ИД. Внутренний")).toBe(true);
+        expect(isExecutorStreamPresentInSchema(uiSchema, "ДАДМ")).toBe(false);
+    });
+    it("resolves stream for typicalWork block from explicit option or root stream", () => {
+        const uiSchema = {
+            field_stream: {
+                "ui:options": {
+                    streamBlock: true,
+                    streamExecutor: "ПиРМ",
+                },
+                field_tasks: {
+                    "ui:options": { archComponent: "typicalWork" },
+                },
+            },
+            field_root: {
+                "ui:options": {
+                    archComponent: "typicalWork",
+                    streamExecutor: "ДАДМ",
+                },
+            },
+        };
+        expect(resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, "field_stream.field_tasks")).toBe("ПиРМ");
+        expect(resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, "field_root")).toBe("ДАДМ");
     });
 });

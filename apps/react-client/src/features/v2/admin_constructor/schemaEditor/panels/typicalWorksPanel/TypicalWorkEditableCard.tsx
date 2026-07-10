@@ -75,6 +75,11 @@ import {
 	streamColor,
 	streamDisplayLabel,
 } from "./typicalWorksAreas";
+import { isExecutorStreamPresentInSchema } from "@smart-anketa/api-contract";
+import {
+	ExecutorStreamMenuRow,
+	ExecutorStreamPresenceHint,
+} from "./ExecutorStreamPresenceLabel";
 import {
 	ARCH_COMPONENT_DOT,
 	archComponentShortLabel,
@@ -831,24 +836,15 @@ export function TypicalWorkEditableCard({
 											}}
 											sx={{ borderRadius: 1, py: 1 }}
 										>
-											<Box
-												sx={{
-													width: 8,
-													height: 8,
-													borderRadius: "2px",
-													bgcolor: streamColor(stream),
-													mr: 1,
-												}}
+											<ExecutorStreamMenuRow
+												stream={streamDisplayLabel(stream)}
+												color={streamColor(stream)}
+												present={isExecutorStreamPresentInSchema(
+													uiSchema,
+													stream,
+												)}
+												selected={streamExecutor === stream}
 											/>
-											{streamDisplayLabel(stream)}
-											{stream !== streamDisplayLabel(stream) ? (
-												<Typography
-													component="span"
-													sx={{ ml: 0.75, fontSize: 11, color: "#8a93a3" }}
-												>
-													({stream})
-												</Typography>
-											) : null}
 										</MenuItem>
 									))}
 								{otherStreams.length > 0 ? (
@@ -877,16 +873,15 @@ export function TypicalWorkEditableCard({
 												}}
 												sx={{ borderRadius: 1, py: 1 }}
 											>
-												<Box
-													sx={{
-														width: 8,
-														height: 8,
-														borderRadius: "2px",
-														bgcolor: streamColor(stream),
-														mr: 1,
-													}}
+												<ExecutorStreamMenuRow
+													stream={streamDisplayLabel(stream)}
+													color={streamColor(stream)}
+													present={isExecutorStreamPresentInSchema(
+														uiSchema,
+														stream,
+													)}
+													selected={streamExecutor === stream}
 												/>
-												{streamDisplayLabel(stream)}
 											</MenuItem>
 										))}
 									</>
@@ -896,6 +891,14 @@ export function TypicalWorkEditableCard({
 					</Popper>
 				</Box>
 			</Box>
+
+			{streamExecutor ? (
+				<Box sx={{ mb: 2 }}>
+					<ExecutorStreamPresenceHint
+						present={isExecutorStreamPresentInSchema(uiSchema, streamExecutor)}
+					/>
+				</Box>
+			) : null}
 
 			{errorMessage ? (
 				<Alert severity="error" sx={{ mb: 2 }}>

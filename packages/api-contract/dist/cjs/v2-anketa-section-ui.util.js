@@ -5,6 +5,10 @@ exports.isV2ArchComponentType = isV2ArchComponentType;
 exports.readV2AnketaSectionUiOptions = readV2AnketaSectionUiOptions;
 exports.resolveV2AnketaStreamBlockOptions = resolveV2AnketaStreamBlockOptions;
 exports.isV2AnketaStreamBlockRoot = isV2AnketaStreamBlockRoot;
+exports.collectExecutorStreamBlocks = collectExecutorStreamBlocks;
+exports.collectPresentExecutorStreamLabels = collectPresentExecutorStreamLabels;
+exports.isExecutorStreamPresentInSchema = isExecutorStreamPresentInSchema;
+exports.resolveStreamExecutorForTypicalWorkOutputPath = resolveStreamExecutorForTypicalWorkOutputPath;
 exports.resolveV2AnketaArchComponent = resolveV2AnketaArchComponent;
 exports.isV2AnketaMainSectionId = isV2AnketaMainSectionId;
 exports.isV2AnketaStreamSectionId = isV2AnketaStreamSectionId;
@@ -128,6 +132,64 @@ function resolveV2AnketaStreamBlockOptions(uiNode, blockKey) {
 }
 function isV2AnketaStreamBlockRoot(uiNode, blockKey) {
     return resolveV2AnketaStreamBlockOptions(uiNode, blockKey).streamBlock;
+}
+/** Корневые стримовые блоки анкеты из uiSchema. */
+function collectExecutorStreamBlocks(uiSchema) {
+    const root = readRecord(uiSchema);
+    if (!root)
+        return [];
+    const blocks = [];
+    for (const blockKey of Object.keys(root)) {
+        if (blockKey.startsWith("ui:"))
+            continue;
+        const branch = readRecord(root[blockKey]);
+        const { streamBlock, streamExecutor } = resolveV2AnketaStreamBlockOptions(branch, blockKey);
+        if (streamBlock && streamExecutor) {
+            blocks.push({
+                blockKey,
+                pointer: `/${blockKey}`,
+                streamExecutor,
+            });
+        }
+    }
+    return blocks;
+}
+function collectPresentExecutorStreamLabels(uiSchema) {
+    return new Set(collectExecutorStreamBlocks(uiSchema).map((block) => block.streamExecutor));
+}
+/** Есть ли в конструкторе корневой streamBlock для стрима (legacy-имена БД → область UI). */
+function isExecutorStreamPresentInSchema(uiSchema, stream) {
+    const area = (0, v2_executor_streams_util_1.resolveExecutorStreamAreaLabel)(stream);
+    const present = collectPresentExecutorStreamLabels(uiSchema);
+    return (((0, v2_executor_streams_util_1.isV2ExecutorStreamLabel)(stream) && present.has(stream)) ||
+        ((0, v2_executor_streams_util_1.isV2ExecutorStreamLabel)(area) && present.has(area)));
+}
+function readUiBranchAtDotPath(uiSchema, dotPath) {
+    const segments = dotPath.split(".").filter(Boolean);
+    let cur = uiSchema;
+    for (const segment of segments) {
+        const branch = readRecord(cur);
+        if (!branch || !(segment in branch))
+            return undefined;
+        cur = branch[segment];
+    }
+    return readRecord(cur);
+}
+/**
+ * Стрим-исполнитель для блока typicalWork: явный ui:options.streamExecutor,
+ * иначе стрим корневого streamBlock по пути вывода.
+ */
+function resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPath) {
+    const leaf = readUiBranchAtDotPath(uiSchema, outputPath);
+    const explicit = readV2AnketaSectionUiOptions(leaf).streamExecutor;
+    if (explicit)
+        return explicit;
+    const rootKey = outputPath.split(".")[0]?.trim();
+    if (!rootKey)
+        return null;
+    const rootBranch = readRecord(readRecord(uiSchema)?.[rootKey]);
+    const { streamExecutor } = resolveV2AnketaStreamBlockOptions(rootBranch, rootKey);
+    return streamExecutor;
 }
 /** Тип арх. компонента секции из ui:options, либо null. */
 function resolveV2AnketaArchComponent(uiNode) {

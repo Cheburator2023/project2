@@ -84,6 +84,8 @@ type TaskTriggerPayload = {
 	label?: string;
 	hint?: string;
 	outputArrayPath?: string;
+	/** Id типовых работ, привязанных к блоку typicalWork в uiSchema. */
+	allowedWorkIds?: string[];
 	/**
 	 * ФТ-024: единый коэффициент группы для всех работ компонента — произведение
 	 * весов параметров. JsonLogic — по merge(localParams стрима, строка компонента);
@@ -612,6 +614,11 @@ export class V2CalculationService {
 											templateId,
 											atDate,
 											hiddenParamCodes,
+											allowedWorkIds: Array.isArray(
+												payload.allowedWorkIds,
+											)
+												? payload.allowedWorkIds
+												: undefined,
 										}),
 									),
 								)
