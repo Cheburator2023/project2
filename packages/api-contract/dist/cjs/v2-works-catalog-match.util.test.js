@@ -145,6 +145,24 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveLaborAnyOfCoefficient)({ field_checkbox: true }, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(1.5);
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveLaborAnyOfCoefficient)({ field_checkbox: false }, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(0.5);
     });
+    (0, vitest_1.it)("resolves by-value labor coefficients from schema dictionary answers", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)({ field_dict: "Да" }, [
+            {
+                paramCode: "field_dict",
+                paramName: "Поле справочника @ field_dict",
+                valueCode: "Да",
+                valueLabel: "Да",
+                coefficient: 20,
+            },
+            {
+                paramCode: "field_dict",
+                paramName: "Поле справочника @ field_dict",
+                valueCode: "Нет",
+                valueLabel: "Нет",
+                coefficient: 10,
+            },
+        ])).toEqual({ field_dict: 20 });
+    });
     (0, vitest_1.it)("matches boolean checkbox trigger by label and code", () => {
         const rules = [
             {

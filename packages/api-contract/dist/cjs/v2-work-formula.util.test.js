@@ -128,4 +128,17 @@ const v2_typical_work_types_1 = require("./v2-typical-work.types");
         const result = (0, v2_work_formula_util_1.evaluateWorkFormula)({ tokens, text: "N × P[Сложность]?" }, { norm: 1, paramCoefficients: {} });
         (0, vitest_1.expect)(result.error).toMatch(/удалён/i);
     });
+    (0, vitest_1.it)("matches formula labor param by schema source key alias", () => {
+        const laborParams = [
+            {
+                paramCode: "field_Hqtu1z5O",
+                paramName: "Поле справочника @ field_Hqtu1z5O",
+            },
+        ];
+        (0, vitest_1.expect)((0, v2_work_formula_util_1.isWorkFormulaLaborParamKnown)({
+            kind: "param_anyof",
+            paramCode: "field_Hqtu1z5O",
+            paramName: "Поле справочника @ field_Hqtu1z5O",
+        }, laborParams)).toBe(true);
+    });
 });

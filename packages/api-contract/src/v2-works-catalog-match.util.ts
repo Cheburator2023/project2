@@ -415,3 +415,33 @@ export function resolveLaborAnyOfCoefficient(
 	);
 	return matches ? anyOf.coeffOn : anyOf.coeffOff;
 }
+
+export type ByValueLaborCoefficientRow = {
+	paramCode: string;
+	paramName?: string | null;
+	valueCode: string | null;
+	valueLabel: string | null;
+	coefficient: number;
+};
+
+/** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
+export function resolveByValueLaborParamCoefficients(
+	source: Record<string, unknown>,
+	rows: readonly ByValueLaborCoefficientRow[],
+): Record<string, number> {
+	const paramCoefficients: Record<string, number> = {};
+	for (const row of rows) {
+		if (
+			resolveLaborCoefficient(
+				source,
+				row.paramCode,
+				row.valueCode,
+				row.valueLabel,
+				row.paramName ?? null,
+			)
+		) {
+			paramCoefficients[row.paramCode] = row.coefficient;
+		}
+	}
+	return paramCoefficients;
+}

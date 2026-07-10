@@ -4,6 +4,7 @@ import {
 	evaluateWorkFormula,
 	formatWorkFormulaGeneralSummary,
 	isParamUsedInFormula,
+	isWorkFormulaLaborParamKnown,
 	markFormulaParamInvalid,
 	normalizeWorkFormulaLaborParamTokens,
 	parseWorkFormulaText,
@@ -169,5 +170,24 @@ describe("v2-work-formula.util", () => {
 			{ norm: 1, paramCoefficients: {} },
 		);
 		expect(result.error).toMatch(/удалён/i);
+	});
+
+	it("matches formula labor param by schema source key alias", () => {
+		const laborParams = [
+			{
+				paramCode: "field_Hqtu1z5O",
+				paramName: "Поле справочника @ field_Hqtu1z5O",
+			},
+		];
+		expect(
+			isWorkFormulaLaborParamKnown(
+				{
+					kind: "param_anyof",
+					paramCode: "field_Hqtu1z5O",
+					paramName: "Поле справочника @ field_Hqtu1z5O",
+				},
+				laborParams,
+			),
+		).toBe(true);
 	});
 });

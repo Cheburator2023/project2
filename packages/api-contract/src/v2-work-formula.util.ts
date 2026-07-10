@@ -4,6 +4,7 @@ import type {
 	V2WorkFormulaToken,
 	V2WorkRoundingMode,
 } from "./v2-typical-work.types";
+import { parseParamNameSourceKeys } from "./v2-work-param-source-keys.util";
 
 export type WorkFormulaEvalContext = {
 	norm: number;
@@ -46,17 +47,35 @@ export type WorkFormulaLaborParamRef = {
 	paramName?: string | null;
 };
 
-/** Сопоставление токена формулы с параметром из блока трудоёмкости (код или подпись). */
+function collectParamRefKeys(ref: WorkFormulaLaborParamRef): Set<string> {
+	const keys = new Set<string>();
+	const code = ref.paramCode.trim();
+	if (code) keys.add(code);
+	for (const key of parseParamNameSourceKeys(ref.paramName).sourceKeys) {
+		if (key.trim()) keys.add(key.trim());
+	}
+	return keys;
+}
+
+/** Сопоставление токена формулы с параметром из блока трудоёмкости (код, подпись, sourceKeys). */
 export function workFormulaLaborParamMatches(
 	token: { paramCode: string; paramName?: string | null },
 	group: WorkFormulaLaborParamRef,
 ): boolean {
-	return (
-		group.paramCode === token.paramCode ||
-		(token.paramName != null && group.paramName === token.paramName) ||
-		(token.paramName != null && group.paramCode === token.paramName) ||
-		(group.paramName != null && group.paramName === token.paramCode)
-	);
+	if (group.paramCode === token.paramCode) return true;
+	if (token.paramName != null && group.paramName === token.paramName) return true;
+	if (token.paramName != null && group.paramCode === token.paramName) return true;
+	if (group.paramName != null && group.paramName === token.paramCode) return true;
+
+	const tokenKeys = collectParamRefKeys({
+		paramCode: token.paramCode,
+		paramName: token.paramName,
+	});
+	const groupKeys = collectParamRefKeys(group);
+	for (const key of tokenKeys) {
+		if (groupKeys.has(key)) return true;
+	}
+	return false;
 }
 
 export function isWorkFormulaLaborParamKnown(

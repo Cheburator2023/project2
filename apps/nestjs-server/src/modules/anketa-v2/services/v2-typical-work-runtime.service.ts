@@ -12,8 +12,8 @@ import {
 	parseStoredTypicalWorkCalculationLogic,
 	previewTypicalWorkCalculation,
 	resolveActiveNormOnDate,
+	resolveByValueLaborParamCoefficients,
 	resolveLaborAnyOfCoefficient,
-	resolveLaborCoefficient,
 	resolveStreamFromSourceType,
 	termsToTokenFormula,
 	typicalWorkRulesMatchSource,
@@ -119,11 +119,17 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 		}
 	}
 
+	const byValueRows: Array<{
+		paramCode: string;
+		paramName: string | null;
+		valueCode: string | null;
+		valueLabel: string | null;
+		coefficient: number;
+	}> = [];
 	for (const row of ctx.laborRows) {
 		if (ctx.hiddenParamCodes?.has(row.paramCode)) continue;
 		const header = laborParamsByCode.get(row.paramCode);
 		if (header?.kind === "any_of") continue;
-
 		if (
 			!isWorkCoefficientValueAvailable(
 				row,
@@ -133,18 +139,18 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 		) {
 			continue;
 		}
-		if (
-			resolveLaborCoefficient(
-				ctx.source,
-				row.paramCode,
-				row.valueCode,
-				row.valueLabel,
-				row.paramName,
-			)
-		) {
-			paramCoefficients[row.paramCode] = decimalToNumber(row.coefficient);
-		}
+		byValueRows.push({
+			paramCode: row.paramCode,
+			paramName: row.paramName,
+			valueCode: row.valueCode,
+			valueLabel: row.valueLabel,
+			coefficient: decimalToNumber(row.coefficient),
+		});
 	}
+	Object.assign(
+		paramCoefficients,
+		resolveByValueLaborParamCoefficients(ctx.source, byValueRows),
+	);
 
 	return paramCoefficients;
 }

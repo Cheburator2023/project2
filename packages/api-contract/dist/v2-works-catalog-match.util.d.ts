@@ -82,3 +82,12 @@ export declare function resolveLaborAnyOfCoefficient(source: Record<string, unkn
     coeffOn: number;
     coeffOff: number;
 }, paramName?: string | null): number;
+export type ByValueLaborCoefficientRow = {
+    paramCode: string;
+    paramName?: string | null;
+    valueCode: string | null;
+    valueLabel: string | null;
+    coefficient: number;
+};
+/** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
+export declare function resolveByValueLaborParamCoefficients(source: Record<string, unknown>, rows: readonly ByValueLaborCoefficientRow[]): Record<string, number>;

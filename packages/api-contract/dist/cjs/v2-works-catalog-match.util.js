@@ -16,6 +16,7 @@ exports.laborValueMatches = laborValueMatches;
 exports.typicalWorkRulesMatchSource = typicalWorkRulesMatchSource;
 exports.resolveLaborCoefficient = resolveLaborCoefficient;
 exports.resolveLaborAnyOfCoefficient = resolveLaborAnyOfCoefficient;
+exports.resolveByValueLaborParamCoefficients = resolveByValueLaborParamCoefficients;
 const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
 Object.defineProperty(exports, "formatParamNameWithSourceKeys", { enumerable: true, get: function () { return v2_work_param_source_keys_util_1.formatParamNameWithSourceKeys; } });
 Object.defineProperty(exports, "parseParamNameSourceKeys", { enumerable: true, get: function () { return v2_work_param_source_keys_util_1.parseParamNameSourceKeys; } });
@@ -291,4 +292,14 @@ function resolveLaborAnyOfCoefficient(source, paramCode, anyOf, paramName = null
     const actual = readSourceField(source, paramCode, paramName);
     const matches = anyOf.valueCodes.some((code, index) => laborValueMatches(actual, code, anyOf.valueLabels[index] ?? null));
     return matches ? anyOf.coeffOn : anyOf.coeffOff;
+}
+/** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
+function resolveByValueLaborParamCoefficients(source, rows) {
+    const paramCoefficients = {};
+    for (const row of rows) {
+        if (resolveLaborCoefficient(source, row.paramCode, row.valueCode, row.valueLabel, row.paramName ?? null)) {
+            paramCoefficients[row.paramCode] = row.coefficient;
+        }
+    }
+    return paramCoefficients;
 }

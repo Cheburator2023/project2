@@ -18,7 +18,7 @@ export type WorkFormulaLaborParamRef = {
     paramCode: string;
     paramName?: string | null;
 };
-/** Сопоставление токена формулы с параметром из блока трудоёмкости (код или подпись). */
+/** Сопоставление токена формулы с параметром из блока трудоёмкости (код, подпись, sourceKeys). */
 export declare function workFormulaLaborParamMatches(token: {
     paramCode: string;
     paramName?: string | null;

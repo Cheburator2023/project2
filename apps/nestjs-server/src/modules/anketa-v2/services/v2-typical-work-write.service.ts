@@ -38,10 +38,13 @@ import {
 	previewTypicalWorkCalculation,
 	resolveActiveNormOnDate,
 	resolveLaborAnyOfCoefficient,
+	resolveByValueLaborParamCoefficients,
 	termsToTokenFormula,
 	tokensToText,
 	validateCoefficientValue,
 	validateFormulaAgainstParams,
+	validateFormulaAgainstLaborParams,
+	laborParamRefsFromPatchGroups,
 	validateNormInputs,
 	validateRoundingInput,
 	validateTermsFormula,
@@ -58,7 +61,6 @@ import { V2TypicalWorkVersionConfigEntity } from "../entities/v2-typical-work-ve
 import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
 import {
 	normalizeArchComponentType,
-	slugParamCode,
 } from "../utils/v2-typical-work-catalog.util";
 import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
 import { V2TypicalWorkService } from "./v2-typical-work.service";
@@ -458,18 +460,48 @@ export class V2TypicalWorkWriteService {
 		}
 
 		if (dto.formula) {
-			let allowed = dto.laborCoefficients
-				? collectAllowedParamCodes(dto.laborCoefficients)
-				: new Set<string>();
-			if (!dto.laborCoefficients) {
-				const existingLabor = await this.laborRepository.find({
+			if (dto.laborParams?.length) {
+				errors.push(
+					...validateFormulaAgainstLaborParams(
+						dto.formula.tokens,
+						laborParamRefsFromPatchGroups(dto.laborParams),
+					),
+				);
+			} else if (dto.laborCoefficients) {
+				errors.push(
+					...validateFormulaAgainstParams(
+						dto.formula.tokens,
+						collectAllowedParamCodes(dto.laborCoefficients),
+					),
+				);
+			} else {
+				const existingLaborParams = await this.laborParamRepository.find({
 					where: { workId, streamExecutor: stream },
 				});
-				allowed = collectAllowedParamCodes(
-					existingLabor.map((row) => ({ paramCode: row.paramCode })),
-				);
+				if (existingLaborParams.length > 0) {
+					errors.push(
+						...validateFormulaAgainstLaborParams(
+							dto.formula.tokens,
+							existingLaborParams.map((row) => ({
+								paramCode: row.paramCode,
+								paramName: row.paramName,
+							})),
+						),
+					);
+				} else {
+					const existingLabor = await this.laborRepository.find({
+						where: { workId, streamExecutor: stream },
+					});
+					errors.push(
+						...validateFormulaAgainstParams(
+							dto.formula.tokens,
+							collectAllowedParamCodes(
+								existingLabor.map((row) => ({ paramCode: row.paramCode })),
+							),
+						),
+					);
+				}
 			}
-			errors.push(...validateFormulaAgainstParams(dto.formula.tokens, allowed));
 		}
 
 		if (errors.length) {
@@ -783,23 +815,21 @@ export class V2TypicalWorkWriteService {
 				);
 				continue;
 			}
-			for (const row of group.coefficients) {
-				if (!isWorkCoefficientValueAvailable(row, coefficientValueCatalog, atDate)) {
-					continue;
-				}
-				const answer = answerSource[group.paramCode];
-				if (answer && row.valueCode === answer) {
-					paramCoefficients[group.paramCode] = row.coefficient;
-				} else if (
-					answer &&
-					row.valueLabel &&
-					slugParamCode(row.valueLabel) === answer
-				) {
-					paramCoefficients[group.paramCode] = row.coefficient;
-				} else if (!answer && row.coefficient != null) {
-					paramCoefficients[group.paramCode] ??= row.coefficient;
-				}
-			}
+			const eligibleRows = group.coefficients
+				.filter((row) =>
+					isWorkCoefficientValueAvailable(row, coefficientValueCatalog, atDate),
+				)
+				.map((row) => ({
+					paramCode: group.paramCode,
+					paramName: group.paramName,
+					valueCode: row.valueCode ?? null,
+					valueLabel: row.valueLabel ?? null,
+					coefficient: row.coefficient,
+				}));
+			Object.assign(
+				paramCoefficients,
+				resolveByValueLaborParamCoefficients(answerSource, eligibleRows),
+			);
 		}
 
 		const terms = card.formulaTerms ?? normalizeStoredFormula(null);

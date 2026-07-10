@@ -272,3 +272,13 @@ export function resolveLaborAnyOfCoefficient(source, paramCode, anyOf, paramName
     const matches = anyOf.valueCodes.some((code, index) => laborValueMatches(actual, code, anyOf.valueLabels[index] ?? null));
     return matches ? anyOf.coeffOn : anyOf.coeffOff;
 }
+/** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
+export function resolveByValueLaborParamCoefficients(source, rows) {
+    const paramCoefficients = {};
+    for (const row of rows) {
+        if (resolveLaborCoefficient(source, row.paramCode, row.valueCode, row.valueLabel, row.paramName ?? null)) {
+            paramCoefficients[row.paramCode] = row.coefficient;
+        }
+    }
+    return paramCoefficients;
+}

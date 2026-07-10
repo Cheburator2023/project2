@@ -3,6 +3,7 @@ import {
 	catalogValueMatchesTriggerRule,
 	isSourceTypeTriggerParam,
 	resolveLaborAnyOfCoefficient,
+	resolveByValueLaborParamCoefficients,
 	resolveStreamFromSourceType,
 	resolveStreamsFromSourceSystems,
 	resolveTriggerStatusCatalogParam,
@@ -209,6 +210,30 @@ describe("v2-works-catalog-match.util", () => {
 				"Чекбокс @ field_checkbox",
 			),
 		).toBe(0.5);
+	});
+
+	it("resolves by-value labor coefficients from schema dictionary answers", () => {
+		expect(
+			resolveByValueLaborParamCoefficients(
+				{ field_dict: "Да" },
+				[
+					{
+						paramCode: "field_dict",
+						paramName: "Поле справочника @ field_dict",
+						valueCode: "Да",
+						valueLabel: "Да",
+						coefficient: 20,
+					},
+					{
+						paramCode: "field_dict",
+						paramName: "Поле справочника @ field_dict",
+						valueCode: "Нет",
+						valueLabel: "Нет",
+						coefficient: 10,
+					},
+				],
+			),
+		).toEqual({ field_dict: 20 });
 	});
 
 	it("matches boolean checkbox trigger by label and code", () => {
