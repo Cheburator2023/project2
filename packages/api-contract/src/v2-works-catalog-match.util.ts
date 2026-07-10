@@ -313,18 +313,43 @@ function scalarRuleValueMatches(
 	return matches;
 }
 
+/** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */
+export function laborValueMatches(
+	actual: unknown,
+	valueCode: string | null | undefined,
+	valueLabel: string | null | undefined,
+): boolean {
+	if (valueLabel != null && String(valueLabel).trim() !== "") {
+		if (String(actual) === valueLabel) return true;
+		if (typeof actual === "boolean") {
+			const norm = valueLabel.trim().toLowerCase();
+			if (norm === "да" && actual === true) return true;
+			if (norm === "нет" && actual === false) return true;
+			if (norm === "true" && actual === true) return true;
+			if (norm === "false" && actual === false) return true;
+		}
+	}
+	if (valueCode != null && String(valueCode).trim() !== "") {
+		if (String(actual) === valueCode) return true;
+		if (typeof actual === "boolean") {
+			const norm = valueCode.trim().toLowerCase();
+			if (norm === "true" && actual === true) return true;
+			if (norm === "false" && actual === false) return true;
+			if (norm === "да" && actual === true) return true;
+			if (norm === "нет" && actual === false) return true;
+		}
+	}
+	return false;
+}
+
 function compareRuleValuesSet(
 	actual: unknown,
 	expectedCodes: string[],
 	expectedLabels: string[],
 	operator: string,
 ): boolean {
-	const actualStr = String(actual ?? "");
-	const matches = expectedCodes.some(
-		(code, index) =>
-			actualStr === code ||
-			actualStr === (expectedLabels[index] ?? "") ||
-			actualStr === String(expectedLabels[index] ?? ""),
+	const matches = expectedCodes.some((code, index) =>
+		laborValueMatches(actual, code, expectedLabels[index] ?? null),
 	);
 	return operator === "not_in" ? !matches : matches;
 }
@@ -381,16 +406,7 @@ export function resolveLaborCoefficient(
 	paramName: string | null = null,
 ): boolean {
 	const actual = readSourceField(source, paramCode, paramName);
-	if (valueLabel != null) {
-		if (String(actual) === valueLabel) return true;
-		if (typeof actual === "boolean") {
-			const norm = valueLabel.trim().toLowerCase();
-			if (norm === "да" && actual === true) return true;
-			if (norm === "нет" && actual === false) return true;
-		}
-	}
-	if (valueCode != null && String(actual) === valueCode) return true;
-	return false;
+	return laborValueMatches(actual, valueCode, valueLabel);
 }
 
 export function resolveLaborAnyOfCoefficient(
@@ -405,12 +421,8 @@ export function resolveLaborAnyOfCoefficient(
 	paramName: string | null = null,
 ): number {
 	const actual = readSourceField(source, paramCode, paramName);
-	const actualStr = String(actual ?? "");
-	const matches = anyOf.valueCodes.some(
-		(code, index) =>
-			actualStr === code ||
-			actualStr === (anyOf.valueLabels[index] ?? "") ||
-			actualStr === String(anyOf.valueLabels[index] ?? ""),
+	const matches = anyOf.valueCodes.some((code, index) =>
+		laborValueMatches(actual, code, anyOf.valueLabels[index] ?? null),
 	);
 	return matches ? anyOf.coeffOn : anyOf.coeffOff;
 }

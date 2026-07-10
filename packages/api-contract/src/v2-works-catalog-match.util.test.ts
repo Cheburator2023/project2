@@ -186,6 +186,31 @@ describe("v2-works-catalog-match.util", () => {
 		).toBe(0.5);
 	});
 
+	it("resolves labor any-of coefficient for boolean checkbox", () => {
+		const anyOf = {
+			valueCodes: ["true"],
+			valueLabels: ["Да"],
+			coeffOn: 1.5,
+			coeffOff: 0.5,
+		};
+		expect(
+			resolveLaborAnyOfCoefficient(
+				{ field_checkbox: true },
+				"field_checkbox",
+				anyOf,
+				"Чекбокс @ field_checkbox",
+			),
+		).toBe(1.5);
+		expect(
+			resolveLaborAnyOfCoefficient(
+				{ field_checkbox: false },
+				"field_checkbox",
+				anyOf,
+				"Чекбокс @ field_checkbox",
+			),
+		).toBe(0.5);
+	});
+
 	it("resolves CSV trigger aliases to catalog params", () => {
 		const catalog = [
 			{

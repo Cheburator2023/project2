@@ -243,6 +243,7 @@ export class V2TypicalWorkRuntimeService {
 						where: {
 							workId: In(workIds),
 							templateVersionId: params.templateVersionId,
+							streamExecutor: stream,
 						},
 					})
 				: Promise.resolve([]),
@@ -252,20 +253,9 @@ export class V2TypicalWorkRuntimeService {
 		const rulesByWork = groupBy(rules, (r) => r.workId);
 		const laborByWork = groupBy(labor, (l) => l.workId);
 		const laborParamsByWork = groupBy(laborParams, (l) => l.workId);
-		const configByWork = new Map<string, V2TypicalWorkVersionConfigEntity>();
-		for (const config of allConfigs) {
-			const prev = configByWork.get(config.workId);
-			if (!prev) {
-				configByWork.set(config.workId, config);
-				continue;
-			}
-			if (
-				config.streamExecutor === stream &&
-				prev.streamExecutor !== stream
-			) {
-				configByWork.set(config.workId, config);
-			}
-		}
+		const configByWork = new Map(
+			allConfigs.map((config) => [config.workId, config] as const),
+		);
 		const assignmentByWorkId = new Map(
 			assignments.map((a) => [a.workId, a]),
 		);

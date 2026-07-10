@@ -46,6 +46,7 @@ import {
 	isSchemaTextualParam,
 	resolveEffectiveWorkArchComponentType,
 	schemaLaborParamPickerCaption,
+	schemaParamRuleName,
 	schemaWorkParameterEmptyPickerMessage,
 } from "./schemaWorkParameters";
 import {
@@ -362,6 +363,7 @@ export function TypicalWorkEditableCard({
 
 	const addLaborParam = (picked: V2TypicalWorkParameterDto) => {
 		if (!draft) return;
+		const paramName = schemaParamRuleName(picked);
 		const useAnyOf =
 			picked.numeric ||
 			isSchemaTextualParam(picked) ||
@@ -369,7 +371,7 @@ export function TypicalWorkEditableCard({
 		const newGroup = useAnyOf
 			? {
 					paramCode: picked.code,
-					paramName: picked.name,
+					paramName,
 					kind: "any_of" as const,
 					coefficients: [],
 					anyOf: {
@@ -381,13 +383,13 @@ export function TypicalWorkEditableCard({
 				}
 			: {
 					paramCode: picked.code,
-					paramName: picked.name,
+					paramName,
 					kind: "by_value" as const,
 					coefficients: picked.values.map((v) => ({
 						id: `new-${Date.now()}-${v.code}`,
 						streamExecutor: draft.streamExecutor,
 						paramCode: picked.code,
-						paramName: picked.name,
+						paramName,
 						valueCode: v.code,
 						valueLabel: v.label,
 						coefficient: 1,

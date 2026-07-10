@@ -55,6 +55,7 @@ function createService({
 		workId: string;
 		streamExecutor: string;
 		paramCode: string;
+		paramName?: string | null;
 		kind: string;
 		anyOfValueCodes?: string[] | null;
 		anyOfValueLabels?: string[] | null;
@@ -313,6 +314,68 @@ describe("V2TypicalWorkRuntimeService", () => {
 
 		expect(on[0]?.coefficient).toBe(2);
 		expect(off[0]?.coefficient).toBe(1);
+	});
+
+	it("applies boolean checkbox any-of coefficient in runtime calculation", async () => {
+		const service = createService({
+			rules: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "type",
+					paramName: "Тип",
+					operator: "=",
+					valueCode: null,
+					valueLabel: "Внутренний",
+				},
+			],
+			laborParams: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "field_flag",
+					paramName: "Флаг @ field_flag",
+					kind: "any_of",
+					anyOfValueCodes: ["true"],
+					anyOfValueLabels: ["Да"],
+					coeffOn: "1.5",
+					coeffOff: "0.5",
+				},
+			],
+			versionConfigs: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					templateVersionId: "tpl-v1",
+					formula: [
+						{ kind: "norm" },
+						{ kind: "param_anyof", paramCode: "field_flag" },
+					],
+					formulaText: null,
+					roundingMode: "none",
+					roundingStep: null,
+					calculationLogic: null,
+				},
+			],
+		});
+
+		const on = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний", field_flag: true },
+			templateVersionId: "tpl-v1",
+			atDate: "2025-06-01",
+		});
+		const off = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний", field_flag: false },
+			templateVersionId: "tpl-v1",
+			atDate: "2025-06-01",
+		});
+
+		expect(on[0]?.coefficient).toBe(1.5);
+		expect(off[0]?.coefficient).toBe(0.5);
 	});
 
 	it("falls back to global catalog works when template has no own works", async () => {

@@ -205,11 +205,42 @@ function scalarRuleValueMatches(actual, rule) {
         return !matches;
     return matches;
 }
+/** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */
+export function laborValueMatches(actual, valueCode, valueLabel) {
+    if (valueLabel != null && String(valueLabel).trim() !== "") {
+        if (String(actual) === valueLabel)
+            return true;
+        if (typeof actual === "boolean") {
+            const norm = valueLabel.trim().toLowerCase();
+            if (norm === "да" && actual === true)
+                return true;
+            if (norm === "нет" && actual === false)
+                return true;
+            if (norm === "true" && actual === true)
+                return true;
+            if (norm === "false" && actual === false)
+                return true;
+        }
+    }
+    if (valueCode != null && String(valueCode).trim() !== "") {
+        if (String(actual) === valueCode)
+            return true;
+        if (typeof actual === "boolean") {
+            const norm = valueCode.trim().toLowerCase();
+            if (norm === "true" && actual === true)
+                return true;
+            if (norm === "false" && actual === false)
+                return true;
+            if (norm === "да" && actual === true)
+                return true;
+            if (norm === "нет" && actual === false)
+                return true;
+        }
+    }
+    return false;
+}
 function compareRuleValuesSet(actual, expectedCodes, expectedLabels, operator) {
-    const actualStr = String(actual ?? "");
-    const matches = expectedCodes.some((code, index) => actualStr === code ||
-        actualStr === (expectedLabels[index] ?? "") ||
-        actualStr === String(expectedLabels[index] ?? ""));
+    const matches = expectedCodes.some((code, index) => laborValueMatches(actual, code, expectedLabels[index] ?? null));
     return operator === "not_in" ? !matches : matches;
 }
 /** Все условия работы (логическое И) против контекста строки/объекта анкеты. */
@@ -245,26 +276,10 @@ export function typicalWorkRulesMatchSource(rules, source) {
 }
 export function resolveLaborCoefficient(source, paramCode, valueCode, valueLabel, paramName = null) {
     const actual = readSourceField(source, paramCode, paramName);
-    if (valueLabel != null) {
-        if (String(actual) === valueLabel)
-            return true;
-        if (typeof actual === "boolean") {
-            const norm = valueLabel.trim().toLowerCase();
-            if (norm === "да" && actual === true)
-                return true;
-            if (norm === "нет" && actual === false)
-                return true;
-        }
-    }
-    if (valueCode != null && String(actual) === valueCode)
-        return true;
-    return false;
+    return laborValueMatches(actual, valueCode, valueLabel);
 }
 export function resolveLaborAnyOfCoefficient(source, paramCode, anyOf, paramName = null) {
     const actual = readSourceField(source, paramCode, paramName);
-    const actualStr = String(actual ?? "");
-    const matches = anyOf.valueCodes.some((code, index) => actualStr === code ||
-        actualStr === (anyOf.valueLabels[index] ?? "") ||
-        actualStr === String(anyOf.valueLabels[index] ?? ""));
+    const matches = anyOf.valueCodes.some((code, index) => laborValueMatches(actual, code, anyOf.valueLabels[index] ?? null));
     return matches ? anyOf.coeffOn : anyOf.coeffOff;
 }

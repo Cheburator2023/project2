@@ -135,6 +135,16 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
             coeffOff: 0.5,
         })).toBe(0.5);
     });
+    (0, vitest_1.it)("resolves labor any-of coefficient for boolean checkbox", () => {
+        const anyOf = {
+            valueCodes: ["true"],
+            valueLabels: ["Да"],
+            coeffOn: 1.5,
+            coeffOff: 0.5,
+        };
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveLaborAnyOfCoefficient)({ field_checkbox: true }, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(1.5);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveLaborAnyOfCoefficient)({ field_checkbox: false }, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(0.5);
+    });
     (0, vitest_1.it)("resolves CSV trigger aliases to catalog params", () => {
         const catalog = [
             {

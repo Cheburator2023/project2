@@ -71,6 +71,8 @@ export declare function catalogValueMatchesTriggerRule(catalogValue: {
     valueCode: string | null;
     valueLabel: string | null;
 }): boolean;
+/** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */
+export declare function laborValueMatches(actual: unknown, valueCode: string | null | undefined, valueLabel: string | null | undefined): boolean;
 /** Все условия работы (логическое И) против контекста строки/объекта анкеты. */
 export declare function typicalWorkRulesMatchSource(rules: TypicalWorkRuleLike[], source: Record<string, unknown>): boolean;
 export declare function resolveLaborCoefficient(source: Record<string, unknown>, paramCode: string, valueCode: string | null, valueLabel: string | null, paramName?: string | null): boolean;
