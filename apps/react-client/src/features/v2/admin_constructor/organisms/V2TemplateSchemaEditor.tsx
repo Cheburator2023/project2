@@ -26,6 +26,7 @@ import type {
 import {
 	buildEmptyV2AnketaTemplateSnapshot,
 	resolveV2AnketaCanvasUiKind,
+	syncTriggerGatedGroupActivationFromTypicalWorks,
 } from "@smart-anketa/api-contract";
 import { evaluateRuleLive } from "../schemaEditor/panels/logicPanel/helpers";
 import { nanoid } from "nanoid";
@@ -572,6 +573,17 @@ export const V2TemplateSchemaEditor = ({
 		() => (calculationResult ? mapCalculationResult(calculationResult) : null),
 		[calculationResult],
 	);
+
+	useEffect(() => {
+		if (!mappedCalculation?.liveFormData) return;
+		setFormData((prev) =>
+			syncTriggerGatedGroupActivationFromTypicalWorks(
+				prev,
+				uiSchema,
+				mappedCalculation.liveFormData,
+			),
+		);
+	}, [mappedCalculation?.liveFormData, uiSchema]);
 
 	const logicPreviewPack = useMemo(
 		() =>

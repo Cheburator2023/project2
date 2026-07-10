@@ -1,6 +1,7 @@
 import type { V2JsonLogicValue, V2LogicGraphDto, V2LogicRuleDto } from "./v2-template.types";
 import {
 	resolveSourceTypicalWorksOutputPath,
+	V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
 	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
 } from "./v2-typical-work-output-paths.util";
 
@@ -74,8 +75,7 @@ export type PatchV2TypicalWorksLogicOptions = {
 /** Канонические пути v5: источники в detailInfo, вывод — в stream-блоки. */
 export const V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
 export { V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH };
-export const V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH =
-	"streamModelControl.field_Khn6-HAW";
+export { V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH };
 
 export function buildSourceTypicalWorksCatalogRule(
 	outputArrayPath: string = V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,

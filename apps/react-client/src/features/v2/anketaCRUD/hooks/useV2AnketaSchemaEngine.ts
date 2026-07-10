@@ -26,6 +26,7 @@ import {
 	collectGeneratedTypicalWorkArrayPaths,
 	ensureGroupActivationDefaults,
 	patchV2AnketaCalculationLogicRules,
+	syncTriggerGatedGroupActivationFromTypicalWorks,
 	type V2LogicGraphDto,
 } from "@smart-anketa/api-contract";
 import { IS_DEV } from "@react-client/common/constants/dev";
@@ -144,6 +145,17 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		() => (calculationResult ? mapCalculationResult(calculationResult) : null),
 		[calculationResult],
 	);
+
+	useEffect(() => {
+		if (!mappedCalculation?.liveFormData) return;
+		setFormData((prev) =>
+			syncTriggerGatedGroupActivationFromTypicalWorks(
+				prev,
+				uiSchema,
+				mappedCalculation.liveFormData,
+			),
+		);
+	}, [mappedCalculation?.liveFormData, uiSchema]);
 
 	const logicPreviewPack = useMemo(
 		() =>

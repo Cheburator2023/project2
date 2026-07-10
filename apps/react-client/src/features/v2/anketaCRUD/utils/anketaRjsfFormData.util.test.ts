@@ -43,4 +43,36 @@ describe("anketaRjsfFormData.util", () => {
 		]);
 		expect((next.generalInfo as { calcName: string }).calcName).toBe("Новое имя");
 	});
+
+	it("does not persist generated typical work arrays from RJSF onChange", () => {
+		const uiSchema = {
+			streamDataSources: {
+				field_typical: { "ui:options": { archComponent: "typicalWork" } },
+			},
+		};
+		const storage = {
+			streamDataSources: {
+				kitchen: "кухня",
+			},
+		};
+		const rjsfData = {
+			streamDataSources: {
+				kitchen: "другое",
+				field_typical: [{ name: "Работа Кирилла" }],
+			},
+		};
+
+		const next = applyRjsfFormChangeToAnketaFormData(
+			storage,
+			rjsfData,
+			uiSchema,
+		);
+
+		expect(
+			(next.streamDataSources as { kitchen: string }).kitchen,
+		).toBe("другое");
+		expect(
+			(next.streamDataSources as { field_typical?: unknown }).field_typical,
+		).toBeUndefined();
+	});
 });

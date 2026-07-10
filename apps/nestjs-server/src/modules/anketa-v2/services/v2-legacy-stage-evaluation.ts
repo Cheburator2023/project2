@@ -515,8 +515,8 @@ function resolveSourceTypicalTasksArray(
 	sourceTypicalWorksPath?: string | null,
 ): unknown[] {
 	if (sourceTypicalWorksPath) {
-		const resolved = readArray(readByDotPath(data, sourceTypicalWorksPath));
-		if (resolved.length > 0) return resolved;
+		const resolved = readByDotPath(data, sourceTypicalWorksPath);
+		if (Array.isArray(resolved)) return resolved;
 	}
 
 	const canonical = readArray(

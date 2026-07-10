@@ -1,5 +1,5 @@
 import type { V2LogicGraphDto, V2LogicRuleDto } from "./v2-template.types";
-import { V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH } from "./v2-typical-work-output-paths.util";
+import { V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH, V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH } from "./v2-typical-work-output-paths.util";
 /** Заменяет dot-путь в JsonLogic (`{"var": "a.b.c"}` и вложенные узлы). */
 export declare function replaceDotPathInJsonLogic(value: unknown, oldPath: string, newPath: string): unknown;
 export type PatchV2TypicalWorksLogicOptions = {
@@ -9,7 +9,7 @@ export type PatchV2TypicalWorksLogicOptions = {
 /** Канонические пути v5: источники в detailInfo, вывод — в stream-блоки. */
 export declare const V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
 export { V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH };
-export declare const V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_Khn6-HAW";
+export { V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH };
 export declare function buildSourceTypicalWorksCatalogRule(outputArrayPath?: string): V2LogicRuleDto;
 export declare function buildControlTypicalWorksCatalogRule(): V2LogicRuleDto;
 /** Схема содержит блок типовых работ (archComponent: typicalWork) — достаточно для каталога. */

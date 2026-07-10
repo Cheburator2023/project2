@@ -1,7 +1,18 @@
 export declare const V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = "streamDataSources.sourceTypicalTasks";
+/** Канонический вывод типовых работ «Контроль моделей». */
+export declare const V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_Khn6-HAW";
+/** Legacy/fan-out пути, куда раньше дублировались сгенерированные типовые работы. */
+export declare const LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS: readonly ["streamDataSources.sourceTypicalTasks", "streamModelControl.field_Khn6-HAW", "detailInfo.detailTypicalTasks", "detailInfo.sourceTypicalTasks", "generalInfo.modelService.controlTypicalTasks"];
 /** Dot-пути read-only массивов «Типовые работы» из uiSchema (archComponent: typicalWork). */
 export declare function collectGeneratedTypicalWorkArrayPaths(uiSchema: unknown, prefix?: string): string[];
 /** Путь вывода типовых работ «Система-источник» по схеме (канонический или пользовательский). */
 export declare function resolveSourceTypicalWorksOutputPath(jsonSchema?: unknown, uiSchema?: unknown): string | null;
 /** Есть ли в jsonSchema узел по dot-пути (только `properties`, без $ref). */
 export declare function jsonSchemaHasResolvablePath(jsonSchema: unknown, dotPath: string): boolean;
+/** Все известные пути read-only массивов типовых работ (uiSchema + legacy). */
+export declare function listAllGeneratedTypicalWorkArrayPaths(uiSchema?: unknown): string[];
+/**
+ * Сбрасывает устаревшие fan-out массивы типовых работ, оставляя только
+ * актуальный `outputArrayPath` (после replace/clear в калькуляторе).
+ */
+export declare function clearStaleGeneratedTypicalWorkPaths(data: Record<string, unknown>, outputArrayPath: string, uiSchema?: unknown): Record<string, unknown>;

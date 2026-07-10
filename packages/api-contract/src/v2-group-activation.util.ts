@@ -1,4 +1,5 @@
 import { readV2AnketaSectionUiOptions } from "./v2-anketa-section-ui.util";
+import { collectGeneratedTypicalWorkArrayPaths } from "./v2-typical-work-output-paths.util";
 
 export const V2_GROUP_ACTIVATION_FORM_KEY = "groupActivation";
 
@@ -112,6 +113,86 @@ export function resolveGroupIsActive(
 	const map = readGroupActivationMap(formData);
 	if (pathKey in map) return map[pathKey] === true;
 	return opts.groupActive !== false;
+}
+
+function readByDotPath(data: Record<string, unknown>, dotPath: string): unknown {
+	const segments = dotPath.split(".").filter(Boolean);
+	let current: unknown = data;
+	for (const segment of segments) {
+		const obj = readRecord(current);
+		if (!obj) return undefined;
+		current = obj[segment];
+	}
+	return current;
+}
+
+function hasGeneratedTypicalWorkRows(
+	liveFormData: Record<string, unknown> | undefined | null,
+	path: string,
+): boolean {
+	if (!liveFormData) return false;
+	const value = readByDotPath(liveFormData, path);
+	return Array.isArray(value) && value.length > 0;
+}
+
+/** Ближайший предок с `groupActivatable` и явным `groupActive: false`. */
+export function findTriggerGatedGroupActivatableAncestor(
+	uiSchema: unknown,
+	typicalWorkPath: string,
+): string | null {
+	const segments = typicalWorkPath.split(".").filter(Boolean);
+	for (let len = segments.length - 1; len >= 1; len--) {
+		const pathKey = segments.slice(0, len).join(".");
+		const opts = readV2AnketaSectionUiOptions(
+			readUiNodeAtPath(uiSchema, pathKey),
+		);
+		if (opts.groupActivatable === true && opts.groupActive === false) {
+			return pathKey;
+		}
+	}
+	return null;
+}
+
+/**
+ * Секции с `groupActivatable` + `groupActive: false`, внутри которых есть
+ * блок типовых работ — включаются/выключаются по факту генерации строк.
+ */
+export function syncTriggerGatedGroupActivationFromTypicalWorks(
+	formData: Record<string, unknown>,
+	uiSchema: unknown,
+	liveFormData?: Record<string, unknown> | null,
+): Record<string, unknown> {
+	const typicalWorkPaths = collectGeneratedTypicalWorkArrayPaths(uiSchema);
+	if (typicalWorkPaths.length === 0) return formData;
+
+	const groupToTypicalPaths = new Map<string, string[]>();
+	for (const typicalPath of typicalWorkPaths) {
+		const groupPath = findTriggerGatedGroupActivatableAncestor(
+			uiSchema,
+			typicalPath,
+		);
+		if (!groupPath) continue;
+		const list = groupToTypicalPaths.get(groupPath) ?? [];
+		list.push(typicalPath);
+		groupToTypicalPaths.set(groupPath, list);
+	}
+	if (groupToTypicalPaths.size === 0) return formData;
+
+	const prev = readGroupActivationMap(formData);
+	let changed = false;
+	const next = { ...prev };
+
+	for (const [groupPath, paths] of groupToTypicalPaths) {
+		const shouldBeActive = paths.some((path) =>
+			hasGeneratedTypicalWorkRows(liveFormData, path),
+		);
+		if (next[groupPath] !== shouldBeActive) {
+			next[groupPath] = shouldBeActive;
+			changed = true;
+		}
+	}
+
+	return changed ? writeGroupActivationMap(formData, next) : formData;
 }
 
 /** Участвует ли путь в расчёте (не под неактивной группой). */

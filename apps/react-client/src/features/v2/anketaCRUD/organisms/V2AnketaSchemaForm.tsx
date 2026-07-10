@@ -362,6 +362,7 @@ export function V2AnketaSchemaForm({
 					const next = applyRjsfFormChangeToAnketaFormData(
 						engine.formData,
 						rjsfNext,
+						engine.previewUiSchema as Record<string, unknown>,
 					);
 					const touchedId = resolveTouchedMainSection(evt);
 					const withWorkflowTouch =

@@ -8,5 +8,12 @@ export declare function collectActivatableGroupDefaults(uiSchema: unknown): Reco
 export declare function ensureGroupActivationDefaults(formData: Record<string, unknown>, uiSchema: unknown): Record<string, unknown>;
 /** Активна ли группа в форме (с учётом uiSchema и `groupActivation`). */
 export declare function resolveGroupIsActive(pathKey: string, uiSchema: unknown, formData: Record<string, unknown> | undefined | null): boolean;
+/** Ближайший предок с `groupActivatable` и явным `groupActive: false`. */
+export declare function findTriggerGatedGroupActivatableAncestor(uiSchema: unknown, typicalWorkPath: string): string | null;
+/**
+ * Секции с `groupActivatable` + `groupActive: false`, внутри которых есть
+ * блок типовых работ — включаются/выключаются по факту генерации строк.
+ */
+export declare function syncTriggerGatedGroupActivationFromTypicalWorks(formData: Record<string, unknown>, uiSchema: unknown, liveFormData?: Record<string, unknown> | null): Record<string, unknown>;
 /** Участвует ли путь в расчёте (не под неактивной группой). */
 export declare function isCalculationPathActive(formData: Record<string, unknown>, pointer: string): boolean;
