@@ -13,6 +13,9 @@ export function useSchemaEditorAnketaEngine(): V2AnketaSchemaEngine {
 		formData,
 		liveFormData,
 		setFormData,
+		logic,
+		calculationItems,
+		taskTriggerItems,
 		dictionaryEnumsLoading,
 		calculationLoading,
 		calculationError,
@@ -26,8 +29,13 @@ export function useSchemaEditorAnketaEngine(): V2AnketaSchemaEngine {
 	);
 
 	const displayFormData = useMemo(
-		() => mergeAnketaDisplayFormData(previewFormData, liveFormData),
-		[previewFormData, liveFormData],
+		() =>
+			mergeAnketaDisplayFormData(
+				previewFormData,
+				liveFormData,
+				previewUiSchema as Record<string, unknown> | undefined,
+			),
+		[previewFormData, liveFormData, previewUiSchema],
 	);
 
 	return useMemo(
@@ -38,6 +46,11 @@ export function useSchemaEditorAnketaEngine(): V2AnketaSchemaEngine {
 			dictionaryEnumsLoading,
 			calculationLoading,
 			calculationError,
+			calculationResult: null,
+			calculationItems,
+			taskTriggerItems,
+			calculationLiveFormData: liveFormData,
+			logicRules: logic.rules,
 			logicValidationIssueCount,
 			logicExtraErrors,
 			previewSchema,
@@ -54,6 +67,10 @@ export function useSchemaEditorAnketaEngine(): V2AnketaSchemaEngine {
 			displayFormData,
 			previewFormData,
 			setFormData,
+			logic.rules,
+			calculationItems,
+			taskTriggerItems,
+			liveFormData,
 			dictionaryEnumsLoading,
 			calculationLoading,
 			calculationError,

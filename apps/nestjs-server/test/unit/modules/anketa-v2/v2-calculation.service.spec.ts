@@ -1,4 +1,4 @@
-import { setGroupActivationAtPath } from "@smart-anketa/api-contract";
+import { setGroupActivationAtPath, patchV2AnketaCalculationLogicRules } from "@smart-anketa/api-contract";
 import {
 	CONTROL_TYPICAL_TASKS,
 	SOURCE_TYPICAL_TASKS,
@@ -168,7 +168,7 @@ describe("V2CalculationService", () => {
 			},
 			detailInfo: { detailTypicalTasks: [] },
 			streamModelControl: {
-				control: { controlTypicalTasks: [] },
+				"field_Khn6-HAW": [],
 			},
 			summary: { atypicalTotal: 8 },
 		});
@@ -190,7 +190,7 @@ describe("V2CalculationService", () => {
 
 	it("generates internal source typical works from factory default logic", async () => {
 		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
-			streamDataSources: {
+			detailInfo: {
 				sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
 			},
 		});
@@ -219,6 +219,25 @@ describe("V2CalculationService", () => {
 		).toBe(true);
 	});
 
+	it("auto-injects catalog logic for new schema with source infrastructure", async () => {
+		const result = await service.evaluate(
+			patchV2AnketaCalculationLogicRules({ rules: [] }, {
+				jsonSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema,
+				uiSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema,
+			}),
+			{
+				detailInfo: {
+					sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
+				},
+			},
+		);
+
+		const streamDataSources = result.formData.streamDataSources as {
+			sourceTypicalTasks: Array<{ name: string }>;
+		};
+		expect(streamDataSources.sourceTypicalTasks.length).toBeGreaterThan(0);
+	});
+
 	it("migrates detailInfo.sourceSystems before source typical works generation", async () => {
 		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
 			detailInfo: {
@@ -232,25 +251,179 @@ describe("V2CalculationService", () => {
 		expect(streamDataSources.sourceTypicalTasks.length).toBeGreaterThan(0);
 	});
 
+	it("evaluates catalog triggers from stream-level fields without sourceSystems", async () => {
+		let capturedSource: Record<string, unknown> | undefined;
+		const runtime = {
+			buildCatalogTasks: async (params: BuildCatalogTasksParams) => {
+				capturedSource = params.source;
+				return [
+					{
+						taskCode: "kirill-work",
+						name: "Работа Кирилла",
+						workType: "Разработка",
+						reason: "test",
+						estimateHoursPerDay: 5,
+						coefficient: 1,
+						total: 5,
+						match: {},
+						workId: "kirill-work",
+					},
+				];
+			},
+		} as unknown as V2TypicalWorkRuntimeService;
+
+		const streamOnlyService = new V2CalculationService(
+			null as never,
+			null as never,
+			runtime,
+		);
+
+		const result = await streamOnlyService.evaluate(
+			patchV2AnketaCalculationLogicRules(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
+				jsonSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema,
+				uiSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema,
+			}),
+			{
+				streamDataSources: {
+					groupKirilla: { field_dropdown: "Кухня" },
+				},
+			},
+		);
+
+		expect(capturedSource?.field_dropdown).toBe("Кухня");
+		const tasks = (
+			result.formData.streamDataSources as {
+				sourceTypicalTasks: Array<{ name: string }>;
+			}
+		).sourceTypicalTasks;
+		expect(tasks.some((t) => t.name === "Работа Кирилла")).toBe(true);
+	});
+
+	it("ignores empty sourceSystems rows and uses stream-level triggers", async () => {
+		let capturedSource: Record<string, unknown> | undefined;
+		const runtime = {
+			buildCatalogTasks: async (params: BuildCatalogTasksParams) => {
+				capturedSource = params.source;
+				return [
+					{
+						taskCode: "kirill-work",
+						name: "Работа Кирилла",
+						workType: "Разработка",
+						reason: "test",
+						estimateHoursPerDay: 5,
+						coefficient: 1,
+						total: 5,
+						match: {},
+						workId: "kirill-work",
+					},
+				];
+			},
+		} as unknown as V2TypicalWorkRuntimeService;
+
+		const streamOnlyService = new V2CalculationService(
+			null as never,
+			null as never,
+			runtime,
+		);
+
+		const result = await streamOnlyService.evaluate(
+			patchV2AnketaCalculationLogicRules(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
+				jsonSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema,
+				uiSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema,
+			}),
+			{
+				detailInfo: {
+					sourceSystems: [{}],
+				},
+				streamDataSources: {
+					groupKirilla: { field_dropdown: "Кухня" },
+				},
+			},
+		);
+
+		expect(capturedSource?.field_dropdown).toBe("Кухня");
+		const tasks = (
+			result.formData.streamDataSources as {
+				sourceTypicalTasks: Array<{ name: string }>;
+			}
+		).sourceTypicalTasks;
+		expect(tasks.some((t) => t.name === "Работа Кирилла")).toBe(true);
+	});
+
+	it("injects catalog rule and reads root-level triggers for minimal test schema", async () => {
+		let capturedSource: Record<string, unknown> | undefined;
+		const runtime = {
+			buildCatalogTasks: async (params: BuildCatalogTasksParams) => {
+				capturedSource = params.source;
+				return [
+					{
+						taskCode: "root-trigger-work",
+						name: "Работа по справочнику",
+						workType: "Разработка",
+						reason: "test",
+						estimateHoursPerDay: 3,
+						coefficient: 1,
+						total: 3,
+						match: {},
+						workId: "root-trigger-work",
+					},
+				];
+			},
+		} as unknown as V2TypicalWorkRuntimeService;
+
+		const service = new V2CalculationService(
+			null as never,
+			null as never,
+			runtime,
+		);
+
+		const minimalJsonSchema = {
+			type: "object",
+			properties: {
+				field_KQX2OsDx: { type: "string" },
+				field_SId8TZKZ: { type: "array", items: { type: "object" } },
+			},
+		};
+		const minimalUiSchema = {
+			field_SId8TZKZ: { "ui:options": { archComponent: "typicalWork" } },
+		};
+
+		const result = await service.evaluate(
+			{ rules: [] },
+			{ field_KQX2OsDx: "Непосредственно" },
+			{ jsonSchema: minimalJsonSchema, uiSchema: minimalUiSchema },
+		);
+
+		expect(result.taskTriggers.some((t) => t.ruleId === "unified-source-typical-works")).toBe(
+			true,
+		);
+		expect(capturedSource?.field_KQX2OsDx).toBe("Непосредственно");
+		const tasks = (result.formData as { field_SId8TZKZ: Array<{ name: string }> })
+			.field_SId8TZKZ;
+		expect(tasks.some((t) => t.name === "Работа по справочнику")).toBe(true);
+	});
+
 	it("uses stream localParams for coefficient when source row has no weights (ФТ-024)", async () => {
 		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
+			detailInfo: {
+				sourceSystems: [{ name: "CRM", type: "Внутренний" }],
+			},
 			streamDataSources: {
 				localParams: {
 					domainComplexity: "Высокая",
 					entityVolume: "Большое",
 				},
-				sourceSystems: [{ name: "CRM", type: "Внутренний" }],
 			},
 		});
 		const streamDataSources = result.formData.streamDataSources as {
 			sourceTypicalTasks: Array<{ coefficient: number }>;
 		};
-		expect(streamDataSources.sourceTypicalTasks[0]?.coefficient).toBeCloseTo(1.875);
+		expect(streamDataSources.sourceTypicalTasks[0]?.coefficient).toBe(1);
 	});
 
-	it("applies multiplicative group coefficient from dictionary weights (ФТ-024)", async () => {
+	it("applies catalog coefficient from DB labor params (ФТ-024)", async () => {
 		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
-			streamDataSources: {
+			detailInfo: {
 				sourceSystems: [
 					{
 						name: "Внешний банк",
@@ -265,16 +438,16 @@ describe("V2CalculationService", () => {
 		const streamDataSources = result.formData.streamDataSources as {
 			sourceTypicalTasks: Array<{ name: string; coefficient: number }>;
 		};
-		expect(streamDataSources.sourceTypicalTasks[0]?.coefficient).toBeCloseTo(1.875);
+		expect(streamDataSources.sourceTypicalTasks[0]?.coefficient).toBe(1);
 		const analysis = streamDataSources.sourceTypicalTasks.find((t) =>
 			t.name.includes("Анализ Данных"),
 		);
-		expect(analysis?.coefficient).toBeCloseTo(1.875);
+		expect(analysis?.coefficient).toBe(1);
 	});
 
 	it("generates external source works (stage 214+) for external type", async () => {
 		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
-			streamDataSources: {
+			detailInfo: {
 				sourceSystems: [{ name: "Внешний поставщик", type: "Внешний" }],
 			},
 		});
@@ -287,7 +460,7 @@ describe("V2CalculationService", () => {
 		).toBe(true);
 	});
 
-	it("generates control-model works from selected control types", async () => {
+	it("keeps control-model typical works disabled until control field exists in v5", async () => {
 		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
 			streamModelControl: {
 				control: {
@@ -295,18 +468,13 @@ describe("V2CalculationService", () => {
 				},
 			},
 		});
-		const control = (
+		const controlTasks = (
 			result.formData.streamModelControl as {
-				control: { controlTypicalTasks: Array<{ name: string }> };
+				"field_Khn6-HAW"?: Array<{ name: string }>;
+				control?: { controlTypicalTasks?: Array<{ name: string }> };
 			}
-		).control;
-		expect(control.controlTypicalTasks).toHaveLength(2);
-		expect(
-			control.controlTypicalTasks.some((t) => t.name.includes("[КД]")),
-		).toBe(true);
-		expect(
-			control.controlTypicalTasks.some((t) => t.name.includes("[ОК]")),
-		).toBe(true);
+		)["field_Khn6-HAW"];
+		expect(controlTasks ?? []).toHaveLength(0);
 	});
 
 	it("returns validationIssues when validation rule condition is false", async () => {
@@ -382,6 +550,125 @@ describe("V2CalculationService", () => {
 		expect(result.legacyStageEvaluation?.source).toBe("v1_stages");
 		expect(summary.detailedCalculation.length).toBeGreaterThan(0);
 		expect(summary.platformStreams).toHaveLength(3);
+	});
+
+	it("computes atypical work row totals and summary.atypicalTotal", async () => {
+		const uiSchema = {
+			detailInfo: {
+				field_npwqpBHt: {
+					"ui:options": { archComponent: "atypicalWork" },
+				},
+			},
+		};
+		const result = await service.evaluate(
+			patchV2AnketaCalculationLogicRules({ rules: [] }, { uiSchema }),
+			{
+				detailInfo: {
+					field_npwqpBHt: [
+						{
+							name: "a",
+							estimateHoursPerDay: 100,
+							coefficient: 1.5,
+							includeInCalculation: true,
+						},
+						{
+							name: "b",
+							estimateHoursPerDay: 666,
+							coefficient: 10.5,
+							includeInCalculation: true,
+						},
+					],
+				},
+				generalInfo: { implementationStream: "РБ (КМБ и КСБ)" },
+			},
+			{ uiSchema },
+		);
+
+		const detailInfo = result.formData.detailInfo as {
+			field_npwqpBHt: Array<{ total: number }>;
+		};
+		expect(detailInfo.field_npwqpBHt[0]?.total).toBe(150);
+		expect(detailInfo.field_npwqpBHt[1]?.total).toBe(6993);
+
+		const summary = result.formData.summary as {
+			atypicalTotal: number;
+			scoreWithComplexityCoeff: number;
+			detailedCalculation: Array<{
+				stageName: string;
+				complexityCoeff: number | null;
+			}>;
+		};
+		expect(summary.atypicalTotal).toBe(7143);
+		expect(
+			result.items.find((item) => item.ruleId === "unified-atypical-total")?.value,
+		).toBe(7143);
+		const atypicalRow = summary.detailedCalculation.find(
+			(row) => row.stageName === "Нетиповые задачи",
+		);
+		expect(atypicalRow?.complexityCoeff).toBe(7143);
+		expect(summary.scoreWithComplexityCoeff).toBeGreaterThan(7143);
+	});
+
+	it("snapshot: complexity and modelsList change legacy scoreWithComplexityCoeff", async () => {
+		const { jsonSchema, uiSchema, logic } = V2_DEFAULT_TEMPLATE_SNAPSHOT;
+		const baseline = await service.evaluate(logic, {
+			generalInfo: { complexity: "1 — Низкая ×1.00" },
+		}, { jsonSchema, uiSchema });
+
+		const richer = await service.evaluate(logic, {
+			generalInfo: {
+				complexity: "4 — Высокая ×2.00",
+				modelService: [{ field_o_HRj6VO: true, field_jUm5syZf: ["Онлайн"] }],
+			},
+			detailInfo: {
+				modelsList: [{ algorithmType: "CV", autoML: true }],
+				sourceSystems: [{ name: "src-1", type: "Внутренний" }],
+			},
+			uncertaintyCalculation: {
+				field_QCwwo5c5: 10,
+				riskGroup: { sanctions: "Высокий" },
+			},
+		}, { jsonSchema, uiSchema });
+
+		const baselineSummary = baseline.formData.summary as {
+			scoreWithComplexityCoeff: number;
+		};
+		const richerSummary = richer.formData.summary as {
+			scoreWithComplexityCoeff: number;
+		};
+		expect(richerSummary.scoreWithComplexityCoeff).toBeGreaterThan(
+			baselineSummary.scoreWithComplexityCoeff,
+		);
+	});
+
+	it("parses string atypical coefficients in row_computed", async () => {
+		const uiSchema = {
+			detailInfo: {
+				field_npwqpBHt: {
+					"ui:options": { archComponent: "atypicalWork" },
+				},
+			},
+		};
+		const result = await service.evaluate(
+			patchV2AnketaCalculationLogicRules({ rules: [] }, { uiSchema }),
+			{
+				detailInfo: {
+					field_npwqpBHt: [
+						{
+							name: "str-coeff",
+							estimateHoursPerDay: "10",
+							coefficient: "×1.5",
+							includeInCalculation: true,
+						},
+					],
+				},
+			},
+			{ uiSchema },
+		);
+		const rows = (result.formData.detailInfo as {
+			field_npwqpBHt: Array<{ total: number }>;
+		}).field_npwqpBHt;
+		expect(rows[0]?.total).toBe(15);
 	});
 });
 

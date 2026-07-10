@@ -5,10 +5,15 @@ import {
 	type V2QuestionnaireDto,
 } from "@smart-anketa/api-contract";
 
+import { V2_DEFAULT_TEMPLATE_SNAPSHOT } from "../constants/v2-default-template-snapshot";
+
 export async function buildV2QuestionnaireRegistryXlsx(
 	rows: V2QuestionnaireDto[],
 ): Promise<Buffer> {
-	const columns = buildV2QuestionnaireRegistryExportColumns();
+	const columns = buildV2QuestionnaireRegistryExportColumns(
+		V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema as Record<string, unknown>,
+		V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema as Record<string, unknown>,
+	);
 	const workbook = new ExcelJS.Workbook();
 	const worksheet = workbook.addWorksheet("Анкеты v2");
 

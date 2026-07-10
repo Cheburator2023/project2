@@ -1,5 +1,10 @@
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -10,9 +15,12 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import {
 	useKanbanBoardAssignees,
 	useKanbanBoardSettings,
+	useResetKanbanBoardColumnsToDefault,
 	useUpdateKanbanBoardAssignee,
 	useUpdateKanbanBoardSettings,
 } from "@react-client/common/api/queries/kanban-board";
+import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
+import { toast } from "@react-client/common/toasts";
 import { TrackerRegistryGrid } from "@react-client/features/tracker/components/TrackerRegistryGrid";
 import {
 	clearAgGridColumnStates,
@@ -20,6 +28,7 @@ import {
 } from "@react-client/common/tableStuff/agGridColumnState";
 import {
 	KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD,
+	KANBAN_BOARD_STATUSES,
 	type KanbanBoardAssigneeDto,
 } from "@smart-anketa/api-contract";
 import { useEffect, useMemo, useState } from "react";
@@ -38,12 +47,22 @@ export function TrackerSettingsPage() {
 		useKanbanBoardAssignees();
 	const updateSettings = useUpdateKanbanBoardSettings();
 	const updateAssignee = useUpdateKanbanBoardAssignee();
+	const resetBoardColumns = useResetKanbanBoardColumnsToDefault();
 
 	const [defaultCapacity, setDefaultCapacity] = useState(
 		String(KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD),
 	);
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const [gridResetNotice, setGridResetNotice] = useState<string | null>(null);
+	const [confirmColumnsResetOpen, setConfirmColumnsResetOpen] = useState(false);
+	const [columnsResetNotice, setColumnsResetNotice] = useState<string | null>(
+		null,
+	);
+
+	const defaultColumnTitles = useMemo(
+		() => KANBAN_BOARD_STATUSES.map((status) => status.title),
+		[],
+	);
 
 	useEffect(() => {
 		if (settings) {
@@ -157,6 +176,37 @@ export function TrackerSettingsPage() {
 				</Card>
 
 				<Card padding="20px">
+					<Stack spacing={2} maxWidth={640}>
+						<Typography variant="h6">Колонки досок</Typography>
+						<Typography variant="body2" color="text.secondary">
+							Заводской набор колонок для новых досок и сброса существующих.
+							Задачи из удалённых колонок переносятся по соответствию старых
+							статусов; неизвестные — во «Входной буфер».
+						</Typography>
+						<Typography variant="body2" component="div">
+							{defaultColumnTitles.map((title) => (
+								<span key={title}>
+									{title}
+									<br />
+								</span>
+							))}
+						</Typography>
+						<Button
+							variant="outlined"
+							color="warning"
+							onClick={() => setConfirmColumnsResetOpen(true)}
+							disabled={resetBoardColumns.isPending}
+							sx={{ alignSelf: "flex-start" }}
+						>
+							Применить ко всем доскам
+						</Button>
+						{columnsResetNotice ? (
+							<Alert severity="info">{columnsResetNotice}</Alert>
+						) : null}
+					</Stack>
+				</Card>
+
+				<Card padding="20px">
 					<Stack spacing={2} maxWidth={560}>
 						<Typography variant="h6">Таблицы реестров</Typography>
 						<Typography variant="body2" color="text.secondary">
@@ -176,6 +226,48 @@ export function TrackerSettingsPage() {
 					</Stack>
 				</Card>
 			</Flex>
+
+			<Dialog
+				open={confirmColumnsResetOpen}
+				onClose={() => setConfirmColumnsResetOpen(false)}
+			>
+				<DialogTitle>Применить заводские колонки?</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						На всех досках будут пересозданы колонки по заводскому списку.
+						Задачи из старых колонок будут перенесены; кастомные колонки
+						исчезнут.
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setConfirmColumnsResetOpen(false)}>
+						Отмена
+					</Button>
+					<Button
+						variant="contained"
+						color="warning"
+						disabled={resetBoardColumns.isPending}
+						onClick={() => {
+							resetBoardColumns.mutate(undefined, {
+								onSuccess: (result) => {
+									setConfirmColumnsResetOpen(false);
+									setColumnsResetNotice(
+										`Обновлено досок: ${result.boardCount}. Перенесено задач: ${result.movedTaskCount}.`,
+									);
+									toast.success("Заводские колонки применены");
+								},
+								onError: (error) => {
+									toast.error("Не удалось обновить колонки", {
+										description: apiErrorMessage(error),
+									});
+								},
+							});
+						}}
+					>
+						Применить
+					</Button>
+				</DialogActions>
+			</Dialog>
 		</Flex>
 	);
 }

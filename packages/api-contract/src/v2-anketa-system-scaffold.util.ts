@@ -12,6 +12,14 @@ export const V2_ANKETA_SYSTEM_ROOT_KEYS = [
 
 export type V2AnketaSystemRootKey = (typeof V2_ANKETA_SYSTEM_ROOT_KEYS)[number];
 
+const SYSTEM_ROOT_KEY_SET = new Set<string>(V2_ANKETA_SYSTEM_ROOT_KEYS);
+
+export function isV2AnketaSystemRootKey(
+	key: string,
+): key is V2AnketaSystemRootKey {
+	return SYSTEM_ROOT_KEY_SET.has(key);
+}
+
 const scaffoldJsonSchemaProperties = scaffoldSnapshot.jsonSchemaProperties as Record<
 	string,
 	RJSFSchema

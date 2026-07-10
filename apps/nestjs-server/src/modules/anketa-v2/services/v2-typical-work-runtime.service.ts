@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, Repository } from "typeorm";
+import { In, IsNull, Repository } from "typeorm";
 import {
 	CONTROL_MODELS_STREAM,
 	applyWorkRounding,
@@ -36,6 +36,8 @@ export type CatalogGeneratedTask = {
 	reason: string;
 	estimateHoursPerDay: number;
 	coefficient: number;
+	/** Итог по формуле работы (чел.-дн.), до записи в анкету. */
+	total: number;
 	match: Record<string, unknown>;
 	workId: string;
 };
@@ -45,6 +47,7 @@ export type BuildCatalogTasksParams = {
 	streamExecutor: string;
 	source: Record<string, unknown>;
 	templateVersionId: string | null;
+	templateId?: string | null;
 	atDate: string;
 	hiddenParamCodes?: ReadonlySet<string>;
 };
@@ -111,6 +114,7 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 					coeffOn: decimalToNumber(header.coeffOn),
 					coeffOff: decimalToNumber(header.coeffOff),
 				},
+				header.paramName,
 			);
 		}
 	}
@@ -135,6 +139,7 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 				row.paramCode,
 				row.valueCode,
 				row.valueLabel,
+				row.paramName,
 			)
 		) {
 			paramCoefficients[row.paramCode] = decimalToNumber(row.coefficient);
@@ -203,14 +208,24 @@ export class V2TypicalWorkRuntimeService {
 		const assignedWorkIds = new Set(assignments.map((a) => a.workId));
 		if (assignedWorkIds.size === 0) return [];
 
-		const works = await this.workRepository.find({
-			where: { archComponentType },
+		let works = await this.workRepository.find({
+			where: {
+				archComponentType,
+				...(params.templateId
+					? { templateId: params.templateId }
+					: {}),
+			},
 		});
+		if (!works.length && params.templateId) {
+			works = await this.workRepository.find({
+				where: { archComponentType, templateId: IsNull() },
+			});
+		}
 		const eligibleWorks = works.filter((w) => assignedWorkIds.has(w.id));
 		if (!eligibleWorks.length) return [];
 
 		const workIds = eligibleWorks.map((w) => w.id);
-		const [norms, rules, labor, laborParams, configs] = await Promise.all([
+		const [norms, rules, labor, laborParams, allConfigs] = await Promise.all([
 			this.normRepository.find({
 				where: { workId: In(workIds), streamExecutor: stream },
 			}),
@@ -228,7 +243,6 @@ export class V2TypicalWorkRuntimeService {
 						where: {
 							workId: In(workIds),
 							templateVersionId: params.templateVersionId,
-							streamExecutor: stream,
 						},
 					})
 				: Promise.resolve([]),
@@ -238,7 +252,20 @@ export class V2TypicalWorkRuntimeService {
 		const rulesByWork = groupBy(rules, (r) => r.workId);
 		const laborByWork = groupBy(labor, (l) => l.workId);
 		const laborParamsByWork = groupBy(laborParams, (l) => l.workId);
-		const configByWork = new Map(configs.map((c) => [c.workId, c]));
+		const configByWork = new Map<string, V2TypicalWorkVersionConfigEntity>();
+		for (const config of allConfigs) {
+			const prev = configByWork.get(config.workId);
+			if (!prev) {
+				configByWork.set(config.workId, config);
+				continue;
+			}
+			if (
+				config.streamExecutor === stream &&
+				prev.streamExecutor !== stream
+			) {
+				configByWork.set(config.workId, config);
+			}
+		}
 		const assignmentByWorkId = new Map(
 			assignments.map((a) => [a.workId, a]),
 		);
@@ -344,6 +371,7 @@ export class V2TypicalWorkRuntimeService {
 				reason: `${ctx.work.name} · ${stream}`,
 				estimateHoursPerDay: ctx.normValue,
 				coefficient,
+				total,
 				match: { archComponentType, stream },
 				workId,
 			});

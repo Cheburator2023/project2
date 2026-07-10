@@ -7,6 +7,7 @@ import type {
 	V2LogicGraphDto,
 	V2UiSchemaDto,
 } from "@smart-anketa/api-contract";
+import { patchV2AnketaCalculationLogicRules } from "@smart-anketa/api-contract";
 
 import {
 	buildDefaultDictionariesFromJsonSchema,
@@ -61,16 +62,21 @@ function asLogic(value: unknown): V2LogicGraphDto {
 }
 
 const file = loadSnapshotPayload();
+const snapshotUiSchema = asUiSchema(file.uiSchema);
+const snapshotJsonSchema = asJsonSchema(file.jsonSchema);
 
 /** Как в v35 export — без applyDictionaryBindings / enrichAnketaLayout. */
 export const V2_DEFAULT_TEMPLATE_SNAPSHOT = {
-	jsonSchema: asJsonSchema(file.jsonSchema),
-	uiSchema: asUiSchema(file.uiSchema),
-	logic: asLogic(file.logic),
+	jsonSchema: snapshotJsonSchema,
+	uiSchema: snapshotUiSchema,
+	logic: patchV2AnketaCalculationLogicRules(asLogic(file.logic), {
+		jsonSchema: snapshotJsonSchema,
+		uiSchema: snapshotUiSchema,
+	}),
 	dictionariesSnapshot: (file.dictionariesSnapshot ??
 		({
 			referencedDictionaryCodes: collectDictionaryCodesFromUiSchema(
-				asUiSchema(file.uiSchema),
+				snapshotUiSchema,
 			),
 		} satisfies V2DictionariesSnapshotDto)) as V2DictionariesSnapshotDto,
 	releaseNotes:

@@ -1,16 +1,19 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { V2FactorySnapshotSettingEntity } from "./entities/v2-factory-snapshot-setting.entity";
 import { V2TemplateEntity } from "./entities/v2-template.entity";
 import { V2TemplateVersionEntity } from "./entities/v2-template-version.entity";
 import { V2TemplateAuditEntity } from "./entities/v2-template-audit.entity";
 import { V2DictionaryEntity } from "./entities/v2-dictionary.entity";
 import { V2DictionaryItemEntity } from "./entities/v2-dictionary-item.entity";
 import { V2QuestionnaireEntity } from "./entities/v2-questionnaire.entity";
+import { V2FactorySnapshotService } from "./services/v2-factory-snapshot.service";
 import { V2TemplateService } from "./services/v2-template.service";
 import { V2TemplateVersionService } from "./services/v2-template-version.service";
 import { V2DictionaryService } from "./services/v2-dictionary.service";
 import { V2DictionarySeedService } from "./services/v2-dictionary-seed.service";
 import { V2AuditService } from "./services/v2-audit.service";
+import { V2FactorySnapshotController } from "./controllers/v2-factory-snapshot.controller";
 import { V2TemplateController } from "./controllers/v2-template.controller";
 import { V2TemplateVersionController } from "./controllers/v2-template-version.controller";
 import { V2DictionaryController } from "./controllers/v2-dictionary.controller";
@@ -57,10 +60,12 @@ import { V2DataTransferService } from "./services/v2-data-transfer.service";
 			V2TypicalWorkVersionConfigEntity,
 			V2TypicalWorkParamEntity,
 			V2TypicalWorkParamValueEntity,
+			V2FactorySnapshotSettingEntity,
 		]),
 	],
 	controllers: [
 		V2TemplateController,
+		V2FactorySnapshotController,
 		V2TemplateVersionController,
 		V2DictionaryController,
 		V2AuditController,
@@ -71,6 +76,7 @@ import { V2DataTransferService } from "./services/v2-data-transfer.service";
 	],
 	providers: [
 		V2TemplateService,
+		V2FactorySnapshotService,
 		V2TemplateVersionService,
 		V2DictionaryService,
 		V2DictionarySeedService,
@@ -86,6 +92,7 @@ import { V2DataTransferService } from "./services/v2-data-transfer.service";
 	],
 	exports: [
 		V2TemplateService,
+		V2FactorySnapshotService,
 		V2TemplateVersionService,
 		V2DictionaryService,
 		V2AuditService,

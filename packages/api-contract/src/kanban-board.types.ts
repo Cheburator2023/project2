@@ -439,6 +439,16 @@ export interface UpdateKanbanBoardSettingsRequestDto {
 	defaultSprintCapacityPd?: number;
 }
 
+export interface ResetKanbanBoardColumnsResultDto {
+	boardCount: number;
+	movedTaskCount: number;
+	boards: Array<{
+		boardId: string;
+		boardName: string;
+		columnCount: number;
+	}>;
+}
+
 export interface KanbanBoardAssigneeDto {
 	id: string;
 	code: string;
@@ -631,23 +641,36 @@ export interface KanbanBoardSnapshotMeta {
 export const KANBAN_BOARD_SCHEMA_VERSION = 1;
 
 export const KANBAN_BOARD_STATUSES = [
-	{ id: "backlog", title: "Бэклог" },
-	{ id: "todo", title: "К выполнению" },
-	{ id: "in_progress", title: "В работе" },
-	{ id: "review", title: "Ревью" },
-	{ id: "qa", title: "QA" },
+	{ id: "todo", title: "Сделать" },
+	{ id: "input_buffer", title: "Входной буфер" },
+	{ id: "analysis_wip", title: "Анализ запроса (В работе)" },
+	{ id: "analysis_done", title: "Анализ запроса (Готово)" },
+	{ id: "dev_wip", title: "Разработка (В работе)" },
+	{ id: "dev_done", title: "Разработка (Готово)" },
+	{ id: "review_wip", title: "Проверка (В работе)" },
+	{ id: "review_done", title: "Проверка (Готово)" },
+	{ id: "demo", title: "Демонстрация" },
 	{ id: "done", title: "Готово" },
 ] as const;
 
 export type KanbanBoardStatusId = (typeof KANBAN_BOARD_STATUSES)[number]["id"];
 
-export const KANBAN_BOARD_COLUMN_COLORS: Record<KanbanBoardStatusId, string> = {
-	backlog: "#64748b",
-	todo: "#2563eb",
-	in_progress: "#d97706",
-	review: "#7c3aed",
-	qa: "#0891b2",
-	done: "#16a34a",
+export const KANBAN_BOARD_INPUT_BUFFER_COLUMN_ID = "input_buffer" as const;
+
+/** Соответствие устаревших id колонок новому заводскому набору. */
+export const KANBAN_BOARD_LEGACY_COLUMN_ID_MAP: Record<
+	string,
+	KanbanBoardStatusId
+> = {
+	backlog: "input_buffer",
+	todo: "todo",
+	in_progress: "dev_wip",
+	review: "review_wip",
+	qa: "review_wip",
+	demo_wip: "demo",
+	demo_done: "demo",
+	done_wip: "done",
+	done: "done",
 };
 
 export const KANBAN_BOARD_DEFAULT_COLUMN_COLORS = [
@@ -661,6 +684,8 @@ export const KANBAN_BOARD_DEFAULT_COLUMN_COLORS = [
 	"#ca8a04",
 	"#4f46e5",
 	"#059669",
+	"#ea580c",
+	"#0d9488",
 ] as const;
 
 export function pickKanbanBoardColumnColor(sortOrder: number): string {
@@ -668,6 +693,15 @@ export function pickKanbanBoardColumnColor(sortOrder: number): string {
 		sortOrder % KANBAN_BOARD_DEFAULT_COLUMN_COLORS.length
 	];
 }
+
+export const KANBAN_BOARD_COLUMN_COLORS = Object.fromEntries(
+	KANBAN_BOARD_STATUSES.map((status, sortOrder) => [
+		status.id,
+		status.id === "done"
+			? "#16a34a"
+			: pickKanbanBoardColumnColor(sortOrder),
+	]),
+) as Record<KanbanBoardStatusId, string>;
 
 export function defaultKanbanBoardColumns(
 	boardId: string,
@@ -704,6 +738,56 @@ export type KanbanBoardData = {
 	root: KanbanBoardItem;
 	[key: string]: KanbanBoardItem;
 };
+
+/** Снимок задачи для сравнения в истории изменений. */
+export interface KanbanBoardTaskHistorySnapshot {
+	parentId: string;
+	position: number;
+	boardId: string;
+	content: KanbanBoardTaskContent;
+}
+
+export interface KanbanBoardTaskChangeItem {
+	field: string;
+	label: string;
+	from: string | null;
+	to: string | null;
+}
+
+export interface KanbanBoardTaskHistoryEntryDto {
+	id: string;
+	boardId: string;
+	taskId: string;
+	taskKey: string;
+	taskTitle: string;
+	changes: KanbanBoardTaskChangeItem[];
+	createdAt: string;
+	createdBy: string | null;
+}
+
+export interface KanbanBoardHistoryDayGroupDto {
+	date: string;
+	entries: KanbanBoardTaskHistoryEntryDto[];
+}
+
+export interface KanbanBoardHistoryDto {
+	boardId: string;
+	boardKey: string;
+	boardName: string;
+	days: KanbanBoardHistoryDayGroupDto[];
+}
+
+export interface KanbanBoardHistoryPreviewDto {
+	boardId: string;
+	boardKey: string;
+	boardName: string;
+	entries: KanbanBoardTaskHistoryEntryDto[];
+}
+
+export interface KanbanBoardHistoryOverviewDto {
+	previewLimit: number;
+	boards: KanbanBoardHistoryPreviewDto[];
+}
 
 /** @deprecated use KanbanBoardTaskContent */
 export type TaskContent = KanbanBoardTaskContent;

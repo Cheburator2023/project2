@@ -1,7 +1,7 @@
 import { Navigate } from "react-router";
 import type { RouteObject } from "react-router";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
-import { SettingsPage } from "@react-client/features/settings/pages/SettingsPage";
+import { SettingsPage } from "@react-client/routing/lazyPages";
 import { adminLegacyRedirects, adminRoutes } from "./adminRoutes";
 import { playgroundRoutes } from "./playgroundRoutes";
 import { trackerRoutes } from "./trackerRoutes";

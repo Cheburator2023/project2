@@ -17,13 +17,21 @@ export function TypicalWorksEmptyState({
 		<Box
 			sx={{
 				height: "100%",
+				width: "100%",
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
 				p: 4,
 			}}
 		>
-			<Box sx={{ maxWidth: 440, textAlign: "center" }}>
+			<Box
+				sx={{
+					maxWidth: 440,
+					textAlign: "center",
+					margin: "0 auto",
+					width: "100%",
+				}}
+			>
 				<Box
 					sx={{
 						width: 64,
@@ -41,14 +49,16 @@ export function TypicalWorksEmptyState({
 				>
 					▤
 				</Box>
-				<Typography sx={{ fontSize: 17, fontWeight: 800, color: "#1d2435", mb: 1 }}>
+				<Typography
+					sx={{ fontSize: 17, fontWeight: 800, color: "#1d2435", mb: 1 }}
+				>
 					Для «{areaTitle}» ещё нет работ
 				</Typography>
 				<Typography
 					sx={{ fontSize: 13, color: "#6b7484", lineHeight: 1.5, mb: 2.5 }}
 				>
-					Типовые работы хранятся в общем справочнике. Выберите нужные и назначьте
-					на эту область — у каждой работы будут свои нормативы и логика именно для
+					Типовые работы хранятся в реестре. Выберите нужные и назначьте на эту
+					область — у каждой работы будут свои нормативы и логика именно для
 					этого стрима.
 				</Typography>
 				<Box
@@ -70,7 +80,7 @@ export function TypicalWorksEmptyState({
 							fontWeight: 600,
 						}}
 					>
-						Добавить из каталога
+						Добавить из реестра
 					</Button>
 					<Button
 						variant="contained"

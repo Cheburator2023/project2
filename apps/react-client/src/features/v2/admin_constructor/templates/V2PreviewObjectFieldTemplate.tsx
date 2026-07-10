@@ -9,7 +9,7 @@ import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode, type SyntheticEvent } from "react";
 import type {
 	ArrayFieldTemplateProps,
 	FieldPathId,
@@ -27,8 +27,14 @@ import {
 } from "@react-client/features/v2/anketaCRUD/utils/anketaFormContext";
 import {
 	countSubsectionFilledItems,
+	getArrayAtPath,
 	getValueAtPath,
+	typicalWorkItemDisplayName,
 } from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
+import {
+	readArchObjectListAtPath,
+	isAnketaArchObjectListPath,
+} from "@react-client/features/v2/anketaCRUD/utils/anketaArchObjectListPaths";
 import {
 	V2_ANKETA_SECTION_COMPLETE_LABELS,
 	isV2AnketaHiddenUiNode,
@@ -206,14 +212,27 @@ function GroupActivationHeaderButton({
 	readOnly?: boolean;
 	onToggle?: (pathKey: string, active: boolean) => void;
 }) {
+	const handleActivate = (e: SyntheticEvent) => {
+		if (readOnly) return;
+		e.stopPropagation();
+		onToggle?.(pathKey, !active);
+	};
+
 	return (
 		<Button
+			component="div"
+			role="button"
+			tabIndex={readOnly ? -1 : 0}
 			size="small"
 			variant={active ? "outlined" : "contained"}
 			disabled={readOnly}
-			onClick={(e) => {
-				e.stopPropagation();
-				onToggle?.(pathKey, !active);
+			onClick={handleActivate}
+			onKeyDown={(e) => {
+				if (readOnly) return;
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					handleActivate(e);
+				}
 			}}
 			sx={{ flexShrink: 0, textTransform: "none", opacity: 1 }}
 		>
@@ -378,7 +397,9 @@ function SectionPanelAccordion({
 						</>
 					) : null}
 					{canExpand && completeButton ? (
-						<Box sx={{ mt: canExpand ? 2 : 0, opacity: 1 }}>{completeButton}</Box>
+						<Box sx={{ mt: canExpand ? 2 : 0, opacity: 1 }}>
+							{completeButton}
+						</Box>
 					) : null}
 				</AccordionDetails>
 			) : null}
@@ -396,6 +417,7 @@ function FlatSectionHeader({
 	pathKey,
 	readOnly,
 	onToggleGroupActivation,
+	formContext,
 }: {
 	sectionTitle: string;
 	sectionCaption?: string;
@@ -406,6 +428,7 @@ function FlatSectionHeader({
 	pathKey?: string;
 	readOnly?: boolean;
 	onToggleGroupActivation?: (pathKey: string, active: boolean) => void;
+	formContext?: unknown;
 }) {
 	const inactive = groupActivatable && !groupActive;
 	const textDimSx = inactive ? { opacity: 0.55 } : undefined;
@@ -470,6 +493,9 @@ function FlatSectionHeader({
 					{sectionDescription}
 				</Typography>
 			) : null}
+			{/* {pathKey ? (
+				<AnketaCalculationDevHint pathKey={pathKey} formContext={formContext} />
+			) : null} */}
 		</>
 	);
 }
@@ -521,9 +547,13 @@ function ObjectFieldsGrid({
 	properties,
 	schema,
 	uiSchema,
+	parentPathKey,
+	formContext,
 }: Pick<ObjectFieldTemplateProps, "properties"> & {
 	schema: RJSFSchema;
 	uiSchema: UiSchema | undefined;
+	parentPathKey?: string;
+	formContext?: unknown;
 }) {
 	const layoutColumns = readLayoutGridColumns(uiSchema);
 	const visibleProperties = properties.filter(
@@ -550,6 +580,12 @@ function ObjectFieldsGrid({
 						sx={{ minWidth: 0 }}
 					>
 						{element.content}
+						{/* {parentPathKey ? (
+							<AnketaCalculationDevHint
+								pathKey={`${parentPathKey}.${element.name}`}
+								formContext={formContext}
+							/>
+						) : null} */}
 					</Grid>
 				);
 			})}
@@ -575,14 +611,32 @@ export function V2PreviewArrayFieldTemplate({
 		anketaModalArrayPaths,
 		anketaCompactArrayTablePaths,
 		anketaReadOnly,
+		formData,
 	} = readAnketaFormContext(registry.formContext);
 	const archComponent = resolveV2AnketaArchComponent(uiSchema);
+	const pathKey = fieldPathId?.path?.join(".") ?? "";
+	const typicalWorkBadgeSuffix = useMemo(() => {
+		if (archComponent !== "typicalWork" || !pathKey) return undefined;
+		const items = getArrayAtPath(formData ?? {}, pathKey);
+		const names = [
+			...new Set(
+				items.map((item, index) => typicalWorkItemDisplayName(item, index)),
+			),
+		];
+		if (names.length === 0) return undefined;
+		if (names.length === 1) return names[0];
+		const preview = names.slice(0, 3).join(", ");
+		return names.length > 3 ? `${preview}…` : preview;
+	}, [archComponent, formData, pathKey]);
 	const wrapArch = (node: ReactNode): ReactNode => (
-		<ArchComponentDevOutline archComponent={archComponent}>
+		<ArchComponentDevOutline
+			archComponent={archComponent}
+			previewMode={archComponent === "typicalWork"}
+			badgeSuffix={typicalWorkBadgeSuffix}
+		>
 			{node}
 		</ArchComponentDevOutline>
 	);
-	const pathKey = fieldPathId?.path?.join(".") ?? "";
 	const lastSegment = fieldPathId?.path?.at(-1);
 	const fieldKey: string =
 		typeof lastSegment === "string" || typeof lastSegment === "number"
@@ -591,7 +645,8 @@ export function V2PreviewArrayFieldTemplate({
 	const useCompactTable = Boolean(
 		pathKey &&
 			((anketaCompactArrayTablePaths?.has(pathKey) ?? false) ||
-				isModalEditableArrayField(archComponent, fieldKey)),
+				isModalEditableArrayField(archComponent, fieldKey) ||
+				archComponent === "typicalWork"),
 	);
 	const useModalAdd = Boolean(
 		pathKey &&
@@ -627,6 +682,10 @@ export function V2PreviewArrayFieldTemplate({
 					sectionHint={sectionHint}
 					formContext={registry.formContext}
 				/>
+				{/* <AnketaCalculationDevHint
+					pathKey={pathKey}
+					formContext={registry.formContext}
+				/> */}
 				{showAddButton ? (
 					<Box mt={2} data-test-id={`add_modal_button_compact_table`}>
 						<Button
@@ -766,7 +825,10 @@ export function V2PreviewObjectFieldTemplate({
 	);
 	const archComponent = resolveV2AnketaArchComponent(uiSchema);
 	const wrapArch = (node: ReactNode): ReactNode => (
-		<ArchComponentDevOutline archComponent={archComponent}>
+		<ArchComponentDevOutline
+			archComponent={archComponent}
+			previewMode={archComponent === "typicalWork"}
+		>
 			{node}
 		</ArchComponentDevOutline>
 	);
@@ -816,6 +878,8 @@ export function V2PreviewObjectFieldTemplate({
 					properties={visibleProperties}
 					schema={schemaNode}
 					uiSchema={uiSchema as UiSchema | undefined}
+					parentPathKey={pathKey || undefined}
+					formContext={registry.formContext}
 				/>
 			) : null}
 			{sectionSlot ? <Box sx={{ mt: 2 }}>{sectionSlot}</Box> : null}
@@ -849,11 +913,12 @@ export function V2PreviewObjectFieldTemplate({
 					? (workflow.sections[workflowSectionIdResolved] ?? "Создано")
 					: "Создано"
 		: "Создано";
-	const workflowLocked = usesMainSectionWorkflow && workflowSectionIdResolved
-		? anketaReadOnly ||
-			isMainSectionLocked?.(workflowSectionIdResolved) ||
-			workflow?.globalStatus === "Заполнено"
-		: anketaReadOnly || workflow?.globalStatus === "Заполнено";
+	const workflowLocked =
+		usesMainSectionWorkflow && workflowSectionIdResolved
+			? anketaReadOnly ||
+				isMainSectionLocked?.(workflowSectionIdResolved) ||
+				workflow?.globalStatus === "Заполнено"
+			: anketaReadOnly || workflow?.globalStatus === "Заполнено";
 	const workflowCompleteButtonLabel =
 		hasExplicitWorkflowSectionId && workflowSectionIdResolved
 			? V2_ANKETA_SECTION_COMPLETE_LABELS[workflowSectionIdResolved]
@@ -870,23 +935,24 @@ export function V2PreviewObjectFieldTemplate({
 	const workflowStatusChip = showWorkflowChrome ? (
 		<AnketaSectionStatusChip kind="section" status={sectionStatus} />
 	) : null;
-	const workflowCompleteButton = groupActivatable && !groupActive ? null : canCompleteWorkflow ? (
-		<Button
-			variant="contained"
-			onClick={() => {
-				if (usesPanelPathWorkflow && panelWorkflowPathKey) {
-					onCompletePanelSection?.(panelWorkflowPathKey);
-					return;
-				}
-				if (workflowSectionIdResolved) {
-					onCompleteMainSection?.(workflowSectionIdResolved);
-				}
-			}}
-			sx={{ textTransform: "uppercase", fontWeight: 600 }}
-		>
-			{workflowCompleteButtonLabel}
-		</Button>
-	) : null;
+	const workflowCompleteButton =
+		groupActivatable && !groupActive ? null : canCompleteWorkflow ? (
+			<Button
+				variant="contained"
+				onClick={() => {
+					if (usesPanelPathWorkflow && panelWorkflowPathKey) {
+						onCompletePanelSection?.(panelWorkflowPathKey);
+						return;
+					}
+					if (workflowSectionIdResolved) {
+						onCompleteMainSection?.(workflowSectionIdResolved);
+					}
+				}}
+				sx={{ textTransform: "uppercase", fontWeight: 600 }}
+			>
+				{workflowCompleteButtonLabel}
+			</Button>
+		) : null;
 
 	if (showWorkflowChrome) {
 		return wrapArch(
@@ -908,7 +974,9 @@ export function V2PreviewObjectFieldTemplate({
 	if (sectionRole === "subsection") {
 		const formData = anketaCtx.formData ?? {};
 		const count = sectionUiOptions.showFilledCount
-			? countSubsectionFilledItems(getValueAtPath(formData, pathKey))
+			? isAnketaArchObjectListPath(pathKey)
+				? readArchObjectListAtPath(formData, pathKey).length
+				: countSubsectionFilledItems(getValueAtPath(formData, pathKey))
 			: undefined;
 
 		return wrapArch(
@@ -953,6 +1021,7 @@ export function V2PreviewObjectFieldTemplate({
 					sectionUiOptions.hideTitle ? undefined : sectionDescription
 				}
 				hideTitle={sectionUiOptions.hideTitle}
+				formContext={registry.formContext}
 				{...groupActivationProps}
 			/>
 		);

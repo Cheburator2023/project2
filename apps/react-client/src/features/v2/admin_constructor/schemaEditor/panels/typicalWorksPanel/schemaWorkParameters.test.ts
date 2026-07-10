@@ -3,6 +3,8 @@ import type { RJSFSchema } from "@rjsf/utils";
 import type { V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
 import {
 	buildSchemaWorkParameters,
+	isSchemaLaborParamCandidate,
+	schemaLaborParamPickerCaption,
 	resolveSchemaParamForTriggerRule,
 	triggerRuleGroupKey,
 	excludeRulesByGroupKey,
@@ -95,7 +97,42 @@ describe("buildSchemaWorkParameters", () => {
 		]);
 	});
 
-	it("includes fields from all arch components in the schema", () => {
+	it("includes fields from all arch components even when work arch type is passed", () => {
+		const extendedSchema = {
+			...jsonSchema,
+			properties: {
+				...jsonSchema.properties,
+				other: {
+					type: "array",
+					items: {
+						type: "object",
+						properties: {
+							flag: { type: "boolean", title: "Чужой блок" },
+						},
+					},
+				},
+			},
+		} as RJSFSchema;
+		const enumMapByCode = {
+			"v2.detailInfo.sourceSystems.items.type": {
+				enums: ["internal", "external"],
+				enumNames: ["Внутренний", "Внешний"],
+			},
+		};
+
+		const params = buildSchemaWorkParameters({
+			archComponentType: "Система-источник",
+			fieldPathHints: hints,
+			uiSchema,
+			jsonSchema: extendedSchema,
+			enumMapByCode,
+		});
+
+		expect(params.some((p) => p.code === "type")).toBe(true);
+		expect(params.some((p) => p.code === "flag")).toBe(true);
+	});
+
+	it("includes fields from all arch components when filter is omitted", () => {
 		const params = buildSchemaWorkParameters({
 			fieldPathHints: hints,
 			uiSchema,
@@ -124,6 +161,55 @@ describe("buildSchemaWorkParameters", () => {
 
 		expect(params.some((p) => p.code === "type")).toBe(true);
 		expect(params.some((p) => p.code === "flag")).toBe(true);
+	});
+
+	it("includes numeric schema fields without enum values", () => {
+		const numericHints: FieldPathHint[] = [
+			{
+				pointer: "/detailInfo/dataMart/metricsCount",
+				key: "metricsCount",
+				title: "Количество метрик",
+				varPath: "detailInfo.dataMart.metricsCount",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: numericHints,
+			uiSchema: {
+				detailInfo: {
+					dataMart: {
+						"ui:options": { archComponent: "dataMart" },
+					},
+				},
+			},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					detailInfo: {
+						type: "object",
+						properties: {
+							dataMart: {
+								type: "object",
+								properties: {
+									metricsCount: {
+										type: "number",
+										title: "Количество метрик",
+									},
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {},
+		});
+
+		const metrics = params.find((p) => p.code === "metricsCount");
+		expect(metrics).toBeDefined();
+		expect(metrics?.numeric).toBe(true);
+		expect(metrics?.values).toEqual([]);
 	});
 
 	it("includes object arch-component fields without /items/ path", () => {
@@ -177,6 +263,444 @@ describe("buildSchemaWorkParameters", () => {
 			"Разработка",
 			"Доработка",
 		]);
+	});
+
+	it("includes dictionary-bound fields without inline enum when dictionary is not loaded", () => {
+		const hints: FieldPathHint[] = [
+			{
+				pointer: "/detailInfo/sourceSystems/items/field_wuYlhnu0",
+				key: "field_wuYlhnu0",
+				title: "Сложность настройки шаблона",
+				varPath: "detailInfo.sourceSystems[].field_wuYlhnu0",
+				dictionaryCode: "v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: hints,
+			uiSchema: {
+				detailInfo: {
+					sourceSystems: {
+						items: {
+							field_wuYlhnu0: {
+								"ui:options": {
+									dictionaryCode:
+										"v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
+								},
+							},
+						},
+					},
+				},
+			},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					detailInfo: {
+						type: "object",
+						properties: {
+							sourceSystems: {
+								type: "array",
+								items: {
+									type: "object",
+									properties: {
+										field_wuYlhnu0: {
+											type: "string",
+											title: "Сложность настройки шаблона",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {},
+		});
+
+		const param = params.find((p) => p.code === "field_wuYlhnu0");
+		expect(param).toBeDefined();
+		expect(param?.dictionaryCode).toBe(
+			"v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
+		);
+		expect(param?.values).toEqual([]);
+	});
+
+	it("includes plain string schema fields without enum or dictionary", () => {
+		const stringHints: FieldPathHint[] = [
+			{
+				pointer: "/detailInfo/dataMart/description",
+				key: "description",
+				title: "Описание витрины",
+				varPath: "detailInfo.dataMart.description",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: stringHints,
+			uiSchema: {
+				detailInfo: {
+					dataMart: {
+						"ui:options": { archComponent: "dataMart" },
+					},
+				},
+			},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					detailInfo: {
+						type: "object",
+						properties: {
+							dataMart: {
+								type: "object",
+								properties: {
+									description: {
+										type: "string",
+										title: "Описание витрины",
+									},
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {},
+		});
+
+		const description = params.find((p) => p.code === "description");
+		expect(description).toBeDefined();
+		expect(description?.textual).toBe(true);
+		expect(description?.values).toEqual([]);
+		expect(isSchemaLaborParamCandidate(description!)).toBe(true);
+	});
+
+	it("keeps same-named «Тип работ» fields on different paths as separate params", () => {
+		const hints: FieldPathHint[] = [
+			{
+				pointer: "/detailInfo/model/workType",
+				key: "workType",
+				title: "Тип работ",
+				varPath: "detailInfo.model.workType",
+				dictionaryCode: null,
+				codesPreview: ["Разработка", "Доработка", "Настройка"],
+			},
+			{
+				pointer: "/detailInfo/dataMart/items/workType",
+				key: "field_yJ5IGkCR",
+				title: "Тип работ",
+				varPath: "detailInfo.dataMart[].workType",
+				dictionaryCode: null,
+				codesPreview: ["Разработка", "Доработка"],
+			},
+			{
+				pointer: "/generalInfo/modelService/workType",
+				key: "workType",
+				title: "Тип работ",
+				varPath: "generalInfo.modelService.workType",
+				dictionaryCode: null,
+				codesPreview: ["Разработка", "Доработка", "Настройка", "Сопровождение"],
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: hints,
+			uiSchema: {},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					detailInfo: {
+						type: "object",
+						properties: {
+							model: {
+								type: "object",
+								properties: {
+									workType: { type: "string", title: "Тип работ" },
+								},
+							},
+							dataMart: {
+								type: "array",
+								items: {
+									type: "object",
+									properties: {
+										workType: { type: "string", title: "Тип работ" },
+									},
+								},
+							},
+						},
+					},
+					generalInfo: {
+						type: "object",
+						properties: {
+							modelService: {
+								type: "object",
+								properties: {
+									workType: { type: "string", title: "Тип работ" },
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {},
+		});
+
+		const workTypes = params.filter((p) => p.name === "Тип работ");
+		expect(workTypes).toHaveLength(3);
+		const codes = workTypes.map((p) => p.code);
+		expect(new Set(codes).size).toBe(3);
+		expect(codes).toContain("field_yJ5IGkCR");
+	});
+
+	it("excludes system scaffold fields (meta/summary/workflow/…)", () => {
+		const scaffoldHints: FieldPathHint[] = [
+			{
+				pointer: "/summary/total",
+				key: "total",
+				title: "Итоговая оценка трудоёмкости (Total), ч/д",
+				varPath: "summary.total",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+			{
+				pointer: "/meta/version",
+				key: "version",
+				title: "Версия",
+				varPath: "meta.version",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+			{
+				pointer: "/uncertaintyCalculation/riskGroup/sanctions",
+				key: "sanctions",
+				title: "Введение санкционных мер",
+				varPath: "uncertaintyCalculation.riskGroup.sanctions",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+			{
+				pointer: "/detailInfo/dataMart/description",
+				key: "description",
+				title: "Описание витрины",
+				varPath: "detailInfo.dataMart.description",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: scaffoldHints,
+			uiSchema: {},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					summary: {
+						type: "object",
+						properties: { total: { type: "number", title: "Total" } },
+					},
+					meta: {
+						type: "object",
+						properties: { version: { type: "string", title: "Версия" } },
+					},
+					uncertaintyCalculation: {
+						type: "object",
+						properties: {
+							riskGroup: {
+								type: "object",
+								properties: {
+									sanctions: { type: "boolean", title: "Санкции" },
+								},
+							},
+						},
+					},
+					detailInfo: {
+						type: "object",
+						properties: {
+							dataMart: {
+								type: "object",
+								properties: {
+									description: {
+										type: "string",
+										title: "Описание витрины",
+									},
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {},
+		});
+
+		expect(params.some((p) => p.code === "total")).toBe(false);
+		expect(params.some((p) => p.code === "version")).toBe(false);
+		expect(params.some((p) => p.code === "sanctions")).toBe(false);
+		// Обычные поля схемы остаются доступными.
+		expect(params.some((p) => p.code === "description")).toBe(true);
+	});
+
+	it("excludes fields inside typical/atypical work result blocks", () => {
+		const workBlockHints: FieldPathHint[] = [
+			{
+				pointer: "/streamDataSources/sourceTypicalTasks/items/estimateHoursPerDay",
+				key: "estimateHoursPerDay",
+				title: "Базовая оценка (ч/д)",
+				varPath: "streamDataSources.sourceTypicalTasks[].estimateHoursPerDay",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+			{
+				pointer: "/detailInfo/sourceSystems/items/entityVolume",
+				key: "entityVolume",
+				title: "Объём по сущностям",
+				varPath: "detailInfo.sourceSystems[].entityVolume",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: workBlockHints,
+			uiSchema: {
+				streamDataSources: {
+					sourceTypicalTasks: {
+						"ui:options": { archComponent: "typicalWork" },
+					},
+				},
+				detailInfo: {
+					sourceSystems: {
+						"ui:options": { archComponent: "sourceSystem" },
+					},
+				},
+			},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					streamDataSources: {
+						type: "object",
+						properties: {
+							sourceTypicalTasks: {
+								type: "array",
+								items: {
+									type: "object",
+									properties: {
+										estimateHoursPerDay: {
+											type: "number",
+											title: "Базовая оценка (ч/д)",
+										},
+									},
+								},
+							},
+						},
+					},
+					detailInfo: {
+						type: "object",
+						properties: {
+							sourceSystems: {
+								type: "array",
+								items: {
+									type: "object",
+									properties: {
+										entityVolume: {
+											type: "number",
+											title: "Объём по сущностям",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {},
+		});
+
+		expect(params.some((p) => p.code === "estimateHoursPerDay")).toBe(false);
+		expect(params.some((p) => p.code === "entityVolume")).toBe(true);
+	});
+});
+
+describe("schemaLaborParamPickerCaption", () => {
+	it("warns that any-of is useless for plain string fields", () => {
+		expect(
+			schemaLaborParamPickerCaption({
+				id: "1",
+				code: "note",
+				name: "Заметка",
+				description: null,
+				textual: true,
+				values: [],
+			}),
+		).toMatch(/Any-of без справочника обычно бесполезен/i);
+	});
+
+	it("warns that any-of is useless for numeric fields without dictionary", () => {
+		expect(
+			schemaLaborParamPickerCaption({
+				id: "2",
+				code: "count",
+				name: "Количество",
+				description: null,
+				numeric: true,
+				values: [],
+			}),
+		).toMatch(/Any-of обычно бесполезен/i);
+	});
+
+	it("notes dictionary fields work for both modes", () => {
+		expect(
+			schemaLaborParamPickerCaption({
+				id: "3",
+				code: "type",
+				name: "Тип",
+				description: null,
+				values: [
+					{
+						id: "v1",
+						code: "a",
+						label: "A",
+						coefficient: null,
+						sortOrder: 0,
+						validFrom: "2025-01-01",
+						validTo: null,
+					},
+					{
+						id: "v2",
+						code: "b",
+						label: "B",
+						coefficient: null,
+						sortOrder: 1,
+						validFrom: "2025-01-01",
+						validTo: null,
+					},
+				],
+			}),
+		).toMatch(/2 значения.*По значениям.*Any-of/i);
+	});
+
+	it("includes schema field path before mode hint", () => {
+		expect(
+			schemaLaborParamPickerCaption({
+				id: "schema:field",
+				code: "field_8pFvwc-v",
+				name: "Наличие реплики в DAPP",
+				description: "streamDataSources.sourceSystems[].field_8pFvwc-v",
+				values: [
+					{
+						id: "v-true",
+						code: "true",
+						label: "Да",
+						coefficient: null,
+						sortOrder: 0,
+						validFrom: "2025-01-01",
+						validTo: null,
+					},
+				],
+			}),
+		).toBe(
+			"streamDataSources.sourceSystems[].field_8pFvwc-v · 1 значение · подходит «По значениям» и Any-of",
+		);
 	});
 });
 

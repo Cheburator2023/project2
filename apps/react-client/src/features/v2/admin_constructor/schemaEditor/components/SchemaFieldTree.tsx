@@ -9,6 +9,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { pathForAdminV2Dictionary } from "@react-client/routing/common/pathHelpers";
 import { resolveV2AnketaCanvasUiKind } from "@smart-anketa/api-contract";
+import { useSchemaConstructorSettings } from "@react-client/common/settings/schemaConstructorSettings";
 import {
 	createContext,
 	forwardRef,
@@ -67,7 +68,7 @@ function buildFieldTreeLabel(
 	const node = resolveSchemaNode(jsonSchema, segs);
 	const title = typeof node?.title === "string" ? node.title : item.label;
 	const uiBranch = readUiSchemaBranchAtPointer(uiSchema, item.id);
-	const canvasKind = resolveV2AnketaCanvasUiKind(uiBranch);
+	const canvasKind = resolveV2AnketaCanvasUiKind(uiBranch, { fieldPointer: item.id });
 	const rootKey = segs.length === 1 ? segs[0] : undefined;
 	const categorySuffix = resolveCanvasCategoryChips(node, uiBranch, rootKey)
 		.map((chip) => chip.label)
@@ -154,10 +155,14 @@ export function SchemaFieldTreePanel({ embedded = false }: { embedded?: boolean 
 		dictionaryCodeByPointer,
 		dictionaryIdByCode,
 	} = useSchemaEditor();
+	const { hideSystemFields } = useSchemaConstructorSettings();
 
 	const items = useMemo(
-		() => buildSchemaFieldTreeModel(jsonSchema, uiSchema),
-		[jsonSchema, uiSchema],
+		() =>
+			buildSchemaFieldTreeModel(jsonSchema, uiSchema, {
+				hideSystemFields,
+			}),
+		[jsonSchema, uiSchema, hideSystemFields],
 	);
 
 	const changedCount = fieldChangeByPointer.size;

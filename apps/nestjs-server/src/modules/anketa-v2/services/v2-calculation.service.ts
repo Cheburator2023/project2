@@ -14,16 +14,23 @@ import {
 	mergeTypicalCoefficientContext,
 	parseParamDependencyGraphFromLogic,
 	filterCoefficientLogicForHiddenFields,
+	patchV2AnketaCalculationLogicRules,
+	hasTypicalWorkStreamTriggerContext,
+	isFilledTypicalWorkSourceRow,
+	readTypicalWorksStreamTriggerContext,
 	resolveHiddenParamCodesForSource,
 	resolveHiddenSourceFieldKeys,
 	readStreamLocalParamsForTypicalOutput,
 	resolveStreamFromSourceType,
 	resolveStreamsFromSourceSystems,
+	resolveSourceTypicalWorksOutputPath,
+	V2_SOURCE_SYSTEMS_ARRAY_PATH,
 	type V2ParamDependencyGraph,
 	type V2ParamDefLike,
 } from "@smart-anketa/api-contract";
 import { V2TemplateService } from "./v2-template.service";
 import { V2TemplateVersionService } from "./v2-template-version.service";
+import { parseFormNumber } from "../utils/v2-form-number.util";
 import {
 	applyJsonLogic,
 	isJsonLogicTruthy,
@@ -333,7 +340,12 @@ export class V2CalculationService {
 	evaluate(
 		logic: V2LogicGraphDto,
 		formData: Record<string, unknown>,
-		options?: { templateVersionId?: string | null },
+		options?: {
+			templateVersionId?: string | null;
+			templateId?: string | null;
+			jsonSchema?: unknown;
+			uiSchema?: unknown;
+		},
 	): Promise<V2CalculationResultDto> {
 		return this.evaluateAsync(logic, formData, options);
 	}
@@ -341,9 +353,18 @@ export class V2CalculationService {
 	private async evaluateAsync(
 		logic: V2LogicGraphDto,
 		formData: Record<string, unknown>,
-		options?: { templateVersionId?: string | null },
+		options?: {
+			templateVersionId?: string | null;
+			templateId?: string | null;
+			jsonSchema?: unknown;
+			uiSchema?: unknown;
+		},
 	): Promise<V2CalculationResultDto> {
-		const rules = logic?.rules ?? [];
+		const rules =
+			patchV2AnketaCalculationLogicRules(logic, {
+				jsonSchema: options?.jsonSchema,
+				uiSchema: options?.uiSchema,
+			})?.rules ?? [];
 		const paramGraph = parseParamDependencyGraphFromLogic(rules);
 		const paramDefs = listCatalogParamDefs();
 		const rowComputed = rules.filter((r) => r.kind === "row_computed");
@@ -359,8 +380,10 @@ export class V2CalculationService {
 				rule,
 				liveData,
 				options?.templateVersionId ?? null,
+				options?.templateId ?? null,
 				paramGraph,
 				paramDefs,
+				options?.uiSchema as Record<string, unknown> | undefined,
 			);
 		}
 
@@ -402,7 +425,14 @@ export class V2CalculationService {
 
 		// Legacy E2E + платформенные стримы: таблицы «Подробный расчёт» / «Платформенные стримы».
 		// При unified merge через spread не затирает total/typicalTotal/atypicalTotal.
-		const legacy = applyLegacySummaryToFormData(liveData);
+		const sourceTypicalWorksPath = resolveSourceTypicalWorksOutputPath(
+			options?.jsonSchema,
+			options?.uiSchema,
+		);
+		const legacy = applyLegacySummaryToFormData(liveData, {
+			sourceTypicalWorksPath,
+			uiSchema: options?.uiSchema,
+		});
 		liveData = legacy.formData;
 		const legacyStageEvaluation = legacy.legacyStageEvaluation;
 
@@ -433,12 +463,18 @@ export class V2CalculationService {
 				row && typeof row === "object" && !Array.isArray(row)
 					? (row as Record<string, unknown>)
 					: {};
+			const normalizedRow = { ...rowObj };
+			for (const key of ["estimateHoursPerDay", "coefficient", "total"] as const) {
+				if (!(key in normalizedRow)) continue;
+				const parsed = parseFormNumber(normalizedRow[key]);
+				if (parsed !== null) normalizedRow[key] = parsed;
+			}
 			let computed: unknown;
 			try {
 				computed = applyJsonLogic(rule.condition as V2JsonLogicValue, {
 					...data,
-					...rowObj,
-					_row: rowObj,
+					...normalizedRow,
+					_row: normalizedRow,
 				});
 			} catch {
 				computed = null;
@@ -452,8 +488,10 @@ export class V2CalculationService {
 		rule: V2LogicRuleDto,
 		data: Record<string, unknown>,
 		templateVersionId: string | null,
+		templateId: string | null,
 		paramGraph: V2ParamDependencyGraph,
 		paramDefs: V2ParamDefLike[],
+		uiSchema?: Record<string, unknown>,
 	): Promise<Record<string, unknown>> {
 		const payload = (rule.payload ?? {}) as TaskTriggerPayload;
 		if (payload.mode !== "generated_rows") return data;
@@ -478,17 +516,23 @@ export class V2CalculationService {
 				: writeByDotPath(data, outputArrayPath, []);
 		}
 
-		const sourceRows = this.resolveGeneratedRowSources(data, payload);
+		const sourceRows = this.resolveGeneratedRowSources(data, payload, uiSchema);
 		if (sourceRows.length === 0) {
 			return payload.outputMode === "append"
 				? data
 				: writeByDotPath(data, outputArrayPath, []);
 		}
 
+		const streamTriggerContext = readTypicalWorksStreamTriggerContext(
+			data,
+			outputArrayPath,
+			uiSchema,
+		);
 		const sourceCount = sourceRows.length;
 		const streamLocalParams = readStreamLocalParamsForTypicalOutput(
 			data,
 			outputArrayPath,
+			uiSchema,
 		);
 		const extraContext = this.readSourceContextPaths(data, payload.sourceContextPaths);
 		const atDate = new Date().toISOString().slice(0, 10);
@@ -505,7 +549,9 @@ export class V2CalculationService {
 								? { value: row, controlType: row, name: row }
 								: {};
 					const sourceForMatch = {
+						...streamTriggerContext,
 						...extraContext,
+						...streamLocalParams,
 						...source,
 						sourceCount,
 						sourceIndex,
@@ -552,6 +598,7 @@ export class V2CalculationService {
 											streamExecutor,
 											source: sourceForMatch,
 											templateVersionId,
+											templateId,
 											atDate,
 											hiddenParamCodes,
 										}),
@@ -591,6 +638,11 @@ export class V2CalculationService {
 								)
 							: (typeof task.coefficient === "number" ? task.coefficient : 1);
 
+						const catalogTotal =
+							"total" in task && typeof task.total === "number"
+								? task.total
+								: task.estimateHoursPerDay * coefficient;
+
 						return {
 							taskCode: task.taskCode,
 							name: task.name,
@@ -600,6 +652,7 @@ export class V2CalculationService {
 								: `${sourceName}: параметр источника`,
 							estimateHoursPerDay: task.estimateHoursPerDay,
 							coefficient,
+							total: catalogTotal,
 							sourceComponent: archComponent,
 							sourceName,
 							generatedByRuleId: rule.id,
@@ -624,6 +677,7 @@ export class V2CalculationService {
 	private resolveGeneratedRowSources(
 		data: Record<string, unknown>,
 		payload: TaskTriggerPayload,
+		uiSchema?: Record<string, unknown>,
 	): unknown[] {
 		const objectPath = payload.sourceObjectPath?.trim();
 		if (objectPath) {
@@ -632,9 +686,54 @@ export class V2CalculationService {
 			return [obj];
 		}
 		const arrayPath = payload.sourceArrayPath?.trim();
-		if (!arrayPath) return [];
-		const rows = readByDotPath(data, arrayPath);
-		return Array.isArray(rows) ? rows : [];
+		const outputPath = payload.outputArrayPath?.trim();
+		const referencePath = outputPath || arrayPath || "";
+
+		if (arrayPath) {
+			const filledFromPath = this.readFilledSourceSystemRows(
+				readByDotPath(data, arrayPath),
+			);
+			if (filledFromPath.length > 0) return filledFromPath;
+
+			if (
+				arrayPath === "streamDataSources.sourceSystems" ||
+				arrayPath === V2_SOURCE_SYSTEMS_ARRAY_PATH ||
+				payload.worksCatalog
+			) {
+				const canonical = this.readFilledSourceSystemRows(
+					readByDotPath(data, V2_SOURCE_SYSTEMS_ARRAY_PATH),
+				);
+				if (canonical.length > 0) return canonical;
+				const legacy = this.readFilledSourceSystemRows(
+					readByDotPath(data, "streamDataSources.sourceSystems"),
+				);
+				if (legacy.length > 0) return legacy;
+			}
+		}
+
+		if (payload.worksCatalog && referencePath) {
+			const streamContext = readTypicalWorksStreamTriggerContext(
+				data,
+				referencePath,
+				uiSchema,
+			);
+			if (hasTypicalWorkStreamTriggerContext(streamContext)) {
+				return [streamContext];
+			}
+		}
+
+		return Array.isArray(readByDotPath(data, arrayPath ?? "")) ? [] : [];
+	}
+
+	private readFilledSourceSystemRows(rows: unknown): Record<string, unknown>[] {
+		if (!Array.isArray(rows)) return [];
+		return rows.filter(
+			(row): row is Record<string, unknown> =>
+				row != null &&
+				typeof row === "object" &&
+				!Array.isArray(row) &&
+				isFilledTypicalWorkSourceRow(row as Record<string, unknown>),
+		);
 	}
 
 	private readSourceContextPaths(

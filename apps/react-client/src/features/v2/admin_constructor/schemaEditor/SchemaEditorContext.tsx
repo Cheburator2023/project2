@@ -123,6 +123,7 @@ export type SchemaEditorContextValue = {
 	addRule: () => void;
 	addRuleForTargetPath: (rawTarget: string) => void;
 	openLogicTabWithRule: (ruleId: string) => void;
+	openLogicTabWithPointer: (pointer: string) => void;
 	updateRulePatch: (patch: Partial<V2LogicRuleDto>) => void;
 	removeSelectedRule: () => void;
 	previewEvalNote: React.ReactNode;

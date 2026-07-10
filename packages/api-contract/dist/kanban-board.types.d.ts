@@ -337,6 +337,15 @@ export interface KanbanBoardSettingsDto {
 export interface UpdateKanbanBoardSettingsRequestDto {
     defaultSprintCapacityPd?: number;
 }
+export interface ResetKanbanBoardColumnsResultDto {
+    boardCount: number;
+    movedTaskCount: number;
+    boards: Array<{
+        boardId: string;
+        boardName: string;
+        columnCount: number;
+    }>;
+}
 export interface KanbanBoardAssigneeDto {
     id: string;
     code: string;
@@ -516,28 +525,43 @@ export interface KanbanBoardSnapshotMeta {
 }
 export declare const KANBAN_BOARD_SCHEMA_VERSION = 1;
 export declare const KANBAN_BOARD_STATUSES: readonly [{
-    readonly id: "backlog";
-    readonly title: "Бэклог";
-}, {
     readonly id: "todo";
-    readonly title: "К выполнению";
+    readonly title: "Сделать";
 }, {
-    readonly id: "in_progress";
-    readonly title: "В работе";
+    readonly id: "input_buffer";
+    readonly title: "Входной буфер";
 }, {
-    readonly id: "review";
-    readonly title: "Ревью";
+    readonly id: "analysis_wip";
+    readonly title: "Анализ запроса (В работе)";
 }, {
-    readonly id: "qa";
-    readonly title: "QA";
+    readonly id: "analysis_done";
+    readonly title: "Анализ запроса (Готово)";
+}, {
+    readonly id: "dev_wip";
+    readonly title: "Разработка (В работе)";
+}, {
+    readonly id: "dev_done";
+    readonly title: "Разработка (Готово)";
+}, {
+    readonly id: "review_wip";
+    readonly title: "Проверка (В работе)";
+}, {
+    readonly id: "review_done";
+    readonly title: "Проверка (Готово)";
+}, {
+    readonly id: "demo";
+    readonly title: "Демонстрация";
 }, {
     readonly id: "done";
     readonly title: "Готово";
 }];
 export type KanbanBoardStatusId = (typeof KANBAN_BOARD_STATUSES)[number]["id"];
-export declare const KANBAN_BOARD_COLUMN_COLORS: Record<KanbanBoardStatusId, string>;
-export declare const KANBAN_BOARD_DEFAULT_COLUMN_COLORS: readonly ["#64748b", "#2563eb", "#d97706", "#7c3aed", "#16a34a", "#db2777", "#0891b2", "#ca8a04", "#4f46e5", "#059669"];
+export declare const KANBAN_BOARD_INPUT_BUFFER_COLUMN_ID: "input_buffer";
+/** Соответствие устаревших id колонок новому заводскому набору. */
+export declare const KANBAN_BOARD_LEGACY_COLUMN_ID_MAP: Record<string, KanbanBoardStatusId>;
+export declare const KANBAN_BOARD_DEFAULT_COLUMN_COLORS: readonly ["#64748b", "#2563eb", "#d97706", "#7c3aed", "#16a34a", "#db2777", "#0891b2", "#ca8a04", "#4f46e5", "#059669", "#ea580c", "#0d9488"];
 export declare function pickKanbanBoardColumnColor(sortOrder: number): string;
+export declare const KANBAN_BOARD_COLUMN_COLORS: Record<KanbanBoardStatusId, string>;
 export declare function defaultKanbanBoardColumns(boardId: string): Omit<KanbanBoardColumnDto, "createdAt" | "updatedAt">[];
 export interface KanbanBoardColumnContent {
     color: string;
@@ -557,6 +581,49 @@ export type KanbanBoardData = {
     root: KanbanBoardItem;
     [key: string]: KanbanBoardItem;
 };
+/** Снимок задачи для сравнения в истории изменений. */
+export interface KanbanBoardTaskHistorySnapshot {
+    parentId: string;
+    position: number;
+    boardId: string;
+    content: KanbanBoardTaskContent;
+}
+export interface KanbanBoardTaskChangeItem {
+    field: string;
+    label: string;
+    from: string | null;
+    to: string | null;
+}
+export interface KanbanBoardTaskHistoryEntryDto {
+    id: string;
+    boardId: string;
+    taskId: string;
+    taskKey: string;
+    taskTitle: string;
+    changes: KanbanBoardTaskChangeItem[];
+    createdAt: string;
+    createdBy: string | null;
+}
+export interface KanbanBoardHistoryDayGroupDto {
+    date: string;
+    entries: KanbanBoardTaskHistoryEntryDto[];
+}
+export interface KanbanBoardHistoryDto {
+    boardId: string;
+    boardKey: string;
+    boardName: string;
+    days: KanbanBoardHistoryDayGroupDto[];
+}
+export interface KanbanBoardHistoryPreviewDto {
+    boardId: string;
+    boardKey: string;
+    boardName: string;
+    entries: KanbanBoardTaskHistoryEntryDto[];
+}
+export interface KanbanBoardHistoryOverviewDto {
+    previewLimit: number;
+    boards: KanbanBoardHistoryPreviewDto[];
+}
 /** @deprecated use KanbanBoardTaskContent */
 export type TaskContent = KanbanBoardTaskContent;
 /** @deprecated use KanbanBoardTaskRecord */
@@ -567,20 +634,32 @@ export type SnapshotMeta = KanbanBoardSnapshotMeta;
 export declare const TASK_TRACKER_SCHEMA_VERSION = 1;
 /** @deprecated use KANBAN_BOARD_STATUSES */
 export declare const TASK_STATUSES: readonly [{
-    readonly id: "backlog";
-    readonly title: "Бэклог";
-}, {
     readonly id: "todo";
-    readonly title: "К выполнению";
+    readonly title: "Сделать";
 }, {
-    readonly id: "in_progress";
-    readonly title: "В работе";
+    readonly id: "input_buffer";
+    readonly title: "Входной буфер";
 }, {
-    readonly id: "review";
-    readonly title: "Ревью";
+    readonly id: "analysis_wip";
+    readonly title: "Анализ запроса (В работе)";
 }, {
-    readonly id: "qa";
-    readonly title: "QA";
+    readonly id: "analysis_done";
+    readonly title: "Анализ запроса (Готово)";
+}, {
+    readonly id: "dev_wip";
+    readonly title: "Разработка (В работе)";
+}, {
+    readonly id: "dev_done";
+    readonly title: "Разработка (Готово)";
+}, {
+    readonly id: "review_wip";
+    readonly title: "Проверка (В работе)";
+}, {
+    readonly id: "review_done";
+    readonly title: "Проверка (Готово)";
+}, {
+    readonly id: "demo";
+    readonly title: "Демонстрация";
 }, {
     readonly id: "done";
     readonly title: "Готово";

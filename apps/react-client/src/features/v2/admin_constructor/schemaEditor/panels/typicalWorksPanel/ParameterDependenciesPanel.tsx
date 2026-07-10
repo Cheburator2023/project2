@@ -42,7 +42,7 @@ export function ParameterDependenciesPanel() {
 	const { logic, setLogic, fieldPathHints, recordDraftHistory } = useSchemaEditor();
 
 	const params = useMemo(
-		() => (catalog?.items ?? []).filter((p) => p.values.length > 0),
+		() => (catalog?.items ?? []).filter((p) => p.values.length > 0 || p.numeric),
 		[catalog?.items],
 	);
 

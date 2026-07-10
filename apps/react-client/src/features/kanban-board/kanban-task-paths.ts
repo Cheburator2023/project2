@@ -9,6 +9,11 @@ export function trackerBoardPath(board: Pick<KanbanBoardBoardDto, "boardKey"> | 
 	return `/tracker/board/${encodeURIComponent(key)}`;
 }
 
+export function trackerBoardHistoryPath(boardKey?: string) {
+	if (!boardKey?.trim()) return "/tracker/history";
+	return `/tracker/board/${encodeURIComponent(normalizeTrackerCode(boardKey))}/history`;
+}
+
 export function trackerTaskPath(
 	task: Pick<KanbanBoardTaskRegistryDto, "taskKey"> | string,
 ) {
@@ -16,7 +21,7 @@ export function trackerTaskPath(
 	return `/tracker/task/${encodeURIComponent(key)}`;
 }
 
-export function trackerTaskCreatePath(boardKey: string, column = "backlog") {
+export function trackerTaskCreatePath(boardKey: string, column = "todo") {
 	const params = new URLSearchParams({ column });
 	return `/tracker/board/${encodeURIComponent(boardKey)}/task/new?${params.toString()}`;
 }
@@ -46,7 +51,7 @@ export function kanbanTaskEditPath(
 }
 
 /** @deprecated используйте trackerTaskCreatePath */
-export function kanbanTaskCreatePath(boardKey: string, column = "backlog") {
+export function kanbanTaskCreatePath(boardKey: string, column = "todo") {
 	return trackerTaskCreatePath(boardKey, column);
 }
 

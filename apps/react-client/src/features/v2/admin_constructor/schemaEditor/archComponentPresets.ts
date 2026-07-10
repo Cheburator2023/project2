@@ -169,6 +169,10 @@ const MANUAL_ARCH_COMPONENT_PRESET_DEFS: Pick<
 			removable: false,
 			orderable: false,
 		},
+		uiBranch: {
+			"ui:description":
+				"Список заполняется автоматически при срабатывании триггеров типовых работ.",
+		},
 	},
 	atypicalWork: {
 		make: () => ({

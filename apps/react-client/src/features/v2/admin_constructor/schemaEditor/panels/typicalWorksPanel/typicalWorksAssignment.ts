@@ -11,7 +11,6 @@ export type WorkStreamsRef = {
 	normsByStream?: Record<string, number | null>;
 	currentNorm?: number | null;
 };
-import { pickDbStreamForLogicStream } from "./typicalWorksAreas";
 
 export function buildAssignWorkPatch(
 	streamExecutor: string,
@@ -21,8 +20,6 @@ export function buildAssignWorkPatch(
 	return {
 		streamExecutor,
 		norms: [{ normValue: baseNormValue, validFrom: today, validTo: null }],
-		rules: [],
-		laborCoefficients: [],
 		formula: defaultWorkFormula(),
 		rounding: defaultWorkRounding(),
 	};
@@ -37,16 +34,4 @@ export function inferBaseNormValue(work: WorkStreamsRef): number {
 		return work.currentNorm;
 	}
 	return 1;
-}
-
-export function targetStreamsForAssign(
-	work: WorkStreamsRef,
-	scopeStreams: string[],
-	logicStream?: string,
-): string[] {
-	if (logicStream) {
-		const dbStream = pickDbStreamForLogicStream(logicStream, work.streams);
-		return work.streams.includes(dbStream) ? [] : [dbStream];
-	}
-	return scopeStreams.filter((stream) => !work.streams.includes(stream));
 }

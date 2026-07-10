@@ -3,6 +3,12 @@ import {
 	resolveV2AnketaArchComponent,
 	type V2ArchComponentType,
 } from "./v2-anketa-section-ui.util";
+import {
+	isV2AnketaSystemRootKey,
+	V2_ANKETA_SYSTEM_ROOT_KEYS,
+} from "./v2-anketa-system-scaffold.util";
+
+export { V2_ANKETA_SYSTEM_ROOT_KEYS, isV2AnketaSystemRootKey };
 
 export type V2AnketaModalKind =
 	| "dataSource"
@@ -124,7 +130,11 @@ export function schemaHasUncertaintyModalWidget(
 /** Метка на холсте конструктора: скрытая, системная или служебная. */
 export function resolveV2AnketaCanvasUiKind(
 	uiNode: unknown,
+	options?: { fieldPointer?: string | null },
 ): V2AnketaCanvasUiKind | null {
+	if (options?.fieldPointer && isV2AnketaSystemRootPointer(options.fieldPointer)) {
+		return "system";
+	}
 	if (readUiOptions(uiNode).system === true) return "system";
 	if (isV2AnketaHiddenUiNode(uiNode)) return "hidden";
 	if (readUiOptions(uiNode).layoutGroup === true) return "utility";
@@ -135,6 +145,11 @@ export function resolveV2AnketaCanvasUiKind(
 		return "utility";
 	}
 	return null;
+}
+
+export function isV2AnketaSystemRootPointer(fieldPointer: string): boolean {
+	const key = fieldPointer.split("/").filter(Boolean)[0];
+	return key != null && isV2AnketaSystemRootKey(key);
 }
 
 export function isV2AnketaModalObjectArch(
@@ -165,6 +180,7 @@ function isReadonlyGeneratedArray(
 	uiNode: unknown,
 	schemaNode: Record<string, unknown> | undefined,
 ): boolean {
+	if (resolveV2AnketaArchComponent(uiNode) === "typicalWork") return true;
 	if (isUiReadonly(uiNode)) return true;
 	if (schemaNode?.readOnly === true) return true;
 	const { addable, removable } = readArrayToolbar(uiNode);

@@ -138,6 +138,24 @@ export type V2TemplateVersionDto = {
 	createdBy: string | null;
 };
 
+/** Краткая версия для реестра схем (без jsonSchema/uiSchema/logic). */
+export type V2TemplateVersionSummaryDto = {
+	id: string;
+	templateId: string;
+	versionNumber: number;
+	status: V2TemplateStatus;
+	releaseNotes: string | null;
+	publishedAt: string | null;
+};
+
+export type V2TemplateRegistryItemDto = V2TemplateDto & {
+	versions: V2TemplateVersionSummaryDto[];
+};
+
+export type V2TemplateRegistryListResponseDto = {
+	items: V2TemplateRegistryItemDto[];
+};
+
 export type V2TemplateAuditDto = {
 	id: string;
 	/** null для событий справочников (без привязки к шаблону). */
@@ -420,4 +438,7 @@ export type V2CalculateRequestDto = {
 	formData: Record<string, unknown>;
 	/** Опционально: переопределить правила для предпросмотра расчёта в админке. */
 	rulesOverride?: V2LogicGraphDto;
+	/** Опционально: схема для авто-подключения каталога типовых работ (предпросмотр в редакторе). */
+	jsonSchema?: Record<string, unknown>;
+	uiSchema?: Record<string, unknown>;
 };

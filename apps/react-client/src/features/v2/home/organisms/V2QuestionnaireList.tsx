@@ -20,6 +20,10 @@ import {
 	useV2Questionnaires,
 	v2QuestionnairesExportXlsx,
 } from "@react-client/common/api/queries/v2-questionnaires";
+import {
+	useV2TemplateVersion,
+	useV2Templates,
+} from "@react-client/common/api/queries/v2-templates";
 import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import { toast } from "@react-client/common/toasts";
@@ -66,10 +70,10 @@ import {
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 import { buildV2QuestionnaireColumnDefs } from "../utils/v2QuestionnaireGridColumns";
 import {
-	FACTORY_GRID_PRESETS,
 	FACTORY_PRESET_IDS,
 	applyQuestionnaireGridPreset,
 	getFactoryGridPreset,
+	getFactoryGridPresets,
 	isFactoryPresetId,
 	type QuestionnaireGridPresetApi,
 } from "../utils/v2QuestionnaireGridFactoryPresets";
@@ -155,9 +159,21 @@ function newPresetId(): string {
 		: `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function GridPresetToolPanel({ api }: { api: PresetGridApi }) {
+function GridPresetToolPanel({
+	api,
+	jsonSchema,
+	uiSchema,
+}: {
+	api: PresetGridApi;
+	jsonSchema?: Record<string, unknown>;
+	uiSchema?: Record<string, unknown>;
+}) {
 	const [presets, setPresets] = useState<GridPreset[]>(readGridPresets);
 	const [name, setName] = useState("");
+	const factoryPresets = useMemo(
+		() => getFactoryGridPresets(jsonSchema, uiSchema),
+		[jsonSchema, uiSchema],
+	);
 
 	const updatePresets = (next: GridPreset[]) => {
 		setPresets(next);
@@ -198,6 +214,8 @@ function GridPresetToolPanel({ api }: { api: PresetGridApi }) {
 		clearAgGridColumnState(GRID_COLUMN_STATE_KEY);
 		const allInformationPreset = getFactoryGridPreset(
 			FACTORY_PRESET_IDS.allInformation,
+			jsonSchema,
+			uiSchema,
 		);
 		if (allInformationPreset) {
 			applyQuestionnaireGridPreset(api, allInformationPreset);
@@ -233,7 +251,7 @@ function GridPresetToolPanel({ api }: { api: PresetGridApi }) {
 				<Typography variant="body2" fontWeight={600}>
 					Готовые преднастройки
 				</Typography>
-				{FACTORY_GRID_PRESETS.map((preset) => (
+				{factoryPresets.map((preset) => (
 					<Stack
 						key={preset.id}
 						spacing={0.75}
@@ -320,6 +338,21 @@ export function V2QuestionnaireList() {
 	const gridRef = useRef<AgGridReact<V2QuestionnaireGridRow>>(null);
 	const { canAccessAdminPanel, canCreateCalculation, canExportReports } = usePermissions();
 	const bulkDelete = useBulkDeleteV2Questionnaires();
+	const { data: templates } = useV2Templates();
+	const activeTemplate = useMemo(
+		() => templates?.find((t) => t.currentVersionId) ?? templates?.[0],
+		[templates],
+	);
+	const { data: templateVersion } = useV2TemplateVersion(
+		activeTemplate?.id ?? "",
+		activeTemplate?.currentVersionId ?? null,
+	);
+	const registryJsonSchema = templateVersion?.jsonSchema as
+		| Record<string, unknown>
+		| undefined;
+	const registryUiSchema = templateVersion?.uiSchema as
+		| Record<string, unknown>
+		| undefined;
 	const [selectedVersions, setSelectedVersions] = useState<
 		V2QuestionnaireVersionRow[]
 	>([]);
@@ -342,7 +375,24 @@ export function V2QuestionnaireList() {
 		}));
 	}, [questionnaires]);
 
-	const columnDefs = useMemo(() => buildV2QuestionnaireColumnDefs(), []);
+	const columnDefs = useMemo(
+		() => buildV2QuestionnaireColumnDefs(registryJsonSchema, registryUiSchema),
+		[registryJsonSchema, registryUiSchema],
+	);
+
+	const GridPresetToolPanelBound = useMemo(
+		() =>
+			function GridPresetToolPanelBound(props: { api: PresetGridApi }) {
+				return (
+					<GridPresetToolPanel
+						{...props}
+						jsonSchema={registryJsonSchema}
+						uiSchema={registryUiSchema}
+					/>
+				);
+			},
+		[registryJsonSchema, registryUiSchema],
+	);
 
 	const gridIcons = useMemo(
 		() => ({
@@ -379,12 +429,12 @@ export function V2QuestionnaireList() {
 					labelDefault: "Настройки",
 					labelKey: "settings",
 					iconKey: "settings",
-					toolPanel: GridPresetToolPanel,
+					toolPanel: GridPresetToolPanelBound,
 				},
 			],
 			position: "right",
 		}),
-		[],
+		[GridPresetToolPanelBound],
 	);
 
 	const onRowDoubleClicked = useCallback(
@@ -406,15 +456,22 @@ export function V2QuestionnaireList() {
 		[],
 	);
 
-	const onGridReady = useCallback((e: GridReadyEvent) => {
-		const basicPreset = getFactoryGridPreset(FACTORY_PRESET_IDS.default);
-		if (basicPreset) {
-			applyQuestionnaireGridPreset(e.api, basicPreset);
-		}
-		applyAgGridColumnState(GRID_COLUMN_STATE_KEY, (state) => {
-			e.api.applyColumnState({ state, applyOrder: true });
-		});
-	}, []);
+	const onGridReady = useCallback(
+		(e: GridReadyEvent) => {
+			const basicPreset = getFactoryGridPreset(
+				FACTORY_PRESET_IDS.default,
+				registryJsonSchema,
+				registryUiSchema,
+			);
+			if (basicPreset) {
+				applyQuestionnaireGridPreset(e.api, basicPreset);
+			}
+			applyAgGridColumnState(GRID_COLUMN_STATE_KEY, (state) => {
+				e.api.applyColumnState({ state, applyOrder: true });
+			});
+		},
+		[registryJsonSchema, registryUiSchema],
+	);
 
 	const persistColumnState = useCallback((api: GridApi) => {
 		saveAgGridColumnState(GRID_COLUMN_STATE_KEY, api.getColumnState());
@@ -571,9 +628,11 @@ export function V2QuestionnaireList() {
 						resizable: true,
 						filter: true,
 						minWidth: 90,
+						autoHeaderHeight: true,
+						wrapHeaderText: true,
 					}}
 					defaultColGroupDef={{
-						marryChildren: true,
+						marryChildren: false,
 					}}
 					sideBar={sideBar}
 					onRowDoubleClicked={onRowDoubleClicked}

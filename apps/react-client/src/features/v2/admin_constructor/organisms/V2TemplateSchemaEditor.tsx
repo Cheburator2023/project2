@@ -46,8 +46,6 @@ import {
 	readLeafUiOptions,
 } from "../schemaEditor/propertiesFieldKind";
 import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayout";
-import { SchemaLogicPanel } from "../schemaEditor/panels/SchemaLogicPanel";
-import { LogicWorkspaceShell } from "../schemaEditor/panels/typicalWorksPanel/TypicalWorksPanel";
 import { LOGIC_TAB_QUERY } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
@@ -111,6 +109,12 @@ import {
 	snapshotFromTemplateVersion,
 	type SchemaEditorDraftSnapshot,
 } from "../utils/schemaEditorLocalDraft";
+import {
+	resolveEffectiveLogicRules,
+	resolveRulesForSelectedExact,
+	resolveRulesForSelectedSubtree,
+	resolveRulesWhereSelectedIsDependency,
+} from "../utils/schemaEditorEffectiveLogic";
 
 function readUiBranch(
 	uiSchema: UiSchema | Record<string, unknown>,
@@ -150,9 +154,8 @@ export type V2EditorHeaderActions = {
 	canActivateAsCurrent: boolean;
 	hasUnsavedChanges: boolean;
 	getExternalPreviewPath: () => string | null;
+	onOpenLogic: () => void;
 };
-
-export type V2SchemaEditorLayoutMode = "dock" | "logic-only";
 
 type DraftHistorySnapshot = {
 	jsonSchema: RJSFSchema;
@@ -168,7 +171,6 @@ interface V2TemplateSchemaEditorProps {
 	initialVersionId?: string | null;
 	onVersionIdChange?: (versionId: string) => void;
 	wording?: V2SchemaEditorWording;
-	layoutMode?: V2SchemaEditorLayoutMode;
 	initialRuleId?: string | null;
 	initialPointer?: string | null;
 	onHeaderMetaChange?: (meta: V2EditorHeaderMeta | null) => void;
@@ -180,7 +182,6 @@ export const V2TemplateSchemaEditor = ({
 	initialVersionId = null,
 	onVersionIdChange,
 	wording = "playgroundTemplate",
-	layoutMode = "dock",
 	initialRuleId = null,
 	initialPointer = null,
 	onHeaderMetaChange,
@@ -188,11 +189,6 @@ export const V2TemplateSchemaEditor = ({
 }: V2TemplateSchemaEditorProps) => {
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
-	const logicWorkspaceTab =
-		searchParams.get(LOGIC_TAB_QUERY) === "dependencies" ||
-		searchParams.get(LOGIC_TAB_QUERY) === "jsonlogic"
-			? (searchParams.get(LOGIC_TAB_QUERY) as "dependencies" | "jsonlogic")
-			: "works";
 	const setLogicWorkspaceTab = useCallback(
 		(tab: "works" | "dependencies" | "jsonlogic") => {
 			setSearchParams(
@@ -275,9 +271,7 @@ export const V2TemplateSchemaEditor = ({
 	const [draftPast, setDraftPast] = useState<DraftHistorySnapshot[]>([]);
 	const [draftFuture, setDraftFuture] = useState<DraftHistorySnapshot[]>([]);
 
-	const [mainTab, setMainTab] = useState<SchemaEditorMainTab>(
-		layoutMode === "logic-only" ? "logic" : "designer",
-	);
+	const [mainTab, setMainTab] = useState<SchemaEditorMainTab>("designer");
 
 	const [selectedRuleId, setSelectedRuleId] = useState<string | null>(
 		initialRuleId,
@@ -312,14 +306,18 @@ export const V2TemplateSchemaEditor = ({
 	}, [mainTab, selectedPointer]);
 
 	useEffect(() => {
-		if (initialRuleId) setSelectedRuleId(initialRuleId);
-	}, [initialRuleId]);
+		if (!initialRuleId) return;
+		setSelectedRuleId(initialRuleId);
+		setMainTab("logic");
+		setLogicWorkspaceTab("jsonlogic");
+	}, [initialRuleId, setLogicWorkspaceTab]);
 
 	useEffect(() => {
-		if (initialPointer) {
-			setSelectedPointer(normalizeJsonPointer(initialPointer));
-		}
-	}, [initialPointer]);
+		if (!initialPointer) return;
+		setSelectedPointer(normalizeJsonPointer(initialPointer));
+		setMainTab("logic");
+		setLogicWorkspaceTab("dependencies");
+	}, [initialPointer, setLogicWorkspaceTab]);
 
 	const pushDraftHistory = useCallback(() => {
 		const snapshot: DraftHistorySnapshot = {
@@ -488,10 +486,12 @@ export const V2TemplateSchemaEditor = ({
 	const blocker = useBrowserRouterNavigationBlocker(
 		({ currentLocation, nextLocation }) => {
 			if (skipLeaveGuardRef.current) return false;
+			// Панели/вкладки/версии редактора переключаются через query-параметры на
+			// том же маршруте — это не уход со страницы, предупреждаем только при
+			// смене pathname.
 			return (
 				hasUnsavedChanges &&
-				(currentLocation.pathname !== nextLocation.pathname ||
-					currentLocation.search !== nextLocation.search)
+				currentLocation.pathname !== nextLocation.pathname
 			);
 		},
 	);
@@ -563,6 +563,8 @@ export const V2TemplateSchemaEditor = ({
 		versionId: activeVersion?.id,
 		formData,
 		rulesOverride: logic,
+		jsonSchema: jsonSchema as Record<string, unknown>,
+		uiSchema: uiSchema as Record<string, unknown>,
 		enabled: Boolean(activeVersion?.id),
 	});
 
@@ -673,31 +675,36 @@ export const V2TemplateSchemaEditor = ({
 		return m;
 	}, [v2Dictionaries]);
 
-	const rulesForSelectedExact = useMemo(() => {
-		if (selectedPointer === null) return [];
-		const np = normalizeJsonPointer(selectedPointer);
-		return logic.rules.filter((r) => normalizeJsonPointer(r.targetPath) === np);
-	}, [logic.rules, selectedPointer]);
+	const effectiveLogicRules = useMemo(
+		() => resolveEffectiveLogicRules(logic, jsonSchema, uiSchema),
+		[logic, jsonSchema, uiSchema],
+	);
 
-	const rulesWhereSelectedIsDependency = useMemo(() => {
-		if (selectedPointer === null) return [];
-		const np = normalizeJsonPointer(selectedPointer);
-		return logic.rules.filter((r) =>
-			r.dependencies.some((d) => normalizeJsonPointer(d) === np),
-		);
-	}, [logic.rules, selectedPointer]);
+	const rulesForSelectedExact = useMemo(
+		() =>
+			resolveRulesForSelectedExact(
+				effectiveLogicRules,
+				selectedPointer,
+				uiSchema,
+				jsonSchema,
+			),
+		[effectiveLogicRules, selectedPointer, uiSchema, jsonSchema],
+	);
 
-	const rulesForSelectedSubtree = useMemo(() => {
-		if (selectedPointer === null) return [];
-		const np = normalizeJsonPointer(selectedPointer);
-		if (np === "/") return [];
-		const pref = `${np}/`;
-		return logic.rules.filter((r) => {
-			const tp = normalizeJsonPointer(r.targetPath);
-			if (tp === np) return false;
-			return tp.startsWith(pref);
-		});
-	}, [logic.rules, selectedPointer]);
+	const rulesWhereSelectedIsDependency = useMemo(
+		() =>
+			resolveRulesWhereSelectedIsDependency(
+				effectiveLogicRules,
+				selectedPointer,
+			),
+		[effectiveLogicRules, selectedPointer],
+	);
+
+	const rulesForSelectedSubtree = useMemo(
+		() =>
+			resolveRulesForSelectedSubtree(effectiveLogicRules, selectedPointer),
+		[effectiveLogicRules, selectedPointer],
+	);
 
 	const handleCreateDraft = async (mode: "empty" | "current") => {
 		const emptySnapshot = buildEmptyV2AnketaTemplateSnapshot();
@@ -924,35 +931,6 @@ export const V2TemplateSchemaEditor = ({
 	activateAsCurrentRef.current = handleActivateAsCurrent;
 
 	const savePending = updateVersion.isPending || createVersion.isPending;
-
-	useEffect(() => {
-		if (!activeVersion) {
-			onHeaderActionsChange?.(null);
-			return;
-		}
-
-		onHeaderActionsChange?.({
-			onSave: () => setSaveDialogOpen(true),
-			onActivateAsCurrent: () => void activateAsCurrentRef.current(),
-			savePending,
-			activatePending:
-				activateVersion.isPending ||
-				(activeVersion.status === "draft" && updateVersion.isPending),
-			canActivateAsCurrent: isAdminEditor && !isSystemCurrent,
-			hasUnsavedChanges,
-			getExternalPreviewPath,
-		});
-	}, [
-		activeVersion,
-		activateVersion.isPending,
-		getExternalPreviewPath,
-		hasUnsavedChanges,
-		isAdminEditor,
-		isSystemCurrent,
-		onHeaderActionsChange,
-		savePending,
-		updateVersion.isPending,
-	]);
 
 	const syncMonacoApply = () => {
 		let parsedSchema: unknown;
@@ -1383,7 +1361,7 @@ export const V2TemplateSchemaEditor = ({
 				uiSchema as Record<string, unknown>,
 				targetPointer,
 			);
-			if (resolveV2AnketaCanvasUiKind(uiBranch) === "system") return;
+			if (resolveV2AnketaCanvasUiKind(uiBranch, { fieldPointer: targetPointer }) === "system") return;
 			if (isCanvasStockField(uiSchema, targetPointer)) return;
 			const segs = pointerSegments(targetPointer);
 			const next = removePropertyAtPointer(jsonSchema, segs);
@@ -1500,10 +1478,61 @@ export const V2TemplateSchemaEditor = ({
 		addRuleForTargetPath(selectedPointer ?? "/");
 	}, [addRuleForTargetPath, selectedPointer]);
 
-	const openLogicTabWithRule = useCallback((ruleId: string) => {
+	const openLogicTabWithRule = useCallback(
+		(ruleId: string) => {
+			setMainTab("logic");
+			setLogicWorkspaceTab("jsonlogic");
+			setSelectedRuleId(ruleId);
+		},
+		[setLogicWorkspaceTab],
+	);
+
+	const openLogicTabWithPointer = useCallback(
+		(pointer: string) => {
+			const normalized = normalizeJsonPointer(pointer);
+			setSelectedPointer(normalized);
+			setMainTab("logic");
+			setLogicWorkspaceTab("dependencies");
+			setLogicPathPick(normalized);
+		},
+		[setLogicWorkspaceTab],
+	);
+
+	const openLogicWorkspace = useCallback(() => {
 		setMainTab("logic");
-		setSelectedRuleId(ruleId);
-	}, []);
+		setLogicWorkspaceTab("works");
+	}, [setLogicWorkspaceTab]);
+
+	useEffect(() => {
+		if (!activeVersion) {
+			onHeaderActionsChange?.(null);
+			return;
+		}
+
+		onHeaderActionsChange?.({
+			onSave: () => setSaveDialogOpen(true),
+			onActivateAsCurrent: () => void activateAsCurrentRef.current(),
+			savePending,
+			activatePending:
+				activateVersion.isPending ||
+				(activeVersion.status === "draft" && updateVersion.isPending),
+			canActivateAsCurrent: isAdminEditor && !isSystemCurrent,
+			hasUnsavedChanges,
+			getExternalPreviewPath,
+			onOpenLogic: openLogicWorkspace,
+		});
+	}, [
+		activeVersion,
+		activateVersion.isPending,
+		getExternalPreviewPath,
+		hasUnsavedChanges,
+		isAdminEditor,
+		isSystemCurrent,
+		onHeaderActionsChange,
+		openLogicWorkspace,
+		savePending,
+		updateVersion.isPending,
+	]);
 
 	const updateRulePatch = useCallback(
 		(patch: Partial<V2LogicRuleDto>) => {
@@ -1658,6 +1687,7 @@ export const V2TemplateSchemaEditor = ({
 			addRule,
 			addRuleForTargetPath,
 			openLogicTabWithRule,
+			openLogicTabWithPointer,
 			updateRulePatch,
 			removeSelectedRule,
 			previewEvalNote,
@@ -1737,6 +1767,7 @@ export const V2TemplateSchemaEditor = ({
 			addRule,
 			addRuleForTargetPath,
 			openLogicTabWithRule,
+			openLogicTabWithPointer,
 			updateRulePatch,
 			removeSelectedRule,
 			previewEvalNote,
@@ -1820,33 +1851,6 @@ export const V2TemplateSchemaEditor = ({
 			}}
 		/>
 	);
-
-	if (layoutMode === "logic-only") {
-		return (
-			<>
-				<SchemaEditorProvider value={editorContext}>
-					<LogicWorkspaceShell
-						tab={logicWorkspaceTab}
-						onTabChange={setLogicWorkspaceTab}
-						jsonLogicPanel={<SchemaLogicPanel embedded />}
-					/>
-				</SchemaEditorProvider>
-				{activeVersion ? (
-					<V2TemplateSaveDialog
-						open={saveDialogOpen}
-						onClose={() => setSaveDialogOpen(false)}
-						versionNumber={activeVersion.versionNumber}
-						versionStatus={activeVersion.status}
-						isSystemCurrent={isSystemCurrent}
-						savePending={savePending}
-						onSaveAsNewVersion={handleSaveAsNewVersion}
-						onSaveInPlace={handleSaveInPlace}
-					/>
-				) : null}
-				{leaveDialog}
-			</>
-		);
-	}
 
 	return (
 		<SchemaEditorProvider value={editorContext}>

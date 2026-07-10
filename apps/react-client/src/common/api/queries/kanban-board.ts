@@ -25,6 +25,8 @@ import type {
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
 	KanbanBoardTaskImageDto,
+	KanbanBoardHistoryDto,
+	KanbanBoardHistoryOverviewDto,
 	UpdateKanbanBoardAssigneeRequestDto,
 	UpdateKanbanBoardBoardRequestDto,
 	UpdateKanbanBoardColumnRequestDto,
@@ -35,6 +37,7 @@ import type {
 	UpdateKanbanBoardStreamRequestDto,
 	UpdateKanbanBoardSupersprintRequestDto,
 	UpdateKanbanBoardTaskRequestDto,
+	ResetKanbanBoardColumnsResultDto,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "../helpers/apiClient";
 
@@ -699,6 +702,18 @@ export const useDeleteKanbanBoardColumn = () => {
 	});
 };
 
+export const useResetKanbanBoardColumnsToDefault = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: () =>
+			apiClient<ResetKanbanBoardColumnsResultDto>({
+				url: "/kanban-board/columns/reset-default",
+				method: "POST",
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
 export const kanbanBoardGetTaskByRef = (ref: string, signal?: AbortSignal) =>
 	apiClient<KanbanBoardTaskRegistryDto>({
 		url: `/kanban-board/tasks/ref/${encodeURIComponent(ref)}`,
@@ -823,6 +838,36 @@ export const kanbanBoardGetBoardByRef = (ref: string, signal?: AbortSignal) =>
 		url: `/kanban-board/boards/ref/${encodeURIComponent(ref)}`,
 		method: "GET",
 		signal,
+	});
+
+export const kanbanBoardGetBoardHistory = (
+	boardRef: string,
+	signal?: AbortSignal,
+) =>
+	apiClient<KanbanBoardHistoryDto>({
+		url: `/kanban-board/boards/${encodeURIComponent(boardRef)}/history`,
+		method: "GET",
+		signal,
+	});
+
+export const kanbanBoardGetHistoryOverview = (signal?: AbortSignal) =>
+	apiClient<KanbanBoardHistoryOverviewDto>({
+		url: "/kanban-board/history/overview",
+		method: "GET",
+		signal,
+	});
+
+export const useKanbanBoardHistory = (boardRef: string | undefined) =>
+	useQuery({
+		queryKey: ["kanbanBoardHistory", boardRef],
+		enabled: Boolean(boardRef),
+		queryFn: ({ signal }) => kanbanBoardGetBoardHistory(boardRef!, signal),
+	});
+
+export const useKanbanBoardHistoryOverview = () =>
+	useQuery({
+		queryKey: ["kanbanBoardHistoryOverview"],
+		queryFn: ({ signal }) => kanbanBoardGetHistoryOverview(signal),
 	});
 
 export const kanbanBoardGetBoardTasks = (boardRef: string, signal?: AbortSignal) =>

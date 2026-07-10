@@ -8,8 +8,8 @@ import FormControl from "@mui/material/FormControl";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { V2_SOURCE_STREAM } from "@smart-anketa/api-contract";
 import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
-import { DEFAULT_WORK_STREAMS } from "./typicalWorksUi";
 import { WORK_ARCH_COMPONENT_TYPES, DEFAULT_WORK_ARCH_COMPONENT_TYPE } from "./typicalWorkPatchErrors";
 
 export type CreateTypicalWorkDialogPayload = {
@@ -44,7 +44,7 @@ export function CreateTypicalWorkDialog({
 		defaultArchComponentType ?? DEFAULT_WORK_ARCH_COMPONENT_TYPE,
 	);
 	const [streamExecutor, setStreamExecutor] = useState<string>(
-		defaultStreamExecutor ?? DEFAULT_WORK_STREAMS[0],
+		defaultStreamExecutor ?? V2_SOURCE_STREAM,
 	);
 	const [starterNorm, setStarterNorm] = useState("1.00");
 
@@ -54,7 +54,7 @@ export function CreateTypicalWorkDialog({
 			setArchComponentType(
 				defaultArchComponentType ?? WORK_ARCH_COMPONENT_TYPES[0],
 			);
-			setStreamExecutor(defaultStreamExecutor ?? DEFAULT_WORK_STREAMS[0]);
+			setStreamExecutor(defaultStreamExecutor ?? V2_SOURCE_STREAM);
 			setStarterNorm("1.00");
 		}
 	}, [defaultArchComponentType, defaultStreamExecutor, open]);
@@ -96,24 +96,9 @@ export function CreateTypicalWorkDialog({
 				</FormControl>
 				{isCreate ? (
 					<>
-						<FormControl fullWidth>
-							<SelectWithPlaceholder
-								placeholder="Стрим-исполнитель"
-								value={streamExecutor}
-								onChange={(e) => setStreamExecutor(String(e.target.value))}
-							>
-								{DEFAULT_WORK_STREAMS.map((stream) => (
-									<MenuItem key={stream} value={stream}>
-										{stream}
-									</MenuItem>
-								))}
-							</SelectWithPlaceholder>
-						</FormControl>
-						{!streamExecutor ? (
-							<Typography sx={{ fontSize: 12, color: "#b5791f" }}>
-								Выберите стрим-исполнитель для первого назначения
-							</Typography>
-						) : null}
+						<Typography sx={{ fontSize: 12, color: "#6b7484" }}>
+							Стрим-исполнитель: <b>{streamExecutor}</b>
+						</Typography>
 						<TextField
 							label="Стартовый норматив, чел.-дн."
 							value={starterNorm}

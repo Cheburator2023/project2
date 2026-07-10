@@ -4,8 +4,11 @@ import {
 	V2_ARCH_COMPONENT_LABELS,
 	type V2ArchComponentType,
 	extractControlCode,
+	formatParamNameWithSourceKeys,
 	isControlTypeTriggerParam,
 	isSourceTypeTriggerParam,
+	isV2AnketaSystemRootKey,
+	stripParamNameSourceKeys,
 } from "@smart-anketa/api-contract";
 import {
 	isObjectFieldGroup,
@@ -59,7 +62,78 @@ export function schemaWorkParameterEmptyPickerMessage(
 		return "Схема шаблона ещё не загружена или пуста";
 	}
 
-	return "В схеме нет полей с выбором значений (enum, справочник, boolean, число)";
+	return "В схеме нет полей, пригодных для параметров (enum, справочник, boolean, число, строка). Дождитесь загрузки словарников.";
+}
+
+export type SchemaBuiltWorkParameterDto = V2TypicalWorkParameterDto & {
+	/** Свободный ввод (type: string без enum/справочника). */
+	textual?: boolean;
+};
+
+export function isSchemaTextualParam(
+	param: Pick<
+		SchemaBuiltWorkParameterDto,
+		"values" | "numeric" | "dictionaryCode" | "textual"
+	>,
+): boolean {
+	return param.textual === true;
+}
+
+export function isSchemaLaborParamCandidate(
+	param: Pick<
+		SchemaBuiltWorkParameterDto,
+		"values" | "numeric" | "dictionaryCode" | "textual"
+	>,
+): boolean {
+	return (
+		param.values.length > 0 ||
+		param.numeric === true ||
+		isSchemaTextualParam(param) ||
+		Boolean(param.dictionaryCode?.trim())
+	);
+}
+
+function pluralSchemaValuesRu(count: number): string {
+	if (count % 10 === 1 && count % 100 !== 11) return `${count} значение`;
+	if (
+		count % 10 >= 2 &&
+		count % 10 <= 4 &&
+		(count % 100 < 12 || count % 100 > 14)
+	) {
+		return `${count} значения`;
+	}
+	return `${count} значений`;
+}
+
+/** Подсказка о режиме коэффициента в селекте «Параметр трудоёмкости». */
+function schemaLaborParamModeHint(
+	param: Pick<
+		SchemaBuiltWorkParameterDto,
+		"values" | "numeric" | "dictionaryCode" | "textual"
+	>,
+): string {
+	if (isSchemaTextualParam(param)) {
+		return "Свободная строка — Any-of без справочника обычно бесполезен; лучше «По значениям»";
+	}
+	if (param.numeric && param.values.length === 0) {
+		return "Число без справочника — Any-of обычно бесполезен; для формулы чаще «По значениям»";
+	}
+	if (param.values.length > 0) {
+		return `${pluralSchemaValuesRu(param.values.length)} · подходит «По значениям» и Any-of`;
+	}
+	if (param.dictionaryCode) {
+		return "Справочник — дождитесь загрузки значений; Any-of заработает после выбора множества";
+	}
+	return "Нет дискретных значений — Any-of, скорее всего, не подойдёт";
+}
+
+/** Подсказка в селекте «Параметр трудоёмкости» — путь к полю и уместный режим. */
+export function schemaLaborParamPickerCaption(
+	param: SchemaBuiltWorkParameterDto,
+): string {
+	const path = param.description?.trim();
+	const modeHint = schemaLaborParamModeHint(param);
+	return path ? `${path} · ${modeHint}` : modeHint;
 }
 
 export function resolveWorkArchSchemaType(
@@ -111,9 +185,12 @@ function valuesFromDictionary(
 	);
 }
 
-function valuesFromSchemaNode(
-	node: RJSFSchema | undefined,
-): Pick<V2TypicalWorkParameterDto, "values" | "numeric"> {
+type SchemaNodeValues = Pick<
+	SchemaBuiltWorkParameterDto,
+	"values" | "numeric" | "textual"
+>;
+
+function valuesFromSchemaNode(node: RJSFSchema | undefined): SchemaNodeValues {
 	if (!node) return { values: [] };
 
 	const enumValues = Array.isArray(node.enum)
@@ -147,6 +224,10 @@ function valuesFromSchemaNode(
 		return { values: [], numeric: true };
 	}
 
+	if (type === "string") {
+		return { values: [], textual: true };
+	}
+
 	return { values: [] };
 }
 
@@ -165,7 +246,10 @@ function isArchComponentLeafField(
 ): boolean {
 	const node = resolveSchemaNode(jsonSchema, pointerSegments(pointer));
 	const type = resolveSchemaNodeType(node);
-	if (!type) return false;
+	if (!type) {
+		if (Array.isArray(node?.enum) && node.enum.length > 0) return true;
+		return node?.const !== undefined;
+	}
 	if (type === "array") return false;
 	if (type === "object" && node && isObjectFieldGroup(node)) return false;
 	return true;
@@ -206,8 +290,58 @@ function schemaParamDescription(
 	return archLabel ? `${archLabel} · ${path}` : path;
 }
 
+type BuiltSchemaParam = SchemaBuiltWorkParameterDto & {
+	pointer: string;
+	dictionaryCode?: string;
+};
+
+/**
+ * Параметры схемы НЕ дедуплицируются по названию: одинаковое имя на разных путях
+ * (например «Тип работ» в разных арх-блоках) — это разные поля схемы. Работа
+ * настраивается в контексте конкретного поля; путь-источник виден в описании.
+ */
+function finalizeSchemaWorkParameters(
+	params: BuiltSchemaParam[],
+): SchemaBuiltWorkParameterDto[] {
+	return params
+		.map((param) => ({
+			id: param.id,
+			code: param.code,
+			name: param.name,
+			description: param.description,
+			dictionaryCode: param.dictionaryCode,
+			numeric: param.numeric,
+			textual: param.textual,
+			values: param.values,
+			sourceKeys: [param.code],
+		}))
+		.sort((a, b) => a.name.localeCompare(b.name, "ru"));
+}
+
+/** Поле внутри блока-результата «Типовые/Нетиповые работы» — не параметр источника. */
+function isWorkResultBlockField(
+	uiSchema: Record<string, unknown> | undefined,
+	pointer: string,
+): boolean {
+	const arch = resolveArchComponentAtPointer(uiSchema, pointer);
+	return arch === "typicalWork" || arch === "atypicalWork";
+}
+
+/**
+ * Поле системного scaffold-а (meta/summary/workflow/uncertaintyCalculation/
+ * groupActivation) добавляется в каждую схему автоматически и не относится к
+ * параметрам работы — исключаем из пикера.
+ */
+function isSystemScaffoldField(pointer: string): boolean {
+	const [root] = pointerSegments(pointer);
+	return Boolean(root) && isV2AnketaSystemRootKey(root);
+}
+
 export type BuildSchemaWorkParametersInput = {
-	/** Не используется для фильтрации — оставлен для совместимости вызовов. */
+	/**
+	 * Тип арх. компонента работы (для подсказок в UI).
+	 * Не фильтрует поля: параметры берутся из live-схемы конструктора целиком.
+	 */
 	archComponentType?: string;
 	fieldPathHints: FieldPathHint[];
 	uiSchema: Record<string, unknown> | undefined;
@@ -215,18 +349,20 @@ export type BuildSchemaWorkParametersInput = {
 	enumMapByCode: Record<string, EnumMapEntry>;
 };
 
-/** Все параметры типовой работы из полей схемы анкеты (без фильтра по arch-компоненту). */
+/** Параметры типовой работы из полей схемы анкеты. */
 export function buildSchemaWorkParameters({
 	fieldPathHints,
 	uiSchema,
 	jsonSchema,
 	enumMapByCode,
-}: BuildSchemaWorkParametersInput): V2TypicalWorkParameterDto[] {
-	const params: V2TypicalWorkParameterDto[] = [];
+}: BuildSchemaWorkParametersInput): SchemaBuiltWorkParameterDto[] {
+	const params: BuiltSchemaParam[] = [];
 	const usedCodes = new Set<string>();
 
 	for (const hint of fieldPathHints) {
+		if (isSystemScaffoldField(hint.pointer)) continue;
 		if (!isArchComponentLeafField(hint.pointer, jsonSchema)) continue;
+		if (isWorkResultBlockField(uiSchema, hint.pointer)) continue;
 
 		const node = resolveSchemaNode(jsonSchema, pointerSegments(hint.pointer));
 		const dictionaryValues = hint.dictionaryCode
@@ -244,24 +380,77 @@ export function buildSchemaWorkParameters({
 			dictionaryValues.length > 0 || previewValues.length > 0
 				? false
 				: schemaValues.numeric;
+		const textual =
+			dictionaryValues.length > 0 ||
+			previewValues.length > 0 ||
+			schemaValues.textual !== true
+				? undefined
+				: true;
+		const dictionaryCode = hint.dictionaryCode?.trim() || undefined;
 
-		if (values.length === 0 && !numeric) continue;
+		if (values.length === 0 && !numeric && !dictionaryCode && !textual) continue;
 
 		const name = (hint.title ?? hint.key).trim();
 		if (!name) continue;
 
+		const code = schemaParamCodeFromHint(hint, usedCodes);
 		params.push({
 			id: `schema:${hint.pointer}`,
-			code: schemaParamCodeFromHint(hint, usedCodes),
+			code,
 			name,
 			description: schemaParamDescription(hint, uiSchema),
+			dictionaryCode,
 			numeric,
+			textual,
 			values,
+			pointer: hint.pointer,
 		});
 	}
 
-	params.sort((a, b) => a.name.localeCompare(b.name, "ru"));
-	return params;
+	return finalizeSchemaWorkParameters(params);
+}
+
+/** Находит параметр схемы по коду, алиасу (sourceKeys) или имени. */
+export function findSchemaWorkParameter(
+	paramOptions: V2TypicalWorkParameterDto[],
+	paramCode: string,
+	paramName?: string | null,
+): V2TypicalWorkParameterDto | undefined {
+	const direct = paramOptions.find((param) => param.code === paramCode);
+	if (direct) return direct;
+
+	const byAlias = paramOptions.find((param) =>
+		param.sourceKeys?.includes(paramCode),
+	);
+	if (byAlias) return byAlias;
+
+	if (paramName?.trim()) {
+		const name = paramName.trim();
+		return paramOptions.find((param) => param.name === name);
+	}
+
+	return undefined;
+}
+
+export function isSchemaLaborParamUsed(
+	laborParams: Array<{ paramCode: string }>,
+	param: Pick<V2TypicalWorkParameterDto, "code" | "sourceKeys">,
+): boolean {
+	return laborParams.some(
+		(group) =>
+			group.paramCode === param.code ||
+			param.sourceKeys?.includes(group.paramCode),
+	);
+}
+
+export function schemaParamRuleName(param: V2TypicalWorkParameterDto): string {
+	return formatParamNameWithSourceKeys(param.name, param.sourceKeys);
+}
+
+export function schemaParamDisplayName(
+	paramName: string | null | undefined,
+): string {
+	return stripParamNameSourceKeys(paramName);
 }
 
 export type TriggerRuleLike = {

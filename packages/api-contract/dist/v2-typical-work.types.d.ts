@@ -108,6 +108,10 @@ export type V2TypicalWorkListItemDto = {
     usedOnSchemasCount?: number;
     currentNorm: number | null;
     streams: string[];
+    /** Схема-владелец работы (null — глобальная работа реестра). */
+    templateId?: string | null;
+    /** Имя схемы-владельца для отображения (null — глобальная). */
+    templateName?: string | null;
     /** Действующая норма на сегодня по каждому назначенному стриму (ключ — streamExecutor в БД). */
     normsByStream?: Record<string, number | null>;
     /** Число параметров трудоёмкости по стриму (ключ — streamExecutor в БД). */
@@ -216,6 +220,8 @@ export type V2TypicalWorkLaborParamInputDto = {
 export type PatchV2TypicalWorkRequestDto = {
     streamExecutor: string;
     templateVersionId?: string;
+    /** Привязать работу к схеме (только если ещё не привязана к другой). */
+    templateId?: string | null;
     name?: string;
     archComponentType?: string;
     norms?: V2TypicalWorkNormInputDto[];
@@ -230,6 +236,8 @@ export type CreateV2TypicalWorkRequestDto = {
     name: string;
     archComponentType: string;
     workType?: string | null;
+    /** Схема-владелец работы (обязательна при создании из конструктора). */
+    templateId?: string | null;
     /** v4: стрим первого назначения (обязателен при создании из области). */
     streamExecutor?: string;
     /** v4: стартовая норма первого назначения, чел.-дн. */
@@ -238,6 +246,14 @@ export type CreateV2TypicalWorkRequestDto = {
 export type CreateV2TypicalWorkAssignmentRequestDto = {
     workId: string;
     streamExecutor: string;
+};
+export type CopyV2TypicalWorkRequestDto = {
+    /** Схема-владелец копии (null — глобальная работа). */
+    templateId?: string | null;
+    /** Стрим-исполнитель, на который назначить копию. */
+    streamExecutor?: string | null;
+    /** Имя копии; по умолчанию «<имя оригинала> (копия)». */
+    name?: string | null;
 };
 export type V2TypicalWorkAssignmentDto = {
     id: string;
@@ -273,6 +289,10 @@ export type V2TypicalWorkParameterDto = {
     code: string;
     name: string;
     description: string | null;
+    /** Альтернативные ключи поля в данных анкеты (дубликаты title в схеме). */
+    sourceKeys?: string[];
+    /** Привязка к словарнику в uiSchema (значения подгружаются асинхронно). */
+    dictionaryCode?: string;
     /** true, если все значения параметра — числа (отображается как числовая шкала, доступны операторы >, <, ≥, ≤) */
     numeric?: boolean;
     values: V2TypicalWorkParameterValueDto[];

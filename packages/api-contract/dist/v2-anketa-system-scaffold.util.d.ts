@@ -2,6 +2,7 @@ import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { V2TemplateSnapshotDto } from "./v2-template.types";
 export declare const V2_ANKETA_SYSTEM_ROOT_KEYS: readonly ["workflow", "meta", "groupActivation", "uncertaintyCalculation", "summary"];
 export type V2AnketaSystemRootKey = (typeof V2_ANKETA_SYSTEM_ROOT_KEYS)[number];
+export declare function isV2AnketaSystemRootKey(key: string): key is V2AnketaSystemRootKey;
 /** Канонический scaffold скрытых системных корневых секций анкеты. */
 export declare function buildV2AnketaSystemScaffold(): {
     jsonSchema: RJSFSchema;

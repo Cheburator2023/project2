@@ -26,6 +26,7 @@ import {
 	type NodeModel,
 	type TreeMethods,
 } from "@minoru/react-dnd-treeview";
+import { useSchemaConstructorSettings } from "@react-client/common/settings/schemaConstructorSettings";
 import {
 	useCallback,
 	useEffect,
@@ -70,6 +71,8 @@ import {
 	resolveCanvasFieldTypeChipLabel,
 	type CanvasCategoryChip as CanvasCategoryChipModel,
 } from "../propertiesFieldKind";
+import { useParams } from "react-router";
+import { useV2TypicalWorksList } from "@react-client/common/api/queries/v2-works";
 import { useSchemaEditor } from "../SchemaEditorContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "./PanelChrome";
@@ -149,7 +152,7 @@ function CanvasUiKindChip({ kind }: { kind: V2AnketaCanvasUiKind }) {
 	);
 }
 
-function findPointerByArchComponent(
+export function findPointerByArchComponent(
 	jsonSchema: import("@rjsf/utils").RJSFSchema,
 	uiSchema: import("@rjsf/utils").UiSchema,
 	arch: V2ArchComponentType,
@@ -281,6 +284,7 @@ function SchemaCanvasFieldRow({
 	hasChild,
 	onToggle,
 	onRequestDelete,
+	typicalWorkTitleSuffix,
 }: {
 	node: NodeModel<SchemaCanvasNodeData>;
 	depth: number;
@@ -290,6 +294,8 @@ function SchemaCanvasFieldRow({
 	hasChild: boolean;
 	onToggle: () => void;
 	onRequestDelete: (state: CanvasDeleteConfirmState) => void;
+	/** Названия типовых работ схемы — добавляются в заголовок блока typicalWork. */
+	typicalWorkTitleSuffix?: string;
 }) {
 	const theme = useTheme();
 	const {
@@ -354,7 +360,7 @@ function SchemaCanvasFieldRow({
 		isGroup &&
 		sectionUiOptions.groupActivatable &&
 		sectionUiOptions.groupActive === false;
-	const canvasUiKind = resolveV2AnketaCanvasUiKind(uiBranch);
+	const canvasUiKind = resolveV2AnketaCanvasUiKind(uiBranch, { fieldPointer });
 	const isSystemField = canvasUiKind === "system";
 	const isStockField = isCanvasStockField(uiSchema, fieldPointer);
 	const { label: typeChipLabel, colorKey: typeChipColorKey } =
@@ -372,6 +378,11 @@ function SchemaCanvasFieldRow({
 					: undefined;
 
 	const showExpand = hasChild && node.data?.kind === "field";
+
+	const rowTitle =
+		sectionUiOptions.archComponent === "typicalWork" && typicalWorkTitleSuffix
+			? `${node.text} · ${typicalWorkTitleSuffix}`
+			: node.text;
 
 	return (
 		<Box
@@ -449,7 +460,7 @@ function SchemaCanvasFieldRow({
 						<FolderOutlinedIcon sx={{ fontSize: 16, color: "info.main" }} />
 					) : null}
 					<Typography variant="body2" fontWeight={selected ? 600 : 500}>
-						{node.text}
+						{rowTitle}
 					</Typography>
 					<Chip
 						size="small"
@@ -742,6 +753,21 @@ export function SchemaCanvasPanel({
 		undoDraft,
 		redoDraft,
 	} = useSchemaEditor();
+	const { hideSystemFields } = useSchemaConstructorSettings();
+	const { templateId = "" } = useParams<{ templateId: string }>();
+	const { data: worksData } = useV2TypicalWorksList({ templateId });
+	const typicalWorkTitleSuffix = useMemo(() => {
+		const names = [
+			...new Set(
+				(worksData?.items ?? [])
+					.map((work) => work.name?.trim())
+					.filter((name): name is string => Boolean(name)),
+			),
+		];
+		if (names.length === 0) return "";
+		const preview = names.slice(0, 3).join(", ");
+		return names.length > 3 ? `${preview}…` : preview;
+	}, [worksData?.items]);
 	const treeRef = useRef<TreeMethods>(null);
 	const [deleteConfirm, setDeleteConfirm] =
 		useState<CanvasDeleteConfirmState | null>(null);
@@ -771,8 +797,11 @@ export function SchemaCanvasPanel({
 	);
 
 	const treeData = useMemo(
-		() => buildSchemaCanvasTree(jsonSchema, uiSchema),
-		[jsonSchema, uiSchema],
+		() =>
+			buildSchemaCanvasTree(jsonSchema, uiSchema, {
+				hideSystemFields,
+			}),
+		[jsonSchema, uiSchema, hideSystemFields],
 	);
 
 	const hasExpandableNodes = useMemo(
@@ -1088,6 +1117,7 @@ export function SchemaCanvasPanel({
 							hasChild={hasChild}
 							onToggle={onToggle}
 							onRequestDelete={handleRequestDelete}
+							typicalWorkTitleSuffix={typicalWorkTitleSuffix}
 						/>
 					)}
 				/>

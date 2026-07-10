@@ -4,14 +4,15 @@ import {
 	NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import type {
-	BulkDeleteV2QuestionnairesResultDto,
-	CreateV2QuestionnaireRequestDto,
-	CreateV2QuestionnaireVersionRequestDto,
-	SeedV2TestQuestionnairesResultDto,
-	UpdateV2QuestionnaireRequestDto,
-	V2QuestionnaireFormPackageDto,
-	V2QuestionnaireDto,
+import {
+	patchV2TypicalWorksLogicRules,
+	type BulkDeleteV2QuestionnairesResultDto,
+	type CreateV2QuestionnaireRequestDto,
+	type CreateV2QuestionnaireVersionRequestDto,
+	type SeedV2TestQuestionnairesResultDto,
+	type UpdateV2QuestionnaireRequestDto,
+	type V2QuestionnaireFormPackageDto,
+	type V2QuestionnaireDto,
 } from "@smart-anketa/api-contract";
 import { Repository } from "typeorm";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
@@ -230,9 +231,15 @@ export class V2QuestionnaireService {
 		for (const spec of V2_TEST_QUESTIONNAIRE_SEED_SPECS) {
 			const raw = buildTestQuestionnaireFormData(jsonSchema, spec.variant);
 			const evaluated = await this.calculationService.evaluate(
-				{ rules: logic?.rules ?? [] } as never,
+				patchV2TypicalWorksLogicRules(
+					{ rules: logic?.rules ?? [] } as never,
+					{ jsonSchema: version.jsonSchema, uiSchema: version.uiSchema },
+				),
 				raw,
-				{ templateVersionId: version.id },
+				{
+					templateVersionId: version.id,
+					templateId: version.templateId,
+				},
 			);
 			const formData = migrateV2AnketaFormData(evaluated.formData);
 			const dto = await this.create(

@@ -1,5 +1,90 @@
 # Semantic Versioning Changelog
 
+# [1.23.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.22.2...v1.23.0) (2026-07-09)
+
+
+### Bug Fixes
+
+* сохранение типовой задачи ([f813742](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f8137429d5434840f402c227a7487d339abd4692))
+* сохранение типовой задачи ([837abc0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/837abc01d034b786942717da23476e5e0142e8f4))
+* сохранение типовой задачи ([65fe504](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/65fe5046e7ee7523335e33eb8f1859060f492ea3))
+
+
+### Features
+
+* add legacy schema tests and enhance schema work parameters handling ([ab8bf63](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ab8bf634c961bdfd7257537be887a4b8520de8c1))
+* enhance FuzzyAutocomplete with substring search functionality ([31f6523](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/31f65230bd0e99851ea86487f39bf6d10a530f77))
+* enhance routing and schema handling in React client ([bfc71ed](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/bfc71ede6afb70a4eca20a6c0ea9757744dc651e))
+* enhance schema labor parameter handling with new caption logic ([79d52af](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/79d52afc0456e1bec08fd796bbbba97548b6d2cc))
+* enhance typical work assignment logic and UI components ([6c031c2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6c031c2845eb8c943280ec6ed01fa1adaa9a58d0))
+* enhance typical works logic and schema handling ([e6bb676](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/e6bb67676b72c4f1126aa82ff7c12fecc1d16b84))
+* enhance work formula editor with operator handling ([fcf1e5b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/fcf1e5bb88dd2f9478d901075bd35965f4bb0132))
+* enhance work formula handling and validation ([9cf2d0b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9cf2d0bcf45ca97f3a15c6c503783c9544d45311))
+* implement migration to collapse legacy source streams into a unified stream ([52e2250](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/52e225023af8c17b67e08e9412f1eb5801334576))
+* integrate FullScreenLoader and enhance schema editor components ([9bca3bb](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9bca3bb3ae7f9d67c360b18aa6cc30bb1de72855))
+* update default anketa snapshot with new archComponent attribute ([b748841](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/b7488410a0e7bd162452b6e6192be5776f922035))
+* update webpack configuration for improved module federation and chunk handling ([342c69b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/342c69b807b21896f1af92d7ca746cee743121d7))
+
+## [1.22.2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.22.1...v1.22.2) (2026-07-06)
+
+
+### Bug Fixes
+
+* update isDevLikeEnvironment function to include 'test' hostname check ([5136d6b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5136d6bc048c9894bd9ecbb855c3b1861d0435c3))
+
+## [1.22.1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.22.0...v1.22.1) (2026-07-06)
+
+# [1.22.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.21.2...v1.22.0) (2026-07-06)
+
+
+### Features
+
+* add bulk JSON retrieval for dictionaries in V2DictionaryController ([cfc9082](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/cfc9082a366d778c1e8a0974e4ab6e86eb7dddc0))
+* add Gantt chart functionality to tracker feature ([ee26735](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ee267352ef56bcf13627b77d26f86fa365171e94))
+* add Kanban board assignee management functionality ([345e662](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/345e662464397e70fa039b4f95e37fc3fb1f320e))
+* add Kanban board settings and assignee role features ([51f0342](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/51f03426ab3493aee5f80a733fd056bb9d324e1c))
+* add Kanban board task image management features ([85f46d7](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/85f46d7d3fb5e3e2bf0070ccd3b842ee9ce4e57a))
+* add Kanban board task management features and improve code normalization ([e475286](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/e475286887f345128ef0c00d83e7b790fb85dbd6))
+* add QA column to Kanban board and enhance subtask management ([a982057](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a982057b6e32041fc57b093356efae9e5a282183))
+* add reset functionality for Kanban board columns ([435012d](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/435012d2edefefaedf1b8e3d6e445f3d5ae80271))
+* add settings page and update navigation ([a0bf0a7](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a0bf0a7cb15cbfad7fa7d3c7daf8f80e2758007c))
+* enhance data transfer functionality with section selection and XLSX export ([6264349](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6264349809fb0cf4a8f96b3821fc2451b4c90f79))
+* enhance e2e testing setup and add full cycle tests for V2TypicalWork ([da06a19](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/da06a198eec961392c6baa7c5a41cae4af2311c4))
+* enhance FuzzyAutocomplete and add new SegmentBar component ([6f587cc](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6f587cc2b5c780ab947ea2c3d8726c97b1b85314))
+* enhance Gantt chart functionality with improved layout and navigation ([474af96](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/474af9613a616c1273d52fc9f8e263476ee861af))
+* enhance json-logic-ts package for ESM compatibility ([6738f8a](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6738f8a2fa5e330b9d27c8d3e6da7408de0f98e1))
+* enhance Kanban board task management with assignee features ([a955962](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a9559620dcba619f2a921d140c6eb09087dde3f1))
+* enhance KanbanBoardColumn with task addition functionality ([c0e5b3c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/c0e5b3c1bbafdb38e3904083c64fd635c3801b5c))
+* enhance KanbanSubtasksChecklist with improved input handling ([e3710c9](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/e3710c9dc8ee83605111e59ac8b8d5ea8fe7a16d))
+* enhance MainLayout and KanbanSubtasksChecklist for improved layout and functionality ([91a7433](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/91a7433ae4aa2d485387234788cca4dd3a1e40e3))
+* enhance schema editor with field change tracking and new utilities ([c1233cb](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/c1233cbe006e5136c308760eb50dd3f817e04c2a))
+* enhance SelectWithPlaceholder component with generic type support ([cd6fdf1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/cd6fdf1f501379d8a4ceca58a5614058c574c02f))
+* enhance tracker functionality with permissions and default form values ([ee812fa](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ee812fa2b53f0e0a9c6ecccc850e2bc2ce367166))
+* enhance typical work calculation logic handling ([ff25ef9](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ff25ef9433062bc6ec1e7d1db39245aef6a2719c))
+* enhance typical work management with new arch component handling ([fa36a32](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/fa36a32d6f42a29250db67a9690e83fc7f4ada4a))
+* enhance typical work management with new formula parsing and UI improvements ([2ea5e6a](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/2ea5e6a4eb03dd666007542a88510126582bb801))
+* enhance unique code generation for parameter values in V2TypicalWorkParamCatalogService ([721fe16](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/721fe1686da8ed80d166739cab0955c5ca1f9c85))
+* enhance V2TypicalWorkController and services with parameter management ([4ab313b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4ab313beef925a85c16f2f2d77868928212e0343))
+* extend v2 typical work migration to handle legacy stream executors ([85f561a](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/85f561a1cb1f277c518e3d8568ba1930727ea111))
+* implement calculation logic for V2 typical work ([3d22898](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3d22898d87d35dc7135241ee12ab43e3ef42f4d5))
+* implement god mode functionality and related tests ([23faa72](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/23faa724ee928da847ff7d4d0bd3369b9eff7e9f))
+* implement Kanban board columns functionality ([a7f8122](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a7f81229c7f949f0f2efb90ae185b68db2395d2d))
+* implement Kanban board customer management and planning import features ([09c4990](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/09c49909e05beb1ed3bb759330d92e7132b39060))
+* implement Kanban board planning features ([865b79a](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/865b79a3125eca71c4fd3ca185f1aea94a3e609b))
+* implement Kanban board task history tracking and management ([3bedbcc](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3bedbcccdb19480523a4262f474584524d55525f))
+* implement selectDisableTypeahead functionality in Select components ([9b152a3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9b152a33b58732b22d1b67da2dcb4e907d881380))
+* implement system field visibility settings in schema constructor ([aa3d10b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/aa3d10b4e523462a486447ca22d6a081453774ac))
+* implement V2 factory snapshot settings and related services ([a2fa77d](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a2fa77df2c96da071b1968be04a5c100e256f16d))
+* implement v2 typical work assignment and labor parameter management ([3e7b710](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3e7b710c1600c924eb12103986e42f2d64fcaee4))
+* implement V2 typical work parameter catalog with migration and service integration ([6bb3aaf](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6bb3aaf12b2d06ec067f0a817cd2f6725508eb57))
+* improve KanbanBoardPage functionality and error handling ([696b877](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/696b8772423525380015c11f973f350a2463682a))
+* introduce SelectWithPlaceholder component for enhanced select functionality ([8f62d76](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/8f62d76a58416a3567c7768c1f5ec226ceb08d1a))
+* introduce typical works logic patching and new utility functions ([6099a15](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6099a152cfe95dd0afb2bad8dc5522cff09d01a5))
+* refactor factory snapshot management and remove deprecated scripts ([b6c88aa](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/b6c88aa4380421d4bd71bf6b023fe3920f07434f))
+* update factory snapshot scripts and dictionary management ([5b3dfef](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5b3dfeff0a2a2ad44dc4c15e34e2cb802446c028))
+* update webpack configuration to use custom browserslist-to-esbuild wrapper ([e8d0c19](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/e8d0c19717b54c19419dd0ee80eb7893df926263))
+* **v35:** factory snapshot, worksCatalog runtime, and formula calculator UI ([a914aa6](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a914aa685ff79be2d6b36de050bb28358a22ef10))
+
 ## [1.21.2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.21.1...v1.21.2) (2026-06-22)
 
 ## [1.21.1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.21.0...v1.21.1) (2026-06-22)

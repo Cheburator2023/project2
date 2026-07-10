@@ -36,16 +36,27 @@ module.exports = merge(common, {
 			}),
 		],
 		splitChunks: {
+			// MF: не трогаем initial/container — только async-чанки от lazy routes.
 			chunks: "async",
+			maxAsyncRequests: 30,
 			cacheGroups: {
-				vendor: {
+				heavyVendor: {
+					test: /[\\/]node_modules[\\/](@monaco-editor|monaco-editor|mermaid|ag-grid-|@xyflow|@svar-ui)[\\/]/,
+					name: "heavy-vendor",
+					chunks: "async",
+					priority: 20,
+					enforce: true,
+				},
+				vendors: {
 					test: /[\\/]node_modules[\\/]/,
 					name: "vendors",
 					chunks: "initial",
+					priority: 10,
 					enforce: true,
 				},
 			},
 		},
+		// MF remote: runtime должен быть внутри container-чанков, не в отдельном файле.
 		runtimeChunk: false,
 		moduleIds: "deterministic",
 		chunkIds: "deterministic",

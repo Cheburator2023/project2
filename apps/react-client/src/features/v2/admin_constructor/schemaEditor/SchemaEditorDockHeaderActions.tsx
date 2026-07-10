@@ -2,11 +2,15 @@ import CloseFullscreenIcon from "@mui/icons-material/CloseFullscreen";
 import FullscreenIcon from "@mui/icons-material/Fullscreen";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import PictureInPictureAltIcon from "@mui/icons-material/PictureInPictureAlt";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import ViewCompactIcon from "@mui/icons-material/ViewCompact";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { IDockviewHeaderActionsProps } from "dockview-react";
+
+import { useSchemaEditorDock } from "./SchemaEditorDockContext";
+import { V2_TEMPLATE_EDIT_TEST_IDS } from "@react-client/features/v2/admin_constructor/testIds";
 
 const POPOUT_URL = "/popout.html";
 
@@ -16,11 +20,13 @@ function HeaderActionButton({
 	title,
 	ariaLabel,
 	onClick,
+	testId,
 	children,
 }: {
 	title: string;
 	ariaLabel: string;
 	onClick: () => void;
+	testId?: string;
 	children: ReactNode;
 }) {
 	return (
@@ -28,6 +34,7 @@ function HeaderActionButton({
 			size="small"
 			title={title}
 			aria-label={ariaLabel}
+			data-test-id={testId}
 			onClick={(e) => {
 				e.stopPropagation();
 				onClick();
@@ -44,13 +51,12 @@ function HeaderActionButton({
 export function SchemaEditorDockHeaderRightActions(
 	props: IDockviewHeaderActionsProps,
 ) {
+	const { resetDockLayout } = useSchemaEditorDock();
 	const groupApi = props.group.api;
 	const location = groupApi.location;
 
 	const [maximized, setMaximized] = useState(() => groupApi.isMaximized());
-	const [floating, setFloating] = useState(
-		() => location.type === "floating",
-	);
+	const [floating, setFloating] = useState(() => location.type === "floating");
 	const [popout, setPopout] = useState(() => location.type === "popout");
 
 	useEffect(() => {
@@ -155,6 +161,14 @@ export function SchemaEditorDockHeaderRightActions(
 				onClick={onPopoutClick}
 			>
 				<OpenInNewIcon sx={{ fontSize: 18 }} />
+			</HeaderActionButton>
+			<HeaderActionButton
+				title="Сбросить расположение панелей"
+				ariaLabel="Сбросить расположение панелей"
+				testId={V2_TEMPLATE_EDIT_TEST_IDS.dockLayoutReset}
+				onClick={resetDockLayout}
+			>
+				<RestartAltIcon sx={{ fontSize: 18 }} />
 			</HeaderActionButton>
 		</Stack>
 	);

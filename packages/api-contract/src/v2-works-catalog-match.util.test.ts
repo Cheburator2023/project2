@@ -8,24 +8,29 @@ import {
 	resolveTriggerStatusCatalogParam,
 	triggerRuleCatalogGroupKey,
 	typicalWorkRulesMatchSource,
+	V2_SOURCE_STREAM,
 } from "./v2-works-catalog-match.util";
 
 describe("v2-works-catalog-match.util", () => {
-	it("resolves stream from source type", () => {
+	it("resolves the unified source stream for any source row", () => {
+		// Разделение внутр/внеш убрано: любой источник → единый стрим.
 		expect(resolveStreamFromSourceType({ type: "Внутренний" })).toBe(
-			"ИД. Внутренний",
+			V2_SOURCE_STREAM,
 		);
-		expect(resolveStreamFromSourceType({ type: "Внешний" })).toBe("ИД. Внешний");
+		expect(resolveStreamFromSourceType({ type: "Внешний" })).toBe(
+			V2_SOURCE_STREAM,
+		);
+		expect(resolveStreamFromSourceType({})).toBe(V2_SOURCE_STREAM);
 	});
 
-	it("collects streams from source systems", () => {
+	it("collects the unified source stream from source systems", () => {
 		expect(
 			resolveStreamsFromSourceSystems({
 				streamDataSources: {
 					sourceSystems: [{ type: "Внутренний" }, { type: "Внешний" }],
 				},
 			}),
-		).toEqual(["ИД. Внутренний", "ИД. Внешний"]);
+		).toEqual([V2_SOURCE_STREAM]);
 	});
 
 	it("matches control type by bracket label", () => {
@@ -46,6 +51,60 @@ describe("v2-works-catalog-match.util", () => {
 		expect(typicalWorkRulesMatchSource(rules, { value: "Технический [ТМ]" })).toBe(
 			false,
 		);
+	});
+
+	it("matches source type trigger by value code", () => {
+		const rules = [
+			{
+				paramCode: "type",
+				paramName: "Тип системы-источника",
+				operator: "=",
+				valueCode: "external",
+				valueLabel: "Внешний",
+			},
+		];
+		expect(typicalWorkRulesMatchSource(rules, { type: "external" })).toBe(true);
+		expect(typicalWorkRulesMatchSource(rules, { type: "Внешний" })).toBe(true);
+		expect(typicalWorkRulesMatchSource(rules, { type: "internal" })).toBe(false);
+	});
+
+	it("reads source field from encoded paramName aliases", () => {
+		const rules = [
+			{
+				paramCode: "field_primary",
+				paramName: "Сложность @ field_alt|field_other",
+				operator: "=",
+				valueCode: "high",
+				valueLabel: "Высокая",
+			},
+		];
+		expect(
+			typicalWorkRulesMatchSource(rules, {
+				field_alt: "high",
+			}),
+		).toBe(true);
+	});
+
+	it("matches schema field trigger by label when rule stores dictionary code", () => {
+		const rules = [
+			{
+				paramCode: "field_nE73kPQl",
+				paramName: "Детализация и ясность запроса постановки задачи",
+				operator: "=",
+				valueCode: "Точечное",
+				valueLabel: "Точечное",
+			},
+		];
+		expect(
+			typicalWorkRulesMatchSource(rules, {
+				field_nE73kPQl: "Точечное",
+			}),
+		).toBe(true);
+		expect(
+			typicalWorkRulesMatchSource(rules, {
+				field_nE73kPQl: "Масштабное",
+			}),
+		).toBe(false);
 	});
 
 	it("matches source type trigger", () => {

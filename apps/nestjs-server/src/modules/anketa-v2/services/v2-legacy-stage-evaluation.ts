@@ -1,6 +1,8 @@
 import {
+	collectAtypicalWorkRowsFromData,
 	isPositiveBinaryFormValue,
 	V2_LEGACY_STAGE_SUMMARY_POINTERS,
+	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
 	type V2LegacyStageEvaluationDto,
 } from "@smart-anketa/api-contract";
 import {
@@ -9,6 +11,8 @@ import {
 	V2_STAGE_DISPLAY_NAMES,
 	type V2StageKey,
 } from "../constants/v2-stage-catalog";
+import { resolveLegacyFormContext } from "../utils/v2-legacy-form-context.util";
+import { parseLegacyMultiplierLabel } from "../utils/v2-form-number.util";
 
 export { V2_LEGACY_STAGE_SUMMARY_POINTERS };
 
@@ -74,7 +78,15 @@ function sumAtypicalIncluded(tasks: unknown[]): number {
 		const o = readRecord(row);
 		if (o?.includeInCalculation === false) continue;
 		const total = Number(o?.total);
-		if (Number.isFinite(total) && total > 0) sum += total;
+		if (Number.isFinite(total) && total > 0) {
+			sum += total;
+			continue;
+		}
+		const estimate = Number(o?.estimateHoursPerDay);
+		const coefficient = Number(o?.coefficient);
+		if (Number.isFinite(estimate) && Number.isFinite(coefficient)) {
+			sum += estimate * coefficient;
+		}
 	}
 	return roundUp2(sum);
 }
@@ -82,14 +94,7 @@ function sumAtypicalIncluded(tasks: unknown[]): number {
 // --- Коэффициенты (порт v1 `coefficients.ts`, адаптация под поля v2) ---
 
 function parseComplexityCoeff(complexity: string | undefined): number {
-	if (!complexity) return 1;
-	const m = complexity.match(/×(\d+(?:\.\d+)?)/);
-	if (m?.[1]) return Number(m[1]);
-	if (complexity.startsWith("1")) return 1;
-	if (complexity.startsWith("2")) return 1.25;
-	if (complexity.startsWith("3")) return 1.5;
-	if (complexity.startsWith("4")) return 2;
-	return 1;
+	return parseLegacyMultiplierLabel(complexity);
 }
 
 function calculateModelsCoefficient(modelsCount: number): number {
@@ -357,41 +362,10 @@ function extractCoefficients(data: Record<string, unknown>): Coefficients {
 	const detailParams =
 		readRecord(detailInfo?.model) ?? readRecord(detailInfo?.parameters);
 	const uncertainty = readRecord(data.uncertaintyCalculation);
-	const dataProcessing = readRecord(data.dataProcessing);
-	const models = readRecord(data.models);
-
-	const modelsCount = Number(detailParams?.modelsCount) || 1;
-	const dataSourcesCount =
-		Number(dataProcessing?.sourcesRDS) ||
-		readArray(
-			readRecord(readRecord(data.streamModelControl)?.dataObjects)?.trainingSources,
-		).length ||
-		readArray(readRecord(data.dataObjects)?.trainingSources).length ||
-		1;
-
-	const algorithmTypes: string[] = [];
-	const modelsList = readArray(models?.modelsList);
-	for (const m of modelsList) {
-		const algo = readRecord(m)?.algorithm;
-		if (typeof algo === "string" && algo.trim()) algorithmTypes.push(algo.trim());
-	}
-	const singleType = detailParams?.algorithmType;
-	if (typeof singleType === "string" && singleType.trim()) {
-		algorithmTypes.push(singleType.trim());
-	}
-
-	const autoMl = isPositiveBinaryFormValue(detailParams?.autoML)
-		? "Да"
-		: "Не требуется";
-
-	const channelsRaw = generalInfo?.channels;
-	const deploymentChannels =
-		typeof channelsRaw === "string" && channelsRaw === "Требуется"
-			? ["Онлайн"]
-			: [];
+	const ctx = resolveLegacyFormContext(data);
 
 	return {
-		modelsCountCoefficient: calculateModelsCoefficient(modelsCount),
+		modelsCountCoefficient: calculateModelsCoefficient(ctx.modelsCount),
 		setupComplexityCoefficient: parseComplexityCoeff(
 			typeof generalInfo?.complexity === "string"
 				? generalInfo.complexity
@@ -399,16 +373,20 @@ function extractCoefficients(data: Record<string, unknown>): Coefficients {
 		),
 		generalUncertaintyCoefficient: calculateTotalUncertaintyFromRiskGroup(
 			readRecord(uncertainty?.riskGroup),
-			Number(uncertainty?.uncertaintyAdjustment) || 0,
+			ctx.uncertaintyAdjustmentPercent,
 		),
-		readyPromReportsCoefficient: getReadyPromReportsCoefficient("Нет"),
-		dataSourcesCountCoefficient: calculateDataSourceCoefficient(dataSourcesCount),
+		readyPromReportsCoefficient: getReadyPromReportsCoefficient(
+			ctx.readyPromReports,
+		),
+		dataSourcesCountCoefficient: calculateDataSourceCoefficient(
+			ctx.dataSourcesCount,
+		),
 		algorithmComplexityCoefficient: Math.max(
-			calculateAlgorithmComplexityCoefficient(algorithmTypes),
+			calculateAlgorithmComplexityCoefficient(ctx.algorithmTypes),
 			Number(detailParams?.algorithmCoeffValue) || 0,
 		) || 1,
 		deploymentChannelsCoefficient: calculateDeploymentChannelCoefficient(
-			deploymentChannels,
+			ctx.deploymentChannels,
 		),
 	};
 }
@@ -417,25 +395,8 @@ function calculateAllStages(
 	data: Record<string, unknown>,
 	coefficients: Coefficients,
 ): Record<V2StageKey, number> {
-	const generalInfo = readRecord(data.generalInfo);
-	const detailInfo = readRecord(data.detailInfo);
-	const detailParams =
-		readRecord(detailInfo?.model) ?? readRecord(detailInfo?.parameters);
+	const ctx = resolveLegacyFormContext(data);
 	const assessedInitiativesCount = 1;
-	const pilotModelRequired =
-		String(generalInfo?.pilotNeed ?? "").includes("MVP") ||
-		String(generalInfo?.pilotNeed ?? "") === "Требуется"
-			? "Да"
-			: "Не требуется";
-	const pilotSupportRequired = pilotModelRequired;
-	const autoMlRequired = isPositiveBinaryFormValue(detailParams?.autoML)
-		? "Да"
-		: "Не требуется";
-	const productionAdditionalReports = "1";
-	const productionDeploymentChannels: string[] = [];
-	const readyPromReports = "Нет";
-	const dataSourcesCount =
-		Number(readRecord(data.dataProcessing)?.sourcesRDS) || 1;
 
 	const c = coefficients;
 	const b = V2_STAGE_BASE_VALUES;
@@ -453,16 +414,16 @@ function calculateAllStages(
 			assessedInitiativesCount,
 			c.dataSourcesCountCoefficient,
 			c.generalUncertaintyCoefficient,
-			readyPromReports,
-			dataSourcesCount,
+			ctx.readyPromReports,
+			ctx.dataSourcesCount,
 		),
 		stage04: calculateStage04(
 			b.stage04,
 			assessedInitiativesCount,
 			c.setupComplexityCoefficient,
 			c.generalUncertaintyCoefficient,
-			readyPromReports,
-			dataSourcesCount,
+			ctx.readyPromReports,
+			ctx.dataSourcesCount,
 		),
 		stage05A: calculateStage05A(
 			b.stage05A,
@@ -471,7 +432,7 @@ function calculateAllStages(
 			c.generalUncertaintyCoefficient,
 			c.readyPromReportsCoefficient,
 			c.algorithmComplexityCoefficient || 1,
-			pilotModelRequired,
+			ctx.pilotModelRequired,
 		),
 		stage05: calculateStage05(
 			b.stage05,
@@ -486,21 +447,23 @@ function calculateAllStages(
 			c.modelsCountCoefficient,
 			c.setupComplexityCoefficient,
 			c.generalUncertaintyCoefficient,
-			autoMlRequired,
+			ctx.autoMlRequired,
 		),
 		stage05B: calculateStage05B(
 			b.stage05B,
 			c.generalUncertaintyCoefficient,
 			c.readyPromReportsCoefficient,
-			pilotSupportRequired,
+			ctx.pilotSupportRequired,
 		),
 		stage07: calculateStage07(
 			b.stage07,
 			assessedInitiativesCount,
 			c.setupComplexityCoefficient,
 			c.generalUncertaintyCoefficient,
-			getProductionAdditionalReportsCoefficient(productionAdditionalReports),
-			productionAdditionalReports,
+			getProductionAdditionalReportsCoefficient(
+				ctx.productionAdditionalReports,
+			),
+			ctx.productionAdditionalReports,
 		),
 		stage09: calculateStage09(
 			b.stage09,
@@ -509,14 +472,14 @@ function calculateAllStages(
 			c.generalUncertaintyCoefficient,
 			c.algorithmComplexityCoefficient || 1,
 			c.deploymentChannelsCoefficient || 1,
-			productionDeploymentChannels,
+			ctx.deploymentChannels,
 		),
 		amlEnforcement: calculateAMLEnforcement(
 			b.amlEnforcement,
 			c.modelsCountCoefficient,
 			c.setupComplexityCoefficient,
 			c.generalUncertaintyCoefficient,
-			autoMlRequired,
+			ctx.autoMlRequired,
 		),
 	};
 }
@@ -524,8 +487,8 @@ function calculateAllStages(
 function integrationRowScore(
 	base: number,
 	coefficients: Coefficients,
-	createIS: string | undefined,
-	createService: string | undefined,
+	createIS: unknown,
+	createService: unknown,
 ): number {
 	const required =
 		isPositiveBinaryFormValue(createIS) ||
@@ -540,11 +503,52 @@ function integrationRowScore(
 	);
 }
 
+function readByDotPath(data: Record<string, unknown>, path: string): unknown {
+	return path.split(".").reduce<unknown>((cur, key) => {
+		const obj = readRecord(cur);
+		return obj ? obj[key] : undefined;
+	}, data);
+}
+
+function resolveSourceTypicalTasksArray(
+	data: Record<string, unknown>,
+	sourceTypicalWorksPath?: string | null,
+): unknown[] {
+	if (sourceTypicalWorksPath) {
+		const resolved = readArray(readByDotPath(data, sourceTypicalWorksPath));
+		if (resolved.length > 0) return resolved;
+	}
+
+	const canonical = readArray(
+		readRecord(data.streamDataSources)?.sourceTypicalTasks ??
+			readRecord(data.detailInfo)?.sourceTypicalTasks,
+	);
+	if (canonical.length > 0) return canonical;
+
+	const streamBlock = readRecord(data.streamDataSources);
+	if (streamBlock) {
+		for (const value of Object.values(streamBlock)) {
+			if (!Array.isArray(value) || value.length === 0) continue;
+			const hasTotals = value.some((row) => {
+				const total = Number(readRecord(row)?.total);
+				return Number.isFinite(total);
+			});
+			if (hasTotals) return value;
+		}
+	}
+
+	return [];
+}
+
 /**
  * Расчёт блока «Итоговая оценка» (11 этапов + платформенные стримы) по правилам v1.
  */
 export function evaluateLegacyV2Summary(
 	data: Record<string, unknown>,
+	options?: {
+		sourceTypicalWorksPath?: string | null;
+		uiSchema?: unknown;
+	},
 ): V2LegacySummaryResult {
 	const coefficients = extractCoefficients(data);
 	const stages = calculateAllStages(data, coefficients);
@@ -578,10 +582,8 @@ export function evaluateLegacyV2Summary(
 	const isAdjusted = integrationRowScore(
 		isBase,
 		coefficients,
-		typeof generalInfo?.createIS === "string" ? generalInfo.createIS : undefined,
-		typeof generalInfo?.createService === "string"
-			? generalInfo.createService
-			: undefined,
+		generalInfo?.createIS,
+		generalInfo?.createService,
 	);
 	baseTotal += isBase;
 	adjustedTotal += isAdjusted;
@@ -601,10 +603,12 @@ export function evaluateLegacyV2Summary(
 			isAdjusted > 0 ? percentDeviation(isBase, isAdjusted) : null,
 	});
 
+	const atypicalRows = collectAtypicalWorkRowsFromData(data, options?.uiSchema);
+	const legacyAtypicalRows = readArray(
+		readRecord(data.streamModelControl)?.atypicalTasks ?? data.atypicalTasks,
+	);
 	const globalAtypical = sumAtypicalIncluded(
-		readArray(
-			readRecord(data.streamModelControl)?.atypicalTasks ?? data.atypicalTasks,
-		),
+		atypicalRows.length > 0 ? atypicalRows : legacyAtypicalRows,
 	);
 	const atypicalBase = 33;
 	const atypicalAdjusted =
@@ -623,9 +627,9 @@ export function evaluateLegacyV2Summary(
 	});
 
 	const sourceTypical = sumTaskTotals(
-		readArray(
-			readRecord(data.streamDataSources)?.sourceTypicalTasks ??
-				readRecord(data.detailInfo)?.sourceTypicalTasks,
+		resolveSourceTypicalTasksArray(
+			data,
+			options?.sourceTypicalWorksPath ?? V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
 		),
 	);
 	const mlTypical = sumTaskTotals(readArray(mlPlatform?.typicalTasks));
@@ -683,8 +687,12 @@ export function buildLegacyStageEvaluationMeta(
 
 export function applyLegacySummaryToFormData(
 	data: Record<string, unknown>,
+	options?: {
+		sourceTypicalWorksPath?: string | null;
+		uiSchema?: unknown;
+	},
 ): { formData: Record<string, unknown>; legacyStageEvaluation: V2LegacyStageEvaluationDto } {
-	const summary = evaluateLegacyV2Summary(data);
+	const summary = evaluateLegacyV2Summary(data, options);
 	const next = { ...data };
 	const prevSummary = readRecord(next.summary) ?? {};
 	next.summary = {

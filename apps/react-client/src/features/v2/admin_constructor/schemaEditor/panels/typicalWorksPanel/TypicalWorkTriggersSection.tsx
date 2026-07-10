@@ -21,12 +21,16 @@ import { useMemo, useState } from "react";
 import {
 	catalogForTriggerRuleGroup,
 	isWorkTriggerGroupInvalid,
+	type TriggerPreviewState,
 	type TriggerValidationIssue,
 } from "./typicalWorkPatchErrors";
 import {
 	excludeRulesByGroupKey,
 	filterRulesByGroupKey,
+	isSchemaTextualParam,
 	resolveSchemaParamForTriggerRule,
+	schemaParamDisplayName,
+	schemaParamRuleName,
 	schemaWorkParameterEmptyPickerMessage,
 	triggerRuleGroupKey,
 } from "./schemaWorkParameters";
@@ -34,6 +38,7 @@ import {
 type TypicalWorkTriggersSectionProps = {
 	rules: V2TypicalWorkRuleDto[];
 	triggerStatus: V2WorkTriggerStatus;
+	triggerPreviewState?: TriggerPreviewState;
 	validationIssues?: TriggerValidationIssue[];
 	schemaFieldCount?: number;
 	paramOptions: V2TypicalWorkParameterDto[];
@@ -57,7 +62,20 @@ function triggerBanner(
 	status: V2WorkTriggerStatus,
 	ruleCount: number,
 	issues: TriggerValidationIssue[] = [],
+	previewState: TriggerPreviewState = "none",
 ) {
+	if (status === "hidden" && previewState === "none" && ruleCount > 0) {
+		return {
+			bg: "#eef4ff",
+			border: "#d4e2f7",
+			iconBg: "#2f6bd8",
+			icon: "i",
+			title: `Условия настроены (${ruleCount} ${ruleCount === 1 ? "условие" : "условия"})`,
+			sub: "заполните поля стрима или систему-источник в превью анкеты — тогда проверим появление работы",
+			fg: "#2f6bd8",
+		};
+	}
+
 	switch (status) {
 		case "appears":
 			return {
@@ -66,7 +84,7 @@ function triggerBanner(
 				iconBg: "#1f8a4d",
 				icon: "✓",
 				title: `Работа появляется в анкете (${ruleCount} ${ruleCount === 1 ? "условие" : "условия"})`,
-				sub: "все условия выполнены",
+				sub: "все условия выполнены для источника в превью",
 				fg: "#1f8a4d",
 			};
 		case "invalid":
@@ -108,6 +126,7 @@ function triggerBanner(
 export function TypicalWorkTriggersSection({
 	rules,
 	triggerStatus,
+	triggerPreviewState = "none",
 	validationIssues = [],
 	schemaFieldCount = 0,
 	paramOptions,
@@ -116,7 +135,12 @@ export function TypicalWorkTriggersSection({
 	onChange,
 }: TypicalWorkTriggersSectionProps) {
 	const [pickerKey, setPickerKey] = useState(0);
-	const banner = triggerBanner(triggerStatus, rules.length, validationIssues);
+	const banner = triggerBanner(
+		triggerStatus,
+		rules.length,
+		validationIssues,
+		triggerPreviewState,
+	);
 
 	const usedGroupKeys = useMemo(
 		() => new Set(rules.map((r) => triggerRuleGroupKey(r, paramOptions))),
@@ -177,7 +201,7 @@ export function TypicalWorkTriggersSection({
 					id: current?.id ?? `new-${Date.now()}`,
 					streamExecutor,
 					paramCode: param.code,
-					paramName: param.name,
+					paramName: schemaParamRuleName(param),
 					operator,
 					valueCode: null,
 					valueLabel: null,
@@ -211,7 +235,7 @@ export function TypicalWorkTriggersSection({
 				id: `new-${Date.now()}-${valueCode}`,
 				streamExecutor,
 				paramCode: param.code,
-				paramName: param.name,
+				paramName: schemaParamRuleName(param),
 				operator: currentOperator,
 				valueCode,
 				valueLabel,
@@ -244,7 +268,7 @@ export function TypicalWorkTriggersSection({
 				id: `new-${Date.now()}`,
 				streamExecutor,
 				paramCode: param.code,
-				paramName: param.name,
+				paramName: schemaParamRuleName(param),
 				operator: "=",
 				valueCode: firstValue?.code ?? null,
 				valueLabel: firstValue?.label ?? null,
@@ -416,7 +440,8 @@ export function TypicalWorkTriggersSection({
 							param?.name ??
 							(isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName)
 								? "Тип источника данных"
-								: (paramRules[0]?.paramName ?? groupKey));
+								: schemaParamDisplayName(paramRules[0]?.paramName) ||
+									groupKey);
 						return (
 							<Box
 								key={groupKey}
@@ -538,6 +563,15 @@ export function TypicalWorkTriggersSection({
 											</Box>
 										))}
 									</Box>
+								) : null}
+								{param && (param.values.length === 0 || isSchemaTextualParam(param)) ? (
+									<Typography sx={{ fontSize: 11.5, color: "#6b7484", mb: 0.9 }}>
+										{isSchemaTextualParam(param)
+											? "Работа появляется, если поле заполнено (любое непустое значение)."
+											: param.numeric
+												? "Задайте порог в условии через операторы сравнения."
+												: "Условие «поле заполнено» — значение не выбирается."}
+									</Typography>
 								) : null}
 								<Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
 									{(param?.values ?? []).map((value) => {

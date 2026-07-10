@@ -20,6 +20,8 @@ import {
 	formatWorkFormulaGeneralSummary,
 	hasWorkRefToken,
 	isTransitiveOnlyFormula,
+	isWorkFormulaLaborParamKnown,
+	normalizeWorkFormulaLaborParamTokens,
 	parseWorkFormulaText,
 	tokensToText,
 	validateWorkFormulaTokens,
@@ -59,12 +61,25 @@ type WorkFormulaEditorProps = {
 	onFormulaChange: (formula: V2TypicalWorkFormulaDto) => void;
 	onRoundingChange: (rounding: V2TypicalWorkRoundingDto) => void;
 	readOnly?: boolean;
+	/** Читаемое имя параметра по коду (для подписи чипов формулы). */
+	resolveParamName?: (paramCode: string, paramName?: string | null) => string;
 };
 
 type ParamOption = {
 	code: string;
 	name: string;
+	/** Число отмеченных значений в множестве any-of (только для any-of пикера). */
+	anyOfValueCount?: number;
 };
+
+function resolveLaborAnyOfValueCount(
+	laborParams: V2TypicalWorkLaborParamGroupDto[],
+	paramCode: string,
+): number {
+	const group = laborParams.find((g) => g.paramCode === paramCode);
+	if (!group || group.kind !== "any_of") return 0;
+	return group.anyOf?.valueCodes.length ?? 0;
+}
 
 const ROUNDING_OPTIONS: {
 	mode: V2TypicalWorkRoundingDto["mode"];
@@ -79,6 +94,17 @@ const ROUNDING_OPTIONS: {
 function formatNormValue(value: number | null): string {
 	if (value == null || !Number.isFinite(value)) return "—";
 	return String(value);
+}
+
+function isFormulaOperandToken(token: V2WorkFormulaToken): boolean {
+	return (
+		token.kind === "norm" ||
+		token.kind === "number" ||
+		token.kind === "param_coeff" ||
+		token.kind === "param_anyof" ||
+		token.kind === "work_ref" ||
+		token.kind === "paren_close"
+	);
 }
 
 function insertTokenAt(
@@ -106,6 +132,8 @@ function tokenChipColors(token: V2WorkFormulaToken): {
 		case "work_ref":
 			return { bg: "#f5f3ff", color: "#6d28d9", border: "#ddd6fe" };
 		case "number":
+			return { bg: "#f8fafc", color: "#334155", border: "#e2e8f0" };
+		case "operator":
 			return { bg: "#f8fafc", color: "#334155", border: "#e2e8f0" };
 		default:
 			return { bg: "#fff", color: "#334155", border: "#e2e8f0" };
@@ -174,9 +202,21 @@ const FORMULA_PICKER_FIELD_SX = {
 	),
 } as const;
 
+/** Подпись чипа параметра: читаемое имя + код (id), если имя известно и отличается. */
+function formatParamSubtitle(
+	name: string | null | undefined,
+	paramCode: string,
+): string {
+	const trimmed = name?.trim();
+	return trimmed && trimmed !== paramCode
+		? `${trimmed} · ${paramCode}`
+		: paramCode;
+}
+
 function tokenDisplayLabel(
 	token: V2WorkFormulaToken,
 	normValue: number | null,
+	resolveParamName?: (paramCode: string, paramName?: string | null) => string,
 ): { title: string; subtitle?: string } {
 	switch (token.kind) {
 		case "norm":
@@ -184,12 +224,20 @@ function tokenDisplayLabel(
 		case "param_coeff":
 			return {
 				title: "коэф. параметра",
-				subtitle: token.paramName ?? token.paramCode,
+				subtitle: formatParamSubtitle(
+					resolveParamName?.(token.paramCode, token.paramName) ??
+						token.paramName,
+					token.paramCode,
+				),
 			};
 		case "param_anyof":
 			return {
-				title: "одно из значений",
-				subtitle: token.paramName ?? token.paramCode,
+				title: "any-of",
+				subtitle: formatParamSubtitle(
+					resolveParamName?.(token.paramCode, token.paramName) ??
+						token.paramName,
+					token.paramCode,
+				),
 			};
 		case "work_ref":
 			return {
@@ -199,9 +247,7 @@ function tokenDisplayLabel(
 		case "number":
 			return { title: String(token.value) };
 		case "operator":
-			if (token.op === "*") return { title: "×" };
-			if (token.op === "/") return { title: "÷" };
-			return { title: token.op };
+			return { title: operatorSymbol(token.op) };
 		case "paren_open":
 			return { title: "(" };
 		case "paren_close":
@@ -224,6 +270,17 @@ const FORMULA_MODE_SEGMENTS = [
 	},
 ];
 
+const FORMULA_OPERATOR_OPTIONS = [
+	{ op: "*" as const, label: "×" },
+	{ op: "/" as const, label: "÷" },
+	{ op: "+" as const, label: "+" },
+	{ op: "-" as const, label: "−" },
+] as const;
+
+function operatorSymbol(op: "+" | "-" | "*" | "/"): string {
+	return FORMULA_OPERATOR_OPTIONS.find((option) => option.op === op)?.label ?? op;
+}
+
 function FormulaRibbonCursor() {
 	return (
 		<Box
@@ -231,11 +288,11 @@ function FormulaRibbonCursor() {
 			sx={{
 				width: 2,
 				height: 36,
-				bgcolor: "#2563eb",
+				bgcolor: "#000",
 				borderRadius: 1,
 				flexShrink: 0,
-				animation: "blink 1s step-end infinite",
-				"@keyframes blink": {
+				animation: "formulaCaretBlink 1s step-end infinite",
+				"@keyframes formulaCaretBlink": {
 					"50%": { opacity: 0 },
 				},
 			}}
@@ -245,22 +302,24 @@ function FormulaRibbonCursor() {
 
 function FormulaRibbonGap({
 	active,
+	showCursor,
 	readOnly,
 	onClick,
 }: {
 	active: boolean;
+	showCursor: boolean;
 	readOnly: boolean;
 	onClick: () => void;
 }) {
 	return (
 		<Box
-			component={readOnly ? "span" : "button"}
-			type={readOnly ? undefined : "button"}
+			component="span"
+			role={readOnly ? undefined : "button"}
 			aria-label={active ? "Позиция вставки" : undefined}
 			onClick={
 				readOnly
 					? undefined
-					: (event: React.MouseEvent<HTMLButtonElement>) => {
+					: (event: React.MouseEvent<HTMLSpanElement>) => {
 							event.stopPropagation();
 							onClick();
 						}
@@ -279,12 +338,9 @@ function FormulaRibbonGap({
 				cursor: readOnly ? "default" : "text",
 				fontFamily: "inherit",
 				outline: "none",
-				"&:focus-visible": {
-					outline: "none",
-				},
 			}}
 		>
-			{active && !readOnly ? <FormulaRibbonCursor /> : null}
+			{showCursor ? <FormulaRibbonCursor /> : null}
 		</Box>
 	);
 }
@@ -300,6 +356,7 @@ export function WorkFormulaEditor({
 	onFormulaChange,
 	onRoundingChange,
 	readOnly = false,
+	resolveParamName,
 }: WorkFormulaEditorProps) {
 	const [mode, setMode] = useState<"visual" | "manual">("visual");
 	const [manualText, setManualText] = useState(formula.text);
@@ -309,11 +366,24 @@ export function WorkFormulaEditor({
 	const [editingNumberIndex, setEditingNumberIndex] = useState<number | null>(
 		null,
 	);
+	const [editingOperatorIndex, setEditingOperatorIndex] = useState<number | null>(
+		null,
+	);
 	const [numberDraft, setNumberDraft] = useState("");
 	const [paramPickerKey, setParamPickerKey] = useState(0);
 	const [anyOfPickerKey, setAnyOfPickerKey] = useState(0);
 	const [workPickerKey, setWorkPickerKey] = useState(0);
+	const [isRibbonFocused, setIsRibbonFocused] = useState(false);
 	const ribbonRef = useRef<HTMLDivElement>(null);
+
+	const showRibbonCursor = !readOnly && isRibbonFocused;
+
+	const handleRibbonBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+		const next = event.relatedTarget;
+		if (next instanceof Node && event.currentTarget.contains(next)) return;
+		setIsRibbonFocused(false);
+		setEditingOperatorIndex(null);
+	};
 
 	const focusRibbon = useCallback(() => {
 		ribbonRef.current?.focus();
@@ -321,6 +391,8 @@ export function WorkFormulaEditor({
 
 	const setCursor = useCallback(
 		(index: number) => {
+			setEditingNumberIndex(null);
+			setEditingOperatorIndex(null);
 			setCursorIndex(Math.max(0, Math.min(index, formula.tokens.length)));
 			focusRibbon();
 		},
@@ -344,13 +416,17 @@ export function WorkFormulaEditor({
 	const paramAnyOfOptions = useMemo(
 		(): ParamOption[] =>
 			laborParams
-				.filter(
-					(g) => g.kind === "any_of" && (g.anyOf?.valueCodes.length ?? 0) > 0,
-				)
+				.filter((g) => g.kind === "any_of")
 				.map((g) => ({
 					code: g.paramCode,
 					name: g.paramName ?? g.paramCode,
+					anyOfValueCount: g.anyOf?.valueCodes.length ?? 0,
 				})),
+		[laborParams],
+	);
+
+	const anyOfLaborParamCount = useMemo(
+		() => laborParams.filter((g) => g.kind === "any_of").length,
 		[laborParams],
 	);
 
@@ -386,9 +462,23 @@ export function WorkFormulaEditor({
 		);
 	}, [availableWorkSources, formula.tokens]);
 
-	const laborParamCodes = useMemo(
-		() => new Set(laborParams.map((g) => g.paramCode)),
+	const laborParamRefs = useMemo(
+		() =>
+			laborParams.map((group) => ({
+				paramCode: group.paramCode,
+				paramName: group.paramName,
+			})),
 		[laborParams],
+	);
+
+	const isLaborFormulaParam = useCallback(
+		(token: V2WorkFormulaToken) => {
+			if (token.kind !== "param_coeff" && token.kind !== "param_anyof") {
+				return false;
+			}
+			return isWorkFormulaLaborParamKnown(token, laborParamRefs);
+		},
+		[laborParamRefs],
 	);
 
 	const paramOrder = useMemo(
@@ -399,10 +489,10 @@ export function WorkFormulaEditor({
 	const formulaError = useMemo(
 		() =>
 			validateWorkFormulaTokens(formula.tokens, {
-				allowedParamCodes: laborParamCodes,
+				laborParams: laborParamRefs,
 				allowInvalidParamRefs: true,
 			}),
-		[formula.tokens, laborParamCodes],
+		[formula.tokens, laborParamRefs],
 	);
 
 	const generalSummary = useMemo(
@@ -426,8 +516,17 @@ export function WorkFormulaEditor({
 
 	const insertToken = (token: V2WorkFormulaToken) => {
 		if (readOnly) return;
-		const next = insertTokenAt(formula.tokens, cursorIndex, token);
-		commitTokens(next, cursorIndex + 1);
+		let index = cursorIndex;
+		let tokens = formula.tokens;
+		if (isFormulaOperandToken(token)) {
+			const prev = tokens[index - 1];
+			if (prev && isFormulaOperandToken(prev)) {
+				tokens = insertTokenAt(tokens, index, { kind: "operator", op: "*" });
+				index += 1;
+			}
+		}
+		const next = insertTokenAt(tokens, index, token);
+		commitTokens(next, index + 1);
 	};
 
 	const removeTokenAt = (deletedIndex: number) => {
@@ -444,6 +543,14 @@ export function WorkFormulaEditor({
 		) {
 			setEditingNumberIndex(editingNumberIndex - 1);
 		}
+		if (editingOperatorIndex === deletedIndex) {
+			setEditingOperatorIndex(null);
+		} else if (
+			editingOperatorIndex != null &&
+			editingOperatorIndex > deletedIndex
+		) {
+			setEditingOperatorIndex(editingOperatorIndex - 1);
+		}
 	};
 
 	const updateTokenAt = (index: number, token: V2WorkFormulaToken) => {
@@ -458,12 +565,24 @@ export function WorkFormulaEditor({
 			setParseError(parsed.error);
 			return;
 		}
+		const normalized = normalizeWorkFormulaLaborParamTokens(
+			parsed.tokens,
+			laborParamRefs,
+		);
+		const validation = validateWorkFormulaTokens(normalized, {
+			laborParams: laborParamRefs,
+			allowInvalidParamRefs: true,
+		});
+		if (validation) {
+			setParseError(validation);
+			return;
+		}
 		setParseError(null);
 		onFormulaChange({
-			tokens: parsed.tokens,
-			text: tokensToText(parsed.tokens),
+			tokens: normalized,
+			text: tokensToText(normalized),
 		});
-		setCursorIndex(parsed.tokens.length);
+		setCursorIndex(normalized.length);
 		setMode("visual");
 	};
 
@@ -475,6 +594,11 @@ export function WorkFormulaEditor({
 
 	const handleRibbonKeyDown = (event: React.KeyboardEvent) => {
 		if (readOnly) return;
+		if (event.key === "Escape") {
+			setEditingNumberIndex(null);
+			setEditingOperatorIndex(null);
+			return;
+		}
 		if (event.key === "ArrowLeft") {
 			event.preventDefault();
 			setCursorIndex((prev) => Math.max(0, prev - 1));
@@ -550,7 +674,7 @@ export function WorkFormulaEditor({
 					readOnly={readOnly}
 					onChange={(nextMode) => {
 						if (nextMode === "manual") {
-							setManualText(formula.text || tokensToText(formula.tokens));
+							setManualText(tokensToText(formula.tokens));
 							setParseError(null);
 							setMode("manual");
 							return;
@@ -566,6 +690,8 @@ export function WorkFormulaEditor({
 					<Box
 						ref={ribbonRef}
 						tabIndex={readOnly ? -1 : 0}
+						onFocus={() => setIsRibbonFocused(true)}
+						onBlur={handleRibbonBlur}
 						onKeyDown={handleRibbonKeyDown}
 						onClick={(event) => {
 							if (readOnly || event.target !== event.currentTarget) return;
@@ -596,6 +722,7 @@ export function WorkFormulaEditor({
 							<>
 								<FormulaRibbonGap
 									active={cursorIndex === 0}
+									showCursor={showRibbonCursor && cursorIndex === 0}
 									readOnly={readOnly}
 									onClick={() => setCursor(0)}
 								/>
@@ -613,48 +740,94 @@ export function WorkFormulaEditor({
 						) : (
 							formula.tokens.map((token, index) => {
 								const colors = tokenChipColors(token);
-								const label = tokenDisplayLabel(token, normValue);
+								const label = tokenDisplayLabel(
+									token,
+									normValue,
+									resolveParamName,
+								);
+								const anyOfValueCount =
+									token.kind === "param_anyof"
+										? resolveLaborAnyOfValueCount(laborParams, token.paramCode)
+										: 0;
+								const isIncompleteAnyOf =
+									token.kind === "param_anyof" && anyOfValueCount === 0;
 								const isInvalidParam =
 									(token.kind === "param_coeff" ||
 										token.kind === "param_anyof") &&
-									(Boolean(token.invalid) ||
-										!laborParamCodes.has(token.paramCode));
+									(Boolean(token.invalid) || !isLaborFormulaParam(token));
+								const isWarningParam = isIncompleteAnyOf && !isInvalidParam;
 								const isEditingNumber =
 									editingNumberIndex === index && token.kind === "number";
+								const isEditingOperator =
+									editingOperatorIndex === index && token.kind === "operator";
+								const isOperator = token.kind === "operator";
 
 								return (
 									<Fragment key={`${token.kind}-${index}`}>
 										<FormulaRibbonGap
 											active={cursorIndex === index}
+											showCursor={showRibbonCursor && cursorIndex === index}
 											readOnly={readOnly}
 											onClick={() => setCursor(index)}
 										/>
 										<Box
+											data-test-id={
+												isOperator ? TID.workFormulaOperatorChip : undefined
+											}
 											onClick={(event) => {
 												event.stopPropagation();
 												setCursor(index + 1);
-												if (token.kind === "number" && !readOnly) {
+												if (readOnly) return;
+												if (token.kind === "number") {
+													setEditingOperatorIndex(null);
 													setEditingNumberIndex(index);
 													setNumberDraft(String(token.value));
+													return;
+												}
+												if (token.kind === "operator") {
+													setEditingNumberIndex(null);
+													setEditingOperatorIndex(index);
 												}
 											}}
 											title={
 												isInvalidParam
 													? "Параметр удалён из блока трудоёмкости — исправьте формулу"
-													: undefined
+													: isWarningParam
+														? "Any-of без выбранных значений — отметьте множество в карточке параметра"
+														: isOperator && !readOnly
+															? "Сменить оператор"
+															: (token.kind === "param_coeff" ||
+																		token.kind === "param_anyof") &&
+																  label.subtitle
+																? label.subtitle
+																: undefined
 											}
 											sx={{
 												display: "inline-flex",
 												flexDirection: "column",
 												alignItems: "center",
 												justifyContent: "center",
-												minWidth: token.kind === "norm" ? 72 : 48,
-												px: 1,
+												minWidth: isOperator ? 32 : token.kind === "norm" ? 72 : 48,
+												px: isOperator ? 0.5 : 1,
 												py: 0.5,
 												borderRadius: "8px",
-												border: `1px solid ${isInvalidParam ? "#fca5a5" : colors.border}`,
-												bgcolor: isInvalidParam ? "#fef2f2" : colors.bg,
-												color: isInvalidParam ? "#b91c1c" : colors.color,
+												border: `1px solid ${
+													isInvalidParam
+														? "#fca5a5"
+														: isWarningParam
+															? "#fdba74"
+															: colors.border
+												}`,
+												bgcolor: isInvalidParam
+													? "#fef2f2"
+													: isWarningParam
+														? "#fff7ed"
+														: colors.bg,
+												color: isInvalidParam
+													? "#b91c1c"
+													: isWarningParam
+														? "#c2410c"
+														: colors.color,
 												cursor: readOnly ? "default" : "pointer",
 												userSelect: "none",
 												flexShrink: 0,
@@ -673,9 +846,7 @@ export function WorkFormulaEditor({
 													onChange={(e) => setNumberDraft(e.target.value)}
 													onClick={(event) => event.stopPropagation()}
 													onBlur={() => {
-														const value = Number(
-															numberDraft.replace(",", "."),
-														);
+														const value = Number(numberDraft.replace(",", "."));
 														if (Number.isFinite(value) && value >= 0) {
 															updateTokenAt(index, {
 																kind: "number",
@@ -705,6 +876,35 @@ export function WorkFormulaEditor({
 													}}
 													sx={FORMULA_INLINE_NUMBER_FIELD_SX}
 												/>
+											) : isEditingOperator && token.kind === "operator" ? (
+												<Flex
+													gap={0.25}
+													data-test-id={TID.workFormulaOperatorSelect}
+													onClick={(event) => event.stopPropagation()}
+												>
+													{FORMULA_OPERATOR_OPTIONS.map(({ op, label }) => (
+														<Button
+															key={op}
+															size="small"
+															variant={token.op === op ? "contained" : "text"}
+															onClick={() => {
+																updateTokenAt(index, { kind: "operator", op });
+																setEditingOperatorIndex(null);
+																setCursor(index + 1);
+																focusRibbon();
+															}}
+															sx={{
+																minWidth: 28,
+																px: 0.5,
+																fontSize: 14,
+																fontWeight: 700,
+																lineHeight: 1.2,
+															}}
+														>
+															{label}
+														</Button>
+													))}
+												</Flex>
 											) : (
 												<>
 													<Typography
@@ -730,7 +930,9 @@ export function WorkFormulaEditor({
 																whiteSpace: "nowrap",
 															}}
 														>
-															{label.subtitle}
+															{isWarningParam
+																? `${label.subtitle} · нет значений`
+																: label.subtitle}
 														</Typography>
 													) : null}
 												</>
@@ -743,6 +945,9 @@ export function WorkFormulaEditor({
 						{formula.tokens.length > 0 ? (
 							<FormulaRibbonGap
 								active={cursorIndex === formula.tokens.length}
+								showCursor={
+									showRibbonCursor && cursorIndex === formula.tokens.length
+								}
 								readOnly={readOnly}
 								onClick={() => setCursor(formula.tokens.length)}
 							/>
@@ -815,100 +1020,155 @@ export function WorkFormulaEditor({
 									mb: 1.5,
 								}}
 							>
-								<FuzzyAutocomplete<ParamOption>
-									key={`param-${paramPickerKey}`}
-									data-test-id={TID.workFormulaParamSelect}
-									options={paramByValueOptions}
-									value={null}
-									onChange={(param) => {
-										if (!param) return;
-										insertToken({
-											kind: "param_coeff",
-											paramCode: param.code,
-											paramName: param.name,
-										});
-										setParamPickerKey((key) => key + 1);
-									}}
-									getOptionLabel={(param) => param.name}
-									getOptionValue={(param) => param.code}
-									// label="коэф. параметра"
-									placeholder="Выберите коэффициент параметра…"
-									emptyLabel="Выберите коэффициент параметра…"
-									searchPlaceholder="Поиск коэффициента параметра…"
-									noMatchesText="Параметры не найдены"
-									allowEmpty
-									size="small"
-									disabled={arithmeticLocked}
-									textFieldSx={FORMULA_PICKER_FIELD_SX.paramCoeff}
-									statusAlert={
-										paramByValueOptions.length === 0
-											? {
-													severity: "info",
-													message:
-														"Добавьте параметр в блок «Параметры трудоёмкости» текущего стрима",
-												}
-											: null
-									}
-								/>
-								<FuzzyAutocomplete<TransitiveSourceOption>
-									key={
-										isTransitiveOnlyFormula(formula.tokens)
-											? `work-selected-${selectedWorkRef?.assignmentId ?? "none"}`
-											: `work-${workPickerKey}`
-									}
-									data-test-id={TID.workFormulaWorkRefSelect}
-									options={availableWorkSources}
-									value={
-										isTransitiveOnlyFormula(formula.tokens)
-											? selectedWorkRef
-											: null
-									}
-									onChange={handleWorkRefSelect}
-									getOptionLabel={(source) => source.workName}
-									getOptionValue={(source) => source.assignmentId}
-									getOptionSecondaryText={(source) => source.archComponentType}
-									placeholder="Выберите значение работы…"
-									emptyLabel="Выберите значение работы…"
-									searchPlaceholder="Поиск значения работы…"
-									noMatchesText="Работы не найдены"
-									allowEmpty={!isTransitiveOnlyFormula(formula.tokens)}
-									size="small"
-									textFieldSx={FORMULA_PICKER_FIELD_SX.workRef}
-								/>
-								<FuzzyAutocomplete<ParamOption>
-									key={`anyof-${anyOfPickerKey}`}
-									data-test-id={TID.workFormulaAnyOfSelect}
-									options={paramAnyOfOptions}
-									value={null}
-									onChange={(param) => {
-										if (!param) return;
-										insertToken({
-											kind: "param_anyof",
-											paramCode: param.code,
-											paramName: param.name,
-										});
-										setAnyOfPickerKey((key) => key + 1);
-									}}
-									getOptionLabel={(param) => param.name}
-									getOptionValue={(param) => param.code}
-									placeholder="Выберите одно из значений…"
-									emptyLabel="Выберите одно из значений…"
-									searchPlaceholder="Поиск одного из значений…"
-									noMatchesText="Одно из значений не найдено"
-									allowEmpty
-									size="small"
-									disabled={arithmeticLocked}
-									textFieldSx={FORMULA_PICKER_FIELD_SX.paramAnyOf}
-									statusAlert={
-										paramAnyOfOptions.length === 0
-											? {
-													severity: "info",
-													message:
-														"Нужен параметр any-of с непустым множеством значений в блоке «Параметры трудоёмкости»",
-												}
-											: null
-									}
-								/>
+								<Box>
+									<Typography
+										sx={{
+											fontSize: 11,
+											color: "#64748b",
+											fontWeight: 600,
+											mb: 0.5,
+										}}
+									>
+										По значениям
+									</Typography>
+									<FuzzyAutocomplete<ParamOption>
+										key={`param-${paramPickerKey}`}
+										data-test-id={TID.workFormulaParamSelect}
+										options={paramByValueOptions}
+										value={null}
+										onChange={(param) => {
+											if (!param) return;
+											insertToken({
+												kind: "param_coeff",
+												paramCode: param.code,
+												paramName: param.name,
+											});
+											setParamPickerKey((key) => key + 1);
+										}}
+										getOptionLabel={(param) => param.name}
+										getOptionValue={(param) => param.code}
+										getOptionSecondaryText={() =>
+											"отдельный коэффициент на каждое значение"
+										}
+										placeholder="Коэф. по значениям…"
+										emptyLabel="Коэф. по значениям…"
+										searchPlaceholder="Поиск (режим «По значениям»)…"
+										noMatchesText="Параметры не найдены"
+										allowEmpty
+										size="small"
+										disabled={arithmeticLocked}
+										textFieldSx={FORMULA_PICKER_FIELD_SX.paramCoeff}
+										statusAlert={
+											paramByValueOptions.length === 0
+												? {
+														severity: "info",
+														message:
+															"Добавьте параметр с режимом «По значениям» в блок «Параметры трудоёмкости»",
+													}
+												: null
+										}
+									/>
+								</Box>
+								<Box>
+									<Typography
+										sx={{
+											fontSize: 11,
+											color: "#64748b",
+											fontWeight: 600,
+											mb: 0.5,
+										}}
+									>
+										Транзитив
+									</Typography>
+									<FuzzyAutocomplete<TransitiveSourceOption>
+										key={
+											isTransitiveOnlyFormula(formula.tokens)
+												? `work-selected-${selectedWorkRef?.assignmentId ?? "none"}`
+												: `work-${workPickerKey}`
+										}
+										data-test-id={TID.workFormulaWorkRefSelect}
+										options={availableWorkSources}
+										value={
+											isTransitiveOnlyFormula(formula.tokens)
+												? selectedWorkRef
+												: null
+										}
+										onChange={handleWorkRefSelect}
+										getOptionLabel={(source) => source.workName}
+										getOptionValue={(source) => source.assignmentId}
+										getOptionSecondaryText={(source) =>
+											source.archComponentType
+										}
+										placeholder="Выберите значение работы…"
+										emptyLabel="Выберите значение работы…"
+										searchPlaceholder="Поиск значения работы…"
+										noMatchesText="Работы не найдены"
+										allowEmpty={!isTransitiveOnlyFormula(formula.tokens)}
+										size="small"
+										textFieldSx={FORMULA_PICKER_FIELD_SX.workRef}
+									/>
+								</Box>
+								<Box>
+									<Typography
+										sx={{
+											fontSize: 11,
+											color: "#64748b",
+											fontWeight: 600,
+											mb: 0.5,
+										}}
+									>
+										Any-of
+									</Typography>
+									<FuzzyAutocomplete<ParamOption>
+										key={`anyof-${anyOfPickerKey}`}
+										data-test-id={TID.workFormulaAnyOfSelect}
+										options={paramAnyOfOptions}
+										value={null}
+										onChange={(param) => {
+											if (!param) return;
+											insertToken({
+												kind: "param_anyof",
+												paramCode: param.code,
+												paramName: param.name,
+											});
+											setAnyOfPickerKey((key) => key + 1);
+										}}
+										getOptionLabel={(param) => param.name}
+										getOptionValue={(param) => param.code}
+										getOptionSecondaryText={(param) => {
+											const count = param.anyOfValueCount ?? 0;
+											if (count === 0) {
+												return "значения не выбраны — отметьте в карточке параметра";
+											}
+											return `${count} ${count === 1 ? "значение" : count < 5 ? "значения" : "значений"} в множестве`;
+										}}
+										placeholder="Any-of параметр…"
+										emptyLabel="Any-of параметр…"
+										searchPlaceholder="Поиск (режим Any-of)…"
+										noMatchesText="Any-of параметры не найдены"
+										allowEmpty
+										size="small"
+										disabled={arithmeticLocked}
+										textFieldSx={FORMULA_PICKER_FIELD_SX.paramAnyOf}
+										statusAlert={
+											anyOfLaborParamCount === 0
+												? {
+														severity: "info",
+														message:
+															"Добавьте параметр с режимом Any-of в блок «Параметры трудоёмкости»",
+													}
+												: paramAnyOfOptions.every(
+															(param) => (param.anyOfValueCount ?? 0) === 0,
+														)
+													? {
+															severity: "warning",
+															message:
+																"Any-of параметры есть, но множества значений пусты — отметьте значения в карточке; в формулу можно добавить заранее",
+														}
+													: null
+										}
+									/>
+								</Box>
 							</Box>
 							<Flex alignItems="center" gap={6} wrap="wrap">
 								<Button
@@ -945,7 +1205,7 @@ export function WorkFormulaEditor({
 											color: "#334155",
 										}}
 									>
-										{op === "*" ? "×" : op === "/" ? "÷" : op}
+										{operatorSymbol(op)}
 									</Button>
 								))}
 								<Button

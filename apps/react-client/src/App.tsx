@@ -28,6 +28,7 @@ import {
 } from "./theme/customizations";
 import AppRoutes from "@react-client/common/routing";
 import { getRouterBasename } from "@react-client/routing/basename";
+import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
 
 const GIT_REVISION = process.env.GIT_REVISION;
 const NODE_ENV = process.env.NODE_ENV;
@@ -100,7 +101,7 @@ const App: React.FC<LayoutProps> = (props) => {
 					<ErrorBoundary ErrorPage={ErrorPage}>
 						<StyledEngineProvider injectFirst>
 							<Toaster />
-							<Suspense fallback={<CircularProgress />}>
+							<Suspense fallback={<FullScreenLoader />}>
 								<LocalizationProvider dateAdapter={AdapterDateFns}>
 									<AppRoutes onLogout={onLogoutHandler} />
 								</LocalizationProvider>

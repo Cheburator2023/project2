@@ -122,6 +122,16 @@ describe("isObjectFieldGroup", () => {
 			}),
 		).toBe(false);
 	});
+
+	it("treats legacy object nodes with properties but without type as containers", () => {
+		expect(
+			isObjectFieldGroup({
+				properties: {
+					child: { type: "string" },
+				},
+			}),
+		).toBe(true);
+	});
 });
 
 describe("removeUiSchemaAtPointer", () => {

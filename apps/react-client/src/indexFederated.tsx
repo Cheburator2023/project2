@@ -103,13 +103,7 @@ const MfeRoot = (props: Props) => {
 
 			setPermissions(permissions);
 		}
-	}, [
-		user,
-		setUsername,
-		setGroups,
-		setRoles,
-		setPermissions,
-	]);
+	}, [user, setUsername, setGroups, setRoles, setPermissions]);
 
 	return (
 		<AuthProvider

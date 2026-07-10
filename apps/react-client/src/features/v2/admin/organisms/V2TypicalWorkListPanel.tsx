@@ -141,6 +141,13 @@ export function V2TypicalWorkListPanel({
 				valueFormatter: (p) => (p.value ? String(p.value) : "—"),
 			},
 			{
+				colId: "template",
+				headerName: "Схема",
+				flex: 1,
+				minWidth: 120,
+				valueGetter: (p) => p.data?.templateName?.trim() || "— (глобальная)",
+			},
+			{
 				colId: "streams",
 				headerName: "Стримы",
 				flex: 1,

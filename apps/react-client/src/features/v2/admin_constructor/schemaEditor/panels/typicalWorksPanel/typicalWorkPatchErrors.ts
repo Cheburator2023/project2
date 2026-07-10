@@ -15,6 +15,7 @@ import {
 	isControlTypeTriggerParam,
 	isTypicalWorkParameterValueActiveOnDate,
 	resolveTriggerStatusCatalogParam,
+	formatParamNameWithSourceKeys,
 	type WorkTriggerStatusCatalogParam,
 } from "@smart-anketa/api-contract";
 import {
@@ -328,15 +329,21 @@ export function collectTriggerValidationIssues(
 	return issues;
 }
 
+export type TriggerPreviewState = "none" | "matched" | "unmatched";
+
 export function analyzeTriggerRules(
 	rules: Parameters<typeof computeTriggerStatus>[0],
 	schemaParams?: V2TypicalWorkParameterDto[],
 	methodologyParams?: V2TypicalWorkParameterDto[],
 	draftSource?: Record<string, unknown>,
 	atDate?: string,
-): { status: V2WorkTriggerStatus; issues: TriggerValidationIssue[] } {
+): {
+	status: V2WorkTriggerStatus;
+	issues: TriggerValidationIssue[];
+	previewState: TriggerPreviewState;
+} {
 	if (rules.length === 0) {
-		return { status: "no_triggers", issues: [] };
+		return { status: "no_triggers", issues: [], previewState: "none" };
 	}
 
 	const issues = collectTriggerValidationIssues(
@@ -346,25 +353,39 @@ export function analyzeTriggerRules(
 		atDate,
 	);
 	if (issues.length > 0) {
-		return { status: "invalid", issues };
+		return { status: "invalid", issues, previewState: "none" };
 	}
 
 	if (draftSource) {
 		const match = typicalWorkRulesMatchSource(
-			rules.map((rule) => ({
-				paramCode: rule.paramCode,
-				paramName: rule.paramName ?? null,
-				operator: rule.operator ?? "=",
-				valueCode: rule.valueCode,
-				valueLabel: rule.valueLabel,
-				values: rule.values,
-			})),
+			rules.map((rule) => {
+				const resolved = schemaParams?.length
+					? resolveSchemaParamForTriggerRule(rule, schemaParams)
+					: undefined;
+				return {
+					paramCode: resolved?.code ?? rule.paramCode,
+					paramName: resolved
+						? formatParamNameWithSourceKeys(
+								resolved.name,
+								resolved.sourceKeys,
+							)
+						: (rule.paramName ?? null),
+					operator: rule.operator ?? "=",
+					valueCode: rule.valueCode,
+					valueLabel: rule.valueLabel,
+					values: rule.values,
+				};
+			}),
 			draftSource,
 		);
-		return { status: match ? "appears" : "hidden", issues: [] };
+		return {
+			status: match ? "appears" : "hidden",
+			issues: [],
+			previewState: match ? "matched" : "unmatched",
+		};
 	}
 
-	return { status: "appears", issues: [] };
+	return { status: "hidden", issues: [], previewState: "none" };
 }
 
 /** Каталог для проверки триггера: поле схемы → его values; seed/CSV → методологический справочник. */

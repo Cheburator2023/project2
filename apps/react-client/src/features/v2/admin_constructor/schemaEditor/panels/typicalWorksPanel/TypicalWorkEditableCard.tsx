@@ -36,9 +36,16 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import { useCreateV2TemplateVersion } from "@react-client/common/api/queries/v2-templates";
 import { useV2TypicalWorkAssignments, useV2WorkParametersCatalog } from "@react-client/common/api/queries/v2-works";
 import { useSchemaEditor } from "../../SchemaEditorContext";
+import { mergeAnketaDisplayFormData } from "@react-client/features/v2/anketaCRUD/utils/mergeAnketaDisplayFormData";
+import { resolvePreviewSourceRowForTypicalWork } from "./typicalWorkTriggerPreview";
 import {
 	buildSchemaWorkParameters,
+	findSchemaWorkParameter,
+	isSchemaLaborParamCandidate,
+	isSchemaLaborParamUsed,
+	isSchemaTextualParam,
 	resolveEffectiveWorkArchComponentType,
+	schemaLaborParamPickerCaption,
 	schemaWorkParameterEmptyPickerMessage,
 } from "./schemaWorkParameters";
 import {
@@ -47,7 +54,7 @@ import {
 	coerceLogicGraph,
 	coerceUiSchema,
 } from "../../../utils/coerceV2TemplateSnapshot";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@react-client/common/toasts";
 import { TypicalWorkFormulaLockedDialog } from "./TypicalWorkFormulaLockedDialog";
 import { RemoveLaborParamDialog } from "./RemoveLaborParamDialog";
@@ -57,7 +64,6 @@ import { WorkFormulaEditor } from "./WorkFormulaEditor";
 import { ensureFormulaTerms } from "./WorkTermsFormulaEditor";
 import {
 	analyzeTriggerRules,
-	computeTriggerStatus,
 	DEFAULT_WORK_ARCH_COMPONENT_TYPE,
 	isWorkCoefficientValueAvailable,
 	resolveCanonicalWorkArchComponentType,
@@ -130,12 +136,7 @@ function resolveLaborParamOption(
 	paramCode: string,
 	paramName?: string | null,
 ): V2TypicalWorkParameterDto | undefined {
-	return (
-		paramOptions.find((p) => p.code === paramCode) ??
-		(paramName
-			? paramOptions.find((p) => p.name === paramName)
-			: undefined)
-	);
+	return findSchemaWorkParameter(paramOptions, paramCode, paramName);
 }
 
 export function TypicalWorkEditableCard({
@@ -150,7 +151,7 @@ export function TypicalWorkEditableCard({
 	onStreamChange,
 	onVersionChange,
 }: TypicalWorkEditableCardProps) {
-	const { fieldPathHints, uiSchema, jsonSchema, enumMapByCode } =
+	const { fieldPathHints, uiSchema, jsonSchema, enumMapByCode, formData, liveFormData } =
 		useSchemaEditor();
 	const { data: assignmentsList } = useV2TypicalWorkAssignments({
 		templateVersionId,
@@ -195,8 +196,16 @@ export function TypicalWorkEditableCard({
 		if (!isNewCard && hasPending()) return;
 		lastSyncedCardKeyRef.current = cardKey;
 		if (isNewCard) defaultedArchKeyRef.current = null;
+		const formula =
+			card.formula.tokens.length > 0
+				? {
+						tokens: card.formula.tokens,
+						text: tokensToText(card.formula.tokens),
+					}
+				: card.formula;
 		setDraft({
 			...structuredClone(card),
+			formula,
 			formulaTerms: ensureFormulaTerms(card),
 		});
 	}, [card, templateVersionId, hasPending]);
@@ -256,11 +265,18 @@ export function TypicalWorkEditableCard({
 		[enumMapByCode, fieldPathHints, jsonSchema, uiSchema],
 	);
 	const laborParamOptions = useMemo(
-		() => paramOptions.filter((p) => p.values.length > 0),
+		() => paramOptions.filter(isSchemaLaborParamCandidate),
+		[paramOptions],
+	);
+	const resolveFormulaParamName = useCallback(
+		(paramCode: string, paramName?: string | null) =>
+			findSchemaWorkParameter(paramOptions, paramCode, paramName)?.name ??
+			paramName ??
+			paramCode,
 		[paramOptions],
 	);
 	const unusedLaborParams = laborParamOptions.filter(
-		(p) => !draft?.laborParams.some((g) => g.paramCode === p.code),
+		(p) => !draft?.laborParams.some((g) => isSchemaLaborParamUsed([g], p)),
 	);
 	const laborPickerHint = schemaWorkParameterEmptyPickerMessage(
 		fieldPathHints.length,
@@ -272,6 +288,7 @@ export function TypicalWorkEditableCard({
 		() =>
 			laborParamOptions.map((param) => ({
 				code: param.code,
+				sourceKeys: param.sourceKeys,
 				values: param.values.map((value) => ({
 					code: value.code,
 					label: value.label,
@@ -280,14 +297,35 @@ export function TypicalWorkEditableCard({
 		[laborParamOptions],
 	);
 
+	const previewFormDataForTriggers = useMemo(
+		() =>
+			mergeAnketaDisplayFormData(
+				formData,
+				liveFormData,
+				uiSchema as Record<string, unknown> | undefined,
+			),
+		[formData, liveFormData, uiSchema],
+	);
+
+	const previewSourceRow = useMemo(
+		() =>
+			resolvePreviewSourceRowForTypicalWork(
+				previewFormDataForTriggers,
+				uiSchema as Record<string, unknown> | undefined,
+				jsonSchema as Record<string, unknown> | undefined,
+			),
+		[previewFormDataForTriggers, uiSchema, jsonSchema],
+	);
+
 	const triggerAnalysis = useMemo(
 		() =>
 			analyzeTriggerRules(
 				draft?.rules ?? [],
 				paramOptions,
 				methodologyCatalog,
+				previewSourceRow,
 			),
-		[draft?.rules, methodologyCatalog, paramOptions],
+		[draft?.rules, methodologyCatalog, paramOptions, previewSourceRow],
 	);
 
 	const commitDraft = (next: V2TypicalWorkCardDto) => {
@@ -297,6 +335,7 @@ export function TypicalWorkEditableCard({
 			next.rules,
 			paramOptions,
 			methodologyCatalog,
+			previewSourceRow,
 		);
 		const withDerived = {
 			...next,
@@ -323,20 +362,37 @@ export function TypicalWorkEditableCard({
 
 	const addLaborParam = (picked: V2TypicalWorkParameterDto) => {
 		if (!draft) return;
-		const newGroup = {
-			paramCode: picked.code,
-			paramName: picked.name,
-			kind: "by_value" as const,
-			coefficients: picked.values.map((v) => ({
-				id: `new-${Date.now()}-${v.code}`,
-				streamExecutor: draft.streamExecutor,
-				paramCode: picked.code,
-				paramName: picked.name,
-				valueCode: v.code,
-				valueLabel: v.label,
-				coefficient: 1,
-			})),
-		};
+		const useAnyOf =
+			picked.numeric ||
+			isSchemaTextualParam(picked) ||
+			(Boolean(picked.dictionaryCode) && picked.values.length === 0);
+		const newGroup = useAnyOf
+			? {
+					paramCode: picked.code,
+					paramName: picked.name,
+					kind: "any_of" as const,
+					coefficients: [],
+					anyOf: {
+						valueCodes: [],
+						valueLabels: [],
+						coeffOn: 1,
+						coeffOff: 1,
+					},
+				}
+			: {
+					paramCode: picked.code,
+					paramName: picked.name,
+					kind: "by_value" as const,
+					coefficients: picked.values.map((v) => ({
+						id: `new-${Date.now()}-${v.code}`,
+						streamExecutor: draft.streamExecutor,
+						paramCode: picked.code,
+						paramName: picked.name,
+						valueCode: v.code,
+						valueLabel: v.label,
+						coefficient: 1,
+					})),
+				};
 		commitDraft({
 			...draft,
 			laborParams: [...draft.laborParams, newGroup],
@@ -880,6 +936,7 @@ export function TypicalWorkEditableCard({
 					<TypicalWorkTriggersSection
 						rules={draft.rules}
 						triggerStatus={triggerAnalysis.status}
+						triggerPreviewState={triggerAnalysis.previewState}
 						validationIssues={triggerAnalysis.issues}
 						schemaFieldCount={fieldPathHints.length}
 						paramOptions={paramOptions}
@@ -931,7 +988,7 @@ export function TypicalWorkEditableCard({
 									getOptionLabel={(param) => param.name}
 									getOptionValue={(param) => param.code}
 									getOptionSecondaryText={(param) =>
-										param.description ?? undefined
+										schemaLaborParamPickerCaption(param)
 									}
 									label="Параметр трудоёмкости"
 									placeholder="Выберите поле схемы…"
@@ -1312,6 +1369,7 @@ export function TypicalWorkEditableCard({
 							onRoundingChange={(rounding) =>
 								commitDraft({ ...draft, rounding })
 							}
+							resolveParamName={resolveFormulaParamName}
 						/>
 					</Paper>
 				</Box>

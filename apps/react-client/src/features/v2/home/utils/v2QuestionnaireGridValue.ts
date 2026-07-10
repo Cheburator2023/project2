@@ -63,6 +63,7 @@ export function formatGridCellValue(value: unknown): string | number | null {
 	return String(value);
 }
 
+/** @deprecated используйте registryFormColumnId из @smart-anketa/api-contract */
 export function formPathColId(path: string): string {
-	return `form.${path.replace(/\./g, "_").replace(/\[(\d+)\]/g, "_$1")}`;
+	return `form.${path}`;
 }

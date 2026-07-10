@@ -88,7 +88,7 @@ describe("WorkFormulaEditor (ui)", () => {
 			"combobox",
 		);
 		await user.click(paramSelect);
-		await user.click(screen.getByRole("option", { name: "Сложность" }));
+		await user.click(screen.getByRole("option", { name: /Сложность/ }));
 
 		expect(screen.getByTestId(TID.workFormulaGeneralSummary)).toHaveTextContent(
 			/N.*Кэф-П1/,
@@ -127,6 +127,43 @@ describe("WorkFormulaEditor (ui)", () => {
 
 		expect(screen.getByTestId(TID.workFormulaGeneralSummary).textContent).toMatch(
 			/N|Кэф/,
+		);
+	});
+
+	it("round-trips visual → manual → visual with param names containing parentheses", async () => {
+		const user = userEvent.setup();
+		const paramName = "Базовая оценка по стриму (СФЕРА)";
+		renderEditor({
+			laborParams: [
+				{
+					paramCode: "field_sphere",
+					paramName,
+					kind: "by_value",
+					coefficients: [],
+				},
+			],
+			initialFormula: {
+				tokens: [
+					{ kind: "norm" },
+					{ kind: "operator", op: "*" },
+					{
+						kind: "param_coeff",
+						paramCode: "field_sphere",
+						paramName,
+					},
+				],
+				// устаревший текст с неэкранированными скобками в имени
+				text: `N × коэф(${paramName})`,
+			},
+		});
+
+		await user.click(screen.getByTestId(TID.workFormulaManualMode));
+		await user.click(screen.getByTestId(TID.workFormulaVisualMode));
+
+		expect(screen.queryByText(/Проверьте скобки/i)).not.toBeInTheDocument();
+		expect(screen.queryByText(/отсутствует в блоке/i)).not.toBeInTheDocument();
+		expect(screen.getByTestId(TID.workFormulaGeneralSummary).textContent).toMatch(
+			/Кэф-П1/,
 		);
 	});
 
@@ -169,8 +206,44 @@ describe("WorkFormulaEditor (ui)", () => {
 		await user.click(paramSelect);
 
 		expect(
-			screen.getByText(/Добавьте параметр в блок «Параметры трудоёмкости»/),
+			screen.getByText(/Добавьте параметр с режимом «По значениям»/),
 		).toBeInTheDocument();
+	});
+
+	it("lists any-of params before values are selected and warns in picker", async () => {
+		const user = userEvent.setup();
+		renderEditor({
+			laborParams: [
+				{
+					paramCode: "flag",
+					paramName: "Флаг",
+					kind: "any_of",
+					coefficients: [],
+					anyOf: {
+						valueCodes: [],
+						valueLabels: [],
+						coeffOn: 1,
+						coeffOff: 0.5,
+					},
+				},
+			],
+		});
+
+		const anyOfSelect = within(
+			screen.getByTestId(TID.workFormulaAnyOfSelect),
+		).getByRole("combobox");
+		await user.click(anyOfSelect);
+
+		expect(screen.getByRole("option", { name: /Флаг/ })).toBeInTheDocument();
+		expect(
+			screen.getByText(/множества значений пусты/i),
+		).toBeInTheDocument();
+
+		await user.click(screen.getByRole("option", { name: /Флаг/ }));
+
+		const ribbon = screen.getByTestId(TID.workFormulaRibbon);
+		expect(within(ribbon).getByText("any-of")).toBeInTheDocument();
+		expect(within(ribbon).getByText(/нет значений/i)).toBeInTheDocument();
 	});
 
 	it("inserts operator after clicked token", async () => {
@@ -207,6 +280,29 @@ describe("WorkFormulaEditor (ui)", () => {
 		expect(within(ribbon).getByTestId(TID.workFormulaCursor)).toBeInTheDocument();
 		expect(screen.getByTestId(TID.workFormulaGeneralSummary)).toHaveTextContent("N");
 		expect(screen.queryByText("2")).not.toBeInTheDocument();
+	});
+
+	it("changes operator inline in the ribbon", async () => {
+		const user = userEvent.setup();
+		renderEditor({
+			initialFormula: {
+				tokens: [
+					{ kind: "norm" },
+					{ kind: "operator", op: "*" },
+					{ kind: "number", value: 2 },
+				],
+				text: "N × 2",
+			},
+		});
+
+		const ribbon = screen.getByTestId(TID.workFormulaRibbon);
+		await user.click(screen.getByTestId(TID.workFormulaOperatorChip));
+		const picker = within(ribbon).getByTestId(TID.workFormulaOperatorSelect);
+		await user.click(within(picker).getByRole("button", { name: "+" }));
+
+		expect(screen.getByTestId(TID.workFormulaGeneralSummary)).toHaveTextContent(
+			"N + 2",
+		);
 	});
 
 	it("read-only hides editing controls", () => {

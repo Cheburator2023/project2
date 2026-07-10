@@ -1,9 +1,12 @@
 import AddIcon from "@mui/icons-material/Add";
 import DownloadIcon from "@mui/icons-material/Download";
+import HistoryIcon from "@mui/icons-material/History";
 import PublishIcon from "@mui/icons-material/Publish";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
@@ -63,6 +66,7 @@ import {
 import {
 	kanbanTaskCreatePath,
 	kanbanTaskEditPath,
+	trackerBoardHistoryPath,
 } from "@react-client/features/kanban-board/kanban-task-paths";
 import { KanbanTaskCardSubtasks } from "@react-client/features/kanban-board/components/KanbanSubtasksChecklist";
 import { KanbanTaskImagesSection } from "@react-client/features/kanban-board/components/KanbanTaskImagesSection";
@@ -181,6 +185,10 @@ export function KanbanBoardPage() {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [board, setBoard] = useState<KanbanBoardData | null>(null);
 	const [importError, setImportError] = useState<string | null>(null);
+	const [boardContextMenu, setBoardContextMenu] = useState<{
+		mouseX: number;
+		mouseY: number;
+	} | null>(null);
 
 	const configQuery = useKanbanBoardConfig();
 	const boardsQuery = useKanbanBoardBoards();
@@ -323,7 +331,21 @@ export function KanbanBoardPage() {
 		[saveMutation],
 	);
 
-	const defaultColumnId = columnsQuery.data?.[0]?.id ?? "backlog";
+	const openBoardHistory = useCallback(() => {
+		const key = boardMeta?.boardKey ?? boardKey;
+		if (!key) return;
+		navigate(trackerBoardHistoryPath(key));
+	}, [boardKey, boardMeta?.boardKey, navigate]);
+
+	const handleBoardContextMenu = useCallback((event: MouseEvent) => {
+		event.preventDefault();
+		setBoardContextMenu({
+			mouseX: event.clientX,
+			mouseY: event.clientY,
+		});
+	}, []);
+
+	const defaultColumnId = columnsQuery.data?.[0]?.id ?? "todo";
 
 	const openCreateTask = useCallback(
 		(columnId = defaultColumnId) => {
@@ -450,6 +472,7 @@ export function KanbanBoardPage() {
 			width="100%"
 			sx={{ height: "100%", overflow: "hidden", boxSizing: "border-box" }}
 			data-test-id="kanban-board-page"
+			onContextMenu={handleBoardContextMenu}
 		>
 			<Header
 				leadingAccessory={
@@ -460,6 +483,15 @@ export function KanbanBoardPage() {
 			>
 				<Flex gap={6} wrap="wrap" alignItems="center">
 					<Spacer />
+					<Button
+						startIcon={<HistoryIcon />}
+						variant="outlined"
+						size="small"
+						onClick={openBoardHistory}
+						disabled={!boardApiRef}
+					>
+						История
+					</Button>
 					<Button
 						startIcon={<AddIcon />}
 						variant="contained"
@@ -661,6 +693,25 @@ export function KanbanBoardPage() {
 					</Box>
 				</Box>
 			</Card>
+			<Menu
+				open={boardContextMenu !== null}
+				onClose={() => setBoardContextMenu(null)}
+				anchorReference="anchorPosition"
+				anchorPosition={
+					boardContextMenu
+						? { top: boardContextMenu.mouseY, left: boardContextMenu.mouseX }
+						: undefined
+				}
+			>
+				<MenuItem
+					onClick={() => {
+						setBoardContextMenu(null);
+						openBoardHistory();
+					}}
+				>
+					История изменений
+				</MenuItem>
+			</Menu>
 		</Flex>
 	);
 }

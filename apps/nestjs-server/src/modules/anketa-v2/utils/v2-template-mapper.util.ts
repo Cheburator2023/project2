@@ -42,6 +42,27 @@ export function mapV2TemplateVersionToDto(
 	};
 }
 
+export function mapV2TemplateVersionSummaryToDto(
+	version: Pick<
+		V2TemplateVersionEntity,
+		| "id"
+		| "templateId"
+		| "versionNumber"
+		| "status"
+		| "releaseNotes"
+		| "publishedAt"
+	>,
+) {
+	return {
+		id: version.id,
+		templateId: version.templateId,
+		versionNumber: version.versionNumber,
+		status: version.status,
+		releaseNotes: version.releaseNotes,
+		publishedAt: version.publishedAt?.toISOString() ?? null,
+	};
+}
+
 export function buildTemplateDeleteSnapshot(
 	template: V2TemplateEntity,
 	versions: V2TemplateVersionEntity[],

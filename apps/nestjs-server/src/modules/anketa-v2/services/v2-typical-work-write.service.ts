@@ -10,6 +10,7 @@ import type {
 	CreateV2TypicalWorkParameterRequestDto,
 	CreateV2TypicalWorkParameterValueRequestDto,
 	CreateV2TypicalWorkAssignmentRequestDto,
+	CopyV2TypicalWorkRequestDto,
 	PatchV2TypicalWorkRequestDto,
 	UpdateV2TypicalWorkParameterRequestDto,
 	UpdateV2TypicalWorkParameterValueRequestDto,
@@ -150,6 +151,7 @@ export class V2TypicalWorkWriteService {
 				archComponentType,
 				workType: dto.workType?.trim() || null,
 				catalogKey: null,
+				templateId: dto.templateId?.trim() || null,
 			}),
 		);
 
@@ -174,6 +176,103 @@ export class V2TypicalWorkWriteService {
 			name: work.name,
 			archComponentType: work.archComponentType,
 			workType: work.workType,
+			streamExecutor: "",
+			assignmentStatus: "unassigned" as const,
+			triggerStatus: "no_triggers" as const,
+			norms: [],
+			rules: [],
+			laborParams: [],
+			formula: defaultWorkFormula(),
+			rounding: defaultWorkRounding(),
+		};
+	}
+
+	/** Глубокая копия работы в новую (нормы/триггеры/параметры/формулы), привязанная к схеме. */
+	async copyWork(workId: string, dto: CopyV2TypicalWorkRequestDto) {
+		const source = await this.workRepository.findOne({ where: { id: workId } });
+		if (!source) {
+			throw new NotFoundException(`Typical work ${workId} not found`);
+		}
+
+		const copy = await this.workRepository.save(
+			this.workRepository.create({
+				name: dto.name?.trim() || `${source.name} (копия)`,
+				archComponentType: source.archComponentType,
+				workType: source.workType,
+				catalogKey: null,
+				templateId: dto.templateId?.trim() || null,
+			}),
+		);
+
+		const [assignments, norms, rules, laborRows, laborParams, versionConfigs] =
+			await Promise.all([
+				this.assignmentRepository.find({ where: { workId } }),
+				this.normRepository.find({ where: { workId } }),
+				this.ruleRepository.find({ where: { workId } }),
+				this.laborRepository.find({ where: { workId } }),
+				this.laborParamRepository.find({ where: { workId } }),
+				this.versionConfigRepository.find({ where: { workId } }),
+			]);
+
+		const strip = <T extends { id?: string; createdAt?: Date; updatedAt?: Date }>(
+			row: T,
+		): Omit<T, "id" | "createdAt" | "updatedAt"> => {
+			const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = row;
+			return rest;
+		};
+
+		for (const assignment of assignments) {
+			await this.assignmentRepository.save(
+				this.assignmentRepository.create({
+					...strip(assignment),
+					workId: copy.id,
+				}),
+			);
+		}
+		for (const norm of norms) {
+			await this.normRepository.save(
+				this.normRepository.create({ ...strip(norm), workId: copy.id }),
+			);
+		}
+		for (const rule of rules) {
+			await this.ruleRepository.save(
+				this.ruleRepository.create({ ...strip(rule), workId: copy.id }),
+			);
+		}
+		for (const labor of laborRows) {
+			await this.laborRepository.save(
+				this.laborRepository.create({ ...strip(labor), workId: copy.id }),
+			);
+		}
+		for (const param of laborParams) {
+			await this.laborParamRepository.save(
+				this.laborParamRepository.create({ ...strip(param), workId: copy.id }),
+			);
+		}
+		for (const config of versionConfigs) {
+			await this.versionConfigRepository.save(
+				this.versionConfigRepository.create({
+					...strip(config),
+					workId: copy.id,
+				}),
+			);
+		}
+
+		const stream =
+			dto.streamExecutor?.trim() ||
+			assignments[0]?.streamExecutor ||
+			norms[0]?.streamExecutor ||
+			"";
+		if (stream) {
+			await this.ensureAssignment(copy.id, stream);
+			return this.typicalWorkService.getWorkCard(copy.id, stream);
+		}
+
+		return {
+			id: copy.id,
+			name: copy.name,
+			archComponentType: copy.archComponentType,
+			workType: copy.workType,
 			streamExecutor: "",
 			assignmentStatus: "unassigned" as const,
 			triggerStatus: "no_triggers" as const,
@@ -399,6 +498,18 @@ export class V2TypicalWorkWriteService {
 		}
 		if (dto.archComponentType !== undefined) {
 			work.archComponentType = normalizeArchComponentType(dto.archComponentType);
+		}
+		if (dto.templateId !== undefined) {
+			const requested = dto.templateId?.trim() || null;
+			if (requested) {
+				if (work.templateId && work.templateId !== requested) {
+					throw new ConflictException({
+						code: "WORK_TEMPLATE_MISMATCH",
+						message: "Работа уже привязана к другой схеме",
+					});
+				}
+				work.templateId = requested;
+			}
 		}
 		await this.workRepository.save(work);
 		await this.ensureAssignment(workId, stream);
@@ -668,6 +779,7 @@ export class V2TypicalWorkWriteService {
 					answerSource,
 					group.paramCode,
 					group.anyOf,
+					group.paramName,
 				);
 				continue;
 			}

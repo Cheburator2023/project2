@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TASK_STATUSES = exports.TASK_TRACKER_SCHEMA_VERSION = exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS = exports.KANBAN_BOARD_COLUMN_COLORS = exports.KANBAN_BOARD_STATUSES = exports.KANBAN_BOARD_SCHEMA_VERSION = exports.KANBAN_BOARD_HEAP_BOARD_SLUG = exports.KANBAN_BOARD_HEAP_BOARD_ID = exports.KANBAN_BOARD_STOCK_PROJECTS = exports.KANBAN_BOARD_STOCK_CUSTOMERS = exports.KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD = exports.KANBAN_BOARD_PRIORITY_COLORS = exports.KANBAN_BOARD_WORK_TYPE_COLORS = exports.KANBAN_BOARD_TASK_TYPE_COLORS = exports.KANBAN_BOARD_ASSIGNEE_ROLES = exports.KANBAN_BOARD_WORK_TYPES = exports.KANBAN_BOARD_TASK_TYPES = exports.KANBAN_BOARD_ROLE_ESTIMATE_FIELDS = exports.KANBAN_BOARD_PRIORITIES = exports.KANBAN_BOARD_DONE_COLUMN_ID = exports.KANBAN_BOARD_TASK_IMAGE_DONE_RETENTION_DAYS = exports.KANBAN_BOARD_TASK_IMAGE_MAX_FULL_BYTES = exports.KANBAN_BOARD_SUBTASK_STATUS_COLORS = exports.KANBAN_BOARD_SUBTASK_STATUSES = void 0;
+exports.TASK_STATUSES = exports.TASK_TRACKER_SCHEMA_VERSION = exports.KANBAN_BOARD_COLUMN_COLORS = exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS = exports.KANBAN_BOARD_LEGACY_COLUMN_ID_MAP = exports.KANBAN_BOARD_INPUT_BUFFER_COLUMN_ID = exports.KANBAN_BOARD_STATUSES = exports.KANBAN_BOARD_SCHEMA_VERSION = exports.KANBAN_BOARD_HEAP_BOARD_SLUG = exports.KANBAN_BOARD_HEAP_BOARD_ID = exports.KANBAN_BOARD_STOCK_PROJECTS = exports.KANBAN_BOARD_STOCK_CUSTOMERS = exports.KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD = exports.KANBAN_BOARD_PRIORITY_COLORS = exports.KANBAN_BOARD_WORK_TYPE_COLORS = exports.KANBAN_BOARD_TASK_TYPE_COLORS = exports.KANBAN_BOARD_ASSIGNEE_ROLES = exports.KANBAN_BOARD_WORK_TYPES = exports.KANBAN_BOARD_TASK_TYPES = exports.KANBAN_BOARD_ROLE_ESTIMATE_FIELDS = exports.KANBAN_BOARD_PRIORITIES = exports.KANBAN_BOARD_DONE_COLUMN_ID = exports.KANBAN_BOARD_TASK_IMAGE_DONE_RETENTION_DAYS = exports.KANBAN_BOARD_TASK_IMAGE_MAX_FULL_BYTES = exports.KANBAN_BOARD_SUBTASK_STATUS_COLORS = exports.KANBAN_BOARD_SUBTASK_STATUSES = void 0;
 exports.kanbanBoardSubtaskStatusTitle = kanbanBoardSubtaskStatusTitle;
 exports.kanbanBoardSubtaskStatusColor = kanbanBoardSubtaskStatusColor;
 exports.kanbanBoardSubtaskIsDone = kanbanBoardSubtaskIsDone;
@@ -172,20 +172,29 @@ exports.KANBAN_BOARD_HEAP_BOARD_ID = "01J000000000000000000015";
 exports.KANBAN_BOARD_HEAP_BOARD_SLUG = "heap";
 exports.KANBAN_BOARD_SCHEMA_VERSION = 1;
 exports.KANBAN_BOARD_STATUSES = [
-    { id: "backlog", title: "Бэклог" },
-    { id: "todo", title: "К выполнению" },
-    { id: "in_progress", title: "В работе" },
-    { id: "review", title: "Ревью" },
-    { id: "qa", title: "QA" },
+    { id: "todo", title: "Сделать" },
+    { id: "input_buffer", title: "Входной буфер" },
+    { id: "analysis_wip", title: "Анализ запроса (В работе)" },
+    { id: "analysis_done", title: "Анализ запроса (Готово)" },
+    { id: "dev_wip", title: "Разработка (В работе)" },
+    { id: "dev_done", title: "Разработка (Готово)" },
+    { id: "review_wip", title: "Проверка (В работе)" },
+    { id: "review_done", title: "Проверка (Готово)" },
+    { id: "demo", title: "Демонстрация" },
     { id: "done", title: "Готово" },
 ];
-exports.KANBAN_BOARD_COLUMN_COLORS = {
-    backlog: "#64748b",
-    todo: "#2563eb",
-    in_progress: "#d97706",
-    review: "#7c3aed",
-    qa: "#0891b2",
-    done: "#16a34a",
+exports.KANBAN_BOARD_INPUT_BUFFER_COLUMN_ID = "input_buffer";
+/** Соответствие устаревших id колонок новому заводскому набору. */
+exports.KANBAN_BOARD_LEGACY_COLUMN_ID_MAP = {
+    backlog: "input_buffer",
+    todo: "todo",
+    in_progress: "dev_wip",
+    review: "review_wip",
+    qa: "review_wip",
+    demo_wip: "demo",
+    demo_done: "demo",
+    done_wip: "done",
+    done: "done",
 };
 exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS = [
     "#64748b",
@@ -198,10 +207,18 @@ exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS = [
     "#ca8a04",
     "#4f46e5",
     "#059669",
+    "#ea580c",
+    "#0d9488",
 ];
 function pickKanbanBoardColumnColor(sortOrder) {
     return exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS[sortOrder % exports.KANBAN_BOARD_DEFAULT_COLUMN_COLORS.length];
 }
+exports.KANBAN_BOARD_COLUMN_COLORS = Object.fromEntries(exports.KANBAN_BOARD_STATUSES.map((status, sortOrder) => [
+    status.id,
+    status.id === "done"
+        ? "#16a34a"
+        : pickKanbanBoardColumnColor(sortOrder),
+]));
 function defaultKanbanBoardColumns(boardId) {
     return exports.KANBAN_BOARD_STATUSES.map((status, sortOrder) => ({
         id: status.id,

@@ -3,7 +3,6 @@ import {
 	Injectable,
 	Logger,
 	NotFoundException,
-	OnModuleInit,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import {
@@ -105,9 +104,19 @@ function toValueDto(
 	};
 }
 
+function isPostgresUniqueViolation(error: unknown): boolean {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"code" in error &&
+		(error as { code?: string }).code === "23505"
+	);
+}
+
 @Injectable()
-export class V2TypicalWorkParamCatalogService implements OnModuleInit {
+export class V2TypicalWorkParamCatalogService {
 	private readonly logger = new Logger(V2TypicalWorkParamCatalogService.name);
+	private seedingPromise: Promise<void> | null = null;
 
 	constructor(
 		@InjectRepository(V2TypicalWorkParamEntity)
@@ -116,25 +125,38 @@ export class V2TypicalWorkParamCatalogService implements OnModuleInit {
 		private readonly valueRepository: Repository<V2TypicalWorkParamValueEntity>,
 	) {}
 
-	async onModuleInit(): Promise<void> {
-		await this.ensureSeededFromDocCatalog();
+	async ensureSeededFromDocCatalog(): Promise<void> {
+		if (this.seedingPromise) {
+			return this.seedingPromise;
+		}
+		this.seedingPromise = this.runEnsureSeededFromDocCatalog().finally(() => {
+			this.seedingPromise = null;
+		});
+		return this.seedingPromise;
 	}
 
-	async ensureSeededFromDocCatalog(): Promise<void> {
+	private async runEnsureSeededFromDocCatalog(): Promise<void> {
 		let created = 0;
 		for (const dict of V2_DOC_CATALOG.dictionaries) {
 			const code = slugParamCode(dict.name);
 			let param = await this.paramRepository.findOne({ where: { code } });
 			if (!param) {
-				param = await this.paramRepository.save(
-					this.paramRepository.create({
-						code,
-						name: dict.name,
-						description: dict.comments?.trim() || dict.attributes?.trim() || null,
-					}),
-				);
-				created++;
+				try {
+					param = await this.paramRepository.save(
+						this.paramRepository.create({
+							code,
+							name: dict.name,
+							description:
+								dict.comments?.trim() || dict.attributes?.trim() || null,
+						}),
+					);
+					created++;
+				} catch (error) {
+					if (!isPostgresUniqueViolation(error)) throw error;
+					param = await this.paramRepository.findOne({ where: { code } });
+				}
 			}
+			if (!param) continue;
 
 			const existingValueCount = await this.valueRepository.count({
 				where: { paramId: param.id },
@@ -143,10 +165,10 @@ export class V2TypicalWorkParamCatalogService implements OnModuleInit {
 
 			const seenValueCodes = new Set<string>();
 			const values = dict.values.map((value, index) => {
-				const code = uniqueParamValueCode(value.label, seenValueCodes);
+				const valueCode = uniqueParamValueCode(value.label, seenValueCodes);
 				return this.valueRepository.create({
-					paramId: param!.id,
-					code,
+					paramId: param.id,
+					code: valueCode,
 					label: value.label,
 					coefficient:
 						value.coeff == null || !Number.isFinite(value.coeff)
@@ -157,8 +179,15 @@ export class V2TypicalWorkParamCatalogService implements OnModuleInit {
 					validTo: null,
 				});
 			});
-			if (values.length > 0) {
+			if (values.length === 0) continue;
+
+			try {
 				await this.valueRepository.save(values);
+			} catch (error) {
+				if (!isPostgresUniqueViolation(error)) throw error;
+				this.logger.debug(
+					`Parameter values for ${code} already seeded (concurrent startup)`,
+				);
 			}
 		}
 		if (created > 0) {

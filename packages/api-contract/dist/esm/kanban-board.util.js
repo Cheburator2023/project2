@@ -1,9 +1,9 @@
-import { defaultKanbanBoardColumns, KANBAN_BOARD_ASSIGNEE_ROLES, KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD, KANBAN_BOARD_SUBTASK_STATUSES, kanbanBoardAssigneeRoleTitle, kanbanBoardSubtaskIsDone, } from "./kanban-board.types";
+import { defaultKanbanBoardColumns, KANBAN_BOARD_ASSIGNEE_ROLES, KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD, KANBAN_BOARD_INPUT_BUFFER_COLUMN_ID, KANBAN_BOARD_LEGACY_COLUMN_ID_MAP, KANBAN_BOARD_STATUSES, KANBAN_BOARD_SUBTASK_STATUSES, kanbanBoardAssigneeRoleTitle, kanbanBoardSubtaskIsDone, } from "./kanban-board.types";
 export function toBoardData(rows, columns) {
     const effectiveColumns = columns.length > 0 ? columns : defaultKanbanBoardColumns("board");
     const sortedColumns = [...effectiveColumns].sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title));
     const columnIds = new Set(sortedColumns.map((column) => column.id));
-    const fallbackColumnId = sortedColumns[0]?.id ?? "backlog";
+    const fallbackColumnId = sortedColumns[0]?.id ?? KANBAN_BOARD_STATUSES[0].id;
     const byColumn = new Map();
     for (const column of sortedColumns) {
         byColumn.set(column.id, []);
@@ -238,4 +238,13 @@ export function boardsEquivalent(left, right) {
     const leftKeys = leftRows.map(sortKey).sort();
     const rightKeys = rightRows.map(sortKey).sort();
     return leftKeys.every((key, index) => key === rightKeys[index]);
+}
+export function resolveKanbanBoardLegacyColumnId(columnId, validIds) {
+    const mapped = KANBAN_BOARD_LEGACY_COLUMN_ID_MAP[columnId] ?? columnId;
+    if (validIds && !validIds.has(mapped)) {
+        return validIds.has(KANBAN_BOARD_INPUT_BUFFER_COLUMN_ID)
+            ? KANBAN_BOARD_INPUT_BUFFER_COLUMN_ID
+            : (KANBAN_BOARD_STATUSES[0]?.id ?? mapped);
+    }
+    return mapped;
 }

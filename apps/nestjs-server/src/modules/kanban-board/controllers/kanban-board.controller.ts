@@ -41,6 +41,7 @@ import type {
 	KanbanBoardColumnDto,
 	KanbanBoardProjectDto,
 	KanbanBoardPlanningImportResultDto,
+	ResetKanbanBoardColumnsResultDto,
 	KanbanBoardSprintDto,
 	KanbanBoardSettingsDto,
 	KanbanBoardStreamDto,
@@ -48,6 +49,8 @@ import type {
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
 	KanbanBoardTaskImageDto,
+	KanbanBoardHistoryDto,
+	KanbanBoardHistoryOverviewDto,
 	UpdateKanbanBoardCustomerRequestDto,
 	UpdateKanbanBoardAssigneeRequestDto,
 	UpdateKanbanBoardBoardRequestDto,
@@ -68,6 +71,16 @@ import {
 	SnapshotIntegrityError,
 	SnapshotSchemaError,
 } from "../services/kanban-board.service";
+import { KanbanBoardHistoryService } from "../services/kanban-board-history.service";
+import { CurrentUser } from "../../../shared/decorators/user.decorator";
+
+const kanbanAuditUserId = (
+	user: Record<string, unknown> | undefined,
+): string | null => {
+	if (!user) return null;
+	const id = user.id ?? user.sub ?? user.preferred_username ?? user.login;
+	return typeof id === "string" && id.trim() ? id.trim() : null;
+};
 
 @ApiBearerAuth("JWT-auth")
 @ApiTags("KanbanBoard")
@@ -77,6 +90,7 @@ export class KanbanBoardController {
 		private readonly kanbanBoardService: KanbanBoardService,
 		private readonly registryService: KanbanBoardRegistryService,
 		private readonly taskImageService: KanbanBoardTaskImageService,
+		private readonly historyService: KanbanBoardHistoryService,
 	) {}
 
 	@Get("config")
@@ -144,6 +158,24 @@ export class KanbanBoardController {
 		@Body() dto: UpdateKanbanBoardSettingsRequestDto,
 	): Promise<KanbanBoardSettingsDto> {
 		return this.registryService.updateSettings(dto);
+	}
+
+	@Post("columns/reset-default")
+	@ApiOperation({
+		summary: "Применить заводской набор колонок ко всем доскам",
+	})
+	async resetAllBoardColumnsToDefault(): Promise<ResetKanbanBoardColumnsResultDto> {
+		return this.registryService.resetAllBoardColumnsToDefault();
+	}
+
+	@Post("boards/:boardId/columns/reset-default")
+	@ApiOperation({ summary: "Применить заводской набор колонок к доске" })
+	async resetBoardColumnsToDefault(
+		@Param("boardId") boardId: string,
+	): Promise<KanbanBoardColumnDto[]> {
+		const resolvedBoardId =
+			await this.registryService.resolveBoardId(boardId);
+		return this.registryService.resetBoardColumnsToDefault(resolvedBoardId);
 	}
 
 	@Get("supersprints")
@@ -403,24 +435,43 @@ export class KanbanBoardController {
 		res.end(buffer);
 	}
 
+	@Get("history/overview")
+	async findHistoryOverview(): Promise<KanbanBoardHistoryOverviewDto> {
+		return this.historyService.findAllBoardsHistoryOverview();
+	}
+
+	@Get("boards/:boardId/history")
+	async findBoardHistory(
+		@Param("boardId") boardId: string,
+	): Promise<KanbanBoardHistoryDto> {
+		const resolvedBoardId =
+			await this.registryService.resolveBoardId(boardId);
+		return this.historyService.findBoardHistory(resolvedBoardId);
+	}
+
 	@Post("tasks")
 	async createTask(
 		@Body() dto: CreateKanbanBoardTaskRequestDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
 	): Promise<KanbanBoardTaskRegistryDto> {
-		return this.registryService.createTask(dto);
+		return this.registryService.createTask(dto, kanbanAuditUserId(user));
 	}
 
 	@Put("tasks/:id")
 	async updateTask(
 		@Param("id") id: string,
 		@Body() dto: UpdateKanbanBoardTaskRequestDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
 	): Promise<KanbanBoardTaskRegistryDto> {
-		return this.registryService.updateTask(id, dto);
+		return this.registryService.updateTask(id, dto, kanbanAuditUserId(user));
 	}
 
 	@Delete("tasks/:id")
-	async deleteTask(@Param("id") id: string): Promise<void> {
-		return this.registryService.deleteTask(id);
+	async deleteTask(
+		@Param("id") id: string,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<void> {
+		return this.registryService.deleteTask(id, kanbanAuditUserId(user));
 	}
 
 	@Get("tasks/:taskId/images")
@@ -526,13 +577,18 @@ export class KanbanBoardController {
 	async saveBoardTasks(
 		@Param("boardId") boardId: string,
 		@Body() tasks: KanbanBoardTaskRecord[],
+		@CurrentUser() user: Record<string, unknown> | undefined,
 	): Promise<KanbanBoardTaskRecord[]> {
 		if (!Array.isArray(tasks)) {
 			throw new BadRequestException("Ожидается массив задач");
 		}
 		const resolvedBoardId =
 			await this.registryService.resolveBoardId(boardId);
-		return this.kanbanBoardService.saveBoardTasks(resolvedBoardId, tasks);
+		return this.kanbanBoardService.saveBoardTasks(
+			resolvedBoardId,
+			tasks,
+			kanbanAuditUserId(user),
+		);
 	}
 
 	@Get("tasks")

@@ -17,19 +17,26 @@ import type {
 	V2TypicalWorkCatalogListResponseDto,
 	V2TypicalWorkAssignmentListResponseDto,
 	CreateV2TypicalWorkAssignmentRequestDto,
+	CopyV2TypicalWorkRequestDto,
 	V2TypicalWorkAssignmentDto,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "../helpers/apiClient";
 
-export const useV2TypicalWorksCatalog = () =>
-	useQuery<V2TypicalWorkCatalogListResponseDto>({
-		queryKey: ["v2-works", "catalog"],
+export const useV2TypicalWorksCatalog = (params?: { templateId?: string | null }) => {
+	const scoped = params != null && "templateId" in params;
+	const templateId = params?.templateId?.trim() ?? "";
+	const qs = templateId ? `?templateId=${encodeURIComponent(templateId)}` : "";
+
+	return useQuery<V2TypicalWorkCatalogListResponseDto>({
+		queryKey: ["v2-works", "catalog", templateId],
 		queryFn: () =>
 			apiClient({
-				url: "/v2/works/catalog",
+				url: `/v2/works/catalog${qs}`,
 				method: "GET",
 			}),
+		enabled: scoped ? Boolean(templateId) : true,
 	});
+};
 
 export const useV2TypicalWorkAssignments = (params?: {
 	workId?: string;
@@ -79,7 +86,10 @@ export const useCreateV2TypicalWorkAssignment = () => {
 export const useV2TypicalWorksList = (params?: {
 	archComponentType?: string;
 	streamExecutor?: string;
+	templateId?: string | null;
 }) => {
+	const scoped = params != null && "templateId" in params;
+	const templateId = params?.templateId?.trim() ?? "";
 	const search = new URLSearchParams();
 	if (params?.archComponentType) {
 		search.set("archComponentType", params.archComponentType);
@@ -87,15 +97,24 @@ export const useV2TypicalWorksList = (params?: {
 	if (params?.streamExecutor) {
 		search.set("streamExecutor", params.streamExecutor);
 	}
+	if (templateId) {
+		search.set("templateId", templateId);
+	}
 	const qs = search.toString();
 
 	return useQuery<V2TypicalWorkListResponseDto>({
-		queryKey: ["v2-works", params?.archComponentType ?? "", params?.streamExecutor ?? ""],
+		queryKey: [
+			"v2-works",
+			params?.archComponentType ?? "",
+			params?.streamExecutor ?? "",
+			templateId,
+		],
 		queryFn: () =>
 			apiClient<V2TypicalWorkListResponseDto>({
 				url: `/v2/works${qs ? `?${qs}` : ""}`,
 				method: "GET",
 			}),
+		enabled: scoped ? Boolean(templateId) : true,
 	});
 };
 
@@ -289,6 +308,25 @@ export const usePreviewV2TypicalWork = () =>
 				data: dto,
 			}),
 	});
+
+export const useCopyV2TypicalWork = () => {
+	const queryClient = useQueryClient();
+	return useMutation<
+		V2TypicalWorkCardDto,
+		Error,
+		{ workId: string; dto: CopyV2TypicalWorkRequestDto }
+	>({
+		mutationFn: ({ workId, dto }) =>
+			apiClient({
+				url: `/v2/works/${workId}/copy`,
+				method: "POST",
+				data: dto,
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
+		},
+	});
+};
 
 export const useCreateV2TypicalWork = () => {
 	const queryClient = useQueryClient();

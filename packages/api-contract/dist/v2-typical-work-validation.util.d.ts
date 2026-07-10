@@ -58,6 +58,10 @@ export type WorkCoefficientRowInput = {
     valueCode: string | null;
     valueLabel: string | null;
 };
+export type WorkCoefficientCatalogParam = WorkTriggerStatusCatalogParam & {
+    sourceKeys?: string[];
+};
+export declare function resolveWorkCoefficientCatalogParam(catalog: WorkCoefficientCatalogParam[], paramCode: string): WorkCoefficientCatalogParam | undefined;
 /**
  * F-03 §578: значение коэффициента трудоёмкости доступно, только если оно
  * присутствует в активном глобальном справочнике значений параметра. Если
@@ -67,4 +71,4 @@ export type WorkCoefficientRowInput = {
  * Строки-флаги без значения (valueCode/valueLabel = null) задают «параметр
  * присутствует» и не ссылаются на словарь — они всегда доступны.
  */
-export declare function isWorkCoefficientValueAvailable(row: WorkCoefficientRowInput, catalog: WorkTriggerStatusCatalogParam[], atDate?: string): boolean;
+export declare function isWorkCoefficientValueAvailable(row: WorkCoefficientRowInput, catalog: WorkCoefficientCatalogParam[], atDate?: string): boolean;

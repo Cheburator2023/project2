@@ -27,8 +27,18 @@ import {
 import {
 	isV2AnketaHiddenUiNode,
 	setGroupActivationAtPath,
+	collectGeneratedTypicalWorkArrayPaths,
 	type V2AnketaMainSectionId,
 } from "@smart-anketa/api-contract";
+import { IS_DEV } from "@react-client/common/constants/dev";
+import {
+	attachTypicalWorkRowInfluence,
+	buildCalculationInfluenceByPath,
+} from "../utils/anketaCalculationDev.util";
+import {
+	applyRjsfFormChangeToAnketaFormData,
+	normalizeAnketaFormDataForRjsf,
+} from "../utils/anketaRjsfFormData.util";
 import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
 
@@ -37,7 +47,9 @@ type Props = {
 	engine?: V2AnketaSchemaEngine;
 	readOnly?: boolean;
 	hiddenTopLevelFields?: string[];
-	anketaFormContext?: AnketaFormContextValue;
+	anketaFormContext?: Partial<
+		Omit<AnketaFormContextValue, "formData" | "previewSchema" | "previewUiSchema">
+	>;
 	modalBindings?: AnketaFormModalBindingSets;
 	"data-test-id"?: string;
 };
@@ -209,6 +221,27 @@ export function V2AnketaSchemaForm({
 		[engine],
 	);
 
+	const devCalculationInfluence = useMemo(() => {
+		if (!IS_DEV) return undefined;
+		const map = buildCalculationInfluenceByPath(
+			engine.calculationItems ?? [],
+			engine.taskTriggerItems ?? [],
+			engine.logicRules ?? [],
+		);
+		attachTypicalWorkRowInfluence(
+			map,
+			engine.calculationLiveFormData,
+			collectGeneratedTypicalWorkArrayPaths(engine.previewUiSchema),
+		);
+		return map;
+	}, [
+		engine.calculationItems,
+		engine.taskTriggerItems,
+		engine.logicRules,
+		engine.calculationLiveFormData,
+		engine.previewUiSchema,
+	]);
+
 	const formContext = useMemo((): AnketaFormContextValue => {
 		const base = anketaFormContext ?? {};
 		return mergeAnketaFormContext(base, {
@@ -229,6 +262,10 @@ export function V2AnketaSchemaForm({
 			onToggleGroupActivation:
 				base.onToggleGroupActivation ??
 				(disabled ? undefined : handleToggleGroupActivation),
+			devCalculationInfluence,
+			devCalculationItems: IS_DEV ? engine.calculationItems : undefined,
+			devTaskTriggerItems: IS_DEV ? engine.taskTriggerItems : undefined,
+			devCalculationLoading: IS_DEV ? engine.calculationLoading : undefined,
 		});
 	}, [
 		anketaFormContext,
@@ -237,9 +274,18 @@ export function V2AnketaSchemaForm({
 		handleToggleGroupActivation,
 		engine.displayFormData,
 		engine.version?.id,
+		engine.calculationItems,
+		engine.taskTriggerItems,
+		engine.calculationLoading,
+		devCalculationInfluence,
 		modalBindings,
 		workflow,
 	]);
+
+	const rjsfFormData = useMemo(
+		() => normalizeAnketaFormDataForRjsf(engine.displayFormData),
+		[engine.displayFormData],
+	);
 
 	const visibleRootFieldCount = useMemo(() => {
 		const props = engine.previewSchema.properties ?? {};
@@ -300,7 +346,7 @@ export function V2AnketaSchemaForm({
 			<Form
 				schema={engine.previewSchema}
 				uiSchema={formUiSchema}
-				formData={engine.displayFormData}
+				formData={rjsfFormData}
 				extraErrors={engine.logicExtraErrors}
 				templates={v2AnketaFormTemplates}
 				widgets={v2AnketaFormWidgets}
@@ -312,7 +358,11 @@ export function V2AnketaSchemaForm({
 				readonly={disabled}
 				formContext={formContext}
 				onChange={(evt) => {
-					const next = (evt.formData as Record<string, unknown>) ?? {};
+					const rjsfNext = (evt.formData as Record<string, unknown>) ?? {};
+					const next = applyRjsfFormChangeToAnketaFormData(
+						engine.formData,
+						rjsfNext,
+					);
 					const touchedId = resolveTouchedMainSection(evt);
 					const withWorkflowTouch =
 						touchedId != null ? touchSectionInFormData(next, touchedId) : next;

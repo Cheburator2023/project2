@@ -12,14 +12,16 @@ import {
 	useCreateV2TypicalWork,
 	useDeleteV2TypicalWork,
 	useV2TypicalWorkCard,
-	useV2TypicalWorksCatalog,
 	useV2TypicalWorksList,
 } from "@react-client/common/api/queries/v2-works";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { parseTypicalWorkDeleteError } from "./typicalWorkPatchErrors";
 import { V2_TEMPLATE_VERSION_QUERY } from "@react-client/routing/common/pathHelpers";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
+import { useSchemaEditor } from "../../SchemaEditorContext";
+import { findPointerByArchComponent } from "../../components/SchemaCanvasDnd";
+import { ARCH_COMPONENT_PRESET_DEFS } from "../../archComponentPresets";
 import { toast } from "@react-client/common/toasts";
 import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../../testIds";
@@ -36,13 +38,16 @@ import {
 	resolveScopeStreams,
 	scopeLabel,
 	scopeSubtitle,
+	streamAreaKey,
 	workAssignedToScope,
 } from "./typicalWorksAreas";
 import {
 	DEFAULT_WORK_STREAMS,
 	groupWorksByArchComponent,
+	NEW_WORK_QUERY,
 	pickDefaultStream,
 	storeWorkStream,
+	WORK_ID_QUERY,
 } from "./typicalWorksUi";
 
 const DEFAULT_SCOPE: LogicWorksScope = {
@@ -55,10 +60,40 @@ export function TypicalWorksPanel() {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const templateVersionId = searchParams.get(V2_TEMPLATE_VERSION_QUERY);
 
-	const { data, isLoading, error } = useV2TypicalWorksList();
-	const { data: catalogData } = useV2TypicalWorksCatalog();
+	const { jsonSchema, uiSchema, setSelectedPointer, handleAddFieldPresetAtParent } =
+		useSchemaEditor();
+
+	const { data, isLoading, error } = useV2TypicalWorksList({
+		templateId,
+	});
 	const createWork = useCreateV2TypicalWork();
 	const deleteWork = useDeleteV2TypicalWork();
+
+	/** Дуплекс логика→конструктор: гарантирует блок «Типовые работы» на холсте и выделяет его. */
+	const ensureTypicalWorkBlockOnCanvas = useCallback(() => {
+		const existing = findPointerByArchComponent(
+			jsonSchema,
+			uiSchema,
+			"typicalWork",
+		);
+		if (existing) {
+			setSelectedPointer(existing);
+			return;
+		}
+		const def = ARCH_COMPONENT_PRESET_DEFS.typicalWork;
+		handleAddFieldPresetAtParent(
+			"/",
+			def.make(),
+			Number.MAX_SAFE_INTEGER,
+			def.uiOptions,
+			def.uiBranch,
+		);
+	}, [
+		jsonSchema,
+		uiSchema,
+		setSelectedPointer,
+		handleAddFieldPresetAtParent,
+	]);
 
 	const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
 	const [streamExecutor, setStreamExecutor] = useState<string | null>(null);
@@ -73,6 +108,42 @@ export function TypicalWorksPanel() {
 	>(null);
 
 	const scopeStreams = useMemo(() => resolveScopeStreams(scope), [scope]);
+
+	// Дуплекс конструктор→логика: открыть конкретную работу по deep-link (?workId=).
+	const deepLinkWorkId = searchParams.get(WORK_ID_QUERY);
+	useEffect(() => {
+		if (!deepLinkWorkId) return;
+		const work = (data?.items ?? []).find((w) => w.id === deepLinkWorkId);
+		if (!work) return;
+		const area = work.streams[0]
+			? streamAreaKey(work.streams[0])
+			: DEFAULT_SCOPE.stream;
+		setScope({ kind: "stream", stream: area });
+		setSelectedWorkId(work.id);
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.delete(WORK_ID_QUERY);
+				return next;
+			},
+			{ replace: true },
+		);
+	}, [deepLinkWorkId, data?.items, setSearchParams]);
+
+	// Дуплекс конструктор→логика: открыть диалог создания работы по deep-link (?newWork=1).
+	const openCreateFlag = searchParams.get(NEW_WORK_QUERY);
+	useEffect(() => {
+		if (openCreateFlag !== "1") return;
+		setCreateOpen(true);
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.delete(NEW_WORK_QUERY);
+				return next;
+			},
+			{ replace: true },
+		);
+	}, [openCreateFlag, setSearchParams]);
 
 	const assignedWorks = useMemo(() => {
 		const items = data?.items ?? [];
@@ -154,7 +225,8 @@ export function TypicalWorksPanel() {
 			const created = await createWork.mutateAsync({
 				name: payload.name,
 				archComponentType: payload.archComponentType,
-				streamExecutor: payload.streamExecutor ?? scopeStreams[0],
+				templateId,
+				streamExecutor: payload.streamExecutor ?? scope.stream,
 				starterNormValue: payload.starterNormValue,
 			});
 			setCreateOpen(false);
@@ -162,10 +234,11 @@ export function TypicalWorksPanel() {
 			const stream =
 				created.streamExecutor ||
 				payload.streamExecutor ||
-				scopeStreams[0] ||
+				scope.stream ||
 				DEFAULT_WORK_STREAMS[0];
 			setStreamExecutor(stream);
 			storeWorkStream(created.id, stream);
+			ensureTypicalWorkBlockOnCanvas();
 			toast.success("Работа создана");
 		} catch (err) {
 			toast.error("Не удалось создать работу", {
@@ -283,11 +356,13 @@ export function TypicalWorksPanel() {
 			<AssignWorkFromCatalogDialog
 				open={assignOpen}
 				scope={scope}
-				scopeStreams={scopeStreams}
-				works={catalogData?.items ?? []}
+				templateId={templateId}
 				templateVersionId={templateVersionId}
 				onClose={() => setAssignOpen(false)}
-				onAssigned={(workId, stream) => openWorkInStreamsView(workId, stream)}
+				onAssigned={(workId, stream) => {
+					openWorkInStreamsView(workId, stream);
+					ensureTypicalWorkBlockOnCanvas();
+				}}
 				onCreateNew={() => {
 					setAssignOpen(false);
 					setCreateOpen(true);
@@ -297,7 +372,7 @@ export function TypicalWorksPanel() {
 			<CreateTypicalWorkDialog
 				open={createOpen}
 				pending={createWork.isPending}
-				defaultStreamExecutor={scopeStreams[0] ?? null}
+				defaultStreamExecutor={scope.stream}
 				onClose={() => setCreateOpen(false)}
 				onSubmit={handleCreateWork}
 			/>

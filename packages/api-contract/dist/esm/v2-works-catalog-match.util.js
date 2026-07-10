@@ -1,35 +1,45 @@
-/** Стрим-исполнитель по типу системы-источника в анкете. */
+import { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamNameSourceKeys, } from "./v2-work-param-source-keys.util";
+export { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamNameSourceKeys, };
+/** Единый стрим-исполнитель для типовых работ систем-источников. */
+export const V2_SOURCE_STREAM = "Источники данных";
+/**
+ * Legacy-маппинг «тип источника → стрим». Больше НЕ используется для
+ * маршрутизации (разделение внутр/внеш убрано): все источники идут в
+ * единый стрим `V2_SOURCE_STREAM`. Оставлен только для чтения старых меток.
+ */
 export const STREAM_BY_SOURCE_TYPE = {
     Внутренний: "ИД. Внутренний",
     Внешний: "ИД. Внешний",
 };
+const SOURCE_TYPE_CODE_ALIASES = {
+    internal: "Внутренний",
+    внутренний: "Внутренний",
+    external: "Внешний",
+    внешний: "Внешний",
+};
+/** Нормализует код/метку типа источника к канонической русской метке. */
+export function normalizeSourceTypeLabel(raw) {
+    const value = String(raw ?? "").trim();
+    if (!value)
+        return null;
+    if (value in STREAM_BY_SOURCE_TYPE) {
+        return value;
+    }
+    const alias = SOURCE_TYPE_CODE_ALIASES[value.toLowerCase()];
+    return alias ?? null;
+}
 export const CONTROL_MODELS_STREAM = "Контроль моделей";
-export function resolveStreamFromSourceType(source) {
-    const sourceType = String(source.type ?? "").trim();
-    return STREAM_BY_SOURCE_TYPE[sourceType] ?? null;
+/**
+ * Стрим-исполнитель строки-источника. Разделение внутр/внеш убрано —
+ * любой источник маршрутизируется в единый стрим `V2_SOURCE_STREAM`.
+ * Тип источника (`type`) остаётся обычным триггером работы.
+ */
+export function resolveStreamFromSourceType(_source) {
+    return V2_SOURCE_STREAM;
 }
-/** Стримы, представленные в `streamDataSources.sourceSystems`. */
-export function resolveStreamsFromSourceSystems(data) {
-    const systems = readDotPath(data, "streamDataSources.sourceSystems");
-    if (!Array.isArray(systems) || systems.length === 0) {
-        return [STREAM_BY_SOURCE_TYPE.Внутренний];
-    }
-    const streams = new Set();
-    for (const row of systems) {
-        if (!row || typeof row !== "object" || Array.isArray(row))
-            continue;
-        const stream = resolveStreamFromSourceType(row);
-        if (stream)
-            streams.add(stream);
-    }
-    return streams.size > 0 ? [...streams] : [STREAM_BY_SOURCE_TYPE.Внутренний];
-}
-function readDotPath(data, path) {
-    return path.split(".").reduce((cur, key) => {
-        if (!cur || typeof cur !== "object" || Array.isArray(cur))
-            return undefined;
-        return cur[key];
-    }, data);
+/** Стрим(ы) типовых работ для систем-источников анкеты — всегда единый. */
+export function resolveStreamsFromSourceSystems(_data) {
+    return [V2_SOURCE_STREAM];
 }
 function slugParamCode(name) {
     return name
@@ -42,8 +52,18 @@ function slugParamCode(name) {
 export function readTypicalWorkSourceField(source, paramCode, paramName) {
     if (paramCode in source)
         return source[paramCode];
+    const { displayName, sourceKeys } = parseParamNameSourceKeys(paramName);
+    for (const key of sourceKeys) {
+        if (key in source)
+            return source[key];
+    }
+    if (displayName) {
+        const slug = slugParamCode(displayName);
+        if (slug in source)
+            return source[slug];
+    }
     if (paramName) {
-        const slug = slugParamCode(paramName);
+        const slug = slugParamCode(stripParamNameSourceKeys(paramName));
         if (slug in source)
             return source[slug];
     }
@@ -161,6 +181,30 @@ function compareRuleValue(actual, expected, operator) {
             return actualStr === expectedStr;
     }
 }
+function scalarRuleValueMatches(actual, rule) {
+    const candidates = [rule.valueCode, rule.valueLabel].filter((value) => value != null && String(value).trim() !== "");
+    if (candidates.length === 0)
+        return false;
+    if ([">=", "<=", ">", "<"].includes(rule.operator)) {
+        return compareRuleValue(actual, rule.valueCode ?? rule.valueLabel, rule.operator);
+    }
+    const actualStr = String(actual ?? "");
+    const matches = candidates.some((candidate) => {
+        if (actualStr === candidate)
+            return true;
+        if (typeof actual === "boolean") {
+            const norm = candidate.trim().toLowerCase();
+            if (norm === "да" && actual === true)
+                return true;
+            if (norm === "нет" && actual === false)
+                return true;
+        }
+        return false;
+    });
+    if (rule.operator === "!=")
+        return !matches;
+    return matches;
+}
 function compareRuleValuesSet(actual, expectedCodes, expectedLabels, operator) {
     const actualStr = String(actual ?? "");
     const matches = expectedCodes.some((code, index) => actualStr === code ||
@@ -173,7 +217,7 @@ export function typicalWorkRulesMatchSource(rules, source) {
     if (rules.length === 0)
         return false;
     return rules.every((rule) => {
-        const paramName = rule.paramName ?? rule.paramCode;
+        const paramName = stripParamNameSourceKeys(rule.paramName) || rule.paramCode;
         const controlCode = extractControlCode(paramName);
         if (controlCode) {
             const rowText = String(source.value ?? source.controlType ?? source.name ?? "");
@@ -196,11 +240,11 @@ export function typicalWorkRulesMatchSource(rules, source) {
         if (rule.valueLabel == null && rule.valueCode == null) {
             return actual !== undefined && actual !== null && actual !== "";
         }
-        return compareRuleValue(actual, rule.valueLabel ?? rule.valueCode, rule.operator);
+        return scalarRuleValueMatches(actual, rule);
     });
 }
-export function resolveLaborCoefficient(source, paramCode, valueCode, valueLabel) {
-    const actual = readSourceField(source, paramCode, null);
+export function resolveLaborCoefficient(source, paramCode, valueCode, valueLabel, paramName = null) {
+    const actual = readSourceField(source, paramCode, paramName);
     if (valueLabel != null) {
         if (String(actual) === valueLabel)
             return true;
@@ -216,8 +260,8 @@ export function resolveLaborCoefficient(source, paramCode, valueCode, valueLabel
         return true;
     return false;
 }
-export function resolveLaborAnyOfCoefficient(source, paramCode, anyOf) {
-    const actual = readSourceField(source, paramCode, null);
+export function resolveLaborAnyOfCoefficient(source, paramCode, anyOf, paramName = null) {
+    const actual = readSourceField(source, paramCode, paramName);
     const actualStr = String(actual ?? "");
     const matches = anyOf.valueCodes.some((code, index) => actualStr === code ||
         actualStr === (anyOf.valueLabels[index] ?? "") ||

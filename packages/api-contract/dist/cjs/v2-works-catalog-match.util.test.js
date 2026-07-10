@@ -3,16 +3,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const vitest_1 = require("vitest");
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
 (0, vitest_1.describe)("v2-works-catalog-match.util", () => {
-    (0, vitest_1.it)("resolves stream from source type", () => {
-        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveStreamFromSourceType)({ type: "Внутренний" })).toBe("ИД. Внутренний");
-        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveStreamFromSourceType)({ type: "Внешний" })).toBe("ИД. Внешний");
+    (0, vitest_1.it)("resolves the unified source stream for any source row", () => {
+        // Разделение внутр/внеш убрано: любой источник → единый стрим.
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveStreamFromSourceType)({ type: "Внутренний" })).toBe(v2_works_catalog_match_util_1.V2_SOURCE_STREAM);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveStreamFromSourceType)({ type: "Внешний" })).toBe(v2_works_catalog_match_util_1.V2_SOURCE_STREAM);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveStreamFromSourceType)({})).toBe(v2_works_catalog_match_util_1.V2_SOURCE_STREAM);
     });
-    (0, vitest_1.it)("collects streams from source systems", () => {
+    (0, vitest_1.it)("collects the unified source stream from source systems", () => {
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveStreamsFromSourceSystems)({
             streamDataSources: {
                 sourceSystems: [{ type: "Внутренний" }, { type: "Внешний" }],
             },
-        })).toEqual(["ИД. Внутренний", "ИД. Внешний"]);
+        })).toEqual([v2_works_catalog_match_util_1.V2_SOURCE_STREAM]);
     });
     (0, vitest_1.it)("matches control type by bracket label", () => {
         const rules = [
@@ -28,6 +30,51 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
             value: "Качество модельных данных [КД]",
         })).toBe(true);
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, { value: "Технический [ТМ]" })).toBe(false);
+    });
+    (0, vitest_1.it)("matches source type trigger by value code", () => {
+        const rules = [
+            {
+                paramCode: "type",
+                paramName: "Тип системы-источника",
+                operator: "=",
+                valueCode: "external",
+                valueLabel: "Внешний",
+            },
+        ];
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, { type: "external" })).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, { type: "Внешний" })).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, { type: "internal" })).toBe(false);
+    });
+    (0, vitest_1.it)("reads source field from encoded paramName aliases", () => {
+        const rules = [
+            {
+                paramCode: "field_primary",
+                paramName: "Сложность @ field_alt|field_other",
+                operator: "=",
+                valueCode: "high",
+                valueLabel: "Высокая",
+            },
+        ];
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, {
+            field_alt: "high",
+        })).toBe(true);
+    });
+    (0, vitest_1.it)("matches schema field trigger by label when rule stores dictionary code", () => {
+        const rules = [
+            {
+                paramCode: "field_nE73kPQl",
+                paramName: "Детализация и ясность запроса постановки задачи",
+                operator: "=",
+                valueCode: "Точечное",
+                valueLabel: "Точечное",
+            },
+        ];
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, {
+            field_nE73kPQl: "Точечное",
+        })).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, {
+            field_nE73kPQl: "Масштабное",
+        })).toBe(false);
     });
     (0, vitest_1.it)("matches source type trigger", () => {
         const rules = [

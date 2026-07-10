@@ -15,7 +15,9 @@ import {
 	useResetV2TemplateToDefault,
 	useRestoreV2Template,
 	useRestoreV2TemplateVersions,
-	useV2Templates,
+	useUpdateV2FactorySnapshotSetting,
+	useV2FactorySnapshotSetting,
+	useV2TemplateRegistry,
 } from "@react-client/common/api/queries/v2-templates";
 import { useSeedV2TestQuestionnaires } from "@react-client/common/api/queries/v2-questionnaires";
 import { toast } from "@react-client/common/toasts";
@@ -48,11 +50,15 @@ export function AdminV2SchemasPage() {
 	const deleteTemplate = useDeleteV2Template();
 	const restoreTemplate = useRestoreV2Template();
 	const restoreVersions = useRestoreV2TemplateVersions();
-	const { data: templates } = useV2Templates();
+	const { data: registry } = useV2TemplateRegistry();
+	const templates = registry?.items;
+	const { data: factorySetting } = useV2FactorySnapshotSetting();
+	const setFactorySnapshot = useUpdateV2FactorySnapshotSetting();
 	const listRef = useRef<V2TemplateListHandle>(null);
 
 	const [selectedTemplateId, setSelectedTemplateId] = useState("");
 	const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+	const [confirmSetFactoryOpen, setConfirmSetFactoryOpen] = useState(false);
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 	const [selectedRows, setSelectedRows] = useState<V2SchemaGridRow[]>([]);
 	const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false);
@@ -63,10 +69,7 @@ export function AdminV2SchemasPage() {
 	}, [templates]);
 
 	const { templates: selectedTemplates, versionsWithoutSelectedTemplate } =
-		useMemo(
-			() => splitSelectedSchemaRows(selectedRows),
-			[selectedRows],
-		);
+		useMemo(() => splitSelectedSchemaRows(selectedRows), [selectedRows]);
 
 	const bulkDeletePending =
 		bulkDeleteVersions.isPending || deleteTemplate.isPending;
@@ -90,6 +93,37 @@ export function AdminV2SchemasPage() {
 	}, [selectedTemplates, selectedTemplateId, templates]);
 
 	const selectedTemplate = actionTargetTemplate;
+
+	const factoryTarget = useMemo(() => {
+		if (versionsWithoutSelectedTemplate.length === 1) {
+			const version = versionsWithoutSelectedTemplate[0];
+			return { templateId: version.templateId, versionId: version.id };
+		}
+		if (
+			selectedTemplates.length === 1 &&
+			versionsWithoutSelectedTemplate.length === 0
+		) {
+			const template = selectedTemplates[0];
+			if (!template.currentVersionId) return null;
+			return { templateId: template.id, versionId: template.currentVersionId };
+		}
+		return null;
+	}, [selectedTemplates, versionsWithoutSelectedTemplate]);
+
+	const factorySettingLabel = useMemo(() => {
+		if (!factorySetting) return "…";
+		if (factorySetting.source === "builtin") {
+			return "встроенный JSON-снимок";
+		}
+		if (factorySetting.templateName) {
+			const version =
+				factorySetting.versionNumber != null
+					? ` v${factorySetting.versionNumber}`
+					: "";
+			return `«${factorySetting.templateName}»${version}`;
+		}
+		return "схема из БД";
+	}, [factorySetting]);
 
 	const handleGridSelectionChange = useCallback((rows: V2SchemaGridRow[]) => {
 		setSelectedRows(rows);
@@ -118,12 +152,15 @@ export function AdminV2SchemasPage() {
 		const affectedTemplateIds = new Set<string>();
 		const deletedTemplateIds = new Set<string>();
 
-		const trackVersionDeleteResult = (result: {
-			deletedVersionIds: string[];
-			reboundQuestionnaireCount?: number;
-			deletedQuestionnaireCount?: number;
-			snapshot: V2TemplateVersionDto[];
-		}, templateId: string) => {
+		const trackVersionDeleteResult = (
+			result: {
+				deletedVersionIds: string[];
+				reboundQuestionnaireCount?: number;
+				deletedQuestionnaireCount?: number;
+				snapshot: V2TemplateVersionDto[];
+			},
+			templateId: string,
+		) => {
 			deletedVersionCount += result.deletedVersionIds.length;
 			reboundQuestionnaireCount += result.reboundQuestionnaireCount ?? 0;
 			deletedQuestionnaireCount += result.deletedQuestionnaireCount ?? 0;
@@ -156,9 +193,7 @@ export function AdminV2SchemasPage() {
 						affectedTemplateIds.add(tpl.id);
 						restoreTemplateSnapshots.push(snapshot);
 					} catch (error) {
-						templateErrors.push(
-							`«${tpl.name}»: ${apiErrorMessage(error)}`,
-						);
+						templateErrors.push(`«${tpl.name}»: ${apiErrorMessage(error)}`);
 					}
 				}
 			}
@@ -236,10 +271,7 @@ export function AdminV2SchemasPage() {
 				parts.push(`версий: ${deletedVersionCount}`);
 			}
 
-			const descriptionParts = [
-				"Актуальная схема системы сохранена",
-				...notes,
-			];
+			const descriptionParts = ["Актуальная схема системы сохранена", ...notes];
 			if (templateErrors.length > 0) {
 				descriptionParts.push(templateErrors.join("; "));
 			}
@@ -282,13 +314,31 @@ export function AdminV2SchemasPage() {
 			height="-webkit-fill-available"
 		>
 			<Header>
-				<Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+				<Stack
+					direction="row"
+					spacing={1}
+					alignItems="center"
+					flexWrap="wrap"
+					useFlexGap
+				>
 					<Button
 						component={RouterLink}
 						to={routes.adminV2Guide.rootPath}
 						variant="text"
 					>
 						Справка
+					</Button>
+					<Button
+						variant="outlined"
+						disabled={!factoryTarget || setFactorySnapshot.isPending}
+						onClick={() => setConfirmSetFactoryOpen(true)}
+						title={
+							factoryTarget
+								? "Новые схемы и сброс к заводской будут брать снимок выбранной версии"
+								: "Выберите одну схему с актуальной версией или одну версию в таблице"
+						}
+					>
+						Назначить заводским эталоном
 					</Button>
 					<Button
 						variant="outlined"
@@ -355,6 +405,7 @@ export function AdminV2SchemasPage() {
 
 			<V2TemplateList
 				ref={listRef}
+				factorySnapshot={factorySetting ?? null}
 				onSelectionChange={handleGridSelectionChange}
 			/>
 
@@ -387,8 +438,8 @@ export function AdminV2SchemasPage() {
 								{versionsWithoutSelectedTemplate.length}.
 							</>
 						) : null}{" "}
-						Полное удаление схемы из реестра — через контекстное меню
-						«Удалить шаблон» (связанные анкеты удаляются вместе со схемой).
+						Полное удаление схемы из реестра — через контекстное меню «Удалить
+						шаблон» (связанные анкеты удаляются вместе со схемой).
 					</DialogContentText>
 				</DialogContent>
 				<DialogActions>
@@ -406,13 +457,17 @@ export function AdminV2SchemasPage() {
 				</DialogActions>
 			</Dialog>
 
-			<Dialog open={confirmResetOpen} onClose={() => setConfirmResetOpen(false)}>
+			<Dialog
+				open={confirmResetOpen}
+				onClose={() => setConfirmResetOpen(false)}
+			>
 				<DialogTitle>Сброс к заводской схеме</DialogTitle>
 				<DialogContent>
 					<DialogContentText>
 						Будет создана и опубликована новая версия шаблона «
-						{selectedTemplate?.name ?? "…"}» с встроенным эталоном (базовая анкета, по
-						мотивам v1). Текущая опубликованная версия будет заменена.
+						{selectedTemplate?.name ?? "…"}» из текущего заводского эталона (
+						{factorySettingLabel}). Текущая опубликованная версия будет
+						заменена.
 					</DialogContentText>
 				</DialogContent>
 				<DialogActions>
@@ -429,6 +484,51 @@ export function AdminV2SchemasPage() {
 						disabled={resetMutation.isPending}
 					>
 						Сбросить
+					</Button>
+				</DialogActions>
+			</Dialog>
+
+			<Dialog
+				open={confirmSetFactoryOpen}
+				onClose={() => setConfirmSetFactoryOpen(false)}
+			>
+				<DialogTitle>Назначить заводским эталоном</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						Новые схемы (режим «Заводская схема») и сброс к заводской будут
+						копировать выбранную версию. Встроенный JSON-снимок в репозитории
+						останется — его можно вернуть в Настройках.
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setConfirmSetFactoryOpen(false)}>
+						Отмена
+					</Button>
+					<Button
+						variant="contained"
+						disabled={!factoryTarget || setFactorySnapshot.isPending}
+						onClick={() => {
+							if (!factoryTarget) return;
+							setFactorySnapshot.mutate(
+								{
+									source: "template",
+									templateId: factoryTarget.templateId,
+									versionId: factoryTarget.versionId,
+								},
+								{
+									onSuccess: () => {
+										setConfirmSetFactoryOpen(false);
+										toast.success("Заводской эталон обновлён");
+									},
+									onError: (err) =>
+										toast.error("Не удалось назначить эталон", {
+											description: apiErrorMessage(err),
+										}),
+								},
+							);
+						}}
+					>
+						Назначить
 					</Button>
 				</DialogActions>
 			</Dialog>

@@ -1,5 +1,6 @@
 import { useCalculateV2Template } from "@react-client/common/api/queries/v2-templates";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
+import { IS_DEV } from "@react-client/common/constants/dev";
 import type {
 	V2CalculationResultDto,
 	V2LogicGraphDto,
@@ -11,6 +12,8 @@ type Options = {
 	versionId?: string | null;
 	formData: Record<string, unknown>;
 	rulesOverride?: V2LogicGraphDto;
+	jsonSchema?: Record<string, unknown>;
+	uiSchema?: Record<string, unknown>;
 	debounceMs?: number;
 	enabled?: boolean;
 };
@@ -20,6 +23,8 @@ export function useDebouncedV2Calculation({
 	versionId,
 	formData,
 	rulesOverride,
+	jsonSchema,
+	uiSchema,
 	debounceMs = 350,
 	enabled = true,
 }: Options) {
@@ -37,10 +42,17 @@ export function useDebouncedV2Calculation({
 
 		const requestId = ++requestIdRef.current;
 		const timer = window.setTimeout(() => {
+			if (IS_DEV) {
+				console.debug("[anketa-calc] POST /calculate", {
+					templateId,
+					versionId,
+					formDataKeys: Object.keys(formData),
+				});
+			}
 			void mutateAsync({
 				templateId,
 				versionId,
-				dto: { formData, rulesOverride },
+				dto: { formData, rulesOverride, jsonSchema, uiSchema },
 			})
 				.then((data) => {
 					if (requestId !== requestIdRef.current) return;
@@ -60,6 +72,8 @@ export function useDebouncedV2Calculation({
 		versionId,
 		formData,
 		rulesOverride,
+		jsonSchema,
+		uiSchema,
 		debounceMs,
 		enabled,
 		mutateAsync,

@@ -15,7 +15,7 @@ import { trackerDateFormatter } from "@react-client/features/tracker/components/
 import type { KanbanBoardBoardDto } from "@smart-anketa/api-contract";
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
-import { trackerBoardPath } from "@react-client/features/kanban-board/kanban-task-paths";
+import { trackerBoardPath, trackerBoardHistoryPath } from "@react-client/features/kanban-board/kanban-task-paths";
 
 export function TrackerBoardsPage() {
 	const navigate = useNavigate();
@@ -123,6 +123,10 @@ export function TrackerBoardsPage() {
 				{
 					label: "Открыть kanban",
 					onClick: (row) => navigate(trackerBoardPath(row.boardKey)),
+				},
+				{
+					label: "История изменений",
+					onClick: (row) => navigate(trackerBoardHistoryPath(row.boardKey)),
 				},
 			]}
 			deleteDialogTitle="Удаление досок"

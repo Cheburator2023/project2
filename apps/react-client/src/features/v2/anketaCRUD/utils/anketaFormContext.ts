@@ -5,7 +5,18 @@ import type {
 	V2AnketaWorkflowDto,
 } from "@smart-anketa/api-contract";
 
+import type {
+	CalculationItem,
+	TaskTriggerItem,
+} from "@react-client/features/v2/admin_constructor/utils/calculationEngine";
+import type { PathCalculationInfluence } from "./anketaCalculationDev.util";
+
 export type AnketaFormContextValue = {
+	/**
+	 * Данные для отображения в UI (RJSF + кастомные таблицы/модалки).
+	 * Всегда `engine.displayFormData` — с учётом серверной калькуляции и merge.
+	 * Не подменять сырым `engine.formData`: иначе пропадут типовые работы и итоги.
+	 */
 	formData?: Record<string, unknown>;
 	/** Актуальные схемы превью (для арх. таблиц и модалок). */
 	previewSchema?: RJSFSchema;
@@ -30,6 +41,11 @@ export type AnketaFormContextValue = {
 	isMainSectionLocked?: (sectionId: V2AnketaMainSectionId) => boolean;
 	/** Включить/выключить опциональную группу (путь в formData, напр. streamDigitalAgents). */
 	onToggleGroupActivation?: (pathKey: string, active: boolean) => void;
+	/** IS_DEV: индекс влияния полей на POST /calculate. */
+	devCalculationInfluence?: Map<string, PathCalculationInfluence>;
+	devCalculationItems?: CalculationItem[];
+	devTaskTriggerItems?: TaskTriggerItem[];
+	devCalculationLoading?: boolean;
 };
 
 export function readAnketaFormContext(
@@ -60,14 +76,19 @@ export function objectFieldSlot(
 /**
  * Merge form context layers without accidentally replacing defined caller values.
  * `objectFieldSlots` are additive because shells often contribute page-level slots.
+ *
+ * `formData` всегда берётся из `fallback` (displayFormData движка) — оболочки страниц
+ * не могут подменить его сырыми данными анкеты.
  */
 export function mergeAnketaFormContext(
 	base: AnketaFormContextValue | undefined,
 	fallback: AnketaFormContextValue,
 ): AnketaFormContextValue {
+	const { formData: _baseFormData, ...baseRest } = base ?? {};
 	return {
 		...fallback,
-		...base,
+		...baseRest,
+		formData: fallback.formData,
 		objectFieldSlots: {
 			...base?.objectFieldSlots,
 			...fallback.objectFieldSlots,

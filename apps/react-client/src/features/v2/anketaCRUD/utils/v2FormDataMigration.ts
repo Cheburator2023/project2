@@ -3,16 +3,45 @@ import {
 	normalizeV2AnketaWorkflow,
 } from "@smart-anketa/api-contract";
 
+import {
+	ANKETA_ARCH_OBJECT_LIST_PATHS,
+	writeArchObjectListAtPath,
+	readArchObjectListAtPath,
+} from "./anketaArchObjectListPaths";
+
 function readRecord(value: unknown): Record<string, unknown> {
 	if (!value || typeof value !== "object" || Array.isArray(value)) return {};
 	return { ...(value as Record<string, unknown>) };
+}
+
+function normalizeArchObjectLists(
+	formData: Record<string, unknown>,
+): Record<string, unknown> {
+	let next = formData;
+	for (const path of ANKETA_ARCH_OBJECT_LIST_PATHS) {
+		const parts = path.split(".");
+		let current: unknown = next;
+		for (const part of parts) {
+			if (current == null || typeof current !== "object") {
+				current = undefined;
+				break;
+			}
+			current = (current as Record<string, unknown>)[part];
+		}
+		if (current == null) continue;
+		if (Array.isArray(current)) continue;
+		if (typeof current !== "object") continue;
+		const items = readArchObjectListAtPath(next, path);
+		next = writeArchObjectListAtPath(next, path, items);
+	}
+	return next;
 }
 
 /** Переносит legacy-пути formData в актуальную вложенность разделов. */
 export function migrateV2AnketaFormData(
 	formData: Record<string, unknown>,
 ): Record<string, unknown> {
-	const next = { ...formData };
+	const next = normalizeArchObjectLists({ ...formData });
 	const detailInfo = readRecord(next.detailInfo);
 	const streamDataSources = readRecord(next.streamDataSources);
 	const streamModelControl = readRecord(next.streamModelControl);

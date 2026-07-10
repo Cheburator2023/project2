@@ -10,6 +10,10 @@ import type { AlertProps } from "@mui/material/Alert";
 import { styled } from "@mui/material/styles";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { fuzzySearch, highlightMatches } from "@react-client/utils/fuzzySearch";
+import {
+	filterSubstringSearchOptions,
+	substringMatchIndexes,
+} from "@react-client/utils/substringSearch";
 
 const indexesToMatches = (
 	indexes: ReadonlyArray<number>,
@@ -82,6 +86,8 @@ type FuzzyAutocompleteProps<T> = {
 	getOptionValue?: (option: T) => string;
 	getOptionSecondaryText?: (option: T) => string | undefined;
 	fuzzyThreshold?: number;
+	/** `substring` — поиск по подстроке (как Ctrl+F); `fuzzy` — посимвольное совпадение. */
+	searchMode?: "substring" | "fuzzy";
 	allowEmpty?: boolean;
 	emptyLabel?: string;
 	searchPlaceholder?: string;
@@ -108,6 +114,7 @@ export function FuzzyAutocomplete<T>({
 	getOptionValue,
 	getOptionSecondaryText,
 	fuzzyThreshold = 0.1,
+	searchMode = "substring",
 	allowEmpty = true,
 	emptyLabel = "Не привязан",
 	searchPlaceholder = "Поиск по значениям...",
@@ -143,7 +150,7 @@ export function FuzzyAutocomplete<T>({
 	);
 
 	const fuzzyMatches =
-		searchTerm.trim().length > 0
+		searchMode === "fuzzy" && searchTerm.trim().length > 0
 			? fuzzySearch(
 					searchTerm,
 					optionsForSelect.map((item) => item.label),
@@ -151,13 +158,25 @@ export function FuzzyAutocomplete<T>({
 				)
 			: [];
 
+	const substringOptions =
+		searchMode === "substring" && searchTerm.trim().length > 0
+			? filterSubstringSearchOptions(
+					optionsForSelect,
+					searchTerm,
+					(item) => item.label,
+					(item) => getOptionSecondaryText?.(item.option),
+				)
+			: optionsForSelect;
+
 	const filteredOptions: FuzzySelectOption<T>[] = searchTerm.trim()
-		? fuzzyMatches.map((match) => {
-				const item = optionsForSelect.find(
-					(option) => option.label === match.target,
-				)!;
-				return { ...item, fuzzyMatch: match };
-			})
+		? searchMode === "fuzzy"
+			? fuzzyMatches.map((match) => {
+					const item = optionsForSelect.find(
+						(option) => option.label === match.target,
+					)!;
+					return { ...item, fuzzyMatch: match };
+				})
+			: substringOptions.map((item) => ({ ...item, fuzzyMatch: null }))
 		: optionsForSelect.map((option) => ({ ...option, fuzzyMatch: null }));
 
 	const selectedValue = value ? resolveValue(value) : "";
@@ -315,9 +334,17 @@ export function FuzzyAutocomplete<T>({
 											<HighlightedOptionText
 												text={item.label}
 												matches={
+													searchMode === "fuzzy" &&
 													item.fuzzyMatch?.indexes
 														? indexesToMatches(item.fuzzyMatch.indexes)
-														: []
+														: searchMode === "substring" && searchTerm.trim()
+															? indexesToMatches(
+																	substringMatchIndexes(
+																		item.label,
+																		searchTerm,
+																	),
+																)
+															: []
 												}
 											/>
 										}

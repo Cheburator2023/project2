@@ -1,5 +1,6 @@
 import {
 	KANBAN_BOARD_PRIORITIES,
+	KANBAN_BOARD_INPUT_BUFFER_COLUMN_ID,
 	KANBAN_BOARD_STATUSES,
 	KANBAN_BOARD_TASK_TYPES,
 	KANBAN_BOARD_WORK_TYPES,
@@ -42,28 +43,35 @@ const STATUS_ALIASES: Record<string, string> = {
 	завершено: "done",
 	выполнено: "done",
 	закрыто: "done",
-	"в работе": "in_progress",
-	"in progress": "in_progress",
-	in_progress: "in_progress",
-	работа: "in_progress",
-	разработка: "in_progress",
+	"в работе": "dev_wip",
+	"in progress": "dev_wip",
+	in_progress: "dev_wip",
+	работа: "dev_wip",
+	разработка: "dev_wip",
+	сделать: "todo",
 	"в очереди": "todo",
 	очередь: "todo",
 	"к выполнению": "todo",
 	todo: "todo",
 	запланировано: "todo",
-	бэклог: "backlog",
-	backlog: "backlog",
-	новая: "backlog",
-	ревью: "review",
-	review: "review",
-	"на проверке": "review",
-	"code review": "review",
-	qa: "qa",
-	"qa testing": "qa",
-	тестирование: "qa",
-	uat: "qa",
-	"на тестировании": "qa",
+	бэклог: "input_buffer",
+	backlog: "input_buffer",
+	"входной буфер": "input_buffer",
+	буфер: "input_buffer",
+	новая: "input_buffer",
+	анализ: "analysis_wip",
+	ревью: "review_wip",
+	review: "review_wip",
+	"на проверке": "review_wip",
+	"code review": "review_wip",
+	проверка: "review_wip",
+	qa: "review_wip",
+	"qa testing": "review_wip",
+	тестирование: "review_wip",
+	uat: "review_wip",
+	"на тестировании": "review_wip",
+	демонстрация: "demo",
+	demo: "demo",
 };
 
 export function scoreStatusColumnMatch(
@@ -141,17 +149,18 @@ export function resolveBestStatusColumnId(
 	}
 
 	if (!normalizePlanningToken(statusText)) {
-		const backlog =
+		const buffer =
+			columns.find((column) => column.id === KANBAN_BOARD_INPUT_BUFFER_COLUMN_ID) ??
 			columns.find((column) => column.id === "backlog") ??
 			columns.find(
 				(column) =>
 					normalizePlanningToken(column.title) ===
-					normalizePlanningToken(KANBAN_BOARD_STATUSES[0].title),
+					normalizePlanningToken(KANBAN_BOARD_STATUSES[1]?.title ?? ""),
 			) ??
 			columns[0];
 		return {
-			columnId: backlog.id,
-			columnTitle: backlog.title,
+			columnId: buffer.id,
+			columnTitle: buffer.title,
 			score: 100,
 		};
 	}

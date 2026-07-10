@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CONTROL_MODELS_STREAM = exports.STREAM_BY_SOURCE_TYPE = void 0;
+exports.CONTROL_MODELS_STREAM = exports.STREAM_BY_SOURCE_TYPE = exports.V2_SOURCE_STREAM = exports.stripParamNameSourceKeys = exports.parseParamNameSourceKeys = exports.formatParamNameWithSourceKeys = void 0;
+exports.normalizeSourceTypeLabel = normalizeSourceTypeLabel;
 exports.resolveStreamFromSourceType = resolveStreamFromSourceType;
 exports.resolveStreamsFromSourceSystems = resolveStreamsFromSourceSystems;
 exports.readTypicalWorkSourceField = readTypicalWorkSourceField;
@@ -14,38 +15,50 @@ exports.catalogValueMatchesTriggerRule = catalogValueMatchesTriggerRule;
 exports.typicalWorkRulesMatchSource = typicalWorkRulesMatchSource;
 exports.resolveLaborCoefficient = resolveLaborCoefficient;
 exports.resolveLaborAnyOfCoefficient = resolveLaborAnyOfCoefficient;
-/** Стрим-исполнитель по типу системы-источника в анкете. */
+const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
+Object.defineProperty(exports, "formatParamNameWithSourceKeys", { enumerable: true, get: function () { return v2_work_param_source_keys_util_1.formatParamNameWithSourceKeys; } });
+Object.defineProperty(exports, "parseParamNameSourceKeys", { enumerable: true, get: function () { return v2_work_param_source_keys_util_1.parseParamNameSourceKeys; } });
+Object.defineProperty(exports, "stripParamNameSourceKeys", { enumerable: true, get: function () { return v2_work_param_source_keys_util_1.stripParamNameSourceKeys; } });
+/** Единый стрим-исполнитель для типовых работ систем-источников. */
+exports.V2_SOURCE_STREAM = "Источники данных";
+/**
+ * Legacy-маппинг «тип источника → стрим». Больше НЕ используется для
+ * маршрутизации (разделение внутр/внеш убрано): все источники идут в
+ * единый стрим `V2_SOURCE_STREAM`. Оставлен только для чтения старых меток.
+ */
 exports.STREAM_BY_SOURCE_TYPE = {
     Внутренний: "ИД. Внутренний",
     Внешний: "ИД. Внешний",
 };
+const SOURCE_TYPE_CODE_ALIASES = {
+    internal: "Внутренний",
+    внутренний: "Внутренний",
+    external: "Внешний",
+    внешний: "Внешний",
+};
+/** Нормализует код/метку типа источника к канонической русской метке. */
+function normalizeSourceTypeLabel(raw) {
+    const value = String(raw ?? "").trim();
+    if (!value)
+        return null;
+    if (value in exports.STREAM_BY_SOURCE_TYPE) {
+        return value;
+    }
+    const alias = SOURCE_TYPE_CODE_ALIASES[value.toLowerCase()];
+    return alias ?? null;
+}
 exports.CONTROL_MODELS_STREAM = "Контроль моделей";
-function resolveStreamFromSourceType(source) {
-    const sourceType = String(source.type ?? "").trim();
-    return exports.STREAM_BY_SOURCE_TYPE[sourceType] ?? null;
+/**
+ * Стрим-исполнитель строки-источника. Разделение внутр/внеш убрано —
+ * любой источник маршрутизируется в единый стрим `V2_SOURCE_STREAM`.
+ * Тип источника (`type`) остаётся обычным триггером работы.
+ */
+function resolveStreamFromSourceType(_source) {
+    return exports.V2_SOURCE_STREAM;
 }
-/** Стримы, представленные в `streamDataSources.sourceSystems`. */
-function resolveStreamsFromSourceSystems(data) {
-    const systems = readDotPath(data, "streamDataSources.sourceSystems");
-    if (!Array.isArray(systems) || systems.length === 0) {
-        return [exports.STREAM_BY_SOURCE_TYPE.Внутренний];
-    }
-    const streams = new Set();
-    for (const row of systems) {
-        if (!row || typeof row !== "object" || Array.isArray(row))
-            continue;
-        const stream = resolveStreamFromSourceType(row);
-        if (stream)
-            streams.add(stream);
-    }
-    return streams.size > 0 ? [...streams] : [exports.STREAM_BY_SOURCE_TYPE.Внутренний];
-}
-function readDotPath(data, path) {
-    return path.split(".").reduce((cur, key) => {
-        if (!cur || typeof cur !== "object" || Array.isArray(cur))
-            return undefined;
-        return cur[key];
-    }, data);
+/** Стрим(ы) типовых работ для систем-источников анкеты — всегда единый. */
+function resolveStreamsFromSourceSystems(_data) {
+    return [exports.V2_SOURCE_STREAM];
 }
 function slugParamCode(name) {
     return name
@@ -58,8 +71,18 @@ function slugParamCode(name) {
 function readTypicalWorkSourceField(source, paramCode, paramName) {
     if (paramCode in source)
         return source[paramCode];
+    const { displayName, sourceKeys } = (0, v2_work_param_source_keys_util_1.parseParamNameSourceKeys)(paramName);
+    for (const key of sourceKeys) {
+        if (key in source)
+            return source[key];
+    }
+    if (displayName) {
+        const slug = slugParamCode(displayName);
+        if (slug in source)
+            return source[slug];
+    }
     if (paramName) {
-        const slug = slugParamCode(paramName);
+        const slug = slugParamCode((0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(paramName));
         if (slug in source)
             return source[slug];
     }
@@ -177,6 +200,30 @@ function compareRuleValue(actual, expected, operator) {
             return actualStr === expectedStr;
     }
 }
+function scalarRuleValueMatches(actual, rule) {
+    const candidates = [rule.valueCode, rule.valueLabel].filter((value) => value != null && String(value).trim() !== "");
+    if (candidates.length === 0)
+        return false;
+    if ([">=", "<=", ">", "<"].includes(rule.operator)) {
+        return compareRuleValue(actual, rule.valueCode ?? rule.valueLabel, rule.operator);
+    }
+    const actualStr = String(actual ?? "");
+    const matches = candidates.some((candidate) => {
+        if (actualStr === candidate)
+            return true;
+        if (typeof actual === "boolean") {
+            const norm = candidate.trim().toLowerCase();
+            if (norm === "да" && actual === true)
+                return true;
+            if (norm === "нет" && actual === false)
+                return true;
+        }
+        return false;
+    });
+    if (rule.operator === "!=")
+        return !matches;
+    return matches;
+}
 function compareRuleValuesSet(actual, expectedCodes, expectedLabels, operator) {
     const actualStr = String(actual ?? "");
     const matches = expectedCodes.some((code, index) => actualStr === code ||
@@ -189,7 +236,7 @@ function typicalWorkRulesMatchSource(rules, source) {
     if (rules.length === 0)
         return false;
     return rules.every((rule) => {
-        const paramName = rule.paramName ?? rule.paramCode;
+        const paramName = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(rule.paramName) || rule.paramCode;
         const controlCode = extractControlCode(paramName);
         if (controlCode) {
             const rowText = String(source.value ?? source.controlType ?? source.name ?? "");
@@ -212,11 +259,11 @@ function typicalWorkRulesMatchSource(rules, source) {
         if (rule.valueLabel == null && rule.valueCode == null) {
             return actual !== undefined && actual !== null && actual !== "";
         }
-        return compareRuleValue(actual, rule.valueLabel ?? rule.valueCode, rule.operator);
+        return scalarRuleValueMatches(actual, rule);
     });
 }
-function resolveLaborCoefficient(source, paramCode, valueCode, valueLabel) {
-    const actual = readSourceField(source, paramCode, null);
+function resolveLaborCoefficient(source, paramCode, valueCode, valueLabel, paramName = null) {
+    const actual = readSourceField(source, paramCode, paramName);
     if (valueLabel != null) {
         if (String(actual) === valueLabel)
             return true;
@@ -232,8 +279,8 @@ function resolveLaborCoefficient(source, paramCode, valueCode, valueLabel) {
         return true;
     return false;
 }
-function resolveLaborAnyOfCoefficient(source, paramCode, anyOf) {
-    const actual = readSourceField(source, paramCode, null);
+function resolveLaborAnyOfCoefficient(source, paramCode, anyOf, paramName = null) {
+    const actual = readSourceField(source, paramCode, paramName);
     const actualStr = String(actual ?? "");
     const matches = anyOf.valueCodes.some((code, index) => actualStr === code ||
         actualStr === (anyOf.valueLabels[index] ?? "") ||

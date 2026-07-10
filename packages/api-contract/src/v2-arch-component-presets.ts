@@ -415,6 +415,10 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 						"type": "boolean",
 						"title": "Необходимо подтвердить возможность интеграции"
 					},
+					"field_qMxSfHk1": {
+						"type": "boolean",
+						"title": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
+					},
 					"field_lDw9gG39": {
 						"type": "boolean",
 						"title": "Требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
@@ -508,6 +512,7 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"field_whHc-OoW",
 					"field_-EGYyyJF",
 					"field_fJ_7OdE7",
+					"field_qMxSfHk1",
 					"field_d3OCFyaC",
 					"field_Y_K0Hy0e",
 					"field_nE73kPQl",
@@ -634,6 +639,10 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_fJ_7OdE7": {
 					"ui:options": {},
 					"ui:placeholder": "Необходимо подтвердить возможность интеграции"
+				},
+				"field_qMxSfHk1": {
+					"ui:options": {},
+					"ui:placeholder": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
 				},
 				"field_lDw9gG39": {
 					"ui:options": {}
