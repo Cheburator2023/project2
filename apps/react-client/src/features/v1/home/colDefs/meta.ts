@@ -1,5 +1,5 @@
 import { ColDef } from "ag-grid-community";
-import { format } from "date-fns/esm";
+import { format } from "date-fns";
 
 export const meta: ColDef<any, any>[] = [
 	{

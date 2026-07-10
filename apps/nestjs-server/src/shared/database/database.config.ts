@@ -63,6 +63,8 @@ export const getDataSourceOptions = (
 ): DataSourceOptions => {
 	const dbConfig = getDatabaseConfig(configService);
 
+	console.log(dbConfig);
+
 	return {
 		type: "postgres",
 		...dbConfig,
