@@ -21,9 +21,13 @@ describe("database.config", () => {
 	};
 
 	it("getTypeOrmModuleOptions returns full options", () => {
-		const opts: any = getTypeOrmModuleOptions(buildCfg());
+		const opts: any = getTypeOrmModuleOptions(
+			buildCfg({ DB_SCHEMA: "sumd" }),
+		);
 		expect(opts.type).toBe("postgres");
 		expect(opts.host).toBe("h");
+		expect(opts.schema).toBe("sumd");
+		expect(opts.extra.options).toBe("-c search_path=sumd,public");
 		expect(opts.synchronize).toBe(true);
 		expect(opts.autoLoadEntities).toBe(true);
 	});

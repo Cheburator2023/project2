@@ -337,7 +337,7 @@ export function V2QuestionnaireList() {
 	const { mode } = useColorScheme();
 	const navigate = useNavigate();
 	const gridRef = useRef<AgGridReact<V2QuestionnaireGridRow>>(null);
-	const { canAccessAdminPanel } = usePermissions();
+	const { canAccessAdminPanel, canCreateCalculation, canExportReports } = usePermissions();
 	const bulkDelete = useBulkDeleteV2Questionnaires();
 	const { data: templates } = useV2Templates();
 	const activeTemplate = useMemo(
@@ -582,30 +582,36 @@ export function V2QuestionnaireList() {
 		<div>
 			<Header>
 				<Stack direction="row" spacing={1} alignItems="center">
-					<Button
-						variant="outlined"
-						size="small"
-						startIcon={<DownloadIcon />}
-						disabled={isExporting || isLoading}
-						onClick={() => void handleExportXlsx()}
-					>
-						{isExporting ? "Экспорт…" : "Экспорт всех"}
-					</Button>
-					<Button
-						variant="outlined"
-						size="small"
-						startIcon={<DownloadIcon />}
-						disabled={
-							isExporting || isLoading || selectedVersions.length === 0
-						}
-						onClick={() =>
-							void handleExportXlsx(selectedVersions.map((row) => row.id))
-						}
-					>
-						{isExporting
-							? "Экспорт…"
-							: `Экспорт выбранных (${selectedVersions.length})`}
-					</Button>
+					{canExportReports ? (
+						<>
+							<Button
+								variant="outlined"
+								size="small"
+								startIcon={<DownloadIcon />}
+								disabled={isExporting || isLoading}
+								onClick={() => void handleExportXlsx()}
+							>
+								{isExporting ? "Экспорт…" : "Экспорт всех"}
+							</Button>
+							<Button
+								variant="outlined"
+								size="small"
+								startIcon={<DownloadIcon />}
+								disabled={
+									isExporting || isLoading || selectedVersions.length === 0
+								}
+								onClick={() =>
+									void handleExportXlsx(
+										selectedVersions.map((row) => row.id),
+									)
+								}
+							>
+								{isExporting
+									? "Экспорт…"
+									: `Экспорт выбранных (${selectedVersions.length})`}
+							</Button>
+						</>
+					) : null}
 					{canAccessAdminPanel ? (
 						<Button
 							variant="outlined"
@@ -618,16 +624,18 @@ export function V2QuestionnaireList() {
 							Удалить выбранные ({selectedVersions.length})
 						</Button>
 					) : null}
-					<Button
-						variant="contained"
-						size="small"
-						startIcon={<AddIcon />}
-						onClick={() =>
-							navigate(`/v2/${v2Routes.calculationCreate.rootPath}`)
-						}
-					>
-						Создать анкету
-					</Button>
+					{canCreateCalculation && (
+						<Button
+							variant="contained"
+							size="small"
+							startIcon={<AddIcon />}
+							onClick={() =>
+								navigate(`/v2/${v2Routes.calculationCreate.rootPath}`)
+							}
+						>
+							Создать анкету
+						</Button>
+					)}
 				</Stack>
 			</Header>
 			<Dialog

@@ -36,6 +36,7 @@ import { Spacer } from "@react-client/common/primitives/Spacer";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
+import {usePermissions} from "@react-client/hooks/usePermissions";
 
 type Engine = V2AnketaSchemaEngine;
 
@@ -71,6 +72,8 @@ export function AnketaFormShell({
 	"data-test-id": dataTestId = "anketa-form-shell",
 }: Props) {
 	const navigate = useNavigate();
+	const { canEditCalculation, canCreateCalculation } = usePermissions();
+
 	const createCopy = useCreateV2QuestionnaireVersion();
 	const internalEngine = useV2AnketaSchemaEngine(engineProp ? null : source);
 	const engine = engineProp ?? internalEngine;
@@ -202,7 +205,7 @@ export function AnketaFormShell({
 						Создать копию
 					</Button>
 				) : null}
-				{onSave ? (
+				{(onSave && canCreateCalculation) ? (
 					<IconButton
 						onClick={onSave}
 						disabled={saveDisabled || savePending || effectiveReadOnly}
@@ -214,6 +217,7 @@ export function AnketaFormShell({
 			</>
 		),
 		[
+			canCreateCalculation,
 			headerExtra,
 			onSave,
 			saveDisabled,
