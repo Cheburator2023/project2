@@ -149,7 +149,7 @@ function CommentItem({
 			<Flex gap={12} alignItems="flex-start" position="relative">
 				<CommentAvatar comment={comment} />
 				<Flex flexDirection="column" flexGrow={1} minWidth="0" gap={0.5}>
-					<Flex alignItems="center" gap={1} wrap="wrap">
+					<Flex alignItems="center" gap={10} wrap="wrap">
 						<Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
 							{comment.authorName}
 						</Typography>
@@ -327,7 +327,7 @@ export function AnketaCommentsSection({ questionnaireId, disabled }: Props) {
 					justifyContent="space-between"
 					alignItems="center"
 					wrap="wrap"
-					gap={1}
+					gap={10}
 				>
 					<Typography variant="caption" color="text.secondary">
 						{resolveCurrentUserName()} · Ctrl+Enter — отправить
@@ -345,7 +345,7 @@ export function AnketaCommentsSection({ questionnaireId, disabled }: Props) {
 				{replyTo ? (
 					<>
 						<Spacer space={8} />
-						<Flex alignItems="center" gap={1} wrap="wrap">
+						<Flex alignItems="center" gap={10} wrap="wrap">
 							<Typography variant="caption" color="text.secondary">
 								Ответ для {replyTo.authorName}
 							</Typography>
@@ -376,7 +376,7 @@ export function AnketaCommentsSection({ questionnaireId, disabled }: Props) {
 				gap={12}
 				wrap="wrap"
 			>
-				<Flex alignItems="center" gap={1}>
+				<Flex alignItems="center" gap={10}>
 					<Typography variant="h6" sx={{ fontSize: 18, fontWeight: 700 }}>
 						Комментарии
 					</Typography>
@@ -398,7 +398,9 @@ export function AnketaCommentsSection({ questionnaireId, disabled }: Props) {
 						size="small"
 						placeholder="Сортировка"
 						value={sort}
-						renderSelected={(value) => COMMENT_SORT_LABELS[value as CommentSort]}
+						renderSelected={(value) =>
+							COMMENT_SORT_LABELS[value as CommentSort]
+						}
 						onChange={(event) => setSort(event.target.value as CommentSort)}
 						sx={{ minWidth: 160 }}
 					>

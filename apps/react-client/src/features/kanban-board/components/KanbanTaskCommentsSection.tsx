@@ -68,9 +68,7 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 		() =>
 			(assigneesQuery.data ?? []).map((item) => ({
 				value: item.name,
-				label: item.roleTitle
-					? `${item.name} — ${item.roleTitle}`
-					: item.name,
+				label: item.roleTitle ? `${item.name} — ${item.roleTitle}` : item.name,
 			})),
 		[assigneesQuery.data],
 	);
@@ -103,7 +101,11 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 		if (authorOptions.some((option) => option.value === defaultName)) {
 			setAuthorName(defaultName);
 		}
-	}, [authorName, authorOptions, settingsQuery.data?.defaultCurrentUserAssigneeName]);
+	}, [
+		authorName,
+		authorOptions,
+		settingsQuery.data?.defaultCurrentUserAssigneeName,
+	]);
 
 	const handleSubmit = async () => {
 		setError(null);
@@ -127,8 +129,7 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 		}
 	};
 
-	const isBusy =
-		disabled || createComment.isPending || deleteComment.isPending;
+	const isBusy = disabled || createComment.isPending || deleteComment.isPending;
 	const comments = commentsQuery.data ?? [];
 
 	return (
@@ -157,7 +158,11 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 						<Fragment key={comment.id}>
 							{index > 0 ? <Spacer space={10} /> : null}
 							<Box>
-								<Flex alignItems="center" justifyContent="space-between" gap={1}>
+								<Flex
+									alignItems="center"
+									justifyContent="space-between"
+									gap={1}
+								>
 									<Flex alignItems="center" gap={1} wrap="wrap">
 										<KanbanTaskFieldChip
 											label={comment.authorName}
@@ -229,7 +234,12 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 						}
 					}}
 				/>
-				<Flex justifyContent="space-between" alignItems="center" wrap="wrap" gap={1}>
+				<Flex
+					justifyContent="space-between"
+					alignItems="center"
+					wrap="wrap"
+					gap={1}
+				>
 					<Typography variant="caption" color="text.secondary">
 						Ctrl+Enter — отправить
 					</Typography>

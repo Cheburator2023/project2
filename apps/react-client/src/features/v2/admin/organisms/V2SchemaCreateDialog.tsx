@@ -27,7 +27,7 @@ import {
 } from "@react-client/features/v2/admin_constructor/utils/coerceV2TemplateSnapshot";
 import { pathForAdminV2Template } from "@react-client/routing/common/pathHelpers";
 import { useUserStore } from "@react-client/common/store/userStore";
-import { format } from "date-fns/esm";
+import { format } from "date-fns";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 

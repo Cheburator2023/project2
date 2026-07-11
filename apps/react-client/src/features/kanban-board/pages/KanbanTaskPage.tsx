@@ -600,7 +600,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 							justifyContent="center"
 							flexGrow={1}
 							gap={12}
-							minHeight={280}
+							minHeight="280px"
 						>
 							<CircularProgress size={36} />
 							<Typography variant="body2" color="text.secondary">
