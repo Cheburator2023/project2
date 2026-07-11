@@ -747,19 +747,28 @@ export const useKanbanBoardTaskImages = (taskId: string | undefined) =>
 		queryFn: ({ signal }) => kanbanBoardListTaskImages(taskId!, signal),
 	});
 
-export const kanbanBoardFetchTaskImageBlob = (
+export const kanbanBoardFetchTaskImageBlob = async (
 	taskId: string,
 	imageId: string,
 	variant: "full" | "thumb" = "full",
 	signal?: AbortSignal,
-) =>
-	apiClient<Blob>({
+): Promise<Blob> => {
+	const blob = await apiClient<Blob>({
 		url: `/kanban-board/tasks/${taskId}/images/${imageId}`,
 		method: "GET",
 		params: { variant },
 		responseType: "blob",
 		signal,
 	});
+	if (
+		!blob.size ||
+		blob.type === "application/json" ||
+		blob.type === "application/problem+json"
+	) {
+		throw new Error("Не удалось загрузить изображение");
+	}
+	return blob;
+};
 
 export type KanbanBoardTaskImageUploadPayload = {
 	name: string;

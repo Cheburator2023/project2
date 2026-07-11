@@ -368,7 +368,7 @@ function buildStaticV2QuestionnaireRegistryColumnTree() {
         formLeaf("generalInfo.createService", "Создание сервиса", "boolean"),
         formLeaf("generalInfo.pilotNeed", "Пилот"),
         formLeaf("uncertaintyCalculation.initiativeTimeline", "Сроки инициативы"),
-        formLeaf("uncertaintyCalculation.initiativeCost", "Стоимость инициативы", "number"),
+        formLeaf("uncertaintyCalculation.initiativeCost", "Стоимость инициативы"),
         formLeaf("uncertaintyCalculation.uncertaintyAdjustment", "Поправка неопределённости", "number"),
         ...Object.entries(exports.V2_UNCERTAINTY_RISK_GROUP_LABELS).map(([key, header]) => formLeaf(`uncertaintyCalculation.riskGroup.${key}`, header)),
     ];

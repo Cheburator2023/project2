@@ -300,10 +300,9 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	}, [parentTask, tasksRegistryQuery.data]);
 
 	const task = taskByRefQuery.data;
-	const taskImages =
-		taskImagesQuery.data ??
-		task?.content.images ??
-		[];
+	const taskImages = taskImagesQuery.isLoading
+		? (task?.content.images ?? [])
+		: (taskImagesQuery.data ?? []);
 
 	useEffect(() => {
 		if (boardId) {

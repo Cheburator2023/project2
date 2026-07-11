@@ -58,13 +58,66 @@ const RISK_FIELD_FROM_MODAL = Object.fromEntries(
 	Object.entries(RISK_FIELD_TO_MODAL).map(([schema, modal]) => [modal, schema]),
 );
 
-const RISK_LEVEL_FROM_MODAL: Record<string, string> = {
-	low: "Реализация не чаще 1 раза в 10 лет",
-	medium_low: "Реализация 1 раз в 3-10 лет",
-	medium: "Реализация 1 раз в 1-3 года",
-	medium_high: "Реализация 1 раз в год",
-	high: "Реализация 1 раз в 6 мес. или чаще",
+const RISK_LEVEL_TO_MODAL: Record<string, string> = {
+	Низкий: "low",
+	Средний: "medium",
+	Высокий: "high",
 };
+
+const RISK_LEVEL_FROM_MODAL: Record<string, string> = {
+	low: "Низкий",
+	medium: "Средний",
+	high: "Высокий",
+};
+
+function readUncertaintyField(
+	uncertainty: Record<string, unknown>,
+	canonicalKey: string,
+	legacyKey: string,
+): unknown {
+	if (uncertainty[canonicalKey] != null && uncertainty[canonicalKey] !== "") {
+		return uncertainty[canonicalKey];
+	}
+	return uncertainty[legacyKey];
+}
+
+function formatUncertaintyAdjustment(value: unknown): string {
+	if (value == null || value === "") return "";
+	const parsed = Number(String(value).replace(",", ".").replace("%", ""));
+	if (!Number.isFinite(parsed)) return toText(value);
+	return String(parsed);
+}
+
+function mapRiskLevelToIncrement(level: string): number {
+	switch (level) {
+		case "Низкий":
+			return 0.03;
+		case "Средний":
+			return 0.05;
+		case "Высокий":
+			return 0.07;
+		case "Очень высокий":
+			return 0.1;
+		default:
+			return 0;
+	}
+}
+
+function buildOverallUncertaintyLabel(
+	riskGroup: Record<string, unknown>,
+	adjustmentPercent: number | undefined,
+): string | undefined {
+	const hasRisks = Object.values(riskGroup).some(
+		(value) => typeof value === "string" && value.trim().length > 0,
+	);
+	if (!hasRisks && adjustmentPercent == null) return undefined;
+	const riskSum = Object.values(riskGroup).reduce<number>((sum, value) => {
+		if (typeof value !== "string") return sum;
+		return sum + mapRiskLevelToIncrement(value);
+	}, 0);
+	const coeff = 1 + riskSum + (adjustmentPercent ?? 0) / 100;
+	return `Средняя ×${coeff.toFixed(2)}`;
+}
 
 function asRecord(value: unknown): Record<string, unknown> {
 	return value && typeof value === "object" && !Array.isArray(value)
@@ -84,14 +137,28 @@ export function uncertaintyModalDefaults(
 	const riskGroup = asRecord(uncertainty.riskGroup);
 
 	return {
-		initiativeTimeline: toText(uncertainty.initiativeTimeline),
-		initiativeCost: toText(uncertainty.initiativeCost),
-		totalUncertaintyAdjustment: toText(uncertainty.uncertaintyAdjustment),
+		initiativeTimeline: toText(
+			readUncertaintyField(
+				uncertainty,
+				"initiativeTimeline",
+				"field_xGCMlbMP",
+			),
+		),
+		initiativeCost: toText(
+			readUncertaintyField(uncertainty, "initiativeCost", "field_bbTNlnC6"),
+		),
+		totalUncertaintyAdjustment: formatUncertaintyAdjustment(
+			readUncertaintyField(
+				uncertainty,
+				"uncertaintyAdjustment",
+				"field_QCwwo5c5",
+			),
+		),
 		risks: Object.fromEntries(
-			Object.entries(RISK_FIELD_TO_MODAL).map(([schemaKey, modalKey]) => [
-				modalKey,
-				toText(riskGroup[schemaKey]),
-			]),
+			Object.entries(RISK_FIELD_TO_MODAL).map(([schemaKey, modalKey]) => {
+				const stored = toText(riskGroup[schemaKey]);
+				return [modalKey, RISK_LEVEL_TO_MODAL[stored] ?? ""];
+			}),
 		),
 	};
 }
@@ -276,22 +343,25 @@ export function AnketaFormModals({
 					? undefined
 					: Number(values.totalUncertaintyAdjustment.replace(",", "."));
 
+			const overallUncertainty = buildOverallUncertaintyLabel(
+				nextRiskGroup,
+				adjustment,
+			);
+
 			return touchSectionInFormData(
 				{
 					...prev,
 					generalInfo: {
 						...asRecord(prev.generalInfo),
-						overallUncertainty: values.totalUncertaintyAdjustment
-							? `Средняя ×${values.totalUncertaintyAdjustment.replace("%", "")}`
-							: asRecord(prev.generalInfo).overallUncertainty,
+						overallUncertainty:
+							overallUncertainty ??
+							asRecord(prev.generalInfo).overallUncertainty,
 					},
 					uncertaintyCalculation: {
 						...currentUncertainty,
-						initiativeTimeline: values.initiativeTimeline,
+						initiativeTimeline: values.initiativeTimeline || undefined,
 						initiativeCost:
-							values.initiativeCost === ""
-								? undefined
-								: Number(values.initiativeCost.replace(",", ".")),
+							values.initiativeCost === "" ? undefined : values.initiativeCost,
 						uncertaintyAdjustment: adjustment,
 						riskGroup: nextRiskGroup,
 					},

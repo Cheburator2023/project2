@@ -2030,14 +2030,7 @@ export class KanbanBoardRegistryService {
 	}
 
 	private async repairTaskImagesContent(task: KanbanBoardTaskEntity): Promise<void> {
-		if (task.content.images?.length) return;
-		const images = await this.taskImageService.listForTask(task.id);
-		if (!images.length) return;
-		task.content = normalizeKanbanBoardTaskContent({
-			...task.content,
-			images,
-		});
-		await this.taskRepository.save(task);
+		await this.taskImageService.syncTaskContentImages(task);
 	}
 
 	private async validateTaskContent(

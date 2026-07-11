@@ -551,7 +551,7 @@ export function buildStaticV2QuestionnaireRegistryColumnTree(): V2RegistryColumn
 		formLeaf("generalInfo.createService", "Создание сервиса", "boolean"),
 		formLeaf("generalInfo.pilotNeed", "Пилот"),
 		formLeaf("uncertaintyCalculation.initiativeTimeline", "Сроки инициативы"),
-		formLeaf("uncertaintyCalculation.initiativeCost", "Стоимость инициативы", "number"),
+		formLeaf("uncertaintyCalculation.initiativeCost", "Стоимость инициативы"),
 		formLeaf(
 			"uncertaintyCalculation.uncertaintyAdjustment",
 			"Поправка неопределённости",

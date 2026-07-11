@@ -11,6 +11,7 @@ import {
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
 import { KanbanBoardEntity } from "../entities/kanban-board.entity";
 import { KanbanBoardHistoryService } from "./kanban-board-history.service";
+import { KanbanBoardTaskImageService } from "./kanban-board-task-image.service";
 import {
 	isSnapshotWorkbook,
 } from "../utils/kanban-board-planning-import.util";
@@ -46,6 +47,7 @@ export class KanbanBoardService {
 		private readonly dataSource: DataSource,
 		private readonly configService: ConfigService,
 		private readonly historyService: KanbanBoardHistoryService,
+		private readonly taskImageService: KanbanBoardTaskImageService,
 	) {}
 
 	getStandId(): string {
@@ -69,6 +71,7 @@ export class KanbanBoardService {
 			where: { boardId },
 			order: { parentId: "ASC", position: "ASC" },
 		});
+		await this.taskImageService.syncTasksContentImages(rows);
 		return rows.map((row) => this.toRecord(row));
 	}
 

@@ -100,20 +100,17 @@
 			"properties": {
 				"initiativeTimeline": {
 					"type": "string",
-					"title": "Сроки инициативы",
-					"enum": [
-						"Краткосрочная",
-						"Среднесрочная",
-						"Долгосрочная"
-					]
+					"title": "Сроки инициативы"
 				},
 				"initiativeCost": {
-					"type": "number",
+					"type": "string",
 					"title": "Стоимость инициативы"
 				},
 				"uncertaintyAdjustment": {
 					"type": "number",
-					"title": "Поправка на общую неопределённость"
+					"title": "Поправка на общую неопределённость",
+					"minimum": 0,
+					"maximum": 30
 				},
 				"riskGroup": {
 					"type": "object",
@@ -375,13 +372,22 @@
 				"riskGroup"
 			],
 			"initiativeTimeline": {
-				"ui:widget": "select"
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.method.21.сроки_инициативы"
+				}
 			},
 			"initiativeCost": {
-				"ui:widget": "text"
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.method.22.стоимость_инициативы"
+				}
 			},
 			"uncertaintyAdjustment": {
-				"ui:widget": "text"
+				"ui:widget": "NumberInputWidget",
+				"ui:options": {
+					"suffix": "%"
+				}
 			},
 			"riskGroup": {
 				"ui:order": [
