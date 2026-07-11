@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type {
 	PatchV2TypicalWorkRequestDto,
 	V2TypicalWorkCardDto,
+	V2TypicalWorkNormInputDto,
 } from "@smart-anketa/api-contract";
 import { collectTypicalWorkPatchValidationErrors } from "@smart-anketa/api-contract";
 import { usePatchV2TypicalWork } from "@react-client/common/api/queries/v2-works";
@@ -21,9 +22,8 @@ function reconcilePatchDtoNorms(
 	if (!stream || !dto.norms?.length) return dto;
 
 	const normsWithId = dto.norms.filter(
-		(norm): norm is PatchV2TypicalWorkRequestDto["norms"][number] & {
-			id: string;
-		} => Boolean(norm.id),
+		(norm): norm is V2TypicalWorkNormInputDto & { id: string } =>
+			Boolean(norm.id),
 	);
 	const normsWithoutId = dto.norms.filter((norm) => !norm.id);
 
