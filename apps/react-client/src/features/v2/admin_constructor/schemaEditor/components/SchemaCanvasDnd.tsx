@@ -78,6 +78,10 @@ import { useSchemaEditor } from "../SchemaEditorContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "./PanelChrome";
 import { SchemaCanvasFieldSearch } from "./SchemaCanvasFieldSearch";
+import {
+	CANVAS_FIELD_POINTER_ATTR,
+	revealCanvasFieldPointer,
+} from "../schemaCanvasFocus";
 import { SchemaCanvasPlaceholder } from "./SchemaCanvasPlaceholder";
 import { isCanvasStockField } from "../canvasStockFields";
 import {
@@ -414,7 +418,7 @@ function SchemaCanvasFieldRow({
 	return (
 		<Box
 			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasFieldRow}
-			data-canvas-field-pointer={fieldPointer}
+			{...{ [CANVAS_FIELD_POINTER_ATTR]: fieldPointer }}
 			onClick={() => setSelectedPointer(fieldPointer)}
 			sx={{
 				display: "flex",
@@ -772,6 +776,8 @@ export function SchemaCanvasPanel({
 	const {
 		jsonSchema,
 		uiSchema,
+		selectedPointer,
+		mainTab,
 		handleAddFieldPresetAtParent,
 		handleDeleteField,
 		moveCanvasField,
@@ -829,6 +835,14 @@ export function SchemaCanvasPanel({
 			}),
 		[jsonSchema, uiSchema, hideSystemFields],
 	);
+
+	useEffect(() => {
+		if (mainTab !== "designer" || !selectedPointer) return;
+		const frame = requestAnimationFrame(() => {
+			revealCanvasFieldPointer(treeRef.current, treeData, selectedPointer);
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [mainTab, selectedPointer, treeData]);
 
 	const hasExpandableNodes = useMemo(
 		() =>

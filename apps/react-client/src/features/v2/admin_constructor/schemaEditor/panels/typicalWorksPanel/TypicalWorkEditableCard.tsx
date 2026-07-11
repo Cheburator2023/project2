@@ -158,8 +158,16 @@ export function TypicalWorkEditableCard({
 	onStreamChange,
 	onVersionChange,
 }: TypicalWorkEditableCardProps) {
-	const { fieldPathHints, uiSchema, jsonSchema, enumMapByCode, formData, liveFormData } =
-		useSchemaEditor();
+	const {
+		fieldPathHints,
+		uiSchema,
+		jsonSchema,
+		enumMapByCode,
+		formData,
+		liveFormData,
+		setSelectedPointer,
+		setMainTab,
+	} = useSchemaEditor();
 	const { data: assignmentsList } = useV2TypicalWorkAssignments({
 		templateVersionId,
 	});
@@ -949,6 +957,10 @@ export function TypicalWorkEditableCard({
 						methodologyCatalog={methodologyCatalog}
 						streamExecutor={streamExecutor ?? draft.streamExecutor}
 						onChange={(rules) => commitDraft({ ...draft, rules })}
+						onNavigateToSchemaField={(pointer) => {
+							setMainTab("designer");
+							setSelectedPointer(pointer);
+						}}
 					/>
 
 					<Box

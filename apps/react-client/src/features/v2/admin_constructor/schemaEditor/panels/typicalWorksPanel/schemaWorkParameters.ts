@@ -8,10 +8,12 @@ import {
 	isControlTypeTriggerParam,
 	isSourceTypeTriggerParam,
 	isV2AnketaSystemRootKey,
+	resolveV2AnketaArchComponent,
 	stripParamNameSourceKeys,
 } from "@smart-anketa/api-contract";
 import {
 	isObjectFieldGroup,
+	readUiSchemaBranchAtPointer,
 	resolveSchemaNode,
 } from "@react-client/features/v2/admin_constructor/utils/schemaMutators";
 import { pointerSegments } from "@react-client/features/v2/admin_constructor/utils/schemaPaths";
@@ -318,13 +320,41 @@ function finalizeSchemaWorkParameters(
 		.sort((a, b) => a.name.localeCompare(b.name, "ru"));
 }
 
+/** Заводские ключи массивов сгенерированных типовых работ (без archComponent в legacy). */
+const LEGACY_TYPICAL_WORK_OUTPUT_ARRAY_KEYS = new Set([
+	"sourceTypicalTasks",
+	"detailTypicalTasks",
+	"controlTypicalTasks",
+]);
+
+function isLegacyGeneratedTypicalWorkArrayUi(
+	uiBranch: Record<string, unknown> | undefined,
+	fieldKey: string,
+): boolean {
+	if (!uiBranch || !LEGACY_TYPICAL_WORK_OUTPUT_ARRAY_KEYS.has(fieldKey)) {
+		return false;
+	}
+	if (resolveV2AnketaArchComponent(uiBranch) === "typicalWork") return true;
+	return uiBranch["ui:readonly"] === true;
+}
+
 /** Поле внутри блока-результата «Типовые/Нетиповые работы» — не параметр источника. */
 function isWorkResultBlockField(
 	uiSchema: Record<string, unknown> | undefined,
 	pointer: string,
 ): boolean {
 	const arch = resolveArchComponentAtPointer(uiSchema, pointer);
-	return arch === "typicalWork" || arch === "atypicalWork";
+	if (arch === "typicalWork" || arch === "atypicalWork") return true;
+
+	const segments = pointerSegments(pointer);
+	for (let len = segments.length; len > 0; len -= 1) {
+		const key = segments[len - 1];
+		if (!key) continue;
+		const partialPointer = `/${segments.slice(0, len).join("/")}`;
+		const branch = readUiSchemaBranchAtPointer(uiSchema, partialPointer);
+		if (isLegacyGeneratedTypicalWorkArrayUi(branch, key)) return true;
+	}
+	return false;
 }
 
 /**
@@ -408,6 +438,52 @@ export function buildSchemaWorkParameters({
 	}
 
 	return finalizeSchemaWorkParameters(params);
+}
+
+const SCHEMA_PARAM_ID_PREFIX = "schema:";
+
+export function resolveSchemaParamPointerFromId(id: string): string | null {
+	return id.startsWith(SCHEMA_PARAM_ID_PREFIX)
+		? id.slice(SCHEMA_PARAM_ID_PREFIX.length)
+		: null;
+}
+
+/** varPath с `[]` для элементов массива (как в подсказках логики). */
+export function jsonPointerToLogicVarPath(pointer: string): string {
+	const segments = pointerSegments(pointer);
+	const parts: string[] = [];
+	for (const segment of segments) {
+		if (segment === "items") {
+			if (parts.length > 0) {
+				parts[parts.length - 1] = `${parts[parts.length - 1]}[]`;
+			}
+			continue;
+		}
+		parts.push(segment);
+	}
+	return parts.join(".");
+}
+
+export type SchemaParamFieldRef = {
+	pointer: string | null;
+	varPath: string | null;
+	fieldKey: string;
+};
+
+export function resolveSchemaParamFieldRef(
+	param: Pick<V2TypicalWorkParameterDto, "id" | "code"> | undefined,
+): SchemaParamFieldRef {
+	const fieldKey = param?.code?.trim() || "—";
+	if (!param) return { pointer: null, varPath: null, fieldKey };
+	const pointer = resolveSchemaParamPointerFromId(param.id);
+	if (!pointer) {
+		return { pointer: null, varPath: null, fieldKey };
+	}
+	return {
+		pointer,
+		varPath: jsonPointerToLogicVarPath(pointer),
+		fieldKey: pointerSegments(pointer).at(-1) ?? fieldKey,
+	};
 }
 
 /** Находит параметр схемы по коду, алиасу (sourceKeys) или имени. */
