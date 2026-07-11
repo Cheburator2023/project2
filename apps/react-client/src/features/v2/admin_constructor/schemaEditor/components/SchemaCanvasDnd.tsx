@@ -35,8 +35,9 @@ import {
 	useState,
 	type CSSProperties,
 } from "react";
-import { useDrag } from "react-dnd";
+import { useDrag, useDragLayer } from "react-dnd";
 import { getEmptyImage } from "react-dnd-html5-backend";
+import { toast } from "@react-client/common/toasts";
 import {
 	readV2AnketaSectionUiOptions,
 	resolveStreamExecutorForTypicalWorkOutputPath,
@@ -102,6 +103,14 @@ import {
 	SCHEMA_CANVAS_ROOT_ID,
 	type SchemaCanvasNodeData,
 } from "../schemaCanvasTree";
+import {
+	canAddTypicalWorkUnderParent,
+	isTypicalWorkFieldAtPointer,
+	isTypicalWorkPaletteUiOptions,
+	resolveTypicalWorkDragContext,
+	resolveTypicalWorkDropParentPointer,
+	TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE,
+} from "../typicalWorkCanvasConstraints";
 
 const DEPTH_INDENT_PX = 12;
 
@@ -319,6 +328,45 @@ function SchemaCanvasFieldRow({
 		duplicateCanvasField,
 	} = useSchemaEditor();
 
+	const { draggingTypicalWork, excludePointer } = useDragLayer((monitor) => {
+		if (!monitor.isDragging()) {
+			return { draggingTypicalWork: false, excludePointer: null as string | null };
+		}
+		const ctx = resolveTypicalWorkDragContext(
+			monitor.getItem(),
+			monitor.getItemType(),
+			uiSchema,
+		);
+		return {
+			draggingTypicalWork: ctx.isTypicalWorkDrag,
+			excludePointer: ctx.excludePointer,
+		};
+	});
+
+	const dropParentPointer = useMemo(
+		() => resolveTypicalWorkDropParentPointer(node, jsonSchema),
+		[node, jsonSchema],
+	);
+
+	const isInvalidTypicalWorkDropTarget = useMemo(() => {
+		if (!draggingTypicalWork || !isDropTarget || !dropParentPointer) {
+			return false;
+		}
+		return !canAddTypicalWorkUnderParent(
+			jsonSchema,
+			uiSchema,
+			dropParentPointer,
+			excludePointer,
+		);
+	}, [
+		draggingTypicalWork,
+		isDropTarget,
+		dropParentPointer,
+		jsonSchema,
+		uiSchema,
+		excludePointer,
+	]);
+
 	if (node.data?.kind === "system-divider") {
 		return (
 			<Box
@@ -443,14 +491,18 @@ function SchemaCanvasFieldRow({
 				borderRadius: 1,
 				border: 2,
 				borderStyle: "solid",
-				borderColor: isDropTarget
+				borderColor: isInvalidTypicalWorkDropTarget
+					? theme.palette.error.main
+					: isDropTarget
 					? theme.palette.primary.main
 					: selected
 						? "primary.main"
 						: isChanged
 							? theme.palette.warning.main
 							: "divider",
-				bgcolor: isDropTarget
+				bgcolor: isInvalidTypicalWorkDropTarget
+					? alpha(theme.palette.error.main, 0.14)
+					: isDropTarget
 					? alpha(theme.palette.primary.main, 0.14)
 					: selected
 						? alpha(theme.palette.primary.main, 0.08)
@@ -643,6 +695,10 @@ function SchemaCanvasFieldRow({
 						tabIndex={selected ? 0 : -1}
 						onClick={(e) => {
 							e.stopPropagation();
+							if (sectionUiOptions.archComponent === "typicalWork") {
+								toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
+								return;
+							}
 							duplicateCanvasField(fieldPointer);
 						}}
 						sx={{ flexShrink: 0 }}
@@ -702,15 +758,22 @@ function PalettePresetRow({ preset }: { preset: PalettePreset }) {
 						}
 					: undefined
 			}
-			onDoubleClickAdd={() =>
+			onDoubleClickAdd={() => {
+				if (
+					isTypicalWorkPaletteUiOptions(preset.uiOptions) &&
+					!canAddTypicalWorkUnderParent(jsonSchema, uiSchema, "/")
+				) {
+					toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
+					return;
+				}
 				handleAddFieldPresetAtParent(
 					"/",
 					preset.make(),
 					rootCount,
 					preset.uiOptions,
 					preset.uiBranch,
-				)
-			}
+				);
+			}}
 		/>
 	);
 }
@@ -956,6 +1019,13 @@ export function SchemaCanvasPanel({
 				if (!presetId) return;
 				const preset = presetById.get(presetId);
 				if (!preset) return;
+				if (
+					isTypicalWorkPaletteUiOptions(preset.uiOptions) &&
+					!canAddTypicalWorkUnderParent(jsonSchema, uiSchema, parentPointer)
+				) {
+					toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
+					return;
+				}
 				handleAddFieldPresetAtParent(
 					parentPointer,
 					preset.make(),
@@ -969,6 +1039,19 @@ export function SchemaCanvasPanel({
 			const dragSource = options.dragSource;
 			if (dragSource?.data?.kind !== "field") return;
 			if (isCanvasSystemField(uiSchema, dragSource.data.fieldPointer)) return;
+
+			if (
+				isTypicalWorkFieldAtPointer(uiSchema, dragSource.data.fieldPointer) &&
+				!canAddTypicalWorkUnderParent(
+					jsonSchema,
+					uiSchema,
+					parentPointer,
+					dragSource.data.fieldPointer,
+				)
+			) {
+				toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
+				return;
+			}
 
 			moveCanvasField(dragSource.data.fieldPointer, parentPointer, index);
 		},

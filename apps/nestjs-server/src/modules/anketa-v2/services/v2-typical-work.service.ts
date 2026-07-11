@@ -48,6 +48,7 @@ import {
 	groupCatalogWorks,
 	inferTriggerValueLabel,
 	normalizeArchComponentType,
+	resolveCatalogWorkComponent,
 	slugParamCode,
 } from "../utils/v2-typical-work-catalog.util";
 import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
@@ -140,7 +141,9 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			const work = await this.workRepository.save(
 				this.workRepository.create({
 					name: first.name.trim(),
-					archComponentType: normalizeArchComponentType(first.component),
+					archComponentType: normalizeArchComponentType(
+						resolveCatalogWorkComponent(first),
+					),
 					workType: first.workType?.trim() || null,
 					catalogKey,
 				}),
@@ -281,7 +284,9 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			const work = await this.workRepository.save(
 				this.workRepository.create({
 					name: first.name.trim(),
-					archComponentType: normalizeArchComponentType(first.component),
+					archComponentType: normalizeArchComponentType(
+						resolveCatalogWorkComponent(first),
+					),
 					workType: first.workType?.trim() || null,
 					catalogKey: null,
 					templateId: trimmedTemplateId,

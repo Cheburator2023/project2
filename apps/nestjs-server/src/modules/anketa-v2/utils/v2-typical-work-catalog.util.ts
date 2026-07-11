@@ -4,6 +4,7 @@ import {
 	V2_DOC_CATALOG,
 	type V2CatalogTypicalWork,
 } from "../constants/v2-doc-catalog";
+import { inferMissingCatalogComponent } from "./v2-catalog-component-inference";
 
 /** Legacy-стримы источников (разделение внутр/внеш убрано). */
 const LEGACY_SOURCE_STREAMS = new Set(["ИД. Внутренний", "ИД. Внешний"]);
@@ -42,6 +43,12 @@ export function normalizeArchComponentType(raw: string): string {
 	return value;
 }
 
+export function resolveCatalogWorkComponent(
+	row: Pick<V2CatalogTypicalWork, "component" | "stream" | "stage">,
+): string {
+	return inferMissingCatalogComponent(row.component, row.stream, row.stage);
+}
+
 export function buildCatalogWorkKey(component: string, name: string): string {
 	return `${normalizeArchComponentType(component)}|${name.trim()}`;
 }
@@ -49,7 +56,7 @@ export function buildCatalogWorkKey(component: string, name: string): string {
 export function groupCatalogWorks(): Map<string, V2CatalogTypicalWork[]> {
 	const groups = new Map<string, V2CatalogTypicalWork[]>();
 	for (const row of V2_DOC_CATALOG.typicalWorks) {
-		const key = buildCatalogWorkKey(row.component, row.name);
+		const key = buildCatalogWorkKey(resolveCatalogWorkComponent(row), row.name);
 		const list = groups.get(key) ?? [];
 		list.push(row);
 		groups.set(key, list);
