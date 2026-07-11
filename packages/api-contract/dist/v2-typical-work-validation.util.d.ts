@@ -1,4 +1,5 @@
 import type { PatchV2TypicalWorkRequestDto, V2TypicalWorkNormInputDto, V2TypicalWorkRoundingDto, V2WorkFormulaToken, V2WorkTriggerStatus } from "./v2-typical-work.types";
+import { type WorkFormulaLaborParamRef } from "./v2-work-formula.util";
 export type ValidationIssue = {
     path: string;
     message: string;
@@ -17,6 +18,11 @@ export declare function collectAllowedParamCodes(laborInputs: Array<{
     paramCode: string;
 }>): Set<string>;
 export declare function validateFormulaAgainstParams(tokens: V2WorkFormulaToken[], allowedParamCodes: Set<string>): ValidationIssue[];
+export declare function laborParamRefsFromPatchGroups(laborParams: Array<{
+    paramCode: string;
+    paramName?: string | null;
+}>): WorkFormulaLaborParamRef[];
+export declare function validateFormulaAgainstLaborParams(tokens: V2WorkFormulaToken[], laborParams: WorkFormulaLaborParamRef[]): ValidationIssue[];
 export type CollectPatchValidationOptions = {
     coverageDate?: string;
 };
@@ -62,6 +68,8 @@ export type WorkCoefficientCatalogParam = WorkTriggerStatusCatalogParam & {
     sourceKeys?: string[];
 };
 export declare function resolveWorkCoefficientCatalogParam(catalog: WorkCoefficientCatalogParam[], paramCode: string): WorkCoefficientCatalogParam | undefined;
+/** Параметр трудоёмкости из поля схемы анкеты (`field_*`), не из глобального CSV. */
+export declare function isSchemaFieldLaborParamCode(paramCode: string): boolean;
 /**
  * F-03 §578: значение коэффициента трудоёмкости доступно, только если оно
  * присутствует в активном глобальном справочнике значений параметра. Если

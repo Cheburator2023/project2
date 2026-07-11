@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyWorkRounding, evaluateWorkFormula, formatWorkFormulaGeneralSummary, isParamUsedInFormula, markFormulaParamInvalid, normalizeWorkFormulaLaborParamTokens, parseWorkFormulaText, previewWorkFormula, tokensToText, validateWorkFormulaTokens, } from "./v2-work-formula.util";
+import { applyWorkRounding, evaluateWorkFormula, formatWorkFormulaGeneralSummary, isParamUsedInFormula, isWorkFormulaLaborParamKnown, markFormulaParamInvalid, normalizeWorkFormulaLaborParamTokens, parseWorkFormulaText, previewWorkFormula, tokensToText, validateWorkFormulaTokens, } from "./v2-work-formula.util";
 import { defaultWorkFormula, defaultWorkRounding } from "./v2-typical-work.types";
 describe("v2-work-formula.util", () => {
     it("parses H × P[param]", () => {
@@ -125,5 +125,18 @@ describe("v2-work-formula.util", () => {
         })).toBeNull();
         const result = evaluateWorkFormula({ tokens, text: "N × P[Сложность]?" }, { norm: 1, paramCoefficients: {} });
         expect(result.error).toMatch(/удалён/i);
+    });
+    it("matches formula labor param by schema source key alias", () => {
+        const laborParams = [
+            {
+                paramCode: "field_Hqtu1z5O",
+                paramName: "Поле справочника @ field_Hqtu1z5O",
+            },
+        ];
+        expect(isWorkFormulaLaborParamKnown({
+            kind: "param_anyof",
+            paramCode: "field_Hqtu1z5O",
+            paramName: "Поле справочника @ field_Hqtu1z5O",
+        }, laborParams)).toBe(true);
     });
 });

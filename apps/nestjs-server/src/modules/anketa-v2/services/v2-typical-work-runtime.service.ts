@@ -12,8 +12,8 @@ import {
 	parseStoredTypicalWorkCalculationLogic,
 	previewTypicalWorkCalculation,
 	resolveActiveNormOnDate,
+	resolveByValueLaborParamCoefficients,
 	resolveLaborAnyOfCoefficient,
-	resolveLaborCoefficient,
 	resolveStreamFromSourceType,
 	termsToTokenFormula,
 	typicalWorkRulesMatchSource,
@@ -50,6 +50,8 @@ export type BuildCatalogTasksParams = {
 	templateId?: string | null;
 	atDate: string;
 	hiddenParamCodes?: ReadonlySet<string>;
+	/** Ограничение списка работ блока typicalWork; undefined — все назначенные. */
+	allowedWorkIds?: readonly string[];
 };
 
 type RuntimeWorkContext = {
@@ -119,11 +121,17 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 		}
 	}
 
+	const byValueRows: Array<{
+		paramCode: string;
+		paramName: string | null;
+		valueCode: string | null;
+		valueLabel: string | null;
+		coefficient: number;
+	}> = [];
 	for (const row of ctx.laborRows) {
 		if (ctx.hiddenParamCodes?.has(row.paramCode)) continue;
 		const header = laborParamsByCode.get(row.paramCode);
 		if (header?.kind === "any_of") continue;
-
 		if (
 			!isWorkCoefficientValueAvailable(
 				row,
@@ -133,18 +141,18 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 		) {
 			continue;
 		}
-		if (
-			resolveLaborCoefficient(
-				ctx.source,
-				row.paramCode,
-				row.valueCode,
-				row.valueLabel,
-				row.paramName,
-			)
-		) {
-			paramCoefficients[row.paramCode] = decimalToNumber(row.coefficient);
-		}
+		byValueRows.push({
+			paramCode: row.paramCode,
+			paramName: row.paramName,
+			valueCode: row.valueCode,
+			valueLabel: row.valueLabel,
+			coefficient: decimalToNumber(row.coefficient),
+		});
 	}
+	Object.assign(
+		paramCoefficients,
+		resolveByValueLaborParamCoefficients(ctx.source, byValueRows),
+	);
 
 	return paramCoefficients;
 }
@@ -224,7 +232,16 @@ export class V2TypicalWorkRuntimeService {
 		const eligibleWorks = works.filter((w) => assignedWorkIds.has(w.id));
 		if (!eligibleWorks.length) return [];
 
-		const workIds = eligibleWorks.map((w) => w.id);
+		const allowedWorkIds = params.allowedWorkIds;
+		const filteredWorks =
+			allowedWorkIds === undefined
+				? eligibleWorks
+				: allowedWorkIds.length === 0
+					? []
+					: eligibleWorks.filter((w) => allowedWorkIds.includes(w.id));
+		if (!filteredWorks.length) return [];
+
+		const workIds = filteredWorks.map((w) => w.id);
 		const [norms, rules, labor, laborParams, allConfigs] = await Promise.all([
 			this.normRepository.find({
 				where: { workId: In(workIds), streamExecutor: stream },
@@ -243,6 +260,7 @@ export class V2TypicalWorkRuntimeService {
 						where: {
 							workId: In(workIds),
 							templateVersionId: params.templateVersionId,
+							streamExecutor: stream,
 						},
 					})
 				: Promise.resolve([]),
@@ -252,20 +270,9 @@ export class V2TypicalWorkRuntimeService {
 		const rulesByWork = groupBy(rules, (r) => r.workId);
 		const laborByWork = groupBy(labor, (l) => l.workId);
 		const laborParamsByWork = groupBy(laborParams, (l) => l.workId);
-		const configByWork = new Map<string, V2TypicalWorkVersionConfigEntity>();
-		for (const config of allConfigs) {
-			const prev = configByWork.get(config.workId);
-			if (!prev) {
-				configByWork.set(config.workId, config);
-				continue;
-			}
-			if (
-				config.streamExecutor === stream &&
-				prev.streamExecutor !== stream
-			) {
-				configByWork.set(config.workId, config);
-			}
-		}
+		const configByWork = new Map(
+			allConfigs.map((config) => [config.workId, config] as const),
+		);
 		const assignmentByWorkId = new Map(
 			assignments.map((a) => [a.workId, a]),
 		);
@@ -274,7 +281,7 @@ export class V2TypicalWorkRuntimeService {
 			await this.paramCatalogService.listTriggerStatusCatalog(params.atDate);
 
 		const contexts = new Map<string, RuntimeWorkContext>();
-		for (const work of eligibleWorks) {
+		for (const work of filteredWorks) {
 			const workNorms = normsByWork.get(work.id) ?? [];
 			const normValue = resolveActiveNormOnDate(
 				workNorms.map((n) => ({

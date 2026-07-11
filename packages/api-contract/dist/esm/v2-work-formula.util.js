@@ -1,3 +1,4 @@
+import { parseParamNameSourceKeys } from "./v2-work-param-source-keys.util";
 const OP_SYMBOL = {
     "+": "+",
     "-": "−",
@@ -13,12 +14,37 @@ export function hasWorkRefToken(tokens) {
 export function isParamToken(token) {
     return token.kind === "param_coeff" || token.kind === "param_anyof";
 }
-/** Сопоставление токена формулы с параметром из блока трудоёмкости (код или подпись). */
+function collectParamRefKeys(ref) {
+    const keys = new Set();
+    const code = ref.paramCode.trim();
+    if (code)
+        keys.add(code);
+    for (const key of parseParamNameSourceKeys(ref.paramName).sourceKeys) {
+        if (key.trim())
+            keys.add(key.trim());
+    }
+    return keys;
+}
+/** Сопоставление токена формулы с параметром из блока трудоёмкости (код, подпись, sourceKeys). */
 export function workFormulaLaborParamMatches(token, group) {
-    return (group.paramCode === token.paramCode ||
-        (token.paramName != null && group.paramName === token.paramName) ||
-        (token.paramName != null && group.paramCode === token.paramName) ||
-        (group.paramName != null && group.paramName === token.paramCode));
+    if (group.paramCode === token.paramCode)
+        return true;
+    if (token.paramName != null && group.paramName === token.paramName)
+        return true;
+    if (token.paramName != null && group.paramCode === token.paramName)
+        return true;
+    if (group.paramName != null && group.paramName === token.paramCode)
+        return true;
+    const tokenKeys = collectParamRefKeys({
+        paramCode: token.paramCode,
+        paramName: token.paramName,
+    });
+    const groupKeys = collectParamRefKeys(group);
+    for (const key of tokenKeys) {
+        if (groupKeys.has(key))
+            return true;
+    }
+    return false;
 }
 export function isWorkFormulaLaborParamKnown(token, laborParams) {
     return laborParams.some((group) => workFormulaLaborParamMatches(token, group));

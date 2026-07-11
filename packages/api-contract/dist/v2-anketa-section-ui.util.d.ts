@@ -51,6 +51,28 @@ export type V2AnketaStreamBlockOptions = {
 /** Явная или legacy-привязка корневого блока к стриму-исполнителю. */
 export declare function resolveV2AnketaStreamBlockOptions(uiNode: unknown, blockKey?: string): V2AnketaStreamBlockOptions;
 export declare function isV2AnketaStreamBlockRoot(uiNode: unknown, blockKey?: string): boolean;
+export declare const V2_STREAM_BLOCK_TITLE_PREFIX = "\u0421\u0442\u0440\u0438\u043C ";
+/** Уже оформленный заголовок стрима (заводской снепшот: «Стрим «…»», новый: «Стрим …»). */
+export declare function hasV2StreamBlockTitlePrefix(title: string): boolean;
+/** Заголовок стримового object-блока (идемпотентно, в стиле заводского снепшота). */
+export declare function formatV2StreamBlockSectionTitle(baseTitle: string): string;
+/** Заголовок секции с учётом streamBlock (явный, legacy stream* / field_* ключ). */
+export declare function resolveV2AnketaSectionDisplayTitle(baseTitle: string, uiNode: unknown, blockKey?: string): string;
+export type ExecutorStreamBlockRef = {
+    blockKey: string;
+    pointer: string;
+    streamExecutor: V2ExecutorStreamLabel;
+};
+/** Корневые стримовые блоки анкеты из uiSchema. */
+export declare function collectExecutorStreamBlocks(uiSchema: unknown): ExecutorStreamBlockRef[];
+export declare function collectPresentExecutorStreamLabels(uiSchema: unknown): Set<V2ExecutorStreamLabel>;
+/** Есть ли в конструкторе корневой streamBlock для стрима (legacy-имена БД → область UI). */
+export declare function isExecutorStreamPresentInSchema(uiSchema: unknown, stream: string): boolean;
+/**
+ * Стрим-исполнитель для блока typicalWork: явный ui:options.streamExecutor,
+ * иначе стрим корневого streamBlock по пути вывода.
+ */
+export declare function resolveStreamExecutorForTypicalWorkOutputPath(uiSchema: unknown, outputPath: string): V2ExecutorStreamLabel | null;
 /** Тип арх. компонента секции из ui:options, либо null. */
 export declare function resolveV2AnketaArchComponent(uiNode: unknown): V2ArchComponentType | null;
 export declare function isV2AnketaMainSectionId(value: string): value is V2AnketaMainSectionId;

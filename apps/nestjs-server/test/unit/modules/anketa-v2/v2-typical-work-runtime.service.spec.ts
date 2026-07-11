@@ -33,6 +33,7 @@ function createService({
 	rules,
 	assignments = DEFAULT_ASSIGNMENTS,
 	laborParams = [],
+	laborRows = [],
 	versionConfigs = [],
 }: {
 	rules: Array<{
@@ -55,11 +56,21 @@ function createService({
 		workId: string;
 		streamExecutor: string;
 		paramCode: string;
+		paramName?: string | null;
 		kind: string;
 		anyOfValueCodes?: string[] | null;
 		anyOfValueLabels?: string[] | null;
 		coeffOn?: string;
 		coeffOff?: string;
+	}>;
+	laborRows?: Array<{
+		workId: string;
+		streamExecutor: string;
+		paramCode: string;
+		paramName?: string | null;
+		valueCode: string | null;
+		valueLabel: string | null;
+		coefficient: string;
 	}>;
 	versionConfigs?: Array<{
 		workId: string;
@@ -103,7 +114,7 @@ function createService({
 		},
 	]);
 	const ruleRepository = repo(rules);
-	const laborRepository = repo([]);
+	const laborRepository = repo(laborRows);
 	const laborParamRepository = repo(laborParams);
 	const assignmentRepository = repo(assignments);
 	const versionConfigRepository = repo(versionConfigs);
@@ -156,6 +167,51 @@ describe("V2TypicalWorkRuntimeService", () => {
 
 		expect(matched.map((task) => task.workId)).toEqual([WORK_WITH_TRIGGER]);
 		expect(notMatched).toEqual([]);
+	});
+
+	it("filters catalog tasks by allowedWorkIds when block binding is set", async () => {
+		const service = createService({
+			rules: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "type",
+					paramName: "Тип источника",
+					operator: "=",
+					valueCode: "internal",
+					valueLabel: "Внутренний",
+				},
+			],
+		});
+
+		const allowed = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			templateVersionId: null,
+			atDate: "2025-06-01",
+			allowedWorkIds: [WORK_WITH_TRIGGER],
+		});
+		const blocked = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			templateVersionId: null,
+			atDate: "2025-06-01",
+			allowedWorkIds: [WORK_WITHOUT_TRIGGERS],
+		});
+		const empty = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			templateVersionId: null,
+			atDate: "2025-06-01",
+			allowedWorkIds: [],
+		});
+
+		expect(allowed.map((task) => task.workId)).toEqual([WORK_WITH_TRIGGER]);
+		expect(blocked).toEqual([]);
+		expect(empty).toEqual([]);
 	});
 
 	it("returns empty when work is not assigned to stream", async () => {
@@ -313,6 +369,146 @@ describe("V2TypicalWorkRuntimeService", () => {
 
 		expect(on[0]?.coefficient).toBe(2);
 		expect(off[0]?.coefficient).toBe(1);
+	});
+
+	it("applies boolean checkbox any-of coefficient in runtime calculation", async () => {
+		const service = createService({
+			rules: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "type",
+					paramName: "Тип",
+					operator: "=",
+					valueCode: null,
+					valueLabel: "Внутренний",
+				},
+			],
+			laborParams: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "field_flag",
+					paramName: "Флаг @ field_flag",
+					kind: "any_of",
+					anyOfValueCodes: ["true"],
+					anyOfValueLabels: ["Да"],
+					coeffOn: "1.5",
+					coeffOff: "0.5",
+				},
+			],
+			versionConfigs: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					templateVersionId: "tpl-v1",
+					formula: [
+						{ kind: "norm" },
+						{ kind: "param_anyof", paramCode: "field_flag" },
+					],
+					formulaText: null,
+					roundingMode: "none",
+					roundingStep: null,
+					calculationLogic: null,
+				},
+			],
+		});
+
+		const on = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний", field_flag: true },
+			templateVersionId: "tpl-v1",
+			atDate: "2025-06-01",
+		});
+		const off = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний", field_flag: false },
+			templateVersionId: "tpl-v1",
+			atDate: "2025-06-01",
+		});
+
+		expect(on[0]?.coefficient).toBe(1.5);
+		expect(off[0]?.coefficient).toBe(0.5);
+	});
+
+	it("applies by-value schema dictionary coefficient in runtime calculation", async () => {
+		const service = createService({
+			rules: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "type",
+					paramName: "Тип",
+					operator: "=",
+					valueCode: null,
+					valueLabel: "Внутренний",
+				},
+			],
+			laborParams: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "field_dict",
+					paramName: "Поле справочника @ field_dict",
+					kind: "by_value",
+				},
+			],
+			laborRows: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "field_dict",
+					paramName: "Поле справочника @ field_dict",
+					valueCode: "Да",
+					valueLabel: "Да",
+					coefficient: "20",
+				},
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "field_dict",
+					paramName: "Поле справочника @ field_dict",
+					valueCode: "Нет",
+					valueLabel: "Нет",
+					coefficient: "10",
+				},
+			],
+			versionConfigs: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					templateVersionId: "tpl-v1",
+					formula: [
+						{ kind: "norm" },
+						{ kind: "param_coeff", paramCode: "field_dict" },
+					],
+					formulaText: null,
+					roundingMode: "none",
+					roundingStep: null,
+					calculationLogic: null,
+				},
+			],
+		});
+
+		const yes = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний", field_dict: "Да" },
+			templateVersionId: "tpl-v1",
+			atDate: "2025-06-01",
+		});
+		const no = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний", field_dict: "Нет" },
+			templateVersionId: "tpl-v1",
+			atDate: "2025-06-01",
+		});
+
+		expect(yes[0]?.coefficient).toBe(20);
+		expect(no[0]?.coefficient).toBe(10);
 	});
 
 	it("falls back to global catalog works when template has no own works", async () => {

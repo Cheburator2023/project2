@@ -3,6 +3,7 @@ import type { DropOptions, NodeModel } from "@minoru/react-dnd-treeview";
 import {
 	isV2AnketaSystemRootPointer,
 	resolveV2AnketaCanvasUiKind,
+	resolveV2AnketaSectionDisplayTitle,
 } from "@smart-anketa/api-contract";
 import {
 	getObjectItemsSchema,
@@ -212,10 +213,21 @@ export function collectGroupOrders(
 	return result;
 }
 
-function fieldTitle(node: RJSFSchema | undefined, key: string): string {
-	return typeof node?.title === "string" && node.title.trim()
-		? node.title.trim()
-		: key;
+function fieldTitle(
+	node: RJSFSchema | undefined,
+	key: string,
+	uiSchema: UiSchema | undefined,
+	fieldPointer: string,
+): string {
+	const base =
+		typeof node?.title === "string" && node.title.trim()
+			? node.title.trim()
+			: key;
+	const uiBranch = readUiSchemaBranchAtPointer(
+		uiSchema as Record<string, unknown> | undefined,
+		fieldPointer,
+	);
+	return resolveV2AnketaSectionDisplayTitle(base, uiBranch, key);
 }
 
 function appendFieldNodes(
@@ -271,7 +283,7 @@ function appendFieldNodes(
 		nodes.push({
 			id: fieldPointer,
 			parent: parentNodeId,
-			text: fieldTitle(node, key),
+			text: fieldTitle(node, key, uiSchema, fieldPointer),
 			droppable: isGroup || Boolean(arrayItems),
 			data: {
 				kind: "field",

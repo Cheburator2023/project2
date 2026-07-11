@@ -1,5 +1,5 @@
 import {
-	collectGeneratedTypicalWorkArrayPaths,
+	listAllGeneratedTypicalWorkArrayPaths,
 	V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
 	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
 } from "@smart-anketa/api-contract";
@@ -65,10 +65,9 @@ function deepMergeRecords(
 function resolveGeneratedTypicalWorkPaths(
 	uiSchema?: Record<string, unknown>,
 ): string[] {
-	const dynamic = uiSchema
-		? collectGeneratedTypicalWorkArrayPaths(uiSchema)
-		: [];
-	return [...new Set([...FALLBACK_GENERATED_TYPICAL_WORK_ARRAY_PATHS, ...dynamic])];
+	return uiSchema
+		? listAllGeneratedTypicalWorkArrayPaths(uiSchema)
+		: [...FALLBACK_GENERATED_TYPICAL_WORK_ARRAY_PATHS];
 }
 
 /** Не затирать pseudo-array арх. блока (modelService и т.п.) при записи вложенных generated paths. */
@@ -106,6 +105,15 @@ function fanOutTypicalWorkLiveData(
 	}
 
 	if (!sourcePath || !sourceValue) return merged;
+
+	if (sourceValue.length === 0) {
+		let cleared = merged;
+		for (const path of paths) {
+			if (shouldSkipGeneratedPathWrite(cleared, path)) continue;
+			cleared = writeAtPath(cleared, path, []);
+		}
+		return cleared;
+	}
 
 	let next = merged;
 	for (const path of paths) {

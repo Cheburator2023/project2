@@ -1,11 +1,42 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = void 0;
+exports.LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS = exports.TYPICAL_WORK_BOUND_WORK_IDS_KEY = exports.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = void 0;
 exports.collectGeneratedTypicalWorkArrayPaths = collectGeneratedTypicalWorkArrayPaths;
+exports.readTypicalWorkBoundWorkIdsAtOutputPath = readTypicalWorkBoundWorkIdsAtOutputPath;
+exports.collectTypicalWorkBlockBindings = collectTypicalWorkBlockBindings;
 exports.resolveSourceTypicalWorksOutputPath = resolveSourceTypicalWorksOutputPath;
 exports.jsonSchemaHasResolvablePath = jsonSchemaHasResolvablePath;
+exports.listAllGeneratedTypicalWorkArrayPaths = listAllGeneratedTypicalWorkArrayPaths;
+exports.clearStaleGeneratedTypicalWorkPaths = clearStaleGeneratedTypicalWorkPaths;
 const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
 exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = "streamDataSources.sourceTypicalTasks";
+/** Канонический вывод типовых работ «Контроль моделей». */
+exports.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_Khn6-HAW";
+/** Ключ ui:options — привязанные к блоку id типовых работ (сохраняется в снепшоте). */
+exports.TYPICAL_WORK_BOUND_WORK_IDS_KEY = "boundWorkIds";
+/** Legacy/fan-out пути, куда раньше дублировались сгенерированные типовые работы. */
+exports.LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS = [
+    exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+    exports.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
+    "detailInfo.detailTypicalTasks",
+    "detailInfo.sourceTypicalTasks",
+    "generalInfo.modelService.controlTypicalTasks",
+];
+function writeAtDotPath(data, dotPath, value) {
+    const parts = dotPath.split(".").filter(Boolean);
+    if (parts.length === 0)
+        return data;
+    const next = { ...data };
+    let cur = next;
+    for (let i = 0; i < parts.length - 1; i++) {
+        const key = parts[i];
+        const child = readRecord(cur[key]) ?? {};
+        cur[key] = { ...child };
+        cur = cur[key];
+    }
+    cur[parts[parts.length - 1]] = value;
+    return next;
+}
 function readRecord(value) {
     return value && typeof value === "object" && !Array.isArray(value)
         ? value
@@ -27,6 +58,37 @@ function collectGeneratedTypicalWorkArrayPaths(uiSchema, prefix = "") {
         paths.push(...collectGeneratedTypicalWorkArrayPaths(branch[key], prefix ? `${prefix}.${key}` : key));
     }
     return [...new Set(paths)];
+}
+function readUiSchemaBranchAtOutputPath(uiSchema, dotPath) {
+    const segments = dotPath.split(".").filter(Boolean);
+    let cur = uiSchema;
+    for (const segment of segments) {
+        const branch = readRecord(cur);
+        if (!branch || !(segment in branch))
+            return undefined;
+        cur = branch[segment];
+    }
+    return readRecord(cur);
+}
+/** Привязанные work id для блока typicalWork по dot-пути в uiSchema. */
+function readTypicalWorkBoundWorkIdsAtOutputPath(uiSchema, outputPath) {
+    const branch = readUiSchemaBranchAtOutputPath(uiSchema, outputPath);
+    const opts = readRecord(branch?.["ui:options"]);
+    if (!opts || !(exports.TYPICAL_WORK_BOUND_WORK_IDS_KEY in opts))
+        return undefined;
+    const raw = opts[exports.TYPICAL_WORK_BOUND_WORK_IDS_KEY];
+    if (!Array.isArray(raw))
+        return [];
+    return [
+        ...new Set(raw.filter((id) => typeof id === "string" && id.trim().length > 0)),
+    ];
+}
+/** Все блоки typicalWork с путями вывода и привязками работ. */
+function collectTypicalWorkBlockBindings(uiSchema) {
+    return collectGeneratedTypicalWorkArrayPaths(uiSchema).map((outputPath) => ({
+        outputPath,
+        boundWorkIds: readTypicalWorkBoundWorkIdsAtOutputPath(uiSchema, outputPath),
+    }));
 }
 /** Путь вывода типовых работ «Система-источник» по схеме (канонический или пользовательский). */
 function resolveSourceTypicalWorksOutputPath(jsonSchema, uiSchema) {
@@ -59,4 +121,27 @@ function jsonSchemaHasResolvablePath(jsonSchema, dotPath) {
         node = properties[segment];
     }
     return true;
+}
+/** Все известные пути read-only массивов типовых работ (uiSchema + legacy). */
+function listAllGeneratedTypicalWorkArrayPaths(uiSchema) {
+    const dynamic = uiSchema
+        ? collectGeneratedTypicalWorkArrayPaths(uiSchema)
+        : [];
+    return [...new Set([...exports.LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS, ...dynamic])];
+}
+/**
+ * Сбрасывает устаревшие fan-out массивы типовых работ, оставляя только
+ * актуальный `outputArrayPath` (после replace/clear в калькуляторе).
+ */
+function clearStaleGeneratedTypicalWorkPaths(data, outputArrayPath, uiSchema) {
+    const activePaths = new Set(uiSchema ? collectGeneratedTypicalWorkArrayPaths(uiSchema) : []);
+    let next = data;
+    for (const path of exports.LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS) {
+        if (path === outputArrayPath)
+            continue;
+        if (activePaths.has(path))
+            continue;
+        next = writeAtDotPath(next, path, []);
+    }
+    return next;
 }

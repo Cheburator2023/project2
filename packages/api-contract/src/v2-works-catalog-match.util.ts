@@ -284,12 +284,6 @@ function scalarRuleValueMatches(
 	actual: unknown,
 	rule: Pick<TypicalWorkRuleLike, "valueCode" | "valueLabel" | "operator">,
 ): boolean {
-	const candidates = [rule.valueCode, rule.valueLabel].filter(
-		(value): value is string =>
-			value != null && String(value).trim() !== "",
-	);
-	if (candidates.length === 0) return false;
-
 	if ([">=", "<=", ">", "<"].includes(rule.operator)) {
 		return compareRuleValue(
 			actual,
@@ -298,19 +292,43 @@ function scalarRuleValueMatches(
 		);
 	}
 
-	const actualStr = String(actual ?? "");
-	const matches = candidates.some((candidate) => {
-		if (actualStr === candidate) return true;
+	const hasValue =
+		(rule.valueCode != null && String(rule.valueCode).trim() !== "") ||
+		(rule.valueLabel != null && String(rule.valueLabel).trim() !== "");
+	if (!hasValue) return false;
+
+	const matches = laborValueMatches(actual, rule.valueCode, rule.valueLabel);
+	if (rule.operator === "!=") return !matches;
+	return matches;
+}
+
+/** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */
+export function laborValueMatches(
+	actual: unknown,
+	valueCode: string | null | undefined,
+	valueLabel: string | null | undefined,
+): boolean {
+	if (valueLabel != null && String(valueLabel).trim() !== "") {
+		if (String(actual) === valueLabel) return true;
 		if (typeof actual === "boolean") {
-			const norm = candidate.trim().toLowerCase();
+			const norm = valueLabel.trim().toLowerCase();
+			if (norm === "да" && actual === true) return true;
+			if (norm === "нет" && actual === false) return true;
+			if (norm === "true" && actual === true) return true;
+			if (norm === "false" && actual === false) return true;
+		}
+	}
+	if (valueCode != null && String(valueCode).trim() !== "") {
+		if (String(actual) === valueCode) return true;
+		if (typeof actual === "boolean") {
+			const norm = valueCode.trim().toLowerCase();
+			if (norm === "true" && actual === true) return true;
+			if (norm === "false" && actual === false) return true;
 			if (norm === "да" && actual === true) return true;
 			if (norm === "нет" && actual === false) return true;
 		}
-		return false;
-	});
-
-	if (rule.operator === "!=") return !matches;
-	return matches;
+	}
+	return false;
 }
 
 function compareRuleValuesSet(
@@ -319,12 +337,8 @@ function compareRuleValuesSet(
 	expectedLabels: string[],
 	operator: string,
 ): boolean {
-	const actualStr = String(actual ?? "");
-	const matches = expectedCodes.some(
-		(code, index) =>
-			actualStr === code ||
-			actualStr === (expectedLabels[index] ?? "") ||
-			actualStr === String(expectedLabels[index] ?? ""),
+	const matches = expectedCodes.some((code, index) =>
+		laborValueMatches(actual, code, expectedLabels[index] ?? null),
 	);
 	return operator === "not_in" ? !matches : matches;
 }
@@ -381,16 +395,7 @@ export function resolveLaborCoefficient(
 	paramName: string | null = null,
 ): boolean {
 	const actual = readSourceField(source, paramCode, paramName);
-	if (valueLabel != null) {
-		if (String(actual) === valueLabel) return true;
-		if (typeof actual === "boolean") {
-			const norm = valueLabel.trim().toLowerCase();
-			if (norm === "да" && actual === true) return true;
-			if (norm === "нет" && actual === false) return true;
-		}
-	}
-	if (valueCode != null && String(actual) === valueCode) return true;
-	return false;
+	return laborValueMatches(actual, valueCode, valueLabel);
 }
 
 export function resolveLaborAnyOfCoefficient(
@@ -405,12 +410,38 @@ export function resolveLaborAnyOfCoefficient(
 	paramName: string | null = null,
 ): number {
 	const actual = readSourceField(source, paramCode, paramName);
-	const actualStr = String(actual ?? "");
-	const matches = anyOf.valueCodes.some(
-		(code, index) =>
-			actualStr === code ||
-			actualStr === (anyOf.valueLabels[index] ?? "") ||
-			actualStr === String(anyOf.valueLabels[index] ?? ""),
+	const matches = anyOf.valueCodes.some((code, index) =>
+		laborValueMatches(actual, code, anyOf.valueLabels[index] ?? null),
 	);
 	return matches ? anyOf.coeffOn : anyOf.coeffOff;
+}
+
+export type ByValueLaborCoefficientRow = {
+	paramCode: string;
+	paramName?: string | null;
+	valueCode: string | null;
+	valueLabel: string | null;
+	coefficient: number;
+};
+
+/** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
+export function resolveByValueLaborParamCoefficients(
+	source: Record<string, unknown>,
+	rows: readonly ByValueLaborCoefficientRow[],
+): Record<string, number> {
+	const paramCoefficients: Record<string, number> = {};
+	for (const row of rows) {
+		if (
+			resolveLaborCoefficient(
+				source,
+				row.paramCode,
+				row.valueCode,
+				row.valueLabel,
+				row.paramName ?? null,
+			)
+		) {
+			paramCoefficients[row.paramCode] = row.coefficient;
+		}
+	}
+	return paramCoefficients;
 }

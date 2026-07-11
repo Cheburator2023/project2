@@ -3,6 +3,7 @@ import {
 	catalogValueMatchesTriggerRule,
 	isSourceTypeTriggerParam,
 	resolveLaborAnyOfCoefficient,
+	resolveByValueLaborParamCoefficients,
 	resolveStreamFromSourceType,
 	resolveStreamsFromSourceSystems,
 	resolveTriggerStatusCatalogParam,
@@ -184,6 +185,75 @@ describe("v2-works-catalog-match.util", () => {
 				},
 			),
 		).toBe(0.5);
+	});
+
+	it("resolves labor any-of coefficient for boolean checkbox", () => {
+		const anyOf = {
+			valueCodes: ["true"],
+			valueLabels: ["Да"],
+			coeffOn: 1.5,
+			coeffOff: 0.5,
+		};
+		expect(
+			resolveLaborAnyOfCoefficient(
+				{ field_checkbox: true },
+				"field_checkbox",
+				anyOf,
+				"Чекбокс @ field_checkbox",
+			),
+		).toBe(1.5);
+		expect(
+			resolveLaborAnyOfCoefficient(
+				{ field_checkbox: false },
+				"field_checkbox",
+				anyOf,
+				"Чекбокс @ field_checkbox",
+			),
+		).toBe(0.5);
+	});
+
+	it("resolves by-value labor coefficients from schema dictionary answers", () => {
+		expect(
+			resolveByValueLaborParamCoefficients(
+				{ field_dict: "Да" },
+				[
+					{
+						paramCode: "field_dict",
+						paramName: "Поле справочника @ field_dict",
+						valueCode: "Да",
+						valueLabel: "Да",
+						coefficient: 20,
+					},
+					{
+						paramCode: "field_dict",
+						paramName: "Поле справочника @ field_dict",
+						valueCode: "Нет",
+						valueLabel: "Нет",
+						coefficient: 10,
+					},
+				],
+			),
+		).toEqual({ field_dict: 20 });
+	});
+
+	it("matches boolean checkbox trigger by label and code", () => {
+		const rules = [
+			{
+				paramCode: "field_cb",
+				paramName: "Чекбокс @ field_cb",
+				operator: "=",
+				valueCode: "true",
+				valueLabel: "Да",
+			},
+		];
+		expect(typicalWorkRulesMatchSource(rules, { field_cb: true })).toBe(true);
+		expect(typicalWorkRulesMatchSource(rules, { field_cb: false })).toBe(false);
+		expect(
+			typicalWorkRulesMatchSource(
+				[{ ...rules[0], operator: "!=" }],
+				{ field_cb: false },
+			),
+		).toBe(true);
 	});
 
 	it("resolves CSV trigger aliases to catalog params", () => {

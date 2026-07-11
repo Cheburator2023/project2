@@ -199,6 +199,13 @@ describe("isWorkCoefficientValueAvailable (F-03 §578)", () => {
     it("excludes a coefficient whose whole parameter is gone", () => {
         expect(isWorkCoefficientValueAvailable({ paramCode: "missing", valueCode: "low", valueLabel: "Низкая" }, catalog)).toBe(false);
     });
+    it("treats schema field params as available without global catalog", () => {
+        expect(isWorkCoefficientValueAvailable({
+            paramCode: "field_Hqtu1z5O",
+            valueCode: "Да",
+            valueLabel: "Да",
+        }, [])).toBe(true);
+    });
     it("keeps presence-flag rows (no value) available — no dictionary to delete from", () => {
         expect(isWorkCoefficientValueAvailable({ paramCode: "flag", valueCode: null, valueLabel: null }, catalog)).toBe(true);
     });
@@ -275,6 +282,82 @@ describe("collectTypicalWorkPatchValidationErrors", () => {
             ],
         });
         expect(issues.some((i) => i.path === "formula" || i.path === "formulaTerms")).toBe(true);
+    });
+    it("accepts any-of labor param referenced in formula by code and schema alias", () => {
+        const issues = collectTypicalWorkPatchValidationErrors({
+            streamExecutor: "Источники данных",
+            formula: {
+                tokens: [
+                    { kind: "norm" },
+                    { kind: "operator", op: "*" },
+                    {
+                        kind: "param_anyof",
+                        paramCode: "field_Hqtu1z5O",
+                        paramName: "Поле справочника @ field_Hqtu1z5O",
+                    },
+                ],
+                text: "N × anyof(field_Hqtu1z5O)",
+            },
+            formulaTerms: tokensToTermsFormula({
+                tokens: [
+                    { kind: "norm" },
+                    { kind: "operator", op: "*" },
+                    {
+                        kind: "param_anyof",
+                        paramCode: "field_Hqtu1z5O",
+                        paramName: "Поле справочника @ field_Hqtu1z5O",
+                    },
+                ],
+                text: "H × anyof",
+            }),
+            laborParams: [
+                {
+                    paramCode: "field_Hqtu1z5O",
+                    paramName: "Поле справочника @ field_Hqtu1z5O",
+                    kind: "any_of",
+                    anyOf: {
+                        valueCodes: ["Да"],
+                        valueLabels: ["Да"],
+                        coeffOn: 10,
+                        coeffOff: 20,
+                    },
+                },
+            ],
+        });
+        expect(issues.filter((issue) => issue.path === "formula")).toEqual([]);
+    });
+    it("accepts by-value labor param referenced in formula for schema field", () => {
+        const issues = collectTypicalWorkPatchValidationErrors({
+            streamExecutor: "Источники данных",
+            formula: {
+                tokens: [
+                    { kind: "norm" },
+                    { kind: "operator", op: "*" },
+                    {
+                        kind: "param_coeff",
+                        paramCode: "field_dict",
+                        paramName: "Поле справочника @ field_dict",
+                    },
+                ],
+                text: "N × коэф(field_dict)",
+            },
+            laborParams: [
+                {
+                    paramCode: "field_dict",
+                    paramName: "Поле справочника @ field_dict",
+                    kind: "by_value",
+                    coefficients: [
+                        {
+                            paramCode: "field_dict",
+                            valueCode: "Да",
+                            valueLabel: "Да",
+                            coefficient: 20,
+                        },
+                    ],
+                },
+            ],
+        });
+        expect(issues.filter((issue) => issue.path === "formula")).toEqual([]);
     });
 });
 describe("isTypicalWorkParameterValueActiveOnDate", () => {

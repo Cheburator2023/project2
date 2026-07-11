@@ -1,0 +1,41 @@
+---
+description: Согласованность typicalWork со снепшотом шаблона (uiSchema + patch logic)
+globs: apps/react-client/src/features/v2/admin_constructor/**/*,packages/api-contract/src/v2-*typical*,packages/api-contract/src/v2-anketa*,apps/nestjs-server/src/modules/anketa-v2/**/*
+alwaysApply: false
+---
+
+# TypicalWork ↔ snapshot
+
+Снепшот версии шаблона = `jsonSchema` + `uiSchema` + `logic`. Привязки типовых работ живут **только в uiSchema**, не в `logic`.
+
+## Что сохраняется в uiSchema
+
+| Ключ | Где | Назначение |
+|------|-----|------------|
+| `ui:options.boundWorkIds` | блок `archComponent: typicalWork` | id работ, привязанных к блоку |
+| `ui:options.streamExecutor` | блок typicalWork (и streamBlock) | стрим-исполнитель |
+| `ui:options.archComponent: typicalWork` | массив вывода | маркер блока |
+
+Правила каталога (`typical-works-catalog-*`) **не пишутся** в снепшот logic — они патчатся в рантайме через `patchV2TypicalWorksLogicRules` / `patchV2AnketaCalculationLogicRules` из uiSchema.
+
+## Обязательная проверка при изменениях
+
+После правок в конструкторе, логике или api-contract:
+
+1. **Roundtrip uiSchema** — `coerceUiSchema(JSON.parse(JSON.stringify(ui)), jsonSchema)` не должен терять `boundWorkIds` / `streamExecutor`.
+2. **Bindings** — `collectTypicalWorkBlockBindings(uiSchema)` даёт те же пути и id, что UI конструктора (`typicalWorkBlockBinding`, properties panel).
+3. **Logic patch** — fingerprint правил `typical-works-catalog-*` до и после coerce совпадает; `allowedWorkIds` только при явном `boundWorkIds` (legacy без ключа → все работы шаблона).
+4. **Вложенность** — путь после `placeTypicalWorkInStream` (напр. `streamDataSources.field_xxx.field_yyy`) совпадает с `outputPath` в bindings и `targetPath` в patched rules.
+5. **Заводской снепшот** — `v2-default-anketa.snapshot.json`: блоки без `boundWorkIds` остаются legacy после coerce.
+
+## Тесты
+
+Запуск: `cd apps/react-client && npx vitest run src/features/v2/admin_constructor/utils/typicalWorkSnapshotConsistency.test.ts`
+
+Дополняй этот файл при новых полях привязки или изменении coerce/enrich.
+
+## Антипаттерны
+
+- Не хранить `allowedWorkIds` / per-block catalog state в `logic` снепшота.
+- Не использовать `resolveEffectiveBoundWorkIds` для списка «непривязанных» в properties — только явный `readBoundWorkIdsAtPointer`.
+- `enrichAnketaLayoutUiSchema` мержит `ui:options` (`{ ...prev, ...patch }`) — кастомные ключи не затирать отдельным присваиванием.

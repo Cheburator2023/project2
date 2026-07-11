@@ -10,6 +10,7 @@ import type {
 	V2TemplateVersionDto,
 } from "@smart-anketa/api-contract";
 import {
+	clearStaleGeneratedTypicalWorkPaths,
 	isCalculationPathActive,
 	mergeTypicalCoefficientContext,
 	parseParamDependencyGraphFromLogic,
@@ -83,6 +84,8 @@ type TaskTriggerPayload = {
 	label?: string;
 	hint?: string;
 	outputArrayPath?: string;
+	/** Id типовых работ, привязанных к блоку typicalWork в uiSchema. */
+	allowedWorkIds?: string[];
 	/**
 	 * ФТ-024: единый коэффициент группы для всех работ компонента — произведение
 	 * весов параметров. JsonLogic — по merge(localParams стрима, строка компонента);
@@ -513,14 +516,24 @@ export class V2CalculationService {
 		if (!passes) {
 			return payload.outputMode === "append"
 				? data
-				: writeByDotPath(data, outputArrayPath, []);
+				: this.writeGeneratedTypicalWorkOutput(
+						data,
+						outputArrayPath,
+						[],
+						uiSchema,
+					);
 		}
 
 		const sourceRows = this.resolveGeneratedRowSources(data, payload, uiSchema);
 		if (sourceRows.length === 0) {
 			return payload.outputMode === "append"
 				? data
-				: writeByDotPath(data, outputArrayPath, []);
+				: this.writeGeneratedTypicalWorkOutput(
+						data,
+						outputArrayPath,
+						[],
+						uiSchema,
+					);
 		}
 
 		const streamTriggerContext = readTypicalWorksStreamTriggerContext(
@@ -601,6 +614,11 @@ export class V2CalculationService {
 											templateId,
 											atDate,
 											hiddenParamCodes,
+											allowedWorkIds: Array.isArray(
+												payload.allowedWorkIds,
+											)
+												? payload.allowedWorkIds
+												: undefined,
 										}),
 									),
 								)
@@ -671,7 +689,27 @@ export class V2CalculationService {
 			return writeByDotPath(data, outputArrayPath, merged);
 		}
 
-		return writeByDotPath(data, outputArrayPath, generated);
+		return this.writeGeneratedTypicalWorkOutput(
+			data,
+			outputArrayPath,
+			generated,
+			uiSchema,
+		);
+	}
+
+	private writeGeneratedTypicalWorkOutput(
+		data: Record<string, unknown>,
+		outputArrayPath: string,
+		rows: unknown[],
+		uiSchema?: Record<string, unknown>,
+	): Record<string, unknown> {
+		let next = writeByDotPath(data, outputArrayPath, rows);
+		next = clearStaleGeneratedTypicalWorkPaths(
+			next,
+			outputArrayPath,
+			uiSchema,
+		);
+		return next;
 	}
 
 	private resolveGeneratedRowSources(

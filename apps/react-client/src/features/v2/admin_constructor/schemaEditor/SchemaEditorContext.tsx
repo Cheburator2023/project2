@@ -91,7 +91,11 @@ export type SchemaEditorContextValue = {
 		index: number,
 		uiOptions?: Record<string, unknown>,
 		uiBranch?: Record<string, unknown>,
-	) => void;
+	) => string | null;
+	placeTypicalWorkInStreamBlock: (
+		streamExecutor: import("@smart-anketa/api-contract").V2ExecutorStreamLabel,
+		preferredPointer?: string | null,
+	) => string | null;
 	reorderRootFieldKeys: (orderedKeys: string[]) => void;
 	applyGroupFieldOrders: (
 		finalOrders: Record<string, string[]>,

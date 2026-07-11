@@ -7,7 +7,12 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Typography from "@mui/material/Typography";
-import type { V2LogicWorkspaceTab, V2TypicalWorkListItemDto } from "@smart-anketa/api-contract";
+import type { V2ExecutorStreamLabel, V2LogicWorkspaceTab, V2TypicalWorkListItemDto } from "@smart-anketa/api-contract";
+import {
+	isExecutorStreamPresentInSchema,
+	isV2ExecutorStreamLabel,
+	resolveStreamExecutorForTypicalWorkOutputPath,
+} from "@smart-anketa/api-contract";
 import {
 	useCreateV2TypicalWork,
 	useDeleteV2TypicalWork,
@@ -20,8 +25,6 @@ import { V2_TEMPLATE_VERSION_QUERY } from "@react-client/routing/common/pathHelp
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { useSchemaEditor } from "../../SchemaEditorContext";
-import { findPointerByArchComponent } from "../../components/SchemaCanvasDnd";
-import { ARCH_COMPONENT_PRESET_DEFS } from "../../archComponentPresets";
 import { toast } from "@react-client/common/toasts";
 import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../../testIds";
@@ -42,13 +45,25 @@ import {
 	workAssignedToScope,
 } from "./typicalWorksAreas";
 import {
+	BIND_POINTER_QUERY,
 	DEFAULT_WORK_STREAMS,
 	groupWorksByArchComponent,
 	NEW_WORK_QUERY,
 	pickDefaultStream,
+	ROLLBACK_TYPICAL_WORK_QUERY,
 	storeWorkStream,
 	WORK_ID_QUERY,
 } from "./typicalWorksUi";
+import {
+	appendBoundWorkIdAtPointer,
+	pointerToOutputPath,
+	removeWorkIdFromAllTypicalWorkBindings,
+} from "../../typicalWorkBlockBinding";
+import { listCanvasEditableChildKeys } from "../../schemaCanvasTree";
+import {
+	makeStreamBlockJsonSchema,
+	makeStreamBlockUiOptions,
+} from "../../streamBlockHelpers";
 
 const DEFAULT_SCOPE: LogicWorksScope = {
 	kind: "stream",
@@ -60,7 +75,7 @@ export function TypicalWorksPanel() {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const templateVersionId = searchParams.get(V2_TEMPLATE_VERSION_QUERY);
 
-	const { jsonSchema, uiSchema, setSelectedPointer, handleAddFieldPresetAtParent } =
+	const { jsonSchema, uiSchema, setSelectedPointer, handleAddFieldPresetAtParent, patchUiSchema, recordDraftHistory, setMainTab, handleDeleteField, placeTypicalWorkInStreamBlock } =
 		useSchemaEditor();
 
 	const { data, isLoading, error } = useV2TypicalWorksList({
@@ -69,31 +84,43 @@ export function TypicalWorksPanel() {
 	const createWork = useCreateV2TypicalWork();
 	const deleteWork = useDeleteV2TypicalWork();
 
-	/** Дуплекс логика→конструктор: гарантирует блок «Типовые работы» на холсте и выделяет его. */
-	const ensureTypicalWorkBlockOnCanvas = useCallback(() => {
-		const existing = findPointerByArchComponent(
-			jsonSchema,
-			uiSchema,
-			"typicalWork",
-		);
-		if (existing) {
-			setSelectedPointer(existing);
-			return;
-		}
-		const def = ARCH_COMPONENT_PRESET_DEFS.typicalWork;
-		handleAddFieldPresetAtParent(
-			"/",
-			def.make(),
-			Number.MAX_SAFE_INTEGER,
-			def.uiOptions,
-			def.uiBranch,
-		);
-	}, [
-		jsonSchema,
-		uiSchema,
-		setSelectedPointer,
-		handleAddFieldPresetAtParent,
-	]);
+	const bindWorkToTypicalWorkBlock = useCallback(
+		(pointer: string, workId: string) => {
+			const allWorkIds = (data?.items ?? []).map((item) => item.id);
+			recordDraftHistory();
+			patchUiSchema(
+				(prev) =>
+					appendBoundWorkIdAtPointer(
+						prev as Record<string, unknown>,
+						pointer,
+						workId,
+						allWorkIds,
+					) as import("@rjsf/utils").UiSchema,
+				{ recordHistory: false },
+			);
+		},
+		[data?.items, patchUiSchema, recordDraftHistory],
+	);
+
+	const isStreamPresentInSchema = useCallback(
+		(stream: string) => isExecutorStreamPresentInSchema(uiSchema, stream),
+		[uiSchema],
+	);
+
+	const handleCreateStreamBlock = useCallback(
+		(stream: V2ExecutorStreamLabel) => {
+			const rootCount = listCanvasEditableChildKeys(jsonSchema, "/", uiSchema).length;
+			handleAddFieldPresetAtParent(
+				"/",
+				makeStreamBlockJsonSchema(stream),
+				rootCount,
+				makeStreamBlockUiOptions(stream),
+			);
+			setMainTab("designer");
+			toast.success(`Добавлен стримовый блок «${stream}»`);
+		},
+		[jsonSchema, uiSchema, handleAddFieldPresetAtParent, setMainTab],
+	);
 
 	const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
 	const [streamExecutor, setStreamExecutor] = useState<string | null>(null);
@@ -215,6 +242,43 @@ export function TypicalWorksPanel() {
 		});
 	};
 
+	const handleCreateDialogClose = useCallback(() => {
+		setCreateOpen(false);
+		const rollbackPointer = searchParams.get(BIND_POINTER_QUERY);
+		const shouldRollback =
+			searchParams.get(ROLLBACK_TYPICAL_WORK_QUERY) === "1" && rollbackPointer;
+
+		if (shouldRollback) {
+			handleDeleteField(rollbackPointer);
+			setMainTab("designer");
+		}
+
+		if (rollbackPointer || shouldRollback) {
+			setSearchParams(
+				(prev) => {
+					const next = new URLSearchParams(prev);
+					next.delete(BIND_POINTER_QUERY);
+					next.delete(ROLLBACK_TYPICAL_WORK_QUERY);
+					return next;
+				},
+				{ replace: true },
+			);
+		}
+	}, [searchParams, handleDeleteField, setMainTab, setSearchParams]);
+
+	const createDefaultStreamExecutor = useMemo(() => {
+		const bindPointer = searchParams.get(BIND_POINTER_QUERY);
+		if (bindPointer) {
+			return (
+				resolveStreamExecutorForTypicalWorkOutputPath(
+					uiSchema,
+					pointerToOutputPath(bindPointer),
+				) ?? scope.stream
+			);
+		}
+		return scope.stream;
+	}, [searchParams, uiSchema, scope.stream]);
+
 	const handleCreateWork = async (payload: {
 		name: string;
 		archComponentType: string;
@@ -238,7 +302,30 @@ export function TypicalWorksPanel() {
 				DEFAULT_WORK_STREAMS[0];
 			setStreamExecutor(stream);
 			storeWorkStream(created.id, stream);
-			ensureTypicalWorkBlockOnCanvas();
+			const bindPointer = searchParams.get(BIND_POINTER_QUERY);
+			const streamForPlacement = isV2ExecutorStreamLabel(
+				payload.streamExecutor ?? scope.stream,
+			)
+				? (payload.streamExecutor ?? scope.stream)
+				: scope.stream;
+			const targetPointer = placeTypicalWorkInStreamBlock(
+				streamForPlacement as V2ExecutorStreamLabel,
+				bindPointer,
+			);
+			if (targetPointer) {
+				bindWorkToTypicalWorkBlock(targetPointer, created.id);
+			}
+			if (bindPointer) {
+				setSearchParams(
+					(prev) => {
+						const next = new URLSearchParams(prev);
+						next.delete(BIND_POINTER_QUERY);
+						next.delete(ROLLBACK_TYPICAL_WORK_QUERY);
+						return next;
+					},
+					{ replace: true },
+				);
+			}
 			toast.success("Работа создана");
 		} catch (err) {
 			toast.error("Не удалось создать работу", {
@@ -249,11 +336,23 @@ export function TypicalWorksPanel() {
 
 	const handleDeleteWork = async (confirm = false) => {
 		if (!deleteTarget) return;
+		const deletedWorkId = deleteTarget.id;
+		const allWorkIds = (data?.items ?? []).map((item) => item.id);
 		try {
-			await deleteWork.mutateAsync({ workId: deleteTarget.id, confirm });
-			if (selectedWorkId === deleteTarget.id) {
+			await deleteWork.mutateAsync({ workId: deletedWorkId, confirm });
+			if (selectedWorkId === deletedWorkId) {
 				setSelectedWorkId(null);
 			}
+			recordDraftHistory();
+			patchUiSchema(
+				(prev) =>
+					removeWorkIdFromAllTypicalWorkBindings(
+						prev as Record<string, unknown>,
+						deletedWorkId,
+						allWorkIds,
+					) as import("@rjsf/utils").UiSchema,
+				{ recordHistory: false },
+			);
 			setDeleteTarget(null);
 			setDeleteUsageConflict(null);
 			toast.success("Работа удалена");
@@ -361,7 +460,14 @@ export function TypicalWorksPanel() {
 				onClose={() => setAssignOpen(false)}
 				onAssigned={(workId, stream) => {
 					openWorkInStreamsView(workId, stream);
-					ensureTypicalWorkBlockOnCanvas();
+					if (isV2ExecutorStreamLabel(stream)) {
+						const pointer = placeTypicalWorkInStreamBlock(
+							stream as V2ExecutorStreamLabel,
+						);
+						if (pointer) {
+							bindWorkToTypicalWorkBlock(pointer, workId);
+						}
+					}
 				}}
 				onCreateNew={() => {
 					setAssignOpen(false);
@@ -372,8 +478,10 @@ export function TypicalWorksPanel() {
 			<CreateTypicalWorkDialog
 				open={createOpen}
 				pending={createWork.isPending}
-				defaultStreamExecutor={scope.stream}
-				onClose={() => setCreateOpen(false)}
+				defaultStreamExecutor={createDefaultStreamExecutor}
+				isStreamPresentInSchema={isStreamPresentInSchema}
+				onCreateStreamBlock={handleCreateStreamBlock}
+				onClose={handleCreateDialogClose}
 				onSubmit={handleCreateWork}
 			/>
 

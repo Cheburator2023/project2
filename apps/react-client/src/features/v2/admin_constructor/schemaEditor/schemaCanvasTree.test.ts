@@ -355,6 +355,35 @@ describe("treeToGroupOrders", () => {
 		expect(orders["schema-group:/right"]).toEqual(["b", "a"]);
 	});
 
+	it("prefixes stream object block title with Стрим on canvas tree", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				field_stream: {
+					type: "object",
+					title: "ДАДМ",
+					properties: {},
+				},
+				generalInfo: {
+					type: "object",
+					title: "Общие сведения",
+					properties: {},
+				},
+			},
+		};
+		const ui: UiSchema = {
+			field_stream: {
+				"ui:options": { streamBlock: true, streamExecutor: "ДАДМ" },
+			},
+		};
+
+		const tree = buildSchemaCanvasTree(schema, ui);
+		expect(tree.find((n) => n.id === "/field_stream")?.text).toBe("Стрим «ДАДМ»");
+		expect(tree.find((n) => n.id === "/generalInfo")?.text).toBe(
+			"Общие сведения",
+		);
+	});
+
 	it("maps array item siblings to items parent pointer", () => {
 		const schema: RJSFSchema = {
 			type: "object",

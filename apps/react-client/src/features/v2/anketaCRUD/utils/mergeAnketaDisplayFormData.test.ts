@@ -86,6 +86,44 @@ describe("mergeAnketaDisplayFormData", () => {
 		);
 	});
 
+	it("clears fan-out typical work paths when live calculation returns empty arrays", () => {
+		const uiSchema = {
+			streamDataSources: {
+				field_typical: { "ui:options": { archComponent: "typicalWork" } },
+			},
+		};
+		const display = mergeAnketaDisplayFormData(
+			{
+				streamDataSources: {
+					sourceTypicalTasks: [{ name: "stale canonical" }],
+					field_typical: [{ name: "stale custom" }],
+				},
+			},
+			{
+				streamDataSources: {
+					field_typical: [],
+				},
+			},
+			uiSchema,
+		);
+
+		expect(
+			(
+				display.streamDataSources as {
+					sourceTypicalTasks: unknown[];
+					field_typical: unknown[];
+				}
+			).sourceTypicalTasks,
+		).toEqual([]);
+		expect(
+			(
+				display.streamDataSources as {
+					field_typical: unknown[];
+				}
+			).field_typical,
+		).toEqual([]);
+	});
+
 	it("uses calculated summary from liveFormData over stale saved summary", () => {
 		const display = mergeAnketaDisplayFormData(
 			{

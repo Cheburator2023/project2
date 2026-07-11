@@ -168,6 +168,7 @@ const MANUAL_ARCH_COMPONENT_PRESET_DEFS: Pick<
 			addable: false,
 			removable: false,
 			orderable: false,
+			boundWorkIds: [],
 		},
 		uiBranch: {
 			"ui:description":

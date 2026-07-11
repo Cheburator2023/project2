@@ -26,6 +26,7 @@ import type {
 import {
 	buildEmptyV2AnketaTemplateSnapshot,
 	resolveV2AnketaCanvasUiKind,
+	syncTriggerGatedGroupActivationFromTypicalWorks,
 } from "@smart-anketa/api-contract";
 import { evaluateRuleLive } from "../schemaEditor/panels/logicPanel/helpers";
 import { nanoid } from "nanoid";
@@ -46,7 +47,12 @@ import {
 	readLeafUiOptions,
 } from "../schemaEditor/propertiesFieldKind";
 import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayout";
-import { LOGIC_TAB_QUERY } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
+import {
+	BIND_POINTER_QUERY,
+	LOGIC_TAB_QUERY,
+	NEW_WORK_QUERY,
+	ROLLBACK_TYPICAL_WORK_QUERY,
+} from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
 import { useDebouncedV2Calculation } from "../hooks/useDebouncedV2Calculation";
@@ -115,6 +121,8 @@ import {
 	resolveRulesForSelectedSubtree,
 	resolveRulesWhereSelectedIsDependency,
 } from "../utils/schemaEditorEffectiveLogic";
+import { placeTypicalWorkInStream } from "../schemaEditor/placeTypicalWorkInStream";
+import type { V2ExecutorStreamLabel } from "@smart-anketa/api-contract";
 
 function readUiBranch(
 	uiSchema: UiSchema | Record<string, unknown>,
@@ -572,6 +580,17 @@ export const V2TemplateSchemaEditor = ({
 		() => (calculationResult ? mapCalculationResult(calculationResult) : null),
 		[calculationResult],
 	);
+
+	useEffect(() => {
+		if (!mappedCalculation?.liveFormData) return;
+		setFormData((prev) =>
+			syncTriggerGatedGroupActivationFromTypicalWorks(
+				prev,
+				uiSchema,
+				mappedCalculation.liveFormData,
+			),
+		);
+	}, [mappedCalculation?.liveFormData, uiSchema]);
 
 	const logicPreviewPack = useMemo(
 		() =>
@@ -1163,7 +1182,7 @@ export const V2TemplateSchemaEditor = ({
 			index: number,
 			uiOptions?: Record<string, unknown>,
 			uiBranch?: Record<string, unknown>,
-		) => {
+		): string | null => {
 			const key = `field_${nanoid(8)}`;
 			const parentSegs = pointerSegments(parentPointer);
 			const safeIndex = clampCanvasInsertIndex(
@@ -1200,7 +1219,44 @@ export const V2TemplateSchemaEditor = ({
 					}
 					return nextUi as UiSchema;
 				});
+				if (uiOptions?.archComponent === "typicalWork") {
+					setMainTab("logic");
+					setSearchParams(
+						(prev) => {
+							const nextParams = new URLSearchParams(prev);
+							nextParams.set(LOGIC_TAB_QUERY, "works");
+							nextParams.set(NEW_WORK_QUERY, "1");
+							nextParams.set(BIND_POINTER_QUERY, childPointer);
+							nextParams.set(ROLLBACK_TYPICAL_WORK_QUERY, "1");
+							return nextParams;
+						},
+						{ replace: true },
+					);
+				}
+				return childPointer;
 			}
+			return null;
+		},
+		[jsonSchema, uiSchema, pushDraftHistory, setSearchParams],
+	);
+
+	const placeTypicalWorkInStreamBlock = useCallback(
+		(
+			streamExecutor: V2ExecutorStreamLabel,
+			preferredPointer?: string | null,
+		): string | null => {
+			const result = placeTypicalWorkInStream(
+				jsonSchema,
+				uiSchema as Record<string, unknown>,
+				streamExecutor,
+				preferredPointer,
+			);
+			if (!result) return null;
+			pushDraftHistory();
+			setJsonSchema(result.jsonSchema);
+			setUiSchema(result.uiSchema as UiSchema);
+			setSelectedPointer(result.typicalWorkPointer);
+			return result.typicalWorkPointer;
 		},
 		[jsonSchema, uiSchema, pushDraftHistory],
 	);
@@ -1669,6 +1725,7 @@ export const V2TemplateSchemaEditor = ({
 			handleAddFieldPreset,
 			handleAddFieldPresetAt,
 			handleAddFieldPresetAtParent,
+			placeTypicalWorkInStreamBlock,
 			reorderRootFieldKeys,
 			applyGroupFieldOrders,
 			moveCanvasField,
@@ -1749,6 +1806,7 @@ export const V2TemplateSchemaEditor = ({
 			handleAddFieldPreset,
 			handleAddFieldPresetAt,
 			handleAddFieldPresetAtParent,
+			placeTypicalWorkInStreamBlock,
 			reorderRootFieldKeys,
 			applyGroupFieldOrders,
 			moveCanvasField,

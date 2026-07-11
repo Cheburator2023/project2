@@ -46,6 +46,7 @@ import {
 	resolveV2AnketaSectionTitleVariant,
 	resolveV2AnketaWorkflowSectionId,
 	readV2AnketaSectionUiOptions,
+	resolveV2AnketaSectionDisplayTitle,
 	resolveGroupIsActive,
 	type V2ArchComponentType,
 } from "@smart-anketa/api-contract";
@@ -96,13 +97,14 @@ function resolveSectionTitle(
 	schemaNode: RJSFSchema | undefined,
 	uiNode: UiSchema | undefined,
 	fallbackName: string,
+	blockKey?: string,
 ): string {
-	return (
+	const base =
 		(uiNode?.["ui:title"] as string | undefined) ||
 		title ||
 		(typeof schemaNode?.title === "string" ? schemaNode.title : undefined) ||
-		fallbackName
-	);
+		fallbackName;
+	return resolveV2AnketaSectionDisplayTitle(base, uiNode, blockKey);
 }
 
 function propertySchemaFor(
@@ -803,11 +805,15 @@ export function V2PreviewObjectFieldTemplate({
 		anketaReadOnly,
 	} = readAnketaFormContext(registry.formContext);
 
+	const blockKey = fieldPathId?.path?.at(-1);
 	const sectionTitle = resolveSectionTitle(
 		title,
 		schemaNode,
 		uiSchema as UiSchema,
 		fieldPathId?.$id ?? "Секция",
+		typeof blockKey === "string" || typeof blockKey === "number"
+			? String(blockKey)
+			: undefined,
 	);
 	const sectionDescription =
 		typeof description === "string" ? description : undefined;

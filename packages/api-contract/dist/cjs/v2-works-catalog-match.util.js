@@ -12,9 +12,11 @@ exports.isPresenceOnlyTriggerRule = isPresenceOnlyTriggerRule;
 exports.resolveTriggerStatusCatalogParam = resolveTriggerStatusCatalogParam;
 exports.triggerRuleCatalogGroupKey = triggerRuleCatalogGroupKey;
 exports.catalogValueMatchesTriggerRule = catalogValueMatchesTriggerRule;
+exports.laborValueMatches = laborValueMatches;
 exports.typicalWorkRulesMatchSource = typicalWorkRulesMatchSource;
 exports.resolveLaborCoefficient = resolveLaborCoefficient;
 exports.resolveLaborAnyOfCoefficient = resolveLaborAnyOfCoefficient;
+exports.resolveByValueLaborParamCoefficients = resolveByValueLaborParamCoefficients;
 const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
 Object.defineProperty(exports, "formatParamNameWithSourceKeys", { enumerable: true, get: function () { return v2_work_param_source_keys_util_1.formatParamNameWithSourceKeys; } });
 Object.defineProperty(exports, "parseParamNameSourceKeys", { enumerable: true, get: function () { return v2_work_param_source_keys_util_1.parseParamNameSourceKeys; } });
@@ -201,34 +203,54 @@ function compareRuleValue(actual, expected, operator) {
     }
 }
 function scalarRuleValueMatches(actual, rule) {
-    const candidates = [rule.valueCode, rule.valueLabel].filter((value) => value != null && String(value).trim() !== "");
-    if (candidates.length === 0)
-        return false;
     if ([">=", "<=", ">", "<"].includes(rule.operator)) {
         return compareRuleValue(actual, rule.valueCode ?? rule.valueLabel, rule.operator);
     }
-    const actualStr = String(actual ?? "");
-    const matches = candidates.some((candidate) => {
-        if (actualStr === candidate)
+    const hasValue = (rule.valueCode != null && String(rule.valueCode).trim() !== "") ||
+        (rule.valueLabel != null && String(rule.valueLabel).trim() !== "");
+    if (!hasValue)
+        return false;
+    const matches = laborValueMatches(actual, rule.valueCode, rule.valueLabel);
+    if (rule.operator === "!=")
+        return !matches;
+    return matches;
+}
+/** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */
+function laborValueMatches(actual, valueCode, valueLabel) {
+    if (valueLabel != null && String(valueLabel).trim() !== "") {
+        if (String(actual) === valueLabel)
             return true;
         if (typeof actual === "boolean") {
-            const norm = candidate.trim().toLowerCase();
+            const norm = valueLabel.trim().toLowerCase();
+            if (norm === "да" && actual === true)
+                return true;
+            if (norm === "нет" && actual === false)
+                return true;
+            if (norm === "true" && actual === true)
+                return true;
+            if (norm === "false" && actual === false)
+                return true;
+        }
+    }
+    if (valueCode != null && String(valueCode).trim() !== "") {
+        if (String(actual) === valueCode)
+            return true;
+        if (typeof actual === "boolean") {
+            const norm = valueCode.trim().toLowerCase();
+            if (norm === "true" && actual === true)
+                return true;
+            if (norm === "false" && actual === false)
+                return true;
             if (norm === "да" && actual === true)
                 return true;
             if (norm === "нет" && actual === false)
                 return true;
         }
-        return false;
-    });
-    if (rule.operator === "!=")
-        return !matches;
-    return matches;
+    }
+    return false;
 }
 function compareRuleValuesSet(actual, expectedCodes, expectedLabels, operator) {
-    const actualStr = String(actual ?? "");
-    const matches = expectedCodes.some((code, index) => actualStr === code ||
-        actualStr === (expectedLabels[index] ?? "") ||
-        actualStr === String(expectedLabels[index] ?? ""));
+    const matches = expectedCodes.some((code, index) => laborValueMatches(actual, code, expectedLabels[index] ?? null));
     return operator === "not_in" ? !matches : matches;
 }
 /** Все условия работы (логическое И) против контекста строки/объекта анкеты. */
@@ -264,26 +286,20 @@ function typicalWorkRulesMatchSource(rules, source) {
 }
 function resolveLaborCoefficient(source, paramCode, valueCode, valueLabel, paramName = null) {
     const actual = readSourceField(source, paramCode, paramName);
-    if (valueLabel != null) {
-        if (String(actual) === valueLabel)
-            return true;
-        if (typeof actual === "boolean") {
-            const norm = valueLabel.trim().toLowerCase();
-            if (norm === "да" && actual === true)
-                return true;
-            if (norm === "нет" && actual === false)
-                return true;
-        }
-    }
-    if (valueCode != null && String(actual) === valueCode)
-        return true;
-    return false;
+    return laborValueMatches(actual, valueCode, valueLabel);
 }
 function resolveLaborAnyOfCoefficient(source, paramCode, anyOf, paramName = null) {
     const actual = readSourceField(source, paramCode, paramName);
-    const actualStr = String(actual ?? "");
-    const matches = anyOf.valueCodes.some((code, index) => actualStr === code ||
-        actualStr === (anyOf.valueLabels[index] ?? "") ||
-        actualStr === String(anyOf.valueLabels[index] ?? ""));
+    const matches = anyOf.valueCodes.some((code, index) => laborValueMatches(actual, code, anyOf.valueLabels[index] ?? null));
     return matches ? anyOf.coeffOn : anyOf.coeffOff;
+}
+/** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
+function resolveByValueLaborParamCoefficients(source, rows) {
+    const paramCoefficients = {};
+    for (const row of rows) {
+        if (resolveLaborCoefficient(source, row.paramCode, row.valueCode, row.valueLabel, row.paramName ?? null)) {
+            paramCoefficients[row.paramCode] = row.coefficient;
+        }
+    }
+    return paramCoefficients;
 }

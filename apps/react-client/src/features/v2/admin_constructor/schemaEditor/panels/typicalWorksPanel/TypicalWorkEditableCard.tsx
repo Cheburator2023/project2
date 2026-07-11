@@ -46,6 +46,7 @@ import {
 	isSchemaTextualParam,
 	resolveEffectiveWorkArchComponentType,
 	schemaLaborParamPickerCaption,
+	schemaParamRuleName,
 	schemaWorkParameterEmptyPickerMessage,
 } from "./schemaWorkParameters";
 import {
@@ -74,6 +75,11 @@ import {
 	streamColor,
 	streamDisplayLabel,
 } from "./typicalWorksAreas";
+import { isExecutorStreamPresentInSchema } from "@smart-anketa/api-contract";
+import {
+	ExecutorStreamMenuRow,
+	ExecutorStreamPresenceHint,
+} from "./ExecutorStreamPresenceLabel";
 import {
 	ARCH_COMPONENT_DOT,
 	archComponentShortLabel,
@@ -87,6 +93,7 @@ import {
 	useDebouncedTypicalWorkSave,
 	type SaveStatus,
 } from "./useDebouncedTypicalWorkSave";
+import { TypicalWorkValueMatchingInfo } from "./typicalWorkValueMatchingHelp";
 
 type TypicalWorkEditableCardProps = {
 	card: V2TypicalWorkCardDto | undefined;
@@ -362,6 +369,7 @@ export function TypicalWorkEditableCard({
 
 	const addLaborParam = (picked: V2TypicalWorkParameterDto) => {
 		if (!draft) return;
+		const paramName = schemaParamRuleName(picked);
 		const useAnyOf =
 			picked.numeric ||
 			isSchemaTextualParam(picked) ||
@@ -369,7 +377,7 @@ export function TypicalWorkEditableCard({
 		const newGroup = useAnyOf
 			? {
 					paramCode: picked.code,
-					paramName: picked.name,
+					paramName,
 					kind: "any_of" as const,
 					coefficients: [],
 					anyOf: {
@@ -381,13 +389,13 @@ export function TypicalWorkEditableCard({
 				}
 			: {
 					paramCode: picked.code,
-					paramName: picked.name,
+					paramName,
 					kind: "by_value" as const,
 					coefficients: picked.values.map((v) => ({
 						id: `new-${Date.now()}-${v.code}`,
 						streamExecutor: draft.streamExecutor,
 						paramCode: picked.code,
-						paramName: picked.name,
+						paramName,
 						valueCode: v.code,
 						valueLabel: v.label,
 						coefficient: 1,
@@ -828,24 +836,15 @@ export function TypicalWorkEditableCard({
 											}}
 											sx={{ borderRadius: 1, py: 1 }}
 										>
-											<Box
-												sx={{
-													width: 8,
-													height: 8,
-													borderRadius: "2px",
-													bgcolor: streamColor(stream),
-													mr: 1,
-												}}
+											<ExecutorStreamMenuRow
+												stream={streamDisplayLabel(stream)}
+												color={streamColor(stream)}
+												present={isExecutorStreamPresentInSchema(
+													uiSchema,
+													stream,
+												)}
+												selected={streamExecutor === stream}
 											/>
-											{streamDisplayLabel(stream)}
-											{stream !== streamDisplayLabel(stream) ? (
-												<Typography
-													component="span"
-													sx={{ ml: 0.75, fontSize: 11, color: "#8a93a3" }}
-												>
-													({stream})
-												</Typography>
-											) : null}
 										</MenuItem>
 									))}
 								{otherStreams.length > 0 ? (
@@ -874,16 +873,15 @@ export function TypicalWorkEditableCard({
 												}}
 												sx={{ borderRadius: 1, py: 1 }}
 											>
-												<Box
-													sx={{
-														width: 8,
-														height: 8,
-														borderRadius: "2px",
-														bgcolor: streamColor(stream),
-														mr: 1,
-													}}
+												<ExecutorStreamMenuRow
+													stream={streamDisplayLabel(stream)}
+													color={streamColor(stream)}
+													present={isExecutorStreamPresentInSchema(
+														uiSchema,
+														stream,
+													)}
+													selected={streamExecutor === stream}
 												/>
-												{streamDisplayLabel(stream)}
 											</MenuItem>
 										))}
 									</>
@@ -893,6 +891,14 @@ export function TypicalWorkEditableCard({
 					</Popper>
 				</Box>
 			</Box>
+
+			{streamExecutor ? (
+				<Box sx={{ mb: 2 }}>
+					<ExecutorStreamPresenceHint
+						present={isExecutorStreamPresentInSchema(uiSchema, streamExecutor)}
+					/>
+				</Box>
+			) : null}
 
 			{errorMessage ? (
 				<Alert severity="error" sx={{ mb: 2 }}>
@@ -1011,11 +1017,11 @@ export function TypicalWorkEditableCard({
 								/>
 							</Box>
 						</Box>
-						<Typography sx={{ fontSize: 11.5, color: "#8a93a3", mb: 1.5 }}>
+						<Typography sx={{ fontSize: 11.5, color: "#8a93a3", mb: 1 }}>
 							Коэффициенты в разрезе стрима «
-							{streamDisplayLabel(streamExecutor)}». Редактируются по каждому
-							значению; используются в формуле как множители.
+							{streamDisplayLabel(streamExecutor)}».
 						</Typography>
+						<TypicalWorkValueMatchingInfo variant="labor" sx={{ mb: 1.5 }} />
 						{draft.laborParams.length === 0 ? (
 							<Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
 								Параметры трудоёмкости не заданы — норма используется как есть

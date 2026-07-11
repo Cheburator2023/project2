@@ -5,7 +5,7 @@ import type {
 	V2WorkFormulaToken,
 	V2WorkTriggerStatus,
 } from "./v2-typical-work.types";
-import { validateWorkFormulaTokens } from "./v2-work-formula.util";
+import { type WorkFormulaLaborParamRef, validateWorkFormulaTokens } from "./v2-work-formula.util";
 import { validateTermsFormula, termsToTokenFormula } from "./v2-work-terms-formula.util";
 import {
 	catalogValueMatchesTriggerRule,
@@ -189,6 +189,26 @@ export function validateFormulaAgainstParams(
 	return err ? [{ path: "formula", message: err }] : [];
 }
 
+export function laborParamRefsFromPatchGroups(
+	laborParams: Array<{ paramCode: string; paramName?: string | null }>,
+): WorkFormulaLaborParamRef[] {
+	return laborParams.map((group) => ({
+		paramCode: group.paramCode,
+		paramName: group.paramName ?? null,
+	}));
+}
+
+export function validateFormulaAgainstLaborParams(
+	tokens: V2WorkFormulaToken[],
+	laborParams: WorkFormulaLaborParamRef[],
+): ValidationIssue[] {
+	const err = validateWorkFormulaTokens(tokens, {
+		laborParams,
+		allowInvalidParamRefs: true,
+	});
+	return err ? [{ path: "formula", message: err }] : [];
+}
+
 export type CollectPatchValidationOptions = {
 	coverageDate?: string;
 };
@@ -274,15 +294,21 @@ export function collectTypicalWorkPatchValidationErrors(
 	}
 
 	if (dto.formulaTerms && dto.laborParams) {
-		const tokens = dto.formula?.tokens ?? termsToTokenFormula(dto.formulaTerms).tokens;
-		const allowed = collectAllowedParamCodes(
-			dto.laborParams.flatMap((g) =>
-				(g.coefficients ?? []).length
-					? (g.coefficients ?? [])
-					: [{ paramCode: g.paramCode }],
+		const tokens =
+			dto.formula?.tokens ?? termsToTokenFormula(dto.formulaTerms).tokens;
+		issues.push(
+			...validateFormulaAgainstLaborParams(
+				tokens,
+				laborParamRefsFromPatchGroups(dto.laborParams),
 			),
 		);
-		issues.push(...validateFormulaAgainstParams(tokens, allowed));
+	} else if (dto.formula && dto.laborParams) {
+		issues.push(
+			...validateFormulaAgainstLaborParams(
+				dto.formula.tokens,
+				laborParamRefsFromPatchGroups(dto.laborParams),
+			),
+		);
 	}
 
 	if (dto.formula && dto.laborCoefficients) {
@@ -469,6 +495,11 @@ export function resolveWorkCoefficientCatalogParam(
 	return catalog.find((item) => item.sourceKeys?.includes(paramCode));
 }
 
+/** Параметр трудоёмкости из поля схемы анкеты (`field_*`), не из глобального CSV. */
+export function isSchemaFieldLaborParamCode(paramCode: string): boolean {
+	return /^field_[A-Za-z0-9_-]+$/.test(paramCode.trim());
+}
+
 /**
  * F-03 §578: значение коэффициента трудоёмкости доступно, только если оно
  * присутствует в активном глобальном справочнике значений параметра. Если
@@ -484,6 +515,7 @@ export function isWorkCoefficientValueAvailable(
 	atDate?: string,
 ): boolean {
 	if (row.valueCode == null && row.valueLabel == null) return true;
+	if (isSchemaFieldLaborParamCode(row.paramCode)) return true;
 	const param = resolveWorkCoefficientCatalogParam(catalog, row.paramCode);
 	if (!param) return false;
 	return param.values.some(

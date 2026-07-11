@@ -37,4 +37,38 @@ const v2_group_activation_util_1 = require("./v2-group-activation.util");
         (0, vitest_1.expect)((0, v2_group_activation_util_1.isCalculationPathActive)(formData, "/streamDigitalAgents/localParams")).toBe(false);
         (0, vitest_1.expect)((0, v2_group_activation_util_1.isCalculationPathActive)(formData, "/summary/total")).toBe(true);
     });
+    (0, vitest_1.it)("finds trigger-gated activatable ancestor for typical work path", () => {
+        const ui = {
+            streamDataSources: {
+                "ui:options": { groupActivatable: true, groupActive: false },
+                field_typical: {
+                    "ui:options": { archComponent: "typicalWork" },
+                },
+            },
+        };
+        (0, vitest_1.expect)((0, v2_group_activation_util_1.findTriggerGatedGroupActivatableAncestor)(ui, "streamDataSources.field_typical")).toBe("streamDataSources");
+    });
+    (0, vitest_1.it)("syncs trigger-gated group activation from live typical work rows", () => {
+        const ui = {
+            streamDataSources: {
+                "ui:options": { groupActivatable: true, groupActive: false },
+                field_typical: {
+                    "ui:options": { archComponent: "typicalWork" },
+                },
+            },
+        };
+        const base = (0, v2_group_activation_util_1.ensureGroupActivationDefaults)({}, ui);
+        const activated = (0, v2_group_activation_util_1.syncTriggerGatedGroupActivationFromTypicalWorks)(base, ui, {
+            streamDataSources: {
+                field_typical: [{ name: "Работа Кирилла" }],
+            },
+        });
+        (0, vitest_1.expect)(activated.groupActivation).toEqual({ streamDataSources: true });
+        const deactivated = (0, v2_group_activation_util_1.syncTriggerGatedGroupActivationFromTypicalWorks)(activated, ui, {
+            streamDataSources: {
+                field_typical: [],
+            },
+        });
+        (0, vitest_1.expect)(deactivated.groupActivation).toEqual({ streamDataSources: false });
+    });
 });

@@ -403,6 +403,96 @@ describe("V2CalculationService", () => {
 		expect(tasks.some((t) => t.name === "Работа по справочнику")).toBe(true);
 	});
 
+	it("clears legacy fan-out typical work paths when root trigger stops matching", async () => {
+		const staleRow = {
+			taskCode: "CAT_38a49690",
+			name: "ееее",
+			total: 10,
+			estimateHoursPerDay: 10,
+			coefficient: 1,
+		};
+		let shouldGenerate = true;
+		const runtime = {
+			buildCatalogTasks: async () =>
+				shouldGenerate
+					? [
+							{
+								taskCode: "CAT_38a49690",
+								name: "ееее",
+								workType: "—",
+								reason: "test",
+								estimateHoursPerDay: 10,
+								coefficient: 1,
+								total: 10,
+								match: {},
+								workId: "CAT_38a49690",
+							},
+						]
+					: [],
+		} as unknown as V2TypicalWorkRuntimeService;
+
+		const service = new V2CalculationService(
+			null as never,
+			null as never,
+			runtime,
+		);
+
+		const minimalJsonSchema = {
+			type: "object",
+			properties: {
+				field_OFmNQhnL: { type: "array", items: { type: "object" } },
+				field_9t6xDZub: { type: "string" },
+			},
+		};
+		const minimalUiSchema = {
+			field_OFmNQhnL: { "ui:options": { archComponent: "typicalWork" } },
+		};
+
+		shouldGenerate = true;
+		const active = await service.evaluate(
+			{ rules: [] },
+			{ field_9t6xDZub: "Да" },
+			{ jsonSchema: minimalJsonSchema, uiSchema: minimalUiSchema },
+		);
+		expect(
+			(active.formData as { field_OFmNQhnL: unknown[] }).field_OFmNQhnL.length,
+		).toBeGreaterThan(0);
+
+		shouldGenerate = false;
+		const inactive = await service.evaluate(
+			{ rules: [] },
+			{
+				field_9t6xDZub: "Нет",
+				field_OFmNQhnL: [staleRow],
+				streamDataSources: { sourceTypicalTasks: [staleRow] },
+				detailInfo: { detailTypicalTasks: [staleRow] },
+				streamModelControl: { "field_Khn6-HAW": [staleRow] },
+			},
+			{ jsonSchema: minimalJsonSchema, uiSchema: minimalUiSchema },
+		);
+
+		const formData = inactive.formData as {
+			field_OFmNQhnL: unknown[];
+			streamDataSources: { sourceTypicalTasks: unknown[] };
+			detailInfo: { detailTypicalTasks: unknown[] };
+			streamModelControl: { "field_Khn6-HAW": unknown[] };
+			summary: {
+				platformStreams: Array<{
+					streamName: string;
+					baseTypicalScore: number;
+				}>;
+			};
+		};
+		expect(formData.field_OFmNQhnL).toEqual([]);
+		expect(formData.streamDataSources.sourceTypicalTasks).toEqual([]);
+		expect(formData.detailInfo.detailTypicalTasks).toEqual([]);
+		expect(formData.streamModelControl["field_Khn6-HAW"]).toEqual([]);
+		const sourcesStream = formData.summary.platformStreams.find(
+			(row) => row.streamName === "Источники данных",
+		);
+		expect(sourcesStream?.baseTypicalScore).toBe(0);
+	});
+
 	it("uses stream localParams for coefficient when source row has no weights (ФТ-024)", async () => {
 		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
 			detailInfo: {

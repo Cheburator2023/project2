@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
@@ -8,9 +9,20 @@ import FormControl from "@mui/material/FormControl";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { V2_SOURCE_STREAM } from "@smart-anketa/api-contract";
+import {
+	V2_EXECUTOR_STREAM_LABELS,
+	V2_SOURCE_STREAM,
+	type V2ExecutorStreamLabel,
+} from "@smart-anketa/api-contract";
 import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
-import { WORK_ARCH_COMPONENT_TYPES, DEFAULT_WORK_ARCH_COMPONENT_TYPE } from "./typicalWorkPatchErrors";
+import {
+	WORK_ARCH_COMPONENT_TYPES,
+	DEFAULT_WORK_ARCH_COMPONENT_TYPE,
+} from "./typicalWorkPatchErrors";
+import {
+	ExecutorStreamPresenceHint,
+	ExecutorStreamPresenceLabel,
+} from "./ExecutorStreamPresenceLabel";
 
 export type CreateTypicalWorkDialogPayload = {
 	name: string;
@@ -25,6 +37,8 @@ type CreateTypicalWorkDialogProps = {
 	mode?: "create" | "edit";
 	defaultArchComponentType?: string;
 	defaultStreamExecutor?: string | null;
+	isStreamPresentInSchema?: (stream: string) => boolean;
+	onCreateStreamBlock?: (stream: V2ExecutorStreamLabel) => void;
 	onClose: () => void;
 	onSubmit: (payload: CreateTypicalWorkDialogPayload) => void;
 };
@@ -35,6 +49,8 @@ export function CreateTypicalWorkDialog({
 	mode = "create",
 	defaultArchComponentType,
 	defaultStreamExecutor,
+	isStreamPresentInSchema,
+	onCreateStreamBlock,
 	onClose,
 	onSubmit,
 }: CreateTypicalWorkDialogProps) {
@@ -58,6 +74,11 @@ export function CreateTypicalWorkDialog({
 			setStarterNorm("1.00");
 		}
 	}, [defaultArchComponentType, defaultStreamExecutor, open]);
+
+	const streamPresent = useMemo(
+		() => isStreamPresentInSchema?.(streamExecutor) ?? false,
+		[isStreamPresentInSchema, streamExecutor],
+	);
 
 	const trimmed = name.trim();
 	const normValue = Number(starterNorm.replace(",", "."));
@@ -96,9 +117,48 @@ export function CreateTypicalWorkDialog({
 				</FormControl>
 				{isCreate ? (
 					<>
-						<Typography sx={{ fontSize: 12, color: "#6b7484" }}>
-							Стрим-исполнитель: <b>{streamExecutor}</b>
-						</Typography>
+						<TextField
+							select
+							label="Стрим-исполнитель"
+							value={streamExecutor}
+							onChange={(e) => setStreamExecutor(String(e.target.value))}
+							helperText="Назначение создаётся сразу; блок стрима в конструкторе нужен для полей и localParams."
+						>
+							{V2_EXECUTOR_STREAM_LABELS.map((stream) => (
+								<MenuItem key={stream} value={stream}>
+									<Box
+										sx={{
+											display: "flex",
+											alignItems: "center",
+											gap: 1,
+											width: "100%",
+										}}
+									>
+										<Typography sx={{ flex: 1 }}>{stream}</Typography>
+										<ExecutorStreamPresenceLabel
+											present={isStreamPresentInSchema?.(stream) ?? false}
+										/>
+									</Box>
+								</MenuItem>
+							))}
+						</TextField>
+						<ExecutorStreamPresenceHint present={streamPresent} />
+						{!streamPresent && onCreateStreamBlock ? (
+							<Button
+								size="small"
+								variant="outlined"
+								onClick={() =>
+									onCreateStreamBlock(streamExecutor as V2ExecutorStreamLabel)
+								}
+								disabled={
+									!V2_EXECUTOR_STREAM_LABELS.includes(
+										streamExecutor as V2ExecutorStreamLabel,
+									)
+								}
+							>
+								Создать стримовый блок в конструкторе
+							</Button>
+						) : null}
 						<TextField
 							label="Стартовый норматив, чел.-дн."
 							value={starterNorm}
@@ -113,17 +173,23 @@ export function CreateTypicalWorkDialog({
 				)}
 			</DialogContent>
 			<DialogActions sx={{ flexDirection: "column", alignItems: "stretch", px: 3, pb: 2 }}>
-				<BoxActions pending={pending} canSubmit={canSubmit} isCreate={isCreate} onClose={onClose} onSubmit={() =>
-					onSubmit({
-						name: trimmed,
-						archComponentType,
-						streamExecutor: isCreate ? streamExecutor : undefined,
-						starterNormValue: isCreate ? normValue : undefined,
-					})
-				} />
+				<BoxActions
+					pending={pending}
+					canSubmit={canSubmit}
+					isCreate={isCreate}
+					onClose={onClose}
+					onSubmit={() =>
+						onSubmit({
+							name: trimmed,
+							archComponentType,
+							streamExecutor: isCreate ? streamExecutor : undefined,
+							starterNormValue: isCreate ? normValue : undefined,
+						})
+					}
+				/>
 				<Typography sx={{ fontSize: 11.5, color: "#8a93a3", mt: 1, textAlign: "center" }}>
 					{isCreate
-						? "Работа добавится в выбранный архитектурный компонент"
+						? "Работа и назначение на стрим создаются сразу в справочнике"
 						: "Изменения применяются сразу к справочнику"}
 				</Typography>
 			</DialogActions>
