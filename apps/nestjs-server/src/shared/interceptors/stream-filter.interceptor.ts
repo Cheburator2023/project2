@@ -35,10 +35,7 @@ export class StreamFilterInterceptor implements NestInterceptor {
 		private readonly streamMappingService: StreamMappingService,
 	) {}
 
-	intercept(
-		context: ExecutionContext,
-		next: CallHandler,
-	): Observable<ResponseData> {
+	intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
 		const shouldFilter = this.reflector.getAllAndOverride<boolean>(
 			STREAM_FILTER_KEY,
 			[context.getHandler(), context.getClass()],
@@ -52,7 +49,11 @@ export class StreamFilterInterceptor implements NestInterceptor {
 
 		return next
 			.handle()
-			.pipe(map((data: ResponseData) => this.filterResponse(data, user)));
+			.pipe(
+				map((data: unknown) =>
+					this.filterResponse(data as ResponseData, user),
+				),
+			);
 	}
 
 	private filterResponse(data: ResponseData, user?: User): ResponseData {
