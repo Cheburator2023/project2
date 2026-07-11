@@ -121,6 +121,8 @@ import {
 	resolveRulesForSelectedSubtree,
 	resolveRulesWhereSelectedIsDependency,
 } from "../utils/schemaEditorEffectiveLogic";
+import { placeTypicalWorkInStream } from "../schemaEditor/placeTypicalWorkInStream";
+import type { V2ExecutorStreamLabel } from "@smart-anketa/api-contract";
 
 function readUiBranch(
 	uiSchema: UiSchema | Record<string, unknown>,
@@ -1180,7 +1182,7 @@ export const V2TemplateSchemaEditor = ({
 			index: number,
 			uiOptions?: Record<string, unknown>,
 			uiBranch?: Record<string, unknown>,
-		) => {
+		): string | null => {
 			const key = `field_${nanoid(8)}`;
 			const parentSegs = pointerSegments(parentPointer);
 			const safeIndex = clampCanvasInsertIndex(
@@ -1231,9 +1233,32 @@ export const V2TemplateSchemaEditor = ({
 						{ replace: true },
 					);
 				}
+				return childPointer;
 			}
+			return null;
 		},
 		[jsonSchema, uiSchema, pushDraftHistory, setSearchParams],
+	);
+
+	const placeTypicalWorkInStreamBlock = useCallback(
+		(
+			streamExecutor: V2ExecutorStreamLabel,
+			preferredPointer?: string | null,
+		): string | null => {
+			const result = placeTypicalWorkInStream(
+				jsonSchema,
+				uiSchema as Record<string, unknown>,
+				streamExecutor,
+				preferredPointer,
+			);
+			if (!result) return null;
+			pushDraftHistory();
+			setJsonSchema(result.jsonSchema);
+			setUiSchema(result.uiSchema as UiSchema);
+			setSelectedPointer(result.typicalWorkPointer);
+			return result.typicalWorkPointer;
+		},
+		[jsonSchema, uiSchema, pushDraftHistory],
 	);
 
 	const handleAddFieldPresetAt = useCallback(
@@ -1700,6 +1725,7 @@ export const V2TemplateSchemaEditor = ({
 			handleAddFieldPreset,
 			handleAddFieldPresetAt,
 			handleAddFieldPresetAtParent,
+			placeTypicalWorkInStreamBlock,
 			reorderRootFieldKeys,
 			applyGroupFieldOrders,
 			moveCanvasField,
@@ -1780,6 +1806,7 @@ export const V2TemplateSchemaEditor = ({
 			handleAddFieldPreset,
 			handleAddFieldPresetAt,
 			handleAddFieldPresetAtParent,
+			placeTypicalWorkInStreamBlock,
 			reorderRootFieldKeys,
 			applyGroupFieldOrders,
 			moveCanvasField,

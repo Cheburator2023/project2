@@ -1,5 +1,6 @@
 import {
 	TYPICAL_WORK_BOUND_WORK_IDS_KEY,
+	collectGeneratedTypicalWorkArrayPaths,
 	readTypicalWorkBoundWorkIdsAtOutputPath,
 } from "@smart-anketa/api-contract";
 import { normalizeJsonPointer } from "../utils/schemaPaths";
@@ -65,4 +66,33 @@ export function removeBoundWorkIdAtPointer(
 		pointer,
 		current.filter((id) => id !== workId),
 	);
+}
+
+function outputPathToPointer(outputPath: string): string {
+	return `/${outputPath.split(".").filter(Boolean).join("/")}`;
+}
+
+/** Убрать work id из boundWorkIds на всех блоках typicalWork (после удаления работы в логике). */
+export function removeWorkIdFromAllTypicalWorkBindings(
+	uiSchema: Record<string, unknown>,
+	workId: string,
+	allWorkIds: string[],
+): Record<string, unknown> {
+	const outputPaths = collectGeneratedTypicalWorkArrayPaths(uiSchema);
+	if (outputPaths.length === 0) return uiSchema;
+
+	let next = uiSchema;
+	for (const outputPath of outputPaths) {
+		const pointer = outputPathToPointer(outputPath);
+		const explicit = readBoundWorkIdsAtPointer(next, pointer);
+		if (explicit === undefined) {
+			if (!allWorkIds.includes(workId)) continue;
+			const remaining = allWorkIds.filter((id) => id !== workId);
+			next = patchBoundWorkIdsAtPointer(next, pointer, remaining);
+			continue;
+		}
+		if (!explicit.includes(workId)) continue;
+		next = removeBoundWorkIdAtPointer(next, pointer, workId, allWorkIds);
+	}
+	return next;
 }

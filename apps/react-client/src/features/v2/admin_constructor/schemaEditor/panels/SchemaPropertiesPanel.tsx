@@ -62,6 +62,7 @@ import {
 import {
 	appendBoundWorkIdAtPointer,
 	pointerToOutputPath,
+	readBoundWorkIdsAtPointer,
 	removeBoundWorkIdAtPointer,
 	resolveEffectiveBoundWorkIds,
 } from "../typicalWorkBlockBinding";
@@ -389,13 +390,21 @@ export function SchemaPropertiesPanel() {
 				: [],
 		[selectedPointer, isTypicalWorkBlock, uiSchema, allTypicalWorkIds],
 	);
+	const explicitBoundWorkIds = useMemo(
+		() =>
+			selectedPointer && isTypicalWorkBlock
+				? (readBoundWorkIdsAtPointer(uiSchema, selectedPointer) ?? [])
+				: [],
+		[selectedPointer, isTypicalWorkBlock, uiSchema],
+	);
 	const boundTypicalWorks = useMemo(
 		() => typicalWorks.filter((work) => boundWorkIds.includes(work.id)),
 		[typicalWorks, boundWorkIds],
 	);
 	const unboundTypicalWorks = useMemo(
-		() => typicalWorks.filter((work) => !boundWorkIds.includes(work.id)),
-		[typicalWorks, boundWorkIds],
+		() =>
+			typicalWorks.filter((work) => !explicitBoundWorkIds.includes(work.id)),
+		[typicalWorks, explicitBoundWorkIds],
 	);
 	const typicalWorkOutputPath = useMemo(
 		() => (selectedPointer ? pointerToOutputPath(selectedPointer) : ""),
@@ -1341,7 +1350,7 @@ export function SchemaPropertiesPanel() {
 										))}
 									</Flex>
 								)}
-								{unboundTypicalWorks.length > 0 ? (
+								{typicalWorks.length > 0 ? (
 									<Box sx={{ mt: 1 }}>
 										<FuzzyAutocomplete<(typeof typicalWorks)[number]>
 											options={unboundTypicalWorks}
@@ -1360,9 +1369,19 @@ export function SchemaPropertiesPanel() {
 													{ recordHistory: false },
 												);
 											}}
-											getOptionLabel={(work) => work.name}
+											getOptionLabel={(work) =>
+												work.archComponentType
+													? `${work.name} · ${work.archComponentType}`
+													: work.name
+											}
 											label="Привязать существующую"
+											placeholder={
+												unboundTypicalWorks.length === 0
+													? "Все работы шаблона уже привязаны к этому блоку"
+													: "Выберите работу из справочника шаблона"
+											}
 											size="small"
+											disabled={unboundTypicalWorks.length === 0}
 										/>
 									</Box>
 								) : null}
