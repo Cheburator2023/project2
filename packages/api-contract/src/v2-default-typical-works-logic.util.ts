@@ -147,10 +147,14 @@ const PATCHED_RULE_IDS = new Set([
 	"unified-control-typical-works",
 ]);
 
-function isPatchedTypicalWorksCatalogRule(rule: V2LogicRuleDto): boolean {
+export function isTypicalWorksCatalogLogicRule(rule: V2LogicRuleDto): boolean {
 	return (
 		PATCHED_RULE_IDS.has(rule.id) || rule.id.startsWith("typical-works-catalog-")
 	);
+}
+
+function isPatchedTypicalWorksCatalogRule(rule: V2LogicRuleDto): boolean {
+	return isTypicalWorksCatalogLogicRule(rule);
 }
 
 const LEGACY_CONTROL_TYPICAL_TASKS_PATH =

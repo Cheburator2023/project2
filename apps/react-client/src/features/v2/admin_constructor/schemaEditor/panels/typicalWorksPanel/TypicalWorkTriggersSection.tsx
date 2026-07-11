@@ -1,9 +1,11 @@
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Typography from "@mui/material/Typography";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import type {
 	V2TypicalWorkParameterDto,
 	V2TypicalWorkRuleDto,
@@ -29,6 +31,7 @@ import {
 	filterRulesByGroupKey,
 	isSchemaTextualParam,
 	resolveSchemaParamForTriggerRule,
+	resolveSchemaParamFieldRef,
 	schemaParamDisplayName,
 	schemaParamRuleName,
 	schemaWorkParameterEmptyPickerMessage,
@@ -46,6 +49,7 @@ type TypicalWorkTriggersSectionProps = {
 	methodologyCatalog?: V2TypicalWorkParameterDto[];
 	streamExecutor: string;
 	onChange: (rules: V2TypicalWorkRuleDto[]) => void;
+	onNavigateToSchemaField?: (pointer: string) => void;
 };
 
 const OPERATOR_LABELS: Record<V2WorkRuleOperator, string> = {
@@ -134,6 +138,7 @@ export function TypicalWorkTriggersSection({
 	methodologyCatalog = [],
 	streamExecutor,
 	onChange,
+	onNavigateToSchemaField,
 }: TypicalWorkTriggersSectionProps) {
 	const [pickerKey, setPickerKey] = useState(0);
 	const banner = triggerBanner(
@@ -314,7 +319,11 @@ export function TypicalWorkTriggersSection({
 						}}
 						getOptionLabel={(param) => param.name}
 						getOptionValue={(param) => param.code}
-						getOptionSecondaryText={(param) => param.description ?? undefined}
+						getOptionSecondaryText={(param) => {
+							const ref = resolveSchemaParamFieldRef(param);
+							if (ref.varPath) return `${ref.varPath} · ${ref.fieldKey}`;
+							return param.description ?? param.code;
+						}}
 						label="Параметр-триггер"
 						placeholder="Выберите поле схемы…"
 						emptyLabel="Выберите поле схемы…"
@@ -445,6 +454,7 @@ export function TypicalWorkTriggersSection({
 								? "Тип источника данных"
 								: schemaParamDisplayName(paramRules[0]?.paramName) ||
 									groupKey);
+						const fieldRef = resolveSchemaParamFieldRef(param);
 						return (
 							<Box
 								key={groupKey}
@@ -458,27 +468,73 @@ export function TypicalWorkTriggersSection({
 								<Box
 									sx={{
 										display: "flex",
-										alignItems: "center",
+										alignItems: "flex-start",
 										gap: 1,
 										mb: 1.1,
 									}}
 								>
-									<Typography
-										sx={{
-											flex: 1,
-											fontSize: 12.5,
-											fontWeight: 700,
-											color: "#1d2435",
-											lineHeight: 1.25,
-										}}
-									>
-										{displayName}
-									</Typography>
+									<Box sx={{ flex: 1, minWidth: 0 }}>
+										<Typography
+											sx={{
+												fontSize: 12.5,
+												fontWeight: 700,
+												color: "#1d2435",
+												lineHeight: 1.25,
+											}}
+										>
+											{displayName}
+										</Typography>
+										{fieldRef.varPath ? (
+											<Typography
+												sx={{
+													mt: 0.35,
+													fontSize: 10.5,
+													color: "#8a93a3",
+													fontFamily:
+														"ui-monospace, SFMono-Regular, Menlo, monospace",
+													lineHeight: 1.35,
+													wordBreak: "break-all",
+												}}
+											>
+												{fieldRef.varPath} · {fieldRef.fieldKey}
+											</Typography>
+										) : (
+											<Typography
+												sx={{ mt: 0.35, fontSize: 10.5, color: "#8a93a3" }}
+											>
+												{groupKey}
+											</Typography>
+										)}
+									</Box>
+									{fieldRef.pointer && onNavigateToSchemaField ? (
+										<Button
+											size="small"
+											variant="outlined"
+											title="Выделить поле на холсте конструктора"
+											startIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+											onClick={() =>
+												onNavigateToSchemaField(fieldRef.pointer!)
+											}
+											sx={{
+												flexShrink: 0,
+												minWidth: 0,
+												px: 1,
+												py: 0.35,
+												fontSize: 11,
+												fontWeight: 600,
+												textTransform: "none",
+												borderColor: "#dfe2ea",
+												color: "#4b5565",
+											}}
+										>
+											К конструктору
+										</Button>
+									) : null}
 									<IconButton
 										size="small"
 										aria-label="Удалить триггер"
 										onClick={() => removeParam(groupKey)}
-										sx={{ color: "#c2554c" }}
+										sx={{ color: "#c2554c", mt: -0.25 }}
 									>
 										<DeleteOutlineIcon fontSize="small" />
 									</IconButton>

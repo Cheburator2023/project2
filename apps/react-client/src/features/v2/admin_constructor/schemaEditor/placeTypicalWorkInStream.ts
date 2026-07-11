@@ -2,7 +2,6 @@ import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import {
 	collectExecutorStreamBlocks,
 	isV2ExecutorStreamLabel,
-	resolveV2AnketaArchComponent,
 	type V2ExecutorStreamLabel,
 } from "@smart-anketa/api-contract";
 import { nanoid } from "nanoid";
@@ -12,6 +11,7 @@ import {
 	makeStreamBlockUiOptions,
 } from "./streamBlockHelpers";
 import { clampCanvasInsertIndex } from "./schemaCanvasTree";
+import { findTypicalWorkPointerInSubtree } from "./typicalWorkCanvasConstraints";
 import { normalizeJsonPointer, pointerSegments } from "../utils/schemaPaths";
 import {
 	insertChildPropertyAt,
@@ -21,7 +21,6 @@ import {
 	movePropertyAtPointer,
 	moveUiSchemaBranchAtPointer,
 	patchUiOptionsAtPointer,
-	readUiSchemaBranchAtPointer,
 } from "../utils/schemaMutators";
 
 function isPointerUnderParent(pointer: string, parentPointer: string): boolean {
@@ -48,21 +47,11 @@ export function findTypicalWorkPointerUnderParent(
 	uiSchema: unknown,
 	parentPointer: string,
 ): string | null {
-	const keys = listOrderedChildKeys(jsonSchema, parentPointer, uiSchema as UiSchema);
-	for (const key of keys) {
-		const pointer =
-			parentPointer === "/"
-				? `/${key}`
-				: `${normalizeJsonPointer(parentPointer)}/${key}`;
-		const branch = readUiSchemaBranchAtPointer(
-			uiSchema as Record<string, unknown>,
-			pointer,
-		);
-		if (resolveV2AnketaArchComponent(branch) === "typicalWork") {
-			return pointer;
-		}
-	}
-	return null;
+	return findTypicalWorkPointerInSubtree(
+		jsonSchema,
+		uiSchema as UiSchema,
+		parentPointer,
+	);
 }
 
 export type PlaceTypicalWorkInStreamResult = {

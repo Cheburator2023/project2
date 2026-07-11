@@ -93,6 +93,7 @@ import {
 	useDebouncedTypicalWorkSave,
 	type SaveStatus,
 } from "./useDebouncedTypicalWorkSave";
+import { reconcileStreamNormPeriods } from "./typicalWorkNormPeriods";
 import { TypicalWorkValueMatchingInfo } from "./typicalWorkValueMatchingHelp";
 
 type TypicalWorkEditableCardProps = {
@@ -158,8 +159,16 @@ export function TypicalWorkEditableCard({
 	onStreamChange,
 	onVersionChange,
 }: TypicalWorkEditableCardProps) {
-	const { fieldPathHints, uiSchema, jsonSchema, enumMapByCode, formData, liveFormData } =
-		useSchemaEditor();
+	const {
+		fieldPathHints,
+		uiSchema,
+		jsonSchema,
+		enumMapByCode,
+		formData,
+		liveFormData,
+		setSelectedPointer,
+		setMainTab,
+	} = useSchemaEditor();
 	const { data: assignmentsList } = useV2TypicalWorkAssignments({
 		templateVersionId,
 	});
@@ -214,6 +223,7 @@ export function TypicalWorkEditableCard({
 			...structuredClone(card),
 			formula,
 			formulaTerms: ensureFormulaTerms(card),
+			norms: reconcileStreamNormPeriods(structuredClone(card.norms)),
 		});
 	}, [card, templateVersionId, hasPending]);
 
@@ -346,6 +356,7 @@ export function TypicalWorkEditableCard({
 		);
 		const withDerived = {
 			...next,
+			norms: reconcileStreamNormPeriods(next.norms, next.streamExecutor),
 			formula,
 			formulaTerms,
 			formulaBadge: computeFormulaBadgeFromTokens(formula.tokens),
@@ -949,6 +960,10 @@ export function TypicalWorkEditableCard({
 						methodologyCatalog={methodologyCatalog}
 						streamExecutor={streamExecutor ?? draft.streamExecutor}
 						onChange={(rules) => commitDraft({ ...draft, rules })}
+						onNavigateToSchemaField={(pointer) => {
+							setMainTab("designer");
+							setSelectedPointer(pointer);
+						}}
 					/>
 
 					<Box

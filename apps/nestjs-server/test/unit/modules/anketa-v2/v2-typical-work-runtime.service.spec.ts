@@ -433,6 +433,62 @@ describe("V2TypicalWorkRuntimeService", () => {
 		expect(off[0]?.coefficient).toBe(0.5);
 	});
 
+	it("treats absent boolean checkbox as coeffOff when typical work activates", async () => {
+		const service = createService({
+			rules: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "type",
+					paramName: "Тип",
+					operator: "=",
+					valueCode: null,
+					valueLabel: "Внутренний",
+				},
+			],
+			laborParams: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "field_flag",
+					paramName: "Флаг @ field_flag",
+					kind: "any_of",
+					anyOfValueCodes: ["true"],
+					anyOfValueLabels: ["Да"],
+					coeffOn: "1",
+					coeffOff: "2",
+				},
+			],
+			versionConfigs: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					templateVersionId: "tpl-v1",
+					formula: [
+						{ kind: "norm" },
+						{ kind: "param_anyof", paramCode: "field_flag" },
+					],
+					formulaText: null,
+					roundingMode: "none",
+					roundingStep: null,
+					calculationLogic: null,
+				},
+			],
+		});
+
+		const absent = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			templateVersionId: "tpl-v1",
+			atDate: "2025-06-01",
+			hiddenParamCodes: new Set(["field_flag"]),
+		});
+
+		expect(absent[0]?.coefficient).toBe(2);
+		expect(absent[0]?.total).toBe(4);
+	});
+
 	it("applies by-value schema dictionary coefficient in runtime calculation", async () => {
 		const service = createService({
 			rules: [

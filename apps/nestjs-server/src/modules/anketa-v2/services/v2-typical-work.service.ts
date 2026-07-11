@@ -23,12 +23,13 @@ import {
 	compileCalculationLogicFromVersionConfig,
 	needsCalculationLogicBackfill,
 	parseStoredTypicalWorkCalculationLogic,
+	backfillTypicalWorkBoundWorkIdsInUiSchema,
 	resolveActiveNormOnDate,
 	compileStoredTypicalWorkResultLogic,
 	tokensToText,
-	parseWorkFormulaText,
 	computeFormulaBadge,
 	normalizeStoredFormula,
+	resolveVersionConfigTokenFormula,
 	termsToTokenFormula,
 } from "@smart-anketa/api-contract";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
@@ -47,6 +48,7 @@ import {
 	groupCatalogWorks,
 	inferTriggerValueLabel,
 	normalizeArchComponentType,
+	resolveCatalogWorkComponent,
 	slugParamCode,
 } from "../utils/v2-typical-work-catalog.util";
 import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
@@ -59,15 +61,12 @@ function decimalToNumber(value: string | number | null | undefined): number {
 function resolveCardTokenFormula(
 	termsFormula: ReturnType<typeof normalizeStoredFormula>,
 	formulaText: string | null | undefined,
+	formulaRaw?: unknown,
 ): ReturnType<typeof defaultWorkFormula> {
-	const trimmed = formulaText?.trim();
-	if (trimmed) {
-		const parsed = parseWorkFormulaText(trimmed);
-		if (!parsed.error && parsed.tokens.length > 0) {
-			return { tokens: parsed.tokens, text: tokensToText(parsed.tokens) };
-		}
-	}
-	return termsToTokenFormula(termsFormula);
+	return resolveVersionConfigTokenFormula(
+		formulaRaw ?? termsFormula,
+		formulaText,
+	);
 }
 
 function todayIsoDate(): string {
@@ -142,7 +141,9 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			const work = await this.workRepository.save(
 				this.workRepository.create({
 					name: first.name.trim(),
-					archComponentType: normalizeArchComponentType(first.component),
+					archComponentType: normalizeArchComponentType(
+						resolveCatalogWorkComponent(first),
+					),
 					workType: first.workType?.trim() || null,
 					catalogKey,
 				}),
@@ -263,6 +264,10 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				trimmedTemplateId,
 				trimmedVersionId,
 			);
+			await this.backfillTypicalWorkBindingsInVersionUiSchema(
+				trimmedTemplateId,
+				trimmedVersionId,
+			);
 			return 0;
 		}
 
@@ -279,7 +284,9 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			const work = await this.workRepository.save(
 				this.workRepository.create({
 					name: first.name.trim(),
-					archComponentType: normalizeArchComponentType(first.component),
+					archComponentType: normalizeArchComponentType(
+						resolveCatalogWorkComponent(first),
+					),
 					workType: first.workType?.trim() || null,
 					catalogKey: null,
 					templateId: trimmedTemplateId,
@@ -395,7 +402,47 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			);
 		}
 
+		await this.backfillTypicalWorkBindingsInVersionUiSchema(
+			trimmedTemplateId,
+			trimmedVersionId,
+		);
 		return created;
+	}
+
+	/** Записывает boundWorkIds на legacy-блоки typicalWork по назначениям работ на стрим. */
+	async backfillTypicalWorkBindingsInVersionUiSchema(
+		templateId: string,
+		templateVersionId: string,
+	): Promise<void> {
+		const version = await this.templateVersionRepository.findOne({
+			where: { id: templateVersionId },
+		});
+		if (!version?.uiSchema || typeof version.uiSchema !== "object") return;
+
+		const works = await this.workRepository.find({ where: { templateId } });
+		if (works.length === 0) return;
+
+		const workIds = works.map((work) => work.id);
+		const assignments = await this.assignmentRepository.find({
+			where: { workId: In(workIds), isActive: true },
+		});
+		const streamsByWork = new Map<string, string[]>();
+		for (const row of assignments) {
+			const list = streamsByWork.get(row.workId) ?? [];
+			list.push(row.streamExecutor);
+			streamsByWork.set(row.workId, list);
+		}
+		const catalog = works.map((work) => ({
+			id: work.id,
+			streams: streamsByWork.get(work.id) ?? [],
+		}));
+
+		const uiSchema = version.uiSchema as Record<string, unknown>;
+		const next = backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog);
+		if (JSON.stringify(next) === JSON.stringify(uiSchema)) return;
+
+		version.uiSchema = next;
+		await this.templateVersionRepository.save(version);
 	}
 
 	private async ensureWorkStreamAssignment(
@@ -858,7 +905,11 @@ export class V2TypicalWorkService {
 				)
 			: normalizeStoredFormula(null);
 		const tokenFormula = versionConfig
-			? resolveCardTokenFormula(termsFormula, versionConfig.formulaText)
+			? resolveCardTokenFormula(
+					termsFormula,
+					versionConfig.formulaText,
+					versionConfig.formula,
+				)
 			: defaultWorkFormula();
 		const triggerStatusCatalog =
 			await this.paramCatalogService.listTriggerStatusCatalog(todayIsoDate());

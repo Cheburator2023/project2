@@ -432,11 +432,27 @@ export const KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD = 9;
 
 export interface KanbanBoardSettingsDto {
 	defaultSprintCapacityPd: number;
+	/** Имя исполнителя, от лица которого пишутся комментарии (пока без ролевой модели) */
+	defaultCurrentUserAssigneeName: string | null;
 	updatedAt: string;
 }
 
 export interface UpdateKanbanBoardSettingsRequestDto {
 	defaultSprintCapacityPd?: number;
+	defaultCurrentUserAssigneeName?: string | null;
+}
+
+export interface KanbanBoardTaskCommentDto {
+	id: string;
+	taskId: string;
+	body: string;
+	authorName: string;
+	createdAt: string;
+}
+
+export interface CreateKanbanBoardTaskCommentRequestDto {
+	body: string;
+	authorName: string;
 }
 
 export interface ResetKanbanBoardColumnsResultDto {

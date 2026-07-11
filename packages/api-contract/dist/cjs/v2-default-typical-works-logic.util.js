@@ -5,6 +5,7 @@ exports.replaceDotPathInJsonLogic = replaceDotPathInJsonLogic;
 exports.typicalWorksCatalogRuleId = typicalWorksCatalogRuleId;
 exports.buildSourceTypicalWorksCatalogRule = buildSourceTypicalWorksCatalogRule;
 exports.buildControlTypicalWorksCatalogRule = buildControlTypicalWorksCatalogRule;
+exports.isTypicalWorksCatalogLogicRule = isTypicalWorksCatalogLogicRule;
 exports.schemaSupportsSourceTypicalWorksCatalog = schemaSupportsSourceTypicalWorksCatalog;
 exports.patchV2TypicalWorksLogicRules = patchV2TypicalWorksLogicRules;
 const v2_typical_work_output_paths_util_1 = require("./v2-typical-work-output-paths.util");
@@ -114,8 +115,11 @@ const PATCHED_RULE_IDS = new Set([
     "unified-source-typical-works",
     "unified-control-typical-works",
 ]);
-function isPatchedTypicalWorksCatalogRule(rule) {
+function isTypicalWorksCatalogLogicRule(rule) {
     return (PATCHED_RULE_IDS.has(rule.id) || rule.id.startsWith("typical-works-catalog-"));
+}
+function isPatchedTypicalWorksCatalogRule(rule) {
+    return isTypicalWorksCatalogLogicRule(rule);
 }
 const LEGACY_CONTROL_TYPICAL_TASKS_PATH = "streamModelControl.control.controlTypicalTasks";
 const LEGACY_CONTROL_TYPICAL_TASKS_SLASH_PATH = "/streamModelControl/control/controlTypicalTasks";

@@ -300,13 +300,19 @@ export const useV2TemplateVersion = (
 export const useCreateV2TemplateVersionFromDefault = () => {
 	const queryClient = useQueryClient();
 
-	return useMutation<V2TemplateVersionDto, Error, string>({
-		mutationFn: (templateId) =>
+	return useMutation<
+		V2TemplateVersionDto,
+		Error,
+		{ templateId: string; withoutTypicalWorks?: boolean }
+	>({
+		mutationFn: ({ templateId, withoutTypicalWorks }) =>
 			apiClient<V2TemplateVersionDto>({
-				url: `/v2/templates/${templateId}/versions/from-default`,
+				url: `/v2/templates/${templateId}/versions/from-default${
+					withoutTypicalWorks ? "?withoutTypicalWorks=true" : ""
+				}`,
 				method: "POST",
 			}),
-		onSuccess: (_, templateId) => {
+		onSuccess: (_, { templateId }) => {
 			void invalidateV2TemplatesList(queryClient);
 			queryClient.invalidateQueries({
 				queryKey: ["v2-templates", templateId, "versions"],

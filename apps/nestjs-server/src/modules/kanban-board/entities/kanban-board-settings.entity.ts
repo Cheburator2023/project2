@@ -16,6 +16,14 @@ export class KanbanBoardSettingsEntity {
 	})
 	defaultSprintCapacityPd!: string;
 
+	@Column({
+		name: "default_current_user_assignee_name",
+		type: "varchar",
+		length: 255,
+		nullable: true,
+	})
+	defaultCurrentUserAssigneeName!: string | null;
+
 	@UpdateDateColumn({ name: "updated_at", type: "timestamptz" })
 	updatedAt!: Date;
 }

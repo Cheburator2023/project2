@@ -52,6 +52,7 @@ import {
 import { KanbanRoleEstimatesFields } from "@react-client/features/kanban-board/components/KanbanRoleEstimatesFields";
 import { KanbanSubtasksChecklist } from "@react-client/features/kanban-board/components/KanbanSubtasksChecklist";
 import { KanbanTaskImagesSection } from "@react-client/features/kanban-board/components/KanbanTaskImagesSection";
+import { KanbanTaskCommentsSection } from "@react-client/features/kanban-board/components/KanbanTaskCommentsSection";
 import {
 	isKanbanTaskCreateRoute,
 	kanbanBoardPath,
@@ -736,6 +737,16 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 									height={480}
 								/>
 							</Box>
+
+							{!isCreate && taskId ? (
+								<>
+									<Spacer space={12} />
+									<KanbanTaskCommentsSection
+										taskId={taskId}
+										disabled={isSaving}
+									/>
+								</>
+							) : null}
 						</Stack>
 					) : null}
 				</Stack>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inferLegacyStreamExecutorForBlockKey, isV2ExecutorStreamLabel, V2_EXECUTOR_STREAM_LABELS, } from "./v2-executor-streams.util";
+import { inferLegacyStreamExecutorForBlockKey, isV2ExecutorStreamLabel, typicalWorkAssignedToExecutorStream, V2_EXECUTOR_STREAM_LABELS, } from "./v2-executor-streams.util";
 import { collectExecutorStreamBlocks, formatV2StreamBlockSectionTitle, isExecutorStreamPresentInSchema, resolveV2AnketaSectionDisplayTitle, resolveV2AnketaStreamBlockOptions, readV2AnketaSectionUiOptions, resolveStreamExecutorForTypicalWorkOutputPath, } from "./v2-anketa-section-ui.util";
 describe("v2-executor-streams.util", () => {
     it("lists six executor stream labels", () => {
@@ -100,5 +100,9 @@ describe("collectExecutorStreamBlocks", () => {
         };
         expect(resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, "field_stream.field_tasks")).toBe("ПиРМ");
         expect(resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, "field_root")).toBe("ДАДМ");
+    });
+    it("typicalWorkAssignedToExecutorStream matches DB stream aliases", () => {
+        expect(typicalWorkAssignedToExecutorStream(["ИД. Внутренний"], "Источники данных")).toBe(true);
+        expect(typicalWorkAssignedToExecutorStream(["Контроль моделей"], "Источники данных")).toBe(false);
     });
 });

@@ -24,9 +24,11 @@ import type {
 	V2TypicalWorkPreviewResponseDto,
 } from "@smart-anketa/api-contract";
 import {
+	buildTypicalWorkFactorCoeffResolver,
 	compileCalculationLogicFromVersionConfig,
 	collectAllowedParamCodes,
 	compileStoredTypicalWorkResultLogic,
+	computeTypicalWorkFormulaTotal,
 	computeWorkTriggerStatus,
 	defaultWorkFormula,
 	defaultWorkRounding,
@@ -813,8 +815,10 @@ export class V2TypicalWorkWriteService {
 					group.anyOf,
 					group.paramName,
 				);
-				continue;
 			}
+		}
+		for (const group of card.laborParams) {
+			if (group.kind === "any_of") continue;
 			const eligibleRows = group.coefficients
 				.filter((row) =>
 					isWorkCoefficientValueAvailable(row, coefficientValueCatalog, atDate),
@@ -833,6 +837,19 @@ export class V2TypicalWorkWriteService {
 		}
 
 		const terms = card.formulaTerms ?? normalizeStoredFormula(null);
+		const anyOfParams =
+			card.laborParams
+				?.filter((group) => group.kind === "any_of" && group.anyOf)
+				.map((group) => ({
+					paramCode: group.paramCode,
+					paramName: group.paramName,
+					anyOf: group.anyOf!,
+				})) ?? [];
+		const resolveFactorCoeff = buildTypicalWorkFactorCoeffResolver({
+			paramCoefficients,
+			anyOfParams,
+			source: answerSource,
+		});
 		let evaluated: {
 			symbolic: string;
 			expanded: string;
@@ -844,7 +861,7 @@ export class V2TypicalWorkWriteService {
 			const termsValue = evaluateTermsFormula({
 				terms: terms.terms,
 				baseNorm: norm,
-				resolveFactorCoeff: (code) => paramCoefficients[code] ?? 1,
+				resolveFactorCoeff,
 			});
 			evaluated = {
 				symbolic: terms.text,
@@ -853,23 +870,37 @@ export class V2TypicalWorkWriteService {
 				error: termsValue == null ? "Не удалось вычислить транзитивную формулу" : null,
 			};
 		} else {
-			const termsValue = evaluateTermsFormula({
-				terms: terms.terms,
-				baseNorm: norm,
-				resolveFactorCoeff: (code) => paramCoefficients[code] ?? 1,
+			const total = computeTypicalWorkFormulaTotal({
+				calculationLogic: card.calculationLogic,
+				formula: card.formula,
+				formulaText: card.formula.text ?? card.formulaTerms?.text,
+				terms,
+				rounding: card.rounding,
+				norm,
+				paramCoefficients,
+				source: answerSource,
+				resolveFactorCoeff,
 			});
-			if (termsValue != null) {
+			if (total != null) {
+				const tokenPreview = previewTypicalWorkCalculation(
+					card.calculationLogic,
+					{ formula: card.formula, rounding: card.rounding },
+					{ norm, paramCoefficients, source: answerSource },
+				);
 				evaluated = {
-					symbolic: terms.text,
-					expanded: terms.text,
-					value: termsValue,
+					symbolic:
+						tokenPreview.symbolic ||
+						card.formulaTerms?.text ||
+						card.formula.text,
+					expanded: tokenPreview.expanded || tokenPreview.symbolic,
+					value: total,
 					error: null,
 				};
 			} else {
 				evaluated = previewTypicalWorkCalculation(
 					card.calculationLogic,
 					{ formula: card.formula, rounding: card.rounding },
-					{ norm, paramCoefficients },
+					{ norm, paramCoefficients, source: answerSource },
 				);
 			}
 		}

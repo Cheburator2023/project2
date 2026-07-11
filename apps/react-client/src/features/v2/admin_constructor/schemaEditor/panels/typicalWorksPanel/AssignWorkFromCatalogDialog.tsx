@@ -27,7 +27,7 @@ import type { ColDef, RowClickedEvent } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@react-client/common/toasts";
-import { scopeLabel, type LogicWorksScope } from "./typicalWorksAreas";
+import { scopeLabel, scopeStreamExecutor, type LogicWorksScope } from "./typicalWorksAreas";
 
 registerAgGridTableModules();
 
@@ -124,17 +124,21 @@ export function AssignWorkFromCatalogDialog({
 	const bindToSchema = useCallback(
 		async (work: V2TypicalWorkListItemDto) => {
 			setPending(true);
+			const streamExecutor = scopeStreamExecutor(
+				scope,
+				work.streams[0] ?? "Источники данных",
+			);
 			try {
 				await patch.mutateAsync({
 					workId: work.id,
 					dto: {
-						streamExecutor: scope.stream,
+						streamExecutor,
 						templateVersionId: templateVersionId ?? undefined,
 						templateId: templateId || undefined,
 					},
 				});
 				toast.success(`«${work.name}» привязана к схеме`);
-				onAssigned(work.id, scope.stream);
+				onAssigned(work.id, streamExecutor);
 				setDecision(null);
 				onClose();
 			} catch (err) {
@@ -145,22 +149,26 @@ export function AssignWorkFromCatalogDialog({
 				setPending(false);
 			}
 		},
-		[onAssigned, onClose, patch, scope.stream, templateId, templateVersionId],
+		[onAssigned, onClose, patch, scope, templateId, templateVersionId],
 	);
 
 	const copyToSchema = useCallback(
 		async (work: V2TypicalWorkListItemDto) => {
 			setPending(true);
+			const streamExecutor = scopeStreamExecutor(
+				scope,
+				work.streams[0] ?? "Источники данных",
+			);
 			try {
 				const copy = await copyWork.mutateAsync({
 					workId: work.id,
 					dto: {
 						templateId: templateId || undefined,
-						streamExecutor: scope.stream,
+						streamExecutor,
 					},
 				});
 				toast.success(`Создана копия «${copy.name}»`);
-				onAssigned(copy.id, copy.streamExecutor || scope.stream);
+				onAssigned(copy.id, copy.streamExecutor || streamExecutor);
 				setDecision(null);
 				onClose();
 			} catch (err) {
@@ -171,22 +179,26 @@ export function AssignWorkFromCatalogDialog({
 				setPending(false);
 			}
 		},
-		[copyWork, onAssigned, onClose, scope.stream, templateId],
+		[copyWork, onAssigned, onClose, scope, templateId],
 	);
 
 	const handleRowSelect = useCallback(
 		(work: V2TypicalWorkListItemDto) => {
 			if (pending) return;
 			const owner = work.templateId ?? null;
+			const streamExecutor = scopeStreamExecutor(
+				scope,
+				work.streams[0] ?? "Источники данных",
+			);
 			if (owner && templateId && owner === templateId) {
 				toast.info("Работа уже в этой схеме");
-				onAssigned(work.id, work.streams[0] ?? scope.stream);
+				onAssigned(work.id, work.streams[0] ?? streamExecutor);
 				onClose();
 				return;
 			}
 			setDecision(work);
 		},
-		[pending, templateId, onAssigned, onClose, scope.stream],
+		[pending, templateId, onAssigned, onClose, scope],
 	);
 
 	const onRowClicked = useCallback(

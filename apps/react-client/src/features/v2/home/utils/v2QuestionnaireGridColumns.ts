@@ -6,6 +6,11 @@ import {
 	type V2RegistryLeafColumn,
 	type V2RegistrySchemaColumnOptions,
 } from "@smart-anketa/api-contract";
+import { AG_GRID_DATE_FILTER_PARAMS } from "@react-client/common/tableStuff/agGridDateFilterParams";
+import {
+	AG_GRID_SIMPLE_NUMBER_FILTER_PARAMS,
+	AG_GRID_SIMPLE_TEXT_FILTER_PARAMS,
+} from "@react-client/common/tableStuff/agGridSimpleFilterParams";
 import {
 	V2WorkflowGlobalStatusCell,
 	v2WorkflowSectionStatusCell,
@@ -26,9 +31,19 @@ function agFilterForValueType(
 	return "agTextColumnFilter";
 }
 
+function agFilterParamsForValueType(
+	valueType: V2RegistryLeafColumn["valueType"],
+): ColDef["filterParams"] {
+	if (valueType === "number") return AG_GRID_SIMPLE_NUMBER_FILTER_PARAMS;
+	if (valueType === "date") return AG_GRID_DATE_FILTER_PARAMS;
+	if (valueType === "text") return AG_GRID_SIMPLE_TEXT_FILTER_PARAMS;
+	return { maxNumConditions: 1 };
+}
+
 function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow> {
 	const minWidth = estimateRegistryColumnWidth(leaf.header);
 	const filter = agFilterForValueType(leaf.valueType);
+	const filterParams = agFilterParamsForValueType(leaf.valueType);
 
 	if (leaf.kind === "sectionStatus" && leaf.sectionId) {
 		const sectionId = leaf.sectionId;
@@ -38,6 +53,7 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 			minWidth,
 			resizable: true,
 			filter: "agSetColumnFilter",
+			filterParams: { maxNumConditions: 1 },
 			cellRenderer: v2WorkflowSectionStatusCell(sectionId),
 			valueGetter: (p) =>
 				resolveVersionRow(p.data)?.workflowSectionStatuses?.[sectionId] ??
@@ -53,6 +69,7 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 				minWidth,
 				resizable: true,
 				filter: "agSetColumnFilter",
+				filterParams: { maxNumConditions: 1 },
 				cellRenderer: V2WorkflowGlobalStatusCell,
 				valueGetter: (p) =>
 					resolveVersionRow(p.data)?.workflowGlobalStatus ?? null,
@@ -65,6 +82,8 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 				minWidth,
 				resizable: true,
 				filter: "agDateColumnFilter",
+				filterParams: AG_GRID_DATE_FILTER_PARAMS,
+				cellDataType: "dateString",
 				valueFormatter: (p) =>
 					p.value ? new Date(String(p.value)).toLocaleString("ru-RU") : "",
 				valueGetter: (p) => resolveVersionRow(p.data)?.[leaf.id as "createdAt"] ?? "",
@@ -77,6 +96,7 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 				minWidth,
 				resizable: true,
 				filter: "agNumberColumnFilter",
+				filterParams: AG_GRID_SIMPLE_NUMBER_FILTER_PARAMS,
 				valueGetter: (p) =>
 					resolveVersionRow(p.data)?.finalCoefficient ?? null,
 			};
@@ -88,6 +108,7 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 				minWidth,
 				resizable: true,
 				filter,
+				filterParams,
 				valueGetter: (p) => {
 					const row = resolveVersionRow(p.data);
 					return row?.readableId ?? row?.id ?? "";
@@ -101,6 +122,7 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 				minWidth,
 				resizable: true,
 				filter: "agSetColumnFilter",
+				filterParams: { maxNumConditions: 1 },
 				valueGetter: (p) =>
 					resolveVersionRow(p.data)?.schemaBinding.status ?? "",
 			};
@@ -111,6 +133,7 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 			minWidth,
 			resizable: true,
 			filter,
+			filterParams,
 			valueGetter: (p) => {
 				const row = resolveVersionRow(p.data);
 				if (!row) return "";
@@ -125,6 +148,7 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 		minWidth,
 		resizable: true,
 		filter,
+		filterParams,
 		valueGetter: (p) =>
 			formatGridCellValue(getFormValue(p.data, leaf.formPath ?? "")),
 	};

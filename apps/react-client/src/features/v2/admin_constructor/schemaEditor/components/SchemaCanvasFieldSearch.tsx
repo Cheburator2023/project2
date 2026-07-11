@@ -30,10 +30,12 @@ import {
 	type CanvasFieldSearchCrumb,
 	type CanvasFieldSearchOption,
 } from "../schemaCanvasSearch";
+import {
+	CANVAS_FIELD_POINTER_ATTR,
+	focusCanvasField,
+} from "../schemaCanvasFocus";
 import type { SchemaCanvasNodeData } from "../schemaCanvasTree";
 import { useSchemaEditor } from "../SchemaEditorContext";
-
-const CANVAS_FIELD_POINTER_ATTR = "data-canvas-field-pointer";
 
 const HighlightedText = styled("span")<{ highlighted?: boolean }>(
 	({ highlighted, theme }) => ({
@@ -148,15 +150,6 @@ function SearchResultBreadcrumbs({
 type SearchMatch = {
 	option: CanvasFieldSearchOption;
 };
-
-function focusCanvasField(pointer: string) {
-	requestAnimationFrame(() => {
-		const el = document.querySelector(
-			`[${CANVAS_FIELD_POINTER_ATTR}="${CSS.escape(pointer)}"]`,
-		);
-		el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-	});
-}
 
 export function SchemaCanvasFieldSearch({
 	treeData,

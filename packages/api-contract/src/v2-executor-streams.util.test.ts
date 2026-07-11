@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	inferLegacyStreamExecutorForBlockKey,
 	isV2ExecutorStreamLabel,
+	typicalWorkAssignedToExecutorStream,
 	V2_EXECUTOR_STREAM_LABELS,
 } from "./v2-executor-streams.util";
 import {
@@ -168,5 +169,20 @@ describe("collectExecutorStreamBlocks", () => {
 		expect(
 			resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, "field_root"),
 		).toBe("ДАДМ");
+	});
+
+	it("typicalWorkAssignedToExecutorStream matches DB stream aliases", () => {
+		expect(
+			typicalWorkAssignedToExecutorStream(
+				["ИД. Внутренний"],
+				"Источники данных",
+			),
+		).toBe(true);
+		expect(
+			typicalWorkAssignedToExecutorStream(
+				["Контроль моделей"],
+				"Источники данных",
+			),
+		).toBe(false);
 	});
 });

@@ -31,6 +31,7 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { AG_GRID_SIMPLE_TEXT_FILTER_PARAMS } from "@react-client/common/tableStuff/agGridSimpleFilterParams";
 import {
 	applyAgGridColumnState,
 	clearAgGridColumnState,
@@ -627,6 +628,7 @@ export function V2QuestionnaireList() {
 						sortable: true,
 						resizable: true,
 						filter: true,
+						filterParams: AG_GRID_SIMPLE_TEXT_FILTER_PARAMS,
 						minWidth: 90,
 						autoHeaderHeight: true,
 						wrapHeaderText: true,

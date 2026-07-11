@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	buildTypicalWorkFactorCoeffResolver,
 	catalogValueMatchesTriggerRule,
 	isSourceTypeTriggerParam,
 	resolveLaborAnyOfCoefficient,
@@ -210,6 +211,35 @@ describe("v2-works-catalog-match.util", () => {
 				"Чекбокс @ field_checkbox",
 			),
 		).toBe(0.5);
+		expect(
+			resolveLaborAnyOfCoefficient(
+				{},
+				"field_checkbox",
+				anyOf,
+				"Чекбокс @ field_checkbox",
+			),
+		).toBe(0.5);
+	});
+
+	it("buildTypicalWorkFactorCoeffResolver falls back to any_of coeffOff", () => {
+		const resolve = buildTypicalWorkFactorCoeffResolver({
+			paramCoefficients: {},
+			anyOfParams: [
+				{
+					paramCode: "field_cb",
+					paramName: "Чекбокс @ field_cb",
+					anyOf: {
+						valueCodes: ["true"],
+						valueLabels: ["Да"],
+						coeffOn: 1,
+						coeffOff: 2,
+					},
+				},
+			],
+			source: {},
+		});
+		expect(resolve("field_cb")).toBe(2);
+		expect(resolve("missing")).toBe(1);
 	});
 
 	it("resolves by-value labor coefficients from schema dictionary answers", () => {

@@ -173,37 +173,6 @@ div.ag-watermark-text {
     transform: translateZ(0);
 }
 
-:where([class*="ag-theme-checkboxStyle"]) {
-    & .ag-checkbox-input-wrapper {
-        &:where(.ag-checked):after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-			border-radius: 50px;
-            line-height: 1;
-            display: block;
-            z-index: 1;
-			background-color: white;
-			mask-image: none;
-        }
-    }
-}
-
-:where([class*="ag-theme-checkboxStyle"]) {
-    & .ag-checkbox-input-wrapper, & .ag-radio-button-input-wrapper {
-        &:where(.ag-checked) {
-            &:after {
-                background-color: var(--ag-checkbox-checked-shape-color);
-            }
-        }
-    }
-}
-
 .MuiPopover-root .MuiPaper-root.MuiPaper-rounded.MuiPopover-paper.MuiMenu-paper {
 min-width: auto!important;
 }

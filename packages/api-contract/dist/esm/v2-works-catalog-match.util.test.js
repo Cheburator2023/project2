@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { catalogValueMatchesTriggerRule, isSourceTypeTriggerParam, resolveLaborAnyOfCoefficient, resolveByValueLaborParamCoefficients, resolveStreamFromSourceType, resolveStreamsFromSourceSystems, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, typicalWorkRulesMatchSource, V2_SOURCE_STREAM, } from "./v2-works-catalog-match.util";
+import { buildTypicalWorkFactorCoeffResolver, catalogValueMatchesTriggerRule, isSourceTypeTriggerParam, resolveLaborAnyOfCoefficient, resolveByValueLaborParamCoefficients, resolveStreamFromSourceType, resolveStreamsFromSourceSystems, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, typicalWorkRulesMatchSource, V2_SOURCE_STREAM, } from "./v2-works-catalog-match.util";
 describe("v2-works-catalog-match.util", () => {
     it("resolves the unified source stream for any source row", () => {
         // Разделение внутр/внеш убрано: любой источник → единый стрим.
@@ -142,6 +142,27 @@ describe("v2-works-catalog-match.util", () => {
         };
         expect(resolveLaborAnyOfCoefficient({ field_checkbox: true }, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(1.5);
         expect(resolveLaborAnyOfCoefficient({ field_checkbox: false }, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(0.5);
+        expect(resolveLaborAnyOfCoefficient({}, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(0.5);
+    });
+    it("buildTypicalWorkFactorCoeffResolver falls back to any_of coeffOff", () => {
+        const resolve = buildTypicalWorkFactorCoeffResolver({
+            paramCoefficients: {},
+            anyOfParams: [
+                {
+                    paramCode: "field_cb",
+                    paramName: "Чекбокс @ field_cb",
+                    anyOf: {
+                        valueCodes: ["true"],
+                        valueLabels: ["Да"],
+                        coeffOn: 1,
+                        coeffOff: 2,
+                    },
+                },
+            ],
+            source: {},
+        });
+        expect(resolve("field_cb")).toBe(2);
+        expect(resolve("missing")).toBe(1);
     });
     it("resolves by-value labor coefficients from schema dictionary answers", () => {
         expect(resolveByValueLaborParamCoefficients({ field_dict: "Да" }, [

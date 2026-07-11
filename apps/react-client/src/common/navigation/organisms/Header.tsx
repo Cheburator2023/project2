@@ -24,12 +24,15 @@ export function Header({
 	calcId,
 	leadingAccessory,
 	fixed = false,
+	/** Явный маршрут «Назад» (например, реестр схем из редактора). Надёжнее history.back(). */
+	backTo,
 }: {
 	children?: React.ReactNode;
 	calcId?: string;
 	title?: string;
 	leadingAccessory?: React.ReactNode;
 	fixed?: boolean;
+	backTo?: string;
 }) {
 	const theme = useTheme();
 	const { toggleSideMenu, isSideMenuVisible } = useGlobalSettingsStore();
@@ -39,6 +42,16 @@ export function Header({
 
 	const id1 = new URLSearchParams(window.location.search).get("id1");
 	const id2 = new URLSearchParams(window.location.search).get("id2");
+
+	const canGoBack = Boolean(backTo) || (history.state?.idx ?? 0) > 0;
+
+	const handleBack = () => {
+		if (backTo) {
+			navigate(backTo);
+			return;
+		}
+		navigate(-1);
+	};
 
 	useLayoutEffect(() => {
 		const el = headerRef.current;
@@ -119,15 +132,15 @@ export function Header({
 									<CloseRoundedIcon data-test-id="header--CloseRoundedIcon-0" />
 								)}
 							</MenuButton>
-							{(history.state?.idx ?? 0) > 0 && (
+							{canGoBack ? (
 								<IconButton
 									size="small"
-									onClick={() => navigate(-1)}
+									onClick={handleBack}
 									title="Вернуться назад"
 								>
 									<ArrowBackIcon />
 								</IconButton>
-							)}
+							) : null}
 							{title ? (
 								<Flex gap={1} alignItems="baseline" minWidth="0">
 									<b>{title}</b>

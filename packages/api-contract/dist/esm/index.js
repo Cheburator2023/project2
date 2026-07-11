@@ -9,6 +9,7 @@ export * from "./v2-questionnaire.types";
 export * from "./v2-questionnaire-registry-columns.util";
 export * from "./v2-questionnaire-registry-export.util";
 export * from "./v2-factory-snapshot.types";
+export * from "./v2-factory-snapshot-without-typical-works.util";
 export * from "./v2-typical-work-output-paths.util";
 export * from "./v2-data-transfer.types";
 export * from "./ui-tooltip.util";

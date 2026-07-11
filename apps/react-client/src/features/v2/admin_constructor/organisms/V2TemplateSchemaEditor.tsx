@@ -122,6 +122,12 @@ import {
 	resolveRulesWhereSelectedIsDependency,
 } from "../utils/schemaEditorEffectiveLogic";
 import { placeTypicalWorkInStream } from "../schemaEditor/placeTypicalWorkInStream";
+import {
+	canAddTypicalWorkUnderParent,
+	isTypicalWorkFieldAtPointer,
+	isTypicalWorkPaletteUiOptions,
+	TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE,
+} from "../schemaEditor/typicalWorkCanvasConstraints";
 import type { V2ExecutorStreamLabel } from "@smart-anketa/api-contract";
 
 function readUiBranch(
@@ -1183,6 +1189,14 @@ export const V2TemplateSchemaEditor = ({
 			uiOptions?: Record<string, unknown>,
 			uiBranch?: Record<string, unknown>,
 		): string | null => {
+			if (
+				isTypicalWorkPaletteUiOptions(uiOptions) &&
+				!canAddTypicalWorkUnderParent(jsonSchema, uiSchema, parentPointer)
+			) {
+				toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
+				return null;
+			}
+
 			const key = `field_${nanoid(8)}`;
 			const parentSegs = pointerSegments(parentPointer);
 			const safeIndex = clampCanvasInsertIndex(
@@ -1306,6 +1320,19 @@ export const V2TemplateSchemaEditor = ({
 			targetParentPointer: string,
 			targetIndex: number,
 		) => {
+			if (
+				isTypicalWorkFieldAtPointer(uiSchema as Record<string, unknown>, sourcePointer) &&
+				!canAddTypicalWorkUnderParent(
+					jsonSchema,
+					uiSchema,
+					targetParentPointer,
+					sourcePointer,
+				)
+			) {
+				toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
+				return;
+			}
+
 			const nextSchema = movePropertyAtPointer(
 				jsonSchema,
 				sourcePointer,
@@ -1339,6 +1366,11 @@ export const V2TemplateSchemaEditor = ({
 
 	const duplicateCanvasField = useCallback(
 		(sourcePointer: string) => {
+			if (isTypicalWorkFieldAtPointer(uiSchema as Record<string, unknown>, sourcePointer)) {
+				toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
+				return;
+			}
+
 			const newKey = `field_${nanoid(8)}`;
 			const result = duplicateFieldAtPointer(
 				jsonSchema,

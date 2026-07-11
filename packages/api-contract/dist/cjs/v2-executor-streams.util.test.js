@@ -103,4 +103,8 @@ const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
         (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveStreamExecutorForTypicalWorkOutputPath)(uiSchema, "field_stream.field_tasks")).toBe("ПиРМ");
         (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveStreamExecutorForTypicalWorkOutputPath)(uiSchema, "field_root")).toBe("ДАДМ");
     });
+    (0, vitest_1.it)("typicalWorkAssignedToExecutorStream matches DB stream aliases", () => {
+        (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)(["ИД. Внутренний"], "Источники данных")).toBe(true);
+        (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)(["Контроль моделей"], "Источники данных")).toBe(false);
+    });
 });
