@@ -52,9 +52,11 @@ export type V2AnketaStreamBlockOptions = {
 export declare function resolveV2AnketaStreamBlockOptions(uiNode: unknown, blockKey?: string): V2AnketaStreamBlockOptions;
 export declare function isV2AnketaStreamBlockRoot(uiNode: unknown, blockKey?: string): boolean;
 export declare const V2_STREAM_BLOCK_TITLE_PREFIX = "\u0421\u0442\u0440\u0438\u043C ";
-/** Заголовок стримового object-блока: префикс «Стрим » (идемпотентно). */
+/** Уже оформленный заголовок стрима (заводской снепшот: «Стрим «…»», новый: «Стрим …»). */
+export declare function hasV2StreamBlockTitlePrefix(title: string): boolean;
+/** Заголовок стримового object-блока (идемпотентно, в стиле заводского снепшота). */
 export declare function formatV2StreamBlockSectionTitle(baseTitle: string): string;
-/** Заголовок секции с учётом streamBlock (явный или legacy stream* ключ). */
+/** Заголовок секции с учётом streamBlock (явный, legacy stream* / field_* ключ). */
 export declare function resolveV2AnketaSectionDisplayTitle(baseTitle: string, uiNode: unknown, blockKey?: string): string;
 export type ExecutorStreamBlockRef = {
     blockKey: string;

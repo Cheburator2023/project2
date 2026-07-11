@@ -41,14 +41,18 @@ const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
 });
 (0, vitest_1.describe)("resolveV2AnketaSectionDisplayTitle", () => {
     (0, vitest_1.it)("prefixes stream object block titles with Стрим", () => {
-        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveV2AnketaSectionDisplayTitle)("ДАДМ", { "ui:options": { streamBlock: true, streamExecutor: "ДАДМ" } }, "field_dadm")).toBe("Стрим ДАДМ");
-        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveV2AnketaSectionDisplayTitle)("Контроль моделей", undefined, "streamModelControl")).toBe("Стрим Контроль моделей");
+        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveV2AnketaSectionDisplayTitle)("ДАДМ", { "ui:options": { streamBlock: true, streamExecutor: "ДАДМ" } }, "field_dadm")).toBe("Стрим «ДАДМ»");
+        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveV2AnketaSectionDisplayTitle)("Контроль моделей", undefined, "streamModelControl")).toBe("Стрим «Контроль моделей»");
+    });
+    (0, vitest_1.it)("keeps factory snapshot titles without double prefix", () => {
+        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveV2AnketaSectionDisplayTitle)("Стрим «Источники данных»", { "ui:options": { streamBlock: true, streamExecutor: "Источники данных" } }, "streamDataSources")).toBe("Стрим «Источники данных»");
     });
     (0, vitest_1.it)("leaves non-stream object titles unchanged", () => {
         (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveV2AnketaSectionDisplayTitle)("Общие сведения", { "ui:options": { sectionRole: "main" } }, "generalInfo")).toBe("Общие сведения");
     });
     (0, vitest_1.it)("formatV2StreamBlockSectionTitle is idempotent", () => {
-        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.formatV2StreamBlockSectionTitle)("ПиРМ")).toBe("Стрим ПиРМ");
+        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.formatV2StreamBlockSectionTitle)("ПиРМ")).toBe("Стрим «ПиРМ»");
+        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.formatV2StreamBlockSectionTitle)("Стрим «ПиРМ»")).toBe("Стрим «ПиРМ»");
         (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.formatV2StreamBlockSectionTitle)("Стрим ПиРМ")).toBe("Стрим ПиРМ");
     });
 });

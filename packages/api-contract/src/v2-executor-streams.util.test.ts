@@ -72,14 +72,24 @@ describe("resolveV2AnketaSectionDisplayTitle", () => {
 				{ "ui:options": { streamBlock: true, streamExecutor: "ДАДМ" } },
 				"field_dadm",
 			),
-		).toBe("Стрим ДАДМ");
+		).toBe("Стрим «ДАДМ»");
 		expect(
 			resolveV2AnketaSectionDisplayTitle(
 				"Контроль моделей",
 				undefined,
 				"streamModelControl",
 			),
-		).toBe("Стрим Контроль моделей");
+		).toBe("Стрим «Контроль моделей»");
+	});
+
+	it("keeps factory snapshot titles without double prefix", () => {
+		expect(
+			resolveV2AnketaSectionDisplayTitle(
+				"Стрим «Источники данных»",
+				{ "ui:options": { streamBlock: true, streamExecutor: "Источники данных" } },
+				"streamDataSources",
+			),
+		).toBe("Стрим «Источники данных»");
 	});
 
 	it("leaves non-stream object titles unchanged", () => {
@@ -93,7 +103,8 @@ describe("resolveV2AnketaSectionDisplayTitle", () => {
 	});
 
 	it("formatV2StreamBlockSectionTitle is idempotent", () => {
-		expect(formatV2StreamBlockSectionTitle("ПиРМ")).toBe("Стрим ПиРМ");
+		expect(formatV2StreamBlockSectionTitle("ПиРМ")).toBe("Стрим «ПиРМ»");
+		expect(formatV2StreamBlockSectionTitle("Стрим «ПиРМ»")).toBe("Стрим «ПиРМ»");
 		expect(formatV2StreamBlockSectionTitle("Стрим ПиРМ")).toBe("Стрим ПиРМ");
 	});
 });

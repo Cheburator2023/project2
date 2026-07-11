@@ -8,6 +8,7 @@ import {
 	V2_ANKETA_MAIN_SECTION_IDS,
 	type V2AnketaMainSectionId,
 } from "./v2-anketa-workflow.types";
+import { V2_ANKETA_MAIN_SECTION_TITLES } from "./v2-anketa-workflow.util";
 
 export const V2_ANKETA_SECTION_ROLE_VALUES = [
 	"main",
@@ -194,29 +195,50 @@ export function isV2AnketaStreamBlockRoot(
 
 export const V2_STREAM_BLOCK_TITLE_PREFIX = "Стрим ";
 
-/** Заголовок стримового object-блока: префикс «Стрим » (идемпотентно). */
+/** Уже оформленный заголовок стрима (заводской снепшот: «Стрим «…»», новый: «Стрим …»). */
+export function hasV2StreamBlockTitlePrefix(title: string): boolean {
+	const trimmed = title.trim();
+	return /^Стрим(\s|«)/u.test(trimmed) || trimmed === "Стрим";
+}
+
+/** Заголовок стримового object-блока (идемпотентно, в стиле заводского снепшота). */
 export function formatV2StreamBlockSectionTitle(baseTitle: string): string {
 	const trimmed = baseTitle.trim();
 	if (!trimmed) return "Стрим";
-	if (
-		trimmed.startsWith(V2_STREAM_BLOCK_TITLE_PREFIX) ||
-		trimmed === "Стрим"
-	) {
-		return trimmed;
+	if (hasV2StreamBlockTitlePrefix(trimmed)) return trimmed;
+	if (isV2ExecutorStreamLabel(trimmed)) {
+		return `Стрим «${trimmed}»`;
 	}
 	return `${V2_STREAM_BLOCK_TITLE_PREFIX}${trimmed}`;
 }
 
-/** Заголовок секции с учётом streamBlock (явный или legacy stream* ключ). */
+/** Заголовок секции с учётом streamBlock (явный, legacy stream* / field_* ключ). */
 export function resolveV2AnketaSectionDisplayTitle(
 	baseTitle: string,
 	uiNode: unknown,
 	blockKey?: string,
 ): string {
-	if (!resolveV2AnketaStreamBlockOptions(uiNode, blockKey).streamBlock) {
-		return baseTitle;
+	const streamOpts = resolveV2AnketaStreamBlockOptions(uiNode, blockKey);
+	if (!streamOpts.streamBlock) return baseTitle;
+
+	const trimmed = baseTitle.trim();
+	if (hasV2StreamBlockTitlePrefix(trimmed)) return trimmed;
+
+	if (
+		blockKey &&
+		(V2_ANKETA_MAIN_SECTION_IDS as readonly string[]).includes(blockKey)
+	) {
+		const canonical =
+			V2_ANKETA_MAIN_SECTION_TITLES[blockKey as V2AnketaMainSectionId];
+		if (canonical) return canonical;
 	}
-	return formatV2StreamBlockSectionTitle(baseTitle);
+
+	const executor = streamOpts.streamExecutor;
+	if (executor && (!trimmed || trimmed === executor)) {
+		return formatV2StreamBlockSectionTitle(executor);
+	}
+
+	return formatV2StreamBlockSectionTitle(trimmed || executor || baseTitle);
 }
 
 export type ExecutorStreamBlockRef = {

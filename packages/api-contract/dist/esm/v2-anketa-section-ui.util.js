@@ -1,5 +1,6 @@
 import { inferLegacyStreamExecutorForBlockKey, isV2ExecutorStreamLabel, resolveExecutorStreamAreaLabel, } from "./v2-executor-streams.util";
 import { V2_ANKETA_MAIN_SECTION_IDS, } from "./v2-anketa-workflow.types";
+import { V2_ANKETA_MAIN_SECTION_TITLES } from "./v2-anketa-workflow.util";
 export const V2_ANKETA_SECTION_ROLE_VALUES = [
     "main",
     "subsection",
@@ -115,23 +116,42 @@ export function isV2AnketaStreamBlockRoot(uiNode, blockKey) {
     return resolveV2AnketaStreamBlockOptions(uiNode, blockKey).streamBlock;
 }
 export const V2_STREAM_BLOCK_TITLE_PREFIX = "Стрим ";
-/** Заголовок стримового object-блока: префикс «Стрим » (идемпотентно). */
+/** Уже оформленный заголовок стрима (заводской снепшот: «Стрим «…»», новый: «Стрим …»). */
+export function hasV2StreamBlockTitlePrefix(title) {
+    const trimmed = title.trim();
+    return /^Стрим(\s|«)/u.test(trimmed) || trimmed === "Стрим";
+}
+/** Заголовок стримового object-блока (идемпотентно, в стиле заводского снепшота). */
 export function formatV2StreamBlockSectionTitle(baseTitle) {
     const trimmed = baseTitle.trim();
     if (!trimmed)
         return "Стрим";
-    if (trimmed.startsWith(V2_STREAM_BLOCK_TITLE_PREFIX) ||
-        trimmed === "Стрим") {
+    if (hasV2StreamBlockTitlePrefix(trimmed))
         return trimmed;
+    if (isV2ExecutorStreamLabel(trimmed)) {
+        return `Стрим «${trimmed}»`;
     }
     return `${V2_STREAM_BLOCK_TITLE_PREFIX}${trimmed}`;
 }
-/** Заголовок секции с учётом streamBlock (явный или legacy stream* ключ). */
+/** Заголовок секции с учётом streamBlock (явный, legacy stream* / field_* ключ). */
 export function resolveV2AnketaSectionDisplayTitle(baseTitle, uiNode, blockKey) {
-    if (!resolveV2AnketaStreamBlockOptions(uiNode, blockKey).streamBlock) {
+    const streamOpts = resolveV2AnketaStreamBlockOptions(uiNode, blockKey);
+    if (!streamOpts.streamBlock)
         return baseTitle;
+    const trimmed = baseTitle.trim();
+    if (hasV2StreamBlockTitlePrefix(trimmed))
+        return trimmed;
+    if (blockKey &&
+        V2_ANKETA_MAIN_SECTION_IDS.includes(blockKey)) {
+        const canonical = V2_ANKETA_MAIN_SECTION_TITLES[blockKey];
+        if (canonical)
+            return canonical;
     }
-    return formatV2StreamBlockSectionTitle(baseTitle);
+    const executor = streamOpts.streamExecutor;
+    if (executor && (!trimmed || trimmed === executor)) {
+        return formatV2StreamBlockSectionTitle(executor);
+    }
+    return formatV2StreamBlockSectionTitle(trimmed || executor || baseTitle);
 }
 /** Корневые стримовые блоки анкеты из uiSchema. */
 export function collectExecutorStreamBlocks(uiSchema) {

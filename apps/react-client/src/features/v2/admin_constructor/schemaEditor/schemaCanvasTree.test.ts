@@ -378,7 +378,7 @@ describe("treeToGroupOrders", () => {
 		};
 
 		const tree = buildSchemaCanvasTree(schema, ui);
-		expect(tree.find((n) => n.id === "/field_stream")?.text).toBe("Стрим ДАДМ");
+		expect(tree.find((n) => n.id === "/field_stream")?.text).toBe("Стрим «ДАДМ»");
 		expect(tree.find((n) => n.id === "/generalInfo")?.text).toBe(
 			"Общие сведения",
 		);
