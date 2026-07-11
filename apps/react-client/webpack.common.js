@@ -78,7 +78,9 @@ module.exports = {
 	],
 	output: {
 		filename: "[name].bundle.js",
-		chunkFilename: "[name].[contenthash:8].chunk.js",
+		chunkFilename: isDev
+			? "chunks/[name].js"
+			: "[name].[contenthash:8].chunk.js",
 		path: path.resolve(__dirname, "dist"),
 		// auto: publicPath выводится из URL remoteEntry.js (важно за proxy-префиксом).
 		publicPath: PUBLIC_PATH || "auto",

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.V2_UNCERTAINTY_RISK_GROUP_LABELS = void 0;
+exports.V2_UNCERTAINTY_CALCULATION_FIELD_ORDER = exports.V2_UNCERTAINTY_RISK_GROUP_ORDER = exports.V2_UNCERTAINTY_RISK_GROUP_LABELS = void 0;
 exports.registryFormColumnId = registryFormColumnId;
 exports.estimateRegistryColumnWidth = estimateRegistryColumnWidth;
 exports.buildStaticV2QuestionnaireRegistryColumnTree = buildStaticV2QuestionnaireRegistryColumnTree;
@@ -27,6 +27,27 @@ exports.V2_UNCERTAINTY_RISK_GROUP_LABELS = {
     isNotUsedAfterProject: "Неиспользование ИС после завершения проекта",
     itArchitectureChanges: "Изменения целевой ИТ архитектуры Банка",
 };
+/** Порядок полей группы рисков в uncertaintyCalculation.riskGroup. */
+exports.V2_UNCERTAINTY_RISK_GROUP_ORDER = [
+    "businessComplexity",
+    "defectsInSolution",
+    "adjacentProjectsImpact",
+    "laborCostIncrease",
+    "thirdPartyNegligence",
+    "staffShortage",
+    "sanctions",
+    "controlProceduresLack",
+    "regulatoryChanges",
+    "isNotUsedAfterProject",
+    "itArchitectureChanges",
+];
+/** Порядок полей в uncertaintyCalculation. */
+exports.V2_UNCERTAINTY_CALCULATION_FIELD_ORDER = [
+    "initiativeTimeline",
+    "initiativeCost",
+    "uncertaintyAdjustment",
+    "riskGroup",
+];
 const SOURCE_SYSTEM_FIELDS = [
     ["name", "Название"],
     ["type", "Тип"],

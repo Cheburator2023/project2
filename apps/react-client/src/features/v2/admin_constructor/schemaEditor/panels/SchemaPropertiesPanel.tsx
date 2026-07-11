@@ -5,10 +5,13 @@ import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { Flex } from "@react-client/common/primitives/Flex";
 import type { V2DictionaryDto } from "@smart-anketa/api-contract";
@@ -89,6 +92,19 @@ import {
 	resolvePropertiesFieldKind,
 } from "../propertiesFieldKind";
 import { readUiSchemaBranchAtPointer } from "../../utils/schemaMutators";
+import {
+	buildSchemaWorkParameters,
+	schemaParamIdFromPointer,
+} from "./typicalWorksPanel/schemaWorkParameters";
+
+async function copyTextToClipboard(text: string, label: string) {
+	try {
+		await navigator.clipboard.writeText(text);
+		toast.success(`${label} скопирован`);
+	} catch {
+		toast.error(`Не удалось скопировать ${label.toLowerCase()}`);
+	}
+}
 
 function PropertiesSection({
 	title,
@@ -340,6 +356,9 @@ export function SchemaPropertiesPanel() {
 		openLogicTabWithRule,
 		addRuleForTargetPath,
 		setMainTab,
+		openLogicTabWithTriggerParam,
+		fieldPathHints,
+		enumMapByCode,
 		uiSchema,
 		jsonSchema,
 		handleAddFieldPresetAtParent,
@@ -468,7 +487,11 @@ export function SchemaPropertiesPanel() {
 			return;
 		}
 		const stream = typicalWorkStreamExecutor as V2ExecutorStreamLabel;
-		const rootCount = listCanvasEditableChildKeys(jsonSchema, "/", uiSchema).length;
+		const rootCount = listCanvasEditableChildKeys(
+			jsonSchema,
+			"/",
+			uiSchema,
+		).length;
 		handleAddFieldPresetAtParent(
 			"/",
 			makeStreamBlockJsonSchema(stream),
@@ -724,6 +747,29 @@ export function SchemaPropertiesPanel() {
 		fieldKind === "general-uncertainty";
 	const workArch = isWorkArchComponent(archComponent);
 
+	const selectedSchemaParamId = useMemo(
+		() => (selectedPointer ? schemaParamIdFromPointer(selectedPointer) : ""),
+		[selectedPointer],
+	);
+
+	const isSchemaTriggerParam = useMemo(() => {
+		if (!selectedPointer) return false;
+		const params = buildSchemaWorkParameters({
+			fieldPathHints,
+			uiSchema,
+			jsonSchema,
+			enumMapByCode,
+		});
+		return params.some((param) => param.id === selectedSchemaParamId);
+	}, [
+		selectedPointer,
+		selectedSchemaParamId,
+		fieldPathHints,
+		uiSchema,
+		jsonSchema,
+		enumMapByCode,
+	]);
+
 	return (
 		<PanelChrome embedded dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.properties}>
 			{monacoError ? (
@@ -754,6 +800,56 @@ export function SchemaPropertiesPanel() {
 								label={V2_ARCH_COMPONENT_LABELS[archComponent]}
 								sx={{ mt: 0.75 }}
 							/>
+						) : null}
+						{isSchemaTriggerParam ? (
+							<Box sx={{ mt: 1.25 }}>
+								<Typography
+									variant="caption"
+									color="text.secondary"
+									display="block"
+									sx={{ mb: 0.5 }}
+								>
+									ID параметра (триггеры типовых работ)
+								</Typography>
+								<Flex gap={0.5} alignItems="center" wrap="wrap">
+									<Typography
+										component="code"
+										variant="caption"
+										sx={{
+											flex: 1,
+											minWidth: 0,
+											wordBreak: "break-all",
+											fontFamily: "monospace",
+										}}
+									>
+										{selectedSchemaParamId}
+									</Typography>
+									<IconButton
+										size="small"
+										title="Скопировать ID параметра"
+										aria-label="Скопировать ID параметра"
+										onClick={() =>
+											void copyTextToClipboard(
+												selectedSchemaParamId,
+												"ID параметра",
+											)
+										}
+									>
+										<ContentCopyIcon sx={{ fontSize: 16 }} />
+									</IconButton>
+									<Button
+										size="small"
+										variant="outlined"
+										startIcon={<OpenInNewIcon sx={{ fontSize: 16 }} />}
+										onClick={() => {
+											if (!selectedPointer) return;
+											openLogicTabWithTriggerParam(selectedPointer);
+										}}
+									>
+										В триггеры
+									</Button>
+								</Flex>
+							</Box>
 						) : null}
 					</Box>
 
@@ -948,11 +1044,7 @@ export function SchemaPropertiesPanel() {
 								>
 									{V2_EXECUTOR_STREAM_LABELS.map((stream) => (
 										<MenuItem key={stream} value={stream}>
-											<Flex
-												alignItems="center"
-												gap={1}
-												sx={{ width: "100%" }}
-											>
+											<Flex alignItems="center" gap={1} sx={{ width: "100%" }}>
 												<Typography sx={{ flex: 1 }}>{stream}</Typography>
 												<ExecutorStreamPresenceLabel
 													present={isExecutorStreamPresentInSchema(
@@ -1299,11 +1391,7 @@ export function SchemaPropertiesPanel() {
 									</MenuItem>
 									{V2_EXECUTOR_STREAM_LABELS.map((stream) => (
 										<MenuItem key={stream} value={stream}>
-											<Flex
-												alignItems="center"
-												gap={1}
-												sx={{ width: "100%" }}
-											>
+											<Flex alignItems="center" gap={1} sx={{ width: "100%" }}>
 												<Typography sx={{ flex: 1 }}>{stream}</Typography>
 												<ExecutorStreamPresenceLabel
 													present={isExecutorStreamPresentInSchema(
@@ -1381,7 +1469,9 @@ export function SchemaPropertiesPanel() {
 										<FuzzyAutocomplete<(typeof typicalWorks)[number]>
 											options={unboundTypicalWorks}
 											value={null}
-											onChange={(work: (typeof typicalWorks)[number] | null) => {
+											onChange={(
+												work: (typeof typicalWorks)[number] | null,
+											) => {
 												if (!work || !selectedPointer) return;
 												recordDraftHistory();
 												patchUiSchema(

@@ -120,8 +120,10 @@ export const viteCommonConfig = ({
 			cacheDir: fileURLToPath(new URL("./.cache/vite-app", import.meta.url)),
 			base,
 			optimizeDeps: {
+				holdUntilCrawlEnd: true,
 				include: [
 					"@smart-anketa/json-logic-ts",
+					"@smart-anketa/api-contract",
 					"react-dnd",
 					"react-dnd-html5-backend",
 					"@minoru/react-dnd-treeview",
@@ -242,6 +244,12 @@ export const viteCommonConfig = ({
 					cachedChecks: false,
 				},
 				port: 8004,
+				hmr: {
+					overlay: false,
+				},
+				watch: {
+					usePolling: Boolean(process.env.VITE_USE_POLLING),
+				},
 				proxy: {
 					"/api": {
 						target: currentTarget,

@@ -168,6 +168,8 @@ export function TypicalWorkEditableCard({
 		liveFormData,
 		setSelectedPointer,
 		setMainTab,
+		triggerParamPickId,
+		clearTriggerParamPick,
 	} = useSchemaEditor();
 	const { data: assignmentsList } = useV2TypicalWorkAssignments({
 		templateVersionId,
@@ -964,6 +966,8 @@ export function TypicalWorkEditableCard({
 							setMainTab("designer");
 							setSelectedPointer(pointer);
 						}}
+						triggerParamPickId={triggerParamPickId}
+						onTriggerParamPickConsumed={clearTriggerParamPick}
 					/>
 
 					<Box

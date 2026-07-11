@@ -442,6 +442,10 @@ export function buildSchemaWorkParameters({
 
 const SCHEMA_PARAM_ID_PREFIX = "schema:";
 
+export function schemaParamIdFromPointer(pointer: string): string {
+	return `${SCHEMA_PARAM_ID_PREFIX}${pointer}`;
+}
+
 export function resolveSchemaParamPointerFromId(id: string): string | null {
 	return id.startsWith(SCHEMA_PARAM_ID_PREFIX)
 		? id.slice(SCHEMA_PARAM_ID_PREFIX.length)

@@ -119,6 +119,80 @@ describe("buildSchemaCanvasTree", () => {
 		expect(workType?.data?.kind).toBe("field");
 	});
 
+	it("nests uncertaintyCalculation fields under overallUncertaintyModal trigger", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				generalInfo: {
+					type: "object",
+					title: "Общая информация",
+					properties: {
+						overallUncertaintyModal: {
+							type: "string",
+							title: "Расчёт общей неопределённости",
+						},
+					},
+				},
+				uncertaintyCalculation: {
+					type: "object",
+					title: "Данные расчёта",
+					properties: {
+						initiativeTimeline: {
+							type: "string",
+							title: "Сроки инициативы",
+						},
+						uncertaintyAdjustment: {
+							type: "number",
+							title: "Поправка на общую неопределённость",
+						},
+						riskGroup: {
+							type: "object",
+							title: "Группа рисков",
+							properties: {
+								sanctions: {
+									type: "string",
+									title: "Введение санкционных мер и других ограничений",
+								},
+							},
+						},
+					},
+				},
+			},
+		};
+		const ui: UiSchema = {
+			"ui:order": ["generalInfo", "uncertaintyCalculation"],
+			generalInfo: {
+				"ui:order": ["overallUncertaintyModal"],
+				overallUncertaintyModal: {
+					"ui:widget": "V2UncertaintyModalWidget",
+				},
+			},
+			uncertaintyCalculation: {
+				"ui:options": { hidden: true, system: true },
+				"ui:order": ["initiativeTimeline", "uncertaintyAdjustment", "riskGroup"],
+				riskGroup: {
+					"ui:order": ["sanctions"],
+				},
+			},
+		};
+
+		const tree = buildSchemaCanvasTree(schema, ui, { hideSystemFields: true });
+		const modalId = "/generalInfo/overallUncertaintyModal";
+
+		expect(tree.find((n) => n.id === modalId)?.droppable).toBe(true);
+		expect(
+			tree.find((n) => n.id === "/uncertaintyCalculation/initiativeTimeline")
+				?.parent,
+		).toBe(modalId);
+		expect(
+			tree.find((n) => n.id === "/uncertaintyCalculation/riskGroup")?.parent,
+		).toBe(modalId);
+		expect(
+			tree.find((n) => n.id === "/uncertaintyCalculation/riskGroup/sanctions")
+				?.parent,
+		).toBe("/uncertaintyCalculation/riskGroup");
+	});
+
 	it("appends summary row under typicalWork array blocks", () => {
 		const preset = ARCH_COMPONENT_PRESET_DEFS.typicalWork.make();
 		const schema: RJSFSchema = {

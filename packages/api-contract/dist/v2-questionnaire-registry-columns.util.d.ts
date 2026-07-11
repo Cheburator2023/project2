@@ -30,6 +30,10 @@ export type V2RegistrySchemaColumnOptions = {
 };
 /** Подписи группы рисков (из jsonSchema.title заводской схемы). */
 export declare const V2_UNCERTAINTY_RISK_GROUP_LABELS: Record<string, string>;
+/** Порядок полей группы рисков в uncertaintyCalculation.riskGroup. */
+export declare const V2_UNCERTAINTY_RISK_GROUP_ORDER: readonly ["businessComplexity", "defectsInSolution", "adjacentProjectsImpact", "laborCostIncrease", "thirdPartyNegligence", "staffShortage", "sanctions", "controlProceduresLack", "regulatoryChanges", "isNotUsedAfterProject", "itArchitectureChanges"];
+/** Порядок полей в uncertaintyCalculation. */
+export declare const V2_UNCERTAINTY_CALCULATION_FIELD_ORDER: readonly ["initiativeTimeline", "initiativeCost", "uncertaintyAdjustment", "riskGroup"];
 export declare function registryFormColumnId(formPath: string): string;
 /** Ширина колонки по длине заголовка — заголовок помещается без обрезки. */
 export declare function estimateRegistryColumnWidth(header: string): number;

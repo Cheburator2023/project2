@@ -50,6 +50,7 @@ import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayo
 import {
 	LOGIC_TAB_QUERY,
 } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
+import { schemaParamIdFromPointer } from "../schemaEditor/panels/typicalWorksPanel/schemaWorkParameters";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
 import { useDebouncedV2Calculation } from "../hooks/useDebouncedV2Calculation";
@@ -290,6 +291,9 @@ export const V2TemplateSchemaEditor = ({
 	const [depsDraft, setDepsDraft] = useState("");
 	const [monacoError, setMonacoError] = useState<string | null>(null);
 	const [logicPathPick, setLogicPathPick] = useState<string>("");
+	const [triggerParamPickId, setTriggerParamPickId] = useState<string | null>(
+		null,
+	);
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 	const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 
@@ -1569,6 +1573,22 @@ export const V2TemplateSchemaEditor = ({
 		[setLogicWorkspaceTab],
 	);
 
+	const clearTriggerParamPick = useCallback(() => {
+		setTriggerParamPickId(null);
+	}, []);
+
+	const openLogicTabWithTriggerParam = useCallback(
+		(pointer: string) => {
+			const normalized = normalizeJsonPointer(pointer);
+			setSelectedPointer(normalized);
+			setLogicPathPick(normalized);
+			setTriggerParamPickId(schemaParamIdFromPointer(normalized));
+			setMainTab("logic");
+			setLogicWorkspaceTab("works");
+		},
+		[setLogicWorkspaceTab],
+	);
+
 	const openLogicWorkspace = useCallback(() => {
 		setMainTab("logic");
 		setLogicWorkspaceTab("works");
@@ -1760,6 +1780,9 @@ export const V2TemplateSchemaEditor = ({
 			addRuleForTargetPath,
 			openLogicTabWithRule,
 			openLogicTabWithPointer,
+			triggerParamPickId,
+			openLogicTabWithTriggerParam,
+			clearTriggerParamPick,
 			updateRulePatch,
 			removeSelectedRule,
 			previewEvalNote,
@@ -1841,6 +1864,9 @@ export const V2TemplateSchemaEditor = ({
 			addRuleForTargetPath,
 			openLogicTabWithRule,
 			openLogicTabWithPointer,
+			triggerParamPickId,
+			openLogicTabWithTriggerParam,
+			clearTriggerParamPick,
 			updateRulePatch,
 			removeSelectedRule,
 			previewEvalNote,

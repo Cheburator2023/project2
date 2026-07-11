@@ -6,6 +6,7 @@ import {
 	isSchemaLaborParamCandidate,
 	jsonPointerToLogicVarPath,
 	resolveSchemaParamFieldRef,
+	schemaParamIdFromPointer,
 	schemaLaborParamPickerCaption,
 	resolveSchemaParamForTriggerRule,
 	triggerRuleGroupKey,
@@ -22,6 +23,14 @@ describe("jsonPointerToLogicVarPath", () => {
 		).toBe("streamDataSources.sourceSystems[].type");
 		expect(jsonPointerToLogicVarPath("/detailInfo/dataMart/metricsCount")).toBe(
 			"detailInfo.dataMart.metricsCount",
+		);
+	});
+});
+
+describe("schemaParamIdFromPointer", () => {
+	it("prefixes json pointer with schema:", () => {
+		expect(schemaParamIdFromPointer("/generalInfo/pilotNeed")).toBe(
+			"schema:/generalInfo/pilotNeed",
 		);
 	});
 });

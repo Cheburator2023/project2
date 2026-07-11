@@ -15,6 +15,8 @@ import {
 import { pointerSegments } from "../utils/schemaPaths";
 import { resolveArchComponentAtPointer } from "./propertiesFieldKind";
 
+export const UNCERTAINTY_CALCULATION_ROOT_POINTER = "/uncertaintyCalculation";
+
 export const SCHEMA_CANVAS_ROOT_ID = "schema-root";
 export const SCHEMA_CANVAS_SYSTEM_DIVIDER_ID = "schema-canvas-system-divider";
 export const PALETTE_DRAG_TYPE = "schema-editor-palette-preset";
@@ -243,6 +245,59 @@ function fieldTitle(
 	return resolveV2AnketaSectionDisplayTitle(base, uiBranch, key);
 }
 
+function isUncertaintyModalTriggerAtPointer(
+	uiSchema: UiSchema | undefined,
+	fieldPointer: string,
+): boolean {
+	const branch = readUiSchemaBranchAtPointer(
+		uiSchema as Record<string, unknown> | undefined,
+		fieldPointer,
+	);
+	return branch?.["ui:widget"] === "V2UncertaintyModalWidget";
+}
+
+function appendUncertaintyCalculationFieldNodes(
+	nodes: NodeModel<SchemaCanvasNodeData>[],
+	jsonSchema: RJSFSchema,
+	uiSchema: UiSchema | undefined,
+	schemaParentPointer: string,
+	treeParentId: string,
+): void {
+	const keys = listOrderedChildKeys(jsonSchema, schemaParentPointer, uiSchema);
+
+	for (const key of keys) {
+		const fieldPointer =
+			schemaParentPointer === "/"
+				? `/${key}`
+				: `${schemaParentPointer}/${key}`;
+		const node = resolveSchemaNode(jsonSchema, pointerSegments(fieldPointer));
+		const isGroup = isObjectFieldGroup(node);
+
+		nodes.push({
+			id: fieldPointer,
+			parent: treeParentId,
+			text: fieldTitle(node, key, uiSchema, fieldPointer),
+			droppable: isGroup,
+			data: {
+				kind: "field",
+				fieldPointer,
+				fieldKey: key,
+				parentPointer: schemaParentPointer,
+			},
+		});
+
+		if (isGroup) {
+			appendUncertaintyCalculationFieldNodes(
+				nodes,
+				jsonSchema,
+				uiSchema,
+				fieldPointer,
+				fieldPointer,
+			);
+		}
+	}
+}
+
 function appendFieldNodes(
 	nodes: NodeModel<SchemaCanvasNodeData>[],
 	jsonSchema: RJSFSchema,
@@ -292,12 +347,16 @@ function appendFieldNodes(
 		const node = resolveSchemaNode(jsonSchema, pointerSegments(fieldPointer));
 		const isGroup = isObjectFieldGroup(node);
 		const arrayItems = isGroup ? undefined : getObjectItemsSchema(node);
+		const isUncertaintyModalTrigger = isUncertaintyModalTriggerAtPointer(
+			uiSchema,
+			fieldPointer,
+		);
 
 		nodes.push({
 			id: fieldPointer,
 			parent: parentNodeId,
 			text: fieldTitle(node, key, uiSchema, fieldPointer),
-			droppable: isGroup || Boolean(arrayItems),
+			droppable: isGroup || Boolean(arrayItems) || isUncertaintyModalTrigger,
 			data: {
 				kind: "field",
 				fieldPointer,
@@ -305,6 +364,16 @@ function appendFieldNodes(
 				parentPointer,
 			},
 		});
+
+		if (isUncertaintyModalTrigger) {
+			appendUncertaintyCalculationFieldNodes(
+				nodes,
+				jsonSchema,
+				uiSchema,
+				UNCERTAINTY_CALCULATION_ROOT_POINTER,
+				fieldPointer,
+			);
+		}
 
 		if (isGroup) {
 			appendFieldNodes(
@@ -332,18 +401,18 @@ function appendFieldNodes(
 				resolveArchComponentAtPointer(uiSchema, fieldPointer) === "typicalWork"
 			) {
 				const summaryPointer = `${fieldPointer}${TYPICAL_WORK_SUMMARY_NODE_SUFFIX}`;
-				// nodes.push({
-				// 	id: summaryPointer,
-				// 	parent: fieldPointer,
-				// 	text: "Суммарный итог",
-				// 	droppable: false,
-				// 	data: {
-				// 		kind: "typical-work-summary",
-				// 		fieldPointer: summaryPointer,
-				// 		fieldKey: "summaryTotal",
-				// 		parentPointer: fieldPointer,
-				// 	},
-				// });
+				nodes.push({
+					id: summaryPointer,
+					parent: fieldPointer,
+					text: "Суммарный итог",
+					droppable: false,
+					data: {
+						kind: "typical-work-summary",
+						fieldPointer: summaryPointer,
+						fieldKey: "summaryTotal",
+						parentPointer: fieldPointer,
+					},
+				});
 			}
 		}
 	}

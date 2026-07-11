@@ -19,7 +19,7 @@ import {
 	isSourceTypeTriggerParam,
 } from "@smart-anketa/api-contract";
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
 	catalogForTriggerRuleGroup,
 	isWorkTriggerGroupInvalid,
@@ -50,6 +50,9 @@ type TypicalWorkTriggersSectionProps = {
 	streamExecutor: string;
 	onChange: (rules: V2TypicalWorkRuleDto[]) => void;
 	onNavigateToSchemaField?: (pointer: string) => void;
+	/** Id параметра (`schema:…`) — подставить в поиск «Параметр-триггер». */
+	triggerParamPickId?: string | null;
+	onTriggerParamPickConsumed?: () => void;
 };
 
 const OPERATOR_LABELS: Record<V2WorkRuleOperator, string> = {
@@ -139,8 +142,13 @@ export function TypicalWorkTriggersSection({
 	streamExecutor,
 	onChange,
 	onNavigateToSchemaField,
+	triggerParamPickId,
+	onTriggerParamPickConsumed,
 }: TypicalWorkTriggersSectionProps) {
 	const [pickerKey, setPickerKey] = useState(0);
+	const [triggerPickerSearchTerm, setTriggerPickerSearchTerm] = useState<
+		string | undefined
+	>(undefined);
 	const banner = triggerBanner(
 		triggerStatus,
 		rules.length,
@@ -163,6 +171,13 @@ export function TypicalWorkTriggersSection({
 		usedGroupKeys.size,
 		pickerItems.length,
 	);
+
+	useEffect(() => {
+		if (!triggerParamPickId?.trim()) return;
+		setTriggerPickerSearchTerm(triggerParamPickId);
+		setPickerKey((key) => key + 1);
+		onTriggerParamPickConsumed?.();
+	}, [triggerParamPickId, onTriggerParamPickConsumed]);
 
 	const grouped = useMemo(() => {
 		const map = new Map<string, V2TypicalWorkRuleDto[]>();
@@ -316,14 +331,19 @@ export function TypicalWorkTriggersSection({
 						onChange={(param) => {
 							if (!param) return;
 							addParam(param);
+							setTriggerPickerSearchTerm(undefined);
 						}}
 						getOptionLabel={(param) => param.name}
 						getOptionValue={(param) => param.code}
 						getOptionSecondaryText={(param) => {
 							const ref = resolveSchemaParamFieldRef(param);
-							if (ref.varPath) return `${ref.varPath} · ${ref.fieldKey}`;
-							return param.description ?? param.code;
+							if (ref.varPath) {
+								return `${param.id} · ${ref.varPath} · ${ref.fieldKey}`;
+							}
+							return param.id;
 						}}
+						initialSearchTerm={triggerPickerSearchTerm}
+						autoOpenOnInitialSearch={Boolean(triggerPickerSearchTerm)}
 						label="Параметр-триггер"
 						placeholder="Выберите поле схемы…"
 						emptyLabel="Выберите поле схемы…"

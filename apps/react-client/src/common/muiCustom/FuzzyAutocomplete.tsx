@@ -8,7 +8,7 @@ import InputAdornment from "@mui/material/InputAdornment";
 import type { SelectChangeEvent } from "@mui/material/Select";
 import type { AlertProps } from "@mui/material/Alert";
 import { styled } from "@mui/material/styles";
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { fuzzySearch, highlightMatches } from "@react-client/utils/fuzzySearch";
 import {
 	filterSubstringSearchOptions,
@@ -92,6 +92,10 @@ type FuzzyAutocompleteProps<T> = {
 	emptyLabel?: string;
 	searchPlaceholder?: string;
 	noMatchesText?: string;
+	/** Начальный текст в поле поиска (например id параметра при переходе из свойств поля). */
+	initialSearchTerm?: string;
+	/** Открыть выпадающий список при установке initialSearchTerm. */
+	autoOpenOnInitialSearch?: boolean;
 	label?: string;
 	placeholder?: string;
 	helperText?: string;
@@ -119,6 +123,8 @@ export function FuzzyAutocomplete<T>({
 	emptyLabel = "Не привязан",
 	searchPlaceholder = "Поиск по значениям...",
 	noMatchesText = "Нет совпадений",
+	initialSearchTerm,
+	autoOpenOnInitialSearch = false,
 	label,
 	placeholder,
 	helperText,
@@ -133,6 +139,12 @@ export function FuzzyAutocomplete<T>({
 	const [searchTerm, setSearchTerm] = useState("");
 	const [open, setOpen] = useState(false);
 	const resolveValue = getOptionValue ?? getOptionLabel;
+
+	useEffect(() => {
+		if (!initialSearchTerm?.trim()) return;
+		setSearchTerm(initialSearchTerm);
+		if (autoOpenOnInitialSearch) setOpen(true);
+	}, [initialSearchTerm, autoOpenOnInitialSearch]);
 
 	const closeMenu = useCallback(() => {
 		setOpen(false);

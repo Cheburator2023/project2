@@ -128,6 +128,10 @@ export type SchemaEditorContextValue = {
 	addRuleForTargetPath: (rawTarget: string) => void;
 	openLogicTabWithRule: (ruleId: string) => void;
 	openLogicTabWithPointer: (pointer: string) => void;
+	/** Id параметра (`schema:…`) для подсветки в селекте «Параметр-триггер». */
+	triggerParamPickId: string | null;
+	openLogicTabWithTriggerParam: (pointer: string) => void;
+	clearTriggerParamPick: () => void;
 	updateRulePatch: (patch: Partial<V2LogicRuleDto>) => void;
 	removeSelectedRule: () => void;
 	previewEvalNote: React.ReactNode;

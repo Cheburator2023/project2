@@ -20,76 +20,14 @@ import {
 } from "@mui/material";
 import { useV2DictionaryEnumsMaps } from "@react-client/common/api/queries/v2-templates";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { GENERAL_UNCERTAINTY_TOOLTIPS } from "@react-client/features/v2/admin_constructor/schemaEditor/fieldTypePresets";
+import { buildUncertaintyModalRiskGroups } from "@react-client/features/v2/anketaCRUD/utils/v2UncertaintyModalConfig";
 import { useEffect, useMemo, useState } from "react";
 
 const INITIATIVE_TIMELINE_DICTIONARY = "v2.method.21.сроки_инициативы";
 const INITIATIVE_COST_DICTIONARY = "v2.method.22.стоимость_инициативы";
 const UNCERTAINTY_ADJUSTMENT_MAX = 30;
 
-type RiskOption = {
-	id: string;
-	label: string;
-	tooltip?: string;
-};
-
-const RISK_GROUPS: RiskOption[] = [
-	{
-		id: "business_change",
-		label: "Изменение, недостаточная проработка или сложности бизнес",
-		tooltip: GENERAL_UNCERTAINTY_TOOLTIPS[0],
-	},
-	{
-		id: "solution_defects",
-		label: "Наличие дефектов во внедряемом решении/ ПО в рамках",
-		tooltip: GENERAL_UNCERTAINTY_TOOLTIPS[1],
-	},
-	{
-		id: "adjacent_projects",
-		label: "Негативное влияние смежных проектов на показатели проекта",
-		tooltip: GENERAL_UNCERTAINTY_TOOLTIPS[2],
-	},
-	{
-		id: "labor_growth",
-		label: "Увеличение трудозатрат проекта по причине недостаточной",
-		tooltip: GENERAL_UNCERTAINTY_TOOLTIPS[3],
-	},
-	{
-		id: "contractor_risk",
-		label: "Недобросовестное исполнение услуг со стороны привлеченных",
-		tooltip: GENERAL_UNCERTAINTY_TOOLTIPS[4],
-	},
-	{
-		id: "staff_shortage",
-		label: "Отсутствие квалифицированного персонала или ошибок",
-		tooltip: GENERAL_UNCERTAINTY_TOOLTIPS[5],
-	},
-	{
-		id: "sanctions",
-		label: "Введение санкционных мер и других ограничений",
-		tooltip: GENERAL_UNCERTAINTY_TOOLTIPS[6],
-	},
-	{
-		id: "lack_of_controls",
-		label: "Недостаток или отсутствие контрольных процедур",
-		tooltip: GENERAL_UNCERTAINTY_TOOLTIPS[7],
-	},
-	{
-		id: "regulatory_changes",
-		label: "Изменение регуляторных требований",
-		tooltip: GENERAL_UNCERTAINTY_TOOLTIPS[8],
-	},
-	{
-		id: "post_project_usage",
-		label: "Неиспользование ИС после завершения проекта",
-		tooltip: GENERAL_UNCERTAINTY_TOOLTIPS[9],
-	},
-	{
-		id: "target_architecture",
-		label: "Изменения целевой ИТ архитектуры Банка",
-		tooltip: GENERAL_UNCERTAINTY_TOOLTIPS[10],
-	},
-];
+const RISK_GROUPS = buildUncertaintyModalRiskGroups();
 
 const RISK_LEVEL_OPTIONS = [
 	{ value: "", label: "Не выбрано" },

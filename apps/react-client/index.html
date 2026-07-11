@@ -53,6 +53,15 @@
       </script>
       <div class="loader"></div>
     </div>
+    <script>
+      window.addEventListener("vite:preloadError", function (event) {
+        event.preventDefault();
+        if (!sessionStorage.getItem("vite:preload-reload")) {
+          sessionStorage.setItem("vite:preload-reload", "1");
+          window.location.reload();
+        }
+      });
+    </script>
     <script type="module" src="./src/index.tsx"></script>
   </body>
 

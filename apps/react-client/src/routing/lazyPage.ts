@@ -1,4 +1,5 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from "react";
+import { importWithDynamicRecovery } from "./dynamicImportRecovery";
 
 type ModuleRecord = Record<string, ComponentType<never> | unknown>;
 
@@ -7,7 +8,9 @@ export function lazyPage<P = object>(
 	exportName: string,
 ): LazyExoticComponent<ComponentType<P>> {
 	return lazy(async () => {
-		const module = await factory();
+		const module = await importWithDynamicRecovery(factory, {
+			label: exportName,
+		});
 		const component = module[exportName] as ComponentType<P> | undefined;
 
 		if (!component) {
