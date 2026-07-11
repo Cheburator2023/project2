@@ -138,7 +138,9 @@ export function buildPaletteDragNode(
 	};
 }
 
-export function getPresetIdFromPaletteDragSource(value: unknown): string | null {
+export function getPresetIdFromPaletteDragSource(
+	value: unknown,
+): string | null {
 	if (typeof value !== "object" || value === null) return null;
 
 	if (
@@ -175,7 +177,8 @@ export function arrayItemsSectionId(fieldPointer: string): string {
 }
 
 export function groupIdFromParentPointer(parentPointer: string): string {
-	if (parentPointer === "/" || parentPointer === "") return SCHEMA_CANVAS_ROOT_ID;
+	if (parentPointer === "/" || parentPointer === "")
+		return SCHEMA_CANVAS_ROOT_ID;
 	return `schema-group:${parentPointer}`;
 }
 
@@ -191,12 +194,19 @@ export function collectGroupOrders(
 	options?: SchemaCanvasTreeOptions,
 ): Record<string, string[]> {
 	const groupId = groupIdFromParentPointer(parentPointer);
-	const keys = listCanvasOrderedChildKeys(schema, parentPointer, uiSchema, options);
+	const keys = listCanvasOrderedChildKeys(
+		schema,
+		parentPointer,
+		uiSchema,
+		options,
+	);
 	const result: Record<string, string[]> = { [groupId]: keys };
 
 	for (const key of keys) {
 		const childPointer =
-			parentPointer === "/" ? `/${key}` : `${parentPointer.replace(/\/$/, "")}/${key}`;
+			parentPointer === "/"
+				? `/${key}`
+				: `${parentPointer.replace(/\/$/, "")}/${key}`;
 		const node = resolveSchemaNode(schema, pointerSegments(childPointer));
 		if (isObjectFieldGroup(node)) {
 			Object.assign(
@@ -322,18 +332,18 @@ function appendFieldNodes(
 				resolveArchComponentAtPointer(uiSchema, fieldPointer) === "typicalWork"
 			) {
 				const summaryPointer = `${fieldPointer}${TYPICAL_WORK_SUMMARY_NODE_SUFFIX}`;
-				nodes.push({
-					id: summaryPointer,
-					parent: fieldPointer,
-					text: "Суммарный итог",
-					droppable: false,
-					data: {
-						kind: "typical-work-summary",
-						fieldPointer: summaryPointer,
-						fieldKey: "summaryTotal",
-						parentPointer: fieldPointer,
-					},
-				});
+				// nodes.push({
+				// 	id: summaryPointer,
+				// 	parent: fieldPointer,
+				// 	text: "Суммарный итог",
+				// 	droppable: false,
+				// 	data: {
+				// 		kind: "typical-work-summary",
+				// 		fieldPointer: summaryPointer,
+				// 		fieldKey: "summaryTotal",
+				// 		parentPointer: fieldPointer,
+				// 	},
+				// });
 			}
 		}
 	}
@@ -345,7 +355,14 @@ export function buildSchemaCanvasTree(
 	options?: SchemaCanvasTreeOptions,
 ): NodeModel<SchemaCanvasNodeData>[] {
 	const nodes: NodeModel<SchemaCanvasNodeData>[] = [];
-	appendFieldNodes(nodes, jsonSchema, uiSchema, "/", SCHEMA_CANVAS_ROOT_ID, options);
+	appendFieldNodes(
+		nodes,
+		jsonSchema,
+		uiSchema,
+		"/",
+		SCHEMA_CANVAS_ROOT_ID,
+		options,
+	);
 	return nodes;
 }
 
@@ -356,8 +373,7 @@ function siblingFieldKeys(
 	return tree
 		.filter(
 			(node) =>
-				String(node.parent) === String(parentId) &&
-				node.data?.kind === "field",
+				String(node.parent) === String(parentId) && node.data?.kind === "field",
 		)
 		.map((node) => node.data!.fieldKey);
 }
