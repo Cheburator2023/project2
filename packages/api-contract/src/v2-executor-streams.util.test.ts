@@ -6,7 +6,9 @@ import {
 } from "./v2-executor-streams.util";
 import {
 	collectExecutorStreamBlocks,
+	formatV2StreamBlockSectionTitle,
 	isExecutorStreamPresentInSchema,
+	resolveV2AnketaSectionDisplayTitle,
 	resolveV2AnketaStreamBlockOptions,
 	readV2AnketaSectionUiOptions,
 	resolveStreamExecutorForTypicalWorkOutputPath,
@@ -59,6 +61,40 @@ describe("resolveV2AnketaStreamBlockOptions", () => {
 		expect(
 			resolveV2AnketaStreamBlockOptions(undefined, "streamModelControl"),
 		).toEqual({ streamBlock: true, streamExecutor: "Контроль моделей" });
+	});
+});
+
+describe("resolveV2AnketaSectionDisplayTitle", () => {
+	it("prefixes stream object block titles with Стрим", () => {
+		expect(
+			resolveV2AnketaSectionDisplayTitle(
+				"ДАДМ",
+				{ "ui:options": { streamBlock: true, streamExecutor: "ДАДМ" } },
+				"field_dadm",
+			),
+		).toBe("Стрим ДАДМ");
+		expect(
+			resolveV2AnketaSectionDisplayTitle(
+				"Контроль моделей",
+				undefined,
+				"streamModelControl",
+			),
+		).toBe("Стрим Контроль моделей");
+	});
+
+	it("leaves non-stream object titles unchanged", () => {
+		expect(
+			resolveV2AnketaSectionDisplayTitle(
+				"Общие сведения",
+				{ "ui:options": { sectionRole: "main" } },
+				"generalInfo",
+			),
+		).toBe("Общие сведения");
+	});
+
+	it("formatV2StreamBlockSectionTitle is idempotent", () => {
+		expect(formatV2StreamBlockSectionTitle("ПиРМ")).toBe("Стрим ПиРМ");
+		expect(formatV2StreamBlockSectionTitle("Стрим ПиРМ")).toBe("Стрим ПиРМ");
 	});
 });
 

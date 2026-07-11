@@ -1,10 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.V2_ANKETA_STREAM_SECTION_IDS = exports.V2_ARCH_COMPONENT_LABELS = exports.V2_ARCH_COMPONENT_TYPES = exports.V2_ANKETA_SECTION_ROLE_VALUES = void 0;
+exports.V2_ANKETA_STREAM_SECTION_IDS = exports.V2_STREAM_BLOCK_TITLE_PREFIX = exports.V2_ARCH_COMPONENT_LABELS = exports.V2_ARCH_COMPONENT_TYPES = exports.V2_ANKETA_SECTION_ROLE_VALUES = void 0;
 exports.isV2ArchComponentType = isV2ArchComponentType;
 exports.readV2AnketaSectionUiOptions = readV2AnketaSectionUiOptions;
 exports.resolveV2AnketaStreamBlockOptions = resolveV2AnketaStreamBlockOptions;
 exports.isV2AnketaStreamBlockRoot = isV2AnketaStreamBlockRoot;
+exports.formatV2StreamBlockSectionTitle = formatV2StreamBlockSectionTitle;
+exports.resolveV2AnketaSectionDisplayTitle = resolveV2AnketaSectionDisplayTitle;
 exports.collectExecutorStreamBlocks = collectExecutorStreamBlocks;
 exports.collectPresentExecutorStreamLabels = collectPresentExecutorStreamLabels;
 exports.isExecutorStreamPresentInSchema = isExecutorStreamPresentInSchema;
@@ -132,6 +134,25 @@ function resolveV2AnketaStreamBlockOptions(uiNode, blockKey) {
 }
 function isV2AnketaStreamBlockRoot(uiNode, blockKey) {
     return resolveV2AnketaStreamBlockOptions(uiNode, blockKey).streamBlock;
+}
+exports.V2_STREAM_BLOCK_TITLE_PREFIX = "Стрим ";
+/** Заголовок стримового object-блока: префикс «Стрим » (идемпотентно). */
+function formatV2StreamBlockSectionTitle(baseTitle) {
+    const trimmed = baseTitle.trim();
+    if (!trimmed)
+        return "Стрим";
+    if (trimmed.startsWith(exports.V2_STREAM_BLOCK_TITLE_PREFIX) ||
+        trimmed === "Стрим") {
+        return trimmed;
+    }
+    return `${exports.V2_STREAM_BLOCK_TITLE_PREFIX}${trimmed}`;
+}
+/** Заголовок секции с учётом streamBlock (явный или legacy stream* ключ). */
+function resolveV2AnketaSectionDisplayTitle(baseTitle, uiNode, blockKey) {
+    if (!resolveV2AnketaStreamBlockOptions(uiNode, blockKey).streamBlock) {
+        return baseTitle;
+    }
+    return formatV2StreamBlockSectionTitle(baseTitle);
 }
 /** Корневые стримовые блоки анкеты из uiSchema. */
 function collectExecutorStreamBlocks(uiSchema) {

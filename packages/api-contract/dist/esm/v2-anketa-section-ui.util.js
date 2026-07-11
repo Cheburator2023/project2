@@ -114,6 +114,25 @@ export function resolveV2AnketaStreamBlockOptions(uiNode, blockKey) {
 export function isV2AnketaStreamBlockRoot(uiNode, blockKey) {
     return resolveV2AnketaStreamBlockOptions(uiNode, blockKey).streamBlock;
 }
+export const V2_STREAM_BLOCK_TITLE_PREFIX = "Стрим ";
+/** Заголовок стримового object-блока: префикс «Стрим » (идемпотентно). */
+export function formatV2StreamBlockSectionTitle(baseTitle) {
+    const trimmed = baseTitle.trim();
+    if (!trimmed)
+        return "Стрим";
+    if (trimmed.startsWith(V2_STREAM_BLOCK_TITLE_PREFIX) ||
+        trimmed === "Стрим") {
+        return trimmed;
+    }
+    return `${V2_STREAM_BLOCK_TITLE_PREFIX}${trimmed}`;
+}
+/** Заголовок секции с учётом streamBlock (явный или legacy stream* ключ). */
+export function resolveV2AnketaSectionDisplayTitle(baseTitle, uiNode, blockKey) {
+    if (!resolveV2AnketaStreamBlockOptions(uiNode, blockKey).streamBlock) {
+        return baseTitle;
+    }
+    return formatV2StreamBlockSectionTitle(baseTitle);
+}
 /** Корневые стримовые блоки анкеты из uiSchema. */
 export function collectExecutorStreamBlocks(uiSchema) {
     const root = readRecord(uiSchema);

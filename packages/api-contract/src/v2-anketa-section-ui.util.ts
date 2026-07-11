@@ -192,6 +192,33 @@ export function isV2AnketaStreamBlockRoot(
 	return resolveV2AnketaStreamBlockOptions(uiNode, blockKey).streamBlock;
 }
 
+export const V2_STREAM_BLOCK_TITLE_PREFIX = "Стрим ";
+
+/** Заголовок стримового object-блока: префикс «Стрим » (идемпотентно). */
+export function formatV2StreamBlockSectionTitle(baseTitle: string): string {
+	const trimmed = baseTitle.trim();
+	if (!trimmed) return "Стрим";
+	if (
+		trimmed.startsWith(V2_STREAM_BLOCK_TITLE_PREFIX) ||
+		trimmed === "Стрим"
+	) {
+		return trimmed;
+	}
+	return `${V2_STREAM_BLOCK_TITLE_PREFIX}${trimmed}`;
+}
+
+/** Заголовок секции с учётом streamBlock (явный или legacy stream* ключ). */
+export function resolveV2AnketaSectionDisplayTitle(
+	baseTitle: string,
+	uiNode: unknown,
+	blockKey?: string,
+): string {
+	if (!resolveV2AnketaStreamBlockOptions(uiNode, blockKey).streamBlock) {
+		return baseTitle;
+	}
+	return formatV2StreamBlockSectionTitle(baseTitle);
+}
+
 export type ExecutorStreamBlockRef = {
 	blockKey: string;
 	pointer: string;
