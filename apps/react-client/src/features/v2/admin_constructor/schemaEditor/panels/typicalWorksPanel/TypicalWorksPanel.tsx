@@ -48,6 +48,7 @@ import {
 	groupWorksByArchComponent,
 	NEW_WORK_QUERY,
 	pickDefaultStream,
+	ROLLBACK_TYPICAL_WORK_QUERY,
 	storeWorkStream,
 	WORK_ID_QUERY,
 } from "./typicalWorksUi";
@@ -68,7 +69,7 @@ export function TypicalWorksPanel() {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const templateVersionId = searchParams.get(V2_TEMPLATE_VERSION_QUERY);
 
-	const { jsonSchema, uiSchema, setSelectedPointer, handleAddFieldPresetAtParent, patchUiSchema, recordDraftHistory, setMainTab } =
+	const { jsonSchema, uiSchema, setSelectedPointer, handleAddFieldPresetAtParent, patchUiSchema, recordDraftHistory, setMainTab, handleDeleteField } =
 		useSchemaEditor();
 
 	const { data, isLoading, error } = useV2TypicalWorksList({
@@ -269,6 +270,30 @@ export function TypicalWorksPanel() {
 		});
 	};
 
+	const handleCreateDialogClose = useCallback(() => {
+		setCreateOpen(false);
+		const rollbackPointer = searchParams.get(BIND_POINTER_QUERY);
+		const shouldRollback =
+			searchParams.get(ROLLBACK_TYPICAL_WORK_QUERY) === "1" && rollbackPointer;
+
+		if (shouldRollback) {
+			handleDeleteField(rollbackPointer);
+			setMainTab("designer");
+		}
+
+		if (rollbackPointer || shouldRollback) {
+			setSearchParams(
+				(prev) => {
+					const next = new URLSearchParams(prev);
+					next.delete(BIND_POINTER_QUERY);
+					next.delete(ROLLBACK_TYPICAL_WORK_QUERY);
+					return next;
+				},
+				{ replace: true },
+			);
+		}
+	}, [searchParams, handleDeleteField, setMainTab, setSearchParams]);
+
 	const handleCreateWork = async (payload: {
 		name: string;
 		archComponentType: string;
@@ -305,6 +330,7 @@ export function TypicalWorksPanel() {
 					(prev) => {
 						const next = new URLSearchParams(prev);
 						next.delete(BIND_POINTER_QUERY);
+						next.delete(ROLLBACK_TYPICAL_WORK_QUERY);
 						return next;
 					},
 					{ replace: true },
@@ -446,7 +472,7 @@ export function TypicalWorksPanel() {
 				defaultStreamExecutor={scope.stream}
 				isStreamPresentInSchema={isStreamPresentInSchema}
 				onCreateStreamBlock={handleCreateStreamBlock}
-				onClose={() => setCreateOpen(false)}
+				onClose={handleCreateDialogClose}
 				onSubmit={handleCreateWork}
 			/>
 

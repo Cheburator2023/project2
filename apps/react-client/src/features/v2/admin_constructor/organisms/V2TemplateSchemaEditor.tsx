@@ -51,6 +51,7 @@ import {
 	BIND_POINTER_QUERY,
 	LOGIC_TAB_QUERY,
 	NEW_WORK_QUERY,
+	ROLLBACK_TYPICAL_WORK_QUERY,
 } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
@@ -1224,6 +1225,7 @@ export const V2TemplateSchemaEditor = ({
 							nextParams.set(LOGIC_TAB_QUERY, "works");
 							nextParams.set(NEW_WORK_QUERY, "1");
 							nextParams.set(BIND_POINTER_QUERY, childPointer);
+							nextParams.set(ROLLBACK_TYPICAL_WORK_QUERY, "1");
 							return nextParams;
 						},
 						{ replace: true },
