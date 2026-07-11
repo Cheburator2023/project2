@@ -149,6 +149,20 @@ export class KanbanBoardRegistryService {
 			}
 			settings.defaultSprintCapacityPd = String(dto.defaultSprintCapacityPd);
 		}
+		if (dto.defaultCurrentUserAssigneeName !== undefined) {
+			const name = dto.defaultCurrentUserAssigneeName?.trim() ?? "";
+			if (name) {
+				const assignee = await this.assigneeRepository.findOne({
+					where: { name },
+				});
+				if (!assignee) {
+					throw new BadRequestException("Исполнитель не найден в справочнике");
+				}
+				settings.defaultCurrentUserAssigneeName = name;
+			} else {
+				settings.defaultCurrentUserAssigneeName = null;
+			}
+		}
 		await this.settingsRepository.save(settings);
 		return this.toSettingsDto(settings);
 	}
@@ -1858,6 +1872,8 @@ export class KanbanBoardRegistryService {
 	): KanbanBoardSettingsDto {
 		return {
 			defaultSprintCapacityPd: this.parseNumeric(settings.defaultSprintCapacityPd),
+			defaultCurrentUserAssigneeName:
+				settings.defaultCurrentUserAssigneeName?.trim() || null,
 			updatedAt: settings.updatedAt.toISOString(),
 		};
 	}

@@ -8,20 +8,18 @@ import DialogTitle from "@mui/material/DialogTitle";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import type { ColDef, ValueParserParams } from "ag-grid-community";
 import { Card } from "@react-client/common/muiCustom/Card";
+import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { Flex } from "@react-client/common/primitives/Flex";
 import {
 	useKanbanBoardAssignees,
 	useKanbanBoardSettings,
 	useResetKanbanBoardColumnsToDefault,
-	useUpdateKanbanBoardAssignee,
 	useUpdateKanbanBoardSettings,
 } from "@react-client/common/api/queries/kanban-board";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { toast } from "@react-client/common/toasts";
-import { TrackerRegistryGrid } from "@react-client/features/tracker/components/TrackerRegistryGrid";
 import {
 	clearAgGridColumnStates,
 	TRACKER_AG_GRID_STATE_KEYS,
@@ -29,9 +27,13 @@ import {
 import {
 	KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD,
 	KANBAN_BOARD_STATUSES,
-	type KanbanBoardAssigneeDto,
 } from "@smart-anketa/api-contract";
 import { useEffect, useMemo, useState } from "react";
+
+type AssigneeOption = {
+	value: string;
+	label: string;
+};
 
 const parseCapacity = (value: unknown): number | null => {
 	if (value === null || value === undefined || value === "") return null;
@@ -46,13 +48,14 @@ export function TrackerSettingsPage() {
 	const { data: assignees = [], isLoading: assigneesLoading } =
 		useKanbanBoardAssignees();
 	const updateSettings = useUpdateKanbanBoardSettings();
-	const updateAssignee = useUpdateKanbanBoardAssignee();
 	const resetBoardColumns = useResetKanbanBoardColumnsToDefault();
 
 	const [defaultCapacity, setDefaultCapacity] = useState(
 		String(KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD),
 	);
+	const [defaultCurrentUser, setDefaultCurrentUser] = useState("");
 	const [saveError, setSaveError] = useState<string | null>(null);
+	const [userSaveError, setUserSaveError] = useState<string | null>(null);
 	const [gridResetNotice, setGridResetNotice] = useState<string | null>(null);
 	const [confirmColumnsResetOpen, setConfirmColumnsResetOpen] = useState(false);
 	const [columnsResetNotice, setColumnsResetNotice] = useState<string | null>(
@@ -67,43 +70,26 @@ export function TrackerSettingsPage() {
 	useEffect(() => {
 		if (settings) {
 			setDefaultCapacity(String(settings.defaultSprintCapacityPd));
+			setDefaultCurrentUser(settings.defaultCurrentUserAssigneeName ?? "");
 		}
 	}, [settings]);
 
-	const columnDefs = useMemo<ColDef<KanbanBoardAssigneeDto>[]>(
-		() => [
-			{ field: "name", headerName: "Исполнитель", flex: 1, minWidth: 160 },
-			{ field: "roleTitle", headerName: "Роль", width: 120 },
-			{ field: "email", headerName: "Email", flex: 1, minWidth: 180 },
-			{
-				field: "taskCount",
-				headerName: "Задач",
-				width: 90,
-				type: "numericColumn",
-				editable: false,
-			},
-			{
-				field: "sprintCapacityPd",
-				headerName: "Ёмкость, чд",
-				width: 130,
-				type: "numericColumn",
-				editable: true,
-				valueParser: (params: ValueParserParams<KanbanBoardAssigneeDto>) =>
-					parseCapacity(params.newValue),
-				valueFormatter: (params) =>
-					params.value === null || params.value === undefined
-						? "—"
-						: String(params.value),
-			},
-			{
-				field: "effectiveSprintCapacityPd",
-				headerName: "Итого ёмкость",
-				width: 130,
-				type: "numericColumn",
-				editable: false,
-			},
-		],
-		[],
+	const assigneeOptions = useMemo<AssigneeOption[]>(
+		() =>
+			assignees.map((item) => ({
+				value: item.name,
+				label: item.roleTitle
+					? `${item.name} — ${item.roleTitle}`
+					: item.name,
+			})),
+		[assignees],
+	);
+
+	const selectedCurrentUser = useMemo(
+		() =>
+			assigneeOptions.find((option) => option.value === defaultCurrentUser) ??
+			null,
+		[assigneeOptions, defaultCurrentUser],
 	);
 
 	const handleSaveDefault = async () => {
@@ -120,18 +106,16 @@ export function TrackerSettingsPage() {
 		}
 	};
 
-	const handleCapacityChange = async (
-		row: KanbanBoardAssigneeDto,
-		value: unknown,
-	) => {
-		const parsed = parseCapacity(value);
-		if (parsed === null && value !== null && value !== "" && value !== "—") {
-			return;
+	const handleSaveCurrentUser = async () => {
+		setUserSaveError(null);
+		try {
+			await updateSettings.mutateAsync({
+				defaultCurrentUserAssigneeName: defaultCurrentUser.trim() || null,
+			});
+			toast.success("Исполнитель по умолчанию сохранён");
+		} catch {
+			setUserSaveError("Не удалось сохранить исполнителя");
 		}
-		await updateAssignee.mutateAsync({
-			id: row.id,
-			data: { sprintCapacityPd: parsed },
-		});
 	};
 
 	const handleResetGridColumns = () => {
@@ -172,6 +156,40 @@ export function TrackerSettingsPage() {
 							</Button>
 						</Stack>
 						{saveError ? <Alert severity="error">{saveError}</Alert> : null}
+					</Stack>
+				</Card>
+
+				<Card padding="20px">
+					<Stack spacing={2} maxWidth={480}>
+						<Typography variant="h6">Текущий пользователь</Typography>
+						<Typography variant="body2" color="text.secondary">
+							Кто вы в трекере — используется как исполнитель по умолчанию при
+							написании комментариев к задачам. Пока нет привязки к учётной
+							записи, выбор делается вручную.
+						</Typography>
+						<FuzzyAutocomplete<AssigneeOption>
+							label="Я — исполнитель"
+							options={assigneeOptions}
+							value={selectedCurrentUser}
+							onChange={(option) =>
+								setDefaultCurrentUser(option?.value ?? "")
+							}
+							getOptionLabel={(option) => option.label}
+							getOptionValue={(option) => option.value}
+							disabled={assigneesLoading || settingsLoading}
+							fullWidth
+						/>
+						<Button
+							variant="contained"
+							onClick={() => void handleSaveCurrentUser()}
+							disabled={updateSettings.isPending || settingsLoading}
+							sx={{ alignSelf: "flex-start", minWidth: 140 }}
+						>
+							Сохранить
+						</Button>
+						{userSaveError ? (
+							<Alert severity="error">{userSaveError}</Alert>
+						) : null}
 					</Stack>
 				</Card>
 

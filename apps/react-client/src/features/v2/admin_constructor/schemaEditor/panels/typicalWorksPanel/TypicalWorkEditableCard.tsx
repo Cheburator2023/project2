@@ -93,6 +93,7 @@ import {
 	useDebouncedTypicalWorkSave,
 	type SaveStatus,
 } from "./useDebouncedTypicalWorkSave";
+import { reconcileStreamNormPeriods } from "./typicalWorkNormPeriods";
 import { TypicalWorkValueMatchingInfo } from "./typicalWorkValueMatchingHelp";
 
 type TypicalWorkEditableCardProps = {
@@ -222,6 +223,7 @@ export function TypicalWorkEditableCard({
 			...structuredClone(card),
 			formula,
 			formulaTerms: ensureFormulaTerms(card),
+			norms: reconcileStreamNormPeriods(structuredClone(card.norms)),
 		});
 	}, [card, templateVersionId, hasPending]);
 
@@ -354,6 +356,7 @@ export function TypicalWorkEditableCard({
 		);
 		const withDerived = {
 			...next,
+			norms: reconcileStreamNormPeriods(next.norms, next.streamExecutor),
 			formula,
 			formulaTerms,
 			formulaBadge: computeFormulaBadgeFromTokens(formula.tokens),

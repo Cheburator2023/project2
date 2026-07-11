@@ -25,6 +25,8 @@ import type {
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
 	KanbanBoardTaskImageDto,
+	KanbanBoardTaskCommentDto,
+	CreateKanbanBoardTaskCommentRequestDto,
 	KanbanBoardHistoryDto,
 	KanbanBoardHistoryOverviewDto,
 	UpdateKanbanBoardAssigneeRequestDto,
@@ -829,6 +831,68 @@ export const useDeleteKanbanBoardTaskImage = () => {
 				queryKey: ["kanbanBoardTaskImages", taskId],
 			});
 			queryClient.invalidateQueries({ queryKey: ["kanbanBoardTaskRef"] });
+		},
+	});
+};
+
+export const kanbanBoardListTaskComments = (
+	taskId: string,
+	signal?: AbortSignal,
+) =>
+	apiClient<KanbanBoardTaskCommentDto[]>({
+		url: `/kanban-board/tasks/${taskId}/comments`,
+		method: "GET",
+		signal,
+	});
+
+export const useKanbanBoardTaskComments = (taskId: string | undefined) =>
+	useQuery({
+		queryKey: ["kanbanBoardTaskComments", taskId],
+		enabled: Boolean(taskId),
+		queryFn: ({ signal }) => kanbanBoardListTaskComments(taskId!, signal),
+	});
+
+export const useCreateKanbanBoardTaskComment = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			taskId,
+			data,
+		}: {
+			taskId: string;
+			data: CreateKanbanBoardTaskCommentRequestDto;
+		}) =>
+			apiClient<KanbanBoardTaskCommentDto>({
+				url: `/kanban-board/tasks/${taskId}/comments`,
+				method: "POST",
+				data,
+			}),
+		onSuccess: (_comment, { taskId }) => {
+			queryClient.invalidateQueries({
+				queryKey: ["kanbanBoardTaskComments", taskId],
+			});
+		},
+	});
+};
+
+export const useDeleteKanbanBoardTaskComment = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			taskId,
+			commentId,
+		}: {
+			taskId: string;
+			commentId: string;
+		}) =>
+			apiClient<void>({
+				url: `/kanban-board/tasks/${taskId}/comments/${commentId}`,
+				method: "DELETE",
+			}),
+		onSuccess: (_result, { taskId }) => {
+			queryClient.invalidateQueries({
+				queryKey: ["kanbanBoardTaskComments", taskId],
+			});
 		},
 	});
 };

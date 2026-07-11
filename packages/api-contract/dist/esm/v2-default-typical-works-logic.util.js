@@ -105,8 +105,11 @@ const PATCHED_RULE_IDS = new Set([
     "unified-source-typical-works",
     "unified-control-typical-works",
 ]);
-function isPatchedTypicalWorksCatalogRule(rule) {
+export function isTypicalWorksCatalogLogicRule(rule) {
     return (PATCHED_RULE_IDS.has(rule.id) || rule.id.startsWith("typical-works-catalog-"));
+}
+function isPatchedTypicalWorksCatalogRule(rule) {
+    return isTypicalWorksCatalogLogicRule(rule);
 }
 const LEGACY_CONTROL_TYPICAL_TASKS_PATH = "streamModelControl.control.controlTypicalTasks";
 const LEGACY_CONTROL_TYPICAL_TASKS_SLASH_PATH = "/streamModelControl/control/controlTypicalTasks";

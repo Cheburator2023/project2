@@ -6,9 +6,33 @@ import {
 	type V2ExecutorStreamLabel,
 } from "@smart-anketa/api-contract";
 
-export type LogicWorksScope = { kind: "stream"; stream: string };
+export type LogicWorksScope =
+	| { kind: "stream"; stream: string }
+	| { kind: "all" };
+
+export const ALL_LOGIC_WORKS_SCOPE: LogicWorksScope = { kind: "all" };
 
 export const LOGIC_EXECUTOR_STREAMS = V2_EXECUTOR_STREAM_LABELS;
+
+export function isAllLogicWorksScope(
+	scope: LogicWorksScope,
+): scope is { kind: "all" } {
+	return scope.kind === "all";
+}
+
+export const DEFAULT_LOGIC_STREAM = "Источники данных" as const;
+
+export const DEFAULT_SCOPE: LogicWorksScope = {
+	kind: "stream",
+	stream: DEFAULT_LOGIC_STREAM,
+};
+
+export function scopeStreamExecutor(
+	scope: LogicWorksScope,
+	fallback: string = LOGIC_EXECUTOR_STREAMS[0],
+): string {
+	return scope.kind === "all" ? fallback : scope.stream;
+}
 
 /** Имена стримов в БД → область в UI (для сопоставления с существующими назначениями). */
 const DB_STREAM_TO_AREA: Record<string, string> = V2_DB_STREAM_TO_EXECUTOR_AREA;
@@ -36,15 +60,28 @@ export function streamAreaKey(stream: string): string {
 }
 
 export function resolveScopeStreams(scope: LogicWorksScope): string[] {
+	if (scope.kind === "all") {
+		return LOGIC_EXECUTOR_STREAMS.flatMap(
+			(stream) => AREA_TO_DB_STREAMS[stream] ?? [stream],
+		);
+	}
 	return AREA_TO_DB_STREAMS[scope.stream] ?? [scope.stream];
 }
 
-export function scopeLabel(scope: LogicWorksScope): string {
-	return scope.stream;
+export function workMatchesLogicScope(
+	workStreams: string[],
+	scope: LogicWorksScope,
+): boolean {
+	if (scope.kind === "all") return true;
+	return workAssignedToScope(workStreams, resolveScopeStreams(scope));
 }
 
-export function scopeSubtitle(_scope: LogicWorksScope): string {
-	return "стрим-исполнитель";
+export function scopeLabel(scope: LogicWorksScope): string {
+	return scope.kind === "all" ? "Все области" : scope.stream;
+}
+
+export function scopeSubtitle(scope: LogicWorksScope): string {
+	return scope.kind === "all" ? "все области" : "стрим-исполнитель";
 }
 
 export function workAssignedToScope(

@@ -49,6 +49,8 @@ import type {
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
 	KanbanBoardTaskImageDto,
+	KanbanBoardTaskCommentDto,
+	CreateKanbanBoardTaskCommentRequestDto,
 	KanbanBoardHistoryDto,
 	KanbanBoardHistoryOverviewDto,
 	UpdateKanbanBoardCustomerRequestDto,
@@ -65,6 +67,7 @@ import type {
 import type { Response } from "express";
 import { KanbanBoardRegistryService } from "../services/kanban-board-registry.service";
 import { KanbanBoardTaskImageService } from "../services/kanban-board-task-image.service";
+import { KanbanBoardTaskCommentService } from "../services/kanban-board-task-comment.service";
 import {
 	KanbanBoardService,
 	PlanningImportNotSupportedError,
@@ -90,6 +93,7 @@ export class KanbanBoardController {
 		private readonly kanbanBoardService: KanbanBoardService,
 		private readonly registryService: KanbanBoardRegistryService,
 		private readonly taskImageService: KanbanBoardTaskImageService,
+		private readonly taskCommentService: KanbanBoardTaskCommentService,
 		private readonly historyService: KanbanBoardHistoryService,
 	) {}
 
@@ -539,6 +543,29 @@ export class KanbanBoardController {
 		@Param("imageId") imageId: string,
 	): Promise<void> {
 		return this.taskImageService.delete(taskId, imageId);
+	}
+
+	@Get("tasks/:taskId/comments")
+	async listTaskComments(
+		@Param("taskId") taskId: string,
+	): Promise<KanbanBoardTaskCommentDto[]> {
+		return this.taskCommentService.listForTask(taskId);
+	}
+
+	@Post("tasks/:taskId/comments")
+	async createTaskComment(
+		@Param("taskId") taskId: string,
+		@Body() dto: CreateKanbanBoardTaskCommentRequestDto,
+	): Promise<KanbanBoardTaskCommentDto> {
+		return this.taskCommentService.create(taskId, dto);
+	}
+
+	@Delete("tasks/:taskId/comments/:commentId")
+	async deleteTaskComment(
+		@Param("taskId") taskId: string,
+		@Param("commentId") commentId: string,
+	): Promise<void> {
+		return this.taskCommentService.delete(taskId, commentId);
 	}
 
 	@Post("tasks/import-planning")

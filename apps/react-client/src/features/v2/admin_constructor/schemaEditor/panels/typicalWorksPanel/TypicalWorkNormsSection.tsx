@@ -14,6 +14,10 @@ import { validateNormInputs } from "@smart-anketa/api-contract";
 import { useMemo, useState } from "react";
 import { streamDisplayLabel } from "./typicalWorksAreas";
 import {
+	closeOpenNormPeriodsBefore,
+	isoNormDay,
+} from "./typicalWorkNormPeriods";
+import {
 	normPeriodStatus,
 	normStatusColors,
 	normStatusLabel,
@@ -26,35 +30,6 @@ type TypicalWorkNormsSectionProps = {
 	formatDate: (value: string | null) => string;
 	parseDateInput: (value: string) => string;
 };
-
-function isoDateValue(value: string | null): string {
-	if (!value) return "";
-	const day = value.slice(0, 10);
-	return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : "";
-}
-
-function dayBefore(isoDay: string): string | null {
-	if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDay)) return null;
-	const date = new Date(`${isoDay}T12:00:00.000Z`);
-	if (Number.isNaN(date.getTime())) return null;
-	date.setUTCDate(date.getUTCDate() - 1);
-	return date.toISOString().slice(0, 10);
-}
-
-function closeOpenNormPeriodsBefore(
-	norms: V2TypicalWorkNormDto[],
-	streamExecutor: string,
-	nextValidFrom: string,
-): V2TypicalWorkNormDto[] {
-	const closeBefore = dayBefore(nextValidFrom);
-	if (!closeBefore) return norms;
-	return norms.map((norm) => {
-		if (norm.streamExecutor !== streamExecutor || norm.validTo) return norm;
-		const from = isoDateValue(norm.validFrom);
-		if (!from || from > closeBefore) return norm;
-		return { ...norm, validTo: closeBefore };
-	});
-}
 
 function normIssuesByLocalIndex(
 	issues: Array<{ path: string; message: string }>,
@@ -271,15 +246,22 @@ export function TypicalWorkNormsSection({
 								<TextField
 									size="small"
 									type="date"
-									value={isoDateValue(norm.validFrom)}
+									value={isoNormDay(norm.validFrom)}
 									error={rowIssues?.has("validFrom")}
 									helperText={rowIssues?.get("validFrom") ?? " "}
 									FormHelperTextProps={{ sx: { m: 0, minHeight: 16 } }}
 									onChange={(e) => {
-										const next = [...norms];
+										const newValidFrom = e.target.value;
+										const closed = closeOpenNormPeriodsBefore(
+											norms,
+											streamExecutor,
+											newValidFrom,
+											{ exceptNormId: norm.id },
+										);
+										const next = [...closed];
 										next[index] = {
 											...norm,
-											validFrom: e.target.value,
+											validFrom: newValidFrom,
 										};
 										onChange(next);
 									}}
@@ -289,7 +271,7 @@ export function TypicalWorkNormsSection({
 								<TextField
 									size="small"
 									type="date"
-									value={isoDateValue(norm.validTo)}
+									value={isoNormDay(norm.validTo)}
 									error={rowIssues?.has("validTo")}
 									helperText={rowIssues?.get("validTo") ?? " "}
 									FormHelperTextProps={{ sx: { m: 0, minHeight: 16 } }}

@@ -1,6 +1,7 @@
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
+import Divider from "@mui/material/Divider";
 import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import Paper from "@mui/material/Paper";
@@ -8,8 +9,10 @@ import Popper from "@mui/material/Popper";
 import Typography from "@mui/material/Typography";
 import { useRef, useState } from "react";
 import {
+	ALL_LOGIC_WORKS_SCOPE,
 	LOGIC_EXECUTOR_STREAMS,
 	type LogicWorksScope,
+	isAllLogicWorksScope,
 	scopeLabel,
 	streamColor,
 } from "./typicalWorksAreas";
@@ -29,7 +32,9 @@ export function LogicWorksToolbar({
 	const { uiSchema } = useSchemaEditor();
 	const anchorRef = useRef<HTMLButtonElement>(null);
 	const [pickerOpen, setPickerOpen] = useState(false);
-	const scopePresent = isExecutorStreamPresentInSchema(uiSchema, scope.stream);
+	const scopePresent =
+		!isAllLogicWorksScope(scope) &&
+		isExecutorStreamPresentInSchema(uiSchema, scope.stream);
 
 	return (
 		<Box
@@ -86,11 +91,19 @@ export function LogicWorksToolbar({
 				component="span"
 				sx={{
 					fontSize: 11,
-					color: scopePresent ? "#1f8a4d" : "#c62828",
+					color: isAllLogicWorksScope(scope)
+						? "#8a93a3"
+						: scopePresent
+							? "#1f8a4d"
+							: "#c62828",
 					fontWeight: 600,
 				}}
 			>
-				{scopePresent ? "стрим в схеме" : "стрим не в схеме"}
+				{isAllLogicWorksScope(scope)
+					? "все назначенные работы"
+					: scopePresent
+						? "стрим в схеме"
+						: "стрим не в схеме"}
 			</Typography>
 			<Popper
 				open={pickerOpen}
@@ -125,8 +138,28 @@ export function LogicWorksToolbar({
 							Стрим-исполнитель
 						</Typography>
 						<MenuList dense disablePadding>
+							<MenuItem
+								selected={isAllLogicWorksScope(scope)}
+								onClick={() => {
+									onScopeChange(ALL_LOGIC_WORKS_SCOPE);
+									setPickerOpen(false);
+								}}
+								sx={{ borderRadius: 1, py: 0.9 }}
+							>
+								<Typography
+									sx={{
+										fontSize: 13,
+										fontWeight: isAllLogicWorksScope(scope) ? 700 : 600,
+										color: "#1d2435",
+									}}
+								>
+									Все области
+								</Typography>
+							</MenuItem>
+							<Divider sx={{ my: 0.5 }} />
 							{LOGIC_EXECUTOR_STREAMS.map((stream) => {
-								const selected = scope.stream === stream;
+								const selected =
+									!isAllLogicWorksScope(scope) && scope.stream === stream;
 								const present = isExecutorStreamPresentInSchema(
 									uiSchema,
 									stream,

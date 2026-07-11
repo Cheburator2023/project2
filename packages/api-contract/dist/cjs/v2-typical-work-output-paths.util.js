@@ -5,6 +5,7 @@ exports.collectGeneratedTypicalWorkArrayPaths = collectGeneratedTypicalWorkArray
 exports.readTypicalWorkBoundWorkIdsAtOutputPath = readTypicalWorkBoundWorkIdsAtOutputPath;
 exports.collectTypicalWorkBlockBindings = collectTypicalWorkBlockBindings;
 exports.backfillTypicalWorkBoundWorkIdsInUiSchema = backfillTypicalWorkBoundWorkIdsInUiSchema;
+exports.disableTypicalWorkCatalogBindingsInUiSchema = disableTypicalWorkCatalogBindingsInUiSchema;
 exports.resolveSourceTypicalWorksOutputPath = resolveSourceTypicalWorksOutputPath;
 exports.jsonSchemaHasResolvablePath = jsonSchemaHasResolvablePath;
 exports.listAllGeneratedTypicalWorkArrayPaths = listAllGeneratedTypicalWorkArrayPaths;
@@ -140,6 +141,17 @@ function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog) {
         if (ids.length === 0)
             continue;
         next = patchBoundWorkIdsAtOutputPath(next, binding.outputPath, ids);
+    }
+    return next;
+}
+/**
+ * Явно отключает автогенерацию каталога типовых работ на всех блоках typicalWork.
+ * Пустой boundWorkIds — сигнал patchV2TypicalWorksLogicRules не включать catalog rule.
+ */
+function disableTypicalWorkCatalogBindingsInUiSchema(uiSchema) {
+    let next = uiSchema;
+    for (const outputPath of collectGeneratedTypicalWorkArrayPaths(uiSchema)) {
+        next = patchBoundWorkIdsAtOutputPath(next, outputPath, []);
     }
     return next;
 }

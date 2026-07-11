@@ -12,6 +12,46 @@ import {
 	saveBufferedTypicalWorkPatch,
 } from "./typicalWorkSaveBuffer";
 
+import { reconcileStreamNormPeriods } from "./typicalWorkNormPeriods";
+
+function reconcilePatchDtoNorms(
+	dto: PatchV2TypicalWorkRequestDto,
+): PatchV2TypicalWorkRequestDto {
+	const stream = dto.streamExecutor?.trim();
+	if (!stream || !dto.norms?.length) return dto;
+
+	const normsWithId = dto.norms.filter(
+		(norm): norm is PatchV2TypicalWorkRequestDto["norms"][number] & {
+			id: string;
+		} => Boolean(norm.id),
+	);
+	const normsWithoutId = dto.norms.filter((norm) => !norm.id);
+
+	const reconciled = reconcileStreamNormPeriods(
+		normsWithId.map((norm) => ({
+			id: norm.id,
+			streamExecutor: stream,
+			normValue: norm.normValue,
+			validFrom: norm.validFrom,
+			validTo: norm.validTo ?? null,
+		})),
+		stream,
+	);
+
+	return {
+		...dto,
+		norms: [
+			...normsWithoutId,
+			...reconciled.map(({ id, normValue, validFrom, validTo }) => ({
+				id,
+				normValue,
+				validFrom,
+				validTo,
+			})),
+		],
+	};
+}
+
 export type SaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 
 type UseDebouncedTypicalWorkSaveOptions = {
@@ -34,11 +74,11 @@ export function useDebouncedTypicalWorkSave(
 
 	const flush = useCallback(async () => {
 		if (!workId || !pendingRef.current) return;
-		const dto = {
+		const dto = reconcilePatchDtoNorms({
 			...pendingRef.current,
 			templateVersionId:
 				templateVersionIdRef.current ?? pendingRef.current.templateVersionId,
-		};
+		});
 		const validationErrors = collectTypicalWorkPatchValidationErrors(dto);
 		if (validationErrors.length > 0) {
 			const message = validationErrors
@@ -151,12 +191,16 @@ export function cardToPatchDto(
 	templateVersionId: string | null,
 ): PatchV2TypicalWorkRequestDto {
 	const stream = card.streamExecutor.trim();
+	const reconciledNorms = reconcileStreamNormPeriods(
+		card.norms,
+		stream,
+	);
 	return {
 		streamExecutor: stream,
 		templateVersionId: templateVersionId ?? undefined,
 		name: card.name,
 		archComponentType: card.archComponentType,
-		norms: card.norms
+		norms: reconciledNorms
 			.filter((norm) => norm.streamExecutor === stream)
 			.map((norm) => ({
 				id: norm.id,

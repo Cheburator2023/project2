@@ -132,6 +132,17 @@ export function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog) {
     }
     return next;
 }
+/**
+ * Явно отключает автогенерацию каталога типовых работ на всех блоках typicalWork.
+ * Пустой boundWorkIds — сигнал patchV2TypicalWorksLogicRules не включать catalog rule.
+ */
+export function disableTypicalWorkCatalogBindingsInUiSchema(uiSchema) {
+    let next = uiSchema;
+    for (const outputPath of collectGeneratedTypicalWorkArrayPaths(uiSchema)) {
+        next = patchBoundWorkIdsAtOutputPath(next, outputPath, []);
+    }
+    return next;
+}
 /** Путь вывода типовых работ «Система-источник» по схеме (канонический или пользовательский). */
 export function resolveSourceTypicalWorksOutputPath(jsonSchema, uiSchema) {
     if (jsonSchemaHasResolvablePath(jsonSchema, V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH)) {

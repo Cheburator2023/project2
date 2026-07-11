@@ -193,24 +193,27 @@ export function useBrowserRouterNavigationBlocker(
 			if (isProceedingRef.current) return;
 
 			const nextLocation = readWindowLocation();
-			const currentLocation = locationRef.current;
 			if (
 				!tryBlock(NavigationType.Pop, nextLocation, () => {
-					originalReplace({
-						pathname: nextLocation.pathname,
-						search: nextLocation.search,
-						hash: nextLocation.hash,
-					});
+					isProceedingRef.current = true;
+					try {
+						window.history.go(-1);
+					} finally {
+						isProceedingRef.current = false;
+					}
 				})
 			) {
 				return;
 			}
 
-			originalReplace({
-				pathname: currentLocation.pathname,
-				search: currentLocation.search,
-				hash: currentLocation.hash,
-			});
+			// Отменяем pop, чтобы React Router не остался на предыдущем маршруте
+			// при восстановленном URL (иначе — пустой экран).
+			isProceedingRef.current = true;
+			try {
+				window.history.go(1);
+			} finally {
+				isProceedingRef.current = false;
+			}
 		};
 
 		window.addEventListener("popstate", onPopState);

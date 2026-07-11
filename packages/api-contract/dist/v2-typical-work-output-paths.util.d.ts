@@ -25,6 +25,11 @@ export declare function collectTypicalWorkBlockBindings(uiSchema: unknown): Typi
  * Вызывается после сида каталога в шаблон (id работ известны только после seed).
  */
 export declare function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema: Record<string, unknown>, catalog: readonly TypicalWorkCatalogBindingItem[]): Record<string, unknown>;
+/**
+ * Явно отключает автогенерацию каталога типовых работ на всех блоках typicalWork.
+ * Пустой boundWorkIds — сигнал patchV2TypicalWorksLogicRules не включать catalog rule.
+ */
+export declare function disableTypicalWorkCatalogBindingsInUiSchema(uiSchema: Record<string, unknown>): Record<string, unknown>;
 /** Путь вывода типовых работ «Система-источник» по схеме (канонический или пользовательский). */
 export declare function resolveSourceTypicalWorksOutputPath(jsonSchema?: unknown, uiSchema?: unknown): string | null;
 /** Есть ли в jsonSchema узел по dot-пути (только `properties`, без $ref). */
