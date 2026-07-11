@@ -29,7 +29,7 @@ import {
 import AppRoutes from "@react-client/common/routing";
 import { getRouterBasename } from "@react-client/routing/basename";
 import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
-import ru from "date-fns/locale/ru";
+import { ru } from "date-fns/locale/ru";
 
 const GIT_REVISION = process.env.GIT_REVISION;
 const NODE_ENV = process.env.NODE_ENV;
