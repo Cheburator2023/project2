@@ -203,4 +203,25 @@ describe("v2-typical-work-jsonlogic.util", () => {
 		});
 		expect(total).toBe(25);
 	});
+
+	it("computeTypicalWorkFormulaTotal evaluates ((N + c) × param) + constant", () => {
+		const formulaText = "((N + 5) × коэф(p1)) + 11";
+		const parsed = parseWorkFormulaText(formulaText);
+		expect(parsed.error).toBeNull();
+		const terms = tokensToTermsFormula({
+			tokens: parsed.tokens,
+			text: formulaText,
+		});
+		const total = computeTypicalWorkFormulaTotal({
+			calculationLogic: null,
+			formula: terms,
+			formulaText,
+			terms,
+			rounding: defaultWorkRounding(),
+			norm: 20,
+			paramCoefficients: { p1: 1 },
+			resolveFactorCoeff: (code) => (code === "p1" ? 1 : 1),
+		});
+		expect(total).toBe(36);
+	});
 });

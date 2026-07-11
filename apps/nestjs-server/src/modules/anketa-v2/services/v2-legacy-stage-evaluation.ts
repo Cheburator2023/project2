@@ -4,6 +4,7 @@ import {
 	V2_LEGACY_STAGE_SUMMARY_POINTERS,
 	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
 	type V2LegacyStageEvaluationDto,
+	buildExecutorStreamWorkSummaryRows,
 } from "@smart-anketa/api-contract";
 import {
 	V2_PLATFORM_STREAM_NAMES,
@@ -636,29 +637,45 @@ export function evaluateLegacyV2Summary(
 	const mlAtypical = sumAtypicalIncluded(readArray(mlPlatform?.atypicalTasks));
 	const algorithmMult = Math.max(coefficients.algorithmComplexityCoefficient, 1);
 
-	const platformStreams: V2PlatformStreamRow[] = [
-		{
-			streamName: V2_PLATFORM_STREAM_NAMES[0],
-			baseTypicalScore: mlTypical,
-			adjustedTypicalScore: roundUp2(mlTypical * algorithmMult),
-			deviationPercent: percentDeviation(mlTypical, mlTypical * algorithmMult),
-			atypicalScore: mlAtypical,
-		},
-		{
-			streamName: V2_PLATFORM_STREAM_NAMES[1],
-			baseTypicalScore: 0,
-			adjustedTypicalScore: 0,
-			deviationPercent: null,
-			atypicalScore: 0,
-		},
-		{
-			streamName: V2_PLATFORM_STREAM_NAMES[2],
-			baseTypicalScore: sourceTypical,
-			adjustedTypicalScore: roundUp2(sourceTypical * algorithmMult),
-			deviationPercent: percentDeviation(sourceTypical, sourceTypical * algorithmMult),
-			atypicalScore: 0,
-		},
-	];
+	const dynamicPlatformStreams =
+		options?.uiSchema != null
+			? buildExecutorStreamWorkSummaryRows(data, options.uiSchema).map((row) => ({
+					streamName: row.streamName,
+					baseTypicalScore: row.baseTypicalScore,
+					adjustedTypicalScore: row.adjustedTypicalScore,
+					deviationPercent: row.deviationPercent,
+					atypicalScore: row.atypicalScore,
+				}))
+			: null;
+
+	const platformStreams: V2PlatformStreamRow[] = dynamicPlatformStreams?.length
+		? dynamicPlatformStreams
+		: [
+				{
+					streamName: V2_PLATFORM_STREAM_NAMES[0],
+					baseTypicalScore: mlTypical,
+					adjustedTypicalScore: roundUp2(mlTypical * algorithmMult),
+					deviationPercent: percentDeviation(mlTypical, mlTypical * algorithmMult),
+					atypicalScore: mlAtypical,
+				},
+				{
+					streamName: V2_PLATFORM_STREAM_NAMES[1],
+					baseTypicalScore: 0,
+					adjustedTypicalScore: 0,
+					deviationPercent: null,
+					atypicalScore: 0,
+				},
+				{
+					streamName: V2_PLATFORM_STREAM_NAMES[2],
+					baseTypicalScore: sourceTypical,
+					adjustedTypicalScore: roundUp2(sourceTypical * algorithmMult),
+					deviationPercent: percentDeviation(
+						sourceTypical,
+						sourceTypical * algorithmMult,
+					),
+					atypicalScore: 0,
+				},
+			];
 
 	const baseScoreStream = roundUp2(baseTotal);
 	const scoreWithComplexityCoeff = roundUp2(adjustedTotal + atypicalAdjusted);

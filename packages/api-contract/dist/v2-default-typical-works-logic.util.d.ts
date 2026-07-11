@@ -16,6 +16,8 @@ export declare function buildSourceTypicalWorksCatalogRule(outputArrayPath?: str
 }): V2LogicRuleDto;
 export declare function buildControlTypicalWorksCatalogRule(): V2LogicRuleDto;
 export declare function isTypicalWorksCatalogLogicRule(rule: V2LogicRuleDto): boolean;
+export declare function buildTypicalWorkRowTotalRule(arrayPath: string): V2LogicRuleDto;
+export declare function buildUnifiedTypicalTotalRule(arrayPaths: string[]): V2LogicRuleDto | null;
 /** Схема содержит блок типовых работ (archComponent: typicalWork) — достаточно для каталога. */
 export declare function schemaSupportsSourceTypicalWorksCatalog(jsonSchema?: unknown, uiSchema?: unknown): boolean;
 /** Заменяет устаревшие static-tasks правила на каталог работ с путями схемы v5. */

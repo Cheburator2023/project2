@@ -17,6 +17,7 @@ import {
 } from "./AnketaFormModals";
 import { V2AnketaSchemaForm } from "./V2AnketaSchemaForm";
 import { Flex } from "@react-client/common/primitives/Flex";
+import { ANKETA_COLUMN_VIEWPORT_HEIGHT } from "../templates/AnketaFormPageLayout";
 
 type Props = {
 	engine: V2AnketaSchemaEngine;
@@ -24,7 +25,10 @@ type Props = {
 	/** Доп. корневые ключи, скрываемые поверх uiSchema (редко). */
 	hiddenTopLevelFields?: string[];
 	anketaFormContext?: Partial<
-		Omit<AnketaFormContextValue, "formData" | "previewSchema" | "previewUiSchema">
+		Omit<
+			AnketaFormContextValue,
+			"formData" | "previewSchema" | "previewUiSchema"
+		>
 	>;
 	/** Слот «Рассчитать общую неопределённость» в generalInfo (режим анкеты). */
 	showUncertaintySlot?: boolean;
@@ -97,7 +101,9 @@ export function V2AnketaFormWithModals({
 			onCompletePanelSection: completePanelSectionByPath,
 			onTouchMainSection: touchMainSection,
 			isMainSectionLocked: isSectionLocked,
-			objectFieldSlots: uncertaintySlot ? { generalInfo: uncertaintySlot } : undefined,
+			objectFieldSlots: uncertaintySlot
+				? { generalInfo: uncertaintySlot }
+				: undefined,
 			openAnketaModal: (path, editIndex) =>
 				modalControlsRef.current.openArrayModal(path, editIndex),
 			openUncertaintyModal: () =>
@@ -126,14 +132,22 @@ export function V2AnketaFormWithModals({
 
 	return (
 		<>
-			<V2AnketaSchemaForm
-				engine={engine}
-				readOnly={effectiveReadOnly}
-				hiddenTopLevelFields={hiddenTopLevelFields}
-				anketaFormContext={anketaFormContext}
-				modalBindings={modalBindingSets}
+			<Flex
+				flexDirection="column"
+				width="100%"
+				minWidth="0"
+				height={ANKETA_COLUMN_VIEWPORT_HEIGHT}
 				data-test-id={dataTestId}
-			/>
+				sx={{ overflow: "auto", borderRadius: "8px" }}
+			>
+				<V2AnketaSchemaForm
+					engine={engine}
+					readOnly={effectiveReadOnly}
+					hiddenTopLevelFields={hiddenTopLevelFields}
+					anketaFormContext={anketaFormContext}
+					modalBindings={modalBindingSets}
+				/>
+			</Flex>
 			<AnketaFormModals
 				formData={engine.formData}
 				previewSchema={engine.previewSchema}
@@ -141,6 +155,7 @@ export function V2AnketaFormWithModals({
 				modalBindings={modalBindingSets.bindings}
 				onFormDataChange={engine.setFormData}
 				controlsRef={modalControlsRef}
+				data-test-id={"anketa-form-modals"}
 			/>
 		</>
 	);

@@ -6,6 +6,8 @@ exports.typicalWorksCatalogRuleId = typicalWorksCatalogRuleId;
 exports.buildSourceTypicalWorksCatalogRule = buildSourceTypicalWorksCatalogRule;
 exports.buildControlTypicalWorksCatalogRule = buildControlTypicalWorksCatalogRule;
 exports.isTypicalWorksCatalogLogicRule = isTypicalWorksCatalogLogicRule;
+exports.buildTypicalWorkRowTotalRule = buildTypicalWorkRowTotalRule;
+exports.buildUnifiedTypicalTotalRule = buildUnifiedTypicalTotalRule;
 exports.schemaSupportsSourceTypicalWorksCatalog = schemaSupportsSourceTypicalWorksCatalog;
 exports.patchV2TypicalWorksLogicRules = patchV2TypicalWorksLogicRules;
 const v2_typical_work_output_paths_util_1 = require("./v2-typical-work-output-paths.util");
@@ -121,6 +123,70 @@ function isTypicalWorksCatalogLogicRule(rule) {
 function isPatchedTypicalWorksCatalogRule(rule) {
     return isTypicalWorksCatalogLogicRule(rule);
 }
+function typicalRowTotalRuleId(arrayPath) {
+    return `unified-typical-row-total:${arrayPath.replace(/\./g, "_")}`;
+}
+function isTypicalRowTotalPatchedRuleId(id) {
+    return id.startsWith("unified-typical-row-total:");
+}
+function buildTypicalArrayReduceTerm(arrayPath) {
+    return {
+        reduce: [
+            { var: arrayPath },
+            {
+                "+": [
+                    { var: "accumulator" },
+                    {
+                        max: [0, { var: "current.total" }],
+                    },
+                ],
+            },
+            0,
+        ],
+    };
+}
+function buildTypicalWorkRowTotalRule(arrayPath) {
+    return {
+        id: typicalRowTotalRuleId(arrayPath),
+        kind: "row_computed",
+        payload: {
+            label: "Per-row итог типовой работы",
+            fieldVar: "total",
+            arrayPath,
+            formulaHint: "row.total = норматив (ч/д) × коэффициент",
+        },
+        condition: {
+            "*": [{ var: "estimateHoursPerDay" }, { var: "coefficient" }],
+        },
+        targetPath: `/${arrayPath.replace(/\./g, "/")}`,
+        description: "ФТ-024: итог строки типовой работы.",
+        dependencies: [],
+    };
+}
+function buildUnifiedTypicalTotalRule(arrayPaths) {
+    if (arrayPaths.length === 0)
+        return null;
+    const condition = arrayPaths.length === 1
+        ? buildTypicalArrayReduceTerm(arrayPaths[0])
+        : {
+            "+": arrayPaths.map((path) => buildTypicalArrayReduceTerm(path)),
+        };
+    return {
+        id: "unified-typical-total",
+        kind: "computed",
+        payload: {
+            mode: "expert",
+            role: "typical_total",
+            label: "Сумма по типовым работам",
+            calcModel: "unified",
+            formulaHint: `Σ типовые работы (${arrayPaths.join(" + ")})`,
+        },
+        condition,
+        targetPath: "/summary/typicalTotal",
+        description: "ФТ-026: сумма итоговых оценок типовых работ.",
+        dependencies: arrayPaths.map((path) => `/${path.replace(/\./g, "/")}`),
+    };
+}
 const LEGACY_CONTROL_TYPICAL_TASKS_PATH = "streamModelControl.control.controlTypicalTasks";
 const LEGACY_CONTROL_TYPICAL_TASKS_SLASH_PATH = "/streamModelControl/control/controlTypicalTasks";
 const LEGACY_CONTROL_TYPICAL_TASKS_SLASH_REPLACEMENT = `/${v2_typical_work_output_paths_util_1.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH.replace(/\./g, "/")}`;
@@ -195,8 +261,23 @@ function patchV2TypicalWorksLogicRules(logic, options) {
     }
     if (hasControlRule)
         patched.push(buildControlTypicalWorksCatalogRule());
+    const typicalPaths = options?.uiSchema
+        ? (0, v2_typical_work_output_paths_util_1.collectGeneratedTypicalWorkArrayPaths)(options.uiSchema)
+        : [];
     const rest = rules
-        .filter((rule) => !isPatchedTypicalWorksCatalogRule(rule))
+        .filter((rule) => !isPatchedTypicalWorksCatalogRule(rule) &&
+        !isTypicalRowTotalPatchedRuleId(rule.id) &&
+        (typicalPaths.length === 0 || rule.id !== "unified-typical-total"))
         .map((rule) => patchUnifiedTypicalTotalRule(patchLegacyRowTotalRule(patchTypicalWorksPathsDeep(rule)), sourceOutputPath));
-    return { ...logic, rules: [...rest, ...patched] };
+    const injectedTypicalRows = typicalPaths.map((path) => buildTypicalWorkRowTotalRule(path));
+    const unifiedTypical = buildUnifiedTypicalTotalRule(typicalPaths);
+    return {
+        ...logic,
+        rules: [
+            ...rest,
+            ...patched,
+            ...injectedTypicalRows,
+            ...(unifiedTypical ? [unifiedTypical] : []),
+        ],
+    };
 }

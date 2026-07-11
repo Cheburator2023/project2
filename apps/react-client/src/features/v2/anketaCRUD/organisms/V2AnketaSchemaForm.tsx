@@ -319,9 +319,6 @@ export function V2AnketaSchemaForm({
 			sx={{
 				width: "100%",
 				minWidth: 0,
-				overflow: "auto",
-				height: "calc(100vh - 66px)",
-				borderRadius: "8px",
 			}}
 		>
 			{engine.calculationError ? (

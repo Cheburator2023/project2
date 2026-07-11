@@ -2,6 +2,7 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import CircularProgress from "@mui/material/CircularProgress";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -34,6 +35,7 @@ import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocompl
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Header } from "@react-client/common/navigation/organisms/Header";
+import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import {
 	useCreateKanbanBoardTask,
 	useKanbanBoardAssignees,
@@ -41,6 +43,7 @@ import {
 	useKanbanBoardColumns,
 	useKanbanBoardCustomers,
 	useKanbanBoardSprints,
+	useKanbanBoardSettings,
 	useKanbanBoardStreams,
 	useKanbanBoardTaskByRef,
 	useKanbanBoardTaskImages,
@@ -89,6 +92,24 @@ const formatDueDate = (value: Date | null): string => {
 	if (!value || !isValid(value)) return "";
 	return format(value, "yyyy-MM-dd");
 };
+
+function resolveKanbanTaskAssigneeFields(
+	assignees: string[],
+	currentAssignee: string,
+): { assignees?: string[]; currentAssignee?: string } {
+	const uniqueAssignees = [
+		...new Set(assignees.map((item) => item.trim()).filter(Boolean)),
+	];
+	const current = currentAssignee.trim();
+	if (current && !uniqueAssignees.includes(current)) {
+		uniqueAssignees.push(current);
+	}
+	const resolvedCurrent = current || uniqueAssignees[0];
+	return {
+		assignees: uniqueAssignees.length ? uniqueAssignees : undefined,
+		currentAssignee: resolvedCurrent || undefined,
+	};
+}
 
 type ParentTaskOption = {
 	id: string;
@@ -179,6 +200,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [subtasks, setSubtasks] = useState<KanbanBoardSubtaskItem[]>([]);
 
 	const assigneesQuery = useKanbanBoardAssignees();
+	const settingsQuery = useKanbanBoardSettings();
 	const sprintsQuery = useKanbanBoardSprints();
 	const streamsQuery = useKanbanBoardStreams();
 	const customersQuery = useKanbanBoardCustomers();
@@ -390,9 +412,21 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	}, [isCreate, task]);
 
 	useEffect(() => {
-		if (currentAssignee && !assignees.includes(currentAssignee)) {
-			setCurrentAssignee("");
+		if (!isCreate) return;
+		const defaultName = settingsQuery.data?.defaultCurrentUserAssigneeName?.trim();
+		if (!defaultName) return;
+		setAssignees((prev) => (prev.length ? prev : [defaultName]));
+		setCurrentAssignee((prev) => prev || defaultName);
+	}, [isCreate, settingsQuery.data?.defaultCurrentUserAssigneeName]);
+
+	useEffect(() => {
+		if (!currentAssignee) return;
+		if (assignees.includes(currentAssignee)) return;
+		if (!assignees.length) {
+			setAssignees([currentAssignee]);
+			return;
 		}
+		setCurrentAssignee("");
 	}, [assignees, currentAssignee]);
 
 	useEffect(() => {
@@ -412,6 +446,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			? Number(backlogNumber)
 			: undefined;
 		const parsedEstimate = estimatePd.trim() ? Number(estimatePd) : undefined;
+		const assigneeFields = resolveKanbanTaskAssigneeFields(assignees, currentAssignee);
 		return normalizeKanbanBoardTaskContent({
 			title: title.trim(),
 			description: description || undefined,
@@ -422,8 +457,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			priority: priority
 				? (priority as KanbanBoardTaskContent["priority"])
 				: undefined,
-			assignees: assignees.length ? assignees : undefined,
-			currentAssignee: currentAssignee.trim() || undefined,
+			...assigneeFields,
 			taskType: taskType
 				? (taskType as KanbanBoardTaskContent["taskType"])
 				: undefined,
@@ -495,6 +529,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	};
 
 	const isSaving = createTask.isPending || updateTask.isPending;
+	const isTaskLoading = !isCreate && taskByRefQuery.isLoading && !task;
 	const showForm = isCreate || Boolean(task);
 	const showBoardPicker = isCreate && !boardKeyParam && !boardKeyFromQuery;
 	const boardSubtitle = boardMeta
@@ -529,7 +564,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				<Flex gap={6} wrap="wrap" alignItems="center">
 					<Chip
 						size="small"
-						label={isCreate ? "Создание" : statusTitle}
+						label={isCreate ? "Создание" : isTaskLoading ? "Загрузка…" : statusTitle}
 						sx={{
 							bgcolor: alpha(columnColor, 0.14),
 							color: columnColor,
@@ -558,17 +593,33 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				}}
 			>
 				<Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-					{!isCreate && taskByRefQuery.isError ? (
+					{isTaskLoading ? (
+						<Flex
+							flexDirection="column"
+							alignItems="center"
+							justifyContent="center"
+							flexGrow={1}
+							gap={12}
+							minHeight={280}
+						>
+							<CircularProgress size={36} />
+							<Typography variant="body2" color="text.secondary">
+								Загрузка задачи {taskKey}…
+							</Typography>
+						</Flex>
+					) : null}
+					{!isTaskLoading && !isCreate && taskByRefQuery.isError ? (
 						<Alert severity="error">Не удалось загрузить задачу</Alert>
 					) : null}
-					{!isCreate && taskByRefQuery.isSuccess && !task ? (
+					{!isTaskLoading && !isCreate && taskByRefQuery.isSuccess && !task ? (
 						<Alert severity="warning">Задача не найдена</Alert>
 					) : null}
 					{createTask.isError || updateTask.isError ? (
 						<Alert severity="error">
-							{isCreate
-								? "Не удалось создать задачу"
-								: "Не удалось сохранить задачу"}
+							{apiErrorMessage(createTask.error ?? updateTask.error) ||
+								(isCreate
+									? "Не удалось создать задачу"
+									: "Не удалось сохранить задачу")}
 						</Alert>
 					) : null}
 					{isLockedByOther && foreignLock ? (

@@ -31,6 +31,7 @@ export * from "./v2-typical-work-jsonlogic.util";
 export * from "./v2-typical-work-validation.util";
 export * from "./v2-anketa-ui-layout.util";
 export * from "./v2-group-activation.util";
+export * from "./v2-stream-summary.util";
 export * from "./v2-legacy-stage.constants";
 export * from "./v2-anketa-system-scaffold.util";
 export * from "./v2-logic-rule-builders.util";

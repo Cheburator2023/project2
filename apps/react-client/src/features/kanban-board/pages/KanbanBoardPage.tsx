@@ -3,8 +3,10 @@ import DownloadIcon from "@mui/icons-material/Download";
 import HistoryIcon from "@mui/icons-material/History";
 import PublishIcon from "@mui/icons-material/Publish";
 import Alert from "@mui/material/Alert";
+import Backdrop from "@mui/material/Backdrop";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
@@ -205,6 +207,7 @@ export function KanbanBoardPage() {
 		useState<KanbanBoardTaskEditBlockedErrorDto | null>(null);
 	const [pendingBoard, setPendingBoard] = useState<KanbanBoardData | null>(null);
 	const [remoteStale, setRemoteStale] = useState(false);
+	const [openingTaskLabel, setOpeningTaskLabel] = useState<string | null>(null);
 	const editLabel = useTrackerEditIdentity();
 	const [boardContextMenu, setBoardContextMenu] = useState<{
 		mouseX: number;
@@ -233,6 +236,7 @@ export function KanbanBoardPage() {
 		queryKey: ["kanbanBoardTasks", boardApiRef],
 		enabled: Boolean(boardApiRef),
 		queryFn: async ({ signal }) => kanbanBoardGetBoardTasks(boardApiRef, signal),
+		refetchOnMount: "always",
 	});
 
 	const resolvedBoardId =
@@ -254,14 +258,25 @@ export function KanbanBoardPage() {
 		)
 		.join("|");
 
+	const tasksSignature = useMemo(
+		() =>
+			(tasksQuery.data ?? [])
+				.map(
+					(task) =>
+						`${task.id}:${task.updatedAt}:${task.parentId}:${task.position}:${task.content.title}`,
+				)
+				.join("|"),
+		[tasksQuery.data],
+	);
+
 	useEffect(() => {
 		setBoard(null);
 	}, [boardApiRef]);
 
 	useEffect(() => {
-		if (!columnsQuery.data || !tasksQuery.isSuccess) return;
-		setBoard(buildBoardData(tasksQuery.data ?? [], columnsQuery.data));
-	}, [boardApiRef, columnsSignature, columnsQuery.data, tasksQuery.isSuccess]);
+		if (!columnsQuery.data || !tasksQuery.data) return;
+		setBoard(buildBoardData(tasksQuery.data, columnsQuery.data));
+	}, [boardApiRef, columnsSignature, columnsQuery.data, tasksSignature]);
 
 	const getColumns = useCallback(
 		() =>
@@ -485,11 +500,9 @@ export function KanbanBoardPage() {
 			const task = tasksQuery.data?.find((item) => item.id === card.id);
 			const projectCode = boardMeta?.projectCode;
 			if (task?.taskNumber && projectCode) {
-				navigate(
-					kanbanTaskEditPath(
-						formatKanbanTaskKey(projectCode, task.taskNumber),
-					),
-				);
+				const taskRef = formatKanbanTaskKey(projectCode, task.taskNumber);
+				setOpeningTaskLabel(taskRef);
+				navigate(kanbanTaskEditPath(taskRef));
 			}
 		},
 		[boardMeta?.projectCode, navigate, tasksQuery.data],
@@ -813,6 +826,20 @@ export function KanbanBoardPage() {
 					if (pendingBoard) persistBoard(pendingBoard, true);
 				}}
 			/>
+			<Backdrop
+				open={Boolean(openingTaskLabel)}
+				sx={{
+					zIndex: (theme) => theme.zIndex.modal + 1,
+					color: "common.white",
+					flexDirection: "column",
+					gap: 12,
+				}}
+			>
+				<CircularProgress color="inherit" size={40} />
+				<Typography variant="body1">
+					Открываем задачу{openingTaskLabel ? ` ${openingTaskLabel}` : ""}…
+				</Typography>
+			</Backdrop>
 		</Flex>
 	);
 }

@@ -42,7 +42,42 @@ function formatNameLabel(raw: string): string {
 	return raw;
 }
 
-function formatTypicalWorkNumber(item: Record<string, unknown>, field: string): string {
+export type TypicalWorkCoefficientCell = {
+	formula: string | null;
+	coefficient: string;
+};
+
+/** Формула из coefficientDisplay; итоговый коэффициент — из поля coefficient. */
+export function parseTypicalWorkCoefficientDisplay(
+	item: Record<string, unknown>,
+): TypicalWorkCoefficientCell {
+	const coefficient = formatTypicalWorkNumber(item, "coefficient");
+	if (coefficient === "—") return { formula: null, coefficient };
+
+	const displayRaw = item.coefficientDisplay;
+	let display =
+		typeof displayRaw === "string" && displayRaw.trim()
+			? displayRaw.trim()
+			: "";
+
+	if (display) {
+		const eqMatch = display.match(/^(.+?)\s*=\s*([^=]+)$/);
+		if (eqMatch) {
+			display = eqMatch[1].trim();
+		}
+	}
+
+	if (!display || display === coefficient) {
+		return { formula: null, coefficient };
+	}
+
+	return { formula: display, coefficient };
+}
+
+function formatTypicalWorkNumber(
+	item: Record<string, unknown>,
+	field: string,
+): string {
 	const value = item[field];
 	if (value == null || value === "") return "—";
 	if (typeof value === "number" && Number.isFinite(value)) {
@@ -70,8 +105,13 @@ const FACTORY_TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
 	{
 		key: "coefficient",
 		header: "Коэффициент",
-		width: "0.9fr",
-		render: (item) => formatTypicalWorkNumber(item, "coefficient"),
+		width: "1.1fr",
+		multiline: true,
+		render: (item) => {
+			const { formula, coefficient } = parseTypicalWorkCoefficientDisplay(item);
+			if (formula) return `${formula} = ${coefficient}`;
+			return coefficient;
+		},
 	},
 	{
 		key: "total",
@@ -81,7 +121,8 @@ const FACTORY_TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
 	},
 ];
 
-const TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = FACTORY_TYPICAL_WORK_COLUMNS;
+const TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] =
+	FACTORY_TYPICAL_WORK_COLUMNS;
 
 const ATYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
 	{
@@ -386,7 +427,9 @@ export function getArrayTableColumnsFromSchema(
 ): AnketaArrayTableColumn[] | null {
 	if (!rootSchema || !rootUi) return null;
 	const slice = getArrayItemSchemaSliceForModal(rootSchema, rootUi, path);
-	const props = slice?.schema.properties as Record<string, RJSFSchema> | undefined;
+	const props = slice?.schema.properties as
+		| Record<string, RJSFSchema>
+		| undefined;
 	if (!props) return null;
 	const keys = Object.keys(props);
 	if (keys.length === 0) return null;
@@ -413,7 +456,9 @@ export function resolveArrayTableColumns(
 	rootSchema?: RJSFSchema,
 	rootUi?: UiSchema,
 ): AnketaArrayTableColumn[] | null {
-	if (isTypicalWorkArrayPath(path, rootUi as Record<string, unknown> | undefined)) {
+	if (
+		isTypicalWorkArrayPath(path, rootUi as Record<string, unknown> | undefined)
+	) {
 		return getTypicalWorkFactoryTableColumns();
 	}
 	return (
@@ -459,7 +504,7 @@ export function sumTypicalWorkTotals(
 				? raw
 				: typeof raw === "string" && raw.trim()
 					? Number(raw.replace(",", "."))
-					: NaN;
+					: Number.NaN;
 		if (!Number.isFinite(num)) continue;
 		sum += num;
 		hasValue = true;

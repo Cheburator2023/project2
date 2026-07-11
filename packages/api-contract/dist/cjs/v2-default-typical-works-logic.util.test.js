@@ -28,6 +28,24 @@ const v2_default_typical_works_logic_util_1 = require("./v2-default-typical-work
         (0, vitest_1.expect)(payload.sourceArrayPath).toBe(v2_default_typical_works_logic_util_1.V2_SOURCE_SYSTEMS_ARRAY_PATH);
         (0, vitest_1.expect)(payload.tasks).toBeUndefined();
     });
+    (0, vitest_1.it)("injects row_computed and unified typical total for every typicalWork path", () => {
+        const ui = {
+            streamDataSources: {
+                sourceTypicalTasks: { "ui:options": { archComponent: "typicalWork" } },
+            },
+            field_pirm: {
+                "ui:options": { streamBlock: true, streamExecutor: "ПиРМ" },
+                myTypical: { "ui:options": { archComponent: "typicalWork" } },
+            },
+        };
+        const patched = (0, v2_default_typical_works_logic_util_1.patchV2TypicalWorksLogicRules)({ rules: [] }, { uiSchema: ui });
+        (0, vitest_1.expect)(patched.rules.some((rule) => rule.id === "unified-typical-row-total:field_pirm_myTypical")).toBe(true);
+        const unified = patched.rules.find((rule) => rule.id === "unified-typical-total");
+        (0, vitest_1.expect)(unified?.dependencies).toEqual(vitest_1.expect.arrayContaining([
+            "/streamDataSources/sourceTypicalTasks",
+            "/field_pirm/myTypical",
+        ]));
+    });
     (0, vitest_1.it)("does not inject catalog rules into partial logic graphs", () => {
         const patched = (0, v2_default_typical_works_logic_util_1.patchV2TypicalWorksLogicRules)({
             rules: [

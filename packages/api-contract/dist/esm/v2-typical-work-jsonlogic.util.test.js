@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compileCalculationLogicFromVersionConfig, compileStoredTypicalWorkResultLogic, compileTypicalWorkCalculationLogic, compileTypicalWorkTriggerRulesToJsonLogic, compileWorkFormulaTokensToJsonLogic, computeTypicalWorkFormulaTotal, evaluateTypicalWorkCalculation, evaluateTypicalWorkJsonLogicValue, evaluateTypicalWorkResultJsonLogic, needsCalculationLogicBackfill, previewTypicalWorkCalculation, } from "./v2-typical-work-jsonlogic.util";
 import { defaultWorkFormula, defaultWorkRounding } from "./v2-typical-work.types";
-import { defaultBaseNormTerm } from "./v2-work-terms-formula.util";
+import { defaultBaseNormTerm, tokensToTermsFormula } from "./v2-work-terms-formula.util";
 import { parseWorkFormulaText, previewWorkFormula } from "./v2-work-formula.util";
 describe("v2-typical-work-jsonlogic.util", () => {
     it("compiles N × P[x] to JsonLogic", () => {
@@ -156,5 +156,25 @@ describe("v2-typical-work-jsonlogic.util", () => {
             resolveFactorCoeff: (code) => (code === "p1" ? 1 : 1),
         });
         expect(total).toBe(25);
+    });
+    it("computeTypicalWorkFormulaTotal evaluates ((N + c) × param) + constant", () => {
+        const formulaText = "((N + 5) × коэф(p1)) + 11";
+        const parsed = parseWorkFormulaText(formulaText);
+        expect(parsed.error).toBeNull();
+        const terms = tokensToTermsFormula({
+            tokens: parsed.tokens,
+            text: formulaText,
+        });
+        const total = computeTypicalWorkFormulaTotal({
+            calculationLogic: null,
+            formula: terms,
+            formulaText,
+            terms,
+            rounding: defaultWorkRounding(),
+            norm: 20,
+            paramCoefficients: { p1: 1 },
+            resolveFactorCoeff: (code) => (code === "p1" ? 1 : 1),
+        });
+        expect(total).toBe(36);
     });
 });

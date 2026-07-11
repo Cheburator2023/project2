@@ -61,7 +61,8 @@ function splitTokensByAdditiveOps(tokens: V2WorkFormulaToken[]): V2WorkFormulaTo
 	let current: V2WorkFormulaToken[] = [];
 	let depth = 0;
 
-	for (const token of tokens) {
+	for (let i = 0; i < tokens.length; i++) {
+		const token = tokens[i]!;
 		if (token.kind === "paren_open") {
 			depth++;
 			current.push(token);
@@ -73,6 +74,16 @@ function splitTokensByAdditiveOps(tokens: V2WorkFormulaToken[]): V2WorkFormulaTo
 			continue;
 		}
 		if (depth === 0 && token.kind === "operator" && token.op === "+") {
+			const rest = tokens.slice(i + 1);
+			if (
+				current.length === 1 &&
+				current[0]?.kind === "norm" &&
+				rest[0]?.kind === "number" &&
+				rest.some((t) => t.kind === "operator" && t.op === "*")
+			) {
+				current.push(token);
+				continue;
+			}
 			segments.push(current);
 			current = [];
 			continue;
@@ -106,22 +117,27 @@ function unwrapParenthesizedFormulaTokens(
 	return tokens;
 }
 
-function parseMultSegment(
+function normalizeMultSegmentTokens(
 	segment: V2WorkFormulaToken[],
-	startOrder: number,
-): { terms: V2WorkFormulaTermDto[]; nextOrder: number } {
-	const terms: V2WorkFormulaTermDto[] = [];
-	let order = startOrder;
-
-	if (segment[0]?.kind !== "norm") {
-		return { terms: [defaultBaseNormTerm()], nextOrder: startOrder + 1 };
+): V2WorkFormulaToken[] {
+	let normalized = unwrapParenthesizedFormulaTokens(segment);
+	while (normalized[0]?.kind === "paren_open") {
+		const next = unwrapParenthesizedFormulaTokens(normalized);
+		if (next.length === normalized.length) break;
+		normalized = next;
 	}
+	return normalized;
+}
 
-	const baseTerm = defaultBaseNormTerm();
-	baseTerm.order = order++;
-	terms.push(baseTerm);
+function appendMultChainTerms(
+	segment: V2WorkFormulaToken[],
+	startIndex: number,
+	startOrder: number,
+	terms: V2WorkFormulaTermDto[],
+): number {
+	let order = startOrder;
+	let i = startIndex;
 
-	let i = 1;
 	while (i < segment.length) {
 		const direct = segment[i];
 		if (isParamToken(direct)) {
@@ -171,7 +187,48 @@ function parseMultSegment(
 		break;
 	}
 
-	return { terms, nextOrder: order };
+	return order;
+}
+
+function parseMultSegment(
+	segment: V2WorkFormulaToken[],
+	startOrder: number,
+): { terms: V2WorkFormulaTermDto[]; nextOrder: number } {
+	const normalized = normalizeMultSegmentTokens(segment);
+	const terms: V2WorkFormulaTermDto[] = [];
+	let order = startOrder;
+
+	if (
+		normalized[0]?.kind === "norm" &&
+		normalized[1]?.kind === "operator" &&
+		normalized[1].op === "+" &&
+		normalized[2]?.kind === "number"
+	) {
+		const baseTerm = defaultBaseNormTerm();
+		baseTerm.order = order++;
+		terms.push(baseTerm);
+		terms.push({
+			id: createTermId("add"),
+			kind: "additive",
+			title: `+ ${normalized[2].value}`,
+			order: order++,
+			baseValue: normalized[2].value,
+			factors: [],
+		});
+		const nextOrder = appendMultChainTerms(normalized, 3, order, terms);
+		return { terms, nextOrder };
+	}
+
+	if (normalized[0]?.kind !== "norm") {
+		return { terms: [defaultBaseNormTerm()], nextOrder: startOrder + 1 };
+	}
+
+	const baseTerm = defaultBaseNormTerm();
+	baseTerm.order = order++;
+	terms.push(baseTerm);
+
+	const nextOrder = appendMultChainTerms(normalized, 1, order, terms);
+	return { terms, nextOrder };
 }
 
 function parseAddSegment(
@@ -408,6 +465,12 @@ export function formatTypicalWorkCoefficientDisplay(params: {
 	const resolveFactor = (paramCode: string): number =>
 		params.paramCoefficients[paramCode] ?? 1;
 
+	const multTerms = sorted.filter((t) => t.kind === "multiplier");
+	const firstMultOrder =
+		multTerms.length > 0
+			? Math.min(...multTerms.map((term) => term.order))
+			: Number.POSITIVE_INFINITY;
+
 	const joinNumericFactors = (values: number[]): string => {
 		const parts = values
 			.map((value) => formatFormulaNumber(value))
@@ -416,12 +479,27 @@ export function formatTypicalWorkCoefficientDisplay(params: {
 	};
 
 	const parts: string[] = [];
+	let effectiveBase = formatFormulaNumber(params.baseNorm);
 	for (const term of sorted) {
 		if (term.kind === "base_norm") {
 			const factors = term.factors.map((f) => resolveFactor(f.paramCode));
-			const base = formatFormulaNumber(params.baseNorm);
 			const tail = joinNumericFactors(factors);
-			parts.push(tail ? `${base} × ${tail}` : base);
+			if (multTerms.length > 0) {
+				for (const addTerm of sorted) {
+					if (addTerm.kind !== "additive" || addTerm.order >= firstMultOrder) {
+						continue;
+					}
+					const addValue = formatFormulaNumber(
+						(addTerm.baseValue ?? 1) *
+							addTerm.factors.reduce(
+								(acc, f) => acc * resolveFactor(f.paramCode),
+								1,
+							),
+					);
+					effectiveBase = `(${effectiveBase} + ${addValue})`;
+				}
+			}
+			parts.push(tail ? `${effectiveBase} × ${tail}` : effectiveBase);
 			continue;
 		}
 		if (term.kind === "multiplier") {
@@ -433,6 +511,7 @@ export function formatTypicalWorkCoefficientDisplay(params: {
 			if (chunk) parts.push(`× ${chunk}`);
 		}
 		if (term.kind === "additive") {
+			if (multTerms.length > 0 && term.order < firstMultOrder) continue;
 			const values = [
 				term.baseValue ?? 1,
 				...term.factors.map((f) => resolveFactor(f.paramCode)),
@@ -557,6 +636,25 @@ export function evaluateTermsFormula(params: {
 		return params.resolveTransitive(transitive.sourceAssignmentId);
 	}
 
+	const multTerms = sorted.filter((t) => t.kind === "multiplier");
+	const firstMultOrder =
+		multTerms.length > 0
+			? Math.min(...multTerms.map((term) => term.order))
+			: Number.POSITIVE_INFINITY;
+
+	let effectiveBase = params.baseNorm;
+	if (multTerms.length > 0) {
+		for (const term of sorted) {
+			if (term.kind !== "additive" || term.order >= firstMultOrder) continue;
+			const base = term.baseValue ?? 1;
+			const coeff = term.factors.reduce(
+				(acc, f) => acc * params.resolveFactorCoeff(f.paramCode),
+				1,
+			);
+			effectiveBase += base * coeff;
+		}
+	}
+
 	let product = 1;
 	let sum = 0;
 	let hasMult = false;
@@ -567,7 +665,7 @@ export function evaluateTermsFormula(params: {
 				(acc, f) => acc * params.resolveFactorCoeff(f.paramCode),
 				1,
 			);
-			product *= params.baseNorm * coeff;
+			product *= effectiveBase * coeff;
 			hasMult = true;
 			continue;
 		}
@@ -581,6 +679,7 @@ export function evaluateTermsFormula(params: {
 			hasMult = true;
 		}
 		if (term.kind === "additive") {
+			if (multTerms.length > 0 && term.order < firstMultOrder) continue;
 			const base = term.baseValue ?? 1;
 			const coeff = term.factors.reduce(
 				(acc, f) => acc * params.resolveFactorCoeff(f.paramCode),

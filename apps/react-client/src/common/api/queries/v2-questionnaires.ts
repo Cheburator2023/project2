@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
 	CreateV2QuestionnaireRequestDto,
 	CreateV2QuestionnaireVersionRequestDto,
+	CreateV2QuestionnaireCommentRequestDto,
 	BulkDeleteV2QuestionnairesResultDto,
 	SeedV2TestQuestionnairesResultDto,
 	UpdateV2QuestionnaireRequestDto,
+	V2QuestionnaireCommentDto,
 	V2QuestionnaireDto,
 	V2QuestionnaireFormPackageDto,
 } from "@smart-anketa/api-contract";
@@ -130,10 +132,78 @@ export const useSeedV2TestQuestionnaires = () => {
 	});
 };
 
-export const v2QuestionnairesExportXlsx = (signal?: AbortSignal) =>
-	apiClient<Blob>({
+export const v2QuestionnairesExportXlsx = (
+	options?: { ids?: string[]; signal?: AbortSignal },
+) => {
+	const ids = options?.ids?.filter(Boolean);
+	if (ids && ids.length > 0) {
+		return apiClient<Blob>({
+			url: "/v2/questionnaires/export/xlsx",
+			method: "POST",
+			data: { ids },
+			signal: options?.signal,
+			responseType: "blob",
+		});
+	}
+	return apiClient<Blob>({
 		url: "/v2/questionnaires/export/xlsx",
 		method: "GET",
-		signal,
+		signal: options?.signal,
 		responseType: "blob",
 	});
+};
+
+const commentsKey = (questionnaireId: string) =>
+	[...ROOT_KEY, questionnaireId, "comments"] as const;
+
+export const useV2QuestionnaireComments = (questionnaireId: string | undefined) =>
+	useQuery<V2QuestionnaireCommentDto[]>({
+		queryKey: commentsKey(questionnaireId ?? ""),
+		queryFn: () =>
+			apiClient<V2QuestionnaireCommentDto[]>({
+				url: `/v2/questionnaires/${questionnaireId}/comments`,
+				method: "GET",
+			}),
+		enabled: Boolean(questionnaireId),
+	});
+
+export const useCreateV2QuestionnaireComment = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			questionnaireId,
+			data,
+		}: {
+			questionnaireId: string;
+			data: CreateV2QuestionnaireCommentRequestDto;
+		}) =>
+			apiClient<V2QuestionnaireCommentDto>({
+				url: `/v2/questionnaires/${questionnaireId}/comments`,
+				method: "POST",
+				data,
+			}),
+		onSuccess: (_data, vars) => {
+			qc.invalidateQueries({ queryKey: commentsKey(vars.questionnaireId) });
+		},
+	});
+};
+
+export const useDeleteV2QuestionnaireComment = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			questionnaireId,
+			commentId,
+		}: {
+			questionnaireId: string;
+			commentId: string;
+		}) =>
+			apiClient<void>({
+				url: `/v2/questionnaires/${questionnaireId}/comments/${commentId}`,
+				method: "DELETE",
+			}),
+		onSuccess: (_data, vars) => {
+			qc.invalidateQueries({ queryKey: commentsKey(vars.questionnaireId) });
+		},
+	});
+};

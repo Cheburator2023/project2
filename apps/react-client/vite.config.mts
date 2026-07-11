@@ -147,7 +147,7 @@ export const viteCommonConfig = ({
 						entryFileNames: "[name].js",
 						chunkFileNames: "chunks/[name]-[hash].js",
 						assetFileNames: "assets/[name]-[hash][extname]",
-						manualChunks(id) {
+						manualChunks(id: string) {
 							return resolveVendorChunk(id);
 						},
 					},

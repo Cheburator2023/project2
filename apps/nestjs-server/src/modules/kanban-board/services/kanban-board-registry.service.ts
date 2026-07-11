@@ -2066,15 +2066,18 @@ export class KanbanBoardRegistryService {
 				throw new BadRequestException("Спринт не найден");
 			}
 		}
-		const assignees = kanbanBoardTaskAssignees(content);
+		const assignees = [...kanbanBoardTaskAssignees(content)];
 		const currentAssignee = content.currentAssignee?.trim();
 		if (currentAssignee && !assignees.includes(currentAssignee)) {
-			throw new BadRequestException(
-				"Текущий исполнитель должен быть среди исполнителей задачи",
-			);
+			assignees.push(currentAssignee);
 		}
+		const resolvedCurrent = currentAssignee || assignees[0];
 		const { assigneeRole: _legacyRole, ...rest } = content;
-		return rest;
+		return {
+			...rest,
+			assignees: assignees.length ? assignees : undefined,
+			currentAssignee: resolvedCurrent || undefined,
+		};
 	}
 
 	private async loadSprintTitleMap(sprintIds: string[]): Promise<Map<string, string>> {

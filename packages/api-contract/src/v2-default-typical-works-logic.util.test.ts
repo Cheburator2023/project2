@@ -34,6 +34,31 @@ describe("v2-default-typical-works-logic.util", () => {
 		expect(payload.tasks).toBeUndefined();
 	});
 
+	it("injects row_computed and unified typical total for every typicalWork path", () => {
+		const ui = {
+			streamDataSources: {
+				sourceTypicalTasks: { "ui:options": { archComponent: "typicalWork" } },
+			},
+			field_pirm: {
+				"ui:options": { streamBlock: true, streamExecutor: "ПиРМ" },
+				myTypical: { "ui:options": { archComponent: "typicalWork" } },
+			},
+		};
+		const patched = patchV2TypicalWorksLogicRules({ rules: [] }, { uiSchema: ui });
+		expect(
+			patched.rules.some(
+				(rule) => rule.id === "unified-typical-row-total:field_pirm_myTypical",
+			),
+		).toBe(true);
+		const unified = patched.rules.find((rule) => rule.id === "unified-typical-total");
+		expect(unified?.dependencies).toEqual(
+			expect.arrayContaining([
+				"/streamDataSources/sourceTypicalTasks",
+				"/field_pirm/myTypical",
+			]),
+		);
+	});
+
 	it("does not inject catalog rules into partial logic graphs", () => {
 		const patched = patchV2TypicalWorksLogicRules({
 			rules: [

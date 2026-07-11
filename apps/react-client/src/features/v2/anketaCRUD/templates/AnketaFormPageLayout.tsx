@@ -3,16 +3,22 @@ import CircularProgress from "@mui/material/CircularProgress";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import type { ReactNode } from "react";
 
+const ANKETA_COLUMN_VIEWPORT_HEIGHT = "calc(100vh - 66px)";
+
+export { ANKETA_COLUMN_VIEWPORT_HEIGHT };
+
 export function AnketaFormPageLayout({
 	headerActions,
 	main,
 	sidebar,
+	footer,
 	loading = false,
 	"data-test-id": dataTestId = "anketa-form-page",
 }: {
 	headerActions?: ReactNode;
 	main: ReactNode;
 	sidebar: ReactNode;
+	footer?: ReactNode;
 	loading?: boolean;
 	"data-test-id"?: string;
 }) {
@@ -73,8 +79,28 @@ export function AnketaFormPageLayout({
 					</Box>
 				) : (
 					<>
-						{main}
-						{sidebar}
+						<Box
+							sx={{
+								minWidth: 0,
+								minHeight: 0,
+								height: ANKETA_COLUMN_VIEWPORT_HEIGHT,
+							}}
+						>
+							{main}
+						</Box>
+						<Box
+							sx={{
+								minWidth: 0,
+								height: ANKETA_COLUMN_VIEWPORT_HEIGHT,
+								overflow: "auto",
+								borderRadius: "8px",
+							}}
+						>
+							{sidebar}
+						</Box>
+						{footer ? (
+							<Box sx={{ gridColumn: "1 / -1", minWidth: 0 }}>{footer}</Box>
+						) : null}
 					</>
 				)}
 			</Box>

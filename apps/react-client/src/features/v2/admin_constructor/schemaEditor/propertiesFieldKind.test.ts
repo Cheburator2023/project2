@@ -54,9 +54,26 @@ describe("resolveCanvasCategoryChips", () => {
 
 		expect(resolveCanvasCategoryChips(schema, ui)[0]?.label).toBe("работы");
 	});
+	it("labels textarea string as строка·textarea", () => {
+		const schema: RJSFSchema = { type: "string", title: "Комментарий" };
+		const ui = { "ui:widget": "textarea" };
+
+		expect(resolveCanvasFieldTypeChipLabel(schema, ui)).toEqual({
+			label: "строка·textarea",
+			colorKey: "string-textarea",
+		});
+	});
 });
 
 describe("resolvePrimitiveFieldTypeVariant", () => {
+	it("maps textarea string to string-textarea", () => {
+		const schema: RJSFSchema = { type: "string", title: "Комментарий" };
+
+		expect(resolvePrimitiveFieldTypeVariant(schema, undefined, "textarea")).toBe(
+			"string-textarea",
+		);
+	});
+
 	it("maps dictionary multi to dictionary-list", () => {
 		const schema: RJSFSchema = {
 			type: "array",

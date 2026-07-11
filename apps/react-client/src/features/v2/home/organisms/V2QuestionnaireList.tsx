@@ -478,6 +478,30 @@ export function V2QuestionnaireList() {
 		saveAgGridColumnState(GRID_COLUMN_STATE_KEY, api.getColumnState());
 	}, []);
 
+	const handleExportXlsx = useCallback(async (ids?: string[]) => {
+		setIsExporting(true);
+		try {
+			const blob = await v2QuestionnairesExportXlsx({ ids });
+			const date = new Date().toISOString().slice(0, 10);
+			const suffix =
+				ids && ids.length > 0 ? `selected-${ids.length}` : "all";
+			downloadBlob(blob, `v2-questionnaires-${suffix}-${date}.xlsx`);
+			if (ids && ids.length > 0) {
+				toast.success(
+					ids.length === 1
+						? "Анкета экспортирована"
+						: `Экспортировано анкет: ${ids.length}`,
+				);
+			}
+		} catch (err) {
+			toast.error("Ошибка экспорта", {
+				description: apiErrorMessage(err),
+			});
+		} finally {
+			setIsExporting(false);
+		}
+	}, []);
+
 	const getContextMenuItems = useCallback(
 		(
 			params: GetContextMenuItemsParams<V2QuestionnaireGridRow>,
@@ -486,6 +510,19 @@ export function V2QuestionnaireList() {
 			if (!row) {
 				return [];
 			}
+			const selectedRows = params.api
+				.getSelectedRows()
+				.map((item) => resolveVersionRow(item))
+				.filter((item): item is V2QuestionnaireVersionRow => item != null);
+			const exportIds =
+				selectedRows.length > 0
+					? selectedRows.map((item) => item.id)
+					: [row.id];
+			const exportLabel =
+				exportIds.length > 1
+					? `Экспорт в XLSX (${exportIds.length})`
+					: "Экспорт в XLSX";
+
 			return [
 				{
 					name: "Открыть",
@@ -501,25 +538,15 @@ export function V2QuestionnaireList() {
 							`/v2/${v2Routes.calculationNewVersion.rootPath.replace(":id", row.id)}`,
 						),
 				},
+				{
+					name: exportLabel,
+					disabled: isExporting,
+					action: () => void handleExportXlsx(exportIds),
+				},
 			];
 		},
-		[navigate],
+		[navigate, isExporting, handleExportXlsx],
 	);
-
-	const handleExportXlsx = useCallback(async () => {
-		setIsExporting(true);
-		try {
-			const blob = await v2QuestionnairesExportXlsx();
-			const date = new Date().toISOString().slice(0, 10);
-			downloadBlob(blob, `v2-questionnaires-${date}.xlsx`);
-		} catch (err) {
-			toast.error("Ошибка экспорта", {
-				description: apiErrorMessage(err),
-			});
-		} finally {
-			setIsExporting(false);
-		}
-	}, []);
 
 	const runBulkDelete = useCallback(() => {
 		const ids = selectedVersions.map((row) => row.id);
@@ -562,7 +589,22 @@ export function V2QuestionnaireList() {
 						disabled={isExporting || isLoading}
 						onClick={() => void handleExportXlsx()}
 					>
-						{isExporting ? "Экспорт…" : "Экспорт XLSX"}
+						{isExporting ? "Экспорт…" : "Экспорт всех"}
+					</Button>
+					<Button
+						variant="outlined"
+						size="small"
+						startIcon={<DownloadIcon />}
+						disabled={
+							isExporting || isLoading || selectedVersions.length === 0
+						}
+						onClick={() =>
+							void handleExportXlsx(selectedVersions.map((row) => row.id))
+						}
+					>
+						{isExporting
+							? "Экспорт…"
+							: `Экспорт выбранных (${selectedVersions.length})`}
 					</Button>
 					{canAccessAdminPanel ? (
 						<Button
@@ -644,16 +686,12 @@ export function V2QuestionnaireList() {
 						if (event.finished) persistColumnState(event.api);
 					}}
 					loading={isLoading}
-					rowSelection={
-						canAccessAdminPanel
-							? {
-									mode: "multiRow",
-									checkboxes: true,
-									headerCheckbox: true,
-									enableClickSelection: false,
-								}
-							: undefined
-					}
+					rowSelection={{
+						mode: "multiRow",
+						checkboxes: true,
+						headerCheckbox: true,
+						enableClickSelection: false,
+					}}
 					onSelectionChanged={(
 						e: SelectionChangedEvent<V2QuestionnaireGridRow>,
 					) => {

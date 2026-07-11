@@ -248,7 +248,7 @@ export function V2FinalEvaluationPanel({
 					{platformRows.length > 0 ? (
 						<>
 							<Typography variant="h6" fontWeight={700} mb={2}>
-								Платформенные стримы
+								Стримы
 							</Typography>
 							<MiniTable
 								columns={[

@@ -159,4 +159,24 @@ const v2_work_formula_util_1 = require("./v2-work-formula.util");
         });
         (0, vitest_1.expect)(total).toBe(25);
     });
+    (0, vitest_1.it)("computeTypicalWorkFormulaTotal evaluates ((N + c) × param) + constant", () => {
+        const formulaText = "((N + 5) × коэф(p1)) + 11";
+        const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)(formulaText);
+        (0, vitest_1.expect)(parsed.error).toBeNull();
+        const terms = (0, v2_work_terms_formula_util_1.tokensToTermsFormula)({
+            tokens: parsed.tokens,
+            text: formulaText,
+        });
+        const total = (0, v2_typical_work_jsonlogic_util_1.computeTypicalWorkFormulaTotal)({
+            calculationLogic: null,
+            formula: terms,
+            formulaText,
+            terms,
+            rounding: (0, v2_typical_work_types_1.defaultWorkRounding)(),
+            norm: 20,
+            paramCoefficients: { p1: 1 },
+            resolveFactorCoeff: (code) => (code === "p1" ? 1 : 1),
+        });
+        (0, vitest_1.expect)(total).toBe(36);
+    });
 });

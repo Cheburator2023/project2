@@ -12,6 +12,8 @@ export * from "./request/create-v2-questionnaire.dto";
 export * from "./request/update-v2-questionnaire.dto";
 export * from "./request/create-v2-questionnaire-version.dto";
 export * from "./request/bulk-delete-v2-questionnaires.dto";
+export * from "./request/export-v2-questionnaires-xlsx.dto";
 export * from "./request/seed-v2-test-questionnaires.dto";
+export * from "./request/create-v2-questionnaire-comment.dto";
 export * from "./response/v2-template-response.dto";
 export * from "./response/v2-template-delete-snapshot.dto";

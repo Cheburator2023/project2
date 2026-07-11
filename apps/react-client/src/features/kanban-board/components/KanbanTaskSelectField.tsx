@@ -125,7 +125,7 @@ export function KanbanTaskMultiSelectField({
 			onChange={(event) => {
 				const nextValue = event.target.value;
 				onChange(
-					typeof nextValue === "string" ? nextValue.split(",") : nextValue,
+					Array.isArray(nextValue) ? nextValue : String(nextValue).split(","),
 				);
 			}}
 			fullWidth={fullWidth}

@@ -33,6 +33,7 @@ import {
 	setUiHiddenAtPointer,
 	setUiPlaceholderAtPointer,
 	setUiTooltipAtPointer,
+	setUiWidgetAtPointer,
 	syncDictionaryFieldUiAtPointer,
 } from "../../utils/schemaMutators";
 import {
@@ -206,7 +207,7 @@ function FieldTypeControl({
 				onChange={(e) =>
 					onPrimitiveTypeChange(e.target.value as PrimitiveFieldTypeVariant)
 				}
-				helperText="Мультисправочник — мультиселект; при смене типа привязка справочника сбрасывается."
+				helperText="Мультисправочник — мультиселект; textarea — многострочное поле; при смене типа привязка справочника сбрасывается."
 			>
 				{PRIMITIVE_FIELD_TYPE_OPTIONS.map((option) => (
 					<MenuItem key={option.id} value={option.id}>
@@ -604,7 +605,40 @@ export function SchemaPropertiesPanel() {
 						{ recordHistory: false },
 					);
 					updateField({ type: "string" }, { recordHistory: false });
+				} else if (primitiveTypeVariant === "string-textarea") {
+					patchUiSchema(
+						(prev) =>
+							setUiWidgetAtPointer(
+								clearDictionaryFieldBindingAtPointer(
+									prev as Record<string, unknown>,
+									selectedPointer,
+								),
+								selectedPointer,
+								null,
+							) as UiSchema,
+						{ recordHistory: false },
+					);
 				}
+				return;
+			}
+
+			if (nextVariant === "string-textarea") {
+				patchUiSchema(
+					(prev) =>
+						setUiWidgetAtPointer(
+							clearDictionaryFieldBindingAtPointer(
+								prev as Record<string, unknown>,
+								selectedPointer,
+							),
+							selectedPointer,
+							"textarea",
+						) as UiSchema,
+					{ recordHistory: false },
+				);
+				updateField(buildDictionaryMultiSchemaPatch(false), {
+					recordHistory: false,
+				});
+				updateField({ type: "string" }, { recordHistory: false });
 				return;
 			}
 

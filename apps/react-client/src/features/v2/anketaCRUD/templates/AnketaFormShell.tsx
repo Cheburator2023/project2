@@ -19,6 +19,7 @@ import {
 } from "../organisms/AnketaGlobalCompleteDialog";
 import { FinalScoreCard } from "../organisms/FinalScoreCard";
 import { V2AnketaFormWithModals } from "../organisms/V2AnketaFormWithModals";
+import { AnketaCommentsSection } from "../organisms/AnketaCommentsSection";
 import {
 	useV2AnketaSchemaEngine,
 	type V2AnketaSchemaEngine,
@@ -31,6 +32,7 @@ import type { AnketaFormContextValue } from "../utils/anketaFormContext";
 import { AnketaFormPageLayout } from "./AnketaFormPageLayout";
 import { useCreateV2QuestionnaireVersion } from "@react-client/common/api/queries/v2-questionnaires";
 import { useNavigate } from "react-router";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
@@ -270,6 +272,16 @@ export function AnketaFormShell({
 							/>
 						</>
 					)
+				}
+				footer={
+					!errorMessage && questionnaireId ? (
+						<>
+							<Spacer space={24} />
+							<AnketaCommentsSection
+								questionnaireId={questionnaireId}
+							/>
+						</>
+					) : null
 				}
 				sidebar={
 					errorMessage ? (

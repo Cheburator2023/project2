@@ -14,7 +14,7 @@ import {
 	type V2QuestionnaireFormPackageDto,
 	type V2QuestionnaireDto,
 } from "@smart-anketa/api-contract";
-import { Repository } from "typeorm";
+import { Repository, In } from "typeorm";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
@@ -64,9 +64,29 @@ export class V2QuestionnaireService {
 		return Promise.all(rows.map((row) => this.toDto(row)));
 	}
 
-	async exportRegistryXlsx(): Promise<Buffer> {
-		const rows = await this.findAll();
+	async exportRegistryXlsx(ids?: string[]): Promise<Buffer> {
+		const rows =
+			ids && ids.length > 0
+				? await this.findAllByIds(ids)
+				: await this.findAll();
 		return buildV2QuestionnaireRegistryXlsx(rows);
+	}
+
+	async findAllByIds(ids: string[]): Promise<V2QuestionnaireDto[]> {
+		const uniqueIds = [...new Set(ids)];
+		const rows = await this.questionnaireRepository.find({
+			where: { id: In(uniqueIds) },
+			relations: ["template", "boundTemplateVersion"],
+			order: { createdAt: "DESC" },
+		});
+		const byId = new Map(
+			await Promise.all(
+				rows.map(async (row) => [row.id, await this.toDto(row)] as const),
+			),
+		);
+		return uniqueIds
+			.map((id) => byId.get(id))
+			.filter((dto): dto is V2QuestionnaireDto => dto != null);
 	}
 
 	async findOne(id: string): Promise<V2QuestionnaireDto> {

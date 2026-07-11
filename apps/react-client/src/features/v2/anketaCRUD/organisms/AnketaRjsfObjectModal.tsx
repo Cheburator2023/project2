@@ -75,7 +75,20 @@ export function AnketaRjsfObjectModal({
 	}, [open, defaultValues]);
 
 	return (
-		<Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+		<Dialog
+			open={open}
+			onClose={onClose}
+			maxWidth="md"
+			fullWidth
+			scroll="paper"
+			PaperProps={{
+				sx: {
+					maxHeight: "calc(100vh - 66px)",
+					display: "flex",
+					flexDirection: "column",
+				},
+			}}
+		>
 			<DialogTitle sx={{ pr: 6 }}>
 				{title}
 				<IconButton
@@ -87,7 +100,7 @@ export function AnketaRjsfObjectModal({
 					<CloseIcon />
 				</IconButton>
 			</DialogTitle>
-			<DialogContent dividers>
+			<DialogContent dividers sx={{ overflow: "auto", flex: 1, minHeight: 0 }}>
 				<Box sx={{ pt: 0.5 }}>
 					<Form
 						key={formKey}

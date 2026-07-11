@@ -77,6 +77,35 @@ const invalidateTracker = (queryClient: ReturnType<typeof useQueryClient>) => {
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasks"] });
 };
 
+const patchKanbanBoardTaskInCaches = (
+	queryClient: ReturnType<typeof useQueryClient>,
+	updated: KanbanBoardTaskRegistryDto,
+) => {
+	queryClient.setQueriesData<KanbanBoardTaskRecord[]>(
+		{ queryKey: ["kanbanBoardTasks"] },
+		(cached) => {
+			if (!cached?.some((task) => task.id === updated.id)) {
+				return cached;
+			}
+			return cached.map((task) =>
+				task.id === updated.id
+					? {
+							...task,
+							boardId: updated.boardId,
+							projectId: updated.projectId,
+							taskNumber: updated.taskNumber,
+							parentId: updated.parentId,
+							position: updated.position,
+							content: updated.content,
+							origin: updated.origin,
+							updatedAt: updated.updatedAt,
+						}
+					: task,
+			);
+		},
+	);
+};
+
 export const kanbanBoardGetConfig = (signal?: AbortSignal) =>
 	apiClient<KanbanBoardConfig>({
 		url: "/kanban-board/config",
@@ -562,7 +591,10 @@ export const useUpdateKanbanBoardTask = () => {
 				method: "PUT",
 				data,
 			}),
-		onSuccess: () => invalidateTracker(queryClient),
+		onSuccess: (updated) => {
+			patchKanbanBoardTaskInCaches(queryClient, updated);
+			invalidateTracker(queryClient);
+		},
 	});
 };
 
