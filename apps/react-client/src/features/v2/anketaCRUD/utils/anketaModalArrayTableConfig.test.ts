@@ -55,16 +55,16 @@ describe("typical work table helpers", () => {
 		).toEqual(["name", "estimate", "coefficient", "total"]);
 	});
 
-	it("prefers coefficientDisplay over numeric coefficient", () => {
+	it("shows numeric coefficient, not formula display", () => {
 		const coefficientCol = getTypicalWorkFactoryTableColumns().find(
 			(col) => col.key === "coefficient",
 		);
 		expect(
 			coefficientCol?.render?.({
-				coefficient: 3,
-				coefficientDisplay: "5 × 1.2 × 2",
+				coefficient: 2,
+				coefficientDisplay: "20 * 5 = 2",
 			}),
-		).toBe("5 × 1.2 × 2");
+		).toBe("2");
 		expect(coefficientCol?.render?.({ coefficient: 1.5 })).toBe("1.5");
 	});
 

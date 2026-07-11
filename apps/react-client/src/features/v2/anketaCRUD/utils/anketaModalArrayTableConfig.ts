@@ -54,12 +54,6 @@ function formatTypicalWorkNumber(item: Record<string, unknown>, field: string): 
 	return String(value);
 }
 
-function typicalWorkCoefficientText(item: Record<string, unknown>): string {
-	const display = item.coefficientDisplay;
-	if (typeof display === "string" && display.trim()) return display.trim();
-	return formatTypicalWorkNumber(item, "coefficient");
-}
-
 const FACTORY_TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
 	{
 		key: "name",
@@ -76,9 +70,8 @@ const FACTORY_TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
 	{
 		key: "coefficient",
 		header: "Коэффициент",
-		width: "1.2fr",
-		multiline: true,
-		render: (item) => typicalWorkCoefficientText(item),
+		width: "0.9fr",
+		render: (item) => formatTypicalWorkNumber(item, "coefficient"),
 	},
 	{
 		key: "total",
