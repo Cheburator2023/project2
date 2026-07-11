@@ -17,6 +17,8 @@ import { KanbanBoardService } from "./services/kanban-board.service";
 import { KanbanBoardRegistryService } from "./services/kanban-board-registry.service";
 import { KanbanBoardTaskImageService } from "./services/kanban-board-task-image.service";
 import { KanbanBoardTaskCommentService } from "./services/kanban-board-task-comment.service";
+import { KanbanBoardTaskLockService } from "./services/kanban-board-task-lock.service";
+import { KanbanBoardTaskLockEntity } from "./entities/kanban-board-task-lock.entity";
 import { KanbanBoardTaskImageCleanupService } from "./services/kanban-board-task-image-cleanup.service";
 import { KanbanBoardTaskHistoryEntity } from "./entities/kanban-board-task-history.entity";
 import { KanbanBoardHistoryService } from "./services/kanban-board-history.service";
@@ -35,6 +37,7 @@ import { KanbanBoardHistoryService } from "./services/kanban-board-history.servi
 			KanbanBoardTaskEntity,
 			KanbanBoardTaskImageEntity,
 			KanbanBoardTaskCommentEntity,
+			KanbanBoardTaskLockEntity,
 			KanbanBoardSettingsEntity,
 			KanbanBoardTaskHistoryEntity,
 		]),
@@ -45,6 +48,7 @@ import { KanbanBoardHistoryService } from "./services/kanban-board-history.servi
 		KanbanBoardRegistryService,
 		KanbanBoardTaskImageService,
 		KanbanBoardTaskCommentService,
+		KanbanBoardTaskLockService,
 		KanbanBoardTaskImageCleanupService,
 		KanbanBoardHistoryService,
 	],
@@ -53,6 +57,7 @@ import { KanbanBoardHistoryService } from "./services/kanban-board-history.servi
 		KanbanBoardRegistryService,
 		KanbanBoardTaskImageService,
 		KanbanBoardTaskCommentService,
+		KanbanBoardTaskLockService,
 		KanbanBoardHistoryService,
 	],
 })

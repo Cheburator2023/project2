@@ -75,6 +75,7 @@ export function toBoardData(
 				type: "card",
 				content: task.content,
 				origin: task.origin,
+				updatedAt: task.updatedAt,
 			};
 		}
 	}

@@ -63,7 +63,7 @@ function typicalWorkCoefficientText(item: Record<string, unknown>): string {
 const FACTORY_TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
 	{
 		key: "name",
-		header: "Наименование",
+		header: "Название типовой работы",
 		width: "1.6fr",
 		render: (item) => text(item, "name"),
 	},
@@ -472,6 +472,15 @@ export function sumTypicalWorkTotals(
 		hasValue = true;
 	}
 	return hasValue ? sum : null;
+}
+
+export function formatTypicalWorkSummaryTotal(
+	total: number | null,
+	options?: { loading?: boolean },
+): string {
+	if (options?.loading && total == null) return "…";
+	if (total != null) return String(total);
+	return "—";
 }
 
 export function collectTypicalWorkSourceNames(

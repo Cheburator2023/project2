@@ -737,32 +737,22 @@
 							"properties": {
 								"name": {
 									"type": "string",
-									"title": "Наименование",
+									"title": "Название типовой работы",
+									"readOnly": true
+								},
+								"estimateHoursPerDay": {
+									"type": "number",
+									"title": "Базовая оценка",
+									"readOnly": true
+								},
+								"coefficient": {
+									"type": "number",
+									"title": "Коэффициент",
 									"readOnly": true
 								},
 								"total": {
 									"type": "number",
 									"title": "Итог",
-									"readOnly": true
-								},
-								"reason": {
-									"type": "string",
-									"title": "Причина",
-									"readOnly": true
-								},
-								"workType": {
-									"type": "string",
-									"title": "Тип работ",
-									"readOnly": true
-								},
-								"coefficient": {
-									"type": "number",
-									"title": "Коэф.",
-									"readOnly": true
-								},
-								"estimateHoursPerDay": {
-									"type": "number",
-									"title": "Базовая оценка (ч/д)",
 									"readOnly": true
 								}
 							}
@@ -991,22 +981,12 @@
 							"properties": {
 								"name": {
 									"type": "string",
-									"title": "Наименование",
+									"title": "Название типовой работы",
 									"readOnly": true
 								},
-								"total": {
+								"estimateHoursPerDay": {
 									"type": "number",
-									"title": "Итог",
-									"readOnly": true
-								},
-								"reason": {
-									"type": "string",
-									"title": "Причина",
-									"readOnly": true
-								},
-								"workType": {
-									"type": "string",
-									"title": "Тип работ",
+									"title": "Базовая оценка",
 									"readOnly": true
 								},
 								"coefficient": {
@@ -1014,9 +994,9 @@
 									"title": "Коэффициент",
 									"readOnly": true
 								},
-								"estimateHoursPerDay": {
+								"total": {
 									"type": "number",
-									"title": "Базовая оценка (ч/д)",
+									"title": "Итог",
 									"readOnly": true
 								}
 							}
@@ -1153,22 +1133,12 @@
 							"properties": {
 								"name": {
 									"type": "string",
-									"title": "Наименование",
+									"title": "Название типовой работы",
 									"readOnly": true
 								},
-								"total": {
+								"estimateHoursPerDay": {
 									"type": "number",
-									"title": "Итог",
-									"readOnly": true
-								},
-								"reason": {
-									"type": "string",
-									"title": "Причина",
-									"readOnly": true
-								},
-								"workType": {
-									"type": "string",
-									"title": "Тип работ",
+									"title": "Базовая оценка",
 									"readOnly": true
 								},
 								"coefficient": {
@@ -1176,9 +1146,9 @@
 									"title": "Коэффициент",
 									"readOnly": true
 								},
-								"estimateHoursPerDay": {
+								"total": {
 									"type": "number",
-									"title": "Базовая оценка (ч/д)",
+									"title": "Итог",
 									"readOnly": true
 								}
 							}
@@ -1246,22 +1216,12 @@
 							"properties": {
 								"name": {
 									"type": "string",
-									"title": "Наименование",
+									"title": "Название типовой работы",
 									"readOnly": true
 								},
-								"total": {
+								"estimateHoursPerDay": {
 									"type": "number",
-									"title": "Итог",
-									"readOnly": true
-								},
-								"reason": {
-									"type": "string",
-									"title": "Причина",
-									"readOnly": true
-								},
-								"workType": {
-									"type": "string",
-									"title": "Тип работ",
+									"title": "Базовая оценка",
 									"readOnly": true
 								},
 								"coefficient": {
@@ -1269,9 +1229,9 @@
 									"title": "Коэффициент",
 									"readOnly": true
 								},
-								"estimateHoursPerDay": {
+								"total": {
 									"type": "number",
-									"title": "Базовая оценка (ч/д)",
+									"title": "Итог",
 									"readOnly": true
 								}
 							}
@@ -2216,7 +2176,31 @@
 					"removable": false
 				},
 				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника при расчёте анкеты.\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
+				"ui:description": "Формируются автоматически по правилам справочника.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах",
+				"items": {
+					"ui:order": [
+						"name",
+						"estimateHoursPerDay",
+						"coefficient",
+						"total"
+					],
+					"name": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					},
+					"estimateHoursPerDay": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					},
+					"coefficient": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					},
+					"total": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					}
+				}
 			}
 		},
 		"generalInfo": {
@@ -2464,27 +2448,17 @@
 			},
 			"sourceTypicalTasks": {
 				"items": {
+					"ui:order": [
+						"name",
+						"estimateHoursPerDay",
+						"coefficient",
+						"total"
+					],
 					"name": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
-					"total": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"reason": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"ui:order": [
-						"name",
-						"workType",
-						"reason",
-						"total",
-						"coefficient",
-						"estimateHoursPerDay"
-					],
-					"workType": {
+					"estimateHoursPerDay": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
@@ -2492,7 +2466,7 @@
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
-					"estimateHoursPerDay": {
+					"total": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					}
@@ -2503,7 +2477,7 @@
 					"removable": false
 				},
 				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника на основании локальных параметров стрима и компонентов «Система-источник».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
+				"ui:description": "Формируются автоматически по правилам справочника.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
 			}
 		},
 		"field_i8dL7QZa": {
@@ -2650,19 +2624,17 @@
 			},
 			"sourceTypicalTasks": {
 				"items": {
+					"ui:order": [
+						"name",
+						"estimateHoursPerDay",
+						"coefficient",
+						"total"
+					],
 					"name": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
-					"total": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"reason": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"workType": {
+					"estimateHoursPerDay": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
@@ -2670,7 +2642,7 @@
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
-					"estimateHoursPerDay": {
+					"total": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					}
@@ -2682,7 +2654,7 @@
 					"archComponent": "typicalWork"
 				},
 				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника на основании локальных параметров стрима и компонентов «Система-источник».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
+				"ui:description": "Формируются автоматически по правилам справочника.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
 			}
 		},
 		"streamModelControl": {
@@ -2748,19 +2720,17 @@
 			},
 			"field_Khn6-HAW": {
 				"items": {
+					"ui:order": [
+						"name",
+						"estimateHoursPerDay",
+						"coefficient",
+						"total"
+					],
 					"name": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
-					"total": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"reason": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"workType": {
+					"estimateHoursPerDay": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
@@ -2768,7 +2738,7 @@
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
-					"estimateHoursPerDay": {
+					"total": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					}
@@ -2780,7 +2750,7 @@
 					"archComponent": "typicalWork"
 				},
 				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника на основании локальных параметров стрима и компонентов «Система-источник».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
+				"ui:description": "Формируются автоматически по правилам справочника.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
 			},
 			"field_QkVbhG-_": {
 				"items": {

@@ -56,6 +56,21 @@ describe("ARCH_COMPONENT_PRESET_DEFS", () => {
 		});
 	}
 
+	it("typicalWork preset exposes canonical item fields", () => {
+		const preset = ARCH_COMPONENT_PRESET_DEFS.typicalWork.make();
+		expect(propertyKeys(preset).sort()).toEqual(
+			["coefficient", "estimateHoursPerDay", "name", "total"].sort(),
+		);
+		const itemProps = (preset.items as RJSFSchema).properties as Record<
+			string,
+			RJSFSchema
+		>;
+		expect(itemProps.name?.title).toBe("Название типовой работы");
+		expect(itemProps.estimateHoursPerDay?.title).toBe("Базовая оценка");
+		expect(itemProps.coefficient?.title).toBe("Коэффициент");
+		expect(itemProps.total?.title).toBe("Итог");
+	});
+
 	// snapshot-as-source-of-truth: у нетиповой работы НЕ должно быть schema
 	// `default`, иначе RJSF подставит их в недостающие ключи существующего
 	// снепшота. Дефолты для новой строки задаются явно.

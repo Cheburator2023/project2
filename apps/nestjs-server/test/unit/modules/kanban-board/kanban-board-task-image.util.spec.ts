@@ -4,6 +4,7 @@ import {
 	kanbanBoardTaskImageDoneRetentionDays,
 	kanbanBoardTaskImageReadCandidates,
 	kanbanBoardTaskImageRefsEqual,
+	kanbanBoardTaskImageRelativeFromStored,
 	kanbanBoardTaskImageStoragePaths,
 } from "../../../../src/modules/kanban-board/utils/kanban-board-task-image.util";
 
@@ -46,6 +47,7 @@ describe("kanban-board-task-image.util", () => {
 		).toEqual([
 			"/data/images/01TASK/01IMG-full.webp",
 			"/old/abs/01TASK/01IMG-full.webp",
+			"/data/images/01TASK/01IMG-full.png",
 		]);
 	});
 
@@ -59,5 +61,35 @@ describe("kanban-board-task-image.util", () => {
 		expect(
 			kanbanBoardTaskImageRefsEqual([{ id: "a" }], [{ id: "b" }]),
 		).toBe(false);
+	});
+
+	it("extracts relative path from legacy absolute stored path", () => {
+		expect(
+			kanbanBoardTaskImageRelativeFromStored(
+				"/Users/dev/smart_anketa_ui/apps/nestjs-server/data/kanban-task-images/01TASK/01IMG-full.webp",
+			),
+		).toBe("01TASK/01IMG-full.webp");
+	});
+
+	it("includes alternate extensions and relative stored paths in read candidates", () => {
+		const row = {
+			id: "01IMG",
+			taskId: "01TASK",
+			mimeType: "image/webp",
+			fullPath:
+				"/old/abs/kanban-task-images/01TASK/01IMG-full.webp",
+			thumbPath:
+				"/old/abs/kanban-task-images/01TASK/01IMG-thumb.webp",
+		};
+		const candidates = kanbanBoardTaskImageReadCandidates(
+			"/data/images",
+			row,
+			"full",
+		);
+		expect(candidates).toContain("/data/images/01TASK/01IMG-full.webp");
+		expect(candidates).toContain("/data/images/01TASK/01IMG-full.png");
+		expect(candidates).toContain(
+			"/old/abs/kanban-task-images/01TASK/01IMG-full.webp",
+		);
 	});
 });

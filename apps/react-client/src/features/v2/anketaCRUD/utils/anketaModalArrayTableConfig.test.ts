@@ -3,6 +3,7 @@ import {
 	adjustTypicalWorkTableColumns,
 	collectTypicalWorkSourceNames,
 	filterTypicalWorkItems,
+	formatTypicalWorkSummaryTotal,
 	getTypicalWorkFactoryTableColumns,
 	resolveArrayTableColumns,
 	sumTypicalWorkTotals,
@@ -32,7 +33,7 @@ describe("typical work table helpers", () => {
 
 	it("uses factory four-column layout for typical work paths", () => {
 		expect(getTypicalWorkFactoryTableColumns().map((col) => col.header)).toEqual([
-			"Наименование",
+			"Название типовой работы",
 			"Базовая оценка",
 			"Коэффициент",
 			"Итог",
@@ -45,7 +46,7 @@ describe("typical work table helpers", () => {
 		expect(
 			adjustTypicalWorkTableColumns(
 				[
-					{ key: "name", header: "Наименование" },
+					{ key: "name", header: "Название типовой работы" },
 					{ key: "workType", header: "Тип работ" },
 					{ key: "total", header: "Итог" },
 				],
@@ -70,5 +71,12 @@ describe("typical work table helpers", () => {
 	it("resolves typical work display name", () => {
 		expect(typicalWorkItemDisplayName({ name: "  Модель  " }, 0)).toBe("Модель");
 		expect(typicalWorkItemDisplayName({}, 2)).toBe("Работа 3");
+	});
+
+	it("formats summary total for canvas and table footer", () => {
+		expect(formatTypicalWorkSummaryTotal(12.5)).toBe("12.5");
+		expect(formatTypicalWorkSummaryTotal(null)).toBe("—");
+		expect(formatTypicalWorkSummaryTotal(null, { loading: true })).toBe("…");
+		expect(formatTypicalWorkSummaryTotal(3, { loading: true })).toBe("3");
 	});
 });

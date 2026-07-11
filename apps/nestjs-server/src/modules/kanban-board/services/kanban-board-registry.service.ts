@@ -99,7 +99,9 @@ import {
 } from "../utils/kanban-board-planning-import-registry.util";
 import { buildMeta } from "../utils/kanban-board-snapshot.util";
 import { KanbanBoardTaskImageService } from "./kanban-board-task-image.service";
+import { KanbanBoardTaskLockService } from "./kanban-board-task-lock.service";
 import { KanbanBoardHistoryService } from "./kanban-board-history.service";
+import { assertKanbanBoardTaskVersion } from "../utils/kanban-board-task-edit.util";
 
 @Injectable()
 export class KanbanBoardRegistryService {
@@ -126,6 +128,7 @@ export class KanbanBoardRegistryService {
 		private readonly settingsRepository: Repository<KanbanBoardSettingsEntity>,
 		private readonly kanbanBoardService: KanbanBoardService,
 		private readonly taskImageService: KanbanBoardTaskImageService,
+		private readonly taskLockService: KanbanBoardTaskLockService,
 		private readonly historyService: KanbanBoardHistoryService,
 	) {}
 
@@ -931,6 +934,7 @@ export class KanbanBoardRegistryService {
 			relations: { board: { project: true } },
 			order: { updatedAt: "DESC" },
 		});
+		await this.taskImageService.syncTasksContentImages(rows);
 		const columnTitles = await this.loadColumnTitleMap(
 			rows.map((row) => row.boardId),
 		);
@@ -1322,6 +1326,24 @@ export class KanbanBoardRegistryService {
 			relations: { board: { project: true } },
 		});
 		if (!task) throw new NotFoundException("Задача не найдена");
+
+		const lockHolder = dto.lockHolderLabel?.trim()
+			? { label: dto.lockHolderLabel.trim(), userId: createdBy ?? null }
+			: undefined;
+		await this.taskLockService.assertEditable(
+			task.id,
+			lockHolder,
+			dto.forceOverwrite,
+		);
+		assertKanbanBoardTaskVersion(
+			task,
+			dto.expectedUpdatedAt,
+			dto.forceOverwrite,
+			{
+				taskKey: this.historyService.formatTaskKey(task),
+				taskTitle: task.content.title,
+			},
+		);
 
 		const before = this.historyService.snapshotFromTask(task);
 		const columnTitles = await this.historyService.loadColumnTitleMap([

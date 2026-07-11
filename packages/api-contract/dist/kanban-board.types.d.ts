@@ -311,6 +311,43 @@ export interface UpdateKanbanBoardTaskRequestDto {
     parentId?: string;
     position?: number;
     content?: KanbanBoardTaskContent;
+    /** Версия задачи на клиенте; при расхождении — 409, если не forceOverwrite */
+    expectedUpdatedAt?: string;
+    forceOverwrite?: boolean;
+    /** Подпись редактора для проверки soft-lock (имя исполнителя из настроек) */
+    lockHolderLabel?: string;
+}
+export interface SaveKanbanBoardTasksRequestDto {
+    tasks: KanbanBoardTaskRecord[];
+    /** taskId → updatedAt на момент начала правки */
+    expectedUpdatedAtByTaskId?: Record<string, string>;
+    forceOverwrite?: boolean;
+    lockHolderLabel?: string;
+}
+export declare const KANBAN_BOARD_TASK_LOCK_TTL_MS: number;
+export declare const KANBAN_BOARD_SYNC_POLL_INTERVAL_MS = 15000;
+export interface KanbanBoardTaskLockDto {
+    taskId: string;
+    lockedByLabel: string;
+    lockedByUserId: string | null;
+    expiresAt: string;
+}
+export interface AcquireKanbanBoardTaskLockRequestDto {
+    lockedByLabel: string;
+}
+export interface KanbanBoardTaskConflictItemDto {
+    taskId: string;
+    taskKey?: string;
+    taskTitle?: string;
+    expectedUpdatedAt: string;
+    actualUpdatedAt: string;
+}
+export type KanbanBoardTaskEditBlockReason = "version" | "lock";
+export interface KanbanBoardTaskEditBlockedErrorDto {
+    message: string;
+    reason: KanbanBoardTaskEditBlockReason;
+    conflicts?: KanbanBoardTaskConflictItemDto[];
+    lock?: KanbanBoardTaskLockDto;
 }
 export interface KanbanBoardColumnDto {
     id: string;
@@ -590,6 +627,8 @@ export interface KanbanBoardItem {
     type?: string;
     content?: KanbanBoardNodeContent;
     origin?: string;
+    /** Версия задачи для optimistic locking на доске */
+    updatedAt?: string;
 }
 export type KanbanBoardData = {
     root: KanbanBoardItem;

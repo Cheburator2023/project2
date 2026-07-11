@@ -46,6 +46,8 @@ export type AnketaFormContextValue = {
 	devCalculationItems?: CalculationItem[];
 	devTaskTriggerItems?: TaskTriggerItem[];
 	devCalculationLoading?: boolean;
+	/** POST /calculate в процессе — для строки «Суммарный итог» типовых работ. */
+	calculationLoading?: boolean;
 };
 
 export function readAnketaFormContext(

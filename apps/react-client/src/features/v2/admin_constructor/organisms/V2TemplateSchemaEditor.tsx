@@ -48,10 +48,7 @@ import {
 } from "../schemaEditor/propertiesFieldKind";
 import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayout";
 import {
-	BIND_POINTER_QUERY,
 	LOGIC_TAB_QUERY,
-	NEW_WORK_QUERY,
-	ROLLBACK_TYPICAL_WORK_QUERY,
 } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
@@ -202,7 +199,7 @@ export const V2TemplateSchemaEditor = ({
 	onHeaderActionsChange,
 }: V2TemplateSchemaEditorProps) => {
 	const navigate = useNavigate();
-	const [searchParams, setSearchParams] = useSearchParams();
+	const [, setSearchParams] = useSearchParams();
 	const setLogicWorkspaceTab = useCallback(
 		(tab: "works" | "dependencies" | "jsonlogic") => {
 			setSearchParams(
@@ -1233,25 +1230,11 @@ export const V2TemplateSchemaEditor = ({
 					}
 					return nextUi as UiSchema;
 				});
-				if (uiOptions?.archComponent === "typicalWork") {
-					setMainTab("logic");
-					setSearchParams(
-						(prev) => {
-							const nextParams = new URLSearchParams(prev);
-							nextParams.set(LOGIC_TAB_QUERY, "works");
-							nextParams.set(NEW_WORK_QUERY, "1");
-							nextParams.set(BIND_POINTER_QUERY, childPointer);
-							nextParams.set(ROLLBACK_TYPICAL_WORK_QUERY, "1");
-							return nextParams;
-						},
-						{ replace: true },
-					);
-				}
 				return childPointer;
 			}
 			return null;
 		},
-		[jsonSchema, uiSchema, pushDraftHistory, setSearchParams],
+		[jsonSchema, uiSchema, pushDraftHistory],
 	);
 
 	const placeTypicalWorkInStreamBlock = useCallback(

@@ -266,6 +266,7 @@ export function V2AnketaSchemaForm({
 			devCalculationItems: IS_DEV ? engine.calculationItems : undefined,
 			devTaskTriggerItems: IS_DEV ? engine.taskTriggerItems : undefined,
 			devCalculationLoading: IS_DEV ? engine.calculationLoading : undefined,
+			calculationLoading: engine.calculationLoading,
 		});
 	}, [
 		anketaFormContext,

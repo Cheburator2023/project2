@@ -24,8 +24,10 @@ import {
 	type KanbanBoardSubtaskItem,
 	type KanbanBoardTaskContent,
 	type KanbanBoardTaskRegistryDto,
+	parseKanbanBoardTaskEditBlockedError,
+	type KanbanBoardTaskEditBlockedErrorDto,
 } from "@smart-anketa/api-contract";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
@@ -60,6 +62,9 @@ import {
 } from "@react-client/features/kanban-board/kanban-task-paths";
 import { normalizeTrackerCode } from "@smart-anketa/api-contract";
 import { TrackerMarkdownEditor } from "@react-client/features/kanban-board/components/TrackerMarkdownEditor";
+import { TrackerTaskConflictDialog } from "@react-client/features/tracker/components/TrackerTaskConflictDialog";
+import { useKanbanTaskEditLock } from "@react-client/features/tracker/hooks/useKanbanTaskEditLock";
+import { useTrackerTaskSync } from "@react-client/features/tracker/hooks/useTrackerTaskSync";
 
 const PRIORITY_OPTIONS = KANBAN_BOARD_PRIORITIES.map((option) => ({
 	value: option.id,
@@ -339,6 +344,21 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 
 	const createTask = useCreateKanbanBoardTask();
 	const updateTask = useUpdateKanbanBoardTask();
+	const [editBlocked, setEditBlocked] =
+		useState<KanbanBoardTaskEditBlockedErrorDto | null>(null);
+	const [remoteStale, setRemoteStale] = useState(false);
+
+	const { editLabel, foreignLock, isLockedByOther } = useKanbanTaskEditLock(
+		taskId,
+		!isCreate,
+	);
+
+	useTrackerTaskSync({
+		taskRef: !isCreate ? taskKey : undefined,
+		enabled: !isCreate && Boolean(task),
+		baselineUpdatedAt: task?.updatedAt,
+		onRemoteUpdate: useCallback(() => setRemoteStale(true), []),
+	});
 
 	useEffect(() => {
 		if (isCreate || !task) return;
@@ -428,7 +448,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		});
 	};
 
-	const handleSave = async () => {
+	const handleSave = async (forceOverwrite?: boolean) => {
 		const content = buildContent();
 		if (!content || !effectiveBoardId) return;
 
@@ -443,21 +463,35 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		}
 
 		if (!task) return;
-		await updateTask.mutateAsync({
-			id: task.id,
-			data: {
-				boardId: effectiveBoardId,
-				parentId,
-				content,
-			},
-		});
-		navigate(
-			kanbanBoardPath(
-				boardMeta && "boardKey" in boardMeta
-					? boardMeta.boardKey
-					: task.boardKey,
-			),
-		);
+		try {
+			await updateTask.mutateAsync({
+				id: task.id,
+				data: {
+					boardId: effectiveBoardId,
+					parentId,
+					content,
+					expectedUpdatedAt: task.updatedAt,
+					forceOverwrite,
+					lockHolderLabel: editLabel || undefined,
+				},
+			});
+			setRemoteStale(false);
+			setEditBlocked(null);
+			navigate(
+				kanbanBoardPath(
+					boardMeta && "boardKey" in boardMeta
+						? boardMeta.boardKey
+						: task.boardKey,
+				),
+			);
+		} catch (error) {
+			const blocked = parseKanbanBoardTaskEditBlockedError(error);
+			if (blocked) {
+				setEditBlocked(blocked);
+				return;
+			}
+			throw error;
+		}
 	};
 
 	const isSaving = createTask.isPending || updateTask.isPending;
@@ -470,7 +504,8 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		!title.trim() ||
 		!effectiveBoardId ||
 		(!isCreate && taskByRefQuery.isLoading) ||
-		isSaving;
+		isSaving ||
+		isLockedByOther;
 
 	if (!isCreate && !taskKey) {
 		return <Alert severity="warning">Не указана задача</Alert>;
@@ -534,6 +569,29 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 							{isCreate
 								? "Не удалось создать задачу"
 								: "Не удалось сохранить задачу"}
+						</Alert>
+					) : null}
+					{isLockedByOther && foreignLock ? (
+						<Alert severity="warning">
+							Задача редактируется: {foreignLock.lockedByLabel}
+						</Alert>
+					) : null}
+					{remoteStale ? (
+						<Alert
+							severity="info"
+							action={
+								<Button
+									color="inherit"
+									size="small"
+									onClick={() => {
+										void taskByRefQuery.refetch().then(() => setRemoteStale(false));
+									}}
+								>
+									Обновить
+								</Button>
+							}
+						>
+							Задача изменилась на сервере. Обновите данные перед сохранением.
 						</Alert>
 					) : null}
 
@@ -750,6 +808,19 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 					) : null}
 				</Stack>
 			</Card>
+			<TrackerTaskConflictDialog
+				open={Boolean(editBlocked)}
+				error={editBlocked}
+				onClose={() => setEditBlocked(null)}
+				onRefresh={() => {
+					setEditBlocked(null);
+					void taskByRefQuery.refetch().then(() => setRemoteStale(false));
+				}}
+				onForceOverwrite={() => {
+					setEditBlocked(null);
+					void handleSave(true);
+				}}
+			/>
 		</Flex>
 	);
 }

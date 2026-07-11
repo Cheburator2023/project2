@@ -15,6 +15,7 @@ import {
 } from "./schemaCanvasTree";
 import type { DropOptions } from "@minoru/react-dnd-treeview";
 import type { SchemaCanvasNodeData } from "./schemaCanvasTree";
+import { ARCH_COMPONENT_PRESET_DEFS } from "./archComponentPresets";
 
 describe("palette drag helpers", () => {
 	it("builds NodeModel drag item and resolves preset id", () => {
@@ -116,6 +117,31 @@ describe("buildSchemaCanvasTree", () => {
 		expect(workType?.parent).toBe(arrayId);
 		expect(name?.data?.kind).toBe("field");
 		expect(workType?.data?.kind).toBe("field");
+	});
+
+	it("appends summary row under typicalWork array blocks", () => {
+		const preset = ARCH_COMPONENT_PRESET_DEFS.typicalWork.make();
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				streamTypical: preset,
+			},
+		};
+		const ui: UiSchema = {
+			streamTypical: {
+				"ui:options": { archComponent: "typicalWork" },
+			},
+		};
+
+		const tree = buildSchemaCanvasTree(schema, ui);
+		const arrayId = "/streamTypical";
+		const summary = tree.find(
+			(n) => n.id === `${arrayId}/@summaryTotal`,
+		);
+
+		expect(summary?.parent).toBe(arrayId);
+		expect(summary?.text).toBe("Суммарный итог");
+		expect(summary?.data?.kind).toBe("typical-work-summary");
 	});
 });
 

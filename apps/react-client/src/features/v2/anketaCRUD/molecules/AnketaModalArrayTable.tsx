@@ -27,6 +27,7 @@ import { useMemo, useState } from "react";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
+import { TypicalWorkSummaryTotal } from "./TypicalWorkSummaryTotal";
 
 type Props = {
 	pathKey: string;
@@ -133,6 +134,9 @@ export function AnketaModalArrayTable({
 		return filterTypicalWorkItems(items, sourceNameFilter);
 	}, [isTypicalWorks, items, sourceNameFilter, sourceNames.length]);
 	const typicalTotal = isTypicalWorks ? sumTypicalWorkTotals(visibleItems) : null;
+	const calculationLoading = Boolean(
+		ctx.calculationLoading ?? ctx.devCalculationLoading,
+	);
 	const displayColumns = useMemo(() => {
 		if (!columns) return null;
 		if (!isTypicalWorks) return columns;
@@ -215,6 +219,14 @@ export function AnketaModalArrayTable({
 						))}
 					</Box>
 				)}
+				{isTypicalWorks ? (
+					<TypicalWorkSummaryTotal
+						total={typicalTotal}
+						loading={calculationLoading}
+						data-test-id={`${tableTestId}--total`}
+						sx={{ mt: 1.5 }}
+					/>
+				) : null}
 			</Box>
 		);
 	}
@@ -397,28 +409,13 @@ export function AnketaModalArrayTable({
 				</ListEmptyPlaceholder>
 			)}
 
-			{typicalTotal != null ? (
-				<Box
-					sx={{
-						mt: 1.5,
-						display: "flex",
-						justifyContent: "flex-end",
-						alignItems: "center",
-						gap: 1,
-					}}
+			{isTypicalWorks ? (
+				<TypicalWorkSummaryTotal
+					total={typicalTotal}
+					loading={calculationLoading}
 					data-test-id={`${tableTestId}--total`}
-				>
-					<Typography variant="body2" color="text.secondary">
-						Суммарный итог:
-					</Typography>
-					<Typography
-						variant="subtitle1"
-						fontWeight={800}
-						sx={{ fontFamily: "monospace" }}
-					>
-						{typicalTotal} ч/д
-					</Typography>
-				</Box>
+					sx={{ mt: 1.5 }}
+				/>
 			) : null}
 		</Box>
 	);
