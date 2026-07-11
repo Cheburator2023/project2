@@ -1,5 +1,33 @@
 # Semantic Versioning Changelog
 
+# [1.24.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.23.0...v1.24.0) (2026-07-11)
+
+
+### Bug Fixes
+
+* typework disable fix ([3624698](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/362469898ae0a68f7bbbdb5f0ba6c7572bdb553c))
+
+
+### Features
+
+* add registry endpoint for V2 templates and enhance response structure ([4b4158e](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4b4158e3a4bd83f99bef4f2e25d953122596ff77))
+* add rollback functionality for typical work creation in schema editor ([4cef026](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4cef026498286eb8a2b2300647a54b669fa2657e))
+* add TypicalWorkValueMatchingInfo component for enhanced value matching guidance ([7436123](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/74361230668f8f89472afbf7191e9ba32105520f))
+* enhance labor coefficient resolution in V2TypicalWork services ([92b0206](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/92b020648e7f031b3857cca65d9eaaedbafbfe88))
+* enhance schema canvas tree title resolution for stream blocks ([1c87ed3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/1c87ed3970a086853b24b43e489507ce45d3f2c1))
+* enhance TextFieldCustomWidget with passthrough options and improve logic ([6dcf367](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6dcf367ccca8ced5a2a421362413eadc8a727767))
+* enhance V2Calculation service and controller with jsonSchema and uiSchema support ([ceca6ba](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ceca6bab2d4c9b2f3c05db097e52d43a357c8ac5))
+* enhance V2FactorySnapshotService and V2TemplateVersionService with typical work seeding logic ([5fae1b3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5fae1b316c0473fc0754147d256b69919791cd04))
+* enhance V2FinalEvaluationPanel with new utility functions for summary evaluation ([7ae7cc7](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/7ae7cc7f66446b6aadea91ae2cc17d26c240852d))
+* enhance V2TypicalWorkRuntimeService and related components with labor value matching logic ([38ab871](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/38ab871965b98b65c37c733bda2e52e6b5c81ebb))
+* implement typical work binding logic in schema editor ([c8b1b5a](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/c8b1b5a051cd470413b1e2a16c24000043942bd4))
+* implement typical work snapshot consistency and placement logic ([824b0d6](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/824b0d60947a6ff8a8b44fb4e44ec20d44cc9788))
+* integrate SchemaEditorDndProvider for improved drag-and-drop functionality ([83d5db4](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/83d5db43820b7ca2a518434885a6d79903289e48))
+* migrate legacy visibility rules and update task dependencies ([6699a40](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6699a40b92b17d894d1355855071be5f935feb02))
+* refactor AnketaForm components and introduce unit tests for context merging ([d1a0120](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/d1a0120f2b764c08abae746d6e28528b5432fb1d))
+* refactor calculation logic and introduce new utility functions for improved data handling ([718a97f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/718a97f45b2c76e8d3acf41db6c4746c1898ab95))
+* update stream block titles for consistency and clarity ([b02c4ec](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/b02c4ec53f93a5ecc8c3576566088de1a3e0607c))
+
 # [1.23.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.22.2...v1.23.0) (2026-07-09)
 
 
