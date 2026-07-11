@@ -135,6 +135,26 @@ const MANUAL_ARCH_COMPONENT_PRESET_DEFS: Pick<
 						title: "Наименование",
 						readOnly: true,
 					},
+					estimateHoursPerDay: {
+						type: "number",
+						title: "Базовая оценка",
+						readOnly: true,
+					},
+					coefficient: {
+						type: "number",
+						title: "Коэффициент",
+						readOnly: true,
+					},
+					coefficientDisplay: {
+						type: "string",
+						title: "Коэффициент (развёрнуто)",
+						readOnly: true,
+					},
+					total: {
+						type: "number",
+						title: "Итог",
+						readOnly: true,
+					},
 					workType: {
 						type: "string",
 						title: "Тип работ",
@@ -143,21 +163,6 @@ const MANUAL_ARCH_COMPONENT_PRESET_DEFS: Pick<
 					reason: {
 						type: "string",
 						title: "Причина",
-						readOnly: true,
-					},
-					estimateHoursPerDay: {
-						type: "number",
-						title: "Базовая оценка (ч/д)",
-						readOnly: true,
-					},
-					coefficient: {
-						type: "number",
-						title: "Коэф.",
-						readOnly: true,
-					},
-					total: {
-						type: "number",
-						title: "Итог",
 						readOnly: true,
 					},
 				},

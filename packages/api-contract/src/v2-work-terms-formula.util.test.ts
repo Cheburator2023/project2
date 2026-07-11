@@ -3,6 +3,8 @@ import {
 	computeFormulaBadge,
 	defaultTermsFormula,
 	evaluateTermsFormula,
+	formatTypicalWorkCoefficientDisplay,
+	shouldShowTypicalWorkCoefficientBreakdown,
 	syncTermsFromTokenFormula,
 	termsToTokenFormula,
 	tokensToTermsFormula,
@@ -37,6 +39,36 @@ describe("v2-work-terms-formula", () => {
 		expect(value).toBe(20);
 	});
 
+	it("formats simple coefficient as number and complex as resolved formula", () => {
+		const simple = defaultTermsFormula().terms;
+		expect(shouldShowTypicalWorkCoefficientBreakdown(simple)).toBe(false);
+		expect(
+			formatTypicalWorkCoefficientDisplay({
+				terms: simple,
+				baseNorm: 5,
+				paramCoefficients: {},
+				coefficient: 1.25,
+			}),
+		).toBe("1.25");
+
+		const withParam = tokensToTermsFormula({
+			tokens: [
+				{ kind: "norm" },
+				{ kind: "param_coeff", paramCode: "p1", paramName: "Сложность" },
+			],
+			text: "H × P1",
+		}).terms;
+		expect(shouldShowTypicalWorkCoefficientBreakdown(withParam)).toBe(true);
+		expect(
+			formatTypicalWorkCoefficientDisplay({
+				terms: withParam,
+				baseNorm: 5,
+				paramCoefficients: { p1: 1.2 },
+				coefficient: 1.2,
+			}),
+		).toBe("5 × 1.2");
+	});
+
 	it("converts N + constant to additive term and round-trips tokens", () => {
 		const source = {
 			tokens: [
@@ -56,5 +88,22 @@ describe("v2-work-terms-formula", () => {
 
 		const synced = syncTermsFromTokenFormula(source);
 		expect(synced.terms[1]?.baseValue).toBe(2.5);
+	});
+
+	it("unwraps parenthesized (N + c) × param into additive and multiplier terms", () => {
+		const terms = tokensToTermsFormula({
+			tokens: [
+				{ kind: "paren_open" },
+				{ kind: "norm" },
+				{ kind: "operator", op: "+" },
+				{ kind: "number", value: 5 },
+				{ kind: "paren_close" },
+				{ kind: "operator", op: "*" },
+				{ kind: "param_coeff", paramCode: "p1", paramName: "P1" },
+			],
+			text: "(N + 5) × P1",
+		});
+		expect(terms.terms.length).toBeGreaterThan(1);
+		expect(terms.terms.some((t) => t.kind === "additive")).toBe(true);
 	});
 });

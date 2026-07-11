@@ -64,7 +64,8 @@ import {
 	pointerToOutputPath,
 	readBoundWorkIdsAtPointer,
 	removeBoundWorkIdAtPointer,
-	resolveEffectiveBoundWorkIds,
+	resolveTypicalWorkDisplayBoundIds,
+	filterTypicalWorksForStreamExecutor,
 } from "../typicalWorkBlockBinding";
 import { listCanvasEditableChildKeys } from "../schemaCanvasTree";
 import {
@@ -375,36 +376,13 @@ export function SchemaPropertiesPanel() {
 		templateId: isTypicalWorkBlock ? templateId : null,
 	});
 	const typicalWorks = typicalWorksData?.items ?? [];
-	const allTypicalWorkIds = useMemo(
-		() => typicalWorks.map((work) => work.id),
+	const typicalWorkCatalog = useMemo(
+		() =>
+			typicalWorks.map((work) => ({
+				id: work.id,
+				streams: work.streams ?? [],
+			})),
 		[typicalWorks],
-	);
-	const boundWorkIds = useMemo(
-		() =>
-			selectedPointer && isTypicalWorkBlock
-				? resolveEffectiveBoundWorkIds(
-						uiSchema,
-						selectedPointer,
-						allTypicalWorkIds,
-					)
-				: [],
-		[selectedPointer, isTypicalWorkBlock, uiSchema, allTypicalWorkIds],
-	);
-	const explicitBoundWorkIds = useMemo(
-		() =>
-			selectedPointer && isTypicalWorkBlock
-				? (readBoundWorkIdsAtPointer(uiSchema, selectedPointer) ?? [])
-				: [],
-		[selectedPointer, isTypicalWorkBlock, uiSchema],
-	);
-	const boundTypicalWorks = useMemo(
-		() => typicalWorks.filter((work) => boundWorkIds.includes(work.id)),
-		[typicalWorks, boundWorkIds],
-	);
-	const unboundTypicalWorks = useMemo(
-		() =>
-			typicalWorks.filter((work) => !explicitBoundWorkIds.includes(work.id)),
-		[typicalWorks, explicitBoundWorkIds],
 	);
 	const typicalWorkOutputPath = useMemo(
 		() => (selectedPointer ? pointerToOutputPath(selectedPointer) : ""),
@@ -426,6 +404,53 @@ export function SchemaPropertiesPanel() {
 		sectionUiOptions.streamExecutor,
 		uiSchema,
 	]);
+	const boundWorkIds = useMemo(
+		() =>
+			selectedPointer && isTypicalWorkBlock
+				? resolveTypicalWorkDisplayBoundIds(
+						uiSchema,
+						selectedPointer,
+						typicalWorkCatalog,
+						typicalWorkStreamExecutor,
+					)
+				: [],
+		[
+			selectedPointer,
+			isTypicalWorkBlock,
+			uiSchema,
+			typicalWorkCatalog,
+			typicalWorkStreamExecutor,
+		],
+	);
+	const explicitBoundWorkIds = useMemo(
+		() =>
+			selectedPointer && isTypicalWorkBlock
+				? readBoundWorkIdsAtPointer(uiSchema, selectedPointer)
+				: undefined,
+		[selectedPointer, isTypicalWorkBlock, uiSchema],
+	);
+	const boundTypicalWorks = useMemo(
+		() => typicalWorks.filter((work) => boundWorkIds.includes(work.id)),
+		[typicalWorks, boundWorkIds],
+	);
+	const streamScopedTypicalWorks = useMemo(
+		() =>
+			filterTypicalWorksForStreamExecutor(
+				typicalWorkCatalog,
+				typicalWorkStreamExecutor,
+			)
+				.map((item) => typicalWorks.find((work) => work.id === item.id))
+				.filter((work): work is (typeof typicalWorks)[number] => Boolean(work)),
+		[typicalWorkCatalog, typicalWorkStreamExecutor, typicalWorks],
+	);
+	const unboundTypicalWorks = useMemo(() => {
+		if (explicitBoundWorkIds !== undefined) {
+			return streamScopedTypicalWorks.filter(
+				(work) => !explicitBoundWorkIds.includes(work.id),
+			);
+		}
+		return [];
+	}, [explicitBoundWorkIds, streamScopedTypicalWorks]);
 	const typicalWorkStreamPresent = useMemo(
 		() =>
 			typicalWorkStreamExecutor
@@ -1341,7 +1366,8 @@ export function SchemaPropertiesPanel() {
 																prev as Record<string, unknown>,
 																selectedPointer,
 																w.id,
-																allTypicalWorkIds,
+																typicalWorkCatalog,
+																typicalWorkStreamExecutor,
 															) as UiSchema,
 														{ recordHistory: false },
 													);
@@ -1364,7 +1390,8 @@ export function SchemaPropertiesPanel() {
 															prev as Record<string, unknown>,
 															selectedPointer,
 															work.id,
-															allTypicalWorkIds,
+															typicalWorkCatalog,
+															typicalWorkStreamExecutor,
 														) as UiSchema,
 													{ recordHistory: false },
 												);

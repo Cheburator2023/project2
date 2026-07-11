@@ -4,11 +4,13 @@ exports.LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS = exports.TYPICAL_WORK_BOUND_W
 exports.collectGeneratedTypicalWorkArrayPaths = collectGeneratedTypicalWorkArrayPaths;
 exports.readTypicalWorkBoundWorkIdsAtOutputPath = readTypicalWorkBoundWorkIdsAtOutputPath;
 exports.collectTypicalWorkBlockBindings = collectTypicalWorkBlockBindings;
+exports.backfillTypicalWorkBoundWorkIdsInUiSchema = backfillTypicalWorkBoundWorkIdsInUiSchema;
 exports.resolveSourceTypicalWorksOutputPath = resolveSourceTypicalWorksOutputPath;
 exports.jsonSchemaHasResolvablePath = jsonSchemaHasResolvablePath;
 exports.listAllGeneratedTypicalWorkArrayPaths = listAllGeneratedTypicalWorkArrayPaths;
 exports.clearStaleGeneratedTypicalWorkPaths = clearStaleGeneratedTypicalWorkPaths;
 const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
+const v2_executor_streams_util_1 = require("./v2-executor-streams.util");
 exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = "streamDataSources.sourceTypicalTasks";
 /** Канонический вывод типовых работ «Контроль моделей». */
 exports.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_Khn6-HAW";
@@ -89,6 +91,57 @@ function collectTypicalWorkBlockBindings(uiSchema) {
         outputPath,
         boundWorkIds: readTypicalWorkBoundWorkIdsAtOutputPath(uiSchema, outputPath),
     }));
+}
+function patchBoundWorkIdsAtOutputPath(uiSchema, outputPath, boundWorkIds) {
+    const segments = outputPath.split(".").filter(Boolean);
+    if (segments.length === 0)
+        return uiSchema;
+    const patchLeaf = (node, depth) => {
+        const key = segments[depth];
+        if (!key)
+            return node;
+        if (depth === segments.length - 1) {
+            const existingChild = readRecord(node[key]) ?? {};
+            const prevOpts = readRecord(existingChild["ui:options"]) ?? {};
+            return {
+                ...node,
+                [key]: {
+                    ...existingChild,
+                    "ui:options": {
+                        ...prevOpts,
+                        [exports.TYPICAL_WORK_BOUND_WORK_IDS_KEY]: [...new Set(boundWorkIds)],
+                    },
+                },
+            };
+        }
+        const child = readRecord(node[key]) ?? {};
+        return {
+            ...node,
+            [key]: patchLeaf(child, depth + 1),
+        };
+    };
+    return patchLeaf({ ...uiSchema }, 0);
+}
+/**
+ * Заполняет boundWorkIds на legacy-блоках typicalWork по назначениям работ на стрим блока.
+ * Вызывается после сида каталога в шаблон (id работ известны только после seed).
+ */
+function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog) {
+    let next = uiSchema;
+    for (const binding of collectTypicalWorkBlockBindings(uiSchema)) {
+        if (binding.boundWorkIds !== undefined)
+            continue;
+        const stream = (0, v2_anketa_section_ui_util_1.resolveStreamExecutorForTypicalWorkOutputPath)(next, binding.outputPath);
+        if (!stream)
+            continue;
+        const ids = catalog
+            .filter((work) => (0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)(work.streams, stream))
+            .map((work) => work.id);
+        if (ids.length === 0)
+            continue;
+        next = patchBoundWorkIdsAtOutputPath(next, binding.outputPath, ids);
+    }
+    return next;
 }
 /** Путь вывода типовых работ «Система-источник» по схеме (канонический или пользовательский). */
 function resolveSourceTypicalWorksOutputPath(jsonSchema, uiSchema) {

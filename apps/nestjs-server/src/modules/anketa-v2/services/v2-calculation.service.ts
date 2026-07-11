@@ -670,6 +670,11 @@ export class V2CalculationService {
 								: `${sourceName}: параметр источника`,
 							estimateHoursPerDay: task.estimateHoursPerDay,
 							coefficient,
+							coefficientDisplay:
+								"coefficientDisplay" in task &&
+								typeof task.coefficientDisplay === "string"
+									? task.coefficientDisplay
+									: undefined,
 							total: catalogTotal,
 							sourceComponent: archComponent,
 							sourceName,

@@ -497,7 +497,6 @@ export function markFormulaParamInvalid(tokens, paramCode) {
 export function evaluateWorkFormula(formula, ctx) {
     const symbolic = formula.text || tokensToText(formula.tokens);
     const validation = validateWorkFormulaTokens(formula.tokens);
-    console.log(validation);
     if (validation) {
         return { symbolic, expanded: "", value: null, error: validation };
     }

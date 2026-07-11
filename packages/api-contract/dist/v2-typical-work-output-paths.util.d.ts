@@ -5,8 +5,12 @@ export declare const V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.
 export declare const TYPICAL_WORK_BOUND_WORK_IDS_KEY = "boundWorkIds";
 export type TypicalWorkBlockBinding = {
     outputPath: string;
-    /** undefined — legacy-блок без явной привязки (все работы шаблона). */
+    /** undefined — legacy-блок: привязки по стриму блока (см. backfill / UI). */
     boundWorkIds: string[] | undefined;
+};
+export type TypicalWorkCatalogBindingItem = {
+    id: string;
+    streams: readonly string[];
 };
 /** Legacy/fan-out пути, куда раньше дублировались сгенерированные типовые работы. */
 export declare const LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS: readonly ["streamDataSources.sourceTypicalTasks", "streamModelControl.field_Khn6-HAW", "detailInfo.detailTypicalTasks", "detailInfo.sourceTypicalTasks", "generalInfo.modelService.controlTypicalTasks"];
@@ -16,6 +20,11 @@ export declare function collectGeneratedTypicalWorkArrayPaths(uiSchema: unknown,
 export declare function readTypicalWorkBoundWorkIdsAtOutputPath(uiSchema: unknown, outputPath: string): string[] | undefined;
 /** Все блоки typicalWork с путями вывода и привязками работ. */
 export declare function collectTypicalWorkBlockBindings(uiSchema: unknown): TypicalWorkBlockBinding[];
+/**
+ * Заполняет boundWorkIds на legacy-блоках typicalWork по назначениям работ на стрим блока.
+ * Вызывается после сида каталога в шаблон (id работ известны только после seed).
+ */
+export declare function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema: Record<string, unknown>, catalog: readonly TypicalWorkCatalogBindingItem[]): Record<string, unknown>;
 /** Путь вывода типовых работ «Система-источник» по схеме (канонический или пользовательский). */
 export declare function resolveSourceTypicalWorksOutputPath(jsonSchema?: unknown, uiSchema?: unknown): string | null;
 /** Есть ли в jsonSchema узел по dot-пути (только `properties`, без $ref). */

@@ -282,3 +282,19 @@ export function resolveByValueLaborParamCoefficients(source, rows) {
     }
     return paramCoefficients;
 }
+/**
+ * Резолвер коэффициента фактора формулы: сначала рассчитанные значения,
+ * затем any_of по фактическому ответу (в т.ч. «выкл» при отсутствии/снятом чекбоксе).
+ */
+export function buildTypicalWorkFactorCoeffResolver(params) {
+    return (paramCode) => {
+        if (Object.hasOwn(params.paramCoefficients, paramCode)) {
+            return params.paramCoefficients[paramCode];
+        }
+        const header = params.anyOfParams.find((row) => row.paramCode === paramCode);
+        if (header) {
+            return resolveLaborAnyOfCoefficient(params.source, header.paramCode, header.anyOf, header.paramName ?? null);
+        }
+        return 1;
+    };
+}

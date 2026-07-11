@@ -213,7 +213,8 @@ describe("typicalWork snapshot consistency", () => {
 			placed!.uiSchema,
 			placed!.typicalWorkPointer,
 			"work-nested",
-			["work-nested"],
+			[{ id: "work-nested", streams: ["Источники данных"] }],
+			"Источники данных",
 		);
 		const boundBefore = readBoundWorkIdsAtPointer(
 			ui,

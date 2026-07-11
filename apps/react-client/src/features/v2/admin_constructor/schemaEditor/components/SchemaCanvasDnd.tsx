@@ -39,6 +39,7 @@ import { useDrag } from "react-dnd";
 import { getEmptyImage } from "react-dnd-html5-backend";
 import {
 	readV2AnketaSectionUiOptions,
+	resolveStreamExecutorForTypicalWorkOutputPath,
 	resolveV2AnketaArchComponent,
 	resolveV2AnketaCanvasUiKind,
 	type V2AnketaCanvasUiKind,
@@ -73,7 +74,11 @@ import {
 } from "../propertiesFieldKind";
 import { useParams } from "react-router";
 import { useV2TypicalWorksList } from "@react-client/common/api/queries/v2-works";
-import { resolveEffectiveBoundWorkIds } from "../typicalWorkBlockBinding";
+import {
+	pointerToOutputPath,
+	resolveTypicalWorkDisplayBoundIds,
+	type TypicalWorkCatalogItem,
+} from "../typicalWorkBlockBinding";
 import { useSchemaEditor } from "../SchemaEditorContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "./PanelChrome";
@@ -290,7 +295,7 @@ function SchemaCanvasFieldRow({
 	onToggle,
 	onRequestDelete,
 	typicalWorkNameById,
-	allTypicalWorkIds,
+	typicalWorkCatalog,
 }: {
 	node: NodeModel<SchemaCanvasNodeData>;
 	depth: number;
@@ -301,7 +306,7 @@ function SchemaCanvasFieldRow({
 	onToggle: () => void;
 	onRequestDelete: (state: CanvasDeleteConfirmState) => void;
 	typicalWorkNameById: Map<string, string>;
-	allTypicalWorkIds: string[];
+	typicalWorkCatalog: TypicalWorkCatalogItem[];
 }) {
 	const theme = useTheme();
 	const {
@@ -387,10 +392,16 @@ function SchemaCanvasFieldRow({
 
 	const typicalWorkTitleSuffix = useMemo(() => {
 		if (sectionUiOptions.archComponent !== "typicalWork") return "";
-		const ids = resolveEffectiveBoundWorkIds(
+		const outputPath = pointerToOutputPath(fieldPointer);
+		const streamExecutor =
+			sectionUiOptions.streamExecutor ??
+			resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPath) ??
+			"";
+		const ids = resolveTypicalWorkDisplayBoundIds(
 			uiSchema,
 			fieldPointer,
-			allTypicalWorkIds,
+			typicalWorkCatalog,
+			streamExecutor,
 		);
 		const names = [
 			...new Set(
@@ -404,9 +415,10 @@ function SchemaCanvasFieldRow({
 		return names.length > 3 ? `${preview}…` : preview;
 	}, [
 		sectionUiOptions.archComponent,
+		sectionUiOptions.streamExecutor,
 		uiSchema,
 		fieldPointer,
-		allTypicalWorkIds,
+		typicalWorkCatalog,
 		typicalWorkNameById,
 	]);
 
@@ -789,6 +801,14 @@ export function SchemaCanvasPanel({
 	const { hideSystemFields } = useSchemaConstructorSettings();
 	const { templateId = "" } = useParams<{ templateId: string }>();
 	const { data: worksData } = useV2TypicalWorksList({ templateId });
+	const typicalWorkCatalog = useMemo<TypicalWorkCatalogItem[]>(
+		() =>
+			(worksData?.items ?? []).map((work) => ({
+				id: work.id,
+				streams: work.streams ?? [],
+			})),
+		[worksData?.items],
+	);
 	const typicalWorkNameById = useMemo(() => {
 		const map = new Map<string, string>();
 		for (const work of worksData?.items ?? []) {
@@ -796,10 +816,6 @@ export function SchemaCanvasPanel({
 		}
 		return map;
 	}, [worksData?.items]);
-	const allTypicalWorkIds = useMemo(
-		() => [...typicalWorkNameById.keys()],
-		[typicalWorkNameById],
-	);
 	const treeRef = useRef<TreeMethods>(null);
 	const [deleteConfirm, setDeleteConfirm] =
 		useState<CanvasDeleteConfirmState | null>(null);
@@ -1158,7 +1174,7 @@ export function SchemaCanvasPanel({
 							onToggle={onToggle}
 							onRequestDelete={handleRequestDelete}
 							typicalWorkNameById={typicalWorkNameById}
-							allTypicalWorkIds={allTypicalWorkIds}
+							typicalWorkCatalog={typicalWorkCatalog}
 						/>
 					)}
 				/>

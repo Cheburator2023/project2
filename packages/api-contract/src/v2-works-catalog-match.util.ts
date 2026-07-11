@@ -445,3 +445,40 @@ export function resolveByValueLaborParamCoefficients(
 	}
 	return paramCoefficients;
 }
+
+export type TypicalWorkAnyOfLaborParamLike = {
+	paramCode: string;
+	paramName?: string | null;
+	anyOf: {
+		valueCodes: string[];
+		valueLabels: string[];
+		coeffOn: number;
+		coeffOff: number;
+	};
+};
+
+/**
+ * Резолвер коэффициента фактора формулы: сначала рассчитанные значения,
+ * затем any_of по фактическому ответу (в т.ч. «выкл» при отсутствии/снятом чекбоксе).
+ */
+export function buildTypicalWorkFactorCoeffResolver(params: {
+	paramCoefficients: Record<string, number>;
+	anyOfParams: readonly TypicalWorkAnyOfLaborParamLike[];
+	source: Record<string, unknown>;
+}): (paramCode: string) => number {
+	return (paramCode: string) => {
+		if (Object.hasOwn(params.paramCoefficients, paramCode)) {
+			return params.paramCoefficients[paramCode]!;
+		}
+		const header = params.anyOfParams.find((row) => row.paramCode === paramCode);
+		if (header) {
+			return resolveLaborAnyOfCoefficient(
+				params.source,
+				header.paramCode,
+				header.anyOf,
+				header.paramName ?? null,
+			);
+		}
+		return 1;
+	};
+}

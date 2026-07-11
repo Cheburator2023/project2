@@ -86,7 +86,13 @@ export function TypicalWorksPanel() {
 
 	const bindWorkToTypicalWorkBlock = useCallback(
 		(pointer: string, workId: string) => {
-			const allWorkIds = (data?.items ?? []).map((item) => item.id);
+			const catalog = (data?.items ?? []).map((item) => ({
+				id: item.id,
+				streams: item.streams ?? [],
+			}));
+			const outputPath = pointerToOutputPath(pointer);
+			const streamExecutor =
+				resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPath) ?? "";
 			recordDraftHistory();
 			patchUiSchema(
 				(prev) =>
@@ -94,12 +100,13 @@ export function TypicalWorksPanel() {
 						prev as Record<string, unknown>,
 						pointer,
 						workId,
-						allWorkIds,
+						catalog,
+						streamExecutor,
 					) as import("@rjsf/utils").UiSchema,
 				{ recordHistory: false },
 			);
 		},
-		[data?.items, patchUiSchema, recordDraftHistory],
+		[data?.items, patchUiSchema, recordDraftHistory, uiSchema],
 	);
 
 	const isStreamPresentInSchema = useCallback(
@@ -337,7 +344,10 @@ export function TypicalWorksPanel() {
 	const handleDeleteWork = async (confirm = false) => {
 		if (!deleteTarget) return;
 		const deletedWorkId = deleteTarget.id;
-		const allWorkIds = (data?.items ?? []).map((item) => item.id);
+		const catalog = (data?.items ?? []).map((item) => ({
+			id: item.id,
+			streams: item.streams ?? [],
+		}));
 		try {
 			await deleteWork.mutateAsync({ workId: deletedWorkId, confirm });
 			if (selectedWorkId === deletedWorkId) {
@@ -349,7 +359,7 @@ export function TypicalWorksPanel() {
 					removeWorkIdFromAllTypicalWorkBindings(
 						prev as Record<string, unknown>,
 						deletedWorkId,
-						allWorkIds,
+						catalog,
 					) as import("@rjsf/utils").UiSchema,
 				{ recordHistory: false },
 			);

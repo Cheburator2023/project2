@@ -10,3 +10,7 @@ export declare const V2_DB_STREAM_TO_EXECUTOR_AREA: Record<string, V2ExecutorStr
 export declare function isV2ExecutorStreamLabel(value: string): value is V2ExecutorStreamLabel;
 export declare function inferLegacyStreamExecutorForBlockKey(blockKey: string): V2ExecutorStreamLabel | null;
 export declare function resolveExecutorStreamAreaLabel(stream: string): string;
+/** Стримы БД/области UI, в которых ищется назначение работы для блока typicalWork. */
+export declare function resolveExecutorScopeDbStreams(executorStream: string): readonly string[];
+/** Работа назначена на стрим-исполнитель блока typicalWork (legacy без boundWorkIds). */
+export declare function typicalWorkAssignedToExecutorStream(workStreams: readonly string[], executorStream: string): boolean;

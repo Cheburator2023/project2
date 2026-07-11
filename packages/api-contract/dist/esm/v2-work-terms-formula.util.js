@@ -1,4 +1,4 @@
-import { isTransitiveOnlyFormula, isParamToken } from "./v2-work-formula.util";
+import { isTransitiveOnlyFormula, isParamToken, parseWorkFormulaText, tokensToText } from "./v2-work-formula.util";
 export function createTermId(prefix = "term") {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -57,6 +57,28 @@ function splitTokensByAdditiveOps(tokens) {
     }
     segments.push(current);
     return segments.filter((segment) => segment.length > 0);
+}
+/** Снимает одну внешнюю пару скобок, если формула целиком в (…). */
+function unwrapParenthesizedFormulaTokens(tokens) {
+    if (tokens[0]?.kind !== "paren_open")
+        return tokens;
+    let depth = 0;
+    for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i];
+        if (token?.kind === "paren_open")
+            depth++;
+        else if (token?.kind === "paren_close") {
+            depth--;
+            if (depth === 0) {
+                const tail = tokens.slice(i + 1);
+                if (tail.length === 0) {
+                    return tokens.slice(1, i);
+                }
+                return [...tokens.slice(1, i), ...tail];
+            }
+        }
+    }
+    return tokens;
 }
 function parseMultSegment(segment, startOrder) {
     const terms = [];
@@ -183,7 +205,8 @@ export function tokensToTermsFormula(formula) {
             };
         }
     }
-    const segments = splitTokensByAdditiveOps(formula.tokens);
+    const normalizedTokens = unwrapParenthesizedFormulaTokens(formula.tokens);
+    const segments = splitTokensByAdditiveOps(normalizedTokens);
     if (segments.length === 0) {
         return defaultTermsFormula();
     }
@@ -214,6 +237,23 @@ export function normalizeStoredFormula(raw, fallbackText) {
         });
     }
     return defaultTermsFormula();
+}
+/** Token-формула version_config: приоритет formulaText (скобки, группировка). */
+export function resolveVersionConfigTokenFormula(formula, formulaText) {
+    const trimmed = formulaText?.trim();
+    if (trimmed) {
+        const parsed = parseWorkFormulaText(trimmed);
+        if (!parsed.error && parsed.tokens.length > 0) {
+            return { tokens: parsed.tokens, text: trimmed };
+        }
+    }
+    if (Array.isArray(formula) && formula.length > 0) {
+        const tokens = formula;
+        if (tokens.every((t) => t && typeof t === "object" && "kind" in t)) {
+            return { tokens, text: tokensToText(tokens) };
+        }
+    }
+    return termsToTokenFormula(normalizeStoredFormula(formula, formulaText));
 }
 function sortTerms(terms) {
     return [...terms].sort((a, b) => a.order - b.order);
@@ -252,6 +292,89 @@ export function formatTermsSummary(terms) {
     const add = parts.filter((p) => p.startsWith("+"));
     if (mult.length === 0 && add.length === 0)
         return "H";
+    if (add.length === 0)
+        return mult.join(" ");
+    return `${mult.join(" ")} ${add.join(" ")}`.trim();
+}
+function formatFormulaNumber(value) {
+    if (!Number.isFinite(value))
+        return "—";
+    const rounded = Math.round(value * 10000) / 10000;
+    if (Number.isInteger(rounded))
+        return String(rounded);
+    return String(rounded)
+        .replace(/(\.\d*?)0+$/, "$1")
+        .replace(/\.$/, "");
+}
+/** Показывать развёрнутую формулу коэффициента (с подставленными значениями). */
+export function shouldShowTypicalWorkCoefficientBreakdown(terms) {
+    const sorted = sortTerms(terms);
+    if (sorted.some((t) => t.kind === "transitive"))
+        return true;
+    const base = sorted.find((t) => t.kind === "base_norm");
+    const extra = sorted.filter((t) => t.kind !== "base_norm");
+    if (extra.some((t) => t.kind === "additive"))
+        return true;
+    const paramFactorCount = (base?.factors.length ?? 0) +
+        extra.reduce((acc, term) => acc + term.factors.length, 0);
+    if (paramFactorCount > 0)
+        return true;
+    if (extra.filter((t) => t.kind === "multiplier").length > 1)
+        return true;
+    const singleMult = extra.find((t) => t.kind === "multiplier");
+    if (singleMult && (singleMult.baseValue ?? 1) !== 1)
+        return true;
+    return false;
+}
+/** Человекочитаемое представление коэффициента: число или формула с конкретными значениями. */
+export function formatTypicalWorkCoefficientDisplay(params) {
+    const sorted = sortTerms(params.terms);
+    if (!shouldShowTypicalWorkCoefficientBreakdown(sorted)) {
+        return formatFormulaNumber(params.coefficient);
+    }
+    const transitive = sorted.find((t) => t.kind === "transitive");
+    if (transitive) {
+        return transitive.sourceWorkName
+            ? `→ ${transitive.sourceWorkName}`
+            : "→ (транзитивная ссылка)";
+    }
+    const resolveFactor = (paramCode) => params.paramCoefficients[paramCode] ?? 1;
+    const joinNumericFactors = (values) => {
+        const parts = values
+            .map((value) => formatFormulaNumber(value))
+            .filter((value) => value !== "1");
+        return parts.join(" × ");
+    };
+    const parts = [];
+    for (const term of sorted) {
+        if (term.kind === "base_norm") {
+            const factors = term.factors.map((f) => resolveFactor(f.paramCode));
+            const base = formatFormulaNumber(params.baseNorm);
+            const tail = joinNumericFactors(factors);
+            parts.push(tail ? `${base} × ${tail}` : base);
+            continue;
+        }
+        if (term.kind === "multiplier") {
+            const values = [
+                term.baseValue ?? 1,
+                ...term.factors.map((f) => resolveFactor(f.paramCode)),
+            ];
+            const chunk = joinNumericFactors(values);
+            if (chunk)
+                parts.push(`× ${chunk}`);
+        }
+        if (term.kind === "additive") {
+            const values = [
+                term.baseValue ?? 1,
+                ...term.factors.map((f) => resolveFactor(f.paramCode)),
+            ];
+            const chunk = joinNumericFactors(values);
+            if (chunk)
+                parts.push(`+ ${chunk}`);
+        }
+    }
+    const mult = parts.filter((p) => !p.startsWith("+"));
+    const add = parts.filter((p) => p.startsWith("+"));
     if (add.length === 0)
         return mult.join(" ");
     return `${mult.join(" ")} ${add.join(" ")}`.trim();

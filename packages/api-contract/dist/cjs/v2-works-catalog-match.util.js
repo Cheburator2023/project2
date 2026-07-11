@@ -17,6 +17,7 @@ exports.typicalWorkRulesMatchSource = typicalWorkRulesMatchSource;
 exports.resolveLaborCoefficient = resolveLaborCoefficient;
 exports.resolveLaborAnyOfCoefficient = resolveLaborAnyOfCoefficient;
 exports.resolveByValueLaborParamCoefficients = resolveByValueLaborParamCoefficients;
+exports.buildTypicalWorkFactorCoeffResolver = buildTypicalWorkFactorCoeffResolver;
 const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
 Object.defineProperty(exports, "formatParamNameWithSourceKeys", { enumerable: true, get: function () { return v2_work_param_source_keys_util_1.formatParamNameWithSourceKeys; } });
 Object.defineProperty(exports, "parseParamNameSourceKeys", { enumerable: true, get: function () { return v2_work_param_source_keys_util_1.parseParamNameSourceKeys; } });
@@ -302,4 +303,20 @@ function resolveByValueLaborParamCoefficients(source, rows) {
         }
     }
     return paramCoefficients;
+}
+/**
+ * Резолвер коэффициента фактора формулы: сначала рассчитанные значения,
+ * затем any_of по фактическому ответу (в т.ч. «выкл» при отсутствии/снятом чекбоксе).
+ */
+function buildTypicalWorkFactorCoeffResolver(params) {
+    return (paramCode) => {
+        if (Object.hasOwn(params.paramCoefficients, paramCode)) {
+            return params.paramCoefficients[paramCode];
+        }
+        const header = params.anyOfParams.find((row) => row.paramCode === paramCode);
+        if (header) {
+            return resolveLaborAnyOfCoefficient(params.source, header.paramCode, header.anyOf, header.paramName ?? null);
+        }
+        return 1;
+    };
 }

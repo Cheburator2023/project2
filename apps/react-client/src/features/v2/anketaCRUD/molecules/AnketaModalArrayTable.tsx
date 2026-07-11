@@ -21,7 +21,6 @@ import {
 	isTypicalWorkArrayPath,
 	resolveArrayTableColumns,
 	sumTypicalWorkTotals,
-	typicalWorkItemDisplayName,
 	type AnketaArrayTableColumn,
 } from "../utils/anketaModalArrayTableConfig";
 import { useMemo, useState } from "react";
@@ -93,9 +92,11 @@ function CellValue({
 			variant="body2"
 			color={value === "—" ? "text.disabled" : "text.primary"}
 			sx={{
-				overflow: "hidden",
-				textOverflow: "ellipsis",
-				whiteSpace: "nowrap",
+				overflow: column.multiline ? "visible" : "hidden",
+				textOverflow: column.multiline ? "clip" : "ellipsis",
+				whiteSpace: column.multiline ? "pre-wrap" : "nowrap",
+				fontFamily: column.key === "coefficient" ? "monospace" : undefined,
+				fontSize: column.key === "coefficient" ? 12 : undefined,
 			}}
 		>
 			{value}
@@ -328,16 +329,6 @@ export function AnketaModalArrayTable({
 									borderColor: "divider",
 								}}
 							>
-								{isTypicalWorks ? (
-									<Typography
-										variant="subtitle2"
-										fontWeight={700}
-										data-test-id={`${tableTestId}--row-title--${index}`}
-										sx={{ minWidth: 0 }}
-									>
-										{typicalWorkItemDisplayName(item, index)}
-									</Typography>
-								) : null}
 								<Box
 									sx={{
 										display: "grid",
@@ -418,7 +409,7 @@ export function AnketaModalArrayTable({
 					data-test-id={`${tableTestId}--total`}
 				>
 					<Typography variant="body2" color="text.secondary">
-						Итого по типовым работам:
+						Суммарный итог:
 					</Typography>
 					<Typography
 						variant="subtitle1"

@@ -1,4 +1,8 @@
-import { V2_SOURCE_STREAM } from "@smart-anketa/api-contract";
+import {
+	compileStoredTypicalWorkResultLogic,
+	parseWorkFormulaText,
+	V2_SOURCE_STREAM,
+} from "@smart-anketa/api-contract";
 import { V2CalculationService } from "../../../../src/modules/anketa-v2/services/v2-calculation.service";
 import { createCalculationService } from "./helpers/v2-calculation-test.helpers";
 import {
@@ -184,6 +188,130 @@ describe("V2CalculationService labor coefficients (runtime integration)", () => 
 		expect(tasks).toHaveLength(1);
 		expect(tasks[0]?.coefficient).toBe(10);
 		expect(tasks[0]?.total).toBe(15);
+	});
+
+	it("writes coeffOff for absent boolean checkbox in stream trigger context", async () => {
+		const result = await evaluateWithRuntime(
+			baseFixture({
+				laborParams: [
+					{
+						workId: WORK_ID,
+						streamExecutor: V2_SOURCE_STREAM,
+						paramCode: "field_cb",
+						paramName: "Чекбокс @ field_cb",
+						kind: "any_of",
+						anyOfValueCodes: ["true"],
+						anyOfValueLabels: ["Да"],
+						coeffOn: "1",
+						coeffOff: "2",
+					},
+				],
+				versionConfigs: [
+					{
+						workId: WORK_ID,
+						streamExecutor: V2_SOURCE_STREAM,
+						templateVersionId: TEMPLATE_VERSION_ID,
+						formula: [
+							{ kind: "norm" },
+							{ kind: "param_anyof", paramCode: "field_cb" },
+						],
+						formulaText: null,
+						roundingMode: "none",
+						roundingStep: null,
+						calculationLogic: null,
+					},
+				],
+			}),
+			{
+				streamDataSources: {
+					sourceSystems: [{ name: "Источник 1", type: "Внутренний" }],
+				},
+			},
+		);
+
+		const tasks = (
+			result.formData.streamDataSources as {
+				sourceTypicalTasks: Array<{
+					coefficient: number;
+					total: number;
+				}>;
+			}
+		).sourceTypicalTasks;
+
+		expect(tasks).toHaveLength(1);
+		expect(tasks[0]?.coefficient).toBe(2);
+		expect(tasks[0]?.total).toBe(3);
+	});
+
+	it("applies parenthesized norm formula from calculationLogic in generated rows", async () => {
+		const parsed = parseWorkFormulaText("(N + 5) × коэф(p1)");
+		const calculationLogic = compileStoredTypicalWorkResultLogic(
+			{ tokens: parsed.tokens, text: "(N + 5) × коэф(p1)" },
+			{ mode: "NONE", step: null },
+		);
+		const result = await evaluateWithRuntime(
+			baseFixture({
+				laborParams: [
+					{
+						workId: WORK_ID,
+						streamExecutor: V2_SOURCE_STREAM,
+						paramCode: "p1",
+						paramName: "P1 @ p1",
+						kind: "any_of",
+						anyOfValueCodes: ["true"],
+						anyOfValueLabels: ["Да"],
+						coeffOn: "1",
+						coeffOff: "2",
+					},
+				],
+				versionConfigs: [
+					{
+						workId: WORK_ID,
+						streamExecutor: V2_SOURCE_STREAM,
+						templateVersionId: TEMPLATE_VERSION_ID,
+						formula: {
+							version: 2,
+							terms: [
+								{
+									id: "base",
+									kind: "base_norm",
+									title: "Базовый норматив работы",
+									order: 0,
+									factors: [],
+								},
+							],
+							text: "H",
+						},
+						formulaText: "(N + 5) × коэф(p1)",
+						roundingMode: "none",
+						roundingStep: null,
+						calculationLogic,
+					},
+				],
+				normValue: "20",
+			}),
+			{
+				streamDataSources: {
+					sourceSystems: [{ name: "Источник 1", type: "Внутренний" }],
+					p1: true,
+				},
+			},
+		);
+
+		const tasks = (
+			result.formData.streamDataSources as {
+				sourceTypicalTasks: Array<{
+					coefficient: number;
+					total: number;
+					estimateHoursPerDay: number;
+				}>;
+			}
+		).sourceTypicalTasks;
+
+		expect(tasks).toHaveLength(1);
+		expect(tasks[0]?.estimateHoursPerDay).toBe(20);
+		expect(tasks[0]?.total).toBe(25);
+		expect(tasks[0]?.coefficient).toBe(1.25);
 	});
 
 	it("passes stream-level field values into runtime source context", async () => {

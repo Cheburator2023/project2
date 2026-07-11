@@ -144,6 +144,27 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
         };
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveLaborAnyOfCoefficient)({ field_checkbox: true }, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(1.5);
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveLaborAnyOfCoefficient)({ field_checkbox: false }, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(0.5);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveLaborAnyOfCoefficient)({}, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(0.5);
+    });
+    (0, vitest_1.it)("buildTypicalWorkFactorCoeffResolver falls back to any_of coeffOff", () => {
+        const resolve = (0, v2_works_catalog_match_util_1.buildTypicalWorkFactorCoeffResolver)({
+            paramCoefficients: {},
+            anyOfParams: [
+                {
+                    paramCode: "field_cb",
+                    paramName: "Чекбокс @ field_cb",
+                    anyOf: {
+                        valueCodes: ["true"],
+                        valueLabels: ["Да"],
+                        coeffOn: 1,
+                        coeffOff: 2,
+                    },
+                },
+            ],
+            source: {},
+        });
+        (0, vitest_1.expect)(resolve("field_cb")).toBe(2);
+        (0, vitest_1.expect)(resolve("missing")).toBe(1);
     });
     (0, vitest_1.it)("resolves by-value labor coefficients from schema dictionary answers", () => {
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)({ field_dict: "Да" }, [
