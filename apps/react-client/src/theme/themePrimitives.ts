@@ -100,6 +100,8 @@ export const red = {
 	900: "hsl(0, 93%, 6%)",
 };
 
+export const inputBackgroundColor = "#91919114";
+
 export const getDesignTokens = (mode: PaletteMode) => {
 	customShadows[1] =
 		mode === "dark"

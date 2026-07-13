@@ -8,7 +8,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { alpha } from "@mui/material/styles";
-import { format, isValid, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import {
 	KANBAN_BOARD_PRIORITIES,
 	KANBAN_BOARD_HEAP_BOARD_ID,
@@ -82,14 +82,17 @@ const SPRINT_SELECT_COLOR = "#0891b2";
 const STREAM_SELECT_COLOR = "#7c3aed";
 const CUSTOMER_SELECT_COLOR = "#0d9488";
 
+const isValidDate = (value: Date | null | undefined): value is Date =>
+	value instanceof Date && !Number.isNaN(value.getTime());
+
 const parseDueDate = (value: string): Date | null => {
 	if (!value.trim()) return null;
 	const parsed = parseISO(value.trim());
-	return isValid(parsed) ? parsed : null;
+	return isValidDate(parsed) ? parsed : null;
 };
 
 const formatDueDate = (value: Date | null): string => {
-	if (!value || !isValid(value)) return "";
+	if (!isValidDate(value)) return "";
 	return format(value, "yyyy-MM-dd");
 };
 

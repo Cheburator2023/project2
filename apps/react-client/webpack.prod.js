@@ -47,6 +47,13 @@ module.exports = merge(common, {
 					priority: 20,
 					enforce: true,
 				},
+				dateFns: {
+					test: /[\\/]node_modules[\\/]date-fns[\\/]/,
+					name: "date-fns",
+					chunks: "all",
+					priority: 25,
+					enforce: true,
+				},
 				vendors: {
 					test: /[\\/]node_modules[\\/]/,
 					name: "vendors",

@@ -124,6 +124,7 @@ export const viteCommonConfig = ({
 				include: [
 					"@smart-anketa/json-logic-ts",
 					"@smart-anketa/api-contract",
+					"date-fns",
 					"react-dnd",
 					"react-dnd-html5-backend",
 					"@minoru/react-dnd-treeview",
@@ -133,7 +134,9 @@ export const viteCommonConfig = ({
 			resolve: {
 				alias: {
 					"@smart-anketa/json-logic-ts": JSON_LOGIC_TS_ENTRY,
+					"date-fns": path.resolve(ROOT_DIR, "../../node_modules/date-fns"),
 				},
+				dedupe: ["date-fns"],
 			},
 			build: {
 				target: browserslistToEsbuild(),
