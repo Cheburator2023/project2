@@ -4,6 +4,7 @@ import {
 	isGodModeAccessToken,
 	isNoRolesGodMode,
 } from "@react-client/common/auth/godMode";
+import { publishAppSync } from "@react-client/common/crossTab/appBroadcast";
 
 export type MfeAuthHostProps = {
 	token?: string;
@@ -128,9 +129,14 @@ export function resolveFreshAccessToken(
 export async function refreshHostAccessToken(
 	props?: MfeAuthHostProps | null,
 ): Promise<string | null> {
+	const hadToken = Boolean(useAuthStore.getState().accessToken);
 	const keycloak = resolveKeycloakInstance(props);
 	if (keycloak?.authenticated === false) {
 		clearMfeAuthState();
+		publishAppSync({
+			type: "auth:logout",
+			reason: "session-expired",
+		});
 		return null;
 	}
 
@@ -143,11 +149,18 @@ export async function refreshHostAccessToken(
 				if (typeof window !== "undefined") {
 					window.token = refreshed;
 				}
+				if (!hadToken) {
+					publishAppSync({ type: "auth:session-changed" });
+				}
 				return refreshed;
 			}
 		} catch {
 			// Не повторяем запрос с заведомо устаревшим host/cookie token.
 			clearMfeAuthState();
+			publishAppSync({
+				type: "auth:logout",
+				reason: "refresh-failed",
+			});
 			return null;
 		}
 	}
@@ -159,6 +172,10 @@ export async function refreshHostAccessToken(
 	}
 
 	clearMfeAuthState();
+	publishAppSync({
+		type: "auth:logout",
+		reason: "session-expired",
+	});
 	return null;
 }
 
@@ -216,6 +233,7 @@ export function resetKeycloakLoginGuardForTests(): void {
 /** Полный logout: чистим локальное состояние и отдаём управление Keycloak. */
 export function performMfeLogout(props?: MfeAuthHostProps | null): void {
 	clearMfeAuthState();
+	publishAppSync({ type: "auth:logout", reason: "user" });
 	props?.onLogout?.();
 
 	const keycloak = resolveKeycloakInstance(props);

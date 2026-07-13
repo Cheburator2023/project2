@@ -1,4 +1,15 @@
 const AUTO_RELOAD_FLAG = "dynamic-import:auto-reload";
+const DEPLOY_SYNC_CHANNEL = "smart-anketa:deploy-sync:v1";
+const BUILD_REVISION = process.env.GIT_REVISION ?? "unknown";
+
+type DeploySyncMessage = {
+	type: "stale-chunks";
+	revision: string;
+	label: string;
+};
+
+let recoveryHandlersRegistered = false;
+let deploySyncChannel: BroadcastChannel | null = null;
 
 function delay(ms: number): Promise<void> {
 	return new Promise((resolve) => {
@@ -11,12 +22,32 @@ function shouldAttemptAutoReload(): boolean {
 }
 
 function markAutoReloadAttempt(label?: string): void {
-	sessionStorage.setItem(AUTO_RELOAD_FLAG, label ?? "module");
+	sessionStorage.setItem(
+		AUTO_RELOAD_FLAG,
+		JSON.stringify({
+			revision: BUILD_REVISION,
+			label: label ?? "module",
+		}),
+	);
 }
 
-function reloadForStaleChunks(label?: string): void {
+function broadcastStaleChunks(label?: string): void {
+	deploySyncChannel?.postMessage({
+		type: "stale-chunks",
+		revision: BUILD_REVISION,
+		label: label ?? "module",
+	} satisfies DeploySyncMessage);
+}
+
+function reloadForStaleChunks(
+	label?: string,
+	{ broadcast = true }: { broadcast?: boolean } = {},
+): void {
 	if (!shouldAttemptAutoReload()) return;
 	markAutoReloadAttempt(label);
+	if (broadcast) {
+		broadcastStaleChunks(label);
+	}
 	globalThis.location.reload();
 }
 
@@ -72,19 +103,53 @@ export async function importWithDynamicRecovery<T>(
 	}
 }
 
-/** Сбрасывает флаг одноразовой перезагрузки после успешного старта приложения. */
+/**
+ * Сбрасывает защиту от reload-loop только после загрузки другой сборки.
+ * Успешный lazy import сбрасывает её сразу в importWithDynamicRecovery.
+ */
 export function clearDynamicImportReloadFlag(): void {
-	sessionStorage.removeItem(AUTO_RELOAD_FLAG);
+	const raw = sessionStorage.getItem(AUTO_RELOAD_FLAG);
+	if (!raw) return;
+
+	try {
+		const value = JSON.parse(raw) as { revision?: string };
+		if (value.revision !== BUILD_REVISION) {
+			sessionStorage.removeItem(AUTO_RELOAD_FLAG);
+		}
+	} catch {
+		sessionStorage.removeItem(AUTO_RELOAD_FLAG);
+	}
 }
 
-/** Глобальный fallback: ловит ChunkLoadError вне lazyPage (например, nested import). */
+/**
+ * Ловит ChunkLoadError вне lazyPage и синхронизирует reload между вкладками.
+ * Вкладки на другой ревизии игнорируют сообщение от устаревшего приложения.
+ */
 export function registerDynamicImportRecoveryHandlers(): void {
-	if (typeof window === "undefined") return;
+	if (typeof window === "undefined" || recoveryHandlersRegistered) return;
+	recoveryHandlersRegistered = true;
 
 	const recover = (error: unknown) => {
 		if (!isDynamicImportFetchError(error)) return;
 		reloadForStaleChunks("global");
 	};
+
+	if ("BroadcastChannel" in globalThis) {
+		deploySyncChannel = new BroadcastChannel(DEPLOY_SYNC_CHANNEL);
+		deploySyncChannel.addEventListener(
+			"message",
+			(event: MessageEvent<DeploySyncMessage>) => {
+				const message = event.data;
+				if (
+					message?.type !== "stale-chunks" ||
+					message.revision !== BUILD_REVISION
+				) {
+					return;
+				}
+				reloadForStaleChunks(message.label, { broadcast: false });
+			},
+		);
+	}
 
 	window.addEventListener("unhandledrejection", (event) => {
 		recover(event.reason);

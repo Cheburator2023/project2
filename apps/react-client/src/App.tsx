@@ -8,9 +8,10 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { ErrorBoundary } from "@react-client/common/errors/ErrorBoundary";
 import { ErrorPage } from "@react-client/common/errors/pages/ErrorPage";
 import { performMfeLogout } from "@react-client/common/auth/syncMfeAuth";
+import { queryClient } from "@react-client/common/api/queryClient";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { Toaster } from "@react-client/common/toasts";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { setDefaultOptions } from "date-fns/esm";
 
 import { isEmpty } from "lodash-es";
@@ -27,9 +28,14 @@ import {
 	treeViewCustomizations,
 } from "./theme/customizations";
 import AppRoutes from "@react-client/common/routing";
+import { registerAppCrossTabHandlers } from "@react-client/common/crossTab/registerAppCrossTabHandlers";
 import { getRouterBasename } from "@react-client/routing/basename";
+import { registerDynamicImportRecoveryHandlers } from "@react-client/routing/dynamicImportRecovery";
 import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
 import { ru } from "date-fns/esm/locale";
+
+registerDynamicImportRecoveryHandlers();
+registerAppCrossTabHandlers();
 
 const GIT_REVISION = process.env.GIT_REVISION;
 const NODE_ENV = process.env.NODE_ENV;
@@ -52,16 +58,6 @@ const xThemeComponents: any = {
 	...datePickersCustomizations,
 	...treeViewCustomizations,
 };
-
-const queryClient = new QueryClient({
-	defaultOptions: {
-		queries: {
-			refetchOnWindowFocus: false,
-			retry: 2,
-			gcTime: 1000 * 60 * 5, //  5 minutes
-		},
-	},
-});
 
 interface LayoutProps {
 	children?: React.ReactNode;

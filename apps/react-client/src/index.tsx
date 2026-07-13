@@ -1,14 +1,9 @@
 import App from "@react-client/App";
 import { AuthProvider } from "@react-client/common/providers/AuthProvider";
-import {
-	clearDynamicImportReloadFlag,
-	registerDynamicImportRecoveryHandlers,
-} from "@react-client/routing/dynamicImportRecovery";
+import { clearDynamicImportReloadFlag } from "@react-client/routing/dynamicImportRecovery";
 import { globalStyles } from "@react-client/theme/GlobalStyle";
 import React from "react";
 import ReactDOM from "react-dom/client";
-
-registerDynamicImportRecoveryHandlers();
 
 if (typeof window !== "undefined") {
 	window.addEventListener("vite:preloadError", (event) => {

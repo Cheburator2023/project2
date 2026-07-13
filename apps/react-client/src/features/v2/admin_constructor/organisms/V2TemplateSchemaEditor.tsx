@@ -19,6 +19,10 @@ import {
 } from "@react-client/routing/common/pathHelpers";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
+import {
+	publishAppSync,
+	subscribeAppSync,
+} from "@react-client/common/crossTab/appBroadcast";
 import type {
 	CreateV2TemplateVersionRequestDto,
 	V2LogicRuleDto,
@@ -500,6 +504,25 @@ export const V2TemplateSchemaEditor = ({
 		return () => window.clearTimeout(timer);
 	}, [jsonSchema, uiSchema, logic, formData, activeVersion?.id, syncDirtyFlag]);
 
+	useEffect(
+		() =>
+			subscribeAppSync((event) => {
+				if (
+					event.type !== "schema:server-version-changed" ||
+					event.templateId !== templateId
+				) {
+					return;
+				}
+				void refetchVersions();
+				if (hasUnsavedChanges) {
+					toast.warning(
+						"Версия схемы изменена в другой вкладке. Сохраните текущий черновик или обновите страницу.",
+					);
+				}
+			}),
+		[hasUnsavedChanges, refetchVersions, templateId],
+	);
+
 	const blocker = useBrowserRouterNavigationBlocker(
 		({ currentLocation, nextLocation }) => {
 			if (skipLeaveGuardRef.current) return false;
@@ -976,6 +999,12 @@ export const V2TemplateSchemaEditor = ({
 			setSaveDialogOpen(false);
 			commitBaselineToCurrent();
 			setLeaveDialogOpen(false);
+			publishAppSync({
+				type: "schema:server-version-changed",
+				templateId,
+				versionId: activeVersion.id,
+				action: "save",
+			});
 
 			if (isAdminEditor) {
 				toast.success(`Версия v${activeVersion.versionNumber} сохранена`);
@@ -1013,6 +1042,12 @@ export const V2TemplateSchemaEditor = ({
 				setSaveDialogOpen(false);
 				commitBaselineToCurrent();
 				persistVersionInUrl(created.id, { skipLeaveGuard: true });
+				publishAppSync({
+					type: "schema:server-version-changed",
+					templateId,
+					versionId: created.id,
+					action: "save",
+				});
 
 				if (isAdminEditor) {
 					toast.success(`Создан черновик v${created.versionNumber}`);
@@ -1057,6 +1092,12 @@ export const V2TemplateSchemaEditor = ({
 			await refetchVersions();
 			commitBaselineToCurrent();
 			persistVersionInUrl(activated.id, { skipLeaveGuard: true });
+			publishAppSync({
+				type: "schema:server-version-changed",
+				templateId,
+				versionId: activated.id,
+				action: "activate",
+			});
 
 			if (isAdminEditor) {
 				toast.success(

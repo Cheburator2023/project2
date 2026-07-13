@@ -7,6 +7,10 @@ import {
 	isGodModeAccessToken,
 	isNoRolesGodMode,
 } from "@react-client/common/auth/godMode";
+import {
+	publishAppSync,
+	type AppQueryScope,
+} from "@react-client/common/crossTab/appBroadcast";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import axios, {
 	type AxiosError,
@@ -28,6 +32,18 @@ const axiosInstance = axios.create({
 type RetriableAxiosConfig = AxiosRequestConfig & { _authRetry?: boolean };
 
 let refreshPromise: Promise<string | null> | null = null;
+
+function mutationScopeForUrl(url?: string): AppQueryScope | null {
+	if (!url) return null;
+	if (url.includes("/v2/data-transfer")) return "v2-all";
+	if (url.includes("/v2/templates") || url.includes("/v2/works")) {
+		return "v2-templates";
+	}
+	if (url.includes("/v2/dictionaries")) return "v2-dictionaries";
+	if (url.includes("/v2/questionnaires")) return "v2-questionnaires";
+	if (url.includes("/kanban-board")) return "tracker";
+	return null;
+}
 
 function queueTokenRefresh(): Promise<string | null> {
 	if (!refreshPromise) {
@@ -69,7 +85,16 @@ axiosInstance.interceptors.request.use(
 );
 
 axiosInstance.interceptors.response.use(
-	(response: AxiosResponse) => response,
+	(response: AxiosResponse) => {
+		const method = response.config.method?.toLowerCase();
+		if (method && !["get", "head", "options"].includes(method)) {
+			const scope = mutationScopeForUrl(response.config.url);
+			if (scope) {
+				publishAppSync({ type: "query:invalidate", scope });
+			}
+		}
+		return response;
+	},
 	async (error: AxiosError) => {
 		const originalRequest = error.config as RetriableAxiosConfig | undefined;
 		const status = error.response?.status;
