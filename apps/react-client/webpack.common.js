@@ -123,6 +123,10 @@ module.exports = {
 			// Глобальные стили (dockview, xyflow, toasts) — без CSS Modules, как в data_lineage.
 			{
 				test: /\.css$/,
+				// CSS-импорты являются side effect. Это особенно важно для пакетов
+				// вроде @svar-ui/react-gantt, которые помечают весь пакет как
+				// sideEffects: false: production tree shaking иначе удаляет стили.
+				sideEffects: true,
 				use: ["style-loader", "css-loader"],
 			},
 		],
