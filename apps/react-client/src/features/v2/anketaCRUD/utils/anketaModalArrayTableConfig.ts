@@ -12,7 +12,6 @@ export type AnketaArrayTableColumn = {
 	field?: string;
 	chip?: boolean;
 	link?: boolean;
-	/** Длинный текст (например, развёрнутая формула коэффициента). */
 	multiline?: boolean;
 };
 
@@ -40,38 +39,6 @@ function formatNameLabel(raw: string): string {
 	if (raw === "crm_retail") return "CRM Retail";
 	if (raw === "crm_corp") return "CRM Corp";
 	return raw;
-}
-
-export type TypicalWorkCoefficientCell = {
-	formula: string | null;
-	coefficient: string;
-};
-
-/** Формула из coefficientDisplay; итоговый коэффициент — из поля coefficient. */
-export function parseTypicalWorkCoefficientDisplay(
-	item: Record<string, unknown>,
-): TypicalWorkCoefficientCell {
-	const coefficient = formatTypicalWorkNumber(item, "coefficient");
-	if (coefficient === "—") return { formula: null, coefficient };
-
-	const displayRaw = item.coefficientDisplay;
-	let display =
-		typeof displayRaw === "string" && displayRaw.trim()
-			? displayRaw.trim()
-			: "";
-
-	if (display) {
-		const eqMatch = display.match(/^(.+?)\s*=\s*([^=]+)$/);
-		if (eqMatch) {
-			display = eqMatch[1].trim();
-		}
-	}
-
-	if (!display || display === coefficient) {
-		return { formula: null, coefficient };
-	}
-
-	return { formula: display, coefficient };
 }
 
 function formatTypicalWorkNumber(
@@ -105,13 +72,8 @@ const FACTORY_TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
 	{
 		key: "coefficient",
 		header: "Коэффициент",
-		width: "1.1fr",
-		multiline: true,
-		render: (item) => {
-			const { formula, coefficient } = parseTypicalWorkCoefficientDisplay(item);
-			if (formula) return `${formula} = ${coefficient}`;
-			return coefficient;
-		},
+		width: "0.8fr",
+		render: (item) => formatTypicalWorkNumber(item, "coefficient"),
 	},
 	{
 		key: "total",

@@ -4,6 +4,7 @@ exports.CONTROL_MODELS_STREAM = exports.STREAM_BY_SOURCE_TYPE = exports.V2_SOURC
 exports.normalizeSourceTypeLabel = normalizeSourceTypeLabel;
 exports.resolveStreamFromSourceType = resolveStreamFromSourceType;
 exports.resolveStreamsFromSourceSystems = resolveStreamsFromSourceSystems;
+exports.readLaborParamAnswer = readLaborParamAnswer;
 exports.readTypicalWorkSourceField = readTypicalWorkSourceField;
 exports.extractControlCode = extractControlCode;
 exports.isSourceTypeTriggerParam = isSourceTypeTriggerParam;
@@ -70,8 +71,12 @@ function slugParamCode(name) {
         .replace(/^_+|_+$/g, "")
         .slice(0, 80);
 }
-/** Читает значение параметра из контекста строки/объекта анкеты. */
-function readTypicalWorkSourceField(source, paramCode, paramName) {
+/**
+ * Ответ параметра трудоёмкости: только явные поля анкеты (paramCode / sourceKeys / slug).
+ * Без fallback на `value`/`controlType` строки — иначе отсутствующий чекбокс
+ * ошибочно наследует чужое значение и получает coeffOn вместо coeffOff.
+ */
+function readLaborParamAnswer(source, paramCode, paramName) {
     if (paramCode in source)
         return source[paramCode];
     const { displayName, sourceKeys } = (0, v2_work_param_source_keys_util_1.parseParamNameSourceKeys)(paramName);
@@ -94,10 +99,19 @@ function readTypicalWorkSourceField(source, paramCode, paramName) {
             isSourceTypeTriggerParam(paramCode, paramName))) {
         return source.type;
     }
-    if (source.controlType !== undefined)
-        return source.controlType;
-    if (source.value !== undefined)
-        return source.value;
+    return undefined;
+}
+/** Читает значение параметра из контекста строки/объекта анкеты (триггеры, JsonLogic). */
+function readTypicalWorkSourceField(source, paramCode, paramName) {
+    const direct = readLaborParamAnswer(source, paramCode, paramName);
+    if (direct !== undefined)
+        return direct;
+    if (isControlTypeTriggerParam(paramCode, paramName)) {
+        if (source.controlType !== undefined)
+            return source.controlType;
+        if (source.value !== undefined)
+            return source.value;
+    }
     return undefined;
 }
 function readSourceField(source, paramCode, paramName) {
@@ -286,20 +300,50 @@ function typicalWorkRulesMatchSource(rules, source) {
     });
 }
 function resolveLaborCoefficient(source, paramCode, valueCode, valueLabel, paramName = null) {
-    const actual = readSourceField(source, paramCode, paramName);
+    const actual = readLaborParamAnswer(source, paramCode, paramName);
     return laborValueMatches(actual, valueCode, valueLabel);
 }
 function resolveLaborAnyOfCoefficient(source, paramCode, anyOf, paramName = null) {
-    const actual = readSourceField(source, paramCode, paramName);
+    const actual = readLaborParamAnswer(source, paramCode, paramName);
     const matches = anyOf.valueCodes.some((code, index) => laborValueMatches(actual, code, anyOf.valueLabels[index] ?? null));
     return matches ? anyOf.coeffOn : anyOf.coeffOff;
+}
+function expectedBooleanLaborValue(valueCode, valueLabel) {
+    for (const raw of [valueCode, valueLabel]) {
+        const normalized = raw?.trim().toLowerCase();
+        if (normalized === "true" || normalized === "да")
+            return true;
+        if (normalized === "false" || normalized === "нет")
+            return false;
+    }
+    return null;
 }
 /** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
 function resolveByValueLaborParamCoefficients(source, rows) {
     const paramCoefficients = {};
+    const rowsByParam = new Map();
     for (const row of rows) {
-        if (resolveLaborCoefficient(source, row.paramCode, row.valueCode, row.valueLabel, row.paramName ?? null)) {
-            paramCoefficients[row.paramCode] = row.coefficient;
+        const paramRows = rowsByParam.get(row.paramCode) ?? [];
+        paramRows.push(row);
+        rowsByParam.set(row.paramCode, paramRows);
+    }
+    for (const [paramCode, paramRows] of rowsByParam) {
+        const paramName = paramRows[0]?.paramName ?? null;
+        let actual = readLaborParamAnswer(source, paramCode, paramName);
+        // Неотмеченный чекбокс часто отсутствует в formData целиком. Если набор
+        // коэффициентов явно логический (есть и Да/true, и Нет/false), отсутствие
+        // поля эквивалентно false и должно выбрать коэффициент строки «Нет».
+        if (actual === undefined) {
+            const booleanValues = new Set(paramRows.map((row) => expectedBooleanLaborValue(row.valueCode, row.valueLabel)));
+            if (booleanValues.has(true) && booleanValues.has(false)) {
+                actual = false;
+            }
+        }
+        for (const row of paramRows) {
+            if (laborValueMatches(actual, row.valueCode, row.valueLabel)) {
+                paramCoefficients[paramCode] = row.coefficient;
+                break;
+            }
         }
     }
     return paramCoefficients;

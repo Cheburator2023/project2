@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { computeFormulaBadge, defaultTermsFormula, evaluateTermsFormula, formatTypicalWorkCoefficientDisplay, shouldShowTypicalWorkCoefficientBreakdown, syncTermsFromTokenFormula, termsToTokenFormula, tokensToTermsFormula, validateTermsFormula, } from "./v2-work-terms-formula.util";
+import { computeFormulaBadge, defaultTermsFormula, evaluateTermsFormula, formatTypicalWorkCoefficientDisplay, shouldShowTypicalWorkCoefficientBreakdown, syncTermsFromTokenFormula, termsToTokenFormula, tokensToTermsFormula, validateTermsFormula, resolveVersionConfigTokenFormula, } from "./v2-work-terms-formula.util";
+import { tokensToText } from "./v2-work-formula.util";
 describe("v2-work-terms-formula", () => {
     it("requires exactly one base norm term", () => {
         expect(validateTermsFormula([])).toMatch(/базовый/i);
@@ -66,6 +67,24 @@ describe("v2-work-terms-formula", () => {
         expect(roundTrip.tokens).toEqual(source.tokens);
         const synced = syncTermsFromTokenFormula(source);
         expect(synced.terms[1]?.baseValue).toBe(2.5);
+    });
+    it("converts N - constant to additive term and round-trips tokens", () => {
+        const source = {
+            tokens: [
+                { kind: "norm" },
+                { kind: "operator", op: "-" },
+                { kind: "number", value: 2.5 },
+            ],
+            text: "N - 2.5",
+        };
+        const terms = tokensToTermsFormula(source);
+        expect(terms.terms).toHaveLength(2);
+        expect(terms.terms[1]?.kind).toBe("additive");
+        expect(terms.terms[1]?.baseValue).toBe(-2.5);
+        const roundTrip = termsToTokenFormula(terms);
+        expect(roundTrip.tokens).toEqual(source.tokens);
+        const resolved = resolveVersionConfigTokenFormula(terms, tokensToText(source.tokens));
+        expect(resolved.tokens).toEqual(source.tokens);
     });
     it("unwraps parenthesized (N + c) × param into additive and multiplier terms", () => {
         const terms = tokensToTermsFormula({

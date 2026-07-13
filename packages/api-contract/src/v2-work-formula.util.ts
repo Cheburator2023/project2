@@ -398,9 +398,15 @@ export function parseWorkFormulaText(text: string): {
 			continue;
 		}
 
-		if ("+-×÷*/".includes(ch)) {
+		if ("+-×÷*/−".includes(ch)) {
 			const op =
-				ch === "×" ? "*" : ch === "÷" ? "/" : (ch as "+" | "-" | "*" | "/");
+				ch === "×"
+					? "*"
+					: ch === "÷"
+						? "/"
+						: ch === "−"
+							? "-"
+							: (ch as "+" | "-" | "*" | "/");
 			tokens.push({ kind: "operator", op });
 			i++;
 			continue;

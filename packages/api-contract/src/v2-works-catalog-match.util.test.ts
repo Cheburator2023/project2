@@ -221,6 +221,23 @@ describe("v2-works-catalog-match.util", () => {
 		).toBe(0.5);
 	});
 
+	it("does not treat unrelated source.value as boolean labor answer", () => {
+		const anyOf = {
+			valueCodes: ["true"],
+			valueLabels: ["Да"],
+			coeffOn: 1,
+			coeffOff: 2,
+		};
+		expect(
+			resolveLaborAnyOfCoefficient(
+				{ name: "Источник", type: "Внутренний", value: "Да" },
+				"field_cb",
+				anyOf,
+				"Чекбокс @ field_cb",
+			),
+		).toBe(2);
+	});
+
 	it("buildTypicalWorkFactorCoeffResolver falls back to any_of coeffOff", () => {
 		const resolve = buildTypicalWorkFactorCoeffResolver({
 			paramCoefficients: {},
@@ -264,6 +281,30 @@ describe("v2-works-catalog-match.util", () => {
 				],
 			),
 		).toEqual({ field_dict: 20 });
+	});
+
+	it("treats an absent by-value boolean checkbox as false", () => {
+		expect(
+			resolveByValueLaborParamCoefficients(
+				{ name: "Источник", value: "Да" },
+				[
+					{
+						paramCode: "field_cb",
+						paramName: "Чекбокс @ field_cb",
+						valueCode: "true",
+						valueLabel: "Да",
+						coefficient: 1,
+					},
+					{
+						paramCode: "field_cb",
+						paramName: "Чекбокс @ field_cb",
+						valueCode: "false",
+						valueLabel: "Нет",
+						coefficient: 2,
+					},
+				],
+			),
+		).toEqual({ field_cb: 2 });
 	});
 
 	it("matches boolean checkbox trigger by label and code", () => {

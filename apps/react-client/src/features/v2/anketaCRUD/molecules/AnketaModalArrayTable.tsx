@@ -19,7 +19,6 @@ import {
 	filterTypicalWorkItems,
 	getArrayAtPath,
 	isTypicalWorkArrayPath,
-	parseTypicalWorkCoefficientDisplay,
 	resolveArrayTableColumns,
 	sumTypicalWorkTotals,
 	type AnketaArrayTableColumn,
@@ -45,61 +44,13 @@ function gridTemplate(
 	return showRowActions ? `${cols} 72px` : cols;
 }
 
-function TypicalWorkCoefficientValue({
-	item,
-}: {
-	item: Record<string, unknown>;
-}) {
-	const { formula, coefficient } = parseTypicalWorkCoefficientDisplay(item);
-	const monoSx = { fontFamily: "monospace", fontSize: 12 } as const;
-
-	if (coefficient === "—") {
-		return (
-			<Typography variant="body2" color="text.disabled" sx={monoSx}>
-				—
-			</Typography>
-		);
-	}
-
-	return (
-		<Typography
-			variant="body2"
-			sx={{
-				overflow: "visible",
-				textOverflow: "clip",
-				whiteSpace: "pre-wrap",
-				...monoSx,
-			}}
-		>
-			{formula ? (
-				<Box component="span" sx={{ color: "text.secondary" }}>
-					{formula}
-					{" = "}
-				</Box>
-			) : null}
-			<Box
-				component="span"
-				sx={{ color: "primary.main", fontWeight: 600 }}
-			>
-				{coefficient}
-			</Box>
-		</Typography>
-	);
-}
-
 function CellValue({
 	column,
 	value,
-	item,
 }: {
 	column: AnketaArrayTableColumn;
 	value: string;
-	item?: Record<string, unknown>;
 }) {
-	if (column.key === "coefficient" && item) {
-		return <TypicalWorkCoefficientValue item={item} />;
-	}
-
 	if (column.chip && value !== "—") {
 		return (
 			<Chip
@@ -406,7 +357,6 @@ export function AnketaModalArrayTable({
 										<CellValue
 											key={column.key}
 											column={column}
-											item={item}
 											value={
 												column.render
 													? column.render(item)

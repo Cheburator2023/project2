@@ -38,6 +38,30 @@ function catalogValuesForParam(
 	return catalog.find((p) => p.code === paramCode)?.values ?? [];
 }
 
+function isBooleanLikeAnyOf(
+	group: V2TypicalWorkLaborParamGroupDto,
+	catalog: V2TypicalWorkParameterDto[],
+): boolean {
+	const codes = new Set([
+		...(group.anyOf?.valueCodes ?? []),
+		...catalogValuesForParam(group.paramCode, catalog).map((v) => v.code),
+	]);
+	return codes.has("true") || codes.has("false");
+}
+
+function defaultOffCodeForAnyOf(
+	group: V2TypicalWorkLaborParamGroupDto,
+	catalog: V2TypicalWorkParameterDto[],
+): string | undefined {
+	const values = catalogValuesForParam(group.paramCode, catalog);
+	const fromCatalog = values.find(
+		(v) => v.code === "false" || v.label.trim().toLowerCase() === "нет",
+	)?.code;
+	if (fromCatalog) return fromCatalog;
+	const fromAnyOf = group.anyOf?.valueCodes.find((code) => code === "false");
+	return fromAnyOf;
+}
+
 export function buildDefaultPreviewAnswers(
 	laborParams: V2TypicalWorkLaborParamGroupDto[],
 	rules: V2TypicalWorkRuleDto[],
@@ -47,7 +71,12 @@ export function buildDefaultPreviewAnswers(
 
 	for (const group of laborParams) {
 		if (group.kind === "any_of" && group.anyOf?.valueCodes.length) {
-			answers[group.paramCode] = group.anyOf.valueCodes[0] ?? "";
+			if (isBooleanLikeAnyOf(group, catalog)) {
+				const offCode = defaultOffCodeForAnyOf(group, catalog);
+				if (offCode) answers[group.paramCode] = offCode;
+			} else {
+				answers[group.paramCode] = group.anyOf.valueCodes[0] ?? "";
+			}
 			continue;
 		}
 		const fromCoeff = group.coefficients.find((c) => c.valueCode)?.valueCode;
@@ -218,7 +247,16 @@ export function TypicalWorkFormulaPreview({
 				<Flex flexDirection="column" gap={10} sx={{ mb: 1.5 }}>
 					{paramRows.map((param) => {
 						if (param.values.length === 0) return null;
-						const current = answers[param.code] ?? param.values[0]?.code ?? "";
+						const laborGroup = laborParams.find((g) => g.paramCode === param.code);
+						const booleanLike =
+							laborGroup?.kind === "any_of" &&
+							isBooleanLikeAnyOf(laborGroup, paramCatalog);
+						const defaultCode = booleanLike
+							? (defaultOffCodeForAnyOf(laborGroup!, paramCatalog) ??
+								param.values.find((v) => v.code === "false")?.code ??
+								"")
+							: (param.values[0]?.code ?? "");
+						const current = answers[param.code] ?? defaultCode;
 						return (
 							<Box key={param.code}>
 								<Typography sx={{ fontSize: 12, fontWeight: 600, mb: 0.5 }}>

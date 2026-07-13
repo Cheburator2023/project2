@@ -330,8 +330,14 @@ export function parseWorkFormulaText(text) {
             i++;
             continue;
         }
-        if ("+-×÷*/".includes(ch)) {
-            const op = ch === "×" ? "*" : ch === "÷" ? "/" : ch;
+        if ("+-×÷*/−".includes(ch)) {
+            const op = ch === "×"
+                ? "*"
+                : ch === "÷"
+                    ? "/"
+                    : ch === "−"
+                        ? "-"
+                        : ch;
             tokens.push({ kind: "operator", op });
             i++;
             continue;

@@ -5,7 +5,6 @@ import {
 	filterTypicalWorkItems,
 	formatTypicalWorkSummaryTotal,
 	getTypicalWorkFactoryTableColumns,
-	parseTypicalWorkCoefficientDisplay,
 	resolveArrayTableColumns,
 	sumTypicalWorkTotals,
 	typicalWorkItemDisplayName,
@@ -56,24 +55,7 @@ describe("typical work table helpers", () => {
 		).toEqual(["name", "estimate", "coefficient", "total"]);
 	});
 
-	it("keeps formula in coefficient column and highlights numeric coefficient", () => {
-		expect(
-			parseTypicalWorkCoefficientDisplay({
-				coefficient: 2,
-				coefficientDisplay: "20 * 5 = 2",
-			}),
-		).toEqual({ formula: "20 * 5", coefficient: "2" });
-		expect(
-			parseTypicalWorkCoefficientDisplay({
-				coefficient: 1.2,
-				coefficientDisplay: "5 × 1.2",
-			}),
-		).toEqual({ formula: "5 × 1.2", coefficient: "1.2" });
-		expect(parseTypicalWorkCoefficientDisplay({ coefficient: 1.5 })).toEqual({
-			formula: null,
-			coefficient: "1.5",
-		});
-
+	it("shows only numeric coefficient in coefficient column", () => {
 		const coefficientCol = getTypicalWorkFactoryTableColumns().find(
 			(col) => col.key === "coefficient",
 		);
@@ -82,7 +64,14 @@ describe("typical work table helpers", () => {
 				coefficient: 2,
 				coefficientDisplay: "20 * 5 = 2",
 			}),
-		).toBe("20 * 5 = 2");
+		).toBe("2");
+		expect(
+			coefficientCol?.render?.({
+				coefficient: 1.2,
+				coefficientDisplay: "5 × 1.2",
+			}),
+		).toBe("1.2");
+		expect(coefficientCol?.render?.({ coefficient: 1.5 })).toBe("1.5");
 	});
 
 	it("resolves typical work display name", () => {

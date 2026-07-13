@@ -30,6 +30,7 @@ import {
 	tokensToText,
 	computeFormulaBadgeFromTokens,
 	resolveActiveNormOnDate,
+	resolveVersionConfigTokenFormula,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
@@ -204,6 +205,8 @@ export function TypicalWorkEditableCard({
 
 	const lastSyncedCardKeyRef = useRef<string | null>(null);
 	const defaultedArchKeyRef = useRef<string | null>(null);
+	const saveInProgressRef = useRef(false);
+	saveInProgressRef.current = status === "dirty" || status === "saving";
 
 	useEffect(() => {
 		if (!card) return;
@@ -211,16 +214,13 @@ export function TypicalWorkEditableCard({
 		const isNewCard = cardKey !== lastSyncedCardKeyRef.current;
 		// Не перетираем несохранённые правки при фоновом рефетче того же card
 		// (autosave инвалидирует query → возвращает новый объект с теми же данными).
-		if (!isNewCard && hasPending()) return;
+		if (!isNewCard && (hasPending() || saveInProgressRef.current)) return;
 		lastSyncedCardKeyRef.current = cardKey;
 		if (isNewCard) defaultedArchKeyRef.current = null;
-		const formula =
-			card.formula.tokens.length > 0
-				? {
-						tokens: card.formula.tokens,
-						text: tokensToText(card.formula.tokens),
-					}
-				: card.formula;
+		const formula = resolveVersionConfigTokenFormula(
+			card.formulaTerms,
+			card.formula.text,
+		);
 		setDraft({
 			...structuredClone(card),
 			formula,

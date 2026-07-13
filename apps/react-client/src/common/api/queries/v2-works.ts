@@ -285,10 +285,15 @@ export const usePatchV2TypicalWork = () => {
 				method: "PATCH",
 				data: dto,
 			}),
-		onSuccess: (card) => {
+		onSuccess: (card, variables) => {
 			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
 			queryClient.setQueryData(
-				["v2-works", card.id, card.streamExecutor, ""],
+				[
+					"v2-works",
+					card.id,
+					card.streamExecutor,
+					variables.dto.templateVersionId ?? "",
+				],
 				card,
 			);
 		},

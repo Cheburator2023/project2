@@ -37,6 +37,18 @@ function splitTokensByAdditiveOps(tokens) {
     const segments = [];
     let current = [];
     let depth = 0;
+    let pendingAddOp = null;
+    const pushCurrentSegment = () => {
+        if (current.length === 0)
+            return;
+        segments.push({
+            tokens: current,
+            ...(segments.length > 0
+                ? { addOp: pendingAddOp ?? "+" }
+                : {}),
+        });
+        current = [];
+    };
     for (let i = 0; i < tokens.length; i++) {
         const token = tokens[i];
         if (token.kind === "paren_open") {
@@ -49,23 +61,27 @@ function splitTokensByAdditiveOps(tokens) {
             current.push(token);
             continue;
         }
-        if (depth === 0 && token.kind === "operator" && token.op === "+") {
-            const rest = tokens.slice(i + 1);
-            if (current.length === 1 &&
-                current[0]?.kind === "norm" &&
-                rest[0]?.kind === "number" &&
-                rest.some((t) => t.kind === "operator" && t.op === "*")) {
-                current.push(token);
-                continue;
+        if (depth === 0 &&
+            token.kind === "operator" &&
+            (token.op === "+" || token.op === "-")) {
+            if (token.op === "+") {
+                const rest = tokens.slice(i + 1);
+                if (current.length === 1 &&
+                    current[0]?.kind === "norm" &&
+                    rest[0]?.kind === "number" &&
+                    rest.some((t) => t.kind === "operator" && t.op === "*")) {
+                    current.push(token);
+                    continue;
+                }
             }
-            segments.push(current);
-            current = [];
+            pushCurrentSegment();
+            pendingAddOp = token.op;
             continue;
         }
         current.push(token);
     }
-    segments.push(current);
-    return segments.filter((segment) => segment.length > 0);
+    pushCurrentSegment();
+    return segments.filter((segment) => segment.tokens.length > 0);
 }
 /** Снимает одну внешнюю пару скобок, если формула целиком в (…). */
 function unwrapParenthesizedFormulaTokens(tokens) {
@@ -181,14 +197,16 @@ function parseMultSegment(segment, startOrder) {
     const nextOrder = appendMultChainTerms(normalized, 1, order, terms);
     return { terms, nextOrder };
 }
-function parseAddSegment(segment, order) {
+function parseAddSegment(segment, order, addOp = "+") {
     let i = 0;
     let baseValue = 1;
     const factors = [];
     let title = "Слагаемое";
     if (segment[0]?.kind === "number") {
         baseValue = segment[0].value;
-        title = `+ ${baseValue}`;
+        title = addOp === "-" ? `- ${baseValue}` : `+ ${baseValue}`;
+        if (addOp === "-")
+            baseValue = -Math.abs(baseValue);
         i = 1;
     }
     else if (isParamToken(segment[0])) {
@@ -253,11 +271,14 @@ export function tokensToTermsFormula(formula) {
     if (segments.length === 0) {
         return defaultTermsFormula();
     }
-    const multParsed = parseMultSegment(segments[0] ?? [], 0);
+    const multParsed = parseMultSegment(segments[0]?.tokens ?? [], 0);
     const terms = [...multParsed.terms];
     let order = multParsed.nextOrder;
     for (let segIdx = 1; segIdx < segments.length; segIdx++) {
-        terms.push(parseAddSegment(segments[segIdx] ?? [], order++));
+        const segment = segments[segIdx];
+        if (!segment)
+            continue;
+        terms.push(parseAddSegment(segment.tokens, order++, segment.addOp ?? "+"));
     }
     return {
         version: 2,
@@ -319,7 +340,12 @@ export function formatTermsSummary(terms) {
         const factorLabels = term.factors.map((f) => f.paramName ?? f.paramCode);
         const base = term.baseValue ?? 1;
         if (term.factors.length === 0) {
-            parts.push(term.kind === "additive" ? `+ ${base}` : `× ${base}`);
+            if (term.kind === "additive" && base < 0) {
+                parts.push(`- ${Math.abs(base)}`);
+            }
+            else {
+                parts.push(term.kind === "additive" ? `+ ${base}` : `× ${base}`);
+            }
         }
         else {
             const factorPart = factorLabels.map((f) => `P[${f}]`).join(" × ");
@@ -332,7 +358,7 @@ export function formatTermsSummary(terms) {
     if (hasTransitive)
         return parts.join(" ");
     const mult = parts.filter((p) => p.startsWith("×") || p === "H");
-    const add = parts.filter((p) => p.startsWith("+"));
+    const add = parts.filter((p) => p.startsWith("+") || p.startsWith("-"));
     if (mult.length === 0 && add.length === 0)
         return "H";
     if (add.length === 0)
@@ -428,12 +454,14 @@ export function formatTypicalWorkCoefficientDisplay(params) {
                 ...term.factors.map((f) => resolveFactor(f.paramCode)),
             ];
             const chunk = joinNumericFactors(values);
-            if (chunk)
-                parts.push(`+ ${chunk}`);
+            if (!chunk)
+                continue;
+            const base = term.baseValue ?? 1;
+            parts.push(base < 0 ? `- ${Math.abs(base)}` : `+ ${chunk}`);
         }
     }
-    const mult = parts.filter((p) => !p.startsWith("+"));
-    const add = parts.filter((p) => p.startsWith("+"));
+    const mult = parts.filter((p) => !p.startsWith("+") && !p.startsWith("-"));
+    const add = parts.filter((p) => p.startsWith("+") || p.startsWith("-"));
     if (add.length === 0)
         return mult.join(" ");
     return `${mult.join(" ")} ${add.join(" ")}`.trim();
@@ -470,7 +498,9 @@ export function validateTermsFormula(terms) {
                 return "Заполните название члена формулы";
             }
             if (term.baseValue != null && term.baseValue < 0) {
-                return "Базовое значение члена должно быть неотрицательным";
+                if (term.kind !== "additive" || term.factors.length > 0) {
+                    return "Базовое значение члена должно быть неотрицательным";
+                }
             }
             const seen = new Set();
             for (const factor of term.factors) {
@@ -597,14 +627,17 @@ export function termsToTokenFormula(termsDto) {
         }
     }
     const appendTermFactors = (term, prefixOp) => {
-        if (prefixOp && tokens.length > 0) {
-            tokens.push({ kind: "operator", op: prefixOp });
-        }
         const base = term.baseValue ?? 1;
         const hasFactors = term.factors.length > 0;
         if (term.kind === "additive" && !hasFactors) {
-            tokens.push({ kind: "number", value: base });
+            if (tokens.length > 0) {
+                tokens.push({ kind: "operator", op: base < 0 ? "-" : "+" });
+            }
+            tokens.push({ kind: "number", value: Math.abs(base) });
             return;
+        }
+        if (prefixOp && tokens.length > 0) {
+            tokens.push({ kind: "operator", op: prefixOp });
         }
         if (term.kind !== "base_norm" && base !== 1) {
             if (tokens.length > 1 && term.kind === "multiplier") {
@@ -633,8 +666,8 @@ export function termsToTokenFormula(termsDto) {
         }
         appendTermFactors(term, tokens.length > 1 ? "*" : undefined);
     }
-    for (const [index, term] of addParts.entries()) {
-        appendTermFactors(term, index === 0 && tokens.length === 1 ? "+" : "+");
+    for (const term of addParts) {
+        appendTermFactors(term);
     }
     return {
         tokens: tokens.length ? tokens : [{ kind: "norm" }],

@@ -243,6 +243,142 @@ describe("V2CalculationService labor coefficients (runtime integration)", () => 
 		expect(tasks[0]?.total).toBe(3);
 	});
 
+	it("writes coeffOff for absent boolean checkbox in stream localParams", async () => {
+		const result = await evaluateWithRuntime(
+			baseFixture({
+				laborParams: [
+					{
+						workId: WORK_ID,
+						streamExecutor: V2_SOURCE_STREAM,
+						paramCode: "field_cb",
+						paramName: "Чекбокс @ field_cb",
+						kind: "any_of",
+						anyOfValueCodes: ["true"],
+						anyOfValueLabels: ["Да"],
+						coeffOn: "1",
+						coeffOff: "2",
+					},
+				],
+				versionConfigs: [
+					{
+						workId: WORK_ID,
+						streamExecutor: V2_SOURCE_STREAM,
+						templateVersionId: TEMPLATE_VERSION_ID,
+						formula: [
+							{ kind: "norm" },
+							{ kind: "param_anyof", paramCode: "field_cb" },
+						],
+						formulaText: null,
+						roundingMode: "none",
+						roundingStep: null,
+						calculationLogic: null,
+					},
+				],
+			}),
+			{
+				streamDataSources: {
+					localParams: {},
+					sourceSystems: [
+						{
+							name: "Источник 1",
+							type: "Внутренний",
+							value: "Да",
+						},
+					],
+				},
+			},
+		);
+
+		const tasks = (
+			result.formData.streamDataSources as {
+				sourceTypicalTasks: Array<{
+					coefficient: number;
+					total: number;
+				}>;
+			}
+		).sourceTypicalTasks;
+
+		expect(tasks).toHaveLength(1);
+		expect(tasks[0]?.coefficient).toBe(2);
+		expect(tasks[0]?.total).toBe(3);
+	});
+
+	it("writes the false by-value coefficient for an absent boolean checkbox", async () => {
+		const result = await evaluateWithRuntime(
+			baseFixture({
+				laborParams: [
+					{
+						workId: WORK_ID,
+						streamExecutor: V2_SOURCE_STREAM,
+						paramCode: "field_cb",
+						paramName: "Чекбокс @ field_cb",
+						kind: "by_value",
+					},
+				],
+				laborRows: [
+					{
+						workId: WORK_ID,
+						streamExecutor: V2_SOURCE_STREAM,
+						paramCode: "field_cb",
+						paramName: "Чекбокс @ field_cb",
+						valueCode: "true",
+						valueLabel: "Да",
+						coefficient: "1",
+					},
+					{
+						workId: WORK_ID,
+						streamExecutor: V2_SOURCE_STREAM,
+						paramCode: "field_cb",
+						paramName: "Чекбокс @ field_cb",
+						valueCode: "false",
+						valueLabel: "Нет",
+						coefficient: "2",
+					},
+				],
+				versionConfigs: [
+					{
+						workId: WORK_ID,
+						streamExecutor: V2_SOURCE_STREAM,
+						templateVersionId: TEMPLATE_VERSION_ID,
+						formula: [
+							{ kind: "norm" },
+							{ kind: "param_coeff", paramCode: "field_cb" },
+						],
+						formulaText: null,
+						roundingMode: "none",
+						roundingStep: null,
+						calculationLogic: null,
+					},
+				],
+			}),
+			{
+				streamDataSources: {
+					localParams: {},
+					sourceSystems: [
+						{
+							name: "Источник 1",
+							type: "Внутренний",
+							value: "Да",
+						},
+					],
+				},
+			},
+		);
+
+		const tasks = (
+			result.formData.streamDataSources as {
+				sourceTypicalTasks: Array<{
+					coefficient: number;
+					total: number;
+				}>;
+			}
+		).sourceTypicalTasks;
+
+		expect(tasks).toHaveLength(1);
+		expect(tasks[0]?.coefficient).toBe(2);
+		expect(tasks[0]?.total).toBe(3);
+	});
+
 	it("applies parenthesized norm formula from calculationLogic in generated rows", async () => {
 		const parsed = parseWorkFormulaText("(N + 5) × коэф(p1)");
 		const calculationLogic = compileStoredTypicalWorkResultLogic(
