@@ -4,14 +4,14 @@ import "./theme/dockview.css";
 import { StyledEngineProvider } from "@mui/material";
 import { unstable_ClassNameGenerator as ClassNameGenerator } from "@mui/material/className";
 import { LocalizationProvider } from "@mui/x-date-pickers";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFnsV3";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { ErrorBoundary } from "@react-client/common/errors/ErrorBoundary";
 import { ErrorPage } from "@react-client/common/errors/pages/ErrorPage";
 import { performMfeLogout } from "@react-client/common/auth/syncMfeAuth";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { Toaster } from "@react-client/common/toasts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { setDefaultOptions } from "date-fns";
+import { setDefaultOptions } from "date-fns/esm";
 
 import { isEmpty } from "lodash-es";
 import type React from "react";
@@ -29,7 +29,7 @@ import {
 import AppRoutes from "@react-client/common/routing";
 import { getRouterBasename } from "@react-client/routing/basename";
 import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
-import { ru } from "date-fns/locale";
+import { ru } from "date-fns/esm/locale";
 
 const GIT_REVISION = process.env.GIT_REVISION;
 const NODE_ENV = process.env.NODE_ENV;

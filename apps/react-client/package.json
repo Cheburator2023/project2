@@ -47,7 +47,7 @@
 		"@xyflow/react": "12.1.1",
 		"ag-grid-enterprise": "*",
 		"axios": "1.8.4",
-		"date-fns": "3.6.0",
+		"date-fns": "2.30.0",
 		"dnd-multi-backend": "*",
 		"happy-dom": "^17.6.3",
 		"html-to-image": "1.11.11",

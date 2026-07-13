@@ -18,8 +18,6 @@ const ALIAS = {
 	"@react-client": `${SRC_DIR}`,
 	// Webpack: ESM+browser-safe entry (CJS loadEngine uses node:module/createRequire).
 	"@smart-anketa/json-logic-ts": JSON_LOGIC_TS_ENTRY,
-	// Единая копия date-fns v3 для barrel- и subpath-импортов (MUI AdapterDateFnsV3).
-	"date-fns": path.join(NODE_MODULES_DIR, "date-fns"),
 };
 
 const tsRule = isDev
