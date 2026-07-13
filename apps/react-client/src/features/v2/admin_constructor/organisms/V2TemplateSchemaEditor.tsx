@@ -813,20 +813,6 @@ export const V2TemplateSchemaEditor = ({
 		syncTypicalWorksSchemaField.mutateAsync,
 	]);
 
-	useEffect(() => {
-		const missing = fieldPathHints.filter((hint) => !hint.schemaFieldUid);
-		if (missing.length === 0) return;
-		setUiSchema((previous) => {
-			let next = previous as Record<string, unknown>;
-			for (const hint of missing) {
-				next = patchUiOptionsAtPointer(next, hint.pointer, {
-					schemaFieldUid: `field_${crypto.randomUUID()}`,
-				});
-			}
-			return next as UiSchema;
-		});
-	}, [fieldPathHints]);
-
 	const logicPathFieldHint = useMemo(() => {
 		if (!logicPathPick) return undefined;
 		return fieldPathHints.find((h) => h.pointer === logicPathPick);
