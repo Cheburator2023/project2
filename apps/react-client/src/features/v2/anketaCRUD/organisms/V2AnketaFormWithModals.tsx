@@ -149,7 +149,7 @@ export function V2AnketaFormWithModals({
 				/>
 			</Flex>
 			<AnketaFormModals
-				formData={engine.formData}
+				formData={engine.displayFormData}
 				previewSchema={engine.previewSchema}
 				previewUiSchema={engine.previewUiSchema}
 				modalBindings={modalBindingSets.bindings}

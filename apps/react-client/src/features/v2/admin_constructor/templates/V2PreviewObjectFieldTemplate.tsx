@@ -25,6 +25,8 @@ import {
 	objectFieldSlot,
 	readAnketaFormContext,
 } from "@react-client/features/v2/anketaCRUD/utils/anketaFormContext";
+import { isAnketaArchPathReadOnly } from "@react-client/features/v2/anketaCRUD/utils/anketaPathLock.util";
+import { shouldHideInactiveActivatableGroupInCompletedAnketa } from "@react-client/features/v2/anketaCRUD/utils/anketaInactiveGroupVisibility.util";
 import {
 	countSubsectionFilledItems,
 	getArrayAtPath,
@@ -612,7 +614,6 @@ export function V2PreviewArrayFieldTemplate({
 		openAnketaModal,
 		anketaModalArrayPaths,
 		anketaCompactArrayTablePaths,
-		anketaReadOnly,
 		formData,
 	} = readAnketaFormContext(registry.formContext);
 	const archComponent = resolveV2AnketaArchComponent(uiSchema);
@@ -667,7 +668,10 @@ export function V2PreviewArrayFieldTemplate({
 		typeof uiSchema?.["ui:description"] === "string"
 			? uiSchema["ui:description"]
 			: undefined;
-	const canEdit = !disabled && !readonly && !anketaReadOnly;
+	const canEdit =
+		!disabled &&
+		!readonly &&
+		!isAnketaArchPathReadOnly(registry.formContext, pathKey);
 	const addLabel =
 		typeof (uiSchema?.["ui:options"] as { addButtonText?: unknown } | undefined)
 			?.addButtonText === "string"
@@ -772,12 +776,25 @@ export function V2PreviewObjectFieldTemplate({
 	);
 
 	if (isRoot) {
-		const visibleProperties = properties.filter(
-			(element) =>
-				!isV2AnketaHiddenUiNode(
+		const visibleProperties = properties.filter((element) => {
+			if (
+				isV2AnketaHiddenUiNode(
 					(uiSchema as UiSchema | undefined)?.[element.name],
-				),
-		);
+				)
+			) {
+				return false;
+			}
+			if (
+				shouldHideInactiveActivatableGroupInCompletedAnketa(
+					registry.formContext,
+					element.name,
+					(uiSchema as UiSchema | undefined)?.[element.name],
+				)
+			) {
+				return false;
+			}
+			return true;
+		});
 
 		return (
 			<Stack
@@ -858,6 +875,15 @@ export function V2PreviewObjectFieldTemplate({
 			? anketaCtx.onToggleGroupActivation
 			: undefined,
 	};
+	if (
+		shouldHideInactiveActivatableGroupInCompletedAnketa(
+			registry.formContext,
+			pathKey,
+			uiSchema,
+		)
+	) {
+		return null;
+	}
 	const useArchObjectModal = shouldUseArchObjectModal(
 		anketaCtx,
 		pathKey,

@@ -24,6 +24,12 @@ function roundUp2(value) {
     const rounded = Math.ceil(value * 100 - 1e-9) / 100;
     return rounded === 0 ? 0 : rounded;
 }
+function percentDeviation(base, adjusted) {
+    if (!Number.isFinite(base) || !Number.isFinite(adjusted) || base === 0) {
+        return null;
+    }
+    return Math.round(((adjusted - base) / base) * 10000) / 100;
+}
 function sumTaskTotals(tasks) {
     let sum = 0;
     for (const row of tasks) {
@@ -57,7 +63,7 @@ function pathsUnderBlock(paths, blockKey) {
     return paths.filter((path) => path === blockKey || path.startsWith(prefix));
 }
 /** Суммы типовых и нетиповых работ по каждому активному стримовому блоку анкеты. */
-export function buildExecutorStreamWorkSummaryRows(data, uiSchema) {
+export function buildExecutorStreamWorkSummaryRows(data, uiSchema, typicalScoreMultiplier = 1) {
     const blocks = collectExecutorStreamBlocks(uiSchema);
     if (blocks.length === 0)
         return [];
@@ -82,13 +88,17 @@ export function buildExecutorStreamWorkSummaryRows(data, uiSchema) {
         }
         typicalTotal = roundUp2(typicalTotal);
         atypicalTotal = roundUp2(atypicalTotal);
+        const multiplier = Number.isFinite(typicalScoreMultiplier) && typicalScoreMultiplier > 0
+            ? typicalScoreMultiplier
+            : 1;
+        const adjustedTypicalScore = roundUp2(typicalTotal * multiplier);
         return {
             streamName: formatV2StreamBlockSectionTitle(block.streamExecutor),
             blockKey: block.blockKey,
             streamExecutor: block.streamExecutor,
             baseTypicalScore: typicalTotal,
-            adjustedTypicalScore: typicalTotal,
-            deviationPercent: null,
+            adjustedTypicalScore,
+            deviationPercent: percentDeviation(typicalTotal, adjustedTypicalScore),
             atypicalScore: atypicalTotal,
         };
     });

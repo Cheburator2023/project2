@@ -504,6 +504,21 @@ export class V2CalculationService {
 		if (!outputArrayPath || (!usesCatalog && !hasStaticTasks)) {
 			return data;
 		}
+		const clearRowsGeneratedByRule = () => {
+			const existing = readByDotPath(data, outputArrayPath);
+			if (!Array.isArray(existing)) return data;
+			return writeByDotPath(
+				data,
+				outputArrayPath,
+				existing.filter(
+					(row) =>
+						!row ||
+						typeof row !== "object" ||
+						Array.isArray(row) ||
+						(row as Record<string, unknown>).generatedByRuleId !== rule.id,
+				),
+			);
+		};
 
 		let passes = false;
 		try {
@@ -515,7 +530,7 @@ export class V2CalculationService {
 		}
 		if (!passes) {
 			return payload.outputMode === "append"
-				? data
+				? clearRowsGeneratedByRule()
 				: this.writeGeneratedTypicalWorkOutput(
 						data,
 						outputArrayPath,
@@ -527,7 +542,7 @@ export class V2CalculationService {
 		const sourceRows = this.resolveGeneratedRowSources(data, payload, uiSchema);
 		if (sourceRows.length === 0) {
 			return payload.outputMode === "append"
-				? data
+				? clearRowsGeneratedByRule()
 				: this.writeGeneratedTypicalWorkOutput(
 						data,
 						outputArrayPath,
@@ -658,7 +673,9 @@ export class V2CalculationService {
 
 						const catalogTotal =
 							"total" in task && typeof task.total === "number"
-								? task.total
+								? usesCatalog && catalogCoeff !== 0
+									? task.total * (coefficient / catalogCoeff)
+									: task.total
 								: task.estimateHoursPerDay * coefficient;
 
 						return {

@@ -42,10 +42,10 @@ export const AnketaPreviewPageV2 = () => {
 				id,
 				body: {
 					calcName: getV2QuestionnaireFormTitle(
-						engine.formData,
+						engine.displayFormData,
 						formPackage.questionnaire.calcName,
 					),
-					formData: engine.formData,
+					formData: engine.displayFormData,
 					finalCoefficient: null,
 				},
 			},

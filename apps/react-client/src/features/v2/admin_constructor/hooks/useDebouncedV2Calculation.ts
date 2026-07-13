@@ -33,17 +33,23 @@ export function useDebouncedV2Calculation({
 	const { mutateAsync, isPending } = useCalculateV2Template();
 	const [result, setResult] = useState<V2CalculationResultDto | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [isDebouncing, setIsDebouncing] = useState(false);
 	const requestIdRef = useRef(0);
 
 	useEffect(() => {
 		if (!enabled || !templateId || !versionId) {
 			setResult(null);
 			setError(null);
+			setIsDebouncing(false);
 			return;
 		}
 
 		const requestId = ++requestIdRef.current;
+		setResult(null);
+		setError(null);
+		setIsDebouncing(true);
 		const timer = window.setTimeout(() => {
+			setIsDebouncing(false);
 			if (IS_DEV) {
 				console.debug("[anketa-calc] POST /calculate", {
 					templateId,
@@ -84,7 +90,7 @@ export function useDebouncedV2Calculation({
 
 	return {
 		result,
-		isLoading: isPending,
+		isLoading: isDebouncing || isPending,
 		error,
 	};
 }

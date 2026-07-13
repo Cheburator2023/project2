@@ -1,4 +1,5 @@
 import {
+	BadRequestException,
 	Body,
 	Controller,
 	Param,
@@ -27,6 +28,11 @@ export class V2CalculationController {
 		@Body() body: CalculateV2TemplateDto,
 		@Query("versionId") versionId?: string,
 	): Promise<V2CalculationResultDto> {
+		if (!versionId && (body.jsonSchema || body.uiSchema || body.rulesOverride)) {
+			throw new BadRequestException(
+				"versionId is required when calculation overrides are provided",
+			);
+		}
 		const version = await this.calculationService.getEffectiveVersion(
 			templateId,
 			versionId,

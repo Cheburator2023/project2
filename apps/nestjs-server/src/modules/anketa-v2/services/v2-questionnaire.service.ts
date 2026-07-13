@@ -69,7 +69,24 @@ export class V2QuestionnaireService {
 			ids && ids.length > 0
 				? await this.findAllByIds(ids)
 				: await this.findAll();
-		return buildV2QuestionnaireRegistryXlsx(rows);
+		const versionIds = [
+			...new Set(
+				rows
+					.map((row) => row.boundTemplateVersionId)
+					.filter((id): id is string => Boolean(id)),
+			),
+		];
+		const versions =
+			versionIds.length > 0
+				? await this.versionRepository.find({ where: { id: In(versionIds) } })
+				: [];
+		return buildV2QuestionnaireRegistryXlsx(
+			rows,
+			versions.map((version) => ({
+				jsonSchema: version.jsonSchema as Record<string, unknown>,
+				uiSchema: version.uiSchema as Record<string, unknown>,
+			})),
+		);
 	}
 
 	async findAllByIds(ids: string[]): Promise<V2QuestionnaireDto[]> {
@@ -259,6 +276,8 @@ export class V2QuestionnaireService {
 				{
 					templateVersionId: version.id,
 					templateId: version.templateId,
+					jsonSchema: version.jsonSchema,
+					uiSchema: version.uiSchema,
 				},
 			);
 			const formData = migrateV2AnketaFormData(evaluated.formData);

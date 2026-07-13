@@ -8,4 +8,4 @@ export type V2StreamWorkSummaryRow = {
     atypicalScore: number;
 };
 /** Суммы типовых и нетиповых работ по каждому активному стримовому блоку анкеты. */
-export declare function buildExecutorStreamWorkSummaryRows(data: Record<string, unknown>, uiSchema: unknown): V2StreamWorkSummaryRow[];
+export declare function buildExecutorStreamWorkSummaryRows(data: Record<string, unknown>, uiSchema: unknown, typicalScoreMultiplier?: number): V2StreamWorkSummaryRow[];

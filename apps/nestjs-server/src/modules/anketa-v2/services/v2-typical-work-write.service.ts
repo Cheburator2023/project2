@@ -27,6 +27,7 @@ import type {
 } from "@smart-anketa/api-contract";
 import {
 	buildTypicalWorkFactorCoeffResolver,
+	applyWorkRounding,
 	compileCalculationLogicFromVersionConfig,
 	collectAllowedParamCodes,
 	compileStoredTypicalWorkResultLogic,
@@ -962,7 +963,10 @@ export class V2TypicalWorkWriteService {
 			evaluated = {
 				symbolic: terms.text,
 				expanded: terms.text,
-				value: termsValue,
+				value:
+					termsValue == null
+						? null
+						: applyWorkRounding(termsValue, card.rounding),
 				error:
 					termsValue == null
 						? "Не удалось вычислить транзитивную формулу"

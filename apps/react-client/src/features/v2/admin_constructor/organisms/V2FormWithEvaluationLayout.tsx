@@ -9,6 +9,7 @@ type Props = {
 	children: ReactNode;
 	summary?: V2SummaryFormSlice | null;
 	formData?: Record<string, unknown> | null;
+	calculationError?: string | null;
 	calculationLoading?: boolean;
 	sideMinWidth?: number;
 };
@@ -20,6 +21,7 @@ export function V2FormWithEvaluationLayout({
 	children,
 	summary,
 	formData,
+	calculationError,
 	calculationLoading,
 	sideMinWidth = 360,
 }: Props) {
@@ -45,6 +47,7 @@ export function V2FormWithEvaluationLayout({
 				<V2FinalEvaluationPanel
 					summary={summary}
 					formData={formData}
+					calculationError={calculationError}
 					isLoading={calculationLoading}
 					compact
 				/>

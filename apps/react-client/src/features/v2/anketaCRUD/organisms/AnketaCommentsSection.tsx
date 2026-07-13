@@ -17,7 +17,6 @@ import {
 	useDeleteV2QuestionnaireComment,
 	useV2QuestionnaireComments,
 } from "@react-client/common/api/queries/v2-questionnaires";
-import { Card } from "@react-client/common/muiCustom/Card";
 import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
@@ -290,7 +289,75 @@ export function AnketaCommentsSection({ questionnaireId, disabled }: Props) {
 	};
 
 	return (
-		<Card padding="20px" data-test-id="anketa-comments-section">
+		<div data-test-id="anketa-comments-section">
+			<Flex
+				alignItems="center"
+				justifyContent="space-between"
+				gap={12}
+				wrap="wrap"
+			>
+				<Flex alignItems="center" gap={10}>
+					<Typography variant="h6" sx={{ fontSize: 18, fontWeight: 700 }}>
+						Комментарии
+					</Typography>
+					<Chip
+						size="small"
+						label={commentCount}
+						sx={{
+							height: 22,
+							fontWeight: 700,
+							bgcolor: alpha("#ed6c02", 0.12),
+							color: "#ed6c02",
+							border: `1px solid ${alpha("#ed6c02", 0.25)}`,
+						}}
+					/>
+				</Flex>
+				<Flex alignItems="center" gap={10}>
+					<SortIcon sx={{ fontSize: 18, color: "text.secondary" }} />
+					<SelectWithPlaceholder
+						size="small"
+						placeholder="Сортировка"
+						value={sort}
+						renderSelected={(value) =>
+							COMMENT_SORT_LABELS[value as CommentSort]
+						}
+						onChange={(event) => setSort(event.target.value as CommentSort)}
+						sx={{ minWidth: 160 }}
+					>
+						<MenuItem value="recent">{COMMENT_SORT_LABELS.recent}</MenuItem>
+						<MenuItem value="oldest">{COMMENT_SORT_LABELS.oldest}</MenuItem>
+					</SelectWithPlaceholder>
+				</Flex>
+			</Flex>
+
+			<Spacer space={16} />
+
+			{commentsQuery.isLoading ? (
+				<Flex justifyContent="center" padding="24px 0">
+					<CircularProgress size={28} />
+				</Flex>
+			) : sortedRoots.length ? (
+				<Flex flexDirection="column" gap={16}>
+					{sortedRoots.map((comment) => (
+						<CommentItem
+							key={comment.id}
+							comment={comment}
+							depth={0}
+							disabled={disabled}
+							isBusy={isBusy}
+							onReply={setReplyTo}
+							onDelete={(commentId) => void handleDelete(commentId)}
+						/>
+					))}
+				</Flex>
+			) : (
+				<Typography variant="body2" color="text.secondary">
+					Пока нет комментариев — будьте первым.
+				</Typography>
+			)}
+
+			<Spacer space={16} />
+
 			<Box
 				sx={{
 					border: "1px solid",
@@ -370,71 +437,7 @@ export function AnketaCommentsSection({ questionnaireId, disabled }: Props) {
 
 			<Spacer space={16} />
 
-			<Flex
-				alignItems="center"
-				justifyContent="space-between"
-				gap={12}
-				wrap="wrap"
-			>
-				<Flex alignItems="center" gap={10}>
-					<Typography variant="h6" sx={{ fontSize: 18, fontWeight: 700 }}>
-						Комментарии
-					</Typography>
-					<Chip
-						size="small"
-						label={commentCount}
-						sx={{
-							height: 22,
-							fontWeight: 700,
-							bgcolor: alpha("#ed6c02", 0.12),
-							color: "#ed6c02",
-							border: `1px solid ${alpha("#ed6c02", 0.25)}`,
-						}}
-					/>
-				</Flex>
-				<Flex alignItems="center" gap={10}>
-					<SortIcon sx={{ fontSize: 18, color: "text.secondary" }} />
-					<SelectWithPlaceholder
-						size="small"
-						placeholder="Сортировка"
-						value={sort}
-						renderSelected={(value) =>
-							COMMENT_SORT_LABELS[value as CommentSort]
-						}
-						onChange={(event) => setSort(event.target.value as CommentSort)}
-						sx={{ minWidth: 160 }}
-					>
-						<MenuItem value="recent">{COMMENT_SORT_LABELS.recent}</MenuItem>
-						<MenuItem value="oldest">{COMMENT_SORT_LABELS.oldest}</MenuItem>
-					</SelectWithPlaceholder>
-				</Flex>
-			</Flex>
-
-			<Spacer space={12} />
-
-			{commentsQuery.isLoading ? (
-				<Flex justifyContent="center" padding="24px 0">
-					<CircularProgress size={28} />
-				</Flex>
-			) : sortedRoots.length ? (
-				<Flex flexDirection="column" gap={16}>
-					{sortedRoots.map((comment) => (
-						<CommentItem
-							key={comment.id}
-							comment={comment}
-							depth={0}
-							disabled={disabled}
-							isBusy={isBusy}
-							onReply={setReplyTo}
-							onDelete={(commentId) => void handleDelete(commentId)}
-						/>
-					))}
-				</Flex>
-			) : (
-				<Typography variant="body2" color="text.secondary">
-					Пока нет комментариев — будьте первым.
-				</Typography>
-			)}
-		</Card>
+			<Spacer space={64} />
+		</div>
 	);
 }

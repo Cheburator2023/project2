@@ -24,6 +24,32 @@ function lockUiBranch(node: UiSchema): UiSchema {
 	return next;
 }
 
+function lockUiSchemaAtPath(uiSchema: UiSchema, path: string): UiSchema {
+	const parts = path.split(".").filter(Boolean);
+	if (parts.length === 0) return uiSchema;
+
+	const next: UiSchema = { ...uiSchema };
+	let current: UiSchema = next;
+
+	for (let i = 0; i < parts.length - 1; i++) {
+		const key = parts[i];
+		const child =
+			current[key] && typeof current[key] === "object"
+				? ({ ...(current[key] as UiSchema) } as UiSchema)
+				: {};
+		current[key] = child;
+		current = child;
+	}
+
+	const lastKey = parts[parts.length - 1];
+	const leaf =
+		current[lastKey] && typeof current[lastKey] === "object"
+			? ({ ...(current[lastKey] as UiSchema) } as UiSchema)
+			: {};
+	current[lastKey] = lockUiBranch(leaf);
+	return next;
+}
+
 /** Блокирует поля завершённых разделов и всей анкеты в «Заполнено». */
 export function applySectionLocksToUiSchema(
 	uiSchema: UiSchema,
@@ -42,5 +68,13 @@ export function applySectionLocksToUiSchema(
 			[field]: lockUiBranch(next[field] as UiSchema),
 		};
 	}
+
+	if (workflow.panelSections) {
+		for (const [pathKey, status] of Object.entries(workflow.panelSections)) {
+			if (status !== "Заполнено" && !globallyLocked) continue;
+			next = lockUiSchemaAtPath(next, pathKey);
+		}
+	}
+
 	return next;
 }

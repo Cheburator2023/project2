@@ -72,4 +72,25 @@ describe("buildExecutorStreamWorkSummaryRows", () => {
 		const optional = active.find((row) => row.streamExecutor === "Цифровые агенты");
 		expect(optional?.baseTypicalScore).toBe(10);
 	});
+
+	it("applies the algorithm multiplier to adjusted typical scores", () => {
+		const rows = buildExecutorStreamWorkSummaryRows(
+			{
+				streamDataSources: {
+					sourceTypicalTasks: [{ total: 8 }],
+				},
+			},
+			uiSchema,
+			1.25,
+		);
+
+		const sources = rows.find(
+			(row) => row.streamExecutor === "Источники данных",
+		);
+		expect(sources).toMatchObject({
+			baseTypicalScore: 8,
+			adjustedTypicalScore: 10,
+			deviationPercent: 25,
+		});
+	});
 });

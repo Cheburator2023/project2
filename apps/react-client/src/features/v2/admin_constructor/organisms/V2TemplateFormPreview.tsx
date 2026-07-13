@@ -101,6 +101,7 @@ export function V2TemplateFormPreview({
 				<V2FormWithEvaluationLayout
 					summary={engine.summary}
 					formData={engine.displayFormData}
+					calculationError={engine.calculationError}
 					calculationLoading={engine.calculationLoading}
 				>
 					<V2AnketaFormWithModals

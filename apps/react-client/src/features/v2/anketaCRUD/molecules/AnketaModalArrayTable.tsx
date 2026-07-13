@@ -12,6 +12,7 @@ import {
 	anketaMoleculeTestIdForPath,
 } from "./testIds";
 import { readAnketaFormContext } from "../utils/anketaFormContext";
+import { isAnketaArchPathReadOnly } from "../utils/anketaPathLock.util";
 import {
 	arrayTableShowsRowActions,
 	adjustTypicalWorkTableColumns,
@@ -118,7 +119,7 @@ export function AnketaModalArrayTable({
 		ctx.previewUiSchema,
 	);
 	const items = getArrayAtPath(ctx.formData ?? {}, pathKey);
-	const readOnly = ctx.anketaReadOnly;
+	const readOnly = isAnketaArchPathReadOnly(formContext, pathKey);
 	const showRowActions = arrayTableShowsRowActions(pathKey, formContext);
 	const isTypicalWorks = isTypicalWorkArrayPath(
 		pathKey,
@@ -364,7 +365,7 @@ export function AnketaModalArrayTable({
 											}
 										/>
 									))}
-									{showRowActions ? (
+									{showRowActions && !readOnly ? (
 										<Stack
 											direction="row"
 											spacing={0.25}
@@ -372,7 +373,6 @@ export function AnketaModalArrayTable({
 										>
 											<IconButton
 												size="small"
-												disabled={readOnly}
 												title="Редактировать"
 												data-test-id={`${tableTestId}--edit--${index}`}
 												onClick={() =>
@@ -383,7 +383,6 @@ export function AnketaModalArrayTable({
 											</IconButton>
 											<IconButton
 												size="small"
-												disabled={readOnly}
 												title="Удалить"
 												data-test-id={`${tableTestId}--delete--${index}`}
 												onClick={() =>

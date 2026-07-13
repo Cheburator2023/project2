@@ -1,9 +1,15 @@
+import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import { Header } from "@react-client/common/navigation/organisms/Header";
+import { PanelResizeHandleStyled } from "@react-client/features/v1/anketaCRUD/atoms/PanelResizeHandleStyled";
 import type { ReactNode } from "react";
+import { Panel, PanelGroup } from "react-resizable-panels";
 
-const ANKETA_COLUMN_VIEWPORT_HEIGHT = "calc(100vh - 66px)";
+const ANKETA_HEADER_HEIGHT_PX = 66;
+const ANKETA_COLUMN_VIEWPORT_HEIGHT = `calc(100vh - ${ANKETA_HEADER_HEIGHT_PX}px)`;
 
 export { ANKETA_COLUMN_VIEWPORT_HEIGHT };
 
@@ -22,6 +28,9 @@ export function AnketaFormPageLayout({
 	loading?: boolean;
 	"data-test-id"?: string;
 }) {
+	const theme = useTheme();
+	const isLargeScreen = useMediaQuery(theme.breakpoints.up("lg"));
+
 	return (
 		<Box
 			data-test-id={`${dataTestId}--root`}
@@ -29,7 +38,7 @@ export function AnketaFormPageLayout({
 				width: "100%",
 				maxWidth: "100%",
 				minWidth: 0,
-				height: "-webkit-fill-available",
+				height: "100vh",
 				display: "flex",
 				flexDirection: "column",
 				overflow: "hidden",
@@ -45,33 +54,23 @@ export function AnketaFormPageLayout({
 				data-test-id={`${dataTestId}--main`}
 				sx={{
 					flex: 1,
-					display: "grid",
-					gridTemplateColumns: {
-						xs: "1fr",
-						lg: "minmax(0, 2fr) minmax(360px, 1fr)",
-					},
-					gap: 2,
-					alignItems: "start",
 					minHeight: 0,
 					minWidth: 0,
 					width: "100%",
 					maxWidth: "100%",
-					height: "-webkit-fill-available",
 					overflowY: "auto",
 					overflowX: "hidden",
 					boxSizing: "border-box",
-					"& > *": { minWidth: 0, maxWidth: "100%" },
 				}}
 			>
 				{loading ? (
 					<Box
 						data-test-id={`${dataTestId}--loading`}
 						sx={{
-							gridColumn: "1 / -1",
 							display: "flex",
 							justifyContent: "center",
 							alignItems: "center",
-							minHeight: "min(480px, 60vh)",
+							minHeight: ANKETA_COLUMN_VIEWPORT_HEIGHT,
 							py: 6,
 						}}
 					>
@@ -80,26 +79,108 @@ export function AnketaFormPageLayout({
 				) : (
 					<>
 						<Box
+							data-test-id={`${dataTestId}--viewport`}
 							sx={{
-								minWidth: 0,
-								minHeight: 0,
+								minHeight: ANKETA_COLUMN_VIEWPORT_HEIGHT,
 								height: ANKETA_COLUMN_VIEWPORT_HEIGHT,
+								flexShrink: 0,
+								minWidth: 0,
+								display: "flex",
+								flexDirection: "column",
 							}}
 						>
-							{main}
-						</Box>
-						<Box
-							sx={{
-								minWidth: 0,
-								height: ANKETA_COLUMN_VIEWPORT_HEIGHT,
-								overflow: "auto",
-								borderRadius: "8px",
-							}}
-						>
-							{sidebar}
+							{isLargeScreen ? (
+								<PanelGroup
+									direction="horizontal"
+									autoSaveId="v2_anketa_form_page_layout"
+									style={{
+										flex: 1,
+										minHeight: 0,
+										height: "100%",
+										width: "100%",
+									}}
+									data-test-id={`${dataTestId}--panel-group`}
+								>
+									<Panel
+										defaultSize={65}
+										minSize={35}
+										data-test-id={`${dataTestId}--panel-main`}
+									>
+										<Box
+											sx={{
+												minWidth: 0,
+												minHeight: 0,
+												height: "100%",
+												overflow: "auto",
+											}}
+										>
+											{main}
+										</Box>
+									</Panel>
+									<PanelResizeHandleStyled
+										data-test-id={`${dataTestId}--panel-resize-handle`}
+									>
+										<DragIndicatorIcon fontSize="small" />
+									</PanelResizeHandleStyled>
+									<Panel
+										defaultSize={35}
+										minSize={25}
+										maxSize={45}
+										data-test-id={`${dataTestId}--panel-sidebar`}
+									>
+										<Box
+											sx={{
+												minWidth: 0,
+												height: "100%",
+												overflow: "auto",
+												borderRadius: "8px",
+											}}
+										>
+											{sidebar}
+										</Box>
+									</Panel>
+								</PanelGroup>
+							) : (
+								<Box
+									sx={{
+										display: "flex",
+										flexDirection: "column",
+										minHeight: 0,
+										height: "100%",
+										gap: 2,
+									}}
+								>
+									<Box
+										sx={{
+											flex: 1,
+											minWidth: 0,
+											minHeight: 0,
+											overflow: "auto",
+										}}
+									>
+										{main}
+									</Box>
+									<Box
+										sx={{
+											flex: 1,
+											minWidth: 0,
+											minHeight: 0,
+											overflow: "auto",
+											borderRadius: "8px",
+										}}
+									>
+										{sidebar}
+									</Box>
+								</Box>
+							)}
 						</Box>
 						{footer ? (
-							<Box sx={{ gridColumn: "1 / -1", minWidth: 0 }}>{footer}</Box>
+							<Box
+								data-test-id={`${dataTestId}--footer`}
+								sx={{ flexShrink: 0, minWidth: 0 }}
+							>
+								{footer}
+							</Box>
 						) : null}
 					</>
 				)}

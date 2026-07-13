@@ -169,9 +169,22 @@ export function uncertaintySummaryText(formData: Record<string, unknown>): strin
 		return toText(generalInfo.overallUncertainty);
 	}
 	const uncertainty = asRecord(formData.uncertaintyCalculation);
-	const adjustment = uncertainty.uncertaintyAdjustment;
-	if (adjustment == null || adjustment === "") return "не рассчитана";
-	return String(adjustment);
+	const adjustment = readUncertaintyField(
+		uncertainty,
+		"uncertaintyAdjustment",
+		"field_QCwwo5c5",
+	);
+	const adjustmentNumber =
+		adjustment == null || adjustment === "" ? undefined : Number(adjustment);
+	const finiteAdjustment =
+		adjustmentNumber != null && Number.isFinite(adjustmentNumber)
+			? adjustmentNumber
+			: undefined;
+	const derived = buildOverallUncertaintyLabel(
+		asRecord(uncertainty.riskGroup),
+		finiteAdjustment,
+	);
+	return derived ?? "не рассчитана";
 }
 
 type ActiveModal =

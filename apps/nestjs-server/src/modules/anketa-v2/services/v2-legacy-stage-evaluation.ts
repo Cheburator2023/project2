@@ -639,7 +639,11 @@ export function evaluateLegacyV2Summary(
 
 	const dynamicPlatformStreams =
 		options?.uiSchema != null
-			? buildExecutorStreamWorkSummaryRows(data, options.uiSchema).map((row) => ({
+			? buildExecutorStreamWorkSummaryRows(
+					data,
+					options.uiSchema,
+					algorithmMult,
+				).map((row) => ({
 					streamName: row.streamName,
 					baseTypicalScore: row.baseTypicalScore,
 					adjustedTypicalScore: row.adjustedTypicalScore,

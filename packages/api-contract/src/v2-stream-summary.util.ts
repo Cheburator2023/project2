@@ -39,6 +39,13 @@ function roundUp2(value: number): number {
 	return rounded === 0 ? 0 : rounded;
 }
 
+function percentDeviation(base: number, adjusted: number): number | null {
+	if (!Number.isFinite(base) || !Number.isFinite(adjusted) || base === 0) {
+		return null;
+	}
+	return Math.round(((adjusted - base) / base) * 10000) / 100;
+}
+
 function sumTaskTotals(tasks: unknown[]): number {
 	let sum = 0;
 	for (const row of tasks) {
@@ -76,6 +83,7 @@ function pathsUnderBlock(paths: readonly string[], blockKey: string): string[] {
 export function buildExecutorStreamWorkSummaryRows(
 	data: Record<string, unknown>,
 	uiSchema: unknown,
+	typicalScoreMultiplier = 1,
 ): V2StreamWorkSummaryRow[] {
 	const blocks = collectExecutorStreamBlocks(uiSchema);
 	if (blocks.length === 0) return [];
@@ -103,14 +111,22 @@ export function buildExecutorStreamWorkSummaryRows(
 
 			typicalTotal = roundUp2(typicalTotal);
 			atypicalTotal = roundUp2(atypicalTotal);
+			const multiplier =
+				Number.isFinite(typicalScoreMultiplier) && typicalScoreMultiplier > 0
+					? typicalScoreMultiplier
+					: 1;
+			const adjustedTypicalScore = roundUp2(typicalTotal * multiplier);
 
 			return {
 				streamName: formatV2StreamBlockSectionTitle(block.streamExecutor),
 				blockKey: block.blockKey,
 				streamExecutor: block.streamExecutor,
 				baseTypicalScore: typicalTotal,
-				adjustedTypicalScore: typicalTotal,
-				deviationPercent: null,
+				adjustedTypicalScore,
+				deviationPercent: percentDeviation(
+					typicalTotal,
+					adjustedTypicalScore,
+				),
 				atypicalScore: atypicalTotal,
 			};
 		});

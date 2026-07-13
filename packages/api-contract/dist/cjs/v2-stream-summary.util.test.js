@@ -58,4 +58,17 @@ const uiSchema = {
         const optional = active.find((row) => row.streamExecutor === "Цифровые агенты");
         (0, vitest_1.expect)(optional?.baseTypicalScore).toBe(10);
     });
+    (0, vitest_1.it)("applies the algorithm multiplier to adjusted typical scores", () => {
+        const rows = (0, v2_stream_summary_util_1.buildExecutorStreamWorkSummaryRows)({
+            streamDataSources: {
+                sourceTypicalTasks: [{ total: 8 }],
+            },
+        }, uiSchema, 1.25);
+        const sources = rows.find((row) => row.streamExecutor === "Источники данных");
+        (0, vitest_1.expect)(sources).toMatchObject({
+            baseTypicalScore: 8,
+            adjustedTypicalScore: 10,
+            deviationPercent: 25,
+        });
+    });
 });
