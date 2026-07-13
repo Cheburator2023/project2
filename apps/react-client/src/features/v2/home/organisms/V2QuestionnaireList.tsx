@@ -32,6 +32,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { AG_GRID_SIMPLE_TEXT_FILTER_PARAMS } from "@react-client/common/tableStuff/agGridSimpleFilterParams";
+import { useAgGridContainerLayout } from "@react-client/common/tableStuff/useAgGridContainerLayout";
 import {
 	applyAgGridColumnState,
 	clearAgGridColumnState,
@@ -98,13 +99,14 @@ ModuleRegistry.registerModules([
 ]);
 
 const GridWrapper = styled(Flex)`
+	flex: 1 1 auto;
+	min-height: 0;
 	width: 100%;
-	height: -webkit-fill-available;
+	height: 100%;
 
 	& > div {
 		width: 100%;
-		min-height: 360px;
-		height: -webkit-fill-available;
+		height: 100%;
 	}
 `;
 
@@ -337,6 +339,8 @@ export function V2QuestionnaireList() {
 	const { mode } = useColorScheme();
 	const navigate = useNavigate();
 	const gridRef = useRef<AgGridReact<V2QuestionnaireGridRow>>(null);
+	const gridHostRef = useRef<HTMLDivElement>(null);
+	useAgGridContainerLayout(gridRef, gridHostRef);
 	const { canAccessAdminPanel, canCreateCalculation, canExportReports } = usePermissions();
 	const bulkDelete = useBulkDeleteV2Questionnaires();
 	const { data: templates } = useV2Templates();
@@ -470,6 +474,9 @@ export function V2QuestionnaireList() {
 			applyAgGridColumnState(GRID_COLUMN_STATE_KEY, (state) => {
 				e.api.applyColumnState({ state, applyOrder: true });
 			});
+			requestAnimationFrame(() => {
+				e.api.resetColumnHeaderHeights();
+			});
 		},
 		[registryJsonSchema, registryUiSchema],
 	);
@@ -579,7 +586,13 @@ export function V2QuestionnaireList() {
 	}, [bulkDelete, selectedVersions]);
 
 	return (
-		<div>
+		<Flex
+			flexDirection="column"
+			height="100%"
+			minHeight={0}
+			minWidth={0}
+			width="100%"
+		>
 			<Header>
 				<Stack direction="row" spacing={1} alignItems="center">
 					{canExportReports ? (
@@ -661,7 +674,12 @@ export function V2QuestionnaireList() {
 					</Button>
 				</DialogActions>
 			</Dialog>
-			<GridWrapper flexGrow={1} minHeight="0" sx={{ p: 0 }}>
+			<GridWrapper
+				ref={gridHostRef}
+				flexGrow={1}
+				minHeight={0}
+				sx={{ p: 0 }}
+			>
 				<AgGridReact<V2QuestionnaireGridRow>
 					ref={gridRef}
 					theme={gridTheme}
@@ -686,6 +704,11 @@ export function V2QuestionnaireList() {
 					onRowDoubleClicked={onRowDoubleClicked}
 					getContextMenuItems={getContextMenuItems}
 					onGridReady={onGridReady}
+					onFirstDataRendered={(event) => {
+						requestAnimationFrame(() => {
+							event.api.resetColumnHeaderHeights();
+						});
+					}}
 					onColumnMoved={(event) => persistColumnState(event.api)}
 					onColumnVisible={(event) => persistColumnState(event.api)}
 					onColumnPinned={(event) => persistColumnState(event.api)}
@@ -711,6 +734,6 @@ export function V2QuestionnaireList() {
 					suppressAggFuncInHeader
 				/>
 			</GridWrapper>
-		</div>
+		</Flex>
 	);
 }
