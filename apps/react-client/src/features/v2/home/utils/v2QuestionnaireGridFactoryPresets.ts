@@ -27,7 +27,6 @@ export type QuestionnaireGridPresetApi = {
 	}) => void;
 	setFilterModel: (model: Record<string, unknown> | null) => void;
 	onFilterChanged: () => void;
-	refreshHeader?: () => void;
 };
 
 const PRIMARY_NAME_COL_ID = "calcName";
@@ -118,7 +117,6 @@ export function applyQuestionnaireGridPreset(
 	});
 	api.setFilterModel(preset.filterModel ?? null);
 	api.onFilterChanged();
-	api.refreshHeader?.();
 }
 
 export function getAllGridColumnIds(

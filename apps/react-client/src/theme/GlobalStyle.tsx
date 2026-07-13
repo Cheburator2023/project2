@@ -132,27 +132,6 @@ div.ag-watermark-text {
 
 }
 
-.ag-theme-alpine .ag-header,
-.ag-theme-balham .ag-header,
-.ag-theme-material .ag-header {
-    transform: translateZ(0) !important;
-}
-
-.ag-header {
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-    backface-visibility: hidden;
-}
-
-.ag-header-row {
-    transform: translateZ(0);
-}
-
-.ag-root-wrapper * {
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-}
-
 .ag-popup-parent {
     transform: translateZ(0);
 }

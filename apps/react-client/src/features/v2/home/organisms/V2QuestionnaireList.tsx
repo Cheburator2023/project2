@@ -32,7 +32,6 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { AG_GRID_SIMPLE_TEXT_FILTER_PARAMS } from "@react-client/common/tableStuff/agGridSimpleFilterParams";
-import { useAgGridContainerLayout } from "@react-client/common/tableStuff/useAgGridContainerLayout";
 import {
 	applyAgGridColumnState,
 	clearAgGridColumnState,
@@ -339,8 +338,6 @@ export function V2QuestionnaireList() {
 	const { mode } = useColorScheme();
 	const navigate = useNavigate();
 	const gridRef = useRef<AgGridReact<V2QuestionnaireGridRow>>(null);
-	const gridHostRef = useRef<HTMLDivElement>(null);
-	useAgGridContainerLayout(gridRef, gridHostRef);
 	const { canAccessAdminPanel, canCreateCalculation, canExportReports } = usePermissions();
 	const bulkDelete = useBulkDeleteV2Questionnaires();
 	const { data: templates } = useV2Templates();
@@ -473,9 +470,6 @@ export function V2QuestionnaireList() {
 			}
 			applyAgGridColumnState(GRID_COLUMN_STATE_KEY, (state) => {
 				e.api.applyColumnState({ state, applyOrder: true });
-			});
-			requestAnimationFrame(() => {
-				e.api.refreshHeader();
 			});
 		},
 		[registryJsonSchema, registryUiSchema],
@@ -674,7 +668,7 @@ export function V2QuestionnaireList() {
 					</Button>
 				</DialogActions>
 			</Dialog>
-			<GridWrapper ref={gridHostRef} flexGrow={1} sx={{ p: 0 }}>
+			<GridWrapper flexGrow={1} sx={{ p: 0 }}>
 				<AgGridReact<V2QuestionnaireGridRow>
 					ref={gridRef}
 					theme={gridTheme}
@@ -689,9 +683,9 @@ export function V2QuestionnaireList() {
 						filter: true,
 						filterParams: AG_GRID_SIMPLE_TEXT_FILTER_PARAMS,
 						minWidth: 90,
-						autoHeaderHeight: true,
-						wrapHeaderText: true,
 					}}
+					headerHeight={32}
+					groupHeaderHeight={32}
 					defaultColGroupDef={{
 						marryChildren: false,
 					}}
@@ -699,11 +693,6 @@ export function V2QuestionnaireList() {
 					onRowDoubleClicked={onRowDoubleClicked}
 					getContextMenuItems={getContextMenuItems}
 					onGridReady={onGridReady}
-					onFirstDataRendered={(event) => {
-						requestAnimationFrame(() => {
-							event.api.refreshHeader();
-						});
-					}}
 					onColumnMoved={(event) => persistColumnState(event.api)}
 					onColumnVisible={(event) => persistColumnState(event.api)}
 					onColumnPinned={(event) => persistColumnState(event.api)}
