@@ -102,7 +102,7 @@ const App: React.FC<LayoutProps> = (props) => {
 					<ErrorBoundary ErrorPage={ErrorPage}>
 						<StyledEngineProvider injectFirst>
 							<Toaster />
-							<Suspense fallback={<FullScreenLoader />}>
+							<Suspense fallback={<FullScreenLoader height="100vh" />}>
 								<LocalizationProvider dateAdapter={AdapterDateFns}>
 									<AppRoutes onLogout={onLogoutHandler} />
 								</LocalizationProvider>

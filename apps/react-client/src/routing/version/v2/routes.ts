@@ -1,5 +1,5 @@
 import type { AppRouteConfig } from "@react-client/routing/common/types";
-import {Permission} from "@react-client/types/roles";
+import { Permission } from "@react-client/types/roles";
 
 export const navbarGroups = {
 	main: { title: "Разделы" },
@@ -16,7 +16,7 @@ export const v2Routes = {
 		rootPath: "calculation/create",
 		name: "Создание анкеты",
 		disabled: false,
-		permission: Permission.ANKETA_CREATE_CALCULATION
+		permission: Permission.ANKETA_CREATE_CALCULATION,
 	},
 	calculationPreview: {
 		rootPath: "calculation/preview/:id",
