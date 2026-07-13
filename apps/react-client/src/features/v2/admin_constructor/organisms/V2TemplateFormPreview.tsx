@@ -100,6 +100,7 @@ export function V2TemplateFormPreview({
 			<Box data-test-id={V2_TEMPLATE_READ_TEST_IDS.form}>
 				<V2FormWithEvaluationLayout
 					summary={engine.summary}
+					formData={engine.displayFormData}
 					calculationLoading={engine.calculationLoading}
 				>
 					<V2AnketaFormWithModals

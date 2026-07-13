@@ -83,6 +83,7 @@ export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean })
 				) : (
 					<V2FormWithEvaluationLayout
 						summary={engine.summary}
+						formData={engine.displayFormData}
 						calculationLoading={calculationLoading}
 					>
 						<V2AnketaFormWithModals

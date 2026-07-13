@@ -293,6 +293,7 @@ export function AnketaFormShell({
 					) : (
 						<FinalScoreCard
 							summary={engine.summary}
+							formData={engine.displayFormData}
 							isLoading={engine.calculationLoading}
 							calculationItems={engine.calculationItems}
 							taskTriggerItems={engine.taskTriggerItems}

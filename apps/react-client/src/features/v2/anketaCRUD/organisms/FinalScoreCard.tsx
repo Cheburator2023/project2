@@ -10,11 +10,13 @@ import type {
 
 export const FinalScoreCard = ({
 	summary,
+	formData,
 	isLoading,
 	calculationItems,
 	taskTriggerItems,
 }: {
 	summary?: V2SummaryFormSlice | null;
+	formData?: Record<string, unknown> | null;
 	isLoading?: boolean;
 	calculationItems?: CalculationItem[];
 	taskTriggerItems?: TaskTriggerItem[];
@@ -27,6 +29,7 @@ export const FinalScoreCard = ({
 	return (
 		<V2FinalEvaluationPanel
 			summary={summary}
+			formData={formData}
 			isLoading={isLoading}
 			compact
 			engineCaption={devCaption}

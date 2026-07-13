@@ -181,7 +181,10 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 	const isMultiple = options?.multiple;
 	const noDelete = options?.noDelete;
 	const fieldTitle = label || schema?.title;
-	const selectPlaceholder = placeholder || fieldTitle;
+	const selectPlaceholder = placeholder;
+	const selectLabelSlotProps = {
+		inputLabel: { shrink: true },
+	};
 
 	const isFuzzy = isSelect && isMultiple;
 
@@ -208,6 +211,11 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 				}));
 
 	if (isSelect && isMultiple) {
+		const selectedValues = Array.isArray(value)
+			? value
+			: value != null
+				? [value]
+				: [];
 		const _handleChangeMult = (event: SelectChangeEvent) => {
 			const {
 				target: { value },
@@ -220,7 +228,8 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 
 		return (
 			<TextFieldCustom
-				value={Array.isArray(value) ? value : value != null ? [value] : []}
+				value={selectedValues}
+				label={fieldTitle}
 				title={tooltipText || undefined}
 				onChange={_handleChangeMult as any}
 				id={id}
@@ -230,6 +239,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 				error={rawErrors && rawErrors.length > 0}
 				select
 				slotProps={{
+					...selectLabelSlotProps,
 					select: {
 						multiple: true,
 						displayEmpty: !!selectPlaceholder,
@@ -376,7 +386,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 				{filteredOptions.length > 0 ? (
 					filteredOptions.map((item) => (
 						<MenuItem key={item.value} value={item.value}>
-							<Checkbox checked={value.includes(item.value)} />
+							<Checkbox checked={selectedValues.includes(item.value)} />
 							<ListItemText
 								primary={
 									<HighlightedMenuItem
@@ -504,7 +514,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 		<TextFieldCustom
 			id={id}
 			title={isSelect ? tooltipText || valToTitle : valToTitle}
-			label={isSelect ? undefined : fieldTitle}
+			label={fieldTitle}
 			value={isSelect ? (value ?? "") : value}
 			required={required}
 			disabled={isDisabled}
@@ -526,6 +536,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 				},
 			}}
 			slotProps={{
+				...(isSelect ? selectLabelSlotProps : {}),
 				select: {
 					displayEmpty: isSelect && !!selectPlaceholder,
 					renderValue: (selected: unknown) => {

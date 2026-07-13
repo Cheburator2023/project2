@@ -13,6 +13,7 @@ import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
+import { uncertaintySummaryText } from "@react-client/features/v2/anketaCRUD/organisms/AnketaFormModals";
 
 export type V2SummaryFormSlice = {
 	total?: number;
@@ -84,6 +85,7 @@ function hasLegacyHeadline(summary: V2SummaryFormSlice): boolean {
 
 type Props = {
 	summary?: V2SummaryFormSlice | null;
+	formData?: Record<string, unknown> | null;
 	isLoading?: boolean;
 	compact?: boolean;
 	onExportExcel?: () => void;
@@ -93,11 +95,13 @@ type Props = {
 
 export function V2FinalEvaluationPanel({
 	summary,
+	formData,
 	isLoading,
 	compact,
 	onExportExcel,
 	engineCaption,
 }: Props) {
+	const uncertaintySummary = formData ? uncertaintySummaryText(formData) : null;
 	const rows = summary?.detailedCalculation ?? [];
 	const platformRows = summary?.platformStreams ?? [];
 	const showUnifiedHeadline = Boolean(
@@ -151,18 +155,15 @@ export function V2FinalEvaluationPanel({
 					</Button>
 					{isLoading ? <CircularProgress size={16} /> : null}
 				</Stack>
-				{engineCaption ? (
-					<Typography
-						variant="caption"
-						color="text.secondary"
-						display="block"
-						sx={{ mb: 4 }}
-					>
-						{engineCaption}
-					</Typography>
-				) : null}
 
 				<Stack spacing={2}>
+					{uncertaintySummary != null ? (
+						<Metric
+							label="Общая неопределенность:"
+							value={uncertaintySummary}
+						/>
+					) : null}
+
 					{showUnifiedHeadline ? (
 						<>
 							<Metric
