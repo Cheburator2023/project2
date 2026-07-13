@@ -475,7 +475,7 @@ export function V2QuestionnaireList() {
 				e.api.applyColumnState({ state, applyOrder: true });
 			});
 			requestAnimationFrame(() => {
-				e.api.resetColumnHeaderHeights();
+				e.api.refreshHeader();
 			});
 		},
 		[registryJsonSchema, registryUiSchema],
@@ -589,8 +589,8 @@ export function V2QuestionnaireList() {
 		<Flex
 			flexDirection="column"
 			height="100%"
-			minHeight={0}
-			minWidth={0}
+			minHeight="0"
+			minWidth="0"
 			width="100%"
 		>
 			<Header>
@@ -674,12 +674,7 @@ export function V2QuestionnaireList() {
 					</Button>
 				</DialogActions>
 			</Dialog>
-			<GridWrapper
-				ref={gridHostRef}
-				flexGrow={1}
-				minHeight={0}
-				sx={{ p: 0 }}
-			>
+			<GridWrapper ref={gridHostRef} flexGrow={1} sx={{ p: 0 }}>
 				<AgGridReact<V2QuestionnaireGridRow>
 					ref={gridRef}
 					theme={gridTheme}
@@ -706,7 +701,7 @@ export function V2QuestionnaireList() {
 					onGridReady={onGridReady}
 					onFirstDataRendered={(event) => {
 						requestAnimationFrame(() => {
-							event.api.resetColumnHeaderHeights();
+							event.api.refreshHeader();
 						});
 					}}
 					onColumnMoved={(event) => persistColumnState(event.api)}

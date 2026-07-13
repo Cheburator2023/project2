@@ -13,7 +13,7 @@ export function useAgGridContainerLayout<TData>(
 		const syncLayout = () => {
 			const api = gridRef.current?.api;
 			if (!api) return;
-			api.resetColumnHeaderHeights();
+			api.refreshHeader();
 		};
 
 		syncLayout();
