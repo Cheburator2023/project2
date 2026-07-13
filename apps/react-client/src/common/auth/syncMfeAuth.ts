@@ -22,6 +22,8 @@ type KeycloakLike = {
 	logout?: (options?: { redirectUri?: string }) => Promise<void> | void;
 };
 
+let loginRedirectInFlight = false;
+
 function asKeycloak(value: unknown): KeycloakLike | null {
 	if (!value || typeof value !== "object") return null;
 	return value as KeycloakLike;
@@ -144,7 +146,9 @@ export async function refreshHostAccessToken(
 				return refreshed;
 			}
 		} catch {
-			// refresh через Keycloak не удался — пробуем прочитать текущий host token
+			// Не повторяем запрос с заведомо устаревшим host/cookie token.
+			clearMfeAuthState();
+			return null;
 		}
 	}
 
@@ -176,9 +180,8 @@ export function ensureKeycloakSession(
 	const keycloak = resolveKeycloakInstance(props);
 	if (!keycloak?.login) return;
 
-	if (keycloak.authenticated === false) {
-		clearMfeAuthState();
-		void keycloak.login();
+	if (keycloak.authenticated === true) {
+		loginRedirectInFlight = false;
 		return;
 	}
 
@@ -186,10 +189,28 @@ export function ensureKeycloakSession(
 	const hasHostUser = Boolean(props?.user);
 	const hasKeycloakToken = Boolean(tokenFromKeycloak(keycloak));
 
-	if (!hasHostToken && !hasHostUser && !hasKeycloakToken) {
-		clearMfeAuthState();
-		void keycloak.login();
+	const needsLogin =
+		keycloak.authenticated === false ||
+		(!hasHostToken && !hasHostUser && !hasKeycloakToken);
+	if (!needsLogin || loginRedirectInFlight) return;
+
+	loginRedirectInFlight = true;
+	clearMfeAuthState();
+	try {
+		const result = keycloak.login();
+		if (result && typeof result.then === "function") {
+			void result.catch(() => {
+				loginRedirectInFlight = false;
+			});
+		}
+	} catch {
+		loginRedirectInFlight = false;
 	}
+}
+
+/** Только для изоляции unit-тестов auth-flow. */
+export function resetKeycloakLoginGuardForTests(): void {
+	loginRedirectInFlight = false;
 }
 
 /** Полный logout: чистим локальное состояние и отдаём управление Keycloak. */

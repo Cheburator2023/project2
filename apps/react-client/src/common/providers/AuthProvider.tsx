@@ -20,7 +20,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 }) => {
 	const setAccessToken = useAuthStore((state) => state.setAccessToken);
 	const godMode = isNoRolesGodMode();
-	const hostProps = { token, keycloak, user, onLogout };
 
 	useLayoutEffect(() => {
 		if (godMode) {
@@ -28,9 +27,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 			return;
 		}
 
+		const hostProps = { token, keycloak, user, onLogout };
 		syncMfeAuthFromHost(hostProps);
 		ensureKeycloakSession(hostProps);
-	}, [godMode, token, keycloak, user, onLogout, setAccessToken]);
+	}, [
+		godMode,
+		token,
+		(keycloak as { authenticated?: boolean } | undefined)?.authenticated,
+		Boolean(user),
+		onLogout,
+		setAccessToken,
+	]);
 
 	if (godMode) return <>{children}</>;
 	return children;

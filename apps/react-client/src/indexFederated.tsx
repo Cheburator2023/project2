@@ -47,7 +47,6 @@ export type Props = {
 
 const MfeRoot = (props: Props) => {
 	normalizeMfeUrlIfNeeded();
-	syncMfeAuthFromHost(props);
 
 	window.__SMART_ANKETA_MFE_DEBUG__ = {
 		mountedAt: new Date().toISOString(),
@@ -62,7 +61,8 @@ const MfeRoot = (props: Props) => {
 			window.keycloak = props.keycloak;
 		}
 		window.user = props.user;
-		window.token = props.token;
+		window.token =
+			props.keycloak?.authenticated === false ? undefined : props.token;
 		syncMfeAuthFromHost(props);
 	}, [props]);
 
