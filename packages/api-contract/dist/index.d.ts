@@ -27,6 +27,7 @@ export * from "./v2-typical-work.types";
 export * from "./v2-typical-work-v4.types";
 export * from "./v2-work-formula.util";
 export * from "./v2-work-terms-formula.util";
+export * from "./v2-typical-work-schema-sync.util";
 export * from "./v2-typical-work-jsonlogic.util";
 export * from "./v2-typical-work-validation.util";
 export * from "./v2-anketa-ui-layout.util";

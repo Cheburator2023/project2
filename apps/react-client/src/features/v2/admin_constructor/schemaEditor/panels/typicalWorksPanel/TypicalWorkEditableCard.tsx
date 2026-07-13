@@ -22,7 +22,10 @@ import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import type { V2TypicalWorkCardDto, V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
+import type {
+	V2TypicalWorkCardDto,
+	V2TypicalWorkParameterDto,
+} from "@smart-anketa/api-contract";
 import {
 	isParamUsedInFormula,
 	markFormulaParamInvalid,
@@ -35,7 +38,10 @@ import {
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { useCreateV2TemplateVersion } from "@react-client/common/api/queries/v2-templates";
-import { useV2TypicalWorkAssignments, useV2WorkParametersCatalog } from "@react-client/common/api/queries/v2-works";
+import {
+	useV2TypicalWorkAssignments,
+	useV2WorkParametersCatalog,
+} from "@react-client/common/api/queries/v2-works";
 import { useSchemaEditor } from "../../SchemaEditorContext";
 import { mergeAnketaDisplayFormData } from "@react-client/features/v2/anketaCRUD/utils/mergeAnketaDisplayFormData";
 import { resolvePreviewSourceRowForTypicalWork } from "./typicalWorkTriggerPreview";
@@ -171,6 +177,7 @@ export function TypicalWorkEditableCard({
 		setMainTab,
 		triggerParamPickId,
 		clearTriggerParamPick,
+		requestCalculationRefresh,
 	} = useSchemaEditor();
 	const { data: assignmentsList } = useV2TypicalWorkAssignments({
 		templateVersionId,
@@ -201,6 +208,7 @@ export function TypicalWorkEditableCard({
 		hasPending,
 	} = useDebouncedTypicalWorkSave(card?.id ?? null, templateVersionId, {
 		onFormulaLocked: () => setFormulaLockedOpen(true),
+		onSaved: requestCalculationRefresh,
 	});
 
 	const lastSyncedCardKeyRef = useRef<string | null>(null);
@@ -389,6 +397,7 @@ export function TypicalWorkEditableCard({
 			(Boolean(picked.dictionaryCode) && picked.values.length === 0);
 		const newGroup = useAnyOf
 			? {
+					schemaFieldUid: picked.schemaFieldUid ?? null,
 					paramCode: picked.code,
 					paramName,
 					kind: "any_of" as const,
@@ -401,6 +410,7 @@ export function TypicalWorkEditableCard({
 					},
 				}
 			: {
+					schemaFieldUid: picked.schemaFieldUid ?? null,
 					paramCode: picked.code,
 					paramName,
 					kind: "by_value" as const,
@@ -523,7 +533,9 @@ export function TypicalWorkEditableCard({
 	}
 
 	const compDot = ARCH_COMPONENT_DOT[effectiveArchComponentType] ?? "#94a3b8";
-	const recommended = recommendedStreamsForComponent(effectiveArchComponentType);
+	const recommended = recommendedStreamsForComponent(
+		effectiveArchComponentType,
+	);
 	const otherStreams = availableStreams.filter(
 		(s) => !recommended.includes(streamDisplayLabel(s)),
 	);
@@ -989,7 +1001,12 @@ export function TypicalWorkEditableCard({
 							}}
 						>
 							<Typography
-								sx={{ fontSize: 13.5, fontWeight: 700, color: "#1d2435", pt: 0.75 }}
+								sx={{
+									fontSize: 13.5,
+									fontWeight: 700,
+									color: "#1d2435",
+									pt: 0.75,
+								}}
 							>
 								Параметры трудоёмкости
 							</Typography>
@@ -1174,9 +1191,7 @@ export function TypicalWorkEditableCard({
 													mb: 1,
 												}}
 											>
-												{(
-													paramMeta?.values ?? []
-												).map((value) => {
+													{(paramMeta?.values ?? []).map((value) => {
 													const selected = group.anyOf?.valueCodes.includes(
 														value.code,
 													);
@@ -1203,7 +1218,8 @@ export function TypicalWorkEditableCard({
 																				current.valueCodes[i] !== value.code,
 																		)
 																	: [...current.valueLabels, value.label];
-																const nextGroups = draft.laborParams.map((g) =>
+																	const nextGroups = draft.laborParams.map(
+																		(g) =>
 																	g.paramCode === group.paramCode
 																		? {
 																				...g,
@@ -1258,7 +1274,10 @@ export function TypicalWorkEditableCard({
 																	}
 																: g,
 														);
-														commitDraft({ ...draft, laborParams: nextGroups });
+															commitDraft({
+																...draft,
+																laborParams: nextGroups,
+															});
 													}}
 												/>
 												<TextField
@@ -1282,7 +1301,10 @@ export function TypicalWorkEditableCard({
 																	}
 																: g,
 														);
-														commitDraft({ ...draft, laborParams: nextGroups });
+															commitDraft({
+																...draft,
+																laborParams: nextGroups,
+															});
 													}}
 												/>
 											</Box>

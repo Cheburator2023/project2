@@ -17,9 +17,7 @@ import type { FieldPathHint } from "../../types";
 describe("jsonPointerToLogicVarPath", () => {
 	it("marks array item segments with []", () => {
 		expect(
-			jsonPointerToLogicVarPath(
-				"/streamDataSources/sourceSystems/items/type",
-			),
+			jsonPointerToLogicVarPath("/streamDataSources/sourceSystems/items/type"),
 		).toBe("streamDataSources.sourceSystems[].type");
 		expect(jsonPointerToLogicVarPath("/detailInfo/dataMart/metricsCount")).toBe(
 			"detailInfo.dataMart.metricsCount",
@@ -44,6 +42,7 @@ describe("resolveSchemaParamFieldRef", () => {
 					key: "type",
 					title: "Тип системы-источника",
 					varPath: "streamDataSources.sourceSystems[].type",
+					schemaFieldUid: "field-stable",
 					dictionaryCode: null,
 					codesPreview: null,
 				},
@@ -75,6 +74,8 @@ describe("resolveSchemaParamFieldRef", () => {
 			varPath: "streamDataSources.sourceSystems[].type",
 			fieldKey: "type",
 		});
+		expect(param?.id).toBe("schema:field-stable");
+		expect(param?.schemaFieldUid).toBe("field-stable");
 	});
 });
 
@@ -610,7 +611,8 @@ describe("buildSchemaWorkParameters", () => {
 	it("excludes fields inside typical/atypical work result blocks", () => {
 		const workBlockHints: FieldPathHint[] = [
 			{
-				pointer: "/streamDataSources/sourceTypicalTasks/items/estimateHoursPerDay",
+				pointer:
+					"/streamDataSources/sourceTypicalTasks/items/estimateHoursPerDay",
 				key: "estimateHoursPerDay",
 				title: "Базовая оценка (ч/д)",
 				varPath: "streamDataSources.sourceTypicalTasks[].estimateHoursPerDay",
@@ -698,8 +700,7 @@ describe("buildSchemaWorkParameters", () => {
 				codesPreview: null,
 			},
 			{
-				pointer:
-					"/field_aJEu5ziT/sourceTypicalTasks/items/estimateHoursPerDay",
+				pointer: "/field_aJEu5ziT/sourceTypicalTasks/items/estimateHoursPerDay",
 				key: "estimateHoursPerDay",
 				title: "Базовая оценка (ч/д)",
 				varPath: "field_aJEu5ziT.sourceTypicalTasks[].estimateHoursPerDay",
@@ -735,7 +736,10 @@ describe("buildSchemaWorkParameters", () => {
 								items: {
 									type: "object",
 									properties: {
-										estimateHoursPerDay: { type: "number", title: "Базовая оценка (ч/д)" },
+										estimateHoursPerDay: {
+											type: "number",
+											title: "Базовая оценка (ч/д)",
+										},
 									},
 								},
 							},
@@ -749,7 +753,10 @@ describe("buildSchemaWorkParameters", () => {
 								items: {
 									type: "object",
 									properties: {
-										estimateHoursPerDay: { type: "number", title: "Базовая оценка (ч/д)" },
+										estimateHoursPerDay: {
+											type: "number",
+											title: "Базовая оценка (ч/д)",
+										},
 									},
 								},
 							},

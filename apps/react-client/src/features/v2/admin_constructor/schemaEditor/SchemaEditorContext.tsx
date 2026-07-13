@@ -53,6 +53,7 @@ export type SchemaEditorContextValue = {
 	liveFormData: Record<string, unknown>;
 	calculationLoading: boolean;
 	calculationError: string | null;
+	requestCalculationRefresh: () => void;
 	logicExtraErrors: ErrorSchema;
 	logicValidationIssueCount: number;
 	legacyStageEvaluation: V2LegacyStageEvaluationDto | null;
@@ -120,7 +121,12 @@ export type SchemaEditorContextValue = {
 		updater: (prev: UiSchema) => UiSchema,
 		options?: { recordHistory?: boolean },
 	) => void;
-	handleDeleteField: (pointer?: string | null) => void;
+	handleDeleteField: (pointer?: string | null) => Promise<boolean>;
+	getFieldDeleteImpact: (
+		pointer: string,
+	) => Promise<
+		import("@smart-anketa/api-contract").V2TypicalWorkSchemaFieldSyncImpactDto
+	>;
 	handleToggleRequired: (checked: boolean) => void;
 	handleWidgetChange: (widget: string) => void;
 	handleDictionaryCodeChange: (code: string) => void;
@@ -145,7 +151,11 @@ export type SchemaEditorContextValue = {
 	isObjectGroup: boolean;
 	groupChildFields: Array<{ key: string; title: string; typeLabel: string }>;
 	hasArrayObjectItems: boolean;
-	arrayItemChildFields: Array<{ key: string; title: string; typeLabel: string }>;
+	arrayItemChildFields: Array<{
+		key: string;
+		title: string;
+		typeLabel: string;
+	}>;
 	isCustomUiGroup: boolean;
 	customUiGroupSummary: string | null;
 	canBindDictionary: boolean;

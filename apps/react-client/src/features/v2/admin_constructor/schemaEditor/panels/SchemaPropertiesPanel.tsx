@@ -781,10 +781,13 @@ export function SchemaPropertiesPanel() {
 		fieldKind === "general-uncertainty";
 	const workArch = isWorkArchComponent(archComponent);
 
-	const selectedSchemaParamId = useMemo(
-		() => (selectedPointer ? schemaParamIdFromPointer(selectedPointer) : ""),
-		[selectedPointer],
-	);
+	const selectedSchemaParamId = useMemo(() => {
+		if (!selectedPointer) return "";
+		const hint = fieldPathHints.find(
+			(field) => field.pointer === selectedPointer,
+		);
+		return schemaParamIdFromPointer(selectedPointer, hint?.schemaFieldUid);
+	}, [selectedPointer, fieldPathHints]);
 
 	const isSchemaTriggerParam = useMemo(() => {
 		if (!selectedPointer) return false;

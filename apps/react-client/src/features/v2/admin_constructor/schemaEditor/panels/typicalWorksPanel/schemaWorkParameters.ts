@@ -199,7 +199,9 @@ function valuesFromSchemaNode(node: RJSFSchema | undefined): SchemaNodeValues {
 		? node.enum.filter((value): value is string => typeof value === "string")
 		: [];
 	const enumNames = Array.isArray(node.enumNames)
-		? node.enumNames.filter((value): value is string => typeof value === "string")
+		? node.enumNames.filter(
+				(value): value is string => typeof value === "string",
+			)
 		: [];
 	if (enumValues.length > 0) {
 		return {
@@ -265,7 +267,9 @@ function schemaParamCodeFromHint(
 		usedCodes.add(hint.key);
 		return hint.key;
 	}
-	const base = (hint.varPath ?? hint.pointer.replace(/^\//, "").replace(/\//g, "_"))
+	const base = (
+		hint.varPath ?? hint.pointer.replace(/^\//, "").replace(/\//g, "_")
+	)
 		.replace(/[^\wа-яА-Я]+/gi, "_")
 		.replace(/^_+|_+$/g, "")
 		.slice(0, 80);
@@ -308,6 +312,8 @@ function finalizeSchemaWorkParameters(
 	return params
 		.map((param) => ({
 			id: param.id,
+			schemaFieldUid: param.schemaFieldUid,
+			schemaPointer: param.pointer,
 			code: param.code,
 			name: param.name,
 			description: param.description,
@@ -418,14 +424,16 @@ export function buildSchemaWorkParameters({
 				: true;
 		const dictionaryCode = hint.dictionaryCode?.trim() || undefined;
 
-		if (values.length === 0 && !numeric && !dictionaryCode && !textual) continue;
+		if (values.length === 0 && !numeric && !dictionaryCode && !textual)
+			continue;
 
 		const name = (hint.title ?? hint.key).trim();
 		if (!name) continue;
 
 		const code = schemaParamCodeFromHint(hint, usedCodes);
 		params.push({
-			id: `schema:${hint.pointer}`,
+			id: `schema:${hint.schemaFieldUid ?? hint.pointer}`,
+			schemaFieldUid: hint.schemaFieldUid ?? undefined,
 			code,
 			name,
 			description: schemaParamDescription(hint, uiSchema),
@@ -442,8 +450,11 @@ export function buildSchemaWorkParameters({
 
 const SCHEMA_PARAM_ID_PREFIX = "schema:";
 
-export function schemaParamIdFromPointer(pointer: string): string {
-	return `${SCHEMA_PARAM_ID_PREFIX}${pointer}`;
+export function schemaParamIdFromPointer(
+	pointer: string,
+	schemaFieldUid?: string | null,
+): string {
+	return `${SCHEMA_PARAM_ID_PREFIX}${schemaFieldUid ?? pointer}`;
 }
 
 export function resolveSchemaParamPointerFromId(id: string): string | null {
@@ -475,11 +486,14 @@ export type SchemaParamFieldRef = {
 };
 
 export function resolveSchemaParamFieldRef(
-	param: Pick<V2TypicalWorkParameterDto, "id" | "code"> | undefined,
+	param:
+		| Pick<V2TypicalWorkParameterDto, "id" | "code" | "schemaPointer">
+		| undefined,
 ): SchemaParamFieldRef {
 	const fieldKey = param?.code?.trim() || "—";
 	if (!param) return { pointer: null, varPath: null, fieldKey };
-	const pointer = resolveSchemaParamPointerFromId(param.id);
+	const pointer =
+		param.schemaPointer ?? resolveSchemaParamPointerFromId(param.id);
 	if (!pointer) {
 		return { pointer: null, varPath: null, fieldKey };
 	}
@@ -551,15 +565,21 @@ export function triggerRuleGroupKey(
 
 export function filterRulesByGroupKey<
 	T extends TriggerRuleLike & { id?: string },
->(rules: T[], groupKey: string, paramOptions: V2TypicalWorkParameterDto[]): T[] {
+>(
+	rules: T[],
+	groupKey: string,
+	paramOptions: V2TypicalWorkParameterDto[],
+): T[] {
 	return rules.filter(
 		(rule) => triggerRuleGroupKey(rule, paramOptions) === groupKey,
 	);
 }
 
-export function excludeRulesByGroupKey<
-	T extends TriggerRuleLike,
->(rules: T[], groupKey: string, paramOptions: V2TypicalWorkParameterDto[]): T[] {
+export function excludeRulesByGroupKey<T extends TriggerRuleLike>(
+	rules: T[],
+	groupKey: string,
+	paramOptions: V2TypicalWorkParameterDto[],
+): T[] {
 	return rules.filter(
 		(rule) => triggerRuleGroupKey(rule, paramOptions) !== groupKey,
 	);

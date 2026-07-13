@@ -55,6 +55,7 @@ export type V2TypicalWorkRuleValueDto = {
 export type V2TypicalWorkRuleDto = {
     id: string;
     streamExecutor: string;
+    schemaFieldUid?: string | null;
     paramCode: string;
     paramName: string | null;
     operator: V2WorkRuleOperator;
@@ -80,6 +81,7 @@ export type V2TypicalWorkLaborAnyOfDto = {
     coeffOff: number;
 };
 export type V2TypicalWorkLaborParamGroupDto = {
+    schemaFieldUid?: string | null;
     paramCode: string;
     paramName: string | null;
     /** by_value — коэффициент на каждое значение; any_of — on/off по множеству. */
@@ -194,6 +196,7 @@ export type V2TypicalWorkNormInputDto = {
 };
 export type V2TypicalWorkRuleInputDto = {
     id?: string;
+    schemaFieldUid?: string | null;
     paramCode: string;
     paramName?: string | null;
     operator: V2WorkRuleOperator;
@@ -211,6 +214,7 @@ export type V2TypicalWorkLaborCoefficientInputDto = {
     coefficient: number;
 };
 export type V2TypicalWorkLaborParamInputDto = {
+    schemaFieldUid?: string | null;
     paramCode: string;
     paramName?: string | null;
     kind?: "by_value" | "any_of";
@@ -286,6 +290,8 @@ export type V2TypicalWorkParameterValueDto = {
 };
 export type V2TypicalWorkParameterDto = {
     id: string;
+    schemaFieldUid?: string;
+    schemaPointer?: string;
     code: string;
     name: string;
     description: string | null;

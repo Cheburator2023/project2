@@ -14,6 +14,7 @@ type Options = {
 	rulesOverride?: V2LogicGraphDto;
 	jsonSchema?: Record<string, unknown>;
 	uiSchema?: Record<string, unknown>;
+	revision?: number;
 	debounceMs?: number;
 	enabled?: boolean;
 };
@@ -25,6 +26,7 @@ export function useDebouncedV2Calculation({
 	rulesOverride,
 	jsonSchema,
 	uiSchema,
+	revision = 0,
 	debounceMs = 350,
 	enabled = true,
 }: Options) {
@@ -74,6 +76,7 @@ export function useDebouncedV2Calculation({
 		rulesOverride,
 		jsonSchema,
 		uiSchema,
+		revision,
 		debounceMs,
 		enabled,
 		mutateAsync,

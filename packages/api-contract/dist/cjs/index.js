@@ -43,6 +43,7 @@ __exportStar(require("./v2-typical-work.types"), exports);
 __exportStar(require("./v2-typical-work-v4.types"), exports);
 __exportStar(require("./v2-work-formula.util"), exports);
 __exportStar(require("./v2-work-terms-formula.util"), exports);
+__exportStar(require("./v2-typical-work-schema-sync.util"), exports);
 __exportStar(require("./v2-typical-work-jsonlogic.util"), exports);
 __exportStar(require("./v2-typical-work-validation.util"), exports);
 __exportStar(require("./v2-anketa-ui-layout.util"), exports);

@@ -18,6 +18,7 @@ export type FieldPathHint = {
 	key: string;
 	title: string | null;
 	varPath: string;
+	schemaFieldUid?: string | null;
 	dictionaryCode: string | null;
 	codesPreview: string[] | null;
 };

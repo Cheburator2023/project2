@@ -211,7 +211,11 @@ export function TypicalWorkTriggersSection({
 			const nextValues = selected
 				? currentValues.filter((v) => v.code !== valueCode)
 				: [...currentValues, { code: valueCode, label: valueLabel }];
-			const withoutGroup = excludeRulesByGroupKey(rules, groupKey, paramOptions);
+			const withoutGroup = excludeRulesByGroupKey(
+				rules,
+				groupKey,
+				paramOptions,
+			);
 			if (nextValues.length === 0) {
 				onChange(withoutGroup);
 				return;
@@ -221,6 +225,7 @@ export function TypicalWorkTriggersSection({
 				{
 					id: current?.id ?? `new-${Date.now()}`,
 					streamExecutor,
+					schemaFieldUid: param.schemaFieldUid ?? null,
 					paramCode: param.code,
 					paramName: schemaParamRuleName(param),
 					operator,
@@ -255,6 +260,7 @@ export function TypicalWorkTriggersSection({
 			{
 				id: `new-${Date.now()}-${valueCode}`,
 				streamExecutor,
+				schemaFieldUid: param.schemaFieldUid ?? null,
 				paramCode: param.code,
 				paramName: schemaParamRuleName(param),
 				operator: currentOperator,
@@ -288,6 +294,7 @@ export function TypicalWorkTriggersSection({
 			{
 				id: `new-${Date.now()}`,
 				streamExecutor,
+				schemaFieldUid: param.schemaFieldUid ?? null,
 				paramCode: param.code,
 				paramName: schemaParamRuleName(param),
 				operator: "=",
@@ -322,7 +329,9 @@ export function TypicalWorkTriggersSection({
 				>
 					Условия появления работы
 				</Typography>
-				<Box sx={{ ml: "auto", minWidth: 280, maxWidth: 420, flex: "1 1 280px" }}>
+				<Box
+					sx={{ ml: "auto", minWidth: 280, maxWidth: 420, flex: "1 1 280px" }}
+				>
 					<FuzzyAutocomplete<V2TypicalWorkParameterDto>
 						key={pickerKey}
 						data-test-id="trig-picker-items"
@@ -433,7 +442,10 @@ export function TypicalWorkTriggersSection({
 							paramOptions.find((item) => item.code === groupKey) ??
 							resolveSchemaParamForTriggerRule(ruleSeed, paramOptions);
 						const isKnownPseudoTrigger =
-							isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName) ||
+							isSourceTypeTriggerParam(
+								ruleSeed.paramCode,
+								ruleSeed.paramName,
+							) ||
 							isControlTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName);
 						const validationCatalog = catalogForTriggerRuleGroup(
 							ruleSeed,
@@ -472,8 +484,7 @@ export function TypicalWorkTriggersSection({
 							param?.name ??
 							(isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName)
 								? "Тип источника данных"
-								: schemaParamDisplayName(paramRules[0]?.paramName) ||
-									groupKey);
+								: schemaParamDisplayName(paramRules[0]?.paramName) || groupKey);
 						const fieldRef = resolveSchemaParamFieldRef(param);
 						return (
 							<Box
@@ -532,9 +543,7 @@ export function TypicalWorkTriggersSection({
 											variant="outlined"
 											title="Выделить поле на холсте конструктора"
 											startIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-											onClick={() =>
-												onNavigateToSchemaField(fieldRef.pointer!)
-											}
+											onClick={() => onNavigateToSchemaField(fieldRef.pointer!)}
 											sx={{
 												flexShrink: 0,
 												minWidth: 0,
@@ -643,8 +652,11 @@ export function TypicalWorkTriggersSection({
 										))}
 									</Box>
 								) : null}
-								{param && (param.values.length === 0 || isSchemaTextualParam(param)) ? (
-									<Typography sx={{ fontSize: 11.5, color: "#6b7484", mb: 0.9 }}>
+								{param &&
+								(param.values.length === 0 || isSchemaTextualParam(param)) ? (
+									<Typography
+										sx={{ fontSize: 11.5, color: "#6b7484", mb: 0.9 }}
+									>
 										{isSchemaTextualParam(param)
 											? "Работа появляется, если поле заполнено (любое непустое значение)."
 											: param.numeric

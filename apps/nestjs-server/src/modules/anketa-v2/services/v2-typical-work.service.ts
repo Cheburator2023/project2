@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, OnModuleInit } from "@nestjs/common";
+import {
+	Injectable,
+	Logger,
+	NotFoundException,
+	OnModuleInit,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { IsNull, Not, In, Repository } from "typeorm";
 import type {
@@ -386,11 +391,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			}
 
 			for (const stream of streams) {
-				await this.ensureWorkVersionConfig(
-					work.id,
-					trimmedVersionId,
-					stream,
-				);
+				await this.ensureWorkVersionConfig(work.id, trimmedVersionId, stream);
 			}
 
 			created++;
@@ -599,9 +600,10 @@ export class V2TypicalWorkService {
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
 	) {}
 
-	private async resolveTemplateIdFilter(
-		query: { templateId?: string; templateVersionId?: string },
-	): Promise<string | undefined> {
+	private async resolveTemplateIdFilter(query: {
+		templateId?: string;
+		templateVersionId?: string;
+	}): Promise<string | undefined> {
 		if (query.templateId?.trim()) return query.templateId.trim();
 		if (!query.templateVersionId?.trim()) return undefined;
 		const version = await this.templateVersionRepository.findOne({
@@ -657,7 +659,9 @@ export class V2TypicalWorkService {
 		if (assignments.length === 0) return { total: 0, items: [] };
 
 		const workIds = unique(assignments.map((a) => a.workId));
-		const works = await this.workRepository.find({ where: { id: In(workIds) } });
+		const works = await this.workRepository.find({
+			where: { id: In(workIds) },
+		});
 		const workById = new Map(works.map((w) => [w.id, w]));
 		const atDate = todayIsoDate();
 		const triggerStatusCatalog =
@@ -697,13 +701,17 @@ export class V2TypicalWorkService {
 					},
 				});
 				if (config) {
-					const terms = normalizeStoredFormula(config.formula, config.formulaText);
+					const terms = normalizeStoredFormula(
+						config.formula,
+						config.formulaText,
+					);
 					formulaBadge = computeFormulaBadge(terms.terms);
 				}
 			}
 
 			const assignmentRules =
-				rulesByKey.get(`${assignment.workId}|${assignment.streamExecutor}`) ?? [];
+				rulesByKey.get(`${assignment.workId}|${assignment.streamExecutor}`) ??
+				[];
 
 			items.push({
 				id: assignment.id,
@@ -797,7 +805,7 @@ export class V2TypicalWorkService {
 				const streamForStatus =
 					streamFilter && streams.includes(streamFilter)
 						? streamFilter
-						: streams[0] ?? streamFilter ?? "";
+						: (streams[0] ?? streamFilter ?? "");
 
 				const normsDto = workNorms.map(mapNormEntity);
 				const normsByStream: Record<string, number | null> = {};
@@ -816,7 +824,7 @@ export class V2TypicalWorkService {
 					laborParamCountByStream[stream] = paramCodes.size;
 				}
 				const currentNorm = streamForStatus
-					? normsByStream[streamForStatus] ?? null
+					? (normsByStream[streamForStatus] ?? null)
 					: null;
 
 				return {
@@ -836,7 +844,7 @@ export class V2TypicalWorkService {
 					streams,
 					templateId: work.templateId,
 					templateName: work.templateId
-						? templateNameById.get(work.templateId) ?? null
+						? (templateNameById.get(work.templateId) ?? null)
 						: null,
 					normsByStream,
 					laborParamCountByStream,
@@ -899,10 +907,7 @@ export class V2TypicalWorkService {
 			laborParams,
 		);
 		const termsFormula = versionConfig
-			? normalizeStoredFormula(
-					versionConfig.formula,
-					versionConfig.formulaText,
-				)
+			? normalizeStoredFormula(versionConfig.formula, versionConfig.formulaText)
 			: normalizeStoredFormula(null);
 		const tokenFormula = versionConfig
 			? resolveCardTokenFormula(
@@ -995,7 +1000,12 @@ function resolveAssignmentStatus(
 function resolveTriggerStatus(
 	rules: Pick<
 		V2TypicalWorkRuleEntity,
-		"paramCode" | "paramName" | "operator" | "valueCode" | "valueLabel" | "valueCodes"
+		| "paramCode"
+		| "paramName"
+		| "operator"
+		| "valueCode"
+		| "valueLabel"
+		| "valueCodes"
 	>[],
 	triggerStatusCatalog: WorkTriggerStatusCatalogParam[],
 	atDate: string,
@@ -1028,6 +1038,7 @@ function mapRuleEntity(entity: V2TypicalWorkRuleEntity): V2TypicalWorkRuleDto {
 	return {
 		id: entity.id,
 		streamExecutor: entity.streamExecutor,
+		schemaFieldUid: entity.schemaFieldUid,
 		paramCode: entity.paramCode,
 		paramName: entity.paramName,
 		operator: entity.operator as V2TypicalWorkRuleDto["operator"],
@@ -1075,6 +1086,7 @@ function groupLaborByParam(
 		const kind = header.kind === "any_of" ? "any_of" : "by_value";
 		if (existing) {
 			existing.kind = kind;
+			existing.schemaFieldUid = header.schemaFieldUid;
 			if (kind === "any_of") {
 				existing.anyOf = {
 					valueCodes: header.anyOfValueCodes ?? [],
@@ -1086,6 +1098,7 @@ function groupLaborByParam(
 			continue;
 		}
 		groups.set(header.paramCode, {
+			schemaFieldUid: header.schemaFieldUid,
 			paramCode: header.paramCode,
 			paramName: header.paramName,
 			kind,

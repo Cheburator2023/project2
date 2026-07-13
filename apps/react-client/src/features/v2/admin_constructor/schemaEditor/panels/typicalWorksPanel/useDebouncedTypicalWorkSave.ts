@@ -56,6 +56,7 @@ export type SaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 
 type UseDebouncedTypicalWorkSaveOptions = {
 	onFormulaLocked?: () => void;
+	onSaved?: () => void;
 };
 
 export function useDebouncedTypicalWorkSave(
@@ -96,6 +97,7 @@ export function useDebouncedTypicalWorkSave(
 			await clearBufferedTypicalWorkPatch(workId);
 			setBufferedRestore(false);
 			setStatus("saved");
+			options?.onSaved?.();
 		} catch (error) {
 			const parsed = parseTypicalWorkPatchError(error);
 			if (parsed.code === "FORMULA_LOCKED") {
@@ -191,10 +193,7 @@ export function cardToPatchDto(
 	templateVersionId: string | null,
 ): PatchV2TypicalWorkRequestDto {
 	const stream = card.streamExecutor.trim();
-	const reconciledNorms = reconcileStreamNormPeriods(
-		card.norms,
-		stream,
-	);
+	const reconciledNorms = reconcileStreamNormPeriods(card.norms, stream);
 	return {
 		streamExecutor: stream,
 		templateVersionId: templateVersionId ?? undefined,
@@ -212,6 +211,7 @@ export function cardToPatchDto(
 			.filter((rule) => rule.streamExecutor === stream)
 			.map((rule) => ({
 				id: rule.id,
+				schemaFieldUid: rule.schemaFieldUid ?? null,
 				paramCode: rule.paramCode,
 				paramName: rule.paramName,
 				operator: rule.operator,
@@ -227,6 +227,7 @@ export function cardToPatchDto(
 					group.coefficients.every((row) => row.streamExecutor === stream),
 			)
 			.map((group) => ({
+				schemaFieldUid: group.schemaFieldUid ?? null,
 				paramCode: group.paramCode,
 				paramName: group.paramName,
 				kind: group.kind ?? "by_value",

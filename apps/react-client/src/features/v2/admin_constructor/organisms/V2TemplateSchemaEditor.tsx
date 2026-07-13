@@ -47,10 +47,12 @@ import {
 	readLeafUiOptions,
 } from "../schemaEditor/propertiesFieldKind";
 import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayout";
+import { LOGIC_TAB_QUERY } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import {
-	LOGIC_TAB_QUERY,
-} from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
-import { schemaParamIdFromPointer } from "../schemaEditor/panels/typicalWorksPanel/schemaWorkParameters";
+	buildSchemaWorkParameters,
+	schemaParamIdFromPointer,
+} from "../schemaEditor/panels/typicalWorksPanel/schemaWorkParameters";
+import { useSyncV2TypicalWorksSchemaField } from "@react-client/common/api/queries/v2-works";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
 import { useDebouncedV2Calculation } from "../hooks/useDebouncedV2Calculation";
@@ -505,8 +507,7 @@ export const V2TemplateSchemaEditor = ({
 			// том же маршруте — это не уход со страницы, предупреждаем только при
 			// смене pathname.
 			return (
-				hasUnsavedChanges &&
-				currentLocation.pathname !== nextLocation.pathname
+				hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname
 			);
 		},
 	);
@@ -568,6 +569,12 @@ export const V2TemplateSchemaEditor = ({
 
 	const { enumMapByCode, isLoading: dictionaryEnumsLoading } =
 		useV2DictionaryEnumsMaps(referencedDictionaryCodes);
+	const syncTypicalWorksSchemaField = useSyncV2TypicalWorksSchemaField();
+	const [calculationRevision, setCalculationRevision] = useState(0);
+	const requestCalculationRefresh = useCallback(
+		() => setCalculationRevision((revision) => revision + 1),
+		[],
+	);
 
 	const {
 		result: calculationResult,
@@ -580,6 +587,7 @@ export const V2TemplateSchemaEditor = ({
 		rulesOverride: logic,
 		jsonSchema: jsonSchema as Record<string, unknown>,
 		uiSchema: uiSchema as Record<string, unknown>,
+		revision: calculationRevision,
 		enabled: Boolean(activeVersion?.id),
 	});
 
@@ -661,10 +669,15 @@ export const V2TemplateSchemaEditor = ({
 				const title = typeof node?.title === "string" ? node.title : null;
 				const leaf = readUiBranch(ui, segs);
 				let dictionaryCode: string | null = null;
+				let schemaFieldUid: string | null = null;
 				const opts = leaf?.["ui:options"];
 				if (opts && typeof opts === "object" && !Array.isArray(opts)) {
-					const dc = (opts as Record<string, unknown>).dictionaryCode;
+					const options = opts as Record<string, unknown>;
+					const dc = options.dictionaryCode;
 					if (typeof dc === "string" && dc.trim()) dictionaryCode = dc.trim();
+					const uid = options.schemaFieldUid;
+					if (typeof uid === "string" && uid.trim())
+						schemaFieldUid = uid.trim();
 				}
 				const varPath = jsonPointerToFormDataVarPath(row.pointer);
 				const codesPreview =
@@ -676,11 +689,143 @@ export const V2TemplateSchemaEditor = ({
 					key: row.key,
 					title,
 					varPath,
+					schemaFieldUid,
 					dictionaryCode,
 					codesPreview,
 				};
 			});
 	}, [jsonSchema, uiSchema, enumMapByCode]);
+
+	const schemaWorkParams = useMemo(
+		() =>
+			buildSchemaWorkParameters({
+				fieldPathHints,
+				uiSchema: uiSchema as Record<string, unknown>,
+				jsonSchema,
+				enumMapByCode,
+			}),
+		[fieldPathHints, uiSchema, jsonSchema, enumMapByCode],
+	);
+	const previousSchemaParamsRef = useRef<
+		Map<
+			string,
+			{
+				code: string;
+				name: string;
+				values: Array<{ code: string; label: string }>;
+			}
+		>
+	>(new Map());
+	const previousSchemaParamsVersionRef = useRef<string | null>(null);
+	const pendingSchemaSyncBeforeRef = useRef(
+		new Map<
+			string,
+			{
+				code: string;
+				name: string;
+				values: Array<{ code: string; label: string }>;
+			}
+		>(),
+	);
+	const schemaSyncTimerRef = useRef<number | null>(null);
+
+	useEffect(() => {
+		const versionId = activeVersion?.id;
+		const current = new Map(
+			schemaWorkParams
+				.filter((param) => param.schemaFieldUid)
+				.map((param) => [
+					param.schemaFieldUid!,
+					{
+						code: param.code,
+						name: param.name,
+						values: param.values.map((value) => ({
+							code: value.code,
+							label: value.label,
+						})),
+					},
+				]),
+		);
+		const previous = previousSchemaParamsRef.current;
+		previousSchemaParamsRef.current = current;
+		if (previousSchemaParamsVersionRef.current !== (versionId ?? null)) {
+			previousSchemaParamsVersionRef.current = versionId ?? null;
+			pendingSchemaSyncBeforeRef.current.clear();
+			return;
+		}
+		if (!versionId || previous.size === 0) return;
+
+		const changed = [...current].filter(([uid, param]) => {
+			const before = previous.get(uid);
+			return before && JSON.stringify(before) !== JSON.stringify(param);
+		});
+		if (changed.length === 0) return;
+		for (const [uid] of changed) {
+			const before = previous.get(uid);
+			if (before && !pendingSchemaSyncBeforeRef.current.has(uid)) {
+				pendingSchemaSyncBeforeRef.current.set(uid, before);
+			}
+		}
+		if (schemaSyncTimerRef.current) {
+			window.clearTimeout(schemaSyncTimerRef.current);
+		}
+		schemaSyncTimerRef.current = window.setTimeout(() => {
+			const pending = [...pendingSchemaSyncBeforeRef.current];
+			pendingSchemaSyncBeforeRef.current.clear();
+			void Promise.all(
+				pending.map(([schemaFieldUid, before]) => {
+					const param = current.get(schemaFieldUid);
+					if (!param) return Promise.resolve();
+					return syncTypicalWorksSchemaField.mutateAsync({
+						templateVersionId: versionId,
+						mode: "apply",
+						operation: "upsert",
+						field: {
+							schemaFieldUid,
+							previousCode: before.code,
+							code: param.code,
+							name: param.name,
+							values:
+								before.values.length > 0 || param.values.length > 0
+									? param.values
+									: undefined,
+						},
+					});
+				}),
+			)
+				.then(requestCalculationRefresh)
+				.catch((error) => {
+					for (const [uid, before] of pending) {
+						pendingSchemaSyncBeforeRef.current.set(uid, before);
+					}
+					toast.error(apiErrorMessage(error));
+				});
+		}, 500);
+		return () => {
+			if (schemaSyncTimerRef.current) {
+				window.clearTimeout(schemaSyncTimerRef.current);
+			}
+		};
+	}, [
+		activeVersion?.id,
+		requestCalculationRefresh,
+		schemaWorkParams,
+		syncTypicalWorksSchemaField.mutateAsync,
+	]);
+
+	useEffect(() => {
+		const missing = fieldPathHints.filter((hint) => !hint.schemaFieldUid);
+		if (missing.length === 0) return;
+		setUiSchema((previous) => {
+			let next = previous as Record<string, unknown>;
+			for (const hint of missing) {
+				next = patchUiOptionsAtPointer(next, hint.pointer, {
+					schemaFieldUid: `field_${crypto.randomUUID()}`,
+				});
+			}
+			return next as UiSchema;
+		});
+	}, [fieldPathHints]);
 
 	const logicPathFieldHint = useMemo(() => {
 		if (!logicPathPick) return undefined;
@@ -727,8 +872,7 @@ export const V2TemplateSchemaEditor = ({
 	);
 
 	const rulesForSelectedSubtree = useMemo(
-		() =>
-			resolveRulesForSelectedSubtree(effectiveLogicRules, selectedPointer),
+		() => resolveRulesForSelectedSubtree(effectiveLogicRules, selectedPointer),
 		[effectiveLogicRules, selectedPointer],
 	);
 
@@ -1308,7 +1452,10 @@ export const V2TemplateSchemaEditor = ({
 			targetIndex: number,
 		) => {
 			if (
-				isTypicalWorkFieldAtPointer(uiSchema as Record<string, unknown>, sourcePointer) &&
+				isTypicalWorkFieldAtPointer(
+					uiSchema as Record<string, unknown>,
+					sourcePointer,
+				) &&
 				!canAddTypicalWorkUnderParent(
 					jsonSchema,
 					uiSchema,
@@ -1353,7 +1500,12 @@ export const V2TemplateSchemaEditor = ({
 
 	const duplicateCanvasField = useCallback(
 		(sourcePointer: string) => {
-			if (isTypicalWorkFieldAtPointer(uiSchema as Record<string, unknown>, sourcePointer)) {
+			if (
+				isTypicalWorkFieldAtPointer(
+					uiSchema as Record<string, unknown>,
+					sourcePointer,
+				)
+			) {
 				toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
 				return;
 			}
@@ -1369,7 +1521,11 @@ export const V2TemplateSchemaEditor = ({
 
 			pushDraftHistory();
 			setJsonSchema(result.schema);
-			setUiSchema(result.ui as UiSchema);
+			setUiSchema(
+				patchUiOptionsAtPointer(result.ui, result.newPointer, {
+					schemaFieldUid: `field_${crypto.randomUUID()}`,
+				}) as UiSchema,
+			);
 			setSelectedPointer(result.newPointer);
 		},
 		[jsonSchema, uiSchema, pushDraftHistory],
@@ -1427,17 +1583,107 @@ export const V2TemplateSchemaEditor = ({
 		[pushDraftHistory],
 	);
 
+	const schemaParamsInSubtree = useCallback(
+		(pointer: string) => {
+			const normalized = normalizeJsonPointer(pointer);
+			const prefix = `${normalized}/`;
+			return schemaWorkParams.filter((param) => {
+				const paramPointer = param.schemaPointer
+					? normalizeJsonPointer(param.schemaPointer)
+					: "";
+				return paramPointer === normalized || paramPointer.startsWith(prefix);
+			});
+		},
+		[schemaWorkParams],
+	);
+
+	const getFieldDeleteImpact = useCallback(
+		async (pointer: string) => {
+			const versionId = activeVersion?.id;
+			const empty = {
+				worksMatched: 0,
+				worksUpdated: 0,
+				rulesUpdated: 0,
+				rulesRemoved: 0,
+				laborParamsUpdated: 0,
+				laborParamsRemoved: 0,
+				formulasInvalidated: 0,
+			};
+			if (!versionId) return empty;
+			const params = schemaParamsInSubtree(pointer).filter(
+				(param) => param.schemaFieldUid,
+			);
+			const impacts = await Promise.all(
+				params.map((param) =>
+					syncTypicalWorksSchemaField.mutateAsync({
+						templateVersionId: versionId,
+						mode: "dryRun",
+						operation: "delete",
+						field: {
+							schemaFieldUid: param.schemaFieldUid!,
+							previousCode: param.code,
+						},
+					}),
+				),
+			);
+			return impacts.reduce(
+				(sum, impact) => ({
+					worksMatched: sum.worksMatched + impact.worksMatched,
+					worksUpdated: 0,
+					rulesUpdated: 0,
+					rulesRemoved: sum.rulesRemoved + impact.rulesRemoved,
+					laborParamsUpdated: 0,
+					laborParamsRemoved:
+						sum.laborParamsRemoved + impact.laborParamsRemoved,
+					formulasInvalidated:
+						sum.formulasInvalidated + impact.formulasInvalidated,
+				}),
+				empty,
+			);
+		},
+		[
+			activeVersion?.id,
+			schemaParamsInSubtree,
+			syncTypicalWorksSchemaField.mutateAsync,
+		],
+	);
+
 	const handleDeleteField = useCallback(
-		(pointer?: string | null) => {
+		async (pointer?: string | null) => {
 			const targetPointer = pointer ?? selectedPointer;
-			if (!targetPointer) return;
-			pushDraftHistory();
+			if (!targetPointer) return false;
 			const uiBranch = readUiSchemaBranchAtPointer(
 				uiSchema as Record<string, unknown>,
 				targetPointer,
 			);
-			if (resolveV2AnketaCanvasUiKind(uiBranch, { fieldPointer: targetPointer }) === "system") return;
-			if (isCanvasStockField(uiSchema, targetPointer)) return;
+			if (
+				resolveV2AnketaCanvasUiKind(uiBranch, {
+					fieldPointer: targetPointer,
+				}) === "system"
+			)
+				return false;
+			if (isCanvasStockField(uiSchema, targetPointer)) return false;
+			const versionId = activeVersion?.id;
+			if (versionId) {
+				try {
+					for (const param of schemaParamsInSubtree(targetPointer)) {
+						if (!param.schemaFieldUid) continue;
+						await syncTypicalWorksSchemaField.mutateAsync({
+							templateVersionId: versionId,
+							mode: "apply",
+							operation: "delete",
+							field: {
+								schemaFieldUid: param.schemaFieldUid,
+								previousCode: param.code,
+							},
+						});
+					}
+				} catch (error) {
+					toast.error(apiErrorMessage(error));
+					return false;
+				}
+			}
+			pushDraftHistory();
 			const segs = pointerSegments(targetPointer);
 			const next = removePropertyAtPointer(jsonSchema, segs);
 			if (next) {
@@ -1465,9 +1711,21 @@ export const V2TemplateSchemaEditor = ({
 					}),
 				}));
 				setSelectedPointer(null);
+				requestCalculationRefresh();
+				return true;
 			}
+			return false;
 		},
-		[jsonSchema, selectedPointer, uiSchema, pushDraftHistory],
+		[
+			activeVersion?.id,
+			jsonSchema,
+			selectedPointer,
+			uiSchema,
+			pushDraftHistory,
+			requestCalculationRefresh,
+			schemaParamsInSubtree,
+			syncTypicalWorksSchemaField.mutateAsync,
+		],
 	);
 
 	const handleToggleRequired = useCallback(
@@ -1582,11 +1840,16 @@ export const V2TemplateSchemaEditor = ({
 			const normalized = normalizeJsonPointer(pointer);
 			setSelectedPointer(normalized);
 			setLogicPathPick(normalized);
-			setTriggerParamPickId(schemaParamIdFromPointer(normalized));
+			const field = fieldPathHints.find(
+				(hint) => normalizeJsonPointer(hint.pointer) === normalized,
+			);
+			setTriggerParamPickId(
+				schemaParamIdFromPointer(normalized, field?.schemaFieldUid),
+			);
 			setMainTab("logic");
 			setLogicWorkspaceTab("works");
 		},
-		[setLogicWorkspaceTab],
+		[fieldPathHints, setLogicWorkspaceTab],
 	);
 
 	const openLogicWorkspace = useCallback(() => {
@@ -1731,6 +1994,7 @@ export const V2TemplateSchemaEditor = ({
 			liveFormData,
 			calculationLoading,
 			calculationError,
+			requestCalculationRefresh,
 			logicExtraErrors,
 			logicValidationIssueCount,
 			legacyStageEvaluation,
@@ -1773,6 +2037,7 @@ export const V2TemplateSchemaEditor = ({
 			updateField,
 			patchUiSchema,
 			handleDeleteField,
+			getFieldDeleteImpact,
 			handleToggleRequired,
 			handleWidgetChange,
 			handleDictionaryCodeChange,
@@ -1825,6 +2090,7 @@ export const V2TemplateSchemaEditor = ({
 			liveFormData,
 			calculationLoading,
 			calculationError,
+			requestCalculationRefresh,
 			logicExtraErrors,
 			logicValidationIssueCount,
 			legacyStageEvaluation,
@@ -1857,6 +2123,7 @@ export const V2TemplateSchemaEditor = ({
 			updateField,
 			patchUiSchema,
 			handleDeleteField,
+			getFieldDeleteImpact,
 			handleToggleRequired,
 			handleWidgetChange,
 			handleDictionaryCodeChange,

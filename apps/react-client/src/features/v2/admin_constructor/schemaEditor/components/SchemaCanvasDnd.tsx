@@ -340,7 +340,10 @@ function SchemaCanvasFieldRow({
 
 	const { draggingTypicalWork, excludePointer } = useDragLayer((monitor) => {
 		if (!monitor.isDragging()) {
-			return { draggingTypicalWork: false, excludePointer: null as string | null };
+			return {
+				draggingTypicalWork: false,
+				excludePointer: null as string | null,
+			};
 		}
 		const ctx = resolveTypicalWorkDragContext(
 			monitor.getItem(),
@@ -472,7 +475,11 @@ function SchemaCanvasFieldRow({
 	const { label: typeChipLabel, colorKey: typeChipColorKey } =
 		resolveCanvasFieldTypeChipLabel(schemaNode, uiBranch);
 	const typeChipColor = resolveCanvasTypeChipColor(typeChipColorKey);
-	const categoryChips = resolveCanvasCategoryChips(schemaNode, uiBranch, fieldKey);
+	const categoryChips = resolveCanvasCategoryChips(
+		schemaNode,
+		uiBranch,
+		fieldKey,
+	);
 
 	const canvasUiColor =
 		canvasUiKind === "hidden"
@@ -517,8 +524,7 @@ function SchemaCanvasFieldRow({
 		typicalWorkNameById,
 	]);
 
-	const rowTitle =
-		typicalWorkTitleSuffix
+	const rowTitle = typicalWorkTitleSuffix
 			? `${node.text} · ${typicalWorkTitleSuffix}`
 			: node.text;
 
@@ -783,7 +789,11 @@ function PalettePresetRow({ preset }: { preset: PalettePreset }) {
 		uiSchema,
 		setSelectedPointer,
 	} = useSchemaEditor();
-	const rootCount = listCanvasEditableChildKeys(jsonSchema, "/", uiSchema).length;
+	const rootCount = listCanvasEditableChildKeys(
+		jsonSchema,
+		"/",
+		uiSchema,
+	).length;
 	const isArch = preset.section === "arch" || preset.section === "works";
 	const archType = isArch ? (preset.chipLabel as V2ArchComponentType) : null;
 	const archColor = archType ? ARCH_COMPONENT_CHIP_COLORS[archType] : undefined;
@@ -902,6 +912,7 @@ export function SchemaCanvasPanel({
 		mainTab,
 		handleAddFieldPresetAtParent,
 		handleDeleteField,
+		getFieldDeleteImpact,
 		moveCanvasField,
 		canUndoDraft,
 		canRedoDraft,
@@ -929,15 +940,28 @@ export function SchemaCanvasPanel({
 	const treeRef = useRef<TreeMethods>(null);
 	const [deleteConfirm, setDeleteConfirm] =
 		useState<CanvasDeleteConfirmState | null>(null);
+	const [deleteImpact, setDeleteImpact] = useState<Awaited<
+		ReturnType<typeof getFieldDeleteImpact>
+	> | null>(null);
+	const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
 
-	const handleRequestDelete = useCallback((state: CanvasDeleteConfirmState) => {
-		setDeleteConfirm(state);
-	}, []);
+	const handleRequestDelete = useCallback(
+		(state: CanvasDeleteConfirmState) => {
+			setDeleteConfirm(state);
+			setDeleteImpact(null);
+			setDeleteImpactLoading(true);
+			void getFieldDeleteImpact(state.pointer)
+				.then(setDeleteImpact)
+				.catch(() => setDeleteImpact(null))
+				.finally(() => setDeleteImpactLoading(false));
+		},
+		[getFieldDeleteImpact],
+	);
 
-	const handleConfirmDelete = useCallback(() => {
+	const handleConfirmDelete = useCallback(async () => {
 		if (!deleteConfirm) return;
-		handleDeleteField(deleteConfirm.pointer);
-		setDeleteConfirm(null);
+		const deleted = await handleDeleteField(deleteConfirm.pointer);
+		if (deleted) setDeleteConfirm(null);
 	}, [deleteConfirm, handleDeleteField]);
 
 	const presetById = useMemo(
@@ -987,7 +1011,9 @@ export function SchemaCanvasPanel({
 	}, []);
 
 	const canvasToolbarActions = (
-		<Box sx={{ display: "flex", gap: 0.5, flexShrink: 0, alignItems: "center" }}>
+		<Box
+			sx={{ display: "flex", gap: 0.5, flexShrink: 0, alignItems: "center" }}
+		>
 			<IconButton
 				size="small"
 				disabled={!canUndoDraft}
@@ -1211,8 +1237,7 @@ export function SchemaCanvasPanel({
 						px: 0.5,
 						py: 0.5,
 						position: "relative",
-					[`& .${CANVAS_TREE_ROOT_CLASS}, & .${CANVAS_TREE_ROOT_CLASS} ul`]:
-						{
+						[`& .${CANVAS_TREE_ROOT_CLASS}, & .${CANVAS_TREE_ROOT_CLASS} ul`]: {
 							listStyle: "none",
 							m: 0,
 							p: 0,
@@ -1350,12 +1375,25 @@ export function SchemaCanvasPanel({
 						Связанные правила логики для этого поля и его потомков тоже будут
 						удалены.
 					</Typography>
+					{deleteImpactLoading ? (
+						<Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+							Проверяем связи с типовыми работами…
+						</Typography>
+					) : deleteImpact && deleteImpact.worksMatched > 0 ? (
+						<Typography variant="body2" color="error" sx={{ mt: 1 }}>
+							Будут обновлены типовые работы: {deleteImpact.worksMatched},
+							условия: {deleteImpact.rulesRemoved}, параметры трудоёмкости:{" "}
+							{deleteImpact.laborParamsRemoved}. Связанные формулы будут
+							помечены как требующие исправления.
+						</Typography>
+					) : null}
 				</DialogContent>
 				<DialogActions>
 					<Button onClick={() => setDeleteConfirm(null)}>Отмена</Button>
 					<Button
 						variant="contained"
 						color="error"
+						disabled={deleteImpactLoading}
 						data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasDeleteConfirmSubmit}
 						onClick={handleConfirmDelete}
 					>
