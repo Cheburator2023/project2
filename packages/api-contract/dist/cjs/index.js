@@ -22,6 +22,7 @@ __exportStar(require("./coefficient.types"), exports);
 __exportStar(require("./questionnaire.types"), exports);
 __exportStar(require("./v2-template.types"), exports);
 __exportStar(require("./v2-questionnaire.types"), exports);
+__exportStar(require("./v2-questionnaire-calc-name.util"), exports);
 __exportStar(require("./v2-questionnaire-registry-columns.util"), exports);
 __exportStar(require("./v2-questionnaire-registry-export.util"), exports);
 __exportStar(require("./v2-factory-snapshot.types"), exports);

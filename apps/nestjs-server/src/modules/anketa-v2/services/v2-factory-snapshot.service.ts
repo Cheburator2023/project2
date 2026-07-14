@@ -15,6 +15,7 @@ import type {
 	V2UiSchemaDto,
 } from "@smart-anketa/api-contract";
 import { patchV2AnketaCalculationLogicRules } from "@smart-anketa/api-contract";
+import { stripQuestionnaireCalcNameFromTemplateSnapshot } from "@smart-anketa/api-contract";
 import { V2_DEFAULT_TEMPLATE_SNAPSHOT } from "../constants/v2-default-template-snapshot";
 import { V2FactorySnapshotSettingEntity } from "../entities/v2-factory-snapshot-setting.entity";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
@@ -170,35 +171,36 @@ export class V2FactorySnapshotService {
 
 	private builtinSnapshot(): V2EffectiveFactorySnapshot {
 		const snap = V2_DEFAULT_TEMPLATE_SNAPSHOT;
-		return {
+		return stripQuestionnaireCalcNameFromTemplateSnapshot({
 			jsonSchema: structuredClone(snap.jsonSchema),
 			uiSchema: structuredClone(snap.uiSchema),
 			logic: structuredClone(snap.logic),
 			dictionariesSnapshot: structuredClone(snap.dictionariesSnapshot),
 			releaseNotes: snap.releaseNotes,
-		};
+		});
 	}
 
 	private versionToSnapshot(
 		version: V2TemplateVersionEntity,
 	): V2EffectiveFactorySnapshot {
-		return {
+		const logic = patchV2AnketaCalculationLogicRules(
+			structuredClone(version.logic ?? { rules: [] }),
+			{
+				jsonSchema: structuredClone(version.jsonSchema),
+				uiSchema: structuredClone(version.uiSchema ?? {}),
+			},
+		);
+		return stripQuestionnaireCalcNameFromTemplateSnapshot({
 			jsonSchema: structuredClone(version.jsonSchema),
 			uiSchema: structuredClone(version.uiSchema ?? {}),
-			logic: patchV2AnketaCalculationLogicRules(
-				structuredClone(version.logic ?? { rules: [] }),
-				{
-					jsonSchema: structuredClone(version.jsonSchema),
-					uiSchema: structuredClone(version.uiSchema ?? {}),
-				},
-			),
+			logic,
 			dictionariesSnapshot: structuredClone(
 				version.dictionariesSnapshot ?? { referencedDictionaryCodes: [] },
 			),
 			releaseNotes:
 				version.releaseNotes?.trim() ||
 				`Заводской эталон: версия ${version.versionNumber}`,
-		};
+		});
 	}
 
 	private async resolveTemplateVersion(

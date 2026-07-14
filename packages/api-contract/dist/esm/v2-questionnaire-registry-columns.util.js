@@ -494,7 +494,6 @@ function arrayItemCols(groupHeader, basePath, index, fields) {
 /** Статический набор колонок (fallback без схемы). */
 export function buildStaticV2QuestionnaireRegistryColumnTree() {
     const generalInfoChildren = [
-        formLeaf("generalInfo.calcName", "Название анкеты (инициативы)"),
         formLeaf("generalInfo.businessCustomer", "Заказчик"),
         formLeaf("generalInfo.implementationStream", "Стрим-исполнитель"),
         formLeaf("generalInfo.complexity", "Сложность"),

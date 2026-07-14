@@ -39,6 +39,7 @@ import {
 	applyRjsfFormChangeToAnketaFormData,
 	normalizeAnketaFormDataForRjsf,
 } from "../utils/anketaRjsfFormData.util";
+import { hideQuestionnaireCalcNameInUiSchema } from "../utils/anketaQuestionnaireMeta.util";
 import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
 
@@ -202,6 +203,7 @@ export function V2AnketaSchemaForm({
 			modalBindings.bindings,
 		);
 		ui = applySectionLocksToUiSchema(ui, workflow);
+		ui = hideQuestionnaireCalcNameInUiSchema(ui);
 		return {
 			...ui,
 			"ui:submitButtonOptions": { norender: true },

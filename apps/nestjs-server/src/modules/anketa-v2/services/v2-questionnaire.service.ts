@@ -1,5 +1,6 @@
 import {
 	BadRequestException,
+	ConflictException,
 	Injectable,
 	NotFoundException,
 } from "@nestjs/common";
@@ -144,8 +145,20 @@ export class V2QuestionnaireService {
 		const versionLabel = "1";
 		const readableId = `V2-${seriesId}-v${versionLabel}`;
 
+		const calcName = dto.calcName?.trim();
+		if (!calcName) {
+			throw new ConflictException({
+				errors: [
+					{
+						path: "calcName",
+						message: "Название анкеты обязательно",
+					},
+				],
+			});
+		}
+
 		const entity = this.questionnaireRepository.create({
-			calcName: dto.calcName?.trim() || "Новая анкета",
+			calcName,
 			status: "active",
 			version: versionLabel,
 			seriesId,

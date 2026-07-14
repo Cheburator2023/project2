@@ -766,10 +766,6 @@
 				"type": "object",
 				"title": "Общая информация",
 				"properties": {
-					"calcName": {
-						"type": "string",
-						"title": "Название анкеты"
-					},
 					"createIS": {
 						"type": "boolean",
 						"title": "Требуется создание информационной системы"
@@ -2204,19 +2200,11 @@
 			}
 		},
 		"generalInfo": {
-			"calcName": {
-				"ui:widget": "text",
-				"ui:options": {
-					"fullWidth": true
-				},
-				"ui:placeholder": "Название анкеты"
-			},
 			"createIS": {
 				"ui:options": {},
 				"ui:placeholder": "Создание ИС"
 			},
 			"ui:order": [
-				"calcName",
 				"businessCustomer",
 				"implementationStream",
 				"complexity",

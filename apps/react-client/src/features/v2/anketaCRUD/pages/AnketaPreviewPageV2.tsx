@@ -6,7 +6,7 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import { toast } from "@react-client/common/toasts";
 import { AnketaFormShell } from "@react-client/features/v2/anketaCRUD/templates/AnketaFormShell";
 import { useV2AnketaSchemaEngine } from "@react-client/features/v2/anketaCRUD/hooks/useV2AnketaSchemaEngine";
-import { getV2QuestionnaireFormTitle } from "@react-client/features/v2/anketaCRUD/utils/v2QuestionnaireFormTitle";
+import { stripQuestionnaireCalcNameFromFormData } from "@react-client/features/v2/anketaCRUD/utils/anketaQuestionnaireMeta.util";
 import { useMemo } from "react";
 import { useParams } from "react-router";
 
@@ -41,11 +41,10 @@ export const AnketaPreviewPageV2 = () => {
 			{
 				id,
 				body: {
-					calcName: getV2QuestionnaireFormTitle(
+					calcName: formPackage.questionnaire.calcName,
+					formData: stripQuestionnaireCalcNameFromFormData(
 						engine.displayFormData,
-						formPackage.questionnaire.calcName,
 					),
-					formData: engine.displayFormData,
 					finalCoefficient: null,
 				},
 			},
