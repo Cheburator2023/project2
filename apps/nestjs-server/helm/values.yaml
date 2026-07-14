@@ -9,6 +9,43 @@ image:
   tag: v1.0.0
   pullPolicy: Always
 
+auditSidecar:
+  enabled: false
+  name: audit-proxy
+  image:
+    repository: ""
+    tag: v1.0.17
+    pullPolicy: Always
+  ports: []
+  readinessProbe:
+    tcpSocket:
+      port: 8081
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+  livenessProbe:
+    tcpSocket:
+      port: 8081
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+  env:
+    SPRING_PROFILES_ACTIVE: dev
+    KAFKA_BOOTSTRAP_SERVERS: omni1-emulator-kafka:9092
+    MS_PROPERTIES_INFO_SYSTEM_CODE: SUMD
+    MS_PROPERTIES_INFO_SYSTEM_ID: "1661"
+  extraEnv: []
+  volumeMounts: []
+  volumes: []
+  resources: {}
+
+extraEnv: []
+extraVolumes: []
+
 resources:
   requests:
     cpu: "300m"
