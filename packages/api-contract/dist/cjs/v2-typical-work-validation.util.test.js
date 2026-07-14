@@ -361,6 +361,31 @@ const v2_work_terms_formula_util_1 = require("./v2-work-terms-formula.util");
         });
         (0, vitest_1.expect)(issues.filter((issue) => issue.path === "formula")).toEqual([]);
     });
+    (0, vitest_1.it)("rejects formula with negative effort for active norm (N − 30)", () => {
+        const issues = (0, v2_typical_work_validation_util_1.collectTypicalWorkPatchValidationErrors)({
+            streamExecutor: "ИД. Внутренний",
+            formula: {
+                tokens: [
+                    { kind: "norm" },
+                    { kind: "operator", op: "-" },
+                    { kind: "number", value: 30 },
+                ],
+                text: "N − 30",
+            },
+            rounding: { mode: "CEIL", step: 1 },
+            norms: [
+                {
+                    normValue: 20,
+                    validFrom: "2020-01-01",
+                    validTo: null,
+                },
+            ],
+        }, { coverageDate: "2025-06-01" });
+        (0, vitest_1.expect)(issues).toContainEqual(vitest_1.expect.objectContaining({
+            path: "formula",
+            message: vitest_1.expect.stringMatching(/не может быть отрицательным/i),
+        }));
+    });
 });
 (0, vitest_1.describe)("isTypicalWorkParameterValueActiveOnDate", () => {
     (0, vitest_1.it)("checks inclusive validFrom/validTo window", () => {

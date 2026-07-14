@@ -13,6 +13,8 @@ exports.validateWorkFormulaTokens = validateWorkFormulaTokens;
 exports.isParamUsedInFormula = isParamUsedInFormula;
 exports.markFormulaParamInvalid = markFormulaParamInvalid;
 exports.evaluateWorkFormula = evaluateWorkFormula;
+exports.clampTypicalWorkEffort = clampTypicalWorkEffort;
+exports.roundWorkEffortValue = roundWorkEffortValue;
 exports.applyWorkRounding = applyWorkRounding;
 exports.previewWorkFormula = previewWorkFormula;
 const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
@@ -697,7 +699,14 @@ function evaluateWorkFormula(formula, ctx) {
         error: null,
     };
 }
-function applyWorkRounding(value, rounding) {
+/** Трудозатраты (ч/д) не могут быть отрицательными. */
+function clampTypicalWorkEffort(value) {
+    if (!Number.isFinite(value))
+        return 0;
+    return Math.max(0, value);
+}
+/** Округление без ограничения снизу — для валидации формулы перед сохранением. */
+function roundWorkEffortValue(value, rounding) {
     if (rounding.mode === "NONE")
         return value;
     const step = rounding.step ?? 0.1;
@@ -714,6 +723,9 @@ function applyWorkRounding(value, rounding) {
         default:
             return value;
     }
+}
+function applyWorkRounding(value, rounding) {
+    return clampTypicalWorkEffort(roundWorkEffortValue(value, rounding));
 }
 function previewWorkFormula(formula, rounding, ctx) {
     const evaluated = evaluateWorkFormula(formula, ctx);

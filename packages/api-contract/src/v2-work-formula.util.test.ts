@@ -152,6 +152,12 @@ describe("v2-work-formula.util", () => {
 		expect(applyWorkRounding(1.23, { mode: "NONE", step: null })).toBe(1.23);
 	});
 
+	it("applyWorkRounding clamps negative effort to zero", () => {
+		expect(applyWorkRounding(-5, { mode: "NONE", step: null })).toBe(0);
+		expect(applyWorkRounding(-5, { mode: "CEIL", step: 1 })).toBe(0);
+		expect(applyWorkRounding(20.55 - 30, { mode: "CEIL", step: 1 })).toBe(0);
+	});
+
 	it("validateWorkFormulaTokens catches double operator", () => {
 		const err = validateWorkFormulaTokens([
 			{ kind: "norm" },

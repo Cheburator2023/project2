@@ -1,4 +1,4 @@
-import type { V2LogicGraphDto, V2LogicRuleDto } from "./v2-template.types";
+import type { V2JsonLogicValue, V2LogicGraphDto, V2LogicRuleDto } from "./v2-template.types";
 import { V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH, V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH } from "./v2-typical-work-output-paths.util";
 /** Заменяет dot-путь в JsonLogic (`{"var": "a.b.c"}` и вложенные узлы). */
 export declare function replaceDotPathInJsonLogic(value: unknown, oldPath: string, newPath: string): unknown;
@@ -16,6 +16,11 @@ export declare function buildSourceTypicalWorksCatalogRule(outputArrayPath?: str
 }): V2LogicRuleDto;
 export declare function buildControlTypicalWorksCatalogRule(): V2LogicRuleDto;
 export declare function isTypicalWorksCatalogLogicRule(rule: V2LogicRuleDto): boolean;
+/**
+ * Итог строки типовой работы: для строк каталога (workId) сохраняем уже
+ * округлённый total; иначе estimate × coefficient (ручные/legacy строки).
+ */
+export declare function buildTypicalWorkRowTotalCondition(): V2JsonLogicValue;
 export declare function buildTypicalWorkRowTotalRule(arrayPath: string): V2LogicRuleDto;
 export declare function buildUnifiedTypicalTotalRule(arrayPaths: string[]): V2LogicRuleDto | null;
 /** Схема содержит блок типовых работ (archComponent: typicalWork) — достаточно для каталога. */

@@ -40,6 +40,8 @@ const v2_default_typical_works_logic_util_1 = require("./v2-default-typical-work
         };
         const patched = (0, v2_default_typical_works_logic_util_1.patchV2TypicalWorksLogicRules)({ rules: [] }, { uiSchema: ui });
         (0, vitest_1.expect)(patched.rules.some((rule) => rule.id === "unified-typical-row-total:field_pirm_myTypical")).toBe(true);
+        const rowRule = patched.rules.find((rule) => rule.id === "unified-typical-row-total:field_pirm_myTypical");
+        (0, vitest_1.expect)(rowRule?.condition).toEqual((0, v2_default_typical_works_logic_util_1.buildTypicalWorkRowTotalCondition)());
         const unified = patched.rules.find((rule) => rule.id === "unified-typical-total");
         (0, vitest_1.expect)(unified?.dependencies).toEqual(vitest_1.expect.arrayContaining([
             "/streamDataSources/sourceTypicalTasks",

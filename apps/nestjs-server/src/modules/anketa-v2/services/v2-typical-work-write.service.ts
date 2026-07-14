@@ -51,6 +51,7 @@ import {
 	validateCoefficientValue,
 	validateFormulaAgainstParams,
 	validateFormulaAgainstLaborParams,
+	validateFormulaNonNegativeEffort,
 	laborParamRefsFromPatchGroups,
 	validateNormInputs,
 	validateRoundingInput,
@@ -511,6 +512,19 @@ export class V2TypicalWorkWriteService {
 					);
 				}
 			}
+		}
+
+		if ((dto.formula || dto.formulaTerms) && dto.norms?.length) {
+			errors.push(
+				...validateFormulaNonNegativeEffort({
+					formula: dto.formula,
+					formulaTerms: dto.formulaTerms,
+					rounding: dto.rounding,
+					norms: dto.norms,
+					laborParams: dto.laborParams,
+					coverageDate: new Date().toISOString().slice(0, 10),
+				}),
+			);
 		}
 
 		if (errors.length) {

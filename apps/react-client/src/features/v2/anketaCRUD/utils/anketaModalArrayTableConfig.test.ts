@@ -21,6 +21,22 @@ describe("typical work table helpers", () => {
 		).toBe(3.2);
 	});
 
+	it("normalizes float artifacts when summing typical work totals", () => {
+		expect(
+			sumTypicalWorkTotals([{ total: 20.999999999999996 }]),
+		).toBe(21);
+		expect(
+			sumTypicalWorkTotals([
+				{ total: 10.000000000000002 },
+				{ total: 10.999999999999996 },
+			]),
+		).toBe(21);
+	});
+
+	it("ignores negative totals in summary sum", () => {
+		expect(sumTypicalWorkTotals([{ total: -5 }])).toBe(0);
+	});
+
 	it("collects and filters by sourceName", () => {
 		const items = [
 			{ sourceName: "CRM", total: 1 },
@@ -81,6 +97,7 @@ describe("typical work table helpers", () => {
 
 	it("formats summary total for canvas and table footer", () => {
 		expect(formatTypicalWorkSummaryTotal(12.5)).toBe("12.5");
+		expect(formatTypicalWorkSummaryTotal(20.999999999999996)).toBe("21");
 		expect(formatTypicalWorkSummaryTotal(null)).toBe("—");
 		expect(formatTypicalWorkSummaryTotal(null, { loading: true })).toBe("…");
 		expect(formatTypicalWorkSummaryTotal(3, { loading: true })).toBe("3");

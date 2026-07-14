@@ -822,7 +822,14 @@ export function evaluateWorkFormula(
 	};
 }
 
-export function applyWorkRounding(
+/** Трудозатраты (ч/д) не могут быть отрицательными. */
+export function clampTypicalWorkEffort(value: number): number {
+	if (!Number.isFinite(value)) return 0;
+	return Math.max(0, value);
+}
+
+/** Округление без ограничения снизу — для валидации формулы перед сохранением. */
+export function roundWorkEffortValue(
 	value: number,
 	rounding: V2TypicalWorkRoundingDto,
 ): number {
@@ -840,6 +847,13 @@ export function applyWorkRounding(
 		default:
 			return value;
 	}
+}
+
+export function applyWorkRounding(
+	value: number,
+	rounding: V2TypicalWorkRoundingDto,
+): number {
+	return clampTypicalWorkEffort(roundWorkEffortValue(value, rounding));
 }
 
 export function previewWorkFormula(

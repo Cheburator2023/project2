@@ -359,6 +359,31 @@ describe("collectTypicalWorkPatchValidationErrors", () => {
         });
         expect(issues.filter((issue) => issue.path === "formula")).toEqual([]);
     });
+    it("rejects formula with negative effort for active norm (N − 30)", () => {
+        const issues = collectTypicalWorkPatchValidationErrors({
+            streamExecutor: "ИД. Внутренний",
+            formula: {
+                tokens: [
+                    { kind: "norm" },
+                    { kind: "operator", op: "-" },
+                    { kind: "number", value: 30 },
+                ],
+                text: "N − 30",
+            },
+            rounding: { mode: "CEIL", step: 1 },
+            norms: [
+                {
+                    normValue: 20,
+                    validFrom: "2020-01-01",
+                    validTo: null,
+                },
+            ],
+        }, { coverageDate: "2025-06-01" });
+        expect(issues).toContainEqual(expect.objectContaining({
+            path: "formula",
+            message: expect.stringMatching(/не может быть отрицательным/i),
+        }));
+    });
 });
 describe("isTypicalWorkParameterValueActiveOnDate", () => {
     it("checks inclusive validFrom/validTo window", () => {

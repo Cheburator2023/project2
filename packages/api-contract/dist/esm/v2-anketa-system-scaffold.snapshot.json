@@ -1,522 +1,522 @@
 {
-    "jsonSchemaProperties": {
-        "workflow": {
-            "type": "object",
-            "title": "Статусы заполнения",
-            "properties": {
-                "globalStatus": {
-                    "type": "string",
-                    "title": "Глобальный статус",
-                    "enum": [
-                        "Черновик",
-                        "Заполнено"
-                    ],
-                    "default": "Черновик",
-                    "readOnly": true
-                },
-                "sections": {
-                    "type": "object",
-                    "title": "Статусы разделов",
-                    "readOnly": true,
-                    "properties": {
-                        "generalInfo": {
-                            "type": "string",
-                            "enum": [
-                                "Создано",
-                                "В работе",
-                                "Заполнено"
-                            ],
-                            "default": "Создано"
-                        },
-                        "detailInfo": {
-                            "type": "string",
-                            "enum": [
-                                "Создано",
-                                "В работе",
-                                "Заполнено"
-                            ],
-                            "default": "Создано"
-                        },
-                        "streamDataSources": {
-                            "type": "string",
-                            "enum": [
-                                "Создано",
-                                "В работе",
-                                "Заполнено"
-                            ],
-                            "default": "Создано"
-                        },
-                        "streamModelControl": {
-                            "type": "string",
-                            "enum": [
-                                "Создано",
-                                "В работе",
-                                "Заполнено"
-                            ],
-                            "default": "Создано"
-                        }
-                    }
-                }
-            }
-        },
-        "meta": {
-            "type": "object",
-            "title": "Мета",
-            "properties": {
-                "id": {
-                    "type": "string",
-                    "title": "Идентификатор",
-                    "readOnly": true
-                },
-                "name": {
-                    "type": "string",
-                    "title": "Наименование анкеты"
-                },
-                "version": {
-                    "type": "integer",
-                    "title": "Версия"
-                },
-                "status": {
-                    "type": "string",
-                    "title": "Статус",
-                    "enum": [
-                        "Активная",
-                        "Архив"
-                    ],
-                    "default": "Активная"
-                }
-            }
-        },
-        "groupActivation": {
-            "type": "object",
-            "title": "Активность групп",
-            "additionalProperties": {
-                "type": "boolean"
-            }
-        },
-        "uncertaintyCalculation": {
-            "type": "object",
-            "title": "Данные расчёта неопределённости",
-            "properties": {
-                "initiativeTimeline": {
-                    "type": "string",
-                    "title": "Сроки инициативы"
-                },
-                "initiativeCost": {
-                    "type": "string",
-                    "title": "Стоимость инициативы"
-                },
-                "uncertaintyAdjustment": {
-                    "type": "number",
-                    "title": "Поправка на общую неопределённость",
-                    "minimum": 0,
-                    "maximum": 30
-                },
-                "riskGroup": {
-                    "type": "object",
-                    "title": "Группа рисков",
-                    "properties": {
-                        "businessComplexity": {
-                            "type": "string",
-                            "title": "Изменение, недостаточная проработка или сложности бизнес процессов Банка",
-                            "enum": [
-                                "Низкий",
-                                "Средний",
-                                "Высокий"
-                            ]
-                        },
-                        "defectsInSolution": {
-                            "type": "string",
-                            "title": "Наличие дефектов во внедряемом решении/ ПО в рамках проекта",
-                            "enum": [
-                                "Низкий",
-                                "Средний",
-                                "Высокий"
-                            ]
-                        },
-                        "adjacentProjectsImpact": {
-                            "type": "string",
-                            "title": "Негативное влияние смежных проектов на показатели проекта",
-                            "enum": [
-                                "Низкий",
-                                "Средний",
-                                "Высокий"
-                            ]
-                        },
-                        "laborCostIncrease": {
-                            "type": "string",
-                            "title": "Увеличение трудозатрат проекта по причине недостаточной проработки требований на этапе планирования проекта",
-                            "enum": [
-                                "Низкий",
-                                "Средний",
-                                "Высокий"
-                            ]
-                        },
-                        "thirdPartyNegligence": {
-                            "type": "string",
-                            "title": "Недобросовестное исполнение услуг со стороны привлеченных контрагентов/ подрядчиков",
-                            "enum": [
-                                "Низкий",
-                                "Средний",
-                                "Высокий"
-                            ]
-                        },
-                        "staffShortage": {
-                            "type": "string",
-                            "title": "Отсутствие квалифицированного персонала или ошибок персонала",
-                            "enum": [
-                                "Низкий",
-                                "Средний",
-                                "Высокий"
-                            ]
-                        },
-                        "sanctions": {
-                            "type": "string",
-                            "title": "Введение санкционных мер и других ограничений",
-                            "enum": [
-                                "Низкий",
-                                "Средний",
-                                "Высокий"
-                            ]
-                        },
-                        "controlProceduresLack": {
-                            "type": "string",
-                            "title": "Недостаток или отсутствие контрольных процедур",
-                            "enum": [
-                                "Низкий",
-                                "Средний",
-                                "Высокий"
-                            ]
-                        },
-                        "regulatoryChanges": {
-                            "type": "string",
-                            "title": "Изменение регуляторных требований",
-                            "enum": [
-                                "Низкий",
-                                "Средний",
-                                "Высокий"
-                            ]
-                        },
-                        "isNotUsedAfterProject": {
-                            "type": "string",
-                            "title": "Неиспользование ИС после завершения проекта",
-                            "enum": [
-                                "Низкий",
-                                "Средний",
-                                "Высокий"
-                            ]
-                        },
-                        "itArchitectureChanges": {
-                            "type": "string",
-                            "title": "Изменения целевой ИТ архитектуры Банка",
-                            "enum": [
-                                "Низкий",
-                                "Средний",
-                                "Высокий"
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "summary": {
-            "type": "object",
-            "title": "Итоговая оценка",
-            "readOnly": true,
-            "properties": {
-                "total": {
-                    "type": "number",
-                    "title": "Итоговая оценка трудоёмкости (Total), ч/д",
-                    "readOnly": true
-                },
-                "typicalTotal": {
-                    "type": "number",
-                    "title": "Сумма по типовым работам, ч/д",
-                    "readOnly": true
-                },
-                "atypicalTotal": {
-                    "type": "number",
-                    "title": "Сумма по нетиповым работам, ч/д",
-                    "readOnly": true
-                },
-                "baseScoreStream": {
-                    "type": "number",
-                    "title": "Базовая оценка по стриму (СФЕРА)",
-                    "readOnly": true
-                },
-                "scoreWithComplexityCoeff": {
-                    "type": "number",
-                    "title": "Оценка с поправкой на коэффициент сложности",
-                    "readOnly": true
-                },
-                "deviationFromBaseline": {
-                    "type": "number",
-                    "title": "Отклонение относительно базовой оценки по стриму (СФЕРА), %",
-                    "readOnly": true
-                },
-                "detailedCalculation": {
-                    "type": "array",
-                    "title": "Подробный расчёт",
-                    "readOnly": true,
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "stageName": {
-                                "type": "string",
-                                "title": "Наименование этапа E2E планирования"
-                            },
-                            "baseScore": {
-                                "type": "number",
-                                "title": "Базовая оценка по стриму (СФЕРА)"
-                            },
-                            "complexityCoeff": {
-                                "type": "number",
-                                "title": "Оценка с поправкой на коэффициент сложности"
-                            },
-                            "deviationFromBase": {
-                                "type": "number",
-                                "title": "Отклонение относительно базовой оценки по стриму (СФЕРА), %"
-                            }
-                        }
-                    }
-                },
-                "platformStreams": {
-                    "type": "array",
-                    "title": "Платформенные стримы",
-                    "readOnly": true,
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "streamName": {
-                                "type": "string",
-                                "title": "Наименование стрима"
-                            },
-                            "baseTypicalScore": {
-                                "type": "number",
-                                "title": "Базовая оценка (типовые)"
-                            },
-                            "adjustedTypicalScore": {
-                                "type": "number",
-                                "title": "Оценка с поправкой (типовые)"
-                            },
-                            "deviationPercent": {
-                                "type": "number",
-                                "title": "Отклонение, %"
-                            },
-                            "atypicalScore": {
-                                "type": "number",
-                                "title": "Оценка нетиповых задач"
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    },
-    "uiSchema": {
-        "ui:order": [
-            "workflow",
-            "meta",
-            "groupActivation",
-            "uncertaintyCalculation",
-            "summary"
-        ],
-        "workflow": {
-            "ui:options": {
-                "hidden": true,
-                "system": true
-            }
-        },
-        "meta": {
-            "ui:options": {
-                "hidden": true,
-                "system": true
-            },
-            "ui:order": [
-                "id",
-                "name",
-                "version",
-                "status"
-            ],
-            "id": {
-                "ui:widget": "text",
-                "ui:readonly": true
-            },
-            "name": {
-                "ui:widget": "text",
-                "ui:placeholder": "Наименование анкеты"
-            },
-            "version": {
-                "ui:widget": "updown",
-                "ui:readonly": true
-            },
-            "status": {
-                "ui:widget": "select"
-            }
-        },
-        "groupActivation": {
-            "ui:options": {
-                "hidden": true,
-                "system": true
-            }
-        },
-        "uncertaintyCalculation": {
-            "ui:options": {
-                "hidden": true,
-                "system": true
-            },
-            "ui:order": [
-                "initiativeTimeline",
-                "initiativeCost",
-                "uncertaintyAdjustment",
-                "riskGroup"
-            ],
-            "initiativeTimeline": {
-                "ui:widget": "select",
-                "ui:options": {
-                    "dictionaryCode": "v2.method.21.сроки_инициативы"
-                }
-            },
-            "initiativeCost": {
-                "ui:widget": "select",
-                "ui:options": {
-                    "dictionaryCode": "v2.method.22.стоимость_инициативы"
-                }
-            },
-            "uncertaintyAdjustment": {
-                "ui:widget": "NumberInputWidget",
-                "ui:options": {
-                    "suffix": "%"
-                }
-            },
-            "riskGroup": {
-                "ui:order": [
-                    "businessComplexity",
-                    "defectsInSolution",
-                    "adjacentProjectsImpact",
-                    "laborCostIncrease",
-                    "thirdPartyNegligence",
-                    "staffShortage",
-                    "sanctions",
-                    "controlProceduresLack",
-                    "regulatoryChanges",
-                    "isNotUsedAfterProject",
-                    "itArchitectureChanges"
-                ],
-                "businessComplexity": {
-                    "ui:widget": "select"
-                },
-                "defectsInSolution": {
-                    "ui:widget": "select"
-                },
-                "adjacentProjectsImpact": {
-                    "ui:widget": "select"
-                },
-                "laborCostIncrease": {
-                    "ui:widget": "select"
-                },
-                "thirdPartyNegligence": {
-                    "ui:widget": "select"
-                },
-                "staffShortage": {
-                    "ui:widget": "select"
-                },
-                "sanctions": {
-                    "ui:widget": "select"
-                },
-                "controlProceduresLack": {
-                    "ui:widget": "select"
-                },
-                "regulatoryChanges": {
-                    "ui:widget": "select"
-                },
-                "isNotUsedAfterProject": {
-                    "ui:widget": "select"
-                },
-                "itArchitectureChanges": {
-                    "ui:widget": "select"
-                }
-            }
-        },
-        "summary": {
-            "ui:readonly": true,
-            "ui:options": {
-                "hidden": true,
-                "system": true
-            },
-            "ui:order": [
-                "baseScoreStream",
-                "scoreWithComplexityCoeff",
-                "deviationFromBaseline",
-                "detailedCalculation",
-                "platformStreams"
-            ],
-            "baseScoreStream": {
-                "ui:widget": "text",
-                "ui:readonly": true
-            },
-            "scoreWithComplexityCoeff": {
-                "ui:widget": "text",
-                "ui:readonly": true
-            },
-            "deviationFromBaseline": {
-                "ui:widget": "text",
-                "ui:readonly": true
-            },
-            "detailedCalculation": {
-                "ui:options": {
-                    "orderable": false,
-                    "addable": false,
-                    "removable": false
-                },
-                "items": {
-                    "stageName": {
-                        "ui:widget": "text",
-                        "ui:readonly": true
-                    },
-                    "baseScore": {
-                        "ui:widget": "text",
-                        "ui:readonly": true
-                    },
-                    "complexityCoeff": {
-                        "ui:widget": "text",
-                        "ui:readonly": true
-                    },
-                    "deviationFromBase": {
-                        "ui:widget": "text",
-                        "ui:readonly": true
-                    }
-                }
-            },
-            "platformStreams": {
-                "ui:options": {
-                    "orderable": false,
-                    "addable": false,
-                    "removable": false
-                },
-                "items": {
-                    "streamName": {
-                        "ui:widget": "text",
-                        "ui:readonly": true
-                    },
-                    "baseTypicalScore": {
-                        "ui:widget": "text",
-                        "ui:readonly": true
-                    },
-                    "adjustedTypicalScore": {
-                        "ui:widget": "text",
-                        "ui:readonly": true
-                    },
-                    "deviationPercent": {
-                        "ui:widget": "text",
-                        "ui:readonly": true
-                    },
-                    "atypicalScore": {
-                        "ui:widget": "text",
-                        "ui:readonly": true
-                    }
-                }
-            }
-        }
-    }
+	"jsonSchemaProperties": {
+		"workflow": {
+			"type": "object",
+			"title": "Статусы заполнения",
+			"properties": {
+				"globalStatus": {
+					"type": "string",
+					"title": "Глобальный статус",
+					"enum": [
+						"Черновик",
+						"Заполнено"
+					],
+					"default": "Черновик",
+					"readOnly": true
+				},
+				"sections": {
+					"type": "object",
+					"title": "Статусы разделов",
+					"readOnly": true,
+					"properties": {
+						"generalInfo": {
+							"type": "string",
+							"enum": [
+								"Создано",
+								"В работе",
+								"Заполнено"
+							],
+							"default": "Создано"
+						},
+						"detailInfo": {
+							"type": "string",
+							"enum": [
+								"Создано",
+								"В работе",
+								"Заполнено"
+							],
+							"default": "Создано"
+						},
+						"streamDataSources": {
+							"type": "string",
+							"enum": [
+								"Создано",
+								"В работе",
+								"Заполнено"
+							],
+							"default": "Создано"
+						},
+						"streamModelControl": {
+							"type": "string",
+							"enum": [
+								"Создано",
+								"В работе",
+								"Заполнено"
+							],
+							"default": "Создано"
+						}
+					}
+				}
+			}
+		},
+		"meta": {
+			"type": "object",
+			"title": "Мета",
+			"properties": {
+				"id": {
+					"type": "string",
+					"title": "Идентификатор",
+					"readOnly": true
+				},
+				"name": {
+					"type": "string",
+					"title": "Наименование анкеты"
+				},
+				"version": {
+					"type": "integer",
+					"title": "Версия"
+				},
+				"status": {
+					"type": "string",
+					"title": "Статус",
+					"enum": [
+						"Активная",
+						"Архив"
+					],
+					"default": "Активная"
+				}
+			}
+		},
+		"groupActivation": {
+			"type": "object",
+			"title": "Активность групп",
+			"additionalProperties": {
+				"type": "boolean"
+			}
+		},
+		"uncertaintyCalculation": {
+			"type": "object",
+			"title": "Данные расчёта неопределённости",
+			"properties": {
+				"initiativeTimeline": {
+					"type": "string",
+					"title": "Сроки инициативы"
+				},
+				"initiativeCost": {
+					"type": "string",
+					"title": "Стоимость инициативы"
+				},
+				"uncertaintyAdjustment": {
+					"type": "number",
+					"title": "Поправка на общую неопределённость",
+					"minimum": 0,
+					"maximum": 30
+				},
+				"riskGroup": {
+					"type": "object",
+					"title": "Группа рисков",
+					"properties": {
+						"businessComplexity": {
+							"type": "string",
+							"title": "Изменение, недостаточная проработка или сложности бизнес процессов Банка",
+							"enum": [
+								"Низкий",
+								"Средний",
+								"Высокий"
+							]
+						},
+						"defectsInSolution": {
+							"type": "string",
+							"title": "Наличие дефектов во внедряемом решении/ ПО в рамках проекта",
+							"enum": [
+								"Низкий",
+								"Средний",
+								"Высокий"
+							]
+						},
+						"adjacentProjectsImpact": {
+							"type": "string",
+							"title": "Негативное влияние смежных проектов на показатели проекта",
+							"enum": [
+								"Низкий",
+								"Средний",
+								"Высокий"
+							]
+						},
+						"laborCostIncrease": {
+							"type": "string",
+							"title": "Увеличение трудозатрат проекта по причине недостаточной проработки требований на этапе планирования проекта",
+							"enum": [
+								"Низкий",
+								"Средний",
+								"Высокий"
+							]
+						},
+						"thirdPartyNegligence": {
+							"type": "string",
+							"title": "Недобросовестное исполнение услуг со стороны привлеченных контрагентов/ подрядчиков",
+							"enum": [
+								"Низкий",
+								"Средний",
+								"Высокий"
+							]
+						},
+						"staffShortage": {
+							"type": "string",
+							"title": "Отсутствие квалифицированного персонала или ошибок персонала",
+							"enum": [
+								"Низкий",
+								"Средний",
+								"Высокий"
+							]
+						},
+						"sanctions": {
+							"type": "string",
+							"title": "Введение санкционных мер и других ограничений",
+							"enum": [
+								"Низкий",
+								"Средний",
+								"Высокий"
+							]
+						},
+						"controlProceduresLack": {
+							"type": "string",
+							"title": "Недостаток или отсутствие контрольных процедур",
+							"enum": [
+								"Низкий",
+								"Средний",
+								"Высокий"
+							]
+						},
+						"regulatoryChanges": {
+							"type": "string",
+							"title": "Изменение регуляторных требований",
+							"enum": [
+								"Низкий",
+								"Средний",
+								"Высокий"
+							]
+						},
+						"isNotUsedAfterProject": {
+							"type": "string",
+							"title": "Неиспользование ИС после завершения проекта",
+							"enum": [
+								"Низкий",
+								"Средний",
+								"Высокий"
+							]
+						},
+						"itArchitectureChanges": {
+							"type": "string",
+							"title": "Изменения целевой ИТ архитектуры Банка",
+							"enum": [
+								"Низкий",
+								"Средний",
+								"Высокий"
+							]
+						}
+					}
+				}
+			}
+		},
+		"summary": {
+			"type": "object",
+			"title": "Итоговая оценка",
+			"readOnly": true,
+			"properties": {
+				"total": {
+					"type": "number",
+					"title": "Итоговая оценка трудоёмкости (Total), ч/д",
+					"readOnly": true
+				},
+				"typicalTotal": {
+					"type": "number",
+					"title": "Сумма по типовым работам, ч/д",
+					"readOnly": true
+				},
+				"atypicalTotal": {
+					"type": "number",
+					"title": "Сумма по нетиповым работам, ч/д",
+					"readOnly": true
+				},
+				"baseScoreStream": {
+					"type": "number",
+					"title": "Базовая оценка по стриму (СФЕРА)",
+					"readOnly": true
+				},
+				"scoreWithComplexityCoeff": {
+					"type": "number",
+					"title": "Оценка с поправкой на коэффициент сложности",
+					"readOnly": true
+				},
+				"deviationFromBaseline": {
+					"type": "number",
+					"title": "Отклонение относительно базовой оценки по стриму (СФЕРА), %",
+					"readOnly": true
+				},
+				"detailedCalculation": {
+					"type": "array",
+					"title": "Подробный расчёт",
+					"readOnly": true,
+					"items": {
+						"type": "object",
+						"properties": {
+							"stageName": {
+								"type": "string",
+								"title": "Наименование этапа E2E планирования"
+							},
+							"baseScore": {
+								"type": "number",
+								"title": "Базовая оценка по стриму (СФЕРА)"
+							},
+							"complexityCoeff": {
+								"type": "number",
+								"title": "Оценка с поправкой на коэффициент сложности"
+							},
+							"deviationFromBase": {
+								"type": "number",
+								"title": "Отклонение относительно базовой оценки по стриму (СФЕРА), %"
+							}
+						}
+					}
+				},
+				"platformStreams": {
+					"type": "array",
+					"title": "Платформенные стримы",
+					"readOnly": true,
+					"items": {
+						"type": "object",
+						"properties": {
+							"streamName": {
+								"type": "string",
+								"title": "Наименование стрима"
+							},
+							"baseTypicalScore": {
+								"type": "number",
+								"title": "Базовая оценка (типовые)"
+							},
+							"adjustedTypicalScore": {
+								"type": "number",
+								"title": "Оценка с поправкой (типовые)"
+							},
+							"deviationPercent": {
+								"type": "number",
+								"title": "Отклонение, %"
+							},
+							"atypicalScore": {
+								"type": "number",
+								"title": "Оценка нетиповых задач"
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"uiSchema": {
+		"ui:order": [
+			"workflow",
+			"meta",
+			"groupActivation",
+			"uncertaintyCalculation",
+			"summary"
+		],
+		"workflow": {
+			"ui:options": {
+				"hidden": true,
+				"system": true
+			}
+		},
+		"meta": {
+			"ui:options": {
+				"hidden": true,
+				"system": true
+			},
+			"ui:order": [
+				"id",
+				"name",
+				"version",
+				"status"
+			],
+			"id": {
+				"ui:widget": "text",
+				"ui:readonly": true
+			},
+			"name": {
+				"ui:widget": "text",
+				"ui:placeholder": "Наименование анкеты"
+			},
+			"version": {
+				"ui:widget": "updown",
+				"ui:readonly": true
+			},
+			"status": {
+				"ui:widget": "select"
+			}
+		},
+		"groupActivation": {
+			"ui:options": {
+				"hidden": true,
+				"system": true
+			}
+		},
+		"uncertaintyCalculation": {
+			"ui:options": {
+				"hidden": true,
+				"system": true
+			},
+			"ui:order": [
+				"initiativeTimeline",
+				"initiativeCost",
+				"uncertaintyAdjustment",
+				"riskGroup"
+			],
+			"initiativeTimeline": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.method.21.сроки_инициативы"
+				}
+			},
+			"initiativeCost": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.method.22.стоимость_инициативы"
+				}
+			},
+			"uncertaintyAdjustment": {
+				"ui:widget": "NumberInputWidget",
+				"ui:options": {
+					"suffix": "%"
+				}
+			},
+			"riskGroup": {
+				"ui:order": [
+					"businessComplexity",
+					"defectsInSolution",
+					"adjacentProjectsImpact",
+					"laborCostIncrease",
+					"thirdPartyNegligence",
+					"staffShortage",
+					"sanctions",
+					"controlProceduresLack",
+					"regulatoryChanges",
+					"isNotUsedAfterProject",
+					"itArchitectureChanges"
+				],
+				"businessComplexity": {
+					"ui:widget": "select"
+				},
+				"defectsInSolution": {
+					"ui:widget": "select"
+				},
+				"adjacentProjectsImpact": {
+					"ui:widget": "select"
+				},
+				"laborCostIncrease": {
+					"ui:widget": "select"
+				},
+				"thirdPartyNegligence": {
+					"ui:widget": "select"
+				},
+				"staffShortage": {
+					"ui:widget": "select"
+				},
+				"sanctions": {
+					"ui:widget": "select"
+				},
+				"controlProceduresLack": {
+					"ui:widget": "select"
+				},
+				"regulatoryChanges": {
+					"ui:widget": "select"
+				},
+				"isNotUsedAfterProject": {
+					"ui:widget": "select"
+				},
+				"itArchitectureChanges": {
+					"ui:widget": "select"
+				}
+			}
+		},
+		"summary": {
+			"ui:readonly": true,
+			"ui:options": {
+				"hidden": true,
+				"system": true
+			},
+			"ui:order": [
+				"baseScoreStream",
+				"scoreWithComplexityCoeff",
+				"deviationFromBaseline",
+				"detailedCalculation",
+				"platformStreams"
+			],
+			"baseScoreStream": {
+				"ui:widget": "text",
+				"ui:readonly": true
+			},
+			"scoreWithComplexityCoeff": {
+				"ui:widget": "text",
+				"ui:readonly": true
+			},
+			"deviationFromBaseline": {
+				"ui:widget": "text",
+				"ui:readonly": true
+			},
+			"detailedCalculation": {
+				"ui:options": {
+					"orderable": false,
+					"addable": false,
+					"removable": false
+				},
+				"items": {
+					"stageName": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					},
+					"baseScore": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					},
+					"complexityCoeff": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					},
+					"deviationFromBase": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					}
+				}
+			},
+			"platformStreams": {
+				"ui:options": {
+					"orderable": false,
+					"addable": false,
+					"removable": false
+				},
+				"items": {
+					"streamName": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					},
+					"baseTypicalScore": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					},
+					"adjustedTypicalScore": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					},
+					"deviationPercent": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					},
+					"atypicalScore": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					}
+				}
+			}
+		}
+	}
 }

@@ -5,8 +5,18 @@ import type {
 	V2WorkFormulaToken,
 	V2WorkTriggerStatus,
 } from "./v2-typical-work.types";
-import { type WorkFormulaLaborParamRef, validateWorkFormulaTokens } from "./v2-work-formula.util";
-import { validateTermsFormula, termsToTokenFormula } from "./v2-work-terms-formula.util";
+import { defaultWorkRounding } from "./v2-typical-work.types";
+import {
+	evaluateWorkFormula,
+	type WorkFormulaLaborParamRef,
+	roundWorkEffortValue,
+	validateWorkFormulaTokens,
+} from "./v2-work-formula.util";
+import {
+	evaluateTermsFormula,
+	termsToTokenFormula,
+	validateTermsFormula,
+} from "./v2-work-terms-formula.util";
 import {
 	catalogValueMatchesTriggerRule,
 	isControlTypeTriggerParam,
@@ -209,6 +219,111 @@ export function validateFormulaAgainstLaborParams(
 	return err ? [{ path: "formula", message: err }] : [];
 }
 
+function resolveActiveNormValueOnDate(
+	norms: V2TypicalWorkNormInputDto[],
+	coverageDate: string,
+): number | null {
+	const day = coverageDate.slice(0, 10);
+	for (const norm of norms) {
+		const from = parseIsoDay(norm.validFrom);
+		if (!from) continue;
+		const to = norm.validTo ? parseIsoDay(norm.validTo) : null;
+		if (day < from) continue;
+		if (to && day > to) continue;
+		if (!Number.isFinite(norm.normValue) || norm.normValue < 0) continue;
+		return norm.normValue;
+	}
+	return null;
+}
+
+function maxLaborParamCoefficients(
+	laborParams: NonNullable<PatchV2TypicalWorkRequestDto["laborParams"]>,
+): Record<string, number> {
+	const map: Record<string, number> = {};
+	for (const group of laborParams) {
+		let max = 0;
+		if (group.kind === "any_of" && group.anyOf) {
+			max = Math.max(group.anyOf.coeffOn, group.anyOf.coeffOff);
+		}
+		for (const row of group.coefficients ?? []) {
+			if (Number.isFinite(row.coefficient)) {
+				max = Math.max(max, row.coefficient);
+			}
+		}
+		map[group.paramCode] = max;
+	}
+	return map;
+}
+
+const FORMULA_NEGATIVE_EFFORT_MESSAGE =
+	"Итог формулы не может быть отрицательным: трудозатраты указываются в человеко-днях (≥ 0)";
+
+/** Проверяет, что при действующей норме формула не даёт отрицательный итог (после округления). */
+export function validateFormulaNonNegativeEffort(params: {
+	formula?: PatchV2TypicalWorkRequestDto["formula"];
+	formulaTerms?: PatchV2TypicalWorkRequestDto["formulaTerms"];
+	rounding?: V2TypicalWorkRoundingDto;
+	norms: V2TypicalWorkNormInputDto[];
+	laborParams?: PatchV2TypicalWorkRequestDto["laborParams"];
+	coverageDate: string;
+}): ValidationIssue[] {
+	const normValue = resolveActiveNormValueOnDate(
+		params.norms,
+		params.coverageDate,
+	);
+	if (normValue == null) return [];
+
+	const rounding = params.rounding ?? defaultWorkRounding();
+	const paramCoefficients = params.laborParams?.length
+		? maxLaborParamCoefficients(params.laborParams)
+		: {};
+	const ctx = { norm: normValue, paramCoefficients, source: {} as Record<string, unknown> };
+
+	if (params.formulaTerms?.terms.some((term) => term.kind === "transitive")) {
+		return [];
+	}
+
+	let rounded: number | null = null;
+
+	if (params.formulaTerms) {
+		const termsError = validateTermsFormula(params.formulaTerms.terms);
+		if (termsError) return [];
+		const termsValue = evaluateTermsFormula({
+			terms: params.formulaTerms.terms,
+			baseNorm: normValue,
+			resolveFactorCoeff: (paramCode) => paramCoefficients[paramCode] ?? 0,
+		});
+		if (termsValue != null) {
+			rounded = roundWorkEffortValue(termsValue, rounding);
+		}
+	}
+
+	const tokenFormula =
+		params.formula?.tokens?.length
+			? params.formula
+			: params.formulaTerms
+				? termsToTokenFormula(params.formulaTerms)
+				: null;
+
+	if (tokenFormula?.tokens.length) {
+		const evaluated = evaluateWorkFormula(tokenFormula, ctx);
+		if (evaluated.value != null) {
+			rounded = roundWorkEffortValue(evaluated.value, rounding);
+		}
+	}
+
+	if (rounded != null && rounded < 0) {
+		return [
+			{
+				path: params.formulaTerms ? "formulaTerms" : "formula",
+				message: FORMULA_NEGATIVE_EFFORT_MESSAGE,
+			},
+		];
+	}
+
+	return [];
+}
+
 export type CollectPatchValidationOptions = {
 	coverageDate?: string;
 };
@@ -317,6 +432,19 @@ export function collectTypicalWorkPatchValidationErrors(
 				dto.formula.tokens,
 				collectAllowedParamCodes(dto.laborCoefficients),
 			),
+		);
+	}
+
+	if ((dto.formula || dto.formulaTerms) && dto.norms?.length) {
+		issues.push(
+			...validateFormulaNonNegativeEffort({
+				formula: dto.formula,
+				formulaTerms: dto.formulaTerms,
+				rounding: dto.rounding,
+				norms: dto.norms,
+				laborParams: dto.laborParams,
+				coverageDate,
+			}),
 		);
 	}
 

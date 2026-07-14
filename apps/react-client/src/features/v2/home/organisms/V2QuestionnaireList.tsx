@@ -79,6 +79,7 @@ import {
 import {
 	FACTORY_PRESET_IDS,
 	applyQuestionnaireGridPreset,
+	clearQuestionnaireGridFilters,
 	getFactoryGridPreset,
 	getFactoryGridPresets,
 	isFactoryPresetId,
@@ -220,6 +221,10 @@ function GridPresetToolPanel({
 		updatePresets(presets.filter((preset) => preset.id !== presetId));
 	};
 
+	const resetFilters = () => {
+		clearQuestionnaireGridFilters(api);
+	};
+
 	const resetGridState = () => {
 		clearAgGridColumnState(GRID_COLUMN_STATE_KEY);
 		const allInformationPreset = getFactoryGridPreset(
@@ -254,6 +259,9 @@ function GridPresetToolPanel({
 				/>
 				<Button variant="contained" size="small" onClick={savePreset}>
 					Сохранить текущий вид
+				</Button>
+				<Button variant="outlined" size="small" onClick={resetFilters}>
+					Сбросить фильтры
 				</Button>
 				<Button variant="outlined" size="small" onClick={resetGridState}>
 					Сбросить колонки и фильтры

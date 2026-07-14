@@ -1,5 +1,6 @@
-import { validateWorkFormulaTokens } from "./v2-work-formula.util";
-import { validateTermsFormula, termsToTokenFormula } from "./v2-work-terms-formula.util";
+import { defaultWorkRounding } from "./v2-typical-work.types";
+import { evaluateWorkFormula, roundWorkEffortValue, validateWorkFormulaTokens, } from "./v2-work-formula.util";
+import { evaluateTermsFormula, termsToTokenFormula, validateTermsFormula, } from "./v2-work-terms-formula.util";
 import { catalogValueMatchesTriggerRule, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, typicalWorkRulesMatchSource, } from "./v2-works-catalog-match.util";
 function parseIsoDay(value) {
     const day = value.slice(0, 10);
@@ -153,6 +154,88 @@ export function validateFormulaAgainstLaborParams(tokens, laborParams) {
     });
     return err ? [{ path: "formula", message: err }] : [];
 }
+function resolveActiveNormValueOnDate(norms, coverageDate) {
+    const day = coverageDate.slice(0, 10);
+    for (const norm of norms) {
+        const from = parseIsoDay(norm.validFrom);
+        if (!from)
+            continue;
+        const to = norm.validTo ? parseIsoDay(norm.validTo) : null;
+        if (day < from)
+            continue;
+        if (to && day > to)
+            continue;
+        if (!Number.isFinite(norm.normValue) || norm.normValue < 0)
+            continue;
+        return norm.normValue;
+    }
+    return null;
+}
+function maxLaborParamCoefficients(laborParams) {
+    const map = {};
+    for (const group of laborParams) {
+        let max = 0;
+        if (group.kind === "any_of" && group.anyOf) {
+            max = Math.max(group.anyOf.coeffOn, group.anyOf.coeffOff);
+        }
+        for (const row of group.coefficients ?? []) {
+            if (Number.isFinite(row.coefficient)) {
+                max = Math.max(max, row.coefficient);
+            }
+        }
+        map[group.paramCode] = max;
+    }
+    return map;
+}
+const FORMULA_NEGATIVE_EFFORT_MESSAGE = "Итог формулы не может быть отрицательным: трудозатраты указываются в человеко-днях (≥ 0)";
+/** Проверяет, что при действующей норме формула не даёт отрицательный итог (после округления). */
+export function validateFormulaNonNegativeEffort(params) {
+    const normValue = resolveActiveNormValueOnDate(params.norms, params.coverageDate);
+    if (normValue == null)
+        return [];
+    const rounding = params.rounding ?? defaultWorkRounding();
+    const paramCoefficients = params.laborParams?.length
+        ? maxLaborParamCoefficients(params.laborParams)
+        : {};
+    const ctx = { norm: normValue, paramCoefficients, source: {} };
+    if (params.formulaTerms?.terms.some((term) => term.kind === "transitive")) {
+        return [];
+    }
+    let rounded = null;
+    if (params.formulaTerms) {
+        const termsError = validateTermsFormula(params.formulaTerms.terms);
+        if (termsError)
+            return [];
+        const termsValue = evaluateTermsFormula({
+            terms: params.formulaTerms.terms,
+            baseNorm: normValue,
+            resolveFactorCoeff: (paramCode) => paramCoefficients[paramCode] ?? 0,
+        });
+        if (termsValue != null) {
+            rounded = roundWorkEffortValue(termsValue, rounding);
+        }
+    }
+    const tokenFormula = params.formula?.tokens?.length
+        ? params.formula
+        : params.formulaTerms
+            ? termsToTokenFormula(params.formulaTerms)
+            : null;
+    if (tokenFormula?.tokens.length) {
+        const evaluated = evaluateWorkFormula(tokenFormula, ctx);
+        if (evaluated.value != null) {
+            rounded = roundWorkEffortValue(evaluated.value, rounding);
+        }
+    }
+    if (rounded != null && rounded < 0) {
+        return [
+            {
+                path: params.formulaTerms ? "formulaTerms" : "formula",
+                message: FORMULA_NEGATIVE_EFFORT_MESSAGE,
+            },
+        ];
+    }
+    return [];
+}
 /** Клиентская валидация PATCH типовой работы перед автосохранением. */
 export function collectTypicalWorkPatchValidationErrors(dto, options) {
     const issues = [];
@@ -209,6 +292,16 @@ export function collectTypicalWorkPatchValidationErrors(dto, options) {
     }
     if (dto.formula && dto.laborCoefficients) {
         issues.push(...validateFormulaAgainstParams(dto.formula.tokens, collectAllowedParamCodes(dto.laborCoefficients)));
+    }
+    if ((dto.formula || dto.formulaTerms) && dto.norms?.length) {
+        issues.push(...validateFormulaNonNegativeEffort({
+            formula: dto.formula,
+            formulaTerms: dto.formulaTerms,
+            rounding: dto.rounding,
+            norms: dto.norms,
+            laborParams: dto.laborParams,
+            coverageDate,
+        }));
     }
     return issues;
 }
