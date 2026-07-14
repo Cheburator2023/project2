@@ -185,6 +185,10 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 	const selectLabelSlotProps = {
 		inputLabel: { shrink: true },
 	};
+	const showInputPlaceholder = !isSelect && Boolean(placeholder?.trim());
+	const textInputLabelSlotProps = showInputPlaceholder
+		? { inputLabel: { shrink: true } }
+		: undefined;
 
 	const isFuzzy = isSelect && isMultiple;
 
@@ -536,7 +540,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 				},
 			}}
 			slotProps={{
-				...(isSelect ? selectLabelSlotProps : {}),
+				...(isSelect ? selectLabelSlotProps : textInputLabelSlotProps),
 				select: {
 					displayEmpty: isSelect && !!selectPlaceholder,
 					renderValue: (selected: unknown) => {

@@ -776,7 +776,7 @@ export function SchemaPropertiesPanel() {
 	const showLayoutOptions = fieldKind === "layout";
 	const showArrayOptions = fieldKind === "array" || fieldKind === "arch-array";
 	const showPlaceholderField =
-		fieldKind === "primitive" ||
+		(fieldKind === "primitive" && primitiveTypeVariant !== "boolean") ||
 		showArrayOptions ||
 		fieldKind === "general-uncertainty";
 	const workArch = isWorkArchComponent(archComponent);

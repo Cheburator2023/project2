@@ -1,11 +1,10 @@
 import Checkbox from "@mui/material/Checkbox";
-import FormControl from "@mui/material/FormControl";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import FormHelperText from "@mui/material/FormHelperText";
+import Typography from "@mui/material/Typography";
 import type { WidgetProps } from "@rjsf/utils";
 import { InlineLabelWithTooltip } from "./FieldLabelWithTooltip";
 
-/** Да/нет с иконкой подсказки у подписи. */
+/** Да/нет с иконкой подсказки у подписи и текстом описания под полем. */
 export function V2BooleanWidget(props: WidgetProps) {
 	const {
 		id,
@@ -14,10 +13,8 @@ export function V2BooleanWidget(props: WidgetProps) {
 		onChange,
 		disabled,
 		readonly,
-		required,
 		schema,
 		options,
-		rawErrors,
 	} = props;
 
 	const isDisabled = Boolean(disabled || readonly);
@@ -29,9 +26,11 @@ export function V2BooleanWidget(props: WidgetProps) {
 				: "";
 	const tooltip =
 		typeof options?.tooltip === "string" ? options.tooltip : undefined;
+	const description =
+		typeof schema?.description === "string" ? schema.description.trim() : "";
 
 	return (
-		<FormControl error={Boolean(rawErrors?.length)} required={required}>
+		<>
 			<FormControlLabel
 				control={
 					<Checkbox
@@ -45,9 +44,15 @@ export function V2BooleanWidget(props: WidgetProps) {
 					<InlineLabelWithTooltip label={title || " "} tooltip={tooltip} />
 				}
 			/>
-			{rawErrors?.[0] ? (
-				<FormHelperText>{rawErrors[0]}</FormHelperText>
+			{description ? (
+				<Typography
+					variant="body2"
+					color="text.secondary"
+					sx={{ mt: -0.5, ml: 4.25 }}
+				>
+					{description}
+				</Typography>
 			) : null}
-		</FormControl>
+		</>
 	);
 }
