@@ -26,6 +26,7 @@
 		"migration:generate": "typeorm-ts-node-commonjs migration:generate ./src/migrations/$npm_config_name -d ./src/ormconfig.ts"
 	},
 	"dependencies": {
+		"@nestjs/axios": "^4.0.1",
 		"@nestjs/cli": "11.0.5",
 		"@nestjs/common": "11.0.12",
 		"@nestjs/config": "4.0.2",

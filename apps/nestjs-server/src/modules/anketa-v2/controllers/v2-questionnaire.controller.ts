@@ -32,14 +32,26 @@ import {
 import { V2QuestionnaireService } from "../services/v2-questionnaire.service";
 import { V2QuestionnaireCommentService } from "../services/v2-questionnaire-comment.service";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
+import { AuditService } from "../../../shared/audit/audit.service";
+import {
+    AUDIT_EVENT_SUMD_CREATEANKETA,
+    AUDIT_EVENT_SUMD_SAVEANKETA,
+    AUDIT_EVENT_SUMD_DELETEANKETA,
+    AUDIT_EVENT_SUMD_EXPORT,
+    AUDIT_EVENT_SUMD_HOLDANKETA,
+    AUDIT_EVENT_SUMD_APPROVE,
+} from "../../../shared/audit/audit.constants";
+import { v4 as uuidv4 } from "uuid";
+import { normalizeV2AnketaWorkflow } from "../utils/v2-anketa-workflow.util";
 
 @ApiTags("v2-questionnaires")
 @Controller("v2/questionnaires")
 export class V2QuestionnaireController {
-	constructor(
-		private readonly questionnaireService: V2QuestionnaireService,
-		private readonly commentService: V2QuestionnaireCommentService,
-	) {}
+    constructor(
+        private readonly questionnaireService: V2QuestionnaireService,
+        private readonly commentService: V2QuestionnaireCommentService,
+        private readonly auditService: AuditService,
+    ) {}
 
 	@Get()
 	@ApiOperation({ summary: "Реестр анкет v2 (отдельно от реестра схем)" })
@@ -47,68 +59,206 @@ export class V2QuestionnaireController {
 		return this.questionnaireService.findAll();
 	}
 
-	@Post("bulk-delete")
-	@HttpCode(200)
-	@ApiOperation({ summary: "Массовое удаление анкет v2 по id (админка)" })
-	async bulkDelete(
-		@Body() body: BulkDeleteV2QuestionnairesDto,
-	): Promise<BulkDeleteV2QuestionnairesResultDto> {
-		return this.questionnaireService.bulkDelete(body.ids);
-	}
+    @Post("bulk-delete")
+    @HttpCode(200)
+    @ApiOperation({ summary: "Массовое удаление анкет v2 по id (админка)" })
+    async bulkDelete(
+        @Body() body: BulkDeleteV2QuestionnairesDto,
+        @CurrentUser() user: Record<string, unknown> | undefined,
+    ): Promise<BulkDeleteV2QuestionnairesResultDto> {
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
 
-	@Post("seed-test")
-	@HttpCode(200)
-	@ApiOperation({
-		summary:
-			"Создать тестовые анкеты по актуальной схеме шаблона (formData из jsonSchema + расчёт)",
-	})
-	async seedTest(
-		@Body() body: SeedV2TestQuestionnairesDto,
-		@CurrentUser() user: Record<string, unknown> | undefined,
-	): Promise<SeedV2TestQuestionnairesResultDto> {
-		return this.questionnaireService.seedTestQuestionnaires(
-			body.templateId,
-			user as never,
-		);
-	}
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_DELETEANKETA,
+            "START",
+            correlationId,
+            initiator,
+            { ids: body.ids },
+        );
 
-	@Get("export/xlsx")
-	@ApiOperation({ summary: "Выгрузка всех анкет v2 реестра в XLSX" })
-	@ApiResponse({
-		status: HttpStatus.OK,
-		content: {
-			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
-				schema: { type: "string", format: "binary" },
-			},
-		},
-	})
-	async exportRegistryXlsx(@Res() res: Response): Promise<void> {
-		const buffer = await this.questionnaireService.exportRegistryXlsx();
-		this.sendRegistryXlsxResponse(res, buffer, "v2-questionnaires");
-	}
+        try {
+            const result = await this.questionnaireService.bulkDelete(body.ids);
 
-	@Post("export/xlsx")
-	@HttpCode(200)
-	@ApiOperation({ summary: "Выгрузка выбранных анкет v2 реестра в XLSX" })
-	@ApiResponse({
-		status: HttpStatus.OK,
-		content: {
-			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
-				schema: { type: "string", format: "binary" },
-			},
-		},
-	})
-	async exportSelectedRegistryXlsx(
-		@Body() body: ExportV2QuestionnairesXlsxDto,
-		@Res() res: Response,
-	): Promise<void> {
-		const buffer = await this.questionnaireService.exportRegistryXlsx(body.ids);
-		this.sendRegistryXlsxResponse(
-			res,
-			buffer,
-			`v2-questionnaires-selected-${body.ids.length}`,
-		);
-	}
+            for (const id of result.deletedIds) {
+                this.auditService.sendEvent(
+                    AUDIT_EVENT_SUMD_DELETEANKETA,
+                    "SUCCESS",
+                    uuidv4(),
+                    initiator,
+                    { questionnaireId: id },
+                );
+            }
+            for (const failed of result.failed) {
+                this.auditService.sendEvent(
+                    AUDIT_EVENT_SUMD_DELETEANKETA,
+                    "FAILURE",
+                    uuidv4(),
+                    initiator,
+                    { questionnaireId: failed.id, errorMessage: failed.message },
+                );
+            }
+
+            return result;
+        } catch (error) {
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_DELETEANKETA,
+                "FAILURE",
+                correlationId,
+                initiator,
+                { errorMessage: (error as Error).message },
+            );
+            throw error;
+        }
+    }
+
+    @Post("seed-test")
+    @HttpCode(200)
+    @ApiOperation({
+        summary:
+            "Создать тестовые анкеты по актуальной схеме шаблона (formData из jsonSchema + расчёт)",
+    })
+    async seedTest(
+        @Body() body: SeedV2TestQuestionnairesDto,
+        @CurrentUser() user: Record<string, unknown> | undefined,
+    ): Promise<SeedV2TestQuestionnairesResultDto> {
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
+
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_CREATEANKETA,
+            "START",
+            correlationId,
+            initiator,
+            { templateId: body.templateId, seed: true },
+        );
+
+        try {
+            const result = await this.questionnaireService.seedTestQuestionnaires(
+                body.templateId,
+                user as never,
+            );
+            for (const created of result.created) {
+                this.auditService.sendEvent(
+                    AUDIT_EVENT_SUMD_CREATEANKETA,
+                    "SUCCESS",
+                    uuidv4(),
+                    initiator,
+                    { questionnaireId: created.id },
+                );
+            }
+            return result;
+        } catch (error) {
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_CREATEANKETA,
+                "FAILURE",
+                correlationId,
+                initiator,
+                { errorMessage: (error as Error).message },
+            );
+            throw error;
+        }
+    }
+
+    @Get("export/xlsx")
+    @ApiOperation({ summary: "Выгрузка всех анкет v2 реестра в XLSX" })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        content: {
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                schema: { type: "string", format: "binary" },
+            },
+        },
+    })
+    async exportRegistryXlsx(
+        @Res() res: Response,
+        @CurrentUser() user: Record<string, unknown> | undefined,
+    ): Promise<void> {
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
+
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_EXPORT,
+            "START",
+            correlationId,
+            initiator,
+            { exportType: "all" },
+        );
+
+        try {
+            const buffer = await this.questionnaireService.exportRegistryXlsx();
+            this.sendRegistryXlsxResponse(res, buffer, "v2-questionnaires");
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_EXPORT,
+                "SUCCESS",
+                correlationId,
+                initiator,
+                { exportType: "all" },
+            );
+        } catch (error) {
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_EXPORT,
+                "FAILURE",
+                correlationId,
+                initiator,
+                { exportType: "all", errorMessage: (error as Error).message },
+            );
+            throw error;
+        }
+    }
+
+    @Post("export/xlsx")
+    @HttpCode(200)
+    @ApiOperation({ summary: "Выгрузка выбранных анкет v2 реестра в XLSX" })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        content: {
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                schema: { type: "string", format: "binary" },
+            },
+        },
+    })
+    async exportSelectedRegistryXlsx(
+        @Body() body: ExportV2QuestionnairesXlsxDto,
+        @Res() res: Response,
+        @CurrentUser() user: Record<string, unknown> | undefined,
+    ): Promise<void> {
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
+
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_EXPORT,
+            "START",
+            correlationId,
+            initiator,
+            { exportType: "selected", ids: body.ids },
+        );
+
+        try {
+            const buffer = await this.questionnaireService.exportRegistryXlsx(body.ids);
+            this.sendRegistryXlsxResponse(
+                res,
+                buffer,
+                `v2-questionnaires-selected-${body.ids.length}`,
+            );
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_EXPORT,
+                "SUCCESS",
+                correlationId,
+                initiator,
+                { exportType: "selected", ids: body.ids },
+            );
+        } catch (error) {
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_EXPORT,
+                "FAILURE",
+                correlationId,
+                initiator,
+                { exportType: "selected", ids: body.ids, errorMessage: (error as Error).message },
+            );
+            throw error;
+        }
+    }
 
 	private sendRegistryXlsxResponse(
 		res: Response,
@@ -174,37 +324,207 @@ export class V2QuestionnaireController {
 		return this.commentService.delete(id, commentId);
 	}
 
-	@Post()
-	@ApiOperation({
-		summary:
-			"Создать анкету по актуальной опубликованной схеме шаблона (фиксируется boundTemplateVersionId)",
-	})
-	async create(
-		@Body() body: CreateV2QuestionnaireDto,
-		@CurrentUser() user: Record<string, unknown> | undefined,
-	): Promise<V2QuestionnaireDto> {
-		return this.questionnaireService.create(body, user as never);
-	}
+    @Post()
+    @ApiOperation({
+        summary:
+            "Создать анкету по актуальной опубликованной схеме шаблона (фиксируется boundTemplateVersionId)",
+    })
+    async create(
+        @Body() body: CreateV2QuestionnaireDto,
+        @CurrentUser() user: Record<string, unknown> | undefined,
+    ): Promise<V2QuestionnaireDto> {
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
 
-	@Patch(":id")
-	@ApiOperation({ summary: "Обновить данные анкеты" })
-	async update(
-		@Param("id", ParseUUIDPipe) id: string,
-		@Body() body: UpdateV2QuestionnaireDto,
-	): Promise<V2QuestionnaireDto> {
-		return this.questionnaireService.update(id, body);
-	}
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_CREATEANKETA,
+            "START",
+            correlationId,
+            initiator,
+            { templateId: body.templateId },
+        );
 
-	@Post(":id/new-version")
-	@ApiOperation({
-		summary:
-			"Новая версия анкеты в серии (наследует привязку к схеме, как v1)",
-	})
-	async createNewVersion(
-		@Param("id", ParseUUIDPipe) id: string,
-		@Body() body: CreateV2QuestionnaireVersionDto,
-		@CurrentUser() user: Record<string, unknown> | undefined,
-	): Promise<V2QuestionnaireDto> {
-		return this.questionnaireService.createNewVersion(id, body, user as never);
-	}
+        try {
+            const result = await this.questionnaireService.create(body, user as never);
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_CREATEANKETA,
+                "SUCCESS",
+                correlationId,
+                initiator,
+                { questionnaireId: result.id },
+            );
+            return result;
+        } catch (error) {
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_CREATEANKETA,
+                "FAILURE",
+                correlationId,
+                initiator,
+                { errorMessage: (error as Error).message },
+            );
+            throw error;
+        }
+    }
+
+    @Patch(":id")
+    @ApiOperation({ summary: "Обновить данные анкеты" })
+    async update(
+        @Param("id", ParseUUIDPipe) id: string,
+        @Body() body: UpdateV2QuestionnaireDto,
+        @CurrentUser() user: Record<string, unknown> | undefined,
+    ): Promise<V2QuestionnaireDto> {
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
+
+        // Получаем текущую анкету до обновления для сравнения статусов
+        const before = await this.questionnaireService.findOne(id);
+        const beforeWorkflow = normalizeV2AnketaWorkflow(before.formData?.workflow);
+
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_SAVEANKETA,
+            "START",
+            correlationId,
+            initiator,
+            { questionnaireId: id, changes: body },
+        );
+
+        try {
+            const result = await this.questionnaireService.update(id, body);
+            const afterWorkflow = normalizeV2AnketaWorkflow(result.formData?.workflow);
+
+            // Дополнительные события при изменении статусов
+            if (beforeWorkflow && afterWorkflow) {
+                // Глобальный статус -> HOLDANKETA (утверждение)
+                if (
+                    beforeWorkflow.globalStatus !== "Заполнено" &&
+                    afterWorkflow.globalStatus === "Заполнено"
+                ) {
+                    this.auditService.sendEvent(
+                        AUDIT_EVENT_SUMD_HOLDANKETA,
+                        "SUCCESS",
+                        uuidv4(),
+                        initiator,
+                        {
+                            questionnaireId: id,
+                            oldStatus: beforeWorkflow.globalStatus,
+                            newStatus: afterWorkflow.globalStatus,
+                        },
+                    );
+                }
+
+                // Статусы разделов -> APPROVE
+                const sections = [
+                    "generalInfo",
+                    "detailInfo",
+                    "streamDataSources",
+                    "streamModelControl",
+                ] as const;
+                for (const section of sections) {
+                    const beforeStatus = beforeWorkflow.sections?.[section];
+                    const afterStatus = afterWorkflow.sections?.[section];
+                    if (beforeStatus !== "Заполнено" && afterStatus === "Заполнено") {
+                        this.auditService.sendEvent(
+                            AUDIT_EVENT_SUMD_APPROVE,
+                            "SUCCESS",
+                            uuidv4(),
+                            initiator,
+                            {
+                                questionnaireId: id,
+                                section,
+                                oldStatus: beforeStatus,
+                                newStatus: afterStatus,
+                            },
+                        );
+                    }
+                }
+            }
+
+            // Если статус анкеты изменился на 'archived' -> удаление
+            if (before.status !== "archived" && result.status === "archived") {
+                this.auditService.sendEvent(
+                    AUDIT_EVENT_SUMD_DELETEANKETA,
+                    "SUCCESS",
+                    uuidv4(),
+                    initiator,
+                    { questionnaireId: id },
+                );
+            }
+
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_SAVEANKETA,
+                "SUCCESS",
+                correlationId,
+                initiator,
+                { questionnaireId: id },
+            );
+
+            return result;
+        } catch (error) {
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_SAVEANKETA,
+                "FAILURE",
+                correlationId,
+                initiator,
+                { questionnaireId: id, errorMessage: (error as Error).message },
+            );
+            throw error;
+        }
+    }
+
+    @Post(":id/new-version")
+    @ApiOperation({
+        summary:
+            "Новая версия анкеты в серии (наследует привязку к схеме, как v1)",
+    })
+    async createNewVersion(
+        @Param("id", ParseUUIDPipe) id: string,
+        @Body() body: CreateV2QuestionnaireVersionDto,
+        @CurrentUser() user: Record<string, unknown> | undefined,
+    ): Promise<V2QuestionnaireDto> {
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
+
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_CREATEANKETA,
+            "START",
+            correlationId,
+            initiator,
+            { sourceQuestionnaireId: id },
+        );
+
+        try {
+            const result = await this.questionnaireService.createNewVersion(
+                id,
+                body,
+                user as never,
+            );
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_CREATEANKETA,
+                "SUCCESS",
+                correlationId,
+                initiator,
+                { questionnaireId: result.id, sourceQuestionnaireId: id },
+            );
+            return result;
+        } catch (error) {
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_CREATEANKETA,
+                "FAILURE",
+                correlationId,
+                initiator,
+                { sourceQuestionnaireId: id, errorMessage: (error as Error).message },
+            );
+            throw error;
+        }
+    }
+
+    private buildInitiator(
+        user: Record<string, unknown> | undefined,
+    ): Record<string, unknown> {
+        return {
+            sub: user?.preferred_username ?? user?.sub ?? "unknown",
+            channel: "internal",
+            realm: user?.realm ?? "",
+        };
+    }
 }

@@ -51,6 +51,13 @@ import {
 } from "../../../shared/decorators/request-context.decorator";
 import { CreateNewVersionDto } from "../dto/request/create-new-version.dto";
 import { CreateCloneDto } from "../dto/request/create-clone.dto";
+import { AuditService } from "../../../shared/audit/audit.service";
+import {
+    AUDIT_EVENT_SUMD_CREATEANKETA,
+    AUDIT_EVENT_SUMD_SAVEANKETA,
+    AUDIT_EVENT_SUMD_EXPORT,
+} from "../../../shared/audit/audit.constants";
+import { v4 as uuidv4 } from "uuid";
 
 @ApiBearerAuth("JWT-auth")
 @ApiTags("Calculation")
@@ -59,11 +66,12 @@ import { CreateCloneDto } from "../dto/request/create-clone.dto";
 export class CalculationController {
 	private activeRequests = new Map<string, AbortController>();
 
-	constructor(
-		private readonly calculationService: CalculationService,
-		private readonly excelExportService: ExcelExportService,
-		private readonly customLogger: CustomLogger,
-	) {}
+    constructor(
+        private readonly calculationService: CalculationService,
+        private readonly excelExportService: ExcelExportService,
+        private readonly customLogger: CustomLogger,
+        private readonly auditService: AuditService,
+    ) {}
 
 	@Post()
 	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
@@ -104,20 +112,31 @@ export class CalculationController {
 	): Promise<CalculationResponseDto> {
 		this.activeRequests.set(ctx.requestId, ctx.abortController);
 
-		try {
-			this.customLogger.log(
-				"Начало создания расчета",
-				"CalculationController.create",
-				{
-					requestId: ctx.requestId,
-					userId: user?.id,
-					mdc: {
-						method: "POST",
-						path: "/calculation",
-						userId: user?.id,
-					},
-				},
-			);
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
+
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_CREATEANKETA,
+            "START",
+            correlationId,
+            initiator,
+            { calcName: createCalculationDto.calcName },
+        );
+
+        try {
+            this.customLogger.log(
+                "Начало создания расчета",
+                "CalculationController.create",
+                {
+                    requestId: ctx.requestId,
+                    userId: user?.id,
+                    mdc: {
+                        method: "POST",
+                        path: "/calculation",
+                        userId: user?.id,
+                    },
+                },
+            );
 
 			const calculation = await this.calculationService.create(
 				createCalculationDto,
@@ -134,23 +153,38 @@ export class CalculationController {
 				},
 			);
 
-			return await this.mapToResponseDto(calculation);
-		} catch (error) {
-			this.customLogger.error(
-				"Ошибка при создании расчета",
-				error.stack,
-				"CalculationController.create",
-				{
-					requestId: ctx.requestId,
-					error: error.message,
-					dto: createCalculationDto,
-				},
-			);
-			throw error;
-		} finally {
-			this.activeRequests.delete(ctx.requestId);
-		}
-	}
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_CREATEANKETA,
+                "SUCCESS",
+                correlationId,
+                initiator,
+                { calculationId: calculation.id },
+            );
+
+            return await this.mapToResponseDto(calculation);
+        } catch (error) {
+            this.customLogger.error(
+                "Ошибка при создании расчета",
+                error.stack,
+                "CalculationController.create",
+                {
+                    requestId: ctx.requestId,
+                    error: error.message,
+                    dto: createCalculationDto,
+                },
+            );
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_CREATEANKETA,
+                "FAILURE",
+                correlationId,
+                initiator,
+                { errorMessage: (error as Error).message },
+            );
+            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
+    }
 
 	@Put(":id")
 	@StreamFilter()
@@ -202,20 +236,31 @@ export class CalculationController {
 	): Promise<CalculationResponseDto> {
 		this.activeRequests.set(ctx.requestId, ctx.abortController);
 
-		try {
-			this.customLogger.log(
-				"Начало обновления расчета",
-				"CalculationController.update",
-				{
-					requestId: ctx.requestId,
-					userId: user?.id,
-					mdc: {
-						method: "PUT",
-						path: `/calculation/${id}`,
-						userId: user?.id,
-					},
-				},
-			);
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
+
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_SAVEANKETA,
+            "START",
+            correlationId,
+            initiator,
+            { calculationId: id, changes: updateCalculationDto },
+        );
+
+        try {
+            this.customLogger.log(
+                "Начало обновления расчета",
+                "CalculationController.update",
+                {
+                    requestId: ctx.requestId,
+                    userId: user?.id,
+                    mdc: {
+                        method: "PUT",
+                        path: `/calculation/${id}`,
+                        userId: user?.id,
+                    },
+                },
+            );
 
 			const calculation = await this.calculationService.updateCalculation(
 				id,
@@ -233,24 +278,39 @@ export class CalculationController {
 				},
 			);
 
-			return await this.mapToResponseDto(calculation);
-		} catch (error) {
-			this.customLogger.error(
-				"Ошибка при обновлении расчета",
-				error.stack,
-				"CalculationController.update",
-				{
-					requestId: ctx.requestId,
-					calculationId: id,
-					error: error.message,
-					dto: updateCalculationDto,
-				},
-			);
-			throw error;
-		} finally {
-			this.activeRequests.delete(ctx.requestId);
-		}
-	}
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_SAVEANKETA,
+                "SUCCESS",
+                correlationId,
+                initiator,
+                { calculationId: id },
+            );
+
+            return await this.mapToResponseDto(calculation);
+        } catch (error) {
+            this.customLogger.error(
+                "Ошибка при обновлении расчета",
+                error.stack,
+                "CalculationController.update",
+                {
+                    requestId: ctx.requestId,
+                    calculationId: id,
+                    error: error.message,
+                    dto: updateCalculationDto,
+                },
+            );
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_SAVEANKETA,
+                "FAILURE",
+                correlationId,
+                initiator,
+                { calculationId: id, errorMessage: (error as Error).message },
+            );
+            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
+    }
 
 	@Get("all")
 	@StreamFilter()
@@ -583,20 +643,31 @@ export class CalculationController {
 	): Promise<void> {
 		this.activeRequests.set(ctx.requestId, ctx.abortController);
 
-		try {
-			this.customLogger.log(
-				"Начало экспорта расчетов в Excel",
-				"CalculationController.exportToExcel",
-				{
-					requestId: ctx.requestId,
-					userId: user?.id,
-					mdc: {
-						method: "POST",
-						path: "/calculation/export/excel",
-						userId: user?.id,
-					},
-				},
-			);
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
+
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_EXPORT,
+            "START",
+            correlationId,
+            initiator,
+            { exportType: "excel" },
+        );
+
+        try {
+            this.customLogger.log(
+                "Начало экспорта расчетов в Excel",
+                "CalculationController.exportToExcel",
+                {
+                    requestId: ctx.requestId,
+                    userId: user?.id,
+                    mdc: {
+                        method: "POST",
+                        path: "/calculation/export/excel",
+                        userId: user?.id,
+                    },
+                },
+            );
 
 			const calculations = await this.calculationService.findAllForExport(
 				user,
@@ -627,22 +698,37 @@ export class CalculationController {
 				},
 			);
 
-			res.end(buffer);
-		} catch (error) {
-			this.customLogger.error(
-				"Ошибка при экспорте расчетов в Excel",
-				error.stack,
-				"CalculationController.exportToExcel",
-				{
-					requestId: ctx.requestId,
-					error: error.message,
-				},
-			);
-			throw error;
-		} finally {
-			this.activeRequests.delete(ctx.requestId);
-		}
-	}
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_EXPORT,
+                "SUCCESS",
+                correlationId,
+                initiator,
+                { exportType: "excel", count: calculations.length },
+            );
+
+            res.end(buffer);
+        } catch (error) {
+            this.customLogger.error(
+                "Ошибка при экспорте расчетов в Excel",
+                error.stack,
+                "CalculationController.exportToExcel",
+                {
+                    requestId: ctx.requestId,
+                    error: error.message,
+                },
+            );
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_EXPORT,
+                "FAILURE",
+                correlationId,
+                initiator,
+                { exportType: "excel", errorMessage: (error as Error).message },
+            );
+            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
+    }
 
 	@Post(":id/new-version")
 	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
@@ -695,12 +781,23 @@ export class CalculationController {
 	): Promise<CalculationResponseDto> {
 		this.activeRequests.set(ctx.requestId, ctx.abortController);
 
-		try {
-			this.customLogger.log(
-				`Creating new version for calculation ${id} [${ctx.requestId}]`,
-				"CalculationController.createNewVersion",
-				{ userId: user?.id, sourceCalcId: id },
-			);
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
+
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_CREATEANKETA,
+            "START",
+            correlationId,
+            initiator,
+            { sourceCalculationId: id },
+        );
+
+        try {
+            this.customLogger.log(
+                `Creating new version for calculation ${id} [${ctx.requestId}]`,
+                "CalculationController.createNewVersion",
+                { userId: user?.id, sourceCalcId: id },
+            );
 
 			const calculation = await this.calculationService.createNewVersion(
 				id,
@@ -715,23 +812,38 @@ export class CalculationController {
 				{ calculationId: calculation.id, sourceCalcId: id },
 			);
 
-			return await this.mapToResponseDto(calculation);
-		} catch (error) {
-			this.customLogger.error(
-				`Failed to create new version [${ctx.requestId}]`,
-				error.stack,
-				"CalculationController.createNewVersion",
-				{
-					requestId: ctx.requestId,
-					error: error.message,
-					sourceCalcId: id,
-				},
-			);
-			throw error;
-		} finally {
-			this.activeRequests.delete(ctx.requestId);
-		}
-	}
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_CREATEANKETA,
+                "SUCCESS",
+                correlationId,
+                initiator,
+                { calculationId: calculation.id, sourceCalculationId: id },
+            );
+
+            return await this.mapToResponseDto(calculation);
+        } catch (error) {
+            this.customLogger.error(
+                `Failed to create new version [${ctx.requestId}]`,
+                error.stack,
+                "CalculationController.createNewVersion",
+                {
+                    requestId: ctx.requestId,
+                    error: error.message,
+                    sourceCalcId: id,
+                },
+            );
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_CREATEANKETA,
+                "FAILURE",
+                correlationId,
+                initiator,
+                { sourceCalculationId: id, errorMessage: (error as Error).message },
+            );
+            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
+    }
 
 	@Post(":id/clone")
 	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
@@ -783,12 +895,23 @@ export class CalculationController {
 	): Promise<CalculationResponseDto> {
 		this.activeRequests.set(ctx.requestId, ctx.abortController);
 
-		try {
-			this.customLogger.log(
-				`Creating clone from template ${id} [${ctx.requestId}]`,
-				"CalculationController.createClone",
-				{ userId: user?.id, templateCalcId: id },
-			);
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
+
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_CREATEANKETA,
+            "START",
+            correlationId,
+            initiator,
+            { templateCalculationId: id },
+        );
+
+        try {
+            this.customLogger.log(
+                `Creating clone from template ${id} [${ctx.requestId}]`,
+                "CalculationController.createClone",
+                { userId: user?.id, templateCalcId: id },
+            );
 
 			const calculation = await this.calculationService.createClone(
 				id,
@@ -803,23 +926,38 @@ export class CalculationController {
 				{ calculationId: calculation.id, templateCalcId: id },
 			);
 
-			return await this.mapToResponseDto(calculation);
-		} catch (error) {
-			this.customLogger.error(
-				`Failed to create clone [${ctx.requestId}]`,
-				error.stack,
-				"CalculationController.createClone",
-				{
-					requestId: ctx.requestId,
-					error: error.message,
-					templateCalcId: id,
-				},
-			);
-			throw error;
-		} finally {
-			this.activeRequests.delete(ctx.requestId);
-		}
-	}
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_CREATEANKETA,
+                "SUCCESS",
+                correlationId,
+                initiator,
+                { calculationId: calculation.id, templateCalculationId: id },
+            );
+
+            return await this.mapToResponseDto(calculation);
+        } catch (error) {
+            this.customLogger.error(
+                `Failed to create clone [${ctx.requestId}]`,
+                error.stack,
+                "CalculationController.createClone",
+                {
+                    requestId: ctx.requestId,
+                    error: error.message,
+                    templateCalcId: id,
+                },
+            );
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_CREATEANKETA,
+                "FAILURE",
+                correlationId,
+                initiator,
+                { templateCalculationId: id, errorMessage: (error as Error).message },
+            );
+            throw error;
+        } finally {
+            this.activeRequests.delete(ctx.requestId);
+        }
+    }
 
 	private async mapToResponseDto(
 		calculation: Calculation,
@@ -875,40 +1013,48 @@ export class CalculationController {
 			}
 		}
 
-		return {
-			id: calculation.id,
-			calcName: calculation.calcName,
-			rfd: calculation.rfd,
-			streamExecutor: calculation.streamExecutor,
-			department: calculation.department,
-			customerName: calculation.customerName,
-			comment: calculation.comment,
-			questionnaireData: {
-				...(calculation.questionnaireData || {}),
-				initiativeTimeline:
-					calculation.questionnaireData?.initiativeTimeline ??
-					undefined,
-				initiativeCost:
-					calculation.questionnaireData?.initiativeCost ?? undefined,
-				modelDeveloped: calculation.questionnaireData?.modelDeveloped || "Нет",
-				readyPromReports:
-					`${calculation.questionnaireData?.readyPromReports ?? ""}`.trim() ===
-					""
-						? "Нет"
-						: (calculation.questionnaireData!.readyPromReports as "Да" | "Нет"),
-				generalUncertainty,
-				productionDeploymentChannels,
-			},
-			finalCoefficient: calculation.finalCoefficient,
-			createdAt: calculation.createdAt,
-			author: calculation.author,
-			status: calculation.status,
-			version: calculation.version,
-			seriesId: calculation.seriesId,
-			parentCalcId: calculation.parentCalcId || undefined,
-			readableId: calculation.readableId,
-			parentReadableId: calculation.parentCalc?.readableId || undefined,
-			seriesLatestVersion,
-		};
-	}
+        return {
+            id: calculation.id,
+            calcName: calculation.calcName,
+            rfd: calculation.rfd,
+            streamExecutor: calculation.streamExecutor,
+            department: calculation.department,
+            customerName: calculation.customerName,
+            comment: calculation.comment,
+            questionnaireData: {
+                ...(calculation.questionnaireData || {}),
+                initiativeTimeline:
+                    calculation.questionnaireData?.initiativeTimeline ??
+                    undefined,
+                initiativeCost:
+                    calculation.questionnaireData?.initiativeCost ?? undefined,
+                modelDeveloped: calculation.questionnaireData?.modelDeveloped || "Нет",
+                readyPromReports:
+                    `${calculation.questionnaireData?.readyPromReports ?? ""}`.trim() ===
+                    ""
+                        ? "Нет"
+                        : (calculation.questionnaireData!.readyPromReports as "Да" | "Нет"),
+                generalUncertainty,
+                productionDeploymentChannels,
+            },
+            finalCoefficient: calculation.finalCoefficient,
+            createdAt: calculation.createdAt,
+            author: calculation.author,
+            status: calculation.status,
+            version: calculation.version,
+            seriesId: calculation.seriesId,
+            parentCalcId: calculation.parentCalcId || undefined,
+            readableId: calculation.readableId,
+            parentReadableId: calculation.parentCalc?.readableId || undefined,
+            seriesLatestVersion,
+        };
+    }
+
+    private buildInitiator(user: any): Record<string, unknown> {
+        return {
+            sub: user?.preferred_username ?? user?.sub ?? "unknown",
+            channel: "internal",
+            realm: user?.realm ?? "",
+        };
+    }
 }
