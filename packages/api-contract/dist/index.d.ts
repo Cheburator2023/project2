@@ -7,6 +7,7 @@ export * from "./questionnaire.types";
 export * from "./v2-template.types";
 export * from "./v2-questionnaire.types";
 export * from "./v2-questionnaire-calc-name.util";
+export * from "./v2-questionnaire-uncertainty-coefficient.util";
 export * from "./v2-questionnaire-registry-columns.util";
 export * from "./v2-questionnaire-registry-export.util";
 export * from "./v2-factory-snapshot.types";

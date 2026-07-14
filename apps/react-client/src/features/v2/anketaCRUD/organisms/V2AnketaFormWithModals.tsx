@@ -2,7 +2,7 @@ import CalculateOutlinedIcon from "@mui/icons-material/CalculateOutlined";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
-import { useMemo, useRef, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAnketaWorkflow } from "../hooks/useAnketaWorkflow";
 import type { V2AnketaSchemaEngine } from "../hooks/useV2AnketaSchemaEngine";
 import {
@@ -71,6 +71,22 @@ export function V2AnketaFormWithModals({
 		deleteArrayItem: () => {},
 		deleteObject: () => {},
 	});
+	const [highlightedAtypicalPaths, setHighlightedAtypicalPaths] = useState<
+		ReadonlySet<string>
+	>(() => new Set());
+	const highlightTimerRef = useRef<number | null>(null);
+
+	const handleAtypicalCoefficientsUpdated = useCallback((paths: string[]) => {
+		if (paths.length === 0) return;
+		setHighlightedAtypicalPaths(new Set(paths));
+		if (highlightTimerRef.current != null) {
+			window.clearTimeout(highlightTimerRef.current);
+		}
+		highlightTimerRef.current = window.setTimeout(() => {
+			setHighlightedAtypicalPaths(new Set());
+			highlightTimerRef.current = null;
+		}, 8000);
+	}, []);
 
 	const anketaFormContext = useMemo((): AnketaFormContextValue => {
 		const uncertaintySlot: ReactNode | undefined = showUncertaintySlot ? (
@@ -118,6 +134,7 @@ export function V2AnketaFormWithModals({
 			anketaModalObjectPaths: modalBindingSets.modalObjectPathSet,
 			anketaReadOnly: effectiveReadOnly,
 			schemaEditorPreview: anketaFormContextProp?.schemaEditorPreview,
+			atypicalUncertaintySyncHighlightPaths: highlightedAtypicalPaths,
 		});
 	}, [
 		anketaFormContextProp,
@@ -130,6 +147,7 @@ export function V2AnketaFormWithModals({
 		completePanelSectionByPath,
 		touchMainSection,
 		isSectionLocked,
+		highlightedAtypicalPaths,
 	]);
 
 	return (
@@ -157,6 +175,7 @@ export function V2AnketaFormWithModals({
 				previewUiSchema={engine.previewUiSchema}
 				modalBindings={modalBindingSets.bindings}
 				onFormDataChange={engine.setFormData}
+				onAtypicalCoefficientsUpdated={handleAtypicalCoefficientsUpdated}
 				controlsRef={modalControlsRef}
 				data-test-id={"anketa-form-modals"}
 			/>
