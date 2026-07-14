@@ -15,6 +15,7 @@ import type { AppRouteConfig } from "@react-client/routing/common/types";
 import { v1Routes } from "@react-client/routing/version/v1/routes";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
 import { useLocation, useNavigate } from "react-router";
+import {useUserStore} from "@react-client/common/store/userStore";
 
 const V1_PREFIX = "/v1";
 const V2_PREFIX = "/v2";
@@ -58,6 +59,12 @@ const v2UserNavItems = () =>
 			r.rootPath !== v2Routes.calculationNewVersion.rootPath &&
 			r.rootPath !== v2Routes.calculationCompare.rootPath,
 	);
+
+const useV2UserNavItems = () => {
+	const { hasPermission } = useUserStore();
+	
+	return v2UserNavItems().filter(item => !item?.permission || hasPermission(item.permission));
+};
 
 function routeRowSelected(route: AppRouteConfig, pathname: string): boolean {
 	if (route.rootPath === commonRoutes.adminV2Schemas.rootPath) {
@@ -130,6 +137,8 @@ export function MenuContent() {
 	const { pathname } = useLocation();
 	const { canAccessTracker } = usePermissions();
 
+	const v2UserNavItems = useV2UserNavItems()
+
 	const go = (path: string) => navigate(path);
 
 	return (
@@ -142,7 +151,7 @@ export function MenuContent() {
 					title="Калькулятор v2"
 					homeLabel={v2Routes.home.name}
 					homePath={V2_PREFIX}
-					nestedItems={v2UserNavItems()}
+					nestedItems={v2UserNavItems}
 					pathname={pathname}
 					onNavigate={go}
 				/>

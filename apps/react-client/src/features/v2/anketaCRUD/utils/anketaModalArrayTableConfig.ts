@@ -12,6 +12,7 @@ export type AnketaArrayTableColumn = {
 	field?: string;
 	chip?: boolean;
 	link?: boolean;
+	multiline?: boolean;
 };
 
 function text(item: Record<string, unknown>, field: string): string {
@@ -40,45 +41,50 @@ function formatNameLabel(raw: string): string {
 	return raw;
 }
 
-const TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
+function formatTypicalWorkNumber(
+	item: Record<string, unknown>,
+	field: string,
+): string {
+	const value = item[field];
+	if (value == null || value === "") return "—";
+	if (typeof value === "number" && Number.isFinite(value)) {
+		if (Number.isInteger(value)) return String(value);
+		return String(Math.round(value * 10000) / 10000)
+			.replace(/(\.\d*?)0+$/, "$1")
+			.replace(/\.$/, "");
+	}
+	return String(value);
+}
+
+const FACTORY_TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
 	{
 		key: "name",
-		header: "Наименование",
-		width: "1.5fr",
-		link: true,
+		header: "Название типовой работы",
+		width: "1.6fr",
 		render: (item) => text(item, "name"),
 	},
 	{
-		key: "sourceName",
-		header: "Объект",
-		width: "1fr",
-		render: (item) => text(item, "sourceName"),
-	},
-	{
-		key: "workType",
-		header: "Тип работ",
-		width: "1.1fr",
-		render: (item) => text(item, "workType"),
-	},
-	{
 		key: "estimate",
-		header: "Базовая оценка (ч/д)",
-		width: "0.95fr",
-		render: (item) => text(item, "estimateHoursPerDay"),
+		header: "Базовая оценка",
+		width: "1fr",
+		render: (item) => formatTypicalWorkNumber(item, "estimateHoursPerDay"),
 	},
 	{
 		key: "coefficient",
-		header: "Коэф.",
-		width: "0.7fr",
-		render: (item) => text(item, "coefficient"),
+		header: "Коэффициент",
+		width: "0.8fr",
+		render: (item) => formatTypicalWorkNumber(item, "coefficient"),
 	},
 	{
 		key: "total",
 		header: "Итог",
-		width: "0.7fr",
-		render: (item) => text(item, "total"),
+		width: "0.8fr",
+		render: (item) => formatTypicalWorkNumber(item, "total"),
 	},
 ];
+
+const TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] =
+	FACTORY_TYPICAL_WORK_COLUMNS;
 
 const ATYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
 	{
@@ -383,7 +389,9 @@ export function getArrayTableColumnsFromSchema(
 ): AnketaArrayTableColumn[] | null {
 	if (!rootSchema || !rootUi) return null;
 	const slice = getArrayItemSchemaSliceForModal(rootSchema, rootUi, path);
-	const props = slice?.schema.properties as Record<string, RJSFSchema> | undefined;
+	const props = slice?.schema.properties as
+		| Record<string, RJSFSchema>
+		| undefined;
 	if (!props) return null;
 	const keys = Object.keys(props);
 	if (keys.length === 0) return null;
@@ -401,11 +409,20 @@ export function getArrayTableColumnsFromSchema(
 	});
 }
 
+export function getTypicalWorkFactoryTableColumns(): AnketaArrayTableColumn[] {
+	return FACTORY_TYPICAL_WORK_COLUMNS.map((column) => ({ ...column }));
+}
+
 export function resolveArrayTableColumns(
 	path: string,
 	rootSchema?: RJSFSchema,
 	rootUi?: UiSchema,
 ): AnketaArrayTableColumn[] | null {
+	if (
+		isTypicalWorkArrayPath(path, rootUi as Record<string, unknown> | undefined)
+	) {
+		return getTypicalWorkFactoryTableColumns();
+	}
 	return (
 		getArrayTableColumnsFromSchema(rootSchema, rootUi, path) ??
 		getArrayTableColumns(path)
@@ -449,12 +466,21 @@ export function sumTypicalWorkTotals(
 				? raw
 				: typeof raw === "string" && raw.trim()
 					? Number(raw.replace(",", "."))
-					: NaN;
+					: Number.NaN;
 		if (!Number.isFinite(num)) continue;
 		sum += num;
 		hasValue = true;
 	}
 	return hasValue ? sum : null;
+}
+
+export function formatTypicalWorkSummaryTotal(
+	total: number | null,
+	options?: { loading?: boolean },
+): string {
+	if (options?.loading && total == null) return "…";
+	if (total != null) return String(total);
+	return "—";
 }
 
 export function collectTypicalWorkSourceNames(
@@ -488,20 +514,23 @@ export function typicalWorkItemDisplayName(
 	return `Работа ${fallbackIndex + 1}`;
 }
 
-/** Колонки таблицы типовых работ: имя — в заголовке карточки строки. */
+const FACTORY_TYPICAL_WORK_COLUMN_KEYS = [
+	"name",
+	"estimate",
+	"coefficient",
+	"total",
+] as const;
+
+/** Колонки таблицы типовых работ: заводской шаблон из четырёх столбцов. */
 export function adjustTypicalWorkTableColumns(
 	columns: AnketaArrayTableColumn[],
-	items: Record<string, unknown>[],
+	_items: Record<string, unknown>[],
 ): AnketaArrayTableColumn[] {
-	const hasSource = items.some(
-		(item) =>
-			typeof item.sourceName === "string" && item.sourceName.trim().length > 0,
+	const byKey = new Map(columns.map((col) => [col.key, col]));
+	const factory = getTypicalWorkFactoryTableColumns();
+	return FACTORY_TYPICAL_WORK_COLUMN_KEYS.map(
+		(key) => byKey.get(key) ?? factory.find((col) => col.key === key)!,
 	);
-	return columns.filter((col) => {
-		if (col.key === "name") return false;
-		if (col.key === "sourceName" && !hasSource) return false;
-		return true;
-	});
 }
 
 export function getArrayAtPath(

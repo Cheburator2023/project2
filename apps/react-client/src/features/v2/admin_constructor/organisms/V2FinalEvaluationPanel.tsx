@@ -1,4 +1,5 @@
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -13,6 +14,7 @@ import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
+import { uncertaintySummaryText } from "@react-client/features/v2/anketaCRUD/organisms/AnketaFormModals";
 
 export type V2SummaryFormSlice = {
 	total?: number;
@@ -84,6 +86,8 @@ function hasLegacyHeadline(summary: V2SummaryFormSlice): boolean {
 
 type Props = {
 	summary?: V2SummaryFormSlice | null;
+	formData?: Record<string, unknown> | null;
+	calculationError?: string | null;
 	isLoading?: boolean;
 	compact?: boolean;
 	onExportExcel?: () => void;
@@ -93,21 +97,25 @@ type Props = {
 
 export function V2FinalEvaluationPanel({
 	summary,
+	formData,
+	calculationError,
 	isLoading,
 	compact,
 	onExportExcel,
 	engineCaption,
 }: Props) {
-	const rows = summary?.detailedCalculation ?? [];
-	const platformRows = summary?.platformStreams ?? [];
+	const uncertaintySummary = formData ? uncertaintySummaryText(formData) : null;
+	const effectiveSummary = calculationError ? null : summary;
+	const rows = effectiveSummary?.detailedCalculation ?? [];
+	const platformRows = effectiveSummary?.platformStreams ?? [];
 	const showUnifiedHeadline = Boolean(
-		summary && hasNonZeroUnifiedTotals(summary),
+		effectiveSummary && hasNonZeroUnifiedTotals(effectiveSummary),
 	);
 	const showLegacyHeadline = Boolean(
-		summary && hasLegacyHeadline(summary) && !showUnifiedHeadline,
+		effectiveSummary && hasLegacyHeadline(effectiveSummary),
 	);
 	const hasData =
-		summary &&
+		effectiveSummary &&
 		(showUnifiedHeadline ||
 			showLegacyHeadline ||
 			rows.length > 0 ||
@@ -129,6 +137,7 @@ export function V2FinalEvaluationPanel({
 					direction="row"
 					alignItems="center"
 					flexWrap="wrap"
+					justifyContent="space-between"
 					gap={1.5}
 					mb={engineCaption ? 1 : 4}
 				>
@@ -151,47 +160,53 @@ export function V2FinalEvaluationPanel({
 					</Button>
 					{isLoading ? <CircularProgress size={16} /> : null}
 				</Stack>
-				{engineCaption ? (
-					<Typography
-						variant="caption"
-						color="text.secondary"
-						display="block"
-						sx={{ mb: 4 }}
-					>
-						{engineCaption}
-					</Typography>
+
+				{calculationError ? (
+					<Alert severity="error" sx={{ mb: 2 }}>
+						Итог недоступен: {calculationError}
+					</Alert>
 				) : null}
 
 				<Stack spacing={2}>
+					{uncertaintySummary != null ? (
+						<Metric
+							label="Общая неопределенность:"
+							value={uncertaintySummary}
+						/>
+					) : null}
+
 					{showUnifiedHeadline ? (
 						<>
 							<Metric
 								label="Итоговая трудоёмкость (ч/д):"
-								value={formatNum(summary?.total)}
+								value={formatNum(effectiveSummary?.total)}
 							/>
 							<Metric
 								label="Типовые работы:"
-								value={formatNum(summary?.typicalTotal)}
+								value={formatNum(effectiveSummary?.typicalTotal)}
 							/>
 							<Metric
 								label="Нетиповые работы:"
-								value={formatNum(summary?.atypicalTotal)}
+								value={formatNum(effectiveSummary?.atypicalTotal)}
 							/>
 						</>
-					) : showLegacyHeadline ? (
+					) : null}
+					{showLegacyHeadline ? (
 						<>
 							<Metric
 								label="Базовая оценка по стриму (СФЕРА):"
-								value={formatNum(summary?.baseScoreStream)}
+								value={formatNum(effectiveSummary?.baseScoreStream)}
 							/>
 							<Metric
 								label="Оценка с поправкой на коэффициент сложности:"
-								value={formatNum(summary?.scoreWithComplexityCoeff)}
+								value={formatNum(effectiveSummary?.scoreWithComplexityCoeff)}
 							/>
 							<Metric
 								label="Отклонение относительно базовой оценки по стриму (СФЕРА):"
-								value={formatPercent(summary?.deviationFromBaseline)}
-								valueColor={deviationColor(summary?.deviationFromBaseline)}
+								value={formatPercent(effectiveSummary?.deviationFromBaseline)}
+								valueColor={deviationColor(
+									effectiveSummary?.deviationFromBaseline,
+								)}
 							/>
 						</>
 					) : null}
@@ -248,7 +263,7 @@ export function V2FinalEvaluationPanel({
 					{platformRows.length > 0 ? (
 						<>
 							<Typography variant="h6" fontWeight={700} mb={2}>
-								Платформенные стримы
+								Стримы
 							</Typography>
 							<MiniTable
 								columns={[

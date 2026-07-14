@@ -129,6 +129,8 @@ export function kanbanBoardPriorityColor(priority) {
         return "#64748b";
     return (KANBAN_BOARD_PRIORITY_COLORS[priority] ?? "#64748b");
 }
+export const KANBAN_BOARD_TASK_LOCK_TTL_MS = 2 * 60 * 1000;
+export const KANBAN_BOARD_SYNC_POLL_INTERVAL_MS = 15_000;
 export const KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD = 9;
 export const KANBAN_BOARD_STOCK_CUSTOMERS = [
     { code: "dadm", name: "ДАДМ" },

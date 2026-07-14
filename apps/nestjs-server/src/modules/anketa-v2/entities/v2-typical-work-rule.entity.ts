@@ -19,6 +19,14 @@ export class V2TypicalWorkRuleEntity {
 	@Column({ name: "stream_executor", type: "varchar", length: 120 })
 	streamExecutor: string;
 
+	@Column({
+		name: "schema_field_uid",
+		type: "varchar",
+		length: 80,
+		nullable: true,
+	})
+	schemaFieldUid: string | null;
+
 	@Column({ name: "param_code", type: "varchar", length: 120 })
 	paramCode: string;
 

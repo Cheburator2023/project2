@@ -35,10 +35,12 @@ import {
 	useState,
 	type CSSProperties,
 } from "react";
-import { useDrag } from "react-dnd";
+import { useDrag, useDragLayer } from "react-dnd";
 import { getEmptyImage } from "react-dnd-html5-backend";
+import { toast } from "@react-client/common/toasts";
 import {
 	readV2AnketaSectionUiOptions,
+	resolveStreamExecutorForTypicalWorkOutputPath,
 	resolveV2AnketaArchComponent,
 	resolveV2AnketaCanvasUiKind,
 	type V2AnketaCanvasUiKind,
@@ -73,10 +75,26 @@ import {
 } from "../propertiesFieldKind";
 import { useParams } from "react-router";
 import { useV2TypicalWorksList } from "@react-client/common/api/queries/v2-works";
+import {
+	pointerToOutputPath,
+	resolveTypicalWorkDisplayBoundIds,
+	type TypicalWorkCatalogItem,
+} from "../typicalWorkBlockBinding";
 import { useSchemaEditor } from "../SchemaEditorContext";
+import { ensureAnketaFormDataWithWorkflow } from "@react-client/features/v2/anketaCRUD/hooks/useAnketaWorkflow";
+import { mergeAnketaDisplayFormData } from "@react-client/features/v2/anketaCRUD/utils/mergeAnketaDisplayFormData";
+import {
+	getArrayAtPath,
+	sumTypicalWorkTotals,
+} from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
+import { TypicalWorkSummaryTotal } from "@react-client/features/v2/anketaCRUD/molecules/TypicalWorkSummaryTotal";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "./PanelChrome";
 import { SchemaCanvasFieldSearch } from "./SchemaCanvasFieldSearch";
+import {
+	CANVAS_FIELD_POINTER_ATTR,
+	revealCanvasFieldPointer,
+} from "../schemaCanvasFocus";
 import { SchemaCanvasPlaceholder } from "./SchemaCanvasPlaceholder";
 import { isCanvasStockField } from "../canvasStockFields";
 import {
@@ -92,6 +110,14 @@ import {
 	SCHEMA_CANVAS_ROOT_ID,
 	type SchemaCanvasNodeData,
 } from "../schemaCanvasTree";
+import {
+	canAddTypicalWorkUnderParent,
+	isTypicalWorkFieldAtPointer,
+	isTypicalWorkPaletteUiOptions,
+	resolveTypicalWorkDragContext,
+	resolveTypicalWorkDropParentPointer,
+	TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE,
+} from "../typicalWorkCanvasConstraints";
 
 const DEPTH_INDENT_PX = 12;
 
@@ -284,7 +310,8 @@ function SchemaCanvasFieldRow({
 	hasChild,
 	onToggle,
 	onRequestDelete,
-	typicalWorkTitleSuffix,
+	typicalWorkNameById,
+	typicalWorkCatalog,
 }: {
 	node: NodeModel<SchemaCanvasNodeData>;
 	depth: number;
@@ -294,8 +321,8 @@ function SchemaCanvasFieldRow({
 	hasChild: boolean;
 	onToggle: () => void;
 	onRequestDelete: (state: CanvasDeleteConfirmState) => void;
-	/** Названия типовых работ схемы — добавляются в заголовок блока typicalWork. */
-	typicalWorkTitleSuffix?: string;
+	typicalWorkNameById: Map<string, string>;
+	typicalWorkCatalog: TypicalWorkCatalogItem[];
 }) {
 	const theme = useTheme();
 	const {
@@ -306,7 +333,65 @@ function SchemaCanvasFieldRow({
 		setSelectedPointer,
 		setUiSchema,
 		duplicateCanvasField,
+		formData,
+		liveFormData,
+		calculationLoading,
 	} = useSchemaEditor();
+
+	const { draggingTypicalWork, excludePointer } = useDragLayer((monitor) => {
+		if (!monitor.isDragging()) {
+			return {
+				draggingTypicalWork: false,
+				excludePointer: null as string | null,
+			};
+		}
+		const ctx = resolveTypicalWorkDragContext(
+			monitor.getItem(),
+			monitor.getItemType(),
+			uiSchema,
+		);
+		return {
+			draggingTypicalWork: ctx.isTypicalWorkDrag,
+			excludePointer: ctx.excludePointer,
+		};
+	});
+
+	const dropParentPointer = useMemo(
+		() => resolveTypicalWorkDropParentPointer(node, jsonSchema),
+		[node, jsonSchema],
+	);
+
+	const isInvalidTypicalWorkDropTarget = useMemo(() => {
+		if (!draggingTypicalWork || !isDropTarget || !dropParentPointer) {
+			return false;
+		}
+		return !canAddTypicalWorkUnderParent(
+			jsonSchema,
+			uiSchema,
+			dropParentPointer,
+			excludePointer,
+		);
+	}, [
+		draggingTypicalWork,
+		isDropTarget,
+		dropParentPointer,
+		jsonSchema,
+		uiSchema,
+		excludePointer,
+	]);
+
+	const typicalWorkSummaryTotal = useMemo(() => {
+		if (node.data?.kind !== "typical-work-summary") return null;
+		const parentPointer = node.data.parentPointer;
+		if (!parentPointer) return null;
+		const dotPath = pointerSegments(parentPointer).join(".");
+		const displayData = mergeAnketaDisplayFormData(
+			ensureAnketaFormDataWithWorkflow(formData),
+			liveFormData,
+			uiSchema as Record<string, unknown>,
+		);
+		return sumTypicalWorkTotals(getArrayAtPath(displayData, dotPath));
+	}, [node.data, formData, liveFormData, uiSchema]);
 
 	if (node.data?.kind === "system-divider") {
 		return (
@@ -328,6 +413,30 @@ function SchemaCanvasFieldRow({
 				>
 					{node.text}
 				</Typography>
+			</Box>
+		);
+	}
+
+	if (node.data?.kind === "typical-work-summary") {
+		return (
+			<Box
+				sx={{
+					ml: `${depth * DEPTH_INDENT_PX}px`,
+					mr: 1,
+					my: 0.5,
+					px: 1,
+					py: 0.75,
+					borderRadius: 1,
+					border: 1,
+					borderStyle: "dashed",
+					borderColor: "divider",
+					bgcolor: alpha(theme.palette.text.secondary, 0.04),
+				}}
+			>
+				<TypicalWorkSummaryTotal
+					total={typicalWorkSummaryTotal}
+					loading={calculationLoading}
+				/>
 			</Box>
 		);
 	}
@@ -366,7 +475,11 @@ function SchemaCanvasFieldRow({
 	const { label: typeChipLabel, colorKey: typeChipColorKey } =
 		resolveCanvasFieldTypeChipLabel(schemaNode, uiBranch);
 	const typeChipColor = resolveCanvasTypeChipColor(typeChipColorKey);
-	const categoryChips = resolveCanvasCategoryChips(schemaNode, uiBranch, fieldKey);
+	const categoryChips = resolveCanvasCategoryChips(
+		schemaNode,
+		uiBranch,
+		fieldKey,
+	);
 
 	const canvasUiColor =
 		canvasUiKind === "hidden"
@@ -379,15 +492,46 @@ function SchemaCanvasFieldRow({
 
 	const showExpand = hasChild && node.data?.kind === "field";
 
-	const rowTitle =
-		sectionUiOptions.archComponent === "typicalWork" && typicalWorkTitleSuffix
+	const typicalWorkTitleSuffix = useMemo(() => {
+		if (sectionUiOptions.archComponent !== "typicalWork") return "";
+		const outputPath = pointerToOutputPath(fieldPointer);
+		const streamExecutor =
+			sectionUiOptions.streamExecutor ??
+			resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPath) ??
+			"";
+		const ids = resolveTypicalWorkDisplayBoundIds(
+			uiSchema,
+			fieldPointer,
+			typicalWorkCatalog,
+			streamExecutor,
+		);
+		const names = [
+			...new Set(
+				ids
+					.map((id) => typicalWorkNameById.get(id)?.trim())
+					.filter((name): name is string => Boolean(name)),
+			),
+		];
+		if (names.length === 0) return "";
+		const preview = names.slice(0, 3).join(", ");
+		return names.length > 3 ? `${preview}…` : preview;
+	}, [
+		sectionUiOptions.archComponent,
+		sectionUiOptions.streamExecutor,
+		uiSchema,
+		fieldPointer,
+		typicalWorkCatalog,
+		typicalWorkNameById,
+	]);
+
+	const rowTitle = typicalWorkTitleSuffix
 			? `${node.text} · ${typicalWorkTitleSuffix}`
 			: node.text;
 
 	return (
 		<Box
 			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasFieldRow}
-			data-canvas-field-pointer={fieldPointer}
+			{...{ [CANVAS_FIELD_POINTER_ATTR]: fieldPointer }}
 			onClick={() => setSelectedPointer(fieldPointer)}
 			sx={{
 				display: "flex",
@@ -400,14 +544,18 @@ function SchemaCanvasFieldRow({
 				borderRadius: 1,
 				border: 2,
 				borderStyle: "solid",
-				borderColor: isDropTarget
+				borderColor: isInvalidTypicalWorkDropTarget
+					? theme.palette.error.main
+					: isDropTarget
 					? theme.palette.primary.main
 					: selected
 						? "primary.main"
 						: isChanged
 							? theme.palette.warning.main
 							: "divider",
-				bgcolor: isDropTarget
+				bgcolor: isInvalidTypicalWorkDropTarget
+					? alpha(theme.palette.error.main, 0.14)
+					: isDropTarget
 					? alpha(theme.palette.primary.main, 0.14)
 					: selected
 						? alpha(theme.palette.primary.main, 0.08)
@@ -600,6 +748,10 @@ function SchemaCanvasFieldRow({
 						tabIndex={selected ? 0 : -1}
 						onClick={(e) => {
 							e.stopPropagation();
+							if (sectionUiOptions.archComponent === "typicalWork") {
+								toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
+								return;
+							}
 							duplicateCanvasField(fieldPointer);
 						}}
 						sx={{ flexShrink: 0 }}
@@ -637,7 +789,11 @@ function PalettePresetRow({ preset }: { preset: PalettePreset }) {
 		uiSchema,
 		setSelectedPointer,
 	} = useSchemaEditor();
-	const rootCount = listCanvasEditableChildKeys(jsonSchema, "/", uiSchema).length;
+	const rootCount = listCanvasEditableChildKeys(
+		jsonSchema,
+		"/",
+		uiSchema,
+	).length;
 	const isArch = preset.section === "arch" || preset.section === "works";
 	const archType = isArch ? (preset.chipLabel as V2ArchComponentType) : null;
 	const archColor = archType ? ARCH_COMPONENT_CHIP_COLORS[archType] : undefined;
@@ -659,15 +815,22 @@ function PalettePresetRow({ preset }: { preset: PalettePreset }) {
 						}
 					: undefined
 			}
-			onDoubleClickAdd={() =>
+			onDoubleClickAdd={() => {
+				if (
+					isTypicalWorkPaletteUiOptions(preset.uiOptions) &&
+					!canAddTypicalWorkUnderParent(jsonSchema, uiSchema, "/")
+				) {
+					toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
+					return;
+				}
 				handleAddFieldPresetAtParent(
 					"/",
 					preset.make(),
 					rootCount,
 					preset.uiOptions,
 					preset.uiBranch,
-				)
-			}
+				);
+			}}
 		/>
 	);
 }
@@ -745,8 +908,11 @@ export function SchemaCanvasPanel({
 	const {
 		jsonSchema,
 		uiSchema,
+		selectedPointer,
+		mainTab,
 		handleAddFieldPresetAtParent,
 		handleDeleteField,
+		getFieldDeleteImpact,
 		moveCanvasField,
 		canUndoDraft,
 		canRedoDraft,
@@ -756,30 +922,46 @@ export function SchemaCanvasPanel({
 	const { hideSystemFields } = useSchemaConstructorSettings();
 	const { templateId = "" } = useParams<{ templateId: string }>();
 	const { data: worksData } = useV2TypicalWorksList({ templateId });
-	const typicalWorkTitleSuffix = useMemo(() => {
-		const names = [
-			...new Set(
-				(worksData?.items ?? [])
-					.map((work) => work.name?.trim())
-					.filter((name): name is string => Boolean(name)),
-			),
-		];
-		if (names.length === 0) return "";
-		const preview = names.slice(0, 3).join(", ");
-		return names.length > 3 ? `${preview}…` : preview;
+	const typicalWorkCatalog = useMemo<TypicalWorkCatalogItem[]>(
+		() =>
+			(worksData?.items ?? []).map((work) => ({
+				id: work.id,
+				streams: work.streams ?? [],
+			})),
+		[worksData?.items],
+	);
+	const typicalWorkNameById = useMemo(() => {
+		const map = new Map<string, string>();
+		for (const work of worksData?.items ?? []) {
+			if (work.name?.trim()) map.set(work.id, work.name.trim());
+		}
+		return map;
 	}, [worksData?.items]);
 	const treeRef = useRef<TreeMethods>(null);
 	const [deleteConfirm, setDeleteConfirm] =
 		useState<CanvasDeleteConfirmState | null>(null);
+	const [deleteImpact, setDeleteImpact] = useState<Awaited<
+		ReturnType<typeof getFieldDeleteImpact>
+	> | null>(null);
+	const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
 
-	const handleRequestDelete = useCallback((state: CanvasDeleteConfirmState) => {
-		setDeleteConfirm(state);
-	}, []);
+	const handleRequestDelete = useCallback(
+		(state: CanvasDeleteConfirmState) => {
+			setDeleteConfirm(state);
+			setDeleteImpact(null);
+			setDeleteImpactLoading(true);
+			void getFieldDeleteImpact(state.pointer)
+				.then(setDeleteImpact)
+				.catch(() => setDeleteImpact(null))
+				.finally(() => setDeleteImpactLoading(false));
+		},
+		[getFieldDeleteImpact],
+	);
 
-	const handleConfirmDelete = useCallback(() => {
+	const handleConfirmDelete = useCallback(async () => {
 		if (!deleteConfirm) return;
-		handleDeleteField(deleteConfirm.pointer);
-		setDeleteConfirm(null);
+		const deleted = await handleDeleteField(deleteConfirm.pointer);
+		if (deleted) setDeleteConfirm(null);
 	}, [deleteConfirm, handleDeleteField]);
 
 	const presetById = useMemo(
@@ -804,6 +986,14 @@ export function SchemaCanvasPanel({
 		[jsonSchema, uiSchema, hideSystemFields],
 	);
 
+	useEffect(() => {
+		if (mainTab !== "designer" || !selectedPointer) return;
+		const frame = requestAnimationFrame(() => {
+			revealCanvasFieldPointer(treeRef.current, treeData, selectedPointer);
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [mainTab, selectedPointer, treeData]);
+
 	const hasExpandableNodes = useMemo(
 		() =>
 			treeData.some((node) =>
@@ -821,7 +1011,9 @@ export function SchemaCanvasPanel({
 	}, []);
 
 	const canvasToolbarActions = (
-		<Box sx={{ display: "flex", gap: 0.5, flexShrink: 0, alignItems: "center" }}>
+		<Box
+			sx={{ display: "flex", gap: 0.5, flexShrink: 0, alignItems: "center" }}
+		>
 			<IconButton
 				size="small"
 				disabled={!canUndoDraft}
@@ -900,6 +1092,13 @@ export function SchemaCanvasPanel({
 				if (!presetId) return;
 				const preset = presetById.get(presetId);
 				if (!preset) return;
+				if (
+					isTypicalWorkPaletteUiOptions(preset.uiOptions) &&
+					!canAddTypicalWorkUnderParent(jsonSchema, uiSchema, parentPointer)
+				) {
+					toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
+					return;
+				}
 				handleAddFieldPresetAtParent(
 					parentPointer,
 					preset.make(),
@@ -913,6 +1112,19 @@ export function SchemaCanvasPanel({
 			const dragSource = options.dragSource;
 			if (dragSource?.data?.kind !== "field") return;
 			if (isCanvasSystemField(uiSchema, dragSource.data.fieldPointer)) return;
+
+			if (
+				isTypicalWorkFieldAtPointer(uiSchema, dragSource.data.fieldPointer) &&
+				!canAddTypicalWorkUnderParent(
+					jsonSchema,
+					uiSchema,
+					parentPointer,
+					dragSource.data.fieldPointer,
+				)
+			) {
+				toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
+				return;
+			}
 
 			moveCanvasField(dragSource.data.fieldPointer, parentPointer, index);
 		},
@@ -1025,8 +1237,7 @@ export function SchemaCanvasPanel({
 						px: 0.5,
 						py: 0.5,
 						position: "relative",
-					[`& .${CANVAS_TREE_ROOT_CLASS}, & .${CANVAS_TREE_ROOT_CLASS} ul`]:
-						{
+						[`& .${CANVAS_TREE_ROOT_CLASS}, & .${CANVAS_TREE_ROOT_CLASS} ul`]: {
 							listStyle: "none",
 							m: 0,
 							p: 0,
@@ -1117,7 +1328,8 @@ export function SchemaCanvasPanel({
 							hasChild={hasChild}
 							onToggle={onToggle}
 							onRequestDelete={handleRequestDelete}
-							typicalWorkTitleSuffix={typicalWorkTitleSuffix}
+							typicalWorkNameById={typicalWorkNameById}
+							typicalWorkCatalog={typicalWorkCatalog}
 						/>
 					)}
 				/>
@@ -1163,12 +1375,25 @@ export function SchemaCanvasPanel({
 						Связанные правила логики для этого поля и его потомков тоже будут
 						удалены.
 					</Typography>
+					{deleteImpactLoading ? (
+						<Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+							Проверяем связи с типовыми работами…
+						</Typography>
+					) : deleteImpact && deleteImpact.worksMatched > 0 ? (
+						<Typography variant="body2" color="error" sx={{ mt: 1 }}>
+							Будут обновлены типовые работы: {deleteImpact.worksMatched},
+							условия: {deleteImpact.rulesRemoved}, параметры трудоёмкости:{" "}
+							{deleteImpact.laborParamsRemoved}. Связанные формулы будут
+							помечены как требующие исправления.
+						</Typography>
+					) : null}
 				</DialogContent>
 				<DialogActions>
 					<Button onClick={() => setDeleteConfirm(null)}>Отмена</Button>
 					<Button
 						variant="contained"
 						color="error"
+						disabled={deleteImpactLoading}
 						data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasDeleteConfirmSubmit}
 						onClick={handleConfirmDelete}
 					>

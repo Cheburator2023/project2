@@ -144,6 +144,36 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
         };
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveLaborAnyOfCoefficient)({ field_checkbox: true }, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(1.5);
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveLaborAnyOfCoefficient)({ field_checkbox: false }, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(0.5);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveLaborAnyOfCoefficient)({}, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(0.5);
+    });
+    (0, vitest_1.it)("does not treat unrelated source.value as boolean labor answer", () => {
+        const anyOf = {
+            valueCodes: ["true"],
+            valueLabels: ["Да"],
+            coeffOn: 1,
+            coeffOff: 2,
+        };
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveLaborAnyOfCoefficient)({ name: "Источник", type: "Внутренний", value: "Да" }, "field_cb", anyOf, "Чекбокс @ field_cb")).toBe(2);
+    });
+    (0, vitest_1.it)("buildTypicalWorkFactorCoeffResolver falls back to any_of coeffOff", () => {
+        const resolve = (0, v2_works_catalog_match_util_1.buildTypicalWorkFactorCoeffResolver)({
+            paramCoefficients: {},
+            anyOfParams: [
+                {
+                    paramCode: "field_cb",
+                    paramName: "Чекбокс @ field_cb",
+                    anyOf: {
+                        valueCodes: ["true"],
+                        valueLabels: ["Да"],
+                        coeffOn: 1,
+                        coeffOff: 2,
+                    },
+                },
+            ],
+            source: {},
+        });
+        (0, vitest_1.expect)(resolve("field_cb")).toBe(2);
+        (0, vitest_1.expect)(resolve("missing")).toBe(1);
     });
     (0, vitest_1.it)("resolves by-value labor coefficients from schema dictionary answers", () => {
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)({ field_dict: "Да" }, [
@@ -162,6 +192,24 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
                 coefficient: 10,
             },
         ])).toEqual({ field_dict: 20 });
+    });
+    (0, vitest_1.it)("treats an absent by-value boolean checkbox as false", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)({ name: "Источник", value: "Да" }, [
+            {
+                paramCode: "field_cb",
+                paramName: "Чекбокс @ field_cb",
+                valueCode: "true",
+                valueLabel: "Да",
+                coefficient: 1,
+            },
+            {
+                paramCode: "field_cb",
+                paramName: "Чекбокс @ field_cb",
+                valueCode: "false",
+                valueLabel: "Нет",
+                coefficient: 2,
+            },
+        ])).toEqual({ field_cb: 2 });
     });
     (0, vitest_1.it)("matches boolean checkbox trigger by label and code", () => {
         const rules = [

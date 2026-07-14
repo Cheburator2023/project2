@@ -30,7 +30,13 @@ export type TypicalWorkRuleLike = {
 export declare function resolveStreamFromSourceType(_source: Record<string, unknown>): string;
 /** Стрим(ы) типовых работ для систем-источников анкеты — всегда единый. */
 export declare function resolveStreamsFromSourceSystems(_data: Record<string, unknown>): string[];
-/** Читает значение параметра из контекста строки/объекта анкеты. */
+/**
+ * Ответ параметра трудоёмкости: только явные поля анкеты (paramCode / sourceKeys / slug).
+ * Без fallback на `value`/`controlType` строки — иначе отсутствующий чекбокс
+ * ошибочно наследует чужое значение и получает coeffOn вместо coeffOff.
+ */
+export declare function readLaborParamAnswer(source: Record<string, unknown>, paramCode: string, paramName: string | null): unknown;
+/** Читает значение параметра из контекста строки/объекта анкеты (триггеры, JsonLogic). */
 export declare function readTypicalWorkSourceField(source: Record<string, unknown>, paramCode: string, paramName: string | null): unknown;
 export declare function extractControlCode(label: string): string | null;
 export type TriggerStatusCatalogParamLike = {
@@ -91,3 +97,22 @@ export type ByValueLaborCoefficientRow = {
 };
 /** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
 export declare function resolveByValueLaborParamCoefficients(source: Record<string, unknown>, rows: readonly ByValueLaborCoefficientRow[]): Record<string, number>;
+export type TypicalWorkAnyOfLaborParamLike = {
+    paramCode: string;
+    paramName?: string | null;
+    anyOf: {
+        valueCodes: string[];
+        valueLabels: string[];
+        coeffOn: number;
+        coeffOff: number;
+    };
+};
+/**
+ * Резолвер коэффициента фактора формулы: сначала рассчитанные значения,
+ * затем any_of по фактическому ответу (в т.ч. «выкл» при отсутствии/снятом чекбоксе).
+ */
+export declare function buildTypicalWorkFactorCoeffResolver(params: {
+    paramCoefficients: Record<string, number>;
+    anyOfParams: readonly TypicalWorkAnyOfLaborParamLike[];
+    source: Record<string, unknown>;
+}): (paramCode: string) => number;

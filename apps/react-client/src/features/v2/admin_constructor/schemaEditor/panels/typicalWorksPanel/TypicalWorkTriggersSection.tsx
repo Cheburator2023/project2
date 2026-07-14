@@ -1,9 +1,11 @@
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Typography from "@mui/material/Typography";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import type {
 	V2TypicalWorkParameterDto,
 	V2TypicalWorkRuleDto,
@@ -17,7 +19,7 @@ import {
 	isSourceTypeTriggerParam,
 } from "@smart-anketa/api-contract";
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
 	catalogForTriggerRuleGroup,
 	isWorkTriggerGroupInvalid,
@@ -29,6 +31,7 @@ import {
 	filterRulesByGroupKey,
 	isSchemaTextualParam,
 	resolveSchemaParamForTriggerRule,
+	resolveSchemaParamFieldRef,
 	schemaParamDisplayName,
 	schemaParamRuleName,
 	schemaWorkParameterEmptyPickerMessage,
@@ -46,6 +49,10 @@ type TypicalWorkTriggersSectionProps = {
 	methodologyCatalog?: V2TypicalWorkParameterDto[];
 	streamExecutor: string;
 	onChange: (rules: V2TypicalWorkRuleDto[]) => void;
+	onNavigateToSchemaField?: (pointer: string) => void;
+	/** Id параметра (`schema:…`) — подставить в поиск «Параметр-триггер». */
+	triggerParamPickId?: string | null;
+	onTriggerParamPickConsumed?: () => void;
 };
 
 const OPERATOR_LABELS: Record<V2WorkRuleOperator, string> = {
@@ -134,8 +141,14 @@ export function TypicalWorkTriggersSection({
 	methodologyCatalog = [],
 	streamExecutor,
 	onChange,
+	onNavigateToSchemaField,
+	triggerParamPickId,
+	onTriggerParamPickConsumed,
 }: TypicalWorkTriggersSectionProps) {
 	const [pickerKey, setPickerKey] = useState(0);
+	const [triggerPickerSearchTerm, setTriggerPickerSearchTerm] = useState<
+		string | undefined
+	>(undefined);
 	const banner = triggerBanner(
 		triggerStatus,
 		rules.length,
@@ -158,6 +171,13 @@ export function TypicalWorkTriggersSection({
 		usedGroupKeys.size,
 		pickerItems.length,
 	);
+
+	useEffect(() => {
+		if (!triggerParamPickId?.trim()) return;
+		setTriggerPickerSearchTerm(triggerParamPickId);
+		setPickerKey((key) => key + 1);
+		onTriggerParamPickConsumed?.();
+	}, [triggerParamPickId, onTriggerParamPickConsumed]);
 
 	const grouped = useMemo(() => {
 		const map = new Map<string, V2TypicalWorkRuleDto[]>();
@@ -191,7 +211,11 @@ export function TypicalWorkTriggersSection({
 			const nextValues = selected
 				? currentValues.filter((v) => v.code !== valueCode)
 				: [...currentValues, { code: valueCode, label: valueLabel }];
-			const withoutGroup = excludeRulesByGroupKey(rules, groupKey, paramOptions);
+			const withoutGroup = excludeRulesByGroupKey(
+				rules,
+				groupKey,
+				paramOptions,
+			);
 			if (nextValues.length === 0) {
 				onChange(withoutGroup);
 				return;
@@ -201,6 +225,7 @@ export function TypicalWorkTriggersSection({
 				{
 					id: current?.id ?? `new-${Date.now()}`,
 					streamExecutor,
+					schemaFieldUid: param.schemaFieldUid ?? null,
 					paramCode: param.code,
 					paramName: schemaParamRuleName(param),
 					operator,
@@ -235,6 +260,7 @@ export function TypicalWorkTriggersSection({
 			{
 				id: `new-${Date.now()}-${valueCode}`,
 				streamExecutor,
+				schemaFieldUid: param.schemaFieldUid ?? null,
 				paramCode: param.code,
 				paramName: schemaParamRuleName(param),
 				operator: currentOperator,
@@ -268,6 +294,7 @@ export function TypicalWorkTriggersSection({
 			{
 				id: `new-${Date.now()}`,
 				streamExecutor,
+				schemaFieldUid: param.schemaFieldUid ?? null,
 				paramCode: param.code,
 				paramName: schemaParamRuleName(param),
 				operator: "=",
@@ -302,7 +329,9 @@ export function TypicalWorkTriggersSection({
 				>
 					Условия появления работы
 				</Typography>
-				<Box sx={{ ml: "auto", minWidth: 280, maxWidth: 420, flex: "1 1 280px" }}>
+				<Box
+					sx={{ ml: "auto", minWidth: 280, maxWidth: 420, flex: "1 1 280px" }}
+				>
 					<FuzzyAutocomplete<V2TypicalWorkParameterDto>
 						key={pickerKey}
 						data-test-id="trig-picker-items"
@@ -311,10 +340,19 @@ export function TypicalWorkTriggersSection({
 						onChange={(param) => {
 							if (!param) return;
 							addParam(param);
+							setTriggerPickerSearchTerm(undefined);
 						}}
 						getOptionLabel={(param) => param.name}
 						getOptionValue={(param) => param.code}
-						getOptionSecondaryText={(param) => param.description ?? undefined}
+						getOptionSecondaryText={(param) => {
+							const ref = resolveSchemaParamFieldRef(param);
+							if (ref.varPath) {
+								return `${param.id} · ${ref.varPath} · ${ref.fieldKey}`;
+							}
+							return param.id;
+						}}
+						initialSearchTerm={triggerPickerSearchTerm}
+						autoOpenOnInitialSearch={Boolean(triggerPickerSearchTerm)}
 						label="Параметр-триггер"
 						placeholder="Выберите поле схемы…"
 						emptyLabel="Выберите поле схемы…"
@@ -404,7 +442,10 @@ export function TypicalWorkTriggersSection({
 							paramOptions.find((item) => item.code === groupKey) ??
 							resolveSchemaParamForTriggerRule(ruleSeed, paramOptions);
 						const isKnownPseudoTrigger =
-							isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName) ||
+							isSourceTypeTriggerParam(
+								ruleSeed.paramCode,
+								ruleSeed.paramName,
+							) ||
 							isControlTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName);
 						const validationCatalog = catalogForTriggerRuleGroup(
 							ruleSeed,
@@ -443,8 +484,8 @@ export function TypicalWorkTriggersSection({
 							param?.name ??
 							(isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName)
 								? "Тип источника данных"
-								: schemaParamDisplayName(paramRules[0]?.paramName) ||
-									groupKey);
+								: schemaParamDisplayName(paramRules[0]?.paramName) || groupKey);
+						const fieldRef = resolveSchemaParamFieldRef(param);
 						return (
 							<Box
 								key={groupKey}
@@ -458,27 +499,71 @@ export function TypicalWorkTriggersSection({
 								<Box
 									sx={{
 										display: "flex",
-										alignItems: "center",
+										alignItems: "flex-start",
 										gap: 1,
 										mb: 1.1,
 									}}
 								>
-									<Typography
-										sx={{
-											flex: 1,
-											fontSize: 12.5,
-											fontWeight: 700,
-											color: "#1d2435",
-											lineHeight: 1.25,
-										}}
-									>
-										{displayName}
-									</Typography>
+									<Box sx={{ flex: 1, minWidth: 0 }}>
+										<Typography
+											sx={{
+												fontSize: 12.5,
+												fontWeight: 700,
+												color: "#1d2435",
+												lineHeight: 1.25,
+											}}
+										>
+											{displayName}
+										</Typography>
+										{fieldRef.varPath ? (
+											<Typography
+												sx={{
+													mt: 0.35,
+													fontSize: 10.5,
+													color: "#8a93a3",
+													fontFamily:
+														"ui-monospace, SFMono-Regular, Menlo, monospace",
+													lineHeight: 1.35,
+													wordBreak: "break-all",
+												}}
+											>
+												{fieldRef.varPath} · {fieldRef.fieldKey}
+											</Typography>
+										) : (
+											<Typography
+												sx={{ mt: 0.35, fontSize: 10.5, color: "#8a93a3" }}
+											>
+												{groupKey}
+											</Typography>
+										)}
+									</Box>
+									{fieldRef.pointer && onNavigateToSchemaField ? (
+										<Button
+											size="small"
+											variant="outlined"
+											title="Выделить поле на холсте конструктора"
+											startIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+											onClick={() => onNavigateToSchemaField(fieldRef.pointer!)}
+											sx={{
+												flexShrink: 0,
+												minWidth: 0,
+												px: 1,
+												py: 0.35,
+												fontSize: 11,
+												fontWeight: 600,
+												textTransform: "none",
+												borderColor: "#dfe2ea",
+												color: "#4b5565",
+											}}
+										>
+											К конструктору
+										</Button>
+									) : null}
 									<IconButton
 										size="small"
 										aria-label="Удалить триггер"
 										onClick={() => removeParam(groupKey)}
-										sx={{ color: "#c2554c" }}
+										sx={{ color: "#c2554c", mt: -0.25 }}
 									>
 										<DeleteOutlineIcon fontSize="small" />
 									</IconButton>
@@ -567,8 +652,11 @@ export function TypicalWorkTriggersSection({
 										))}
 									</Box>
 								) : null}
-								{param && (param.values.length === 0 || isSchemaTextualParam(param)) ? (
-									<Typography sx={{ fontSize: 11.5, color: "#6b7484", mb: 0.9 }}>
+								{param &&
+								(param.values.length === 0 || isSchemaTextualParam(param)) ? (
+									<Typography
+										sx={{ fontSize: 11.5, color: "#6b7484", mb: 0.9 }}
+									>
 										{isSchemaTextualParam(param)
 											? "Работа появляется, если поле заполнено (любое непустое значение)."
 											: param.numeric

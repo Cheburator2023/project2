@@ -5,8 +5,19 @@ import Box from "@mui/material/Box";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import { useColorScheme } from "@mui/material/styles";
+import {
+	publishAppSync,
+	subscribeAppSync,
+} from "@react-client/common/crossTab/appBroadcast";
 import { useEffectOnce } from "@react-client/common/hooks/useEffectOnce";
 import React from "react";
+
+function applyRootColorMode(mode: "light" | "dark") {
+	const rootEl = document.getElementById("root");
+	if (!rootEl) return;
+	rootEl.setAttribute("data-color-scheme", mode);
+	rootEl.style.backgroundColor = "";
+}
 
 export function ColorModeIconDropdown() {
 	const { mode, setMode } = useColorScheme();
@@ -22,32 +33,32 @@ export function ColorModeIconDropdown() {
 	};
 
 	useEffectOnce(() => {
-		const rootEl: HTMLElement = document.getElementById("root") as any;
-		rootEl.setAttribute(
-			"data-color-scheme",
-			mode !== "dark" ? "light" : "dark",
-		);
-		rootEl.style.backgroundColor = "";
+		applyRootColorMode(mode === "dark" ? "dark" : "light");
 		setMode(mode === "dark" ? "dark" : "light");
 	}, !!mode);
 
-	const handleMode = (targetMode: "light" | "dark") => () => {
-		const rootEl: HTMLElement = document.getElementById("root") as any;
+	React.useEffect(
+		() =>
+			subscribeAppSync((event) => {
+				if (event.type !== "settings:theme") return;
+				applyRootColorMode(event.mode);
+				setMode(event.mode);
+			}),
+		[setMode],
+	);
 
+	const handleMode = (targetMode: "light" | "dark") => () => {
 		// remove scrollbars
 		document.documentElement.style.overflow = "hidden";
 		// trigger reflow so that overflow style is applied
 		document.body.clientWidth;
 		// change scheme
-		rootEl.setAttribute(
-			"data-color-scheme",
-			targetMode !== "dark" ? "light" : "dark",
-		);
-		rootEl.style.backgroundColor = "";
+		applyRootColorMode(targetMode);
 		// remove overflow style, which will bring back the scrollbar with the correct scheme
 		document.documentElement.style.overflow = "";
 
 		setMode(targetMode);
+		publishAppSync({ type: "settings:theme", mode: targetMode });
 		handleClose();
 	};
 

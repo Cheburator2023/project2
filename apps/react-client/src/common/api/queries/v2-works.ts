@@ -22,7 +22,9 @@ import type {
 } from "@smart-anketa/api-contract";
 import { apiClient } from "../helpers/apiClient";
 
-export const useV2TypicalWorksCatalog = (params?: { templateId?: string | null }) => {
+export const useV2TypicalWorksCatalog = (params?: {
+	templateId?: string | null;
+}) => {
 	const scoped = params != null && "templateId" in params;
 	const templateId = params?.templateId?.trim() ?? "";
 	const qs = templateId ? `?templateId=${encodeURIComponent(templateId)}` : "";
@@ -46,9 +48,12 @@ export const useV2TypicalWorkAssignments = (params?: {
 }) => {
 	const search = new URLSearchParams();
 	if (params?.workId) search.set("workId", params.workId);
-	if (params?.streamExecutor) search.set("streamExecutor", params.streamExecutor);
-	if (params?.archComponentType) search.set("archComponentType", params.archComponentType);
-	if (params?.templateVersionId) search.set("templateVersionId", params.templateVersionId);
+	if (params?.streamExecutor)
+		search.set("streamExecutor", params.streamExecutor);
+	if (params?.archComponentType)
+		search.set("archComponentType", params.archComponentType);
+	if (params?.templateVersionId)
+		search.set("templateVersionId", params.templateVersionId);
 	const qs = search.toString();
 
 	return useQuery<V2TypicalWorkAssignmentListResponseDto>({
@@ -70,7 +75,11 @@ export const useV2TypicalWorkAssignments = (params?: {
 
 export const useCreateV2TypicalWorkAssignment = () => {
 	const queryClient = useQueryClient();
-	return useMutation<V2TypicalWorkAssignmentDto, Error, CreateV2TypicalWorkAssignmentRequestDto>({
+	return useMutation<
+		V2TypicalWorkAssignmentDto,
+		Error,
+		CreateV2TypicalWorkAssignmentRequestDto
+	>({
 		mutationFn: (dto) =>
 			apiClient({
 				url: "/v2/works/assignments",
@@ -144,7 +153,9 @@ export const useV2TypicalWorkCard = (
 	});
 };
 
-export const useV2WorkParametersCatalog = (options?: { includeInactive?: boolean }) =>
+export const useV2WorkParametersCatalog = (options?: {
+	includeInactive?: boolean;
+}) =>
 	useQuery<V2TypicalWorkParameterListResponseDto>({
 		queryKey: ["v2-works", "parameters", options?.includeInactive === true],
 		queryFn: () =>
@@ -168,7 +179,9 @@ export const useV2ParameterDependencies = () =>
 		staleTime: 60_000,
 	});
 
-function invalidateV2WorkParameterCatalog(queryClient: ReturnType<typeof useQueryClient>) {
+function invalidateV2WorkParameterCatalog(
+	queryClient: ReturnType<typeof useQueryClient>,
+) {
 	queryClient.invalidateQueries({ queryKey: ["v2-works"] });
 }
 
@@ -285,13 +298,33 @@ export const usePatchV2TypicalWork = () => {
 				method: "PATCH",
 				data: dto,
 			}),
-		onSuccess: (card) => {
+		onSuccess: (card, variables) => {
 			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
 			queryClient.setQueryData(
-				["v2-works", card.id, card.streamExecutor, ""],
+				[
+					"v2-works",
+					card.id,
+					card.streamExecutor,
+					variables.dto.templateVersionId ?? "",
+				],
 				card,
 			);
 		},
+	});
+};
+
+export const useSyncV2TypicalWorksSchemaField = () => {
+	return useMutation<
+		import("@smart-anketa/api-contract").V2TypicalWorkSchemaFieldSyncImpactDto,
+		Error,
+		import("@smart-anketa/api-contract").V2TypicalWorkSchemaFieldSyncRequestDto
+	>({
+		mutationFn: (dto) =>
+			apiClient({
+				url: "/v2/works/schema-field-sync",
+				method: "POST",
+				data: dto,
+			}),
 	});
 };
 
@@ -330,7 +363,11 @@ export const useCopyV2TypicalWork = () => {
 
 export const useCreateV2TypicalWork = () => {
 	const queryClient = useQueryClient();
-	return useMutation<V2TypicalWorkCardDto, Error, CreateV2TypicalWorkRequestDto>({
+	return useMutation<
+		V2TypicalWorkCardDto,
+		Error,
+		CreateV2TypicalWorkRequestDto
+	>({
 		mutationFn: (dto) =>
 			apiClient({
 				url: "/v2/works",
@@ -352,8 +389,7 @@ export const useDeleteV2TypicalWork = () => {
 	const queryClient = useQueryClient();
 	return useMutation<void, Error, DeleteV2TypicalWorkVariables>({
 		mutationFn: ({ workId, confirm }) => {
-			const qs =
-				confirm === true ? "?confirm=true" : "";
+			const qs = confirm === true ? "?confirm=true" : "";
 			return apiClient({
 				url: `/v2/works/${workId}${qs}`,
 				method: "DELETE",

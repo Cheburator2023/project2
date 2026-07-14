@@ -32,6 +32,8 @@ import type {
 	V2TypicalWorkAssignmentDto,
 	V2TypicalWorkCatalogListResponseDto,
 	V2TypicalWorkAssignmentListResponseDto,
+	V2TypicalWorkSchemaFieldSyncImpactDto,
+	V2TypicalWorkSchemaFieldSyncRequestDto,
 } from "@smart-anketa/api-contract";
 import { V2TypicalWorkService } from "../services/v2-typical-work.service";
 import { V2TypicalWorkWriteService } from "../services/v2-typical-work-write.service";
@@ -93,7 +95,9 @@ export class V2TypicalWorkController {
 	}
 
 	@Get("parameters/catalog")
-	@ApiOperation({ summary: "Глобальный справочник параметров для условий и коэффициентов" })
+	@ApiOperation({
+		summary: "Глобальный справочник параметров для условий и коэффициентов",
+	})
 	@ApiQuery({ name: "includeInactive", required: false })
 	listParameters(
 		@Query("includeInactive") includeInactive?: string,
@@ -161,7 +165,9 @@ export class V2TypicalWorkController {
 	}
 
 	@Get("parameters/dependencies")
-	@ApiOperation({ summary: "Зависимости параметров (методологический каталог)" })
+	@ApiOperation({
+		summary: "Зависимости параметров (методологический каталог)",
+	})
 	listDependencies(): Promise<V2ParameterDependencyListResponseDto> {
 		return this.typicalWorkWriteService.listParameterDependencies();
 	}
@@ -198,10 +204,24 @@ export class V2TypicalWorkController {
 
 	@Post("calculation-logic/backfill")
 	@ApiOperation({
-		summary: "Скомпилировать JsonLogic для всех сохранённых формул version_config",
+		summary:
+			"Скомпилировать JsonLogic для всех сохранённых формул version_config",
 	})
-	async backfillCalculationLogic(): Promise<{ updated: number; skipped: number }> {
+	async backfillCalculationLogic(): Promise<{
+		updated: number;
+		skipped: number;
+	}> {
 		return this.typicalWorkWriteService.backfillCalculationLogic();
+	}
+
+	@Post("schema-field-sync")
+	@ApiOperation({
+		summary: "Синхронизировать связи типовых работ с полем схемы",
+	})
+	reconcileSchemaField(
+		@Body() dto: V2TypicalWorkSchemaFieldSyncRequestDto,
+	): Promise<V2TypicalWorkSchemaFieldSyncImpactDto> {
+		return this.typicalWorkWriteService.reconcileSchemaField(dto);
 	}
 
 	@Get(":id")
@@ -221,7 +241,9 @@ export class V2TypicalWorkController {
 	}
 
 	@Patch(":id")
-	@ApiOperation({ summary: "Обновить типовую работу (нормы, условия, коэффициенты, формула)" })
+	@ApiOperation({
+		summary: "Обновить типовую работу (нормы, условия, коэффициенты, формула)",
+	})
 	async patch(
 		@Param("id", ParseUUIDPipe) id: string,
 		@Body() dto: PatchV2TypicalWorkRequestDto,
@@ -230,7 +252,9 @@ export class V2TypicalWorkController {
 	}
 
 	@Post(":id/copy")
-	@ApiOperation({ summary: "Скопировать типовую работу (глубокий клон) в схему" })
+	@ApiOperation({
+		summary: "Скопировать типовую работу (глубокий клон) в схему",
+	})
 	async copy(
 		@Param("id", ParseUUIDPipe) id: string,
 		@Body() dto: CopyV2TypicalWorkRequestDto,

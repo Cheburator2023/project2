@@ -4,6 +4,8 @@ exports.V2_DB_STREAM_TO_EXECUTOR_AREA = exports.V2_LEGACY_STREAM_BLOCK_EXECUTOR 
 exports.isV2ExecutorStreamLabel = isV2ExecutorStreamLabel;
 exports.inferLegacyStreamExecutorForBlockKey = inferLegacyStreamExecutorForBlockKey;
 exports.resolveExecutorStreamAreaLabel = resolveExecutorStreamAreaLabel;
+exports.resolveExecutorScopeDbStreams = resolveExecutorScopeDbStreams;
+exports.typicalWorkAssignedToExecutorStream = typicalWorkAssignedToExecutorStream;
 /** Справочник стримов-исполнителей в редакторе логики и на стримовых блоках анкеты. */
 exports.V2_EXECUTOR_STREAM_LABELS = [
     "ДАДМ",
@@ -43,4 +45,25 @@ function inferLegacyStreamExecutorForBlockKey(blockKey) {
 }
 function resolveExecutorStreamAreaLabel(stream) {
     return exports.V2_DB_STREAM_TO_EXECUTOR_AREA[stream] ?? stream;
+}
+/** DB-стримы, сопоставляемые области UI (для фильтрации работ по стриму блока). */
+const EXECUTOR_SCOPE_DB_STREAMS = {
+    "Источники данных": ["ИД. Внутренний", "ИД. Внешний", "Источники данных"],
+    ПиРМ: ["ПиРМ", "ПиРМ (правила и развитие модели)"],
+};
+/** Стримы БД/области UI, в которых ищется назначение работы для блока typicalWork. */
+function resolveExecutorScopeDbStreams(executorStream) {
+    const trimmed = executorStream.trim();
+    if (!trimmed)
+        return [];
+    if (isV2ExecutorStreamLabel(trimmed)) {
+        return EXECUTOR_SCOPE_DB_STREAMS[trimmed] ?? [trimmed];
+    }
+    return [trimmed];
+}
+/** Работа назначена на стрим-исполнитель блока typicalWork (legacy без boundWorkIds). */
+function typicalWorkAssignedToExecutorStream(workStreams, executorStream) {
+    const scopeStreams = resolveExecutorScopeDbStreams(executorStream);
+    return workStreams.some((stream) => scopeStreams.includes(stream) ||
+        scopeStreams.includes(resolveExecutorStreamAreaLabel(stream)));
 }

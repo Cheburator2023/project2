@@ -26,12 +26,37 @@ describe("v2-default-typical-works-logic.util", () => {
 		});
 
 		const rule =
-			patched.rules.find((r) => r.id === "unified-source-typical-works") ??
+			patched.rules.find((r) => r.id.startsWith("typical-works-catalog-")) ??
 			buildSourceTypicalWorksCatalogRule();
 		const payload = rule.payload as Record<string, unknown>;
 		expect(payload.worksCatalog).toBe(true);
 		expect(payload.sourceArrayPath).toBe(V2_SOURCE_SYSTEMS_ARRAY_PATH);
 		expect(payload.tasks).toBeUndefined();
+	});
+
+	it("injects row_computed and unified typical total for every typicalWork path", () => {
+		const ui = {
+			streamDataSources: {
+				sourceTypicalTasks: { "ui:options": { archComponent: "typicalWork" } },
+			},
+			field_pirm: {
+				"ui:options": { streamBlock: true, streamExecutor: "ПиРМ" },
+				myTypical: { "ui:options": { archComponent: "typicalWork" } },
+			},
+		};
+		const patched = patchV2TypicalWorksLogicRules({ rules: [] }, { uiSchema: ui });
+		expect(
+			patched.rules.some(
+				(rule) => rule.id === "unified-typical-row-total:field_pirm_myTypical",
+			),
+		).toBe(true);
+		const unified = patched.rules.find((rule) => rule.id === "unified-typical-total");
+		expect(unified?.dependencies).toEqual(
+			expect.arrayContaining([
+				"/streamDataSources/sourceTypicalTasks",
+				"/field_pirm/myTypical",
+			]),
+		);
 	});
 
 	it("does not inject catalog rules into partial logic graphs", () => {
@@ -47,7 +72,9 @@ describe("v2-default-typical-works-logic.util", () => {
 			],
 		});
 		expect(
-			patched.rules.some((rule) => rule.id === "unified-source-typical-works"),
+			patched.rules.some((rule) =>
+				rule.id.startsWith("typical-works-catalog-"),
+			),
 		).toBe(false);
 	});
 
@@ -77,14 +104,85 @@ describe("v2-default-typical-works-logic.util", () => {
 			},
 		);
 
-		const rule = patched.rules.find(
-			(r) => r.id === "unified-source-typical-works",
+		const rule = patched.rules.find((r) =>
+			r.id.startsWith("typical-works-catalog-"),
 		);
 		expect(rule).toBeDefined();
 		const payload = rule?.payload as Record<string, unknown>;
 		expect(payload.worksCatalog).toBe(true);
 		expect(payload.outputArrayPath).toBe("detailInfo.myTypicalTasks");
 		expect(rule?.targetPath).toBe("/detailInfo/myTypicalTasks");
+	});
+
+	it("injects separate catalog rules per typicalWork block with bound work ids", () => {
+		const patched = patchV2TypicalWorksLogicRules(
+			{ rules: [] },
+			{
+				jsonSchema: {
+					type: "object",
+					properties: {
+						field_a: { type: "array", items: { type: "object" } },
+						field_b: { type: "array", items: { type: "object" } },
+					},
+				},
+				uiSchema: {
+					field_a: {
+						"ui:options": {
+							archComponent: "typicalWork",
+							boundWorkIds: ["work-1"],
+						},
+					},
+					field_b: {
+						"ui:options": {
+							archComponent: "typicalWork",
+							boundWorkIds: ["work-2", "work-3"],
+						},
+					},
+				},
+			},
+		);
+
+		const rules = patched.rules.filter((r) =>
+			r.id.startsWith("typical-works-catalog-"),
+		);
+		expect(rules).toHaveLength(2);
+		const ruleA = rules.find((r) => r.targetPath === "/field_a");
+		const ruleB = rules.find((r) => r.targetPath === "/field_b");
+		expect((ruleA?.payload as Record<string, unknown>).allowedWorkIds).toEqual([
+			"work-1",
+		]);
+		expect((ruleB?.payload as Record<string, unknown>).allowedWorkIds).toEqual([
+			"work-2",
+			"work-3",
+		]);
+	});
+
+	it("disables catalog rule for empty boundWorkIds block", () => {
+		const patched = patchV2TypicalWorksLogicRules(
+			{ rules: [] },
+			{
+				jsonSchema: {
+					type: "object",
+					properties: {
+						field_empty: { type: "array", items: { type: "object" } },
+					},
+				},
+				uiSchema: {
+					field_empty: {
+						"ui:options": {
+							archComponent: "typicalWork",
+							boundWorkIds: [],
+						},
+					},
+				},
+			},
+		);
+
+		const rule = patched.rules.find((r) => r.targetPath === "/field_empty");
+		expect(rule?.condition).toBe(false);
+		expect((rule?.payload as Record<string, unknown>).allowedWorkIds).toEqual(
+			[],
+		);
 	});
 
 	it("injects source catalog rule for root-level typicalWork block without sourceSystems", () => {
@@ -111,7 +209,7 @@ describe("v2-default-typical-works-logic.util", () => {
 		);
 
 		const rule = patched.rules.find(
-			(r) => r.id === "unified-source-typical-works",
+			(r) => r.id === "typical-works-catalog-field_SId8TZKZ",
 		);
 		expect(rule).toBeDefined();
 		const payload = rule?.payload as Record<string, unknown>;

@@ -40,8 +40,8 @@ export const AnketaCreatePageV2 = () => {
 		createMutation.mutate(
 			{
 				templateId: activeTemplate.id,
-				calcName: getV2QuestionnaireFormTitle(engine.formData),
-				formData: engine.formData,
+				calcName: getV2QuestionnaireFormTitle(engine.displayFormData),
+				formData: engine.displayFormData,
 			},
 			{
 				onSuccess: (created) => {

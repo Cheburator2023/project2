@@ -12,6 +12,7 @@ import {
 	anketaMoleculeTestIdForPath,
 } from "./testIds";
 import { readAnketaFormContext } from "../utils/anketaFormContext";
+import { isAnketaArchPathReadOnly } from "../utils/anketaPathLock.util";
 import {
 	resolveObjectTableColumns,
 } from "../utils/anketaArchObjectTableConfig";
@@ -38,7 +39,7 @@ export function AnketaArchObjectPanel({
 		ctx.previewUiSchema,
 	);
 	const items = readArchObjectListAtPath(ctx.formData ?? {}, pathKey);
-	const readOnly = ctx.anketaReadOnly;
+	const readOnly = isAnketaArchPathReadOnly(formContext, pathKey);
 
 	const addLabel = `Добавить ${sectionTitle.toLowerCase()}`;
 	const panelTestId = anketaMoleculeTestIdForPath(
@@ -46,28 +47,32 @@ export function AnketaArchObjectPanel({
 		pathKey,
 	);
 
-	const rowActions = (index: number) => (
-		<Stack direction="row" spacing={0.25} justifyContent="flex-end">
-			<IconButton
-				size="small"
-				disabled={readOnly}
-				title="Редактировать"
-				data-test-id={`${panelTestId}--edit-${index}`}
-				onClick={() => ctx.openAnketaModal?.(pathKey, index)}
-			>
-				<EditOutlinedIcon fontSize="small" />
-			</IconButton>
-			<IconButton
-				size="small"
-				disabled={readOnly}
-				title="Удалить"
-				data-test-id={`${panelTestId}--delete-${index}`}
-				onClick={() => ctx.deleteAnketaArrayItem?.(pathKey, index)}
-			>
-				<DeleteOutlineIcon fontSize="small" />
-			</IconButton>
-		</Stack>
-	);
+	const rowActionsWidth = readOnly ? "" : " 72px";
+	const rowGridColumns = columns
+		? `repeat(${columns.length}, 1fr)${rowActionsWidth}`
+		: `1fr${rowActionsWidth}`;
+
+	const rowActions = (index: number) =>
+		readOnly ? null : (
+			<Stack direction="row" spacing={0.25} justifyContent="flex-end">
+				<IconButton
+					size="small"
+					title="Редактировать"
+					data-test-id={`${panelTestId}--edit-${index}`}
+					onClick={() => ctx.openAnketaModal?.(pathKey, index)}
+				>
+					<EditOutlinedIcon fontSize="small" />
+				</IconButton>
+				<IconButton
+					size="small"
+					title="Удалить"
+					data-test-id={`${panelTestId}--delete-${index}`}
+					onClick={() => ctx.deleteAnketaArrayItem?.(pathKey, index)}
+				>
+					<DeleteOutlineIcon fontSize="small" />
+				</IconButton>
+			</Stack>
+		);
 
 	return (
 		<Box data-test-id={panelTestId} sx={{ minWidth: 0 }}>
@@ -79,9 +84,7 @@ export function AnketaArchObjectPanel({
 							data-test-id={`${panelTestId}--row-${index}`}
 							sx={{
 								display: "grid",
-								gridTemplateColumns: columns
-									? `repeat(${columns.length}, 1fr) 72px`
-									: "1fr 72px",
+								gridTemplateColumns: rowGridColumns,
 								gap: 1,
 								alignItems: "center",
 								px: 1.5,

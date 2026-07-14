@@ -1,6 +1,9 @@
+import {Permission} from "@react-client/types/roles";
+
 export type AppRouteConfig = {
 	rootPath: string;
 	name: string;
+	permission?: Permission;
 	disabled?: boolean;
 	devOnly?: boolean;
 	/** Пункт основного сайдменю */

@@ -83,6 +83,11 @@ export const V2TemplateSchemaEditorPage = () => {
 		>
 			<Box data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.header}>
 				<Header
+					backTo={
+						isAdminContext
+							? routes.adminV2Schemas.rootPath
+							: routes.playground.rootPath
+					}
 					leadingAccessory={
 						headerMeta ? (
 							<Flex

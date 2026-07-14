@@ -97,15 +97,19 @@ function formatNormValue(value: number | null): string {
 	return String(value);
 }
 
-function isFormulaOperandToken(token: V2WorkFormulaToken): boolean {
+function isFormulaValueOperand(token: V2WorkFormulaToken): boolean {
 	return (
 		token.kind === "norm" ||
 		token.kind === "number" ||
 		token.kind === "param_coeff" ||
 		token.kind === "param_anyof" ||
-		token.kind === "work_ref" ||
-		token.kind === "paren_close"
+		token.kind === "work_ref"
 	);
+}
+
+/** Левый операнд неявного умножения: значение или «)» после подвыражения. */
+function isImplicitMultiplyLeftOperand(token: V2WorkFormulaToken): boolean {
+	return isFormulaValueOperand(token) || token.kind === "paren_close";
 }
 
 function insertTokenAt(
@@ -519,9 +523,9 @@ export function WorkFormulaEditor({
 		if (readOnly) return;
 		let index = cursorIndex;
 		let tokens = formula.tokens;
-		if (isFormulaOperandToken(token)) {
+		if (isFormulaValueOperand(token)) {
 			const prev = tokens[index - 1];
-			if (prev && isFormulaOperandToken(prev)) {
+			if (prev && isImplicitMultiplyLeftOperand(prev)) {
 				tokens = insertTokenAt(tokens, index, { kind: "operator", op: "*" });
 				index += 1;
 			}

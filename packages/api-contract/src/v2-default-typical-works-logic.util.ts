@@ -1,5 +1,7 @@
 import type { V2JsonLogicValue, V2LogicGraphDto, V2LogicRuleDto } from "./v2-template.types";
 import {
+	collectTypicalWorkBlockBindings,
+	collectGeneratedTypicalWorkArrayPaths,
 	resolveSourceTypicalWorksOutputPath,
 	V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
 	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
@@ -77,30 +79,45 @@ export const V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
 export { V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH };
 export { V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH };
 
+export function typicalWorksCatalogRuleId(outputArrayPath: string): string {
+	return `typical-works-catalog-${outputArrayPath.replace(/\./g, "-")}`;
+}
+
 export function buildSourceTypicalWorksCatalogRule(
 	outputArrayPath: string = V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+	options?: { boundWorkIds?: string[] | undefined },
 ): V2LogicRuleDto {
+	const boundWorkIds = options?.boundWorkIds;
+	const hasExplicitBinding = boundWorkIds !== undefined;
+	const enabled =
+		!hasExplicitBinding || (boundWorkIds?.length ?? 0) > 0;
+
+	const payload: Record<string, unknown> = {
+		hint:
+			"При заполнении систем-источников подтягиваются типовые работы из справочника (стрим «Источники данных»). Появление работ управляется их триггерами. Настройка — в конструкторе → Логика.",
+		mode: "generated_rows",
+		label: "Типовые работы (стрим «Источники данных»)",
+		worksCatalog: true,
+		worksCatalogArchComponent: "Система-источник",
+		worksCatalogStream: "fromSourceType",
+		taskCode: "CATALOG_SOURCE_TASKS",
+		calcModel: "unified",
+		outputArrayPath,
+		sourceArrayPath: V2_SOURCE_SYSTEMS_ARRAY_PATH,
+	};
+	if (hasExplicitBinding) {
+		payload.allowedWorkIds = boundWorkIds ?? [];
+	}
+
 	return {
-		id: "unified-source-typical-works",
+		id: typicalWorksCatalogRuleId(outputArrayPath),
 		kind: "task_trigger",
 		targetPath: `/${outputArrayPath.replace(/\./g, "/")}`,
-		condition: true,
+		condition: enabled,
 		description:
 			"ФТ-024: типовые работы «Система-источник» из справочника работ (назначения + триггеры).",
 		dependencies: [`/${V2_SOURCE_SYSTEMS_ARRAY_PATH.replace(/\./g, "/")}`],
-		payload: {
-			hint:
-				"При заполнении систем-источников подтягиваются типовые работы из справочника (стрим «Источники данных»). Появление работ управляется их триггерами. Настройка — в конструкторе → Логика.",
-			mode: "generated_rows",
-			label: "Типовые работы (стрим «Источники данных»)",
-			worksCatalog: true,
-			worksCatalogArchComponent: "Система-источник",
-			worksCatalogStream: "fromSourceType",
-			taskCode: "CATALOG_SOURCE_TASKS",
-			calcModel: "unified",
-			outputArrayPath,
-			sourceArrayPath: V2_SOURCE_SYSTEMS_ARRAY_PATH,
-		},
+		payload,
 	};
 }
 
@@ -130,6 +147,89 @@ const PATCHED_RULE_IDS = new Set([
 	"unified-source-typical-works",
 	"unified-control-typical-works",
 ]);
+
+export function isTypicalWorksCatalogLogicRule(rule: V2LogicRuleDto): boolean {
+	return (
+		PATCHED_RULE_IDS.has(rule.id) || rule.id.startsWith("typical-works-catalog-")
+	);
+}
+
+function isPatchedTypicalWorksCatalogRule(rule: V2LogicRuleDto): boolean {
+	return isTypicalWorksCatalogLogicRule(rule);
+}
+
+function typicalRowTotalRuleId(arrayPath: string): string {
+	return `unified-typical-row-total:${arrayPath.replace(/\./g, "_")}`;
+}
+
+function isTypicalRowTotalPatchedRuleId(id: string): boolean {
+	return id.startsWith("unified-typical-row-total:");
+}
+
+function buildTypicalArrayReduceTerm(arrayPath: string): V2JsonLogicValue {
+	return {
+		reduce: [
+			{ var: arrayPath },
+			{
+				"+": [
+					{ var: "accumulator" },
+					{
+						max: [0, { var: "current.total" }],
+					},
+				],
+			},
+			0,
+		],
+	};
+}
+
+export function buildTypicalWorkRowTotalRule(arrayPath: string): V2LogicRuleDto {
+	return {
+		id: typicalRowTotalRuleId(arrayPath),
+		kind: "row_computed",
+		payload: {
+			label: "Per-row итог типовой работы",
+			fieldVar: "total",
+			arrayPath,
+			formulaHint: "row.total = норматив (ч/д) × коэффициент",
+		},
+		condition: {
+			"*": [{ var: "estimateHoursPerDay" }, { var: "coefficient" }],
+		},
+		targetPath: `/${arrayPath.replace(/\./g, "/")}`,
+		description: "ФТ-024: итог строки типовой работы.",
+		dependencies: [],
+	};
+}
+
+export function buildUnifiedTypicalTotalRule(
+	arrayPaths: string[],
+): V2LogicRuleDto | null {
+	if (arrayPaths.length === 0) return null;
+
+	const condition: V2JsonLogicValue =
+		arrayPaths.length === 1
+			? buildTypicalArrayReduceTerm(arrayPaths[0]!)
+			: {
+					"+": arrayPaths.map((path) => buildTypicalArrayReduceTerm(path)),
+				};
+
+	return {
+		id: "unified-typical-total",
+		kind: "computed",
+		payload: {
+			mode: "expert",
+			role: "typical_total",
+			label: "Сумма по типовым работам",
+			calcModel: "unified",
+			formulaHint: `Σ типовые работы (${arrayPaths.join(" + ")})`,
+		},
+		condition,
+		targetPath: "/summary/typicalTotal",
+		description: "ФТ-026: сумма итоговых оценок типовых работ.",
+		dependencies: arrayPaths.map((path) => `/${path.replace(/\./g, "/")}`),
+	};
+}
 
 const LEGACY_CONTROL_TYPICAL_TASKS_PATH =
 	"streamModelControl.control.controlTypicalTasks";
@@ -198,8 +298,12 @@ export function patchV2TypicalWorksLogicRules(
 	options?: PatchV2TypicalWorksLogicOptions,
 ): V2LogicGraphDto {
 	const rules = logic?.rules ?? [];
+	const bindings = options?.uiSchema
+		? collectTypicalWorkBlockBindings(options.uiSchema)
+		: [];
 	const hasSourceRule =
-		rules.some((rule) => rule.id === "unified-source-typical-works") ||
+		rules.some((rule) => isPatchedTypicalWorksCatalogRule(rule)) ||
+		bindings.length > 0 ||
 		schemaSupportsSourceTypicalWorksCatalog(
 			options?.jsonSchema,
 			options?.uiSchema,
@@ -212,16 +316,37 @@ export function patchV2TypicalWorksLogicRules(
 		options?.jsonSchema,
 		options?.uiSchema,
 	);
+
 	if (hasSourceRule) {
-		patched.push(
-			buildSourceTypicalWorksCatalogRule(
-				sourceOutputPath ?? V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
-			),
-		);
+		if (bindings.length > 0) {
+			for (const binding of bindings) {
+				patched.push(
+					buildSourceTypicalWorksCatalogRule(binding.outputPath, {
+						boundWorkIds: binding.boundWorkIds,
+					}),
+				);
+			}
+		} else {
+			patched.push(
+				buildSourceTypicalWorksCatalogRule(
+					sourceOutputPath ?? V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+				),
+			);
+		}
 	}
 	if (hasControlRule) patched.push(buildControlTypicalWorksCatalogRule());
+
+	const typicalPaths = options?.uiSchema
+		? collectGeneratedTypicalWorkArrayPaths(options.uiSchema)
+		: [];
+
 	const rest = rules
-		.filter((rule) => !PATCHED_RULE_IDS.has(rule.id))
+		.filter(
+			(rule) =>
+				!isPatchedTypicalWorksCatalogRule(rule) &&
+				!isTypicalRowTotalPatchedRuleId(rule.id) &&
+				(typicalPaths.length === 0 || rule.id !== "unified-typical-total"),
+		)
 		.map((rule) =>
 			patchUnifiedTypicalTotalRule(
 				patchLegacyRowTotalRule(
@@ -230,5 +355,19 @@ export function patchV2TypicalWorksLogicRules(
 				sourceOutputPath,
 			),
 		);
-	return { ...logic, rules: [...rest, ...patched] };
+
+	const injectedTypicalRows = typicalPaths.map((path) =>
+		buildTypicalWorkRowTotalRule(path),
+	);
+	const unifiedTypical = buildUnifiedTypicalTotalRule(typicalPaths);
+
+	return {
+		...logic,
+		rules: [
+			...rest,
+			...patched,
+			...injectedTypicalRows,
+			...(unifiedTypical ? [unifiedTypical] : []),
+		],
+	};
 }

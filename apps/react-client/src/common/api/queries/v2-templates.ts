@@ -300,13 +300,19 @@ export const useV2TemplateVersion = (
 export const useCreateV2TemplateVersionFromDefault = () => {
 	const queryClient = useQueryClient();
 
-	return useMutation<V2TemplateVersionDto, Error, string>({
-		mutationFn: (templateId) =>
+	return useMutation<
+		V2TemplateVersionDto,
+		Error,
+		{ templateId: string; withoutTypicalWorks?: boolean }
+	>({
+		mutationFn: ({ templateId, withoutTypicalWorks }) =>
 			apiClient<V2TemplateVersionDto>({
-				url: `/v2/templates/${templateId}/versions/from-default`,
+				url: `/v2/templates/${templateId}/versions/from-default${
+					withoutTypicalWorks ? "?withoutTypicalWorks=true" : ""
+				}`,
 				method: "POST",
 			}),
-		onSuccess: (_, templateId) => {
+		onSuccess: (_, { templateId }) => {
 			void invalidateV2TemplatesList(queryClient);
 			queryClient.invalidateQueries({
 				queryKey: ["v2-templates", templateId, "versions"],
@@ -329,6 +335,7 @@ export const useCreateV2TemplateVersion = () => {
 				url: `/v2/templates/${templateId}/versions`,
 				method: "POST",
 				data: dto,
+				timeout: 60_000,
 			}),
 		onSuccess: (_, { templateId }) => {
 			queryClient.invalidateQueries({
@@ -356,6 +363,7 @@ export const useUpdateV2TemplateVersion = () => {
 				url: `/v2/templates/${templateId}/versions/${versionId}`,
 				method: "PUT",
 				data: dto,
+				timeout: 60_000,
 			}),
 		onSuccess: (_, { templateId, versionId }) => {
 			queryClient.invalidateQueries({
@@ -462,6 +470,7 @@ export const useActivateV2TemplateVersionAsCurrent = () => {
 			apiClient<V2TemplateVersionDto>({
 				url: `/v2/templates/${templateId}/versions/${versionId}/activate-as-current`,
 				method: "POST",
+				timeout: 60_000,
 			}),
 		onSettled: (_, __, { templateId }) => {
 			refreshV2TemplateRegistry(queryClient, templateId);

@@ -83,6 +83,14 @@ export function isDictionaryStringField(
 	return dictionaryCode.length > 0 || uiWidget === "select";
 }
 
+export function isTextareaStringField(
+	resolvedField: RJSFSchema | undefined,
+	uiWidget?: string,
+): boolean {
+	if (resolveSchemaNodeType(resolvedField) !== "string") return false;
+	return uiWidget === "textarea";
+}
+
 export function resolvePrimitiveFieldTypeVariant(
 	resolvedField: RJSFSchema | undefined,
 	uiOptions: Record<string, unknown> | undefined,
@@ -93,6 +101,9 @@ export function resolvePrimitiveFieldTypeVariant(
 	}
 	if (isDictionaryStringField(resolvedField, uiOptions, uiWidget)) {
 		return "string-dictionary";
+	}
+	if (isTextareaStringField(resolvedField, uiWidget)) {
+		return "string-textarea";
 	}
 	const type = resolveSchemaNodeType(resolvedField);
 	if (
@@ -119,6 +130,9 @@ export function resolveCanvasFieldTypeChipLabel(
 	}
 	if (isDictionaryStringField(resolvedField, uiOptions, uiWidget)) {
 		return { label: "строка·справочник", colorKey: "string-dictionary" };
+	}
+	if (isTextareaStringField(resolvedField, uiWidget)) {
+		return { label: "строка·textarea", colorKey: "string-textarea" };
 	}
 
 	const type =

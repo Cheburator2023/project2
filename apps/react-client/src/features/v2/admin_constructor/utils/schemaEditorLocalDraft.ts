@@ -1,11 +1,20 @@
 import type { V2LogicGraphDto } from "@smart-anketa/api-contract";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import {
+	isLayoutGroupUi,
+	readLeafUiOptions,
+} from "../schemaEditor/propertiesFieldKind";
+import {
 	coerceJsonSchema,
 	coerceLogicGraph,
 	coerceUiSchema,
 } from "./coerceV2TemplateSnapshot";
-import { stripUiObjectFieldTemplatesFromUi } from "./schemaMutators";
+import {
+	listSchemaFields,
+	patchUiOptionsAtPointer,
+	readUiSchemaBranchAtPointer,
+	stripUiObjectFieldTemplatesFromUi,
+} from "./schemaMutators";
 
 export type SchemaEditorDraftSnapshot = {
 	jsonSchema: RJSFSchema;
@@ -65,10 +74,48 @@ export function snapshotFromTemplateVersion(version: {
 	uiSchema: unknown;
 	logic: unknown;
 }): SchemaEditorDraftSnapshot {
-	return normalizeSchemaEditorDraftSnapshot({
-		jsonSchema: version.jsonSchema,
-		uiSchema: version.uiSchema,
-		logic: version.logic,
-		formData: {},
-	});
+	return ensureSchemaFieldUidsInSnapshot(
+		normalizeSchemaEditorDraftSnapshot({
+			jsonSchema: version.jsonSchema,
+			uiSchema: version.uiSchema,
+			logic: version.logic,
+			formData: {},
+		}),
+	);
+}
+
+function readSchemaFieldUid(
+	uiBranch: Record<string, unknown> | undefined,
+): string | null {
+	const opts = uiBranch?.["ui:options"];
+	if (!opts || typeof opts !== "object" || Array.isArray(opts)) return null;
+	const uid = (opts as Record<string, unknown>).schemaFieldUid;
+	return typeof uid === "string" && uid.trim() ? uid.trim() : null;
+}
+
+/** Добавляет schemaFieldUid legacy-полям до фиксации baseline, чтобы не подсвечивать их как изменённые. */
+export function ensureSchemaFieldUidsInSnapshot(
+	snapshot: SchemaEditorDraftSnapshot,
+): SchemaEditorDraftSnapshot {
+	const { jsonSchema } = snapshot;
+	let ui = snapshot.uiSchema as Record<string, unknown>;
+	let changed = false;
+
+	for (const row of listSchemaFields(jsonSchema, "/", 0, ui as UiSchema)) {
+		const leaf = readUiSchemaBranchAtPointer(ui, row.pointer);
+		if (isLayoutGroupUi(readLeafUiOptions(leaf))) continue;
+		if (readSchemaFieldUid(leaf)) continue;
+
+		ui = patchUiOptionsAtPointer(ui, row.pointer, {
+			schemaFieldUid: `field_${crypto.randomUUID()}`,
+		});
+		changed = true;
+	}
+
+	if (!changed) return snapshot;
+
+	return {
+		...snapshot,
+		uiSchema: ui as UiSchema,
+	};
 }

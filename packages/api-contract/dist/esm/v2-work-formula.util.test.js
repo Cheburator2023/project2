@@ -45,6 +45,18 @@ describe("v2-work-formula.util", () => {
         const parsed = parseWorkFormulaText("( N × 2");
         expect(parsed.error).toMatch(/скобк/i);
     });
+    it("parses subtraction with unicode minus from tokensToText", () => {
+        const tokens = [
+            { kind: "norm" },
+            { kind: "operator", op: "-" },
+            { kind: "number", value: 1 },
+        ];
+        const text = tokensToText(tokens);
+        expect(text).toBe("N − 1");
+        const parsed = parseWorkFormulaText(text);
+        expect(parsed.error).toBeNull();
+        expect(parsed.tokens).toEqual(tokens);
+    });
     it("round-trips param names with parentheses in коэф()", () => {
         const tokens = [
             { kind: "norm" },

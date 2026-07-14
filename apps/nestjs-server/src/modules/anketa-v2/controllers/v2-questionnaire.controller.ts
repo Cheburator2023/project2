@@ -1,6 +1,7 @@
 import {
 	Body,
 	Controller,
+	Delete,
 	Get,
 	HttpCode,
 	HttpStatus,
@@ -15,23 +16,30 @@ import type { Response } from "express";
 import type {
 	BulkDeleteV2QuestionnairesResultDto,
 	SeedV2TestQuestionnairesResultDto,
+	V2QuestionnaireCommentDto,
 	V2QuestionnaireDto,
 	V2QuestionnaireFormPackageDto,
 } from "@smart-anketa/api-contract";
 import {
 	BulkDeleteV2QuestionnairesDto,
+	CreateV2QuestionnaireCommentDto,
 	CreateV2QuestionnaireDto,
 	CreateV2QuestionnaireVersionDto,
+	ExportV2QuestionnairesXlsxDto,
 	SeedV2TestQuestionnairesDto,
 	UpdateV2QuestionnaireDto,
 } from "../dto";
 import { V2QuestionnaireService } from "../services/v2-questionnaire.service";
+import { V2QuestionnaireCommentService } from "../services/v2-questionnaire-comment.service";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
 
 @ApiTags("v2-questionnaires")
 @Controller("v2/questionnaires")
 export class V2QuestionnaireController {
-	constructor(private readonly questionnaireService: V2QuestionnaireService) {}
+	constructor(
+		private readonly questionnaireService: V2QuestionnaireService,
+		private readonly commentService: V2QuestionnaireCommentService,
+	) {}
 
 	@Get()
 	@ApiOperation({ summary: "Реестр анкет v2 (отдельно от реестра схем)" })
@@ -76,6 +84,37 @@ export class V2QuestionnaireController {
 	})
 	async exportRegistryXlsx(@Res() res: Response): Promise<void> {
 		const buffer = await this.questionnaireService.exportRegistryXlsx();
+		this.sendRegistryXlsxResponse(res, buffer, "v2-questionnaires");
+	}
+
+	@Post("export/xlsx")
+	@HttpCode(200)
+	@ApiOperation({ summary: "Выгрузка выбранных анкет v2 реестра в XLSX" })
+	@ApiResponse({
+		status: HttpStatus.OK,
+		content: {
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+				schema: { type: "string", format: "binary" },
+			},
+		},
+	})
+	async exportSelectedRegistryXlsx(
+		@Body() body: ExportV2QuestionnairesXlsxDto,
+		@Res() res: Response,
+	): Promise<void> {
+		const buffer = await this.questionnaireService.exportRegistryXlsx(body.ids);
+		this.sendRegistryXlsxResponse(
+			res,
+			buffer,
+			`v2-questionnaires-selected-${body.ids.length}`,
+		);
+	}
+
+	private sendRegistryXlsxResponse(
+		res: Response,
+		buffer: Buffer,
+		filenamePrefix: string,
+	): void {
 		const date = new Date().toISOString().slice(0, 10);
 		res.setHeader(
 			"Content-Type",
@@ -83,7 +122,7 @@ export class V2QuestionnaireController {
 		);
 		res.setHeader(
 			"Content-Disposition",
-			`attachment; filename=v2-questionnaires-${date}.xlsx`,
+			`attachment; filename=${filenamePrefix}-${date}.xlsx`,
 		);
 		res.end(buffer);
 	}
@@ -105,6 +144,34 @@ export class V2QuestionnaireController {
 		@Param("id", ParseUUIDPipe) id: string,
 	): Promise<V2QuestionnaireFormPackageDto> {
 		return this.questionnaireService.getFormPackage(id);
+	}
+
+	@Get(":id/comments")
+	@ApiOperation({ summary: "Комментарии к анкете" })
+	async listComments(
+		@Param("id", ParseUUIDPipe) id: string,
+	): Promise<V2QuestionnaireCommentDto[]> {
+		return this.commentService.listForQuestionnaire(id);
+	}
+
+	@Post(":id/comments")
+	@ApiOperation({ summary: "Добавить комментарий к анкете" })
+	async createComment(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Body() body: CreateV2QuestionnaireCommentDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<V2QuestionnaireCommentDto> {
+		return this.commentService.create(id, body, user as never);
+	}
+
+	@Delete(":id/comments/:commentId")
+	@HttpCode(204)
+	@ApiOperation({ summary: "Удалить комментарий" })
+	async deleteComment(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Param("commentId") commentId: string,
+	): Promise<void> {
+		return this.commentService.delete(id, commentId);
 	}
 
 	@Post()

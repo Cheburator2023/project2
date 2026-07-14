@@ -14,6 +14,7 @@
  */
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { inferMissingCatalogComponent } from "../src/modules/anketa-v2/utils/v2-catalog-component-inference";
 
 const REPO_ROOT = join(__dirname, "..", "..", "..");
 const DOCS_DIR = join(REPO_ROOT, "llm", "v2_new_docs");
@@ -145,10 +146,14 @@ function buildTypicalWorks(): TypicalWork[] {
 			const originalName = clean(r[cOriginal]);
 			const name = clean(r[cName]) || originalName;
 			const triggerRaw = clean(r[cTrigger]);
+			const stream = clean(r[cStream]);
+			const stage = clean(r[cContext]);
 			return {
-				stream: clean(r[cStream]),
-				component: normalizeComponent(r[cComponent] ?? ""),
-				stage: clean(r[cContext]),
+				stream,
+				component: normalizeComponent(
+					inferMissingCatalogComponent(r[cComponent] ?? "", stream, stage),
+				),
+				stage,
 				name,
 				originalName,
 				workType: clean(r[cWorkType]),

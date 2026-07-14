@@ -47,6 +47,18 @@ const v2_typical_work_types_1 = require("./v2-typical-work.types");
         const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)("( N × 2");
         (0, vitest_1.expect)(parsed.error).toMatch(/скобк/i);
     });
+    (0, vitest_1.it)("parses subtraction with unicode minus from tokensToText", () => {
+        const tokens = [
+            { kind: "norm" },
+            { kind: "operator", op: "-" },
+            { kind: "number", value: 1 },
+        ];
+        const text = (0, v2_work_formula_util_1.tokensToText)(tokens);
+        (0, vitest_1.expect)(text).toBe("N − 1");
+        const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)(text);
+        (0, vitest_1.expect)(parsed.error).toBeNull();
+        (0, vitest_1.expect)(parsed.tokens).toEqual(tokens);
+    });
     (0, vitest_1.it)("round-trips param names with parentheses in коэф()", () => {
         const tokens = [
             { kind: "norm" },

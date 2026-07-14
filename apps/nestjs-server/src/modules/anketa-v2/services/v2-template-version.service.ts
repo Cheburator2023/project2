@@ -15,7 +15,10 @@ import type {
 } from "../dto";
 import { V2FactorySnapshotService } from "./v2-factory-snapshot.service";
 import { V2TypicalWorkSeedService } from "./v2-typical-work.service";
-import type { V2TemplateStatus } from "@smart-anketa/api-contract";
+import {
+	type V2TemplateStatus,
+	prepareFactorySnapshotWithoutTypicalWorks,
+} from "@smart-anketa/api-contract";
 
 @Injectable()
 export class V2TemplateVersionService {
@@ -180,8 +183,12 @@ export class V2TemplateVersionService {
 	async createDraftFromDefault(
 		templateId: string,
 		userId: string | null,
+		options?: { withoutTypicalWorks?: boolean },
 	): Promise<V2TemplateVersionEntity> {
-		const snap = await this.factorySnapshotService.getEffectiveSnapshot();
+		const rawSnap = await this.factorySnapshotService.getEffectiveSnapshot();
+		const snap = options?.withoutTypicalWorks
+			? prepareFactorySnapshotWithoutTypicalWorks(rawSnap)
+			: rawSnap;
 		const version = await this.create(
 			templateId,
 			{
@@ -194,10 +201,12 @@ export class V2TemplateVersionService {
 			},
 			userId,
 		);
-		await this.typicalWorkSeedService.seedTemplateTypicalWorksFromDocCatalog(
-			templateId,
-			version.id,
-		);
+		if (!options?.withoutTypicalWorks) {
+			await this.typicalWorkSeedService.seedTemplateTypicalWorksFromDocCatalog(
+				templateId,
+				version.id,
+			);
+		}
 		return version;
 	}
 

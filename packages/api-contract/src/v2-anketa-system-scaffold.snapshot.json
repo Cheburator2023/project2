@@ -100,20 +100,17 @@
 			"properties": {
 				"initiativeTimeline": {
 					"type": "string",
-					"title": "Сроки инициативы",
-					"enum": [
-						"Краткосрочная",
-						"Среднесрочная",
-						"Долгосрочная"
-					]
+					"title": "Сроки инициативы"
 				},
 				"initiativeCost": {
-					"type": "number",
+					"type": "string",
 					"title": "Стоимость инициативы"
 				},
 				"uncertaintyAdjustment": {
 					"type": "number",
-					"title": "Поправка на общую неопределённость"
+					"title": "Поправка на общую неопределённость",
+					"minimum": 0,
+					"maximum": 30
 				},
 				"riskGroup": {
 					"type": "object",
@@ -121,7 +118,7 @@
 					"properties": {
 						"businessComplexity": {
 							"type": "string",
-							"title": "Изменение, недостаточная проработка или сложности бизнеса",
+							"title": "Изменение, недостаточная проработка или сложности бизнес процессов Банка",
 							"enum": [
 								"Низкий",
 								"Средний",
@@ -130,7 +127,7 @@
 						},
 						"defectsInSolution": {
 							"type": "string",
-							"title": "Наличие дефектов во внедряемом решении / ПО в рамках",
+							"title": "Наличие дефектов во внедряемом решении/ ПО в рамках проекта",
 							"enum": [
 								"Низкий",
 								"Средний",
@@ -148,7 +145,7 @@
 						},
 						"laborCostIncrease": {
 							"type": "string",
-							"title": "Увеличение трудозатрат проекта по причине недостаточной",
+							"title": "Увеличение трудозатрат проекта по причине недостаточной проработки требований на этапе планирования проекта",
 							"enum": [
 								"Низкий",
 								"Средний",
@@ -157,7 +154,7 @@
 						},
 						"thirdPartyNegligence": {
 							"type": "string",
-							"title": "Недобросовестное исполнение услуг со стороны привлечённых",
+							"title": "Недобросовестное исполнение услуг со стороны привлеченных контрагентов/ подрядчиков",
 							"enum": [
 								"Низкий",
 								"Средний",
@@ -166,7 +163,7 @@
 						},
 						"staffShortage": {
 							"type": "string",
-							"title": "Отсутствие квалифицированного персонала или ошибок",
+							"title": "Отсутствие квалифицированного персонала или ошибок персонала",
 							"enum": [
 								"Низкий",
 								"Средний",
@@ -375,13 +372,22 @@
 				"riskGroup"
 			],
 			"initiativeTimeline": {
-				"ui:widget": "select"
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.method.21.сроки_инициативы"
+				}
 			},
 			"initiativeCost": {
-				"ui:widget": "text"
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.method.22.стоимость_инициативы"
+				}
 			},
 			"uncertaintyAdjustment": {
-				"ui:widget": "text"
+				"ui:widget": "NumberInputWidget",
+				"ui:options": {
+					"suffix": "%"
+				}
 			},
 			"riskGroup": {
 				"ui:order": [

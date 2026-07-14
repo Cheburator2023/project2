@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type {
 	PatchV2TypicalWorkRequestDto,
 	V2TypicalWorkCardDto,
+	V2TypicalWorkNormInputDto,
 } from "@smart-anketa/api-contract";
 import { collectTypicalWorkPatchValidationErrors } from "@smart-anketa/api-contract";
 import { usePatchV2TypicalWork } from "@react-client/common/api/queries/v2-works";
@@ -12,10 +13,50 @@ import {
 	saveBufferedTypicalWorkPatch,
 } from "./typicalWorkSaveBuffer";
 
+import { reconcileStreamNormPeriods } from "./typicalWorkNormPeriods";
+
+function reconcilePatchDtoNorms(
+	dto: PatchV2TypicalWorkRequestDto,
+): PatchV2TypicalWorkRequestDto {
+	const stream = dto.streamExecutor?.trim();
+	if (!stream || !dto.norms?.length) return dto;
+
+	const normsWithId = dto.norms.filter(
+		(norm): norm is V2TypicalWorkNormInputDto & { id: string } =>
+			Boolean(norm.id),
+	);
+	const normsWithoutId = dto.norms.filter((norm) => !norm.id);
+
+	const reconciled = reconcileStreamNormPeriods(
+		normsWithId.map((norm) => ({
+			id: norm.id,
+			streamExecutor: stream,
+			normValue: norm.normValue,
+			validFrom: norm.validFrom,
+			validTo: norm.validTo ?? null,
+		})),
+		stream,
+	);
+
+	return {
+		...dto,
+		norms: [
+			...normsWithoutId,
+			...reconciled.map(({ id, normValue, validFrom, validTo }) => ({
+				id,
+				normValue,
+				validFrom,
+				validTo,
+			})),
+		],
+	};
+}
+
 export type SaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 
 type UseDebouncedTypicalWorkSaveOptions = {
 	onFormulaLocked?: () => void;
+	onSaved?: () => void;
 };
 
 export function useDebouncedTypicalWorkSave(
@@ -34,11 +75,11 @@ export function useDebouncedTypicalWorkSave(
 
 	const flush = useCallback(async () => {
 		if (!workId || !pendingRef.current) return;
-		const dto = {
+		const dto = reconcilePatchDtoNorms({
 			...pendingRef.current,
 			templateVersionId:
 				templateVersionIdRef.current ?? pendingRef.current.templateVersionId,
-		};
+		});
 		const validationErrors = collectTypicalWorkPatchValidationErrors(dto);
 		if (validationErrors.length > 0) {
 			const message = validationErrors
@@ -56,6 +97,7 @@ export function useDebouncedTypicalWorkSave(
 			await clearBufferedTypicalWorkPatch(workId);
 			setBufferedRestore(false);
 			setStatus("saved");
+			options?.onSaved?.();
 		} catch (error) {
 			const parsed = parseTypicalWorkPatchError(error);
 			if (parsed.code === "FORMULA_LOCKED") {
@@ -151,12 +193,13 @@ export function cardToPatchDto(
 	templateVersionId: string | null,
 ): PatchV2TypicalWorkRequestDto {
 	const stream = card.streamExecutor.trim();
+	const reconciledNorms = reconcileStreamNormPeriods(card.norms, stream);
 	return {
 		streamExecutor: stream,
 		templateVersionId: templateVersionId ?? undefined,
 		name: card.name,
 		archComponentType: card.archComponentType,
-		norms: card.norms
+		norms: reconciledNorms
 			.filter((norm) => norm.streamExecutor === stream)
 			.map((norm) => ({
 				id: norm.id,
@@ -168,6 +211,7 @@ export function cardToPatchDto(
 			.filter((rule) => rule.streamExecutor === stream)
 			.map((rule) => ({
 				id: rule.id,
+				schemaFieldUid: rule.schemaFieldUid ?? null,
 				paramCode: rule.paramCode,
 				paramName: rule.paramName,
 				operator: rule.operator,
@@ -183,6 +227,7 @@ export function cardToPatchDto(
 					group.coefficients.every((row) => row.streamExecutor === stream),
 			)
 			.map((group) => ({
+				schemaFieldUid: group.schemaFieldUid ?? null,
 				paramCode: group.paramCode,
 				paramName: group.paramName,
 				kind: group.kind ?? "by_value",

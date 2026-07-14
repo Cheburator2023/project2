@@ -4,19 +4,20 @@ import { In, IsNull, Repository } from "typeorm";
 import {
 	CONTROL_MODELS_STREAM,
 	applyWorkRounding,
+	buildTypicalWorkFactorCoeffResolver,
+	computeTypicalWorkFormulaTotal,
 	defaultWorkFormula,
 	defaultWorkRounding,
-	evaluateTermsFormula,
+	formatTypicalWorkCoefficientDisplay,
 	isWorkCoefficientValueAvailable,
 	normalizeStoredFormula,
 	parseStoredTypicalWorkCalculationLogic,
-	previewTypicalWorkCalculation,
 	resolveActiveNormOnDate,
 	resolveByValueLaborParamCoefficients,
 	resolveLaborAnyOfCoefficient,
 	resolveStreamFromSourceType,
-	termsToTokenFormula,
 	typicalWorkRulesMatchSource,
+	type TypicalWorkAnyOfLaborParamLike,
 	type TypicalWorkRuleLike,
 	type V2TypicalWorkRoundingDto,
 } from "@smart-anketa/api-contract";
@@ -36,6 +37,8 @@ export type CatalogGeneratedTask = {
 	reason: string;
 	estimateHoursPerDay: number;
 	coefficient: number;
+	/** Развёрнутое представление коэффициента для таблицы анкеты. */
+	coefficientDisplay?: string;
 	/** Итог по формуле работы (чел.-дн.), до записи в анкету. */
 	total: number;
 	match: Record<string, unknown>;
@@ -50,6 +53,8 @@ export type BuildCatalogTasksParams = {
 	templateId?: string | null;
 	atDate: string;
 	hiddenParamCodes?: ReadonlySet<string>;
+	/** Ограничение списка работ блока typicalWork; undefined — все назначенные. */
+	allowedWorkIds?: readonly string[];
 };
 
 type RuntimeWorkContext = {
@@ -103,20 +108,19 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 	);
 
 	for (const header of ctx.laborParams) {
-		if (ctx.hiddenParamCodes?.has(header.paramCode)) continue;
-		if (header.kind === "any_of") {
-			paramCoefficients[header.paramCode] = resolveLaborAnyOfCoefficient(
-				ctx.source,
-				header.paramCode,
-				{
-					valueCodes: header.anyOfValueCodes ?? [],
-					valueLabels: header.anyOfValueLabels ?? [],
-					coeffOn: decimalToNumber(header.coeffOn),
-					coeffOff: decimalToNumber(header.coeffOff),
-				},
-				header.paramName,
-			);
-		}
+		if (header.kind !== "any_of") continue;
+		// any_of всегда участвует в формуле: отсутствие/«Нет» чекбокса = coeffOff.
+		paramCoefficients[header.paramCode] = resolveLaborAnyOfCoefficient(
+			ctx.source,
+			header.paramCode,
+			{
+				valueCodes: header.anyOfValueCodes ?? [],
+				valueLabels: header.anyOfValueLabels ?? [],
+				coeffOn: decimalToNumber(header.coeffOn),
+				coeffOff: decimalToNumber(header.coeffOff),
+			},
+			header.paramName,
+		);
 	}
 
 	const byValueRows: Array<{
@@ -153,6 +157,23 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 	);
 
 	return paramCoefficients;
+}
+
+function listAnyOfLaborParams(
+	laborParams: V2TypicalWorkLaborParamEntity[],
+): TypicalWorkAnyOfLaborParamLike[] {
+	return laborParams
+		.filter((header) => header.kind === "any_of")
+		.map((header) => ({
+			paramCode: header.paramCode,
+			paramName: header.paramName,
+			anyOf: {
+				valueCodes: header.anyOfValueCodes ?? [],
+				valueLabels: header.anyOfValueLabels ?? [],
+				coeffOn: decimalToNumber(header.coeffOn),
+				coeffOff: decimalToNumber(header.coeffOff),
+			},
+		}));
 }
 
 function resolveRounding(
@@ -230,7 +251,16 @@ export class V2TypicalWorkRuntimeService {
 		const eligibleWorks = works.filter((w) => assignedWorkIds.has(w.id));
 		if (!eligibleWorks.length) return [];
 
-		const workIds = eligibleWorks.map((w) => w.id);
+		const allowedWorkIds = params.allowedWorkIds;
+		const filteredWorks =
+			allowedWorkIds === undefined
+				? eligibleWorks
+				: allowedWorkIds.length === 0
+					? []
+					: eligibleWorks.filter((w) => allowedWorkIds.includes(w.id));
+		if (!filteredWorks.length) return [];
+
+		const workIds = filteredWorks.map((w) => w.id);
 		const [norms, rules, labor, laborParams, allConfigs] = await Promise.all([
 			this.normRepository.find({
 				where: { workId: In(workIds), streamExecutor: stream },
@@ -270,7 +300,7 @@ export class V2TypicalWorkRuntimeService {
 			await this.paramCatalogService.listTriggerStatusCatalog(params.atDate);
 
 		const contexts = new Map<string, RuntimeWorkContext>();
-		for (const work of eligibleWorks) {
+		for (const work of filteredWorks) {
 			const workNorms = normsByWork.get(work.id) ?? [];
 			const normValue = resolveActiveNormOnDate(
 				workNorms.map((n) => ({
@@ -314,6 +344,11 @@ export class V2TypicalWorkRuntimeService {
 
 			visiting.add(workId);
 			const paramCoefficients = resolveParamCoefficients(ctx);
+			const resolveFactorCoeff = buildTypicalWorkFactorCoeffResolver({
+				paramCoefficients,
+				anyOfParams: listAnyOfLaborParams(ctx.laborParams),
+				source: ctx.source,
+			});
 			const rounding = resolveRounding(ctx.config);
 			const terms = ctx.config
 				? normalizeStoredFormula(ctx.config.formula, ctx.config.formulaText)
@@ -327,20 +362,19 @@ export class V2TypicalWorkRuntimeService {
 					? computeTotal(sourceAssignment.workId)
 					: null;
 			} else {
-				raw = evaluateTermsFormula({
-					terms: terms.terms,
-					baseNorm: ctx.normValue,
-					resolveFactorCoeff: (code) => paramCoefficients[code] ?? 1,
+				raw = computeTypicalWorkFormulaTotal({
+					calculationLogic: parseStoredTypicalWorkCalculationLogic(
+						ctx.config?.calculationLogic,
+					),
+					formula: ctx.config?.formula,
+					formulaText: ctx.config?.formulaText,
+					terms,
+					rounding,
+					norm: ctx.normValue,
+					paramCoefficients,
+					source: ctx.source,
+					resolveFactorCoeff,
 				});
-				if (raw == null) {
-					const formula = termsToTokenFormula(terms);
-					const preview = previewTypicalWorkCalculation(
-						parseStoredTypicalWorkCalculationLogic(ctx.config?.calculationLogic),
-						{ formula, rounding },
-						{ norm: ctx.normValue, paramCoefficients },
-					);
-					raw = preview.value ?? ctx.normValue;
-				}
 			}
 
 			visiting.delete(workId);
@@ -360,6 +394,17 @@ export class V2TypicalWorkRuntimeService {
 				coefficient = total / ctx.normValue;
 			}
 
+			const paramCoefficients = resolveParamCoefficients(ctx);
+			const terms = ctx.config
+				? normalizeStoredFormula(ctx.config.formula, ctx.config.formulaText)
+				: normalizeStoredFormula(null);
+			const coefficientDisplay = formatTypicalWorkCoefficientDisplay({
+				terms: terms.terms,
+				baseNorm: ctx.normValue,
+				paramCoefficients,
+				coefficient,
+			});
+
 			tasks.push({
 				taskCode: `CAT_${workId.slice(0, 8)}`,
 				name: ctx.work.name,
@@ -367,6 +412,7 @@ export class V2TypicalWorkRuntimeService {
 				reason: `${ctx.work.name} · ${stream}`,
 				estimateHoursPerDay: ctx.normValue,
 				coefficient,
+				coefficientDisplay,
 				total,
 				match: { archComponentType, stream },
 				workId,

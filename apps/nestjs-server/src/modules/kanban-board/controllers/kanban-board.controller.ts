@@ -49,6 +49,11 @@ import type {
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
 	KanbanBoardTaskImageDto,
+	KanbanBoardTaskCommentDto,
+	CreateKanbanBoardTaskCommentRequestDto,
+	AcquireKanbanBoardTaskLockRequestDto,
+	KanbanBoardTaskLockDto,
+	SaveKanbanBoardTasksRequestDto,
 	KanbanBoardHistoryDto,
 	KanbanBoardHistoryOverviewDto,
 	UpdateKanbanBoardCustomerRequestDto,
@@ -65,6 +70,8 @@ import type {
 import type { Response } from "express";
 import { KanbanBoardRegistryService } from "../services/kanban-board-registry.service";
 import { KanbanBoardTaskImageService } from "../services/kanban-board-task-image.service";
+import { KanbanBoardTaskCommentService } from "../services/kanban-board-task-comment.service";
+import { KanbanBoardTaskLockService } from "../services/kanban-board-task-lock.service";
 import {
 	KanbanBoardService,
 	PlanningImportNotSupportedError,
@@ -90,6 +97,8 @@ export class KanbanBoardController {
 		private readonly kanbanBoardService: KanbanBoardService,
 		private readonly registryService: KanbanBoardRegistryService,
 		private readonly taskImageService: KanbanBoardTaskImageService,
+		private readonly taskCommentService: KanbanBoardTaskCommentService,
+		private readonly taskLockService: KanbanBoardTaskLockService,
 		private readonly historyService: KanbanBoardHistoryService,
 	) {}
 
@@ -466,6 +475,49 @@ export class KanbanBoardController {
 		return this.registryService.updateTask(id, dto, kanbanAuditUserId(user));
 	}
 
+	@Get("tasks/:taskId/lock")
+	async getTaskLock(
+		@Param("taskId") taskId: string,
+	): Promise<KanbanBoardTaskLockDto | null> {
+		return this.taskLockService.getLock(taskId);
+	}
+
+	@Post("tasks/:taskId/lock")
+	async acquireTaskLock(
+		@Param("taskId") taskId: string,
+		@Body() dto: AcquireKanbanBoardTaskLockRequestDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<KanbanBoardTaskLockDto> {
+		return this.taskLockService.acquire(taskId, {
+			label: dto.lockedByLabel,
+			userId: kanbanAuditUserId(user),
+		});
+	}
+
+	@Put("tasks/:taskId/lock")
+	async renewTaskLock(
+		@Param("taskId") taskId: string,
+		@Body() dto: AcquireKanbanBoardTaskLockRequestDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<KanbanBoardTaskLockDto> {
+		return this.taskLockService.renew(taskId, {
+			label: dto.lockedByLabel,
+			userId: kanbanAuditUserId(user),
+		});
+	}
+
+	@Delete("tasks/:taskId/lock")
+	async releaseTaskLock(
+		@Param("taskId") taskId: string,
+		@Body() dto: AcquireKanbanBoardTaskLockRequestDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<void> {
+		return this.taskLockService.release(taskId, {
+			label: dto.lockedByLabel,
+			userId: kanbanAuditUserId(user),
+		});
+	}
+
 	@Delete("tasks/:id")
 	async deleteTask(
 		@Param("id") id: string,
@@ -541,6 +593,29 @@ export class KanbanBoardController {
 		return this.taskImageService.delete(taskId, imageId);
 	}
 
+	@Get("tasks/:taskId/comments")
+	async listTaskComments(
+		@Param("taskId") taskId: string,
+	): Promise<KanbanBoardTaskCommentDto[]> {
+		return this.taskCommentService.listForTask(taskId);
+	}
+
+	@Post("tasks/:taskId/comments")
+	async createTaskComment(
+		@Param("taskId") taskId: string,
+		@Body() dto: CreateKanbanBoardTaskCommentRequestDto,
+	): Promise<KanbanBoardTaskCommentDto> {
+		return this.taskCommentService.create(taskId, dto);
+	}
+
+	@Delete("tasks/:taskId/comments/:commentId")
+	async deleteTaskComment(
+		@Param("taskId") taskId: string,
+		@Param("commentId") commentId: string,
+	): Promise<void> {
+		return this.taskCommentService.delete(taskId, commentId);
+	}
+
 	@Post("tasks/import-planning")
 	@UseInterceptors(FileInterceptor("file"))
 	@ApiConsumes("multipart/form-data")
@@ -576,18 +651,26 @@ export class KanbanBoardController {
 	@Put("boards/:boardId/tasks")
 	async saveBoardTasks(
 		@Param("boardId") boardId: string,
-		@Body() tasks: KanbanBoardTaskRecord[],
+		@Body() body: SaveKanbanBoardTasksRequestDto | KanbanBoardTaskRecord[],
 		@CurrentUser() user: Record<string, unknown> | undefined,
 	): Promise<KanbanBoardTaskRecord[]> {
-		if (!Array.isArray(tasks)) {
+		const payload: SaveKanbanBoardTasksRequestDto = Array.isArray(body)
+			? { tasks: body }
+			: body;
+		if (!payload?.tasks || !Array.isArray(payload.tasks)) {
 			throw new BadRequestException("Ожидается массив задач");
 		}
 		const resolvedBoardId =
 			await this.registryService.resolveBoardId(boardId);
 		return this.kanbanBoardService.saveBoardTasks(
 			resolvedBoardId,
-			tasks,
+			payload.tasks,
 			kanbanAuditUserId(user),
+			{
+				expectedUpdatedAtByTaskId: payload.expectedUpdatedAtByTaskId,
+				forceOverwrite: payload.forceOverwrite,
+				lockHolderLabel: payload.lockHolderLabel,
+			},
 		);
 	}
 

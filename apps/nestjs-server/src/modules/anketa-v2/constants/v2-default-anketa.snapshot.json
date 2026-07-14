@@ -737,32 +737,22 @@
 							"properties": {
 								"name": {
 									"type": "string",
-									"title": "Наименование",
+									"title": "Название типовой работы",
+									"readOnly": true
+								},
+								"estimateHoursPerDay": {
+									"type": "number",
+									"title": "Базовая оценка",
+									"readOnly": true
+								},
+								"coefficient": {
+									"type": "number",
+									"title": "Коэффициент",
 									"readOnly": true
 								},
 								"total": {
 									"type": "number",
 									"title": "Итог",
-									"readOnly": true
-								},
-								"reason": {
-									"type": "string",
-									"title": "Причина",
-									"readOnly": true
-								},
-								"workType": {
-									"type": "string",
-									"title": "Тип работ",
-									"readOnly": true
-								},
-								"coefficient": {
-									"type": "number",
-									"title": "Коэф.",
-									"readOnly": true
-								},
-								"estimateHoursPerDay": {
-									"type": "number",
-									"title": "Базовая оценка (ч/д)",
 									"readOnly": true
 								}
 							}
@@ -913,6 +903,10 @@
 						"title": "Общая неопределённость",
 						"readOnly": true
 					},
+					"overallUncertaintyModal": {
+						"type": "string",
+						"title": "Расчёт общей неопределённости"
+					},
 					"implementationStream": {
 						"enum": [
 							"Моделирование РБ",
@@ -987,22 +981,12 @@
 							"properties": {
 								"name": {
 									"type": "string",
-									"title": "Наименование",
+									"title": "Название типовой работы",
 									"readOnly": true
 								},
-								"total": {
+								"estimateHoursPerDay": {
 									"type": "number",
-									"title": "Итог",
-									"readOnly": true
-								},
-								"reason": {
-									"type": "string",
-									"title": "Причина",
-									"readOnly": true
-								},
-								"workType": {
-									"type": "string",
-									"title": "Тип работ",
+									"title": "Базовая оценка",
 									"readOnly": true
 								},
 								"coefficient": {
@@ -1010,9 +994,9 @@
 									"title": "Коэффициент",
 									"readOnly": true
 								},
-								"estimateHoursPerDay": {
+								"total": {
 									"type": "number",
-									"title": "Базовая оценка (ч/д)",
+									"title": "Итог",
 									"readOnly": true
 								}
 							}
@@ -1149,22 +1133,12 @@
 							"properties": {
 								"name": {
 									"type": "string",
-									"title": "Наименование",
+									"title": "Название типовой работы",
 									"readOnly": true
 								},
-								"total": {
+								"estimateHoursPerDay": {
 									"type": "number",
-									"title": "Итог",
-									"readOnly": true
-								},
-								"reason": {
-									"type": "string",
-									"title": "Причина",
-									"readOnly": true
-								},
-								"workType": {
-									"type": "string",
-									"title": "Тип работ",
+									"title": "Базовая оценка",
 									"readOnly": true
 								},
 								"coefficient": {
@@ -1172,9 +1146,9 @@
 									"title": "Коэффициент",
 									"readOnly": true
 								},
-								"estimateHoursPerDay": {
+								"total": {
 									"type": "number",
-									"title": "Базовая оценка (ч/д)",
+									"title": "Итог",
 									"readOnly": true
 								}
 							}
@@ -1242,22 +1216,12 @@
 							"properties": {
 								"name": {
 									"type": "string",
-									"title": "Наименование",
+									"title": "Название типовой работы",
 									"readOnly": true
 								},
-								"total": {
+								"estimateHoursPerDay": {
 									"type": "number",
-									"title": "Итог",
-									"readOnly": true
-								},
-								"reason": {
-									"type": "string",
-									"title": "Причина",
-									"readOnly": true
-								},
-								"workType": {
-									"type": "string",
-									"title": "Тип работ",
+									"title": "Базовая оценка",
 									"readOnly": true
 								},
 								"coefficient": {
@@ -1265,9 +1229,9 @@
 									"title": "Коэффициент",
 									"readOnly": true
 								},
-								"estimateHoursPerDay": {
+								"total": {
 									"type": "number",
-									"title": "Базовая оценка (ч/д)",
+									"title": "Итог",
 									"readOnly": true
 								}
 							}
@@ -1538,15 +1502,17 @@
 							}
 						}
 					},
-					"field_QCwwo5c5": {
-						"type": "integer",
-						"title": "Поправка на общую неопределённость"
+					"uncertaintyAdjustment": {
+						"type": "number",
+						"title": "Поправка на общую неопределённость",
+						"minimum": 0,
+						"maximum": 30
 					},
-					"field_bbTNlnC6": {
+					"initiativeCost": {
 						"type": "string",
 						"title": "Стоимость инициативы"
 					},
-					"field_xGCMlbMP": {
+					"initiativeTimeline": {
 						"type": "string",
 						"title": "Сроки инициативы"
 					}
@@ -2210,7 +2176,31 @@
 					"removable": false
 				},
 				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника при расчёте анкеты.\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
+				"ui:description": "Формируются автоматически по правилам справочника.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах",
+				"items": {
+					"ui:order": [
+						"name",
+						"estimateHoursPerDay",
+						"coefficient",
+						"total"
+					],
+					"name": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					},
+					"estimateHoursPerDay": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					},
+					"coefficient": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					},
+					"total": {
+						"ui:widget": "text",
+						"ui:readonly": true
+					}
+				}
 			}
 		},
 		"generalInfo": {
@@ -2232,6 +2222,7 @@
 				"complexity",
 				"createIS",
 				"createService",
+				"overallUncertaintyModal",
 				"overallUncertainty",
 				"modelService"
 			],
@@ -2368,6 +2359,12 @@
 				},
 				"ui:placeholder": "Департамент заказчика"
 			},
+			"overallUncertaintyModal": {
+				"ui:widget": "V2UncertaintyModalWidget",
+				"ui:options": {
+					"fullWidth": true
+				}
+			},
 			"overallUncertainty": {
 				"ui:help": "Редактируется через кнопку «Рассчитать общую неопределённость» в разделе",
 				"ui:widget": "hidden",
@@ -2394,8 +2391,7 @@
 				"streamExecutor": "ПиРМ",
 				"sectionRole": "main",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
-				"defaultExpanded": false,
-				"workflowSectionId": "streamDataSources"
+				"defaultExpanded": false
 			},
 			"field_DWMBYTaF": {
 				"items": {
@@ -2451,27 +2447,17 @@
 			},
 			"sourceTypicalTasks": {
 				"items": {
+					"ui:order": [
+						"name",
+						"estimateHoursPerDay",
+						"coefficient",
+						"total"
+					],
 					"name": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
-					"total": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"reason": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"ui:order": [
-						"name",
-						"workType",
-						"reason",
-						"total",
-						"coefficient",
-						"estimateHoursPerDay"
-					],
-					"workType": {
+					"estimateHoursPerDay": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
@@ -2479,7 +2465,7 @@
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
-					"estimateHoursPerDay": {
+					"total": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					}
@@ -2490,7 +2476,7 @@
 					"removable": false
 				},
 				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника на основании локальных параметров стрима и компонентов «Система-источник».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
+				"ui:description": "Формируются автоматически по правилам справочника.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
 			}
 		},
 		"field_i8dL7QZa": {
@@ -2637,19 +2623,17 @@
 			},
 			"sourceTypicalTasks": {
 				"items": {
+					"ui:order": [
+						"name",
+						"estimateHoursPerDay",
+						"coefficient",
+						"total"
+					],
 					"name": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
-					"total": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"reason": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"workType": {
+					"estimateHoursPerDay": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
@@ -2657,7 +2641,7 @@
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
-					"estimateHoursPerDay": {
+					"total": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					}
@@ -2669,7 +2653,7 @@
 					"archComponent": "typicalWork"
 				},
 				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника на основании локальных параметров стрима и компонентов «Система-источник».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
+				"ui:description": "Формируются автоматически по правилам справочника.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
 			}
 		},
 		"streamModelControl": {
@@ -2735,19 +2719,17 @@
 			},
 			"field_Khn6-HAW": {
 				"items": {
+					"ui:order": [
+						"name",
+						"estimateHoursPerDay",
+						"coefficient",
+						"total"
+					],
 					"name": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
-					"total": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"reason": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"workType": {
+					"estimateHoursPerDay": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
@@ -2755,7 +2737,7 @@
 						"ui:widget": "text",
 						"ui:readonly": true
 					},
-					"estimateHoursPerDay": {
+					"total": {
 						"ui:widget": "text",
 						"ui:readonly": true
 					}
@@ -2767,7 +2749,7 @@
 					"archComponent": "typicalWork"
 				},
 				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника на основании локальных параметров стрима и компонентов «Система-источник».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
+				"ui:description": "Формируются автоматически по правилам справочника.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
 			},
 			"field_QkVbhG-_": {
 				"items": {
@@ -2946,9 +2928,9 @@
 		},
 		"uncertaintyCalculation": {
 			"ui:order": [
-				"field_xGCMlbMP",
-				"field_bbTNlnC6",
-				"field_QCwwo5c5",
+				"initiativeTimeline",
+				"initiativeCost",
+				"uncertaintyAdjustment",
 				"riskGroup"
 			],
 			"riskGroup": {
@@ -3047,18 +3029,20 @@
 			"ui:options": {
 				"hidden": true
 			},
-			"field_QCwwo5c5": {
+			"uncertaintyAdjustment": {
+				"ui:widget": "NumberInputWidget",
 				"ui:options": {
+					"suffix": "%",
 					"tooltip": "При необходимости учесть дополнительные экспертные риски, заполнив поле \"Поправка на общую неопределенность\" значением в диапазоне от 0-30%"
 				}
 			},
-			"field_bbTNlnC6": {
+			"initiativeCost": {
 				"ui:widget": "select",
 				"ui:options": {
 					"dictionaryCode": "v2.method.22.стоимость_инициативы"
 				}
 			},
-			"field_xGCMlbMP": {
+			"initiativeTimeline": {
 				"ui:widget": "select",
 				"ui:options": {
 					"dictionaryCode": "v2.method.21.сроки_инициативы"

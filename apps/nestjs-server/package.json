@@ -5,7 +5,7 @@
 	"private": true,
 	"scripts": {
 		"dev": "nest start --watch",
-		"dev:god": "cross-env NODE_ENV=development NO_ROLES=true nest start --watch",
+		"dev:god": "cross-env NODE_ENV=development NO_ROLES=true nest start --debug --watch",
 		"build": "nest build",
 		"build:doc-catalog": "tsx scripts/build-v2-doc-catalog.ts",
 		"sync:factory-snapshot": "node scripts/sync-factory-snapshot.mjs",

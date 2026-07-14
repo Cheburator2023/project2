@@ -258,6 +258,8 @@ export function SchemaCalculationPanel({ embedded = false }: { embedded?: boolea
 			</Typography>
 			<V2FinalEvaluationPanel
 				summary={summary}
+				formData={liveFormData}
+				calculationError={calculationError}
 				isLoading={calculationLoading}
 				compact
 				engineCaption={

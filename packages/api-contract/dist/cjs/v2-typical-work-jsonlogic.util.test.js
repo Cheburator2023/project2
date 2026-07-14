@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const vitest_1 = require("vitest");
 const v2_typical_work_jsonlogic_util_1 = require("./v2-typical-work-jsonlogic.util");
 const v2_typical_work_types_1 = require("./v2-typical-work.types");
+const v2_work_terms_formula_util_1 = require("./v2-work-terms-formula.util");
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
 (0, vitest_1.describe)("v2-typical-work-jsonlogic.util", () => {
     (0, vitest_1.it)("compiles N × P[x] to JsonLogic", () => {
@@ -101,5 +102,81 @@ const v2_work_formula_util_1 = require("./v2-work-formula.util");
         (0, vitest_1.expect)(compiled?.result).toBeTruthy();
         (0, vitest_1.expect)((0, v2_typical_work_jsonlogic_util_1.needsCalculationLogicBackfill)(null)).toBe(true);
         (0, vitest_1.expect)((0, v2_typical_work_jsonlogic_util_1.needsCalculationLogicBackfill)(compiled)).toBe(false);
+    });
+    (0, vitest_1.it)("computeTypicalWorkFormulaTotal prefers token formula over simplified terms", () => {
+        const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)("(N + 5) × коэф(p1)");
+        (0, vitest_1.expect)(parsed.error).toBeNull();
+        const calculationLogic = (0, v2_typical_work_jsonlogic_util_1.compileStoredTypicalWorkResultLogic)({ tokens: parsed.tokens, text: "(N + 5) × коэф(p1)" }, (0, v2_typical_work_types_1.defaultWorkRounding)());
+        const brokenTerms = {
+            version: 2,
+            terms: [(0, v2_work_terms_formula_util_1.defaultBaseNormTerm)()],
+            text: "H",
+        };
+        const total = (0, v2_typical_work_jsonlogic_util_1.computeTypicalWorkFormulaTotal)({
+            calculationLogic,
+            formula: brokenTerms,
+            formulaText: "(N + 5) × коэф(p1)",
+            terms: brokenTerms,
+            rounding: (0, v2_typical_work_types_1.defaultWorkRounding)(),
+            norm: 20,
+            paramCoefficients: { p1: 1 },
+            resolveFactorCoeff: (code) => (code === "p1" ? 1 : 1),
+        });
+        (0, vitest_1.expect)(total).toBe(25);
+    });
+    (0, vitest_1.it)("compileCalculationLogicFromVersionConfig uses formulaText when formula is terms v2", () => {
+        const brokenTerms = {
+            version: 2,
+            terms: [(0, v2_work_terms_formula_util_1.defaultBaseNormTerm)()],
+            text: "H",
+        };
+        const compiled = (0, v2_typical_work_jsonlogic_util_1.compileCalculationLogicFromVersionConfig)({
+            formula: brokenTerms,
+            formulaText: "(N + 5) × коэф(p1)",
+            roundingMode: "NONE",
+            roundingStep: null,
+        });
+        (0, vitest_1.expect)(compiled?.version).toBe(1);
+        const result = (0, v2_typical_work_jsonlogic_util_1.evaluateTypicalWorkResultJsonLogic)(compiled, { norm: 20, paramCoefficients: { p1: 1 } }, "(N + 5) × коэф(p1)");
+        (0, vitest_1.expect)(result.value).toBe(25);
+    });
+    (0, vitest_1.it)("computeTypicalWorkFormulaTotal ignores stale norm-only calculationLogic", () => {
+        const staleLogic = (0, v2_typical_work_jsonlogic_util_1.compileStoredTypicalWorkResultLogic)((0, v2_typical_work_types_1.defaultWorkFormula)(), (0, v2_typical_work_types_1.defaultWorkRounding)());
+        const brokenTerms = {
+            version: 2,
+            terms: [(0, v2_work_terms_formula_util_1.defaultBaseNormTerm)()],
+            text: "H",
+        };
+        const total = (0, v2_typical_work_jsonlogic_util_1.computeTypicalWorkFormulaTotal)({
+            calculationLogic: staleLogic,
+            formula: brokenTerms,
+            formulaText: "(N + 5) × коэф(p1)",
+            terms: brokenTerms,
+            rounding: (0, v2_typical_work_types_1.defaultWorkRounding)(),
+            norm: 20,
+            paramCoefficients: { p1: 1 },
+            resolveFactorCoeff: (code) => (code === "p1" ? 1 : 1),
+        });
+        (0, vitest_1.expect)(total).toBe(25);
+    });
+    (0, vitest_1.it)("computeTypicalWorkFormulaTotal evaluates ((N + c) × param) + constant", () => {
+        const formulaText = "((N + 5) × коэф(p1)) + 11";
+        const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)(formulaText);
+        (0, vitest_1.expect)(parsed.error).toBeNull();
+        const terms = (0, v2_work_terms_formula_util_1.tokensToTermsFormula)({
+            tokens: parsed.tokens,
+            text: formulaText,
+        });
+        const total = (0, v2_typical_work_jsonlogic_util_1.computeTypicalWorkFormulaTotal)({
+            calculationLogic: null,
+            formula: terms,
+            formulaText,
+            terms,
+            rounding: (0, v2_typical_work_types_1.defaultWorkRounding)(),
+            norm: 20,
+            paramCoefficients: { p1: 1 },
+            resolveFactorCoeff: (code) => (code === "p1" ? 1 : 1),
+        });
+        (0, vitest_1.expect)(total).toBe(36);
     });
 });

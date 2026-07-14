@@ -84,6 +84,8 @@ type TaskTriggerPayload = {
 	label?: string;
 	hint?: string;
 	outputArrayPath?: string;
+	/** Id типовых работ, привязанных к блоку typicalWork в uiSchema. */
+	allowedWorkIds?: string[];
 	/**
 	 * ФТ-024: единый коэффициент группы для всех работ компонента — произведение
 	 * весов параметров. JsonLogic — по merge(localParams стрима, строка компонента);
@@ -502,6 +504,21 @@ export class V2CalculationService {
 		if (!outputArrayPath || (!usesCatalog && !hasStaticTasks)) {
 			return data;
 		}
+		const clearRowsGeneratedByRule = () => {
+			const existing = readByDotPath(data, outputArrayPath);
+			if (!Array.isArray(existing)) return data;
+			return writeByDotPath(
+				data,
+				outputArrayPath,
+				existing.filter(
+					(row) =>
+						!row ||
+						typeof row !== "object" ||
+						Array.isArray(row) ||
+						(row as Record<string, unknown>).generatedByRuleId !== rule.id,
+				),
+			);
+		};
 
 		let passes = false;
 		try {
@@ -513,7 +530,7 @@ export class V2CalculationService {
 		}
 		if (!passes) {
 			return payload.outputMode === "append"
-				? data
+				? clearRowsGeneratedByRule()
 				: this.writeGeneratedTypicalWorkOutput(
 						data,
 						outputArrayPath,
@@ -525,7 +542,7 @@ export class V2CalculationService {
 		const sourceRows = this.resolveGeneratedRowSources(data, payload, uiSchema);
 		if (sourceRows.length === 0) {
 			return payload.outputMode === "append"
-				? data
+				? clearRowsGeneratedByRule()
 				: this.writeGeneratedTypicalWorkOutput(
 						data,
 						outputArrayPath,
@@ -612,6 +629,11 @@ export class V2CalculationService {
 											templateId,
 											atDate,
 											hiddenParamCodes,
+											allowedWorkIds: Array.isArray(
+												payload.allowedWorkIds,
+											)
+												? payload.allowedWorkIds
+												: undefined,
 										}),
 									),
 								)
@@ -651,7 +673,9 @@ export class V2CalculationService {
 
 						const catalogTotal =
 							"total" in task && typeof task.total === "number"
-								? task.total
+								? usesCatalog && catalogCoeff !== 0
+									? task.total * (coefficient / catalogCoeff)
+									: task.total
 								: task.estimateHoursPerDay * coefficient;
 
 						return {
@@ -663,6 +687,11 @@ export class V2CalculationService {
 								: `${sourceName}: параметр источника`,
 							estimateHoursPerDay: task.estimateHoursPerDay,
 							coefficient,
+							coefficientDisplay:
+								"coefficientDisplay" in task &&
+								typeof task.coefficientDisplay === "string"
+									? task.coefficientDisplay
+									: undefined,
 							total: catalogTotal,
 							sourceComponent: archComponent,
 							sourceName,

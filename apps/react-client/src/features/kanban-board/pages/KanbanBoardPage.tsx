@@ -3,8 +3,10 @@ import DownloadIcon from "@mui/icons-material/Download";
 import HistoryIcon from "@mui/icons-material/History";
 import PublishIcon from "@mui/icons-material/Publish";
 import Alert from "@mui/material/Alert";
+import Backdrop from "@mui/material/Backdrop";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
@@ -25,6 +27,10 @@ import {
 	kanbanBoardTaskAssignees,
 	formatKanbanTaskKey,
 	normalizeTrackerCode,
+	collectKanbanBoardExpectedVersions,
+	parseKanbanBoardTaskEditBlockedError,
+	type KanbanBoardTaskEditBlockedErrorDto,
+	type KanbanBoardItem,
 } from "@smart-anketa/api-contract";
 import { KanbanTaskContentChips } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
 import { Kanban, dropHandler } from "react-kanban-kit";
@@ -70,6 +76,9 @@ import {
 } from "@react-client/features/kanban-board/kanban-task-paths";
 import { KanbanTaskCardSubtasks } from "@react-client/features/kanban-board/components/KanbanSubtasksChecklist";
 import { KanbanTaskImagesSection } from "@react-client/features/kanban-board/components/KanbanTaskImagesSection";
+import { TrackerTaskConflictDialog } from "@react-client/features/tracker/components/TrackerTaskConflictDialog";
+import { useTrackerBoardSync } from "@react-client/features/tracker/hooks/useTrackerBoardSync";
+import { useTrackerEditIdentity } from "@react-client/features/tracker/hooks/useTrackerEditIdentity";
 
 const buildBoardData = (
 	tasks: Parameters<typeof toBoardData>[0],
@@ -83,10 +92,13 @@ function TaskCardContent({
 	title,
 	content,
 	origin,
+	taskUpdatedAt,
+	editLabel,
 	columnColor,
 	assigneeRoleByName,
 	isBoardBusy,
 	onContentUpdated,
+	onEditBlocked,
 }: {
 	taskId: string;
 	boardId: string;
@@ -94,10 +106,13 @@ function TaskCardContent({
 	title?: string;
 	content?: KanbanBoardTaskContent;
 	origin?: string;
+	taskUpdatedAt?: string;
+	editLabel?: string;
 	columnColor: string;
 	assigneeRoleByName?: ReadonlyMap<string, KanbanBoardAssigneeRoleId | null>;
 	isBoardBusy?: boolean;
 	onContentUpdated: (taskId: string, content: KanbanBoardTaskContent) => void;
+	onEditBlocked?: (error: unknown) => void;
 }) {
 	const displayTitle = title ?? content?.title;
 	const hasRoleChips =
@@ -162,8 +177,11 @@ function TaskCardContent({
 						boardId={boardId}
 						parentId={parentId}
 						content={content}
+						taskUpdatedAt={taskUpdatedAt}
+						editLabel={editLabel}
 						onContentUpdated={onContentUpdated}
 						isSaving={isBoardBusy}
+						onEditBlocked={onEditBlocked}
 					/>
 				) : null}
 				{content?.images?.length ? (
@@ -185,6 +203,12 @@ export function KanbanBoardPage() {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [board, setBoard] = useState<KanbanBoardData | null>(null);
 	const [importError, setImportError] = useState<string | null>(null);
+	const [editBlocked, setEditBlocked] =
+		useState<KanbanBoardTaskEditBlockedErrorDto | null>(null);
+	const [pendingBoard, setPendingBoard] = useState<KanbanBoardData | null>(null);
+	const [remoteStale, setRemoteStale] = useState(false);
+	const [openingTaskLabel, setOpeningTaskLabel] = useState<string | null>(null);
+	const editLabel = useTrackerEditIdentity();
 	const [boardContextMenu, setBoardContextMenu] = useState<{
 		mouseX: number;
 		mouseY: number;
@@ -212,6 +236,7 @@ export function KanbanBoardPage() {
 		queryKey: ["kanbanBoardTasks", boardApiRef],
 		enabled: Boolean(boardApiRef),
 		queryFn: async ({ signal }) => kanbanBoardGetBoardTasks(boardApiRef, signal),
+		refetchOnMount: "always",
 	});
 
 	const resolvedBoardId =
@@ -233,14 +258,25 @@ export function KanbanBoardPage() {
 		)
 		.join("|");
 
+	const tasksSignature = useMemo(
+		() =>
+			(tasksQuery.data ?? [])
+				.map(
+					(task) =>
+						`${task.id}:${task.updatedAt}:${task.parentId}:${task.position}:${task.content.title}`,
+				)
+				.join("|"),
+		[tasksQuery.data],
+	);
+
 	useEffect(() => {
 		setBoard(null);
 	}, [boardApiRef]);
 
 	useEffect(() => {
-		if (!columnsQuery.data || !tasksQuery.isSuccess) return;
-		setBoard(buildBoardData(tasksQuery.data ?? [], columnsQuery.data));
-	}, [boardApiRef, columnsSignature, columnsQuery.data, tasksQuery.isSuccess]);
+		if (!columnsQuery.data || !tasksQuery.data) return;
+		setBoard(buildBoardData(tasksQuery.data, columnsQuery.data));
+	}, [boardApiRef, columnsSignature, columnsQuery.data, tasksSignature]);
 
 	const getColumns = useCallback(
 		() =>
@@ -254,7 +290,13 @@ export function KanbanBoardPage() {
 	);
 
 	const saveMutation = useMutation({
-		mutationFn: (nextBoard: KanbanBoardData) => {
+		mutationFn: ({
+			nextBoard,
+			forceOverwrite,
+		}: {
+			nextBoard: KanbanBoardData;
+			forceOverwrite?: boolean;
+		}) => {
 			if (!standId || !resolvedBoardId) {
 				throw new Error("Не загружен standId трекера");
 			}
@@ -268,16 +310,30 @@ export function KanbanBoardPage() {
 				...task,
 				origin: standId,
 			}));
-			return kanbanBoardSaveBoardTasks(boardApiRef, rows);
+			return kanbanBoardSaveBoardTasks(boardApiRef, {
+				tasks: rows,
+				expectedUpdatedAtByTaskId:
+					collectKanbanBoardExpectedVersions(nextBoard),
+				forceOverwrite,
+				lockHolderLabel: editLabel || undefined,
+			});
 		},
 		onSuccess: (tasks) => {
+			setRemoteStale(false);
+			setEditBlocked(null);
+			setPendingBoard(null);
 			queryClient.setQueryData(["kanbanBoardTasks", boardApiRef], tasks);
 			const columns = getColumns();
 			if (columns.length) {
 				setBoard(buildBoardData(tasks, columns));
 			}
 		},
-		onError: () => {
+		onError: (error, variables) => {
+			const blocked = parseKanbanBoardTaskEditBlockedError(error);
+			if (blocked) {
+				setEditBlocked(blocked);
+				setPendingBoard(variables.nextBoard);
+			}
 			const tasks = queryClient.getQueryData<KanbanBoardTaskRecord[]>([
 				"kanbanBoardTasks",
 				boardApiRef,
@@ -287,6 +343,12 @@ export function KanbanBoardPage() {
 				setBoard(buildBoardData(tasks, columns));
 			}
 		},
+	});
+
+	useTrackerBoardSync({
+		boardRef: boardApiRef,
+		enabled: isReady && !saveMutation.isPending,
+		onRemoteUpdate: useCallback(() => setRemoteStale(true), []),
 	});
 
 	const exportMutation = useMutation({
@@ -324,12 +386,31 @@ export function KanbanBoardPage() {
 	});
 
 	const persistBoard = useCallback(
-		(nextBoard: KanbanBoardData) => {
+		(nextBoard: KanbanBoardData, forceOverwrite?: boolean) => {
 			setBoard(nextBoard);
-			saveMutation.mutate(nextBoard);
+			saveMutation.mutate({ nextBoard, forceOverwrite });
 		},
 		[saveMutation],
 	);
+
+	const handleEditBlocked = useCallback((error: unknown) => {
+		const blocked = parseKanbanBoardTaskEditBlockedError(error);
+		if (blocked) setEditBlocked(blocked);
+	}, []);
+
+	const refreshBoardFromServer = useCallback(async () => {
+		const tasks = await queryClient.fetchQuery({
+			queryKey: ["kanbanBoardTasks", boardApiRef],
+			queryFn: ({ signal }) => kanbanBoardGetBoardTasks(boardApiRef, signal),
+		});
+		const columns = getColumns();
+		if (columns.length) {
+			setBoard(buildBoardData(tasks, columns));
+		}
+		setRemoteStale(false);
+		setEditBlocked(null);
+		setPendingBoard(null);
+	}, [boardApiRef, getColumns, queryClient]);
 
 	const openBoardHistory = useCallback(() => {
 		const key = boardMeta?.boardKey ?? boardKey;
@@ -419,11 +500,9 @@ export function KanbanBoardPage() {
 			const task = tasksQuery.data?.find((item) => item.id === card.id);
 			const projectCode = boardMeta?.projectCode;
 			if (task?.taskNumber && projectCode) {
-				navigate(
-					kanbanTaskEditPath(
-						formatKanbanTaskKey(projectCode, task.taskNumber),
-					),
-				);
+				const taskRef = formatKanbanTaskKey(projectCode, task.taskNumber);
+				setOpeningTaskLabel(taskRef);
+				navigate(kanbanTaskEditPath(taskRef));
 			}
 		},
 		[boardMeta?.projectCode, navigate, tasksQuery.data],
@@ -558,18 +637,35 @@ export function KanbanBoardPage() {
 				}}
 			>
 				{(importError ||
+					remoteStale ||
 					tasksQuery.isError ||
-					saveMutation.isError ||
+					(saveMutation.isError && !editBlocked) ||
 					columnsQuery.isError ||
 					createColumn.isError ||
 					updateColumn.isError ||
 					deleteColumn.isError) && (
 					<Stack spacing={2} sx={{ flexShrink: 0, mb: 2 }}>
 						{importError ? <Alert severity="error">{importError}</Alert> : null}
+						{remoteStale ? (
+							<Alert
+								severity="info"
+								action={
+									<Button
+										color="inherit"
+										size="small"
+										onClick={() => void refreshBoardFromServer()}
+									>
+										Обновить
+									</Button>
+								}
+							>
+								Доска изменилась на сервере. Обновите данные перед сохранением.
+							</Alert>
+						) : null}
 						{tasksQuery.isError ? (
 							<Alert severity="error">Не удалось загрузить задачи</Alert>
 						) : null}
-						{saveMutation.isError ? (
+						{saveMutation.isError && !editBlocked ? (
 							<Alert severity="error">Не удалось сохранить изменения</Alert>
 						) : null}
 						{columnsQuery.isError ? (
@@ -672,11 +768,14 @@ export function KanbanBoardPage() {
 												content={
 													data.content as KanbanBoardTaskContent | undefined
 												}
-												origin={(data as KanbanBoardData[string]).origin}
+												origin={(data as KanbanBoardItem).origin}
+												taskUpdatedAt={(data as KanbanBoardItem).updatedAt}
+												editLabel={editLabel}
 												columnColor={getKanbanColumnColor(column)}
 												assigneeRoleByName={assigneeRoleByName}
 												isBoardBusy={isBoardBusy}
 												onContentUpdated={handleTaskContentUpdated}
+												onEditBlocked={handleEditBlocked}
 											/>
 										),
 									},
@@ -712,6 +811,35 @@ export function KanbanBoardPage() {
 					История изменений
 				</MenuItem>
 			</Menu>
+			<TrackerTaskConflictDialog
+				open={Boolean(editBlocked)}
+				error={editBlocked}
+				onClose={() => {
+					setEditBlocked(null);
+					setPendingBoard(null);
+				}}
+				onRefresh={() => {
+					void refreshBoardFromServer();
+				}}
+				onForceOverwrite={() => {
+					setEditBlocked(null);
+					if (pendingBoard) persistBoard(pendingBoard, true);
+				}}
+			/>
+			<Backdrop
+				open={Boolean(openingTaskLabel)}
+				sx={{
+					zIndex: (theme) => theme.zIndex.modal + 1,
+					color: "common.white",
+					flexDirection: "column",
+					gap: 12,
+				}}
+			>
+				<CircularProgress color="inherit" size={40} />
+				<Typography variant="body1">
+					Открываем задачу{openingTaskLabel ? ` ${openingTaskLabel}` : ""}…
+				</Typography>
+			</Backdrop>
 		</Flex>
 	);
 }

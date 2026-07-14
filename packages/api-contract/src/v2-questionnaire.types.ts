@@ -95,6 +95,11 @@ export type BulkDeleteV2QuestionnairesRequestDto = {
 	ids: string[];
 };
 
+/** Выгрузка выбранных анкет реестра в XLSX (пустой список не допускается). */
+export type ExportV2QuestionnairesXlsxRequestDto = {
+	ids: string[];
+};
+
 export type BulkDeleteV2QuestionnairesFailureDto = {
 	id: string;
 	reason: "not_found" | "delete_failed";
@@ -112,4 +117,20 @@ export type SeedV2TestQuestionnairesRequestDto = {
 
 export type SeedV2TestQuestionnairesResultDto = {
 	created: V2QuestionnaireDto[];
+};
+
+export type V2QuestionnaireCommentDto = {
+	id: string;
+	questionnaireId: string;
+	parentCommentId: string | null;
+	body: string;
+	authorName: string;
+	/** Автор анкеты — для цветовой дифференциации в UI. */
+	isAnketaAuthor: boolean;
+	createdAt: string;
+};
+
+export type CreateV2QuestionnaireCommentRequestDto = {
+	body: string;
+	parentCommentId?: string | null;
 };

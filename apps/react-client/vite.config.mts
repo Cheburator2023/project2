@@ -120,6 +120,9 @@ export const viteCommonConfig = ({
 			cacheDir: fileURLToPath(new URL("./.cache/vite-app", import.meta.url)),
 			base,
 			optimizeDeps: {
+				holdUntilCrawlEnd: true,
+				// Workspace-пакет: не prebundle — иначе кэш deps устаревает после rebuild api-contract.
+				exclude: IS_DEV ? ["@smart-anketa/api-contract"] : [],
 				include: [
 					"@smart-anketa/json-logic-ts",
 					"react-dnd",
@@ -145,7 +148,7 @@ export const viteCommonConfig = ({
 						entryFileNames: "[name].js",
 						chunkFileNames: "chunks/[name]-[hash].js",
 						assetFileNames: "assets/[name]-[hash][extname]",
-						manualChunks(id) {
+						manualChunks(id: string) {
 							return resolveVendorChunk(id);
 						},
 					},
@@ -242,6 +245,12 @@ export const viteCommonConfig = ({
 					cachedChecks: false,
 				},
 				port: 8004,
+				hmr: {
+					overlay: false,
+				},
+				watch: {
+					usePolling: Boolean(process.env.VITE_USE_POLLING),
+				},
 				proxy: {
 					"/api": {
 						target: currentTarget,

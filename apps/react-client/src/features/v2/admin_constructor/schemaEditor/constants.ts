@@ -29,6 +29,7 @@ export const CANVAS_CATEGORY_CHIP_COLORS = {
 /** Цвета чипов типов полей на холсте. */
 export const CANVAS_TYPE_CHIP_COLORS: Record<string, string> = {
 	string: "#0D9488",
+	"string-textarea": "#14B8A6",
 	"string-dictionary": "#0F766E",
 	"dictionary-list": "#B45309",
 	integer: "#4F46E5",
@@ -161,6 +162,7 @@ export const FIELD_PRESETS: PalettePreset[] = [
 /** Варианты примитивного типа в панели свойств (включая справочники). */
 export const PRIMITIVE_FIELD_TYPE_OPTIONS = [
 	{ id: "string", title: "Строка" },
+	{ id: "string-textarea", title: "Строка (textarea)" },
 	{ id: "string-dictionary", title: "Строка / справочник" },
 	{ id: "dictionary-list", title: "Мультисправочник" },
 	...FIELD_PRESETS.filter((fp) =>

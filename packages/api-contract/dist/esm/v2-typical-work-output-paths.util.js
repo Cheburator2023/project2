@@ -1,7 +1,10 @@
-import { resolveV2AnketaArchComponent } from "./v2-anketa-section-ui.util";
+import { resolveV2AnketaArchComponent, resolveStreamExecutorForTypicalWorkOutputPath, } from "./v2-anketa-section-ui.util";
+import { typicalWorkAssignedToExecutorStream } from "./v2-executor-streams.util";
 export const V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = "streamDataSources.sourceTypicalTasks";
 /** Канонический вывод типовых работ «Контроль моделей». */
 export const V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_Khn6-HAW";
+/** Ключ ui:options — привязанные к блоку id типовых работ (сохраняется в снепшоте). */
+export const TYPICAL_WORK_BOUND_WORK_IDS_KEY = "boundWorkIds";
 /** Legacy/fan-out пути, куда раньше дублировались сгенерированные типовые работы. */
 export const LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS = [
     V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
@@ -47,6 +50,99 @@ export function collectGeneratedTypicalWorkArrayPaths(uiSchema, prefix = "") {
     }
     return [...new Set(paths)];
 }
+function readUiSchemaBranchAtOutputPath(uiSchema, dotPath) {
+    const segments = dotPath.split(".").filter(Boolean);
+    let cur = uiSchema;
+    for (const segment of segments) {
+        const branch = readRecord(cur);
+        if (!branch || !(segment in branch))
+            return undefined;
+        cur = branch[segment];
+    }
+    return readRecord(cur);
+}
+/** Привязанные work id для блока typicalWork по dot-пути в uiSchema. */
+export function readTypicalWorkBoundWorkIdsAtOutputPath(uiSchema, outputPath) {
+    const branch = readUiSchemaBranchAtOutputPath(uiSchema, outputPath);
+    const opts = readRecord(branch?.["ui:options"]);
+    if (!opts || !(TYPICAL_WORK_BOUND_WORK_IDS_KEY in opts))
+        return undefined;
+    const raw = opts[TYPICAL_WORK_BOUND_WORK_IDS_KEY];
+    if (!Array.isArray(raw))
+        return [];
+    return [
+        ...new Set(raw.filter((id) => typeof id === "string" && id.trim().length > 0)),
+    ];
+}
+/** Все блоки typicalWork с путями вывода и привязками работ. */
+export function collectTypicalWorkBlockBindings(uiSchema) {
+    return collectGeneratedTypicalWorkArrayPaths(uiSchema).map((outputPath) => ({
+        outputPath,
+        boundWorkIds: readTypicalWorkBoundWorkIdsAtOutputPath(uiSchema, outputPath),
+    }));
+}
+function patchBoundWorkIdsAtOutputPath(uiSchema, outputPath, boundWorkIds) {
+    const segments = outputPath.split(".").filter(Boolean);
+    if (segments.length === 0)
+        return uiSchema;
+    const patchLeaf = (node, depth) => {
+        const key = segments[depth];
+        if (!key)
+            return node;
+        if (depth === segments.length - 1) {
+            const existingChild = readRecord(node[key]) ?? {};
+            const prevOpts = readRecord(existingChild["ui:options"]) ?? {};
+            return {
+                ...node,
+                [key]: {
+                    ...existingChild,
+                    "ui:options": {
+                        ...prevOpts,
+                        [TYPICAL_WORK_BOUND_WORK_IDS_KEY]: [...new Set(boundWorkIds)],
+                    },
+                },
+            };
+        }
+        const child = readRecord(node[key]) ?? {};
+        return {
+            ...node,
+            [key]: patchLeaf(child, depth + 1),
+        };
+    };
+    return patchLeaf({ ...uiSchema }, 0);
+}
+/**
+ * Заполняет boundWorkIds на legacy-блоках typicalWork по назначениям работ на стрим блока.
+ * Вызывается после сида каталога в шаблон (id работ известны только после seed).
+ */
+export function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog) {
+    let next = uiSchema;
+    for (const binding of collectTypicalWorkBlockBindings(uiSchema)) {
+        if (binding.boundWorkIds !== undefined)
+            continue;
+        const stream = resolveStreamExecutorForTypicalWorkOutputPath(next, binding.outputPath);
+        if (!stream)
+            continue;
+        const ids = catalog
+            .filter((work) => typicalWorkAssignedToExecutorStream(work.streams, stream))
+            .map((work) => work.id);
+        if (ids.length === 0)
+            continue;
+        next = patchBoundWorkIdsAtOutputPath(next, binding.outputPath, ids);
+    }
+    return next;
+}
+/**
+ * Явно отключает автогенерацию каталога типовых работ на всех блоках typicalWork.
+ * Пустой boundWorkIds — сигнал patchV2TypicalWorksLogicRules не включать catalog rule.
+ */
+export function disableTypicalWorkCatalogBindingsInUiSchema(uiSchema) {
+    let next = uiSchema;
+    for (const outputPath of collectGeneratedTypicalWorkArrayPaths(uiSchema)) {
+        next = patchBoundWorkIdsAtOutputPath(next, outputPath, []);
+    }
+    return next;
+}
 /** Путь вывода типовых работ «Система-источник» по схеме (канонический или пользовательский). */
 export function resolveSourceTypicalWorksOutputPath(jsonSchema, uiSchema) {
     if (jsonSchemaHasResolvablePath(jsonSchema, V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH)) {
@@ -91,9 +187,12 @@ export function listAllGeneratedTypicalWorkArrayPaths(uiSchema) {
  * актуальный `outputArrayPath` (после replace/clear в калькуляторе).
  */
 export function clearStaleGeneratedTypicalWorkPaths(data, outputArrayPath, uiSchema) {
+    const activePaths = new Set(uiSchema ? collectGeneratedTypicalWorkArrayPaths(uiSchema) : []);
     let next = data;
-    for (const path of listAllGeneratedTypicalWorkArrayPaths(uiSchema)) {
+    for (const path of LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS) {
         if (path === outputArrayPath)
+            continue;
+        if (activePaths.has(path))
             continue;
         next = writeAtDotPath(next, path, []);
     }

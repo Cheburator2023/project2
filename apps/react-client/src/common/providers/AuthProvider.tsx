@@ -4,8 +4,9 @@ import {
 	isNoRolesGodMode,
 } from "@react-client/common/auth/godMode";
 import type { MfeAuthHostProps } from "@react-client/common/auth/syncMfeAuth";
+import { publishAppSync } from "@react-client/common/crossTab/appBroadcast";
 import { useAuthStore } from "../store/authStore";
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 interface AuthProviderProps extends MfeAuthHostProps {
 	children: React.ReactNode;
@@ -20,7 +21,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 }) => {
 	const setAccessToken = useAuthStore((state) => state.setAccessToken);
 	const godMode = isNoRolesGodMode();
-	const hostProps = { token, keycloak, user, onLogout };
+	const hadSessionRef = useRef<boolean | null>(null);
 
 	useLayoutEffect(() => {
 		if (godMode) {
@@ -28,9 +29,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 			return;
 		}
 
-		syncMfeAuthFromHost(hostProps);
+		const hostProps = { token, keycloak, user, onLogout };
+		const syncedToken = syncMfeAuthFromHost(hostProps);
 		ensureKeycloakSession(hostProps);
-	}, [godMode, token, keycloak, user, onLogout, setAccessToken]);
+		const hasSession = Boolean(syncedToken && user);
+		if (hadSessionRef.current === false && hasSession) {
+			publishAppSync({ type: "auth:session-changed" });
+		}
+		hadSessionRef.current = hasSession;
+	}, [
+		godMode,
+		token,
+		(keycloak as { authenticated?: boolean } | undefined)?.authenticated,
+		Boolean(user),
+		onLogout,
+		setAccessToken,
+	]);
 
 	if (godMode) return <>{children}</>;
 	return children;

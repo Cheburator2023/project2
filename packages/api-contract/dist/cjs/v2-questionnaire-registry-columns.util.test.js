@@ -90,4 +90,68 @@ const MINIMAL_UI = {
         const riskCol = columns.find((col) => col.key.includes("riskGroup.businessComplexity"));
         (0, vitest_1.expect)(riskCol?.header).toBe(v2_questionnaire_registry_columns_util_1.V2_UNCERTAINTY_RISK_GROUP_LABELS.businessComplexity);
     });
+    (0, vitest_1.it)("builds E2E stage columns from questionnaire data, not fixed slots", () => {
+        const rows = [
+            {
+                id: "q1",
+                formData: {
+                    summary: {
+                        detailedCalculation: Array.from({ length: 11 }, (_, index) => ({
+                            stageName: `Этап ${index + 1}`,
+                            baseScore: index,
+                        })),
+                    },
+                },
+            },
+        ];
+        const options = (0, v2_questionnaire_registry_columns_util_1.deriveRegistryColumnOptionsFromRows)(rows);
+        const leaves = (0, v2_questionnaire_registry_columns_util_1.flattenV2RegistryColumnTree)((0, v2_questionnaire_registry_columns_util_1.buildV2QuestionnaireRegistryColumnTree)({
+            type: "object",
+            properties: {
+                summary: {
+                    type: "object",
+                    properties: {
+                        detailedCalculation: {
+                            type: "array",
+                            items: {
+                                type: "object",
+                                properties: {
+                                    stageName: { type: "string", title: "Этап" },
+                                    baseScore: { type: "number", title: "Базовая" },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        }, { summary: { detailedCalculation: { items: {} } } }, options));
+        const stageGroups = leaves.filter((leaf) => leaf.formPath?.startsWith("summary.detailedCalculation["));
+        (0, vitest_1.expect)((0, v2_questionnaire_registry_columns_util_1.collectRegistryArrayIndicesFromRows)(rows, "summary.detailedCalculation")).toHaveLength(11);
+        (0, vitest_1.expect)(stageGroups.some((leaf) => leaf.formPath?.includes("[10]."))).toBe(true);
+        (0, vitest_1.expect)(leaves.some((leaf) => leaf.id === "form.summary.detailedCalculation[0].baseScore")).toBe(true);
+    });
+    (0, vitest_1.it)("omits platform stream slots when data is absent", () => {
+        const rows = [{ id: "q1", formData: {} }];
+        const options = (0, v2_questionnaire_registry_columns_util_1.deriveRegistryColumnOptionsFromRows)(rows);
+        const leaves = (0, v2_questionnaire_registry_columns_util_1.flattenV2RegistryColumnTree)((0, v2_questionnaire_registry_columns_util_1.buildV2QuestionnaireRegistryColumnTree)({
+            type: "object",
+            properties: {
+                summary: {
+                    type: "object",
+                    properties: {
+                        platformStreams: {
+                            type: "array",
+                            items: {
+                                type: "object",
+                                properties: {
+                                    streamName: { type: "string", title: "Стрим" },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        }, { summary: { platformStreams: { items: {} } } }, options));
+        (0, vitest_1.expect)(leaves.some((leaf) => leaf.formPath?.startsWith("summary.platformStreams["))).toBe(false);
+    });
 });

@@ -251,12 +251,20 @@ function stableFieldKey(title) {
 	return `field_${createHash("sha1").update(n).digest("base64url").slice(0, 8)}`;
 }
 
+const UNCERTAINTY_DICTIONARY_BY_TITLE = {
+	[normTitle("Сроки инициативы")]: "v2.method.21.сроки_инициативы",
+	[normTitle("Стоимость инициативы")]: "v2.method.22.стоимость_инициативы",
+};
+
 function buildFieldSchema(param) {
 	const t = clean(param.elementType).toLowerCase();
 	const title = param.title;
 
 	if (normTitle(title) === normTitle("Общая неопределенность")) {
 		return { type: "string", title, readOnly: true };
+	}
+	if (normTitle(title) === normTitle("Поправка на общую неопределенность")) {
+		return { type: "number", title, minimum: 0, maximum: 30 };
 	}
 
 	if (/^да\/?нет$/i.test(t)) {
@@ -280,16 +288,32 @@ function buildFieldSchema(param) {
 
 function buildUiField(key, schema, sectionKey) {
 	const ui = {};
+	const titleNorm = normTitle(schema.title ?? "");
 	if (schema.type === "boolean") {
 		ui["ui:widget"] = "checkbox";
 		return ui;
 	}
 	if (schema.type === "number") {
+		if (titleNorm === normTitle("Поправка на общую неопределенность")) {
+			ui["ui:widget"] = "NumberInputWidget";
+			ui["ui:options"] = {
+				suffix: "%",
+				tooltip:
+					'При необходимости учесть дополнительные экспертные риски, заполнив поле "Поправка на общую неопределенность" значением в диапазоне от 0-30%',
+			};
+			return ui;
+		}
 		ui["ui:widget"] = "updown";
 		return ui;
 	}
 	if (schema.readOnly) {
 		ui["ui:readonly"] = true;
+		return ui;
+	}
+	const dictionaryCode = UNCERTAINTY_DICTIONARY_BY_TITLE[titleNorm];
+	if (dictionaryCode) {
+		ui["ui:widget"] = "select";
+		ui["ui:options"] = { dictionaryCode };
 		return ui;
 	}
 	if (schema.enum) {
@@ -473,6 +497,22 @@ function applyGeneralInfoParams(snap, params) {
 		if (giProps[key]) {
 			nextGi[key] = structuredClone(giProps[key]);
 			giOrder.push(key);
+		}
+	}
+
+	if (!nextGi.overallUncertaintyModal) {
+		nextGi.overallUncertaintyModal = {
+			type: "string",
+			title: "Расчёт общей неопределённости",
+		};
+		uiGi.overallUncertaintyModal = {
+			"ui:widget": "V2UncertaintyModalWidget",
+			"ui:options": { fullWidth: true },
+		};
+		if (!giOrder.includes("overallUncertaintyModal")) {
+			const overallIdx = giOrder.indexOf("overallUncertainty");
+			if (overallIdx >= 0) giOrder.splice(overallIdx, 0, "overallUncertaintyModal");
+			else giOrder.push("overallUncertaintyModal");
 		}
 	}
 

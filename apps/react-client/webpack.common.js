@@ -78,7 +78,9 @@ module.exports = {
 	],
 	output: {
 		filename: "[name].bundle.js",
-		chunkFilename: "[name].[contenthash:8].chunk.js",
+		chunkFilename: isDev
+			? "chunks/[name].js"
+			: "[name].[contenthash:8].chunk.js",
 		path: path.resolve(__dirname, "dist"),
 		// auto: publicPath выводится из URL remoteEntry.js (важно за proxy-префиксом).
 		publicPath: PUBLIC_PATH || "auto",
@@ -121,6 +123,10 @@ module.exports = {
 			// Глобальные стили (dockview, xyflow, toasts) — без CSS Modules, как в data_lineage.
 			{
 				test: /\.css$/,
+				// CSS-импорты являются side effect. Это особенно важно для пакетов
+				// вроде @svar-ui/react-gantt, которые помечают весь пакет как
+				// sideEffects: false: production tree shaking иначе удаляет стили.
+				sideEffects: true,
 				use: ["style-loader", "css-loader"],
 			},
 		],

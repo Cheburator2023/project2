@@ -26,10 +26,23 @@ import {
 	coerceUiSchema,
 } from "@react-client/features/v2/admin_constructor/utils/coerceV2TemplateSnapshot";
 import { pathForAdminV2Template } from "@react-client/routing/common/pathHelpers";
-import { useState } from "react";
+import { useUserStore } from "@react-client/common/store/userStore";
+import { format } from "date-fns";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
-export type V2SchemaInitialKind = "empty" | "default";
+export function buildDefaultV2SchemaName(
+	username: string | null | undefined,
+	at: Date = new Date(),
+): string {
+	const dateLabel = format(at, "dd.MM.yyyy");
+	const trimmedUser = username?.trim();
+	return trimmedUser
+		? `Схема ${trimmedUser} ${dateLabel}`
+		: `Схема ${dateLabel}`;
+}
+
+export type V2SchemaInitialKind = "empty" | "default" | "defaultWithoutTypicalWorks";
 
 type Props = {
 	open: boolean;
@@ -38,6 +51,7 @@ type Props = {
 
 export function V2SchemaCreateDialog({ open, onClose }: Props) {
 	const navigate = useNavigate();
+	const username = useUserStore((state) => state.username);
 	const createTemplate = useCreateV2Template();
 	const createVersion = useCreateV2TemplateVersion();
 	const createFromDefault = useCreateV2TemplateVersionFromDefault();
@@ -52,20 +66,26 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 				}`
 			: "встроенный JSON-снимок";
 
-	const [name, setName] = useState("Новая схема");
+	const [name, setName] = useState(() => buildDefaultV2SchemaName(null));
 	const [description, setDescription] = useState("Краткое описание для админки");
 	const [initialKind, setInitialKind] = useState<V2SchemaInitialKind>("default");
+
+	const reset = useCallback(() => {
+		setName(buildDefaultV2SchemaName(username));
+		setDescription("Краткое описание для админки");
+		setInitialKind("default");
+	}, [username]);
+
+	useEffect(() => {
+		if (open) {
+			setName(buildDefaultV2SchemaName(username));
+		}
+	}, [open, username]);
 
 	const pending =
 		createTemplate.isPending ||
 		createVersion.isPending ||
 		createFromDefault.isPending;
-
-	const reset = () => {
-		setName("Новая схема");
-		setDescription("Краткое описание для админки");
-		setInitialKind("default");
-	};
 
 	const handleClose = () => {
 		if (pending) return;
@@ -97,13 +117,18 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 					},
 				});
 			} else {
-				await createFromDefault.mutateAsync(created.id);
+				await createFromDefault.mutateAsync({
+					templateId: created.id,
+					withoutTypicalWorks: initialKind === "defaultWithoutTypicalWorks",
+				});
 			}
 
 			toast.success(
 				initialKind === "empty"
 					? "Схема создана с пустым черновиком"
-					: "Схема создана из заводского эталона",
+					: initialKind === "defaultWithoutTypicalWorks"
+						? "Схема создана из эталона без типовых работ"
+						: "Схема создана из заводского эталона",
 			);
 			reset();
 			onClose();
@@ -158,6 +183,22 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 										<Typography variant="caption" color="text.secondary">
 											Эталон анкеты ({factorySourceHint}). Создаётся
 											черновик для редактирования.
+										</Typography>
+									</Flex>
+								}
+								sx={{ alignItems: "flex-start", ml: 0, mr: 0 }}
+							/>
+							<FormControlLabel
+								value="defaultWithoutTypicalWorks"
+								control={<Radio />}
+								label={
+									<Flex flexDirection="column" gap={0.25}>
+										<Typography variant="body2" fontWeight={600}>
+											Заводская схема без типовых работ
+										</Typography>
+										<Typography variant="caption" color="text.secondary">
+											Структура эталона ({factorySourceHint}) без сида
+											типовых работ и без их JsonLogic-правил.
 										</Typography>
 									</Flex>
 								}

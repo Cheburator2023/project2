@@ -6,6 +6,7 @@ import {
 	Delete,
 	Body,
 	Param,
+	Query,
 	HttpCode,
 	HttpStatus,
 	Logger,
@@ -164,17 +165,24 @@ export class V2TemplateVersionController {
 	@ApiResponse({ status: 201, type: V2TemplateVersionResponseDto })
 	async createFromDefault(
 		@Param("templateId", ParseUUIDPipe) templateId: string,
+		@Query("withoutTypicalWorks") withoutTypicalWorks: string | undefined,
 		@CurrentUser() user: { id: string } | null,
 	): Promise<V2TemplateVersionResponseDto> {
 		const version = await this.versionService.createDraftFromDefault(
 			templateId,
 			user?.id ?? null,
+			{ withoutTypicalWorks: withoutTypicalWorks === "true" },
 		);
 		await this.auditService.log(
 			templateId,
 			"version.created",
 			version.id,
-			{ version, source: "default_factory" },
+			{
+				version,
+				source: withoutTypicalWorks === "true"
+					? "default_factory_without_typical_works"
+					: "default_factory",
+			},
 			user?.id ?? null,
 		);
 		return this.toResponseDto(version);

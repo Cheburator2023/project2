@@ -13,9 +13,11 @@ exports.assembleTypicalWorkCalculationLogic = assembleTypicalWorkCalculationLogi
 exports.compileCalculationLogicFromVersionConfig = compileCalculationLogicFromVersionConfig;
 exports.needsCalculationLogicBackfill = needsCalculationLogicBackfill;
 exports.parseStoredTypicalWorkCalculationLogic = parseStoredTypicalWorkCalculationLogic;
+exports.computeTypicalWorkFormulaTotal = computeTypicalWorkFormulaTotal;
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
 const v2_typical_work_types_1 = require("./v2-typical-work.types");
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
+const v2_work_terms_formula_util_1 = require("./v2-work-terms-formula.util");
 const OP_SYMBOL = {
     "+": "+",
     "-": "−",
@@ -416,16 +418,7 @@ function assembleTypicalWorkCalculationLogic(stored, rules, fallback) {
 }
 /** Собирает JsonLogic result из сохранённой формулы version_config. */
 function compileCalculationLogicFromVersionConfig(config) {
-    const fallback = (0, v2_typical_work_types_1.defaultWorkFormula)();
-    const formulaTokens = Array.isArray(config.formula)
-        ? config.formula
-        : fallback.tokens;
-    const formula = {
-        tokens: formulaTokens,
-        text: config.formulaText?.trim() ||
-            (0, v2_work_formula_util_1.tokensToText)(formulaTokens) ||
-            fallback.text,
-    };
+    const formula = (0, v2_work_terms_formula_util_1.resolveVersionConfigTokenFormula)(config.formula, config.formulaText);
     const rounding = {
         mode: config.roundingMode ||
             (0, v2_typical_work_types_1.defaultWorkRounding)().mode,
@@ -448,4 +441,36 @@ function parseStoredTypicalWorkCalculationLogic(raw) {
         version: 1,
         result: record.result,
     };
+}
+/** Итог по формуле: JsonLogic (из токенов) → token-движок → terms (упрощённая модель). */
+function computeTypicalWorkFormulaTotal(params) {
+    if (params.terms.terms.some((t) => t.kind === "transitive")) {
+        return (0, v2_work_terms_formula_util_1.evaluateTermsFormula)({
+            terms: params.terms.terms,
+            baseNorm: params.norm,
+            resolveFactorCoeff: params.resolveFactorCoeff,
+        });
+    }
+    const tokenFormula = (0, v2_work_terms_formula_util_1.resolveVersionConfigTokenFormula)(params.formula, params.formulaText);
+    const ctx = {
+        norm: params.norm,
+        paramCoefficients: params.paramCoefficients,
+        source: params.source,
+    };
+    const fallback = { formula: tokenFormula, rounding: params.rounding };
+    // formulaText — источник истины для калькулятора; устаревший calculationLogic
+    // (например norm-only backfill из terms v2) не должен перекрывать скобки и ±.
+    const fromTokens = previewTypicalWorkCalculation(null, fallback, ctx);
+    if (fromTokens.value != null)
+        return fromTokens.value;
+    if (params.calculationLogic) {
+        const fromLogic = previewTypicalWorkCalculation(params.calculationLogic, fallback, ctx);
+        if (fromLogic.value != null)
+            return fromLogic.value;
+    }
+    return (0, v2_work_terms_formula_util_1.evaluateTermsFormula)({
+        terms: params.terms.terms,
+        baseNorm: params.norm,
+        resolveFactorCoeff: params.resolveFactorCoeff,
+    });
 }

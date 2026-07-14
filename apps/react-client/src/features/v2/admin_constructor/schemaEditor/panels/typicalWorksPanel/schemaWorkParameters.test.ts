@@ -4,12 +4,80 @@ import type { V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
 import {
 	buildSchemaWorkParameters,
 	isSchemaLaborParamCandidate,
+	jsonPointerToLogicVarPath,
+	resolveSchemaParamFieldRef,
+	schemaParamIdFromPointer,
 	schemaLaborParamPickerCaption,
 	resolveSchemaParamForTriggerRule,
 	triggerRuleGroupKey,
 	excludeRulesByGroupKey,
 } from "./schemaWorkParameters";
 import type { FieldPathHint } from "../../types";
+
+describe("jsonPointerToLogicVarPath", () => {
+	it("marks array item segments with []", () => {
+		expect(
+			jsonPointerToLogicVarPath("/streamDataSources/sourceSystems/items/type"),
+		).toBe("streamDataSources.sourceSystems[].type");
+		expect(jsonPointerToLogicVarPath("/detailInfo/dataMart/metricsCount")).toBe(
+			"detailInfo.dataMart.metricsCount",
+		);
+	});
+});
+
+describe("schemaParamIdFromPointer", () => {
+	it("prefixes json pointer with schema:", () => {
+		expect(schemaParamIdFromPointer("/generalInfo/pilotNeed")).toBe(
+			"schema:/generalInfo/pilotNeed",
+		);
+	});
+});
+
+describe("resolveSchemaParamFieldRef", () => {
+	it("extracts pointer, varPath and field key from schema param id", () => {
+		const [param] = buildSchemaWorkParameters({
+			fieldPathHints: [
+				{
+					pointer: "/streamDataSources/sourceSystems/items/type",
+					key: "type",
+					title: "Тип системы-источника",
+					varPath: "streamDataSources.sourceSystems[].type",
+					schemaFieldUid: "field-stable",
+					dictionaryCode: null,
+					codesPreview: null,
+				},
+			],
+			uiSchema: {},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					streamDataSources: {
+						type: "object",
+						properties: {
+							sourceSystems: {
+								type: "array",
+								items: {
+									type: "object",
+									properties: {
+										type: { type: "string", enum: ["A", "B"] },
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			enumMapByCode: {},
+		});
+		expect(resolveSchemaParamFieldRef(param)).toEqual({
+			pointer: "/streamDataSources/sourceSystems/items/type",
+			varPath: "streamDataSources.sourceSystems[].type",
+			fieldKey: "type",
+		});
+		expect(param?.id).toBe("schema:field-stable");
+		expect(param?.schemaFieldUid).toBe("field-stable");
+	});
+});
 
 describe("buildSchemaWorkParameters", () => {
 	const hints: FieldPathHint[] = [
@@ -543,7 +611,8 @@ describe("buildSchemaWorkParameters", () => {
 	it("excludes fields inside typical/atypical work result blocks", () => {
 		const workBlockHints: FieldPathHint[] = [
 			{
-				pointer: "/streamDataSources/sourceTypicalTasks/items/estimateHoursPerDay",
+				pointer:
+					"/streamDataSources/sourceTypicalTasks/items/estimateHoursPerDay",
 				key: "estimateHoursPerDay",
 				title: "Базовая оценка (ч/д)",
 				varPath: "streamDataSources.sourceTypicalTasks[].estimateHoursPerDay",
@@ -618,6 +687,87 @@ describe("buildSchemaWorkParameters", () => {
 
 		expect(params.some((p) => p.code === "estimateHoursPerDay")).toBe(false);
 		expect(params.some((p) => p.code === "entityVolume")).toBe(true);
+	});
+
+	it("excludes legacy typical work output arrays without archComponent", () => {
+		const legacyHints: FieldPathHint[] = [
+			{
+				pointer: "/detailInfo/detailTypicalTasks/items/estimateHoursPerDay",
+				key: "estimateHoursPerDay",
+				title: "Базовая оценка (ч/д)",
+				varPath: "detailInfo.detailTypicalTasks[].estimateHoursPerDay",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+			{
+				pointer: "/field_aJEu5ziT/sourceTypicalTasks/items/estimateHoursPerDay",
+				key: "estimateHoursPerDay",
+				title: "Базовая оценка (ч/д)",
+				varPath: "field_aJEu5ziT.sourceTypicalTasks[].estimateHoursPerDay",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: legacyHints,
+			uiSchema: {
+				detailInfo: {
+					detailTypicalTasks: {
+						"ui:options": { addable: false },
+						"ui:readonly": true,
+					},
+				},
+				field_aJEu5ziT: {
+					sourceTypicalTasks: {
+						"ui:options": { addable: false },
+						"ui:readonly": true,
+					},
+				},
+			},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					detailInfo: {
+						type: "object",
+						properties: {
+							detailTypicalTasks: {
+								type: "array",
+								items: {
+									type: "object",
+									properties: {
+										estimateHoursPerDay: {
+											type: "number",
+											title: "Базовая оценка (ч/д)",
+										},
+									},
+								},
+							},
+						},
+					},
+					field_aJEu5ziT: {
+						type: "object",
+						properties: {
+							sourceTypicalTasks: {
+								type: "array",
+								items: {
+									type: "object",
+									properties: {
+										estimateHoursPerDay: {
+											type: "number",
+											title: "Базовая оценка (ч/д)",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			enumMapByCode: {},
+		});
+
+		expect(params).toHaveLength(0);
 	});
 });
 

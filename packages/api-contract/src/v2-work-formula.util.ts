@@ -398,9 +398,15 @@ export function parseWorkFormulaText(text: string): {
 			continue;
 		}
 
-		if ("+-×÷*/".includes(ch)) {
+		if ("+-×÷*/−".includes(ch)) {
 			const op =
-				ch === "×" ? "*" : ch === "÷" ? "/" : (ch as "+" | "-" | "*" | "/");
+				ch === "×"
+					? "*"
+					: ch === "÷"
+						? "/"
+						: ch === "−"
+							? "-"
+							: (ch as "+" | "-" | "*" | "/");
 			tokens.push({ kind: "operator", op });
 			i++;
 			continue;
@@ -627,7 +633,6 @@ export function evaluateWorkFormula(
 ): WorkFormulaEvalResult {
 	const symbolic = formula.text || tokensToText(formula.tokens);
 	const validation = validateWorkFormulaTokens(formula.tokens);
-	console.log(validation);
 	if (validation) {
 		return { symbolic, expanded: "", value: null, error: validation };
 	}

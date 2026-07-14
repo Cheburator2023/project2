@@ -30,6 +30,9 @@ export type SchemaEditorContextValue = {
 	setLogic: React.Dispatch<React.SetStateAction<{ rules: V2LogicRuleDto[] }>>;
 	formData: Record<string, unknown>;
 	setFormData: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
+	resetPreviewForm: () => void;
+	previewResetPending: boolean;
+	previewFormRemountKey: number;
 
 	selectedPointer: string | null;
 	setSelectedPointer: (pointer: string | null) => void;
@@ -53,6 +56,7 @@ export type SchemaEditorContextValue = {
 	liveFormData: Record<string, unknown>;
 	calculationLoading: boolean;
 	calculationError: string | null;
+	requestCalculationRefresh: () => void;
 	logicExtraErrors: ErrorSchema;
 	logicValidationIssueCount: number;
 	legacyStageEvaluation: V2LegacyStageEvaluationDto | null;
@@ -91,7 +95,11 @@ export type SchemaEditorContextValue = {
 		index: number,
 		uiOptions?: Record<string, unknown>,
 		uiBranch?: Record<string, unknown>,
-	) => void;
+	) => string | null;
+	placeTypicalWorkInStreamBlock: (
+		streamExecutor: import("@smart-anketa/api-contract").V2ExecutorStreamLabel,
+		preferredPointer?: string | null,
+	) => string | null;
 	reorderRootFieldKeys: (orderedKeys: string[]) => void;
 	applyGroupFieldOrders: (
 		finalOrders: Record<string, string[]>,
@@ -116,7 +124,12 @@ export type SchemaEditorContextValue = {
 		updater: (prev: UiSchema) => UiSchema,
 		options?: { recordHistory?: boolean },
 	) => void;
-	handleDeleteField: (pointer?: string | null) => void;
+	handleDeleteField: (pointer?: string | null) => Promise<boolean>;
+	getFieldDeleteImpact: (
+		pointer: string,
+	) => Promise<
+		import("@smart-anketa/api-contract").V2TypicalWorkSchemaFieldSyncImpactDto
+	>;
 	handleToggleRequired: (checked: boolean) => void;
 	handleWidgetChange: (widget: string) => void;
 	handleDictionaryCodeChange: (code: string) => void;
@@ -124,6 +137,10 @@ export type SchemaEditorContextValue = {
 	addRuleForTargetPath: (rawTarget: string) => void;
 	openLogicTabWithRule: (ruleId: string) => void;
 	openLogicTabWithPointer: (pointer: string) => void;
+	/** Id параметра (`schema:…`) для подсветки в селекте «Параметр-триггер». */
+	triggerParamPickId: string | null;
+	openLogicTabWithTriggerParam: (pointer: string) => void;
+	clearTriggerParamPick: () => void;
 	updateRulePatch: (patch: Partial<V2LogicRuleDto>) => void;
 	removeSelectedRule: () => void;
 	previewEvalNote: React.ReactNode;
@@ -137,7 +154,11 @@ export type SchemaEditorContextValue = {
 	isObjectGroup: boolean;
 	groupChildFields: Array<{ key: string; title: string; typeLabel: string }>;
 	hasArrayObjectItems: boolean;
-	arrayItemChildFields: Array<{ key: string; title: string; typeLabel: string }>;
+	arrayItemChildFields: Array<{
+		key: string;
+		title: string;
+		typeLabel: string;
+	}>;
 	isCustomUiGroup: boolean;
 	customUiGroupSummary: string | null;
 	canBindDictionary: boolean;

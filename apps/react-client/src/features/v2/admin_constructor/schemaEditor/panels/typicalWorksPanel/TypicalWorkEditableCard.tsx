@@ -22,7 +22,10 @@ import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import type { V2TypicalWorkCardDto, V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
+import type {
+	V2TypicalWorkCardDto,
+	V2TypicalWorkParameterDto,
+} from "@smart-anketa/api-contract";
 import {
 	isParamUsedInFormula,
 	markFormulaParamInvalid,
@@ -30,11 +33,15 @@ import {
 	tokensToText,
 	computeFormulaBadgeFromTokens,
 	resolveActiveNormOnDate,
+	resolveVersionConfigTokenFormula,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { useCreateV2TemplateVersion } from "@react-client/common/api/queries/v2-templates";
-import { useV2TypicalWorkAssignments, useV2WorkParametersCatalog } from "@react-client/common/api/queries/v2-works";
+import {
+	useV2TypicalWorkAssignments,
+	useV2WorkParametersCatalog,
+} from "@react-client/common/api/queries/v2-works";
 import { useSchemaEditor } from "../../SchemaEditorContext";
 import { mergeAnketaDisplayFormData } from "@react-client/features/v2/anketaCRUD/utils/mergeAnketaDisplayFormData";
 import { resolvePreviewSourceRowForTypicalWork } from "./typicalWorkTriggerPreview";
@@ -75,6 +82,11 @@ import {
 	streamColor,
 	streamDisplayLabel,
 } from "./typicalWorksAreas";
+import { isExecutorStreamPresentInSchema } from "@smart-anketa/api-contract";
+import {
+	ExecutorStreamMenuRow,
+	ExecutorStreamPresenceHint,
+} from "./ExecutorStreamPresenceLabel";
 import {
 	ARCH_COMPONENT_DOT,
 	archComponentShortLabel,
@@ -88,6 +100,7 @@ import {
 	useDebouncedTypicalWorkSave,
 	type SaveStatus,
 } from "./useDebouncedTypicalWorkSave";
+import { reconcileStreamNormPeriods } from "./typicalWorkNormPeriods";
 import { TypicalWorkValueMatchingInfo } from "./typicalWorkValueMatchingHelp";
 
 type TypicalWorkEditableCardProps = {
@@ -153,8 +166,19 @@ export function TypicalWorkEditableCard({
 	onStreamChange,
 	onVersionChange,
 }: TypicalWorkEditableCardProps) {
-	const { fieldPathHints, uiSchema, jsonSchema, enumMapByCode, formData, liveFormData } =
-		useSchemaEditor();
+	const {
+		fieldPathHints,
+		uiSchema,
+		jsonSchema,
+		enumMapByCode,
+		formData,
+		liveFormData,
+		setSelectedPointer,
+		setMainTab,
+		triggerParamPickId,
+		clearTriggerParamPick,
+		requestCalculationRefresh,
+	} = useSchemaEditor();
 	const { data: assignmentsList } = useV2TypicalWorkAssignments({
 		templateVersionId,
 	});
@@ -184,10 +208,13 @@ export function TypicalWorkEditableCard({
 		hasPending,
 	} = useDebouncedTypicalWorkSave(card?.id ?? null, templateVersionId, {
 		onFormulaLocked: () => setFormulaLockedOpen(true),
+		onSaved: requestCalculationRefresh,
 	});
 
 	const lastSyncedCardKeyRef = useRef<string | null>(null);
 	const defaultedArchKeyRef = useRef<string | null>(null);
+	const saveInProgressRef = useRef(false);
+	saveInProgressRef.current = status === "dirty" || status === "saving";
 
 	useEffect(() => {
 		if (!card) return;
@@ -195,20 +222,18 @@ export function TypicalWorkEditableCard({
 		const isNewCard = cardKey !== lastSyncedCardKeyRef.current;
 		// Не перетираем несохранённые правки при фоновом рефетче того же card
 		// (autosave инвалидирует query → возвращает новый объект с теми же данными).
-		if (!isNewCard && hasPending()) return;
+		if (!isNewCard && (hasPending() || saveInProgressRef.current)) return;
 		lastSyncedCardKeyRef.current = cardKey;
 		if (isNewCard) defaultedArchKeyRef.current = null;
-		const formula =
-			card.formula.tokens.length > 0
-				? {
-						tokens: card.formula.tokens,
-						text: tokensToText(card.formula.tokens),
-					}
-				: card.formula;
+		const formula = resolveVersionConfigTokenFormula(
+			card.formulaTerms,
+			card.formula.text,
+		);
 		setDraft({
 			...structuredClone(card),
 			formula,
 			formulaTerms: ensureFormulaTerms(card),
+			norms: reconcileStreamNormPeriods(structuredClone(card.norms)),
 		});
 	}, [card, templateVersionId, hasPending]);
 
@@ -341,6 +366,7 @@ export function TypicalWorkEditableCard({
 		);
 		const withDerived = {
 			...next,
+			norms: reconcileStreamNormPeriods(next.norms, next.streamExecutor),
 			formula,
 			formulaTerms,
 			formulaBadge: computeFormulaBadgeFromTokens(formula.tokens),
@@ -371,6 +397,7 @@ export function TypicalWorkEditableCard({
 			(Boolean(picked.dictionaryCode) && picked.values.length === 0);
 		const newGroup = useAnyOf
 			? {
+					schemaFieldUid: picked.schemaFieldUid ?? null,
 					paramCode: picked.code,
 					paramName,
 					kind: "any_of" as const,
@@ -383,6 +410,7 @@ export function TypicalWorkEditableCard({
 					},
 				}
 			: {
+					schemaFieldUid: picked.schemaFieldUid ?? null,
 					paramCode: picked.code,
 					paramName,
 					kind: "by_value" as const,
@@ -505,7 +533,9 @@ export function TypicalWorkEditableCard({
 	}
 
 	const compDot = ARCH_COMPONENT_DOT[effectiveArchComponentType] ?? "#94a3b8";
-	const recommended = recommendedStreamsForComponent(effectiveArchComponentType);
+	const recommended = recommendedStreamsForComponent(
+		effectiveArchComponentType,
+	);
 	const otherStreams = availableStreams.filter(
 		(s) => !recommended.includes(streamDisplayLabel(s)),
 	);
@@ -831,24 +861,15 @@ export function TypicalWorkEditableCard({
 											}}
 											sx={{ borderRadius: 1, py: 1 }}
 										>
-											<Box
-												sx={{
-													width: 8,
-													height: 8,
-													borderRadius: "2px",
-													bgcolor: streamColor(stream),
-													mr: 1,
-												}}
+											<ExecutorStreamMenuRow
+												stream={streamDisplayLabel(stream)}
+												color={streamColor(stream)}
+												present={isExecutorStreamPresentInSchema(
+													uiSchema,
+													stream,
+												)}
+												selected={streamExecutor === stream}
 											/>
-											{streamDisplayLabel(stream)}
-											{stream !== streamDisplayLabel(stream) ? (
-												<Typography
-													component="span"
-													sx={{ ml: 0.75, fontSize: 11, color: "#8a93a3" }}
-												>
-													({stream})
-												</Typography>
-											) : null}
 										</MenuItem>
 									))}
 								{otherStreams.length > 0 ? (
@@ -877,16 +898,15 @@ export function TypicalWorkEditableCard({
 												}}
 												sx={{ borderRadius: 1, py: 1 }}
 											>
-												<Box
-													sx={{
-														width: 8,
-														height: 8,
-														borderRadius: "2px",
-														bgcolor: streamColor(stream),
-														mr: 1,
-													}}
+												<ExecutorStreamMenuRow
+													stream={streamDisplayLabel(stream)}
+													color={streamColor(stream)}
+													present={isExecutorStreamPresentInSchema(
+														uiSchema,
+														stream,
+													)}
+													selected={streamExecutor === stream}
 												/>
-												{streamDisplayLabel(stream)}
 											</MenuItem>
 										))}
 									</>
@@ -896,6 +916,14 @@ export function TypicalWorkEditableCard({
 					</Popper>
 				</Box>
 			</Box>
+
+			{streamExecutor ? (
+				<Box sx={{ mb: 2 }}>
+					<ExecutorStreamPresenceHint
+						present={isExecutorStreamPresentInSchema(uiSchema, streamExecutor)}
+					/>
+				</Box>
+			) : null}
 
 			{errorMessage ? (
 				<Alert severity="error" sx={{ mb: 2 }}>
@@ -946,6 +974,12 @@ export function TypicalWorkEditableCard({
 						methodologyCatalog={methodologyCatalog}
 						streamExecutor={streamExecutor ?? draft.streamExecutor}
 						onChange={(rules) => commitDraft({ ...draft, rules })}
+						onNavigateToSchemaField={(pointer) => {
+							setMainTab("designer");
+							setSelectedPointer(pointer);
+						}}
+						triggerParamPickId={triggerParamPickId}
+						onTriggerParamPickConsumed={clearTriggerParamPick}
 					/>
 
 					<Box
@@ -967,7 +1001,12 @@ export function TypicalWorkEditableCard({
 							}}
 						>
 							<Typography
-								sx={{ fontSize: 13.5, fontWeight: 700, color: "#1d2435", pt: 0.75 }}
+								sx={{
+									fontSize: 13.5,
+									fontWeight: 700,
+									color: "#1d2435",
+									pt: 0.75,
+								}}
 							>
 								Параметры трудоёмкости
 							</Typography>
@@ -1152,9 +1191,7 @@ export function TypicalWorkEditableCard({
 													mb: 1,
 												}}
 											>
-												{(
-													paramMeta?.values ?? []
-												).map((value) => {
+													{(paramMeta?.values ?? []).map((value) => {
 													const selected = group.anyOf?.valueCodes.includes(
 														value.code,
 													);
@@ -1181,7 +1218,8 @@ export function TypicalWorkEditableCard({
 																				current.valueCodes[i] !== value.code,
 																		)
 																	: [...current.valueLabels, value.label];
-																const nextGroups = draft.laborParams.map((g) =>
+																	const nextGroups = draft.laborParams.map(
+																		(g) =>
 																	g.paramCode === group.paramCode
 																		? {
 																				...g,
@@ -1236,7 +1274,10 @@ export function TypicalWorkEditableCard({
 																	}
 																: g,
 														);
-														commitDraft({ ...draft, laborParams: nextGroups });
+															commitDraft({
+																...draft,
+																laborParams: nextGroups,
+															});
 													}}
 												/>
 												<TextField
@@ -1260,7 +1301,10 @@ export function TypicalWorkEditableCard({
 																	}
 																: g,
 														);
-														commitDraft({ ...draft, laborParams: nextGroups });
+															commitDraft({
+																...draft,
+																laborParams: nextGroups,
+															});
 													}}
 												/>
 											</Box>

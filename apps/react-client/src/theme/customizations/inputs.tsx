@@ -6,7 +6,7 @@ import { alpha, type Components, type Theme } from "@mui/material/styles";
 import { toggleButtonClasses } from "@mui/material/ToggleButton";
 import { toggleButtonGroupClasses } from "@mui/material/ToggleButtonGroup";
 
-import { brand, gray, red } from "../themePrimitives";
+import { brand, gray, inputBackgroundColor, red } from "../themePrimitives";
 
 /* eslint-disable import/prefer-default-export */
 export const inputsCustomizations: Components<Theme> = {
@@ -488,6 +488,7 @@ export const inputsCustomizations: Components<Theme> = {
 		styleOverrides: {
 			root: {
 				border: "none",
+				backgroundColor: inputBackgroundColor,
 				"& .MuiSelect-select span": {
 					textOverflow: "ellipsis",
 					overflow: "hidden",
@@ -520,7 +521,7 @@ export const inputsCustomizations: Components<Theme> = {
 				color: (theme.vars || theme).palette.text.primary,
 				borderRadius: (theme.vars || theme).shape.borderRadius,
 				border: `1px solid ${(theme.vars || theme).palette.divider}`,
-				backgroundColor: (theme.vars || theme).palette.background.default,
+				backgroundColor: inputBackgroundColor,
 				padding: "inherit",
 				transition: "border 120ms ease-in",
 				"&:hover": {
@@ -560,6 +561,34 @@ export const inputsCustomizations: Components<Theme> = {
 					display: "none",
 				},
 				border: "none",
+			},
+		},
+	},
+	MuiFilledInput: {
+		styleOverrides: {
+			root: {
+				backgroundColor: inputBackgroundColor,
+				"&:hover": {
+					backgroundColor: inputBackgroundColor,
+				},
+				"&.Mui-focused": {
+					backgroundColor: inputBackgroundColor,
+				},
+				"&.Mui-disabled": {
+					backgroundColor: inputBackgroundColor,
+				},
+			},
+		},
+	},
+	MuiInput: {
+		styleOverrides: {
+			root: {
+				backgroundColor: inputBackgroundColor,
+			},
+			underline: {
+				"&:before": {
+					borderBottomColor: gray[300],
+				},
 			},
 		},
 	},

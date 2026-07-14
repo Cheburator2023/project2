@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { catalogValueMatchesTriggerRule, isSourceTypeTriggerParam, resolveLaborAnyOfCoefficient, resolveByValueLaborParamCoefficients, resolveStreamFromSourceType, resolveStreamsFromSourceSystems, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, typicalWorkRulesMatchSource, V2_SOURCE_STREAM, } from "./v2-works-catalog-match.util";
+import { buildTypicalWorkFactorCoeffResolver, catalogValueMatchesTriggerRule, isSourceTypeTriggerParam, resolveLaborAnyOfCoefficient, resolveByValueLaborParamCoefficients, resolveStreamFromSourceType, resolveStreamsFromSourceSystems, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, typicalWorkRulesMatchSource, V2_SOURCE_STREAM, } from "./v2-works-catalog-match.util";
 describe("v2-works-catalog-match.util", () => {
     it("resolves the unified source stream for any source row", () => {
         // Разделение внутр/внеш убрано: любой источник → единый стрим.
@@ -142,6 +142,36 @@ describe("v2-works-catalog-match.util", () => {
         };
         expect(resolveLaborAnyOfCoefficient({ field_checkbox: true }, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(1.5);
         expect(resolveLaborAnyOfCoefficient({ field_checkbox: false }, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(0.5);
+        expect(resolveLaborAnyOfCoefficient({}, "field_checkbox", anyOf, "Чекбокс @ field_checkbox")).toBe(0.5);
+    });
+    it("does not treat unrelated source.value as boolean labor answer", () => {
+        const anyOf = {
+            valueCodes: ["true"],
+            valueLabels: ["Да"],
+            coeffOn: 1,
+            coeffOff: 2,
+        };
+        expect(resolveLaborAnyOfCoefficient({ name: "Источник", type: "Внутренний", value: "Да" }, "field_cb", anyOf, "Чекбокс @ field_cb")).toBe(2);
+    });
+    it("buildTypicalWorkFactorCoeffResolver falls back to any_of coeffOff", () => {
+        const resolve = buildTypicalWorkFactorCoeffResolver({
+            paramCoefficients: {},
+            anyOfParams: [
+                {
+                    paramCode: "field_cb",
+                    paramName: "Чекбокс @ field_cb",
+                    anyOf: {
+                        valueCodes: ["true"],
+                        valueLabels: ["Да"],
+                        coeffOn: 1,
+                        coeffOff: 2,
+                    },
+                },
+            ],
+            source: {},
+        });
+        expect(resolve("field_cb")).toBe(2);
+        expect(resolve("missing")).toBe(1);
     });
     it("resolves by-value labor coefficients from schema dictionary answers", () => {
         expect(resolveByValueLaborParamCoefficients({ field_dict: "Да" }, [
@@ -160,6 +190,24 @@ describe("v2-works-catalog-match.util", () => {
                 coefficient: 10,
             },
         ])).toEqual({ field_dict: 20 });
+    });
+    it("treats an absent by-value boolean checkbox as false", () => {
+        expect(resolveByValueLaborParamCoefficients({ name: "Источник", value: "Да" }, [
+            {
+                paramCode: "field_cb",
+                paramName: "Чекбокс @ field_cb",
+                valueCode: "true",
+                valueLabel: "Да",
+                coefficient: 1,
+            },
+            {
+                paramCode: "field_cb",
+                paramName: "Чекбокс @ field_cb",
+                valueCode: "false",
+                valueLabel: "Нет",
+                coefficient: 2,
+            },
+        ])).toEqual({ field_cb: 2 });
     });
     it("matches boolean checkbox trigger by label and code", () => {
         const rules = [

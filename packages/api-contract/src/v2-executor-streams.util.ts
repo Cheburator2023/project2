@@ -53,3 +53,36 @@ export function inferLegacyStreamExecutorForBlockKey(
 export function resolveExecutorStreamAreaLabel(stream: string): string {
 	return V2_DB_STREAM_TO_EXECUTOR_AREA[stream] ?? stream;
 }
+
+/** DB-стримы, сопоставляемые области UI (для фильтрации работ по стриму блока). */
+const EXECUTOR_SCOPE_DB_STREAMS: Partial<
+	Record<V2ExecutorStreamLabel, readonly string[]>
+> = {
+	"Источники данных": ["ИД. Внутренний", "ИД. Внешний", "Источники данных"],
+	ПиРМ: ["ПиРМ", "ПиРМ (правила и развитие модели)"],
+};
+
+/** Стримы БД/области UI, в которых ищется назначение работы для блока typicalWork. */
+export function resolveExecutorScopeDbStreams(
+	executorStream: string,
+): readonly string[] {
+	const trimmed = executorStream.trim();
+	if (!trimmed) return [];
+	if (isV2ExecutorStreamLabel(trimmed)) {
+		return EXECUTOR_SCOPE_DB_STREAMS[trimmed] ?? [trimmed];
+	}
+	return [trimmed];
+}
+
+/** Работа назначена на стрим-исполнитель блока typicalWork (legacy без boundWorkIds). */
+export function typicalWorkAssignedToExecutorStream(
+	workStreams: readonly string[],
+	executorStream: string,
+): boolean {
+	const scopeStreams = resolveExecutorScopeDbStreams(executorStream);
+	return workStreams.some(
+		(stream) =>
+			scopeStreams.includes(stream) ||
+			scopeStreams.includes(resolveExecutorStreamAreaLabel(stream)),
+	);
+}

@@ -141,6 +141,37 @@ export function mainSectionIdForFormPath(
 		: null;
 }
 
+/** Поле/арх-компонент недоступен для редактирования после завершения раздела или анкеты. */
+export function isAnketaFormPathLocked(
+	workflow: V2AnketaWorkflowDto,
+	pathKey: string,
+): boolean {
+	if (workflow.globalStatus === "Заполнено") return true;
+
+	const trimmed = pathKey.trim();
+	if (!trimmed) return false;
+
+	const mainSectionId = mainSectionIdForFormPath(trimmed);
+	if (
+		mainSectionId &&
+		workflow.sections[mainSectionId] === "Заполнено"
+	) {
+		return true;
+	}
+
+	const panelSections = workflow.panelSections;
+	if (!panelSections) return false;
+
+	for (const [panelPath, status] of Object.entries(panelSections)) {
+		if (status !== "Заполнено") continue;
+		if (trimmed === panelPath || trimmed.startsWith(`${panelPath}.`)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 export const V2_ANKETA_GLOBAL_COMPLETE_LABEL =
 	"Завершить заполнение анкеты";
 

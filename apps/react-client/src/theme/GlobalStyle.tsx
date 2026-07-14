@@ -132,27 +132,6 @@ div.ag-watermark-text {
 
 }
 
-.ag-theme-alpine .ag-header,
-.ag-theme-balham .ag-header,
-.ag-theme-material .ag-header {
-    transform: translateZ(0) !important;
-}
-
-.ag-header {
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-    backface-visibility: hidden;
-}
-
-.ag-header-row {
-    transform: translateZ(0);
-}
-
-.ag-root-wrapper * {
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-}
-
 .ag-popup-parent {
     transform: translateZ(0);
 }
@@ -171,37 +150,6 @@ div.ag-watermark-text {
 
 .ag-icon-filter::before, .ag-icon-filter::after {
     transform: translateZ(0);
-}
-
-:where([class*="ag-theme-checkboxStyle"]) {
-    & .ag-checkbox-input-wrapper {
-        &:where(.ag-checked):after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-			border-radius: 50px;
-            line-height: 1;
-            display: block;
-            z-index: 1;
-			background-color: white;
-			mask-image: none;
-        }
-    }
-}
-
-:where([class*="ag-theme-checkboxStyle"]) {
-    & .ag-checkbox-input-wrapper, & .ag-radio-button-input-wrapper {
-        &:where(.ag-checked) {
-            &:after {
-                background-color: var(--ag-checkbox-checked-shape-color);
-            }
-        }
-    }
 }
 
 .MuiPopover-root .MuiPaper-root.MuiPaper-rounded.MuiPopover-paper.MuiMenu-paper {

@@ -54,7 +54,10 @@ describe("V2 calculation coverage — snapshot logic graph", () => {
 		expect(patched.rules.some((rule) => rule.id === "unified-atypical-total")).toBe(
 			true,
 		);
-		expect(patched.rules.some((rule) => rule.id === "unified-source-typical-works")).toBe(
+		expect(
+			patched.rules.some((rule) => rule.id.startsWith("typical-works-catalog-")),
+		).toBe(true);
+		expect(patched.rules.some((rule) => rule.id === "unified-typical-total")).toBe(
 			true,
 		);
 	});
@@ -146,12 +149,27 @@ describe("V2 calculation coverage — typicalWork (sourceSystem → catalog → 
 		});
 		const summary = summaryOf(result);
 		const sourceStream = summary.platformStreams.find(
-			(s) => s.streamName === "Источники данных",
+			(s) => s.streamName.includes("Источники данных"),
 		);
 		expect(sourceStream?.baseTypicalScore).toBeGreaterThan(0);
 		expect(sourceStream?.adjustedTypicalScore).toBeGreaterThanOrEqual(
 			sourceStream?.baseTypicalScore ?? 0,
 		);
+	});
+
+	it("shows optional stream row after group activation", async () => {
+		const result = await evaluateSnapshot({
+			groupActivation: { streamDigitalAgents: true },
+			streamDigitalAgents: {
+				field_8R2HHTY4: [{ total: 7, estimateHoursPerDay: 7, coefficient: 1 }],
+			},
+		});
+		const summary = summaryOf(result);
+		expect(
+			summary.platformStreams.some((row) =>
+				row.streamName.includes("Цифровые агенты"),
+			),
+		).toBe(true);
 	});
 
 	it("sums control typical tasks into unified typicalTotal when rows exist", async () => {
@@ -264,7 +282,17 @@ describe("V2 calculation coverage — legacy E2E stages", () => {
 		expect(summary.detailedCalculation.map((r) => r.stageName)).toEqual(
 			allStageNames,
 		);
-		expect(summary.platformStreams).toHaveLength(3);
+		expect(summary.platformStreams.length).toBeGreaterThanOrEqual(4);
+		expect(
+			summary.platformStreams.some((row) =>
+				row.streamName.includes("ДАДМ"),
+			),
+		).toBe(true);
+		expect(
+			summary.platformStreams.some((row) =>
+				row.streamName.includes("ПиРМ"),
+			),
+		).toBe(true);
 		expect(summary.baseScoreStream).toBeGreaterThan(0);
 		expect(summary.scoreWithComplexityCoeff).toBeGreaterThan(0);
 	});

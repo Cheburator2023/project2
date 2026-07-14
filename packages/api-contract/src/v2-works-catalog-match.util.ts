@@ -81,8 +81,12 @@ function slugParamCode(name: string): string {
 		.slice(0, 80);
 }
 
-/** Читает значение параметра из контекста строки/объекта анкеты. */
-export function readTypicalWorkSourceField(
+/**
+ * Ответ параметра трудоёмкости: только явные поля анкеты (paramCode / sourceKeys / slug).
+ * Без fallback на `value`/`controlType` строки — иначе отсутствующий чекбокс
+ * ошибочно наследует чужое значение и получает coeffOn вместо coeffOff.
+ */
+export function readLaborParamAnswer(
 	source: Record<string, unknown>,
 	paramCode: string,
 	paramName: string | null,
@@ -109,8 +113,22 @@ export function readTypicalWorkSourceField(
 	) {
 		return source.type;
 	}
-	if (source.controlType !== undefined) return source.controlType;
-	if (source.value !== undefined) return source.value;
+	return undefined;
+}
+
+/** Читает значение параметра из контекста строки/объекта анкеты (триггеры, JsonLogic). */
+export function readTypicalWorkSourceField(
+	source: Record<string, unknown>,
+	paramCode: string,
+	paramName: string | null,
+): unknown {
+	const direct = readLaborParamAnswer(source, paramCode, paramName);
+	if (direct !== undefined) return direct;
+
+	if (isControlTypeTriggerParam(paramCode, paramName)) {
+		if (source.controlType !== undefined) return source.controlType;
+		if (source.value !== undefined) return source.value;
+	}
 	return undefined;
 }
 
@@ -394,7 +412,7 @@ export function resolveLaborCoefficient(
 	valueLabel: string | null,
 	paramName: string | null = null,
 ): boolean {
-	const actual = readSourceField(source, paramCode, paramName);
+	const actual = readLaborParamAnswer(source, paramCode, paramName);
 	return laborValueMatches(actual, valueCode, valueLabel);
 }
 
@@ -409,7 +427,7 @@ export function resolveLaborAnyOfCoefficient(
 	},
 	paramName: string | null = null,
 ): number {
-	const actual = readSourceField(source, paramCode, paramName);
+	const actual = readLaborParamAnswer(source, paramCode, paramName);
 	const matches = anyOf.valueCodes.some((code, index) =>
 		laborValueMatches(actual, code, anyOf.valueLabels[index] ?? null),
 	);
@@ -424,24 +442,92 @@ export type ByValueLaborCoefficientRow = {
 	coefficient: number;
 };
 
+function expectedBooleanLaborValue(
+	valueCode: string | null,
+	valueLabel: string | null,
+): boolean | null {
+	for (const raw of [valueCode, valueLabel]) {
+		const normalized = raw?.trim().toLowerCase();
+		if (normalized === "true" || normalized === "да") return true;
+		if (normalized === "false" || normalized === "нет") return false;
+	}
+	return null;
+}
+
 /** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
 export function resolveByValueLaborParamCoefficients(
 	source: Record<string, unknown>,
 	rows: readonly ByValueLaborCoefficientRow[],
 ): Record<string, number> {
 	const paramCoefficients: Record<string, number> = {};
+	const rowsByParam = new Map<string, ByValueLaborCoefficientRow[]>();
 	for (const row of rows) {
-		if (
-			resolveLaborCoefficient(
-				source,
-				row.paramCode,
-				row.valueCode,
-				row.valueLabel,
-				row.paramName ?? null,
-			)
-		) {
-			paramCoefficients[row.paramCode] = row.coefficient;
+		const paramRows = rowsByParam.get(row.paramCode) ?? [];
+		paramRows.push(row);
+		rowsByParam.set(row.paramCode, paramRows);
+	}
+
+	for (const [paramCode, paramRows] of rowsByParam) {
+		const paramName = paramRows[0]?.paramName ?? null;
+		let actual = readLaborParamAnswer(source, paramCode, paramName);
+
+		// Неотмеченный чекбокс часто отсутствует в formData целиком. Если набор
+		// коэффициентов явно логический (есть и Да/true, и Нет/false), отсутствие
+		// поля эквивалентно false и должно выбрать коэффициент строки «Нет».
+		if (actual === undefined) {
+			const booleanValues = new Set(
+				paramRows.map((row) =>
+					expectedBooleanLaborValue(row.valueCode, row.valueLabel),
+				),
+			);
+			if (booleanValues.has(true) && booleanValues.has(false)) {
+				actual = false;
+			}
+		}
+
+		for (const row of paramRows) {
+			if (laborValueMatches(actual, row.valueCode, row.valueLabel)) {
+				paramCoefficients[paramCode] = row.coefficient;
+				break;
+			}
 		}
 	}
 	return paramCoefficients;
+}
+
+export type TypicalWorkAnyOfLaborParamLike = {
+	paramCode: string;
+	paramName?: string | null;
+	anyOf: {
+		valueCodes: string[];
+		valueLabels: string[];
+		coeffOn: number;
+		coeffOff: number;
+	};
+};
+
+/**
+ * Резолвер коэффициента фактора формулы: сначала рассчитанные значения,
+ * затем any_of по фактическому ответу (в т.ч. «выкл» при отсутствии/снятом чекбоксе).
+ */
+export function buildTypicalWorkFactorCoeffResolver(params: {
+	paramCoefficients: Record<string, number>;
+	anyOfParams: readonly TypicalWorkAnyOfLaborParamLike[];
+	source: Record<string, unknown>;
+}): (paramCode: string) => number {
+	return (paramCode: string) => {
+		if (Object.hasOwn(params.paramCoefficients, paramCode)) {
+			return params.paramCoefficients[paramCode]!;
+		}
+		const header = params.anyOfParams.find((row) => row.paramCode === paramCode);
+		if (header) {
+			return resolveLaborAnyOfCoefficient(
+				params.source,
+				header.paramCode,
+				header.anyOf,
+				header.paramName ?? null,
+			);
+		}
+		return 1;
+	};
 }

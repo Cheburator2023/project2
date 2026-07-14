@@ -22,11 +22,16 @@ import type {
 	V2TypicalWorkParameterValueDto,
 	V2TypicalWorkPreviewRequestDto,
 	V2TypicalWorkPreviewResponseDto,
+	V2TypicalWorkSchemaFieldSyncImpactDto,
+	V2TypicalWorkSchemaFieldSyncRequestDto,
 } from "@smart-anketa/api-contract";
 import {
+	buildTypicalWorkFactorCoeffResolver,
+	applyWorkRounding,
 	compileCalculationLogicFromVersionConfig,
 	collectAllowedParamCodes,
 	compileStoredTypicalWorkResultLogic,
+	computeTypicalWorkFormulaTotal,
 	computeWorkTriggerStatus,
 	defaultWorkFormula,
 	defaultWorkRounding,
@@ -39,6 +44,8 @@ import {
 	resolveActiveNormOnDate,
 	resolveLaborAnyOfCoefficient,
 	resolveByValueLaborParamCoefficients,
+	reconcileTypicalWorkCardWithSchemaField,
+	syncTermsFromTokenFormula,
 	termsToTokenFormula,
 	tokensToText,
 	validateCoefficientValue,
@@ -59,9 +66,7 @@ import { V2TypicalWorkNormEntity } from "../entities/v2-typical-work-norm.entity
 import { V2TypicalWorkRuleEntity } from "../entities/v2-typical-work-rule.entity";
 import { V2TypicalWorkVersionConfigEntity } from "../entities/v2-typical-work-version-config.entity";
 import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
-import {
-	normalizeArchComponentType,
-} from "../utils/v2-typical-work-catalog.util";
+import { normalizeArchComponentType } from "../utils/v2-typical-work-catalog.util";
 import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
 import { V2TypicalWorkService } from "./v2-typical-work.service";
 
@@ -90,11 +95,10 @@ export class V2TypicalWorkWriteService {
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
 	) {}
 
-	listParameters(includeInactive = false): Promise<V2TypicalWorkParameterListResponseDto> {
-		return this.paramCatalogService.listParameters(
-			undefined,
-			includeInactive,
-		);
+	listParameters(
+		includeInactive = false,
+	): Promise<V2TypicalWorkParameterListResponseDto> {
+		return this.paramCatalogService.listParameters(undefined, includeInactive);
 	}
 
 	listParameterDependencies(): Promise<V2ParameterDependencyListResponseDto> {
@@ -216,7 +220,9 @@ export class V2TypicalWorkWriteService {
 				this.versionConfigRepository.find({ where: { workId } }),
 			]);
 
-		const strip = <T extends { id?: string; createdAt?: Date; updatedAt?: Date }>(
+		const strip = <
+			T extends { id?: string; createdAt?: Date; updatedAt?: Date },
+		>(
 			row: T,
 		): Omit<T, "id" | "createdAt" | "updatedAt"> => {
 			const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = row;
@@ -298,7 +304,9 @@ export class V2TypicalWorkWriteService {
 		const stream = dto.streamExecutor.trim();
 		if (!stream) {
 			throw new ConflictException({
-				errors: [{ path: "streamExecutor", message: "Укажите стрим-исполнителя" }],
+				errors: [
+					{ path: "streamExecutor", message: "Укажите стрим-исполнителя" },
+				],
 			});
 		}
 		const existing = await this.assignmentRepository.findOne({
@@ -407,7 +415,9 @@ export class V2TypicalWorkWriteService {
 		const stream = dto.streamExecutor.trim();
 		if (!stream) {
 			throw new ConflictException({
-				errors: [{ path: "streamExecutor", message: "Укажите стрим-исполнителя" }],
+				errors: [
+					{ path: "streamExecutor", message: "Укажите стрим-исполнителя" },
+				],
 			});
 		}
 
@@ -440,8 +450,7 @@ export class V2TypicalWorkWriteService {
 				if (seen.has(key)) {
 					errors.push({
 						path: `laborCoefficients[${index}]`,
-						message:
-							"Дублируется комбинация (параметр, значение) для стрима",
+						message: "Дублируется комбинация (параметр, значение) для стрима",
 					});
 				}
 				seen.add(key);
@@ -529,7 +538,9 @@ export class V2TypicalWorkWriteService {
 			work.name = dto.name.trim();
 		}
 		if (dto.archComponentType !== undefined) {
-			work.archComponentType = normalizeArchComponentType(dto.archComponentType);
+			work.archComponentType = normalizeArchComponentType(
+				dto.archComponentType,
+			);
 		}
 		if (dto.templateId !== undefined) {
 			const requested = dto.templateId?.trim() || null;
@@ -579,6 +590,7 @@ export class V2TypicalWorkWriteService {
 						return this.ruleRepository.create({
 							workId,
 							streamExecutor: stream,
+							schemaFieldUid: rule.schemaFieldUid ?? null,
 							paramCode: rule.paramCode,
 							paramName: rule.paramName ?? null,
 							operator,
@@ -594,13 +606,17 @@ export class V2TypicalWorkWriteService {
 
 		if (dto.laborParams) {
 			await this.laborRepository.delete({ workId, streamExecutor: stream });
-			await this.laborParamRepository.delete({ workId, streamExecutor: stream });
+			await this.laborParamRepository.delete({
+				workId,
+				streamExecutor: stream,
+			});
 			for (const group of dto.laborParams) {
 				const kind = group.kind ?? "by_value";
 				await this.laborParamRepository.save(
 					this.laborParamRepository.create({
 						workId,
 						streamExecutor: stream,
+						schemaFieldUid: group.schemaFieldUid ?? null,
 						paramCode: group.paramCode,
 						paramName: group.paramName ?? null,
 						kind,
@@ -632,7 +648,10 @@ export class V2TypicalWorkWriteService {
 			}
 		} else if (dto.laborCoefficients) {
 			await this.laborRepository.delete({ workId, streamExecutor: stream });
-			await this.laborParamRepository.delete({ workId, streamExecutor: stream });
+			await this.laborParamRepository.delete({
+				workId,
+				streamExecutor: stream,
+			});
 			if (dto.laborCoefficients.length) {
 				await this.laborRepository.save(
 					dto.laborCoefficients.map((row) =>
@@ -652,7 +671,9 @@ export class V2TypicalWorkWriteService {
 				dto.laborCoefficients.map((row) => row.paramCode),
 			);
 			for (const paramCode of paramCodes) {
-				const row = dto.laborCoefficients.find((r) => r.paramCode === paramCode);
+				const row = dto.laborCoefficients.find(
+					(r) => r.paramCode === paramCode,
+				);
 				await this.laborParamRepository.save(
 					this.laborParamRepository.create({
 						workId,
@@ -681,7 +702,9 @@ export class V2TypicalWorkWriteService {
 			const formula = dto.formula ?? termsToTokenFormula(terms);
 			const rounding = dto.rounding ?? defaultWorkRounding();
 
-			if (terms.terms.some((t) => t.kind === "transitive" && t.sourceAssignmentId)) {
+			if (
+				terms.terms.some((t) => t.kind === "transitive" && t.sourceAssignmentId)
+			) {
 				const assignment = await this.ensureAssignment(workId, stream);
 				const configs = await this.versionConfigRepository.find({
 					where: { templateVersionId: dto.templateVersionId },
@@ -701,7 +724,9 @@ export class V2TypicalWorkWriteService {
 						configRow.formula,
 						configRow.formulaText,
 					);
-					const transitive = storedTerms.terms.find((t) => t.kind === "transitive");
+					const transitive = storedTerms.terms.find(
+						(t) => t.kind === "transitive",
+					);
 					edges.set(assignmentRow.id, transitive?.sourceAssignmentId ?? null);
 				}
 				const transitiveTerm = terms.terms.find((t) => t.kind === "transitive");
@@ -726,8 +751,11 @@ export class V2TypicalWorkWriteService {
 
 			const compiled = compileStoredTypicalWorkResultLogic(formula, rounding);
 			const payload = {
-				formula: dto.formulaTerms ?? terms,
-				formulaText: terms.text || formula.text || tokensToText(formula.tokens),
+				// Tokens — канонический источник визуального редактора. Terms-модель
+				// не умеет без потерь представить все арифметические выражения
+				// (например, вычитание), поэтому хранить только её нельзя.
+				formula: formula.tokens,
+				formulaText: formula.text || terms.text || tokensToText(formula.tokens),
 				roundingMode: rounding.mode,
 				roundingStep:
 					rounding.mode === "NONE" ? null : String(rounding.step ?? 0.1),
@@ -763,6 +791,107 @@ export class V2TypicalWorkWriteService {
 		);
 	}
 
+	async reconcileSchemaField(
+		dto: V2TypicalWorkSchemaFieldSyncRequestDto,
+	): Promise<V2TypicalWorkSchemaFieldSyncImpactDto> {
+		const configs = await this.versionConfigRepository.find({
+			where: { templateVersionId: dto.templateVersionId },
+		});
+		const impact: V2TypicalWorkSchemaFieldSyncImpactDto = {
+			worksMatched: 0,
+			worksUpdated: 0,
+			rulesUpdated: 0,
+			rulesRemoved: 0,
+			laborParamsUpdated: 0,
+			laborParamsRemoved: 0,
+			formulasInvalidated: 0,
+		};
+
+		if (configs.length === 0) {
+			return impact;
+		}
+
+		const field = dto.field;
+		const paramCodes = [
+			field.previousCode,
+			field.code,
+		].filter((code): code is string => Boolean(code?.trim()));
+		const matchWhere = [
+			{ schemaFieldUid: field.schemaFieldUid },
+			...paramCodes.map((paramCode) => ({ paramCode })),
+		];
+
+		const [matchingRules, matchingLaborHeaders] = await Promise.all([
+			this.ruleRepository.find({ where: matchWhere }),
+			this.laborParamRepository.find({ where: matchWhere }),
+		]);
+
+		const affectedKeys = new Set(
+			[...matchingRules, ...matchingLaborHeaders].map(
+				(row) => `${row.workId}:${row.streamExecutor}`,
+			),
+		);
+
+		for (const config of configs) {
+			const configKey = `${config.workId}:${config.streamExecutor}`;
+			if (!affectedKeys.has(configKey)) continue;
+
+			const card = await this.typicalWorkService.getWorkCardForSchemaSync(
+				config.workId,
+				config.streamExecutor,
+				dto.templateVersionId,
+			);
+			const reconciled = reconcileTypicalWorkCardWithSchemaField(card, dto);
+			if (!reconciled.changed) continue;
+
+			impact.worksMatched++;
+			impact.rulesUpdated += reconciled.impact.rulesUpdated;
+			impact.rulesRemoved += reconciled.impact.rulesRemoved;
+			impact.laborParamsUpdated += reconciled.impact.laborParamsUpdated;
+			impact.laborParamsRemoved += reconciled.impact.laborParamsRemoved;
+			impact.formulasInvalidated += reconciled.impact.formulasInvalidated;
+
+			if (dto.mode !== "apply") continue;
+			const next = reconciled.card;
+			await this.patchWork(config.workId, {
+				streamExecutor: config.streamExecutor,
+				templateVersionId: dto.templateVersionId,
+				rules: next.rules.map((rule) => ({
+					id: rule.id,
+					schemaFieldUid: rule.schemaFieldUid ?? null,
+					paramCode: rule.paramCode,
+					paramName: rule.paramName,
+					operator: rule.operator,
+					valueCode: rule.valueCode,
+					valueLabel: rule.valueLabel,
+					values: rule.values,
+					sortOrder: rule.sortOrder,
+				})),
+				laborParams: next.laborParams.map((group) => ({
+					schemaFieldUid: group.schemaFieldUid ?? null,
+					paramCode: group.paramCode,
+					paramName: group.paramName,
+					kind: group.kind,
+					coefficients: group.coefficients.map((row) => ({
+						id: row.id,
+						paramCode: row.paramCode,
+						paramName: row.paramName,
+						valueCode: row.valueCode,
+						valueLabel: row.valueLabel,
+						coefficient: row.coefficient,
+					})),
+					anyOf: group.anyOf,
+				})),
+				formula: next.formula,
+				formulaTerms: syncTermsFromTokenFormula(next.formula),
+				rounding: next.rounding,
+			});
+			impact.worksUpdated++;
+		}
+
+		return impact;
+	}
+
 	async previewWork(
 		workId: string,
 		dto: V2TypicalWorkPreviewRequestDto,
@@ -788,9 +917,7 @@ export class V2TypicalWorkWriteService {
 			draftSource,
 		);
 
-		const norm =
-			resolveActiveNormOnDate(card.norms, stream, atDate) ??
-			null;
+		const norm = resolveActiveNormOnDate(card.norms, stream, atDate) ?? null;
 		if (norm == null) {
 			return {
 				formulaSymbolic: card.formulaTerms?.text ?? card.formula.text,
@@ -813,8 +940,10 @@ export class V2TypicalWorkWriteService {
 					group.anyOf,
 					group.paramName,
 				);
-				continue;
 			}
+		}
+		for (const group of card.laborParams) {
+			if (group.kind === "any_of") continue;
 			const eligibleRows = group.coefficients
 				.filter((row) =>
 					isWorkCoefficientValueAvailable(row, coefficientValueCatalog, atDate),
@@ -833,6 +962,19 @@ export class V2TypicalWorkWriteService {
 		}
 
 		const terms = card.formulaTerms ?? normalizeStoredFormula(null);
+		const anyOfParams =
+			card.laborParams
+				?.filter((group) => group.kind === "any_of" && group.anyOf)
+				.map((group) => ({
+					paramCode: group.paramCode,
+					paramName: group.paramName,
+					anyOf: group.anyOf!,
+				})) ?? [];
+		const resolveFactorCoeff = buildTypicalWorkFactorCoeffResolver({
+			paramCoefficients,
+			anyOfParams,
+			source: answerSource,
+		});
 		let evaluated: {
 			symbolic: string;
 			expanded: string;
@@ -844,32 +986,52 @@ export class V2TypicalWorkWriteService {
 			const termsValue = evaluateTermsFormula({
 				terms: terms.terms,
 				baseNorm: norm,
-				resolveFactorCoeff: (code) => paramCoefficients[code] ?? 1,
+				resolveFactorCoeff,
 			});
 			evaluated = {
 				symbolic: terms.text,
 				expanded: terms.text,
-				value: termsValue,
-				error: termsValue == null ? "Не удалось вычислить транзитивную формулу" : null,
+				value:
+					termsValue == null
+						? null
+						: applyWorkRounding(termsValue, card.rounding),
+				error:
+					termsValue == null
+						? "Не удалось вычислить транзитивную формулу"
+						: null,
 			};
 		} else {
-			const termsValue = evaluateTermsFormula({
-				terms: terms.terms,
-				baseNorm: norm,
-				resolveFactorCoeff: (code) => paramCoefficients[code] ?? 1,
+			const total = computeTypicalWorkFormulaTotal({
+				calculationLogic: card.calculationLogic,
+				formula: card.formula,
+				formulaText: card.formula.text ?? card.formulaTerms?.text,
+				terms,
+				rounding: card.rounding,
+				norm,
+				paramCoefficients,
+				source: answerSource,
+				resolveFactorCoeff,
 			});
-			if (termsValue != null) {
+			if (total != null) {
+				const tokenPreview = previewTypicalWorkCalculation(
+					card.calculationLogic,
+					{ formula: card.formula, rounding: card.rounding },
+					{ norm, paramCoefficients, source: answerSource },
+				);
 				evaluated = {
-					symbolic: terms.text,
-					expanded: terms.text,
-					value: termsValue,
+					symbolic:
+						tokenPreview.symbolic ||
+						card.formulaTerms?.text ||
+						card.formula.text,
+					expanded: tokenPreview.expanded || tokenPreview.symbolic,
+					value: total,
 					error: null,
 				};
 			} else {
 				evaluated = previewTypicalWorkCalculation(
 					card.calculationLogic,
 					{ formula: card.formula, rounding: card.rounding },
-					{ norm, paramCoefficients },
+					{ norm, paramCoefficients, source: answerSource },
 				);
 			}
 		}
@@ -883,7 +1045,10 @@ export class V2TypicalWorkWriteService {
 		};
 	}
 
-	async backfillCalculationLogic(): Promise<{ updated: number; skipped: number }> {
+	async backfillCalculationLogic(): Promise<{
+		updated: number;
+		skipped: number;
+	}> {
 		const configs = await this.versionConfigRepository.find();
 		let updated = 0;
 		let skipped = 0;
@@ -914,7 +1079,8 @@ export class V2TypicalWorkWriteService {
 		const config = await this.versionConfigRepository.findOne({
 			where: { workId, streamExecutor, templateVersionId },
 		});
-		if (!config || !needsCalculationLogicBackfill(config.calculationLogic)) return;
+		if (!config || !needsCalculationLogicBackfill(config.calculationLogic))
+			return;
 		const compiled = compileCalculationLogicFromVersionConfig(config);
 		if (!compiled) return;
 		config.calculationLogic = compiled;

@@ -3,10 +3,14 @@ import {
 	type V2TypicalWorkListItemDto,
 	type V2WorkTriggerStatus,
 } from "@smart-anketa/api-contract";
+import fuzzysort from "fuzzysort";
 
 export const LOGIC_TAB_QUERY = "logicTab";
 export const WORK_ID_QUERY = "workId";
 export const NEW_WORK_QUERY = "newWork";
+export const BIND_POINTER_QUERY = "bindPointer";
+/** Откатить блок typicalWork при отмене создания работы (только после DnD/палитры). */
+export const ROLLBACK_TYPICAL_WORK_QUERY = "rollbackTypicalWork";
 
 /** Разделение внутр/внеш убрано — источники в едином стриме. */
 export const DEFAULT_WORK_STREAMS = [V2_SOURCE_STREAM] as const;
@@ -183,4 +187,70 @@ export function formulaBadgeLabel(
 		default:
 			return "без коэф.";
 	}
+}
+
+export type TypicalWorkSidebarGroup = {
+	archComponentType: string;
+	works: V2TypicalWorkListItemDto[];
+};
+
+export function typicalWorkSidebarDisplayLabel(
+	work: V2TypicalWorkListItemDto,
+	allWorks: V2TypicalWorkListItemDto[],
+): string {
+	const duplicates = allWorks.filter((item) => item.name === work.name).length;
+	if (duplicates <= 1) return work.name;
+	return `${work.name} · ${work.id.slice(0, 8)}`;
+}
+
+function typicalWorkSidebarSearchHaystack(
+	work: V2TypicalWorkListItemDto,
+	group: TypicalWorkSidebarGroup,
+	allWorks: V2TypicalWorkListItemDto[],
+): string {
+	const archLabel = archComponentShortLabel(group.archComponentType);
+	return [
+		typicalWorkSidebarDisplayLabel(work, allWorks),
+		work.name,
+		work.id,
+		work.archComponentType,
+		archLabel,
+		work.workType,
+		...work.streams,
+	]
+		.filter((part): part is string => Boolean(part?.trim()))
+		.join(" ");
+}
+
+/** Фильтр списка работ области (fuzzysort по имени, id, арх. компоненту, стримам). */
+export function filterTypicalWorkSidebarGroups(
+	groups: TypicalWorkSidebarGroup[],
+	query: string,
+	allWorks: V2TypicalWorkListItemDto[],
+): TypicalWorkSidebarGroup[] {
+	const trimmed = query.trim();
+	if (!trimmed) return groups;
+
+	return groups
+		.map((group) => {
+			const entries = group.works.map((work) => ({
+				work,
+				haystack: typicalWorkSidebarSearchHaystack(work, group, allWorks),
+			}));
+			const matches = fuzzysort.go(trimmed, entries, { key: "haystack" });
+			return {
+				...group,
+				works: matches.map((match) => match.obj.work),
+			};
+		})
+		.filter((group) => group.works.length > 0);
+}
+
+export function typicalWorkSidebarLabelMatchIndexes(
+	query: string,
+	label: string,
+): ReadonlyArray<number> {
+	const trimmed = query.trim();
+	if (!trimmed) return [];
+	return fuzzysort.single(trimmed, label)?.indexes ?? [];
 }

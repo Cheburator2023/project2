@@ -305,6 +305,46 @@ describe("WorkFormulaEditor (ui)", () => {
 		);
 	});
 
+	it("inserts closing parenthesis without implicit multiply", async () => {
+		const user = userEvent.setup();
+		renderEditor({
+			initialFormula: {
+				tokens: [
+					{ kind: "norm" },
+					{ kind: "operator", op: "*" },
+					{ kind: "number", value: 2 },
+				],
+				text: "N × 2",
+			},
+		});
+
+		await user.click(screen.getByRole("button", { name: ")" }));
+
+		expect(screen.getByTestId(TID.workFormulaGeneralSummary)).toHaveTextContent(
+			"N * 2)",
+		);
+	});
+
+	it("still inserts implicit multiply after closing parenthesis", async () => {
+		const user = userEvent.setup();
+		renderEditor({
+			initialFormula: {
+				tokens: [
+					{ kind: "paren_open" },
+					{ kind: "norm" },
+					{ kind: "paren_close" },
+				],
+				text: "(N)",
+			},
+		});
+
+		await user.click(screen.getByRole("button", { name: "число" }));
+
+		expect(screen.getByTestId(TID.workFormulaGeneralSummary).textContent).toMatch(
+			/\(N\).*\*.*1|\(N\).*×.*1/,
+		);
+	});
+
 	it("read-only hides editing controls", () => {
 		renderEditor({ readOnly: true });
 		expect(screen.queryByTestId(TID.workFormulaAddNorm)).not.toBeInTheDocument();

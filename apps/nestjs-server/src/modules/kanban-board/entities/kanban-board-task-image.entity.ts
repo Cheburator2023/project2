@@ -32,6 +32,12 @@ export class KanbanBoardTaskImageEntity {
 	@Column({ name: "thumb_path", type: "varchar", length: 512 })
 	thumbPath: string;
 
+	@Column({ name: "full_data", type: "bytea", nullable: true })
+	fullData: Buffer | null;
+
+	@Column({ name: "thumb_data", type: "bytea", nullable: true })
+	thumbData: Buffer | null;
+
 	@Column({ name: "created_at", type: "varchar", length: 64 })
 	createdAt: string;
 }

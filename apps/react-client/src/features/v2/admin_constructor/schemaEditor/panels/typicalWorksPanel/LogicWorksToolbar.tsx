@@ -1,20 +1,24 @@
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
+import Divider from "@mui/material/Divider";
 import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
 import Typography from "@mui/material/Typography";
-import { commonRoutes as routes } from "@react-client/routing/common/routes";
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router";
 import {
+	ALL_LOGIC_WORKS_SCOPE,
 	LOGIC_EXECUTOR_STREAMS,
 	type LogicWorksScope,
+	isAllLogicWorksScope,
 	scopeLabel,
 	streamColor,
 } from "./typicalWorksAreas";
+import { useSchemaEditor } from "../../SchemaEditorContext";
+import { isExecutorStreamPresentInSchema } from "@smart-anketa/api-contract";
+import { ExecutorStreamMenuRow } from "./ExecutorStreamPresenceLabel";
 
 type LogicWorksToolbarProps = {
 	scope: LogicWorksScope;
@@ -25,9 +29,12 @@ export function LogicWorksToolbar({
 	scope,
 	onScopeChange,
 }: LogicWorksToolbarProps) {
-	const navigate = useNavigate();
+	const { uiSchema } = useSchemaEditor();
 	const anchorRef = useRef<HTMLButtonElement>(null);
 	const [pickerOpen, setPickerOpen] = useState(false);
+	const scopePresent =
+		!isAllLogicWorksScope(scope) &&
+		isExecutorStreamPresentInSchema(uiSchema, scope.stream);
 
 	return (
 		<Box
@@ -80,6 +87,24 @@ export function LogicWorksToolbar({
 					▾
 				</Typography>
 			</Button>
+			<Typography
+				component="span"
+				sx={{
+					fontSize: 11,
+					color: isAllLogicWorksScope(scope)
+						? "#8a93a3"
+						: scopePresent
+							? "#1f8a4d"
+							: "#c62828",
+					fontWeight: 600,
+				}}
+			>
+				{isAllLogicWorksScope(scope)
+					? "все назначенные работы"
+					: scopePresent
+						? "стрим в схеме"
+						: "стрим не в схеме"}
+			</Typography>
 			<Popper
 				open={pickerOpen}
 				anchorEl={anchorRef.current}
@@ -113,8 +138,32 @@ export function LogicWorksToolbar({
 							Стрим-исполнитель
 						</Typography>
 						<MenuList dense disablePadding>
+							<MenuItem
+								selected={isAllLogicWorksScope(scope)}
+								onClick={() => {
+									onScopeChange(ALL_LOGIC_WORKS_SCOPE);
+									setPickerOpen(false);
+								}}
+								sx={{ borderRadius: 1, py: 0.9 }}
+							>
+								<Typography
+									sx={{
+										fontSize: 13,
+										fontWeight: isAllLogicWorksScope(scope) ? 700 : 600,
+										color: "#1d2435",
+									}}
+								>
+									Все области
+								</Typography>
+							</MenuItem>
+							<Divider sx={{ my: 0.5 }} />
 							{LOGIC_EXECUTOR_STREAMS.map((stream) => {
-								const selected = scope.stream === stream;
+								const selected =
+									!isAllLogicWorksScope(scope) && scope.stream === stream;
+								const present = isExecutorStreamPresentInSchema(
+									uiSchema,
+									stream,
+								);
 								return (
 									<MenuItem
 										key={stream}
@@ -125,23 +174,12 @@ export function LogicWorksToolbar({
 										}}
 										sx={{ borderRadius: 1, py: 0.9 }}
 									>
-										<Box
-											sx={{
-												width: 8,
-												height: 8,
-												borderRadius: "2px",
-												bgcolor: streamColor(stream),
-												mr: 1,
-											}}
+										<ExecutorStreamMenuRow
+											stream={stream}
+											color={streamColor(stream)}
+											present={present}
+											selected={selected}
 										/>
-										<Typography sx={{ flex: 1, fontSize: 12.5 }}>
-											{stream}
-										</Typography>
-										{selected ? (
-											<Typography sx={{ color: "#2f6bd8", fontSize: 13 }}>
-												✓
-											</Typography>
-										) : null}
 									</MenuItem>
 								);
 							})}

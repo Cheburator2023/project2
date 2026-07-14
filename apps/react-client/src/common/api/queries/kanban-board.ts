@@ -25,6 +25,8 @@ import type {
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
 	KanbanBoardTaskImageDto,
+	KanbanBoardTaskCommentDto,
+	CreateKanbanBoardTaskCommentRequestDto,
 	KanbanBoardHistoryDto,
 	KanbanBoardHistoryOverviewDto,
 	UpdateKanbanBoardAssigneeRequestDto,
@@ -37,6 +39,9 @@ import type {
 	UpdateKanbanBoardStreamRequestDto,
 	UpdateKanbanBoardSupersprintRequestDto,
 	UpdateKanbanBoardTaskRequestDto,
+	SaveKanbanBoardTasksRequestDto,
+	AcquireKanbanBoardTaskLockRequestDto,
+	KanbanBoardTaskLockDto,
 	ResetKanbanBoardColumnsResultDto,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "../helpers/apiClient";
@@ -70,6 +75,35 @@ const invalidateTracker = (queryClient: ReturnType<typeof useQueryClient>) => {
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardSettings"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasksRegistry"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasks"] });
+};
+
+const patchKanbanBoardTaskInCaches = (
+	queryClient: ReturnType<typeof useQueryClient>,
+	updated: KanbanBoardTaskRegistryDto,
+) => {
+	queryClient.setQueriesData<KanbanBoardTaskRecord[]>(
+		{ queryKey: ["kanbanBoardTasks"] },
+		(cached) => {
+			if (!cached?.some((task) => task.id === updated.id)) {
+				return cached;
+			}
+			return cached.map((task) =>
+				task.id === updated.id
+					? {
+							...task,
+							boardId: updated.boardId,
+							projectId: updated.projectId,
+							taskNumber: updated.taskNumber,
+							parentId: updated.parentId,
+							position: updated.position,
+							content: updated.content,
+							origin: updated.origin,
+							updatedAt: updated.updatedAt,
+						}
+					: task,
+			);
+		},
+	);
 };
 
 export const kanbanBoardGetConfig = (signal?: AbortSignal) =>
@@ -557,7 +591,10 @@ export const useUpdateKanbanBoardTask = () => {
 				method: "PUT",
 				data,
 			}),
-		onSuccess: () => invalidateTracker(queryClient),
+		onSuccess: (updated) => {
+			patchKanbanBoardTaskInCaches(queryClient, updated);
+			invalidateTracker(queryClient);
+		},
 	});
 };
 
@@ -745,19 +782,28 @@ export const useKanbanBoardTaskImages = (taskId: string | undefined) =>
 		queryFn: ({ signal }) => kanbanBoardListTaskImages(taskId!, signal),
 	});
 
-export const kanbanBoardFetchTaskImageBlob = (
+export const kanbanBoardFetchTaskImageBlob = async (
 	taskId: string,
 	imageId: string,
 	variant: "full" | "thumb" = "full",
 	signal?: AbortSignal,
-) =>
-	apiClient<Blob>({
+): Promise<Blob> => {
+	const blob = await apiClient<Blob>({
 		url: `/kanban-board/tasks/${taskId}/images/${imageId}`,
 		method: "GET",
 		params: { variant },
 		responseType: "blob",
 		signal,
 	});
+	if (
+		!blob.size ||
+		blob.type === "application/json" ||
+		blob.type === "application/problem+json"
+	) {
+		throw new Error("Не удалось загрузить изображение");
+	}
+	return blob;
+};
 
 export type KanbanBoardTaskImageUploadPayload = {
 	name: string;
@@ -833,6 +879,68 @@ export const useDeleteKanbanBoardTaskImage = () => {
 	});
 };
 
+export const kanbanBoardListTaskComments = (
+	taskId: string,
+	signal?: AbortSignal,
+) =>
+	apiClient<KanbanBoardTaskCommentDto[]>({
+		url: `/kanban-board/tasks/${taskId}/comments`,
+		method: "GET",
+		signal,
+	});
+
+export const useKanbanBoardTaskComments = (taskId: string | undefined) =>
+	useQuery({
+		queryKey: ["kanbanBoardTaskComments", taskId],
+		enabled: Boolean(taskId),
+		queryFn: ({ signal }) => kanbanBoardListTaskComments(taskId!, signal),
+	});
+
+export const useCreateKanbanBoardTaskComment = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			taskId,
+			data,
+		}: {
+			taskId: string;
+			data: CreateKanbanBoardTaskCommentRequestDto;
+		}) =>
+			apiClient<KanbanBoardTaskCommentDto>({
+				url: `/kanban-board/tasks/${taskId}/comments`,
+				method: "POST",
+				data,
+			}),
+		onSuccess: (_comment, { taskId }) => {
+			queryClient.invalidateQueries({
+				queryKey: ["kanbanBoardTaskComments", taskId],
+			});
+		},
+	});
+};
+
+export const useDeleteKanbanBoardTaskComment = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			taskId,
+			commentId,
+		}: {
+			taskId: string;
+			commentId: string;
+		}) =>
+			apiClient<void>({
+				url: `/kanban-board/tasks/${taskId}/comments/${commentId}`,
+				method: "DELETE",
+			}),
+		onSuccess: (_result, { taskId }) => {
+			queryClient.invalidateQueries({
+				queryKey: ["kanbanBoardTaskComments", taskId],
+			});
+		},
+	});
+};
+
 export const kanbanBoardGetBoardByRef = (ref: string, signal?: AbortSignal) =>
 	apiClient<KanbanBoardBoardDto>({
 		url: `/kanban-board/boards/ref/${encodeURIComponent(ref)}`,
@@ -879,16 +987,97 @@ export const kanbanBoardGetBoardTasks = (boardRef: string, signal?: AbortSignal)
 
 export const kanbanBoardSaveBoardTasks = (
 	boardId: string,
-	tasks: KanbanBoardTaskRecord[],
+	payload: SaveKanbanBoardTasksRequestDto,
 	signal?: AbortSignal,
 ) =>
 	apiClient<KanbanBoardTaskRecord[]>({
 		url: `/kanban-board/boards/${boardId}/tasks`,
 		method: "PUT",
 		headers: { "Content-Type": "application/json" },
-		data: tasks,
+		data: payload,
 		signal,
 	});
+
+export const kanbanBoardGetTaskLock = (
+	taskId: string,
+	signal?: AbortSignal,
+) =>
+	apiClient<KanbanBoardTaskLockDto | null>({
+		url: `/kanban-board/tasks/${taskId}/lock`,
+		method: "GET",
+		signal,
+	});
+
+export const useKanbanBoardTaskLock = (taskId: string | undefined) =>
+	useQuery({
+		queryKey: ["kanbanBoardTaskLock", taskId],
+		enabled: Boolean(taskId),
+		queryFn: ({ signal }) => kanbanBoardGetTaskLock(taskId!, signal),
+		refetchInterval: 30_000,
+	});
+
+export const useAcquireKanbanBoardTaskLock = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			taskId,
+			data,
+		}: {
+			taskId: string;
+			data: AcquireKanbanBoardTaskLockRequestDto;
+		}) =>
+			apiClient<KanbanBoardTaskLockDto>({
+				url: `/kanban-board/tasks/${taskId}/lock`,
+				method: "POST",
+				data,
+			}),
+		onSuccess: (_lock, { taskId }) => {
+			queryClient.invalidateQueries({ queryKey: ["kanbanBoardTaskLock", taskId] });
+		},
+	});
+};
+
+export const useRenewKanbanBoardTaskLock = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			taskId,
+			data,
+		}: {
+			taskId: string;
+			data: AcquireKanbanBoardTaskLockRequestDto;
+		}) =>
+			apiClient<KanbanBoardTaskLockDto>({
+				url: `/kanban-board/tasks/${taskId}/lock`,
+				method: "PUT",
+				data,
+			}),
+		onSuccess: (_lock, { taskId }) => {
+			queryClient.invalidateQueries({ queryKey: ["kanbanBoardTaskLock", taskId] });
+		},
+	});
+};
+
+export const useReleaseKanbanBoardTaskLock = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			taskId,
+			data,
+		}: {
+			taskId: string;
+			data: AcquireKanbanBoardTaskLockRequestDto;
+		}) =>
+			apiClient<void>({
+				url: `/kanban-board/tasks/${taskId}/lock`,
+				method: "DELETE",
+				data,
+			}),
+		onSuccess: (_result, { taskId }) => {
+			queryClient.invalidateQueries({ queryKey: ["kanbanBoardTaskLock", taskId] });
+		},
+	});
+};
 
 export const kanbanBoardExportBoardSnapshot = (boardId: string, signal?: AbortSignal) =>
 	apiClient<Blob>({

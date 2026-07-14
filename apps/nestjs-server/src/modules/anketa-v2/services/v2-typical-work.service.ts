@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, OnModuleInit } from "@nestjs/common";
+import {
+	Injectable,
+	Logger,
+	NotFoundException,
+	OnModuleInit,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { IsNull, Not, In, Repository } from "typeorm";
 import type {
@@ -23,12 +28,13 @@ import {
 	compileCalculationLogicFromVersionConfig,
 	needsCalculationLogicBackfill,
 	parseStoredTypicalWorkCalculationLogic,
+	backfillTypicalWorkBoundWorkIdsInUiSchema,
 	resolveActiveNormOnDate,
 	compileStoredTypicalWorkResultLogic,
 	tokensToText,
-	parseWorkFormulaText,
 	computeFormulaBadge,
 	normalizeStoredFormula,
+	resolveVersionConfigTokenFormula,
 	termsToTokenFormula,
 } from "@smart-anketa/api-contract";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
@@ -47,6 +53,7 @@ import {
 	groupCatalogWorks,
 	inferTriggerValueLabel,
 	normalizeArchComponentType,
+	resolveCatalogWorkComponent,
 	slugParamCode,
 } from "../utils/v2-typical-work-catalog.util";
 import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
@@ -59,15 +66,12 @@ function decimalToNumber(value: string | number | null | undefined): number {
 function resolveCardTokenFormula(
 	termsFormula: ReturnType<typeof normalizeStoredFormula>,
 	formulaText: string | null | undefined,
+	formulaRaw?: unknown,
 ): ReturnType<typeof defaultWorkFormula> {
-	const trimmed = formulaText?.trim();
-	if (trimmed) {
-		const parsed = parseWorkFormulaText(trimmed);
-		if (!parsed.error && parsed.tokens.length > 0) {
-			return { tokens: parsed.tokens, text: tokensToText(parsed.tokens) };
-		}
-	}
-	return termsToTokenFormula(termsFormula);
+	return resolveVersionConfigTokenFormula(
+		formulaRaw ?? termsFormula,
+		formulaText,
+	);
 }
 
 function todayIsoDate(): string {
@@ -142,7 +146,9 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			const work = await this.workRepository.save(
 				this.workRepository.create({
 					name: first.name.trim(),
-					archComponentType: normalizeArchComponentType(first.component),
+					archComponentType: normalizeArchComponentType(
+						resolveCatalogWorkComponent(first),
+					),
 					workType: first.workType?.trim() || null,
 					catalogKey,
 				}),
@@ -263,6 +269,10 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				trimmedTemplateId,
 				trimmedVersionId,
 			);
+			await this.backfillTypicalWorkBindingsInVersionUiSchema(
+				trimmedTemplateId,
+				trimmedVersionId,
+			);
 			return 0;
 		}
 
@@ -279,7 +289,9 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			const work = await this.workRepository.save(
 				this.workRepository.create({
 					name: first.name.trim(),
-					archComponentType: normalizeArchComponentType(first.component),
+					archComponentType: normalizeArchComponentType(
+						resolveCatalogWorkComponent(first),
+					),
 					workType: first.workType?.trim() || null,
 					catalogKey: null,
 					templateId: trimmedTemplateId,
@@ -379,11 +391,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			}
 
 			for (const stream of streams) {
-				await this.ensureWorkVersionConfig(
-					work.id,
-					trimmedVersionId,
-					stream,
-				);
+				await this.ensureWorkVersionConfig(work.id, trimmedVersionId, stream);
 			}
 
 			created++;
@@ -395,7 +403,47 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			);
 		}
 
+		await this.backfillTypicalWorkBindingsInVersionUiSchema(
+			trimmedTemplateId,
+			trimmedVersionId,
+		);
 		return created;
+	}
+
+	/** Записывает boundWorkIds на legacy-блоки typicalWork по назначениям работ на стрим. */
+	async backfillTypicalWorkBindingsInVersionUiSchema(
+		templateId: string,
+		templateVersionId: string,
+	): Promise<void> {
+		const version = await this.templateVersionRepository.findOne({
+			where: { id: templateVersionId },
+		});
+		if (!version?.uiSchema || typeof version.uiSchema !== "object") return;
+
+		const works = await this.workRepository.find({ where: { templateId } });
+		if (works.length === 0) return;
+
+		const workIds = works.map((work) => work.id);
+		const assignments = await this.assignmentRepository.find({
+			where: { workId: In(workIds), isActive: true },
+		});
+		const streamsByWork = new Map<string, string[]>();
+		for (const row of assignments) {
+			const list = streamsByWork.get(row.workId) ?? [];
+			list.push(row.streamExecutor);
+			streamsByWork.set(row.workId, list);
+		}
+		const catalog = works.map((work) => ({
+			id: work.id,
+			streams: streamsByWork.get(work.id) ?? [],
+		}));
+
+		const uiSchema = version.uiSchema as Record<string, unknown>;
+		const next = backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog);
+		if (JSON.stringify(next) === JSON.stringify(uiSchema)) return;
+
+		version.uiSchema = next;
+		await this.templateVersionRepository.save(version);
 	}
 
 	private async ensureWorkStreamAssignment(
@@ -552,9 +600,10 @@ export class V2TypicalWorkService {
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
 	) {}
 
-	private async resolveTemplateIdFilter(
-		query: { templateId?: string; templateVersionId?: string },
-	): Promise<string | undefined> {
+	private async resolveTemplateIdFilter(query: {
+		templateId?: string;
+		templateVersionId?: string;
+	}): Promise<string | undefined> {
 		if (query.templateId?.trim()) return query.templateId.trim();
 		if (!query.templateVersionId?.trim()) return undefined;
 		const version = await this.templateVersionRepository.findOne({
@@ -610,7 +659,9 @@ export class V2TypicalWorkService {
 		if (assignments.length === 0) return { total: 0, items: [] };
 
 		const workIds = unique(assignments.map((a) => a.workId));
-		const works = await this.workRepository.find({ where: { id: In(workIds) } });
+		const works = await this.workRepository.find({
+			where: { id: In(workIds) },
+		});
 		const workById = new Map(works.map((w) => [w.id, w]));
 		const atDate = todayIsoDate();
 		const triggerStatusCatalog =
@@ -650,13 +701,17 @@ export class V2TypicalWorkService {
 					},
 				});
 				if (config) {
-					const terms = normalizeStoredFormula(config.formula, config.formulaText);
+					const terms = normalizeStoredFormula(
+						config.formula,
+						config.formulaText,
+					);
 					formulaBadge = computeFormulaBadge(terms.terms);
 				}
 			}
 
 			const assignmentRules =
-				rulesByKey.get(`${assignment.workId}|${assignment.streamExecutor}`) ?? [];
+				rulesByKey.get(`${assignment.workId}|${assignment.streamExecutor}`) ??
+				[];
 
 			items.push({
 				id: assignment.id,
@@ -750,7 +805,7 @@ export class V2TypicalWorkService {
 				const streamForStatus =
 					streamFilter && streams.includes(streamFilter)
 						? streamFilter
-						: streams[0] ?? streamFilter ?? "";
+						: (streams[0] ?? streamFilter ?? "");
 
 				const normsDto = workNorms.map(mapNormEntity);
 				const normsByStream: Record<string, number | null> = {};
@@ -769,7 +824,7 @@ export class V2TypicalWorkService {
 					laborParamCountByStream[stream] = paramCodes.size;
 				}
 				const currentNorm = streamForStatus
-					? normsByStream[streamForStatus] ?? null
+					? (normsByStream[streamForStatus] ?? null)
 					: null;
 
 				return {
@@ -789,7 +844,7 @@ export class V2TypicalWorkService {
 					streams,
 					templateId: work.templateId,
 					templateName: work.templateId
-						? templateNameById.get(work.templateId) ?? null
+						? (templateNameById.get(work.templateId) ?? null)
 						: null,
 					normsByStream,
 					laborParamCountByStream,
@@ -852,13 +907,14 @@ export class V2TypicalWorkService {
 			laborParams,
 		);
 		const termsFormula = versionConfig
-			? normalizeStoredFormula(
-					versionConfig.formula,
-					versionConfig.formulaText,
-				)
+			? normalizeStoredFormula(versionConfig.formula, versionConfig.formulaText)
 			: normalizeStoredFormula(null);
 		const tokenFormula = versionConfig
-			? resolveCardTokenFormula(termsFormula, versionConfig.formulaText)
+			? resolveCardTokenFormula(
+					termsFormula,
+					versionConfig.formulaText,
+					versionConfig.formula,
+				)
 			: defaultWorkFormula();
 		const triggerStatusCatalog =
 			await this.paramCatalogService.listTriggerStatusCatalog(todayIsoDate());
@@ -915,6 +971,78 @@ export class V2TypicalWorkService {
 			calculationLogic,
 		};
 	}
+
+	/** Облегчённая карточка для schema-field-sync — без каталогов, норм и подсчётов. */
+	async getWorkCardForSchemaSync(
+		workId: string,
+		streamExecutor: string,
+		templateVersionId: string,
+	): Promise<V2TypicalWorkCardDto> {
+		const work = await this.workRepository.findOne({ where: { id: workId } });
+		if (!work) {
+			throw new NotFoundException(`Typical work ${workId} not found`);
+		}
+
+		const stream = streamExecutor.trim();
+		const [rules, laborRows, laborParams, versionConfig] = await Promise.all([
+			this.ruleRepository.find({
+				where: { workId, streamExecutor: stream },
+				order: { sortOrder: "ASC" },
+			}),
+			this.laborRepository.find({
+				where: { workId, streamExecutor: stream },
+			}),
+			this.laborParamRepository.find({
+				where: { workId, streamExecutor: stream },
+			}),
+			this.versionConfigRepository.findOne({
+				where: { workId, templateVersionId, streamExecutor: stream },
+			}),
+		]);
+
+		const laborParamsGrouped = groupLaborByParam(
+			laborRows.map(mapLaborEntity),
+			laborParams,
+		);
+		const termsFormula = versionConfig
+			? normalizeStoredFormula(versionConfig.formula, versionConfig.formulaText)
+			: normalizeStoredFormula(null);
+		const tokenFormula = versionConfig
+			? resolveCardTokenFormula(
+					termsFormula,
+					versionConfig.formulaText,
+					versionConfig.formula,
+				)
+			: defaultWorkFormula();
+
+		return {
+			id: work.id,
+			name: work.name,
+			archComponentType: work.archComponentType,
+			workType: work.workType,
+			streamExecutor: stream,
+			assignmentId: null,
+			assignmentStatus: "unassigned",
+			usedOnSchemasCount: 0,
+			formulaBadge: computeFormulaBadge(termsFormula.terms),
+			triggerStatus: "appears",
+			norms: [],
+			rules: rules.map(mapRuleEntity),
+			laborParams: laborParamsGrouped,
+			formulaTerms: termsFormula,
+			formula: tokenFormula,
+			rounding: versionConfig
+				? {
+						mode: versionConfig.roundingMode as V2TypicalWorkCardDto["rounding"]["mode"],
+						step:
+							versionConfig.roundingStep === null
+								? null
+								: decimalToNumber(versionConfig.roundingStep),
+					}
+				: defaultWorkRounding(),
+			calculationLogic: null,
+		};
+	}
 }
 
 function groupBy<T>(items: T[], keyFn: (item: T) => string): Map<string, T[]> {
@@ -944,7 +1072,12 @@ function resolveAssignmentStatus(
 function resolveTriggerStatus(
 	rules: Pick<
 		V2TypicalWorkRuleEntity,
-		"paramCode" | "paramName" | "operator" | "valueCode" | "valueLabel" | "valueCodes"
+		| "paramCode"
+		| "paramName"
+		| "operator"
+		| "valueCode"
+		| "valueLabel"
+		| "valueCodes"
 	>[],
 	triggerStatusCatalog: WorkTriggerStatusCatalogParam[],
 	atDate: string,
@@ -977,6 +1110,7 @@ function mapRuleEntity(entity: V2TypicalWorkRuleEntity): V2TypicalWorkRuleDto {
 	return {
 		id: entity.id,
 		streamExecutor: entity.streamExecutor,
+		schemaFieldUid: entity.schemaFieldUid,
 		paramCode: entity.paramCode,
 		paramName: entity.paramName,
 		operator: entity.operator as V2TypicalWorkRuleDto["operator"],
@@ -1024,6 +1158,7 @@ function groupLaborByParam(
 		const kind = header.kind === "any_of" ? "any_of" : "by_value";
 		if (existing) {
 			existing.kind = kind;
+			existing.schemaFieldUid = header.schemaFieldUid;
 			if (kind === "any_of") {
 				existing.anyOf = {
 					valueCodes: header.anyOfValueCodes ?? [],
@@ -1035,6 +1170,7 @@ function groupLaborByParam(
 			continue;
 		}
 		groups.set(header.paramCode, {
+			schemaFieldUid: header.schemaFieldUid,
 			paramCode: header.paramCode,
 			paramName: header.paramName,
 			kind,

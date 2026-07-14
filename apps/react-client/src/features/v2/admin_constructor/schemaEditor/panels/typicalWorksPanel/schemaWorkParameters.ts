@@ -8,10 +8,12 @@ import {
 	isControlTypeTriggerParam,
 	isSourceTypeTriggerParam,
 	isV2AnketaSystemRootKey,
+	resolveV2AnketaArchComponent,
 	stripParamNameSourceKeys,
 } from "@smart-anketa/api-contract";
 import {
 	isObjectFieldGroup,
+	readUiSchemaBranchAtPointer,
 	resolveSchemaNode,
 } from "@react-client/features/v2/admin_constructor/utils/schemaMutators";
 import { pointerSegments } from "@react-client/features/v2/admin_constructor/utils/schemaPaths";
@@ -197,7 +199,9 @@ function valuesFromSchemaNode(node: RJSFSchema | undefined): SchemaNodeValues {
 		? node.enum.filter((value): value is string => typeof value === "string")
 		: [];
 	const enumNames = Array.isArray(node.enumNames)
-		? node.enumNames.filter((value): value is string => typeof value === "string")
+		? node.enumNames.filter(
+				(value): value is string => typeof value === "string",
+			)
 		: [];
 	if (enumValues.length > 0) {
 		return {
@@ -263,7 +267,9 @@ function schemaParamCodeFromHint(
 		usedCodes.add(hint.key);
 		return hint.key;
 	}
-	const base = (hint.varPath ?? hint.pointer.replace(/^\//, "").replace(/\//g, "_"))
+	const base = (
+		hint.varPath ?? hint.pointer.replace(/^\//, "").replace(/\//g, "_")
+	)
 		.replace(/[^\wа-яА-Я]+/gi, "_")
 		.replace(/^_+|_+$/g, "")
 		.slice(0, 80);
@@ -306,6 +312,8 @@ function finalizeSchemaWorkParameters(
 	return params
 		.map((param) => ({
 			id: param.id,
+			schemaFieldUid: param.schemaFieldUid,
+			schemaPointer: param.pointer,
 			code: param.code,
 			name: param.name,
 			description: param.description,
@@ -318,13 +326,41 @@ function finalizeSchemaWorkParameters(
 		.sort((a, b) => a.name.localeCompare(b.name, "ru"));
 }
 
+/** Заводские ключи массивов сгенерированных типовых работ (без archComponent в legacy). */
+const LEGACY_TYPICAL_WORK_OUTPUT_ARRAY_KEYS = new Set([
+	"sourceTypicalTasks",
+	"detailTypicalTasks",
+	"controlTypicalTasks",
+]);
+
+function isLegacyGeneratedTypicalWorkArrayUi(
+	uiBranch: Record<string, unknown> | undefined,
+	fieldKey: string,
+): boolean {
+	if (!uiBranch || !LEGACY_TYPICAL_WORK_OUTPUT_ARRAY_KEYS.has(fieldKey)) {
+		return false;
+	}
+	if (resolveV2AnketaArchComponent(uiBranch) === "typicalWork") return true;
+	return uiBranch["ui:readonly"] === true;
+}
+
 /** Поле внутри блока-результата «Типовые/Нетиповые работы» — не параметр источника. */
 function isWorkResultBlockField(
 	uiSchema: Record<string, unknown> | undefined,
 	pointer: string,
 ): boolean {
 	const arch = resolveArchComponentAtPointer(uiSchema, pointer);
-	return arch === "typicalWork" || arch === "atypicalWork";
+	if (arch === "typicalWork" || arch === "atypicalWork") return true;
+
+	const segments = pointerSegments(pointer);
+	for (let len = segments.length; len > 0; len -= 1) {
+		const key = segments[len - 1];
+		if (!key) continue;
+		const partialPointer = `/${segments.slice(0, len).join("/")}`;
+		const branch = readUiSchemaBranchAtPointer(uiSchema, partialPointer);
+		if (isLegacyGeneratedTypicalWorkArrayUi(branch, key)) return true;
+	}
+	return false;
 }
 
 /**
@@ -388,14 +424,16 @@ export function buildSchemaWorkParameters({
 				: true;
 		const dictionaryCode = hint.dictionaryCode?.trim() || undefined;
 
-		if (values.length === 0 && !numeric && !dictionaryCode && !textual) continue;
+		if (values.length === 0 && !numeric && !dictionaryCode && !textual)
+			continue;
 
 		const name = (hint.title ?? hint.key).trim();
 		if (!name) continue;
 
 		const code = schemaParamCodeFromHint(hint, usedCodes);
 		params.push({
-			id: `schema:${hint.pointer}`,
+			id: `schema:${hint.schemaFieldUid ?? hint.pointer}`,
+			schemaFieldUid: hint.schemaFieldUid ?? undefined,
 			code,
 			name,
 			description: schemaParamDescription(hint, uiSchema),
@@ -408,6 +446,62 @@ export function buildSchemaWorkParameters({
 	}
 
 	return finalizeSchemaWorkParameters(params);
+}
+
+const SCHEMA_PARAM_ID_PREFIX = "schema:";
+
+export function schemaParamIdFromPointer(
+	pointer: string,
+	schemaFieldUid?: string | null,
+): string {
+	return `${SCHEMA_PARAM_ID_PREFIX}${schemaFieldUid ?? pointer}`;
+}
+
+export function resolveSchemaParamPointerFromId(id: string): string | null {
+	return id.startsWith(SCHEMA_PARAM_ID_PREFIX)
+		? id.slice(SCHEMA_PARAM_ID_PREFIX.length)
+		: null;
+}
+
+/** varPath с `[]` для элементов массива (как в подсказках логики). */
+export function jsonPointerToLogicVarPath(pointer: string): string {
+	const segments = pointerSegments(pointer);
+	const parts: string[] = [];
+	for (const segment of segments) {
+		if (segment === "items") {
+			if (parts.length > 0) {
+				parts[parts.length - 1] = `${parts[parts.length - 1]}[]`;
+			}
+			continue;
+		}
+		parts.push(segment);
+	}
+	return parts.join(".");
+}
+
+export type SchemaParamFieldRef = {
+	pointer: string | null;
+	varPath: string | null;
+	fieldKey: string;
+};
+
+export function resolveSchemaParamFieldRef(
+	param:
+		| Pick<V2TypicalWorkParameterDto, "id" | "code" | "schemaPointer">
+		| undefined,
+): SchemaParamFieldRef {
+	const fieldKey = param?.code?.trim() || "—";
+	if (!param) return { pointer: null, varPath: null, fieldKey };
+	const pointer =
+		param.schemaPointer ?? resolveSchemaParamPointerFromId(param.id);
+	if (!pointer) {
+		return { pointer: null, varPath: null, fieldKey };
+	}
+	return {
+		pointer,
+		varPath: jsonPointerToLogicVarPath(pointer),
+		fieldKey: pointerSegments(pointer).at(-1) ?? fieldKey,
+	};
 }
 
 /** Находит параметр схемы по коду, алиасу (sourceKeys) или имени. */
@@ -471,15 +565,21 @@ export function triggerRuleGroupKey(
 
 export function filterRulesByGroupKey<
 	T extends TriggerRuleLike & { id?: string },
->(rules: T[], groupKey: string, paramOptions: V2TypicalWorkParameterDto[]): T[] {
+>(
+	rules: T[],
+	groupKey: string,
+	paramOptions: V2TypicalWorkParameterDto[],
+): T[] {
 	return rules.filter(
 		(rule) => triggerRuleGroupKey(rule, paramOptions) === groupKey,
 	);
 }
 
-export function excludeRulesByGroupKey<
-	T extends TriggerRuleLike,
->(rules: T[], groupKey: string, paramOptions: V2TypicalWorkParameterDto[]): T[] {
+export function excludeRulesByGroupKey<T extends TriggerRuleLike>(
+	rules: T[],
+	groupKey: string,
+	paramOptions: V2TypicalWorkParameterDto[],
+): T[] {
 	return rules.filter(
 		(rule) => triggerRuleGroupKey(rule, paramOptions) !== groupKey,
 	);

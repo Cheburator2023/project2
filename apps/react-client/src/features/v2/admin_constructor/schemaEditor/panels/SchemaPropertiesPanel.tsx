@@ -5,10 +5,13 @@ import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { Flex } from "@react-client/common/primitives/Flex";
 import type { V2DictionaryDto } from "@smart-anketa/api-contract";
@@ -30,11 +33,14 @@ import {
 	setUiHiddenAtPointer,
 	setUiPlaceholderAtPointer,
 	setUiTooltipAtPointer,
+	setUiWidgetAtPointer,
 	syncDictionaryFieldUiAtPointer,
 } from "../../utils/schemaMutators";
 import {
+	isExecutorStreamPresentInSchema,
 	isV2AnketaHiddenUiNode,
 	readV2AnketaSectionUiOptions,
+	resolveStreamExecutorForTypicalWorkOutputPath,
 	resolveV2AnketaStreamBlockOptions,
 	V2_ANKETA_MAIN_SECTION_IDS,
 	V2_ANKETA_MAIN_SECTION_TITLES,
@@ -52,10 +58,29 @@ import { useCallback, useMemo } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { useV2TypicalWorksList } from "@react-client/common/api/queries/v2-works";
 import {
+	BIND_POINTER_QUERY,
 	LOGIC_TAB_QUERY,
 	NEW_WORK_QUERY,
 	WORK_ID_QUERY,
 } from "./typicalWorksPanel/typicalWorksUi";
+import {
+	appendBoundWorkIdAtPointer,
+	pointerToOutputPath,
+	readBoundWorkIdsAtPointer,
+	removeBoundWorkIdAtPointer,
+	resolveTypicalWorkDisplayBoundIds,
+	filterTypicalWorksForStreamExecutor,
+} from "../typicalWorkBlockBinding";
+import { listCanvasEditableChildKeys } from "../schemaCanvasTree";
+import {
+	makeStreamBlockJsonSchema,
+	makeStreamBlockUiOptions,
+} from "../streamBlockHelpers";
+import {
+	ExecutorStreamPresenceHint,
+	ExecutorStreamPresenceLabel,
+} from "./typicalWorksPanel/ExecutorStreamPresenceLabel";
+import { toast } from "@react-client/common/toasts";
 import { useBufferedDraftText } from "../hooks/useBufferedDraftText";
 import { usePropertiesPanelWidth } from "../hooks/usePropertiesPanelWidth";
 import {
@@ -68,6 +93,19 @@ import {
 	resolvePropertiesFieldKind,
 } from "../propertiesFieldKind";
 import { readUiSchemaBranchAtPointer } from "../../utils/schemaMutators";
+import {
+	buildSchemaWorkParameters,
+	schemaParamIdFromPointer,
+} from "./typicalWorksPanel/schemaWorkParameters";
+
+async function copyTextToClipboard(text: string, label: string) {
+	try {
+		await navigator.clipboard.writeText(text);
+		toast.success(`${label} скопирован`);
+	} catch {
+		toast.error(`Не удалось скопировать ${label.toLowerCase()}`);
+	}
+}
 
 function PropertiesSection({
 	title,
@@ -138,11 +176,7 @@ function GroupChildFieldsList({
 					<Typography variant="body2" component="span">
 						{child.title}
 					</Typography>
-					<Typography
-						variant="caption"
-						color="text.secondary"
-						sx={{ ml: 0.5 }}
-					>
+					<Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
 						({child.key} · {ruSchemaTypeLabel(child.typeLabel)})
 					</Typography>
 				</Box>
@@ -173,7 +207,7 @@ function FieldTypeControl({
 				onChange={(e) =>
 					onPrimitiveTypeChange(e.target.value as PrimitiveFieldTypeVariant)
 				}
-				helperText="Мультисправочник — мультиселект; при смене типа привязка справочника сбрасывается."
+				helperText="Мультисправочник — мультиселект; textarea — многострочное поле; при смене типа привязка справочника сбрасывается."
 			>
 				{PRIMITIVE_FIELD_TYPE_OPTIONS.map((option) => (
 					<MenuItem key={option.id} value={option.id}>
@@ -323,7 +357,12 @@ export function SchemaPropertiesPanel() {
 		openLogicTabWithRule,
 		addRuleForTargetPath,
 		setMainTab,
+		openLogicTabWithTriggerParam,
+		fieldPathHints,
+		enumMapByCode,
 		uiSchema,
+		jsonSchema,
+		handleAddFieldPresetAtParent,
 		monacoError,
 	} = useSchemaEditor();
 
@@ -357,6 +396,116 @@ export function SchemaPropertiesPanel() {
 		templateId: isTypicalWorkBlock ? templateId : null,
 	});
 	const typicalWorks = typicalWorksData?.items ?? [];
+	const typicalWorkCatalog = useMemo(
+		() =>
+			typicalWorks.map((work) => ({
+				id: work.id,
+				streams: work.streams ?? [],
+			})),
+		[typicalWorks],
+	);
+	const typicalWorkOutputPath = useMemo(
+		() => (selectedPointer ? pointerToOutputPath(selectedPointer) : ""),
+		[selectedPointer],
+	);
+	const typicalWorkStreamExecutor = useMemo(() => {
+		if (!isTypicalWorkBlock || !typicalWorkOutputPath) return "";
+		return (
+			sectionUiOptions.streamExecutor ??
+			resolveStreamExecutorForTypicalWorkOutputPath(
+				uiSchema,
+				typicalWorkOutputPath,
+			) ??
+			""
+		);
+	}, [
+		isTypicalWorkBlock,
+		typicalWorkOutputPath,
+		sectionUiOptions.streamExecutor,
+		uiSchema,
+	]);
+	const boundWorkIds = useMemo(
+		() =>
+			selectedPointer && isTypicalWorkBlock
+				? resolveTypicalWorkDisplayBoundIds(
+						uiSchema,
+						selectedPointer,
+						typicalWorkCatalog,
+						typicalWorkStreamExecutor,
+					)
+				: [],
+		[
+			selectedPointer,
+			isTypicalWorkBlock,
+			uiSchema,
+			typicalWorkCatalog,
+			typicalWorkStreamExecutor,
+		],
+	);
+	const explicitBoundWorkIds = useMemo(
+		() =>
+			selectedPointer && isTypicalWorkBlock
+				? readBoundWorkIdsAtPointer(uiSchema, selectedPointer)
+				: undefined,
+		[selectedPointer, isTypicalWorkBlock, uiSchema],
+	);
+	const boundTypicalWorks = useMemo(
+		() => typicalWorks.filter((work) => boundWorkIds.includes(work.id)),
+		[typicalWorks, boundWorkIds],
+	);
+	const streamScopedTypicalWorks = useMemo(
+		() =>
+			filterTypicalWorksForStreamExecutor(
+				typicalWorkCatalog,
+				typicalWorkStreamExecutor,
+			)
+				.map((item) => typicalWorks.find((work) => work.id === item.id))
+				.filter((work): work is (typeof typicalWorks)[number] => Boolean(work)),
+		[typicalWorkCatalog, typicalWorkStreamExecutor, typicalWorks],
+	);
+	const unboundTypicalWorks = useMemo(() => {
+		if (explicitBoundWorkIds !== undefined) {
+			return streamScopedTypicalWorks.filter(
+				(work) => !explicitBoundWorkIds.includes(work.id),
+			);
+		}
+		return [];
+	}, [explicitBoundWorkIds, streamScopedTypicalWorks]);
+	const typicalWorkStreamPresent = useMemo(
+		() =>
+			typicalWorkStreamExecutor
+				? isExecutorStreamPresentInSchema(uiSchema, typicalWorkStreamExecutor)
+				: false,
+		[typicalWorkStreamExecutor, uiSchema],
+	);
+	const handleCreateTypicalWorkStreamBlock = useCallback(() => {
+		if (!typicalWorkStreamExecutor) return;
+		if (
+			!V2_EXECUTOR_STREAM_LABELS.includes(
+				typicalWorkStreamExecutor as V2ExecutorStreamLabel,
+			)
+		) {
+			return;
+		}
+		const stream = typicalWorkStreamExecutor as V2ExecutorStreamLabel;
+		const rootCount = listCanvasEditableChildKeys(
+			jsonSchema,
+			"/",
+			uiSchema,
+		).length;
+		handleAddFieldPresetAtParent(
+			"/",
+			makeStreamBlockJsonSchema(stream),
+			rootCount,
+			makeStreamBlockUiOptions(stream),
+		);
+		toast.success(`Добавлен стримовый блок «${stream}»`);
+	}, [
+		typicalWorkStreamExecutor,
+		jsonSchema,
+		uiSchema,
+		handleAddFieldPresetAtParent,
+	]);
 	const openTypicalWorksTab = useCallback(
 		(workId?: string, opts?: { create?: boolean }) => {
 			setSearchParams((prev) => {
@@ -366,11 +515,16 @@ export function SchemaPropertiesPanel() {
 				else next.delete(WORK_ID_QUERY);
 				if (opts?.create) next.set(NEW_WORK_QUERY, "1");
 				else next.delete(NEW_WORK_QUERY);
+				if (opts?.create && selectedPointer) {
+					next.set(BIND_POINTER_QUERY, selectedPointer);
+				} else {
+					next.delete(BIND_POINTER_QUERY);
+				}
 				return next;
 			});
 			setMainTab("logic");
 		},
-		[setSearchParams, setMainTab],
+		[setSearchParams, setMainTab, selectedPointer],
 	);
 	const uiWidget = useMemo(
 		() =>
@@ -451,7 +605,40 @@ export function SchemaPropertiesPanel() {
 						{ recordHistory: false },
 					);
 					updateField({ type: "string" }, { recordHistory: false });
+				} else if (primitiveTypeVariant === "string-textarea") {
+					patchUiSchema(
+						(prev) =>
+							setUiWidgetAtPointer(
+								clearDictionaryFieldBindingAtPointer(
+									prev as Record<string, unknown>,
+									selectedPointer,
+								),
+								selectedPointer,
+								null,
+							) as UiSchema,
+						{ recordHistory: false },
+					);
 				}
+				return;
+			}
+
+			if (nextVariant === "string-textarea") {
+				patchUiSchema(
+					(prev) =>
+						setUiWidgetAtPointer(
+							clearDictionaryFieldBindingAtPointer(
+								prev as Record<string, unknown>,
+								selectedPointer,
+							),
+							selectedPointer,
+							"textarea",
+						) as UiSchema,
+					{ recordHistory: false },
+				);
+				updateField(buildDictionaryMultiSchemaPatch(false), {
+					recordHistory: false,
+				});
+				updateField({ type: "string" }, { recordHistory: false });
 				return;
 			}
 
@@ -578,16 +765,47 @@ export function SchemaPropertiesPanel() {
 		showObjectLayout &&
 		isRootLevelBlock &&
 		!sectionUiOptions.system &&
-		!["generalInfo", "detailInfo", "summary", "meta", "groupActivation", "workflow"].includes(
-			rootBlockKey,
-		);
+		![
+			"generalInfo",
+			"detailInfo",
+			"summary",
+			"meta",
+			"groupActivation",
+			"workflow",
+		].includes(rootBlockKey);
 	const showLayoutOptions = fieldKind === "layout";
 	const showArrayOptions = fieldKind === "array" || fieldKind === "arch-array";
 	const showPlaceholderField =
-		fieldKind === "primitive" ||
+		(fieldKind === "primitive" && primitiveTypeVariant !== "boolean") ||
 		showArrayOptions ||
 		fieldKind === "general-uncertainty";
 	const workArch = isWorkArchComponent(archComponent);
+
+	const selectedSchemaParamId = useMemo(() => {
+		if (!selectedPointer) return "";
+		const hint = fieldPathHints.find(
+			(field) => field.pointer === selectedPointer,
+		);
+		return schemaParamIdFromPointer(selectedPointer, hint?.schemaFieldUid);
+	}, [selectedPointer, fieldPathHints]);
+
+	const isSchemaTriggerParam = useMemo(() => {
+		if (!selectedPointer) return false;
+		const params = buildSchemaWorkParameters({
+			fieldPathHints,
+			uiSchema,
+			jsonSchema,
+			enumMapByCode,
+		});
+		return params.some((param) => param.id === selectedSchemaParamId);
+	}, [
+		selectedPointer,
+		selectedSchemaParamId,
+		fieldPathHints,
+		uiSchema,
+		jsonSchema,
+		enumMapByCode,
+	]);
 
 	return (
 		<PanelChrome embedded dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.properties}>
@@ -619,6 +837,56 @@ export function SchemaPropertiesPanel() {
 								label={V2_ARCH_COMPONENT_LABELS[archComponent]}
 								sx={{ mt: 0.75 }}
 							/>
+						) : null}
+						{isSchemaTriggerParam ? (
+							<Box sx={{ mt: 1.25 }}>
+								<Typography
+									variant="caption"
+									color="text.secondary"
+									display="block"
+									sx={{ mb: 0.5 }}
+								>
+									ID параметра (триггеры типовых работ)
+								</Typography>
+								<Flex gap={0.5} alignItems="center" wrap="wrap">
+									<Typography
+										component="code"
+										variant="caption"
+										sx={{
+											flex: 1,
+											minWidth: 0,
+											wordBreak: "break-all",
+											fontFamily: "monospace",
+										}}
+									>
+										{selectedSchemaParamId}
+									</Typography>
+									<IconButton
+										size="small"
+										title="Скопировать ID параметра"
+										aria-label="Скопировать ID параметра"
+										onClick={() =>
+											void copyTextToClipboard(
+												selectedSchemaParamId,
+												"ID параметра",
+											)
+										}
+									>
+										<ContentCopyIcon sx={{ fontSize: 16 }} />
+									</IconButton>
+									<Button
+										size="small"
+										variant="outlined"
+										startIcon={<OpenInNewIcon sx={{ fontSize: 16 }} />}
+										onClick={() => {
+											if (!selectedPointer) return;
+											openLogicTabWithTriggerParam(selectedPointer);
+										}}
+									>
+										В триггеры
+									</Button>
+								</Flex>
+							</Box>
 						) : null}
 					</Box>
 
@@ -712,7 +980,8 @@ export function SchemaPropertiesPanel() {
 								display="block"
 								sx={{ mt: -0.5, pl: 4 }}
 							>
-								Поле не показывается в превью и анкете; на холсте — чип «Скрыто».
+								Поле не показывается в превью и анкете; на холсте — чип
+								«Скрыто».
 							</Typography>
 						</Box>
 					</PropertiesSection>
@@ -777,8 +1046,7 @@ export function SchemaPropertiesPanel() {
 														streamBlockOptions.streamExecutor ??
 														sectionUiOptions.streamExecutor ??
 														V2_EXECUTOR_STREAM_LABELS[0],
-													sectionRole:
-														sectionUiOptions.sectionRole ?? "main",
+													sectionRole: sectionUiOptions.sectionRole ?? "main",
 												});
 												return;
 											}
@@ -813,7 +1081,15 @@ export function SchemaPropertiesPanel() {
 								>
 									{V2_EXECUTOR_STREAM_LABELS.map((stream) => (
 										<MenuItem key={stream} value={stream}>
-											{stream}
+											<Flex alignItems="center" gap={1} sx={{ width: "100%" }}>
+												<Typography sx={{ flex: 1 }}>{stream}</Typography>
+												<ExecutorStreamPresenceLabel
+													present={isExecutorStreamPresentInSchema(
+														uiSchema,
+														stream,
+													)}
+												/>
+											</Flex>
 										</MenuItem>
 									))}
 								</TextField>
@@ -956,7 +1232,11 @@ export function SchemaPropertiesPanel() {
 									emptyHint="Перетащите поле внутрь группы на холсте."
 								/>
 								{isCustomUiGroup ? (
-									<Typography variant="caption" color="info.main" display="block">
+									<Typography
+										variant="caption"
+										color="info.main"
+										display="block"
+									>
 										Кастомная UI-конфигурация: {customUiGroupSummary}
 									</Typography>
 								) : null}
@@ -1087,9 +1367,12 @@ export function SchemaPropertiesPanel() {
 															) as UiSchema,
 														{ recordHistory: false },
 													);
-													updateField(buildDictionaryMultiSchemaPatch(checked), {
-														recordHistory: false,
-													});
+													updateField(
+														buildDictionaryMultiSchemaPatch(checked),
+														{
+															recordHistory: false,
+														},
+													);
 												}}
 											/>
 										}
@@ -1115,21 +1398,80 @@ export function SchemaPropertiesPanel() {
 							<Divider sx={{ mb: 2 }} />
 
 							<PropertiesSection title="Типовые работы">
+								<TextField
+									select
+									fullWidth
+									size="small"
+									label="Стрим-исполнитель"
+									value={typicalWorkStreamExecutor}
+									onChange={(e) => {
+										if (!selectedPointer) return;
+										recordDraftHistory();
+										patchUiSchema(
+											(prev) =>
+												patchUiOptionsAtPointer(
+													prev as Record<string, unknown>,
+													selectedPointer,
+													{
+														streamExecutor: (e.target.value ||
+															undefined) as V2ExecutorStreamLabel,
+													},
+												) as UiSchema,
+											{ recordHistory: false },
+										);
+									}}
+									helperText={`Справочник ${V2_EXECUTOR_STREAMS_DICTIONARY_CODE}. Связь с назначениями работ в логике.`}
+									sx={{ mb: 1 }}
+								>
+									<MenuItem value="">
+										<em>Не выбран</em>
+									</MenuItem>
+									{V2_EXECUTOR_STREAM_LABELS.map((stream) => (
+										<MenuItem key={stream} value={stream}>
+											<Flex alignItems="center" gap={1} sx={{ width: "100%" }}>
+												<Typography sx={{ flex: 1 }}>{stream}</Typography>
+												<ExecutorStreamPresenceLabel
+													present={isExecutorStreamPresentInSchema(
+														uiSchema,
+														stream,
+													)}
+												/>
+											</Flex>
+										</MenuItem>
+									))}
+								</TextField>
+								{typicalWorkStreamExecutor ? (
+									<Box sx={{ mb: 1 }}>
+										<ExecutorStreamPresenceHint
+											present={typicalWorkStreamPresent}
+										/>
+										{!typicalWorkStreamPresent ? (
+											<Button
+												size="small"
+												variant="outlined"
+												sx={{ mt: 1 }}
+												onClick={handleCreateTypicalWorkStreamBlock}
+											>
+												Создать стримовый блок
+											</Button>
+										) : null}
+									</Box>
+								) : null}
 								<Typography variant="caption" color="text.secondary">
-									Работы появляются в этом блоке при срабатывании их
-									триггеров. Настройка — во вкладке «Логика».
+									К этому блоку привязаны работы из справочника. Они появляются
+									здесь при срабатывании триггеров.
 								</Typography>
-								{typicalWorks.length === 0 ? (
+								{boundTypicalWorks.length === 0 ? (
 									<Typography
 										variant="caption"
 										color="text.secondary"
 										sx={{ display: "block", mt: 0.5 }}
 									>
-										Пока нет типовых работ.
+										Пока нет привязанных работ.
 									</Typography>
 								) : (
 									<Flex gap={0.5} sx={{ flexWrap: "wrap", mt: 0.5 }}>
-										{typicalWorks.map((w) => (
+										{boundTypicalWorks.map((w) => (
 											<Chip
 												key={w.id}
 												size="small"
@@ -1140,10 +1482,63 @@ export function SchemaPropertiesPanel() {
 														: w.name
 												}
 												onClick={() => openTypicalWorksTab(w.id)}
+												onDelete={() => {
+													if (!selectedPointer) return;
+													recordDraftHistory();
+													patchUiSchema(
+														(prev) =>
+															removeBoundWorkIdAtPointer(
+																prev as Record<string, unknown>,
+																selectedPointer,
+																w.id,
+																typicalWorkCatalog,
+																typicalWorkStreamExecutor,
+															) as UiSchema,
+														{ recordHistory: false },
+													);
+												}}
 											/>
 										))}
 									</Flex>
 								)}
+								{typicalWorks.length > 0 ? (
+									<Box sx={{ mt: 1 }}>
+										<FuzzyAutocomplete<(typeof typicalWorks)[number]>
+											options={unboundTypicalWorks}
+											value={null}
+											onChange={(
+												work: (typeof typicalWorks)[number] | null,
+											) => {
+												if (!work || !selectedPointer) return;
+												recordDraftHistory();
+												patchUiSchema(
+													(prev) =>
+														appendBoundWorkIdAtPointer(
+															prev as Record<string, unknown>,
+															selectedPointer,
+															work.id,
+															typicalWorkCatalog,
+															typicalWorkStreamExecutor,
+														) as UiSchema,
+													{ recordHistory: false },
+												);
+											}}
+											getOptionLabel={(work) =>
+												work.archComponentType
+													? `${work.name} · ${work.archComponentType}`
+													: work.name
+											}
+											label="Привязать существующую"
+											placeholder={
+												unboundTypicalWorks.length === 0
+													? "Все работы шаблона уже привязаны к этому блоку"
+													: "Выберите работу из справочника шаблона"
+											}
+											size="small"
+											disabled={unboundTypicalWorks.length === 0}
+										/>
+									</Box>
+								) : null}
 								<Button
 									size="small"
 									variant="outlined"
@@ -1152,7 +1547,7 @@ export function SchemaPropertiesPanel() {
 										openTypicalWorksTab(undefined, { create: true })
 									}
 								>
-									Добавить типовую работу
+									Создать типовую работу
 								</Button>
 							</PropertiesSection>
 						</>

@@ -1,6 +1,7 @@
 import type { V2JsonLogicValue } from "./v2-template.types";
 import type { TypicalWorkRuleLike } from "./v2-works-catalog-match.util";
 import type { V2TypicalWorkFormulaDto, V2TypicalWorkRoundingDto, V2TypicalWorkStoredCalculationLogicDto, V2WorkFormulaToken } from "./v2-typical-work.types";
+import type { V2TypicalWorkFormulaTermsDto } from "./v2-typical-work-v4.types";
 /** Скомпилированная расчётная логика типовой работы (F-03 → JsonLogic). */
 export type V2TypicalWorkCalculationLogicDto = {
     /** v1 — схема компиляции */
@@ -69,3 +70,15 @@ export type VersionConfigFormulaLike = {
 export declare function compileCalculationLogicFromVersionConfig(config: VersionConfigFormulaLike): V2TypicalWorkStoredCalculationLogicDto | null;
 export declare function needsCalculationLogicBackfill(raw: unknown): boolean;
 export declare function parseStoredTypicalWorkCalculationLogic(raw: unknown): V2TypicalWorkStoredCalculationLogicDto | null;
+/** Итог по формуле: JsonLogic (из токенов) → token-движок → terms (упрощённая модель). */
+export declare function computeTypicalWorkFormulaTotal(params: {
+    calculationLogic: V2TypicalWorkStoredCalculationLogicDto | null | undefined;
+    formula: unknown;
+    formulaText?: string | null;
+    terms: V2TypicalWorkFormulaTermsDto;
+    rounding: V2TypicalWorkRoundingDto;
+    norm: number;
+    paramCoefficients: Record<string, number>;
+    source?: Record<string, unknown>;
+    resolveFactorCoeff: (paramCode: string) => number;
+}): number | null;

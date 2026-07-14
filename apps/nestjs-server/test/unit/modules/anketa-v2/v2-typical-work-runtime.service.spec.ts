@@ -169,6 +169,51 @@ describe("V2TypicalWorkRuntimeService", () => {
 		expect(notMatched).toEqual([]);
 	});
 
+	it("filters catalog tasks by allowedWorkIds when block binding is set", async () => {
+		const service = createService({
+			rules: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "type",
+					paramName: "Тип источника",
+					operator: "=",
+					valueCode: "internal",
+					valueLabel: "Внутренний",
+				},
+			],
+		});
+
+		const allowed = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			templateVersionId: null,
+			atDate: "2025-06-01",
+			allowedWorkIds: [WORK_WITH_TRIGGER],
+		});
+		const blocked = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			templateVersionId: null,
+			atDate: "2025-06-01",
+			allowedWorkIds: [WORK_WITHOUT_TRIGGERS],
+		});
+		const empty = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			templateVersionId: null,
+			atDate: "2025-06-01",
+			allowedWorkIds: [],
+		});
+
+		expect(allowed.map((task) => task.workId)).toEqual([WORK_WITH_TRIGGER]);
+		expect(blocked).toEqual([]);
+		expect(empty).toEqual([]);
+	});
+
 	it("returns empty when work is not assigned to stream", async () => {
 		const service = createService({
 			rules: [
@@ -386,6 +431,62 @@ describe("V2TypicalWorkRuntimeService", () => {
 
 		expect(on[0]?.coefficient).toBe(1.5);
 		expect(off[0]?.coefficient).toBe(0.5);
+	});
+
+	it("treats absent boolean checkbox as coeffOff when typical work activates", async () => {
+		const service = createService({
+			rules: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "type",
+					paramName: "Тип",
+					operator: "=",
+					valueCode: null,
+					valueLabel: "Внутренний",
+				},
+			],
+			laborParams: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "field_flag",
+					paramName: "Флаг @ field_flag",
+					kind: "any_of",
+					anyOfValueCodes: ["true"],
+					anyOfValueLabels: ["Да"],
+					coeffOn: "1",
+					coeffOff: "2",
+				},
+			],
+			versionConfigs: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					templateVersionId: "tpl-v1",
+					formula: [
+						{ kind: "norm" },
+						{ kind: "param_anyof", paramCode: "field_flag" },
+					],
+					formulaText: null,
+					roundingMode: "none",
+					roundingStep: null,
+					calculationLogic: null,
+				},
+			],
+		});
+
+		const absent = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			templateVersionId: "tpl-v1",
+			atDate: "2025-06-01",
+			hiddenParamCodes: new Set(["field_flag"]),
+		});
+
+		expect(absent[0]?.coefficient).toBe(2);
+		expect(absent[0]?.total).toBe(4);
 	});
 
 	it("applies by-value schema dictionary coefficient in runtime calculation", async () => {

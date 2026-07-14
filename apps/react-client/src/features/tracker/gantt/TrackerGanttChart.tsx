@@ -7,6 +7,8 @@ import {
 	useKanbanBoardTasksRegistry,
 	useUpdateKanbanBoardTask,
 } from "@react-client/common/api/queries/kanban-board";
+import { TrackerTaskConflictDialog } from "@react-client/features/tracker/components/TrackerTaskConflictDialog";
+import { useTrackerEditIdentity } from "@react-client/features/tracker/hooks/useTrackerEditIdentity";
 import { isTrackerGanttSprintId } from "@react-client/features/tracker/gantt/trackerGanttIds";
 import {
 	buildTrackerGanttTasks,
@@ -39,7 +41,12 @@ import {
 	type TID,
 } from "@svar-ui/react-gantt";
 import "@svar-ui/react-gantt/all.css";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+	parseKanbanBoardTaskEditBlockedError,
+	type KanbanBoardTaskEditBlockedErrorDto,
+	type KanbanBoardTaskRegistryDto,
+} from "@smart-anketa/api-contract";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
 type Props = {
@@ -47,9 +54,20 @@ type Props = {
 	scalePresetId: TrackerGanttScalePresetId;
 };
 
+type PendingGanttUpdate = {
+	taskId: string;
+	boardId: string;
+	content: KanbanBoardTaskRegistryDto["content"];
+	expectedUpdatedAt?: string;
+};
+
 export function TrackerGanttChart({ filters, scalePresetId }: Props) {
 	const navigate = useNavigate();
 	const { mode } = useColorScheme();
+	const editLabel = useTrackerEditIdentity();
+	const [editBlocked, setEditBlocked] =
+		useState<KanbanBoardTaskEditBlockedErrorDto | null>(null);
+	const pendingUpdateRef = useRef<PendingGanttUpdate | null>(null);
 	const [api, setApi] = useState<IApi | undefined>();
 	const isInteractingRef = useRef(false);
 	const registryRef = useRef<
@@ -75,6 +93,69 @@ export function TrackerGanttChart({ filters, scalePresetId }: Props) {
 	);
 
 	registryRef.current = tasksQuery.data ?? [];
+
+	const rebuildGanttFromServer = useCallback(() => {
+		setTasks(
+			buildTrackerGanttTasks({
+				tasks: tasksQuery.data ?? [],
+				sprints: sprintsQuery.data ?? [],
+				filters: filtersRef.current,
+			}),
+		);
+	}, [setTasks, sprintsQuery.data, tasksQuery.data]);
+
+	const applyGanttUpdate = useCallback(
+		async (
+			row: ITask & TrackerGanttTaskMeta,
+			registryTask: KanbanBoardTaskRegistryDto,
+			forceOverwrite?: boolean,
+		) => {
+			if (
+				row.trackerKind !== "task" ||
+				!row.trackerTaskId ||
+				!row.trackerBoardId ||
+				!row.start ||
+				!row.end
+			) {
+				return;
+			}
+
+			const nextContent = {
+				...registryTask.content,
+				dueDate: formatTrackerDueDate(row.end),
+				estimatePd: estimatePdFromGanttBar(row.start, row.end),
+			};
+			pendingUpdateRef.current = {
+				taskId: row.trackerTaskId,
+				boardId: row.trackerBoardId,
+				content: nextContent,
+				expectedUpdatedAt: registryTask.updatedAt,
+			};
+
+			try {
+				await updateTask.mutateAsync({
+					id: row.trackerTaskId,
+					data: {
+						boardId: row.trackerBoardId,
+						content: nextContent,
+						expectedUpdatedAt: registryTask.updatedAt,
+						forceOverwrite,
+						lockHolderLabel: editLabel || undefined,
+					},
+				});
+				setEditBlocked(null);
+				pendingUpdateRef.current = null;
+			} catch (error) {
+				const blocked = parseKanbanBoardTaskEditBlockedError(error);
+				if (blocked) {
+					setEditBlocked(blocked);
+				}
+				rebuildGanttFromServer();
+				throw error;
+			}
+		},
+		[editLabel, rebuildGanttFromServer, updateTask],
+	);
 
 	useEffect(() => {
 		if (isInteractingRef.current) return;
@@ -144,17 +225,7 @@ export function TrackerGanttChart({ filters, scalePresetId }: Props) {
 			);
 			if (!registryTask) return;
 
-			void updateTask.mutateAsync({
-				id: row.trackerTaskId,
-				data: {
-					boardId: row.trackerBoardId,
-					content: {
-						...registryTask.content,
-						dueDate: formatTrackerDueDate(row.end),
-						estimatePd: estimatePdFromGanttBar(row.start, row.end),
-					},
-				},
-			});
+			void applyGanttUpdate(row, registryTask);
 		};
 
 		api.intercept("add-task", () => false);
@@ -174,7 +245,7 @@ export function TrackerGanttChart({ filters, scalePresetId }: Props) {
 			api.detach("select-task");
 			api.detach("update-task");
 		};
-	}, [api, clearSelection, navigate, taskSelected, updateTask]);
+	}, [api, applyGanttUpdate, clearSelection, navigate, taskSelected]);
 
 	const selectedRow = tasks.find((item) => item.id === selectedTaskId) as
 		| (ITask & TrackerGanttTaskMeta)
@@ -302,6 +373,38 @@ export function TrackerGanttChart({ filters, scalePresetId }: Props) {
 					Открыть задачу
 				</Button>
 			</Box>
+			<TrackerTaskConflictDialog
+				open={Boolean(editBlocked)}
+				error={editBlocked}
+				onClose={() => {
+					setEditBlocked(null);
+					pendingUpdateRef.current = null;
+				}}
+				onRefresh={() => {
+					setEditBlocked(null);
+					pendingUpdateRef.current = null;
+					void tasksQuery.refetch().then(() => rebuildGanttFromServer());
+				}}
+				onForceOverwrite={() => {
+					const pending = pendingUpdateRef.current;
+					setEditBlocked(null);
+					if (!pending) return;
+					void updateTask
+						.mutateAsync({
+							id: pending.taskId,
+							data: {
+								boardId: pending.boardId,
+								content: pending.content,
+								expectedUpdatedAt: pending.expectedUpdatedAt,
+								forceOverwrite: true,
+								lockHolderLabel: editLabel || undefined,
+							},
+						})
+						.then(() => {
+							pendingUpdateRef.current = null;
+						});
+				}}
+			/>
 		</Box>
 	);
 }

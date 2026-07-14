@@ -1,7 +1,9 @@
 import {
 	BadRequestException,
 	Injectable,
+	Logger,
 	NotFoundException,
+	OnModuleInit,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import {
@@ -9,17 +11,24 @@ import {
 	normalizeKanbanBoardTaskContent,
 	type KanbanBoardTaskImageDto,
 } from "@smart-anketa/api-contract";
-import { mkdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import { ulid } from "ulid";
 import { KanbanBoardTaskImageEntity } from "../entities/kanban-board-task-image.entity";
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
+import {
+	kanbanBoardTaskImageExtension,
+	kanbanBoardTaskImageReadCandidates,
+	kanbanBoardTaskImageRefsEqual,
+	kanbanBoardTaskImageStoragePaths,
+} from "../utils/kanban-board-task-image.util";
 
 const ALLOWED_MIME = new Set(["image/webp", "image/png"]);
 
 @Injectable()
-export class KanbanBoardTaskImageService {
+export class KanbanBoardTaskImageService implements OnModuleInit {
+	private readonly logger = new Logger(KanbanBoardTaskImageService.name);
 	private readonly uploadRoot = resolve(
 		process.env.KANBAN_TASK_IMAGES_DIR ??
 			join(process.cwd(), "data", "kanban-task-images"),
@@ -32,13 +41,73 @@ export class KanbanBoardTaskImageService {
 		private readonly taskRepository: Repository<KanbanBoardTaskEntity>,
 	) {}
 
+	onModuleInit(): void {
+		if (process.env.KANBAN_TASK_IMAGES_BACKFILL_BLOBS === "false") {
+			return;
+		}
+		void this.backfillMissingBlobsFromDisk();
+	}
+
 	async listForTask(taskId: string): Promise<KanbanBoardTaskImageDto[]> {
 		await this.ensureTaskExists(taskId);
 		const rows = await this.imageRepository.find({
 			where: { taskId },
 			order: { createdAt: "ASC" },
 		});
-		return rows.map((row) => this.toDto(row));
+		const readable: KanbanBoardTaskImageDto[] = [];
+		for (const row of rows) {
+			if (await this.canServeImage(row)) {
+				readable.push(this.toDto(row));
+			}
+		}
+		return readable;
+	}
+
+	async syncTaskContentImages(task: KanbanBoardTaskEntity): Promise<boolean> {
+		const images = await this.listForTask(task.id);
+		const current = task.content.images ?? [];
+		if (kanbanBoardTaskImageRefsEqual(current, images)) {
+			return false;
+		}
+		task.content = normalizeKanbanBoardTaskContent({
+			...task.content,
+			images: images.length ? images : undefined,
+		});
+		await this.taskRepository.save(task);
+		return true;
+	}
+
+	async syncTasksContentImages(tasks: KanbanBoardTaskEntity[]): Promise<void> {
+		if (!tasks.length) return;
+
+		const taskIds = tasks.map((task) => task.id);
+		const rows = await this.imageRepository.find({
+			where: { taskId: In(taskIds) },
+			order: { createdAt: "ASC" },
+		});
+		const imagesByTaskId = new Map<string, KanbanBoardTaskImageDto[]>();
+		for (const row of rows) {
+			const dto = this.toDto(row);
+			const bucket = imagesByTaskId.get(row.taskId) ?? [];
+			bucket.push(dto);
+			imagesByTaskId.set(row.taskId, bucket);
+		}
+
+		const toSave: KanbanBoardTaskEntity[] = [];
+		for (const task of tasks) {
+			const images = imagesByTaskId.get(task.id) ?? [];
+			const current = task.content.images ?? [];
+			if (kanbanBoardTaskImageRefsEqual(current, images)) continue;
+			task.content = normalizeKanbanBoardTaskContent({
+				...task.content,
+				images: images.length ? images : undefined,
+			});
+			toSave.push(task);
+		}
+
+		if (toSave.length) {
+			await this.taskRepository.save(toSave);
+		}
 	}
 
 	async upload(
@@ -56,13 +125,13 @@ export class KanbanBoardTaskImageService {
 		this.validateUpload(payload);
 
 		const id = ulid();
-		const taskDir = join(this.uploadRoot, taskId);
-		await mkdir(taskDir, { recursive: true });
+		const ext = kanbanBoardTaskImageExtension(payload.mimeType);
+		const relativeFullPath = join(taskId, `${id}-full.${ext}`);
+		const relativeThumbPath = join(taskId, `${id}-thumb.${ext}`);
+		const fullPath = join(this.uploadRoot, relativeFullPath);
+		const thumbPath = join(this.uploadRoot, relativeThumbPath);
 
-		const ext = payload.mimeType === "image/png" ? "png" : "webp";
-		const fullPath = join(taskDir, `${id}-full.${ext}`);
-		const thumbPath = join(taskDir, `${id}-thumb.${ext}`);
-
+		await mkdir(join(this.uploadRoot, taskId), { recursive: true });
 		await writeFile(fullPath, payload.full);
 		await writeFile(thumbPath, payload.thumb);
 
@@ -76,8 +145,10 @@ export class KanbanBoardTaskImageService {
 			height: payload.height,
 			fullByteSize: payload.full.length,
 			thumbByteSize: payload.thumb.length,
-			fullPath,
-			thumbPath,
+			fullPath: relativeFullPath,
+			thumbPath: relativeThumbPath,
+			fullData: payload.full,
+			thumbData: payload.thumb,
 			createdAt,
 		});
 		await this.imageRepository.save(entity);
@@ -92,8 +163,7 @@ export class KanbanBoardTaskImageService {
 		variant: "full" | "thumb",
 	): Promise<{ buffer: Buffer; mimeType: string; fileName: string }> {
 		const row = await this.findImageOrThrow(taskId, imageId);
-		const filePath = variant === "thumb" ? row.thumbPath : row.fullPath;
-		const buffer = await readFile(filePath);
+		const buffer = await this.readImageVariant(row, variant);
 		return {
 			buffer,
 			mimeType: row.mimeType,
@@ -176,6 +246,136 @@ export class KanbanBoardTaskImageService {
 		return row;
 	}
 
+	private async readImageVariant(
+		row: KanbanBoardTaskImageEntity,
+		variant: "full" | "thumb",
+	): Promise<Buffer> {
+		const blob = variant === "thumb" ? row.thumbData : row.fullData;
+		if (blob?.length) {
+			return blob;
+		}
+
+		const candidates = kanbanBoardTaskImageReadCandidates(
+			this.uploadRoot,
+			row,
+			variant,
+		);
+		for (const filePath of candidates) {
+			try {
+				const buffer = await readFile(filePath);
+				void this.backfillBlobFromFile(row.id, variant, buffer);
+				return buffer;
+			} catch (error) {
+				if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+					throw error;
+				}
+			}
+		}
+		throw new NotFoundException("Файл изображения не найден на сервере");
+	}
+
+	private async backfillBlobFromFile(
+		imageId: string,
+		variant: "full" | "thumb",
+		buffer: Buffer,
+	): Promise<void> {
+		const patch =
+			variant === "thumb"
+				? { thumbData: buffer }
+				: { fullData: buffer };
+		await this.imageRepository
+			.update({ id: imageId }, patch)
+			.catch(() => undefined);
+	}
+
+	private async backfillMissingBlobsFromDisk(): Promise<void> {
+		try {
+			const rows = await this.imageRepository.find();
+			let updated = 0;
+			for (const row of rows) {
+				let rowUpdated = false;
+				if (!row.fullData?.length) {
+					const buffer = await this.readImageFromDiskOnly(row, "full");
+					if (buffer) {
+						await this.backfillBlobFromFile(row.id, "full", buffer);
+						rowUpdated = true;
+					}
+				}
+				if (!row.thumbData?.length) {
+					const buffer = await this.readImageFromDiskOnly(row, "thumb");
+					if (buffer) {
+						await this.backfillBlobFromFile(row.id, "thumb", buffer);
+						rowUpdated = true;
+					}
+				}
+				if (rowUpdated) updated += 1;
+			}
+			if (updated > 0) {
+				this.logger.log(
+					`Backfill изображений задач: перенесено в БД записей ${updated}`,
+				);
+			}
+		} catch (error) {
+			this.logger.warn(
+				"Backfill изображений задач не выполнен",
+				error instanceof Error ? error.message : String(error),
+			);
+		}
+	}
+
+	private async readImageFromDiskOnly(
+		row: KanbanBoardTaskImageEntity,
+		variant: "full" | "thumb",
+	): Promise<Buffer | null> {
+		const candidates = kanbanBoardTaskImageReadCandidates(
+			this.uploadRoot,
+			row,
+			variant,
+		);
+		for (const filePath of candidates) {
+			try {
+				return await readFile(filePath);
+			} catch (error) {
+				if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+					throw error;
+				}
+			}
+		}
+		return null;
+	}
+
+	private async canServeImage(row: KanbanBoardTaskImageEntity): Promise<boolean> {
+		if (row.fullData?.length && row.thumbData?.length) {
+			return true;
+		}
+		if (row.fullData?.length || row.thumbData?.length) {
+			return true;
+		}
+		const hasFull = await this.hasStoredFile(row, "full");
+		if (!hasFull) return false;
+		return this.hasStoredFile(row, "thumb");
+	}
+
+	private async hasStoredFile(
+		row: KanbanBoardTaskImageEntity,
+		variant: "full" | "thumb",
+	): Promise<boolean> {
+		const candidates = kanbanBoardTaskImageReadCandidates(
+			this.uploadRoot,
+			row,
+			variant,
+		);
+		for (const filePath of candidates) {
+			try {
+				await access(filePath);
+				return true;
+			} catch {
+				// try next candidate
+			}
+		}
+		return false;
+	}
+
 	private toDto(row: KanbanBoardTaskImageEntity): KanbanBoardTaskImageDto {
 		return {
 			id: row.id,
@@ -204,10 +404,20 @@ export class KanbanBoardTaskImageService {
 	}
 
 	private async removeImageFiles(row: KanbanBoardTaskImageEntity) {
-		await Promise.all([
-			unlink(row.fullPath).catch(() => undefined),
-			unlink(row.thumbPath).catch(() => undefined),
-		]);
+		const canonical = kanbanBoardTaskImageStoragePaths(this.uploadRoot, row);
+		const paths = [
+			canonical.fullPath,
+			canonical.thumbPath,
+			row.fullPath,
+			row.thumbPath,
+			join(this.uploadRoot, row.fullPath),
+			join(this.uploadRoot, row.thumbPath),
+		];
+		await Promise.all(
+			[...new Set(paths.filter(Boolean))].map((filePath) =>
+				unlink(filePath).catch(() => undefined),
+			),
+		);
 	}
 
 	private async removeImageRef(taskId: string, imageId: string) {

@@ -17,7 +17,11 @@ export class AddVersioningFieldsFixed1755251569000
 
         const hasStatusEnum = await queryRunner.query(`
 			SELECT EXISTS (
-				SELECT 1 FROM pg_type WHERE typname = 'calculation_status_enum'
+				SELECT 1
+				FROM pg_type t
+				JOIN pg_namespace n ON n.oid = t.typnamespace
+				WHERE t.typname = 'calculation_status_enum'
+					AND n.nspname = current_schema()
 			)
 		`);
 
@@ -193,7 +197,11 @@ export class AddVersioningFieldsFixed1755251569000
 
         const hasStatusEnum = await queryRunner.query(`
 			SELECT EXISTS (
-				SELECT 1 FROM pg_type WHERE typname = 'calculation_status_enum'
+				SELECT 1
+				FROM pg_type t
+				JOIN pg_namespace n ON n.oid = t.typnamespace
+				WHERE t.typname = 'calculation_status_enum'
+					AND n.nspname = current_schema()
 			)
 		`);
 

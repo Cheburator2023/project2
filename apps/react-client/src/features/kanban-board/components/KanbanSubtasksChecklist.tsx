@@ -530,8 +530,11 @@ type CardProps = {
 	boardId: string;
 	parentId: string;
 	content: KanbanBoardTaskContent;
+	taskUpdatedAt?: string;
+	editLabel?: string;
 	onContentUpdated: (taskId: string, content: KanbanBoardTaskContent) => void;
 	isSaving?: boolean;
+	onEditBlocked?: (error: unknown) => void;
 };
 
 export function KanbanTaskCardSubtasks({
@@ -539,8 +542,11 @@ export function KanbanTaskCardSubtasks({
 	boardId,
 	parentId,
 	content,
+	taskUpdatedAt,
+	editLabel,
 	onContentUpdated,
 	isSaving = false,
+	onEditBlocked,
 }: CardProps) {
 	const updateTask = useUpdateKanbanBoardTask();
 	const [items, setItems] = useState(content.subtasks ?? []);
@@ -557,14 +563,21 @@ export function KanbanTaskCardSubtasks({
 		});
 		setItems(nextItems);
 		onContentUpdated(taskId, nextContent);
-		await updateTask.mutateAsync({
-			id: taskId,
-			data: {
-				boardId,
-				parentId,
-				content: nextContent,
-			},
-		});
+		try {
+			await updateTask.mutateAsync({
+				id: taskId,
+				data: {
+					boardId,
+					parentId,
+					content: nextContent,
+					expectedUpdatedAt: taskUpdatedAt,
+					lockHolderLabel: editLabel || undefined,
+				},
+			});
+		} catch (error) {
+			onEditBlocked?.(error);
+			throw error;
+		}
 	};
 
 	if (!items.length) {

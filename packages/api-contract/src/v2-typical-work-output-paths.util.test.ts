@@ -1,48 +1,46 @@
 import { describe, expect, it } from "vitest";
-import {
-	clearStaleGeneratedTypicalWorkPaths,
-	listAllGeneratedTypicalWorkArrayPaths,
-} from "./v2-typical-work-output-paths.util";
+import { backfillTypicalWorkBoundWorkIdsInUiSchema } from "./v2-typical-work-output-paths.util";
 
-describe("v2-typical-work-output-paths.util", () => {
-	it("lists uiSchema and legacy generated typical work paths", () => {
-		const paths = listAllGeneratedTypicalWorkArrayPaths({
-			field_OFmNQhnL: { "ui:options": { archComponent: "typicalWork" } },
-		});
-		expect(paths).toContain("field_OFmNQhnL");
-		expect(paths).toContain("streamDataSources.sourceTypicalTasks");
-		expect(paths).toContain("detailInfo.detailTypicalTasks");
-	});
-
-	it("clears legacy fan-out paths when custom output is replaced", () => {
-		const staleRow = { name: "ееее", total: 10 };
-		const next = clearStaleGeneratedTypicalWorkPaths(
-			{
-				field_OFmNQhnL: [staleRow],
-				streamDataSources: { sourceTypicalTasks: [staleRow] },
-				detailInfo: { detailTypicalTasks: [staleRow] },
-				streamModelControl: { "field_Khn6-HAW": [staleRow] },
+describe("backfillTypicalWorkBoundWorkIdsInUiSchema", () => {
+	it("writes boundWorkIds per stream block from catalog", () => {
+		const uiSchema = {
+			streamDataSources: {
+				"ui:options": {
+					streamBlock: true,
+					streamExecutor: "Источники данных",
+				},
+				sourceTypicalTasks: {
+					"ui:options": { archComponent: "typicalWork" },
+				},
 			},
-			"field_OFmNQhnL",
-			{
-				field_OFmNQhnL: { "ui:options": { archComponent: "typicalWork" } },
+			streamModelControl: {
+				"ui:options": {
+					streamBlock: true,
+					streamExecutor: "Контроль моделей",
+				},
+				field_tw: {
+					"ui:options": { archComponent: "typicalWork" },
+				},
 			},
-		);
+		};
+		const catalog = [
+			{ id: "w-source", streams: ["Источники данных"] },
+			{ id: "w-control", streams: ["Контроль моделей"] },
+		];
 
-		expect(
-			(next.field_OFmNQhnL as Array<{ name: string }>)[0]?.name,
-		).toBe("ееее");
-		expect(
-			(next.streamDataSources as { sourceTypicalTasks: unknown[] })
-				.sourceTypicalTasks,
-		).toEqual([]);
-		expect(
-			(next.detailInfo as { detailTypicalTasks: unknown[] }).detailTypicalTasks,
-		).toEqual([]);
-		expect(
-			(next.streamModelControl as { "field_Khn6-HAW": unknown[] })[
-				"field_Khn6-HAW"
-			],
-		).toEqual([]);
+		const next = backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog);
+		const sourceOpts = (
+			(next.streamDataSources as Record<string, unknown>)
+				.sourceTypicalTasks as Record<string, unknown>
+		)["ui:options"] as { boundWorkIds: string[] };
+		const controlOpts = (
+			(next.streamModelControl as Record<string, unknown>).field_tw as Record<
+				string,
+				unknown
+			>
+		)["ui:options"] as { boundWorkIds: string[] };
+
+		expect(sourceOpts.boundWorkIds).toEqual(["w-source"]);
+		expect(controlOpts.boundWorkIds).toEqual(["w-control"]);
 	});
 });

@@ -18,6 +18,7 @@ export const NumberInputWidget: React.FC<WidgetProps> = (props) => {
 		uiSchema,
 		options,
 		rawErrors,
+		placeholder: widgetPlaceholder,
 	} = props;
 
 	const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -87,6 +88,11 @@ export const NumberInputWidget: React.FC<WidgetProps> = (props) => {
 
 	const prefix = uiSchema?.["ui:options"]?.prefix as string | undefined;
 	const suffix = uiSchema?.["ui:options"]?.suffix as string | undefined;
+	const placeholder =
+		widgetPlaceholder ||
+		(typeof uiSchema?.["ui:placeholder"] === "string"
+			? uiSchema["ui:placeholder"]
+			: undefined);
 
 	return (
 		<TextFieldCustom
@@ -98,6 +104,12 @@ export const NumberInputWidget: React.FC<WidgetProps> = (props) => {
 			disabled={disabled || readonly}
 			required={required}
 			label={label}
+			placeholder={placeholder}
+			slotProps={{
+				inputLabel: {
+					shrink: Boolean(placeholder?.trim()) || Boolean(options?.tooltip),
+				},
+			}}
 			slots={{
 				inputLabel: (props) =>
 					options.tooltip ? (

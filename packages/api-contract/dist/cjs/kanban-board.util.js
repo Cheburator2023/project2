@@ -65,6 +65,7 @@ function toBoardData(rows, columns) {
                 type: "card",
                 content: task.content,
                 origin: task.origin,
+                updatedAt: task.updatedAt,
             };
         }
     }

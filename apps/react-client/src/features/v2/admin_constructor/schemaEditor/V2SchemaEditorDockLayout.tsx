@@ -1,4 +1,5 @@
 import Box from "@mui/material/Box";
+import CircularProgress from "@mui/material/CircularProgress";
 import { useColorScheme } from "@mui/material/styles";
 import {
 	DockviewDefaultTab,
@@ -11,7 +12,7 @@ import {
 	type IDockviewPanelHeaderProps,
 } from "dockview-react";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SchemaEditorDockHeaderRightActions } from "./SchemaEditorDockHeaderActions";
 import { useSchemaEditorDock } from "./SchemaEditorDockContext";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
@@ -29,6 +30,19 @@ import {
 
 const LAYOUT_SAVE_DEBOUNCE_MS = 350;
 
+function finishDockInitialization(
+	api: DockviewApi,
+	el: HTMLElement | null,
+	onComplete: () => void,
+) {
+	requestAnimationFrame(() => {
+		if (el) {
+			layoutDockviewToContainer(api, el);
+		}
+		requestAnimationFrame(onComplete);
+	});
+}
+
 function DockTabNoClose(props: IDockviewPanelHeaderProps) {
 	return <DockviewDefaultTab {...props} hideClose />;
 }
@@ -36,6 +50,7 @@ function DockTabNoClose(props: IDockviewPanelHeaderProps) {
 export function V2SchemaEditorDockLayout() {
 	const { mode } = useColorScheme();
 	const { registerDockApi, registerResetDockLayout } = useSchemaEditorDock();
+	const [isDockReady, setIsDockReady] = useState(false);
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const dockApiRef = useRef<DockviewApi | null>(null);
 	const layoutPersistenceReadyRef = useRef(false);
@@ -61,22 +76,17 @@ export function V2SchemaEditorDockLayout() {
 
 	const applyInitialLayout = useCallback((api: DockviewApi) => {
 		layoutPersistenceReadyRef.current = false;
+		setIsDockReady(false);
 
 		const restored = restoreSchemaEditorDockLayout(api);
 		if (!restored) {
 			buildDefaultDockLayout(api);
 		}
 
-		const el = containerRef.current;
-		if (el) {
-			requestAnimationFrame(() => {
-				layoutDockviewToContainer(api, el);
-				layoutPersistenceReadyRef.current = true;
-			});
-			return;
-		}
-
-		layoutPersistenceReadyRef.current = true;
+		finishDockInitialization(api, containerRef.current, () => {
+			layoutPersistenceReadyRef.current = true;
+			setIsDockReady(true);
+		});
 	}, []);
 
 	const resetDockLayout = useCallback(() => {
@@ -85,19 +95,14 @@ export function V2SchemaEditorDockLayout() {
 		if (!api) return;
 
 		layoutPersistenceReadyRef.current = false;
+		setIsDockReady(false);
 		clearSchemaEditorDockLayoutStorage();
 		buildDefaultDockLayout(api);
-		if (el) {
-			requestAnimationFrame(() => {
-				layoutDockviewToContainer(api, el);
-				layoutPersistenceReadyRef.current = true;
-				writeSchemaEditorDockLayout(api.toJSON());
-			});
-			return;
-		}
-
-		layoutPersistenceReadyRef.current = true;
-		writeSchemaEditorDockLayout(api.toJSON());
+		finishDockInitialization(api, el, () => {
+			layoutPersistenceReadyRef.current = true;
+			setIsDockReady(true);
+			writeSchemaEditorDockLayout(api.toJSON());
+		});
 	}, []);
 
 	const onReady = useCallback(
@@ -116,12 +121,9 @@ export function V2SchemaEditorDockLayout() {
 			}
 
 			layoutPersistenceReadyRef.current = true;
-			const el = containerRef.current;
-			if (el) {
-				requestAnimationFrame(() => {
-					layoutDockviewToContainer(event.api, el);
-				});
-			}
+			finishDockInitialization(event.api, containerRef.current, () => {
+				setIsDockReady(true);
+			});
 		},
 		[applyInitialLayout, registerDockApi, schedulePersistLayout],
 	);
@@ -134,6 +136,7 @@ export function V2SchemaEditorDockLayout() {
 	useEffect(() => {
 		return () => {
 			layoutPersistenceReadyRef.current = false;
+			setIsDockReady(false);
 			if (layoutSaveTimerRef.current != null) {
 				window.clearTimeout(layoutSaveTimerRef.current);
 			}
@@ -149,6 +152,7 @@ export function V2SchemaEditorDockLayout() {
 			ref={containerRef}
 			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.dockLayout}
 			sx={{
+				position: "relative",
 				height: "100%",
 				width: "100%",
 				minHeight: 0,
@@ -168,16 +172,40 @@ export function V2SchemaEditorDockLayout() {
 				},
 			}}
 		>
-			<DockviewReact
-				theme={dockTheme}
-				components={workspacePanelComponents}
-				defaultTabComponent={DockTabNoClose}
-				rightHeaderActionsComponent={SchemaEditorDockHeaderRightActions}
-				floatingGroupBounds="boundedWithinViewport"
-				popoutUrl="/popout.html"
-				disableAutoResizing
-				onReady={onReady}
-			/>
+			{!isDockReady ? (
+				<Box
+					data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.dockLayoutLoader}
+					sx={{
+						position: "absolute",
+						inset: 0,
+						zIndex: 2,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						bgcolor: "background.default",
+					}}
+				>
+					<CircularProgress size={32} />
+				</Box>
+			) : null}
+			<Box
+				sx={{
+					height: "100%",
+					width: "100%",
+					visibility: isDockReady ? "visible" : "hidden",
+				}}
+			>
+				<DockviewReact
+					theme={dockTheme}
+					components={workspacePanelComponents}
+					defaultTabComponent={DockTabNoClose}
+					rightHeaderActionsComponent={SchemaEditorDockHeaderRightActions}
+					floatingGroupBounds="boundedWithinViewport"
+					popoutUrl="/popout.html"
+					disableAutoResizing
+					onReady={onReady}
+				/>
+			</Box>
 		</Box>
 	);
 }

@@ -2,6 +2,8 @@ import * as ExcelJS from "exceljs";
 import {
 	buildV2QuestionnaireRegistryExportColumns,
 	buildV2QuestionnaireRegistryExportRow,
+	deriveRegistryColumnOptionsFromRows,
+	type V2RegistryExportColumn,
 	type V2QuestionnaireDto,
 } from "@smart-anketa/api-contract";
 
@@ -9,11 +11,38 @@ import { V2_DEFAULT_TEMPLATE_SNAPSHOT } from "../constants/v2-default-template-s
 
 export async function buildV2QuestionnaireRegistryXlsx(
 	rows: V2QuestionnaireDto[],
+	versionSchemas: Array<{
+		jsonSchema: Record<string, unknown>;
+		uiSchema: Record<string, unknown>;
+	}> = [],
 ): Promise<Buffer> {
-	const columns = buildV2QuestionnaireRegistryExportColumns(
-		V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema as Record<string, unknown>,
-		V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema as Record<string, unknown>,
-	);
+	const columnOptions = deriveRegistryColumnOptionsFromRows(rows);
+	const schemas =
+		versionSchemas.length > 0
+			? versionSchemas
+			: [
+					{
+						jsonSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema as Record<
+							string,
+							unknown
+						>,
+						uiSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema as Record<
+							string,
+							unknown
+						>,
+					},
+				];
+	const columnsByKey = new Map<string, V2RegistryExportColumn>();
+	for (const schema of schemas) {
+		for (const column of buildV2QuestionnaireRegistryExportColumns(
+			schema.jsonSchema,
+			schema.uiSchema,
+			columnOptions,
+		)) {
+			if (!columnsByKey.has(column.key)) columnsByKey.set(column.key, column);
+		}
+	}
+	const columns = [...columnsByKey.values()];
 	const workbook = new ExcelJS.Workbook();
 	const worksheet = workbook.addWorksheet("Анкеты v2");
 

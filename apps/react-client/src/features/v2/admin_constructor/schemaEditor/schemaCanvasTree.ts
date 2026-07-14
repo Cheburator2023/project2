@@ -3,6 +3,7 @@ import type { DropOptions, NodeModel } from "@minoru/react-dnd-treeview";
 import {
 	isV2AnketaSystemRootPointer,
 	resolveV2AnketaCanvasUiKind,
+	resolveV2AnketaSectionDisplayTitle,
 } from "@smart-anketa/api-contract";
 import {
 	getObjectItemsSchema,
@@ -12,16 +13,21 @@ import {
 	resolveSchemaNode,
 } from "../utils/schemaMutators";
 import { pointerSegments } from "../utils/schemaPaths";
+import { resolveArchComponentAtPointer } from "./propertiesFieldKind";
+
+export const UNCERTAINTY_CALCULATION_ROOT_POINTER = "/uncertaintyCalculation";
 
 export const SCHEMA_CANVAS_ROOT_ID = "schema-root";
 export const SCHEMA_CANVAS_SYSTEM_DIVIDER_ID = "schema-canvas-system-divider";
 export const PALETTE_DRAG_TYPE = "schema-editor-palette-preset";
 export const ARRAY_ITEMS_NODE_SUFFIX = "/@items";
+export const TYPICAL_WORK_SUMMARY_NODE_SUFFIX = "/@summaryTotal";
 
 export type SchemaCanvasNodeKind =
 	| "field"
 	| "array-items-section"
-	| "system-divider";
+	| "system-divider"
+	| "typical-work-summary";
 
 export type SchemaCanvasNodeData = {
 	kind: SchemaCanvasNodeKind;
@@ -134,7 +140,9 @@ export function buildPaletteDragNode(
 	};
 }
 
-export function getPresetIdFromPaletteDragSource(value: unknown): string | null {
+export function getPresetIdFromPaletteDragSource(
+	value: unknown,
+): string | null {
 	if (typeof value !== "object" || value === null) return null;
 
 	if (
@@ -171,7 +179,8 @@ export function arrayItemsSectionId(fieldPointer: string): string {
 }
 
 export function groupIdFromParentPointer(parentPointer: string): string {
-	if (parentPointer === "/" || parentPointer === "") return SCHEMA_CANVAS_ROOT_ID;
+	if (parentPointer === "/" || parentPointer === "")
+		return SCHEMA_CANVAS_ROOT_ID;
 	return `schema-group:${parentPointer}`;
 }
 
@@ -187,12 +196,19 @@ export function collectGroupOrders(
 	options?: SchemaCanvasTreeOptions,
 ): Record<string, string[]> {
 	const groupId = groupIdFromParentPointer(parentPointer);
-	const keys = listCanvasOrderedChildKeys(schema, parentPointer, uiSchema, options);
+	const keys = listCanvasOrderedChildKeys(
+		schema,
+		parentPointer,
+		uiSchema,
+		options,
+	);
 	const result: Record<string, string[]> = { [groupId]: keys };
 
 	for (const key of keys) {
 		const childPointer =
-			parentPointer === "/" ? `/${key}` : `${parentPointer.replace(/\/$/, "")}/${key}`;
+			parentPointer === "/"
+				? `/${key}`
+				: `${parentPointer.replace(/\/$/, "")}/${key}`;
 		const node = resolveSchemaNode(schema, pointerSegments(childPointer));
 		if (isObjectFieldGroup(node)) {
 			Object.assign(
@@ -212,10 +228,74 @@ export function collectGroupOrders(
 	return result;
 }
 
-function fieldTitle(node: RJSFSchema | undefined, key: string): string {
-	return typeof node?.title === "string" && node.title.trim()
-		? node.title.trim()
-		: key;
+function fieldTitle(
+	node: RJSFSchema | undefined,
+	key: string,
+	uiSchema: UiSchema | undefined,
+	fieldPointer: string,
+): string {
+	const base =
+		typeof node?.title === "string" && node.title.trim()
+			? node.title.trim()
+			: key;
+	const uiBranch = readUiSchemaBranchAtPointer(
+		uiSchema as Record<string, unknown> | undefined,
+		fieldPointer,
+	);
+	return resolveV2AnketaSectionDisplayTitle(base, uiBranch, key);
+}
+
+function isUncertaintyModalTriggerAtPointer(
+	uiSchema: UiSchema | undefined,
+	fieldPointer: string,
+): boolean {
+	const branch = readUiSchemaBranchAtPointer(
+		uiSchema as Record<string, unknown> | undefined,
+		fieldPointer,
+	);
+	return branch?.["ui:widget"] === "V2UncertaintyModalWidget";
+}
+
+function appendUncertaintyCalculationFieldNodes(
+	nodes: NodeModel<SchemaCanvasNodeData>[],
+	jsonSchema: RJSFSchema,
+	uiSchema: UiSchema | undefined,
+	schemaParentPointer: string,
+	treeParentId: string,
+): void {
+	const keys = listOrderedChildKeys(jsonSchema, schemaParentPointer, uiSchema);
+
+	for (const key of keys) {
+		const fieldPointer =
+			schemaParentPointer === "/"
+				? `/${key}`
+				: `${schemaParentPointer}/${key}`;
+		const node = resolveSchemaNode(jsonSchema, pointerSegments(fieldPointer));
+		const isGroup = isObjectFieldGroup(node);
+
+		nodes.push({
+			id: fieldPointer,
+			parent: treeParentId,
+			text: fieldTitle(node, key, uiSchema, fieldPointer),
+			droppable: isGroup,
+			data: {
+				kind: "field",
+				fieldPointer,
+				fieldKey: key,
+				parentPointer: schemaParentPointer,
+			},
+		});
+
+		if (isGroup) {
+			appendUncertaintyCalculationFieldNodes(
+				nodes,
+				jsonSchema,
+				uiSchema,
+				fieldPointer,
+				fieldPointer,
+			);
+		}
+	}
 }
 
 function appendFieldNodes(
@@ -267,12 +347,16 @@ function appendFieldNodes(
 		const node = resolveSchemaNode(jsonSchema, pointerSegments(fieldPointer));
 		const isGroup = isObjectFieldGroup(node);
 		const arrayItems = isGroup ? undefined : getObjectItemsSchema(node);
+		const isUncertaintyModalTrigger = isUncertaintyModalTriggerAtPointer(
+			uiSchema,
+			fieldPointer,
+		);
 
 		nodes.push({
 			id: fieldPointer,
 			parent: parentNodeId,
-			text: fieldTitle(node, key),
-			droppable: isGroup || Boolean(arrayItems),
+			text: fieldTitle(node, key, uiSchema, fieldPointer),
+			droppable: isGroup || Boolean(arrayItems) || isUncertaintyModalTrigger,
 			data: {
 				kind: "field",
 				fieldPointer,
@@ -280,6 +364,16 @@ function appendFieldNodes(
 				parentPointer,
 			},
 		});
+
+		if (isUncertaintyModalTrigger) {
+			appendUncertaintyCalculationFieldNodes(
+				nodes,
+				jsonSchema,
+				uiSchema,
+				UNCERTAINTY_CALCULATION_ROOT_POINTER,
+				fieldPointer,
+			);
+		}
 
 		if (isGroup) {
 			appendFieldNodes(
@@ -302,6 +396,24 @@ function appendFieldNodes(
 				fieldPointer,
 				options,
 			);
+			if (
+				uiSchema &&
+				resolveArchComponentAtPointer(uiSchema, fieldPointer) === "typicalWork"
+			) {
+				const summaryPointer = `${fieldPointer}${TYPICAL_WORK_SUMMARY_NODE_SUFFIX}`;
+				nodes.push({
+					id: summaryPointer,
+					parent: fieldPointer,
+					text: "Суммарный итог",
+					droppable: false,
+					data: {
+						kind: "typical-work-summary",
+						fieldPointer: summaryPointer,
+						fieldKey: "summaryTotal",
+						parentPointer: fieldPointer,
+					},
+				});
+			}
 		}
 	}
 }
@@ -312,7 +424,14 @@ export function buildSchemaCanvasTree(
 	options?: SchemaCanvasTreeOptions,
 ): NodeModel<SchemaCanvasNodeData>[] {
 	const nodes: NodeModel<SchemaCanvasNodeData>[] = [];
-	appendFieldNodes(nodes, jsonSchema, uiSchema, "/", SCHEMA_CANVAS_ROOT_ID, options);
+	appendFieldNodes(
+		nodes,
+		jsonSchema,
+		uiSchema,
+		"/",
+		SCHEMA_CANVAS_ROOT_ID,
+		options,
+	);
 	return nodes;
 }
 
@@ -323,8 +442,7 @@ function siblingFieldKeys(
 	return tree
 		.filter(
 			(node) =>
-				String(node.parent) === String(parentId) &&
-				node.data?.kind === "field",
+				String(node.parent) === String(parentId) && node.data?.kind === "field",
 		)
 		.map((node) => node.data!.fieldKey);
 }

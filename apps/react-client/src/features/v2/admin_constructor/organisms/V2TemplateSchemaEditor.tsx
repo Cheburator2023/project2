@@ -19,6 +19,10 @@ import {
 } from "@react-client/routing/common/pathHelpers";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
+import {
+	publishAppSync,
+	subscribeAppSync,
+} from "@react-client/common/crossTab/appBroadcast";
 import type {
 	CreateV2TemplateVersionRequestDto,
 	V2LogicRuleDto,
@@ -28,6 +32,7 @@ import {
 	resolveV2AnketaCanvasUiKind,
 	syncTriggerGatedGroupActivationFromTypicalWorks,
 } from "@smart-anketa/api-contract";
+import { createResetSchemaEditorPreviewFormData } from "../utils/previewFormReset";
 import { evaluateRuleLive } from "../schemaEditor/panels/logicPanel/helpers";
 import { nanoid } from "nanoid";
 import { Box, Button, Typography } from "@mui/material";
@@ -48,6 +53,11 @@ import {
 } from "../schemaEditor/propertiesFieldKind";
 import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayout";
 import { LOGIC_TAB_QUERY } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
+import {
+	buildSchemaWorkParameters,
+	schemaParamIdFromPointer,
+} from "../schemaEditor/panels/typicalWorksPanel/schemaWorkParameters";
+import { useSyncV2TypicalWorksSchemaField } from "@react-client/common/api/queries/v2-works";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
 import { useDebouncedV2Calculation } from "../hooks/useDebouncedV2Calculation";
@@ -116,6 +126,14 @@ import {
 	resolveRulesForSelectedSubtree,
 	resolveRulesWhereSelectedIsDependency,
 } from "../utils/schemaEditorEffectiveLogic";
+import { placeTypicalWorkInStream } from "../schemaEditor/placeTypicalWorkInStream";
+import {
+	canAddTypicalWorkUnderParent,
+	isTypicalWorkFieldAtPointer,
+	isTypicalWorkPaletteUiOptions,
+	TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE,
+} from "../schemaEditor/typicalWorkCanvasConstraints";
+import type { V2ExecutorStreamLabel } from "@smart-anketa/api-contract";
 
 function readUiBranch(
 	uiSchema: UiSchema | Record<string, unknown>,
@@ -189,7 +207,7 @@ export const V2TemplateSchemaEditor = ({
 	onHeaderActionsChange,
 }: V2TemplateSchemaEditorProps) => {
 	const navigate = useNavigate();
-	const [searchParams, setSearchParams] = useSearchParams();
+	const [, setSearchParams] = useSearchParams();
 	const setLogicWorkspaceTab = useCallback(
 		(tab: "works" | "dependencies" | "jsonlogic") => {
 			setSearchParams(
@@ -258,6 +276,8 @@ export const V2TemplateSchemaEditor = ({
 	const [uiSchema, setUiSchema] = useState<UiSchema>({});
 	const [logic, setLogic] = useState(coerceLogicGraph(undefined));
 	const [formData, setFormData] = useState<Record<string, unknown>>({});
+	const [previewResetPending, setPreviewResetPending] = useState(false);
+	const [previewFormRemountKey, setPreviewFormRemountKey] = useState(0);
 
 	const [selectedPointer, setSelectedPointer] = useState<string | null>(
 		initialPointer ? normalizeJsonPointer(initialPointer) : null,
@@ -280,6 +300,9 @@ export const V2TemplateSchemaEditor = ({
 	const [depsDraft, setDepsDraft] = useState("");
 	const [monacoError, setMonacoError] = useState<string | null>(null);
 	const [logicPathPick, setLogicPathPick] = useState<string>("");
+	const [triggerParamPickId, setTriggerParamPickId] = useState<string | null>(
+		null,
+	);
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 	const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 
@@ -484,6 +507,25 @@ export const V2TemplateSchemaEditor = ({
 		return () => window.clearTimeout(timer);
 	}, [jsonSchema, uiSchema, logic, formData, activeVersion?.id, syncDirtyFlag]);
 
+	useEffect(
+		() =>
+			subscribeAppSync((event) => {
+				if (
+					event.type !== "schema:server-version-changed" ||
+					event.templateId !== templateId
+				) {
+					return;
+				}
+				void refetchVersions();
+				if (hasUnsavedChanges) {
+					toast.warning(
+						"Версия схемы изменена в другой вкладке. Сохраните текущий черновик или обновите страницу.",
+					);
+				}
+			}),
+		[hasUnsavedChanges, refetchVersions, templateId],
+	);
+
 	const blocker = useBrowserRouterNavigationBlocker(
 		({ currentLocation, nextLocation }) => {
 			if (skipLeaveGuardRef.current) return false;
@@ -491,8 +533,7 @@ export const V2TemplateSchemaEditor = ({
 			// том же маршруте — это не уход со страницы, предупреждаем только при
 			// смене pathname.
 			return (
-				hasUnsavedChanges &&
-				currentLocation.pathname !== nextLocation.pathname
+				hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname
 			);
 		},
 	);
@@ -554,6 +595,12 @@ export const V2TemplateSchemaEditor = ({
 
 	const { enumMapByCode, isLoading: dictionaryEnumsLoading } =
 		useV2DictionaryEnumsMaps(referencedDictionaryCodes);
+	const syncTypicalWorksSchemaField = useSyncV2TypicalWorksSchemaField();
+	const [calculationRevision, setCalculationRevision] = useState(0);
+	const requestCalculationRefresh = useCallback(
+		() => setCalculationRevision((revision) => revision + 1),
+		[],
+	);
 
 	const {
 		result: calculationResult,
@@ -566,6 +613,7 @@ export const V2TemplateSchemaEditor = ({
 		rulesOverride: logic,
 		jsonSchema: jsonSchema as Record<string, unknown>,
 		uiSchema: uiSchema as Record<string, unknown>,
+		revision: calculationRevision,
 		enabled: Boolean(activeVersion?.id),
 	});
 
@@ -575,7 +623,7 @@ export const V2TemplateSchemaEditor = ({
 	);
 
 	useEffect(() => {
-		if (!mappedCalculation?.liveFormData) return;
+		if (!mappedCalculation?.liveFormData || previewResetPending) return;
 		setFormData((prev) =>
 			syncTriggerGatedGroupActivationFromTypicalWorks(
 				prev,
@@ -583,7 +631,7 @@ export const V2TemplateSchemaEditor = ({
 				mappedCalculation.liveFormData,
 			),
 		);
-	}, [mappedCalculation?.liveFormData, uiSchema]);
+	}, [mappedCalculation?.liveFormData, uiSchema, previewResetPending]);
 
 	const logicPreviewPack = useMemo(
 		() =>
@@ -625,6 +673,33 @@ export const V2TemplateSchemaEditor = ({
 			),
 		[logicPreviewPack.previewUiSchema, uiSchema, jsonSchema, enumMapByCode],
 	);
+	const resetPreviewForm = useCallback(() => {
+		setPreviewResetPending(true);
+		setFormData(createResetSchemaEditorPreviewFormData(previewUiSchema));
+		setPreviewFormRemountKey((key) => key + 1);
+		setCalculationRevision((revision) => revision + 1);
+	}, [previewUiSchema]);
+
+	const previewResetAwaitedLoadingRef = useRef(false);
+	useEffect(() => {
+		if (!previewResetPending) {
+			previewResetAwaitedLoadingRef.current = false;
+			return;
+		}
+		if (!activeVersion?.id) {
+			setPreviewResetPending(false);
+			return;
+		}
+		if (calculationLoading) {
+			previewResetAwaitedLoadingRef.current = true;
+			return;
+		}
+		if (previewResetAwaitedLoadingRef.current) {
+			setPreviewResetPending(false);
+			previewResetAwaitedLoadingRef.current = false;
+		}
+	}, [previewResetPending, calculationLoading, activeVersion?.id]);
+
 	const calculationItems = logicPreviewPack.calculationItems;
 	const taskTriggerItems = logicPreviewPack.taskTriggerItems;
 	const liveFormData = logicPreviewPack.liveFormData;
@@ -647,10 +722,15 @@ export const V2TemplateSchemaEditor = ({
 				const title = typeof node?.title === "string" ? node.title : null;
 				const leaf = readUiBranch(ui, segs);
 				let dictionaryCode: string | null = null;
+				let schemaFieldUid: string | null = null;
 				const opts = leaf?.["ui:options"];
 				if (opts && typeof opts === "object" && !Array.isArray(opts)) {
-					const dc = (opts as Record<string, unknown>).dictionaryCode;
+					const options = opts as Record<string, unknown>;
+					const dc = options.dictionaryCode;
 					if (typeof dc === "string" && dc.trim()) dictionaryCode = dc.trim();
+					const uid = options.schemaFieldUid;
+					if (typeof uid === "string" && uid.trim())
+						schemaFieldUid = uid.trim();
 				}
 				const varPath = jsonPointerToFormDataVarPath(row.pointer);
 				const codesPreview =
@@ -662,11 +742,134 @@ export const V2TemplateSchemaEditor = ({
 					key: row.key,
 					title,
 					varPath,
+					schemaFieldUid,
 					dictionaryCode,
 					codesPreview,
 				};
 			});
 	}, [jsonSchema, uiSchema, enumMapByCode]);
+
+	const schemaWorkParams = useMemo(
+		() =>
+			buildSchemaWorkParameters({
+				fieldPathHints,
+				uiSchema: uiSchema as Record<string, unknown>,
+				jsonSchema,
+				enumMapByCode,
+			}),
+		[fieldPathHints, uiSchema, jsonSchema, enumMapByCode],
+	);
+	const previousSchemaParamsRef = useRef<
+		Map<
+			string,
+			{
+				code: string;
+				name: string;
+				values: Array<{ code: string; label: string }>;
+			}
+		>
+	>(new Map());
+	const previousSchemaParamsVersionRef = useRef<string | null>(null);
+	const pendingSchemaSyncBeforeRef = useRef(
+		new Map<
+			string,
+			{
+				code: string;
+				name: string;
+				values: Array<{ code: string; label: string }>;
+			}
+		>(),
+	);
+	const schemaSyncTimerRef = useRef<number | null>(null);
+
+	useEffect(() => {
+		// Словари подгружаются асинхронно — до готовности values в params «пустые»,
+		// после загрузки diff выглядит как массовое редактирование и шлёт N sync-запросов.
+		if (dictionaryEnumsLoading) return;
+
+		const versionId = activeVersion?.id;
+		const current = new Map(
+			schemaWorkParams
+				.filter((param) => param.schemaFieldUid)
+				.map((param) => [
+					param.schemaFieldUid!,
+					{
+						code: param.code,
+						name: param.name,
+						values: param.values.map((value) => ({
+							code: value.code,
+							label: value.label,
+						})),
+					},
+				]),
+		);
+		const previous = previousSchemaParamsRef.current;
+		previousSchemaParamsRef.current = current;
+		if (previousSchemaParamsVersionRef.current !== (versionId ?? null)) {
+			previousSchemaParamsVersionRef.current = versionId ?? null;
+			pendingSchemaSyncBeforeRef.current.clear();
+			return;
+		}
+		if (!versionId || previous.size === 0) return;
+
+		const changed = [...current].filter(([uid, param]) => {
+			const before = previous.get(uid);
+			return before && JSON.stringify(before) !== JSON.stringify(param);
+		});
+		if (changed.length === 0) return;
+		for (const [uid] of changed) {
+			const before = previous.get(uid);
+			if (before && !pendingSchemaSyncBeforeRef.current.has(uid)) {
+				pendingSchemaSyncBeforeRef.current.set(uid, before);
+			}
+		}
+		if (schemaSyncTimerRef.current) {
+			window.clearTimeout(schemaSyncTimerRef.current);
+		}
+		schemaSyncTimerRef.current = window.setTimeout(() => {
+			const pending = [...pendingSchemaSyncBeforeRef.current];
+			pendingSchemaSyncBeforeRef.current.clear();
+			void Promise.all(
+				pending.map(([schemaFieldUid, before]) => {
+					const param = current.get(schemaFieldUid);
+					if (!param) return Promise.resolve();
+					return syncTypicalWorksSchemaField.mutateAsync({
+						templateVersionId: versionId,
+						mode: "apply",
+						operation: "upsert",
+						field: {
+							schemaFieldUid,
+							previousCode: before.code,
+							code: param.code,
+							name: param.name,
+							values:
+								before.values.length > 0 || param.values.length > 0
+									? param.values
+									: undefined,
+						},
+					});
+				}),
+			)
+				.then(requestCalculationRefresh)
+				.catch((error) => {
+					for (const [uid, before] of pending) {
+						pendingSchemaSyncBeforeRef.current.set(uid, before);
+					}
+					toast.error(apiErrorMessage(error));
+				});
+		}, 500);
+		return () => {
+			if (schemaSyncTimerRef.current) {
+				window.clearTimeout(schemaSyncTimerRef.current);
+			}
+		};
+	}, [
+		activeVersion?.id,
+		dictionaryEnumsLoading,
+		requestCalculationRefresh,
+		schemaWorkParams,
+		syncTypicalWorksSchemaField.mutateAsync,
+	]);
 
 	const logicPathFieldHint = useMemo(() => {
 		if (!logicPathPick) return undefined;
@@ -713,8 +916,7 @@ export const V2TemplateSchemaEditor = ({
 	);
 
 	const rulesForSelectedSubtree = useMemo(
-		() =>
-			resolveRulesForSelectedSubtree(effectiveLogicRules, selectedPointer),
+		() => resolveRulesForSelectedSubtree(effectiveLogicRules, selectedPointer),
 		[effectiveLogicRules, selectedPointer],
 	);
 
@@ -832,6 +1034,12 @@ export const V2TemplateSchemaEditor = ({
 			setSaveDialogOpen(false);
 			commitBaselineToCurrent();
 			setLeaveDialogOpen(false);
+			publishAppSync({
+				type: "schema:server-version-changed",
+				templateId,
+				versionId: activeVersion.id,
+				action: "save",
+			});
 
 			if (isAdminEditor) {
 				toast.success(`Версия v${activeVersion.versionNumber} сохранена`);
@@ -869,6 +1077,12 @@ export const V2TemplateSchemaEditor = ({
 				setSaveDialogOpen(false);
 				commitBaselineToCurrent();
 				persistVersionInUrl(created.id, { skipLeaveGuard: true });
+				publishAppSync({
+					type: "schema:server-version-changed",
+					templateId,
+					versionId: created.id,
+					action: "save",
+				});
 
 				if (isAdminEditor) {
 					toast.success(`Создан черновик v${created.versionNumber}`);
@@ -913,6 +1127,12 @@ export const V2TemplateSchemaEditor = ({
 			await refetchVersions();
 			commitBaselineToCurrent();
 			persistVersionInUrl(activated.id, { skipLeaveGuard: true });
+			publishAppSync({
+				type: "schema:server-version-changed",
+				templateId,
+				versionId: activated.id,
+				action: "activate",
+			});
 
 			if (isAdminEditor) {
 				toast.success(
@@ -1175,7 +1395,15 @@ export const V2TemplateSchemaEditor = ({
 			index: number,
 			uiOptions?: Record<string, unknown>,
 			uiBranch?: Record<string, unknown>,
-		) => {
+		): string | null => {
+			if (
+				isTypicalWorkPaletteUiOptions(uiOptions) &&
+				!canAddTypicalWorkUnderParent(jsonSchema, uiSchema, parentPointer)
+			) {
+				toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
+				return null;
+			}
+
 			const key = `field_${nanoid(8)}`;
 			const parentSegs = pointerSegments(parentPointer);
 			const safeIndex = clampCanvasInsertIndex(
@@ -1212,7 +1440,30 @@ export const V2TemplateSchemaEditor = ({
 					}
 					return nextUi as UiSchema;
 				});
+				return childPointer;
 			}
+			return null;
+		},
+		[jsonSchema, uiSchema, pushDraftHistory],
+	);
+
+	const placeTypicalWorkInStreamBlock = useCallback(
+		(
+			streamExecutor: V2ExecutorStreamLabel,
+			preferredPointer?: string | null,
+		): string | null => {
+			const result = placeTypicalWorkInStream(
+				jsonSchema,
+				uiSchema as Record<string, unknown>,
+				streamExecutor,
+				preferredPointer,
+			);
+			if (!result) return null;
+			pushDraftHistory();
+			setJsonSchema(result.jsonSchema);
+			setUiSchema(result.uiSchema as UiSchema);
+			setSelectedPointer(result.typicalWorkPointer);
+			return result.typicalWorkPointer;
 		},
 		[jsonSchema, uiSchema, pushDraftHistory],
 	);
@@ -1262,6 +1513,22 @@ export const V2TemplateSchemaEditor = ({
 			targetParentPointer: string,
 			targetIndex: number,
 		) => {
+			if (
+				isTypicalWorkFieldAtPointer(
+					uiSchema as Record<string, unknown>,
+					sourcePointer,
+				) &&
+				!canAddTypicalWorkUnderParent(
+					jsonSchema,
+					uiSchema,
+					targetParentPointer,
+					sourcePointer,
+				)
+			) {
+				toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
+				return;
+			}
+
 			const nextSchema = movePropertyAtPointer(
 				jsonSchema,
 				sourcePointer,
@@ -1295,6 +1562,16 @@ export const V2TemplateSchemaEditor = ({
 
 	const duplicateCanvasField = useCallback(
 		(sourcePointer: string) => {
+			if (
+				isTypicalWorkFieldAtPointer(
+					uiSchema as Record<string, unknown>,
+					sourcePointer,
+				)
+			) {
+				toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
+				return;
+			}
+
 			const newKey = `field_${nanoid(8)}`;
 			const result = duplicateFieldAtPointer(
 				jsonSchema,
@@ -1306,7 +1583,11 @@ export const V2TemplateSchemaEditor = ({
 
 			pushDraftHistory();
 			setJsonSchema(result.schema);
-			setUiSchema(result.ui as UiSchema);
+			setUiSchema(
+				patchUiOptionsAtPointer(result.ui, result.newPointer, {
+					schemaFieldUid: `field_${crypto.randomUUID()}`,
+				}) as UiSchema,
+			);
 			setSelectedPointer(result.newPointer);
 		},
 		[jsonSchema, uiSchema, pushDraftHistory],
@@ -1364,17 +1645,107 @@ export const V2TemplateSchemaEditor = ({
 		[pushDraftHistory],
 	);
 
+	const schemaParamsInSubtree = useCallback(
+		(pointer: string) => {
+			const normalized = normalizeJsonPointer(pointer);
+			const prefix = `${normalized}/`;
+			return schemaWorkParams.filter((param) => {
+				const paramPointer = param.schemaPointer
+					? normalizeJsonPointer(param.schemaPointer)
+					: "";
+				return paramPointer === normalized || paramPointer.startsWith(prefix);
+			});
+		},
+		[schemaWorkParams],
+	);
+
+	const getFieldDeleteImpact = useCallback(
+		async (pointer: string) => {
+			const versionId = activeVersion?.id;
+			const empty = {
+				worksMatched: 0,
+				worksUpdated: 0,
+				rulesUpdated: 0,
+				rulesRemoved: 0,
+				laborParamsUpdated: 0,
+				laborParamsRemoved: 0,
+				formulasInvalidated: 0,
+			};
+			if (!versionId) return empty;
+			const params = schemaParamsInSubtree(pointer).filter(
+				(param) => param.schemaFieldUid,
+			);
+			const impacts = await Promise.all(
+				params.map((param) =>
+					syncTypicalWorksSchemaField.mutateAsync({
+						templateVersionId: versionId,
+						mode: "dryRun",
+						operation: "delete",
+						field: {
+							schemaFieldUid: param.schemaFieldUid!,
+							previousCode: param.code,
+						},
+					}),
+				),
+			);
+			return impacts.reduce(
+				(sum, impact) => ({
+					worksMatched: sum.worksMatched + impact.worksMatched,
+					worksUpdated: 0,
+					rulesUpdated: 0,
+					rulesRemoved: sum.rulesRemoved + impact.rulesRemoved,
+					laborParamsUpdated: 0,
+					laborParamsRemoved:
+						sum.laborParamsRemoved + impact.laborParamsRemoved,
+					formulasInvalidated:
+						sum.formulasInvalidated + impact.formulasInvalidated,
+				}),
+				empty,
+			);
+		},
+		[
+			activeVersion?.id,
+			schemaParamsInSubtree,
+			syncTypicalWorksSchemaField.mutateAsync,
+		],
+	);
+
 	const handleDeleteField = useCallback(
-		(pointer?: string | null) => {
+		async (pointer?: string | null) => {
 			const targetPointer = pointer ?? selectedPointer;
-			if (!targetPointer) return;
-			pushDraftHistory();
+			if (!targetPointer) return false;
 			const uiBranch = readUiSchemaBranchAtPointer(
 				uiSchema as Record<string, unknown>,
 				targetPointer,
 			);
-			if (resolveV2AnketaCanvasUiKind(uiBranch, { fieldPointer: targetPointer }) === "system") return;
-			if (isCanvasStockField(uiSchema, targetPointer)) return;
+			if (
+				resolveV2AnketaCanvasUiKind(uiBranch, {
+					fieldPointer: targetPointer,
+				}) === "system"
+			)
+				return false;
+			if (isCanvasStockField(uiSchema, targetPointer)) return false;
+			const versionId = activeVersion?.id;
+			if (versionId) {
+				try {
+					for (const param of schemaParamsInSubtree(targetPointer)) {
+						if (!param.schemaFieldUid) continue;
+						await syncTypicalWorksSchemaField.mutateAsync({
+							templateVersionId: versionId,
+							mode: "apply",
+							operation: "delete",
+							field: {
+								schemaFieldUid: param.schemaFieldUid,
+								previousCode: param.code,
+							},
+						});
+					}
+				} catch (error) {
+					toast.error(apiErrorMessage(error));
+					return false;
+				}
+			}
+			pushDraftHistory();
 			const segs = pointerSegments(targetPointer);
 			const next = removePropertyAtPointer(jsonSchema, segs);
 			if (next) {
@@ -1402,9 +1773,21 @@ export const V2TemplateSchemaEditor = ({
 					}),
 				}));
 				setSelectedPointer(null);
+				requestCalculationRefresh();
+				return true;
 			}
+			return false;
 		},
-		[jsonSchema, selectedPointer, uiSchema, pushDraftHistory],
+		[
+			activeVersion?.id,
+			jsonSchema,
+			selectedPointer,
+			uiSchema,
+			pushDraftHistory,
+			requestCalculationRefresh,
+			schemaParamsInSubtree,
+			syncTypicalWorksSchemaField.mutateAsync,
+		],
 	);
 
 	const handleToggleRequired = useCallback(
@@ -1508,6 +1891,27 @@ export const V2TemplateSchemaEditor = ({
 			setLogicPathPick(normalized);
 		},
 		[setLogicWorkspaceTab],
+	);
+
+	const clearTriggerParamPick = useCallback(() => {
+		setTriggerParamPickId(null);
+	}, []);
+
+	const openLogicTabWithTriggerParam = useCallback(
+		(pointer: string) => {
+			const normalized = normalizeJsonPointer(pointer);
+			setSelectedPointer(normalized);
+			setLogicPathPick(normalized);
+			const field = fieldPathHints.find(
+				(hint) => normalizeJsonPointer(hint.pointer) === normalized,
+			);
+			setTriggerParamPickId(
+				schemaParamIdFromPointer(normalized, field?.schemaFieldUid),
+			);
+			setMainTab("logic");
+			setLogicWorkspaceTab("works");
+		},
+		[fieldPathHints, setLogicWorkspaceTab],
 	);
 
 	const openLogicWorkspace = useCallback(() => {
@@ -1633,6 +2037,9 @@ export const V2TemplateSchemaEditor = ({
 			setLogic,
 			formData,
 			setFormData,
+			resetPreviewForm,
+			previewResetPending,
+			previewFormRemountKey,
 			selectedPointer,
 			setSelectedPointer,
 			treeRows,
@@ -1652,6 +2059,7 @@ export const V2TemplateSchemaEditor = ({
 			liveFormData,
 			calculationLoading,
 			calculationError,
+			requestCalculationRefresh,
 			logicExtraErrors,
 			logicValidationIssueCount,
 			legacyStageEvaluation,
@@ -1681,6 +2089,7 @@ export const V2TemplateSchemaEditor = ({
 			handleAddFieldPreset,
 			handleAddFieldPresetAt,
 			handleAddFieldPresetAtParent,
+			placeTypicalWorkInStreamBlock,
 			reorderRootFieldKeys,
 			applyGroupFieldOrders,
 			moveCanvasField,
@@ -1693,6 +2102,7 @@ export const V2TemplateSchemaEditor = ({
 			updateField,
 			patchUiSchema,
 			handleDeleteField,
+			getFieldDeleteImpact,
 			handleToggleRequired,
 			handleWidgetChange,
 			handleDictionaryCodeChange,
@@ -1700,6 +2110,9 @@ export const V2TemplateSchemaEditor = ({
 			addRuleForTargetPath,
 			openLogicTabWithRule,
 			openLogicTabWithPointer,
+			triggerParamPickId,
+			openLogicTabWithTriggerParam,
+			clearTriggerParamPick,
 			updateRulePatch,
 			removeSelectedRule,
 			previewEvalNote,
@@ -1724,6 +2137,9 @@ export const V2TemplateSchemaEditor = ({
 			uiSchema,
 			logic,
 			formData,
+			resetPreviewForm,
+			previewResetPending,
+			previewFormRemountKey,
 			selectedPointer,
 			treeRows,
 			baselineSnapshot,
@@ -1742,6 +2158,7 @@ export const V2TemplateSchemaEditor = ({
 			liveFormData,
 			calculationLoading,
 			calculationError,
+			requestCalculationRefresh,
 			logicExtraErrors,
 			logicValidationIssueCount,
 			legacyStageEvaluation,
@@ -1761,6 +2178,7 @@ export const V2TemplateSchemaEditor = ({
 			handleAddFieldPreset,
 			handleAddFieldPresetAt,
 			handleAddFieldPresetAtParent,
+			placeTypicalWorkInStreamBlock,
 			reorderRootFieldKeys,
 			applyGroupFieldOrders,
 			moveCanvasField,
@@ -1773,6 +2191,7 @@ export const V2TemplateSchemaEditor = ({
 			updateField,
 			patchUiSchema,
 			handleDeleteField,
+			getFieldDeleteImpact,
 			handleToggleRequired,
 			handleWidgetChange,
 			handleDictionaryCodeChange,
@@ -1780,6 +2199,9 @@ export const V2TemplateSchemaEditor = ({
 			addRuleForTargetPath,
 			openLogicTabWithRule,
 			openLogicTabWithPointer,
+			triggerParamPickId,
+			openLogicTabWithTriggerParam,
+			clearTriggerParamPick,
 			updateRulePatch,
 			removeSelectedRule,
 			previewEvalNote,

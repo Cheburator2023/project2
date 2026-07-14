@@ -15,6 +15,7 @@ import {
 } from "./schemaCanvasTree";
 import type { DropOptions } from "@minoru/react-dnd-treeview";
 import type { SchemaCanvasNodeData } from "./schemaCanvasTree";
+import { ARCH_COMPONENT_PRESET_DEFS } from "./archComponentPresets";
 
 describe("palette drag helpers", () => {
 	it("builds NodeModel drag item and resolves preset id", () => {
@@ -116,6 +117,105 @@ describe("buildSchemaCanvasTree", () => {
 		expect(workType?.parent).toBe(arrayId);
 		expect(name?.data?.kind).toBe("field");
 		expect(workType?.data?.kind).toBe("field");
+	});
+
+	it("nests uncertaintyCalculation fields under overallUncertaintyModal trigger", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				generalInfo: {
+					type: "object",
+					title: "Общая информация",
+					properties: {
+						overallUncertaintyModal: {
+							type: "string",
+							title: "Расчёт общей неопределённости",
+						},
+					},
+				},
+				uncertaintyCalculation: {
+					type: "object",
+					title: "Данные расчёта",
+					properties: {
+						initiativeTimeline: {
+							type: "string",
+							title: "Сроки инициативы",
+						},
+						uncertaintyAdjustment: {
+							type: "number",
+							title: "Поправка на общую неопределённость",
+						},
+						riskGroup: {
+							type: "object",
+							title: "Группа рисков",
+							properties: {
+								sanctions: {
+									type: "string",
+									title: "Введение санкционных мер и других ограничений",
+								},
+							},
+						},
+					},
+				},
+			},
+		};
+		const ui: UiSchema = {
+			"ui:order": ["generalInfo", "uncertaintyCalculation"],
+			generalInfo: {
+				"ui:order": ["overallUncertaintyModal"],
+				overallUncertaintyModal: {
+					"ui:widget": "V2UncertaintyModalWidget",
+				},
+			},
+			uncertaintyCalculation: {
+				"ui:options": { hidden: true, system: true },
+				"ui:order": ["initiativeTimeline", "uncertaintyAdjustment", "riskGroup"],
+				riskGroup: {
+					"ui:order": ["sanctions"],
+				},
+			},
+		};
+
+		const tree = buildSchemaCanvasTree(schema, ui, { hideSystemFields: true });
+		const modalId = "/generalInfo/overallUncertaintyModal";
+
+		expect(tree.find((n) => n.id === modalId)?.droppable).toBe(true);
+		expect(
+			tree.find((n) => n.id === "/uncertaintyCalculation/initiativeTimeline")
+				?.parent,
+		).toBe(modalId);
+		expect(
+			tree.find((n) => n.id === "/uncertaintyCalculation/riskGroup")?.parent,
+		).toBe(modalId);
+		expect(
+			tree.find((n) => n.id === "/uncertaintyCalculation/riskGroup/sanctions")
+				?.parent,
+		).toBe("/uncertaintyCalculation/riskGroup");
+	});
+
+	it("appends summary row under typicalWork array blocks", () => {
+		const preset = ARCH_COMPONENT_PRESET_DEFS.typicalWork.make();
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				streamTypical: preset,
+			},
+		};
+		const ui: UiSchema = {
+			streamTypical: {
+				"ui:options": { archComponent: "typicalWork" },
+			},
+		};
+
+		const tree = buildSchemaCanvasTree(schema, ui);
+		const arrayId = "/streamTypical";
+		const summary = tree.find(
+			(n) => n.id === `${arrayId}/@summaryTotal`,
+		);
+
+		expect(summary?.parent).toBe(arrayId);
+		expect(summary?.text).toBe("Суммарный итог");
+		expect(summary?.data?.kind).toBe("typical-work-summary");
 	});
 });
 
@@ -353,6 +453,35 @@ describe("treeToGroupOrders", () => {
 		expect(orders["schema-root"]).toEqual(["left", "right"]);
 		expect(orders["schema-group:/left"]).toEqual([]);
 		expect(orders["schema-group:/right"]).toEqual(["b", "a"]);
+	});
+
+	it("prefixes stream object block title with Стрим on canvas tree", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				field_stream: {
+					type: "object",
+					title: "ДАДМ",
+					properties: {},
+				},
+				generalInfo: {
+					type: "object",
+					title: "Общие сведения",
+					properties: {},
+				},
+			},
+		};
+		const ui: UiSchema = {
+			field_stream: {
+				"ui:options": { streamBlock: true, streamExecutor: "ДАДМ" },
+			},
+		};
+
+		const tree = buildSchemaCanvasTree(schema, ui);
+		expect(tree.find((n) => n.id === "/field_stream")?.text).toBe("Стрим «ДАДМ»");
+		expect(tree.find((n) => n.id === "/generalInfo")?.text).toBe(
+			"Общие сведения",
+		);
 	});
 
 	it("maps array item siblings to items parent pointer", () => {

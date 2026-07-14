@@ -6,7 +6,18 @@ export declare function defaultTermsFormula(): V2TypicalWorkFormulaTermsDto;
 export declare function isTermsFormulaPayload(formula: unknown): formula is V2TypicalWorkFormulaTermsDto;
 export declare function tokensToTermsFormula(formula: V2TypicalWorkFormulaDto): V2TypicalWorkFormulaTermsDto;
 export declare function normalizeStoredFormula(raw: unknown, fallbackText?: string | null): V2TypicalWorkFormulaTermsDto;
+/** Token-формула version_config: приоритет formulaText (скобки, группировка). */
+export declare function resolveVersionConfigTokenFormula(formula: unknown, formulaText?: string | null): V2TypicalWorkFormulaDto;
 export declare function formatTermsSummary(terms: V2WorkFormulaTermDto[]): string;
+/** Показывать развёрнутую формулу коэффициента (с подставленными значениями). */
+export declare function shouldShowTypicalWorkCoefficientBreakdown(terms: V2WorkFormulaTermDto[]): boolean;
+/** Человекочитаемое представление коэффициента: число или формула с конкретными значениями. */
+export declare function formatTypicalWorkCoefficientDisplay(params: {
+    terms: V2WorkFormulaTermDto[];
+    baseNorm: number;
+    paramCoefficients: Record<string, number>;
+    coefficient: number;
+}): string;
 export declare function validateTermsFormula(terms: V2WorkFormulaTermDto[]): string | null;
 export declare function detectTransitiveCycle(assignmentId: string, targetAssignmentId: string, edges: ReadonlyMap<string, string | null | undefined>): string[] | null;
 export declare function computeFormulaBadge(terms: V2WorkFormulaTermDto[]): V2TypicalWorkFormulaBadgeDto;

@@ -10,6 +10,7 @@ exports.readPanelSectionStatus = readPanelSectionStatus;
 exports.completePanelSection = completePanelSection;
 exports.completeGlobalQuestionnaire = completeGlobalQuestionnaire;
 exports.mainSectionIdForFormPath = mainSectionIdForFormPath;
+exports.isAnketaFormPathLocked = isAnketaFormPathLocked;
 const v2_anketa_workflow_types_1 = require("./v2-anketa-workflow.types");
 function createDefaultV2AnketaWorkflow() {
     const sections = Object.fromEntries(v2_anketa_workflow_types_1.V2_ANKETA_MAIN_SECTION_IDS.map((id) => [id, "Создано"]));
@@ -110,6 +111,30 @@ function mainSectionIdForFormPath(path) {
     return v2_anketa_workflow_types_1.V2_ANKETA_MAIN_SECTION_IDS.includes(root)
         ? root
         : null;
+}
+/** Поле/арх-компонент недоступен для редактирования после завершения раздела или анкеты. */
+function isAnketaFormPathLocked(workflow, pathKey) {
+    if (workflow.globalStatus === "Заполнено")
+        return true;
+    const trimmed = pathKey.trim();
+    if (!trimmed)
+        return false;
+    const mainSectionId = mainSectionIdForFormPath(trimmed);
+    if (mainSectionId &&
+        workflow.sections[mainSectionId] === "Заполнено") {
+        return true;
+    }
+    const panelSections = workflow.panelSections;
+    if (!panelSections)
+        return false;
+    for (const [panelPath, status] of Object.entries(panelSections)) {
+        if (status !== "Заполнено")
+            continue;
+        if (trimmed === panelPath || trimmed.startsWith(`${panelPath}.`)) {
+            return true;
+        }
+    }
+    return false;
 }
 exports.V2_ANKETA_GLOBAL_COMPLETE_LABEL = "Завершить заполнение анкеты";
 exports.V2_ANKETA_SECTION_COMPLETE_LABELS = {

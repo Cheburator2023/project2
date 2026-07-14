@@ -7,7 +7,12 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Typography from "@mui/material/Typography";
-import type { V2LogicWorkspaceTab, V2TypicalWorkListItemDto } from "@smart-anketa/api-contract";
+import type { V2ExecutorStreamLabel, V2LogicWorkspaceTab, V2TypicalWorkListItemDto } from "@smart-anketa/api-contract";
+import {
+	isExecutorStreamPresentInSchema,
+	isV2ExecutorStreamLabel,
+	resolveStreamExecutorForTypicalWorkOutputPath,
+} from "@smart-anketa/api-contract";
 import {
 	useCreateV2TypicalWork,
 	useDeleteV2TypicalWork,
@@ -19,9 +24,9 @@ import { parseTypicalWorkDeleteError } from "./typicalWorkPatchErrors";
 import { V2_TEMPLATE_VERSION_QUERY } from "@react-client/routing/common/pathHelpers";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
+import { useDictionaryListPanelWidth } from "@react-client/features/v2/admin/hooks/useDictionaryListPanelWidth";
+import { Flex } from "@react-client/common/primitives/Flex";
 import { useSchemaEditor } from "../../SchemaEditorContext";
-import { findPointerByArchComponent } from "../../components/SchemaCanvasDnd";
-import { ARCH_COMPONENT_PRESET_DEFS } from "../../archComponentPresets";
 import { toast } from "@react-client/common/toasts";
 import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../../testIds";
@@ -31,36 +36,88 @@ import { LogicWorksToolbar } from "./LogicWorksToolbar";
 import { TypicalWorkEditableCard } from "./TypicalWorkEditableCard";
 import { ParameterDependenciesPanel } from "./ParameterDependenciesPanel";
 import { TypicalWorksEmptyState } from "./TypicalWorksEmptyState";
-import { TypicalWorksTreeSidebar } from "./TypicalWorksTreeSidebar";
+import { TypicalWorksSidebarGrid } from "./TypicalWorksSidebarGrid";
 import {
 	type LogicWorksScope,
+	DEFAULT_LOGIC_STREAM,
+	DEFAULT_SCOPE,
 	pickStreamForScope,
 	resolveScopeStreams,
 	scopeLabel,
+	scopeStreamExecutor,
 	scopeSubtitle,
 	streamAreaKey,
-	workAssignedToScope,
+	workMatchesLogicScope,
 } from "./typicalWorksAreas";
 import {
+	BIND_POINTER_QUERY,
 	DEFAULT_WORK_STREAMS,
-	groupWorksByArchComponent,
 	NEW_WORK_QUERY,
 	pickDefaultStream,
+	ROLLBACK_TYPICAL_WORK_QUERY,
 	storeWorkStream,
 	WORK_ID_QUERY,
 } from "./typicalWorksUi";
+import {
+	appendBoundWorkIdAtPointer,
+	pointerToOutputPath,
+	removeWorkIdFromAllTypicalWorkBindings,
+} from "../../typicalWorkBlockBinding";
+import { listCanvasEditableChildKeys } from "../../schemaCanvasTree";
+import {
+	makeStreamBlockJsonSchema,
+	makeStreamBlockUiOptions,
+} from "../../streamBlockHelpers";
 
-const DEFAULT_SCOPE: LogicWorksScope = {
-	kind: "stream",
-	stream: "Источники данных",
-};
+function TypicalWorksSidebarResizeHandle({
+	onResizeStart,
+	active,
+}: {
+	onResizeStart: (event: React.MouseEvent) => void;
+	active: boolean;
+}) {
+	return (
+		<Flex
+			role="separator"
+			aria-orientation="vertical"
+			aria-label="Изменить ширину панели работ"
+			title="Потяните, чтобы изменить ширину"
+			onMouseDown={onResizeStart}
+			flexShrink={0}
+			width="10px"
+			height="100%"
+			position="relative"
+			zIndex={2}
+			sx={{
+				cursor: "col-resize",
+				mx: "-4px",
+				"&::after": {
+					content: '""',
+					position: "absolute",
+					left: "50%",
+					top: 0,
+					bottom: 0,
+					width: 2,
+					transform: "translateX(-50%)",
+					borderRadius: 1,
+					bgcolor: "divider",
+					opacity: active ? 0.55 : 0.2,
+					transition: "opacity 0.15s",
+				},
+				"&:hover::after": {
+					opacity: 0.45,
+				},
+			}}
+		/>
+	);
+}
 
 export function TypicalWorksPanel() {
 	const { templateId = "" } = useParams<{ templateId: string }>();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const templateVersionId = searchParams.get(V2_TEMPLATE_VERSION_QUERY);
 
-	const { jsonSchema, uiSchema, setSelectedPointer, handleAddFieldPresetAtParent } =
+	const { jsonSchema, uiSchema, setSelectedPointer, handleAddFieldPresetAtParent, patchUiSchema, recordDraftHistory, setMainTab, handleDeleteField, placeTypicalWorkInStreamBlock } =
 		useSchemaEditor();
 
 	const { data, isLoading, error } = useV2TypicalWorksList({
@@ -68,40 +125,64 @@ export function TypicalWorksPanel() {
 	});
 	const createWork = useCreateV2TypicalWork();
 	const deleteWork = useDeleteV2TypicalWork();
+	const {
+		width: sidebarWidth,
+		isResizing: isSidebarResizing,
+		onResizeStart: onSidebarResizeStart,
+	} = useDictionaryListPanelWidth();
 
-	/** Дуплекс логика→конструктор: гарантирует блок «Типовые работы» на холсте и выделяет его. */
-	const ensureTypicalWorkBlockOnCanvas = useCallback(() => {
-		const existing = findPointerByArchComponent(
-			jsonSchema,
-			uiSchema,
-			"typicalWork",
-		);
-		if (existing) {
-			setSelectedPointer(existing);
-			return;
-		}
-		const def = ARCH_COMPONENT_PRESET_DEFS.typicalWork;
-		handleAddFieldPresetAtParent(
-			"/",
-			def.make(),
-			Number.MAX_SAFE_INTEGER,
-			def.uiOptions,
-			def.uiBranch,
-		);
-	}, [
-		jsonSchema,
-		uiSchema,
-		setSelectedPointer,
-		handleAddFieldPresetAtParent,
-	]);
+	const bindWorkToTypicalWorkBlock = useCallback(
+		(pointer: string, workId: string) => {
+			const catalog = (data?.items ?? []).map((item) => ({
+				id: item.id,
+				streams: item.streams ?? [],
+			}));
+			const outputPath = pointerToOutputPath(pointer);
+			const streamExecutor =
+				resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPath) ?? "";
+			recordDraftHistory();
+			patchUiSchema(
+				(prev) =>
+					appendBoundWorkIdAtPointer(
+						prev as Record<string, unknown>,
+						pointer,
+						workId,
+						catalog,
+						streamExecutor,
+					) as import("@rjsf/utils").UiSchema,
+				{ recordHistory: false },
+			);
+		},
+		[data?.items, patchUiSchema, recordDraftHistory, uiSchema],
+	);
+
+	const isStreamPresentInSchema = useCallback(
+		(stream: string) => isExecutorStreamPresentInSchema(uiSchema, stream),
+		[uiSchema],
+	);
+
+	const handleCreateStreamBlock = useCallback(
+		(stream: V2ExecutorStreamLabel) => {
+			const rootCount = listCanvasEditableChildKeys(jsonSchema, "/", uiSchema).length;
+			handleAddFieldPresetAtParent(
+				"/",
+				makeStreamBlockJsonSchema(stream),
+				rootCount,
+				makeStreamBlockUiOptions(stream),
+			);
+			setMainTab("designer");
+			toast.success(`Добавлен стримовый блок «${stream}»`);
+		},
+		[jsonSchema, uiSchema, handleAddFieldPresetAtParent, setMainTab],
+	);
 
 	const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
 	const [streamExecutor, setStreamExecutor] = useState<string | null>(null);
 	const [scope, setScope] = useState<LogicWorksScope>(DEFAULT_SCOPE);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [assignOpen, setAssignOpen] = useState(false);
-	const [deleteTarget, setDeleteTarget] = useState<V2TypicalWorkListItemDto | null>(
-		null,
+	const [deleteTargets, setDeleteTargets] = useState<V2TypicalWorkListItemDto[]>(
+		[],
 	);
 	const [deleteUsageConflict, setDeleteUsageConflict] = useState<
 		ReturnType<typeof parseTypicalWorkDeleteError>
@@ -117,7 +198,7 @@ export function TypicalWorksPanel() {
 		if (!work) return;
 		const area = work.streams[0]
 			? streamAreaKey(work.streams[0])
-			: DEFAULT_SCOPE.stream;
+			: DEFAULT_LOGIC_STREAM;
 		setScope({ kind: "stream", stream: area });
 		setSelectedWorkId(work.id);
 		setSearchParams(
@@ -147,13 +228,8 @@ export function TypicalWorksPanel() {
 
 	const assignedWorks = useMemo(() => {
 		const items = data?.items ?? [];
-		return items.filter((item) => workAssignedToScope(item.streams, scopeStreams));
-	}, [data?.items, scopeStreams]);
-
-	const groups = useMemo(
-		() => groupWorksByArchComponent(assignedWorks),
-		[assignedWorks],
-	);
+		return items.filter((item) => workMatchesLogicScope(item.streams, scope));
+	}, [data?.items, scope]);
 
 	const selectedListItem = useMemo(
 		() => assignedWorks.find((item) => item.id === selectedWorkId) ?? null,
@@ -215,6 +291,43 @@ export function TypicalWorksPanel() {
 		});
 	};
 
+	const handleCreateDialogClose = useCallback(() => {
+		setCreateOpen(false);
+		const rollbackPointer = searchParams.get(BIND_POINTER_QUERY);
+		const shouldRollback =
+			searchParams.get(ROLLBACK_TYPICAL_WORK_QUERY) === "1" && rollbackPointer;
+
+		if (shouldRollback) {
+			handleDeleteField(rollbackPointer);
+			setMainTab("designer");
+		}
+
+		if (rollbackPointer || shouldRollback) {
+			setSearchParams(
+				(prev) => {
+					const next = new URLSearchParams(prev);
+					next.delete(BIND_POINTER_QUERY);
+					next.delete(ROLLBACK_TYPICAL_WORK_QUERY);
+					return next;
+				},
+				{ replace: true },
+			);
+		}
+	}, [searchParams, handleDeleteField, setMainTab, setSearchParams]);
+
+	const createDefaultStreamExecutor = useMemo(() => {
+		const bindPointer = searchParams.get(BIND_POINTER_QUERY);
+		if (bindPointer) {
+			return (
+				resolveStreamExecutorForTypicalWorkOutputPath(
+					uiSchema,
+					pointerToOutputPath(bindPointer),
+				) ?? scopeStreamExecutor(scope, DEFAULT_LOGIC_STREAM)
+			);
+		}
+		return scopeStreamExecutor(scope, DEFAULT_LOGIC_STREAM);
+	}, [searchParams, uiSchema, scope]);
+
 	const handleCreateWork = async (payload: {
 		name: string;
 		archComponentType: string;
@@ -222,11 +335,15 @@ export function TypicalWorksPanel() {
 		starterNormValue?: number;
 	}) => {
 		try {
+			const targetStream = scopeStreamExecutor(
+				scope,
+				payload.streamExecutor ?? DEFAULT_LOGIC_STREAM,
+			);
 			const created = await createWork.mutateAsync({
 				name: payload.name,
 				archComponentType: payload.archComponentType,
 				templateId,
-				streamExecutor: payload.streamExecutor ?? scope.stream,
+				streamExecutor: payload.streamExecutor ?? targetStream,
 				starterNormValue: payload.starterNormValue,
 			});
 			setCreateOpen(false);
@@ -234,11 +351,34 @@ export function TypicalWorksPanel() {
 			const stream =
 				created.streamExecutor ||
 				payload.streamExecutor ||
-				scope.stream ||
+				targetStream ||
 				DEFAULT_WORK_STREAMS[0];
 			setStreamExecutor(stream);
 			storeWorkStream(created.id, stream);
-			ensureTypicalWorkBlockOnCanvas();
+			const bindPointer = searchParams.get(BIND_POINTER_QUERY);
+			const streamForPlacement = isV2ExecutorStreamLabel(
+				payload.streamExecutor ?? targetStream,
+			)
+				? (payload.streamExecutor ?? targetStream)
+				: targetStream;
+			const targetPointer = placeTypicalWorkInStreamBlock(
+				streamForPlacement as V2ExecutorStreamLabel,
+				bindPointer,
+			);
+			if (targetPointer) {
+				bindWorkToTypicalWorkBlock(targetPointer, created.id);
+			}
+			if (bindPointer) {
+				setSearchParams(
+					(prev) => {
+						const next = new URLSearchParams(prev);
+						next.delete(BIND_POINTER_QUERY);
+						next.delete(ROLLBACK_TYPICAL_WORK_QUERY);
+						return next;
+					},
+					{ replace: true },
+				);
+			}
 			toast.success("Работа создана");
 		} catch (err) {
 			toast.error("Не удалось создать работу", {
@@ -247,33 +387,72 @@ export function TypicalWorksPanel() {
 		}
 	};
 
-	const handleDeleteWork = async (confirm = false) => {
-		if (!deleteTarget) return;
-		try {
-			await deleteWork.mutateAsync({ workId: deleteTarget.id, confirm });
-			if (selectedWorkId === deleteTarget.id) {
+	const handleDeleteWorks = async (confirm = false) => {
+		if (!deleteTargets.length) return;
+		const catalog = (data?.items ?? []).map((item) => ({
+			id: item.id,
+			streams: item.streams ?? [],
+		}));
+		const deletedIds: string[] = [];
+		const conflictTargets: V2TypicalWorkListItemDto[] = [];
+		let conflictDetails: ReturnType<typeof parseTypicalWorkDeleteError> = null;
+
+		for (const work of deleteTargets) {
+			try {
+				await deleteWork.mutateAsync({ workId: work.id, confirm });
+				deletedIds.push(work.id);
+			} catch (err) {
+				if (!confirm) {
+					const conflict = parseTypicalWorkDeleteError(err);
+					if (conflict) {
+						conflictTargets.push(work);
+						conflictDetails ??= conflict;
+						continue;
+					}
+				}
+				toast.error(`Не удалось удалить «${work.name}»`, {
+					description: apiErrorMessage(err),
+				});
+			}
+		}
+
+		if (deletedIds.length > 0) {
+			if (selectedWorkId && deletedIds.includes(selectedWorkId)) {
 				setSelectedWorkId(null);
 			}
-			setDeleteTarget(null);
-			setDeleteUsageConflict(null);
-			toast.success("Работа удалена");
-		} catch (err) {
-			if (!confirm) {
-				const conflict = parseTypicalWorkDeleteError(err);
-				if (conflict) {
-					setDeleteUsageConflict(conflict);
-					return;
+			recordDraftHistory();
+			patchUiSchema((prev) => {
+				let next = prev as Record<string, unknown>;
+				for (const workId of deletedIds) {
+					next = removeWorkIdFromAllTypicalWorkBindings(
+						next,
+						workId,
+						catalog,
+					);
 				}
-			}
-			toast.error("Не удалось удалить работу", {
-				description: apiErrorMessage(err),
-			});
+				return next as import("@rjsf/utils").UiSchema;
+			}, { recordHistory: false });
+			toast.success(
+				deletedIds.length === 1
+					? "Работа удалена"
+					: `Удалено работ: ${deletedIds.length}`,
+			);
 		}
+
+		if (conflictTargets.length > 0 && !confirm) {
+			setDeleteTargets(conflictTargets);
+			setDeleteUsageConflict(conflictDetails);
+			return;
+		}
+
+		setDeleteTargets([]);
+		setDeleteUsageConflict(null);
 	};
 
-	const openDeleteDialog = (work: V2TypicalWorkListItemDto) => {
+	const openDeleteDialog = (works: V2TypicalWorkListItemDto[]) => {
+		if (!works.length) return;
 		setDeleteUsageConflict(null);
-		setDeleteTarget(work);
+		setDeleteTargets(works);
 	};
 
 	if (isLoading) {
@@ -321,15 +500,31 @@ export function TypicalWorksPanel() {
 					/>
 				) : (
 					<>
-						<TypicalWorksTreeSidebar
-							groups={groups}
-							selectedWorkId={selectedWorkId}
-							onSelectWork={setSelectedWorkId}
-							onAssignFromCatalog={() => setAssignOpen(true)}
-							onDeleteWork={openDeleteDialog}
-							assignedCount={assignedWorks.length}
-							scopeSubtitle={scopeSubtitle(scope)}
+						<Flex
+							flexDirection="column"
+							flexShrink={0}
+							height="100%"
+							minHeight="0"
+							width={`${sidebarWidth}px`}
+							sx={{
+								borderRight: "1px solid #e6e8ee",
+							}}
+						>
+							<TypicalWorksSidebarGrid
+								works={assignedWorks}
+								selectedWorkId={selectedWorkId}
+								onSelectWork={setSelectedWorkId}
+								onAssignFromCatalog={() => setAssignOpen(true)}
+								onDeleteWorks={openDeleteDialog}
+								assignedCount={assignedWorks.length}
+								scopeSubtitle={scopeSubtitle(scope)}
+							/>
+						</Flex>
+						<TypicalWorksSidebarResizeHandle
+							onResizeStart={onSidebarResizeStart}
+							active={isSidebarResizing}
 						/>
+						<Flex flexGrow={1} minWidth="0" minHeight="0" height="100%">
 						<TypicalWorkEditableCard
 							card={card}
 							fallbackArchComponentType={selectedListItem?.archComponentType}
@@ -348,6 +543,7 @@ export function TypicalWorksPanel() {
 							onStreamChange={handleStreamChange}
 							onVersionChange={handleVersionChange}
 						/>
+						</Flex>
 					</>
 				)}
 			</Box>
@@ -361,7 +557,14 @@ export function TypicalWorksPanel() {
 				onClose={() => setAssignOpen(false)}
 				onAssigned={(workId, stream) => {
 					openWorkInStreamsView(workId, stream);
-					ensureTypicalWorkBlockOnCanvas();
+					if (isV2ExecutorStreamLabel(stream)) {
+						const pointer = placeTypicalWorkInStreamBlock(
+							stream as V2ExecutorStreamLabel,
+						);
+						if (pointer) {
+							bindWorkToTypicalWorkBlock(pointer, workId);
+						}
+					}
 				}}
 				onCreateNew={() => {
 					setAssignOpen(false);
@@ -372,31 +575,63 @@ export function TypicalWorksPanel() {
 			<CreateTypicalWorkDialog
 				open={createOpen}
 				pending={createWork.isPending}
-				defaultStreamExecutor={scope.stream}
-				onClose={() => setCreateOpen(false)}
+				defaultStreamExecutor={createDefaultStreamExecutor}
+				isStreamPresentInSchema={isStreamPresentInSchema}
+				onCreateStreamBlock={handleCreateStreamBlock}
+				onClose={handleCreateDialogClose}
 				onSubmit={handleCreateWork}
 			/>
 
 			<Dialog
-				open={Boolean(deleteTarget)}
+				open={deleteTargets.length > 0}
 				onClose={() => {
 					if (deleteWork.isPending) return;
-					setDeleteTarget(null);
+					setDeleteTargets([]);
 					setDeleteUsageConflict(null);
 				}}
 				maxWidth="xs"
 				fullWidth
 			>
 				<DialogTitle>
-					{deleteUsageConflict ? "Работа используется в анкетах" : "Удалить работу?"}
+					{deleteUsageConflict
+						? deleteTargets.length === 1
+							? "Работа используется в анкетах"
+							: "Некоторые работы используются в анкетах"
+						: deleteTargets.length === 1
+							? "Удалить работу?"
+							: `Удалить работы (${deleteTargets.length})?`}
 				</DialogTitle>
 				<DialogContent>
 					{deleteUsageConflict ? (
 						<>
 							<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-								«{deleteTarget?.name}» учтена в версиях анкет. Удаление затронет
-								сохранённые данные в этих версиях.
+								{deleteTargets.length === 1 ? (
+									<>
+										«{deleteTargets[0]?.name}» учтена в версиях анкет. Удаление
+										затронет сохранённые данные в этих версиях.
+									</>
+								) : (
+									<>
+										{deleteTargets.length} работ учтены в версиях анкет.
+										Удаление затронет сохранённые данные.
+									</>
+								)}
 							</Typography>
+							{deleteTargets.length > 1 ? (
+								<Box component="ul" sx={{ m: 0, pl: 2.5, mb: 1.5 }}>
+									{deleteTargets.map((work) => (
+										<Typography
+											key={work.id}
+											component="li"
+											variant="body2"
+											color="text.secondary"
+											sx={{ mb: 0.5 }}
+										>
+											{work.name}
+										</Typography>
+									))}
+								</Box>
+							) : null}
 							<Box component="ul" sx={{ m: 0, pl: 2.5 }}>
 								{deleteUsageConflict.usedInQuestionnaireVersions.map((usage) => (
 									<Typography
@@ -411,17 +646,36 @@ export function TypicalWorksPanel() {
 								))}
 							</Box>
 						</>
-					) : (
+					) : deleteTargets.length === 1 ? (
 						<Typography variant="body2" color="text.secondary">
-							«{deleteTarget?.name}» будет удалена из глобального справочника без
-							возможности восстановления.
+							«{deleteTargets[0]?.name}» будет удалена из глобального справочника
+							без возможности восстановления.
 						</Typography>
+					) : (
+						<>
+							<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+								Будут удалены работы:
+							</Typography>
+							<Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+								{deleteTargets.map((work) => (
+									<Typography
+										key={work.id}
+										component="li"
+										variant="body2"
+										color="text.secondary"
+										sx={{ mb: 0.5 }}
+									>
+										{work.name}
+									</Typography>
+								))}
+							</Box>
+						</>
 					)}
 				</DialogContent>
 				<DialogActions>
 					<Button
 						onClick={() => {
-							setDeleteTarget(null);
+							setDeleteTargets([]);
 							setDeleteUsageConflict(null);
 						}}
 						disabled={deleteWork.isPending}
@@ -432,7 +686,7 @@ export function TypicalWorksPanel() {
 						color="error"
 						variant="contained"
 						disabled={deleteWork.isPending}
-						onClick={() => void handleDeleteWork(Boolean(deleteUsageConflict))}
+						onClick={() => void handleDeleteWorks(Boolean(deleteUsageConflict))}
 					>
 						{deleteUsageConflict ? "Удалить всё равно" : "Удалить"}
 					</Button>

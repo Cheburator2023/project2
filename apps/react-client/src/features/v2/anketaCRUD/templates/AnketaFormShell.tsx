@@ -1,4 +1,5 @@
 import SaveIcon from "@mui/icons-material/Save";
+import BugReportOutlinedIcon from "@mui/icons-material/BugReportOutlined";
 import Alert from "@mui/material/Alert";
 import {
 	Box,
@@ -12,13 +13,22 @@ import {
 	schemaHasUncertaintyModalWidget,
 	V2_ANKETA_GLOBAL_COMPLETE_LABEL,
 } from "@smart-anketa/api-contract";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type ReactNode,
+} from "react";
 import {
 	AnketaGlobalCompleteDialog,
 	type AnketaGlobalCompleteDialogPhase,
 } from "../organisms/AnketaGlobalCompleteDialog";
 import { FinalScoreCard } from "../organisms/FinalScoreCard";
 import { V2AnketaFormWithModals } from "../organisms/V2AnketaFormWithModals";
+import { AnketaCommentsSection } from "../organisms/AnketaCommentsSection";
+import { V2CalculationDebugDialog } from "../organisms/V2CalculationDebugDialog";
 import {
 	useV2AnketaSchemaEngine,
 	type V2AnketaSchemaEngine,
@@ -31,9 +41,12 @@ import type { AnketaFormContextValue } from "../utils/anketaFormContext";
 import { AnketaFormPageLayout } from "./AnketaFormPageLayout";
 import { useCreateV2QuestionnaireVersion } from "@react-client/common/api/queries/v2-questionnaires";
 import { useNavigate } from "react-router";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
+import { usePermissions } from "@react-client/hooks/usePermissions";
+import { IS_DEV } from "@react-client/common/constants/dev";
 
 type Engine = V2AnketaSchemaEngine;
 
@@ -69,6 +82,8 @@ export function AnketaFormShell({
 	"data-test-id": dataTestId = "anketa-form-shell",
 }: Props) {
 	const navigate = useNavigate();
+	const { canCreateCalculation } = usePermissions();
+
 	const createCopy = useCreateV2QuestionnaireVersion();
 	const internalEngine = useV2AnketaSchemaEngine(engineProp ? null : source);
 	const engine = engineProp ?? internalEngine;
@@ -85,6 +100,7 @@ export function AnketaFormShell({
 	} = useAnketaWorkflow(engine.formData, setFormData);
 	const effectiveReadOnly = readOnly || globallyLocked;
 	const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+	const [calculationDebugOpen, setCalculationDebugOpen] = useState(false);
 	const [completeDialogPhase, setCompleteDialogPhase] =
 		useState<AnketaGlobalCompleteDialogPhase>("confirm");
 	const saveAfterCompleteRef = useRef(false);
@@ -102,7 +118,7 @@ export function AnketaFormShell({
 	const handleCreateCopy = useCallback(() => {
 		if (!questionnaireId) return;
 		createCopy.mutate(
-			{ id: questionnaireId, body: { formData: engine.formData } },
+			{ id: questionnaireId, body: { formData: engine.displayFormData } },
 			{
 				onSuccess: (created) => {
 					toast.success("Создана копия анкеты");
@@ -120,7 +136,7 @@ export function AnketaFormShell({
 	}, [
 		closeCompleteDialog,
 		createCopy,
-		engine.formData,
+		engine.displayFormData,
 		navigate,
 		questionnaireId,
 	]);
@@ -142,12 +158,7 @@ export function AnketaFormShell({
 			saveAfterCompleteRef.current = false;
 			onSave?.();
 		}
-	}, [
-		completeDialogOpen,
-		completeDialogPhase,
-		onSave,
-		workflow.globalStatus,
-	]);
+	}, [completeDialogOpen, completeDialogPhase, onSave, workflow.globalStatus]);
 
 	const anketaFormContext = useMemo((): AnketaFormContextValue => {
 		// Только page-level overrides; formData/schema/ui берёт V2AnketaFormWithModals из engine.
@@ -188,6 +199,18 @@ export function AnketaFormShell({
 					</Button>
 				) : null}
 				{headerExtra}
+				{IS_DEV && (
+					<Button
+						variant="outlined"
+						size="small"
+						startIcon={<BugReportOutlinedIcon />}
+						onClick={() => setCalculationDebugOpen(true)}
+						title="Показать поля, коэффициенты, правила и результаты расчёта"
+						sx={{ whiteSpace: "nowrap" }}
+					>
+						Диагностика расчёта
+					</Button>
+				)}
 				{workflow.globalStatus === "Заполнено" && questionnaireId ? (
 					<Button
 						variant="outlined"
@@ -200,7 +223,7 @@ export function AnketaFormShell({
 						Создать копию
 					</Button>
 				) : null}
-				{onSave ? (
+				{onSave && canCreateCalculation ? (
 					<IconButton
 						onClick={onSave}
 						disabled={saveDisabled || savePending || effectiveReadOnly}
@@ -212,6 +235,7 @@ export function AnketaFormShell({
 			</>
 		),
 		[
+			canCreateCalculation,
 			headerExtra,
 			onSave,
 			saveDisabled,
@@ -271,12 +295,22 @@ export function AnketaFormShell({
 						</>
 					)
 				}
+				footer={
+					!errorMessage && questionnaireId ? (
+						<>
+							<Spacer space={24} />
+							<AnketaCommentsSection questionnaireId={questionnaireId} />
+						</>
+					) : null
+				}
 				sidebar={
 					errorMessage ? (
 						<Box />
 					) : (
 						<FinalScoreCard
 							summary={engine.summary}
+							formData={engine.displayFormData}
+							calculationError={engine.calculationError}
 							isLoading={engine.calculationLoading}
 							calculationItems={engine.calculationItems}
 							taskTriggerItems={engine.taskTriggerItems}
@@ -307,6 +341,11 @@ export function AnketaFormShell({
 					closeCompleteDialog();
 					navigate("/v2");
 				}}
+			/>
+			<V2CalculationDebugDialog
+				open={calculationDebugOpen}
+				onClose={() => setCalculationDebugOpen(false)}
+				engine={engine}
 			/>
 		</>
 	);

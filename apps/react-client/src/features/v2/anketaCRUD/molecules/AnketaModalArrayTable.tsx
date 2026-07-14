@@ -12,6 +12,7 @@ import {
 	anketaMoleculeTestIdForPath,
 } from "./testIds";
 import { readAnketaFormContext } from "../utils/anketaFormContext";
+import { isAnketaArchPathReadOnly } from "../utils/anketaPathLock.util";
 import {
 	arrayTableShowsRowActions,
 	adjustTypicalWorkTableColumns,
@@ -21,13 +22,13 @@ import {
 	isTypicalWorkArrayPath,
 	resolveArrayTableColumns,
 	sumTypicalWorkTotals,
-	typicalWorkItemDisplayName,
 	type AnketaArrayTableColumn,
 } from "../utils/anketaModalArrayTableConfig";
 import { useMemo, useState } from "react";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
+import { TypicalWorkSummaryTotal } from "./TypicalWorkSummaryTotal";
 
 type Props = {
 	pathKey: string;
@@ -93,9 +94,11 @@ function CellValue({
 			variant="body2"
 			color={value === "—" ? "text.disabled" : "text.primary"}
 			sx={{
-				overflow: "hidden",
-				textOverflow: "ellipsis",
-				whiteSpace: "nowrap",
+				overflow: column.multiline ? "visible" : "hidden",
+				textOverflow: column.multiline ? "clip" : "ellipsis",
+				whiteSpace: column.multiline ? "pre-wrap" : "nowrap",
+				fontFamily: column.key === "coefficient" ? "monospace" : undefined,
+				fontSize: column.key === "coefficient" ? 12 : undefined,
 			}}
 		>
 			{value}
@@ -116,7 +119,7 @@ export function AnketaModalArrayTable({
 		ctx.previewUiSchema,
 	);
 	const items = getArrayAtPath(ctx.formData ?? {}, pathKey);
-	const readOnly = ctx.anketaReadOnly;
+	const readOnly = isAnketaArchPathReadOnly(formContext, pathKey);
 	const showRowActions = arrayTableShowsRowActions(pathKey, formContext);
 	const isTypicalWorks = isTypicalWorkArrayPath(
 		pathKey,
@@ -132,6 +135,9 @@ export function AnketaModalArrayTable({
 		return filterTypicalWorkItems(items, sourceNameFilter);
 	}, [isTypicalWorks, items, sourceNameFilter, sourceNames.length]);
 	const typicalTotal = isTypicalWorks ? sumTypicalWorkTotals(visibleItems) : null;
+	const calculationLoading = Boolean(
+		ctx.calculationLoading ?? ctx.devCalculationLoading,
+	);
 	const displayColumns = useMemo(() => {
 		if (!columns) return null;
 		if (!isTypicalWorks) return columns;
@@ -214,6 +220,14 @@ export function AnketaModalArrayTable({
 						))}
 					</Box>
 				)}
+				{isTypicalWorks ? (
+					<TypicalWorkSummaryTotal
+						total={typicalTotal}
+						loading={calculationLoading}
+						data-test-id={`${tableTestId}--total`}
+						sx={{ mt: 1.5 }}
+					/>
+				) : null}
 			</Box>
 		);
 	}
@@ -328,16 +342,6 @@ export function AnketaModalArrayTable({
 									borderColor: "divider",
 								}}
 							>
-								{isTypicalWorks ? (
-									<Typography
-										variant="subtitle2"
-										fontWeight={700}
-										data-test-id={`${tableTestId}--row-title--${index}`}
-										sx={{ minWidth: 0 }}
-									>
-										{typicalWorkItemDisplayName(item, index)}
-									</Typography>
-								) : null}
 								<Box
 									sx={{
 										display: "grid",
@@ -361,7 +365,7 @@ export function AnketaModalArrayTable({
 											}
 										/>
 									))}
-									{showRowActions ? (
+									{showRowActions && !readOnly ? (
 										<Stack
 											direction="row"
 											spacing={0.25}
@@ -369,7 +373,6 @@ export function AnketaModalArrayTable({
 										>
 											<IconButton
 												size="small"
-												disabled={readOnly}
 												title="Редактировать"
 												data-test-id={`${tableTestId}--edit--${index}`}
 												onClick={() =>
@@ -380,7 +383,6 @@ export function AnketaModalArrayTable({
 											</IconButton>
 											<IconButton
 												size="small"
-												disabled={readOnly}
 												title="Удалить"
 												data-test-id={`${tableTestId}--delete--${index}`}
 												onClick={() =>
@@ -406,28 +408,13 @@ export function AnketaModalArrayTable({
 				</ListEmptyPlaceholder>
 			)}
 
-			{typicalTotal != null ? (
-				<Box
-					sx={{
-						mt: 1.5,
-						display: "flex",
-						justifyContent: "flex-end",
-						alignItems: "center",
-						gap: 1,
-					}}
+			{isTypicalWorks ? (
+				<TypicalWorkSummaryTotal
+					total={typicalTotal}
+					loading={calculationLoading}
 					data-test-id={`${tableTestId}--total`}
-				>
-					<Typography variant="body2" color="text.secondary">
-						Итого по типовым работам:
-					</Typography>
-					<Typography
-						variant="subtitle1"
-						fontWeight={800}
-						sx={{ fontFamily: "monospace" }}
-					>
-						{typicalTotal} ч/д
-					</Typography>
-				</Box>
+					sx={{ mt: 1.5 }}
+				/>
 			) : null}
 		</Box>
 	);

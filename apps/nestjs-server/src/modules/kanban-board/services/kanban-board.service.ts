@@ -11,6 +11,13 @@ import {
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
 import { KanbanBoardEntity } from "../entities/kanban-board.entity";
 import { KanbanBoardHistoryService } from "./kanban-board-history.service";
+import { KanbanBoardTaskImageService } from "./kanban-board-task-image.service";
+import { KanbanBoardTaskLockService } from "./kanban-board-task-lock.service";
+import type { KanbanBoardTaskLockHolder } from "./kanban-board-task-lock.service";
+import {
+	throwKanbanBoardTaskVersionConflicts,
+} from "../utils/kanban-board-task-edit.util";
+import type { KanbanBoardTaskConflictItemDto } from "@smart-anketa/api-contract";
 import {
 	isSnapshotWorkbook,
 } from "../utils/kanban-board-planning-import.util";
@@ -46,6 +53,8 @@ export class KanbanBoardService {
 		private readonly dataSource: DataSource,
 		private readonly configService: ConfigService,
 		private readonly historyService: KanbanBoardHistoryService,
+		private readonly taskImageService: KanbanBoardTaskImageService,
+		private readonly taskLockService: KanbanBoardTaskLockService,
 	) {}
 
 	getStandId(): string {
@@ -69,6 +78,7 @@ export class KanbanBoardService {
 			where: { boardId },
 			order: { parentId: "ASC", position: "ASC" },
 		});
+		await this.taskImageService.syncTasksContentImages(rows);
 		return rows.map((row) => this.toRecord(row));
 	}
 
@@ -84,9 +94,21 @@ export class KanbanBoardService {
 		boardId: string,
 		tasks: KanbanBoardTaskRecord[],
 		createdBy?: string | null,
+		options?: {
+			expectedUpdatedAtByTaskId?: Record<string, string>;
+			forceOverwrite?: boolean;
+			lockHolderLabel?: string;
+		},
 	): Promise<KanbanBoardTaskRecord[]> {
 		const standId = this.getStandId();
 		const now = new Date().toISOString();
+		const lockHolder: KanbanBoardTaskLockHolder | undefined =
+			options?.lockHolderLabel?.trim()
+				? {
+						label: options.lockHolderLabel.trim(),
+						userId: createdBy ?? null,
+					}
+				: undefined;
 		const normalized = tasks.map((task) => ({
 			...task,
 			boardId,
@@ -104,6 +126,39 @@ export class KanbanBoardService {
 			relations: { board: { project: true }, project: true },
 		});
 		const existingById = new Map(existing.map((row) => [row.id, row]));
+
+		if (!options?.forceOverwrite && options?.expectedUpdatedAtByTaskId) {
+			const conflicts: KanbanBoardTaskConflictItemDto[] = [];
+			for (const task of prepared) {
+				const prev = existingById.get(task.id);
+				if (!prev) continue;
+				const expected = options.expectedUpdatedAtByTaskId[task.id];
+				if (!expected || expected === prev.updatedAt) continue;
+				conflicts.push({
+					taskId: task.id,
+					taskKey: board?.project?.code
+						? formatKanbanTaskKey(board.project.code, prev.taskNumber ?? 0)
+						: task.id,
+					taskTitle: prev.content.title,
+					expectedUpdatedAt: expected,
+					actualUpdatedAt: prev.updatedAt,
+				});
+			}
+			if (conflicts.length) {
+				throwKanbanBoardTaskVersionConflicts(conflicts);
+			}
+		}
+
+		for (const task of prepared) {
+			const prev = existingById.get(task.id);
+			if (!prev) continue;
+			await this.taskLockService.assertEditable(
+				task.id,
+				lockHolder,
+				options?.forceOverwrite,
+			);
+		}
+
 		const columnTitles = await this.historyService.loadColumnTitleMap([boardId]);
 		const columnTitle = this.historyService.columnTitleResolver(
 			columnTitles,

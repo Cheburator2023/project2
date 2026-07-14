@@ -99,7 +99,9 @@ import {
 } from "../utils/kanban-board-planning-import-registry.util";
 import { buildMeta } from "../utils/kanban-board-snapshot.util";
 import { KanbanBoardTaskImageService } from "./kanban-board-task-image.service";
+import { KanbanBoardTaskLockService } from "./kanban-board-task-lock.service";
 import { KanbanBoardHistoryService } from "./kanban-board-history.service";
+import { assertKanbanBoardTaskVersion } from "../utils/kanban-board-task-edit.util";
 
 @Injectable()
 export class KanbanBoardRegistryService {
@@ -126,6 +128,7 @@ export class KanbanBoardRegistryService {
 		private readonly settingsRepository: Repository<KanbanBoardSettingsEntity>,
 		private readonly kanbanBoardService: KanbanBoardService,
 		private readonly taskImageService: KanbanBoardTaskImageService,
+		private readonly taskLockService: KanbanBoardTaskLockService,
 		private readonly historyService: KanbanBoardHistoryService,
 	) {}
 
@@ -148,6 +151,20 @@ export class KanbanBoardRegistryService {
 				);
 			}
 			settings.defaultSprintCapacityPd = String(dto.defaultSprintCapacityPd);
+		}
+		if (dto.defaultCurrentUserAssigneeName !== undefined) {
+			const name = dto.defaultCurrentUserAssigneeName?.trim() ?? "";
+			if (name) {
+				const assignee = await this.assigneeRepository.findOne({
+					where: { name },
+				});
+				if (!assignee) {
+					throw new BadRequestException("Исполнитель не найден в справочнике");
+				}
+				settings.defaultCurrentUserAssigneeName = name;
+			} else {
+				settings.defaultCurrentUserAssigneeName = null;
+			}
 		}
 		await this.settingsRepository.save(settings);
 		return this.toSettingsDto(settings);
@@ -917,6 +934,7 @@ export class KanbanBoardRegistryService {
 			relations: { board: { project: true } },
 			order: { updatedAt: "DESC" },
 		});
+		await this.taskImageService.syncTasksContentImages(rows);
 		const columnTitles = await this.loadColumnTitleMap(
 			rows.map((row) => row.boardId),
 		);
@@ -1308,6 +1326,24 @@ export class KanbanBoardRegistryService {
 			relations: { board: { project: true } },
 		});
 		if (!task) throw new NotFoundException("Задача не найдена");
+
+		const lockHolder = dto.lockHolderLabel?.trim()
+			? { label: dto.lockHolderLabel.trim(), userId: createdBy ?? null }
+			: undefined;
+		await this.taskLockService.assertEditable(
+			task.id,
+			lockHolder,
+			dto.forceOverwrite,
+		);
+		assertKanbanBoardTaskVersion(
+			task,
+			dto.expectedUpdatedAt,
+			dto.forceOverwrite,
+			{
+				taskKey: this.historyService.formatTaskKey(task),
+				taskTitle: task.content.title,
+			},
+		);
 
 		const before = this.historyService.snapshotFromTask(task);
 		const columnTitles = await this.historyService.loadColumnTitleMap([
@@ -1858,6 +1894,8 @@ export class KanbanBoardRegistryService {
 	): KanbanBoardSettingsDto {
 		return {
 			defaultSprintCapacityPd: this.parseNumeric(settings.defaultSprintCapacityPd),
+			defaultCurrentUserAssigneeName:
+				settings.defaultCurrentUserAssigneeName?.trim() || null,
 			updatedAt: settings.updatedAt.toISOString(),
 		};
 	}
@@ -2014,14 +2052,7 @@ export class KanbanBoardRegistryService {
 	}
 
 	private async repairTaskImagesContent(task: KanbanBoardTaskEntity): Promise<void> {
-		if (task.content.images?.length) return;
-		const images = await this.taskImageService.listForTask(task.id);
-		if (!images.length) return;
-		task.content = normalizeKanbanBoardTaskContent({
-			...task.content,
-			images,
-		});
-		await this.taskRepository.save(task);
+		await this.taskImageService.syncTaskContentImages(task);
 	}
 
 	private async validateTaskContent(
@@ -2035,15 +2066,18 @@ export class KanbanBoardRegistryService {
 				throw new BadRequestException("Спринт не найден");
 			}
 		}
-		const assignees = kanbanBoardTaskAssignees(content);
+		const assignees = [...kanbanBoardTaskAssignees(content)];
 		const currentAssignee = content.currentAssignee?.trim();
 		if (currentAssignee && !assignees.includes(currentAssignee)) {
-			throw new BadRequestException(
-				"Текущий исполнитель должен быть среди исполнителей задачи",
-			);
+			assignees.push(currentAssignee);
 		}
+		const resolvedCurrent = currentAssignee || assignees[0];
 		const { assigneeRole: _legacyRole, ...rest } = content;
-		return rest;
+		return {
+			...rest,
+			assignees: assignees.length ? assignees : undefined,
+			currentAssignee: resolvedCurrent || undefined,
+		};
 	}
 
 	private async loadSprintTitleMap(sprintIds: string[]): Promise<Map<string, string>> {

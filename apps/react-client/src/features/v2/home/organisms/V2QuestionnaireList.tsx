@@ -31,6 +31,7 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { AG_GRID_SET_FILTER_PARAMS } from "@react-client/common/tableStuff/agGridSetFilterParams";
 import {
 	applyAgGridColumnState,
 	clearAgGridColumnState,
@@ -68,7 +69,13 @@ import {
 	agGridCustomMUIThemeDark,
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
-import { buildV2QuestionnaireColumnDefs } from "../utils/v2QuestionnaireGridColumns";
+import {
+	buildV2QuestionnaireColumnDefs,
+} from "../utils/v2QuestionnaireGridColumns";
+import {
+	deriveRegistryColumnOptionsFromRows,
+	type V2RegistrySchemaColumnOptions,
+} from "@smart-anketa/api-contract";
 import {
 	FACTORY_PRESET_IDS,
 	applyQuestionnaireGridPreset,
@@ -97,13 +104,14 @@ ModuleRegistry.registerModules([
 ]);
 
 const GridWrapper = styled(Flex)`
+	flex: 1 1 auto;
+	min-height: 0;
 	width: 100%;
-	height: -webkit-fill-available;
+	height: 100%;
 
 	& > div {
 		width: 100%;
-		min-height: 360px;
-		height: -webkit-fill-available;
+		height: 100%;
 	}
 `;
 
@@ -163,16 +171,18 @@ function GridPresetToolPanel({
 	api,
 	jsonSchema,
 	uiSchema,
+	columnOptions,
 }: {
 	api: PresetGridApi;
 	jsonSchema?: Record<string, unknown>;
 	uiSchema?: Record<string, unknown>;
+	columnOptions?: V2RegistrySchemaColumnOptions;
 }) {
 	const [presets, setPresets] = useState<GridPreset[]>(readGridPresets);
 	const [name, setName] = useState("");
 	const factoryPresets = useMemo(
-		() => getFactoryGridPresets(jsonSchema, uiSchema),
-		[jsonSchema, uiSchema],
+		() => getFactoryGridPresets(jsonSchema, uiSchema, columnOptions),
+		[jsonSchema, uiSchema, columnOptions],
 	);
 
 	const updatePresets = (next: GridPreset[]) => {
@@ -216,6 +226,7 @@ function GridPresetToolPanel({
 			FACTORY_PRESET_IDS.allInformation,
 			jsonSchema,
 			uiSchema,
+			columnOptions,
 		);
 		if (allInformationPreset) {
 			applyQuestionnaireGridPreset(api, allInformationPreset);
@@ -336,7 +347,7 @@ export function V2QuestionnaireList() {
 	const { mode } = useColorScheme();
 	const navigate = useNavigate();
 	const gridRef = useRef<AgGridReact<V2QuestionnaireGridRow>>(null);
-	const { canAccessAdminPanel } = usePermissions();
+	const { canAccessAdminPanel, canCreateCalculation, canExportReports } = usePermissions();
 	const bulkDelete = useBulkDeleteV2Questionnaires();
 	const { data: templates } = useV2Templates();
 	const activeTemplate = useMemo(
@@ -375,9 +386,22 @@ export function V2QuestionnaireList() {
 		}));
 	}, [questionnaires]);
 
+	const registryColumnOptions = useMemo(
+		() =>
+			rowData.length > 0
+				? deriveRegistryColumnOptionsFromRows(rowData)
+				: undefined,
+		[rowData],
+	);
+
 	const columnDefs = useMemo(
-		() => buildV2QuestionnaireColumnDefs(registryJsonSchema, registryUiSchema),
-		[registryJsonSchema, registryUiSchema],
+		() =>
+			buildV2QuestionnaireColumnDefs(
+				registryJsonSchema,
+				registryUiSchema,
+				registryColumnOptions,
+			),
+		[registryJsonSchema, registryUiSchema, registryColumnOptions],
 	);
 
 	const GridPresetToolPanelBound = useMemo(
@@ -388,10 +412,11 @@ export function V2QuestionnaireList() {
 						{...props}
 						jsonSchema={registryJsonSchema}
 						uiSchema={registryUiSchema}
+						columnOptions={registryColumnOptions}
 					/>
 				);
 			},
-		[registryJsonSchema, registryUiSchema],
+		[registryJsonSchema, registryUiSchema, registryColumnOptions],
 	);
 
 	const gridIcons = useMemo(
@@ -462,6 +487,7 @@ export function V2QuestionnaireList() {
 				FACTORY_PRESET_IDS.default,
 				registryJsonSchema,
 				registryUiSchema,
+				registryColumnOptions,
 			);
 			if (basicPreset) {
 				applyQuestionnaireGridPreset(e.api, basicPreset);
@@ -470,11 +496,35 @@ export function V2QuestionnaireList() {
 				e.api.applyColumnState({ state, applyOrder: true });
 			});
 		},
-		[registryJsonSchema, registryUiSchema],
+		[registryJsonSchema, registryUiSchema, registryColumnOptions],
 	);
 
 	const persistColumnState = useCallback((api: GridApi) => {
 		saveAgGridColumnState(GRID_COLUMN_STATE_KEY, api.getColumnState());
+	}, []);
+
+	const handleExportXlsx = useCallback(async (ids?: string[]) => {
+		setIsExporting(true);
+		try {
+			const blob = await v2QuestionnairesExportXlsx({ ids });
+			const date = new Date().toISOString().slice(0, 10);
+			const suffix =
+				ids && ids.length > 0 ? `selected-${ids.length}` : "all";
+			downloadBlob(blob, `v2-questionnaires-${suffix}-${date}.xlsx`);
+			if (ids && ids.length > 0) {
+				toast.success(
+					ids.length === 1
+						? "Анкета экспортирована"
+						: `Экспортировано анкет: ${ids.length}`,
+				);
+			}
+		} catch (err) {
+			toast.error("Ошибка экспорта", {
+				description: apiErrorMessage(err),
+			});
+		} finally {
+			setIsExporting(false);
+		}
 	}, []);
 
 	const getContextMenuItems = useCallback(
@@ -485,6 +535,19 @@ export function V2QuestionnaireList() {
 			if (!row) {
 				return [];
 			}
+			const selectedRows = params.api
+				.getSelectedRows()
+				.map((item) => resolveVersionRow(item))
+				.filter((item): item is V2QuestionnaireVersionRow => item != null);
+			const exportIds =
+				selectedRows.length > 0
+					? selectedRows.map((item) => item.id)
+					: [row.id];
+			const exportLabel =
+				exportIds.length > 1
+					? `Экспорт в XLSX (${exportIds.length})`
+					: "Экспорт в XLSX";
+
 			return [
 				{
 					name: "Открыть",
@@ -500,25 +563,15 @@ export function V2QuestionnaireList() {
 							`/v2/${v2Routes.calculationNewVersion.rootPath.replace(":id", row.id)}`,
 						),
 				},
+				{
+					name: exportLabel,
+					disabled: isExporting,
+					action: () => void handleExportXlsx(exportIds),
+				},
 			];
 		},
-		[navigate],
+		[navigate, isExporting, handleExportXlsx],
 	);
-
-	const handleExportXlsx = useCallback(async () => {
-		setIsExporting(true);
-		try {
-			const blob = await v2QuestionnairesExportXlsx();
-			const date = new Date().toISOString().slice(0, 10);
-			downloadBlob(blob, `v2-questionnaires-${date}.xlsx`);
-		} catch (err) {
-			toast.error("Ошибка экспорта", {
-				description: apiErrorMessage(err),
-			});
-		} finally {
-			setIsExporting(false);
-		}
-	}, []);
 
 	const runBulkDelete = useCallback(() => {
 		const ids = selectedVersions.map((row) => row.id);
@@ -551,18 +604,45 @@ export function V2QuestionnaireList() {
 	}, [bulkDelete, selectedVersions]);
 
 	return (
-		<div>
+		<Flex
+			flexDirection="column"
+			height="100%"
+			minHeight="0"
+			minWidth="0"
+			width="100%"
+		>
 			<Header>
 				<Stack direction="row" spacing={1} alignItems="center">
-					<Button
-						variant="outlined"
-						size="small"
-						startIcon={<DownloadIcon />}
-						disabled={isExporting || isLoading}
-						onClick={() => void handleExportXlsx()}
-					>
-						{isExporting ? "Экспорт…" : "Экспорт XLSX"}
-					</Button>
+					{canExportReports ? (
+						<>
+							<Button
+								variant="outlined"
+								size="small"
+								startIcon={<DownloadIcon />}
+								disabled={isExporting || isLoading}
+								onClick={() => void handleExportXlsx()}
+							>
+								{isExporting ? "Экспорт…" : "Экспорт всех"}
+							</Button>
+							<Button
+								variant="outlined"
+								size="small"
+								startIcon={<DownloadIcon />}
+								disabled={
+									isExporting || isLoading || selectedVersions.length === 0
+								}
+								onClick={() =>
+									void handleExportXlsx(
+										selectedVersions.map((row) => row.id),
+									)
+								}
+							>
+								{isExporting
+									? "Экспорт…"
+									: `Экспорт выбранных (${selectedVersions.length})`}
+							</Button>
+						</>
+					) : null}
 					{canAccessAdminPanel ? (
 						<Button
 							variant="outlined"
@@ -575,16 +655,18 @@ export function V2QuestionnaireList() {
 							Удалить выбранные ({selectedVersions.length})
 						</Button>
 					) : null}
-					<Button
-						variant="contained"
-						size="small"
-						startIcon={<AddIcon />}
-						onClick={() =>
-							navigate(`/v2/${v2Routes.calculationCreate.rootPath}`)
-						}
-					>
-						Создать анкету
-					</Button>
+					{canCreateCalculation && (
+						<Button
+							variant="contained"
+							size="small"
+							startIcon={<AddIcon />}
+							onClick={() =>
+								navigate(`/v2/${v2Routes.calculationCreate.rootPath}`)
+							}
+						>
+							Создать анкету
+						</Button>
+					)}
 				</Stack>
 			</Header>
 			<Dialog
@@ -610,7 +692,7 @@ export function V2QuestionnaireList() {
 					</Button>
 				</DialogActions>
 			</Dialog>
-			<GridWrapper flexGrow={1} minHeight="0" sx={{ p: 0 }}>
+			<GridWrapper flexGrow={1} sx={{ p: 0 }}>
 				<AgGridReact<V2QuestionnaireGridRow>
 					ref={gridRef}
 					theme={gridTheme}
@@ -622,11 +704,12 @@ export function V2QuestionnaireList() {
 					defaultColDef={{
 						sortable: true,
 						resizable: true,
-						filter: true,
+						filter: "agSetColumnFilter",
+						filterParams: AG_GRID_SET_FILTER_PARAMS,
 						minWidth: 90,
-						autoHeaderHeight: true,
-						wrapHeaderText: true,
 					}}
+					headerHeight={32}
+					groupHeaderHeight={32}
 					defaultColGroupDef={{
 						marryChildren: false,
 					}}
@@ -642,16 +725,12 @@ export function V2QuestionnaireList() {
 						if (event.finished) persistColumnState(event.api);
 					}}
 					loading={isLoading}
-					rowSelection={
-						canAccessAdminPanel
-							? {
-									mode: "multiRow",
-									checkboxes: true,
-									headerCheckbox: true,
-									enableClickSelection: false,
-								}
-							: undefined
-					}
+					rowSelection={{
+						mode: "multiRow",
+						checkboxes: true,
+						headerCheckbox: true,
+						enableClickSelection: false,
+					}}
 					onSelectionChanged={(
 						e: SelectionChangedEvent<V2QuestionnaireGridRow>,
 					) => {
@@ -663,6 +742,6 @@ export function V2QuestionnaireList() {
 					suppressAggFuncInHeader
 				/>
 			</GridWrapper>
-		</div>
+		</Flex>
 	);
 }

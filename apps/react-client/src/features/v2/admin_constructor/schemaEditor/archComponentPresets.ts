@@ -56,6 +56,39 @@ export const ATYPICAL_WORK_NEW_ROW_DEFAULTS: Record<string, unknown> = {
 	includeInCalculation: true,
 };
 
+export const TYPICAL_WORK_ITEM_PROPERTIES: RJSFSchema["properties"] = {
+	name: {
+		type: "string",
+		title: "Название типовой работы",
+		readOnly: true,
+	},
+	estimateHoursPerDay: {
+		type: "number",
+		title: "Базовая оценка",
+		readOnly: true,
+	},
+	coefficient: {
+		type: "number",
+		title: "Коэффициент",
+		readOnly: true,
+	},
+	total: {
+		type: "number",
+		title: "Итог",
+		readOnly: true,
+	},
+};
+
+const TYPICAL_WORK_ITEMS_UI_BRANCH: Record<string, unknown> = {
+	items: {
+		"ui:order": ["name", "estimateHoursPerDay", "coefficient", "total"],
+		name: { "ui:widget": "text", "ui:readonly": true },
+		estimateHoursPerDay: { "ui:widget": "text", "ui:readonly": true },
+		coefficient: { "ui:widget": "text", "ui:readonly": true },
+		total: { "ui:widget": "text", "ui:readonly": true },
+	},
+};
+
 const ATYPICAL_WORK_ITEMS_UI_BRANCH: Record<string, unknown> = {
 	items: {
 		"ui:order": [
@@ -129,38 +162,7 @@ const MANUAL_ARCH_COMPONENT_PRESET_DEFS: Pick<
 			items: {
 				type: "object",
 				title: "Типовая работа",
-				properties: {
-					name: {
-						type: "string",
-						title: "Наименование",
-						readOnly: true,
-					},
-					workType: {
-						type: "string",
-						title: "Тип работ",
-						readOnly: true,
-					},
-					reason: {
-						type: "string",
-						title: "Причина",
-						readOnly: true,
-					},
-					estimateHoursPerDay: {
-						type: "number",
-						title: "Базовая оценка (ч/д)",
-						readOnly: true,
-					},
-					coefficient: {
-						type: "number",
-						title: "Коэф.",
-						readOnly: true,
-					},
-					total: {
-						type: "number",
-						title: "Итог",
-						readOnly: true,
-					},
-				},
+				properties: TYPICAL_WORK_ITEM_PROPERTIES,
 			},
 		}),
 		uiOptions: {
@@ -168,10 +170,12 @@ const MANUAL_ARCH_COMPONENT_PRESET_DEFS: Pick<
 			addable: false,
 			removable: false,
 			orderable: false,
+			boundWorkIds: [],
 		},
 		uiBranch: {
+			...TYPICAL_WORK_ITEMS_UI_BRANCH,
 			"ui:description":
-				"Список заполняется автоматически при срабатывании триггеров типовых работ.",
+				"Список заполняется автоматически при срабатывании триггеров типовых работ.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах",
 		},
 	},
 	atypicalWork: {
