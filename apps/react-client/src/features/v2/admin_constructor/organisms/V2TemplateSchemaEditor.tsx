@@ -753,6 +753,10 @@ export const V2TemplateSchemaEditor = ({
 	const schemaSyncTimerRef = useRef<number | null>(null);
 
 	useEffect(() => {
+		// Словари подгружаются асинхронно — до готовности values в params «пустые»,
+		// после загрузки diff выглядит как массовое редактирование и шлёт N sync-запросов.
+		if (dictionaryEnumsLoading) return;
+
 		const versionId = activeVersion?.id;
 		const current = new Map(
 			schemaWorkParams
@@ -831,6 +835,7 @@ export const V2TemplateSchemaEditor = ({
 		};
 	}, [
 		activeVersion?.id,
+		dictionaryEnumsLoading,
 		requestCalculationRefresh,
 		schemaWorkParams,
 		syncTypicalWorksSchemaField.mutateAsync,

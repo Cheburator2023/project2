@@ -971,6 +971,78 @@ export class V2TypicalWorkService {
 			calculationLogic,
 		};
 	}
+
+	/** Облегчённая карточка для schema-field-sync — без каталогов, норм и подсчётов. */
+	async getWorkCardForSchemaSync(
+		workId: string,
+		streamExecutor: string,
+		templateVersionId: string,
+	): Promise<V2TypicalWorkCardDto> {
+		const work = await this.workRepository.findOne({ where: { id: workId } });
+		if (!work) {
+			throw new NotFoundException(`Typical work ${workId} not found`);
+		}
+
+		const stream = streamExecutor.trim();
+		const [rules, laborRows, laborParams, versionConfig] = await Promise.all([
+			this.ruleRepository.find({
+				where: { workId, streamExecutor: stream },
+				order: { sortOrder: "ASC" },
+			}),
+			this.laborRepository.find({
+				where: { workId, streamExecutor: stream },
+			}),
+			this.laborParamRepository.find({
+				where: { workId, streamExecutor: stream },
+			}),
+			this.versionConfigRepository.findOne({
+				where: { workId, templateVersionId, streamExecutor: stream },
+			}),
+		]);
+
+		const laborParamsGrouped = groupLaborByParam(
+			laborRows.map(mapLaborEntity),
+			laborParams,
+		);
+		const termsFormula = versionConfig
+			? normalizeStoredFormula(versionConfig.formula, versionConfig.formulaText)
+			: normalizeStoredFormula(null);
+		const tokenFormula = versionConfig
+			? resolveCardTokenFormula(
+					termsFormula,
+					versionConfig.formulaText,
+					versionConfig.formula,
+				)
+			: defaultWorkFormula();
+
+		return {
+			id: work.id,
+			name: work.name,
+			archComponentType: work.archComponentType,
+			workType: work.workType,
+			streamExecutor: stream,
+			assignmentId: null,
+			assignmentStatus: "unassigned",
+			usedOnSchemasCount: 0,
+			formulaBadge: computeFormulaBadge(termsFormula.terms),
+			triggerStatus: "appears",
+			norms: [],
+			rules: rules.map(mapRuleEntity),
+			laborParams: laborParamsGrouped,
+			formulaTerms: termsFormula,
+			formula: tokenFormula,
+			rounding: versionConfig
+				? {
+						mode: versionConfig.roundingMode as V2TypicalWorkCardDto["rounding"]["mode"],
+						step:
+							versionConfig.roundingStep === null
+								? null
+								: decimalToNumber(versionConfig.roundingStep),
+					}
+				: defaultWorkRounding(),
+			calculationLogic: null,
+		};
+	}
 }
 
 function groupBy<T>(items: T[], keyFn: (item: T) => string): Map<string, T[]> {

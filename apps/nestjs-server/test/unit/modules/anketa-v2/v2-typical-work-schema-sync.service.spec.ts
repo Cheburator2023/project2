@@ -36,8 +36,21 @@ describe("V2TypicalWorkWriteService.reconcileSchemaField", () => {
 				{ workId: "work-2", streamExecutor: "Источник" },
 			]),
 		};
+		const ruleRepository = {
+			find: jest.fn().mockResolvedValue([
+				{
+					workId: "work-1",
+					streamExecutor: "Источник",
+					schemaFieldUid: "field-1",
+					paramCode: "field_code",
+				},
+			]),
+		};
+		const laborParamRepository = {
+			find: jest.fn().mockResolvedValue([]),
+		};
 		const typicalWorkService = {
-			getWorkCard: jest
+			getWorkCardForSchemaSync: jest
 				.fn()
 				.mockImplementation((workId: string) =>
 					Promise.resolve(
@@ -50,10 +63,17 @@ describe("V2TypicalWorkWriteService.reconcileSchemaField", () => {
 		) as V2TypicalWorkWriteService;
 		Object.assign(service as unknown as Record<string, unknown>, {
 			versionConfigRepository,
+			ruleRepository,
+			laborParamRepository,
 			typicalWorkService,
 		});
 		jest.spyOn(service, "patchWork").mockResolvedValue({} as never);
-		return { service, versionConfigRepository, typicalWorkService };
+		return {
+			service,
+			versionConfigRepository,
+			ruleRepository,
+			typicalWorkService,
+		};
 	}
 
 	it("dry-runs every assignment in the requested version without writing", async () => {
@@ -68,7 +88,7 @@ describe("V2TypicalWorkWriteService.reconcileSchemaField", () => {
 		expect(versionConfigRepository.find).toHaveBeenCalledWith({
 			where: { templateVersionId: "version-1" },
 		});
-		expect(typicalWorkService.getWorkCard).toHaveBeenCalledTimes(2);
+		expect(typicalWorkService.getWorkCardForSchemaSync).toHaveBeenCalledTimes(1);
 		expect(service.patchWork).not.toHaveBeenCalled();
 		expect(impact).toMatchObject({
 			worksMatched: 1,

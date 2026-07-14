@@ -807,8 +807,36 @@ export class V2TypicalWorkWriteService {
 			formulasInvalidated: 0,
 		};
 
+		if (configs.length === 0) {
+			return impact;
+		}
+
+		const field = dto.field;
+		const paramCodes = [
+			field.previousCode,
+			field.code,
+		].filter((code): code is string => Boolean(code?.trim()));
+		const matchWhere = [
+			{ schemaFieldUid: field.schemaFieldUid },
+			...paramCodes.map((paramCode) => ({ paramCode })),
+		];
+
+		const [matchingRules, matchingLaborHeaders] = await Promise.all([
+			this.ruleRepository.find({ where: matchWhere }),
+			this.laborParamRepository.find({ where: matchWhere }),
+		]);
+
+		const affectedKeys = new Set(
+			[...matchingRules, ...matchingLaborHeaders].map(
+				(row) => `${row.workId}:${row.streamExecutor}`,
+			),
+		);
+
 		for (const config of configs) {
-			const card = await this.typicalWorkService.getWorkCard(
+			const configKey = `${config.workId}:${config.streamExecutor}`;
+			if (!affectedKeys.has(configKey)) continue;
+
+			const card = await this.typicalWorkService.getWorkCardForSchemaSync(
 				config.workId,
 				config.streamExecutor,
 				dto.templateVersionId,

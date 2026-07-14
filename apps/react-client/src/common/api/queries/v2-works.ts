@@ -314,7 +314,6 @@ export const usePatchV2TypicalWork = () => {
 };
 
 export const useSyncV2TypicalWorksSchemaField = () => {
-	const queryClient = useQueryClient();
 	return useMutation<
 		import("@smart-anketa/api-contract").V2TypicalWorkSchemaFieldSyncImpactDto,
 		Error,
@@ -326,11 +325,6 @@ export const useSyncV2TypicalWorksSchemaField = () => {
 				method: "POST",
 				data: dto,
 			}),
-		onSuccess: (_impact, dto) => {
-			if (dto.mode === "apply") {
-				void queryClient.invalidateQueries({ queryKey: ["v2-works"] });
-			}
-		},
 	});
 };
 

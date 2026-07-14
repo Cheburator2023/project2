@@ -45,6 +45,15 @@ function mutationScopeForUrl(url?: string): AppQueryScope | null {
 	return null;
 }
 
+/** Внутренние/фоновые мутации не должны триггерить cross-tab refetch всего v2. */
+function shouldPublishMutationSync(url?: string): boolean {
+	if (!url) return false;
+	if (url.includes("/schema-field-sync")) return false;
+	if (url.includes("/preview")) return false;
+	if (url.includes("/lock") || url.includes("/renew")) return false;
+	return mutationScopeForUrl(url) !== null;
+}
+
 function queueTokenRefresh(): Promise<string | null> {
 	if (!refreshPromise) {
 		refreshPromise = refreshHostAccessToken().finally(() => {
@@ -88,9 +97,12 @@ axiosInstance.interceptors.response.use(
 	(response: AxiosResponse) => {
 		const method = response.config.method?.toLowerCase();
 		if (method && !["get", "head", "options"].includes(method)) {
-			const scope = mutationScopeForUrl(response.config.url);
-			if (scope) {
-				publishAppSync({ type: "query:invalidate", scope });
+			const url = response.config.url;
+			if (shouldPublishMutationSync(url)) {
+				const scope = mutationScopeForUrl(url);
+				if (scope) {
+					publishAppSync({ type: "query:invalidate", scope });
+				}
 			}
 		}
 		return response;
