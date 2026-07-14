@@ -13,6 +13,7 @@ export function useSchemaEditorAnketaEngine(): V2AnketaSchemaEngine {
 		formData,
 		liveFormData,
 		setFormData,
+		previewResetPending,
 		logic,
 		calculationItems,
 		taskTriggerItems,
@@ -30,12 +31,14 @@ export function useSchemaEditorAnketaEngine(): V2AnketaSchemaEngine {
 
 	const displayFormData = useMemo(
 		() =>
-			mergeAnketaDisplayFormData(
-				previewFormData,
-				liveFormData,
-				previewUiSchema as Record<string, unknown> | undefined,
-			),
-		[previewFormData, liveFormData, previewUiSchema],
+			previewResetPending
+				? previewFormData
+				: mergeAnketaDisplayFormData(
+						previewFormData,
+						liveFormData,
+						previewUiSchema as Record<string, unknown> | undefined,
+					),
+		[previewResetPending, previewFormData, liveFormData, previewUiSchema],
 	);
 
 	return useMemo(

@@ -31,7 +31,7 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
-import { AG_GRID_SIMPLE_TEXT_FILTER_PARAMS } from "@react-client/common/tableStuff/agGridSimpleFilterParams";
+import { AG_GRID_SET_FILTER_PARAMS } from "@react-client/common/tableStuff/agGridSetFilterParams";
 import {
 	applyAgGridColumnState,
 	clearAgGridColumnState,
@@ -69,7 +69,13 @@ import {
 	agGridCustomMUIThemeDark,
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
-import { buildV2QuestionnaireColumnDefs } from "../utils/v2QuestionnaireGridColumns";
+import {
+	buildV2QuestionnaireColumnDefs,
+} from "../utils/v2QuestionnaireGridColumns";
+import {
+	deriveRegistryColumnOptionsFromRows,
+	type V2RegistrySchemaColumnOptions,
+} from "@smart-anketa/api-contract";
 import {
 	FACTORY_PRESET_IDS,
 	applyQuestionnaireGridPreset,
@@ -165,16 +171,18 @@ function GridPresetToolPanel({
 	api,
 	jsonSchema,
 	uiSchema,
+	columnOptions,
 }: {
 	api: PresetGridApi;
 	jsonSchema?: Record<string, unknown>;
 	uiSchema?: Record<string, unknown>;
+	columnOptions?: V2RegistrySchemaColumnOptions;
 }) {
 	const [presets, setPresets] = useState<GridPreset[]>(readGridPresets);
 	const [name, setName] = useState("");
 	const factoryPresets = useMemo(
-		() => getFactoryGridPresets(jsonSchema, uiSchema),
-		[jsonSchema, uiSchema],
+		() => getFactoryGridPresets(jsonSchema, uiSchema, columnOptions),
+		[jsonSchema, uiSchema, columnOptions],
 	);
 
 	const updatePresets = (next: GridPreset[]) => {
@@ -218,6 +226,7 @@ function GridPresetToolPanel({
 			FACTORY_PRESET_IDS.allInformation,
 			jsonSchema,
 			uiSchema,
+			columnOptions,
 		);
 		if (allInformationPreset) {
 			applyQuestionnaireGridPreset(api, allInformationPreset);
@@ -377,9 +386,22 @@ export function V2QuestionnaireList() {
 		}));
 	}, [questionnaires]);
 
+	const registryColumnOptions = useMemo(
+		() =>
+			rowData.length > 0
+				? deriveRegistryColumnOptionsFromRows(rowData)
+				: undefined,
+		[rowData],
+	);
+
 	const columnDefs = useMemo(
-		() => buildV2QuestionnaireColumnDefs(registryJsonSchema, registryUiSchema),
-		[registryJsonSchema, registryUiSchema],
+		() =>
+			buildV2QuestionnaireColumnDefs(
+				registryJsonSchema,
+				registryUiSchema,
+				registryColumnOptions,
+			),
+		[registryJsonSchema, registryUiSchema, registryColumnOptions],
 	);
 
 	const GridPresetToolPanelBound = useMemo(
@@ -390,10 +412,11 @@ export function V2QuestionnaireList() {
 						{...props}
 						jsonSchema={registryJsonSchema}
 						uiSchema={registryUiSchema}
+						columnOptions={registryColumnOptions}
 					/>
 				);
 			},
-		[registryJsonSchema, registryUiSchema],
+		[registryJsonSchema, registryUiSchema, registryColumnOptions],
 	);
 
 	const gridIcons = useMemo(
@@ -464,6 +487,7 @@ export function V2QuestionnaireList() {
 				FACTORY_PRESET_IDS.default,
 				registryJsonSchema,
 				registryUiSchema,
+				registryColumnOptions,
 			);
 			if (basicPreset) {
 				applyQuestionnaireGridPreset(e.api, basicPreset);
@@ -472,7 +496,7 @@ export function V2QuestionnaireList() {
 				e.api.applyColumnState({ state, applyOrder: true });
 			});
 		},
-		[registryJsonSchema, registryUiSchema],
+		[registryJsonSchema, registryUiSchema, registryColumnOptions],
 	);
 
 	const persistColumnState = useCallback((api: GridApi) => {
@@ -680,8 +704,8 @@ export function V2QuestionnaireList() {
 					defaultColDef={{
 						sortable: true,
 						resizable: true,
-						filter: true,
-						filterParams: AG_GRID_SIMPLE_TEXT_FILTER_PARAMS,
+						filter: "agSetColumnFilter",
+						filterParams: AG_GRID_SET_FILTER_PARAMS,
 						minWidth: 90,
 					}}
 					headerHeight={32}

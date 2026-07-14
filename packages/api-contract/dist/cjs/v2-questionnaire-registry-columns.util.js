@@ -3,14 +3,24 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.V2_UNCERTAINTY_CALCULATION_FIELD_ORDER = exports.V2_UNCERTAINTY_RISK_GROUP_ORDER = exports.V2_UNCERTAINTY_RISK_GROUP_LABELS = void 0;
 exports.registryFormColumnId = registryFormColumnId;
 exports.estimateRegistryColumnWidth = estimateRegistryColumnWidth;
+exports.collectRegistryArrayIndicesFromRows = collectRegistryArrayIndicesFromRows;
+exports.collectRegistryArrayGroupLabelsFromRows = collectRegistryArrayGroupLabelsFromRows;
+exports.deriveRegistryColumnOptionsFromRows = deriveRegistryColumnOptionsFromRows;
 exports.buildStaticV2QuestionnaireRegistryColumnTree = buildStaticV2QuestionnaireRegistryColumnTree;
 exports.buildV2QuestionnaireRegistryColumnTree = buildV2QuestionnaireRegistryColumnTree;
 exports.flattenV2RegistryColumnTree = flattenV2RegistryColumnTree;
 exports.getByFormPath = getByFormPath;
 exports.buildV2QuestionnaireRegistryExportColumns = buildV2QuestionnaireRegistryExportColumns;
 const v2_anketa_workflow_util_1 = require("./v2-anketa-workflow.util");
-const v2_anketa_workflow_types_1 = require("./v2-anketa-workflow.types");
 const v2_anketa_editor_ui_util_1 = require("./v2-anketa-editor-ui.util");
+const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
+const REGISTRY_SKIP_ROOT_KEYS = new Set([
+    "workflow",
+    "meta",
+    "groupActivation",
+    "uncertaintyCalculation",
+    "summary",
+]);
 const UNCERTAINTY_ROOT = "uncertaintyCalculation";
 const SUMMARY_ROOT = "summary";
 /** Подписи группы рисков (из jsonSchema.title заводской схемы). */
@@ -74,19 +84,6 @@ const MODEL_FIELDS = [
     ["algorithm", "Алгоритм"],
     ["autoML", "AutoML"],
     ["role", "Роль"],
-];
-const PLATFORM_STREAM_FIELDS = [
-    ["streamName", "Стрим"],
-    ["baseTypicalScore", "Базовая (типовые)"],
-    ["adjustedTypicalScore", "С поправкой"],
-    ["deviationPercent", "Отклонение %"],
-    ["atypicalScore", "Нетиповые"],
-];
-const E2E_STAGE_FIELDS = [
-    ["stageName", "Этап E2E"],
-    ["baseScore", "Базовая"],
-    ["complexityCoeff", "С поправкой"],
-    ["deviationFromBase", "Отклонение %"],
 ];
 const DEFAULT_ARRAY_MAX_ITEMS = 3;
 function registryFormColumnId(formPath) {
@@ -201,6 +198,103 @@ function sectionStatusLeaf(sectionId) {
         valueType: "text",
     };
 }
+function panelStatusLeaf(panelPathKey, sectionTitle) {
+    return {
+        type: "leaf",
+        id: `workflowPanel.${panelPathKey}`,
+        header: `${sectionTitle} — статус`,
+        kind: "panelStatus",
+        panelPathKey,
+        valueType: "text",
+    };
+}
+function readArrayAtFormPath(formData, dotPath) {
+    const value = getByFormPath(formData ?? {}, dotPath);
+    return Array.isArray(value) ? value : undefined;
+}
+function arrayItemHasData(item) {
+    if (item == null)
+        return false;
+    if (typeof item !== "object")
+        return true;
+    return Object.values(item).some((v) => v != null && v !== "");
+}
+/** Индексы элементов массива, встречающиеся в данных анкет. */
+function collectRegistryArrayIndicesFromRows(rows, dotPath) {
+    const indices = new Set();
+    for (const row of rows) {
+        const arr = readArrayAtFormPath(row.formData, dotPath);
+        if (!arr)
+            continue;
+        arr.forEach((item, index) => {
+            if (arrayItemHasData(item))
+                indices.add(index);
+        });
+    }
+    return [...indices].sort((a, b) => a - b);
+}
+/** Подписи групп массива (stageName, streamName и т.п.) из данных анкет. */
+function collectRegistryArrayGroupLabelsFromRows(rows, dotPath, nameField) {
+    const labels = {};
+    for (const row of rows) {
+        const arr = readArrayAtFormPath(row.formData, dotPath);
+        if (!arr)
+            continue;
+        arr.forEach((item, index) => {
+            if (labels[index])
+                return;
+            const rec = readRecord(item);
+            const name = rec?.[nameField];
+            if (typeof name === "string" && name.trim()) {
+                labels[index] = name.trim();
+            }
+        });
+    }
+    return labels;
+}
+function deriveRegistryColumnOptionsFromRows(rows) {
+    const arrayIndicesByPath = {};
+    const arrayGroupLabelsByPath = {};
+    for (const path of [
+        `${SUMMARY_ROOT}.platformStreams`,
+        `${SUMMARY_ROOT}.detailedCalculation`,
+    ]) {
+        const indices = collectRegistryArrayIndicesFromRows(rows, path);
+        if (indices.length === 0)
+            continue;
+        arrayIndicesByPath[path] = indices;
+        const nameField = path === `${SUMMARY_ROOT}.platformStreams` ? "streamName" : "stageName";
+        const labels = collectRegistryArrayGroupLabelsFromRows(rows, path, nameField);
+        if (Object.keys(labels).length > 0) {
+            arrayGroupLabelsByPath[path] = labels;
+        }
+    }
+    return { rows, arrayIndicesByPath, arrayGroupLabelsByPath };
+}
+function resolveArrayIndices(dotPath, options) {
+    const explicit = options.arrayIndicesByPath?.[dotPath];
+    if (explicit?.length)
+        return explicit;
+    if (options.rows?.length) {
+        const fromRows = collectRegistryArrayIndicesFromRows(options.rows, dotPath);
+        if (fromRows.length > 0)
+            return fromRows;
+    }
+    const maxItems = options.arrayMaxItems ?? DEFAULT_ARRAY_MAX_ITEMS;
+    return Array.from({ length: maxItems }, (_, index) => index);
+}
+function resolveArrayGroupHeader(dotPath, index, fallbackHeader, options) {
+    const label = options.arrayGroupLabelsByPath?.[dotPath]?.[index];
+    if (label)
+        return label;
+    return `${fallbackHeader} ${index + 1}`;
+}
+function readPanelSectionStatus(row, panelPathKey) {
+    const workflow = readRecord(row.formData?.workflow);
+    const panelSections = readRecord(workflow?.panelSections);
+    const status = panelSections?.[panelPathKey];
+    return typeof status === "string" ? status : "";
+}
 function group(header, children, opts) {
     return {
         type: "group",
@@ -209,11 +303,11 @@ function group(header, children, opts) {
         children,
     };
 }
-function arrayItemGroupFromSchema(groupHeader, basePath, index, itemSchema, itemUi) {
+function arrayItemGroupFromSchema(groupHeader, basePath, index, itemSchema, itemUi, headerOverride) {
     const fields = [];
     const props = readRecord(itemSchema.properties);
     if (!props) {
-        return group(`${groupHeader} ${index + 1}`, []);
+        return group(headerOverride ?? `${groupHeader} ${index + 1}`, []);
     }
     for (const key of listOrderedPropertyKeys(itemSchema, itemUi)) {
         const fieldSchema = readRecord(props[key]);
@@ -224,11 +318,10 @@ function arrayItemGroupFromSchema(groupHeader, basePath, index, itemSchema, item
             continue;
         fields.push(formLeaf(`${basePath}[${index}].${key}`, readFieldTitle(fieldSchema, key), resolveValueType(fieldSchema)));
     }
-    return group(`${groupHeader} ${index + 1}`, fields);
+    return group(headerOverride ?? `${groupHeader} ${index + 1}`, fields);
 }
 function collectSchemaSectionColumns(sectionSchema, sectionUi, sectionDotPath, options) {
     const nodes = [];
-    const maxItems = options.arrayMaxItems ?? DEFAULT_ARRAY_MAX_ITEMS;
     for (const key of listOrderedPropertyKeys(sectionSchema, sectionUi)) {
         const childSchema = readRecord(readRecord(sectionSchema.properties)?.[key]);
         const childUi = readRecord(sectionUi?.[key]);
@@ -264,16 +357,15 @@ function collectSchemaSectionColumns(sectionSchema, sectionUi, sectionDotPath, o
             const itemProps = readRecord(itemsSchema.properties);
             if (!itemProps || Object.keys(itemProps).length === 0)
                 continue;
-            if (childSchema.readOnly === true)
-                continue;
             if (isReadonlyGeneratedArray(childSchema, childUi))
                 continue;
             const itemsUi = readRecord(childUi?.items);
             const groupHeader = typeof childSchema.title === "string" && childSchema.title.trim()
                 ? childSchema.title.trim()
                 : key;
-            for (let index = 0; index < maxItems; index += 1) {
-                nodes.push(arrayItemGroupFromSchema(groupHeader, childPath, index, itemsSchema, itemsUi));
+            const indices = resolveArrayIndices(childPath, options);
+            for (const index of indices) {
+                nodes.push(arrayItemGroupFromSchema(groupHeader, childPath, index, itemsSchema, itemsUi, resolveArrayGroupHeader(childPath, index, groupHeader, options)));
             }
         }
     }
@@ -314,7 +406,6 @@ function collectSummaryColumns(schema, ui, options) {
     const props = readRecord(schema.properties);
     if (!props)
         return nodes;
-    const maxItems = options.arrayMaxItems ?? DEFAULT_ARRAY_MAX_ITEMS;
     const scalarFields = [];
     for (const key of listOrderedPropertyKeys(schema, ui)) {
         const fieldSchema = readRecord(props[key]);
@@ -332,22 +423,30 @@ function collectSummaryColumns(schema, ui, options) {
     if (scalarFields.length) {
         nodes.push(group("Итоговая оценка", scalarFields));
     }
+    const platformPath = `${SUMMARY_ROOT}.platformStreams`;
     const platformStreams = readRecord(props.platformStreams);
     const platformUi = readRecord(ui?.platformStreams);
     if (platformStreams && resolveSchemaType(platformStreams) === "array") {
         const itemsSchema = readRecord(platformStreams.items);
         if (itemsSchema) {
             const itemsUi = readRecord(platformUi?.items);
-            nodes.push(group("Платформенные стримы", Array.from({ length: maxItems + 1 }, (_, index) => arrayItemGroupFromSchema("Стрим", `${SUMMARY_ROOT}.platformStreams`, index, itemsSchema, itemsUi))));
+            const indices = resolveArrayIndices(platformPath, options);
+            if (indices.length > 0) {
+                nodes.push(group("Платформенные стримы", indices.map((index) => arrayItemGroupFromSchema("Стрим", platformPath, index, itemsSchema, itemsUi, resolveArrayGroupHeader(platformPath, index, "Стрим", options)))));
+            }
         }
     }
+    const detailedPath = `${SUMMARY_ROOT}.detailedCalculation`;
     const detailedCalculation = readRecord(props.detailedCalculation);
     const detailedUi = readRecord(ui?.detailedCalculation);
     if (detailedCalculation && resolveSchemaType(detailedCalculation) === "array") {
         const itemsSchema = readRecord(detailedCalculation.items);
         if (itemsSchema) {
             const itemsUi = readRecord(detailedUi?.items);
-            nodes.push(group("E2E этапы", Array.from({ length: maxItems + 2 }, (_, index) => arrayItemGroupFromSchema("Этап", `${SUMMARY_ROOT}.detailedCalculation`, index, itemsSchema, itemsUi))));
+            const indices = resolveArrayIndices(detailedPath, options);
+            if (indices.length > 0) {
+                nodes.push(group("E2E этапы", indices.map((index) => arrayItemGroupFromSchema("Этап", detailedPath, index, itemsSchema, itemsUi, resolveArrayGroupHeader(detailedPath, index, "Этап", options)))));
+            }
         }
     }
     return nodes;
@@ -367,11 +466,42 @@ function buildMetaRegistryGroup() {
         metaLeaf("updatedAt", "Дата последнего изменения", "updatedAt", "date"),
     ], { openByDefault: true });
 }
+function sectionGroupFromNodes(sectionTitle, statusLeaves, children, openByDefault) {
+    return group(sectionTitle, [...statusLeaves, ...children], { openByDefault });
+}
+function listRegistryRootSectionKeys(rootSchema, rootUi) {
+    const props = readRecord(rootSchema.properties);
+    if (!props)
+        return [];
+    return listOrderedPropertyKeys(rootSchema, rootUi).filter((key) => {
+        if (REGISTRY_SKIP_ROOT_KEYS.has(key))
+            return false;
+        const sectionSchema = readRecord(props[key]);
+        if (!sectionSchema || resolveSchemaType(sectionSchema) !== "object") {
+            return false;
+        }
+        const sectionUi = readRecord(rootUi?.[key]);
+        if (sectionUi && (0, v2_anketa_editor_ui_util_1.isV2AnketaHiddenUiNode)(sectionUi))
+            return false;
+        const uiOptions = (0, v2_anketa_section_ui_util_1.readV2AnketaSectionUiOptions)(sectionUi);
+        if (uiOptions.hidden || uiOptions.system)
+            return false;
+        return true;
+    });
+}
+function buildSectionStatusLeaves(sectionKey, sectionTitle, sectionUi) {
+    const uiOptions = (0, v2_anketa_section_ui_util_1.readV2AnketaSectionUiOptions)(sectionUi);
+    const binding = (0, v2_anketa_section_ui_util_1.resolveAnketaSectionWorkflowBinding)(sectionKey, uiOptions);
+    if (binding.kind === "main") {
+        return [sectionStatusLeaf(binding.sectionId)];
+    }
+    if (binding.kind === "panel") {
+        return [panelStatusLeaf(binding.pathKey, sectionTitle)];
+    }
+    return [];
+}
 function mainSectionGroupFromNodes(sectionId, children, openByDefault) {
-    return group(v2_anketa_workflow_util_1.V2_ANKETA_MAIN_SECTION_TITLES[sectionId], [
-        sectionStatusLeaf(sectionId),
-        ...children,
-    ], { openByDefault });
+    return sectionGroupFromNodes(v2_anketa_workflow_util_1.V2_ANKETA_MAIN_SECTION_TITLES[sectionId], [sectionStatusLeaf(sectionId)], children, openByDefault);
 }
 function arrayItemCols(groupHeader, basePath, index, fields) {
     return group(`${groupHeader} ${index + 1}`, fields.map(([key, label]) => formLeaf(`${basePath}[${index}].${key}`, label)));
@@ -440,8 +570,6 @@ function buildStaticV2QuestionnaireRegistryColumnTree() {
             formLeaf("summary.scoreWithComplexityCoeff", "С поправкой сложности", "number"),
             formLeaf("summary.deviationFromBaseline", "Отклонение %", "number"),
         ]),
-        group("Платформенные стримы", [0, 1, 2, 3].map((index) => arrayItemCols("Стрим", "summary.platformStreams", index, PLATFORM_STREAM_FIELDS))),
-        group("E2E этапы", [0, 1, 2, 3, 4].map((index) => arrayItemCols("Этап", "summary.detailedCalculation", index, E2E_STAGE_FIELDS))),
     ];
 }
 /** Колонки реестра из версии jsonSchema/uiSchema шаблона. */
@@ -452,24 +580,25 @@ function buildV2QuestionnaireRegistryColumnTree(jsonSchema, uiSchema, options = 
     const rootSchema = readRecord(jsonSchema);
     const rootUi = readRecord(uiSchema);
     const rootProps = readRecord(rootSchema?.properties);
-    if (!rootProps) {
+    if (!rootSchema || !rootProps) {
         return buildStaticV2QuestionnaireRegistryColumnTree();
     }
     const tree = [buildMetaRegistryGroup()];
-    for (const sectionId of v2_anketa_workflow_types_1.V2_ANKETA_MAIN_SECTION_IDS) {
-        const sectionSchema = readRecord(rootProps[sectionId]);
+    for (const sectionKey of listRegistryRootSectionKeys(rootSchema, rootUi)) {
+        const sectionSchema = readRecord(rootProps[sectionKey]);
         if (!sectionSchema)
             continue;
-        const sectionUi = readRecord(rootUi?.[sectionId]);
-        const sectionColumns = collectSchemaSectionColumns(sectionSchema, sectionUi, sectionId, options);
-        if (sectionId === "generalInfo") {
+        const sectionUi = readRecord(rootUi?.[sectionKey]);
+        const sectionTitle = (0, v2_anketa_section_ui_util_1.resolveV2AnketaSectionDisplayTitle)(readFieldTitle(sectionSchema, sectionKey), sectionUi, sectionKey);
+        const sectionColumns = collectSchemaSectionColumns(sectionSchema, sectionUi, sectionKey, options);
+        if (sectionKey === "generalInfo") {
             const uncertaintySchema = readRecord(rootProps[UNCERTAINTY_ROOT]);
             const uncertaintyUi = readRecord(rootUi?.[UNCERTAINTY_ROOT]);
             if (uncertaintySchema) {
                 sectionColumns.push(...collectUncertaintyColumns(uncertaintySchema, uncertaintyUi));
             }
         }
-        tree.push(mainSectionGroupFromNodes(sectionId, sectionColumns, sectionId === "generalInfo"));
+        tree.push(sectionGroupFromNodes(sectionTitle, buildSectionStatusLeaves(sectionKey, sectionTitle, sectionUi), sectionColumns, sectionKey === "generalInfo"));
     }
     const summarySchema = readRecord(rootProps[SUMMARY_ROOT]);
     const summaryUi = readRecord(rootUi?.[SUMMARY_ROOT]);
@@ -548,6 +677,14 @@ function buildV2QuestionnaireRegistryExportColumns(jsonSchema, uiSchema, options
                 key: leaf.id,
                 header: leaf.header,
                 valueGetter: (row) => row.workflowSectionStatuses?.[sectionId] ?? "",
+            };
+        }
+        if (leaf.kind === "panelStatus") {
+            const panelPathKey = leaf.panelPathKey;
+            return {
+                key: leaf.id,
+                header: leaf.header,
+                valueGetter: (row) => readPanelSectionStatus(row, panelPathKey),
             };
         }
         return {

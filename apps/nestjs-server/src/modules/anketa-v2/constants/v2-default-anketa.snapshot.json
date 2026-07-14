@@ -2391,8 +2391,7 @@
 				"streamExecutor": "ПиРМ",
 				"sectionRole": "main",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
-				"defaultExpanded": false,
-				"workflowSectionId": "streamDataSources"
+				"defaultExpanded": false
 			},
 			"field_DWMBYTaF": {
 				"items": {

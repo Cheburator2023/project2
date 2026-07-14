@@ -2,6 +2,7 @@ import * as ExcelJS from "exceljs";
 import {
 	buildV2QuestionnaireRegistryExportColumns,
 	buildV2QuestionnaireRegistryExportRow,
+	deriveRegistryColumnOptionsFromRows,
 	type V2RegistryExportColumn,
 	type V2QuestionnaireDto,
 } from "@smart-anketa/api-contract";
@@ -15,6 +16,7 @@ export async function buildV2QuestionnaireRegistryXlsx(
 		uiSchema: Record<string, unknown>;
 	}> = [],
 ): Promise<Buffer> {
+	const columnOptions = deriveRegistryColumnOptionsFromRows(rows);
 	const schemas =
 		versionSchemas.length > 0
 			? versionSchemas
@@ -35,6 +37,7 @@ export async function buildV2QuestionnaireRegistryXlsx(
 		for (const column of buildV2QuestionnaireRegistryExportColumns(
 			schema.jsonSchema,
 			schema.uiSchema,
+			columnOptions,
 		)) {
 			if (!columnsByKey.has(column.key)) columnsByKey.set(column.key, column);
 		}

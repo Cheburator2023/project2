@@ -4,11 +4,20 @@ import {
 	type V2AnketaMainSectionId,
 } from "./v2-anketa-workflow.types";
 import { isV2AnketaHiddenUiNode } from "./v2-anketa-editor-ui.util";
+import {
+	readV2AnketaSectionUiOptions,
+	resolveAnketaSectionWorkflowBinding,
+	resolveV2AnketaSectionDisplayTitle,
+} from "./v2-anketa-section-ui.util";
 import type { V2QuestionnaireDto } from "./v2-questionnaire.types";
 
 export type V2RegistryColumnValueType = "text" | "number" | "date" | "boolean";
 
-export type V2RegistryColumnKind = "meta" | "form" | "sectionStatus";
+export type V2RegistryColumnKind =
+	| "meta"
+	| "form"
+	| "sectionStatus"
+	| "panelStatus";
 
 export type V2RegistryLeafColumn = {
 	type: "leaf";
@@ -18,6 +27,7 @@ export type V2RegistryLeafColumn = {
 	formPath?: string;
 	metaKey?: keyof V2QuestionnaireDto | string;
 	sectionId?: V2AnketaMainSectionId;
+	panelPathKey?: string;
 	valueType?: V2RegistryColumnValueType;
 };
 
@@ -37,9 +47,23 @@ export type V2RegistryExportColumn = {
 };
 
 export type V2RegistrySchemaColumnOptions = {
-	/** Сколько элементов массива разворачивать в колонки реестра. */
+	/** Сколько элементов массива разворачивать в колонки реестра (fallback без данных). */
 	arrayMaxItems?: number;
+	/** Строки реестра — для авто-индексов массивов и подписей групп. */
+	rows?: V2QuestionnaireDto[];
+	/** Явные индексы массивов по dot-пути (например `summary.detailedCalculation`). */
+	arrayIndicesByPath?: Record<string, number[]>;
+	/** Подписи групп массивов: путь → индекс → заголовок. */
+	arrayGroupLabelsByPath?: Record<string, Record<number, string>>;
 };
+
+const REGISTRY_SKIP_ROOT_KEYS = new Set([
+	"workflow",
+	"meta",
+	"groupActivation",
+	"uncertaintyCalculation",
+	"summary",
+]);
 
 
 const UNCERTAINTY_ROOT = "uncertaintyCalculation";
@@ -117,21 +141,6 @@ const MODEL_FIELDS = [
 	["algorithm", "Алгоритм"],
 	["autoML", "AutoML"],
 	["role", "Роль"],
-] as const;
-
-const PLATFORM_STREAM_FIELDS = [
-	["streamName", "Стрим"],
-	["baseTypicalScore", "Базовая (типовые)"],
-	["adjustedTypicalScore", "С поправкой"],
-	["deviationPercent", "Отклонение %"],
-	["atypicalScore", "Нетиповые"],
-] as const;
-
-const E2E_STAGE_FIELDS = [
-	["stageName", "Этап E2E"],
-	["baseScore", "Базовая"],
-	["complexityCoeff", "С поправкой"],
-	["deviationFromBase", "Отклонение %"],
 ] as const;
 
 const DEFAULT_ARRAY_MAX_ITEMS = 3;
@@ -275,6 +284,136 @@ function sectionStatusLeaf(
 	};
 }
 
+function panelStatusLeaf(
+	panelPathKey: string,
+	sectionTitle: string,
+): V2RegistryLeafColumn {
+	return {
+		type: "leaf",
+		id: `workflowPanel.${panelPathKey}`,
+		header: `${sectionTitle} — статус`,
+		kind: "panelStatus",
+		panelPathKey,
+		valueType: "text",
+	};
+}
+
+function readArrayAtFormPath(
+	formData: Record<string, unknown> | undefined,
+	dotPath: string,
+): unknown[] | undefined {
+	const value = getByFormPath(formData ?? {}, dotPath);
+	return Array.isArray(value) ? value : undefined;
+}
+
+function arrayItemHasData(item: unknown): boolean {
+	if (item == null) return false;
+	if (typeof item !== "object") return true;
+	return Object.values(item as Record<string, unknown>).some(
+		(v) => v != null && v !== "",
+	);
+}
+
+/** Индексы элементов массива, встречающиеся в данных анкет. */
+export function collectRegistryArrayIndicesFromRows(
+	rows: V2QuestionnaireDto[],
+	dotPath: string,
+): number[] {
+	const indices = new Set<number>();
+	for (const row of rows) {
+		const arr = readArrayAtFormPath(row.formData, dotPath);
+		if (!arr) continue;
+		arr.forEach((item, index) => {
+			if (arrayItemHasData(item)) indices.add(index);
+		});
+	}
+	return [...indices].sort((a, b) => a - b);
+}
+
+/** Подписи групп массива (stageName, streamName и т.п.) из данных анкет. */
+export function collectRegistryArrayGroupLabelsFromRows(
+	rows: V2QuestionnaireDto[],
+	dotPath: string,
+	nameField: string,
+): Record<number, string> {
+	const labels: Record<number, string> = {};
+	for (const row of rows) {
+		const arr = readArrayAtFormPath(row.formData, dotPath);
+		if (!arr) continue;
+		arr.forEach((item, index) => {
+			if (labels[index]) return;
+			const rec = readRecord(item);
+			const name = rec?.[nameField];
+			if (typeof name === "string" && name.trim()) {
+				labels[index] = name.trim();
+			}
+		});
+	}
+	return labels;
+}
+
+export function deriveRegistryColumnOptionsFromRows(
+	rows: V2QuestionnaireDto[],
+): V2RegistrySchemaColumnOptions {
+	const arrayIndicesByPath: Record<string, number[]> = {};
+	const arrayGroupLabelsByPath: Record<string, Record<number, string>> = {};
+
+	for (const path of [
+		`${SUMMARY_ROOT}.platformStreams`,
+		`${SUMMARY_ROOT}.detailedCalculation`,
+	] as const) {
+		const indices = collectRegistryArrayIndicesFromRows(rows, path);
+		if (indices.length === 0) continue;
+		arrayIndicesByPath[path] = indices;
+		const nameField =
+			path === `${SUMMARY_ROOT}.platformStreams` ? "streamName" : "stageName";
+		const labels = collectRegistryArrayGroupLabelsFromRows(
+			rows,
+			path,
+			nameField,
+		);
+		if (Object.keys(labels).length > 0) {
+			arrayGroupLabelsByPath[path] = labels;
+		}
+	}
+
+	return { rows, arrayIndicesByPath, arrayGroupLabelsByPath };
+}
+
+function resolveArrayIndices(
+	dotPath: string,
+	options: V2RegistrySchemaColumnOptions,
+): number[] {
+	const explicit = options.arrayIndicesByPath?.[dotPath];
+	if (explicit?.length) return explicit;
+	if (options.rows?.length) {
+		return collectRegistryArrayIndicesFromRows(options.rows, dotPath);
+	}
+	const maxItems = options.arrayMaxItems ?? DEFAULT_ARRAY_MAX_ITEMS;
+	return Array.from({ length: maxItems }, (_, index) => index);
+}
+
+function resolveArrayGroupHeader(
+	dotPath: string,
+	index: number,
+	fallbackHeader: string,
+	options: V2RegistrySchemaColumnOptions,
+): string {
+	const label = options.arrayGroupLabelsByPath?.[dotPath]?.[index];
+	if (label) return label;
+	return `${fallbackHeader} ${index + 1}`;
+}
+
+function readPanelSectionStatus(
+	row: V2QuestionnaireDto,
+	panelPathKey: string,
+): string {
+	const workflow = readRecord(row.formData?.workflow);
+	const panelSections = readRecord(workflow?.panelSections);
+	const status = panelSections?.[panelPathKey];
+	return typeof status === "string" ? status : "";
+}
+
 function group(
 	header: string,
 	children: V2RegistryColumnNode[],
@@ -294,11 +433,12 @@ function arrayItemGroupFromSchema(
 	index: number,
 	itemSchema: Record<string, unknown>,
 	itemUi: Record<string, unknown> | undefined,
+	headerOverride?: string,
 ): V2RegistryGroupColumn {
 	const fields: V2RegistryLeafColumn[] = [];
 	const props = readRecord(itemSchema.properties);
 	if (!props) {
-		return group(`${groupHeader} ${index + 1}`, []);
+		return group(headerOverride ?? `${groupHeader} ${index + 1}`, []);
 	}
 	for (const key of listOrderedPropertyKeys(itemSchema, itemUi)) {
 		const fieldSchema = readRecord(props[key]);
@@ -313,7 +453,7 @@ function arrayItemGroupFromSchema(
 			),
 		);
 	}
-	return group(`${groupHeader} ${index + 1}`, fields);
+	return group(headerOverride ?? `${groupHeader} ${index + 1}`, fields);
 }
 
 function collectSchemaSectionColumns(
@@ -323,7 +463,6 @@ function collectSchemaSectionColumns(
 	options: V2RegistrySchemaColumnOptions,
 ): V2RegistryColumnNode[] {
 	const nodes: V2RegistryColumnNode[] = [];
-	const maxItems = options.arrayMaxItems ?? DEFAULT_ARRAY_MAX_ITEMS;
 
 	for (const key of listOrderedPropertyKeys(sectionSchema, sectionUi)) {
 		const childSchema = readRecord(readRecord(sectionSchema.properties)?.[key]);
@@ -370,14 +509,14 @@ function collectSchemaSectionColumns(
 			if (!itemsSchema) continue;
 			const itemProps = readRecord(itemsSchema.properties);
 			if (!itemProps || Object.keys(itemProps).length === 0) continue;
-			if (childSchema.readOnly === true) continue;
 			if (isReadonlyGeneratedArray(childSchema, childUi)) continue;
 			const itemsUi = readRecord(childUi?.items);
 			const groupHeader =
 				typeof childSchema.title === "string" && childSchema.title.trim()
 					? childSchema.title.trim()
 					: key;
-			for (let index = 0; index < maxItems; index += 1) {
+			const indices = resolveArrayIndices(childPath, options);
+			for (const index of indices) {
 				nodes.push(
 					arrayItemGroupFromSchema(
 						groupHeader,
@@ -385,6 +524,12 @@ function collectSchemaSectionColumns(
 						index,
 						itemsSchema,
 						itemsUi,
+						resolveArrayGroupHeader(
+							childPath,
+							index,
+							groupHeader,
+							options,
+						),
 					),
 				);
 			}
@@ -445,7 +590,6 @@ function collectSummaryColumns(
 	const nodes: V2RegistryColumnNode[] = [];
 	const props = readRecord(schema.properties);
 	if (!props) return nodes;
-	const maxItems = options.arrayMaxItems ?? DEFAULT_ARRAY_MAX_ITEMS;
 
 	const scalarFields: V2RegistryLeafColumn[] = [];
 	for (const key of listOrderedPropertyKeys(schema, ui)) {
@@ -469,49 +613,69 @@ function collectSummaryColumns(
 		nodes.push(group("Итоговая оценка", scalarFields));
 	}
 
+	const platformPath = `${SUMMARY_ROOT}.platformStreams`;
 	const platformStreams = readRecord(props.platformStreams);
 	const platformUi = readRecord(ui?.platformStreams);
 	if (platformStreams && resolveSchemaType(platformStreams) === "array") {
 		const itemsSchema = readRecord(platformStreams.items);
 		if (itemsSchema) {
 			const itemsUi = readRecord(platformUi?.items);
-			nodes.push(
-				group(
-					"Платформенные стримы",
-					Array.from({ length: maxItems + 1 }, (_, index) =>
-						arrayItemGroupFromSchema(
-							"Стрим",
-							`${SUMMARY_ROOT}.platformStreams`,
-							index,
-							itemsSchema,
-							itemsUi,
+			const indices = resolveArrayIndices(platformPath, options);
+			if (indices.length > 0) {
+				nodes.push(
+					group(
+						"Платформенные стримы",
+						indices.map((index) =>
+							arrayItemGroupFromSchema(
+								"Стрим",
+								platformPath,
+								index,
+								itemsSchema,
+								itemsUi,
+								resolveArrayGroupHeader(
+									platformPath,
+									index,
+									"Стрим",
+									options,
+								),
+							),
 						),
 					),
-				),
-			);
+				);
+			}
 		}
 	}
 
+	const detailedPath = `${SUMMARY_ROOT}.detailedCalculation`;
 	const detailedCalculation = readRecord(props.detailedCalculation);
 	const detailedUi = readRecord(ui?.detailedCalculation);
 	if (detailedCalculation && resolveSchemaType(detailedCalculation) === "array") {
 		const itemsSchema = readRecord(detailedCalculation.items);
 		if (itemsSchema) {
 			const itemsUi = readRecord(detailedUi?.items);
-			nodes.push(
-				group(
-					"E2E этапы",
-					Array.from({ length: maxItems + 2 }, (_, index) =>
-						arrayItemGroupFromSchema(
-							"Этап",
-							`${SUMMARY_ROOT}.detailedCalculation`,
-							index,
-							itemsSchema,
-							itemsUi,
+			const indices = resolveArrayIndices(detailedPath, options);
+			if (indices.length > 0) {
+				nodes.push(
+					group(
+						"E2E этапы",
+						indices.map((index) =>
+							arrayItemGroupFromSchema(
+								"Этап",
+								detailedPath,
+								index,
+								itemsSchema,
+								itemsUi,
+								resolveArrayGroupHeader(
+									detailedPath,
+									index,
+									"Этап",
+									options,
+								),
+							),
 						),
 					),
-				),
-			);
+				);
+			}
 		}
 	}
 
@@ -538,15 +702,62 @@ function buildMetaRegistryGroup(): V2RegistryGroupColumn {
 	);
 }
 
+function sectionGroupFromNodes(
+	sectionTitle: string,
+	statusLeaves: V2RegistryLeafColumn[],
+	children: V2RegistryColumnNode[],
+	openByDefault?: boolean,
+): V2RegistryGroupColumn {
+	return group(sectionTitle, [...statusLeaves, ...children], { openByDefault });
+}
+
+function listRegistryRootSectionKeys(
+	rootSchema: Record<string, unknown>,
+	rootUi: Record<string, unknown> | undefined,
+): string[] {
+	const props = readRecord(rootSchema.properties);
+	if (!props) return [];
+	return listOrderedPropertyKeys(rootSchema, rootUi).filter((key) => {
+		if (REGISTRY_SKIP_ROOT_KEYS.has(key)) return false;
+		const sectionSchema = readRecord(props[key]);
+		if (!sectionSchema || resolveSchemaType(sectionSchema) !== "object") {
+			return false;
+		}
+		const sectionUi = readRecord(rootUi?.[key]);
+		if (sectionUi && isV2AnketaHiddenUiNode(sectionUi)) return false;
+		const uiOptions = readV2AnketaSectionUiOptions(sectionUi);
+		if (uiOptions.hidden || uiOptions.system) return false;
+		return true;
+	});
+}
+
+function buildSectionStatusLeaves(
+	sectionKey: string,
+	sectionTitle: string,
+	sectionUi: Record<string, unknown> | undefined,
+): V2RegistryLeafColumn[] {
+	const uiOptions = readV2AnketaSectionUiOptions(sectionUi);
+	const binding = resolveAnketaSectionWorkflowBinding(sectionKey, uiOptions);
+	if (binding.kind === "main") {
+		return [sectionStatusLeaf(binding.sectionId)];
+	}
+	if (binding.kind === "panel") {
+		return [panelStatusLeaf(binding.pathKey, sectionTitle)];
+	}
+	return [];
+}
+
 function mainSectionGroupFromNodes(
 	sectionId: V2AnketaMainSectionId,
 	children: V2RegistryColumnNode[],
 	openByDefault?: boolean,
 ): V2RegistryGroupColumn {
-	return group(V2_ANKETA_MAIN_SECTION_TITLES[sectionId], [
-		sectionStatusLeaf(sectionId),
-		...children,
-	], { openByDefault });
+	return sectionGroupFromNodes(
+		V2_ANKETA_MAIN_SECTION_TITLES[sectionId],
+		[sectionStatusLeaf(sectionId)],
+		children,
+		openByDefault,
+	);
 }
 
 function arrayItemCols(
@@ -662,28 +873,6 @@ export function buildStaticV2QuestionnaireRegistryColumnTree(): V2RegistryColumn
 			formLeaf("summary.scoreWithComplexityCoeff", "С поправкой сложности", "number"),
 			formLeaf("summary.deviationFromBaseline", "Отклонение %", "number"),
 		]),
-		group(
-			"Платформенные стримы",
-			([0, 1, 2, 3] as const).map((index) =>
-				arrayItemCols(
-					"Стрим",
-					"summary.platformStreams",
-					index,
-					PLATFORM_STREAM_FIELDS,
-				),
-			),
-		),
-		group(
-			"E2E этапы",
-			([0, 1, 2, 3, 4] as const).map((index) =>
-				arrayItemCols(
-					"Этап",
-					"summary.detailedCalculation",
-					index,
-					E2E_STAGE_FIELDS,
-				),
-			),
-		),
 	];
 }
 
@@ -700,24 +889,29 @@ export function buildV2QuestionnaireRegistryColumnTree(
 	const rootSchema = readRecord(jsonSchema);
 	const rootUi = readRecord(uiSchema);
 	const rootProps = readRecord(rootSchema?.properties);
-	if (!rootProps) {
+	if (!rootSchema || !rootProps) {
 		return buildStaticV2QuestionnaireRegistryColumnTree();
 	}
 
 	const tree: V2RegistryColumnNode[] = [buildMetaRegistryGroup()];
 
-	for (const sectionId of V2_ANKETA_MAIN_SECTION_IDS) {
-		const sectionSchema = readRecord(rootProps[sectionId]);
+	for (const sectionKey of listRegistryRootSectionKeys(rootSchema, rootUi)) {
+		const sectionSchema = readRecord(rootProps[sectionKey]);
 		if (!sectionSchema) continue;
-		const sectionUi = readRecord(rootUi?.[sectionId]);
+		const sectionUi = readRecord(rootUi?.[sectionKey]);
+		const sectionTitle = resolveV2AnketaSectionDisplayTitle(
+			readFieldTitle(sectionSchema, sectionKey),
+			sectionUi,
+			sectionKey,
+		);
 		const sectionColumns = collectSchemaSectionColumns(
 			sectionSchema,
 			sectionUi,
-			sectionId,
+			sectionKey,
 			options,
 		);
 
-		if (sectionId === "generalInfo") {
+		if (sectionKey === "generalInfo") {
 			const uncertaintySchema = readRecord(rootProps[UNCERTAINTY_ROOT]);
 			const uncertaintyUi = readRecord(rootUi?.[UNCERTAINTY_ROOT]);
 			if (uncertaintySchema) {
@@ -728,10 +922,11 @@ export function buildV2QuestionnaireRegistryColumnTree(
 		}
 
 		tree.push(
-			mainSectionGroupFromNodes(
-				sectionId,
+			sectionGroupFromNodes(
+				sectionTitle,
+				buildSectionStatusLeaves(sectionKey, sectionTitle, sectionUi),
 				sectionColumns,
-				sectionId === "generalInfo",
+				sectionKey === "generalInfo",
 			),
 		);
 	}
@@ -823,6 +1018,14 @@ export function buildV2QuestionnaireRegistryExportColumns(
 				key: leaf.id,
 				header: leaf.header,
 				valueGetter: (row) => row.workflowSectionStatuses?.[sectionId] ?? "",
+			};
+		}
+		if (leaf.kind === "panelStatus") {
+			const panelPathKey = leaf.panelPathKey!;
+			return {
+				key: leaf.id,
+				header: leaf.header,
+				valueGetter: (row) => readPanelSectionStatus(row, panelPathKey),
 			};
 		}
 		return {

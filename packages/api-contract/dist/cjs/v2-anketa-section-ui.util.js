@@ -18,6 +18,7 @@ exports.isV2AnketaStreamSectionId = isV2AnketaStreamSectionId;
 exports.resolveV2AnketaSectionRole = resolveV2AnketaSectionRole;
 exports.resolveV2AnketaDefaultExpanded = resolveV2AnketaDefaultExpanded;
 exports.resolveV2AnketaWorkflowSectionId = resolveV2AnketaWorkflowSectionId;
+exports.resolveAnketaSectionWorkflowBinding = resolveAnketaSectionWorkflowBinding;
 exports.resolveV2AnketaSectionTitleVariant = resolveV2AnketaSectionTitleVariant;
 const v2_executor_streams_util_1 = require("./v2-executor-streams.util");
 const v2_anketa_workflow_types_1 = require("./v2-anketa-workflow.types");
@@ -295,6 +296,31 @@ function resolveV2AnketaWorkflowSectionId(uiNode, path) {
         return opts.workflowSectionId;
     const root = path[0] ?? "";
     return path.length === 1 && isV2AnketaMainSectionId(root) ? root : null;
+}
+/**
+ * Привязка секции к workflow: канонические корневые разделы — `workflow.sections`,
+ * кастомные streamBlock / скопированные панели — `workflow.panelSections[pathKey]`.
+ * Явный `workflowSectionId`, не совпадающий с ключом блока, игнорируется.
+ */
+function resolveAnketaSectionWorkflowBinding(pathKey, uiOptions) {
+    const trimmed = pathKey.trim();
+    if (!trimmed)
+        return { kind: "none" };
+    const rootKey = trimmed.split(".")[0] ?? "";
+    if (trimmed === rootKey && isV2AnketaMainSectionId(rootKey)) {
+        return { kind: "main", sectionId: rootKey };
+    }
+    const panelWorkflowEligible = uiOptions.streamBlock === true ||
+        uiOptions.groupActivatable === true ||
+        uiOptions.sectionRole === "main";
+    if (panelWorkflowEligible) {
+        return { kind: "panel", pathKey: trimmed };
+    }
+    if (uiOptions.workflowSectionId &&
+        trimmed === uiOptions.workflowSectionId) {
+        return { kind: "main", sectionId: uiOptions.workflowSectionId };
+    }
+    return { kind: "none" };
 }
 function resolveV2AnketaSectionTitleVariant(uiNode, fallback = "h6") {
     const opts = readV2AnketaSectionUiOptions(uiNode);

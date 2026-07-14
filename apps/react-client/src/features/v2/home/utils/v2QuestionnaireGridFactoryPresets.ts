@@ -1,5 +1,8 @@
 import type { ColDef, ColGroupDef, ColumnState } from "ag-grid-community";
-import { registryFormColumnId } from "@smart-anketa/api-contract";
+import {
+	registryFormColumnId,
+	type V2RegistrySchemaColumnOptions,
+} from "@smart-anketa/api-contract";
 import type { V2QuestionnaireGridRow } from "../types/v2QuestionnaireGrid.types";
 import { buildV2QuestionnaireColumnDefs } from "./v2QuestionnaireGridColumns";
 
@@ -122,17 +125,19 @@ export function applyQuestionnaireGridPreset(
 export function getAllGridColumnIds(
 	jsonSchema?: Record<string, unknown>,
 	uiSchema?: Record<string, unknown>,
+	options?: V2RegistrySchemaColumnOptions,
 ): string[] {
 	return collectLeafColumnIds(
-		buildV2QuestionnaireColumnDefs(jsonSchema, uiSchema),
+		buildV2QuestionnaireColumnDefs(jsonSchema, uiSchema, options),
 	);
 }
 
 function buildFactoryPresets(
 	jsonSchema?: Record<string, unknown>,
 	uiSchema?: Record<string, unknown>,
+	options?: V2RegistrySchemaColumnOptions,
 ): FactoryGridPreset[] {
-	const allIds = getAllGridColumnIds(jsonSchema, uiSchema);
+	const allIds = getAllGridColumnIds(jsonSchema, uiSchema, options);
 	return [
 		{
 			id: FACTORY_PRESET_IDS.default,
@@ -158,16 +163,18 @@ function buildFactoryPresets(
 export function getFactoryGridPresets(
 	jsonSchema?: Record<string, unknown>,
 	uiSchema?: Record<string, unknown>,
+	options?: V2RegistrySchemaColumnOptions,
 ): FactoryGridPreset[] {
-	return buildFactoryPresets(jsonSchema, uiSchema);
+	return buildFactoryPresets(jsonSchema, uiSchema, options);
 }
 
 export function getFactoryGridPreset(
 	id: string,
 	jsonSchema?: Record<string, unknown>,
 	uiSchema?: Record<string, unknown>,
+	options?: V2RegistrySchemaColumnOptions,
 ): FactoryGridPreset | undefined {
-	return getFactoryGridPresets(jsonSchema, uiSchema).find(
+	return getFactoryGridPresets(jsonSchema, uiSchema, options).find(
 		(preset) => preset.id === id,
 	);
 }

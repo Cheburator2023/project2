@@ -27,3 +27,17 @@ export function v2WorkflowSectionStatusCell(sectionId: V2AnketaMainSectionId) {
 		return <AnketaSectionStatusChip kind="section" status={status} />;
 	};
 }
+
+export function v2WorkflowPanelStatusCell(panelPathKey: string) {
+	return function V2WorkflowPanelStatusCell(
+		params: ICellRendererParams<V2QuestionnaireGridRow>,
+	) {
+		const version = resolveVersionRow(params.data);
+		const workflow = version?.formData?.workflow as
+			| { panelSections?: Record<string, V2AnketaSectionStatus> }
+			| undefined;
+		const status = workflow?.panelSections?.[panelPathKey];
+		if (!status) return null;
+		return <AnketaSectionStatusChip kind="section" status={status} />;
+	};
+}

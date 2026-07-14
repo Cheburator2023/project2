@@ -274,6 +274,31 @@ export function resolveV2AnketaWorkflowSectionId(uiNode, path) {
     const root = path[0] ?? "";
     return path.length === 1 && isV2AnketaMainSectionId(root) ? root : null;
 }
+/**
+ * Привязка секции к workflow: канонические корневые разделы — `workflow.sections`,
+ * кастомные streamBlock / скопированные панели — `workflow.panelSections[pathKey]`.
+ * Явный `workflowSectionId`, не совпадающий с ключом блока, игнорируется.
+ */
+export function resolveAnketaSectionWorkflowBinding(pathKey, uiOptions) {
+    const trimmed = pathKey.trim();
+    if (!trimmed)
+        return { kind: "none" };
+    const rootKey = trimmed.split(".")[0] ?? "";
+    if (trimmed === rootKey && isV2AnketaMainSectionId(rootKey)) {
+        return { kind: "main", sectionId: rootKey };
+    }
+    const panelWorkflowEligible = uiOptions.streamBlock === true ||
+        uiOptions.groupActivatable === true ||
+        uiOptions.sectionRole === "main";
+    if (panelWorkflowEligible) {
+        return { kind: "panel", pathKey: trimmed };
+    }
+    if (uiOptions.workflowSectionId &&
+        trimmed === uiOptions.workflowSectionId) {
+        return { kind: "main", sectionId: uiOptions.workflowSectionId };
+    }
+    return { kind: "none" };
+}
 export function resolveV2AnketaSectionTitleVariant(uiNode, fallback = "h6") {
     const opts = readV2AnketaSectionUiOptions(uiNode);
     return opts.titleVariant ?? fallback;

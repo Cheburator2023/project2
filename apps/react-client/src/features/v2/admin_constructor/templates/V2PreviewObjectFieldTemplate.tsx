@@ -42,11 +42,11 @@ import {
 	isV2AnketaHiddenUiNode,
 	isV2AnketaModalObjectArch,
 	readPanelSectionStatus,
+	resolveAnketaSectionWorkflowBinding,
 	resolveV2AnketaArchComponent,
 	resolveV2AnketaDefaultExpanded,
 	resolveV2AnketaSectionRole,
 	resolveV2AnketaSectionTitleVariant,
-	resolveV2AnketaWorkflowSectionId,
 	readV2AnketaSectionUiOptions,
 	resolveV2AnketaSectionDisplayTitle,
 	resolveGroupIsActive,
@@ -842,9 +842,9 @@ export function V2PreviewObjectFieldTemplate({
 	);
 	const titleVariant = resolveV2AnketaSectionTitleVariant(uiSchema);
 	const sectionUiOptions = readV2AnketaSectionUiOptions(uiSchema);
-	const workflowSectionId = resolveV2AnketaWorkflowSectionId(
-		uiSchema,
-		pathSegments,
+	const workflowBinding = resolveAnketaSectionWorkflowBinding(
+		pathKey,
+		sectionUiOptions,
 	);
 	const archComponent = resolveV2AnketaArchComponent(uiSchema);
 	const wrapArch = (node: ReactNode): ReactNode => (
@@ -921,38 +921,36 @@ export function V2PreviewObjectFieldTemplate({
 	const showWorkflowChrome =
 		sectionRole === "main" ||
 		Boolean(sectionUiOptions.workflowSectionId) ||
-		sectionUiOptions.groupActivatable === true;
-	const workflowSectionIdResolved = workflowSectionId;
-	const hasExplicitWorkflowSectionId = Boolean(
-		sectionUiOptions.workflowSectionId,
-	);
+		sectionUiOptions.groupActivatable === true ||
+		workflowBinding.kind === "panel";
+	const usesMainSectionWorkflow = workflowBinding.kind === "main";
+	const usesPanelPathWorkflow = workflowBinding.kind === "panel";
 	const panelWorkflowPathKey =
-		showWorkflowChrome && !hasExplicitWorkflowSectionId && pathKey
-			? pathKey
-			: null;
-	const usesMainSectionWorkflow = Boolean(
-		hasExplicitWorkflowSectionId && workflowSectionIdResolved,
-	);
-	const usesPanelPathWorkflow = Boolean(
-		panelWorkflowPathKey && !workflowSectionIdResolved,
-	);
+		workflowBinding.kind === "panel" ? workflowBinding.pathKey : null;
+	const workflowSectionIdResolved =
+		workflowBinding.kind === "main" ? workflowBinding.sectionId : null;
 	const sectionStatus = workflow
 		? usesMainSectionWorkflow && workflowSectionIdResolved
 			? (workflow.sections[workflowSectionIdResolved] ?? "Создано")
 			: usesPanelPathWorkflow && panelWorkflowPathKey
 				? readPanelSectionStatus(workflow, panelWorkflowPathKey)
-				: workflowSectionIdResolved
-					? (workflow.sections[workflowSectionIdResolved] ?? "Создано")
-					: "Создано"
+				: "Создано"
 		: "Создано";
 	const workflowLocked =
 		usesMainSectionWorkflow && workflowSectionIdResolved
 			? anketaReadOnly ||
 				isMainSectionLocked?.(workflowSectionIdResolved) ||
 				workflow?.globalStatus === "Заполнено"
-			: anketaReadOnly || workflow?.globalStatus === "Заполнено";
+			: usesPanelPathWorkflow && panelWorkflowPathKey
+				? anketaReadOnly ||
+					(workflow
+						? readPanelSectionStatus(workflow, panelWorkflowPathKey) ===
+							"Заполнено"
+						: false) ||
+					workflow?.globalStatus === "Заполнено"
+				: anketaReadOnly || workflow?.globalStatus === "Заполнено";
 	const workflowCompleteButtonLabel =
-		hasExplicitWorkflowSectionId && workflowSectionIdResolved
+		usesMainSectionWorkflow && workflowSectionIdResolved
 			? V2_ANKETA_SECTION_COMPLETE_LABELS[workflowSectionIdResolved]
 			: `Завершить заполнение ${sectionTitle}`;
 	const canCompleteWorkflow =
@@ -963,7 +961,7 @@ export function V2PreviewObjectFieldTemplate({
 			? Boolean(onCompleteMainSection && workflowSectionIdResolved)
 			: usesPanelPathWorkflow
 				? Boolean(onCompletePanelSection && panelWorkflowPathKey)
-				: Boolean(onCompleteMainSection && workflowSectionIdResolved));
+				: false);
 	const workflowStatusChip = showWorkflowChrome ? (
 		<AnketaSectionStatusChip kind="section" status={sectionStatus} />
 	) : null;

@@ -32,6 +32,7 @@ import {
 	resolveV2AnketaCanvasUiKind,
 	syncTriggerGatedGroupActivationFromTypicalWorks,
 } from "@smart-anketa/api-contract";
+import { createResetSchemaEditorPreviewFormData } from "../utils/previewFormReset";
 import { evaluateRuleLive } from "../schemaEditor/panels/logicPanel/helpers";
 import { nanoid } from "nanoid";
 import { Box, Button, Typography } from "@mui/material";
@@ -275,6 +276,8 @@ export const V2TemplateSchemaEditor = ({
 	const [uiSchema, setUiSchema] = useState<UiSchema>({});
 	const [logic, setLogic] = useState(coerceLogicGraph(undefined));
 	const [formData, setFormData] = useState<Record<string, unknown>>({});
+	const [previewResetPending, setPreviewResetPending] = useState(false);
+	const [previewFormRemountKey, setPreviewFormRemountKey] = useState(0);
 
 	const [selectedPointer, setSelectedPointer] = useState<string | null>(
 		initialPointer ? normalizeJsonPointer(initialPointer) : null,
@@ -620,7 +623,7 @@ export const V2TemplateSchemaEditor = ({
 	);
 
 	useEffect(() => {
-		if (!mappedCalculation?.liveFormData) return;
+		if (!mappedCalculation?.liveFormData || previewResetPending) return;
 		setFormData((prev) =>
 			syncTriggerGatedGroupActivationFromTypicalWorks(
 				prev,
@@ -628,7 +631,7 @@ export const V2TemplateSchemaEditor = ({
 				mappedCalculation.liveFormData,
 			),
 		);
-	}, [mappedCalculation?.liveFormData, uiSchema]);
+	}, [mappedCalculation?.liveFormData, uiSchema, previewResetPending]);
 
 	const logicPreviewPack = useMemo(
 		() =>
@@ -670,6 +673,33 @@ export const V2TemplateSchemaEditor = ({
 			),
 		[logicPreviewPack.previewUiSchema, uiSchema, jsonSchema, enumMapByCode],
 	);
+	const resetPreviewForm = useCallback(() => {
+		setPreviewResetPending(true);
+		setFormData(createResetSchemaEditorPreviewFormData(previewUiSchema));
+		setPreviewFormRemountKey((key) => key + 1);
+		setCalculationRevision((revision) => revision + 1);
+	}, [previewUiSchema]);
+
+	const previewResetAwaitedLoadingRef = useRef(false);
+	useEffect(() => {
+		if (!previewResetPending) {
+			previewResetAwaitedLoadingRef.current = false;
+			return;
+		}
+		if (!activeVersion?.id) {
+			setPreviewResetPending(false);
+			return;
+		}
+		if (calculationLoading) {
+			previewResetAwaitedLoadingRef.current = true;
+			return;
+		}
+		if (previewResetAwaitedLoadingRef.current) {
+			setPreviewResetPending(false);
+			previewResetAwaitedLoadingRef.current = false;
+		}
+	}, [previewResetPending, calculationLoading, activeVersion?.id]);
+
 	const calculationItems = logicPreviewPack.calculationItems;
 	const taskTriggerItems = logicPreviewPack.taskTriggerItems;
 	const liveFormData = logicPreviewPack.liveFormData;
@@ -2007,6 +2037,9 @@ export const V2TemplateSchemaEditor = ({
 			setLogic,
 			formData,
 			setFormData,
+			resetPreviewForm,
+			previewResetPending,
+			previewFormRemountKey,
 			selectedPointer,
 			setSelectedPointer,
 			treeRows,
@@ -2104,6 +2137,9 @@ export const V2TemplateSchemaEditor = ({
 			uiSchema,
 			logic,
 			formData,
+			resetPreviewForm,
+			previewResetPending,
+			previewFormRemountKey,
 			selectedPointer,
 			treeRows,
 			baselineSnapshot,

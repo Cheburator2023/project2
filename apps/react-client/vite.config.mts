@@ -121,9 +121,10 @@ export const viteCommonConfig = ({
 			base,
 			optimizeDeps: {
 				holdUntilCrawlEnd: true,
+				// Workspace-пакет: не prebundle — иначе кэш deps устаревает после rebuild api-contract.
+				exclude: IS_DEV ? ["@smart-anketa/api-contract"] : [],
 				include: [
 					"@smart-anketa/json-logic-ts",
-					"@smart-anketa/api-contract",
 					"react-dnd",
 					"react-dnd-html5-backend",
 					"@minoru/react-dnd-treeview",

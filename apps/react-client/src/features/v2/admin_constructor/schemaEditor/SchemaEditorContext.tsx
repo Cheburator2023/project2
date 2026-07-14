@@ -30,6 +30,9 @@ export type SchemaEditorContextValue = {
 	setLogic: React.Dispatch<React.SetStateAction<{ rules: V2LogicRuleDto[] }>>;
 	formData: Record<string, unknown>;
 	setFormData: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
+	resetPreviewForm: () => void;
+	previewResetPending: boolean;
+	previewFormRemountKey: number;
 
 	selectedPointer: string | null;
 	setSelectedPointer: (pointer: string | null) => void;

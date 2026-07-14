@@ -51,6 +51,7 @@ type Props = {
 		Omit<AnketaFormContextValue, "formData" | "previewSchema" | "previewUiSchema">
 	>;
 	modalBindings?: AnketaFormModalBindingSets;
+	formRemountKey?: number;
 	"data-test-id"?: string;
 };
 
@@ -158,6 +159,7 @@ export function V2AnketaSchemaForm({
 	hiddenTopLevelFields = [],
 	anketaFormContext,
 	modalBindings: modalBindingsProp,
+	formRemountKey,
 	"data-test-id": dataTestId = "v2-anketa-schema-form",
 }: Props) {
 	const internalEngine = useV2AnketaSchemaEngine(
@@ -342,6 +344,7 @@ export function V2AnketaSchemaForm({
 			) : null}
 
 			<Form
+				key={formRemountKey ?? 0}
 				schema={engine.previewSchema}
 				uiSchema={formUiSchema}
 				formData={rjsfFormData}

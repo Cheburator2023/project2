@@ -32,6 +32,7 @@ type Props = {
 	>;
 	/** Слот «Рассчитать общую неопределённость» в generalInfo (режим анкеты). */
 	showUncertaintySlot?: boolean;
+	formRemountKey?: number;
 	"data-test-id"?: string;
 };
 
@@ -42,6 +43,7 @@ export function V2AnketaFormWithModals({
 	hiddenTopLevelFields = [],
 	anketaFormContext: anketaFormContextProp,
 	showUncertaintySlot = false,
+	formRemountKey,
 	"data-test-id": dataTestId = "v2-anketa-form-with-modals",
 }: Props) {
 	const effectiveReadOnly = readOnly || engine.readOnly;
@@ -146,6 +148,7 @@ export function V2AnketaFormWithModals({
 					hiddenTopLevelFields={hiddenTopLevelFields}
 					anketaFormContext={anketaFormContext}
 					modalBindings={modalBindingSets}
+					formRemountKey={formRemountKey}
 				/>
 			</Flex>
 			<AnketaFormModals

@@ -81,5 +81,20 @@ export declare function isV2AnketaStreamSectionId(value: string): value is V2Ank
 export declare function resolveV2AnketaSectionRole(uiNode: unknown, path: string[]): V2AnketaSectionRole;
 export declare function resolveV2AnketaDefaultExpanded(uiNode: unknown, path: string[], role: V2AnketaSectionRole): boolean;
 export declare function resolveV2AnketaWorkflowSectionId(uiNode: unknown, path: string[]): V2AnketaMainSectionId | null;
+export type AnketaSectionWorkflowBinding = {
+    kind: "main";
+    sectionId: V2AnketaMainSectionId;
+} | {
+    kind: "panel";
+    pathKey: string;
+} | {
+    kind: "none";
+};
+/**
+ * Привязка секции к workflow: канонические корневые разделы — `workflow.sections`,
+ * кастомные streamBlock / скопированные панели — `workflow.panelSections[pathKey]`.
+ * Явный `workflowSectionId`, не совпадающий с ключом блока, игнорируется.
+ */
+export declare function resolveAnketaSectionWorkflowBinding(pathKey: string, uiOptions: Pick<V2AnketaSectionUiOptions, "workflowSectionId" | "streamBlock" | "groupActivatable" | "sectionRole">): AnketaSectionWorkflowBinding;
 export declare function resolveV2AnketaSectionTitleVariant(uiNode: unknown, fallback?: V2AnketaSectionTitleVariant): V2AnketaSectionTitleVariant;
 export { STREAM_SECTION_IDS as V2_ANKETA_STREAM_SECTION_IDS };

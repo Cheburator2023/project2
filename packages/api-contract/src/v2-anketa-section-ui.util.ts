@@ -424,6 +424,53 @@ export function resolveV2AnketaWorkflowSectionId(
 	return path.length === 1 && isV2AnketaMainSectionId(root) ? root : null;
 }
 
+export type AnketaSectionWorkflowBinding =
+	| { kind: "main"; sectionId: V2AnketaMainSectionId }
+	| { kind: "panel"; pathKey: string }
+	| { kind: "none" };
+
+/**
+ * Привязка секции к workflow: канонические корневые разделы — `workflow.sections`,
+ * кастомные streamBlock / скопированные панели — `workflow.panelSections[pathKey]`.
+ * Явный `workflowSectionId`, не совпадающий с ключом блока, игнорируется.
+ */
+export function resolveAnketaSectionWorkflowBinding(
+	pathKey: string,
+	uiOptions: Pick<
+		V2AnketaSectionUiOptions,
+		| "workflowSectionId"
+		| "streamBlock"
+		| "groupActivatable"
+		| "sectionRole"
+	>,
+): AnketaSectionWorkflowBinding {
+	const trimmed = pathKey.trim();
+	if (!trimmed) return { kind: "none" };
+
+	const rootKey = trimmed.split(".")[0] ?? "";
+	if (trimmed === rootKey && isV2AnketaMainSectionId(rootKey)) {
+		return { kind: "main", sectionId: rootKey };
+	}
+
+	const panelWorkflowEligible =
+		uiOptions.streamBlock === true ||
+		uiOptions.groupActivatable === true ||
+		uiOptions.sectionRole === "main";
+
+	if (panelWorkflowEligible) {
+		return { kind: "panel", pathKey: trimmed };
+	}
+
+	if (
+		uiOptions.workflowSectionId &&
+		trimmed === uiOptions.workflowSectionId
+	) {
+		return { kind: "main", sectionId: uiOptions.workflowSectionId };
+	}
+
+	return { kind: "none" };
+}
+
 export function resolveV2AnketaSectionTitleVariant(
 	uiNode: unknown,
 	fallback: V2AnketaSectionTitleVariant = "h6",

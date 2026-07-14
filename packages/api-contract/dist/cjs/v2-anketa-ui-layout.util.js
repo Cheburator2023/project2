@@ -82,6 +82,13 @@ function enrichAnketaLayoutUiSchema(uiSchema, jsonSchema) {
                 ? { streamExecutor: streamBlock.streamExecutor }
                 : {}),
         });
+        const blockOpts = (0, v2_anketa_section_ui_util_1.readV2AnketaSectionUiOptions)(blockUi);
+        if (blockOpts.workflowSectionId &&
+            blockKey !== blockOpts.workflowSectionId) {
+            const uiOpts = readRecord(blockUi["ui:options"]) ?? {};
+            delete uiOpts.workflowSectionId;
+            blockUi["ui:options"] = uiOpts;
+        }
         const blockProps = readSchemaProperties(blockSchema);
         for (const [key, childSchema] of Object.entries(blockProps)) {
             if (readSchemaType(childSchema) !== "object")
