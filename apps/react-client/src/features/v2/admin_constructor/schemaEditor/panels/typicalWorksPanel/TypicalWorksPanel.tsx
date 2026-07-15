@@ -19,6 +19,7 @@ import {
 	useV2TypicalWorkCard,
 	useV2TypicalWorksList,
 } from "@react-client/common/api/queries/v2-works";
+import { useV2Template } from "@react-client/common/api/queries/v2-templates";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { parseTypicalWorkDeleteError } from "./typicalWorkPatchErrors";
 import { V2_TEMPLATE_VERSION_QUERY } from "@react-client/routing/common/pathHelpers";
@@ -116,6 +117,7 @@ export function TypicalWorksPanel() {
 	const { templateId = "" } = useParams<{ templateId: string }>();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const templateVersionId = searchParams.get(V2_TEMPLATE_VERSION_QUERY);
+	const { data: templateMeta } = useV2Template(templateId);
 
 	const { jsonSchema, uiSchema, setSelectedPointer, handleAddFieldPresetAtParent, patchUiSchema, recordDraftHistory, setMainTab, handleDeleteField, placeTypicalWorkInStreamBlock } =
 		useSchemaEditor();
@@ -553,6 +555,7 @@ export function TypicalWorksPanel() {
 				open={assignOpen}
 				scope={scope}
 				templateId={templateId}
+				templateName={templateMeta?.name ?? ""}
 				templateVersionId={templateVersionId}
 				onClose={() => setAssignOpen(false)}
 				onAssigned={(workId, stream) => {

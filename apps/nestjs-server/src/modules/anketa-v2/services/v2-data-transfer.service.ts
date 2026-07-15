@@ -1,7 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { V2DataTransferSection } from "@smart-anketa/api-contract";
-import { V2_DATA_TRANSFER_DEFAULT_SECTIONS } from "@smart-anketa/api-contract";
+import {
+	expandV2DataTransferExportSections,
+	V2_DATA_TRANSFER_DEFAULT_SECTIONS,
+} from "@smart-anketa/api-contract";
 import { DataSource, Repository } from "typeorm";
 import { V2DictionaryEntity } from "../entities/v2-dictionary.entity";
 import { V2DictionaryItemEntity } from "../entities/v2-dictionary-item.entity";
@@ -9,10 +12,13 @@ import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
+import { V2TypicalWorkAssignmentEntity } from "../entities/v2-typical-work-assignment.entity";
 import { V2TypicalWorkLaborCoefficientEntity } from "../entities/v2-typical-work-labor-coefficient.entity";
+import { V2TypicalWorkLaborParamEntity } from "../entities/v2-typical-work-labor-param.entity";
 import { V2TypicalWorkNormEntity } from "../entities/v2-typical-work-norm.entity";
 import { V2TypicalWorkRuleEntity } from "../entities/v2-typical-work-rule.entity";
 import { V2TypicalWorkVersionConfigEntity } from "../entities/v2-typical-work-version-config.entity";
+import { remapAssignmentIdsInVersionConfigRow } from "../utils/v2-data-transfer-formula.util";
 import {
 	assertV2DataSnapshotIntegrity,
 	buildV2DataSnapshot,
@@ -44,6 +50,10 @@ export class V2DataTransferService {
 		private readonly templateVersionRepo: Repository<V2TemplateVersionEntity>,
 		@InjectRepository(V2TypicalWorkEntity)
 		private readonly typicalWorkRepo: Repository<V2TypicalWorkEntity>,
+		@InjectRepository(V2TypicalWorkAssignmentEntity)
+		private readonly typicalWorkAssignmentRepo: Repository<V2TypicalWorkAssignmentEntity>,
+		@InjectRepository(V2TypicalWorkLaborParamEntity)
+		private readonly typicalWorkLaborParamRepo: Repository<V2TypicalWorkLaborParamEntity>,
 		@InjectRepository(V2TypicalWorkNormEntity)
 		private readonly typicalWorkNormRepo: Repository<V2TypicalWorkNormEntity>,
 		@InjectRepository(V2TypicalWorkRuleEntity)
@@ -59,9 +69,13 @@ export class V2DataTransferService {
 	async exportSnapshot(
 		sections: V2DataTransferSection[] = V2_DATA_TRANSFER_DEFAULT_SECTIONS,
 	): Promise<Buffer> {
-		const payload = await this.loadPayload(sections);
+		const exportSections = expandV2DataTransferExportSections(sections);
+		const payload = await this.loadPayload(exportSections);
 		const snapshot = buildV2DataSnapshot(payload, undefined, sections);
-		return Buffer.from(JSON.stringify(snapshot, null, 2), "utf8");
+		const buffer = Buffer.from(JSON.stringify(snapshot, null, 2), "utf8");
+		const parsed = parseV2DataSnapshot(buffer);
+		assertV2DataSnapshotIntegrity(parsed);
+		return buffer;
 	}
 
 	async importSnapshot(
@@ -108,6 +122,12 @@ export class V2DataTransferService {
 			typicalWorks: this.includes(sections, "typicalWorks")
 				? snapshot.typicalWorks
 				: [],
+			typicalWorkAssignments: this.includes(sections, "typicalWorks")
+				? snapshot.typicalWorkAssignments
+				: [],
+			typicalWorkLaborParams: this.includes(sections, "typicalWorks")
+				? snapshot.typicalWorkLaborParams
+				: [],
 			typicalWorkNorms: this.includes(sections, "typicalWorks")
 				? snapshot.typicalWorkNorms
 				: [],
@@ -138,6 +158,8 @@ export class V2DataTransferService {
 			templates,
 			templateVersions,
 			typicalWorks,
+			typicalWorkAssignments,
+			typicalWorkLaborParams,
 			typicalWorkNorms,
 			typicalWorkRules,
 			typicalWorkLaborCoefficients,
@@ -158,6 +180,12 @@ export class V2DataTransferService {
 				: Promise.resolve([]),
 			this.includes(sections, "typicalWorks")
 				? this.typicalWorkRepo.find()
+				: Promise.resolve([]),
+			this.includes(sections, "typicalWorks")
+				? this.typicalWorkAssignmentRepo.find()
+				: Promise.resolve([]),
+			this.includes(sections, "typicalWorks")
+				? this.typicalWorkLaborParamRepo.find()
 				: Promise.resolve([]),
 			this.includes(sections, "typicalWorks")
 				? this.typicalWorkNormRepo.find()
@@ -182,6 +210,12 @@ export class V2DataTransferService {
 			templates: templates.map((row) => this.toRow(row)),
 			templateVersions: templateVersions.map((row) => this.toRow(row)),
 			typicalWorks: typicalWorks.map((row) => this.toRow(row)),
+			typicalWorkAssignments: typicalWorkAssignments.map((row) =>
+				this.toRow(row),
+			),
+			typicalWorkLaborParams: typicalWorkLaborParams.map((row) =>
+				this.toRow(row),
+			),
 			typicalWorkNorms: typicalWorkNorms.map((row) => this.toRow(row)),
 			typicalWorkRules: typicalWorkRules.map((row) => this.toRow(row)),
 			typicalWorkLaborCoefficients: typicalWorkLaborCoefficients.map((row) =>
@@ -212,6 +246,8 @@ export class V2DataTransferService {
 			templates: 0,
 			templateVersions: 0,
 			typicalWorks: 0,
+			typicalWorkAssignments: 0,
+			typicalWorkLaborParams: 0,
 			typicalWorkNorms: 0,
 			typicalWorkRules: 0,
 			typicalWorkLaborCoefficients: 0,
@@ -241,6 +277,8 @@ export class V2DataTransferService {
 				await manager.delete(V2TypicalWorkNormEntity, {});
 				await manager.delete(V2TypicalWorkRuleEntity, {});
 				await manager.delete(V2TypicalWorkLaborCoefficientEntity, {});
+				await manager.delete(V2TypicalWorkLaborParamEntity, {});
+				await manager.delete(V2TypicalWorkAssignmentEntity, {});
 				await manager.delete(V2TypicalWorkEntity, {});
 			}
 
@@ -255,7 +293,10 @@ export class V2DataTransferService {
 				await manager.delete(V2DictionaryEntity, {});
 			}
 
-			await this.insertAll(manager, filtered, stats, { skipExisting: false });
+			await this.insertAll(manager, filtered, stats, { skipExisting: false }, {
+				fullSnapshot: snapshot,
+				sections,
+			});
 		});
 
 		return stats;
@@ -269,7 +310,10 @@ export class V2DataTransferService {
 		const filtered = this.filterSnapshotBySections(snapshot, sections);
 
 		await this.dataSource.transaction(async (manager) => {
-			await this.insertAll(manager, filtered, stats, { skipExisting: true });
+			await this.insertAll(manager, filtered, stats, { skipExisting: true }, {
+				fullSnapshot: snapshot,
+				sections,
+			});
 		});
 
 		return stats;
@@ -280,6 +324,10 @@ export class V2DataTransferService {
 		snapshot: V2DataSnapshot,
 		stats: V2DataImportStats,
 		options: { skipExisting: boolean },
+		context?: {
+			fullSnapshot: V2DataSnapshot;
+			sections: readonly V2DataTransferSection[];
+		},
 	): Promise<void> {
 		const dictIdMap = new Map<string, string>();
 		const templateIdMap = new Map<string, string>();
@@ -417,9 +465,9 @@ export class V2DataTransferService {
 					?.find((version) => version.versionNumber === versionNumber);
 				if (existingVersion) {
 					versionIdMap.set(String(row.id), existingVersion.id);
+					stats.skipped.templateVersions += 1;
+					continue;
 				}
-				stats.skipped.templateVersions += 1;
-				continue;
 			}
 
 			if (options.skipExisting && existingVersionKeys.has(versionKey)) {
@@ -465,7 +513,6 @@ export class V2DataTransferService {
 		}
 
 		const workRepo = manager.getRepository(V2TypicalWorkEntity);
-		const worksToInsert = new Set<string>();
 
 		for (const row of snapshot.typicalWorks) {
 			const id = String(row.id);
@@ -486,18 +533,60 @@ export class V2DataTransferService {
 					continue;
 				}
 			}
-			await workRepo.save(this.fromRow(V2TypicalWorkEntity, row));
+			const templateId = row.templateId
+				? (templateIdMap.get(String(row.templateId)) ??
+					String(row.templateId))
+				: null;
+			await workRepo.save(
+				this.fromRow(V2TypicalWorkEntity, {
+					...row,
+					templateId,
+				}),
+			);
 			workIdMap.set(id, id);
-			worksToInsert.add(id);
 			stats.inserted.typicalWorks += 1;
 		}
+
+		if (
+			context &&
+			snapshot.typicalWorkVersionConfigs.length > 0
+		) {
+			await this.ensureVersionIdMapForTypicalWorks(
+				manager,
+				context.fullSnapshot,
+				templateIdMap,
+				versionIdMap,
+				existingTemplateByCode,
+				{
+					insertTemplates: this.includes(context.sections, "templates"),
+				},
+				stats,
+			);
+		}
+
+		const assignmentIdMap = await this.insertTypicalWorkAssignments(
+			manager.getRepository(V2TypicalWorkAssignmentEntity),
+			snapshot.typicalWorkAssignments,
+			workIdMap,
+			stats,
+		);
+
+		await this.insertWorkChildren(
+			manager.getRepository(V2TypicalWorkLaborParamEntity),
+			V2TypicalWorkLaborParamEntity,
+			snapshot.typicalWorkLaborParams,
+			workIdMap,
+			options.skipExisting,
+			(row) => `${row.workId}::${row.streamExecutor}::${row.paramCode}`,
+			stats,
+			"typicalWorkLaborParams",
+		);
 
 		await this.insertWorkChildren(
 			manager.getRepository(V2TypicalWorkNormEntity),
 			V2TypicalWorkNormEntity,
 			snapshot.typicalWorkNorms,
 			workIdMap,
-			worksToInsert,
 			options.skipExisting,
 			(row) => `${row.workId}::${row.streamExecutor}::${row.validFrom}`,
 			stats,
@@ -508,7 +597,6 @@ export class V2DataTransferService {
 			V2TypicalWorkRuleEntity,
 			snapshot.typicalWorkRules,
 			workIdMap,
-			worksToInsert,
 			options.skipExisting,
 			(row) =>
 				`${row.workId}::${row.streamExecutor}::${row.paramCode}::${row.operator}::${row.valueCode ?? ""}`,
@@ -520,7 +608,6 @@ export class V2DataTransferService {
 			V2TypicalWorkLaborCoefficientEntity,
 			snapshot.typicalWorkLaborCoefficients,
 			workIdMap,
-			worksToInsert,
 			options.skipExisting,
 			(row) =>
 				`${row.workId}::${row.streamExecutor}::${row.paramCode}::${row.valueCode ?? ""}`,
@@ -531,10 +618,11 @@ export class V2DataTransferService {
 		const versionConfigRepo = manager.getRepository(
 			V2TypicalWorkVersionConfigEntity,
 		);
-		const existingConfigKeys = new Set(
-			(await versionConfigRepo.find()).map(
-				(row) => `${row.templateVersionId}::${row.workId}`,
-			),
+		const existingConfigByKey = new Map(
+			(await versionConfigRepo.find()).map((row) => [
+				`${row.templateVersionId}::${row.workId}::${row.streamExecutor ?? ""}`,
+				row,
+			]),
 		);
 
 		for (const row of snapshot.typicalWorkVersionConfigs) {
@@ -546,19 +634,38 @@ export class V2DataTransferService {
 				stats.skipped.typicalWorkVersionConfigs += 1;
 				continue;
 			}
-			const key = `${templateVersionId}::${workId}`;
-			if (options.skipExisting && existingConfigKeys.has(key)) {
-				stats.skipped.typicalWorkVersionConfigs += 1;
-				continue;
-			}
-			await versionConfigRepo.save(
-				this.fromRow(V2TypicalWorkVersionConfigEntity, {
+			const streamExecutor = String(row.streamExecutor ?? "");
+			const key = `${templateVersionId}::${workId}::${streamExecutor}`;
+			const remappedRow = remapAssignmentIdsInVersionConfigRow(
+				{
 					...row,
 					templateVersionId,
 					workId,
-				}),
+					streamExecutor,
+				},
+				assignmentIdMap,
 			);
-			existingConfigKeys.add(key);
+			const existingConfig = existingConfigByKey.get(key);
+			if (options.skipExisting && existingConfig) {
+				await versionConfigRepo.save({
+					...existingConfig,
+					...this.fromRow(V2TypicalWorkVersionConfigEntity, remappedRow),
+					id: existingConfig.id,
+				});
+				stats.inserted.typicalWorkVersionConfigs += 1;
+				continue;
+			}
+			await versionConfigRepo.save(
+				this.fromRow(V2TypicalWorkVersionConfigEntity, remappedRow),
+			);
+			existingConfigByKey.set(
+				key,
+				existingConfig ??
+					(this.fromRow(
+						V2TypicalWorkVersionConfigEntity,
+						remappedRow,
+					) as V2TypicalWorkVersionConfigEntity),
+			);
 			stats.inserted.typicalWorkVersionConfigs += 1;
 		}
 
@@ -633,30 +740,70 @@ export class V2DataTransferService {
 		}
 	}
 
+	private async insertTypicalWorkAssignments(
+		repo: Repository<V2TypicalWorkAssignmentEntity>,
+		rows: Row[],
+		workIdMap: Map<string, string>,
+		stats: V2DataImportStats,
+	): Promise<Map<string, string>> {
+		const assignmentIdMap = new Map<string, string>();
+		const existing = await repo.find();
+		const existingByKey = new Map(
+			existing.map((row) => [`${row.workId}::${row.streamExecutor}`, row]),
+		);
+
+		for (const row of rows) {
+			const sourceId = String(row.id);
+			const workId = workIdMap.get(String(row.workId));
+			if (!workId) {
+				stats.skipped.typicalWorkAssignments += 1;
+				continue;
+			}
+			const streamExecutor = String(row.streamExecutor);
+			const key = `${workId}::${streamExecutor}`;
+			const existingRow = existingByKey.get(key);
+			if (existingRow) {
+				assignmentIdMap.set(sourceId, existingRow.id);
+				stats.skipped.typicalWorkAssignments += 1;
+				continue;
+			}
+
+			const saved = await repo.save(
+				this.fromRow(V2TypicalWorkAssignmentEntity, {
+					...row,
+					workId,
+					streamExecutor,
+				}),
+			);
+			assignmentIdMap.set(sourceId, saved.id);
+			existingByKey.set(key, saved);
+			stats.inserted.typicalWorkAssignments += 1;
+		}
+
+		return assignmentIdMap;
+	}
+
 	private async insertWorkChildren<T extends { workId: string }>(
 		repo: Repository<T>,
 		EntityClass: new () => T,
 		rows: Row[],
 		workIdMap: Map<string, string>,
-		worksToInsert: Set<string>,
 		skipExisting: boolean,
 		keyOf: (row: T) => string,
 		stats: V2DataImportStats,
 		statKey:
+			| "typicalWorkLaborParams"
 			| "typicalWorkNorms"
 			| "typicalWorkRules"
 			| "typicalWorkLaborCoefficients",
 	): Promise<void> {
 		const existing = await repo.find();
-		const existingKeys = new Set(existing.map((row) => keyOf(row)));
+		const existingByKey = new Map(existing.map((row) => [keyOf(row), row]));
+		const existingKeys = new Set(existingByKey.keys());
 
 		for (const row of rows) {
 			const workId = workIdMap.get(String(row.workId));
 			if (!workId) {
-				stats.skipped[statKey] += 1;
-				continue;
-			}
-			if (skipExisting && !worksToInsert.has(workId)) {
 				stats.skipped[statKey] += 1;
 				continue;
 			}
@@ -665,13 +812,105 @@ export class V2DataTransferService {
 				workId,
 			});
 			const key = keyOf(entity);
+			const existingRow = existingByKey.get(key);
+			if (skipExisting && existingRow) {
+				await repo.save({ ...existingRow, ...entity, id: existingRow.id });
+				stats.inserted[statKey] += 1;
+				continue;
+			}
 			if (skipExisting && existingKeys.has(key)) {
 				stats.skipped[statKey] += 1;
 				continue;
 			}
 			await repo.save(entity);
 			existingKeys.add(key);
+			existingByKey.set(key, entity);
 			stats.inserted[statKey] += 1;
+		}
+	}
+
+	private async ensureVersionIdMapForTypicalWorks(
+		manager: DataSource["manager"],
+		fullSnapshot: V2DataSnapshot,
+		templateIdMap: Map<string, string>,
+		versionIdMap: Map<string, string>,
+		existingTemplateByCode: Map<string, V2TemplateEntity>,
+		options: { insertTemplates: boolean },
+		stats: V2DataImportStats,
+	): Promise<void> {
+		for (const row of fullSnapshot.templates) {
+			const sourceId = String(row.id);
+			if (templateIdMap.has(sourceId)) {
+				continue;
+			}
+			const existing = existingTemplateByCode.get(String(row.code));
+			if (existing) {
+				templateIdMap.set(sourceId, existing.id);
+			}
+		}
+
+		const versionRepo = manager.getRepository(V2TemplateVersionEntity);
+		const existingVersions = await versionRepo.find();
+		const existingVersionByTemplate = new Map<
+			string,
+			V2TemplateVersionEntity[]
+		>();
+		for (const version of existingVersions) {
+			const list = existingVersionByTemplate.get(version.templateId) ?? [];
+			list.push(version);
+			existingVersionByTemplate.set(version.templateId, list);
+		}
+		const existingVersionKeys = new Set(
+			existingVersions.map(
+				(row) => `${row.templateId}::${row.versionNumber}`,
+			),
+		);
+
+		const sortedVersions = [...fullSnapshot.templateVersions].sort(
+			(a, b) => Number(a.versionNumber) - Number(b.versionNumber),
+		);
+
+		for (const row of sortedVersions) {
+			const sourceId = String(row.id);
+			if (versionIdMap.has(sourceId)) {
+				continue;
+			}
+
+			const mappedTemplateId = templateIdMap.get(String(row.templateId));
+			if (!mappedTemplateId) {
+				continue;
+			}
+
+			const versionNumber = Number(row.versionNumber);
+			const versionKey = `${mappedTemplateId}::${versionNumber}`;
+			const existingVersion = existingVersionByTemplate
+				.get(mappedTemplateId)
+				?.find((version) => version.versionNumber === versionNumber);
+
+			if (existingVersion) {
+				versionIdMap.set(sourceId, existingVersion.id);
+				continue;
+			}
+
+			if (!options.insertTemplates) {
+				continue;
+			}
+
+			const saved = await versionRepo.save(
+				this.fromRow(V2TemplateVersionEntity, {
+					...row,
+					templateId: mappedTemplateId,
+					parentVersionId: row.parentVersionId
+						? (versionIdMap.get(String(row.parentVersionId)) ?? null)
+						: null,
+				}),
+			);
+			versionIdMap.set(sourceId, saved.id);
+			existingVersionKeys.add(versionKey);
+			const list = existingVersionByTemplate.get(mappedTemplateId) ?? [];
+			list.push(saved);
+			existingVersionByTemplate.set(mappedTemplateId, list);
+			stats.inserted.templateVersions += 1;
 		}
 	}
 

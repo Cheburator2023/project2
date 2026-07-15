@@ -2,8 +2,9 @@ import Typography from "@mui/material/Typography";
 import { useV2TypicalWorksList } from "@react-client/common/api/queries/v2-works";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { useDictionaryListPanelWidth } from "@react-client/features/v2/admin/hooks/useDictionaryListPanelWidth";
+import { useTypicalWorksListDetailSplit } from "@react-client/features/v2/admin/hooks/useDictionaryListPanelWidth";
 import { useEffect, useState } from "react";
+import type { V2TypicalWorkListItemDto } from "@smart-anketa/api-contract";
 import {
 	V2TypicalWorkDetail,
 	type V2TypicalWorkHeaderState,
@@ -15,6 +16,7 @@ type V2TypicalWorkWorkspaceProps = {
 	onCreateRequest?: () => void;
 	showListCreateButton?: boolean;
 	onSelectedWorkChange?: (workId: string | null) => void;
+	onCheckedWorksChange?: (works: V2TypicalWorkListItemDto[]) => void;
 	onHeaderChange?: (state: V2TypicalWorkHeaderState | null) => void;
 };
 
@@ -66,6 +68,7 @@ export function V2TypicalWorkWorkspace({
 	onCreateRequest,
 	showListCreateButton = true,
 	onSelectedWorkChange,
+	onCheckedWorksChange,
 	onHeaderChange,
 }: V2TypicalWorkWorkspaceProps) {
 	const { data, isLoading } = useV2TypicalWorksList();
@@ -73,10 +76,11 @@ export function V2TypicalWorkWorkspace({
 	const [selectedId, setSelectedId] = useState<string | null>(initialWorkId ?? null);
 	const [quickFilter, setQuickFilter] = useState("");
 	const {
-		width: listWidth,
+		containerRef,
+		listWidth,
 		isResizing,
 		onResizeStart,
-	} = useDictionaryListPanelWidth();
+	} = useTypicalWorksListDetailSplit();
 
 	const selectedWork = items.find((item) => item.id === selectedId) ?? null;
 
@@ -111,13 +115,21 @@ export function V2TypicalWorkWorkspace({
 	}
 
 	return (
-		<Flex flexDirection="row" height="100%" minHeight="0" width="100%" gap={4}>
+		<Flex
+			ref={containerRef}
+			flexDirection="row"
+			height="100%"
+			minHeight="0"
+			width="100%"
+			gap={4}
+		>
 			<Flex
 				flexDirection="column"
 				flexShrink={0}
 				height="100%"
 				minHeight="0"
-				width={`${listWidth}px`}
+				width={listWidth}
+				minWidth="320px"
 			>
 				<V2TypicalWorkListPanel
 					items={items}
@@ -125,6 +137,7 @@ export function V2TypicalWorkWorkspace({
 					quickFilter={quickFilter}
 					onQuickFilterChange={setQuickFilter}
 					onSelect={setSelectedId}
+					onCheckedWorksChange={onCheckedWorksChange}
 					onCreate={onCreateRequest}
 					showCreateButton={showListCreateButton}
 				/>
@@ -132,7 +145,7 @@ export function V2TypicalWorkWorkspace({
 
 			<WorkSplitResizeHandle onResizeStart={onResizeStart} active={isResizing} />
 
-			<Flex flexGrow={1} minWidth="0" minHeight="0" height="100%">
+			<Flex flexGrow={1} flexShrink={1} minWidth="260px" minHeight="0" height="100%">
 				{selectedWork ? (
 					<V2TypicalWorkDetail
 						key={selectedWork.id}

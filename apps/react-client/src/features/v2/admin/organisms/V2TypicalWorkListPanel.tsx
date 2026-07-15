@@ -11,9 +11,7 @@ import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.
 import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
 import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import { toast } from "@react-client/common/toasts";
-import {
-	WORK_ARCH_COMPONENT_TYPES,
-} from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorkPatchErrors";
+import { WORK_ARCH_COMPONENT_TYPES } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorkPatchErrors";
 import { resolveEffectiveWorkArchComponentType } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/schemaWorkParameters";
 import { DEFAULT_WORK_STREAMS } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import {
@@ -26,9 +24,12 @@ import {
 	type CellValueChangedEvent,
 	type ColDef,
 	type ICellRendererParams,
+	type RowClassParams,
+	type RowClickedEvent,
+	type SelectionChangedEvent,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { pathForAdminV2TypicalWork } from "@react-client/routing/common/pathHelpers";
 
@@ -52,6 +53,7 @@ type V2TypicalWorkListPanelProps = {
 	quickFilter: string;
 	onQuickFilterChange: (value: string) => void;
 	onSelect: (id: string) => void;
+	onCheckedWorksChange?: (works: V2TypicalWorkListItemDto[]) => void;
 	onCreate?: () => void;
 	showCreateButton?: boolean;
 };
@@ -66,7 +68,7 @@ function streamsCellRenderer(p: ICellRendererParams<V2TypicalWorkListItemDto>) {
 		);
 	}
 	return (
-		<Flex gap={0.5} wrap="wrap" alignItems="center">
+		<Flex gap={6} wrap="wrap" alignItems="center" height="100%">
 			{streams.slice(0, 2).map((stream) => (
 				<Chip
 					key={stream}
@@ -91,6 +93,7 @@ export function V2TypicalWorkListPanel({
 	quickFilter,
 	onQuickFilterChange,
 	onSelect,
+	onCheckedWorksChange,
 	onCreate,
 	showCreateButton = true,
 }: V2TypicalWorkListPanelProps) {
@@ -101,6 +104,11 @@ export function V2TypicalWorkListPanel({
 	const patch = usePatchV2TypicalWork();
 	const patchRef = useRef(patch);
 	patchRef.current = patch;
+	const [checkedWorks, setCheckedWorks] = useState<V2TypicalWorkListItemDto[]>(
+		[],
+	);
+	const onCheckedWorksChangeRef = useRef(onCheckedWorksChange);
+	onCheckedWorksChangeRef.current = onCheckedWorksChange;
 
 	const gridTheme =
 		mode === "light" || mode === undefined
@@ -118,7 +126,7 @@ export function V2TypicalWorkListPanel({
 				field: "name",
 				headerName: "Название",
 				flex: 1.6,
-				minWidth: 160,
+				minWidth: 260,
 				editable: true,
 				cellEditor: "agTextCellEditor",
 			},
@@ -151,7 +159,7 @@ export function V2TypicalWorkListPanel({
 				colId: "streams",
 				headerName: "Стримы",
 				flex: 1,
-				minWidth: 120,
+				minWidth: 220,
 				sortable: false,
 				filter: false,
 				cellRenderer: streamsCellRenderer,
@@ -214,25 +222,56 @@ export function V2TypicalWorkListPanel({
 	useEffect(() => {
 		const api = gridRef.current?.api;
 		if (!api) return;
-		api.deselectAll();
+		const selected = api.getSelectedRows();
+		setCheckedWorks(selected);
+		onCheckedWorksChangeRef.current?.(selected);
+	}, [items]);
+
+	const getRowClass = useCallback(
+		(params: RowClassParams<V2TypicalWorkListItemDto>) =>
+			params.data?.id === selectedId ? "v2-typical-work-list-row--active" : "",
+		[selectedId],
+	);
+
+	const onSelectionChanged = useCallback(
+		(event: SelectionChangedEvent<V2TypicalWorkListItemDto>) => {
+			const selected = event.api.getSelectedRows();
+			setCheckedWorks(selected);
+			onCheckedWorksChangeRef.current?.(selected);
+		},
+		[],
+	);
+
+	useEffect(() => {
+		const api = gridRef.current?.api;
+		if (!api) return;
+		api.redrawRows();
 		if (!selectedId) return;
 		api.forEachNode((node) => {
 			if (node.data?.id === selectedId) {
-				node.setSelected(true);
 				api.ensureNodeVisible(node, "middle");
 			}
 		});
 	}, [selectedId, items]);
 
 	const onRowClicked = useCallback(
-		(event: { data?: V2TypicalWorkListItemDto }) => {
+		(event: RowClickedEvent<V2TypicalWorkListItemDto>) => {
 			if (event.data?.id) onSelect(event.data.id);
 		},
 		[onSelect],
 	);
 
 	return (
-		<Card height="100%" width="100%" padding="12px">
+		<Card
+			height="100%"
+			width="100%"
+			padding="12px"
+			sx={{
+				"& .v2-typical-work-list-row--active": {
+					backgroundColor: "action.selected",
+				},
+			}}
+		>
 			<Flex flexDirection="column" height="100%" minHeight="0" gap={8}>
 				<Flex alignItems="center" gap={8}>
 					<TextField
@@ -249,6 +288,9 @@ export function V2TypicalWorkListPanel({
 					) : null}
 				</Flex>
 				<Typography variant="caption" color="text.secondary">
+					{checkedWorks.length > 0
+						? `Выбрано для удаления: ${checkedWorks.length}. `
+						: null}
 					Название и тип компонента редактируются по клику в ячейке
 				</Typography>
 				<AgGridHost>
@@ -260,13 +302,22 @@ export function V2TypicalWorkListPanel({
 						columnDefs={columnDefs}
 						defaultColDef={defaultColDef}
 						localeText={AG_GRID_LOCALE_RU}
-						rowSelection={{ mode: "singleRow", checkboxes: false }}
+						rowSelection={{
+							mode: "multiRow",
+							checkboxes: true,
+							headerCheckbox: true,
+							enableClickSelection: false,
+						}}
+						suppressRowClickSelection
 						singleClickEdit
 						stopEditingWhenCellsLoseFocus
 						suppressCellFocus
+						getRowClass={getRowClass}
 						onRowClicked={onRowClicked}
+						onSelectionChanged={onSelectionChanged}
 						onRowDoubleClicked={(event) => {
-							if (event.data?.id) navigate(pathForAdminV2TypicalWork(event.data.id));
+							if (event.data?.id)
+								navigate(pathForAdminV2TypicalWork(event.data.id));
 						}}
 						onCellValueChanged={onCellValueChanged}
 						getRowId={(params) => params.data.id}
@@ -276,7 +327,9 @@ export function V2TypicalWorkListPanel({
 						onColumnVisible={(event) =>
 							gridPersistence.onColumnVisible(event.api)
 						}
-						onColumnPinned={(event) => gridPersistence.onColumnPinned(event.api)}
+						onColumnPinned={(event) =>
+							gridPersistence.onColumnPinned(event.api)
+						}
 						onSortChanged={(event) => gridPersistence.onSortChanged(event.api)}
 						onColumnResized={(event) => {
 							if (event.finished) gridPersistence.onColumnResized(event.api);

@@ -9,6 +9,7 @@ import {
 	AdminV2GuidePage,
 	AdminV2HistoryPage,
 	AdminV2SchemasPage,
+	AdminV2SettingsPage,
 	AdminV2TemplateHistoryPage,
 	AdminV2TypicalWorkDetailPage,
 	AdminV2TypicalWorksPage,
@@ -52,6 +53,7 @@ function adminChildRoutes(): RouteObject[] {
 					element: <AdminV2TypicalWorkDetailPage />,
 				},
 				{ path: "history", element: <AdminV2HistoryPage /> },
+				{ path: "settings", element: <AdminV2SettingsPage /> },
 				{
 					path: "templates/:templateId/read",
 					element: <V2TemplatePreviewPage />,
@@ -158,6 +160,10 @@ export function adminLegacyRedirects(): RouteObject[] {
 		{
 			path: "/admin/v2/history",
 			element: <Navigate to={commonRoutes.adminV2History.rootPath} replace />,
+		},
+		{
+			path: "/admin/v2/settings",
+			element: <Navigate to={commonRoutes.adminV2Settings.rootPath} replace />,
 		},
 		{
 			path: "/admin/v2/templates/:templateId/read",

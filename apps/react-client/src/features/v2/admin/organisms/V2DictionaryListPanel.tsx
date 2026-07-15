@@ -14,10 +14,7 @@ import {
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 import type { V2DictionaryDto } from "@smart-anketa/api-contract";
-import {
-	type ColDef,
-	type ICellRendererParams,
-} from "ag-grid-community";
+import { type ColDef, type ICellRendererParams } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
@@ -50,12 +47,17 @@ function flagsCellRenderer(p: ICellRendererParams<V2DictionaryDto>) {
 	const row = p.data;
 	if (!row) return null;
 	return (
-		<Flex gap={0.5} wrap="wrap" alignItems="center">
+		<Flex gap={6} wrap="wrap" alignItems="center" height="100%">
 			{row.isDefault ? (
 				<Chip size="small" label="Заводской" variant="outlined" color="info" />
 			) : null}
 			{row.isInUse ? (
-				<Chip size="small" label="В схемах" variant="outlined" color="warning" />
+				<Chip
+					size="small"
+					label="В схемах"
+					variant="outlined"
+					color="warning"
+				/>
 			) : null}
 			{!row.isDefault && !row.isInUse ? (
 				<Chip size="small" label="Свободный" variant="outlined" />
@@ -89,7 +91,8 @@ export function V2DictionaryListPanel({
 			{
 				colId: "flags",
 				headerName: "Статус",
-				width: 130,
+				width: 230,
+				minWidth: 230,
 				sortable: false,
 				filter: false,
 				cellRenderer: flagsCellRenderer,
@@ -216,7 +219,9 @@ export function V2DictionaryListPanel({
 						onColumnVisible={(event) =>
 							gridPersistence.onColumnVisible(event.api)
 						}
-						onColumnPinned={(event) => gridPersistence.onColumnPinned(event.api)}
+						onColumnPinned={(event) =>
+							gridPersistence.onColumnPinned(event.api)
+						}
 						onSortChanged={(event) => gridPersistence.onSortChanged(event.api)}
 						onColumnResized={(event) => {
 							if (event.finished) gridPersistence.onColumnResized(event.api);
