@@ -17,6 +17,7 @@ export type WorkSchemaParamDef = {
 export type TypicalWorkRuleRefLike = {
     paramCode: string;
     paramName?: string | null;
+    schemaFieldUid?: string | null;
 };
 export declare function findWorkSchemaParameter<T extends WorkSchemaParamDef>(params: T[], paramCode: string, paramName?: string | null): T | undefined;
 /** CSV/seed-триггер → поле схемы анкеты (алиас «Тип источника» → `type`). */

@@ -33,9 +33,8 @@ function formatSyncedParamName(request, currentName, nextCode, previousCode) {
     return formatParamNameWithSourceKeys(displayName, [...new Set(aliasCodes)]);
 }
 function matchesField(ref, request) {
-    if (ref.schemaFieldUid &&
-        ref.schemaFieldUid === request.field.schemaFieldUid) {
-        return true;
+    if (ref.schemaFieldUid) {
+        return ref.schemaFieldUid === request.field.schemaFieldUid;
     }
     const aliases = collectFieldAliasCodes(request);
     if (aliases.has(ref.paramCode))
@@ -205,7 +204,9 @@ export function reconcileTypicalWorkCardWithSchemaField(card, request) {
     const laborParams = card.laborParams
         .map((group) => reconcileLaborParam(group, request))
         .filter((group) => group != null);
-    const formulaReconciled = reconcileFormulaTokensForField(card.formula.tokens, request);
+    const formulaReconciled = matchingRules.length > 0 || matchingLabor.length > 0
+        ? reconcileFormulaTokensForField(card.formula.tokens, request)
+        : { tokens: card.formula.tokens, invalidated: false };
     let formulaTokens = formulaReconciled.tokens;
     let formulasInvalidated = formulaReconciled.invalidated ? 1 : 0;
     const formulaSanitized = sanitizeFormulaAgainstLaborParams(formulaTokens, laborParams);

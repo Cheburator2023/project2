@@ -23,6 +23,7 @@ export type WorkSchemaParamDef = {
 export type TypicalWorkRuleRefLike = {
 	paramCode: string;
 	paramName?: string | null;
+	schemaFieldUid?: string | null;
 };
 
 export function findWorkSchemaParameter<T extends WorkSchemaParamDef>(
@@ -56,6 +57,13 @@ export function resolveWorkSchemaParamForRule<T extends WorkSchemaParamDef>(
 	rule: TypicalWorkRuleRefLike,
 	params: T[],
 ): T | undefined {
+	if (rule.schemaFieldUid?.trim()) {
+		const byUid = params.find(
+			(param) => param.schemaFieldUid === rule.schemaFieldUid,
+		);
+		if (byUid) return byUid;
+	}
+
 	const direct =
 		findWorkSchemaParameter(params, rule.paramCode, rule.paramName) ??
 		undefined;

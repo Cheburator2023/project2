@@ -173,6 +173,33 @@ describe("collectTypicalWorkSchemaConsistencyIssues", () => {
             }),
         ]);
     });
+    it("uses schemaFieldUid to disambiguate fields with the same code", () => {
+        const issues = collectTypicalWorkSchemaConsistencyIssues({
+            schemaParams: [
+                {
+                    code: "workType",
+                    name: "Тип работ",
+                    schemaFieldUid: "uid-first",
+                    values: [],
+                },
+                {
+                    code: "workType",
+                    name: "Тип работ",
+                    schemaFieldUid: "uid-bound",
+                    values: [],
+                },
+            ],
+            rules: [],
+            laborParamCodes: [
+                {
+                    paramCode: "workType",
+                    paramName: "Тип работ @ workType|тип_работ",
+                    schemaFieldUid: "uid-bound",
+                },
+            ],
+        });
+        expect(issues).toEqual([]);
+    });
     it("reports broken pilot trigger split as schema/catalog mismatch", () => {
         const issues = collectTypicalWorkSchemaConsistencyIssues({
             schemaParams: [{ code: "type", name: "Тип системы-источника", values: [] }],

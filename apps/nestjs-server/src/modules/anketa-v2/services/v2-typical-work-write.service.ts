@@ -48,6 +48,7 @@ import {
 	normalizeStoredFormula,
 	previewTypicalWorkCalculation,
 	resolveActiveNormOnDate,
+	resolveWorkSchemaParamForRule,
 	resolveLaborAnyOfCoefficient,
 	resolveByValueLaborParamCoefficients,
 	reconcileTypicalWorkCardWithSchemaField,
@@ -906,6 +907,10 @@ export class V2TypicalWorkWriteService {
 	async reconcileSchemaField(
 		dto: V2TypicalWorkSchemaFieldSyncRequestDto,
 		workArchComponent?: string | null,
+		options?: {
+			workId?: string;
+			unboundLaborOnly?: boolean;
+		},
 	): Promise<V2TypicalWorkSchemaFieldSyncImpactDto> {
 		const configs = await this.versionConfigRepository.find({
 			where: { templateVersionId: dto.templateVersionId },
@@ -940,13 +945,18 @@ export class V2TypicalWorkWriteService {
 			...(field.name?.trim() ? [{ paramName: field.name.trim() }] : []),
 		];
 
-		const [matchingRules, matchingLaborHeaders, matchingLaborRows] = await Promise.all([
+		const [foundRules, foundLaborHeaders, foundLaborRows] = await Promise.all([
 			this.ruleRepository.find({ where: matchWhere }),
 			this.laborParamRepository.find({ where: matchWhere }),
 			legacyMatchWhere.length > 0
 				? this.laborRepository.find({ where: legacyMatchWhere })
 				: Promise.resolve([]),
 		]);
+		const matchingRules = options?.unboundLaborOnly ? [] : foundRules;
+		const matchingLaborHeaders = options?.unboundLaborOnly
+			? foundLaborHeaders.filter((row) => !row.schemaFieldUid)
+			: foundLaborHeaders;
+		const matchingLaborRows = options?.unboundLaborOnly ? [] : foundLaborRows;
 
 		const affectedKeys = new Set(
 			[...matchingRules, ...matchingLaborHeaders, ...matchingLaborRows].map(
@@ -970,6 +980,7 @@ export class V2TypicalWorkWriteService {
 			: null;
 
 		for (const config of configs) {
+			if (options?.workId && config.workId !== options.workId) continue;
 			const configKey = `${config.workId}:${config.streamExecutor}`;
 			if (!affectedKeys.has(configKey)) continue;
 			if (
@@ -1316,6 +1327,52 @@ export class V2TypicalWorkWriteService {
 		const configs = await this.versionConfigRepository.find({
 			where: { templateVersionId },
 		});
+		const repairedBindings = new Set<string>();
+		for (const config of configs) {
+			const card = await this.typicalWorkService.getWorkCardForSchemaSync(
+				config.workId,
+				config.streamExecutor,
+				templateVersionId,
+			);
+			for (const labor of card.laborParams) {
+				if (labor.schemaFieldUid) continue;
+				const resolved = resolveWorkSchemaParamForRule(labor, schemaParams);
+				if (!resolved?.schemaFieldUid) continue;
+
+				const bindingKey = `${config.workId}:${resolved.schemaFieldUid}`;
+				if (repairedBindings.has(bindingKey)) continue;
+				repairedBindings.add(bindingKey);
+
+				const impact = await this.reconcileSchemaField(
+					{
+						templateVersionId,
+						mode,
+						operation: "upsert",
+						field: {
+							schemaFieldUid: resolved.schemaFieldUid,
+							previousCode: labor.paramCode,
+							aliasCodes: resolved.sourceKeys,
+							code: resolved.code,
+							name: resolved.name,
+							values:
+								resolved.values && resolved.values.length > 0
+									? resolved.values
+									: undefined,
+						},
+					},
+					null,
+					{ workId: config.workId, unboundLaborOnly: true },
+				);
+				aggregate.worksMatched += impact.worksMatched;
+				aggregate.worksUpdated += impact.worksUpdated;
+				aggregate.rulesUpdated += impact.rulesUpdated;
+				aggregate.rulesRemoved += impact.rulesRemoved;
+				aggregate.laborParamsUpdated += impact.laborParamsUpdated;
+				aggregate.laborParamsRemoved += impact.laborParamsRemoved;
+				aggregate.formulasInvalidated += impact.formulasInvalidated;
+			}
+		}
+
 		for (const config of configs) {
 			const card = await this.typicalWorkService.getWorkCardForSchemaSync(
 				config.workId,

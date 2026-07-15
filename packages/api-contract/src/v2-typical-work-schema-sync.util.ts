@@ -96,11 +96,8 @@ function matchesField(
 	},
 	request: V2TypicalWorkSchemaFieldSyncRequestDto,
 ): boolean {
-	if (
-		ref.schemaFieldUid &&
-		ref.schemaFieldUid === request.field.schemaFieldUid
-	) {
-		return true;
+	if (ref.schemaFieldUid) {
+		return ref.schemaFieldUid === request.field.schemaFieldUid;
 	}
 
 	const aliases = collectFieldAliasCodes(request);
@@ -345,10 +342,10 @@ export function reconcileTypicalWorkCardWithSchemaField(
 		.map((group) => reconcileLaborParam(group, request))
 		.filter((group): group is V2TypicalWorkLaborParamGroupDto => group != null);
 
-	const formulaReconciled = reconcileFormulaTokensForField(
-		card.formula.tokens,
-		request,
-	);
+	const formulaReconciled =
+		matchingRules.length > 0 || matchingLabor.length > 0
+			? reconcileFormulaTokensForField(card.formula.tokens, request)
+			: { tokens: card.formula.tokens, invalidated: false };
 	let formulaTokens = formulaReconciled.tokens;
 	let formulasInvalidated = formulaReconciled.invalidated ? 1 : 0;
 

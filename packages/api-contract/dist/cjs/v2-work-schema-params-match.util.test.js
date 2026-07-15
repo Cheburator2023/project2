@@ -175,6 +175,33 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
             }),
         ]);
     });
+    (0, vitest_1.it)("uses schemaFieldUid to disambiguate fields with the same code", () => {
+        const issues = (0, v2_template_work_schema_params_util_1.collectTypicalWorkSchemaConsistencyIssues)({
+            schemaParams: [
+                {
+                    code: "workType",
+                    name: "Тип работ",
+                    schemaFieldUid: "uid-first",
+                    values: [],
+                },
+                {
+                    code: "workType",
+                    name: "Тип работ",
+                    schemaFieldUid: "uid-bound",
+                    values: [],
+                },
+            ],
+            rules: [],
+            laborParamCodes: [
+                {
+                    paramCode: "workType",
+                    paramName: "Тип работ @ workType|тип_работ",
+                    schemaFieldUid: "uid-bound",
+                },
+            ],
+        });
+        (0, vitest_1.expect)(issues).toEqual([]);
+    });
     (0, vitest_1.it)("reports broken pilot trigger split as schema/catalog mismatch", () => {
         const issues = (0, v2_template_work_schema_params_util_1.collectTypicalWorkSchemaConsistencyIssues)({
             schemaParams: [{ code: "type", name: "Тип системы-источника", values: [] }],

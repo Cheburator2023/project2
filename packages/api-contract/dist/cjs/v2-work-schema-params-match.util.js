@@ -29,6 +29,11 @@ function findWorkSchemaParameter(params, paramCode, paramName) {
 }
 /** CSV/seed-триггер → поле схемы анкеты (алиас «Тип источника» → `type`). */
 function resolveWorkSchemaParamForRule(rule, params) {
+    if (rule.schemaFieldUid?.trim()) {
+        const byUid = params.find((param) => param.schemaFieldUid === rule.schemaFieldUid);
+        if (byUid)
+            return byUid;
+    }
     const direct = findWorkSchemaParameter(params, rule.paramCode, rule.paramName) ??
         undefined;
     if (direct)

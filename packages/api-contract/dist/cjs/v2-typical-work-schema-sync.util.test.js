@@ -212,6 +212,26 @@ function card() {
         (0, vitest_1.expect)(result.card.rules[0]?.schemaFieldUid).toBe("field-1");
         (0, vitest_1.expect)(result.card.laborParams[0]?.schemaFieldUid).toBe("field-1");
     });
+    (0, vitest_1.it)("does not remap an already bound reference by a shared code or name", () => {
+        const result = (0, v2_typical_work_schema_sync_util_1.reconcileTypicalWorkCardWithSchemaField)(card(), {
+            templateVersionId: "version-1",
+            mode: "apply",
+            operation: "upsert",
+            field: {
+                schemaFieldUid: "field-2",
+                previousCode: "old_code",
+                code: "old_code",
+                name: "Старое имя",
+                values: [{ code: "keep", label: "Старое значение" }],
+            },
+        });
+        (0, vitest_1.expect)(result.card.rules[0]?.schemaFieldUid).toBe("field-1");
+        (0, vitest_1.expect)(result.card.laborParams[0]?.schemaFieldUid).toBe("field-1");
+        (0, vitest_1.expect)(result.card.formula.tokens[2]).toMatchObject({
+            kind: "param_coeff",
+            paramCode: "old_code",
+        });
+    });
     (0, vitest_1.it)("matches legacy slug paramCode by field title without catalog entry", () => {
         const legacy = card();
         legacy.rules[0] = {
