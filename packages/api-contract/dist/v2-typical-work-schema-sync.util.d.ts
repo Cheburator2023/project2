@@ -23,6 +23,10 @@ export type V2TypicalWorkSchemaFieldSyncImpactDto = {
     laborParamsRemoved: number;
     formulasInvalidated: number;
 };
+export type V2TypicalWorkSchemaBulkSyncResponseDto = V2TypicalWorkSchemaFieldSyncImpactDto & {
+    fieldsProcessed: number;
+    consistencyIssues: import("./v2-template-work-schema-params.util").TypicalWorkSchemaConsistencyIssue[];
+};
 export declare function reconcileTypicalWorkCardWithSchemaField(card: V2TypicalWorkCardDto, request: V2TypicalWorkSchemaFieldSyncRequestDto): {
     card: V2TypicalWorkCardDto;
     changed: boolean;

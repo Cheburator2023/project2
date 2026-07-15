@@ -7,6 +7,7 @@ import { useSearchParams } from "react-router";
 import {
 	CALCULATION_PANEL_ID,
 	DOCK_PANEL_HEADINGS,
+	ISSUES_PANEL_ID,
 	RELATIONS_PANEL_ID,
 } from "./constants";
 import { SchemaDesignerLayout } from "./components/SchemaDesignerLayout";
@@ -18,6 +19,7 @@ import { SchemaLogicPanel } from "./panels/SchemaLogicPanel";
 import { LogicWorkspaceShell } from "./panels/typicalWorksPanel/TypicalWorksPanel";
 import { LOGIC_TAB_QUERY } from "./panels/typicalWorksPanel/typicalWorksUi";
 import { SchemaPreviewPanel } from "./panels/SchemaPreviewPanel";
+import { SchemaIssuesPanel } from "./panels/SchemaIssuesPanel";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 
 export const WORKSPACE_PANEL_IDS = DOCK_PANEL_HEADINGS.map(([id]) => id);
@@ -138,6 +140,16 @@ export function PreviewWorkspacePanel(_props: IDockviewPanelProps) {
 	);
 }
 
+export function IssuesWorkspacePanel(_props: IDockviewPanelProps) {
+	return (
+		<PanelHost dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.panelIssues}>
+			<Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+				<SchemaIssuesPanel embedded />
+			</Box>
+		</PanelHost>
+	);
+}
+
 export function CalculationDockPanel(_props: IDockviewPanelProps) {
 	return (
 		<PanelHost dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.panelCalculation}>
@@ -160,6 +172,7 @@ export const workspacePanelComponents = {
 	designer: DesignerWorkspacePanel,
 	json: JsonWorkspacePanel,
 	logic: LogicWorkspacePanel,
+	[ISSUES_PANEL_ID]: IssuesWorkspacePanel,
 	preview: PreviewWorkspacePanel,
 	[CALCULATION_PANEL_ID]: CalculationDockPanel,
 	[RELATIONS_PANEL_ID]: RelationsDockPanel,

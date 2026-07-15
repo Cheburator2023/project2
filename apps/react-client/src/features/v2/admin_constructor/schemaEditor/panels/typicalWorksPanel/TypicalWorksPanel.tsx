@@ -7,7 +7,11 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Typography from "@mui/material/Typography";
-import type { V2ExecutorStreamLabel, V2LogicWorkspaceTab, V2TypicalWorkListItemDto } from "@smart-anketa/api-contract";
+import type {
+	V2ExecutorStreamLabel,
+	V2LogicWorkspaceTab,
+	V2TypicalWorkListItemDto,
+} from "@smart-anketa/api-contract";
 import {
 	isExecutorStreamPresentInSchema,
 	isV2ExecutorStreamLabel,
@@ -119,8 +123,17 @@ export function TypicalWorksPanel() {
 	const templateVersionId = searchParams.get(V2_TEMPLATE_VERSION_QUERY);
 	const { data: templateMeta } = useV2Template(templateId);
 
-	const { jsonSchema, uiSchema, setSelectedPointer, handleAddFieldPresetAtParent, patchUiSchema, recordDraftHistory, setMainTab, handleDeleteField, placeTypicalWorkInStreamBlock } =
-		useSchemaEditor();
+	const {
+		jsonSchema,
+		uiSchema,
+		setSelectedPointer,
+		handleAddFieldPresetAtParent,
+		patchUiSchema,
+		recordDraftHistory,
+		setMainTab,
+		handleDeleteField,
+		placeTypicalWorkInStreamBlock,
+	} = useSchemaEditor();
 
 	const { data, isLoading, error } = useV2TypicalWorksList({
 		templateId,
@@ -141,7 +154,8 @@ export function TypicalWorksPanel() {
 			}));
 			const outputPath = pointerToOutputPath(pointer);
 			const streamExecutor =
-				resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPath) ?? "";
+				resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPath) ??
+				"";
 			recordDraftHistory();
 			patchUiSchema(
 				(prev) =>
@@ -165,7 +179,11 @@ export function TypicalWorksPanel() {
 
 	const handleCreateStreamBlock = useCallback(
 		(stream: V2ExecutorStreamLabel) => {
-			const rootCount = listCanvasEditableChildKeys(jsonSchema, "/", uiSchema).length;
+			const rootCount = listCanvasEditableChildKeys(
+				jsonSchema,
+				"/",
+				uiSchema,
+			).length;
 			handleAddFieldPresetAtParent(
 				"/",
 				makeStreamBlockJsonSchema(stream),
@@ -183,12 +201,11 @@ export function TypicalWorksPanel() {
 	const [scope, setScope] = useState<LogicWorksScope>(DEFAULT_SCOPE);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [assignOpen, setAssignOpen] = useState(false);
-	const [deleteTargets, setDeleteTargets] = useState<V2TypicalWorkListItemDto[]>(
-		[],
-	);
-	const [deleteUsageConflict, setDeleteUsageConflict] = useState<
-		ReturnType<typeof parseTypicalWorkDeleteError>
-	>(null);
+	const [deleteTargets, setDeleteTargets] = useState<
+		V2TypicalWorkListItemDto[]
+	>([]);
+	const [deleteUsageConflict, setDeleteUsageConflict] =
+		useState<ReturnType<typeof parseTypicalWorkDeleteError>>(null);
 
 	const scopeStreams = useMemo(() => resolveScopeStreams(scope), [scope]);
 
@@ -254,7 +271,10 @@ export function TypicalWorksPanel() {
 			setSelectedWorkId(null);
 			return;
 		}
-		if (!selectedWorkId || !assignedWorks.some((w) => w.id === selectedWorkId)) {
+		if (
+			!selectedWorkId ||
+			!assignedWorks.some((w) => w.id === selectedWorkId)
+		) {
 			setSelectedWorkId(assignedWorks[0]?.id ?? null);
 		}
 	}, [assignedWorks, selectedWorkId]);
@@ -274,11 +294,7 @@ export function TypicalWorksPanel() {
 		data: card,
 		isLoading: cardLoading,
 		error: cardError,
-	} = useV2TypicalWorkCard(
-		selectedWorkId,
-		streamExecutor,
-		templateVersionId,
-	);
+	} = useV2TypicalWorkCard(selectedWorkId, streamExecutor, templateVersionId);
 
 	const handleStreamChange = (stream: string) => {
 		setStreamExecutor(stream);
@@ -423,17 +439,20 @@ export function TypicalWorksPanel() {
 				setSelectedWorkId(null);
 			}
 			recordDraftHistory();
-			patchUiSchema((prev) => {
-				let next = prev as Record<string, unknown>;
-				for (const workId of deletedIds) {
-					next = removeWorkIdFromAllTypicalWorkBindings(
-						next,
-						workId,
-						catalog,
-					);
-				}
-				return next as import("@rjsf/utils").UiSchema;
-			}, { recordHistory: false });
+			patchUiSchema(
+				(prev) => {
+					let next = prev as Record<string, unknown>;
+					for (const workId of deletedIds) {
+						next = removeWorkIdFromAllTypicalWorkBindings(
+							next,
+							workId,
+							catalog,
+						);
+					}
+					return next as import("@rjsf/utils").UiSchema;
+				},
+				{ recordHistory: false },
+			);
 			toast.success(
 				deletedIds.length === 1
 					? "Работа удалена"
@@ -485,70 +504,72 @@ export function TypicalWorksPanel() {
 					minHeight: 0,
 				}}
 			>
-			<LogicWorksToolbar
-				scope={scope}
-				onScopeChange={(next) => {
-					setScope(next);
-					setSelectedWorkId(null);
-				}}
-			/>
+				<LogicWorksToolbar
+					scope={scope}
+					onScopeChange={(next) => {
+						setScope(next);
+						setSelectedWorkId(null);
+					}}
+				/>
 
-			<Box sx={{ flex: 1, minHeight: 0, display: "flex" }}>
-				{assignedWorks.length === 0 ? (
-					<TypicalWorksEmptyState
-						areaTitle={scopeLabel(scope)}
-						onCreateWork={() => setCreateOpen(true)}
-						onAssignFromCatalog={() => setAssignOpen(true)}
-					/>
-				) : (
-					<>
-						<Flex
-							flexDirection="column"
-							flexShrink={0}
-							height="100%"
-							minHeight="0"
-							width={`${sidebarWidth}px`}
-							sx={{
-								borderRight: "1px solid #e6e8ee",
-							}}
-						>
-							<TypicalWorksSidebarGrid
-								works={assignedWorks}
-								selectedWorkId={selectedWorkId}
-								onSelectWork={setSelectedWorkId}
-								onAssignFromCatalog={() => setAssignOpen(true)}
-								onDeleteWorks={openDeleteDialog}
-								assignedCount={assignedWorks.length}
-								scopeSubtitle={scopeSubtitle(scope)}
+				<Box sx={{ flex: 1, minHeight: 0, display: "flex" }}>
+					{assignedWorks.length === 0 ? (
+						<TypicalWorksEmptyState
+							areaTitle={scopeLabel(scope)}
+							onCreateWork={() => setCreateOpen(true)}
+							onAssignFromCatalog={() => setAssignOpen(true)}
+						/>
+					) : (
+						<>
+							<Flex
+								flexDirection="column"
+								flexShrink={0}
+								height="100%"
+								minHeight="0"
+								width={`${sidebarWidth}px`}
+								sx={{
+									borderRight: "1px solid #e6e8ee",
+								}}
+							>
+								<TypicalWorksSidebarGrid
+									works={assignedWorks}
+									selectedWorkId={selectedWorkId}
+									onSelectWork={setSelectedWorkId}
+									onAssignFromCatalog={() => setAssignOpen(true)}
+									onDeleteWorks={openDeleteDialog}
+									assignedCount={assignedWorks.length}
+									scopeSubtitle={scopeSubtitle(scope)}
+								/>
+							</Flex>
+							<TypicalWorksSidebarResizeHandle
+								onResizeStart={onSidebarResizeStart}
+								active={isSidebarResizing}
 							/>
-						</Flex>
-						<TypicalWorksSidebarResizeHandle
-							onResizeStart={onSidebarResizeStart}
-							active={isSidebarResizing}
-						/>
-						<Flex flexGrow={1} minWidth="0" minHeight="0" height="100%">
-						<TypicalWorkEditableCard
-							card={card}
-							fallbackArchComponentType={selectedListItem?.archComponentType}
-							loading={cardLoading}
-							error={
-								cardError instanceof Error
-									? cardError.message
-									: cardError
-										? String(cardError)
-										: null
-							}
-							availableStreams={availableStreams}
-							streamExecutor={streamExecutor}
-							templateId={templateId}
-							templateVersionId={templateVersionId}
-							onStreamChange={handleStreamChange}
-							onVersionChange={handleVersionChange}
-						/>
-						</Flex>
-					</>
-				)}
-			</Box>
+							<Flex flexGrow={1} minWidth="0" minHeight="0" height="100%">
+								<TypicalWorkEditableCard
+									card={card}
+									fallbackArchComponentType={
+										selectedListItem?.archComponentType
+									}
+									loading={cardLoading}
+									error={
+										cardError instanceof Error
+											? cardError.message
+											: cardError
+												? String(cardError)
+												: null
+									}
+									availableStreams={availableStreams}
+									streamExecutor={streamExecutor}
+									templateId={templateId}
+									templateVersionId={templateVersionId}
+									onStreamChange={handleStreamChange}
+									onVersionChange={handleVersionChange}
+								/>
+							</Flex>
+						</>
+					)}
+				</Box>
 			</Box>
 
 			<AssignWorkFromCatalogDialog
@@ -607,7 +628,11 @@ export function TypicalWorksPanel() {
 				<DialogContent>
 					{deleteUsageConflict ? (
 						<>
-							<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+							<Typography
+								variant="body2"
+								color="text.secondary"
+								sx={{ mb: 1.5 }}
+							>
 								{deleteTargets.length === 1 ? (
 									<>
 										«{deleteTargets[0]?.name}» учтена в версиях анкет. Удаление
@@ -636,27 +661,33 @@ export function TypicalWorksPanel() {
 								</Box>
 							) : null}
 							<Box component="ul" sx={{ m: 0, pl: 2.5 }}>
-								{deleteUsageConflict.usedInQuestionnaireVersions.map((usage) => (
-									<Typography
-										key={`${usage.questionnaireId}-${usage.version}`}
-										component="li"
-										variant="body2"
-										color="text.secondary"
-										sx={{ mb: 0.5 }}
-									>
-										{usage.calcName} (версия {usage.version})
-									</Typography>
-								))}
+								{deleteUsageConflict.usedInQuestionnaireVersions.map(
+									(usage) => (
+										<Typography
+											key={`${usage.questionnaireId}-${usage.version}`}
+											component="li"
+											variant="body2"
+											color="text.secondary"
+											sx={{ mb: 0.5 }}
+										>
+											{usage.calcName} (версия {usage.version})
+										</Typography>
+									),
+								)}
 							</Box>
 						</>
 					) : deleteTargets.length === 1 ? (
 						<Typography variant="body2" color="text.secondary">
-							«{deleteTargets[0]?.name}» будет удалена из глобального справочника
-							без возможности восстановления.
+							«{deleteTargets[0]?.name}» будет удалена из глобального
+							справочника без возможности восстановления.
 						</Typography>
 					) : (
 						<>
-							<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+							<Typography
+								variant="body2"
+								color="text.secondary"
+								sx={{ mb: 1.5 }}
+							>
 								Будут удалены работы:
 							</Typography>
 							<Box component="ul" sx={{ m: 0, pl: 2.5 }}>
@@ -725,7 +756,14 @@ export function LogicWorkspaceShell({
 	jsonLogicPanel,
 }: LogicWorkspaceShellProps) {
 	return (
-		<Box sx={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+		<Box
+			sx={{
+				display: "flex",
+				flexDirection: "column",
+				height: "100%",
+				minHeight: 0,
+			}}
+		>
 			<Box
 				sx={{
 					flexShrink: 0,

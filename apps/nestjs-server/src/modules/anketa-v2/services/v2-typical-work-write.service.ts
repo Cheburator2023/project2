@@ -24,8 +24,13 @@ import type {
 	V2TypicalWorkPreviewResponseDto,
 	V2TypicalWorkSchemaFieldSyncImpactDto,
 	V2TypicalWorkSchemaFieldSyncRequestDto,
+	V2TypicalWorkSchemaBulkSyncResponseDto,
 } from "@smart-anketa/api-contract";
 import {
+	buildWorkSchemaParamsFromTemplate,
+	collectTypicalWorkSchemaConsistencyIssues,
+	enrichWorkSchemaParamsWithCatalogAliases,
+	findCatalogPreviousCodeForSchemaParam,
 	buildTypicalWorkFactorCoeffResolver,
 	applyWorkRounding,
 	compileCalculationLogicFromVersionConfig,
@@ -1103,6 +1108,102 @@ export class V2TypicalWorkWriteService {
 		if (!compiled) return;
 		config.calculationLogic = compiled;
 		await this.versionConfigRepository.save(config);
+	}
+
+	async reconcileAllSchemaFieldsForVersion(
+		templateVersionId: string,
+		mode: "dryRun" | "apply" = "apply",
+	): Promise<V2TypicalWorkSchemaBulkSyncResponseDto> {
+		const version = await this.templateVersionRepository.findOne({
+			where: { id: templateVersionId },
+		});
+		if (!version) {
+			throw new NotFoundException(`Version with id ${templateVersionId} not found`);
+		}
+
+		const catalog = await this.paramCatalogService.listParameters();
+		const schemaParams = enrichWorkSchemaParamsWithCatalogAliases(
+			buildWorkSchemaParamsFromTemplate({
+				jsonSchema: (version.jsonSchema ?? {}) as Record<string, unknown>,
+				uiSchema: (version.uiSchema ?? {}) as Record<string, unknown>,
+			}),
+			catalog.items,
+		);
+		const aggregate: V2TypicalWorkSchemaBulkSyncResponseDto = {
+			worksMatched: 0,
+			worksUpdated: 0,
+			rulesUpdated: 0,
+			rulesRemoved: 0,
+			laborParamsUpdated: 0,
+			laborParamsRemoved: 0,
+			formulasInvalidated: 0,
+			fieldsProcessed: 0,
+			consistencyIssues: [],
+		};
+
+		for (const schemaParam of schemaParams) {
+			if (!schemaParam.schemaFieldUid) continue;
+			const previousCode =
+				findCatalogPreviousCodeForSchemaParam(catalog.items, schemaParam) ??
+				schemaParam.code;
+			const impact = await this.reconcileSchemaField({
+				templateVersionId,
+				mode,
+				operation: "upsert",
+				field: {
+					schemaFieldUid: schemaParam.schemaFieldUid,
+					previousCode,
+					code: schemaParam.code,
+					name: schemaParam.name,
+					values:
+						schemaParam.values && schemaParam.values.length > 0
+							? schemaParam.values
+							: undefined,
+				},
+			});
+			aggregate.fieldsProcessed++;
+			aggregate.worksMatched += impact.worksMatched;
+			aggregate.worksUpdated += impact.worksUpdated;
+			aggregate.rulesUpdated += impact.rulesUpdated;
+			aggregate.rulesRemoved += impact.rulesRemoved;
+			aggregate.laborParamsUpdated += impact.laborParamsUpdated;
+			aggregate.laborParamsRemoved += impact.laborParamsRemoved;
+			aggregate.formulasInvalidated += impact.formulasInvalidated;
+		}
+
+		const configs = await this.versionConfigRepository.find({
+			where: { templateVersionId },
+		});
+		for (const config of configs) {
+			const card = await this.typicalWorkService.getWorkCardForSchemaSync(
+				config.workId,
+				config.streamExecutor,
+				templateVersionId,
+			);
+			aggregate.consistencyIssues.push(
+				...collectTypicalWorkSchemaConsistencyIssues({
+					schemaParams,
+					rules: card.rules,
+					laborParamCodes: card.laborParams.map((group) => ({
+						paramCode: group.paramCode,
+						paramName: group.paramName,
+						schemaFieldUid: group.schemaFieldUid,
+					})),
+					formulaParamCodes: card.formula.tokens
+						.filter(
+							(token) =>
+								token.kind === "param_coeff" || token.kind === "param_anyof",
+						)
+						.map((token) => token.paramCode),
+				}).map((issue) => ({
+					...issue,
+					workId: config.workId,
+					streamExecutor: config.streamExecutor,
+				})),
+			);
+		}
+
+		return aggregate;
 	}
 }
 

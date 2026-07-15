@@ -1,5 +1,8 @@
 import type { V2LogicGraphDto, V2LogicRuleDto } from "./v2-template.types";
 import { type PatchV2TypicalWorksLogicOptions } from "./v2-default-typical-works-logic.util";
+/** Итог строки нетиповой работы — та же формула, что row_computed на сервере. */
+export declare function computeAtypicalWorkRowTotal(estimateHoursPerDay: unknown, coefficient: unknown): number | null;
+export declare function withComputedAtypicalWorkRowTotal(row: Record<string, unknown>): Record<string, unknown>;
 /** Dot-пути массивов «Нетиповые работы» из uiSchema (archComponent: atypicalWork). */
 export declare function collectAtypicalWorkArrayPaths(uiSchema: unknown, prefix?: string): string[];
 export declare function buildAtypicalWorkRowTotalRule(arrayPath: string): V2LogicRuleDto;

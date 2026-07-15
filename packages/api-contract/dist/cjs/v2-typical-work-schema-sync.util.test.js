@@ -90,6 +90,32 @@ function card() {
             paramName: "Новое имя",
         });
     });
+    (0, vitest_1.it)("remaps legacy trigger value codes to schema enum codes", () => {
+        const legacy = card();
+        legacy.rules[0] = {
+            ...legacy.rules[0],
+            operator: "=",
+            valueCode: "keep",
+            valueLabel: "Старое значение",
+            values: undefined,
+        };
+        const result = (0, v2_typical_work_schema_sync_util_1.reconcileTypicalWorkCardWithSchemaField)(legacy, {
+            templateVersionId: "version-1",
+            mode: "apply",
+            operation: "upsert",
+            field: {
+                schemaFieldUid: "field-1",
+                previousCode: "old_code",
+                code: "new_code",
+                name: "Новое имя",
+                values: [{ code: "KEEP", label: "Новое значение" }],
+            },
+        });
+        (0, vitest_1.expect)(result.card.rules[0]).toMatchObject({
+            valueCode: "KEEP",
+            valueLabel: "Новое значение",
+        });
+    });
     (0, vitest_1.it)("removes field references and invalidates formula tokens", () => {
         const result = (0, v2_typical_work_schema_sync_util_1.reconcileTypicalWorkCardWithSchemaField)(card(), {
             templateVersionId: "version-1",

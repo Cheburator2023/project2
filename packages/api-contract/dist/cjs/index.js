@@ -41,6 +41,8 @@ __exportStar(require("./v2-typical-works.util"), exports);
 __exportStar(require("./v2-default-typical-works-logic.util"), exports);
 __exportStar(require("./v2-atypical-works-logic.util"), exports);
 __exportStar(require("./v2-works-catalog-match.util"), exports);
+__exportStar(require("./v2-work-schema-params-match.util"), exports);
+__exportStar(require("./v2-template-work-schema-params.util"), exports);
 __exportStar(require("./v2-typical-work.types"), exports);
 __exportStar(require("./v2-typical-work-v4.types"), exports);
 __exportStar(require("./v2-work-formula.util"), exports);

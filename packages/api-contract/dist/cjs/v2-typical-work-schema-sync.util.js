@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.reconcileTypicalWorkCardWithSchemaField = reconcileTypicalWorkCardWithSchemaField;
+const v2_template_work_schema_params_util_1 = require("./v2-template-work-schema-params.util");
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
 function matchesField(ref, request) {
     if (ref.schemaFieldUid) {
@@ -26,23 +27,33 @@ function reconcileRule(rule, request) {
     const isSetOperator = rule.operator === "in" || rule.operator === "not_in";
     const nextValues = isSetOperator
         ? (rule.values ?? [])
-            .filter((value) => allowed.has(value.code))
-            .map((value) => ({
-            code: value.code,
-            label: allowed.get(value.code) ?? value.label ?? null,
-        }))
+            .filter((value) => values.some((allowedValue) => (0, v2_template_work_schema_params_util_1.schemaEnumValueMatchesRule)(allowedValue, {
+            valueCode: value.code,
+            valueLabel: value.label,
+        })))
+            .map((value) => {
+            const matched = values.find((allowedValue) => (0, v2_template_work_schema_params_util_1.schemaEnumValueMatchesRule)(allowedValue, {
+                valueCode: value.code,
+                valueLabel: value.label,
+            }));
+            return {
+                code: matched?.code ?? value.code,
+                label: matched?.label ?? value.label ?? null,
+            };
+        })
         : undefined;
-    const scalarAvailable = rule.valueCode != null && allowed.has(rule.valueCode);
+    const scalarMatch = values.find((value) => (0, v2_template_work_schema_params_util_1.schemaEnumValueMatchesRule)(value, rule));
+    const scalarAvailable = scalarMatch != null;
     return {
         ...rule,
         schemaFieldUid: request.field.schemaFieldUid,
         paramCode: request.field.code ?? rule.paramCode,
         paramName: request.field.name ?? rule.paramName,
-        valueCode: isSetOperator ? null : scalarAvailable ? rule.valueCode : null,
+        valueCode: isSetOperator ? null : scalarAvailable ? scalarMatch.code : null,
         valueLabel: isSetOperator
             ? null
-            : scalarAvailable && rule.valueCode != null
-                ? (allowed.get(rule.valueCode) ?? rule.valueLabel)
+            : scalarAvailable
+                ? (scalarMatch.label ?? rule.valueLabel)
                 : null,
         values: nextValues,
     };

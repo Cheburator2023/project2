@@ -71,7 +71,9 @@ export function useDebouncedTypicalWorkSave(
 	const timerRef = useRef<number | null>(null);
 	const pendingRef = useRef<PatchV2TypicalWorkRequestDto | null>(null);
 	const templateVersionIdRef = useRef(templateVersionId);
+	const optionsRef = useRef(options);
 	templateVersionIdRef.current = templateVersionId;
+	optionsRef.current = options;
 
 	const flush = useCallback(async () => {
 		if (!workId || !pendingRef.current) return;
@@ -97,14 +99,14 @@ export function useDebouncedTypicalWorkSave(
 			await clearBufferedTypicalWorkPatch(workId);
 			setBufferedRestore(false);
 			setStatus("saved");
-			options?.onSaved?.();
+			optionsRef.current?.onSaved?.();
 		} catch (error) {
 			const parsed = parseTypicalWorkPatchError(error);
 			if (parsed.code === "FORMULA_LOCKED") {
 				pendingRef.current = dto;
 				setStatus("error");
 				setErrorMessage(parsed.message);
-				options?.onFormulaLocked?.();
+				optionsRef.current?.onFormulaLocked?.();
 				return;
 			}
 			pendingRef.current = dto;
@@ -117,7 +119,7 @@ export function useDebouncedTypicalWorkSave(
 				errorMessage: parsed.message,
 			});
 		}
-	}, [options, patch, workId]);
+	}, [patch, workId]);
 
 	const scheduleSave = useCallback(
 		(dto: PatchV2TypicalWorkRequestDto) => {

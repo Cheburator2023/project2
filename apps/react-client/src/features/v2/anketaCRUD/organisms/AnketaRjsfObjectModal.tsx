@@ -23,6 +23,8 @@ type Props = {
 	defaultValues?: Record<string, unknown>;
 	onClose: () => void;
 	onSubmit: (values: Record<string, unknown>) => void;
+	/** Пересчёт производных полей при каждом изменении (напр. итог нетиповой работы). */
+	transformFormData?: (data: Record<string, unknown>) => Record<string, unknown>;
 };
 
 /** uiSchema для модалки: без повторного заголовка корневого object (есть DialogTitle). */
@@ -49,6 +51,7 @@ export function AnketaRjsfObjectModal({
 	defaultValues,
 	onClose,
 	onSubmit,
+	transformFormData,
 }: Props) {
 	const [formData, setFormData] = useState<Record<string, unknown>>({});
 
@@ -69,10 +72,11 @@ export function AnketaRjsfObjectModal({
 	const wasOpenRef = useRef(false);
 	useEffect(() => {
 		if (open && !wasOpenRef.current) {
-			setFormData(defaultValues ?? {});
+			const initial = defaultValues ?? {};
+			setFormData(transformFormData ? transformFormData(initial) : initial);
 		}
 		wasOpenRef.current = open;
-	}, [open, defaultValues]);
+	}, [open, defaultValues, transformFormData]);
 
 	return (
 		<Dialog
@@ -113,9 +117,10 @@ export function AnketaRjsfObjectModal({
 						liveValidate
 						noHtml5Validate
 						showErrorList={false}
-						onChange={(evt) =>
-							setFormData((evt.formData as Record<string, unknown>) ?? {})
-						}
+						onChange={(evt) => {
+							const raw = (evt.formData as Record<string, unknown>) ?? {};
+							setFormData(transformFormData ? transformFormData(raw) : raw);
+						}}
 					/>
 				</Box>
 			</DialogContent>

@@ -124,10 +124,24 @@ export function countUnmappedDependencyTargets(
 	graph: V2ParamDependencyGraph,
 	bindings: V2ParamFieldBinding[],
 ): number {
+	return listUnmappedDependencyTargets(graph, bindings).length;
+}
+
+export function listUnmappedDependencyTargets(
+	graph: V2ParamDependencyGraph,
+	bindings: V2ParamFieldBinding[],
+): Array<{ targetParamCode: string; paramName: string }> {
+	const nameByCode = new Map(bindings.map((b) => [b.paramCode, b.paramName]));
 	const pointersByCode = new Map(bindings.map((b) => [b.paramCode, b.pointers]));
-	return graph.targets.filter(
-		(target) =>
-			target.rules.length > 0 &&
-			(pointersByCode.get(target.targetParamCode)?.length ?? 0) === 0,
-	).length;
+	return graph.targets
+		.filter(
+			(target) =>
+				target.rules.length > 0 &&
+				(pointersByCode.get(target.targetParamCode)?.length ?? 0) === 0,
+		)
+		.map((target) => ({
+			targetParamCode: target.targetParamCode,
+			paramName:
+				nameByCode.get(target.targetParamCode) ?? target.targetParamCode,
+		}));
 }

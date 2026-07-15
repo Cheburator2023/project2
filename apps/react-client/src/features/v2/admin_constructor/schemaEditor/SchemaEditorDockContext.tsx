@@ -15,6 +15,7 @@ type SchemaEditorDockContextValue = {
 	registerResetDockLayout: (reset: (() => void) | null) => void;
 	resetDockLayout: () => void;
 	activateMainTab: (tab: SchemaEditorMainTab) => void;
+	updatePanelTitle: (panelId: string, title: string) => void;
 };
 
 const SchemaEditorDockContext = createContext<SchemaEditorDockContextValue | null>(
@@ -97,6 +98,10 @@ export function SchemaEditorDockProvider({
 		resetDockLayoutRef.current?.();
 	}, []);
 
+	const updatePanelTitle = useCallback((panelId: string, title: string) => {
+		apiRef.current?.getPanel(panelId)?.api.setTitle(title);
+	}, []);
+
 	const registerDockApi = useCallback(
 		(api: DockviewApi | null) => {
 			activePanelDisposableRef.current?.dispose();
@@ -174,6 +179,7 @@ export function SchemaEditorDockProvider({
 		registerResetDockLayout,
 		resetDockLayout,
 		activateMainTab,
+		updatePanelTitle,
 	};
 
 	return (

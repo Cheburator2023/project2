@@ -88,6 +88,32 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
             paramName: "Новое имя",
         });
     });
+    it("remaps legacy trigger value codes to schema enum codes", () => {
+        const legacy = card();
+        legacy.rules[0] = {
+            ...legacy.rules[0],
+            operator: "=",
+            valueCode: "keep",
+            valueLabel: "Старое значение",
+            values: undefined,
+        };
+        const result = reconcileTypicalWorkCardWithSchemaField(legacy, {
+            templateVersionId: "version-1",
+            mode: "apply",
+            operation: "upsert",
+            field: {
+                schemaFieldUid: "field-1",
+                previousCode: "old_code",
+                code: "new_code",
+                name: "Новое имя",
+                values: [{ code: "KEEP", label: "Новое значение" }],
+            },
+        });
+        expect(result.card.rules[0]).toMatchObject({
+            valueCode: "KEEP",
+            valueLabel: "Новое значение",
+        });
+    });
     it("removes field references and invalidates formula tokens", () => {
         const result = reconcileTypicalWorkCardWithSchemaField(card(), {
             templateVersionId: "version-1",

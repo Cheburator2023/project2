@@ -15,6 +15,7 @@ import type {
 } from "../dto";
 import { V2FactorySnapshotService } from "./v2-factory-snapshot.service";
 import { V2TypicalWorkSeedService } from "./v2-typical-work.service";
+import { V2TypicalWorkWriteService } from "./v2-typical-work-write.service";
 import {
 	type V2TemplateStatus,
 	prepareFactorySnapshotWithoutTypicalWorks,
@@ -30,6 +31,7 @@ export class V2TemplateVersionService {
 		private readonly templateService: V2TemplateService,
 		private readonly factorySnapshotService: V2FactorySnapshotService,
 		private readonly typicalWorkSeedService: V2TypicalWorkSeedService,
+		private readonly typicalWorkWriteService: V2TypicalWorkWriteService,
 	) {}
 
 	async findAll(templateId: string): Promise<V2TemplateVersionEntity[]> {
@@ -205,6 +207,10 @@ export class V2TemplateVersionService {
 			await this.typicalWorkSeedService.seedTemplateTypicalWorksFromDocCatalog(
 				templateId,
 				version.id,
+			);
+			await this.typicalWorkWriteService.reconcileAllSchemaFieldsForVersion(
+				version.id,
+				"apply",
 			);
 		}
 		return version;

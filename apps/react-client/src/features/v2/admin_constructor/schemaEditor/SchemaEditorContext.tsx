@@ -16,6 +16,11 @@ import type {
 } from "./types";
 import type { SchemaEditorDraftSnapshot } from "../utils/schemaEditorLocalDraft";
 import type { SchemaFieldChangeInfo } from "./schemaFieldTreeChanges";
+import type { LogicValidationIssue } from "../utils/logicValidation";
+import type {
+	SchemaEditorIssue,
+} from "./collectSchemaEditorIssues";
+import type { TypicalWorkSchemaConsistencyIssue } from "@smart-anketa/api-contract";
 
 export type SchemaEditorContextValue = {
 	templateId: string;
@@ -59,7 +64,10 @@ export type SchemaEditorContextValue = {
 	requestCalculationRefresh: () => void;
 	logicExtraErrors: ErrorSchema;
 	logicValidationIssueCount: number;
+	logicValidationIssues: LogicValidationIssue[];
 	legacyStageEvaluation: V2LegacyStageEvaluationDto | null;
+	schemaConsistencyIssues: TypicalWorkSchemaConsistencyIssue[];
+	navigateToSchemaEditorIssue: (issue: SchemaEditorIssue) => void;
 
 	schemaMonacoText: string;
 	setSchemaMonacoText: (v: string) => void;
@@ -141,6 +149,7 @@ export type SchemaEditorContextValue = {
 	triggerParamPickId: string | null;
 	openLogicTabWithTriggerParam: (pointer: string) => void;
 	clearTriggerParamPick: () => void;
+	openTypicalWorksTab: (workId?: string) => void;
 	updateRulePatch: (patch: Partial<V2LogicRuleDto>) => void;
 	removeSelectedRule: () => void;
 	previewEvalNote: React.ReactNode;

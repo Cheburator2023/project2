@@ -25,6 +25,7 @@ import {
 } from "@react-client/common/crossTab/appBroadcast";
 import type {
 	CreateV2TemplateVersionRequestDto,
+	TypicalWorkSchemaConsistencyIssue,
 	V2LogicRuleDto,
 } from "@smart-anketa/api-contract";
 import {
@@ -43,7 +44,10 @@ import { useBrowserRouterNavigationBlocker } from "../hooks/useBrowserRouterNavi
 import { clampCanvasInsertIndex } from "../schemaEditor/schemaCanvasTree";
 import { SchemaEditorProvider } from "../schemaEditor/SchemaEditorContext";
 import type { SchemaEditorContextValue } from "../schemaEditor/SchemaEditorContext";
-import type { TypicalWorkSaveGateState } from "../schemaEditor/typicalWorkSaveGate";
+import {
+	saveGateStateEquals,
+	type TypicalWorkSaveGateState,
+} from "../schemaEditor/typicalWorkSaveGate";
 import type { SchemaEditorMainTab } from "../schemaEditor/types";
 import { SchemaEditorDockProvider } from "../schemaEditor/SchemaEditorDockContext";
 import {
@@ -53,12 +57,14 @@ import {
 	readLeafUiOptions,
 } from "../schemaEditor/propertiesFieldKind";
 import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayout";
-import { LOGIC_TAB_QUERY } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
+import { LOGIC_TAB_QUERY, WORK_ID_QUERY } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import {
 	buildSchemaWorkParameters,
+	resolveSchemaParamForTriggerRule,
 	schemaParamIdFromPointer,
 } from "../schemaEditor/panels/typicalWorksPanel/schemaWorkParameters";
-import { useSyncV2TypicalWorksSchemaField } from "@react-client/common/api/queries/v2-works";
+import type { SchemaEditorIssue } from "../schemaEditor/collectSchemaEditorIssues";
+import { useSyncV2TypicalWorksSchemaField, useBulkSyncV2TypicalWorksSchemaFields } from "@react-client/common/api/queries/v2-works";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
 import { useDebouncedV2Calculation } from "../hooks/useDebouncedV2Calculation";
@@ -274,11 +280,35 @@ export const V2TemplateSchemaEditor = ({
 	const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 	const [typicalWorkSaveGate, setTypicalWorkSaveGate] =
 		useState<TypicalWorkSaveGateState | null>(null);
+	const typicalWorkRetryRef = useRef<(() => void) | undefined>(undefined);
 	const registerTypicalWorkSaveGate = useCallback(
 		(state: TypicalWorkSaveGateState | null) => {
-			setTypicalWorkSaveGate(state);
+			typicalWorkRetryRef.current = state?.onRetry;
+			setTypicalWorkSaveGate((prev) => {
+				const next =
+					state == null
+						? null
+						: {
+								blocked: state.blocked,
+								message: state.message,
+								status: state.status,
+								workName: state.workName,
+								errorMessage: state.errorMessage,
+							};
+				return saveGateStateEquals(prev, next) ? prev : next;
+			});
 		},
 		[],
+	);
+	const typicalWorkSaveDisplay = useMemo(
+		() =>
+			typicalWorkSaveGate
+				? {
+						...typicalWorkSaveGate,
+						onRetry: typicalWorkRetryRef.current,
+					}
+				: null,
+		[typicalWorkSaveGate],
 	);
 	const typicalWorkSaveBlocked = typicalWorkSaveGate?.blocked ?? false;
 	const typicalWorkSaveBlockedMessage =
@@ -312,6 +342,9 @@ export const V2TemplateSchemaEditor = ({
 	);
 	const [depsDraft, setDepsDraft] = useState("");
 	const [monacoError, setMonacoError] = useState<string | null>(null);
+	const [schemaConsistencyIssues, setSchemaConsistencyIssues] = useState<
+		TypicalWorkSchemaConsistencyIssue[]
+	>([]);
 	const [logicPathPick, setLogicPathPick] = useState<string>("");
 	const [triggerParamPickId, setTriggerParamPickId] = useState<string | null>(
 		null,
@@ -609,6 +642,8 @@ export const V2TemplateSchemaEditor = ({
 	const { enumMapByCode, isLoading: dictionaryEnumsLoading } =
 		useV2DictionaryEnumsMaps(referencedDictionaryCodes);
 	const syncTypicalWorksSchemaField = useSyncV2TypicalWorksSchemaField();
+	const bulkSyncTypicalWorksSchemaFields =
+		useBulkSyncV2TypicalWorksSchemaFields();
 	const [calculationRevision, setCalculationRevision] = useState(0);
 	const requestCalculationRefresh = useCallback(
 		() => setCalculationRevision((revision) => revision + 1),
@@ -717,8 +752,8 @@ export const V2TemplateSchemaEditor = ({
 	const taskTriggerItems = logicPreviewPack.taskTriggerItems;
 	const liveFormData = logicPreviewPack.liveFormData;
 	const logicExtraErrors = logicPreviewPack.extraErrors;
-	const logicValidationIssueCount =
-		logicPreviewPack.logicValidationIssues.length;
+	const logicValidationIssues = logicPreviewPack.logicValidationIssues;
+	const logicValidationIssueCount = logicValidationIssues.length;
 	const legacyStageEvaluation =
 		mappedCalculation?.legacyStageEvaluation ?? null;
 
@@ -794,6 +829,45 @@ export const V2TemplateSchemaEditor = ({
 		>(),
 	);
 	const schemaSyncTimerRef = useRef<number | null>(null);
+	const initialSchemaBulkSyncRef = useRef<string | null>(null);
+	const bulkSyncTrackedVersionRef = useRef<string | null>(null);
+
+	useEffect(() => {
+		if (dictionaryEnumsLoading) return;
+		const versionId = activeVersion?.id;
+		if (!versionId || schemaWorkParams.length === 0) return;
+
+		if (bulkSyncTrackedVersionRef.current !== versionId) {
+			bulkSyncTrackedVersionRef.current = versionId;
+			initialSchemaBulkSyncRef.current = null;
+			setSchemaConsistencyIssues([]);
+		}
+
+		if (initialSchemaBulkSyncRef.current === versionId) return;
+		initialSchemaBulkSyncRef.current = versionId;
+
+		void bulkSyncTypicalWorksSchemaFields
+			.mutateAsync({ templateVersionId: versionId, mode: "apply" })
+			.then((result) => {
+				setSchemaConsistencyIssues(result.consistencyIssues);
+				if (result.consistencyIssues.length > 0) {
+					toast.warning(
+						`После синхронизации параметров осталось ${result.consistencyIssues.length} проблем связи работ со схемой`,
+					);
+				}
+				requestCalculationRefresh();
+			})
+			.catch((error) => {
+				initialSchemaBulkSyncRef.current = null;
+				toast.error(apiErrorMessage(error));
+			});
+	}, [
+		activeVersion?.id,
+		bulkSyncTypicalWorksSchemaFields,
+		dictionaryEnumsLoading,
+		requestCalculationRefresh,
+		schemaWorkParams.length,
+	]);
 
 	useEffect(() => {
 		// Словари подгружаются асинхронно — до готовности values в params «пустые»,
@@ -1944,6 +2018,79 @@ export const V2TemplateSchemaEditor = ({
 		setLogicWorkspaceTab("works");
 	}, [setLogicWorkspaceTab]);
 
+	const openTypicalWorksTab = useCallback(
+		(workId?: string) => {
+			setSearchParams((prev) => {
+				const next = new URLSearchParams(prev);
+				next.set(LOGIC_TAB_QUERY, "works");
+				if (workId) next.set(WORK_ID_QUERY, workId);
+				else next.delete(WORK_ID_QUERY);
+				return next;
+			});
+			setMainTab("logic");
+		},
+		[setSearchParams],
+	);
+
+	const navigateToSchemaEditorIssue = useCallback(
+		(issue: SchemaEditorIssue) => {
+			const target = issue.target;
+			switch (target.kind) {
+				case "designer":
+					setMainTab("designer");
+					setSelectedPointer(target.pointer);
+					return;
+				case "logic_rule":
+					openLogicTabWithRule(target.ruleId);
+					return;
+				case "logic_dependencies":
+					if (target.pointer) {
+						openLogicTabWithPointer(target.pointer);
+						return;
+					}
+					setMainTab("logic");
+					setLogicWorkspaceTab("dependencies");
+					return;
+				case "typical_work":
+					openTypicalWorksTab(target.workId);
+					if (target.paramCode) {
+						const schemaParam = resolveSchemaParamForTriggerRule(
+							{ paramCode: target.paramCode },
+							schemaWorkParams,
+						);
+						if (schemaParam?.schemaPointer) {
+							const hint = fieldPathHints.find(
+								(row) => row.pointer === schemaParam.schemaPointer,
+							);
+							setTriggerParamPickId(
+								schemaParamIdFromPointer(
+									schemaParam.schemaPointer,
+									hint?.schemaFieldUid,
+								),
+							);
+						}
+					}
+					return;
+				case "json":
+					setMainTab("json");
+					return;
+				case "calculation":
+					setMainTab("calculation");
+					return;
+				default:
+					return;
+			}
+		},
+		[
+			fieldPathHints,
+			openLogicTabWithPointer,
+			openLogicTabWithRule,
+			openTypicalWorksTab,
+			schemaWorkParams,
+			setLogicWorkspaceTab,
+		],
+	);
+
 	useEffect(() => {
 		if (!activeVersion) {
 			onHeaderActionsChange?.(null);
@@ -2095,7 +2242,10 @@ export const V2TemplateSchemaEditor = ({
 			requestCalculationRefresh,
 			logicExtraErrors,
 			logicValidationIssueCount,
+			logicValidationIssues,
 			legacyStageEvaluation,
+			schemaConsistencyIssues,
+			navigateToSchemaEditorIssue,
 			schemaMonacoText,
 			setSchemaMonacoText,
 			uiMonacoText,
@@ -2146,6 +2296,7 @@ export const V2TemplateSchemaEditor = ({
 			triggerParamPickId,
 			openLogicTabWithTriggerParam,
 			clearTriggerParamPick,
+			openTypicalWorksTab,
 			updateRulePatch,
 			removeSelectedRule,
 			previewEvalNote,
@@ -2162,7 +2313,7 @@ export const V2TemplateSchemaEditor = ({
 			canBindDictionary,
 			currentDictionaryCode,
 			dictionaryBindingMissing,
-			typicalWorkSaveDisplay: typicalWorkSaveGate,
+			typicalWorkSaveDisplay,
 			typicalWorkSaveBlocked,
 			typicalWorkSaveBlockedMessage,
 			registerTypicalWorkSaveGate,
@@ -2198,7 +2349,10 @@ export const V2TemplateSchemaEditor = ({
 			requestCalculationRefresh,
 			logicExtraErrors,
 			logicValidationIssueCount,
+			logicValidationIssues,
 			legacyStageEvaluation,
+			schemaConsistencyIssues,
+			navigateToSchemaEditorIssue,
 			schemaMonacoText,
 			uiMonacoText,
 			logicMonacoText,
@@ -2239,6 +2393,8 @@ export const V2TemplateSchemaEditor = ({
 			triggerParamPickId,
 			openLogicTabWithTriggerParam,
 			clearTriggerParamPick,
+			openTypicalWorksTab,
+			navigateToSchemaEditorIssue,
 			updateRulePatch,
 			removeSelectedRule,
 			previewEvalNote,
@@ -2258,7 +2414,7 @@ export const V2TemplateSchemaEditor = ({
 			handleDepsBlur,
 			calculationLoading,
 			calculationError,
-			typicalWorkSaveGate,
+			typicalWorkSaveDisplay,
 			typicalWorkSaveBlocked,
 			typicalWorkSaveBlockedMessage,
 			registerTypicalWorkSaveGate,

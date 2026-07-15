@@ -34,6 +34,7 @@ import type {
 	V2TypicalWorkAssignmentListResponseDto,
 	V2TypicalWorkSchemaFieldSyncImpactDto,
 	V2TypicalWorkSchemaFieldSyncRequestDto,
+	V2TypicalWorkSchemaBulkSyncResponseDto,
 } from "@smart-anketa/api-contract";
 import { V2TypicalWorkService } from "../services/v2-typical-work.service";
 import { V2TypicalWorkWriteService } from "../services/v2-typical-work-write.service";
@@ -222,6 +223,24 @@ export class V2TypicalWorkController {
 		@Body() dto: V2TypicalWorkSchemaFieldSyncRequestDto,
 	): Promise<V2TypicalWorkSchemaFieldSyncImpactDto> {
 		return this.typicalWorkWriteService.reconcileSchemaField(dto);
+	}
+
+	@Post("schema-field-sync/bulk")
+	@ApiOperation({
+		summary:
+			"Массовая синхронизация типовых работ с полями схемы версии шаблона",
+	})
+	reconcileAllSchemaFields(
+		@Body()
+		dto: {
+			templateVersionId: string;
+			mode?: "dryRun" | "apply";
+		},
+	): Promise<V2TypicalWorkSchemaBulkSyncResponseDto> {
+		return this.typicalWorkWriteService.reconcileAllSchemaFieldsForVersion(
+			dto.templateVersionId,
+			dto.mode ?? "apply",
+		);
 	}
 
 	@Get(":id")

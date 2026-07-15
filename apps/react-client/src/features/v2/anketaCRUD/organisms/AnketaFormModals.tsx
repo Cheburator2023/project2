@@ -24,6 +24,7 @@ import {
 	resolveV2AnketaArchComponent,
 	resolveV2QuestionnaireUncertaintyCoefficient,
 	syncAtypicalWorkCoefficientsInFormData,
+	withComputedAtypicalWorkRowTotal,
 	type V2AnketaEditorBindings,
 } from "@smart-anketa/api-contract";
 import { ATYPICAL_WORK_NEW_ROW_DEFAULTS } from "@react-client/features/v2/admin_constructor/schemaEditor/archComponentPresets";
@@ -287,10 +288,17 @@ export function AnketaFormModals({
 			const items = isArchObjectListModal
 				? readArchObjectListAtPath(formData, activeModal.path)
 				: getArrayAtPath(formData, activeModal.path);
-			const values =
+			const rawValues =
 				activeModal.editIndex != null
 					? ((items[activeModal.editIndex] as Record<string, unknown>) ?? {})
 					: newArrayRowDefaults(formData, previewUiSchema, activeModal.path);
+			const arch = resolveV2AnketaArchComponent(
+				getObjectUiSlice(previewUiSchema, activeModal.path),
+			);
+			const values =
+				arch === "atypicalWork"
+					? withComputedAtypicalWorkRowTotal(rawValues)
+					: rawValues;
 			const parentNode = resolveSchemaNodeTitle(
 				previewSchema,
 				activeModal.path,
@@ -406,11 +414,11 @@ export function AnketaFormModals({
 			);
 			const rowValues =
 				arch === "atypicalWork"
-					? {
+					? withComputedAtypicalWorkRowTotal({
 							...values,
 							coefficient: resolveV2QuestionnaireUncertaintyCoefficient(prev)
 								.coefficient,
-						}
+						})
 					: values;
 			const updated = isAnketaArchObjectListPath(path)
 				? editIndex == null
@@ -437,6 +445,17 @@ export function AnketaFormModals({
 		closeModal();
 	};
 
+	const atypicalWorkModalTransform = useCallback(
+		(data: Record<string, unknown>) => withComputedAtypicalWorkRowTotal(data),
+		[],
+	);
+
+	const isAtypicalWorkModal =
+		activeModal?.kind === "rjsfObject" &&
+		resolveV2AnketaArchComponent(
+			getObjectUiSlice(previewUiSchema, activeModal.path),
+		) === "atypicalWork";
+
 	return (
 		<>
 			<TotalUncertaintyModal
@@ -452,6 +471,9 @@ export function AnketaFormModals({
 					schema={rjsfModalSlice.schema}
 					uiSchema={rjsfModalSlice.uiSchema}
 					defaultValues={rjsfModalSlice.values}
+					transformFormData={
+						isAtypicalWorkModal ? atypicalWorkModalTransform : undefined
+					}
 					onClose={closeModal}
 					onSubmit={(values) => {
 						if (activeModal?.kind !== "rjsfObject") return;

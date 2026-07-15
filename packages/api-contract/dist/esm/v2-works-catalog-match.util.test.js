@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildTypicalWorkFactorCoeffResolver, catalogValueMatchesTriggerRule, isSourceTypeTriggerParam, resolveLaborAnyOfCoefficient, resolveByValueLaborParamCoefficients, resolveStreamFromSourceType, resolveStreamsFromSourceSystems, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, typicalWorkRulesMatchSource, V2_SOURCE_STREAM, } from "./v2-works-catalog-match.util";
+import { buildTypicalWorkFactorCoeffResolver, catalogValueMatchesTriggerRule, isBrokenTypicalWorkTriggerRef, isMethodologyPresenceTriggerRule, isSourceTypeTriggerParam, resolveLaborAnyOfCoefficient, resolveByValueLaborParamCoefficients, resolveStreamFromSourceType, resolveStreamsFromSourceSystems, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, typicalWorkRulesMatchSource, V2_SOURCE_STREAM, } from "./v2-works-catalog-match.util";
+import { resolveWorkSchemaParamForRule } from "./v2-work-schema-params-match.util";
 describe("v2-works-catalog-match.util", () => {
     it("resolves the unified source stream for any source row", () => {
         // Разделение внутр/внеш убрано: любой источник → единый стрим.
@@ -275,5 +276,37 @@ describe("v2-works-catalog-match.util", () => {
             valueCode: "кд",
             valueLabel: "КД",
         })).toBe(true);
+    });
+    it("detects broken and methodology-only presence triggers", () => {
+        expect(isBrokenTypicalWorkTriggerRef({ paramCode: "", paramName: "?" })).toBe(true);
+        expect(isMethodologyPresenceTriggerRule({
+            paramCode: "пилот_первичный",
+            paramName: "? Пилот (первичный",
+            valueCode: null,
+            valueLabel: null,
+        })).toBe(true);
+        expect(isMethodologyPresenceTriggerRule({
+            paramCode: "повторный",
+            paramName: "повторный)",
+            valueCode: null,
+            valueLabel: null,
+        })).toBe(true);
+    });
+    it("maps control trigger to вид контроля schema field without substring false positives", () => {
+        const resolved = resolveWorkSchemaParamForRule({
+            paramCode: "вид_контроля_ок",
+            paramName: "Вид контроля: ОК",
+        }, [
+            {
+                code: "field_adjacent",
+                name: "Негативное влияние смежных проектов на показатели проекта",
+            },
+            {
+                code: "field_control",
+                name: "Вид контроля",
+                values: [{ code: "ок", label: "ОК — Оперативный контроль" }],
+            },
+        ]);
+        expect(resolved?.code).toBe("field_control");
     });
 });

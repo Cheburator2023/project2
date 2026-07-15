@@ -16,10 +16,14 @@ import {
 	resolveByValueLaborParamCoefficients,
 	resolveLaborAnyOfCoefficient,
 	resolveStreamFromSourceType,
-	typicalWorkRulesMatchSource,
+	typicalWorkRulesMatchSourceWithSchema,
+	buildWorkSchemaParamsFromTemplate,
+	remapLaborCoefficientRowsForSchema,
+	resolveWorkSchemaParamForRule,
 	type TypicalWorkAnyOfLaborParamLike,
 	type TypicalWorkRuleLike,
 	type V2TypicalWorkRoundingDto,
+	type WorkSchemaParamDef,
 } from "@smart-anketa/api-contract";
 import { V2TypicalWorkAssignmentEntity } from "../entities/v2-typical-work-assignment.entity";
 import { V2TypicalWorkLaborCoefficientEntity } from "../entities/v2-typical-work-labor-coefficient.entity";
@@ -28,6 +32,7 @@ import { V2TypicalWorkNormEntity } from "../entities/v2-typical-work-norm.entity
 import { V2TypicalWorkRuleEntity } from "../entities/v2-typical-work-rule.entity";
 import { V2TypicalWorkVersionConfigEntity } from "../entities/v2-typical-work-version-config.entity";
 import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
+import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
 
 export type CatalogGeneratedTask = {
@@ -72,6 +77,7 @@ type RuntimeWorkContext = {
 		ReturnType<V2TypicalWorkParamCatalogService["listTriggerStatusCatalog"]>
 	>;
 	hiddenParamCodes?: ReadonlySet<string>;
+	schemaParams: WorkSchemaParamDef[];
 };
 
 function decimalToNumber(value: string | number | null | undefined): number {
@@ -109,18 +115,23 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 
 	for (const header of ctx.laborParams) {
 		if (header.kind !== "any_of") continue;
-		// any_of всегда участвует в формуле: отсутствие/«Нет» чекбокса = coeffOff.
+		const resolved = resolveWorkSchemaParamForRule(header, ctx.schemaParams);
+		const paramCode = resolved?.code ?? header.paramCode;
+		const paramName = resolved?.name ?? header.paramName;
 		paramCoefficients[header.paramCode] = resolveLaborAnyOfCoefficient(
 			ctx.source,
-			header.paramCode,
+			paramCode,
 			{
 				valueCodes: header.anyOfValueCodes ?? [],
 				valueLabels: header.anyOfValueLabels ?? [],
 				coeffOn: decimalToNumber(header.coeffOn),
 				coeffOff: decimalToNumber(header.coeffOff),
 			},
-			header.paramName,
+			paramName,
 		);
+		if (paramCode !== header.paramCode) {
+			paramCoefficients[paramCode] = paramCoefficients[header.paramCode]!;
+		}
 	}
 
 	const byValueRows: Array<{
@@ -151,10 +162,24 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 			coefficient: decimalToNumber(row.coefficient),
 		});
 	}
-	Object.assign(
-		paramCoefficients,
-		resolveByValueLaborParamCoefficients(ctx.source, byValueRows),
+	const remappedRows = remapLaborCoefficientRowsForSchema(
+		byValueRows,
+		ctx.schemaParams,
 	);
+	const resolvedCoeffs = resolveByValueLaborParamCoefficients(
+		ctx.source,
+		remappedRows,
+	);
+	for (let index = 0; index < byValueRows.length; index++) {
+		const original = byValueRows[index]!;
+		const remapped = remappedRows[index]!;
+		const value = resolvedCoeffs[remapped.paramCode];
+		if (value === undefined) continue;
+		paramCoefficients[remapped.paramCode] = value;
+		if (remapped.paramCode !== original.paramCode) {
+			paramCoefficients[original.paramCode] = value;
+		}
+	}
 
 	return paramCoefficients;
 }
@@ -203,6 +228,8 @@ export class V2TypicalWorkRuntimeService {
 		private readonly assignmentRepository: Repository<V2TypicalWorkAssignmentEntity>,
 		@InjectRepository(V2TypicalWorkVersionConfigEntity)
 		private readonly versionConfigRepository: Repository<V2TypicalWorkVersionConfigEntity>,
+		@InjectRepository(V2TemplateVersionEntity)
+		private readonly templateVersionRepository: Repository<V2TemplateVersionEntity>,
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
 	) {}
 
@@ -298,6 +325,7 @@ export class V2TypicalWorkRuntimeService {
 		const assignmentById = new Map(assignments.map((a) => [a.id, a]));
 		const coefficientValueCatalog =
 			await this.paramCatalogService.listTriggerStatusCatalog(params.atDate);
+		const schemaParams = await this.loadSchemaParams(params.templateVersionId);
 
 		const contexts = new Map<string, RuntimeWorkContext>();
 		for (const work of filteredWorks) {
@@ -315,7 +343,15 @@ export class V2TypicalWorkRuntimeService {
 			if (normValue == null) continue;
 
 			const workRules = (rulesByWork.get(work.id) ?? []).map(mapRuleEntity);
-			if (!typicalWorkRulesMatchSource(workRules, params.source)) continue;
+			if (
+				!typicalWorkRulesMatchSourceWithSchema(
+					workRules,
+					params.source,
+					schemaParams,
+				)
+			) {
+				continue;
+			}
 
 			contexts.set(work.id, {
 				work,
@@ -330,6 +366,7 @@ export class V2TypicalWorkRuntimeService {
 				assignmentByWorkId,
 				coefficientValueCatalog,
 				hiddenParamCodes: params.hiddenParamCodes,
+				schemaParams,
 			});
 		}
 
@@ -420,6 +457,20 @@ export class V2TypicalWorkRuntimeService {
 		}
 
 		return tasks;
+	}
+
+	private async loadSchemaParams(
+		templateVersionId: string | null,
+	): Promise<WorkSchemaParamDef[]> {
+		if (!templateVersionId) return [];
+		const version = await this.templateVersionRepository.findOne({
+			where: { id: templateVersionId },
+		});
+		if (!version) return [];
+		return buildWorkSchemaParamsFromTemplate({
+			jsonSchema: (version.jsonSchema ?? {}) as Record<string, unknown>,
+			uiSchema: (version.uiSchema ?? {}) as Record<string, unknown>,
+		});
 	}
 }
 

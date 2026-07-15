@@ -10,6 +10,8 @@ exports.extractControlCode = extractControlCode;
 exports.isSourceTypeTriggerParam = isSourceTypeTriggerParam;
 exports.isControlTypeTriggerParam = isControlTypeTriggerParam;
 exports.isPresenceOnlyTriggerRule = isPresenceOnlyTriggerRule;
+exports.isBrokenTypicalWorkTriggerRef = isBrokenTypicalWorkTriggerRef;
+exports.isMethodologyPresenceTriggerRule = isMethodologyPresenceTriggerRule;
 exports.resolveTriggerStatusCatalogParam = resolveTriggerStatusCatalogParam;
 exports.triggerRuleCatalogGroupKey = triggerRuleCatalogGroupKey;
 exports.catalogValueMatchesTriggerRule = catalogValueMatchesTriggerRule;
@@ -143,6 +145,39 @@ function isPresenceOnlyTriggerRule(rule) {
     return (rule.valueCode == null &&
         rule.valueLabel == null &&
         (!rule.values || rule.values.length === 0));
+}
+/** Битые/пустые ссылки из legacy CSV — не проверяем против схемы. */
+function isBrokenTypicalWorkTriggerRef(rule) {
+    if (rule.paramCode.trim())
+        return false;
+    const name = rule.paramName?.trim();
+    return !name || name === "?";
+}
+/**
+ * Методологические presence-триггеры (пилот, мониторинг и т.п.) не привязаны к полям схемы.
+ * Legacy CSV иногда режет «Пилот (первичный, повторный)» на отдельные paramCode.
+ */
+function isMethodologyPresenceTriggerRule(rule) {
+    if (!isPresenceOnlyTriggerRule(rule))
+        return false;
+    if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName))
+        return false;
+    if (isControlTypeTriggerParam(rule.paramCode, rule.paramName))
+        return false;
+    const code = rule.paramCode.trim().toLowerCase();
+    const name = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(rule.paramName ?? "")
+        .trim()
+        .toLowerCase();
+    if (code === "повторный" || name.endsWith("повторный)"))
+        return true;
+    if (/^пилот(?:[_\s(]|$)/.test(code))
+        return true;
+    if (/^[?]\s*пилот/.test(name) || /пилот\s*\(/.test(name))
+        return true;
+    if (/^мониторинг(?:[_\s]|$)/.test(code) || /^мониторинг/.test(name)) {
+        return true;
+    }
+    return false;
 }
 /** Сопоставляет правило триггера с параметром глобального справочника (алиасы CSV → каталог). */
 function resolveTriggerStatusCatalogParam(rule, catalog) {

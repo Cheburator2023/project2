@@ -3,13 +3,12 @@ import type { V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
 import {
 	V2_ARCH_COMPONENT_LABELS,
 	type V2ArchComponentType,
-	extractControlCode,
 	formatParamNameWithSourceKeys,
-	isControlTypeTriggerParam,
 	isSourceTypeTriggerParam,
 	isV2AnketaSystemRootKey,
 	resolveV2AnketaArchComponent,
 	stripParamNameSourceKeys,
+	resolveWorkSchemaParamForRule,
 } from "@smart-anketa/api-contract";
 import {
 	isObjectFieldGroup,
@@ -633,34 +632,5 @@ export function resolveSchemaParamForTriggerRule(
 	rule: TriggerRuleLike,
 	paramOptions: V2TypicalWorkParameterDto[],
 ): V2TypicalWorkParameterDto | undefined {
-	const direct =
-		paramOptions.find((param) => param.code === rule.paramCode) ??
-		(rule.paramName
-			? paramOptions.find((param) => param.name === rule.paramName)
-			: undefined);
-	if (direct) return direct;
-
-	const paramLabel = rule.paramName ?? rule.paramCode;
-
-	if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName)) {
-		return (
-			paramOptions.find((param) => param.code === "type") ??
-			paramOptions.find((param) => /тип.*источник/i.test(param.name))
-		);
-	}
-
-	if (isControlTypeTriggerParam(rule.paramCode, rule.paramName)) {
-		const controlCode = extractControlCode(paramLabel);
-		if (controlCode) {
-			const byCode = paramOptions.find(
-				(param) =>
-					param.name.toUpperCase().includes(controlCode) ||
-					param.description?.toUpperCase().includes(controlCode),
-			);
-			if (byCode) return byCode;
-		}
-		return paramOptions.find((param) => /вид контроля/i.test(param.name));
-	}
-
-	return undefined;
+	return resolveWorkSchemaParamForRule(rule, paramOptions);
 }

@@ -101,6 +101,9 @@ export function createInMemoryTypicalWorkRuntime(
 		},
 	]);
 	const versionConfigRepository = repo(versionConfigs);
+	const templateVersionRepository = {
+		findOne: jest.fn(async () => null),
+	};
 	const paramCatalogService = {
 		listTriggerStatusCatalog: jest.fn(async () => []),
 	};
@@ -113,6 +116,7 @@ export function createInMemoryTypicalWorkRuntime(
 		laborParamRepository as never,
 		assignmentRepository as never,
 		versionConfigRepository as never,
+		templateVersionRepository as never,
 		paramCatalogService as never,
 	);
 }

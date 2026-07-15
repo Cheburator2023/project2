@@ -16,7 +16,7 @@ export function useDebouncedRjsfFieldValue<T>({
 	debounceMs = V2_PREVIEW_FORM_DEBOUNCE_MS,
 }: Options<T>) {
 	const [localValue, setLocalValue] = useState(value);
-	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const timerRef = useRef<number | null>(null);
 
 	useEffect(() => {
 		if (!enabled) return;

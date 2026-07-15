@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const vitest_1 = require("vitest");
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
+const v2_work_schema_params_match_util_1 = require("./v2-work-schema-params-match.util");
 (0, vitest_1.describe)("v2-works-catalog-match.util", () => {
     (0, vitest_1.it)("resolves the unified source stream for any source row", () => {
         // Разделение внутр/внеш убрано: любой источник → единый стрим.
@@ -277,5 +278,37 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
             valueCode: "кд",
             valueLabel: "КД",
         })).toBe(true);
+    });
+    (0, vitest_1.it)("detects broken and methodology-only presence triggers", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.isBrokenTypicalWorkTriggerRef)({ paramCode: "", paramName: "?" })).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.isMethodologyPresenceTriggerRule)({
+            paramCode: "пилот_первичный",
+            paramName: "? Пилот (первичный",
+            valueCode: null,
+            valueLabel: null,
+        })).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.isMethodologyPresenceTriggerRule)({
+            paramCode: "повторный",
+            paramName: "повторный)",
+            valueCode: null,
+            valueLabel: null,
+        })).toBe(true);
+    });
+    (0, vitest_1.it)("maps control trigger to вид контроля schema field without substring false positives", () => {
+        const resolved = (0, v2_work_schema_params_match_util_1.resolveWorkSchemaParamForRule)({
+            paramCode: "вид_контроля_ок",
+            paramName: "Вид контроля: ОК",
+        }, [
+            {
+                code: "field_adjacent",
+                name: "Негативное влияние смежных проектов на показатели проекта",
+            },
+            {
+                code: "field_control",
+                name: "Вид контроля",
+                values: [{ code: "ок", label: "ОК — Оперативный контроль" }],
+            },
+        ]);
+        (0, vitest_1.expect)(resolved?.code).toBe("field_control");
     });
 });

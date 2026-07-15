@@ -328,6 +328,21 @@ export const useSyncV2TypicalWorksSchemaField = () => {
 	});
 };
 
+export const useBulkSyncV2TypicalWorksSchemaFields = () => {
+	return useMutation<
+		import("@smart-anketa/api-contract").V2TypicalWorkSchemaBulkSyncResponseDto,
+		Error,
+		{ templateVersionId: string; mode?: "dryRun" | "apply" }
+	>({
+		mutationFn: (dto) =>
+			apiClient({
+				url: "/v2/works/schema-field-sync/bulk",
+				method: "POST",
+				data: dto,
+			}),
+	});
+};
+
 export const usePreviewV2TypicalWork = () =>
 	useMutation<
 		V2TypicalWorkPreviewResponseDto,

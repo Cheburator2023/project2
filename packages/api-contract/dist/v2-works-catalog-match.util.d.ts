@@ -58,6 +58,25 @@ export declare function isPresenceOnlyTriggerRule(rule: {
         label: string | null;
     }>;
 }): boolean;
+/** Битые/пустые ссылки из legacy CSV — не проверяем против схемы. */
+export declare function isBrokenTypicalWorkTriggerRef(rule: {
+    paramCode: string;
+    paramName?: string | null;
+}): boolean;
+/**
+ * Методологические presence-триггеры (пилот, мониторинг и т.п.) не привязаны к полям схемы.
+ * Legacy CSV иногда режет «Пилот (первичный, повторный)» на отдельные paramCode.
+ */
+export declare function isMethodologyPresenceTriggerRule(rule: {
+    paramCode: string;
+    paramName?: string | null;
+    valueCode: string | null;
+    valueLabel: string | null;
+    values?: Array<{
+        code: string;
+        label: string | null;
+    }>;
+}): boolean;
 /** Сопоставляет правило триггера с параметром глобального справочника (алиасы CSV → каталог). */
 export declare function resolveTriggerStatusCatalogParam(rule: {
     paramCode: string;
