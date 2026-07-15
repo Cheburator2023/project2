@@ -65,7 +65,6 @@ function reconcileRule(rule, request) {
             paramName: formatSyncedParamName(request, rule.paramName, nextCode, rule.paramCode) ?? rule.paramName,
         };
     }
-    const allowed = new Map(values.map((value) => [value.code, value.label]));
     const isSetOperator = rule.operator === "in" || rule.operator === "not_in";
     const nextValues = isSetOperator
         ? (rule.values ?? [])
@@ -100,13 +99,29 @@ function reconcileRule(rule, request) {
         values: nextValues,
     };
 }
+function normalizeLaborValueIdentity(value) {
+    return (value ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/ё/g, "е")
+        .replace(/\s+/g, "");
+}
+function findMatchingLaborCoefficient(group, value) {
+    return group.coefficients.find((row) => schemaEnumValueMatchesRule(value, {
+        valueCode: row.valueCode,
+        valueLabel: row.valueLabel,
+    }) ||
+        normalizeLaborValueIdentity(row.valueCode) ===
+            normalizeLaborValueIdentity(value.code) ||
+        normalizeLaborValueIdentity(row.valueLabel) ===
+            normalizeLaborValueIdentity(value.label));
+}
 function reconcileLaborParam(group, request) {
     if (!matchesField(group, request))
         return group;
     if (request.operation === "delete")
         return null;
     const values = request.field.values;
-    const oldCoefficients = new Map(group.coefficients.map((row) => [row.valueCode, row]));
     const nextBase = {
         ...group,
         schemaFieldUid: request.field.schemaFieldUid,
@@ -131,7 +146,7 @@ function reconcileLaborParam(group, request) {
     return {
         ...nextBase,
         coefficients: values.map((value, index) => {
-            const existing = oldCoefficients.get(value.code);
+            const existing = findMatchingLaborCoefficient(group, value);
             return {
                 id: existing?.id ?? `sync-${index}-${value.code}`,
                 streamExecutor: existing?.streamExecutor ??

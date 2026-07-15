@@ -6,6 +6,7 @@ import {
 	type V2LogicGraphDto,
 } from "@smart-anketa/api-contract";
 import { V2_DEFAULT_TEMPLATE_SNAPSHOT } from "../../../../src/modules/anketa-v2/constants/v2-default-template-snapshot";
+import { V2_FACTORY_TYPICAL_WORKS_SNAPSHOT } from "../../../../src/modules/anketa-v2/constants/v2-factory-typical-works-catalog";
 
 const snapshotPath = join(
 	__dirname,
@@ -90,6 +91,51 @@ describe("v2 factory snapshot", () => {
 			"Двусторонний",
 			"Неизвестно",
 		]);
+	});
+
+	it("содержит коэффициенты трудоёмкости Этапа 220 из методологии", () => {
+		const work = V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks.find(
+			(row) =>
+				row.stage === "Этап 220" &&
+				row.name === "Проведение ИФТ Решения",
+		);
+		expect(work).toBeDefined();
+		const hashing = work?.laborCoefficients?.find(
+			(group) => group.paramName === "Требуется хэширование/ шифрование",
+		);
+		expect(hashing?.values).toEqual([
+			{ label: "Да", coefficient: 1.25 },
+			{ label: "Нет", coefficient: 0.75 },
+			{ label: "Неизвестно", coefficient: 1 },
+		]);
+	});
+
+	it("учитывает компонентное исключение для хэширования системы-источника", () => {
+		const work = V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks.find(
+			(row) =>
+				row.component === "Система-источник" &&
+				row.stage === "Этап 215" &&
+				row.name ===
+					"Интервьюирование заказчика, подтверждение финансирования и обработка RDS",
+		);
+		const hashing = work?.laborCoefficients?.find(
+			(group) => group.paramName === "Требуется хэширование/ шифрование",
+		);
+		expect(hashing?.values.find((value) => value.label === "Нет")?.coefficient).toBe(
+			0.9,
+		);
+	});
+
+	it("для параметров трудоёмкости формул заданы конечные коэффициенты", () => {
+		for (const work of V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks) {
+			if (!work.formulaText) continue;
+			for (const group of work.laborCoefficients ?? []) {
+				expect(group.values.length).toBeGreaterThan(0);
+				for (const value of group.values) {
+					expect(Number.isFinite(value.coefficient)).toBe(true);
+				}
+			}
+		}
 	});
 
 	it("dictionariesSnapshot из v35", () => {

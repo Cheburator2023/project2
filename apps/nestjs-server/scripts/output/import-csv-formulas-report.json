@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-07-15T16:38:32.338Z",
+  "generatedAt": "2026-07-15T20:09:54.488Z",
   "mode": "write",
-  "csvPath": "/Users/synikolaev/smart_anketa_ui/Смарт_анкета_Объединённая_обновлённая_1.csv",
+  "csvPath": "/Users/synikolaev/smart_anketa_ui/llm/Смарт_анкета_Объединённая_обновлённая_2.csv",
   "snapshotPath": "/Users/synikolaev/smart_anketa_ui/apps/nestjs-server/src/modules/anketa-v2/constants/v2-factory-typical-works.snapshot.json",
   "counts": {
     "csvRows": 78,
@@ -12,7 +12,7 @@
     "transformedSpecialFormulas": 2,
     "unresolvedTriggerRules": 1,
     "snapshotWithFormula": 78,
-    "patchedThisRun": 78,
+    "patchedThisRun": 76,
     "alreadyHadFormula": 78
   },
   "results": [
@@ -839,7 +839,7 @@
       "roundingStep": 0.1,
       "unmatchedParams": [],
       "transformedSpecial": [
-        "Kдоля(Этап 217) → калибровочный множитель"
+        "Kдоля(Этап 217) → сохранена калибровочная формула snapshot"
       ],
       "laborCoefficientParams": 5,
       "triggerRules": 1,
@@ -855,7 +855,7 @@
       "roundingStep": 0.1,
       "unmatchedParams": [],
       "transformedSpecial": [
-        "Kдоля(Этап 217) → калибровочный множитель"
+        "Kдоля(Этап 217) → сохранена калибровочная формула snapshot"
       ],
       "laborCoefficientParams": 5,
       "triggerRules": 1,

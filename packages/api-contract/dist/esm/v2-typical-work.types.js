@@ -30,6 +30,13 @@ export const V2_LOGIC_WORKSPACE_TAB_VALUES = [
     "dependencies",
     "jsonlogic",
 ];
+export const V2_WORK_FORMULA_ARCH_COUNT_KINDS = [
+    "model",
+    "sourceSystem",
+    "dataMart",
+    "dataProcess",
+    "modelService",
+];
 /** Норма, действующая на дату (для дерева и превью). */
 export function resolveActiveNormOnDate(norms, streamExecutor, atDate) {
     const day = atDate.slice(0, 10);

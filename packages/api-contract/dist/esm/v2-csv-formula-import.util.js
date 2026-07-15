@@ -187,7 +187,7 @@ export function parseCsvTriggerRules(raw) {
         };
     });
 }
-export function parseCsvLaborCoefficients(formulaRaw) {
+export function parseCsvLaborCoefficients(formulaRaw, archComponent) {
     const sectionMatch = formulaRaw.match(/Переменные\s*—\s*параметры трудоёмкости[\s\S]*?:([\s\S]*?)(?:\n\s*Операнды:|$)/iu);
     if (!sectionMatch?.[1])
         return [];
@@ -217,6 +217,23 @@ export function parseCsvLaborCoefficients(formulaRaw) {
             return { label, coefficient };
         })
             .filter((value) => value !== null);
+        const normalizedComponent = clean(archComponent).toLowerCase();
+        const componentOverrides = match[2].matchAll(/\(\s*на\s+«([^»]+)»\s+([^→;)]+)→\s*(-?\d+(?:[.,]\d+)?)/giu);
+        for (const override of componentOverrides) {
+            if (!normalizedComponent ||
+                clean(override[1]).toLowerCase() !== normalizedComponent) {
+                continue;
+            }
+            const label = clean(override[2]);
+            const coefficient = Number((override[3] ?? "").replace(",", "."));
+            if (!label || !Number.isFinite(coefficient))
+                continue;
+            const existing = values.find((value) => value.label.toLowerCase() === label.toLowerCase());
+            if (existing)
+                existing.coefficient = coefficient;
+            else
+                values.push({ label, coefficient });
+        }
         if (values.length > 0) {
             groups.push({ paramName: clean(match[1]), values });
         }
@@ -581,7 +598,7 @@ export function csvRowToCatalogPatch(row, candidates, overrides = {}) {
             roundingMode: build.roundingMode,
             roundingStep: build.roundingStep,
             laborParams,
-            laborCoefficients: parseCsvLaborCoefficients(row.formulaRaw),
+            laborCoefficients: parseCsvLaborCoefficients(row.formulaRaw, row.component),
             triggerParams: row.triggerParams,
             triggerRules: row.triggerRules,
             norm: row.norm,

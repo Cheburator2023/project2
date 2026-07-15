@@ -90,6 +90,60 @@ function card() {
             paramName: "Новое имя @ new_code|old_code|старое_имя",
         });
     });
+    (0, vitest_1.it)("preserves factory coefficients when schema labels add spaces", () => {
+        const legacy = card();
+        legacy.laborParams[0] = {
+            ...legacy.laborParams[0],
+            paramName: "Количество сущностей (исходных таблиц)",
+            coefficients: [
+                {
+                    id: "coeff-point",
+                    streamExecutor: "Источники данных",
+                    paramCode: "количество_сущностей_исходных_таблиц",
+                    paramName: "Количество сущностей (исходных таблиц)",
+                    valueCode: "точечное_1_4",
+                    valueLabel: "Точечное(1-4)",
+                    coefficient: 0.5,
+                },
+                {
+                    id: "coeff-large",
+                    streamExecutor: "Источники данных",
+                    paramCode: "количество_сущностей_исходных_таблиц",
+                    paramName: "Количество сущностей (исходных таблиц)",
+                    valueCode: "масштабное_25",
+                    valueLabel: "Масштабное(25+)",
+                    coefficient: 1.75,
+                },
+            ],
+        };
+        const result = (0, v2_typical_work_schema_sync_util_1.reconcileTypicalWorkCardWithSchemaField)(legacy, {
+            templateVersionId: "version-1",
+            mode: "apply",
+            operation: "upsert",
+            field: {
+                schemaFieldUid: "field-1",
+                previousCode: "old_code",
+                code: "field_Y_K0Hy0e",
+                name: "Количество сущностей (исходных таблиц)",
+                values: [
+                    { code: "Точечное (1-4)", label: "Точечное (1-4)" },
+                    { code: "Масштабное (25+)", label: "Масштабное (25+)" },
+                ],
+            },
+        });
+        (0, vitest_1.expect)(result.card.laborParams[0]?.coefficients).toMatchObject([
+            {
+                valueCode: "Точечное (1-4)",
+                valueLabel: "Точечное (1-4)",
+                coefficient: 0.5,
+            },
+            {
+                valueCode: "Масштабное (25+)",
+                valueLabel: "Масштабное (25+)",
+                coefficient: 1.75,
+            },
+        ]);
+    });
     (0, vitest_1.it)("remaps legacy trigger value codes to schema enum codes", () => {
         const legacy = card();
         legacy.rules[0] = {

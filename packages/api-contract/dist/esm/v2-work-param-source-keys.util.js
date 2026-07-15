@@ -1,5 +1,5 @@
 /** Суффикс в `paramName` правила: «Название @ field_a|field_b» — альтернативные ключи в данных анкеты. */
-const PARAM_SOURCE_KEYS_SUFFIX_RE = /\s+@\s+([\w|,-]+)$/;
+const PARAM_SOURCE_KEYS_SUFFIX_RE = /\s+@\s+([\p{L}\p{N}_|,-]+)$/u;
 export function formatParamNameWithSourceKeys(name, sourceKeys) {
     const uniqueKeys = [...new Set((sourceKeys ?? []).filter(Boolean))];
     if (uniqueKeys.length === 0)

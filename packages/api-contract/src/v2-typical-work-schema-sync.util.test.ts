@@ -93,6 +93,63 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
 		});
 	});
 
+	it("preserves factory coefficients when schema labels add spaces", () => {
+		const legacy = card();
+		legacy.laborParams[0] = {
+			...legacy.laborParams[0]!,
+			paramName: "Количество сущностей (исходных таблиц)",
+			coefficients: [
+				{
+					id: "coeff-point",
+					streamExecutor: "Источники данных",
+					paramCode: "количество_сущностей_исходных_таблиц",
+					paramName: "Количество сущностей (исходных таблиц)",
+					valueCode: "точечное_1_4",
+					valueLabel: "Точечное(1-4)",
+					coefficient: 0.5,
+				},
+				{
+					id: "coeff-large",
+					streamExecutor: "Источники данных",
+					paramCode: "количество_сущностей_исходных_таблиц",
+					paramName: "Количество сущностей (исходных таблиц)",
+					valueCode: "масштабное_25",
+					valueLabel: "Масштабное(25+)",
+					coefficient: 1.75,
+				},
+			],
+		};
+
+		const result = reconcileTypicalWorkCardWithSchemaField(legacy, {
+			templateVersionId: "version-1",
+			mode: "apply",
+			operation: "upsert",
+			field: {
+				schemaFieldUid: "field-1",
+				previousCode: "old_code",
+				code: "field_Y_K0Hy0e",
+				name: "Количество сущностей (исходных таблиц)",
+				values: [
+					{ code: "Точечное (1-4)", label: "Точечное (1-4)" },
+					{ code: "Масштабное (25+)", label: "Масштабное (25+)" },
+				],
+			},
+		});
+
+		expect(result.card.laborParams[0]?.coefficients).toMatchObject([
+			{
+				valueCode: "Точечное (1-4)",
+				valueLabel: "Точечное (1-4)",
+				coefficient: 0.5,
+			},
+			{
+				valueCode: "Масштабное (25+)",
+				valueLabel: "Масштабное (25+)",
+				coefficient: 1.75,
+			},
+		]);
+	});
+
 	it("remaps legacy trigger value codes to schema enum codes", () => {
 		const legacy = card();
 		legacy.rules[0] = {

@@ -36,7 +36,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..", "..", "..");
 const DEFAULT_CSV = join(
 	REPO_ROOT,
-	"Смарт_анкета_Объединённая_обновлённая_1.csv",
+	"llm",
+	"Смарт_анкета_Объединённая_обновлённая_2.csv",
 );
 const SNAPSHOT_PATH = join(
 	__dirname,
@@ -419,6 +420,37 @@ function main() {
 			overrides,
 		);
 		if (!patch || !build) {
+			const preservedIndex = indexByKey.get(key);
+			const preserved =
+				preservedIndex == null
+					? undefined
+					: snapshot.typicalWorks[preservedIndex];
+			if (
+				build?.skippedSpecial.some((item) => /Kдоля/iu.test(item)) &&
+				preserved?.formulaText?.trim() &&
+				(preserved.laborCoefficients?.length ?? 0) > 0
+			) {
+				usedIndexes.add(preservedIndex!);
+				alreadyHadFormula++;
+				results.push({
+					status: "matched",
+					csvKey: key,
+					snapshotIndex: preservedIndex!,
+					formulaText: preserved.formulaText,
+					roundingMode: preserved.roundingMode ?? "CEIL",
+					roundingStep: preserved.roundingStep ?? 0.1,
+					unmatchedParams: [],
+					transformedSpecial: [
+						"Kдоля(Этап 217) → сохранена калибровочная формула snapshot",
+					],
+					laborCoefficientParams:
+						preserved.laborCoefficients?.length ?? 0,
+					triggerRules: preserved.triggerRules?.length ?? 0,
+					unresolvedTriggers: [],
+					matchKind: "exact",
+				});
+				continue;
+			}
 			const reason = !build
 				? "unparseable_formula"
 				: build.parseError

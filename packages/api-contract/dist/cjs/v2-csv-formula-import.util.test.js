@@ -108,6 +108,27 @@ const v2_csv_formula_import_util_1 = require("./v2-csv-formula-import.util");
             },
         ]);
     });
+    (0, vitest_1.it)("applies component-specific coefficient override", () => {
+        const formula = `Переменные — параметры трудоёмкости (Ki, по умолчанию = 1):
+  — Требуется хэширование/ шифрование: Да→1.25; Нет→0.75; Неизвестно→1 (на «Система-источник» Нет→0.9)
+
+Операнды: «×» — умножение`;
+        (0, vitest_1.expect)((0, v2_csv_formula_import_util_1.parseCsvLaborCoefficients)(formula, "Система-источник")).toEqual([
+            {
+                paramName: "Требуется хэширование/ шифрование",
+                values: [
+                    { label: "Да", coefficient: 1.25 },
+                    { label: "Нет", coefficient: 0.9 },
+                    { label: "Неизвестно", coefficient: 1 },
+                ],
+            },
+        ]);
+        (0, vitest_1.expect)((0, v2_csv_formula_import_util_1.parseCsvLaborCoefficients)(formula, "Объект / Витрина данных")[0]?.values).toEqual([
+            { label: "Да", coefficient: 1.25 },
+            { label: "Нет", coefficient: 0.75 },
+            { label: "Неизвестно", coefficient: 1 },
+        ]);
+    });
     (0, vitest_1.it)("expands Kдоля through the calibration multiplier", () => {
         const build = (0, v2_csv_formula_import_util_1.buildFormulaFromCsvRow)({
             formulaRaw: `ЧД(работы) = ОКРУГЛ.ВВЕРХ(Норматив × Kдоля(Этап 217); 0,1)

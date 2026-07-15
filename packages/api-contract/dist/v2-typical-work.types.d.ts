@@ -12,6 +12,12 @@ export type V2WorkTriggerStatus = (typeof V2_WORK_TRIGGER_STATUS_VALUES)[number]
 export declare const V2_LOGIC_WORKSPACE_TAB_VALUES: readonly ["works", "dependencies", "jsonlogic"];
 export type V2LogicWorkspaceTab = (typeof V2_LOGIC_WORKSPACE_TAB_VALUES)[number];
 export type V2WorkFormulaOperatorToken = "+" | "-" | "*" | "/";
+export declare const V2_WORK_FORMULA_ARCH_COUNT_KINDS: readonly ["model", "sourceSystem", "dataMart", "dataProcess", "modelService"];
+export type V2WorkFormulaArchCountKind = (typeof V2_WORK_FORMULA_ARCH_COUNT_KINDS)[number];
+export type V2WorkArchCountCoeffStep = {
+    count: number;
+    coefficient: number;
+};
 export type V2WorkFormulaToken = {
     kind: "norm";
 } | {
@@ -30,6 +36,10 @@ export type V2WorkFormulaToken = {
     assignmentId: string;
     workName?: string;
     invalid?: boolean;
+} | {
+    kind: "arch_count_coeff";
+    archComponentKind: V2WorkFormulaArchCountKind;
+    steps: V2WorkArchCountCoeffStep[];
 } | {
     kind: "number";
     value: number;

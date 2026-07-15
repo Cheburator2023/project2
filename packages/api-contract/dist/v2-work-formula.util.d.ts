@@ -2,6 +2,8 @@ import type { V2TypicalWorkFormulaDto, V2TypicalWorkRoundingDto, V2WorkFormulaTo
 export type WorkFormulaEvalContext = {
     norm: number;
     paramCoefficients: Record<string, number>;
+    /** Полный formData анкеты — для arch_count_coeff. */
+    formData?: Record<string, unknown>;
 };
 export type WorkFormulaEvalResult = {
     symbolic: string;

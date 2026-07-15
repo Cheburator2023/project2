@@ -2,6 +2,35 @@ import { describe, expect, it } from "vitest";
 import { applyWorkRounding, evaluateWorkFormula, formatWorkFormulaGeneralSummary, isParamUsedInFormula, isWorkFormulaLaborParamKnown, markFormulaParamInvalid, normalizeWorkFormulaLaborParamTokens, parseWorkFormulaText, previewWorkFormula, reconcileFormulaLaborParamTokens, tokensToText, validateWorkFormulaTokens, } from "./v2-work-formula.util";
 import { defaultWorkFormula, defaultWorkRounding } from "./v2-typical-work.types";
 describe("v2-work-formula.util", () => {
+    it("parses and evaluates arch_count_coeff token", () => {
+        const token = {
+            kind: "arch_count_coeff",
+            archComponentKind: "model",
+            steps: [
+                { count: 1, coefficient: 2 },
+                { count: 2, coefficient: 1.5 },
+            ],
+        };
+        const text = tokensToText([token]);
+        expect(text).toContain("архкоэф");
+        const parsed = parseWorkFormulaText(text);
+        expect(parsed.error).toBeNull();
+        expect(parsed.tokens[0]).toMatchObject({
+            kind: "arch_count_coeff",
+            archComponentKind: "model",
+        });
+        const formula = {
+            tokens: [token, { kind: "operator", op: "*" }, { kind: "norm" }],
+            text,
+        };
+        const result = evaluateWorkFormula(formula, {
+            norm: 10,
+            paramCoefficients: {},
+            formData: { detailInfo: { modelsList: [{ name: "A" }] } },
+        });
+        expect(result.value).toBe(20);
+        expect(result.error).toBeNull();
+    });
     it("parses H × P[param]", () => {
         const parsed = parseWorkFormulaText("H × P[Сложность]");
         expect(parsed.error).toBeNull();

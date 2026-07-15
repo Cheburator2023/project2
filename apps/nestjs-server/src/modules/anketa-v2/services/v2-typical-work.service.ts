@@ -127,6 +127,14 @@ function decimalToNumber(value: string | number | null | undefined): number {
 	return typeof value === "number" ? value : Number(value);
 }
 
+function normalizeFactoryLaborLabel(value: string | null | undefined): string {
+	return stripParamNameSourceKeys(value ?? "")
+		.trim()
+		.toLowerCase()
+		.replace(/ё/g, "е")
+		.replace(/\s+/g, "");
+}
+
 function resolveCardTokenFormula(
 	termsFormula: ReturnType<typeof normalizeStoredFormula>,
 	formulaText: string | null | undefined,
@@ -215,6 +223,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				`Typical works catalog: ${count} works (factory snapshot seed on template create only)`,
 			);
 			await this.ensureFactoryVersionConfigs();
+			await this.syncFactoryLaborCoefficients();
 			return;
 		}
 		this.logger.log(
@@ -759,6 +768,114 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		}
 
 		return streams;
+	}
+
+	/**
+	 * Обновляет коэффициенты уже созданных из factory registry работ.
+	 *
+	 * Раньше `seedTemplateTypicalWorksFromFactorySnapshot` прекращал работу,
+	 * если у шаблона уже были типовые работы. Поэтому добавленные позднее в
+	 * snapshot коэффициенты (включая компонентные исключения) оставались в БД
+	 * равными 1. Сопоставление идёт по
+	 * заводскому имени работы, компоненту, стриму, параметру и значению; коды
+	 * параметров схемы при этом сохраняются.
+	 */
+	async syncFactoryLaborCoefficients(): Promise<number> {
+		const registryByWorkKey = new Map(
+			V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works.map((entry) => [
+				`${normalizeArchComponentType(entry.archComponentType)}|${entry.name.trim()}`,
+				entry,
+			]),
+		);
+		const works = await this.workRepository.find({
+			where: { templateId: Not(IsNull()) },
+		});
+		if (works.length === 0) return 0;
+
+		const catalogGroups = groupCatalogWorks();
+		const workIds = works.map((work) => work.id);
+		const existingRows = await this.laborRepository.find({
+			where: { workId: In(workIds) },
+		});
+		const rowsByWorkId = new Map<string, V2TypicalWorkLaborCoefficientEntity[]>();
+		for (const row of existingRows) {
+			const rows = rowsByWorkId.get(row.workId) ?? [];
+			rows.push(row);
+			rowsByWorkId.set(row.workId, rows);
+		}
+
+		let synchronized = 0;
+		for (const work of works) {
+			const registry = registryByWorkKey.get(
+				`${normalizeArchComponentType(work.archComponentType)}|${work.name.trim()}`,
+			);
+			if (!registry) continue;
+
+			const catalogRows = findCatalogRowsForRegistryWork(
+				registry,
+				catalogGroups,
+			);
+			if (catalogRows.length === 0) continue;
+
+			const workRows = rowsByWorkId.get(work.id) ?? [];
+			for (const catalogRow of catalogRows) {
+				const stream = canonicalizeWorkStream(catalogRow.stream);
+				for (const group of catalogRow.laborCoefficients ?? []) {
+					const normalizedParam = normalizeFactoryLaborLabel(group.paramName);
+					const sameParamRows = workRows.filter(
+						(row) =>
+							row.streamExecutor === stream &&
+							normalizeFactoryLaborLabel(row.paramName ?? row.paramCode) ===
+								normalizedParam,
+					);
+					const paramCode =
+						sameParamRows[0]?.paramCode ?? slugParamCode(group.paramName);
+
+					for (const value of group.values) {
+						const normalizedValue = normalizeFactoryLaborLabel(value.label);
+						const matches = sameParamRows.filter(
+							(row) =>
+								normalizeFactoryLaborLabel(
+									row.valueLabel ?? row.valueCode,
+								) === normalizedValue,
+						);
+						const coefficient = String(value.coefficient ?? 1);
+
+						if (matches.length === 0) {
+							const created = await this.laborRepository.save(
+								this.laborRepository.create({
+									workId: work.id,
+									streamExecutor: stream,
+									paramCode,
+									paramName: group.paramName,
+									valueCode: slugParamCode(value.label),
+									valueLabel: value.label,
+									coefficient,
+								}),
+							);
+							workRows.push(created);
+							sameParamRows.push(created);
+							synchronized++;
+							continue;
+						}
+
+						for (const row of matches) {
+							if (Number(row.coefficient) === Number(coefficient)) continue;
+							row.coefficient = coefficient;
+							await this.laborRepository.save(row);
+							synchronized++;
+						}
+					}
+				}
+			}
+		}
+
+		if (synchronized > 0) {
+			this.logger.log(
+				`Synchronized ${synchronized} factory typical-work labor coefficients`,
+			);
+		}
+		return synchronized;
 	}
 
 	private async ensureTemplateVersionConfigs(

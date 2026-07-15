@@ -17,6 +17,7 @@ exports.computeTypicalWorkFormulaTotal = computeTypicalWorkFormulaTotal;
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
 const v2_typical_work_types_1 = require("./v2-typical-work.types");
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
+const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util");
 const v2_work_terms_formula_util_1 = require("./v2-work-terms-formula.util");
 const OP_SYMBOL = {
     "+": "+",
@@ -40,6 +41,10 @@ function tokenToJsonLogicLeaf(token) {
             return { var: `coeff.${token.paramCode}` };
         case "work_ref":
             return null;
+        case "arch_count_coeff":
+            return {
+                archCountCoeff: [token.archComponentKind, token.steps],
+            };
         default:
             return null;
     }
@@ -65,7 +70,8 @@ function compileWorkFormulaTokensToJsonLogic(tokens) {
         if (token.kind === "norm" ||
             token.kind === "number" ||
             token.kind === "param_coeff" ||
-            token.kind === "param_anyof") {
+            token.kind === "param_anyof" ||
+            token.kind === "arch_count_coeff") {
             const leaf = tokenToJsonLogicLeaf(token);
             if (leaf == null)
                 return null;
@@ -258,6 +264,14 @@ function evaluateTypicalWorkJsonLogicValue(rule, data) {
     if (op === "typicalWorkField") {
         return resolveTypicalWorkField(data, args);
     }
+    if (op === "archCountCoeff") {
+        const kind = String(args[0] ?? "");
+        const steps = (Array.isArray(args[1]) ? args[1] : []);
+        const formData = data.formData ??
+            data.source ??
+            {};
+        return (0, v2_work_arch_count_coeff_util_1.resolveArchCountCoeffFromToken)(formData, kind, steps);
+    }
     if (op === "roundStep") {
         const [inner, mode, step] = args;
         const value = evaluateTypicalWorkJsonLogicValue(inner, data);
@@ -302,6 +316,7 @@ function buildJsonLogicData(ctx) {
         norm: ctx.norm,
         coeff: ctx.paramCoefficients,
         source: ctx.source ?? {},
+        formData: ctx.formData ?? ctx.source ?? {},
     };
 }
 function expandedLabelFromJsonLogic(rule, data) {
@@ -456,6 +471,7 @@ function computeTypicalWorkFormulaTotal(params) {
         norm: params.norm,
         paramCoefficients: params.paramCoefficients,
         source: params.source,
+        formData: params.formData ?? params.source,
     };
     const fallback = { formula: tokenFormula, rounding: params.rounding };
     // formulaText — источник истины для калькулятора; устаревший calculationLogic

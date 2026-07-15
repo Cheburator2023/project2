@@ -21,6 +21,7 @@ exports.applyWorkRounding = applyWorkRounding;
 exports.previewWorkFormula = previewWorkFormula;
 const v2_param_slug_util_1 = require("./v2-param-slug.util");
 const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
+const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util");
 const OP_SYMBOL = {
     "+": "+",
     "-": "−",
@@ -144,6 +145,8 @@ function tokensToText(tokens) {
                 return token.invalid
                     ? `работа(${token.assignmentId})?`
                     : `работа(${token.assignmentId})`;
+            case "arch_count_coeff":
+                return `архкоэф(${(0, v2_work_arch_count_coeff_util_1.formatWorkArchCountKindLabel)(token.archComponentKind)}; ${(0, v2_work_arch_count_coeff_util_1.formatArchCountCoeffSteps)(token.steps)})`;
             case "number":
                 return String(token.value);
             case "operator":
@@ -186,6 +189,8 @@ function formatWorkFormulaGeneralSummary(tokens, paramOrder) {
             }
             case "work_ref":
                 return token.workName ? `→${token.workName}` : "→работа";
+            case "arch_count_coeff":
+                return `Кол-${(0, v2_work_arch_count_coeff_util_1.formatWorkArchCountKindLabel)(token.archComponentKind)}`;
             case "number":
                 return String(token.value);
             case "operator":
@@ -309,6 +314,63 @@ function parseWorkFormulaText(text) {
         }
         return { kind: "param_coeff", id };
     };
+    const readArchCountCoeffCall = () => {
+        const fnName = "архкоэф";
+        const start = i;
+        if (input.slice(i, i + fnName.length).toLowerCase() !== fnName)
+            return null;
+        i += fnName.length;
+        skipWs();
+        if (input[i] !== "(") {
+            i = start;
+            return null;
+        }
+        i++;
+        skipWs();
+        const kindStart = i;
+        while (i < input.length && input[i] !== ";" && input[i] !== ")")
+            i++;
+        const kindLabel = input.slice(kindStart, i).trim();
+        const kind = (0, v2_work_arch_count_coeff_util_1.parseWorkArchCountKindLabel)(kindLabel);
+        if (!kind) {
+            i = start;
+            return null;
+        }
+        skipWs();
+        if (input[i] !== ";") {
+            i = start;
+            return null;
+        }
+        i++;
+        skipWs();
+        const stepsStart = i;
+        let depth = 1;
+        while (i < input.length && depth > 0) {
+            const ch = input[i] ?? "";
+            if (ch === "(")
+                depth += 1;
+            else if (ch === ")")
+                depth -= 1;
+            if (depth > 0)
+                i += 1;
+        }
+        const stepsRaw = input.slice(stepsStart, i).trim();
+        if (!stepsRaw) {
+            i = start;
+            return null;
+        }
+        const steps = (0, v2_work_arch_count_coeff_util_1.parseArchCountCoeffSteps)(stepsRaw);
+        if (!steps) {
+            i = start;
+            return null;
+        }
+        i++;
+        return {
+            kind: "arch_count_coeff",
+            archComponentKind: kind,
+            steps,
+        };
+    };
     while (i < input.length) {
         skipWs();
         if (i >= input.length)
@@ -325,6 +387,11 @@ function parseWorkFormulaText(text) {
             !/[A-Za-zА-Яа-я0-9_]/.test(input[i + 5] ?? "")) {
             tokens.push({ kind: "norm" });
             i += 5;
+            continue;
+        }
+        const archCountToken = readArchCountCoeffCall();
+        if (archCountToken) {
+            tokens.push(archCountToken);
             continue;
         }
         const fnCall = readFunctionCall("коэф") ??
@@ -434,6 +501,8 @@ function describeWorkFormulaTokenLabel(token) {
             return token.workName
                 ? `работа(${token.workName})`
                 : `работа(${token.assignmentId})`;
+        case "arch_count_coeff":
+            return `архкоэф(${(0, v2_work_arch_count_coeff_util_1.formatWorkArchCountKindLabel)(token.archComponentKind)})`;
         case "number":
             return String(token.value);
         case "operator":
@@ -531,6 +600,11 @@ function validateWorkFormulaTokens(tokens, options) {
         }
         if (token.kind === "work_ref" && token.invalid) {
             return "Значение недоступно";
+        }
+        if (token.kind === "arch_count_coeff") {
+            const stepsErr = (0, v2_work_arch_count_coeff_util_1.validateArchCountCoeffSteps)(token.archComponentKind, token.steps);
+            if (stepsErr)
+                return stepsErr;
         }
         expectOperand = false;
     }
@@ -661,6 +735,25 @@ function evaluateWorkFormula(formula, ctx) {
                 value: null,
                 error: "Транзитивная ссылка вычисляется отдельно",
             };
+        }
+        if (token.kind === "arch_count_coeff") {
+            if (!expectOperand)
+                return {
+                    symbolic,
+                    expanded: "",
+                    value: null,
+                    error: "Ожидался оператор",
+                };
+            const stepsErr = (0, v2_work_arch_count_coeff_util_1.validateArchCountCoeffSteps)(token.archComponentKind, token.steps);
+            if (stepsErr) {
+                return { symbolic, expanded: "", value: null, error: stepsErr };
+            }
+            const formData = ctx.formData ?? {};
+            const coeff = (0, v2_work_arch_count_coeff_util_1.resolveArchCountCoeffFromToken)(formData, token.archComponentKind, token.steps);
+            values.push(coeff);
+            labels.push(String(coeff));
+            expectOperand = false;
+            continue;
         }
         if (token.kind === "paren_open") {
             if (!expectOperand)

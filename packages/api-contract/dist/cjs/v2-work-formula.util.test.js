@@ -4,6 +4,35 @@ const vitest_1 = require("vitest");
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
 const v2_typical_work_types_1 = require("./v2-typical-work.types");
 (0, vitest_1.describe)("v2-work-formula.util", () => {
+    (0, vitest_1.it)("parses and evaluates arch_count_coeff token", () => {
+        const token = {
+            kind: "arch_count_coeff",
+            archComponentKind: "model",
+            steps: [
+                { count: 1, coefficient: 2 },
+                { count: 2, coefficient: 1.5 },
+            ],
+        };
+        const text = (0, v2_work_formula_util_1.tokensToText)([token]);
+        (0, vitest_1.expect)(text).toContain("архкоэф");
+        const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)(text);
+        (0, vitest_1.expect)(parsed.error).toBeNull();
+        (0, vitest_1.expect)(parsed.tokens[0]).toMatchObject({
+            kind: "arch_count_coeff",
+            archComponentKind: "model",
+        });
+        const formula = {
+            tokens: [token, { kind: "operator", op: "*" }, { kind: "norm" }],
+            text,
+        };
+        const result = (0, v2_work_formula_util_1.evaluateWorkFormula)(formula, {
+            norm: 10,
+            paramCoefficients: {},
+            formData: { detailInfo: { modelsList: [{ name: "A" }] } },
+        });
+        (0, vitest_1.expect)(result.value).toBe(20);
+        (0, vitest_1.expect)(result.error).toBeNull();
+    });
     (0, vitest_1.it)("parses H × P[param]", () => {
         const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)("H × P[Сложность]");
         (0, vitest_1.expect)(parsed.error).toBeNull();

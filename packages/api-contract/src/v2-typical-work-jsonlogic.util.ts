@@ -21,6 +21,10 @@ import {
 	validateWorkFormulaTokens,
 } from "./v2-work-formula.util";
 import {
+	resolveArchCountCoeffFromToken,
+	type V2WorkArchCountCoeffStep,
+} from "./v2-work-arch-count-coeff.util";
+import {
 	evaluateTermsFormula,
 	resolveVersionConfigTokenFormula,
 } from "./v2-work-terms-formula.util";
@@ -40,6 +44,7 @@ export type TypicalWorkJsonLogicEvalContext = {
 	norm: number;
 	paramCoefficients: Record<string, number>;
 	source?: Record<string, unknown>;
+	formData?: Record<string, unknown>;
 };
 
 export type TypicalWorkCalculationEvalInput = {
@@ -80,6 +85,10 @@ function tokenToJsonLogicLeaf(token: V2WorkFormulaToken): V2JsonLogicValue | nul
 			return { var: `coeff.${token.paramCode}` };
 		case "work_ref":
 			return null;
+		case "arch_count_coeff":
+			return {
+				archCountCoeff: [token.archComponentKind, token.steps],
+			};
 		default:
 			return null;
 	}
@@ -112,7 +121,8 @@ export function compileWorkFormulaTokensToJsonLogic(
 			token.kind === "norm" ||
 			token.kind === "number" ||
 			token.kind === "param_coeff" ||
-			token.kind === "param_anyof"
+			token.kind === "param_anyof" ||
+			token.kind === "arch_count_coeff"
 		) {
 			const leaf = tokenToJsonLogicLeaf(token);
 			if (leaf == null) return null;
@@ -328,6 +338,16 @@ export function evaluateTypicalWorkJsonLogicValue(
 		return resolveTypicalWorkField(data, args);
 	}
 
+	if (op === "archCountCoeff") {
+		const kind = String(args[0] ?? "");
+		const steps = (Array.isArray(args[1]) ? args[1] : []) as V2WorkArchCountCoeffStep[];
+		const formData =
+			(data.formData as Record<string, unknown> | undefined) ??
+			(data.source as Record<string, unknown> | undefined) ??
+			{};
+		return resolveArchCountCoeffFromToken(formData, kind as never, steps);
+	}
+
 	if (op === "roundStep") {
 		const [inner, mode, step] = args;
 		const value = evaluateTypicalWorkJsonLogicValue(inner as V2JsonLogicValue, data);
@@ -375,6 +395,7 @@ function buildJsonLogicData(ctx: TypicalWorkJsonLogicEvalContext): Record<string
 		norm: ctx.norm,
 		coeff: ctx.paramCoefficients,
 		source: ctx.source ?? {},
+		formData: ctx.formData ?? ctx.source ?? {},
 	};
 }
 
@@ -580,6 +601,7 @@ export function computeTypicalWorkFormulaTotal(params: {
 	norm: number;
 	paramCoefficients: Record<string, number>;
 	source?: Record<string, unknown>;
+	formData?: Record<string, unknown>;
 	resolveFactorCoeff: (paramCode: string) => number;
 }): number | null {
 	if (params.terms.terms.some((t) => t.kind === "transitive")) {
@@ -598,6 +620,7 @@ export function computeTypicalWorkFormulaTotal(params: {
 		norm: params.norm,
 		paramCoefficients: params.paramCoefficients,
 		source: params.source,
+		formData: params.formData ?? params.source,
 	};
 	const fallback = { formula: tokenFormula, rounding: params.rounding };
 

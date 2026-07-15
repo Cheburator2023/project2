@@ -65,7 +65,7 @@ export declare function normalizeCsvArchComponent(raw: string): string;
 export declare function inferCsvArchComponent(rawComponent: string, stream: string, stage: string): string;
 export declare function stripWorkStagePrefix(name: string): string;
 export declare function parseCsvTriggerRules(raw: string): CsvFormulaTriggerRule[];
-export declare function parseCsvLaborCoefficients(formulaRaw: string): CsvFormulaLaborCoefficient[];
+export declare function parseCsvLaborCoefficients(formulaRaw: string, archComponent?: string): CsvFormulaLaborCoefficient[];
 export declare function parseCsvFormulaImportRows(csvText: string): CsvFormulaImportRow[];
 export declare function buildCatalogMatchKey(row: Pick<CsvFormulaImportRow, "stream" | "component" | "stage" | "name">): string;
 export declare function normalizeParamLabel(label: string): string;

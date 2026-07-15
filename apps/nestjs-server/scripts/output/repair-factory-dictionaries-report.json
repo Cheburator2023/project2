@@ -1,12 +1,12 @@
 {
-  "mode": "dry-run",
-  "csvPath": "/Users/synikolaev/smart_anketa_ui/Параметры СА по блокам (3).csv",
+  "mode": "write",
+  "csvPath": "/Users/synikolaev/smart_anketa_ui/llm/v2_new_docs/Параметры СА по блокам (3).csv",
   "summary": {
     "csvParameters": 179,
     "csvDictionaryParameters": 70,
     "changes": 0,
     "unresolved": 0,
-    "workRepairs": 0,
+    "workRepairs": 46,
     "workIssues": 0
   },
   "checksums": {
@@ -15,6 +15,384 @@
   },
   "changes": [],
   "unresolved": [],
-  "workRepairs": [],
+  "workRepairs": [
+    {
+      "kind": "remap_coefficient_value",
+      "work": "Интервьюирование заказчика, подтверждение финансирования и обработка RDS",
+      "component": "Система-источник",
+      "paramName": "Риск появления дополнительных систем-источников",
+      "before": "Да",
+      "after": "Есть",
+      "coefficient": 0.75
+    },
+    {
+      "kind": "remap_coefficient_value",
+      "work": "Планирование и работа с бэклогом",
+      "component": "Система-источник",
+      "paramName": "Риск появления дополнительных систем-источников",
+      "before": "Да",
+      "after": "Есть",
+      "coefficient": 0.75
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Планирование и работа с бэклогом",
+      "component": "Система-источник",
+      "paramName": "NDA",
+      "value": "Не требуется",
+      "coefficient": 0
+    },
+    {
+      "kind": "remap_coefficient_value",
+      "work": "Сбор и анализ требований",
+      "component": "Система-источник",
+      "paramName": "Риск появления дополнительных систем-источников",
+      "before": "Да",
+      "after": "Есть",
+      "coefficient": 0.75
+    },
+    {
+      "kind": "remap_coefficient_value",
+      "work": "Поиск и анализ источника(ов) и данных",
+      "component": "Система-источник",
+      "paramName": "Риск появления дополнительных систем-источников",
+      "before": "Да",
+      "after": "Есть",
+      "coefficient": 0.75
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Поиск и анализ источника(ов) и данных",
+      "component": "Система-источник",
+      "paramName": "NDA",
+      "value": "Не требуется",
+      "coefficient": 0
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Подготовка АЗ для заключения NDA, согласование содержания NDA",
+      "component": "Система-источник",
+      "paramName": "NDA",
+      "value": "Не требуется",
+      "coefficient": 0
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Доработка внутренней документации и информационных ресурсов группы",
+      "component": "Система-источник",
+      "paramName": "NDA",
+      "value": "Не требуется",
+      "coefficient": 0
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Планирование и работа с бэклогом",
+      "component": "Система-источник",
+      "paramName": "NDA",
+      "value": "Не требуется",
+      "coefficient": 0
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Подготовка АЗ для заключения NDA, согласование содержания NDA",
+      "component": "Система-источник",
+      "paramName": "NDA",
+      "value": "Не требуется",
+      "coefficient": 0
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Планирование и работа с бэклогом",
+      "component": "Система-источник",
+      "paramName": "NDA",
+      "value": "Не требуется",
+      "coefficient": 0
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Подготовка АЗ для заключения NDA, согласование содержания NDA",
+      "component": "Система-источник",
+      "paramName": "NDA",
+      "value": "Не требуется",
+      "coefficient": 0
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Интервьюирование заказчика, подтверждение финансирования и обработка RDS",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "remap_coefficient_value",
+      "work": "Интервьюирование заказчика, подтверждение финансирования и обработка RDS",
+      "component": "Процесс обработки данных",
+      "paramName": "Способ предоставления данных заказчику",
+      "before": "Непосредственно",
+      "after": "Напрямую",
+      "coefficient": 0.8
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Планирование и работа с бэклогом",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "remap_coefficient_value",
+      "work": "Планирование и работа с бэклогом",
+      "component": "Процесс обработки данных",
+      "paramName": "Способ предоставления данных заказчику",
+      "before": "Непосредственно",
+      "after": "Напрямую",
+      "coefficient": 0.8
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Планирование и работа с бэклогом",
+      "component": "Процесс обработки данных",
+      "paramName": "NDA",
+      "value": "Не требуется",
+      "coefficient": 0
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Сбор и анализ требований",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "remap_coefficient_value",
+      "work": "Сбор и анализ требований",
+      "component": "Процесс обработки данных",
+      "paramName": "Способ предоставления данных заказчику",
+      "before": "Непосредственно",
+      "after": "Напрямую",
+      "coefficient": 0.8
+    },
+    {
+      "kind": "remap_coefficient_value",
+      "work": "Оперативное обеспечение юридического основания или инициация этапа",
+      "component": "Процесс обработки данных",
+      "paramName": "Способ предоставления данных заказчику",
+      "before": "Непосредственно",
+      "after": "Напрямую",
+      "coefficient": 0.8
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Составление модели данных s2t",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Составление ТР",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "remap_coefficient_value",
+      "work": "Составление ТР",
+      "component": "Процесс обработки данных",
+      "paramName": "Способ предоставления данных заказчику",
+      "before": "Непосредственно",
+      "after": "Напрямую",
+      "coefficient": 0.8
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Подготовка АЗ для заключения NDA, согласование содержания NDA",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "remap_coefficient_value",
+      "work": "Подготовка АЗ для заключения NDA, согласование содержания NDA",
+      "component": "Процесс обработки данных",
+      "paramName": "Способ предоставления данных заказчику",
+      "before": "Непосредственно",
+      "after": "Напрямую",
+      "coefficient": 0.8
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Подготовка АЗ для заключения NDA, согласование содержания NDA",
+      "component": "Процесс обработки данных",
+      "paramName": "NDA",
+      "value": "Не требуется",
+      "coefficient": 0
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Согласование интеграции с ИБ и ЮБ",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Согласование АР, участие в Тестировании и ПСИ",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Доработка внутренней документации и инфрмационных ресурсов группы",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "remap_coefficient_value",
+      "work": "Доработка внутренней документации и инфрмационных ресурсов группы",
+      "component": "Процесс обработки данных",
+      "paramName": "Способ предоставления данных заказчику",
+      "before": "Непосредственно",
+      "after": "Напрямую",
+      "coefficient": 0.8
+    },
+    {
+      "kind": "drop_unresolved_trigger",
+      "work": "Сбор и анализ требований по изменениям",
+      "component": "Система-источник",
+      "paramName": "Не понятно условие появления работ"
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Планирование и работа с бэклогом",
+      "component": "Объект/Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Работа над артефактом АР",
+      "component": "Объект/Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Работа над артефактами ТПиС, ПМИ",
+      "component": "Объект/Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Работы по разворачиванию и настройке новой инфраструктуры",
+      "component": "Объект/Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Согласование артефактов и заведение заявок на доступы",
+      "component": "Объект/Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Разработка Решения",
+      "component": "Объект/Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Тестирование и отладка Решения",
+      "component": "Объект/Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Проведение ИФТ Решения",
+      "component": "Объект/Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Проведение Тестирования Решения и ПСИ",
+      "component": "Объект/Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Вывод Решения в Промышленную эксплуатацию",
+      "component": "Объект/Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Доработка внутренней документации и инфрмационных ресурсов группы",
+      "component": "Объект/Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Планирование и работа с бэклогом",
+      "component": "Система-источник",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Постановка источника на мониторинг",
+      "component": "Система-источник",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Доработка внутренней документации и инфрмационных ресурсов группы",
+      "component": "Система-источник",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    },
+    {
+      "kind": "drop_obsolete_coefficient_value",
+      "work": "Реализация процесса загрузки внутренних данных в Платформу данных для целей моделирования",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно",
+      "coefficient": 1
+    }
+  ],
   "workIssues": []
 }

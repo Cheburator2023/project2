@@ -15,6 +15,7 @@ export type TypicalWorkJsonLogicEvalContext = {
     norm: number;
     paramCoefficients: Record<string, number>;
     source?: Record<string, unknown>;
+    formData?: Record<string, unknown>;
 };
 export type TypicalWorkCalculationEvalInput = {
     logic: V2TypicalWorkCalculationLogicDto;
@@ -80,5 +81,6 @@ export declare function computeTypicalWorkFormulaTotal(params: {
     norm: number;
     paramCoefficients: Record<string, number>;
     source?: Record<string, unknown>;
+    formData?: Record<string, unknown>;
     resolveFactorCoeff: (paramCode: string) => number;
 }): number | null;

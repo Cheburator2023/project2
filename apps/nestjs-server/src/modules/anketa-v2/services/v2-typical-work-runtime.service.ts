@@ -53,6 +53,8 @@ export type BuildCatalogTasksParams = {
 	archComponentType: string;
 	streamExecutor: string;
 	source: Record<string, unknown>;
+	/** Полный formData анкеты — для arch_count_coeff в формулах. */
+	formData?: Record<string, unknown>;
 	templateVersionId: string | null;
 	templateId?: string | null;
 	atDate: string;
@@ -66,6 +68,7 @@ type RuntimeWorkContext = {
 	stream: string;
 	atDate: string;
 	source: Record<string, unknown>;
+	formData: Record<string, unknown>;
 	normValue: number;
 	rules: TypicalWorkRuleLike[];
 	laborRows: V2TypicalWorkLaborCoefficientEntity[];
@@ -362,6 +365,7 @@ export class V2TypicalWorkRuntimeService {
 				stream,
 				atDate: params.atDate,
 				source: params.source,
+				formData: params.formData ?? params.source,
 				normValue,
 				rules: workRules,
 				laborRows: laborByWork.get(work.id) ?? [],
@@ -414,6 +418,7 @@ export class V2TypicalWorkRuntimeService {
 					norm: ctx.normValue,
 					paramCoefficients,
 					source: ctx.source,
+					formData: ctx.formData,
 					resolveFactorCoeff,
 				});
 			}

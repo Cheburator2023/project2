@@ -5,7 +5,7 @@
  * Формула и округление — конфигурация версии шаблона.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.V2_LOGIC_WORKSPACE_TAB_VALUES = exports.V2_WORK_TRIGGER_STATUS_VALUES = exports.V2_WORK_ROUNDING_MODE_VALUES = exports.V2_WORK_RULE_OPERATOR_VALUES = void 0;
+exports.V2_WORK_FORMULA_ARCH_COUNT_KINDS = exports.V2_LOGIC_WORKSPACE_TAB_VALUES = exports.V2_WORK_TRIGGER_STATUS_VALUES = exports.V2_WORK_ROUNDING_MODE_VALUES = exports.V2_WORK_RULE_OPERATOR_VALUES = void 0;
 exports.resolveActiveNormOnDate = resolveActiveNormOnDate;
 exports.defaultWorkFormula = defaultWorkFormula;
 exports.defaultWorkRounding = defaultWorkRounding;
@@ -35,6 +35,13 @@ exports.V2_LOGIC_WORKSPACE_TAB_VALUES = [
     "works",
     "dependencies",
     "jsonlogic",
+];
+exports.V2_WORK_FORMULA_ARCH_COUNT_KINDS = [
+    "model",
+    "sourceSystem",
+    "dataMart",
+    "dataProcess",
+    "modelService",
 ];
 /** Норма, действующая на дату (для дерева и превью). */
 function resolveActiveNormOnDate(norms, streamExecutor, atDate) {

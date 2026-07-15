@@ -625,6 +625,7 @@ export class V2CalculationService {
 											archComponentType: archComponent,
 											streamExecutor,
 											source: sourceForMatch,
+											formData: data,
 											templateVersionId,
 											templateId,
 											atDate,
