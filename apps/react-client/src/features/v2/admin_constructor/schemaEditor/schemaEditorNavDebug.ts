@@ -55,11 +55,3 @@ declare global {
 		};
 	}
 }
-
-if (import.meta.env.DEV && typeof window !== "undefined") {
-	window.__schemaNavDebug = {
-		enable: enableSchemaEditorNavDebug,
-		disable: disableSchemaEditorNavDebug,
-		isEnabled: isSchemaEditorNavDebugEnabled,
-	};
-}
