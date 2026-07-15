@@ -1,8 +1,8 @@
 import { styled } from "@mui/material/styles";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { SideMenu } from "@react-client/common/navigation/organisms/SideMenu";
+import { SuspenseOutlet } from "@react-client/common/layouts/SuspenseOutlet";
 import { Flex } from "../primitives/Flex";
-import { Outlet } from "react-router";
 
 /** Ширина persistent drawer — должна совпадать с SideMenu. */
 export const MAIN_LAYOUT_DRAWER_WIDTH = 260;
@@ -88,7 +88,7 @@ export function MainLayout({
 				open={isSideMenuVisible}
 				data-test-id="main-layout--MainWrapper-0"
 			>
-				{children ?? <Outlet />}
+				{children ?? <SuspenseOutlet />}
 			</MainWrapper>
 		</MainLayoutContainer>
 	);
