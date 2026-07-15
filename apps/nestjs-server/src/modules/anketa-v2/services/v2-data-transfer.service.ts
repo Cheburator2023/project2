@@ -783,7 +783,7 @@ export class V2DataTransferService {
 		return assignmentIdMap;
 	}
 
-	private async insertWorkChildren<T extends { workId: string }>(
+	private async insertWorkChildren<T extends { workId: string; id: string }>(
 		repo: Repository<T>,
 		EntityClass: new () => T,
 		rows: Row[],
