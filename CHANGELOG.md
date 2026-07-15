@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.27.1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.27.0...v1.27.1) (2026-07-15)
+
+
+### Bug Fixes
+
+* update insertWorkChildren method signature to include id parameter ([fdd16dd](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/fdd16ddd7a85d020394084e45b34433165313ddd))
+
 # [1.27.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.26.0...v1.27.0) (2026-07-15)
 
 
