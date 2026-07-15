@@ -75,7 +75,7 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
         expect(result.changed).toBe(true);
         expect(result.card.rules[0]).toMatchObject({
             paramCode: "new_code",
-            paramName: "Новое имя",
+            paramName: "Новое имя @ new_code|old_code|старое_имя",
             values: [{ code: "keep", label: "Новое значение" }],
         });
         expect(result.card.laborParams[0]?.coefficients).toMatchObject([
@@ -85,7 +85,7 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
         expect(result.card.formula.tokens[2]).toMatchObject({
             kind: "param_coeff",
             paramCode: "new_code",
-            paramName: "Новое имя",
+            paramName: "Новое имя @ new_code|old_code|старое_имя",
         });
     });
     it("remaps legacy trigger value codes to schema enum codes", () => {
@@ -198,8 +198,8 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
         expect(result.card.formula.tokens[2]).toMatchObject({
             kind: "param_coeff",
             paramCode: "field_R3Lx-csF",
-            invalid: false,
         });
+        expect(result.card.formula.tokens[2]).not.toHaveProperty("invalid", true);
     });
     it("marks orphan formula tokens invalid when labor param is absent", () => {
         const legacy = card();

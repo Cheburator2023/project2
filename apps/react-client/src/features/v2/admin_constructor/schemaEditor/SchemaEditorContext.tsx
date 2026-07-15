@@ -20,6 +20,7 @@ import type { LogicValidationIssue } from "../utils/logicValidation";
 import type {
 	SchemaEditorIssue,
 } from "./collectSchemaEditorIssues";
+import type { TypicalWorkNavFocus } from "./schemaEditorIssueNavigation";
 import type { TypicalWorkSchemaConsistencyIssue } from "@smart-anketa/api-contract";
 
 export type SchemaEditorContextValue = {
@@ -68,6 +69,10 @@ export type SchemaEditorContextValue = {
 	legacyStageEvaluation: V2LegacyStageEvaluationDto | null;
 	schemaConsistencyIssues: TypicalWorkSchemaConsistencyIssue[];
 	navigateToSchemaEditorIssue: (issue: SchemaEditorIssue) => void;
+	openDesignerAtPointer: (pointer: string) => void;
+	openLogicForIssueTarget: (target: SchemaEditorIssue["target"]) => void;
+	typicalWorkNavFocus: TypicalWorkNavFocus | null;
+	clearTypicalWorkNavFocus: () => void;
 
 	schemaMonacoText: string;
 	setSchemaMonacoText: (v: string) => void;

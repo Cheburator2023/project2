@@ -30,7 +30,9 @@ export declare function remapBoundWorkIdsInUiSchema(uiSchema: Record<string, unk
  * Заполняет boundWorkIds на legacy-блоках typicalWork по назначениям работ на стрим блока.
  * Вызывается после сида каталога в шаблон (id работ известны только после seed).
  */
-export declare function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema: Record<string, unknown>, catalog: readonly TypicalWorkCatalogBindingItem[]): Record<string, unknown>;
+export declare function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema: Record<string, unknown>, catalog: readonly TypicalWorkCatalogBindingItem[], options?: {
+    replaceExisting?: (boundWorkIds: readonly string[]) => boolean;
+}): Record<string, unknown>;
 /**
  * Явно отключает автогенерацию каталога типовых работ на всех блоках typicalWork.
  * Пустой boundWorkIds — сигнал patchV2TypicalWorksLogicRules не включать catalog rule.

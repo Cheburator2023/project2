@@ -152,11 +152,13 @@ function remapBoundWorkIdsInUiSchema(uiSchema, workIdMap) {
  * Заполняет boundWorkIds на legacy-блоках typicalWork по назначениям работ на стрим блока.
  * Вызывается после сида каталога в шаблон (id работ известны только после seed).
  */
-function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog) {
+function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog, options) {
     let next = uiSchema;
     for (const binding of collectTypicalWorkBlockBindings(uiSchema)) {
-        if (binding.boundWorkIds !== undefined)
+        if (binding.boundWorkIds !== undefined &&
+            !options?.replaceExisting?.(binding.boundWorkIds)) {
             continue;
+        }
         const stream = (0, v2_anketa_section_ui_util_1.resolveStreamExecutorForTypicalWorkOutputPath)(next, binding.outputPath);
         if (!stream)
             continue;

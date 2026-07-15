@@ -11,6 +11,7 @@
 		"sync:factory-snapshot": "node scripts/sync-factory-snapshot.mjs",
 		"sync:factory-template-works-registry": "node scripts/sync-factory-template-works-registry.mjs",
 		"import:csv-formulas": "tsx scripts/import-csv-formulas-to-factory.ts",
+		"repair:factory-dictionaries": "tsx scripts/repair-factory-dictionaries.ts",
 		"repair:typical-works-bindings": "node scripts/repair-typical-works-bindings.mjs",
 		"start": "NODE_ENV=production tsx dist/main",
 		"start:debug": "nest start --debug --watch",

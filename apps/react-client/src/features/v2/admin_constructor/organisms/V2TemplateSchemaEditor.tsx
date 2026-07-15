@@ -60,10 +60,14 @@ import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayo
 import { LOGIC_TAB_QUERY, WORK_ID_QUERY } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import {
 	buildSchemaWorkParameters,
-	resolveSchemaParamForTriggerRule,
 	schemaParamIdFromPointer,
 } from "../schemaEditor/panels/typicalWorksPanel/schemaWorkParameters";
 import type { SchemaEditorIssue } from "../schemaEditor/collectSchemaEditorIssues";
+import type { TypicalWorkNavFocus } from "../schemaEditor/schemaEditorIssueNavigation";
+import {
+	issueSupportsDesignerNavigation,
+	issueSupportsLogicNavigation,
+} from "../schemaEditor/schemaEditorIssueNavigation";
 import { useSyncV2TypicalWorksSchemaField, useBulkSyncV2TypicalWorksSchemaFields } from "@react-client/common/api/queries/v2-works";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
@@ -215,18 +219,33 @@ export const V2TemplateSchemaEditor = ({
 }: V2TemplateSchemaEditorProps) => {
 	const navigate = useNavigate();
 	const [, setSearchParams] = useSearchParams();
+	const skipLeaveGuardRef = useRef(false);
+
+	const runInternalEditorNavigation = useCallback((fn: () => void) => {
+		skipLeaveGuardRef.current = true;
+		try {
+			fn();
+		} finally {
+			window.setTimeout(() => {
+				skipLeaveGuardRef.current = false;
+			}, 0);
+		}
+	}, []);
+
 	const setLogicWorkspaceTab = useCallback(
 		(tab: "works" | "dependencies" | "jsonlogic") => {
-			setSearchParams(
-				(prev) => {
-					const next = new URLSearchParams(prev);
-					next.set(LOGIC_TAB_QUERY, tab);
-					return next;
-				},
-				{ replace: true },
-			);
+			runInternalEditorNavigation(() => {
+				setSearchParams(
+					(prev) => {
+						const next = new URLSearchParams(prev);
+						next.set(LOGIC_TAB_QUERY, tab);
+						return next;
+					},
+					{ replace: true },
+				);
+			});
 		},
-		[setSearchParams],
+		[runInternalEditorNavigation, setSearchParams],
 	);
 	const isAdminEditor = wording === "adminSchema";
 
@@ -349,6 +368,8 @@ export const V2TemplateSchemaEditor = ({
 	const [triggerParamPickId, setTriggerParamPickId] = useState<string | null>(
 		null,
 	);
+	const [typicalWorkNavFocus, setTypicalWorkNavFocus] =
+		useState<TypicalWorkNavFocus | null>(null);
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 	const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 
@@ -356,7 +377,10 @@ export const V2TemplateSchemaEditor = ({
 	const [baselineSnapshot, setBaselineSnapshot] =
 		useState<SchemaEditorDraftSnapshot | null>(null);
 	const draftHydratedVersionIdRef = useRef<string | null>(null);
-	const skipLeaveGuardRef = useRef(false);
+
+	const clearTypicalWorkNavFocus = useCallback(() => {
+		setTypicalWorkNavFocus(null);
+	}, []);
 
 	const selectedRule =
 		logic.rules.find((r) => r.id === selectedRuleId) ?? logic.rules[0];
@@ -575,12 +599,15 @@ export const V2TemplateSchemaEditor = ({
 	const blocker = useBrowserRouterNavigationBlocker(
 		({ currentLocation, nextLocation }) => {
 			if (skipLeaveGuardRef.current) return false;
-			// Панели/вкладки/версии редактора переключаются через query-параметры на
-			// том же маршруте — это не уход со страницы, предупреждаем только при
-			// смене pathname.
-			return (
-				hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname
-			);
+			const normalizePath = (pathname: string) =>
+				pathname.replace(/\/$/, "") || "/";
+			if (
+				normalizePath(currentLocation.pathname) ===
+				normalizePath(nextLocation.pathname)
+			) {
+				return false;
+			}
+			return hasUnsavedChanges;
 		},
 	);
 
@@ -2013,75 +2040,104 @@ export const V2TemplateSchemaEditor = ({
 	}, [setLogicWorkspaceTab]);
 
 	const openTypicalWorksTab = useCallback(
-		(workId?: string) => {
-			setSearchParams((prev) => {
-				const next = new URLSearchParams(prev);
-				next.set(LOGIC_TAB_QUERY, "works");
-				if (workId) next.set(WORK_ID_QUERY, workId);
-				else next.delete(WORK_ID_QUERY);
-				return next;
+		(workId?: string, focus?: Omit<TypicalWorkNavFocus, "workId">) => {
+			runInternalEditorNavigation(() => {
+				if (workId) {
+					setTypicalWorkNavFocus({
+						workId,
+						paramCode: focus?.paramCode,
+					});
+				}
+				setSearchParams(
+					(prev) => {
+						const next = new URLSearchParams(prev);
+						next.set(LOGIC_TAB_QUERY, "works");
+						next.delete(WORK_ID_QUERY);
+						return next;
+					},
+					{ replace: true },
+				);
+				setMainTab("logic");
 			});
-			setMainTab("logic");
 		},
-		[setSearchParams],
+		[runInternalEditorNavigation, setSearchParams],
+	);
+
+	const openDesignerAtPointer = useCallback(
+		(pointer: string) => {
+			runInternalEditorNavigation(() => {
+				setMainTab("designer");
+				setSelectedPointer(normalizeJsonPointer(pointer));
+			});
+		},
+		[runInternalEditorNavigation],
+	);
+
+	const openLogicForIssueTarget = useCallback(
+		(target: SchemaEditorIssue["target"]) => {
+			runInternalEditorNavigation(() => {
+				switch (target.kind) {
+					case "logic_rule":
+						setMainTab("logic");
+						setLogicWorkspaceTab("jsonlogic");
+						setSelectedRuleId(target.ruleId);
+						return;
+					case "logic_dependencies":
+						if (target.pointer) {
+							openLogicTabWithPointer(target.pointer);
+							return;
+						}
+						setMainTab("logic");
+						setLogicWorkspaceTab("dependencies");
+						return;
+					case "typical_work": {
+						// Переход к работе не должен одновременно открывать/фокусировать
+						// параметр. Для параметра в панели проблем есть отдельная кнопка.
+						setTriggerParamPickId(null);
+						openTypicalWorksTab(target.workId);
+						return;
+					}
+					default:
+						return;
+				}
+			});
+		},
+		[
+			openLogicTabWithPointer,
+			openTypicalWorksTab,
+			runInternalEditorNavigation,
+			setLogicWorkspaceTab,
+		],
 	);
 
 	const navigateToSchemaEditorIssue = useCallback(
 		(issue: SchemaEditorIssue) => {
-			const target = issue.target;
-			switch (target.kind) {
-				case "designer":
-					setMainTab("designer");
-					setSelectedPointer(target.pointer);
-					return;
-				case "logic_rule":
-					openLogicTabWithRule(target.ruleId);
-					return;
-				case "logic_dependencies":
-					if (target.pointer) {
-						openLogicTabWithPointer(target.pointer);
-						return;
-					}
-					setMainTab("logic");
-					setLogicWorkspaceTab("dependencies");
-					return;
-				case "typical_work":
-					openTypicalWorksTab(target.workId);
-					if (target.paramCode) {
-						const schemaParam = resolveSchemaParamForTriggerRule(
-							{ paramCode: target.paramCode },
-							schemaWorkParams,
-						);
-						if (schemaParam?.schemaPointer) {
-							const hint = fieldPathHints.find(
-								(row) => row.pointer === schemaParam.schemaPointer,
-							);
-							setTriggerParamPickId(
-								schemaParamIdFromPointer(
-									schemaParam.schemaPointer,
-									hint?.schemaFieldUid,
-								),
-							);
-						}
-					}
-					return;
-				case "json":
-					setMainTab("json");
-					return;
-				case "calculation":
-					setMainTab("calculation");
-					return;
-				default:
-					return;
+			const { target } = issue;
+			if (issueSupportsLogicNavigation(target)) {
+				openLogicForIssueTarget(target);
+				return;
 			}
+			if (issueSupportsDesignerNavigation(target)) {
+				openDesignerAtPointer(target.pointer);
+				return;
+			}
+			runInternalEditorNavigation(() => {
+				switch (target.kind) {
+					case "json":
+						setMainTab("json");
+						return;
+					case "calculation":
+						setMainTab("calculation");
+						return;
+					default:
+						return;
+				}
+			});
 		},
 		[
-			fieldPathHints,
-			openLogicTabWithPointer,
-			openLogicTabWithRule,
-			openTypicalWorksTab,
-			schemaWorkParams,
-			setLogicWorkspaceTab,
+			openDesignerAtPointer,
+			openLogicForIssueTarget,
+			runInternalEditorNavigation,
 		],
 	);
 
@@ -2240,6 +2296,10 @@ export const V2TemplateSchemaEditor = ({
 			legacyStageEvaluation,
 			schemaConsistencyIssues,
 			navigateToSchemaEditorIssue,
+			openDesignerAtPointer,
+			openLogicForIssueTarget,
+			typicalWorkNavFocus,
+			clearTypicalWorkNavFocus,
 			schemaMonacoText,
 			setSchemaMonacoText,
 			uiMonacoText,
@@ -2347,6 +2407,10 @@ export const V2TemplateSchemaEditor = ({
 			legacyStageEvaluation,
 			schemaConsistencyIssues,
 			navigateToSchemaEditorIssue,
+			openDesignerAtPointer,
+			openLogicForIssueTarget,
+			typicalWorkNavFocus,
+			clearTypicalWorkNavFocus,
 			schemaMonacoText,
 			uiMonacoText,
 			logicMonacoText,

@@ -6,7 +6,6 @@ import {
 	applyWorkRounding,
 	buildTypicalWorkFactorCoeffResolver,
 	computeTypicalWorkFormulaTotal,
-	defaultWorkFormula,
 	defaultWorkRounding,
 	formatTypicalWorkCoefficientDisplay,
 	isWorkCoefficientValueAvailable,
@@ -255,6 +254,7 @@ export class V2TypicalWorkRuntimeService {
 		const stream = params.streamExecutor.trim();
 		const archComponentType = params.archComponentType.trim();
 		if (!stream || !archComponentType) return [];
+		if (params.allowedWorkIds?.length === 0) return [];
 
 		const assignments = await this.assignmentRepository.find({
 			where: { streamExecutor: stream, isActive: true },
@@ -262,9 +262,14 @@ export class V2TypicalWorkRuntimeService {
 		const assignedWorkIds = new Set(assignments.map((a) => a.workId));
 		if (assignedWorkIds.size === 0) return [];
 
+		const allowedWorkIds = params.allowedWorkIds;
+		const workWhere =
+			allowedWorkIds === undefined
+				? { archComponentType }
+				: { id: In([...allowedWorkIds]) };
 		let works = await this.workRepository.find({
 			where: {
-				archComponentType,
+				...workWhere,
 				...(params.templateId
 					? { templateId: params.templateId }
 					: {}),
@@ -272,13 +277,12 @@ export class V2TypicalWorkRuntimeService {
 		});
 		if (!works.length && params.templateId) {
 			works = await this.workRepository.find({
-				where: { archComponentType, templateId: IsNull() },
+				where: { ...workWhere, templateId: IsNull() },
 			});
 		}
 		const eligibleWorks = works.filter((w) => assignedWorkIds.has(w.id));
 		if (!eligibleWorks.length) return [];
 
-		const allowedWorkIds = params.allowedWorkIds;
 		const filteredWorks =
 			allowedWorkIds === undefined
 				? eligibleWorks

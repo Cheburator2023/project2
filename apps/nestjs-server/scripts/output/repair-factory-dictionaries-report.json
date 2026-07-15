@@ -1,0 +1,20 @@
+{
+  "mode": "dry-run",
+  "csvPath": "/Users/synikolaev/smart_anketa_ui/Параметры СА по блокам (3).csv",
+  "summary": {
+    "csvParameters": 179,
+    "csvDictionaryParameters": 70,
+    "changes": 0,
+    "unresolved": 0,
+    "workRepairs": 0,
+    "workIssues": 0
+  },
+  "checksums": {
+    "before": "82277c7db6157c7ffcf8ef68c217e65aee86f8e1f8c34d2259e08d0503003a78",
+    "after": "82277c7db6157c7ffcf8ef68c217e65aee86f8e1f8c34d2259e08d0503003a78"
+  },
+  "changes": [],
+  "unresolved": [],
+  "workRepairs": [],
+  "workIssues": []
+}

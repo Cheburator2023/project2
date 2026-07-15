@@ -69,6 +69,56 @@ import {
 	slugParamCode,
 } from "../utils/v2-typical-work-catalog.util";
 import { V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY } from "../constants/v2-factory-template-typical-works-registry";
+
+const LEGACY_FACTORY_BOUND_WORK_NAMES = new Set([
+	"Этап 212. Реализация процесса загрузки внутренних данных в Платформу данных для целей моделирования",
+	"Этап 214. Сбор и анализ требований",
+	"Этап 215. Согласование пилота / разовой загрузки с ИБ и ЮБ",
+	"Этап 216. Согласование интеграции с ИБ и ЮБ",
+	"Этап 217. Составление ТР",
+	"Этап 218. Составление модели данных s2t",
+	"Этап 220. Тестирование и отладка Решения",
+	"Этап 230. Постановка источника на мониторинг",
+]);
+
+const LEGACY_ROOT_ATYPICAL_WORK_KEY = "field_V6wVCAX9";
+
+function removeLegacyRootAtypicalWork(
+	jsonSchema: Record<string, unknown>,
+	uiSchema: Record<string, unknown>,
+): {
+	jsonSchema: Record<string, unknown>;
+	uiSchema: Record<string, unknown>;
+	changed: boolean;
+} {
+	const properties =
+		jsonSchema.properties &&
+		typeof jsonSchema.properties === "object" &&
+		!Array.isArray(jsonSchema.properties)
+			? (jsonSchema.properties as Record<string, unknown>)
+			: undefined;
+	if (!properties?.[LEGACY_ROOT_ATYPICAL_WORK_KEY]) {
+		return { jsonSchema, uiSchema, changed: false };
+	}
+
+	const nextJsonSchema = structuredClone(jsonSchema);
+	const nextProperties = nextJsonSchema.properties as Record<string, unknown>;
+	delete nextProperties[LEGACY_ROOT_ATYPICAL_WORK_KEY];
+
+	const nextUiSchema = structuredClone(uiSchema);
+	delete nextUiSchema[LEGACY_ROOT_ATYPICAL_WORK_KEY];
+	if (Array.isArray(nextUiSchema["ui:order"])) {
+		nextUiSchema["ui:order"] = nextUiSchema["ui:order"].filter(
+			(key) => key !== LEGACY_ROOT_ATYPICAL_WORK_KEY,
+		);
+	}
+
+	return {
+		jsonSchema: nextJsonSchema,
+		uiSchema: nextUiSchema,
+		changed: true,
+	};
+}
 import type { V2FactoryTypicalWork } from "../constants/v2-factory-typical-works-catalog";
 import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
 
@@ -447,11 +497,27 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			id: work.id,
 			streams: streamsByWork.get(work.id) ?? [],
 		}));
+		const workNameById = new Map(
+			works.map((work) => [work.id, work.name.trim()] as const),
+		);
 
-		const uiSchema = version.uiSchema as Record<string, unknown>;
-		const next = backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog);
-		if (JSON.stringify(next) === JSON.stringify(uiSchema)) return;
+		const cleaned = removeLegacyRootAtypicalWork(
+			(version.jsonSchema ?? {}) as Record<string, unknown>,
+			version.uiSchema as Record<string, unknown>,
+		);
+		const uiSchema = cleaned.uiSchema;
+		const next = backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog, {
+			replaceExisting: (boundWorkIds) =>
+				boundWorkIds.length === LEGACY_FACTORY_BOUND_WORK_NAMES.size &&
+				boundWorkIds.every((id) =>
+					LEGACY_FACTORY_BOUND_WORK_NAMES.has(workNameById.get(id) ?? ""),
+				),
+		});
+		if (!cleaned.changed && JSON.stringify(next) === JSON.stringify(uiSchema)) {
+			return;
+		}
 
+		version.jsonSchema = cleaned.jsonSchema;
 		version.uiSchema = next;
 		await this.templateVersionRepository.save(version);
 	}

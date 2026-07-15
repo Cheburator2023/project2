@@ -35,6 +35,37 @@ const v2_typical_work_output_paths_util_1 = require("./v2-typical-work-output-pa
         (0, vitest_1.expect)(sourceOpts.boundWorkIds).toEqual(["w-source"]);
         (0, vitest_1.expect)(controlOpts.boundWorkIds).toEqual(["w-control"]);
     });
+    (0, vitest_1.it)("replaces a recognized legacy subset without overwriting arbitrary explicit bindings", () => {
+        const uiSchema = {
+            streamDataSources: {
+                "ui:options": {
+                    streamBlock: true,
+                    streamExecutor: "Источники данных",
+                },
+                sourceTypicalTasks: {
+                    "ui:options": {
+                        archComponent: "typicalWork",
+                        boundWorkIds: ["legacy-a", "legacy-b"],
+                    },
+                },
+            },
+        };
+        const catalog = [
+            { id: "legacy-a", streams: ["Источники данных"] },
+            { id: "legacy-b", streams: ["Источники данных"] },
+            { id: "missing-work", streams: ["Источники данных"] },
+        ];
+        const next = (0, v2_typical_work_output_paths_util_1.backfillTypicalWorkBoundWorkIdsInUiSchema)(uiSchema, catalog, {
+            replaceExisting: (ids) => ids.every((id) => id.startsWith("legacy-")),
+        });
+        const opts = next.streamDataSources
+            .sourceTypicalTasks["ui:options"];
+        (0, vitest_1.expect)(opts.boundWorkIds).toEqual([
+            "legacy-a",
+            "legacy-b",
+            "missing-work",
+        ]);
+    });
 });
 (0, vitest_1.describe)("remapBoundWorkIdsInUiSchema", () => {
     (0, vitest_1.it)("replaces legacy work ids in explicit boundWorkIds", () => {

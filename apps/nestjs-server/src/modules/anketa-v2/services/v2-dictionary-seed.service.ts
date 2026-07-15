@@ -34,50 +34,72 @@ export class V2DictionarySeedService implements OnModuleInit {
 		await this.removeSupersededDuplicates();
 		await this.removeObsoleteFactoryDictionaries();
 		await this.ensureDefaultDictionaries();
-		await this.syncCorrectedComplexityDictionaryItems();
+		await this.syncDefaultDictionaryItems();
 		await this.syncDefaultMetadata();
 	}
 
-	/**
-	 * Исправляет две заводские шкалы, которые в старом snapshot были скопированы
-	 * от других полей при одинаковом title «Сложность реализации».
-	 */
-	private async syncCorrectedComplexityDictionaryItems(): Promise<void> {
-		const codes = [
-			"v2.detailInfo.dataMart.field_46LCnfWo",
-			"v2.detailInfo.sourceSystems.items.field_L1lRlgf1",
-		];
-		for (const code of codes) {
-			const def = V2_ALL_DEFAULT_DICTIONARIES.find((item) => item.code === code);
-			if (!def) continue;
+	/** Полностью приводит items всех заводских справочников к factory bundle. */
+	async syncDefaultDictionaryItems(): Promise<void> {
+		let updated = 0;
+		for (const def of V2_ALL_DEFAULT_DICTIONARIES) {
 			const dictionary = await this.dictionaryRepository.findOne({
-				where: { code },
+				where: { code: def.code },
 			});
 			if (!dictionary) continue;
 			const existing = await this.itemRepository.find({
 				where: { dictionaryId: dictionary.id },
 				order: { order: "ASC" },
 			});
-			const existingLabels = existing.map((item) => item.label);
-			const expectedLabels = def.items.map((item) => item.label);
-			if (JSON.stringify(existingLabels) === JSON.stringify(expectedLabels)) {
-				continue;
+			const existingByCode = new Map(existing.map((item) => [item.code, item]));
+			const expectedCodes = new Set(def.items.map((item) => item.code));
+			let dictionaryChanged = false;
+
+			for (const expected of def.items) {
+				const current = existingByCode.get(expected.code);
+				if (!current) {
+					await this.itemRepository.save(
+						this.itemRepository.create({
+							dictionaryId: dictionary.id,
+							code: expected.code,
+							label: expected.label,
+							order: expected.order,
+							isActive: true,
+							parentCode: null,
+							payload: expected.payload ?? null,
+						}),
+					);
+					dictionaryChanged = true;
+					continue;
+				}
+				const nextPayload = expected.payload ?? null;
+				if (
+					current.label !== expected.label ||
+					current.order !== expected.order ||
+					!current.isActive ||
+					current.parentCode !== null ||
+					JSON.stringify(current.payload) !== JSON.stringify(nextPayload)
+				) {
+					current.label = expected.label;
+					current.order = expected.order;
+					current.isActive = true;
+					current.parentCode = null;
+					current.payload = nextPayload;
+					await this.itemRepository.save(current);
+					dictionaryChanged = true;
+				}
 			}
-			await this.itemRepository.delete({ dictionaryId: dictionary.id });
-			await this.itemRepository.save(
-				def.items.map((item) =>
-					this.itemRepository.create({
-						dictionaryId: dictionary.id,
-						code: item.code,
-						label: item.label,
-						order: item.order,
-						isActive: true,
-						parentCode: null,
-						payload: item.payload ?? null,
-					}),
-				),
+
+			const stale = existing.filter((item) => !expectedCodes.has(item.code));
+			if (stale.length > 0) {
+				await this.itemRepository.remove(stale);
+				dictionaryChanged = true;
+			}
+			if (dictionaryChanged) updated++;
+		}
+		if (updated > 0) {
+			this.logger.log(
+				`Синхронизированы элементы заводских справочников: ${updated}`,
 			);
-			this.logger.log(`Исправлена заводская шкала справочника ${code}`);
 		}
 	}
 

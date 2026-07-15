@@ -216,6 +216,12 @@ describe("V2TypicalWorkRuntimeService", () => {
 		expect(allowed.map((task) => task.workId)).toEqual([WORK_WITH_TRIGGER]);
 		expect(blocked).toEqual([]);
 		expect(empty).toEqual([]);
+		const workFind = (service as unknown as {
+			workRepository: { find: jest.Mock };
+		}).workRepository.find;
+		const allowedWhere = workFind.mock.calls[0]?.[0]?.where;
+		expect(allowedWhere).toHaveProperty("id");
+		expect(allowedWhere).not.toHaveProperty("archComponentType");
 	});
 
 	it("returns empty when work is not assigned to stream", async () => {

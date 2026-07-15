@@ -139,11 +139,13 @@ export function remapBoundWorkIdsInUiSchema(uiSchema, workIdMap) {
  * Заполняет boundWorkIds на legacy-блоках typicalWork по назначениям работ на стрим блока.
  * Вызывается после сида каталога в шаблон (id работ известны только после seed).
  */
-export function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog) {
+export function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog, options) {
     let next = uiSchema;
     for (const binding of collectTypicalWorkBlockBindings(uiSchema)) {
-        if (binding.boundWorkIds !== undefined)
+        if (binding.boundWorkIds !== undefined &&
+            !options?.replaceExisting?.(binding.boundWorkIds)) {
             continue;
+        }
         const stream = resolveStreamExecutorForTypicalWorkOutputPath(next, binding.outputPath);
         if (!stream)
             continue;

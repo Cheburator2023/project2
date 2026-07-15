@@ -489,6 +489,7 @@ export function TypicalWorkTriggersSection({
 						return (
 							<Box
 								key={groupKey}
+								data-work-trigger-param={groupKey}
 								sx={{
 									border: `1px solid ${groupInvalid ? "#f5c6c6" : "#f0e3d2"}`,
 									bgcolor: groupInvalid ? "#fff5f5" : "#fdf8f1",

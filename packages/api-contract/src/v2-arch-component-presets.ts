@@ -27,23 +27,25 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"workType": {
 					"enum": [
 						"Разработка",
+						"Внедрение",
 						"Доработка",
-						"Настройка"
+						"Калибровка",
+						"Разработка и внедрение"
 					],
 					"type": "string",
 					"title": "Тип работ"
 				},
 				"modelClass": {
 					"enum": [
-						"1",
-						"2",
-						"3",
-						"4",
-						"5",
-						"6",
-						"7",
-						"8",
-						"9"
+						"1 — Розничные регуляторные модели",
+						"2 — Розничные бизнес-модели",
+						"3 — Розничные модели CRM",
+						"4 — Розничные модели Collection",
+						"5 — Корпоративные регуляторные модели",
+						"6 — Корпоративные бизнес-модели",
+						"7 — Прочие корпоративные модели",
+						"8 — Модели финансового моделирования",
+						"9 — Модели цифровых помощников"
 					],
 					"type": "string",
 					"title": "Класс моделей"
@@ -58,15 +60,22 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				},
 				"field_4IL7OStC": {
 					"enum": [
-						"Да",
-						"Нет"
+						"Ручной",
+						"Автоматизированный"
 					],
 					"type": "string",
 					"title": "Способ загрузки данных в BI-систему"
 				},
 				"field_F7nK-We5": {
 					"type": "string",
-					"title": "Тип БД для BI-системы"
+					"title": "Тип БД для BI-системы",
+					"enum": [
+						"Векторные",
+						"Графовые",
+						"Временные ряды и события",
+						"Документо-ориентированные",
+						"Специализированные"
+					]
 				},
 				"field_JcKtx9Mg": {
 					"type": "boolean",
@@ -79,7 +88,15 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_SvNx6iEq": {
 					"type": "array",
 					"items": {
-						"type": "string"
+						"type": "string",
+						"enum": [
+							"КД — Качество модельных данных",
+							"ТМ — Технический контроль",
+							"ОК — Оперативный контроль",
+							"АК — Аналитический контроль",
+							"КМЗ — Контроль модельных значений",
+							"ОВ — Оценка влияния моделей"
+						]
 					},
 					"title": "Вид контроля",
 					"uniqueItems": true
@@ -99,7 +116,20 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_jUm5syZf": {
 					"type": "array",
 					"items": {
-						"type": "string"
+						"type": "string",
+						"enum": [
+							"Батч",
+							"Батч + загрузка данных потребителю",
+							"Батч + Онлайн",
+							"Онлайн",
+							"Онлайн gpu",
+							"Стриминг",
+							"Мобильные устройства",
+							"LLM",
+							"Гео-сервисы",
+							"Внедрение в облаке",
+							"Графовая платформа"
+						]
 					},
 					"title": "Каналы внедрения",
 					"uniqueItems": true
@@ -284,22 +314,17 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					},
 					"field_-t8JSf3p": {
 						"enum": [
-							"Точечное",
-							"Малое",
-							"Среднее",
-							"Большое",
-							"Масштабное"
+							"Неизвестно",
+							"Стандартная",
+							"Нестандартная"
 						],
 						"type": "string",
 						"title": "Форма договора"
 					},
 					"field_1ANadh7U": {
 						"enum": [
-							"Точечное",
-							"Малое",
-							"Среднее",
-							"Большое",
-							"Масштабное"
+							"Однократный",
+							"Регламентный"
 						],
 						"type": "string",
 						"title": "Тип загрузки данных"
@@ -310,11 +335,9 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					},
 					"field_3a0vme2u": {
 						"enum": [
-							"Точечное",
-							"Малое",
-							"Среднее",
-							"Большое",
-							"Масштабное"
+							"Да",
+							"Нет",
+							"Неизвестно"
 						],
 						"type": "string",
 						"title": "Предусмотрено проведение конкурса"
@@ -325,11 +348,8 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					},
 					"field_4jxR0E0m": {
 						"enum": [
-							"Точечное",
-							"Малое",
-							"Среднее",
-							"Большое",
-							"Масштабное"
+							"Первичный",
+							"Повторный"
 						],
 						"type": "string",
 						"title": "Пилот"
@@ -344,33 +364,27 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					},
 					"field_9BXQE8SI": {
 						"enum": [
-							"Точечное",
-							"Малое",
-							"Среднее",
-							"Большое",
-							"Масштабное"
+							"Односторонний",
+							"Двусторонний",
+							"Неизвестно"
 						],
 						"type": "string",
 						"title": "Режим обмена данными"
 					},
 					"field_AKLVuyFy": {
 						"enum": [
-							"Точечное",
-							"Малое",
-							"Среднее",
-							"Большое",
-							"Масштабное"
+							"Да",
+							"Нет",
+							"Неизвестно"
 						],
 						"type": "string",
 						"title": "Наличие конфиденциальных данных"
 					},
 					"field_DBFG7kIN": {
 						"enum": [
-							"Точечное",
-							"Малое",
-							"Среднее",
-							"Большое",
-							"Масштабное"
+							"Да",
+							"Нет",
+							"Неизвестно"
 						],
 						"type": "string",
 						"title": "Наличие юридического основания для пилота"
@@ -392,20 +406,18 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					},
 					"field_HuOLfL4K": {
 						"enum": [
-							"Точечное",
-							"Малое",
-							"Среднее",
-							"Большое",
-							"Масштабное"
+							"Есть",
+							"Нет",
+							"Неизвестно"
 						],
 						"type": "string",
 						"title": "Риск появления дополнительных систем-источников"
 					},
 					"field_L1lRlgf1": {
 						"enum": [
-							"Низкая",
-							"Средняя",
 							"Высокая",
+							"Средняя",
+							"Низкая",
 							"Неизвестно"
 						],
 						"type": "string",
@@ -417,11 +429,10 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					},
 					"field_VX7y3PsB": {
 						"enum": [
-							"Точечное",
-							"Малое",
-							"Среднее",
-							"Большое",
-							"Масштабное"
+							"Высокая",
+							"Средняя",
+							"Низкая",
+							"Неизвестно"
 						],
 						"type": "string",
 						"title": "Сложность конфигурации модели разметки данных"
@@ -432,11 +443,26 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					},
 					"field_Y_K0Hy0e": {
 						"type": "string",
-						"title": "Количество сущностей (исходных таблиц)"
+						"title": "Количество сущностей (исходных таблиц)",
+						"enum": [
+							"Точечное (1-4)",
+							"Малое (5-9)",
+							"Среднее (9-15)",
+							"Крупное (15-20)",
+							"Большое (20-25)",
+							"Масштабное (25+)",
+							"Неизвестно"
+						]
 					},
 					"field_d3OCFyaC": {
 						"type": "string",
-						"title": "Сложность предметной области"
+						"title": "Сложность предметной области",
+						"enum": [
+							"Низкая",
+							"Средняя",
+							"Высокая",
+							"Неизвестно"
+						]
 					},
 					"field_fJ_7OdE7": {
 						"type": "boolean",
@@ -447,16 +473,20 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 						"title": "Требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
 					},
 					"field_lzP44Urx": {
-						"type": "boolean",
-						"title": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик"
+						"type": "string",
+						"title": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик",
+						"enum": [
+							"Да",
+							"Нет",
+							"Неизвестно"
+						]
 					},
 					"field_nE73kPQl": {
 						"enum": [
-							"Точечное",
-							"Малое",
-							"Среднее",
-							"Большое",
-							"Масштабное"
+							"Высокая",
+							"Средняя",
+							"Низкая",
+							"Неизвестно"
 						],
 						"type": "string",
 						"title": "Детализация и ясность запроса постановки задачи"
@@ -467,22 +497,18 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					},
 					"field_tpROQBf5": {
 						"enum": [
-							"Точечное",
-							"Малое",
-							"Среднее",
-							"Большое",
-							"Масштабное"
+							"Стандартное",
+							"Нестандартное",
+							"Неизвестно"
 						],
 						"type": "string",
 						"title": "NDA"
 					},
 					"field_vqqlHbU6": {
 						"enum": [
-							"Точечное",
-							"Малое",
-							"Среднее",
-							"Большое",
-							"Масштабное"
+							"Да",
+							"Нет",
+							"Неизвестно"
 						],
 						"type": "string",
 						"title": "Требуется хэширование/ шифрование"
@@ -493,7 +519,13 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					},
 					"field_wuYlhnu0": {
 						"type": "string",
-						"title": "Сложность настройки шаблона разметки данных"
+						"title": "Сложность настройки шаблона разметки данных",
+						"enum": [
+							"Высокая",
+							"Средняя",
+							"Низкая",
+							"Неизвестно"
+						]
 					}
 				}
 			},
@@ -766,15 +798,16 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_C6oqyTPh": {
 					"enum": [
 						"Да",
-						"Нет"
+						"Нет",
+						"Неизвестно"
 					],
 					"type": "string",
 					"title": "Требуется хэширование/ шифрование"
 				},
 				"field_HgUCNn6E": {
 					"enum": [
-						"Да",
-						"Нет"
+						"Пакетный",
+						"Потоковый"
 					],
 					"type": "string",
 					"title": "Тип процесса обработки данных"
@@ -786,7 +819,8 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_R3Lx-csF": {
 					"enum": [
 						"Да",
-						"Нет"
+						"Нет",
+						"Неизвестно"
 					],
 					"type": "string",
 					"title": "Двусторонний обмен данными"
@@ -813,7 +847,8 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"confidentialData": {
 					"enum": [
 						"Да",
-						"Нет"
+						"Нет",
+						"Неизвестно"
 					],
 					"type": "string",
 					"title": "Наличие конфиденциальных данных"
@@ -915,7 +950,8 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_0uV7wafS": {
 					"enum": [
 						"Да",
-						"Нет"
+						"Нет",
+						"Неизвестно"
 					],
 					"type": "string",
 					"title": "Требуется хэширование/ шифрование"
@@ -926,9 +962,9 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				},
 				"field_46LCnfWo": {
 					"enum": [
-						"Низкая",
-						"Средняя",
 						"Высокая",
+						"Средняя",
+						"Низкая",
 						"Неизвестно"
 					],
 					"type": "string",
@@ -941,7 +977,8 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_L-WWLDWY": {
 					"enum": [
 						"Да",
-						"Нет"
+						"Нет",
+						"Неизвестно"
 					],
 					"type": "string",
 					"title": "Наличие конфиденциальных данных"
@@ -949,7 +986,8 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_N9LFD6Hu": {
 					"enum": [
 						"Да",
-						"Нет"
+						"Нет",
+						"Неизвестно"
 					],
 					"type": "string",
 					"title": "Двусторонний обмен данными"
@@ -960,8 +998,9 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				},
 				"field_fRuMuWtn": {
 					"enum": [
-						"Да",
-						"Нет"
+						"Непосредственно",
+						"Опосредованно",
+						"Неизвестно"
 					],
 					"type": "string",
 					"title": "Способ предоставления данных заказчику"
@@ -972,8 +1011,10 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				},
 				"field_le47srI7": {
 					"enum": [
-						"Да",
-						"Нет"
+						"Холодный",
+						"Теплый",
+						"Горячий",
+						"Потоковый"
 					],
 					"type": "string",
 					"title": "Слой хранения"
@@ -1148,10 +1189,13 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"algorithmType": {
 					"enum": [
 						"Табличные данные",
-						"Временные ряды",
-						"NLP",
-						"CV",
-						"RL"
+						"Текстовая аналитика — Классические модели",
+						"Текстовая аналитика — LLM",
+						"Аудио-аналитика",
+						"Компьютерное зрение",
+						"Оптимизационная задача",
+						"Гео-аналитика",
+						"Графовая аналитика"
 					],
 					"type": "string",
 					"title": "Сложность алгоритма / тип ML задачи"
@@ -1174,7 +1218,11 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				},
 				"field_VbI-0aiT": {
 					"type": "string",
-					"title": "Роль модели"
+					"title": "Роль модели",
+					"enum": [
+						"Обычная",
+						"Оркестратор"
+					]
 				},
 				"field_atxiq-UM": {
 					"type": "string",

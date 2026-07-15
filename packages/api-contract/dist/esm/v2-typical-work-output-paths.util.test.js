@@ -33,6 +33,37 @@ describe("backfillTypicalWorkBoundWorkIdsInUiSchema", () => {
         expect(sourceOpts.boundWorkIds).toEqual(["w-source"]);
         expect(controlOpts.boundWorkIds).toEqual(["w-control"]);
     });
+    it("replaces a recognized legacy subset without overwriting arbitrary explicit bindings", () => {
+        const uiSchema = {
+            streamDataSources: {
+                "ui:options": {
+                    streamBlock: true,
+                    streamExecutor: "Источники данных",
+                },
+                sourceTypicalTasks: {
+                    "ui:options": {
+                        archComponent: "typicalWork",
+                        boundWorkIds: ["legacy-a", "legacy-b"],
+                    },
+                },
+            },
+        };
+        const catalog = [
+            { id: "legacy-a", streams: ["Источники данных"] },
+            { id: "legacy-b", streams: ["Источники данных"] },
+            { id: "missing-work", streams: ["Источники данных"] },
+        ];
+        const next = backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog, {
+            replaceExisting: (ids) => ids.every((id) => id.startsWith("legacy-")),
+        });
+        const opts = next.streamDataSources
+            .sourceTypicalTasks["ui:options"];
+        expect(opts.boundWorkIds).toEqual([
+            "legacy-a",
+            "legacy-b",
+            "missing-work",
+        ]);
+    });
 });
 describe("remapBoundWorkIdsInUiSchema", () => {
     it("replaces legacy work ids in explicit boundWorkIds", () => {

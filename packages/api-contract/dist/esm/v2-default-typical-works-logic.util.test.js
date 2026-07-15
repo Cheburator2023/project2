@@ -87,6 +87,10 @@ describe("v2-default-typical-works-logic.util", () => {
         const payload = rule?.payload;
         expect(payload.worksCatalog).toBe(true);
         expect(payload.outputArrayPath).toBe("detailInfo.myTypicalTasks");
+        expect(payload.sourceContextPaths).toEqual([
+            "detailInfo.dataMart",
+            "detailInfo.dataProcess",
+        ]);
         expect(rule?.targetPath).toBe("/detailInfo/myTypicalTasks");
     });
     it("injects separate catalog rules per typicalWork block with bound work ids", () => {

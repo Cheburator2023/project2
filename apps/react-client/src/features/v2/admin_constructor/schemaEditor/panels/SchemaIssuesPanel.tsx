@@ -2,6 +2,7 @@ import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Box from "@mui/material/Box";
 import InputAdornment from "@mui/material/InputAdornment";
@@ -25,11 +26,18 @@ import {
 	type SchemaEditorIssue,
 	type SchemaEditorIssueSeverity,
 } from "../collectSchemaEditorIssues";
+import {
+	issueSupportsLogicNavigation,
+	resolveIssueDesignerPointer,
+} from "../schemaEditorIssueNavigation";
 import { ISSUES_PANEL_ID } from "../constants";
 import { PanelChrome } from "../components/PanelChrome";
 import { useSchemaEditor } from "../SchemaEditorContext";
 import { useSchemaEditorDock } from "../SchemaEditorDockContext";
-import { buildSchemaWorkParameters } from "./typicalWorksPanel/schemaWorkParameters";
+import {
+	buildSchemaWorkParameters,
+	resolveSchemaParamForTriggerRule,
+} from "./typicalWorksPanel/schemaWorkParameters";
 import { buildParamFieldBindings, graphToDraft } from "./typicalWorksPanel/parameterDependenciesLogic";
 import { readParameterDependencyDraft } from "./typicalWorksPanel/parameterDependenciesStorage";
 
@@ -60,13 +68,23 @@ const SEVERITY_META: Record<
 
 function IssueRow({
 	issue,
+	parameterPointer,
 	onNavigate,
+	onOpenDesigner,
+	onOpenLogic,
 }: {
 	issue: SchemaEditorIssue;
+	parameterPointer: string | null;
 	onNavigate: (issue: SchemaEditorIssue) => void;
+	onOpenDesigner: (pointer: string) => void;
+	onOpenLogic: (issue: SchemaEditorIssue) => void;
 }) {
 	const meta = SEVERITY_META[issue.severity];
 	const navigable = issue.target.kind !== "none";
+	const designerPointer = resolveIssueDesignerPointer(issue);
+	const showDesignerButton = Boolean(designerPointer);
+	const showLogicButton = issueSupportsLogicNavigation(issue.target);
+	const showParameterButton = showLogicButton;
 
 	return (
 		<Card
@@ -98,6 +116,64 @@ function IssueRow({
 					<Typography variant="body2" color="text.secondary">
 						{issue.message}
 					</Typography>
+					{showDesignerButton || showLogicButton || showParameterButton ? (
+						<Flex gap={8} wrap="wrap" sx={{ mt: 0.5 }}>
+							{showDesignerButton ? (
+								<Button
+									size="small"
+									variant="outlined"
+									disabled={!designerPointer}
+									title={
+										designerPointer
+											? "Открыть поле на холсте конструктора"
+											: "Для этой проблемы нет привязки к полю схемы"
+									}
+									data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.issueGoDesigner}
+									onClick={(event) => {
+										event.stopPropagation();
+										if (!designerPointer) return;
+										onOpenDesigner(designerPointer);
+									}}
+								>
+									К конструктору
+								</Button>
+							) : null}
+							{showParameterButton ? (
+								<Button
+									size="small"
+									variant="outlined"
+									disabled={!parameterPointer}
+									title={
+										parameterPointer
+											? "Открыть связанный параметр в конструкторе"
+											: "Подходящий параметр схемы не найден"
+									}
+									data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.issueGoParameter}
+									onClick={(event) => {
+										event.stopPropagation();
+										if (!parameterPointer) return;
+										onOpenDesigner(parameterPointer);
+									}}
+								>
+									К параметру
+								</Button>
+							) : null}
+							{showLogicButton ? (
+								<Button
+									size="small"
+									variant="outlined"
+									title="Открыть связанный раздел логики"
+									data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.issueGoLogic}
+									onClick={(event) => {
+										event.stopPropagation();
+										onOpenLogic(issue);
+									}}
+								>
+									К логике
+								</Button>
+							) : null}
+						</Flex>
+					) : null}
 				</Flex>
 			</Flex>
 		</Card>
@@ -238,6 +314,8 @@ export function SchemaIssuesPanel({ embedded = false }: { embedded?: boolean }) 
 		calculationError,
 		typicalWorkSaveDisplay,
 		navigateToSchemaEditorIssue,
+		openDesignerAtPointer,
+		openLogicForIssueTarget,
 		jsonSchema,
 		uiSchema,
 	} = useSchemaEditor();
@@ -270,6 +348,38 @@ export function SchemaIssuesPanel({ embedded = false }: { embedded?: boolean }) 
 			}),
 		[enumMapByCode, fieldPathHints, jsonSchema, uiSchema],
 	);
+
+	const resolveParameterPointer = (issue: SchemaEditorIssue): string | null => {
+		const { target } = issue;
+		if (target.kind === "designer") return target.pointer;
+		if (target.kind === "logic_dependencies" && target.pointer) {
+			return target.pointer;
+		}
+		if (target.kind === "logic_rule") {
+			const rule = logic.rules.find((item) => item.id === target.ruleId);
+			const pointer = rule?.targetPath?.trim();
+			if (
+				pointer &&
+				fieldPathHints.some((hint) => hint.pointer === pointer)
+			) {
+				return pointer;
+			}
+			return null;
+		}
+		if (
+			(target.kind === "typical_work" ||
+				target.kind === "logic_dependencies") &&
+			target.paramCode
+		) {
+			return (
+				resolveSchemaParamForTriggerRule(
+					{ paramCode: target.paramCode },
+					schemaParams,
+				)?.schemaPointer ?? null
+			);
+		}
+		return null;
+	};
 
 	const methodologyParams = useMemo(
 		() => (catalog?.items ?? []).filter((p) => p.values.length > 0 || p.numeric),
@@ -418,7 +528,10 @@ export function SchemaIssuesPanel({ embedded = false }: { embedded?: boolean }) 
 					<IssueRow
 						key={issue.id}
 						issue={issue}
+						parameterPointer={resolveParameterPointer(issue)}
 						onNavigate={navigateToSchemaEditorIssue}
+						onOpenDesigner={openDesignerAtPointer}
+						onOpenLogic={(item) => openLogicForIssueTarget(item.target)}
 					/>
 				))}
 			</Flex>

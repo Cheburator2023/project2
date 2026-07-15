@@ -89,6 +89,10 @@ const v2_default_typical_works_logic_util_1 = require("./v2-default-typical-work
         const payload = rule?.payload;
         (0, vitest_1.expect)(payload.worksCatalog).toBe(true);
         (0, vitest_1.expect)(payload.outputArrayPath).toBe("detailInfo.myTypicalTasks");
+        (0, vitest_1.expect)(payload.sourceContextPaths).toEqual([
+            "detailInfo.dataMart",
+            "detailInfo.dataProcess",
+        ]);
         (0, vitest_1.expect)(rule?.targetPath).toBe("/detailInfo/myTypicalTasks");
     });
     (0, vitest_1.it)("injects separate catalog rules per typicalWork block with bound work ids", () => {

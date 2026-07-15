@@ -133,6 +133,7 @@ export function TypicalWorksPanel() {
 		setMainTab,
 		handleDeleteField,
 		placeTypicalWorkInStreamBlock,
+		typicalWorkNavFocus,
 	} = useSchemaEditor();
 
 	const { data, isLoading, error } = useV2TypicalWorksList({
@@ -229,6 +230,19 @@ export function TypicalWorksPanel() {
 			{ replace: true },
 		);
 	}, [deepLinkWorkId, data?.items, setSearchParams]);
+
+	useEffect(() => {
+		if (!typicalWorkNavFocus?.workId) return;
+		const work = (data?.items ?? []).find(
+			(item) => item.id === typicalWorkNavFocus.workId,
+		);
+		if (!work) return;
+		const area = work.streams[0]
+			? streamAreaKey(work.streams[0])
+			: DEFAULT_LOGIC_STREAM;
+		setScope({ kind: "stream", stream: area });
+		setSelectedWorkId(work.id);
+	}, [data?.items, typicalWorkNavFocus?.workId]);
 
 	// Дуплекс конструктор→логика: открыть диалог создания работы по deep-link (?newWork=1).
 	const openCreateFlag = searchParams.get(NEW_WORK_QUERY);

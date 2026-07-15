@@ -46,15 +46,19 @@ import { mergeAnketaDisplayFormData } from "@react-client/features/v2/anketaCRUD
 import { resolvePreviewSourceRowForTypicalWork } from "./typicalWorkTriggerPreview";
 import {
 	buildSchemaWorkParameters,
+	findSchemaWorkParameter,
 	isSchemaLaborParamCandidate,
 	isSchemaLaborParamUsed,
 	isSchemaTextualParam,
 	resolveEffectiveWorkArchComponentType,
+	resolveSchemaParamForTriggerRule,
 	resolveWorkParameterOption,
 	schemaLaborParamPickerCaption,
 	schemaParamRuleName,
 	schemaWorkParameterEmptyPickerMessage,
+	triggerRuleGroupKey,
 } from "./schemaWorkParameters";
+import { scrollWorkParamIntoView } from "../../schemaEditorIssueNavigation";
 import {
 	coerceDictionariesSnapshot,
 	coerceJsonSchema,
@@ -99,7 +103,6 @@ import {
 	cardToPatchDto,
 	useDebouncedTypicalWorkSave,
 } from "./useDebouncedTypicalWorkSave";
-import { TypicalWorkSaveStatusBar } from "./TypicalWorkSaveStatusBar";
 import { reconcileStreamNormPeriods } from "./typicalWorkNormPeriods";
 import { TypicalWorkValueMatchingInfo } from "./typicalWorkValueMatchingHelp";
 
@@ -154,6 +157,8 @@ export function TypicalWorkEditableCard({
 		setMainTab,
 		triggerParamPickId,
 		clearTriggerParamPick,
+		typicalWorkNavFocus,
+		clearTypicalWorkNavFocus,
 		requestCalculationRefresh,
 		registerTypicalWorkSaveGate,
 	} = useSchemaEditor();
@@ -307,6 +312,55 @@ export function TypicalWorkEditableCard({
 			}),
 		[enumMapByCode, fieldPathHints, jsonSchema, uiSchema],
 	);
+
+	useEffect(() => {
+		if (!typicalWorkNavFocus || !draft || card?.id !== typicalWorkNavFocus.workId) {
+			return;
+		}
+
+		const paramCode = typicalWorkNavFocus.paramCode?.trim();
+		const scrollTarget = () => {
+			if (!paramCode) {
+				document
+					.querySelector("[data-work-card-root]")
+					?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+				clearTypicalWorkNavFocus();
+				return;
+			}
+
+			const resolved =
+				findSchemaWorkParameter(paramOptions, paramCode) ??
+				resolveSchemaParamForTriggerRule({ paramCode }, paramOptions);
+			const codesToTry = [
+				resolved?.code,
+				paramCode,
+				...draft.laborParams.map((group) => group.paramCode),
+				...draft.rules.map((rule) =>
+					triggerRuleGroupKey(rule, paramOptions),
+				),
+			].filter((code): code is string => Boolean(code?.trim()));
+
+			for (const code of [...new Set(codesToTry)]) {
+				if (scrollWorkParamIntoView(code)) {
+					clearTypicalWorkNavFocus();
+					return;
+				}
+			}
+
+			clearTypicalWorkNavFocus();
+		};
+
+		const frame = requestAnimationFrame(() => {
+			requestAnimationFrame(scrollTarget);
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [
+		card?.id,
+		clearTypicalWorkNavFocus,
+		draft,
+		paramOptions,
+		typicalWorkNavFocus,
+	]);
 	const laborParamOptions = useMemo(
 		() => paramOptions.filter(isSchemaLaborParamCandidate),
 		[paramOptions],
@@ -631,7 +685,10 @@ export function TypicalWorkEditableCard({
 				errorMessage={errorMessage}
 				onRetry={retry}
 			/> */}
-			<Box sx={{ flex: 1, overflow: "auto", px: 2.75, py: 2.25, minWidth: 0 }}>
+			<Box
+				data-work-card-root
+				sx={{ flex: 1, overflow: "auto", px: 2.75, py: 2.25, minWidth: 0 }}
+			>
 				<TypicalWorkFormulaLockedDialog
 					open={formulaLockedOpen}
 					pending={createVersion.isPending}
@@ -1141,6 +1198,7 @@ export function TypicalWorkEditableCard({
 									return (
 										<Box
 											key={group.paramCode}
+											data-work-labor-param={group.paramCode}
 											sx={{
 												border: "1px solid #eef0f4",
 												borderRadius: "10px",

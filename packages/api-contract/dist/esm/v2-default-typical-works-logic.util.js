@@ -63,6 +63,10 @@ export function buildSourceTypicalWorksCatalogRule(outputArrayPath = V2_SOURCE_T
         worksCatalog: true,
         worksCatalogArchComponent: "Система-источник",
         worksCatalogStream: "fromSourceType",
+        sourceContextPaths: [
+            "detailInfo.dataMart",
+            "detailInfo.dataProcess",
+        ],
         taskCode: "CATALOG_SOURCE_TASKS",
         calcModel: "unified",
         outputArrayPath,

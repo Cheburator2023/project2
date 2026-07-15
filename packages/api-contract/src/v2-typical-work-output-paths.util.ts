@@ -209,10 +209,18 @@ export function remapBoundWorkIdsInUiSchema(
 export function backfillTypicalWorkBoundWorkIdsInUiSchema(
 	uiSchema: Record<string, unknown>,
 	catalog: readonly TypicalWorkCatalogBindingItem[],
+	options?: {
+		replaceExisting?: (boundWorkIds: readonly string[]) => boolean;
+	},
 ): Record<string, unknown> {
 	let next = uiSchema;
 	for (const binding of collectTypicalWorkBlockBindings(uiSchema)) {
-		if (binding.boundWorkIds !== undefined) continue;
+		if (
+			binding.boundWorkIds !== undefined &&
+			!options?.replaceExisting?.(binding.boundWorkIds)
+		) {
+			continue;
+		}
 		const stream = resolveStreamExecutorForTypicalWorkOutputPath(
 			next,
 			binding.outputPath,
