@@ -35,7 +35,7 @@ export function buildDefaultV2SchemaName(
 	username: string | null | undefined,
 	at: Date = new Date(),
 ): string {
-	const dateLabel = format(at, "dd.MM.yyyy");
+	const dateLabel = format(at, "dd.MM.yyyy HH:mm");
 	const trimmedUser = username?.trim();
 	return trimmedUser
 		? `Схема ${trimmedUser} ${dateLabel}`
