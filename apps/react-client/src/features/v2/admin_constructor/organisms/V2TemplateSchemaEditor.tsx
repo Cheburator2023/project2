@@ -43,6 +43,7 @@ import { useBrowserRouterNavigationBlocker } from "../hooks/useBrowserRouterNavi
 import { clampCanvasInsertIndex } from "../schemaEditor/schemaCanvasTree";
 import { SchemaEditorProvider } from "../schemaEditor/SchemaEditorContext";
 import type { SchemaEditorContextValue } from "../schemaEditor/SchemaEditorContext";
+import type { TypicalWorkSaveGateState } from "../schemaEditor/typicalWorkSaveGate";
 import type { SchemaEditorMainTab } from "../schemaEditor/types";
 import { SchemaEditorDockProvider } from "../schemaEditor/SchemaEditorDockContext";
 import {
@@ -271,6 +272,18 @@ export const V2TemplateSchemaEditor = ({
 	}, [activeVersionId, initialVersionId, onVersionIdChange]);
 
 	const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+	const [typicalWorkSaveGate, setTypicalWorkSaveGate] =
+		useState<TypicalWorkSaveGateState | null>(null);
+	const registerTypicalWorkSaveGate = useCallback(
+		(state: TypicalWorkSaveGateState | null) => {
+			setTypicalWorkSaveGate(state);
+		},
+		[],
+	);
+	const typicalWorkSaveBlocked = typicalWorkSaveGate?.blocked ?? false;
+	const typicalWorkSaveBlockedMessage =
+		typicalWorkSaveGate?.message ??
+		"Сохраните типовую работу в панели логики перед сохранением схемы";
 
 	const [jsonSchema, setJsonSchema] = useState<RJSFSchema>(EMPTY_JSON_SCHEMA);
 	const [uiSchema, setUiSchema] = useState<UiSchema>({});
@@ -1023,6 +1036,10 @@ export const V2TemplateSchemaEditor = ({
 
 	const handleSaveInPlace = useCallback(async () => {
 		if (!activeVersion || activeVersion.status !== "draft") return;
+		if (typicalWorkSaveBlocked) {
+			toast.warning(typicalWorkSaveBlockedMessage);
+			return;
+		}
 
 		try {
 			await updateVersion.mutateAsync({
@@ -1060,10 +1077,16 @@ export const V2TemplateSchemaEditor = ({
 		updateVersion,
 		versionSnapshotDto,
 		commitBaselineToCurrent,
+		typicalWorkSaveBlocked,
+		typicalWorkSaveBlockedMessage,
 	]);
 
 	const handleSaveAsNewVersion = useCallback(
 		async (releaseNotes: string) => {
+			if (typicalWorkSaveBlocked) {
+				toast.warning(typicalWorkSaveBlockedMessage);
+				return;
+			}
 			try {
 				const created = await createVersion.mutateAsync({
 					templateId,
@@ -1105,6 +1128,8 @@ export const V2TemplateSchemaEditor = ({
 			refetchVersions,
 			templateId,
 			versionSnapshotDto,
+			typicalWorkSaveBlocked,
+			typicalWorkSaveBlockedMessage,
 		],
 	);
 
@@ -1926,7 +1951,13 @@ export const V2TemplateSchemaEditor = ({
 		}
 
 		onHeaderActionsChange?.({
-			onSave: () => setSaveDialogOpen(true),
+			onSave: () => {
+				if (typicalWorkSaveBlocked) {
+					toast.warning(typicalWorkSaveBlockedMessage);
+					return;
+				}
+				setSaveDialogOpen(true);
+			},
 			onActivateAsCurrent: () => void activateAsCurrentRef.current(),
 			savePending,
 			activatePending:
@@ -1948,6 +1979,8 @@ export const V2TemplateSchemaEditor = ({
 		openLogicWorkspace,
 		savePending,
 		updateVersion.isPending,
+		typicalWorkSaveBlocked,
+		typicalWorkSaveBlockedMessage,
 	]);
 
 	const updateRulePatch = useCallback(
@@ -2129,6 +2162,10 @@ export const V2TemplateSchemaEditor = ({
 			canBindDictionary,
 			currentDictionaryCode,
 			dictionaryBindingMissing,
+			typicalWorkSaveDisplay: typicalWorkSaveGate,
+			typicalWorkSaveBlocked,
+			typicalWorkSaveBlockedMessage,
+			registerTypicalWorkSaveGate,
 		}),
 		[
 			templateId,
@@ -2221,6 +2258,9 @@ export const V2TemplateSchemaEditor = ({
 			handleDepsBlur,
 			calculationLoading,
 			calculationError,
+			typicalWorkSaveBlocked,
+			typicalWorkSaveBlockedMessage,
+			registerTypicalWorkSaveGate,
 		],
 	);
 
@@ -2328,6 +2368,8 @@ export const V2TemplateSchemaEditor = ({
 					versionStatus={activeVersion.status}
 					isSystemCurrent={isSystemCurrent}
 					savePending={savePending}
+					typicalWorkSaveBlocked={typicalWorkSaveBlocked}
+					typicalWorkSaveBlockedMessage={typicalWorkSaveBlockedMessage}
 					onSaveAsNewVersion={handleSaveAsNewVersion}
 					onSaveInPlace={handleSaveInPlace}
 				/>

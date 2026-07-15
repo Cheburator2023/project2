@@ -769,7 +769,11 @@ export class V2TypicalWorkWriteService {
 				// не умеет без потерь представить все арифметические выражения
 				// (например, вычитание), поэтому хранить только её нельзя.
 				formula: formula.tokens,
-				formulaText: formula.text || terms.text || tokensToText(formula.tokens),
+				formulaText:
+					tokensToText(formula.tokens) ||
+					formula.text?.trim() ||
+					terms.text ||
+					null,
 				roundingMode: rounding.mode,
 				roundingStep:
 					rounding.mode === "NONE" ? null : String(rounding.step ?? 0.1),

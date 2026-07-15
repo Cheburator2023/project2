@@ -164,6 +164,14 @@ export type SchemaEditorContextValue = {
 	canBindDictionary: boolean;
 	currentDictionaryCode: string;
 	dictionaryBindingMissing: boolean;
+
+	/** Состояние автосохранения открытой типовой работы. */
+	typicalWorkSaveDisplay: import("./typicalWorkSaveGate").TypicalWorkSaveGateState | null;
+	typicalWorkSaveBlocked: boolean;
+	typicalWorkSaveBlockedMessage: string | null;
+	registerTypicalWorkSaveGate: (
+		state: import("./typicalWorkSaveGate").TypicalWorkSaveGateState | null,
+	) => void;
 };
 
 const SchemaEditorContext = createContext<SchemaEditorContextValue | null>(

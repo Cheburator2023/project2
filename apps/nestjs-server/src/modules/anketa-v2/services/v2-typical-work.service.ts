@@ -1043,6 +1043,49 @@ export class V2TypicalWorkService {
 			calculationLogic: null,
 		};
 	}
+
+	/** Копирует формулы типовых работ с родительской версии шаблона на новую. */
+	async copyVersionConfigsFromParent(
+		templateId: string,
+		parentVersionId: string,
+		newVersionId: string,
+	): Promise<number> {
+		const works = await this.workRepository.find({ where: { templateId } });
+		const workIds = works.map((work) => work.id);
+		if (workIds.length === 0) return 0;
+
+		const parentConfigs = await this.versionConfigRepository.find({
+			where: { templateVersionId: parentVersionId, workId: In(workIds) },
+		});
+
+		let copied = 0;
+		for (const parent of parentConfigs) {
+			const existing = await this.versionConfigRepository.findOne({
+				where: {
+					templateVersionId: newVersionId,
+					workId: parent.workId,
+					streamExecutor: parent.streamExecutor,
+				},
+			});
+			if (existing) continue;
+
+			await this.versionConfigRepository.save(
+				this.versionConfigRepository.create({
+					workId: parent.workId,
+					templateVersionId: newVersionId,
+					streamExecutor: parent.streamExecutor,
+					formula: parent.formula,
+					formulaText: parent.formulaText,
+					roundingMode: parent.roundingMode,
+					roundingStep: parent.roundingStep,
+					calculationLogic: parent.calculationLogic,
+				}),
+			);
+			copied += 1;
+		}
+
+		return copied;
+	}
 }
 
 function groupBy<T>(items: T[], keyFn: (item: T) => string): Map<string, T[]> {

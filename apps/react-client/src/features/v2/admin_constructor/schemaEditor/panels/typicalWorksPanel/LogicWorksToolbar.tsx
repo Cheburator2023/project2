@@ -8,6 +8,7 @@ import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
 import Typography from "@mui/material/Typography";
 import { useRef, useState } from "react";
+import { Flex } from "@react-client/common/primitives/Flex";
 import {
 	ALL_LOGIC_WORKS_SCOPE,
 	LOGIC_EXECUTOR_STREAMS,
@@ -19,6 +20,7 @@ import {
 import { useSchemaEditor } from "../../SchemaEditorContext";
 import { isExecutorStreamPresentInSchema } from "@smart-anketa/api-contract";
 import { ExecutorStreamMenuRow } from "./ExecutorStreamPresenceLabel";
+import { TypicalWorkSaveStatusBar } from "./TypicalWorkSaveStatusBar";
 
 type LogicWorksToolbarProps = {
 	scope: LogicWorksScope;
@@ -29,7 +31,7 @@ export function LogicWorksToolbar({
 	scope,
 	onScopeChange,
 }: LogicWorksToolbarProps) {
-	const { uiSchema } = useSchemaEditor();
+	const { uiSchema, typicalWorkSaveDisplay } = useSchemaEditor();
 	const anchorRef = useRef<HTMLButtonElement>(null);
 	const [pickerOpen, setPickerOpen] = useState(false);
 	const scopePresent =
@@ -189,6 +191,30 @@ export function LogicWorksToolbar({
 			</Popper>
 
 			<Box sx={{ flexGrow: 1 }} />
+
+			{typicalWorkSaveDisplay ? (
+				<Flex
+					alignItems="center"
+					gap={8}
+					flexShrink={0}
+					px={12}
+					py={6}
+					sx={{
+						border: "1px solid #e6e8ee",
+						borderRadius: "9px",
+						bgcolor: "#fafbfc",
+						maxWidth: 360,
+					}}
+				>
+					<TypicalWorkSaveStatusBar
+						compact
+						status={typicalWorkSaveDisplay.status}
+						workName={typicalWorkSaveDisplay.workName}
+						errorMessage={typicalWorkSaveDisplay.errorMessage}
+						onRetry={typicalWorkSaveDisplay.onRetry}
+					/>
+				</Flex>
+			) : null}
 
 			{/* <Button
 				onClick={() => navigate(routes.adminV2TypicalWorks.rootPath)}

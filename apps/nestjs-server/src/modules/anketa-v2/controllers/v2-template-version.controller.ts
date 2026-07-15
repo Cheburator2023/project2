@@ -15,6 +15,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { V2TemplateVersionService } from "../services/v2-template-version.service";
 import { V2TemplateService } from "../services/v2-template.service";
+import { V2TypicalWorkService } from "../services/v2-typical-work.service";
 import { V2AuditService } from "../services/v2-audit.service";
 import {
 	V2TemplateVersionResponseDto,
@@ -35,6 +36,7 @@ export class V2TemplateVersionController {
 	constructor(
 		private readonly versionService: V2TemplateVersionService,
 		private readonly templateService: V2TemplateService,
+		private readonly typicalWorkService: V2TypicalWorkService,
 		private readonly auditService: V2AuditService,
 	) {}
 
@@ -67,6 +69,13 @@ export class V2TemplateVersionController {
 		@CurrentUser() user: { id: string } | null,
 	): Promise<V2TemplateVersionResponseDto> {
 		const version = await this.versionService.create(templateId, dto, user?.id ?? null);
+		if (dto.parentVersionId) {
+			await this.typicalWorkService.copyVersionConfigsFromParent(
+				templateId,
+				dto.parentVersionId,
+				version.id,
+			);
+		}
 		await this.auditService.log(
 			templateId,
 			"version.created",

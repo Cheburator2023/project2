@@ -33,7 +33,6 @@ import {
 	tokensToText,
 	computeFormulaBadgeFromTokens,
 	resolveActiveNormOnDate,
-	resolveVersionConfigTokenFormula,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
@@ -64,6 +63,7 @@ import {
 } from "../../../utils/coerceV2TemplateSnapshot";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@react-client/common/toasts";
+import { Flex } from "@react-client/common/primitives/Flex";
 import { TypicalWorkFormulaLockedDialog } from "./TypicalWorkFormulaLockedDialog";
 import { RemoveLaborParamDialog } from "./RemoveLaborParamDialog";
 import { TypicalWorkNormsSection } from "./TypicalWorkNormsSection";
@@ -98,8 +98,8 @@ import {
 import {
 	cardToPatchDto,
 	useDebouncedTypicalWorkSave,
-	type SaveStatus,
 } from "./useDebouncedTypicalWorkSave";
+import { TypicalWorkSaveStatusBar } from "./TypicalWorkSaveStatusBar";
 import { reconcileStreamNormPeriods } from "./typicalWorkNormPeriods";
 import { TypicalWorkValueMatchingInfo } from "./typicalWorkValueMatchingHelp";
 
@@ -115,21 +115,6 @@ type TypicalWorkEditableCardProps = {
 	onStreamChange: (stream: string) => void;
 	onVersionChange: (versionId: string) => void;
 };
-
-function saveStatusLabel(status: SaveStatus): string {
-	switch (status) {
-		case "saving":
-			return "Сохранение…";
-		case "saved":
-			return "Сохранено";
-		case "error":
-			return "Ошибка сохранения";
-		case "dirty":
-			return "Есть несохранённые изменения…";
-		default:
-			return "";
-	}
-}
 
 function formatDate(value: string | null): string {
 	if (!value) return "";
@@ -178,6 +163,7 @@ export function TypicalWorkEditableCard({
 		triggerParamPickId,
 		clearTriggerParamPick,
 		requestCalculationRefresh,
+		registerTypicalWorkSaveGate,
 	} = useSchemaEditor();
 	const { data: assignmentsList } = useV2TypicalWorkAssignments({
 		templateVersionId,
@@ -211,6 +197,39 @@ export function TypicalWorkEditableCard({
 		onSaved: requestCalculationRefresh,
 	});
 
+	useEffect(() => {
+		if (!draft) {
+			registerTypicalWorkSaveGate(null);
+			return;
+		}
+		const blocked =
+			status === "dirty" ||
+			status === "saving" ||
+			(status === "error" && hasPending());
+		registerTypicalWorkSaveGate({
+			blocked,
+			message: blocked
+				? status === "saving"
+					? "Сохраняется типовая работа…"
+					: status === "error"
+						? "Исправьте ошибку сохранения типовой работы перед сохранением схемы"
+						: "Сохраните типовую работу в панели логики перед сохранением схемы"
+				: undefined,
+			status,
+			workName: draft.name,
+			errorMessage: status === "error" ? errorMessage : null,
+			onRetry: status === "error" ? retry : undefined,
+		});
+		return () => registerTypicalWorkSaveGate(null);
+	}, [
+		draft,
+		errorMessage,
+		hasPending,
+		registerTypicalWorkSaveGate,
+		retry,
+		status,
+	]);
+
 	const lastSyncedCardKeyRef = useRef<string | null>(null);
 	const defaultedArchKeyRef = useRef<string | null>(null);
 	const saveInProgressRef = useRef(false);
@@ -225,10 +244,10 @@ export function TypicalWorkEditableCard({
 		if (!isNewCard && (hasPending() || saveInProgressRef.current)) return;
 		lastSyncedCardKeyRef.current = cardKey;
 		if (isNewCard) defaultedArchKeyRef.current = null;
-		const formula = resolveVersionConfigTokenFormula(
-			card.formulaTerms,
-			card.formula.text,
-		);
+		const formula = {
+			tokens: card.formula.tokens,
+			text: card.formula.text?.trim() || tokensToText(card.formula.tokens),
+		};
 		setDraft({
 			...structuredClone(card),
 			formula,
@@ -356,7 +375,10 @@ export function TypicalWorkEditableCard({
 	);
 
 	const commitDraft = (next: V2TypicalWorkCardDto) => {
-		const formula = next.formula;
+		const formula = {
+			tokens: next.formula.tokens,
+			text: tokensToText(next.formula.tokens),
+		};
 		const formulaTerms = syncTermsFromTokenFormula(formula);
 		const nextTrigger = analyzeTriggerRules(
 			next.rules,
@@ -539,15 +561,22 @@ export function TypicalWorkEditableCard({
 	const otherStreams = availableStreams.filter(
 		(s) => !recommended.includes(streamDisplayLabel(s)),
 	);
-	const saveDot =
-		status === "error"
-			? "#c62828"
-			: status === "dirty" || status === "saving"
-				? "#b5791f"
-				: "#1f8a4d";
 
 	return (
-		<Box sx={{ flex: 1, overflow: "auto", px: 2.75, py: 2.25, minWidth: 0 }}>
+		<Flex
+			flexDirection="column"
+			flex={1}
+			minHeight={0}
+			minWidth={0}
+			height="100%"
+		>
+			<TypicalWorkSaveStatusBar
+				status={status}
+				workName={draft.name}
+				errorMessage={errorMessage}
+				onRetry={retry}
+			/>
+			<Box sx={{ flex: 1, overflow: "auto", px: 2.75, py: 2.25, minWidth: 0 }}>
 			<TypicalWorkFormulaLockedDialog
 				open={formulaLockedOpen}
 				pending={createVersion.isPending}
@@ -673,30 +702,6 @@ export function TypicalWorkEditableCard({
 								))}
 							</Select>
 						</FormControl>
-						<Box
-							sx={{
-								display: "inline-flex",
-								alignItems: "center",
-								gap: 0.75,
-								fontSize: 11.5,
-								color: status === "error" ? "#c62828" : "#1f8a4d",
-							}}
-						>
-							<Box
-								sx={{
-									width: 7,
-									height: 7,
-									borderRadius: "50%",
-									bgcolor: saveDot,
-								}}
-							/>
-							{saveStatusLabel(status)}
-						</Box>
-						{status === "error" ? (
-							<Button size="small" onClick={retry}>
-								Повторить
-							</Button>
-						) : null}
 						{draft.assignmentStatus ? (
 							<Box
 								component="span"
@@ -1421,6 +1426,7 @@ export function TypicalWorkEditableCard({
 					</Paper>
 				</Box>
 			)}
-		</Box>
+			</Box>
+		</Flex>
 	);
 }
