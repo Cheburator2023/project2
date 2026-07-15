@@ -3,6 +3,9 @@ import {
 	SCHEMA_EDITOR_DOCK_LAYOUT_STORAGE_KEY,
 	buildDefaultDockLayout,
 	clearSchemaEditorDockLayoutStorage,
+	ensureAllMissingDockPanels,
+	ensureDockPanel,
+	getMissingDockPanelIds,
 	readSchemaEditorDockLayout,
 	restoreSchemaEditorDockLayout,
 	writeSchemaEditorDockLayout,
@@ -84,6 +87,116 @@ describe("schemaEditorDockLayout.util", () => {
 			"designer",
 			"json",
 			"logic",
+			"issues",
+			"preview",
+			"relations",
+			"calculation",
+		]);
+	});
+
+	it("ensureDockPanel adds a missing panel next to the main panel", () => {
+		const added: Array<{ id: string; inactive?: boolean; position?: unknown }> =
+			[];
+		const api = {
+			getPanel: vi.fn((id: string) =>
+				id === "designer" ? { id: "designer" } : undefined,
+			),
+			addPanel: vi.fn((opts: { id: string; inactive?: boolean; position?: unknown }) => {
+				added.push(opts);
+				return { id: opts.id };
+			}),
+			panels: [{ id: "designer" }],
+		};
+
+		const panel = ensureDockPanel(api as never, "issues", { active: false });
+
+		expect(panel?.id).toBe("issues");
+		expect(added).toEqual([
+			expect.objectContaining({
+				id: "issues",
+				inactive: true,
+				position: { referencePanel: "designer" },
+			}),
+		]);
+	});
+
+	it("ensureDockPanel adds the main panel to an empty dock without reference", () => {
+		const api = {
+			getPanel: vi.fn(() => undefined),
+			addPanel: vi.fn((opts: { id: string }) => ({ id: opts.id })),
+			panels: [],
+		};
+
+		const panel = ensureDockPanel(api as never, "designer");
+
+		expect(panel?.id).toBe("designer");
+		expect(api.addPanel).toHaveBeenCalledWith(
+			expect.not.objectContaining({ position: expect.anything() }),
+		);
+	});
+
+	it("ensureDockPanel skips non-main panels while the dock is still empty", () => {
+		const api = {
+			getPanel: vi.fn(() => undefined),
+			addPanel: vi.fn(),
+			panels: [],
+		};
+
+		expect(ensureDockPanel(api as never, "issues")).toBeUndefined();
+		expect(api.addPanel).not.toHaveBeenCalled();
+	});
+
+	it("ensureDockPanel uses the first open panel when designer is absent", () => {
+		const api = {
+			getPanel: vi.fn((id: string) =>
+				id === "json" ? { id: "json" } : undefined,
+			),
+			addPanel: vi.fn((opts: { id: string; position?: { referencePanel: string } }) => ({
+				id: opts.id,
+			})),
+			panels: [{ id: "json" }],
+		};
+
+		ensureDockPanel(api as never, "issues");
+
+		expect(api.addPanel).toHaveBeenCalledWith(
+			expect.objectContaining({
+				id: "issues",
+				position: { referencePanel: "json" },
+			}),
+		);
+	});
+
+	it("ensureAllMissingDockPanels adds every workspace panel that is not open", () => {
+		const api = {
+			panels: [{ id: "designer" }, { id: "json" }],
+			getPanel: vi.fn((id: string) =>
+				["designer", "json"].includes(id) ? { id } : undefined,
+			),
+			addPanel: vi.fn((opts: { id: string }) => ({ id: opts.id })),
+		};
+
+		const added = ensureAllMissingDockPanels(api as never);
+
+		expect(added).toEqual([
+			"logic",
+			"issues",
+			"preview",
+			"relations",
+			"calculation",
+		]);
+		expect(api.addPanel).toHaveBeenCalledTimes(5);
+	});
+
+	it("getMissingDockPanelIds returns ids absent from the current dock", () => {
+		const api = {
+			panels: [{ id: "designer" }],
+		};
+
+		expect(getMissingDockPanelIds(api as never)).toEqual([
+			"json",
+			"logic",
+			"issues",
 			"preview",
 			"relations",
 			"calculation",

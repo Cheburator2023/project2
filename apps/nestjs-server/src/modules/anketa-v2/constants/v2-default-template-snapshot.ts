@@ -21,7 +21,8 @@ import {
  *
  * Factory bundle (committed snapshots, без CSV-генераторов):
  * - `v2-default-anketa.snapshot.json` — jsonSchema, uiSchema, logic, dictionariesSnapshot
- * - `v2-factory-typical-works.snapshot.json` — типовые работы и методологические параметры
+ * - `v2-factory-typical-works.snapshot.json` — методологические параметры и CSV-каталог триггеров/трудоёмкости
+ * - `v2-factory-template-typical-works.registry.json` — 73 типовые работы эталонной схемы (prod)
  *
  * Обновление схемы: `npm run sync:factory-snapshot -- /path/to/export.json` (из apps/nestjs-server).
  */

@@ -21,6 +21,10 @@ export declare function readTypicalWorkBoundWorkIdsAtOutputPath(uiSchema: unknow
 /** Все блоки typicalWork с путями вывода и привязками работ. */
 export declare function collectTypicalWorkBlockBindings(uiSchema: unknown): TypicalWorkBlockBinding[];
 /**
+ * Заменяет id работ в boundWorkIds после seed с переназначением uuid.
+ */
+export declare function remapBoundWorkIdsInUiSchema(uiSchema: Record<string, unknown>, workIdMap: ReadonlyMap<string, string>): Record<string, unknown>;
+/**
  * Заполняет boundWorkIds на legacy-блоках typicalWork по назначениям работ на стрим блока.
  * Вызывается после сида каталога в шаблон (id работ известны только после seed).
  */

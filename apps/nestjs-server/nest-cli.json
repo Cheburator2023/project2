@@ -8,6 +8,10 @@
 			{
 				"include": "modules/anketa-v2/constants/*.snapshot.json",
 				"watchAssets": true
+			},
+			{
+				"include": "modules/anketa-v2/constants/*.registry.json",
+				"watchAssets": true
 			}
 		]
 	}

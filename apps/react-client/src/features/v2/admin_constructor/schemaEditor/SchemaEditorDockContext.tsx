@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { DockviewApi, DockviewIDisposable } from "dockview-react";
 import type { SchemaEditorMainTab } from "./types";
+import { ensureDockPanel } from "./schemaEditorDockLayout.util";
 import { WORKSPACE_PANEL_IDS } from "./workspacePanels";
 
 type SchemaEditorDockContextValue = {
@@ -15,6 +16,7 @@ type SchemaEditorDockContextValue = {
 	registerResetDockLayout: (reset: (() => void) | null) => void;
 	resetDockLayout: () => void;
 	activateMainTab: (tab: SchemaEditorMainTab) => void;
+	getOpenPanelIds: () => SchemaEditorMainTab[];
 	updatePanelTitle: (panelId: string, title: string) => void;
 };
 
@@ -82,12 +84,25 @@ export function SchemaEditorDockProvider({
 	}, [endDockDrag]);
 
 	const activateMainTab = useCallback((tab: SchemaEditorMainTab) => {
-		const panel = apiRef.current?.getPanel(tab);
+		const api = apiRef.current;
+		if (!api) return;
+
+		const panel = ensureDockPanel(api, tab) ?? api.getPanel(tab);
 		if (!panel) return;
+
 		syncingFromStateRef.current = true;
 		panel.api.setActive();
 		onMainTabChangeRef.current(tab);
 		syncingFromStateRef.current = false;
+	}, []);
+
+	const getOpenPanelIds = useCallback((): SchemaEditorMainTab[] => {
+		const api = apiRef.current;
+		if (!api) return [];
+
+		return api.panels
+			.map((panel) => panel.id)
+			.filter((id): id is SchemaEditorMainTab => isWorkspacePanelId(id));
 	}, []);
 
 	const registerResetDockLayout = useCallback((reset: (() => void) | null) => {
@@ -179,6 +194,7 @@ export function SchemaEditorDockProvider({
 		registerResetDockLayout,
 		resetDockLayout,
 		activateMainTab,
+		getOpenPanelIds,
 		updatePanelTitle,
 	};
 

@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { IDockviewHeaderActionsProps } from "dockview-react";
 
 import { useSchemaEditorDock } from "./SchemaEditorDockContext";
+import { SchemaEditorDockPanelMenu } from "./SchemaEditorDockPanelMenu";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "@react-client/features/v2/admin_constructor/testIds";
 
 const POPOUT_URL = "/popout.html";
@@ -162,6 +163,7 @@ export function SchemaEditorDockHeaderRightActions(
 			>
 				<OpenInNewIcon sx={{ fontSize: 18 }} />
 			</HeaderActionButton>
+			<SchemaEditorDockPanelMenu />
 			<HeaderActionButton
 				title="Сбросить расположение панелей"
 				ariaLabel="Сбросить расположение панелей"

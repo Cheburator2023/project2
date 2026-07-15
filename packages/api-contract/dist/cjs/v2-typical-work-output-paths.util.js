@@ -4,6 +4,7 @@ exports.LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS = exports.TYPICAL_WORK_BOUND_W
 exports.collectGeneratedTypicalWorkArrayPaths = collectGeneratedTypicalWorkArrayPaths;
 exports.readTypicalWorkBoundWorkIdsAtOutputPath = readTypicalWorkBoundWorkIdsAtOutputPath;
 exports.collectTypicalWorkBlockBindings = collectTypicalWorkBlockBindings;
+exports.remapBoundWorkIdsInUiSchema = remapBoundWorkIdsInUiSchema;
 exports.backfillTypicalWorkBoundWorkIdsInUiSchema = backfillTypicalWorkBoundWorkIdsInUiSchema;
 exports.disableTypicalWorkCatalogBindingsInUiSchema = disableTypicalWorkCatalogBindingsInUiSchema;
 exports.resolveSourceTypicalWorksOutputPath = resolveSourceTypicalWorksOutputPath;
@@ -122,6 +123,24 @@ function patchBoundWorkIdsAtOutputPath(uiSchema, outputPath, boundWorkIds) {
         };
     };
     return patchLeaf({ ...uiSchema }, 0);
+}
+/**
+ * Заменяет id работ в boundWorkIds после seed с переназначением uuid.
+ */
+function remapBoundWorkIdsInUiSchema(uiSchema, workIdMap) {
+    if (workIdMap.size === 0)
+        return uiSchema;
+    let next = uiSchema;
+    for (const binding of collectTypicalWorkBlockBindings(uiSchema)) {
+        if (!binding.boundWorkIds?.length)
+            continue;
+        const remapped = binding.boundWorkIds.map((id) => workIdMap.get(id) ?? id);
+        if (remapped.every((id, index) => id === binding.boundWorkIds?.[index])) {
+            continue;
+        }
+        next = patchBoundWorkIdsAtOutputPath(next, binding.outputPath, remapped);
+    }
+    return next;
 }
 /**
  * Заполняет boundWorkIds на legacy-блоках typicalWork по назначениям работ на стрим блока.

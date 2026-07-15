@@ -53,6 +53,24 @@ export function buildCatalogWorkKey(component: string, name: string): string {
 	return `${normalizeArchComponentType(component)}|${name.trim()}`;
 }
 
+/** «Этап 217. Составление ТР» → «Составление ТР» для сопоставления с CSV-каталогом. */
+export function stripWorkStagePrefix(name: string): string {
+	return name.replace(/^Этап\s+\d+\.\s*/u, "").trim();
+}
+
+export function findCatalogRowsForRegistryWork(
+	entry: Pick<V2FactoryTypicalWork, "name"> & {
+		archComponentType: string;
+	},
+	catalogGroups: Map<string, V2FactoryTypicalWork[]>,
+): V2FactoryTypicalWork[] {
+	const key = buildCatalogWorkKey(
+		entry.archComponentType,
+		stripWorkStagePrefix(entry.name),
+	);
+	return catalogGroups.get(key) ?? [];
+}
+
 export function groupCatalogWorks(): Map<string, V2FactoryTypicalWork[]> {
 	const groups = new Map<string, V2FactoryTypicalWork[]>();
 	for (const row of V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks) {

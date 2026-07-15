@@ -9,6 +9,7 @@
 		"build": "nest build",
 		"build:doc-catalog": "echo 'DEPRECATED: edit v2-factory-typical-works.snapshot.json directly' && exit 1",
 		"sync:factory-snapshot": "node scripts/sync-factory-snapshot.mjs",
+		"sync:factory-template-works-registry": "node scripts/sync-factory-template-works-registry.mjs",
 		"repair:typical-works-bindings": "node scripts/repair-typical-works-bindings.mjs",
 		"start": "NODE_ENV=production tsx dist/main",
 		"start:debug": "nest start --debug --watch",

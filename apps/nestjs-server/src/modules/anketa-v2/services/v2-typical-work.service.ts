@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { IsNull, Not, In, Repository } from "typeorm";
+import { randomUUID } from "node:crypto";
 import type {
 	V2TypicalWorkCardDto,
 	V2TypicalWorkLaborCoefficientDto,
@@ -29,6 +30,7 @@ import {
 	needsCalculationLogicBackfill,
 	parseStoredTypicalWorkCalculationLogic,
 	backfillTypicalWorkBoundWorkIdsInUiSchema,
+	remapBoundWorkIdsInUiSchema,
 	resolveActiveNormOnDate,
 	compileStoredTypicalWorkResultLogic,
 	tokensToText,
@@ -50,12 +52,15 @@ import { V2TypicalWorkVersionConfigEntity } from "../entities/v2-typical-work-ve
 import {
 	canonicalizeWorkStream,
 	DEFAULT_NORM_VALID_FROM,
+	findCatalogRowsForRegistryWork,
 	groupCatalogWorks,
 	inferTriggerValueLabel,
 	normalizeArchComponentType,
 	resolveCatalogWorkComponent,
 	slugParamCode,
 } from "../utils/v2-typical-work-catalog.util";
+import { V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY } from "../constants/v2-factory-template-typical-works-registry";
+import type { V2FactoryTypicalWork } from "../constants/v2-factory-typical-works-catalog";
 import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
 
 function decimalToNumber(value: string | number | null | undefined): number {
@@ -257,7 +262,8 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 
 	/**
 	 * При создании схемы из заводского снимка — копирует типовые работы
-	 * из `v2-factory-typical-works.snapshot.json` в реестр схемы.
+	 * из `v2-factory-template-typical-works.registry.json` (prod эталон)
+	 * с триггерами/трудоёмкостью из CSV-каталога по базовому имени работы.
 	 */
 	async seedTemplateTypicalWorksFromFactorySnapshot(
 		templateId: string,
@@ -285,116 +291,40 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		await this.paramCatalogService.ensureSeededFromFactorySnapshot();
 		const paramCatalog = await this.paramCatalogService.listParameters();
 		const paramsByName = new Map(paramCatalog.items.map((p) => [p.name, p]));
-		const groups = groupCatalogWorks();
+		const catalogGroups = groupCatalogWorks();
+		const workIdMap = new Map<string, string>();
 		let created = 0;
 
-		for (const [, rows] of groups) {
-			const first = rows[0];
-			if (!first) continue;
+		for (const entry of V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works) {
+			let workId = entry.id.trim();
+			const existingById = await this.workRepository.findOne({
+				where: { id: workId },
+			});
+			if (existingById && existingById.templateId !== trimmedTemplateId) {
+				const nextId = randomUUID();
+				workIdMap.set(entry.id, nextId);
+				workId = nextId;
+			}
 
 			const work = await this.workRepository.save(
 				this.workRepository.create({
-					name: first.name.trim(),
+					id: workId,
+					name: entry.name.trim(),
 					archComponentType: normalizeArchComponentType(
-						resolveCatalogWorkComponent(first),
+						entry.archComponentType,
 					),
-					workType: first.workType?.trim() || null,
+					workType: entry.workType?.trim() || null,
 					catalogKey: null,
 					templateId: trimmedTemplateId,
 				}),
 			);
 
-			const seenNormKeys = new Set<string>();
-			const seenRuleKeys = new Set<string>();
-			const seenLaborKeys = new Set<string>();
-			const streams = new Set<string>();
-
-			for (const row of rows) {
-				const originalStream = row.stream.trim();
-				const stream = canonicalizeWorkStream(originalStream);
-				streams.add(stream);
-				await this.ensureWorkStreamAssignment(work.id, stream);
-
-				if (row.norm !== null) {
-					const normKey = `${stream}|${row.norm}`;
-					if (!seenNormKeys.has(normKey)) {
-						seenNormKeys.add(normKey);
-						await this.normRepository.save(
-							this.normRepository.create({
-								workId: work.id,
-								streamExecutor: stream,
-								normValue: String(row.norm),
-								validFrom: DEFAULT_NORM_VALID_FROM,
-								validTo: null,
-							}),
-						);
-					}
-				}
-
-				for (const paramName of row.triggerParams) {
-					const trimmed = paramName.trim();
-					if (!trimmed) continue;
-					const paramCode = slugParamCode(trimmed);
-					const ruleKey = `${stream}|${paramCode}`;
-					if (seenRuleKeys.has(ruleKey)) continue;
-					seenRuleKeys.add(ruleKey);
-
-					const valueLabel = inferTriggerValueLabel(trimmed, originalStream);
-					await this.ruleRepository.save(
-						this.ruleRepository.create({
-							workId: work.id,
-							streamExecutor: stream,
-							paramCode,
-							paramName: trimmed,
-							operator: "=",
-							valueCode: valueLabel ? slugParamCode(valueLabel) : null,
-							valueLabel,
-						}),
-					);
-				}
-
-				for (const paramName of row.laborParams) {
-					const trimmed = paramName.trim();
-					if (!trimmed) continue;
-					const paramCode = slugParamCode(trimmed);
-					const dictValues = paramsByName.get(trimmed)?.values ?? [];
-
-					if (dictValues.length === 0) {
-						const laborKey = `${stream}|${paramCode}|`;
-						if (seenLaborKeys.has(laborKey)) continue;
-						seenLaborKeys.add(laborKey);
-						await this.laborRepository.save(
-							this.laborRepository.create({
-								workId: work.id,
-								streamExecutor: stream,
-								paramCode,
-								paramName: trimmed,
-								valueCode: null,
-								valueLabel: null,
-								coefficient: "1",
-							}),
-						);
-						continue;
-					}
-
-					for (const value of dictValues) {
-						const laborKey = `${stream}|${paramCode}|${value.label}`;
-						if (seenLaborKeys.has(laborKey)) continue;
-						seenLaborKeys.add(laborKey);
-						await this.laborRepository.save(
-							this.laborRepository.create({
-								workId: work.id,
-								streamExecutor: stream,
-								paramCode,
-								paramName: trimmed,
-								valueCode: slugParamCode(value.label),
-								valueLabel: value.label,
-								coefficient: String(value.coefficient ?? 1),
-							}),
-						);
-					}
-				}
-			}
+			const streams = await this.seedRegistryWorkNormsAndCatalog(
+				work.id,
+				entry,
+				findCatalogRowsForRegistryWork(entry, catalogGroups),
+				paramsByName,
+			);
 
 			for (const stream of streams) {
 				await this.ensureWorkVersionConfig(work.id, trimmedVersionId, stream);
@@ -405,8 +335,12 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 
 		if (created > 0) {
 			this.logger.log(
-				`Seeded ${created} template typical works for template ${trimmedTemplateId}`,
+				`Seeded ${created} template typical works for template ${trimmedTemplateId} from factory registry`,
 			);
+		}
+
+		if (workIdMap.size > 0) {
+			await this.remapWorkIdsInVersionUiSchema(trimmedVersionId, workIdMap);
 		}
 
 		await this.backfillTypicalWorkBindingsInVersionUiSchema(
@@ -512,6 +446,157 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				calculationLogic: compiled,
 			}),
 		);
+	}
+
+	private async remapWorkIdsInVersionUiSchema(
+		templateVersionId: string,
+		workIdMap: Map<string, string>,
+	): Promise<void> {
+		if (workIdMap.size === 0) return;
+
+		const version = await this.templateVersionRepository.findOne({
+			where: { id: templateVersionId },
+		});
+		if (!version?.uiSchema || typeof version.uiSchema !== "object") return;
+
+		const uiSchema = version.uiSchema as Record<string, unknown>;
+		const next = remapBoundWorkIdsInUiSchema(uiSchema, workIdMap);
+		if (JSON.stringify(next) === JSON.stringify(uiSchema)) return;
+
+		version.uiSchema = next;
+		await this.templateVersionRepository.save(version);
+	}
+
+	private async seedRegistryWorkNormsAndCatalog(
+		workId: string,
+		entry: {
+			streams: string[];
+			normsByStream: Record<string, number | null>;
+		},
+		catalogRows: V2FactoryTypicalWork[],
+		paramsByName: Map<
+			string,
+			{ values?: Array<{ label: string; coefficient?: number | null }> }
+		>,
+	): Promise<Set<string>> {
+		const seenNormKeys = new Set<string>();
+		const seenRuleKeys = new Set<string>();
+		const seenLaborKeys = new Set<string>();
+		const streams = new Set<string>();
+
+		for (const rawStream of entry.streams) {
+			const stream = canonicalizeWorkStream(rawStream.trim());
+			if (!stream) continue;
+			streams.add(stream);
+			await this.ensureWorkStreamAssignment(workId, stream);
+
+			const registryNorm =
+				entry.normsByStream[rawStream] ?? entry.normsByStream[stream];
+			if (registryNorm != null) {
+				const normKey = `${stream}|${registryNorm}`;
+				if (!seenNormKeys.has(normKey)) {
+					seenNormKeys.add(normKey);
+					await this.normRepository.save(
+						this.normRepository.create({
+							workId,
+							streamExecutor: stream,
+							normValue: String(registryNorm),
+							validFrom: DEFAULT_NORM_VALID_FROM,
+							validTo: null,
+						}),
+					);
+				}
+			}
+		}
+
+		for (const row of catalogRows) {
+			const originalStream = row.stream.trim();
+			const stream = canonicalizeWorkStream(originalStream);
+			streams.add(stream);
+			await this.ensureWorkStreamAssignment(workId, stream);
+
+			if (row.norm !== null) {
+				const normKey = `${stream}|${row.norm}`;
+				if (!seenNormKeys.has(normKey)) {
+					seenNormKeys.add(normKey);
+					await this.normRepository.save(
+						this.normRepository.create({
+							workId,
+							streamExecutor: stream,
+							normValue: String(row.norm),
+							validFrom: DEFAULT_NORM_VALID_FROM,
+							validTo: null,
+						}),
+					);
+				}
+			}
+
+			for (const paramName of row.triggerParams) {
+				const trimmed = paramName.trim();
+				if (!trimmed) continue;
+				const paramCode = slugParamCode(trimmed);
+				const ruleKey = `${stream}|${paramCode}`;
+				if (seenRuleKeys.has(ruleKey)) continue;
+				seenRuleKeys.add(ruleKey);
+
+				const valueLabel = inferTriggerValueLabel(trimmed, originalStream);
+				await this.ruleRepository.save(
+					this.ruleRepository.create({
+						workId,
+						streamExecutor: stream,
+						paramCode,
+						paramName: trimmed,
+						operator: "=",
+						valueCode: valueLabel ? slugParamCode(valueLabel) : null,
+						valueLabel,
+					}),
+				);
+			}
+
+			for (const paramName of row.laborParams) {
+				const trimmed = paramName.trim();
+				if (!trimmed) continue;
+				const paramCode = slugParamCode(trimmed);
+				const dictValues = paramsByName.get(trimmed)?.values ?? [];
+
+				if (dictValues.length === 0) {
+					const laborKey = `${stream}|${paramCode}|`;
+					if (seenLaborKeys.has(laborKey)) continue;
+					seenLaborKeys.add(laborKey);
+					await this.laborRepository.save(
+						this.laborRepository.create({
+							workId,
+							streamExecutor: stream,
+							paramCode,
+							paramName: trimmed,
+							valueCode: null,
+							valueLabel: null,
+							coefficient: "1",
+						}),
+					);
+					continue;
+				}
+
+				for (const value of dictValues) {
+					const laborKey = `${stream}|${paramCode}|${value.label}`;
+					if (seenLaborKeys.has(laborKey)) continue;
+					seenLaborKeys.add(laborKey);
+					await this.laborRepository.save(
+						this.laborRepository.create({
+							workId,
+							streamExecutor: stream,
+							paramCode,
+							paramName: trimmed,
+							valueCode: slugParamCode(value.label),
+							valueLabel: value.label,
+							coefficient: String(value.coefficient ?? 1),
+						}),
+					);
+				}
+			}
+		}
+
+		return streams;
 	}
 
 	private async ensureTemplateVersionConfigs(

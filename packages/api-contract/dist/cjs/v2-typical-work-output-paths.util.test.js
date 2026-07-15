@@ -36,3 +36,24 @@ const v2_typical_work_output_paths_util_1 = require("./v2-typical-work-output-pa
         (0, vitest_1.expect)(controlOpts.boundWorkIds).toEqual(["w-control"]);
     });
 });
+(0, vitest_1.describe)("remapBoundWorkIdsInUiSchema", () => {
+    (0, vitest_1.it)("replaces legacy work ids in explicit boundWorkIds", () => {
+        const uiSchema = {
+            streamDataSources: {
+                sourceTypicalTasks: {
+                    "ui:options": {
+                        archComponent: "typicalWork",
+                        boundWorkIds: ["old-a", "old-b"],
+                    },
+                },
+            },
+        };
+        const next = (0, v2_typical_work_output_paths_util_1.remapBoundWorkIdsInUiSchema)(uiSchema, new Map([
+            ["old-a", "new-a"],
+            ["old-b", "new-b"],
+        ]));
+        const opts = next.streamDataSources
+            .sourceTypicalTasks["ui:options"];
+        (0, vitest_1.expect)(opts.boundWorkIds).toEqual(["new-a", "new-b"]);
+    });
+});

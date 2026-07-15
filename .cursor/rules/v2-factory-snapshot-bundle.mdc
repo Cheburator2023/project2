@@ -13,7 +13,8 @@ alwaysApply: false
 | Файл | Содержимое |
 |------|------------|
 | `v2-default-anketa.snapshot.json` | jsonSchema, uiSchema, logic, dictionariesSnapshot |
-| `v2-factory-typical-works.snapshot.json` | типовые работы, методологические параметры |
+| `v2-factory-typical-works.snapshot.json` | CSV-каталог триггеров/трудоёмкости, методологические параметры |
+| `v2-factory-template-typical-works.registry.json` | 73 типовые работы эталонной prod-схемы (имена, нормы, id) |
 | `packages/api-contract/.../v2-anketa-system-scaffold.snapshot.json` | scaffold пустой анкеты |
 
 Загрузчики: `v2-default-template-snapshot.ts`, `v2-factory-typical-works-catalog.ts`.
@@ -22,7 +23,8 @@ alwaysApply: false
 
 - **Схема/UI/logic** — export версии из админки → `npm run sync:factory-snapshot -- export.json`
 - **Привязки работ к полям** — после деплоя: bulk reconcile на версии шаблона; offline: `node scripts/repair-typical-works-bindings.mjs schema.json data-transfer.json` (нужен полный export с rules/formula, не список работ)
-- **Типовые работы / методология** — править `v2-factory-typical-works.snapshot.json` напрямую
+- **Реестр работ эталонной схемы (73 шт.)** — `v2-factory-template-typical-works.registry.json`; обновление: `npm run sync:factory-template-works-registry -- works-list.json`
+- **Типовые работы / методология (CSV-каталог триггеров)** — править `v2-factory-typical-works.snapshot.json` напрямую
 - **Arch presets** — `npm run sync:arch-presets` после изменения factory schema snapshot
 
 ## Запрещено
