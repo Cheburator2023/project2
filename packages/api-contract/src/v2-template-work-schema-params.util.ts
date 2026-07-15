@@ -17,6 +17,7 @@ import {
 	isPresenceOnlyTriggerRule,
 	isSourceTypeTriggerParam,
 } from "./v2-works-catalog-match.util";
+import { collectUnavailableLaborCoefficientIssues } from "./v2-typical-work-validation.util";
 
 type JsonSchemaNode = {
 	type?: string | string[];
@@ -194,7 +195,7 @@ export function buildWorkSchemaParamsFromTemplate(params: {
 export type TypicalWorkSchemaConsistencyIssue = {
 	workId?: string;
 	streamExecutor?: string;
-	kind: "trigger" | "labor" | "formula";
+	kind: "trigger" | "labor" | "labor_value" | "formula";
 	paramCode: string;
 	paramName?: string | null;
 	message: string;
@@ -207,10 +208,22 @@ export type TypicalWorkSchemaConsistencyInput = {
 		paramCode: string;
 		paramName?: string | null;
 		schemaFieldUid?: string | null;
+		kind?: string | null;
+		coefficients?: Array<{
+			valueCode: string | null;
+			valueLabel: string | null;
+		}>;
 	}>;
 	formulaParamCodes?: string[];
 	/** Параметры методологического каталога (заводской snapshot) — не требуют поля схемы. */
 	methodologyParams?: Array<{ code: string; name: string }>;
+	/** Полный методологический каталог со значениями — для проверки «Значение недоступно». */
+	methodologyCatalog?: Array<{
+		code: string;
+		name: string;
+		sourceKeys?: string[];
+		values: Array<{ code: string; label: string }>;
+	}>;
 };
 
 function matchesMethodologyCatalogParam(
@@ -379,6 +392,19 @@ export function collectTypicalWorkSchemaConsistencyIssues(
 				`Параметр трудоёмкости использует legacy-код «${labor.paramCode}» вместо поля схемы «${resolved.name}» (${resolved.code})`,
 			);
 		}
+	}
+
+	for (const unavailable of collectUnavailableLaborCoefficientIssues({
+		laborParams: input.laborParamCodes,
+		schemaParams: input.schemaParams,
+		methodologyCatalog: input.methodologyCatalog,
+	})) {
+		report(
+			unavailable.kind,
+			unavailable.paramCode,
+			unavailable.paramName,
+			unavailable.message,
+		);
 	}
 
 	for (const paramCode of input.formulaParamCodes ?? []) {

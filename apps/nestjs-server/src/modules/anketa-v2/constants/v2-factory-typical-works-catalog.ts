@@ -30,6 +30,9 @@ export type V2FactoryTypicalWork = {
 	laborParams: string[];
 	laborCoefficients?: Array<{
 		paramName: string;
+		/** Явная статическая связь с полем factory-схемы без runtime-сопоставления. */
+		paramCode?: string;
+		schemaFieldUid?: string;
 		values: Array<{
 			label: string;
 			coefficient: number;

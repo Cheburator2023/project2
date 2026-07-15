@@ -163,7 +163,7 @@ export function collectSchemaEditorIssues(
 
 	for (const consistency of input.schemaConsistencyIssues) {
 		pushIssue(issues, {
-			severity: "error",
+			severity: consistency.kind === "labor_value" ? "warning" : "error",
 			category: "typical_work",
 			title: consistency.paramName?.trim() || consistency.paramCode,
 			message: consistency.message,

@@ -530,7 +530,6 @@ function main() {
 		const hadFormula = Boolean(target.formulaText?.trim());
 		if (hadFormula && matchKind !== "registry_append") alreadyHadFormula++;
 
-		target.formulaText = patch.formulaText;
 		target.roundingMode = patch.roundingMode;
 		target.roundingStep = patch.roundingStep;
 		if (patch.laborParams !== undefined) {
@@ -538,7 +537,34 @@ function main() {
 				(p) => p.trim() && p.trim() !== "—",
 			);
 		}
-		target.laborCoefficients = patch.laborCoefficients;
+		const staticBindings = new Map(
+			(target.laborCoefficients ?? []).map((group) => [
+				normalizeParamLabel(group.paramName),
+				{
+					paramCode: group.paramCode,
+					schemaFieldUid: group.schemaFieldUid,
+				},
+			]),
+		);
+		target.laborCoefficients = patch.laborCoefficients?.map((group) => {
+			const binding = staticBindings.get(normalizeParamLabel(group.paramName));
+			return {
+				...group,
+				...(binding?.paramCode ? { paramCode: binding.paramCode } : {}),
+				...(binding?.schemaFieldUid
+					? { schemaFieldUid: binding.schemaFieldUid }
+					: {}),
+			};
+		});
+		target.formulaText = [...staticBindings.entries()].reduce(
+			(formula, [paramName, binding]) =>
+				binding.paramCode
+					? formula
+							.split(`коэф(${slugParamCode(paramName)})`)
+							.join(`коэф(${binding.paramCode})`)
+					: formula,
+			patch.formulaText,
+		);
 		if (patch.triggerParams !== undefined) {
 			target.triggerParams = patch.triggerParams;
 			target.triggerParam = patch.triggerParams[0] ?? target.triggerParam;

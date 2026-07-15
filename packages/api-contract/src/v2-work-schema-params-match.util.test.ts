@@ -229,6 +229,113 @@ describe("collectTypicalWorkSchemaConsistencyIssues", () => {
 		expect(issues).toEqual([]);
 	});
 
+	it("reports labor coefficient values missing from the coefficient catalog", () => {
+		const issues = collectTypicalWorkSchemaConsistencyIssues({
+			schemaParams: [
+				{
+					code: "workType",
+					name: "Тип работ",
+					schemaFieldUid: "uid-work-type",
+					values: [
+						{ code: "Разработка", label: "Разработка" },
+						{ code: "Доработка", label: "Доработка" },
+					],
+				},
+			],
+			rules: [],
+			laborParamCodes: [
+				{
+					paramCode: "workType",
+					paramName: "Тип работ",
+					schemaFieldUid: "uid-work-type",
+					coefficients: [
+						{ valueCode: "Разработка", valueLabel: "Разработка" },
+						{ valueCode: "Настройка", valueLabel: "Настройка" },
+					],
+				},
+			],
+		});
+
+		expect(issues).toEqual([
+			expect.objectContaining({
+				kind: "labor_value",
+				paramCode: "workType",
+				message: expect.stringContaining("Настройка"),
+			}),
+		]);
+	});
+
+	it("reports unavailable labor values when duplicate schema codes overwrite catalog entry", () => {
+		const issues = collectTypicalWorkSchemaConsistencyIssues({
+			schemaParams: [
+				{
+					code: "workType",
+					name: "Тип работ (витрина)",
+					schemaFieldUid: "uid-good",
+					values: [
+						{ code: "Разработка", label: "Разработка" },
+						{ code: "Доработка", label: "Доработка" },
+						{ code: "Настройка", label: "Настройка" },
+					],
+				},
+				{
+					code: "workType",
+					name: "Тип работ (источник)",
+					schemaFieldUid: "uid-bad",
+					values: [
+						{ code: "Разработка", label: "Разработка" },
+						{ code: "Доработка", label: "Доработка" },
+					],
+				},
+			],
+			rules: [],
+			laborParamCodes: [
+				{
+					paramCode: "workType",
+					paramName: "Тип работ",
+					schemaFieldUid: "uid-good",
+					coefficients: [
+						{ valueCode: "Настройка", valueLabel: "Настройка" },
+					],
+				},
+			],
+		});
+
+		expect(issues).toEqual([
+			expect.objectContaining({
+				kind: "labor_value",
+				paramCode: "workType",
+				message: expect.stringContaining("Настройка"),
+			}),
+		]);
+	});
+
+	it("does not report unavailable badges for schema field coefficient codes", () => {
+		const issues = collectTypicalWorkSchemaConsistencyIssues({
+			schemaParams: [
+				{
+					code: "field_count",
+					name: "Количество",
+					schemaFieldUid: "uid-count",
+					values: [],
+				},
+			],
+			rules: [],
+			laborParamCodes: [
+				{
+					paramCode: "field_count",
+					paramName: "Количество",
+					schemaFieldUid: "uid-count",
+					coefficients: [
+						{ valueCode: "range_1", valueLabel: "До 20" },
+					],
+				},
+			],
+		});
+
+		expect(issues).toEqual([]);
+	});
+
 	it("reports broken pilot trigger split as schema/catalog mismatch", () => {
 		const issues = collectTypicalWorkSchemaConsistencyIssues({
 			schemaParams: [{ code: "type", name: "Тип системы-источника", values: [] }],

@@ -8,7 +8,7 @@ export declare function buildWorkSchemaParamsFromTemplate(params: {
 export type TypicalWorkSchemaConsistencyIssue = {
     workId?: string;
     streamExecutor?: string;
-    kind: "trigger" | "labor" | "formula";
+    kind: "trigger" | "labor" | "labor_value" | "formula";
     paramCode: string;
     paramName?: string | null;
     message: string;
@@ -20,12 +20,27 @@ export type TypicalWorkSchemaConsistencyInput = {
         paramCode: string;
         paramName?: string | null;
         schemaFieldUid?: string | null;
+        kind?: string | null;
+        coefficients?: Array<{
+            valueCode: string | null;
+            valueLabel: string | null;
+        }>;
     }>;
     formulaParamCodes?: string[];
     /** Параметры методологического каталога (заводской snapshot) — не требуют поля схемы. */
     methodologyParams?: Array<{
         code: string;
         name: string;
+    }>;
+    /** Полный методологический каталог со значениями — для проверки «Значение недоступно». */
+    methodologyCatalog?: Array<{
+        code: string;
+        name: string;
+        sourceKeys?: string[];
+        values: Array<{
+            code: string;
+            label: string;
+        }>;
     }>;
 };
 export declare function enrichWorkSchemaParamsWithCatalogAliases<T extends WorkSchemaParamDef>(schemaParams: T[], catalog: Array<{

@@ -1387,6 +1387,11 @@ export class V2TypicalWorkWriteService {
 						paramCode: group.paramCode,
 						paramName: group.paramName,
 						schemaFieldUid: group.schemaFieldUid,
+						kind: group.kind,
+						coefficients: group.coefficients.map((row) => ({
+							valueCode: row.valueCode,
+							valueLabel: row.valueLabel,
+						})),
 					})),
 					formulaParamCodes: card.formula.tokens
 						.filter(
@@ -1399,6 +1404,14 @@ export class V2TypicalWorkWriteService {
 							code: slugParamCode(dict.name),
 							name: dict.name,
 						})),
+					methodologyCatalog: catalog.items.map((param) => ({
+						code: param.code,
+						name: param.name,
+						values: param.values.map((value) => ({
+							code: value.code,
+							label: value.label,
+						})),
+					})),
 				}).map((issue) => ({
 					...issue,
 					workId: config.workId,

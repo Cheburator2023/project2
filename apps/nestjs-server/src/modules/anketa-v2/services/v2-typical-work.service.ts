@@ -203,6 +203,8 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		private readonly ruleRepository: Repository<V2TypicalWorkRuleEntity>,
 		@InjectRepository(V2TypicalWorkLaborCoefficientEntity)
 		private readonly laborRepository: Repository<V2TypicalWorkLaborCoefficientEntity>,
+		@InjectRepository(V2TypicalWorkLaborParamEntity)
+		private readonly laborParamRepository: Repository<V2TypicalWorkLaborParamEntity>,
 		@InjectRepository(V2TypicalWorkAssignmentEntity)
 		private readonly assignmentRepository: Repository<V2TypicalWorkAssignmentEntity>,
 		@InjectRepository(V2TypicalWorkVersionConfigEntity)
@@ -619,6 +621,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		const seenNormKeys = new Set<string>();
 		const seenRuleKeys = new Set<string>();
 		const seenLaborKeys = new Set<string>();
+		const seenLaborParamKeys = new Set<string>();
 		const streams = new Set<string>();
 
 		for (const rawStream of entry.streams) {
@@ -720,15 +723,35 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			for (const paramName of row.laborParams) {
 				const trimmed = paramName.trim();
 				if (!trimmed) continue;
-				const paramCode = slugParamCode(trimmed);
-				const rowValues =
-					row.laborCoefficients?.find(
-						(group) => group.paramName.trim() === trimmed,
-					)?.values ?? [];
+				const coefficientGroup = row.laborCoefficients?.find(
+					(group) => group.paramName.trim() === trimmed,
+				);
+				const paramCode =
+					coefficientGroup?.paramCode?.trim() || slugParamCode(trimmed);
+				const rowValues = coefficientGroup?.values ?? [];
 				const dictValues =
 					rowValues.length > 0
 						? rowValues
 						: (paramsByName.get(trimmed)?.values ?? []);
+				const laborParamKey = `${stream}|${paramCode}`;
+				if (!seenLaborParamKeys.has(laborParamKey)) {
+					seenLaborParamKeys.add(laborParamKey);
+					await this.laborParamRepository.save(
+						this.laborParamRepository.create({
+							workId,
+							streamExecutor: stream,
+							schemaFieldUid:
+								coefficientGroup?.schemaFieldUid?.trim() || null,
+							paramCode,
+							paramName: trimmed,
+							kind: "by_value",
+							anyOfValueCodes: null,
+							anyOfValueLabels: null,
+							coeffOn: null,
+							coeffOff: null,
+						}),
+					);
+				}
 
 				if (dictValues.length === 0) {
 					const laborKey = `${stream}|${paramCode}|`;

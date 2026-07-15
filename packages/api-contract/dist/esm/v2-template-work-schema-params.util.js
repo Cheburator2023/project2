@@ -3,6 +3,7 @@ import { V2_ARCH_COMPONENT_LABELS, resolveV2AnketaArchComponent, } from "./v2-an
 import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
 import { findWorkSchemaParameter, resolveWorkSchemaParamForRule, } from "./v2-work-schema-params-match.util";
 import { catalogValueMatchesTriggerRule, isBrokenTypicalWorkTriggerRef, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, } from "./v2-works-catalog-match.util";
+import { collectUnavailableLaborCoefficientIssues } from "./v2-typical-work-validation.util";
 function schemaNodeType(node) {
     if (!node)
         return null;
@@ -248,6 +249,13 @@ export function collectTypicalWorkSchemaConsistencyIssues(input) {
                 labor.schemaFieldUid !== resolved.schemaFieldUid)) {
             report("labor", labor.paramCode, labor.paramName, `Параметр трудоёмкости использует legacy-код «${labor.paramCode}» вместо поля схемы «${resolved.name}» (${resolved.code})`);
         }
+    }
+    for (const unavailable of collectUnavailableLaborCoefficientIssues({
+        laborParams: input.laborParamCodes,
+        schemaParams: input.schemaParams,
+        methodologyCatalog: input.methodologyCatalog,
+    })) {
+        report(unavailable.kind, unavailable.paramCode, unavailable.paramName, unavailable.message);
     }
     for (const paramCode of input.formulaParamCodes ?? []) {
         if (!findWorkSchemaParameter(input.schemaParams, paramCode) &&

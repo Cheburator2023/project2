@@ -138,6 +138,37 @@ describe("v2 factory snapshot", () => {
 		}
 	});
 
+	it("статически связывает «Тип работ» со справочником по набору значений", () => {
+		const bindings = V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks.flatMap(
+			(work) =>
+				(work.laborCoefficients ?? [])
+					.filter((group) => group.paramName === "Тип работ")
+					.map((group) => ({ work, group })),
+		);
+
+		expect(bindings).toHaveLength(24);
+		for (const { work, group } of bindings) {
+			expect(group.values.map((value) => value.label)).toEqual([
+				"Разработка",
+				"Доработка",
+				"Настройка",
+			]);
+			if (work.component.includes("Процесс")) {
+				expect(group).toMatchObject({
+					paramCode: "field_yJ51GkCR",
+					schemaFieldUid: "field_68f5a4fa-579f-4b89-b4f3-11214957dffe",
+				});
+				expect(work.formulaText).toContain("коэф(field_yJ51GkCR)");
+			} else {
+				expect(group).toMatchObject({
+					paramCode: "workType",
+					schemaFieldUid: "field_6f91d0c5-3949-4468-88e9-29741af2b07d",
+				});
+				expect(work.formulaText).toContain("коэф(workType)");
+			}
+		}
+	});
+
 	it("dictionariesSnapshot из v35", () => {
 		expect(file.dictionariesSnapshot?.referencedDictionaryCodes?.length).toBe(
 			69,

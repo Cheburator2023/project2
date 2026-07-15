@@ -2,6 +2,7 @@ import { defaultWorkRounding } from "./v2-typical-work.types";
 import { evaluateWorkFormula, roundWorkEffortValue, validateWorkFormulaTokens, } from "./v2-work-formula.util";
 import { evaluateTermsFormula, termsToTokenFormula, validateTermsFormula, } from "./v2-work-terms-formula.util";
 import { catalogValueMatchesTriggerRule, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, typicalWorkRulesMatchSource, } from "./v2-works-catalog-match.util";
+import { findWorkSchemaParameter } from "./v2-work-schema-params-match.util";
 function parseIsoDay(value) {
     const day = value.slice(0, 10);
     return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
@@ -441,4 +442,96 @@ export function isWorkCoefficientValueAvailable(row, catalog, atDate) {
         return false;
     return param.values.some((value) => (value.code === row.valueCode || value.label === row.valueLabel) &&
         (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
+}
+export function isWorkSchemaLaborParamCandidate(param) {
+    return (param.values?.length ?? 0) > 0;
+}
+function toWorkCoefficientCatalogParam(param, legacyCode) {
+    const sourceKeys = new Set([
+        ...(param.sourceKeys ?? [param.code]),
+        ...(legacyCode && legacyCode !== param.code ? [legacyCode] : []),
+    ]);
+    return {
+        code: param.code,
+        sourceKeys: [...sourceKeys],
+        values: param.values.map((value) => ({
+            code: value.code,
+            label: value.label,
+        })),
+    };
+}
+/** Каталог коэффициентов как в TypicalWorkEditableCard.coefficientCatalog. */
+export function buildWorkCoefficientCatalog(input) {
+    const byCode = new Map();
+    const addParam = (param, legacyCode) => {
+        byCode.set(param.code, toWorkCoefficientCatalogParam(param, legacyCode));
+    };
+    for (const param of input.schemaParams.filter(isWorkSchemaLaborParamCandidate)) {
+        addParam({
+            code: param.code,
+            name: param.name,
+            sourceKeys: param.sourceKeys,
+            values: param.values ?? [],
+        });
+    }
+    const methodologyParams = (input.methodologyCatalog ?? []).map((param) => ({
+        code: param.code,
+        name: param.name ?? param.code,
+        sourceKeys: param.sourceKeys,
+        values: param.values,
+    }));
+    for (const group of input.laborParams) {
+        const alreadyKnown = [...byCode.values()].some((entry) => entry.code === group.paramCode ||
+            entry.sourceKeys?.includes(group.paramCode));
+        if (alreadyKnown)
+            continue;
+        const schemaMatch = findWorkSchemaParameter(input.schemaParams, group.paramCode, group.paramName);
+        if (schemaMatch) {
+            addParam({
+                code: schemaMatch.code,
+                sourceKeys: schemaMatch.sourceKeys,
+                values: schemaMatch.values ?? [],
+            }, group.paramCode);
+            continue;
+        }
+        const catalogMatch = findWorkSchemaParameter(methodologyParams, group.paramCode, group.paramName);
+        if (catalogMatch) {
+            addParam({
+                code: catalogMatch.code,
+                sourceKeys: catalogMatch.sourceKeys,
+                values: catalogMatch.values ?? [],
+            }, group.paramCode);
+        }
+    }
+    return [...byCode.values()];
+}
+export function collectUnavailableLaborCoefficientIssues(input) {
+    const catalog = buildWorkCoefficientCatalog({
+        schemaParams: input.schemaParams,
+        laborParams: input.laborParams,
+        methodologyCatalog: input.methodologyCatalog,
+    });
+    const issues = [];
+    for (const group of input.laborParams) {
+        if (group.kind === "any_of")
+            continue;
+        for (const row of group.coefficients ?? []) {
+            if (!row.valueCode && !row.valueLabel)
+                continue;
+            if (isWorkCoefficientValueAvailable({
+                paramCode: group.paramCode,
+                valueCode: row.valueCode,
+                valueLabel: row.valueLabel,
+            }, catalog, input.atDate)) {
+                continue;
+            }
+            issues.push({
+                kind: "labor_value",
+                paramCode: group.paramCode,
+                paramName: group.paramName,
+                message: `Значение параметра трудоёмкости «${row.valueLabel ?? row.valueCode}» недоступно в справочнике`,
+            });
+        }
+    }
+    return issues;
 }

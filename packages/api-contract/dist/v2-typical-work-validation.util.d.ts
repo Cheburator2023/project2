@@ -1,5 +1,6 @@
 import type { PatchV2TypicalWorkRequestDto, V2TypicalWorkNormInputDto, V2TypicalWorkRoundingDto, V2WorkFormulaToken, V2WorkTriggerStatus } from "./v2-typical-work.types";
 import { type WorkFormulaLaborParamRef } from "./v2-work-formula.util";
+import type { WorkSchemaParamDef } from "./v2-work-schema-params-match.util";
 export type ValidationIssue = {
     path: string;
     message: string;
@@ -89,3 +90,42 @@ export declare function isSchemaFieldLaborParamCode(paramCode: string): boolean;
  * присутствует» и не ссылаются на словарь — они всегда доступны.
  */
 export declare function isWorkCoefficientValueAvailable(row: WorkCoefficientRowInput, catalog: WorkCoefficientCatalogParam[], atDate?: string): boolean;
+export type WorkCoefficientCatalogSourceParam = {
+    code: string;
+    name?: string;
+    sourceKeys?: string[];
+    values: Array<{
+        code: string;
+        label: string;
+    }>;
+};
+export declare function isWorkSchemaLaborParamCandidate(param: Pick<WorkSchemaParamDef, "values">): boolean;
+/** Каталог коэффициентов как в TypicalWorkEditableCard.coefficientCatalog. */
+export declare function buildWorkCoefficientCatalog(input: {
+    schemaParams: WorkSchemaParamDef[];
+    laborParams: Array<{
+        paramCode: string;
+        paramName?: string | null;
+    }>;
+    methodologyCatalog?: WorkCoefficientCatalogSourceParam[];
+}): WorkCoefficientCatalogParam[];
+export type UnavailableLaborCoefficientIssue = {
+    kind: "labor_value";
+    paramCode: string;
+    paramName?: string | null;
+    message: string;
+};
+export declare function collectUnavailableLaborCoefficientIssues(input: {
+    laborParams: Array<{
+        paramCode: string;
+        paramName?: string | null;
+        kind?: string | null;
+        coefficients?: Array<{
+            valueCode: string | null;
+            valueLabel: string | null;
+        }>;
+    }>;
+    schemaParams: WorkSchemaParamDef[];
+    methodologyCatalog?: WorkCoefficientCatalogSourceParam[];
+    atDate?: string;
+}): UnavailableLaborCoefficientIssue[];

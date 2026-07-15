@@ -10,6 +10,7 @@ const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
 const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
 const v2_work_schema_params_match_util_1 = require("./v2-work-schema-params-match.util");
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
+const v2_typical_work_validation_util_1 = require("./v2-typical-work-validation.util");
 function schemaNodeType(node) {
     if (!node)
         return null;
@@ -255,6 +256,13 @@ function collectTypicalWorkSchemaConsistencyIssues(input) {
                 labor.schemaFieldUid !== resolved.schemaFieldUid)) {
             report("labor", labor.paramCode, labor.paramName, `Параметр трудоёмкости использует legacy-код «${labor.paramCode}» вместо поля схемы «${resolved.name}» (${resolved.code})`);
         }
+    }
+    for (const unavailable of (0, v2_typical_work_validation_util_1.collectUnavailableLaborCoefficientIssues)({
+        laborParams: input.laborParamCodes,
+        schemaParams: input.schemaParams,
+        methodologyCatalog: input.methodologyCatalog,
+    })) {
+        report(unavailable.kind, unavailable.paramCode, unavailable.paramName, unavailable.message);
     }
     for (const paramCode of input.formulaParamCodes ?? []) {
         if (!(0, v2_work_schema_params_match_util_1.findWorkSchemaParameter)(input.schemaParams, paramCode) &&

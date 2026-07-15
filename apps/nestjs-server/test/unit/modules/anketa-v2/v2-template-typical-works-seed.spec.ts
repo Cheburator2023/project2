@@ -27,6 +27,7 @@ describe("V2TypicalWorkSeedService.seedTemplateTypicalWorksFromDocCatalog", () =
 			{ save: jest.fn(), create: jest.fn() } as never,
 			{ save: jest.fn(), create: jest.fn() } as never,
 			{ save: jest.fn(), create: jest.fn() } as never,
+			{ save: jest.fn(), create: jest.fn() } as never,
 			assignmentRepository as never,
 			versionConfigRepository as never,
 			{ findOne: jest.fn() } as never,
@@ -37,7 +38,13 @@ describe("V2TypicalWorkSeedService.seedTemplateTypicalWorksFromDocCatalog", () =
 			} as never,
 		);
 
-		workRepository.find.mockResolvedValue([{ id: "w1" }]);
+		workRepository.find.mockResolvedValue([
+			{
+				id: "w1",
+				name: "Этап 999. Тестовая работа",
+				archComponentType: "Система-источник",
+			},
+		]);
 
 		const created = await service.seedTemplateTypicalWorksFromDocCatalog(
 			"template-1",

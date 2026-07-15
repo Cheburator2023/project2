@@ -202,6 +202,107 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
         });
         (0, vitest_1.expect)(issues).toEqual([]);
     });
+    (0, vitest_1.it)("reports labor coefficient values missing from the coefficient catalog", () => {
+        const issues = (0, v2_template_work_schema_params_util_1.collectTypicalWorkSchemaConsistencyIssues)({
+            schemaParams: [
+                {
+                    code: "workType",
+                    name: "Тип работ",
+                    schemaFieldUid: "uid-work-type",
+                    values: [
+                        { code: "Разработка", label: "Разработка" },
+                        { code: "Доработка", label: "Доработка" },
+                    ],
+                },
+            ],
+            rules: [],
+            laborParamCodes: [
+                {
+                    paramCode: "workType",
+                    paramName: "Тип работ",
+                    schemaFieldUid: "uid-work-type",
+                    coefficients: [
+                        { valueCode: "Разработка", valueLabel: "Разработка" },
+                        { valueCode: "Настройка", valueLabel: "Настройка" },
+                    ],
+                },
+            ],
+        });
+        (0, vitest_1.expect)(issues).toEqual([
+            vitest_1.expect.objectContaining({
+                kind: "labor_value",
+                paramCode: "workType",
+                message: vitest_1.expect.stringContaining("Настройка"),
+            }),
+        ]);
+    });
+    (0, vitest_1.it)("reports unavailable labor values when duplicate schema codes overwrite catalog entry", () => {
+        const issues = (0, v2_template_work_schema_params_util_1.collectTypicalWorkSchemaConsistencyIssues)({
+            schemaParams: [
+                {
+                    code: "workType",
+                    name: "Тип работ (витрина)",
+                    schemaFieldUid: "uid-good",
+                    values: [
+                        { code: "Разработка", label: "Разработка" },
+                        { code: "Доработка", label: "Доработка" },
+                        { code: "Настройка", label: "Настройка" },
+                    ],
+                },
+                {
+                    code: "workType",
+                    name: "Тип работ (источник)",
+                    schemaFieldUid: "uid-bad",
+                    values: [
+                        { code: "Разработка", label: "Разработка" },
+                        { code: "Доработка", label: "Доработка" },
+                    ],
+                },
+            ],
+            rules: [],
+            laborParamCodes: [
+                {
+                    paramCode: "workType",
+                    paramName: "Тип работ",
+                    schemaFieldUid: "uid-good",
+                    coefficients: [
+                        { valueCode: "Настройка", valueLabel: "Настройка" },
+                    ],
+                },
+            ],
+        });
+        (0, vitest_1.expect)(issues).toEqual([
+            vitest_1.expect.objectContaining({
+                kind: "labor_value",
+                paramCode: "workType",
+                message: vitest_1.expect.stringContaining("Настройка"),
+            }),
+        ]);
+    });
+    (0, vitest_1.it)("does not report unavailable badges for schema field coefficient codes", () => {
+        const issues = (0, v2_template_work_schema_params_util_1.collectTypicalWorkSchemaConsistencyIssues)({
+            schemaParams: [
+                {
+                    code: "field_count",
+                    name: "Количество",
+                    schemaFieldUid: "uid-count",
+                    values: [],
+                },
+            ],
+            rules: [],
+            laborParamCodes: [
+                {
+                    paramCode: "field_count",
+                    paramName: "Количество",
+                    schemaFieldUid: "uid-count",
+                    coefficients: [
+                        { valueCode: "range_1", valueLabel: "До 20" },
+                    ],
+                },
+            ],
+        });
+        (0, vitest_1.expect)(issues).toEqual([]);
+    });
     (0, vitest_1.it)("reports broken pilot trigger split as schema/catalog mismatch", () => {
         const issues = (0, v2_template_work_schema_params_util_1.collectTypicalWorkSchemaConsistencyIssues)({
             schemaParams: [{ code: "type", name: "Тип системы-источника", values: [] }],

@@ -37,6 +37,7 @@ describe("factory labor coefficient sync", () => {
 			{} as never,
 			{} as never,
 			{} as never,
+			{} as never,
 		);
 
 		const count = await service.syncFactoryLaborCoefficients();
