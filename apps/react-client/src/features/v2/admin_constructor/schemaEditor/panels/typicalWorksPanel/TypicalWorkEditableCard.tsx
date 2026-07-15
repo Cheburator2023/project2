@@ -46,11 +46,11 @@ import { mergeAnketaDisplayFormData } from "@react-client/features/v2/anketaCRUD
 import { resolvePreviewSourceRowForTypicalWork } from "./typicalWorkTriggerPreview";
 import {
 	buildSchemaWorkParameters,
-	findSchemaWorkParameter,
 	isSchemaLaborParamCandidate,
 	isSchemaLaborParamUsed,
 	isSchemaTextualParam,
 	resolveEffectiveWorkArchComponentType,
+	resolveWorkParameterOption,
 	schemaLaborParamPickerCaption,
 	schemaParamRuleName,
 	schemaWorkParameterEmptyPickerMessage,
@@ -129,14 +129,6 @@ function parseDateInput(value: string): string {
 	const m = trimmed.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
 	if (m) return `${m[3]}-${m[2]}-${m[1]}`;
 	return trimmed;
-}
-
-function resolveLaborParamOption(
-	paramOptions: V2TypicalWorkParameterDto[],
-	paramCode: string,
-	paramName?: string | null,
-): V2TypicalWorkParameterDto | undefined {
-	return findSchemaWorkParameter(paramOptions, paramCode, paramName);
 }
 
 export function TypicalWorkEditableCard({
@@ -316,10 +308,15 @@ export function TypicalWorkEditableCard({
 	);
 	const resolveFormulaParamName = useCallback(
 		(paramCode: string, paramName?: string | null) =>
-			findSchemaWorkParameter(paramOptions, paramCode, paramName)?.name ??
+			resolveWorkParameterOption(
+				paramCode,
+				paramName,
+				paramOptions,
+				methodologyCatalog,
+			)?.name ??
 			paramName ??
 			paramCode,
-		[paramOptions],
+		[methodologyCatalog, paramOptions],
 	);
 	const unusedLaborParams = laborParamOptions.filter(
 		(p) => !draft?.laborParams.some((g) => isSchemaLaborParamUsed([g], p)),
@@ -330,17 +327,70 @@ export function TypicalWorkEditableCard({
 		unusedLaborParams.length,
 	);
 
-	const coefficientCatalog = useMemo(
-		() =>
-			laborParamOptions.map((param) => ({
+	const coefficientCatalog = useMemo(() => {
+		const byCode = new Map<
+			string,
+			{
+				code: string;
+				sourceKeys?: string[];
+				values: Array<{ code: string; label: string }>;
+			}
+		>();
+
+		const addParam = (param: V2TypicalWorkParameterDto, legacyCode?: string) => {
+			byCode.set(param.code, {
 				code: param.code,
-				sourceKeys: param.sourceKeys,
+				sourceKeys: [
+					...(param.sourceKeys ?? [param.code]),
+					...(legacyCode && legacyCode !== param.code ? [legacyCode] : []),
+				],
 				values: param.values.map((value) => ({
 					code: value.code,
 					label: value.label,
 				})),
-			})),
-		[laborParamOptions],
+			});
+		};
+
+		for (const param of laborParamOptions) {
+			addParam(param);
+		}
+
+		for (const group of draft?.laborParams ?? []) {
+			const alreadyKnown = [...byCode.values()].some(
+				(entry) =>
+					entry.code === group.paramCode ||
+					entry.sourceKeys?.includes(group.paramCode),
+			);
+			if (alreadyKnown) continue;
+
+			const resolved = resolveWorkParameterOption(
+				group.paramCode,
+				group.paramName,
+				paramOptions,
+				methodologyCatalog,
+			);
+			if (resolved) {
+				addParam(resolved, group.paramCode);
+			}
+		}
+
+		return [...byCode.values()];
+	}, [
+		draft?.laborParams,
+		laborParamOptions,
+		methodologyCatalog,
+		paramOptions,
+	]);
+
+	const resolveLaborParamOption = useCallback(
+		(paramCode: string, paramName?: string | null) =>
+			resolveWorkParameterOption(
+				paramCode,
+				paramName,
+				paramOptions,
+				methodologyCatalog,
+			),
+		[methodologyCatalog, paramOptions],
 	);
 
 	const previewFormDataForTriggers = useMemo(
@@ -1070,7 +1120,6 @@ export function TypicalWorkEditableCard({
 						) : (
 							draft.laborParams.map((group) => {
 								const paramMeta = resolveLaborParamOption(
-									laborParamOptions,
 									group.paramCode,
 									group.paramName,
 								);
@@ -1122,7 +1171,6 @@ export function TypicalWorkEditableCard({
 													| "by_value"
 													| "any_of";
 												const param = resolveLaborParamOption(
-													laborParamOptions,
 													group.paramCode,
 													group.paramName,
 												);

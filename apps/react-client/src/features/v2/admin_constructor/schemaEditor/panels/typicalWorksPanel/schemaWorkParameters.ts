@@ -520,10 +520,53 @@ export function findSchemaWorkParameter(
 
 	if (paramName?.trim()) {
 		const name = paramName.trim();
-		return paramOptions.find((param) => param.name === name);
+		const byName = paramOptions.find((param) => param.name === name);
+		if (byName) return byName;
+		const normName = name.toLowerCase();
+		return paramOptions.find(
+			(param) => param.name.trim().toLowerCase() === normName,
+		);
 	}
 
 	return undefined;
+}
+
+/**
+ * Параметр работы: сначала поле схемы (с алиасами триггеров), затем
+ * методологический справочник из настроек, затем мост legacy-кода → схема.
+ */
+export function resolveWorkParameterOption(
+	paramCode: string,
+	paramName: string | null | undefined,
+	schemaParams: V2TypicalWorkParameterDto[],
+	methodologyCatalog: V2TypicalWorkParameterDto[] = [],
+): V2TypicalWorkParameterDto | undefined {
+	const schemaMatch =
+		findSchemaWorkParameter(schemaParams, paramCode, paramName) ??
+		resolveSchemaParamForTriggerRule({ paramCode, paramName }, schemaParams);
+	if (schemaMatch) return schemaMatch;
+
+	const catalogMatch =
+		findSchemaWorkParameter(methodologyCatalog, paramCode, paramName) ??
+		resolveSchemaParamForTriggerRule(
+			{ paramCode, paramName },
+			methodologyCatalog,
+		);
+	if (catalogMatch) return catalogMatch;
+
+	if (!schemaParams.length || !methodologyCatalog.length) return undefined;
+
+	const catalogSeed =
+		methodologyCatalog.find((param) => param.code === paramCode) ??
+		(paramName
+			? methodologyCatalog.find((param) => param.name === paramName)
+			: undefined);
+	if (!catalogSeed) return undefined;
+
+	return resolveSchemaParamForTriggerRule(
+		{ paramCode: catalogSeed.code, paramName: catalogSeed.name },
+		schemaParams,
+	);
 }
 
 export function isSchemaLaborParamUsed(

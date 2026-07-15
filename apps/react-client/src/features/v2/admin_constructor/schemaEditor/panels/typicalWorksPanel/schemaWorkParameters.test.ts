@@ -11,6 +11,7 @@ import {
 	resolveSchemaParamForTriggerRule,
 	triggerRuleGroupKey,
 	excludeRulesByGroupKey,
+	resolveWorkParameterOption,
 } from "./schemaWorkParameters";
 import type { FieldPathHint } from "../../types";
 
@@ -904,6 +905,71 @@ describe("resolveSchemaParamForTriggerRule", () => {
 			schemaParams,
 		);
 		expect(param?.code).toBe("type");
+	});
+});
+
+describe("resolveWorkParameterOption", () => {
+	const schemaParams: V2TypicalWorkParameterDto[] = [
+		{
+			id: "schema:type",
+			code: "type",
+			name: "Тип системы-источника",
+			description: null,
+			schemaPointer: "/streamDataSources/sourceSystems/items/type",
+			values: [],
+		},
+	];
+	const methodologyCatalog: V2TypicalWorkParameterDto[] = [
+		{
+			id: "cat-legacy",
+			code: "тип_системы_источника",
+			name: "Тип системы-источника",
+			description: null,
+			values: [
+				{
+					id: "v1",
+					code: "internal",
+					label: "Внутренний",
+					coefficient: null,
+					sortOrder: 0,
+					validFrom: "2025-01-01",
+					validTo: null,
+				},
+			],
+		},
+	];
+
+	it("prefers schema param over methodology catalog", () => {
+		expect(
+			resolveWorkParameterOption(
+				"type",
+				"Тип системы-источника",
+				schemaParams,
+				methodologyCatalog,
+			)?.code,
+		).toBe("type");
+	});
+
+	it("bridges legacy catalog code to schema field", () => {
+		expect(
+			resolveWorkParameterOption(
+				"тип_системы_источника",
+				"Тип системы-источника",
+				schemaParams,
+				methodologyCatalog,
+			)?.code,
+		).toBe("type");
+	});
+
+	it("falls back to methodology catalog when schema has no match", () => {
+		expect(
+			resolveWorkParameterOption(
+				"тип_системы_источника",
+				"Тип системы-источника",
+				[],
+				methodologyCatalog,
+			)?.code,
+		).toBe("тип_системы_источника");
 	});
 });
 
