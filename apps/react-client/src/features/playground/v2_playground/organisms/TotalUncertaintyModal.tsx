@@ -1,5 +1,5 @@
-import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
 import CloseIcon from "@mui/icons-material/Close";
+import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
 import {
 	Box,
 	Button,
@@ -247,9 +247,17 @@ export const TotalUncertaintyModal = ({
 									{risk.label}
 								</Typography>
 								{risk.tooltip ? (
-									<div title={risk.tooltip}>
-										<InfoOutlineIcon sx={{ fontSize: 16, color: "#88888877" }} />
-									</div>
+									<IconButton
+										size="small"
+										title={risk.tooltip}
+										aria-label={risk.tooltip}
+										disableRipple
+										sx={{ p: 0.25, flexShrink: 0, cursor: "help" }}
+									>
+										<InfoOutlineIcon
+											sx={{ fontSize: 16, color: "#88888877", pointerEvents: "none" }}
+										/>
+									</IconButton>
 								) : null}
 							</Flex>
 							<Select
