@@ -1,7 +1,6 @@
 import { formatParamNameWithSourceKeys } from "./v2-work-param-source-keys.util";
 import type { TypicalWorkRuleLike } from "./v2-works-catalog-match.util";
 import {
-	extractControlCode,
 	isControlTypeTriggerParam,
 	isSourceTypeTriggerParam,
 	typicalWorkRulesMatchSource,
@@ -13,6 +12,8 @@ export type WorkSchemaParamDef = {
 	code: string;
 	name: string;
 	description?: string | null;
+	/** Архитектурный компонент поля из ближайшего ui:options.archComponent. */
+	archComponent?: string | null;
 	schemaFieldUid?: string | null;
 	schemaPointer?: string | null;
 	sourceKeys?: string[];

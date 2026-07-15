@@ -83,6 +83,7 @@ describe("buildWorkSchemaParamsFromTemplate", () => {
             uiSchema: {
                 streamDataSources: {
                     sourceSystems: {
+                        "ui:options": { archComponent: "sourceSystem" },
                         items: {
                             type: {
                                 "ui:options": { schemaFieldUid: "uid-type" },
@@ -98,6 +99,7 @@ describe("buildWorkSchemaParamsFromTemplate", () => {
         expect(params.some((p) => p.code === "type")).toBe(true);
         expect(params.find((p) => p.code === "type")?.schemaFieldUid).toBe("uid-type");
         expect(params.some((p) => p.code === "field_metric")).toBe(true);
+        expect(params.find((p) => p.code === "field_metric")?.archComponent).toBe("Система-источник");
     });
 });
 describe("collectTypicalWorkSchemaConsistencyIssues", () => {
@@ -127,8 +129,49 @@ describe("collectTypicalWorkSchemaConsistencyIssues", () => {
             laborParamCodes: [
                 { paramCode: "пилот_первичный", paramName: "? Пилот (первичный" },
             ],
+            methodologyParams: [
+                { code: "пилот_первичный", name: "? Пилот (первичный" },
+            ],
         });
         expect(issues).toEqual([]);
+    });
+    it("reports orphan labor params even without schemaFieldUid", () => {
+        const issues = collectTypicalWorkSchemaConsistencyIssues({
+            schemaParams: [{ code: "type", name: "Тип системы-источника", values: [] }],
+            rules: [],
+            laborParamCodes: [
+                { paramCode: "fake_param", paramName: "Несуществующий параметр" },
+            ],
+        });
+        expect(issues).toEqual([
+            expect.objectContaining({ kind: "labor", paramCode: "fake_param" }),
+        ]);
+    });
+    it("reports a resolvable legacy labor code until it is bound to the schema field", () => {
+        const issues = collectTypicalWorkSchemaConsistencyIssues({
+            schemaParams: [
+                {
+                    code: "field_complexity",
+                    name: "Сложность реализации",
+                    schemaFieldUid: "uid-complexity",
+                    values: [],
+                },
+            ],
+            rules: [],
+            laborParamCodes: [
+                {
+                    paramCode: "сложность_реализации",
+                    paramName: "Сложность реализации",
+                },
+            ],
+        });
+        expect(issues).toEqual([
+            expect.objectContaining({
+                kind: "labor",
+                paramCode: "сложность_реализации",
+                message: expect.stringContaining("field_complexity"),
+            }),
+        ]);
     });
     it("reports broken pilot trigger split as schema/catalog mismatch", () => {
         const issues = collectTypicalWorkSchemaConsistencyIssues({

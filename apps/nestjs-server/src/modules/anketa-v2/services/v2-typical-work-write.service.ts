@@ -25,6 +25,7 @@ import type {
 	V2TypicalWorkSchemaFieldSyncImpactDto,
 	V2TypicalWorkSchemaFieldSyncRequestDto,
 	V2TypicalWorkSchemaBulkSyncResponseDto,
+	BulkDeleteV2TypicalWorksResultDto,
 } from "@smart-anketa/api-contract";
 import {
 	buildWorkSchemaParamsFromTemplate,
@@ -58,6 +59,7 @@ import {
 	validateFormulaAgainstLaborParams,
 	validateFormulaNonNegativeEffort,
 	laborParamRefsFromPatchGroups,
+	reconcileFormulaLaborParamTokens,
 	validateNormInputs,
 	validateRoundingInput,
 	validateTermsFormula,
@@ -383,21 +385,78 @@ export class V2TypicalWorkWriteService {
 	}
 
 	async deleteWork(workId: string, confirm = false): Promise<void> {
-		const work = await this.workRepository.findOne({ where: { id: workId } });
-		if (!work) throw new NotFoundException(`Typical work ${workId} not found`);
-
-		const usedInQuestionnaireVersions =
-			await this.findQuestionnaireUsages(workId);
-		if (usedInQuestionnaireVersions.length > 0 && !confirm) {
+		const result = await this.bulkDeleteWorks([workId], confirm);
+		if (result.failed.some((row) => row.id === workId && row.reason === "not_found")) {
+			throw new NotFoundException(`Typical work ${workId} not found`);
+		}
+		const conflict = result.conflicts.find((row) => row.workId === workId);
+		if (conflict) {
 			throw new ConflictException({
 				code: "WORK_IN_USE",
 				message:
 					"Работа учтена в версиях анкет. Подтвердите удаление, если нужно удалить безвозвратно.",
-				usedInQuestionnaireVersions,
+				usedInQuestionnaireVersions: conflict.usedInQuestionnaireVersions,
 			});
 		}
+		if (result.failed.some((row) => row.id === workId)) {
+			throw new ConflictException({
+				code: "DELETE_FAILED",
+				message: "Не удалось удалить типовую работу",
+			});
+		}
+	}
 
-		await this.workRepository.delete(workId);
+	async bulkDeleteWorks(
+		ids: string[],
+		confirm = false,
+	): Promise<BulkDeleteV2TypicalWorksResultDto> {
+		const uniqueIds = [...new Set(ids)];
+		const deletedIds: string[] = [];
+		const conflicts: BulkDeleteV2TypicalWorksResultDto["conflicts"] = [];
+		const failed: BulkDeleteV2TypicalWorksResultDto["failed"] = [];
+
+		const works = await this.workRepository.find({
+			where: { id: In(uniqueIds) },
+		});
+		const worksById = new Map(works.map((work) => [work.id, work]));
+		const idsToDelete: string[] = [];
+
+		for (const workId of uniqueIds) {
+			if (!worksById.has(workId)) {
+				failed.push({
+					id: workId,
+					reason: "not_found",
+					message: "Типовая работа не найдена",
+				});
+				continue;
+			}
+
+			const usedInQuestionnaireVersions =
+				await this.findQuestionnaireUsages(workId);
+			if (usedInQuestionnaireVersions.length > 0 && !confirm) {
+				conflicts.push({ workId, usedInQuestionnaireVersions });
+				continue;
+			}
+
+			idsToDelete.push(workId);
+		}
+
+		if (idsToDelete.length > 0) {
+			try {
+				await this.workRepository.delete({ id: In(idsToDelete) });
+				deletedIds.push(...idsToDelete);
+			} catch {
+				for (const workId of idsToDelete) {
+					failed.push({
+						id: workId,
+						reason: "delete_failed",
+						message: "Не удалось удалить типовую работу",
+					});
+				}
+			}
+		}
+
+		return { deletedIds, conflicts, failed };
 	}
 
 	private async findQuestionnaireUsages(workId: string) {
@@ -722,6 +781,36 @@ export class V2TypicalWorkWriteService {
 			const formula = dto.formula ?? termsToTokenFormula(terms);
 			const rounding = dto.rounding ?? defaultWorkRounding();
 
+			let formulaTokens = formula.tokens;
+			if (dto.laborParams?.length) {
+				formulaTokens = reconcileFormulaLaborParamTokens(
+					formulaTokens,
+					laborParamRefsFromPatchGroups(dto.laborParams),
+				);
+			} else {
+				const laborHeaders = await this.laborParamRepository.find({
+					where: { workId, streamExecutor: stream },
+				});
+				if (laborHeaders.length > 0) {
+					formulaTokens = reconcileFormulaLaborParamTokens(
+						formulaTokens,
+						laborHeaders.map((row) => ({
+							paramCode: row.paramCode,
+							paramName: row.paramName,
+						})),
+					);
+				}
+			}
+			const resolvedFormula = {
+				...formula,
+				tokens: formulaTokens,
+				text:
+					tokensToText(formulaTokens) ||
+					formula.text?.trim() ||
+					terms.text ||
+					"",
+			};
+
 			if (
 				terms.terms.some((t) => t.kind === "transitive" && t.sourceAssignmentId)
 			) {
@@ -769,17 +858,16 @@ export class V2TypicalWorkWriteService {
 				}
 			}
 
-			const compiled = compileStoredTypicalWorkResultLogic(formula, rounding);
+			const compiled = compileStoredTypicalWorkResultLogic(
+				resolvedFormula,
+				rounding,
+			);
 			const payload = {
 				// Tokens — канонический источник визуального редактора. Terms-модель
 				// не умеет без потерь представить все арифметические выражения
 				// (например, вычитание), поэтому хранить только её нельзя.
-				formula: formula.tokens,
-				formulaText:
-					tokensToText(formula.tokens) ||
-					formula.text?.trim() ||
-					terms.text ||
-					null,
+				formula: resolvedFormula.tokens,
+				formulaText: resolvedFormula.text,
 				roundingMode: rounding.mode,
 				roundingStep:
 					rounding.mode === "NONE" ? null : String(rounding.step ?? 0.1),
@@ -817,6 +905,7 @@ export class V2TypicalWorkWriteService {
 
 	async reconcileSchemaField(
 		dto: V2TypicalWorkSchemaFieldSyncRequestDto,
+		workArchComponent?: string | null,
 	): Promise<V2TypicalWorkSchemaFieldSyncImpactDto> {
 		const configs = await this.versionConfigRepository.find({
 			where: { templateVersionId: dto.templateVersionId },
@@ -846,21 +935,49 @@ export class V2TypicalWorkWriteService {
 			...paramCodes.map((paramCode) => ({ paramCode })),
 			...(field.name?.trim() ? [{ paramName: field.name.trim() }] : []),
 		];
+		const legacyMatchWhere = [
+			...paramCodes.map((paramCode) => ({ paramCode })),
+			...(field.name?.trim() ? [{ paramName: field.name.trim() }] : []),
+		];
 
-		const [matchingRules, matchingLaborHeaders] = await Promise.all([
+		const [matchingRules, matchingLaborHeaders, matchingLaborRows] = await Promise.all([
 			this.ruleRepository.find({ where: matchWhere }),
 			this.laborParamRepository.find({ where: matchWhere }),
+			legacyMatchWhere.length > 0
+				? this.laborRepository.find({ where: legacyMatchWhere })
+				: Promise.resolve([]),
 		]);
 
 		const affectedKeys = new Set(
-			[...matchingRules, ...matchingLaborHeaders].map(
+			[...matchingRules, ...matchingLaborHeaders, ...matchingLaborRows].map(
 				(row) => `${row.workId}:${row.streamExecutor}`,
 			),
 		);
+		const normalizedWorkArch = workArchComponent
+			? normalizeArchComponentType(workArchComponent)
+			: null;
+		const workArchById = normalizedWorkArch
+			? new Map(
+					(
+						await this.workRepository.find({
+							where: { id: In(configs.map((config) => config.workId)) },
+						})
+					).map((work) => [
+						work.id,
+						normalizeArchComponentType(work.archComponentType),
+					]),
+				)
+			: null;
 
 		for (const config of configs) {
 			const configKey = `${config.workId}:${config.streamExecutor}`;
 			if (!affectedKeys.has(configKey)) continue;
+			if (
+				normalizedWorkArch &&
+				workArchById?.get(config.workId) !== normalizedWorkArch
+			) {
+				continue;
+			}
 
 			const card = await this.typicalWorkService.getWorkCardForSchemaSync(
 				config.workId,
@@ -1149,28 +1266,43 @@ export class V2TypicalWorkWriteService {
 			fieldsProcessed: 0,
 			consistencyIssues: [],
 		};
+		const schemaParamNameCounts = new Map<string, number>();
+		for (const schemaParam of schemaParams) {
+			const normalizedName = schemaParam.name.trim().toLocaleLowerCase("ru");
+			schemaParamNameCounts.set(
+				normalizedName,
+				(schemaParamNameCounts.get(normalizedName) ?? 0) + 1,
+			);
+		}
 
 		for (const schemaParam of schemaParams) {
 			if (!schemaParam.schemaFieldUid) continue;
 			const previousCode =
 				findCatalogPreviousCodeForSchemaParam(catalog.items, schemaParam) ??
 				schemaParam.code;
-			const impact = await this.reconcileSchemaField({
-				templateVersionId,
-				mode,
-				operation: "upsert",
-				field: {
-					schemaFieldUid: schemaParam.schemaFieldUid,
-					previousCode,
-					aliasCodes: schemaParam.sourceKeys,
-					code: schemaParam.code,
-					name: schemaParam.name,
-					values:
-						schemaParam.values && schemaParam.values.length > 0
-							? schemaParam.values
-							: undefined,
+			const duplicateNameCount =
+				schemaParamNameCounts.get(
+					schemaParam.name.trim().toLocaleLowerCase("ru"),
+				) ?? 0;
+			const impact = await this.reconcileSchemaField(
+				{
+					templateVersionId,
+					mode,
+					operation: "upsert",
+					field: {
+						schemaFieldUid: schemaParam.schemaFieldUid,
+						previousCode,
+						aliasCodes: schemaParam.sourceKeys,
+						code: schemaParam.code,
+						name: schemaParam.name,
+						values:
+							schemaParam.values && schemaParam.values.length > 0
+								? schemaParam.values
+								: undefined,
+					},
 				},
-			});
+				duplicateNameCount > 1 ? schemaParam.archComponent : null,
+			);
 			aggregate.fieldsProcessed++;
 			aggregate.worksMatched += impact.worksMatched;
 			aggregate.worksUpdated += impact.worksUpdated;

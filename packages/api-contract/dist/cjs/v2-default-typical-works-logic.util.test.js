@@ -216,8 +216,26 @@ const v2_default_typical_works_logic_util_1 = require("./v2-default-typical-work
         const rule = patched.rules.find((r) => r.id === "unified-typical-total");
         (0, vitest_1.expect)(rule?.dependencies).toEqual([
             "/streamDataSources/sourceTypicalTasks",
-            "/streamModelControl/field_Khn6-HAW",
+            "/streamModelControl/field_G0AoYAl8",
         ]);
+    });
+    (0, vitest_1.it)("drops legacy unified-control-row-total rule", () => {
+        const patched = (0, v2_default_typical_works_logic_util_1.patchV2TypicalWorksLogicRules)({
+            rules: [
+                {
+                    id: "unified-control-row-total",
+                    kind: "row_computed",
+                    targetPath: "/streamModelControl/field_Khn6-HAW",
+                    condition: true,
+                    dependencies: [],
+                    payload: {
+                        fieldVar: "total",
+                        arrayPath: "streamModelControl.field_Khn6-HAW",
+                    },
+                },
+            ],
+        });
+        (0, vitest_1.expect)(patched.rules.some((rule) => rule.id === "unified-control-row-total")).toBe(false);
     });
     (0, vitest_1.it)("patches unified-typical-total to custom typicalWork output path from uiSchema", () => {
         const customPath = "streamDataSources.field_SId8TZKZ";

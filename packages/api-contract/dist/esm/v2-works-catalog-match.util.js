@@ -72,8 +72,7 @@ export function readLaborParamAnswer(source, paramCode, paramName) {
             return source[slug];
     }
     if (source.type !== undefined &&
-        (paramCode === "type" ||
-            isSourceTypeTriggerParam(paramCode, paramName))) {
+        (paramCode === "type" || isSourceTypeTriggerParam(paramCode, paramName))) {
         return source.type;
     }
     return undefined;
@@ -245,6 +244,24 @@ export function laborValueMatches(actual, valueCode, valueLabel) {
     if (valueLabel != null && String(valueLabel).trim() !== "") {
         if (String(actual) === valueLabel)
             return true;
+        if (typeof actual === "number" && Number.isFinite(actual)) {
+            const range = valueLabel.trim().toLowerCase().replace(/\s+/g, " ");
+            const upTo = range.match(/^до\s*(\d+(?:[.,]\d+)?)/u);
+            if (upTo?.[1] && actual <= Number(upTo[1].replace(",", "."))) {
+                return true;
+            }
+            const interval = range.match(/^(\d+(?:[.,]\d+)?)\s*[–—-]\s*(\d+(?:[.,]\d+)?)/u);
+            if (interval?.[1] && interval[2]) {
+                const min = Number(interval[1].replace(",", "."));
+                const max = Number(interval[2].replace(",", "."));
+                if (actual > min && actual <= max)
+                    return true;
+            }
+            const over = range.match(/^(?:>|более\s+)(\d+(?:[.,]\d+)?)/u);
+            if (over?.[1] && actual > Number(over[1].replace(",", "."))) {
+                return true;
+            }
+        }
         if (typeof actual === "boolean") {
             const norm = valueLabel.trim().toLowerCase();
             if (norm === "да" && actual === true)

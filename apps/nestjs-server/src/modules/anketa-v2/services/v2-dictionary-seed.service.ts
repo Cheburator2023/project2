@@ -34,7 +34,51 @@ export class V2DictionarySeedService implements OnModuleInit {
 		await this.removeSupersededDuplicates();
 		await this.removeObsoleteFactoryDictionaries();
 		await this.ensureDefaultDictionaries();
+		await this.syncCorrectedComplexityDictionaryItems();
 		await this.syncDefaultMetadata();
+	}
+
+	/**
+	 * Исправляет две заводские шкалы, которые в старом snapshot были скопированы
+	 * от других полей при одинаковом title «Сложность реализации».
+	 */
+	private async syncCorrectedComplexityDictionaryItems(): Promise<void> {
+		const codes = [
+			"v2.detailInfo.dataMart.field_46LCnfWo",
+			"v2.detailInfo.sourceSystems.items.field_L1lRlgf1",
+		];
+		for (const code of codes) {
+			const def = V2_ALL_DEFAULT_DICTIONARIES.find((item) => item.code === code);
+			if (!def) continue;
+			const dictionary = await this.dictionaryRepository.findOne({
+				where: { code },
+			});
+			if (!dictionary) continue;
+			const existing = await this.itemRepository.find({
+				where: { dictionaryId: dictionary.id },
+				order: { order: "ASC" },
+			});
+			const existingLabels = existing.map((item) => item.label);
+			const expectedLabels = def.items.map((item) => item.label);
+			if (JSON.stringify(existingLabels) === JSON.stringify(expectedLabels)) {
+				continue;
+			}
+			await this.itemRepository.delete({ dictionaryId: dictionary.id });
+			await this.itemRepository.save(
+				def.items.map((item) =>
+					this.itemRepository.create({
+						dictionaryId: dictionary.id,
+						code: item.code,
+						label: item.label,
+						order: item.order,
+						isActive: true,
+						parentCode: null,
+						payload: item.payload ?? null,
+					}),
+				),
+			);
+			this.logger.log(`Исправлена заводская шкала справочника ${code}`);
+		}
 	}
 
 	async ensureDefaultDictionaries(): Promise<void> {

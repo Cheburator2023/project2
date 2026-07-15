@@ -4,7 +4,11 @@ import type {
 	V2WorkFormulaToken,
 	V2WorkRoundingMode,
 } from "./v2-typical-work.types";
-import { parseParamNameSourceKeys } from "./v2-work-param-source-keys.util";
+import { slugParamCode } from "./v2-param-slug.util";
+import {
+	parseParamNameSourceKeys,
+	stripParamNameSourceKeys,
+} from "./v2-work-param-source-keys.util";
 
 export type WorkFormulaEvalContext = {
 	norm: number;
@@ -51,8 +55,16 @@ function collectParamRefKeys(ref: WorkFormulaLaborParamRef): Set<string> {
 	const keys = new Set<string>();
 	const code = ref.paramCode.trim();
 	if (code) keys.add(code);
-	for (const key of parseParamNameSourceKeys(ref.paramName).sourceKeys) {
+	const { displayName, sourceKeys } = parseParamNameSourceKeys(ref.paramName);
+	for (const key of sourceKeys) {
 		if (key.trim()) keys.add(key.trim());
+	}
+	for (const label of [
+		displayName,
+		stripParamNameSourceKeys(ref.paramName ?? ""),
+	]) {
+		const slug = slugParamCode(label.trim());
+		if (slug) keys.add(slug);
 	}
 	return keys;
 }
@@ -66,6 +78,16 @@ export function workFormulaLaborParamMatches(
 	if (token.paramName != null && group.paramName === token.paramName) return true;
 	if (token.paramName != null && group.paramCode === token.paramName) return true;
 	if (group.paramName != null && group.paramName === token.paramCode) return true;
+
+	const tokenDisplay = stripParamNameSourceKeys(token.paramName ?? "")
+		.trim()
+		.toLowerCase();
+	const groupDisplay = stripParamNameSourceKeys(group.paramName ?? "")
+		.trim()
+		.toLowerCase();
+	if (tokenDisplay && groupDisplay && tokenDisplay === groupDisplay) {
+		return true;
+	}
 
 	const tokenKeys = collectParamRefKeys({
 		paramCode: token.paramCode,
@@ -96,10 +118,25 @@ export function normalizeWorkFormulaLaborParamTokens(
 		const group = laborParams.find((g) => workFormulaLaborParamMatches(token, g));
 		if (!group) return token;
 		return {
-			...token,
+			kind: token.kind,
 			paramCode: group.paramCode,
 			paramName: group.paramName ?? group.paramCode,
 		};
+	});
+}
+
+/** Сопоставляет param-токены формулы с блоком трудоёмкости и снимает invalid при совпадении. */
+export function reconcileFormulaLaborParamTokens(
+	tokens: V2WorkFormulaToken[],
+	laborParams: readonly WorkFormulaLaborParamRef[],
+): V2WorkFormulaToken[] {
+	const normalized = normalizeWorkFormulaLaborParamTokens(tokens, laborParams);
+	return normalized.map((token) => {
+		if (!isParamToken(token)) return token;
+		if (!isWorkFormulaLaborParamKnown(token, laborParams)) return token;
+		if (!token.invalid) return token;
+		const { invalid: _invalid, ...rest } = token;
+		return rest;
 	});
 }
 
@@ -342,16 +379,22 @@ export function parseWorkFormulaText(text: string): {
 			readFunctionCall("anyof") ??
 			readFunctionCall("работа");
 		if (fnCall) {
+			skipWs();
+			const invalid = input[i] === "?";
+			if (invalid) i++;
+
 			if (fnCall.kind === "work_ref") {
 				tokens.push({
 					kind: "work_ref",
 					assignmentId: fnCall.id,
+					...(invalid ? { invalid: true } : {}),
 				});
 			} else {
 				tokens.push({
 					kind: fnCall.kind,
 					paramCode: fnCall.id,
 					paramName: fnCall.id,
+					...(invalid ? { invalid: true } : {}),
 				});
 			}
 			continue;

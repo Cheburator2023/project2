@@ -27,6 +27,8 @@ export declare function isWorkFormulaLaborParamKnown(token: Extract<V2WorkFormul
     kind: "param_coeff" | "param_anyof";
 }>, laborParams: readonly WorkFormulaLaborParamRef[]): boolean;
 export declare function normalizeWorkFormulaLaborParamTokens(tokens: V2WorkFormulaToken[], laborParams: readonly WorkFormulaLaborParamRef[]): V2WorkFormulaToken[];
+/** Сопоставляет param-токены формулы с блоком трудоёмкости и снимает invalid при совпадении. */
+export declare function reconcileFormulaLaborParamTokens(tokens: V2WorkFormulaToken[], laborParams: readonly WorkFormulaLaborParamRef[]): V2WorkFormulaToken[];
 export declare function tokensToText(tokens: V2WorkFormulaToken[]): string;
 /** Краткая запись для блока «Общая формула норматива» (N, Кэф-П1, …). */
 export declare function formatWorkFormulaGeneralSummary(tokens: V2WorkFormulaToken[], paramOrder: readonly string[]): string;

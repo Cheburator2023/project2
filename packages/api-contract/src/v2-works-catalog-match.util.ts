@@ -23,13 +23,15 @@ export const STREAM_BY_SOURCE_TYPE: Record<string, string> = {
 	Внешний: "ИД. Внешний",
 };
 
-const SOURCE_TYPE_CODE_ALIASES: Record<string, keyof typeof STREAM_BY_SOURCE_TYPE> =
-	{
-		internal: "Внутренний",
-		внутренний: "Внутренний",
-		external: "Внешний",
-		внешний: "Внешний",
-	};
+const SOURCE_TYPE_CODE_ALIASES: Record<
+	string,
+	keyof typeof STREAM_BY_SOURCE_TYPE
+> = {
+	internal: "Внутренний",
+	внутренний: "Внутренний",
+	external: "Внешний",
+	внешний: "Внешний",
+};
 
 /** Нормализует код/метку типа источника к канонической русской метке. */
 export function normalizeSourceTypeLabel(
@@ -108,8 +110,7 @@ export function readLaborParamAnswer(
 	}
 	if (
 		source.type !== undefined &&
-		(paramCode === "type" ||
-			isSourceTypeTriggerParam(paramCode, paramName))
+		(paramCode === "type" || isSourceTypeTriggerParam(paramCode, paramName))
 	) {
 		return source.type;
 	}
@@ -239,7 +240,9 @@ export function resolveTriggerStatusCatalogParam(
 
 	const paramName = rule.paramName?.trim();
 	if (paramName) {
-		const bySlug = catalog.find((item) => item.code === slugParamCode(paramName));
+		const bySlug = catalog.find(
+			(item) => item.code === slugParamCode(paramName),
+		);
 		if (bySlug) return bySlug;
 	}
 
@@ -368,6 +371,25 @@ export function laborValueMatches(
 ): boolean {
 	if (valueLabel != null && String(valueLabel).trim() !== "") {
 		if (String(actual) === valueLabel) return true;
+		if (typeof actual === "number" && Number.isFinite(actual)) {
+			const range = valueLabel.trim().toLowerCase().replace(/\s+/g, " ");
+			const upTo = range.match(/^до\s*(\d+(?:[.,]\d+)?)/u);
+			if (upTo?.[1] && actual <= Number(upTo[1].replace(",", "."))) {
+				return true;
+			}
+			const interval = range.match(
+				/^(\d+(?:[.,]\d+)?)\s*[–—-]\s*(\d+(?:[.,]\d+)?)/u,
+			);
+			if (interval?.[1] && interval[2]) {
+				const min = Number(interval[1].replace(",", "."));
+				const max = Number(interval[2].replace(",", "."));
+				if (actual > min && actual <= max) return true;
+			}
+			const over = range.match(/^(?:>|более\s+)(\d+(?:[.,]\d+)?)/u);
+			if (over?.[1] && actual > Number(over[1].replace(",", "."))) {
+				return true;
+			}
+		}
 		if (typeof actual === "boolean") {
 			const norm = valueLabel.trim().toLowerCase();
 			if (norm === "да" && actual === true) return true;
@@ -559,7 +581,9 @@ export function buildTypicalWorkFactorCoeffResolver(params: {
 		if (Object.hasOwn(params.paramCoefficients, paramCode)) {
 			return params.paramCoefficients[paramCode]!;
 		}
-		const header = params.anyOfParams.find((row) => row.paramCode === paramCode);
+		const header = params.anyOfParams.find(
+			(row) => row.paramCode === paramCode,
+		);
 		if (header) {
 			return resolveLaborAnyOfCoefficient(
 				params.source,

@@ -6,6 +6,7 @@ import {
 import {
 	ColumnsToolPanelModule,
 	FiltersToolPanelModule,
+	RowGroupingModule,
 	SideBarModule,
 } from "ag-grid-enterprise";
 
@@ -20,6 +21,7 @@ export function registerAgGridTableModules(): void {
 		SideBarModule,
 		ColumnsToolPanelModule,
 		FiltersToolPanelModule,
+		RowGroupingModule,
 	]);
 	registered = true;
 }

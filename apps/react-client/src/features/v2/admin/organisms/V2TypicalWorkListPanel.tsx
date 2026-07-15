@@ -9,6 +9,10 @@ import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
+import {
+	AG_GRID_SCHEMA_GROUP_AUTO_COLUMN,
+	readAgGridSchemaGroupLabel,
+} from "@react-client/common/tableStuff/agGridSchemaGrouping";
 import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import { toast } from "@react-client/common/toasts";
 import { WORK_ARCH_COMPONENT_TYPES } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorkPatchErrors";
@@ -123,6 +127,13 @@ export function V2TypicalWorkListPanel({
 	const columnDefs = useMemo<ColDef<V2TypicalWorkListItemDto>[]>(
 		() => [
 			{
+				colId: "schemaGroup",
+				rowGroup: true,
+				hide: true,
+				valueGetter: (params) =>
+					readAgGridSchemaGroupLabel(params.data?.templateName),
+			},
+			{
 				field: "name",
 				headerName: "Название",
 				flex: 1.6,
@@ -149,13 +160,6 @@ export function V2TypicalWorkListPanel({
 				valueFormatter: (p) => (p.value ? String(p.value) : "—"),
 			},
 			{
-				colId: "template",
-				headerName: "Схема",
-				flex: 1,
-				minWidth: 120,
-				valueGetter: (p) => p.data?.templateName?.trim() || "— (глобальная)",
-			},
-			{
 				colId: "streams",
 				headerName: "Стримы",
 				flex: 1,
@@ -174,6 +178,11 @@ export function V2TypicalWorkListPanel({
 			resizable: true,
 			minWidth: 72,
 		}),
+		[],
+	);
+
+	const autoGroupColumnDef = useMemo<ColDef>(
+		() => AG_GRID_SCHEMA_GROUP_AUTO_COLUMN,
 		[],
 	);
 
@@ -229,7 +238,9 @@ export function V2TypicalWorkListPanel({
 
 	const getRowClass = useCallback(
 		(params: RowClassParams<V2TypicalWorkListItemDto>) =>
-			params.data?.id === selectedId ? "v2-typical-work-list-row--active" : "",
+			!params.node.group && params.data?.id === selectedId
+				? "v2-typical-work-list-row--active"
+				: "",
 		[selectedId],
 	);
 
@@ -256,7 +267,8 @@ export function V2TypicalWorkListPanel({
 
 	const onRowClicked = useCallback(
 		(event: RowClickedEvent<V2TypicalWorkListItemDto>) => {
-			if (event.data?.id) onSelect(event.data.id);
+			if (event.node.group || !event.data?.id) return;
+			onSelect(event.data.id);
 		},
 		[onSelect],
 	);
@@ -301,6 +313,10 @@ export function V2TypicalWorkListPanel({
 						rowData={items}
 						columnDefs={columnDefs}
 						defaultColDef={defaultColDef}
+						autoGroupColumnDef={autoGroupColumnDef}
+						groupDefaultExpanded={-1}
+						groupDisplayType="singleColumn"
+						isRowSelectable={(node) => !node.group}
 						localeText={AG_GRID_LOCALE_RU}
 						rowSelection={{
 							mode: "multiRow",

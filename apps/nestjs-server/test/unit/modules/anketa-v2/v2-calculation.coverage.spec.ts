@@ -177,7 +177,7 @@ describe("V2 calculation coverage — typicalWork (sourceSystem → catalog → 
 			rules: logic.rules.filter((rule) =>
 				[
 					"default-row-source-typical-task-total",
-					"unified-control-row-total",
+					"unified-typical-row-total:streamModelControl_field_G0AoYAl8",
 					"unified-typical-total",
 					"unified-grand-total",
 				].includes(rule.id),
@@ -188,7 +188,7 @@ describe("V2 calculation coverage — typicalWork (sourceSystem → catalog → 
 				sourceTypicalTasks: [{ estimateHoursPerDay: 4, coefficient: 1 }],
 			},
 			streamModelControl: {
-				"field_Khn6-HAW": [{ estimateHoursPerDay: 6, coefficient: 1 }],
+				"field_G0AoYAl8": [{ estimateHoursPerDay: 6, coefficient: 1 }],
 			},
 			summary: { atypicalTotal: 0 },
 		});
@@ -397,7 +397,7 @@ describe("V2 calculation coverage — legacy E2E stages", () => {
 });
 
 describe("V2 calculation coverage — rule kinds & guards", () => {
-	it("task_trigger pilot rules report passes=false when pilotNeed is absent", async () => {
+	it("task_trigger pilot rules report passes=false when prePromEval is absent", async () => {
 		const result = await evaluateSnapshot({});
 		const pilotTriggers = result.taskTriggers.filter(
 			(t) => t.taskCode === "PILOT_SUPPORT",

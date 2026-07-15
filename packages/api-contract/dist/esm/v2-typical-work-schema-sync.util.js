@@ -1,7 +1,7 @@
 import { slugParamCode } from "./v2-param-slug.util";
 import { schemaEnumValueMatchesRule } from "./v2-template-work-schema-params.util";
-import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
-import { isParamToken, markUnknownFormulaLaborParamTokensInvalid, tokensToText, } from "./v2-work-formula.util";
+import { formatParamNameWithSourceKeys, stripParamNameSourceKeys, } from "./v2-work-param-source-keys.util";
+import { isParamToken, markUnknownFormulaLaborParamTokensInvalid, reconcileFormulaLaborParamTokens, tokensToText, } from "./v2-work-formula.util";
 function collectFieldAliasCodes(request) {
     const aliases = new Set();
     for (const code of [
@@ -18,6 +18,19 @@ function collectFieldAliasCodes(request) {
             aliases.add(slug);
     }
     return aliases;
+}
+function formatSyncedParamName(request, currentName, nextCode, previousCode) {
+    const displayName = stripParamNameSourceKeys(request.field.name ?? currentName ?? "").trim();
+    if (!displayName)
+        return currentName ?? null;
+    const aliasCodes = [
+        nextCode,
+        previousCode,
+        request.field.previousCode,
+        ...(request.field.aliasCodes ?? []),
+        currentName ? slugParamCode(stripParamNameSourceKeys(currentName)) : null,
+    ].filter((code) => Boolean(code?.trim()));
+    return formatParamNameWithSourceKeys(displayName, [...new Set(aliasCodes)]);
 }
 function matchesField(ref, request) {
     if (ref.schemaFieldUid &&
@@ -44,11 +57,12 @@ function reconcileRule(rule, request) {
         return null;
     const values = request.field.values;
     if (values === undefined) {
+        const nextCode = request.field.code ?? rule.paramCode;
         return {
             ...rule,
             schemaFieldUid: request.field.schemaFieldUid,
-            paramCode: request.field.code ?? rule.paramCode,
-            paramName: request.field.name ?? rule.paramName,
+            paramCode: nextCode,
+            paramName: formatSyncedParamName(request, rule.paramName, nextCode, rule.paramCode) ?? rule.paramName,
         };
     }
     const allowed = new Map(values.map((value) => [value.code, value.label]));
@@ -76,7 +90,7 @@ function reconcileRule(rule, request) {
         ...rule,
         schemaFieldUid: request.field.schemaFieldUid,
         paramCode: request.field.code ?? rule.paramCode,
-        paramName: request.field.name ?? rule.paramName,
+        paramName: formatSyncedParamName(request, rule.paramName, request.field.code ?? rule.paramCode, rule.paramCode) ?? rule.paramName,
         valueCode: isSetOperator ? null : scalarAvailable ? scalarMatch.code : null,
         valueLabel: isSetOperator
             ? null
@@ -97,7 +111,7 @@ function reconcileLaborParam(group, request) {
         ...group,
         schemaFieldUid: request.field.schemaFieldUid,
         paramCode: request.field.code ?? group.paramCode,
-        paramName: request.field.name ?? group.paramName,
+        paramName: formatSyncedParamName(request, group.paramName, request.field.code ?? group.paramCode, group.paramCode) ?? group.paramName,
     };
     if (values === undefined)
         return nextBase;
@@ -148,7 +162,7 @@ function reconcileFormulaTokensForField(tokens, request) {
             return {
                 ...token,
                 paramCode: request.field.code ?? token.paramCode,
-                paramName: request.field.name ?? token.paramName,
+                paramName: formatSyncedParamName(request, token.paramName, request.field.code ?? token.paramCode, token.paramCode) ?? token.paramName,
                 invalid: false,
             };
         }),
@@ -180,7 +194,10 @@ export function reconcileTypicalWorkCardWithSchemaField(card, request) {
     let formulaTokens = formulaReconciled.tokens;
     let formulasInvalidated = formulaReconciled.invalidated ? 1 : 0;
     const formulaSanitized = sanitizeFormulaAgainstLaborParams(formulaTokens, laborParams);
-    formulaTokens = formulaSanitized.tokens;
+    formulaTokens = reconcileFormulaLaborParamTokens(formulaSanitized.tokens, laborParams.map((group) => ({
+        paramCode: group.paramCode,
+        paramName: group.paramName ?? null,
+    })));
     if (formulaSanitized.invalidated) {
         formulasInvalidated = 1;
     }

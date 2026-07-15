@@ -168,7 +168,7 @@ describe("V2CalculationService", () => {
 			},
 			detailInfo: { detailTypicalTasks: [] },
 			streamModelControl: {
-				"field_Khn6-HAW": [],
+				"field_G0AoYAl8": [],
 			},
 			summary: { atypicalTotal: 8 },
 		});
@@ -466,7 +466,7 @@ describe("V2CalculationService", () => {
 				field_OFmNQhnL: [staleRow],
 				streamDataSources: { sourceTypicalTasks: [staleRow] },
 				detailInfo: { detailTypicalTasks: [staleRow] },
-				streamModelControl: { "field_Khn6-HAW": [staleRow] },
+				streamModelControl: { "field_G0AoYAl8": [staleRow] },
 			},
 			{ jsonSchema: minimalJsonSchema, uiSchema: minimalUiSchema },
 		);
@@ -475,7 +475,7 @@ describe("V2CalculationService", () => {
 			field_OFmNQhnL: unknown[];
 			streamDataSources: { sourceTypicalTasks: unknown[] };
 			detailInfo: { detailTypicalTasks: unknown[] };
-			streamModelControl: { "field_Khn6-HAW": unknown[] };
+			streamModelControl: { "field_G0AoYAl8": unknown[] };
 			summary: {
 				platformStreams: Array<{
 					streamName: string;
@@ -486,7 +486,7 @@ describe("V2CalculationService", () => {
 		expect(formData.field_OFmNQhnL).toEqual([]);
 		expect(formData.streamDataSources.sourceTypicalTasks).toEqual([]);
 		expect(formData.detailInfo.detailTypicalTasks).toEqual([]);
-		expect(formData.streamModelControl["field_Khn6-HAW"]).toEqual([]);
+		expect(formData.streamModelControl["field_G0AoYAl8"]).toEqual([]);
 		const sourcesStream = formData.summary.platformStreams.find(
 			(row) => row.streamName === "Источники данных",
 		);
@@ -560,10 +560,10 @@ describe("V2CalculationService", () => {
 		});
 		const controlTasks = (
 			result.formData.streamModelControl as {
-				"field_Khn6-HAW"?: Array<{ name: string }>;
+				"field_G0AoYAl8"?: Array<{ name: string }>;
 				control?: { controlTypicalTasks?: Array<{ name: string }> };
 			}
-		)["field_Khn6-HAW"];
+		)["field_G0AoYAl8"];
 		expect(controlTasks ?? []).toHaveLength(0);
 	});
 

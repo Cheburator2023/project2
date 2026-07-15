@@ -204,17 +204,24 @@ function buildUnifiedTypicalTotalRule(arrayPaths) {
         dependencies: arrayPaths.map((path) => `/${path.replace(/\./g, "/")}`),
     };
 }
-const LEGACY_CONTROL_TYPICAL_TASKS_PATH = "streamModelControl.control.controlTypicalTasks";
-const LEGACY_CONTROL_TYPICAL_TASKS_SLASH_PATH = "/streamModelControl/control/controlTypicalTasks";
-const LEGACY_CONTROL_TYPICAL_TASKS_SLASH_REPLACEMENT = `/${v2_typical_work_output_paths_util_1.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH.replace(/\./g, "/")}`;
+const LEGACY_CONTROL_ROW_TOTAL_RULE_IDS = new Set([
+    "unified-control-row-total",
+]);
+function isLegacyControlRowTotalRuleId(id) {
+    return LEGACY_CONTROL_ROW_TOTAL_RULE_IDS.has(id);
+}
 function patchTypicalWorksPathsDeep(value) {
     if (typeof value === "string") {
         let next = value;
-        if (next.includes(LEGACY_CONTROL_TYPICAL_TASKS_PATH)) {
-            next = next.replaceAll(LEGACY_CONTROL_TYPICAL_TASKS_PATH, v2_typical_work_output_paths_util_1.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH);
-        }
-        if (next.includes(LEGACY_CONTROL_TYPICAL_TASKS_SLASH_PATH)) {
-            next = next.replaceAll(LEGACY_CONTROL_TYPICAL_TASKS_SLASH_PATH, LEGACY_CONTROL_TYPICAL_TASKS_SLASH_REPLACEMENT);
+        for (const legacyPath of v2_typical_work_output_paths_util_1.LEGACY_CONTROL_TYPICAL_TASKS_OUTPUT_PATHS) {
+            if (next.includes(legacyPath)) {
+                next = next.replaceAll(legacyPath, v2_typical_work_output_paths_util_1.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH);
+            }
+            const legacySlash = `/${legacyPath.replace(/\./g, "/")}`;
+            const canonicalSlash = `/${v2_typical_work_output_paths_util_1.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH.replace(/\./g, "/")}`;
+            if (next.includes(legacySlash)) {
+                next = next.replaceAll(legacySlash, canonicalSlash);
+            }
         }
         if (next === "streamDataSources.sourceSystems") {
             return exports.V2_SOURCE_SYSTEMS_ARRAY_PATH;
@@ -284,6 +291,7 @@ function patchV2TypicalWorksLogicRules(logic, options) {
     const rest = rules
         .filter((rule) => !isPatchedTypicalWorksCatalogRule(rule) &&
         !isTypicalRowTotalPatchedRuleId(rule.id) &&
+        !isLegacyControlRowTotalRuleId(rule.id) &&
         (typicalPaths.length === 0 || rule.id !== "unified-typical-total"))
         .map((rule) => patchUnifiedTypicalTotalRule(patchLegacyRowTotalRule(patchTypicalWorksPathsDeep(rule)), sourceOutputPath));
     const injectedTypicalRows = typicalPaths.map((path) => buildTypicalWorkRowTotalRule(path));

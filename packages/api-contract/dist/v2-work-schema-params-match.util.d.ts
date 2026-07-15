@@ -4,6 +4,8 @@ export type WorkSchemaParamDef = {
     code: string;
     name: string;
     description?: string | null;
+    /** Архитектурный компонент поля из ближайшего ui:options.archComponent. */
+    archComponent?: string | null;
     schemaFieldUid?: string | null;
     schemaPointer?: string | null;
     sourceKeys?: string[];

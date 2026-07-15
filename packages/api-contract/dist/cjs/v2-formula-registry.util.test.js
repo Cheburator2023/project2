@@ -42,6 +42,38 @@ const v2_formula_registry_util_1 = require("./v2-formula-registry.util");
         (0, vitest_1.expect)(result.hasInvalidRefs).toBe(true);
     });
 });
+(0, vitest_1.describe)("assessFormulaRegistryLinks", () => {
+    (0, vitest_1.it)("clears stale invalid flag when labor param matches by alias", () => {
+        const result = (0, v2_formula_registry_util_1.assessFormulaRegistryLinks)([
+            { kind: "norm" },
+            {
+                kind: "param_coeff",
+                paramCode: "field_x",
+                paramName: "field_x",
+                invalid: true,
+            },
+        ], {
+            laborParams: [
+                {
+                    paramCode: "сложность_реализации",
+                    paramName: "Сложность реализации @ field_x|сложность_реализации",
+                },
+            ],
+        });
+        (0, vitest_1.expect)(result.hasInvalidRefs).toBe(false);
+        (0, vitest_1.expect)(result.paramRefs[0]?.invalid).toBeUndefined();
+    });
+    (0, vitest_1.it)("marks missing labor block as broken even without stale invalid flag", () => {
+        const result = (0, v2_formula_registry_util_1.assessFormulaRegistryLinks)([
+            {
+                kind: "param_coeff",
+                paramCode: "field_missing",
+                paramName: "field_missing",
+            },
+        ], { laborParams: [] });
+        (0, vitest_1.expect)(result.hasInvalidRefs).toBe(true);
+    });
+});
 (0, vitest_1.describe)("formatFormulaRegistryParamLabel", () => {
     (0, vitest_1.it)("shows name with code when both differ", () => {
         (0, vitest_1.expect)((0, v2_formula_registry_util_1.formatFormulaRegistryParamLabel)("field_abc", "Количество")).toBe("Количество (field_abc)");

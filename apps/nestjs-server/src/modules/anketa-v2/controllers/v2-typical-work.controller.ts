@@ -36,7 +36,9 @@ import type {
 	V2TypicalWorkSchemaFieldSyncRequestDto,
 	V2TypicalWorkSchemaBulkSyncResponseDto,
 	V2FormulaRegistryListResponseDto,
+	BulkDeleteV2TypicalWorksResultDto,
 } from "@smart-anketa/api-contract";
+import { BulkDeleteV2TypicalWorksDto } from "../dto/request/bulk-delete-v2-typical-works.dto";
 import { V2TypicalWorkService } from "../services/v2-typical-work.service";
 import { V2TypicalWorkWriteService } from "../services/v2-typical-work-write.service";
 
@@ -214,6 +216,17 @@ export class V2TypicalWorkController {
 		skipped: number;
 	}> {
 		return this.typicalWorkWriteService.backfillCalculationLogic();
+	}
+
+	@Post("bulk-delete")
+	@ApiOperation({ summary: "Массовое удаление типовых работ" })
+	async bulkDelete(
+		@Body() dto: BulkDeleteV2TypicalWorksDto,
+	): Promise<BulkDeleteV2TypicalWorksResultDto> {
+		return this.typicalWorkWriteService.bulkDeleteWorks(
+			dto.ids,
+			dto.confirm === true,
+		);
 	}
 
 	@Post("schema-field-sync")

@@ -454,14 +454,16 @@ export function TypicalWorkEditableCard({
 	useEffect(() => {
 		if (!draft || !card) return;
 		if (resolveCanonicalWorkArchComponentType(draft.archComponentType)) return;
+		if (resolveCanonicalWorkArchComponentType(card.archComponentType)) return;
 		const cardKey = `${card.id}::${card.streamExecutor}`;
 		if (defaultedArchKeyRef.current === cardKey) return;
+		if (saveInProgressRef.current || hasPending()) return;
 		defaultedArchKeyRef.current = cardKey;
 		commitDraft({
 			...draft,
 			archComponentType: DEFAULT_WORK_ARCH_COMPONENT_TYPE,
 		});
-	}, [card, draft]);
+	}, [card, draft, hasPending]);
 
 	const addLaborParam = (picked: V2TypicalWorkParameterDto) => {
 		if (!draft) return;

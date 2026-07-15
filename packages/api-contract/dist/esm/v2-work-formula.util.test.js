@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyWorkRounding, evaluateWorkFormula, formatWorkFormulaGeneralSummary, isParamUsedInFormula, isWorkFormulaLaborParamKnown, markFormulaParamInvalid, normalizeWorkFormulaLaborParamTokens, parseWorkFormulaText, previewWorkFormula, tokensToText, validateWorkFormulaTokens, } from "./v2-work-formula.util";
+import { applyWorkRounding, evaluateWorkFormula, formatWorkFormulaGeneralSummary, isParamUsedInFormula, isWorkFormulaLaborParamKnown, markFormulaParamInvalid, normalizeWorkFormulaLaborParamTokens, parseWorkFormulaText, previewWorkFormula, reconcileFormulaLaborParamTokens, tokensToText, validateWorkFormulaTokens, } from "./v2-work-formula.util";
 import { defaultWorkFormula, defaultWorkRounding } from "./v2-typical-work.types";
 describe("v2-work-formula.util", () => {
     it("parses H × P[param]", () => {
@@ -111,6 +111,37 @@ describe("v2-work-formula.util", () => {
             ],
             allowInvalidParamRefs: true,
         })).toBeNull();
+    });
+    it("reconciles schema field code with labor slug and drops invalid marker", () => {
+        const tokens = [
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_coeff",
+                paramCode: "field_46LcNfWo",
+                paramName: "field_46LcNfWo",
+                invalid: true,
+            },
+        ];
+        const laborParams = [
+            {
+                paramCode: "сложность_реализации",
+                paramName: "Сложность реализации @ field_46LcNfWo|сложность_реализации",
+            },
+        ];
+        const reconciled = reconcileFormulaLaborParamTokens(tokens, laborParams);
+        expect(tokensToText(reconciled)).toBe("N × коэф(сложность_реализации)");
+        expect(reconciled[2]).not.toHaveProperty("invalid");
+    });
+    it("parses optional invalid marker after param ref", () => {
+        const parsed = parseWorkFormulaText("N * коэф(field_x)?");
+        expect(parsed.error).toBeNull();
+        expect(parsed.tokens[2]).toEqual({
+            kind: "param_coeff",
+            paramCode: "field_x",
+            paramName: "field_x",
+            invalid: true,
+        });
     });
     it("applyWorkRounding NONE keeps raw value", () => {
         expect(applyWorkRounding(1.23, { mode: "NONE", step: null })).toBe(1.23);

@@ -672,13 +672,14 @@ export const V2TemplateSchemaEditor = ({
 
 	useEffect(() => {
 		if (!mappedCalculation?.liveFormData || previewResetPending) return;
-		setFormData((prev) =>
-			syncTriggerGatedGroupActivationFromTypicalWorks(
+		setFormData((prev) => {
+			const next = syncTriggerGatedGroupActivationFromTypicalWorks(
 				prev,
 				uiSchema,
 				mappedCalculation.liveFormData,
-			),
-		);
+			);
+			return next === prev ? prev : next;
+		});
 	}, [mappedCalculation?.liveFormData, uiSchema, previewResetPending]);
 
 	const logicPreviewPack = useMemo(
@@ -817,7 +818,7 @@ export const V2TemplateSchemaEditor = ({
 			}
 		>
 	>(new Map());
-	const previousSchemaParamsVersionRef = useRef<string | null>(null);
+	const schemaParamsBaselineVersionRef = useRef<string | null>(null);
 	const pendingSchemaSyncBeforeRef = useRef(
 		new Map<
 			string,
@@ -846,15 +847,9 @@ export const V2TemplateSchemaEditor = ({
 		if (initialSchemaBulkSyncRef.current === versionId) return;
 		initialSchemaBulkSyncRef.current = versionId;
 
-		void bulkSyncSchemaFields({ templateVersionId: versionId, mode: "apply" })
+		void bulkSyncSchemaFields({ templateVersionId: versionId, mode: "dryRun" })
 			.then((result) => {
 				setSchemaConsistencyIssues(result.consistencyIssues);
-				if (result.consistencyIssues.length > 0) {
-					toast.warning(
-						`После синхронизации параметров осталось ${result.consistencyIssues.length} проблем связи работ со схемой`,
-					);
-				}
-				requestCalculationRefresh();
 			})
 			.catch((error) => {
 				toast.error(apiErrorMessage(error));
@@ -863,7 +858,6 @@ export const V2TemplateSchemaEditor = ({
 		activeVersion?.id,
 		bulkSyncSchemaFields,
 		dictionaryEnumsLoading,
-		requestCalculationRefresh,
 		schemaWorkParams.length,
 	]);
 
@@ -888,19 +882,21 @@ export const V2TemplateSchemaEditor = ({
 					},
 				]),
 		);
-		const previous = previousSchemaParamsRef.current;
-		previousSchemaParamsRef.current = current;
-		if (previousSchemaParamsVersionRef.current !== (versionId ?? null)) {
-			previousSchemaParamsVersionRef.current = versionId ?? null;
+		if (schemaParamsBaselineVersionRef.current !== versionId) {
+			schemaParamsBaselineVersionRef.current = versionId ?? null;
+			previousSchemaParamsRef.current = current;
 			pendingSchemaSyncBeforeRef.current.clear();
 			return;
 		}
-		if (!versionId || previous.size === 0) return;
+
+		const previous = previousSchemaParamsRef.current;
+		if (!versionId) return;
 
 		const changed = [...current].filter(([uid, param]) => {
 			const before = previous.get(uid);
 			return before && JSON.stringify(before) !== JSON.stringify(param);
 		});
+		previousSchemaParamsRef.current = current;
 		if (changed.length === 0) return;
 		for (const [uid] of changed) {
 			const before = previous.get(uid);

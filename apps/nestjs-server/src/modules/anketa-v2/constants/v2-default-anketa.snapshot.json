@@ -219,9 +219,10 @@
 							},
 							"field_46LCnfWo": {
 								"enum": [
-									"До 20",
-									"20–50",
-									"Более 50"
+									"Низкая",
+									"Средняя",
+									"Высокая",
+									"Неизвестно"
 								],
 								"type": "string",
 								"title": "Сложность реализации"
@@ -581,11 +582,10 @@
 								},
 								"field_L1lRlgf1": {
 									"enum": [
-										"Точечное",
-										"Малое",
-										"Среднее",
-										"Большое",
-										"Масштабное"
+										"Низкая",
+										"Средняя",
+										"Высокая",
+										"Неизвестно"
 									],
 									"type": "string",
 									"title": "Сложность реализации"
@@ -3543,29 +3543,6 @@
 	"logic": {
 		"rules": [
 			{
-				"id": "unified-control-row-total",
-				"kind": "row_computed",
-				"payload": {
-					"label": "Per-row итог работы контроля моделей",
-					"fieldVar": "total",
-					"arrayPath": "streamModelControl.field_Khn6-HAW",
-					"formulaHint": "row.total = норматив контроля (ч/д, справочник №40) × коэффициент."
-				},
-				"condition": {
-					"*": [
-						{
-							"var": "estimateHoursPerDay"
-						},
-						{
-							"var": "coefficient"
-						}
-					]
-				},
-				"targetPath": "/streamModelControl/control/controlTypicalTasks",
-				"description": "ФТ-024: итог строки работы контроля моделей.",
-				"dependencies": []
-			},
-			{
 				"id": "unified-grand-total",
 				"kind": "computed",
 				"payload": {
@@ -3609,15 +3586,15 @@
 				"condition": {
 					"==": [
 						{
-							"var": [
-								"generalInfo.pilotNeed"
-							]
+							"var": "generalInfo.modelService.prePromEval"
 						},
-						"Требуется"
+						true
 					]
 				},
 				"targetPath": "/",
-				"dependencies": []
+				"dependencies": [
+					"/generalInfo/modelService/prePromEval"
+				]
 			},
 			{
 				"id": "TJNtbRBNc9qBOhqvd2nk9",
@@ -3629,15 +3606,15 @@
 				"condition": {
 					"==": [
 						{
-							"var": [
-								"generalInfo.pilotNeed"
-							]
+							"var": "generalInfo.modelService.prePromEval"
 						},
-						"Требуется"
+						true
 					]
 				},
 				"targetPath": "/",
-				"dependencies": []
+				"dependencies": [
+					"/generalInfo/modelService/prePromEval"
+				]
 			}
 		]
 	},

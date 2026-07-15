@@ -4,7 +4,6 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import * as express from "express";
 import { AppModule } from "./app.module";
 import { logger } from "./shared/logger/logger.config";
-import { LoggingInterceptor } from "./shared/interceptors/logging.interceptor";
 import { CustomLogger } from "./shared/services/logger.service";
 import { RateLimiterMiddleware } from "./shared/middleware/rate-limiter.middleware";
 
@@ -18,9 +17,7 @@ async function bootstrap() {
     });
 
 	const rateLimiter = app.get(RateLimiterMiddleware);
-	app.use(rateLimiter.use.bind(rateLimiter));
-
-    app.useGlobalInterceptors(new LoggingInterceptor(customLogger));
+    app.use(rateLimiter.use.bind(rateLimiter));
 
 	app.enableCors({
 		origin: "*",

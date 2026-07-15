@@ -1,3 +1,4 @@
+import { isWorkFormulaLaborParamKnown, } from "./v2-work-formula.util";
 export function extractFormulaRegistryLinks(tokens) {
     const paramRefs = [];
     const workRefs = [];
@@ -30,6 +31,56 @@ export function extractFormulaRegistryLinks(tokens) {
                 assignmentId: token.assignmentId,
                 workName: token.workName ?? null,
                 invalid: token.invalid,
+            });
+        }
+    }
+    return { paramRefs, workRefs, hasInvalidRefs };
+}
+/** Оценивает ссылки формулы по фактическому наличию параметров/назначений, а не устаревшему token.invalid. */
+export function assessFormulaRegistryLinks(tokens, options = {}) {
+    const { laborParams, knownAssignmentIds } = options;
+    const paramRefs = [];
+    const workRefs = [];
+    const seenParams = new Set();
+    const seenAssignments = new Set();
+    let hasInvalidRefs = false;
+    for (const token of tokens) {
+        if (token.kind === "param_coeff" || token.kind === "param_anyof") {
+            const key = `${token.kind}:${token.paramCode}`;
+            if (seenParams.has(key))
+                continue;
+            seenParams.add(key);
+            let invalid = token.invalid === true;
+            if (laborParams !== undefined) {
+                invalid =
+                    laborParams.length > 0
+                        ? !isWorkFormulaLaborParamKnown(token, laborParams)
+                        : true;
+            }
+            if (invalid)
+                hasInvalidRefs = true;
+            paramRefs.push({
+                paramCode: token.paramCode,
+                paramName: token.paramName ?? null,
+                kind: token.kind,
+                ...(invalid ? { invalid: true } : {}),
+            });
+            continue;
+        }
+        if (token.kind === "work_ref") {
+            if (seenAssignments.has(token.assignmentId))
+                continue;
+            seenAssignments.add(token.assignmentId);
+            let invalid = token.invalid === true;
+            if (knownAssignmentIds !== undefined) {
+                invalid = !knownAssignmentIds.has(token.assignmentId);
+            }
+            if (invalid)
+                hasInvalidRefs = true;
+            workRefs.push({
+                assignmentId: token.assignmentId,
+                workName: token.workName ?? null,
+                ...(invalid ? { invalid: true } : {}),
             });
         }
     }

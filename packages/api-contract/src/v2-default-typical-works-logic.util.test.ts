@@ -268,8 +268,29 @@ describe("v2-default-typical-works-logic.util", () => {
 		const rule = patched.rules.find((r) => r.id === "unified-typical-total");
 		expect(rule?.dependencies).toEqual([
 			"/streamDataSources/sourceTypicalTasks",
-			"/streamModelControl/field_Khn6-HAW",
+			"/streamModelControl/field_G0AoYAl8",
 		]);
+	});
+
+	it("drops legacy unified-control-row-total rule", () => {
+		const patched = patchV2TypicalWorksLogicRules({
+			rules: [
+				{
+					id: "unified-control-row-total",
+					kind: "row_computed",
+					targetPath: "/streamModelControl/field_Khn6-HAW",
+					condition: true,
+					dependencies: [],
+					payload: {
+						fieldVar: "total",
+						arrayPath: "streamModelControl.field_Khn6-HAW",
+					},
+				},
+			],
+		});
+		expect(
+			patched.rules.some((rule) => rule.id === "unified-control-row-total"),
+		).toBe(false);
 	});
 
 	it("patches unified-typical-total to custom typicalWork output path from uiSchema", () => {

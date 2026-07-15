@@ -114,6 +114,37 @@ const v2_typical_work_types_1 = require("./v2-typical-work.types");
             allowInvalidParamRefs: true,
         })).toBeNull();
     });
+    (0, vitest_1.it)("reconciles schema field code with labor slug and drops invalid marker", () => {
+        const tokens = [
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_coeff",
+                paramCode: "field_46LcNfWo",
+                paramName: "field_46LcNfWo",
+                invalid: true,
+            },
+        ];
+        const laborParams = [
+            {
+                paramCode: "сложность_реализации",
+                paramName: "Сложность реализации @ field_46LcNfWo|сложность_реализации",
+            },
+        ];
+        const reconciled = (0, v2_work_formula_util_1.reconcileFormulaLaborParamTokens)(tokens, laborParams);
+        (0, vitest_1.expect)((0, v2_work_formula_util_1.tokensToText)(reconciled)).toBe("N × коэф(сложность_реализации)");
+        (0, vitest_1.expect)(reconciled[2]).not.toHaveProperty("invalid");
+    });
+    (0, vitest_1.it)("parses optional invalid marker after param ref", () => {
+        const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)("N * коэф(field_x)?");
+        (0, vitest_1.expect)(parsed.error).toBeNull();
+        (0, vitest_1.expect)(parsed.tokens[2]).toEqual({
+            kind: "param_coeff",
+            paramCode: "field_x",
+            paramName: "field_x",
+            invalid: true,
+        });
+    });
     (0, vitest_1.it)("applyWorkRounding NONE keeps raw value", () => {
         (0, vitest_1.expect)((0, v2_work_formula_util_1.applyWorkRounding)(1.23, { mode: "NONE", step: null })).toBe(1.23);
     });

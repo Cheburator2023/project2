@@ -1,4 +1,6 @@
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -143,13 +145,34 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 	return (
 		<Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
 			<DialogTitle>Новая схема</DialogTitle>
-			<DialogContent>
+			<DialogContent sx={{ position: "relative" }}>
+				{pending ? (
+					<Box
+						sx={{
+							position: "absolute",
+							inset: 0,
+							zIndex: 1,
+							display: "flex",
+							flexDirection: "column",
+							alignItems: "center",
+							justifyContent: "center",
+							gap: 12,
+							bgcolor: "rgba(255, 255, 255, 0.72)",
+						}}
+					>
+						<CircularProgress size={36} />
+						<Typography variant="body2" color="text.secondary">
+							Создаём схему и первую версию…
+						</Typography>
+					</Box>
+				) : null}
 				<Flex flexDirection="column">
 					<TextField
 						autoFocus
 						margin="dense"
 						label="Название"
 						fullWidth
+						disabled={pending}
 						value={name}
 						onChange={(e) => setName(e.target.value)}
 					/>
@@ -160,11 +183,12 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 						fullWidth
 						multiline
 						minRows={2}
+						disabled={pending}
 						value={description}
 						onChange={(e) => setDescription(e.target.value)}
 					/>
 					<Spacer />
-					<FormControl component="fieldset" margin="dense">
+					<FormControl component="fieldset" margin="dense" disabled={pending}>
 						<FormLabel component="legend">Начальное содержимое</FormLabel>
 						<RadioGroup
 							value={initialKind}
@@ -233,7 +257,10 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 					disabled={pending || !name.trim()}
 					onClick={() => void handleSubmit()}
 				>
-					Создать
+					{pending ? (
+						<CircularProgress size={16} color="inherit" sx={{ mr: 1 }} />
+					) : null}
+					{pending ? "Создание…" : "Создать"}
 				</Button>
 			</DialogActions>
 		</Dialog>

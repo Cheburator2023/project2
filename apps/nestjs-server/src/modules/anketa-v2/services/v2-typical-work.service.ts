@@ -35,12 +35,17 @@ import {
 	resolveActiveNormOnDate,
 	compileStoredTypicalWorkResultLogic,
 	tokensToText,
+	parseWorkFormulaText,
 	computeFormulaBadge,
 	normalizeStoredFormula,
 	resolveVersionConfigTokenFormula,
-	termsToTokenFormula,
 	extractFormulaRegistryLinks,
+	assessFormulaRegistryLinks,
 	normalizeWorkFormulaLaborParamTokens,
+	reconcileFormulaLaborParamTokens,
+	formatParamNameWithSourceKeys,
+	stripParamNameSourceKeys,
+	type WorkFormulaLaborParamRef,
 } from "@smart-anketa/api-contract";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
@@ -56,6 +61,7 @@ import {
 	canonicalizeWorkStream,
 	DEFAULT_NORM_VALID_FROM,
 	findCatalogRowsForRegistryWork,
+	findCatalogFormulaForStream,
 	groupCatalogWorks,
 	inferTriggerValueLabel,
 	normalizeArchComponentType,
@@ -84,6 +90,46 @@ function resolveCardTokenFormula(
 
 function todayIsoDate(): string {
 	return new Date().toISOString().slice(0, 10);
+}
+
+function resolveSeedVersionConfigFormula(
+	catalogRows: V2FactoryTypicalWork[],
+	streamExecutor: string,
+): {
+	formula: ReturnType<typeof defaultWorkFormula>;
+	rounding: ReturnType<typeof defaultWorkRounding>;
+} {
+	const catalogFormula = findCatalogFormulaForStream(
+		catalogRows,
+		streamExecutor,
+	);
+	if (!catalogFormula) {
+		return {
+			formula: defaultWorkFormula(),
+			rounding: defaultWorkRounding(),
+		};
+	}
+
+	const parsed = parseWorkFormulaText(catalogFormula.formulaText);
+	if (parsed.error) {
+		throw new Error(
+			`Invalid factory formula for stream "${streamExecutor}": ${parsed.error}`,
+		);
+	}
+
+	return {
+		formula: {
+			tokens: parsed.tokens,
+			text: catalogFormula.formulaText,
+		},
+		rounding: {
+			mode: catalogFormula.roundingMode,
+			step:
+				catalogFormula.roundingMode === "NONE"
+					? null
+					: (catalogFormula.roundingStep ?? 0.1),
+		},
+	};
 }
 
 @Injectable()
@@ -322,15 +368,25 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				}),
 			);
 
+			const catalogRows = findCatalogRowsForRegistryWork(
+				entry,
+				catalogGroups,
+			);
+
 			const streams = await this.seedRegistryWorkNormsAndCatalog(
 				work.id,
 				entry,
-				findCatalogRowsForRegistryWork(entry, catalogGroups),
+				catalogRows,
 				paramsByName,
 			);
 
 			for (const stream of streams) {
-				await this.ensureWorkVersionConfig(work.id, trimmedVersionId, stream);
+				await this.ensureWorkVersionConfig(
+					work.id,
+					trimmedVersionId,
+					stream,
+					catalogRows,
+				);
 			}
 
 			created++;
@@ -425,6 +481,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		workId: string,
 		templateVersionId: string,
 		streamExecutor: string,
+		catalogRows: V2FactoryTypicalWork[] = [],
 	): Promise<void> {
 		const stream = streamExecutor.trim();
 		const existing = await this.versionConfigRepository.findOne({
@@ -432,8 +489,10 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		});
 		if (existing) return;
 
-		const formula = defaultWorkFormula();
-		const rounding = defaultWorkRounding();
+		const { formula, rounding } = resolveSeedVersionConfigFormula(
+			catalogRows,
+			stream,
+		);
 		const compiled = compileStoredTypicalWorkResultLogic(formula, rounding);
 
 		await this.versionConfigRepository.save(
@@ -534,24 +593,51 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				}
 			}
 
-			for (const paramName of row.triggerParams) {
-				const trimmed = paramName.trim();
+			const triggerRules =
+				row.triggerRules?.length
+					? row.triggerRules
+					: row.triggerParams.map((paramName) => ({
+							paramName,
+							operator: "exists" as const,
+							values: [] as string[],
+						}));
+			for (const triggerRule of triggerRules) {
+				if (triggerRule.operator === "unresolved") continue;
+				const trimmed = triggerRule.paramName.trim();
 				if (!trimmed) continue;
 				const paramCode = slugParamCode(trimmed);
 				const ruleKey = `${stream}|${paramCode}`;
 				if (seenRuleKeys.has(ruleKey)) continue;
 				seenRuleKeys.add(ruleKey);
 
-				const valueLabel = inferTriggerValueLabel(trimmed, originalStream);
+				const values =
+					triggerRule.values.length > 0
+						? triggerRule.values
+						: [];
+				const inferredValue =
+					values[0] ?? inferTriggerValueLabel(trimmed, originalStream);
+				const valueCodes =
+					values.length > 1
+						? values.map((label) => ({
+								code: slugParamCode(label),
+								label,
+							}))
+						: null;
 				await this.ruleRepository.save(
 					this.ruleRepository.create({
 						workId,
 						streamExecutor: stream,
 						paramCode,
 						paramName: trimmed,
-						operator: "=",
-						valueCode: valueLabel ? slugParamCode(valueLabel) : null,
-						valueLabel,
+						operator:
+							triggerRule.operator === "exists"
+								? "="
+								: triggerRule.operator,
+						valueCode: inferredValue
+							? slugParamCode(inferredValue)
+							: null,
+						valueLabel: inferredValue,
+						valueCodes,
 					}),
 				);
 			}
@@ -560,7 +646,14 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				const trimmed = paramName.trim();
 				if (!trimmed) continue;
 				const paramCode = slugParamCode(trimmed);
-				const dictValues = paramsByName.get(trimmed)?.values ?? [];
+				const rowValues =
+					row.laborCoefficients?.find(
+						(group) => group.paramName.trim() === trimmed,
+					)?.values ?? [];
+				const dictValues =
+					rowValues.length > 0
+						? rowValues
+						: (paramsByName.get(trimmed)?.values ?? []);
 
 				if (dictValues.length === 0) {
 					const laborKey = `${stream}|${paramCode}|`;
@@ -620,62 +713,40 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			assignmentsByWork.set(assignment.workId, list);
 		}
 
+		const catalogGroups = groupCatalogWorks();
+
 		for (const work of works) {
+			const catalogRows = findCatalogRowsForRegistryWork(
+				{
+					name: work.name,
+					archComponentType: work.archComponentType,
+				},
+				catalogGroups,
+			);
 			const streams = assignmentsByWork.get(work.id) ?? [];
 			for (const stream of streams) {
-				await this.ensureWorkVersionConfig(work.id, templateVersionId, stream);
+				await this.ensureWorkVersionConfig(
+					work.id,
+					templateVersionId,
+					stream,
+					catalogRows,
+				);
 			}
 		}
 	}
 
-	/** Дефолтная формула H для всех работ на текущей опубликованной версии шаблона. */
+	/** Создаёт недостающие конфиги текущей заводской версии по assignments и snapshot. */
 	async ensureFactoryVersionConfigs(): Promise<void> {
 		const activeTemplate = await this.templateRepository.findOne({
 			where: { currentVersionId: Not(IsNull()) },
 			order: { updatedAt: "DESC" },
 		});
 		const templateVersionId = activeTemplate?.currentVersionId;
-		if (!templateVersionId) return;
-
-		const version = await this.templateVersionRepository.findOne({
-			where: { id: templateVersionId },
-		});
-		if (!version) return;
-
-		const works = await this.workRepository.find();
-		if (works.length === 0) return;
-
-		const existing = await this.versionConfigRepository.find({
-			where: { templateVersionId },
-		});
-		const existingWorkIds = new Set(existing.map((row) => row.workId));
-		const formula = defaultWorkFormula();
-		const rounding = defaultWorkRounding();
-		const compiled = compileStoredTypicalWorkResultLogic(formula, rounding);
-		let created = 0;
-
-		for (const work of works) {
-			if (existingWorkIds.has(work.id)) continue;
-			await this.versionConfigRepository.save(
-				this.versionConfigRepository.create({
-					workId: work.id,
-					templateVersionId,
-					formula: formula.tokens,
-					formulaText: formula.text || tokensToText(formula.tokens),
-					roundingMode: rounding.mode,
-					roundingStep:
-						rounding.mode === "NONE" ? null : String(rounding.step ?? 0.1),
-					calculationLogic: compiled,
-				}),
-			);
-			created++;
-		}
-
-		if (created > 0) {
-			this.logger.log(
-				`Seeded ${created} typical work version configs for template version ${templateVersionId}`,
-			);
-		}
+		if (!activeTemplate?.id || !templateVersionId) return;
+		await this.ensureTemplateVersionConfigs(
+			activeTemplate.id,
+			templateVersionId,
+		);
 	}
 }
 
@@ -1084,16 +1155,12 @@ export class V2TypicalWorkService {
 			workId: string,
 			streamExecutor: string,
 			tokens: ReturnType<typeof defaultWorkFormula>["tokens"],
+			laborParamsGrouped: V2TypicalWorkCardDto["laborParams"],
 		) => {
-			const laborParamsGrouped = groupLaborByParam(
-				(laborRowsByWorkStream.get(`${workId}:${streamExecutor}`) ?? []).map(
-					mapLaborEntity,
-				),
-				laborHeadersByWorkStream.get(`${workId}:${streamExecutor}`) ?? [],
-			);
-			const normalized = normalizeWorkFormulaLaborParamTokens(
-				tokens,
-				laborParamsGrouped,
+			const laborRefs = buildLaborRefsFromGroupedParams(laborParamsGrouped);
+			const normalized = reconcileFormulaLaborParamTokens(
+				normalizeWorkFormulaLaborParamTokens(tokens, laborRefs),
+				laborRefs,
 			);
 			return normalized.map((token) => {
 				if (token.kind !== "param_coeff" && token.kind !== "param_anyof") {
@@ -1122,12 +1189,26 @@ export class V2TypicalWorkService {
 					assignmentByWorkStream.get(
 						`${config.workId}:${config.streamExecutor}`,
 					) ?? null;
+				const laborParamsGrouped = mergeLaborParamGroupsByIdentity(
+					groupLaborByParam(
+						(laborRowsByWorkStream.get(`${config.workId}:${config.streamExecutor}`) ??
+							[]
+						).map(mapLaborEntity),
+						laborHeadersByWorkStream.get(
+							`${config.workId}:${config.streamExecutor}`,
+						) ?? [],
+					),
+				);
 				const enrichedTokens = enrichRegistryFormulaTokens(
 					config.workId,
 					config.streamExecutor,
 					tokenFormula.tokens,
+					laborParamsGrouped,
 				);
-				const links = extractFormulaRegistryLinks(enrichedTokens);
+				const links = assessFormulaRegistryLinks(enrichedTokens, {
+					laborParams: buildLaborRefsFromGroupedParams(laborParamsGrouped),
+					knownAssignmentIds: new Set(assignmentById.keys()),
+				});
 				const workRefs = links.workRefs.map((ref) => {
 					const sourceAssignment = assignmentById.get(ref.assignmentId);
 					const refWork = sourceAssignment
@@ -1151,7 +1232,11 @@ export class V2TypicalWorkService {
 					versionStatus: version.status,
 					streamExecutor: config.streamExecutor,
 					assignmentId: assignment?.id ?? null,
-					formulaText: tokenFormula.text || terms.text || "",
+					formulaText:
+						tokensToText(enrichedTokens) ||
+						tokenFormula.text ||
+						terms.text ||
+						"",
 					formulaBadge: computeFormulaBadge(terms.terms),
 					roundingMode:
 						config.roundingMode as V2TypicalWorkCardDto["rounding"]["mode"],
@@ -1253,20 +1338,35 @@ export class V2TypicalWorkService {
 				: Promise.resolve(null),
 		]);
 
-		const laborParamsGrouped = groupLaborByParam(
-			laborRows.map(mapLaborEntity),
-			laborParams,
+		const laborParamsGrouped = mergeLaborParamGroupsByIdentity(
+			groupLaborByParam(
+				laborRows.map(mapLaborEntity),
+				laborParams,
+			),
 		);
 		const termsFormula = versionConfig
 			? normalizeStoredFormula(versionConfig.formula, versionConfig.formulaText)
 			: normalizeStoredFormula(null);
-		const tokenFormula = versionConfig
+		const tokenFormulaRaw = versionConfig
 			? resolveCardTokenFormula(
 					termsFormula,
 					versionConfig.formulaText,
 					versionConfig.formula,
 				)
 			: defaultWorkFormula();
+		const laborRefs = buildLaborRefsFromGroupedParams(laborParamsGrouped);
+		const formulaTokens = reconcileFormulaLaborParamTokens(
+			normalizeWorkFormulaLaborParamTokens(tokenFormulaRaw.tokens, laborRefs),
+			laborRefs,
+		);
+		const tokenFormula = {
+			tokens: formulaTokens,
+			text:
+				tokensToText(formulaTokens) ||
+				tokenFormulaRaw.text ||
+				termsFormula.text ||
+				"",
+		};
 		const triggerStatusCatalog =
 			await this.paramCatalogService.listTriggerStatusCatalog(todayIsoDate());
 		const usedOnSchemasCount = await this.countSchemaUsages(workId);
@@ -1351,20 +1451,35 @@ export class V2TypicalWorkService {
 			}),
 		]);
 
-		const laborParamsGrouped = groupLaborByParam(
-			laborRows.map(mapLaborEntity),
-			laborParams,
+		const laborParamsGrouped = mergeLaborParamGroupsByIdentity(
+			groupLaborByParam(
+				laborRows.map(mapLaborEntity),
+				laborParams,
+			),
 		);
 		const termsFormula = versionConfig
 			? normalizeStoredFormula(versionConfig.formula, versionConfig.formulaText)
 			: normalizeStoredFormula(null);
-		const tokenFormula = versionConfig
+		const tokenFormulaRaw = versionConfig
 			? resolveCardTokenFormula(
 					termsFormula,
 					versionConfig.formulaText,
 					versionConfig.formula,
 				)
 			: defaultWorkFormula();
+		const laborRefs = buildLaborRefsFromGroupedParams(laborParamsGrouped);
+		const formulaTokens = reconcileFormulaLaborParamTokens(
+			normalizeWorkFormulaLaborParamTokens(tokenFormulaRaw.tokens, laborRefs),
+			laborRefs,
+		);
+		const tokenFormula = {
+			tokens: formulaTokens,
+			text:
+				tokensToText(formulaTokens) ||
+				tokenFormulaRaw.text ||
+				termsFormula.text ||
+				"",
+		};
 
 		return {
 			id: work.id,
@@ -1581,4 +1696,76 @@ function groupLaborByParam(
 		});
 	}
 	return [...groups.values()];
+}
+
+function mergeLaborParamGroupsByIdentity(
+	groups: V2TypicalWorkCardDto["laborParams"],
+): V2TypicalWorkCardDto["laborParams"] {
+	const merged = new Map<string, V2TypicalWorkCardDto["laborParams"][number]>();
+
+	for (const group of groups) {
+		const identityKey =
+			group.schemaFieldUid?.trim() ||
+			slugParamCode(stripParamNameSourceKeys(group.paramName ?? group.paramCode)) ||
+			group.paramCode;
+		const existing = merged.get(identityKey);
+		if (!existing) {
+			merged.set(identityKey, {
+				...group,
+				coefficients: [...group.coefficients],
+			});
+			continue;
+		}
+
+		const codes = [
+			existing.paramCode,
+			group.paramCode,
+			...existing.coefficients.map((row) => row.paramCode),
+			...group.coefficients.map((row) => row.paramCode),
+		].filter((code): code is string => Boolean(code?.trim()));
+		const uniqueCodes = [...new Set(codes)];
+		const preferredCode =
+			uniqueCodes.find((code) => code.startsWith("field_")) ??
+			group.paramCode ??
+			existing.paramCode;
+		const displayName = stripParamNameSourceKeys(
+			group.paramName ?? existing.paramName ?? preferredCode,
+		).trim();
+
+		merged.set(identityKey, {
+			...existing,
+			schemaFieldUid: group.schemaFieldUid ?? existing.schemaFieldUid,
+			paramCode: preferredCode,
+			paramName: displayName
+				? formatParamNameWithSourceKeys(displayName, uniqueCodes)
+				: (group.paramName ?? existing.paramName),
+			kind: group.kind ?? existing.kind,
+			anyOf: group.anyOf ?? existing.anyOf,
+			coefficients: [...existing.coefficients, ...group.coefficients],
+		});
+	}
+
+	return [...merged.values()];
+}
+
+function buildLaborRefsFromGroupedParams(
+	groups: V2TypicalWorkCardDto["laborParams"],
+): WorkFormulaLaborParamRef[] {
+	return groups.map((group) => {
+		const aliasCodes = [
+			group.paramCode,
+			...group.coefficients.map((row) => row.paramCode),
+			slugParamCode(stripParamNameSourceKeys(group.paramName ?? "")),
+		].filter((code): code is string => Boolean(code?.trim()));
+		const uniqueCodes = [...new Set(aliasCodes)];
+		const displayName = stripParamNameSourceKeys(
+			group.paramName ?? group.paramCode,
+		).trim();
+		return {
+			paramCode: group.paramCode,
+			paramName: displayName
+				? formatParamNameWithSourceKeys(displayName, uniqueCodes)
+				: (group.paramName ?? null),
+		};
+	});
 }

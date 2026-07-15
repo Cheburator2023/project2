@@ -1,6 +1,8 @@
 export declare const V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = "streamDataSources.sourceTypicalTasks";
 /** Канонический вывод типовых работ «Контроль моделей». */
-export declare const V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_Khn6-HAW";
+export declare const V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_G0AoYAl8";
+/** Устаревшие пути вывода типовых работ «Контроль моделей». */
+export declare const LEGACY_CONTROL_TYPICAL_TASKS_OUTPUT_PATHS: readonly ["streamModelControl.field_Khn6-HAW", "streamModelControl.control.controlTypicalTasks"];
 /** Ключ ui:options — привязанные к блоку id типовых работ (сохраняется в снепшоте). */
 export declare const TYPICAL_WORK_BOUND_WORK_IDS_KEY = "boundWorkIds";
 export type TypicalWorkBlockBinding = {
@@ -13,7 +15,7 @@ export type TypicalWorkCatalogBindingItem = {
     streams: readonly string[];
 };
 /** Legacy/fan-out пути, куда раньше дублировались сгенерированные типовые работы. */
-export declare const LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS: readonly ["streamDataSources.sourceTypicalTasks", "streamModelControl.field_Khn6-HAW", "detailInfo.detailTypicalTasks", "detailInfo.sourceTypicalTasks", "generalInfo.modelService.controlTypicalTasks"];
+export declare const LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS: readonly ["streamDataSources.sourceTypicalTasks", "streamModelControl.field_Khn6-HAW", "streamModelControl.control.controlTypicalTasks", "streamModelControl.field_G0AoYAl8", "detailInfo.detailTypicalTasks", "detailInfo.sourceTypicalTasks", "generalInfo.modelService.controlTypicalTasks"];
 /** Dot-пути read-only массивов «Типовые работы» из uiSchema (archComponent: typicalWork). */
 export declare function collectGeneratedTypicalWorkArrayPaths(uiSchema: unknown, prefix?: string): string[];
 /** Привязанные work id для блока typicalWork по dot-пути в uiSchema. */

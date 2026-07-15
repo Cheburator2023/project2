@@ -7,6 +7,9 @@ import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
+import {
+	AG_GRID_SCHEMA_GROUP_AUTO_COLUMN,
+} from "@react-client/common/tableStuff/agGridSchemaGrouping";
 import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import {
 	agGridCustomMUITheme,
@@ -147,16 +150,15 @@ export function V2FormulaRegistryListPanel({
 	const columnDefs = useMemo<ColDef<V2FormulaRegistryItemDto>[]>(
 		() => [
 			{
+				field: "templateName",
+				rowGroup: true,
+				hide: true,
+			},
+			{
 				field: "workName",
 				headerName: "Работа",
 				flex: 1.3,
 				minWidth: 180,
-			},
-			{
-				field: "templateName",
-				headerName: "Схема",
-				flex: 1,
-				minWidth: 140,
 			},
 			{
 				colId: "version",
@@ -218,6 +220,11 @@ export function V2FormulaRegistryListPanel({
 		[],
 	);
 
+	const autoGroupColumnDef = useMemo<ColDef>(
+		() => AG_GRID_SCHEMA_GROUP_AUTO_COLUMN,
+		[],
+	);
+
 	useEffect(() => {
 		const api = gridRef.current?.api;
 		if (!api || !selectedId) return;
@@ -230,13 +237,16 @@ export function V2FormulaRegistryListPanel({
 
 	const getRowClass = useCallback(
 		(params: RowClassParams<V2FormulaRegistryItemDto>) =>
-			params.data?.id === selectedId ? "v2-formula-registry-row--active" : "",
+			!params.node.group && params.data?.id === selectedId
+				? "v2-formula-registry-row--active"
+				: "",
 		[selectedId],
 	);
 
 	const onRowClicked = useCallback(
 		(event: RowClickedEvent<V2FormulaRegistryItemDto>) => {
-			if (event.data?.id) onSelect(event.data.id);
+			if (event.node.group || !event.data?.id) return;
+			onSelect(event.data.id);
 		},
 		[onSelect],
 	);
@@ -295,6 +305,9 @@ export function V2FormulaRegistryListPanel({
 						rowData={items}
 						columnDefs={columnDefs}
 						defaultColDef={defaultColDef}
+						autoGroupColumnDef={autoGroupColumnDef}
+						groupDefaultExpanded={-1}
+						groupDisplayType="singleColumn"
 						localeText={AG_GRID_LOCALE_RU}
 						getRowId={(params) => params.data.id}
 						rowSelection={{ mode: "singleRow", checkboxes: false }}

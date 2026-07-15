@@ -6,6 +6,7 @@ exports.isParamToken = isParamToken;
 exports.workFormulaLaborParamMatches = workFormulaLaborParamMatches;
 exports.isWorkFormulaLaborParamKnown = isWorkFormulaLaborParamKnown;
 exports.normalizeWorkFormulaLaborParamTokens = normalizeWorkFormulaLaborParamTokens;
+exports.reconcileFormulaLaborParamTokens = reconcileFormulaLaborParamTokens;
 exports.tokensToText = tokensToText;
 exports.formatWorkFormulaGeneralSummary = formatWorkFormulaGeneralSummary;
 exports.parseWorkFormulaText = parseWorkFormulaText;
@@ -18,6 +19,7 @@ exports.clampTypicalWorkEffort = clampTypicalWorkEffort;
 exports.roundWorkEffortValue = roundWorkEffortValue;
 exports.applyWorkRounding = applyWorkRounding;
 exports.previewWorkFormula = previewWorkFormula;
+const v2_param_slug_util_1 = require("./v2-param-slug.util");
 const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
 const OP_SYMBOL = {
     "+": "+",
@@ -39,9 +41,18 @@ function collectParamRefKeys(ref) {
     const code = ref.paramCode.trim();
     if (code)
         keys.add(code);
-    for (const key of (0, v2_work_param_source_keys_util_1.parseParamNameSourceKeys)(ref.paramName).sourceKeys) {
+    const { displayName, sourceKeys } = (0, v2_work_param_source_keys_util_1.parseParamNameSourceKeys)(ref.paramName);
+    for (const key of sourceKeys) {
         if (key.trim())
             keys.add(key.trim());
+    }
+    for (const label of [
+        displayName,
+        (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(ref.paramName ?? ""),
+    ]) {
+        const slug = (0, v2_param_slug_util_1.slugParamCode)(label.trim());
+        if (slug)
+            keys.add(slug);
     }
     return keys;
 }
@@ -55,6 +66,15 @@ function workFormulaLaborParamMatches(token, group) {
         return true;
     if (group.paramName != null && group.paramName === token.paramCode)
         return true;
+    const tokenDisplay = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(token.paramName ?? "")
+        .trim()
+        .toLowerCase();
+    const groupDisplay = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(group.paramName ?? "")
+        .trim()
+        .toLowerCase();
+    if (tokenDisplay && groupDisplay && tokenDisplay === groupDisplay) {
+        return true;
+    }
     const tokenKeys = collectParamRefKeys({
         paramCode: token.paramCode,
         paramName: token.paramName,
@@ -78,10 +98,24 @@ function normalizeWorkFormulaLaborParamTokens(tokens, laborParams) {
         if (!group)
             return token;
         return {
-            ...token,
+            kind: token.kind,
             paramCode: group.paramCode,
             paramName: group.paramName ?? group.paramCode,
         };
+    });
+}
+/** Сопоставляет param-токены формулы с блоком трудоёмкости и снимает invalid при совпадении. */
+function reconcileFormulaLaborParamTokens(tokens, laborParams) {
+    const normalized = normalizeWorkFormulaLaborParamTokens(tokens, laborParams);
+    return normalized.map((token) => {
+        if (!isParamToken(token))
+            return token;
+        if (!isWorkFormulaLaborParamKnown(token, laborParams))
+            return token;
+        if (!token.invalid)
+            return token;
+        const { invalid: _invalid, ...rest } = token;
+        return rest;
     });
 }
 function formatWorkFormulaParamRef(paramCode, paramName) {
@@ -297,10 +331,15 @@ function parseWorkFormulaText(text) {
             readFunctionCall("anyof") ??
             readFunctionCall("работа");
         if (fnCall) {
+            skipWs();
+            const invalid = input[i] === "?";
+            if (invalid)
+                i++;
             if (fnCall.kind === "work_ref") {
                 tokens.push({
                     kind: "work_ref",
                     assignmentId: fnCall.id,
+                    ...(invalid ? { invalid: true } : {}),
                 });
             }
             else {
@@ -308,6 +347,7 @@ function parseWorkFormulaText(text) {
                     kind: fnCall.kind,
                     paramCode: fnCall.id,
                     paramName: fnCall.id,
+                    ...(invalid ? { invalid: true } : {}),
                 });
             }
             continue;

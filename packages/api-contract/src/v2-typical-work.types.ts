@@ -352,6 +352,28 @@ export type V2DeleteTypicalWorkConflictDto = {
 	usedInQuestionnaireVersions: V2TypicalWorkQuestionnaireUsageDto[];
 };
 
+export type BulkDeleteV2TypicalWorksRequestDto = {
+	ids: string[];
+	confirm?: boolean;
+};
+
+export type BulkDeleteV2TypicalWorkConflictDto = {
+	workId: string;
+	usedInQuestionnaireVersions: V2TypicalWorkQuestionnaireUsageDto[];
+};
+
+export type BulkDeleteV2TypicalWorkFailureDto = {
+	id: string;
+	reason: "not_found" | "delete_failed";
+	message: string;
+};
+
+export type BulkDeleteV2TypicalWorksResultDto = {
+	deletedIds: string[];
+	conflicts: BulkDeleteV2TypicalWorkConflictDto[];
+	failed: BulkDeleteV2TypicalWorkFailureDto[];
+};
+
 export type V2TypicalWorkParameterValueDto = {
 	id: string;
 	code: string;

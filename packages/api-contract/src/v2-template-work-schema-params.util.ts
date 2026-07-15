@@ -1,4 +1,8 @@
 import { slugParamCode } from "./v2-param-slug.util";
+import {
+	V2_ARCH_COMPONENT_LABELS,
+	resolveV2AnketaArchComponent,
+} from "./v2-anketa-section-ui.util";
 import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
 import type { WorkSchemaParamDef, TypicalWorkRuleRefLike } from "./v2-work-schema-params-match.util";
 import {
@@ -57,6 +61,18 @@ function readUiBranch(
 	return cur && typeof cur === "object" && !Array.isArray(cur)
 		? (cur as Record<string, unknown>)
 		: undefined;
+}
+
+function resolveFieldArchComponent(
+	uiSchema: Record<string, unknown> | undefined,
+	segments: string[],
+): string | null {
+	for (let length = segments.length; length >= 0; length--) {
+		const branch = readUiBranch(uiSchema, segments.slice(0, length));
+		const arch = resolveV2AnketaArchComponent(branch);
+		if (arch) return V2_ARCH_COMPONENT_LABELS[arch];
+	}
+	return null;
 }
 
 function valuesFromSchemaNode(
@@ -126,6 +142,7 @@ function walkSchemaFields(
 			code: key,
 			name: title,
 			description: pointer,
+			archComponent: resolveFieldArchComponent(uiSchema, segments),
 			schemaFieldUid,
 			schemaPointer: pointer,
 			sourceKeys: [key],
@@ -136,7 +153,7 @@ function walkSchemaFields(
 	}
 
 	if (schemaNodeType(node) === "object" && node.properties) {
-		for (const [key, child] of Object.entries(node.properties)) {
+		for (const key of Object.keys(node.properties)) {
 			const childPointer =
 				pointer === "/" ? `/${key}` : `${pointer.replace(/\/$/, "")}/${key}`;
 			walkSchemaFields(schema, uiSchema, childPointer, [...segments, key], out);
@@ -145,7 +162,7 @@ function walkSchemaFields(
 
 	const itemsSchema = objectItemsSchema(node);
 	if (itemsSchema?.properties) {
-		for (const [key, child] of Object.entries(itemsSchema.properties)) {
+		for (const key of Object.keys(itemsSchema.properties)) {
 			const childPointer = `${pointer.replace(/\/$/, "")}/items/${key}`;
 			walkSchemaFields(
 				schema,
@@ -339,7 +356,7 @@ export function collectTypicalWorkSchemaConsistencyIssues(
 	for (const labor of input.laborParamCodes) {
 		const resolved = resolveWorkSchemaParamForRule(labor, input.schemaParams);
 		if (!resolved) {
-			if (!labor.schemaFieldUid) {
+			if (matchesMethodologyCatalogParam(labor, input.methodologyParams)) {
 				continue;
 			}
 			report(
@@ -347,6 +364,19 @@ export function collectTypicalWorkSchemaConsistencyIssues(
 				labor.paramCode,
 				labor.paramName,
 				"Параметр трудоёмкости не найден в схеме шаблона",
+			);
+			continue;
+		}
+		if (
+			labor.paramCode !== resolved.code ||
+			(resolved.schemaFieldUid &&
+				labor.schemaFieldUid !== resolved.schemaFieldUid)
+		) {
+			report(
+				"labor",
+				labor.paramCode,
+				labor.paramName,
+				`Параметр трудоёмкости использует legacy-код «${labor.paramCode}» вместо поля схемы «${resolved.name}» (${resolved.code})`,
 			);
 		}
 	}

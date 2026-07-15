@@ -19,7 +19,7 @@ import {
 } from "@smart-anketa/api-contract";
 import {
 	useCreateV2TypicalWork,
-	useDeleteV2TypicalWork,
+	useBulkDeleteV2TypicalWorks,
 	useV2TypicalWorkCard,
 	useV2TypicalWorksList,
 } from "@react-client/common/api/queries/v2-works";
@@ -139,7 +139,7 @@ export function TypicalWorksPanel() {
 		templateId,
 	});
 	const createWork = useCreateV2TypicalWork();
-	const deleteWork = useDeleteV2TypicalWork();
+	const bulkDeleteWorks = useBulkDeleteV2TypicalWorks();
 	const {
 		width: sidebarWidth,
 		isResizing: isSidebarResizing,
@@ -272,10 +272,10 @@ export function TypicalWorksPanel() {
 			return;
 		}
 		if (
-			!selectedWorkId ||
+			selectedWorkId &&
 			!assignedWorks.some((w) => w.id === selectedWorkId)
 		) {
-			setSelectedWorkId(assignedWorks[0]?.id ?? null);
+			setSelectedWorkId(null);
 		}
 	}, [assignedWorks, selectedWorkId]);
 
@@ -411,63 +411,68 @@ export function TypicalWorksPanel() {
 			id: item.id,
 			streams: item.streams ?? [],
 		}));
-		const deletedIds: string[] = [];
-		const conflictTargets: V2TypicalWorkListItemDto[] = [];
-		let conflictDetails: ReturnType<typeof parseTypicalWorkDeleteError> = null;
 
-		for (const work of deleteTargets) {
-			try {
-				await deleteWork.mutateAsync({ workId: work.id, confirm });
-				deletedIds.push(work.id);
-			} catch (err) {
-				if (!confirm) {
-					const conflict = parseTypicalWorkDeleteError(err);
-					if (conflict) {
-						conflictTargets.push(work);
-						conflictDetails ??= conflict;
-						continue;
-					}
-				}
-				toast.error(`Не удалось удалить «${work.name}»`, {
-					description: apiErrorMessage(err),
+		try {
+			const result = await bulkDeleteWorks.mutateAsync({
+				ids: deleteTargets.map((work) => work.id),
+				confirm,
+			});
+			const { deletedIds, conflicts, failed } = result;
+
+			for (const failure of failed) {
+				const work = deleteTargets.find((item) => item.id === failure.id);
+				toast.error(`Не удалось удалить «${work?.name ?? failure.id}»`, {
+					description: failure.message,
 				});
 			}
-		}
 
-		if (deletedIds.length > 0) {
-			if (selectedWorkId && deletedIds.includes(selectedWorkId)) {
-				setSelectedWorkId(null);
+			if (deletedIds.length > 0) {
+				if (selectedWorkId && deletedIds.includes(selectedWorkId)) {
+					setSelectedWorkId(null);
+				}
+				recordDraftHistory();
+				patchUiSchema(
+					(prev) => {
+						let next = prev as Record<string, unknown>;
+						for (const workId of deletedIds) {
+							next = removeWorkIdFromAllTypicalWorkBindings(
+								next,
+								workId,
+								catalog,
+							);
+						}
+						return next as import("@rjsf/utils").UiSchema;
+					},
+					{ recordHistory: false },
+				);
+				toast.success(
+					deletedIds.length === 1
+						? "Работа удалена"
+						: `Удалено работ: ${deletedIds.length}`,
+				);
 			}
-			recordDraftHistory();
-			patchUiSchema(
-				(prev) => {
-					let next = prev as Record<string, unknown>;
-					for (const workId of deletedIds) {
-						next = removeWorkIdFromAllTypicalWorkBindings(
-							next,
-							workId,
-							catalog,
-						);
-					}
-					return next as import("@rjsf/utils").UiSchema;
-				},
-				{ recordHistory: false },
-			);
-			toast.success(
-				deletedIds.length === 1
-					? "Работа удалена"
-					: `Удалено работ: ${deletedIds.length}`,
-			);
-		}
 
-		if (conflictTargets.length > 0 && !confirm) {
-			setDeleteTargets(conflictTargets);
-			setDeleteUsageConflict(conflictDetails);
-			return;
-		}
+			if (conflicts.length > 0 && !confirm) {
+				const conflictIds = new Set(conflicts.map((row) => row.workId));
+				setDeleteTargets(
+					deleteTargets.filter((work) => conflictIds.has(work.id)),
+				);
+				setDeleteUsageConflict({
+					code: "WORK_IN_USE",
+					usedInQuestionnaireVersions: conflicts.flatMap(
+						(row) => row.usedInQuestionnaireVersions,
+					),
+				});
+				return;
+			}
 
-		setDeleteTargets([]);
-		setDeleteUsageConflict(null);
+			setDeleteTargets([]);
+			setDeleteUsageConflict(null);
+		} catch (err) {
+			toast.error("Не удалось удалить работы", {
+				description: apiErrorMessage(err),
+			});
+		}
 	};
 
 	const openDeleteDialog = (works: V2TypicalWorkListItemDto[]) => {
@@ -609,7 +614,7 @@ export function TypicalWorksPanel() {
 			<Dialog
 				open={deleteTargets.length > 0}
 				onClose={() => {
-					if (deleteWork.isPending) return;
+					if (bulkDeleteWorks.isPending) return;
 					setDeleteTargets([]);
 					setDeleteUsageConflict(null);
 				}}
@@ -712,14 +717,14 @@ export function TypicalWorksPanel() {
 							setDeleteTargets([]);
 							setDeleteUsageConflict(null);
 						}}
-						disabled={deleteWork.isPending}
+						disabled={bulkDeleteWorks.isPending}
 					>
 						Отмена
 					</Button>
 					<Button
 						color="error"
 						variant="contained"
-						disabled={deleteWork.isPending}
+						disabled={bulkDeleteWorks.isPending}
 						onClick={() => void handleDeleteWorks(Boolean(deleteUsageConflict))}
 					>
 						{deleteUsageConflict ? "Удалить всё равно" : "Удалить"}

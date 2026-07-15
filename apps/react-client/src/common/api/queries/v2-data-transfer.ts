@@ -3,7 +3,7 @@ import {
 	V2_DATA_TRANSFER_DEFAULT_SECTIONS,
 	type V2DataTransferSection,
 } from "@smart-anketa/api-contract";
-import { apiClient } from "../helpers/apiClient";
+import { apiClient, API_HEAVY_OPERATION_TIMEOUT_MS } from "../helpers/apiClient";
 import { downloadBlob } from "./kanban-board";
 
 export type V2DataImportMode = "merge" | "replace";
@@ -59,7 +59,7 @@ export const v2DataTransferExport = (
 		method: "GET",
 		signal,
 		responseType: "blob",
-		timeout: 120_000,
+		timeout: API_HEAVY_OPERATION_TIMEOUT_MS,
 	});
 
 export const v2DataTransferImport = async (
@@ -76,7 +76,7 @@ export const v2DataTransferImport = async (
 		data: formData,
 		headers: { "Content-Type": undefined },
 		signal,
-		timeout: 120_000,
+		timeout: API_HEAVY_OPERATION_TIMEOUT_MS,
 	});
 };
 

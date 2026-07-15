@@ -20,8 +20,9 @@ import type {
 	CopyV2TypicalWorkRequestDto,
 	V2TypicalWorkAssignmentDto,
 	V2FormulaRegistryListResponseDto,
+	BulkDeleteV2TypicalWorksResultDto,
 } from "@smart-anketa/api-contract";
-import { apiClient } from "../helpers/apiClient";
+import { apiClient, API_ENTITY_CREATE_TIMEOUT_MS } from "../helpers/apiClient";
 
 export const useV2TypicalWorksCatalog = (params?: {
 	templateId?: string | null;
@@ -316,7 +317,6 @@ export const usePatchV2TypicalWork = () => {
 				data: dto,
 			}),
 		onSuccess: (card, variables) => {
-			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
 			queryClient.setQueryData(
 				[
 					"v2-works",
@@ -326,6 +326,12 @@ export const usePatchV2TypicalWork = () => {
 				],
 				card,
 			);
+			const templateId = variables.dto.templateId?.trim();
+			if (templateId) {
+				void queryClient.invalidateQueries({
+					queryKey: ["v2-works", "", "", templateId],
+				});
+			}
 		},
 	});
 };
@@ -386,6 +392,7 @@ export const useCopyV2TypicalWork = () => {
 				url: `/v2/works/${workId}/copy`,
 				method: "POST",
 				data: dto,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
@@ -405,6 +412,7 @@ export const useCreateV2TypicalWork = () => {
 				url: "/v2/works",
 				method: "POST",
 				data: dto,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
@@ -414,6 +422,11 @@ export const useCreateV2TypicalWork = () => {
 
 export type DeleteV2TypicalWorkVariables = {
 	workId: string;
+	confirm?: boolean;
+};
+
+export type BulkDeleteV2TypicalWorksVariables = {
+	ids: string[];
 	confirm?: boolean;
 };
 
@@ -433,6 +446,26 @@ export const useDeleteV2TypicalWork = () => {
 	});
 };
 
+export const useBulkDeleteV2TypicalWorks = () => {
+	const queryClient = useQueryClient();
+	return useMutation<
+		BulkDeleteV2TypicalWorksResultDto,
+		Error,
+		BulkDeleteV2TypicalWorksVariables
+	>({
+		mutationFn: ({ ids, confirm }) =>
+			apiClient({
+				url: "/v2/works/bulk-delete",
+				method: "POST",
+				data: { ids, confirm: confirm === true ? true : undefined },
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
+		},
+	});
+};
+
 export const useBackfillV2TypicalWorkCalculationLogic = () => {
 	const queryClient = useQueryClient();
 	return useMutation<{ updated: number; skipped: number }, Error, void>({
@@ -440,6 +473,7 @@ export const useBackfillV2TypicalWorkCalculationLogic = () => {
 			apiClient({
 				url: "/v2/works/calculation-logic/backfill",
 				method: "POST",
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["v2-works"] });

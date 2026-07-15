@@ -403,11 +403,10 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					},
 					"field_L1lRlgf1": {
 						"enum": [
-							"Точечное",
-							"Малое",
-							"Среднее",
-							"Большое",
-							"Масштабное"
+							"Низкая",
+							"Средняя",
+							"Высокая",
+							"Неизвестно"
 						],
 						"type": "string",
 						"title": "Сложность реализации"
@@ -927,9 +926,10 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				},
 				"field_46LCnfWo": {
 					"enum": [
-						"До 20",
-						"20–50",
-						"Более 50"
+						"Низкая",
+						"Средняя",
+						"Высокая",
+						"Неизвестно"
 					],
 					"type": "string",
 					"title": "Сложность реализации"

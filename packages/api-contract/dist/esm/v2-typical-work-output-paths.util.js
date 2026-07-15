@@ -2,12 +2,18 @@ import { resolveV2AnketaArchComponent, resolveStreamExecutorForTypicalWorkOutput
 import { typicalWorkAssignedToExecutorStream } from "./v2-executor-streams.util";
 export const V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = "streamDataSources.sourceTypicalTasks";
 /** Канонический вывод типовых работ «Контроль моделей». */
-export const V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_Khn6-HAW";
+export const V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_G0AoYAl8";
+/** Устаревшие пути вывода типовых работ «Контроль моделей». */
+export const LEGACY_CONTROL_TYPICAL_TASKS_OUTPUT_PATHS = [
+    "streamModelControl.field_Khn6-HAW",
+    "streamModelControl.control.controlTypicalTasks",
+];
 /** Ключ ui:options — привязанные к блоку id типовых работ (сохраняется в снепшоте). */
 export const TYPICAL_WORK_BOUND_WORK_IDS_KEY = "boundWorkIds";
 /** Legacy/fan-out пути, куда раньше дублировались сгенерированные типовые работы. */
 export const LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS = [
     V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+    ...LEGACY_CONTROL_TYPICAL_TASKS_OUTPUT_PATHS,
     V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
     "detailInfo.detailTypicalTasks",
     "detailInfo.sourceTypicalTasks",

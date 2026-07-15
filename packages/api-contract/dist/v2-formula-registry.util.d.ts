@@ -1,4 +1,5 @@
 import type { V2TypicalWorkFormulaBadgeDto, V2WorkFormulaToken, V2WorkRoundingMode } from "./v2-typical-work.types";
+import { type WorkFormulaLaborParamRef } from "./v2-work-formula.util";
 export type V2FormulaRegistryParamRefDto = {
     paramCode: string;
     paramName?: string | null;
@@ -41,6 +42,16 @@ export type V2FormulaRegistryListResponseDto = {
     templateOptions: V2FormulaRegistryTemplateOptionDto[];
 };
 export declare function extractFormulaRegistryLinks(tokens: V2WorkFormulaToken[]): {
+    paramRefs: V2FormulaRegistryParamRefDto[];
+    workRefs: V2FormulaRegistryWorkRefDto[];
+    hasInvalidRefs: boolean;
+};
+export type AssessFormulaRegistryLinksOptions = {
+    laborParams?: readonly WorkFormulaLaborParamRef[];
+    knownAssignmentIds?: ReadonlySet<string>;
+};
+/** Оценивает ссылки формулы по фактическому наличию параметров/назначений, а не устаревшему token.invalid. */
+export declare function assessFormulaRegistryLinks(tokens: V2WorkFormulaToken[], options?: AssessFormulaRegistryLinksOptions): {
     paramRefs: V2FormulaRegistryParamRefDto[];
     workRefs: V2FormulaRegistryWorkRefDto[];
     hasInvalidRefs: boolean;

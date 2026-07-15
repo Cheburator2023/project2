@@ -22,7 +22,22 @@ export type V2FactoryTypicalWork = {
 	normRaw: string;
 	triggerParam: string;
 	triggerParams: string[];
+	triggerRules?: Array<{
+		paramName: string;
+		operator: "=" | "in" | "exists" | "unresolved";
+		values: string[];
+	}>;
 	laborParams: string[];
+	laborCoefficients?: Array<{
+		paramName: string;
+		values: Array<{
+			label: string;
+			coefficient: number;
+		}>;
+	}>;
+	formulaText?: string;
+	roundingMode?: "CEIL" | "FLOOR" | "ROUND" | "NONE";
+	roundingStep?: number | null;
 };
 
 export type V2FactoryMethodologyDictValue = {
@@ -73,7 +88,9 @@ function resolveSnapshotPath(): string {
 
 function loadFactoryTypicalWorksSnapshot(): V2FactoryTypicalWorksSnapshot {
 	const path = resolveSnapshotPath();
-	return JSON.parse(readFileSync(path, "utf-8")) as V2FactoryTypicalWorksSnapshot;
+	return JSON.parse(
+		readFileSync(path, "utf-8"),
+	) as V2FactoryTypicalWorksSnapshot;
 }
 
 export const V2_FACTORY_TYPICAL_WORKS_SNAPSHOT: V2FactoryTypicalWorksSnapshot =
@@ -88,8 +105,7 @@ export function typicalWorksFor(
 	stream?: string,
 ): V2FactoryTypicalWork[] {
 	return V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks.filter(
-		(w) =>
-			w.component === component && (stream ? w.stream === stream : true),
+		(w) => w.component === component && (stream ? w.stream === stream : true),
 	);
 }
 

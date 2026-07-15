@@ -49,13 +49,22 @@ export function resolveCatalogWorkComponent(
 	return inferMissingCatalogComponent(row.component, row.stream, row.stage);
 }
 
-export function buildCatalogWorkKey(component: string, name: string): string {
-	return `${normalizeArchComponentType(component)}|${name.trim()}`;
+export function extractWorkStage(name: string): string | null {
+	const match = name.trim().match(/^Этап[\s_]+(\d+)(?:\.|\s|$)/iu);
+	return match?.[1] ? `Этап ${match[1]}` : null;
+}
+
+export function buildCatalogWorkKey(
+	component: string,
+	stage: string,
+	name: string,
+): string {
+	return `${normalizeArchComponentType(component)}|${stage.trim()}|${name.trim()}`;
 }
 
 /** «Этап 217. Составление ТР» → «Составление ТР» для сопоставления с CSV-каталогом. */
 export function stripWorkStagePrefix(name: string): string {
-	return name.replace(/^Этап\s+\d+\.\s*/u, "").trim();
+	return name.replace(/^Этап[\s_]+\d+\.\s*/u, "").trim();
 }
 
 export function findCatalogRowsForRegistryWork(
@@ -64,8 +73,11 @@ export function findCatalogRowsForRegistryWork(
 	},
 	catalogGroups: Map<string, V2FactoryTypicalWork[]>,
 ): V2FactoryTypicalWork[] {
+	const stage = extractWorkStage(entry.name);
+	if (!stage) return [];
 	const key = buildCatalogWorkKey(
 		entry.archComponentType,
+		stage,
 		stripWorkStagePrefix(entry.name),
 	);
 	return catalogGroups.get(key) ?? [];
@@ -74,7 +86,11 @@ export function findCatalogRowsForRegistryWork(
 export function groupCatalogWorks(): Map<string, V2FactoryTypicalWork[]> {
 	const groups = new Map<string, V2FactoryTypicalWork[]>();
 	for (const row of V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks) {
-		const key = buildCatalogWorkKey(resolveCatalogWorkComponent(row), row.name);
+		const key = buildCatalogWorkKey(
+			resolveCatalogWorkComponent(row),
+			row.stage,
+			row.name,
+		);
 		const list = groups.get(key) ?? [];
 		list.push(row);
 		groups.set(key, list);
@@ -99,6 +115,30 @@ export function inferTriggerValueLabel(
 export function dictionaryValuesForParam(paramName: string) {
 	const dict = dictionaryByName(paramName);
 	return dict?.values ?? [];
+}
+
+export type CatalogFormulaSeedConfig = {
+	formulaText: string;
+	roundingMode: "CEIL" | "FLOOR" | "ROUND" | "NONE";
+	roundingStep: number | null;
+};
+
+export function findCatalogFormulaForStream(
+	catalogRows: V2FactoryTypicalWork[],
+	streamExecutor: string,
+): CatalogFormulaSeedConfig | null {
+	const stream = streamExecutor.trim();
+	for (const row of catalogRows) {
+		if (canonicalizeWorkStream(row.stream) !== stream) continue;
+		const formulaText = row.formulaText?.trim();
+		if (!formulaText) continue;
+		return {
+			formulaText,
+			roundingMode: row.roundingMode ?? "CEIL",
+			roundingStep: row.roundingStep ?? 0.1,
+		};
+	}
+	return null;
 }
 
 export const DEFAULT_NORM_VALID_FROM = "2025-01-01";
