@@ -9,7 +9,10 @@ import InputAdornment from "@mui/material/InputAdornment";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { parseParamDependencyGraphFromLogic } from "@smart-anketa/api-contract";
-import { useV2TypicalWorksList, useV2WorkParametersCatalog } from "@react-client/common/api/queries/v2-works";
+import {
+	useV2TypicalWorksList,
+	useV2WorkParametersCatalog,
+} from "@react-client/common/api/queries/v2-works";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
 import { Flex } from "@react-client/common/primitives/Flex";
@@ -34,11 +37,15 @@ import { ISSUES_PANEL_ID } from "../constants";
 import { PanelChrome } from "../components/PanelChrome";
 import { useSchemaEditor } from "../SchemaEditorContext";
 import { useSchemaEditorDock } from "../SchemaEditorDockContext";
+import { logSchemaEditorNav } from "../schemaEditorNavDebug";
 import {
 	buildSchemaWorkParameters,
 	resolveSchemaParamForTriggerRule,
 } from "./typicalWorksPanel/schemaWorkParameters";
-import { buildParamFieldBindings, graphToDraft } from "./typicalWorksPanel/parameterDependenciesLogic";
+import {
+	buildParamFieldBindings,
+	graphToDraft,
+} from "./typicalWorksPanel/parameterDependenciesLogic";
 import { readParameterDependencyDraft } from "./typicalWorksPanel/parameterDependenciesStorage";
 
 const ISSUES_SEARCH_DEBOUNCE_MS = 300;
@@ -107,7 +114,12 @@ function IssueRow({
 					sx={{ flexShrink: 0 }}
 				/>
 				<Flex flexDirection="column" gap={4} minWidth="0" flexGrow={1}>
-					<Typography variant="body2" fontWeight={600} noWrap title={issue.title}>
+					<Typography
+						variant="body2"
+						fontWeight={600}
+						noWrap
+						title={issue.title}
+					>
 						{issue.title}
 					</Typography>
 					<Typography variant="caption" color="text.secondary">
@@ -259,7 +271,11 @@ function IssuesPanelToolbar({
 						/>
 					) : null}
 					{filteredCounts.info > 0 ? (
-						<Chip size="small" color="info" label={`Инфо: ${filteredCounts.info}`} />
+						<Chip
+							size="small"
+							color="info"
+							label={`Инфо: ${filteredCounts.info}`}
+						/>
 					) : null}
 				</Flex>
 			) : null}
@@ -298,7 +314,11 @@ function IssuesJsonView({ issues }: { issues: SchemaEditorIssue[] }) {
 	);
 }
 
-export function SchemaIssuesPanel({ embedded = false }: { embedded?: boolean }) {
+export function SchemaIssuesPanel({
+	embedded = false,
+}: {
+	embedded?: boolean;
+}) {
 	const { templateId = "" } = useParams<{ templateId: string }>();
 	const { updatePanelTitle } = useSchemaEditorDock();
 	const {
@@ -358,10 +378,7 @@ export function SchemaIssuesPanel({ embedded = false }: { embedded?: boolean }) 
 		if (target.kind === "logic_rule") {
 			const rule = logic.rules.find((item) => item.id === target.ruleId);
 			const pointer = rule?.targetPath?.trim();
-			if (
-				pointer &&
-				fieldPathHints.some((hint) => hint.pointer === pointer)
-			) {
+			if (pointer && fieldPathHints.some((hint) => hint.pointer === pointer)) {
 				return pointer;
 			}
 			return null;
@@ -382,7 +399,8 @@ export function SchemaIssuesPanel({ embedded = false }: { embedded?: boolean }) 
 	};
 
 	const methodologyParams = useMemo(
-		() => (catalog?.items ?? []).filter((p) => p.values.length > 0 || p.numeric),
+		() =>
+			(catalog?.items ?? []).filter((p) => p.values.length > 0 || p.numeric),
 		[catalog?.items],
 	);
 
@@ -396,7 +414,11 @@ export function SchemaIssuesPanel({ embedded = false }: { embedded?: boolean }) 
 		const fromLogic = graphToDraft(
 			parseParamDependencyGraphFromLogic(logic.rules),
 		);
-		if (fromLogic.targets.some((target: { rules: unknown[] }) => target.rules.length > 0)) {
+		if (
+			fromLogic.targets.some(
+				(target: { rules: unknown[] }) => target.rules.length > 0,
+			)
+		) {
 			return fromLogic;
 		}
 		if (templateId) {
@@ -499,8 +521,8 @@ export function SchemaIssuesPanel({ embedded = false }: { embedded?: boolean }) 
 			<Flex flexDirection="column" gap={8}>
 				{debouncedSearchQuery.trim() ? (
 					<Typography variant="caption" color="text.secondary">
-						JSON содержит все {issues.length} проблем; поиск применяется только к
-						списку.
+						JSON содержит все {issues.length} проблем; поиск применяется только
+						к списку.
 					</Typography>
 				) : null}
 				<IssuesJsonView issues={issues} />
@@ -531,7 +553,17 @@ export function SchemaIssuesPanel({ embedded = false }: { embedded?: boolean }) 
 						parameterPointer={resolveParameterPointer(issue)}
 						onNavigate={navigateToSchemaEditorIssue}
 						onOpenDesigner={openDesignerAtPointer}
-						onOpenLogic={(item) => openLogicForIssueTarget(item.target)}
+						onOpenLogic={(item) => {
+							logSchemaEditorNav("issues.clickGoLogic", {
+								issueId: item.id,
+								targetKind: item.target.kind,
+								workId:
+									item.target.kind === "typical_work"
+										? item.target.workId
+										: null,
+							});
+							openLogicForIssueTarget(item.target, { focusParam: false });
+						}}
 					/>
 				))}
 			</Flex>

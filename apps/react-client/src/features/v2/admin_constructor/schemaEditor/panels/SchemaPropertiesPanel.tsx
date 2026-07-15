@@ -23,6 +23,7 @@ import {
 	ruleKindLabel,
 } from "../constants";
 import { useSchemaEditor } from "../SchemaEditorContext";
+import { useSchemaEditorUiStore } from "../schemaEditorUiStore";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "../components/PanelChrome";
 import { normalizeJsonPointer, pointerSegments } from "../../utils/schemaPaths";
@@ -59,9 +60,7 @@ import { useParams, useSearchParams } from "react-router";
 import { useV2TypicalWorksList } from "@react-client/common/api/queries/v2-works";
 import {
 	BIND_POINTER_QUERY,
-	LOGIC_TAB_QUERY,
 	NEW_WORK_QUERY,
-	WORK_ID_QUERY,
 } from "./typicalWorksPanel/typicalWorksUi";
 import {
 	appendBoundWorkIdAtPointer,
@@ -508,11 +507,10 @@ export function SchemaPropertiesPanel() {
 	]);
 	const openTypicalWorksTab = useCallback(
 		(workId?: string, opts?: { create?: boolean }) => {
+			const store = useSchemaEditorUiStore.getState();
+			store.prepareTypicalWorkNavigation(workId);
 			setSearchParams((prev) => {
 				const next = new URLSearchParams(prev);
-				next.set(LOGIC_TAB_QUERY, "works");
-				if (workId) next.set(WORK_ID_QUERY, workId);
-				else next.delete(WORK_ID_QUERY);
 				if (opts?.create) next.set(NEW_WORK_QUERY, "1");
 				else next.delete(NEW_WORK_QUERY);
 				if (opts?.create && selectedPointer) {

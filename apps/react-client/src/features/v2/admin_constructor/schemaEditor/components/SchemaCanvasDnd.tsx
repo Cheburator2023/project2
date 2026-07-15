@@ -909,6 +909,7 @@ export function SchemaCanvasPanel({
 		jsonSchema,
 		uiSchema,
 		selectedPointer,
+		mainTab,
 		handleAddFieldPresetAtParent,
 		handleDeleteField,
 		getFieldDeleteImpact,
@@ -986,9 +987,9 @@ export function SchemaCanvasPanel({
 	);
 
 	useEffect(() => {
-		if (!selectedPointer) return;
+		if (mainTab !== "designer" || !selectedPointer) return;
 		revealCanvasFieldPointer(treeRef.current, treeData, selectedPointer);
-	}, [selectedPointer, treeData]);
+	}, [mainTab, selectedPointer, treeData]);
 
 	const hasExpandableNodes = useMemo(
 		() =>

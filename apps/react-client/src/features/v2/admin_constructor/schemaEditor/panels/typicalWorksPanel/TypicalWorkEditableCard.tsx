@@ -153,8 +153,7 @@ export function TypicalWorkEditableCard({
 		enumMapByCode,
 		formData,
 		liveFormData,
-		setSelectedPointer,
-		setMainTab,
+		openDesignerAtPointer,
 		triggerParamPickId,
 		clearTriggerParamPick,
 		typicalWorkNavFocus,
@@ -179,6 +178,8 @@ export function TypicalWorkEditableCard({
 	>(null);
 	const [streamMenuOpen, setStreamMenuOpen] = useState(false);
 	const streamAnchorRef = useRef<HTMLButtonElement>(null);
+	const cardScrollRef = useRef<HTMLDivElement>(null);
+	const navFocusScrollKeyRef = useRef<string | null>(null);
 	const pendingRetryRef = useRef(false);
 	const {
 		status,
@@ -314,16 +315,24 @@ export function TypicalWorkEditableCard({
 	);
 
 	useEffect(() => {
-		if (!typicalWorkNavFocus || !draft || card?.id !== typicalWorkNavFocus.workId) {
+		if (!typicalWorkNavFocus || card?.id !== typicalWorkNavFocus.workId) {
 			return;
 		}
+
+		const scrollKey = `${typicalWorkNavFocus.workId}:${typicalWorkNavFocus.paramCode ?? ""}`;
+		if (navFocusScrollKeyRef.current === scrollKey) {
+			return;
+		}
+		if (!draft) {
+			return;
+		}
+
+		navFocusScrollKeyRef.current = scrollKey;
 
 		const paramCode = typicalWorkNavFocus.paramCode?.trim();
 		const scrollTarget = () => {
 			if (!paramCode) {
-				document
-					.querySelector("[data-work-card-root]")
-					?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+				cardScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
 				clearTypicalWorkNavFocus();
 				return;
 			}
@@ -686,6 +695,7 @@ export function TypicalWorkEditableCard({
 				onRetry={retry}
 			/> */}
 			<Box
+				ref={cardScrollRef}
 				data-work-card-root
 				sx={{ flex: 1, overflow: "auto", px: 2.75, py: 2.25, minWidth: 0 }}
 			>
@@ -1096,8 +1106,7 @@ export function TypicalWorkEditableCard({
 							streamExecutor={streamExecutor ?? draft.streamExecutor}
 							onChange={(rules) => commitDraft({ ...draft, rules })}
 							onNavigateToSchemaField={(pointer) => {
-								setMainTab("designer");
-								setSelectedPointer(pointer);
+								openDesignerAtPointer(pointer);
 							}}
 							triggerParamPickId={triggerParamPickId}
 							onTriggerParamPickConsumed={clearTriggerParamPick}

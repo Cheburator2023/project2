@@ -1,0 +1,70 @@
+---
+description: Zustand для UI-состояния редактора схемы (навигация, dock, логика) вместо React Context
+globs: apps/react-client/src/features/v2/admin_constructor/**/*
+alwaysApply: false
+---
+
+# Zustand в редакторе схемы (v2 admin constructor)
+
+Для **координации UI между панелями** (dock, вкладки, deep-link, навигация из «Проблем», типовые работы) — **Zustand**, не раздувание React Context и не цепочки `useState` + ref + Provider.
+
+React Context в `SchemaEditorContext` — legacy; новую логику туда **не добавлять**.
+
+## Когда Zustand
+
+| Сценарий | Zustand | Context / локальный state |
+|----------|---------|---------------------------|
+| `mainTab`, sync с dockview | ✅ store | ❌ |
+| `typicalWorkNavFocus`, `?workId=` deep-link | ✅ store | ❌ |
+| Навигация «К логике» / «К конструктору» | ✅ actions в store | ❌ |
+| Состояние одной панели (форма, локальный draft) | — | ✅ `useState` |
+| Данные с сервера | — | ✅ react-query |
+
+## Паттерн (как `userStore.ts`)
+
+```typescript
+import { create } from "zustand";
+
+type SchemaEditorUiState = {
+  mainTab: SchemaEditorMainTab;
+  typicalWorkNavFocus: TypicalWorkNavFocus | null;
+  setMainTab: (tab: SchemaEditorMainTab) => void;
+  openTypicalWork: (workId: string, focus?: { paramCode?: string }) => void;
+  clearTypicalWorkNavFocus: () => void;
+  resetForTemplate: (templateId: string) => void;
+};
+
+export const useSchemaEditorUiStore = create<SchemaEditorUiState>((set) => ({
+  mainTab: "designer",
+  typicalWorkNavFocus: null,
+  setMainTab: (tab) => set({ mainTab: tab }),
+  openTypicalWork: (workId, focus) =>
+    set({
+      mainTab: "logic",
+      typicalWorkNavFocus: { workId, paramCode: focus?.paramCode },
+    }),
+  clearTypicalWorkNavFocus: () => set({ typicalWorkNavFocus: null }),
+  resetForTemplate: () =>
+    set({ mainTab: "designer", typicalWorkNavFocus: null }),
+}));
+```
+
+## Правила реализации
+
+1. **Store вне React-дерева** — `store.getState()` / `subscribe` для dock callbacks и deep-link без remount и без `activateMainTabRef`.
+2. **Селекторы** — `useSchemaEditorUiStore((s) => s.mainTab)`, не подписка на весь store.
+3. **Actions, не setState снаружи** — навигация только через методы store (`openTypicalWork`, `openDesignerAtPointer`).
+4. **Persist опционально** — `mainTab` в `sessionStorage` через middleware или в action; не дублировать в Context.
+5. **Миграция по шагам** — сначала navigation/ui store; `SchemaEditorContext` сужать, не переписывать монолит одним PR.
+
+## Антипаттерны (источник багов навигации)
+
+- ❌ `setMainTab` + `activateMainTabRef` + `onRegisterActivateMainTab` + Context
+- ❌ `useEffect` recovery-навигации по URL в родителе редактора
+- ❌ guard/block на `setMainTab` и rAF lock dock
+- ❌ remount редактора (loader вместо дерева) при refetch react-query
+
+## Файлы
+
+- Store: `apps/react-client/src/features/v2/admin_constructor/schemaEditor/schemaEditorUiStore.ts`
+- Образец: `apps/react-client/src/common/store/userStore.ts`

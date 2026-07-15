@@ -9,6 +9,7 @@ import {
 import type { DockviewApi, DockviewIDisposable } from "dockview-react";
 import type { SchemaEditorMainTab } from "./types";
 import { ensureDockPanel } from "./schemaEditorDockLayout.util";
+import { useSchemaEditorUiStore } from "./schemaEditorUiStore";
 import { WORKSPACE_PANEL_IDS } from "./workspacePanels";
 
 type SchemaEditorDockContextValue = {
@@ -23,6 +24,8 @@ type SchemaEditorDockContextValue = {
 const SchemaEditorDockContext = createContext<SchemaEditorDockContextValue | null>(
 	null,
 );
+
+const SUPPRESS_DOCK_SYNC_MS = 400;
 
 function isWorkspacePanelId(id: string): id is SchemaEditorMainTab {
 	return (WORKSPACE_PANEL_IDS as readonly string[]).includes(id);
@@ -39,15 +42,14 @@ function syncMainTabFromActivePanel(
 	onMainTabChange(id);
 }
 
-export function SchemaEditorDockProvider({
-	mainTab,
-	onMainTabChange,
-	children,
-}: {
-	mainTab: SchemaEditorMainTab;
-	onMainTabChange: (tab: SchemaEditorMainTab) => void;
-	children: ReactNode;
-}) {
+export function SchemaEditorDockProvider({ children }: { children: ReactNode }) {
+	const mainTab = useSchemaEditorUiStore((s) => s.mainTab);
+	const setMainTab = useSchemaEditorUiStore((s) => s.setMainTab);
+	const syncMainTabFromDock = useSchemaEditorUiStore((s) => s.syncMainTabFromDock);
+	const registerDockActivateMainTab = useSchemaEditorUiStore(
+		(s) => s.registerDockActivateMainTab,
+	);
+
 	const apiRef = useRef<DockviewApi | null>(null);
 	const resetDockLayoutRef = useRef<(() => void) | null>(null);
 	const activePanelDisposableRef = useRef<DockviewIDisposable | null>(null);
@@ -55,10 +57,42 @@ export function SchemaEditorDockProvider({
 	const syncingFromDockRef = useRef(false);
 	const syncingFromStateRef = useRef(false);
 	const dockDraggingRef = useRef(false);
+	const suppressDockSyncUntilRef = useRef(0);
 	const mainTabRef = useRef(mainTab);
 	mainTabRef.current = mainTab;
-	const onMainTabChangeRef = useRef(onMainTabChange);
-	onMainTabChangeRef.current = onMainTabChange;
+
+	const activateMainTab = useCallback(
+		(tab: SchemaEditorMainTab) => {
+			suppressDockSyncUntilRef.current = Date.now() + SUPPRESS_DOCK_SYNC_MS;
+
+			const api = apiRef.current;
+			if (!api) {
+				setMainTab(tab);
+				return;
+			}
+
+			const panel = ensureDockPanel(api, tab) ?? api.getPanel(tab);
+			if (!panel) {
+				setMainTab(tab);
+				return;
+			}
+
+			if (panel.api.isActive && mainTabRef.current === tab) {
+				return;
+			}
+
+			syncingFromStateRef.current = true;
+			panel.api.setActive();
+			setMainTab(tab);
+			syncingFromStateRef.current = false;
+		},
+		[setMainTab],
+	);
+
+	useEffect(() => {
+		registerDockActivateMainTab(activateMainTab);
+		return () => registerDockActivateMainTab(null);
+	}, [activateMainTab, registerDockActivateMainTab]);
 
 	const endDockDrag = useCallback(() => {
 		if (!dockDraggingRef.current) return;
@@ -71,9 +105,9 @@ export function SchemaEditorDockProvider({
 		if (!api) return;
 
 		syncingFromDockRef.current = true;
-		syncMainTabFromActivePanel(api, onMainTabChangeRef.current);
+		syncMainTabFromActivePanel(api, syncMainTabFromDock);
 		syncingFromDockRef.current = false;
-	}, []);
+	}, [syncMainTabFromDock]);
 
 	const beginDockDrag = useCallback(() => {
 		if (dockDraggingRef.current) return;
@@ -82,19 +116,6 @@ export function SchemaEditorDockProvider({
 		window.addEventListener("pointerup", endDockDrag, true);
 		window.addEventListener("dragend", endDockDrag, true);
 	}, [endDockDrag]);
-
-	const activateMainTab = useCallback((tab: SchemaEditorMainTab) => {
-		const api = apiRef.current;
-		if (!api) return;
-
-		const panel = ensureDockPanel(api, tab) ?? api.getPanel(tab);
-		if (!panel) return;
-
-		syncingFromStateRef.current = true;
-		panel.api.setActive();
-		onMainTabChangeRef.current(tab);
-		syncingFromStateRef.current = false;
-	}, []);
 
 	const getOpenPanelIds = useCallback((): SchemaEditorMainTab[] => {
 		const api = apiRef.current;
@@ -134,7 +155,9 @@ export function SchemaEditorDockProvider({
 				return;
 			}
 
-			const panel = api.getPanel(mainTabRef.current);
+			const panel =
+				ensureDockPanel(api, mainTabRef.current) ??
+				api.getPanel(mainTabRef.current);
 			if (panel && !panel.api.isActive) {
 				syncingFromStateRef.current = true;
 				panel.api.setActive();
@@ -143,6 +166,7 @@ export function SchemaEditorDockProvider({
 
 			activePanelDisposableRef.current = api.onDidActivePanelChange((panel) => {
 				if (syncingFromStateRef.current || dockDraggingRef.current) return;
+				if (Date.now() < suppressDockSyncUntilRef.current) return;
 
 				const id = panel?.id;
 				if (!id || !isWorkspacePanelId(id)) {
@@ -150,7 +174,7 @@ export function SchemaEditorDockProvider({
 				}
 
 				syncingFromDockRef.current = true;
-				onMainTabChangeRef.current(id);
+				syncMainTabFromDock(id);
 				syncingFromDockRef.current = false;
 			});
 
@@ -163,14 +187,14 @@ export function SchemaEditorDockProvider({
 				}),
 			];
 		},
-		[beginDockDrag, endDockDrag],
+		[beginDockDrag, endDockDrag, syncMainTabFromDock],
 	);
 
 	useEffect(() => {
 		const api = apiRef.current;
 		if (!api || syncingFromDockRef.current || dockDraggingRef.current) return;
 
-		const panel = api.getPanel(mainTab);
+		const panel = ensureDockPanel(api, mainTab) ?? api.getPanel(mainTab);
 		if (!panel || panel.api.isActive) return;
 
 		syncingFromStateRef.current = true;

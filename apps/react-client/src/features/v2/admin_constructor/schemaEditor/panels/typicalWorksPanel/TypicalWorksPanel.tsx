@@ -9,7 +9,6 @@ import DialogTitle from "@mui/material/DialogTitle";
 import Typography from "@mui/material/Typography";
 import type {
 	V2ExecutorStreamLabel,
-	V2LogicWorkspaceTab,
 	V2TypicalWorkListItemDto,
 } from "@smart-anketa/api-contract";
 import {
@@ -32,14 +31,14 @@ import { useParams, useSearchParams } from "react-router";
 import { useDictionaryListPanelWidth } from "@react-client/features/v2/admin/hooks/useDictionaryListPanelWidth";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { useSchemaEditor } from "../../SchemaEditorContext";
+import { useSchemaEditorUiStore } from "../../schemaEditorUiStore";
+import { logSchemaEditorNav } from "../../schemaEditorNavDebug";
 import { toast } from "@react-client/common/toasts";
-import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../../testIds";
 import { CreateTypicalWorkDialog } from "./CreateTypicalWorkDialog";
 import { AssignWorkFromCatalogDialog } from "./AssignWorkFromCatalogDialog";
 import { LogicWorksToolbar } from "./LogicWorksToolbar";
 import { TypicalWorkEditableCard } from "./TypicalWorkEditableCard";
-import { ParameterDependenciesPanel } from "./ParameterDependenciesPanel";
 import { TypicalWorksEmptyState } from "./TypicalWorksEmptyState";
 import { TypicalWorksSidebarGrid } from "./TypicalWorksSidebarGrid";
 import {
@@ -61,7 +60,6 @@ import {
 	pickDefaultStream,
 	ROLLBACK_TYPICAL_WORK_QUERY,
 	storeWorkStream,
-	WORK_ID_QUERY,
 } from "./typicalWorksUi";
 import {
 	appendBoundWorkIdAtPointer,
@@ -126,15 +124,19 @@ export function TypicalWorksPanel() {
 	const {
 		jsonSchema,
 		uiSchema,
-		setSelectedPointer,
 		handleAddFieldPresetAtParent,
 		patchUiSchema,
 		recordDraftHistory,
-		setMainTab,
 		handleDeleteField,
 		placeTypicalWorkInStreamBlock,
-		typicalWorkNavFocus,
 	} = useSchemaEditor();
+	const activateMainTab = useSchemaEditorUiStore((s) => s.activateMainTab);
+	const logicWorkspaceTab = useSchemaEditorUiStore((s) => s.logicWorkspaceTab);
+	const typicalWorkNavFocus = useSchemaEditorUiStore((s) => s.typicalWorkNavFocus);
+	const selectedWorkId = useSchemaEditorUiStore((s) => s.selectedTypicalWorkId);
+	const setSelectedTypicalWorkId = useSchemaEditorUiStore(
+		(s) => s.setSelectedTypicalWorkId,
+	);
 
 	const { data, isLoading, error } = useV2TypicalWorksList({
 		templateId,
@@ -191,13 +193,12 @@ export function TypicalWorksPanel() {
 				rootCount,
 				makeStreamBlockUiOptions(stream),
 			);
-			setMainTab("designer");
+			activateMainTab("designer");
 			toast.success(`Добавлен стримовый блок «${stream}»`);
 		},
-		[jsonSchema, uiSchema, handleAddFieldPresetAtParent, setMainTab],
+		[jsonSchema, uiSchema, handleAddFieldPresetAtParent, activateMainTab],
 	);
 
-	const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
 	const [streamExecutor, setStreamExecutor] = useState<string | null>(null);
 	const [scope, setScope] = useState<LogicWorksScope>(DEFAULT_SCOPE);
 	const [createOpen, setCreateOpen] = useState(false);
@@ -210,39 +211,70 @@ export function TypicalWorksPanel() {
 
 	const scopeStreams = useMemo(() => resolveScopeStreams(scope), [scope]);
 
-	// Дуплекс конструктор→логика: открыть конкретную работу по deep-link (?workId=).
-	const deepLinkWorkId = searchParams.get(WORK_ID_QUERY);
 	useEffect(() => {
-		if (!deepLinkWorkId) return;
-		const work = (data?.items ?? []).find((w) => w.id === deepLinkWorkId);
-		if (!work) return;
-		const area = work.streams[0]
-			? streamAreaKey(work.streams[0])
-			: DEFAULT_LOGIC_STREAM;
-		setScope({ kind: "stream", stream: area });
-		setSelectedWorkId(work.id);
-		setSearchParams(
-			(prev) => {
-				const next = new URLSearchParams(prev);
-				next.delete(WORK_ID_QUERY);
-				return next;
-			},
-			{ replace: true },
-		);
-	}, [deepLinkWorkId, data?.items, setSearchParams]);
+		logSchemaEditorNav("works.panelMounted", {
+			logicTab: logicWorkspaceTab,
+			navFocusWorkId: typicalWorkNavFocus?.workId ?? null,
+			selectedWorkId,
+			isLoading,
+			itemsCount: data?.items?.length ?? 0,
+		});
+		return () => {
+			logSchemaEditorNav("works.panelUnmounted", {});
+		};
+	}, []);
+
+	const applyWorkSelection = useCallback(
+		(workId: string) => {
+			const work = (data?.items ?? []).find((item) => item.id === workId);
+			if (!work) return false;
+
+			const area = work.streams[0]
+				? streamAreaKey(work.streams[0])
+				: DEFAULT_LOGIC_STREAM;
+			setScope({ kind: "stream", stream: area });
+			if (
+				useSchemaEditorUiStore.getState().selectedTypicalWorkId !== work.id
+			) {
+				setSelectedTypicalWorkId(work.id);
+			}
+			const stream =
+				pickDefaultStream(work) ??
+				work.streams[0] ??
+				scopeStreamExecutor(
+					{ kind: "stream", stream: area },
+					DEFAULT_LOGIC_STREAM,
+				);
+			if (stream) {
+				setStreamExecutor(stream);
+				storeWorkStream(work.id, stream);
+			}
+			logSchemaEditorNav("works.applyWorkSelection", {
+				source: "navFocus",
+				workId: work.id,
+				scopeStream: area,
+			});
+			return true;
+		},
+		[data?.items, setSelectedTypicalWorkId],
+	);
 
 	useEffect(() => {
 		if (!typicalWorkNavFocus?.workId) return;
-		const work = (data?.items ?? []).find(
-			(item) => item.id === typicalWorkNavFocus.workId,
-		);
-		if (!work) return;
-		const area = work.streams[0]
-			? streamAreaKey(work.streams[0])
-			: DEFAULT_LOGIC_STREAM;
-		setScope({ kind: "stream", stream: area });
-		setSelectedWorkId(work.id);
-	}, [data?.items, typicalWorkNavFocus?.workId]);
+		logSchemaEditorNav("works.navFocusEffect", {
+			workId: typicalWorkNavFocus.workId,
+			paramCode: typicalWorkNavFocus.paramCode ?? null,
+			logicTab: logicWorkspaceTab,
+			itemsCount: data?.items?.length ?? 0,
+		});
+		applyWorkSelection(typicalWorkNavFocus.workId);
+	}, [
+		applyWorkSelection,
+		data?.items?.length,
+		logicWorkspaceTab,
+		typicalWorkNavFocus?.paramCode,
+		typicalWorkNavFocus?.workId,
+	]);
 
 	// Дуплекс конструктор→логика: открыть диалог создания работы по deep-link (?newWork=1).
 	const openCreateFlag = searchParams.get(NEW_WORK_QUERY);
@@ -275,23 +307,77 @@ export function TypicalWorksPanel() {
 	}, [selectedListItem]);
 
 	const openWorkInStreamsView = (workId: string, stream: string) => {
-		setSelectedWorkId(workId);
+		setSelectedTypicalWorkId(workId);
 		setStreamExecutor(stream);
 		storeWorkStream(workId, stream);
 	};
 
+	const handleSelectWork = useCallback(
+		(workId: string) => {
+			if (useSchemaEditorUiStore.getState().selectedTypicalWorkId === workId) {
+				return;
+			}
+			setSelectedTypicalWorkId(workId);
+			const work = (data?.items ?? []).find((item) => item.id === workId);
+			if (!work) return;
+			const stream =
+				pickDefaultStream(work) ??
+				work.streams[0] ??
+				scopeStreamExecutor(scope, DEFAULT_LOGIC_STREAM);
+			if (stream) {
+				setStreamExecutor(stream);
+				storeWorkStream(workId, stream);
+			}
+		},
+		[data?.items, scope, setSelectedTypicalWorkId],
+	);
+
+	const clearSelectedWork = useCallback(() => {
+		setSelectedTypicalWorkId(null);
+	}, [setSelectedTypicalWorkId]);
+
 	useEffect(() => {
-		if (!assignedWorks.length) {
-			setSelectedWorkId(null);
+		if (typicalWorkNavFocus?.workId || selectedWorkId) {
+			logSchemaEditorNav("works.assignedWorksGuard.skip", {
+				reason: typicalWorkNavFocus?.workId ? "navFocus" : "store",
+				typicalWorkNavFocusId: typicalWorkNavFocus?.workId ?? null,
+				selectedWorkId,
+			});
 			return;
 		}
-		if (
-			selectedWorkId &&
-			!assignedWorks.some((w) => w.id === selectedWorkId)
-		) {
-			setSelectedWorkId(null);
+		if (!assignedWorks.length) {
+			logSchemaEditorNav("works.assignedWorksGuard.clear", {
+				reason: "emptyAssignedWorks",
+				selectedWorkId,
+			});
+			clearSelectedWork();
+			return;
 		}
-	}, [assignedWorks, selectedWorkId]);
+	}, [
+		assignedWorks,
+		clearSelectedWork,
+		selectedWorkId,
+		typicalWorkNavFocus?.workId,
+	]);
+
+	useEffect(() => {
+		if (typicalWorkNavFocus?.workId || !selectedWorkId) {
+			return;
+		}
+		if (!assignedWorks.some((w) => w.id === selectedWorkId)) {
+			logSchemaEditorNav("works.assignedWorksGuard.clear", {
+				reason: "outOfScope",
+				selectedWorkId,
+				assignedIds: assignedWorks.map((w) => w.id),
+			});
+			clearSelectedWork();
+		}
+	}, [
+		assignedWorks,
+		clearSelectedWork,
+		selectedWorkId,
+		typicalWorkNavFocus?.workId,
+	]);
 
 	useEffect(() => {
 		if (!selectedListItem) {
@@ -331,7 +417,7 @@ export function TypicalWorksPanel() {
 
 		if (shouldRollback) {
 			handleDeleteField(rollbackPointer);
-			setMainTab("designer");
+			activateMainTab("designer");
 		}
 
 		if (rollbackPointer || shouldRollback) {
@@ -345,7 +431,7 @@ export function TypicalWorksPanel() {
 				{ replace: true },
 			);
 		}
-	}, [searchParams, handleDeleteField, setMainTab, setSearchParams]);
+	}, [activateMainTab, searchParams, handleDeleteField, setSearchParams]);
 
 	const createDefaultStreamExecutor = useMemo(() => {
 		const bindPointer = searchParams.get(BIND_POINTER_QUERY);
@@ -379,7 +465,7 @@ export function TypicalWorksPanel() {
 				starterNormValue: payload.starterNormValue,
 			});
 			setCreateOpen(false);
-			setSelectedWorkId(created.id);
+			setSelectedTypicalWorkId(created.id);
 			const stream =
 				created.streamExecutor ||
 				payload.streamExecutor ||
@@ -442,7 +528,7 @@ export function TypicalWorksPanel() {
 
 			if (deletedIds.length > 0) {
 				if (selectedWorkId && deletedIds.includes(selectedWorkId)) {
-					setSelectedWorkId(null);
+					clearSelectedWork();
 				}
 				recordDraftHistory();
 				patchUiSchema(
@@ -495,7 +581,7 @@ export function TypicalWorksPanel() {
 		setDeleteTargets(works);
 	};
 
-	if (isLoading) {
+	if (isLoading && !data) {
 		return (
 			<Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
 				<CircularProgress size={32} />
@@ -527,7 +613,7 @@ export function TypicalWorksPanel() {
 					scope={scope}
 					onScopeChange={(next) => {
 						setScope(next);
-						setSelectedWorkId(null);
+						clearSelectedWork();
 					}}
 				/>
 
@@ -553,7 +639,7 @@ export function TypicalWorksPanel() {
 								<TypicalWorksSidebarGrid
 									works={assignedWorks}
 									selectedWorkId={selectedWorkId}
-									onSelectWork={setSelectedWorkId}
+									onSelectWork={handleSelectWork}
 									onAssignFromCatalog={() => setAssignOpen(true)}
 									onDeleteWorks={openDeleteDialog}
 									assignedCount={assignedWorks.length}
@@ -746,78 +832,5 @@ export function TypicalWorksPanel() {
 				</DialogActions>
 			</Dialog>
 		</>
-	);
-}
-
-export type LogicWorkspaceShellProps = {
-	tab: V2LogicWorkspaceTab;
-	onTabChange: (tab: V2LogicWorkspaceTab) => void;
-	jsonLogicPanel: React.ReactNode;
-};
-
-const LOGIC_WORKSPACE_SEGMENTS: Array<{
-	id: V2LogicWorkspaceTab;
-	label: string;
-	title?: string;
-}> = [
-	{ id: "works", label: "Типовые работы" },
-	{
-		id: "dependencies",
-		label: "Зависимости параметров",
-		title: "Связи значений параметров между собой",
-	},
-	{ id: "jsonlogic", label: "JsonLogic" },
-];
-
-export function LogicWorkspaceShell({
-	tab,
-	onTabChange,
-	jsonLogicPanel,
-}: LogicWorkspaceShellProps) {
-	return (
-		<Box
-			sx={{
-				display: "flex",
-				flexDirection: "column",
-				height: "100%",
-				minHeight: 0,
-			}}
-		>
-			<Box
-				sx={{
-					flexShrink: 0,
-					px: 2,
-					py: 1.25,
-					borderBottom: 1,
-					borderColor: "divider",
-					bgcolor: "background.paper",
-					display: "flex",
-					alignItems: "center",
-					gap: 1.5,
-					flexWrap: "wrap",
-				}}
-			>
-				<SegmentBar
-					segments={LOGIC_WORKSPACE_SEGMENTS}
-					value={tab}
-					onChange={onTabChange}
-				/>
-				<Typography variant="caption" color="text.secondary">
-					{tab === "works"
-						? "Норматив · триггеры появления · параметры трудоёмкости · формула"
-						: tab === "dependencies"
-							? "Зависимости между параметрами анкеты"
-							: "Расширенный редактор JsonLogic-правил"}
-				</Typography>
-			</Box>
-
-			<Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-				{tab === "works" ? <TypicalWorksPanel /> : null}
-				{tab === "dependencies" ? <ParameterDependenciesPanel /> : null}
-				{tab === "jsonlogic" ? (
-					<Box sx={{ height: "100%", minHeight: 0 }}>{jsonLogicPanel}</Box>
-				) : null}
-			</Box>
-		</Box>
 	);
 }

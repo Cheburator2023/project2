@@ -2,8 +2,7 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import type { IDockviewPanelProps } from "dockview-react";
 import type { V2LogicWorkspaceTab } from "@smart-anketa/api-contract";
-import { useCallback } from "react";
-import { useSearchParams } from "react-router";
+import { useCallback, useEffect } from "react";
 import {
 	CALCULATION_PANEL_ID,
 	DOCK_PANEL_HEADINGS,
@@ -16,8 +15,9 @@ import { SchemaCalculationPanel } from "./panels/SchemaCalculationPanel";
 import { SchemaRelationsPanel } from "./panels/SchemaRelationsPanel";
 import { SchemaJsonPanel } from "./panels/SchemaJsonPanel";
 import { SchemaLogicPanel } from "./panels/SchemaLogicPanel";
-import { LogicWorkspaceShell } from "./panels/typicalWorksPanel/TypicalWorksPanel";
-import { LOGIC_TAB_QUERY } from "./panels/typicalWorksPanel/typicalWorksUi";
+import { LogicWorkspaceShell } from "./panels/typicalWorksPanel/LogicWorkspaceShell";
+import { useSchemaEditorUiStore } from "./schemaEditorUiStore";
+import { logSchemaEditorNav } from "./schemaEditorNavDebug";
 import { SchemaPreviewPanel } from "./panels/SchemaPreviewPanel";
 import { SchemaIssuesPanel } from "./panels/SchemaIssuesPanel";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
@@ -92,21 +92,22 @@ export function JsonWorkspacePanel(_props: IDockviewPanelProps) {
 }
 
 export function LogicWorkspacePanel(_props: IDockviewPanelProps) {
-	const [searchParams, setSearchParams] = useSearchParams();
-	const tab = parseLogicTab(searchParams.get(LOGIC_TAB_QUERY));
+	const tab = useSchemaEditorUiStore((s) => s.logicWorkspaceTab);
+	const setLogicWorkspaceTab = useSchemaEditorUiStore((s) => s.setLogicWorkspaceTab);
+	const selectedWorkId = useSchemaEditorUiStore((s) => s.selectedTypicalWorkId);
+
+	useEffect(() => {
+		logSchemaEditorNav("logicWorkspace.tab", {
+			tab,
+			workId: selectedWorkId,
+		});
+	}, [selectedWorkId, tab]);
 
 	const onTabChange = useCallback(
 		(next: V2LogicWorkspaceTab) => {
-			setSearchParams(
-				(prev) => {
-					const params = new URLSearchParams(prev);
-					params.set(LOGIC_TAB_QUERY, next);
-					return params;
-				},
-				{ replace: true },
-			);
+			setLogicWorkspaceTab(next);
 		},
-		[setSearchParams],
+		[setLogicWorkspaceTab],
 	);
 
 	return (
@@ -120,13 +121,6 @@ export function LogicWorkspacePanel(_props: IDockviewPanelProps) {
 			</Box>
 		</PanelHost>
 	);
-}
-
-function parseLogicTab(raw: string | null): V2LogicWorkspaceTab {
-	if (raw === "dependencies" || raw === "jsonlogic" || raw === "works") {
-		return raw;
-	}
-	return "works";
 }
 
 export function PreviewWorkspacePanel(_props: IDockviewPanelProps) {

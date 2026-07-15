@@ -70,7 +70,10 @@ export type SchemaEditorContextValue = {
 	schemaConsistencyIssues: TypicalWorkSchemaConsistencyIssue[];
 	navigateToSchemaEditorIssue: (issue: SchemaEditorIssue) => void;
 	openDesignerAtPointer: (pointer: string) => void;
-	openLogicForIssueTarget: (target: SchemaEditorIssue["target"]) => void;
+	openLogicForIssueTarget: (
+		target: SchemaEditorIssue["target"],
+		options?: { focusParam?: boolean },
+	) => void;
 	typicalWorkNavFocus: TypicalWorkNavFocus | null;
 	clearTypicalWorkNavFocus: () => void;
 

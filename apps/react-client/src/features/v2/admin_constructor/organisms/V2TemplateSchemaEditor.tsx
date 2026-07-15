@@ -48,7 +48,6 @@ import {
 	saveGateStateEquals,
 	type TypicalWorkSaveGateState,
 } from "../schemaEditor/typicalWorkSaveGate";
-import type { SchemaEditorMainTab } from "../schemaEditor/types";
 import { SchemaEditorDockProvider } from "../schemaEditor/SchemaEditorDockContext";
 import {
 	canBindDictionaryToField,
@@ -58,6 +57,8 @@ import {
 } from "../schemaEditor/propertiesFieldKind";
 import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayout";
 import { LOGIC_TAB_QUERY, WORK_ID_QUERY } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
+import { TypicalWorksPanelPersistentRoot } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksPanelPersistentMount";
+import { TypicalWorksPanel } from "../schemaEditor/panels/typicalWorksPanel/TypicalWorksPanel";
 import {
 	buildSchemaWorkParameters,
 	schemaParamIdFromPointer,
@@ -68,6 +69,7 @@ import {
 	issueSupportsDesignerNavigation,
 	issueSupportsLogicNavigation,
 } from "../schemaEditor/schemaEditorIssueNavigation";
+import { useSchemaEditorUiStore } from "../schemaEditor/schemaEditorUiStore";
 import { useSyncV2TypicalWorksSchemaField, useBulkSyncV2TypicalWorksSchemaFields } from "@react-client/common/api/queries/v2-works";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
@@ -218,8 +220,13 @@ export const V2TemplateSchemaEditor = ({
 	onHeaderActionsChange,
 }: V2TemplateSchemaEditorProps) => {
 	const navigate = useNavigate();
-	const [, setSearchParams] = useSearchParams();
+	const [searchParams, setSearchParams] = useSearchParams();
 	const skipLeaveGuardRef = useRef(false);
+	const migratedLogicUrlParamsRef = useRef(false);
+
+	const setLogicWorkspaceTabInStore = useSchemaEditorUiStore(
+		(s) => s.setLogicWorkspaceTab,
+	);
 
 	const runInternalEditorNavigation = useCallback((fn: () => void) => {
 		skipLeaveGuardRef.current = true;
@@ -235,17 +242,10 @@ export const V2TemplateSchemaEditor = ({
 	const setLogicWorkspaceTab = useCallback(
 		(tab: "works" | "dependencies" | "jsonlogic") => {
 			runInternalEditorNavigation(() => {
-				setSearchParams(
-					(prev) => {
-						const next = new URLSearchParams(prev);
-						next.set(LOGIC_TAB_QUERY, tab);
-						return next;
-					},
-					{ replace: true },
-				);
+				setLogicWorkspaceTabInStore(tab);
 			});
 		},
-		[runInternalEditorNavigation, setSearchParams],
+		[runInternalEditorNavigation, setLogicWorkspaceTabInStore],
 	);
 	const isAdminEditor = wording === "adminSchema";
 
@@ -253,6 +253,7 @@ export const V2TemplateSchemaEditor = ({
 		data: template,
 		error: templateError,
 		isError: templateLoadError,
+		isPending: templatePending,
 	} = useV2Template(templateId);
 	const { data: v2Dictionaries = [] } = useV2Dictionaries();
 	const {
@@ -281,10 +282,14 @@ export const V2TemplateSchemaEditor = ({
 
 	const {
 		data: activeVersion,
-		isLoading: activeVersionLoading,
+		isPending: activeVersionPending,
 		isError: activeVersionLoadError,
 		error: activeVersionError,
 	} = useV2TemplateVersion(templateId, activeVersionId);
+
+	const isEditorBootstrapping =
+		(templatePending && !template) ||
+		(Boolean(activeVersionId) && activeVersionPending && !activeVersion);
 
 	const isSystemCurrent = Boolean(
 		template?.currentVersionId &&
@@ -354,7 +359,59 @@ export const V2TemplateSchemaEditor = ({
 	const [draftPast, setDraftPast] = useState<DraftHistorySnapshot[]>([]);
 	const [draftFuture, setDraftFuture] = useState<DraftHistorySnapshot[]>([]);
 
-	const [mainTab, setMainTab] = useState<SchemaEditorMainTab>("designer");
+	const editorHasLoadedRef = useRef(false);
+
+	const mainTab = useSchemaEditorUiStore((s) => s.mainTab);
+	const typicalWorkNavFocus = useSchemaEditorUiStore((s) => s.typicalWorkNavFocus);
+	const activateMainTab = useSchemaEditorUiStore((s) => s.activateMainTab);
+	const prepareTypicalWorkNavigation = useSchemaEditorUiStore(
+		(s) => s.prepareTypicalWorkNavigation,
+	);
+	const clearTypicalWorkNavFocus = useSchemaEditorUiStore(
+		(s) => s.clearTypicalWorkNavFocus,
+	);
+
+	useEffect(() => {
+		useSchemaEditorUiStore.getState().initForTemplate(templateId);
+	}, [templateId]);
+
+	useEffect(() => {
+		if (migratedLogicUrlParamsRef.current) return;
+
+		const legacyLogicTab = searchParams.get(LOGIC_TAB_QUERY);
+		const legacyWorkId = searchParams.get(WORK_ID_QUERY);
+		if (!legacyLogicTab && !legacyWorkId) {
+			migratedLogicUrlParamsRef.current = true;
+			return;
+		}
+
+		migratedLogicUrlParamsRef.current = true;
+		runInternalEditorNavigation(() => {
+			const store = useSchemaEditorUiStore.getState();
+			if (
+				legacyLogicTab === "works" ||
+				legacyLogicTab === "dependencies" ||
+				legacyLogicTab === "jsonlogic"
+			) {
+				store.setLogicWorkspaceTab(legacyLogicTab);
+			}
+			if (legacyWorkId) {
+				store.prepareTypicalWorkNavigation(legacyWorkId);
+			}
+			if (legacyLogicTab || legacyWorkId) {
+				store.activateMainTab("logic");
+			}
+			setSearchParams(
+				(prev) => {
+					const next = new URLSearchParams(prev);
+					next.delete(LOGIC_TAB_QUERY);
+					next.delete(WORK_ID_QUERY);
+					return next;
+				},
+				{ replace: true },
+			);
+		});
+	}, [runInternalEditorNavigation, searchParams, setSearchParams]);
 
 	const [selectedRuleId, setSelectedRuleId] = useState<string | null>(
 		initialRuleId,
@@ -368,8 +425,6 @@ export const V2TemplateSchemaEditor = ({
 	const [triggerParamPickId, setTriggerParamPickId] = useState<string | null>(
 		null,
 	);
-	const [typicalWorkNavFocus, setTypicalWorkNavFocus] =
-		useState<TypicalWorkNavFocus | null>(null);
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 	const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 
@@ -377,10 +432,6 @@ export const V2TemplateSchemaEditor = ({
 	const [baselineSnapshot, setBaselineSnapshot] =
 		useState<SchemaEditorDraftSnapshot | null>(null);
 	const draftHydratedVersionIdRef = useRef<string | null>(null);
-
-	const clearTypicalWorkNavFocus = useCallback(() => {
-		setTypicalWorkNavFocus(null);
-	}, []);
 
 	const selectedRule =
 		logic.rules.find((r) => r.id === selectedRuleId) ?? logic.rules[0];
@@ -402,16 +453,16 @@ export const V2TemplateSchemaEditor = ({
 	useEffect(() => {
 		if (!initialRuleId) return;
 		setSelectedRuleId(initialRuleId);
-		setMainTab("logic");
+		activateMainTab("logic");
 		setLogicWorkspaceTab("jsonlogic");
-	}, [initialRuleId, setLogicWorkspaceTab]);
+	}, [activateMainTab, initialRuleId, setLogicWorkspaceTab]);
 
 	useEffect(() => {
 		if (!initialPointer) return;
 		setSelectedPointer(normalizeJsonPointer(initialPointer));
-		setMainTab("logic");
+		activateMainTab("logic");
 		setLogicWorkspaceTab("dependencies");
-	}, [initialPointer, setLogicWorkspaceTab]);
+	}, [activateMainTab, initialPointer, setLogicWorkspaceTab]);
 
 	const pushDraftHistory = useCallback(() => {
 		const snapshot: DraftHistorySnapshot = {
@@ -1995,22 +2046,22 @@ export const V2TemplateSchemaEditor = ({
 
 	const openLogicTabWithRule = useCallback(
 		(ruleId: string) => {
-			setMainTab("logic");
+			activateMainTab("logic");
 			setLogicWorkspaceTab("jsonlogic");
 			setSelectedRuleId(ruleId);
 		},
-		[setLogicWorkspaceTab],
+		[activateMainTab, setLogicWorkspaceTab],
 	);
 
 	const openLogicTabWithPointer = useCallback(
 		(pointer: string) => {
 			const normalized = normalizeJsonPointer(pointer);
 			setSelectedPointer(normalized);
-			setMainTab("logic");
+			activateMainTab("logic");
 			setLogicWorkspaceTab("dependencies");
 			setLogicPathPick(normalized);
 		},
-		[setLogicWorkspaceTab],
+		[activateMainTab, setLogicWorkspaceTab],
 	);
 
 	const clearTriggerParamPick = useCallback(() => {
@@ -2028,73 +2079,76 @@ export const V2TemplateSchemaEditor = ({
 			setTriggerParamPickId(
 				schemaParamIdFromPointer(normalized, field?.schemaFieldUid),
 			);
-			setMainTab("logic");
+			activateMainTab("logic");
 			setLogicWorkspaceTab("works");
 		},
-		[fieldPathHints, setLogicWorkspaceTab],
+		[activateMainTab, fieldPathHints, setLogicWorkspaceTab],
 	);
 
 	const openLogicWorkspace = useCallback(() => {
-		setMainTab("logic");
+		activateMainTab("logic");
 		setLogicWorkspaceTab("works");
-	}, [setLogicWorkspaceTab]);
+	}, [activateMainTab, setLogicWorkspaceTab]);
+
+	const commitTypicalWorksTabNavigation = useCallback(
+		(workId?: string, focus?: Omit<TypicalWorkNavFocus, "workId">) => {
+			prepareTypicalWorkNavigation(workId, focus);
+			activateMainTab("logic");
+		},
+		[activateMainTab, prepareTypicalWorkNavigation],
+	);
 
 	const openTypicalWorksTab = useCallback(
 		(workId?: string, focus?: Omit<TypicalWorkNavFocus, "workId">) => {
 			runInternalEditorNavigation(() => {
-				if (workId) {
-					setTypicalWorkNavFocus({
-						workId,
-						paramCode: focus?.paramCode,
-					});
-				}
-				setSearchParams(
-					(prev) => {
-						const next = new URLSearchParams(prev);
-						next.set(LOGIC_TAB_QUERY, "works");
-						next.delete(WORK_ID_QUERY);
-						return next;
-					},
-					{ replace: true },
-				);
-				setMainTab("logic");
+				commitTypicalWorksTabNavigation(workId, focus);
 			});
 		},
-		[runInternalEditorNavigation, setSearchParams],
+		[commitTypicalWorksTabNavigation, runInternalEditorNavigation],
 	);
 
 	const openDesignerAtPointer = useCallback(
 		(pointer: string) => {
 			runInternalEditorNavigation(() => {
-				setMainTab("designer");
+				activateMainTab("designer");
 				setSelectedPointer(normalizeJsonPointer(pointer));
 			});
 		},
-		[runInternalEditorNavigation],
+		[activateMainTab, runInternalEditorNavigation],
 	);
 
 	const openLogicForIssueTarget = useCallback(
-		(target: SchemaEditorIssue["target"]) => {
+		(
+			target: SchemaEditorIssue["target"],
+			options?: { focusParam?: boolean },
+		) => {
 			runInternalEditorNavigation(() => {
 				switch (target.kind) {
 					case "logic_rule":
-						setMainTab("logic");
+						activateMainTab("logic");
 						setLogicWorkspaceTab("jsonlogic");
 						setSelectedRuleId(target.ruleId);
 						return;
 					case "logic_dependencies":
 						if (target.pointer) {
-							openLogicTabWithPointer(target.pointer);
+							const normalized = normalizeJsonPointer(target.pointer);
+							setSelectedPointer(normalized);
+							activateMainTab("logic");
+							setLogicWorkspaceTab("dependencies");
+							setLogicPathPick(normalized);
 							return;
 						}
-						setMainTab("logic");
+						activateMainTab("logic");
 						setLogicWorkspaceTab("dependencies");
 						return;
 					case "typical_work": {
-						// Переход к работе не должен одновременно открывать/фокусировать
-						// параметр. Для параметра в панели проблем есть отдельная кнопка.
 						setTriggerParamPickId(null);
-						openTypicalWorksTab(target.workId);
+						commitTypicalWorksTabNavigation(
+							target.workId,
+							options?.focusParam && target.paramCode?.trim()
+								? { paramCode: target.paramCode.trim() }
+								: undefined,
+						);
 						return;
 					}
 					default:
@@ -2103,8 +2157,8 @@ export const V2TemplateSchemaEditor = ({
 			});
 		},
 		[
-			openLogicTabWithPointer,
-			openTypicalWorksTab,
+			activateMainTab,
+			commitTypicalWorksTabNavigation,
 			runInternalEditorNavigation,
 			setLogicWorkspaceTab,
 		],
@@ -2114,7 +2168,7 @@ export const V2TemplateSchemaEditor = ({
 		(issue: SchemaEditorIssue) => {
 			const { target } = issue;
 			if (issueSupportsLogicNavigation(target)) {
-				openLogicForIssueTarget(target);
+				openLogicForIssueTarget(target, { focusParam: true });
 				return;
 			}
 			if (issueSupportsDesignerNavigation(target)) {
@@ -2124,10 +2178,10 @@ export const V2TemplateSchemaEditor = ({
 			runInternalEditorNavigation(() => {
 				switch (target.kind) {
 					case "json":
-						setMainTab("json");
+						activateMainTab("json");
 						return;
 					case "calculation":
-						setMainTab("calculation");
+						activateMainTab("calculation");
 						return;
 					default:
 						return;
@@ -2135,6 +2189,7 @@ export const V2TemplateSchemaEditor = ({
 			});
 		},
 		[
+			activateMainTab,
 			openDesignerAtPointer,
 			openLogicForIssueTarget,
 			runInternalEditorNavigation,
@@ -2258,7 +2313,7 @@ export const V2TemplateSchemaEditor = ({
 		() => ({
 			templateId,
 			mainTab,
-			setMainTab,
+			setMainTab: activateMainTab,
 			jsonSchema,
 			setJsonSchema,
 			uiSchema,
@@ -2375,6 +2430,7 @@ export const V2TemplateSchemaEditor = ({
 		[
 			templateId,
 			mainTab,
+			activateMainTab,
 			jsonSchema,
 			uiSchema,
 			logic,
@@ -2479,7 +2535,11 @@ export const V2TemplateSchemaEditor = ({
 		],
 	);
 
-	if (!template || activeVersionLoading) {
+	if (template && activeVersion) {
+		editorHasLoadedRef.current = true;
+	}
+
+	if (isEditorBootstrapping && !editorHasLoadedRef.current) {
 		return (
 			<Typography component="div">
 				{wording === "adminSchema" ? (
@@ -2491,7 +2551,17 @@ export const V2TemplateSchemaEditor = ({
 		);
 	}
 
-	if (!activeVersion) {
+	if (!template) {
+		return (
+			<Typography component="div">
+				{wording === "adminSchema"
+					? "Схема не найдена"
+					: "Шаблон не найден"}
+			</Typography>
+		);
+	}
+
+	if (!activeVersion && !editorHasLoadedRef.current) {
 		return (
 			<Flex
 				flexDirection="column"
@@ -2543,7 +2613,11 @@ export const V2TemplateSchemaEditor = ({
 
 	return (
 		<SchemaEditorProvider value={editorContext}>
-			<Card
+			<SchemaEditorDockProvider>
+				<TypicalWorksPanelPersistentRoot>
+					<TypicalWorksPanel />
+				</TypicalWorksPanelPersistentRoot>
+				<Card
 				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.schemaEditor}
 				height="100%"
 				padding="0"
@@ -2567,12 +2641,7 @@ export const V2TemplateSchemaEditor = ({
 				<Box
 					sx={{ flex: 1, minHeight: 0, position: "relative", width: "100%" }}
 				>
-					<SchemaEditorDockProvider
-						mainTab={mainTab}
-						onMainTabChange={setMainTab}
-					>
-						<V2SchemaEditorDockLayout />
-					</SchemaEditorDockProvider>
+					<V2SchemaEditorDockLayout />
 				</Box>
 			</Card>
 			{activeVersion ? (
@@ -2590,6 +2659,7 @@ export const V2TemplateSchemaEditor = ({
 				/>
 			) : null}
 			{leaveDialog}
+			</SchemaEditorDockProvider>
 		</SchemaEditorProvider>
 	);
 };
