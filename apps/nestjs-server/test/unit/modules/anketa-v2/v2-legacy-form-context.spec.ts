@@ -62,18 +62,39 @@ describe("v2-legacy-form-context.util", () => {
 		expect(ctx.uncertaintyAdjustmentPercent).toBe(15);
 	});
 
-	it("derives readyPromReports from dataMart field_lovKvLZc", () => {
+	it("derives readyPromReports from dataMart readyPromReports", () => {
+		const ctx = resolveLegacyFormContext({
+			detailInfo: { dataMart: [{ readyPromReports: true }] },
+		});
+		expect(ctx.readyPromReports).toBe("Да");
+	});
+
+	it("derives readyPromReports from legacy dataMart field_lovKvLZc", () => {
 		const ctx = resolveLegacyFormContext({
 			detailInfo: { dataMart: [{ field_lovKvLZc: true }] },
 		});
 		expect(ctx.readyPromReports).toBe("Да");
 	});
 
-	it("derives productionAdditionalReports from dataMart metricsCount", () => {
+	it("derives productionAdditionalReports from generalInfo", () => {
+		const ctx = resolveLegacyFormContext({
+			generalInfo: { productionAdditionalReports: "Не требуется" },
+		});
+		expect(ctx.productionAdditionalReports).toBe("Не требуется");
+	});
+
+	it("derives productionAdditionalReports from dataMart metricsCount fallback", () => {
 		const ctx = resolveLegacyFormContext({
 			detailInfo: { dataMart: [{ metricsCount: 7 }] },
 		});
 		expect(ctx.productionAdditionalReports).toBe("7");
+	});
+
+	it("reads assessedInitiativesCount from generalInfo", () => {
+		const ctx = resolveLegacyFormContext({
+			generalInfo: { assessedInitiativesCount: 5 },
+		});
+		expect(ctx.assessedInitiativesCount).toBe(5);
 	});
 });
 

@@ -296,6 +296,10 @@
 							"field_zApubb5V": {
 								"type": "string",
 								"title": "Название объекта/витрины данных"
+							},
+							"readyPromReports": {
+								"type": "boolean",
+								"title": "Наличие готовых пром витрин (необходима продуктивизация)"
 							}
 						}
 					},
@@ -1152,6 +1156,17 @@
 						],
 						"type": "string",
 						"title": "Стрим-исполнитель"
+					},
+					"assessedInitiativesCount": {
+						"type": "integer",
+						"title": "Количество оцениваемых инициатив",
+						"minimum": 1,
+						"maximum": 99,
+						"default": 1
+					},
+					"productionAdditionalReports": {
+						"type": "string",
+						"title": "Необходимость продуктивизации и количество дополнительных витрин"
 					}
 				}
 			},
@@ -2045,6 +2060,7 @@
 					"field_rZeUo8a_",
 					"field_Q8DGJNTn",
 					"field_xva1dRvW",
+					"readyPromReports",
 					"field_Ad1msOl7",
 					"field_28IPlEQu",
 					"field_fRuMuWtn",
@@ -2155,6 +2171,12 @@
 				"field_zApubb5V": {
 					"ui:options": {
 						"schemaFieldUid": "field_877bae45-21cb-4237-a20a-83260f054e9e"
+					}
+				},
+				"readyPromReports": {
+					"ui:widget": "checkbox",
+					"ui:options": {
+						"schemaFieldUid": "field_12d42005-7d15-4d0f-9aa0-2b6eebc596c8"
 					}
 				}
 			},
@@ -2716,6 +2738,8 @@
 				"createIS",
 				"createService",
 				"field_GWL5PLfS",
+				"assessedInitiativesCount",
+				"productionAdditionalReports",
 				"overallUncertainty",
 				"modelService"
 			],
@@ -2918,6 +2942,19 @@
 					"schemaFieldUid": "field_5a37fd57-e717-4cfd-9a05-4125455c8564"
 				},
 				"ui:placeholder": "Стрим-исполнитель"
+			},
+			"assessedInitiativesCount": {
+				"ui:widget": "updown",
+				"ui:options": {
+					"schemaFieldUid": "field_89bf48ee-4f44-4995-86fa-5cb1132abe63"
+				}
+			},
+			"productionAdditionalReports": {
+				"ui:widget": "select",
+				"ui:options": {
+					"dictionaryCode": "v2.method.26.необходимость_продуктивизации_и_количество_допол",
+					"schemaFieldUid": "field_d2a78102-57a7-4f7e-aad2-0cb015948496"
+				}
 			}
 		},
 		"field_aJEu5ziT": {
@@ -3856,6 +3893,7 @@
 			"v2.method.2.класс_моделей",
 			"v2.method.21.сроки_инициативы",
 			"v2.method.22.стоимость_инициативы",
+			"v2.method.26.необходимость_продуктивизации_и_количество_допол",
 			"v2.method.27.сложность_предметной_области",
 			"v2.method.28.объ_м_запроса_по_сущностям",
 			"v2.method.29.детализация_и_ясность_запроса_rds",

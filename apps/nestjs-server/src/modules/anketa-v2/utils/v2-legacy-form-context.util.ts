@@ -41,6 +41,7 @@ export type V2LegacyFormContext = {
 	pilotSupportRequired: "Да" | "Не требуется";
 	deploymentChannels: string[];
 	dataSourcesCount: number;
+	assessedInitiativesCount: number;
 	readyPromReports: "Да" | "Нет";
 	productionAdditionalReports: string;
 	uncertaintyAdjustmentPercent: number;
@@ -136,18 +137,33 @@ export function resolveLegacyFormContext(
 	);
 
 	const readyPromReports: "Да" | "Нет" =
+		isPositiveBinaryFormValue(dataMart?.readyPromReports) ||
 		isPositiveBinaryFormValue(dataMart?.field_lovKvLZc) ||
 		dataMart?.field_le47srI7 === "Да"
 			? "Да"
 			: "Нет";
 
-	const metricsCount =
-		parseFormNumber(dataMart?.metricsCount) ??
-		parseFormNumber(dataMart?.field_28IPlEQu);
+	const productionAdditionalReportsRaw = generalInfo?.productionAdditionalReports;
 	const productionAdditionalReports =
-		metricsCount !== null && metricsCount >= 1
-			? String(Math.min(99, Math.floor(metricsCount)))
-			: "1";
+		typeof productionAdditionalReportsRaw === "string" &&
+		productionAdditionalReportsRaw.trim()
+			? productionAdditionalReportsRaw.trim()
+			: (() => {
+					const metricsCount =
+						parseFormNumber(dataMart?.metricsCount) ??
+						parseFormNumber(dataMart?.field_28IPlEQu);
+					return metricsCount !== null && metricsCount >= 1
+						? String(Math.min(99, Math.floor(metricsCount)))
+						: "1";
+				})();
+
+	const assessedInitiativesCount = Math.min(
+		99,
+		Math.max(
+			1,
+			parseFormNumber(generalInfo?.assessedInitiativesCount) ?? 1,
+		),
+	);
 
 	const uncertaintyAdjustmentPercent =
 		parseFormNumber(uncertainty?.field_QCwwo5c5) ??
@@ -163,6 +179,7 @@ export function resolveLegacyFormContext(
 		pilotSupportRequired,
 		deploymentChannels,
 		dataSourcesCount,
+		assessedInitiativesCount,
 		readyPromReports,
 		productionAdditionalReports,
 		uncertaintyAdjustmentPercent,

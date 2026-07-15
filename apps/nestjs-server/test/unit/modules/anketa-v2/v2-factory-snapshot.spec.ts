@@ -171,7 +171,7 @@ describe("v2 factory snapshot", () => {
 
 	it("dictionariesSnapshot из v35", () => {
 		expect(file.dictionariesSnapshot?.referencedDictionaryCodes?.length).toBe(
-			69,
+			70,
 		);
 	});
 });
