@@ -54,7 +54,7 @@ function arrayItemCount(path: string): number {
 
 function sampleNumber(path: string, depth: number): number {
 	if (path.endsWith("estimateHoursPerDay")) return 3;
-	if (path.endsWith("coefficient")) return 1.5;
+	if (path.endsWith("coefficient")) return 1;
 	if (path.endsWith("modelsCount")) return 2;
 	if (path.endsWith("initiativeCost")) return 1_500_000;
 	if (path.endsWith("uncertaintyAdjustment")) return 0.15;

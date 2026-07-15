@@ -48,6 +48,8 @@ export type AnketaFormContextValue = {
 	devCalculationLoading?: boolean;
 	/** POST /calculate в процессе — для строки «Суммарный итог» типовых работ. */
 	calculationLoading?: boolean;
+	/** Пути arch-блоков нетиповых работ, у которых коэффициент обновился после пересчёта неопределённости. */
+	atypicalUncertaintySyncHighlightPaths?: ReadonlySet<string>;
 };
 
 export function readAnketaFormContext(

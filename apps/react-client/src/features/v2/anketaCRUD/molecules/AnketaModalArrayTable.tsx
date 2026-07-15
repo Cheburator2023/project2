@@ -138,6 +138,18 @@ export function AnketaModalArrayTable({
 	const calculationLoading = Boolean(
 		ctx.calculationLoading ?? ctx.devCalculationLoading,
 	);
+	const highlightUncertaintySync = Boolean(
+		ctx.atypicalUncertaintySyncHighlightPaths?.has(pathKey),
+	);
+	const uncertaintyHighlightSx = highlightUncertaintySync
+		? {
+				borderRadius: 2,
+				p: 1.5,
+				border: "2px solid",
+				borderColor: "warning.main",
+				bgcolor: "rgba(255, 193, 7, 0.08)",
+			}
+		: undefined;
 	const displayColumns = useMemo(() => {
 		if (!columns) return null;
 		if (!isTypicalWorks) return columns;
@@ -152,7 +164,10 @@ export function AnketaModalArrayTable({
 	// Fallback for paths without a column config (e.g., custom constructor schemas)
 	if (!displayColumns) {
 		return (
-			<Box data-test-id={tableTestId} sx={{ minWidth: 0 }}>
+			<Box
+				data-test-id={tableTestId}
+				sx={{ minWidth: 0, ...uncertaintyHighlightSx }}
+			>
 				<Stack direction="row" spacing={0.75} alignItems="baseline" mb={1.5}>
 					<Typography
 						variant="subtitle1"
@@ -233,7 +248,19 @@ export function AnketaModalArrayTable({
 	}
 
 	return (
-		<Box data-test-id={tableTestId} sx={{ minWidth: 0 }}>
+		<Box
+			data-test-id={tableTestId}
+			sx={{ minWidth: 0, ...uncertaintyHighlightSx }}
+		>
+			{highlightUncertaintySync ? (
+				<Typography
+					variant="caption"
+					color="warning.main"
+					sx={{ mb: 1, display: "block" }}
+				>
+					Коэффициенты обновлены по результатам расчёта общей неопределённости
+				</Typography>
+			) : null}
 			<Stack
 				direction="row"
 				spacing={0.75}

@@ -117,6 +117,11 @@ const v2_typical_work_types_1 = require("./v2-typical-work.types");
     (0, vitest_1.it)("applyWorkRounding NONE keeps raw value", () => {
         (0, vitest_1.expect)((0, v2_work_formula_util_1.applyWorkRounding)(1.23, { mode: "NONE", step: null })).toBe(1.23);
     });
+    (0, vitest_1.it)("applyWorkRounding clamps negative effort to zero", () => {
+        (0, vitest_1.expect)((0, v2_work_formula_util_1.applyWorkRounding)(-5, { mode: "NONE", step: null })).toBe(0);
+        (0, vitest_1.expect)((0, v2_work_formula_util_1.applyWorkRounding)(-5, { mode: "CEIL", step: 1 })).toBe(0);
+        (0, vitest_1.expect)((0, v2_work_formula_util_1.applyWorkRounding)(20.55 - 30, { mode: "CEIL", step: 1 })).toBe(0);
+    });
     (0, vitest_1.it)("validateWorkFormulaTokens catches double operator", () => {
         const err = (0, v2_work_formula_util_1.validateWorkFormulaTokens)([
             { kind: "norm" },

@@ -1,5 +1,20 @@
 # Semantic Versioning Changelog
 
+# [1.27.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.26.0...v1.27.0) (2026-07-15)
+
+
+### Features
+
+* enhance v2 data transfer functionality ([510564b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/510564b71e4fb8eb14d0d94c22eefea85b363385))
+
+# [1.26.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.25.0...v1.26.0) (2026-07-14)
+
+
+### Features
+
+* add @nestjs/axios dependency to package.json and package-lock.json ([ee692be](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ee692be12063944575410d56a318a25f47b34232))
+* add validation for non-negative effort in formulas ([6b03eff](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6b03effda6725f90e504278eb31d973262a542d9))
+
 # [1.24.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.23.0...v1.24.0) (2026-07-11)
 
 

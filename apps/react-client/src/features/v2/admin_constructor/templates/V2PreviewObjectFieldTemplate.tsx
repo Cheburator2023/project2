@@ -615,6 +615,7 @@ export function V2PreviewArrayFieldTemplate({
 		anketaModalArrayPaths,
 		anketaCompactArrayTablePaths,
 		formData,
+		atypicalUncertaintySyncHighlightPaths,
 	} = readAnketaFormContext(registry.formContext);
 	const archComponent = resolveV2AnketaArchComponent(uiSchema);
 	const pathKey = fieldPathId?.path?.join(".") ?? "";
@@ -631,13 +632,27 @@ export function V2PreviewArrayFieldTemplate({
 		const preview = names.slice(0, 3).join(", ");
 		return names.length > 3 ? `${preview}…` : preview;
 	}, [archComponent, formData, pathKey]);
+	const highlightUncertaintySync = Boolean(
+		archComponent === "atypicalWork" &&
+			pathKey &&
+			atypicalUncertaintySyncHighlightPaths?.has(pathKey),
+	);
+	const uncertaintyHighlightSx = highlightUncertaintySync
+		? {
+				borderRadius: 2,
+				p: 1.5,
+				border: "2px solid",
+				borderColor: "warning.main",
+				bgcolor: "rgba(255, 193, 7, 0.08)",
+			}
+		: undefined;
 	const wrapArch = (node: ReactNode): ReactNode => (
 		<ArchComponentDevOutline
 			archComponent={archComponent}
 			previewMode={archComponent === "typicalWork"}
 			badgeSuffix={typicalWorkBadgeSuffix}
 		>
-			{node}
+			<Box sx={uncertaintyHighlightSx}>{node}</Box>
 		</ArchComponentDevOutline>
 	);
 	const lastSegment = fieldPathId?.path?.at(-1);

@@ -82,7 +82,6 @@ describe("ARCH_COMPONENT_PRESET_DEFS", () => {
 			expect(field.default).toBeUndefined();
 		}
 		expect(ATYPICAL_WORK_NEW_ROW_DEFAULTS).toEqual({
-			coefficient: 1.5,
 			includeInCalculation: true,
 		});
 	});

@@ -2,7 +2,7 @@ import Typography from "@mui/material/Typography";
 import { useV2Dictionaries } from "@react-client/common/api/queries/v2-templates";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { useDictionaryListPanelWidth } from "@react-client/features/v2/admin/hooks/useDictionaryListPanelWidth";
+import { useDictionariesListDetailSplit } from "@react-client/features/v2/admin/hooks/useDictionaryListPanelWidth";
 import type { V2DictionaryDto } from "@smart-anketa/api-contract";
 import { useEffect, useState } from "react";
 import {
@@ -75,10 +75,11 @@ export function V2DictionaryWorkspace({
 	);
 	const [quickFilter, setQuickFilter] = useState("");
 	const {
-		width: listWidth,
+		containerRef,
+		listWidth,
 		isResizing,
 		onResizeStart,
-	} = useDictionaryListPanelWidth();
+	} = useDictionariesListDetailSplit();
 
 	const selectedDictionary =
 		dictionaries.find((d) => d.id === selectedId) ?? null;
@@ -110,13 +111,21 @@ export function V2DictionaryWorkspace({
 	}
 
 	return (
-		<Flex flexDirection="row" height="100%" minHeight="0" width="100%" gap={4}>
+		<Flex
+			ref={containerRef}
+			flexDirection="row"
+			height="100%"
+			minHeight="0"
+			width="100%"
+			gap={4}
+		>
 			<Flex
 				flexDirection="column"
 				flexShrink={0}
 				height="100%"
 				minHeight="0"
-				width={`${listWidth}px`}
+				width={listWidth}
+				minWidth="280px"
 			>
 				<V2DictionaryListPanel
 					items={dictionaries}
@@ -134,7 +143,7 @@ export function V2DictionaryWorkspace({
 				active={isResizing}
 			/>
 
-			<Flex flexGrow={1} minWidth="0" minHeight="0" height="100%">
+			<Flex flexGrow={1} minWidth="260px" minHeight="0" height="100%">
 				{selectedId ? (
 					<V2DictionaryDetail
 						key={selectedId}

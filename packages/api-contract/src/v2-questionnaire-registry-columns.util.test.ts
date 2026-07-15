@@ -16,7 +16,6 @@ const MINIMAL_SCHEMA = {
 		generalInfo: {
 			type: "object",
 			properties: {
-				calcName: { type: "string", title: "Название анкеты" },
 				businessCustomer: { type: "string", title: "Заказчик" },
 			},
 		},
@@ -64,7 +63,7 @@ const MINIMAL_SCHEMA = {
 } as const;
 
 const MINIMAL_UI = {
-	generalInfo: { "ui:order": ["calcName", "businessCustomer"] },
+	generalInfo: { "ui:order": ["businessCustomer"] },
 	uncertaintyCalculation: {
 		riskGroup: { "ui:order": ["businessComplexity"] },
 	},

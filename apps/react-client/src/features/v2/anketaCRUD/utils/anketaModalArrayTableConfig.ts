@@ -41,11 +41,7 @@ function formatNameLabel(raw: string): string {
 	return raw;
 }
 
-function formatTypicalWorkNumber(
-	item: Record<string, unknown>,
-	field: string,
-): string {
-	const value = item[field];
+function formatTypicalWorkNumberValue(value: unknown): string {
 	if (value == null || value === "") return "—";
 	if (typeof value === "number" && Number.isFinite(value)) {
 		if (Number.isInteger(value)) return String(value);
@@ -54,6 +50,28 @@ function formatTypicalWorkNumber(
 			.replace(/\.$/, "");
 	}
 	return String(value);
+}
+
+function formatTypicalWorkNumber(
+	item: Record<string, unknown>,
+	field: string,
+): string {
+	return formatTypicalWorkNumberValue(item[field]);
+}
+
+/** Числовое значение итога строки (с нормализацией float-артефактов). */
+export function normalizeTypicalWorkTotalValue(raw: unknown): number | null {
+	if (raw == null || raw === "") return null;
+	const num =
+		typeof raw === "number"
+			? raw
+			: typeof raw === "string" && raw.trim()
+				? Number(raw.replace(",", "."))
+				: Number.NaN;
+	if (!Number.isFinite(num)) return null;
+	const normalized =
+		Number.isInteger(num) ? num : Math.round(num * 10000) / 10000;
+	return Math.max(0, normalized);
 }
 
 const FACTORY_TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
@@ -460,14 +478,8 @@ export function sumTypicalWorkTotals(
 	let sum = 0;
 	let hasValue = false;
 	for (const item of items) {
-		const raw = item.total;
-		const num =
-			typeof raw === "number"
-				? raw
-				: typeof raw === "string" && raw.trim()
-					? Number(raw.replace(",", "."))
-					: Number.NaN;
-		if (!Number.isFinite(num)) continue;
+		const num = normalizeTypicalWorkTotalValue(item.total);
+		if (num == null) continue;
 		sum += num;
 		hasValue = true;
 	}
@@ -479,7 +491,7 @@ export function formatTypicalWorkSummaryTotal(
 	options?: { loading?: boolean },
 ): string {
 	if (options?.loading && total == null) return "…";
-	if (total != null) return String(total);
+	if (total != null) return formatTypicalWorkNumberValue(total);
 	return "—";
 }
 

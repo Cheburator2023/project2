@@ -46,5 +46,9 @@ export declare function validateWorkFormulaTokens(tokens: V2WorkFormulaToken[], 
 export declare function isParamUsedInFormula(tokens: V2WorkFormulaToken[], paramCode: string): boolean;
 export declare function markFormulaParamInvalid(tokens: V2WorkFormulaToken[], paramCode: string): V2WorkFormulaToken[];
 export declare function evaluateWorkFormula(formula: V2TypicalWorkFormulaDto, ctx: WorkFormulaEvalContext): WorkFormulaEvalResult;
+/** Трудозатраты (ч/д) не могут быть отрицательными. */
+export declare function clampTypicalWorkEffort(value: number): number;
+/** Округление без ограничения снизу — для валидации формулы перед сохранением. */
+export declare function roundWorkEffortValue(value: number, rounding: V2TypicalWorkRoundingDto): number;
 export declare function applyWorkRounding(value: number, rounding: V2TypicalWorkRoundingDto): number;
 export declare function previewWorkFormula(formula: V2TypicalWorkFormulaDto, rounding: V2TypicalWorkRoundingDto, ctx: WorkFormulaEvalContext): WorkFormulaEvalResult;

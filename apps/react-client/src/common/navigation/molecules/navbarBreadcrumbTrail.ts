@@ -91,6 +91,10 @@ function adminTrail(pathname: string): NavbarBreadcrumbItem[] | null {
 		return [adminCrumb(), { label: commonRoutes.adminV2TypicalWorks.name }];
 	}
 
+	if (pathname.startsWith(commonRoutes.adminV2Settings.rootPath)) {
+		return [adminCrumb(), { label: commonRoutes.adminV2Settings.name }];
+	}
+
 	const templateModeMatch = pathname.match(
 		/^\/admin\/templates\/[^/]+\/(edit|read|logic)$/,
 	);

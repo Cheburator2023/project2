@@ -276,9 +276,7 @@ function resolveArrayIndices(dotPath, options) {
     if (explicit?.length)
         return explicit;
     if (options.rows?.length) {
-        const fromRows = collectRegistryArrayIndicesFromRows(options.rows, dotPath);
-        if (fromRows.length > 0)
-            return fromRows;
+        return collectRegistryArrayIndicesFromRows(options.rows, dotPath);
     }
     const maxItems = options.arrayMaxItems ?? DEFAULT_ARRAY_MAX_ITEMS;
     return Array.from({ length: maxItems }, (_, index) => index);
@@ -509,7 +507,6 @@ function arrayItemCols(groupHeader, basePath, index, fields) {
 /** Статический набор колонок (fallback без схемы). */
 function buildStaticV2QuestionnaireRegistryColumnTree() {
     const generalInfoChildren = [
-        formLeaf("generalInfo.calcName", "Название анкеты (инициативы)"),
         formLeaf("generalInfo.businessCustomer", "Заказчик"),
         formLeaf("generalInfo.implementationStream", "Стрим-исполнитель"),
         formLeaf("generalInfo.complexity", "Сложность"),

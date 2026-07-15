@@ -133,6 +133,24 @@ function buildTypicalArrayReduceTerm(arrayPath) {
         ],
     };
 }
+/**
+ * Итог строки типовой работы: для строк каталога (workId) сохраняем уже
+ * округлённый total; иначе estimate × coefficient (ручные/legacy строки).
+ */
+export function buildTypicalWorkRowTotalCondition() {
+    return {
+        if: [
+            {
+                and: [
+                    { "!!": [{ var: "workId" }] },
+                    { "!=": [{ var: "total" }, null] },
+                ],
+            },
+            { var: "total" },
+            { "*": [{ var: "estimateHoursPerDay" }, { var: "coefficient" }] },
+        ],
+    };
+}
 export function buildTypicalWorkRowTotalRule(arrayPath) {
     return {
         id: typicalRowTotalRuleId(arrayPath),
@@ -141,11 +159,9 @@ export function buildTypicalWorkRowTotalRule(arrayPath) {
             label: "Per-row итог типовой работы",
             fieldVar: "total",
             arrayPath,
-            formulaHint: "row.total = норматив (ч/д) × коэффициент",
+            formulaHint: "row.total = каталог (округл.) или норматив (ч/д) × коэффициент",
         },
-        condition: {
-            "*": [{ var: "estimateHoursPerDay" }, { var: "coefficient" }],
-        },
+        condition: buildTypicalWorkRowTotalCondition(),
         targetPath: `/${arrayPath.replace(/\./g, "/")}`,
         description: "ФТ-024: итог строки типовой работы.",
         dependencies: [],

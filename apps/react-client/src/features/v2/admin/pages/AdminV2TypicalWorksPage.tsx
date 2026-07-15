@@ -5,14 +5,11 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Stack from "@mui/material/Stack";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import { Flex } from "@react-client/common/primitives/Flex";
 import {
 	useCreateV2TypicalWork,
 	useDeleteV2TypicalWork,
-	useV2TypicalWorksList,
 } from "@react-client/common/api/queries/v2-works";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { Header } from "@react-client/common/navigation/organisms/Header";
@@ -22,13 +19,9 @@ import type { V2TypicalWorkHeaderState } from "@react-client/features/v2/admin/o
 import { V2TypicalWorkWorkspace } from "@react-client/features/v2/admin/organisms/V2TypicalWorkWorkspace";
 import { CreateTypicalWorkDialog } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/CreateTypicalWorkDialog";
 import { TypicalWorkParametersCatalogView } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/TypicalWorkParametersCatalogView";
-import {
-	parseTypicalWorkDeleteError,
-} from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorkPatchErrors";
+import { parseTypicalWorkDeleteError } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorkPatchErrors";
 import { resolveEffectiveWorkArchComponentType } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/schemaWorkParameters";
-import {
-	archComponentShortLabel,
-} from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
+import { archComponentShortLabel } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import type { CreateTypicalWorkDialogPayload } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/CreateTypicalWorkDialog";
 import { pathForAdminV2TypicalWork } from "@react-client/routing/common/pathHelpers";
 import { commonRoutes as routes } from "@react-client/routing/common/routes";
@@ -40,27 +33,22 @@ type AdminView = "works" | "parameters";
 
 export function AdminV2TypicalWorksPage() {
 	const navigate = useNavigate();
-	const { data } = useV2TypicalWorksList();
 	const createWork = useCreateV2TypicalWork();
 	const deleteWork = useDeleteV2TypicalWork();
 
 	const [view, setView] = useState<AdminView>("works");
 	const [createOpen, setCreateOpen] = useState(false);
 	const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
-	const [detailHeader, setDetailHeader] = useState<V2TypicalWorkHeaderState | null>(
-		null,
+	const [checkedWorks, setCheckedWorks] = useState<V2TypicalWorkListItemDto[]>(
+		[],
 	);
-	const [deleteTarget, setDeleteTarget] = useState<V2TypicalWorkListItemDto | null>(
-		null,
+	const [detailHeader, setDetailHeader] =
+		useState<V2TypicalWorkHeaderState | null>(null);
+	const [deleteTargets, setDeleteTargets] = useState<V2TypicalWorkListItemDto[]>(
+		[],
 	);
-	const [deleteUsageConflict, setDeleteUsageConflict] = useState<
-		ReturnType<typeof parseTypicalWorkDeleteError>
-	>(null);
-
-	const selectedWork = useMemo(
-		() => (data?.items ?? []).find((item) => item.id === selectedWorkId) ?? null,
-		[data?.items, selectedWorkId],
-	);
+	const [deleteUsageConflict, setDeleteUsageConflict] =
+		useState<ReturnType<typeof parseTypicalWorkDeleteError>>(null);
 
 	const handleCreateWork = async (payload: CreateTypicalWorkDialogPayload) => {
 		try {
@@ -80,31 +68,65 @@ export function AdminV2TypicalWorksPage() {
 		}
 	};
 
-	const handleDeleteWork = useCallback(
+	const handleDeleteWorks = useCallback(
 		async (confirm = false) => {
-			if (!deleteTarget) return;
-			try {
-				await deleteWork.mutateAsync({ workId: deleteTarget.id, confirm });
-				if (selectedWorkId === deleteTarget.id) {
+			if (!deleteTargets.length) return;
+			const deletedIds: string[] = [];
+			const conflictTargets: V2TypicalWorkListItemDto[] = [];
+			let conflictDetails: ReturnType<typeof parseTypicalWorkDeleteError> = null;
+
+			for (const work of deleteTargets) {
+				try {
+					await deleteWork.mutateAsync({ workId: work.id, confirm });
+					deletedIds.push(work.id);
+				} catch (error) {
+					if (!confirm) {
+						const conflict = parseTypicalWorkDeleteError(error);
+						if (conflict) {
+							conflictTargets.push(work);
+							conflictDetails ??= conflict;
+							continue;
+						}
+					}
+					toast.error(`Не удалось удалить «${work.name}»`, {
+						description: apiErrorMessage(error),
+					});
+				}
+			}
+
+			if (deletedIds.length > 0) {
+				if (selectedWorkId && deletedIds.includes(selectedWorkId)) {
 					setSelectedWorkId(null);
 				}
-				setDeleteTarget(null);
-				setDeleteUsageConflict(null);
-				toast.success("Работа удалена");
-			} catch (error) {
-				if (!confirm) {
-					const conflict = parseTypicalWorkDeleteError(error);
-					if (conflict) {
-						setDeleteUsageConflict(conflict);
-						return;
-					}
-				}
-				toast.error("Не удалось удалить работу", {
-					description: apiErrorMessage(error),
-				});
+				setCheckedWorks((prev) =>
+					prev.filter((work) => !deletedIds.includes(work.id)),
+				);
+				toast.success(
+					deletedIds.length === 1
+						? "Работа удалена"
+						: `Удалено работ: ${deletedIds.length}`,
+				);
 			}
+
+			if (conflictTargets.length > 0 && !confirm) {
+				setDeleteTargets(conflictTargets);
+				setDeleteUsageConflict(conflictDetails);
+				return;
+			}
+
+			setDeleteTargets([]);
+			setDeleteUsageConflict(null);
 		},
-		[deleteTarget, deleteWork, selectedWorkId],
+		[deleteTargets, deleteWork, selectedWorkId],
+	);
+
+	const openDeleteDialog = useCallback(
+		(works: V2TypicalWorkListItemDto[]) => {
+			if (!works.length) return;
+			setDeleteUsageConflict(null);
+			setDeleteTargets(works);
+		},
+		[],
 	);
 
 	const pageTitle =
@@ -112,8 +134,19 @@ export function AdminV2TypicalWorksPage() {
 			? "Параметры трудоёмкости"
 			: (detailHeader?.title ?? routes.adminV2TypicalWorks.name);
 
+	const deleteButtonLabel = useMemo(() => {
+		if (checkedWorks.length === 0) return "Удалить";
+		if (checkedWorks.length === 1) return "Удалить";
+		return `Удалить (${checkedWorks.length})`;
+	}, [checkedWorks.length]);
+
 	return (
-		<Flex flexDirection="column" flexGrow={1} minHeight="0" sx={{ height: "100%" }}>
+		<Flex
+			flexDirection="column"
+			flexGrow={1}
+			minHeight="0"
+			sx={{ height: "100%" }}
+		>
 			<Header
 				title={pageTitle}
 				leadingAccessory={
@@ -132,19 +165,13 @@ export function AdminV2TypicalWorksPage() {
 					) : undefined
 				}
 			>
-				<Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-					<ToggleButtonGroup
-						size="small"
-						exclusive
-						value={view}
-						onChange={(_e, val: AdminView | null) => {
-							if (val) setView(val);
-						}}
-					>
-						<ToggleButton value="works">Работы</ToggleButton>
-						<ToggleButton value="parameters">Параметры</ToggleButton>
-					</ToggleButtonGroup>
-
+				<Stack
+					direction="row"
+					spacing={1}
+					alignItems="center"
+					flexWrap="wrap"
+					useFlexGap
+				>
 					{view === "works" ? (
 						<>
 							<V2AdminButton onClick={() => setCreateOpen(true)}>
@@ -153,26 +180,27 @@ export function AdminV2TypicalWorksPage() {
 							<V2AdminButton
 								color="error"
 								variant="outlined"
-								disabled={!selectedWork || deleteWork.isPending}
-								onClick={() => {
-									if (selectedWork) {
-										setDeleteUsageConflict(null);
-										setDeleteTarget(selectedWork);
-									}
-								}}
+								disabled={checkedWorks.length === 0 || deleteWork.isPending}
+								onClick={() => openDeleteDialog(checkedWorks)}
 							>
-								Удалить
+								{deleteButtonLabel}
 							</V2AdminButton>
 						</>
 					) : null}
 				</Stack>
 			</Header>
 
-			<Flex flexDirection="column" flexGrow={1} minHeight="0" sx={{ overflow: "hidden" }}>
+			<Flex
+				flexDirection="column"
+				flexGrow={1}
+				minHeight="0"
+				sx={{ overflow: "hidden" }}
+			>
 				{view === "works" ? (
 					<V2TypicalWorkWorkspace
 						onCreateRequest={() => setCreateOpen(true)}
 						onSelectedWorkChange={setSelectedWorkId}
+						onCheckedWorksChange={setCheckedWorks}
 						onHeaderChange={setDetailHeader}
 					/>
 				) : (
@@ -190,50 +218,110 @@ export function AdminV2TypicalWorksPage() {
 			/>
 
 			<Dialog
-				open={Boolean(deleteTarget)}
+				open={deleteTargets.length > 0}
 				onClose={() => {
 					if (deleteWork.isPending) return;
-					setDeleteTarget(null);
+					setDeleteTargets([]);
 					setDeleteUsageConflict(null);
 				}}
 				maxWidth="xs"
 				fullWidth
 			>
 				<DialogTitle>
-					{deleteUsageConflict ? "Работа используется в анкетах" : "Удалить работу?"}
+					{deleteUsageConflict
+						? deleteTargets.length === 1
+							? "Работа используется в анкетах"
+							: "Работы используются в анкетах"
+						: deleteTargets.length === 1
+							? "Удалить работу?"
+							: `Удалить работы (${deleteTargets.length})?`}
 				</DialogTitle>
 				<DialogContent>
 					{deleteUsageConflict ? (
 						<>
-							<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-								«{deleteTarget?.name}» учтена в версиях анкет. Удаление затронет
-								сохранённые данные в этих версиях.
+							<Typography
+								variant="body2"
+								color="text.secondary"
+								sx={{ mb: 1.5 }}
+							>
+								{deleteTargets.length === 1 ? (
+									<>
+										«{deleteTargets[0]?.name}» учтена в версиях анкет. Удаление
+										затронет сохранённые данные в этих версиях.
+									</>
+								) : (
+									<>
+										{deleteTargets.length} работ учтены в версиях анкет.
+										Удаление затронет сохранённые данные.
+									</>
+								)}
+							</Typography>
+							{deleteTargets.length > 1 ? (
+								<Box component="ul" sx={{ m: 0, pl: 2.5, mb: 1.5 }}>
+									{deleteTargets.map((work) => (
+										<Typography
+											key={work.id}
+											component="li"
+											variant="body2"
+											color="text.secondary"
+											sx={{ mb: 0.5 }}
+										>
+											{work.name}
+										</Typography>
+									))}
+								</Box>
+							) : null}
+							<Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+								{deleteUsageConflict.usedInQuestionnaireVersions.map(
+									(usage) => (
+										<Typography
+											key={`${usage.questionnaireId}-${usage.version}`}
+											component="li"
+											variant="body2"
+											color="text.secondary"
+											sx={{ mb: 0.5 }}
+										>
+											{usage.calcName} (версия {usage.version})
+										</Typography>
+									),
+								)}
+							</Box>
+						</>
+					) : deleteTargets.length === 1 ? (
+						<Typography variant="body2" color="text.secondary">
+							«{deleteTargets[0]?.name}» будет удалена из глобального справочника
+							без возможности восстановления.
+						</Typography>
+					) : (
+						<>
+							<Typography
+								variant="body2"
+								color="text.secondary"
+								sx={{ mb: 1.5 }}
+							>
+								Будут удалены из глобального справочника без возможности
+								восстановления:
 							</Typography>
 							<Box component="ul" sx={{ m: 0, pl: 2.5 }}>
-								{deleteUsageConflict.usedInQuestionnaireVersions.map((usage) => (
+								{deleteTargets.map((work) => (
 									<Typography
-										key={`${usage.questionnaireId}-${usage.version}`}
+										key={work.id}
 										component="li"
 										variant="body2"
 										color="text.secondary"
 										sx={{ mb: 0.5 }}
 									>
-										{usage.calcName} (версия {usage.version})
+										{work.name}
 									</Typography>
 								))}
 							</Box>
 						</>
-					) : (
-						<Typography variant="body2" color="text.secondary">
-							«{deleteTarget?.name}» будет удалена из глобального справочника без
-							возможности восстановления.
-						</Typography>
 					)}
 				</DialogContent>
 				<DialogActions>
 					<Button
 						onClick={() => {
-							setDeleteTarget(null);
+							setDeleteTargets([]);
 							setDeleteUsageConflict(null);
 						}}
 						disabled={deleteWork.isPending}
@@ -244,7 +332,7 @@ export function AdminV2TypicalWorksPage() {
 						color="error"
 						variant="contained"
 						disabled={deleteWork.isPending}
-						onClick={() => void handleDeleteWork(Boolean(deleteUsageConflict))}
+						onClick={() => void handleDeleteWorks(Boolean(deleteUsageConflict))}
 					>
 						{deleteUsageConflict ? "Удалить всё равно" : "Удалить"}
 					</Button>

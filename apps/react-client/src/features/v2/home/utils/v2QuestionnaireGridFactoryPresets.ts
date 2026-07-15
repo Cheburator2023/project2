@@ -101,6 +101,14 @@ const DEFAULT_REGISTRY_VISIBLE = [
 	"updatedAt",
 ];
 
+/** Сбрасывает только фильтры, порядок и видимость колонок не меняет. */
+export function clearQuestionnaireGridFilters(
+	api: Pick<QuestionnaireGridPresetApi, "setFilterModel" | "onFilterChanged">,
+): void {
+	api.setFilterModel(null);
+	api.onFilterChanged();
+}
+
 /** Сбрасывает фильтры/сортировку и применяет преднастройку колонок. */
 export function applyQuestionnaireGridPreset(
 	api: QuestionnaireGridPresetApi,

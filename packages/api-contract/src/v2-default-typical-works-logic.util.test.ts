@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	buildSourceTypicalWorksCatalogRule,
+	buildTypicalWorkRowTotalCondition,
 	patchV2TypicalWorksLogicRules,
 	V2_SOURCE_SYSTEMS_ARRAY_PATH,
 } from "./v2-default-typical-works-logic.util";
@@ -50,6 +51,10 @@ describe("v2-default-typical-works-logic.util", () => {
 				(rule) => rule.id === "unified-typical-row-total:field_pirm_myTypical",
 			),
 		).toBe(true);
+		const rowRule = patched.rules.find(
+			(rule) => rule.id === "unified-typical-row-total:field_pirm_myTypical",
+		);
+		expect(rowRule?.condition).toEqual(buildTypicalWorkRowTotalCondition());
 		const unified = patched.rules.find((rule) => rule.id === "unified-typical-total");
 		expect(unified?.dependencies).toEqual(
 			expect.arrayContaining([

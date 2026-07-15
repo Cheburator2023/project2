@@ -713,8 +713,7 @@
 								},
 								"coefficient": {
 									"type": "number",
-									"title": "Коэффициент",
-									"default": 1.5
+									"title": "Коэффициент"
 								},
 								"estimateHoursPerDay": {
 									"type": "number",
@@ -766,10 +765,6 @@
 				"type": "object",
 				"title": "Общая информация",
 				"properties": {
-					"calcName": {
-						"type": "string",
-						"title": "Название анкеты"
-					},
 					"createIS": {
 						"type": "boolean",
 						"title": "Требуется создание информационной системы"
@@ -957,8 +952,7 @@
 								},
 								"coefficient": {
 									"type": "number",
-									"title": "Коэффициент",
-									"default": 1.5
+									"title": "Коэффициент"
 								},
 								"estimateHoursPerDay": {
 									"type": "number",
@@ -1034,8 +1028,7 @@
 								},
 								"coefficient": {
 									"type": "number",
-									"title": "Коэффициент",
-									"default": 1.5
+									"title": "Коэффициент"
 								},
 								"estimateHoursPerDay": {
 									"type": "number",
@@ -1109,8 +1102,7 @@
 								},
 								"coefficient": {
 									"type": "number",
-									"title": "Коэффициент",
-									"default": 1.5
+									"title": "Коэффициент"
 								},
 								"estimateHoursPerDay": {
 									"type": "number",
@@ -1263,8 +1255,7 @@
 								},
 								"coefficient": {
 									"type": "number",
-									"title": "Коэффициент",
-									"default": 1.5
+									"title": "Коэффициент"
 								},
 								"estimateHoursPerDay": {
 									"type": "number",
@@ -1319,8 +1310,7 @@
 								},
 								"coefficient": {
 									"type": "number",
-									"title": "Коэффициент",
-									"default": 1.5
+									"title": "Коэффициент"
 								},
 								"estimateHoursPerDay": {
 									"type": "number",
@@ -1365,8 +1355,7 @@
 								},
 								"coefficient": {
 									"type": "number",
-									"title": "Коэффициент",
-									"default": 1.5
+									"title": "Коэффициент"
 								},
 								"estimateHoursPerDay": {
 									"type": "number",
@@ -2153,7 +2142,8 @@
 						}
 					},
 					"coefficient": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:readonly": true
 					},
 					"estimateHoursPerDay": {
 						"ui:widget": "text"
@@ -2204,19 +2194,11 @@
 			}
 		},
 		"generalInfo": {
-			"calcName": {
-				"ui:widget": "text",
-				"ui:options": {
-					"fullWidth": true
-				},
-				"ui:placeholder": "Название анкеты"
-			},
 			"createIS": {
 				"ui:options": {},
 				"ui:placeholder": "Создание ИС"
 			},
 			"ui:order": [
-				"calcName",
 				"businessCustomer",
 				"implementationStream",
 				"complexity",
@@ -2429,7 +2411,8 @@
 						}
 					},
 					"coefficient": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:readonly": true
 					},
 					"estimateHoursPerDay": {
 						"ui:widget": "text"
@@ -2509,7 +2492,8 @@
 					],
 					"workType": {},
 					"coefficient": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:readonly": true
 					},
 					"estimateHoursPerDay": {
 						"ui:widget": "text"
@@ -2605,7 +2589,8 @@
 						}
 					},
 					"coefficient": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:readonly": true
 					},
 					"estimateHoursPerDay": {
 						"ui:widget": "text"
@@ -2775,7 +2760,8 @@
 						}
 					},
 					"coefficient": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:readonly": true
 					},
 					"estimateHoursPerDay": {
 						"ui:widget": "text"
@@ -2842,7 +2828,8 @@
 						}
 					},
 					"coefficient": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:readonly": true
 					},
 					"estimateHoursPerDay": {
 						"ui:widget": "text"
@@ -2897,7 +2884,8 @@
 						}
 					},
 					"coefficient": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:readonly": true
 					},
 					"estimateHoursPerDay": {
 						"ui:widget": "text"

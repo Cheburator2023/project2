@@ -5,6 +5,9 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemText from "@mui/material/ListItemText";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { styled, useColorScheme } from "@mui/material/styles";
@@ -23,11 +26,19 @@ import {
 	agGridCustomMUIThemeDark,
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
-import type { ColDef, RowClickedEvent } from "ag-grid-community";
+import type { ColDef, RowClickedEvent, SelectionChangedEvent } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@react-client/common/toasts";
+import {
+	buildTypicalWorkCopyName,
+	planWorkAddition,
+	workNeedsCopyForSchema,
+	workSchemaLinkLabel,
+	type WorkAddPlan,
+} from "./assignWorkFromCatalog.util";
 import { scopeLabel, scopeStreamExecutor, type LogicWorksScope } from "./typicalWorksAreas";
+import { assignmentStatusLabel } from "./typicalWorksUi";
 
 registerAgGridTableModules();
 
@@ -45,16 +56,26 @@ type AssignWorkFromRegistryDialogProps = {
 	open: boolean;
 	scope: LogicWorksScope;
 	templateId: string;
+	templateName: string;
 	templateVersionId: string | null;
 	onClose: () => void;
 	onAssigned: (workId: string, streamExecutor: string) => void;
 	onCreateNew: () => void;
 };
 
+function groupPlans(plans: WorkAddPlan[]) {
+	return {
+		already: plans.filter((plan) => plan.action === "already_in_current"),
+		bind: plans.filter((plan) => plan.action === "bind"),
+		copy: plans.filter((plan) => plan.action === "copy"),
+	};
+}
+
 export function AssignWorkFromCatalogDialog({
 	open,
 	scope,
 	templateId,
+	templateName,
 	templateVersionId,
 	onClose,
 	onAssigned,
@@ -65,12 +86,17 @@ export function AssignWorkFromCatalogDialog({
 	const [query, setQuery] = useState("");
 	const [pending, setPending] = useState(false);
 	const [decision, setDecision] = useState<V2TypicalWorkListItemDto | null>(null);
+	const [bulkConfirmPlans, setBulkConfirmPlans] = useState<WorkAddPlan[] | null>(
+		null,
+	);
+	const [selectedCount, setSelectedCount] = useState(0);
 
 	const { data, isLoading, error } = useV2TypicalWorksList();
 	const copyWork = useCopyV2TypicalWork();
 	const patch = usePatchV2TypicalWork();
 
 	const items = data?.items ?? [];
+	const targetSchemaLabel = templateName.trim() || "текущая схема";
 
 	const gridTheme =
 		mode === "light" || mode === undefined
@@ -82,37 +108,56 @@ export function AssignWorkFromCatalogDialog({
 			{
 				field: "name",
 				headerName: "Название",
-				flex: 1.6,
-				minWidth: 200,
+				flex: 1.5,
+				minWidth: 180,
 			},
 			{
 				field: "archComponentType",
 				headerName: "Компонент",
 				flex: 1,
+				minWidth: 120,
+			},
+			{
+				colId: "schemaLink",
+				headerName: "Привязка к схеме",
+				flex: 1.2,
+				minWidth: 160,
+				valueGetter: (params) =>
+					params.data
+						? workSchemaLinkLabel(params.data, templateId)
+						: "—",
+			},
+			{
+				colId: "assignment",
+				headerName: "Назначение",
+				flex: 1,
 				minWidth: 140,
-			},
-			{
-				field: "workType",
-				headerName: "Тип",
-				width: 110,
-				valueFormatter: (p) => p.value?.trim() || "—",
-			},
-			{
-				colId: "template",
-				headerName: "Схема",
-				flex: 1.1,
-				minWidth: 150,
-				valueGetter: (p) =>
-					p.data?.templateName?.trim() || "— (глобальная)",
+				valueGetter: (params) => {
+					const work = params.data;
+					if (!work) return "—";
+					const status = assignmentStatusLabel(
+						work.assignmentStatus,
+						work.usedOnSchemasCount,
+					);
+					if (work.streams.length > 0) {
+						return status
+							? `${status} · ${work.streams.length} поток.`
+							: `${work.streams.length} поток.`;
+					}
+					return status || "—";
+				},
 			},
 		],
-		[],
+		[templateId],
 	);
 
 	useEffect(() => {
 		if (!open) return;
 		setQuery("");
 		setDecision(null);
+		setBulkConfirmPlans(null);
+		setSelectedCount(0);
+		gridRef.current?.api?.deselectAll();
 	}, [open]);
 
 	useEffect(() => {
@@ -121,13 +166,121 @@ export function AssignWorkFromCatalogDialog({
 		api.setGridOption("quickFilterText", query.trim());
 	}, [query]);
 
+	const onSelectionChanged = useCallback(
+		(event: SelectionChangedEvent<V2TypicalWorkListItemDto>) => {
+			setSelectedCount(event.api.getSelectedRows().length);
+		},
+		[],
+	);
+
+	const streamForWork = useCallback(
+		(work: V2TypicalWorkListItemDto) =>
+			scopeStreamExecutor(scope, work.streams[0] ?? "Источники данных"),
+		[scope],
+	);
+
+	const executePlans = useCallback(
+		async (plans: WorkAddPlan[]) => {
+			if (plans.length === 0) return;
+			setPending(true);
+			let bound = 0;
+			let copied = 0;
+			let already = 0;
+			let failed = 0;
+
+			for (const plan of plans) {
+				const work = plan.work;
+				const streamExecutor = streamForWork(work);
+				try {
+					if (plan.action === "already_in_current") {
+						onAssigned(work.id, work.streams[0] ?? streamExecutor);
+						already += 1;
+						continue;
+					}
+					if (plan.action === "copy") {
+						const copy = await copyWork.mutateAsync({
+							workId: work.id,
+							dto: {
+								templateId: templateId || undefined,
+								streamExecutor,
+								name: buildTypicalWorkCopyName(work, targetSchemaLabel),
+							},
+						});
+						onAssigned(copy.id, copy.streamExecutor || streamExecutor);
+						copied += 1;
+						continue;
+					}
+					await patch.mutateAsync({
+						workId: work.id,
+						dto: {
+							streamExecutor,
+							templateVersionId: templateVersionId ?? undefined,
+							templateId: templateId || undefined,
+						},
+					});
+					onAssigned(work.id, streamExecutor);
+					bound += 1;
+				} catch {
+					failed += 1;
+				}
+			}
+
+			const added = bound + copied + already;
+			if (failed === 0) {
+				const parts: string[] = [];
+				if (bound > 0) parts.push(`привязано ${bound}`);
+				if (copied > 0) parts.push(`скопировано ${copied}`);
+				if (already > 0) parts.push(`уже в схеме ${already}`);
+				toast.success(
+					added === 1
+						? "Работа добавлена в схему"
+						: `Добавлено работ: ${added}${parts.length ? ` (${parts.join(", ")})` : ""}`,
+				);
+				setDecision(null);
+				setBulkConfirmPlans(null);
+				onClose();
+			} else {
+				toast.error("Не все работы удалось добавить", {
+					description: `Успешно: ${added}, ошибок: ${failed}`,
+				});
+			}
+			setPending(false);
+		},
+		[
+			copyWork,
+			onAssigned,
+			onClose,
+			patch,
+			streamForWork,
+			targetSchemaLabel,
+			templateId,
+			templateVersionId,
+		],
+	);
+
+	const handleAssignSelected = useCallback(() => {
+		const selected = gridRef.current?.api?.getSelectedRows() ?? [];
+		if (selected.length === 0) return;
+
+		const plans = selected.map((work) => planWorkAddition(work, templateId));
+		const { already, bind, copy } = groupPlans(plans);
+
+		if (bind.length === 0 && copy.length === 0) {
+			toast.info(
+				already.length === 1
+					? "Выбранная работа уже в этой схеме"
+					: "Все выбранные работы уже в этой схеме",
+			);
+			return;
+		}
+
+		setBulkConfirmPlans(plans);
+	}, [templateId]);
+
 	const bindToSchema = useCallback(
 		async (work: V2TypicalWorkListItemDto) => {
 			setPending(true);
-			const streamExecutor = scopeStreamExecutor(
-				scope,
-				work.streams[0] ?? "Источники данных",
-			);
+			const streamExecutor = streamForWork(work);
 			try {
 				await patch.mutateAsync({
 					workId: work.id,
@@ -137,7 +290,7 @@ export function AssignWorkFromCatalogDialog({
 						templateId: templateId || undefined,
 					},
 				});
-				toast.success(`«${work.name}» привязана к схеме`);
+				toast.success(`«${work.name}» привязана к схеме «${targetSchemaLabel}»`);
 				onAssigned(work.id, streamExecutor);
 				setDecision(null);
 				onClose();
@@ -149,22 +302,29 @@ export function AssignWorkFromCatalogDialog({
 				setPending(false);
 			}
 		},
-		[onAssigned, onClose, patch, scope, templateId, templateVersionId],
+		[
+			onAssigned,
+			onClose,
+			patch,
+			streamForWork,
+			targetSchemaLabel,
+			templateId,
+			templateVersionId,
+		],
 	);
 
 	const copyToSchema = useCallback(
 		async (work: V2TypicalWorkListItemDto) => {
 			setPending(true);
-			const streamExecutor = scopeStreamExecutor(
-				scope,
-				work.streams[0] ?? "Источники данных",
-			);
+			const streamExecutor = streamForWork(work);
+			const copyName = buildTypicalWorkCopyName(work, targetSchemaLabel);
 			try {
 				const copy = await copyWork.mutateAsync({
 					workId: work.id,
 					dto: {
 						templateId: templateId || undefined,
 						streamExecutor,
+						name: copyName,
 					},
 				});
 				toast.success(`Создана копия «${copy.name}»`);
@@ -179,17 +339,21 @@ export function AssignWorkFromCatalogDialog({
 				setPending(false);
 			}
 		},
-		[copyWork, onAssigned, onClose, scope, templateId],
+		[
+			copyWork,
+			onAssigned,
+			onClose,
+			streamForWork,
+			targetSchemaLabel,
+			templateId,
+		],
 	);
 
 	const handleRowSelect = useCallback(
 		(work: V2TypicalWorkListItemDto) => {
 			if (pending) return;
 			const owner = work.templateId ?? null;
-			const streamExecutor = scopeStreamExecutor(
-				scope,
-				work.streams[0] ?? "Источники данных",
-			);
+			const streamExecutor = streamForWork(work);
 			if (owner && templateId && owner === templateId) {
 				toast.info("Работа уже в этой схеме");
 				onAssigned(work.id, work.streams[0] ?? streamExecutor);
@@ -198,7 +362,7 @@ export function AssignWorkFromCatalogDialog({
 			}
 			setDecision(work);
 		},
-		[pending, templateId, onAssigned, onClose, scope],
+		[pending, templateId, onAssigned, onClose, streamForWork],
 	);
 
 	const onRowClicked = useCallback(
@@ -212,6 +376,10 @@ export function AssignWorkFromCatalogDialog({
 	const decisionOwnedByOther = Boolean(
 		decision?.templateId && decision.templateId !== templateId,
 	);
+	const decisionNeedsCopy = decision
+		? workNeedsCopyForSchema(decision, templateId)
+		: false;
+	const bulkGroups = bulkConfirmPlans ? groupPlans(bulkConfirmPlans) : null;
 
 	return (
 		<Dialog
@@ -225,9 +393,17 @@ export function AssignWorkFromCatalogDialog({
 				<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
 					Глобальный реестр типовых работ. Назначить на:{" "}
 					<b>{scopeLabel(scope)}</b>
+					{templateName.trim() ? (
+						<>
+							{" "}
+							· схема <b>{templateName.trim()}</b>
+						</>
+					) : null}
 				</Typography>
 				<Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>
-					Выберите строку в таблице, чтобы добавить работу в текущую схему.
+					Отметьте чекбоксами несколько работ — перед добавлением покажем, что
+					будет привязано, а что скопировано. Клик по строке — поштучное
+					добавление.
 				</Typography>
 				<TextField
 					size="small"
@@ -281,8 +457,15 @@ export function AssignWorkFromCatalogDialog({
 							headerHeight={36}
 							rowHeight={40}
 							suppressCellFocus
-							rowSelection={{ mode: "singleRow", checkboxes: false }}
+							suppressRowClickSelection
+							rowSelection={{
+								mode: "multiRow",
+								checkboxes: true,
+								headerCheckbox: true,
+								enableClickSelection: false,
+							}}
 							onRowClicked={onRowClicked}
+							onSelectionChanged={onSelectionChanged}
 							getRowId={(p) => p.data.id}
 							overlayNoRowsTemplate="Нет работ по запросу"
 						/>
@@ -295,10 +478,113 @@ export function AssignWorkFromCatalogDialog({
 				</Button>
 				<Box sx={{ flex: 1 }} />
 				{pending ? <CircularProgress size={22} sx={{ mr: 1 }} /> : null}
+				<Button
+					variant="contained"
+					disabled={pending || selectedCount === 0}
+					onClick={handleAssignSelected}
+				>
+					{selectedCount > 0
+						? `Добавить выбранные (${selectedCount})`
+						: "Добавить выбранные"}
+				</Button>
 				<Button onClick={onClose} disabled={pending}>
 					Закрыть
 				</Button>
 			</DialogActions>
+
+			<Dialog
+				open={Boolean(bulkConfirmPlans)}
+				onClose={pending ? undefined : () => setBulkConfirmPlans(null)}
+				maxWidth="sm"
+				fullWidth
+			>
+				<DialogTitle sx={{ fontWeight: 800 }}>
+					Подтверждение добавления
+				</DialogTitle>
+				<DialogContent>
+					<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+						В схему «{targetSchemaLabel}» ({scopeLabel(scope)}):
+					</Typography>
+
+					{bulkGroups?.copy.length ? (
+						<Box sx={{ mb: 2 }}>
+							<Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+								Будут созданы копии ({bulkGroups.copy.length})
+							</Typography>
+							<Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+								Оригиналы останутся на других схемах. Имя копии: «… (копия ·{" "}
+								{targetSchemaLabel})».
+							</Typography>
+							<List dense disablePadding>
+								{bulkGroups.copy.map((plan) => (
+									<ListItem key={plan.work.id} disableGutters sx={{ py: 0.25 }}>
+										<ListItemText
+											primary={plan.work.name}
+											secondary={
+												plan.action === "copy" ? plan.reason : undefined
+											}
+											primaryTypographyProps={{ variant: "body2" }}
+											secondaryTypographyProps={{ variant: "caption" }}
+										/>
+									</ListItem>
+								))}
+							</List>
+						</Box>
+					) : null}
+
+					{bulkGroups?.bind.length ? (
+						<Box sx={{ mb: 2 }}>
+							<Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+								Будут привязаны ({bulkGroups.bind.length})
+							</Typography>
+							<List dense disablePadding>
+								{bulkGroups.bind.map((plan) => (
+									<ListItem key={plan.work.id} disableGutters sx={{ py: 0.25 }}>
+										<ListItemText
+											primary={plan.work.name}
+											secondary={workSchemaLinkLabel(plan.work, templateId)}
+											primaryTypographyProps={{ variant: "body2" }}
+											secondaryTypographyProps={{ variant: "caption" }}
+										/>
+									</ListItem>
+								))}
+							</List>
+						</Box>
+					) : null}
+
+					{bulkGroups?.already.length ? (
+						<Box>
+							<Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+								Уже в этой схеме ({bulkGroups.already.length})
+							</Typography>
+							<Typography variant="caption" color="text.secondary">
+								{bulkGroups.already.map((plan) => plan.work.name).join(", ")}
+							</Typography>
+						</Box>
+					) : null}
+				</DialogContent>
+				<DialogActions sx={{ px: 3, pb: 2 }}>
+					<Button
+						onClick={() => setBulkConfirmPlans(null)}
+						disabled={pending}
+					>
+						Отмена
+					</Button>
+					<Box sx={{ flex: 1 }} />
+					{pending ? <CircularProgress size={20} sx={{ mr: 1 }} /> : null}
+					<Button
+						variant="contained"
+						disabled={pending || !bulkConfirmPlans}
+						onClick={() =>
+							bulkConfirmPlans && void executePlans(bulkConfirmPlans)
+						}
+					>
+						{bulkGroups?.copy.length
+							? "Создать копии и добавить"
+							: "Добавить"}
+					</Button>
+				</DialogActions>
+			</Dialog>
 
 			<Dialog
 				open={Boolean(decision)}
@@ -310,9 +596,16 @@ export function AssignWorkFromCatalogDialog({
 					Добавить «{decision?.name}»
 				</DialogTitle>
 				<DialogContent>
+					<Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+						{decision
+							? `Текущая привязка: ${workSchemaLinkLabel(decision, templateId)}`
+							: null}
+					</Typography>
 					<Typography variant="body2" color="text.secondary">
-						{decisionOwnedByOther
-							? `Работа принадлежит схеме «${decision?.templateName ?? "другая схема"}». Перепривязка недоступна — создайте копию для текущей схемы.`
+						{decisionNeedsCopy
+							? decisionOwnedByOther
+								? `Работа принадлежит схеме «${decision?.templateName ?? "другая схема"}». Перепривязка недоступна — будет создана копия «${decision ? buildTypicalWorkCopyName(decision, targetSchemaLabel) : ""}».`
+								: `Работа уже используется на других схемах. Для «${targetSchemaLabel}» будет создана копия «${decision ? buildTypicalWorkCopyName(decision, targetSchemaLabel) : ""}».`
 							: "Работа не привязана к схеме. Привяжите её к текущей схеме или создайте независимую копию."}
 					</Typography>
 				</DialogContent>
@@ -322,7 +615,7 @@ export function AssignWorkFromCatalogDialog({
 					</Button>
 					<Box sx={{ flex: 1 }} />
 					{pending ? <CircularProgress size={20} sx={{ mr: 1 }} /> : null}
-					{!decisionOwnedByOther ? (
+					{!decisionNeedsCopy ? (
 						<Button
 							variant="outlined"
 							disabled={pending}
@@ -336,12 +629,12 @@ export function AssignWorkFromCatalogDialog({
 						disabled={pending}
 						onClick={() =>
 							decision &&
-							void (decisionOwnedByOther
+							void (decisionNeedsCopy
 								? copyToSchema(decision)
 								: bindToSchema(decision))
 						}
 					>
-						{decisionOwnedByOther ? "Сделать копию" : "Привязать к схеме"}
+						{decisionNeedsCopy ? "Создать копию" : "Привязать к схеме"}
 					</Button>
 				</DialogActions>
 			</Dialog>

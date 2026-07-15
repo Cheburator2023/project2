@@ -23,6 +23,15 @@ export declare function laborParamRefsFromPatchGroups(laborParams: Array<{
     paramName?: string | null;
 }>): WorkFormulaLaborParamRef[];
 export declare function validateFormulaAgainstLaborParams(tokens: V2WorkFormulaToken[], laborParams: WorkFormulaLaborParamRef[]): ValidationIssue[];
+/** Проверяет, что при действующей норме формула не даёт отрицательный итог (после округления). */
+export declare function validateFormulaNonNegativeEffort(params: {
+    formula?: PatchV2TypicalWorkRequestDto["formula"];
+    formulaTerms?: PatchV2TypicalWorkRequestDto["formulaTerms"];
+    rounding?: V2TypicalWorkRoundingDto;
+    norms: V2TypicalWorkNormInputDto[];
+    laborParams?: PatchV2TypicalWorkRequestDto["laborParams"];
+    coverageDate: string;
+}): ValidationIssue[];
 export type CollectPatchValidationOptions = {
     coverageDate?: string;
 };

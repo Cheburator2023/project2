@@ -680,7 +680,14 @@ export function evaluateWorkFormula(formula, ctx) {
         error: null,
     };
 }
-export function applyWorkRounding(value, rounding) {
+/** Трудозатраты (ч/д) не могут быть отрицательными. */
+export function clampTypicalWorkEffort(value) {
+    if (!Number.isFinite(value))
+        return 0;
+    return Math.max(0, value);
+}
+/** Округление без ограничения снизу — для валидации формулы перед сохранением. */
+export function roundWorkEffortValue(value, rounding) {
     if (rounding.mode === "NONE")
         return value;
     const step = rounding.step ?? 0.1;
@@ -697,6 +704,9 @@ export function applyWorkRounding(value, rounding) {
         default:
             return value;
     }
+}
+export function applyWorkRounding(value, rounding) {
+    return clampTypicalWorkEffort(roundWorkEffortValue(value, rounding));
 }
 export function previewWorkFormula(formula, rounding, ctx) {
     const evaluated = evaluateWorkFormula(formula, ctx);

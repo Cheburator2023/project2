@@ -28,6 +28,7 @@ import {
 	V2DataTransferService,
 } from "../services/v2-data-transfer.service";
 import {
+	buildV2DataTransferExportFilename,
 	parseV2DataTransferSections,
 } from "@smart-anketa/api-contract";
 import type { V2DataImportMode } from "../utils/v2-data-snapshot.util";
@@ -65,11 +66,11 @@ export class V2DataTransferController {
 	): Promise<void> {
 		const sections = parseV2DataTransferSections(sectionsRaw);
 		const buffer = await this.transferService.exportSnapshot(sections);
-		const date = new Date().toISOString().slice(0, 10);
+		const filename = buildV2DataTransferExportFilename(sections);
 		res.setHeader("Content-Type", "application/json; charset=utf-8");
 		res.setHeader(
 			"Content-Disposition",
-			`attachment; filename=smart-anketa-v2-${date}.json`,
+			`attachment; filename="${filename}"`,
 		);
 		res.end(buffer);
 	}

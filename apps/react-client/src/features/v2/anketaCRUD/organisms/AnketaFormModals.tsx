@@ -22,6 +22,8 @@ import { getObjectUiSlice } from "../utils/anketaSchemaAtPath";
 import type { AnketaModalKind } from "../utils/anketaFormModalPaths";
 import {
 	resolveV2AnketaArchComponent,
+	resolveV2QuestionnaireUncertaintyCoefficient,
+	syncAtypicalWorkCoefficientsInFormData,
 	type V2AnketaEditorBindings,
 } from "@smart-anketa/api-contract";
 import { ATYPICAL_WORK_NEW_ROW_DEFAULTS } from "@react-client/features/v2/admin_constructor/schemaEditor/archComponentPresets";
@@ -88,35 +90,20 @@ function formatUncertaintyAdjustment(value: unknown): string {
 	return String(parsed);
 }
 
-function mapRiskLevelToIncrement(level: string): number {
-	switch (level) {
-		case "Низкий":
-			return 0.03;
-		case "Средний":
-			return 0.05;
-		case "Высокий":
-			return 0.07;
-		case "Очень высокий":
-			return 0.1;
-		default:
-			return 0;
-	}
-}
-
 function buildOverallUncertaintyLabel(
 	riskGroup: Record<string, unknown>,
 	adjustmentPercent: number | undefined,
 ): string | undefined {
-	const hasRisks = Object.values(riskGroup).some(
-		(value) => typeof value === "string" && value.trim().length > 0,
+	const { calculated, coefficient } = resolveV2QuestionnaireUncertaintyCoefficient(
+		{
+			uncertaintyCalculation: {
+				riskGroup,
+				uncertaintyAdjustment: adjustmentPercent,
+			},
+		},
 	);
-	if (!hasRisks && adjustmentPercent == null) return undefined;
-	const riskSum = Object.values(riskGroup).reduce<number>((sum, value) => {
-		if (typeof value !== "string") return sum;
-		return sum + mapRiskLevelToIncrement(value);
-	}, 0);
-	const coeff = 1 + riskSum + (adjustmentPercent ?? 0) / 100;
-	return `Средняя ×${coeff.toFixed(2)}`;
+	if (!calculated) return undefined;
+	return `Средняя ×${coefficient.toFixed(2)}`;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -206,6 +193,7 @@ type Props = {
 	onFormDataChange: (
 		updater: (prev: Record<string, unknown>) => Record<string, unknown>,
 	) => void;
+	onAtypicalCoefficientsUpdated?: (paths: string[]) => void;
 	controlsRef: MutableRefObject<AnketaFormModalControls>;
 };
 
@@ -215,6 +203,7 @@ export function AnketaFormModals({
 	previewUiSchema,
 	modalBindings,
 	onFormDataChange,
+	onAtypicalCoefficientsUpdated,
 	controlsRef,
 }: Props) {
 	const [activeModal, setActiveModal] = useState<ActiveModal | null>(null);
@@ -301,7 +290,7 @@ export function AnketaFormModals({
 			const values =
 				activeModal.editIndex != null
 					? ((items[activeModal.editIndex] as Record<string, unknown>) ?? {})
-					: newArrayRowDefaults(previewUiSchema, activeModal.path);
+					: newArrayRowDefaults(formData, previewUiSchema, activeModal.path);
 			const parentNode = resolveSchemaNodeTitle(
 				previewSchema,
 				activeModal.path,
@@ -339,6 +328,22 @@ export function AnketaFormModals({
 		previewUiSchema,
 	]);
 
+	const applyAtypicalCoefficientSync = (
+		data: Record<string, unknown>,
+		highlight = false,
+	): Record<string, unknown> => {
+		const { coefficient } = resolveV2QuestionnaireUncertaintyCoefficient(data);
+		const synced = syncAtypicalWorkCoefficientsInFormData(
+			data,
+			previewUiSchema,
+			coefficient,
+		);
+		if (highlight && synced.changed) {
+			onAtypicalCoefficientsUpdated?.(synced.updatedPaths);
+		}
+		return synced.formData;
+	};
+
 	const handleUncertaintySubmit = (values: TotalUncertaintyFormValues) => {
 		onFormDataChange((prev) => {
 			const currentUncertainty = asRecord(prev.uncertaintyCalculation);
@@ -361,25 +366,30 @@ export function AnketaFormModals({
 				adjustment,
 			);
 
-			return touchSectionInFormData(
-				{
-					...prev,
-					generalInfo: {
-						...asRecord(prev.generalInfo),
-						overallUncertainty:
-							overallUncertainty ??
-							asRecord(prev.generalInfo).overallUncertainty,
+			const nextGeneralInfo = { ...asRecord(prev.generalInfo) };
+			if (overallUncertainty) {
+				nextGeneralInfo.overallUncertainty = overallUncertainty;
+			} else {
+				delete nextGeneralInfo.overallUncertainty;
+			}
+
+			return applyAtypicalCoefficientSync(
+				touchSectionInFormData(
+					{
+						...prev,
+						generalInfo: nextGeneralInfo,
+						uncertaintyCalculation: {
+							...currentUncertainty,
+							initiativeTimeline: values.initiativeTimeline || undefined,
+							initiativeCost:
+								values.initiativeCost === "" ? undefined : values.initiativeCost,
+							uncertaintyAdjustment: adjustment,
+							riskGroup: nextRiskGroup,
+						},
 					},
-					uncertaintyCalculation: {
-						...currentUncertainty,
-						initiativeTimeline: values.initiativeTimeline || undefined,
-						initiativeCost:
-							values.initiativeCost === "" ? undefined : values.initiativeCost,
-						uncertaintyAdjustment: adjustment,
-						riskGroup: nextRiskGroup,
-					},
-				},
-				"generalInfo",
+					"generalInfo",
+				),
+				true,
 			);
 		});
 		closeModal();
@@ -391,13 +401,24 @@ export function AnketaFormModals({
 		values: Record<string, unknown>,
 	) => {
 		onFormDataChange((prev) => {
+			const arch = resolveV2AnketaArchComponent(
+				getObjectUiSlice(previewUiSchema, path),
+			);
+			const rowValues =
+				arch === "atypicalWork"
+					? {
+							...values,
+							coefficient: resolveV2QuestionnaireUncertaintyCoefficient(prev)
+								.coefficient,
+						}
+					: values;
 			const updated = isAnketaArchObjectListPath(path)
 				? editIndex == null
-					? appendArchObjectListItem(prev, path, values)
-					: updateArchObjectListItem(prev, path, editIndex, values)
+					? appendArchObjectListItem(prev, path, rowValues)
+					: updateArchObjectListItem(prev, path, editIndex, rowValues)
 				: editIndex == null
-					? appendAtFormPath(prev, path, values)
-					: updateAtFormPath(prev, path, editIndex, values);
+					? appendAtFormPath(prev, path, rowValues)
+					: updateAtFormPath(prev, path, editIndex, rowValues);
 			return touchSectionForPathInFormData(updated, path);
 		});
 		closeModal();
@@ -456,13 +477,20 @@ export function AnketaFormModals({
  * со схемы и применяются явно только при создании строки.
  */
 function newArrayRowDefaults(
+	formData: Record<string, unknown>,
 	previewUiSchema: UiSchema,
 	path: string,
 ): Record<string, unknown> {
 	const arch = resolveV2AnketaArchComponent(
 		getObjectUiSlice(previewUiSchema, path),
 	);
-	if (arch === "atypicalWork") return { ...ATYPICAL_WORK_NEW_ROW_DEFAULTS };
+	if (arch === "atypicalWork") {
+		return {
+			...ATYPICAL_WORK_NEW_ROW_DEFAULTS,
+			coefficient: resolveV2QuestionnaireUncertaintyCoefficient(formData)
+				.coefficient,
+		};
+	}
 	return {};
 }
 

@@ -27,6 +27,8 @@ import {
 	ensureGroupActivationDefaults,
 	patchV2AnketaCalculationLogicRules,
 	syncTriggerGatedGroupActivationFromTypicalWorks,
+	resolveV2QuestionnaireUncertaintyCoefficient,
+	syncAtypicalWorkCoefficientsInFormData,
 	type V2LogicGraphDto,
 } from "@smart-anketa/api-contract";
 import { IS_DEV } from "@react-client/common/constants/dev";
@@ -118,6 +120,29 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		if (!uiSchema || Object.keys(uiSchema).length === 0) return;
 		setFormData((prev) => ensureGroupActivationDefaults(prev, uiSchema));
 	}, [uiSchema]);
+
+	const uncertaintySyncSignature = useMemo(
+		() =>
+			JSON.stringify({
+				uncertainty: formData.uncertaintyCalculation,
+				overallUncertainty: (formData.generalInfo as Record<string, unknown> | undefined)
+					?.overallUncertainty,
+			}),
+		[formData.uncertaintyCalculation, formData.generalInfo],
+	);
+
+	useEffect(() => {
+		if (!uiSchema || Object.keys(uiSchema).length === 0) return;
+		setFormData((prev) => {
+			const { coefficient } = resolveV2QuestionnaireUncertaintyCoefficient(prev);
+			const synced = syncAtypicalWorkCoefficientsInFormData(
+				prev,
+				uiSchema,
+				coefficient,
+			);
+			return synced.changed ? synced.formData : prev;
+		});
+	}, [uiSchema, uncertaintySyncSignature]);
 
 	const referencedDictionaryCodes = useMemo(
 		() => collectDictionaryCodesFromUiSchema(uiSchema),

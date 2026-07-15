@@ -46,6 +46,13 @@ export const commonRoutes = {
 		showInNavbar: true,
 		navbar: { group: "adminV2", order: 6 },
 	},
+	adminV2Settings: {
+		rootPath: "/admin/settings",
+		name: "Настройки",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "adminV2", order: 7 },
+	},
 	adminV2TypicalWorkDetail: {
 		rootPath: "/admin/typical-works/:workId",
 		name: "Типовая работа",

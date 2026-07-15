@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 import type { V2DataTransferSection } from "@smart-anketa/api-contract";
 
-export const V2_DATA_SNAPSHOT_FORMAT_VERSION = 1;
+export const V2_DATA_SNAPSHOT_FORMAT_VERSION = 2;
+
+export const V2_DATA_SNAPSHOT_LEGACY_FORMAT_VERSION = 1;
 
 export type V2DataImportMode = "merge" | "replace";
 
@@ -15,6 +17,8 @@ export interface V2DataSnapshotMeta {
 		templates: number;
 		templateVersions: number;
 		typicalWorks: number;
+		typicalWorkAssignments: number;
+		typicalWorkLaborParams: number;
 		typicalWorkNorms: number;
 		typicalWorkRules: number;
 		typicalWorkLaborCoefficients: number;
@@ -31,6 +35,8 @@ export interface V2DataSnapshotPayload {
 	templates: Record<string, unknown>[];
 	templateVersions: Record<string, unknown>[];
 	typicalWorks: Record<string, unknown>[];
+	typicalWorkAssignments: Record<string, unknown>[];
+	typicalWorkLaborParams: Record<string, unknown>[];
 	typicalWorkNorms: Record<string, unknown>[];
 	typicalWorkRules: Record<string, unknown>[];
 	typicalWorkLaborCoefficients: Record<string, unknown>[];
@@ -48,6 +54,24 @@ export interface V2DataImportStats {
 	skipped: Record<string, number>;
 }
 
+const V1_PAYLOAD_ARRAY_KEYS = [
+	"dictionaries",
+	"dictionaryItems",
+	"templates",
+	"templateVersions",
+	"typicalWorks",
+	"typicalWorkNorms",
+	"typicalWorkRules",
+	"typicalWorkLaborCoefficients",
+	"typicalWorkVersionConfigs",
+	"questionnaires",
+] as const satisfies ReadonlyArray<keyof V2DataSnapshotPayload>;
+
+const V2_ONLY_PAYLOAD_ARRAY_KEYS = [
+	"typicalWorkAssignments",
+	"typicalWorkLaborParams",
+] as const satisfies ReadonlyArray<keyof V2DataSnapshotPayload>;
+
 function stableStringify(value: unknown): string {
 	return JSON.stringify(value, (_key, item) => {
 		if (item && typeof item === "object" && !Array.isArray(item)) {
@@ -62,8 +86,68 @@ function stableStringify(value: unknown): string {
 	});
 }
 
-export function hashV2DataPayload(payload: V2DataSnapshotPayload): string {
-	return createHash("sha256").update(stableStringify(payload)).digest("hex");
+export function emptyV2DataSnapshotPayload(): V2DataSnapshotPayload {
+	return {
+		dictionaries: [],
+		dictionaryItems: [],
+		templates: [],
+		templateVersions: [],
+		typicalWorks: [],
+		typicalWorkAssignments: [],
+		typicalWorkLaborParams: [],
+		typicalWorkNorms: [],
+		typicalWorkRules: [],
+		typicalWorkLaborCoefficients: [],
+		typicalWorkVersionConfigs: [],
+		questionnaires: [],
+	};
+}
+
+export function payloadForIntegrityCheck(
+	snapshot: V2DataSnapshot,
+): Record<string, unknown[]> {
+	const formatVersion =
+		snapshot.meta?.formatVersion ?? V2_DATA_SNAPSHOT_FORMAT_VERSION;
+	const payload: Record<string, unknown[]> = {};
+	for (const key of V1_PAYLOAD_ARRAY_KEYS) {
+		payload[key] = snapshot[key];
+	}
+	if (formatVersion >= V2_DATA_SNAPSHOT_FORMAT_VERSION) {
+		for (const key of V2_ONLY_PAYLOAD_ARRAY_KEYS) {
+			payload[key] = snapshot[key] ?? [];
+		}
+	}
+	return payload;
+}
+
+export function hashV2DataPayload(
+	payload: V2DataSnapshotPayload,
+	formatVersion: number = V2_DATA_SNAPSHOT_FORMAT_VERSION,
+): string {
+	const hashPayload = payloadForIntegrityCheck({
+		meta: {
+			formatVersion,
+			exportedAt: "",
+			sha256: "",
+			counts: {
+				dictionaries: payload.dictionaries.length,
+				dictionaryItems: payload.dictionaryItems.length,
+				templates: payload.templates.length,
+				templateVersions: payload.templateVersions.length,
+				typicalWorks: payload.typicalWorks.length,
+				typicalWorkAssignments: payload.typicalWorkAssignments.length,
+				typicalWorkLaborParams: payload.typicalWorkLaborParams.length,
+				typicalWorkNorms: payload.typicalWorkNorms.length,
+				typicalWorkRules: payload.typicalWorkRules.length,
+				typicalWorkLaborCoefficients:
+					payload.typicalWorkLaborCoefficients.length,
+				typicalWorkVersionConfigs: payload.typicalWorkVersionConfigs.length,
+				questionnaires: payload.questionnaires.length,
+			},
+		},
+		...payload,
+	});
+	return createHash("sha256").update(stableStringify(hashPayload)).digest("hex");
 }
 
 export function buildV2DataSnapshot(
@@ -84,6 +168,8 @@ export function buildV2DataSnapshot(
 				templates: payload.templates.length,
 				templateVersions: payload.templateVersions.length,
 				typicalWorks: payload.typicalWorks.length,
+				typicalWorkAssignments: payload.typicalWorkAssignments.length,
+				typicalWorkLaborParams: payload.typicalWorkLaborParams.length,
 				typicalWorkNorms: payload.typicalWorkNorms.length,
 				typicalWorkRules: payload.typicalWorkRules.length,
 				typicalWorkLaborCoefficients:
@@ -109,53 +195,44 @@ export function parseV2DataSnapshot(buffer: Buffer): V2DataSnapshot {
 	}
 
 	const snapshot = parsed as Partial<V2DataSnapshot>;
-	if (snapshot.meta?.formatVersion !== V2_DATA_SNAPSHOT_FORMAT_VERSION) {
+	const formatVersion = snapshot.meta?.formatVersion;
+	if (
+		formatVersion !== V2_DATA_SNAPSHOT_FORMAT_VERSION &&
+		formatVersion !== V2_DATA_SNAPSHOT_LEGACY_FORMAT_VERSION
+	) {
 		throw new SnapshotSchemaError(
-			`Неподдерживаемая версия формата: ${snapshot.meta?.formatVersion ?? "?"}`,
+			`Неподдерживаемая версия формата: ${formatVersion ?? "?"}`,
 		);
 	}
 
-	const arrays = [
-		"dictionaries",
-		"dictionaryItems",
-		"templates",
-		"templateVersions",
-		"typicalWorks",
-		"typicalWorkNorms",
-		"typicalWorkRules",
-		"typicalWorkLaborCoefficients",
-		"typicalWorkVersionConfigs",
-		"questionnaires",
-	] as const;
-
-	for (const key of arrays) {
+	for (const key of V1_PAYLOAD_ARRAY_KEYS) {
 		if (!Array.isArray(snapshot[key])) {
 			throw new SnapshotSchemaError(`Отсутствует массив ${key}`);
 		}
+	}
+
+	if (formatVersion >= V2_DATA_SNAPSHOT_FORMAT_VERSION) {
+		for (const key of V2_ONLY_PAYLOAD_ARRAY_KEYS) {
+			if (!Array.isArray(snapshot[key])) {
+				throw new SnapshotSchemaError(`Отсутствует массив ${key}`);
+			}
+		}
+	} else {
+		snapshot.typicalWorkAssignments = [];
+		snapshot.typicalWorkLaborParams = [];
 	}
 
 	return snapshot as V2DataSnapshot;
 }
 
 export function assertV2DataSnapshotIntegrity(snapshot: V2DataSnapshot): void {
-	const { sha256, ...metaRest } = snapshot.meta;
-	const payload: V2DataSnapshotPayload = {
-		dictionaries: snapshot.dictionaries,
-		dictionaryItems: snapshot.dictionaryItems,
-		templates: snapshot.templates,
-		templateVersions: snapshot.templateVersions,
-		typicalWorks: snapshot.typicalWorks,
-		typicalWorkNorms: snapshot.typicalWorkNorms,
-		typicalWorkRules: snapshot.typicalWorkRules,
-		typicalWorkLaborCoefficients: snapshot.typicalWorkLaborCoefficients,
-		typicalWorkVersionConfigs: snapshot.typicalWorkVersionConfigs,
-		questionnaires: snapshot.questionnaires,
-	};
-	const actual = hashV2DataPayload(payload);
+	const { sha256 } = snapshot.meta;
+	const actual = createHash("sha256")
+		.update(stableStringify(payloadForIntegrityCheck(snapshot)))
+		.digest("hex");
 	if (actual !== sha256) {
 		throw new SnapshotIntegrityError(sha256, actual);
 	}
-	void metaRest;
 }
 
 export class SnapshotIntegrityError extends Error {

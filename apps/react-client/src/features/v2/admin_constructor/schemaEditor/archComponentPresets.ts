@@ -52,7 +52,6 @@ const ATYPICAL_WORK_ITEM_PROPERTIES: RJSFSchema["properties"] = {
  * сохранённые значения (нарушение snapshot-as-source-of-truth).
  */
 export const ATYPICAL_WORK_NEW_ROW_DEFAULTS: Record<string, unknown> = {
-	coefficient: 1.5,
 	includeInCalculation: true,
 };
 
@@ -105,7 +104,7 @@ const ATYPICAL_WORK_ITEMS_UI_BRANCH: Record<string, unknown> = {
 			"ui:options": { dictionaryCode: ATYPICAL_WORK_TYPE_DICTIONARY_CODE },
 		},
 		estimateHoursPerDay: { "ui:widget": "text" },
-		coefficient: { "ui:widget": "text" },
+		coefficient: { "ui:widget": "text", "ui:readonly": true },
 		total: { "ui:widget": "text", "ui:readonly": true },
 		includeInCalculation: { "ui:widget": "checkbox" },
 	},
