@@ -642,8 +642,8 @@ export const V2TemplateSchemaEditor = ({
 	const { enumMapByCode, isLoading: dictionaryEnumsLoading } =
 		useV2DictionaryEnumsMaps(referencedDictionaryCodes);
 	const syncTypicalWorksSchemaField = useSyncV2TypicalWorksSchemaField();
-	const bulkSyncTypicalWorksSchemaFields =
-		useBulkSyncV2TypicalWorksSchemaFields();
+	const bulkSyncSchemaFields =
+		useBulkSyncV2TypicalWorksSchemaFields().mutateAsync;
 	const [calculationRevision, setCalculationRevision] = useState(0);
 	const requestCalculationRefresh = useCallback(
 		() => setCalculationRevision((revision) => revision + 1),
@@ -846,8 +846,7 @@ export const V2TemplateSchemaEditor = ({
 		if (initialSchemaBulkSyncRef.current === versionId) return;
 		initialSchemaBulkSyncRef.current = versionId;
 
-		void bulkSyncTypicalWorksSchemaFields
-			.mutateAsync({ templateVersionId: versionId, mode: "apply" })
+		void bulkSyncSchemaFields({ templateVersionId: versionId, mode: "apply" })
 			.then((result) => {
 				setSchemaConsistencyIssues(result.consistencyIssues);
 				if (result.consistencyIssues.length > 0) {
@@ -858,12 +857,11 @@ export const V2TemplateSchemaEditor = ({
 				requestCalculationRefresh();
 			})
 			.catch((error) => {
-				initialSchemaBulkSyncRef.current = null;
 				toast.error(apiErrorMessage(error));
 			});
 	}, [
 		activeVersion?.id,
-		bulkSyncTypicalWorksSchemaFields,
+		bulkSyncSchemaFields,
 		dictionaryEnumsLoading,
 		requestCalculationRefresh,
 		schemaWorkParams.length,

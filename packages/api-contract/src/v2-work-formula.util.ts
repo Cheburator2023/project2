@@ -627,6 +627,18 @@ export function markFormulaParamInvalid(
 	);
 }
 
+/** Помечает param-токены формулы invalid, если их нет в блоке трудоёмкости. */
+export function markUnknownFormulaLaborParamTokensInvalid(
+	tokens: V2WorkFormulaToken[],
+	laborParams: readonly WorkFormulaLaborParamRef[],
+): V2WorkFormulaToken[] {
+	return tokens.map((token) => {
+		if (!isParamToken(token) || token.invalid) return token;
+		if (isWorkFormulaLaborParamKnown(token, laborParams)) return token;
+		return { ...token, invalid: true };
+	});
+}
+
 export function evaluateWorkFormula(
 	formula: V2TypicalWorkFormulaDto,
 	ctx: WorkFormulaEvalContext,

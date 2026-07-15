@@ -496,6 +496,9 @@ function isRuleInputInvalid(
 	atDate?: string,
 ): boolean {
 	const operator = rule.operator ?? "=";
+	if (isSchemaFieldLaborParamCode(rule.paramCode)) {
+		return false;
+	}
 	if (operator === "in" || operator === "not_in") {
 		const values = rule.values?.length
 			? rule.values

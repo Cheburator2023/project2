@@ -879,40 +879,46 @@ export class V2TypicalWorkWriteService {
 
 			if (dto.mode !== "apply") continue;
 			const next = reconciled.card;
-			await this.patchWork(config.workId, {
-				streamExecutor: config.streamExecutor,
-				templateVersionId: dto.templateVersionId,
-				rules: next.rules.map((rule) => ({
-					id: rule.id,
-					schemaFieldUid: rule.schemaFieldUid ?? null,
-					paramCode: rule.paramCode,
-					paramName: rule.paramName,
-					operator: rule.operator,
-					valueCode: rule.valueCode,
-					valueLabel: rule.valueLabel,
-					values: rule.values,
-					sortOrder: rule.sortOrder,
-				})),
-				laborParams: next.laborParams.map((group) => ({
-					schemaFieldUid: group.schemaFieldUid ?? null,
-					paramCode: group.paramCode,
-					paramName: group.paramName,
-					kind: group.kind,
-					coefficients: group.coefficients.map((row) => ({
-						id: row.id,
-						paramCode: row.paramCode,
-						paramName: row.paramName,
-						valueCode: row.valueCode,
-						valueLabel: row.valueLabel,
-						coefficient: row.coefficient,
+			try {
+				await this.patchWork(config.workId, {
+					streamExecutor: config.streamExecutor,
+					templateVersionId: dto.templateVersionId,
+					rules: next.rules.map((rule) => ({
+						id: rule.id,
+						schemaFieldUid: rule.schemaFieldUid ?? null,
+						paramCode: rule.paramCode,
+						paramName: rule.paramName,
+						operator: rule.operator,
+						valueCode: rule.valueCode,
+						valueLabel: rule.valueLabel,
+						values: rule.values,
+						sortOrder: rule.sortOrder,
 					})),
-					anyOf: group.anyOf,
-				})),
-				formula: next.formula,
-				formulaTerms: syncTermsFromTokenFormula(next.formula),
-				rounding: next.rounding,
-			});
-			impact.worksUpdated++;
+					laborParams: next.laborParams.map((group) => ({
+						schemaFieldUid: group.schemaFieldUid ?? null,
+						paramCode: group.paramCode,
+						paramName: group.paramName,
+						kind: group.kind,
+						coefficients: group.coefficients.map((row) => ({
+							id: row.id,
+							paramCode: row.paramCode,
+							paramName: row.paramName,
+							valueCode: row.valueCode,
+							valueLabel: row.valueLabel,
+							coefficient: row.coefficient,
+						})),
+						anyOf: group.anyOf,
+					})),
+					formula: next.formula,
+					formulaTerms: syncTermsFromTokenFormula(next.formula),
+					rounding: next.rounding,
+				});
+				impact.worksUpdated++;
+			} catch (error) {
+				if (!(error instanceof ConflictException)) {
+					throw error;
+				}
+			}
 		}
 
 		return impact;

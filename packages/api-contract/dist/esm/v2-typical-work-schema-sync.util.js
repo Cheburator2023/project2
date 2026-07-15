@@ -1,7 +1,7 @@
 import { slugParamCode } from "./v2-param-slug.util";
 import { schemaEnumValueMatchesRule } from "./v2-template-work-schema-params.util";
 import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
-import { tokensToText } from "./v2-work-formula.util";
+import { isParamToken, markUnknownFormulaLaborParamTokensInvalid, tokensToText, } from "./v2-work-formula.util";
 function collectFieldAliasCodes(request) {
     const aliases = new Set();
     for (const code of [
@@ -132,14 +132,15 @@ function reconcileLaborParam(group, request) {
         }),
     };
 }
-function reconcileFormulaTokens(tokens, oldParamCode, request) {
+function reconcileFormulaTokensForField(tokens, request) {
+    const aliases = collectFieldAliasCodes(request);
     let invalidated = false;
     return {
         tokens: tokens.map((token) => {
-            if ((token.kind !== "param_coeff" && token.kind !== "param_anyof") ||
-                token.paramCode !== oldParamCode) {
+            if (!isParamToken(token))
                 return token;
-            }
+            if (!aliases.has(token.paramCode))
+                return token;
             if (request.operation === "delete") {
                 invalidated = true;
                 return { ...token, invalid: true };
@@ -154,28 +155,40 @@ function reconcileFormulaTokens(tokens, oldParamCode, request) {
         invalidated,
     };
 }
+function sanitizeFormulaAgainstLaborParams(tokens, laborParams) {
+    const laborRefs = laborParams.map((group) => ({
+        paramCode: group.paramCode,
+        paramName: group.paramName ?? null,
+    }));
+    const nextTokens = markUnknownFormulaLaborParamTokensInvalid(tokens, laborRefs);
+    const invalidated = nextTokens.some((token, index) => isParamToken(token) &&
+        token.invalid &&
+        isParamToken(tokens[index]) &&
+        !tokens[index].invalid);
+    return { tokens: nextTokens, invalidated };
+}
 export function reconcileTypicalWorkCardWithSchemaField(card, request) {
     const matchingRules = card.rules.filter((rule) => matchesField(rule, request));
     const matchingLabor = card.laborParams.filter((group) => matchesField(group, request));
-    const oldCodes = new Set([
-        ...matchingRules.map((rule) => rule.paramCode),
-        ...matchingLabor.map((group) => group.paramCode),
-    ]);
     const rules = card.rules
         .map((rule) => reconcileRule(rule, request))
         .filter((rule) => rule != null);
     const laborParams = card.laborParams
         .map((group) => reconcileLaborParam(group, request))
         .filter((group) => group != null);
-    let formulaTokens = card.formula.tokens;
-    let formulasInvalidated = 0;
-    for (const oldCode of oldCodes) {
-        const reconciled = reconcileFormulaTokens(formulaTokens, oldCode, request);
-        formulaTokens = reconciled.tokens;
-        if (reconciled.invalidated)
-            formulasInvalidated = 1;
+    const formulaReconciled = reconcileFormulaTokensForField(card.formula.tokens, request);
+    let formulaTokens = formulaReconciled.tokens;
+    let formulasInvalidated = formulaReconciled.invalidated ? 1 : 0;
+    const formulaSanitized = sanitizeFormulaAgainstLaborParams(formulaTokens, laborParams);
+    formulaTokens = formulaSanitized.tokens;
+    if (formulaSanitized.invalidated) {
+        formulasInvalidated = 1;
     }
-    const changed = matchingRules.length > 0 || matchingLabor.length > 0;
+    const changed = matchingRules.length > 0 ||
+        matchingLabor.length > 0 ||
+        formulaReconciled.invalidated ||
+        formulaSanitized.invalidated ||
+        JSON.stringify(formulaTokens) !== JSON.stringify(card.formula.tokens);
     return {
         card: {
             ...card,

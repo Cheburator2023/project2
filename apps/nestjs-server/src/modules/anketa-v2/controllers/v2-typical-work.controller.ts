@@ -35,6 +35,7 @@ import type {
 	V2TypicalWorkSchemaFieldSyncImpactDto,
 	V2TypicalWorkSchemaFieldSyncRequestDto,
 	V2TypicalWorkSchemaBulkSyncResponseDto,
+	V2FormulaRegistryListResponseDto,
 } from "@smart-anketa/api-contract";
 import { V2TypicalWorkService } from "../services/v2-typical-work.service";
 import { V2TypicalWorkWriteService } from "../services/v2-typical-work-write.service";
@@ -240,6 +241,17 @@ export class V2TypicalWorkController {
 		return this.typicalWorkWriteService.reconcileAllSchemaFieldsForVersion(
 			dto.templateVersionId,
 			dto.mode ?? "apply",
+		);
+	}
+
+	@Get("formulas/registry")
+	@ApiOperation({ summary: "Реестр формул типовых работ по всем схемам" })
+	@ApiQuery({ name: "templateId", required: false })
+	listFormulaRegistry(
+		@Query("templateId") templateId?: string,
+	): Promise<V2FormulaRegistryListResponseDto> {
+		return this.typicalWorkService.listFormulaRegistry(
+			templateId ? { templateId } : undefined,
 		);
 	}
 

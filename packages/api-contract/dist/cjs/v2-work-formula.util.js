@@ -12,6 +12,7 @@ exports.parseWorkFormulaText = parseWorkFormulaText;
 exports.validateWorkFormulaTokens = validateWorkFormulaTokens;
 exports.isParamUsedInFormula = isParamUsedInFormula;
 exports.markFormulaParamInvalid = markFormulaParamInvalid;
+exports.markUnknownFormulaLaborParamTokensInvalid = markUnknownFormulaLaborParamTokensInvalid;
 exports.evaluateWorkFormula = evaluateWorkFormula;
 exports.clampTypicalWorkEffort = clampTypicalWorkEffort;
 exports.roundWorkEffortValue = roundWorkEffortValue;
@@ -518,6 +519,16 @@ function markFormulaParamInvalid(tokens, paramCode) {
     return tokens.map((token) => isParamToken(token) && token.paramCode === paramCode
         ? { ...token, invalid: true }
         : token);
+}
+/** Помечает param-токены формулы invalid, если их нет в блоке трудоёмкости. */
+function markUnknownFormulaLaborParamTokensInvalid(tokens, laborParams) {
+    return tokens.map((token) => {
+        if (!isParamToken(token) || token.invalid)
+            return token;
+        if (isWorkFormulaLaborParamKnown(token, laborParams))
+            return token;
+        return { ...token, invalid: true };
+    });
 }
 function evaluateWorkFormula(formula, ctx) {
     const symbolic = formula.text || tokensToText(formula.tokens);

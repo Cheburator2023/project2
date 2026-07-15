@@ -51,6 +51,7 @@ __exportStar(require("./v2-work-terms-formula.util"), exports);
 __exportStar(require("./v2-typical-work-schema-sync.util"), exports);
 __exportStar(require("./v2-typical-work-jsonlogic.util"), exports);
 __exportStar(require("./v2-typical-work-validation.util"), exports);
+__exportStar(require("./v2-formula-registry.util"), exports);
 __exportStar(require("./v2-anketa-ui-layout.util"), exports);
 __exportStar(require("./v2-group-activation.util"), exports);
 __exportStar(require("./v2-stream-summary.util"), exports);

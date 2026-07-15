@@ -45,6 +45,8 @@ export type ValidateWorkFormulaTokenOptions = {
 export declare function validateWorkFormulaTokens(tokens: V2WorkFormulaToken[], options?: Set<string> | ValidateWorkFormulaTokenOptions): string | null;
 export declare function isParamUsedInFormula(tokens: V2WorkFormulaToken[], paramCode: string): boolean;
 export declare function markFormulaParamInvalid(tokens: V2WorkFormulaToken[], paramCode: string): V2WorkFormulaToken[];
+/** Помечает param-токены формулы invalid, если их нет в блоке трудоёмкости. */
+export declare function markUnknownFormulaLaborParamTokensInvalid(tokens: V2WorkFormulaToken[], laborParams: readonly WorkFormulaLaborParamRef[]): V2WorkFormulaToken[];
 export declare function evaluateWorkFormula(formula: V2TypicalWorkFormulaDto, ctx: WorkFormulaEvalContext): WorkFormulaEvalResult;
 /** Трудозатраты (ч/д) не могут быть отрицательными. */
 export declare function clampTypicalWorkEffort(value: number): number;

@@ -5,15 +5,19 @@ import CircularProgress from "@mui/material/CircularProgress";
 import FormControl from "@mui/material/FormControl";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
-import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
-import type { V2TypicalWorkCardDto } from "@smart-anketa/api-contract";
+import type {
+	V2TypicalWorkCardDto,
+	V2TypicalWorkRuleDto,
+	V2WorkRuleOperator,
+} from "@smart-anketa/api-contract";
 import { resolveActiveNormOnDate } from "@smart-anketa/api-contract";
+import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 import { WorkFormulaEditor } from "./WorkFormulaEditor";
 import { triggerStatusColors } from "./typicalWorksUi";
 
@@ -24,6 +28,23 @@ type TypicalWorkCardViewProps = {
 	availableStreams: string[];
 	streamExecutor: string | null;
 	onStreamChange: (stream: string) => void;
+	/** Без дублирования заголовка (имя, чипы) — для встраивания в реестр. */
+	hideHeader?: boolean;
+	/** Убрать внешние отступы контейнера. */
+	embedded?: boolean;
+	/** В реестре показываем факт настройки, а не runtime-статус превью. */
+	readOnlyRegistry?: boolean;
+};
+
+const OPERATOR_LABELS: Record<V2WorkRuleOperator, string> = {
+	"=": "=",
+	"!=": "≠",
+	">=": "≥",
+	"<=": "≤",
+	">": ">",
+	"<": "<",
+	in: "∈",
+	not_in: "∉",
 };
 
 function formatDate(value: string | null): string {
@@ -33,6 +54,73 @@ function formatDate(value: string | null): string {
 	return `${d}.${m}.${y}`;
 }
 
+function formatRuleValue(rule: V2TypicalWorkRuleDto): string {
+	if (rule.values?.length) {
+		return rule.values
+			.map((value) => value.label ?? value.code)
+			.filter(Boolean)
+			.join(", ");
+	}
+	return rule.valueLabel ?? rule.valueCode ?? "—";
+}
+
+function LaborParamGroupView({
+	group,
+}: {
+	group: V2TypicalWorkCardDto["laborParams"][number];
+}) {
+	if (group.kind === "any_of" && group.anyOf) {
+		const labels =
+			group.anyOf.valueLabels?.filter(Boolean) ??
+			group.anyOf.valueCodes ??
+			[];
+		return (
+			<Box sx={{ mb: 1.5 }}>
+				<Typography variant="body2" fontWeight={600} gutterBottom>
+					{group.paramName ?? group.paramCode}
+				</Typography>
+				<Typography variant="body2" color="text.secondary">
+					Any-of: {labels.length > 0 ? labels.join(", ") : "—"}
+				</Typography>
+				<Typography variant="caption" color="text.secondary" display="block">
+					Коэфф. при выполнении: {group.anyOf.coeffOn ?? 1} · при невыполнении:{" "}
+					{group.anyOf.coeffOff ?? 1}
+				</Typography>
+			</Box>
+		);
+	}
+
+	return (
+		<Box sx={{ mb: 1.5 }}>
+			<Typography variant="body2" fontWeight={600} gutterBottom>
+				{group.paramName ?? group.paramCode}
+			</Typography>
+			{group.coefficients.length === 0 ? (
+				<Typography variant="body2" color="text.secondary">
+					Коэффициенты не заданы.
+				</Typography>
+			) : (
+				<Table size="small">
+					<TableHead>
+						<TableRow>
+							<TableCell>Значение</TableCell>
+							<TableCell>Коэффициент</TableCell>
+						</TableRow>
+					</TableHead>
+					<TableBody>
+						{group.coefficients.map((row) => (
+							<TableRow key={row.id}>
+								<TableCell>{row.valueLabel ?? row.valueCode ?? "—"}</TableCell>
+								<TableCell>{row.coefficient}</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
+			)}
+		</Box>
+	);
+}
+
 export function TypicalWorkCardView({
 	card,
 	loading,
@@ -40,10 +128,13 @@ export function TypicalWorkCardView({
 	availableStreams,
 	streamExecutor,
 	onStreamChange,
+	hideHeader = false,
+	embedded = false,
+	readOnlyRegistry = false,
 }: TypicalWorkCardViewProps) {
 	if (loading) {
 		return (
-			<Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+			<Box sx={{ p: embedded ? 2 : 4, display: "flex", justifyContent: "center" }}>
 				<CircularProgress size={28} />
 			</Box>
 		);
@@ -51,7 +142,7 @@ export function TypicalWorkCardView({
 
 	if (error) {
 		return (
-			<Alert severity="error" sx={{ m: 2 }}>
+			<Alert severity="error" sx={{ m: embedded ? 0 : 2 }}>
 				{error}
 			</Alert>
 		);
@@ -59,8 +150,8 @@ export function TypicalWorkCardView({
 
 	if (!card) {
 		return (
-			<Alert severity="info" sx={{ m: 2 }}>
-				Выберите работу в дереве слева.
+			<Alert severity="info" sx={{ m: embedded ? 0 : 2 }}>
+				Выберите работу в списке слева.
 			</Alert>
 		);
 	}
@@ -68,29 +159,45 @@ export function TypicalWorkCardView({
 	const statusColors = triggerStatusColors(card.triggerStatus);
 
 	return (
-		<Box sx={{ flex: 1, overflow: "auto", p: 2 }}>
-			<Box
-				sx={{
-					display: "flex",
-					flexWrap: "wrap",
-					gap: 2,
-					alignItems: "center",
-					mb: 2,
-				}}
-			>
-				<Box sx={{ flex: 1, minWidth: 240 }}>
-					<Typography variant="h6" fontWeight={700}>
-						{card.name}
-					</Typography>
-					<Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 0.75 }}>
-						<Chip size="small" label={card.archComponentType} />
-						{card.workType ? (
-							<Chip size="small" variant="outlined" label={card.workType} />
-						) : null}
+		<Box sx={{ flex: 1, overflow: "auto", p: embedded ? 0 : 2 }}>
+			{!hideHeader ? (
+				<Box
+					sx={{
+						display: "flex",
+						flexWrap: "wrap",
+						gap: 2,
+						alignItems: "center",
+						mb: 2,
+					}}
+				>
+					<Box sx={{ flex: 1, minWidth: 240 }}>
+						<Typography variant="h6" fontWeight={700}>
+							{card.name}
+						</Typography>
+						<Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 0.75 }}>
+							<Chip size="small" label={card.archComponentType} />
+							{card.workType ? (
+								<Chip size="small" variant="outlined" label={card.workType} />
+							) : null}
+						</Box>
 					</Box>
-				</Box>
 
-				<FormControl size="small" sx={{ minWidth: 220 }}>
+					<FormControl size="small" sx={{ minWidth: 220 }}>
+						<SelectWithPlaceholder
+							placeholder="Стрим-исполнитель"
+							value={streamExecutor ?? ""}
+							onChange={(e) => onStreamChange(String(e.target.value))}
+						>
+							{availableStreams.map((stream) => (
+								<MenuItem key={stream} value={stream}>
+									{stream}
+								</MenuItem>
+							))}
+						</SelectWithPlaceholder>
+					</FormControl>
+				</Box>
+			) : (
+				<FormControl size="small" sx={{ minWidth: 220, mb: 2 }}>
 					<SelectWithPlaceholder
 						placeholder="Стрим-исполнитель"
 						value={streamExecutor ?? ""}
@@ -103,12 +210,12 @@ export function TypicalWorkCardView({
 						))}
 					</SelectWithPlaceholder>
 				</FormControl>
-			</Box>
+			)}
 
 			{!streamExecutor ? (
 				<Alert severity="info">
-					Выберите стрим-исполнителя, чтобы задать условия, коэффициенты и
-					нормы.
+					Выберите стрим-исполнителя, чтобы просмотреть условия, параметры и
+					формулу.
 				</Alert>
 			) : (
 				<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -119,18 +226,30 @@ export function TypicalWorkCardView({
 						<Chip
 							size="small"
 							label={
-								card.triggerStatus === "appears"
-									? `Работа появляется в анкете, когда выполнены все условия (${card.rules.length})`
-									: card.triggerStatus === "hidden"
-										? "Работа скрыта — триггеры не выполнены при текущих ответах"
-										: card.triggerStatus === "invalid"
-											? "Условие невалидно — работа не появится"
-											: "Без триггеров — работа не появится в анкете"
+								readOnlyRegistry
+									? card.rules.length === 0
+										? "Триггеры не заданы"
+										: `Настроено ${card.rules.length} ${card.rules.length === 1 ? "условие" : card.rules.length < 5 ? "условия" : "условий"}`
+									: card.triggerStatus === "appears"
+										? `Работа появляется в анкете, когда выполнены все условия (${card.rules.length})`
+										: card.triggerStatus === "hidden"
+											? "Работа скрыта — триггеры не выполнены при текущих ответах"
+											: card.triggerStatus === "invalid"
+												? "Условие невалидно — работа не появится"
+												: "Без триггеров — работа не появится в анкете"
 							}
 							sx={{
 								mb: 1,
-								bgcolor: statusColors.bg,
-								color: statusColors.color,
+								bgcolor: readOnlyRegistry
+									? card.rules.length > 0
+										? "#eef4ff"
+										: "#eef1f6"
+									: statusColors.bg,
+								color: readOnlyRegistry
+									? card.rules.length > 0
+										? "#2f6bd8"
+										: "#5b6577"
+									: statusColors.color,
 								fontWeight: 600,
 							}}
 						/>
@@ -151,8 +270,10 @@ export function TypicalWorkCardView({
 									{card.rules.map((rule) => (
 										<TableRow key={rule.id}>
 											<TableCell>{rule.paramName ?? rule.paramCode}</TableCell>
-											<TableCell>{rule.operator}</TableCell>
-											<TableCell>{rule.valueLabel ?? "—"}</TableCell>
+											<TableCell>
+												{OPERATOR_LABELS[rule.operator] ?? rule.operator}
+											</TableCell>
+											<TableCell>{formatRuleValue(rule)}</TableCell>
 										</TableRow>
 									))}
 								</TableBody>
@@ -208,32 +329,15 @@ export function TypicalWorkCardView({
 							</Typography>
 						) : (
 							card.laborParams.map((group) => (
-								<Box key={group.paramCode} sx={{ mb: 1.5 }}>
-									<Typography variant="body2" fontWeight={600} gutterBottom>
-										{group.paramName ?? group.paramCode}
-									</Typography>
-									<Table size="small">
-										<TableHead>
-											<TableRow>
-												<TableCell>Значение</TableCell>
-												<TableCell>Коэффициент</TableCell>
-											</TableRow>
-										</TableHead>
-										<TableBody>
-											{group.coefficients.map((row) => (
-												<TableRow key={row.id}>
-													<TableCell>{row.valueLabel ?? "—"}</TableCell>
-													<TableCell>{row.coefficient}</TableCell>
-												</TableRow>
-											))}
-										</TableBody>
-									</Table>
-								</Box>
+								<LaborParamGroupView key={group.paramCode} group={group} />
 							))
 						)}
 					</Paper>
 
 					<Paper variant="outlined" sx={{ p: 1.5, borderRadius: "12px" }}>
+						<Typography variant="subtitle2" fontWeight={700} gutterBottom>
+							Формула
+						</Typography>
 						<WorkFormulaEditor
 							formula={card.formula}
 							rounding={card.rounding}

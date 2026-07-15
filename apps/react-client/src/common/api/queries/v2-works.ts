@@ -19,6 +19,7 @@ import type {
 	CreateV2TypicalWorkAssignmentRequestDto,
 	CopyV2TypicalWorkRequestDto,
 	V2TypicalWorkAssignmentDto,
+	V2FormulaRegistryListResponseDto,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "../helpers/apiClient";
 
@@ -127,10 +128,25 @@ export const useV2TypicalWorksList = (params?: {
 	});
 };
 
+export const useV2FormulaRegistry = (params?: { templateId?: string | null }) => {
+	const templateId = params?.templateId?.trim() ?? "";
+	const qs = templateId ? `?templateId=${encodeURIComponent(templateId)}` : "";
+
+	return useQuery<V2FormulaRegistryListResponseDto>({
+		queryKey: ["v2-works", "formulas", "registry", templateId],
+		queryFn: () =>
+			apiClient({
+				url: `/v2/works/formulas/registry${qs}`,
+				method: "GET",
+			}),
+	});
+};
+
 export const useV2TypicalWorkCard = (
 	workId: string | null,
 	streamExecutor: string | null,
 	templateVersionId?: string | null,
+	options?: { enabled?: boolean },
 ) => {
 	const search = new URLSearchParams();
 	if (streamExecutor) search.set("streamExecutor", streamExecutor);
@@ -149,7 +165,8 @@ export const useV2TypicalWorkCard = (
 				url: `/v2/works/${workId}${qs ? `?${qs}` : ""}`,
 				method: "GET",
 			}),
-		enabled: Boolean(workId && streamExecutor),
+		enabled:
+			(options?.enabled ?? true) && Boolean(workId && streamExecutor),
 	});
 };
 

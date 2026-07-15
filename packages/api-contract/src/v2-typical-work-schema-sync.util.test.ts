@@ -212,4 +212,33 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
 			invalid: false,
 		});
 	});
+
+	it("marks orphan formula tokens invalid when labor param is absent", () => {
+		const legacy = card();
+		legacy.laborParams = [];
+		legacy.formula.tokens[2] = {
+			kind: "param_coeff",
+			paramCode: "field_HuOLfL4K",
+			paramName: "Поле",
+		};
+
+		const result = reconcileTypicalWorkCardWithSchemaField(legacy, {
+			templateVersionId: "version-1",
+			mode: "apply",
+			operation: "upsert",
+			field: {
+				schemaFieldUid: "field-other",
+				previousCode: "other_code",
+				code: "other_code",
+				name: "Другое поле",
+			},
+		});
+
+		expect(result.card.formula.tokens[2]).toMatchObject({
+			kind: "param_coeff",
+			paramCode: "field_HuOLfL4K",
+			invalid: true,
+		});
+		expect(result.impact.formulasInvalidated).toBe(1);
+	});
 });

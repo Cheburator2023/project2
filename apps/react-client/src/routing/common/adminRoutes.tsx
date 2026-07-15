@@ -13,6 +13,7 @@ import {
 	AdminV2TemplateHistoryPage,
 	AdminV2TypicalWorkDetailPage,
 	AdminV2TypicalWorksPage,
+	AdminV2FormulaRegistryPage,
 	V2TemplatePreviewPage,
 	V2TemplateSchemaEditorPage,
 } from "@react-client/routing/lazyPages";
@@ -48,6 +49,7 @@ function adminChildRoutes(): RouteObject[] {
 					element: <AdminV2DictionaryDetailPage />,
 				},
 				{ path: "typical-works", element: <AdminV2TypicalWorksPage /> },
+				{ path: "formulas", element: <AdminV2FormulaRegistryPage /> },
 				{
 					path: "typical-works/:workId",
 					element: <AdminV2TypicalWorkDetailPage />,

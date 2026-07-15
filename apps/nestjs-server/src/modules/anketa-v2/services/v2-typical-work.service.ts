@@ -21,6 +21,7 @@ import type {
 	V2TypicalWorkRuleDto,
 	V2WorkTriggerStatus,
 	WorkTriggerStatusCatalogParam,
+	V2FormulaRegistryListResponseDto,
 } from "@smart-anketa/api-contract";
 import {
 	defaultWorkFormula,
@@ -38,6 +39,8 @@ import {
 	normalizeStoredFormula,
 	resolveVersionConfigTokenFormula,
 	termsToTokenFormula,
+	extractFormulaRegistryLinks,
+	normalizeWorkFormulaLaborParamTokens,
 } from "@smart-anketa/api-contract";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
@@ -967,6 +970,242 @@ export class V2TypicalWorkService {
 		};
 	}
 
+	async listFormulaRegistry(query?: {
+		templateId?: string;
+	}): Promise<V2FormulaRegistryListResponseDto> {
+		const templateFilter = query?.templateId?.trim();
+		const configs = await this.versionConfigRepository.find({
+			order: { updatedAt: "DESC" },
+		});
+		if (configs.length === 0) {
+			return { total: 0, items: [], templateOptions: [] };
+		}
+
+		const workIds = unique(configs.map((config) => config.workId));
+		const versionIds = unique(configs.map((config) => config.templateVersionId));
+		const referencedAssignmentIds = new Set<string>();
+
+		const parsedConfigs = configs.map((config) => {
+			const terms = normalizeStoredFormula(config.formula, config.formulaText);
+			const tokenFormula = resolveCardTokenFormula(
+				terms,
+				config.formulaText,
+				config.formula,
+			);
+			const links = extractFormulaRegistryLinks(tokenFormula.tokens);
+			for (const ref of links.workRefs) {
+				referencedAssignmentIds.add(ref.assignmentId);
+			}
+			return { config, terms, tokenFormula, links };
+		});
+
+		const [works, versions, assignmentsForWorks, assignmentsForRefs, laborRows, laborParamHeaders, rules, paramCatalog] =
+			await Promise.all([
+				this.workRepository.find({ where: { id: In(workIds) } }),
+				this.templateVersionRepository.find({ where: { id: In(versionIds) } }),
+				this.assignmentRepository.find({ where: { workId: In(workIds) } }),
+				referencedAssignmentIds.size
+					? this.assignmentRepository.find({
+							where: { id: In([...referencedAssignmentIds]) },
+						})
+					: Promise.resolve([]),
+				this.laborRepository.find({ where: { workId: In(workIds) } }),
+				this.laborParamRepository.find({ where: { workId: In(workIds) } }),
+				this.ruleRepository.find({ where: { workId: In(workIds) } }),
+				this.paramCatalogService.listParameters(),
+			]);
+
+		const catalogNameByCode = new Map(
+			paramCatalog.items.map((param) => [param.code, param.name]),
+		);
+		const laborRowsByWorkStream = groupBy(
+			laborRows,
+			(row) => `${row.workId}:${row.streamExecutor}`,
+		);
+		const laborHeadersByWorkStream = groupBy(
+			laborParamHeaders,
+			(header) => `${header.workId}:${header.streamExecutor}`,
+		);
+		const ruleNameByWorkStreamCode = new Map<string, string>();
+		for (const rule of rules) {
+			const key = `${rule.workId}:${rule.streamExecutor}:${rule.paramCode}`;
+			if (!ruleNameByWorkStreamCode.has(key) && rule.paramName?.trim()) {
+				ruleNameByWorkStreamCode.set(key, rule.paramName.trim());
+			}
+		}
+
+		const refWorkIds = unique(
+			assignmentsForRefs.map((assignment) => assignment.workId),
+		);
+		const missingWorkIds = refWorkIds.filter((id) => !workIds.includes(id));
+		const refWorks = missingWorkIds.length
+			? await this.workRepository.find({ where: { id: In(missingWorkIds) } })
+			: [];
+
+		const templateIds = unique(versions.map((version) => version.templateId));
+		const templates = templateIds.length
+			? await this.templateRepository.find({ where: { id: In(templateIds) } })
+			: [];
+
+		const workById = new Map(
+			[...works, ...refWorks].map((work) => [work.id, work]),
+		);
+		const versionById = new Map(versions.map((version) => [version.id, version]));
+		const templateById = new Map(templates.map((template) => [template.id, template]));
+		const assignmentById = new Map(
+			[...assignmentsForWorks, ...assignmentsForRefs].map((assignment) => [
+				assignment.id,
+				assignment,
+			]),
+		);
+		const assignmentByWorkStream = new Map(
+			assignmentsForWorks.map((assignment) => [
+				`${assignment.workId}:${assignment.streamExecutor}`,
+				assignment,
+			]),
+		);
+
+		const resolveRegistryParamName = (
+			workId: string,
+			streamExecutor: string,
+			paramCode: string,
+			currentName?: string | null,
+		): string | null => {
+			const trimmed = currentName?.trim();
+			if (trimmed) return trimmed;
+			const ruleName = ruleNameByWorkStreamCode.get(
+				`${workId}:${streamExecutor}:${paramCode}`,
+			);
+			if (ruleName) return ruleName;
+			return catalogNameByCode.get(paramCode) ?? null;
+		};
+
+		const enrichRegistryFormulaTokens = (
+			workId: string,
+			streamExecutor: string,
+			tokens: ReturnType<typeof defaultWorkFormula>["tokens"],
+		) => {
+			const laborParamsGrouped = groupLaborByParam(
+				(laborRowsByWorkStream.get(`${workId}:${streamExecutor}`) ?? []).map(
+					mapLaborEntity,
+				),
+				laborHeadersByWorkStream.get(`${workId}:${streamExecutor}`) ?? [],
+			);
+			const normalized = normalizeWorkFormulaLaborParamTokens(
+				tokens,
+				laborParamsGrouped,
+			);
+			return normalized.map((token) => {
+				if (token.kind !== "param_coeff" && token.kind !== "param_anyof") {
+					return token;
+				}
+				const paramName = resolveRegistryParamName(
+					workId,
+					streamExecutor,
+					token.paramCode,
+					token.paramName,
+				);
+				return paramName ? { ...token, paramName } : token;
+			});
+		};
+
+		const items = parsedConfigs
+			.map(({ config, terms, tokenFormula, links: _links }) => {
+				const work = workById.get(config.workId);
+				const version = versionById.get(config.templateVersionId);
+				if (!work || !version) return null;
+				const template = templateById.get(version.templateId);
+				if (!template) return null;
+				if (templateFilter && template.id !== templateFilter) return null;
+
+				const assignment =
+					assignmentByWorkStream.get(
+						`${config.workId}:${config.streamExecutor}`,
+					) ?? null;
+				const enrichedTokens = enrichRegistryFormulaTokens(
+					config.workId,
+					config.streamExecutor,
+					tokenFormula.tokens,
+				);
+				const links = extractFormulaRegistryLinks(enrichedTokens);
+				const workRefs = links.workRefs.map((ref) => {
+					const sourceAssignment = assignmentById.get(ref.assignmentId);
+					const refWork = sourceAssignment
+						? workById.get(sourceAssignment.workId)
+						: undefined;
+					return {
+						...ref,
+						workId: sourceAssignment?.workId ?? null,
+						workName: refWork?.name ?? ref.workName ?? null,
+					};
+				});
+
+				return {
+					id: config.id,
+					workId: work.id,
+					workName: work.name,
+					templateId: template.id,
+					templateName: template.name,
+					templateVersionId: version.id,
+					versionNumber: version.versionNumber,
+					versionStatus: version.status,
+					streamExecutor: config.streamExecutor,
+					assignmentId: assignment?.id ?? null,
+					formulaText: tokenFormula.text || terms.text || "",
+					formulaBadge: computeFormulaBadge(terms.terms),
+					roundingMode:
+						config.roundingMode as V2TypicalWorkCardDto["rounding"]["mode"],
+					paramRefs: links.paramRefs.map((ref) => ({
+						...ref,
+						paramName:
+							resolveRegistryParamName(
+								config.workId,
+								config.streamExecutor,
+								ref.paramCode,
+								ref.paramName,
+							) ?? ref.paramName,
+					})),
+					workRefs,
+					hasInvalidRefs: links.hasInvalidRefs,
+					createdAt: config.createdAt.toISOString(),
+					updatedAt: config.updatedAt.toISOString(),
+				};
+			})
+			.filter((item): item is NonNullable<typeof item> => item != null);
+
+		const templateOptions = [...templateById.values()]
+			.map((template) => ({ id: template.id, name: template.name }))
+			.sort((a, b) => a.name.localeCompare(b.name, "ru"));
+
+		return { total: items.length, items, templateOptions };
+	}
+
+	private async resolveTemplateVersionIdForWorkCard(
+		work: V2TypicalWorkEntity,
+		workId: string,
+		stream: string,
+		templateVersionId?: string,
+	): Promise<string | undefined> {
+		const explicit = templateVersionId?.trim();
+		if (explicit) return explicit;
+
+		if (work.templateId) {
+			const template = await this.templateRepository.findOne({
+				where: { id: work.templateId },
+				select: ["id", "currentVersionId"],
+			});
+			if (template?.currentVersionId) {
+				return template.currentVersionId;
+			}
+		}
+
+		const latestConfig = await this.versionConfigRepository.findOne({
+			where: { workId, streamExecutor: stream },
+			order: { updatedAt: "DESC" },
+		});
+		return latestConfig?.templateVersionId;
+	}
+
 	async getWorkCard(
 		workId: string,
 		streamExecutor: string,
@@ -978,6 +1217,12 @@ export class V2TypicalWorkService {
 		}
 
 		const stream = streamExecutor.trim();
+		const resolvedVersionId = await this.resolveTemplateVersionIdForWorkCard(
+			work,
+			workId,
+			stream,
+			templateVersionId,
+		);
 		const [norms, rules, laborRows, laborParams, assignment, versionConfig] =
 			await Promise.all([
 			this.normRepository.find({
@@ -997,9 +1242,13 @@ export class V2TypicalWorkService {
 			this.assignmentRepository.findOne({
 				where: { workId, streamExecutor: stream },
 			}),
-			templateVersionId
+			resolvedVersionId
 				? this.versionConfigRepository.findOne({
-						where: { workId, templateVersionId, streamExecutor: stream },
+						where: {
+							workId,
+							templateVersionId: resolvedVersionId,
+							streamExecutor: stream,
+						},
 					})
 				: Promise.resolve(null),
 		]);
@@ -1027,7 +1276,7 @@ export class V2TypicalWorkService {
 			: null;
 		if (
 			versionConfig &&
-			templateVersionId &&
+			resolvedVersionId &&
 			needsCalculationLogicBackfill(versionConfig.calculationLogic)
 		) {
 			const compiled = compileCalculationLogicFromVersionConfig(versionConfig);

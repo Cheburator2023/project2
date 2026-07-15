@@ -500,6 +500,16 @@ export function markFormulaParamInvalid(tokens, paramCode) {
         ? { ...token, invalid: true }
         : token);
 }
+/** Помечает param-токены формулы invalid, если их нет в блоке трудоёмкости. */
+export function markUnknownFormulaLaborParamTokensInvalid(tokens, laborParams) {
+    return tokens.map((token) => {
+        if (!isParamToken(token) || token.invalid)
+            return token;
+        if (isWorkFormulaLaborParamKnown(token, laborParams))
+            return token;
+        return { ...token, invalid: true };
+    });
+}
 export function evaluateWorkFormula(formula, ctx) {
     const symbolic = formula.text || tokensToText(formula.tokens);
     const validation = validateWorkFormulaTokens(formula.tokens);

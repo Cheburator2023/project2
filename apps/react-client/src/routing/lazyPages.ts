@@ -133,6 +133,13 @@ export const AdminV2TypicalWorksPage = lazyPage(
 		),
 	"AdminV2TypicalWorksPage",
 );
+export const AdminV2FormulaRegistryPage = lazyPage(
+	() =>
+		import(
+			/* webpackChunkName: "page-admin-formulas" */ "@react-client/features/v2/admin/pages/AdminV2FormulaRegistryPage"
+		),
+	"AdminV2FormulaRegistryPage",
+);
 export const AdminV2TypicalWorkDetailPage = lazyPage(
 	() =>
 		import(
