@@ -621,10 +621,6 @@
 									"type": "boolean",
 									"title": "Необходимо подтвердить возможность интеграции"
 								},
-								"field_qMxSfHk1": {
-									"type": "boolean",
-									"title": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
-								},
 								"field_lDw9gG39": {
 									"type": "boolean",
 									"title": "Требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
@@ -643,6 +639,10 @@
 									],
 									"type": "string",
 									"title": "Детализация и ясность запроса постановки задачи"
+								},
+								"field_qMxSfHk1": {
+									"type": "boolean",
+									"title": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
 								},
 								"field_tpROQBf5": {
 									"enum": [
@@ -665,17 +665,6 @@
 									],
 									"type": "string",
 									"title": "Требуется хэширование/ шифрование"
-								},
-								"field_wf7CHiVI": {
-									"enum": [
-										"Точечное",
-										"Малое",
-										"Среднее",
-										"Большое",
-										"Масштабное"
-									],
-									"type": "string",
-									"title": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик"
 								},
 								"field_whHc-OoW": {
 									"type": "boolean",
@@ -713,7 +702,8 @@
 								},
 								"coefficient": {
 									"type": "number",
-									"title": "Коэффициент"
+									"title": "Коэффициент",
+									"default": 1.5
 								},
 								"estimateHoursPerDay": {
 									"type": "number",
@@ -736,22 +726,32 @@
 							"properties": {
 								"name": {
 									"type": "string",
-									"title": "Название типовой работы",
-									"readOnly": true
-								},
-								"estimateHoursPerDay": {
-									"type": "number",
-									"title": "Базовая оценка",
-									"readOnly": true
-								},
-								"coefficient": {
-									"type": "number",
-									"title": "Коэффициент",
+									"title": "Наименование",
 									"readOnly": true
 								},
 								"total": {
 									"type": "number",
 									"title": "Итог",
+									"readOnly": true
+								},
+								"reason": {
+									"type": "string",
+									"title": "Причина",
+									"readOnly": true
+								},
+								"workType": {
+									"type": "string",
+									"title": "Тип работ",
+									"readOnly": true
+								},
+								"coefficient": {
+									"type": "number",
+									"title": "Коэф.",
+									"readOnly": true
+								},
+								"estimateHoursPerDay": {
+									"type": "number",
+									"title": "Базовая оценка (ч/д)",
 									"readOnly": true
 								}
 							}
@@ -765,6 +765,10 @@
 				"type": "object",
 				"title": "Общая информация",
 				"properties": {
+					"calcName": {
+						"type": "string",
+						"title": "Название анкеты"
+					},
 					"createIS": {
 						"type": "boolean",
 						"title": "Требуется создание информационной системы"
@@ -885,6 +889,21 @@
 						"type": "boolean",
 						"title": "Требуется создание сервиса"
 					},
+					"field_GWL5PLfS": {
+						"type": "string",
+						"title": "Комментарий",
+						"description": "Комментарий"
+					},
+					"field__iu-GEg1": {
+						"type": "string",
+						"title": "RFD",
+						"description": ""
+					},
+					"field_vz9bm7A3": {
+						"type": "string",
+						"title": "ФИО заказчика",
+						"description": "\n"
+					},
 					"businessCustomer": {
 						"type": "array",
 						"items": {
@@ -898,10 +917,6 @@
 						"title": "Общая неопределённость",
 						"readOnly": true
 					},
-					"overallUncertaintyModal": {
-						"type": "string",
-						"title": "Расчёт общей неопределённости"
-					},
 					"implementationStream": {
 						"enum": [
 							"Моделирование РБ",
@@ -913,6 +928,44 @@
 						"title": "Стрим-исполнитель"
 					}
 				}
+			},
+			"field_V6wVCAX9": {
+				"type": "array",
+				"items": {
+					"type": "object",
+					"title": "Нетиповая задача",
+					"required": [
+						"name"
+					],
+					"properties": {
+						"name": {
+							"type": "string",
+							"title": "Задача"
+						},
+						"total": {
+							"type": "number",
+							"title": "Итог",
+							"readOnly": true
+						},
+						"workType": {
+							"type": "string",
+							"title": "Тип работ"
+						},
+						"coefficient": {
+							"type": "number",
+							"title": "Коэф."
+						},
+						"estimateHoursPerDay": {
+							"type": "number",
+							"title": "Оценка ч/д"
+						},
+						"includeInCalculation": {
+							"type": "boolean",
+							"title": "Включить в расчёт"
+						}
+					}
+				},
+				"title": "Нетиповые работы"
 			},
 			"field_aJEu5ziT": {
 				"type": "object",
@@ -952,7 +1005,8 @@
 								},
 								"coefficient": {
 									"type": "number",
-									"title": "Коэффициент"
+									"title": "Коэффициент",
+									"default": 1.5
 								},
 								"estimateHoursPerDay": {
 									"type": "number",
@@ -975,12 +1029,22 @@
 							"properties": {
 								"name": {
 									"type": "string",
-									"title": "Название типовой работы",
+									"title": "Наименование",
 									"readOnly": true
 								},
-								"estimateHoursPerDay": {
+								"total": {
 									"type": "number",
-									"title": "Базовая оценка",
+									"title": "Итог",
+									"readOnly": true
+								},
+								"reason": {
+									"type": "string",
+									"title": "Причина",
+									"readOnly": true
+								},
+								"workType": {
+									"type": "string",
+									"title": "Тип работ",
 									"readOnly": true
 								},
 								"coefficient": {
@@ -988,9 +1052,9 @@
 									"title": "Коэффициент",
 									"readOnly": true
 								},
-								"total": {
+								"estimateHoursPerDay": {
 									"type": "number",
-									"title": "Итог",
+									"title": "Базовая оценка (ч/д)",
 									"readOnly": true
 								}
 							}
@@ -1028,7 +1092,8 @@
 								},
 								"coefficient": {
 									"type": "number",
-									"title": "Коэффициент"
+									"title": "Коэффициент",
+									"default": 1.5
 								},
 								"estimateHoursPerDay": {
 									"type": "number",
@@ -1078,59 +1143,20 @@
 							}
 						}
 					},
-					"field_eCyDEFw3": {
+					"field_u-7AkDrP": {
 						"type": "array",
 						"items": {
 							"type": "object",
-							"title": "Нетиповая задача",
-							"required": [
-								"name"
-							],
-							"properties": {
-								"name": {
-									"type": "string",
-									"title": "Задача"
-								},
-								"total": {
-									"type": "number",
-									"title": "Итог",
-									"readOnly": true
-								},
-								"workType": {
-									"type": "string",
-									"title": "Тип работ"
-								},
-								"coefficient": {
-									"type": "number",
-									"title": "Коэффициент"
-								},
-								"estimateHoursPerDay": {
-									"type": "number",
-									"title": "Оценка ч/д"
-								},
-								"includeInCalculation": {
-									"type": "boolean",
-									"title": "Включить в расчёт",
-									"default": true
-								}
-							}
-						},
-						"title": "Нетиповые работы"
-					},
-					"sourceTypicalTasks": {
-						"type": "array",
-						"items": {
-							"type": "object",
-							"title": "Типовая работа источника",
+							"title": "Типовая работа",
 							"properties": {
 								"name": {
 									"type": "string",
 									"title": "Название типовой работы",
 									"readOnly": true
 								},
-								"estimateHoursPerDay": {
+								"total": {
 									"type": "number",
-									"title": "Базовая оценка",
+									"title": "Итог",
 									"readOnly": true
 								},
 								"coefficient": {
@@ -1138,9 +1164,9 @@
 									"title": "Коэффициент",
 									"readOnly": true
 								},
-								"total": {
+								"estimateHoursPerDay": {
 									"type": "number",
-									"title": "Итог",
+									"title": "Базовая оценка",
 									"readOnly": true
 								}
 							}
@@ -1200,20 +1226,20 @@
 							}
 						}
 					},
-					"field_Khn6-HAW": {
+					"field_G0AoYAl8": {
 						"type": "array",
 						"items": {
 							"type": "object",
-							"title": "Типовая работа источника",
+							"title": "Типовая работа",
 							"properties": {
 								"name": {
 									"type": "string",
 									"title": "Название типовой работы",
 									"readOnly": true
 								},
-								"estimateHoursPerDay": {
+								"total": {
 									"type": "number",
-									"title": "Базовая оценка",
+									"title": "Итог",
 									"readOnly": true
 								},
 								"coefficient": {
@@ -1221,9 +1247,9 @@
 									"title": "Коэффициент",
 									"readOnly": true
 								},
-								"total": {
+								"estimateHoursPerDay": {
 									"type": "number",
-									"title": "Итог",
+									"title": "Базовая оценка",
 									"readOnly": true
 								}
 							}
@@ -1231,7 +1257,7 @@
 						"title": "Типовые работы",
 						"readOnly": true
 					},
-					"field_QkVbhG-_": {
+					"field_hQeUoQl4": {
 						"type": "array",
 						"items": {
 							"type": "object",
@@ -1255,7 +1281,7 @@
 								},
 								"coefficient": {
 									"type": "number",
-									"title": "Коэффициент"
+									"title": "Коэф."
 								},
 								"estimateHoursPerDay": {
 									"type": "number",
@@ -1263,8 +1289,7 @@
 								},
 								"includeInCalculation": {
 									"type": "boolean",
-									"title": "Включить в расчёт",
-									"default": true
+									"title": "Включить в расчёт"
 								}
 							}
 						},
@@ -1286,7 +1311,7 @@
 						"title": "Локальные параметры",
 						"readOnly": true
 					},
-					"field_r8nz3JWH": {
+					"field_AuPTJbZa": {
 						"type": "array",
 						"items": {
 							"type": "object",
@@ -1310,7 +1335,7 @@
 								},
 								"coefficient": {
 									"type": "number",
-									"title": "Коэффициент"
+									"title": "Коэф."
 								},
 								"estimateHoursPerDay": {
 									"type": "number",
@@ -1318,8 +1343,7 @@
 								},
 								"includeInCalculation": {
 									"type": "boolean",
-									"title": "Включить в расчёт",
-									"default": true
+									"title": "Включить в расчёт"
 								}
 							}
 						},
@@ -1331,7 +1355,17 @@
 				"type": "object",
 				"title": "Стрим «Потоковые данные»",
 				"properties": {
-					"field_2l6A7K3g": {
+					"field_8uYGWAZ9": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"title": "Типовая работа источника",
+							"properties": {}
+						},
+						"title": "Локальные параметры",
+						"readOnly": true
+					},
+					"field_xzzoJBAc": {
 						"type": "array",
 						"items": {
 							"type": "object",
@@ -1355,7 +1389,7 @@
 								},
 								"coefficient": {
 									"type": "number",
-									"title": "Коэффициент"
+									"title": "Коэф."
 								},
 								"estimateHoursPerDay": {
 									"type": "number",
@@ -1363,22 +1397,11 @@
 								},
 								"includeInCalculation": {
 									"type": "boolean",
-									"title": "Включить в расчёт",
-									"default": true
+									"title": "Включить в расчёт"
 								}
 							}
 						},
 						"title": "Нетиповые работы"
-					},
-					"field_8uYGWAZ9": {
-						"type": "array",
-						"items": {
-							"type": "object",
-							"title": "Типовая работа источника",
-							"properties": {}
-						},
-						"title": "Локальные параметры",
-						"readOnly": true
 					}
 				}
 			},
@@ -1491,17 +1514,15 @@
 							}
 						}
 					},
-					"uncertaintyAdjustment": {
-						"type": "number",
-						"title": "Поправка на общую неопределённость",
-						"minimum": 0,
-						"maximum": 30
+					"field_QCwwo5c5": {
+						"type": "integer",
+						"title": "Поправка на общую неопределённость"
 					},
-					"initiativeCost": {
+					"field_bbTNlnC6": {
 						"type": "string",
 						"title": "Стоимость инициативы"
 					},
-					"initiativeTimeline": {
+					"field_xGCMlbMP": {
 						"type": "string",
 						"title": "Сроки инициативы"
 					}
@@ -1513,20 +1534,30 @@
 		"meta": {
 			"id": {
 				"ui:widget": "text",
+				"ui:options": {
+					"schemaFieldUid": "field_7b72459f-6b48-4d12-a957-0df7db081173"
+				},
 				"ui:readonly": true
 			},
 			"name": {
 				"ui:widget": "text",
+				"ui:options": {
+					"schemaFieldUid": "field_ca5dfbe8-f553-46f6-b93b-05c4ae6c39af"
+				},
 				"ui:placeholder": "Наименование анкеты"
 			},
 			"status": {
 				"ui:widget": "select",
 				"ui:options": {
-					"dictionaryCode": "v2.meta.status"
+					"dictionaryCode": "v2.meta.status",
+					"schemaFieldUid": "field_8aa83ccf-2471-47d2-afe1-4c463edbce91"
 				}
 			},
 			"version": {
 				"ui:widget": "updown",
+				"ui:options": {
+					"schemaFieldUid": "field_223a11e3-055d-43cd-8ffb-25df5cc1a1cd"
+				},
 				"ui:readonly": true
 			},
 			"ui:order": [
@@ -1536,10 +1567,16 @@
 				"status"
 			],
 			"ui:options": {
-				"hidden": true
+				"hidden": true,
+				"schemaFieldUid": "field_3a9e594d-f19e-4cbd-975e-19dfd615b74c"
 			}
 		},
 		"summary": {
+			"total": {
+				"ui:options": {
+					"schemaFieldUid": "field_71cc48b2-db4e-43d8-aec0-f318b917f5ea"
+				}
+			},
 			"ui:order": [
 				"baseScoreStream",
 				"scoreWithComplexityCoeff",
@@ -1548,73 +1585,122 @@
 				"platformStreams"
 			],
 			"ui:options": {
-				"hidden": true
+				"hidden": true,
+				"schemaFieldUid": "field_568c803a-fef6-4a95-8f14-aff014652992"
 			},
 			"ui:readonly": true,
+			"typicalTotal": {
+				"ui:options": {
+					"schemaFieldUid": "field_be3a1181-4993-4d2d-a001-32d3cd517e8c"
+				}
+			},
+			"atypicalTotal": {
+				"ui:options": {
+					"schemaFieldUid": "field_5594e192-5508-4958-86ef-ffc67987a025"
+				}
+			},
 			"baseScoreStream": {
 				"ui:widget": "text",
+				"ui:options": {
+					"schemaFieldUid": "field_b5010649-f009-4a25-944a-8888698c4f09"
+				},
 				"ui:readonly": true
 			},
 			"platformStreams": {
 				"items": {
 					"streamName": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_20617c59-6460-4478-9d42-6744d5a7888a"
+						},
 						"ui:readonly": true
 					},
 					"atypicalScore": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_2d4d4c47-bb31-48ca-b895-7ccad801e2ec"
+						},
 						"ui:readonly": true
 					},
 					"baseTypicalScore": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_344a0bcb-9fc4-474f-ab2a-1e138e44b1c2"
+						},
 						"ui:readonly": true
 					},
 					"deviationPercent": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_ba57b863-9255-48f3-959d-46f292fdc35c"
+						},
 						"ui:readonly": true
 					},
 					"adjustedTypicalScore": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_b02c42e8-0abd-4849-af3b-30a2d087bdba"
+						},
 						"ui:readonly": true
 					}
 				},
 				"ui:options": {
 					"addable": false,
 					"orderable": false,
-					"removable": false
+					"removable": false,
+					"schemaFieldUid": "field_0500e92d-ef82-418e-bf9d-89de512945c1"
 				}
 			},
 			"detailedCalculation": {
 				"items": {
 					"baseScore": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_d2e682d0-140d-4461-96c0-808462295867"
+						},
 						"ui:readonly": true
 					},
 					"stageName": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_4f38b418-f7c1-4f51-9733-5dc175b3e640"
+						},
 						"ui:readonly": true
 					},
 					"complexityCoeff": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_d40e8fcd-c9ce-4cc8-a772-74f9468aac22"
+						},
 						"ui:readonly": true
 					},
 					"deviationFromBase": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_e997bc80-90bf-4d86-b0e0-492d6d3a07f8"
+						},
 						"ui:readonly": true
 					}
 				},
 				"ui:options": {
 					"addable": false,
 					"orderable": false,
-					"removable": false
+					"removable": false,
+					"schemaFieldUid": "field_50c0ef41-ec57-44b8-8baf-6dea89110135"
 				}
 			},
 			"deviationFromBaseline": {
 				"ui:widget": "text",
+				"ui:options": {
+					"schemaFieldUid": "field_8d86e51a-2d70-4015-a8d3-440977c7204c"
+				},
 				"ui:readonly": true
 			},
 			"scoreWithComplexityCoeff": {
 				"ui:widget": "text",
+				"ui:options": {
+					"schemaFieldUid": "field_2b9d71ba-92fa-4c75-89e9-94fd04feea84"
+				},
 				"ui:readonly": true
 			}
 		},
@@ -1624,6 +1710,7 @@
 			"meta",
 			"generalInfo",
 			"uncertaintyCalculation",
+			"field_V6wVCAX9",
 			"detailInfo",
 			"field_aJEu5ziT",
 			"field_i8dL7QZa",
@@ -1638,35 +1725,44 @@
 				"detailInfo": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.workflow.sections.detailInfo"
+						"dictionaryCode": "v2.workflow.sections.detailInfo",
+						"schemaFieldUid": "field_b95ddbc4-75e1-41f3-a156-e0d42e75ab30"
 					}
+				},
+				"ui:options": {
+					"schemaFieldUid": "field_97db55d6-ff60-4258-886f-deaca5ac7a7c"
 				},
 				"generalInfo": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.workflow.sections.generalInfo"
+						"dictionaryCode": "v2.workflow.sections.generalInfo",
+						"schemaFieldUid": "field_00cefe5f-48b6-4bfd-a650-7830ebc026bf"
 					}
 				},
 				"streamDataSources": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.workflow.sections.streamDataSources"
+						"dictionaryCode": "v2.workflow.sections.streamDataSources",
+						"schemaFieldUid": "field_9c3f7429-be21-4e77-8e1e-650171880506"
 					}
 				},
 				"streamModelControl": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.workflow.sections.streamModelControl"
+						"dictionaryCode": "v2.workflow.sections.streamModelControl",
+						"schemaFieldUid": "field_7e6080dc-7707-46ed-a0a9-2bab5e6f56cf"
 					}
 				}
 			},
 			"ui:options": {
-				"hidden": true
+				"hidden": true,
+				"schemaFieldUid": "field_541a3f35-aeab-44e3-a0e1-6ce0273ff95b"
 			},
 			"globalStatus": {
 				"ui:widget": "select",
 				"ui:options": {
-					"dictionaryCode": "v2.workflow.globalStatus"
+					"dictionaryCode": "v2.workflow.globalStatus",
+					"schemaFieldUid": "field_12d7a9ec-8e42-4ba7-b995-3c2b64009199"
 				}
 			}
 		},
@@ -1694,76 +1790,107 @@
 				"workType": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.detailInfo.dataMart.workType"
+						"dictionaryCode": "v2.detailInfo.dataMart.workType",
+						"schemaFieldUid": "field_6f91d0c5-3949-4468-88e9-29741af2b07d"
 					}
 				},
 				"ui:options": {
 					"sectionRole": "subsection",
 					"archComponent": "dataMart",
+					"schemaFieldUid": "field_5516bbf5-1a48-40a6-88f8-d05728ca64b3",
 					"showFilledCount": true
 				},
 				"metricsCount": {
-					"ui:options": {}
+					"ui:options": {
+						"schemaFieldUid": "field_77f9732b-b562-4e32-b8ff-67d106f17fcf"
+					}
 				},
 				"field_0uV7wafS": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.detailInfo.dataMart.field_0uV7wafS"
+						"dictionaryCode": "v2.detailInfo.dataMart.field_0uV7wafS",
+						"schemaFieldUid": "field_13c2cdce-f11e-4d6a-8577-0ad7e1940170"
 					}
 				},
 				"field_28IPlEQu": {
-					"ui:options": {}
+					"ui:options": {
+						"schemaFieldUid": "field_e03806f6-01f4-44ee-835a-e9e5bae8f6c6"
+					}
 				},
 				"field_46LCnfWo": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.detailInfo.dataMart.field_46LCnfWo"
+						"dictionaryCode": "v2.detailInfo.dataMart.field_46LCnfWo",
+						"schemaFieldUid": "field_9aaf1e8d-e27c-4f48-a631-9f690ea03a07"
 					}
 				},
 				"field_Ad1msOl7": {
-					"ui:options": {}
+					"ui:options": {
+						"schemaFieldUid": "field_08a71e6d-809b-41a3-aa63-10c8b89da9a0"
+					}
 				},
 				"field_L-WWLDWY": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.detailInfo.dataMart.field_L-WWLDWY"
+						"dictionaryCode": "v2.detailInfo.dataMart.field_L-WWLDWY",
+						"schemaFieldUid": "field_1a14aa49-5c0c-41e7-81b8-637f03555391"
 					}
 				},
 				"field_N9LFD6Hu": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.detailInfo.dataMart.field_N9LFD6Hu"
+						"dictionaryCode": "v2.detailInfo.dataMart.field_N9LFD6Hu",
+						"schemaFieldUid": "field_8cff1155-e458-4fea-a8c7-abad1260df8f"
 					}
 				},
 				"field_Q8DGJNTn": {
-					"ui:options": {}
+					"ui:options": {
+						"schemaFieldUid": "field_e48e94c0-465e-47de-8a9c-ae8d95ca8d6c"
+					}
 				},
 				"field_fRuMuWtn": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.detailInfo.dataMart.deliveryMode"
+						"dictionaryCode": "v2.detailInfo.dataMart.deliveryMode",
+						"schemaFieldUid": "field_5389285c-9fe6-4a47-bfdb-2ad6a082cbd0"
 					}
 				},
 				"field_hIM0c5gG": {
-					"ui:options": {}
+					"ui:options": {
+						"schemaFieldUid": "field_73e7ba4b-2124-44c9-bfc3-7d5d524c9076"
+					}
 				},
 				"field_le47srI7": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.detailInfo.dataMart.field_le47srI7"
+						"dictionaryCode": "v2.detailInfo.dataMart.field_le47srI7",
+						"schemaFieldUid": "field_bffd7490-feee-4eb1-a48e-524746fd659c"
 					}
 				},
 				"field_lovKvLZc": {
-					"ui:options": {}
+					"ui:options": {
+						"schemaFieldUid": "field_7e902aa9-dd30-4944-a4ba-b70d14ff7ee1"
+					}
 				},
 				"field_rZeUo8a_": {
-					"ui:options": {}
+					"ui:options": {
+						"schemaFieldUid": "field_c7affe0f-873e-42e1-b79a-c29c62b26c0f"
+					}
 				},
 				"field_w_EN6lWe": {
-					"ui:options": {}
+					"ui:options": {
+						"schemaFieldUid": "field_5525d556-6cd1-4efa-b10b-0f24ea6c1d96"
+					}
 				},
 				"field_xva1dRvW": {
-					"ui:options": {}
+					"ui:options": {
+						"schemaFieldUid": "field_0845a1af-f430-4897-9300-4a3c580aa6ee"
+					}
+				},
+				"field_zApubb5V": {
+					"ui:options": {
+						"schemaFieldUid": "field_877bae45-21cb-4237-a20a-83260f054e9e"
+					}
 				}
 			},
 			"ui:order": [
@@ -1778,7 +1905,9 @@
 			"modelsList": {
 				"items": {
 					"autoML": {
-						"ui:options": {}
+						"ui:options": {
+							"schemaFieldUid": "field_8b58cf5d-ea4a-4180-8670-ff2021bcaa9b"
+						}
 					},
 					"ui:order": [
 						"field_atxiq-UM",
@@ -1794,40 +1923,56 @@
 					"workType": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.detailInfo.model.workType"
+							"dictionaryCode": "v2.detailInfo.model.workType",
+							"schemaFieldUid": "field_450d6b84-7414-42d9-8d4c-57409e4f90c8"
 						}
 					},
 					"algorithmType": {
 						"ui:widget": "select",
 						"ui:options": {
 							"tooltip": "По умолчанию применяется один тип алгоритма: >1 возможно для каскада или ансамблей моделей, если в одном решении используется комбинация алгоритмов/типов ML задач (т.е. для всех моделей/подмоделей решения может быть задействован один тип алгоритма). Заполняем вложенный список алгоритмов по типу данных, алгоритмов ML и инфраструктуры, участвующей во внедрении решения:\n\n· Табличные данные — любой ML-алгоритм (в т.ч. без учителя)\n· Текстовая аналитика — Классические модели — алгоритмы для текста (кроме LLM)\n· Текстовая аналитика — LLM — LLM для текста\n· Аудиоаналитика — алгоритмы для звука (аудио, видео)\n· Компьютерное зрение — CV — алгоритмы для изображений (аудио, видео)\n· Оптимизационная задача — модельный оптимизатор или эвристики\n· ГЕОаналитика — требуется платформа геоаналитики\n· Графовая аналитика — требуется графовая платформа",
-							"dictionaryCode": "v2.detailInfo.model.algorithmType"
+							"dictionaryCode": "v2.detailInfo.model.algorithmType",
+							"schemaFieldUid": "field_bd100464-101d-4d4e-8096-751dab52e01f"
 						}
 					},
 					"field_58TkWuwu": {
-						"ui:options": {}
+						"ui:options": {
+							"schemaFieldUid": "field_ef1169ba-7832-472a-8043-494ff92c7c57"
+						}
 					},
 					"field_CeBkWcQc": {
-						"ui:options": {}
+						"ui:options": {
+							"schemaFieldUid": "field_6f650ab1-89c0-4e26-bf4f-b61fb494cde1"
+						}
 					},
 					"field_S23CbRXp": {
-						"ui:options": {}
+						"ui:options": {
+							"schemaFieldUid": "field_6cf96965-0a42-4e6e-b63d-79d724faf002"
+						}
 					},
 					"field_S41Rqt5E": {
-						"ui:options": {}
+						"ui:options": {
+							"schemaFieldUid": "field_278b61ee-774f-4e84-9a41-e9ce26c5319f"
+						}
 					},
 					"field_VbI-0aiT": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.method.13.роль_модели"
+							"dictionaryCode": "v2.method.13.роль_модели",
+							"schemaFieldUid": "field_0bb82aba-dd87-422f-8824-b97f56159fcf"
 						}
 					},
-					"field_atxiq-UM": {}
+					"field_atxiq-UM": {
+						"ui:options": {
+							"schemaFieldUid": "field_641d16cb-4f74-41d3-abbf-12510e14ccae"
+						}
+					}
 				},
 				"ui:options": {
 					"addable": true,
 					"orderable": false,
-					"removable": true
+					"removable": true,
+					"schemaFieldUid": "field_bb404bf1-7006-43c4-952d-853735efd4bb"
 				}
 			},
 			"parameters": {
@@ -1836,18 +1981,26 @@
 					"streamNames"
 				],
 				"ui:options": {
-					"sectionRole": "flat"
+					"sectionRole": "flat",
+					"schemaFieldUid": "field_799212d3-0ea8-449f-a392-a0ba12223f74"
 				},
 				"streamNames": {
-					"ui:widget": "text"
+					"ui:widget": "text",
+					"ui:options": {
+						"schemaFieldUid": "field_d48a687b-c6c8-4ac3-8e66-0fc1d0b190c6"
+					}
 				},
 				"streamsOutsideDADM": {
-					"ui:widget": "checkbox"
+					"ui:widget": "checkbox",
+					"ui:options": {
+						"schemaFieldUid": "field_7a60d97c-9121-4507-b78f-cc09afc09d38"
+					}
 				}
 			},
 			"ui:options": {
 				"sectionRole": "main",
 				"titleVariant": "h5",
+				"schemaFieldUid": "field_bece32d7-0463-49e8-8591-4827109e563b",
 				"defaultExpanded": false,
 				"workflowSectionId": "detailInfo"
 			},
@@ -1865,51 +2018,62 @@
 				"ui:options": {
 					"sectionRole": "subsection",
 					"archComponent": "dataProcess",
+					"schemaFieldUid": "field_51b8a4f4-d0f3-455e-9591-120a4d6293e5",
 					"showFilledCount": true
 				},
 				"deliveryMode": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.detailInfo.dataProcess.deliveryMode"
+						"dictionaryCode": "v2.detailInfo.dataProcess.deliveryMode",
+						"schemaFieldUid": "field_3fa66577-5e4e-4021-a21c-d9f3d40125cd"
 					}
 				},
 				"field_C6oqyTPh": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.detailInfo.dataProcess.field_C6oqyTPh"
+						"dictionaryCode": "v2.detailInfo.dataProcess.field_C6oqyTPh",
+						"schemaFieldUid": "field_99d467e2-2205-4096-81c7-762d5d04166c"
 					}
 				},
 				"field_HgUCNn6E": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.detailInfo.dataProcess.field_HgUCNn6E"
+						"dictionaryCode": "v2.detailInfo.dataProcess.field_HgUCNn6E",
+						"schemaFieldUid": "field_553faff6-a347-41a5-8ac7-feab2fc38e46"
 					}
 				},
 				"field_It-B8PfV": {
+					"ui:options": {
+						"schemaFieldUid": "field_8bc18250-e9e2-4d55-ad33-6776b857a03d"
+					},
 					"ui:placeholder": "Название процесса"
 				},
 				"field_R3Lx-csF": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.detailInfo.dataProcess.field_R3Lx-csF"
+						"dictionaryCode": "v2.detailInfo.dataProcess.field_R3Lx-csF",
+						"schemaFieldUid": "field_9f1865ca-e9a1-4130-9ee7-d8dc37452bce"
 					}
 				},
 				"field_UEzs5Q87": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.detailInfo.dataProcess.implComplexity"
+						"dictionaryCode": "v2.detailInfo.dataProcess.implComplexity",
+						"schemaFieldUid": "field_aa1dc517-1277-4ca5-ad9f-ed0bb8a9efe6"
 					}
 				},
 				"field_yJ51GkCR": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.detailInfo.dataProcess.workType"
+						"dictionaryCode": "v2.detailInfo.dataProcess.workType",
+						"schemaFieldUid": "field_68f5a4fa-579f-4b89-b4f3-11214957dffe"
 					}
 				},
 				"confidentialData": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.detailInfo.dataProcess.confidentialData"
+						"dictionaryCode": "v2.detailInfo.dataProcess.confidentialData",
+						"schemaFieldUid": "field_d6d1a663-62f2-42c8-b0fb-b3f5d8e9bc51"
 					}
 				}
 			},
@@ -1918,14 +2082,16 @@
 					"name": {
 						"ui:widget": "text",
 						"ui:options": {
-							"tooltip": "Заполняется при отсутствии витрин с агрегатами/широких витрин с агрегатами/широких витрин на регламенте в области ответственности модельного стрима, при необходимости поиска данных, указывается количество внутренних (в т.ч. в ответственности другого стрима) и внешних источников данных"
+							"tooltip": "Заполняется при отсутствии витрин с агрегатами/широких витрин с агрегатами/широких витрин на регламенте в области ответственности модельного стрима, при необходимости поиска данных, указывается количество внутренних (в т.ч. в ответственности другого стрима) и внешних источников данных",
+							"schemaFieldUid": "field_bbe1adba-db69-4d19-a15d-a4d269727aca"
 						},
 						"ui:placeholder": "Название источника"
 					},
 					"type": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.detailInfo.sourceSystems.items.type"
+							"dictionaryCode": "v2.detailInfo.sourceSystems.items.type",
+							"schemaFieldUid": "field_f0070137-09a8-432a-bd47-dd6e901d8cb2"
 						}
 					},
 					"ui:order": [
@@ -1941,7 +2107,6 @@
 						"field_Y_K0Hy0e",
 						"field_nE73kPQl",
 						"field_HuOLfL4K",
-						"field_wf7CHiVI",
 						"field_tpROQBf5",
 						"field_AKLVuyFy",
 						"field_4jxR0E0m",
@@ -1964,150 +2129,192 @@
 						"field_WgK6lIS-"
 					],
 					"field_-EGYyyJF": {
-						"ui:options": {},
+						"ui:options": {
+							"schemaFieldUid": "field_6676112d-2c43-41a0-8b3c-bd0d492ecd49"
+						},
 						"ui:placeholder": "Необходим новый тракт данных от источника"
 					},
 					"field_-t8JSf3p": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_-t8JSf3p"
+							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_-t8JSf3p",
+							"schemaFieldUid": "field_1a1d2a81-91ee-4a96-a38d-7d9e63e7edfc"
 						}
 					},
 					"field_1ANadh7U": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_1ANadh7U"
+							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_1ANadh7U",
+							"schemaFieldUid": "field_f80e7284-6d7b-48be-87b4-31d898e8ba33"
 						}
 					},
 					"field_1bl3dfSX": {
-						"ui:options": {}
+						"ui:options": {
+							"schemaFieldUid": "field_9278382f-a3b6-4c1f-88e0-ef31ac39e54b"
+						}
 					},
 					"field_3a0vme2u": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_3a0vme2u"
+							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_3a0vme2u",
+							"schemaFieldUid": "field_057938c2-0209-4665-be31-2adca840940f"
 						}
 					},
 					"field_4Gff93vI": {
-						"ui:options": {}
+						"ui:options": {
+							"schemaFieldUid": "field_7ec2be63-0014-4dd4-966d-44404aaad910"
+						}
 					},
 					"field_4jxR0E0m": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_4jxR0E0m"
+							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_4jxR0E0m",
+							"schemaFieldUid": "field_32d71261-cc35-4a8e-97cd-21e5fd21f199"
 						}
 					},
 					"field_61bkBs0m": {
-						"ui:options": {}
+						"ui:options": {
+							"schemaFieldUid": "field_00e91b78-dcc7-4457-9fc0-f1a45a643c32"
+						}
 					},
 					"field_8pFvwc-v": {
+						"ui:options": {
+							"schemaFieldUid": "field_f1bda400-9a8d-4ee0-b3ac-f4f73549792a"
+						},
 						"ui:placeholder": "Наличие реплики в DAPP"
 					},
 					"field_9BXQE8SI": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_K2ioHD8d"
+							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_K2ioHD8d",
+							"schemaFieldUid": "field_704c304c-c99a-40b6-86a0-a7562024e8c5"
 						}
 					},
 					"field_AKLVuyFy": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_p4zxdNZG"
+							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_p4zxdNZG",
+							"schemaFieldUid": "field_759bbb62-26dc-44ea-9e16-40ad1c4bfa03"
 						}
 					},
 					"field_DBFG7kIN": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_DBFG7kIN"
+							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_DBFG7kIN",
+							"schemaFieldUid": "field_c5eb01d6-6ed6-45c5-8e44-521568e0b7ac"
 						}
 					},
 					"field_DJJtx7nX": {
-						"ui:options": {}
+						"ui:options": {
+							"schemaFieldUid": "field_8d2fadfa-bffc-48fc-ae01-2e8295462beb"
+						}
+					},
+					"field_F8GPVM7R": {
+						"ui:options": {
+							"schemaFieldUid": "field_ee81cbee-281b-4d15-b478-9b5dffac47aa"
+						}
 					},
 					"field_HuOLfL4K": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "Риск появления дополнительных систем-источников"
+							"dictionaryCode": "Риск появления дополнительных систем-источников",
+							"schemaFieldUid": "field_8f0b912b-84cd-4bf9-b978-f6713eed8b36"
 						}
 					},
 					"field_L1lRlgf1": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_L1lRlgf1"
+							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_L1lRlgf1",
+							"schemaFieldUid": "field_8cc4ea6a-62b9-410e-b56f-dda6755e65ff"
 						}
 					},
 					"field_TvqjyIO-": {
-						"ui:options": {}
+						"ui:options": {
+							"schemaFieldUid": "field_1a58b817-eb43-451c-a592-500b96998076"
+						}
 					},
 					"field_VX7y3PsB": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_VX7y3PsB"
+							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_VX7y3PsB",
+							"schemaFieldUid": "field_58353db5-247f-465a-8250-97b4693839bb"
 						}
 					},
 					"field_WgK6lIS-": {
-						"ui:options": {}
+						"ui:options": {
+							"schemaFieldUid": "field_83980706-189a-43ac-a9a3-ebb355fbcf01"
+						}
 					},
 					"field_Y_K0Hy0e": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.method.28.объ_м_запроса_по_сущностям"
+							"dictionaryCode": "v2.method.28.объ_м_запроса_по_сущностям",
+							"schemaFieldUid": "field_751a2780-f830-4a45-a4bb-6698014f5b9d"
 						}
 					},
 					"field_d3OCFyaC": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.method.27.сложность_предметной_области"
+							"dictionaryCode": "v2.method.27.сложность_предметной_области",
+							"schemaFieldUid": "field_3f716282-d75b-498f-a0b4-2d99f4a6599e"
 						}
 					},
 					"field_fJ_7OdE7": {
-						"ui:options": {},
+						"ui:options": {
+							"schemaFieldUid": "field_8a8bbc10-ade4-41c0-bc37-6f1eadb99723"
+						},
 						"ui:placeholder": "Необходимо подтвердить возможность интеграции"
 					},
-					"field_qMxSfHk1": {
-						"ui:options": {},
-						"ui:placeholder": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
-					},
 					"field_lDw9gG39": {
-						"ui:options": {}
+						"ui:options": {
+							"schemaFieldUid": "field_7d161d75-68cc-45be-92d2-2991928b567b"
+						}
 					},
 					"field_lzP44Urx": {
-						"ui:options": {},
+						"ui:options": {
+							"schemaFieldUid": "field_213d174a-4e1d-4843-8505-f7f5f4737feb"
+						},
 						"ui:placeholder": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик"
 					},
 					"field_nE73kPQl": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.method.29.детализация_и_ясность_запроса_rds"
+							"dictionaryCode": "v2.method.29.детализация_и_ясность_запроса_rds",
+							"schemaFieldUid": "field_d8ea6134-00e5-4fc6-9253-4885103db9e2"
 						}
+					},
+					"field_qMxSfHk1": {
+						"ui:options": {
+							"schemaFieldUid": "field_2eeb9751-22b7-4545-afeb-75bc4c7ec74e"
+						},
+						"ui:placeholder": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
 					},
 					"field_tpROQBf5": {
 						"ui:widget": "select",
 						"ui:options": {
 							"tooltip": "Соглашение о неразглашении",
-							"dictionaryCode": "v2.detailInfo.sourceSystems.items.nda"
+							"dictionaryCode": "v2.detailInfo.sourceSystems.items.nda",
+							"schemaFieldUid": "field_37dc02ff-01f5-4ae8-844a-cc66023efc98"
 						}
 					},
 					"field_vqqlHbU6": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_HMnqITVb"
-						}
-					},
-					"field_wf7CHiVI": {
-						"ui:widget": "select",
-						"ui:options": {
-							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_wf7CHiVI"
+							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_HMnqITVb",
+							"schemaFieldUid": "field_8e679168-535f-4dd9-b11c-790393469e8e"
 						}
 					},
 					"field_whHc-OoW": {
-						"ui:options": {},
+						"ui:options": {
+							"schemaFieldUid": "field_7464bec8-4d2e-4360-a38c-447fd0342be9"
+						},
 						"ui:placeholder": "Риск появления дополнительных систем-источников"
 					},
 					"field_wuYlhnu0": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_wuYlhnu0"
+							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
+							"schemaFieldUid": "field_d6554cad-b9ca-4b1e-b885-8868f35e60f5"
 						}
 					}
 				},
@@ -2115,16 +2322,23 @@
 					"addable": true,
 					"orderable": false,
 					"removable": true,
-					"archComponent": "sourceSystem"
+					"archComponent": "sourceSystem",
+					"schemaFieldUid": "field_4a77415d-9c12-4256-bc63-4087d1196874"
 				}
 			},
 			"field_npwqpBHt": {
 				"items": {
 					"name": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_5f1acfa0-3978-4775-871c-194bfd3904f7"
+						}
 					},
 					"total": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_a42df357-afe0-4637-91c8-1089904ae6c0"
+						},
 						"ui:readonly": true
 					},
 					"ui:order": [
@@ -2138,85 +2352,119 @@
 					"workType": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.dataObjects.applicationSources.items.development"
+							"dictionaryCode": "v2.method.14.тип_работ_для_нетиповой_работы_пропро",
+							"schemaFieldUid": "field_f38866c8-ac3e-4655-992d-57227c295b81"
 						}
 					},
 					"coefficient": {
 						"ui:widget": "text",
-						"ui:readonly": true
+						"ui:options": {
+							"schemaFieldUid": "field_1c464eec-e770-4f6d-b527-63d0da2acd78"
+						}
 					},
 					"estimateHoursPerDay": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_77ac0982-e942-4b7d-b5bb-077255c28ff8"
+						}
 					},
 					"includeInCalculation": {
-						"ui:widget": "checkbox"
+						"ui:widget": "checkbox",
+						"ui:options": {
+							"schemaFieldUid": "field_99d854e4-dffe-40d1-948c-b2fceadf831d"
+						}
 					}
 				},
 				"ui:options": {
 					"addable": true,
 					"orderable": false,
 					"removable": true,
-					"archComponent": "atypicalWork"
+					"archComponent": "atypicalWork",
+					"schemaFieldUid": "field_762c6a0e-c106-4100-bbff-c099fc9c8ca1"
 				}
 			},
 			"detailTypicalTasks": {
+				"items": {
+					"name": {
+						"ui:options": {
+							"schemaFieldUid": "field_b032a32f-5cec-4536-84ba-a732c3e6d8c7"
+						}
+					},
+					"total": {
+						"ui:options": {
+							"schemaFieldUid": "field_3c6f9dfe-77f9-41dc-9f21-d083a3c33c31"
+						}
+					},
+					"reason": {
+						"ui:options": {
+							"schemaFieldUid": "field_5b1b36c2-22e1-4cd8-9012-eb2621d893c0"
+						}
+					},
+					"workType": {
+						"ui:options": {
+							"schemaFieldUid": "field_74cb3d2f-76d5-4a2e-ac06-8760e37944d6"
+						}
+					},
+					"coefficient": {
+						"ui:options": {
+							"schemaFieldUid": "field_5e649147-121c-428c-910a-48c61315e2c3"
+						}
+					},
+					"estimateHoursPerDay": {
+						"ui:options": {
+							"schemaFieldUid": "field_1c7147ad-ecfd-42fa-a0cb-dd4cddda75b2"
+						}
+					}
+				},
 				"ui:options": {
 					"addable": false,
 					"orderable": false,
-					"removable": false
+					"removable": false,
+					"schemaFieldUid": "field_ec166924-3deb-4574-8fbc-1f88c316a64a"
 				},
 				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах",
-				"items": {
-					"ui:order": [
-						"name",
-						"estimateHoursPerDay",
-						"coefficient",
-						"total"
-					],
-					"name": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"estimateHoursPerDay": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"coefficient": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"total": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					}
-				}
+				"ui:description": "Формируются автоматически по правилам справочника при расчёте анкеты.\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
 			}
 		},
 		"generalInfo": {
+			"calcName": {
+				"ui:widget": "text",
+				"ui:options": {
+					"fullWidth": true,
+					"schemaFieldUid": "field_980e3837-5f9a-408b-8806-33004c3345a7"
+				},
+				"ui:placeholder": "Название анкеты"
+			},
 			"createIS": {
-				"ui:options": {},
+				"ui:options": {
+					"schemaFieldUid": "field_4526e23d-6e82-4ced-b941-694236a1eb09"
+				},
 				"ui:placeholder": "Создание ИС"
 			},
 			"ui:order": [
+				"calcName",
+				"field__iu-GEg1",
+				"field_vz9bm7A3",
 				"businessCustomer",
 				"implementationStream",
 				"complexity",
 				"createIS",
 				"createService",
-				"overallUncertaintyModal",
+				"field_GWL5PLfS",
 				"overallUncertainty",
 				"modelService"
 			],
 			"complexity": {
 				"ui:widget": "select",
 				"ui:options": {
-					"dictionaryCode": "v2.generalInfo.complexity"
+					"dictionaryCode": "v2.generalInfo.complexity",
+					"schemaFieldUid": "field_61a51b98-b6a8-47c9-aa27-74ff2219513f"
 				},
 				"ui:placeholder": "Регуляторные требования"
 			},
 			"ui:options": {
 				"sectionRole": "main",
+				"schemaFieldUid": "field_88fef16f-c45b-41b5-8d83-3da557fc8476",
 				"defaultExpanded": true,
 				"workflowSectionId": "generalInfo"
 			},
@@ -2242,124 +2490,226 @@
 				"workType": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.generalInfo.modelService.workType"
+						"dictionaryCode": "v2.generalInfo.modelService.workType",
+						"schemaFieldUid": "field_22ae6d02-b421-41ee-ba8a-5b3153f0f040"
 					},
 					"ui:placeholder": "Тип работ"
 				},
 				"modelClass": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.method.2.класс_моделей"
+						"dictionaryCode": "v2.method.2.класс_моделей",
+						"schemaFieldUid": "field_248655c8-3aa7-4a38-9afd-d09c21f9f122"
 					},
 					"ui:placeholder": "Класс моделей"
 				},
 				"ui:options": {
 					"sectionRole": "subsection",
 					"archComponent": "modelService",
+					"schemaFieldUid": "field_3bc4dc73-6804-4107-8251-5e41d9a1dfed",
 					"showFilledCount": true
 				},
 				"prePromEval": {
+					"ui:options": {
+						"schemaFieldUid": "field_7ff20c0a-1cd7-4d66-99ae-b52ed1a9bb3a"
+					},
 					"ui:placeholder": "Необходимость поддержки проведения пилота"
 				},
 				"pkRegulatory": {
-					"ui:options": {},
+					"ui:options": {
+						"schemaFieldUid": "field_08ccfd5f-235f-40d5-bbee-4a4873b9a8d0"
+					},
 					"ui:placeholder": "ПВР/Регуляторная"
 				},
 				"field_4IL7OStC": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "Способ загрузки данных в BI-систему"
+						"dictionaryCode": "Способ загрузки данных в BI-систему",
+						"schemaFieldUid": "field_2ceb3182-537b-4ffb-80e7-03ff397d61f2"
 					},
 					"ui:placeholder": "Способ загрузки данных в BI-систему"
 				},
 				"field_F7nK-We5": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.modelserviceiInfo.bidbtype"
+						"dictionaryCode": "v2.modelserviceiInfo.bidbtype",
+						"schemaFieldUid": "field_f1d16b7e-c700-40fc-abee-8c7dbad9e6ac"
 					},
 					"ui:placeholder": "Тип БД для BI-системы"
 				},
 				"field_JcKtx9Mg": {
-					"ui:options": {},
+					"ui:options": {
+						"schemaFieldUid": "field_9c96b450-48ee-4284-b8ea-0419b45812f8"
+					},
 					"ui:placeholder": "Требуется оркестратор"
 				},
 				"field_KzzDtkB0": {
-					"ui:options": {},
+					"ui:options": {
+						"schemaFieldUid": "field_031c725e-0b8d-49bb-a44c-61606b62fe4e"
+					},
 					"ui:placeholder": "Требуется визуализация результатов работы модельного сервиса"
 				},
 				"field_SvNx6iEq": {
 					"ui:widget": "select",
 					"ui:options": {
 						"multiple": true,
-						"dictionaryCode": "v2.method.3.вид_контроля"
+						"dictionaryCode": "v2.method.3.вид_контроля",
+						"schemaFieldUid": "field_355676f4-fbf4-4e9c-9870-86736e6e05d7"
 					},
 					"ui:placeholder": "Вид контроля"
 				},
 				"field_Y2S_XRAQ": {
-					"ui:options": {},
+					"ui:options": {
+						"schemaFieldUid": "field_467bb8b7-95ba-4383-b06b-c42515f9d9d7"
+					},
 					"ui:placeholder": "Использование данных СХК через РЕПО"
 				},
 				"field_dEVFQVQn": {
+					"ui:options": {
+						"schemaFieldUid": "field_18c2a4b9-199d-4f71-84e0-1c94caf3ca8b"
+					},
 					"ui:placeholder": "Название модельного сервиса"
 				},
 				"field_imxB4YEd": {
-					"ui:options": {},
+					"ui:options": {
+						"schemaFieldUid": "field_d3b505fd-e708-4ec0-9669-b6352b705d42"
+					},
 					"ui:placeholder": "Первичное подключение ИС к РЕПО"
 				},
 				"field_jUm5syZf": {
 					"ui:widget": "select",
 					"ui:options": {
 						"multiple": true,
-						"dictionaryCode": "v2.method.4.канал_внедрения"
+						"dictionaryCode": "v2.method.4.канал_внедрения",
+						"schemaFieldUid": "field_4fb7d302-c5f0-49e6-9cd2-959a1fbe1f4e"
 					},
 					"ui:placeholder": "Каналы внедрения"
 				},
 				"field_kkbRs50S": {
-					"ui:options": {},
+					"ui:options": {
+						"schemaFieldUid": "field_03128147-5fa6-4163-8aee-5eeadfeb15e9"
+					},
 					"ui:placeholder": "Хранение артефактов в РЕПО"
 				},
 				"field_o_HRj6VO": {
 					"ui:options": {
-						"tooltip": "Применяется в случае, если требуется создать прототип модели, которую Заказчик планирует апробировать перед выносом в пром. Длительность пилота ограничена 6 месяцами. Блокируется при выборе 'Да' в поле 'Модель разработана?"
+						"tooltip": "Применяется в случае, если требуется создать прототип модели, которую Заказчик планирует апробировать перед выносом в пром. Длительность пилота ограничена 6 месяцами. Блокируется при выборе 'Да' в поле 'Модель разработана?",
+						"schemaFieldUid": "field_eb6300e7-8889-40bf-92a1-0c8a778de8ef"
 					},
 					"ui:placeholder": "Необходимость пилота"
 				},
 				"field_r66ph-79": {
-					"ui:options": {},
+					"ui:options": {
+						"schemaFieldUid": "field_40c7febb-4936-4cb9-9a83-3f95bbf28754"
+					},
 					"ui:placeholder": "Перекладка артефактов между контурами посредством РЕПО"
 				}
 			},
 			"createService": {
+				"ui:options": {
+					"schemaFieldUid": "field_a7ab92c0-2a08-4639-bb5c-559b0d53442d"
+				},
 				"ui:placeholder": "Создание сервиса"
+			},
+			"field_GWL5PLfS": {
+				"ui:widget": "textarea",
+				"ui:options": {
+					"schemaFieldUid": "field_339ec533-a27b-4093-8aa6-e66260b20a8e"
+				},
+				"ui:placeholder": "Комментарий"
+			},
+			"field__iu-GEg1": {
+				"ui:options": {
+					"schemaFieldUid": "field_c24dc59d-78de-4490-a4d0-f77773efdd28"
+				}
+			},
+			"field_vz9bm7A3": {
+				"ui:options": {
+					"schemaFieldUid": "field_25f8f4f8-0afe-403d-b146-419467072587"
+				}
 			},
 			"businessCustomer": {
 				"ui:widget": "select",
 				"ui:options": {
 					"tooltip": "Указывается департамент заказчика, для которого требуется оценить инициативу",
 					"multiple": true,
-					"dictionaryCode": "v2.generalInfo.businessCustomer"
+					"dictionaryCode": "v2.generalInfo.businessCustomer",
+					"schemaFieldUid": "field_25b55ce1-bb7f-4de6-a666-be200a0eb6c5"
 				},
 				"ui:placeholder": "Департамент заказчика"
-			},
-			"overallUncertaintyModal": {
-				"ui:widget": "V2UncertaintyModalWidget",
-				"ui:options": {
-					"fullWidth": true
-				}
 			},
 			"overallUncertainty": {
 				"ui:help": "Редактируется через кнопку «Рассчитать общую неопределённость» в разделе",
 				"ui:widget": "hidden",
 				"ui:options": {
-					"hidden": true
+					"hidden": true,
+					"schemaFieldUid": "field_0a089432-ff45-4f1d-90be-13040532bde3"
 				}
 			},
 			"implementationStream": {
 				"ui:widget": "select",
 				"ui:options": {
-					"dictionaryCode": "v2.generalInfo.implementationStream"
+					"dictionaryCode": "v2.generalInfo.implementationStream",
+					"schemaFieldUid": "field_5a37fd57-e717-4cfd-9a05-4125455c8564"
 				},
 				"ui:placeholder": "Стрим-исполнитель"
+			}
+		},
+		"field_V6wVCAX9": {
+			"items": {
+				"name": {
+					"ui:widget": "text",
+					"ui:options": {
+						"schemaFieldUid": "field_b32df413-cc20-4c9d-942b-358fb660e70c"
+					}
+				},
+				"total": {
+					"ui:widget": "text",
+					"ui:options": {
+						"schemaFieldUid": "field_be794a74-430b-4754-8b95-a0da94f1e55e"
+					},
+					"ui:readonly": true
+				},
+				"ui:order": [
+					"name",
+					"workType",
+					"estimateHoursPerDay",
+					"coefficient",
+					"total",
+					"includeInCalculation"
+				],
+				"workType": {
+					"ui:widget": "select",
+					"ui:options": {
+						"dictionaryCode": "v2.method.14.тип_работ_для_нетиповой_работы_пропро",
+						"schemaFieldUid": "field_75b7f49d-03ab-41ca-b5c6-2d9d56eff77a"
+					}
+				},
+				"coefficient": {
+					"ui:widget": "text",
+					"ui:options": {
+						"schemaFieldUid": "field_c872e523-7d59-4754-b762-b1e14e7c2f96"
+					}
+				},
+				"estimateHoursPerDay": {
+					"ui:widget": "text",
+					"ui:options": {
+						"schemaFieldUid": "field_92aaea75-6417-4522-b4e4-ef63260058f2"
+					}
+				},
+				"includeInCalculation": {
+					"ui:widget": "checkbox",
+					"ui:options": {
+						"schemaFieldUid": "field_82ed80aa-9f89-42fd-8d1a-b19f00148f9b"
+					}
+				}
+			},
+			"ui:options": {
+				"addable": true,
+				"orderable": false,
+				"removable": true,
+				"archComponent": "atypicalWork",
+				"schemaFieldUid": "field_47a1122e-6107-4687-b7dc-be65159690c7"
 			}
 		},
 		"field_aJEu5ziT": {
@@ -2369,10 +2719,11 @@
 				"field_eCyDEFw3"
 			],
 			"ui:options": {
-				"streamBlock": true,
-				"streamExecutor": "ПиРМ",
 				"sectionRole": "main",
+				"streamBlock": true,
+				"schemaFieldUid": "field_38265b0e-e8b0-44b4-8684-2a4310407e64",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
+				"streamExecutor": "ПиРМ",
 				"defaultExpanded": false
 			},
 			"field_DWMBYTaF": {
@@ -2382,7 +2733,8 @@
 				"ui:options": {
 					"addable": false,
 					"orderable": false,
-					"removable": false
+					"removable": false,
+					"schemaFieldUid": "field_b6ec30a1-0b93-4966-9aa1-79de8d8c27b7"
 				},
 				"ui:readonly": true,
 				"ui:description": "Формируются автоматически по правилам справочника на основании локальных параметров стрима и компонентов «Система-источник».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
@@ -2390,10 +2742,16 @@
 			"field_eCyDEFw3": {
 				"items": {
 					"name": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_9ee2d06a-e6dd-4ea5-ad3d-cfe242fac0e8"
+						}
 					},
 					"total": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_573d35f5-f183-4aa3-94f4-e72d41f33377"
+						},
 						"ui:readonly": true
 					},
 					"ui:order": [
@@ -2407,59 +2765,98 @@
 					"workType": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.method.14.тип_работ_для_нетиповой_работы_пропро"
+							"dictionaryCode": "v2.method.14.тип_работ_для_нетиповой_работы_пропро",
+							"schemaFieldUid": "field_bc75efb7-d729-49b7-a1bd-623ce91c0fd4"
 						}
 					},
 					"coefficient": {
 						"ui:widget": "text",
-						"ui:readonly": true
+						"ui:options": {
+							"schemaFieldUid": "field_33551654-a6e1-4e04-8550-5808114214f2"
+						}
 					},
 					"estimateHoursPerDay": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_5fec5393-4897-4fde-88c8-88c6e7effdb8"
+						}
 					},
 					"includeInCalculation": {
-						"ui:widget": "checkbox"
+						"ui:widget": "checkbox",
+						"ui:options": {
+							"schemaFieldUid": "field_f7891261-75a0-4bea-9250-3ed20aec69cc"
+						}
 					}
 				},
 				"ui:options": {
 					"addable": true,
 					"orderable": false,
 					"removable": true,
-					"archComponent": "atypicalWork"
+					"archComponent": "atypicalWork",
+					"schemaFieldUid": "field_e4510f6f-8d65-47fb-8645-4628266b0b3f"
 				}
 			},
 			"sourceTypicalTasks": {
 				"items": {
-					"ui:order": [
-						"name",
-						"estimateHoursPerDay",
-						"coefficient",
-						"total"
-					],
 					"name": {
 						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"estimateHoursPerDay": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"coefficient": {
-						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_34ec1f9b-2e39-4525-816d-85ff2e86940c"
+						},
 						"ui:readonly": true
 					},
 					"total": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_b4ba2f85-ad38-457a-98ea-3b18861aee27"
+						},
+						"ui:readonly": true
+					},
+					"reason": {
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_3d1127de-2c28-4ec1-9368-93bd67be6270"
+						},
+						"ui:readonly": true
+					},
+					"ui:order": [
+						"name",
+						"workType",
+						"reason",
+						"total",
+						"coefficient",
+						"estimateHoursPerDay"
+					],
+					"workType": {
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_d047c413-b143-4f17-b755-c1997eb7323f"
+						},
+						"ui:readonly": true
+					},
+					"coefficient": {
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_548bcc55-f0d1-44ad-8478-460130e0f666"
+						},
+						"ui:readonly": true
+					},
+					"estimateHoursPerDay": {
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_aacbdb0a-6ad1-49ed-88ba-d50ed5423f46"
+						},
 						"ui:readonly": true
 					}
 				},
 				"ui:options": {
 					"addable": false,
 					"orderable": false,
-					"removable": false
+					"removable": false,
+					"schemaFieldUid": "field_c66b1077-3931-4e05-a1bb-9727393bb7ba"
 				},
 				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
+				"ui:description": "Формируются автоматически по правилам справочника на основании локальных параметров стрима и компонентов «Система-источник».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
 			}
 		},
 		"field_i8dL7QZa": {
@@ -2467,19 +2864,26 @@
 				"field_eCyDEFw3"
 			],
 			"ui:options": {
-				"streamBlock": true,
-				"streamExecutor": "ДАДМ",
 				"sectionRole": "main",
+				"streamBlock": true,
+				"schemaFieldUid": "field_045cee7d-650b-4b64-9dc4-3009e9bfbc33",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
+				"streamExecutor": "ДАДМ",
 				"defaultExpanded": false
 			},
 			"field_eCyDEFw3": {
 				"items": {
 					"name": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_ad8ff795-c4c5-4202-8394-5aa024f009eb"
+						}
 					},
 					"total": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_69f168b3-493f-4926-a648-f26af54a8f0f"
+						},
 						"ui:readonly": true
 					},
 					"ui:order": [
@@ -2490,42 +2894,56 @@
 						"total",
 						"includeInCalculation"
 					],
-					"workType": {},
+					"workType": {
+						"ui:options": {
+							"schemaFieldUid": "field_4a3e08c7-c93c-40ab-ac47-435de9394172"
+						}
+					},
 					"coefficient": {
 						"ui:widget": "text",
-						"ui:readonly": true
+						"ui:options": {
+							"schemaFieldUid": "field_001b6c1f-3027-4121-944a-6580e967024e"
+						}
 					},
 					"estimateHoursPerDay": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_b38d2fe3-69e1-416e-bda6-8578267e70c5"
+						}
 					},
 					"includeInCalculation": {
-						"ui:widget": "checkbox"
+						"ui:widget": "checkbox",
+						"ui:options": {
+							"schemaFieldUid": "field_7650f28b-6c2e-496d-9b32-2d18f0c56eb5"
+						}
 					}
 				},
 				"ui:options": {
 					"addable": true,
 					"orderable": false,
 					"removable": true,
-					"archComponent": "atypicalWork"
+					"archComponent": "atypicalWork",
+					"schemaFieldUid": "field_8c9d6813-67a0-4b51-944d-cd69f761bbb0"
 				}
 			}
 		},
 		"groupActivation": {
 			"ui:options": {
-				"hidden": true
+				"hidden": true,
+				"schemaFieldUid": "field_a93ecb9a-a081-4e17-8d63-baddf5cef778"
 			}
 		},
 		"streamDataSources": {
 			"ui:order": [
 				"localParams",
-				"sourceTypicalTasks",
-				"field_eCyDEFw3"
+				"field_u-7AkDrP"
 			],
 			"ui:options": {
-				"streamBlock": true,
-				"streamExecutor": "Источники данных",
 				"sectionRole": "main",
+				"streamBlock": true,
+				"schemaFieldUid": "field_c37298ad-14f3-4b8c-ba41-aaae021c004c",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
+				"streamExecutor": "Источники данных",
 				"defaultExpanded": false,
 				"workflowSectionId": "streamDataSources"
 			},
@@ -2538,96 +2956,72 @@
 				],
 				"ui:options": {
 					"sectionRole": "subsection",
+					"schemaFieldUid": "field_55566904-6c77-4d9b-861b-f85316ed0f87",
 					"showFilledCount": true
 				},
 				"field_FLO128j-": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.streamDataSources.localParams.tisChangeVolume"
+						"dictionaryCode": "v2.streamDataSources.localParams.tisChangeVolume",
+						"schemaFieldUid": "field_6b7beaa3-26db-4f1f-bb67-9575205a76ef"
 					}
 				},
 				"field_P1nnb5h5": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.streamDataSources.localParams.studyRegulations"
+						"dictionaryCode": "v2.streamDataSources.localParams.studyRegulations",
+						"schemaFieldUid": "field_704369e7-b3c4-47c9-88de-8125a21608db"
 					}
 				},
 				"field_fWcU13WA": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.streamDataSources.localParams.reapproveArtifact"
+						"dictionaryCode": "v2.streamDataSources.localParams.reapproveArtifact",
+						"schemaFieldUid": "field_5bed7080-82fd-4207-a383-07a570e89113"
 					}
 				},
 				"field_oHrG3Q3A": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.streamDataSources.localParams.stakeholdersKnown"
+						"dictionaryCode": "v2.streamDataSources.localParams.stakeholdersKnown",
+						"schemaFieldUid": "field_cd356d1e-eaa3-44f0-a7dd-0e8c94a2e5a1"
 					}
 				}
 			},
-			"field_eCyDEFw3": {
+			"field_u-7AkDrP": {
 				"items": {
 					"name": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_3bef6a2f-bad7-4c40-aa67-ea5ca3fb7084"
+						},
+						"ui:readonly": true
 					},
 					"total": {
 						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"ui:order": [
-						"name",
-						"workType",
-						"estimateHoursPerDay",
-						"coefficient",
-						"total",
-						"includeInCalculation"
-					],
-					"workType": {
-						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.method.14.тип_работ_для_нетиповой_работы_пропро"
-						}
-					},
-					"coefficient": {
-						"ui:widget": "text",
+							"schemaFieldUid": "field_c3028cec-fca7-4223-803c-ae951b40e9a5"
+						},
 						"ui:readonly": true
 					},
-					"estimateHoursPerDay": {
-						"ui:widget": "text"
-					},
-					"includeInCalculation": {
-						"ui:widget": "checkbox"
-					}
-				},
-				"ui:options": {
-					"addable": true,
-					"orderable": false,
-					"removable": true,
-					"archComponent": "atypicalWork"
-				}
-			},
-			"sourceTypicalTasks": {
-				"items": {
 					"ui:order": [
 						"name",
 						"estimateHoursPerDay",
 						"coefficient",
 						"total"
 					],
-					"name": {
+					"coefficient": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_1dbe1cb9-0058-4931-8e5e-0580a80ef845"
+						},
 						"ui:readonly": true
 					},
 					"estimateHoursPerDay": {
 						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"coefficient": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"total": {
-						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_b5c3bac3-8010-4afa-bf9e-f21a3978e629"
+						},
 						"ui:readonly": true
 					}
 				},
@@ -2635,23 +3029,35 @@
 					"addable": false,
 					"orderable": false,
 					"removable": false,
-					"archComponent": "typicalWork"
+					"boundWorkIds": [
+						"523dbce7-48be-47a5-8ab4-348d3b09fd85",
+						"95304956-f3e8-44ea-9607-0eddf1c3b3b2",
+						"c04fd1f6-6f4c-4c50-adba-30de430396ec",
+						"0e7063d3-870b-4e9d-953d-29bb7db811b8",
+						"40d94691-370a-431d-a5ef-8a85ae605af1",
+						"d1800d9b-868f-4c84-893a-218d1d3bbae2",
+						"97d144ad-ca0a-404f-8a17-5eef2b4934b4",
+						"ad738931-fcf6-4de9-b7eb-68defba4c47b"
+					],
+					"archComponent": "typicalWork",
+					"schemaFieldUid": "field_5f30f5f1-60e2-4e1e-8651-17ae5979e530",
+					"streamExecutor": "Источники данных"
 				},
-				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
+				"ui:description": "Список заполняется автоматически при срабатывании триггеров типовых работ.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
 			}
 		},
 		"streamModelControl": {
 			"ui:order": [
 				"localParams",
-				"field_Khn6-HAW",
-				"field_QkVbhG-_"
+				"field_G0AoYAl8",
+				"field_hQeUoQl4"
 			],
 			"ui:options": {
-				"streamBlock": true,
-				"streamExecutor": "Контроль моделей",
 				"sectionRole": "main",
+				"streamBlock": true,
+				"schemaFieldUid": "field_9d964cb9-c074-4484-a952-ca1f1d28bfa8",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
+				"streamExecutor": "Контроль моделей",
 				"defaultExpanded": false,
 				"workflowSectionId": "streamModelControl"
 			},
@@ -2668,62 +3074,89 @@
 				],
 				"ui:options": {
 					"sectionRole": "subsection",
+					"schemaFieldUid": "field_7c4e124e-e75d-4d27-b8f2-f96a03c2f40d",
 					"showFilledCount": true
 				},
 				"field_5tjhj31h": {
-					"ui:options": {}
+					"ui:options": {
+						"schemaFieldUid": "field_af8e5543-fad3-4feb-8805-054c09829a83"
+					}
 				},
 				"field_B3r6KeDB": {
-					"ui:options": {}
+					"ui:options": {
+						"schemaFieldUid": "field_674e4602-5244-42e8-bbdd-4cf68ef10d40"
+					}
 				},
 				"field_IGQX_9FN": {
-					"ui:options": {}
+					"ui:options": {
+						"schemaFieldUid": "field_15e8f2e9-0ea8-46f5-a7d3-59abcb82cb12"
+					}
 				},
 				"field_OrZLpCID": {
-					"ui:options": {}
+					"ui:options": {
+						"schemaFieldUid": "field_1299cf13-fa98-4d66-8420-52f5e31849ce"
+					}
 				},
 				"field_Tq1ez5gv": {
-					"ui:options": {}
+					"ui:options": {
+						"schemaFieldUid": "field_15a1b9f6-7250-46b0-b7b5-0fc9175fde57"
+					}
 				},
 				"field_Vc8LdrIe": {
 					"ui:widget": "select",
 					"ui:options": {
-						"dictionaryCode": "v2.method.5.тип_источника_данных"
+						"dictionaryCode": "v2.method.5.тип_источника_данных",
+						"schemaFieldUid": "field_2b440e6f-f401-4512-af0e-a2862f60bc8c"
 					}
 				},
 				"field_oVFNOrlT": {
 					"ui:widget": "select",
 					"ui:options": {
 						"multiple": true,
-						"dictionaryCode": "v2.streamModelControl.localParams.field_EhLyopSI"
+						"dictionaryCode": "v2.streamModelControl.localParams.field_EhLyopSI",
+						"schemaFieldUid": "field_afddd832-6e8b-46ab-afc4-cc61aa6ad9e9"
 					}
 				},
 				"field_ovsN_jvq": {
-					"ui:options": {}
+					"ui:options": {
+						"schemaFieldUid": "field_5532c4ea-ebdb-461f-a709-51dad9d56641"
+					}
 				}
 			},
-			"field_Khn6-HAW": {
+			"field_G0AoYAl8": {
 				"items": {
+					"name": {
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_40a11002-ce02-4f81-9d09-062b6e0dd36d"
+						},
+						"ui:readonly": true
+					},
+					"total": {
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_66c62ff7-143c-48fa-99e4-1a92d1d6e643"
+						},
+						"ui:readonly": true
+					},
 					"ui:order": [
 						"name",
 						"estimateHoursPerDay",
 						"coefficient",
 						"total"
 					],
-					"name": {
+					"coefficient": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_1b03ad61-4e53-42aa-b44b-aaf75521768c"
+						},
 						"ui:readonly": true
 					},
 					"estimateHoursPerDay": {
 						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"coefficient": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"total": {
-						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_a4f120d9-005d-41fd-9d60-28ae60d87c61"
+						},
 						"ui:readonly": true
 					}
 				},
@@ -2731,18 +3164,25 @@
 					"addable": false,
 					"orderable": false,
 					"removable": false,
-					"archComponent": "typicalWork"
+					"boundWorkIds": [],
+					"archComponent": "typicalWork",
+					"schemaFieldUid": "field_3e1d8681-5311-43fa-9710-5b3c3ee5e301"
 				},
-				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
+				"ui:description": "Список заполняется автоматически при срабатывании триггеров типовых работ.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
 			},
-			"field_QkVbhG-_": {
+			"field_hQeUoQl4": {
 				"items": {
 					"name": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_3db038a3-5f5f-40f3-ae3d-e52950e19da8"
+						}
 					},
 					"total": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_178516c2-6a90-4d0f-8c28-0ec94e7d3aa3"
+						},
 						"ui:readonly": true
 					},
 					"ui:order": [
@@ -2756,39 +3196,50 @@
 					"workType": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.method.14.тип_работ_для_нетиповой_работы_пропро"
+							"dictionaryCode": "v2.method.14.тип_работ_для_нетиповой_работы_пропро",
+							"schemaFieldUid": "field_f83c6604-9045-40be-b74c-c147d4054dba"
 						}
 					},
 					"coefficient": {
 						"ui:widget": "text",
-						"ui:readonly": true
+						"ui:options": {
+							"schemaFieldUid": "field_fce8094b-e3f9-47eb-b5d4-29e5f48b97ab"
+						}
 					},
 					"estimateHoursPerDay": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_9856476c-410a-4479-9c1c-6fd96c388461"
+						}
 					},
 					"includeInCalculation": {
-						"ui:widget": "checkbox"
+						"ui:widget": "checkbox",
+						"ui:options": {
+							"schemaFieldUid": "field_a148c0dc-b3da-4a7c-93b6-cae48fc6d9a2"
+						}
 					}
 				},
 				"ui:options": {
 					"addable": true,
 					"orderable": false,
 					"removable": true,
-					"archComponent": "atypicalWork"
+					"archComponent": "atypicalWork",
+					"schemaFieldUid": "field_81a987ee-6365-45a0-8da4-13490cdbaf6e"
 				}
 			}
 		},
 		"streamDigitalAgents": {
 			"ui:order": [
 				"field_8R2HHTY4",
-				"field_r8nz3JWH"
+				"field_AuPTJbZa"
 			],
 			"ui:options": {
-				"streamBlock": true,
-				"streamExecutor": "Цифровые агенты",
 				"groupActive": false,
 				"sectionRole": "panel",
+				"streamBlock": true,
+				"schemaFieldUid": "field_27837af1-9cfe-4453-8419-98d33f2b87e1",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
+				"streamExecutor": "Цифровые агенты",
 				"defaultExpanded": false,
 				"groupActivatable": true
 			},
@@ -2799,18 +3250,25 @@
 				"ui:options": {
 					"addable": false,
 					"orderable": false,
-					"removable": false
+					"removable": false,
+					"schemaFieldUid": "field_2bc29e46-1584-470a-976d-784dd6748e11"
 				},
 				"ui:readonly": true,
 				"ui:description": "Формируются автоматически по правилам справочника на основании локальных параметров стрима и компонентов «Система-источник».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
 			},
-			"field_r8nz3JWH": {
+			"field_AuPTJbZa": {
 				"items": {
 					"name": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_c95e575c-38b4-4c63-ab46-3ea783565187"
+						}
 					},
 					"total": {
 						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_82e53f00-7f00-4c09-89dc-aad64013a285"
+						},
 						"ui:readonly": true
 					},
 					"ui:order": [
@@ -2824,82 +3282,52 @@
 					"workType": {
 						"ui:widget": "select",
 						"ui:options": {
-							"dictionaryCode": "v2.method.14.тип_работ_для_нетиповой_работы_пропро"
+							"dictionaryCode": "v2.method.14.тип_работ_для_нетиповой_работы_пропро",
+							"schemaFieldUid": "field_df15a5f7-a318-4ea4-acbe-33087c57ea45"
 						}
 					},
 					"coefficient": {
 						"ui:widget": "text",
-						"ui:readonly": true
+						"ui:options": {
+							"schemaFieldUid": "field_43031966-56aa-4fd8-b5ec-472f89cbe5b0"
+						}
 					},
 					"estimateHoursPerDay": {
-						"ui:widget": "text"
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_28ba5411-4632-453e-9303-4c2d9181b903"
+						}
 					},
 					"includeInCalculation": {
-						"ui:widget": "checkbox"
+						"ui:widget": "checkbox",
+						"ui:options": {
+							"schemaFieldUid": "field_7876e6ee-de17-46bc-898c-1acd7abf1a83"
+						}
 					}
 				},
 				"ui:options": {
 					"addable": true,
 					"orderable": false,
 					"removable": true,
-					"archComponent": "atypicalWork"
+					"archComponent": "atypicalWork",
+					"schemaFieldUid": "field_a232299f-1e7c-4ff7-98c1-a990a33985c0"
 				}
 			}
 		},
 		"streamStreamingData": {
 			"ui:order": [
 				"field_8uYGWAZ9",
-				"field_2l6A7K3g"
+				"field_xzzoJBAc"
 			],
 			"ui:options": {
-				"streamBlock": true,
-				"streamExecutor": "Потоковые данные",
 				"groupActive": false,
 				"sectionRole": "panel",
+				"streamBlock": true,
+				"schemaFieldUid": "field_7b00a615-654b-4642-a989-554356b42864",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
+				"streamExecutor": "Потоковые данные",
 				"defaultExpanded": false,
 				"groupActivatable": true
-			},
-			"field_2l6A7K3g": {
-				"items": {
-					"name": {
-						"ui:widget": "text"
-					},
-					"total": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"ui:order": [
-						"name",
-						"workType",
-						"estimateHoursPerDay",
-						"coefficient",
-						"total",
-						"includeInCalculation"
-					],
-					"workType": {
-						"ui:widget": "select",
-						"ui:options": {
-							"dictionaryCode": "v2.method.14.тип_работ_для_нетиповой_работы_пропро"
-						}
-					},
-					"coefficient": {
-						"ui:widget": "text",
-						"ui:readonly": true
-					},
-					"estimateHoursPerDay": {
-						"ui:widget": "text"
-					},
-					"includeInCalculation": {
-						"ui:widget": "checkbox"
-					}
-				},
-				"ui:options": {
-					"addable": true,
-					"orderable": false,
-					"removable": true,
-					"archComponent": "atypicalWork"
-				}
 			},
 			"field_8uYGWAZ9": {
 				"items": {
@@ -2908,17 +3336,75 @@
 				"ui:options": {
 					"addable": false,
 					"orderable": false,
-					"removable": false
+					"removable": false,
+					"schemaFieldUid": "field_9970ffc1-b394-482e-a6a6-2f9c6d147615"
 				},
 				"ui:readonly": true,
 				"ui:description": "Формируются автоматически по правилам справочника на основании локальных параметров стрима и компонентов «Система-источник».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
+			},
+			"field_xzzoJBAc": {
+				"items": {
+					"name": {
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_f70dd542-e4c6-448a-a499-19dce4bca605"
+						}
+					},
+					"total": {
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_62bc42c9-c492-4b1a-b76e-9e8692725b70"
+						},
+						"ui:readonly": true
+					},
+					"ui:order": [
+						"name",
+						"workType",
+						"estimateHoursPerDay",
+						"coefficient",
+						"total",
+						"includeInCalculation"
+					],
+					"workType": {
+						"ui:widget": "select",
+						"ui:options": {
+							"dictionaryCode": "v2.method.14.тип_работ_для_нетиповой_работы_пропро",
+							"schemaFieldUid": "field_0e5a61c7-8e9b-4618-8ba6-554029bfb51a"
+						}
+					},
+					"coefficient": {
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_aa3477bd-9ce4-4eb1-81ce-4ba3f52cee83"
+						}
+					},
+					"estimateHoursPerDay": {
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_b9294f29-c794-47d0-a40e-d773d1d0a373"
+						}
+					},
+					"includeInCalculation": {
+						"ui:widget": "checkbox",
+						"ui:options": {
+							"schemaFieldUid": "field_b0551dfc-9af6-4034-8ab8-a3e70a718ec0"
+						}
+					}
+				},
+				"ui:options": {
+					"addable": true,
+					"orderable": false,
+					"removable": true,
+					"archComponent": "atypicalWork",
+					"schemaFieldUid": "field_71126a33-c1d2-4dd2-846f-425e6eb42c78"
+				}
 			}
 		},
 		"uncertaintyCalculation": {
 			"ui:order": [
-				"initiativeTimeline",
-				"initiativeCost",
-				"uncertaintyAdjustment",
+				"field_xGCMlbMP",
+				"field_bbTNlnC6",
+				"field_QCwwo5c5",
 				"riskGroup"
 			],
 			"riskGroup": {
@@ -2939,130 +3425,123 @@
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Запрет/задержка разрешения от внешних регуляторов на работы\n\\n* Отсутствие приемлемого контрагента (вендор/поставщик)",
-						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.sanctions"
+						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.sanctions",
+						"schemaFieldUid": "field_dcc85a82-25e5-4cd7-b300-14f25048002d"
 					}
+				},
+				"ui:options": {
+					"schemaFieldUid": "field_6da6e9c1-61ad-46d7-a573-a3aa8c0f237f"
 				},
 				"staffShortage": {
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Недостаток / отсутствие ресурсов на работы по реализации проекта разработки и внедрению доработок проекта (в т.ч. у подрядчика)\n\\n* Недостаточные компетенции персонала\n\\n* Недостаточный уровень набора дополнительного персонала",
-						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.staffShortage"
+						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.staffShortage",
+						"schemaFieldUid": "field_cb1419d6-b570-4b5f-b46d-cf56edc07831"
 					}
 				},
 				"defectsInSolution": {
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Сбои в работе инфраструктуры и сервисного обслуживания\n\\n* Сбои в работе ПО\n\\n* Сбои продукта на этапе интеграции\n\\n* Ошибки в системном ПО, интегрируемых системах",
-						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.defectsInSolution"
+						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.defectsInSolution",
+						"schemaFieldUid": "field_f67adc93-2753-43e7-a75a-4c83773e6664"
 					}
 				},
 				"laborCostIncrease": {
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Недостаточная проработка требований на этапах детального анализа\n\\n* Недостатки планирования и обеспечения непрерывности деятельности\n\\n* Расширение границ задач проекта или изменение трудозатрат по задачам",
-						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.laborCostIncrease"
+						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.laborCostIncrease",
+						"schemaFieldUid": "field_bf261be2-af08-4c5e-8022-8ec8b3d235e6"
 					}
 				},
 				"regulatoryChanges": {
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Изменение требований внешних регуляторов и прочие несовершенства правовой системы",
-						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.regulatoryChanges"
+						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.regulatoryChanges",
+						"schemaFieldUid": "field_444ab7f8-e74d-4b62-9a40-76d5aed3c7e0"
 					}
 				},
 				"businessComplexity": {
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Изменение бизнес-процессов Банка\n\\n* Недостатки коммуникаций / взаимодействия\n\\n* Неполные и нечеткие обязанности\n\\n* Отсутствие выделения ставок на наем персонала необходимого для реализации проекта\n\\n* Задержка заключения договоров с подрядчиками\n\\n* Длительное согласование проектных документов в Банке\n\\n* Отсутствие утвержденных нормативных документов",
-						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.businessComplexity"
+						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.businessComplexity",
+						"schemaFieldUid": "field_41c55293-7225-4690-bbb6-598f7d5550bb"
 					}
 				},
 				"thirdPartyNegligence": {
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Задержка в закупке, поставке и развертывании оборудования\n\\n* Ненадлежащее качество исполнения услуг со стороны привлеченных контрагентов/подрядчиков\n\\n* Нарушение подрядчиками сроков выполнения работ\n\\n* Экономические события, влиящие на состояние третьих лиц, в том числе банкротство",
-						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.thirdPartyNegligence"
+						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.thirdPartyNegligence",
+						"schemaFieldUid": "field_8ca50850-3fa4-4a25-ab5d-96c57fca0e05"
 					}
 				},
 				"controlProceduresLack": {
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Недостаточное вовлечение руководства\n\\n* Недостатки контрольных механизмов",
-						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.controlProceduresLack"
+						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.controlProceduresLack",
+						"schemaFieldUid": "field_06370b46-6380-4b63-866c-d3f52e078a73"
 					}
 				},
 				"isNotUsedAfterProject": {
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Создание ИС (с ID в РИС), не введенной в эксплуатацию про итогам завершения проекта",
-						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.isNotUsedAfterProject"
+						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.isNotUsedAfterProject",
+						"schemaFieldUid": "field_ecd39d17-7f85-4d3b-ac23-5ad79c9d639f"
 					}
 				},
 				"itArchitectureChanges": {
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Изменения принципов реализации целевой архитектуры Банка",
-						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.itArchitectureChanges"
+						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.itArchitectureChanges",
+						"schemaFieldUid": "field_e2629ac3-9eee-4af6-84bf-9a565a7425d7"
 					}
 				},
 				"adjacentProjectsImpact": {
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Пересечение с большим количеством проектов и увеличение сроков по смежным проектам\n\\n* Задержки из за изменения сроков реализации смежных ИТ систем и проектов",
-						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.adjacentProjectsImpact"
+						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.adjacentProjectsImpact",
+						"schemaFieldUid": "field_af26c704-db2c-4d5d-8400-065dcb40858e"
 					}
 				}
 			},
 			"ui:widget": "hidden",
 			"ui:options": {
-				"hidden": true
+				"hidden": true,
+				"schemaFieldUid": "field_18ea6916-6593-4682-acdc-48ca5e31badb"
 			},
-			"uncertaintyAdjustment": {
-				"ui:widget": "NumberInputWidget",
+			"field_QCwwo5c5": {
 				"ui:options": {
-					"suffix": "%",
-					"tooltip": "При необходимости учесть дополнительные экспертные риски, заполнив поле \"Поправка на общую неопределенность\" значением в диапазоне от 0-30%"
+					"tooltip": "При необходимости учесть дополнительные экспертные риски, заполнив поле \"Поправка на общую неопределенность\" значением в диапазоне от 0-30%",
+					"schemaFieldUid": "field_59399372-52ef-4e49-9535-b011a7b30782"
 				}
 			},
-			"initiativeCost": {
+			"field_bbTNlnC6": {
 				"ui:widget": "select",
 				"ui:options": {
-					"dictionaryCode": "v2.method.22.стоимость_инициативы"
+					"dictionaryCode": "v2.method.22.стоимость_инициативы",
+					"schemaFieldUid": "field_8c0fedd4-9ec5-4528-8376-e695e5bd0bc3"
 				}
 			},
-			"initiativeTimeline": {
+			"field_xGCMlbMP": {
 				"ui:widget": "select",
 				"ui:options": {
-					"dictionaryCode": "v2.method.21.сроки_инициативы"
+					"dictionaryCode": "v2.method.21.сроки_инициативы",
+					"schemaFieldUid": "field_82339b7f-0791-4a0b-8348-815ee6258d4b"
 				}
 			}
 		}
 	},
 	"logic": {
 		"rules": [
-			{
-				"id": "default-row-source-typical-task-total",
-				"kind": "row_computed",
-				"payload": {
-					"label": "Per-row итог типовой работы источника (ФТ-024)",
-					"fieldVar": "total",
-					"arrayPath": "streamDataSources.sourceTypicalTasks",
-					"formulaHint": "row.total = норматив (ч/д) × коэффициент группы источника. Норматив из работы.csv."
-				},
-				"condition": {
-					"*": [
-						{
-							"var": "estimateHoursPerDay"
-						},
-						{
-							"var": "coefficient"
-						}
-					]
-				},
-				"targetPath": "/streamDataSources/sourceTypicalTasks",
-				"description": "ФТ-024: итог строки типовой работы источника данных.",
-				"dependencies": []
-			},
 			{
 				"id": "unified-control-row-total",
 				"kind": "row_computed",
@@ -3082,76 +3561,9 @@
 						}
 					]
 				},
-				"targetPath": "/streamModelControl/field_Khn6-HAW",
+				"targetPath": "/streamModelControl/control/controlTypicalTasks",
 				"description": "ФТ-024: итог строки работы контроля моделей.",
 				"dependencies": []
-			},
-			{
-				"id": "unified-typical-total",
-				"kind": "computed",
-				"payload": {
-					"mode": "expert",
-					"role": "typical_total",
-					"label": "Сумма по типовым работам",
-					"calcModel": "unified",
-					"formulaHint": "Σ источники + Σ контроль моделей (sourceTypicalTasks + field_Khn6-HAW)."
-				},
-				"condition": {
-					"+": [
-						{
-							"reduce": [
-								{
-									"var": "streamDataSources.sourceTypicalTasks"
-								},
-								{
-									"+": [
-										{
-											"var": "accumulator"
-										},
-										{
-											"max": [
-												0,
-												{
-													"var": "current.total"
-												}
-											]
-										}
-									]
-								},
-								0
-							]
-						},
-						{
-							"reduce": [
-								{
-									"var": "streamModelControl.field_Khn6-HAW"
-								},
-								{
-									"+": [
-										{
-											"var": "accumulator"
-										},
-										{
-											"max": [
-												0,
-												{
-													"var": "current.total"
-												}
-											]
-										}
-									]
-								},
-								0
-							]
-						}
-					]
-				},
-				"targetPath": "/summary/typicalTotal",
-				"description": "ФТ-026: сумма итоговых оценок типовых работ.",
-				"dependencies": [
-					"/streamDataSources/sourceTypicalTasks",
-					"/streamModelControl/field_Khn6-HAW"
-				]
 			},
 			{
 				"id": "unified-grand-total",
@@ -3226,52 +3638,11 @@
 				},
 				"targetPath": "/",
 				"dependencies": []
-			},
-			{
-				"id": "unified-source-typical-works",
-				"kind": "task_trigger",
-				"targetPath": "/streamDataSources/sourceTypicalTasks",
-				"condition": true,
-				"description": "ФТ-024: типовые работы «Система-источник» из справочника работ (назначения + триггеры).",
-				"dependencies": [
-					"/detailInfo/sourceSystems"
-				],
-				"payload": {
-					"hint": "При заполнении систем-источников подтягиваются типовые работы из справочника (стрим «Источники данных»). Появление работ управляется их триггерами. Настройка — в конструкторе → Логика.",
-					"mode": "generated_rows",
-					"label": "Типовые работы (стрим «Источники данных»)",
-					"worksCatalog": true,
-					"worksCatalogArchComponent": "Система-источник",
-					"worksCatalogStream": "fromSourceType",
-					"taskCode": "CATALOG_SOURCE_TASKS",
-					"calcModel": "unified",
-					"outputArrayPath": "streamDataSources.sourceTypicalTasks",
-					"sourceArrayPath": "detailInfo.sourceSystems"
-				}
-			},
-			{
-				"id": "unified-control-typical-works",
-				"kind": "task_trigger",
-				"targetPath": "/streamModelControl/field_Khn6-HAW",
-				"condition": false,
-				"description": "Контроль моделей: генерация отключена до появления поля выбора видов контроля в схеме v5.",
-				"dependencies": [],
-				"payload": {
-					"mode": "generated_rows",
-					"label": "Типовые работы (стрим «Контроль моделей»)",
-					"worksCatalog": true,
-					"worksCatalogArchComponent": "Контроль модели",
-					"worksCatalogStream": "Контроль моделей",
-					"outputArrayPath": "streamModelControl.field_Khn6-HAW",
-					"sourceArrayPath": "streamModelControl.field_Khn6-HAW",
-					"tasks": []
-				}
 			}
 		]
 	},
 	"dictionariesSnapshot": {
 		"referencedDictionaryCodes": [
-			"v2.dataObjects.applicationSources.items.development",
 			"v2.detailInfo.dataMart.deliveryMode",
 			"v2.detailInfo.dataMart.field_0uV7wafS",
 			"v2.detailInfo.dataMart.field_46LCnfWo",
@@ -3298,7 +3669,6 @@
 			"v2.detailInfo.sourceSystems.items.field_L1lRlgf1",
 			"v2.detailInfo.sourceSystems.items.field_VX7y3PsB",
 			"v2.detailInfo.sourceSystems.items.field_p4zxdNZG",
-			"v2.detailInfo.sourceSystems.items.field_wf7CHiVI",
 			"v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
 			"v2.detailInfo.sourceSystems.items.nda",
 			"v2.detailInfo.sourceSystems.items.type",

@@ -1,0 +1,36 @@
+---
+description: Заводской factory bundle — только committed snapshots, без CSV-генераторов
+globs: apps/nestjs-server/src/modules/anketa-v2/constants/**,apps/nestjs-server/scripts/**,scripts/sync-v2*.mjs
+alwaysApply: false
+---
+
+# Factory snapshot bundle
+
+Заводские данные v2 **самодостаточны** — committed JSON в репозитории, без генерации из `llm/` CSV в рантайме и без обязательных dev-скриптов.
+
+## Источники истины
+
+| Файл | Содержимое |
+|------|------------|
+| `v2-default-anketa.snapshot.json` | jsonSchema, uiSchema, logic, dictionariesSnapshot |
+| `v2-factory-typical-works.snapshot.json` | типовые работы, методологические параметры |
+| `packages/api-contract/.../v2-anketa-system-scaffold.snapshot.json` | scaffold пустой анкеты |
+
+Загрузчики: `v2-default-template-snapshot.ts`, `v2-factory-typical-works-catalog.ts`.
+
+## Обновление
+
+- **Схема/UI/logic** — export версии из админки → `npm run sync:factory-snapshot -- export.json`
+- **Привязки работ к полям** — после деплоя: bulk reconcile на версии шаблона; offline: `node scripts/repair-typical-works-bindings.mjs schema.json data-transfer.json` (нужен полный export с rules/formula, не список работ)
+- **Типовые работы / методология** — править `v2-factory-typical-works.snapshot.json` напрямую
+- **Arch presets** — `npm run sync:arch-presets` после изменения factory schema snapshot
+
+## Запрещено
+
+- Не добавлять runtime-зависимость от CSV в `llm/v2_new_docs/`
+- Не восстанавливать `build:doc-catalog` / `sync:v2-params-from-csv` как обязательный шаг сборки
+- Не генерировать factory data в `OnModuleInit` из внешних файлов
+
+## Deprecated
+
+Скрипты в `apps/nestjs-server/scripts/_deprecated/` — только архив.

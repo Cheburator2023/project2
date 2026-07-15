@@ -1,10 +1,9 @@
-import { V2_DOC_CATALOG } from "./v2-doc-catalog";
+import { V2_FACTORY_TYPICAL_WORKS_SNAPSHOT } from "../constants/v2-factory-typical-works-catalog";
 import type { V2DefaultDictionaryDef } from "../utils/v2-schema-dictionary.util";
 
 /**
  * Методологические справочники (веса, классы, виды контроля и т.д.)
- * из каталога методолога. Заводские — не удаляются, сбрасываются как enum-справочники схемы.
- * Регенерация: `npm run build:doc-catalog`.
+ * из заводского снимка `v2-factory-typical-works.snapshot.json`.
  */
 
 function dictCode(id: string, name: string): string {
@@ -28,7 +27,7 @@ function itemCode(label: string, index: number): string {
 
 /** Справочники методолога с непустым списком значений. */
 export const V2_METHODOLOGY_DICTIONARIES: V2DefaultDictionaryDef[] =
-	V2_DOC_CATALOG.dictionaries
+	V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.dictionaries
 		.filter((d) => d.values.length > 0)
 		.map((d) => {
 			const seen = new Set<string>();

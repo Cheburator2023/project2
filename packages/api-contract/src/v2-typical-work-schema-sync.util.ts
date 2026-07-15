@@ -4,7 +4,9 @@ import type {
 	V2TypicalWorkRuleDto,
 	V2WorkFormulaToken,
 } from "./v2-typical-work.types";
+import { slugParamCode } from "./v2-param-slug.util";
 import { schemaEnumValueMatchesRule } from "./v2-template-work-schema-params.util";
+import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
 import { tokensToText } from "./v2-work-formula.util";
 
 export type V2TypicalWorkSchemaFieldSyncRequestDto = {
@@ -14,6 +16,8 @@ export type V2TypicalWorkSchemaFieldSyncRequestDto = {
 	field: {
 		schemaFieldUid: string;
 		previousCode?: string | null;
+		/** Доп. legacy-коды (slug, sourceKeys) для сопоставления правил/формул. */
+		aliasCodes?: string[];
 		code?: string | null;
 		name?: string | null;
 		values?: Array<{ code: string; label: string }>;
@@ -36,16 +40,53 @@ export type V2TypicalWorkSchemaBulkSyncResponseDto =
 		consistencyIssues: import("./v2-template-work-schema-params.util").TypicalWorkSchemaConsistencyIssue[];
 	};
 
+function collectFieldAliasCodes(
+	request: V2TypicalWorkSchemaFieldSyncRequestDto,
+): Set<string> {
+	const aliases = new Set<string>();
+	for (const code of [
+		request.field.previousCode,
+		request.field.code,
+		...(request.field.aliasCodes ?? []),
+	]) {
+		if (code?.trim()) aliases.add(code.trim());
+	}
+	if (request.field.name?.trim()) {
+		const slug = slugParamCode(
+			stripParamNameSourceKeys(request.field.name).trim(),
+		);
+		if (slug) aliases.add(slug);
+	}
+	return aliases;
+}
+
 function matchesField(
-	ref: { schemaFieldUid?: string | null; paramCode: string },
+	ref: {
+		schemaFieldUid?: string | null;
+		paramCode: string;
+		paramName?: string | null;
+	},
 	request: V2TypicalWorkSchemaFieldSyncRequestDto,
 ): boolean {
-	if (ref.schemaFieldUid) {
-		return ref.schemaFieldUid === request.field.schemaFieldUid;
+	if (
+		ref.schemaFieldUid &&
+		ref.schemaFieldUid === request.field.schemaFieldUid
+	) {
+		return true;
 	}
-	return Boolean(
-		request.field.previousCode && ref.paramCode === request.field.previousCode,
-	);
+
+	const aliases = collectFieldAliasCodes(request);
+	if (aliases.has(ref.paramCode)) return true;
+
+	if (request.field.name?.trim() && ref.paramName?.trim()) {
+		const fieldName = stripParamNameSourceKeys(request.field.name)
+			.trim()
+			.toLowerCase();
+		const refName = stripParamNameSourceKeys(ref.paramName).trim().toLowerCase();
+		if (fieldName === refName) return true;
+	}
+
+	return false;
 }
 
 function reconcileRule(

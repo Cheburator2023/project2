@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Синхронизирует наборы полей в v2-default-anketa.snapshot.json с авторитетным CSV
- * llm/v2_new_docs/Параметры 15.06.csv — оставляет только параметры из CSV (новый набор).
+ * @deprecated Factory schema редактируется напрямую или через sync:factory-snapshot.
+ * Раньше синхронизировал arch/localParams из llm/v2_new_docs/Параметры 15.06.csv.
  *
- * Запуск: node scripts/sync-v2-params-from-csv.mjs
+ * См. apps/nestjs-server/scripts/_deprecated/README.md
  */
 import { createHash, randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";

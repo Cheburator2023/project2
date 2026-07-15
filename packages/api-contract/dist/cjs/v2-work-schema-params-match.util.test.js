@@ -132,33 +132,41 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
         });
         (0, vitest_1.expect)(issues).toEqual([]);
     });
-    (0, vitest_1.it)("ignores methodology presence triggers not bound to schema fields", () => {
+    (0, vitest_1.it)("reports broken pilot trigger split as schema/catalog mismatch", () => {
         const issues = (0, v2_template_work_schema_params_util_1.collectTypicalWorkSchemaConsistencyIssues)({
             schemaParams: [{ code: "type", name: "Тип системы-источника", values: [] }],
             rules: [
                 {
                     paramCode: "пилот_первичный",
-                    paramName: "? Пилот (первичный",
-                    operator: "=",
-                    valueCode: null,
-                    valueLabel: null,
-                },
-                {
-                    paramCode: "повторный",
-                    paramName: "повторный)",
-                    operator: "=",
-                    valueCode: null,
-                    valueLabel: null,
-                },
-                {
-                    paramCode: "",
-                    paramName: "?",
+                    paramName: "Пилот (первичный",
                     operator: "=",
                     valueCode: null,
                     valueLabel: null,
                 },
             ],
             laborParamCodes: [],
+        });
+        (0, vitest_1.expect)(issues.some((issue) => issue.paramCode === "пилот_первичный")).toBe(true);
+    });
+    (0, vitest_1.it)("accepts pilot works bound to methodology catalog param", () => {
+        const issues = (0, v2_template_work_schema_params_util_1.collectTypicalWorkSchemaConsistencyIssues)({
+            schemaParams: [{ code: "type", name: "Тип системы-источника", values: [] }],
+            rules: [
+                {
+                    paramCode: "тип_пилота_разовой_загрузки",
+                    paramName: "Тип пилота / разовой загрузки",
+                    operator: "=",
+                    valueCode: null,
+                    valueLabel: null,
+                },
+            ],
+            laborParamCodes: [],
+            methodologyParams: [
+                {
+                    code: "тип_пилота_разовой_загрузки",
+                    name: "Тип пилота / разовой загрузки",
+                },
+            ],
         });
         (0, vitest_1.expect)(issues).toEqual([]);
     });
@@ -223,6 +231,10 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
     (0, vitest_1.it)("matches catalog item by normalized title", () => {
         const code = (0, v2_template_work_schema_params_util_1.findCatalogPreviousCodeForSchemaParam)([{ code: "тип_системы_источника", name: "Тип системы-источника" }], { code: "type", name: "Тип системы-источника" });
         (0, vitest_1.expect)(code).toBe("тип_системы_источника");
+    });
+    (0, vitest_1.it)("falls back to slug when catalog has no dedicated item", () => {
+        const code = (0, v2_template_work_schema_params_util_1.findCatalogPreviousCodeForSchemaParam)([], { code: "field_R3Lx-csF", name: "Двусторонний обмен данными" });
+        (0, vitest_1.expect)(code).toBe("двусторонний_обмен_данными");
     });
 });
 (0, vitest_1.describe)("schemaEnumValueMatchesRule", () => {

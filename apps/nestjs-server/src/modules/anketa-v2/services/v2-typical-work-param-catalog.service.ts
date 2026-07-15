@@ -18,7 +18,7 @@ import {
 	type WorkTriggerStatusCatalogParam,
 } from "@smart-anketa/api-contract";
 import { Repository } from "typeorm";
-import { V2_DOC_CATALOG } from "../constants/v2-doc-catalog";
+import { V2_FACTORY_TYPICAL_WORKS_SNAPSHOT } from "../constants/v2-factory-typical-works-catalog";
 import { V2TypicalWorkParamEntity } from "../entities/v2-typical-work-param.entity";
 import { V2TypicalWorkParamValueEntity } from "../entities/v2-typical-work-param-value.entity";
 import {
@@ -125,19 +125,24 @@ export class V2TypicalWorkParamCatalogService {
 		private readonly valueRepository: Repository<V2TypicalWorkParamValueEntity>,
 	) {}
 
-	async ensureSeededFromDocCatalog(): Promise<void> {
+	async ensureSeededFromFactorySnapshot(): Promise<void> {
 		if (this.seedingPromise) {
 			return this.seedingPromise;
 		}
-		this.seedingPromise = this.runEnsureSeededFromDocCatalog().finally(() => {
+		this.seedingPromise = this.runEnsureSeededFromFactorySnapshot().finally(() => {
 			this.seedingPromise = null;
 		});
 		return this.seedingPromise;
 	}
 
-	private async runEnsureSeededFromDocCatalog(): Promise<void> {
+	/** @deprecated Use ensureSeededFromFactorySnapshot */
+	async ensureSeededFromDocCatalog(): Promise<void> {
+		return this.ensureSeededFromFactorySnapshot();
+	}
+
+	private async runEnsureSeededFromFactorySnapshot(): Promise<void> {
 		let created = 0;
-		for (const dict of V2_DOC_CATALOG.dictionaries) {
+		for (const dict of V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.dictionaries) {
 			const code = slugParamCode(dict.name);
 			let param = await this.paramRepository.findOne({ where: { code } });
 			if (!param) {

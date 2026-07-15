@@ -1,13 +1,44 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.reconcileTypicalWorkCardWithSchemaField = reconcileTypicalWorkCardWithSchemaField;
+const v2_param_slug_util_1 = require("./v2-param-slug.util");
 const v2_template_work_schema_params_util_1 = require("./v2-template-work-schema-params.util");
+const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
-function matchesField(ref, request) {
-    if (ref.schemaFieldUid) {
-        return ref.schemaFieldUid === request.field.schemaFieldUid;
+function collectFieldAliasCodes(request) {
+    const aliases = new Set();
+    for (const code of [
+        request.field.previousCode,
+        request.field.code,
+        ...(request.field.aliasCodes ?? []),
+    ]) {
+        if (code?.trim())
+            aliases.add(code.trim());
     }
-    return Boolean(request.field.previousCode && ref.paramCode === request.field.previousCode);
+    if (request.field.name?.trim()) {
+        const slug = (0, v2_param_slug_util_1.slugParamCode)((0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(request.field.name).trim());
+        if (slug)
+            aliases.add(slug);
+    }
+    return aliases;
+}
+function matchesField(ref, request) {
+    if (ref.schemaFieldUid &&
+        ref.schemaFieldUid === request.field.schemaFieldUid) {
+        return true;
+    }
+    const aliases = collectFieldAliasCodes(request);
+    if (aliases.has(ref.paramCode))
+        return true;
+    if (request.field.name?.trim() && ref.paramName?.trim()) {
+        const fieldName = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(request.field.name)
+            .trim()
+            .toLowerCase();
+        const refName = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(ref.paramName).trim().toLowerCase();
+        if (fieldName === refName)
+            return true;
+    }
+    return false;
 }
 function reconcileRule(rule, request) {
     if (!matchesField(rule, request))

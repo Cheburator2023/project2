@@ -26,6 +26,7 @@ export * from "./v2-default-typical-works-logic.util";
 export * from "./v2-atypical-works-logic.util";
 export * from "./v2-works-catalog-match.util";
 export * from "./v2-work-schema-params-match.util";
+export * from "./v2-param-slug.util";
 export * from "./v2-template-work-schema-params.util";
 export * from "./v2-typical-work.types";
 export * from "./v2-typical-work-v4.types";

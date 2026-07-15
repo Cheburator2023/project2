@@ -153,33 +153,44 @@ describe("collectTypicalWorkSchemaConsistencyIssues", () => {
 		expect(issues).toEqual([]);
 	});
 
-	it("ignores methodology presence triggers not bound to schema fields", () => {
+	it("reports broken pilot trigger split as schema/catalog mismatch", () => {
 		const issues = collectTypicalWorkSchemaConsistencyIssues({
 			schemaParams: [{ code: "type", name: "Тип системы-источника", values: [] }],
 			rules: [
 				{
 					paramCode: "пилот_первичный",
-					paramName: "? Пилот (первичный",
-					operator: "=",
-					valueCode: null,
-					valueLabel: null,
-				},
-				{
-					paramCode: "повторный",
-					paramName: "повторный)",
-					operator: "=",
-					valueCode: null,
-					valueLabel: null,
-				},
-				{
-					paramCode: "",
-					paramName: "?",
+					paramName: "Пилот (первичный",
 					operator: "=",
 					valueCode: null,
 					valueLabel: null,
 				},
 			],
 			laborParamCodes: [],
+		});
+		expect(issues.some((issue) => issue.paramCode === "пилот_первичный")).toBe(
+			true,
+		);
+	});
+
+	it("accepts pilot works bound to methodology catalog param", () => {
+		const issues = collectTypicalWorkSchemaConsistencyIssues({
+			schemaParams: [{ code: "type", name: "Тип системы-источника", values: [] }],
+			rules: [
+				{
+					paramCode: "тип_пилота_разовой_загрузки",
+					paramName: "Тип пилота / разовой загрузки",
+					operator: "=",
+					valueCode: null,
+					valueLabel: null,
+				},
+			],
+			laborParamCodes: [],
+			methodologyParams: [
+				{
+					code: "тип_пилота_разовой_загрузки",
+					name: "Тип пилота / разовой загрузки",
+				},
+			],
 		});
 		expect(issues).toEqual([]);
 	});
@@ -250,6 +261,14 @@ describe("findCatalogPreviousCodeForSchemaParam", () => {
 			{ code: "type", name: "Тип системы-источника" },
 		);
 		expect(code).toBe("тип_системы_источника");
+	});
+
+	it("falls back to slug when catalog has no dedicated item", () => {
+		const code = findCatalogPreviousCodeForSchemaParam(
+			[],
+			{ code: "field_R3Lx-csF", name: "Двусторонний обмен данными" },
+		);
+		expect(code).toBe("двусторонний_обмен_данными");
 	});
 });
 

@@ -6,6 +6,8 @@ export type V2TypicalWorkSchemaFieldSyncRequestDto = {
     field: {
         schemaFieldUid: string;
         previousCode?: string | null;
+        /** Доп. legacy-коды (slug, sourceKeys) для сопоставления правил/формул. */
+        aliasCodes?: string[];
         code?: string | null;
         name?: string | null;
         values?: Array<{

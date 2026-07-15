@@ -17,9 +17,13 @@ import {
 } from "../utils/v2-schema-dictionary.util";
 
 /**
- * Эталон схемы: заводской шаблон «Новая схема», версия 35 (export smart-anketa-v2).
- * Файл: `v2-default-anketa.snapshot.json` — копия v35 без изменений.
- * Обновление: `npm run sync:factory-snapshot -- /path/to/export.json` (из apps/nestjs-server).
+ * Эталон схемы: заводской шаблон «Новая схема», версия 35.
+ *
+ * Factory bundle (committed snapshots, без CSV-генераторов):
+ * - `v2-default-anketa.snapshot.json` — jsonSchema, uiSchema, logic, dictionariesSnapshot
+ * - `v2-factory-typical-works.snapshot.json` — типовые работы и методологические параметры
+ *
+ * Обновление схемы: `npm run sync:factory-snapshot -- /path/to/export.json` (из apps/nestjs-server).
  */
 const SNAPSHOT_FILENAME = "v2-default-anketa.snapshot.json";
 
@@ -85,7 +89,7 @@ export const V2_DEFAULT_TEMPLATE_SNAPSHOT = {
 			),
 		} satisfies V2DictionariesSnapshotDto)) as V2DictionariesSnapshotDto,
 	releaseNotes:
-		"Заводская схема V2 — эталон шаблона «Новая схема» (export smart-anketa-v2, v35)",
+		"Заводская схема V2 — эталон шаблона «Новая схема» (prod export v15, СА 10.07)",
 };
 
 const { jsonSchema, uiSchema, dictionariesSnapshot } =

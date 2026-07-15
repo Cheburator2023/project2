@@ -72,7 +72,8 @@ import { V2TypicalWorkNormEntity } from "../entities/v2-typical-work-norm.entity
 import { V2TypicalWorkRuleEntity } from "../entities/v2-typical-work-rule.entity";
 import { V2TypicalWorkVersionConfigEntity } from "../entities/v2-typical-work-version-config.entity";
 import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
-import { normalizeArchComponentType } from "../utils/v2-typical-work-catalog.util";
+import { normalizeArchComponentType, slugParamCode } from "../utils/v2-typical-work-catalog.util";
+import { V2_FACTORY_TYPICAL_WORKS_SNAPSHOT } from "../constants/v2-factory-typical-works-catalog";
 import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
 import { V2TypicalWorkService } from "./v2-typical-work.service";
 
@@ -838,10 +839,12 @@ export class V2TypicalWorkWriteService {
 		const paramCodes = [
 			field.previousCode,
 			field.code,
+			...(field.aliasCodes ?? []),
 		].filter((code): code is string => Boolean(code?.trim()));
 		const matchWhere = [
 			{ schemaFieldUid: field.schemaFieldUid },
 			...paramCodes.map((paramCode) => ({ paramCode })),
+			...(field.name?.trim() ? [{ paramName: field.name.trim() }] : []),
 		];
 
 		const [matchingRules, matchingLaborHeaders] = await Promise.all([
@@ -1153,6 +1156,7 @@ export class V2TypicalWorkWriteService {
 				field: {
 					schemaFieldUid: schemaParam.schemaFieldUid,
 					previousCode,
+					aliasCodes: schemaParam.sourceKeys,
 					code: schemaParam.code,
 					name: schemaParam.name,
 					values:
@@ -1195,6 +1199,11 @@ export class V2TypicalWorkWriteService {
 								token.kind === "param_coeff" || token.kind === "param_anyof",
 						)
 						.map((token) => token.paramCode),
+					methodologyParams:
+						V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.dictionaries.map((dict) => ({
+							code: slugParamCode(dict.name),
+							name: dict.name,
+						})),
 				}).map((issue) => ({
 					...issue,
 					workId: config.workId,

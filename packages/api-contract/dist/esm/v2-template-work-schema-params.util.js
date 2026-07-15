@@ -1,6 +1,7 @@
+import { slugParamCode } from "./v2-param-slug.util";
 import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
 import { findWorkSchemaParameter, resolveWorkSchemaParamForRule, } from "./v2-work-schema-params-match.util";
-import { catalogValueMatchesTriggerRule, isBrokenTypicalWorkTriggerRef, isControlTypeTriggerParam, isMethodologyPresenceTriggerRule, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, } from "./v2-works-catalog-match.util";
+import { catalogValueMatchesTriggerRule, isBrokenTypicalWorkTriggerRef, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, } from "./v2-works-catalog-match.util";
 function schemaNodeType(node) {
     if (!node)
         return null;
@@ -130,13 +131,21 @@ export function buildWorkSchemaParamsFromTemplate(params) {
     walkSchemaFields(params.jsonSchema, params.uiSchema, "/", [], out);
     return out.sort((a, b) => a.name.localeCompare(b.name, "ru"));
 }
+function matchesMethodologyCatalogParam(rule, methodologyParams) {
+    if (!methodologyParams?.length)
+        return false;
+    return Boolean(findWorkSchemaParameter(methodologyParams, rule.paramCode, rule.paramName));
+}
 export function enrichWorkSchemaParamsWithCatalogAliases(schemaParams, catalog) {
     return schemaParams.map((schemaParam) => {
         const previousCode = findCatalogPreviousCodeForSchemaParam(catalog, schemaParam);
+        const nameSlug = slugParamCode(stripParamNameSourceKeys(schemaParam.name).trim());
         const sourceKeys = new Set(schemaParam.sourceKeys ?? [schemaParam.code]);
         sourceKeys.add(schemaParam.code);
         if (previousCode)
             sourceKeys.add(previousCode);
+        if (nameSlug)
+            sourceKeys.add(nameSlug);
         return { ...schemaParam, sourceKeys: [...sourceKeys] };
     });
 }
@@ -176,8 +185,6 @@ export function schemaEnumValueMatchesRule(enumValue, rule) {
 function ruleRequiresSchemaBinding(rule) {
     if (isBrokenTypicalWorkTriggerRef(rule))
         return false;
-    if (isMethodologyPresenceTriggerRule(rule))
-        return false;
     if (rule.paramCode?.trim() || rule.paramName?.trim())
         return true;
     return (isSourceTypeTriggerParam(rule.paramCode, rule.paramName) ||
@@ -199,6 +206,9 @@ export function collectTypicalWorkSchemaConsistencyIssues(input) {
         }
         const resolved = resolveWorkSchemaParamForRule(rule, input.schemaParams);
         if (!resolved) {
+            if (matchesMethodologyCatalogParam(rule, input.methodologyParams)) {
+                continue;
+            }
             if (isPresenceOnlyTriggerRule(rule) &&
                 (isSourceTypeTriggerParam(rule.paramCode, rule.paramName) ||
                     isControlTypeTriggerParam(rule.paramCode, rule.paramName))) {
@@ -237,6 +247,12 @@ export function findCatalogPreviousCodeForSchemaParam(catalog, schemaParam) {
     const exact = catalog.find((item) => item.name.trim() === schemaParam.name);
     if (exact)
         return exact.code;
-    return catalog.find((item) => stripParamNameSourceKeys(item.name).trim().toLowerCase() ===
+    const byNormName = catalog.find((item) => stripParamNameSourceKeys(item.name).trim().toLowerCase() ===
         normSchemaName)?.code;
+    if (byNormName)
+        return byNormName;
+    const nameSlug = slugParamCode(normSchemaName);
+    if (!nameSlug)
+        return undefined;
+    return catalog.find((item) => item.code === nameSlug)?.code ?? nameSlug;
 }

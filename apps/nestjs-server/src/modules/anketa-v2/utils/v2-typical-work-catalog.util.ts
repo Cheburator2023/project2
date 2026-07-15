@@ -1,9 +1,9 @@
 import { V2_SOURCE_STREAM } from "@smart-anketa/api-contract";
 import {
 	dictionaryByName,
-	V2_DOC_CATALOG,
-	type V2CatalogTypicalWork,
-} from "../constants/v2-doc-catalog";
+	V2_FACTORY_TYPICAL_WORKS_SNAPSHOT,
+	type V2FactoryTypicalWork,
+} from "../constants/v2-factory-typical-works-catalog";
 import { inferMissingCatalogComponent } from "./v2-catalog-component-inference";
 
 /** Legacy-стримы источников (разделение внутр/внеш убрано). */
@@ -44,7 +44,7 @@ export function normalizeArchComponentType(raw: string): string {
 }
 
 export function resolveCatalogWorkComponent(
-	row: Pick<V2CatalogTypicalWork, "component" | "stream" | "stage">,
+	row: Pick<V2FactoryTypicalWork, "component" | "stream" | "stage">,
 ): string {
 	return inferMissingCatalogComponent(row.component, row.stream, row.stage);
 }
@@ -53,9 +53,9 @@ export function buildCatalogWorkKey(component: string, name: string): string {
 	return `${normalizeArchComponentType(component)}|${name.trim()}`;
 }
 
-export function groupCatalogWorks(): Map<string, V2CatalogTypicalWork[]> {
-	const groups = new Map<string, V2CatalogTypicalWork[]>();
-	for (const row of V2_DOC_CATALOG.typicalWorks) {
+export function groupCatalogWorks(): Map<string, V2FactoryTypicalWork[]> {
+	const groups = new Map<string, V2FactoryTypicalWork[]>();
+	for (const row of V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks) {
 		const key = buildCatalogWorkKey(resolveCatalogWorkComponent(row), row.name);
 		const list = groups.get(key) ?? [];
 		list.push(row);

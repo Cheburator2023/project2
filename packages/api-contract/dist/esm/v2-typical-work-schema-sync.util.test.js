@@ -156,4 +156,49 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
         expect(result.card.rules[0]?.schemaFieldUid).toBe("field-1");
         expect(result.card.laborParams[0]?.schemaFieldUid).toBe("field-1");
     });
+    it("matches legacy slug paramCode by field title without catalog entry", () => {
+        const legacy = card();
+        legacy.rules[0] = {
+            ...legacy.rules[0],
+            schemaFieldUid: undefined,
+            paramCode: "двусторонний_обмен_данными",
+            paramName: "Двусторонний обмен данными",
+        };
+        legacy.laborParams[0] = {
+            ...legacy.laborParams[0],
+            schemaFieldUid: undefined,
+            paramCode: "двусторонний_обмен_данными",
+            paramName: "Двусторонний обмен данными",
+        };
+        legacy.formula.tokens[2] = {
+            kind: "param_coeff",
+            paramCode: "двусторонний_обмен_данными",
+            paramName: "Двусторонний обмен данными",
+        };
+        const result = reconcileTypicalWorkCardWithSchemaField(legacy, {
+            templateVersionId: "version-1",
+            mode: "apply",
+            operation: "upsert",
+            field: {
+                schemaFieldUid: "field_9f1865ca-e9a1-4130-9ee7-d8dc37452bce",
+                previousCode: "двусторонний_обмен_данными",
+                code: "field_R3Lx-csF",
+                name: "Двусторонний обмен данными",
+                values: [
+                    { code: "Да", label: "Да" },
+                    { code: "Нет", label: "Нет" },
+                ],
+            },
+        });
+        expect(result.changed).toBe(true);
+        expect(result.card.rules[0]).toMatchObject({
+            paramCode: "field_R3Lx-csF",
+            schemaFieldUid: "field_9f1865ca-e9a1-4130-9ee7-d8dc37452bce",
+        });
+        expect(result.card.formula.tokens[2]).toMatchObject({
+            kind: "param_coeff",
+            paramCode: "field_R3Lx-csF",
+            invalid: false,
+        });
+    });
 });

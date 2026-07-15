@@ -22,6 +22,11 @@ export type TypicalWorkSchemaConsistencyInput = {
         schemaFieldUid?: string | null;
     }>;
     formulaParamCodes?: string[];
+    /** Параметры методологического каталога (заводской snapshot) — не требуют поля схемы. */
+    methodologyParams?: Array<{
+        code: string;
+        name: string;
+    }>;
 };
 export declare function enrichWorkSchemaParamsWithCatalogAliases<T extends WorkSchemaParamDef>(schemaParams: T[], catalog: Array<{
     code: string;

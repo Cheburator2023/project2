@@ -5,6 +5,7 @@ exports.enrichWorkSchemaParamsWithCatalogAliases = enrichWorkSchemaParamsWithCat
 exports.schemaEnumValueMatchesRule = schemaEnumValueMatchesRule;
 exports.collectTypicalWorkSchemaConsistencyIssues = collectTypicalWorkSchemaConsistencyIssues;
 exports.findCatalogPreviousCodeForSchemaParam = findCatalogPreviousCodeForSchemaParam;
+const v2_param_slug_util_1 = require("./v2-param-slug.util");
 const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
 const v2_work_schema_params_match_util_1 = require("./v2-work-schema-params-match.util");
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
@@ -137,13 +138,21 @@ function buildWorkSchemaParamsFromTemplate(params) {
     walkSchemaFields(params.jsonSchema, params.uiSchema, "/", [], out);
     return out.sort((a, b) => a.name.localeCompare(b.name, "ru"));
 }
+function matchesMethodologyCatalogParam(rule, methodologyParams) {
+    if (!methodologyParams?.length)
+        return false;
+    return Boolean((0, v2_work_schema_params_match_util_1.findWorkSchemaParameter)(methodologyParams, rule.paramCode, rule.paramName));
+}
 function enrichWorkSchemaParamsWithCatalogAliases(schemaParams, catalog) {
     return schemaParams.map((schemaParam) => {
         const previousCode = findCatalogPreviousCodeForSchemaParam(catalog, schemaParam);
+        const nameSlug = (0, v2_param_slug_util_1.slugParamCode)((0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(schemaParam.name).trim());
         const sourceKeys = new Set(schemaParam.sourceKeys ?? [schemaParam.code]);
         sourceKeys.add(schemaParam.code);
         if (previousCode)
             sourceKeys.add(previousCode);
+        if (nameSlug)
+            sourceKeys.add(nameSlug);
         return { ...schemaParam, sourceKeys: [...sourceKeys] };
     });
 }
@@ -183,8 +192,6 @@ function schemaEnumValueMatchesRule(enumValue, rule) {
 function ruleRequiresSchemaBinding(rule) {
     if ((0, v2_works_catalog_match_util_1.isBrokenTypicalWorkTriggerRef)(rule))
         return false;
-    if ((0, v2_works_catalog_match_util_1.isMethodologyPresenceTriggerRule)(rule))
-        return false;
     if (rule.paramCode?.trim() || rule.paramName?.trim())
         return true;
     return ((0, v2_works_catalog_match_util_1.isSourceTypeTriggerParam)(rule.paramCode, rule.paramName) ||
@@ -206,6 +213,9 @@ function collectTypicalWorkSchemaConsistencyIssues(input) {
         }
         const resolved = (0, v2_work_schema_params_match_util_1.resolveWorkSchemaParamForRule)(rule, input.schemaParams);
         if (!resolved) {
+            if (matchesMethodologyCatalogParam(rule, input.methodologyParams)) {
+                continue;
+            }
             if ((0, v2_works_catalog_match_util_1.isPresenceOnlyTriggerRule)(rule) &&
                 ((0, v2_works_catalog_match_util_1.isSourceTypeTriggerParam)(rule.paramCode, rule.paramName) ||
                     (0, v2_works_catalog_match_util_1.isControlTypeTriggerParam)(rule.paramCode, rule.paramName))) {
@@ -244,6 +254,12 @@ function findCatalogPreviousCodeForSchemaParam(catalog, schemaParam) {
     const exact = catalog.find((item) => item.name.trim() === schemaParam.name);
     if (exact)
         return exact.code;
-    return catalog.find((item) => (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(item.name).trim().toLowerCase() ===
+    const byNormName = catalog.find((item) => (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(item.name).trim().toLowerCase() ===
         normSchemaName)?.code;
+    if (byNormName)
+        return byNormName;
+    const nameSlug = (0, v2_param_slug_util_1.slugParamCode)(normSchemaName);
+    if (!nameSlug)
+        return undefined;
+    return catalog.find((item) => item.code === nameSlug)?.code ?? nameSlug;
 }

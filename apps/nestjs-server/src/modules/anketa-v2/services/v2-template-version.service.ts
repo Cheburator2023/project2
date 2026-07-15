@@ -204,7 +204,7 @@ export class V2TemplateVersionService {
 			userId,
 		);
 		if (!options?.withoutTypicalWorks) {
-			await this.typicalWorkSeedService.seedTemplateTypicalWorksFromDocCatalog(
+			await this.typicalWorkSeedService.seedTemplateTypicalWorksFromFactorySnapshot(
 				templateId,
 				version.id,
 			);
@@ -233,9 +233,13 @@ export class V2TemplateVersionService {
 			},
 			userId,
 		);
-		await this.typicalWorkSeedService.seedTemplateTypicalWorksFromDocCatalog(
+		await this.typicalWorkSeedService.seedTemplateTypicalWorksFromFactorySnapshot(
 			templateId,
 			draft.id,
+		);
+		await this.typicalWorkWriteService.reconcileAllSchemaFieldsForVersion(
+			draft.id,
+			"apply",
 		);
 
 		const published = await this.publish(draft.id, {}, userId);
@@ -252,9 +256,13 @@ export class V2TemplateVersionService {
 			},
 			userId,
 		);
-		await this.typicalWorkSeedService.seedTemplateTypicalWorksFromDocCatalog(
+		await this.typicalWorkSeedService.seedTemplateTypicalWorksFromFactorySnapshot(
 			templateId,
 			editingDraft.id,
+		);
+		await this.typicalWorkWriteService.reconcileAllSchemaFieldsForVersion(
+			editingDraft.id,
+			"apply",
 		);
 
 		return published;

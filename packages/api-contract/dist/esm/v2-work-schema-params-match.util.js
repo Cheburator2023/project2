@@ -26,7 +26,6 @@ export function resolveWorkSchemaParamForRule(rule, params) {
         undefined;
     if (direct)
         return direct;
-    const paramLabel = rule.paramName ?? rule.paramCode;
     if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName)) {
         return (params.find((param) => param.code === "type") ??
             params.find((param) => /тип.*источник/i.test(param.name)));

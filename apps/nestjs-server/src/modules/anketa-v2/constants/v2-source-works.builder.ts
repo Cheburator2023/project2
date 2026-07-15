@@ -1,17 +1,12 @@
 import type { V2JsonLogicValue } from "@smart-anketa/api-contract";
 import {
-	V2_DOC_CATALOG,
+	V2_FACTORY_TYPICAL_WORKS_SNAPSHOT,
 	dictionaryByName,
-	type V2CatalogTypicalWork,
-} from "./v2-doc-catalog";
+	type V2FactoryTypicalWork,
+} from "./v2-factory-typical-works-catalog";
 
 /**
- * Каталог-управляемая сборка типовых работ и единого коэффициента (ФТ-024).
- *
- * Нормативы — из `работы.csv`, веса параметров — из `справочники.csv`
- * (через `v2-doc-catalog`). Результат — данные для `generated_rows`-правил и
- * JsonLogic коэффициентов групп; всё редактируется в админке и регенерируется
- * через `npm run build:doc-catalog`.
+ * Тестовая сборка типовых работ из заводского снимка (legacy builder для unit-тестов).
  */
 
 export type GeneratedTask = {
@@ -47,8 +42,8 @@ function componentTag(component: string): string {
 // --- Стрим «Источники данных» (IND): все работы с числовым нормативом --------
 
 function indTasks(stream: string, matchType: string): GeneratedTask[] {
-	return V2_DOC_CATALOG.typicalWorks
-		.filter((w: V2CatalogTypicalWork) => w.stream === stream && w.norm !== null)
+	return V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks
+		.filter((w: V2FactoryTypicalWork) => w.stream === stream && w.norm !== null)
 		.map((w, i) => ({
 			taskCode: `IND_${stageNumber(w.stage)}_${componentTag(w.component)}_${slug(
 				w.name,

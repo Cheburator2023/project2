@@ -103,12 +103,12 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 	) {}
 
 	async onModuleInit(): Promise<void> {
-		await this.paramCatalogService.ensureSeededFromDocCatalog();
-		await this.purgeDocCatalogSeededWorks();
+		await this.paramCatalogService.ensureSeededFromFactorySnapshot();
+		await this.purgeLegacyCatalogSeededWorks();
 		const count = await this.workRepository.count();
 		if (count > 0) {
 			this.logger.log(
-				`Typical works catalog: ${count} works (auto-seed from doc catalog disabled)`,
+				`Typical works catalog: ${count} works (factory snapshot seed on template create only)`,
 			);
 			await this.ensureFactoryVersionConfigs();
 			return;
@@ -118,8 +118,8 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		);
 	}
 
-	/** Удаляет работы, автоматически залитые из doc-каталога (catalog_key), чтобы каталог начинался с нуля. */
-	async purgeDocCatalogSeededWorks(): Promise<void> {
+	/** Удаляет работы с legacy catalog_key (старый auto-seed). */
+	async purgeLegacyCatalogSeededWorks(): Promise<void> {
 		const legacy = await this.workRepository.find({
 			where: { catalogKey: Not(IsNull()) },
 		});
@@ -128,12 +128,18 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		const ids = legacy.map((row) => row.id);
 		await this.workRepository.delete(ids);
 		this.logger.log(
-			`Purged ${legacy.length} doc-catalog typical works — use constructor Logic to add works`,
+			`Purged ${legacy.length} legacy catalog typical works — use constructor Logic to add works`,
 		);
 	}
 
+	/** @deprecated Use purgeLegacyCatalogSeededWorks */
+	async purgeDocCatalogSeededWorks(): Promise<void> {
+		return this.purgeLegacyCatalogSeededWorks();
+	}
+
+	/** @deprecated Global seed removed — works seed per template from factory snapshot */
 	async seedFromDocCatalog(): Promise<void> {
-		await this.paramCatalogService.ensureSeededFromDocCatalog();
+		await this.paramCatalogService.ensureSeededFromFactorySnapshot();
 		const paramCatalog = await this.paramCatalogService.listParameters();
 		const paramsByName = new Map(paramCatalog.items.map((p) => [p.name, p]));
 		const groups = groupCatalogWorks();
@@ -250,10 +256,10 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 	}
 
 	/**
-	 * При создании схемы из заводского снимка — копирует полный набор типовых работ
-	 * из doc-каталога в реестр схемы (даже без норм/триггеров: работа + назначение на стрим).
+	 * При создании схемы из заводского снимка — копирует типовые работы
+	 * из `v2-factory-typical-works.snapshot.json` в реестр схемы.
 	 */
-	async seedTemplateTypicalWorksFromDocCatalog(
+	async seedTemplateTypicalWorksFromFactorySnapshot(
 		templateId: string,
 		templateVersionId: string,
 	): Promise<number> {
@@ -276,7 +282,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			return 0;
 		}
 
-		await this.paramCatalogService.ensureSeededFromDocCatalog();
+		await this.paramCatalogService.ensureSeededFromFactorySnapshot();
 		const paramCatalog = await this.paramCatalogService.listParameters();
 		const paramsByName = new Map(paramCatalog.items.map((p) => [p.name, p]));
 		const groups = groupCatalogWorks();
@@ -408,6 +414,17 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			trimmedVersionId,
 		);
 		return created;
+	}
+
+	/** @deprecated Use seedTemplateTypicalWorksFromFactorySnapshot */
+	async seedTemplateTypicalWorksFromDocCatalog(
+		templateId: string,
+		templateVersionId: string,
+	): Promise<number> {
+		return this.seedTemplateTypicalWorksFromFactorySnapshot(
+			templateId,
+			templateVersionId,
+		);
 	}
 
 	/** Записывает boundWorkIds на legacy-блоки typicalWork по назначениям работ на стрим. */
