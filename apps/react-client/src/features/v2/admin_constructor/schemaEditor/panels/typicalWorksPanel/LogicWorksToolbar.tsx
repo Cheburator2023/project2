@@ -8,7 +8,6 @@ import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
 import Typography from "@mui/material/Typography";
 import { useRef, useState } from "react";
-import { Flex } from "@react-client/common/primitives/Flex";
 import {
 	ALL_LOGIC_WORKS_SCOPE,
 	LOGIC_EXECUTOR_STREAMS,
@@ -193,13 +192,13 @@ export function LogicWorksToolbar({
 			<Box sx={{ flexGrow: 1 }} />
 
 			{typicalWorkSaveDisplay ? (
-				<Flex
-					alignItems="center"
-					gap={8}
-					flexShrink={0}
-					px={12}
-					py={6}
+				<Box
 					sx={{
+						display: "flex",
+						alignItems: "center",
+						flexShrink: 0,
+						px: 1.5,
+						py: 0.75,
 						border: "1px solid #e6e8ee",
 						borderRadius: "9px",
 						bgcolor: "#fafbfc",
@@ -213,7 +212,7 @@ export function LogicWorksToolbar({
 						errorMessage={typicalWorkSaveDisplay.errorMessage}
 						onRetry={typicalWorkSaveDisplay.onRetry}
 					/>
-				</Flex>
+				</Box>
 			) : null}
 
 			{/* <Button

@@ -565,9 +565,9 @@ export function TypicalWorkEditableCard({
 	return (
 		<Flex
 			flexDirection="column"
-			flex={1}
-			minHeight={0}
-			minWidth={0}
+			flexGrow={1}
+			minHeight="0"
+			minWidth="0"
 			height="100%"
 		>
 			<TypicalWorkSaveStatusBar

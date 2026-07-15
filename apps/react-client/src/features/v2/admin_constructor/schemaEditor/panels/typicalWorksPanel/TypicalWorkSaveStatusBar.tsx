@@ -1,5 +1,6 @@
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
+import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { Flex } from "@react-client/common/primitives/Flex";
 import type { SaveStatus } from "./useDebouncedTypicalWorkSave";
@@ -75,10 +76,9 @@ export function TypicalWorkSaveStatusBar({
 		<Flex
 			alignItems={compact ? "center" : "flex-start"}
 			gap={compact ? 8 : 10}
-			flexWrap="wrap"
+			wrap="wrap"
 			flexShrink={0}
-			px={compact ? 0 : 14}
-			py={compact ? 0 : 10}
+			padding={compact ? "0" : "10px 14px"}
 			sx={{
 				borderBottom: compact ? "none" : "1px solid #e6e8ee",
 				bgcolor: compact ? "transparent" : meta.bgcolor,
@@ -90,28 +90,40 @@ export function TypicalWorkSaveStatusBar({
 			}}
 			data-test-id="typical-work-save-status"
 		>
-			<Flex alignItems="center" gap={8} minWidth={0} flexGrow={1}>
+			<Flex alignItems="center" gap={8} minWidth="0" flexGrow={1}>
 				{meta.showSpinner ? (
 					<CircularProgress size={14} sx={{ color: meta.dot }} />
 				) : (
-					<Flex
-						width={8}
-						height={8}
-						borderRadius="50%"
-						flexShrink={0}
-						sx={{ bgcolor: meta.dot }}
+					<Box
+						sx={{
+							width: 8,
+							height: 8,
+							borderRadius: "50%",
+							bgcolor: meta.dot,
+							flexShrink: 0,
+						}}
 					/>
 				)}
-				<Flex flexDirection="column" gap={2} minWidth={0}>
+				<Flex flexDirection="column" gap={2} minWidth="0">
 					<Typography
+						noWrap={compact}
 						sx={{
 							fontSize: compact ? 11 : 12.5,
 							fontWeight: 700,
 							color: meta.color,
 							lineHeight: 1.2,
+							maxWidth: compact ? 280 : "100%",
 						}}
 					>
 						{meta.label}
+						{compact && workName ? (
+							<Box
+								component="span"
+								sx={{ fontWeight: 600, color: "#5b6577", ml: 0.75 }}
+							>
+								— {workName}
+							</Box>
+						) : null}
 					</Typography>
 					{!compact && workName ? (
 						<Typography

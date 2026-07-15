@@ -2258,6 +2258,7 @@ export const V2TemplateSchemaEditor = ({
 			handleDepsBlur,
 			calculationLoading,
 			calculationError,
+			typicalWorkSaveGate,
 			typicalWorkSaveBlocked,
 			typicalWorkSaveBlockedMessage,
 			registerTypicalWorkSaveGate,
