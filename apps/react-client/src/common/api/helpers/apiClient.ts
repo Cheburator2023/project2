@@ -23,7 +23,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 const IS_DEV = process.env.NODE_ENV === "development";
 
 /** Базовый таймаут для GET и лёгких запросов */
-export const API_DEFAULT_TIMEOUT_MS = 30_000;
+export const API_DEFAULT_TIMEOUT_MS = 63_000;
 /** Создание и клонирование сущностей (версии схем, шаблоны, анкеты, работы) */
 export const API_ENTITY_CREATE_TIMEOUT_MS = 120_000;
 /** Тяжёлые операции (импорт, экспорт, data-transfer) */
@@ -89,7 +89,11 @@ axiosInstance.interceptors.request.use(
 		// FormData: убрать дефолтный application/json, иначе multer не видит файл
 		if (typeof FormData !== "undefined" && config.data instanceof FormData) {
 			const headers = config.headers;
-			if (headers && typeof (headers as { delete?: (k: string) => void }).delete === "function") {
+			if (
+				headers &&
+				typeof (headers as { delete?: (k: string) => void }).delete ===
+					"function"
+			) {
 				(headers as { delete: (k: string) => void }).delete("Content-Type");
 			} else if (headers && typeof headers === "object") {
 				delete (headers as Record<string, unknown>)["Content-Type"];
