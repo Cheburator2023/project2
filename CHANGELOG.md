@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.27.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.26.0...v1.27.0) (2026-07-15)
+
+
+### Features
+
+* enhance v2 data transfer functionality ([510564b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/510564b71e4fb8eb14d0d94c22eefea85b363385))
+
 # [1.26.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.25.0...v1.26.0) (2026-07-14)
 
 
