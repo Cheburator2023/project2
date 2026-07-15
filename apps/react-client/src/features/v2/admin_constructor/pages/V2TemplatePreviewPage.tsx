@@ -90,6 +90,7 @@ export const V2TemplatePreviewPage = () => {
 			data-test-id={V2_TEMPLATE_READ_TEST_IDS.page}
 			source={source}
 			engine={engine}
+			debouncePreviewInputs
 			headerExtra={
 				<>
 					<Typography variant="subtitle2" fontWeight={600} sx={{ mr: 1 }} noWrap>

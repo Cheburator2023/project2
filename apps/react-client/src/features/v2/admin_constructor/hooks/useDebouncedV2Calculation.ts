@@ -45,7 +45,6 @@ export function useDebouncedV2Calculation({
 		}
 
 		const requestId = ++requestIdRef.current;
-		setResult(null);
 		setError(null);
 		setIsDebouncing(true);
 		const timer = window.setTimeout(() => {

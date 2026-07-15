@@ -33,6 +33,8 @@ export type AnketaFormContextValue = {
 	anketaReadOnly?: boolean;
 	/** Превью в конструкторе схемы — виджеты вроде GeneralUncertainty без gate по инициативе. */
 	schemaEditorPreview?: boolean;
+	/** Debounce commit полей в formData (превью админки, без лагов на каждый символ). */
+	debouncePreviewInputs?: boolean;
 	workflow?: V2AnketaWorkflowDto;
 	onCompleteMainSection?: (sectionId: V2AnketaMainSectionId) => void;
 	/** Завершение кастомной панели (группа без workflowSectionId) по path. */

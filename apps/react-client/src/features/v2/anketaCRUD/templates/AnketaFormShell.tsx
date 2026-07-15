@@ -63,6 +63,8 @@ type Props = {
 	/** Внешняя загрузка (например, form-package с сервера). */
 	loading?: boolean;
 	errorMessage?: string | null;
+	/** Превью шаблона в админке — debounce ввода и отложенная логика. */
+	debouncePreviewInputs?: boolean;
 	"data-test-id"?: string;
 };
 
@@ -79,6 +81,7 @@ export function AnketaFormShell({
 	questionnaireId,
 	loading: externalLoading = false,
 	errorMessage = null,
+	debouncePreviewInputs = false,
 	"data-test-id": dataTestId = "anketa-form-shell",
 }: Props) {
 	const navigate = useNavigate();
@@ -169,6 +172,7 @@ export function AnketaFormShell({
 			isMainSectionLocked: isSectionLocked,
 			anketaReadOnly: effectiveReadOnly,
 			schemaEditorPreview: false,
+			debouncePreviewInputs,
 		};
 	}, [
 		effectiveReadOnly,
@@ -176,6 +180,7 @@ export function AnketaFormShell({
 		completeMainSection,
 		touchMainSection,
 		isSectionLocked,
+		debouncePreviewInputs,
 	]);
 
 	const headerActions = useMemo(

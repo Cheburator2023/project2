@@ -28,6 +28,8 @@ import { fuzzySearch, highlightMatches } from "@react-client/utils/fuzzySearch";
 import { buildSelectOptions, selectLabelForValue } from "./selectFieldOptions";
 import { resolveFieldEnabledWhen } from "./fieldEnabledWhen";
 import { normalizeUiTooltip } from "@smart-anketa/api-contract";
+import { readAnketaFormContextFromRjsfProps } from "@react-client/features/v2/anketaCRUD/utils/anketaFormContext";
+import { useDebouncedRjsfFieldValue } from "@react-client/common/forms/hooks/useDebouncedRjsfFieldValue";
 
 const RJSF_WIDGET_OPTION_KEYS = new Set([
 	"enumOptions",
@@ -153,14 +155,40 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 		onChange([]);
 	};
 
-	const _onChange = (e: any) => {
-		onChange?.(e.target.value);
+	const optionsForSelect = buildSelectOptions(options, schema);
+	const isSelect = optionsForSelect.length > 0;
+	const allowCustomInput = options?.freeSolo || options?.allowCustomInput;
+	const anketaCtx = readAnketaFormContextFromRjsfProps(props);
+	const debouncePreviewInputs = Boolean(
+		anketaCtx.debouncePreviewInputs ?? anketaCtx.schemaEditorPreview,
+	);
+	const debouncedPlainText = useDebouncedRjsfFieldValue({
+		value: String(value ?? ""),
+		onChange: (next) => onChange?.(next),
+		enabled: debouncePreviewInputs && !isSelect,
+	});
+	const debouncedFreeSoloText = useDebouncedRjsfFieldValue({
+		value: String(value ?? ""),
+		onChange: (next) => onChange?.(next),
+		enabled: debouncePreviewInputs && isSelect && Boolean(allowCustomInput),
+	});
+
+	const _onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+		const next = e.target.value;
+		if (debouncePreviewInputs && !isSelect) {
+			debouncedPlainText.onChange(next);
+			return;
+		}
+		onChange?.(next);
 	};
 
 	const _onBlur = ({
-		target: { value },
-	}: React.FocusEvent<HTMLInputElement>) => {
-		onBlur?.(id, value);
+		target: { value: blurValue },
+	}: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+		if (debouncePreviewInputs && !isSelect) {
+			debouncedPlainText.onBlur();
+		}
+		onBlur?.(id, blurValue);
 	};
 
 	const _onFocus = ({
@@ -169,9 +197,6 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 		return onFocus?.(id, value);
 	};
 
-	const optionsForSelect = buildSelectOptions(options, schema);
-	const isSelect = optionsForSelect.length > 0;
-	const allowCustomInput = options?.freeSolo || options?.allowCustomInput;
 	const fieldEnabled = resolveFieldEnabledWhen(
 		props.formContext?.formData,
 		options as Record<string, unknown> | undefined,
@@ -447,11 +472,22 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 				id={id}
 				freeSolo
 				options={autocompleteOptions}
-				value={value || ""}
+				value={
+					debouncePreviewInputs ? debouncedFreeSoloText.value : value || ""
+				}
 				onChange={(_event, newValue) => {
-					onChange?.(newValue || "");
+					const next = newValue || "";
+					if (debouncePreviewInputs) {
+						debouncedFreeSoloText.onChange(next);
+						return;
+					}
+					onChange?.(next);
 				}}
 				onInputChange={(_event, newInputValue) => {
+					if (debouncePreviewInputs) {
+						debouncedFreeSoloText.onChange(newInputValue);
+						return;
+					}
 					onChange?.(newInputValue);
 				}}
 				filterOptions={(options, { inputValue }) => {
@@ -519,7 +555,13 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 			id={id}
 			title={isSelect ? tooltipText || valToTitle : valToTitle}
 			label={fieldTitle}
-			value={isSelect ? (value ?? "") : value}
+			value={
+				isSelect
+					? (value ?? "")
+					: debouncePreviewInputs
+						? debouncedPlainText.value
+						: value
+			}
 			required={required}
 			disabled={isDisabled}
 			autoFocus={autofocus}

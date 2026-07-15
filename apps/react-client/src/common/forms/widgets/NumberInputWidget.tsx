@@ -2,6 +2,8 @@ import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
 import { InputAdornment, InputLabel } from "@mui/material";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
 import { Flex } from "@react-client/common/primitives/Flex";
+import { useDebouncedRjsfFieldValue } from "@react-client/common/forms/hooks/useDebouncedRjsfFieldValue";
+import { readAnketaFormContextFromRjsfProps } from "@react-client/features/v2/anketaCRUD/utils/anketaFormContext";
 import { WidgetProps } from "@rjsf/utils";
 import React from "react";
 
@@ -20,6 +22,16 @@ export const NumberInputWidget: React.FC<WidgetProps> = (props) => {
 		rawErrors,
 		placeholder: widgetPlaceholder,
 	} = props;
+
+	const anketaCtx = readAnketaFormContextFromRjsfProps(props);
+	const debouncePreviewInputs = Boolean(
+		anketaCtx.debouncePreviewInputs ?? anketaCtx.schemaEditorPreview,
+	);
+	const debouncedNumber = useDebouncedRjsfFieldValue<number | undefined>({
+		value: typeof value === "number" ? value : undefined,
+		onChange: (next) => onChange(next),
+		enabled: debouncePreviewInputs,
+	});
 
 	const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
 		const allowedKeys = [
@@ -62,11 +74,13 @@ export const NumberInputWidget: React.FC<WidgetProps> = (props) => {
 		}
 	};
 
-	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-		const inputValue = event.target.value;
-
+	const commitNumber = (inputValue: string) => {
 		if (inputValue === "") {
-			onChange(undefined);
+			if (debouncePreviewInputs) {
+				debouncedNumber.onChange(undefined);
+			} else {
+				onChange(undefined);
+			}
 			return;
 		}
 
@@ -83,8 +97,26 @@ export const NumberInputWidget: React.FC<WidgetProps> = (props) => {
 				? Math.min(Math.max(numValue, min), max)
 				: numValue;
 
-		onChange(clampedValue);
+		if (debouncePreviewInputs) {
+			debouncedNumber.onChange(clampedValue);
+		} else {
+			onChange(clampedValue);
+		}
 	};
+
+	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+		commitNumber(event.target.value);
+	};
+
+	const handleBlur = () => {
+		if (debouncePreviewInputs) {
+			debouncedNumber.onBlur();
+		}
+	};
+
+	const displayValue = debouncePreviewInputs
+		? (debouncedNumber.value ?? "")
+		: (value ?? "");
 
 	const prefix = uiSchema?.["ui:options"]?.prefix as string | undefined;
 	const suffix = uiSchema?.["ui:options"]?.suffix as string | undefined;
@@ -98,8 +130,9 @@ export const NumberInputWidget: React.FC<WidgetProps> = (props) => {
 		<TextFieldCustom
 			id={id}
 			type="number"
-			value={value ?? ""}
+			value={displayValue}
 			onChange={handleChange}
+			onBlur={handleBlur}
 			onKeyDown={handleKeyDown}
 			disabled={disabled || readonly}
 			required={required}

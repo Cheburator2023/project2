@@ -248,6 +248,10 @@ export function V2AnketaSchemaForm({
 
 	const formContext = useMemo((): AnketaFormContextValue => {
 		const base = anketaFormContext ?? {};
+		const schemaEditorPreview =
+			base.schemaEditorPreview ?? engine.version?.id === "editor-draft";
+		const debouncePreviewInputs =
+			base.debouncePreviewInputs ?? schemaEditorPreview;
 		return mergeAnketaFormContext(base, {
 			formData: engine.displayFormData,
 			previewSchema: engine.previewSchema,
@@ -261,8 +265,8 @@ export function V2AnketaSchemaForm({
 				base.anketaCompactArrayTablePaths ??
 				modalBindings.compactArrayTablePathSet,
 			anketaReadOnly: readOnly || base.anketaReadOnly,
-			schemaEditorPreview:
-				base.schemaEditorPreview ?? engine.version?.id === "editor-draft",
+			schemaEditorPreview,
+			debouncePreviewInputs,
 			onToggleGroupActivation:
 				base.onToggleGroupActivation ??
 				(disabled ? undefined : handleToggleGroupActivation),
@@ -291,6 +295,13 @@ export function V2AnketaSchemaForm({
 		() => normalizeAnketaFormDataForRjsf(engine.displayFormData),
 		[engine.displayFormData],
 	);
+
+	const debouncePreviewInputs = useMemo(() => {
+		const base = anketaFormContext ?? {};
+		const schemaEditorPreview =
+			base.schemaEditorPreview ?? engine.version?.id === "editor-draft";
+		return base.debouncePreviewInputs ?? schemaEditorPreview;
+	}, [anketaFormContext, engine.version?.id]);
 
 	const visibleRootFieldCount = useMemo(() => {
 		const props = engine.previewSchema.properties ?? {};
@@ -354,7 +365,7 @@ export function V2AnketaSchemaForm({
 				templates={v2AnketaFormTemplates}
 				widgets={v2AnketaFormWidgets}
 				validator={validatorRu}
-				liveValidate
+				liveValidate={!debouncePreviewInputs}
 				noHtml5Validate
 				showErrorList={false}
 				disabled={disabled}
