@@ -240,7 +240,7 @@ export const V2TemplateSchemaEditor = ({
 	}, []);
 
 	const setLogicWorkspaceTab = useCallback(
-		(tab: "works" | "dependencies" | "jsonlogic") => {
+		(tab: "works" | "atypicalWorks" | "dependencies" | "jsonlogic") => {
 			runInternalEditorNavigation(() => {
 				setLogicWorkspaceTabInStore(tab);
 			});
@@ -390,6 +390,7 @@ export const V2TemplateSchemaEditor = ({
 			const store = useSchemaEditorUiStore.getState();
 			if (
 				legacyLogicTab === "works" ||
+				legacyLogicTab === "atypicalWorks" ||
 				legacyLogicTab === "dependencies" ||
 				legacyLogicTab === "jsonlogic"
 			) {

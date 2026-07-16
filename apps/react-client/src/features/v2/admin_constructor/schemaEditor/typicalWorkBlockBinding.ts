@@ -125,7 +125,7 @@ export function removeBoundWorkIdAtPointer(
 	);
 }
 
-function outputPathToPointer(outputPath: string): string {
+export function outputPathToPointer(outputPath: string): string {
 	return `/${outputPath.split(".").filter(Boolean).join("/")}`;
 }
 
