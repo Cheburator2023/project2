@@ -1,4 +1,12 @@
+import {
+	V2_IMPLEMENTATION_STREAM_CODES,
+	V2_IMPLEMENTATION_STREAM_LABELS,
+} from "@smart-anketa/api-contract";
 import { DEPARTMENTS, STREAM_FILTERED_ROLES, STREAMS } from "../constants";
+
+const V2_IMPLEMENTATION_STREAM_LABEL_VALUES = Object.values(
+	V2_IMPLEMENTATION_STREAM_LABELS,
+);
 
 export function normalizeUserGroups(userGroups: string[]): string[] {
 	const result: string[] = [];
@@ -39,6 +47,8 @@ export function extractDepartmentsAndStreams(userGroups: string[]): string[] {
 	return normalizedGroups.filter(
 		(group) =>
 			Object.values(DEPARTMENTS).includes(group as any) ||
-			Object.values(STREAMS).includes(group as any),
+			Object.values(STREAMS).includes(group as any) ||
+			(V2_IMPLEMENTATION_STREAM_CODES as readonly string[]).includes(group) ||
+			V2_IMPLEMENTATION_STREAM_LABEL_VALUES.includes(group as any),
 	);
 }

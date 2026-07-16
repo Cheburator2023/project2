@@ -48,6 +48,8 @@ describe("StreamMappingService", () => {
 			const dept = DEPARTMENTS.RB;
 			const result = service.getGroupsAfterMapping([role, dept]);
 			expect(result).toContain(STREAMS.RB);
+			expect(result).toContain("rb");
+			expect(result).toContain("Моделирование РБ");
 		});
 
 		it("passes through known stream", () => {
@@ -55,6 +57,14 @@ describe("StreamMappingService", () => {
 			const stream = STREAMS.RB;
 			const result = service.getGroupsAfterMapping([role, stream]);
 			expect(result).toContain(stream);
+		});
+
+		it("expands v2 implementation stream code to label and back", () => {
+			const role = STREAM_FILTERED_ROLES[0];
+			const result = service.getGroupsAfterMapping([role, "rb"]);
+			expect(result).toEqual(
+				expect.arrayContaining(["rb", "Моделирование РБ"]),
+			);
 		});
 	});
 });

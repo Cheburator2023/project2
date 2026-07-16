@@ -8,8 +8,11 @@ import {
 	updatePropertyAtPointer,
 } from "./schemaMutators";
 
-/** Ответ `/v2/dictionaries/json/:code` — извлекаем коды под enum в схеме. */
-export function parseDictionaryJsonToEnumPair(data: unknown): {
+/** Ответ `/v2/dictionaries/json/:code` — code → enum value, label → подпись. */
+export function parseDictionaryJsonToEnumPair(
+	data: unknown,
+	dictionaryCode?: string,
+): {
 	enums: string[];
 	enumNames: string[];
 } | null {
@@ -17,6 +20,26 @@ export function parseDictionaryJsonToEnumPair(data: unknown): {
 	const raw = data as Record<string, unknown>;
 	const items = raw.items;
 	if (!Array.isArray(items)) return null;
+	const resolvedCode =
+		typeof dictionaryCode === "string" && dictionaryCode.trim()
+			? dictionaryCode.trim()
+			: typeof raw.code === "string"
+				? raw.code.trim()
+				: "";
+	/** Для этих справочников в formData хранится code, а не label. */
+	const storeCode =
+		resolvedCode === "v2.generalInfo.implementationStream" ||
+		items.some((it) => {
+			if (!it || typeof it !== "object") return false;
+			const payload = (it as Record<string, unknown>).payload;
+			return (
+				payload &&
+				typeof payload === "object" &&
+				!Array.isArray(payload) &&
+				(payload as Record<string, unknown>).storeCode === true
+			);
+		});
+
 	const enums: string[] = [];
 	const enumNames: string[] = [];
 	for (const it of items) {
@@ -25,11 +48,16 @@ export function parseDictionaryJsonToEnumPair(data: unknown): {
 		const code = row.code;
 		if (typeof code !== "string" || !code.trim()) continue;
 		const label = row.label;
-		// В formData/jsonSchema хранится полный label (enum из схемы), code — короткий ключ в БД.
-		const value =
+		const displayLabel =
 			typeof label === "string" && label.trim() ? label.trim() : code.trim();
-		enums.push(value);
-		enumNames.push(value);
+		if (storeCode) {
+			enums.push(code.trim());
+			enumNames.push(displayLabel);
+		} else {
+			// Legacy: в formData/jsonSchema хранится полный label (enum из схемы).
+			enums.push(displayLabel);
+			enumNames.push(displayLabel);
+		}
 	}
 	if (!enums.length) return null;
 	return { enums, enumNames };

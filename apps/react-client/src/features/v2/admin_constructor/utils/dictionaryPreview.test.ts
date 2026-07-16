@@ -4,6 +4,7 @@ import {
 	collectDictionaryFieldBindings,
 	mergeDictionaryEnumsIntoPreviewSchema,
 	mergeDictionaryOptionsIntoPreviewUiSchema,
+	parseDictionaryJsonToEnumPair,
 } from "./dictionaryPreview";
 
 const ENUM_MAP = {
@@ -125,6 +126,48 @@ describe("dictionary preview merge", () => {
 				],
 				enumNames: ["Alpha", "Beta"],
 			},
+		});
+	});
+});
+
+describe("parseDictionaryJsonToEnumPair", () => {
+	it("keeps legacy label-as-value for ordinary dictionaries", () => {
+		expect(
+			parseDictionaryJsonToEnumPair({
+				code: "v2.test.dict",
+				items: [
+					{ code: "a", label: "Alpha" },
+					{ code: "b", label: "Beta" },
+				],
+			}),
+		).toEqual({
+			enums: ["Alpha", "Beta"],
+			enumNames: ["Alpha", "Beta"],
+		});
+	});
+
+	it("stores codes for implementationStream dictionary", () => {
+		expect(
+			parseDictionaryJsonToEnumPair(
+				{
+					items: [
+						{
+							code: "rb",
+							label: "Моделирование РБ",
+							payload: { storeCode: true },
+						},
+						{
+							code: "rnd",
+							label: "Моделирование RnD",
+							payload: { storeCode: true },
+						},
+					],
+				},
+				"v2.generalInfo.implementationStream",
+			),
+		).toEqual({
+			enums: ["rb", "rnd"],
+			enumNames: ["Моделирование РБ", "Моделирование RnD"],
 		});
 	});
 });

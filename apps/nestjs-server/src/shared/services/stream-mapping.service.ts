@@ -1,19 +1,39 @@
 import { Injectable } from "@nestjs/common";
+import {
+	isV2ImplementationStreamCode,
+	V2_IMPLEMENTATION_STREAM_CODES,
+	V2_IMPLEMENTATION_STREAM_LABELS,
+} from "@smart-anketa/api-contract";
 import { DEPARTMENTS, STREAM_FILTERED_ROLES, STREAMS } from "../constants";
 import {
 	extractDepartmentsAndStreams,
 	extractUserRoles,
 } from "../utils/user-groups.util";
 
-const DEPARTMENT_TO_STREAM_MAPPING = {
-	[DEPARTMENTS.KIB_SMB]: [STREAMS.KIB_SMB],
+/** Департамент Keycloak → стримы v1 (`streamExecutor`) и коды v2 (`implementationStream`). */
+const DEPARTMENT_TO_STREAM_MAPPING: Record<string, readonly string[]> = {
+	[DEPARTMENTS.KIB_SMB]: [
+		STREAMS.KIB_SMB,
+		"kmbkcb",
+		V2_IMPLEMENTATION_STREAM_LABELS.kmbkcb,
+	],
 	[DEPARTMENTS.PARTNERSHIPS_IT]: [
 		STREAMS.PARTNERSHIPS_IT_IT,
 		STREAMS.PARTNERSHIPS_IT_RND,
+		"ptitpc",
+		V2_IMPLEMENTATION_STREAM_LABELS.ptitpc,
 	],
-	[DEPARTMENTS.RB]: [STREAMS.RB],
-	[DEPARTMENTS.ML_ALGORITHMS]: [STREAMS.ML_ALGORITHMS],
-	[DEPARTMENTS.PROCESS_FINANCIAL]: [STREAMS.PROCESS_FINANCIAL],
+	[DEPARTMENTS.RB]: [STREAMS.RB, "rb", V2_IMPLEMENTATION_STREAM_LABELS.rb],
+	[DEPARTMENTS.ML_ALGORITHMS]: [
+		STREAMS.ML_ALGORITHMS,
+		"rnd",
+		V2_IMPLEMENTATION_STREAM_LABELS.rnd,
+	],
+	[DEPARTMENTS.PROCESS_FINANCIAL]: [
+		STREAMS.PROCESS_FINANCIAL,
+		"finmdl",
+		V2_IMPLEMENTATION_STREAM_LABELS.finmdl,
+	],
 };
 
 /**
@@ -37,11 +57,32 @@ export class StreamMappingService {
 
 		if (this.isStreamFilteredUser(userGroups)) {
 			const departmentsAndStreams = extractDepartmentsAndStreams(userGroups);
-			return departmentsAndStreams.flatMap(
-				(group) => DEPARTMENT_TO_STREAM_MAPPING[group] || group,
+			const mapped = departmentsAndStreams.flatMap(
+				(group) => DEPARTMENT_TO_STREAM_MAPPING[group] ?? [group],
 			);
+			return this.expandStreamAliases(mapped);
 		}
 
 		return [];
+	}
+
+	/** Добавляет пары code↔label v2, чтобы фильтр срабатывал и по ключу, и по подписи. */
+	private expandStreamAliases(streams: readonly string[]): string[] {
+		const expanded = new Set<string>();
+		for (const stream of streams) {
+			const trimmed = stream.trim();
+			if (!trimmed) continue;
+			expanded.add(trimmed);
+			if (isV2ImplementationStreamCode(trimmed)) {
+				expanded.add(V2_IMPLEMENTATION_STREAM_LABELS[trimmed]);
+				continue;
+			}
+			for (const code of V2_IMPLEMENTATION_STREAM_CODES) {
+				if (V2_IMPLEMENTATION_STREAM_LABELS[code] === trimmed) {
+					expanded.add(code);
+				}
+			}
+		}
+		return [...expanded];
 	}
 }
