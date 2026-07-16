@@ -1,6 +1,6 @@
 # Справочник `implementationStream` и фильтрация по стримам
 
-Документ описывает поле **Стрим-исполнитель** анкеты v2 и то, как по нему фильтруется реестр для ролей со стрим-ограничением.
+Документ описывает единый справочник **Стрим-исполнитель** (`V2_IMPLEMENTATION_STREAM`): поле анкеты v2, стрим-блоки конструктора схемы, редактор логики типовых работ и фильтрацию реестра для ролей со стрим-ограничением.
 
 ## 1. Назначение
 
@@ -12,8 +12,16 @@
 | **UI (select)** | человекочитаемая **подпись** |
 | **Реестр (грид)** | подпись (код резолвится в label) |
 
-Это **не** то же самое, что `streamExecutor` у типовых работ / стрим-блоков конструктора (`V2_EXECUTOR_STREAM_LABELS`: ДАДМ, ПиРМ, …).  
-`implementationStream` — атрибут **анкеты**; `streamExecutor` — привязка работ и блоков схемы.
+Тот же справочник кодов используется для **стрим-блоков** в конструкторе схемы (`ui:options.streamExecutor`) и для **области стрима** в редакторе логики типовых работ. В этих местах в uiSchema тоже хранятся **коды**; подписи показываются только в UI.
+
+| Контекст | Где лежит значение | Формат |
+|----------|-------------------|--------|
+| Поле анкеты | `formData.generalInfo.implementationStream` | код |
+| Стримовый блок схемы | `uiSchema.*.ui:options.streamExecutor` | код |
+| Область в логике типовых работ | scope / селекты редактора | код |
+| Назначения типовых работ в БД | `streamExecutor` у норм/правил | **имя стрима в БД** (см. §4) |
+
+Legacy-подписи executor-стримов (`ДАДМ`, `ПиРМ`, `Источники данных`, …) при **чтении** нормализуются в код через `normalizeStreamBlockExecutor` (`v2-stream-block-executor.util.ts`).
 
 ---
 
@@ -56,6 +64,7 @@ v2.generalInfo.implementationStream
 - `isV2ImplementationStreamCode(value)`
 - `resolveImplementationStreamLabel(code)`
 - `buildImplementationStreamEnumPair()` → `{ enums, enumNames }`
+- `V2_IMPLEMENTATION_STREAM` — именованные константы кодов (`V2_IMPLEMENTATION_STREAM.RB`, …)
 
 ### Логика анкеты
 
@@ -114,7 +123,7 @@ Keycloak groups
 
 - в groups могут прийти **код** или **подпись** стрима напрямую — они тоже учитываются;
 - `expandStreamAliases` добавляет пары **code ↔ label**, чтобы фильтр срабатывал независимо от формата значения в анкете;
-- стримы `idsrc` / `mdlctl` / `pirm` / `strdat` / `digagt` (и остальные коды) также имеют
+- стримы `idsrc` / `mdlctl` / `dadm` / `pirm` / `strdat` / `digagt` (и остальные коды) также имеют
   identity-маппинг `code → [code]`: если код есть в groups пользователя, он попадает в allow-list
   (подпись добавит `expandStreamAliases`).
 
@@ -127,11 +136,94 @@ Keycloak groups
 
 ---
 
-## 4. Ключевые файлы
+## 4. Стрим-блоки конструктора и логика типовых работ
+
+### Стримовый блок в uiSchema
+
+Корневой object-блок анкеты может быть помечен как платформенный/поддерживающий стрим:
+
+```json
+{
+  "ui:options": {
+    "streamBlock": true,
+    "streamExecutor": "idsrc",
+    "sectionRole": "main"
+  }
+}
+```
+
+- **`streamExecutor`** — код из `V2_IMPLEMENTATION_STREAM` (не подпись).
+- Заголовок секции в UI: `resolveStreamBlockExecutorLabel(code)` → «Стрим «Источники данных»».
+- Старые шаблоны с подписью (`"Источники данных"`, `"ДАДМ"`) или legacy-ключами (`streamDataSources`, `field_i8dL7QZa`) при чтении приводятся к коду.
+
+UI конструктора: панель «Стримовый блок» в `SchemaPropertiesPanel` — селект по `V2_IMPLEMENTATION_STREAM_CODES` / `V2_IMPLEMENTATION_STREAM_LABELS`, справочник `v2.generalInfo.implementationStream`.
+
+### Редактор логики типовых работ
+
+Область (toolbar), матрица назначений и диалог создания работы оперируют **кодами** `V2_IMPLEMENTATION_STREAM`:
+
+| UI | Константа / файл |
+|----|------------------|
+| Список стримов области | `LOGIC_EXECUTOR_STREAMS` = `V2_IMPLEMENTATION_STREAM_CODES` |
+| Область по умолчанию | `DEFAULT_LOGIC_STREAM` = `idsrc` |
+| Подпись в UI | `streamDisplayLabel` → `resolveStreamBlockExecutorLabel` |
+| Фильтр работ в sidebar | `workMatchesLogicScope` + `resolveStreamBlockExecutorScopeStreams` |
+
+Файл react-client: `typicalWorksAreas.ts`.
+
+### Два слоя `streamExecutor`
+
+| Слой | Формат | Пример |
+|------|--------|--------|
+| UI логики / uiSchema блока | код implementationStream | `idsrc`, `dadm` |
+| БД типовых работ (нормы, правила, назначения) | каноническое **имя стрима** | `Источники данных`, `ИД. Внутренний`, `ДАДМ` |
+
+При **создании** работы или **назначении** на стрим UI передаёт код, API получает DB-имя:
+
+```text
+код (idsrc)
+  → resolveLogicStreamDbExecutor("idsrc")
+  → "Источники данных"   // POST/PATCH typical work
+```
+
+При **отображении** и **фильтрации** DB-имя сопоставляется обратно с кодом:
+
+```text
+"ИД. Внутренний"
+  → resolveLogicStreamForDbExecutor(...)
+  → idsrc
+```
+
+Scope для сопоставления работ (`IMPLEMENTATION_STREAM_DB_SCOPE` в `v2-stream-block-executor.util.ts`) включает legacy-имена БД, подписи и сами коды — чтобы фильтр работал и для старых назначений.
+
+### Хелперы `v2-stream-block-executor.util.ts`
+
+| Функция | Назначение |
+|---------|------------|
+| `normalizeStreamBlockExecutor(value)` | код, подпись справочника или legacy executor-label → код или `null` |
+| `resolveStreamBlockExecutorLabel(value)` | код / legacy → подпись для UI |
+| `resolveStreamBlockExecutorScopeStreams(code)` | код → список имён для поиска назначений работ |
+| `resolveLogicStreamForDbExecutor(dbStream)` | имя в БД → код |
+| `resolveLogicStreamDbExecutor(code)` | код → каноническое имя для записи в БД |
+| `inferLegacyStreamBlockExecutorCode(blockKey)` | `streamDataSources`, `field_i8dL7QZa`, … → код |
+
+Связанные util в api-contract:
+
+- `collectExecutorStreamBlocks`, `isExecutorStreamPresentInSchema` — стрим-блоки в uiSchema;
+- `typicalWorkAssignedToExecutorStream` — работа назначена на стрим блока (с учётом scope);
+- `V2_EXECUTOR_STREAM_LABELS` — **legacy**-метки для старых шаблонов и editor executor areas; новый код опирается на `V2_IMPLEMENTATION_STREAM`.
+
+---
+
+## 5. Ключевые файлы
 
 | Файл | Содержание |
 |------|------------|
-| `packages/api-contract/src/v2-implementation-streams.util.ts` | коды, подписи, хелперы |
+| `packages/api-contract/src/v2-implementation-streams.util.ts` | коды, подписи, `V2_IMPLEMENTATION_STREAM`, хелперы |
+| `packages/api-contract/src/v2-stream-block-executor.util.ts` | нормализация код↔label↔DB для блоков и логики |
+| `packages/api-contract/src/v2-anketa-section-ui.util.ts` | `streamBlock`, `collectExecutorStreamBlocks`, заголовки |
+| `apps/react-client/.../SchemaPropertiesPanel.tsx` | селект стрим-исполнителя стрим-блока |
+| `apps/react-client/.../typicalWorksAreas.ts` | область и фильтры редактора логики |
 | `apps/nestjs-server/.../v2-default-organizational-dictionaries.ts` | seed справочника |
 | `apps/nestjs-server/.../v2-default-anketa.snapshot.json` | enum / enumNames в схеме |
 | `apps/react-client/.../dictionaryPreview.ts` | `storeCode` → code в formData |
@@ -142,7 +234,7 @@ Keycloak groups
 
 ---
 
-## 5. Отличия v1 и v2
+## 6. Отличия v1 и v2
 
 | | v1 | v2 |
 |--|----|----|
