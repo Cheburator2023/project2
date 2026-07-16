@@ -1,6 +1,10 @@
 export const STREAM_FILTERED_ROLES = [
 	"ds",
-	"ds_lead",
+	"de",
+	"sarep",
+	"data_expert",
+	"mipm_stream",
+	"modelops",
 ] as const;
 
 export type StreamFilteredRole = (typeof STREAM_FILTERED_ROLES)[number];

@@ -1,11 +1,9 @@
-import SaveIcon from "@mui/icons-material/Save";
 import BugReportOutlinedIcon from "@mui/icons-material/BugReportOutlined";
 import Alert from "@mui/material/Alert";
 import {
 	Box,
 	Button,
 	CircularProgress,
-	IconButton,
 	Typography,
 } from "@mui/material";
 import type { V2SchemaBindingDto } from "@smart-anketa/api-contract";
@@ -85,7 +83,8 @@ export function AnketaFormShell({
 	"data-test-id": dataTestId = "anketa-form-shell",
 }: Props) {
 	const navigate = useNavigate();
-	const { canCreateCalculation } = usePermissions();
+	const { canCreateCalculation, canEditCalculation, canWorkflowApprove } =
+		usePermissions();
 
 	const createCopy = useCreateV2QuestionnaireVersion();
 	const internalEngine = useV2AnketaSchemaEngine(engineProp ? null : source);
@@ -183,11 +182,16 @@ export function AnketaFormShell({
 		debouncePreviewInputs,
 	]);
 
+	const isEditingQuestionnaire = Boolean(questionnaireId);
+	const canSaveQuestionnaire = isEditingQuestionnaire
+		? canEditCalculation
+		: canCreateCalculation;
+
 	const headerActions = useMemo(
 		() => (
 			<>
 				<AnketaSectionStatusChip kind="global" status={workflow.globalStatus} />
-				{!globallyLocked ? (
+				{(!globallyLocked && canWorkflowApprove )? (
 					<Button
 						variant="contained"
 						size="small"
@@ -228,20 +232,29 @@ export function AnketaFormShell({
 						Создать копию
 					</Button>
 				) : null}
-				{onSave && canCreateCalculation ? (
-					<IconButton
+				{onSave && canSaveQuestionnaire ? (
+					<Button
+						variant="contained"
+						size="small"
 						onClick={onSave}
 						disabled={saveDisabled || savePending || effectiveReadOnly}
-						title="Сохранить"
+						startIcon={
+							savePending ? (
+								<CircularProgress size={16} color="inherit" />
+							) : undefined
+						}
+						sx={{ fontWeight: 600, textTransform: "none", whiteSpace: "nowrap" }}
 					>
-						{savePending ? <CircularProgress size={20} /> : <SaveIcon />}
-					</IconButton>
+						{isEditingQuestionnaire ? "Сохранить" : "Создать"}
+					</Button>
 				) : null}
 			</>
 		),
 		[
-			canCreateCalculation,
+			canSaveQuestionnaire,
+			canWorkflowApprove,
 			headerExtra,
+			isEditingQuestionnaire,
 			onSave,
 			saveDisabled,
 			savePending,
@@ -327,7 +340,9 @@ export function AnketaFormShell({
 				open={completeDialogOpen}
 				phase={completeDialogPhase}
 				onClose={closeCompleteDialog}
-				canSave={Boolean(onSave) && !saveDisabled}
+				canSave={
+					Boolean(onSave) && canSaveQuestionnaire && !saveDisabled
+				}
 				savePending={savePending}
 				hasQuestionnaireId={Boolean(questionnaireId)}
 				createCopyPending={createCopy.isPending}
