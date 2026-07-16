@@ -355,7 +355,12 @@ export function V2QuestionnaireList() {
 	const { mode } = useColorScheme();
 	const navigate = useNavigate();
 	const gridRef = useRef<AgGridReact<V2QuestionnaireGridRow>>(null);
-	const { canAccessAdminPanel, canCreateCalculation, canExportReports } = usePermissions();
+	const {
+		canAccessAdminPanel,
+		canCreateCalculation,
+		canDeleteCalculation,
+		canExportReports,
+	} = usePermissions();
 	const bulkDelete = useBulkDeleteV2Questionnaires();
 	const { data: templates } = useV2Templates();
 	const activeTemplate = useMemo(
@@ -651,7 +656,7 @@ export function V2QuestionnaireList() {
 							</Button>
 						</>
 					) : null}
-					{canAccessAdminPanel ? (
+					{canDeleteCalculation || canAccessAdminPanel ? (
 						<Button
 							variant="outlined"
 							size="small"

@@ -33,8 +33,10 @@ import {
 import { V2QuestionnaireService } from "../services/v2-questionnaire.service";
 import { V2QuestionnaireCommentService } from "../services/v2-questionnaire-comment.service";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
+import { RealmRole } from "../../../shared/decorators/realm-role.decorator";
 import { StreamFilter } from "../../../shared/decorators/stream-filter.decorator";
 import { StreamFilterInterceptor } from "../../../shared/interceptors/stream-filter.interceptor";
+import { Permission } from "../../../shared/types/permissions";
 
 @ApiTags("v2-questionnaires")
 @Controller("v2/questionnaires")
@@ -54,7 +56,11 @@ export class V2QuestionnaireController {
 
 	@Post("bulk-delete")
 	@HttpCode(200)
-	@ApiOperation({ summary: "Массовое удаление анкет v2 по id (админка)" })
+	@RealmRole(
+		Permission.ANKETA_DELETE_CALCULATION,
+		Permission.ANKETA_ADMIN_PANEL,
+	)
+	@ApiOperation({ summary: "Массовое удаление анкет v2 по id" })
 	async bulkDelete(
 		@Body() body: BulkDeleteV2QuestionnairesDto,
 	): Promise<BulkDeleteV2QuestionnairesResultDto> {
