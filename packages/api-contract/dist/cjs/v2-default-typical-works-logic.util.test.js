@@ -286,4 +286,28 @@ const v2_default_typical_works_logic_util_1 = require("./v2-default-typical-work
         (0, vitest_1.expect)(JSON.stringify(rule?.condition)).toContain(customPath);
         (0, vitest_1.expect)(JSON.stringify(rule?.condition)).not.toContain("streamDataSources.sourceTypicalTasks");
     });
+    (0, vitest_1.it)("injects model stream catalog rule for detailTypicalTasks block", () => {
+        const patched = (0, v2_default_typical_works_logic_util_1.patchV2TypicalWorksLogicRules)({ rules: [] }, {
+            uiSchema: {
+                detailInfo: {
+                    "ui:options": {
+                        streamBlock: true,
+                        streamExecutor: "Модельный стрим",
+                    },
+                    detailTypicalTasks: {
+                        "ui:options": {
+                            archComponent: "typicalWork",
+                            streamExecutor: "Модельный стрим",
+                        },
+                    },
+                },
+            },
+        });
+        const rule = patched.rules.find((entry) => entry.id === "typical-works-catalog-detailInfo-detailTypicalTasks");
+        (0, vitest_1.expect)(rule).toBeTruthy();
+        const payload = rule?.payload;
+        (0, vitest_1.expect)(payload.worksCatalogStream).toBe("Модельный стрим");
+        (0, vitest_1.expect)(payload.worksCatalogAllArchComponents).toBe(true);
+        (0, vitest_1.expect)(payload.sourceArrayPath).toBeUndefined();
+    });
 });

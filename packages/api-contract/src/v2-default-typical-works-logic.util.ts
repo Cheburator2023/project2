@@ -1,4 +1,9 @@
 import type { V2JsonLogicValue, V2LogicGraphDto, V2LogicRuleDto } from "./v2-template.types";
+import { resolveStreamExecutorForTypicalWorkOutputPath } from "./v2-anketa-section-ui.util";
+import {
+	V2_MODEL_STREAM_EXECUTOR,
+	V2_MODEL_STREAM_FACTORY_WORK_IDS,
+} from "./v2-model-stream-typical-works.constants";
 import {
 	collectTypicalWorkBlockBindings,
 	collectGeneratedTypicalWorkArrayPaths,
@@ -82,6 +87,36 @@ export { V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH };
 
 export function typicalWorksCatalogRuleId(outputArrayPath: string): string {
 	return `typical-works-catalog-${outputArrayPath.replace(/\./g, "-")}`;
+}
+
+export function buildModelStreamTypicalWorksCatalogRule(
+	outputArrayPath: string,
+	options?: { boundWorkIds?: string[] | undefined },
+): V2LogicRuleDto {
+	const boundWorkIds = options?.boundWorkIds ?? [...V2_MODEL_STREAM_FACTORY_WORK_IDS];
+	return {
+		id: typicalWorksCatalogRuleId(outputArrayPath),
+		kind: "task_trigger",
+		targetPath: `/${outputArrayPath.replace(/\./g, "/")}`,
+		condition: true,
+		description:
+			"ФТ-024: типовые работы модельного стрима из справочника (10 этапов CSV).",
+		dependencies: [],
+		payload: {
+			hint:
+				"Типовые работы модельного стрима: всегда видимые этапы и этапы по триггерам из detailInfo.",
+			mode: "generated_rows",
+			label: "Типовые работы (Модельный стрим)",
+			worksCatalog: true,
+			worksCatalogStream: V2_MODEL_STREAM_EXECUTOR,
+			worksCatalogAllArchComponents: true,
+			outputArrayPath,
+			allowedWorkIds: boundWorkIds,
+			sourceContextPaths: ["detailInfo", "generalInfo", "uncertaintyCalculation"],
+			taskCode: "CATALOG_MODEL_STREAM_TASKS",
+			calcModel: "unified",
+		},
+	};
 }
 
 export function buildSourceTypicalWorksCatalogRule(
@@ -343,11 +378,25 @@ export function patchV2TypicalWorksLogicRules(
 	if (hasSourceRule) {
 		if (bindings.length > 0) {
 			for (const binding of bindings) {
-				patched.push(
-					buildSourceTypicalWorksCatalogRule(binding.outputPath, {
-						boundWorkIds: binding.boundWorkIds,
-					}),
-				);
+				const streamExecutor = options?.uiSchema
+					? resolveStreamExecutorForTypicalWorkOutputPath(
+							options.uiSchema,
+							binding.outputPath,
+						)
+					: null;
+				if (streamExecutor === V2_MODEL_STREAM_EXECUTOR) {
+					patched.push(
+						buildModelStreamTypicalWorksCatalogRule(binding.outputPath, {
+							boundWorkIds: binding.boundWorkIds,
+						}),
+					);
+				} else {
+					patched.push(
+						buildSourceTypicalWorksCatalogRule(binding.outputPath, {
+							boundWorkIds: binding.boundWorkIds,
+						}),
+					);
+				}
 			}
 		} else {
 			patched.push(

@@ -45,8 +45,10 @@ export function AdminV2DictionariesPage() {
 	const [createOpen, setCreateOpen] = useState(false);
 	const [pending, setPending] = useState<PendingBulk | null>(null);
 	const [bulkResult, setBulkResult] = useState<BulkResultState | null>(null);
-	const [selectedDictionary, setSelectedDictionary] =
-		useState<V2DictionaryDto | null>(null);
+	const [checkedDictionaries, setCheckedDictionaries] = useState<
+		V2DictionaryDto[]
+	>([]);
+	const [selectionResetKey, setSelectionResetKey] = useState(0);
 	const [detailHeader, setDetailHeader] = useState<V2DictionaryHeaderState | null>(
 		null,
 	);
@@ -62,6 +64,8 @@ export function AdminV2DictionariesPage() {
 				{
 					onSuccess: (result) => {
 						setPending(null);
+						setCheckedDictionaries([]);
+						setSelectionResetKey((key) => key + 1);
 						setBulkResult({ kind: "delete", result });
 					},
 				},
@@ -78,6 +82,8 @@ export function AdminV2DictionariesPage() {
 				{
 					onSuccess: (result) => {
 						setPending(null);
+						setCheckedDictionaries([]);
+						setSelectionResetKey((key) => key + 1);
 						setBulkResult({ kind: "reset", result });
 					},
 				},
@@ -99,10 +105,8 @@ export function AdminV2DictionariesPage() {
 		? pending.rows.filter(canResetV2Dictionary).length
 		: 0;
 
-	const canDeleteSelected =
-		selectedDictionary !== null && canDeleteV2Dictionary(selectedDictionary);
-	const canResetSelected =
-		selectedDictionary !== null && canResetV2Dictionary(selectedDictionary);
+	const deletableChecked = checkedDictionaries.filter(canDeleteV2Dictionary);
+	const resettableChecked = checkedDictionaries.filter(canResetV2Dictionary);
 
 	return (
 		<Flex
@@ -166,22 +170,24 @@ export function AdminV2DictionariesPage() {
 					<Button
 						variant="outlined"
 						color="warning"
-						disabled={!canResetSelected || bulkReset.isPending}
+						disabled={checkedDictionaries.length === 0 || bulkReset.isPending}
 						title={
-							selectedDictionary && !canResetSelected
+							checkedDictionaries.length > 0 && resettableChecked.length === 0
 								? "Сброс доступен только для заводских справочников"
 								: undefined
 						}
 						onClick={() =>
-							selectedDictionary &&
-							setPending({ kind: "reset", rows: [selectedDictionary] })
+							checkedDictionaries.length > 0 &&
+							setPending({ kind: "reset", rows: checkedDictionaries })
 						}
 					>
-						Сбросить к заводским
+						{checkedDictionaries.length > 0
+							? `Сбросить (${checkedDictionaries.length})`
+							: "Сбросить к заводским"}
 					</Button>
 					<div
 						title={
-							selectedDictionary && !canDeleteSelected
+							checkedDictionaries.length > 0 && deletableChecked.length === 0
 								? "Нельзя удалить заводской или используемый в схемах справочник"
 								: undefined
 						}
@@ -189,13 +195,15 @@ export function AdminV2DictionariesPage() {
 						<V2AdminButton
 							color="error"
 							variant="outlined"
-							disabled={!canDeleteSelected || bulkDelete.isPending}
+							disabled={checkedDictionaries.length === 0 || bulkDelete.isPending}
 							onClick={() =>
-								selectedDictionary &&
-								setPending({ kind: "delete", rows: [selectedDictionary] })
+								checkedDictionaries.length > 0 &&
+								setPending({ kind: "delete", rows: checkedDictionaries })
 							}
 						>
-							Удалить
+							{checkedDictionaries.length > 0
+								? `Удалить (${checkedDictionaries.length})`
+								: "Удалить"}
 						</V2AdminButton>
 					</div>
 				</Stack>
@@ -216,7 +224,8 @@ export function AdminV2DictionariesPage() {
 				<V2DictionaryWorkspace
 					showListCreateButton={false}
 					onCreateRequest={() => setCreateOpen(true)}
-					onSelectedDictionaryChange={setSelectedDictionary}
+					onCheckedDictionariesChange={setCheckedDictionaries}
+					selectionResetKey={selectionResetKey}
 					onHeaderChange={setDetailHeader}
 				/>
 			</Flex>

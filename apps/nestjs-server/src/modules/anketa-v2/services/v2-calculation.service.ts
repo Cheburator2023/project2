@@ -697,6 +697,7 @@ export class V2CalculationService {
 							sourceComponent: archComponent,
 							sourceName,
 							generatedByRuleId: rule.id,
+							workId: "workId" in task ? task.workId : undefined,
 						};
 					});
 				}),

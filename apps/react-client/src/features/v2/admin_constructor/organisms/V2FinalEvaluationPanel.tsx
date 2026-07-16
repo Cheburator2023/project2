@@ -20,6 +20,7 @@ import {
 	formatTypicalWorkNumberValue,
 	typicalWorkItemDisplayName,
 } from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
+import { sortModelStreamTypicalWorkRows } from "@smart-anketa/api-contract";
 import { useMemo } from "react";
 
 const MODEL_STREAM_LABEL = "Модельный стрим";
@@ -134,11 +135,14 @@ export function V2FinalEvaluationPanel({
 	);
 	const modelStreamTypicalRows = useMemo(
 		() =>
-			typicalWorkGroups
-				.filter((group) => group.streamExecutor === MODEL_STREAM_LABEL)
-				.flatMap((group) => group.rows),
+			sortModelStreamTypicalWorkRows(
+				typicalWorkGroups
+					.filter((group) => group.streamExecutor === MODEL_STREAM_LABEL)
+					.flatMap((group) => group.rows),
+			),
 		[typicalWorkGroups],
 	);
+	const useModelStreamTypicalWorksTable = modelStreamTypicalRows.length > 0;
 	const otherTypicalWorkGroups = useMemo(
 		() =>
 			typicalWorkGroups.filter(
@@ -150,7 +154,7 @@ export function V2FinalEvaluationPanel({
 		modelStreamTypicalRows.length +
 		otherTypicalWorkGroups.reduce((sum, group) => sum + group.rows.length, 0);
 	const showModelStreamSection =
-		rows.length > 0 || modelStreamTypicalRows.length > 0;
+		useModelStreamTypicalWorksTable || rows.length > 0;
 	const showUnifiedHeadline = Boolean(
 		effectiveSummary && hasNonZeroUnifiedTotals(effectiveSummary),
 	);
@@ -290,7 +294,9 @@ export function V2FinalEvaluationPanel({
 									<Typography variant="h6" fontWeight={700} mb={2}>
 										Модельный стрим
 									</Typography>
-									{rows.length > 0 ? (
+									{useModelStreamTypicalWorksTable ? (
+										<TypicalWorksMiniTable rows={modelStreamTypicalRows} />
+									) : rows.length > 0 ? (
 										<MiniTable
 											columns={[
 												"Наименование этапа E2E планирования",
@@ -310,21 +316,6 @@ export function V2FinalEvaluationPanel({
 												bold: r.stageName === "Итого",
 											}))}
 										/>
-									) : null}
-									{modelStreamTypicalRows.length > 0 ? (
-										<Box sx={{ mt: rows.length > 0 ? 3 : 0 }}>
-											{rows.length > 0 ? (
-												<Typography
-													variant="subtitle2"
-													fontWeight={700}
-													color="text.secondary"
-													mb={1.5}
-												>
-													Типовые работы
-												</Typography>
-											) : null}
-											<TypicalWorksMiniTable rows={modelStreamTypicalRows} />
-										</Box>
 									) : null}
 									{otherTypicalWorkGroups.length > 0 ||
 									platformRows.length > 0 ? (

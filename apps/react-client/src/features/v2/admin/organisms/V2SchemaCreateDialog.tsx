@@ -19,9 +19,11 @@ import {
 	useV2FactorySnapshotSetting,
 } from "@react-client/common/api/queries/v2-templates";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
+import { isApiGatewayOrTimeoutError } from "@react-client/common/api/helpers/isApiGatewayOrTimeoutError";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { toast } from "@react-client/common/toasts";
+import { waitForV2FactoryTemplateReady } from "@react-client/features/v2/admin/utils/waitForV2FactoryTemplateReady";
 import { buildEmptyV2AnketaTemplateSnapshot } from "@smart-anketa/api-contract";
 import {
 	coerceJsonSchema,
@@ -71,6 +73,8 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 	const [name, setName] = useState(() => buildDefaultV2SchemaName(null));
 	const [description, setDescription] = useState("Краткое описание для админки");
 	const [initialKind, setInitialKind] = useState<V2SchemaInitialKind>("default");
+	const [progressLabel, setProgressLabel] = useState<string | null>(null);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const reset = useCallback(() => {
 		setName(buildDefaultV2SchemaName(username));
@@ -85,6 +89,7 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 	}, [open, username]);
 
 	const pending =
+		isSubmitting ||
 		createTemplate.isPending ||
 		createVersion.isPending ||
 		createFromDefault.isPending;
@@ -100,6 +105,8 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 		if (!trimmedName) return;
 
 		try {
+			setIsSubmitting(true);
+			setProgressLabel("Создаём схему и первую версию…");
 			const created = await createTemplate.mutateAsync({
 				code: `schema-${Date.now()}`,
 				name: trimmedName,
@@ -119,10 +126,37 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 					},
 				});
 			} else {
-				await createFromDefault.mutateAsync({
-					templateId: created.id,
-					withoutTypicalWorks: initialKind === "defaultWithoutTypicalWorks",
+				const withoutTypicalWorks =
+					initialKind === "defaultWithoutTypicalWorks";
+				let versionRequestFailed = false;
+
+				try {
+					await createFromDefault.mutateAsync({
+						templateId: created.id,
+						withoutTypicalWorks,
+					});
+				} catch (error) {
+					if (!isApiGatewayOrTimeoutError(error)) {
+						throw error;
+					}
+					versionRequestFailed = true;
+				}
+
+				setProgressLabel(
+					withoutTypicalWorks
+						? "Проверяем готовность черновика…"
+						: "Загружаем типовые работы…",
+				);
+				const ready = await waitForV2FactoryTemplateReady(created.id, {
+					withoutTypicalWorks,
 				});
+				if (!ready) {
+					throw new Error(
+						versionRequestFailed
+							? "Схема создаётся дольше обычного. Обновите страницу через минуту."
+							: "Не удалось дождаться загрузки типовых работ.",
+					);
+				}
 			}
 
 			toast.success(
@@ -133,12 +167,16 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 						: "Схема создана из заводского эталона",
 			);
 			reset();
+			setProgressLabel(null);
 			onClose();
 			navigate(pathForAdminV2Template(created.id));
 		} catch (error) {
 			toast.error("Не удалось создать схему", {
 				description: apiErrorMessage(error),
 			});
+		} finally {
+			setIsSubmitting(false);
+			setProgressLabel(null);
 		}
 	};
 
@@ -162,7 +200,7 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 					>
 						<CircularProgress size={36} />
 						<Typography variant="body2" color="text.secondary">
-							Создаём схему и первую версию…
+							{progressLabel ?? "Создаём схему и первую версию…"}
 						</Typography>
 					</Box>
 				) : null}

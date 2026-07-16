@@ -320,7 +320,7 @@ export const useCreateV2TemplateVersionFromDefault = () => {
 					withoutTypicalWorks ? "?withoutTypicalWorks=true" : ""
 				}`,
 				method: "POST",
-				timeout: API_FACTORY_SCHEMA_TIMEOUT_MS,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: (_, { templateId }) => {
 			void invalidateV2TemplatesList(queryClient);

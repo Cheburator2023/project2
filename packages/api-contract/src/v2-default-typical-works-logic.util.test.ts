@@ -348,4 +348,35 @@ describe("v2-default-typical-works-logic.util", () => {
 			"streamDataSources.sourceTypicalTasks",
 		);
 	});
+
+	it("injects model stream catalog rule for detailTypicalTasks block", () => {
+		const patched = patchV2TypicalWorksLogicRules(
+			{ rules: [] },
+			{
+				uiSchema: {
+					detailInfo: {
+						"ui:options": {
+							streamBlock: true,
+							streamExecutor: "Модельный стрим",
+						},
+						detailTypicalTasks: {
+							"ui:options": {
+								archComponent: "typicalWork",
+								streamExecutor: "Модельный стрим",
+							},
+						},
+					},
+				},
+			},
+		);
+
+		const rule = patched.rules.find(
+			(entry) => entry.id === "typical-works-catalog-detailInfo-detailTypicalTasks",
+		);
+		expect(rule).toBeTruthy();
+		const payload = rule?.payload as Record<string, unknown>;
+		expect(payload.worksCatalogStream).toBe("Модельный стрим");
+		expect(payload.worksCatalogAllArchComponents).toBe(true);
+		expect(payload.sourceArrayPath).toBeUndefined();
+	});
 });

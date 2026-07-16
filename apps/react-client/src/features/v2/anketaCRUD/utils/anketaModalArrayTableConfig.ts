@@ -6,6 +6,8 @@ import {
 	collectGeneratedTypicalWorkArrayPaths,
 	listAllGeneratedTypicalWorkArrayPaths,
 	resolveStreamExecutorForTypicalWorkOutputPath,
+	sortModelStreamTypicalWorkRows,
+	V2_MODEL_STREAM_EXECUTOR,
 } from "@smart-anketa/api-contract";
 
 export type AnketaArrayTableColumn = {
@@ -539,6 +541,7 @@ function isAppearedTypicalWorkRow(row: Record<string, unknown>): boolean {
 	}
 	const name = typeof row.name === "string" ? row.name.trim() : "";
 	if (!name) return false;
+	if (typeof row.workId === "string" && row.workId.trim()) return true;
 	return (
 		normalizeTypicalWorkTotalValue(row.estimateHoursPerDay) != null ||
 		normalizeTypicalWorkTotalValue(row.coefficient) != null ||
@@ -610,7 +613,11 @@ export function collectAppearedTypicalWorkGroups(
 				uiSchema,
 				path,
 			),
-			rows,
+			rows:
+				resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, path) ===
+				V2_MODEL_STREAM_EXECUTOR
+					? sortModelStreamTypicalWorkRows(rows)
+					: rows,
 		});
 	}
 

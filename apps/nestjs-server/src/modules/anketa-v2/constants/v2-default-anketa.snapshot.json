@@ -2711,7 +2711,19 @@
           "removable": false,
           "schemaFieldUid": "field_ec166924-3deb-4574-8fbc-1f88c316a64a",
           "archComponent": "typicalWork",
-          "streamExecutor": "Модельный стрим"
+          "streamExecutor": "Модельный стрим",
+          "boundWorkIds": [
+            "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",
+            "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4002",
+            "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4003",
+            "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4004",
+            "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4005",
+            "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4006",
+            "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4007",
+            "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4008",
+            "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4009",
+            "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4010"
+          ]
         },
         "ui:readonly": true,
         "ui:description": "Формируются автоматически по правилам справочника при расчёте анкеты.\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"

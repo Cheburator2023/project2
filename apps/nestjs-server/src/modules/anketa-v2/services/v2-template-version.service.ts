@@ -1,5 +1,6 @@
 import {
 	Injectable,
+	Logger,
 	NotFoundException,
 	ConflictException,
 } from "@nestjs/common";
@@ -23,6 +24,8 @@ import {
 
 @Injectable()
 export class V2TemplateVersionService {
+	private readonly logger = new Logger(V2TemplateVersionService.name);
+
 	constructor(
 		@InjectRepository(V2TemplateVersionEntity)
 		private readonly versionRepository: Repository<V2TemplateVersionEntity>,
@@ -204,17 +207,33 @@ export class V2TemplateVersionService {
 			userId,
 		);
 		if (!options?.withoutTypicalWorks) {
-			await this.typicalWorkSeedService.seedTemplateTypicalWorksFromFactorySnapshot(
-				templateId,
-				version.id,
-			);
-			await this.typicalWorkWriteService.reconcileAllSchemaFieldsForVersion(
-				version.id,
-				"apply",
-				{ skipConsistencyReport: true },
-			);
+			this.seedTypicalWorksInBackground(templateId, version.id);
 		}
 		return version;
+	}
+
+	private seedTypicalWorksInBackground(
+		templateId: string,
+		versionId: string,
+	): void {
+		void (async () => {
+			try {
+				await this.typicalWorkSeedService.seedTemplateTypicalWorksFromFactorySnapshot(
+					templateId,
+					versionId,
+				);
+				await this.typicalWorkWriteService.reconcileAllSchemaFieldsForVersion(
+					versionId,
+					"apply",
+					{ skipConsistencyReport: true },
+				);
+			} catch (error) {
+				this.logger.error(
+					`Background typical works seed failed for template ${templateId} version ${versionId}`,
+					error instanceof Error ? error.stack : String(error),
+				);
+			}
+		})();
 	}
 
 	async resetToDefault(

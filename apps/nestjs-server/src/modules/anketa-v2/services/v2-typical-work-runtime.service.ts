@@ -16,6 +16,8 @@ import {
 	resolveByValueLaborParamCoefficients,
 	resolveLaborAnyOfCoefficient,
 	resolveStreamFromSourceType,
+	isModelStreamAlwaysActiveWork,
+	isModelStreamAlwaysShownWork,
 	matchTypicalWorkTriggers,
 	type TypicalWorkTriggerMatchInput,
 	buildWorkSchemaParamsFromTemplate,
@@ -83,6 +85,8 @@ type RuntimeWorkContext = {
 	>;
 	hiddenParamCodes?: ReadonlySet<string>;
 	schemaParams: WorkSchemaParamDef[];
+	triggersMatch: boolean;
+	alwaysShown: boolean;
 };
 
 function decimalToNumber(value: string | number | null | undefined): number {
@@ -295,9 +299,9 @@ export class V2TypicalWorkRuntimeService {
 
 		const allowedWorkIds = params.allowedWorkIds;
 		const workWhere =
-			allowedWorkIds === undefined
-				? { archComponentType }
-				: { id: In([...allowedWorkIds]) };
+			allowedWorkIds !== undefined
+				? { id: In([...allowedWorkIds]) }
+				: { archComponentType };
 		let works = await this.workRepository.find({
 			where: {
 				...workWhere,
@@ -390,13 +394,16 @@ export class V2TypicalWorkRuntimeService {
 					(assignmentByWorkId.get(work.id)?.triggerFormula as TypicalWorkTriggerMatchInput["triggerFormula"]) ??
 					null,
 			};
-			if (
-				!matchTypicalWorkTriggers(
-					triggerInput,
-					params.source,
-					params.formData ?? params.source,
-				)
-			) {
+			const triggersMatch = matchTypicalWorkTriggers(
+				triggerInput,
+				params.source,
+				params.formData ?? params.source,
+			);
+			const alwaysActive = isModelStreamAlwaysActiveWork(work.id);
+			const alwaysShown =
+				isModelStreamAlwaysShownWork(work.id) || alwaysActive;
+
+			if (!triggersMatch && !alwaysShown) {
 				continue;
 			}
 
@@ -415,6 +422,8 @@ export class V2TypicalWorkRuntimeService {
 				coefficientValueCatalog,
 				hiddenParamCodes: params.hiddenParamCodes,
 				schemaParams,
+				triggersMatch,
+				alwaysShown,
 			});
 		}
 
@@ -426,6 +435,10 @@ export class V2TypicalWorkRuntimeService {
 			if (visiting.has(workId)) return null;
 			const ctx = contexts.get(workId);
 			if (!ctx) return null;
+			if (ctx.alwaysShown && !ctx.triggersMatch && !isModelStreamAlwaysActiveWork(workId)) {
+				memo.set(workId, 0);
+				return 0;
+			}
 
 			visiting.add(workId);
 			const paramCoefficients = resolveParamCoefficients(ctx);

@@ -435,7 +435,9 @@ function patchAnketaSnapshot(anketa: AnketaSnapshotFile): boolean {
 			| undefined;
 		if (
 			taskOptions?.archComponent !== "typicalWork" ||
-			taskOptions?.streamExecutor !== MODEL_STREAM
+			taskOptions?.streamExecutor !== MODEL_STREAM ||
+			!Array.isArray(taskOptions?.boundWorkIds) ||
+			(taskOptions.boundWorkIds as unknown[]).length !== 10
 		) {
 			typicalTasks["ui:options"] = {
 				...(taskOptions ?? {}),
@@ -444,6 +446,18 @@ function patchAnketaSnapshot(anketa: AnketaSnapshotFile): boolean {
 				removable: false,
 				archComponent: "typicalWork",
 				streamExecutor: MODEL_STREAM,
+				boundWorkIds: [
+					"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",
+					"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4002",
+					"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4003",
+					"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4004",
+					"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4005",
+					"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4006",
+					"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4007",
+					"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4008",
+					"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4009",
+					"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4010",
+				],
 			};
 			changed = true;
 		}

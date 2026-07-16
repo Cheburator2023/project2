@@ -14,9 +14,15 @@ import {
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 import type { V2DictionaryDto } from "@smart-anketa/api-contract";
-import { type ColDef, type ICellRendererParams } from "ag-grid-community";
+import {
+	type ColDef,
+	type ICellRendererParams,
+	type RowClassParams,
+	type RowClickedEvent,
+	type SelectionChangedEvent,
+} from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 registerAgGridTableModules();
 
@@ -39,6 +45,8 @@ type V2DictionaryListPanelProps = {
 	quickFilter: string;
 	onQuickFilterChange: (value: string) => void;
 	onSelect: (id: string) => void;
+	onCheckedDictionariesChange?: (rows: V2DictionaryDto[]) => void;
+	selectionResetKey?: number;
 	onCreate?: () => void;
 	showCreateButton?: boolean;
 };
@@ -72,11 +80,18 @@ export function V2DictionaryListPanel({
 	quickFilter,
 	onQuickFilterChange,
 	onSelect,
+	onCheckedDictionariesChange,
+	selectionResetKey = 0,
 	onCreate,
 	showCreateButton = true,
 }: V2DictionaryListPanelProps) {
 	const { mode } = useColorScheme();
 	const gridRef = useRef<AgGridReact<V2DictionaryDto>>(null);
+	const onCheckedDictionariesChangeRef = useRef(onCheckedDictionariesChange);
+	onCheckedDictionariesChangeRef.current = onCheckedDictionariesChange;
+	const [checkedDictionaries, setCheckedDictionaries] = useState<
+		V2DictionaryDto[]
+	>([]);
 	const gridPersistence = useAgGridColumnPersistence("v2.dictionaries.panel");
 
 	const gridTheme =
@@ -117,22 +132,52 @@ export function V2DictionaryListPanel({
 	useEffect(() => {
 		const api = gridRef.current?.api;
 		if (!api) return;
+		const selected = api.getSelectedRows();
+		setCheckedDictionaries(selected);
+		onCheckedDictionariesChangeRef.current?.(selected);
+	}, [items]);
 
+	useEffect(() => {
+		const api = gridRef.current?.api;
+		if (!api) return;
 		api.deselectAll();
-		if (!selectedId) return;
+		setCheckedDictionaries([]);
+		onCheckedDictionariesChangeRef.current?.([]);
+	}, [selectionResetKey]);
 
+	const getRowClass = useCallback(
+		(params: RowClassParams<V2DictionaryDto>) =>
+			params.data?.id === selectedId ? "v2-dictionary-list-row--active" : "",
+		[selectedId],
+	);
+
+	const onSelectionChanged = useCallback(
+		(event: SelectionChangedEvent<V2DictionaryDto>) => {
+			const selected = event.api.getSelectedRows();
+			setCheckedDictionaries(selected);
+			onCheckedDictionariesChangeRef.current?.(selected);
+		},
+		[],
+	);
+
+	const onRowClicked = useCallback(
+		(event: RowClickedEvent<V2DictionaryDto>) => {
+			if (!event.data?.id) return;
+			onSelect(event.data.id);
+		},
+		[onSelect],
+	);
+
+	useEffect(() => {
+		const api = gridRef.current?.api;
+		if (!api || !selectedId) return;
+		api.redrawRows();
 		api.forEachNode((node) => {
 			if (node.data?.id === selectedId) {
-				node.setSelected(true);
 				api.ensureNodeVisible(node, "middle");
 			}
 		});
 	}, [selectedId, items]);
-
-	const handleSelectionChanged = useCallback(() => {
-		const row = gridRef.current?.api?.getSelectedRows()[0];
-		if (row?.id) onSelect(row.id);
-	}, [onSelect]);
 
 	return (
 		<Card
@@ -144,6 +189,9 @@ export function V2DictionaryListPanel({
 				display: "flex",
 				flexDirection: "column",
 				minHeight: 0,
+				"& .v2-dictionary-list-row--active": {
+					backgroundColor: "action.selected",
+				},
 				"& > div": {
 					display: "flex",
 					flexDirection: "column",
@@ -199,6 +247,11 @@ export function V2DictionaryListPanel({
 					color="text.secondary"
 					sx={{ px: 1.75, py: 0.75, flexShrink: 0 }}
 				>
+					{checkedDictionaries.length > 0 ? (
+						<>
+							Выбрано: <b>{checkedDictionaries.length}</b>.{" "}
+						</>
+					) : null}
 					<b>{items.length}</b> справочников
 				</Typography>
 				<AgGridHost>
@@ -211,8 +264,16 @@ export function V2DictionaryListPanel({
 						defaultColDef={defaultColDef}
 						localeText={AG_GRID_LOCALE_RU}
 						getRowId={(p) => p.data.id}
-						rowSelection={{ mode: "singleRow", enableClickSelection: true }}
-						onSelectionChanged={handleSelectionChanged}
+						rowSelection={{
+							mode: "multiRow",
+							checkboxes: true,
+							headerCheckbox: true,
+							enableClickSelection: false,
+						}}
+						suppressRowClickSelection
+						getRowClass={getRowClass}
+						onRowClicked={onRowClicked}
+						onSelectionChanged={onSelectionChanged}
 						sideBar={gridPersistence.sideBar}
 						onGridReady={gridPersistence.onGridReady}
 						onColumnMoved={(event) => gridPersistence.onColumnMoved(event.api)}

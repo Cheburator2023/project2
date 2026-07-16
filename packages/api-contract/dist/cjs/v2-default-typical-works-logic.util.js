@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = exports.V2_SOURCE_SYSTEMS_ARRAY_PATH = void 0;
 exports.replaceDotPathInJsonLogic = replaceDotPathInJsonLogic;
 exports.typicalWorksCatalogRuleId = typicalWorksCatalogRuleId;
+exports.buildModelStreamTypicalWorksCatalogRule = buildModelStreamTypicalWorksCatalogRule;
 exports.buildSourceTypicalWorksCatalogRule = buildSourceTypicalWorksCatalogRule;
 exports.buildControlTypicalWorksCatalogRule = buildControlTypicalWorksCatalogRule;
 exports.isTypicalWorksCatalogLogicRule = isTypicalWorksCatalogLogicRule;
@@ -11,6 +12,8 @@ exports.buildTypicalWorkRowTotalRule = buildTypicalWorkRowTotalRule;
 exports.buildUnifiedTypicalTotalRule = buildUnifiedTypicalTotalRule;
 exports.schemaSupportsSourceTypicalWorksCatalog = schemaSupportsSourceTypicalWorksCatalog;
 exports.patchV2TypicalWorksLogicRules = patchV2TypicalWorksLogicRules;
+const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
+const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typical-works.constants");
 const v2_typical_work_output_paths_util_1 = require("./v2-typical-work-output-paths.util");
 Object.defineProperty(exports, "V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH", { enumerable: true, get: function () { return v2_typical_work_output_paths_util_1.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH; } });
 Object.defineProperty(exports, "V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH", { enumerable: true, get: function () { return v2_typical_work_output_paths_util_1.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH; } });
@@ -64,6 +67,30 @@ function patchUnifiedTypicalTotalRule(rule, sourceOutputPath) {
 exports.V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
 function typicalWorksCatalogRuleId(outputArrayPath) {
     return `typical-works-catalog-${outputArrayPath.replace(/\./g, "-")}`;
+}
+function buildModelStreamTypicalWorksCatalogRule(outputArrayPath, options) {
+    const boundWorkIds = options?.boundWorkIds ?? [...v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_FACTORY_WORK_IDS];
+    return {
+        id: typicalWorksCatalogRuleId(outputArrayPath),
+        kind: "task_trigger",
+        targetPath: `/${outputArrayPath.replace(/\./g, "/")}`,
+        condition: true,
+        description: "ФТ-024: типовые работы модельного стрима из справочника (10 этапов CSV).",
+        dependencies: [],
+        payload: {
+            hint: "Типовые работы модельного стрима: всегда видимые этапы и этапы по триггерам из detailInfo.",
+            mode: "generated_rows",
+            label: "Типовые работы (Модельный стрим)",
+            worksCatalog: true,
+            worksCatalogStream: v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR,
+            worksCatalogAllArchComponents: true,
+            outputArrayPath,
+            allowedWorkIds: boundWorkIds,
+            sourceContextPaths: ["detailInfo", "generalInfo", "uncertaintyCalculation"],
+            taskCode: "CATALOG_MODEL_STREAM_TASKS",
+            calcModel: "unified",
+        },
+    };
 }
 function buildSourceTypicalWorksCatalogRule(outputArrayPath = v2_typical_work_output_paths_util_1.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH, options) {
     const boundWorkIds = options?.boundWorkIds;
@@ -278,9 +305,19 @@ function patchV2TypicalWorksLogicRules(logic, options) {
     if (hasSourceRule) {
         if (bindings.length > 0) {
             for (const binding of bindings) {
-                patched.push(buildSourceTypicalWorksCatalogRule(binding.outputPath, {
-                    boundWorkIds: binding.boundWorkIds,
-                }));
+                const streamExecutor = options?.uiSchema
+                    ? (0, v2_anketa_section_ui_util_1.resolveStreamExecutorForTypicalWorkOutputPath)(options.uiSchema, binding.outputPath)
+                    : null;
+                if (streamExecutor === v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR) {
+                    patched.push(buildModelStreamTypicalWorksCatalogRule(binding.outputPath, {
+                        boundWorkIds: binding.boundWorkIds,
+                    }));
+                }
+                else {
+                    patched.push(buildSourceTypicalWorksCatalogRule(binding.outputPath, {
+                        boundWorkIds: binding.boundWorkIds,
+                    }));
+                }
             }
         }
         else {
