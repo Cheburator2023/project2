@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { V2_IMPLEMENTATION_STREAM, V2_IMPLEMENTATION_STREAM_LABELS, } from "./v2-implementation-streams.util";
-import { inferLegacyStreamBlockExecutorCode, normalizeStreamBlockExecutor, resolveLogicStreamDbExecutor, resolveLogicStreamForDbExecutor, resolveStreamBlockExecutorLabel, resolveStreamBlockExecutorScopeStreams, } from "./v2-stream-block-executor.util";
+import { inferLegacyStreamBlockExecutorCode, normalizeStreamBlockExecutor, resolveLogicStreamDbExecutor, resolveLogicStreamForDbExecutor, resolveStreamBlockExecutorLabel, resolveStreamBlockExecutorScopeStreams, serializeStreamBlockExecutors, normalizeStreamBlockExecutors, } from "./v2-stream-block-executor.util";
 describe("v2-stream-block-executor.util", () => {
     it("normalizes implementation stream codes and legacy labels", () => {
         expect(normalizeStreamBlockExecutor(V2_IMPLEMENTATION_STREAM.IDSRC)).toBe(V2_IMPLEMENTATION_STREAM.IDSRC);
@@ -24,5 +24,23 @@ describe("v2-stream-block-executor.util", () => {
         expect(resolveLogicStreamForDbExecutor("ИД. Внутренний")).toBe(V2_IMPLEMENTATION_STREAM.IDSRC);
         expect(resolveLogicStreamForDbExecutor("ДАДМ")).toBe(V2_IMPLEMENTATION_STREAM.DADM);
         expect(resolveLogicStreamDbExecutor(V2_IMPLEMENTATION_STREAM.DADM)).toBe("ДАДМ");
+    });
+    it("normalizes and serializes multi-stream executor values", () => {
+        expect(normalizeStreamBlockExecutors([
+            V2_IMPLEMENTATION_STREAM.IDSRC,
+            "Источники данных",
+            V2_IMPLEMENTATION_STREAM.PIRM,
+        ])).toEqual([
+            V2_IMPLEMENTATION_STREAM.IDSRC,
+            V2_IMPLEMENTATION_STREAM.PIRM,
+        ]);
+        expect(serializeStreamBlockExecutors([
+            V2_IMPLEMENTATION_STREAM.IDSRC,
+            V2_IMPLEMENTATION_STREAM.PIRM,
+        ])).toEqual([
+            V2_IMPLEMENTATION_STREAM.IDSRC,
+            V2_IMPLEMENTATION_STREAM.PIRM,
+        ]);
+        expect(serializeStreamBlockExecutors([V2_IMPLEMENTATION_STREAM.IDSRC])).toBe(V2_IMPLEMENTATION_STREAM.IDSRC);
     });
 });

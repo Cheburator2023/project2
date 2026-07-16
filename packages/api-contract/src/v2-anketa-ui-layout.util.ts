@@ -3,6 +3,7 @@ import {
 	readV2AnketaSectionUiOptions,
 	resolveV2AnketaStreamBlockOptions,
 } from "./v2-anketa-section-ui.util";
+import { serializeStreamBlockExecutors } from "./v2-stream-block-executor.util";
 import type { V2JsonSchemaDto, V2UiSchemaDto } from "./v2-template.types";
 
 function readRecord(value: unknown): Record<string, unknown> | undefined {
@@ -93,8 +94,12 @@ export function enrichAnketaLayoutUiSchema(
 		if (!streamBlock.streamBlock) continue;
 		mergeUiOptions(blockUi, {
 			streamBlock: true,
-			...(streamBlock.streamExecutor
-				? { streamExecutor: streamBlock.streamExecutor }
+			...(streamBlock.streamExecutors.length > 0
+				? {
+						streamExecutor: serializeStreamBlockExecutors(
+							streamBlock.streamExecutors,
+						),
+					}
 				: {}),
 		});
 		const blockOpts = readV2AnketaSectionUiOptions(blockUi);

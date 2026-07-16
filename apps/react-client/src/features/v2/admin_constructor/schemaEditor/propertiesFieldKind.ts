@@ -1,7 +1,7 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { V2ArchComponentType } from "@smart-anketa/api-contract";
 import {
-	resolveStreamBlockExecutorLabel,
+	resolveStreamBlockExecutorsLabel,
 	resolveV2AnketaArchComponent,
 	resolveV2AnketaStreamBlockOptions,
 	V2_ARCH_COMPONENT_LABELS,
@@ -165,9 +165,9 @@ export function resolveCanvasCategoryChips(
 	const arch = resolveV2AnketaArchComponent(uiBranch);
 	const streamBlock = resolveV2AnketaStreamBlockOptions(uiBranch, blockKey);
 
-	if (streamBlock.streamBlock && streamBlock.streamExecutor) {
+	if (streamBlock.streamBlock && streamBlock.streamExecutors.length > 0) {
 		chips.push({
-			label: resolveStreamBlockExecutorLabel(streamBlock.streamExecutor),
+			label: resolveStreamBlockExecutorsLabel(streamBlock.streamExecutors),
 			title: "Стримовый блок",
 			color: "#2563eb",
 		});

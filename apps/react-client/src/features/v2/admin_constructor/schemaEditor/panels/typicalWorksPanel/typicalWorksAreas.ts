@@ -6,13 +6,14 @@ import {
 	resolveLogicStreamForDbExecutor,
 	resolveStreamBlockExecutorLabel,
 	resolveStreamBlockExecutorScopeStreams,
+	resolveStreamBlockExecutorsLabel,
 	V2_IMPLEMENTATION_STREAM,
 	V2_IMPLEMENTATION_STREAM_CODES,
 	type V2ImplementationStreamCode,
 } from "@smart-anketa/api-contract";
 
 export type LogicWorksScope =
-	| { kind: "stream"; stream: string }
+	| { kind: "stream"; streams: string[] }
 	| { kind: "all" };
 
 export type LogicStreamCode = V2ImplementationStreamCode;
@@ -28,18 +29,24 @@ export function isAllLogicWorksScope(
 	return scope.kind === "all";
 }
 
+export function isStreamLogicWorksScope(
+	scope: LogicWorksScope,
+): scope is { kind: "stream"; streams: string[] } {
+	return scope.kind === "stream";
+}
+
 export const DEFAULT_LOGIC_STREAM = V2_IMPLEMENTATION_STREAM.IDSRC;
 
 export const DEFAULT_SCOPE: LogicWorksScope = {
 	kind: "stream",
-	stream: DEFAULT_LOGIC_STREAM,
+	streams: [DEFAULT_LOGIC_STREAM],
 };
 
 export function scopeStreamExecutor(
 	scope: LogicWorksScope,
 	fallback: string = DEFAULT_LOGIC_STREAM,
 ): string {
-	return scope.kind === "all" ? fallback : scope.stream;
+	return scope.kind === "all" ? fallback : (scope.streams[0] ?? fallback);
 }
 
 const ARCH_COMPONENT_RECOMMENDED_STREAMS: Record<
@@ -87,7 +94,9 @@ export function resolveScopeStreams(scope: LogicWorksScope): string[] {
 			...resolveStreamBlockExecutorScopeStreams(code),
 		]);
 	}
-	return [...resolveStreamBlockExecutorScopeStreams(scope.stream)];
+	return scope.streams.flatMap((stream) => [
+		...resolveStreamBlockExecutorScopeStreams(stream),
+	]);
 }
 
 export function workMatchesLogicScope(
@@ -99,11 +108,51 @@ export function workMatchesLogicScope(
 }
 
 export function scopeLabel(scope: LogicWorksScope): string {
-	return scope.kind === "all" ? "Все области" : streamDisplayLabel(scope.stream);
+	if (scope.kind === "all") return "Все области";
+	if (scope.streams.length === 1) {
+		return streamDisplayLabel(scope.streams[0]);
+	}
+	return resolveStreamBlockExecutorsLabel(scope.streams);
 }
 
 export function scopeSubtitle(scope: LogicWorksScope): string {
-	return scope.kind === "all" ? "все области" : "стрим-исполнитель";
+	if (scope.kind === "all") return "все области";
+	if (scope.streams.length === 1) return "стрим-исполнитель";
+	return `${scope.streams.length} стрима`;
+}
+
+export function isStreamSelectedInScope(
+	scope: LogicWorksScope,
+	stream: string,
+): boolean {
+	if (scope.kind === "all") return false;
+	const code = normalizeStreamBlockExecutor(stream);
+	return scope.streams.some(
+		(item) =>
+			item === stream ||
+			(code != null && normalizeStreamBlockExecutor(item) === code),
+	);
+}
+
+export function toggleStreamInScope(
+	scope: LogicWorksScope,
+	stream: string,
+): LogicWorksScope {
+	if (scope.kind === "all") {
+		return { kind: "stream", streams: [stream] };
+	}
+	const selected = isStreamSelectedInScope(scope, stream);
+	if (selected) {
+		const code = normalizeStreamBlockExecutor(stream);
+		const next = scope.streams.filter(
+			(item) =>
+				item !== stream &&
+				(code == null || normalizeStreamBlockExecutor(item) !== code),
+		);
+		if (next.length === 0) return ALL_LOGIC_WORKS_SCOPE;
+		return { kind: "stream", streams: next };
+	}
+	return { kind: "stream", streams: [...scope.streams, stream] };
 }
 
 export function workAssignedToScope(
@@ -202,4 +251,20 @@ export function resolveDbStreamsForScope(scopeStreams: string[]): string[] {
 export function shortenStreamLabel(stream: string, max = 16): string {
 	const label = streamDisplayLabel(stream);
 	return label.length > max ? `${label.slice(0, max - 1)}…` : label;
+}
+
+export function scopeStreamsPresentInSchema(
+	uiSchema: unknown,
+	scope: LogicWorksScope,
+	isPresent: (stream: string) => boolean,
+): { all: boolean; any: boolean; missing: string[] } {
+	if (scope.kind === "all") {
+		return { all: true, any: true, missing: [] };
+	}
+	const missing = scope.streams.filter((stream) => !isPresent(stream));
+	return {
+		all: missing.length === 0,
+		any: missing.length < scope.streams.length,
+		missing,
+	};
 }

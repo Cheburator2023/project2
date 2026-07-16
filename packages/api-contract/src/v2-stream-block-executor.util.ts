@@ -12,8 +12,11 @@ import {
 	type V2ImplementationStreamCode,
 } from "./v2-implementation-streams.util";
 
-/** Значение `ui:options.streamExecutor` у стрим-блока анкеты — код implementationStream. */
+/** Значение `ui:options.streamExecutor` у стрим-блока — код или массив кодов implementationStream. */
 export type V2StreamBlockExecutor = V2ImplementationStreamCode;
+export type V2StreamBlockExecutorValue =
+	| V2StreamBlockExecutor
+	| V2StreamBlockExecutor[];
 
 const LEGACY_EXECUTOR_LABEL_TO_CODE: Partial<
 	Record<V2ExecutorStreamLabel, V2ImplementationStreamCode>
@@ -77,6 +80,41 @@ export function normalizeStreamBlockExecutor(
 		return LEGACY_EXECUTOR_LABEL_TO_CODE[trimmed] ?? null;
 	}
 	return null;
+}
+
+/** Нормализует одно значение или массив в уникальный список кодов (порядок сохраняется). */
+export function normalizeStreamBlockExecutors(
+	value: unknown,
+): V2ImplementationStreamCode[] {
+	if (typeof value === "string") {
+		const code = normalizeStreamBlockExecutor(value);
+		return code ? [code] : [];
+	}
+	if (!Array.isArray(value)) return [];
+	const result: V2ImplementationStreamCode[] = [];
+	for (const item of value) {
+		if (typeof item !== "string") continue;
+		const code = normalizeStreamBlockExecutor(item);
+		if (code && !result.includes(code)) result.push(code);
+	}
+	return result;
+}
+
+/** Сериализация в uiSchema: один код — строка, несколько — массив. */
+export function serializeStreamBlockExecutors(
+	executors: readonly V2ImplementationStreamCode[],
+): V2StreamBlockExecutorValue | undefined {
+	if (executors.length === 0) return undefined;
+	if (executors.length === 1) return executors[0];
+	return [...executors];
+}
+
+export function resolveStreamBlockExecutorsLabel(
+	value: string | readonly string[] | undefined | null,
+): string {
+	const codes = normalizeStreamBlockExecutors(value);
+	if (codes.length === 0) return "";
+	return codes.map((code) => V2_IMPLEMENTATION_STREAM_LABELS[code]).join(", ");
 }
 
 export function inferLegacyStreamBlockExecutorCode(

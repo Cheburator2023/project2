@@ -18,6 +18,7 @@ import {
 } from "./v2-stream-block-executor.util";
 import {
 	isV2ExecutorStreamLabel,
+	typicalWorkAssignedToAnyExecutorStream,
 	typicalWorkAssignedToExecutorStream,
 	V2_EXECUTOR_STREAM_LABELS,
 } from "./v2-executor-streams.util";
@@ -72,6 +73,7 @@ describe("resolveV2AnketaStreamBlockOptions", () => {
 		).toEqual({
 			streamBlock: true,
 			streamExecutor: V2_IMPLEMENTATION_STREAM.IDSRC,
+			streamExecutors: [V2_IMPLEMENTATION_STREAM.IDSRC],
 		});
 	});
 
@@ -81,6 +83,7 @@ describe("resolveV2AnketaStreamBlockOptions", () => {
 		).toEqual({
 			streamBlock: true,
 			streamExecutor: V2_IMPLEMENTATION_STREAM.MDLCTL,
+			streamExecutors: [V2_IMPLEMENTATION_STREAM.MDLCTL],
 		});
 	});
 });
@@ -160,7 +163,7 @@ describe("collectExecutorStreamBlocks", () => {
 			},
 			streamDataSources: {},
 		});
-		expect(blocks.map((b) => b.streamExecutor).sort()).toEqual([
+		expect(blocks.map((b) => b.streamExecutors).flat().sort()).toEqual([
 			V2_IMPLEMENTATION_STREAM.IDSRC,
 			V2_IMPLEMENTATION_STREAM.IDSRC,
 		]);
@@ -207,10 +210,47 @@ describe("collectExecutorStreamBlocks", () => {
 				uiSchema,
 				"field_stream.field_tasks",
 			),
-		).toBe(V2_IMPLEMENTATION_STREAM.PIRM);
+		).toEqual([V2_IMPLEMENTATION_STREAM.PIRM]);
 		expect(
 			resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, "field_root"),
-		).toBe(V2_IMPLEMENTATION_STREAM.IDSRC);
+		).toEqual([V2_IMPLEMENTATION_STREAM.IDSRC]);
+	});
+
+	it("reads multi-stream executor metadata", () => {
+		const opts = readV2AnketaSectionUiOptions({
+			"ui:options": {
+				streamBlock: true,
+				streamExecutor: [
+					V2_IMPLEMENTATION_STREAM.IDSRC,
+					V2_IMPLEMENTATION_STREAM.PIRM,
+				],
+			},
+		});
+		expect(opts.streamExecutor).toEqual([
+			V2_IMPLEMENTATION_STREAM.IDSRC,
+			V2_IMPLEMENTATION_STREAM.PIRM,
+		]);
+	});
+
+	it("typicalWorkAssignedToAnyExecutorStream matches any selected stream", () => {
+		expect(
+			typicalWorkAssignedToAnyExecutorStream(
+				["ИД. Внутренний"],
+				[V2_IMPLEMENTATION_STREAM.IDSRC, V2_IMPLEMENTATION_STREAM.DADM],
+			),
+		).toBe(true);
+		expect(
+			typicalWorkAssignedToAnyExecutorStream(
+				["ДАДМ"],
+				[V2_IMPLEMENTATION_STREAM.IDSRC, V2_IMPLEMENTATION_STREAM.DADM],
+			),
+		).toBe(true);
+		expect(
+			typicalWorkAssignedToAnyExecutorStream(
+				["Моделирование РБ"],
+				[V2_IMPLEMENTATION_STREAM.IDSRC, V2_IMPLEMENTATION_STREAM.DADM],
+			),
+		).toBe(false);
 	});
 
 	it("typicalWorkAssignedToExecutorStream matches DB stream aliases", () => {

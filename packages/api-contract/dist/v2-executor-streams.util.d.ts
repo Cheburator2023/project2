@@ -13,3 +13,5 @@ export declare function resolveExecutorStreamAreaLabel(stream: string): string;
 export declare function resolveExecutorScopeDbStreams(executorStream: string): readonly string[];
 /** Работа назначена на стрим-исполнитель блока typicalWork (legacy без boundWorkIds). */
 export declare function typicalWorkAssignedToExecutorStream(workStreams: readonly string[], executorStream: string): boolean;
+/** Работа назначена хотя бы на один из стримов-исполнителей блока. */
+export declare function typicalWorkAssignedToAnyExecutorStream(workStreams: readonly string[], executorStreams: string | readonly string[]): boolean;

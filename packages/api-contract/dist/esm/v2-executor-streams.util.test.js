@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { V2_IMPLEMENTATION_STREAM, V2_IMPLEMENTATION_STREAM_LABELS, } from "./v2-implementation-streams.util";
 import { collectExecutorStreamBlocks, formatV2StreamBlockSectionTitle, isExecutorStreamPresentInSchema, readV2AnketaSectionUiOptions, resolveStreamExecutorForTypicalWorkOutputPath, resolveV2AnketaSectionDisplayTitle, resolveV2AnketaStreamBlockOptions, } from "./v2-anketa-section-ui.util";
 import { inferLegacyStreamBlockExecutorCode, } from "./v2-stream-block-executor.util";
-import { isV2ExecutorStreamLabel, typicalWorkAssignedToExecutorStream, V2_EXECUTOR_STREAM_LABELS, } from "./v2-executor-streams.util";
+import { isV2ExecutorStreamLabel, typicalWorkAssignedToAnyExecutorStream, typicalWorkAssignedToExecutorStream, V2_EXECUTOR_STREAM_LABELS, } from "./v2-executor-streams.util";
 describe("v2-executor-streams.util", () => {
     it("lists six executor stream labels", () => {
         expect(V2_EXECUTOR_STREAM_LABELS).toEqual([
@@ -41,12 +41,14 @@ describe("resolveV2AnketaStreamBlockOptions", () => {
         }, "customBlock")).toEqual({
             streamBlock: true,
             streamExecutor: V2_IMPLEMENTATION_STREAM.IDSRC,
+            streamExecutors: [V2_IMPLEMENTATION_STREAM.IDSRC],
         });
     });
     it("infers legacy stream blocks without explicit flag", () => {
         expect(resolveV2AnketaStreamBlockOptions(undefined, "streamModelControl")).toEqual({
             streamBlock: true,
             streamExecutor: V2_IMPLEMENTATION_STREAM.MDLCTL,
+            streamExecutors: [V2_IMPLEMENTATION_STREAM.MDLCTL],
         });
     });
 });
@@ -87,7 +89,7 @@ describe("collectExecutorStreamBlocks", () => {
             },
             streamDataSources: {},
         });
-        expect(blocks.map((b) => b.streamExecutor).sort()).toEqual([
+        expect(blocks.map((b) => b.streamExecutors).flat().sort()).toEqual([
             V2_IMPLEMENTATION_STREAM.IDSRC,
             V2_IMPLEMENTATION_STREAM.IDSRC,
         ]);
@@ -123,8 +125,28 @@ describe("collectExecutorStreamBlocks", () => {
                 },
             },
         };
-        expect(resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, "field_stream.field_tasks")).toBe(V2_IMPLEMENTATION_STREAM.PIRM);
-        expect(resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, "field_root")).toBe(V2_IMPLEMENTATION_STREAM.IDSRC);
+        expect(resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, "field_stream.field_tasks")).toEqual([V2_IMPLEMENTATION_STREAM.PIRM]);
+        expect(resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, "field_root")).toEqual([V2_IMPLEMENTATION_STREAM.IDSRC]);
+    });
+    it("reads multi-stream executor metadata", () => {
+        const opts = readV2AnketaSectionUiOptions({
+            "ui:options": {
+                streamBlock: true,
+                streamExecutor: [
+                    V2_IMPLEMENTATION_STREAM.IDSRC,
+                    V2_IMPLEMENTATION_STREAM.PIRM,
+                ],
+            },
+        });
+        expect(opts.streamExecutor).toEqual([
+            V2_IMPLEMENTATION_STREAM.IDSRC,
+            V2_IMPLEMENTATION_STREAM.PIRM,
+        ]);
+    });
+    it("typicalWorkAssignedToAnyExecutorStream matches any selected stream", () => {
+        expect(typicalWorkAssignedToAnyExecutorStream(["ИД. Внутренний"], [V2_IMPLEMENTATION_STREAM.IDSRC, V2_IMPLEMENTATION_STREAM.DADM])).toBe(true);
+        expect(typicalWorkAssignedToAnyExecutorStream(["ДАДМ"], [V2_IMPLEMENTATION_STREAM.IDSRC, V2_IMPLEMENTATION_STREAM.DADM])).toBe(true);
+        expect(typicalWorkAssignedToAnyExecutorStream(["Моделирование РБ"], [V2_IMPLEMENTATION_STREAM.IDSRC, V2_IMPLEMENTATION_STREAM.DADM])).toBe(false);
     });
     it("typicalWorkAssignedToExecutorStream matches DB stream aliases", () => {
         expect(typicalWorkAssignedToExecutorStream(["ИД. Внутренний"], V2_IMPLEMENTATION_STREAM.IDSRC)).toBe(true);

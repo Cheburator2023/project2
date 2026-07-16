@@ -36,8 +36,8 @@ export function resolveStreamBlockPointer(
 	const code = normalizeStreamBlockExecutor(streamExecutor);
 	if (!code) return null;
 	return (
-		collectExecutorStreamBlocks(uiSchema).find(
-			(block) => block.streamExecutor === code,
+		collectExecutorStreamBlocks(uiSchema).find((block) =>
+			block.streamExecutors.includes(code),
 		)?.pointer ?? null
 	);
 }

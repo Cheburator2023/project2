@@ -1,4 +1,4 @@
-import { type V2StreamBlockExecutor } from "./v2-stream-block-executor.util";
+import { type V2StreamBlockExecutor, type V2StreamBlockExecutorValue } from "./v2-stream-block-executor.util";
 import { type V2AnketaMainSectionId } from "./v2-anketa-workflow.types";
 export declare const V2_ANKETA_SECTION_ROLE_VALUES: readonly ["main", "subsection", "panel", "flat"];
 export type V2AnketaSectionRole = (typeof V2_ANKETA_SECTION_ROLE_VALUES)[number];
@@ -40,12 +40,15 @@ export type V2AnketaSectionUiOptions = {
     /** Корневой блок платформенного/поддерживающего стрима. */
     streamBlock?: boolean;
     /** Стрим-исполнитель из справочника (ДАДМ, ПиРМ, …). */
-    streamExecutor?: V2StreamBlockExecutor;
+    streamExecutor?: V2StreamBlockExecutorValue;
 };
 declare const STREAM_SECTION_IDS: V2AnketaMainSectionId[];
 export declare function readV2AnketaSectionUiOptions(uiNode: unknown): V2AnketaSectionUiOptions;
+export declare function readStreamExecutorsFromSectionUi(uiNode: unknown): V2StreamBlockExecutor[];
 export type V2AnketaStreamBlockOptions = {
     streamBlock: boolean;
+    streamExecutors: V2StreamBlockExecutor[];
+    /** Первый стрим (обратная совместимость). */
     streamExecutor: V2StreamBlockExecutor | null;
 };
 /** Явная или legacy-привязка корневого блока к стриму-исполнителю. */
@@ -56,11 +59,14 @@ export declare const V2_STREAM_BLOCK_TITLE_PREFIX = "\u0421\u0442\u0440\u0438\u0
 export declare function hasV2StreamBlockTitlePrefix(title: string): boolean;
 /** Заголовок стримового object-блока (идемпотентно, в стиле заводского снепшота). */
 export declare function formatV2StreamBlockSectionTitle(baseTitle: string): string;
+export declare function formatV2StreamBlockSectionTitleFromExecutors(executors: readonly V2StreamBlockExecutor[]): string;
 /** Заголовок секции с учётом streamBlock (явный, legacy stream* / field_* ключ). */
 export declare function resolveV2AnketaSectionDisplayTitle(baseTitle: string, uiNode: unknown, blockKey?: string): string;
 export type ExecutorStreamBlockRef = {
     blockKey: string;
     pointer: string;
+    streamExecutors: V2StreamBlockExecutor[];
+    /** Первый стрим (обратная совместимость). */
     streamExecutor: V2StreamBlockExecutor;
 };
 /** Корневые стримовые блоки анкеты из uiSchema. */
@@ -69,10 +75,12 @@ export declare function collectPresentExecutorStreamLabels(uiSchema: unknown): S
 /** Есть ли в конструкторе корневой streamBlock для стрима (код или legacy-имя БД). */
 export declare function isExecutorStreamPresentInSchema(uiSchema: unknown, stream: string): boolean;
 /**
- * Стрим-исполнитель для блока typicalWork: явный ui:options.streamExecutor,
- * иначе стрим корневого streamBlock по пути вывода.
+ * Стримы-исполнители для блока typicalWork: явный ui:options.streamExecutor,
+ * иначе стримы корневого streamBlock по пути вывода.
  */
-export declare function resolveStreamExecutorForTypicalWorkOutputPath(uiSchema: unknown, outputPath: string): V2StreamBlockExecutor | null;
+export declare function resolveStreamExecutorForTypicalWorkOutputPath(uiSchema: unknown, outputPath: string): V2StreamBlockExecutor[];
+/** Первый стрим-исполнитель для блока typicalWork (legacy single-stream API). */
+export declare function resolvePrimaryStreamExecutorForTypicalWorkOutputPath(uiSchema: unknown, outputPath: string): V2StreamBlockExecutor | null;
 /** Тип арх. компонента секции из ui:options, либо null. */
 export declare function resolveV2AnketaArchComponent(uiNode: unknown): V2ArchComponentType | null;
 export declare function isV2AnketaMainSectionId(value: string): value is V2AnketaMainSectionId;

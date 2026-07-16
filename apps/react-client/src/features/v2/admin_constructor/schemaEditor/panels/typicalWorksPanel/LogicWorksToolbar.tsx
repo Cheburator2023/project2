@@ -1,7 +1,9 @@
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Checkbox from "@mui/material/Checkbox";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 import Divider from "@mui/material/Divider";
+import ListItemText from "@mui/material/ListItemText";
 import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import Paper from "@mui/material/Paper";
@@ -13,9 +15,13 @@ import {
 	LOGIC_EXECUTOR_STREAMS,
 	type LogicWorksScope,
 	isAllLogicWorksScope,
+	isStreamSelectedInScope,
 	scopeLabel,
+	scopeStreamsPresentInSchema,
+	scopeSubtitle,
 	streamColor,
 	streamDisplayLabel,
+	toggleStreamInScope,
 } from "./typicalWorksAreas";
 import { useSchemaEditor } from "../../SchemaEditorContext";
 import { isExecutorStreamPresentInSchema } from "@smart-anketa/api-contract";
@@ -34,9 +40,11 @@ export function LogicWorksToolbar({
 	const { uiSchema, typicalWorkSaveDisplay } = useSchemaEditor();
 	const anchorRef = useRef<HTMLButtonElement>(null);
 	const [pickerOpen, setPickerOpen] = useState(false);
-	const scopePresent =
-		!isAllLogicWorksScope(scope) &&
-		isExecutorStreamPresentInSchema(uiSchema, scope.stream);
+	const scopePresence = scopeStreamsPresentInSchema(
+		uiSchema,
+		scope,
+		(stream) => isExecutorStreamPresentInSchema(uiSchema, stream),
+	);
 
 	return (
 		<Box
@@ -91,21 +99,26 @@ export function LogicWorksToolbar({
 			</Button>
 			<Typography
 				component="span"
+				title={scopeSubtitle(scope)}
 				sx={{
 					fontSize: 11,
 					color: isAllLogicWorksScope(scope)
 						? "#8a93a3"
-						: scopePresent
+						: scopePresence.all
 							? "#1f8a4d"
-							: "#c62828",
+							: scopePresence.any
+								? "#e07b16"
+								: "#c62828",
 					fontWeight: 600,
 				}}
 			>
 				{isAllLogicWorksScope(scope)
 					? "все назначенные работы"
-					: scopePresent
-						? "стрим в схеме"
-						: "стрим не в схеме"}
+					: scopePresence.all
+						? "стримы в схеме"
+						: scopePresence.any
+							? "не все стримы в схеме"
+							: "стримы не в схеме"}
 			</Typography>
 			<Popper
 				open={pickerOpen}
@@ -160,8 +173,7 @@ export function LogicWorksToolbar({
 							</MenuItem>
 							<Divider sx={{ my: 0.5 }} />
 							{LOGIC_EXECUTOR_STREAMS.map((stream) => {
-								const selected =
-									!isAllLogicWorksScope(scope) && scope.stream === stream;
+								const selected = isStreamSelectedInScope(scope, stream);
 								const present = isExecutorStreamPresentInSchema(
 									uiSchema,
 									stream,
@@ -171,16 +183,25 @@ export function LogicWorksToolbar({
 										key={stream}
 										selected={selected}
 										onClick={() => {
-											onScopeChange({ kind: "stream", stream });
-											setPickerOpen(false);
+											onScopeChange(toggleStreamInScope(scope, stream));
 										}}
 										sx={{ borderRadius: 1, py: 0.9 }}
 									>
-										<ExecutorStreamMenuRow
-											stream={streamDisplayLabel(stream)}
-											color={streamColor(stream)}
-											present={present}
-											selected={selected}
+										<Checkbox
+											checked={selected}
+											size="small"
+											sx={{ p: 0.5, mr: 0.5 }}
+											tabIndex={-1}
+										/>
+										<ListItemText
+											primary={
+												<ExecutorStreamMenuRow
+													stream={streamDisplayLabel(stream)}
+													color={streamColor(stream)}
+													present={present}
+													selected={selected}
+												/>
+											}
 										/>
 									</MenuItem>
 								);
@@ -215,24 +236,6 @@ export function LogicWorksToolbar({
 					/>
 				</Box>
 			) : null}
-
-			{/* <Button
-				onClick={() => navigate(routes.adminV2TypicalWorks.rootPath)}
-				title="Создание, удаление и параметры трудоёмкости — в разделе администрирования"
-				sx={{
-					textTransform: "none",
-					height: 36,
-					px: 1.25,
-					border: "1px solid #dfe2ea",
-					borderRadius: "9px",
-					bgcolor: "#fff",
-					color: "#5b6577",
-					fontSize: "12px",
-					fontWeight: 600,
-				}}
-			>
-				Администрирование
-			</Button> */}
 		</Box>
 	);
 }

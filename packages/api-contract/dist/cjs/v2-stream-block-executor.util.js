@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.normalizeStreamBlockExecutor = normalizeStreamBlockExecutor;
+exports.normalizeStreamBlockExecutors = normalizeStreamBlockExecutors;
+exports.serializeStreamBlockExecutors = serializeStreamBlockExecutors;
+exports.resolveStreamBlockExecutorsLabel = resolveStreamBlockExecutorsLabel;
 exports.inferLegacyStreamBlockExecutorCode = inferLegacyStreamBlockExecutorCode;
 exports.resolveStreamBlockExecutorLabel = resolveStreamBlockExecutorLabel;
 exports.resolveStreamBlockExecutorScopeStreams = resolveStreamBlockExecutorScopeStreams;
@@ -62,6 +65,38 @@ function normalizeStreamBlockExecutor(value) {
         return LEGACY_EXECUTOR_LABEL_TO_CODE[trimmed] ?? null;
     }
     return null;
+}
+/** Нормализует одно значение или массив в уникальный список кодов (порядок сохраняется). */
+function normalizeStreamBlockExecutors(value) {
+    if (typeof value === "string") {
+        const code = normalizeStreamBlockExecutor(value);
+        return code ? [code] : [];
+    }
+    if (!Array.isArray(value))
+        return [];
+    const result = [];
+    for (const item of value) {
+        if (typeof item !== "string")
+            continue;
+        const code = normalizeStreamBlockExecutor(item);
+        if (code && !result.includes(code))
+            result.push(code);
+    }
+    return result;
+}
+/** Сериализация в uiSchema: один код — строка, несколько — массив. */
+function serializeStreamBlockExecutors(executors) {
+    if (executors.length === 0)
+        return undefined;
+    if (executors.length === 1)
+        return executors[0];
+    return [...executors];
+}
+function resolveStreamBlockExecutorsLabel(value) {
+    const codes = normalizeStreamBlockExecutors(value);
+    if (codes.length === 0)
+        return "";
+    return codes.map((code) => v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS[code]).join(", ");
 }
 function inferLegacyStreamBlockExecutorCode(blockKey) {
     const direct = LEGACY_BLOCK_KEY_TO_CODE[blockKey];

@@ -52,6 +52,7 @@ import {
 	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
 	V2_IMPLEMENTATION_STREAM_LABELS,
 	normalizeStreamBlockExecutor,
+	normalizeStreamBlockExecutors,
 	resolveStreamBlockExecutorLabel,
 	type V2AnketaMainSectionId,
 	type V2AnketaSectionRole,
@@ -80,10 +81,13 @@ import {
 	makeStreamBlockUiOptions,
 } from "../streamBlockHelpers";
 import {
-	ExecutorStreamPresenceHint,
-	ExecutorStreamPresenceLabel,
-} from "./typicalWorksPanel/ExecutorStreamPresenceLabel";
+	StreamExecutorMultiSelect,
+	streamExecutorsToUiValue,
+} from "../../components/StreamExecutorMultiSelect";
 import { toast } from "@react-client/common/toasts";
+import {
+	ExecutorStreamPresenceHint,
+} from "./typicalWorksPanel/ExecutorStreamPresenceLabel";
 import { useBufferedDraftText } from "../hooks/useBufferedDraftText";
 import { usePropertiesPanelWidth } from "../hooks/usePropertiesPanelWidth";
 import {
@@ -411,15 +415,15 @@ export function SchemaPropertiesPanel() {
 		() => (selectedPointer ? pointerToOutputPath(selectedPointer) : ""),
 		[selectedPointer],
 	);
-	const typicalWorkStreamExecutor = useMemo(() => {
-		if (!isTypicalWorkBlock || !typicalWorkOutputPath) return "";
-		return (
-			sectionUiOptions.streamExecutor ??
-			resolveStreamExecutorForTypicalWorkOutputPath(
-				uiSchema,
-				typicalWorkOutputPath,
-			) ??
-			""
+	const typicalWorkStreamExecutors = useMemo(() => {
+		if (!isTypicalWorkBlock || !typicalWorkOutputPath) return [];
+		const explicit = normalizeStreamBlockExecutors(
+			sectionUiOptions.streamExecutor,
+		);
+		if (explicit.length > 0) return explicit;
+		return resolveStreamExecutorForTypicalWorkOutputPath(
+			uiSchema,
+			typicalWorkOutputPath,
 		);
 	}, [
 		isTypicalWorkBlock,
@@ -433,16 +437,16 @@ export function SchemaPropertiesPanel() {
 				? resolveTypicalWorkDisplayBoundIds(
 						uiSchema,
 						selectedPointer,
-						typicalWorkCatalog,
-						typicalWorkStreamExecutor,
-					)
+					typicalWorkCatalog,
+					typicalWorkStreamExecutors,
+				)
 				: [],
 		[
 			selectedPointer,
 			isTypicalWorkBlock,
 			uiSchema,
 			typicalWorkCatalog,
-			typicalWorkStreamExecutor,
+			typicalWorkStreamExecutors,
 		],
 	);
 	const explicitBoundWorkIds = useMemo(
@@ -459,12 +463,12 @@ export function SchemaPropertiesPanel() {
 	const streamScopedTypicalWorks = useMemo(
 		() =>
 			filterTypicalWorksForStreamExecutor(
-				typicalWorkCatalog,
-				typicalWorkStreamExecutor,
-			)
+					typicalWorkCatalog,
+					typicalWorkStreamExecutors,
+				)
 				.map((item) => typicalWorks.find((work) => work.id === item.id))
 				.filter((work): work is (typeof typicalWorks)[number] => Boolean(work)),
-		[typicalWorkCatalog, typicalWorkStreamExecutor, typicalWorks],
+		[typicalWorkCatalog, typicalWorkStreamExecutors, typicalWorks],
 	);
 	const unboundTypicalWorks = useMemo(() => {
 		if (explicitBoundWorkIds !== undefined) {
@@ -474,16 +478,18 @@ export function SchemaPropertiesPanel() {
 		}
 		return [];
 	}, [explicitBoundWorkIds, streamScopedTypicalWorks]);
-	const typicalWorkStreamPresent = useMemo(
-		() =>
-			typicalWorkStreamExecutor
-				? isExecutorStreamPresentInSchema(uiSchema, typicalWorkStreamExecutor)
-				: false,
-		[typicalWorkStreamExecutor, uiSchema],
-	);
+	const typicalWorkStreamPresence = useMemo(() => {
+		if (typicalWorkStreamExecutors.length === 0) {
+			return { all: false, missing: [] as V2ImplementationStreamCode[] };
+		}
+		const missing = typicalWorkStreamExecutors.filter(
+			(code) => !isExecutorStreamPresentInSchema(uiSchema, code),
+		);
+		return { all: missing.length === 0, missing };
+	}, [typicalWorkStreamExecutors, uiSchema]);
 	const handleCreateTypicalWorkStreamBlock = useCallback(() => {
-		if (!typicalWorkStreamExecutor) return;
-		const code = normalizeStreamBlockExecutor(typicalWorkStreamExecutor);
+		const code =
+			typicalWorkStreamPresence.missing[0] ?? typicalWorkStreamExecutors[0];
 		if (!code) return;
 		const rootCount = listCanvasEditableChildKeys(
 			jsonSchema,
@@ -500,7 +506,8 @@ export function SchemaPropertiesPanel() {
 			`Добавлен стримовый блок «${resolveStreamBlockExecutorLabel(code)}»`,
 		);
 	}, [
-		typicalWorkStreamExecutor,
+		typicalWorkStreamExecutors,
+		typicalWorkStreamPresence.missing,
 		jsonSchema,
 		uiSchema,
 		handleAddFieldPresetAtParent,
@@ -759,6 +766,16 @@ export function SchemaPropertiesPanel() {
 		() => resolveV2AnketaStreamBlockOptions(leafUiBranch, rootBlockKey),
 		[leafUiBranch, rootBlockKey],
 	);
+	const streamBlockExecutors = useMemo(() => {
+		const explicit = normalizeStreamBlockExecutors(
+			sectionUiOptions.streamExecutor,
+		);
+		if (explicit.length > 0) return explicit;
+		return streamBlockOptions.streamExecutors;
+	}, [
+		sectionUiOptions.streamExecutor,
+		streamBlockOptions.streamExecutors,
+	]);
 	const showStreamBlockOptions =
 		showObjectLayout &&
 		isRootLevelBlock &&
@@ -1040,10 +1057,11 @@ export function SchemaPropertiesPanel() {
 											if (e.target.checked) {
 												patchSectionUi({
 													streamBlock: true,
-													streamExecutor:
-														streamBlockOptions.streamExecutor ??
-														sectionUiOptions.streamExecutor ??
-														V2_IMPLEMENTATION_STREAM.IDSRC,
+													streamExecutor: streamExecutorsToUiValue(
+														streamBlockExecutors.length > 0
+															? streamBlockExecutors
+															: [V2_IMPLEMENTATION_STREAM.IDSRC],
+													),
 													sectionRole: sectionUiOptions.sectionRole ?? "main",
 												});
 												return;
@@ -1058,41 +1076,17 @@ export function SchemaPropertiesPanel() {
 								label="Стримовый блок (платформенный / поддерживающий стрим)"
 							/>
 							{streamBlockOptions.streamBlock ? (
-								<TextField
-									select
-									fullWidth
-									size="small"
-									label="Стрим-исполнитель"
-									value={
-										sectionUiOptions.streamExecutor ??
-										streamBlockOptions.streamExecutor ??
-										""
-									}
-									onChange={(e) =>
+								<StreamExecutorMultiSelect
+									value={streamBlockExecutors}
+									uiSchema={uiSchema}
+									onChange={(codes) =>
 										patchSectionUi({
 											streamBlock: true,
-											streamExecutor: (e.target.value ||
-												undefined) as V2ImplementationStreamCode,
+											streamExecutor: streamExecutorsToUiValue(codes),
 										})
 									}
 									helperText={`Справочник ${V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE}. Используется в логике типовых работ и ролевке секций.`}
-								>
-									{V2_IMPLEMENTATION_STREAM_CODES.map((code) => (
-										<MenuItem key={code} value={code}>
-											<Flex alignItems="center" gap={1} sx={{ width: "100%" }}>
-												<Typography sx={{ flex: 1 }}>
-													{V2_IMPLEMENTATION_STREAM_LABELS[code]}
-												</Typography>
-												<ExecutorStreamPresenceLabel
-													present={isExecutorStreamPresentInSchema(
-														uiSchema,
-														code,
-													)}
-												/>
-											</Flex>
-										</MenuItem>
-									))}
-								</TextField>
+								/>
 							) : null}
 						</PropertiesSection>
 					) : null}
@@ -1398,13 +1392,12 @@ export function SchemaPropertiesPanel() {
 							<Divider sx={{ mb: 2 }} />
 
 							<PropertiesSection title="Типовые работы">
-								<TextField
-									select
-									fullWidth
-									size="small"
-									label="Стрим-исполнитель"
-									value={typicalWorkStreamExecutor}
-									onChange={(e) => {
+								<Box sx={{ mb: 1 }}>
+									<StreamExecutorMultiSelect
+										value={typicalWorkStreamExecutors}
+										uiSchema={uiSchema}
+										allowEmpty
+										onChange={(codes) => {
 										if (!selectedPointer) return;
 										recordDraftHistory();
 										patchUiSchema(
@@ -1413,41 +1406,21 @@ export function SchemaPropertiesPanel() {
 													prev as Record<string, unknown>,
 													selectedPointer,
 													{
-														streamExecutor: (e.target.value ||
-															undefined) as V2ImplementationStreamCode,
+														streamExecutor: streamExecutorsToUiValue(codes),
 													},
 												) as UiSchema,
 											{ recordHistory: false },
 										);
 									}}
 									helperText={`Справочник ${V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE}. Связь с назначениями работ в логике.`}
-									sx={{ mb: 1 }}
-								>
-									<MenuItem value="">
-										<em>Не выбран</em>
-									</MenuItem>
-									{V2_IMPLEMENTATION_STREAM_CODES.map((code) => (
-										<MenuItem key={code} value={code}>
-											<Flex alignItems="center" gap={1} sx={{ width: "100%" }}>
-												<Typography sx={{ flex: 1 }}>
-													{V2_IMPLEMENTATION_STREAM_LABELS[code]}
-												</Typography>
-												<ExecutorStreamPresenceLabel
-													present={isExecutorStreamPresentInSchema(
-														uiSchema,
-														code,
-													)}
-												/>
-											</Flex>
-										</MenuItem>
-									))}
-								</TextField>
-								{typicalWorkStreamExecutor ? (
+									/>
+								</Box>
+								{typicalWorkStreamExecutors.length > 0 ? (
 									<Box sx={{ mb: 1 }}>
 										<ExecutorStreamPresenceHint
-											present={typicalWorkStreamPresent}
+											present={typicalWorkStreamPresence.all}
 										/>
-										{!typicalWorkStreamPresent ? (
+										{!typicalWorkStreamPresence.all ? (
 											<Button
 												size="small"
 												variant="outlined"
@@ -1493,9 +1466,9 @@ export function SchemaPropertiesPanel() {
 																prev as Record<string, unknown>,
 																selectedPointer,
 																w.id,
-																typicalWorkCatalog,
-																typicalWorkStreamExecutor,
-															) as UiSchema,
+					typicalWorkCatalog,
+					typicalWorkStreamExecutors,
+				) as UiSchema,
 														{ recordHistory: false },
 													);
 												}}
@@ -1519,9 +1492,9 @@ export function SchemaPropertiesPanel() {
 															prev as Record<string, unknown>,
 															selectedPointer,
 															work.id,
-															typicalWorkCatalog,
-															typicalWorkStreamExecutor,
-														) as UiSchema,
+					typicalWorkCatalog,
+					typicalWorkStreamExecutors,
+				) as UiSchema,
 													{ recordHistory: false },
 												);
 											}}

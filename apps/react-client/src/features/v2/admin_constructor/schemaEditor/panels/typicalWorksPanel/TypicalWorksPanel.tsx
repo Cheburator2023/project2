@@ -158,9 +158,10 @@ export function TypicalWorksPanel() {
 				streams: item.streams ?? [],
 			}));
 			const outputPath = pointerToOutputPath(pointer);
-			const streamExecutor =
-				resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPath) ??
-				"";
+			const streamExecutors = resolveStreamExecutorForTypicalWorkOutputPath(
+				uiSchema,
+				outputPath,
+			);
 			recordDraftHistory();
 			patchUiSchema(
 				(prev) =>
@@ -169,7 +170,7 @@ export function TypicalWorksPanel() {
 						pointer,
 						workId,
 						catalog,
-						streamExecutor,
+						streamExecutors,
 					) as import("@rjsf/utils").UiSchema,
 				{ recordHistory: false },
 			);
@@ -241,7 +242,7 @@ export function TypicalWorksPanel() {
 			const area = work.streams[0]
 				? streamAreaKey(work.streams[0])
 				: DEFAULT_LOGIC_STREAM;
-			setScope({ kind: "stream", stream: area });
+			setScope({ kind: "stream", streams: [area] });
 			if (
 				useSchemaEditorUiStore.getState().selectedTypicalWorkId !== work.id
 			) {
@@ -251,7 +252,7 @@ export function TypicalWorksPanel() {
 				pickDefaultStream(work) ??
 				work.streams[0] ??
 				scopeStreamExecutor(
-					{ kind: "stream", stream: area },
+					{ kind: "stream", streams: [area] },
 					DEFAULT_LOGIC_STREAM,
 				);
 			if (stream) {
@@ -445,12 +446,11 @@ export function TypicalWorksPanel() {
 	const createDefaultStreamExecutor = useMemo(() => {
 		const bindPointer = searchParams.get(BIND_POINTER_QUERY);
 		if (bindPointer) {
-			return (
-				resolveStreamExecutorForTypicalWorkOutputPath(
-					uiSchema,
-					pointerToOutputPath(bindPointer),
-				) ?? scopeStreamExecutor(scope, DEFAULT_LOGIC_STREAM)
+			const executors = resolveStreamExecutorForTypicalWorkOutputPath(
+				uiSchema,
+				pointerToOutputPath(bindPointer),
 			);
+			return executors[0] ?? scopeStreamExecutor(scope, DEFAULT_LOGIC_STREAM);
 		}
 		return scopeStreamExecutor(scope, DEFAULT_LOGIC_STREAM);
 	}, [searchParams, uiSchema, scope]);

@@ -27,4 +27,22 @@ const v2_stream_block_executor_util_1 = require("./v2-stream-block-executor.util
         (0, vitest_1.expect)((0, v2_stream_block_executor_util_1.resolveLogicStreamForDbExecutor)("ДАДМ")).toBe(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DADM);
         (0, vitest_1.expect)((0, v2_stream_block_executor_util_1.resolveLogicStreamDbExecutor)(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DADM)).toBe("ДАДМ");
     });
+    (0, vitest_1.it)("normalizes and serializes multi-stream executor values", () => {
+        (0, vitest_1.expect)((0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutors)([
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC,
+            "Источники данных",
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM,
+        ])).toEqual([
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC,
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM,
+        ]);
+        (0, vitest_1.expect)((0, v2_stream_block_executor_util_1.serializeStreamBlockExecutors)([
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC,
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM,
+        ])).toEqual([
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC,
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM,
+        ]);
+        (0, vitest_1.expect)((0, v2_stream_block_executor_util_1.serializeStreamBlockExecutors)([v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC])).toBe(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC);
+    });
 });

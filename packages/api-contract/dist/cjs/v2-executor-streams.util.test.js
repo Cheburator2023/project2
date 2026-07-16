@@ -43,12 +43,14 @@ const v2_executor_streams_util_1 = require("./v2-executor-streams.util");
         }, "customBlock")).toEqual({
             streamBlock: true,
             streamExecutor: v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC,
+            streamExecutors: [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC],
         });
     });
     (0, vitest_1.it)("infers legacy stream blocks without explicit flag", () => {
         (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveV2AnketaStreamBlockOptions)(undefined, "streamModelControl")).toEqual({
             streamBlock: true,
             streamExecutor: v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.MDLCTL,
+            streamExecutors: [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.MDLCTL],
         });
     });
 });
@@ -89,7 +91,7 @@ const v2_executor_streams_util_1 = require("./v2-executor-streams.util");
             },
             streamDataSources: {},
         });
-        (0, vitest_1.expect)(blocks.map((b) => b.streamExecutor).sort()).toEqual([
+        (0, vitest_1.expect)(blocks.map((b) => b.streamExecutors).flat().sort()).toEqual([
             v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC,
             v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC,
         ]);
@@ -125,8 +127,28 @@ const v2_executor_streams_util_1 = require("./v2-executor-streams.util");
                 },
             },
         };
-        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveStreamExecutorForTypicalWorkOutputPath)(uiSchema, "field_stream.field_tasks")).toBe(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM);
-        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveStreamExecutorForTypicalWorkOutputPath)(uiSchema, "field_root")).toBe(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC);
+        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveStreamExecutorForTypicalWorkOutputPath)(uiSchema, "field_stream.field_tasks")).toEqual([v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM]);
+        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveStreamExecutorForTypicalWorkOutputPath)(uiSchema, "field_root")).toEqual([v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC]);
+    });
+    (0, vitest_1.it)("reads multi-stream executor metadata", () => {
+        const opts = (0, v2_anketa_section_ui_util_1.readV2AnketaSectionUiOptions)({
+            "ui:options": {
+                streamBlock: true,
+                streamExecutor: [
+                    v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC,
+                    v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM,
+                ],
+            },
+        });
+        (0, vitest_1.expect)(opts.streamExecutor).toEqual([
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC,
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM,
+        ]);
+    });
+    (0, vitest_1.it)("typicalWorkAssignedToAnyExecutorStream matches any selected stream", () => {
+        (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToAnyExecutorStream)(["ИД. Внутренний"], [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC, v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DADM])).toBe(true);
+        (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToAnyExecutorStream)(["ДАДМ"], [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC, v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DADM])).toBe(true);
+        (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToAnyExecutorStream)(["Моделирование РБ"], [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC, v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DADM])).toBe(false);
     });
     (0, vitest_1.it)("typicalWorkAssignedToExecutorStream matches DB stream aliases", () => {
         (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)(["ИД. Внутренний"], v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC)).toBe(true);

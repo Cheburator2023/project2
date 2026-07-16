@@ -10,6 +10,8 @@ import {
 	resolveLogicStreamForDbExecutor,
 	resolveStreamBlockExecutorLabel,
 	resolveStreamBlockExecutorScopeStreams,
+	serializeStreamBlockExecutors,
+	normalizeStreamBlockExecutors,
 } from "./v2-stream-block-executor.util";
 
 describe("v2-stream-block-executor.util", () => {
@@ -61,6 +63,31 @@ describe("v2-stream-block-executor.util", () => {
 		);
 		expect(resolveLogicStreamDbExecutor(V2_IMPLEMENTATION_STREAM.DADM)).toBe(
 			"ДАДМ",
+		);
+	});
+
+	it("normalizes and serializes multi-stream executor values", () => {
+		expect(
+			normalizeStreamBlockExecutors([
+				V2_IMPLEMENTATION_STREAM.IDSRC,
+				"Источники данных",
+				V2_IMPLEMENTATION_STREAM.PIRM,
+			]),
+		).toEqual([
+			V2_IMPLEMENTATION_STREAM.IDSRC,
+			V2_IMPLEMENTATION_STREAM.PIRM,
+		]);
+		expect(
+			serializeStreamBlockExecutors([
+				V2_IMPLEMENTATION_STREAM.IDSRC,
+				V2_IMPLEMENTATION_STREAM.PIRM,
+			]),
+		).toEqual([
+			V2_IMPLEMENTATION_STREAM.IDSRC,
+			V2_IMPLEMENTATION_STREAM.PIRM,
+		]);
+		expect(serializeStreamBlockExecutors([V2_IMPLEMENTATION_STREAM.IDSRC])).toBe(
+			V2_IMPLEMENTATION_STREAM.IDSRC,
 		);
 	});
 });

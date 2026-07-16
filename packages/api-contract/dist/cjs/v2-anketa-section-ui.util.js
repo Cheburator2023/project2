@@ -3,15 +3,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.V2_ANKETA_STREAM_SECTION_IDS = exports.V2_STREAM_BLOCK_TITLE_PREFIX = exports.V2_ARCH_COMPONENT_LABELS = exports.V2_ARCH_COMPONENT_TYPES = exports.V2_ANKETA_SECTION_ROLE_VALUES = void 0;
 exports.isV2ArchComponentType = isV2ArchComponentType;
 exports.readV2AnketaSectionUiOptions = readV2AnketaSectionUiOptions;
+exports.readStreamExecutorsFromSectionUi = readStreamExecutorsFromSectionUi;
 exports.resolveV2AnketaStreamBlockOptions = resolveV2AnketaStreamBlockOptions;
 exports.isV2AnketaStreamBlockRoot = isV2AnketaStreamBlockRoot;
 exports.hasV2StreamBlockTitlePrefix = hasV2StreamBlockTitlePrefix;
 exports.formatV2StreamBlockSectionTitle = formatV2StreamBlockSectionTitle;
+exports.formatV2StreamBlockSectionTitleFromExecutors = formatV2StreamBlockSectionTitleFromExecutors;
 exports.resolveV2AnketaSectionDisplayTitle = resolveV2AnketaSectionDisplayTitle;
 exports.collectExecutorStreamBlocks = collectExecutorStreamBlocks;
 exports.collectPresentExecutorStreamLabels = collectPresentExecutorStreamLabels;
 exports.isExecutorStreamPresentInSchema = isExecutorStreamPresentInSchema;
 exports.resolveStreamExecutorForTypicalWorkOutputPath = resolveStreamExecutorForTypicalWorkOutputPath;
+exports.resolvePrimaryStreamExecutorForTypicalWorkOutputPath = resolvePrimaryStreamExecutorForTypicalWorkOutputPath;
 exports.resolveV2AnketaArchComponent = resolveV2AnketaArchComponent;
 exports.isV2AnketaMainSectionId = isV2AnketaMainSectionId;
 exports.isV2AnketaStreamSectionId = isV2AnketaStreamSectionId;
@@ -112,29 +115,37 @@ function readV2AnketaSectionUiOptions(uiNode) {
                 ? false
                 : undefined,
         streamExecutor: (() => {
-            if (typeof opts.streamExecutor !== "string")
-                return undefined;
-            return (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutor)(opts.streamExecutor) ?? undefined;
+            const executors = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutors)(opts.streamExecutor);
+            return (0, v2_stream_block_executor_util_1.serializeStreamBlockExecutors)(executors);
         })(),
     };
+}
+function readStreamExecutorsFromSectionUi(uiNode) {
+    return (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutors)(readV2AnketaSectionUiOptions(uiNode).streamExecutor);
 }
 /** Явная или legacy-привязка корневого блока к стриму-исполнителю. */
 function resolveV2AnketaStreamBlockOptions(uiNode, blockKey) {
     const opts = readV2AnketaSectionUiOptions(uiNode);
     if (opts.streamBlock === false) {
-        return { streamBlock: false, streamExecutor: null };
+        return { streamBlock: false, streamExecutor: null, streamExecutors: [] };
     }
     if (opts.streamBlock === true) {
+        const streamExecutors = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutors)(opts.streamExecutor);
         return {
             streamBlock: true,
-            streamExecutor: opts.streamExecutor ?? null,
+            streamExecutors,
+            streamExecutor: streamExecutors[0] ?? null,
         };
     }
     const legacy = blockKey != null ? (0, v2_stream_block_executor_util_1.inferLegacyStreamBlockExecutorCode)(blockKey) : null;
     if (legacy) {
-        return { streamBlock: true, streamExecutor: legacy };
+        return {
+            streamBlock: true,
+            streamExecutors: [legacy],
+            streamExecutor: legacy,
+        };
     }
-    return { streamBlock: false, streamExecutor: null };
+    return { streamBlock: false, streamExecutor: null, streamExecutors: [] };
 }
 function isV2AnketaStreamBlockRoot(uiNode, blockKey) {
     return resolveV2AnketaStreamBlockOptions(uiNode, blockKey).streamBlock;
@@ -152,6 +163,10 @@ function formatV2StreamBlockSectionTitle(baseTitle) {
         return "Стрим";
     if (hasV2StreamBlockTitlePrefix(trimmed))
         return trimmed;
+    const codes = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutors)(trimmed);
+    if (codes.length > 1) {
+        return `Стрим «${(0, v2_stream_block_executor_util_1.resolveStreamBlockExecutorsLabel)(codes)}»`;
+    }
     if ((0, v2_implementation_streams_util_1.isV2ImplementationStreamCode)(trimmed) || (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutor)(trimmed)) {
         return `Стрим «${(0, v2_stream_block_executor_util_1.resolveStreamBlockExecutorLabel)(trimmed)}»`;
     }
@@ -159,6 +174,12 @@ function formatV2StreamBlockSectionTitle(baseTitle) {
         return `Стрим «${trimmed}»`;
     }
     return `${exports.V2_STREAM_BLOCK_TITLE_PREFIX}${trimmed}`;
+}
+function formatV2StreamBlockSectionTitleFromExecutors(executors) {
+    if (executors.length === 0)
+        return "Стрим";
+    const label = (0, v2_stream_block_executor_util_1.resolveStreamBlockExecutorsLabel)(executors);
+    return label ? `Стрим «${label}»` : "Стрим";
 }
 /** Заголовок секции с учётом streamBlock (явный, legacy stream* / field_* ключ). */
 function resolveV2AnketaSectionDisplayTitle(baseTitle, uiNode, blockKey) {
@@ -175,8 +196,9 @@ function resolveV2AnketaSectionDisplayTitle(baseTitle, uiNode, blockKey) {
             return canonical;
     }
     const executor = streamOpts.streamExecutor;
-    if (executor && (!trimmed || trimmed === executor)) {
-        return formatV2StreamBlockSectionTitle(executor);
+    const executors = streamOpts.streamExecutors;
+    if (executors.length > 0 && (!trimmed || trimmed === executor)) {
+        return formatV2StreamBlockSectionTitleFromExecutors(executors);
     }
     return formatV2StreamBlockSectionTitle(trimmed || executor || baseTitle);
 }
@@ -190,19 +212,20 @@ function collectExecutorStreamBlocks(uiSchema) {
         if (blockKey.startsWith("ui:"))
             continue;
         const branch = readRecord(root[blockKey]);
-        const { streamBlock, streamExecutor } = resolveV2AnketaStreamBlockOptions(branch, blockKey);
-        if (streamBlock && streamExecutor) {
+        const { streamBlock, streamExecutors } = resolveV2AnketaStreamBlockOptions(branch, blockKey);
+        if (streamBlock && streamExecutors.length > 0) {
             blocks.push({
                 blockKey,
                 pointer: `/${blockKey}`,
-                streamExecutor,
+                streamExecutors,
+                streamExecutor: streamExecutors[0],
             });
         }
     }
     return blocks;
 }
 function collectPresentExecutorStreamLabels(uiSchema) {
-    return new Set(collectExecutorStreamBlocks(uiSchema).map((block) => block.streamExecutor));
+    return new Set(collectExecutorStreamBlocks(uiSchema).flatMap((block) => block.streamExecutors));
 }
 /** Есть ли в конструкторе корневой streamBlock для стрима (код или legacy-имя БД). */
 function isExecutorStreamPresentInSchema(uiSchema, stream) {
@@ -233,20 +256,24 @@ function readUiBranchAtDotPath(uiSchema, dotPath) {
     return readRecord(cur);
 }
 /**
- * Стрим-исполнитель для блока typicalWork: явный ui:options.streamExecutor,
- * иначе стрим корневого streamBlock по пути вывода.
+ * Стримы-исполнители для блока typicalWork: явный ui:options.streamExecutor,
+ * иначе стримы корневого streamBlock по пути вывода.
  */
 function resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPath) {
     const leaf = readUiBranchAtDotPath(uiSchema, outputPath);
-    const explicit = readV2AnketaSectionUiOptions(leaf).streamExecutor;
-    if (explicit)
+    const explicit = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutors)(readV2AnketaSectionUiOptions(leaf).streamExecutor);
+    if (explicit.length > 0)
         return explicit;
     const rootKey = outputPath.split(".")[0]?.trim();
     if (!rootKey)
-        return null;
+        return [];
     const rootBranch = readRecord(readRecord(uiSchema)?.[rootKey]);
-    const { streamExecutor } = resolveV2AnketaStreamBlockOptions(rootBranch, rootKey);
-    return streamExecutor;
+    return resolveV2AnketaStreamBlockOptions(rootBranch, rootKey).streamExecutors;
+}
+/** Первый стрим-исполнитель для блока typicalWork (legacy single-stream API). */
+function resolvePrimaryStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPath) {
+    return (resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPath)[0] ??
+        null);
 }
 /** Тип арх. компонента секции из ui:options, либо null. */
 function resolveV2AnketaArchComponent(uiNode) {

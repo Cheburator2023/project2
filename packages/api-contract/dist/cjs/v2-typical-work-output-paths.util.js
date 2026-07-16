@@ -159,11 +159,11 @@ function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog, options) {
             !options?.replaceExisting?.(binding.boundWorkIds)) {
             continue;
         }
-        const stream = (0, v2_anketa_section_ui_util_1.resolveStreamExecutorForTypicalWorkOutputPath)(next, binding.outputPath);
-        if (!stream)
+        const streams = (0, v2_anketa_section_ui_util_1.resolveStreamExecutorForTypicalWorkOutputPath)(next, binding.outputPath);
+        if (streams.length === 0)
             continue;
         const ids = catalog
-            .filter((work) => (0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)(work.streams, stream))
+            .filter((work) => (0, v2_executor_streams_util_1.typicalWorkAssignedToAnyExecutorStream)(work.streams, streams))
             .map((work) => work.id);
         if (ids.length === 0)
             continue;

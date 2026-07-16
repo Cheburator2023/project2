@@ -6,6 +6,7 @@ exports.inferLegacyStreamExecutorForBlockKey = inferLegacyStreamExecutorForBlock
 exports.resolveExecutorStreamAreaLabel = resolveExecutorStreamAreaLabel;
 exports.resolveExecutorScopeDbStreams = resolveExecutorScopeDbStreams;
 exports.typicalWorkAssignedToExecutorStream = typicalWorkAssignedToExecutorStream;
+exports.typicalWorkAssignedToAnyExecutorStream = typicalWorkAssignedToAnyExecutorStream;
 /** Справочник стримов-исполнителей в редакторе логики и на стримовых блоках анкеты. */
 const v2_stream_block_executor_util_1 = require("./v2-stream-block-executor.util");
 exports.V2_EXECUTOR_STREAM_LABELS = [
@@ -75,4 +76,11 @@ function typicalWorkAssignedToExecutorStream(workStreams, executorStream) {
     const scopeStreams = resolveExecutorScopeDbStreams(executorStream);
     return workStreams.some((stream) => scopeStreams.includes(stream) ||
         scopeStreams.includes(resolveExecutorStreamAreaLabel(stream)));
+}
+/** Работа назначена хотя бы на один из стримов-исполнителей блока. */
+function typicalWorkAssignedToAnyExecutorStream(workStreams, executorStreams) {
+    const executors = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutors)(executorStreams);
+    if (executors.length === 0)
+        return false;
+    return executors.some((executor) => typicalWorkAssignedToExecutorStream(workStreams, executor));
 }

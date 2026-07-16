@@ -1,6 +1,7 @@
 /** Справочник стримов-исполнителей в редакторе логики и на стримовых блоках анкеты. */
 import {
 	normalizeStreamBlockExecutor,
+	normalizeStreamBlockExecutors,
 	resolveStreamBlockExecutorScopeStreams,
 } from "./v2-stream-block-executor.util";
 
@@ -99,5 +100,17 @@ export function typicalWorkAssignedToExecutorStream(
 		(stream) =>
 			scopeStreams.includes(stream) ||
 			scopeStreams.includes(resolveExecutorStreamAreaLabel(stream)),
+	);
+}
+
+/** Работа назначена хотя бы на один из стримов-исполнителей блока. */
+export function typicalWorkAssignedToAnyExecutorStream(
+	workStreams: readonly string[],
+	executorStreams: string | readonly string[],
+): boolean {
+	const executors = normalizeStreamBlockExecutors(executorStreams);
+	if (executors.length === 0) return false;
+	return executors.some((executor) =>
+		typicalWorkAssignedToExecutorStream(workStreams, executor),
 	);
 }
