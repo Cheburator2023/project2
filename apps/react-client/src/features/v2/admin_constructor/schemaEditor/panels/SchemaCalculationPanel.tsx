@@ -10,10 +10,10 @@ import { useMemo } from "react";
 import type {
 	CalculationItem,
 	ComputedRuleRole,
-	TaskTriggerItem,
 } from "../../utils/calculationEngine";
 import { formatComputedNumber } from "../../utils/calculationEngine";
 import { V2FinalEvaluationPanel } from "../../organisms/V2FinalEvaluationPanel";
+import { TaskTriggerRow } from "../../organisms/TaskTriggerRow";
 import { readSummaryFromFormData } from "../../utils/readSummaryFromFormData";
 import {
 	isOverwrittenByLegacyStageEngine,
@@ -164,52 +164,6 @@ function CalculationRow({
 	);
 }
 
-function TaskTriggerRow({ item }: { item: TaskTriggerItem }) {
-	const hintText = [
-		item.hint || "Триггер типовой работы.",
-		`Код: ${item.taskCode}`,
-		`Сработал: ${item.passes ? "да" : "нет"}`,
-	]
-		.filter(Boolean)
-		.join("\n");
-
-	return (
-		<Box
-			sx={{
-				display: "flex",
-				alignItems: "center",
-				gap: 1,
-				px: 1,
-				py: 0.75,
-				borderRadius: 1,
-				border: 1,
-				borderColor: item.passes ? "success.light" : "divider",
-				bgcolor: item.passes ? "action.selected" : "background.paper",
-				opacity: item.passes ? 1 : 0.7,
-			}}
-		>
-			<Chip
-				size="small"
-				label={item.taskCode}
-				color={item.passes ? "success" : "default"}
-				variant="outlined"
-				sx={{ height: 20 }}
-			/>
-			<Typography
-				variant="body2"
-				sx={{ flex: 1, minWidth: 0 }}
-				noWrap
-				title={item.label}
-			>
-				{item.label}
-			</Typography>
-			<IconButton size="small" title={hintText} aria-label="Подсказка">
-				<InfoOutlinedIcon sx={{ fontSize: 16 }} />
-			</IconButton>
-		</Box>
-	);
-}
-
 export function SchemaCalculationPanel({ embedded = false }: { embedded?: boolean }) {
 	const {
 		calculationItems,
@@ -219,6 +173,7 @@ export function SchemaCalculationPanel({ embedded = false }: { embedded?: boolea
 		liveFormData,
 		legacyStageEvaluation,
 		openLogicTabWithRule,
+		previewUiSchema,
 	} = useSchemaEditor();
 
 	const summary = readSummaryFromFormData(liveFormData);
@@ -262,6 +217,8 @@ export function SchemaCalculationPanel({ embedded = false }: { embedded?: boolea
 				calculationError={calculationError}
 				isLoading={calculationLoading}
 				compact
+				uiSchema={previewUiSchema as Record<string, unknown>}
+				liveFormData={liveFormData}
 				engineCaption={
 					legacyApplied
 						? `После /calculate · ${legacyStageEvaluation?.stageRowCount ?? 0} этапов · ${legacyStageEvaluation?.platformStreamCount ?? 0} стримов`

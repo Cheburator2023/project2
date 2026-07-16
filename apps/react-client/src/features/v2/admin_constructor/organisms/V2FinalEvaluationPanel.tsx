@@ -15,6 +15,21 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { uncertaintySummaryText } from "@react-client/features/v2/anketaCRUD/organisms/AnketaFormModals";
+import {
+	collectAppearedTypicalWorkGroups,
+	formatTypicalWorkNumberValue,
+	typicalWorkItemDisplayName,
+} from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
+import { useMemo } from "react";
+
+const MODEL_STREAM_LABEL = "Модельный стрим";
+
+const TYPICAL_WORK_TABLE_COLUMNS = [
+	"Название типовой работы",
+	"Базовая оценка",
+	"Коэффициент",
+	"Итог",
+] as const;
 
 export type V2SummaryFormSlice = {
 	total?: number;
@@ -93,6 +108,9 @@ type Props = {
 	onExportExcel?: () => void;
 	/** Подзаголовок источника данных (например, движок v1). */
 	engineCaption?: string;
+	uiSchema?: Record<string, unknown>;
+	/** Свежие данные расчёта с сервера (массивы типовых работ). */
+	liveFormData?: Record<string, unknown> | null;
 };
 
 export function V2FinalEvaluationPanel({
@@ -103,11 +121,36 @@ export function V2FinalEvaluationPanel({
 	compact,
 	onExportExcel,
 	engineCaption,
+	uiSchema,
+	liveFormData,
 }: Props) {
 	const uncertaintySummary = formData ? uncertaintySummaryText(formData) : null;
 	const effectiveSummary = calculationError ? null : summary;
 	const rows = effectiveSummary?.detailedCalculation ?? [];
 	const platformRows = effectiveSummary?.platformStreams ?? [];
+	const typicalWorkGroups = useMemo(
+		() => collectAppearedTypicalWorkGroups(formData, uiSchema, liveFormData),
+		[formData, uiSchema, liveFormData],
+	);
+	const modelStreamTypicalRows = useMemo(
+		() =>
+			typicalWorkGroups
+				.filter((group) => group.streamExecutor === MODEL_STREAM_LABEL)
+				.flatMap((group) => group.rows),
+		[typicalWorkGroups],
+	);
+	const otherTypicalWorkGroups = useMemo(
+		() =>
+			typicalWorkGroups.filter(
+				(group) => group.streamExecutor !== MODEL_STREAM_LABEL,
+			),
+		[typicalWorkGroups],
+	);
+	const typicalWorkRowCount =
+		modelStreamTypicalRows.length +
+		otherTypicalWorkGroups.reduce((sum, group) => sum + group.rows.length, 0);
+	const showModelStreamSection =
+		rows.length > 0 || modelStreamTypicalRows.length > 0;
 	const showUnifiedHeadline = Boolean(
 		effectiveSummary && hasNonZeroUnifiedTotals(effectiveSummary),
 	);
@@ -115,11 +158,16 @@ export function V2FinalEvaluationPanel({
 		effectiveSummary && hasLegacyHeadline(effectiveSummary),
 	);
 	const hasData =
-		effectiveSummary &&
-		(showUnifiedHeadline ||
-			showLegacyHeadline ||
-			rows.length > 0 ||
-			platformRows.length > 0);
+		(effectiveSummary &&
+			(showUnifiedHeadline ||
+				showLegacyHeadline ||
+				rows.length > 0 ||
+				platformRows.length > 0)) ||
+		typicalWorkRowCount > 0;
+	const showDetailedSection =
+		showModelStreamSection ||
+		platformRows.length > 0 ||
+		otherTypicalWorkGroups.length > 0;
 
 	return (
 		<Box sx={{ width: "100%", minWidth: 0 }}>
@@ -224,65 +272,120 @@ export function V2FinalEvaluationPanel({
 				}}
 			>
 				<CardContent sx={{ p: compact ? 3 : 4, pt: compact ? 5 : 6 }}>
-					{!hasData && !isLoading ? (
+					{!hasData && !isLoading && typicalWorkRowCount === 0 ? (
 						<Typography variant="body2" color="text.secondary">
 							Заполните анкету — здесь появится расчёт по 11 этапам E2E и
 							платформенным стримам.
 						</Typography>
 					) : null}
 
-					{rows.length > 0 ? (
+					{showDetailedSection ? (
 						<>
 							<Typography variant="h5" fontWeight={700} mb={4}>
 								Подробный расчет
 							</Typography>
-							<Typography variant="h6" fontWeight={700} mb={2}>
-								Модельный стрим
-							</Typography>
-							<MiniTable
-								columns={[
-									"Наименование этапа E2E планирования",
-									"Базовая оценка",
-									"Оценка с поправкой",
-									"Отклонение",
-								]}
-								rows={rows.map((r) => ({
-									name: r.stageName ?? "—",
-									c1: formatNum(r.baseScore),
-									c2: formatNum(r.complexityCoeff ?? undefined),
-									c3: formatPercent(r.deviationFromBase ?? undefined),
-									c3Color: deviationColor(r.deviationFromBase ?? undefined),
-									muted: r.disabled,
-									bold: r.stageName === "Итого",
-								}))}
-							/>
-							<Divider sx={{ mb: 5 }} />
-						</>
-					) : null}
 
-					{platformRows.length > 0 ? (
-						<>
-							<Typography variant="h6" fontWeight={700} mb={2}>
-								Стримы
-							</Typography>
-							<MiniTable
-								columns={[
-									"Наименование стрима",
-									"Базовая оценка",
-									"Оценка с поправкой",
-									"Отклонение",
-									"Оценка нетиповых задач",
-								]}
-								rows={platformRows.map((r) => ({
-									name: r.streamName ?? "—",
-									c1: formatNum(r.baseTypicalScore),
-									c2: formatNum(r.adjustedTypicalScore),
-									c3: formatPercent(r.deviationPercent ?? undefined),
-									c3Color: deviationColor(r.deviationPercent ?? undefined),
-									c4: formatNum(r.atypicalScore),
-								}))}
-								fiveCols
-							/>
+							{showModelStreamSection ? (
+								<>
+									<Typography variant="h6" fontWeight={700} mb={2}>
+										Модельный стрим
+									</Typography>
+									{rows.length > 0 ? (
+										<MiniTable
+											columns={[
+												"Наименование этапа E2E планирования",
+												"Базовая оценка",
+												"Оценка с поправкой",
+												"Отклонение",
+											]}
+											rows={rows.map((r) => ({
+												name: r.stageName ?? "—",
+												c1: formatNum(r.baseScore),
+												c2: formatNum(r.complexityCoeff ?? undefined),
+												c3: formatPercent(r.deviationFromBase ?? undefined),
+												c3Color: deviationColor(
+													r.deviationFromBase ?? undefined,
+												),
+												muted: r.disabled,
+												bold: r.stageName === "Итого",
+											}))}
+										/>
+									) : null}
+									{modelStreamTypicalRows.length > 0 ? (
+										<Box sx={{ mt: rows.length > 0 ? 3 : 0 }}>
+											{rows.length > 0 ? (
+												<Typography
+													variant="subtitle2"
+													fontWeight={700}
+													color="text.secondary"
+													mb={1.5}
+												>
+													Типовые работы
+												</Typography>
+											) : null}
+											<TypicalWorksMiniTable rows={modelStreamTypicalRows} />
+										</Box>
+									) : null}
+									{otherTypicalWorkGroups.length > 0 ||
+									platformRows.length > 0 ? (
+										<Divider sx={{ my: 4 }} />
+									) : null}
+								</>
+							) : null}
+
+							{otherTypicalWorkGroups.length > 0 ? (
+								<>
+									<Typography variant="h6" fontWeight={700} mb={2}>
+										Появление типовых работ
+									</Typography>
+									<Stack spacing={3} mb={platformRows.length > 0 ? 4 : 0}>
+										{otherTypicalWorkGroups.map((group) => (
+											<Box key={group.path}>
+												{group.streamExecutor ? (
+													<Typography
+														variant="subtitle2"
+														fontWeight={700}
+														color="text.secondary"
+														mb={1.5}
+													>
+														{group.streamExecutor}
+													</Typography>
+												) : null}
+												<TypicalWorksMiniTable rows={group.rows} />
+											</Box>
+										))}
+									</Stack>
+									{platformRows.length > 0 ? (
+										<Divider sx={{ mb: 5 }} />
+									) : null}
+								</>
+							) : null}
+
+							{platformRows.length > 0 ? (
+								<>
+									<Typography variant="h6" fontWeight={700} mb={2}>
+										Стримы
+									</Typography>
+									<MiniTable
+										columns={[
+											"Наименование стрима",
+											"Базовая оценка",
+											"Оценка с поправкой",
+											"Отклонение",
+											"Оценка нетиповых задач",
+										]}
+										rows={platformRows.map((r) => ({
+											name: r.streamName ?? "—",
+											c1: formatNum(r.baseTypicalScore),
+											c2: formatNum(r.adjustedTypicalScore),
+											c3: formatPercent(r.deviationPercent ?? undefined),
+											c3Color: deviationColor(r.deviationPercent ?? undefined),
+											c4: formatNum(r.atypicalScore),
+										}))}
+										fiveCols
+									/>
+								</>
+							) : null}
 						</>
 					) : null}
 				</CardContent>
@@ -317,6 +420,24 @@ function Metric({
 				{value}
 			</Typography>
 		</Box>
+	);
+}
+
+function TypicalWorksMiniTable({
+	rows,
+}: {
+	rows: Record<string, unknown>[];
+}) {
+	return (
+		<MiniTable
+			columns={[...TYPICAL_WORK_TABLE_COLUMNS]}
+			rows={rows.map((item, index) => ({
+				name: typicalWorkItemDisplayName(item, index),
+				c1: formatTypicalWorkNumberValue(item.estimateHoursPerDay),
+				c2: formatTypicalWorkNumberValue(item.coefficient),
+				c3: formatTypicalWorkNumberValue(item.total),
+			}))}
+		/>
 	);
 }
 

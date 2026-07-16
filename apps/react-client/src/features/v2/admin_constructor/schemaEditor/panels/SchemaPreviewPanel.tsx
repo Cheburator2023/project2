@@ -92,6 +92,8 @@ export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean })
 						formData={engine.displayFormData}
 						calculationError={calculationError}
 						calculationLoading={calculationLoading}
+						uiSchema={engine.previewUiSchema as Record<string, unknown>}
+						liveFormData={engine.calculationLiveFormData}
 					>
 						<V2AnketaFormWithModals
 							engine={engine}

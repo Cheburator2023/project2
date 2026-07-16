@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	adjustTypicalWorkTableColumns,
+	collectAppearedTypicalWorkRows,
 	collectTypicalWorkSourceNames,
 	filterTypicalWorkItems,
 	formatTypicalWorkSummaryTotal,
@@ -101,5 +102,53 @@ describe("typical work table helpers", () => {
 		expect(formatTypicalWorkSummaryTotal(null)).toBe("—");
 		expect(formatTypicalWorkSummaryTotal(null, { loading: true })).toBe("…");
 		expect(formatTypicalWorkSummaryTotal(3, { loading: true })).toBe("3");
+	});
+
+	it("collects appeared typical work rows from formData", () => {
+		const rows = collectAppearedTypicalWorkRows({
+			streamDataSources: {
+				sourceTypicalTasks: [
+					{ name: "Уточнение требований", estimateHoursPerDay: 5, coefficient: 2, total: 10 },
+					{ generatedByRuleId: "rule-1", estimateHoursPerDay: 3, total: 3 },
+					{},
+				],
+			},
+		});
+		expect(rows).toHaveLength(2);
+		expect(rows[0]?.name).toBe("Уточнение требований");
+	});
+
+	it("prefers liveFormData when collecting appeared typical work rows", () => {
+		const rows = collectAppearedTypicalWorkRows(
+			{
+				detailInfo: {
+					detailTypicalTasks: [],
+				},
+			},
+			{
+				detailInfo: {
+					detailTypicalTasks: {
+						"ui:options": {
+							archComponent: "typicalWork",
+							streamExecutor: "Модельный стрим",
+						},
+					},
+				},
+			},
+			{
+				detailInfo: {
+					detailTypicalTasks: [
+						{
+							name: "Постановка задачи",
+							estimateHoursPerDay: 33,
+							coefficient: 1,
+							total: 33,
+						},
+					],
+				},
+			},
+		);
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.name).toBe("Постановка задачи");
 	});
 });

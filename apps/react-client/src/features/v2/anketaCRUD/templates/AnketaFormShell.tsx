@@ -332,6 +332,8 @@ export function AnketaFormShell({
 							isLoading={engine.calculationLoading}
 							calculationItems={engine.calculationItems}
 							taskTriggerItems={engine.taskTriggerItems}
+							uiSchema={engine.previewUiSchema as Record<string, unknown>}
+							liveFormData={engine.calculationLiveFormData}
 						/>
 					)
 				}
