@@ -242,7 +242,7 @@ export function TypicalWorksPanel() {
 			const area = work.streams[0]
 				? streamAreaKey(work.streams[0])
 				: DEFAULT_LOGIC_STREAM;
-			setScope({ kind: "stream", streams: [area] });
+			setScope({ kind: "stream", streams: [area], roles: [] });
 			if (
 				useSchemaEditorUiStore.getState().selectedTypicalWorkId !== work.id
 			) {
@@ -252,7 +252,7 @@ export function TypicalWorksPanel() {
 				pickDefaultStream(work) ??
 				work.streams[0] ??
 				scopeStreamExecutor(
-					{ kind: "stream", streams: [area] },
+					{ kind: "stream", streams: [area], roles: [] },
 					DEFAULT_LOGIC_STREAM,
 				);
 			if (stream) {

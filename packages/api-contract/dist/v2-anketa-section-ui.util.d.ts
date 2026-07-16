@@ -1,3 +1,4 @@
+import { type V2StreamBlockRoleCode, type V2StreamBlockRoleValue } from "./v2-stream-block-role.util";
 import { type V2StreamBlockExecutor, type V2StreamBlockExecutorValue } from "./v2-stream-block-executor.util";
 import { type V2AnketaMainSectionId } from "./v2-anketa-workflow.types";
 export declare const V2_ANKETA_SECTION_ROLE_VALUES: readonly ["main", "subsection", "panel", "flat"];
@@ -41,13 +42,17 @@ export type V2AnketaSectionUiOptions = {
     streamBlock?: boolean;
     /** Стрим-исполнитель из справочника (ДАДМ, ПиРМ, …). */
     streamExecutor?: V2StreamBlockExecutorValue;
+    /** Роли платформы для стрим-блока (код или массив кодов). */
+    streamBlockRoles?: V2StreamBlockRoleValue;
 };
 declare const STREAM_SECTION_IDS: V2AnketaMainSectionId[];
 export declare function readV2AnketaSectionUiOptions(uiNode: unknown): V2AnketaSectionUiOptions;
+export declare function readStreamBlockRolesFromSectionUi(uiNode: unknown): V2StreamBlockRoleCode[];
 export declare function readStreamExecutorsFromSectionUi(uiNode: unknown): V2StreamBlockExecutor[];
 export type V2AnketaStreamBlockOptions = {
     streamBlock: boolean;
     streamExecutors: V2StreamBlockExecutor[];
+    streamBlockRoles: V2StreamBlockRoleCode[];
     /** Первый стрим (обратная совместимость). */
     streamExecutor: V2StreamBlockExecutor | null;
 };
@@ -81,6 +86,8 @@ export declare function isExecutorStreamPresentInSchema(uiSchema: unknown, strea
 export declare function resolveStreamExecutorForTypicalWorkOutputPath(uiSchema: unknown, outputPath: string): V2StreamBlockExecutor[];
 /** Первый стрим-исполнитель для блока typicalWork (legacy single-stream API). */
 export declare function resolvePrimaryStreamExecutorForTypicalWorkOutputPath(uiSchema: unknown, outputPath: string): V2StreamBlockExecutor | null;
+/** Роли платформы для блока typicalWork: явные ui:options.streamBlockRoles или корневой streamBlock. */
+export declare function resolveStreamBlockRolesForTypicalWorkOutputPath(uiSchema: unknown, outputPath: string): V2StreamBlockRoleCode[];
 /** Тип арх. компонента секции из ui:options, либо null. */
 export declare function resolveV2AnketaArchComponent(uiNode: unknown): V2ArchComponentType | null;
 export declare function isV2AnketaMainSectionId(value: string): value is V2AnketaMainSectionId;

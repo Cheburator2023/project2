@@ -2,18 +2,22 @@
 
 import {
 	normalizeStreamBlockExecutor,
+	normalizeStreamBlockRoles,
 	resolveLogicStreamDbExecutor,
 	resolveLogicStreamForDbExecutor,
 	resolveStreamBlockExecutorLabel,
 	resolveStreamBlockExecutorScopeStreams,
 	resolveStreamBlockExecutorsLabel,
+	resolveStreamBlockRolesLabel,
 	V2_IMPLEMENTATION_STREAM,
 	V2_IMPLEMENTATION_STREAM_CODES,
+	V2_STREAM_BLOCK_ROLE_CODES,
 	type V2ImplementationStreamCode,
+	type V2StreamBlockRoleCode,
 } from "@smart-anketa/api-contract";
 
 export type LogicWorksScope =
-	| { kind: "stream"; streams: string[] }
+	| { kind: "stream"; streams: string[]; roles: string[] }
 	| { kind: "all" };
 
 export type LogicStreamCode = V2ImplementationStreamCode;
@@ -40,7 +44,10 @@ export const DEFAULT_LOGIC_STREAM = V2_IMPLEMENTATION_STREAM.IDSRC;
 export const DEFAULT_SCOPE: LogicWorksScope = {
 	kind: "stream",
 	streams: [DEFAULT_LOGIC_STREAM],
+	roles: [],
 };
+
+export const LOGIC_STREAM_BLOCK_ROLES = V2_STREAM_BLOCK_ROLE_CODES;
 
 export function scopeStreamExecutor(
 	scope: LogicWorksScope,
@@ -109,16 +116,61 @@ export function workMatchesLogicScope(
 
 export function scopeLabel(scope: LogicWorksScope): string {
 	if (scope.kind === "all") return "Все области";
-	if (scope.streams.length === 1) {
-		return streamDisplayLabel(scope.streams[0]);
-	}
-	return resolveStreamBlockExecutorsLabel(scope.streams);
+	const streamPart =
+		scope.streams.length === 1
+			? streamDisplayLabel(scope.streams[0])
+			: resolveStreamBlockExecutorsLabel(scope.streams);
+	const rolePart =
+		scope.roles.length > 0 ? resolveStreamBlockRolesLabel(scope.roles) : "";
+	if (streamPart && rolePart) return `${streamPart} · ${rolePart}`;
+	return streamPart || rolePart || "Область";
 }
 
 export function scopeSubtitle(scope: LogicWorksScope): string {
 	if (scope.kind === "all") return "все области";
-	if (scope.streams.length === 1) return "стрим-исполнитель";
-	return `${scope.streams.length} стрима`;
+	const parts: string[] = [];
+	if (scope.streams.length === 1) parts.push("стрим-исполнитель");
+	else if (scope.streams.length > 1) parts.push(`${scope.streams.length} стрима`);
+	if (scope.roles.length === 1) parts.push("1 роль");
+	else if (scope.roles.length > 1) parts.push(`${scope.roles.length} роли`);
+	return parts.join(" · ") || "стрим-исполнитель";
+}
+
+export function isRoleSelectedInScope(
+	scope: LogicWorksScope,
+	role: string,
+): boolean {
+	if (scope.kind === "all") return false;
+	const code = normalizeStreamBlockRoles(role)[0];
+	return scope.roles.some(
+		(item) =>
+			item === role ||
+			(code != null && normalizeStreamBlockRoles(item)[0] === code),
+	);
+}
+
+export function toggleRoleInScope(
+	scope: LogicWorksScope,
+	role: string,
+): LogicWorksScope {
+	if (scope.kind === "all") {
+		return { kind: "stream", streams: [DEFAULT_LOGIC_STREAM], roles: [role] };
+	}
+	const selected = isRoleSelectedInScope(scope, role);
+	if (selected) {
+		const code = normalizeStreamBlockRoles(role)[0];
+		const next = scope.roles.filter(
+			(item) =>
+				item !== role &&
+				(code == null || normalizeStreamBlockRoles(item)[0] !== code),
+		);
+		return { ...scope, roles: next };
+	}
+	return { ...scope, roles: [...scope.roles, role] };
+}
+
+export function roleDisplayLabel(role: string): string {
+	return resolveStreamBlockRolesLabel(role) || role;
 }
 
 export function isStreamSelectedInScope(
@@ -139,7 +191,7 @@ export function toggleStreamInScope(
 	stream: string,
 ): LogicWorksScope {
 	if (scope.kind === "all") {
-		return { kind: "stream", streams: [stream] };
+		return { kind: "stream", streams: [stream], roles: [] };
 	}
 	const selected = isStreamSelectedInScope(scope, stream);
 	if (selected) {
@@ -150,9 +202,9 @@ export function toggleStreamInScope(
 				(code == null || normalizeStreamBlockExecutor(item) !== code),
 		);
 		if (next.length === 0) return ALL_LOGIC_WORKS_SCOPE;
-		return { kind: "stream", streams: next };
+		return { kind: "stream", streams: next, roles: scope.roles };
 	}
-	return { kind: "stream", streams: [...scope.streams, stream] };
+	return { kind: "stream", streams: [...scope.streams, stream], roles: scope.roles };
 }
 
 export function workAssignedToScope(

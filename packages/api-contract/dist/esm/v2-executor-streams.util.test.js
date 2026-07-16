@@ -42,6 +42,7 @@ describe("resolveV2AnketaStreamBlockOptions", () => {
             streamBlock: true,
             streamExecutor: V2_IMPLEMENTATION_STREAM.IDSRC,
             streamExecutors: [V2_IMPLEMENTATION_STREAM.IDSRC],
+            streamBlockRoles: [],
         });
     });
     it("infers legacy stream blocks without explicit flag", () => {
@@ -49,6 +50,7 @@ describe("resolveV2AnketaStreamBlockOptions", () => {
             streamBlock: true,
             streamExecutor: V2_IMPLEMENTATION_STREAM.MDLCTL,
             streamExecutors: [V2_IMPLEMENTATION_STREAM.MDLCTL],
+            streamBlockRoles: [],
         });
     });
 });

@@ -4,6 +4,7 @@ import {
 	resolveV2AnketaStreamBlockOptions,
 } from "./v2-anketa-section-ui.util";
 import { serializeStreamBlockExecutors } from "./v2-stream-block-executor.util";
+import { serializeStreamBlockRoles } from "./v2-stream-block-role.util";
 import type { V2JsonSchemaDto, V2UiSchemaDto } from "./v2-template.types";
 
 function readRecord(value: unknown): Record<string, unknown> | undefined {
@@ -98,6 +99,13 @@ export function enrichAnketaLayoutUiSchema(
 				? {
 						streamExecutor: serializeStreamBlockExecutors(
 							streamBlock.streamExecutors,
+						),
+					}
+				: {}),
+			...(streamBlock.streamBlockRoles.length > 0
+				? {
+						streamBlockRoles: serializeStreamBlockRoles(
+							streamBlock.streamBlockRoles,
 						),
 					}
 				: {}),

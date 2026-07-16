@@ -13,14 +13,18 @@ import { useRef, useState } from "react";
 import {
 	ALL_LOGIC_WORKS_SCOPE,
 	LOGIC_EXECUTOR_STREAMS,
+	LOGIC_STREAM_BLOCK_ROLES,
 	type LogicWorksScope,
 	isAllLogicWorksScope,
+	isRoleSelectedInScope,
 	isStreamSelectedInScope,
+	roleDisplayLabel,
 	scopeLabel,
 	scopeStreamsPresentInSchema,
 	scopeSubtitle,
 	streamColor,
 	streamDisplayLabel,
+	toggleRoleInScope,
 	toggleStreamInScope,
 } from "./typicalWorksAreas";
 import { useSchemaEditor } from "../../SchemaEditorContext";
@@ -132,7 +136,7 @@ export function LogicWorksToolbar({
 						sx={{
 							mt: 0.75,
 							width: 320,
-							maxHeight: 380,
+							maxHeight: 480,
 							overflow: "auto",
 							borderRadius: "11px",
 							border: "1px solid #e1e5ec",
@@ -202,6 +206,47 @@ export function LogicWorksToolbar({
 													selected={selected}
 												/>
 											}
+										/>
+									</MenuItem>
+								);
+							})}
+							<Divider sx={{ my: 0.5 }} />
+							<Typography
+								sx={{
+									fontSize: 10,
+									fontWeight: 700,
+									letterSpacing: "0.04em",
+									textTransform: "uppercase",
+									color: "#aab1c0",
+									px: 1.1,
+									py: 0.75,
+								}}
+							>
+								Роли
+							</Typography>
+							{LOGIC_STREAM_BLOCK_ROLES.map((role) => {
+								const selected = isRoleSelectedInScope(scope, role);
+								return (
+									<MenuItem
+										key={role}
+										selected={selected}
+										onClick={() => {
+											onScopeChange(toggleRoleInScope(scope, role));
+										}}
+										sx={{ borderRadius: 1, py: 0.9 }}
+									>
+										<Checkbox
+											checked={selected}
+											size="small"
+											sx={{ p: 0.5, mr: 0.5 }}
+											tabIndex={-1}
+										/>
+										<ListItemText
+											primary={roleDisplayLabel(role)}
+											primaryTypographyProps={{
+												fontSize: 13,
+												fontWeight: selected ? 700 : 500,
+											}}
 										/>
 									</MenuItem>
 								);

@@ -1,3 +1,4 @@
+import { normalizeStreamBlockRoles, serializeStreamBlockRoles, } from "./v2-stream-block-role.util";
 import { inferLegacyStreamBlockExecutorCode, normalizeStreamBlockExecutor, normalizeStreamBlockExecutors, resolveStreamBlockExecutorLabel, resolveStreamBlockExecutorsLabel, serializeStreamBlockExecutors, } from "./v2-stream-block-executor.util";
 import { isV2ExecutorStreamLabel, resolveExecutorStreamAreaLabel, typicalWorkAssignedToExecutorStream, } from "./v2-executor-streams.util";
 import { isV2ImplementationStreamCode } from "./v2-implementation-streams.util";
@@ -92,7 +93,14 @@ export function readV2AnketaSectionUiOptions(uiNode) {
             const executors = normalizeStreamBlockExecutors(opts.streamExecutor);
             return serializeStreamBlockExecutors(executors);
         })(),
+        streamBlockRoles: (() => {
+            const roles = normalizeStreamBlockRoles(opts.streamBlockRoles);
+            return serializeStreamBlockRoles(roles);
+        })(),
     };
+}
+export function readStreamBlockRolesFromSectionUi(uiNode) {
+    return normalizeStreamBlockRoles(readV2AnketaSectionUiOptions(uiNode).streamBlockRoles);
 }
 export function readStreamExecutorsFromSectionUi(uiNode) {
     return normalizeStreamBlockExecutors(readV2AnketaSectionUiOptions(uiNode).streamExecutor);
@@ -101,7 +109,12 @@ export function readStreamExecutorsFromSectionUi(uiNode) {
 export function resolveV2AnketaStreamBlockOptions(uiNode, blockKey) {
     const opts = readV2AnketaSectionUiOptions(uiNode);
     if (opts.streamBlock === false) {
-        return { streamBlock: false, streamExecutor: null, streamExecutors: [] };
+        return {
+            streamBlock: false,
+            streamExecutor: null,
+            streamExecutors: [],
+            streamBlockRoles: [],
+        };
     }
     if (opts.streamBlock === true) {
         const streamExecutors = normalizeStreamBlockExecutors(opts.streamExecutor);
@@ -109,6 +122,7 @@ export function resolveV2AnketaStreamBlockOptions(uiNode, blockKey) {
             streamBlock: true,
             streamExecutors,
             streamExecutor: streamExecutors[0] ?? null,
+            streamBlockRoles: normalizeStreamBlockRoles(opts.streamBlockRoles),
         };
     }
     const legacy = blockKey != null ? inferLegacyStreamBlockExecutorCode(blockKey) : null;
@@ -117,9 +131,15 @@ export function resolveV2AnketaStreamBlockOptions(uiNode, blockKey) {
             streamBlock: true,
             streamExecutors: [legacy],
             streamExecutor: legacy,
+            streamBlockRoles: normalizeStreamBlockRoles(opts.streamBlockRoles),
         };
     }
-    return { streamBlock: false, streamExecutor: null, streamExecutors: [] };
+    return {
+        streamBlock: false,
+        streamExecutor: null,
+        streamExecutors: [],
+        streamBlockRoles: [],
+    };
 }
 export function isV2AnketaStreamBlockRoot(uiNode, blockKey) {
     return resolveV2AnketaStreamBlockOptions(uiNode, blockKey).streamBlock;
@@ -248,6 +268,17 @@ export function resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPa
 export function resolvePrimaryStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPath) {
     return (resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPath)[0] ??
         null);
+}
+/** Роли платформы для блока typicalWork: явные ui:options.streamBlockRoles или корневой streamBlock. */
+export function resolveStreamBlockRolesForTypicalWorkOutputPath(uiSchema, outputPath) {
+    const leaf = readUiBranchAtDotPath(uiSchema, outputPath);
+    const explicit = normalizeStreamBlockRoles(readV2AnketaSectionUiOptions(leaf).streamBlockRoles);
+    if (explicit.length > 0)
+        return explicit;
+    const rootKey = outputPath.split(".")[0]?.trim();
+    if (!rootKey)
+        return [];
+    return resolveV2AnketaStreamBlockOptions(readRecord(readRecord(uiSchema)?.[rootKey]), rootKey).streamBlockRoles;
 }
 /** Тип арх. компонента секции из ui:options, либо null. */
 export function resolveV2AnketaArchComponent(uiNode) {

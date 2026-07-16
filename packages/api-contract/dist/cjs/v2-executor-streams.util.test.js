@@ -44,6 +44,7 @@ const v2_executor_streams_util_1 = require("./v2-executor-streams.util");
             streamBlock: true,
             streamExecutor: v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC,
             streamExecutors: [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC],
+            streamBlockRoles: [],
         });
     });
     (0, vitest_1.it)("infers legacy stream blocks without explicit flag", () => {
@@ -51,6 +52,7 @@ const v2_executor_streams_util_1 = require("./v2-executor-streams.util");
             streamBlock: true,
             streamExecutor: v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.MDLCTL,
             streamExecutors: [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.MDLCTL],
+            streamBlockRoles: [],
         });
     });
 });

@@ -53,7 +53,9 @@ import {
 	V2_IMPLEMENTATION_STREAM_LABELS,
 	normalizeStreamBlockExecutor,
 	normalizeStreamBlockExecutors,
+	normalizeStreamBlockRoles,
 	resolveStreamBlockExecutorLabel,
+	resolveStreamBlockRolesForTypicalWorkOutputPath,
 	type V2AnketaMainSectionId,
 	type V2AnketaSectionRole,
 	type V2ImplementationStreamCode,
@@ -80,6 +82,10 @@ import {
 	makeStreamBlockJsonSchema,
 	makeStreamBlockUiOptions,
 } from "../streamBlockHelpers";
+import {
+	StreamBlockRoleMultiSelect,
+	streamBlockRolesToUiValue,
+} from "../../components/StreamBlockRoleMultiSelect";
 import {
 	StreamExecutorMultiSelect,
 	streamExecutorsToUiValue,
@@ -431,6 +437,22 @@ export function SchemaPropertiesPanel() {
 		sectionUiOptions.streamExecutor,
 		uiSchema,
 	]);
+	const typicalWorkStreamBlockRoles = useMemo(() => {
+		if (!isTypicalWorkBlock || !typicalWorkOutputPath) return [];
+		const explicit = normalizeStreamBlockRoles(
+			sectionUiOptions.streamBlockRoles,
+		);
+		if (explicit.length > 0) return explicit;
+		return resolveStreamBlockRolesForTypicalWorkOutputPath(
+			uiSchema,
+			typicalWorkOutputPath,
+		);
+	}, [
+		isTypicalWorkBlock,
+		typicalWorkOutputPath,
+		sectionUiOptions.streamBlockRoles,
+		uiSchema,
+	]);
 	const boundWorkIds = useMemo(
 		() =>
 			selectedPointer && isTypicalWorkBlock
@@ -776,6 +798,16 @@ export function SchemaPropertiesPanel() {
 		sectionUiOptions.streamExecutor,
 		streamBlockOptions.streamExecutors,
 	]);
+	const streamBlockRoleCodes = useMemo(() => {
+		const explicit = normalizeStreamBlockRoles(
+			sectionUiOptions.streamBlockRoles,
+		);
+		if (explicit.length > 0) return explicit;
+		return streamBlockOptions.streamBlockRoles;
+	}, [
+		sectionUiOptions.streamBlockRoles,
+		streamBlockOptions.streamBlockRoles,
+	]);
 	const showStreamBlockOptions =
 		showObjectLayout &&
 		isRootLevelBlock &&
@@ -1086,6 +1118,16 @@ export function SchemaPropertiesPanel() {
 										})
 									}
 									helperText={`Справочник ${V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE}. Используется в логике типовых работ и ролевке секций.`}
+								/>
+								<StreamBlockRoleMultiSelect
+									value={streamBlockRoleCodes}
+									onChange={(roles) =>
+										patchSectionUi({
+											streamBlock: true,
+											streamBlockRoles: streamBlockRolesToUiValue(roles),
+										})
+									}
+									helperText="Роли Keycloak, связанные со стрим-блоком."
 								/>
 							) : null}
 						</PropertiesSection>
@@ -1413,6 +1455,26 @@ export function SchemaPropertiesPanel() {
 										);
 									}}
 									helperText={`Справочник ${V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE}. Связь с назначениями работ в логике.`}
+									/>
+									<StreamBlockRoleMultiSelect
+										value={typicalWorkStreamBlockRoles}
+										onChange={(roles) => {
+											if (!selectedPointer) return;
+											recordDraftHistory();
+											patchUiSchema(
+												(prev) =>
+													patchUiOptionsAtPointer(
+														prev as Record<string, unknown>,
+														selectedPointer,
+														{
+															streamBlockRoles:
+																streamBlockRolesToUiValue(roles),
+														},
+													) as UiSchema,
+												{ recordHistory: false },
+											);
+										}}
+										helperText="Роли Keycloak для блока типовых работ."
 									/>
 								</Box>
 								{typicalWorkStreamExecutors.length > 0 ? (
