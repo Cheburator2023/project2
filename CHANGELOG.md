@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.29.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.28.0...v1.29.0) (2026-07-16)
+
+
+### Features
+
+* enhance model stream handling and improve UI components ([6f4640f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6f4640f15a7065cc0898883797f7920a15812e13))
+
 # [1.28.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.27.1...v1.28.0) (2026-07-16)
 
 
