@@ -8,12 +8,14 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Typography from "@mui/material/Typography";
 import type {
-	V2ExecutorStreamLabel,
 	V2TypicalWorkListItemDto,
 } from "@smart-anketa/api-contract";
 import {
 	isExecutorStreamPresentInSchema,
-	isV2ExecutorStreamLabel,
+	normalizeStreamBlockExecutor,
+	resolveLogicStreamDbExecutor,
+	resolveLogicStreamForDbExecutor,
+	resolveStreamBlockExecutorLabel,
 	resolveStreamExecutorForTypicalWorkOutputPath,
 } from "@smart-anketa/api-contract";
 import {
@@ -181,7 +183,12 @@ export function TypicalWorksPanel() {
 	);
 
 	const handleCreateStreamBlock = useCallback(
-		(stream: V2ExecutorStreamLabel) => {
+		(stream: string) => {
+			const code = normalizeStreamBlockExecutor(stream);
+			if (!code) {
+				toast.error(`Не удалось сопоставить стрим «${stream}» с кодом implementationStream`);
+				return;
+			}
 			const rootCount = listCanvasEditableChildKeys(
 				jsonSchema,
 				"/",
@@ -189,12 +196,14 @@ export function TypicalWorksPanel() {
 			).length;
 			handleAddFieldPresetAtParent(
 				"/",
-				makeStreamBlockJsonSchema(stream),
+				makeStreamBlockJsonSchema(code),
 				rootCount,
-				makeStreamBlockUiOptions(stream),
+				makeStreamBlockUiOptions(code),
 			);
 			activateMainTab("designer");
-			toast.success(`Добавлен стримовый блок «${stream}»`);
+			toast.success(
+				`Добавлен стримовый блок «${resolveStreamBlockExecutorLabel(code)}»`,
+			);
 		},
 		[jsonSchema, uiSchema, handleAddFieldPresetAtParent, activateMainTab],
 	);
@@ -453,34 +462,29 @@ export function TypicalWorksPanel() {
 		starterNormValue?: number;
 	}) => {
 		try {
-			const targetStream = scopeStreamExecutor(
-				scope,
-				payload.streamExecutor ?? DEFAULT_LOGIC_STREAM,
-			);
+			const targetCode =
+				normalizeStreamBlockExecutor(
+					payload.streamExecutor ?? scopeStreamExecutor(scope, DEFAULT_LOGIC_STREAM),
+				) ?? DEFAULT_LOGIC_STREAM;
+			const dbStream = resolveLogicStreamDbExecutor(targetCode);
 			const created = await createWork.mutateAsync({
 				name: payload.name,
 				archComponentType: payload.archComponentType,
 				templateId,
-				streamExecutor: payload.streamExecutor ?? targetStream,
+				streamExecutor: dbStream,
 				starterNormValue: payload.starterNormValue,
 			});
 			setCreateOpen(false);
 			setSelectedTypicalWorkId(created.id);
 			const stream =
 				created.streamExecutor ||
-				payload.streamExecutor ||
-				targetStream ||
+				dbStream ||
 				DEFAULT_WORK_STREAMS[0];
 			setStreamExecutor(stream);
 			storeWorkStream(created.id, stream);
 			const bindPointer = searchParams.get(BIND_POINTER_QUERY);
-			const streamForPlacement = isV2ExecutorStreamLabel(
-				payload.streamExecutor ?? targetStream,
-			)
-				? (payload.streamExecutor ?? targetStream)
-				: targetStream;
 			const targetPointer = placeTypicalWorkInStreamBlock(
-				streamForPlacement as V2ExecutorStreamLabel,
+				targetCode,
 				bindPointer,
 			);
 			if (targetPointer) {
@@ -686,10 +690,11 @@ export function TypicalWorksPanel() {
 				onClose={() => setAssignOpen(false)}
 				onAssigned={(workId, stream) => {
 					openWorkInStreamsView(workId, stream);
-					if (isV2ExecutorStreamLabel(stream)) {
-						const pointer = placeTypicalWorkInStreamBlock(
-							stream as V2ExecutorStreamLabel,
-						);
+					const code =
+						resolveLogicStreamForDbExecutor(stream) ??
+						normalizeStreamBlockExecutor(stream);
+					if (code) {
+						const pointer = placeTypicalWorkInStreamBlock(code);
 						if (pointer) {
 							bindWorkToTypicalWorkBlock(pointer, workId);
 						}

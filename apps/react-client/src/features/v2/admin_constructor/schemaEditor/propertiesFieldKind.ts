@@ -1,6 +1,7 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { V2ArchComponentType } from "@smart-anketa/api-contract";
 import {
+	resolveStreamBlockExecutorLabel,
 	resolveV2AnketaArchComponent,
 	resolveV2AnketaStreamBlockOptions,
 	V2_ARCH_COMPONENT_LABELS,
@@ -166,7 +167,7 @@ export function resolveCanvasCategoryChips(
 
 	if (streamBlock.streamBlock && streamBlock.streamExecutor) {
 		chips.push({
-			label: streamBlock.streamExecutor,
+			label: resolveStreamBlockExecutorLabel(streamBlock.streamExecutor),
 			title: "Стримовый блок",
 			color: "#2563eb",
 		});

@@ -1,9 +1,15 @@
 import {
-	inferLegacyStreamExecutorForBlockKey,
+	inferLegacyStreamBlockExecutorCode,
+	normalizeStreamBlockExecutor,
+	resolveStreamBlockExecutorLabel,
+	type V2StreamBlockExecutor,
+} from "./v2-stream-block-executor.util";
+import {
 	isV2ExecutorStreamLabel,
 	resolveExecutorStreamAreaLabel,
-	type V2ExecutorStreamLabel,
+	typicalWorkAssignedToExecutorStream,
 } from "./v2-executor-streams.util";
+import { isV2ImplementationStreamCode } from "./v2-implementation-streams.util";
 import {
 	V2_ANKETA_MAIN_SECTION_IDS,
 	type V2AnketaMainSectionId,
@@ -89,7 +95,7 @@ export type V2AnketaSectionUiOptions = {
 	/** Корневой блок платформенного/поддерживающего стрима. */
 	streamBlock?: boolean;
 	/** Стрим-исполнитель из справочника (ДАДМ, ПиРМ, …). */
-	streamExecutor?: V2ExecutorStreamLabel;
+	streamExecutor?: V2StreamBlockExecutor;
 };
 
 const STREAM_SECTION_IDS = V2_ANKETA_MAIN_SECTION_IDS.filter((id) =>
@@ -152,15 +158,14 @@ export function readV2AnketaSectionUiOptions(
 					: undefined,
 		streamExecutor: (() => {
 			if (typeof opts.streamExecutor !== "string") return undefined;
-			const trimmed = opts.streamExecutor.trim();
-			return isV2ExecutorStreamLabel(trimmed) ? trimmed : undefined;
+			return normalizeStreamBlockExecutor(opts.streamExecutor) ?? undefined;
 		})(),
 	};
 }
 
 export type V2AnketaStreamBlockOptions = {
 	streamBlock: boolean;
-	streamExecutor: V2ExecutorStreamLabel | null;
+	streamExecutor: V2StreamBlockExecutor | null;
 };
 
 /** Явная или legacy-привязка корневого блока к стриму-исполнителю. */
@@ -179,7 +184,7 @@ export function resolveV2AnketaStreamBlockOptions(
 		};
 	}
 	const legacy =
-		blockKey != null ? inferLegacyStreamExecutorForBlockKey(blockKey) : null;
+		blockKey != null ? inferLegacyStreamBlockExecutorCode(blockKey) : null;
 	if (legacy) {
 		return { streamBlock: true, streamExecutor: legacy };
 	}
@@ -206,6 +211,9 @@ export function formatV2StreamBlockSectionTitle(baseTitle: string): string {
 	const trimmed = baseTitle.trim();
 	if (!trimmed) return "Стрим";
 	if (hasV2StreamBlockTitlePrefix(trimmed)) return trimmed;
+	if (isV2ImplementationStreamCode(trimmed) || normalizeStreamBlockExecutor(trimmed)) {
+		return `Стрим «${resolveStreamBlockExecutorLabel(trimmed)}»`;
+	}
 	if (isV2ExecutorStreamLabel(trimmed)) {
 		return `Стрим «${trimmed}»`;
 	}
@@ -244,7 +252,7 @@ export function resolveV2AnketaSectionDisplayTitle(
 export type ExecutorStreamBlockRef = {
 	blockKey: string;
 	pointer: string;
-	streamExecutor: V2ExecutorStreamLabel;
+	streamExecutor: V2StreamBlockExecutor;
 };
 
 /** Корневые стримовые блоки анкеты из uiSchema. */
@@ -275,23 +283,28 @@ export function collectExecutorStreamBlocks(
 
 export function collectPresentExecutorStreamLabels(
 	uiSchema: unknown,
-): Set<V2ExecutorStreamLabel> {
+): Set<V2StreamBlockExecutor> {
 	return new Set(
 		collectExecutorStreamBlocks(uiSchema).map((block) => block.streamExecutor),
 	);
 }
 
-/** Есть ли в конструкторе корневой streamBlock для стрима (legacy-имена БД → область UI). */
+/** Есть ли в конструкторе корневой streamBlock для стрима (код или legacy-имя БД). */
 export function isExecutorStreamPresentInSchema(
 	uiSchema: unknown,
 	stream: string,
 ): boolean {
-	const area = resolveExecutorStreamAreaLabel(stream);
+	const trimmed = stream.trim();
+	if (!trimmed) return false;
 	const present = collectPresentExecutorStreamLabels(uiSchema);
-	return (
-		(isV2ExecutorStreamLabel(stream) && present.has(stream)) ||
-		(isV2ExecutorStreamLabel(area) && present.has(area))
-	);
+	const streamCode = normalizeStreamBlockExecutor(trimmed);
+	if (streamCode && present.has(streamCode)) return true;
+	for (const code of present) {
+		if (typicalWorkAssignedToExecutorStream([trimmed], code)) return true;
+	}
+	const area = resolveExecutorStreamAreaLabel(trimmed);
+	const areaCode = normalizeStreamBlockExecutor(area);
+	return areaCode != null && present.has(areaCode);
 }
 
 function readUiBranchAtDotPath(
@@ -315,7 +328,7 @@ function readUiBranchAtDotPath(
 export function resolveStreamExecutorForTypicalWorkOutputPath(
 	uiSchema: unknown,
 	outputPath: string,
-): V2ExecutorStreamLabel | null {
+): V2StreamBlockExecutor | null {
 	const leaf = readUiBranchAtDotPath(uiSchema, outputPath);
 	const explicit = readV2AnketaSectionUiOptions(leaf).streamExecutor;
 	if (explicit) return explicit;
@@ -391,7 +404,7 @@ export function resolveV2AnketaSectionRole(
 	if (path.length === 2) {
 		if (
 			isV2AnketaStreamSectionId(root) ||
-			inferLegacyStreamExecutorForBlockKey(root)
+			inferLegacyStreamBlockExecutorCode(root)
 		) {
 			return "subsection";
 		}

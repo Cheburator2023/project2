@@ -1,4 +1,6 @@
-import { inferLegacyStreamExecutorForBlockKey, isV2ExecutorStreamLabel, resolveExecutorStreamAreaLabel, } from "./v2-executor-streams.util";
+import { inferLegacyStreamBlockExecutorCode, normalizeStreamBlockExecutor, resolveStreamBlockExecutorLabel, } from "./v2-stream-block-executor.util";
+import { isV2ExecutorStreamLabel, resolveExecutorStreamAreaLabel, typicalWorkAssignedToExecutorStream, } from "./v2-executor-streams.util";
+import { isV2ImplementationStreamCode } from "./v2-implementation-streams.util";
 import { V2_ANKETA_MAIN_SECTION_IDS, } from "./v2-anketa-workflow.types";
 import { V2_ANKETA_MAIN_SECTION_TITLES } from "./v2-anketa-workflow.util";
 export const V2_ANKETA_SECTION_ROLE_VALUES = [
@@ -89,8 +91,7 @@ export function readV2AnketaSectionUiOptions(uiNode) {
         streamExecutor: (() => {
             if (typeof opts.streamExecutor !== "string")
                 return undefined;
-            const trimmed = opts.streamExecutor.trim();
-            return isV2ExecutorStreamLabel(trimmed) ? trimmed : undefined;
+            return normalizeStreamBlockExecutor(opts.streamExecutor) ?? undefined;
         })(),
     };
 }
@@ -106,7 +107,7 @@ export function resolveV2AnketaStreamBlockOptions(uiNode, blockKey) {
             streamExecutor: opts.streamExecutor ?? null,
         };
     }
-    const legacy = blockKey != null ? inferLegacyStreamExecutorForBlockKey(blockKey) : null;
+    const legacy = blockKey != null ? inferLegacyStreamBlockExecutorCode(blockKey) : null;
     if (legacy) {
         return { streamBlock: true, streamExecutor: legacy };
     }
@@ -128,6 +129,9 @@ export function formatV2StreamBlockSectionTitle(baseTitle) {
         return "Стрим";
     if (hasV2StreamBlockTitlePrefix(trimmed))
         return trimmed;
+    if (isV2ImplementationStreamCode(trimmed) || normalizeStreamBlockExecutor(trimmed)) {
+        return `Стрим «${resolveStreamBlockExecutorLabel(trimmed)}»`;
+    }
     if (isV2ExecutorStreamLabel(trimmed)) {
         return `Стрим «${trimmed}»`;
     }
@@ -177,12 +181,22 @@ export function collectExecutorStreamBlocks(uiSchema) {
 export function collectPresentExecutorStreamLabels(uiSchema) {
     return new Set(collectExecutorStreamBlocks(uiSchema).map((block) => block.streamExecutor));
 }
-/** Есть ли в конструкторе корневой streamBlock для стрима (legacy-имена БД → область UI). */
+/** Есть ли в конструкторе корневой streamBlock для стрима (код или legacy-имя БД). */
 export function isExecutorStreamPresentInSchema(uiSchema, stream) {
-    const area = resolveExecutorStreamAreaLabel(stream);
+    const trimmed = stream.trim();
+    if (!trimmed)
+        return false;
     const present = collectPresentExecutorStreamLabels(uiSchema);
-    return ((isV2ExecutorStreamLabel(stream) && present.has(stream)) ||
-        (isV2ExecutorStreamLabel(area) && present.has(area)));
+    const streamCode = normalizeStreamBlockExecutor(trimmed);
+    if (streamCode && present.has(streamCode))
+        return true;
+    for (const code of present) {
+        if (typicalWorkAssignedToExecutorStream([trimmed], code))
+            return true;
+    }
+    const area = resolveExecutorStreamAreaLabel(trimmed);
+    const areaCode = normalizeStreamBlockExecutor(area);
+    return areaCode != null && present.has(areaCode);
 }
 function readUiBranchAtDotPath(uiSchema, dotPath) {
     const segments = dotPath.split(".").filter(Boolean);
@@ -248,7 +262,7 @@ export function resolveV2AnketaSectionRole(uiNode, path) {
         return "main";
     if (path.length === 2) {
         if (isV2AnketaStreamSectionId(root) ||
-            inferLegacyStreamExecutorForBlockKey(root)) {
+            inferLegacyStreamBlockExecutorCode(root)) {
             return "subsection";
         }
     }

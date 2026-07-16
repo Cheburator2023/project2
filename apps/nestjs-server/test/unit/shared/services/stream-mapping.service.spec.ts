@@ -83,6 +83,7 @@ describe("StreamMappingService", () => {
 			const role = STREAM_FILTERED_ROLES[0];
 			const result = service.getGroupsAfterMapping([
 				role,
+				V2_IMPLEMENTATION_STREAM.DADM,
 				V2_IMPLEMENTATION_STREAM.PIRM,
 				V2_IMPLEMENTATION_STREAM.IDSRC,
 				V2_IMPLEMENTATION_STREAM.MDLCTL,
@@ -91,6 +92,8 @@ describe("StreamMappingService", () => {
 			]);
 			expect(result).toEqual(
 				expect.arrayContaining([
+					V2_IMPLEMENTATION_STREAM.DADM,
+					V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.DADM],
 					V2_IMPLEMENTATION_STREAM.PIRM,
 					V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.PIRM],
 					V2_IMPLEMENTATION_STREAM.IDSRC,

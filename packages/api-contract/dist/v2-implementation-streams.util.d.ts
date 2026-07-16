@@ -7,12 +7,13 @@ export declare const V2_IMPLEMENTATION_STREAM: {
     readonly RND: "rnd";
     readonly IDSRC: "idsrc";
     readonly MDLCTL: "mdlctl";
+    readonly DADM: "dadm";
     readonly PIRM: "pirm";
     readonly STRDAT: "strdat";
     readonly DIGAGT: "digagt";
 };
 /** Стрим-исполнитель анкеты (`generalInfo.implementationStream`): ключ в formData / логике. */
-export declare const V2_IMPLEMENTATION_STREAM_CODES: readonly ["kmbkcb", "rb", "ptitpc", "finmdl", "rnd", "idsrc", "mdlctl", "pirm", "strdat", "digagt"];
+export declare const V2_IMPLEMENTATION_STREAM_CODES: readonly ["kmbkcb", "rb", "ptitpc", "finmdl", "rnd", "idsrc", "mdlctl", "dadm", "pirm", "strdat", "digagt"];
 export type V2ImplementationStreamCode = (typeof V2_IMPLEMENTATION_STREAM_CODES)[number];
 /** Подписи для UI / справочника (значение в formData — код). */
 export declare const V2_IMPLEMENTATION_STREAM_LABELS: Record<V2ImplementationStreamCode, string>;

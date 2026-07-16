@@ -47,11 +47,15 @@ import {
 	V2_ANKETA_MAIN_SECTION_TITLES,
 	V2_ANKETA_SECTION_ROLE_VALUES,
 	V2_ARCH_COMPONENT_LABELS,
-	V2_EXECUTOR_STREAM_LABELS,
-	V2_EXECUTOR_STREAMS_DICTIONARY_CODE,
+	V2_IMPLEMENTATION_STREAM,
+	V2_IMPLEMENTATION_STREAM_CODES,
+	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
+	V2_IMPLEMENTATION_STREAM_LABELS,
+	normalizeStreamBlockExecutor,
+	resolveStreamBlockExecutorLabel,
 	type V2AnketaMainSectionId,
 	type V2AnketaSectionRole,
-	type V2ExecutorStreamLabel,
+	type V2ImplementationStreamCode,
 } from "@smart-anketa/api-contract";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { ReactNode } from "react";
@@ -479,14 +483,8 @@ export function SchemaPropertiesPanel() {
 	);
 	const handleCreateTypicalWorkStreamBlock = useCallback(() => {
 		if (!typicalWorkStreamExecutor) return;
-		if (
-			!V2_EXECUTOR_STREAM_LABELS.includes(
-				typicalWorkStreamExecutor as V2ExecutorStreamLabel,
-			)
-		) {
-			return;
-		}
-		const stream = typicalWorkStreamExecutor as V2ExecutorStreamLabel;
+		const code = normalizeStreamBlockExecutor(typicalWorkStreamExecutor);
+		if (!code) return;
 		const rootCount = listCanvasEditableChildKeys(
 			jsonSchema,
 			"/",
@@ -494,11 +492,13 @@ export function SchemaPropertiesPanel() {
 		).length;
 		handleAddFieldPresetAtParent(
 			"/",
-			makeStreamBlockJsonSchema(stream),
+			makeStreamBlockJsonSchema(code),
 			rootCount,
-			makeStreamBlockUiOptions(stream),
+			makeStreamBlockUiOptions(code),
 		);
-		toast.success(`Добавлен стримовый блок «${stream}»`);
+		toast.success(
+			`Добавлен стримовый блок «${resolveStreamBlockExecutorLabel(code)}»`,
+		);
 	}, [
 		typicalWorkStreamExecutor,
 		jsonSchema,
@@ -1043,7 +1043,7 @@ export function SchemaPropertiesPanel() {
 													streamExecutor:
 														streamBlockOptions.streamExecutor ??
 														sectionUiOptions.streamExecutor ??
-														V2_EXECUTOR_STREAM_LABELS[0],
+														V2_IMPLEMENTATION_STREAM.IDSRC,
 													sectionRole: sectionUiOptions.sectionRole ?? "main",
 												});
 												return;
@@ -1072,19 +1072,21 @@ export function SchemaPropertiesPanel() {
 										patchSectionUi({
 											streamBlock: true,
 											streamExecutor: (e.target.value ||
-												undefined) as V2ExecutorStreamLabel,
+												undefined) as V2ImplementationStreamCode,
 										})
 									}
-									helperText={`Справочник ${V2_EXECUTOR_STREAMS_DICTIONARY_CODE}. Используется в логике типовых работ и ролевке секций.`}
+									helperText={`Справочник ${V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE}. Используется в логике типовых работ и ролевке секций.`}
 								>
-									{V2_EXECUTOR_STREAM_LABELS.map((stream) => (
-										<MenuItem key={stream} value={stream}>
+									{V2_IMPLEMENTATION_STREAM_CODES.map((code) => (
+										<MenuItem key={code} value={code}>
 											<Flex alignItems="center" gap={1} sx={{ width: "100%" }}>
-												<Typography sx={{ flex: 1 }}>{stream}</Typography>
+												<Typography sx={{ flex: 1 }}>
+													{V2_IMPLEMENTATION_STREAM_LABELS[code]}
+												</Typography>
 												<ExecutorStreamPresenceLabel
 													present={isExecutorStreamPresentInSchema(
 														uiSchema,
-														stream,
+														code,
 													)}
 												/>
 											</Flex>
@@ -1412,26 +1414,28 @@ export function SchemaPropertiesPanel() {
 													selectedPointer,
 													{
 														streamExecutor: (e.target.value ||
-															undefined) as V2ExecutorStreamLabel,
+															undefined) as V2ImplementationStreamCode,
 													},
 												) as UiSchema,
 											{ recordHistory: false },
 										);
 									}}
-									helperText={`Справочник ${V2_EXECUTOR_STREAMS_DICTIONARY_CODE}. Связь с назначениями работ в логике.`}
+									helperText={`Справочник ${V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE}. Связь с назначениями работ в логике.`}
 									sx={{ mb: 1 }}
 								>
 									<MenuItem value="">
 										<em>Не выбран</em>
 									</MenuItem>
-									{V2_EXECUTOR_STREAM_LABELS.map((stream) => (
-										<MenuItem key={stream} value={stream}>
+									{V2_IMPLEMENTATION_STREAM_CODES.map((code) => (
+										<MenuItem key={code} value={code}>
 											<Flex alignItems="center" gap={1} sx={{ width: "100%" }}>
-												<Typography sx={{ flex: 1 }}>{stream}</Typography>
+												<Typography sx={{ flex: 1 }}>
+													{V2_IMPLEMENTATION_STREAM_LABELS[code]}
+												</Typography>
 												<ExecutorStreamPresenceLabel
 													present={isExecutorStreamPresentInSchema(
 														uiSchema,
-														stream,
+														code,
 													)}
 												/>
 											</Flex>

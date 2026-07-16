@@ -1,4 +1,9 @@
 /** Справочник стримов-исполнителей в редакторе логики и на стримовых блоках анкеты. */
+import {
+	normalizeStreamBlockExecutor,
+	resolveStreamBlockExecutorScopeStreams,
+} from "./v2-stream-block-executor.util";
+
 export const V2_EXECUTOR_STREAM_LABELS = [
 	"ДАДМ",
 	"ПиРМ",
@@ -79,6 +84,16 @@ export function typicalWorkAssignedToExecutorStream(
 	workStreams: readonly string[],
 	executorStream: string,
 ): boolean {
+	const trimmed = executorStream.trim();
+	if (!trimmed) return false;
+	if (normalizeStreamBlockExecutor(trimmed)) {
+		const scopeStreams = resolveStreamBlockExecutorScopeStreams(trimmed);
+		return workStreams.some(
+			(stream) =>
+				scopeStreams.includes(stream.trim()) ||
+				scopeStreams.includes(resolveExecutorStreamAreaLabel(stream)),
+		);
+	}
 	const scopeStreams = resolveExecutorScopeDbStreams(executorStream);
 	return workStreams.some(
 		(stream) =>

@@ -15,6 +15,7 @@ import {
 	isAllLogicWorksScope,
 	scopeLabel,
 	streamColor,
+	streamDisplayLabel,
 } from "./typicalWorksAreas";
 import { useSchemaEditor } from "../../SchemaEditorContext";
 import { isExecutorStreamPresentInSchema } from "@smart-anketa/api-contract";
@@ -176,7 +177,7 @@ export function LogicWorksToolbar({
 										sx={{ borderRadius: 1, py: 0.9 }}
 									>
 										<ExecutorStreamMenuRow
-											stream={stream}
+											stream={streamDisplayLabel(stream)}
 											color={streamColor(stream)}
 											present={present}
 											selected={selected}

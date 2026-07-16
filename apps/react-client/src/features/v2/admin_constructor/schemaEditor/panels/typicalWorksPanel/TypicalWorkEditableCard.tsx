@@ -83,8 +83,10 @@ import {
 } from "./typicalWorkPatchErrors";
 import {
 	recommendedStreamsForComponent,
+	streamAreaKey,
 	streamColor,
 	streamDisplayLabel,
+	type LogicStreamCode,
 } from "./typicalWorksAreas";
 import { isExecutorStreamPresentInSchema } from "@smart-anketa/api-contract";
 import {
@@ -677,7 +679,7 @@ export function TypicalWorkEditableCard({
 		effectiveArchComponentType,
 	);
 	const otherStreams = availableStreams.filter(
-		(s) => !recommended.includes(streamDisplayLabel(s)),
+		(s) => !recommended.includes(streamAreaKey(s) as LogicStreamCode),
 	);
 
 	return (
@@ -978,7 +980,11 @@ export function TypicalWorkEditableCard({
 										Рекомендованные для компонента
 									</Typography>
 									{availableStreams
-										.filter((s) => recommended.includes(streamDisplayLabel(s)))
+										.filter((s) =>
+											recommended.includes(
+												streamAreaKey(s) as LogicStreamCode,
+											),
+										)
 										.map((stream) => (
 											<MenuItem
 												key={`rec-${stream}`}

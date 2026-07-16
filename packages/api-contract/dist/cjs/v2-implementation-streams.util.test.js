@@ -12,6 +12,7 @@ const v2_implementation_streams_util_1 = require("./v2-implementation-streams.ut
             v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.RND,
             v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC,
             v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.MDLCTL,
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DADM,
             v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM,
             v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.STRDAT,
             v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DIGAGT,
@@ -26,6 +27,7 @@ const v2_implementation_streams_util_1 = require("./v2-implementation-streams.ut
         (0, vitest_1.expect)(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS[v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.RND]).toBe("Моделирование RnD");
         (0, vitest_1.expect)(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS[v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC]).toBe("Источники данных");
         (0, vitest_1.expect)(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS[v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.MDLCTL]).toBe("Контроль моделей");
+        (0, vitest_1.expect)(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS[v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DADM]).toBe("ДАДМ");
         (0, vitest_1.expect)(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS[v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM]).toBe("Платформы и Решения для моделирования");
         (0, vitest_1.expect)(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS[v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.STRDAT]).toBe("Потоковые данные");
         (0, vitest_1.expect)(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS[v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DIGAGT]).toBe("Цифровые агенты");

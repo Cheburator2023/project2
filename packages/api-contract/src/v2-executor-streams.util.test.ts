@@ -1,19 +1,26 @@
 import { describe, expect, it } from "vitest";
 import {
-	inferLegacyStreamExecutorForBlockKey,
-	isV2ExecutorStreamLabel,
-	typicalWorkAssignedToExecutorStream,
-	V2_EXECUTOR_STREAM_LABELS,
-} from "./v2-executor-streams.util";
+	V2_IMPLEMENTATION_STREAM,
+	V2_IMPLEMENTATION_STREAM_LABELS,
+} from "./v2-implementation-streams.util";
 import {
 	collectExecutorStreamBlocks,
 	formatV2StreamBlockSectionTitle,
 	isExecutorStreamPresentInSchema,
-	resolveV2AnketaSectionDisplayTitle,
-	resolveV2AnketaStreamBlockOptions,
 	readV2AnketaSectionUiOptions,
 	resolveStreamExecutorForTypicalWorkOutputPath,
+	resolveV2AnketaSectionDisplayTitle,
+	resolveV2AnketaStreamBlockOptions,
 } from "./v2-anketa-section-ui.util";
+import {
+	inferLegacyStreamBlockExecutorCode,
+	normalizeStreamBlockExecutor,
+} from "./v2-stream-block-executor.util";
+import {
+	isV2ExecutorStreamLabel,
+	typicalWorkAssignedToExecutorStream,
+	V2_EXECUTOR_STREAM_LABELS,
+} from "./v2-executor-streams.util";
 
 describe("v2-executor-streams.util", () => {
 	it("lists six executor stream labels", () => {
@@ -27,11 +34,13 @@ describe("v2-executor-streams.util", () => {
 		]);
 	});
 
-	it("maps legacy block keys to executor streams", () => {
-		expect(inferLegacyStreamExecutorForBlockKey("streamDataSources")).toBe(
-			"Источники данных",
+	it("maps legacy block keys to implementation stream codes", () => {
+		expect(inferLegacyStreamBlockExecutorCode("streamDataSources")).toBe(
+			V2_IMPLEMENTATION_STREAM.IDSRC,
 		);
-		expect(inferLegacyStreamExecutorForBlockKey("field_i8dL7QZa")).toBe("ДАДМ");
+		expect(inferLegacyStreamBlockExecutorCode("field_i8dL7QZa")).toBe(
+			V2_IMPLEMENTATION_STREAM.DADM,
+		);
 	});
 
 	it("validates executor stream labels", () => {
@@ -45,23 +54,34 @@ describe("resolveV2AnketaStreamBlockOptions", () => {
 		const opts = readV2AnketaSectionUiOptions({
 			"ui:options": {
 				streamBlock: true,
-				streamExecutor: "Цифровые агенты",
+				streamExecutor: V2_IMPLEMENTATION_STREAM.DIGAGT,
 			},
 		});
 		expect(opts.streamBlock).toBe(true);
-		expect(opts.streamExecutor).toBe("Цифровые агенты");
+		expect(opts.streamExecutor).toBe(V2_IMPLEMENTATION_STREAM.DIGAGT);
 		expect(
 			resolveV2AnketaStreamBlockOptions(
-				{ "ui:options": { streamBlock: true, streamExecutor: "ДАДМ" } },
+				{
+					"ui:options": {
+						streamBlock: true,
+						streamExecutor: V2_IMPLEMENTATION_STREAM.IDSRC,
+					},
+				},
 				"customBlock",
 			),
-		).toEqual({ streamBlock: true, streamExecutor: "ДАДМ" });
+		).toEqual({
+			streamBlock: true,
+			streamExecutor: V2_IMPLEMENTATION_STREAM.IDSRC,
+		});
 	});
 
 	it("infers legacy stream blocks without explicit flag", () => {
 		expect(
 			resolveV2AnketaStreamBlockOptions(undefined, "streamModelControl"),
-		).toEqual({ streamBlock: true, streamExecutor: "Контроль моделей" });
+		).toEqual({
+			streamBlock: true,
+			streamExecutor: V2_IMPLEMENTATION_STREAM.MDLCTL,
+		});
 	});
 });
 
@@ -69,25 +89,39 @@ describe("resolveV2AnketaSectionDisplayTitle", () => {
 	it("prefixes stream object block titles with Стрим", () => {
 		expect(
 			resolveV2AnketaSectionDisplayTitle(
-				"ДАДМ",
-				{ "ui:options": { streamBlock: true, streamExecutor: "ДАДМ" } },
+				V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.IDSRC],
+				{
+					"ui:options": {
+						streamBlock: true,
+						streamExecutor: V2_IMPLEMENTATION_STREAM.IDSRC,
+					},
+				},
 				"field_dadm",
 			),
-		).toBe("Стрим «ДАДМ»");
+		).toBe(
+			`Стрим «${V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.IDSRC]}»`,
+		);
 		expect(
 			resolveV2AnketaSectionDisplayTitle(
-				"Контроль моделей",
+				V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.MDLCTL],
 				undefined,
 				"streamModelControl",
 			),
-		).toBe("Стрим «Контроль моделей»");
+		).toBe(
+			`Стрим «${V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.MDLCTL]}»`,
+		);
 	});
 
 	it("keeps factory snapshot titles without double prefix", () => {
 		expect(
 			resolveV2AnketaSectionDisplayTitle(
 				"Стрим «Источники данных»",
-				{ "ui:options": { streamBlock: true, streamExecutor: "Источники данных" } },
+				{
+					"ui:options": {
+						streamBlock: true,
+						streamExecutor: V2_IMPLEMENTATION_STREAM.IDSRC,
+					},
+				},
 				"streamDataSources",
 			),
 		).toBe("Стрим «Источники данных»");
@@ -104,23 +138,31 @@ describe("resolveV2AnketaSectionDisplayTitle", () => {
 	});
 
 	it("formatV2StreamBlockSectionTitle is idempotent", () => {
-		expect(formatV2StreamBlockSectionTitle("ПиРМ")).toBe("Стрим «ПиРМ»");
-		expect(formatV2StreamBlockSectionTitle("Стрим «ПиРМ»")).toBe("Стрим «ПиРМ»");
-		expect(formatV2StreamBlockSectionTitle("Стрим ПиРМ")).toBe("Стрим ПиРМ");
+		expect(
+			formatV2StreamBlockSectionTitle(V2_IMPLEMENTATION_STREAM.PIRM),
+		).toBe(`Стрим «${V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.PIRM]}»`);
+		expect(
+			formatV2StreamBlockSectionTitle(
+				`Стрим «${V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.PIRM]}»`,
+			),
+		).toBe(`Стрим «${V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.PIRM]}»`);
 	});
 });
 
 describe("collectExecutorStreamBlocks", () => {
 	it("lists explicit and legacy root stream blocks", () => {
 		const blocks = collectExecutorStreamBlocks({
-			field_dadm: {
-				"ui:options": { streamBlock: true, streamExecutor: "ДАДМ" },
+			field_src: {
+				"ui:options": {
+					streamBlock: true,
+					streamExecutor: V2_IMPLEMENTATION_STREAM.IDSRC,
+				},
 			},
 			streamDataSources: {},
 		});
 		expect(blocks.map((b) => b.streamExecutor).sort()).toEqual([
-			"ДАДМ",
-			"Источники данных",
+			V2_IMPLEMENTATION_STREAM.IDSRC,
+			V2_IMPLEMENTATION_STREAM.IDSRC,
 		]);
 	});
 
@@ -129,13 +171,13 @@ describe("collectExecutorStreamBlocks", () => {
 			field_src: {
 				"ui:options": {
 					streamBlock: true,
-					streamExecutor: "Источники данных",
+					streamExecutor: V2_IMPLEMENTATION_STREAM.IDSRC,
 				},
 			},
 		};
-		expect(isExecutorStreamPresentInSchema(uiSchema, "Источники данных")).toBe(
-			true,
-		);
+		expect(
+			isExecutorStreamPresentInSchema(uiSchema, V2_IMPLEMENTATION_STREAM.IDSRC),
+		).toBe(true);
 		expect(isExecutorStreamPresentInSchema(uiSchema, "ИД. Внутренний")).toBe(
 			true,
 		);
@@ -147,7 +189,7 @@ describe("collectExecutorStreamBlocks", () => {
 			field_stream: {
 				"ui:options": {
 					streamBlock: true,
-					streamExecutor: "ПиРМ",
+					streamExecutor: V2_IMPLEMENTATION_STREAM.PIRM,
 				},
 				field_tasks: {
 					"ui:options": { archComponent: "typicalWork" },
@@ -156,7 +198,7 @@ describe("collectExecutorStreamBlocks", () => {
 			field_root: {
 				"ui:options": {
 					archComponent: "typicalWork",
-					streamExecutor: "ДАДМ",
+					streamExecutor: V2_IMPLEMENTATION_STREAM.IDSRC,
 				},
 			},
 		};
@@ -165,23 +207,23 @@ describe("collectExecutorStreamBlocks", () => {
 				uiSchema,
 				"field_stream.field_tasks",
 			),
-		).toBe("ПиРМ");
+		).toBe(V2_IMPLEMENTATION_STREAM.PIRM);
 		expect(
 			resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, "field_root"),
-		).toBe("ДАДМ");
+		).toBe(V2_IMPLEMENTATION_STREAM.IDSRC);
 	});
 
 	it("typicalWorkAssignedToExecutorStream matches DB stream aliases", () => {
 		expect(
 			typicalWorkAssignedToExecutorStream(
 				["ИД. Внутренний"],
-				"Источники данных",
+				V2_IMPLEMENTATION_STREAM.IDSRC,
 			),
 		).toBe(true);
 		expect(
 			typicalWorkAssignedToExecutorStream(
 				["Контроль моделей"],
-				"Источники данных",
+				V2_IMPLEMENTATION_STREAM.IDSRC,
 			),
 		).toBe(false);
 	});

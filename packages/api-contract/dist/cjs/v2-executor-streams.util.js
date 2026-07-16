@@ -7,6 +7,7 @@ exports.resolveExecutorStreamAreaLabel = resolveExecutorStreamAreaLabel;
 exports.resolveExecutorScopeDbStreams = resolveExecutorScopeDbStreams;
 exports.typicalWorkAssignedToExecutorStream = typicalWorkAssignedToExecutorStream;
 /** Справочник стримов-исполнителей в редакторе логики и на стримовых блоках анкеты. */
+const v2_stream_block_executor_util_1 = require("./v2-stream-block-executor.util");
 exports.V2_EXECUTOR_STREAM_LABELS = [
     "ДАДМ",
     "ПиРМ",
@@ -63,6 +64,14 @@ function resolveExecutorScopeDbStreams(executorStream) {
 }
 /** Работа назначена на стрим-исполнитель блока typicalWork (legacy без boundWorkIds). */
 function typicalWorkAssignedToExecutorStream(workStreams, executorStream) {
+    const trimmed = executorStream.trim();
+    if (!trimmed)
+        return false;
+    if ((0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutor)(trimmed)) {
+        const scopeStreams = (0, v2_stream_block_executor_util_1.resolveStreamBlockExecutorScopeStreams)(trimmed);
+        return workStreams.some((stream) => scopeStreams.includes(stream.trim()) ||
+            scopeStreams.includes(resolveExecutorStreamAreaLabel(stream)));
+    }
     const scopeStreams = resolveExecutorScopeDbStreams(executorStream);
     return workStreams.some((stream) => scopeStreams.includes(stream) ||
         scopeStreams.includes(resolveExecutorStreamAreaLabel(stream)));

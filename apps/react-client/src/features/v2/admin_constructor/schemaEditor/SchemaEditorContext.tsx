@@ -113,7 +113,7 @@ export type SchemaEditorContextValue = {
 		uiBranch?: Record<string, unknown>,
 	) => string | null;
 	placeTypicalWorkInStreamBlock: (
-		streamExecutor: import("@smart-anketa/api-contract").V2ExecutorStreamLabel,
+		streamExecutor: string,
 		preferredPointer?: string | null,
 	) => string | null;
 	reorderRootFieldKeys: (orderedKeys: string[]) => void;

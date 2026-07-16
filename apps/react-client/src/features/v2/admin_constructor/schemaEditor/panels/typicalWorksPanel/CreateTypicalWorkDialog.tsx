@@ -10,9 +10,11 @@ import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import {
-	V2_EXECUTOR_STREAM_LABELS,
-	V2_SOURCE_STREAM,
-	type V2ExecutorStreamLabel,
+	isV2ImplementationStreamCode,
+	V2_IMPLEMENTATION_STREAM,
+	V2_IMPLEMENTATION_STREAM_CODES,
+	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
+	V2_IMPLEMENTATION_STREAM_LABELS,
 } from "@smart-anketa/api-contract";
 import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 import {
@@ -23,6 +25,7 @@ import {
 	ExecutorStreamPresenceHint,
 	ExecutorStreamPresenceLabel,
 } from "./ExecutorStreamPresenceLabel";
+import { streamDisplayLabel } from "./typicalWorksAreas";
 
 export type CreateTypicalWorkDialogPayload = {
 	name: string;
@@ -38,7 +41,7 @@ type CreateTypicalWorkDialogProps = {
 	defaultArchComponentType?: string;
 	defaultStreamExecutor?: string | null;
 	isStreamPresentInSchema?: (stream: string) => boolean;
-	onCreateStreamBlock?: (stream: V2ExecutorStreamLabel) => void;
+	onCreateStreamBlock?: (stream: string) => void;
 	onClose: () => void;
 	onSubmit: (payload: CreateTypicalWorkDialogPayload) => void;
 };
@@ -60,7 +63,7 @@ export function CreateTypicalWorkDialog({
 		defaultArchComponentType ?? DEFAULT_WORK_ARCH_COMPONENT_TYPE,
 	);
 	const [streamExecutor, setStreamExecutor] = useState<string>(
-		defaultStreamExecutor ?? V2_SOURCE_STREAM,
+		defaultStreamExecutor ?? V2_IMPLEMENTATION_STREAM.IDSRC,
 	);
 	const [starterNorm, setStarterNorm] = useState("1.00");
 
@@ -70,7 +73,9 @@ export function CreateTypicalWorkDialog({
 			setArchComponentType(
 				defaultArchComponentType ?? WORK_ARCH_COMPONENT_TYPES[0],
 			);
-			setStreamExecutor(defaultStreamExecutor ?? V2_SOURCE_STREAM);
+			setStreamExecutor(
+				defaultStreamExecutor ?? V2_IMPLEMENTATION_STREAM.IDSRC,
+			);
 			setStarterNorm("1.00");
 		}
 	}, [defaultArchComponentType, defaultStreamExecutor, open]);
@@ -122,10 +127,10 @@ export function CreateTypicalWorkDialog({
 							label="Стрим-исполнитель"
 							value={streamExecutor}
 							onChange={(e) => setStreamExecutor(String(e.target.value))}
-							helperText="Назначение создаётся сразу; блок стрима в конструкторе нужен для полей и localParams."
+							helperText={`Справочник ${V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE}. Назначение создаётся сразу; блок стрима в конструкторе нужен для полей и localParams.`}
 						>
-							{V2_EXECUTOR_STREAM_LABELS.map((stream) => (
-								<MenuItem key={stream} value={stream}>
+							{V2_IMPLEMENTATION_STREAM_CODES.map((code) => (
+								<MenuItem key={code} value={code}>
 									<Box
 										sx={{
 											display: "flex",
@@ -134,9 +139,11 @@ export function CreateTypicalWorkDialog({
 											width: "100%",
 										}}
 									>
-										<Typography sx={{ flex: 1 }}>{stream}</Typography>
+										<Typography sx={{ flex: 1 }}>
+											{V2_IMPLEMENTATION_STREAM_LABELS[code]}
+										</Typography>
 										<ExecutorStreamPresenceLabel
-											present={isStreamPresentInSchema?.(stream) ?? false}
+											present={isStreamPresentInSchema?.(code) ?? false}
 										/>
 									</Box>
 								</MenuItem>
@@ -147,14 +154,8 @@ export function CreateTypicalWorkDialog({
 							<Button
 								size="small"
 								variant="outlined"
-								onClick={() =>
-									onCreateStreamBlock(streamExecutor as V2ExecutorStreamLabel)
-								}
-								disabled={
-									!V2_EXECUTOR_STREAM_LABELS.includes(
-										streamExecutor as V2ExecutorStreamLabel,
-									)
-								}
+								onClick={() => onCreateStreamBlock(streamExecutor)}
+								disabled={!isV2ImplementationStreamCode(streamExecutor)}
 							>
 								Создать стримовый блок в конструкторе
 							</Button>
@@ -168,7 +169,10 @@ export function CreateTypicalWorkDialog({
 					</>
 				) : (
 					<Typography sx={{ fontSize: 12, color: "#6b7484" }}>
-						Стрим-исполнитель (рекомендация): {defaultStreamExecutor ?? "—"}
+						Стрим-исполнитель (рекомендация):{" "}
+						{defaultStreamExecutor
+							? streamDisplayLabel(defaultStreamExecutor)
+							: "—"}
 					</Typography>
 				)}
 			</DialogContent>
