@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.30.1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.30.0...v1.30.1) (2026-07-16)
+
+
+### Bug Fixes
+
+* update tracker access logic in usePermissions hook ([3b1b8ab](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3b1b8ab84b29061a4506bd84b76622ca2bffbc20))
+
 # [1.30.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.29.0...v1.30.0) (2026-07-16)
 
 
