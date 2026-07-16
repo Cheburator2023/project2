@@ -1,4 +1,5 @@
 import type { V2LogicRuleDto } from "@smart-anketa/api-contract";
+import { isTypicalWorksCatalogLogicRule } from "@smart-anketa/api-contract";
 import {
 	applyLogic,
 	type JsonLogicValue,
@@ -102,6 +103,29 @@ function isReduceScopedVar(varPath: string): boolean {
 	return varPath === "accumulator" || varPath.startsWith("current.");
 }
 
+const ROW_COMPUTED_SCOPED_VARS = new Set([
+	"estimateHoursPerDay",
+	"coefficient",
+	"total",
+	"workId",
+	"name",
+	"includeInCalculation",
+	"_row",
+]);
+
+function isRowComputedScopedVar(
+	varPath: string,
+	rule: V2LogicRuleDto,
+): boolean {
+	if (rule.kind !== "row_computed") return false;
+	const payload = (rule.payload ?? {}) as Record<string, unknown>;
+	const fieldVar =
+		typeof payload.fieldVar === "string" ? payload.fieldVar.trim() : "";
+	if (fieldVar && varPath === fieldVar) return true;
+	if (!varPath.includes(".")) return ROW_COMPUTED_SCOPED_VARS.has(varPath);
+	return false;
+}
+
 export function extractVarsFromLogic(value: unknown): string[] {
 	const out = new Set<string>();
 	const walk = (node: unknown) => {
@@ -139,6 +163,7 @@ export function findUnclaimedVars(
 	const result: string[] = [];
 	for (const v of vars) {
 		if (isReduceScopedVar(v)) continue;
+		if (isRowComputedScopedVar(v, rule)) continue;
 		const hint = fieldPathHints.find((h) => h.varPath === v || h.pointer === v);
 		const pointer = hint?.pointer ?? normalizeJsonPointer(v);
 		if (!declared.has(pointer)) result.push(v);
@@ -246,7 +271,8 @@ export function validateRule(
 	if (rule.kind === "task_trigger") {
 		const taskCode =
 			typeof payload.taskCode === "string" ? payload.taskCode : "";
-		if (!taskCode) {
+		const worksCatalog = payload.worksCatalog === true;
+		if (!taskCode && !worksCatalog && !isTypicalWorksCatalogLogicRule(rule)) {
 			issues.push({
 				severity: "error",
 				message: "Не указан код типовой работы (taskCode)",

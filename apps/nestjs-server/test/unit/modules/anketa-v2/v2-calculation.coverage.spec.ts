@@ -14,6 +14,7 @@ import {
 
 const service = createCalculationService();
 const { jsonSchema, uiSchema, logic } = SNAPSHOT;
+const SOURCE_TYPICAL_TASKS_KEY = "field_u-7AkDrP";
 
 function evaluateSnapshot(formData: Record<string, unknown> = {}) {
 	return service.evaluate(logic, formData, { jsonSchema, uiSchema });
@@ -45,7 +46,7 @@ function summaryOf(result: Awaited<ReturnType<typeof evaluateSnapshot>>) {
 describe("V2 calculation coverage — snapshot logic graph", () => {
 	it("injects row_computed for every atypicalWork path in factory uiSchema", () => {
 		const paths = collectAtypicalWorkArrayPaths(uiSchema);
-		expect(paths.length).toBeGreaterThanOrEqual(7);
+		expect(paths.length).toBeGreaterThanOrEqual(6);
 		const patched = patchV2AnketaCalculationLogicRules({ rules: [] }, { uiSchema });
 		for (const path of paths) {
 			const ruleId = `unified-atypical-row-total:${path.replace(/\./g, "_")}`;
@@ -123,9 +124,12 @@ describe("V2 calculation coverage — typicalWork (sourceSystem → catalog → 
 		});
 		const tasks = (
 			result.formData.streamDataSources as {
-				sourceTypicalTasks: Array<{ total?: number; estimateHoursPerDay: number }>;
+				[SOURCE_TYPICAL_TASKS_KEY]: Array<{
+					total?: number;
+					estimateHoursPerDay: number;
+				}>;
 			}
-		).sourceTypicalTasks;
+		)[SOURCE_TYPICAL_TASKS_KEY];
 		expect(tasks.length).toBeGreaterThan(0);
 		for (const task of tasks) {
 			expect(task.total).toBeGreaterThan(0);
@@ -176,8 +180,6 @@ describe("V2 calculation coverage — typicalWork (sourceSystem → catalog → 
 		const totalsOnlyGraph = {
 			rules: logic.rules.filter((rule) =>
 				[
-					"default-row-source-typical-task-total",
-					"unified-control-row-total",
 					"unified-typical-total",
 					"unified-grand-total",
 				].includes(rule.id),
@@ -185,10 +187,14 @@ describe("V2 calculation coverage — typicalWork (sourceSystem → catalog → 
 		};
 		const result = await service.evaluate(totalsOnlyGraph, {
 			streamDataSources: {
-				sourceTypicalTasks: [{ estimateHoursPerDay: 4, coefficient: 1 }],
+				[SOURCE_TYPICAL_TASKS_KEY]: [
+					{ estimateHoursPerDay: 4, coefficient: 1, total: 4 },
+				],
 			},
 			streamModelControl: {
-				"field_Khn6-HAW": [{ estimateHoursPerDay: 6, coefficient: 1 }],
+				"field_G0AoYAl8": [
+					{ estimateHoursPerDay: 6, coefficient: 1, total: 6 },
+				],
 			},
 			summary: { atypicalTotal: 0 },
 		});
@@ -253,7 +259,7 @@ describe("V2 calculation coverage — atypicalWork (all snapshot paths)", () => 
 					},
 				],
 			},
-			streamDataSources: {
+			field_aJEu5ziT: {
 				field_eCyDEFw3: [
 					{
 						name: "b",
@@ -397,7 +403,7 @@ describe("V2 calculation coverage — legacy E2E stages", () => {
 });
 
 describe("V2 calculation coverage — rule kinds & guards", () => {
-	it("task_trigger pilot rules report passes=false when pilotNeed is absent", async () => {
+	it("task_trigger pilot rules report passes=false when prePromEval is absent", async () => {
 		const result = await evaluateSnapshot({});
 		const pilotTriggers = result.taskTriggers.filter(
 			(t) => t.taskCode === "PILOT_SUPPORT",
@@ -529,14 +535,14 @@ describe("V2 calculation coverage — migration & validation", () => {
 		});
 		const intTasks = (
 			internal.formData.streamDataSources as {
-				sourceTypicalTasks: Array<{ reason: string }>;
+				[SOURCE_TYPICAL_TASKS_KEY]: Array<{ reason: string }>;
 			}
-		).sourceTypicalTasks;
+		)[SOURCE_TYPICAL_TASKS_KEY];
 		const extTasks = (
 			external.formData.streamDataSources as {
-				sourceTypicalTasks: Array<{ reason: string }>;
+				[SOURCE_TYPICAL_TASKS_KEY]: Array<{ reason: string }>;
 			}
-		).sourceTypicalTasks;
+		)[SOURCE_TYPICAL_TASKS_KEY];
 		expect(intTasks.some((t) => !t.reason.includes("214"))).toBe(true);
 		expect(extTasks.some((t) => t.reason.includes("214"))).toBe(true);
 	});

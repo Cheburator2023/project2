@@ -2,12 +2,18 @@ import { resolveV2AnketaArchComponent, resolveStreamExecutorForTypicalWorkOutput
 import { typicalWorkAssignedToExecutorStream } from "./v2-executor-streams.util";
 export const V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = "streamDataSources.sourceTypicalTasks";
 /** Канонический вывод типовых работ «Контроль моделей». */
-export const V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_Khn6-HAW";
+export const V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_G0AoYAl8";
+/** Устаревшие пути вывода типовых работ «Контроль моделей». */
+export const LEGACY_CONTROL_TYPICAL_TASKS_OUTPUT_PATHS = [
+    "streamModelControl.field_Khn6-HAW",
+    "streamModelControl.control.controlTypicalTasks",
+];
 /** Ключ ui:options — привязанные к блоку id типовых работ (сохраняется в снепшоте). */
 export const TYPICAL_WORK_BOUND_WORK_IDS_KEY = "boundWorkIds";
 /** Legacy/fan-out пути, куда раньше дублировались сгенерированные типовые работы. */
 export const LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS = [
     V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+    ...LEGACY_CONTROL_TYPICAL_TASKS_OUTPUT_PATHS,
     V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
     "detailInfo.detailTypicalTasks",
     "detailInfo.sourceTypicalTasks",
@@ -112,14 +118,34 @@ function patchBoundWorkIdsAtOutputPath(uiSchema, outputPath, boundWorkIds) {
     return patchLeaf({ ...uiSchema }, 0);
 }
 /**
+ * Заменяет id работ в boundWorkIds после seed с переназначением uuid.
+ */
+export function remapBoundWorkIdsInUiSchema(uiSchema, workIdMap) {
+    if (workIdMap.size === 0)
+        return uiSchema;
+    let next = uiSchema;
+    for (const binding of collectTypicalWorkBlockBindings(uiSchema)) {
+        if (!binding.boundWorkIds?.length)
+            continue;
+        const remapped = binding.boundWorkIds.map((id) => workIdMap.get(id) ?? id);
+        if (remapped.every((id, index) => id === binding.boundWorkIds?.[index])) {
+            continue;
+        }
+        next = patchBoundWorkIdsAtOutputPath(next, binding.outputPath, remapped);
+    }
+    return next;
+}
+/**
  * Заполняет boundWorkIds на legacy-блоках typicalWork по назначениям работ на стрим блока.
  * Вызывается после сида каталога в шаблон (id работ известны только после seed).
  */
-export function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog) {
+export function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog, options) {
     let next = uiSchema;
     for (const binding of collectTypicalWorkBlockBindings(uiSchema)) {
-        if (binding.boundWorkIds !== undefined)
+        if (binding.boundWorkIds !== undefined &&
+            !options?.replaceExisting?.(binding.boundWorkIds)) {
             continue;
+        }
         const stream = resolveStreamExecutorForTypicalWorkOutputPath(next, binding.outputPath);
         if (!stream)
             continue;

@@ -16,6 +16,8 @@ type V2DictionaryWorkspaceProps = {
 	onCreateRequest?: () => void;
 	showListCreateButton?: boolean;
 	onSelectedDictionaryChange?: (dictionary: V2DictionaryDto | null) => void;
+	onCheckedDictionariesChange?: (rows: V2DictionaryDto[]) => void;
+	selectionResetKey?: number;
 	onHeaderChange?: (state: V2DictionaryHeaderState | null) => void;
 };
 
@@ -67,6 +69,8 @@ export function V2DictionaryWorkspace({
 	onCreateRequest,
 	showListCreateButton = true,
 	onSelectedDictionaryChange,
+	onCheckedDictionariesChange,
+	selectionResetKey,
 	onHeaderChange,
 }: V2DictionaryWorkspaceProps) {
 	const { data: dictionaries = [], isLoading } = useV2Dictionaries();
@@ -133,6 +137,8 @@ export function V2DictionaryWorkspace({
 					quickFilter={quickFilter}
 					onQuickFilterChange={setQuickFilter}
 					onSelect={setSelectedId}
+					onCheckedDictionariesChange={onCheckedDictionariesChange}
+					selectionResetKey={selectionResetKey}
 					onCreate={onCreateRequest}
 					showCreateButton={showListCreateButton}
 				/>

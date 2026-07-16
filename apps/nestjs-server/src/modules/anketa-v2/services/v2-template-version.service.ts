@@ -1,5 +1,6 @@
 import {
 	Injectable,
+	Logger,
 	NotFoundException,
 	ConflictException,
 } from "@nestjs/common";
@@ -15,6 +16,7 @@ import type {
 } from "../dto";
 import { V2FactorySnapshotService } from "./v2-factory-snapshot.service";
 import { V2TypicalWorkSeedService } from "./v2-typical-work.service";
+import { V2TypicalWorkWriteService } from "./v2-typical-work-write.service";
 import {
 	type V2TemplateStatus,
 	prepareFactorySnapshotWithoutTypicalWorks,
@@ -22,6 +24,8 @@ import {
 
 @Injectable()
 export class V2TemplateVersionService {
+	private readonly logger = new Logger(V2TemplateVersionService.name);
+
 	constructor(
 		@InjectRepository(V2TemplateVersionEntity)
 		private readonly versionRepository: Repository<V2TemplateVersionEntity>,
@@ -30,6 +34,7 @@ export class V2TemplateVersionService {
 		private readonly templateService: V2TemplateService,
 		private readonly factorySnapshotService: V2FactorySnapshotService,
 		private readonly typicalWorkSeedService: V2TypicalWorkSeedService,
+		private readonly typicalWorkWriteService: V2TypicalWorkWriteService,
 	) {}
 
 	async findAll(templateId: string): Promise<V2TemplateVersionEntity[]> {
@@ -202,12 +207,33 @@ export class V2TemplateVersionService {
 			userId,
 		);
 		if (!options?.withoutTypicalWorks) {
-			await this.typicalWorkSeedService.seedTemplateTypicalWorksFromDocCatalog(
-				templateId,
-				version.id,
-			);
+			this.seedTypicalWorksInBackground(templateId, version.id);
 		}
 		return version;
+	}
+
+	private seedTypicalWorksInBackground(
+		templateId: string,
+		versionId: string,
+	): void {
+		void (async () => {
+			try {
+				await this.typicalWorkSeedService.seedTemplateTypicalWorksFromFactorySnapshot(
+					templateId,
+					versionId,
+				);
+				await this.typicalWorkWriteService.reconcileAllSchemaFieldsForVersion(
+					versionId,
+					"apply",
+					{ skipConsistencyReport: true },
+				);
+			} catch (error) {
+				this.logger.error(
+					`Background typical works seed failed for template ${templateId} version ${versionId}`,
+					error instanceof Error ? error.stack : String(error),
+				);
+			}
+		})();
 	}
 
 	async resetToDefault(
@@ -227,9 +253,14 @@ export class V2TemplateVersionService {
 			},
 			userId,
 		);
-		await this.typicalWorkSeedService.seedTemplateTypicalWorksFromDocCatalog(
+		await this.typicalWorkSeedService.seedTemplateTypicalWorksFromFactorySnapshot(
 			templateId,
 			draft.id,
+		);
+		await this.typicalWorkWriteService.reconcileAllSchemaFieldsForVersion(
+			draft.id,
+			"apply",
+			{ skipConsistencyReport: true },
 		);
 
 		const published = await this.publish(draft.id, {}, userId);
@@ -241,14 +272,20 @@ export class V2TemplateVersionService {
 				uiSchema: structuredClone(published.uiSchema ?? {}),
 				logic: structuredClone(published.logic ?? { rules: [] }),
 				dictionariesSnapshot: published.dictionariesSnapshot ?? null,
-				releaseNotes: "Черновик для редактирования (копия опубликованной после сброса)",
+				releaseNotes:
+					"Черновик для редактирования (копия опубликованной после сброса)",
 				parentVersionId: published.id,
 			},
 			userId,
 		);
-		await this.typicalWorkSeedService.seedTemplateTypicalWorksFromDocCatalog(
+		await this.typicalWorkSeedService.seedTemplateTypicalWorksFromFactorySnapshot(
 			templateId,
 			editingDraft.id,
+		);
+		await this.typicalWorkWriteService.reconcileAllSchemaFieldsForVersion(
+			editingDraft.id,
+			"apply",
+			{ skipConsistencyReport: true },
 		);
 
 		return published;

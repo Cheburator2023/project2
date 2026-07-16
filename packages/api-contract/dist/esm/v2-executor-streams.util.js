@@ -6,6 +6,7 @@ export const V2_EXECUTOR_STREAM_LABELS = [
     "Контроль моделей",
     "Цифровые агенты",
     "Потоковые данные",
+    "Модельный стрим",
 ];
 /** Код справочника v2 для привязки блока к стриму (конструктор). */
 export const V2_EXECUTOR_STREAMS_DICTIONARY_CODE = "v2.streams.executor";
@@ -28,6 +29,7 @@ export const V2_DB_STREAM_TO_EXECUTOR_AREA = {
     "Модельный сервис": "ДАДМ",
     "Сопровождение и поддержка": "ДАДМ",
     "Архитектура данных": "ДАДМ",
+    "Модельный стрим": "Модельный стрим",
 };
 export function isV2ExecutorStreamLabel(value) {
     return V2_EXECUTOR_STREAM_LABELS.includes(value);
@@ -42,6 +44,7 @@ export function resolveExecutorStreamAreaLabel(stream) {
 const EXECUTOR_SCOPE_DB_STREAMS = {
     "Источники данных": ["ИД. Внутренний", "ИД. Внешний", "Источники данных"],
     ПиРМ: ["ПиРМ", "ПиРМ (правила и развитие модели)"],
+    "Модельный стрим": ["Модельный стрим"],
 };
 /** Стримы БД/области UI, в которых ищется назначение работы для блока typicalWork. */
 export function resolveExecutorScopeDbStreams(executorStream) {

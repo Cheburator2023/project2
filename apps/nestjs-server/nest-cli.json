@@ -10,7 +10,7 @@
 				"watchAssets": true
 			},
 			{
-				"include": "modules/anketa-v2/constants/generated/*.generated.json",
+				"include": "modules/anketa-v2/constants/*.registry.json",
 				"watchAssets": true
 			}
 		]

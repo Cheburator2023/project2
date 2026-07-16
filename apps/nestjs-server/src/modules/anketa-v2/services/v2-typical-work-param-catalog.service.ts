@@ -18,7 +18,7 @@ import {
 	type WorkTriggerStatusCatalogParam,
 } from "@smart-anketa/api-contract";
 import { Repository } from "typeorm";
-import { V2_DOC_CATALOG } from "../constants/v2-doc-catalog";
+import { V2_FACTORY_TYPICAL_WORKS_SNAPSHOT } from "../constants/v2-factory-typical-works-catalog";
 import { V2TypicalWorkParamEntity } from "../entities/v2-typical-work-param.entity";
 import { V2TypicalWorkParamValueEntity } from "../entities/v2-typical-work-param-value.entity";
 import {
@@ -125,19 +125,25 @@ export class V2TypicalWorkParamCatalogService {
 		private readonly valueRepository: Repository<V2TypicalWorkParamValueEntity>,
 	) {}
 
-	async ensureSeededFromDocCatalog(): Promise<void> {
+	async ensureSeededFromFactorySnapshot(): Promise<void> {
 		if (this.seedingPromise) {
 			return this.seedingPromise;
 		}
-		this.seedingPromise = this.runEnsureSeededFromDocCatalog().finally(() => {
+		this.seedingPromise = this.runEnsureSeededFromFactorySnapshot().finally(() => {
 			this.seedingPromise = null;
 		});
 		return this.seedingPromise;
 	}
 
-	private async runEnsureSeededFromDocCatalog(): Promise<void> {
+	/** @deprecated Use ensureSeededFromFactorySnapshot */
+	async ensureSeededFromDocCatalog(): Promise<void> {
+		return this.ensureSeededFromFactorySnapshot();
+	}
+
+	private async runEnsureSeededFromFactorySnapshot(): Promise<void> {
 		let created = 0;
-		for (const dict of V2_DOC_CATALOG.dictionaries) {
+		let synchronized = 0;
+		for (const dict of V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.dictionaries) {
 			const code = slugParamCode(dict.name);
 			let param = await this.paramRepository.findOne({ where: { code } });
 			if (!param) {
@@ -158,16 +164,22 @@ export class V2TypicalWorkParamCatalogService {
 			}
 			if (!param) continue;
 
-			const existingValueCount = await this.valueRepository.count({
-				where: { paramId: param.id },
-			});
-			if (existingValueCount > 0) continue;
+			const description =
+				dict.comments?.trim() || dict.attributes?.trim() || null;
+			if (param.name !== dict.name || param.description !== description) {
+				param.name = dict.name;
+				param.description = description;
+				await this.paramRepository.save(param);
+			}
 
+			const existing = await this.valueRepository.find({
+				where: { paramId: param.id },
+				order: { sortOrder: "ASC" },
+			});
 			const seenValueCodes = new Set<string>();
-			const values = dict.values.map((value, index) => {
+			const expected = dict.values.map((value, index) => {
 				const valueCode = uniqueParamValueCode(value.label, seenValueCodes);
-				return this.valueRepository.create({
-					paramId: param.id,
+				return {
 					code: valueCode,
 					label: value.label,
 					coefficient:
@@ -177,21 +189,55 @@ export class V2TypicalWorkParamCatalogService {
 					sortOrder: index,
 					validFrom: DEFAULT_NORM_VALID_FROM,
 					validTo: null,
-				});
+				};
 			});
-			if (values.length === 0) continue;
+			const existingByCode = new Map(existing.map((value) => [value.code, value]));
+			const expectedCodes = new Set(expected.map((value) => value.code));
+			let changed = false;
 
-			try {
-				await this.valueRepository.save(values);
-			} catch (error) {
-				if (!isPostgresUniqueViolation(error)) throw error;
-				this.logger.debug(
-					`Parameter values for ${code} already seeded (concurrent startup)`,
-				);
+			for (const value of expected) {
+				const current = existingByCode.get(value.code);
+				if (!current) {
+					await this.valueRepository.save(
+						this.valueRepository.create({
+							paramId: param.id,
+							...value,
+						}),
+					);
+					changed = true;
+					continue;
+				}
+				if (
+					current.label !== value.label ||
+					current.coefficient !== value.coefficient ||
+					current.sortOrder !== value.sortOrder ||
+					current.validFrom !== value.validFrom ||
+					current.validTo !== null
+				) {
+					current.label = value.label;
+					current.coefficient = value.coefficient;
+					current.sortOrder = value.sortOrder;
+					current.validFrom = value.validFrom;
+					current.validTo = null;
+					await this.valueRepository.save(current);
+					changed = true;
+				}
 			}
+
+			const stale = existing.filter((value) => !expectedCodes.has(value.code));
+			if (stale.length > 0) {
+				await this.valueRepository.remove(stale);
+				changed = true;
+			}
+			if (changed) synchronized++;
 		}
 		if (created > 0) {
 			this.logger.log(`Seeded ${created} typical-work parameter catalogs`);
+		}
+		if (synchronized > 0) {
+			this.logger.log(
+				`Synchronized ${synchronized} factory typical-work parameter catalogs`,
+			);
 		}
 	}
 

@@ -22,6 +22,41 @@ export class V2TypicalWorkAssignmentEntity {
 	@Column({ name: "is_active", type: "boolean", default: true })
 	isActive: boolean;
 
+	@Column({
+		name: "trigger_arch_count_kind",
+		type: "varchar",
+		length: 40,
+		nullable: true,
+	})
+	triggerArchCountKind: string | null;
+
+	@Column({ name: "trigger_arch_count_steps", type: "jsonb", nullable: true })
+	triggerArchCountSteps: Array<{ count: number; coefficient: number }> | null;
+
+	@Column({
+		name: "trigger_arch_count_combinator",
+		type: "varchar",
+		length: 3,
+		default: "and",
+	})
+	triggerArchCountCombinator: string;
+
+	@Column({ name: "trigger_mode", type: "varchar", length: 20, default: "simple" })
+	triggerMode: string;
+
+	@Column({ name: "trigger_formula", type: "jsonb", nullable: true })
+	triggerFormula: {
+		tokens: unknown[];
+		text: string;
+	} | null;
+
+	@Column({ name: "labor_arch_counts", type: "jsonb", nullable: true })
+	laborArchCounts: Array<{
+		kind: string;
+		paramName?: string | null;
+		steps: Array<{ count: number; coefficient: number }>;
+	}> | null;
+
 	@CreateDateColumn({ name: "created_at", type: "timestamptz" })
 	createdAt: Date;
 

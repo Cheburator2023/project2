@@ -9,12 +9,43 @@ import {
 	normalizeWorkFormulaLaborParamTokens,
 	parseWorkFormulaText,
 	previewWorkFormula,
+	reconcileFormulaLaborParamTokens,
 	tokensToText,
 	validateWorkFormulaTokens,
 } from "./v2-work-formula.util";
 import { defaultWorkFormula, defaultWorkRounding } from "./v2-typical-work.types";
 
 describe("v2-work-formula.util", () => {
+	it("parses and evaluates arch_count_coeff token", () => {
+		const token = {
+			kind: "arch_count_coeff" as const,
+			archComponentKind: "model" as const,
+			steps: [
+				{ count: 1, coefficient: 2 },
+				{ count: 2, coefficient: 1.5 },
+			],
+		};
+		const text = tokensToText([token]);
+		expect(text).toContain("архкоэф");
+		const parsed = parseWorkFormulaText(text);
+		expect(parsed.error).toBeNull();
+		expect(parsed.tokens[0]).toMatchObject({
+			kind: "arch_count_coeff",
+			archComponentKind: "model",
+		});
+		const formula = {
+			tokens: [token, { kind: "operator" as const, op: "*" as const }, { kind: "norm" as const }],
+			text,
+		};
+		const result = evaluateWorkFormula(formula, {
+			norm: 10,
+			paramCoefficients: {},
+			formData: { detailInfo: { modelsList: [{ name: "A" }] } },
+		});
+		expect(result.value).toBe(20);
+		expect(result.error).toBeNull();
+	});
+
 	it("parses H × P[param]", () => {
 		const parsed = parseWorkFormulaText("H × P[Сложность]");
 		expect(parsed.error).toBeNull();
@@ -146,6 +177,41 @@ describe("v2-work-formula.util", () => {
 				allowInvalidParamRefs: true,
 			}),
 		).toBeNull();
+	});
+
+	it("reconciles schema field code with labor slug and drops invalid marker", () => {
+		const tokens = [
+			{ kind: "norm" as const },
+			{ kind: "operator" as const, op: "*" as const },
+			{
+				kind: "param_coeff" as const,
+				paramCode: "field_46LcNfWo",
+				paramName: "field_46LcNfWo",
+				invalid: true,
+			},
+		];
+		const laborParams = [
+			{
+				paramCode: "сложность_реализации",
+				paramName: "Сложность реализации @ field_46LcNfWo|сложность_реализации",
+			},
+		];
+		const reconciled = reconcileFormulaLaborParamTokens(tokens, laborParams);
+		expect(tokensToText(reconciled)).toBe(
+			"N × коэф(сложность_реализации)",
+		);
+		expect(reconciled[2]).not.toHaveProperty("invalid");
+	});
+
+	it("parses optional invalid marker after param ref", () => {
+		const parsed = parseWorkFormulaText("N * коэф(field_x)?");
+		expect(parsed.error).toBeNull();
+		expect(parsed.tokens[2]).toEqual({
+			kind: "param_coeff",
+			paramCode: "field_x",
+			paramName: "field_x",
+			invalid: true,
+		});
 	});
 
 	it("applyWorkRounding NONE keeps raw value", () => {

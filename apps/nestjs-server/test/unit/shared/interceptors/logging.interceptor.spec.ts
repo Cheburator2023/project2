@@ -34,17 +34,11 @@ describe("LoggingInterceptor", () => {
 		jest.clearAllMocks();
 	});
 
-	it("logs incoming request and httpLog on success", async () => {
+	it("logs httpLog on success", async () => {
 		const { ctx } = buildCtx();
 		const next: any = { handle: () => of("ok") };
 		await lastValueFrom(interceptor.intercept(ctx, next));
-		expect(logger.log).toHaveBeenCalledWith(
-			expect.stringContaining("Incoming request"),
-			"HTTP",
-			expect.objectContaining({
-				headers: expect.objectContaining({ authorization: "*****" }),
-			}),
-		);
+		expect(logger.log).not.toHaveBeenCalled();
 		expect(logger.httpLog).toHaveBeenCalled();
 	});
 

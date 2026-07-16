@@ -9,7 +9,7 @@ import Typography from "@mui/material/Typography";
 import { Flex } from "@react-client/common/primitives/Flex";
 import {
 	useCreateV2TypicalWork,
-	useDeleteV2TypicalWork,
+	useBulkDeleteV2TypicalWorks,
 } from "@react-client/common/api/queries/v2-works";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { Header } from "@react-client/common/navigation/organisms/Header";
@@ -34,7 +34,7 @@ type AdminView = "works" | "parameters";
 export function AdminV2TypicalWorksPage() {
 	const navigate = useNavigate();
 	const createWork = useCreateV2TypicalWork();
-	const deleteWork = useDeleteV2TypicalWork();
+	const bulkDeleteWorks = useBulkDeleteV2TypicalWorks();
 
 	const [view, setView] = useState<AdminView>("works");
 	const [createOpen, setCreateOpen] = useState(false);
@@ -71,53 +71,58 @@ export function AdminV2TypicalWorksPage() {
 	const handleDeleteWorks = useCallback(
 		async (confirm = false) => {
 			if (!deleteTargets.length) return;
-			const deletedIds: string[] = [];
-			const conflictTargets: V2TypicalWorkListItemDto[] = [];
-			let conflictDetails: ReturnType<typeof parseTypicalWorkDeleteError> = null;
 
-			for (const work of deleteTargets) {
-				try {
-					await deleteWork.mutateAsync({ workId: work.id, confirm });
-					deletedIds.push(work.id);
-				} catch (error) {
-					if (!confirm) {
-						const conflict = parseTypicalWorkDeleteError(error);
-						if (conflict) {
-							conflictTargets.push(work);
-							conflictDetails ??= conflict;
-							continue;
-						}
-					}
-					toast.error(`Не удалось удалить «${work.name}»`, {
-						description: apiErrorMessage(error),
+			try {
+				const result = await bulkDeleteWorks.mutateAsync({
+					ids: deleteTargets.map((work) => work.id),
+					confirm,
+				});
+				const { deletedIds, conflicts, failed } = result;
+
+				for (const failure of failed) {
+					const work = deleteTargets.find((item) => item.id === failure.id);
+					toast.error(`Не удалось удалить «${work?.name ?? failure.id}»`, {
+						description: failure.message,
 					});
 				}
-			}
 
-			if (deletedIds.length > 0) {
-				if (selectedWorkId && deletedIds.includes(selectedWorkId)) {
-					setSelectedWorkId(null);
+				if (deletedIds.length > 0) {
+					if (selectedWorkId && deletedIds.includes(selectedWorkId)) {
+						setSelectedWorkId(null);
+					}
+					setCheckedWorks((prev) =>
+						prev.filter((work) => !deletedIds.includes(work.id)),
+					);
+					toast.success(
+						deletedIds.length === 1
+							? "Работа удалена"
+							: `Удалено работ: ${deletedIds.length}`,
+					);
 				}
-				setCheckedWorks((prev) =>
-					prev.filter((work) => !deletedIds.includes(work.id)),
-				);
-				toast.success(
-					deletedIds.length === 1
-						? "Работа удалена"
-						: `Удалено работ: ${deletedIds.length}`,
-				);
-			}
 
-			if (conflictTargets.length > 0 && !confirm) {
-				setDeleteTargets(conflictTargets);
-				setDeleteUsageConflict(conflictDetails);
-				return;
-			}
+				if (conflicts.length > 0 && !confirm) {
+					const conflictIds = new Set(conflicts.map((row) => row.workId));
+					setDeleteTargets(
+						deleteTargets.filter((work) => conflictIds.has(work.id)),
+					);
+					setDeleteUsageConflict({
+						code: "WORK_IN_USE",
+						usedInQuestionnaireVersions: conflicts.flatMap(
+							(row) => row.usedInQuestionnaireVersions,
+						),
+					});
+					return;
+				}
 
-			setDeleteTargets([]);
-			setDeleteUsageConflict(null);
+				setDeleteTargets([]);
+				setDeleteUsageConflict(null);
+			} catch (error) {
+				toast.error("Не удалось удалить работы", {
+					description: apiErrorMessage(error),
+				});
+			}
 		},
-		[deleteTargets, deleteWork, selectedWorkId],
+		[deleteTargets, bulkDeleteWorks, selectedWorkId],
 	);
 
 	const openDeleteDialog = useCallback(
@@ -180,7 +185,7 @@ export function AdminV2TypicalWorksPage() {
 							<V2AdminButton
 								color="error"
 								variant="outlined"
-								disabled={checkedWorks.length === 0 || deleteWork.isPending}
+								disabled={checkedWorks.length === 0 || bulkDeleteWorks.isPending}
 								onClick={() => openDeleteDialog(checkedWorks)}
 							>
 								{deleteButtonLabel}
@@ -220,7 +225,7 @@ export function AdminV2TypicalWorksPage() {
 			<Dialog
 				open={deleteTargets.length > 0}
 				onClose={() => {
-					if (deleteWork.isPending) return;
+					if (bulkDeleteWorks.isPending) return;
 					setDeleteTargets([]);
 					setDeleteUsageConflict(null);
 				}}
@@ -324,14 +329,14 @@ export function AdminV2TypicalWorksPage() {
 							setDeleteTargets([]);
 							setDeleteUsageConflict(null);
 						}}
-						disabled={deleteWork.isPending}
+						disabled={bulkDeleteWorks.isPending}
 					>
 						Отмена
 					</Button>
 					<Button
 						color="error"
 						variant="contained"
-						disabled={deleteWork.isPending}
+						disabled={bulkDeleteWorks.isPending}
 						onClick={() => void handleDeleteWorks(Boolean(deleteUsageConflict))}
 					>
 						{deleteUsageConflict ? "Удалить всё равно" : "Удалить"}

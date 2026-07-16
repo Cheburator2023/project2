@@ -4,6 +4,7 @@ import {
 	buildCanvasFieldSearchOptions,
 	filterCanvasFieldSearchOptions,
 	listCanvasAncestorNodeIds,
+	listCanvasExpandNodeIds,
 	substringMatchIndexes,
 } from "./schemaCanvasSearch";
 import {
@@ -59,6 +60,28 @@ describe("schemaCanvasSearch", () => {
 			"/group1",
 			"/group1/name",
 		]);
+	});
+
+	it("lists only expandable ancestor ids for nested target", () => {
+		const tree: NodeModel<SchemaCanvasNodeData>[] = [
+			fieldNode("/group1", SCHEMA_CANVAS_ROOT_ID, "Группа", "group1"),
+			fieldNode("/group1/nested", "/group1", "Вложенная", "nested"),
+			fieldNode("/group1/nested/leaf", "/group1/nested", "Лист", "leaf"),
+		];
+
+		expect(listCanvasExpandNodeIds(tree, "/group1/nested/leaf")).toEqual([
+			"/group1",
+			"/group1/nested",
+		]);
+	});
+
+	it("opens nested array item path via array parent", () => {
+		const tree: NodeModel<SchemaCanvasNodeData>[] = [
+			fieldNode("/rows", SCHEMA_CANVAS_ROOT_ID, "Строки", "rows"),
+			fieldNode("/rows/items/code", "/rows", "Код", "code"),
+		];
+
+		expect(listCanvasExpandNodeIds(tree, "/rows/items/code")).toEqual(["/rows"]);
 	});
 
 	it("prioritizes exact id match over partial title match", () => {

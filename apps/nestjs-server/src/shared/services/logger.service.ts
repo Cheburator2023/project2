@@ -12,6 +12,15 @@ export class CustomLogger implements LoggerService {
     private readonly tslgClientVersion = process.env.TSLG_CLIENT_VERSION || "1.0.0";
     private readonly risCode = process.env.RIS_CODE || "1404";
     private readonly isProduction = process.env.NODE_ENV === "production";
+    private static readonly MAX_BODY_LOG_CHARS = 2048;
+    private static readonly OMITTED_BODY_FIELDS = new Set([
+        "jsonSchema",
+        "uiSchema",
+        "logic",
+        "dictionariesSnapshot",
+        "json_schema",
+        "ui_schema",
+    ]);
 
     private tslgTransport: TSLGTransport | null = null;
 
@@ -164,28 +173,49 @@ export class CustomLogger implements LoggerService {
     private sanitizeBody(body: any): string {
         if (!body) return "";
         try {
-            const sanitized = { ...body };
-
-            // Санитизация чувствительных данных
-            if (sanitized.password) sanitized.password = "*****";
-            if (sanitized.newPassword) sanitized.newPassword = "*****";
-            if (sanitized.currentPassword) sanitized.currentPassword = "*****";
-            if (sanitized.token) sanitized.token = "*****";
-            if (sanitized.accessToken) sanitized.accessToken = "*****";
-            if (sanitized.refreshToken) sanitized.refreshToken = "*****";
-            if (sanitized.jwt) sanitized.jwt = "*****";
-            if (sanitized.authorization) {
-                if (sanitized.authorization.startsWith("Bearer ")) {
-                    sanitized.authorization = "Bearer *****";
-                } else {
-                    sanitized.authorization = "*****";
-                }
+            const sanitized = this.compactBodyForLog(body);
+            const serialized = JSON.stringify(sanitized);
+            if (serialized.length <= CustomLogger.MAX_BODY_LOG_CHARS) {
+                return serialized;
             }
-
-            return JSON.stringify(sanitized);
+            return `${serialized.slice(0, CustomLogger.MAX_BODY_LOG_CHARS)}…[truncated ${serialized.length} chars]`;
         } catch {
             return "[Non-serializable body]";
         }
+    }
+
+    private compactBodyForLog(body: any): Record<string, unknown> {
+        if (typeof body !== "object" || body === null || Array.isArray(body)) {
+            return body as Record<string, unknown>;
+        }
+
+        const sanitized = { ...body } as Record<string, unknown>;
+
+        for (const [key, value] of Object.entries(sanitized)) {
+            if (CustomLogger.OMITTED_BODY_FIELDS.has(key) && value != null) {
+                const size =
+                    typeof value === "string"
+                        ? value.length
+                        : JSON.stringify(value).length;
+                sanitized[key] = `[omitted ${Math.ceil(size / 1024)} KB]`;
+                continue;
+            }
+
+            if (typeof value === "string" && this.isJwtToken(value)) {
+                sanitized[key] = "*****";
+                continue;
+            }
+
+            if (
+                key.toLowerCase() === "password" ||
+                key.toLowerCase() === "token" ||
+                key.toLowerCase() === "authorization"
+            ) {
+                sanitized[key] = "*****";
+            }
+        }
+
+        return sanitized;
     }
 
     private sanitizeHeaders(headers: any): any {

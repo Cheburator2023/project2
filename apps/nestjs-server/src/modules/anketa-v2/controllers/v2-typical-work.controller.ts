@@ -34,7 +34,11 @@ import type {
 	V2TypicalWorkAssignmentListResponseDto,
 	V2TypicalWorkSchemaFieldSyncImpactDto,
 	V2TypicalWorkSchemaFieldSyncRequestDto,
+	V2TypicalWorkSchemaBulkSyncResponseDto,
+	V2FormulaRegistryListResponseDto,
+	BulkDeleteV2TypicalWorksResultDto,
 } from "@smart-anketa/api-contract";
+import { BulkDeleteV2TypicalWorksDto } from "../dto/request/bulk-delete-v2-typical-works.dto";
 import { V2TypicalWorkService } from "../services/v2-typical-work.service";
 import { V2TypicalWorkWriteService } from "../services/v2-typical-work-write.service";
 
@@ -214,6 +218,17 @@ export class V2TypicalWorkController {
 		return this.typicalWorkWriteService.backfillCalculationLogic();
 	}
 
+	@Post("bulk-delete")
+	@ApiOperation({ summary: "Массовое удаление типовых работ" })
+	async bulkDelete(
+		@Body() dto: BulkDeleteV2TypicalWorksDto,
+	): Promise<BulkDeleteV2TypicalWorksResultDto> {
+		return this.typicalWorkWriteService.bulkDeleteWorks(
+			dto.ids,
+			dto.confirm === true,
+		);
+	}
+
 	@Post("schema-field-sync")
 	@ApiOperation({
 		summary: "Синхронизировать связи типовых работ с полем схемы",
@@ -222,6 +237,35 @@ export class V2TypicalWorkController {
 		@Body() dto: V2TypicalWorkSchemaFieldSyncRequestDto,
 	): Promise<V2TypicalWorkSchemaFieldSyncImpactDto> {
 		return this.typicalWorkWriteService.reconcileSchemaField(dto);
+	}
+
+	@Post("schema-field-sync/bulk")
+	@ApiOperation({
+		summary:
+			"Массовая синхронизация типовых работ с полями схемы версии шаблона",
+	})
+	reconcileAllSchemaFields(
+		@Body()
+		dto: {
+			templateVersionId: string;
+			mode?: "dryRun" | "apply";
+		},
+	): Promise<V2TypicalWorkSchemaBulkSyncResponseDto> {
+		return this.typicalWorkWriteService.reconcileAllSchemaFieldsForVersion(
+			dto.templateVersionId,
+			dto.mode ?? "apply",
+		);
+	}
+
+	@Get("formulas/registry")
+	@ApiOperation({ summary: "Реестр формул типовых работ по всем схемам" })
+	@ApiQuery({ name: "templateId", required: false })
+	listFormulaRegistry(
+		@Query("templateId") templateId?: string,
+	): Promise<V2FormulaRegistryListResponseDto> {
+		return this.typicalWorkService.listFormulaRegistry(
+			templateId ? { templateId } : undefined,
+		);
 	}
 
 	@Get(":id")

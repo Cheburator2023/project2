@@ -25,15 +25,11 @@ import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import {
 	buildCanvasFieldSearchOptions,
 	filterCanvasFieldSearchOptions,
-	listCanvasAncestorNodeIds,
 	substringMatchIndexes,
 	type CanvasFieldSearchCrumb,
 	type CanvasFieldSearchOption,
 } from "../schemaCanvasSearch";
-import {
-	CANVAS_FIELD_POINTER_ATTR,
-	focusCanvasField,
-} from "../schemaCanvasFocus";
+import { revealCanvasFieldPointer } from "../schemaCanvasFocus";
 import type { SchemaCanvasNodeData } from "../schemaCanvasTree";
 import { useSchemaEditor } from "../SchemaEditorContext";
 
@@ -178,14 +174,8 @@ export function SchemaCanvasFieldSearch({
 
 	const handleSelect = useCallback(
 		(option: CanvasFieldSearchOption) => {
-			for (const nodeId of listCanvasAncestorNodeIds(
-				treeData,
-				option.pointer,
-			)) {
-				treeRef.current?.open(nodeId);
-			}
 			setSelectedPointer(option.pointer);
-			focusCanvasField(option.pointer);
+			revealCanvasFieldPointer(treeRef.current, treeData, option.pointer);
 			setQuery("");
 			setOpen(false);
 			inputRef.current?.blur();
@@ -272,4 +262,3 @@ export function SchemaCanvasFieldSearch({
 	);
 }
 
-export { CANVAS_FIELD_POINTER_ATTR };

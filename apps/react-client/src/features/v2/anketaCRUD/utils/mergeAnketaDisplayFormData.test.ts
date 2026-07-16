@@ -124,6 +124,47 @@ describe("mergeAnketaDisplayFormData", () => {
 		).toEqual([]);
 	});
 
+	it("preserves user atypical row fields while applying calculated total from liveFormData", () => {
+		const display = mergeAnketaDisplayFormData(
+			{
+				streamDataSources: {
+					atypicalTasks: [
+						{
+							name: "Уточнение требований",
+							estimateHoursPerDay: 5,
+							coefficient: 1.2,
+						},
+					],
+				},
+			},
+			{
+				streamDataSources: {
+					atypicalTasks: [
+						{
+							name: "Уточнение требований",
+							estimateHoursPerDay: 5,
+							coefficient: 1.2,
+							total: 6,
+						},
+					],
+				},
+			},
+		);
+
+		expect(
+			(
+				display.streamDataSources as {
+					atypicalTasks: Array<{ name: string; total: number }>;
+				}
+			).atypicalTasks[0],
+		).toEqual({
+			name: "Уточнение требований",
+			estimateHoursPerDay: 5,
+			coefficient: 1.2,
+			total: 6,
+		});
+	});
+
 	it("uses calculated summary from liveFormData over stale saved summary", () => {
 		const display = mergeAnketaDisplayFormData(
 			{

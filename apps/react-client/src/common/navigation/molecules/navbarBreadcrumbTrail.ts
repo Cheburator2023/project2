@@ -91,6 +91,10 @@ function adminTrail(pathname: string): NavbarBreadcrumbItem[] | null {
 		return [adminCrumb(), { label: commonRoutes.adminV2TypicalWorks.name }];
 	}
 
+	if (pathname.startsWith(commonRoutes.adminV2Formulas.rootPath)) {
+		return [adminCrumb(), { label: commonRoutes.adminV2Formulas.name }];
+	}
+
 	if (pathname.startsWith(commonRoutes.adminV2Settings.rootPath)) {
 		return [adminCrumb(), { label: commonRoutes.adminV2Settings.name }];
 	}

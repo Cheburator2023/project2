@@ -2,6 +2,8 @@ import type { V2TypicalWorkFormulaDto, V2TypicalWorkRoundingDto, V2WorkFormulaTo
 export type WorkFormulaEvalContext = {
     norm: number;
     paramCoefficients: Record<string, number>;
+    /** Полный formData анкеты — для arch_count_coeff. */
+    formData?: Record<string, unknown>;
 };
 export type WorkFormulaEvalResult = {
     symbolic: string;
@@ -27,6 +29,8 @@ export declare function isWorkFormulaLaborParamKnown(token: Extract<V2WorkFormul
     kind: "param_coeff" | "param_anyof";
 }>, laborParams: readonly WorkFormulaLaborParamRef[]): boolean;
 export declare function normalizeWorkFormulaLaborParamTokens(tokens: V2WorkFormulaToken[], laborParams: readonly WorkFormulaLaborParamRef[]): V2WorkFormulaToken[];
+/** Сопоставляет param-токены формулы с блоком трудоёмкости и снимает invalid при совпадении. */
+export declare function reconcileFormulaLaborParamTokens(tokens: V2WorkFormulaToken[], laborParams: readonly WorkFormulaLaborParamRef[]): V2WorkFormulaToken[];
 export declare function tokensToText(tokens: V2WorkFormulaToken[]): string;
 /** Краткая запись для блока «Общая формула норматива» (N, Кэф-П1, …). */
 export declare function formatWorkFormulaGeneralSummary(tokens: V2WorkFormulaToken[], paramOrder: readonly string[]): string;
@@ -45,6 +49,8 @@ export type ValidateWorkFormulaTokenOptions = {
 export declare function validateWorkFormulaTokens(tokens: V2WorkFormulaToken[], options?: Set<string> | ValidateWorkFormulaTokenOptions): string | null;
 export declare function isParamUsedInFormula(tokens: V2WorkFormulaToken[], paramCode: string): boolean;
 export declare function markFormulaParamInvalid(tokens: V2WorkFormulaToken[], paramCode: string): V2WorkFormulaToken[];
+/** Помечает param-токены формулы invalid, если их нет в блоке трудоёмкости. */
+export declare function markUnknownFormulaLaborParamTokensInvalid(tokens: V2WorkFormulaToken[], laborParams: readonly WorkFormulaLaborParamRef[]): V2WorkFormulaToken[];
 export declare function evaluateWorkFormula(formula: V2TypicalWorkFormulaDto, ctx: WorkFormulaEvalContext): WorkFormulaEvalResult;
 /** Трудозатраты (ч/д) не могут быть отрицательными. */
 export declare function clampTypicalWorkEffort(value: number): number;

@@ -320,12 +320,18 @@ function applyRowComputedRule(
 			row && typeof row === "object" && !Array.isArray(row)
 				? (row as Record<string, unknown>)
 				: {};
+		const normalizedRow = { ...rowObj };
+		for (const key of ["estimateHoursPerDay", "coefficient", "total"] as const) {
+			if (!(key in normalizedRow)) continue;
+			const parsed = toFiniteNumber(normalizedRow[key]);
+			if (parsed !== null) normalizedRow[key] = parsed;
+		}
 		let computed: unknown;
 		try {
 			computed = applyLogic(rule.condition as JsonLogicValue, {
 				...data,
-				...rowObj,
-				_row: rowObj,
+				...normalizedRow,
+				_row: normalizedRow,
 			});
 		} catch {
 			computed = null;

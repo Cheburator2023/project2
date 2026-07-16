@@ -103,6 +103,8 @@ export function V2TemplateFormPreview({
 					formData={engine.displayFormData}
 					calculationError={engine.calculationError}
 					calculationLoading={engine.calculationLoading}
+					uiSchema={engine.previewUiSchema as Record<string, unknown>}
+					liveFormData={engine.calculationLiveFormData}
 				>
 					<V2AnketaFormWithModals
 						engine={engine}

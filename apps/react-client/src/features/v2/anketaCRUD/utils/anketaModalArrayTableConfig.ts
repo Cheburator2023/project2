@@ -2,7 +2,13 @@ import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { AnketaCompactArrayTablePath } from "./anketaFormModalPaths";
 import { getArrayItemSchemaSliceForModal } from "./anketaSchemaAtPath";
 import { readAnketaFormContext } from "./anketaFormContext";
-import { collectGeneratedTypicalWorkArrayPaths } from "@smart-anketa/api-contract";
+import {
+	collectGeneratedTypicalWorkArrayPaths,
+	listAllGeneratedTypicalWorkArrayPaths,
+	resolveStreamExecutorForTypicalWorkOutputPath,
+	sortModelStreamTypicalWorkRows,
+	V2_MODEL_STREAM_EXECUTOR,
+} from "@smart-anketa/api-contract";
 
 export type AnketaArrayTableColumn = {
 	key: string;
@@ -41,7 +47,7 @@ function formatNameLabel(raw: string): string {
 	return raw;
 }
 
-function formatTypicalWorkNumberValue(value: unknown): string {
+export function formatTypicalWorkNumberValue(value: unknown): string {
 	if (value == null || value === "") return "—";
 	if (typeof value === "number" && Number.isFinite(value)) {
 		if (Number.isInteger(value)) return String(value);
@@ -524,6 +530,98 @@ export function typicalWorkItemDisplayName(
 	const raw = item.name;
 	if (typeof raw === "string" && raw.trim()) return raw.trim();
 	return `Работа ${fallbackIndex + 1}`;
+}
+
+function isAppearedTypicalWorkRow(row: Record<string, unknown>): boolean {
+	if (
+		typeof row.generatedByRuleId === "string" &&
+		row.generatedByRuleId.trim()
+	) {
+		return true;
+	}
+	const name = typeof row.name === "string" ? row.name.trim() : "";
+	if (!name) return false;
+	if (typeof row.workId === "string" && row.workId.trim()) return true;
+	return (
+		normalizeTypicalWorkTotalValue(row.estimateHoursPerDay) != null ||
+		normalizeTypicalWorkTotalValue(row.coefficient) != null ||
+		normalizeTypicalWorkTotalValue(row.total) != null
+	);
+}
+
+function typicalWorkRowDedupKey(row: Record<string, unknown>): string {
+	return [
+		typeof row.taskCode === "string" ? row.taskCode.trim() : "",
+		typeof row.name === "string" ? row.name.trim() : "",
+		typeof row.sourceName === "string" ? row.sourceName.trim() : "",
+		typeof row.generatedByRuleId === "string" ? row.generatedByRuleId.trim() : "",
+	].join("|");
+}
+
+export type AppearedTypicalWorkGroup = {
+	path: string;
+	streamExecutor: string | null;
+	rows: Record<string, unknown>[];
+};
+
+function readTypicalWorkArrayAtPath(
+	formData: Record<string, unknown> | null | undefined,
+	liveFormData: Record<string, unknown> | null | undefined,
+	path: string,
+): Record<string, unknown>[] {
+	const liveRows = liveFormData ? getArrayAtPath(liveFormData, path) : [];
+	if (liveRows.length > 0) return liveRows;
+	return formData ? getArrayAtPath(formData, path) : [];
+}
+
+/** Строки типовых работ, появившиеся после срабатывания триггеров (для итоговой панели). */
+export function collectAppearedTypicalWorkRows(
+	formData: Record<string, unknown> | null | undefined,
+	uiSchema?: Record<string, unknown>,
+	liveFormData?: Record<string, unknown> | null,
+): Record<string, unknown>[] {
+	return collectAppearedTypicalWorkGroups(formData, uiSchema, liveFormData).flatMap(
+		(group) => group.rows,
+	);
+}
+
+/** Типовые работы, сгруппированные по пути вывода и стриму-исполнителю. */
+export function collectAppearedTypicalWorkGroups(
+	formData: Record<string, unknown> | null | undefined,
+	uiSchema?: Record<string, unknown>,
+	liveFormData?: Record<string, unknown> | null,
+): AppearedTypicalWorkGroup[] {
+	if (!formData && !liveFormData) return [];
+
+	const paths = listAllGeneratedTypicalWorkArrayPaths(uiSchema);
+	const seen = new Set<string>();
+	const groups: AppearedTypicalWorkGroup[] = [];
+
+	for (const path of paths) {
+		const rows: Record<string, unknown>[] = [];
+		for (const item of readTypicalWorkArrayAtPath(formData, liveFormData, path)) {
+			if (!isAppearedTypicalWorkRow(item)) continue;
+			const key = `${path}|${typicalWorkRowDedupKey(item)}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			rows.push(item);
+		}
+		if (rows.length === 0) continue;
+		groups.push({
+			path,
+			streamExecutor: resolveStreamExecutorForTypicalWorkOutputPath(
+				uiSchema,
+				path,
+			),
+			rows:
+				resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, path) ===
+				V2_MODEL_STREAM_EXECUTOR
+					? sortModelStreamTypicalWorkRows(rows)
+					: rows,
+		});
+	}
+
+	return groups;
 }
 
 const FACTORY_TYPICAL_WORK_COLUMN_KEYS = [

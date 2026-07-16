@@ -25,15 +25,6 @@ export class LoggingInterceptor implements NestInterceptor {
 			headers.authorization = "*****";
 		}
 
-		this.logger.log(
-			`Incoming request: ${request.method} ${request.url}`,
-			"HTTP",
-			{
-				headers,
-				body: request.body,
-			},
-		);
-
 		return next.handle().pipe(
 			tap({
 				next: () => {

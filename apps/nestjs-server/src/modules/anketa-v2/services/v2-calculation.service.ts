@@ -625,6 +625,7 @@ export class V2CalculationService {
 											archComponentType: archComponent,
 											streamExecutor,
 											source: sourceForMatch,
+											formData: data,
 											templateVersionId,
 											templateId,
 											atDate,
@@ -696,6 +697,7 @@ export class V2CalculationService {
 							sourceComponent: archComponent,
 							sourceName,
 							generatedByRuleId: rule.id,
+							workId: "workId" in task ? task.workId : undefined,
 						};
 					});
 				}),

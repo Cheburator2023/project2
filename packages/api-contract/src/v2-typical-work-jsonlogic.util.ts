@@ -1,5 +1,5 @@
 import type { V2JsonLogicValue } from "./v2-template.types";
-import type { TypicalWorkRuleLike } from "./v2-works-catalog-match.util";
+import type { TypicalWorkRuleLike, TypicalWorkTriggerArchCountLike } from "./v2-works-catalog-match.util";
 import {
 	readTypicalWorkSourceField,
 	typicalWorkRulesMatchSource,
@@ -8,6 +8,8 @@ import type {
 	V2TypicalWorkFormulaDto,
 	V2TypicalWorkRoundingDto,
 	V2TypicalWorkStoredCalculationLogicDto,
+	V2TypicalWorkTriggerFormulaDto,
+	V2TypicalWorkTriggerMode,
 	V2WorkFormulaToken,
 } from "./v2-typical-work.types";
 import {
@@ -20,6 +22,17 @@ import {
 	tokensToText,
 	validateWorkFormulaTokens,
 } from "./v2-work-formula.util";
+import {
+	compileTriggerFormulaTokensToJsonLogic,
+	hasTypicalWorkTriggersConfigured,
+	matchTypicalWorkTriggers,
+	type TypicalWorkTriggerMatchInput,
+} from "./v2-trigger-formula.util";
+import {
+	resolveArchCountCoeffFromToken,
+	archCountTriggerMatches,
+	type V2WorkArchCountCoeffStep,
+} from "./v2-work-arch-count-coeff.util";
 import {
 	evaluateTermsFormula,
 	resolveVersionConfigTokenFormula,
@@ -40,12 +53,17 @@ export type TypicalWorkJsonLogicEvalContext = {
 	norm: number;
 	paramCoefficients: Record<string, number>;
 	source?: Record<string, unknown>;
+	formData?: Record<string, unknown>;
 };
 
 export type TypicalWorkCalculationEvalInput = {
 	logic: V2TypicalWorkCalculationLogicDto;
 	rules: TypicalWorkRuleLike[];
 	source: Record<string, unknown>;
+	formData?: Record<string, unknown>;
+	triggerMode?: V2TypicalWorkTriggerMode;
+	triggerArchCount?: TypicalWorkTriggerArchCountLike | null;
+	triggerFormula?: V2TypicalWorkTriggerFormulaDto | null;
 	norm: number;
 	paramCoefficients: Record<string, number>;
 	rounding: V2TypicalWorkRoundingDto;
@@ -80,6 +98,10 @@ function tokenToJsonLogicLeaf(token: V2WorkFormulaToken): V2JsonLogicValue | nul
 			return { var: `coeff.${token.paramCode}` };
 		case "work_ref":
 			return null;
+		case "arch_count_coeff":
+			return {
+				archCountCoeff: [token.archComponentKind, token.steps],
+			};
 		default:
 			return null;
 	}
@@ -112,7 +134,8 @@ export function compileWorkFormulaTokensToJsonLogic(
 			token.kind === "norm" ||
 			token.kind === "number" ||
 			token.kind === "param_coeff" ||
-			token.kind === "param_anyof"
+			token.kind === "param_anyof" ||
+			token.kind === "arch_count_coeff"
 		) {
 			const leaf = tokenToJsonLogicLeaf(token);
 			if (leaf == null) return null;
@@ -173,16 +196,57 @@ function compileRuleToJsonLogic(rule: TypicalWorkRuleLike): V2JsonLogicValue {
 	}
 }
 
-/** Компилирует триггеры работы в JsonLogic (логическое И). Пустой список → false. */
+function compileParamRulesToJsonLogic(rules: TypicalWorkRuleLike[]): V2JsonLogicValue {
+	if (rules.length === 0) return false;
+	const groups = new Map<string, TypicalWorkRuleLike[]>();
+	for (const rule of rules) {
+		const key = rule.paramCode.trim() || "__empty__";
+		const list = groups.get(key) ?? [];
+		list.push(rule);
+		groups.set(key, list);
+	}
+	const compiled = [...groups.values()].map((groupRules) =>
+		groupRules.length === 1
+			? compileRuleToJsonLogic(groupRules[0]!)
+			: { and: groupRules.map(compileRuleToJsonLogic) },
+	);
+	if (compiled.length === 1) return compiled[0] ?? false;
+	return { and: compiled };
+}
+
+export function compileTypicalWorkTriggersToJsonLogic(
+	input: TypicalWorkTriggerMatchInput,
+): V2JsonLogicValue {
+	if (input.mode === "formula") {
+		return compileTriggerFormulaTokensToJsonLogic(
+			input.triggerFormula?.tokens ?? [],
+		);
+	}
+	return compileTypicalWorkTriggerRulesToJsonLogic(
+		input.rules,
+		input.triggerArchCount,
+	);
+}
+
+/** Компилирует триггеры: (ПТ₁ И ПТ₂ …) [И/ИЛИ] arch-count. Пустой список без arch → false. */
 export function compileTypicalWorkTriggerRulesToJsonLogic(
 	rules: TypicalWorkRuleLike[],
+	triggerArchCount?: TypicalWorkTriggerArchCountLike | null,
 ): V2JsonLogicValue {
-	if (rules.length === 0) return false;
-	if (rules.length === 1) {
-		const only = rules[0];
-		return only ? compileRuleToJsonLogic(only) : false;
-	}
-	return { and: rules.map(compileRuleToJsonLogic) };
+	const hasArch = Boolean(
+		triggerArchCount?.kind && (triggerArchCount.steps?.length ?? 0) > 0,
+	);
+	if (rules.length === 0 && !hasArch) return false;
+
+	const paramPart = compileParamRulesToJsonLogic(rules);
+	if (!hasArch) return paramPart;
+
+	const archPart: V2JsonLogicValue = {
+		archCountTrigger: [triggerArchCount!.kind!, triggerArchCount!.steps ?? []],
+	};
+	const combinator = triggerArchCount?.combinator ?? "and";
+	if (combinator === "or") return { or: [paramPart, archPart] };
+	return { and: [paramPart, archPart] };
 }
 
 /** Оборачивает выражение округлением (custom op roundStep). */
@@ -200,12 +264,20 @@ export function compileTypicalWorkCalculationLogic(input: {
 	formula: V2TypicalWorkFormulaDto;
 	rounding: V2TypicalWorkRoundingDto;
 	rules: TypicalWorkRuleLike[];
+	triggerArchCount?: TypicalWorkTriggerArchCountLike | null;
+	triggerMode?: V2TypicalWorkTriggerMode;
+	triggerFormula?: V2TypicalWorkTriggerFormulaDto | null;
 }): V2TypicalWorkCalculationLogicDto | null {
 	const inner = compileWorkFormulaTokensToJsonLogic(input.formula.tokens);
 	if (inner == null) return null;
 	return {
 		version: 1,
-		include: compileTypicalWorkTriggerRulesToJsonLogic(input.rules),
+		include: compileTypicalWorkTriggersToJsonLogic({
+			mode: input.triggerMode,
+			rules: input.rules,
+			triggerArchCount: input.triggerArchCount,
+			triggerFormula: input.triggerFormula,
+		}),
 		result: compileTypicalWorkRoundingJsonLogic(inner, input.rounding),
 	};
 }
@@ -328,6 +400,32 @@ export function evaluateTypicalWorkJsonLogicValue(
 		return resolveTypicalWorkField(data, args);
 	}
 
+	if (op === "archCountCoeff") {
+		const kind = String(args[0] ?? "");
+		const steps = (Array.isArray(args[1]) ? args[1] : []) as V2WorkArchCountCoeffStep[];
+		const formData =
+			(data.formData as Record<string, unknown> | undefined) ??
+			(data.source as Record<string, unknown> | undefined) ??
+			{};
+		return resolveArchCountCoeffFromToken(formData, kind as never, steps);
+	}
+
+	if (op === "archCountTrigger") {
+		const kind = String(args[0] ?? "");
+		const steps = (Array.isArray(args[1]) ? args[1] : []) as V2WorkArchCountCoeffStep[];
+		const formData =
+			(data.formData as Record<string, unknown> | undefined) ??
+			(data.source as Record<string, unknown> | undefined) ??
+			{};
+		return archCountTriggerMatches(formData, kind as never, steps);
+	}
+
+	if (op === "or") {
+		return args.some((arg) =>
+			Boolean(evaluateTypicalWorkJsonLogicValue(arg as V2JsonLogicValue, data)),
+		);
+	}
+
 	if (op === "roundStep") {
 		const [inner, mode, step] = args;
 		const value = evaluateTypicalWorkJsonLogicValue(inner as V2JsonLogicValue, data);
@@ -375,6 +473,7 @@ function buildJsonLogicData(ctx: TypicalWorkJsonLogicEvalContext): Record<string
 		norm: ctx.norm,
 		coeff: ctx.paramCoefficients,
 		source: ctx.source ?? {},
+		formData: ctx.formData ?? ctx.source ?? {},
 	};
 }
 
@@ -445,7 +544,13 @@ export function evaluateTypicalWorkCalculation(
 	const { logic, rules, source, norm, paramCoefficients } = input;
 	const data = buildJsonLogicData({ norm, paramCoefficients, source });
 
-	if (rules.length === 0) {
+	const triggerInput: TypicalWorkTriggerMatchInput = {
+		mode: input.triggerMode,
+		rules,
+		triggerArchCount: input.triggerArchCount,
+		triggerFormula: input.triggerFormula,
+	};
+	if (!hasTypicalWorkTriggersConfigured(triggerInput)) {
 		return {
 			included: false,
 			symbolic: "",
@@ -455,7 +560,11 @@ export function evaluateTypicalWorkCalculation(
 		};
 	}
 
-	const includedByRules = typicalWorkRulesMatchSource(rules, source);
+	const includedByRules = matchTypicalWorkTriggers(
+		triggerInput,
+		source,
+		input.formData ?? source,
+	);
 	const includedByLogic = Boolean(
 		evaluateTypicalWorkJsonLogicValue(logic.include, data),
 	);
@@ -511,11 +620,18 @@ export function assembleTypicalWorkCalculationLogic(
 		formula: V2TypicalWorkFormulaDto;
 		rounding: V2TypicalWorkRoundingDto;
 	},
+	triggerInput?: TypicalWorkTriggerMatchInput | null,
 ): V2TypicalWorkCalculationLogicDto | null {
+	const triggerArchCount = triggerInput?.triggerArchCount;
 	if (stored?.result != null) {
 		return {
 			version: 1,
-			include: compileTypicalWorkTriggerRulesToJsonLogic(rules),
+			include: compileTypicalWorkTriggersToJsonLogic({
+				mode: triggerInput?.mode,
+				rules,
+				triggerArchCount,
+				triggerFormula: triggerInput?.triggerFormula,
+			}),
 			result: stored.result,
 		};
 	}
@@ -524,6 +640,9 @@ export function assembleTypicalWorkCalculationLogic(
 		formula: fallback.formula,
 		rounding: fallback.rounding,
 		rules,
+		triggerArchCount,
+		triggerMode: triggerInput?.mode,
+		triggerFormula: triggerInput?.triggerFormula,
 	});
 }
 
@@ -580,6 +699,7 @@ export function computeTypicalWorkFormulaTotal(params: {
 	norm: number;
 	paramCoefficients: Record<string, number>;
 	source?: Record<string, unknown>;
+	formData?: Record<string, unknown>;
 	resolveFactorCoeff: (paramCode: string) => number;
 }): number | null {
 	if (params.terms.terms.some((t) => t.kind === "transitive")) {
@@ -598,6 +718,7 @@ export function computeTypicalWorkFormulaTotal(params: {
 		norm: params.norm,
 		paramCoefficients: params.paramCoefficients,
 		source: params.source,
+		formData: params.formData ?? params.source,
 	};
 	const fallback = { formula: tokenFormula, rounding: params.rounding };
 

@@ -175,8 +175,43 @@ export function dictionaryCodeToSchemaPointer(code: string): string {
 }
 
 /**
+ * Справочники, привязанные в uiSchema через dictionaryCode, с enum на фактическом
+ * поле схемы (legacy-код в dictionaryCode может не совпадать с ключом property).
+ */
+export function collectDictionaryBindingsFromUiSchema(
+	uiSchema: unknown,
+	basePointer = "/",
+): Array<{ dictionaryCode: string; fieldPointer: string }> {
+	const out: Array<{ dictionaryCode: string; fieldPointer: string }> = [];
+
+	const walk = (node: unknown, pointer: string) => {
+		if (!node || typeof node !== "object" || Array.isArray(node)) return;
+		const rec = node as Record<string, unknown>;
+		const opts = rec["ui:options"];
+		if (opts && typeof opts === "object" && !Array.isArray(opts)) {
+			const dc = (opts as Record<string, unknown>).dictionaryCode;
+			if (typeof dc === "string" && dc.trim() && pointer !== "/") {
+				out.push({
+					dictionaryCode: dc.trim(),
+					fieldPointer: normalizePointer(pointer),
+				});
+			}
+		}
+		for (const [key, value] of Object.entries(rec)) {
+			if (key.startsWith("ui:")) continue;
+			const childPtr =
+				pointer === "/" ? `/${key}` : `${normalizePointer(pointer)}/${key}`;
+			walk(value, childPtr);
+		}
+	};
+
+	walk(uiSchema, basePointer);
+	return out;
+}
+
+/**
  * Справочники, привязанные в uiSchema через dictionaryCode, но не попавшие в
- * extractEnumFieldsFromJsonSchema (другой путь / legacy-код).
+ * extractEnumFieldsFromJsonSchema (legacy-код ≠ jsonPointerToDictionaryCode).
  */
 export function buildDictionariesFromUiSchemaReferences(
 	schema: V2JsonSchemaDto,
@@ -185,34 +220,41 @@ export function buildDictionariesFromUiSchemaReferences(
 	allowlist?: ReadonlySet<string>,
 ): V2DefaultDictionaryDef[] {
 	const out: V2DefaultDictionaryDef[] = [];
-	for (const code of collectDictionaryCodesFromUiSchema(uiSchema)) {
-		if (existingCodes.has(code)) continue;
-		if (allowlist && !allowlist.has(code)) continue;
-		const pointer = dictionaryCodeToSchemaPointer(code);
-		const node = resolveSchemaAtPointer(schema, pointer);
+	const seenCodes = new Set(existingCodes);
+
+	for (const binding of collectDictionaryBindingsFromUiSchema(uiSchema)) {
+		const { dictionaryCode, fieldPointer } = binding;
+		if (seenCodes.has(dictionaryCode)) continue;
+		if (allowlist && !allowlist.has(dictionaryCode)) continue;
+
+		const node = resolveSchemaAtPointer(schema, fieldPointer);
 		if (!node) continue;
 		const enums = enumStrings(node);
 		if (enums.length === 0) continue;
+
 		const title =
 			typeof node.title === "string" && node.title.trim()
 				? node.title.trim()
-				: code.split(".").pop() ?? code;
+				: (fieldPointer.split("/").filter(Boolean).pop() ?? dictionaryCode);
 		if (methodologyDictionaryByName(title)) continue;
+
 		const seen = new Set<string>();
 		out.push({
-			code,
+			code: dictionaryCode,
 			name: title,
-			description: `Заводской справочник (uiSchema) для ${pointer}`,
+			description: `Заводской справочник (uiSchema) для ${fieldPointer}`,
 			category: "Схема",
-			fieldPointer: pointer,
+			fieldPointer,
 			items: enums.map((label, order) => ({
 				code: schemaDictionaryItemCode(label, order, seen),
 				label,
 				order,
-				payload: { fieldPointer: pointer },
+				payload: { fieldPointer },
 			})),
 		});
+		seenCodes.add(dictionaryCode);
 	}
+
 	return out;
 }
 

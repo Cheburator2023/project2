@@ -86,6 +86,16 @@ const v2_work_terms_formula_util_1 = require("./v2-work-terms-formula.util");
             },
         ], catalog)).toBe("invalid");
     });
+    (0, vitest_1.it)("does not invalidate schema field triggers against global catalog", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.computeWorkTriggerStatus)([
+            {
+                paramCode: "field_HuOLfL4K",
+                paramName: "Поле схемы",
+                valueCode: "yes",
+                valueLabel: "Да",
+            },
+        ], catalog)).toBe("appears");
+    });
     (0, vitest_1.it)("marks stale value as invalid", () => {
         (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.computeWorkTriggerStatus)([
             {

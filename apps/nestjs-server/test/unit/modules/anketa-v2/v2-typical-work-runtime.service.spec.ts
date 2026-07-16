@@ -118,6 +118,9 @@ function createService({
 	const laborParamRepository = repo(laborParams);
 	const assignmentRepository = repo(assignments);
 	const versionConfigRepository = repo(versionConfigs);
+	const templateVersionRepository = {
+		findOne: jest.fn(async () => null),
+	};
 	const paramCatalogService = {
 		listTriggerStatusCatalog: jest.fn(async () => []),
 	};
@@ -130,6 +133,7 @@ function createService({
 		laborParamRepository as never,
 		assignmentRepository as never,
 		versionConfigRepository as never,
+		templateVersionRepository as never,
 		paramCatalogService as never,
 	);
 }
@@ -212,6 +216,12 @@ describe("V2TypicalWorkRuntimeService", () => {
 		expect(allowed.map((task) => task.workId)).toEqual([WORK_WITH_TRIGGER]);
 		expect(blocked).toEqual([]);
 		expect(empty).toEqual([]);
+		const workFind = (service as unknown as {
+			workRepository: { find: jest.Mock };
+		}).workRepository.find;
+		const allowedWhere = workFind.mock.calls[0]?.[0]?.where;
+		expect(allowedWhere).toHaveProperty("id");
+		expect(allowedWhere).not.toHaveProperty("archComponentType");
 	});
 
 	it("returns empty when work is not assigned to stream", async () => {

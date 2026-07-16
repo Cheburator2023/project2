@@ -16,7 +16,7 @@ import {
 } from "./v2-anketa-section-ui.util";
 
 describe("v2-executor-streams.util", () => {
-	it("lists six executor stream labels", () => {
+	it("lists seven executor stream labels", () => {
 		expect(V2_EXECUTOR_STREAM_LABELS).toEqual([
 			"ДАДМ",
 			"ПиРМ",
@@ -24,6 +24,7 @@ describe("v2-executor-streams.util", () => {
 			"Контроль моделей",
 			"Цифровые агенты",
 			"Потоковые данные",
+			"Модельный стрим",
 		]);
 	});
 

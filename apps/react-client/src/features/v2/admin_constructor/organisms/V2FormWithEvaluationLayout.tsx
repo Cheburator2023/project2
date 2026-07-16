@@ -11,6 +11,8 @@ type Props = {
 	formData?: Record<string, unknown> | null;
 	calculationError?: string | null;
 	calculationLoading?: boolean;
+	uiSchema?: Record<string, unknown>;
+	liveFormData?: Record<string, unknown> | null;
 	sideMinWidth?: number;
 };
 
@@ -23,6 +25,8 @@ export function V2FormWithEvaluationLayout({
 	formData,
 	calculationError,
 	calculationLoading,
+	uiSchema,
+	liveFormData,
 	sideMinWidth = 360,
 }: Props) {
 	return (
@@ -50,6 +54,8 @@ export function V2FormWithEvaluationLayout({
 					calculationError={calculationError}
 					isLoading={calculationLoading}
 					compact
+					uiSchema={uiSchema}
+					liveFormData={liveFormData}
 				/>
 			</Box>
 		</Box>

@@ -189,7 +189,16 @@ export function TypicalWorksSidebarGrid({
 	useEffect(() => {
 		const api = gridRef.current?.api;
 		if (!api) return;
-		setCheckedWorks(api.getSelectedRows());
+		const selected = api.getSelectedRows();
+		setCheckedWorks((prev) => {
+			if (
+				prev.length === selected.length &&
+				prev.every((row, index) => row.id === selected[index]?.id)
+			) {
+				return prev;
+			}
+			return selected;
+		});
 	}, [works]);
 
 	useEffect(() => {

@@ -1,8 +1,16 @@
 import type { NodeModel } from "@minoru/react-dnd-treeview";
+import { normalizeJsonPointer } from "../utils/schemaPaths";
 import {
 	SCHEMA_CANVAS_ROOT_ID,
 	type SchemaCanvasNodeData,
 } from "./schemaCanvasTree";
+
+function canvasNodeHasChildren(
+	treeData: NodeModel<SchemaCanvasNodeData>[],
+	nodeId: string,
+): boolean {
+	return treeData.some((node) => String(node.parent) === String(nodeId));
+}
 
 export type CanvasFieldSearchCrumb = {
 	title: string;
@@ -56,14 +64,15 @@ export function buildCanvasFieldSearchOptions(
 		});
 }
 
-/** Id узлов дерева от корня до цели (для open()). */
+/** Id узлов дерева от корня до цели (включая цель). */
 export function listCanvasAncestorNodeIds(
 	treeData: NodeModel<SchemaCanvasNodeData>[],
 	targetPointer: string,
 ): string[] {
+	const pointer = normalizeJsonPointer(targetPointer);
 	const byId = new Map(treeData.map((node) => [String(node.id), node]));
 	const ids: string[] = [];
-	let current = byId.get(targetPointer);
+	let current = byId.get(pointer);
 
 	while (current) {
 		ids.unshift(String(current.id));
@@ -72,7 +81,30 @@ export function listCanvasAncestorNodeIds(
 		current = byId.get(parentId);
 	}
 
+	if (ids.length > 0) {
+		return ids;
+	}
+
+	const parts = pointer.split("/").filter(Boolean);
+	let acc = "";
+	for (const part of parts) {
+		acc += `/${part}`;
+		if (byId.has(acc)) {
+			ids.push(acc);
+		}
+	}
+
 	return ids;
+}
+
+/** Id узлов, которые нужно раскрыть, чтобы показать вложенное поле. */
+export function listCanvasExpandNodeIds(
+	treeData: NodeModel<SchemaCanvasNodeData>[],
+	targetPointer: string,
+): string[] {
+	return listCanvasAncestorNodeIds(treeData, targetPointer).filter((nodeId) =>
+		canvasNodeHasChildren(treeData, nodeId),
+	);
 }
 
 function normalizeSearchText(value: string): string {

@@ -10,7 +10,7 @@ import type {
 	V2QuestionnaireDto,
 	V2QuestionnaireFormPackageDto,
 } from "@smart-anketa/api-contract";
-import { apiClient } from "../helpers/apiClient";
+import { apiClient, API_ENTITY_CREATE_TIMEOUT_MS } from "../helpers/apiClient";
 
 const ROOT_KEY = ["v2-questionnaires"] as const;
 
@@ -57,6 +57,7 @@ export const useCreateV2Questionnaire = () => {
 				url: "/v2/questionnaires",
 				method: "POST",
 				data: body,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: () => qc.invalidateQueries({ queryKey: ROOT_KEY }),
 	});
@@ -101,6 +102,7 @@ export const useCreateV2QuestionnaireVersion = () => {
 				url: `/v2/questionnaires/${id}/new-version`,
 				method: "POST",
 				data: body,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: () => qc.invalidateQueries({ queryKey: ROOT_KEY }),
 	});
@@ -127,6 +129,7 @@ export const useSeedV2TestQuestionnaires = () => {
 				url: "/v2/questionnaires/seed-test",
 				method: "POST",
 				data: body,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: () => qc.invalidateQueries({ queryKey: ROOT_KEY }),
 	});

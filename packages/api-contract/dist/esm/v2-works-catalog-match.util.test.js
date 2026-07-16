@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildTypicalWorkFactorCoeffResolver, catalogValueMatchesTriggerRule, isSourceTypeTriggerParam, resolveLaborAnyOfCoefficient, resolveByValueLaborParamCoefficients, resolveStreamFromSourceType, resolveStreamsFromSourceSystems, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, typicalWorkRulesMatchSource, V2_SOURCE_STREAM, } from "./v2-works-catalog-match.util";
+import { buildTypicalWorkFactorCoeffResolver, catalogValueMatchesTriggerRule, isBrokenTypicalWorkTriggerRef, isMethodologyPresenceTriggerRule, isSourceTypeTriggerParam, resolveLaborAnyOfCoefficient, resolveByValueLaborParamCoefficients, resolveStreamFromSourceType, resolveStreamsFromSourceSystems, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, typicalWorkRulesMatchSource, V2_SOURCE_STREAM, } from "./v2-works-catalog-match.util";
+import { archCountTriggerMatches } from "./v2-work-arch-count-coeff.util";
+import { resolveWorkSchemaParamForRule } from "./v2-work-schema-params-match.util";
 describe("v2-works-catalog-match.util", () => {
     it("resolves the unified source stream for any source row", () => {
         // Разделение внутр/внеш убрано: любой источник → единый стрим.
@@ -274,6 +276,85 @@ describe("v2-works-catalog-match.util", () => {
             paramName: "Вид контроля: КД",
             valueCode: "кд",
             valueLabel: "КД",
+        })).toBe(true);
+    });
+    it("detects broken and methodology-only presence triggers", () => {
+        expect(isBrokenTypicalWorkTriggerRef({ paramCode: "", paramName: "?" })).toBe(true);
+        expect(isMethodologyPresenceTriggerRule({
+            paramCode: "пилот_первичный",
+            paramName: "? Пилот (первичный",
+            valueCode: null,
+            valueLabel: null,
+        })).toBe(true);
+        expect(isMethodologyPresenceTriggerRule({
+            paramCode: "повторный",
+            paramName: "повторный)",
+            valueCode: null,
+            valueLabel: null,
+        })).toBe(true);
+    });
+    it("maps control trigger to вид контроля schema field without substring false positives", () => {
+        const resolved = resolveWorkSchemaParamForRule({
+            paramCode: "вид_контроля_ок",
+            paramName: "Вид контроля: ОК",
+        }, [
+            {
+                code: "field_adjacent",
+                name: "Негативное влияние смежных проектов на показатели проекта",
+            },
+            {
+                code: "field_control",
+                name: "Вид контроля",
+                values: [{ code: "ок", label: "ОК — Оперативный контроль" }],
+            },
+        ]);
+        expect(resolved?.code).toBe("field_control");
+    });
+    it("archCountTriggerMatches uses minimum step threshold", () => {
+        expect(archCountTriggerMatches({ detailInfo: { dataMart: { name: "dm1" } } }, "dataMart", [{ count: 2, coefficient: 1 }])).toBe(false);
+        expect(archCountTriggerMatches({
+            detailInfo: {
+                dataMart: { name: "dm1" },
+            },
+        }, "dataMart", [{ count: 1, coefficient: 1 }])).toBe(true);
+    });
+    it("typicalWorkRulesMatchSource combines all params (AND) with global arch count", () => {
+        const formData = {
+            detailInfo: { dataMart: { name: "dm1" } },
+        };
+        const triggerArchCount = {
+            kind: "dataMart",
+            steps: [{ count: 1, coefficient: 1 }],
+            combinator: "and",
+        };
+        expect(typicalWorkRulesMatchSource([
+            {
+                paramCode: "type",
+                paramName: "Тип",
+                operator: "=",
+                valueCode: "internal",
+                valueLabel: "Внутренний",
+            },
+            {
+                paramCode: "region",
+                paramName: "Регион",
+                operator: "=",
+                valueCode: "eu",
+                valueLabel: "EU",
+            },
+        ], { type: "internal", region: "eu" }, formData, triggerArchCount)).toBe(true);
+        expect(typicalWorkRulesMatchSource([
+            {
+                paramCode: "type",
+                paramName: "Тип",
+                operator: "=",
+                valueCode: "internal",
+                valueLabel: "Внутренний",
+            },
+        ], { type: "internal" }, formData, {
+            kind: "dataMart",
+            steps: [{ count: 3, coefficient: 1 }],
+            combinator: "or",
         })).toBe(true);
     });
 });

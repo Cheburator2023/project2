@@ -87,6 +87,10 @@ describe("v2-default-typical-works-logic.util", () => {
         const payload = rule?.payload;
         expect(payload.worksCatalog).toBe(true);
         expect(payload.outputArrayPath).toBe("detailInfo.myTypicalTasks");
+        expect(payload.sourceContextPaths).toEqual([
+            "detailInfo.dataMart",
+            "detailInfo.dataProcess",
+        ]);
         expect(rule?.targetPath).toBe("/detailInfo/myTypicalTasks");
     });
     it("injects separate catalog rules per typicalWork block with bound work ids", () => {
@@ -214,8 +218,26 @@ describe("v2-default-typical-works-logic.util", () => {
         const rule = patched.rules.find((r) => r.id === "unified-typical-total");
         expect(rule?.dependencies).toEqual([
             "/streamDataSources/sourceTypicalTasks",
-            "/streamModelControl/field_Khn6-HAW",
+            "/streamModelControl/field_G0AoYAl8",
         ]);
+    });
+    it("drops legacy unified-control-row-total rule", () => {
+        const patched = patchV2TypicalWorksLogicRules({
+            rules: [
+                {
+                    id: "unified-control-row-total",
+                    kind: "row_computed",
+                    targetPath: "/streamModelControl/field_Khn6-HAW",
+                    condition: true,
+                    dependencies: [],
+                    payload: {
+                        fieldVar: "total",
+                        arrayPath: "streamModelControl.field_Khn6-HAW",
+                    },
+                },
+            ],
+        });
+        expect(patched.rules.some((rule) => rule.id === "unified-control-row-total")).toBe(false);
     });
     it("patches unified-typical-total to custom typicalWork output path from uiSchema", () => {
         const customPath = "streamDataSources.field_SId8TZKZ";
@@ -261,5 +283,29 @@ describe("v2-default-typical-works-logic.util", () => {
         ]);
         expect(JSON.stringify(rule?.condition)).toContain(customPath);
         expect(JSON.stringify(rule?.condition)).not.toContain("streamDataSources.sourceTypicalTasks");
+    });
+    it("injects model stream catalog rule for detailTypicalTasks block", () => {
+        const patched = patchV2TypicalWorksLogicRules({ rules: [] }, {
+            uiSchema: {
+                detailInfo: {
+                    "ui:options": {
+                        streamBlock: true,
+                        streamExecutor: "Модельный стрим",
+                    },
+                    detailTypicalTasks: {
+                        "ui:options": {
+                            archComponent: "typicalWork",
+                            streamExecutor: "Модельный стрим",
+                        },
+                    },
+                },
+            },
+        });
+        const rule = patched.rules.find((entry) => entry.id === "typical-works-catalog-detailInfo-detailTypicalTasks");
+        expect(rule).toBeTruthy();
+        const payload = rule?.payload;
+        expect(payload.worksCatalogStream).toBe("Модельный стрим");
+        expect(payload.worksCatalogAllArchComponents).toBe(true);
+        expect(payload.sourceArrayPath).toBeUndefined();
     });
 });

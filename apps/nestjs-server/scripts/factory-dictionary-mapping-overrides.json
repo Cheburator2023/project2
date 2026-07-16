@@ -1,0 +1,38 @@
+{
+	"pointers": {
+		"39": "/detailInfo/sourceSystems/items/field_HuOLfL4K",
+		"62": "/detailInfo/dataProcess/field_yJ51GkCR",
+		"63": "/detailInfo/dataProcess/deliveryMode",
+		"64": "/detailInfo/dataProcess/field_UEzs5Q87",
+		"65": "/detailInfo/dataProcess/confidentialData",
+		"66": "/detailInfo/dataProcess/field_C6oqyTPh",
+		"67": "/detailInfo/dataProcess/field_R3Lx-csF",
+		"70": "/detailInfo/dataMart/workType",
+		"75": "/detailInfo/dataMart/field_46LCnfWo",
+		"82": "/detailInfo/dataMart/field_fRuMuWtn",
+		"83": "/detailInfo/dataMart/field_L-WWLDWY",
+		"84": "/detailInfo/dataMart/field_0uV7wafS",
+		"85": "/detailInfo/dataMart/field_N9LFD6Hu",
+		"100": "/detailInfo/field_npwqpBHt/items/workType",
+		"108": "/field_aJEu5ziT/field_eCyDEFw3/items/workType"
+	},
+	"ignoreRows": [
+		"128"
+	],
+	"valueAliases": {
+		"Риск появления дополнительных систем-источников": {
+			"Да": "Есть"
+		},
+		"Процесс обработки данных|Способ предоставления данных заказчику": {
+			"Непосредственно": "Напрямую"
+		}
+	},
+	"dropCoefficientValues": {
+		"NDA": [
+			"Не требуется"
+		],
+		"Тип работ": [
+			"Неизвестно"
+		]
+	}
+}

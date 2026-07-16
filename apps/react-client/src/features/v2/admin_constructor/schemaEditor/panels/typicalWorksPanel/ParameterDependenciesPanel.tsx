@@ -16,6 +16,7 @@ import { V2_TEMPLATE_VERSION_QUERY } from "@react-client/routing/common/pathHelp
 import { useParams, useSearchParams } from "react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSchemaEditor } from "../../SchemaEditorContext";
+import { buildSchemaWorkParameters } from "./schemaWorkParameters";
 import {
 	evaluateTargetVisible,
 	isDependentTarget,
@@ -39,16 +40,35 @@ export function ParameterDependenciesPanel() {
 	const [searchParams] = useSearchParams();
 	const templateVersionId = searchParams.get(V2_TEMPLATE_VERSION_QUERY);
 	const { data: catalog, isLoading, error } = useV2WorkParametersCatalog();
-	const { logic, setLogic, fieldPathHints, recordDraftHistory } = useSchemaEditor();
+	const {
+		logic,
+		setLogic,
+		fieldPathHints,
+		recordDraftHistory,
+		jsonSchema,
+		uiSchema,
+		enumMapByCode,
+	} = useSchemaEditor();
 
 	const params = useMemo(
 		() => (catalog?.items ?? []).filter((p) => p.values.length > 0 || p.numeric),
 		[catalog?.items],
 	);
 
+	const schemaParams = useMemo(
+		() =>
+			buildSchemaWorkParameters({
+				fieldPathHints,
+				uiSchema: uiSchema as Record<string, unknown>,
+				jsonSchema,
+				enumMapByCode,
+			}),
+		[enumMapByCode, fieldPathHints, jsonSchema, uiSchema],
+	);
+
 	const bindings = useMemo(
-		() => buildParamFieldBindings(params, fieldPathHints),
-		[params, fieldPathHints],
+		() => buildParamFieldBindings(params, fieldPathHints, schemaParams),
+		[params, fieldPathHints, schemaParams],
 	);
 
 	const [draft, setDraft] = useState<ParameterDependencyDraft>({ targets: [] });

@@ -20,6 +20,8 @@ type Props = {
 	versionStatus: V2TemplateStatus;
 	isSystemCurrent: boolean;
 	savePending: boolean;
+	typicalWorkSaveBlocked?: boolean;
+	typicalWorkSaveBlockedMessage?: string | null;
 	onSaveAsNewVersion: (releaseNotes: string) => void | Promise<void>;
 	onSaveInPlace: () => void | Promise<void>;
 };
@@ -31,6 +33,8 @@ export function V2TemplateSaveDialog({
 	versionStatus,
 	isSystemCurrent,
 	savePending,
+	typicalWorkSaveBlocked = false,
+	typicalWorkSaveBlockedMessage = null,
 	onSaveAsNewVersion,
 	onSaveInPlace,
 }: Props) {
@@ -38,6 +42,7 @@ export function V2TemplateSaveDialog({
 	const [confirmInPlaceOpen, setConfirmInPlaceOpen] = useState(false);
 
 	const canSaveInPlace = versionStatus === "draft";
+	const saveBlocked = typicalWorkSaveBlocked || savePending;
 
 	useEffect(() => {
 		if (!open) {
@@ -95,6 +100,11 @@ export function V2TemplateSaveDialog({
 						{V2_TEMPLATE_VERSION_STATUS_RU[versionStatus] ?? versionStatus}
 						). Выберите способ сохранения изменений.
 					</DialogContentText>
+					{typicalWorkSaveBlocked && typicalWorkSaveBlockedMessage ? (
+						<DialogContentText color="warning.main" sx={{ mb: 2 }}>
+							{typicalWorkSaveBlockedMessage}
+						</DialogContentText>
+					) : null}
 					<Flex flexDirection="column" gap={2}>
 						<TextField
 							label="Комментарий к новой версии"
@@ -118,7 +128,7 @@ export function V2TemplateSaveDialog({
 
 						<Button
 							variant="outlined"
-							disabled={savePending || !canSaveInPlace}
+							disabled={saveBlocked || !canSaveInPlace}
 							onClick={handleSaveInPlaceClick}
 							startIcon={
 								savePending ? (
@@ -131,7 +141,7 @@ export function V2TemplateSaveDialog({
 
 						<Button
 							variant="contained"
-							disabled={savePending}
+							disabled={saveBlocked}
 							onClick={() => void onSaveAsNewVersion(releaseNotes.trim())}
 							startIcon={
 								savePending ? (

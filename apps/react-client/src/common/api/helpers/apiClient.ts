@@ -22,8 +22,17 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
+/** Базовый таймаут для GET и лёгких запросов */
+export const API_DEFAULT_TIMEOUT_MS = 63_000;
+/** Создание и клонирование сущностей (версии схем, шаблоны, анкеты, работы) */
+export const API_ENTITY_CREATE_TIMEOUT_MS = 120_000;
+/** Тяжёлые операции (импорт, экспорт, data-transfer) */
+export const API_HEAVY_OPERATION_TIMEOUT_MS = 120_000;
+/** Заводская схема: seed 73 работ + reconcile полей (может занимать несколько минут) */
+export const API_FACTORY_SCHEMA_TIMEOUT_MS = 600_000;
+
 const axiosInstance = axios.create({
-	timeout: 10000,
+	timeout: API_DEFAULT_TIMEOUT_MS,
 	headers: {
 		"Content-Type": "application/json",
 	},
@@ -48,8 +57,11 @@ function mutationScopeForUrl(url?: string): AppQueryScope | null {
 /** Внутренние/фоновые мутации не должны триггерить cross-tab refetch всего v2. */
 function shouldPublishMutationSync(url?: string): boolean {
 	if (!url) return false;
+	// POST как read/query — не меняют серверное состояние, invalidation → бесконечный refetch.
 	if (url.includes("/schema-field-sync")) return false;
 	if (url.includes("/preview")) return false;
+	if (url.includes("/calculate")) return false;
+	if (url.includes("/dictionaries/json/bulk")) return false;
 	if (url.includes("/lock") || url.includes("/renew")) return false;
 	return mutationScopeForUrl(url) !== null;
 }
@@ -79,7 +91,11 @@ axiosInstance.interceptors.request.use(
 		// FormData: убрать дефолтный application/json, иначе multer не видит файл
 		if (typeof FormData !== "undefined" && config.data instanceof FormData) {
 			const headers = config.headers;
-			if (headers && typeof (headers as { delete?: (k: string) => void }).delete === "function") {
+			if (
+				headers &&
+				typeof (headers as { delete?: (k: string) => void }).delete ===
+					"function"
+			) {
 				(headers as { delete: (k: string) => void }).delete("Content-Type");
 			} else if (headers && typeof headers === "object") {
 				delete (headers as Record<string, unknown>)["Content-Type"];
@@ -167,7 +183,7 @@ export const apiClient = async <T>({
 		headers,
 		responseType: responseType as any,
 		signal,
-		timeout,
+		timeout: timeout ?? API_DEFAULT_TIMEOUT_MS,
 	};
 
 	const response = await axiosInstance(config);

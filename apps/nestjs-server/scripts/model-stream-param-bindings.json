@@ -1,0 +1,42 @@
+{
+	"complexity": {
+		"paramCode": "complexity",
+		"schemaFieldUid": "field_61a51b98-b6a8-47c9-aa27-74ff2219513f"
+	},
+	"overallUncertainty": {
+		"paramCode": "overallUncertainty",
+		"schemaFieldUid": "field_0a089432-ff45-4f1d-90be-13040532bde3"
+	},
+	"readyPromReports": {
+		"paramCode": "readyPromReports",
+		"schemaFieldUid": "field_12d42005-7d15-4d0f-9aa0-2b6eebc596c8"
+	},
+	"assessedInitiativesCount": {
+		"paramCode": "assessedInitiativesCount",
+		"schemaFieldUid": "field_89bf48ee-4f44-4995-86fa-5cb1132abe63"
+	},
+	"field_o_HRj6VO": {
+		"paramCode": "field_o_HRj6VO",
+		"schemaFieldUid": "field_eb6300e7-8889-40bf-92a1-0c8a778de8ef"
+	},
+	"prePromEval": {
+		"paramCode": "prePromEval",
+		"schemaFieldUid": "field_7ff20c0a-1cd7-4d66-99ae-b52ed1a9bb3a"
+	},
+	"autoML": {
+		"paramCode": "autoML",
+		"schemaFieldUid": "field_8b58cf5d-ea4a-4180-8670-ff2021bcaa9b"
+	},
+	"algorithmType": {
+		"paramCode": "algorithmType",
+		"schemaFieldUid": "field_bd100464-101d-4d4e-8096-751dab52e01f"
+	},
+	"productionAdditionalReports": {
+		"paramCode": "productionAdditionalReports",
+		"schemaFieldUid": "field_d2a78102-57a7-4f7e-aad2-0cb015948496"
+	},
+	"field_jUm5syZf": {
+		"paramCode": "field_jUm5syZf",
+		"schemaFieldUid": "field_4fb7d302-c5f0-49e6-9cd2-959a1fbe1f4e"
+	}
+}

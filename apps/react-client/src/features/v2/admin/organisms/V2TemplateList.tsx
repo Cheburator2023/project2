@@ -39,11 +39,19 @@ import {
 } from "ag-grid-community";
 import { ContextMenuModule, TreeDataModule } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
-import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from "react";
+import {
+	forwardRef,
+	useCallback,
+	useImperativeHandle,
+	useMemo,
+	useRef,
+} from "react";
 import { useNavigate } from "react-router";
-import { agGridCustomMUITheme, agGridCustomMUIThemeDark } from "@react-client/theme/ag-grid/agGridCustomTheme";
+import {
+	agGridCustomMUITheme,
+	agGridCustomMUIThemeDark,
+} from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
-
 
 registerAgGridTableModules();
 ModuleRegistry.registerModules([
@@ -125,8 +133,10 @@ export type V2TemplateListHandle = {
 const dateFmt = (v: unknown) =>
 	v ? new Date(String(v)).toLocaleString("ru-RU") : "";
 
-export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListProps>(
-	function V2TemplateList({ onSelectionChange, factorySnapshot }, ref) {
+export const V2TemplateList = forwardRef<
+	V2TemplateListHandle,
+	V2TemplateListProps
+>(function V2TemplateList({ onSelectionChange, factorySnapshot }, ref) {
 	const theme = useTheme();
 	const { mode } = useColorScheme();
 	const navigate = useNavigate();
@@ -136,7 +146,8 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 			? agGridCustomMUITheme
 			: agGridCustomMUIThemeDark;
 
-	const { data: registry, isLoading: registryLoading } = useV2TemplateRegistry();
+	const { data: registry, isLoading: registryLoading } =
+		useV2TemplateRegistry();
 	const templates = registry?.items;
 	const deleteTemplate = useDeleteV2Template();
 	const restoreTemplate = useRestoreV2Template();
@@ -186,18 +197,6 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 			navigate(pathForAdminV2Template(templateId, versionId));
 		},
 		[navigate],
-	);
-
-	const resolveDefaultVersionId = useCallback(
-		(templateId: string): string | null => {
-			const t = templates?.find((x) => x.id === templateId);
-			const latestDraft = (t?.versions ?? [])
-				.filter((v) => v.status === "draft")
-				.sort((a, b) => b.versionNumber - a.versionNumber)[0];
-			if (latestDraft?.id) return latestDraft.id;
-			return t?.currentVersionId ?? null;
-		},
-		[templates],
 	);
 
 	const handleDeleteTemplate = useCallback(
@@ -286,10 +285,7 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 
 	const handleDeleteVersion = useCallback(
 		(row: V2SchemaGridVersionRow) => {
-			if (
-				systemCurrentVersionId != null &&
-				row.id === systemCurrentVersionId
-			) {
+			if (systemCurrentVersionId != null && row.id === systemCurrentVersionId) {
 				toast.error(
 					"Нельзя удалить версию — она является актуальной схемой системы",
 				);
@@ -305,16 +301,13 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 							return;
 						}
 
-						toastWithUndo(
-							`Версия ${row.versionNumber} удалена`,
-							async () => {
-								await restoreVersions.mutateAsync({
-									templateId: row.templateId,
-									versions: result.snapshot,
-								});
-								toast.success("Удаление версии отменено");
-							},
-						);
+						toastWithUndo(`Версия ${row.versionNumber} удалена`, async () => {
+							await restoreVersions.mutateAsync({
+								templateId: row.templateId,
+								versions: result.snapshot,
+							});
+							toast.success("Удаление версии отменено");
+						});
 					},
 					onError: (error) => {
 						toast.error("Не удалось удалить версию", {
@@ -330,14 +323,10 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 	const handleRowDoubleClicked = useCallback(
 		(e: RowDoubleClickedEvent<V2SchemaGridRow>) => {
 			const row = e.data;
-			if (!row) return;
-			if (row.rowKind === "version") {
-				openEditor(row.templateId, row.id);
-				return;
-			}
-			openEditor(row.id, resolveDefaultVersionId(row.id));
+			if (!row || row.rowKind !== "version") return;
+			openEditor(row.templateId, row.id);
 		},
-		[openEditor, resolveDefaultVersionId],
+		[openEditor],
 	);
 
 	const getRowStyle = useCallback(
@@ -384,11 +373,6 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 						name: "История изменений",
 						action: () => navigate(pathForAdminV2TemplateHistory(row.id)),
 						icon: '<span class="ag-icon ag-icon-menu"></span>',
-					},
-					{
-						name: "Открыть редактор",
-						action: () =>
-							openEditor(row.id, resolveDefaultVersionId(row.id)),
 					},
 					"separator",
 					{
@@ -454,7 +438,6 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 		[
 			navigate,
 			openEditor,
-			resolveDefaultVersionId,
 			handleDeleteTemplate,
 			handleBulkDeleteVersions,
 			handleDeleteVersion,
@@ -480,6 +463,13 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 
 	const columnDefs = useMemo<ColDef<V2SchemaGridRow>[]>(
 		() => [
+			{
+				field: "createdAt",
+				headerName: "Создано",
+				minWidth: 170,
+				valueGetter: (p) =>
+					p.data?.rowKind === "template" ? dateFmt(p.data.createdAt) : "",
+			},
 			{
 				colId: "actualChip",
 				headerName: "Актуальная схема",
@@ -565,8 +555,7 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 				headerName: "Код",
 				flex: 0.8,
 				minWidth: 110,
-				valueGetter: (p) =>
-					p.data?.rowKind === "template" ? p.data.code : "",
+				valueGetter: (p) => (p.data?.rowKind === "template" ? p.data.code : ""),
 			},
 			{
 				field: "description",
@@ -599,9 +588,7 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 				headerName: "Статус версии",
 				minWidth: 130,
 				valueGetter: (p) =>
-					p.data?.rowKind === "version"
-						? VERSION_STATUS_RU[p.data.status]
-						: "",
+					p.data?.rowKind === "version" ? VERSION_STATUS_RU[p.data.status] : "",
 			},
 			{
 				colId: "publishedAt",
@@ -633,10 +620,13 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 		[factorySnapshot],
 	);
 
-	const onGridReady = useCallback((e: GridReadyEvent<V2SchemaGridRow>) => {
-		gridPersistence.onGridReady(e);
-		e.api.expandAll();
-	}, [gridPersistence]);
+	const onGridReady = useCallback(
+		(e: GridReadyEvent<V2SchemaGridRow>) => {
+			gridPersistence.onGridReady(e);
+			e.api.expandAll();
+		},
+		[gridPersistence],
+	);
 
 	const loadingCombined = registryLoading;
 
@@ -698,5 +688,4 @@ export const V2TemplateList = forwardRef<V2TemplateListHandle, V2TemplateListPro
 			/>
 		</GridWrapper>
 	);
-},
-);
+});

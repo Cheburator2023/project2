@@ -4,11 +4,25 @@ import type {
 	V2WorkFormulaToken,
 	V2WorkRoundingMode,
 } from "./v2-typical-work.types";
-import { parseParamNameSourceKeys } from "./v2-work-param-source-keys.util";
+import { slugParamCode } from "./v2-param-slug.util";
+import {
+	parseParamNameSourceKeys,
+	stripParamNameSourceKeys,
+} from "./v2-work-param-source-keys.util";
+import {
+	formatArchCountCoeffSteps,
+	formatWorkArchCountKindLabel,
+	parseArchCountCoeffSteps,
+	parseWorkArchCountKindLabel,
+	resolveArchCountCoeffFromToken,
+	validateArchCountCoeffSteps,
+} from "./v2-work-arch-count-coeff.util";
 
 export type WorkFormulaEvalContext = {
 	norm: number;
 	paramCoefficients: Record<string, number>;
+	/** Полный formData анкеты — для arch_count_coeff. */
+	formData?: Record<string, unknown>;
 };
 
 export type WorkFormulaEvalResult = {
@@ -51,8 +65,16 @@ function collectParamRefKeys(ref: WorkFormulaLaborParamRef): Set<string> {
 	const keys = new Set<string>();
 	const code = ref.paramCode.trim();
 	if (code) keys.add(code);
-	for (const key of parseParamNameSourceKeys(ref.paramName).sourceKeys) {
+	const { displayName, sourceKeys } = parseParamNameSourceKeys(ref.paramName);
+	for (const key of sourceKeys) {
 		if (key.trim()) keys.add(key.trim());
+	}
+	for (const label of [
+		displayName,
+		stripParamNameSourceKeys(ref.paramName ?? ""),
+	]) {
+		const slug = slugParamCode(label.trim());
+		if (slug) keys.add(slug);
 	}
 	return keys;
 }
@@ -66,6 +88,16 @@ export function workFormulaLaborParamMatches(
 	if (token.paramName != null && group.paramName === token.paramName) return true;
 	if (token.paramName != null && group.paramCode === token.paramName) return true;
 	if (group.paramName != null && group.paramName === token.paramCode) return true;
+
+	const tokenDisplay = stripParamNameSourceKeys(token.paramName ?? "")
+		.trim()
+		.toLowerCase();
+	const groupDisplay = stripParamNameSourceKeys(group.paramName ?? "")
+		.trim()
+		.toLowerCase();
+	if (tokenDisplay && groupDisplay && tokenDisplay === groupDisplay) {
+		return true;
+	}
 
 	const tokenKeys = collectParamRefKeys({
 		paramCode: token.paramCode,
@@ -96,10 +128,25 @@ export function normalizeWorkFormulaLaborParamTokens(
 		const group = laborParams.find((g) => workFormulaLaborParamMatches(token, g));
 		if (!group) return token;
 		return {
-			...token,
+			kind: token.kind,
 			paramCode: group.paramCode,
 			paramName: group.paramName ?? group.paramCode,
 		};
+	});
+}
+
+/** Сопоставляет param-токены формулы с блоком трудоёмкости и снимает invalid при совпадении. */
+export function reconcileFormulaLaborParamTokens(
+	tokens: V2WorkFormulaToken[],
+	laborParams: readonly WorkFormulaLaborParamRef[],
+): V2WorkFormulaToken[] {
+	const normalized = normalizeWorkFormulaLaborParamTokens(tokens, laborParams);
+	return normalized.map((token) => {
+		if (!isParamToken(token)) return token;
+		if (!isWorkFormulaLaborParamKnown(token, laborParams)) return token;
+		if (!token.invalid) return token;
+		const { invalid: _invalid, ...rest } = token;
+		return rest;
 	});
 }
 
@@ -133,6 +180,8 @@ export function tokensToText(tokens: V2WorkFormulaToken[]): string {
 					return token.invalid
 						? `работа(${token.assignmentId})?`
 						: `работа(${token.assignmentId})`;
+				case "arch_count_coeff":
+					return `архкоэф(${formatWorkArchCountKindLabel(token.archComponentKind)}; ${formatArchCountCoeffSteps(token.steps)})`;
 				case "number":
 					return String(token.value);
 				case "operator":
@@ -181,6 +230,8 @@ export function formatWorkFormulaGeneralSummary(
 				}
 				case "work_ref":
 					return token.workName ? `→${token.workName}` : "→работа";
+				case "arch_count_coeff":
+					return `Кол-${formatWorkArchCountKindLabel(token.archComponentKind)}`;
 				case "number":
 					return String(token.value);
 				case "operator":
@@ -313,6 +364,59 @@ export function parseWorkFormulaText(text: string): {
 		return { kind: "param_coeff", id };
 	};
 
+	const readArchCountCoeffCall = (): V2WorkFormulaToken | null => {
+		const fnName = "архкоэф";
+		const start = i;
+		if (input.slice(i, i + fnName.length).toLowerCase() !== fnName) return null;
+		i += fnName.length;
+		skipWs();
+		if (input[i] !== "(") {
+			i = start;
+			return null;
+		}
+		i++;
+		skipWs();
+		const kindStart = i;
+		while (i < input.length && input[i] !== ";" && input[i] !== ")") i++;
+		const kindLabel = input.slice(kindStart, i).trim();
+		const kind = parseWorkArchCountKindLabel(kindLabel);
+		if (!kind) {
+			i = start;
+			return null;
+		}
+		skipWs();
+		if (input[i] !== ";") {
+			i = start;
+			return null;
+		}
+		i++;
+		skipWs();
+		const stepsStart = i;
+		let depth = 1;
+		while (i < input.length && depth > 0) {
+			const ch = input[i] ?? "";
+			if (ch === "(") depth += 1;
+			else if (ch === ")") depth -= 1;
+			if (depth > 0) i += 1;
+		}
+		const stepsRaw = input.slice(stepsStart, i).trim();
+		if (!stepsRaw) {
+			i = start;
+			return null;
+		}
+		const steps = parseArchCountCoeffSteps(stepsRaw);
+		if (!steps) {
+			i = start;
+			return null;
+		}
+		i++;
+		return {
+			kind: "arch_count_coeff",
+			archComponentKind: kind,
+			steps,
+		};
+	};
+
 	while (i < input.length) {
 		skipWs();
 		if (i >= input.length) break;
@@ -337,21 +441,33 @@ export function parseWorkFormulaText(text: string): {
 			continue;
 		}
 
+		const archCountToken = readArchCountCoeffCall();
+		if (archCountToken) {
+			tokens.push(archCountToken);
+			continue;
+		}
+
 		const fnCall =
 			readFunctionCall("коэф") ??
 			readFunctionCall("anyof") ??
 			readFunctionCall("работа");
 		if (fnCall) {
+			skipWs();
+			const invalid = input[i] === "?";
+			if (invalid) i++;
+
 			if (fnCall.kind === "work_ref") {
 				tokens.push({
 					kind: "work_ref",
 					assignmentId: fnCall.id,
+					...(invalid ? { invalid: true } : {}),
 				});
 			} else {
 				tokens.push({
 					kind: fnCall.kind,
 					paramCode: fnCall.id,
 					paramName: fnCall.id,
+					...(invalid ? { invalid: true } : {}),
 				});
 			}
 			continue;
@@ -450,6 +566,8 @@ function describeWorkFormulaTokenLabel(token: V2WorkFormulaToken): string {
 			return token.workName
 				? `работа(${token.workName})`
 				: `работа(${token.assignmentId})`;
+		case "arch_count_coeff":
+			return `архкоэф(${formatWorkArchCountKindLabel(token.archComponentKind)})`;
 		case "number":
 			return String(token.value);
 		case "operator":
@@ -581,6 +699,14 @@ export function validateWorkFormulaTokens(
 			return "Значение недоступно";
 		}
 
+		if (token.kind === "arch_count_coeff") {
+			const stepsErr = validateArchCountCoeffSteps(
+				token.archComponentKind,
+				token.steps,
+			);
+			if (stepsErr) return stepsErr;
+		}
+
 		expectOperand = false;
 	}
 
@@ -625,6 +751,18 @@ export function markFormulaParamInvalid(
 			? { ...token, invalid: true }
 			: token,
 	);
+}
+
+/** Помечает param-токены формулы invalid, если их нет в блоке трудоёмкости. */
+export function markUnknownFormulaLaborParamTokensInvalid(
+	tokens: V2WorkFormulaToken[],
+	laborParams: readonly WorkFormulaLaborParamRef[],
+): V2WorkFormulaToken[] {
+	return tokens.map((token) => {
+		if (!isParamToken(token) || token.invalid) return token;
+		if (isWorkFormulaLaborParamKnown(token, laborParams)) return token;
+		return { ...token, invalid: true };
+	});
 }
 
 export function evaluateWorkFormula(
@@ -729,6 +867,32 @@ export function evaluateWorkFormula(
 				value: null,
 				error: "Транзитивная ссылка вычисляется отдельно",
 			};
+		}
+		if (token.kind === "arch_count_coeff") {
+			if (!expectOperand)
+				return {
+					symbolic,
+					expanded: "",
+					value: null,
+					error: "Ожидался оператор",
+				};
+			const stepsErr = validateArchCountCoeffSteps(
+				token.archComponentKind,
+				token.steps,
+			);
+			if (stepsErr) {
+				return { symbolic, expanded: "", value: null, error: stepsErr };
+			}
+			const formData = ctx.formData ?? {};
+			const coeff = resolveArchCountCoeffFromToken(
+				formData,
+				token.archComponentKind,
+				token.steps,
+			);
+			values.push(coeff);
+			labels.push(String(coeff));
+			expectOperand = false;
+			continue;
 		}
 		if (token.kind === "paren_open") {
 			if (!expectOperand)

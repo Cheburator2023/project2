@@ -10,7 +10,73 @@ export const SCHEMA_EDITOR_DOCK_LAYOUT_STORAGE_KEY =
 
 const KNOWN_PANEL_IDS = new Set<string>(WORKSPACE_PANEL_IDS);
 
+const DOCK_PANEL_TITLE_BY_ID = new Map<string, string>(
+	DOCK_PANEL_HEADINGS.map(([id, title]) => [id, title]),
+);
+
 type SerializedDockLayout = ReturnType<DockviewApi["toJSON"]>;
+
+export function getDockPanelTitle(panelId: string): string {
+	return DOCK_PANEL_TITLE_BY_ID.get(panelId) ?? panelId;
+}
+
+export function getMissingDockPanelIds(api: DockviewApi): string[] {
+	const openIds = new Set(api.panels.map((panel) => panel.id));
+	return WORKSPACE_PANEL_IDS.filter((id) => !openIds.has(id));
+}
+
+function resolveDockPanelReference(api: DockviewApi): string | undefined {
+	if (api.getPanel(MAIN_DOCK_PANEL_ID)) {
+		return MAIN_DOCK_PANEL_ID;
+	}
+	return api.panels[0]?.id;
+}
+
+export function ensureDockPanel(
+	api: DockviewApi,
+	panelId: string,
+	options?: { active?: boolean },
+) {
+	const existing = api.getPanel(panelId);
+	if (existing) {
+		return existing;
+	}
+
+	if (!KNOWN_PANEL_IDS.has(panelId)) {
+		return undefined;
+	}
+
+	const referencePanel = resolveDockPanelReference(api);
+	if (!referencePanel) {
+		if (panelId !== MAIN_DOCK_PANEL_ID) {
+			return undefined;
+		}
+
+		return api.addPanel({
+			id: panelId,
+			component: panelId,
+			title: getDockPanelTitle(panelId),
+			inactive: options?.active === false,
+		});
+	}
+
+	return api.addPanel({
+		id: panelId,
+		component: panelId,
+		title: getDockPanelTitle(panelId),
+		position: { referencePanel },
+		inactive: options?.active === false,
+	});
+}
+
+/** Добавляет панели, отсутствующие в сохранённом layout (например, «Проблемы» после обновления). */
+export function ensureAllMissingDockPanels(api: DockviewApi): string[] {
+	const missing = getMissingDockPanelIds(api);
+	for (const panelId of missing) {
+		ensureDockPanel(api, panelId, { active: false });
+	}
+	return missing;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return Boolean(value) && typeof value === "object" && !Array.isArray(value);

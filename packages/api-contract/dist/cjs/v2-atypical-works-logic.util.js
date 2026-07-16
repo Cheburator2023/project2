@@ -1,5 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.computeAtypicalWorkRowTotal = computeAtypicalWorkRowTotal;
+exports.withComputedAtypicalWorkRowTotal = withComputedAtypicalWorkRowTotal;
 exports.collectAtypicalWorkArrayPaths = collectAtypicalWorkArrayPaths;
 exports.buildAtypicalWorkRowTotalRule = buildAtypicalWorkRowTotalRule;
 exports.buildUnifiedAtypicalTotalRule = buildUnifiedAtypicalTotalRule;
@@ -23,6 +25,34 @@ function readByDotPath(data, dotPath) {
         current = obj[segment];
     }
     return current;
+}
+function toFiniteFormNumber(value) {
+    if (value === null || value === undefined || value === "")
+        return null;
+    if (typeof value === "number")
+        return Number.isFinite(value) ? value : null;
+    if (typeof value === "string") {
+        const n = Number(value.replace(",", "."));
+        return Number.isFinite(n) ? n : null;
+    }
+    return null;
+}
+/** Итог строки нетиповой работы — та же формула, что row_computed на сервере. */
+function computeAtypicalWorkRowTotal(estimateHoursPerDay, coefficient) {
+    const estimate = toFiniteFormNumber(estimateHoursPerDay);
+    const coeff = toFiniteFormNumber(coefficient);
+    if (estimate === null || coeff === null)
+        return null;
+    const product = estimate * coeff;
+    return Number.isFinite(product) ? product : null;
+}
+function withComputedAtypicalWorkRowTotal(row) {
+    const total = computeAtypicalWorkRowTotal(row.estimateHoursPerDay, row.coefficient);
+    if (total === null) {
+        const { total: _removed, ...rest } = row;
+        return rest;
+    }
+    return { ...row, total };
 }
 /** Dot-пути массивов «Нетиповые работы» из uiSchema (archComponent: atypicalWork). */
 function collectAtypicalWorkArrayPaths(uiSchema, prefix = "") {

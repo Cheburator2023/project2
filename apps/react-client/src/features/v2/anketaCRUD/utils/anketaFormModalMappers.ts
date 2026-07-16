@@ -2,6 +2,7 @@ import type { DataSourceFormValues } from "@react-client/features/playground/v2_
 import type { ModelServiceFormValues } from "@react-client/features/playground/v2_playground/organisms/ModelServiceModal";
 import type { NonStandardTaskFormValues } from "@react-client/features/playground/v2_playground/organisms/NonStandardTaskModal";
 import type { V2AnketaModalKind } from "@smart-anketa/api-contract";
+import { computeAtypicalWorkRowTotal } from "@smart-anketa/api-contract";
 
 const SOURCE_TYPE_TO_SCHEMA: Record<string, string> = {
 	internal: "Внутренний",
@@ -122,17 +123,17 @@ export function mapNonStandardTaskToAtypicalTask(
 ): Record<string, unknown> {
 	const estimateHoursPerDay = numericOrUndefined(values.estimateHours);
 	const coefficient = numericOrUndefined(values.coefficient);
-	const total =
-		estimateHoursPerDay != null && coefficient != null
-			? Math.round(estimateHoursPerDay * coefficient)
-			: undefined;
+	const total = computeAtypicalWorkRowTotal(
+		estimateHoursPerDay,
+		coefficient,
+	);
 
 	return {
 		name: values.name,
 		workType: values.workType,
 		estimateHoursPerDay,
 		coefficient,
-		total,
+		total: total ?? undefined,
 		includeInCalculation: values.includeInCalculation,
 	};
 }

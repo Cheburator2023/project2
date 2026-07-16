@@ -1,4 +1,6 @@
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -17,9 +19,11 @@ import {
 	useV2FactorySnapshotSetting,
 } from "@react-client/common/api/queries/v2-templates";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
+import { isApiGatewayOrTimeoutError } from "@react-client/common/api/helpers/isApiGatewayOrTimeoutError";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { toast } from "@react-client/common/toasts";
+import { waitForV2FactoryTemplateReady } from "@react-client/features/v2/admin/utils/waitForV2FactoryTemplateReady";
 import { buildEmptyV2AnketaTemplateSnapshot } from "@smart-anketa/api-contract";
 import {
 	coerceJsonSchema,
@@ -35,7 +39,7 @@ export function buildDefaultV2SchemaName(
 	username: string | null | undefined,
 	at: Date = new Date(),
 ): string {
-	const dateLabel = format(at, "dd.MM.yyyy");
+	const dateLabel = format(at, "dd.MM.yyyy HH:mm");
 	const trimmedUser = username?.trim();
 	return trimmedUser
 		? `Схема ${trimmedUser} ${dateLabel}`
@@ -69,6 +73,8 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 	const [name, setName] = useState(() => buildDefaultV2SchemaName(null));
 	const [description, setDescription] = useState("Краткое описание для админки");
 	const [initialKind, setInitialKind] = useState<V2SchemaInitialKind>("default");
+	const [progressLabel, setProgressLabel] = useState<string | null>(null);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const reset = useCallback(() => {
 		setName(buildDefaultV2SchemaName(username));
@@ -83,6 +89,7 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 	}, [open, username]);
 
 	const pending =
+		isSubmitting ||
 		createTemplate.isPending ||
 		createVersion.isPending ||
 		createFromDefault.isPending;
@@ -98,6 +105,8 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 		if (!trimmedName) return;
 
 		try {
+			setIsSubmitting(true);
+			setProgressLabel("Создаём схему и первую версию…");
 			const created = await createTemplate.mutateAsync({
 				code: `schema-${Date.now()}`,
 				name: trimmedName,
@@ -117,10 +126,37 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 					},
 				});
 			} else {
-				await createFromDefault.mutateAsync({
-					templateId: created.id,
-					withoutTypicalWorks: initialKind === "defaultWithoutTypicalWorks",
+				const withoutTypicalWorks =
+					initialKind === "defaultWithoutTypicalWorks";
+				let versionRequestFailed = false;
+
+				try {
+					await createFromDefault.mutateAsync({
+						templateId: created.id,
+						withoutTypicalWorks,
+					});
+				} catch (error) {
+					if (!isApiGatewayOrTimeoutError(error)) {
+						throw error;
+					}
+					versionRequestFailed = true;
+				}
+
+				setProgressLabel(
+					withoutTypicalWorks
+						? "Проверяем готовность черновика…"
+						: "Загружаем типовые работы…",
+				);
+				const ready = await waitForV2FactoryTemplateReady(created.id, {
+					withoutTypicalWorks,
 				});
+				if (!ready) {
+					throw new Error(
+						versionRequestFailed
+							? "Схема создаётся дольше обычного. Обновите страницу через минуту."
+							: "Не удалось дождаться загрузки типовых работ.",
+					);
+				}
 			}
 
 			toast.success(
@@ -131,25 +167,50 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 						: "Схема создана из заводского эталона",
 			);
 			reset();
+			setProgressLabel(null);
 			onClose();
 			navigate(pathForAdminV2Template(created.id));
 		} catch (error) {
 			toast.error("Не удалось создать схему", {
 				description: apiErrorMessage(error),
 			});
+		} finally {
+			setIsSubmitting(false);
+			setProgressLabel(null);
 		}
 	};
 
 	return (
 		<Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
 			<DialogTitle>Новая схема</DialogTitle>
-			<DialogContent>
+			<DialogContent sx={{ position: "relative" }}>
+				{pending ? (
+					<Box
+						sx={{
+							position: "absolute",
+							inset: 0,
+							zIndex: 1,
+							display: "flex",
+							flexDirection: "column",
+							alignItems: "center",
+							justifyContent: "center",
+							gap: 12,
+							bgcolor: "rgba(255, 255, 255, 0.72)",
+						}}
+					>
+						<CircularProgress size={36} />
+						<Typography variant="body2" color="text.secondary">
+							{progressLabel ?? "Создаём схему и первую версию…"}
+						</Typography>
+					</Box>
+				) : null}
 				<Flex flexDirection="column">
 					<TextField
 						autoFocus
 						margin="dense"
 						label="Название"
 						fullWidth
+						disabled={pending}
 						value={name}
 						onChange={(e) => setName(e.target.value)}
 					/>
@@ -160,11 +221,12 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 						fullWidth
 						multiline
 						minRows={2}
+						disabled={pending}
 						value={description}
 						onChange={(e) => setDescription(e.target.value)}
 					/>
 					<Spacer />
-					<FormControl component="fieldset" margin="dense">
+					<FormControl component="fieldset" margin="dense" disabled={pending}>
 						<FormLabel component="legend">Начальное содержимое</FormLabel>
 						<RadioGroup
 							value={initialKind}
@@ -233,7 +295,10 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 					disabled={pending || !name.trim()}
 					onClick={() => void handleSubmit()}
 				>
-					Создать
+					{pending ? (
+						<CircularProgress size={16} color="inherit" sx={{ mr: 1 }} />
+					) : null}
+					{pending ? "Создание…" : "Создать"}
 				</Button>
 			</DialogActions>
 		</Dialog>

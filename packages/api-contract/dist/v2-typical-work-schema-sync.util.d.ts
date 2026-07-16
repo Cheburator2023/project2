@@ -6,6 +6,8 @@ export type V2TypicalWorkSchemaFieldSyncRequestDto = {
     field: {
         schemaFieldUid: string;
         previousCode?: string | null;
+        /** Доп. legacy-коды (slug, sourceKeys) для сопоставления правил/формул. */
+        aliasCodes?: string[];
         code?: string | null;
         name?: string | null;
         values?: Array<{
@@ -22,6 +24,10 @@ export type V2TypicalWorkSchemaFieldSyncImpactDto = {
     laborParamsUpdated: number;
     laborParamsRemoved: number;
     formulasInvalidated: number;
+};
+export type V2TypicalWorkSchemaBulkSyncResponseDto = V2TypicalWorkSchemaFieldSyncImpactDto & {
+    fieldsProcessed: number;
+    consistencyIssues: import("./v2-template-work-schema-params.util").TypicalWorkSchemaConsistencyIssue[];
 };
 export declare function reconcileTypicalWorkCardWithSchemaField(card: V2TypicalWorkCardDto, request: V2TypicalWorkSchemaFieldSyncRequestDto): {
     card: V2TypicalWorkCardDto;

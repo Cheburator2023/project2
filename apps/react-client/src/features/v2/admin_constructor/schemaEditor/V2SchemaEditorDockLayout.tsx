@@ -20,6 +20,7 @@ import { workspacePanelComponents } from "./workspacePanels";
 import {
 	buildDefaultDockLayout,
 	clearSchemaEditorDockLayoutStorage,
+	ensureAllMissingDockPanels,
 	restoreSchemaEditorDockLayout,
 	writeSchemaEditorDockLayout,
 } from "./schemaEditorDockLayout.util";
@@ -81,6 +82,8 @@ export function V2SchemaEditorDockLayout() {
 		const restored = restoreSchemaEditorDockLayout(api);
 		if (!restored) {
 			buildDefaultDockLayout(api);
+		} else {
+			ensureAllMissingDockPanels(api);
 		}
 
 		finishDockInitialization(api, containerRef.current, () => {
@@ -108,7 +111,6 @@ export function V2SchemaEditorDockLayout() {
 	const onReady = useCallback(
 		(event: DockviewReadyEvent) => {
 			dockApiRef.current = event.api;
-			registerDockApi(event.api);
 
 			layoutChangeDisposableRef.current?.dispose();
 			layoutChangeDisposableRef.current = event.api.onDidLayoutChange(() => {
@@ -117,9 +119,12 @@ export function V2SchemaEditorDockLayout() {
 
 			if (event.api.totalPanels === 0) {
 				applyInitialLayout(event.api);
+				registerDockApi(event.api);
 				return;
 			}
 
+			ensureAllMissingDockPanels(event.api);
+			registerDockApi(event.api);
 			layoutPersistenceReadyRef.current = true;
 			finishDockInitialization(event.api, containerRef.current, () => {
 				setIsDockReady(true);

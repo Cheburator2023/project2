@@ -39,6 +39,14 @@ const readEnvFlag = (
 	return raw === "true" || raw === "1";
 };
 
+const resolveDbLogging = (configService: ConfigService): boolean => {
+	if (configService.get<string | undefined>("DB_LOGGING") !== undefined) {
+		return readEnvFlag(configService, "DB_LOGGING", false);
+	}
+	// LOGGING — legacy alias (раньше включал все SQL-запросы по умолчанию)
+	return readEnvFlag(configService, "LOGGING", false);
+};
+
 const resolveSynchronize = (configService: ConfigService): boolean => {
 	if (configService.get<string>("NODE_ENV") === "production") {
 		return false;
@@ -65,7 +73,7 @@ export const getTypeOrmModuleOptions = (
 		migrations: [join(__dirname, "../../migrations/*{.ts,.js}")],
 		migrationsRun: readEnvFlag(configService, "DB_MIGRATIONS_RUN", true),
 		synchronize: resolveSynchronize(configService),
-		logging: readEnvFlag(configService, "LOGGING", true),
+		logging: resolveDbLogging(configService),
 		autoLoadEntities: readEnvFlag(configService, "AUTO_LOAD_ENTITIES", false),
 	};
 };
@@ -75,8 +83,6 @@ export const getDataSourceOptions = (
 ): DataSourceOptions => {
 	const dbConfig = getDatabaseConfig(configService);
 	const { schema, ...connectionConfig } = dbConfig;
-
-	console.log(connectionConfig);
 
 	return {
 		type: "postgres",
@@ -91,6 +97,6 @@ export const getDataSourceOptions = (
 		migrations: [join(__dirname, "../../migrations/*{.ts,.js}")],
 		migrationsRun: readEnvFlag(configService, "DB_MIGRATIONS_RUN", true),
 		synchronize: resolveSynchronize(configService),
-		logging: readEnvFlag(configService, "LOGGING", true),
+		logging: resolveDbLogging(configService),
 	};
 };

@@ -35,7 +35,11 @@ import type {
 import { useMemo } from "react";
 
 import { parseDictionaryJsonToEnumPair } from "@react-client/features/v2/admin_constructor/utils/dictionaryPreview";
-import { apiClient } from "../helpers/apiClient";
+import {
+	apiClient,
+	API_ENTITY_CREATE_TIMEOUT_MS,
+	API_FACTORY_SCHEMA_TIMEOUT_MS,
+} from "../helpers/apiClient";
 
 export type DeleteV2TemplateInput =
 	| string
@@ -158,6 +162,7 @@ export const useCreateV2Template = () => {
 				url: "/v2/templates",
 				method: "POST",
 				data: dto,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: () => {
 			void invalidateV2TemplatesList(queryClient);
@@ -189,21 +194,23 @@ export const useUpdateV2Template = () => {
 export const useDeleteV2Template = () => {
 	const queryClient = useQueryClient();
 
-	return useMutation<V2TemplateDeleteSnapshotDto, Error, DeleteV2TemplateInput>({
-		mutationFn: (input) => {
-			const { id } = resolveDeleteTemplateInput(input);
-			return apiClient<V2TemplateDeleteSnapshotDto>({
-				url: `/v2/templates/${id}`,
-				method: "DELETE",
-			});
+	return useMutation<V2TemplateDeleteSnapshotDto, Error, DeleteV2TemplateInput>(
+		{
+			mutationFn: (input) => {
+				const { id } = resolveDeleteTemplateInput(input);
+				return apiClient<V2TemplateDeleteSnapshotDto>({
+					url: `/v2/templates/${id}`,
+					method: "DELETE",
+				});
+			},
+			onSettled: (_, __, input) => {
+				const { id, skipCacheRefresh } = resolveDeleteTemplateInput(input);
+				if (skipCacheRefresh) return;
+				void invalidateV2TemplatesList(queryClient);
+				void removeV2TemplateFromCache(queryClient, id);
+			},
 		},
-		onSettled: (_, __, input) => {
-			const { id, skipCacheRefresh } = resolveDeleteTemplateInput(input);
-			if (skipCacheRefresh) return;
-			void invalidateV2TemplatesList(queryClient);
-			void removeV2TemplateFromCache(queryClient, id);
-		},
-	});
+	);
 };
 
 export const useRestoreV2Template = () => {
@@ -215,6 +222,7 @@ export const useRestoreV2Template = () => {
 				url: "/v2/templates/restore",
 				method: "POST",
 				data: snapshot,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: (_, snapshot) => {
 			void invalidateV2TemplatesList(queryClient);
@@ -259,6 +267,7 @@ export const useRestoreV2TemplateVersions = () => {
 				url: `/v2/templates/${templateId}/versions/restore`,
 				method: "POST",
 				data: { versions },
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: (_, { templateId }) => {
 			queryClient.invalidateQueries({
@@ -311,6 +320,7 @@ export const useCreateV2TemplateVersionFromDefault = () => {
 					withoutTypicalWorks ? "?withoutTypicalWorks=true" : ""
 				}`,
 				method: "POST",
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: (_, { templateId }) => {
 			void invalidateV2TemplatesList(queryClient);
@@ -335,7 +345,7 @@ export const useCreateV2TemplateVersion = () => {
 				url: `/v2/templates/${templateId}/versions`,
 				method: "POST",
 				data: dto,
-				timeout: 60_000,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: (_, { templateId }) => {
 			queryClient.invalidateQueries({
@@ -363,7 +373,7 @@ export const useUpdateV2TemplateVersion = () => {
 				url: `/v2/templates/${templateId}/versions/${versionId}`,
 				method: "PUT",
 				data: dto,
-				timeout: 60_000,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: (_, { templateId, versionId }) => {
 			queryClient.invalidateQueries({
@@ -394,6 +404,7 @@ export const usePublishV2TemplateVersion = () => {
 				url: `/v2/templates/${templateId}/versions/${versionId}/publish`,
 				method: "POST",
 				data: dto,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: (_, { templateId, versionId }) => {
 			void invalidateV2TemplatesList(queryClient);
@@ -445,6 +456,7 @@ export const useRollbackV2TemplateVersion = () => {
 				url: `/v2/templates/${templateId}/versions/rollback`,
 				method: "POST",
 				data: dto,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: (_, { templateId }) => {
 			queryClient.invalidateQueries({
@@ -454,7 +466,10 @@ export const useRollbackV2TemplateVersion = () => {
 	});
 };
 
-function refreshV2TemplateRegistry(queryClient: QueryClient, templateId: string) {
+function refreshV2TemplateRegistry(
+	queryClient: QueryClient,
+	templateId: string,
+) {
 	invalidateV2TemplateRegistry(queryClient, [templateId]);
 }
 
@@ -470,7 +485,7 @@ export const useActivateV2TemplateVersionAsCurrent = () => {
 			apiClient<V2TemplateVersionDto>({
 				url: `/v2/templates/${templateId}/versions/${versionId}/activate-as-current`,
 				method: "POST",
-				timeout: 60_000,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSettled: (_, __, { templateId }) => {
 			refreshV2TemplateRegistry(queryClient, templateId);
@@ -487,6 +502,7 @@ export const useResetV2TemplateToDefault = () => {
 			apiClient<V2TemplateVersionDto>({
 				url: `/v2/templates/${templateId}/versions/reset-default`,
 				method: "POST",
+				timeout: API_FACTORY_SCHEMA_TIMEOUT_MS,
 			}),
 		onSuccess: (_, templateId) => {
 			queryClient.invalidateQueries({ queryKey: ["v2-audit"] });
@@ -595,6 +611,7 @@ export const useCreateV2Dictionary = () => {
 				url: "/v2/dictionaries",
 				method: "POST",
 				data: dto,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries"] });
@@ -685,6 +702,7 @@ export const useResetV2DictionaryToDefault = () => {
 			apiClient<V2DictionaryDto>({
 				url: `/v2/dictionaries/${id}/reset-default`,
 				method: "POST",
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: (_, id) => {
 			queryClient.invalidateQueries({ queryKey: ["v2-dictionaries"] });
@@ -735,6 +753,7 @@ export const useCreateV2DictionaryItem = () => {
 				url: `/v2/dictionaries/${dictionaryId}/items`,
 				method: "POST",
 				data: dto,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: (_, { dictionaryId }) => {
 			queryClient.invalidateQueries({
@@ -830,10 +849,7 @@ export const useV2DictionaryEnumsMaps = (dictionaryCodes: string[]) => {
 	});
 
 	const enumMapByCode = useMemo(() => {
-		const result: Record<
-			string,
-			{ enums: string[]; enumNames: string[] }
-		> = {};
+		const result: Record<string, { enums: string[]; enumNames: string[] }> = {};
 		if (!data) return result;
 		for (const code of uniqueSorted) {
 			const snapshot = data[code];

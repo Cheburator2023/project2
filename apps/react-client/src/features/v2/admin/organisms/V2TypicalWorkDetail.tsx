@@ -1,13 +1,16 @@
 import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import Typography from "@mui/material/Typography";
+import { useV2TypicalWorkCard } from "@react-client/common/api/queries/v2-works";
+import { useV2Template } from "@react-client/common/api/queries/v2-templates";
+import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
+import { TypicalWorkCardView } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/TypicalWorkCardView";
 import { resolveEffectiveWorkArchComponentType } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/schemaWorkParameters";
 import type { V2TypicalWorkListItemDto } from "@smart-anketa/api-contract";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export type V2TypicalWorkHeaderState = {
 	title: string;
@@ -25,6 +28,27 @@ export function V2TypicalWorkDetail({
 	layout = "workspace",
 	onHeaderChange,
 }: V2TypicalWorkDetailProps) {
+	const [streamExecutor, setStreamExecutor] = useState<string | null>(
+		work.streams[0] ?? null,
+	);
+
+	useEffect(() => {
+		setStreamExecutor(work.streams[0] ?? null);
+	}, [work.id, work.streams]);
+
+	const templateId = work.templateId?.trim() ?? "";
+	const { data: template, isLoading: templateLoading } =
+		useV2Template(templateId);
+	const templateVersionId = template?.currentVersionId ?? null;
+
+	const {
+		data: card,
+		isLoading,
+		error,
+	} = useV2TypicalWorkCard(work.id, streamExecutor, templateVersionId, {
+		enabled: Boolean(streamExecutor) && (!templateId || !templateLoading),
+	});
+
 	useEffect(() => {
 		onHeaderChange?.({
 			title: work.name,
@@ -44,19 +68,19 @@ export function V2TypicalWorkDetail({
 			sx={{ overflow: "auto" }}
 		>
 			<Flex flexDirection="column" gap={16}>
-				<Box>
+				<Flex flexDirection="column" gap={4}>
 					<Typography variant="overline" color="text.secondary">
 						Карточка работы
 					</Typography>
-					<Typography variant="h6" fontWeight={700} sx={{ mt: 0.5 }}>
+					<Typography variant="h6" fontWeight={700}>
 						{work.name}
 					</Typography>
-				</Box>
+				</Flex>
 
 				<Divider />
 
-				<Box>
-					<Typography variant="subtitle2" fontWeight={700} gutterBottom>
+				<Flex flexDirection="column" gap={8}>
+					<Typography variant="subtitle2" fontWeight={700}>
 						Атрибуты
 					</Typography>
 					<Flex flexDirection="column" gap={1.25}>
@@ -76,37 +100,60 @@ export function V2TypicalWorkDetail({
 								{work.workType ?? "—"}
 							</Typography>
 						</Flex>
+						{work.templateName ? (
+							<Flex justifyContent="space-between" gap={8}>
+								<Typography variant="body2" color="text.secondary">
+									Схема
+								</Typography>
+								<Typography variant="body2" textAlign="right">
+									{work.templateName}
+								</Typography>
+							</Flex>
+						) : null}
 					</Flex>
-				</Box>
+				</Flex>
 
-				<Box>
-					<Typography variant="subtitle2" fontWeight={700} gutterBottom>
-						Стримы
-					</Typography>
-					{work.streams.length === 0 ? (
-						<Typography variant="body2" color="text.secondary">
-							Работа ещё не назначена ни на один стрим. Назначение выполняется в
-							редакторе логики шаблона.
+				{work.streams.length > 0 ? (
+					<Flex flexDirection="column" gap={8}>
+						<Typography variant="subtitle2" fontWeight={700}>
+							Стримы
 						</Typography>
-					) : (
 						<Flex gap={0.75} wrap="wrap">
 							{work.streams.map((stream) => (
 								<Chip
 									key={stream}
 									size="small"
 									label={stream}
-									variant="outlined"
-									sx={{ opacity: 0.85 }}
+									variant={stream === streamExecutor ? "filled" : "outlined"}
+									color={stream === streamExecutor ? "primary" : "default"}
+									onClick={() => setStreamExecutor(stream)}
+									sx={{ cursor: "pointer" }}
 								/>
 							))}
 						</Flex>
-					)}
-				</Box>
+					</Flex>
+				) : null}
 
-				<Alert severity="info">
-					Нормы, формула, параметры трудоёмкости и триггеры настраиваются в редакторе
-					логики шаблона (вкладка «Логика») для каждого стрима отдельно.
-				</Alert>
+				<Divider />
+
+				{work.streams.length === 0 ? (
+					<Alert severity="info">
+						Работа ещё не назначена ни на один стрим. Назначение и настройка
+						условий выполняются в редакторе логики шаблона.
+					</Alert>
+				) : (
+					<TypicalWorkCardView
+						card={card}
+						loading={isLoading || (Boolean(templateId) && templateLoading)}
+						error={error ? apiErrorMessage(error) : null}
+						availableStreams={work.streams}
+						streamExecutor={streamExecutor}
+						onStreamChange={setStreamExecutor}
+						hideHeader
+						embedded
+						readOnlyRegistry
+					/>
+				)}
 			</Flex>
 		</Card>
 	);

@@ -988,10 +988,7 @@ export function SchemaCanvasPanel({
 
 	useEffect(() => {
 		if (mainTab !== "designer" || !selectedPointer) return;
-		const frame = requestAnimationFrame(() => {
-			revealCanvasFieldPointer(treeRef.current, treeData, selectedPointer);
-		});
-		return () => cancelAnimationFrame(frame);
+		revealCanvasFieldPointer(treeRef.current, treeData, selectedPointer);
 	}, [mainTab, selectedPointer, treeData]);
 
 	const hasExpandableNodes = useMemo(

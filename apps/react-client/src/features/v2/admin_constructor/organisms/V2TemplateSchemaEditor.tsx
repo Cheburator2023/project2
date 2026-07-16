@@ -25,6 +25,7 @@ import {
 } from "@react-client/common/crossTab/appBroadcast";
 import type {
 	CreateV2TemplateVersionRequestDto,
+	TypicalWorkSchemaConsistencyIssue,
 	V2LogicRuleDto,
 } from "@smart-anketa/api-contract";
 import {
@@ -43,7 +44,10 @@ import { useBrowserRouterNavigationBlocker } from "../hooks/useBrowserRouterNavi
 import { clampCanvasInsertIndex } from "../schemaEditor/schemaCanvasTree";
 import { SchemaEditorProvider } from "../schemaEditor/SchemaEditorContext";
 import type { SchemaEditorContextValue } from "../schemaEditor/SchemaEditorContext";
-import type { SchemaEditorMainTab } from "../schemaEditor/types";
+import {
+	saveGateStateEquals,
+	type TypicalWorkSaveGateState,
+} from "../schemaEditor/typicalWorkSaveGate";
 import { SchemaEditorDockProvider } from "../schemaEditor/SchemaEditorDockContext";
 import {
 	canBindDictionaryToField,
@@ -52,12 +56,21 @@ import {
 	readLeafUiOptions,
 } from "../schemaEditor/propertiesFieldKind";
 import { V2SchemaEditorDockLayout } from "../schemaEditor/V2SchemaEditorDockLayout";
-import { LOGIC_TAB_QUERY } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
+import { LOGIC_TAB_QUERY, WORK_ID_QUERY } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
+import { TypicalWorksPanelPersistentRoot } from "../schemaEditor/panels/typicalWorksPanel/typicalWorksPanelPersistentMount";
+import { TypicalWorksPanel } from "../schemaEditor/panels/typicalWorksPanel/TypicalWorksPanel";
 import {
 	buildSchemaWorkParameters,
 	schemaParamIdFromPointer,
 } from "../schemaEditor/panels/typicalWorksPanel/schemaWorkParameters";
-import { useSyncV2TypicalWorksSchemaField } from "@react-client/common/api/queries/v2-works";
+import type { SchemaEditorIssue } from "../schemaEditor/collectSchemaEditorIssues";
+import type { TypicalWorkNavFocus } from "../schemaEditor/schemaEditorIssueNavigation";
+import {
+	issueSupportsDesignerNavigation,
+	issueSupportsLogicNavigation,
+} from "../schemaEditor/schemaEditorIssueNavigation";
+import { useSchemaEditorUiStore } from "../schemaEditor/schemaEditorUiStore";
+import { useSyncV2TypicalWorksSchemaField, useBulkSyncV2TypicalWorksSchemaFields } from "@react-client/common/api/queries/v2-works";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
 import { useDebouncedV2Calculation } from "../hooks/useDebouncedV2Calculation";
@@ -207,19 +220,32 @@ export const V2TemplateSchemaEditor = ({
 	onHeaderActionsChange,
 }: V2TemplateSchemaEditorProps) => {
 	const navigate = useNavigate();
-	const [, setSearchParams] = useSearchParams();
+	const [searchParams, setSearchParams] = useSearchParams();
+	const skipLeaveGuardRef = useRef(false);
+	const migratedLogicUrlParamsRef = useRef(false);
+
+	const setLogicWorkspaceTabInStore = useSchemaEditorUiStore(
+		(s) => s.setLogicWorkspaceTab,
+	);
+
+	const runInternalEditorNavigation = useCallback((fn: () => void) => {
+		skipLeaveGuardRef.current = true;
+		try {
+			fn();
+		} finally {
+			window.setTimeout(() => {
+				skipLeaveGuardRef.current = false;
+			}, 0);
+		}
+	}, []);
+
 	const setLogicWorkspaceTab = useCallback(
 		(tab: "works" | "dependencies" | "jsonlogic") => {
-			setSearchParams(
-				(prev) => {
-					const next = new URLSearchParams(prev);
-					next.set(LOGIC_TAB_QUERY, tab);
-					return next;
-				},
-				{ replace: true },
-			);
+			runInternalEditorNavigation(() => {
+				setLogicWorkspaceTabInStore(tab);
+			});
 		},
-		[setSearchParams],
+		[runInternalEditorNavigation, setLogicWorkspaceTabInStore],
 	);
 	const isAdminEditor = wording === "adminSchema";
 
@@ -227,6 +253,7 @@ export const V2TemplateSchemaEditor = ({
 		data: template,
 		error: templateError,
 		isError: templateLoadError,
+		isPending: templatePending,
 	} = useV2Template(templateId);
 	const { data: v2Dictionaries = [] } = useV2Dictionaries();
 	const {
@@ -255,10 +282,14 @@ export const V2TemplateSchemaEditor = ({
 
 	const {
 		data: activeVersion,
-		isLoading: activeVersionLoading,
+		isPending: activeVersionPending,
 		isError: activeVersionLoadError,
 		error: activeVersionError,
 	} = useV2TemplateVersion(templateId, activeVersionId);
+
+	const isEditorBootstrapping =
+		(templatePending && !template) ||
+		(Boolean(activeVersionId) && activeVersionPending && !activeVersion);
 
 	const isSystemCurrent = Boolean(
 		template?.currentVersionId &&
@@ -271,6 +302,42 @@ export const V2TemplateSchemaEditor = ({
 	}, [activeVersionId, initialVersionId, onVersionIdChange]);
 
 	const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+	const [typicalWorkSaveGate, setTypicalWorkSaveGate] =
+		useState<TypicalWorkSaveGateState | null>(null);
+	const typicalWorkRetryRef = useRef<(() => void) | undefined>(undefined);
+	const registerTypicalWorkSaveGate = useCallback(
+		(state: TypicalWorkSaveGateState | null) => {
+			typicalWorkRetryRef.current = state?.onRetry;
+			setTypicalWorkSaveGate((prev) => {
+				const next =
+					state == null
+						? null
+						: {
+								blocked: state.blocked,
+								message: state.message,
+								status: state.status,
+								workName: state.workName,
+								errorMessage: state.errorMessage,
+							};
+				return saveGateStateEquals(prev, next) ? prev : next;
+			});
+		},
+		[],
+	);
+	const typicalWorkSaveDisplay = useMemo(
+		() =>
+			typicalWorkSaveGate
+				? {
+						...typicalWorkSaveGate,
+						onRetry: typicalWorkRetryRef.current,
+					}
+				: null,
+		[typicalWorkSaveGate],
+	);
+	const typicalWorkSaveBlocked = typicalWorkSaveGate?.blocked ?? false;
+	const typicalWorkSaveBlockedMessage =
+		typicalWorkSaveGate?.message ??
+		"Сохраните типовую работу в панели логики перед сохранением схемы";
 
 	const [jsonSchema, setJsonSchema] = useState<RJSFSchema>(EMPTY_JSON_SCHEMA);
 	const [uiSchema, setUiSchema] = useState<UiSchema>({});
@@ -292,13 +359,68 @@ export const V2TemplateSchemaEditor = ({
 	const [draftPast, setDraftPast] = useState<DraftHistorySnapshot[]>([]);
 	const [draftFuture, setDraftFuture] = useState<DraftHistorySnapshot[]>([]);
 
-	const [mainTab, setMainTab] = useState<SchemaEditorMainTab>("designer");
+	const editorHasLoadedRef = useRef(false);
+
+	const mainTab = useSchemaEditorUiStore((s) => s.mainTab);
+	const typicalWorkNavFocus = useSchemaEditorUiStore((s) => s.typicalWorkNavFocus);
+	const activateMainTab = useSchemaEditorUiStore((s) => s.activateMainTab);
+	const prepareTypicalWorkNavigation = useSchemaEditorUiStore(
+		(s) => s.prepareTypicalWorkNavigation,
+	);
+	const clearTypicalWorkNavFocus = useSchemaEditorUiStore(
+		(s) => s.clearTypicalWorkNavFocus,
+	);
+
+	useEffect(() => {
+		useSchemaEditorUiStore.getState().initForTemplate(templateId);
+	}, [templateId]);
+
+	useEffect(() => {
+		if (migratedLogicUrlParamsRef.current) return;
+
+		const legacyLogicTab = searchParams.get(LOGIC_TAB_QUERY);
+		const legacyWorkId = searchParams.get(WORK_ID_QUERY);
+		if (!legacyLogicTab && !legacyWorkId) {
+			migratedLogicUrlParamsRef.current = true;
+			return;
+		}
+
+		migratedLogicUrlParamsRef.current = true;
+		runInternalEditorNavigation(() => {
+			const store = useSchemaEditorUiStore.getState();
+			if (
+				legacyLogicTab === "works" ||
+				legacyLogicTab === "dependencies" ||
+				legacyLogicTab === "jsonlogic"
+			) {
+				store.setLogicWorkspaceTab(legacyLogicTab);
+			}
+			if (legacyWorkId) {
+				store.prepareTypicalWorkNavigation(legacyWorkId);
+			}
+			if (legacyLogicTab || legacyWorkId) {
+				store.activateMainTab("logic");
+			}
+			setSearchParams(
+				(prev) => {
+					const next = new URLSearchParams(prev);
+					next.delete(LOGIC_TAB_QUERY);
+					next.delete(WORK_ID_QUERY);
+					return next;
+				},
+				{ replace: true },
+			);
+		});
+	}, [runInternalEditorNavigation, searchParams, setSearchParams]);
 
 	const [selectedRuleId, setSelectedRuleId] = useState<string | null>(
 		initialRuleId,
 	);
 	const [depsDraft, setDepsDraft] = useState("");
 	const [monacoError, setMonacoError] = useState<string | null>(null);
+	const [schemaConsistencyIssues, setSchemaConsistencyIssues] = useState<
+		TypicalWorkSchemaConsistencyIssue[]
+	>([]);
 	const [logicPathPick, setLogicPathPick] = useState<string>("");
 	const [triggerParamPickId, setTriggerParamPickId] = useState<string | null>(
 		null,
@@ -310,7 +432,6 @@ export const V2TemplateSchemaEditor = ({
 	const [baselineSnapshot, setBaselineSnapshot] =
 		useState<SchemaEditorDraftSnapshot | null>(null);
 	const draftHydratedVersionIdRef = useRef<string | null>(null);
-	const skipLeaveGuardRef = useRef(false);
 
 	const selectedRule =
 		logic.rules.find((r) => r.id === selectedRuleId) ?? logic.rules[0];
@@ -332,16 +453,16 @@ export const V2TemplateSchemaEditor = ({
 	useEffect(() => {
 		if (!initialRuleId) return;
 		setSelectedRuleId(initialRuleId);
-		setMainTab("logic");
+		activateMainTab("logic");
 		setLogicWorkspaceTab("jsonlogic");
-	}, [initialRuleId, setLogicWorkspaceTab]);
+	}, [activateMainTab, initialRuleId, setLogicWorkspaceTab]);
 
 	useEffect(() => {
 		if (!initialPointer) return;
 		setSelectedPointer(normalizeJsonPointer(initialPointer));
-		setMainTab("logic");
+		activateMainTab("logic");
 		setLogicWorkspaceTab("dependencies");
-	}, [initialPointer, setLogicWorkspaceTab]);
+	}, [activateMainTab, initialPointer, setLogicWorkspaceTab]);
 
 	const pushDraftHistory = useCallback(() => {
 		const snapshot: DraftHistorySnapshot = {
@@ -529,12 +650,15 @@ export const V2TemplateSchemaEditor = ({
 	const blocker = useBrowserRouterNavigationBlocker(
 		({ currentLocation, nextLocation }) => {
 			if (skipLeaveGuardRef.current) return false;
-			// Панели/вкладки/версии редактора переключаются через query-параметры на
-			// том же маршруте — это не уход со страницы, предупреждаем только при
-			// смене pathname.
-			return (
-				hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname
-			);
+			const normalizePath = (pathname: string) =>
+				pathname.replace(/\/$/, "") || "/";
+			if (
+				normalizePath(currentLocation.pathname) ===
+				normalizePath(nextLocation.pathname)
+			) {
+				return false;
+			}
+			return hasUnsavedChanges;
 		},
 	);
 
@@ -596,6 +720,8 @@ export const V2TemplateSchemaEditor = ({
 	const { enumMapByCode, isLoading: dictionaryEnumsLoading } =
 		useV2DictionaryEnumsMaps(referencedDictionaryCodes);
 	const syncTypicalWorksSchemaField = useSyncV2TypicalWorksSchemaField();
+	const bulkSyncSchemaFields =
+		useBulkSyncV2TypicalWorksSchemaFields().mutateAsync;
 	const [calculationRevision, setCalculationRevision] = useState(0);
 	const requestCalculationRefresh = useCallback(
 		() => setCalculationRevision((revision) => revision + 1),
@@ -624,13 +750,14 @@ export const V2TemplateSchemaEditor = ({
 
 	useEffect(() => {
 		if (!mappedCalculation?.liveFormData || previewResetPending) return;
-		setFormData((prev) =>
-			syncTriggerGatedGroupActivationFromTypicalWorks(
+		setFormData((prev) => {
+			const next = syncTriggerGatedGroupActivationFromTypicalWorks(
 				prev,
 				uiSchema,
 				mappedCalculation.liveFormData,
-			),
-		);
+			);
+			return next === prev ? prev : next;
+		});
 	}, [mappedCalculation?.liveFormData, uiSchema, previewResetPending]);
 
 	const logicPreviewPack = useMemo(
@@ -704,8 +831,8 @@ export const V2TemplateSchemaEditor = ({
 	const taskTriggerItems = logicPreviewPack.taskTriggerItems;
 	const liveFormData = logicPreviewPack.liveFormData;
 	const logicExtraErrors = logicPreviewPack.extraErrors;
-	const logicValidationIssueCount =
-		logicPreviewPack.logicValidationIssues.length;
+	const logicValidationIssues = logicPreviewPack.logicValidationIssues;
+	const logicValidationIssueCount = logicValidationIssues.length;
 	const legacyStageEvaluation =
 		mappedCalculation?.legacyStageEvaluation ?? null;
 
@@ -769,7 +896,7 @@ export const V2TemplateSchemaEditor = ({
 			}
 		>
 	>(new Map());
-	const previousSchemaParamsVersionRef = useRef<string | null>(null);
+	const schemaParamsBaselineVersionRef = useRef<string | null>(null);
 	const pendingSchemaSyncBeforeRef = useRef(
 		new Map<
 			string,
@@ -781,6 +908,36 @@ export const V2TemplateSchemaEditor = ({
 		>(),
 	);
 	const schemaSyncTimerRef = useRef<number | null>(null);
+	const initialSchemaBulkSyncRef = useRef<string | null>(null);
+	const bulkSyncTrackedVersionRef = useRef<string | null>(null);
+
+	useEffect(() => {
+		if (dictionaryEnumsLoading) return;
+		const versionId = activeVersion?.id;
+		if (!versionId || schemaWorkParams.length === 0) return;
+
+		if (bulkSyncTrackedVersionRef.current !== versionId) {
+			bulkSyncTrackedVersionRef.current = versionId;
+			initialSchemaBulkSyncRef.current = null;
+			setSchemaConsistencyIssues([]);
+		}
+
+		if (initialSchemaBulkSyncRef.current === versionId) return;
+		initialSchemaBulkSyncRef.current = versionId;
+
+		void bulkSyncSchemaFields({ templateVersionId: versionId, mode: "dryRun" })
+			.then((result) => {
+				setSchemaConsistencyIssues(result.consistencyIssues);
+			})
+			.catch((error) => {
+				toast.error(apiErrorMessage(error));
+			});
+	}, [
+		activeVersion?.id,
+		bulkSyncSchemaFields,
+		dictionaryEnumsLoading,
+		schemaWorkParams.length,
+	]);
 
 	useEffect(() => {
 		// Словари подгружаются асинхронно — до готовности values в params «пустые»,
@@ -803,19 +960,21 @@ export const V2TemplateSchemaEditor = ({
 					},
 				]),
 		);
-		const previous = previousSchemaParamsRef.current;
-		previousSchemaParamsRef.current = current;
-		if (previousSchemaParamsVersionRef.current !== (versionId ?? null)) {
-			previousSchemaParamsVersionRef.current = versionId ?? null;
+		if (schemaParamsBaselineVersionRef.current !== versionId) {
+			schemaParamsBaselineVersionRef.current = versionId ?? null;
+			previousSchemaParamsRef.current = current;
 			pendingSchemaSyncBeforeRef.current.clear();
 			return;
 		}
-		if (!versionId || previous.size === 0) return;
+
+		const previous = previousSchemaParamsRef.current;
+		if (!versionId) return;
 
 		const changed = [...current].filter(([uid, param]) => {
 			const before = previous.get(uid);
 			return before && JSON.stringify(before) !== JSON.stringify(param);
 		});
+		previousSchemaParamsRef.current = current;
 		if (changed.length === 0) return;
 		for (const [uid] of changed) {
 			const before = previous.get(uid);
@@ -1023,6 +1182,10 @@ export const V2TemplateSchemaEditor = ({
 
 	const handleSaveInPlace = useCallback(async () => {
 		if (!activeVersion || activeVersion.status !== "draft") return;
+		if (typicalWorkSaveBlocked) {
+			toast.warning(typicalWorkSaveBlockedMessage);
+			return;
+		}
 
 		try {
 			await updateVersion.mutateAsync({
@@ -1060,10 +1223,16 @@ export const V2TemplateSchemaEditor = ({
 		updateVersion,
 		versionSnapshotDto,
 		commitBaselineToCurrent,
+		typicalWorkSaveBlocked,
+		typicalWorkSaveBlockedMessage,
 	]);
 
 	const handleSaveAsNewVersion = useCallback(
 		async (releaseNotes: string) => {
+			if (typicalWorkSaveBlocked) {
+				toast.warning(typicalWorkSaveBlockedMessage);
+				return;
+			}
 			try {
 				const created = await createVersion.mutateAsync({
 					templateId,
@@ -1105,6 +1274,8 @@ export const V2TemplateSchemaEditor = ({
 			refetchVersions,
 			templateId,
 			versionSnapshotDto,
+			typicalWorkSaveBlocked,
+			typicalWorkSaveBlockedMessage,
 		],
 	);
 
@@ -1875,22 +2046,22 @@ export const V2TemplateSchemaEditor = ({
 
 	const openLogicTabWithRule = useCallback(
 		(ruleId: string) => {
-			setMainTab("logic");
+			activateMainTab("logic");
 			setLogicWorkspaceTab("jsonlogic");
 			setSelectedRuleId(ruleId);
 		},
-		[setLogicWorkspaceTab],
+		[activateMainTab, setLogicWorkspaceTab],
 	);
 
 	const openLogicTabWithPointer = useCallback(
 		(pointer: string) => {
 			const normalized = normalizeJsonPointer(pointer);
 			setSelectedPointer(normalized);
-			setMainTab("logic");
+			activateMainTab("logic");
 			setLogicWorkspaceTab("dependencies");
 			setLogicPathPick(normalized);
 		},
-		[setLogicWorkspaceTab],
+		[activateMainTab, setLogicWorkspaceTab],
 	);
 
 	const clearTriggerParamPick = useCallback(() => {
@@ -1908,16 +2079,122 @@ export const V2TemplateSchemaEditor = ({
 			setTriggerParamPickId(
 				schemaParamIdFromPointer(normalized, field?.schemaFieldUid),
 			);
-			setMainTab("logic");
+			activateMainTab("logic");
 			setLogicWorkspaceTab("works");
 		},
-		[fieldPathHints, setLogicWorkspaceTab],
+		[activateMainTab, fieldPathHints, setLogicWorkspaceTab],
 	);
 
 	const openLogicWorkspace = useCallback(() => {
-		setMainTab("logic");
+		activateMainTab("logic");
 		setLogicWorkspaceTab("works");
-	}, [setLogicWorkspaceTab]);
+	}, [activateMainTab, setLogicWorkspaceTab]);
+
+	const commitTypicalWorksTabNavigation = useCallback(
+		(workId?: string, focus?: Omit<TypicalWorkNavFocus, "workId">) => {
+			prepareTypicalWorkNavigation(workId, focus);
+			activateMainTab("logic");
+		},
+		[activateMainTab, prepareTypicalWorkNavigation],
+	);
+
+	const openTypicalWorksTab = useCallback(
+		(workId?: string, focus?: Omit<TypicalWorkNavFocus, "workId">) => {
+			runInternalEditorNavigation(() => {
+				commitTypicalWorksTabNavigation(workId, focus);
+			});
+		},
+		[commitTypicalWorksTabNavigation, runInternalEditorNavigation],
+	);
+
+	const openDesignerAtPointer = useCallback(
+		(pointer: string) => {
+			runInternalEditorNavigation(() => {
+				activateMainTab("designer");
+				setSelectedPointer(normalizeJsonPointer(pointer));
+			});
+		},
+		[activateMainTab, runInternalEditorNavigation],
+	);
+
+	const openLogicForIssueTarget = useCallback(
+		(
+			target: SchemaEditorIssue["target"],
+			options?: { focusParam?: boolean },
+		) => {
+			runInternalEditorNavigation(() => {
+				switch (target.kind) {
+					case "logic_rule":
+						activateMainTab("logic");
+						setLogicWorkspaceTab("jsonlogic");
+						setSelectedRuleId(target.ruleId);
+						return;
+					case "logic_dependencies":
+						if (target.pointer) {
+							const normalized = normalizeJsonPointer(target.pointer);
+							setSelectedPointer(normalized);
+							activateMainTab("logic");
+							setLogicWorkspaceTab("dependencies");
+							setLogicPathPick(normalized);
+							return;
+						}
+						activateMainTab("logic");
+						setLogicWorkspaceTab("dependencies");
+						return;
+					case "typical_work": {
+						setTriggerParamPickId(null);
+						commitTypicalWorksTabNavigation(
+							target.workId,
+							options?.focusParam && target.paramCode?.trim()
+								? { paramCode: target.paramCode.trim() }
+								: undefined,
+						);
+						return;
+					}
+					default:
+						return;
+				}
+			});
+		},
+		[
+			activateMainTab,
+			commitTypicalWorksTabNavigation,
+			runInternalEditorNavigation,
+			setLogicWorkspaceTab,
+		],
+	);
+
+	const navigateToSchemaEditorIssue = useCallback(
+		(issue: SchemaEditorIssue) => {
+			const { target } = issue;
+			if (issueSupportsLogicNavigation(target)) {
+				openLogicForIssueTarget(target, { focusParam: true });
+				return;
+			}
+			if (issueSupportsDesignerNavigation(target)) {
+				openDesignerAtPointer(target.pointer);
+				return;
+			}
+			runInternalEditorNavigation(() => {
+				switch (target.kind) {
+					case "json":
+						activateMainTab("json");
+						return;
+					case "calculation":
+						activateMainTab("calculation");
+						return;
+					default:
+						return;
+				}
+			});
+		},
+		[
+			activateMainTab,
+			openDesignerAtPointer,
+			openLogicForIssueTarget,
+			runInternalEditorNavigation,
+		],
+	);
 
 	useEffect(() => {
 		if (!activeVersion) {
@@ -1926,7 +2203,13 @@ export const V2TemplateSchemaEditor = ({
 		}
 
 		onHeaderActionsChange?.({
-			onSave: () => setSaveDialogOpen(true),
+			onSave: () => {
+				if (typicalWorkSaveBlocked) {
+					toast.warning(typicalWorkSaveBlockedMessage);
+					return;
+				}
+				setSaveDialogOpen(true);
+			},
 			onActivateAsCurrent: () => void activateAsCurrentRef.current(),
 			savePending,
 			activatePending:
@@ -1948,6 +2231,8 @@ export const V2TemplateSchemaEditor = ({
 		openLogicWorkspace,
 		savePending,
 		updateVersion.isPending,
+		typicalWorkSaveBlocked,
+		typicalWorkSaveBlockedMessage,
 	]);
 
 	const updateRulePatch = useCallback(
@@ -2028,7 +2313,7 @@ export const V2TemplateSchemaEditor = ({
 		() => ({
 			templateId,
 			mainTab,
-			setMainTab,
+			setMainTab: activateMainTab,
 			jsonSchema,
 			setJsonSchema,
 			uiSchema,
@@ -2062,7 +2347,14 @@ export const V2TemplateSchemaEditor = ({
 			requestCalculationRefresh,
 			logicExtraErrors,
 			logicValidationIssueCount,
+			logicValidationIssues,
 			legacyStageEvaluation,
+			schemaConsistencyIssues,
+			navigateToSchemaEditorIssue,
+			openDesignerAtPointer,
+			openLogicForIssueTarget,
+			typicalWorkNavFocus,
+			clearTypicalWorkNavFocus,
 			schemaMonacoText,
 			setSchemaMonacoText,
 			uiMonacoText,
@@ -2113,6 +2405,7 @@ export const V2TemplateSchemaEditor = ({
 			triggerParamPickId,
 			openLogicTabWithTriggerParam,
 			clearTriggerParamPick,
+			openTypicalWorksTab,
 			updateRulePatch,
 			removeSelectedRule,
 			previewEvalNote,
@@ -2129,10 +2422,15 @@ export const V2TemplateSchemaEditor = ({
 			canBindDictionary,
 			currentDictionaryCode,
 			dictionaryBindingMissing,
+			typicalWorkSaveDisplay,
+			typicalWorkSaveBlocked,
+			typicalWorkSaveBlockedMessage,
+			registerTypicalWorkSaveGate,
 		}),
 		[
 			templateId,
 			mainTab,
+			activateMainTab,
 			jsonSchema,
 			uiSchema,
 			logic,
@@ -2161,7 +2459,14 @@ export const V2TemplateSchemaEditor = ({
 			requestCalculationRefresh,
 			logicExtraErrors,
 			logicValidationIssueCount,
+			logicValidationIssues,
 			legacyStageEvaluation,
+			schemaConsistencyIssues,
+			navigateToSchemaEditorIssue,
+			openDesignerAtPointer,
+			openLogicForIssueTarget,
+			typicalWorkNavFocus,
+			clearTypicalWorkNavFocus,
 			schemaMonacoText,
 			uiMonacoText,
 			logicMonacoText,
@@ -2202,6 +2507,8 @@ export const V2TemplateSchemaEditor = ({
 			triggerParamPickId,
 			openLogicTabWithTriggerParam,
 			clearTriggerParamPick,
+			openTypicalWorksTab,
+			navigateToSchemaEditorIssue,
 			updateRulePatch,
 			removeSelectedRule,
 			previewEvalNote,
@@ -2221,10 +2528,18 @@ export const V2TemplateSchemaEditor = ({
 			handleDepsBlur,
 			calculationLoading,
 			calculationError,
+			typicalWorkSaveDisplay,
+			typicalWorkSaveBlocked,
+			typicalWorkSaveBlockedMessage,
+			registerTypicalWorkSaveGate,
 		],
 	);
 
-	if (!template || activeVersionLoading) {
+	if (template && activeVersion) {
+		editorHasLoadedRef.current = true;
+	}
+
+	if (isEditorBootstrapping && !editorHasLoadedRef.current) {
 		return (
 			<Typography component="div">
 				{wording === "adminSchema" ? (
@@ -2236,7 +2551,17 @@ export const V2TemplateSchemaEditor = ({
 		);
 	}
 
-	if (!activeVersion) {
+	if (!template) {
+		return (
+			<Typography component="div">
+				{wording === "adminSchema"
+					? "Схема не найдена"
+					: "Шаблон не найден"}
+			</Typography>
+		);
+	}
+
+	if (!activeVersion && !editorHasLoadedRef.current) {
 		return (
 			<Flex
 				flexDirection="column"
@@ -2288,7 +2613,11 @@ export const V2TemplateSchemaEditor = ({
 
 	return (
 		<SchemaEditorProvider value={editorContext}>
-			<Card
+			<SchemaEditorDockProvider>
+				<TypicalWorksPanelPersistentRoot>
+					<TypicalWorksPanel />
+				</TypicalWorksPanelPersistentRoot>
+				<Card
 				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.schemaEditor}
 				height="100%"
 				padding="0"
@@ -2312,12 +2641,7 @@ export const V2TemplateSchemaEditor = ({
 				<Box
 					sx={{ flex: 1, minHeight: 0, position: "relative", width: "100%" }}
 				>
-					<SchemaEditorDockProvider
-						mainTab={mainTab}
-						onMainTabChange={setMainTab}
-					>
-						<V2SchemaEditorDockLayout />
-					</SchemaEditorDockProvider>
+					<V2SchemaEditorDockLayout />
 				</Box>
 			</Card>
 			{activeVersion ? (
@@ -2328,11 +2652,14 @@ export const V2TemplateSchemaEditor = ({
 					versionStatus={activeVersion.status}
 					isSystemCurrent={isSystemCurrent}
 					savePending={savePending}
+					typicalWorkSaveBlocked={typicalWorkSaveBlocked}
+					typicalWorkSaveBlockedMessage={typicalWorkSaveBlockedMessage}
 					onSaveAsNewVersion={handleSaveAsNewVersion}
 					onSaveInPlace={handleSaveInPlace}
 				/>
 			) : null}
 			{leaveDialog}
+			</SchemaEditorDockProvider>
 		</SchemaEditorProvider>
 	);
 };

@@ -16,6 +16,12 @@ import type {
 } from "./types";
 import type { SchemaEditorDraftSnapshot } from "../utils/schemaEditorLocalDraft";
 import type { SchemaFieldChangeInfo } from "./schemaFieldTreeChanges";
+import type { LogicValidationIssue } from "../utils/logicValidation";
+import type {
+	SchemaEditorIssue,
+} from "./collectSchemaEditorIssues";
+import type { TypicalWorkNavFocus } from "./schemaEditorIssueNavigation";
+import type { TypicalWorkSchemaConsistencyIssue } from "@smart-anketa/api-contract";
 
 export type SchemaEditorContextValue = {
 	templateId: string;
@@ -59,7 +65,17 @@ export type SchemaEditorContextValue = {
 	requestCalculationRefresh: () => void;
 	logicExtraErrors: ErrorSchema;
 	logicValidationIssueCount: number;
+	logicValidationIssues: LogicValidationIssue[];
 	legacyStageEvaluation: V2LegacyStageEvaluationDto | null;
+	schemaConsistencyIssues: TypicalWorkSchemaConsistencyIssue[];
+	navigateToSchemaEditorIssue: (issue: SchemaEditorIssue) => void;
+	openDesignerAtPointer: (pointer: string) => void;
+	openLogicForIssueTarget: (
+		target: SchemaEditorIssue["target"],
+		options?: { focusParam?: boolean },
+	) => void;
+	typicalWorkNavFocus: TypicalWorkNavFocus | null;
+	clearTypicalWorkNavFocus: () => void;
 
 	schemaMonacoText: string;
 	setSchemaMonacoText: (v: string) => void;
@@ -141,6 +157,7 @@ export type SchemaEditorContextValue = {
 	triggerParamPickId: string | null;
 	openLogicTabWithTriggerParam: (pointer: string) => void;
 	clearTriggerParamPick: () => void;
+	openTypicalWorksTab: (workId?: string) => void;
 	updateRulePatch: (patch: Partial<V2LogicRuleDto>) => void;
 	removeSelectedRule: () => void;
 	previewEvalNote: React.ReactNode;
@@ -164,6 +181,14 @@ export type SchemaEditorContextValue = {
 	canBindDictionary: boolean;
 	currentDictionaryCode: string;
 	dictionaryBindingMissing: boolean;
+
+	/** Состояние автосохранения открытой типовой работы. */
+	typicalWorkSaveDisplay: import("./typicalWorkSaveGate").TypicalWorkSaveGateState | null;
+	typicalWorkSaveBlocked: boolean;
+	typicalWorkSaveBlockedMessage: string | null;
+	registerTypicalWorkSaveGate: (
+		state: import("./typicalWorkSaveGate").TypicalWorkSaveGateState | null,
+	) => void;
 };
 
 const SchemaEditorContext = createContext<SchemaEditorContextValue | null>(

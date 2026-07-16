@@ -1,5 +1,5 @@
 /** Справочник стримов-исполнителей в редакторе логики и на стримовых блоках анкеты. */
-export declare const V2_EXECUTOR_STREAM_LABELS: readonly ["ДАДМ", "ПиРМ", "Источники данных", "Контроль моделей", "Цифровые агенты", "Потоковые данные"];
+export declare const V2_EXECUTOR_STREAM_LABELS: readonly ["ДАДМ", "ПиРМ", "Источники данных", "Контроль моделей", "Цифровые агенты", "Потоковые данные", "Модельный стрим"];
 export type V2ExecutorStreamLabel = (typeof V2_EXECUTOR_STREAM_LABELS)[number];
 /** Код справочника v2 для привязки блока к стриму (конструктор). */
 export declare const V2_EXECUTOR_STREAMS_DICTIONARY_CODE = "v2.streams.executor";

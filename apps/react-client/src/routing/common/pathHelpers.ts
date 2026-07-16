@@ -46,6 +46,18 @@ export const pathForAdminV2TypicalWork = (workId: string) =>
 		encodeURIComponent(workId),
 	);
 
+export const pathForAdminV2FormulaInSchemaEditor = (
+	templateId: string,
+	templateVersionId: string,
+	workId: string,
+) => {
+	const base = pathForAdminV2Template(templateId, templateVersionId);
+	const params = new URLSearchParams();
+	params.set("logicTab", "works");
+	params.set("workId", workId);
+	return `${base}?${params.toString()}`;
+};
+
 export const pathForAdminV2TemplateHistory = (templateId: string) =>
 	commonRoutes.adminV2TemplateHistory.rootPath.replace(
 		":templateId",

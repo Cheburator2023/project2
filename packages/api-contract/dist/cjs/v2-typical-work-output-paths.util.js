@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS = exports.TYPICAL_WORK_BOUND_WORK_IDS_KEY = exports.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = void 0;
+exports.LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS = exports.TYPICAL_WORK_BOUND_WORK_IDS_KEY = exports.LEGACY_CONTROL_TYPICAL_TASKS_OUTPUT_PATHS = exports.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = void 0;
 exports.collectGeneratedTypicalWorkArrayPaths = collectGeneratedTypicalWorkArrayPaths;
 exports.readTypicalWorkBoundWorkIdsAtOutputPath = readTypicalWorkBoundWorkIdsAtOutputPath;
 exports.collectTypicalWorkBlockBindings = collectTypicalWorkBlockBindings;
+exports.remapBoundWorkIdsInUiSchema = remapBoundWorkIdsInUiSchema;
 exports.backfillTypicalWorkBoundWorkIdsInUiSchema = backfillTypicalWorkBoundWorkIdsInUiSchema;
 exports.disableTypicalWorkCatalogBindingsInUiSchema = disableTypicalWorkCatalogBindingsInUiSchema;
 exports.resolveSourceTypicalWorksOutputPath = resolveSourceTypicalWorksOutputPath;
@@ -14,12 +15,18 @@ const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
 const v2_executor_streams_util_1 = require("./v2-executor-streams.util");
 exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = "streamDataSources.sourceTypicalTasks";
 /** Канонический вывод типовых работ «Контроль моделей». */
-exports.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_Khn6-HAW";
+exports.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_G0AoYAl8";
+/** Устаревшие пути вывода типовых работ «Контроль моделей». */
+exports.LEGACY_CONTROL_TYPICAL_TASKS_OUTPUT_PATHS = [
+    "streamModelControl.field_Khn6-HAW",
+    "streamModelControl.control.controlTypicalTasks",
+];
 /** Ключ ui:options — привязанные к блоку id типовых работ (сохраняется в снепшоте). */
 exports.TYPICAL_WORK_BOUND_WORK_IDS_KEY = "boundWorkIds";
 /** Legacy/fan-out пути, куда раньше дублировались сгенерированные типовые работы. */
 exports.LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS = [
     exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+    ...exports.LEGACY_CONTROL_TYPICAL_TASKS_OUTPUT_PATHS,
     exports.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
     "detailInfo.detailTypicalTasks",
     "detailInfo.sourceTypicalTasks",
@@ -124,14 +131,34 @@ function patchBoundWorkIdsAtOutputPath(uiSchema, outputPath, boundWorkIds) {
     return patchLeaf({ ...uiSchema }, 0);
 }
 /**
+ * Заменяет id работ в boundWorkIds после seed с переназначением uuid.
+ */
+function remapBoundWorkIdsInUiSchema(uiSchema, workIdMap) {
+    if (workIdMap.size === 0)
+        return uiSchema;
+    let next = uiSchema;
+    for (const binding of collectTypicalWorkBlockBindings(uiSchema)) {
+        if (!binding.boundWorkIds?.length)
+            continue;
+        const remapped = binding.boundWorkIds.map((id) => workIdMap.get(id) ?? id);
+        if (remapped.every((id, index) => id === binding.boundWorkIds?.[index])) {
+            continue;
+        }
+        next = patchBoundWorkIdsAtOutputPath(next, binding.outputPath, remapped);
+    }
+    return next;
+}
+/**
  * Заполняет boundWorkIds на legacy-блоках typicalWork по назначениям работ на стрим блока.
  * Вызывается после сида каталога в шаблон (id работ известны только после seed).
  */
-function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog) {
+function backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog, options) {
     let next = uiSchema;
     for (const binding of collectTypicalWorkBlockBindings(uiSchema)) {
-        if (binding.boundWorkIds !== undefined)
+        if (binding.boundWorkIds !== undefined &&
+            !options?.replaceExisting?.(binding.boundWorkIds)) {
             continue;
+        }
         const stream = (0, v2_anketa_section_ui_util_1.resolveStreamExecutorForTypicalWorkOutputPath)(next, binding.outputPath);
         if (!stream)
             continue;

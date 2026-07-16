@@ -3,13 +3,12 @@ import type { V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
 import {
 	V2_ARCH_COMPONENT_LABELS,
 	type V2ArchComponentType,
-	extractControlCode,
 	formatParamNameWithSourceKeys,
-	isControlTypeTriggerParam,
 	isSourceTypeTriggerParam,
 	isV2AnketaSystemRootKey,
 	resolveV2AnketaArchComponent,
 	stripParamNameSourceKeys,
+	resolveWorkSchemaParamForRule,
 } from "@smart-anketa/api-contract";
 import {
 	isObjectFieldGroup,
@@ -520,10 +519,53 @@ export function findSchemaWorkParameter(
 
 	if (paramName?.trim()) {
 		const name = paramName.trim();
-		return paramOptions.find((param) => param.name === name);
+		const byName = paramOptions.find((param) => param.name === name);
+		if (byName) return byName;
+		const normName = name.toLowerCase();
+		return paramOptions.find(
+			(param) => param.name.trim().toLowerCase() === normName,
+		);
 	}
 
 	return undefined;
+}
+
+/**
+ * Параметр работы: сначала поле схемы (с алиасами триггеров), затем
+ * методологический справочник из настроек, затем мост legacy-кода → схема.
+ */
+export function resolveWorkParameterOption(
+	paramCode: string,
+	paramName: string | null | undefined,
+	schemaParams: V2TypicalWorkParameterDto[],
+	methodologyCatalog: V2TypicalWorkParameterDto[] = [],
+): V2TypicalWorkParameterDto | undefined {
+	const schemaMatch =
+		findSchemaWorkParameter(schemaParams, paramCode, paramName) ??
+		resolveSchemaParamForTriggerRule({ paramCode, paramName }, schemaParams);
+	if (schemaMatch) return schemaMatch;
+
+	const catalogMatch =
+		findSchemaWorkParameter(methodologyCatalog, paramCode, paramName) ??
+		resolveSchemaParamForTriggerRule(
+			{ paramCode, paramName },
+			methodologyCatalog,
+		);
+	if (catalogMatch) return catalogMatch;
+
+	if (!schemaParams.length || !methodologyCatalog.length) return undefined;
+
+	const catalogSeed =
+		methodologyCatalog.find((param) => param.code === paramCode) ??
+		(paramName
+			? methodologyCatalog.find((param) => param.name === paramName)
+			: undefined);
+	if (!catalogSeed) return undefined;
+
+	return resolveSchemaParamForTriggerRule(
+		{ paramCode: catalogSeed.code, paramName: catalogSeed.name },
+		schemaParams,
+	);
 }
 
 export function isSchemaLaborParamUsed(
@@ -590,34 +632,5 @@ export function resolveSchemaParamForTriggerRule(
 	rule: TriggerRuleLike,
 	paramOptions: V2TypicalWorkParameterDto[],
 ): V2TypicalWorkParameterDto | undefined {
-	const direct =
-		paramOptions.find((param) => param.code === rule.paramCode) ??
-		(rule.paramName
-			? paramOptions.find((param) => param.name === rule.paramName)
-			: undefined);
-	if (direct) return direct;
-
-	const paramLabel = rule.paramName ?? rule.paramCode;
-
-	if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName)) {
-		return (
-			paramOptions.find((param) => param.code === "type") ??
-			paramOptions.find((param) => /тип.*источник/i.test(param.name))
-		);
-	}
-
-	if (isControlTypeTriggerParam(rule.paramCode, rule.paramName)) {
-		const controlCode = extractControlCode(paramLabel);
-		if (controlCode) {
-			const byCode = paramOptions.find(
-				(param) =>
-					param.name.toUpperCase().includes(controlCode) ||
-					param.description?.toUpperCase().includes(controlCode),
-			);
-			if (byCode) return byCode;
-		}
-		return paramOptions.find((param) => /вид контроля/i.test(param.name));
-	}
-
-	return undefined;
+	return resolveWorkSchemaParamForRule(rule, paramOptions);
 }

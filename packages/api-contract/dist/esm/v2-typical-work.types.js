@@ -30,6 +30,20 @@ export const V2_LOGIC_WORKSPACE_TAB_VALUES = [
     "dependencies",
     "jsonlogic",
 ];
+export const V2_WORK_FORMULA_ARCH_COUNT_KINDS = [
+    "model",
+    "sourceSystem",
+    "dataMart",
+    "dataProcess",
+    "modelService",
+];
+export function defaultTriggerArchCount() {
+    return { kind: null, steps: [], combinator: "and" };
+}
+export const V2_TYPICAL_WORK_TRIGGER_MODE_VALUES = ["simple", "formula"];
+export function defaultTriggerFormula() {
+    return { tokens: [], text: "" };
+}
 /** Норма, действующая на дату (для дерева и превью). */
 export function resolveActiveNormOnDate(norms, streamExecutor, atDate) {
     const day = atDate.slice(0, 10);

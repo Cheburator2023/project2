@@ -1,6 +1,7 @@
 import type { TreeMethods } from "@minoru/react-dnd-treeview";
 import type { NodeModel } from "@minoru/react-dnd-treeview";
-import { listCanvasAncestorNodeIds } from "./schemaCanvasSearch";
+import { normalizeJsonPointer } from "../utils/schemaPaths";
+import { listCanvasExpandNodeIds } from "./schemaCanvasSearch";
 import type { SchemaCanvasNodeData } from "./schemaCanvasTree";
 
 export const CANVAS_FIELD_POINTER_ATTR = "data-canvas-field-pointer";
@@ -14,16 +15,21 @@ export function focusCanvasField(pointer: string): void {
 	});
 }
 
-/** Раскрывает предков в дереве холста и прокручивает к полю (как в поиске). */
+/** Раскрывает предков в дереве холста и прокручивает к полю. */
 export function revealCanvasFieldPointer(
 	treeRef: TreeMethods | null | undefined,
 	treeData: NodeModel<SchemaCanvasNodeData>[],
 	pointer: string,
 ): void {
-	for (const nodeId of listCanvasAncestorNodeIds(treeData, pointer)) {
-		treeRef?.open(nodeId);
+	const normalizedPointer = normalizeJsonPointer(pointer);
+	const nodeIds = listCanvasExpandNodeIds(treeData, normalizedPointer);
+	if (nodeIds.length > 0) {
+		// open() с массивом — один setState; по одному id в цикле теряются предки.
+		treeRef?.open(nodeIds);
 	}
 	requestAnimationFrame(() => {
-		focusCanvasField(pointer);
+		requestAnimationFrame(() => {
+			focusCanvasField(normalizedPointer);
+		});
 	});
 }

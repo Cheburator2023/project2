@@ -4,7 +4,22 @@ import type {
 	V2TypicalWorkRuleDto,
 	V2WorkFormulaToken,
 } from "./v2-typical-work.types";
-import { tokensToText } from "./v2-work-formula.util";
+import {
+	normalizeStoredValueCode,
+	normalizeStoredValueLabel,
+	slugParamCode,
+} from "./v2-param-slug.util";
+import { schemaEnumValueMatchesRule } from "./v2-template-work-schema-params.util";
+import {
+	formatParamNameWithSourceKeys,
+	stripParamNameSourceKeys,
+} from "./v2-work-param-source-keys.util";
+import {
+	isParamToken,
+	markUnknownFormulaLaborParamTokensInvalid,
+	reconcileFormulaLaborParamTokens,
+	tokensToText,
+} from "./v2-work-formula.util";
 
 export type V2TypicalWorkSchemaFieldSyncRequestDto = {
 	templateVersionId: string;
@@ -13,6 +28,8 @@ export type V2TypicalWorkSchemaFieldSyncRequestDto = {
 	field: {
 		schemaFieldUid: string;
 		previousCode?: string | null;
+		/** Доп. legacy-коды (slug, sourceKeys) для сопоставления правил/формул. */
+		aliasCodes?: string[];
 		code?: string | null;
 		name?: string | null;
 		values?: Array<{ code: string; label: string }>;
@@ -29,16 +46,76 @@ export type V2TypicalWorkSchemaFieldSyncImpactDto = {
 	formulasInvalidated: number;
 };
 
+export type V2TypicalWorkSchemaBulkSyncResponseDto =
+	V2TypicalWorkSchemaFieldSyncImpactDto & {
+		fieldsProcessed: number;
+		consistencyIssues: import("./v2-template-work-schema-params.util").TypicalWorkSchemaConsistencyIssue[];
+	};
+
+function collectFieldAliasCodes(
+	request: V2TypicalWorkSchemaFieldSyncRequestDto,
+): Set<string> {
+	const aliases = new Set<string>();
+	for (const code of [
+		request.field.previousCode,
+		request.field.code,
+		...(request.field.aliasCodes ?? []),
+	]) {
+		if (code?.trim()) aliases.add(code.trim());
+	}
+	if (request.field.name?.trim()) {
+		const slug = slugParamCode(
+			stripParamNameSourceKeys(request.field.name).trim(),
+		);
+		if (slug) aliases.add(slug);
+	}
+	return aliases;
+}
+
+function formatSyncedParamName(
+	request: V2TypicalWorkSchemaFieldSyncRequestDto,
+	currentName: string | null | undefined,
+	nextCode: string,
+	previousCode?: string | null,
+): string | null {
+	const displayName = stripParamNameSourceKeys(
+		request.field.name ?? currentName ?? "",
+	).trim();
+	if (!displayName) return currentName ?? null;
+	const aliasCodes = [
+		nextCode,
+		previousCode,
+		request.field.previousCode,
+		...(request.field.aliasCodes ?? []),
+		currentName ? slugParamCode(stripParamNameSourceKeys(currentName)) : null,
+	].filter((code): code is string => Boolean(code?.trim()));
+	return formatParamNameWithSourceKeys(displayName, [...new Set(aliasCodes)]);
+}
+
 function matchesField(
-	ref: { schemaFieldUid?: string | null; paramCode: string },
+	ref: {
+		schemaFieldUid?: string | null;
+		paramCode: string;
+		paramName?: string | null;
+	},
 	request: V2TypicalWorkSchemaFieldSyncRequestDto,
 ): boolean {
 	if (ref.schemaFieldUid) {
 		return ref.schemaFieldUid === request.field.schemaFieldUid;
 	}
-	return Boolean(
-		request.field.previousCode && ref.paramCode === request.field.previousCode,
-	);
+
+	const aliases = collectFieldAliasCodes(request);
+	if (aliases.has(ref.paramCode)) return true;
+
+	if (request.field.name?.trim() && ref.paramName?.trim()) {
+		const fieldName = stripParamNameSourceKeys(request.field.name)
+			.trim()
+			.toLowerCase();
+		const refName = stripParamNameSourceKeys(ref.paramName).trim().toLowerCase();
+		if (fieldName === refName) return true;
+	}
+
+	return false;
 }
 
 function reconcileRule(
@@ -50,38 +127,97 @@ function reconcileRule(
 
 	const values = request.field.values;
 	if (values === undefined) {
+		const nextCode = request.field.code ?? rule.paramCode;
 		return {
 			...rule,
 			schemaFieldUid: request.field.schemaFieldUid,
-			paramCode: request.field.code ?? rule.paramCode,
-			paramName: request.field.name ?? rule.paramName,
+			paramCode: nextCode,
+			paramName:
+				formatSyncedParamName(
+					request,
+					rule.paramName,
+					nextCode,
+					rule.paramCode,
+				) ?? rule.paramName,
 		};
 	}
-	const allowed = new Map(values.map((value) => [value.code, value.label]));
 	const isSetOperator = rule.operator === "in" || rule.operator === "not_in";
 	const nextValues = isSetOperator
 		? (rule.values ?? [])
-				.filter((value) => allowed.has(value.code))
-				.map((value) => ({
-					code: value.code,
-					label: allowed.get(value.code) ?? value.label ?? null,
-				}))
+				.filter((value) =>
+					values.some((allowedValue) =>
+						schemaEnumValueMatchesRule(allowedValue, {
+							valueCode: value.code,
+							valueLabel: value.label,
+						}),
+					),
+				)
+				.map((value) => {
+					const matched = values.find((allowedValue) =>
+						schemaEnumValueMatchesRule(allowedValue, {
+							valueCode: value.code,
+							valueLabel: value.label,
+						}),
+					);
+					return {
+						code: matched?.code ?? value.code,
+						label: matched?.label ?? value.label ?? null,
+					};
+				})
 		: undefined;
-	const scalarAvailable = rule.valueCode != null && allowed.has(rule.valueCode);
+	const scalarMatch = values.find((value) =>
+		schemaEnumValueMatchesRule(value, rule),
+	);
+	const scalarAvailable = scalarMatch != null;
 
 	return {
 		...rule,
 		schemaFieldUid: request.field.schemaFieldUid,
 		paramCode: request.field.code ?? rule.paramCode,
-		paramName: request.field.name ?? rule.paramName,
-		valueCode: isSetOperator ? null : scalarAvailable ? rule.valueCode : null,
+		paramName:
+			formatSyncedParamName(
+				request,
+				rule.paramName,
+				request.field.code ?? rule.paramCode,
+				rule.paramCode,
+			) ?? rule.paramName,
+		valueCode: isSetOperator
+			? null
+			: scalarAvailable
+				? normalizeStoredValueCode(scalarMatch.code, scalarMatch.label)
+				: null,
 		valueLabel: isSetOperator
 			? null
-			: scalarAvailable && rule.valueCode != null
-				? (allowed.get(rule.valueCode) ?? rule.valueLabel)
+			: scalarAvailable
+				? normalizeStoredValueLabel(scalarMatch.label ?? rule.valueLabel)
 				: null,
 		values: nextValues,
 	};
+}
+
+function normalizeLaborValueIdentity(value: string | null | undefined): string {
+	return (value ?? "")
+		.trim()
+		.toLowerCase()
+		.replace(/ё/g, "е")
+		.replace(/\s+/g, "");
+}
+
+function findMatchingLaborCoefficient(
+	group: V2TypicalWorkLaborParamGroupDto,
+	value: { code: string; label: string },
+) {
+	return group.coefficients.find(
+		(row) =>
+			schemaEnumValueMatchesRule(value, {
+				valueCode: row.valueCode,
+				valueLabel: row.valueLabel,
+			}) ||
+			normalizeLaborValueIdentity(row.valueCode) ===
+				normalizeLaborValueIdentity(value.code) ||
+			normalizeLaborValueIdentity(row.valueLabel) ===
+				normalizeLaborValueIdentity(value.label),
+	);
 }
 
 function reconcileLaborParam(
@@ -92,14 +228,17 @@ function reconcileLaborParam(
 	if (request.operation === "delete") return null;
 
 	const values = request.field.values;
-	const oldCoefficients = new Map(
-		group.coefficients.map((row) => [row.valueCode, row]),
-	);
 	const nextBase = {
 		...group,
 		schemaFieldUid: request.field.schemaFieldUid,
 		paramCode: request.field.code ?? group.paramCode,
-		paramName: request.field.name ?? group.paramName,
+		paramName:
+			formatSyncedParamName(
+				request,
+				group.paramName,
+				request.field.code ?? group.paramCode,
+				group.paramCode,
+			) ?? group.paramName,
 	};
 	if (values === undefined) return nextBase;
 
@@ -109,8 +248,12 @@ function reconcileLaborParam(
 		return {
 			...nextBase,
 			anyOf: {
-				valueCodes: selectedValues.map((value) => value.code),
-				valueLabels: selectedValues.map((value) => value.label),
+				valueCodes: selectedValues.map((value) =>
+					normalizeStoredValueCode(value.code, value.label),
+				),
+				valueLabels: selectedValues.map(
+					(value) => normalizeStoredValueLabel(value.label) ?? value.label,
+				),
 				coeffOn: group.anyOf?.coeffOn ?? 1,
 				coeffOff: group.anyOf?.coeffOff ?? 1,
 			},
@@ -120,7 +263,7 @@ function reconcileLaborParam(
 	return {
 		...nextBase,
 		coefficients: values.map((value, index) => {
-			const existing = oldCoefficients.get(value.code);
+			const existing = findMatchingLaborCoefficient(group, value);
 			return {
 				id: existing?.id ?? `sync-${index}-${value.code}`,
 				streamExecutor:
@@ -129,28 +272,24 @@ function reconcileLaborParam(
 					"",
 				paramCode: request.field.code ?? group.paramCode,
 				paramName: request.field.name ?? group.paramName,
-				valueCode: value.code,
-				valueLabel: value.label,
+				valueCode: normalizeStoredValueCode(value.code, value.label),
+				valueLabel: normalizeStoredValueLabel(value.label),
 				coefficient: existing?.coefficient ?? 1,
 			};
 		}),
 	};
 }
 
-function reconcileFormulaTokens(
+function reconcileFormulaTokensForField(
 	tokens: V2WorkFormulaToken[],
-	oldParamCode: string,
 	request: V2TypicalWorkSchemaFieldSyncRequestDto,
 ): { tokens: V2WorkFormulaToken[]; invalidated: boolean } {
+	const aliases = collectFieldAliasCodes(request);
 	let invalidated = false;
 	return {
 		tokens: tokens.map((token) => {
-			if (
-				(token.kind !== "param_coeff" && token.kind !== "param_anyof") ||
-				token.paramCode !== oldParamCode
-			) {
-				return token;
-			}
+			if (!isParamToken(token)) return token;
+			if (!aliases.has(token.paramCode)) return token;
 			if (request.operation === "delete") {
 				invalidated = true;
 				return { ...token, invalid: true };
@@ -158,12 +297,37 @@ function reconcileFormulaTokens(
 			return {
 				...token,
 				paramCode: request.field.code ?? token.paramCode,
-				paramName: request.field.name ?? token.paramName,
+				paramName:
+					formatSyncedParamName(
+						request,
+						token.paramName,
+						request.field.code ?? token.paramCode,
+						token.paramCode,
+					) ?? token.paramName,
 				invalid: false,
 			};
 		}),
 		invalidated,
 	};
+}
+
+function sanitizeFormulaAgainstLaborParams(
+	tokens: V2WorkFormulaToken[],
+	laborParams: V2TypicalWorkLaborParamGroupDto[],
+): { tokens: V2WorkFormulaToken[]; invalidated: boolean } {
+	const laborRefs = laborParams.map((group) => ({
+		paramCode: group.paramCode,
+		paramName: group.paramName ?? null,
+	}));
+	const nextTokens = markUnknownFormulaLaborParamTokensInvalid(tokens, laborRefs);
+	const invalidated = nextTokens.some(
+		(token, index) =>
+			isParamToken(token) &&
+			token.invalid &&
+			isParamToken(tokens[index]!) &&
+			!tokens[index]!.invalid,
+	);
+	return { tokens: nextTokens, invalidated };
 }
 
 export function reconcileTypicalWorkCardWithSchemaField(
@@ -183,10 +347,6 @@ export function reconcileTypicalWorkCardWithSchemaField(
 	const matchingLabor = card.laborParams.filter((group) =>
 		matchesField(group, request),
 	);
-	const oldCodes = new Set([
-		...matchingRules.map((rule) => rule.paramCode),
-		...matchingLabor.map((group) => group.paramCode),
-	]);
 	const rules = card.rules
 		.map((rule) => reconcileRule(rule, request))
 		.filter((rule): rule is V2TypicalWorkRuleDto => rule != null);
@@ -194,14 +354,34 @@ export function reconcileTypicalWorkCardWithSchemaField(
 		.map((group) => reconcileLaborParam(group, request))
 		.filter((group): group is V2TypicalWorkLaborParamGroupDto => group != null);
 
-	let formulaTokens = card.formula.tokens;
-	let formulasInvalidated = 0;
-	for (const oldCode of oldCodes) {
-		const reconciled = reconcileFormulaTokens(formulaTokens, oldCode, request);
-		formulaTokens = reconciled.tokens;
-		if (reconciled.invalidated) formulasInvalidated = 1;
+	const formulaReconciled =
+		matchingRules.length > 0 || matchingLabor.length > 0
+			? reconcileFormulaTokensForField(card.formula.tokens, request)
+			: { tokens: card.formula.tokens, invalidated: false };
+	let formulaTokens = formulaReconciled.tokens;
+	let formulasInvalidated = formulaReconciled.invalidated ? 1 : 0;
+
+	const formulaSanitized = sanitizeFormulaAgainstLaborParams(
+		formulaTokens,
+		laborParams,
+	);
+	formulaTokens = reconcileFormulaLaborParamTokens(
+		formulaSanitized.tokens,
+		laborParams.map((group) => ({
+			paramCode: group.paramCode,
+			paramName: group.paramName ?? null,
+		})),
+	);
+	if (formulaSanitized.invalidated) {
+		formulasInvalidated = 1;
 	}
-	const changed = matchingRules.length > 0 || matchingLabor.length > 0;
+
+	const changed =
+		matchingRules.length > 0 ||
+		matchingLabor.length > 0 ||
+		formulaReconciled.invalidated ||
+		formulaSanitized.invalidated ||
+		JSON.stringify(formulaTokens) !== JSON.stringify(card.formula.tokens);
 
 	return {
 		card: {

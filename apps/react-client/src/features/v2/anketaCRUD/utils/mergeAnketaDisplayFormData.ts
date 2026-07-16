@@ -1,4 +1,5 @@
 import {
+	collectAtypicalWorkArrayPaths,
 	listAllGeneratedTypicalWorkArrayPaths,
 	V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
 	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
@@ -14,6 +15,12 @@ const FALLBACK_GENERATED_TYPICAL_WORK_ARRAY_PATHS = [
 	V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
 	"detailInfo.detailTypicalTasks",
 	"generalInfo.modelService.controlTypicalTasks",
+] as const;
+
+const FALLBACK_ATYPICAL_WORK_ARRAY_PATHS = [
+	"streamDataSources.atypicalTasks",
+	"detailInfo.detailAtypicalTasks",
+	"streamModelControl.atypicalTasks",
 ] as const;
 
 function readAtPath(data: Record<string, unknown>, path: string): unknown {
@@ -68,6 +75,41 @@ function resolveGeneratedTypicalWorkPaths(
 	return uiSchema
 		? listAllGeneratedTypicalWorkArrayPaths(uiSchema)
 		: [...FALLBACK_GENERATED_TYPICAL_WORK_ARRAY_PATHS];
+}
+
+function resolveAtypicalWorkPaths(uiSchema?: Record<string, unknown>): string[] {
+	const paths = uiSchema
+		? collectAtypicalWorkArrayPaths(uiSchema)
+		: [...FALLBACK_ATYPICAL_WORK_ARRAY_PATHS];
+	return paths.length > 0 ? paths : [...FALLBACK_ATYPICAL_WORK_ARRAY_PATHS];
+}
+
+/** Подставляет row.total из liveFormData после deepMerge — иначе ввод в модалке затирает калькуляцию. */
+function applyCalculatedAtypicalWorkRowTotals(
+	merged: Record<string, unknown>,
+	liveFormData: Record<string, unknown>,
+	paths: string[],
+): Record<string, unknown> {
+	let next = merged;
+
+	for (const path of paths) {
+		const mergedArr = readAtPath(next, path);
+		const liveArr = readAtPath(liveFormData, path);
+		if (!Array.isArray(mergedArr) || !Array.isArray(liveArr)) continue;
+
+		const patched = mergedArr.map((row, index) => {
+			if (!isPlainRecord(row)) return row;
+			const liveRow = liveArr[index];
+			if (!isPlainRecord(liveRow)) return row;
+			const liveTotal = liveRow.total;
+			if (liveTotal === undefined || liveTotal === null) return row;
+			return { ...row, total: liveTotal };
+		});
+
+		next = writeAtPath(next, path, patched);
+	}
+
+	return next;
 }
 
 /** Не затирать pseudo-array арх. блока (modelService и т.п.) при записи вложенных generated paths. */
@@ -156,6 +198,12 @@ export function mergeAnketaDisplayFormData(
 			merged = writeAtPath(merged, path, liveValue);
 		}
 	}
+
+	merged = applyCalculatedAtypicalWorkRowTotals(
+		merged,
+		liveFormData,
+		resolveAtypicalWorkPaths(uiSchema),
+	);
 
 	return fanOutTypicalWorkLiveData(merged, liveFormData, generatedPaths);
 }

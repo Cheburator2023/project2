@@ -1,5 +1,8 @@
-import { LOGIC_TAB_QUERY } from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import { Navigate, useLocation, useParams } from "react-router";
+import {
+	LOGIC_TAB_QUERY,
+	WORK_ID_QUERY,
+} from "@react-client/features/v2/admin_constructor/schemaEditor/panels/typicalWorksPanel/typicalWorksUi";
 import {
 	V2_TEMPLATE_VERSION_QUERY,
 	pathForAdminV2Template,
@@ -23,15 +26,8 @@ export function RedirectV2TemplateLogicToEdit() {
 	const isAdmin = isAdminTemplatePath(pathname);
 
 	const params = new URLSearchParams(search);
-	if (!params.get(LOGIC_TAB_QUERY)) {
-		if (params.get("ruleId")) {
-			params.set(LOGIC_TAB_QUERY, "jsonlogic");
-		} else if (params.get("pointer")) {
-			params.set(LOGIC_TAB_QUERY, "dependencies");
-		} else {
-			params.set(LOGIC_TAB_QUERY, "works");
-		}
-	}
+	params.delete(LOGIC_TAB_QUERY);
+	params.delete(WORK_ID_QUERY);
 
 	const versionId = params.get(V2_TEMPLATE_VERSION_QUERY);
 	const editPath = isAdmin

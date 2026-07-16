@@ -13,6 +13,7 @@ import type {
 	V2TypicalWorkFormulaDto,
 	V2TypicalWorkLaborParamGroupDto,
 	V2TypicalWorkRoundingDto,
+	V2WorkFormulaArchCountKind,
 	V2WorkFormulaToken,
 } from "@smart-anketa/api-contract";
 import {
@@ -25,6 +26,9 @@ import {
 	parseWorkFormulaText,
 	tokensToText,
 	validateWorkFormulaTokens,
+	V2_WORK_FORMULA_ARCH_COUNT_KINDS,
+	formatWorkArchCountKindLabel,
+	validateArchCountCoeffSteps,
 } from "@smart-anketa/api-contract";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
@@ -42,6 +46,10 @@ import {
 } from "react";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { TypicalWorkValueMatchingInfo } from "./typicalWorkValueMatchingHelp";
+import {
+	ArchCountCoeffStepsEditor,
+	formatArchCountCoeffChipSubtitle,
+} from "./ArchCountCoeffStepsEditor";
 
 export type TransitiveSourceOption = {
 	assignmentId: string;
@@ -97,13 +105,19 @@ function formatNormValue(value: number | null): string {
 	return String(value);
 }
 
+type ArchCountOption = {
+	kind: V2WorkFormulaArchCountKind;
+	label: string;
+};
+
 function isFormulaValueOperand(token: V2WorkFormulaToken): boolean {
 	return (
 		token.kind === "norm" ||
 		token.kind === "number" ||
 		token.kind === "param_coeff" ||
 		token.kind === "param_anyof" ||
-		token.kind === "work_ref"
+		token.kind === "work_ref" ||
+		token.kind === "arch_count_coeff"
 	);
 }
 
@@ -136,6 +150,8 @@ function tokenChipColors(token: V2WorkFormulaToken): {
 			return { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa" };
 		case "work_ref":
 			return { bg: "#f5f3ff", color: "#6d28d9", border: "#ddd6fe" };
+		case "arch_count_coeff":
+			return { bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" };
 		case "number":
 			return { bg: "#f8fafc", color: "#334155", border: "#e2e8f0" };
 		case "operator":
@@ -205,6 +221,13 @@ const FORMULA_PICKER_FIELD_SX = {
 			assignmentId: "",
 		}),
 	),
+	archCount: formulaPickerFieldSx(
+		tokenChipColors({
+			kind: "arch_count_coeff",
+			archComponentKind: "model",
+			steps: [{ count: 1, coefficient: 1 }],
+		}),
+	),
 } as const;
 
 /** Подпись чипа параметра: читаемое имя + код (id), если имя известно и отличается. */
@@ -248,6 +271,11 @@ function tokenDisplayLabel(
 			return {
 				title: "значение работы",
 				subtitle: token.workName ?? token.assignmentId,
+			};
+		case "arch_count_coeff":
+			return {
+				title: `кол-во: ${formatWorkArchCountKindLabel(token.archComponentKind)}`,
+				subtitle: formatArchCountCoeffChipSubtitle(token.steps),
 			};
 		case "number":
 			return { title: String(token.value) };
@@ -378,6 +406,10 @@ export function WorkFormulaEditor({
 	const [paramPickerKey, setParamPickerKey] = useState(0);
 	const [anyOfPickerKey, setAnyOfPickerKey] = useState(0);
 	const [workPickerKey, setWorkPickerKey] = useState(0);
+	const [archCountPickerKey, setArchCountPickerKey] = useState(0);
+	const [archCountEditIndex, setArchCountEditIndex] = useState<number | null>(
+		null,
+	);
 	const [isRibbonFocused, setIsRibbonFocused] = useState(false);
 	const ribbonRef = useRef<HTMLDivElement>(null);
 
@@ -434,6 +466,26 @@ export function WorkFormulaEditor({
 		() => laborParams.filter((g) => g.kind === "any_of").length,
 		[laborParams],
 	);
+
+	const archCountOptions = useMemo((): ArchCountOption[] => {
+		const usedKinds = new Set(
+			formula.tokens
+				.filter((token) => token.kind === "arch_count_coeff")
+				.map((token) => token.archComponentKind),
+		);
+		return V2_WORK_FORMULA_ARCH_COUNT_KINDS.filter(
+			(kind) => !usedKinds.has(kind),
+		).map((kind) => ({
+			kind,
+			label: formatWorkArchCountKindLabel(kind),
+		}));
+	}, [formula.tokens]);
+
+	const archCountEditToken = useMemo(() => {
+		if (archCountEditIndex == null) return null;
+		const token = formula.tokens[archCountEditIndex];
+		return token?.kind === "arch_count_coeff" ? token : null;
+	}, [archCountEditIndex, formula.tokens]);
 
 	const availableWorkSources = useMemo(() => {
 		return transitiveSources.filter((source) => {
@@ -760,6 +812,14 @@ export function WorkFormulaEditor({
 									(token.kind === "param_coeff" ||
 										token.kind === "param_anyof") &&
 									(Boolean(token.invalid) || !isLaborFormulaParam(token));
+								const isInvalidArchCount =
+									token.kind === "arch_count_coeff" &&
+									Boolean(
+										validateArchCountCoeffSteps(
+											token.archComponentKind,
+											token.steps,
+										),
+									);
 								const isWarningParam = isIncompleteAnyOf && !isInvalidParam;
 								const isEditingNumber =
 									editingNumberIndex === index && token.kind === "number";
@@ -792,12 +852,18 @@ export function WorkFormulaEditor({
 												if (token.kind === "operator") {
 													setEditingNumberIndex(null);
 													setEditingOperatorIndex(index);
+													return;
+												}
+												if (token.kind === "arch_count_coeff") {
+													setArchCountEditIndex(index);
 												}
 											}}
 											title={
 												isInvalidParam
 													? "Параметр удалён из блока трудоёмкости — исправьте формулу"
-													: isWarningParam
+													: isInvalidArchCount
+														? "Настройте пары количество — коэффициент"
+														: isWarningParam
 														? "Any-of без выбранных значений — отметьте множество в карточке параметра"
 														: isOperator && !readOnly
 															? "Сменить оператор"
@@ -817,18 +883,18 @@ export function WorkFormulaEditor({
 												py: 0.5,
 												borderRadius: "8px",
 												border: `1px solid ${
-													isInvalidParam
+													isInvalidParam || isInvalidArchCount
 														? "#fca5a5"
 														: isWarningParam
 															? "#fdba74"
 															: colors.border
 												}`,
-												bgcolor: isInvalidParam
+												bgcolor: isInvalidParam || isInvalidArchCount
 													? "#fef2f2"
 													: isWarningParam
 														? "#fff7ed"
 														: colors.bg,
-												color: isInvalidParam
+												color: isInvalidParam || isInvalidArchCount
 													? "#b91c1c"
 													: isWarningParam
 														? "#c2410c"
@@ -1176,6 +1242,55 @@ export function WorkFormulaEditor({
 									/>
 								</Box>
 							</Box>
+							<Box sx={{ mb: 1.5 }}>
+								<Typography
+									sx={{
+										fontSize: 11,
+										color: "#64748b",
+										fontWeight: 600,
+										mb: 0.5,
+									}}
+								>
+									По количеству компонентов
+								</Typography>
+								<FuzzyAutocomplete<ArchCountOption>
+									key={`arch-count-${archCountPickerKey}`}
+									data-test-id={TID.workFormulaArchCountSelect}
+									options={archCountOptions}
+									value={null}
+									onChange={(option) => {
+										if (!option) return;
+										insertToken({
+											kind: "arch_count_coeff",
+											archComponentKind: option.kind,
+											steps: [{ count: 1, coefficient: 1 }],
+										});
+										setArchCountPickerKey((key) => key + 1);
+									}}
+									getOptionLabel={(option) => option.label}
+									getOptionValue={(option) => option.kind}
+									getOptionSecondaryText={() =>
+										"коэффициент зависит от числа компонентов в анкете"
+									}
+									placeholder="Выберите компонент…"
+									emptyLabel="Выберите компонент…"
+									searchPlaceholder="Поиск компонента…"
+									noMatchesText="Компоненты не найдены"
+									allowEmpty
+									size="small"
+									disabled={arithmeticLocked}
+									textFieldSx={FORMULA_PICKER_FIELD_SX.archCount}
+									statusAlert={
+										archCountOptions.length === 0
+											? {
+													severity: "info",
+													message:
+														"Все типы компонентов уже добавлены в формулу",
+												}
+											: null
+									}
+								/>
+							</Box>
 							<Flex alignItems="center" gap={6} wrap="wrap">
 								<Button
 									size="small"
@@ -1348,6 +1463,24 @@ export function WorkFormulaEditor({
 					</Button>
 				</DialogActions>
 			</Dialog>
+
+			{archCountEditToken ? (
+				<ArchCountCoeffStepsEditor
+					open={archCountEditIndex != null}
+					kind={archCountEditToken.archComponentKind}
+					steps={archCountEditToken.steps}
+					readOnly={readOnly}
+					onClose={() => setArchCountEditIndex(null)}
+					onSave={(steps) => {
+						if (archCountEditIndex == null) return;
+						updateTokenAt(archCountEditIndex, {
+							...archCountEditToken,
+							steps,
+						});
+						setArchCountEditIndex(null);
+					}}
+				/>
+			) : null}
 		</Flex>
 	);
 }

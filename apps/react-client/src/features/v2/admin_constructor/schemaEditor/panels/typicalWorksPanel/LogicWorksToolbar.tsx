@@ -19,6 +19,7 @@ import {
 import { useSchemaEditor } from "../../SchemaEditorContext";
 import { isExecutorStreamPresentInSchema } from "@smart-anketa/api-contract";
 import { ExecutorStreamMenuRow } from "./ExecutorStreamPresenceLabel";
+import { TypicalWorkSaveStatusBar } from "./TypicalWorkSaveStatusBar";
 
 type LogicWorksToolbarProps = {
 	scope: LogicWorksScope;
@@ -29,7 +30,7 @@ export function LogicWorksToolbar({
 	scope,
 	onScopeChange,
 }: LogicWorksToolbarProps) {
-	const { uiSchema } = useSchemaEditor();
+	const { uiSchema, typicalWorkSaveDisplay } = useSchemaEditor();
 	const anchorRef = useRef<HTMLButtonElement>(null);
 	const [pickerOpen, setPickerOpen] = useState(false);
 	const scopePresent =
@@ -189,6 +190,30 @@ export function LogicWorksToolbar({
 			</Popper>
 
 			<Box sx={{ flexGrow: 1 }} />
+
+			{typicalWorkSaveDisplay ? (
+				<Box
+					sx={{
+						display: "flex",
+						alignItems: "center",
+						flexShrink: 0,
+						px: 1.5,
+						py: 0.75,
+						border: "1px solid #e6e8ee",
+						borderRadius: "9px",
+						bgcolor: "#fafbfc",
+						maxWidth: 360,
+					}}
+				>
+					<TypicalWorkSaveStatusBar
+						compact
+						status={typicalWorkSaveDisplay.status}
+						workName={typicalWorkSaveDisplay.workName}
+						errorMessage={typicalWorkSaveDisplay.errorMessage}
+						onRetry={typicalWorkSaveDisplay.onRetry}
+					/>
+				</Box>
+			) : null}
 
 			{/* <Button
 				onClick={() => navigate(routes.adminV2TypicalWorks.rootPath)}

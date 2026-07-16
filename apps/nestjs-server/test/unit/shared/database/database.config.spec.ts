@@ -14,7 +14,7 @@ describe("database.config", () => {
 			DB_NAME: "db",
 			DB_MIGRATIONS_RUN: false,
 			DB_SYNCHRONIZE: true,
-			LOGGING: false,
+			DB_LOGGING: false,
 			AUTO_LOAD_ENTITIES: true,
 			...over,
 		});

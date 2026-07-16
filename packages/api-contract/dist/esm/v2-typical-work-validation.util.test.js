@@ -84,6 +84,16 @@ describe("computeWorkTriggerStatus", () => {
             },
         ], catalog)).toBe("invalid");
     });
+    it("does not invalidate schema field triggers against global catalog", () => {
+        expect(computeWorkTriggerStatus([
+            {
+                paramCode: "field_HuOLfL4K",
+                paramName: "Поле схемы",
+                valueCode: "yes",
+                valueLabel: "Да",
+            },
+        ], catalog)).toBe("appears");
+    });
     it("marks stale value as invalid", () => {
         expect(computeWorkTriggerStatus([
             {

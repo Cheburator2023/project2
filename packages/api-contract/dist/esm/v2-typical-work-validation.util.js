@@ -1,7 +1,10 @@
 import { defaultWorkRounding } from "./v2-typical-work.types";
 import { evaluateWorkFormula, roundWorkEffortValue, validateWorkFormulaTokens, } from "./v2-work-formula.util";
 import { evaluateTermsFormula, termsToTokenFormula, validateTermsFormula, } from "./v2-work-terms-formula.util";
-import { catalogValueMatchesTriggerRule, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, typicalWorkRulesMatchSource, } from "./v2-works-catalog-match.util";
+import { catalogValueMatchesTriggerRule, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, } from "./v2-works-catalog-match.util";
+import { findWorkSchemaParameter } from "./v2-work-schema-params-match.util";
+import { isNumericLaborByValueParam } from "./v2-numeric-labor-range.util";
+import { hasTypicalWorkTriggersConfigured, matchTypicalWorkTriggers, validateTriggerFormulaTokens, } from "./v2-trigger-formula.util";
 function parseIsoDay(value) {
     const day = value.slice(0, 10);
     return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
@@ -320,6 +323,9 @@ export function filterTypicalWorkParameterValuesActiveOnDate(values, atDate) {
 }
 function isRuleInputInvalid(rule, catalog, atDate) {
     const operator = rule.operator ?? "=";
+    if (isSchemaFieldLaborParamCode(rule.paramCode)) {
+        return false;
+    }
     if (operator === "in" || operator === "not_in") {
         const values = rule.values?.length
             ? rule.values
@@ -371,36 +377,56 @@ function isRuleInputInvalid(rule, catalog, atDate) {
         (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
 }
 /** F-03/v4: статус триггеров с учётом каталога и (опционально) черновика ответов. */
-export function computeWorkTriggerStatus(rules, catalog, atDate, draftSource) {
-    if (rules.length === 0)
+export function computeWorkTriggerStatus(rules, catalog, atDate, draftSource, formData, triggerArchCount, triggerMode = "simple", triggerFormula) {
+    const matchRules = rules.map((rule) => ({
+        paramCode: rule.paramCode,
+        paramName: rule.paramName ?? null,
+        operator: rule.operator ?? "=",
+        valueCode: rule.valueCode,
+        valueLabel: rule.valueLabel,
+        values: rule.values,
+    }));
+    const triggerInput = {
+        mode: triggerMode,
+        rules: matchRules,
+        triggerArchCount,
+        triggerFormula,
+    };
+    if (!hasTypicalWorkTriggersConfigured(triggerInput)) {
         return "no_triggers";
-    if (catalog?.length) {
-        const grouped = new Map();
-        for (const rule of rules) {
-            const key = triggerRuleCatalogGroupKey(rule, catalog);
-            const list = grouped.get(key) ?? [];
-            list.push(rule);
-            grouped.set(key, list);
+    }
+    if (triggerMode === "formula") {
+        const formulaError = validateTriggerFormulaTokens(triggerFormula?.tokens ?? []);
+        if (formulaError)
+            return "invalid";
+        if (draftSource) {
+            return matchTypicalWorkTriggers(triggerInput, draftSource, formData ?? draftSource)
+                ? "appears"
+                : "hidden";
         }
-        for (const [groupKey, groupRules] of grouped) {
-            if (isWorkTriggerGroupInvalid(groupKey, groupRules, catalog, atDate)) {
-                return "invalid";
+        return "hidden";
+    }
+    if (rules.length > 0) {
+        if (catalog?.length) {
+            const grouped = new Map();
+            for (const rule of rules) {
+                const key = triggerRuleCatalogGroupKey(rule, catalog);
+                const list = grouped.get(key) ?? [];
+                list.push(rule);
+                grouped.set(key, list);
+            }
+            for (const [groupKey, groupRules] of grouped) {
+                if (isWorkTriggerGroupInvalid(groupKey, groupRules, catalog, atDate)) {
+                    return "invalid";
+                }
             }
         }
-    }
-    else if (rules.some((rule) => !rule.paramCode?.trim())) {
-        return "invalid";
+        else if (rules.some((rule) => !rule.paramCode?.trim())) {
+            return "invalid";
+        }
     }
     if (draftSource) {
-        const matchRules = rules.map((rule) => ({
-            paramCode: rule.paramCode,
-            paramName: rule.paramName ?? null,
-            operator: rule.operator ?? "=",
-            valueCode: rule.valueCode,
-            valueLabel: rule.valueLabel,
-            values: rule.values,
-        }));
-        return typicalWorkRulesMatchSource(matchRules, draftSource)
+        return matchTypicalWorkTriggers(triggerInput, draftSource, formData ?? draftSource)
             ? "appears"
             : "hidden";
     }
@@ -436,6 +462,107 @@ export function isWorkCoefficientValueAvailable(row, catalog, atDate) {
     const param = resolveWorkCoefficientCatalogParam(catalog, row.paramCode);
     if (!param)
         return false;
+    if (param.values.length === 0)
+        return true;
     return param.values.some((value) => (value.code === row.valueCode || value.label === row.valueLabel) &&
         (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
+}
+export function isWorkSchemaLaborParamCandidate(param) {
+    return (param.values?.length ?? 0) > 0;
+}
+function toWorkCoefficientCatalogParam(param, legacyCode) {
+    const sourceKeys = new Set([
+        ...(param.sourceKeys ?? [param.code]),
+        ...(legacyCode && legacyCode !== param.code ? [legacyCode] : []),
+    ]);
+    return {
+        code: param.code,
+        sourceKeys: [...sourceKeys],
+        values: param.values.map((value) => ({
+            code: value.code,
+            label: value.label,
+        })),
+    };
+}
+/** Каталог коэффициентов как в TypicalWorkEditableCard.coefficientCatalog. */
+export function buildWorkCoefficientCatalog(input) {
+    const byCode = new Map();
+    const addParam = (param, legacyCode) => {
+        byCode.set(param.code, toWorkCoefficientCatalogParam(param, legacyCode));
+    };
+    for (const param of input.schemaParams.filter(isWorkSchemaLaborParamCandidate)) {
+        addParam({
+            code: param.code,
+            name: param.name,
+            sourceKeys: param.sourceKeys,
+            values: param.values ?? [],
+        });
+    }
+    const methodologyParams = (input.methodologyCatalog ?? []).map((param) => ({
+        code: param.code,
+        name: param.name ?? param.code,
+        sourceKeys: param.sourceKeys,
+        values: param.values,
+    }));
+    for (const group of input.laborParams) {
+        const alreadyKnown = [...byCode.values()].some((entry) => entry.code === group.paramCode ||
+            entry.sourceKeys?.includes(group.paramCode));
+        if (alreadyKnown)
+            continue;
+        const schemaMatch = findWorkSchemaParameter(input.schemaParams, group.paramCode, group.paramName);
+        if (schemaMatch) {
+            addParam({
+                code: schemaMatch.code,
+                sourceKeys: schemaMatch.sourceKeys,
+                values: schemaMatch.values ?? [],
+            }, group.paramCode);
+            continue;
+        }
+        const catalogMatch = findWorkSchemaParameter(methodologyParams, group.paramCode, group.paramName);
+        if (catalogMatch) {
+            addParam({
+                code: catalogMatch.code,
+                sourceKeys: catalogMatch.sourceKeys,
+                values: catalogMatch.values ?? [],
+            }, group.paramCode);
+        }
+    }
+    return [...byCode.values()];
+}
+export function collectUnavailableLaborCoefficientIssues(input) {
+    const catalog = buildWorkCoefficientCatalog({
+        schemaParams: input.schemaParams,
+        laborParams: input.laborParams,
+        methodologyCatalog: input.methodologyCatalog,
+    });
+    const issues = [];
+    for (const group of input.laborParams) {
+        if (group.kind === "any_of")
+            continue;
+        const catalogParam = resolveWorkCoefficientCatalogParam(catalog, group.paramCode);
+        if (isNumericLaborByValueParam({
+            name: group.paramName,
+            values: catalogParam?.values,
+        })) {
+            continue;
+        }
+        for (const row of group.coefficients ?? []) {
+            if (!row.valueCode && !row.valueLabel)
+                continue;
+            if (isWorkCoefficientValueAvailable({
+                paramCode: group.paramCode,
+                valueCode: row.valueCode,
+                valueLabel: row.valueLabel,
+            }, catalog, input.atDate)) {
+                continue;
+            }
+            issues.push({
+                kind: "labor_value",
+                paramCode: group.paramCode,
+                paramName: group.paramName,
+                message: `Значение параметра трудоёмкости «${row.valueLabel ?? row.valueCode}» недоступно в справочнике`,
+            });
+        }
+    }
+    return issues;
 }

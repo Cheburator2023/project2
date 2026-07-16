@@ -4,7 +4,7 @@ const vitest_1 = require("vitest");
 const v2_executor_streams_util_1 = require("./v2-executor-streams.util");
 const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
 (0, vitest_1.describe)("v2-executor-streams.util", () => {
-    (0, vitest_1.it)("lists six executor stream labels", () => {
+    (0, vitest_1.it)("lists seven executor stream labels", () => {
         (0, vitest_1.expect)(v2_executor_streams_util_1.V2_EXECUTOR_STREAM_LABELS).toEqual([
             "ДАДМ",
             "ПиРМ",
@@ -12,6 +12,7 @@ const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
             "Контроль моделей",
             "Цифровые агенты",
             "Потоковые данные",
+            "Модельный стрим",
         ]);
     });
     (0, vitest_1.it)("maps legacy block keys to executor streams", () => {

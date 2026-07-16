@@ -1,6 +1,7 @@
 import type { V2JsonLogicValue } from "./v2-template.types";
-import type { TypicalWorkRuleLike } from "./v2-works-catalog-match.util";
-import type { V2TypicalWorkFormulaDto, V2TypicalWorkRoundingDto, V2TypicalWorkStoredCalculationLogicDto, V2WorkFormulaToken } from "./v2-typical-work.types";
+import type { TypicalWorkRuleLike, TypicalWorkTriggerArchCountLike } from "./v2-works-catalog-match.util";
+import type { V2TypicalWorkFormulaDto, V2TypicalWorkRoundingDto, V2TypicalWorkStoredCalculationLogicDto, V2TypicalWorkTriggerFormulaDto, V2TypicalWorkTriggerMode, V2WorkFormulaToken } from "./v2-typical-work.types";
+import { type TypicalWorkTriggerMatchInput } from "./v2-trigger-formula.util";
 import type { V2TypicalWorkFormulaTermsDto } from "./v2-typical-work-v4.types";
 /** Скомпилированная расчётная логика типовой работы (F-03 → JsonLogic). */
 export type V2TypicalWorkCalculationLogicDto = {
@@ -15,11 +16,16 @@ export type TypicalWorkJsonLogicEvalContext = {
     norm: number;
     paramCoefficients: Record<string, number>;
     source?: Record<string, unknown>;
+    formData?: Record<string, unknown>;
 };
 export type TypicalWorkCalculationEvalInput = {
     logic: V2TypicalWorkCalculationLogicDto;
     rules: TypicalWorkRuleLike[];
     source: Record<string, unknown>;
+    formData?: Record<string, unknown>;
+    triggerMode?: V2TypicalWorkTriggerMode;
+    triggerArchCount?: TypicalWorkTriggerArchCountLike | null;
+    triggerFormula?: V2TypicalWorkTriggerFormulaDto | null;
     norm: number;
     paramCoefficients: Record<string, number>;
     rounding: V2TypicalWorkRoundingDto;
@@ -33,14 +39,18 @@ export type TypicalWorkCalculationEvalResult = {
 };
 /** Компилирует token-формулу в JsonLogic-выражение (+, −, ×, ÷, var). */
 export declare function compileWorkFormulaTokensToJsonLogic(tokens: V2WorkFormulaToken[]): V2JsonLogicValue | null;
-/** Компилирует триггеры работы в JsonLogic (логическое И). Пустой список → false. */
-export declare function compileTypicalWorkTriggerRulesToJsonLogic(rules: TypicalWorkRuleLike[]): V2JsonLogicValue;
+export declare function compileTypicalWorkTriggersToJsonLogic(input: TypicalWorkTriggerMatchInput): V2JsonLogicValue;
+/** Компилирует триггеры: (ПТ₁ И ПТ₂ …) [И/ИЛИ] arch-count. Пустой список без arch → false. */
+export declare function compileTypicalWorkTriggerRulesToJsonLogic(rules: TypicalWorkRuleLike[], triggerArchCount?: TypicalWorkTriggerArchCountLike | null): V2JsonLogicValue;
 /** Оборачивает выражение округлением (custom op roundStep). */
 export declare function compileTypicalWorkRoundingJsonLogic(inner: V2JsonLogicValue, rounding: V2TypicalWorkRoundingDto): V2JsonLogicValue;
 export declare function compileTypicalWorkCalculationLogic(input: {
     formula: V2TypicalWorkFormulaDto;
     rounding: V2TypicalWorkRoundingDto;
     rules: TypicalWorkRuleLike[];
+    triggerArchCount?: TypicalWorkTriggerArchCountLike | null;
+    triggerMode?: V2TypicalWorkTriggerMode;
+    triggerFormula?: V2TypicalWorkTriggerFormulaDto | null;
 }): V2TypicalWorkCalculationLogicDto | null;
 /** Компилирует только result для сохранения в version_config (без include). */
 export declare function compileStoredTypicalWorkResultLogic(formula: V2TypicalWorkFormulaDto, rounding: V2TypicalWorkRoundingDto): V2TypicalWorkStoredCalculationLogicDto | null;
@@ -59,7 +69,7 @@ export declare function previewTypicalWorkCalculation(logic: V2TypicalWorkStored
 export declare function assembleTypicalWorkCalculationLogic(stored: Pick<V2TypicalWorkCalculationLogicDto, "result"> | null | undefined, rules: TypicalWorkRuleLike[], fallback?: {
     formula: V2TypicalWorkFormulaDto;
     rounding: V2TypicalWorkRoundingDto;
-}): V2TypicalWorkCalculationLogicDto | null;
+}, triggerInput?: TypicalWorkTriggerMatchInput | null): V2TypicalWorkCalculationLogicDto | null;
 export type VersionConfigFormulaLike = {
     formula: unknown;
     formulaText?: string | null;
@@ -80,5 +90,6 @@ export declare function computeTypicalWorkFormulaTotal(params: {
     norm: number;
     paramCoefficients: Record<string, number>;
     source?: Record<string, unknown>;
+    formData?: Record<string, unknown>;
     resolveFactorCoeff: (paramCode: string) => number;
 }): number | null;

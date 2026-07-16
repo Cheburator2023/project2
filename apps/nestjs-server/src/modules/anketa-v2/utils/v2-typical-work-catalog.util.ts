@@ -1,9 +1,12 @@
-import { V2_SOURCE_STREAM } from "@smart-anketa/api-contract";
+import {
+	V2_SOURCE_STREAM,
+	normalizeParamLabel,
+} from "@smart-anketa/api-contract";
 import {
 	dictionaryByName,
-	V2_DOC_CATALOG,
-	type V2CatalogTypicalWork,
-} from "../constants/v2-doc-catalog";
+	V2_FACTORY_TYPICAL_WORKS_SNAPSHOT,
+	type V2FactoryTypicalWork,
+} from "../constants/v2-factory-typical-works-catalog";
 import { inferMissingCatalogComponent } from "./v2-catalog-component-inference";
 
 /** Legacy-стримы источников (разделение внутр/внеш убрано). */
@@ -44,19 +47,116 @@ export function normalizeArchComponentType(raw: string): string {
 }
 
 export function resolveCatalogWorkComponent(
-	row: Pick<V2CatalogTypicalWork, "component" | "stream" | "stage">,
+	row: Pick<V2FactoryTypicalWork, "component" | "stream" | "stage">,
 ): string {
 	return inferMissingCatalogComponent(row.component, row.stream, row.stage);
 }
 
-export function buildCatalogWorkKey(component: string, name: string): string {
-	return `${normalizeArchComponentType(component)}|${name.trim()}`;
+export function extractWorkStage(name: string): string | null {
+	const trimmed = name.trim();
+	const legacy = trimmed.match(/^Этап[\s_]+(\d+)(?:\.|\s|$)/iu);
+	if (legacy?.[1]) return `Этап ${legacy[1]}`;
+
+	const e2e = trimmed.match(/^(\d+[ABab])\.\s+/u);
+	if (e2e?.[1]) return e2e[1].toUpperCase();
+
+	const e2eNumeric = trimmed.match(/^(\d+)\.\s+/u);
+	if (e2eNumeric?.[1]) return e2eNumeric[1];
+
+	if (/^AutoML:\s*/iu.test(trimmed)) return "AutoML";
+
+	return null;
 }
 
-export function groupCatalogWorks(): Map<string, V2CatalogTypicalWork[]> {
-	const groups = new Map<string, V2CatalogTypicalWork[]>();
-	for (const row of V2_DOC_CATALOG.typicalWorks) {
-		const key = buildCatalogWorkKey(resolveCatalogWorkComponent(row), row.name);
+export function findCatalogLaborParamGroup(
+	row: Pick<V2FactoryTypicalWork, "laborCoefficients">,
+	paramName: string,
+): NonNullable<V2FactoryTypicalWork["laborCoefficients"]>[number] | undefined {
+	const trimmed = paramName.trim();
+	if (!trimmed) return undefined;
+	const norm = normalizeParamLabel(trimmed);
+	for (const group of row.laborCoefficients ?? []) {
+		const groupNorm = normalizeParamLabel(group.paramName);
+		if (
+			groupNorm === norm ||
+			groupNorm.startsWith(norm) ||
+			norm.startsWith(groupNorm)
+		) {
+			return group;
+		}
+	}
+	return undefined;
+}
+
+export function resolveCatalogTriggerParamCode(
+	row: Pick<
+		V2FactoryTypicalWork,
+		"laborCoefficients" | "triggerRules"
+	>,
+	triggerParamName: string,
+): string {
+	const trimmed = triggerParamName.trim();
+	const norm = normalizeParamLabel(trimmed);
+	const triggerRule = row.triggerRules?.find((rule) => {
+		const ruleNorm = normalizeParamLabel(rule.paramName);
+		return (
+			ruleNorm === norm ||
+			ruleNorm.startsWith(norm) ||
+			norm.startsWith(ruleNorm)
+		);
+	});
+	if (triggerRule?.paramCode?.trim()) {
+		return triggerRule.paramCode.trim();
+	}
+	const coefficientGroup = findCatalogLaborParamGroup(row, trimmed);
+	return coefficientGroup?.paramCode?.trim() || slugParamCode(trimmed);
+}
+
+export function buildCatalogWorkKey(
+	component: string,
+	stage: string,
+	name: string,
+): string {
+	return `${normalizeArchComponentType(component)}|${stage.trim()}|${name.trim()}`;
+}
+
+/** «Этап 217. Составление ТР» → «Составление ТР» для сопоставления с CSV-каталогом. */
+export function stripWorkStagePrefix(name: string): string {
+	let rest = name.trim();
+	rest = rest.replace(/^Этап[\s_]+\d+\.\s*/u, "");
+	const stagePrefix = rest.match(/^(\d+[ABАВаб]?)\.\s*/iu);
+	if (stagePrefix) {
+		rest = rest.slice(stagePrefix[0].length);
+	} else {
+		rest = rest.replace(/^AutoML:\s*/iu, "");
+	}
+	return rest.trim().replace(/\.\s*$/u, "");
+}
+
+export function findCatalogRowsForRegistryWork(
+	entry: Pick<V2FactoryTypicalWork, "name"> & {
+		archComponentType: string;
+	},
+	catalogGroups: Map<string, V2FactoryTypicalWork[]>,
+): V2FactoryTypicalWork[] {
+	const stage = extractWorkStage(entry.name);
+	if (!stage) return [];
+	const key = buildCatalogWorkKey(
+		entry.archComponentType,
+		stage,
+		stripWorkStagePrefix(entry.name),
+	);
+	return catalogGroups.get(key) ?? [];
+}
+
+export function groupCatalogWorks(): Map<string, V2FactoryTypicalWork[]> {
+	const groups = new Map<string, V2FactoryTypicalWork[]>();
+	for (const row of V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks) {
+		const key = buildCatalogWorkKey(
+			resolveCatalogWorkComponent(row),
+			row.stage,
+			row.name,
+		);
 		const list = groups.get(key) ?? [];
 		list.push(row);
 		groups.set(key, list);
@@ -81,6 +181,30 @@ export function inferTriggerValueLabel(
 export function dictionaryValuesForParam(paramName: string) {
 	const dict = dictionaryByName(paramName);
 	return dict?.values ?? [];
+}
+
+export type CatalogFormulaSeedConfig = {
+	formulaText: string;
+	roundingMode: "CEIL" | "FLOOR" | "ROUND" | "NONE";
+	roundingStep: number | null;
+};
+
+export function findCatalogFormulaForStream(
+	catalogRows: V2FactoryTypicalWork[],
+	streamExecutor: string,
+): CatalogFormulaSeedConfig | null {
+	const stream = streamExecutor.trim();
+	for (const row of catalogRows) {
+		if (canonicalizeWorkStream(row.stream) !== stream) continue;
+		const formulaText = row.formulaText?.trim();
+		if (!formulaText) continue;
+		return {
+			formulaText,
+			roundingMode: row.roundingMode ?? "CEIL",
+			roundingStep: row.roundingStep ?? 0.1,
+		};
+	}
+	return null;
 }
 
 export const DEFAULT_NORM_VALID_FROM = "2025-01-01";

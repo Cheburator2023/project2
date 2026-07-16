@@ -6,6 +6,7 @@ export const V2_EXECUTOR_STREAM_LABELS = [
 	"Контроль моделей",
 	"Цифровые агенты",
 	"Потоковые данные",
+	"Модельный стрим",
 ] as const;
 
 export type V2ExecutorStreamLabel = (typeof V2_EXECUTOR_STREAM_LABELS)[number];
@@ -36,6 +37,7 @@ export const V2_DB_STREAM_TO_EXECUTOR_AREA: Record<string, V2ExecutorStreamLabel
 		"Модельный сервис": "ДАДМ",
 		"Сопровождение и поддержка": "ДАДМ",
 		"Архитектура данных": "ДАДМ",
+		"Модельный стрим": "Модельный стрим",
 	};
 
 export function isV2ExecutorStreamLabel(
@@ -60,6 +62,7 @@ const EXECUTOR_SCOPE_DB_STREAMS: Partial<
 > = {
 	"Источники данных": ["ИД. Внутренний", "ИД. Внешний", "Источники данных"],
 	ПиРМ: ["ПиРМ", "ПиРМ (правила и развитие модели)"],
+	"Модельный стрим": ["Модельный стрим"],
 };
 
 /** Стримы БД/области UI, в которых ищется назначение работы для блока typicalWork. */

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = exports.V2_SOURCE_SYSTEMS_ARRAY_PATH = void 0;
 exports.replaceDotPathInJsonLogic = replaceDotPathInJsonLogic;
 exports.typicalWorksCatalogRuleId = typicalWorksCatalogRuleId;
+exports.buildModelStreamTypicalWorksCatalogRule = buildModelStreamTypicalWorksCatalogRule;
 exports.buildSourceTypicalWorksCatalogRule = buildSourceTypicalWorksCatalogRule;
 exports.buildControlTypicalWorksCatalogRule = buildControlTypicalWorksCatalogRule;
 exports.isTypicalWorksCatalogLogicRule = isTypicalWorksCatalogLogicRule;
@@ -11,6 +12,8 @@ exports.buildTypicalWorkRowTotalRule = buildTypicalWorkRowTotalRule;
 exports.buildUnifiedTypicalTotalRule = buildUnifiedTypicalTotalRule;
 exports.schemaSupportsSourceTypicalWorksCatalog = schemaSupportsSourceTypicalWorksCatalog;
 exports.patchV2TypicalWorksLogicRules = patchV2TypicalWorksLogicRules;
+const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
+const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typical-works.constants");
 const v2_typical_work_output_paths_util_1 = require("./v2-typical-work-output-paths.util");
 Object.defineProperty(exports, "V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH", { enumerable: true, get: function () { return v2_typical_work_output_paths_util_1.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH; } });
 Object.defineProperty(exports, "V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH", { enumerable: true, get: function () { return v2_typical_work_output_paths_util_1.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH; } });
@@ -65,6 +68,30 @@ exports.V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
 function typicalWorksCatalogRuleId(outputArrayPath) {
     return `typical-works-catalog-${outputArrayPath.replace(/\./g, "-")}`;
 }
+function buildModelStreamTypicalWorksCatalogRule(outputArrayPath, options) {
+    const boundWorkIds = options?.boundWorkIds ?? [...v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_FACTORY_WORK_IDS];
+    return {
+        id: typicalWorksCatalogRuleId(outputArrayPath),
+        kind: "task_trigger",
+        targetPath: `/${outputArrayPath.replace(/\./g, "/")}`,
+        condition: true,
+        description: "ФТ-024: типовые работы модельного стрима из справочника (10 этапов CSV).",
+        dependencies: [],
+        payload: {
+            hint: "Типовые работы модельного стрима: всегда видимые этапы и этапы по триггерам из detailInfo.",
+            mode: "generated_rows",
+            label: "Типовые работы (Модельный стрим)",
+            worksCatalog: true,
+            worksCatalogStream: v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR,
+            worksCatalogAllArchComponents: true,
+            outputArrayPath,
+            allowedWorkIds: boundWorkIds,
+            sourceContextPaths: ["detailInfo", "generalInfo", "uncertaintyCalculation"],
+            taskCode: "CATALOG_MODEL_STREAM_TASKS",
+            calcModel: "unified",
+        },
+    };
+}
 function buildSourceTypicalWorksCatalogRule(outputArrayPath = v2_typical_work_output_paths_util_1.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH, options) {
     const boundWorkIds = options?.boundWorkIds;
     const hasExplicitBinding = boundWorkIds !== undefined;
@@ -76,6 +103,10 @@ function buildSourceTypicalWorksCatalogRule(outputArrayPath = v2_typical_work_ou
         worksCatalog: true,
         worksCatalogArchComponent: "Система-источник",
         worksCatalogStream: "fromSourceType",
+        sourceContextPaths: [
+            "detailInfo.dataMart",
+            "detailInfo.dataProcess",
+        ],
         taskCode: "CATALOG_SOURCE_TASKS",
         calcModel: "unified",
         outputArrayPath,
@@ -204,17 +235,24 @@ function buildUnifiedTypicalTotalRule(arrayPaths) {
         dependencies: arrayPaths.map((path) => `/${path.replace(/\./g, "/")}`),
     };
 }
-const LEGACY_CONTROL_TYPICAL_TASKS_PATH = "streamModelControl.control.controlTypicalTasks";
-const LEGACY_CONTROL_TYPICAL_TASKS_SLASH_PATH = "/streamModelControl/control/controlTypicalTasks";
-const LEGACY_CONTROL_TYPICAL_TASKS_SLASH_REPLACEMENT = `/${v2_typical_work_output_paths_util_1.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH.replace(/\./g, "/")}`;
+const LEGACY_CONTROL_ROW_TOTAL_RULE_IDS = new Set([
+    "unified-control-row-total",
+]);
+function isLegacyControlRowTotalRuleId(id) {
+    return LEGACY_CONTROL_ROW_TOTAL_RULE_IDS.has(id);
+}
 function patchTypicalWorksPathsDeep(value) {
     if (typeof value === "string") {
         let next = value;
-        if (next.includes(LEGACY_CONTROL_TYPICAL_TASKS_PATH)) {
-            next = next.replaceAll(LEGACY_CONTROL_TYPICAL_TASKS_PATH, v2_typical_work_output_paths_util_1.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH);
-        }
-        if (next.includes(LEGACY_CONTROL_TYPICAL_TASKS_SLASH_PATH)) {
-            next = next.replaceAll(LEGACY_CONTROL_TYPICAL_TASKS_SLASH_PATH, LEGACY_CONTROL_TYPICAL_TASKS_SLASH_REPLACEMENT);
+        for (const legacyPath of v2_typical_work_output_paths_util_1.LEGACY_CONTROL_TYPICAL_TASKS_OUTPUT_PATHS) {
+            if (next.includes(legacyPath)) {
+                next = next.replaceAll(legacyPath, v2_typical_work_output_paths_util_1.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH);
+            }
+            const legacySlash = `/${legacyPath.replace(/\./g, "/")}`;
+            const canonicalSlash = `/${v2_typical_work_output_paths_util_1.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH.replace(/\./g, "/")}`;
+            if (next.includes(legacySlash)) {
+                next = next.replaceAll(legacySlash, canonicalSlash);
+            }
         }
         if (next === "streamDataSources.sourceSystems") {
             return exports.V2_SOURCE_SYSTEMS_ARRAY_PATH;
@@ -267,9 +305,19 @@ function patchV2TypicalWorksLogicRules(logic, options) {
     if (hasSourceRule) {
         if (bindings.length > 0) {
             for (const binding of bindings) {
-                patched.push(buildSourceTypicalWorksCatalogRule(binding.outputPath, {
-                    boundWorkIds: binding.boundWorkIds,
-                }));
+                const streamExecutor = options?.uiSchema
+                    ? (0, v2_anketa_section_ui_util_1.resolveStreamExecutorForTypicalWorkOutputPath)(options.uiSchema, binding.outputPath)
+                    : null;
+                if (streamExecutor === v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR) {
+                    patched.push(buildModelStreamTypicalWorksCatalogRule(binding.outputPath, {
+                        boundWorkIds: binding.boundWorkIds,
+                    }));
+                }
+                else {
+                    patched.push(buildSourceTypicalWorksCatalogRule(binding.outputPath, {
+                        boundWorkIds: binding.boundWorkIds,
+                    }));
+                }
             }
         }
         else {
@@ -284,6 +332,7 @@ function patchV2TypicalWorksLogicRules(logic, options) {
     const rest = rules
         .filter((rule) => !isPatchedTypicalWorksCatalogRule(rule) &&
         !isTypicalRowTotalPatchedRuleId(rule.id) &&
+        !isLegacyControlRowTotalRuleId(rule.id) &&
         (typicalPaths.length === 0 || rule.id !== "unified-typical-total"))
         .map((rule) => patchUnifiedTypicalTotalRule(patchLegacyRowTotalRule(patchTypicalWorksPathsDeep(rule)), sourceOutputPath));
     const injectedTypicalRows = typicalPaths.map((path) => buildTypicalWorkRowTotalRule(path));

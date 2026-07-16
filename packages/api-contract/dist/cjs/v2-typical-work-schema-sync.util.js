@@ -1,12 +1,56 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.reconcileTypicalWorkCardWithSchemaField = reconcileTypicalWorkCardWithSchemaField;
+const v2_param_slug_util_1 = require("./v2-param-slug.util");
+const v2_template_work_schema_params_util_1 = require("./v2-template-work-schema-params.util");
+const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
+function collectFieldAliasCodes(request) {
+    const aliases = new Set();
+    for (const code of [
+        request.field.previousCode,
+        request.field.code,
+        ...(request.field.aliasCodes ?? []),
+    ]) {
+        if (code?.trim())
+            aliases.add(code.trim());
+    }
+    if (request.field.name?.trim()) {
+        const slug = (0, v2_param_slug_util_1.slugParamCode)((0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(request.field.name).trim());
+        if (slug)
+            aliases.add(slug);
+    }
+    return aliases;
+}
+function formatSyncedParamName(request, currentName, nextCode, previousCode) {
+    const displayName = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(request.field.name ?? currentName ?? "").trim();
+    if (!displayName)
+        return currentName ?? null;
+    const aliasCodes = [
+        nextCode,
+        previousCode,
+        request.field.previousCode,
+        ...(request.field.aliasCodes ?? []),
+        currentName ? (0, v2_param_slug_util_1.slugParamCode)((0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(currentName)) : null,
+    ].filter((code) => Boolean(code?.trim()));
+    return (0, v2_work_param_source_keys_util_1.formatParamNameWithSourceKeys)(displayName, [...new Set(aliasCodes)]);
+}
 function matchesField(ref, request) {
     if (ref.schemaFieldUid) {
         return ref.schemaFieldUid === request.field.schemaFieldUid;
     }
-    return Boolean(request.field.previousCode && ref.paramCode === request.field.previousCode);
+    const aliases = collectFieldAliasCodes(request);
+    if (aliases.has(ref.paramCode))
+        return true;
+    if (request.field.name?.trim() && ref.paramName?.trim()) {
+        const fieldName = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(request.field.name)
+            .trim()
+            .toLowerCase();
+        const refName = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(ref.paramName).trim().toLowerCase();
+        if (fieldName === refName)
+            return true;
+    }
+    return false;
 }
 function reconcileRule(rule, request) {
     if (!matchesField(rule, request))
@@ -15,37 +59,68 @@ function reconcileRule(rule, request) {
         return null;
     const values = request.field.values;
     if (values === undefined) {
+        const nextCode = request.field.code ?? rule.paramCode;
         return {
             ...rule,
             schemaFieldUid: request.field.schemaFieldUid,
-            paramCode: request.field.code ?? rule.paramCode,
-            paramName: request.field.name ?? rule.paramName,
+            paramCode: nextCode,
+            paramName: formatSyncedParamName(request, rule.paramName, nextCode, rule.paramCode) ?? rule.paramName,
         };
     }
-    const allowed = new Map(values.map((value) => [value.code, value.label]));
     const isSetOperator = rule.operator === "in" || rule.operator === "not_in";
     const nextValues = isSetOperator
         ? (rule.values ?? [])
-            .filter((value) => allowed.has(value.code))
-            .map((value) => ({
-            code: value.code,
-            label: allowed.get(value.code) ?? value.label ?? null,
-        }))
+            .filter((value) => values.some((allowedValue) => (0, v2_template_work_schema_params_util_1.schemaEnumValueMatchesRule)(allowedValue, {
+            valueCode: value.code,
+            valueLabel: value.label,
+        })))
+            .map((value) => {
+            const matched = values.find((allowedValue) => (0, v2_template_work_schema_params_util_1.schemaEnumValueMatchesRule)(allowedValue, {
+                valueCode: value.code,
+                valueLabel: value.label,
+            }));
+            return {
+                code: matched?.code ?? value.code,
+                label: matched?.label ?? value.label ?? null,
+            };
+        })
         : undefined;
-    const scalarAvailable = rule.valueCode != null && allowed.has(rule.valueCode);
+    const scalarMatch = values.find((value) => (0, v2_template_work_schema_params_util_1.schemaEnumValueMatchesRule)(value, rule));
+    const scalarAvailable = scalarMatch != null;
     return {
         ...rule,
         schemaFieldUid: request.field.schemaFieldUid,
         paramCode: request.field.code ?? rule.paramCode,
-        paramName: request.field.name ?? rule.paramName,
-        valueCode: isSetOperator ? null : scalarAvailable ? rule.valueCode : null,
+        paramName: formatSyncedParamName(request, rule.paramName, request.field.code ?? rule.paramCode, rule.paramCode) ?? rule.paramName,
+        valueCode: isSetOperator
+            ? null
+            : scalarAvailable
+                ? (0, v2_param_slug_util_1.normalizeStoredValueCode)(scalarMatch.code, scalarMatch.label)
+                : null,
         valueLabel: isSetOperator
             ? null
-            : scalarAvailable && rule.valueCode != null
-                ? (allowed.get(rule.valueCode) ?? rule.valueLabel)
+            : scalarAvailable
+                ? (0, v2_param_slug_util_1.normalizeStoredValueLabel)(scalarMatch.label ?? rule.valueLabel)
                 : null,
         values: nextValues,
     };
+}
+function normalizeLaborValueIdentity(value) {
+    return (value ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/ё/g, "е")
+        .replace(/\s+/g, "");
+}
+function findMatchingLaborCoefficient(group, value) {
+    return group.coefficients.find((row) => (0, v2_template_work_schema_params_util_1.schemaEnumValueMatchesRule)(value, {
+        valueCode: row.valueCode,
+        valueLabel: row.valueLabel,
+    }) ||
+        normalizeLaborValueIdentity(row.valueCode) ===
+            normalizeLaborValueIdentity(value.code) ||
+        normalizeLaborValueIdentity(row.valueLabel) ===
+            normalizeLaborValueIdentity(value.label));
 }
 function reconcileLaborParam(group, request) {
     if (!matchesField(group, request))
@@ -53,12 +128,11 @@ function reconcileLaborParam(group, request) {
     if (request.operation === "delete")
         return null;
     const values = request.field.values;
-    const oldCoefficients = new Map(group.coefficients.map((row) => [row.valueCode, row]));
     const nextBase = {
         ...group,
         schemaFieldUid: request.field.schemaFieldUid,
         paramCode: request.field.code ?? group.paramCode,
-        paramName: request.field.name ?? group.paramName,
+        paramName: formatSyncedParamName(request, group.paramName, request.field.code ?? group.paramCode, group.paramCode) ?? group.paramName,
     };
     if (values === undefined)
         return nextBase;
@@ -68,8 +142,8 @@ function reconcileLaborParam(group, request) {
         return {
             ...nextBase,
             anyOf: {
-                valueCodes: selectedValues.map((value) => value.code),
-                valueLabels: selectedValues.map((value) => value.label),
+                valueCodes: selectedValues.map((value) => (0, v2_param_slug_util_1.normalizeStoredValueCode)(value.code, value.label)),
+                valueLabels: selectedValues.map((value) => (0, v2_param_slug_util_1.normalizeStoredValueLabel)(value.label) ?? value.label),
                 coeffOn: group.anyOf?.coeffOn ?? 1,
                 coeffOff: group.anyOf?.coeffOff ?? 1,
             },
@@ -78,7 +152,7 @@ function reconcileLaborParam(group, request) {
     return {
         ...nextBase,
         coefficients: values.map((value, index) => {
-            const existing = oldCoefficients.get(value.code);
+            const existing = findMatchingLaborCoefficient(group, value);
             return {
                 id: existing?.id ?? `sync-${index}-${value.code}`,
                 streamExecutor: existing?.streamExecutor ??
@@ -86,21 +160,22 @@ function reconcileLaborParam(group, request) {
                     "",
                 paramCode: request.field.code ?? group.paramCode,
                 paramName: request.field.name ?? group.paramName,
-                valueCode: value.code,
-                valueLabel: value.label,
+                valueCode: (0, v2_param_slug_util_1.normalizeStoredValueCode)(value.code, value.label),
+                valueLabel: (0, v2_param_slug_util_1.normalizeStoredValueLabel)(value.label),
                 coefficient: existing?.coefficient ?? 1,
             };
         }),
     };
 }
-function reconcileFormulaTokens(tokens, oldParamCode, request) {
+function reconcileFormulaTokensForField(tokens, request) {
+    const aliases = collectFieldAliasCodes(request);
     let invalidated = false;
     return {
         tokens: tokens.map((token) => {
-            if ((token.kind !== "param_coeff" && token.kind !== "param_anyof") ||
-                token.paramCode !== oldParamCode) {
+            if (!(0, v2_work_formula_util_1.isParamToken)(token))
                 return token;
-            }
+            if (!aliases.has(token.paramCode))
+                return token;
             if (request.operation === "delete") {
                 invalidated = true;
                 return { ...token, invalid: true };
@@ -108,35 +183,52 @@ function reconcileFormulaTokens(tokens, oldParamCode, request) {
             return {
                 ...token,
                 paramCode: request.field.code ?? token.paramCode,
-                paramName: request.field.name ?? token.paramName,
+                paramName: formatSyncedParamName(request, token.paramName, request.field.code ?? token.paramCode, token.paramCode) ?? token.paramName,
                 invalid: false,
             };
         }),
         invalidated,
     };
 }
+function sanitizeFormulaAgainstLaborParams(tokens, laborParams) {
+    const laborRefs = laborParams.map((group) => ({
+        paramCode: group.paramCode,
+        paramName: group.paramName ?? null,
+    }));
+    const nextTokens = (0, v2_work_formula_util_1.markUnknownFormulaLaborParamTokensInvalid)(tokens, laborRefs);
+    const invalidated = nextTokens.some((token, index) => (0, v2_work_formula_util_1.isParamToken)(token) &&
+        token.invalid &&
+        (0, v2_work_formula_util_1.isParamToken)(tokens[index]) &&
+        !tokens[index].invalid);
+    return { tokens: nextTokens, invalidated };
+}
 function reconcileTypicalWorkCardWithSchemaField(card, request) {
     const matchingRules = card.rules.filter((rule) => matchesField(rule, request));
     const matchingLabor = card.laborParams.filter((group) => matchesField(group, request));
-    const oldCodes = new Set([
-        ...matchingRules.map((rule) => rule.paramCode),
-        ...matchingLabor.map((group) => group.paramCode),
-    ]);
     const rules = card.rules
         .map((rule) => reconcileRule(rule, request))
         .filter((rule) => rule != null);
     const laborParams = card.laborParams
         .map((group) => reconcileLaborParam(group, request))
         .filter((group) => group != null);
-    let formulaTokens = card.formula.tokens;
-    let formulasInvalidated = 0;
-    for (const oldCode of oldCodes) {
-        const reconciled = reconcileFormulaTokens(formulaTokens, oldCode, request);
-        formulaTokens = reconciled.tokens;
-        if (reconciled.invalidated)
-            formulasInvalidated = 1;
+    const formulaReconciled = matchingRules.length > 0 || matchingLabor.length > 0
+        ? reconcileFormulaTokensForField(card.formula.tokens, request)
+        : { tokens: card.formula.tokens, invalidated: false };
+    let formulaTokens = formulaReconciled.tokens;
+    let formulasInvalidated = formulaReconciled.invalidated ? 1 : 0;
+    const formulaSanitized = sanitizeFormulaAgainstLaborParams(formulaTokens, laborParams);
+    formulaTokens = (0, v2_work_formula_util_1.reconcileFormulaLaborParamTokens)(formulaSanitized.tokens, laborParams.map((group) => ({
+        paramCode: group.paramCode,
+        paramName: group.paramName ?? null,
+    })));
+    if (formulaSanitized.invalidated) {
+        formulasInvalidated = 1;
     }
-    const changed = matchingRules.length > 0 || matchingLabor.length > 0;
+    const changed = matchingRules.length > 0 ||
+        matchingLabor.length > 0 ||
+        formulaReconciled.invalidated ||
+        formulaSanitized.invalidated ||
+        JSON.stringify(formulaTokens) !== JSON.stringify(card.formula.tokens);
     return {
         card: {
             ...card,

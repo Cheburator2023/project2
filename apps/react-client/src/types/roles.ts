@@ -23,7 +23,7 @@ export enum Permission {
 	ANKETA_ADMIN_PANEL = "anketa_admin_panel",
 	DEVELOPER = "developer",
 	ANKETA_DELETE_CALCULATION = "anketa_delete_calculation",
-	ANKETA_WORKFLOW_APPROVE = "— anketa_workflow_approve",
-	ANKETA_AUDIT_VIEW = "anketa_audit_view"
+	ANKETA_WORKFLOW_APPROVE = "anketa_workflow_approve",
+	ANKETA_AUDIT_VIEW = "anketa_audit_view",
 }
 export type UserPermissions = Permission[];

@@ -47,6 +47,22 @@ export type V2LogicWorkspaceTab =
 
 export type V2WorkFormulaOperatorToken = "+" | "-" | "*" | "/";
 
+export const V2_WORK_FORMULA_ARCH_COUNT_KINDS = [
+	"model",
+	"sourceSystem",
+	"dataMart",
+	"dataProcess",
+	"modelService",
+] as const;
+
+export type V2WorkFormulaArchCountKind =
+	(typeof V2_WORK_FORMULA_ARCH_COUNT_KINDS)[number];
+
+export type V2WorkArchCountCoeffStep = {
+	count: number;
+	coefficient: number;
+};
+
 export type V2WorkFormulaToken =
 	| { kind: "norm" }
 	| {
@@ -68,6 +84,11 @@ export type V2WorkFormulaToken =
 			workName?: string;
 			invalid?: boolean;
 	  }
+	| {
+			kind: "arch_count_coeff";
+			archComponentKind: V2WorkFormulaArchCountKind;
+			steps: V2WorkArchCountCoeffStep[];
+	  }
 	| { kind: "number"; value: number }
 	| { kind: "operator"; op: V2WorkFormulaOperatorToken }
 	| { kind: "paren_open" }
@@ -85,6 +106,62 @@ export type V2TypicalWorkRuleValueDto = {
 	code: string;
 	label: string | null;
 };
+
+export type V2TypicalWorkTriggerArchCountCombinator = "and" | "or";
+
+/** Глобальное условие по количеству арх. компонентов для стрима работы. */
+export type V2TypicalWorkTriggerArchCountDto = {
+	kind: V2WorkFormulaArchCountKind | null;
+	steps: V2WorkArchCountCoeffStep[];
+	/** Связка всех параметров-триггеров с arch-count: and (И) или or (ИЛИ). */
+	combinator: V2TypicalWorkTriggerArchCountCombinator;
+};
+
+export function defaultTriggerArchCount(): V2TypicalWorkTriggerArchCountDto {
+	return { kind: null, steps: [], combinator: "and" };
+}
+
+/** Коэффициент трудоёмкости по количеству арх. компонентов (без поля схемы). */
+export type V2TypicalWorkLaborArchCountDto = {
+	kind: V2WorkFormulaArchCountKind;
+	steps: V2WorkArchCountCoeffStep[];
+	paramName?: string | null;
+};
+
+export const V2_TYPICAL_WORK_TRIGGER_MODE_VALUES = ["simple", "formula"] as const;
+export type V2TypicalWorkTriggerMode =
+	(typeof V2_TYPICAL_WORK_TRIGGER_MODE_VALUES)[number];
+
+export type V2TriggerFormulaLogicOp = "and" | "or";
+
+export type V2TriggerFormulaToken =
+	| {
+			kind: "param";
+			paramCode: string;
+			paramName?: string;
+			schemaFieldUid?: string | null;
+			operator: V2WorkRuleOperator;
+			valueCode?: string | null;
+			valueLabel?: string | null;
+			values?: V2TypicalWorkRuleValueDto[];
+	  }
+	| {
+			kind: "arch_count";
+			archComponentKind: V2WorkFormulaArchCountKind;
+			steps: V2WorkArchCountCoeffStep[];
+	  }
+	| { kind: "logic"; op: V2TriggerFormulaLogicOp }
+	| { kind: "paren_open" }
+	| { kind: "paren_close" };
+
+export type V2TypicalWorkTriggerFormulaDto = {
+	tokens: V2TriggerFormulaToken[];
+	text: string;
+};
+
+export function defaultTriggerFormula(): V2TypicalWorkTriggerFormulaDto {
+	return { tokens: [], text: "" };
+}
 
 export type V2TypicalWorkRuleDto = {
 	id: string;
@@ -227,6 +304,10 @@ export type V2TypicalWorkCardDto = {
 	triggerStatus: V2WorkTriggerStatus;
 	norms: V2TypicalWorkNormDto[];
 	rules: V2TypicalWorkRuleDto[];
+	triggerMode?: V2TypicalWorkTriggerMode;
+	triggerFormula?: V2TypicalWorkTriggerFormulaDto;
+	triggerArchCount?: V2TypicalWorkTriggerArchCountDto;
+	laborArchCounts?: V2TypicalWorkLaborArchCountDto[];
 	laborParams: V2TypicalWorkLaborParamGroupDto[];
 	formula: V2TypicalWorkFormulaDto;
 	formulaTerms?: V2TypicalWorkFormulaTermsDto;
@@ -295,6 +376,10 @@ export type PatchV2TypicalWorkRequestDto = {
 	archComponentType?: string;
 	norms?: V2TypicalWorkNormInputDto[];
 	rules?: V2TypicalWorkRuleInputDto[];
+	triggerMode?: V2TypicalWorkTriggerMode;
+	triggerFormula?: V2TypicalWorkTriggerFormulaDto | null;
+	triggerArchCount?: V2TypicalWorkTriggerArchCountDto | null;
+	laborArchCounts?: V2TypicalWorkLaborArchCountDto[] | null;
 	laborCoefficients?: V2TypicalWorkLaborCoefficientInputDto[];
 	laborParams?: V2TypicalWorkLaborParamInputDto[];
 	formula?: V2TypicalWorkFormulaDto;
@@ -350,6 +435,28 @@ export type V2TypicalWorkQuestionnaireUsageDto = {
 export type V2DeleteTypicalWorkConflictDto = {
 	code: "WORK_IN_USE";
 	usedInQuestionnaireVersions: V2TypicalWorkQuestionnaireUsageDto[];
+};
+
+export type BulkDeleteV2TypicalWorksRequestDto = {
+	ids: string[];
+	confirm?: boolean;
+};
+
+export type BulkDeleteV2TypicalWorkConflictDto = {
+	workId: string;
+	usedInQuestionnaireVersions: V2TypicalWorkQuestionnaireUsageDto[];
+};
+
+export type BulkDeleteV2TypicalWorkFailureDto = {
+	id: string;
+	reason: "not_found" | "delete_failed";
+	message: string;
+};
+
+export type BulkDeleteV2TypicalWorksResultDto = {
+	deletedIds: string[];
+	conflicts: BulkDeleteV2TypicalWorkConflictDto[];
+	failed: BulkDeleteV2TypicalWorkFailureDto[];
 };
 
 export type V2TypicalWorkParameterValueDto = {

@@ -89,6 +89,10 @@ const v2_default_typical_works_logic_util_1 = require("./v2-default-typical-work
         const payload = rule?.payload;
         (0, vitest_1.expect)(payload.worksCatalog).toBe(true);
         (0, vitest_1.expect)(payload.outputArrayPath).toBe("detailInfo.myTypicalTasks");
+        (0, vitest_1.expect)(payload.sourceContextPaths).toEqual([
+            "detailInfo.dataMart",
+            "detailInfo.dataProcess",
+        ]);
         (0, vitest_1.expect)(rule?.targetPath).toBe("/detailInfo/myTypicalTasks");
     });
     (0, vitest_1.it)("injects separate catalog rules per typicalWork block with bound work ids", () => {
@@ -216,8 +220,26 @@ const v2_default_typical_works_logic_util_1 = require("./v2-default-typical-work
         const rule = patched.rules.find((r) => r.id === "unified-typical-total");
         (0, vitest_1.expect)(rule?.dependencies).toEqual([
             "/streamDataSources/sourceTypicalTasks",
-            "/streamModelControl/field_Khn6-HAW",
+            "/streamModelControl/field_G0AoYAl8",
         ]);
+    });
+    (0, vitest_1.it)("drops legacy unified-control-row-total rule", () => {
+        const patched = (0, v2_default_typical_works_logic_util_1.patchV2TypicalWorksLogicRules)({
+            rules: [
+                {
+                    id: "unified-control-row-total",
+                    kind: "row_computed",
+                    targetPath: "/streamModelControl/field_Khn6-HAW",
+                    condition: true,
+                    dependencies: [],
+                    payload: {
+                        fieldVar: "total",
+                        arrayPath: "streamModelControl.field_Khn6-HAW",
+                    },
+                },
+            ],
+        });
+        (0, vitest_1.expect)(patched.rules.some((rule) => rule.id === "unified-control-row-total")).toBe(false);
     });
     (0, vitest_1.it)("patches unified-typical-total to custom typicalWork output path from uiSchema", () => {
         const customPath = "streamDataSources.field_SId8TZKZ";
@@ -263,5 +285,29 @@ const v2_default_typical_works_logic_util_1 = require("./v2-default-typical-work
         ]);
         (0, vitest_1.expect)(JSON.stringify(rule?.condition)).toContain(customPath);
         (0, vitest_1.expect)(JSON.stringify(rule?.condition)).not.toContain("streamDataSources.sourceTypicalTasks");
+    });
+    (0, vitest_1.it)("injects model stream catalog rule for detailTypicalTasks block", () => {
+        const patched = (0, v2_default_typical_works_logic_util_1.patchV2TypicalWorksLogicRules)({ rules: [] }, {
+            uiSchema: {
+                detailInfo: {
+                    "ui:options": {
+                        streamBlock: true,
+                        streamExecutor: "Модельный стрим",
+                    },
+                    detailTypicalTasks: {
+                        "ui:options": {
+                            archComponent: "typicalWork",
+                            streamExecutor: "Модельный стрим",
+                        },
+                    },
+                },
+            },
+        });
+        const rule = patched.rules.find((entry) => entry.id === "typical-works-catalog-detailInfo-detailTypicalTasks");
+        (0, vitest_1.expect)(rule).toBeTruthy();
+        const payload = rule?.payload;
+        (0, vitest_1.expect)(payload.worksCatalogStream).toBe("Модельный стрим");
+        (0, vitest_1.expect)(payload.worksCatalogAllArchComponents).toBe(true);
+        (0, vitest_1.expect)(payload.sourceArrayPath).toBeUndefined();
     });
 });

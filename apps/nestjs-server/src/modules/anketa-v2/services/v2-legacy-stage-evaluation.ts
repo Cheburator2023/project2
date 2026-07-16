@@ -397,7 +397,7 @@ function calculateAllStages(
 	coefficients: Coefficients,
 ): Record<V2StageKey, number> {
 	const ctx = resolveLegacyFormContext(data);
-	const assessedInitiativesCount = 1;
+	const assessedInitiativesCount = ctx.assessedInitiativesCount;
 
 	const c = coefficients;
 	const b = V2_STAGE_BASE_VALUES;

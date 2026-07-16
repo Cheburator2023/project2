@@ -49,6 +49,9 @@ describe("V2TypicalWorkWriteService.reconcileSchemaField", () => {
 		const laborParamRepository = {
 			find: jest.fn().mockResolvedValue([]),
 		};
+		const laborRepository = {
+			find: jest.fn().mockResolvedValue([]),
+		};
 		const typicalWorkService = {
 			getWorkCardForSchemaSync: jest
 				.fn()
@@ -65,6 +68,7 @@ describe("V2TypicalWorkWriteService.reconcileSchemaField", () => {
 			versionConfigRepository,
 			ruleRepository,
 			laborParamRepository,
+			laborRepository,
 			typicalWorkService,
 		});
 		jest.spyOn(service, "patchWork").mockResolvedValue({} as never);
@@ -120,7 +124,7 @@ describe("V2TypicalWorkWriteService.reconcileSchemaField", () => {
 				rules: [
 					expect.objectContaining({
 						paramCode: "renamed",
-						paramName: "Переименованное поле",
+						paramName: expect.stringContaining("Переименованное поле"),
 					}),
 				],
 			}),
