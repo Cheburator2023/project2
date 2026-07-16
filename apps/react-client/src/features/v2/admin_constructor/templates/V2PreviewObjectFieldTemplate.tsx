@@ -51,6 +51,7 @@ import {
 	resolveV2AnketaSectionDisplayTitle,
 	resolveGroupIsActive,
 	type V2ArchComponentType,
+	isV2AnketaBlockVisibleForViewer,
 } from "@smart-anketa/api-contract";
 import { isGeneralUncertaintyField } from "../schemaEditor/propertiesFieldKind";
 import { ArchComponentDevOutline } from "./ArchComponentDevOutline";
@@ -619,6 +620,17 @@ export function V2PreviewArrayFieldTemplate({
 	} = readAnketaFormContext(registry.formContext);
 	const archComponent = resolveV2AnketaArchComponent(uiSchema);
 	const pathKey = fieldPathId?.path?.join(".") ?? "";
+	if (
+		pathKey &&
+		!isAnketaSectionVisibleForViewer(
+			registry.formContext,
+			readAnketaFormContext(registry.formContext).previewUiSchema ??
+				(uiSchema as UiSchema),
+			pathKey,
+		)
+	) {
+		return null;
+	}
 	const typicalWorkBadgeSuffix = useMemo(() => {
 		if (archComponent !== "typicalWork" || !pathKey) return undefined;
 		const items = getArrayAtPath(formData ?? {}, pathKey);
@@ -773,6 +785,21 @@ export function V2PreviewArrayFieldTemplate({
 	);
 }
 
+function isAnketaSectionVisibleForViewer(
+	formContext: unknown,
+	uiSchema: UiSchema | undefined,
+	outputPath: string,
+): boolean {
+	const ctx = readAnketaFormContext(formContext);
+	if (!ctx.viewerAccess?.applyAccessRules || !uiSchema) return true;
+	return isV2AnketaBlockVisibleForViewer(
+		ctx.viewerAccess,
+		uiSchema,
+		outputPath,
+		{ applyAccessRules: true },
+	);
+}
+
 /** Группы/секции (object) в accordion-карточках; корень — только вертикальный стек. */
 export function V2PreviewObjectFieldTemplate({
 	title,
@@ -804,6 +831,15 @@ export function V2PreviewObjectFieldTemplate({
 					registry.formContext,
 					element.name,
 					(uiSchema as UiSchema | undefined)?.[element.name],
+				)
+			) {
+				return false;
+			}
+			if (
+				!isAnketaSectionVisibleForViewer(
+					registry.formContext,
+					uiSchema as UiSchema | undefined,
+					element.name,
 				)
 			) {
 				return false;
@@ -895,6 +931,16 @@ export function V2PreviewObjectFieldTemplate({
 			registry.formContext,
 			pathKey,
 			uiSchema,
+		)
+	) {
+		return null;
+	}
+	if (
+		pathKey &&
+		!isAnketaSectionVisibleForViewer(
+			registry.formContext,
+			anketaCtx.previewUiSchema ?? (uiSchema as UiSchema),
+			pathKey,
 		)
 	) {
 		return null;

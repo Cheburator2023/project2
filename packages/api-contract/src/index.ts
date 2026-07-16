@@ -22,6 +22,8 @@ export * from "./v2-implementation-streams.util";
 export * from "./v2-stream-block-executor.util";
 export * from "./v2-stream-block-role.util";
 export * from "./v2-anketa-section-ui.util";
+export * from "./v2-anketa-block-access.util";
+export * from "./v2-user-stream-mapping.util";
 export * from "./v2-arch-component-presets";
 export * from "./v2-anketa-editor-ui.util";
 export * from "./v2-typical-works.util";

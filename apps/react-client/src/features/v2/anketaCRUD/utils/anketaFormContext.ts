@@ -10,6 +10,7 @@ import type {
 	TaskTriggerItem,
 } from "@react-client/features/v2/admin_constructor/utils/calculationEngine";
 import type { PathCalculationInfluence } from "./anketaCalculationDev.util";
+import type { AnketaViewerAccess } from "./anketaViewerAccess";
 
 export type AnketaFormContextValue = {
 	/**
@@ -52,6 +53,8 @@ export type AnketaFormContextValue = {
 	calculationLoading?: boolean;
 	/** Пути arch-блоков нетиповых работ, у которых коэффициент обновился после пересчёта неопределённости. */
 	atypicalUncertaintySyncHighlightPaths?: ReadonlySet<string>;
+	/** Роли и стримы зрителя для ролевки блоков (только просмотр анкеты). */
+	viewerAccess?: AnketaViewerAccess;
 };
 
 export function readAnketaFormContext(

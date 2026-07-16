@@ -1,5 +1,6 @@
 import { type V2AnketaMainSectionId } from "./v2-anketa-workflow.types";
 import type { V2QuestionnaireDto } from "./v2-questionnaire.types";
+import { type V2AnketaViewerAccessContext } from "./v2-anketa-block-access.util";
 export type V2RegistryColumnValueType = "text" | "number" | "date" | "boolean";
 export type V2RegistryColumnKind = "meta" | "form" | "sectionStatus" | "panelStatus";
 export type V2RegistryLeafColumn = {
@@ -34,6 +35,10 @@ export type V2RegistrySchemaColumnOptions = {
     arrayIndicesByPath?: Record<string, number[]>;
     /** Подписи групп массивов: путь → индекс → заголовок. */
     arrayGroupLabelsByPath?: Record<string, Record<number, string>>;
+    /** Контекст зрителя для ролевки колонок экспорта. */
+    viewerAccess?: V2AnketaViewerAccessContext;
+    /** Применять правила доступа к экспорту (false в админ-превью). */
+    applyAccessRules?: boolean;
 };
 /** Подписи группы рисков (из jsonSchema.title заводской схемы). */
 export declare const V2_UNCERTAINTY_RISK_GROUP_LABELS: Record<string, string>;

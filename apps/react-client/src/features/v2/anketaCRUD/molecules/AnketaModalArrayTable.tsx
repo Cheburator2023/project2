@@ -29,6 +29,13 @@ import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 import { TypicalWorkSummaryTotal } from "./TypicalWorkSummaryTotal";
+import { shouldMaskWorkEstimatesForViewerAtPath } from "@smart-anketa/api-contract";
+
+const ESTIMATE_TABLE_COLUMN_KEYS = new Set([
+	"estimate",
+	"coefficient",
+	"total",
+]);
 
 type Props = {
 	pathKey: string;
@@ -134,7 +141,22 @@ export function AnketaModalArrayTable({
 		if (!isTypicalWorks || sourceNames.length <= 1) return items;
 		return filterTypicalWorkItems(items, sourceNameFilter);
 	}, [isTypicalWorks, items, sourceNameFilter, sourceNames.length]);
-	const typicalTotal = isTypicalWorks ? sumTypicalWorkTotals(visibleItems) : null;
+	const maskEstimates = useMemo(() => {
+		if (!ctx.viewerAccess?.applyAccessRules || !ctx.previewUiSchema) {
+			return false;
+		}
+		return shouldMaskWorkEstimatesForViewerAtPath(
+			ctx.viewerAccess,
+			ctx.previewUiSchema,
+			pathKey,
+			{ applyAccessRules: true },
+		);
+	}, [ctx.previewUiSchema, ctx.viewerAccess, pathKey]);
+	const typicalTotal = isTypicalWorks
+		? maskEstimates
+			? null
+			: sumTypicalWorkTotals(visibleItems)
+		: null;
 	const calculationLoading = Boolean(
 		ctx.calculationLoading ?? ctx.devCalculationLoading,
 	);
@@ -381,17 +403,23 @@ export function AnketaModalArrayTable({
 										minWidth: showRowActions ? 720 : 640,
 									}}
 								>
-									{displayColumns.map((column) => (
-										<CellValue
-											key={column.key}
-											column={column}
-											value={
-												column.render
-													? column.render(item)
-													: String(item[column.field ?? column.key] ?? "—")
-											}
-										/>
-									))}
+									{displayColumns.map((column) => {
+										const rawValue = column.render
+											? column.render(item)
+											: String(item[column.field ?? column.key] ?? "—");
+										const value =
+											maskEstimates &&
+											ESTIMATE_TABLE_COLUMN_KEYS.has(column.key)
+												? "—"
+												: rawValue;
+										return (
+											<CellValue
+												key={column.key}
+												column={column}
+												value={value}
+											/>
+										);
+									})}
 									{showRowActions && !readOnly ? (
 										<Stack
 											direction="row"

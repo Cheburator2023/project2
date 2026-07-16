@@ -36,6 +36,7 @@ import {
 } from "../utils/v2-form-data-migration.util";
 import { normalizeV2AnketaWorkflow } from "../utils/v2-anketa-workflow.util";
 import { buildV2QuestionnaireRegistryXlsx } from "../utils/v2-questionnaire-registry-export.util";
+import { buildV2AnketaViewerAccessFromUser } from "../utils/v2-anketa-viewer-access.util";
 
 type TUserLike = {
 	given_name?: string;
@@ -65,7 +66,10 @@ export class V2QuestionnaireService {
 		return Promise.all(rows.map((row) => this.toDto(row)));
 	}
 
-	async exportRegistryXlsx(ids?: string[]): Promise<Buffer> {
+	async exportRegistryXlsx(
+		ids?: string[],
+		user?: Record<string, unknown>,
+	): Promise<Buffer> {
 		const rows =
 			ids && ids.length > 0
 				? await this.findAllByIds(ids)
@@ -81,12 +85,19 @@ export class V2QuestionnaireService {
 			versionIds.length > 0
 				? await this.versionRepository.find({ where: { id: In(versionIds) } })
 				: [];
+		const viewerAccess = buildV2AnketaViewerAccessFromUser(
+			user as { groups?: string[] } | undefined,
+		);
 		return buildV2QuestionnaireRegistryXlsx(
 			rows,
 			versions.map((version) => ({
 				jsonSchema: version.jsonSchema as Record<string, unknown>,
 				uiSchema: version.uiSchema as Record<string, unknown>,
 			})),
+			{
+				viewerAccess,
+				applyAccessRules: Boolean(viewerAccess),
+			},
 		);
 	}
 

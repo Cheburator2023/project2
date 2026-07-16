@@ -2,6 +2,8 @@
 
 Документ описывает единый справочник **Стрим-исполнитель** (`V2_IMPLEMENTATION_STREAM`): поле анкеты v2, стрим-блоки конструктора схемы, редактор логики типовых работ и фильтрацию реестра для ролей со стрим-ограничением.
 
+**См. также:** [anketa-block-access.md](./anketa-block-access.md) — видимость стрим-блоков и типовых/нетиповых работ при **просмотре анкеты** и **экспорте XLSX** (роли `streamBlockRoles`, маскировка оценок для лидов). На расчёт `POST /calculate` не влияет.
+
 ## 1. Назначение
 
 `generalInfo.implementationStream` — справочное поле анкеты v2 («Стрим-исполнитель»).
@@ -134,6 +136,8 @@ Keycloak groups
 3. Есть разрешённые стримы → остаются анкеты, у которых `implementationStream` ∈ allow-list.
 4. У анкеты нет `implementationStream` → она **не** проходит фильтр.
 
+> **Отличие от ролевки блоков.** Stream filter режет **список анкет** в реестре. Скрытие полей внутри открытой анкеты и колонок в XLSX — отдельный механизм, см. [anketa-block-access.md §8](./anketa-block-access.md#8-связь-с-фильтром-реестра).
+
 ---
 
 ## 4. Стрим-блоки конструктора и логика типовых работ
@@ -147,16 +151,22 @@ Keycloak groups
   "ui:options": {
     "streamBlock": true,
     "streamExecutor": "idsrc",
+    "streamBlockRoles": ["ds", "de"],
     "sectionRole": "main"
   }
 }
 ```
 
-- **`streamExecutor`** — код из `V2_IMPLEMENTATION_STREAM` (не подпись).
+- **`streamExecutor`** — код из `V2_IMPLEMENTATION_STREAM` (не подпись); допускается массив кодов.
+- **`streamBlockRoles`** — одна роль Keycloak или массив (`V2_STREAM_BLOCK_ROLE`); используется при просмотре анкеты и экспорте, см. [anketa-block-access.md §2](./anketa-block-access.md#2-настройки-в-uischema).
 - Заголовок секции в UI: `resolveStreamBlockExecutorLabel(code)` → «Стрим «Источники данных»».
 - Старые шаблоны с подписью (`"Источники данных"`, `"ДАДМ"`) или legacy-ключами (`streamDataSources`, `field_i8dL7QZa`) при чтении приводятся к коду.
 
-UI конструктора: панель «Стримовый блок» в `SchemaPropertiesPanel` — селект по `V2_IMPLEMENTATION_STREAM_CODES` / `V2_IMPLEMENTATION_STREAM_LABELS`, справочник `v2.generalInfo.implementationStream`.
+UI конструктора: панель «Стримовый блок» в `SchemaPropertiesPanel` — мультиселект стримов и ролей (`StreamExecutorMultiSelect`, `StreamBlockRoleMultiSelect`), справочник `v2.generalInfo.implementationStream`. Аналогичные настройки — на блоках **типовых** и **нетиповых работ** и во вкладках логики «Типовые работы» / «Нетиповые работы» ([anketa-block-access.md §2](./anketa-block-access.md#2-настройки-в-uischema)).
+
+### Просмотр анкеты: видимость блоков
+
+Те же `streamExecutor` и `streamBlockRoles` определяют, видит ли пользователь секцию при открытии анкеты (не в конструкторе). Правила, лиды, маскировка оценок — [anketa-block-access.md §4–§5](./anketa-block-access.md#4-правила-видимости-блоков).
 
 ### Редактор логики типовых работ
 
@@ -219,18 +229,23 @@ Scope для сопоставления работ (`IMPLEMENTATION_STREAM_DB_SC
 
 | Файл | Содержание |
 |------|------------|
+| `apps/nestjs-server/docs/anketa-block-access.md` | ролевка блоков при просмотре и экспорте (см. также этот документ) |
 | `packages/api-contract/src/v2-implementation-streams.util.ts` | коды, подписи, `V2_IMPLEMENTATION_STREAM`, хелперы |
 | `packages/api-contract/src/v2-stream-block-executor.util.ts` | нормализация код↔label↔DB для блоков и логики |
+| `packages/api-contract/src/v2-stream-block-role.util.ts` | коды ролей `streamBlockRoles` |
+| `packages/api-contract/src/v2-anketa-block-access.util.ts` | `isBlockVisibleForUser`, маскировка оценок |
+| `packages/api-contract/src/v2-user-stream-mapping.util.ts` | groups Keycloak → стримы пользователя |
 | `packages/api-contract/src/v2-anketa-section-ui.util.ts` | `streamBlock`, `collectExecutorStreamBlocks`, заголовки |
 | `apps/react-client/.../SchemaPropertiesPanel.tsx` | селект стрим-исполнителя стрим-блока |
 | `apps/react-client/.../typicalWorksAreas.ts` | область и фильтры редактора логики |
+| `apps/react-client/.../V2PreviewObjectFieldTemplate.tsx` | скрытие блоков при просмотре анкеты |
 | `apps/nestjs-server/.../v2-default-organizational-dictionaries.ts` | seed справочника |
 | `apps/nestjs-server/.../v2-default-anketa.snapshot.json` | enum / enumNames в схеме |
 | `apps/react-client/.../dictionaryPreview.ts` | `storeCode` → code в formData |
 | `apps/nestjs-server/src/shared/interceptors/stream-filter.interceptor.ts` | фильтр ответа |
 | `apps/nestjs-server/src/shared/services/stream-mapping.service.ts` | роли → разрешённые стримы |
 | `apps/nestjs-server/src/shared/utils/user-groups.util.ts` | разбор Keycloak groups |
-| `apps/nestjs-server/.../v2-questionnaire.controller.ts` | `@StreamFilter()` на реестре |
+| `apps/nestjs-server/.../v2-questionnaire.controller.ts` | `@StreamFilter()` на реестре; export/xlsx + block access |
 
 ---
 
@@ -244,3 +259,10 @@ Scope для сопоставления работ (`IMPLEMENTATION_STREAM_DB_SC
 | Фильтр списка | `CalculationController` | `V2QuestionnaireController.findAll` |
 
 Общий механизм: один `StreamFilterInterceptor` + `StreamMappingService`.
+
+### Связанная документация
+
+| Документ | Тема |
+|----------|------|
+| [anketa-block-access.md](./anketa-block-access.md) | видимость стрим-блоков и typical/atypical при просмотре и экспорте; `streamBlockRoles`; лиды |
+| этот документ | справочник кодов, stream filter реестра, uiSchema `streamExecutor`, логика типовых работ |

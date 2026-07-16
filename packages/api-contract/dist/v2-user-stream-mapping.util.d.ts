@@ -1,0 +1,8 @@
+import { type V2ImplementationStreamCode } from "./v2-implementation-streams.util";
+/** Роли Keycloak, для которых стрим берётся из департамента / groups (как на бекенде). */
+export declare const V2_USER_STREAM_FILTERED_ROLE_CODES: readonly ["ds", "de", "sarep", "data_expert", "mipm_stream", "modelops"];
+export declare function normalizeV2UserGroups(userGroups: readonly string[]): string[];
+export declare function extractV2UserRoleCodes(userGroups: readonly string[]): string[];
+export declare function isV2UserStreamFilteredByGroups(userGroups: readonly string[]): boolean;
+/** Коды implementationStream пользователя из groups Keycloak. */
+export declare function resolveV2UserImplementationStreamsFromGroups(userGroups: readonly string[]): V2ImplementationStreamCode[];

@@ -93,8 +93,8 @@ export class V2QuestionnaireController {
 			},
 		},
 	})
-	async exportRegistryXlsx(@Res() res: Response): Promise<void> {
-		const buffer = await this.questionnaireService.exportRegistryXlsx();
+	async exportRegistryXlsx(@Res() res: Response, @CurrentUser() user: Record<string, unknown> | undefined): Promise<void> {
+		const buffer = await this.questionnaireService.exportRegistryXlsx(undefined, user);
 		this.sendRegistryXlsxResponse(res, buffer, "v2-questionnaires");
 	}
 
@@ -112,8 +112,12 @@ export class V2QuestionnaireController {
 	async exportSelectedRegistryXlsx(
 		@Body() body: ExportV2QuestionnairesXlsxDto,
 		@Res() res: Response,
+		@CurrentUser() user: Record<string, unknown> | undefined,
 	): Promise<void> {
-		const buffer = await this.questionnaireService.exportRegistryXlsx(body.ids);
+		const buffer = await this.questionnaireService.exportRegistryXlsx(
+			body.ids,
+			user,
+		);
 		this.sendRegistryXlsxResponse(
 			res,
 			buffer,
