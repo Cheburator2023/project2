@@ -925,9 +925,16 @@ export const V2TemplateSchemaEditor = ({
 		if (initialSchemaBulkSyncRef.current === versionId) return;
 		initialSchemaBulkSyncRef.current = versionId;
 
-		void bulkSyncSchemaFields({ templateVersionId: versionId, mode: "dryRun" })
+		void bulkSyncSchemaFields({ templateVersionId: versionId, mode: "apply" })
 			.then((result) => {
 				setSchemaConsistencyIssues(result.consistencyIssues);
+				if (
+					result.worksUpdated > 0 ||
+					result.laborParamsUpdated > 0 ||
+					result.rulesUpdated > 0
+				) {
+					requestCalculationRefresh();
+				}
 			})
 			.catch((error) => {
 				toast.error(apiErrorMessage(error));
@@ -936,6 +943,7 @@ export const V2TemplateSchemaEditor = ({
 		activeVersion?.id,
 		bulkSyncSchemaFields,
 		dictionaryEnumsLoading,
+		requestCalculationRefresh,
 		schemaWorkParams.length,
 	]);
 

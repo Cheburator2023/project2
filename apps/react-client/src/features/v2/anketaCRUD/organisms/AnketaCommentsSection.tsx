@@ -21,6 +21,7 @@ import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWith
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
+import { getKeycloakUserDisplayName } from "@react-client/common/auth/keycloakUserText.util";
 import { useUserStore } from "@react-client/common/store/userStore";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -72,14 +73,7 @@ function formatRelativeTime(iso: string): string {
 function resolveCurrentUserName(): string {
 	const keycloakUser = useGlobalSettingsStore.getState().user;
 	if (keycloakUser) {
-		const fullName =
-			`${keycloakUser.given_name ?? ""} ${keycloakUser.family_name ?? ""}`.trim();
-		return (
-			fullName ||
-			keycloakUser.preferred_username ||
-			keycloakUser.email ||
-			"Пользователь"
-		);
+		return getKeycloakUserDisplayName(keycloakUser);
 	}
 	return useUserStore.getState().username ?? "Пользователь";
 }

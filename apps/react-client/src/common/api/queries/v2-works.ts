@@ -22,7 +22,11 @@ import type {
 	V2FormulaRegistryListResponseDto,
 	BulkDeleteV2TypicalWorksResultDto,
 } from "@smart-anketa/api-contract";
-import { apiClient, API_ENTITY_CREATE_TIMEOUT_MS } from "../helpers/apiClient";
+import {
+	apiClient,
+	API_ENTITY_CREATE_TIMEOUT_MS,
+	API_HEAVY_OPERATION_TIMEOUT_MS,
+} from "../helpers/apiClient";
 
 export const useV2TypicalWorksCatalog = (params?: {
 	templateId?: string | null;
@@ -352,6 +356,8 @@ export const useSyncV2TypicalWorksSchemaField = () => {
 };
 
 export const useBulkSyncV2TypicalWorksSchemaFields = () => {
+	const queryClient = useQueryClient();
+
 	return useMutation<
 		import("@smart-anketa/api-contract").V2TypicalWorkSchemaBulkSyncResponseDto,
 		Error,
@@ -362,7 +368,11 @@ export const useBulkSyncV2TypicalWorksSchemaFields = () => {
 				url: "/v2/works/schema-field-sync/bulk",
 				method: "POST",
 				data: dto,
+				timeout: API_HEAVY_OPERATION_TIMEOUT_MS,
 			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
+		},
 	});
 };
 

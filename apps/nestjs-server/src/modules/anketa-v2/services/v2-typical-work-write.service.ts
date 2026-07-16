@@ -4,7 +4,7 @@ import {
 	NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, IsNull, Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import type {
 	CreateV2TypicalWorkRequestDto,
 	CreateV2TypicalWorkParameterRequestDto,
@@ -1389,63 +1389,57 @@ export class V2TypicalWorkWriteService {
 			aggregate.formulasInvalidated += impact.formulasInvalidated;
 		}
 
-		const workIds = [...new Set(configs.map((config) => config.workId))];
-		const unboundLaborCount =
-			workIds.length > 0
-				? await this.laborParamRepository.count({
-						where: { workId: In(workIds), schemaFieldUid: IsNull() },
-					})
-				: 0;
+		const repairedLaborBindings = new Set<string>();
+		for (const config of configs) {
+			const card = await this.typicalWorkService.getWorkCardForSchemaSync(
+				config.workId,
+				config.streamExecutor,
+				templateVersionId,
+			);
+			for (const labor of card.laborParams) {
+				const resolved = resolveWorkSchemaParamForRule(labor, schemaParams);
+				if (!resolved?.schemaFieldUid) continue;
+				const needsRebind =
+					labor.paramCode !== resolved.code ||
+					(labor.schemaFieldUid ?? null) !==
+						(resolved.schemaFieldUid ?? null);
+				if (!needsRebind) continue;
 
-		if (unboundLaborCount > 0) {
-			const repairedBindings = new Set<string>();
-			for (const config of configs) {
-				const card = await this.typicalWorkService.getWorkCardForSchemaSync(
-					config.workId,
-					config.streamExecutor,
-					templateVersionId,
+				const bindingKey = `${config.workId}:${config.streamExecutor}:${labor.paramCode}:${resolved.schemaFieldUid}`;
+				if (repairedLaborBindings.has(bindingKey)) continue;
+				repairedLaborBindings.add(bindingKey);
+
+				const impact = await this.reconcileSchemaField(
+					{
+						templateVersionId,
+						mode,
+						operation: "upsert",
+						field: {
+							schemaFieldUid: resolved.schemaFieldUid,
+							previousCode: labor.paramCode,
+							aliasCodes: resolved.sourceKeys,
+							code: resolved.code,
+							name: resolved.name,
+							values:
+								resolved.values && resolved.values.length > 0
+									? resolved.values
+									: undefined,
+						},
+					},
+					null,
+					{
+						workId: config.workId,
+						unboundLaborOnly: !labor.schemaFieldUid,
+						prefetchedConfigs: configs,
+					},
 				);
-				for (const labor of card.laborParams) {
-					if (labor.schemaFieldUid) continue;
-					const resolved = resolveWorkSchemaParamForRule(labor, schemaParams);
-					if (!resolved?.schemaFieldUid) continue;
-
-					const bindingKey = `${config.workId}:${resolved.schemaFieldUid}`;
-					if (repairedBindings.has(bindingKey)) continue;
-					repairedBindings.add(bindingKey);
-
-					const impact = await this.reconcileSchemaField(
-						{
-							templateVersionId,
-							mode,
-							operation: "upsert",
-							field: {
-								schemaFieldUid: resolved.schemaFieldUid,
-								previousCode: labor.paramCode,
-								aliasCodes: resolved.sourceKeys,
-								code: resolved.code,
-								name: resolved.name,
-								values:
-									resolved.values && resolved.values.length > 0
-										? resolved.values
-										: undefined,
-							},
-						},
-						null,
-						{
-							workId: config.workId,
-							unboundLaborOnly: true,
-							prefetchedConfigs: configs,
-						},
-					);
-					aggregate.worksMatched += impact.worksMatched;
-					aggregate.worksUpdated += impact.worksUpdated;
-					aggregate.rulesUpdated += impact.rulesUpdated;
-					aggregate.rulesRemoved += impact.rulesRemoved;
-					aggregate.laborParamsUpdated += impact.laborParamsUpdated;
-					aggregate.laborParamsRemoved += impact.laborParamsRemoved;
-					aggregate.formulasInvalidated += impact.formulasInvalidated;
-				}
+				aggregate.worksMatched += impact.worksMatched;
+				aggregate.worksUpdated += impact.worksUpdated;
+				aggregate.rulesUpdated += impact.rulesUpdated;
+				aggregate.rulesRemoved += impact.rulesRemoved;
+				aggregate.laborParamsUpdated += impact.laborParamsUpdated;
+				aggregate.laborParamsRemoved += impact.laborParamsRemoved;
+				aggregate.formulasInvalidated += impact.formulasInvalidated;
 			}
 		}
 

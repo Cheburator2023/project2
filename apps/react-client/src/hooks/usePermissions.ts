@@ -1,3 +1,4 @@
+import { IS_DEV } from "@react-client/common/constants/dev";
 import { useUserStore } from "@react-client/common/store/userStore";
 import { Permission } from "@react-client/types/roles";
 
@@ -15,8 +16,6 @@ export const usePermissions = () => {
 		canExportReports: hasPermission(Permission.ANKETA_EXPORT_REPORTS),
 		canWorkflowApprove: hasPermission(Permission.ANKETA_WORKFLOW_APPROVE),
 		canAccessAdminPanel: hasPermission(Permission.ANKETA_ADMIN_PANEL),
-		canAccessTracker:
-			hasPermission(Permission.DEVELOPER) ||
-			hasPermission(Permission.ANKETA_ADMIN_PANEL),
+		canAccessTracker: hasPermission(Permission.DEVELOPER) && IS_DEV,
 	};
 };

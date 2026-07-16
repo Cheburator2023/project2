@@ -1,10 +1,14 @@
-import "@fontsource/inter";
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
+import "@fontsource/inter/700.css";
 import "./theme/dockview.css";
 
 import { StyledEngineProvider } from "@mui/material";
 import { unstable_ClassNameGenerator as ClassNameGenerator } from "@mui/material/className";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { normalizeKeycloakUser } from "@react-client/common/auth/keycloakUserText.util";
 import { ErrorBoundary } from "@react-client/common/errors/ErrorBoundary";
 import { ErrorPage } from "@react-client/common/errors/pages/ErrorPage";
 import { performMfeLogout } from "@react-client/common/auth/syncMfeAuth";
@@ -73,7 +77,8 @@ interface LayoutProps {
 }
 
 const App: React.FC<LayoutProps> = (props) => {
-	const { user, onLogout, bridged, urlConfig, keycloak } = props;
+	const { user: rawUser, onLogout, bridged, urlConfig, keycloak } = props;
+	const user = normalizeKeycloakUser(rawUser);
 
 	const { setUser, setConfigMap } = useGlobalSettingsStore();
 
