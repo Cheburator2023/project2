@@ -1,3 +1,16 @@
+/** Именованные коды стрим-исполнителя (значение = код в formData / логике). */
+export declare const V2_IMPLEMENTATION_STREAM: {
+    readonly KMBKCB: "kmbkcb";
+    readonly RB: "rb";
+    readonly PTITPC: "ptitpc";
+    readonly FINMDL: "finmdl";
+    readonly RND: "rnd";
+    readonly IDSRC: "idsrc";
+    readonly MDLCTL: "mdlctl";
+    readonly PIRM: "pirm";
+    readonly STRDAT: "strdat";
+    readonly DIGAGT: "digagt";
+};
 /** Стрим-исполнитель анкеты (`generalInfo.implementationStream`): ключ в formData / логике. */
 export declare const V2_IMPLEMENTATION_STREAM_CODES: readonly ["kmbkcb", "rb", "ptitpc", "finmdl", "rnd", "idsrc", "mdlctl", "pirm", "strdat", "digagt"];
 export type V2ImplementationStreamCode = (typeof V2_IMPLEMENTATION_STREAM_CODES)[number];

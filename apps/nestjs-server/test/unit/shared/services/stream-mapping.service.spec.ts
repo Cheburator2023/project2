@@ -4,6 +4,10 @@ import {
 	STREAMS,
 	STREAM_FILTERED_ROLES,
 } from "../../../../src/shared/constants";
+import {
+	V2_IMPLEMENTATION_STREAM,
+	V2_IMPLEMENTATION_STREAM_LABELS,
+} from "@smart-anketa/api-contract";
 
 describe("StreamMappingService", () => {
 	let service: StreamMappingService;
@@ -48,8 +52,10 @@ describe("StreamMappingService", () => {
 			const dept = DEPARTMENTS.RB;
 			const result = service.getGroupsAfterMapping([role, dept]);
 			expect(result).toContain(STREAMS.RB);
-			expect(result).toContain("rb");
-			expect(result).toContain("Моделирование РБ");
+			expect(result).toContain(V2_IMPLEMENTATION_STREAM.RB);
+			expect(result).toContain(
+				V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.RB],
+			);
 		});
 
 		it("passes through known stream", () => {
@@ -61,9 +67,37 @@ describe("StreamMappingService", () => {
 
 		it("expands v2 implementation stream code to label and back", () => {
 			const role = STREAM_FILTERED_ROLES[0];
-			const result = service.getGroupsAfterMapping([role, "rb"]);
+			const result = service.getGroupsAfterMapping([
+				role,
+				V2_IMPLEMENTATION_STREAM.RB,
+			]);
 			expect(result).toEqual(
-				expect.arrayContaining(["rb", "Моделирование РБ"]),
+				expect.arrayContaining([
+					V2_IMPLEMENTATION_STREAM.RB,
+					V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.RB],
+				]),
+			);
+		});
+
+		it("maps platform stream codes from groups directly", () => {
+			const role = STREAM_FILTERED_ROLES[0];
+			const result = service.getGroupsAfterMapping([
+				role,
+				V2_IMPLEMENTATION_STREAM.PIRM,
+				V2_IMPLEMENTATION_STREAM.IDSRC,
+				V2_IMPLEMENTATION_STREAM.MDLCTL,
+				V2_IMPLEMENTATION_STREAM.STRDAT,
+				V2_IMPLEMENTATION_STREAM.DIGAGT,
+			]);
+			expect(result).toEqual(
+				expect.arrayContaining([
+					V2_IMPLEMENTATION_STREAM.PIRM,
+					V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.PIRM],
+					V2_IMPLEMENTATION_STREAM.IDSRC,
+					V2_IMPLEMENTATION_STREAM.MDLCTL,
+					V2_IMPLEMENTATION_STREAM.STRDAT,
+					V2_IMPLEMENTATION_STREAM.DIGAGT,
+				]),
 			);
 		});
 	});
