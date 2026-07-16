@@ -49,6 +49,7 @@ __exportStar(require("./v2-typical-work.types"), exports);
 __exportStar(require("./v2-typical-work-v4.types"), exports);
 __exportStar(require("./v2-trigger-formula.util"), exports);
 __exportStar(require("./v2-work-formula.util"), exports);
+__exportStar(require("./v2-labor-arch-count.util"), exports);
 __exportStar(require("./v2-work-arch-count-coeff.util"), exports);
 __exportStar(require("./v2-work-terms-formula.util"), exports);
 __exportStar(require("./v2-typical-work-schema-sync.util"), exports);

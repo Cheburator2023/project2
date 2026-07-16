@@ -1,0 +1,85 @@
+{
+  "generatedAt": "2026-07-16T11:56:23.529Z",
+  "mode": "write",
+  "counts": {
+    "csvRows": 10,
+    "matched": 10,
+    "unmatched": 0,
+    "registryAdded": 0,
+    "appended": 0,
+    "anketaPatched": false,
+    "totalWorks": 117
+  },
+  "rows": [
+    {
+      "csvKey": "Модельный стрим|Модельный сервис|01|Постановка задачи",
+      "status": "matched",
+      "snapshotIndex": 107,
+      "formulaText": "N * архкоэф(Модели; 1=1; 2=1,75; 3=2,5; 4=3,25; 5=4; 6=4,75; 7=5,5; 8=6,25; 9=7; 10=7,75; 11=8,5; 12=9,25; 13=10; 14=10,75; 15=11,5) * коэф(complexity) * коэф(overallUncertainty) * коэф(readyPromReports)",
+      "appended": false
+    },
+    {
+      "csvKey": "Модельный стрим|Система-источник|02|Поиск данных",
+      "status": "matched",
+      "snapshotIndex": 108,
+      "formulaText": "N * коэф(overallUncertainty) * архкоэф(Система-источник; 1=1; 2=1,2; 3=1,4; 4=1,6; 5=1,8; 6=2; 7=2,2; 8=2,4; 9=2,6; 10=3) * коэф(assessedInitiativesCount)",
+      "appended": false
+    },
+    {
+      "csvKey": "Модельный стрим|Объект / Витрина данных|04|Построение витрины для разработки",
+      "status": "matched",
+      "snapshotIndex": 109,
+      "formulaText": "N * коэф(complexity) * коэф(overallUncertainty) * коэф(assessedInitiativesCount)",
+      "appended": false
+    },
+    {
+      "csvKey": "Модельный стрим|Модель|05A|Разработка пилотной модели (MVP)",
+      "status": "matched",
+      "snapshotIndex": 110,
+      "formulaText": "N * архкоэф(Модели; 1=1; 2=1,75; 3=2,5; 4=3,25; 5=4; 6=4,75; 7=5,5; 8=6,25; 9=7; 10=7,75; 11=8,5; 12=9,25; 13=10; 14=10,75; 15=11,5) * коэф(complexity) * коэф(overallUncertainty) * коэф(readyPromReports) * коэф(algorithmType)",
+      "appended": false
+    },
+    {
+      "csvKey": "Модельный стрим|Модель|05|Разработка модели",
+      "status": "matched",
+      "snapshotIndex": 111,
+      "formulaText": "N * архкоэф(Модели; 1=1; 2=1,75; 3=2,5; 4=3,25; 5=4; 6=4,75; 7=5,5; 8=6,25; 9=7; 10=7,75; 11=8,5; 12=9,25; 13=10; 14=10,75; 15=11,5) * коэф(complexity) * коэф(overallUncertainty) * коэф(readyPromReports) * коэф(algorithmType)",
+      "appended": false
+    },
+    {
+      "csvKey": "Модельный стрим|Модель|AutoML|разработка",
+      "status": "matched",
+      "snapshotIndex": 112,
+      "formulaText": "N * архкоэф(Модели; 1=1; 2=1,75; 3=2,5; 4=3,25; 5=4; 6=4,75; 7=5,5; 8=6,25; 9=7; 10=7,75; 11=8,5; 12=9,25; 13=10; 14=10,75; 15=11,5) * коэф(complexity) * коэф(overallUncertainty)",
+      "appended": false
+    },
+    {
+      "csvKey": "Модельный стрим|Модельный сервис|05B|Пилотирование модели",
+      "status": "matched",
+      "snapshotIndex": 113,
+      "formulaText": "N * коэф(overallUncertainty) * коэф(readyPromReports)",
+      "appended": false
+    },
+    {
+      "csvKey": "Модельный стрим|Объект / Витрина данных|07|Разработка витрины для применения модели",
+      "status": "matched",
+      "snapshotIndex": 114,
+      "formulaText": "N * коэф(complexity) * коэф(overallUncertainty) * коэф(productionAdditionalReports) * коэф(assessedInitiativesCount)",
+      "appended": false
+    },
+    {
+      "csvKey": "Модельный стрим|Модельный сервис|09|Адаптация и внедрение модели",
+      "status": "matched",
+      "snapshotIndex": 115,
+      "formulaText": "N * архкоэф(Модели; 1=1; 2=1,75; 3=2,5; 4=3,25; 5=4; 6=4,75; 7=5,5; 8=6,25; 9=7; 10=7,75; 11=8,5; 12=9,25; 13=10; 14=10,75; 15=11,5) * коэф(complexity) * коэф(overallUncertainty) * коэф(algorithmType) * коэф(field_jUm5syZf)",
+      "appended": false
+    },
+    {
+      "csvKey": "Модельный стрим|Модель|AutoML|внедрение",
+      "status": "matched",
+      "snapshotIndex": 116,
+      "formulaText": "N * архкоэф(Модели; 1=1; 2=1,75; 3=2,5; 4=3,25; 5=4; 6=4,75; 7=5,5; 8=6,25; 9=7; 10=7,75; 11=8,5; 12=9,25; 13=10; 14=10,75; 15=11,5) * коэф(complexity) * коэф(overallUncertainty)",
+      "appended": false
+    }
+  ]
+}

@@ -123,6 +123,45 @@ describe("buildWorkSchemaParamsFromTemplate", () => {
 			"Система-источник",
 		);
 	});
+
+	it("collects array-of-enum fields as schema params", () => {
+		const params = buildWorkSchemaParamsFromTemplate({
+			jsonSchema: {
+				type: "object",
+				properties: {
+					modelService: {
+						type: "object",
+						properties: {
+							field_jUm5syZf: {
+								type: "array",
+								title: "Каналы внедрения",
+								items: {
+									type: "string",
+									enum: ["Батч", "Онлайн"],
+								},
+							},
+						},
+					},
+				},
+			},
+			uiSchema: {
+				modelService: {
+					field_jUm5syZf: {
+						"ui:options": { schemaFieldUid: "field_4fb7d302-c5f0-49e6-9cd2-959a1fbe1f4e" },
+					},
+				},
+			},
+		});
+		const field = params.find((p) => p.code === "field_jUm5syZf");
+		expect(field?.name).toBe("Каналы внедрения");
+		expect(field?.schemaFieldUid).toBe(
+			"field_4fb7d302-c5f0-49e6-9cd2-959a1fbe1f4e",
+		);
+		expect(field?.values).toEqual([
+			{ code: "Батч", label: "Батч" },
+			{ code: "Онлайн", label: "Онлайн" },
+		]);
+	});
 });
 
 describe("collectTypicalWorkSchemaConsistencyIssues", () => {
@@ -328,6 +367,34 @@ describe("collectTypicalWorkSchemaConsistencyIssues", () => {
 					schemaFieldUid: "uid-count",
 					coefficients: [
 						{ valueCode: "range_1", valueLabel: "До 20" },
+					],
+				},
+			],
+		});
+
+		expect(issues).toEqual([]);
+	});
+
+	it("does not report numeric by-value labor coefficients as unavailable", () => {
+		const issues = collectTypicalWorkSchemaConsistencyIssues({
+			schemaParams: [
+				{
+					code: "assessedInitiativesCount",
+					name: "Количество оцениваемых инициатив",
+					schemaFieldUid: "field_89bf48ee-4f44-4995-86fa-5cb1132abe63",
+					values: [],
+				},
+			],
+			rules: [],
+			laborParamCodes: [
+				{
+					paramCode: "assessedInitiativesCount",
+					paramName: "Количество оцениваемых инициатив",
+					schemaFieldUid: "field_89bf48ee-4f44-4995-86fa-5cb1132abe63",
+					coefficients: [
+						{ valueCode: "1", valueLabel: "1" },
+						{ valueCode: "2", valueLabel: "2" },
+						{ valueCode: "99", valueLabel: "99" },
 					],
 				},
 			],

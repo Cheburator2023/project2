@@ -46,12 +46,15 @@ import {
 	isWorkCoefficientValueAvailable,
 	needsCalculationLogicBackfill,
 	normalizeStoredFormula,
+	normalizeStoredValueCode,
+	normalizeStoredValueLabel,
 	previewTypicalWorkCalculation,
 	resolveActiveNormOnDate,
 	resolveWorkSchemaParamForRule,
 	resolveLaborAnyOfCoefficient,
 	resolveByValueLaborParamCoefficients,
 	reconcileTypicalWorkCardWithSchemaField,
+	reconcileFormulaWithLaborArchCounts,
 	syncTermsFromTokenFormula,
 	termsToTokenFormula,
 	tokensToText,
@@ -600,7 +603,8 @@ export class V2TypicalWorkWriteService {
 		const touchesFormula =
 			dto.formula !== undefined ||
 			dto.formulaTerms !== undefined ||
-			dto.rounding !== undefined;
+			dto.rounding !== undefined ||
+			dto.laborArchCounts !== undefined;
 		if (touchesFormula && dto.templateVersionId) {
 			const version = await this.templateVersionRepository.findOne({
 				where: { id: dto.templateVersionId },
@@ -684,7 +688,7 @@ export class V2TypicalWorkWriteService {
 			}
 		}
 
-		if (dto.triggerArchCount !== undefined || dto.triggerMode !== undefined || dto.triggerFormula !== undefined) {
+		if (dto.triggerArchCount !== undefined || dto.triggerMode !== undefined || dto.triggerFormula !== undefined || dto.laborArchCounts !== undefined) {
 			const assignment = await this.ensureAssignment(workId, stream);
 			if (dto.triggerArchCount !== undefined) {
 				const arch = dto.triggerArchCount;
@@ -693,6 +697,15 @@ export class V2TypicalWorkWriteService {
 					? arch.steps
 					: null;
 				assignment.triggerArchCountCombinator = arch?.combinator ?? "and";
+			}
+			if (dto.laborArchCounts !== undefined) {
+				assignment.laborArchCounts = dto.laborArchCounts?.length
+					? dto.laborArchCounts.map((row) => ({
+							kind: row.kind,
+							paramName: row.paramName ?? null,
+							steps: row.steps,
+						}))
+					: null;
 			}
 			if (dto.triggerMode !== undefined) {
 				assignment.triggerMode = dto.triggerMode;
@@ -742,8 +755,14 @@ export class V2TypicalWorkWriteService {
 								streamExecutor: stream,
 								paramCode: group.paramCode,
 								paramName: group.paramName ?? null,
-								valueCode: row.valueCode ?? null,
-								valueLabel: row.valueLabel ?? null,
+								valueCode:
+									row.valueCode != null
+										? normalizeStoredValueCode(
+												row.valueCode,
+												row.valueLabel,
+											)
+										: null,
+								valueLabel: normalizeStoredValueLabel(row.valueLabel),
 								coefficient: String(row.coefficient),
 							}),
 						);
@@ -764,8 +783,11 @@ export class V2TypicalWorkWriteService {
 							streamExecutor: stream,
 							paramCode: row.paramCode,
 							paramName: row.paramName ?? null,
-							valueCode: row.valueCode ?? null,
-							valueLabel: row.valueLabel ?? null,
+							valueCode:
+								row.valueCode != null
+									? normalizeStoredValueCode(row.valueCode, row.valueLabel)
+									: null,
+							valueLabel: normalizeStoredValueLabel(row.valueLabel),
 							coefficient: String(row.coefficient),
 						}),
 					),
@@ -807,6 +829,13 @@ export class V2TypicalWorkWriteService {
 			const rounding = dto.rounding ?? defaultWorkRounding();
 
 			let formulaTokens = formula.tokens;
+			if (dto.laborArchCounts !== undefined) {
+				const reconciled = reconcileFormulaWithLaborArchCounts(
+					{ ...formula, tokens: formulaTokens },
+					dto.laborArchCounts ?? [],
+				);
+				formulaTokens = reconciled.tokens;
+			}
 			if (dto.laborParams?.length) {
 				formulaTokens = reconcileFormulaLaborParamTokens(
 					formulaTokens,

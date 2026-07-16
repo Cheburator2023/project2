@@ -26,6 +26,7 @@ const v2_work_formula_util_1 = require("./v2-work-formula.util");
 const v2_work_terms_formula_util_1 = require("./v2-work-terms-formula.util");
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
 const v2_work_schema_params_match_util_1 = require("./v2-work-schema-params-match.util");
+const v2_numeric_labor_range_util_1 = require("./v2-numeric-labor-range.util");
 const v2_trigger_formula_util_1 = require("./v2-trigger-formula.util");
 function parseIsoDay(value) {
     const day = value.slice(0, 10);
@@ -484,6 +485,8 @@ function isWorkCoefficientValueAvailable(row, catalog, atDate) {
     const param = resolveWorkCoefficientCatalogParam(catalog, row.paramCode);
     if (!param)
         return false;
+    if (param.values.length === 0)
+        return true;
     return param.values.some((value) => (value.code === row.valueCode || value.label === row.valueLabel) &&
         (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
 }
@@ -559,6 +562,13 @@ function collectUnavailableLaborCoefficientIssues(input) {
     for (const group of input.laborParams) {
         if (group.kind === "any_of")
             continue;
+        const catalogParam = resolveWorkCoefficientCatalogParam(catalog, group.paramCode);
+        if ((0, v2_numeric_labor_range_util_1.isNumericLaborByValueParam)({
+            name: group.paramName,
+            values: catalogParam?.values,
+        })) {
+            continue;
+        }
         for (const row of group.coefficients ?? []) {
             if (!row.valueCode && !row.valueLabel)
                 continue;

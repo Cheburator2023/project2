@@ -121,6 +121,13 @@ export function defaultTriggerArchCount(): V2TypicalWorkTriggerArchCountDto {
 	return { kind: null, steps: [], combinator: "and" };
 }
 
+/** Коэффициент трудоёмкости по количеству арх. компонентов (без поля схемы). */
+export type V2TypicalWorkLaborArchCountDto = {
+	kind: V2WorkFormulaArchCountKind;
+	steps: V2WorkArchCountCoeffStep[];
+	paramName?: string | null;
+};
+
 export const V2_TYPICAL_WORK_TRIGGER_MODE_VALUES = ["simple", "formula"] as const;
 export type V2TypicalWorkTriggerMode =
 	(typeof V2_TYPICAL_WORK_TRIGGER_MODE_VALUES)[number];
@@ -300,6 +307,7 @@ export type V2TypicalWorkCardDto = {
 	triggerMode?: V2TypicalWorkTriggerMode;
 	triggerFormula?: V2TypicalWorkTriggerFormulaDto;
 	triggerArchCount?: V2TypicalWorkTriggerArchCountDto;
+	laborArchCounts?: V2TypicalWorkLaborArchCountDto[];
 	laborParams: V2TypicalWorkLaborParamGroupDto[];
 	formula: V2TypicalWorkFormulaDto;
 	formulaTerms?: V2TypicalWorkFormulaTermsDto;
@@ -371,6 +379,7 @@ export type PatchV2TypicalWorkRequestDto = {
 	triggerMode?: V2TypicalWorkTriggerMode;
 	triggerFormula?: V2TypicalWorkTriggerFormulaDto | null;
 	triggerArchCount?: V2TypicalWorkTriggerArchCountDto | null;
+	laborArchCounts?: V2TypicalWorkLaborArchCountDto[] | null;
 	laborCoefficients?: V2TypicalWorkLaborCoefficientInputDto[];
 	laborParams?: V2TypicalWorkLaborParamInputDto[];
 	formula?: V2TypicalWorkFormulaDto;

@@ -1,4 +1,7 @@
-import { V2_SOURCE_STREAM } from "@smart-anketa/api-contract";
+import {
+	V2_SOURCE_STREAM,
+	normalizeParamLabel,
+} from "@smart-anketa/api-contract";
 import {
 	dictionaryByName,
 	V2_FACTORY_TYPICAL_WORKS_SNAPSHOT,
@@ -50,8 +53,63 @@ export function resolveCatalogWorkComponent(
 }
 
 export function extractWorkStage(name: string): string | null {
-	const match = name.trim().match(/^Этап[\s_]+(\d+)(?:\.|\s|$)/iu);
-	return match?.[1] ? `Этап ${match[1]}` : null;
+	const trimmed = name.trim();
+	const legacy = trimmed.match(/^Этап[\s_]+(\d+)(?:\.|\s|$)/iu);
+	if (legacy?.[1]) return `Этап ${legacy[1]}`;
+
+	const e2e = trimmed.match(/^(\d+[ABab])\.\s+/u);
+	if (e2e?.[1]) return e2e[1].toUpperCase();
+
+	const e2eNumeric = trimmed.match(/^(\d+)\.\s+/u);
+	if (e2eNumeric?.[1]) return e2eNumeric[1];
+
+	if (/^AutoML:\s*/iu.test(trimmed)) return "AutoML";
+
+	return null;
+}
+
+export function findCatalogLaborParamGroup(
+	row: Pick<V2FactoryTypicalWork, "laborCoefficients">,
+	paramName: string,
+): NonNullable<V2FactoryTypicalWork["laborCoefficients"]>[number] | undefined {
+	const trimmed = paramName.trim();
+	if (!trimmed) return undefined;
+	const norm = normalizeParamLabel(trimmed);
+	for (const group of row.laborCoefficients ?? []) {
+		const groupNorm = normalizeParamLabel(group.paramName);
+		if (
+			groupNorm === norm ||
+			groupNorm.startsWith(norm) ||
+			norm.startsWith(groupNorm)
+		) {
+			return group;
+		}
+	}
+	return undefined;
+}
+
+export function resolveCatalogTriggerParamCode(
+	row: Pick<
+		V2FactoryTypicalWork,
+		"laborCoefficients" | "triggerRules"
+	>,
+	triggerParamName: string,
+): string {
+	const trimmed = triggerParamName.trim();
+	const norm = normalizeParamLabel(trimmed);
+	const triggerRule = row.triggerRules?.find((rule) => {
+		const ruleNorm = normalizeParamLabel(rule.paramName);
+		return (
+			ruleNorm === norm ||
+			ruleNorm.startsWith(norm) ||
+			norm.startsWith(ruleNorm)
+		);
+	});
+	if (triggerRule?.paramCode?.trim()) {
+		return triggerRule.paramCode.trim();
+	}
+	const coefficientGroup = findCatalogLaborParamGroup(row, trimmed);
+	return coefficientGroup?.paramCode?.trim() || slugParamCode(trimmed);
 }
 
 export function buildCatalogWorkKey(
@@ -64,7 +122,15 @@ export function buildCatalogWorkKey(
 
 /** «Этап 217. Составление ТР» → «Составление ТР» для сопоставления с CSV-каталогом. */
 export function stripWorkStagePrefix(name: string): string {
-	return name.replace(/^Этап[\s_]+\d+\.\s*/u, "").trim();
+	let rest = name.trim();
+	rest = rest.replace(/^Этап[\s_]+\d+\.\s*/u, "");
+	const stagePrefix = rest.match(/^(\d+[ABАВаб]?)\.\s*/iu);
+	if (stagePrefix) {
+		rest = rest.slice(stagePrefix[0].length);
+	} else {
+		rest = rest.replace(/^AutoML:\s*/iu, "");
+	}
+	return rest.trim().replace(/\.\s*$/u, "");
 }
 
 export function findCatalogRowsForRegistryWork(

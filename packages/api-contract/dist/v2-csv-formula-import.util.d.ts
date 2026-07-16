@@ -12,6 +12,8 @@ export type CsvFormulaImportRow = {
     triggerRules: CsvFormulaTriggerRule[];
     laborParams: string[];
     formulaRaw: string;
+    /** Колонка «Коэффициенты параметров трудоёмкости» (формат модельного стрима). */
+    laborCoefficientsRaw?: string;
 };
 export type CsvFormulaCatalogPatch = {
     formulaText: string;
@@ -34,7 +36,7 @@ export type CsvFormulaLaborCoefficient = {
 };
 export type CsvFormulaTriggerRule = {
     paramName: string;
-    operator: "=" | "in" | "exists" | "unresolved";
+    operator: "=" | "!=" | "in" | "exists" | "unresolved";
     values: string[];
 };
 export type CsvFormulaParamCandidate = {
@@ -64,6 +66,28 @@ export declare function normalizeCsvArchComponent(raw: string): string;
 /** Этап 220 / 230 и «?» — как в v2-catalog-component-inference. */
 export declare function inferCsvArchComponent(rawComponent: string, stream: string, stage: string): string;
 export declare function stripWorkStagePrefix(name: string): string;
+/** E2E-этап из названия работы модельного стрима: «01. …», «05A. …», «AutoML: …». */
+export declare function extractE2eWorkStage(name: string): string;
+export declare function resolveE2eWorkStageAndName(smartName: string): {
+    stage: string;
+    name: string;
+};
+/** Шаги K = 1 + (N−1)×increment для архкоэф(Модели; …). */
+export declare function buildLinearArchCountSteps(maxCount: number, increment?: number): Array<{
+    count: number;
+    coefficient: number;
+}>;
+export declare const MODEL_STREAM_SOURCE_COUNT_STEPS: Array<{
+    count: number;
+    coefficient: number;
+}>;
+export declare function formatArchCountFormulaSteps(steps: ReadonlyArray<{
+    count: number;
+    coefficient: number;
+}>): string;
+/** Парсит блоки «Параметр: 1→1; 2→1,25 …» из колонки коэффициентов модельного стрима. */
+export declare function parseModelStreamLaborCoefficients(raw: string): CsvFormulaLaborCoefficient[];
+export declare function parseModelStreamTriggerRules(raw: string): CsvFormulaTriggerRule[];
 export declare function parseCsvTriggerRules(raw: string): CsvFormulaTriggerRule[];
 export declare function parseCsvLaborCoefficients(formulaRaw: string, archComponent?: string): CsvFormulaLaborCoefficient[];
 export declare function parseCsvFormulaImportRows(csvText: string): CsvFormulaImportRow[];

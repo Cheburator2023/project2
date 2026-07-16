@@ -92,11 +92,15 @@ function reconcileRule(rule, request) {
         schemaFieldUid: request.field.schemaFieldUid,
         paramCode: request.field.code ?? rule.paramCode,
         paramName: formatSyncedParamName(request, rule.paramName, request.field.code ?? rule.paramCode, rule.paramCode) ?? rule.paramName,
-        valueCode: isSetOperator ? null : scalarAvailable ? scalarMatch.code : null,
+        valueCode: isSetOperator
+            ? null
+            : scalarAvailable
+                ? (0, v2_param_slug_util_1.normalizeStoredValueCode)(scalarMatch.code, scalarMatch.label)
+                : null,
         valueLabel: isSetOperator
             ? null
             : scalarAvailable
-                ? (scalarMatch.label ?? rule.valueLabel)
+                ? (0, v2_param_slug_util_1.normalizeStoredValueLabel)(scalarMatch.label ?? rule.valueLabel)
                 : null,
         values: nextValues,
     };
@@ -138,8 +142,8 @@ function reconcileLaborParam(group, request) {
         return {
             ...nextBase,
             anyOf: {
-                valueCodes: selectedValues.map((value) => value.code),
-                valueLabels: selectedValues.map((value) => value.label),
+                valueCodes: selectedValues.map((value) => (0, v2_param_slug_util_1.normalizeStoredValueCode)(value.code, value.label)),
+                valueLabels: selectedValues.map((value) => (0, v2_param_slug_util_1.normalizeStoredValueLabel)(value.label) ?? value.label),
                 coeffOn: group.anyOf?.coeffOn ?? 1,
                 coeffOff: group.anyOf?.coeffOff ?? 1,
             },
@@ -156,8 +160,8 @@ function reconcileLaborParam(group, request) {
                     "",
                 paramCode: request.field.code ?? group.paramCode,
                 paramName: request.field.name ?? group.paramName,
-                valueCode: value.code,
-                valueLabel: value.label,
+                valueCode: (0, v2_param_slug_util_1.normalizeStoredValueCode)(value.code, value.label),
+                valueLabel: (0, v2_param_slug_util_1.normalizeStoredValueLabel)(value.label),
                 coefficient: existing?.coefficient ?? 1,
             };
         }),

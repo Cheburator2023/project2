@@ -13,6 +13,29 @@ describe("v2-typical-work-catalog util", () => {
 		expect(extractWorkStage("Этап_211. Разработка БТ")).toBe("Этап 211");
 	});
 
+	it("extracts E2E model-stream stages from registry work names", () => {
+		expect(extractWorkStage("09. Адаптация и внедрение модели")).toBe("09");
+		expect(extractWorkStage("05A. Разработка пилотной модели (MVP)")).toBe(
+			"05A",
+		);
+		expect(extractWorkStage("AutoML: внедрение")).toBe("AutoML");
+	});
+
+	it("matches model-stream registry works to catalog rows with formulas", () => {
+		const groups = groupCatalogWorks();
+		const rows = findCatalogRowsForRegistryWork(
+			{
+				name: "09. Адаптация и внедрение модели",
+				archComponentType: "Модельный сервис",
+			},
+			groups,
+		);
+
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.formulaText).toContain("архкоэф(Модели");
+		expect(rows[0]?.triggerRules?.[0]?.paramName).toBe("Каналы внедрения");
+	});
+
 	it("does not merge same-name works from different stages", () => {
 		const groups = groupCatalogWorks();
 		const stage217 = findCatalogRowsForRegistryWork(

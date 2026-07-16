@@ -1,4 +1,4 @@
-import { slugParamCode } from "./v2-param-slug.util";
+import { normalizeStoredValueCode, normalizeStoredValueLabel, slugParamCode, } from "./v2-param-slug.util";
 import { schemaEnumValueMatchesRule } from "./v2-template-work-schema-params.util";
 import { formatParamNameWithSourceKeys, stripParamNameSourceKeys, } from "./v2-work-param-source-keys.util";
 import { isParamToken, markUnknownFormulaLaborParamTokensInvalid, reconcileFormulaLaborParamTokens, tokensToText, } from "./v2-work-formula.util";
@@ -89,11 +89,15 @@ function reconcileRule(rule, request) {
         schemaFieldUid: request.field.schemaFieldUid,
         paramCode: request.field.code ?? rule.paramCode,
         paramName: formatSyncedParamName(request, rule.paramName, request.field.code ?? rule.paramCode, rule.paramCode) ?? rule.paramName,
-        valueCode: isSetOperator ? null : scalarAvailable ? scalarMatch.code : null,
+        valueCode: isSetOperator
+            ? null
+            : scalarAvailable
+                ? normalizeStoredValueCode(scalarMatch.code, scalarMatch.label)
+                : null,
         valueLabel: isSetOperator
             ? null
             : scalarAvailable
-                ? (scalarMatch.label ?? rule.valueLabel)
+                ? normalizeStoredValueLabel(scalarMatch.label ?? rule.valueLabel)
                 : null,
         values: nextValues,
     };
@@ -135,8 +139,8 @@ function reconcileLaborParam(group, request) {
         return {
             ...nextBase,
             anyOf: {
-                valueCodes: selectedValues.map((value) => value.code),
-                valueLabels: selectedValues.map((value) => value.label),
+                valueCodes: selectedValues.map((value) => normalizeStoredValueCode(value.code, value.label)),
+                valueLabels: selectedValues.map((value) => normalizeStoredValueLabel(value.label) ?? value.label),
                 coeffOn: group.anyOf?.coeffOn ?? 1,
                 coeffOff: group.anyOf?.coeffOff ?? 1,
             },
@@ -153,8 +157,8 @@ function reconcileLaborParam(group, request) {
                     "",
                 paramCode: request.field.code ?? group.paramCode,
                 paramName: request.field.name ?? group.paramName,
-                valueCode: value.code,
-                valueLabel: value.label,
+                valueCode: normalizeStoredValueCode(value.code, value.label),
+                valueLabel: normalizeStoredValueLabel(value.label),
                 coefficient: existing?.coefficient ?? 1,
             };
         }),

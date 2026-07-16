@@ -37,6 +37,8 @@ import {
 	isNumericLaborByValueParam,
 	resolveNumericLaborPresetRows,
 	buildNumericLaborCoefficientRows,
+	reconcileFormulaWithLaborArchCounts,
+	defaultLaborArchCounts,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
@@ -76,6 +78,7 @@ import { TypicalWorkFormulaLockedDialog } from "./TypicalWorkFormulaLockedDialog
 import { RemoveLaborParamDialog } from "./RemoveLaborParamDialog";
 import { TypicalWorkNormsSection } from "./TypicalWorkNormsSection";
 import { TypicalWorkTriggersSection } from "./TypicalWorkTriggersSection";
+import { TypicalWorkLaborArchCountSection } from "./TypicalWorkLaborArchCountSection";
 import { WorkFormulaEditor } from "./WorkFormulaEditor";
 import { ensureFormulaTerms } from "./WorkTermsFormulaEditor";
 import {
@@ -1239,6 +1242,19 @@ export function TypicalWorkEditableCard({
 								{streamDisplayLabel(streamExecutor)}».
 							</Typography>
 							<TypicalWorkValueMatchingInfo variant="labor" sx={{ mb: 1.5 }} />
+							<TypicalWorkLaborArchCountSection
+								laborArchCounts={draft.laborArchCounts ?? defaultLaborArchCounts()}
+								onChange={(laborArchCounts) =>
+									commitDraft({
+										...draft,
+										laborArchCounts,
+										formula: reconcileFormulaWithLaborArchCounts(
+											draft.formula,
+											laborArchCounts,
+										),
+									})
+								}
+							/>
 							{draft.laborParams.length === 0 ? (
 								<Typography
 									variant="body2"

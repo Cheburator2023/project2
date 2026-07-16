@@ -3,6 +3,7 @@ import { evaluateWorkFormula, roundWorkEffortValue, validateWorkFormulaTokens, }
 import { evaluateTermsFormula, termsToTokenFormula, validateTermsFormula, } from "./v2-work-terms-formula.util";
 import { catalogValueMatchesTriggerRule, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, } from "./v2-works-catalog-match.util";
 import { findWorkSchemaParameter } from "./v2-work-schema-params-match.util";
+import { isNumericLaborByValueParam } from "./v2-numeric-labor-range.util";
 import { hasTypicalWorkTriggersConfigured, matchTypicalWorkTriggers, validateTriggerFormulaTokens, } from "./v2-trigger-formula.util";
 function parseIsoDay(value) {
     const day = value.slice(0, 10);
@@ -461,6 +462,8 @@ export function isWorkCoefficientValueAvailable(row, catalog, atDate) {
     const param = resolveWorkCoefficientCatalogParam(catalog, row.paramCode);
     if (!param)
         return false;
+    if (param.values.length === 0)
+        return true;
     return param.values.some((value) => (value.code === row.valueCode || value.label === row.valueLabel) &&
         (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
 }
@@ -536,6 +539,13 @@ export function collectUnavailableLaborCoefficientIssues(input) {
     for (const group of input.laborParams) {
         if (group.kind === "any_of")
             continue;
+        const catalogParam = resolveWorkCoefficientCatalogParam(catalog, group.paramCode);
+        if (isNumericLaborByValueParam({
+            name: group.paramName,
+            values: catalogParam?.values,
+        })) {
+            continue;
+        }
         for (const row of group.coefficients ?? []) {
             if (!row.valueCode && !row.valueLabel)
                 continue;

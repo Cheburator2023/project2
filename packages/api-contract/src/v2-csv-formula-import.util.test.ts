@@ -7,6 +7,7 @@ import {
 	parseCsvFormulaImportRows,
 	parseCsvLaborCoefficients,
 	parseCsvTriggerRules,
+	parseModelStreamTriggerRules,
 	resolveCsvParamCode,
 } from "./v2-csv-formula-import.util";
 
@@ -51,6 +52,44 @@ describe("v2-csv-formula-import.util", () => {
 			{
 				paramName: "Не понятно условие появления работ",
 				operator: "unresolved",
+				values: [],
+			},
+		]);
+	});
+
+	it("parses model-stream triggers without splitting param names on «и»", () => {
+		expect(
+			parseModelStreamTriggerRules(
+				"Необходимость продуктивизации и количество дополнительных витрин ≠ «Не требуется»",
+			),
+		).toEqual([
+			{
+				paramName:
+					"Необходимость продуктивизации и количество дополнительных витрин",
+				operator: "!=",
+				values: ["Не требуется"],
+			},
+		]);
+		expect(parseModelStreamTriggerRules("Каналы внедрения ≠ Пусто")).toEqual([
+			{
+				paramName: "Каналы внедрения",
+				operator: "exists",
+				values: [],
+			},
+		]);
+		expect(
+			parseModelStreamTriggerRules(
+				"Необходимость AutoML = «Да» И Каналы внедрения ≠ Пусто",
+			),
+		).toEqual([
+			{
+				paramName: "Необходимость AutoML",
+				operator: "=",
+				values: ["Да"],
+			},
+			{
+				paramName: "Каналы внедрения",
+				operator: "exists",
 				values: [],
 			},
 		]);

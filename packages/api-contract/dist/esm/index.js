@@ -33,6 +33,7 @@ export * from "./v2-typical-work.types";
 export * from "./v2-typical-work-v4.types";
 export * from "./v2-trigger-formula.util";
 export * from "./v2-work-formula.util";
+export * from "./v2-labor-arch-count.util";
 export * from "./v2-work-arch-count-coeff.util";
 export * from "./v2-work-terms-formula.util";
 export * from "./v2-typical-work-schema-sync.util";

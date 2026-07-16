@@ -30,6 +30,7 @@ import {
 } from "./v2-works-catalog-match.util";
 import type { WorkSchemaParamDef } from "./v2-work-schema-params-match.util";
 import { findWorkSchemaParameter } from "./v2-work-schema-params-match.util";
+import { isNumericLaborByValueParam } from "./v2-numeric-labor-range.util";
 import {
 	hasTypicalWorkTriggersConfigured,
 	matchTypicalWorkTriggers,
@@ -694,6 +695,7 @@ export function isWorkCoefficientValueAvailable(
 	if (isSchemaFieldLaborParamCode(row.paramCode)) return true;
 	const param = resolveWorkCoefficientCatalogParam(catalog, row.paramCode);
 	if (!param) return false;
+	if (param.values.length === 0) return true;
 	return param.values.some(
 		(value) =>
 			(value.code === row.valueCode || value.label === row.valueLabel) &&
@@ -839,6 +841,18 @@ export function collectUnavailableLaborCoefficientIssues(input: {
 
 	for (const group of input.laborParams) {
 		if (group.kind === "any_of") continue;
+		const catalogParam = resolveWorkCoefficientCatalogParam(
+			catalog,
+			group.paramCode,
+		);
+		if (
+			isNumericLaborByValueParam({
+				name: group.paramName,
+				values: catalogParam?.values,
+			})
+		) {
+			continue;
+		}
 		for (const row of group.coefficients ?? []) {
 			if (!row.valueCode && !row.valueLabel) continue;
 			if (

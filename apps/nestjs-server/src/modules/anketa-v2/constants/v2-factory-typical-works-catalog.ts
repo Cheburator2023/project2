@@ -24,9 +24,18 @@ export type V2FactoryTypicalWork = {
 	triggerParams: string[];
 	triggerRules?: Array<{
 		paramName: string;
-		operator: "=" | "in" | "exists" | "unresolved";
+		/** Явная статическая связь с полем factory-схемы без runtime-сопоставления. */
+		paramCode?: string;
+		schemaFieldUid?: string;
+		operator: "=" | "!=" | "in" | "exists" | "unresolved";
 		values: string[];
 	}>;
+	/** Триггер по количеству арх. компонентов (без поля схемы). */
+	triggerArchCount?: {
+		kind: string;
+		steps: Array<{ count: number; coefficient: number }>;
+		combinator?: "and" | "or";
+	} | null;
 	laborParams: string[];
 	laborCoefficients?: Array<{
 		paramName: string;
@@ -37,6 +46,12 @@ export type V2FactoryTypicalWork = {
 			label: string;
 			coefficient: number;
 		}>;
+	}>;
+	/** Коэффициенты по количеству арх. компонентов (без поля схемы). */
+	laborArchCounts?: Array<{
+		kind: string;
+		paramName?: string | null;
+		steps: Array<{ count: number; coefficient: number }>;
 	}>;
 	formulaText?: string;
 	roundingMode?: "CEIL" | "FLOOR" | "ROUND" | "NONE";

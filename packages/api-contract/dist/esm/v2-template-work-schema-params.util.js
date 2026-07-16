@@ -4,6 +4,7 @@ import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
 import { findWorkSchemaParameter, resolveWorkSchemaParamForRule, } from "./v2-work-schema-params-match.util";
 import { catalogValueMatchesTriggerRule, isBrokenTypicalWorkTriggerRef, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, } from "./v2-works-catalog-match.util";
 import { collectUnavailableLaborCoefficientIssues } from "./v2-typical-work-validation.util";
+import { isArchCountLaborParamName } from "./v2-labor-arch-count.util";
 function schemaNodeType(node) {
     if (!node)
         return null;
@@ -24,7 +25,7 @@ function objectItemsSchema(node) {
         return null;
     if (Array.isArray(items))
         return items[0] ?? null;
-    return schemaNodeType(items) === "object" ? items : null;
+    return items;
 }
 function readUiBranch(uiSchema, segments) {
     if (!uiSchema)
@@ -67,13 +68,17 @@ function valuesFromSchemaNode(node) {
     }));
 }
 function isLeafWorkSchemaField(node) {
+    if (!node)
+        return false;
     const type = schemaNodeType(node);
     if (!type)
         return false;
     if (type === "object")
         return false;
-    if (type === "array")
-        return false;
+    if (type === "array") {
+        const items = objectItemsSchema(node);
+        return Boolean(items && valuesFromSchemaNode(items).length > 0);
+    }
     if (valuesFromSchemaNode(node).length > 0)
         return true;
     return ["string", "number", "integer", "boolean"].includes(type);
@@ -110,6 +115,8 @@ function walkSchemaFields(schema, uiSchema, pointer, segments, out) {
                 dictionaryCode = options.dictionaryCode.trim() || null;
             }
         }
+        const fieldType = schemaNodeType(node);
+        const enumSource = fieldType === "array" ? (objectItemsSchema(node) ?? undefined) : node;
         out.push({
             code: key,
             name: title,
@@ -118,7 +125,7 @@ function walkSchemaFields(schema, uiSchema, pointer, segments, out) {
             schemaFieldUid,
             schemaPointer: pointer,
             sourceKeys: [key],
-            values: valuesFromSchemaNode(node),
+            values: valuesFromSchemaNode(enumSource),
             ...(dictionaryCode ? { dictionaryCode } : {}),
         });
         return;
@@ -214,6 +221,9 @@ export function collectTypicalWorkSchemaConsistencyIssues(input) {
     };
     for (const rule of input.rules) {
         if (!ruleRequiresSchemaBinding(rule)) {
+            continue;
+        }
+        if (isArchCountLaborParamName(rule.paramName ?? "")) {
             continue;
         }
         const resolved = resolveWorkSchemaParamForRule(rule, input.schemaParams);

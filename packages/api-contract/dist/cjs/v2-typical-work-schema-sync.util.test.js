@@ -303,4 +303,39 @@ function card() {
         });
         (0, vitest_1.expect)(result.impact.formulasInvalidated).toBe(1);
     });
+    (0, vitest_1.it)("stores short valueCode for long schema enum labels", () => {
+        const longValue = "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели";
+        const legacy = card();
+        legacy.laborParams[0] = {
+            ...legacy.laborParams[0],
+            paramCode: "complexity",
+            paramName: "Сложность постановки",
+            coefficients: [
+                {
+                    id: "coef-3",
+                    streamExecutor: "Модельный стрим",
+                    paramCode: "complexity",
+                    paramName: "Сложность постановки",
+                    valueCode: "3",
+                    valueLabel: "3",
+                    coefficient: 1.5,
+                },
+            ],
+        };
+        const result = (0, v2_typical_work_schema_sync_util_1.reconcileTypicalWorkCardWithSchemaField)(legacy, {
+            templateVersionId: "version-1",
+            mode: "apply",
+            operation: "upsert",
+            field: {
+                schemaFieldUid: "field_61a51b98-b6a8-47c9-aa27-74ff2219513f",
+                previousCode: "complexity",
+                code: "complexity",
+                name: "Регуляторные требования",
+                values: [{ code: longValue, label: longValue }],
+            },
+        });
+        (0, vitest_1.expect)(result.changed).toBe(true);
+        (0, vitest_1.expect)(result.card.laborParams[0]?.coefficients[0]?.valueCode).toBe("3");
+        (0, vitest_1.expect)((result.card.laborParams[0]?.coefficients[0]?.valueLabel ?? "").length).toBeLessThanOrEqual(255);
+    });
 });

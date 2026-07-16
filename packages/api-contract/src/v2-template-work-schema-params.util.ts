@@ -18,6 +18,7 @@ import {
 	isSourceTypeTriggerParam,
 } from "./v2-works-catalog-match.util";
 import { collectUnavailableLaborCoefficientIssues } from "./v2-typical-work-validation.util";
+import { isArchCountLaborParamName } from "./v2-labor-arch-count.util";
 
 type JsonSchemaNode = {
 	type?: string | string[];
@@ -43,7 +44,7 @@ function objectItemsSchema(node: JsonSchemaNode): JsonSchemaNode | null {
 	const items = node.items;
 	if (!items) return null;
 	if (Array.isArray(items)) return items[0] ?? null;
-	return schemaNodeType(items) === "object" ? items : null;
+	return items;
 }
 
 function readUiBranch(
@@ -94,10 +95,14 @@ function valuesFromSchemaNode(
 }
 
 function isLeafWorkSchemaField(node: JsonSchemaNode | undefined): boolean {
+	if (!node) return false;
 	const type = schemaNodeType(node);
 	if (!type) return false;
 	if (type === "object") return false;
-	if (type === "array") return false;
+	if (type === "array") {
+		const items = objectItemsSchema(node);
+		return Boolean(items && valuesFromSchemaNode(items).length > 0);
+	}
 	if (valuesFromSchemaNode(node).length > 0) return true;
 	return ["string", "number", "integer", "boolean"].includes(type);
 }
@@ -139,6 +144,9 @@ function walkSchemaFields(
 				dictionaryCode = options.dictionaryCode.trim() || null;
 			}
 		}
+		const fieldType = schemaNodeType(node);
+		const enumSource =
+			fieldType === "array" ? (objectItemsSchema(node) ?? undefined) : node;
 		out.push({
 			code: key,
 			name: title,
@@ -147,7 +155,7 @@ function walkSchemaFields(
 			schemaFieldUid,
 			schemaPointer: pointer,
 			sourceKeys: [key],
-			values: valuesFromSchemaNode(node),
+			values: valuesFromSchemaNode(enumSource),
 			...(dictionaryCode ? { dictionaryCode } : {}),
 		} as WorkSchemaParamDef & { dictionaryCode?: string });
 		return;
@@ -330,6 +338,9 @@ export function collectTypicalWorkSchemaConsistencyIssues(
 
 	for (const rule of input.rules) {
 		if (!ruleRequiresSchemaBinding(rule)) {
+			continue;
+		}
+		if (isArchCountLaborParamName(rule.paramName ?? "")) {
 			continue;
 		}
 		const resolved = resolveWorkSchemaParamForRule(rule, input.schemaParams);

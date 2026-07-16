@@ -16,6 +16,8 @@ export type CsvFormulaImportRow = {
 	triggerRules: CsvFormulaTriggerRule[];
 	laborParams: string[];
 	formulaRaw: string;
+	/** Колонка «Коэффициенты параметров трудоёмкости» (формат модельного стрима). */
+	laborCoefficientsRaw?: string;
 };
 
 export type CsvFormulaCatalogPatch = {
@@ -41,7 +43,7 @@ export type CsvFormulaLaborCoefficient = {
 
 export type CsvFormulaTriggerRule = {
 	paramName: string;
-	operator: "=" | "in" | "exists" | "unresolved";
+	operator: "=" | "!=" | "in" | "exists" | "unresolved";
 	values: string[];
 };
 
@@ -166,7 +168,247 @@ export function inferCsvArchComponent(
 }
 
 export function stripWorkStagePrefix(name: string): string {
-	return name.replace(/^Этап[\s_]+\d+\.\s*/u, "").trim();
+	let rest = name.trim();
+	rest = rest.replace(/^Этап[\s_]+\d+\.\s*/u, "");
+	const stagePrefix = rest.match(/^(\d+[ABАВаб]?)\.\s*/iu);
+	if (stagePrefix) {
+		rest = rest.slice(stagePrefix[0].length);
+	} else {
+		rest = rest.replace(/^AutoML:\s*/iu, "");
+	}
+	return rest.trim().replace(/\.\s*$/u, "");
+}
+
+/** E2E-этап из названия работы модельного стрима: «01. …», «05A. …», «AutoML: …». */
+export function extractE2eWorkStage(name: string): string {
+	const trimmed = name.trim();
+	const stagePrefix = trimmed.match(/^(\d+[ABАВаб]?)\.\s*/iu);
+	if (stagePrefix?.[1]) {
+		return stagePrefix[1]
+			.replace(/А/g, "A")
+			.replace(/В/g, "B")
+			.replace(/а/g, "A")
+			.replace(/в/g, "B");
+	}
+	if (/^AutoML:/iu.test(trimmed)) return "AutoML";
+	return "";
+}
+
+export function resolveE2eWorkStageAndName(smartName: string): {
+	stage: string;
+	name: string;
+} {
+	const stage = extractE2eWorkStage(smartName);
+	let name = smartName.trim();
+	name = name.replace(/^Этап[\s_]+\d+\.\s*/u, "");
+	const stagePrefix = name.match(/^(\d+[ABАВаб]?)\.\s*/iu);
+	if (stagePrefix) {
+		name = name.slice(stagePrefix[0].length);
+	} else {
+		name = name.replace(/^AutoML:\s*/iu, "");
+	}
+	name = name.trim().replace(/\.\s*$/u, "");
+	return { stage, name: name || smartName.trim() };
+}
+
+/** Шаги K = 1 + (N−1)×increment для архкоэф(Модели; …). */
+export function buildLinearArchCountSteps(
+	maxCount: number,
+	increment = 0.75,
+): Array<{ count: number; coefficient: number }> {
+	const steps: Array<{ count: number; coefficient: number }> = [];
+	for (let count = 1; count <= maxCount; count += 1) {
+		const coefficient =
+			count === 1 ? 1 : Math.round((1 + (count - 1) * increment) * 10000) / 10000;
+		steps.push({ count, coefficient });
+	}
+	return steps;
+}
+
+export const MODEL_STREAM_SOURCE_COUNT_STEPS: Array<{
+	count: number;
+	coefficient: number;
+}> = [
+	{ count: 1, coefficient: 1 },
+	{ count: 2, coefficient: 1.2 },
+	{ count: 3, coefficient: 1.4 },
+	{ count: 4, coefficient: 1.6 },
+	{ count: 5, coefficient: 1.8 },
+	{ count: 6, coefficient: 2 },
+	{ count: 7, coefficient: 2.2 },
+	{ count: 8, coefficient: 2.4 },
+	{ count: 9, coefficient: 2.6 },
+	{ count: 10, coefficient: 3 },
+];
+
+export function formatArchCountFormulaSteps(
+	steps: ReadonlyArray<{ count: number; coefficient: number }>,
+): string {
+	return steps
+		.map(
+			(step) =>
+				`${step.count}=${String(step.coefficient).replace(".", ",")}`,
+		)
+		.join("; ");
+}
+
+const MODEL_STREAM_ARCH_COUNT_PARAM_LABELS: Record<
+	string,
+	{ kind: "model" | "sourceSystem"; steps: string }
+> = {
+	"кол-во моделей": {
+		kind: "model",
+		steps: formatArchCountFormulaSteps(buildLinearArchCountSteps(15)),
+	},
+	"количество моделей": {
+		kind: "model",
+		steps: formatArchCountFormulaSteps(buildLinearArchCountSteps(15)),
+	},
+	"кол-во источников для проработки": {
+		kind: "sourceSystem",
+		steps: formatArchCountFormulaSteps(MODEL_STREAM_SOURCE_COUNT_STEPS),
+	},
+};
+
+function isInitiativesDivisorParam(label: string): boolean {
+	const norm = normalizeParamLabel(label);
+	return norm.includes("оцениваемых инициатив");
+}
+
+/** Парсит блоки «Параметр: 1→1; 2→1,25 …» из колонки коэффициентов модельного стрима. */
+export function parseModelStreamLaborCoefficients(
+	raw: string,
+): CsvFormulaLaborCoefficient[] {
+	const text = raw.replace(/\r/g, "").trim();
+	if (!text) return [];
+
+	const groups: CsvFormulaLaborCoefficient[] = [];
+	const blocks = text.split(/\n(?=[^\n]+:)/u);
+	for (const block of blocks) {
+		const colon = block.indexOf(":");
+		if (colon <= 0) continue;
+		const paramName = clean(block.slice(0, colon));
+		const body = block.slice(colon + 1);
+		if (!paramName) continue;
+
+		if (/делитель итога/iu.test(body) || isInitiativesDivisorParam(paramName)) {
+			const values: Array<{ label: string; coefficient: number }> = [
+				{ label: "1", coefficient: 1 },
+			];
+			for (let n = 2; n <= 99; n += 1) {
+				values.push({
+					label: String(n),
+					coefficient: Math.round((1 / n) * 10000) / 10000,
+				});
+			}
+			groups.push({ paramName, values });
+			continue;
+		}
+
+		const values: Array<{ label: string; coefficient: number }> = [];
+		for (const match of body.matchAll(
+			/(?:^|[;\s(])([^→;(\n]+?)\s*→\s*(-?\d+(?:[.,]\d+)?)/giu,
+		)) {
+			const label = clean(match[1] ?? "");
+			const coefficient = Number((match[2] ?? "").replace(",", "."));
+			if (!label || !Number.isFinite(coefficient)) continue;
+			if (/^далее\b/iu.test(label)) continue;
+			values.push({ label, coefficient });
+		}
+
+		if (/K\s*=\s*1\s*\+\s*\(N.?1\)\s*×\s*0\.75/iu.test(body)) {
+			const maxCount =
+				normalizeParamLabel(paramName).includes("модел") ? 15 : 99;
+			for (let n = 2; n <= maxCount; n += 1) {
+				const coefficient = Math.round((1 + (n - 1) * 0.75) * 10000) / 10000;
+				if (!values.some((row) => row.label === String(n))) {
+					values.push({ label: String(n), coefficient });
+				}
+			}
+		}
+
+		if (values.length > 0) {
+			groups.push({ paramName, values });
+		}
+	}
+	return groups;
+}
+
+function hasModelStreamTriggerOperator(part: string): boolean {
+	return /(?:=|≠|>=|<=|>|<)\s*/u.test(part);
+}
+
+function splitModelStreamTriggerClauses(raw: string): string[] {
+	if (!/\s+И\s+/u.test(raw)) return [raw];
+
+	const parts: string[] = [];
+	let current = "";
+	for (const segment of raw.split(/\s+И\s+/u)) {
+		if (!current) {
+			current = segment;
+			continue;
+		}
+		if (hasModelStreamTriggerOperator(current)) {
+			parts.push(current.trim());
+			current = segment;
+		} else {
+			current += ` И ${segment}`;
+		}
+	}
+	if (current.trim()) parts.push(current.trim());
+	return parts.length > 0 ? parts : [raw];
+}
+
+function parseSingleModelStreamTriggerRule(
+	raw: string,
+): CsvFormulaTriggerRule | null {
+	const part = clean(raw);
+	if (!part) return null;
+
+	const eqQuoted = part.match(/^(.+?)\s*=\s*«([^»]+)»\s*$/u);
+	if (eqQuoted?.[1] && eqQuoted[2]) {
+		return {
+			paramName: clean(eqQuoted[1]),
+			operator: "=",
+			values: [clean(eqQuoted[2])],
+		};
+	}
+
+	const neqQuoted = part.match(/^(.+?)\s*≠\s*«([^»]+)»\s*$/u);
+	if (neqQuoted?.[1] && neqQuoted[2]) {
+		return {
+			paramName: clean(neqQuoted[1]),
+			operator: "!=",
+			values: [clean(neqQuoted[2])],
+		};
+	}
+
+	if (/≠\s*Пусто\s*$/iu.test(part)) {
+		return {
+			paramName: clean(part.replace(/≠\s*Пусто\s*$/iu, "")),
+			operator: "exists",
+			values: [],
+		};
+	}
+
+	if (/>\s*0\s*$/u.test(part)) {
+		return {
+			paramName: clean(part.replace(/>\s*0\s*$/u, "")),
+			operator: "exists",
+			values: [],
+		};
+	}
+
+	return parseCsvTriggerRules(part)[0] ?? null;
+}
+
+export function parseModelStreamTriggerRules(raw: string): CsvFormulaTriggerRule[] {
+	const trimmed = raw.trim();
+	if (!trimmed) return [];
+
+	return splitModelStreamTriggerClauses(trimmed)
+		.map((chunk) => parseSingleModelStreamTriggerRule(chunk))
+		.filter((rule): rule is CsvFormulaTriggerRule => rule !== null);
 }
 
 function splitTopLevelList(raw: string): string[] {
@@ -205,6 +447,12 @@ function parseLaborParamsNumbered(raw: string): string[] {
 		}
 	}
 	if (params.length === 0) {
+		if (trimmed.includes(";")) {
+			return trimmed
+				.split(";")
+				.map((part) => clean(part))
+				.filter(Boolean);
+		}
 		return splitTopLevelList(raw);
 	}
 	return params;
@@ -363,6 +611,9 @@ export function parseCsvFormulaImportRows(
 	const cTrigger = idx("Параметр-триггер");
 	const cLabor = idx("Параметры трудоемкости");
 	const cFormula = idx("Формула");
+	const cCoeffs = header.findIndex((h) =>
+		clean(h).toLowerCase().includes("коэффициенты параметров"),
+	);
 
 	return rows
 		.slice(1)
@@ -371,14 +622,20 @@ export function parseCsvFormulaImportRows(
 			const smartName =
 				clean(r[cName >= 0 ? cName : cOriginal]) || originalName;
 			const stream = clean(r[cStream]);
-			const stage = clean(r[cContext]);
+			let stage = clean(r[cContext]);
+			const e2e = resolveE2eWorkStageAndName(smartName);
+			if (!stage) stage = e2e.stage;
 			const baseName =
+				e2e.name ||
 				stripWorkStagePrefix(smartName) ||
 				stripWorkStagePrefix(originalName) ||
 				smartName ||
 				originalName;
 			const triggerRaw = r[cTrigger] ?? "";
-			const triggerRules = parseCsvTriggerRules(triggerRaw);
+			const triggerRules =
+				stream === "Модельный стрим"
+					? parseModelStreamTriggerRules(triggerRaw)
+					: parseCsvTriggerRules(triggerRaw);
 			return {
 				stream,
 				component: inferCsvArchComponent(r[cComponent] ?? "", stream, stage),
@@ -392,7 +649,9 @@ export function parseCsvFormulaImportRows(
 				triggerRules,
 				laborParams:
 					cLabor >= 0 ? parseLaborParamsNumbered(r[cLabor] ?? "") : [],
-				formulaRaw: cLabor >= 0 && cFormula >= 0 ? (r[cFormula] ?? "") : "",
+				formulaRaw: cFormula >= 0 ? (r[cFormula] ?? "") : "",
+				laborCoefficientsRaw:
+					cCoeffs >= 0 ? (r[cCoeffs] ?? "") : undefined,
 			};
 		})
 		.filter((row) => row.name.length > 0 && row.stream.length > 0);
@@ -561,6 +820,10 @@ export function buildFormulaTextFromCsvCore(
 		return { formulaText: "N", unmatchedParams, skippedSpecial };
 	}
 
+	if (/[KК]\s*\(/iu.test(core)) {
+		return buildModelStreamFormulaTextFromCore(core, resolveParamCode);
+	}
+
 	const parts = core.split("×").map((part) => clean(part));
 	const exprParts: string[] = ["N"];
 
@@ -588,6 +851,123 @@ export function buildFormulaTextFromCsvCore(
 	}
 
 	const formulaText = exprParts.length === 1 ? "N" : exprParts.join(" * ");
+	return { formulaText, unmatchedParams, skippedSpecial };
+}
+
+function splitModelStreamFormulaOperands(core: string): string[] {
+	const operands: string[] = [];
+	let current = "";
+	let parenDepth = 0;
+	for (const ch of core.replace(/\r/g, "")) {
+		if (ch === "(") parenDepth += 1;
+		else if (ch === ")" && parenDepth > 0) parenDepth -= 1;
+		const isMul = ch === "×" && parenDepth === 0;
+		const isDiv = ch === "÷" && parenDepth === 0;
+		if (isMul || isDiv) {
+			const part = clean(current);
+			if (part) operands.push(part);
+			operands.push(isDiv ? "__DIV__" : "__MUL__");
+			current = "";
+			continue;
+		}
+		current += ch;
+	}
+	const tail = clean(current);
+	if (tail) operands.push(tail);
+	return operands;
+}
+
+function buildModelStreamFormulaTextFromCore(
+	core: string,
+	resolveParamCode: (label: string) => string | null,
+): Pick<
+	CsvFormulaBuildResult,
+	"formulaText" | "unmatchedParams" | "skippedSpecial"
+> {
+	const unmatchedParams: string[] = [];
+	const skippedSpecial: string[] = [];
+	const operands = splitModelStreamFormulaOperands(
+		core.replace(/^\d+(?:[.,]\d+)?\s*×\s*/u, "").replace(/^Норматив\s*×\s*/iu, ""),
+	);
+	const exprParts: string[] = ["N"];
+	let pendingOp: "*" | "/" = "*";
+
+	for (const operand of operands) {
+		if (operand === "__MUL__") {
+			pendingOp = "*";
+			continue;
+		}
+		if (operand === "__DIV__") {
+			pendingOp = "/";
+			continue;
+		}
+
+		const coeffCall = operand.match(/^[KК]\s*\((.+)\)\s*$/iu);
+		if (coeffCall?.[1]) {
+			const label = clean(coeffCall[1]);
+			const arch = MODEL_STREAM_ARCH_COUNT_PARAM_LABELS[normalizeParamLabel(label)];
+			if (arch) {
+				const kindLabel =
+					arch.kind === "model" ? "Модели" : "Система-источник";
+				const token = `архкоэф(${kindLabel}; ${arch.steps})`;
+				exprParts.push(pendingOp === "/" ? `(${token})` : token);
+				if (pendingOp === "/") pendingOp = "*";
+				continue;
+			}
+			const code = resolveParamCode(label);
+			if (!code) {
+				unmatchedParams.push(label);
+				continue;
+			}
+			const token = `коэф(${code})`;
+			if (pendingOp === "/") {
+				if (isInitiativesDivisorParam(label)) {
+					exprParts.push(token);
+				} else {
+					exprParts.push(`/ ${token}`);
+				}
+				pendingOp = "*";
+			} else {
+				exprParts.push(token);
+			}
+			continue;
+		}
+
+		if (/^\d+(?:[.,]\d+)?$/u.test(operand)) {
+			skippedSpecial.push(operand);
+			continue;
+		}
+
+		const bareLabel = operand.replace(/^К\s*\(/iu, "").replace(/\)\s*$/u, "");
+		const label = clean(bareLabel);
+		const code = resolveParamCode(label);
+		if (!code) {
+			unmatchedParams.push(operand);
+			continue;
+		}
+		const token = `коэф(${code})`;
+		if (pendingOp === "/") {
+			if (isInitiativesDivisorParam(label)) {
+				exprParts.push(token);
+			} else {
+				exprParts.push(`/ ${token}`);
+			}
+			pendingOp = "*";
+		} else {
+			exprParts.push(token);
+		}
+	}
+
+	let formulaText = "N";
+	for (let i = 1; i < exprParts.length; i += 1) {
+		const part = exprParts[i] ?? "";
+		if (part.startsWith("/ ")) {
+			formulaText += ` ${part}`;
+		} else {
+			formulaText += ` * ${part}`;
+		}
+	}
+	formulaText = formulaText.replace(/\s+/g, " ").trim();
 	return { formulaText, unmatchedParams, skippedSpecial };
 }
 
@@ -771,7 +1151,11 @@ export function csvRowToCatalogPatch(
 			? build.inferredLaborParams
 			: row.laborParams;
 	const allowedParamCodes = new Set(
-		laborParams.map((paramName) => slugParamCode(paramName)),
+		laborParams.flatMap((paramName) => {
+			const slug = slugParamCode(paramName);
+			const override = overrides[paramName.trim()];
+			return override ? [slug, override] : [slug];
+		}),
 	);
 	const parsed = parseWorkFormulaText(build.formulaText);
 	const unboundCodes = parsed.tokens
@@ -797,10 +1181,10 @@ export function csvRowToCatalogPatch(
 			roundingMode: build.roundingMode,
 			roundingStep: build.roundingStep,
 			laborParams,
-			laborCoefficients: parseCsvLaborCoefficients(
-				row.formulaRaw,
-				row.component,
-			),
+			laborCoefficients:
+				row.laborCoefficientsRaw?.trim()
+					? parseModelStreamLaborCoefficients(row.laborCoefficientsRaw)
+					: parseCsvLaborCoefficients(row.formulaRaw, row.component),
 			triggerParams: row.triggerParams,
 			triggerRules: row.triggerRules,
 			norm: row.norm,

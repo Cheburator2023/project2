@@ -50,6 +50,13 @@ export class V2TypicalWorkAssignmentEntity {
 		text: string;
 	} | null;
 
+	@Column({ name: "labor_arch_counts", type: "jsonb", nullable: true })
+	laborArchCounts: Array<{
+		kind: string;
+		paramName?: string | null;
+		steps: Array<{ count: number; coefficient: number }>;
+	}> | null;
+
 	@CreateDateColumn({ name: "created_at", type: "timestamptz" })
 	createdAt: Date;
 

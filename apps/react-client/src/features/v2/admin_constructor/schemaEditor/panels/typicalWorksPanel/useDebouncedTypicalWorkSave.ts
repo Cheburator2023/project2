@@ -4,7 +4,7 @@ import type {
 	V2TypicalWorkCardDto,
 	V2TypicalWorkNormInputDto,
 } from "@smart-anketa/api-contract";
-import { collectTypicalWorkPatchValidationErrors, defaultTriggerArchCount, defaultTriggerFormula } from "@smart-anketa/api-contract";
+import { collectTypicalWorkPatchValidationErrors, defaultTriggerArchCount, defaultTriggerFormula, defaultLaborArchCounts, reconcileFormulaWithLaborArchCounts } from "@smart-anketa/api-contract";
 import { usePatchV2TypicalWork } from "@react-client/common/api/queries/v2-works";
 import { parseTypicalWorkPatchError } from "./typicalWorkPatchErrors";
 import {
@@ -225,6 +225,7 @@ export function cardToPatchDto(
 		triggerArchCount: card.triggerArchCount ?? defaultTriggerArchCount(),
 		triggerMode: card.triggerMode ?? "simple",
 		triggerFormula: card.triggerFormula ?? defaultTriggerFormula(),
+		laborArchCounts: card.laborArchCounts ?? defaultLaborArchCounts(),
 		laborParams: card.laborParams
 			.filter(
 				(group) =>
@@ -248,7 +249,10 @@ export function cardToPatchDto(
 					})),
 				anyOf: group.anyOf ?? null,
 			})),
-		formula: card.formula,
+		formula: reconcileFormulaWithLaborArchCounts(
+			card.formula,
+			card.laborArchCounts ?? defaultLaborArchCounts(),
+		),
 		formulaTerms: card.formulaTerms,
 		rounding: card.rounding,
 	};

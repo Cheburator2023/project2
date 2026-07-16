@@ -40,6 +40,34 @@ const v2_csv_formula_import_util_1 = require("./v2-csv-formula-import.util");
             },
         ]);
     });
+    (0, vitest_1.it)("parses model-stream triggers without splitting param names on «и»", () => {
+        (0, vitest_1.expect)((0, v2_csv_formula_import_util_1.parseModelStreamTriggerRules)("Необходимость продуктивизации и количество дополнительных витрин ≠ «Не требуется»")).toEqual([
+            {
+                paramName: "Необходимость продуктивизации и количество дополнительных витрин",
+                operator: "!=",
+                values: ["Не требуется"],
+            },
+        ]);
+        (0, vitest_1.expect)((0, v2_csv_formula_import_util_1.parseModelStreamTriggerRules)("Каналы внедрения ≠ Пусто")).toEqual([
+            {
+                paramName: "Каналы внедрения",
+                operator: "exists",
+                values: [],
+            },
+        ]);
+        (0, vitest_1.expect)((0, v2_csv_formula_import_util_1.parseModelStreamTriggerRules)("Необходимость AutoML = «Да» И Каналы внедрения ≠ Пусто")).toEqual([
+            {
+                paramName: "Необходимость AutoML",
+                operator: "=",
+                values: ["Да"],
+            },
+            {
+                paramName: "Каналы внедрения",
+                operator: "exists",
+                values: [],
+            },
+        ]);
+    });
     (0, vitest_1.it)("does not turn explanatory dash text into labor params", () => {
         const csv = `Стрим;Арх. Компонент;Название оригинальное;Название в смарт-анкете СУМ;Контекст;Тип работы;Наличие норматива;Параметр-триггер;Параметры трудоемкости;Формула
 ИД. Внешний;Арх. Компонент. Объект данных;Work;Этап 220. Work;Этап 220;Опциональная;0,8;Trigger;"— (параметры те же, что у этапа 217)";"ЧД(работы) = ОКРУГЛ.ВВЕРХ(Норматив; 0,1)"`;

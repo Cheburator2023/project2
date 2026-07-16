@@ -2,6 +2,8 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
+import { schemaHasUncertaintyModalWidget } from "@smart-anketa/api-contract";
+import { useMemo } from "react";
 import { V2AnketaFormWithModals } from "@react-client/features/v2/anketaCRUD/organisms/V2AnketaFormWithModals";
 import { useSchemaEditorAnketaEngine } from "../../hooks/useSchemaEditorAnketaEngine";
 import { V2FormWithEvaluationLayout } from "../../organisms/V2FormWithEvaluationLayout";
@@ -20,6 +22,14 @@ export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean })
 		resetPreviewForm,
 		previewFormRemountKey,
 	} = useSchemaEditor();
+
+	const showUncertaintySlot = useMemo(
+		() =>
+			!schemaHasUncertaintyModalWidget(
+				engine.previewUiSchema as Record<string, unknown>,
+			),
+		[engine.previewUiSchema],
+	);
 
 	const resetButton = (
 		<Button
@@ -73,6 +83,7 @@ export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean })
 					<V2AnketaFormWithModals
 						engine={engine}
 						formRemountKey={previewFormRemountKey}
+						showUncertaintySlot={showUncertaintySlot}
 						data-test-id="schema-editor-anketa-preview"
 					/>
 				) : (
@@ -85,6 +96,7 @@ export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean })
 						<V2AnketaFormWithModals
 							engine={engine}
 							formRemountKey={previewFormRemountKey}
+							showUncertaintySlot={showUncertaintySlot}
 							data-test-id="schema-editor-anketa-preview"
 						/>
 					</V2FormWithEvaluationLayout>

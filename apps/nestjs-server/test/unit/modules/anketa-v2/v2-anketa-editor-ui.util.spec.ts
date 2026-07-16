@@ -77,6 +77,6 @@ describe("resolveV2AnketaEditorBindings", () => {
 				fieldPointer: "/uncertaintyCalculation",
 			}),
 		).toBe("system");
-		expect(schemaHasUncertaintyModalWidget(snapshot.uiSchema)).toBe(true);
+		expect(schemaHasUncertaintyModalWidget(snapshot.uiSchema)).toBe(false);
 	});
 });

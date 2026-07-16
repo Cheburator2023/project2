@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFormulaFromCsvRow, buildFormulaTextFromCsvCore, csvRowToCatalogPatch, extractFormulaCoreFromCsvText, parseCsvFormulaImportRows, parseCsvLaborCoefficients, parseCsvTriggerRules, resolveCsvParamCode, } from "./v2-csv-formula-import.util";
+import { buildFormulaFromCsvRow, buildFormulaTextFromCsvCore, csvRowToCatalogPatch, extractFormulaCoreFromCsvText, parseCsvFormulaImportRows, parseCsvLaborCoefficients, parseCsvTriggerRules, parseModelStreamTriggerRules, resolveCsvParamCode, } from "./v2-csv-formula-import.util";
 describe("v2-csv-formula-import.util", () => {
     it("parses CSV rows with multiline labor params", () => {
         const csv = `Стрим;Арх. Компонент;Название оригинальное;Название в смарт-анкете СУМ;Контекст;Тип работы;Наличие норматива;Параметр-триггер;Параметры трудоемкости;Формула
@@ -34,6 +34,34 @@ describe("v2-csv-formula-import.util", () => {
             {
                 paramName: "Не понятно условие появления работ",
                 operator: "unresolved",
+                values: [],
+            },
+        ]);
+    });
+    it("parses model-stream triggers without splitting param names on «и»", () => {
+        expect(parseModelStreamTriggerRules("Необходимость продуктивизации и количество дополнительных витрин ≠ «Не требуется»")).toEqual([
+            {
+                paramName: "Необходимость продуктивизации и количество дополнительных витрин",
+                operator: "!=",
+                values: ["Не требуется"],
+            },
+        ]);
+        expect(parseModelStreamTriggerRules("Каналы внедрения ≠ Пусто")).toEqual([
+            {
+                paramName: "Каналы внедрения",
+                operator: "exists",
+                values: [],
+            },
+        ]);
+        expect(parseModelStreamTriggerRules("Необходимость AutoML = «Да» И Каналы внедрения ≠ Пусто")).toEqual([
+            {
+                paramName: "Необходимость AutoML",
+                operator: "=",
+                values: ["Да"],
+            },
+            {
+                paramName: "Каналы внедрения",
+                operator: "exists",
                 values: [],
             },
         ]);
