@@ -48,6 +48,36 @@ export function normalizeKeycloakUser(
 	};
 }
 
+export function isSameKeycloakUser(
+	left: T_KEYCLOAK_USER | undefined | null,
+	right: T_KEYCLOAK_USER | undefined | null,
+): boolean {
+	if (!left && !right) return true;
+	if (!left || !right) return false;
+	return (
+		left.sub === right.sub &&
+		left.given_name === right.given_name &&
+		left.family_name === right.family_name &&
+		left.name === right.name &&
+		left.preferred_username === right.preferred_username &&
+		left.email === right.email
+	);
+}
+
+export function keycloakUserMemoKey(
+	user: T_KEYCLOAK_USER | undefined | null,
+): string {
+	if (!user) return "";
+	return [
+		user.sub,
+		user.given_name,
+		user.family_name,
+		user.name,
+		user.preferred_username,
+		user.email,
+	].join("|");
+}
+
 export function getKeycloakUserDisplayName(
 	user: Pick<
 		T_KEYCLOAK_USER,

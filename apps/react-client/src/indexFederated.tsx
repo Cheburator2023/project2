@@ -6,13 +6,15 @@ import "@fontsource/inter/700.css";
 import { AuthProvider } from "@react-client/common/providers/AuthProvider";
 import {
 	getKeycloakUserDisplayName,
+	isSameKeycloakUser,
+	keycloakUserMemoKey,
 	normalizeKeycloakUser,
 } from "@react-client/common/auth/keycloakUserText.util";
 import { useUserStore } from "@react-client/common/store/userStore";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { globalStyles } from "@react-client/theme/GlobalStyle";
 import { Permission, Role } from "@react-client/types/roles";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
 import App from "./App";
 import { syncMfeAuthFromHost } from "@react-client/common/auth/syncMfeAuth";
@@ -55,7 +57,11 @@ export type Props = {
 
 const MfeRoot = (props: Props) => {
 	normalizeMfeUrlIfNeeded();
-	const user = normalizeKeycloakUser(props.user);
+	const userMemoKey = keycloakUserMemoKey(props.user);
+	const user = useMemo(
+		() => normalizeKeycloakUser(props.user),
+		[userMemoKey],
+	);
 
 	window.__SMART_ANKETA_MFE_DEBUG__ = {
 		mountedAt: new Date().toISOString(),
@@ -79,6 +85,8 @@ const MfeRoot = (props: Props) => {
 	const { setUsername, setGroups, setRoles, setPermissions } = useUserStore();
 
 	useEffect(() => {
+		const currentUser = useGlobalSettingsStore.getState().user;
+		if (isSameKeycloakUser(currentUser, user)) return;
 		setUser(user);
 	}, [user, setUser]);
 
