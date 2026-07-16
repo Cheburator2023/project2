@@ -1,5 +1,37 @@
 # Semantic Versioning Changelog
 
+# [1.28.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.27.1...v1.28.0) (2026-07-16)
+
+
+### Bug Fixes
+
+* increase default API timeout and improve request header handling ([c5c5d68](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/c5c5d687e0f632ea83713de6a29e3830ed805fd0))
+* update tooltip display in TotalUncertaintyModal ([6a2eaae](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6a2eaaedcbbd550b197566b88db8710dda836c31))
+
+
+### Features
+
+* add bulk schema field synchronization for typical works ([7ed448a](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/7ed448a091c281f3390297f98cfa543fdbc56b2b))
+* add CSV import functionality for formulas and enhance typical works management ([61f73e3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/61f73e3041d679581241bfbc65ceffbd87a58d1a))
+* add factory dictionary repair functionality and enhance typical works synchronization ([168c895](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/168c8959449b4f28693b390e059994bd98efa386))
+* add formula registry management and enhance typical work services ([30ae463](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/30ae463f4f13cd7ac9bdab19dca61e126d6202b3))
+* add model stream import functionality and enhance parameter bindings ([cc6a56e](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/cc6a56efc7477dea6745a89b27bf679e5c65298e))
+* add parameter dependencies logic and tests for typical work ([a0d10e3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a0d10e33ca646ed8bffa50ea57819a86ef45a47e))
+* add TaskTriggerRow component and enhance V2FinalEvaluationPanel with typical work handling ([82c9e17](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/82c9e1735447270e05fea50fbcfa27e14856a610))
+* enhance CSV import functionality and synchronize labor coefficients ([92d4af7](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/92d4af7e9c15e33a4fd369b252ce652d3d881c3c))
+* enhance factory snapshot management and introduce new registry for typical works ([ce18ecf](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ce18ecf85dd41e5a7d3cf51a5737f5c361a9e4c6))
+* enhance labor coefficient handling and improve formula synchronization ([4b97f8d](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4b97f8db8d621e28072a95777ed8e819082bd3df))
+* enhance typical work assignment schema with trigger fields and improve timeout handling ([310a27e](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/310a27e635acbfdd281fa21aed29f60cad133409))
+* enhance typical work schema reconciliation and introduce schemaFieldUid handling ([c71d7fa](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/c71d7faf3f5c6ab3ba3156f2e7860ef17b15f630))
+* enhance typical work UI components and layout ([310c141](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/310c1411a53c5976df797ca8d003bee0cda5ade5))
+* enhance v2-default-anketa and v2-factory-typical-works schemas with new fields ([0f25f21](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0f25f21fb77dc2a5bf14ff250117eae722d448fa))
+* implement debounced input handling for RJSF widgets ([0cb3426](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0cb34265a5142a2c68bbf6fbdcea57d880f8212a))
+* implement typical work version configuration copying and UI enhancements ([ca7b724](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ca7b72478669ac3c53c6fcca37a26563e5cce286))
+* integrate Zustand for schema editor UI state management ([03df578](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/03df578676c10927073bb8be959aec2d72132267))
+* introduce SuspenseOutlet for improved lazy loading in MainLayout ([5e91d68](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5e91d68b33e2a6800add69c10f1bcda31aa7cc46))
+* replace anketa save icon with contextual text button ([06dd7e9](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/06dd7e9b675d000a551870eaa155b6ed98162397))
+* replace anketa save icon with contextual text button ([0f8bf9c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0f8bf9c46786b090a55cfeb2f44ebe64dd241beb))
+
 ## [1.27.1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.27.0...v1.27.1) (2026-07-15)
 
 
