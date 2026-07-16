@@ -26,6 +26,7 @@ const v2_work_formula_util_1 = require("./v2-work-formula.util");
 const v2_work_terms_formula_util_1 = require("./v2-work-terms-formula.util");
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
 const v2_work_schema_params_match_util_1 = require("./v2-work-schema-params-match.util");
+const v2_trigger_formula_util_1 = require("./v2-trigger-formula.util");
 function parseIsoDay(value) {
     const day = value.slice(0, 10);
     return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
@@ -398,36 +399,56 @@ function isRuleInputInvalid(rule, catalog, atDate) {
         (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
 }
 /** F-03/v4: статус триггеров с учётом каталога и (опционально) черновика ответов. */
-function computeWorkTriggerStatus(rules, catalog, atDate, draftSource) {
-    if (rules.length === 0)
+function computeWorkTriggerStatus(rules, catalog, atDate, draftSource, formData, triggerArchCount, triggerMode = "simple", triggerFormula) {
+    const matchRules = rules.map((rule) => ({
+        paramCode: rule.paramCode,
+        paramName: rule.paramName ?? null,
+        operator: rule.operator ?? "=",
+        valueCode: rule.valueCode,
+        valueLabel: rule.valueLabel,
+        values: rule.values,
+    }));
+    const triggerInput = {
+        mode: triggerMode,
+        rules: matchRules,
+        triggerArchCount,
+        triggerFormula,
+    };
+    if (!(0, v2_trigger_formula_util_1.hasTypicalWorkTriggersConfigured)(triggerInput)) {
         return "no_triggers";
-    if (catalog?.length) {
-        const grouped = new Map();
-        for (const rule of rules) {
-            const key = (0, v2_works_catalog_match_util_1.triggerRuleCatalogGroupKey)(rule, catalog);
-            const list = grouped.get(key) ?? [];
-            list.push(rule);
-            grouped.set(key, list);
+    }
+    if (triggerMode === "formula") {
+        const formulaError = (0, v2_trigger_formula_util_1.validateTriggerFormulaTokens)(triggerFormula?.tokens ?? []);
+        if (formulaError)
+            return "invalid";
+        if (draftSource) {
+            return (0, v2_trigger_formula_util_1.matchTypicalWorkTriggers)(triggerInput, draftSource, formData ?? draftSource)
+                ? "appears"
+                : "hidden";
         }
-        for (const [groupKey, groupRules] of grouped) {
-            if (isWorkTriggerGroupInvalid(groupKey, groupRules, catalog, atDate)) {
-                return "invalid";
+        return "hidden";
+    }
+    if (rules.length > 0) {
+        if (catalog?.length) {
+            const grouped = new Map();
+            for (const rule of rules) {
+                const key = (0, v2_works_catalog_match_util_1.triggerRuleCatalogGroupKey)(rule, catalog);
+                const list = grouped.get(key) ?? [];
+                list.push(rule);
+                grouped.set(key, list);
+            }
+            for (const [groupKey, groupRules] of grouped) {
+                if (isWorkTriggerGroupInvalid(groupKey, groupRules, catalog, atDate)) {
+                    return "invalid";
+                }
             }
         }
-    }
-    else if (rules.some((rule) => !rule.paramCode?.trim())) {
-        return "invalid";
+        else if (rules.some((rule) => !rule.paramCode?.trim())) {
+            return "invalid";
+        }
     }
     if (draftSource) {
-        const matchRules = rules.map((rule) => ({
-            paramCode: rule.paramCode,
-            paramName: rule.paramName ?? null,
-            operator: rule.operator ?? "=",
-            valueCode: rule.valueCode,
-            valueLabel: rule.valueLabel,
-            values: rule.values,
-        }));
-        return (0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(matchRules, draftSource)
+        return (0, v2_trigger_formula_util_1.matchTypicalWorkTriggers)(triggerInput, draftSource, formData ?? draftSource)
             ? "appears"
             : "hidden";
     }

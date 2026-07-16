@@ -1,7 +1,8 @@
-import { readTypicalWorkSourceField, typicalWorkRulesMatchSource, } from "./v2-works-catalog-match.util";
+import { readTypicalWorkSourceField, } from "./v2-works-catalog-match.util";
 import { defaultWorkRounding, } from "./v2-typical-work.types";
 import { applyWorkRounding, previewWorkFormula, tokensToText, validateWorkFormulaTokens, } from "./v2-work-formula.util";
-import { resolveArchCountCoeffFromToken, } from "./v2-work-arch-count-coeff.util";
+import { compileTriggerFormulaTokensToJsonLogic, hasTypicalWorkTriggersConfigured, matchTypicalWorkTriggers, } from "./v2-trigger-formula.util";
+import { resolveArchCountCoeffFromToken, archCountTriggerMatches, } from "./v2-work-arch-count-coeff.util";
 import { evaluateTermsFormula, resolveVersionConfigTokenFormula, } from "./v2-work-terms-formula.util";
 const OP_SYMBOL = {
     "+": "+",
@@ -115,15 +116,44 @@ function compileRuleToJsonLogic(rule) {
             return { "==": [field, expected] };
     }
 }
-/** Компилирует триггеры работы в JsonLogic (логическое И). Пустой список → false. */
-export function compileTypicalWorkTriggerRulesToJsonLogic(rules) {
+function compileParamRulesToJsonLogic(rules) {
     if (rules.length === 0)
         return false;
-    if (rules.length === 1) {
-        const only = rules[0];
-        return only ? compileRuleToJsonLogic(only) : false;
+    const groups = new Map();
+    for (const rule of rules) {
+        const key = rule.paramCode.trim() || "__empty__";
+        const list = groups.get(key) ?? [];
+        list.push(rule);
+        groups.set(key, list);
     }
-    return { and: rules.map(compileRuleToJsonLogic) };
+    const compiled = [...groups.values()].map((groupRules) => groupRules.length === 1
+        ? compileRuleToJsonLogic(groupRules[0])
+        : { and: groupRules.map(compileRuleToJsonLogic) });
+    if (compiled.length === 1)
+        return compiled[0] ?? false;
+    return { and: compiled };
+}
+export function compileTypicalWorkTriggersToJsonLogic(input) {
+    if (input.mode === "formula") {
+        return compileTriggerFormulaTokensToJsonLogic(input.triggerFormula?.tokens ?? []);
+    }
+    return compileTypicalWorkTriggerRulesToJsonLogic(input.rules, input.triggerArchCount);
+}
+/** Компилирует триггеры: (ПТ₁ И ПТ₂ …) [И/ИЛИ] arch-count. Пустой список без arch → false. */
+export function compileTypicalWorkTriggerRulesToJsonLogic(rules, triggerArchCount) {
+    const hasArch = Boolean(triggerArchCount?.kind && (triggerArchCount.steps?.length ?? 0) > 0);
+    if (rules.length === 0 && !hasArch)
+        return false;
+    const paramPart = compileParamRulesToJsonLogic(rules);
+    if (!hasArch)
+        return paramPart;
+    const archPart = {
+        archCountTrigger: [triggerArchCount.kind, triggerArchCount.steps ?? []],
+    };
+    const combinator = triggerArchCount?.combinator ?? "and";
+    if (combinator === "or")
+        return { or: [paramPart, archPart] };
+    return { and: [paramPart, archPart] };
 }
 /** Оборачивает выражение округлением (custom op roundStep). */
 export function compileTypicalWorkRoundingJsonLogic(inner, rounding) {
@@ -139,7 +169,12 @@ export function compileTypicalWorkCalculationLogic(input) {
         return null;
     return {
         version: 1,
-        include: compileTypicalWorkTriggerRulesToJsonLogic(input.rules),
+        include: compileTypicalWorkTriggersToJsonLogic({
+            mode: input.triggerMode,
+            rules: input.rules,
+            triggerArchCount: input.triggerArchCount,
+            triggerFormula: input.triggerFormula,
+        }),
         result: compileTypicalWorkRoundingJsonLogic(inner, input.rounding),
     };
 }
@@ -256,6 +291,17 @@ export function evaluateTypicalWorkJsonLogicValue(rule, data) {
             {};
         return resolveArchCountCoeffFromToken(formData, kind, steps);
     }
+    if (op === "archCountTrigger") {
+        const kind = String(args[0] ?? "");
+        const steps = (Array.isArray(args[1]) ? args[1] : []);
+        const formData = data.formData ??
+            data.source ??
+            {};
+        return archCountTriggerMatches(formData, kind, steps);
+    }
+    if (op === "or") {
+        return args.some((arg) => Boolean(evaluateTypicalWorkJsonLogicValue(arg, data)));
+    }
     if (op === "roundStep") {
         const [inner, mode, step] = args;
         const value = evaluateTypicalWorkJsonLogicValue(inner, data);
@@ -358,7 +404,13 @@ export function evaluateTypicalWorkResultJsonLogic(logic, ctx, formulaText) {
 export function evaluateTypicalWorkCalculation(input) {
     const { logic, rules, source, norm, paramCoefficients } = input;
     const data = buildJsonLogicData({ norm, paramCoefficients, source });
-    if (rules.length === 0) {
+    const triggerInput = {
+        mode: input.triggerMode,
+        rules,
+        triggerArchCount: input.triggerArchCount,
+        triggerFormula: input.triggerFormula,
+    };
+    if (!hasTypicalWorkTriggersConfigured(triggerInput)) {
         return {
             included: false,
             symbolic: "",
@@ -367,7 +419,7 @@ export function evaluateTypicalWorkCalculation(input) {
             error: null,
         };
     }
-    const includedByRules = typicalWorkRulesMatchSource(rules, source);
+    const includedByRules = matchTypicalWorkTriggers(triggerInput, source, input.formData ?? source);
     const includedByLogic = Boolean(evaluateTypicalWorkJsonLogicValue(logic.include, data));
     if (!includedByRules || !includedByLogic) {
         return {
@@ -399,11 +451,17 @@ export function previewTypicalWorkCalculation(logic, fallback, ctx) {
     };
 }
 /** Собирает полную логику из сохранённого result и актуальных триггеров. */
-export function assembleTypicalWorkCalculationLogic(stored, rules, fallback) {
+export function assembleTypicalWorkCalculationLogic(stored, rules, fallback, triggerInput) {
+    const triggerArchCount = triggerInput?.triggerArchCount;
     if (stored?.result != null) {
         return {
             version: 1,
-            include: compileTypicalWorkTriggerRulesToJsonLogic(rules),
+            include: compileTypicalWorkTriggersToJsonLogic({
+                mode: triggerInput?.mode,
+                rules,
+                triggerArchCount,
+                triggerFormula: triggerInput?.triggerFormula,
+            }),
             result: stored.result,
         };
     }
@@ -413,6 +471,9 @@ export function assembleTypicalWorkCalculationLogic(stored, rules, fallback) {
         formula: fallback.formula,
         rounding: fallback.rounding,
         rules,
+        triggerArchCount,
+        triggerMode: triggerInput?.mode,
+        triggerFormula: triggerInput?.triggerFormula,
     });
 }
 /** Собирает JsonLogic result из сохранённой формулы version_config. */

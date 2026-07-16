@@ -2,6 +2,8 @@ import type {
 	PatchV2TypicalWorkRequestDto,
 	V2TypicalWorkNormInputDto,
 	V2TypicalWorkRoundingDto,
+	V2TypicalWorkTriggerFormulaDto,
+	V2TypicalWorkTriggerMode,
 	V2WorkFormulaToken,
 	V2WorkTriggerStatus,
 } from "./v2-typical-work.types";
@@ -24,10 +26,15 @@ import {
 	isSourceTypeTriggerParam,
 	resolveTriggerStatusCatalogParam,
 	triggerRuleCatalogGroupKey,
-	typicalWorkRulesMatchSource,
+	type TypicalWorkTriggerArchCountLike,
 } from "./v2-works-catalog-match.util";
 import type { WorkSchemaParamDef } from "./v2-work-schema-params-match.util";
 import { findWorkSchemaParameter } from "./v2-work-schema-params-match.util";
+import {
+	hasTypicalWorkTriggersConfigured,
+	matchTypicalWorkTriggers,
+	validateTriggerFormulaTokens,
+} from "./v2-trigger-formula.util";
 
 export type ValidationIssue = { path: string; message: string };
 
@@ -563,36 +570,72 @@ export function computeWorkTriggerStatus(
 	catalog?: WorkTriggerStatusCatalogParam[],
 	atDate?: string,
 	draftSource?: Record<string, unknown>,
+	formData?: Record<string, unknown>,
+	triggerArchCount?: TypicalWorkTriggerArchCountLike | null,
+	triggerMode: V2TypicalWorkTriggerMode = "simple",
+	triggerFormula?: V2TypicalWorkTriggerFormulaDto | null,
 ): V2WorkTriggerStatus {
-	if (rules.length === 0) return "no_triggers";
+	const matchRules = rules.map((rule) => ({
+		paramCode: rule.paramCode,
+		paramName: rule.paramName ?? null,
+		operator: rule.operator ?? "=",
+		valueCode: rule.valueCode,
+		valueLabel: rule.valueLabel,
+		values: rule.values,
+	}));
+	const triggerInput = {
+		mode: triggerMode,
+		rules: matchRules,
+		triggerArchCount,
+		triggerFormula,
+	};
 
-	if (catalog?.length) {
-		const grouped = new Map<string, WorkTriggerStatusRuleInput[]>();
-		for (const rule of rules) {
-			const key = triggerRuleCatalogGroupKey(rule, catalog);
-			const list = grouped.get(key) ?? [];
-			list.push(rule);
-			grouped.set(key, list);
+	if (!hasTypicalWorkTriggersConfigured(triggerInput)) {
+		return "no_triggers";
+	}
+
+	if (triggerMode === "formula") {
+		const formulaError = validateTriggerFormulaTokens(
+			triggerFormula?.tokens ?? [],
+		);
+		if (formulaError) return "invalid";
+		if (draftSource) {
+			return matchTypicalWorkTriggers(
+				triggerInput,
+				draftSource,
+				formData ?? draftSource,
+			)
+				? "appears"
+				: "hidden";
 		}
-		for (const [groupKey, groupRules] of grouped) {
-			if (isWorkTriggerGroupInvalid(groupKey, groupRules, catalog, atDate)) {
-				return "invalid";
+		return "hidden";
+	}
+
+	if (rules.length > 0) {
+		if (catalog?.length) {
+			const grouped = new Map<string, WorkTriggerStatusRuleInput[]>();
+			for (const rule of rules) {
+				const key = triggerRuleCatalogGroupKey(rule, catalog);
+				const list = grouped.get(key) ?? [];
+				list.push(rule);
+				grouped.set(key, list);
 			}
+			for (const [groupKey, groupRules] of grouped) {
+				if (isWorkTriggerGroupInvalid(groupKey, groupRules, catalog, atDate)) {
+					return "invalid";
+				}
+			}
+		} else if (rules.some((rule) => !rule.paramCode?.trim())) {
+			return "invalid";
 		}
-	} else if (rules.some((rule) => !rule.paramCode?.trim())) {
-		return "invalid";
 	}
 
 	if (draftSource) {
-		const matchRules = rules.map((rule) => ({
-			paramCode: rule.paramCode,
-			paramName: rule.paramName ?? null,
-			operator: rule.operator ?? "=",
-			valueCode: rule.valueCode,
-			valueLabel: rule.valueLabel,
-			values: rule.values,
-		}));
-		return typicalWorkRulesMatchSource(matchRules, draftSource)
+		return matchTypicalWorkTriggers(
+			triggerInput,
+			draftSource,
+			formData ?? draftSource,
+		)
 			? "appears"
 			: "hidden";
 	}

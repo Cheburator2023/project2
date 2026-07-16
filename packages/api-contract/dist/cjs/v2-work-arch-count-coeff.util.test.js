@@ -45,4 +45,7 @@ const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util
         (0, vitest_1.expect)((0, v2_work_arch_count_coeff_util_1.parseWorkArchCountKindLabel)("Модели")).toBe("model");
         (0, vitest_1.expect)((0, v2_work_arch_count_coeff_util_1.parseWorkArchCountKindLabel)("Система-источник")).toBe("sourceSystem");
     });
+    (0, vitest_1.it)("archCountTriggerMatches requires count >= min step", () => {
+        (0, vitest_1.expect)((0, v2_work_arch_count_coeff_util_1.archCountTriggerMatches)({}, "model", [{ count: 2, coefficient: 1 }])).toBe(false);
+    });
 });

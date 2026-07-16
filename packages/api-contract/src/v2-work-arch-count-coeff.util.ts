@@ -231,3 +231,16 @@ export function resolveArchCountCoeffFromToken(
 	const count = resolveWorkArchComponentCount(formData, kind);
 	return lookupArchCountCoefficient(steps, count) ?? 1;
 }
+
+/** Триггер по количеству компонентов: выполнен, если count ≥ минимальный порог из steps. */
+export function archCountTriggerMatches(
+	formData: Record<string, unknown>,
+	kind: V2WorkFormulaArchCountKind,
+	steps: readonly V2WorkArchCountCoeffStep[],
+): boolean {
+	if (!steps.length) return false;
+	const count = resolveWorkArchComponentCount(formData, kind);
+	if (!Number.isFinite(count) || count <= 0) return false;
+	const threshold = Math.min(...steps.map((step) => step.count));
+	return count >= threshold;
+}

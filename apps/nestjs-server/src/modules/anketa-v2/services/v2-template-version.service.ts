@@ -211,6 +211,7 @@ export class V2TemplateVersionService {
 			await this.typicalWorkWriteService.reconcileAllSchemaFieldsForVersion(
 				version.id,
 				"apply",
+				{ skipConsistencyReport: true },
 			);
 		}
 		return version;
@@ -240,6 +241,7 @@ export class V2TemplateVersionService {
 		await this.typicalWorkWriteService.reconcileAllSchemaFieldsForVersion(
 			draft.id,
 			"apply",
+			{ skipConsistencyReport: true },
 		);
 
 		const published = await this.publish(draft.id, {}, userId);
@@ -251,7 +253,8 @@ export class V2TemplateVersionService {
 				uiSchema: structuredClone(published.uiSchema ?? {}),
 				logic: structuredClone(published.logic ?? { rules: [] }),
 				dictionariesSnapshot: published.dictionariesSnapshot ?? null,
-				releaseNotes: "Черновик для редактирования (копия опубликованной после сброса)",
+				releaseNotes:
+					"Черновик для редактирования (копия опубликованной после сброса)",
 				parentVersionId: published.id,
 			},
 			userId,
@@ -263,6 +266,7 @@ export class V2TemplateVersionService {
 		await this.typicalWorkWriteService.reconcileAllSchemaFieldsForVersion(
 			editingDraft.id,
 			"apply",
+			{ skipConsistencyReport: true },
 		);
 
 		return published;

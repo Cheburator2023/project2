@@ -22,7 +22,7 @@ const LOGIC_WORKSPACE_SEGMENTS: Array<{
 		label: "Зависимости параметров",
 		title: "Связи значений параметров между собой",
 	},
-	{ id: "jsonlogic", label: "JsonLogic" },
+	// { id: "jsonlogic", label: "JsonLogic" },
 ];
 
 export function LogicWorkspaceShell({
@@ -67,7 +67,9 @@ export function LogicWorkspaceShell({
 				</Typography>
 			</Box>
 
-			<Box sx={{ flex: 1, minHeight: 0, overflow: "hidden", position: "relative" }}>
+			<Box
+				sx={{ flex: 1, minHeight: 0, overflow: "hidden", position: "relative" }}
+			>
 				<Box
 					sx={{
 						display: tab === "works" ? "flex" : "none",

@@ -35,7 +35,11 @@ import type {
 import { useMemo } from "react";
 
 import { parseDictionaryJsonToEnumPair } from "@react-client/features/v2/admin_constructor/utils/dictionaryPreview";
-import { apiClient, API_ENTITY_CREATE_TIMEOUT_MS } from "../helpers/apiClient";
+import {
+	apiClient,
+	API_ENTITY_CREATE_TIMEOUT_MS,
+	API_FACTORY_SCHEMA_TIMEOUT_MS,
+} from "../helpers/apiClient";
 
 export type DeleteV2TemplateInput =
 	| string
@@ -190,21 +194,23 @@ export const useUpdateV2Template = () => {
 export const useDeleteV2Template = () => {
 	const queryClient = useQueryClient();
 
-	return useMutation<V2TemplateDeleteSnapshotDto, Error, DeleteV2TemplateInput>({
-		mutationFn: (input) => {
-			const { id } = resolveDeleteTemplateInput(input);
-			return apiClient<V2TemplateDeleteSnapshotDto>({
-				url: `/v2/templates/${id}`,
-				method: "DELETE",
-			});
+	return useMutation<V2TemplateDeleteSnapshotDto, Error, DeleteV2TemplateInput>(
+		{
+			mutationFn: (input) => {
+				const { id } = resolveDeleteTemplateInput(input);
+				return apiClient<V2TemplateDeleteSnapshotDto>({
+					url: `/v2/templates/${id}`,
+					method: "DELETE",
+				});
+			},
+			onSettled: (_, __, input) => {
+				const { id, skipCacheRefresh } = resolveDeleteTemplateInput(input);
+				if (skipCacheRefresh) return;
+				void invalidateV2TemplatesList(queryClient);
+				void removeV2TemplateFromCache(queryClient, id);
+			},
 		},
-		onSettled: (_, __, input) => {
-			const { id, skipCacheRefresh } = resolveDeleteTemplateInput(input);
-			if (skipCacheRefresh) return;
-			void invalidateV2TemplatesList(queryClient);
-			void removeV2TemplateFromCache(queryClient, id);
-		},
-	});
+	);
 };
 
 export const useRestoreV2Template = () => {
@@ -314,7 +320,7 @@ export const useCreateV2TemplateVersionFromDefault = () => {
 					withoutTypicalWorks ? "?withoutTypicalWorks=true" : ""
 				}`,
 				method: "POST",
-				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
+				timeout: API_FACTORY_SCHEMA_TIMEOUT_MS,
 			}),
 		onSuccess: (_, { templateId }) => {
 			void invalidateV2TemplatesList(queryClient);
@@ -460,7 +466,10 @@ export const useRollbackV2TemplateVersion = () => {
 	});
 };
 
-function refreshV2TemplateRegistry(queryClient: QueryClient, templateId: string) {
+function refreshV2TemplateRegistry(
+	queryClient: QueryClient,
+	templateId: string,
+) {
 	invalidateV2TemplateRegistry(queryClient, [templateId]);
 }
 
@@ -493,7 +502,7 @@ export const useResetV2TemplateToDefault = () => {
 			apiClient<V2TemplateVersionDto>({
 				url: `/v2/templates/${templateId}/versions/reset-default`,
 				method: "POST",
-				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
+				timeout: API_FACTORY_SCHEMA_TIMEOUT_MS,
 			}),
 		onSuccess: (_, templateId) => {
 			queryClient.invalidateQueries({ queryKey: ["v2-audit"] });
@@ -840,10 +849,7 @@ export const useV2DictionaryEnumsMaps = (dictionaryCodes: string[]) => {
 	});
 
 	const enumMapByCode = useMemo(() => {
-		const result: Record<
-			string,
-			{ enums: string[]; enumNames: string[] }
-		> = {};
+		const result: Record<string, { enums: string[]; enumNames: string[] }> = {};
 		if (!data) return result;
 		for (const code of uniqueSorted) {
 			const snapshot = data[code];

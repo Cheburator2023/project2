@@ -1,8 +1,9 @@
 import { defaultWorkRounding } from "./v2-typical-work.types";
 import { evaluateWorkFormula, roundWorkEffortValue, validateWorkFormulaTokens, } from "./v2-work-formula.util";
 import { evaluateTermsFormula, termsToTokenFormula, validateTermsFormula, } from "./v2-work-terms-formula.util";
-import { catalogValueMatchesTriggerRule, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, typicalWorkRulesMatchSource, } from "./v2-works-catalog-match.util";
+import { catalogValueMatchesTriggerRule, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, } from "./v2-works-catalog-match.util";
 import { findWorkSchemaParameter } from "./v2-work-schema-params-match.util";
+import { hasTypicalWorkTriggersConfigured, matchTypicalWorkTriggers, validateTriggerFormulaTokens, } from "./v2-trigger-formula.util";
 function parseIsoDay(value) {
     const day = value.slice(0, 10);
     return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
@@ -375,36 +376,56 @@ function isRuleInputInvalid(rule, catalog, atDate) {
         (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
 }
 /** F-03/v4: статус триггеров с учётом каталога и (опционально) черновика ответов. */
-export function computeWorkTriggerStatus(rules, catalog, atDate, draftSource) {
-    if (rules.length === 0)
+export function computeWorkTriggerStatus(rules, catalog, atDate, draftSource, formData, triggerArchCount, triggerMode = "simple", triggerFormula) {
+    const matchRules = rules.map((rule) => ({
+        paramCode: rule.paramCode,
+        paramName: rule.paramName ?? null,
+        operator: rule.operator ?? "=",
+        valueCode: rule.valueCode,
+        valueLabel: rule.valueLabel,
+        values: rule.values,
+    }));
+    const triggerInput = {
+        mode: triggerMode,
+        rules: matchRules,
+        triggerArchCount,
+        triggerFormula,
+    };
+    if (!hasTypicalWorkTriggersConfigured(triggerInput)) {
         return "no_triggers";
-    if (catalog?.length) {
-        const grouped = new Map();
-        for (const rule of rules) {
-            const key = triggerRuleCatalogGroupKey(rule, catalog);
-            const list = grouped.get(key) ?? [];
-            list.push(rule);
-            grouped.set(key, list);
+    }
+    if (triggerMode === "formula") {
+        const formulaError = validateTriggerFormulaTokens(triggerFormula?.tokens ?? []);
+        if (formulaError)
+            return "invalid";
+        if (draftSource) {
+            return matchTypicalWorkTriggers(triggerInput, draftSource, formData ?? draftSource)
+                ? "appears"
+                : "hidden";
         }
-        for (const [groupKey, groupRules] of grouped) {
-            if (isWorkTriggerGroupInvalid(groupKey, groupRules, catalog, atDate)) {
-                return "invalid";
+        return "hidden";
+    }
+    if (rules.length > 0) {
+        if (catalog?.length) {
+            const grouped = new Map();
+            for (const rule of rules) {
+                const key = triggerRuleCatalogGroupKey(rule, catalog);
+                const list = grouped.get(key) ?? [];
+                list.push(rule);
+                grouped.set(key, list);
+            }
+            for (const [groupKey, groupRules] of grouped) {
+                if (isWorkTriggerGroupInvalid(groupKey, groupRules, catalog, atDate)) {
+                    return "invalid";
+                }
             }
         }
-    }
-    else if (rules.some((rule) => !rule.paramCode?.trim())) {
-        return "invalid";
+        else if (rules.some((rule) => !rule.paramCode?.trim())) {
+            return "invalid";
+        }
     }
     if (draftSource) {
-        const matchRules = rules.map((rule) => ({
-            paramCode: rule.paramCode,
-            paramName: rule.paramName ?? null,
-            operator: rule.operator ?? "=",
-            valueCode: rule.valueCode,
-            valueLabel: rule.valueLabel,
-            values: rule.values,
-        }));
-        return typicalWorkRulesMatchSource(matchRules, draftSource)
+        return matchTypicalWorkTriggers(triggerInput, draftSource, formData ?? draftSource)
             ? "appears"
             : "hidden";
     }

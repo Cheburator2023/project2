@@ -60,8 +60,8 @@ export function resolveTypicalWorkRulesForSourceMatch(rules, schemaParams) {
         };
     });
 }
-export function typicalWorkRulesMatchSourceWithSchema(rules, source, schemaParams) {
-    return typicalWorkRulesMatchSource(resolveTypicalWorkRulesForSourceMatch(rules, schemaParams), source);
+export function typicalWorkRulesMatchSourceWithSchema(rules, source, schemaParams, formData, triggerArchCount) {
+    return typicalWorkRulesMatchSource(resolveTypicalWorkRulesForSourceMatch(rules, schemaParams), source, formData, triggerArchCount);
 }
 export function remapLaborCoefficientRowsForSchema(rows, schemaParams) {
     if (!schemaParams?.length)

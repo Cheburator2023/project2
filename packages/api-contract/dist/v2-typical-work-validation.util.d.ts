@@ -1,5 +1,6 @@
-import type { PatchV2TypicalWorkRequestDto, V2TypicalWorkNormInputDto, V2TypicalWorkRoundingDto, V2WorkFormulaToken, V2WorkTriggerStatus } from "./v2-typical-work.types";
+import type { PatchV2TypicalWorkRequestDto, V2TypicalWorkNormInputDto, V2TypicalWorkRoundingDto, V2TypicalWorkTriggerFormulaDto, V2TypicalWorkTriggerMode, V2WorkFormulaToken, V2WorkTriggerStatus } from "./v2-typical-work.types";
 import { type WorkFormulaLaborParamRef } from "./v2-work-formula.util";
+import { type TypicalWorkTriggerArchCountLike } from "./v2-works-catalog-match.util";
 import type { WorkSchemaParamDef } from "./v2-work-schema-params-match.util";
 export type ValidationIssue = {
     path: string;
@@ -67,7 +68,7 @@ export declare function filterTypicalWorkParameterValuesActiveOnDate<T extends {
     validTo?: string | null;
 }>(values: T[], atDate: string): T[];
 /** F-03/v4: статус триггеров с учётом каталога и (опционально) черновика ответов. */
-export declare function computeWorkTriggerStatus(rules: WorkTriggerStatusRuleInput[], catalog?: WorkTriggerStatusCatalogParam[], atDate?: string, draftSource?: Record<string, unknown>): V2WorkTriggerStatus;
+export declare function computeWorkTriggerStatus(rules: WorkTriggerStatusRuleInput[], catalog?: WorkTriggerStatusCatalogParam[], atDate?: string, draftSource?: Record<string, unknown>, formData?: Record<string, unknown>, triggerArchCount?: TypicalWorkTriggerArchCountLike | null, triggerMode?: V2TypicalWorkTriggerMode, triggerFormula?: V2TypicalWorkTriggerFormulaDto | null): V2WorkTriggerStatus;
 export declare function isWorkTriggerGroupInvalid(paramCode: string, rules: WorkTriggerStatusRuleInput[], catalog: WorkTriggerStatusCatalogParam[], atDate?: string): boolean;
 export type WorkCoefficientRowInput = {
     paramCode: string;

@@ -34,6 +34,8 @@ import {
 	remapBoundWorkIdsInUiSchema,
 	resolveActiveNormOnDate,
 	compileStoredTypicalWorkResultLogic,
+	defaultTriggerArchCount,
+	defaultTriggerFormula,
 	tokensToText,
 	parseWorkFormulaText,
 	computeFormulaBadge,
@@ -405,11 +407,28 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		const workIdMap = new Map<string, string>();
 		let created = 0;
 
+		const registryIds = V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works.map(
+			(entry) => entry.id.trim(),
+		);
+		const existingWorksById = new Map(
+			(
+				await this.workRepository.find({
+					where: { id: In(registryIds) },
+				})
+			).map((work) => [work.id, work]),
+		);
+		const existingVersionConfigs = await this.versionConfigRepository.find({
+			where: { templateVersionId: trimmedVersionId },
+		});
+		const versionConfigKeys = new Set(
+			existingVersionConfigs.map(
+				(row) => `${row.workId}|${row.streamExecutor.trim()}`,
+			),
+		);
+
 		for (const entry of V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works) {
 			let workId = entry.id.trim();
-			const existingById = await this.workRepository.findOne({
-				where: { id: workId },
-			});
+			const existingById = existingWorksById.get(workId);
 			if (existingById && existingById.templateId !== trimmedTemplateId) {
 				const nextId = randomUUID();
 				workIdMap.set(entry.id, nextId);
@@ -447,6 +466,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 					trimmedVersionId,
 					stream,
 					catalogRows,
+					versionConfigKeys,
 				);
 			}
 
@@ -559,12 +579,18 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		templateVersionId: string,
 		streamExecutor: string,
 		catalogRows: V2FactoryTypicalWork[] = [],
+		existingConfigKeys?: Set<string>,
 	): Promise<void> {
 		const stream = streamExecutor.trim();
-		const existing = await this.versionConfigRepository.findOne({
-			where: { workId, templateVersionId, streamExecutor: stream },
-		});
-		if (existing) return;
+		const configKey = `${workId}|${stream}`;
+		if (existingConfigKeys?.has(configKey)) return;
+
+		if (!existingConfigKeys) {
+			const existing = await this.versionConfigRepository.findOne({
+				where: { workId, templateVersionId, streamExecutor: stream },
+			});
+			if (existing) return;
+		}
 
 		const { formula, rounding } = resolveSeedVersionConfigFormula(
 			catalogRows,
@@ -585,6 +611,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				calculationLogic: compiled,
 			}),
 		);
+		existingConfigKeys?.add(configKey);
 	}
 
 	private async remapWorkIdsInVersionUiSchema(
@@ -623,12 +650,75 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		const seenLaborKeys = new Set<string>();
 		const seenLaborParamKeys = new Set<string>();
 		const streams = new Set<string>();
+		const pendingAssignments: Array<{
+			workId: string;
+			streamExecutor: string;
+			isActive: boolean;
+		}> = [];
+		const pendingNorms: Array<{
+			workId: string;
+			streamExecutor: string;
+			normValue: string;
+			validFrom: string;
+			validTo: null;
+		}> = [];
+		const pendingRules: Array<{
+			workId: string;
+			streamExecutor: string;
+			paramCode: string;
+			paramName: string;
+			operator: string;
+			valueCode: string | null;
+			valueLabel: string | null;
+			valueCodes: Array<{ code: string; label: string }> | null;
+		}> = [];
+		const pendingLaborParams: Array<{
+			workId: string;
+			streamExecutor: string;
+			schemaFieldUid: string | null;
+			paramCode: string;
+			paramName: string;
+			kind: string;
+			anyOfValueCodes: null;
+			anyOfValueLabels: null;
+			coeffOn: null;
+			coeffOff: null;
+		}> = [];
+		const pendingLaborRows: Array<{
+			workId: string;
+			streamExecutor: string;
+			paramCode: string;
+			paramName: string;
+			valueCode: string | null;
+			valueLabel: string | null;
+			coefficient: string;
+		}> = [];
+
+		const existingAssignments = await this.assignmentRepository.find({
+			where: { workId },
+		});
+		const assignmentKeys = new Set(
+			existingAssignments.map(
+				(row) => `${row.workId}|${row.streamExecutor.trim()}`,
+			),
+		);
+
+		const queueAssignment = (stream: string) => {
+			const key = `${workId}|${stream}`;
+			if (assignmentKeys.has(key)) return;
+			assignmentKeys.add(key);
+			pendingAssignments.push({
+				workId,
+				streamExecutor: stream,
+				isActive: true,
+			});
+		};
 
 		for (const rawStream of entry.streams) {
 			const stream = canonicalizeWorkStream(rawStream.trim());
 			if (!stream) continue;
 			streams.add(stream);
-			await this.ensureWorkStreamAssignment(workId, stream);
+			queueAssignment(stream);
 
 			const registryNorm =
 				entry.normsByStream[rawStream] ?? entry.normsByStream[stream];
@@ -636,15 +726,13 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				const normKey = `${stream}|${registryNorm}`;
 				if (!seenNormKeys.has(normKey)) {
 					seenNormKeys.add(normKey);
-					await this.normRepository.save(
-						this.normRepository.create({
-							workId,
-							streamExecutor: stream,
-							normValue: String(registryNorm),
-							validFrom: DEFAULT_NORM_VALID_FROM,
-							validTo: null,
-						}),
-					);
+					pendingNorms.push({
+						workId,
+						streamExecutor: stream,
+						normValue: String(registryNorm),
+						validFrom: DEFAULT_NORM_VALID_FROM,
+						validTo: null,
+					});
 				}
 			}
 		}
@@ -653,21 +741,19 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			const originalStream = row.stream.trim();
 			const stream = canonicalizeWorkStream(originalStream);
 			streams.add(stream);
-			await this.ensureWorkStreamAssignment(workId, stream);
+			queueAssignment(stream);
 
 			if (row.norm !== null) {
 				const normKey = `${stream}|${row.norm}`;
 				if (!seenNormKeys.has(normKey)) {
 					seenNormKeys.add(normKey);
-					await this.normRepository.save(
-						this.normRepository.create({
-							workId,
-							streamExecutor: stream,
-							normValue: String(row.norm),
-							validFrom: DEFAULT_NORM_VALID_FROM,
-							validTo: null,
-						}),
-					);
+					pendingNorms.push({
+						workId,
+						streamExecutor: stream,
+						normValue: String(row.norm),
+						validFrom: DEFAULT_NORM_VALID_FROM,
+						validTo: null,
+					});
 				}
 			}
 
@@ -701,23 +787,21 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 								label,
 							}))
 						: null;
-				await this.ruleRepository.save(
-					this.ruleRepository.create({
-						workId,
-						streamExecutor: stream,
-						paramCode,
-						paramName: trimmed,
-						operator:
-							triggerRule.operator === "exists"
-								? "="
-								: triggerRule.operator,
-						valueCode: inferredValue
-							? slugParamCode(inferredValue)
-							: null,
-						valueLabel: inferredValue,
-						valueCodes,
-					}),
-				);
+				pendingRules.push({
+					workId,
+					streamExecutor: stream,
+					paramCode,
+					paramName: trimmed,
+					operator:
+						triggerRule.operator === "exists"
+							? "="
+							: triggerRule.operator,
+					valueCode: inferredValue
+						? slugParamCode(inferredValue)
+						: null,
+					valueLabel: inferredValue,
+					valueCodes,
+				});
 			}
 
 			for (const paramName of row.laborParams) {
@@ -736,38 +820,34 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				const laborParamKey = `${stream}|${paramCode}`;
 				if (!seenLaborParamKeys.has(laborParamKey)) {
 					seenLaborParamKeys.add(laborParamKey);
-					await this.laborParamRepository.save(
-						this.laborParamRepository.create({
-							workId,
-							streamExecutor: stream,
-							schemaFieldUid:
-								coefficientGroup?.schemaFieldUid?.trim() || null,
-							paramCode,
-							paramName: trimmed,
-							kind: "by_value",
-							anyOfValueCodes: null,
-							anyOfValueLabels: null,
-							coeffOn: null,
-							coeffOff: null,
-						}),
-					);
+					pendingLaborParams.push({
+						workId,
+						streamExecutor: stream,
+						schemaFieldUid:
+							coefficientGroup?.schemaFieldUid?.trim() || null,
+						paramCode,
+						paramName: trimmed,
+						kind: "by_value",
+						anyOfValueCodes: null,
+						anyOfValueLabels: null,
+						coeffOn: null,
+						coeffOff: null,
+					});
 				}
 
 				if (dictValues.length === 0) {
 					const laborKey = `${stream}|${paramCode}|`;
 					if (seenLaborKeys.has(laborKey)) continue;
 					seenLaborKeys.add(laborKey);
-					await this.laborRepository.save(
-						this.laborRepository.create({
-							workId,
-							streamExecutor: stream,
-							paramCode,
-							paramName: trimmed,
-							valueCode: null,
-							valueLabel: null,
-							coefficient: "1",
-						}),
-					);
+					pendingLaborRows.push({
+						workId,
+						streamExecutor: stream,
+						paramCode,
+						paramName: trimmed,
+						valueCode: null,
+						valueLabel: null,
+						coefficient: "1",
+					});
 					continue;
 				}
 
@@ -775,19 +855,33 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 					const laborKey = `${stream}|${paramCode}|${value.label}`;
 					if (seenLaborKeys.has(laborKey)) continue;
 					seenLaborKeys.add(laborKey);
-					await this.laborRepository.save(
-						this.laborRepository.create({
-							workId,
-							streamExecutor: stream,
-							paramCode,
-							paramName: trimmed,
-							valueCode: slugParamCode(value.label),
-							valueLabel: value.label,
-							coefficient: String(value.coefficient ?? 1),
-						}),
-					);
+					pendingLaborRows.push({
+						workId,
+						streamExecutor: stream,
+						paramCode,
+						paramName: trimmed,
+						valueCode: slugParamCode(value.label),
+						valueLabel: value.label,
+						coefficient: String(value.coefficient ?? 1),
+					});
 				}
 			}
+		}
+
+		if (pendingAssignments.length > 0) {
+			await this.assignmentRepository.insert(pendingAssignments);
+		}
+		if (pendingNorms.length > 0) {
+			await this.normRepository.insert(pendingNorms);
+		}
+		if (pendingRules.length > 0) {
+			await this.ruleRepository.insert(pendingRules);
+		}
+		if (pendingLaborParams.length > 0) {
+			await this.laborParamRepository.insert(pendingLaborParams);
+		}
+		if (pendingLaborRows.length > 0) {
+			await this.laborRepository.insert(pendingLaborRows);
 		}
 
 		return streams;
@@ -1613,6 +1707,11 @@ export class V2TypicalWorkService {
 			),
 			norms: norms.map(mapNormEntity),
 			rules: rules.map(mapRuleEntity),
+			triggerArchCount: mapTriggerArchCountEntity(assignment),
+			triggerMode:
+				(assignment?.triggerMode as V2TypicalWorkCardDto["triggerMode"]) ??
+				"simple",
+			triggerFormula: mapTriggerFormulaEntity(assignment),
 			laborParams: laborParamsGrouped,
 			formulaTerms: termsFormula,
 			formula: tokenFormula,
@@ -1833,6 +1932,35 @@ function mapRuleEntity(entity: V2TypicalWorkRuleEntity): V2TypicalWorkRuleDto {
 		valueLabel: entity.valueLabel,
 		values: entity.valueCodes ?? undefined,
 		sortOrder: entity.sortOrder,
+	};
+}
+
+function mapTriggerFormulaEntity(
+	assignment: V2TypicalWorkAssignmentEntity | null | undefined,
+): NonNullable<V2TypicalWorkCardDto["triggerFormula"]> {
+	const raw = assignment?.triggerFormula;
+	if (!raw?.tokens?.length) return defaultTriggerFormula();
+	return {
+		tokens: raw.tokens as NonNullable<
+			V2TypicalWorkCardDto["triggerFormula"]
+		>["tokens"],
+		text: raw.text ?? "",
+	};
+}
+
+function mapTriggerArchCountEntity(
+	assignment: V2TypicalWorkAssignmentEntity | null | undefined,
+): NonNullable<V2TypicalWorkCardDto["triggerArchCount"]> {
+	if (!assignment?.triggerArchCountKind) return defaultTriggerArchCount();
+	return {
+		kind: assignment.triggerArchCountKind as NonNullable<
+			V2TypicalWorkCardDto["triggerArchCount"]
+		>["kind"],
+		steps: assignment.triggerArchCountSteps ?? [],
+		combinator:
+			(assignment.triggerArchCountCombinator as NonNullable<
+				V2TypicalWorkCardDto["triggerArchCount"]
+			>["combinator"]) ?? "and",
 	};
 }
 

@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const vitest_1 = require("vitest");
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
+const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util");
 const v2_work_schema_params_match_util_1 = require("./v2-work-schema-params-match.util");
 (0, vitest_1.describe)("v2-works-catalog-match.util", () => {
     (0, vitest_1.it)("resolves the unified source stream for any source row", () => {
@@ -310,5 +311,52 @@ const v2_work_schema_params_match_util_1 = require("./v2-work-schema-params-matc
             },
         ]);
         (0, vitest_1.expect)(resolved?.code).toBe("field_control");
+    });
+    (0, vitest_1.it)("archCountTriggerMatches uses minimum step threshold", () => {
+        (0, vitest_1.expect)((0, v2_work_arch_count_coeff_util_1.archCountTriggerMatches)({ detailInfo: { dataMart: { name: "dm1" } } }, "dataMart", [{ count: 2, coefficient: 1 }])).toBe(false);
+        (0, vitest_1.expect)((0, v2_work_arch_count_coeff_util_1.archCountTriggerMatches)({
+            detailInfo: {
+                dataMart: { name: "dm1" },
+            },
+        }, "dataMart", [{ count: 1, coefficient: 1 }])).toBe(true);
+    });
+    (0, vitest_1.it)("typicalWorkRulesMatchSource combines all params (AND) with global arch count", () => {
+        const formData = {
+            detailInfo: { dataMart: { name: "dm1" } },
+        };
+        const triggerArchCount = {
+            kind: "dataMart",
+            steps: [{ count: 1, coefficient: 1 }],
+            combinator: "and",
+        };
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)([
+            {
+                paramCode: "type",
+                paramName: "Тип",
+                operator: "=",
+                valueCode: "internal",
+                valueLabel: "Внутренний",
+            },
+            {
+                paramCode: "region",
+                paramName: "Регион",
+                operator: "=",
+                valueCode: "eu",
+                valueLabel: "EU",
+            },
+        ], { type: "internal", region: "eu" }, formData, triggerArchCount)).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)([
+            {
+                paramCode: "type",
+                paramName: "Тип",
+                operator: "=",
+                valueCode: "internal",
+                valueLabel: "Внутренний",
+            },
+        ], { type: "internal" }, formData, {
+            kind: "dataMart",
+            steps: [{ count: 3, coefficient: 1 }],
+            combinator: "or",
+        })).toBe(true);
     });
 });

@@ -4,7 +4,7 @@ import {
 	NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, Repository } from "typeorm";
+import { In, IsNull, Repository } from "typeorm";
 import type {
 	CreateV2TypicalWorkRequestDto,
 	CreateV2TypicalWorkParameterRequestDto,
@@ -684,6 +684,30 @@ export class V2TypicalWorkWriteService {
 			}
 		}
 
+		if (dto.triggerArchCount !== undefined || dto.triggerMode !== undefined || dto.triggerFormula !== undefined) {
+			const assignment = await this.ensureAssignment(workId, stream);
+			if (dto.triggerArchCount !== undefined) {
+				const arch = dto.triggerArchCount;
+				assignment.triggerArchCountKind = arch?.kind ?? null;
+				assignment.triggerArchCountSteps = arch?.steps?.length
+					? arch.steps
+					: null;
+				assignment.triggerArchCountCombinator = arch?.combinator ?? "and";
+			}
+			if (dto.triggerMode !== undefined) {
+				assignment.triggerMode = dto.triggerMode;
+			}
+			if (dto.triggerFormula !== undefined) {
+				assignment.triggerFormula = dto.triggerFormula
+					? {
+							tokens: dto.triggerFormula.tokens,
+							text: dto.triggerFormula.text,
+						}
+					: null;
+			}
+			await this.assignmentRepository.save(assignment);
+		}
+
 		if (dto.laborParams) {
 			await this.laborRepository.delete({ workId, streamExecutor: stream });
 			await this.laborParamRepository.delete({
@@ -910,11 +934,14 @@ export class V2TypicalWorkWriteService {
 		options?: {
 			workId?: string;
 			unboundLaborOnly?: boolean;
+			prefetchedConfigs?: V2TypicalWorkVersionConfigEntity[];
 		},
 	): Promise<V2TypicalWorkSchemaFieldSyncImpactDto> {
-		const configs = await this.versionConfigRepository.find({
-			where: { templateVersionId: dto.templateVersionId },
-		});
+		const configs =
+			options?.prefetchedConfigs ??
+			(await this.versionConfigRepository.find({
+				where: { templateVersionId: dto.templateVersionId },
+			}));
 		const impact: V2TypicalWorkSchemaFieldSyncImpactDto = {
 			worksMatched: 0,
 			worksUpdated: 0,
@@ -1075,6 +1102,10 @@ export class V2TypicalWorkWriteService {
 			triggerStatusCatalog,
 			atDate,
 			draftSource,
+			draftSource,
+			card.triggerArchCount,
+			card.triggerMode ?? "simple",
+			card.triggerFormula,
 		);
 
 		const norm = resolveActiveNormOnDate(card.norms, stream, atDate) ?? null;
@@ -1250,6 +1281,7 @@ export class V2TypicalWorkWriteService {
 	async reconcileAllSchemaFieldsForVersion(
 		templateVersionId: string,
 		mode: "dryRun" | "apply" = "apply",
+		options?: { skipConsistencyReport?: boolean },
 	): Promise<V2TypicalWorkSchemaBulkSyncResponseDto> {
 		const version = await this.templateVersionRepository.findOne({
 			where: { id: templateVersionId },
@@ -1277,6 +1309,9 @@ export class V2TypicalWorkWriteService {
 			fieldsProcessed: 0,
 			consistencyIssues: [],
 		};
+		const configs = await this.versionConfigRepository.find({
+			where: { templateVersionId },
+		});
 		const schemaParamNameCounts = new Map<string, number>();
 		for (const schemaParam of schemaParams) {
 			const normalizedName = schemaParam.name.trim().toLocaleLowerCase("ru");
@@ -1313,6 +1348,7 @@ export class V2TypicalWorkWriteService {
 					},
 				},
 				duplicateNameCount > 1 ? schemaParam.archComponent : null,
+				{ prefetchedConfigs: configs },
 			);
 			aggregate.fieldsProcessed++;
 			aggregate.worksMatched += impact.worksMatched;
@@ -1324,56 +1360,68 @@ export class V2TypicalWorkWriteService {
 			aggregate.formulasInvalidated += impact.formulasInvalidated;
 		}
 
-		const configs = await this.versionConfigRepository.find({
-			where: { templateVersionId },
-		});
-		const repairedBindings = new Set<string>();
-		for (const config of configs) {
-			const card = await this.typicalWorkService.getWorkCardForSchemaSync(
-				config.workId,
-				config.streamExecutor,
-				templateVersionId,
-			);
-			for (const labor of card.laborParams) {
-				if (labor.schemaFieldUid) continue;
-				const resolved = resolveWorkSchemaParamForRule(labor, schemaParams);
-				if (!resolved?.schemaFieldUid) continue;
+		const workIds = [...new Set(configs.map((config) => config.workId))];
+		const unboundLaborCount =
+			workIds.length > 0
+				? await this.laborParamRepository.count({
+						where: { workId: In(workIds), schemaFieldUid: IsNull() },
+					})
+				: 0;
 
-				const bindingKey = `${config.workId}:${resolved.schemaFieldUid}`;
-				if (repairedBindings.has(bindingKey)) continue;
-				repairedBindings.add(bindingKey);
-
-				const impact = await this.reconcileSchemaField(
-					{
-						templateVersionId,
-						mode,
-						operation: "upsert",
-						field: {
-							schemaFieldUid: resolved.schemaFieldUid,
-							previousCode: labor.paramCode,
-							aliasCodes: resolved.sourceKeys,
-							code: resolved.code,
-							name: resolved.name,
-							values:
-								resolved.values && resolved.values.length > 0
-									? resolved.values
-									: undefined,
-						},
-					},
-					null,
-					{ workId: config.workId, unboundLaborOnly: true },
+		if (unboundLaborCount > 0) {
+			const repairedBindings = new Set<string>();
+			for (const config of configs) {
+				const card = await this.typicalWorkService.getWorkCardForSchemaSync(
+					config.workId,
+					config.streamExecutor,
+					templateVersionId,
 				);
-				aggregate.worksMatched += impact.worksMatched;
-				aggregate.worksUpdated += impact.worksUpdated;
-				aggregate.rulesUpdated += impact.rulesUpdated;
-				aggregate.rulesRemoved += impact.rulesRemoved;
-				aggregate.laborParamsUpdated += impact.laborParamsUpdated;
-				aggregate.laborParamsRemoved += impact.laborParamsRemoved;
-				aggregate.formulasInvalidated += impact.formulasInvalidated;
+				for (const labor of card.laborParams) {
+					if (labor.schemaFieldUid) continue;
+					const resolved = resolveWorkSchemaParamForRule(labor, schemaParams);
+					if (!resolved?.schemaFieldUid) continue;
+
+					const bindingKey = `${config.workId}:${resolved.schemaFieldUid}`;
+					if (repairedBindings.has(bindingKey)) continue;
+					repairedBindings.add(bindingKey);
+
+					const impact = await this.reconcileSchemaField(
+						{
+							templateVersionId,
+							mode,
+							operation: "upsert",
+							field: {
+								schemaFieldUid: resolved.schemaFieldUid,
+								previousCode: labor.paramCode,
+								aliasCodes: resolved.sourceKeys,
+								code: resolved.code,
+								name: resolved.name,
+								values:
+									resolved.values && resolved.values.length > 0
+										? resolved.values
+										: undefined,
+							},
+						},
+						null,
+						{
+							workId: config.workId,
+							unboundLaborOnly: true,
+							prefetchedConfigs: configs,
+						},
+					);
+					aggregate.worksMatched += impact.worksMatched;
+					aggregate.worksUpdated += impact.worksUpdated;
+					aggregate.rulesUpdated += impact.rulesUpdated;
+					aggregate.rulesRemoved += impact.rulesRemoved;
+					aggregate.laborParamsUpdated += impact.laborParamsUpdated;
+					aggregate.laborParamsRemoved += impact.laborParamsRemoved;
+					aggregate.formulasInvalidated += impact.formulasInvalidated;
+				}
 			}
 		}
 
-		for (const config of configs) {
+		if (!options?.skipConsistencyReport) {
+			for (const config of configs) {
 			const card = await this.typicalWorkService.getWorkCardForSchemaSync(
 				config.workId,
 				config.streamExecutor,
@@ -1418,6 +1466,7 @@ export class V2TypicalWorkWriteService {
 					streamExecutor: config.streamExecutor,
 				})),
 			);
+			}
 		}
 
 		return aggregate;

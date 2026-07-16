@@ -1,5 +1,5 @@
 import { formatParamNameWithSourceKeys } from "./v2-work-param-source-keys.util";
-import type { TypicalWorkRuleLike } from "./v2-works-catalog-match.util";
+import type { TypicalWorkRuleLike, TypicalWorkTriggerArchCountLike } from "./v2-works-catalog-match.util";
 import {
 	isControlTypeTriggerParam,
 	isSourceTypeTriggerParam,
@@ -121,10 +121,14 @@ export function typicalWorkRulesMatchSourceWithSchema(
 	rules: TypicalWorkRuleLike[],
 	source: Record<string, unknown>,
 	schemaParams?: WorkSchemaParamDef[],
+	formData?: Record<string, unknown>,
+	triggerArchCount?: TypicalWorkTriggerArchCountLike | null,
 ): boolean {
 	return typicalWorkRulesMatchSource(
 		resolveTypicalWorkRulesForSourceMatch(rules, schemaParams),
 		source,
+		formData,
+		triggerArchCount,
 	);
 }
 

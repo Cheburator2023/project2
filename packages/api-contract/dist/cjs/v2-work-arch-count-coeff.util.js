@@ -9,6 +9,7 @@ exports.validateArchCountCoeffSteps = validateArchCountCoeffSteps;
 exports.lookupArchCountCoefficient = lookupArchCountCoefficient;
 exports.resolveWorkArchComponentCount = resolveWorkArchComponentCount;
 exports.resolveArchCountCoeffFromToken = resolveArchCountCoeffFromToken;
+exports.archCountTriggerMatches = archCountTriggerMatches;
 const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
 const v2_typical_works_util_1 = require("./v2-typical-works.util");
 exports.V2_WORK_ARCH_COUNT_LIMITS = {
@@ -209,4 +210,14 @@ function resolveWorkArchComponentCount(formData, kind) {
 function resolveArchCountCoeffFromToken(formData, kind, steps) {
     const count = resolveWorkArchComponentCount(formData, kind);
     return lookupArchCountCoefficient(steps, count) ?? 1;
+}
+/** Триггер по количеству компонентов: выполнен, если count ≥ минимальный порог из steps. */
+function archCountTriggerMatches(formData, kind, steps) {
+    if (!steps.length)
+        return false;
+    const count = resolveWorkArchComponentCount(formData, kind);
+    if (!Number.isFinite(count) || count <= 0)
+        return false;
+    const threshold = Math.min(...steps.map((step) => step.count));
+    return count >= threshold;
 }

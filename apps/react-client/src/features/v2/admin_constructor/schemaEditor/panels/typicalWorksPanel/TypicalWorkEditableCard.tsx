@@ -21,6 +21,7 @@ import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import type {
 	V2TypicalWorkCardDto,
@@ -33,6 +34,9 @@ import {
 	tokensToText,
 	computeFormulaBadgeFromTokens,
 	resolveActiveNormOnDate,
+	isNumericLaborByValueParam,
+	resolveNumericLaborPresetRows,
+	buildNumericLaborCoefficientRows,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
@@ -486,8 +490,22 @@ export function TypicalWorkEditableCard({
 				paramOptions,
 				methodologyCatalog,
 				previewSourceRow,
+				undefined,
+				previewFormDataForTriggers,
+				draft?.triggerArchCount,
+				draft?.triggerMode ?? "simple",
+				draft?.triggerFormula,
 			),
-		[draft?.rules, methodologyCatalog, paramOptions, previewSourceRow],
+		[
+			draft?.rules,
+			draft?.triggerArchCount,
+			draft?.triggerFormula,
+			draft?.triggerMode,
+			methodologyCatalog,
+			paramOptions,
+			previewFormDataForTriggers,
+			previewSourceRow,
+		],
 	);
 
 	const commitDraft = (next: V2TypicalWorkCardDto) => {
@@ -501,6 +519,11 @@ export function TypicalWorkEditableCard({
 			paramOptions,
 			methodologyCatalog,
 			previewSourceRow,
+			undefined,
+			previewFormDataForTriggers,
+			next.triggerArchCount,
+			next.triggerMode ?? "simple",
+			next.triggerFormula,
 		);
 		const withDerived = {
 			...next,
@@ -531,10 +554,17 @@ export function TypicalWorkEditableCard({
 	const addLaborParam = (picked: V2TypicalWorkParameterDto) => {
 		if (!draft) return;
 		const paramName = schemaParamRuleName(picked);
+		const numericPreset = resolveNumericLaborPresetRows(paramName);
+		const useNumericByValue = isNumericLaborByValueParam({
+			numeric: picked.numeric,
+			values: picked.values,
+			name: paramName,
+		});
 		const useAnyOf =
-			picked.numeric ||
-			isSchemaTextualParam(picked) ||
-			(Boolean(picked.dictionaryCode) && picked.values.length === 0);
+			!useNumericByValue &&
+			(picked.numeric ||
+				isSchemaTextualParam(picked) ||
+				(Boolean(picked.dictionaryCode) && picked.values.length === 0));
 		const newGroup = useAnyOf
 			? {
 					schemaFieldUid: picked.schemaFieldUid ?? null,
@@ -554,15 +584,22 @@ export function TypicalWorkEditableCard({
 					paramCode: picked.code,
 					paramName,
 					kind: "by_value" as const,
-					coefficients: picked.values.map((v) => ({
-						id: `new-${Date.now()}-${v.code}`,
-						streamExecutor: draft.streamExecutor,
-						paramCode: picked.code,
-						paramName,
-						valueCode: v.code,
-						valueLabel: v.label,
-						coefficient: 1,
-					})),
+					coefficients:
+						numericPreset != null
+							? buildNumericLaborCoefficientRows(numericPreset, {
+									streamExecutor: draft.streamExecutor,
+									paramCode: picked.code,
+									paramName,
+								})
+							: picked.values.map((v) => ({
+									id: `new-${Date.now()}-${v.code}`,
+									streamExecutor: draft.streamExecutor,
+									paramCode: picked.code,
+									paramName,
+									valueCode: v.code,
+									valueLabel: v.label,
+									coefficient: 1,
+								})),
 				};
 		commitDraft({
 			...draft,
@@ -1097,6 +1134,9 @@ export function TypicalWorkEditableCard({
 
 						<TypicalWorkTriggersSection
 							rules={draft.rules}
+							triggerMode={draft.triggerMode}
+							triggerFormula={draft.triggerFormula}
+							triggerArchCount={draft.triggerArchCount}
 							triggerStatus={triggerAnalysis.status}
 							triggerPreviewState={triggerAnalysis.previewState}
 							validationIssues={triggerAnalysis.issues}
@@ -1105,6 +1145,15 @@ export function TypicalWorkEditableCard({
 							methodologyCatalog={methodologyCatalog}
 							streamExecutor={streamExecutor ?? draft.streamExecutor}
 							onChange={(rules) => commitDraft({ ...draft, rules })}
+							onTriggerModeChange={(triggerMode) =>
+								commitDraft({ ...draft, triggerMode })
+							}
+							onTriggerFormulaChange={(triggerFormula) =>
+								commitDraft({ ...draft, triggerFormula })
+							}
+							onTriggerArchCountChange={(triggerArchCount) =>
+								commitDraft({ ...draft, triggerArchCount })
+							}
 							onNavigateToSchemaField={(pointer) => {
 								openDesignerAtPointer(pointer);
 							}}
@@ -1204,6 +1253,11 @@ export function TypicalWorkEditableCard({
 										group.paramCode,
 										group.paramName,
 									);
+									const numericLaborRows =
+										paramMeta?.numeric === true ||
+										resolveNumericLaborPresetRows(
+											paramMeta?.name ?? group.paramName,
+										) != null;
 									return (
 										<Box
 											key={group.paramCode}
@@ -1280,15 +1334,36 @@ export function TypicalWorkEditableCard({
 																coefficients:
 																	g.coefficients.length > 0
 																		? g.coefficients
-																		: (param?.values ?? []).map((v) => ({
-																				id: `new-${Date.now()}-${v.code}`,
-																				streamExecutor: draft.streamExecutor,
-																				paramCode: g.paramCode,
-																				paramName: g.paramName,
-																				valueCode: v.code,
-																				valueLabel: v.label,
-																				coefficient: 1,
-																			})),
+																		: (() => {
+																				const preset =
+																					resolveNumericLaborPresetRows(
+																						param?.name ??
+																							g.paramName,
+																					);
+																				if (preset) {
+																					return buildNumericLaborCoefficientRows(
+																						preset,
+																						{
+																							streamExecutor:
+																								draft.streamExecutor,
+																							paramCode: g.paramCode,
+																							paramName: g.paramName,
+																						},
+																					);
+																				}
+																				return (param?.values ?? []).map(
+																					(v) => ({
+																						id: `new-${Date.now()}-${v.code}`,
+																						streamExecutor:
+																							draft.streamExecutor,
+																						paramCode: g.paramCode,
+																						paramName: g.paramName,
+																						valueCode: v.code,
+																						valueLabel: v.label,
+																						coefficient: 1,
+																					}),
+																				);
+																			})(),
 															};
 														});
 														commitDraft({ ...draft, laborParams: nextGroups });
@@ -1450,10 +1525,21 @@ export function TypicalWorkEditableCard({
 													</Box>
 												</Box>
 											) : (
-												<Table size="small">
+												<Box>
+													{numericLaborRows ? (
+														<Typography
+															sx={{ fontSize: 11.5, color: "#6b7484", mb: 1 }}
+														>
+															Число из анкеты сопоставляется с подписью строки:
+															точное значение («5»), «до N», «A–B», «&gt;N» /
+															«более N» (как для количества метрик).
+														</Typography>
+													) : null}
+													<Table size="small">
 													<TableBody>
 														{group.coefficients.map((row, index) => {
 															const valueAvailable =
+																numericLaborRows ||
 																isWorkCoefficientValueAvailable(
 																	row,
 																	coefficientCatalog,
@@ -1469,20 +1555,55 @@ export function TypicalWorkEditableCard({
 																				flexWrap: "wrap",
 																			}}
 																		>
-																			<Typography
-																				component="span"
-																				sx={{
-																					fontSize: 13,
-																					color: valueAvailable
-																						? "inherit"
-																						: "#c62828",
-																					textDecoration: valueAvailable
-																						? "none"
-																						: "line-through",
-																				}}
-																			>
-																				{row.valueLabel ?? "—"}
-																			</Typography>
+																			{numericLaborRows ? (
+																				<TextField
+																					size="small"
+																					value={row.valueLabel ?? ""}
+																					placeholder="до 20 / 20–50 / >50 / 7"
+																					onChange={(e) => {
+																						const nextGroups =
+																							draft.laborParams.map((g) => {
+																								if (
+																									g.paramCode !==
+																									group.paramCode
+																								)
+																									return g;
+																								const coeffs = [
+																									...g.coefficients,
+																								];
+																								coeffs[index] = {
+																									...row,
+																									valueLabel:
+																										e.target.value,
+																								};
+																								return {
+																									...g,
+																									coefficients: coeffs,
+																								};
+																							});
+																						commitDraft({
+																							...draft,
+																							laborParams: nextGroups,
+																						});
+																					}}
+																					sx={{ minWidth: 160 }}
+																				/>
+																			) : (
+																				<Typography
+																					component="span"
+																					sx={{
+																						fontSize: 13,
+																						color: valueAvailable
+																							? "inherit"
+																							: "#c62828",
+																						textDecoration: valueAvailable
+																							? "none"
+																							: "line-through",
+																					}}
+																				>
+																					{row.valueLabel ?? "—"}
+																				</Typography>
+																			)}
 																			{valueAvailable ? null : (
 																				<Box
 																					component="span"
@@ -1537,11 +1658,78 @@ export function TypicalWorkEditableCard({
 																			}}
 																		/>
 																	</TableCell>
+																	{numericLaborRows ? (
+																		<TableCell sx={{ width: 48, p: 0.5 }}>
+																			<IconButton
+																				size="small"
+																				aria-label="Удалить строку"
+																				title="Удалить строку"
+																				disabled={group.coefficients.length <= 1}
+																				onClick={() => {
+																					const nextGroups =
+																						draft.laborParams.map((g) =>
+																							g.paramCode === group.paramCode
+																								? {
+																										...g,
+																										coefficients:
+																											g.coefficients.filter(
+																												(_, rowIndex) =>
+																													rowIndex !== index,
+																											),
+																									}
+																								: g,
+																						);
+																					commitDraft({
+																						...draft,
+																						laborParams: nextGroups,
+																					});
+																				}}
+																			>
+																				<DeleteOutlineIcon fontSize="small" />
+																			</IconButton>
+																		</TableCell>
+																	) : null}
 																</TableRow>
 															);
 														})}
 													</TableBody>
 												</Table>
+													{numericLaborRows ? (
+														<Button
+															size="small"
+															startIcon={<AddIcon />}
+															sx={{ mt: 1 }}
+															onClick={() => {
+																const nextGroups = draft.laborParams.map((g) =>
+																	g.paramCode === group.paramCode
+																		? {
+																				...g,
+																				coefficients: [
+																					...g.coefficients,
+																					{
+																						id: `new-${Date.now()}`,
+																						streamExecutor:
+																							draft.streamExecutor,
+																						paramCode: g.paramCode,
+																						paramName: g.paramName,
+																						valueCode: `range_${g.coefficients.length + 1}`,
+																						valueLabel: "",
+																						coefficient: 1,
+																					},
+																				],
+																			}
+																		: g,
+																);
+																commitDraft({
+																	...draft,
+																	laborParams: nextGroups,
+																});
+															}}
+														>
+															Добавить значение или диапазон
+														</Button>
+													) : null}
+												</Box>
 											)}
 										</Box>
 									);

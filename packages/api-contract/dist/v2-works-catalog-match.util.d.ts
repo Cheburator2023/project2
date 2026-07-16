@@ -1,4 +1,6 @@
 import { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
+import { type V2WorkArchCountCoeffStep, type V2WorkFormulaArchCountKind } from "./v2-work-arch-count-coeff.util";
+import type { V2TypicalWorkTriggerArchCountCombinator } from "./v2-typical-work.types";
 export { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamNameSourceKeys, };
 /** Единый стрим-исполнитель для типовых работ систем-источников. */
 export declare const V2_SOURCE_STREAM = "\u0418\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u0438 \u0434\u0430\u043D\u043D\u044B\u0445";
@@ -21,6 +23,11 @@ export type TypicalWorkRuleLike = {
         code: string;
         label: string | null;
     }>;
+};
+export type TypicalWorkTriggerArchCountLike = {
+    kind?: V2WorkFormulaArchCountKind | null;
+    steps?: V2WorkArchCountCoeffStep[] | null;
+    combinator?: V2TypicalWorkTriggerArchCountCombinator;
 };
 /**
  * Стрим-исполнитель строки-источника. Разделение внутр/внеш убрано —
@@ -97,9 +104,20 @@ export declare function catalogValueMatchesTriggerRule(catalogValue: {
     valueLabel: string | null;
 }): boolean;
 /** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */
+export declare function coerceNumericLaborActual(actual: unknown): unknown;
+/** Читает значение по schemaPointer (`/generalInfo/field`, `/detailInfo/dataMart/items/field`). */
+export declare function readValueAtSchemaPointer(root: Record<string, unknown>, pointer: string): unknown;
+/** Контекст для коэффициентов: строка arch-компонента + поля formData вне строки (generalInfo и т.д.). */
+export declare function buildLaborCoefficientLookupSource(source: Record<string, unknown>, formData: Record<string, unknown>, schemaParams: ReadonlyArray<{
+    code: string;
+    schemaPointer?: string | null;
+}>, paramCodes: readonly string[]): Record<string, unknown>;
+/** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */
 export declare function laborValueMatches(actual: unknown, valueCode: string | null | undefined, valueLabel: string | null | undefined): boolean;
-/** Все условия работы (логическое И) против контекста строки/объекта анкеты. */
-export declare function typicalWorkRulesMatchSource(rules: TypicalWorkRuleLike[], source: Record<string, unknown>): boolean;
+export declare function matchSingleTypicalWorkRuleForTriggerFormula(rule: TypicalWorkRuleLike, source: Record<string, unknown>): boolean;
+/** Все параметры-триггеры (И) и опционально глобальное условие по количеству компонентов. */
+export declare function typicalWorkRulesMatchSource(rules: TypicalWorkRuleLike[], source: Record<string, unknown>, formData?: Record<string, unknown>, triggerArchCount?: TypicalWorkTriggerArchCountLike | null): boolean;
+export declare function hasTypicalWorkTriggersConfiguredSimple(rules: TypicalWorkRuleLike[], triggerArchCount?: TypicalWorkTriggerArchCountLike | null): boolean;
 export declare function resolveLaborCoefficient(source: Record<string, unknown>, paramCode: string, valueCode: string | null, valueLabel: string | null, paramName?: string | null): boolean;
 export declare function resolveLaborAnyOfCoefficient(source: Record<string, unknown>, paramCode: string, anyOf: {
     valueCodes: string[];

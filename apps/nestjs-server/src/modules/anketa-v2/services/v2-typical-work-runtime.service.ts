@@ -10,17 +10,20 @@ import {
 	formatTypicalWorkCoefficientDisplay,
 	isWorkCoefficientValueAvailable,
 	normalizeStoredFormula,
+	buildLaborCoefficientLookupSource,
 	parseStoredTypicalWorkCalculationLogic,
 	resolveActiveNormOnDate,
 	resolveByValueLaborParamCoefficients,
 	resolveLaborAnyOfCoefficient,
 	resolveStreamFromSourceType,
-	typicalWorkRulesMatchSourceWithSchema,
+	matchTypicalWorkTriggers,
+	type TypicalWorkTriggerMatchInput,
 	buildWorkSchemaParamsFromTemplate,
 	remapLaborCoefficientRowsForSchema,
 	resolveWorkSchemaParamForRule,
 	type TypicalWorkAnyOfLaborParamLike,
 	type TypicalWorkRuleLike,
+	type TypicalWorkTriggerArchCountLike,
 	type V2TypicalWorkRoundingDto,
 	type WorkSchemaParamDef,
 } from "@smart-anketa/api-contract";
@@ -109,10 +112,35 @@ function mapRuleEntity(rule: V2TypicalWorkRuleEntity): TypicalWorkRuleLike {
 	};
 }
 
+function mapTriggerArchCountFromAssignment(
+	assignment: V2TypicalWorkAssignmentEntity | undefined,
+): TypicalWorkTriggerArchCountLike | null {
+	if (!assignment?.triggerArchCountKind) return null;
+	return {
+		kind: assignment.triggerArchCountKind as TypicalWorkTriggerArchCountLike["kind"],
+		steps: assignment.triggerArchCountSteps ?? [],
+		combinator:
+			(assignment.triggerArchCountCombinator as TypicalWorkTriggerArchCountLike["combinator"]) ??
+			"and",
+	};
+}
+
 function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, number> {
 	const paramCoefficients: Record<string, number> = {};
 	const laborParamsByCode = new Map(
 		ctx.laborParams.map((row) => [row.paramCode, row]),
+	);
+	const laborParamCodes = [
+		...new Set([
+			...ctx.laborParams.map((row) => row.paramCode),
+			...ctx.laborRows.map((row) => row.paramCode),
+		]),
+	];
+	const lookupSource = buildLaborCoefficientLookupSource(
+		ctx.source,
+		ctx.formData,
+		ctx.schemaParams,
+		laborParamCodes,
 	);
 
 	for (const header of ctx.laborParams) {
@@ -121,7 +149,7 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 		const paramCode = resolved?.code ?? header.paramCode;
 		const paramName = resolved?.name ?? header.paramName;
 		paramCoefficients[header.paramCode] = resolveLaborAnyOfCoefficient(
-			ctx.source,
+			lookupSource,
 			paramCode,
 			{
 				valueCodes: header.anyOfValueCodes ?? [],
@@ -169,7 +197,7 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 		ctx.schemaParams,
 	);
 	const resolvedCoeffs = resolveByValueLaborParamCoefficients(
-		ctx.source,
+		lookupSource,
 		remappedRows,
 	);
 	for (let index = 0; index < byValueRows.length; index++) {
@@ -350,11 +378,23 @@ export class V2TypicalWorkRuntimeService {
 			if (normValue == null) continue;
 
 			const workRules = (rulesByWork.get(work.id) ?? []).map(mapRuleEntity);
+			const triggerInput: TypicalWorkTriggerMatchInput = {
+				mode:
+					(assignmentByWorkId.get(work.id)?.triggerMode as TypicalWorkTriggerMatchInput["mode"]) ??
+					"simple",
+				rules: workRules,
+				triggerArchCount: mapTriggerArchCountFromAssignment(
+					assignmentByWorkId.get(work.id),
+				),
+				triggerFormula:
+					(assignmentByWorkId.get(work.id)?.triggerFormula as TypicalWorkTriggerMatchInput["triggerFormula"]) ??
+					null,
+			};
 			if (
-				!typicalWorkRulesMatchSourceWithSchema(
-					workRules,
+				!matchTypicalWorkTriggers(
+					triggerInput,
 					params.source,
-					schemaParams,
+					params.formData ?? params.source,
 				)
 			) {
 				continue;

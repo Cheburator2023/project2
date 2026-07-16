@@ -3,6 +3,9 @@ import type {
 	V2DeleteTypicalWorkConflictDto,
 	V2TypicalWorkFieldErrorDto,
 	V2TypicalWorkParameterDto,
+	V2TypicalWorkTriggerArchCountDto,
+	V2TypicalWorkTriggerFormulaDto,
+	V2TypicalWorkTriggerMode,
 	V2WorkTriggerStatus,
 } from "@smart-anketa/api-contract";
 import {
@@ -17,6 +20,11 @@ import {
 	resolveTriggerStatusCatalogParam,
 	formatParamNameWithSourceKeys,
 	type WorkTriggerStatusCatalogParam,
+	evaluateTriggerFormula,
+	hasTypicalWorkTriggersConfigured,
+	isTriggerFormulaConfigured,
+	matchTypicalWorkTriggers,
+	validateTriggerFormulaTokens,
 } from "@smart-anketa/api-contract";
 import {
 	resolveSchemaParamForTriggerRule,
@@ -337,13 +345,70 @@ export function analyzeTriggerRules(
 	methodologyParams?: V2TypicalWorkParameterDto[],
 	draftSource?: Record<string, unknown>,
 	atDate?: string,
+	previewFormData?: Record<string, unknown>,
+	triggerArchCount?: V2TypicalWorkTriggerArchCountDto | null,
+	triggerMode: V2TypicalWorkTriggerMode = "simple",
+	triggerFormula?: V2TypicalWorkTriggerFormulaDto | null,
 ): {
 	status: V2WorkTriggerStatus;
 	issues: TriggerValidationIssue[];
 	previewState: TriggerPreviewState;
 } {
-	if (rules.length === 0) {
+	const triggerInput = {
+		mode: triggerMode,
+		rules: rules.map((rule) => {
+			const resolved = schemaParams?.length
+				? resolveSchemaParamForTriggerRule(rule, schemaParams)
+				: undefined;
+			return {
+				paramCode: resolved?.code ?? rule.paramCode,
+				paramName: resolved
+					? formatParamNameWithSourceKeys(resolved.name, resolved.sourceKeys)
+					: (rule.paramName ?? null),
+				operator: rule.operator ?? "=",
+				valueCode: rule.valueCode,
+				valueLabel: rule.valueLabel,
+				values: rule.values,
+			};
+		}),
+		triggerArchCount,
+		triggerFormula,
+	};
+
+	if (!hasTypicalWorkTriggersConfigured(triggerInput)) {
 		return { status: "no_triggers", issues: [], previewState: "none" };
+	}
+
+	if (triggerMode === "formula") {
+		const formulaError = validateTriggerFormulaTokens(
+			triggerFormula?.tokens ?? [],
+		);
+		if (formulaError) {
+			return {
+				status: "invalid",
+				issues: [
+					{
+						paramCode: "triggerFormula",
+						paramName: "Формула триггеров",
+						message: formulaError,
+					},
+				],
+				previewState: "none",
+			};
+		}
+		if (draftSource) {
+			const match = matchTypicalWorkTriggers(
+				triggerInput,
+				draftSource,
+				previewFormData,
+			);
+			return {
+				status: match ? "appears" : "hidden",
+				issues: [],
+				previewState: match ? "matched" : "unmatched",
+			};
+		}
+		return { status: "hidden", issues: [], previewState: "none" };
 	}
 
 	const issues = collectTriggerValidationIssues(
@@ -357,26 +422,10 @@ export function analyzeTriggerRules(
 	}
 
 	if (draftSource) {
-		const match = typicalWorkRulesMatchSource(
-			rules.map((rule) => {
-				const resolved = schemaParams?.length
-					? resolveSchemaParamForTriggerRule(rule, schemaParams)
-					: undefined;
-				return {
-					paramCode: resolved?.code ?? rule.paramCode,
-					paramName: resolved
-						? formatParamNameWithSourceKeys(
-								resolved.name,
-								resolved.sourceKeys,
-							)
-						: (rule.paramName ?? null),
-					operator: rule.operator ?? "=",
-					valueCode: rule.valueCode,
-					valueLabel: rule.valueLabel,
-					values: rule.values,
-				};
-			}),
+		const match = matchTypicalWorkTriggers(
+			triggerInput,
 			draftSource,
+			previewFormData,
 		);
 		return {
 			status: match ? "appears" : "hidden",
@@ -418,6 +467,10 @@ export function computeTriggerStatus(
 	methodologyParams?: V2TypicalWorkParameterDto[],
 	draftSource?: Record<string, unknown>,
 	atDate?: string,
+	previewFormData?: Record<string, unknown>,
+	triggerArchCount?: V2TypicalWorkTriggerArchCountDto | null,
+	triggerMode?: V2TypicalWorkTriggerMode,
+	triggerFormula?: V2TypicalWorkTriggerFormulaDto | null,
 ): V2WorkTriggerStatus {
 	return analyzeTriggerRules(
 		rules,
@@ -425,6 +478,10 @@ export function computeTriggerStatus(
 		methodologyParams,
 		draftSource,
 		atDate,
+		previewFormData,
+		triggerArchCount,
+		triggerMode,
+		triggerFormula,
 	).status;
 }
 

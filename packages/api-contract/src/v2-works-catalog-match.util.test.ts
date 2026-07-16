@@ -14,6 +14,7 @@ import {
 	typicalWorkRulesMatchSource,
 	V2_SOURCE_STREAM,
 } from "./v2-works-catalog-match.util";
+import { archCountTriggerMatches } from "./v2-work-arch-count-coeff.util";
 import { resolveWorkSchemaParamForRule } from "./v2-work-schema-params-match.util";
 
 describe("v2-works-catalog-match.util", () => {
@@ -459,5 +460,80 @@ describe("v2-works-catalog-match.util", () => {
 			],
 		);
 		expect(resolved?.code).toBe("field_control");
+	});
+
+	it("archCountTriggerMatches uses minimum step threshold", () => {
+		expect(
+			archCountTriggerMatches(
+				{ detailInfo: { dataMart: { name: "dm1" } } },
+				"dataMart",
+				[{ count: 2, coefficient: 1 }],
+			),
+		).toBe(false);
+		expect(
+			archCountTriggerMatches(
+				{
+					detailInfo: {
+						dataMart: { name: "dm1" },
+					},
+				},
+				"dataMart",
+				[{ count: 1, coefficient: 1 }],
+			),
+		).toBe(true);
+	});
+
+	it("typicalWorkRulesMatchSource combines all params (AND) with global arch count", () => {
+		const formData = {
+			detailInfo: { dataMart: { name: "dm1" } },
+		};
+		const triggerArchCount = {
+			kind: "dataMart" as const,
+			steps: [{ count: 1, coefficient: 1 }],
+			combinator: "and" as const,
+		};
+		expect(
+			typicalWorkRulesMatchSource(
+				[
+					{
+						paramCode: "type",
+						paramName: "Тип",
+						operator: "=",
+						valueCode: "internal",
+						valueLabel: "Внутренний",
+					},
+					{
+						paramCode: "region",
+						paramName: "Регион",
+						operator: "=",
+						valueCode: "eu",
+						valueLabel: "EU",
+					},
+				],
+				{ type: "internal", region: "eu" },
+				formData,
+				triggerArchCount,
+			),
+		).toBe(true);
+		expect(
+			typicalWorkRulesMatchSource(
+				[
+					{
+						paramCode: "type",
+						paramName: "Тип",
+						operator: "=",
+						valueCode: "internal",
+						valueLabel: "Внутренний",
+					},
+				],
+				{ type: "internal" },
+				formData,
+				{
+					kind: "dataMart",
+					steps: [{ count: 3, coefficient: 1 }],
+					combinator: "or",
+				},
+			),
+		).toBe(true);
 	});
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	archCountTriggerMatches,
 	formatArchCountCoeffSteps,
 	lookupArchCountCoefficient,
 	parseArchCountCoeffSteps,
@@ -75,5 +76,11 @@ describe("v2-work-arch-count-coeff.util", () => {
 	it("parseWorkArchCountKindLabel accepts Russian labels", () => {
 		expect(parseWorkArchCountKindLabel("Модели")).toBe("model");
 		expect(parseWorkArchCountKindLabel("Система-источник")).toBe("sourceSystem");
+	});
+
+	it("archCountTriggerMatches requires count >= min step", () => {
+		expect(
+			archCountTriggerMatches({}, "model", [{ count: 2, coefficient: 1 }]),
+		).toBe(false);
 	});
 });

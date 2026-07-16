@@ -14,3 +14,5 @@ export declare function lookupArchCountCoefficient(steps: readonly V2WorkArchCou
 /** Количество арх. компонентов в formData анкеты (не в строке каталога). */
 export declare function resolveWorkArchComponentCount(formData: Record<string, unknown>, kind: V2WorkFormulaArchCountKind): number;
 export declare function resolveArchCountCoeffFromToken(formData: Record<string, unknown>, kind: V2WorkFormulaArchCountKind, steps: readonly V2WorkArchCountCoeffStep[]): number;
+/** Триггер по количеству компонентов: выполнен, если count ≥ минимальный порог из steps. */
+export declare function archCountTriggerMatches(formData: Record<string, unknown>, kind: V2WorkFormulaArchCountKind, steps: readonly V2WorkArchCountCoeffStep[]): boolean;

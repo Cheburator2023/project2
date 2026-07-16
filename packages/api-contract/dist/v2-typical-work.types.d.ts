@@ -62,6 +62,44 @@ export type V2TypicalWorkRuleValueDto = {
     code: string;
     label: string | null;
 };
+export type V2TypicalWorkTriggerArchCountCombinator = "and" | "or";
+/** Глобальное условие по количеству арх. компонентов для стрима работы. */
+export type V2TypicalWorkTriggerArchCountDto = {
+    kind: V2WorkFormulaArchCountKind | null;
+    steps: V2WorkArchCountCoeffStep[];
+    /** Связка всех параметров-триггеров с arch-count: and (И) или or (ИЛИ). */
+    combinator: V2TypicalWorkTriggerArchCountCombinator;
+};
+export declare function defaultTriggerArchCount(): V2TypicalWorkTriggerArchCountDto;
+export declare const V2_TYPICAL_WORK_TRIGGER_MODE_VALUES: readonly ["simple", "formula"];
+export type V2TypicalWorkTriggerMode = (typeof V2_TYPICAL_WORK_TRIGGER_MODE_VALUES)[number];
+export type V2TriggerFormulaLogicOp = "and" | "or";
+export type V2TriggerFormulaToken = {
+    kind: "param";
+    paramCode: string;
+    paramName?: string;
+    schemaFieldUid?: string | null;
+    operator: V2WorkRuleOperator;
+    valueCode?: string | null;
+    valueLabel?: string | null;
+    values?: V2TypicalWorkRuleValueDto[];
+} | {
+    kind: "arch_count";
+    archComponentKind: V2WorkFormulaArchCountKind;
+    steps: V2WorkArchCountCoeffStep[];
+} | {
+    kind: "logic";
+    op: V2TriggerFormulaLogicOp;
+} | {
+    kind: "paren_open";
+} | {
+    kind: "paren_close";
+};
+export type V2TypicalWorkTriggerFormulaDto = {
+    tokens: V2TriggerFormulaToken[];
+    text: string;
+};
+export declare function defaultTriggerFormula(): V2TypicalWorkTriggerFormulaDto;
 export type V2TypicalWorkRuleDto = {
     id: string;
     streamExecutor: string;
@@ -179,6 +217,9 @@ export type V2TypicalWorkCardDto = {
     triggerStatus: V2WorkTriggerStatus;
     norms: V2TypicalWorkNormDto[];
     rules: V2TypicalWorkRuleDto[];
+    triggerMode?: V2TypicalWorkTriggerMode;
+    triggerFormula?: V2TypicalWorkTriggerFormulaDto;
+    triggerArchCount?: V2TypicalWorkTriggerArchCountDto;
     laborParams: V2TypicalWorkLaborParamGroupDto[];
     formula: V2TypicalWorkFormulaDto;
     formulaTerms?: V2TypicalWorkFormulaTermsDto;
@@ -240,6 +281,9 @@ export type PatchV2TypicalWorkRequestDto = {
     archComponentType?: string;
     norms?: V2TypicalWorkNormInputDto[];
     rules?: V2TypicalWorkRuleInputDto[];
+    triggerMode?: V2TypicalWorkTriggerMode;
+    triggerFormula?: V2TypicalWorkTriggerFormulaDto | null;
+    triggerArchCount?: V2TypicalWorkTriggerArchCountDto | null;
     laborCoefficients?: V2TypicalWorkLaborCoefficientInputDto[];
     laborParams?: V2TypicalWorkLaborParamInputDto[];
     formula?: V2TypicalWorkFormulaDto;

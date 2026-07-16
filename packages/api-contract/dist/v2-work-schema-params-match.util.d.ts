@@ -1,4 +1,4 @@
-import type { TypicalWorkRuleLike } from "./v2-works-catalog-match.util";
+import type { TypicalWorkRuleLike, TypicalWorkTriggerArchCountLike } from "./v2-works-catalog-match.util";
 /** Минимальное описание поля схемы для сопоставления с legacy-кодами каталога. */
 export type WorkSchemaParamDef = {
     code: string;
@@ -23,7 +23,7 @@ export declare function findWorkSchemaParameter<T extends WorkSchemaParamDef>(pa
 /** CSV/seed-триггер → поле схемы анкеты (алиас «Тип источника» → `type`). */
 export declare function resolveWorkSchemaParamForRule<T extends WorkSchemaParamDef>(rule: TypicalWorkRuleRefLike, params: T[]): T | undefined;
 export declare function resolveTypicalWorkRulesForSourceMatch<T extends TypicalWorkRuleLike>(rules: T[], schemaParams: WorkSchemaParamDef[] | undefined): T[];
-export declare function typicalWorkRulesMatchSourceWithSchema(rules: TypicalWorkRuleLike[], source: Record<string, unknown>, schemaParams?: WorkSchemaParamDef[]): boolean;
+export declare function typicalWorkRulesMatchSourceWithSchema(rules: TypicalWorkRuleLike[], source: Record<string, unknown>, schemaParams?: WorkSchemaParamDef[], formData?: Record<string, unknown>, triggerArchCount?: TypicalWorkTriggerArchCountLike | null): boolean;
 export type LaborCoefficientRowRef = {
     paramCode: string;
     paramName?: string | null;

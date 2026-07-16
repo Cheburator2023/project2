@@ -3,6 +3,12 @@ import {
 	parseParamNameSourceKeys,
 	stripParamNameSourceKeys,
 } from "./v2-work-param-source-keys.util";
+import {
+	archCountTriggerMatches,
+	type V2WorkArchCountCoeffStep,
+	type V2WorkFormulaArchCountKind,
+} from "./v2-work-arch-count-coeff.util";
+import type { V2TypicalWorkTriggerArchCountCombinator } from "./v2-typical-work.types";
 
 export {
 	formatParamNameWithSourceKeys,
@@ -55,6 +61,12 @@ export type TypicalWorkRuleLike = {
 	valueCode: string | null;
 	valueLabel: string | null;
 	values?: Array<{ code: string; label: string | null }>;
+};
+
+export type TypicalWorkTriggerArchCountLike = {
+	kind?: V2WorkFormulaArchCountKind | null;
+	steps?: V2WorkArchCountCoeffStep[] | null;
+	combinator?: V2TypicalWorkTriggerArchCountCombinator;
 };
 
 /**
@@ -364,17 +376,75 @@ function scalarRuleValueMatches(
 }
 
 /** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */
+export function coerceNumericLaborActual(actual: unknown): unknown {
+	if (typeof actual === "string") {
+		const trimmed = actual.trim();
+		if (!trimmed) return actual;
+		if (trimmed.toLowerCase() === "не требуется") return trimmed;
+		const num = Number(trimmed.replace(",", "."));
+		if (Number.isFinite(num)) return num;
+	}
+	return actual;
+}
+
+/** Читает значение по schemaPointer (`/generalInfo/field`, `/detailInfo/dataMart/items/field`). */
+export function readValueAtSchemaPointer(
+	root: Record<string, unknown>,
+	pointer: string,
+): unknown {
+	if (!pointer.startsWith("/")) return undefined;
+	const segments = pointer.split("/").filter(Boolean);
+	let cur: unknown = root;
+	for (const segment of segments) {
+		if (segment === "items") {
+			if (Array.isArray(cur)) cur = cur[0];
+			continue;
+		}
+		if (cur == null || typeof cur !== "object") return undefined;
+		if (Array.isArray(cur)) cur = cur[0];
+		if (cur == null || typeof cur !== "object") return undefined;
+		cur = (cur as Record<string, unknown>)[segment];
+	}
+	return cur;
+}
+
+/** Контекст для коэффициентов: строка arch-компонента + поля formData вне строки (generalInfo и т.д.). */
+export function buildLaborCoefficientLookupSource(
+	source: Record<string, unknown>,
+	formData: Record<string, unknown>,
+	schemaParams: ReadonlyArray<{
+		code: string;
+		schemaPointer?: string | null;
+	}>,
+	paramCodes: readonly string[],
+): Record<string, unknown> {
+	const merged: Record<string, unknown> = { ...source };
+	const codes = new Set(paramCodes);
+	for (const param of schemaParams) {
+		if (!codes.has(param.code)) continue;
+		const current = merged[param.code];
+		if (current !== undefined && current !== null && current !== "") continue;
+		const pointer = param.schemaPointer?.trim();
+		if (!pointer) continue;
+		const fromForm = readValueAtSchemaPointer(formData, pointer);
+		if (fromForm !== undefined) merged[param.code] = fromForm;
+	}
+	return merged;
+}
+
+/** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */
 export function laborValueMatches(
 	actual: unknown,
 	valueCode: string | null | undefined,
 	valueLabel: string | null | undefined,
 ): boolean {
+	const normalizedActual = coerceNumericLaborActual(actual);
 	if (valueLabel != null && String(valueLabel).trim() !== "") {
-		if (String(actual) === valueLabel) return true;
-		if (typeof actual === "number" && Number.isFinite(actual)) {
+		if (String(normalizedActual) === valueLabel) return true;
+		if (typeof normalizedActual === "number" && Number.isFinite(normalizedActual)) {
 			const range = valueLabel.trim().toLowerCase().replace(/\s+/g, " ");
 			const upTo = range.match(/^до\s*(\d+(?:[.,]\d+)?)/u);
-			if (upTo?.[1] && actual <= Number(upTo[1].replace(",", "."))) {
+			if (upTo?.[1] && normalizedActual <= Number(upTo[1].replace(",", "."))) {
 				return true;
 			}
 			const interval = range.match(
@@ -383,29 +453,29 @@ export function laborValueMatches(
 			if (interval?.[1] && interval[2]) {
 				const min = Number(interval[1].replace(",", "."));
 				const max = Number(interval[2].replace(",", "."));
-				if (actual > min && actual <= max) return true;
+				if (normalizedActual > min && normalizedActual <= max) return true;
 			}
 			const over = range.match(/^(?:>|более\s+)(\d+(?:[.,]\d+)?)/u);
-			if (over?.[1] && actual > Number(over[1].replace(",", "."))) {
+			if (over?.[1] && normalizedActual > Number(over[1].replace(",", "."))) {
 				return true;
 			}
 		}
-		if (typeof actual === "boolean") {
+		if (typeof normalizedActual === "boolean") {
 			const norm = valueLabel.trim().toLowerCase();
-			if (norm === "да" && actual === true) return true;
-			if (norm === "нет" && actual === false) return true;
-			if (norm === "true" && actual === true) return true;
-			if (norm === "false" && actual === false) return true;
+			if (norm === "да" && normalizedActual === true) return true;
+			if (norm === "нет" && normalizedActual === false) return true;
+			if (norm === "true" && normalizedActual === true) return true;
+			if (norm === "false" && normalizedActual === false) return true;
 		}
 	}
 	if (valueCode != null && String(valueCode).trim() !== "") {
-		if (String(actual) === valueCode) return true;
-		if (typeof actual === "boolean") {
+		if (String(normalizedActual) === valueCode) return true;
+		if (typeof normalizedActual === "boolean") {
 			const norm = valueCode.trim().toLowerCase();
-			if (norm === "true" && actual === true) return true;
-			if (norm === "false" && actual === false) return true;
-			if (norm === "да" && actual === true) return true;
-			if (norm === "нет" && actual === false) return true;
+			if (norm === "true" && normalizedActual === true) return true;
+			if (norm === "false" && normalizedActual === false) return true;
+			if (norm === "да" && normalizedActual === true) return true;
+			if (norm === "нет" && normalizedActual === false) return true;
 		}
 	}
 	return false;
@@ -423,48 +493,113 @@ function compareRuleValuesSet(
 	return operator === "not_in" ? !matches : matches;
 }
 
-/** Все условия работы (логическое И) против контекста строки/объекта анкеты. */
-export function typicalWorkRulesMatchSource(
+export function matchSingleTypicalWorkRuleForTriggerFormula(
+	rule: TypicalWorkRuleLike,
+	source: Record<string, unknown>,
+): boolean {
+	return matchSingleTypicalWorkRule(rule, source);
+}
+
+function matchSingleTypicalWorkRule(
+	rule: TypicalWorkRuleLike,
+	source: Record<string, unknown>,
+): boolean {
+	const paramName = stripParamNameSourceKeys(rule.paramName) || rule.paramCode;
+	const controlCode = extractControlCode(paramName);
+	if (controlCode) {
+		const rowText = String(
+			source.value ?? source.controlType ?? source.name ?? "",
+		);
+		const matches =
+			rowText.includes(`[${controlCode}]`) ||
+			rowText.toUpperCase() === controlCode ||
+			rowText.includes(controlCode);
+		return rule.operator === "!=" ? !matches : matches;
+	}
+
+	const actual = readSourceField(source, rule.paramCode, rule.paramName);
+	if (rule.operator === "in" || rule.operator === "not_in") {
+		const values = rule.values?.length
+			? rule.values
+			: rule.valueCode
+				? [{ code: rule.valueCode, label: rule.valueLabel }]
+				: [];
+		if (values.length === 0) return false;
+		return compareRuleValuesSet(
+			actual,
+			values.map((v) => v.code),
+			values.map((v) => v.label ?? ""),
+			rule.operator,
+		);
+	}
+	if (rule.valueLabel == null && rule.valueCode == null) {
+		return actual !== undefined && actual !== null && actual !== "";
+	}
+	return scalarRuleValueMatches(actual, rule);
+}
+
+function groupTypicalWorkRulesByParam(
+	rules: TypicalWorkRuleLike[],
+): Map<string, TypicalWorkRuleLike[]> {
+	const groups = new Map<string, TypicalWorkRuleLike[]>();
+	for (const rule of rules) {
+		const key = rule.paramCode.trim() || "__empty__";
+		const list = groups.get(key) ?? [];
+		list.push(rule);
+		groups.set(key, list);
+	}
+	return groups;
+}
+
+function matchTypicalWorkParamRules(
 	rules: TypicalWorkRuleLike[],
 	source: Record<string, unknown>,
 ): boolean {
 	if (rules.length === 0) return false;
+	const groups = groupTypicalWorkRulesByParam(rules);
+	return [...groups.values()].every((groupRules) =>
+		groupRules.every((rule) => matchSingleTypicalWorkRule(rule, source)),
+	);
+}
 
-	return rules.every((rule) => {
-		const paramName =
-			stripParamNameSourceKeys(rule.paramName) || rule.paramCode;
-		const controlCode = extractControlCode(paramName);
-		if (controlCode) {
-			const rowText = String(
-				source.value ?? source.controlType ?? source.name ?? "",
-			);
-			const matches =
-				rowText.includes(`[${controlCode}]`) ||
-				rowText.toUpperCase() === controlCode ||
-				rowText.includes(controlCode);
-			return rule.operator === "!=" ? !matches : matches;
-		}
+function hasTypicalWorkTriggerArchCount(
+	triggerArchCount?: TypicalWorkTriggerArchCountLike | null,
+): boolean {
+	return Boolean(
+		triggerArchCount?.kind && (triggerArchCount.steps?.length ?? 0) > 0,
+	);
+}
 
-		const actual = readSourceField(source, rule.paramCode, rule.paramName);
-		if (rule.operator === "in" || rule.operator === "not_in") {
-			const values = rule.values?.length
-				? rule.values
-				: rule.valueCode
-					? [{ code: rule.valueCode, label: rule.valueLabel }]
-					: [];
-			if (values.length === 0) return false;
-			return compareRuleValuesSet(
-				actual,
-				values.map((v) => v.code),
-				values.map((v) => v.label ?? ""),
-				rule.operator,
-			);
-		}
-		if (rule.valueLabel == null && rule.valueCode == null) {
-			return actual !== undefined && actual !== null && actual !== "";
-		}
-		return scalarRuleValueMatches(actual, rule);
-	});
+/** Все параметры-триггеры (И) и опционально глобальное условие по количеству компонентов. */
+export function typicalWorkRulesMatchSource(
+	rules: TypicalWorkRuleLike[],
+	source: Record<string, unknown>,
+	formData?: Record<string, unknown>,
+	triggerArchCount?: TypicalWorkTriggerArchCountLike | null,
+): boolean {
+	const hasArch = hasTypicalWorkTriggerArchCount(triggerArchCount);
+	if (rules.length === 0 && !hasArch) return false;
+
+	const paramMatch = matchTypicalWorkParamRules(rules, source);
+	if (!hasArch) return paramMatch;
+
+	const archMatch = formData
+		? archCountTriggerMatches(
+				formData,
+				triggerArchCount!.kind!,
+				triggerArchCount!.steps ?? [],
+			)
+		: false;
+	const combinator = triggerArchCount?.combinator ?? "and";
+	if (combinator === "or") return paramMatch || archMatch;
+	return paramMatch && archMatch;
+}
+
+export function hasTypicalWorkTriggersConfiguredSimple(
+	rules: TypicalWorkRuleLike[],
+	triggerArchCount?: TypicalWorkTriggerArchCountLike | null,
+): boolean {
+	return rules.length > 0 || hasTypicalWorkTriggerArchCount(triggerArchCount);
 }
 
 export function resolveLaborCoefficient(

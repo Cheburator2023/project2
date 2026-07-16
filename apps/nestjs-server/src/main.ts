@@ -85,7 +85,11 @@ async function bootstrap() {
 	});
 
     const port = process.env.PORT || 3000;
-    await app.listen(port);
+    const server = await app.listen(port);
+    // Заводская схема и bulk-reconcile могут выполняться несколько минут — не обрываем по HTTP-таймауту Node.
+    if (typeof server.setTimeout === "function") {
+        server.setTimeout(0);
+    }
     logger.log(`🔄 Application is running on port ${port}`);
 
     process.on('SIGTERM', async () => {

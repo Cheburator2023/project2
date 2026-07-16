@@ -67,8 +67,8 @@ function resolveTypicalWorkRulesForSourceMatch(rules, schemaParams) {
         };
     });
 }
-function typicalWorkRulesMatchSourceWithSchema(rules, source, schemaParams) {
-    return (0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(resolveTypicalWorkRulesForSourceMatch(rules, schemaParams), source);
+function typicalWorkRulesMatchSourceWithSchema(rules, source, schemaParams, formData, triggerArchCount) {
+    return (0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(resolveTypicalWorkRulesForSourceMatch(rules, schemaParams), source, formData, triggerArchCount);
 }
 function remapLaborCoefficientRowsForSchema(rows, schemaParams) {
     if (!schemaParams?.length)
