@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.31.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.30.2...v1.31.0) (2026-07-17)
+
+
+### Features
+
+* enhance authentication flow and update Dockerfile for changelog handling ([7433a1f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/7433a1fa3e5bf2e838bf10b65c6199da6e85c1fd))
+
 ## [1.30.2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.30.1...v1.30.2) (2026-07-16)
 
 ## [1.30.1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.30.0...v1.30.1) (2026-07-16)
