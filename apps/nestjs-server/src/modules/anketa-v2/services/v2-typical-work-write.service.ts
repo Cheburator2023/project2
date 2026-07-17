@@ -54,6 +54,7 @@ import {
 	resolveLaborAnyOfCoefficient,
 	resolveByValueLaborParamCoefficients,
 	reconcileTypicalWorkCardWithSchemaField,
+	mergeLaborParamGroupsByParamCode,
 	reconcileFormulaWithLaborArchCounts,
 	syncTermsFromTokenFormula,
 	termsToTokenFormula,
@@ -727,7 +728,7 @@ export class V2TypicalWorkWriteService {
 				workId,
 				streamExecutor: stream,
 			});
-			for (const group of dto.laborParams) {
+			for (const group of mergeLaborParamGroupsByParamCode(dto.laborParams)) {
 				const kind = group.kind ?? "by_value";
 				await this.laborParamRepository.save(
 					this.laborParamRepository.create({

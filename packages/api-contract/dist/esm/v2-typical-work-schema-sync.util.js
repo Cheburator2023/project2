@@ -109,6 +109,45 @@ function normalizeLaborValueIdentity(value) {
         .replace(/ё/g, "е")
         .replace(/\s+/g, "");
 }
+function laborCoefficientIdentity(row) {
+    return `${normalizeLaborValueIdentity(row.valueCode)}|${normalizeLaborValueIdentity(row.valueLabel)}`;
+}
+/** Схлопывает группы с одним paramCode — иначе patchWork ловит uq_v2_typical_work_labor_param. */
+export function mergeLaborParamGroupsByParamCode(groups) {
+    const merged = new Map();
+    for (const group of groups) {
+        const key = group.paramCode.trim();
+        if (!key)
+            continue;
+        const existing = merged.get(key);
+        if (!existing) {
+            merged.set(key, {
+                ...group,
+                coefficients: [...(group.coefficients ?? [])],
+            });
+            continue;
+        }
+        const coefficientsByIdentity = new Map();
+        for (const row of [
+            ...(existing.coefficients ?? []),
+            ...(group.coefficients ?? []),
+        ]) {
+            const identity = laborCoefficientIdentity(row);
+            if (!coefficientsByIdentity.has(identity)) {
+                coefficientsByIdentity.set(identity, row);
+            }
+        }
+        merged.set(key, {
+            ...existing,
+            schemaFieldUid: group.schemaFieldUid ?? existing.schemaFieldUid,
+            paramName: group.paramName ?? existing.paramName,
+            kind: group.kind ?? existing.kind,
+            anyOf: group.anyOf ?? existing.anyOf,
+            coefficients: [...coefficientsByIdentity.values()],
+        });
+    }
+    return [...merged.values()];
+}
 function findMatchingLaborCoefficient(group, value) {
     return group.coefficients.find((row) => schemaEnumValueMatchesRule(value, {
         valueCode: row.valueCode,
@@ -205,9 +244,9 @@ export function reconcileTypicalWorkCardWithSchemaField(card, request) {
     const rules = card.rules
         .map((rule) => reconcileRule(rule, request))
         .filter((rule) => rule != null);
-    const laborParams = card.laborParams
+    const laborParams = mergeLaborParamGroupsByParamCode(card.laborParams
         .map((group) => reconcileLaborParam(group, request))
-        .filter((group) => group != null);
+        .filter((group) => group != null));
     const formulaReconciled = matchingRules.length > 0 || matchingLabor.length > 0
         ? reconcileFormulaTokensForField(card.formula.tokens, request)
         : { tokens: card.formula.tokens, invalidated: false };

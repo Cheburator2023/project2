@@ -361,4 +361,58 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
 			(result.card.laborParams[0]?.coefficients[0]?.valueLabel ?? "").length,
 		).toBeLessThanOrEqual(255);
 	});
+
+	it("merges duplicate labor param groups after legacy and bound rows converge", () => {
+		const legacy = card();
+		legacy.laborParams = [
+			{
+				schemaFieldUid: "field_8cff1155-e458-4fea-a8c7-abad1260df8f",
+				paramCode: "field_N9LFD6Hu",
+				paramName: "Двусторонний обмен данными",
+				kind: "by_value",
+				coefficients: [],
+			},
+			{
+				schemaFieldUid: undefined,
+				paramCode: "двусторонний_обмен_данными",
+				paramName: "Двусторонний обмен данными",
+				kind: "by_value",
+				coefficients: [
+					{
+						id: "coef-legacy",
+						streamExecutor: "Источники данных",
+						paramCode: "двусторонний_обмен_данными",
+						paramName: "Двусторонний обмен данными",
+						valueCode: "yes",
+						valueLabel: "Да",
+						coefficient: 1.2,
+					},
+				],
+			},
+		];
+
+		const result = reconcileTypicalWorkCardWithSchemaField(legacy, {
+			templateVersionId: "version-1",
+			mode: "apply",
+			operation: "upsert",
+			field: {
+				schemaFieldUid: "field_8cff1155-e458-4fea-a8c7-abad1260df8f",
+				previousCode: "двусторонний_обмен_данными",
+				aliasCodes: ["field_N9LFD6Hu"],
+				code: "field_N9LFD6Hu",
+				name: "Двусторонний обмен данными",
+				values: [
+					{ code: "yes", label: "Да" },
+					{ code: "no", label: "Нет" },
+				],
+			},
+		});
+
+		expect(result.card.laborParams).toHaveLength(1);
+		expect(result.card.laborParams[0]).toMatchObject({
+			paramCode: "field_N9LFD6Hu",
+			schemaFieldUid: "field_8cff1155-e458-4fea-a8c7-abad1260df8f",
+		});
+		expect(result.card.laborParams[0]?.coefficients).toHaveLength(2);
+	});
 });

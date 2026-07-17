@@ -203,6 +203,71 @@ function normalizeLaborValueIdentity(value: string | null | undefined): string {
 		.replace(/\s+/g, "");
 }
 
+function laborCoefficientIdentity(row: {
+	valueCode?: string | null;
+	valueLabel?: string | null;
+}): string {
+	return `${normalizeLaborValueIdentity(row.valueCode)}|${normalizeLaborValueIdentity(row.valueLabel)}`;
+}
+
+type MergeableLaborParamGroup = {
+	paramCode: string;
+	schemaFieldUid?: string | null;
+	paramName?: string | null;
+	kind?: "by_value" | "any_of";
+	coefficients?: Array<{
+		valueCode?: string | null;
+		valueLabel?: string | null;
+	}>;
+	anyOf?: V2TypicalWorkLaborParamGroupDto["anyOf"];
+};
+
+/** Схлопывает группы с одним paramCode — иначе patchWork ловит uq_v2_typical_work_labor_param. */
+export function mergeLaborParamGroupsByParamCode<
+	T extends MergeableLaborParamGroup,
+>(groups: T[]): T[] {
+	const merged = new Map<string, T>();
+
+	for (const group of groups) {
+		const key = group.paramCode.trim();
+		if (!key) continue;
+
+		const existing = merged.get(key);
+		if (!existing) {
+			merged.set(key, {
+				...group,
+				coefficients: [...(group.coefficients ?? [])],
+			} as T);
+			continue;
+		}
+
+		const coefficientsByIdentity = new Map<
+			string,
+			NonNullable<T["coefficients"]>[number]
+		>();
+		for (const row of [
+			...(existing.coefficients ?? []),
+			...(group.coefficients ?? []),
+		]) {
+			const identity = laborCoefficientIdentity(row);
+			if (!coefficientsByIdentity.has(identity)) {
+				coefficientsByIdentity.set(identity, row);
+			}
+		}
+
+		merged.set(key, {
+			...existing,
+			schemaFieldUid: group.schemaFieldUid ?? existing.schemaFieldUid,
+			paramName: group.paramName ?? existing.paramName,
+			kind: group.kind ?? existing.kind,
+			anyOf: group.anyOf ?? existing.anyOf,
+			coefficients: [...coefficientsByIdentity.values()],
+		} as T);
+	}
+
+	return [...merged.values()];
+}
+
 function findMatchingLaborCoefficient(
 	group: V2TypicalWorkLaborParamGroupDto,
 	value: { code: string; label: string },
@@ -350,9 +415,11 @@ export function reconcileTypicalWorkCardWithSchemaField(
 	const rules = card.rules
 		.map((rule) => reconcileRule(rule, request))
 		.filter((rule): rule is V2TypicalWorkRuleDto => rule != null);
-	const laborParams = card.laborParams
-		.map((group) => reconcileLaborParam(group, request))
-		.filter((group): group is V2TypicalWorkLaborParamGroupDto => group != null);
+	const laborParams = mergeLaborParamGroupsByParamCode(
+		card.laborParams
+			.map((group) => reconcileLaborParam(group, request))
+			.filter((group): group is V2TypicalWorkLaborParamGroupDto => group != null),
+	);
 
 	const formulaReconciled =
 		matchingRules.length > 0 || matchingLabor.length > 0
