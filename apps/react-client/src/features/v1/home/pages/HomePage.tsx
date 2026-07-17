@@ -9,6 +9,7 @@ import type { CalculationResponseDto } from "@smart-anketa/api-contract";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { getAgGridMainMenuItemsWithoutRowGroup } from "@react-client/common/tableStuff/agGridMainMenuItems";
 import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import { toast } from "@react-client/common/toasts";
 import { _columnDefs } from "@react-client/features/v1/home/colDefs";
@@ -24,7 +25,6 @@ import {
 	ColDef,
 	ColumnWidthCallbackParams,
 	ExcelStyle,
-	GetMainMenuItemsParams,
 	GetContextMenuItemsParams,
 	type GridApi,
 	type GridReadyEvent,
@@ -297,11 +297,7 @@ export const HomeTemplete = ({
 		cellRendererParams: {
 			hoveredRowId,
 		},
-		mainMenuItems: (params: GetMainMenuItemsParams) => {
-			return params.defaultItems.filter(
-				(item) => item !== "columnChooser" && item !== "rowGroup",
-			);
-		},
+		mainMenuItems: getAgGridMainMenuItemsWithoutRowGroup,
 	};
 
 	const calculateColumnWidth = (params: ColumnWidthCallbackParams) => {

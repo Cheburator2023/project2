@@ -309,7 +309,7 @@ const v2_atypical_works_logic_util_1 = require("./v2-atypical-works-logic.util")
         const payload = rule?.payload;
         (0, vitest_1.expect)(payload.worksCatalogStream).toBe("Модельный стрим");
         (0, vitest_1.expect)(payload.worksCatalogAllArchComponents).toBe(true);
-        (0, vitest_1.expect)(payload.sourceArrayPath).toBeUndefined();
+        (0, vitest_1.expect)(payload.sourceArrayPath).toBe("generalInfo.modelService");
     });
     (0, vitest_1.it)("isTypicalWorksCatalogLogicComplete returns true for fully patched logic", () => {
         const uiSchema = {
@@ -333,6 +333,63 @@ const v2_atypical_works_logic_util_1 = require("./v2-atypical-works-logic.util")
         const resolved = (0, v2_atypical_works_logic_util_1.resolveAnketaCalculationLogic)(patched, { uiSchema });
         (0, vitest_1.expect)(resolved).toEqual(patched);
         (0, vitest_1.expect)((0, v2_atypical_works_logic_util_1.isAtypicalWorksLogicComplete)(resolved, { uiSchema })).toBe(true);
+    });
+    (0, vitest_1.it)("upgradeTypicalWorksCatalogLogicRules adds model stream sourceArrayPath to stale logic", () => {
+        const uiSchema = {
+            detailInfo: {
+                "ui:options": {
+                    streamBlock: true,
+                    streamExecutor: "Модельный стрим",
+                },
+                detailTypicalTasks: {
+                    "ui:options": {
+                        archComponent: "typicalWork",
+                        streamExecutor: "Модельный стрим",
+                    },
+                },
+            },
+        };
+        const staleLogic = {
+            rules: [
+                {
+                    id: "typical-works-catalog-detailInfo-detailTypicalTasks",
+                    kind: "task_trigger",
+                    targetPath: "/detailInfo/detailTypicalTasks",
+                    condition: true,
+                    dependencies: [],
+                    payload: {
+                        mode: "generated_rows",
+                        worksCatalog: true,
+                        worksCatalogStream: "Модельный стрим",
+                        outputArrayPath: "detailInfo.detailTypicalTasks",
+                    },
+                },
+                {
+                    id: "unified-typical-row-total:detailInfo_detailTypicalTasks",
+                    kind: "row_computed",
+                    targetPath: "/detailInfo/detailTypicalTasks",
+                    condition: true,
+                    dependencies: [],
+                    payload: {
+                        arrayPath: "detailInfo.detailTypicalTasks",
+                        fieldVar: "total",
+                    },
+                },
+                {
+                    id: "unified-typical-total",
+                    kind: "computed",
+                    targetPath: "/summary/typicalTotal",
+                    condition: true,
+                    dependencies: [],
+                    payload: {},
+                },
+            ],
+        };
+        const upgraded = (0, v2_default_typical_works_logic_util_1.upgradeTypicalWorksCatalogLogicRules)(staleLogic, { uiSchema });
+        const catalogRule = upgraded.rules.find((rule) => rule.id === "typical-works-catalog-detailInfo-detailTypicalTasks");
+        (0, vitest_1.expect)((catalogRule?.payload).sourceArrayPath).toBe(v2_default_typical_works_logic_util_1.V2_MODEL_STREAM_SOURCE_ARRAY_PATH);
+        const resolved = (0, v2_atypical_works_logic_util_1.resolveAnketaCalculationLogic)(staleLogic, { uiSchema });
+        (0, vitest_1.expect)((resolved.rules.find((rule) => rule.id === "typical-works-catalog-detailInfo-detailTypicalTasks")?.payload).sourceArrayPath).toBe(v2_default_typical_works_logic_util_1.V2_MODEL_STREAM_SOURCE_ARRAY_PATH);
     });
     (0, vitest_1.it)("shouldSkipLegacyModelStreamStageSummary for model stream typicalWork block", () => {
         (0, vitest_1.expect)((0, v2_default_typical_works_logic_util_1.shouldSkipLegacyModelStreamStageSummary)({

@@ -4,6 +4,9 @@ import {
 	V2_MODEL_STREAM_EXECUTOR,
 	V2_MODEL_STREAM_FACTORY_WORK_IDS,
 } from "./v2-model-stream-typical-works.constants";
+
+/** Источник триггеров модельного стрима — arch object list «Модельный сервис». */
+export const V2_MODEL_STREAM_SOURCE_ARRAY_PATH = "generalInfo.modelService";
 import {
 	collectTypicalWorkBlockBindings,
 	collectGeneratedTypicalWorkArrayPaths,
@@ -104,13 +107,14 @@ export function buildModelStreamTypicalWorksCatalogRule(
 		dependencies: [],
 		payload: {
 			hint:
-				"Типовые работы модельного стрима: всегда видимые этапы и этапы по триггерам из detailInfo.",
+				"Типовые работы модельного стрима: этапы по триггерам из generalInfo (модельный сервис), detailInfo и неопределённости.",
 			mode: "generated_rows",
 			label: "Типовые работы (Модельный стрим)",
 			worksCatalog: true,
 			worksCatalogStream: V2_MODEL_STREAM_EXECUTOR,
 			worksCatalogAllArchComponents: true,
 			outputArrayPath,
+			sourceArrayPath: V2_MODEL_STREAM_SOURCE_ARRAY_PATH,
 			allowedWorkIds: boundWorkIds,
 			sourceContextPaths: ["detailInfo", "generalInfo", "uncertaintyCalculation"],
 			taskCode: "CATALOG_MODEL_STREAM_TASKS",
@@ -509,4 +513,137 @@ export function patchV2TypicalWorksLogicRules(
 			...(unifiedTypical ? [unifiedTypical] : []),
 		],
 	};
+}
+
+function buildCanonicalTypicalWorksCatalogRules(
+	options?: PatchV2TypicalWorksLogicOptions,
+): Map<string, V2LogicRuleDto> {
+	const bindings = options?.uiSchema
+		? collectTypicalWorkBlockBindings(options.uiSchema)
+		: [];
+	const rules = new Map<string, V2LogicRuleDto>();
+
+	if (bindings.length > 0) {
+		for (const binding of bindings) {
+			const streamExecutor = options?.uiSchema
+				? resolveStreamExecutorForTypicalWorkOutputPath(
+						options.uiSchema,
+						binding.outputPath,
+					)
+				: null;
+			const rule =
+				streamExecutor === V2_MODEL_STREAM_EXECUTOR
+					? buildModelStreamTypicalWorksCatalogRule(binding.outputPath, {
+							boundWorkIds: binding.boundWorkIds,
+						})
+					: buildSourceTypicalWorksCatalogRule(binding.outputPath, {
+							boundWorkIds: binding.boundWorkIds,
+						});
+			rules.set(rule.id, rule);
+		}
+		return rules;
+	}
+
+	if (
+		schemaSupportsSourceTypicalWorksCatalog(
+			options?.jsonSchema,
+			options?.uiSchema,
+		)
+	) {
+		const sourceOutputPath = resolveSourceTypicalWorksOutputPath(
+			options?.jsonSchema,
+			options?.uiSchema,
+		);
+		const rule = buildSourceTypicalWorksCatalogRule(
+			sourceOutputPath ?? V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+		);
+		rules.set(rule.id, rule);
+	}
+
+	return rules;
+}
+
+const CATALOG_PAYLOAD_UPGRADE_KEYS = [
+	"hint",
+	"mode",
+	"label",
+	"worksCatalog",
+	"worksCatalogStream",
+	"worksCatalogAllArchComponents",
+	"worksCatalogArchComponent",
+	"outputArrayPath",
+	"sourceArrayPath",
+	"sourceContextPaths",
+	"taskCode",
+	"calcModel",
+	"allowedWorkIds",
+] as const;
+
+function mergeTypicalWorksCatalogRulePayload(
+	existing: Record<string, unknown>,
+	canonical: Record<string, unknown>,
+): Record<string, unknown> {
+	const merged = { ...existing };
+	for (const key of CATALOG_PAYLOAD_UPGRADE_KEYS) {
+		const next = canonical[key];
+		if (next === undefined || next === null || next === "") continue;
+		const cur = merged[key];
+		if (key === "allowedWorkIds") {
+			if (
+				Array.isArray(next) &&
+				next.length > 0 &&
+				(!Array.isArray(cur) ||
+					cur.length === 0 ||
+					JSON.stringify(cur) !== JSON.stringify(next))
+			) {
+				merged[key] = next;
+			}
+			continue;
+		}
+		if (
+			key === "sourceArrayPath" &&
+			canonical.worksCatalogStream === V2_MODEL_STREAM_EXECUTOR &&
+			cur !== next
+		) {
+			merged[key] = next;
+			continue;
+		}
+		if (cur === undefined || cur === null || cur === "") {
+			merged[key] = next;
+		}
+	}
+	return merged;
+}
+
+/**
+ * Дополняет уже сохранённые catalog-правила актуальным payload из uiSchema
+ * (например sourceArrayPath для модельного стрима), не пересобирая весь logic.
+ */
+export function upgradeTypicalWorksCatalogLogicRules(
+	logic: V2LogicGraphDto,
+	options?: PatchV2TypicalWorksLogicOptions,
+): V2LogicGraphDto {
+	const canonicalById = buildCanonicalTypicalWorksCatalogRules(options);
+	if (canonicalById.size === 0) return logic;
+
+	let changed = false;
+	const rules = (logic?.rules ?? []).map((rule) => {
+		if (!isTypicalWorksCatalogLogicRule(rule)) return rule;
+		const canonical = canonicalById.get(rule.id);
+		if (!canonical) return rule;
+
+		const existingPayload = (rule.payload ?? {}) as Record<string, unknown>;
+		const canonicalPayload = (canonical.payload ?? {}) as Record<string, unknown>;
+		const mergedPayload = mergeTypicalWorksCatalogRulePayload(
+			existingPayload,
+			canonicalPayload,
+		);
+		if (JSON.stringify(mergedPayload) === JSON.stringify(existingPayload)) {
+			return rule;
+		}
+		changed = true;
+		return { ...rule, payload: mergedPayload };
+	});
+
+	return changed ? { ...logic, rules } : logic;
 }

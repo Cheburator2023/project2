@@ -157,9 +157,10 @@ function buildUnifiedAtypicalTotalRule(arrayPaths) {
 }
 /** Патч logic только если в snapshot/версии не хватает catalog/row-total правил. */
 function resolveAnketaCalculationLogic(logic, options) {
-    const withTypical = (0, v2_default_typical_works_logic_util_1.isTypicalWorksCatalogLogicComplete)(logic, options)
-        ? logic
-        : (0, v2_default_typical_works_logic_util_1.patchV2TypicalWorksLogicRules)(logic, options);
+    const upgraded = (0, v2_default_typical_works_logic_util_1.upgradeTypicalWorksCatalogLogicRules)(logic, options);
+    const withTypical = (0, v2_default_typical_works_logic_util_1.isTypicalWorksCatalogLogicComplete)(upgraded, options)
+        ? upgraded
+        : (0, v2_default_typical_works_logic_util_1.patchV2TypicalWorksLogicRules)(upgraded, options);
     return isAtypicalWorksLogicComplete(withTypical, {
         uiSchema: options?.uiSchema,
     })

@@ -179,6 +179,12 @@ function nodeToColDef(
 	};
 }
 
+export function buildV2QuestionnaireColumnDefsFromTree(
+	columnTree: readonly V2RegistryColumnNode[],
+): Array<ColDef<V2QuestionnaireGridRow> | ColGroupDef<V2QuestionnaireGridRow>> {
+	return columnTree.map(nodeToColDef);
+}
+
 export function buildV2QuestionnaireColumnDefs(
 	jsonSchema?: Record<string, unknown>,
 	uiSchema?: Record<string, unknown>,

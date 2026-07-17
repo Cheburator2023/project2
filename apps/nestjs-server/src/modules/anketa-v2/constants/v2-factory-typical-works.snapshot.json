@@ -7667,9 +7667,27 @@
       "workType": "Опциональная",
       "norm": 33,
       "normRaw": "33",
-      "triggerParam": "",
-      "triggerParams": [],
-      "triggerRules": [],
+      "triggerParam": "нет — работа выводится всегда.",
+      "triggerParams": [
+        "нет — работа выводится всегда."
+      ],
+      "triggerRules": [
+        {
+          "paramName": "нет — работа выводится всегда.",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "triggerArchCount": {
+        "kind": "modelService",
+        "steps": [
+          {
+            "count": 1,
+            "coefficient": 1
+          }
+        ],
+        "combinator": "and"
+      },
       "laborParams": [
         "Сложность постановки",
         "Общая неопределённость",
@@ -7811,6 +7829,8 @@
           "values": [
             "Нет"
           ],
+          "valueCode": "false",
+          "valueLabel": "Нет",
           "paramCode": "readyPromReports",
           "schemaFieldUid": "field_12d42005-7d15-4d0f-9aa0-2b6eebc596c8"
         }
@@ -8306,6 +8326,8 @@
           "values": [
             "Нет"
           ],
+          "valueCode": "false",
+          "valueLabel": "Нет",
           "paramCode": "readyPromReports",
           "schemaFieldUid": "field_12d42005-7d15-4d0f-9aa0-2b6eebc596c8"
         }
@@ -8749,7 +8771,17 @@
       ],
       "formulaText": "N * коэф(complexity) * коэф(overallUncertainty) * коэф(assessedInitiativesCount)",
       "roundingMode": "CEIL",
-      "roundingStep": 2
+      "roundingStep": 2,
+      "triggerArchCount": {
+        "kind": "dataMart",
+        "steps": [
+          {
+            "count": 1,
+            "coefficient": 1
+          }
+        ],
+        "combinator": "and"
+      }
     },
     {
       "stream": "Модельный стрим",
@@ -8767,8 +8799,12 @@
       "triggerRules": [
         {
           "paramName": "Необходимость пилота (MVP)",
-          "operator": "exists",
-          "values": [],
+          "operator": "=",
+          "values": [
+            "Да"
+          ],
+          "valueCode": "true",
+          "valueLabel": "Да",
           "paramCode": "field_o_HRj6VO",
           "schemaFieldUid": "field_eb6300e7-8889-40bf-92a1-0c8a778de8ef"
         }
@@ -8943,9 +8979,27 @@
       "workType": "Опциональная",
       "norm": 37,
       "normRaw": "37",
-      "triggerParam": "",
-      "triggerParams": [],
-      "triggerRules": [],
+      "triggerParam": "нет — работа выводится всегда.",
+      "triggerParams": [
+        "нет — работа выводится всегда."
+      ],
+      "triggerRules": [
+        {
+          "paramName": "нет — работа выводится всегда.",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "triggerArchCount": {
+        "kind": "model",
+        "steps": [
+          {
+            "count": 1,
+            "coefficient": 1
+          }
+        ],
+        "combinator": "and"
+      },
       "laborParams": [
         "Сложность постановки",
         "Общая неопределённость",
@@ -9116,17 +9170,19 @@
       "workType": "Опциональная",
       "norm": 68,
       "normRaw": "68",
-      "triggerParam": "Необходимость AutoML",
+      "triggerParam": "«Необходимость AutoML»",
       "triggerParams": [
-        "Необходимость AutoML"
+        "«Необходимость AutoML»"
       ],
       "triggerRules": [
         {
-          "paramName": "Необходимость AutoML",
+          "paramName": "«Необходимость AutoML»",
           "operator": "=",
           "values": [
             "Да"
           ],
+          "valueCode": "true",
+          "valueLabel": "Да",
           "paramCode": "autoML",
           "schemaFieldUid": "field_8b58cf5d-ea4a-4180-8670-ff2021bcaa9b"
         }
@@ -9245,17 +9301,19 @@
       "workType": "Опциональная",
       "norm": 34,
       "normRaw": "34",
-      "triggerParam": "Необходимость поддержки проведения пилота",
+      "triggerParam": "«Необходимость поддержки проведения пилота»",
       "triggerParams": [
-        "Необходимость поддержки проведения пилота"
+        "«Необходимость поддержки проведения пилота»"
       ],
       "triggerRules": [
         {
-          "paramName": "Необходимость поддержки проведения пилота",
+          "paramName": "«Необходимость поддержки проведения пилота»",
           "operator": "=",
           "values": [
             "Да"
           ],
+          "valueCode": "true",
+          "valueLabel": "Да",
           "paramCode": "prePromEval",
           "schemaFieldUid": "field_7ff20c0a-1cd7-4d66-99ae-b52ed1a9bb3a"
         }
@@ -9294,17 +9352,19 @@
       "workType": "Опциональная",
       "norm": 56,
       "normRaw": "56",
-      "triggerParam": "Необходимость продуктивизации и количество дополнительных витрин",
+      "triggerParam": "«Необходимость продуктивизации и количество дополнительных витрин»",
       "triggerParams": [
-        "Необходимость продуктивизации и количество дополнительных витрин"
+        "«Необходимость продуктивизации и количество дополнительных витрин»"
       ],
       "triggerRules": [
         {
-          "paramName": "Необходимость продуктивизации и количество дополнительных витрин",
+          "paramName": "«Необходимость продуктивизации и количество дополнительных витрин»",
           "operator": "!=",
           "values": [
             "Не требуется"
           ],
+          "valueCode": "не_требуется",
+          "valueLabel": "Не требуется",
           "paramCode": "productionAdditionalReports",
           "schemaFieldUid": "field_d2a78102-57a7-4f7e-aad2-0cb015948496"
         }
@@ -10390,17 +10450,19 @@
       "workType": "Опциональная",
       "norm": 68,
       "normRaw": "68",
-      "triggerParam": "Необходимость AutoML",
+      "triggerParam": "«Необходимость AutoML»",
       "triggerParams": [
-        "Необходимость AutoML"
+        "«Необходимость AutoML»"
       ],
       "triggerRules": [
         {
-          "paramName": "Необходимость AutoML",
+          "paramName": "«Необходимость AutoML»",
           "operator": "=",
           "values": [
             "Да"
           ],
+          "valueCode": "true",
+          "valueLabel": "Да",
           "paramCode": "autoML",
           "schemaFieldUid": "field_8b58cf5d-ea4a-4180-8670-ff2021bcaa9b"
         }

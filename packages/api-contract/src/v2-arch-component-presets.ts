@@ -785,6 +785,9 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 		"schema": {
 			"type": "object",
 			"title": "Процессы обработки данных",
+			"required": [
+				"field_It-B8PfV"
+			],
 			"properties": {
 				"deliveryMode": {
 					"enum": [
@@ -933,6 +936,9 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 		"schema": {
 			"type": "object",
 			"title": "Объект / Витрина данных",
+			"required": [
+				"field_zApubb5V"
+			],
 			"properties": {
 				"workType": {
 					"enum": [
@@ -1038,6 +1044,10 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_zApubb5V": {
 					"type": "string",
 					"title": "Название объекта/витрины данных"
+				},
+				"readyPromReports": {
+					"type": "boolean",
+					"title": "Наличие готовых пром витрин (необходима продуктивизация)"
 				}
 			}
 		},
@@ -1060,6 +1070,7 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_rZeUo8a_",
 				"field_Q8DGJNTn",
 				"field_xva1dRvW",
+				"readyPromReports",
 				"field_Ad1msOl7",
 				"field_28IPlEQu",
 				"field_fRuMuWtn",
@@ -1165,6 +1176,12 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"ui:options": {
 					"schemaFieldUid": "field_877bae45-21cb-4237-a20a-83260f054e9e"
 				}
+			},
+			"readyPromReports": {
+				"ui:widget": "checkbox",
+				"ui:options": {
+					"schemaFieldUid": "field_12d42005-7d15-4d0f-9aa0-2b6eebc596c8"
+				}
 			}
 		}
 	},
@@ -1172,6 +1189,9 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 		"schema": {
 			"type": "object",
 			"title": "Модель",
+			"required": [
+				"field_atxiq-UM"
+			],
 			"properties": {
 				"autoML": {
 					"type": "boolean",

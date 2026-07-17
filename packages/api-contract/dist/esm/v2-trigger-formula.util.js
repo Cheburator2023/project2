@@ -1,5 +1,6 @@
-import { archCountTriggerMatches } from "./v2-work-arch-count-coeff.util";
-import { matchSingleTypicalWorkRuleForTriggerFormula, typicalWorkRulesMatchSource, } from "./v2-works-catalog-match.util";
+import { archCountTriggerMatches, isTriggerArchCountConfigured, formatTriggerArchCountConditionLabel } from "./v2-work-arch-count-coeff.util";
+import { matchSingleTypicalWorkRuleForTriggerFormula, normalizeTypicalWorkTriggerRuleForMatch, typicalWorkRulesMatchSource, } from "./v2-works-catalog-match.util";
+import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
 const LOGIC_LABEL = {
     and: "И",
     or: "ИЛИ",
@@ -32,6 +33,66 @@ export function describeTriggerFormulaToken(token) {
 }
 export function triggerFormulaTokensToText(tokens) {
     return tokens.map(describeTriggerFormulaToken).join(" ");
+}
+function describeTriggerRuleOperator(operator) {
+    switch (operator) {
+        case "!=":
+            return "≠";
+        case "in":
+            return "∈";
+        case "not_in":
+            return "∉";
+        default:
+            return operator;
+    }
+}
+/** Человекочитаемое описание одного param-условия (simple mode). */
+export function describeTypicalWorkSimpleTriggerRule(rule) {
+    const normalized = normalizeTypicalWorkTriggerRuleForMatch(rule);
+    const label = stripParamNameSourceKeys(normalized.paramName ?? "") || normalized.paramCode;
+    const op = normalized.operator || "=";
+    if (op === "in" || op === "not_in") {
+        const values = normalized.values?.length
+            ? normalized.values
+            : normalized.valueCode
+                ? [{ code: normalized.valueCode, label: normalized.valueLabel }]
+                : [];
+        const rendered = values
+            .map((value) => value.label ?? value.code)
+            .filter(Boolean)
+            .join(", ");
+        return rendered
+            ? `${label} ${describeTriggerRuleOperator(op)} {${rendered}}`
+            : label;
+    }
+    if (normalized.valueCode == null &&
+        normalized.valueLabel == null &&
+        !normalized.values?.length) {
+        return `${label} ≠ пусто`;
+    }
+    const value = normalized.valueLabel ?? normalized.valueCode ?? "";
+    return value ? `${label} ${describeTriggerRuleOperator(op)} ${value}` : label;
+}
+/** Формула условий появления работы для UI (simple или formula mode). */
+export function describeTypicalWorkTriggerConditions(input) {
+    if (input.mode === "formula") {
+        const text = input.triggerFormula?.text?.trim() ||
+            triggerFormulaTokensToText(input.triggerFormula?.tokens ?? []);
+        return text || null;
+    }
+    const paramParts = input.rules.map(describeTypicalWorkSimpleTriggerRule);
+    if (paramParts.length === 0 && !isTriggerArchCountConfigured(input.triggerArchCount)) {
+        return null;
+    }
+    const paramExpr = paramParts.length > 1 ? paramParts.map((part) => `(${part})`).join(" И ") : paramParts[0];
+    if (!isTriggerArchCountConfigured(input.triggerArchCount) || !input.triggerArchCount?.kind) {
+        return paramExpr ?? null;
+    }
+    const archExpr = formatTriggerArchCountConditionLabel(input.triggerArchCount.kind, input.triggerArchCount.steps ?? []);
+    if (!paramExpr)
+        return archExpr;
+    const combinator = input.triggerArchCount.combinator === "or" ? " ИЛИ " : " И ";
+    return `${paramExpr}${combinator}${archExpr}`;
 }
 export function validateTriggerFormulaTokens(tokens) {
     if (tokens.length === 0)
@@ -259,20 +320,18 @@ export function createDefaultTriggerParamToken(input) {
         values: input.values,
     };
 }
-export function matchTypicalWorkTriggers(input, source, formData) {
+export function matchTypicalWorkTriggers(input, source, formData, matchContext) {
     if (input.mode === "formula") {
         return evaluateTriggerFormula(input.triggerFormula?.tokens ?? [], {
             source,
             formData: formData ?? source,
         });
     }
-    return typicalWorkRulesMatchSource(input.rules, source, formData, input.triggerArchCount);
+    return typicalWorkRulesMatchSource(input.rules, source, formData, input.triggerArchCount, matchContext);
 }
 export function hasTypicalWorkTriggersConfigured(input) {
     if (input.mode === "formula") {
         return isTriggerFormulaConfigured(input.triggerFormula);
     }
-    return (input.rules.length > 0 ||
-        Boolean(input.triggerArchCount?.kind &&
-            (input.triggerArchCount.steps?.length ?? 0) > 0));
+    return (input.rules.length > 0 || isTriggerArchCountConfigured(input.triggerArchCount));
 }

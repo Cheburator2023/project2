@@ -74,6 +74,40 @@ export function resolveV2QuestionnaireUncertaintyCoefficient(formData) {
     const coefficient = Math.round((1 + riskSum + (adjustmentPercent ?? 0) / 100) * 100) / 100;
     return { calculated: true, coefficient };
 }
+/** Код параметра «Общая неопределённость» в формулах типовых работ модельного стрима. */
+export const V2_TYPICAL_WORK_UNCERTAINTY_PARAM_CODE = "overallUncertainty";
+function normalizeTypicalWorkUncertaintyParamLabel(value) {
+    return value.trim().toLowerCase().replace(/ё/g, "е");
+}
+/** Параметр трудоёмкости «Общая неопределённость» — вычисляемый, не из справочника коэффициентов. */
+export function isTypicalWorkComputedUncertaintyParam(paramCode, paramName) {
+    if (paramCode === V2_TYPICAL_WORK_UNCERTAINTY_PARAM_CODE)
+        return true;
+    if (!paramName)
+        return false;
+    return (normalizeTypicalWorkUncertaintyParamLabel(paramName) ===
+        "общая неопределенность");
+}
+/**
+ * Подставляет коэффициент общей неопределённости из uncertaintyCalculation
+ * (K = 1 + Σриски + поправка%/100; если не рассчитана — 1).
+ * Перекрывает фиксированные строки коэффициентов в конфигураторе.
+ */
+export function applyComputedOverallUncertaintyToTypicalWorkParamCoefficients(formData, paramCoefficients, options) {
+    const refs = options?.laborParamRefs ?? [];
+    const formulaCodes = options?.formulaParamCodes ?? [];
+    const usesUncertainty = refs.some((ref) => isTypicalWorkComputedUncertaintyParam(ref.paramCode, ref.paramName)) ||
+        formulaCodes.some((code) => isTypicalWorkComputedUncertaintyParam(code, null));
+    if (!usesUncertainty)
+        return;
+    const { coefficient } = resolveV2QuestionnaireUncertaintyCoefficient(formData);
+    paramCoefficients[V2_TYPICAL_WORK_UNCERTAINTY_PARAM_CODE] = coefficient;
+    for (const ref of refs) {
+        if (isTypicalWorkComputedUncertaintyParam(ref.paramCode, ref.paramName)) {
+            paramCoefficients[ref.paramCode] = coefficient;
+        }
+    }
+}
 /** Подставляет коэффициент неопределённости во все строки arch-блоков atypicalWork. */
 export function syncAtypicalWorkCoefficientsInFormData(formData, uiSchema, coefficient) {
     const paths = collectAtypicalWorkArrayPaths(uiSchema);

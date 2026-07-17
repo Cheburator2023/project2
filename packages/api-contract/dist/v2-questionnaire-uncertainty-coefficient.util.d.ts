@@ -8,6 +8,23 @@ export type V2QuestionnaireUncertaintyCoefficient = {
 };
 /** Коэффициент общей неопределённости для нетиповых работ (и legacy stage calc). */
 export declare function resolveV2QuestionnaireUncertaintyCoefficient(formData: Record<string, unknown>): V2QuestionnaireUncertaintyCoefficient;
+/** Код параметра «Общая неопределённость» в формулах типовых работ модельного стрима. */
+export declare const V2_TYPICAL_WORK_UNCERTAINTY_PARAM_CODE = "overallUncertainty";
+/** Параметр трудоёмкости «Общая неопределённость» — вычисляемый, не из справочника коэффициентов. */
+export declare function isTypicalWorkComputedUncertaintyParam(paramCode: string, paramName?: string | null): boolean;
+export type TypicalWorkLaborParamRef = {
+    paramCode: string;
+    paramName?: string | null;
+};
+/**
+ * Подставляет коэффициент общей неопределённости из uncertaintyCalculation
+ * (K = 1 + Σриски + поправка%/100; если не рассчитана — 1).
+ * Перекрывает фиксированные строки коэффициентов в конфигураторе.
+ */
+export declare function applyComputedOverallUncertaintyToTypicalWorkParamCoefficients(formData: Record<string, unknown>, paramCoefficients: Record<string, number>, options?: {
+    laborParamRefs?: readonly TypicalWorkLaborParamRef[];
+    formulaParamCodes?: readonly string[];
+}): void;
 export type SyncAtypicalWorkCoefficientsResult = {
     formData: Record<string, unknown>;
     updatedPaths: string[];

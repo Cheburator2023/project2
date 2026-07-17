@@ -191,6 +191,9 @@
 					"dataMart": {
 						"type": "object",
 						"title": "Объект / Витрина данных",
+						"required": [
+							"field_zApubb5V"
+						],
 						"properties": {
 							"workType": {
 								"enum": [
@@ -308,6 +311,9 @@
 						"items": {
 							"type": "object",
 							"title": "Модель",
+							"required": [
+								"field_atxiq-UM"
+							],
 							"properties": {
 								"autoML": {
 									"type": "boolean",
@@ -386,6 +392,9 @@
 					"dataProcess": {
 						"type": "object",
 						"title": "Процессы обработки данных",
+						"required": [
+							"field_It-B8PfV"
+						],
 						"properties": {
 							"deliveryMode": {
 								"enum": [
@@ -3874,13 +3883,14 @@
 				"description": "ФТ-024: типовые работы модельного стрима из справочника (10 этапов factory snapshot).",
 				"dependencies": [],
 				"payload": {
-					"hint": "Типовые работы модельного стрима: всегда видимые этапы и этапы по триггерам из detailInfo.",
+					"hint": "Типовые работы модельного стрима: этапы по триггерам из generalInfo (модельный сервис), detailInfo и неопределённости.",
 					"mode": "generated_rows",
 					"label": "Типовые работы (Модельный стрим)",
 					"worksCatalog": true,
 					"worksCatalogStream": "Модельный стрим",
 					"worksCatalogAllArchComponents": true,
 					"outputArrayPath": "detailInfo.detailTypicalTasks",
+					"sourceArrayPath": "generalInfo.modelService",
 					"allowedWorkIds": [
 						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",
 						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4002",

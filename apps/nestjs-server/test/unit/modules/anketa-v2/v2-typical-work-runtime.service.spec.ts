@@ -603,4 +603,73 @@ describe("V2TypicalWorkRuntimeService", () => {
 
 		expect(tasks.length).toBeGreaterThan(0);
 	});
+
+	it("uses computed overallUncertainty from uncertaintyCalculation in formula total", async () => {
+		const service = createService({
+			rules: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "type",
+					paramName: "Тип источника",
+					operator: "eq",
+					valueCode: "internal",
+					valueLabel: "Внутренний",
+				},
+			],
+			laborRows: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "overallUncertainty",
+					paramName: "Общая неопределённость",
+					valueCode: "default",
+					valueLabel: "По умолчанию",
+					coefficient: "2",
+				},
+			],
+			versionConfigs: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					templateVersionId: "tpl-v1",
+					formula: [
+						{ kind: "norm" },
+						{ kind: "param_coeff", paramCode: "overallUncertainty" },
+					],
+					formulaText: null,
+					roundingMode: "none",
+					roundingStep: null,
+					calculationLogic: null,
+				},
+			],
+		});
+
+		const withoutUncertainty = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			formData: {},
+			templateVersionId: "tpl-v1",
+			atDate: "2025-06-01",
+		});
+		const withUncertainty = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			formData: {
+				uncertaintyCalculation: {
+					riskGroup: { sanctions: "Средний" },
+					uncertaintyAdjustment: 10,
+				},
+			},
+			templateVersionId: "tpl-v1",
+			atDate: "2025-06-01",
+		});
+
+		expect(withoutUncertainty[0]?.total).toBe(2);
+		expect(withoutUncertainty[0]?.coefficient).toBe(1);
+		expect(withUncertainty[0]?.total).toBeCloseTo(2 * 1.15, 5);
+		expect(withUncertainty[0]?.coefficient).toBeCloseTo(1.15, 5);
+	});
 });

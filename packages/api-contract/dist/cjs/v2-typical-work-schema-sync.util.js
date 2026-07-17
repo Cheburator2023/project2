@@ -1,5 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.laborCoefficientStoredKey = laborCoefficientStoredKey;
+exports.dedupeLaborCoefficientsByStoredValue = dedupeLaborCoefficientsByStoredValue;
 exports.mergeLaborParamGroupsByParamCode = mergeLaborParamGroupsByParamCode;
 exports.reconcileTypicalWorkCardWithSchemaField = reconcileTypicalWorkCardWithSchemaField;
 const v2_param_slug_util_1 = require("./v2-param-slug.util");
@@ -113,8 +115,26 @@ function normalizeLaborValueIdentity(value) {
         .replace(/ё/g, "е")
         .replace(/\s+/g, "");
 }
+/** Ключ совпадения для uq_v2_typical_work_labor (work, stream, param_code, value_code). */
+function laborCoefficientStoredKey(row) {
+    if (row.valueCode == null && !row.valueLabel?.trim())
+        return "";
+    return normalizeLaborValueIdentity((0, v2_param_slug_util_1.normalizeStoredValueCode)(row.valueCode ?? row.valueLabel ?? "", row.valueLabel));
+}
+function dedupeLaborCoefficientsByStoredValue(coefficients) {
+    const seen = new Set();
+    const result = [];
+    for (const row of coefficients) {
+        const key = laborCoefficientStoredKey(row);
+        if (seen.has(key))
+            continue;
+        seen.add(key);
+        result.push(row);
+    }
+    return result;
+}
 function laborCoefficientIdentity(row) {
-    return `${normalizeLaborValueIdentity(row.valueCode)}|${normalizeLaborValueIdentity(row.valueLabel)}`;
+    return laborCoefficientStoredKey(row);
 }
 /** Схлопывает группы с одним paramCode — иначе patchWork ловит uq_v2_typical_work_labor_param. */
 function mergeLaborParamGroupsByParamCode(groups) {
@@ -127,7 +147,7 @@ function mergeLaborParamGroupsByParamCode(groups) {
         if (!existing) {
             merged.set(key, {
                 ...group,
-                coefficients: [...(group.coefficients ?? [])],
+                coefficients: dedupeLaborCoefficientsByStoredValue(group.coefficients ?? []),
             });
             continue;
         }
@@ -147,7 +167,9 @@ function mergeLaborParamGroupsByParamCode(groups) {
             paramName: group.paramName ?? existing.paramName,
             kind: group.kind ?? existing.kind,
             anyOf: group.anyOf ?? existing.anyOf,
-            coefficients: [...coefficientsByIdentity.values()],
+            coefficients: dedupeLaborCoefficientsByStoredValue([
+                ...coefficientsByIdentity.values(),
+            ]),
         });
     }
     return [...merged.values()];

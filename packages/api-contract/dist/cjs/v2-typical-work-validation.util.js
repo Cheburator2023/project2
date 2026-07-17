@@ -401,14 +401,14 @@ function isRuleInputInvalid(rule, catalog, atDate) {
 }
 /** F-03/v4: статус триггеров с учётом каталога и (опционально) черновика ответов. */
 function computeWorkTriggerStatus(rules, catalog, atDate, draftSource, formData, triggerArchCount, triggerMode = "simple", triggerFormula) {
-    const matchRules = rules.map((rule) => ({
+    const matchRules = (0, v2_works_catalog_match_util_1.normalizeTypicalWorkTriggerRulesForMatch)(rules.map((rule) => ({
         paramCode: rule.paramCode,
         paramName: rule.paramName ?? null,
         operator: rule.operator ?? "=",
         valueCode: rule.valueCode,
         valueLabel: rule.valueLabel,
         values: rule.values,
-    }));
+    })));
     const triggerInput = {
         mode: triggerMode,
         rules: matchRules,
@@ -427,7 +427,7 @@ function computeWorkTriggerStatus(rules, catalog, atDate, draftSource, formData,
                 ? "appears"
                 : "hidden";
         }
-        return "hidden";
+        return "appears";
     }
     if (rules.length > 0) {
         if (catalog?.length) {

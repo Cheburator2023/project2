@@ -26,7 +26,7 @@ export const ARCH_COMPONENT_DOT: Record<string, string> = {
 export function triggerStatusLabel(status: V2WorkTriggerStatus): string {
 	switch (status) {
 		case "appears":
-			return "появляется";
+			return "настроены";
 		case "hidden":
 			return "скрыта";
 		case "no_triggers":

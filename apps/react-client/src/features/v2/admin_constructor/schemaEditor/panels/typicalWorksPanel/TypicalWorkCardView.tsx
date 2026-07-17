@@ -231,9 +231,9 @@ export function TypicalWorkCardView({
 										? "Условия появления не заданы"
 										: `Настроено ${card.rules.length} ${card.rules.length === 1 ? "условие" : card.rules.length < 5 ? "условия" : "условий"}`
 									: card.triggerStatus === "appears"
-										? `Работа появляется в анкете, когда выполнены все условия (${card.rules.length})`
+										? `Условия настроены (${card.rules.length})`
 										: card.triggerStatus === "hidden"
-											? "Работа скрыта — условия появления не выполнены при текущих ответах"
+											? `Условия настроены (${card.rules.length})`
 											: card.triggerStatus === "invalid"
 												? "Условие невалидно — работа не появится"
 												: "Без условий появления — работа не появится в анкете"

@@ -26,6 +26,7 @@ import {
 	isSourceTypeTriggerParam,
 	resolveTriggerStatusCatalogParam,
 	triggerRuleCatalogGroupKey,
+	normalizeTypicalWorkTriggerRulesForMatch,
 	type TypicalWorkTriggerArchCountLike,
 } from "./v2-works-catalog-match.util";
 import type { WorkSchemaParamDef } from "./v2-work-schema-params-match.util";
@@ -576,14 +577,16 @@ export function computeWorkTriggerStatus(
 	triggerMode: V2TypicalWorkTriggerMode = "simple",
 	triggerFormula?: V2TypicalWorkTriggerFormulaDto | null,
 ): V2WorkTriggerStatus {
-	const matchRules = rules.map((rule) => ({
-		paramCode: rule.paramCode,
-		paramName: rule.paramName ?? null,
-		operator: rule.operator ?? "=",
-		valueCode: rule.valueCode,
-		valueLabel: rule.valueLabel,
-		values: rule.values,
-	}));
+	const matchRules = normalizeTypicalWorkTriggerRulesForMatch(
+		rules.map((rule) => ({
+			paramCode: rule.paramCode,
+			paramName: rule.paramName ?? null,
+			operator: rule.operator ?? "=",
+			valueCode: rule.valueCode,
+			valueLabel: rule.valueLabel,
+			values: rule.values,
+		})),
+	);
 	const triggerInput = {
 		mode: triggerMode,
 		rules: matchRules,
@@ -609,7 +612,7 @@ export function computeWorkTriggerStatus(
 				? "appears"
 				: "hidden";
 		}
-		return "hidden";
+		return "appears";
 	}
 
 	if (rules.length > 0) {

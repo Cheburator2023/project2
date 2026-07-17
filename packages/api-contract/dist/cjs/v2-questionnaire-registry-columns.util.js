@@ -8,6 +8,8 @@ exports.collectRegistryArrayGroupLabelsFromRows = collectRegistryArrayGroupLabel
 exports.deriveRegistryColumnOptionsFromRows = deriveRegistryColumnOptionsFromRows;
 exports.buildStaticV2QuestionnaireRegistryColumnTree = buildStaticV2QuestionnaireRegistryColumnTree;
 exports.buildV2QuestionnaireRegistryColumnTree = buildV2QuestionnaireRegistryColumnTree;
+exports.mergeV2QuestionnaireRegistryColumnTrees = mergeV2QuestionnaireRegistryColumnTrees;
+exports.buildV2QuestionnaireRegistryConfig = buildV2QuestionnaireRegistryConfig;
 exports.flattenV2RegistryColumnTree = flattenV2RegistryColumnTree;
 exports.getByFormPath = getByFormPath;
 exports.buildV2QuestionnaireRegistryExportColumns = buildV2QuestionnaireRegistryExportColumns;
@@ -252,18 +254,42 @@ function collectRegistryArrayGroupLabelsFromRows(rows, dotPath, nameField) {
     }
     return labels;
 }
+function collectArrayPathsInFormData(value, prefix, out) {
+    if (value == null || typeof value !== "object")
+        return;
+    if (Array.isArray(value)) {
+        if (prefix)
+            out.add(prefix);
+        return;
+    }
+    for (const [key, child] of Object.entries(value)) {
+        const path = prefix ? `${prefix}.${key}` : key;
+        if (Array.isArray(child)) {
+            out.add(path);
+        }
+        else if (child && typeof child === "object") {
+            collectArrayPathsInFormData(child, path, out);
+        }
+    }
+}
 function deriveRegistryColumnOptionsFromRows(rows) {
     const arrayIndicesByPath = {};
     const arrayGroupLabelsByPath = {};
-    for (const path of [
-        `${SUMMARY_ROOT}.platformStreams`,
-        `${SUMMARY_ROOT}.detailedCalculation`,
-    ]) {
+    const arrayPaths = new Set();
+    for (const row of rows) {
+        collectArrayPathsInFormData(row.formData, "", arrayPaths);
+    }
+    for (const path of arrayPaths) {
         const indices = collectRegistryArrayIndicesFromRows(rows, path);
         if (indices.length === 0)
             continue;
         arrayIndicesByPath[path] = indices;
-        const nameField = path === `${SUMMARY_ROOT}.platformStreams` ? "streamName" : "stageName";
+        const nameField = path.endsWith("platformStreams") || path.includes("platformStreams")
+            ? "streamName"
+            : path.endsWith("detailedCalculation") ||
+                path.includes("detailedCalculation")
+                ? "stageName"
+                : "name";
         const labels = collectRegistryArrayGroupLabelsFromRows(rows, path, nameField);
         if (Object.keys(labels).length > 0) {
             arrayGroupLabelsByPath[path] = labels;
@@ -334,18 +360,7 @@ function collectSchemaSectionColumns(sectionSchema, sectionUi, sectionDotPath, o
             continue;
         }
         if (childType === "object") {
-            const nestedProps = readRecord(childSchema.properties);
-            if (!nestedProps)
-                continue;
-            for (const nestedKey of listOrderedPropertyKeys(childSchema, childUi)) {
-                const nestedSchema = readRecord(nestedProps[nestedKey]);
-                const nestedUi = readRecord(childUi?.[nestedKey]);
-                if (!nestedSchema || !isScalarSchemaNode(nestedSchema))
-                    continue;
-                if (nestedUi && (0, v2_anketa_editor_ui_util_1.isV2AnketaHiddenUiNode)(nestedUi))
-                    continue;
-                nodes.push(formLeaf(`${childPath}.${nestedKey}`, readFieldTitle(nestedSchema, nestedKey), resolveValueType(nestedSchema)));
-            }
+            nodes.push(...collectSchemaSectionColumns(childSchema, childUi, childPath, options));
             continue;
         }
         if (childType === "array") {
@@ -603,6 +618,71 @@ function buildV2QuestionnaireRegistryColumnTree(jsonSchema, uiSchema, options = 
         tree.push(...collectSummaryColumns(summarySchema, summaryUi, options));
     }
     return tree;
+}
+function flattenRegistryLeaves(nodes) {
+    const leaves = [];
+    const walk = (node) => {
+        if (node.type === "leaf") {
+            leaves.push(node);
+            return;
+        }
+        for (const child of node.children)
+            walk(child);
+    };
+    for (const node of nodes)
+        walk(node);
+    return leaves;
+}
+/** Объединяет деревья колонок из нескольких версий схем (как при экспорте XLSX). */
+function mergeV2QuestionnaireRegistryColumnTrees(trees) {
+    if (!trees.length)
+        return buildStaticV2QuestionnaireRegistryColumnTree();
+    const leavesById = new Map();
+    for (const tree of trees) {
+        for (const leaf of flattenRegistryLeaves(tree)) {
+            if (!leavesById.has(leaf.id))
+                leavesById.set(leaf.id, leaf);
+        }
+    }
+    const usedIds = new Set();
+    const remapNode = (node) => {
+        if (node.type === "leaf") {
+            const merged = leavesById.get(node.id);
+            if (!merged)
+                return null;
+            usedIds.add(node.id);
+            return { ...merged };
+        }
+        const children = node.children
+            .map(remapNode)
+            .filter((child) => child != null);
+        if (!children.length)
+            return null;
+        return { ...node, children };
+    };
+    const primary = trees[0];
+    const merged = primary
+        .map(remapNode)
+        .filter((node) => node != null);
+    const orphanLeaves = [...leavesById.values()].filter((leaf) => !usedIds.has(leaf.id));
+    if (orphanLeaves.length > 0) {
+        merged.push({
+            type: "group",
+            header: "Дополнительные поля",
+            children: orphanLeaves,
+        });
+    }
+    return merged.length > 0 ? merged : buildStaticV2QuestionnaireRegistryColumnTree();
+}
+function buildV2QuestionnaireRegistryConfig(schemas, rows = []) {
+    const columnOptions = deriveRegistryColumnOptionsFromRows(rows);
+    const trees = schemas.map(({ jsonSchema, uiSchema }) => buildV2QuestionnaireRegistryColumnTree(jsonSchema, uiSchema, columnOptions));
+    const columnTree = mergeV2QuestionnaireRegistryColumnTrees(trees);
+    return {
+        columnTree,
+        arrayIndicesByPath: columnOptions.arrayIndicesByPath ?? {},
+        arrayGroupLabelsByPath: columnOptions.arrayGroupLabelsByPath ?? {},
+    };
 }
 function flattenV2RegistryColumnTree(nodes) {
     const leaves = [];

@@ -1,4 +1,6 @@
 import type { V2JsonLogicValue, V2LogicGraphDto, V2LogicRuleDto } from "./v2-template.types";
+/** Источник триггеров модельного стрима — arch object list «Модельный сервис». */
+export declare const V2_MODEL_STREAM_SOURCE_ARRAY_PATH = "generalInfo.modelService";
 import { V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH, V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH } from "./v2-typical-work-output-paths.util";
 /** Заменяет dot-путь в JsonLogic (`{"var": "a.b.c"}` и вложенные узлы). */
 export declare function replaceDotPathInJsonLogic(value: unknown, oldPath: string, newPath: string): unknown;
@@ -36,3 +38,8 @@ export declare function buildUnifiedTypicalTotalRule(arrayPaths: string[]): V2Lo
 export declare function schemaSupportsSourceTypicalWorksCatalog(jsonSchema?: unknown, uiSchema?: unknown): boolean;
 /** Заменяет устаревшие static-tasks правила на каталог работ с путями схемы v5. */
 export declare function patchV2TypicalWorksLogicRules(logic: V2LogicGraphDto, options?: PatchV2TypicalWorksLogicOptions): V2LogicGraphDto;
+/**
+ * Дополняет уже сохранённые catalog-правила актуальным payload из uiSchema
+ * (например sourceArrayPath для модельного стрима), не пересобирая весь logic.
+ */
+export declare function upgradeTypicalWorksCatalogLogicRules(logic: V2LogicGraphDto, options?: PatchV2TypicalWorksLogicOptions): V2LogicGraphDto;

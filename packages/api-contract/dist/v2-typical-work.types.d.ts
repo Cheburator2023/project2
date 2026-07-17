@@ -63,6 +63,8 @@ export type V2TypicalWorkRuleValueDto = {
     label: string | null;
 };
 export type V2TypicalWorkTriggerArchCountCombinator = "and" | "or";
+export declare const V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES: readonly [">=", "<=", "=", ">", "<"];
+export type V2TypicalWorkTriggerArchCountOperator = (typeof V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES)[number];
 /** Глобальное условие по количеству арх. компонентов для стрима работы. */
 export type V2TypicalWorkTriggerArchCountDto = {
     kind: V2WorkFormulaArchCountKind | null;

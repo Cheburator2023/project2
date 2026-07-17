@@ -9,10 +9,12 @@ import type {
 	V2QuestionnaireCommentDto,
 	V2QuestionnaireDto,
 	V2QuestionnaireFormPackageDto,
+	V2QuestionnaireRegistryConfigDto,
 } from "@smart-anketa/api-contract";
 import { apiClient, API_ENTITY_CREATE_TIMEOUT_MS } from "../helpers/apiClient";
 
 const ROOT_KEY = ["v2-questionnaires"] as const;
+const REGISTRY_CONFIG_KEY = [...ROOT_KEY, "registry-config"] as const;
 
 export const useV2Questionnaires = () =>
 	useQuery<V2QuestionnaireDto[]>({
@@ -20,6 +22,16 @@ export const useV2Questionnaires = () =>
 		queryFn: () =>
 			apiClient<V2QuestionnaireDto[]>({
 				url: "/v2/questionnaires",
+				method: "GET",
+			}),
+	});
+
+export const useV2QuestionnaireRegistryConfig = () =>
+	useQuery<V2QuestionnaireRegistryConfigDto>({
+		queryKey: REGISTRY_CONFIG_KEY,
+		queryFn: () =>
+			apiClient<V2QuestionnaireRegistryConfigDto>({
+				url: "/v2/questionnaires/registry-config",
 				method: "GET",
 			}),
 	});

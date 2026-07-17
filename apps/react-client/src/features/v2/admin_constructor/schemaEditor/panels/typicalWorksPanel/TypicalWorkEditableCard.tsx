@@ -39,6 +39,7 @@ import {
 	buildNumericLaborCoefficientRows,
 	reconcileFormulaWithLaborArchCounts,
 	defaultLaborArchCounts,
+	isExecutorStreamPresentInSchema,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
@@ -48,8 +49,6 @@ import {
 	useV2WorkParametersCatalog,
 } from "@react-client/common/api/queries/v2-works";
 import { useSchemaEditor } from "../../SchemaEditorContext";
-import { mergeAnketaDisplayFormData } from "@react-client/features/v2/anketaCRUD/utils/mergeAnketaDisplayFormData";
-import { resolvePreviewSourceRowForTypicalWork } from "./typicalWorkTriggerPreview";
 import {
 	buildSchemaWorkParameters,
 	findSchemaWorkParameter,
@@ -71,7 +70,7 @@ import {
 	coerceLogicGraph,
 	coerceUiSchema,
 } from "../../../utils/coerceV2TemplateSnapshot";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@react-client/common/toasts";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { TypicalWorkFormulaLockedDialog } from "./TypicalWorkFormulaLockedDialog";
@@ -89,11 +88,13 @@ import {
 	WORK_ARCH_COMPONENT_TYPES,
 } from "./typicalWorkPatchErrors";
 import {
+	useTypicalWorkTriggerAnalysis,
+} from "./useTypicalWorkTriggerPreview";
+import {
 	recommendedStreamsForComponent,
 	streamColor,
 	streamDisplayLabel,
 } from "./typicalWorksAreas";
-import { isExecutorStreamPresentInSchema } from "@smart-anketa/api-contract";
 import {
 	ExecutorStreamMenuRow,
 	ExecutorStreamPresenceHint,
@@ -158,8 +159,6 @@ export function TypicalWorkEditableCard({
 		uiSchema,
 		jsonSchema,
 		enumMapByCode,
-		formData,
-		liveFormData,
 		openDesignerAtPointer,
 		triggerParamPickId,
 		clearTriggerParamPick,
@@ -245,26 +244,52 @@ export function TypicalWorkEditableCard({
 	const saveInProgressRef = useRef(false);
 	saveInProgressRef.current = status === "dirty" || status === "saving";
 
-	useEffect(() => {
-		if (!card) return;
+	const buildDraftFromCard = useCallback(
+		(nextCard: V2TypicalWorkCardDto): V2TypicalWorkCardDto => {
+			const formula = {
+				tokens: nextCard.formula.tokens,
+				text:
+					nextCard.formula.text?.trim() ||
+					tokensToText(nextCard.formula.tokens),
+			};
+			return {
+				...structuredClone(nextCard),
+				formula,
+				formulaTerms: ensureFormulaTerms(nextCard),
+				norms: reconcileStreamNormPeriods(structuredClone(nextCard.norms)),
+			};
+		},
+		[],
+	);
+
+	useLayoutEffect(() => {
+		if (!card) {
+			lastSyncedCardKeyRef.current = null;
+			setDraft(null);
+			return;
+		}
 		const cardKey = `${card.id}::${card.streamExecutor}::${templateVersionId ?? ""}`;
 		const isNewCard = cardKey !== lastSyncedCardKeyRef.current;
-		// Не перетираем несохранённые правки при фоновом рефетче того же card
-		// (autosave инвалидирует query → возвращает новый объект с теми же данными).
 		if (!isNewCard && (hasPending() || saveInProgressRef.current)) return;
 		lastSyncedCardKeyRef.current = cardKey;
 		if (isNewCard) defaultedArchKeyRef.current = null;
-		const formula = {
-			tokens: card.formula.tokens,
-			text: card.formula.text?.trim() || tokensToText(card.formula.tokens),
-		};
-		setDraft({
-			...structuredClone(card),
-			formula,
-			formulaTerms: ensureFormulaTerms(card),
-			norms: reconcileStreamNormPeriods(structuredClone(card.norms)),
-		});
-	}, [card, templateVersionId, hasPending]);
+		setDraft(buildDraftFromCard(card));
+	}, [buildDraftFromCard, card, hasPending, templateVersionId]);
+
+	const isDraftSyncedWithCard = useMemo(() => {
+		if (!card || !draft) return false;
+		return (
+			draft.id === card.id &&
+			draft.streamExecutor === card.streamExecutor &&
+			(draft.assignmentId ?? null) === (card.assignmentId ?? null)
+		);
+	}, [card, draft]);
+
+	const activeTriggerWork = useMemo(() => {
+		if (!card) return null;
+		if (isDraftSyncedWithCard && draft) return draft;
+		return buildDraftFromCard(card);
+	}, [buildDraftFromCard, card, draft, isDraftSyncedWithCard]);
 
 	const transitiveSources = useMemo(() => {
 		return (assignmentsList?.items ?? [])
@@ -466,49 +491,9 @@ export function TypicalWorkEditableCard({
 		[methodologyCatalog, paramOptions],
 	);
 
-	const previewFormDataForTriggers = useMemo(
-		() =>
-			mergeAnketaDisplayFormData(
-				formData,
-				liveFormData,
-				uiSchema as Record<string, unknown> | undefined,
-			),
-		[formData, liveFormData, uiSchema],
-	);
-
-	const previewSourceRow = useMemo(
-		() =>
-			resolvePreviewSourceRowForTypicalWork(
-				previewFormDataForTriggers,
-				uiSchema as Record<string, unknown> | undefined,
-				jsonSchema as Record<string, unknown> | undefined,
-			),
-		[previewFormDataForTriggers, uiSchema, jsonSchema],
-	);
-
-	const triggerAnalysis = useMemo(
-		() =>
-			analyzeTriggerRules(
-				draft?.rules ?? [],
-				paramOptions,
-				methodologyCatalog,
-				previewSourceRow,
-				undefined,
-				previewFormDataForTriggers,
-				draft?.triggerArchCount,
-				draft?.triggerMode ?? "simple",
-				draft?.triggerFormula,
-			),
-		[
-			draft?.rules,
-			draft?.triggerArchCount,
-			draft?.triggerFormula,
-			draft?.triggerMode,
-			methodologyCatalog,
-			paramOptions,
-			previewFormDataForTriggers,
-			previewSourceRow,
-		],
+	const triggerAnalysis = useTypicalWorkTriggerAnalysis(
+		activeTriggerWork,
+		methodologyCatalog,
 	);
 
 	const commitDraft = (next: V2TypicalWorkCardDto) => {
@@ -521,9 +506,9 @@ export function TypicalWorkEditableCard({
 			next.rules,
 			paramOptions,
 			methodologyCatalog,
-			previewSourceRow,
 			undefined,
-			previewFormDataForTriggers,
+			undefined,
+			undefined,
 			next.triggerArchCount,
 			next.triggerMode ?? "simple",
 			next.triggerFormula,
@@ -1141,7 +1126,6 @@ export function TypicalWorkEditableCard({
 							triggerFormula={draft.triggerFormula}
 							triggerArchCount={draft.triggerArchCount}
 							triggerStatus={triggerAnalysis.status}
-							triggerPreviewState={triggerAnalysis.previewState}
 							validationIssues={triggerAnalysis.issues}
 							schemaFieldCount={fieldPathHints.length}
 							paramOptions={paramOptions}

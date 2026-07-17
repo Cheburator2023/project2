@@ -28,6 +28,7 @@ import type {
 	BulkDeleteV2TypicalWorksResultDto,
 } from "@smart-anketa/api-contract";
 import {
+	applyComputedOverallUncertaintyToTypicalWorkParamCoefficients,
 	buildWorkSchemaParamsFromTemplate,
 	collectTypicalWorkSchemaConsistencyIssues,
 	enrichWorkSchemaParamsWithCatalogAliases,
@@ -55,6 +56,7 @@ import {
 	resolveByValueLaborParamCoefficients,
 	reconcileTypicalWorkCardWithSchemaField,
 	mergeLaborParamGroupsByParamCode,
+	dedupeLaborCoefficientsByStoredValue,
 	reconcileFormulaWithLaborArchCounts,
 	syncTermsFromTokenFormula,
 	termsToTokenFormula,
@@ -693,10 +695,13 @@ export class V2TypicalWorkWriteService {
 			const assignment = await this.ensureAssignment(workId, stream);
 			if (dto.triggerArchCount !== undefined) {
 				const arch = dto.triggerArchCount;
-				assignment.triggerArchCountKind = arch?.kind ?? null;
-				assignment.triggerArchCountSteps = arch?.steps?.length
-					? arch.steps
-					: null;
+				const configured = Boolean(
+					arch?.kind &&
+						(arch.steps?.length ?? 0) > 0 &&
+						arch.steps?.some((step) => Number.isFinite(step.count)),
+				);
+				assignment.triggerArchCountKind = configured ? arch!.kind : null;
+				assignment.triggerArchCountSteps = configured ? arch!.steps : null;
 				assignment.triggerArchCountCombinator = arch?.combinator ?? "and";
 			}
 			if (dto.laborArchCounts !== undefined) {
@@ -749,7 +754,9 @@ export class V2TypicalWorkWriteService {
 					}),
 				);
 				if (kind !== "any_of") {
-					for (const row of group.coefficients ?? []) {
+					for (const row of dedupeLaborCoefficientsByStoredValue(
+						group.coefficients ?? [],
+					)) {
 						await this.laborRepository.save(
 							this.laborRepository.create({
 								workId,
@@ -1183,6 +1190,21 @@ export class V2TypicalWorkWriteService {
 		}
 
 		const terms = card.formulaTerms ?? normalizeStoredFormula(null);
+		applyComputedOverallUncertaintyToTypicalWorkParamCoefficients(
+			answerSource as Record<string, unknown>,
+			paramCoefficients,
+			{
+				laborParamRefs:
+					card.laborParams?.map((group) => ({
+						paramCode: group.paramCode,
+						paramName: group.paramName,
+					})) ?? [],
+				formulaParamCodes: terms.terms.flatMap((term) =>
+					term.factors.map((factor) => factor.paramCode),
+				),
+			},
+		);
+
 		const anyOfParams =
 			card.laborParams
 				?.filter((group) => group.kind === "any_of" && group.anyOf)

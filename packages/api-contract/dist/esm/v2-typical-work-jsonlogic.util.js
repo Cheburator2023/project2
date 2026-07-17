@@ -2,7 +2,7 @@ import { readTypicalWorkSourceField, } from "./v2-works-catalog-match.util";
 import { defaultWorkRounding, } from "./v2-typical-work.types";
 import { applyWorkRounding, previewWorkFormula, tokensToText, validateWorkFormulaTokens, } from "./v2-work-formula.util";
 import { compileTriggerFormulaTokensToJsonLogic, hasTypicalWorkTriggersConfigured, matchTypicalWorkTriggers, } from "./v2-trigger-formula.util";
-import { resolveArchCountCoeffFromToken, archCountTriggerMatches, } from "./v2-work-arch-count-coeff.util";
+import { resolveArchCountCoeffFromToken, archCountTriggerMatches, isTriggerArchCountConfigured, } from "./v2-work-arch-count-coeff.util";
 import { evaluateTermsFormula, resolveVersionConfigTokenFormula, } from "./v2-work-terms-formula.util";
 const OP_SYMBOL = {
     "+": "+",
@@ -141,7 +141,7 @@ export function compileTypicalWorkTriggersToJsonLogic(input) {
 }
 /** Компилирует триггеры: (ПТ₁ И ПТ₂ …) [И/ИЛИ] arch-count. Пустой список без arch → false. */
 export function compileTypicalWorkTriggerRulesToJsonLogic(rules, triggerArchCount) {
-    const hasArch = Boolean(triggerArchCount?.kind && (triggerArchCount.steps?.length ?? 0) > 0);
+    const hasArch = isTriggerArchCountConfigured(triggerArchCount);
     if (rules.length === 0 && !hasArch)
         return false;
     const paramPart = compileParamRulesToJsonLogic(rules);

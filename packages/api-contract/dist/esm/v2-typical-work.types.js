@@ -37,6 +37,13 @@ export const V2_WORK_FORMULA_ARCH_COUNT_KINDS = [
     "dataProcess",
     "modelService",
 ];
+export const V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES = [
+    ">=",
+    "<=",
+    "=",
+    ">",
+    "<",
+];
 export function defaultTriggerArchCount() {
     return { kind: null, steps: [], combinator: "and" };
 }

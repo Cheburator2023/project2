@@ -31,6 +31,7 @@ import {
 import {
 	resolveArchCountCoeffFromToken,
 	archCountTriggerMatches,
+	isTriggerArchCountConfigured,
 	type V2WorkArchCountCoeffStep,
 } from "./v2-work-arch-count-coeff.util";
 import {
@@ -233,9 +234,7 @@ export function compileTypicalWorkTriggerRulesToJsonLogic(
 	rules: TypicalWorkRuleLike[],
 	triggerArchCount?: TypicalWorkTriggerArchCountLike | null,
 ): V2JsonLogicValue {
-	const hasArch = Boolean(
-		triggerArchCount?.kind && (triggerArchCount.steps?.length ?? 0) > 0,
-	);
+	const hasArch = isTriggerArchCountConfigured(triggerArchCount);
 	if (rules.length === 0 && !hasArch) return false;
 
 	const paramPart = compileParamRulesToJsonLogic(rules);

@@ -534,6 +534,7 @@ function gridSizeForProperty(
 			typeof options === "object" &&
 			!Array.isArray(options) &&
 			(options as { fullWidth?: unknown }).fullWidth === true) ||
+		uiWidget === "textarea" ||
 		name === "calcName" ||
 		name === "name" ||
 		propertySchema?.type === "object" ||

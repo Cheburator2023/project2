@@ -175,6 +175,11 @@ export const PRIMITIVE_FIELD_TYPE_OPTIONS = [
 export type PrimitiveFieldTypeVariant =
 	(typeof PRIMITIVE_FIELD_TYPE_OPTIONS)[number]["id"];
 
+/** Исторический ориентир для коротких строк; в свойствах можно задать больше. */
+export const SCHEMA_DEFAULT_STRING_MAX_LENGTH = 255;
+/** Верхняя граница maxLength в JSON Schema (конструктор). */
+export const SCHEMA_STRING_MAX_LENGTH_CAP = 10_000;
+
 export const LAYOUT_PRESETS: PalettePreset[] = [
 	{
 		id: "object",

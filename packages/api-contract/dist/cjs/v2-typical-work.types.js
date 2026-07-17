@@ -5,7 +5,7 @@
  * Формула и округление — конфигурация версии шаблона.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.V2_TYPICAL_WORK_TRIGGER_MODE_VALUES = exports.V2_WORK_FORMULA_ARCH_COUNT_KINDS = exports.V2_LOGIC_WORKSPACE_TAB_VALUES = exports.V2_WORK_TRIGGER_STATUS_VALUES = exports.V2_WORK_ROUNDING_MODE_VALUES = exports.V2_WORK_RULE_OPERATOR_VALUES = void 0;
+exports.V2_TYPICAL_WORK_TRIGGER_MODE_VALUES = exports.V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES = exports.V2_WORK_FORMULA_ARCH_COUNT_KINDS = exports.V2_LOGIC_WORKSPACE_TAB_VALUES = exports.V2_WORK_TRIGGER_STATUS_VALUES = exports.V2_WORK_ROUNDING_MODE_VALUES = exports.V2_WORK_RULE_OPERATOR_VALUES = void 0;
 exports.defaultTriggerArchCount = defaultTriggerArchCount;
 exports.defaultTriggerFormula = defaultTriggerFormula;
 exports.resolveActiveNormOnDate = resolveActiveNormOnDate;
@@ -44,6 +44,13 @@ exports.V2_WORK_FORMULA_ARCH_COUNT_KINDS = [
     "dataMart",
     "dataProcess",
     "modelService",
+];
+exports.V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES = [
+    ">=",
+    "<=",
+    "=",
+    ">",
+    "<",
 ];
 function defaultTriggerArchCount() {
     return { kind: null, steps: [], combinator: "and" };

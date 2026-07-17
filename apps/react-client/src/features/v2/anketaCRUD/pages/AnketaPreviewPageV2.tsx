@@ -58,6 +58,20 @@ export const AnketaPreviewPageV2 = () => {
 		);
 	};
 
+	const onRenameQuestionnaire = (calcName: string) => {
+		if (!id) return;
+		updateMutation.mutate(
+			{ id, body: { calcName } },
+			{
+				onSuccess: () => toast.success("Название анкеты обновлено"),
+				onError: (err) =>
+					toast.error("Не удалось переименовать", {
+						description: apiErrorMessage(err),
+					}),
+			},
+		);
+	};
+
 	const errorMessage =
 		!isLoading && (error || !formPackage)
 			? error
@@ -73,6 +87,11 @@ export const AnketaPreviewPageV2 = () => {
 			loading={isLoading}
 			errorMessage={errorMessage}
 			questionnaireId={id}
+			questionnaireCalcName={formPackage?.questionnaire.calcName}
+			onRenameQuestionnaire={
+				formPackage && !errorMessage ? onRenameQuestionnaire : undefined
+			}
+			renamePending={updateMutation.isPending}
 			schemaBinding={formPackage?.questionnaire.schemaBinding}
 			readOnly={formPackage?.readOnly}
 			onSave={formPackage && !errorMessage ? onSave : undefined}

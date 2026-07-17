@@ -20,6 +20,40 @@ const v2_questionnaire_uncertainty_coefficient_util_1 = require("./v2-questionna
         })).toEqual({ calculated: true, coefficient: 1.05 });
     });
 });
+(0, vitest_1.describe)("typical work overallUncertainty", () => {
+    (0, vitest_1.it)("detects computed uncertainty param by code and label", () => {
+        (0, vitest_1.expect)((0, v2_questionnaire_uncertainty_coefficient_util_1.isTypicalWorkComputedUncertaintyParam)("overallUncertainty")).toBe(true);
+        (0, vitest_1.expect)((0, v2_questionnaire_uncertainty_coefficient_util_1.isTypicalWorkComputedUncertaintyParam)("other", "Общая неопределённость")).toBe(true);
+        (0, vitest_1.expect)((0, v2_questionnaire_uncertainty_coefficient_util_1.isTypicalWorkComputedUncertaintyParam)("complexity")).toBe(false);
+    });
+    (0, vitest_1.it)("injects calculated coefficient and overrides configurator value", () => {
+        const paramCoefficients = { overallUncertainty: 2.5, complexity: 1.5 };
+        (0, v2_questionnaire_uncertainty_coefficient_util_1.applyComputedOverallUncertaintyToTypicalWorkParamCoefficients)({
+            uncertaintyCalculation: {
+                riskGroup: { sanctions: "Средний" },
+                uncertaintyAdjustment: 10,
+            },
+        }, paramCoefficients, {
+            formulaParamCodes: ["overallUncertainty"],
+        });
+        (0, vitest_1.expect)(paramCoefficients.overallUncertainty).toBe(1.15);
+        (0, vitest_1.expect)(paramCoefficients.complexity).toBe(1.5);
+    });
+    (0, vitest_1.it)("defaults to 1 when uncertainty is not calculated", () => {
+        const paramCoefficients = {};
+        (0, v2_questionnaire_uncertainty_coefficient_util_1.applyComputedOverallUncertaintyToTypicalWorkParamCoefficients)({}, paramCoefficients, { formulaParamCodes: ["overallUncertainty"] });
+        (0, vitest_1.expect)(paramCoefficients.overallUncertainty).toBe(1);
+    });
+    (0, vitest_1.it)("skips injection when formula does not use uncertainty", () => {
+        const paramCoefficients = { complexity: 1.5 };
+        (0, v2_questionnaire_uncertainty_coefficient_util_1.applyComputedOverallUncertaintyToTypicalWorkParamCoefficients)({
+            uncertaintyCalculation: {
+                riskGroup: { sanctions: "Высокий" },
+            },
+        }, paramCoefficients, { formulaParamCodes: ["complexity"] });
+        (0, vitest_1.expect)(paramCoefficients.overallUncertainty).toBeUndefined();
+    });
+});
 (0, vitest_1.describe)("syncAtypicalWorkCoefficientsInFormData", () => {
     const uiSchema = {
         detailInfo: {

@@ -19,6 +19,8 @@ import type { FieldTypePreset, PrimitiveFieldTypeVariant } from "../constants";
 import {
 	LAYOUT_GRID_COLUMN_OPTIONS,
 	PRIMITIVE_FIELD_TYPE_OPTIONS,
+	SCHEMA_DEFAULT_STRING_MAX_LENGTH,
+	SCHEMA_STRING_MAX_LENGTH_CAP,
 	ruSchemaTypeLabel,
 	ruleKindLabel,
 } from "../constants";
@@ -90,6 +92,7 @@ import {
 	resolveArchComponentAtPointer,
 	resolvePrimitiveFieldTypeVariant,
 	resolvePropertiesFieldKind,
+	resolveSchemaNodeType,
 } from "../propertiesFieldKind";
 import { readUiSchemaBranchAtPointer } from "../../utils/schemaMutators";
 import {
@@ -547,6 +550,17 @@ export function SchemaPropertiesPanel() {
 			resolvePrimitiveFieldTypeVariant(resolvedField, leafUiOptions, uiWidget),
 		[resolvedField, leafUiOptions, uiWidget],
 	);
+	const fieldFullWidth = leafUiOptions?.fullWidth === true;
+	const schemaMaxLength =
+		typeof resolvedField?.maxLength === "number"
+			? resolvedField.maxLength
+			: "";
+	const textareaRows =
+		typeof leafUiOptions?.rows === "number" ? leafUiOptions.rows : 4;
+	const showStringMaxLength =
+		fieldKind === "primitive" &&
+		resolveSchemaNodeType(resolvedField) === "string" &&
+		primitiveTypeVariant !== "dictionary-list";
 
 	const commitFieldPatch = useCallback(
 		(patch: Partial<RJSFSchema>) =>
@@ -623,13 +637,20 @@ export function SchemaPropertiesPanel() {
 			if (nextVariant === "string-textarea") {
 				patchUiSchema(
 					(prev) =>
-						setUiWidgetAtPointer(
-							clearDictionaryFieldBindingAtPointer(
-								prev as Record<string, unknown>,
+						patchUiOptionsAtPointer(
+							setUiWidgetAtPointer(
+								clearDictionaryFieldBindingAtPointer(
+									prev as Record<string, unknown>,
+									selectedPointer,
+								),
 								selectedPointer,
+								"textarea",
 							),
 							selectedPointer,
-							"textarea",
+							{
+								fullWidth: true,
+								rows: 4,
+							},
 						) as UiSchema,
 					{ recordHistory: false },
 				);
@@ -950,6 +971,74 @@ export function SchemaPropertiesPanel() {
 									onBlur={tooltipDraft.onBlur}
 									helperText="Иконка ℹ рядом с подписью поля; текст — в нативной подсказке при наведении."
 								/>
+							</>
+						) : null}
+						{fieldKind === "primitive" ? (
+							<>
+								<FormControlLabel
+									control={
+										<Checkbox
+											checked={fieldFullWidth}
+											onChange={(e) =>
+												patchSectionUi({
+													fullWidth: e.target.checked || undefined,
+												})
+											}
+										/>
+									}
+									label="На всю ширину"
+								/>
+								{showStringMaxLength ? (
+									<TextField
+										fullWidth
+										size="small"
+										type="number"
+										label="Макс. длина"
+										value={schemaMaxLength}
+										onChange={(e) => {
+											const raw = e.target.value.trim();
+											if (!raw) {
+												commitFieldPatch({ maxLength: undefined });
+												return;
+											}
+											const parsed = Number.parseInt(raw, 10);
+											if (!Number.isFinite(parsed) || parsed < 1) return;
+											commitFieldPatch({
+												maxLength: Math.min(
+													parsed,
+													SCHEMA_STRING_MAX_LENGTH_CAP,
+												),
+											});
+										}}
+										helperText={`Пусто — без ограничения. Стандарт — ${SCHEMA_DEFAULT_STRING_MAX_LENGTH}; можно до ${SCHEMA_STRING_MAX_LENGTH_CAP}.`}
+										slotProps={{
+											htmlInput: {
+												min: 1,
+												max: SCHEMA_STRING_MAX_LENGTH_CAP,
+											},
+										}}
+									/>
+								) : null}
+								{primitiveTypeVariant === "string-textarea" ? (
+									<TextField
+										fullWidth
+										size="small"
+										type="number"
+										label="Число строк"
+										value={textareaRows}
+										onChange={(e) => {
+											const parsed = Number.parseInt(e.target.value, 10);
+											if (!Number.isFinite(parsed) || parsed < 2) return;
+											patchSectionUi({
+												rows: Math.min(parsed, 30),
+											});
+										}}
+										helperText="Высота многострочного поля в форме"
+										slotProps={{
+											htmlInput: { min: 2, max: 30 },
+										}}
+									/>
+								) : null}
 							</>
 						) : null}
 						<Box>

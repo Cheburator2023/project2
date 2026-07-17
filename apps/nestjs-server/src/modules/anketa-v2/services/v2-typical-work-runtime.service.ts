@@ -4,6 +4,7 @@ import { In, IsNull, Repository } from "typeorm";
 import {
 	CONTROL_MODELS_STREAM,
 	applyWorkRounding,
+	applyComputedOverallUncertaintyToTypicalWorkParamCoefficients,
 	buildTypicalWorkFactorCoeffResolver,
 	computeTypicalWorkFormulaTotal,
 	defaultWorkRounding,
@@ -19,6 +20,8 @@ import {
 	isModelStreamAlwaysActiveWork,
 	isModelStreamAlwaysShownWork,
 	matchTypicalWorkTriggers,
+	normalizeTypicalWorkTriggerRuleForMatch,
+	remapFactoryAllowedWorkIdsToTemplateWorks,
 	type TypicalWorkTriggerMatchInput,
 	buildWorkSchemaParamsFromTemplate,
 	remapLaborCoefficientRowsForSchema,
@@ -38,6 +41,7 @@ import { V2TypicalWorkVersionConfigEntity } from "../entities/v2-typical-work-ve
 import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
+import { V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY } from "../constants/v2-factory-template-typical-works-registry";
 
 export type CatalogGeneratedTask = {
 	taskCode: string;
@@ -106,14 +110,14 @@ function groupBy<T>(items: T[], keyFn: (item: T) => string): Map<string, T[]> {
 }
 
 function mapRuleEntity(rule: V2TypicalWorkRuleEntity): TypicalWorkRuleLike {
-	return {
+	return normalizeTypicalWorkTriggerRuleForMatch({
 		paramCode: rule.paramCode,
 		paramName: rule.paramName,
 		operator: rule.operator,
 		valueCode: rule.valueCode,
 		valueLabel: rule.valueLabel,
 		values: rule.valueCodes ?? undefined,
-	};
+	});
 }
 
 function mapTriggerArchCountFromAssignment(
@@ -215,6 +219,30 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 		}
 	}
 
+	const terms = ctx.config
+		? normalizeStoredFormula(ctx.config.formula, ctx.config.formulaText)
+		: normalizeStoredFormula(null);
+	const formulaParamCodes = terms.terms.flatMap((term) =>
+		term.factors.map((factor) => factor.paramCode),
+	);
+	applyComputedOverallUncertaintyToTypicalWorkParamCoefficients(
+		ctx.formData,
+		paramCoefficients,
+		{
+			laborParamRefs: [
+				...ctx.laborParams.map((row) => ({
+					paramCode: row.paramCode,
+					paramName: row.paramName,
+				})),
+				...ctx.laborRows.map((row) => ({
+					paramCode: row.paramCode,
+					paramName: row.paramName,
+				})),
+			],
+			formulaParamCodes,
+		},
+	);
+
 	return paramCoefficients;
 }
 
@@ -297,7 +325,11 @@ export class V2TypicalWorkRuntimeService {
 		const assignedWorkIds = new Set(assignments.map((a) => a.workId));
 		if (assignedWorkIds.size === 0) return [];
 
-		const allowedWorkIds = params.allowedWorkIds;
+		const allowedWorkIds = await this.resolveAllowedWorkIdsForTemplate(
+			params.allowedWorkIds,
+			params.templateId,
+			assignedWorkIds,
+		);
 		const workWhere =
 			allowedWorkIds !== undefined
 				? { id: In([...allowedWorkIds]) }
@@ -533,6 +565,43 @@ export class V2TypicalWorkRuntimeService {
 			jsonSchema: (version.jsonSchema ?? {}) as Record<string, unknown>,
 			uiSchema: (version.uiSchema ?? {}) as Record<string, unknown>,
 		});
+	}
+
+	private async resolveAllowedWorkIdsForTemplate(
+		allowedWorkIds: readonly string[] | undefined,
+		templateId: string | null | undefined,
+		assignedWorkIds: ReadonlySet<string>,
+	): Promise<string[] | undefined> {
+		if (allowedWorkIds === undefined) return undefined;
+		if (allowedWorkIds.length === 0) return [];
+
+		const directAssigned = allowedWorkIds.filter((id) => assignedWorkIds.has(id));
+		if (directAssigned.length === allowedWorkIds.length) {
+			return [...allowedWorkIds];
+		}
+
+		if (!templateId?.trim()) {
+			return directAssigned.length > 0 ? directAssigned : [...allowedWorkIds];
+		}
+
+		const templateWorks = await this.workRepository.find({
+			where: { templateId: templateId.trim() },
+		});
+		if (templateWorks.length === 0) {
+			return directAssigned.length > 0 ? directAssigned : [...allowedWorkIds];
+		}
+
+		const remapped = remapFactoryAllowedWorkIdsToTemplateWorks(
+			allowedWorkIds,
+			templateWorks.map((work) => ({ id: work.id, name: work.name })),
+			V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works.map((work) => ({
+				id: work.id,
+				name: work.name,
+			})),
+		).filter((id) => assignedWorkIds.has(id));
+
+		if (remapped.length > 0) return remapped;
+		return directAssigned.length > 0 ? directAssigned : [...allowedWorkIds];
 	}
 }
 

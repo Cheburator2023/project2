@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFormulaFromCsvRow, buildFormulaTextFromCsvCore, csvRowToCatalogPatch, extractFormulaCoreFromCsvText, parseCsvFormulaImportRows, parseCsvLaborCoefficients, parseCsvTriggerRules, parseModelStreamTriggerRules, resolveCsvParamCode, } from "./v2-csv-formula-import.util";
+import { buildFormulaFromCsvRow, buildFormulaTextFromCsvCore, csvRowToCatalogPatch, extractFormulaCoreFromCsvText, parseCsvFormulaImportRows, parseCsvLaborCoefficients, parseCsvTriggerRules, extractTriggerTextFromResultChoice, parseModelStreamTriggerRules, resolveCsvParamCode, } from "./v2-csv-formula-import.util";
 describe("v2-csv-formula-import.util", () => {
     it("parses CSV rows with multiline labor params", () => {
         const csv = `Стрим;Арх. Компонент;Название оригинальное;Название в смарт-анкете СУМ;Контекст;Тип работы;Наличие норматива;Параметр-триггер;Параметры трудоемкости;Формула
@@ -63,6 +63,19 @@ describe("v2-csv-formula-import.util", () => {
                 paramName: "Каналы внедрения",
                 operator: "exists",
                 values: [],
+            },
+        ]);
+    });
+    it("reads model-stream trigger from «Результат выбора» when param column is name-only", () => {
+        expect(extractTriggerTextFromResultChoice('Триггер: Необходимость пилота (MVP) = «Да» (иначе Итог = 0).\nНорматив: 40 чел-дн.')).toBe("Необходимость пилота (MVP) = «Да»");
+        const csv = `"Стрим";"Арх. Компонент";"Название в смарт-анкете СУМ";"Наличие норматива";"Параметр-триггер";"Параметры трудоемкости";"Коэффициенты параметров трудоёмкости";"Формула";"Результат выбора"
+"Модельный стрим";"Арх. Компонент. Модель";"05А. Разработка пилотной модели (MVP)";"40";"Необходимость пилота (MVP)";"Сложность постановки";"1→1";"N";"Триггер: Необходимость пилота (MVP) = «Да» (иначе Итог = 0)."`;
+        const row = parseCsvFormulaImportRows(csv)[0];
+        expect(row?.triggerRules).toEqual([
+            {
+                paramName: "Необходимость пилота (MVP)",
+                operator: "=",
+                values: ["Да"],
             },
         ]);
     });

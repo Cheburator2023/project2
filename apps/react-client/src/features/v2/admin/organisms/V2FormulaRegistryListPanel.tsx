@@ -6,6 +6,7 @@ import { styled, useColorScheme } from "@mui/material/styles";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { getAgGridMainMenuItems } from "@react-client/common/tableStuff/agGridMainMenuItems";
 import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
 import {
 	AG_GRID_SCHEMA_GROUP_AUTO_COLUMN,
@@ -216,6 +217,7 @@ export function V2FormulaRegistryListPanel({
 			sortable: true,
 			resizable: true,
 			minWidth: 72,
+			mainMenuItems: getAgGridMainMenuItems,
 		}),
 		[],
 	);

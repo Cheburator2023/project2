@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+	applyComputedOverallUncertaintyToTypicalWorkParamCoefficients,
+	isTypicalWorkComputedUncertaintyParam,
 	resolveV2QuestionnaireUncertaintyCoefficient,
 	syncAtypicalWorkCoefficientsInFormData,
 } from "./v2-questionnaire-uncertainty-coefficient.util";
@@ -28,6 +30,58 @@ describe("resolveV2QuestionnaireUncertaintyCoefficient", () => {
 				uncertaintyCalculation: { uncertaintyAdjustment: 5 },
 			}),
 		).toEqual({ calculated: true, coefficient: 1.05 });
+	});
+});
+
+describe("typical work overallUncertainty", () => {
+	it("detects computed uncertainty param by code and label", () => {
+		expect(isTypicalWorkComputedUncertaintyParam("overallUncertainty")).toBe(true);
+		expect(
+			isTypicalWorkComputedUncertaintyParam("other", "Общая неопределённость"),
+		).toBe(true);
+		expect(isTypicalWorkComputedUncertaintyParam("complexity")).toBe(false);
+	});
+
+	it("injects calculated coefficient and overrides configurator value", () => {
+		const paramCoefficients = { overallUncertainty: 2.5, complexity: 1.5 };
+		applyComputedOverallUncertaintyToTypicalWorkParamCoefficients(
+			{
+				uncertaintyCalculation: {
+					riskGroup: { sanctions: "Средний" },
+					uncertaintyAdjustment: 10,
+				},
+			},
+			paramCoefficients,
+			{
+				formulaParamCodes: ["overallUncertainty"],
+			},
+		);
+		expect(paramCoefficients.overallUncertainty).toBe(1.15);
+		expect(paramCoefficients.complexity).toBe(1.5);
+	});
+
+	it("defaults to 1 when uncertainty is not calculated", () => {
+		const paramCoefficients: Record<string, number> = {};
+		applyComputedOverallUncertaintyToTypicalWorkParamCoefficients(
+			{},
+			paramCoefficients,
+			{ formulaParamCodes: ["overallUncertainty"] },
+		);
+		expect(paramCoefficients.overallUncertainty).toBe(1);
+	});
+
+	it("skips injection when formula does not use uncertainty", () => {
+		const paramCoefficients: Record<string, number> = { complexity: 1.5 };
+		applyComputedOverallUncertaintyToTypicalWorkParamCoefficients(
+			{
+				uncertaintyCalculation: {
+					riskGroup: { sanctions: "Высокий" },
+				},
+			},
+			paramCoefficients,
+			{ formulaParamCodes: ["complexity"] },
+		);
+		expect(paramCoefficients.overallUncertainty).toBeUndefined();
 	});
 });
 

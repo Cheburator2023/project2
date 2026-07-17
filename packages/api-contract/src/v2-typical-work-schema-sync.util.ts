@@ -203,11 +203,39 @@ function normalizeLaborValueIdentity(value: string | null | undefined): string {
 		.replace(/\s+/g, "");
 }
 
+/** Ключ совпадения для uq_v2_typical_work_labor (work, stream, param_code, value_code). */
+export function laborCoefficientStoredKey(row: {
+	valueCode?: string | null;
+	valueLabel?: string | null;
+}): string {
+	if (row.valueCode == null && !row.valueLabel?.trim()) return "";
+	return normalizeLaborValueIdentity(
+		normalizeStoredValueCode(
+			row.valueCode ?? row.valueLabel ?? "",
+			row.valueLabel,
+		),
+	);
+}
+
+export function dedupeLaborCoefficientsByStoredValue<
+	T extends { valueCode?: string | null; valueLabel?: string | null },
+>(coefficients: readonly T[]): T[] {
+	const seen = new Set<string>();
+	const result: T[] = [];
+	for (const row of coefficients) {
+		const key = laborCoefficientStoredKey(row);
+		if (seen.has(key)) continue;
+		seen.add(key);
+		result.push(row);
+	}
+	return result;
+}
+
 function laborCoefficientIdentity(row: {
 	valueCode?: string | null;
 	valueLabel?: string | null;
 }): string {
-	return `${normalizeLaborValueIdentity(row.valueCode)}|${normalizeLaborValueIdentity(row.valueLabel)}`;
+	return laborCoefficientStoredKey(row);
 }
 
 type MergeableLaborParamGroup = {
@@ -236,7 +264,9 @@ export function mergeLaborParamGroupsByParamCode<
 		if (!existing) {
 			merged.set(key, {
 				...group,
-				coefficients: [...(group.coefficients ?? [])],
+				coefficients: dedupeLaborCoefficientsByStoredValue(
+					group.coefficients ?? [],
+				),
 			} as T);
 			continue;
 		}
@@ -261,7 +291,9 @@ export function mergeLaborParamGroupsByParamCode<
 			paramName: group.paramName ?? existing.paramName,
 			kind: group.kind ?? existing.kind,
 			anyOf: group.anyOf ?? existing.anyOf,
-			coefficients: [...coefficientsByIdentity.values()],
+			coefficients: dedupeLaborCoefficientsByStoredValue([
+				...coefficientsByIdentity.values(),
+			]),
 		} as T);
 	}
 

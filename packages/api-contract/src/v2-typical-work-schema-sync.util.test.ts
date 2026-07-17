@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { V2TypicalWorkCardDto } from "./v2-typical-work.types";
-import { reconcileTypicalWorkCardWithSchemaField } from "./v2-typical-work-schema-sync.util";
+import {
+	dedupeLaborCoefficientsByStoredValue,
+	mergeLaborParamGroupsByParamCode,
+	reconcileTypicalWorkCardWithSchemaField,
+} from "./v2-typical-work-schema-sync.util";
 
 function card(): V2TypicalWorkCardDto {
 	return {
@@ -414,5 +418,92 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
 			schemaFieldUid: "field_8cff1155-e458-4fea-a8c7-abad1260df8f",
 		});
 		expect(result.card.laborParams[0]?.coefficients).toHaveLength(2);
+	});
+
+	it("dedupes labor coefficients that normalize to the same stored value_code", () => {
+		const rows = dedupeLaborCoefficientsByStoredValue([
+			{
+				id: "a",
+				streamExecutor: "Источники данных",
+				paramCode: "workType",
+				paramName: "Тип работ",
+				valueCode: "разработка",
+				valueLabel: "Разработка",
+				coefficient: 1,
+			},
+			{
+				id: "b",
+				streamExecutor: "Источники данных",
+				paramCode: "тип_работ",
+				paramName: "Тип работ",
+				valueCode: "разработка",
+				valueLabel: "Разработка",
+				coefficient: 1.5,
+			},
+		]);
+
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.coefficient).toBe(1);
+	});
+
+	it("dedupes merged workType rows after legacy slug and bound field converge", () => {
+		const legacy = card();
+		legacy.laborParams = [
+			{
+				schemaFieldUid: "field-work-type",
+				paramCode: "workType",
+				paramName: "Тип работ",
+				kind: "by_value",
+				coefficients: [
+					{
+						id: "bound",
+						streamExecutor: "Источники данных",
+						paramCode: "workType",
+						paramName: "Тип работ",
+						valueCode: "разработка",
+						valueLabel: "Разработка",
+						coefficient: 1,
+					},
+				],
+			},
+			{
+				schemaFieldUid: undefined,
+				paramCode: "тип_работ",
+				paramName: "Тип работ",
+				kind: "by_value",
+				coefficients: [
+					{
+						id: "legacy",
+						streamExecutor: "Источники данных",
+						paramCode: "тип_работ",
+						paramName: "Тип работ",
+						valueCode: "разработка",
+						valueLabel: "Разработка",
+						coefficient: 1.5,
+					},
+				],
+			},
+		];
+
+		const result = reconcileTypicalWorkCardWithSchemaField(legacy, {
+			templateVersionId: "version-1",
+			mode: "apply",
+			operation: "upsert",
+			field: {
+				schemaFieldUid: "field-work-type",
+				previousCode: "тип_работ",
+				aliasCodes: ["workType"],
+				code: "workType",
+				name: "Тип работ",
+				values: [{ code: "разработка", label: "Разработка" }],
+			},
+		});
+
+		expect(result.card.laborParams).toHaveLength(1);
+		expect(result.card.laborParams[0]?.coefficients).toHaveLength(1);
+		expect(result.card.laborParams[0]?.coefficients[0]).toMatchObject({
+			valueCode: "разработка",
+			coefficient: 1,
+		});
 	});
 });

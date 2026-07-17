@@ -88,6 +88,8 @@ export declare function formatArchCountFormulaSteps(steps: ReadonlyArray<{
 /** Парсит блоки «Параметр: 1→1; 2→1,25 …» из колонки коэффициентов модельного стрима. */
 export declare function parseModelStreamLaborCoefficients(raw: string): CsvFormulaLaborCoefficient[];
 export declare function parseModelStreamTriggerRules(raw: string): CsvFormulaTriggerRule[];
+/** Строка триггера из колонки «Результат выбора» (блок «Триггер: …»). */
+export declare function extractTriggerTextFromResultChoice(raw: string): string;
 export declare function parseCsvTriggerRules(raw: string): CsvFormulaTriggerRule[];
 export declare function parseCsvLaborCoefficients(formulaRaw: string, archComponent?: string): CsvFormulaLaborCoefficient[];
 export declare function parseCsvFormulaImportRows(csvText: string): CsvFormulaImportRow[];
@@ -105,4 +107,15 @@ export declare function csvRowToCatalogPatch(row: CsvFormulaImportRow, candidate
     patch: CsvFormulaCatalogPatch | null;
     build: CsvFormulaBuildResult | null;
 };
+export type FactorySnapshotTriggerRule = {
+    paramName: string;
+    operator?: string;
+    values?: string[];
+    paramCode?: string;
+    schemaFieldUid?: string;
+    valueCode?: string | null;
+    valueLabel?: string | null;
+};
+/** Нормализует triggerRules factory snapshot: valueCode/valueLabel для boolean «Да»/«Нет». */
+export declare function enrichFactorySnapshotTriggerRule(rule: FactorySnapshotTriggerRule): FactorySnapshotTriggerRule;
 export declare function validateImportedFormulaText(formulaText: string): string | null;

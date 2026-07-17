@@ -19,6 +19,7 @@ import {
 } from "@react-client/common/api/queries/v2-works";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { getAgGridMainMenuItems } from "@react-client/common/tableStuff/agGridMainMenuItems";
 import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
 import { Flex } from "@react-client/common/primitives/Flex";
 import {
@@ -453,6 +454,7 @@ export function AssignWorkFromCatalogDialog({
 								sortable: true,
 								resizable: true,
 								filter: false,
+								mainMenuItems: getAgGridMainMenuItems,
 							}}
 							headerHeight={36}
 							rowHeight={40}

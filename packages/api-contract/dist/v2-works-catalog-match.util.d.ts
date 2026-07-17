@@ -1,5 +1,6 @@
 import { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
 import { type V2WorkArchCountCoeffStep, type V2WorkFormulaArchCountKind } from "./v2-work-arch-count-coeff.util";
+import type { TypicalWorkTriggerMatchContext } from "./v2-typical-works.util";
 import type { V2TypicalWorkTriggerArchCountCombinator } from "./v2-typical-work.types";
 export { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamNameSourceKeys, };
 /** Единый стрим-исполнитель для типовых работ систем-источников. */
@@ -24,6 +25,16 @@ export type TypicalWorkRuleLike = {
         label: string | null;
     }>;
 };
+/** Вход для normalize: factory snapshot может хранить values как string[]. */
+export type TypicalWorkTriggerRuleMatchInput = Omit<TypicalWorkRuleLike, "values"> & {
+    values?: Array<{
+        code: string;
+        label: string | null;
+    } | string>;
+};
+/** Приводит legacy/snapshot-правила к виду, пригодному для сопоставления с ответами анкеты. */
+export declare function normalizeTypicalWorkTriggerRuleForMatch(rule: TypicalWorkTriggerRuleMatchInput): TypicalWorkRuleLike;
+export declare function normalizeTypicalWorkTriggerRulesForMatch(rules: TypicalWorkTriggerRuleMatchInput[]): TypicalWorkRuleLike[];
 export type TypicalWorkTriggerArchCountLike = {
     kind?: V2WorkFormulaArchCountKind | null;
     steps?: V2WorkArchCountCoeffStep[] | null;
@@ -116,7 +127,7 @@ export declare function buildLaborCoefficientLookupSource(source: Record<string,
 export declare function laborValueMatches(actual: unknown, valueCode: string | null | undefined, valueLabel: string | null | undefined): boolean;
 export declare function matchSingleTypicalWorkRuleForTriggerFormula(rule: TypicalWorkRuleLike, source: Record<string, unknown>): boolean;
 /** Все параметры-триггеры (И) и опционально глобальное условие по количеству компонентов. */
-export declare function typicalWorkRulesMatchSource(rules: TypicalWorkRuleLike[], source: Record<string, unknown>, formData?: Record<string, unknown>, triggerArchCount?: TypicalWorkTriggerArchCountLike | null): boolean;
+export declare function typicalWorkRulesMatchSource(rules: TypicalWorkRuleLike[], source: Record<string, unknown>, formData?: Record<string, unknown>, triggerArchCount?: TypicalWorkTriggerArchCountLike | null, matchContext?: TypicalWorkTriggerMatchContext): boolean;
 export declare function hasTypicalWorkTriggersConfiguredSimple(rules: TypicalWorkRuleLike[], triggerArchCount?: TypicalWorkTriggerArchCountLike | null): boolean;
 export declare function resolveLaborCoefficient(source: Record<string, unknown>, paramCode: string, valueCode: string | null, valueLabel: string | null, paramName?: string | null): boolean;
 export declare function resolveLaborAnyOfCoefficient(source: Record<string, unknown>, paramCode: string, anyOf: {

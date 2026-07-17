@@ -45,13 +45,17 @@ import {
 	parseWorkFormulaText,
 	computeFormulaBadge,
 	normalizeStoredFormula,
+	resolveCatalogTriggerStoredValue,
 	resolveVersionConfigTokenFormula,
 	extractFormulaRegistryLinks,
 	assessFormulaRegistryLinks,
 	normalizeWorkFormulaLaborParamTokens,
 	reconcileFormulaLaborParamTokens,
+	dedupeLaborCoefficientsByStoredValue,
 	formatParamNameWithSourceKeys,
+	normalizeParamLabel,
 	stripParamNameSourceKeys,
+	isTriggerArchCountConfigured,
 	type WorkFormulaLaborParamRef,
 } from "@smart-anketa/api-contract";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
@@ -840,18 +844,11 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				if (seenRuleKeys.has(ruleKey)) continue;
 				seenRuleKeys.add(ruleKey);
 
-				const values = triggerRule.values.length > 0 ? triggerRule.values : [];
-				const inferredValue =
-					values[0] ?? inferTriggerValueLabel(trimmed, originalStream);
-				const valueCodes =
-					values.length > 1
-						? values.map((label) => ({
-								code: slugParamCode(label),
-								label,
-							}))
-						: null;
-				const operator =
-					triggerRule.operator === "exists" ? "=" : triggerRule.operator;
+				const stored = resolveCatalogTriggerRuleStoredValues(
+					triggerRule,
+					trimmed,
+					originalStream,
+				);
 				pendingRules.push({
 					workId,
 					streamExecutor: stream,
@@ -863,10 +860,10 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 						null,
 					paramCode,
 					paramName: trimmed,
-					operator,
-					valueCode: inferredValue ? slugParamCode(inferredValue) : null,
-					valueLabel: inferredValue,
-					valueCodes,
+					operator: stored.operator,
+					valueCode: stored.valueCode,
+					valueLabel: stored.valueLabel,
+					valueCodes: stored.valueCodes,
 				});
 			}
 
@@ -1163,6 +1160,90 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		return synchronized;
 	}
 
+	private async upsertFactoryCatalogTriggerRule(params: {
+		work: V2TypicalWorkEntity;
+		catalogRow: V2FactoryTypicalWork;
+		triggerRule: CatalogTriggerRuleLike;
+		stream: string;
+		originalStream: string;
+		workRules: V2TypicalWorkRuleEntity[];
+	}): Promise<number> {
+		const { work, catalogRow, triggerRule, stream, originalStream, workRules } =
+			params;
+		if (triggerRule.operator === "unresolved") return 0;
+		const trimmed = triggerRule.paramName.trim();
+		if (!trimmed) return 0;
+		if (isArchCountLaborParamName(trimmed)) return 0;
+
+		const coefficientGroup = findCatalogLaborParamGroup(catalogRow, trimmed);
+		const paramCode = resolveCatalogTriggerParamCode(catalogRow, trimmed);
+		const existing = findExistingFactoryTriggerRule(
+			workRules,
+			stream,
+			paramCode,
+			trimmed,
+		);
+		const stored = resolveCatalogTriggerRuleStoredValues(
+			triggerRule,
+			trimmed,
+			originalStream,
+		);
+		const schemaFieldUid =
+			triggerRule.schemaFieldUid?.trim() ??
+			coefficientGroup?.schemaFieldUid?.trim() ??
+			null;
+
+		if (existing) {
+			const catalogValues =
+				triggerRule.values.length > 0 ? triggerRule.values : [];
+			const valueChanged =
+				catalogValues.length > 0 &&
+				(existing.valueLabel !== stored.valueLabel ||
+					existing.valueCode !== stored.valueCode ||
+					JSON.stringify(existing.valueCodes ?? null) !==
+						JSON.stringify(stored.valueCodes ?? null));
+			const operatorChanged = existing.operator !== stored.operator;
+			const paramCodeChanged = existing.paramCode !== paramCode;
+			const schemaFieldChanged =
+				Boolean(schemaFieldUid) && existing.schemaFieldUid !== schemaFieldUid;
+			if (
+				!valueChanged &&
+				!operatorChanged &&
+				!paramCodeChanged &&
+				!schemaFieldChanged
+			) {
+				return 0;
+			}
+
+			existing.operator = stored.operator;
+			if (catalogValues.length > 0 || stored.valueLabel) {
+				existing.valueCode = stored.valueCode;
+				existing.valueLabel = stored.valueLabel;
+				existing.valueCodes = stored.valueCodes;
+			}
+			if (paramCodeChanged) existing.paramCode = paramCode;
+			if (schemaFieldChanged) existing.schemaFieldUid = schemaFieldUid;
+			await this.ruleRepository.save(existing);
+			return 1;
+		}
+
+		const created = await this.ruleRepository.save(
+			this.ruleRepository.create({
+				workId: work.id,
+				streamExecutor: stream,
+				schemaFieldUid,
+				paramCode,
+				paramName: trimmed,
+				operator: stored.operator,
+				valueCode: stored.valueCode,
+				valueLabel: stored.valueLabel,
+				valueCodes: stored.valueCodes,
+			}),
+		);
+		workRules.push(created);
+		return 1;
+	}
+
 	/**
 	 * Добавляет недостающие триггеры из factory snapshot для работ реестра.
 	 * Нужно для шаблонов, созданных до исправления сопоставления E2E-этапов.
@@ -1217,62 +1298,15 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 						}));
 
 				for (const triggerRule of triggerRules) {
-					if (triggerRule.operator === "unresolved") continue;
-					const trimmed = triggerRule.paramName.trim();
-					if (!trimmed) continue;
-					if (isArchCountLaborParamName(trimmed)) continue;
-					const coefficientGroup = findCatalogLaborParamGroup(
+					const changed = await this.upsertFactoryCatalogTriggerRule({
+						work,
 						catalogRow,
-						trimmed,
-					);
-					const paramCode = resolveCatalogTriggerParamCode(
-						catalogRow,
-						trimmed,
-					);
-					const alreadyExists = workRules.some(
-						(row) =>
-							row.streamExecutor === stream &&
-							row.paramCode === paramCode,
-					);
-					if (alreadyExists) continue;
-
-					const values =
-						triggerRule.values.length > 0 ? triggerRule.values : [];
-					const inferredValue =
-						values[0] ??
-						inferTriggerValueLabel(trimmed, originalStream);
-					const operator =
-						triggerRule.operator === "exists"
-							? "="
-							: triggerRule.operator;
-					const created = await this.ruleRepository.save(
-						this.ruleRepository.create({
-							workId: work.id,
-							streamExecutor: stream,
-							schemaFieldUid:
-								("schemaFieldUid" in triggerRule
-									? triggerRule.schemaFieldUid?.trim()
-									: null) ??
-								coefficientGroup?.schemaFieldUid?.trim() ??
-								null,
-							paramCode,
-							paramName: trimmed,
-							operator,
-							valueCode: inferredValue
-								? slugParamCode(inferredValue)
-								: null,
-							valueLabel: inferredValue,
-							valueCodes:
-								values.length > 1
-									? values.map((label) => ({
-											code: slugParamCode(label),
-											label,
-										}))
-									: null,
-						}),
-					);
-					workRules.push(created);
-					synchronized++;
+						triggerRule,
+						stream,
+						originalStream,
+						workRules,
+					});
+					synchronized += changed;
 				}
 			}
 		}
@@ -1351,6 +1385,18 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 								row.paramCode === paramCode,
 						);
 						if (duplicate) {
+							if (
+								!duplicate.valueLabel &&
+								!duplicate.valueCode &&
+								(rule.valueLabel || rule.valueCode)
+							) {
+								duplicate.valueCode = rule.valueCode;
+								duplicate.valueLabel = rule.valueLabel;
+								duplicate.valueCodes = rule.valueCodes;
+								duplicate.operator = rule.operator;
+								await this.ruleRepository.save(duplicate);
+								synchronized++;
+							}
 							await this.ruleRepository.delete(rule.id);
 							synchronized++;
 							continue;
@@ -1463,6 +1509,17 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 							catalogRow.triggerArchCount.steps;
 						assignment.triggerArchCountCombinator =
 							catalogRow.triggerArchCount.combinator ?? "and";
+						await this.assignmentRepository.save(assignment);
+						synchronized++;
+					}
+				} else {
+					const assignment = assignments.find(
+						(row) => row.workId === work.id && row.streamExecutor === stream,
+					);
+					if (assignment?.triggerArchCountKind) {
+						assignment.triggerArchCountKind = null;
+						assignment.triggerArchCountSteps = null;
+						assignment.triggerArchCountCombinator = "and";
 						await this.assignmentRepository.save(assignment);
 						synchronized++;
 					}
@@ -2191,7 +2248,7 @@ export class V2TypicalWorkService {
 		}
 
 		const stream = streamExecutor.trim();
-		const resolvedVersionId = await this.resolveTemplateVersionIdForWorkCard(
+		const resolvedVersionId = 		await this.resolveTemplateVersionIdForWorkCard(
 			work,
 			workId,
 			stream,
@@ -2536,7 +2593,7 @@ function mapTriggerArchCountEntity(
 	assignment: V2TypicalWorkAssignmentEntity | null | undefined,
 ): NonNullable<V2TypicalWorkCardDto["triggerArchCount"]> {
 	if (!assignment?.triggerArchCountKind) return defaultTriggerArchCount();
-	return {
+	const mapped = {
 		kind: assignment.triggerArchCountKind as NonNullable<
 			V2TypicalWorkCardDto["triggerArchCount"]
 		>["kind"],
@@ -2546,6 +2603,8 @@ function mapTriggerArchCountEntity(
 				V2TypicalWorkCardDto["triggerArchCount"]
 			>["combinator"]) ?? "and",
 	};
+	if (!isTriggerArchCountConfigured(mapped)) return defaultTriggerArchCount();
+	return mapped;
 }
 
 function mapLaborArchCountsEntity(
@@ -2677,11 +2736,82 @@ function mergeLaborParamGroupsByIdentity(
 				: (group.paramName ?? existing.paramName),
 			kind: group.kind ?? existing.kind,
 			anyOf: group.anyOf ?? existing.anyOf,
-			coefficients: [...existing.coefficients, ...group.coefficients],
+			coefficients: dedupeLaborCoefficientsByStoredValue([
+				...existing.coefficients,
+				...group.coefficients,
+			]),
 		});
 	}
 
 	return [...merged.values()];
+}
+
+type CatalogTriggerRuleLike = {
+	paramName: string;
+	operator: string;
+	values: readonly string[];
+	schemaFieldUid?: string;
+};
+
+function findExistingFactoryTriggerRule(
+	workRules: V2TypicalWorkRuleEntity[],
+	stream: string,
+	paramCode: string,
+	paramName: string,
+): V2TypicalWorkRuleEntity | undefined {
+	const paramNorm = normalizeParamLabel(paramName);
+	return workRules.find((row) => {
+		if (row.streamExecutor !== stream) return false;
+		if (row.paramCode === paramCode) return true;
+		const rowName = row.paramName?.trim();
+		return Boolean(rowName && normalizeParamLabel(rowName) === paramNorm);
+	});
+}
+
+function resolveCatalogTriggerRuleStoredValues(
+	triggerRule: CatalogTriggerRuleLike,
+	paramName: string,
+	originalStream: string,
+): {
+	operator: string;
+	valueCode: string | null;
+	valueLabel: string | null;
+	valueCodes: Array<{ code: string; label: string }> | null;
+} {
+	const values = triggerRule.values.length > 0 ? [...triggerRule.values] : [];
+	const inferredValue =
+		values[0] ?? inferTriggerValueLabel(paramName, originalStream);
+	const operator =
+		triggerRule.operator === "exists" ? "=" : triggerRule.operator;
+
+	if (values.length > 1) {
+		return {
+			operator,
+			valueCode: null,
+			valueLabel: null,
+			valueCodes: values.map((label) => {
+				const stored = resolveCatalogTriggerStoredValue(label);
+				return { code: stored.valueCode, label: stored.valueLabel };
+			}),
+		};
+	}
+
+	if (!inferredValue) {
+		return {
+			operator,
+			valueCode: null,
+			valueLabel: null,
+			valueCodes: null,
+		};
+	}
+
+	const stored = resolveCatalogTriggerStoredValue(inferredValue);
+	return {
+		operator,
+		valueCode: stored.valueCode,
+		valueLabel: stored.valueLabel,
+		valueCodes: null,
+	};
 }
 
 function buildLaborRefsFromGroupedParams(

@@ -549,6 +549,8 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 	}
 
 	const valToTitle = props.options.valToTitle ? value : undefined;
+	const htmlMaxLength =
+		typeof schema?.maxLength === "number" ? schema.maxLength : undefined;
 
 	return (
 		<TextFieldCustom
@@ -600,6 +602,9 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 					},
 				},
 				input: {
+					inputProps: {
+						maxLength: htmlMaxLength,
+					},
 					endAdornment: isSelect &&
 						!isEqual(initialValue, props.value) &&
 						props.options?.reset && (

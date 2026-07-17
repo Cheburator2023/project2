@@ -4,6 +4,7 @@ import MenuItem from "@mui/material/MenuItem";
 import { styled, useColorScheme } from "@mui/material/styles";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { getAgGridMainMenuItems } from "@react-client/common/tableStuff/agGridMainMenuItems";
 import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
 import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import { useV2Dictionaries } from "@react-client/common/api/queries/v2-templates";
@@ -176,6 +177,7 @@ export const V2DictionaryList = ({
 					resizable: true,
 					floatingFilter: true,
 					minWidth: 100,
+					mainMenuItems: getAgGridMainMenuItems,
 				}}
 				loading={isLoading}
 				pagination

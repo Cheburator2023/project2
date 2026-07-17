@@ -109,8 +109,26 @@ function normalizeLaborValueIdentity(value) {
         .replace(/ё/g, "е")
         .replace(/\s+/g, "");
 }
+/** Ключ совпадения для uq_v2_typical_work_labor (work, stream, param_code, value_code). */
+export function laborCoefficientStoredKey(row) {
+    if (row.valueCode == null && !row.valueLabel?.trim())
+        return "";
+    return normalizeLaborValueIdentity(normalizeStoredValueCode(row.valueCode ?? row.valueLabel ?? "", row.valueLabel));
+}
+export function dedupeLaborCoefficientsByStoredValue(coefficients) {
+    const seen = new Set();
+    const result = [];
+    for (const row of coefficients) {
+        const key = laborCoefficientStoredKey(row);
+        if (seen.has(key))
+            continue;
+        seen.add(key);
+        result.push(row);
+    }
+    return result;
+}
 function laborCoefficientIdentity(row) {
-    return `${normalizeLaborValueIdentity(row.valueCode)}|${normalizeLaborValueIdentity(row.valueLabel)}`;
+    return laborCoefficientStoredKey(row);
 }
 /** Схлопывает группы с одним paramCode — иначе patchWork ловит uq_v2_typical_work_labor_param. */
 export function mergeLaborParamGroupsByParamCode(groups) {
@@ -123,7 +141,7 @@ export function mergeLaborParamGroupsByParamCode(groups) {
         if (!existing) {
             merged.set(key, {
                 ...group,
-                coefficients: [...(group.coefficients ?? [])],
+                coefficients: dedupeLaborCoefficientsByStoredValue(group.coefficients ?? []),
             });
             continue;
         }
@@ -143,7 +161,9 @@ export function mergeLaborParamGroupsByParamCode(groups) {
             paramName: group.paramName ?? existing.paramName,
             kind: group.kind ?? existing.kind,
             anyOf: group.anyOf ?? existing.anyOf,
-            coefficients: [...coefficientsByIdentity.values()],
+            coefficients: dedupeLaborCoefficientsByStoredValue([
+                ...coefficientsByIdentity.values(),
+            ]),
         });
     }
     return [...merged.values()];

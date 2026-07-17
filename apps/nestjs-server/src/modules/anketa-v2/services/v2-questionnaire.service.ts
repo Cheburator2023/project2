@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from "@nestjs/typeorm";
 import {
 	patchV2TypicalWorksLogicRules,
+	buildV2QuestionnaireRegistryConfig,
 	type BulkDeleteV2QuestionnairesResultDto,
 	type CreateV2QuestionnaireRequestDto,
 	type CreateV2QuestionnaireVersionRequestDto,
@@ -14,6 +15,7 @@ import {
 	type UpdateV2QuestionnaireRequestDto,
 	type V2QuestionnaireFormPackageDto,
 	type V2QuestionnaireDto,
+	type V2QuestionnaireRegistryConfigDto,
 } from "@smart-anketa/api-contract";
 import { Repository, In } from "typeorm";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
@@ -36,6 +38,7 @@ import {
 } from "../utils/v2-form-data-migration.util";
 import { normalizeV2AnketaWorkflow } from "../utils/v2-anketa-workflow.util";
 import { buildV2QuestionnaireRegistryXlsx } from "../utils/v2-questionnaire-registry-export.util";
+import { V2_DEFAULT_TEMPLATE_SNAPSHOT } from "../constants/v2-default-template-snapshot";
 
 type TUserLike = {
 	given_name?: string;
@@ -63,6 +66,40 @@ export class V2QuestionnaireService {
 			order: { createdAt: "DESC" },
 		});
 		return Promise.all(rows.map((row) => this.toDto(row)));
+	}
+
+	async getRegistryConfig(): Promise<V2QuestionnaireRegistryConfigDto> {
+		const rows = await this.findAll();
+		const versionIds = [
+			...new Set(
+				rows
+					.map((row) => row.boundTemplateVersionId)
+					.filter((id): id is string => Boolean(id)),
+			),
+		];
+		const versions =
+			versionIds.length > 0
+				? await this.versionRepository.find({ where: { id: In(versionIds) } })
+				: [];
+		const schemas =
+			versions.length > 0
+				? versions.map((version) => ({
+						jsonSchema: version.jsonSchema as Record<string, unknown>,
+						uiSchema: version.uiSchema as Record<string, unknown>,
+					}))
+				: [
+						{
+							jsonSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema as Record<
+								string,
+								unknown
+							>,
+							uiSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema as Record<
+								string,
+								unknown
+							>,
+						},
+					];
+		return buildV2QuestionnaireRegistryConfig(schemas, rows);
 	}
 
 	async exportRegistryXlsx(ids?: string[]): Promise<Buffer> {

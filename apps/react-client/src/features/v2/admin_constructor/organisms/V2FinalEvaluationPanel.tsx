@@ -282,7 +282,7 @@ export function V2FinalEvaluationPanel({
 			<Card
 				elevation={0}
 				sx={{
-					borderRadius: "0 4px",
+					borderRadius: "8px",
 					boxShadow: "0px 4px 20px rgba(0,0,0,0.04)",
 					mt: compact ? -5 : -7.5,
 					width: "100%",

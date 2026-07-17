@@ -7,11 +7,11 @@ import type {
 	V2TypicalWorkTriggerFormulaDto,
 	V2TypicalWorkTriggerMode,
 	V2WorkTriggerStatus,
+	TypicalWorkTriggerMatchContext,
 } from "@smart-anketa/api-contract";
 import {
 	isWorkCoefficientValueAvailable,
 	isWorkTriggerGroupInvalid,
-	typicalWorkRulesMatchSource,
 	catalogValueMatchesTriggerRule,
 	isPresenceOnlyTriggerRule,
 	isSourceTypeTriggerParam,
@@ -20,11 +20,9 @@ import {
 	resolveTriggerStatusCatalogParam,
 	formatParamNameWithSourceKeys,
 	type WorkTriggerStatusCatalogParam,
-	evaluateTriggerFormula,
 	hasTypicalWorkTriggersConfigured,
-	isTriggerFormulaConfigured,
-	matchTypicalWorkTriggers,
 	validateTriggerFormulaTokens,
+	type TriggerPreviewState,
 } from "@smart-anketa/api-contract";
 import {
 	resolveSchemaParamForTriggerRule,
@@ -212,6 +210,19 @@ export function collectTriggerValidationIssues(
 			isControlTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName);
 
 		if (
+			!schemaParam &&
+			!knownPseudo &&
+			/^field_[A-Za-z0-9_-]+$/.test(groupKey)
+		) {
+			issues.push({
+				paramCode: groupKey,
+				paramName: displayName,
+				message: `Параметр «${displayName}» (код ${groupKey}) не найден в схеме шаблона`,
+			});
+			continue;
+		}
+
+		if (
 			!isWorkTriggerGroupInvalid(groupKey, paramRules, catalog, atDate)
 		) {
 			continue;
@@ -337,18 +348,19 @@ export function collectTriggerValidationIssues(
 	return issues;
 }
 
-export type TriggerPreviewState = "none" | "matched" | "unmatched";
+export type { TriggerPreviewState };
 
 export function analyzeTriggerRules(
 	rules: Parameters<typeof computeTriggerStatus>[0],
 	schemaParams?: V2TypicalWorkParameterDto[],
 	methodologyParams?: V2TypicalWorkParameterDto[],
-	draftSource?: Record<string, unknown>,
+	_draftSource?: Record<string, unknown>,
 	atDate?: string,
-	previewFormData?: Record<string, unknown>,
+	_previewFormData?: Record<string, unknown>,
 	triggerArchCount?: V2TypicalWorkTriggerArchCountDto | null,
 	triggerMode: V2TypicalWorkTriggerMode = "simple",
 	triggerFormula?: V2TypicalWorkTriggerFormulaDto | null,
+	_triggerMatchContext?: TypicalWorkTriggerMatchContext,
 ): {
 	status: V2WorkTriggerStatus;
 	issues: TriggerValidationIssue[];
@@ -357,18 +369,23 @@ export function analyzeTriggerRules(
 	const triggerInput = {
 		mode: triggerMode,
 		rules: rules.map((rule) => {
-			const resolved = schemaParams?.length
-				? resolveSchemaParamForTriggerRule(rule, schemaParams)
-				: undefined;
-			return {
-				paramCode: resolved?.code ?? rule.paramCode,
-				paramName: resolved
-					? formatParamNameWithSourceKeys(resolved.name, resolved.sourceKeys)
-					: (rule.paramName ?? null),
+			const ruleSeed = {
+				paramCode: rule.paramCode,
+				paramName: rule.paramName ?? null,
 				operator: rule.operator ?? "=",
 				valueCode: rule.valueCode,
 				valueLabel: rule.valueLabel,
 				values: rule.values,
+			};
+			const resolved = schemaParams?.length
+				? resolveSchemaParamForTriggerRule(ruleSeed, schemaParams)
+				: undefined;
+			return {
+				...ruleSeed,
+				paramCode: resolved?.code ?? rule.paramCode,
+				paramName: resolved
+					? formatParamNameWithSourceKeys(resolved.name, resolved.sourceKeys)
+					: (rule.paramName ?? null),
 			};
 		}),
 		triggerArchCount,
@@ -379,62 +396,34 @@ export function analyzeTriggerRules(
 		return { status: "no_triggers", issues: [], previewState: "none" };
 	}
 
-	if (triggerMode === "formula") {
-		const formulaError = validateTriggerFormulaTokens(
-			triggerFormula?.tokens ?? [],
-		);
-		if (formulaError) {
-			return {
-				status: "invalid",
-				issues: [
-					{
-						paramCode: "triggerFormula",
-						paramName: "Формула триггеров",
-						message: formulaError,
-					},
-				],
-				previewState: "none",
-			};
-		}
-		if (draftSource) {
-			const match = matchTypicalWorkTriggers(
-				triggerInput,
-				draftSource,
-				previewFormData,
-			);
-			return {
-				status: match ? "appears" : "hidden",
-				issues: [],
-				previewState: match ? "matched" : "unmatched",
-			};
-		}
-		return { status: "hidden", issues: [], previewState: "none" };
-	}
+	const issues =
+		triggerMode === "formula"
+			? (() => {
+					const formulaError = validateTriggerFormulaTokens(
+						triggerFormula?.tokens ?? [],
+					);
+					return formulaError
+						? [
+								{
+									paramCode: "triggerFormula",
+									paramName: "Формула триггеров",
+									message: formulaError,
+								},
+							]
+						: [];
+				})()
+			: collectTriggerValidationIssues(
+					rules,
+					schemaParams,
+					methodologyParams,
+					atDate,
+				);
 
-	const issues = collectTriggerValidationIssues(
-		rules,
-		schemaParams,
-		methodologyParams,
-		atDate,
-	);
 	if (issues.length > 0) {
 		return { status: "invalid", issues, previewState: "none" };
 	}
 
-	if (draftSource) {
-		const match = matchTypicalWorkTriggers(
-			triggerInput,
-			draftSource,
-			previewFormData,
-		);
-		return {
-			status: match ? "appears" : "hidden",
-			issues: [],
-			previewState: match ? "matched" : "unmatched",
-		};
-	}
-
-	return { status: "hidden", issues: [], previewState: "none" };
+	return { status: "appears", issues: [], previewState: "none" };
 }
 
 /** Каталог для проверки триггера: поле схемы → его values; seed/CSV → методологический справочник. */
@@ -471,6 +460,7 @@ export function computeTriggerStatus(
 	triggerArchCount?: V2TypicalWorkTriggerArchCountDto | null,
 	triggerMode?: V2TypicalWorkTriggerMode,
 	triggerFormula?: V2TypicalWorkTriggerFormulaDto | null,
+	triggerMatchContext?: TypicalWorkTriggerMatchContext,
 ): V2WorkTriggerStatus {
 	return analyzeTriggerRules(
 		rules,
@@ -482,6 +472,7 @@ export function computeTriggerStatus(
 		triggerArchCount,
 		triggerMode,
 		triggerFormula,
+		triggerMatchContext,
 	).status;
 }
 

@@ -29,6 +29,15 @@ export type V2TypicalWorkSchemaBulkSyncResponseDto = V2TypicalWorkSchemaFieldSyn
     fieldsProcessed: number;
     consistencyIssues: import("./v2-template-work-schema-params.util").TypicalWorkSchemaConsistencyIssue[];
 };
+/** Ключ совпадения для uq_v2_typical_work_labor (work, stream, param_code, value_code). */
+export declare function laborCoefficientStoredKey(row: {
+    valueCode?: string | null;
+    valueLabel?: string | null;
+}): string;
+export declare function dedupeLaborCoefficientsByStoredValue<T extends {
+    valueCode?: string | null;
+    valueLabel?: string | null;
+}>(coefficients: readonly T[]): T[];
 type MergeableLaborParamGroup = {
     paramCode: string;
     schemaFieldUid?: string | null;

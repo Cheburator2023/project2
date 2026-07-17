@@ -158,7 +158,7 @@ function compileTypicalWorkTriggersToJsonLogic(input) {
 }
 /** Компилирует триггеры: (ПТ₁ И ПТ₂ …) [И/ИЛИ] arch-count. Пустой список без arch → false. */
 function compileTypicalWorkTriggerRulesToJsonLogic(rules, triggerArchCount) {
-    const hasArch = Boolean(triggerArchCount?.kind && (triggerArchCount.steps?.length ?? 0) > 0);
+    const hasArch = (0, v2_work_arch_count_coeff_util_1.isTriggerArchCountConfigured)(triggerArchCount);
     if (rules.length === 0 && !hasArch)
         return false;
     const paramPart = compileParamRulesToJsonLogic(rules);

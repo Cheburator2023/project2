@@ -1,5 +1,5 @@
 import { resolveV2AnketaArchComponent } from "./v2-anketa-section-ui.util";
-import { patchV2TypicalWorksLogicRules, isTypicalWorksCatalogLogicComplete, } from "./v2-default-typical-works-logic.util";
+import { patchV2TypicalWorksLogicRules, isTypicalWorksCatalogLogicComplete, upgradeTypicalWorksCatalogLogicRules, } from "./v2-default-typical-works-logic.util";
 function readRecord(value) {
     return value && typeof value === "object" && !Array.isArray(value)
         ? value
@@ -145,9 +145,10 @@ export function buildUnifiedAtypicalTotalRule(arrayPaths) {
 }
 /** Патч logic только если в snapshot/версии не хватает catalog/row-total правил. */
 export function resolveAnketaCalculationLogic(logic, options) {
-    const withTypical = isTypicalWorksCatalogLogicComplete(logic, options)
-        ? logic
-        : patchV2TypicalWorksLogicRules(logic, options);
+    const upgraded = upgradeTypicalWorksCatalogLogicRules(logic, options);
+    const withTypical = isTypicalWorksCatalogLogicComplete(upgraded, options)
+        ? upgraded
+        : patchV2TypicalWorksLogicRules(upgraded, options);
     return isAtypicalWorksLogicComplete(withTypical, {
         uiSchema: options?.uiSchema,
     })

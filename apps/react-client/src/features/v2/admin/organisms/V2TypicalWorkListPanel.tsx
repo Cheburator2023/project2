@@ -8,6 +8,7 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { getAgGridMainMenuItems } from "@react-client/common/tableStuff/agGridMainMenuItems";
 import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
 import {
 	AG_GRID_SCHEMA_GROUP_AUTO_COLUMN,
@@ -177,6 +178,7 @@ export function V2TypicalWorkListPanel({
 			sortable: true,
 			resizable: true,
 			minWidth: 72,
+			mainMenuItems: getAgGridMainMenuItems,
 		}),
 		[],
 	);

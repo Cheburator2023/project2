@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildV2QuestionnaireRegistryColumnTree, buildV2QuestionnaireRegistryExportColumns, collectRegistryArrayIndicesFromRows, deriveRegistryColumnOptionsFromRows, flattenV2RegistryColumnTree, registryFormColumnId, V2_UNCERTAINTY_RISK_GROUP_LABELS, } from "./v2-questionnaire-registry-columns.util";
+import { buildV2QuestionnaireRegistryColumnTree, buildV2QuestionnaireRegistryConfig, buildV2QuestionnaireRegistryExportColumns, collectRegistryArrayIndicesFromRows, deriveRegistryColumnOptionsFromRows, flattenV2RegistryColumnTree, mergeV2QuestionnaireRegistryColumnTrees, registryFormColumnId, V2_UNCERTAINTY_RISK_GROUP_LABELS, } from "./v2-questionnaire-registry-columns.util";
 const MINIMAL_SCHEMA = {
     type: "object",
     properties: {
@@ -150,5 +150,89 @@ describe("v2-questionnaire-registry-columns.util", () => {
             },
         }, { summary: { platformStreams: { items: {} } } }, options));
         expect(leaves.some((leaf) => leaf.formPath?.startsWith("summary.platformStreams["))).toBe(false);
+    });
+    it("discovers array indices for sourceSystems from questionnaire rows", () => {
+        const rows = [
+            {
+                id: "q1",
+                formData: {
+                    detailInfo: {
+                        sourceSystems: [
+                            { name: "Система 1" },
+                            { name: "Система 2" },
+                            { name: "Система 3" },
+                        ],
+                    },
+                },
+            },
+        ];
+        const options = deriveRegistryColumnOptionsFromRows(rows);
+        expect(options.arrayIndicesByPath?.["detailInfo.sourceSystems"]).toEqual([
+            0, 1, 2,
+        ]);
+    });
+    it("merges column trees from different schema versions", () => {
+        const merged = mergeV2QuestionnaireRegistryColumnTrees([
+            buildV2QuestionnaireRegistryColumnTree({
+                type: "object",
+                properties: {
+                    generalInfo: {
+                        type: "object",
+                        properties: {
+                            fieldA: { type: "string", title: "Поле A" },
+                        },
+                    },
+                },
+            }, { generalInfo: { "ui:order": ["fieldA"] } }),
+            buildV2QuestionnaireRegistryColumnTree({
+                type: "object",
+                properties: {
+                    generalInfo: {
+                        type: "object",
+                        properties: {
+                            fieldB: { type: "string", title: "Поле B" },
+                        },
+                    },
+                },
+            }, { generalInfo: { "ui:order": ["fieldB"] } }),
+        ]);
+        const ids = flattenV2RegistryColumnTree(merged).map((leaf) => leaf.id);
+        expect(ids).toContain("form.generalInfo.fieldA");
+        expect(ids).toContain("form.generalInfo.fieldB");
+    });
+    it("buildV2QuestionnaireRegistryConfig merges schemas", () => {
+        const config = buildV2QuestionnaireRegistryConfig([
+            {
+                jsonSchema: {
+                    type: "object",
+                    properties: {
+                        generalInfo: {
+                            type: "object",
+                            properties: {
+                                fieldA: { type: "string", title: "A" },
+                            },
+                        },
+                    },
+                },
+                uiSchema: { generalInfo: { "ui:order": ["fieldA"] } },
+            },
+            {
+                jsonSchema: {
+                    type: "object",
+                    properties: {
+                        generalInfo: {
+                            type: "object",
+                            properties: {
+                                fieldB: { type: "string", title: "B" },
+                            },
+                        },
+                    },
+                },
+                uiSchema: { generalInfo: { "ui:order": ["fieldB"] } },
+            },
+        ], []);
+        const ids = flattenV2RegistryColumnTree(config.columnTree).map((leaf) => leaf.id);
+        expect(ids).toContain("form.generalInfo.fieldA");
+        expect(ids).toContain("form.generalInfo.fieldB");
     });
 });

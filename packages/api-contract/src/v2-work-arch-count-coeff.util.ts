@@ -1,5 +1,6 @@
 import { V2_ARCH_COMPONENT_LABELS } from "./v2-anketa-section-ui.util";
 import type {
+	V2TypicalWorkTriggerArchCountOperator,
 	V2WorkArchCountCoeffStep,
 	V2WorkFormulaArchCountKind,
 } from "./v2-typical-work.types";
@@ -232,15 +233,113 @@ export function resolveArchCountCoeffFromToken(
 	return lookupArchCountCoefficient(steps, count) ?? 1;
 }
 
-/** Триггер по количеству компонентов: выполнен, если count ≥ минимальный порог из steps. */
+const TRIGGER_ARCH_COUNT_OPERATOR_COEFFICIENT: Record<
+	V2TypicalWorkTriggerArchCountOperator,
+	number
+> = {
+	">=": 1,
+	"=": -1,
+	"<=": -2,
+	">": -3,
+	"<": -4,
+};
+
+const TRIGGER_ARCH_COUNT_COEFFICIENT_OPERATOR = Object.fromEntries(
+	Object.entries(TRIGGER_ARCH_COUNT_OPERATOR_COEFFICIENT).map(
+		([operator, coefficient]) => [String(coefficient), operator],
+	),
+) as Record<string, V2TypicalWorkTriggerArchCountOperator>;
+
+export function encodeTriggerArchCountSteps(
+	operator: V2TypicalWorkTriggerArchCountOperator,
+	threshold: number,
+): V2WorkArchCountCoeffStep[] {
+	return [
+		{
+			count: threshold,
+			coefficient: TRIGGER_ARCH_COUNT_OPERATOR_COEFFICIENT[operator],
+		},
+	];
+}
+
+export function decodeTriggerArchCountCondition(
+	steps: readonly V2WorkArchCountCoeffStep[],
+): {
+	operator: V2TypicalWorkTriggerArchCountOperator;
+	threshold: number;
+} | null {
+	if (!steps.length) return null;
+	const step = steps[0];
+	const encodedOperator =
+		TRIGGER_ARCH_COUNT_COEFFICIENT_OPERATOR[String(step.coefficient)];
+	if (encodedOperator) {
+		return { operator: encodedOperator, threshold: step.count };
+	}
+	const threshold = Math.min(...steps.map((row) => row.count));
+	return { operator: ">=", threshold };
+}
+
+export function isTriggerArchCountConfigured(
+	triggerArchCount?: {
+		kind?: V2WorkFormulaArchCountKind | null;
+		steps?: readonly V2WorkArchCountCoeffStep[] | null;
+	} | null,
+): boolean {
+	return Boolean(
+		triggerArchCount?.kind &&
+			decodeTriggerArchCountCondition(triggerArchCount.steps ?? []),
+	);
+}
+
+export function formatTriggerArchCountConditionLabel(
+	kind: V2WorkFormulaArchCountKind,
+	steps: readonly V2WorkArchCountCoeffStep[],
+): string {
+	const condition = decodeTriggerArchCountCondition(steps);
+	if (!condition) return formatWorkArchCountKindLabel(kind);
+	return `${formatWorkArchCountKindLabel(kind)} ${condition.operator} ${condition.threshold}`;
+}
+
+export function validateTriggerArchCountCondition(
+	kind: V2WorkFormulaArchCountKind,
+	steps: readonly V2WorkArchCountCoeffStep[],
+): string | null {
+	const condition = decodeTriggerArchCountCondition(steps);
+	if (!condition) return "Укажите порог количества компонентов";
+	const limits = V2_WORK_ARCH_COUNT_LIMITS[kind];
+	if (
+		!Number.isFinite(condition.threshold) ||
+		condition.threshold < limits.min ||
+		condition.threshold > limits.max
+	) {
+		return `Количество должно быть в диапазоне ${limits.min}–${limits.max}`;
+	}
+	return null;
+}
+
+/** Триггер по количеству компонентов (оператор сравнения + порог). */
 export function archCountTriggerMatches(
 	formData: Record<string, unknown>,
 	kind: V2WorkFormulaArchCountKind,
 	steps: readonly V2WorkArchCountCoeffStep[],
 ): boolean {
-	if (!steps.length) return false;
+	const condition = decodeTriggerArchCountCondition(steps);
+	if (!condition) return false;
 	const count = resolveWorkArchComponentCount(formData, kind);
-	if (!Number.isFinite(count) || count <= 0) return false;
-	const threshold = Math.min(...steps.map((step) => step.count));
-	return count >= threshold;
+	if (!Number.isFinite(count) || count < 0) return false;
+	const { operator, threshold } = condition;
+	switch (operator) {
+		case ">=":
+			return count >= threshold;
+		case "<=":
+			return count <= threshold;
+		case "=":
+			return count === threshold;
+		case ">":
+			return count > threshold;
+		case "<":
+			return count < threshold;
+		default:
+			return count >= threshold;
+	}
 }

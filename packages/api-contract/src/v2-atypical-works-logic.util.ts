@@ -3,6 +3,7 @@ import { resolveV2AnketaArchComponent } from "./v2-anketa-section-ui.util";
 import {
 	patchV2TypicalWorksLogicRules,
 	isTypicalWorksCatalogLogicComplete,
+	upgradeTypicalWorksCatalogLogicRules,
 	type PatchV2TypicalWorksLogicOptions,
 } from "./v2-default-typical-works-logic.util";
 
@@ -191,9 +192,10 @@ export function resolveAnketaCalculationLogic(
 	logic: V2LogicGraphDto,
 	options?: PatchV2TypicalWorksLogicOptions,
 ): V2LogicGraphDto {
-	const withTypical = isTypicalWorksCatalogLogicComplete(logic, options)
-		? logic
-		: patchV2TypicalWorksLogicRules(logic, options);
+	const upgraded = upgradeTypicalWorksCatalogLogicRules(logic, options);
+	const withTypical = isTypicalWorksCatalogLogicComplete(upgraded, options)
+		? upgraded
+		: patchV2TypicalWorksLogicRules(upgraded, options);
 	return isAtypicalWorksLogicComplete(withTypical, {
 		uiSchema: options?.uiSchema,
 	})

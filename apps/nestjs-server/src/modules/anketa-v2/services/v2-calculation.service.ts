@@ -19,14 +19,18 @@ import {
 	resolveAnketaCalculationLogic,
 	hasTypicalWorkStreamTriggerContext,
 	isFilledTypicalWorkSourceRow,
+	readFilledArchComponentListRows,
 	readTypicalWorksStreamTriggerContext,
 	resolveHiddenParamCodesForSource,
 	resolveHiddenSourceFieldKeys,
 	readStreamLocalParamsForTypicalOutput,
+	readTypicalWorkBoundWorkIdsAtOutputPath,
 	resolveStreamFromSourceType,
 	resolveStreamsFromSourceSystems,
 	resolveSourceTypicalWorksOutputPath,
 	shouldSkipLegacyModelStreamStageSummary,
+	V2_MODEL_STREAM_EXECUTOR,
+	V2_MODEL_STREAM_SOURCE_ARRAY_PATH,
 	V2_SOURCE_SYSTEMS_ARRAY_PATH,
 	type V2ParamDependencyGraph,
 	type V2ParamDefLike,
@@ -621,6 +625,17 @@ export class V2CalculationService {
 						data,
 					);
 
+					const boundWorkIdsFromUi = readTypicalWorkBoundWorkIdsAtOutputPath(
+						uiSchema,
+						outputArrayPath,
+					);
+					const allowedWorkIdsForCatalog =
+						boundWorkIdsFromUi && boundWorkIdsFromUi.length > 0
+							? boundWorkIdsFromUi
+							: Array.isArray(payload.allowedWorkIds)
+								? payload.allowedWorkIds
+								: undefined;
+
 					const taskDefs = usesCatalog
 						? (
 								await Promise.all(
@@ -634,11 +649,7 @@ export class V2CalculationService {
 											templateId,
 											atDate,
 											hiddenParamCodes,
-											allowedWorkIds: Array.isArray(
-												payload.allowedWorkIds,
-											)
-												? payload.allowedWorkIds
-												: undefined,
+											allowedWorkIds: allowedWorkIdsForCatalog,
 										}),
 									),
 								)
@@ -756,10 +767,15 @@ export class V2CalculationService {
 		const referencePath = outputPath || arrayPath || "";
 
 		if (arrayPath) {
-			const filledFromPath = this.readFilledSourceSystemRows(
+			const filledFromPath = readFilledArchComponentListRows(
 				readByDotPath(data, arrayPath),
 			);
 			if (filledFromPath.length > 0) return filledFromPath;
+
+			const legacyFilled = this.readFilledSourceSystemRows(
+				readByDotPath(data, arrayPath),
+			);
+			if (legacyFilled.length > 0) return legacyFilled;
 
 			if (
 				arrayPath === "streamDataSources.sourceSystems" ||
@@ -786,6 +802,16 @@ export class V2CalculationService {
 			if (hasTypicalWorkStreamTriggerContext(streamContext)) {
 				return [streamContext];
 			}
+		}
+
+		if (
+			payload.worksCatalog &&
+			payload.worksCatalogStream?.trim() === V2_MODEL_STREAM_EXECUTOR
+		) {
+			const modelServiceRows = readFilledArchComponentListRows(
+				readByDotPath(data, V2_MODEL_STREAM_SOURCE_ARRAY_PATH),
+			);
+			if (modelServiceRows.length > 0) return modelServiceRows;
 		}
 
 		return Array.isArray(readByDotPath(data, arrayPath ?? "")) ? [] : [];

@@ -177,4 +177,23 @@ describe("v2 factory snapshot", () => {
 			70,
 		);
 	});
+
+	it("модельный стрим 05A: триггер MVP = Да из «Результат выбора»", () => {
+		const work = V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks.find(
+			(row) =>
+				row.stream === "Модельный стрим" &&
+				row.stage === "05A" &&
+				row.name === "Разработка пилотной модели (MVP)",
+		);
+		expect(work?.triggerRules).toEqual([
+			expect.objectContaining({
+				paramName: "Необходимость пилота (MVP)",
+				operator: "=",
+				values: ["Да"],
+				paramCode: "field_o_HRj6VO",
+				valueCode: "true",
+				valueLabel: "Да",
+			}),
+		]);
+	});
 });

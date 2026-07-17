@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { archCountTriggerMatches, formatArchCountCoeffSteps, lookupArchCountCoefficient, parseArchCountCoeffSteps, parseWorkArchCountKindLabel, resolveArchCountCoeffFromToken, resolveWorkArchComponentCount, validateArchCountCoeffSteps, } from "./v2-work-arch-count-coeff.util";
+import { archCountTriggerMatches, encodeTriggerArchCountSteps, formatArchCountCoeffSteps, lookupArchCountCoefficient, parseArchCountCoeffSteps, parseWorkArchCountKindLabel, resolveArchCountCoeffFromToken, resolveWorkArchComponentCount, validateArchCountCoeffSteps, } from "./v2-work-arch-count-coeff.util";
 describe("v2-work-arch-count-coeff.util", () => {
     it("resolves model count from modelsList", () => {
         expect(resolveWorkArchComponentCount({
@@ -43,7 +43,15 @@ describe("v2-work-arch-count-coeff.util", () => {
         expect(parseWorkArchCountKindLabel("Модели")).toBe("model");
         expect(parseWorkArchCountKindLabel("Система-источник")).toBe("sourceSystem");
     });
-    it("archCountTriggerMatches requires count >= min step", () => {
+    it("archCountTriggerMatches supports comparison operators", () => {
+        const formWithTwoModels = {
+            detailInfo: { modelsList: [{ id: 1 }, { id: 2 }] },
+        };
+        expect(archCountTriggerMatches(formWithTwoModels, "model", encodeTriggerArchCountSteps(">=", 2))).toBe(true);
+        expect(archCountTriggerMatches(formWithTwoModels, "model", encodeTriggerArchCountSteps("=", 2))).toBe(true);
+        expect(archCountTriggerMatches(formWithTwoModels, "model", encodeTriggerArchCountSteps("=", 3))).toBe(false);
+    });
+    it("archCountTriggerMatches requires count >= min step (legacy)", () => {
         expect(archCountTriggerMatches({}, "model", [{ count: 2, coefficient: 1 }])).toBe(false);
     });
 });

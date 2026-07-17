@@ -153,4 +153,88 @@ const MINIMAL_UI = {
         }, { summary: { platformStreams: { items: {} } } }, options));
         (0, vitest_1.expect)(leaves.some((leaf) => leaf.formPath?.startsWith("summary.platformStreams["))).toBe(false);
     });
+    (0, vitest_1.it)("discovers array indices for sourceSystems from questionnaire rows", () => {
+        const rows = [
+            {
+                id: "q1",
+                formData: {
+                    detailInfo: {
+                        sourceSystems: [
+                            { name: "Система 1" },
+                            { name: "Система 2" },
+                            { name: "Система 3" },
+                        ],
+                    },
+                },
+            },
+        ];
+        const options = (0, v2_questionnaire_registry_columns_util_1.deriveRegistryColumnOptionsFromRows)(rows);
+        (0, vitest_1.expect)(options.arrayIndicesByPath?.["detailInfo.sourceSystems"]).toEqual([
+            0, 1, 2,
+        ]);
+    });
+    (0, vitest_1.it)("merges column trees from different schema versions", () => {
+        const merged = (0, v2_questionnaire_registry_columns_util_1.mergeV2QuestionnaireRegistryColumnTrees)([
+            (0, v2_questionnaire_registry_columns_util_1.buildV2QuestionnaireRegistryColumnTree)({
+                type: "object",
+                properties: {
+                    generalInfo: {
+                        type: "object",
+                        properties: {
+                            fieldA: { type: "string", title: "Поле A" },
+                        },
+                    },
+                },
+            }, { generalInfo: { "ui:order": ["fieldA"] } }),
+            (0, v2_questionnaire_registry_columns_util_1.buildV2QuestionnaireRegistryColumnTree)({
+                type: "object",
+                properties: {
+                    generalInfo: {
+                        type: "object",
+                        properties: {
+                            fieldB: { type: "string", title: "Поле B" },
+                        },
+                    },
+                },
+            }, { generalInfo: { "ui:order": ["fieldB"] } }),
+        ]);
+        const ids = (0, v2_questionnaire_registry_columns_util_1.flattenV2RegistryColumnTree)(merged).map((leaf) => leaf.id);
+        (0, vitest_1.expect)(ids).toContain("form.generalInfo.fieldA");
+        (0, vitest_1.expect)(ids).toContain("form.generalInfo.fieldB");
+    });
+    (0, vitest_1.it)("buildV2QuestionnaireRegistryConfig merges schemas", () => {
+        const config = (0, v2_questionnaire_registry_columns_util_1.buildV2QuestionnaireRegistryConfig)([
+            {
+                jsonSchema: {
+                    type: "object",
+                    properties: {
+                        generalInfo: {
+                            type: "object",
+                            properties: {
+                                fieldA: { type: "string", title: "A" },
+                            },
+                        },
+                    },
+                },
+                uiSchema: { generalInfo: { "ui:order": ["fieldA"] } },
+            },
+            {
+                jsonSchema: {
+                    type: "object",
+                    properties: {
+                        generalInfo: {
+                            type: "object",
+                            properties: {
+                                fieldB: { type: "string", title: "B" },
+                            },
+                        },
+                    },
+                },
+                uiSchema: { generalInfo: { "ui:order": ["fieldB"] } },
+            },
+        ], []);
+        const ids = (0, v2_questionnaire_registry_columns_util_1.flattenV2RegistryColumnTree)(config.columnTree).map((leaf) => leaf.id);
+        (0, vitest_1.expect)(ids).toContain("form.generalInfo.fieldA");
+        (0, vitest_1.expect)(ids).toContain("form.generalInfo.fieldB");
+    });
 });

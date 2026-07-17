@@ -17,6 +17,7 @@ import {
 } from "@react-client/common/api/queries/v2-templates";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { getAgGridMainMenuItems } from "@react-client/common/tableStuff/agGridMainMenuItems";
 import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
 import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import { auditActionRu } from "@react-client/features/v2/admin/utils/auditActionRu";
@@ -249,6 +250,7 @@ export function AdminV2TemplateHistoryPage() {
 							resizable: true,
 							floatingFilter: true,
 							minWidth: 120,
+							mainMenuItems: getAgGridMainMenuItems,
 						}}
 						getRowStyle={getRowStyle}
 						getContextMenuItems={getContextMenuItems}
