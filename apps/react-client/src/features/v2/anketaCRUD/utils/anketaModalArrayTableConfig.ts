@@ -550,12 +550,24 @@ function isAppearedTypicalWorkRow(row: Record<string, unknown>): boolean {
 }
 
 function typicalWorkRowDedupKey(row: Record<string, unknown>): string {
+	const workId = typeof row.workId === "string" ? row.workId.trim() : "";
+	if (workId) return workId;
 	return [
 		typeof row.taskCode === "string" ? row.taskCode.trim() : "",
 		typeof row.name === "string" ? row.name.trim() : "",
 		typeof row.sourceName === "string" ? row.sourceName.trim() : "",
 		typeof row.generatedByRuleId === "string" ? row.generatedByRuleId.trim() : "",
 	].join("|");
+}
+
+function resolveTypicalWorkCollectionPaths(
+	uiSchema?: Record<string, unknown>,
+): string[] {
+	if (uiSchema) {
+		const activePaths = collectGeneratedTypicalWorkArrayPaths(uiSchema);
+		if (activePaths.length > 0) return activePaths;
+	}
+	return listAllGeneratedTypicalWorkArrayPaths(uiSchema);
 }
 
 export type AppearedTypicalWorkGroup = {
@@ -593,14 +605,22 @@ export function collectAppearedTypicalWorkGroups(
 ): AppearedTypicalWorkGroup[] {
 	if (!formData && !liveFormData) return [];
 
-	const paths = listAllGeneratedTypicalWorkArrayPaths(uiSchema);
+	const paths = resolveTypicalWorkCollectionPaths(uiSchema);
 	const seen = new Set<string>();
+	const globalWorkIdsSeen = new Set<string>();
 	const groups: AppearedTypicalWorkGroup[] = [];
 
 	for (const path of paths) {
 		const rows: Record<string, unknown>[] = [];
 		for (const item of readTypicalWorkArrayAtPath(formData, liveFormData, path)) {
 			if (!isAppearedTypicalWorkRow(item)) continue;
+
+			const workId = typeof item.workId === "string" ? item.workId.trim() : "";
+			if (workId) {
+				if (globalWorkIdsSeen.has(workId)) continue;
+				globalWorkIdsSeen.add(workId);
+			}
+
 			const key = `${path}|${typicalWorkRowDedupKey(item)}`;
 			if (seen.has(key)) continue;
 			seen.add(key);

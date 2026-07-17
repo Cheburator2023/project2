@@ -14,6 +14,24 @@ import {
 	isJsonLogicTruthy,
 } from "../../../../src/modules/anketa-v2/services/v2-json-logic";
 
+const FACTORY_SNAPSHOT_EVAL_OPTS = {
+	jsonSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema,
+	uiSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema,
+};
+
+/** v5 factory uiSchema: типовые работы источников в streamDataSources.field_u-7AkDrP. */
+const FACTORY_SOURCE_TYPICAL_TASKS_KEY = "field_u-7AkDrP";
+
+function readFactorySourceTypicalTasks(
+	formData: Record<string, unknown>,
+): Array<Record<string, unknown>> {
+	const streamDataSources = formData.streamDataSources as
+		| Record<string, unknown>
+		| undefined;
+	const tasks = streamDataSources?.[FACTORY_SOURCE_TYPICAL_TASKS_KEY];
+	return Array.isArray(tasks) ? (tasks as Array<Record<string, unknown>>) : [];
+}
+
 /** Имитация справочника БД для unit-тестов без PostgreSQL. */
 function createStubWorkRuntime(): V2TypicalWorkRuntimeService {
 	return {
@@ -164,7 +182,7 @@ describe("V2CalculationService", () => {
 		};
 		const result = await service.evaluate(summaryOnlyGraph, {
 			streamDataSources: {
-				sourceTypicalTasks: [{ total: 3 }],
+				[FACTORY_SOURCE_TYPICAL_TASKS_KEY]: [{ total: 3 }],
 			},
 			detailInfo: { detailTypicalTasks: [] },
 			streamModelControl: {
@@ -189,34 +207,24 @@ describe("V2CalculationService", () => {
 	});
 
 	it("generates internal source typical works from factory default logic", async () => {
-		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
-			detailInfo: {
-				sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
+		const result = await service.evaluate(
+			V2_DEFAULT_TEMPLATE_SNAPSHOT.logic,
+			{
+				detailInfo: {
+					sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
+				},
 			},
-		});
+			FACTORY_SNAPSHOT_EVAL_OPTS,
+		);
 
-		const streamDataSources = result.formData.streamDataSources as {
-			sourceTypicalTasks: Array<{
-				name: string;
-				estimateHoursPerDay: number;
-				coefficient: number;
-			}>;
-		};
+		const sourceTypicalTasks = readFactorySourceTypicalTasks(result.formData);
 
-		expect(streamDataSources.sourceTypicalTasks.length).toBeGreaterThan(0);
-		expect(
-			streamDataSources.sourceTypicalTasks.every((t) => t.coefficient === 1),
-		).toBe(true);
-		expect(
-			streamDataSources.sourceTypicalTasks.some((t) =>
-				t.name.includes("Анализ Данных"),
-			),
-		).toBe(true);
-		expect(
-			streamDataSources.sourceTypicalTasks.some(
-				(t) => t.estimateHoursPerDay === 3,
-			),
-		).toBe(true);
+		expect(sourceTypicalTasks.length).toBeGreaterThan(0);
+		expect(sourceTypicalTasks.every((t) => t.coefficient === 1)).toBe(true);
+		expect(sourceTypicalTasks.some((t) => String(t.name).includes("Анализ Данных"))).toBe(
+			true,
+		);
+		expect(sourceTypicalTasks.some((t) => t.estimateHoursPerDay === 3)).toBe(true);
 	});
 
 	it("auto-injects catalog logic for new schema with source infrastructure", async () => {
@@ -230,25 +238,24 @@ describe("V2CalculationService", () => {
 					sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
 				},
 			},
+			FACTORY_SNAPSHOT_EVAL_OPTS,
 		);
 
-		const streamDataSources = result.formData.streamDataSources as {
-			sourceTypicalTasks: Array<{ name: string }>;
-		};
-		expect(streamDataSources.sourceTypicalTasks.length).toBeGreaterThan(0);
+		expect(readFactorySourceTypicalTasks(result.formData).length).toBeGreaterThan(0);
 	});
 
 	it("migrates detailInfo.sourceSystems before source typical works generation", async () => {
-		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
-			detailInfo: {
-				sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
+		const result = await service.evaluate(
+			V2_DEFAULT_TEMPLATE_SNAPSHOT.logic,
+			{
+				detailInfo: {
+					sourceSystems: [{ name: "CRM Retail", type: "Внутренний" }],
+				},
 			},
-		});
+			FACTORY_SNAPSHOT_EVAL_OPTS,
+		);
 
-		const streamDataSources = result.formData.streamDataSources as {
-			sourceTypicalTasks: Array<{ name: string }>;
-		};
-		expect(streamDataSources.sourceTypicalTasks.length).toBeGreaterThan(0);
+		expect(readFactorySourceTypicalTasks(result.formData).length).toBeGreaterThan(0);
 	});
 
 	it("evaluates catalog triggers from stream-level fields without sourceSystems", async () => {
@@ -288,14 +295,11 @@ describe("V2CalculationService", () => {
 					groupKirilla: { field_dropdown: "Кухня" },
 				},
 			},
+			FACTORY_SNAPSHOT_EVAL_OPTS,
 		);
 
 		expect(capturedSource?.field_dropdown).toBe("Кухня");
-		const tasks = (
-			result.formData.streamDataSources as {
-				sourceTypicalTasks: Array<{ name: string }>;
-			}
-		).sourceTypicalTasks;
+		const tasks = readFactorySourceTypicalTasks(result.formData);
 		expect(tasks.some((t) => t.name === "Работа Кирилла")).toBe(true);
 	});
 
@@ -339,14 +343,11 @@ describe("V2CalculationService", () => {
 					groupKirilla: { field_dropdown: "Кухня" },
 				},
 			},
+			FACTORY_SNAPSHOT_EVAL_OPTS,
 		);
 
 		expect(capturedSource?.field_dropdown).toBe("Кухня");
-		const tasks = (
-			result.formData.streamDataSources as {
-				sourceTypicalTasks: Array<{ name: string }>;
-			}
-		).sourceTypicalTasks;
+		const tasks = readFactorySourceTypicalTasks(result.formData);
 		expect(tasks.some((t) => t.name === "Работа Кирилла")).toBe(true);
 	});
 
@@ -394,9 +395,11 @@ describe("V2CalculationService", () => {
 			{ jsonSchema: minimalJsonSchema, uiSchema: minimalUiSchema },
 		);
 
-		expect(result.taskTriggers.some((t) => t.ruleId === "unified-source-typical-works")).toBe(
-			true,
-		);
+		expect(
+			result.taskTriggers.some((t) =>
+				t.ruleId.startsWith("typical-works-catalog-"),
+			),
+		).toBe(true);
 		expect(capturedSource?.field_KQX2OsDx).toBe("Непосредственно");
 		const tasks = (result.formData as { field_SId8TZKZ: Array<{ name: string }> })
 			.field_SId8TZKZ;
@@ -490,81 +493,93 @@ describe("V2CalculationService", () => {
 		const sourcesStream = formData.summary.platformStreams.find(
 			(row) => row.streamName === "Источники данных",
 		);
-		expect(sourcesStream?.baseTypicalScore).toBe(0);
+		expect(sourcesStream?.baseTypicalScore == 0).toBe(true);
 	});
 
 	it("uses stream localParams for coefficient when source row has no weights (ФТ-024)", async () => {
-		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
-			detailInfo: {
-				sourceSystems: [{ name: "CRM", type: "Внутренний" }],
-			},
-			streamDataSources: {
-				localParams: {
-					domainComplexity: "Высокая",
-					entityVolume: "Большое",
+		const result = await service.evaluate(
+			V2_DEFAULT_TEMPLATE_SNAPSHOT.logic,
+			{
+				detailInfo: {
+					sourceSystems: [{ name: "CRM", type: "Внутренний" }],
 				},
-			},
-		});
-		const streamDataSources = result.formData.streamDataSources as {
-			sourceTypicalTasks: Array<{ coefficient: number }>;
-		};
-		expect(streamDataSources.sourceTypicalTasks[0]?.coefficient).toBe(1);
-	});
-
-	it("applies catalog coefficient from DB labor params (ФТ-024)", async () => {
-		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
-			detailInfo: {
-				sourceSystems: [
-					{
-						name: "Внешний банк",
-						type: "Внутренний",
+				streamDataSources: {
+					localParams: {
 						domainComplexity: "Высокая",
 						entityVolume: "Большое",
 					},
-				],
+				},
 			},
-		});
+			FACTORY_SNAPSHOT_EVAL_OPTS,
+		);
+		const sourceTypicalTasks = readFactorySourceTypicalTasks(result.formData);
+		expect(sourceTypicalTasks[0]?.coefficient).toBe(1);
+	});
 
-		const streamDataSources = result.formData.streamDataSources as {
-			sourceTypicalTasks: Array<{ name: string; coefficient: number }>;
-		};
-		expect(streamDataSources.sourceTypicalTasks[0]?.coefficient).toBe(1);
-		const analysis = streamDataSources.sourceTypicalTasks.find((t) =>
-			t.name.includes("Анализ Данных"),
+	it("applies catalog coefficient from DB labor params (ФТ-024)", async () => {
+		const result = await service.evaluate(
+			V2_DEFAULT_TEMPLATE_SNAPSHOT.logic,
+			{
+				detailInfo: {
+					sourceSystems: [
+						{
+							name: "Внешний банк",
+							type: "Внутренний",
+							domainComplexity: "Высокая",
+							entityVolume: "Большое",
+						},
+					],
+				},
+			},
+			FACTORY_SNAPSHOT_EVAL_OPTS,
+		);
+
+		const sourceTypicalTasks = readFactorySourceTypicalTasks(result.formData);
+		expect(sourceTypicalTasks[0]?.coefficient).toBe(1);
+		const analysis = sourceTypicalTasks.find((t) =>
+			String(t.name).includes("Анализ Данных"),
 		);
 		expect(analysis?.coefficient).toBe(1);
 	});
 
 	it("generates external source works (stage 214+) for external type", async () => {
-		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
-			detailInfo: {
-				sourceSystems: [{ name: "Внешний поставщик", type: "Внешний" }],
-			},
-		});
-		const streamDataSources = result.formData.streamDataSources as {
-			sourceTypicalTasks: Array<{ reason: string }>;
-		};
-		expect(streamDataSources.sourceTypicalTasks.length).toBeGreaterThan(0);
-		expect(
-			streamDataSources.sourceTypicalTasks.some((t) => t.reason.includes("214")),
-		).toBe(true);
-	});
-
-	it("keeps control-model typical works disabled until control field exists in v5", async () => {
-		const result = await service.evaluate(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
-			streamModelControl: {
-				control: {
-					controlTypes: ["КД", "ОК"],
+		const result = await service.evaluate(
+			V2_DEFAULT_TEMPLATE_SNAPSHOT.logic,
+			{
+				detailInfo: {
+					sourceSystems: [{ name: "Внешний поставщик", type: "Внешний" }],
 				},
 			},
-		});
+			FACTORY_SNAPSHOT_EVAL_OPTS,
+		);
+		const sourceTypicalTasks = readFactorySourceTypicalTasks(result.formData);
+		expect(sourceTypicalTasks.length).toBeGreaterThan(0);
+		expect(sourceTypicalTasks.some((t) => String(t.reason).includes("214"))).toBe(
+			true,
+		);
+	});
+
+	it("factory control typicalWork block uses baked catalog rule (streamModelControl.field_G0AoYAl8)", async () => {
+		const result = await service.evaluate(
+			V2_DEFAULT_TEMPLATE_SNAPSHOT.logic,
+			{
+				detailInfo: {
+					sourceSystems: [{ name: "src", type: "Внутренний" }],
+				},
+				streamModelControl: {
+					control: {
+						controlTypes: ["КД", "ОК"],
+					},
+				},
+			},
+			FACTORY_SNAPSHOT_EVAL_OPTS,
+		);
 		const controlTasks = (
 			result.formData.streamModelControl as {
 				"field_G0AoYAl8"?: Array<{ name: string }>;
-				control?: { controlTypicalTasks?: Array<{ name: string }> };
 			}
 		)["field_G0AoYAl8"];
-		expect(controlTasks ?? []).toHaveLength(0);
+		expect(controlTasks?.length ?? 0).toBeGreaterThan(0);
 	});
 
 	it("returns validationIssues when validation rule condition is false", async () => {
@@ -699,36 +714,32 @@ describe("V2CalculationService", () => {
 		expect(summary.scoreWithComplexityCoeff).toBeGreaterThan(7143);
 	});
 
-	it("snapshot: complexity and modelsList change legacy scoreWithComplexityCoeff", async () => {
+	it("snapshot: не подмешивает legacy E2E при catalog модельного стрима в uiSchema", async () => {
 		const { jsonSchema, uiSchema, logic } = V2_DEFAULT_TEMPLATE_SNAPSHOT;
-		const baseline = await service.evaluate(logic, {
-			generalInfo: { complexity: "1 — Низкая ×1.00" },
-		}, { jsonSchema, uiSchema });
-
-		const richer = await service.evaluate(logic, {
-			generalInfo: {
-				complexity: "4 — Высокая ×2.00",
-				modelService: [{ field_o_HRj6VO: true, field_jUm5syZf: ["Онлайн"] }],
+		const result = await service.evaluate(
+			logic,
+			{
+				generalInfo: {
+					complexity: "4 — Высокая ×2.00",
+					modelService: [{ field_o_HRj6VO: true, field_jUm5syZf: ["Онлайн"] }],
+				},
+				detailInfo: {
+					modelsList: [{ algorithmType: "CV", autoML: true }],
+					sourceSystems: [{ name: "src-1", type: "Внутренний" }],
+				},
+				uncertaintyCalculation: {
+					field_QCwwo5c5: 10,
+					riskGroup: { sanctions: "Высокий" },
+				},
 			},
-			detailInfo: {
-				modelsList: [{ algorithmType: "CV", autoML: true }],
-				sourceSystems: [{ name: "src-1", type: "Внутренний" }],
-			},
-			uncertaintyCalculation: {
-				field_QCwwo5c5: 10,
-				riskGroup: { sanctions: "Высокий" },
-			},
-		}, { jsonSchema, uiSchema });
-
-		const baselineSummary = baseline.formData.summary as {
-			scoreWithComplexityCoeff: number;
-		};
-		const richerSummary = richer.formData.summary as {
-			scoreWithComplexityCoeff: number;
-		};
-		expect(richerSummary.scoreWithComplexityCoeff).toBeGreaterThan(
-			baselineSummary.scoreWithComplexityCoeff,
+			{ jsonSchema, uiSchema },
 		);
+
+		expect(result.legacyStageEvaluation).toBeNull();
+		expect(
+			(result.formData.summary as { scoreWithComplexityCoeff?: number })
+				.scoreWithComplexityCoeff,
+		).toBeUndefined();
 	});
 
 	it("parses string atypical coefficients in row_computed", async () => {

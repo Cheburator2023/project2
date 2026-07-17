@@ -430,7 +430,7 @@ export function AnketaModalArrayTable({
 					data-test-id={`${tableTestId}--empty`}
 				>
 					{isTypicalWorks
-						? "Типовые работы появятся при срабатывании триггеров"
+						? "Типовые работы появятся при выполнении условий появления"
 						: "Нет записей"}
 				</ListEmptyPlaceholder>
 			)}

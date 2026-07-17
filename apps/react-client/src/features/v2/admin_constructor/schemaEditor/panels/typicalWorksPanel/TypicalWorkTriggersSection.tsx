@@ -64,7 +64,7 @@ const TRIGGER_MODE_SEGMENTS: Array<{
 	{
 		id: "simple",
 		label: "Простые условия",
-		title: "Параметры-триггеры с объединением по И",
+		title: "Условия появления типовых работ с объединением по И",
 	},
 	{
 		id: "formula",
@@ -174,7 +174,7 @@ function triggerBanner(
 				sub:
 					issues.length > 0
 						? issues.map((item) => item.message).join(" · ")
-						: "проверьте параметры-триггеры",
+						: "проверьте условия появления",
 				fg: "#c62828",
 			};
 		case "hidden":
@@ -184,7 +184,7 @@ function triggerBanner(
 				iconBg: "#5b6577",
 				icon: "–",
 				title: "Работа скрыта при текущих ответах",
-				sub: "есть триггеры, но условия не выполнены",
+				sub: "условия заданы, но не выполнены при текущих ответах",
 				fg: "#5b6577",
 			};
 		default:
@@ -193,7 +193,7 @@ function triggerBanner(
 				border: "#f0e3c8",
 				iconBg: "#b5791f",
 				icon: "•",
-				title: "Без триггеров — работа не появится в анкете",
+				title: "Без условий появления — работа не появится в анкете",
 				sub: "добавьте хотя бы одно условие, чтобы работа участвовала в расчёте",
 				fg: "#b5791f",
 			};
@@ -460,7 +460,7 @@ export function TypicalWorkTriggersSection({
 						}}
 						initialSearchTerm={triggerPickerSearchTerm}
 						autoOpenOnInitialSearch={Boolean(triggerPickerSearchTerm)}
-						label="Параметр-триггер"
+						label="Параметр условия появления"
 						placeholder="Выберите поле схемы…"
 						emptyLabel="Выберите поле схемы…"
 						searchPlaceholder="поиск параметра…"
@@ -680,7 +680,7 @@ export function TypicalWorkTriggersSection({
 									) : null}
 									<IconButton
 										size="small"
-										aria-label="Удалить триггер"
+										aria-label="Удалить условие появления"
 										onClick={() => removeParam(groupKey)}
 										sx={{ color: "#c2554c", mt: -0.25 }}
 									>
@@ -835,7 +835,7 @@ export function TypicalWorkTriggersSection({
 						);
 					})}
 					<Typography sx={{ fontSize: 11, color: "#8a93a3", px: 0.25 }}>
-						Несколько параметров-триггеров объединяются по <b>И</b> — работа
+						Несколько параметров условий объединяются по <b>И</b> — работа
 						появляется, когда выполнены все.
 					</Typography>
 				</Box>
@@ -859,7 +859,7 @@ export function TypicalWorkTriggersSection({
 							}}
 						>
 							<Typography sx={{ fontSize: 11.5, color: "#6b7484" }}>
-								Все параметры-триггеры
+								Все условия появления
 							</Typography>
 							<Select
 								size="small"

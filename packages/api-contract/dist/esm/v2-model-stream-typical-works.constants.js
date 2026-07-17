@@ -76,3 +76,42 @@ export function sortModelStreamTypicalWorkRows(rows) {
         return compareModelStreamTypicalWorkNames(leftName, rightName);
     });
 }
+/** Одна работа — одна строка (fan-out по legacy-путям даёт дубли с одним workId). */
+export function dedupeTypicalWorkRowsByWorkId(rows) {
+    const seenWorkIds = new Set();
+    const seenFallback = new Set();
+    const result = [];
+    for (const row of rows) {
+        const workId = typeof row.workId === "string" && row.workId.trim()
+            ? row.workId.trim()
+            : "";
+        if (workId) {
+            if (seenWorkIds.has(workId))
+                continue;
+            seenWorkIds.add(workId);
+            result.push(row);
+            continue;
+        }
+        const fallbackKey = [
+            typeof row.taskCode === "string" ? row.taskCode.trim() : "",
+            typeof row.name === "string" ? row.name.trim() : "",
+        ].join("|");
+        if (fallbackKey && seenFallback.has(fallbackKey))
+            continue;
+        if (fallbackKey)
+            seenFallback.add(fallbackKey);
+        result.push(row);
+    }
+    return result;
+}
+/** Строка модельного стрима для «Подробного расчёта»: только с ненулевым итогом. */
+export function isModelStreamTypicalWorkVisibleInSummary(row) {
+    if (row.total == null || row.total === "")
+        return false;
+    const num = typeof row.total === "number"
+        ? row.total
+        : typeof row.total === "string" && row.total.trim()
+            ? Number(row.total.replace(",", "."))
+            : Number.NaN;
+    return Number.isFinite(num) && num > 0;
+}

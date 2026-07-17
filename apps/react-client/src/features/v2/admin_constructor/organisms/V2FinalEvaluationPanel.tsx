@@ -20,7 +20,11 @@ import {
 	formatTypicalWorkNumberValue,
 	typicalWorkItemDisplayName,
 } from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
-import { sortModelStreamTypicalWorkRows } from "@smart-anketa/api-contract";
+import {
+	dedupeTypicalWorkRowsByWorkId,
+	isModelStreamTypicalWorkVisibleInSummary,
+	sortModelStreamTypicalWorkRows,
+} from "@smart-anketa/api-contract";
 import { useMemo } from "react";
 
 const MODEL_STREAM_LABEL = "Модельный стрим";
@@ -133,16 +137,26 @@ export function V2FinalEvaluationPanel({
 		() => collectAppearedTypicalWorkGroups(formData, uiSchema, liveFormData),
 		[formData, uiSchema, liveFormData],
 	);
-	const modelStreamTypicalRows = useMemo(
+	const hasModelStreamCatalog = useMemo(
 		() =>
-			sortModelStreamTypicalWorkRows(
-				typicalWorkGroups
-					.filter((group) => group.streamExecutor === MODEL_STREAM_LABEL)
-					.flatMap((group) => group.rows),
+			typicalWorkGroups.some(
+				(group) =>
+					group.streamExecutor === MODEL_STREAM_LABEL && group.rows.length > 0,
 			),
 		[typicalWorkGroups],
 	);
-	const useModelStreamTypicalWorksTable = modelStreamTypicalRows.length > 0;
+	const modelStreamTypicalRows = useMemo(
+		() =>
+			sortModelStreamTypicalWorkRows(
+				dedupeTypicalWorkRowsByWorkId(
+					typicalWorkGroups
+						.filter((group) => group.streamExecutor === MODEL_STREAM_LABEL)
+						.flatMap((group) => group.rows),
+				).filter(isModelStreamTypicalWorkVisibleInSummary),
+			),
+		[typicalWorkGroups],
+	);
+	const useModelStreamTypicalWorksTable = hasModelStreamCatalog;
 	const otherTypicalWorkGroups = useMemo(
 		() =>
 			typicalWorkGroups.filter(
@@ -154,7 +168,7 @@ export function V2FinalEvaluationPanel({
 		modelStreamTypicalRows.length +
 		otherTypicalWorkGroups.reduce((sum, group) => sum + group.rows.length, 0);
 	const showModelStreamSection =
-		useModelStreamTypicalWorksTable || rows.length > 0;
+		hasModelStreamCatalog || (!hasModelStreamCatalog && rows.length > 0);
 	const showUnifiedHeadline = Boolean(
 		effectiveSummary && hasNonZeroUnifiedTotals(effectiveSummary),
 	);
@@ -278,8 +292,8 @@ export function V2FinalEvaluationPanel({
 				<CardContent sx={{ p: compact ? 3 : 4, pt: compact ? 5 : 6 }}>
 					{!hasData && !isLoading && typicalWorkRowCount === 0 ? (
 						<Typography variant="body2" color="text.secondary">
-							Заполните анкету — здесь появится расчёт по 11 этапам E2E и
-							платформенным стримам.
+							Заполните анкету — здесь появится расчёт поэтапам и платформенным
+							стримам.
 						</Typography>
 					) : null}
 
@@ -295,7 +309,14 @@ export function V2FinalEvaluationPanel({
 										Модельный стрим
 									</Typography>
 									{useModelStreamTypicalWorksTable ? (
-										<TypicalWorksMiniTable rows={modelStreamTypicalRows} />
+										modelStreamTypicalRows.length > 0 ? (
+											<TypicalWorksMiniTable rows={modelStreamTypicalRows} />
+										) : (
+											<Typography variant="body2" color="text.secondary">
+												Работы модельного стрима появятся здесь после выполнения
+												условий появления в анкете.
+											</Typography>
+										)
 									) : rows.length > 0 ? (
 										<MiniTable
 											columns={[
@@ -346,9 +367,7 @@ export function V2FinalEvaluationPanel({
 											</Box>
 										))}
 									</Stack>
-									{platformRows.length > 0 ? (
-										<Divider sx={{ mb: 5 }} />
-									) : null}
+									{platformRows.length > 0 ? <Divider sx={{ mb: 5 }} /> : null}
 								</>
 							) : null}
 
@@ -414,11 +433,7 @@ function Metric({
 	);
 }
 
-function TypicalWorksMiniTable({
-	rows,
-}: {
-	rows: Record<string, unknown>[];
-}) {
+function TypicalWorksMiniTable({ rows }: { rows: Record<string, unknown>[] }) {
 	return (
 		<MiniTable
 			columns={[...TYPICAL_WORK_TABLE_COLUMNS]}

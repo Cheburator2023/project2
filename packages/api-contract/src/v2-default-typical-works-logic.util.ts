@@ -100,7 +100,7 @@ export function buildModelStreamTypicalWorksCatalogRule(
 		targetPath: `/${outputArrayPath.replace(/\./g, "/")}`,
 		condition: true,
 		description:
-			"ФТ-024: типовые работы модельного стрима из справочника (10 этапов CSV).",
+			"ФТ-024: типовые работы модельного стрима из справочника (10 этапов factory snapshot).",
 		dependencies: [],
 		payload: {
 			hint:
@@ -204,6 +204,72 @@ function typicalRowTotalRuleId(arrayPath: string): string {
 
 function isTypicalRowTotalPatchedRuleId(id: string): boolean {
 	return id.startsWith("unified-typical-row-total:");
+}
+
+/** Id catalog-правил, которые должны быть в зафиксированном logic snapshot шаблона. */
+export function requiredTypicalWorksCatalogRuleIds(
+	uiSchema?: unknown,
+): Set<string> {
+	const bindings = uiSchema ? collectTypicalWorkBlockBindings(uiSchema) : [];
+	const ids = new Set<string>();
+	for (const binding of bindings) {
+		if (binding.boundWorkIds !== undefined && binding.boundWorkIds.length === 0) {
+			continue;
+		}
+		ids.add(typicalWorksCatalogRuleId(binding.outputPath));
+	}
+	if (
+		ids.size === 0 &&
+		schemaSupportsSourceTypicalWorksCatalog(undefined, uiSchema)
+	) {
+		ids.add(
+			typicalWorksCatalogRuleId(
+				resolveSourceTypicalWorksOutputPath(undefined, uiSchema) ??
+					V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+			),
+		);
+	}
+	return ids;
+}
+
+/** Logic snapshot уже содержит catalog/row-total правила — не пересобирать в рантайме. */
+export function isTypicalWorksCatalogLogicComplete(
+	logic: V2LogicGraphDto,
+	options?: PatchV2TypicalWorksLogicOptions,
+): boolean {
+	const ruleIds = new Set((logic?.rules ?? []).map((rule) => rule.id));
+	for (const id of requiredTypicalWorksCatalogRuleIds(options?.uiSchema)) {
+		if (!ruleIds.has(id)) return false;
+	}
+
+	const typicalPaths = options?.uiSchema
+		? collectGeneratedTypicalWorkArrayPaths(options.uiSchema)
+		: [];
+	for (const path of typicalPaths) {
+		if (!ruleIds.has(typicalRowTotalRuleId(path))) return false;
+	}
+	if (typicalPaths.length > 0 && !ruleIds.has("unified-typical-total")) {
+		return false;
+	}
+	return true;
+}
+
+/** Модельный стрим: не подмешивать legacy E2E-таблицу из hardcode. */
+export function shouldSkipLegacyModelStreamStageSummary(
+	uiSchema?: unknown,
+): boolean {
+	if (!uiSchema) return false;
+	return collectTypicalWorkBlockBindings(uiSchema).some((binding) => {
+		if (binding.boundWorkIds !== undefined && binding.boundWorkIds.length === 0) {
+			return false;
+		}
+		return (
+			resolveStreamExecutorForTypicalWorkOutputPath(
+				uiSchema,
+				binding.outputPath,
+			) === V2_MODEL_STREAM_EXECUTOR
+		);
+	});
 }
 
 function buildTypicalArrayReduceTerm(arrayPath: string): V2JsonLogicValue {

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-	patchV2AnketaCalculationLogicRules,
+	resolveAnketaCalculationLogic,
 	stripQuestionnaireCalcNameFromTemplateSnapshot,
 	type V2LogicGraphDto,
 } from "@smart-anketa/api-contract";
@@ -39,19 +39,14 @@ describe("v2 factory snapshot", () => {
 		}
 	});
 
-	it("runtime snapshot совпадает с файлом (v35 as-is)", () => {
+	it("runtime snapshot совпадает с файлом (v35 as-is, logic запечён в JSON)", () => {
 		const stripped = stripQuestionnaireCalcNameFromTemplateSnapshot({
 			jsonSchema: stripDraft07Schema(file.jsonSchema),
 			uiSchema: file.uiSchema,
 		});
 		expect(V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema).toEqual(stripped.jsonSchema);
 		expect(V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema).toEqual(stripped.uiSchema);
-		expect(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic).toEqual(
-			patchV2AnketaCalculationLogicRules(file.logic, {
-				jsonSchema: stripped.jsonSchema,
-				uiSchema: stripped.uiSchema,
-			}),
-		);
+		expect(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic).toEqual(file.logic);
 		expect(V2_DEFAULT_TEMPLATE_SNAPSHOT.dictionariesSnapshot).toEqual(
 			file.dictionariesSnapshot ?? {
 				referencedDictionaryCodes: expect.any(Array),
@@ -61,7 +56,15 @@ describe("v2 factory snapshot", () => {
 
 	it("logic содержит правила типовых работ", () => {
 		expect(Array.isArray(file.logic.rules)).toBe(true);
-		expect(file.logic.rules?.length).toBeGreaterThan(0);
+		expect(file.logic.rules?.length).toBeGreaterThanOrEqual(18);
+		expect(
+			file.logic.rules?.some((rule) =>
+				rule.id.startsWith("typical-works-catalog-"),
+			),
+		).toBe(true);
+		expect(file.logic.rules?.some((rule) => rule.id === "unified-typical-total")).toBe(
+			true,
+		);
 	});
 
 	it("не содержит корневой паразитный блок нетиповых работ", () => {

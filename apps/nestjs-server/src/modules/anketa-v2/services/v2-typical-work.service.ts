@@ -234,10 +234,16 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				`Typical works catalog: ${count} works (factory snapshot seed on template create only)`,
 			);
 			await this.ensureFactoryVersionConfigs();
-			await this.syncFactoryLaborCoefficients();
-			await this.syncFactoryCatalogTriggers();
-			await this.syncFactoryParamBindings();
-			await this.syncFactoryLaborArchCounts();
+			if (process.env.V2_FACTORY_CATALOG_SYNC_ON_START === "true") {
+				await this.syncFactoryLaborCoefficients();
+				await this.syncFactoryCatalogTriggers();
+				await this.syncFactoryParamBindings();
+				await this.syncFactoryLaborArchCounts();
+			} else {
+				this.logger.log(
+					"Factory catalog DB sync skipped (static snapshot; set V2_FACTORY_CATALOG_SYNC_ON_START=true to repair dev DB)",
+				);
+			}
 			return;
 		}
 		this.logger.log(

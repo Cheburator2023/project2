@@ -19,6 +19,12 @@ export declare function buildSourceTypicalWorksCatalogRule(outputArrayPath?: str
 }): V2LogicRuleDto;
 export declare function buildControlTypicalWorksCatalogRule(): V2LogicRuleDto;
 export declare function isTypicalWorksCatalogLogicRule(rule: V2LogicRuleDto): boolean;
+/** Id catalog-правил, которые должны быть в зафиксированном logic snapshot шаблона. */
+export declare function requiredTypicalWorksCatalogRuleIds(uiSchema?: unknown): Set<string>;
+/** Logic snapshot уже содержит catalog/row-total правила — не пересобирать в рантайме. */
+export declare function isTypicalWorksCatalogLogicComplete(logic: V2LogicGraphDto, options?: PatchV2TypicalWorksLogicOptions): boolean;
+/** Модельный стрим: не подмешивать legacy E2E-таблицу из hardcode. */
+export declare function shouldSkipLegacyModelStreamStageSummary(uiSchema?: unknown): boolean;
 /**
  * Итог строки типовой работы: для строк каталога (workId) сохраняем уже
  * округлённый total; иначе estimate × coefficient (ручные/legacy строки).

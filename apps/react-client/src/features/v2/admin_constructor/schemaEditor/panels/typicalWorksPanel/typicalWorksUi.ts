@@ -30,7 +30,7 @@ export function triggerStatusLabel(status: V2WorkTriggerStatus): string {
 		case "hidden":
 			return "скрыта";
 		case "no_triggers":
-			return "без триггеров — не появится";
+			return "без условий появления";
 		case "invalid":
 			return "невалидно";
 	}

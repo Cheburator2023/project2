@@ -25,7 +25,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	collectGeneratedTypicalWorkArrayPaths,
 	ensureGroupActivationDefaults,
-	patchV2AnketaCalculationLogicRules,
+	resolveAnketaCalculationLogic,
 	syncTriggerGatedGroupActivationFromTypicalWorks,
 	resolveV2QuestionnaireUncertaintyCoefficient,
 	syncAtypicalWorkCoefficientsInFormData,
@@ -60,7 +60,7 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 	const [uiSchema, setUiSchema] = useState<UiSchema>({});
 	const [logic, setLogic] = useState(() =>
 		coerceLogicGraph(
-			patchV2AnketaCalculationLogicRules(coerceLogicGraph(undefined), {
+			resolveAnketaCalculationLogic(coerceLogicGraph(undefined), {
 				jsonSchema: source?.initialJsonSchema,
 				uiSchema: source?.initialUiSchema,
 			}),
@@ -86,7 +86,7 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 			setUiSchema(coerceUiSchema(source.initialUiSchema, source.initialJsonSchema));
 			setLogic(
 				coerceLogicGraph(
-					patchV2AnketaCalculationLogicRules(
+					resolveAnketaCalculationLogic(
 						coerceLogicGraph(source.initialLogic),
 						{
 							jsonSchema: source.initialJsonSchema,
@@ -104,7 +104,7 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		setUiSchema(coerceUiSchema(version.uiSchema, version.jsonSchema));
 		setLogic(
 			coerceLogicGraph(
-				patchV2AnketaCalculationLogicRules(coerceLogicGraph(version.logic), {
+				resolveAnketaCalculationLogic(coerceLogicGraph(version.logic), {
 					jsonSchema: version.jsonSchema,
 					uiSchema: version.uiSchema,
 				}),

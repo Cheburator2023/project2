@@ -6,6 +6,7 @@ import type {
 	V2JsonLogicValue,
 	V2LogicGraphDto,
 	V2LogicRuleDto,
+	V2LegacyStageEvaluationDto,
 	V2TaskTriggerItemDto,
 	V2TemplateVersionDto,
 } from "@smart-anketa/api-contract";
@@ -15,7 +16,7 @@ import {
 	mergeTypicalCoefficientContext,
 	parseParamDependencyGraphFromLogic,
 	filterCoefficientLogicForHiddenFields,
-	patchV2AnketaCalculationLogicRules,
+	resolveAnketaCalculationLogic,
 	hasTypicalWorkStreamTriggerContext,
 	isFilledTypicalWorkSourceRow,
 	readTypicalWorksStreamTriggerContext,
@@ -25,6 +26,7 @@ import {
 	resolveStreamFromSourceType,
 	resolveStreamsFromSourceSystems,
 	resolveSourceTypicalWorksOutputPath,
+	shouldSkipLegacyModelStreamStageSummary,
 	V2_SOURCE_SYSTEMS_ARRAY_PATH,
 	type V2ParamDependencyGraph,
 	type V2ParamDefLike,
@@ -364,7 +366,7 @@ export class V2CalculationService {
 		},
 	): Promise<V2CalculationResultDto> {
 		const rules =
-			patchV2AnketaCalculationLogicRules(logic, {
+			resolveAnketaCalculationLogic(logic, {
 				jsonSchema: options?.jsonSchema,
 				uiSchema: options?.uiSchema,
 			})?.rules ?? [];
@@ -426,18 +428,20 @@ export class V2CalculationService {
 			};
 		});
 
-		// Legacy E2E + платформенные стримы: таблицы «Подробный расчёт» / «Платформенные стримы».
-		// При unified merge через spread не затирает total/typicalTotal/atypicalTotal.
+		// Legacy E2E — только если нет catalog модельного стрима в snapshot uiSchema.
 		const sourceTypicalWorksPath = resolveSourceTypicalWorksOutputPath(
 			options?.jsonSchema,
 			options?.uiSchema,
 		);
-		const legacy = applyLegacySummaryToFormData(liveData, {
-			sourceTypicalWorksPath,
-			uiSchema: options?.uiSchema,
-		});
-		liveData = legacy.formData;
-		const legacyStageEvaluation = legacy.legacyStageEvaluation;
+		let legacyStageEvaluation: V2LegacyStageEvaluationDto | null = null;
+		if (!shouldSkipLegacyModelStreamStageSummary(options?.uiSchema)) {
+			const legacy = applyLegacySummaryToFormData(liveData, {
+				sourceTypicalWorksPath,
+				uiSchema: options?.uiSchema,
+			});
+			liveData = legacy.formData;
+			legacyStageEvaluation = legacy.legacyStageEvaluation;
+		}
 
 		const validationIssues = evaluateLogicValidationRules(rules, liveData);
 

@@ -13,3 +13,13 @@ export declare function sortModelStreamTypicalWorkRows<T extends {
     name?: unknown;
     workId?: unknown;
 }>(rows: T[]): T[];
+/** Одна работа — одна строка (fan-out по legacy-путям даёт дубли с одним workId). */
+export declare function dedupeTypicalWorkRowsByWorkId<T extends {
+    workId?: unknown;
+    name?: unknown;
+    taskCode?: unknown;
+}>(rows: T[]): T[];
+/** Строка модельного стрима для «Подробного расчёта»: только с ненулевым итогом. */
+export declare function isModelStreamTypicalWorkVisibleInSummary(row: {
+    total?: unknown;
+}): boolean;

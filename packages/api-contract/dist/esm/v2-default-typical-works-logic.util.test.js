@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildSourceTypicalWorksCatalogRule, buildTypicalWorkRowTotalCondition, patchV2TypicalWorksLogicRules, V2_SOURCE_SYSTEMS_ARRAY_PATH, } from "./v2-default-typical-works-logic.util";
+import { buildSourceTypicalWorksCatalogRule, buildTypicalWorkRowTotalCondition, isTypicalWorksCatalogLogicComplete, patchV2TypicalWorksLogicRules, shouldSkipLegacyModelStreamStageSummary, V2_SOURCE_SYSTEMS_ARRAY_PATH, } from "./v2-default-typical-works-logic.util";
+import { isAtypicalWorksLogicComplete, resolveAnketaCalculationLogic, } from "./v2-atypical-works-logic.util";
 describe("v2-default-typical-works-logic.util", () => {
     it("replaces legacy static-tasks rule with worksCatalog and v5 paths", () => {
         const patched = patchV2TypicalWorksLogicRules({
@@ -307,5 +308,47 @@ describe("v2-default-typical-works-logic.util", () => {
         expect(payload.worksCatalogStream).toBe("Модельный стрим");
         expect(payload.worksCatalogAllArchComponents).toBe(true);
         expect(payload.sourceArrayPath).toBeUndefined();
+    });
+    it("isTypicalWorksCatalogLogicComplete returns true for fully patched logic", () => {
+        const uiSchema = {
+            detailInfo: {
+                detailTypicalTasks: { "ui:options": { archComponent: "typicalWork" } },
+            },
+        };
+        const patched = patchV2TypicalWorksLogicRules({ rules: [] }, { uiSchema });
+        expect(isTypicalWorksCatalogLogicComplete(patched, { uiSchema })).toBe(true);
+    });
+    it("resolveAnketaCalculationLogic is no-op when logic snapshot is complete", () => {
+        const uiSchema = {
+            detailInfo: {
+                detailTypicalTasks: { "ui:options": { archComponent: "typicalWork" } },
+            },
+            field_a: {
+                field_b: { "ui:options": { archComponent: "atypicalWork" } },
+            },
+        };
+        const patched = resolveAnketaCalculationLogic({ rules: [] }, { uiSchema });
+        const resolved = resolveAnketaCalculationLogic(patched, { uiSchema });
+        expect(resolved).toEqual(patched);
+        expect(isAtypicalWorksLogicComplete(resolved, { uiSchema })).toBe(true);
+    });
+    it("shouldSkipLegacyModelStreamStageSummary for model stream typicalWork block", () => {
+        expect(shouldSkipLegacyModelStreamStageSummary({
+            detailInfo: {
+                detailTypicalTasks: {
+                    "ui:options": {
+                        archComponent: "typicalWork",
+                        streamExecutor: "Модельный стрим",
+                    },
+                },
+            },
+        })).toBe(true);
+        expect(shouldSkipLegacyModelStreamStageSummary({
+            streamDataSources: {
+                sourceTypicalTasks: {
+                    "ui:options": { archComponent: "typicalWork" },
+                },
+            },
+        })).toBe(false);
     });
 });

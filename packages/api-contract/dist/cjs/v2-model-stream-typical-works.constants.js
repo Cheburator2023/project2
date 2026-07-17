@@ -5,6 +5,8 @@ exports.isModelStreamAlwaysShownWork = isModelStreamAlwaysShownWork;
 exports.isModelStreamAlwaysActiveWork = isModelStreamAlwaysActiveWork;
 exports.compareModelStreamTypicalWorkNames = compareModelStreamTypicalWorkNames;
 exports.sortModelStreamTypicalWorkRows = sortModelStreamTypicalWorkRows;
+exports.dedupeTypicalWorkRowsByWorkId = dedupeTypicalWorkRowsByWorkId;
+exports.isModelStreamTypicalWorkVisibleInSummary = isModelStreamTypicalWorkVisibleInSummary;
 /** Эталонные id 10 типовых работ модельного стрима (factory registry). */
 exports.V2_MODEL_STREAM_FACTORY_WORK_IDS = [
     "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",
@@ -82,4 +84,43 @@ function sortModelStreamTypicalWorkRows(rows) {
             : String(right.workId ?? "");
         return compareModelStreamTypicalWorkNames(leftName, rightName);
     });
+}
+/** Одна работа — одна строка (fan-out по legacy-путям даёт дубли с одним workId). */
+function dedupeTypicalWorkRowsByWorkId(rows) {
+    const seenWorkIds = new Set();
+    const seenFallback = new Set();
+    const result = [];
+    for (const row of rows) {
+        const workId = typeof row.workId === "string" && row.workId.trim()
+            ? row.workId.trim()
+            : "";
+        if (workId) {
+            if (seenWorkIds.has(workId))
+                continue;
+            seenWorkIds.add(workId);
+            result.push(row);
+            continue;
+        }
+        const fallbackKey = [
+            typeof row.taskCode === "string" ? row.taskCode.trim() : "",
+            typeof row.name === "string" ? row.name.trim() : "",
+        ].join("|");
+        if (fallbackKey && seenFallback.has(fallbackKey))
+            continue;
+        if (fallbackKey)
+            seenFallback.add(fallbackKey);
+        result.push(row);
+    }
+    return result;
+}
+/** Строка модельного стрима для «Подробного расчёта»: только с ненулевым итогом. */
+function isModelStreamTypicalWorkVisibleInSummary(row) {
+    if (row.total == null || row.total === "")
+        return false;
+    const num = typeof row.total === "number"
+        ? row.total
+        : typeof row.total === "string" && row.total.trim()
+            ? Number(row.total.replace(",", "."))
+            : Number.NaN;
+    return Number.isFinite(num) && num > 0;
 }

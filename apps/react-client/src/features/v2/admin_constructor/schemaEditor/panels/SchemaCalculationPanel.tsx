@@ -281,7 +281,7 @@ export function SchemaCalculationPanel({ embedded = false }: { embedded?: boolea
 						<Divider sx={{ mb: 1 }} />
 						<Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
 							<Typography variant="caption" fontWeight={700}>
-								Типовые работы (триггеры)
+								Типовые работы (условия появления)
 							</Typography>
 							<IconButton
 								size="small"

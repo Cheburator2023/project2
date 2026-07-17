@@ -1,6 +1,6 @@
 import {
 	collectAtypicalWorkArrayPaths,
-	listAllGeneratedTypicalWorkArrayPaths,
+	collectGeneratedTypicalWorkArrayPaths,
 	V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
 	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
 } from "@smart-anketa/api-contract";
@@ -72,9 +72,11 @@ function deepMergeRecords(
 function resolveGeneratedTypicalWorkPaths(
 	uiSchema?: Record<string, unknown>,
 ): string[] {
-	return uiSchema
-		? listAllGeneratedTypicalWorkArrayPaths(uiSchema)
-		: [...FALLBACK_GENERATED_TYPICAL_WORK_ARRAY_PATHS];
+	if (uiSchema) {
+		const activePaths = collectGeneratedTypicalWorkArrayPaths(uiSchema);
+		if (activePaths.length > 0) return activePaths;
+	}
+	return [...FALLBACK_GENERATED_TYPICAL_WORK_ARRAY_PATHS];
 }
 
 function resolveAtypicalWorkPaths(uiSchema?: Record<string, unknown>): string[] {
