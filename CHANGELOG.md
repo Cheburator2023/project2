@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.32.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.31.0...v1.32.0) (2026-07-17)
+
+
+### Features
+
+* implement labor parameter group merging functionality ([591862e](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/591862e5c62fe83a6ef637164dd4740568d58028))
+
 # [1.31.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.30.2...v1.31.0) (2026-07-17)
 
 
