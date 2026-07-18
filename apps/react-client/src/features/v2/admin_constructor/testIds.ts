@@ -29,6 +29,7 @@ export const V2_TEMPLATE_EDIT_TEST_IDS = {
 	issuesViewList: "issuesViewList",
 	issuesViewJson: "issuesViewJson",
 	issuesJson: "issuesJson",
+	issuesCopyJson: "issuesCopyJson",
 	issueGoDesigner: "issueGoDesigner",
 	issueGoParameter: "issueGoParameter",
 	issueGoLogic: "issueGoLogic",

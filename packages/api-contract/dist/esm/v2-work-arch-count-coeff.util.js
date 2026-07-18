@@ -164,7 +164,7 @@ export function evalArchCountCoefficientFormula(formula, n) {
                 prev === "/";
             if (unary) {
                 i += 1;
-                let start = i;
+                const start = i;
                 while (i < trimmed.length && /[0-9.]/.test(trimmed[i]))
                     i += 1;
                 if (start === i)

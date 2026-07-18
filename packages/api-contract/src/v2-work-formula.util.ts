@@ -79,6 +79,13 @@ function collectParamRefKeys(ref: WorkFormulaLaborParamRef): Set<string> {
 	return keys;
 }
 
+function normalizeLaborParamDisplayLabel(value: string): string {
+	return stripParamNameSourceKeys(value)
+		.trim()
+		.toLowerCase()
+		.replace(/ё/g, "е");
+}
+
 /** Сопоставление токена формулы с параметром из блока трудоёмкости (код, подпись, sourceKeys). */
 export function workFormulaLaborParamMatches(
 	token: { paramCode: string; paramName?: string | null },
@@ -89,14 +96,22 @@ export function workFormulaLaborParamMatches(
 	if (token.paramName != null && group.paramCode === token.paramName) return true;
 	if (group.paramName != null && group.paramName === token.paramCode) return true;
 
-	const tokenDisplay = stripParamNameSourceKeys(token.paramName ?? "")
-		.trim()
-		.toLowerCase();
-	const groupDisplay = stripParamNameSourceKeys(group.paramName ?? "")
-		.trim()
-		.toLowerCase();
+	const tokenDisplay = normalizeLaborParamDisplayLabel(token.paramName ?? "");
+	const groupDisplay = normalizeLaborParamDisplayLabel(group.paramName ?? "");
 	if (tokenDisplay && groupDisplay && tokenDisplay === groupDisplay) {
 		return true;
+	}
+	// «Общая неопределённость» / overallUncertainty — один вычисляемый параметр.
+	if (
+		tokenDisplay === "общая неопределенность" ||
+		token.paramCode === "overallUncertainty"
+	) {
+		if (
+			groupDisplay === "общая неопределенность" ||
+			group.paramCode === "overallUncertainty"
+		) {
+			return true;
+		}
 	}
 
 	const tokenKeys = collectParamRefKeys({

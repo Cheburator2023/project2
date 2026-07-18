@@ -7,8 +7,12 @@ import type {
 	V2TypicalWorkListResponseDto,
 } from "@smart-anketa/api-contract";
 
-/** В реестре заводских типовых работ 83 записи; допускаем небольшой запас на гонки. */
-const FACTORY_TYPICAL_WORKS_MIN_COUNT = 70;
+/**
+ * В `v2-factory-template-typical-works.registry.json` сейчас 113 работ.
+ * Ждём полный набор — иначе UI открывает редактор и дергает schema-field-sync/bulk,
+ * пока фоновый seed ещё пишет строки (гонка → 500).
+ */
+const FACTORY_TYPICAL_WORKS_MIN_COUNT = 113;
 const POLL_INTERVAL_MS = 2_000;
 const MAX_WAIT_MS = 600_000;
 

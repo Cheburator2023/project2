@@ -209,6 +209,8 @@ function resolveSeedVersionConfigFormula(
 @Injectable()
 export class V2TypicalWorkSeedService implements OnModuleInit {
 	private readonly logger = new Logger(V2TypicalWorkSeedService.name);
+	/** In-flight seed по templateVersionId — чтобы bulk schema-sync не гонялся с фоновым сидом. */
+	private readonly seedInFlight = new Map<string, Promise<number>>();
 
 	constructor(
 		@InjectRepository(V2TypicalWorkEntity)
@@ -395,6 +397,14 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		this.logger.log(`Seeded ${created} typical works from doc catalog`);
 	}
 
+	/** Дождаться завершения фонового seed для версии (если сейчас идёт). */
+	async waitForSeedInFlight(templateVersionId: string): Promise<void> {
+		const key = templateVersionId.trim();
+		if (!key) return;
+		const pending = this.seedInFlight.get(key);
+		if (pending) await pending;
+	}
+
 	/**
 	 * При создании схемы из заводского снимка — копирует типовые работы
 	 * из `v2-factory-template-typical-works.registry.json` (prod эталон)
@@ -408,6 +418,25 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		const trimmedVersionId = templateVersionId.trim();
 		if (!trimmedTemplateId || !trimmedVersionId) return 0;
 
+		const existing = this.seedInFlight.get(trimmedVersionId);
+		if (existing) return existing;
+
+		const run = this.runSeedTemplateTypicalWorksFromFactorySnapshot(
+			trimmedTemplateId,
+			trimmedVersionId,
+		).finally(() => {
+			if (this.seedInFlight.get(trimmedVersionId) === run) {
+				this.seedInFlight.delete(trimmedVersionId);
+			}
+		});
+		this.seedInFlight.set(trimmedVersionId, run);
+		return run;
+	}
+
+	private async runSeedTemplateTypicalWorksFromFactorySnapshot(
+		trimmedTemplateId: string,
+		trimmedVersionId: string,
+	): Promise<number> {
 		const existingCount = await this.workRepository.count({
 			where: { templateId: trimmedTemplateId },
 		});

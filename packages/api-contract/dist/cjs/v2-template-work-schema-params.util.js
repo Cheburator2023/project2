@@ -12,6 +12,7 @@ const v2_work_schema_params_match_util_1 = require("./v2-work-schema-params-matc
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
 const v2_typical_work_validation_util_1 = require("./v2-typical-work-validation.util");
 const v2_labor_arch_count_util_1 = require("./v2-labor-arch-count.util");
+const v2_work_formula_util_1 = require("./v2-work-formula.util");
 function schemaNodeType(node) {
     if (!node)
         return null;
@@ -274,10 +275,25 @@ function collectTypicalWorkSchemaConsistencyIssues(input) {
     })) {
         report(unavailable.kind, unavailable.paramCode, unavailable.paramName, unavailable.message);
     }
-    for (const paramCode of input.formulaParamCodes ?? []) {
-        if (!(0, v2_work_schema_params_match_util_1.findWorkSchemaParameter)(input.schemaParams, paramCode) &&
-            !input.laborParamCodes.some((row) => row.paramCode === paramCode)) {
-            report("formula", paramCode, null, "Формула ссылается на параметр, которого нет в схеме или трудоёмкости");
+    const laborRefs = input.laborParamCodes.map((row) => ({
+        paramCode: row.paramCode,
+        paramName: row.paramName,
+    }));
+    if (input.formulaTokens && input.formulaTokens.length > 0) {
+        const formulaError = (0, v2_work_formula_util_1.validateWorkFormulaTokens)(input.formulaTokens, {
+            laborParams: laborRefs,
+            allowInvalidParamRefs: true,
+        });
+        if (formulaError) {
+            report("formula", "formula", null, formulaError);
+        }
+    }
+    else {
+        for (const paramCode of input.formulaParamCodes ?? []) {
+            if (!(0, v2_work_schema_params_match_util_1.findWorkSchemaParameter)(input.schemaParams, paramCode) &&
+                !input.laborParamCodes.some((row) => row.paramCode === paramCode)) {
+                report("formula", paramCode, null, "Формула ссылается на параметр, которого нет в схеме или трудоёмкости");
+            }
         }
     }
     return issues;

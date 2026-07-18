@@ -910,38 +910,73 @@ export const V2TemplateSchemaEditor = ({
 	const schemaSyncTimerRef = useRef<number | null>(null);
 	const initialSchemaBulkSyncRef = useRef<string | null>(null);
 	const bulkSyncTrackedVersionRef = useRef<string | null>(null);
+	const [consistencyRefreshTick, setConsistencyRefreshTick] = useState(0);
+
+	const refreshSchemaConsistencyIssues = useCallback(() => {
+		setConsistencyRefreshTick((tick) => tick + 1);
+	}, []);
 
 	useEffect(() => {
 		if (dictionaryEnumsLoading) return;
 		const versionId = activeVersion?.id;
 		if (!versionId || schemaWorkParams.length === 0) return;
 
-		if (bulkSyncTrackedVersionRef.current !== versionId) {
+		const versionChanged = bulkSyncTrackedVersionRef.current !== versionId;
+		if (versionChanged) {
 			bulkSyncTrackedVersionRef.current = versionId;
 			initialSchemaBulkSyncRef.current = null;
 			setSchemaConsistencyIssues([]);
+			setConsistencyRefreshTick(0);
 		}
 
-		if (initialSchemaBulkSyncRef.current === versionId) return;
-		initialSchemaBulkSyncRef.current = versionId;
+		const shouldApply =
+			initialSchemaBulkSyncRef.current !== versionId &&
+			consistencyRefreshTick === 0;
+		if (shouldApply) {
+			initialSchemaBulkSyncRef.current = versionId;
+		}
 
-		void bulkSyncSchemaFields({ templateVersionId: versionId, mode: "apply" })
-			.then((result) => {
-				setSchemaConsistencyIssues(result.consistencyIssues);
-				if (
-					result.worksUpdated > 0 ||
-					result.laborParamsUpdated > 0 ||
-					result.rulesUpdated > 0
-				) {
-					requestCalculationRefresh();
+		let cancelled = false;
+		void (async () => {
+			const maxAttempts = 3;
+			for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+				try {
+					const result = await bulkSyncSchemaFields({
+						templateVersionId: versionId,
+						// apply только при первом заходе; refresh / Issues — dryRun
+						mode: shouldApply ? "apply" : "dryRun",
+					});
+					if (cancelled) return;
+					setSchemaConsistencyIssues(result.consistencyIssues);
+					if (
+						shouldApply &&
+						(result.worksUpdated > 0 ||
+							result.laborParamsUpdated > 0 ||
+							result.rulesUpdated > 0)
+					) {
+						requestCalculationRefresh();
+					}
+					return;
+				} catch (error) {
+					if (attempt >= maxAttempts) {
+						if (shouldApply && !cancelled) {
+							toast.error(apiErrorMessage(error));
+						}
+						return;
+					}
+					await new Promise((resolve) =>
+						setTimeout(resolve, 1500 * attempt),
+					);
 				}
-			})
-			.catch((error) => {
-				toast.error(apiErrorMessage(error));
-			});
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
 	}, [
 		activeVersion?.id,
 		bulkSyncSchemaFields,
+		consistencyRefreshTick,
 		dictionaryEnumsLoading,
 		requestCalculationRefresh,
 		schemaWorkParams.length,
@@ -2320,6 +2355,7 @@ export const V2TemplateSchemaEditor = ({
 	const editorContext = useMemo<SchemaEditorContextValue>(
 		() => ({
 			templateId,
+			templateVersionId: activeVersion?.id ?? null,
 			mainTab,
 			setMainTab: activateMainTab,
 			jsonSchema,
@@ -2358,6 +2394,7 @@ export const V2TemplateSchemaEditor = ({
 			logicValidationIssues,
 			legacyStageEvaluation,
 			schemaConsistencyIssues,
+			refreshSchemaConsistencyIssues,
 			navigateToSchemaEditorIssue,
 			openDesignerAtPointer,
 			openLogicForIssueTarget,
@@ -2437,6 +2474,7 @@ export const V2TemplateSchemaEditor = ({
 		}),
 		[
 			templateId,
+			activeVersion?.id,
 			mainTab,
 			activateMainTab,
 			jsonSchema,
@@ -2470,6 +2508,7 @@ export const V2TemplateSchemaEditor = ({
 			logicValidationIssues,
 			legacyStageEvaluation,
 			schemaConsistencyIssues,
+			refreshSchemaConsistencyIssues,
 			navigateToSchemaEditorIssue,
 			openDesignerAtPointer,
 			openLogicForIssueTarget,
