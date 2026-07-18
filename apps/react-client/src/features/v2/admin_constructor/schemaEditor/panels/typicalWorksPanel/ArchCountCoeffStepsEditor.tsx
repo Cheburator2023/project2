@@ -3,7 +3,9 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import FormControl from "@mui/material/FormControl";
 import IconButton from "@mui/material/IconButton";
+import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import TextField from "@mui/material/TextField";
@@ -187,39 +189,41 @@ export function ArchCountCoeffStepsEditor({
 					{draft.map((step, index) => {
 						const mode = stepCoeffMode(step);
 						const operator = resolveLaborArchCountOperator(step);
+						const operatorLabelId = `arch-count-op-${index}`;
 						return (
 							<Flex
 								key={`step-${index}`}
-								alignItems="flex-start"
+								alignItems="flex-end"
 								gap={8}
 								wrap="wrap"
 							>
-								<Select
+								<FormControl
 									size="small"
 									disabled={readOnly}
-									value={operator}
-									onChange={(event) =>
-										updateStep(index, {
-											operator: event.target
-												.value as V2TypicalWorkTriggerArchCountOperator,
-										})
-									}
-									sx={{
-										height: 40,
-										minWidth: 72,
-										bgcolor: "#fff",
-										"& .MuiSelect-select": { py: 0.75, fontSize: 13 },
-									}}
-									title="Оператор сравнения"
+									sx={{ minWidth: 88, bgcolor: "#fff" }}
 								>
-									{V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES.map(
-										(op) => (
-											<MenuItem key={op} value={op}>
-												{OPERATOR_LABELS[op]}
-											</MenuItem>
-										),
-									)}
-								</Select>
+									<InputLabel id={operatorLabelId}>Оператор</InputLabel>
+									<Select
+										labelId={operatorLabelId}
+										label="Оператор"
+										value={operator}
+										onChange={(event) =>
+											updateStep(index, {
+												operator: event.target
+													.value as V2TypicalWorkTriggerArchCountOperator,
+											})
+										}
+										title="Оператор сравнения"
+									>
+										{V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES.map(
+											(op) => (
+												<MenuItem key={op} value={op}>
+													{OPERATOR_LABELS[op]}
+												</MenuItem>
+											),
+										)}
+									</Select>
+								</FormControl>
 								<TextField
 									size="small"
 									label="Порог"
@@ -232,19 +236,26 @@ export function ArchCountCoeffStepsEditor({
 										updateStep(index, { count: Math.floor(count) });
 									}}
 									inputProps={{ min: limits.min, max: limits.max }}
+									InputLabelProps={{ shrink: true }}
 									sx={{ width: 100 }}
 								/>
-								<SegmentBar
-									segments={[
-										{ id: "const", label: "Число" },
-										{ id: "formula", label: "Формула" },
-									]}
-									value={mode}
-									onChange={(next) => {
-										if (readOnly) return;
-										setCoeffMode(index, next as CoeffMode);
-									}}
-								/>
+								<Flex
+									alignItems="center"
+									sx={{ height: 40, pb: "1px" }}
+									title="Тип коэффициента"
+								>
+									<SegmentBar
+										segments={[
+											{ id: "const", label: "Число" },
+											{ id: "formula", label: "Формула" },
+										]}
+										value={mode}
+										onChange={(next) => {
+											if (readOnly) return;
+											setCoeffMode(index, next as CoeffMode);
+										}}
+									/>
+								</Flex>
 								{mode === "formula" ? (
 									<TextField
 										size="small"
@@ -257,6 +268,7 @@ export function ArchCountCoeffStepsEditor({
 											})
 										}
 										placeholder="N/5"
+										InputLabelProps={{ shrink: true }}
 										sx={{ width: 140 }}
 										title="Например N/5 или 1+(N-1)*0.75"
 									/>
@@ -273,11 +285,12 @@ export function ArchCountCoeffStepsEditor({
 											if (!Number.isFinite(coefficient)) return;
 											updateStep(index, { coefficient });
 										}}
+										InputLabelProps={{ shrink: true }}
 										sx={{ width: 120 }}
 									/>
 								)}
 								{!readOnly ? (
-									<Flex alignItems="center" gap={0}>
+									<Flex alignItems="center" gap={0} sx={{ height: 40 }}>
 										<IconButton
 											size="small"
 											onClick={() => moveStep(index, -1)}
