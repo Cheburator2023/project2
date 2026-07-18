@@ -1,5 +1,16 @@
 # Semantic Versioning Changelog
 
+# [1.33.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.32.0...v1.33.0) (2026-07-18)
+
+
+### Features
+
+* add PиРМ import functionality and update related configurations ([5fff419](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5fff4194587bc631979b17e50ef80e7dba070473))
+* enhance factory snapshot and questionnaire registry configuration ([009c69f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/009c69f38dbab1f06b5179787d00b69ae67c6839))
+* enhance typical works catalog logic synchronization ([a507f1f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a507f1f4c6da2ea02d2c295885e40766e6f0696e))
+* implement always-shown trigger parameter logic in typical works ([4db971f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4db971fa2a5b60d9dc4de001939a52329cd2edc1))
+* update calculation logic and snapshot handling ([d0309bd](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/d0309bd7a50d3a0b30348afab623e17feffa6ea9))
+
 # [1.32.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.31.0...v1.32.0) (2026-07-17)
 
 
