@@ -12,6 +12,7 @@ import type {
 } from "@smart-anketa/api-contract";
 import {
 	clearStaleGeneratedTypicalWorkPaths,
+	dedupeTypicalWorkRowsByWorkId,
 	isCalculationPathActive,
 	mergeTypicalCoefficientContext,
 	parseParamDependencyGraphFromLogic,
@@ -577,9 +578,21 @@ export class V2CalculationService {
 		const archComponent =
 			payload.worksCatalogArchComponent?.trim() ?? "Система-источник";
 
+		const catalogStream = payload.worksCatalogStream?.trim() ?? "";
+		const collapseByWorkId =
+			usesCatalog &&
+			(payload.worksCatalogAllArchComponents === true ||
+				catalogStream === V2_MODEL_STREAM_EXECUTOR);
+
+		// Модельный стрим: одна контекстная строка, без fan-out по источникам/моделям.
+		const effectiveSourceRows =
+			usesCatalog && catalogStream === V2_MODEL_STREAM_EXECUTOR
+				? sourceRows.slice(0, 1)
+				: sourceRows;
+
 		const generated = (
 			await Promise.all(
-				sourceRows.map(async (row, sourceIndex) => {
+				effectiveSourceRows.map(async (row, sourceIndex) => {
 					const source =
 						row && typeof row === "object" && !Array.isArray(row)
 							? (row as Record<string, unknown>)
@@ -713,6 +726,12 @@ export class V2CalculationService {
 								typeof task.coefficientDisplay === "string"
 									? task.coefficientDisplay
 									: undefined,
+							formulaBreakdown:
+								"formulaBreakdown" in task &&
+								task.formulaBreakdown != null &&
+								typeof task.formulaBreakdown === "object"
+									? task.formulaBreakdown
+									: undefined,
 							total: catalogTotal,
 							sourceComponent: archComponent,
 							sourceName,
@@ -724,19 +743,29 @@ export class V2CalculationService {
 			)
 		).flat();
 
+		const collapsed = collapseByWorkId
+			? dedupeTypicalWorkRowsByWorkId(generated)
+			: generated;
+
 		if (payload.outputMode === "append") {
 			const existing = readByDotPath(data, outputArrayPath);
 			const merged = [
 				...(Array.isArray(existing) ? existing : []),
-				...generated,
+				...collapsed,
 			];
-			return writeByDotPath(data, outputArrayPath, merged);
+			return writeByDotPath(
+				data,
+				outputArrayPath,
+				collapseByWorkId
+					? dedupeTypicalWorkRowsByWorkId(merged)
+					: merged,
+			);
 		}
 
 		return this.writeGeneratedTypicalWorkOutput(
 			data,
 			outputArrayPath,
-			generated,
+			collapsed,
 			uiSchema,
 		);
 	}
@@ -770,6 +799,26 @@ export class V2CalculationService {
 		const arrayPath = payload.sourceArrayPath?.trim();
 		const outputPath = payload.outputArrayPath?.trim();
 		const referencePath = outputPath || arrayPath || "";
+		const catalogStream = payload.worksCatalogStream?.trim() ?? "";
+
+		// Модельный стрим всегда один контекст (arch-count / формула дают множитель).
+		if (payload.worksCatalog && catalogStream === V2_MODEL_STREAM_EXECUTOR) {
+			const modelServiceRows = readFilledArchComponentListRows(
+				readByDotPath(data, V2_MODEL_STREAM_SOURCE_ARRAY_PATH),
+			);
+			if (modelServiceRows.length > 0) return [modelServiceRows[0]!];
+			if (referencePath) {
+				const streamContext = readTypicalWorksStreamTriggerContext(
+					data,
+					referencePath,
+					uiSchema,
+				);
+				if (hasTypicalWorkStreamTriggerContext(streamContext)) {
+					return [streamContext];
+				}
+			}
+			return [{}];
+		}
 
 		if (arrayPath) {
 			const filledFromPath = readFilledArchComponentListRows(
@@ -782,10 +831,10 @@ export class V2CalculationService {
 			);
 			if (legacyFilled.length > 0) return legacyFilled;
 
+			// Fallback на системы-источники — только если правило реально завязано на них.
 			if (
 				arrayPath === "streamDataSources.sourceSystems" ||
-				arrayPath === V2_SOURCE_SYSTEMS_ARRAY_PATH ||
-				payload.worksCatalog
+				arrayPath === V2_SOURCE_SYSTEMS_ARRAY_PATH
 			) {
 				const canonical = this.readFilledSourceSystemRows(
 					readByDotPath(data, V2_SOURCE_SYSTEMS_ARRAY_PATH),
@@ -807,16 +856,6 @@ export class V2CalculationService {
 			if (hasTypicalWorkStreamTriggerContext(streamContext)) {
 				return [streamContext];
 			}
-		}
-
-		if (
-			payload.worksCatalog &&
-			payload.worksCatalogStream?.trim() === V2_MODEL_STREAM_EXECUTOR
-		) {
-			const modelServiceRows = readFilledArchComponentListRows(
-				readByDotPath(data, V2_MODEL_STREAM_SOURCE_ARRAY_PATH),
-			);
-			if (modelServiceRows.length > 0) return modelServiceRows;
 		}
 
 		return Array.isArray(readByDotPath(data, arrayPath ?? "")) ? [] : [];

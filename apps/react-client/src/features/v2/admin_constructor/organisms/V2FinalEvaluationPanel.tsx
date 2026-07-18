@@ -1,3 +1,5 @@
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
@@ -5,6 +7,7 @@ import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import CircularProgress from "@mui/material/CircularProgress";
+import Collapse from "@mui/material/Collapse";
 import Divider from "@mui/material/Divider";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
@@ -24,8 +27,9 @@ import {
 	dedupeTypicalWorkRowsByWorkId,
 	isModelStreamTypicalWorkVisibleInSummary,
 	sortModelStreamTypicalWorkRows,
+	type TypicalWorkFormulaBreakdownDto,
 } from "@smart-anketa/api-contract";
-import { useMemo } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 const MODEL_STREAM_LABEL = "Модельный стрим";
 
@@ -433,17 +437,244 @@ function Metric({
 	);
 }
 
-function TypicalWorksMiniTable({ rows }: { rows: Record<string, unknown>[] }) {
+function readFormulaBreakdown(
+	item: Record<string, unknown>,
+): TypicalWorkFormulaBreakdownDto | null {
+	const raw = item.formulaBreakdown;
+	if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+	const record = raw as Record<string, unknown>;
+	const symbolic =
+		typeof record.symbolic === "string" ? record.symbolic.trim() : "";
+	const expanded =
+		typeof record.expanded === "string" ? record.expanded.trim() : "";
+	if (!symbolic && !expanded) return null;
+	const factors = Array.isArray(record.factors)
+		? record.factors
+				.filter(
+					(factor): factor is Record<string, unknown> =>
+						factor != null && typeof factor === "object" && !Array.isArray(factor),
+				)
+				.map((factor) => ({
+					paramCode:
+						typeof factor.paramCode === "string" ? factor.paramCode : "",
+					paramName:
+						typeof factor.paramName === "string"
+							? factor.paramName
+							: typeof factor.paramCode === "string"
+								? factor.paramCode
+								: "Параметр",
+					value:
+						typeof factor.value === "number" && Number.isFinite(factor.value)
+							? factor.value
+							: Number.NaN,
+				}))
+				.filter((factor) => Number.isFinite(factor.value))
+		: [];
+	return {
+		symbolic: symbolic || "N",
+		expanded:
+			expanded ||
+			`${formatTypicalWorkNumberValue(item.estimateHoursPerDay)} × ${formatTypicalWorkNumberValue(item.coefficient)} = ${formatTypicalWorkNumberValue(item.total)}`,
+		factors,
+		baseNorm:
+			typeof record.baseNorm === "number" && Number.isFinite(record.baseNorm)
+				? record.baseNorm
+				: Number(item.estimateHoursPerDay) || 0,
+		coefficient:
+			typeof record.coefficient === "number" &&
+			Number.isFinite(record.coefficient)
+				? record.coefficient
+				: Number(item.coefficient) || 1,
+		total:
+			typeof record.total === "number" && Number.isFinite(record.total)
+				? record.total
+				: Number(item.total) || 0,
+	};
+}
+
+function buildFallbackFormulaBreakdown(
+	item: Record<string, unknown>,
+): TypicalWorkFormulaBreakdownDto {
+	const base = formatTypicalWorkNumberValue(item.estimateHoursPerDay);
+	const coeff = formatTypicalWorkNumberValue(item.coefficient);
+	const total = formatTypicalWorkNumberValue(item.total);
+	const coeffDisplay =
+		typeof item.coefficientDisplay === "string" &&
+		item.coefficientDisplay.trim()
+			? item.coefficientDisplay.trim()
+			: null;
+	return {
+		symbolic: "N × коэффициент",
+		expanded: coeffDisplay
+			? `${base} × ${coeffDisplay} = ${total}`
+			: `${base} × ${coeff} = ${total}`,
+		factors: [],
+		baseNorm: Number(item.estimateHoursPerDay) || 0,
+		coefficient: Number(item.coefficient) || 1,
+		total: Number(item.total) || 0,
+	};
+}
+
+function TypicalWorkFormulaDetails({ item }: { item: Record<string, unknown> }) {
+	const breakdown =
+		readFormulaBreakdown(item) ?? buildFallbackFormulaBreakdown(item);
+
 	return (
-		<MiniTable
-			columns={[...TYPICAL_WORK_TABLE_COLUMNS]}
-			rows={rows.map((item, index) => ({
-				name: typicalWorkItemDisplayName(item, index),
-				c1: formatTypicalWorkNumberValue(item.estimateHoursPerDay),
-				c2: formatTypicalWorkNumberValue(item.coefficient),
-				c3: formatTypicalWorkNumberValue(item.total),
-			}))}
-		/>
+		<Box
+			sx={{
+				width: "100%",
+				px: 1.5,
+				py: 1.25,
+				borderRadius: 1,
+				bgcolor: "action.hover",
+			}}
+		>
+			{breakdown.symbolic ? (
+				<Typography
+					variant="caption"
+					color="text.secondary"
+					display="block"
+					sx={{ mb: 0.5, lineHeight: 1.4 }}
+				>
+					{breakdown.symbolic}
+				</Typography>
+			) : null}
+			<Typography
+				variant="body2"
+				fontWeight={600}
+				sx={{
+					fontFamily:
+						'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+					fontSize: 13,
+					letterSpacing: 0.15,
+					lineHeight: 1.45,
+					wordBreak: "break-word",
+				}}
+			>
+				{breakdown.expanded}
+			</Typography>
+		</Box>
+	);
+}
+
+function TypicalWorksMiniTable({ rows }: { rows: Record<string, unknown>[] }) {
+	const [openByKey, setOpenByKey] = useState<Record<string, boolean>>({});
+
+	return (
+		<Table
+			size="small"
+			sx={{
+				tableLayout: "fixed",
+				width: "100%",
+				"& td, & th": {
+					px: 0.75,
+					py: 0.5,
+					fontSize: 12,
+					verticalAlign: "top",
+					wordBreak: "break-word",
+				},
+			}}
+		>
+			<TableHead>
+				<TableRow>
+					{TYPICAL_WORK_TABLE_COLUMNS.map((col, index) => (
+						<TableCell
+							key={col}
+							align={index === 0 ? "left" : "right"}
+							sx={{
+								fontWeight: 700,
+								color: "text.secondary",
+								width: index === 0 ? "42%" : undefined,
+							}}
+						>
+							{col}
+						</TableCell>
+					))}
+				</TableRow>
+			</TableHead>
+			<TableBody>
+				{rows.map((item, index) => {
+					const name = typicalWorkItemDisplayName(item, index);
+					const rowKey = `${String(item.workId ?? name)}-${index}`;
+					const open = Boolean(openByKey[rowKey]);
+					const toggle = () =>
+						setOpenByKey((prev) => ({
+							...prev,
+							[rowKey]: !prev[rowKey],
+						}));
+					return (
+						<Fragment key={rowKey}>
+							<TableRow
+								hover
+								onClick={toggle}
+								onKeyDown={(event) => {
+									if (event.key === "Enter" || event.key === " ") {
+										event.preventDefault();
+										toggle();
+									}
+								}}
+								tabIndex={0}
+								role="button"
+								aria-expanded={open}
+								title={open ? "Скрыть формулу" : "Показать формулу"}
+								sx={{
+									cursor: "pointer",
+									bgcolor: open ? "action.hover" : undefined,
+									"& > td": { borderBottom: open ? "none" : undefined },
+								}}
+							>
+								<TableCell>
+									<Stack direction="row" spacing={1} alignItems="flex-start">
+										<Typography color="text.secondary" sx={{ minWidth: 28 }}>
+											{String(index + 1).padStart(2, "0")}.
+										</Typography>
+										<Typography fontWeight={500} sx={{ flex: 1, minWidth: 0 }}>
+											{name}
+										</Typography>
+										{open ? (
+											<ExpandLessIcon
+												fontSize="small"
+												sx={{ color: "text.secondary", mt: 0.15 }}
+											/>
+										) : (
+											<ExpandMoreIcon
+												fontSize="small"
+												sx={{ color: "text.secondary", mt: 0.15 }}
+											/>
+										)}
+									</Stack>
+								</TableCell>
+								<TableCell align="right">
+									{formatTypicalWorkNumberValue(item.estimateHoursPerDay)}
+								</TableCell>
+								<TableCell align="right">
+									{formatTypicalWorkNumberValue(item.coefficient)}
+								</TableCell>
+								<TableCell align="right">
+									{formatTypicalWorkNumberValue(item.total)}
+								</TableCell>
+							</TableRow>
+							<TableRow>
+								<TableCell
+									colSpan={TYPICAL_WORK_TABLE_COLUMNS.length}
+									sx={{
+										py: 0,
+										px: 0.75,
+										borderBottom: open ? undefined : "none",
+									}}
+								>
+									<Collapse in={open} timeout="auto" unmountOnExit>
+										<Box sx={{ pb: 1.25, pt: 0.25, width: "100%" }}>
+											<TypicalWorkFormulaDetails item={item} />
+										</Box>
+									</Collapse>
+								</TableCell>
+							</TableRow>
+						</Fragment>
+					);
+				})}
+			</TableBody>
+		</Table>
 	);
 }
 

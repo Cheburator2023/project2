@@ -6,6 +6,7 @@ import {
 	applyWorkRounding,
 	applyComputedOverallUncertaintyToTypicalWorkParamCoefficients,
 	buildTypicalWorkFactorCoeffResolver,
+	buildTypicalWorkFormulaBreakdown,
 	computeTypicalWorkFormulaTotal,
 	defaultWorkRounding,
 	formatTypicalWorkCoefficientDisplay,
@@ -24,9 +25,11 @@ import {
 	normalizeTypicalWorkTriggerRuleForMatch,
 	remapFactoryAllowedWorkIdsToTemplateWorks,
 	type TypicalWorkTriggerMatchInput,
+	type TypicalWorkFormulaBreakdownDto,
 	buildWorkSchemaParamsFromTemplate,
 	remapLaborCoefficientRowsForSchema,
 	resolveWorkSchemaParamForRule,
+	stripParamNameSourceKeys,
 	type TypicalWorkAnyOfLaborParamLike,
 	type TypicalWorkRuleLike,
 	type TypicalWorkTriggerArchCountLike,
@@ -53,6 +56,8 @@ export type CatalogGeneratedTask = {
 	coefficient: number;
 	/** Развёрнутое представление коэффициента для таблицы анкеты. */
 	coefficientDisplay?: string;
+	/** Полный разбор формулы для «Подробного расчёта». */
+	formulaBreakdown?: TypicalWorkFormulaBreakdownDto;
 	/** Итог по формуле работы (чел.-дн.), до записи в анкету. */
 	total: number;
 	match: Record<string, unknown>;
@@ -548,11 +553,42 @@ export class V2TypicalWorkRuntimeService {
 			const terms = ctx.config
 				? normalizeStoredFormula(ctx.config.formula, ctx.config.formulaText)
 				: normalizeStoredFormula(null);
+			const resolveFactorCoeff = buildTypicalWorkFactorCoeffResolver({
+				paramCoefficients,
+				anyOfParams: listAnyOfLaborParams(ctx.laborParams),
+				source: ctx.source,
+			});
+			const rounding = resolveRounding(ctx.config);
+			const paramNames = Object.fromEntries(
+				ctx.laborParams.map((row) => [
+					row.paramCode,
+					stripParamNameSourceKeys(row.paramName).trim() ||
+						row.paramName?.trim() ||
+						row.paramCode,
+				]),
+			);
 			const coefficientDisplay = formatTypicalWorkCoefficientDisplay({
 				terms: terms.terms,
 				baseNorm: ctx.normValue,
 				paramCoefficients,
 				coefficient,
+			});
+			const formulaBreakdown = buildTypicalWorkFormulaBreakdown({
+				calculationLogic: parseStoredTypicalWorkCalculationLogic(
+					ctx.config?.calculationLogic,
+				),
+				formula: ctx.config?.formula,
+				formulaText: ctx.config?.formulaText,
+				terms,
+				rounding,
+				norm: ctx.normValue,
+				paramCoefficients,
+				paramNames,
+				source: ctx.source,
+				formData: ctx.formData,
+				resolveFactorCoeff,
+				coefficient,
+				total,
 			});
 
 			tasks.push({
@@ -563,6 +599,7 @@ export class V2TypicalWorkRuntimeService {
 				estimateHoursPerDay: ctx.normValue,
 				coefficient,
 				coefficientDisplay,
+				formulaBreakdown,
 				total,
 				match: { archComponentType, stream },
 				workId,

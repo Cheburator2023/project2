@@ -8,6 +8,9 @@ exports.isWorkFormulaLaborParamKnown = isWorkFormulaLaborParamKnown;
 exports.normalizeWorkFormulaLaborParamTokens = normalizeWorkFormulaLaborParamTokens;
 exports.reconcileFormulaLaborParamTokens = reconcileFormulaLaborParamTokens;
 exports.tokensToText = tokensToText;
+exports.applyWorkFormulaParamNames = applyWorkFormulaParamNames;
+exports.formatWorkFormulaReadableSymbolic = formatWorkFormulaReadableSymbolic;
+exports.formatWorkFormulaReadableWithValues = formatWorkFormulaReadableWithValues;
 exports.formatWorkFormulaGeneralSummary = formatWorkFormulaGeneralSummary;
 exports.parseWorkFormulaText = parseWorkFormulaText;
 exports.validateWorkFormulaTokens = validateWorkFormulaTokens;
@@ -178,9 +181,109 @@ function tokensToText(tokens) {
 const GENERAL_OP_SYMBOL = {
     "+": "+",
     "-": "−",
-    "*": "*",
-    "/": "/",
+    "*": "×",
+    "/": "÷",
 };
+function joinWorkFormulaReadableParts(parts) {
+    return parts
+        .join(" ")
+        .replace(/\(\s+/g, "(")
+        .replace(/\s+\)/g, ")")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+/** Подставляет человекочитаемые имена параметров в токены формулы. */
+function applyWorkFormulaParamNames(tokens, paramNames) {
+    if (!paramNames)
+        return tokens;
+    return tokens.map((token) => {
+        if (!isParamToken(token))
+            return token;
+        const name = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(paramNames[token.paramCode]?.trim() || token.paramName).trim();
+        if (!name)
+            return token;
+        return { ...token, paramName: name };
+    });
+}
+/** Формула с человекочитаемыми именами параметров (для подробного расчёта). */
+function formatWorkFormulaReadableSymbolic(tokens) {
+    return joinWorkFormulaReadableParts(tokens.map((token) => {
+        switch (token.kind) {
+            case "norm":
+                return "N";
+            case "param_coeff":
+            case "param_anyof":
+                return ((0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(token.paramName).trim() ||
+                    token.paramCode.trim() ||
+                    "параметр");
+            case "work_ref":
+                return token.workName?.trim()
+                    ? `→${token.workName.trim()}`
+                    : "→работа";
+            case "arch_count_coeff":
+                return `Кол-${(0, v2_work_arch_count_coeff_util_1.formatWorkArchCountKindLabel)(token.archComponentKind)}`;
+            case "number":
+                return String(token.value);
+            case "operator":
+                return GENERAL_OP_SYMBOL[token.op] ?? token.op;
+            case "paren_open":
+                return "(";
+            case "paren_close":
+                return ")";
+            default:
+                return "";
+        }
+    }));
+}
+function formatReadableFormulaNumber(value) {
+    if (!Number.isFinite(value))
+        return "?";
+    const rounded = Math.round(value * 10000) / 10000;
+    if (Number.isInteger(rounded))
+        return String(rounded);
+    return String(rounded)
+        .replace(/(\.\d*?)0+$/, "$1")
+        .replace(/\.$/, "");
+}
+/** Формула с подставленными числами (N и коэффициенты → значения). */
+function formatWorkFormulaReadableWithValues(tokens, ctx) {
+    const resolveCoeff = ctx.resolveFactorCoeff ??
+        ((paramCode) => {
+            const value = ctx.paramCoefficients[paramCode];
+            return value != null && Number.isFinite(value) ? value : Number.NaN;
+        });
+    return joinWorkFormulaReadableParts(tokens.map((token) => {
+        switch (token.kind) {
+            case "norm":
+                return formatReadableFormulaNumber(ctx.norm);
+            case "param_coeff":
+            case "param_anyof": {
+                const value = resolveCoeff(token.paramCode);
+                return Number.isFinite(value)
+                    ? formatReadableFormulaNumber(value)
+                    : "?";
+            }
+            case "work_ref":
+                return token.workName?.trim()
+                    ? `→${token.workName.trim()}`
+                    : "→работа";
+            case "arch_count_coeff": {
+                const value = (0, v2_work_arch_count_coeff_util_1.resolveArchCountCoeffFromToken)(ctx.formData ?? {}, token.archComponentKind, token.steps);
+                return formatReadableFormulaNumber(value);
+            }
+            case "number":
+                return formatReadableFormulaNumber(token.value);
+            case "operator":
+                return GENERAL_OP_SYMBOL[token.op] ?? token.op;
+            case "paren_open":
+                return "(";
+            case "paren_close":
+                return ")";
+            default:
+                return "";
+        }
+    }));
+}
 /** Краткая запись для блока «Общая формула норматива» (N, Кэф-П1, …). */
 function formatWorkFormulaGeneralSummary(tokens, paramOrder) {
     const indexByCode = new Map(paramOrder.map((code, index) => [code, index + 1]));
@@ -734,7 +837,10 @@ function evaluateWorkFormula(formula, ctx) {
                 };
             }
             values.push(coeff);
-            labels.push(String(coeff));
+            {
+                const label = (token.paramName ?? token.paramCode).trim() || token.paramCode;
+                labels.push(`${label}=${coeff}`);
+            }
             expectOperand = false;
             continue;
         }
@@ -761,7 +867,7 @@ function evaluateWorkFormula(formula, ctx) {
             const formData = ctx.formData ?? {};
             const coeff = (0, v2_work_arch_count_coeff_util_1.resolveArchCountCoeffFromToken)(formData, token.archComponentKind, token.steps);
             values.push(coeff);
-            labels.push(String(coeff));
+            labels.push(`Кол-${(0, v2_work_arch_count_coeff_util_1.formatWorkArchCountKindLabel)(token.archComponentKind)}=${coeff}`);
             expectOperand = false;
             continue;
         }

@@ -8,6 +8,7 @@ import type {
 	V2WorkFormulaFactorDto,
 	V2WorkFormulaTermDto,
 } from "./v2-typical-work-v4.types";
+import { resolveArchCountCoeffFromToken } from "./v2-work-arch-count-coeff.util";
 import { isTransitiveOnlyFormula, isParamToken, parseWorkFormulaText, tokensToText } from "./v2-work-formula.util";
 
 export function createTermId(prefix = "term"): string {
@@ -266,6 +267,35 @@ function parseAddSegment(
 	let baseValue = 1;
 	const factors: V2WorkFormulaFactorDto[] = [];
 	let title = "Слагаемое";
+
+	// N × … → слагаемое, пропорциональное нормативу (в т.ч. N × архкоэф).
+	if (segment[0]?.kind === "norm") {
+		let coeffStart = 1;
+		if (
+			segment[1]?.kind === "operator" &&
+			segment[1].op === "*" &&
+			segment.length >= 3
+		) {
+			coeffStart = 2;
+		} else if (segment.length > 1) {
+			// Неразборный хвост после N — не подменяем на «+1».
+			coeffStart = 1;
+		}
+		const coeffTokens = segment.slice(coeffStart);
+		const paramFactors = coeffTokens
+			.filter(isParamToken)
+			.map((token, index) => factorFromParamToken(token, index));
+		return {
+			id: createTermId("add"),
+			kind: "additive",
+			title: addOp === "-" ? "− N × …" : "+ N × …",
+			order,
+			baseValue: addOp === "-" ? -1 : 1,
+			factors: paramFactors,
+			scaleByNorm: true,
+			coeffTokens: coeffTokens.length > 0 ? coeffTokens : [{ kind: "number", value: 1 }],
+		};
+	}
 
 	if (segment[0]?.kind === "number") {
 		baseValue = segment[0].value;
@@ -604,7 +634,10 @@ export function validateTermsFormula(
 				return "Заполните название члена формулы";
 			}
 			if (term.baseValue != null && term.baseValue < 0) {
-				if (term.kind !== "additive" || term.factors.length > 0) {
+				if (
+					term.kind !== "additive" ||
+					(!term.scaleByNorm && term.factors.length > 0)
+				) {
 					return "Базовое значение члена должно быть неотрицательным";
 				}
 			}
@@ -661,11 +694,52 @@ export function computeFormulaBadge(
 	return "multiplier";
 }
 
+/** Произведение токенов коэффициента (числа, коэф. параметров, архкоэф). */
+function evaluateCoeffTokensProduct(
+	tokens: readonly V2WorkFormulaToken[],
+	resolveFactorCoeff: (paramCode: string) => number,
+	formData?: Record<string, unknown>,
+): number | null {
+	if (tokens.length === 0) return 1;
+	let product = 1;
+	let expectOperand = true;
+	for (const token of tokens) {
+		if (token.kind === "operator" && token.op === "*") {
+			if (expectOperand) return null;
+			expectOperand = true;
+			continue;
+		}
+		if (!expectOperand) return null;
+		if (token.kind === "number") {
+			product *= token.value;
+			expectOperand = false;
+			continue;
+		}
+		if (isParamToken(token)) {
+			product *= resolveFactorCoeff(token.paramCode);
+			expectOperand = false;
+			continue;
+		}
+		if (token.kind === "arch_count_coeff") {
+			product *= resolveArchCountCoeffFromToken(
+				formData ?? {},
+				token.archComponentKind,
+				token.steps,
+			);
+			expectOperand = false;
+			continue;
+		}
+		return null;
+	}
+	return expectOperand ? null : product;
+}
+
 export function evaluateTermsFormula(params: {
 	terms: V2WorkFormulaTermDto[];
 	baseNorm: number;
 	resolveFactorCoeff: (paramCode: string) => number;
 	resolveTransitive?: (sourceAssignmentId: string) => number | null;
+	formData?: Record<string, unknown>;
 }): number | null {
 	const error = validateTermsFormula(params.terms);
 	if (error) return null;
@@ -682,16 +756,31 @@ export function evaluateTermsFormula(params: {
 			? Math.min(...multTerms.map((term) => term.order))
 			: Number.POSITIVE_INFINITY;
 
+	const resolveAdditiveValue = (term: V2WorkFormulaTermDto): number | null => {
+		const sign = term.baseValue ?? 1;
+		if (term.scaleByNorm) {
+			const coeff = evaluateCoeffTokensProduct(
+				term.coeffTokens ?? [],
+				params.resolveFactorCoeff,
+				params.formData,
+			);
+			if (coeff == null) return null;
+			return sign * params.baseNorm * coeff;
+		}
+		const coeff = term.factors.reduce(
+			(acc, f) => acc * params.resolveFactorCoeff(f.paramCode),
+			1,
+		);
+		return sign * coeff;
+	};
+
 	let effectiveBase = params.baseNorm;
 	if (multTerms.length > 0) {
 		for (const term of sorted) {
 			if (term.kind !== "additive" || term.order >= firstMultOrder) continue;
-			const base = term.baseValue ?? 1;
-			const coeff = term.factors.reduce(
-				(acc, f) => acc * params.resolveFactorCoeff(f.paramCode),
-				1,
-			);
-			effectiveBase += base * coeff;
+			const value = resolveAdditiveValue(term);
+			if (value == null) return null;
+			effectiveBase += value;
 		}
 	}
 
@@ -720,12 +809,9 @@ export function evaluateTermsFormula(params: {
 		}
 		if (term.kind === "additive") {
 			if (multTerms.length > 0 && term.order < firstMultOrder) continue;
-			const base = term.baseValue ?? 1;
-			const coeff = term.factors.reduce(
-				(acc, f) => acc * params.resolveFactorCoeff(f.paramCode),
-				1,
-			);
-			sum += base * coeff;
+			const value = resolveAdditiveValue(term);
+			if (value == null) return null;
+			sum += value;
 		}
 	}
 

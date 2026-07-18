@@ -14,10 +14,13 @@ exports.assembleTypicalWorkCalculationLogic = assembleTypicalWorkCalculationLogi
 exports.compileCalculationLogicFromVersionConfig = compileCalculationLogicFromVersionConfig;
 exports.needsCalculationLogicBackfill = needsCalculationLogicBackfill;
 exports.parseStoredTypicalWorkCalculationLogic = parseStoredTypicalWorkCalculationLogic;
+exports.fillFormulaParamCoefficients = fillFormulaParamCoefficients;
 exports.computeTypicalWorkFormulaTotal = computeTypicalWorkFormulaTotal;
+exports.buildTypicalWorkFormulaBreakdown = buildTypicalWorkFormulaBreakdown;
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
 const v2_typical_work_types_1 = require("./v2-typical-work.types");
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
+const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
 const v2_trigger_formula_util_1 = require("./v2-trigger-formula.util");
 const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util");
 const v2_work_terms_formula_util_1 = require("./v2-work-terms-formula.util");
@@ -519,6 +522,22 @@ function parseStoredTypicalWorkCalculationLogic(raw) {
         result: record.result,
     };
 }
+/** Дополняет paramCoefficients значениями из resolveFactorCoeff для всех коэф. в формуле. */
+function fillFormulaParamCoefficients(tokens, paramCoefficients, resolveFactorCoeff) {
+    const next = { ...paramCoefficients };
+    for (const token of tokens) {
+        if (!(0, v2_work_formula_util_1.isParamToken)(token))
+            continue;
+        if (next[token.paramCode] != null && Number.isFinite(next[token.paramCode])) {
+            continue;
+        }
+        const resolved = resolveFactorCoeff(token.paramCode);
+        if (Number.isFinite(resolved)) {
+            next[token.paramCode] = resolved;
+        }
+    }
+    return next;
+}
 /** Итог по формуле: JsonLogic (из токенов) → token-движок → terms (упрощённая модель). */
 function computeTypicalWorkFormulaTotal(params) {
     if (params.terms.terms.some((t) => t.kind === "transitive")) {
@@ -526,12 +545,14 @@ function computeTypicalWorkFormulaTotal(params) {
             terms: params.terms.terms,
             baseNorm: params.norm,
             resolveFactorCoeff: params.resolveFactorCoeff,
+            formData: params.formData ?? params.source,
         });
     }
     const tokenFormula = (0, v2_work_terms_formula_util_1.resolveVersionConfigTokenFormula)(params.formula, params.formulaText);
+    const paramCoefficients = fillFormulaParamCoefficients(tokenFormula.tokens, params.paramCoefficients, params.resolveFactorCoeff);
     const ctx = {
         norm: params.norm,
-        paramCoefficients: params.paramCoefficients,
+        paramCoefficients,
         source: params.source,
         formData: params.formData ?? params.source,
     };
@@ -550,5 +571,99 @@ function computeTypicalWorkFormulaTotal(params) {
         terms: params.terms.terms,
         baseNorm: params.norm,
         resolveFactorCoeff: params.resolveFactorCoeff,
+        formData: params.formData ?? params.source,
     });
+}
+function formatBreakdownNumber(value) {
+    if (!Number.isFinite(value))
+        return "—";
+    const rounded = Math.round(value * 10000) / 10000;
+    if (Number.isInteger(rounded))
+        return String(rounded);
+    return String(rounded)
+        .replace(/(\.\d*?)0+$/, "$1")
+        .replace(/\.$/, "");
+}
+function collectFormulaFactorLines(params) {
+    const seen = new Set();
+    const factors = [];
+    const push = (paramCode, paramName, value) => {
+        const key = paramCode.trim() || paramName.trim();
+        if (!key || seen.has(key))
+            return;
+        seen.add(key);
+        const displayName = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(paramName).trim() ||
+            paramCode.trim() ||
+            key;
+        factors.push({
+            paramCode: paramCode.trim() || key,
+            paramName: displayName,
+            value,
+        });
+    };
+    for (const token of params.tokens) {
+        if ((0, v2_work_formula_util_1.isParamToken)(token)) {
+            const name = params.paramNames?.[token.paramCode]?.trim() ||
+                token.paramName?.trim() ||
+                token.paramCode;
+            push(token.paramCode, name, params.resolveFactorCoeff(token.paramCode));
+            continue;
+        }
+        if (token.kind === "arch_count_coeff") {
+            const name = `Кол-${(0, v2_work_arch_count_coeff_util_1.formatWorkArchCountKindLabel)(token.archComponentKind)}`;
+            const value = (0, v2_work_arch_count_coeff_util_1.resolveArchCountCoeffFromToken)(params.formData ?? {}, token.archComponentKind, token.steps);
+            push(`arch:${token.archComponentKind}`, name, value);
+        }
+    }
+    if (factors.length === 0) {
+        for (const term of params.terms.terms) {
+            for (const factor of term.factors) {
+                const name = params.paramNames?.[factor.paramCode]?.trim() ||
+                    factor.paramName?.trim() ||
+                    factor.paramCode;
+                push(factor.paramCode, name, params.resolveFactorCoeff(factor.paramCode));
+            }
+        }
+    }
+    return factors;
+}
+/** Собирает символьную формулу, подстановку и список коэффициентов с реальными значениями. */
+function buildTypicalWorkFormulaBreakdown(params) {
+    const tokenFormula = (0, v2_work_terms_formula_util_1.resolveVersionConfigTokenFormula)(params.formula, params.formulaText);
+    const paramCoefficients = fillFormulaParamCoefficients(tokenFormula.tokens, params.paramCoefficients, params.resolveFactorCoeff);
+    const ctx = {
+        norm: params.norm,
+        paramCoefficients,
+        source: params.source,
+        formData: params.formData ?? params.source,
+    };
+    const namedTokens = (0, v2_work_formula_util_1.applyWorkFormulaParamNames)(tokenFormula.tokens, params.paramNames);
+    const symbolic = (0, v2_work_formula_util_1.formatWorkFormulaReadableSymbolic)(namedTokens) ||
+        (0, v2_work_terms_formula_util_1.formatTermsSummary)(params.terms.terms) ||
+        "N";
+    const totalLabel = formatBreakdownNumber(params.total);
+    const valuesFormula = (0, v2_work_formula_util_1.formatWorkFormulaReadableWithValues)(namedTokens, {
+        norm: params.norm,
+        paramCoefficients,
+        formData: ctx.formData,
+        resolveFactorCoeff: params.resolveFactorCoeff,
+    });
+    const expanded = valuesFormula
+        ? `${valuesFormula} = ${totalLabel}`
+        : `${formatBreakdownNumber(params.norm)} × ${formatBreakdownNumber(params.coefficient)} = ${totalLabel}`;
+    return {
+        symbolic,
+        expanded,
+        factors: collectFormulaFactorLines({
+            tokens: namedTokens,
+            terms: params.terms,
+            paramCoefficients,
+            paramNames: params.paramNames,
+            formData: ctx.formData,
+            resolveFactorCoeff: params.resolveFactorCoeff,
+        }),
+        baseNorm: params.norm,
+        coefficient: params.coefficient,
+        total: params.total,
+    };
 }

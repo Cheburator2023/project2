@@ -303,6 +303,63 @@ describe("V2CalculationService", () => {
 		expect(tasks.some((t) => t.name === "Работа Кирилла")).toBe(true);
 	});
 
+	it("does not fan out model-stream typical works by sourceSystems count", async () => {
+		const modelStreamCalls: BuildCatalogTasksParams[] = [];
+		const runtime = {
+			buildCatalogTasks: async (params: BuildCatalogTasksParams) => {
+				if (params.streamExecutor === "Модельный стрим") {
+					modelStreamCalls.push(params);
+					return [
+						{
+							taskCode: "work-07",
+							name: "07. Разработка витрины для применения модели",
+							workType: "Опциональная",
+							reason: "test",
+							estimateHoursPerDay: 56,
+							coefficient: 1,
+							total: 56,
+							match: {},
+							workId: "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4009",
+						},
+					];
+				}
+				return [];
+			},
+		} as unknown as V2TypicalWorkRuntimeService;
+
+		const calc = new V2CalculationService(null as never, null as never, runtime);
+		const result = await calc.evaluate(
+			patchV2AnketaCalculationLogicRules(V2_DEFAULT_TEMPLATE_SNAPSHOT.logic, {
+				jsonSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema,
+				uiSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema,
+			}),
+			{
+				detailInfo: {
+					sourceSystems: [
+						{ name: "S1", type: "Внутренний" },
+						{ name: "S2", type: "Внутренний" },
+						{ name: "S3", type: "Внутренний" },
+						{ name: "S4", type: "Внутренний" },
+						{ name: "S5", type: "Внутренний" },
+						{ name: "S6", type: "Внутренний" },
+					],
+				},
+			},
+			FACTORY_SNAPSHOT_EVAL_OPTS,
+		);
+
+		const detailTasks = (
+			(result.formData as { detailInfo?: { detailTypicalTasks?: unknown[] } })
+				.detailInfo?.detailTypicalTasks ?? []
+		) as Array<{ name?: string }>;
+		const work07 = detailTasks.filter(
+			(row) => row.name === "07. Разработка витрины для применения модели",
+		);
+
+		expect(modelStreamCalls.length).toBeLessThanOrEqual(1);
+		expect(work07.length).toBeLessThanOrEqual(1);
+	});
+
 	it("ignores empty sourceSystems rows and uses stream-level triggers", async () => {
 		let capturedSource: Record<string, unknown> | undefined;
 		const runtime = {

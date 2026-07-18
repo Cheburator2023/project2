@@ -32,6 +32,17 @@ export declare function normalizeWorkFormulaLaborParamTokens(tokens: V2WorkFormu
 /** Сопоставляет param-токены формулы с блоком трудоёмкости и снимает invalid при совпадении. */
 export declare function reconcileFormulaLaborParamTokens(tokens: V2WorkFormulaToken[], laborParams: readonly WorkFormulaLaborParamRef[]): V2WorkFormulaToken[];
 export declare function tokensToText(tokens: V2WorkFormulaToken[]): string;
+/** Подставляет человекочитаемые имена параметров в токены формулы. */
+export declare function applyWorkFormulaParamNames(tokens: V2WorkFormulaToken[], paramNames?: Record<string, string> | null): V2WorkFormulaToken[];
+/** Формула с человекочитаемыми именами параметров (для подробного расчёта). */
+export declare function formatWorkFormulaReadableSymbolic(tokens: V2WorkFormulaToken[]): string;
+/** Формула с подставленными числами (N и коэффициенты → значения). */
+export declare function formatWorkFormulaReadableWithValues(tokens: V2WorkFormulaToken[], ctx: {
+    norm: number;
+    paramCoefficients: Record<string, number>;
+    formData?: Record<string, unknown>;
+    resolveFactorCoeff?: (paramCode: string) => number;
+}): string;
 /** Краткая запись для блока «Общая формула норматива» (N, Кэф-П1, …). */
 export declare function formatWorkFormulaGeneralSummary(tokens: V2WorkFormulaToken[], paramOrder: readonly string[]): string;
 export declare function parseWorkFormulaText(text: string): {

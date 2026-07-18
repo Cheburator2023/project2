@@ -81,12 +81,9 @@ export type SchemaEditorContextValue = {
 	typicalWorkNavFocus: TypicalWorkNavFocus | null;
 	clearTypicalWorkNavFocus: () => void;
 
-	schemaMonacoText: string;
-	setSchemaMonacoText: (v: string) => void;
-	uiMonacoText: string;
-	setUiMonacoText: (v: string) => void;
-	logicMonacoText: string;
-	setLogicMonacoText: (v: string) => void;
+	/** Целый снепшот { jsonSchema, uiSchema, logic } в Monaco. */
+	snapshotMonacoText: string;
+	setSnapshotMonacoText: (v: string) => void;
 	monacoError: string | null;
 	setMonacoError: (v: string | null) => void;
 	syncMonacoApply: () => void;

@@ -89,6 +89,10 @@ import {
 	coerceUiSchema,
 } from "../utils/coerceV2TemplateSnapshot";
 import {
+	formatSchemaEditorSnapshotJson,
+	parseSchemaEditorSnapshotJson,
+} from "../schemaEditor/schemaEditorSnapshotJson";
+import {
 	normalizeJsonPointer,
 	parentOfPointer,
 	pointerSegments,
@@ -349,12 +353,12 @@ export const V2TemplateSchemaEditor = ({
 	const [selectedPointer, setSelectedPointer] = useState<string | null>(
 		initialPointer ? normalizeJsonPointer(initialPointer) : null,
 	);
-	const [schemaMonacoText, setSchemaMonacoText] = useState(
-		JSON.stringify(EMPTY_JSON_SCHEMA, null, 2),
-	);
-	const [uiMonacoText, setUiMonacoText] = useState("{}");
-	const [logicMonacoText, setLogicMonacoText] = useState(
-		JSON.stringify({ rules: [] }, null, 2),
+	const [snapshotMonacoText, setSnapshotMonacoText] = useState(() =>
+		formatSchemaEditorSnapshotJson({
+			jsonSchema: EMPTY_JSON_SCHEMA,
+			uiSchema: {},
+			logic: { rules: [] },
+		}),
 	);
 	const [draftPast, setDraftPast] = useState<DraftHistorySnapshot[]>([]);
 	const [draftFuture, setDraftFuture] = useState<DraftHistorySnapshot[]>([]);
@@ -474,14 +478,22 @@ export const V2TemplateSchemaEditor = ({
 		setDraftFuture([]);
 	}, [jsonSchema, uiSchema, selectedPointer]);
 
-	const applyDraftSnapshot = useCallback((snapshot: DraftHistorySnapshot) => {
-		setJsonSchema(snapshot.jsonSchema);
-		setUiSchema(snapshot.uiSchema);
-		setSelectedPointer(snapshot.selectedPointer);
-		setSchemaMonacoText(JSON.stringify(snapshot.jsonSchema, null, 2));
-		setUiMonacoText(JSON.stringify(snapshot.uiSchema, null, 2));
-		setMonacoError(null);
-	}, []);
+	const applyDraftSnapshot = useCallback(
+		(snapshot: DraftHistorySnapshot) => {
+			setJsonSchema(snapshot.jsonSchema);
+			setUiSchema(snapshot.uiSchema);
+			setSelectedPointer(snapshot.selectedPointer);
+			setSnapshotMonacoText(
+				formatSchemaEditorSnapshotJson({
+					jsonSchema: snapshot.jsonSchema,
+					uiSchema: snapshot.uiSchema,
+					logic,
+				}),
+			);
+			setMonacoError(null);
+		},
+		[logic],
+	);
 
 	const undoDraft = useCallback(() => {
 		setDraftPast((past) => {
@@ -569,9 +581,13 @@ export const V2TemplateSchemaEditor = ({
 			setUiSchema(snapshot.uiSchema);
 			setLogic(snapshot.logic);
 			setFormData(snapshot.formData);
-			setSchemaMonacoText(JSON.stringify(snapshot.jsonSchema, null, 2));
-			setUiMonacoText(JSON.stringify(snapshot.uiSchema, null, 2));
-			setLogicMonacoText(JSON.stringify(snapshot.logic, null, 2));
+			setSnapshotMonacoText(
+				formatSchemaEditorSnapshotJson({
+					jsonSchema: snapshot.jsonSchema,
+					uiSchema: snapshot.uiSchema,
+					logic: snapshot.logic,
+				}),
+			);
 			setMonacoError(null);
 		},
 		[],
@@ -1379,65 +1395,27 @@ export const V2TemplateSchemaEditor = ({
 	const savePending = updateVersion.isPending || createVersion.isPending;
 
 	const syncMonacoApply = () => {
-		let parsedSchema: unknown;
-		let parsedUi: unknown;
-		let parsedLogic: unknown;
-
-		try {
-			parsedSchema = JSON.parse(schemaMonacoText);
-		} catch {
-			setMonacoError("JSON Schema: некорректный JSON");
+		const parsed = parseSchemaEditorSnapshotJson(snapshotMonacoText);
+		if (!parsed.ok) {
+			setMonacoError(parsed.error);
 			return;
 		}
 
 		try {
-			parsedUi = JSON.parse(uiMonacoText);
-		} catch {
-			setMonacoError("UI Schema: некорректный JSON");
-			return;
-		}
-
-		try {
-			parsedLogic = JSON.parse(logicMonacoText);
-		} catch {
-			setMonacoError("JSON Logic: некорректный JSON");
-			return;
-		}
-
-		if (
-			!parsedSchema ||
-			typeof parsedSchema !== "object" ||
-			Array.isArray(parsedSchema)
-		) {
-			setMonacoError("JSON Schema: ожидается объект");
-			return;
-		}
-
-		if (!parsedUi || typeof parsedUi !== "object" || Array.isArray(parsedUi)) {
-			setMonacoError("UI Schema: ожидается объект");
-			return;
-		}
-
-		if (
-			!parsedLogic ||
-			typeof parsedLogic !== "object" ||
-			Array.isArray(parsedLogic)
-		) {
-			setMonacoError("JSON Logic: ожидается объект с массивом rules");
-			return;
-		}
-
-		try {
-			const nextSchema = coerceJsonSchema(parsedSchema);
-			const nextUi = coerceUiSchema(parsedUi, nextSchema);
-			const nextLogic = coerceLogicGraph(parsedLogic);
+			const nextSchema = coerceJsonSchema(parsed.value.jsonSchema);
+			const nextUi = coerceUiSchema(parsed.value.uiSchema, nextSchema);
+			const nextLogic = coerceLogicGraph(parsed.value.logic);
 			listSchemaFields(nextSchema, "/", 0, nextUi);
 			setJsonSchema(nextSchema);
 			setUiSchema(nextUi);
 			setLogic(nextLogic);
-			setSchemaMonacoText(JSON.stringify(nextSchema, null, 2));
-			setUiMonacoText(JSON.stringify(nextUi, null, 2));
-			setLogicMonacoText(JSON.stringify(nextLogic, null, 2));
+			setSnapshotMonacoText(
+				formatSchemaEditorSnapshotJson({
+					jsonSchema: nextSchema,
+					uiSchema: nextUi,
+					logic: nextLogic,
+				}),
+			);
 			setMonacoError(null);
 		} catch (error) {
 			setMonacoError(
@@ -1449,11 +1427,30 @@ export const V2TemplateSchemaEditor = ({
 	};
 
 	const reloadMonacoFromState = () => {
-		setSchemaMonacoText(JSON.stringify(jsonSchema, null, 2));
-		setUiMonacoText(JSON.stringify(uiSchema, null, 2));
-		setLogicMonacoText(JSON.stringify(logic, null, 2));
+		setSnapshotMonacoText(
+			formatSchemaEditorSnapshotJson({
+				jsonSchema,
+				uiSchema,
+				logic,
+			}),
+		);
 		setMonacoError(null);
 	};
+
+	// При открытии вкладки JSON подтягиваем актуальный черновик с холста (для выгрузки).
+	useEffect(() => {
+		if (mainTab !== "json") return;
+		setSnapshotMonacoText(
+			formatSchemaEditorSnapshotJson({
+				jsonSchema,
+				uiSchema,
+				logic,
+			}),
+		);
+		setMonacoError(null);
+		// Только при смене вкладки — не затирать правки в Monaco, пока пользователь на json.
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- sync on tab enter
+	}, [mainTab]);
 
 	const selectedPointerParent = selectedPointer
 		? parentOfPointer(selectedPointer)
@@ -2224,7 +2221,7 @@ export const V2TemplateSchemaEditor = ({
 						activateMainTab("json");
 						return;
 					case "calculation":
-						activateMainTab("calculation");
+						activateMainTab("preview");
 						return;
 					default:
 						return;
@@ -2400,12 +2397,8 @@ export const V2TemplateSchemaEditor = ({
 			openLogicForIssueTarget,
 			typicalWorkNavFocus,
 			clearTypicalWorkNavFocus,
-			schemaMonacoText,
-			setSchemaMonacoText,
-			uiMonacoText,
-			setUiMonacoText,
-			logicMonacoText,
-			setLogicMonacoText,
+			snapshotMonacoText,
+			setSnapshotMonacoText,
 			monacoError,
 			setMonacoError,
 			syncMonacoApply,
@@ -2514,9 +2507,7 @@ export const V2TemplateSchemaEditor = ({
 			openLogicForIssueTarget,
 			typicalWorkNavFocus,
 			clearTypicalWorkNavFocus,
-			schemaMonacoText,
-			uiMonacoText,
-			logicMonacoText,
+			snapshotMonacoText,
 			monacoError,
 			selectedRuleId,
 			selectedRule,

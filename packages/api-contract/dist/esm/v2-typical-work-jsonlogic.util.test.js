@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compileCalculationLogicFromVersionConfig, compileStoredTypicalWorkResultLogic, compileTypicalWorkCalculationLogic, compileTypicalWorkTriggerRulesToJsonLogic, compileWorkFormulaTokensToJsonLogic, computeTypicalWorkFormulaTotal, evaluateTypicalWorkCalculation, evaluateTypicalWorkJsonLogicValue, evaluateTypicalWorkResultJsonLogic, needsCalculationLogicBackfill, previewTypicalWorkCalculation, } from "./v2-typical-work-jsonlogic.util";
+import { buildTypicalWorkFormulaBreakdown, compileCalculationLogicFromVersionConfig, compileStoredTypicalWorkResultLogic, compileTypicalWorkCalculationLogic, compileTypicalWorkTriggerRulesToJsonLogic, compileWorkFormulaTokensToJsonLogic, computeTypicalWorkFormulaTotal, evaluateTypicalWorkCalculation, evaluateTypicalWorkJsonLogicValue, evaluateTypicalWorkResultJsonLogic, needsCalculationLogicBackfill, previewTypicalWorkCalculation, } from "./v2-typical-work-jsonlogic.util";
 import { defaultWorkFormula, defaultWorkRounding } from "./v2-typical-work.types";
 import { defaultBaseNormTerm, tokensToTermsFormula } from "./v2-work-terms-formula.util";
 import { parseWorkFormulaText, previewWorkFormula } from "./v2-work-formula.util";
@@ -176,5 +176,34 @@ describe("v2-typical-work-jsonlogic.util", () => {
             resolveFactorCoeff: (code) => (code === "p1" ? 1 : 1),
         });
         expect(total).toBe(36);
+    });
+    it("buildTypicalWorkFormulaBreakdown lists real coefficient values", () => {
+        const formulaText = "N × коэф(p1)";
+        const parsed = parseWorkFormulaText(formulaText);
+        expect(parsed.error).toBeNull();
+        const terms = tokensToTermsFormula({
+            tokens: parsed.tokens,
+            text: formulaText,
+        });
+        const breakdown = buildTypicalWorkFormulaBreakdown({
+            formula: terms,
+            formulaText,
+            terms,
+            rounding: defaultWorkRounding(),
+            norm: 40,
+            paramCoefficients: { p1: 1.5 },
+            paramNames: {
+                p1: "Сложность реализации @ field_46LcNfWo|сложность_реализации",
+            },
+            resolveFactorCoeff: (code) => (code === "p1" ? 1.5 : 1),
+            coefficient: 1.5,
+            total: 60,
+        });
+        expect(breakdown.symbolic).toBe("N × Сложность реализации");
+        expect(breakdown.expanded).toBe("40 × 1.5 = 60");
+        expect(breakdown.factors).toEqual([
+            { paramCode: "p1", paramName: "Сложность реализации", value: 1.5 },
+        ]);
+        expect(breakdown.total).toBe(60);
     });
 });

@@ -4,6 +4,7 @@ import { getArrayItemSchemaSliceForModal } from "./anketaSchemaAtPath";
 import { readAnketaFormContext } from "./anketaFormContext";
 import {
 	collectGeneratedTypicalWorkArrayPaths,
+	dedupeTypicalWorkRowsByWorkId,
 	listAllGeneratedTypicalWorkArrayPaths,
 	resolveStreamExecutorForTypicalWorkOutputPath,
 	sortModelStreamTypicalWorkRows,
@@ -606,36 +607,41 @@ export function collectAppearedTypicalWorkGroups(
 	if (!formData && !liveFormData) return [];
 
 	const paths = resolveTypicalWorkCollectionPaths(uiSchema);
-	const seen = new Set<string>();
 	const globalWorkIdsSeen = new Set<string>();
 	const groups: AppearedTypicalWorkGroup[] = [];
 
 	for (const path of paths) {
+		const streamExecutor = resolveStreamExecutorForTypicalWorkOutputPath(
+			uiSchema,
+			path,
+		);
+		const appeared = readTypicalWorkArrayAtPath(
+			formData,
+			liveFormData,
+			path,
+		).filter(isAppearedTypicalWorkRow);
+		const collapsed = dedupeTypicalWorkRowsByWorkId(appeared, {
+			groupBySourceName: streamExecutor === "Источники данных",
+		});
 		const rows: Record<string, unknown>[] = [];
-		for (const item of readTypicalWorkArrayAtPath(formData, liveFormData, path)) {
-			if (!isAppearedTypicalWorkRow(item)) continue;
-
+		for (const item of collapsed) {
 			const workId = typeof item.workId === "string" ? item.workId.trim() : "";
 			if (workId) {
 				if (globalWorkIdsSeen.has(workId)) continue;
 				globalWorkIdsSeen.add(workId);
+			} else {
+				const key = typicalWorkRowDedupKey(item);
+				if (globalWorkIdsSeen.has(`fb:${key}`)) continue;
+				globalWorkIdsSeen.add(`fb:${key}`);
 			}
-
-			const key = `${path}|${typicalWorkRowDedupKey(item)}`;
-			if (seen.has(key)) continue;
-			seen.add(key);
 			rows.push(item);
 		}
 		if (rows.length === 0) continue;
 		groups.push({
 			path,
-			streamExecutor: resolveStreamExecutorForTypicalWorkOutputPath(
-				uiSchema,
-				path,
-			),
+			streamExecutor,
 			rows:
-				resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, path) ===
-				V2_MODEL_STREAM_EXECUTOR
+				streamExecutor === V2_MODEL_STREAM_EXECUTOR
 					? sortModelStreamTypicalWorkRows(rows)
 					: rows,
 		});

@@ -26,13 +26,45 @@ describe("compareModelStreamTypicalWorkNames", () => {
 });
 
 describe("dedupeTypicalWorkRowsByWorkId", () => {
-	it("keeps one row per workId", () => {
+	it("keeps one row per workId and sums coefficient/total", () => {
 		const workId = "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001";
 		const rows = dedupeTypicalWorkRowsByWorkId([
-			{ workId, name: "01. Постановка задачи.", total: 33 },
-			{ workId, name: "01. Постановка задачи.", total: 33 },
+			{
+				workId,
+				name: "07. Разработка витрины для применения модели",
+				estimateHoursPerDay: 56,
+				coefficient: 1,
+				total: 56,
+			},
+			{
+				workId,
+				name: "07. Разработка витрины для применения модели",
+				estimateHoursPerDay: 56,
+				coefficient: 1,
+				total: 56,
+			},
+			{
+				workId,
+				name: "07. Разработка витрины для применения модели",
+				estimateHoursPerDay: 56,
+				coefficient: 1,
+				total: 56,
+			},
+			{
+				workId,
+				name: "07. Разработка витрины для применения модели",
+				estimateHoursPerDay: 56,
+				coefficient: 1,
+				total: 56,
+			},
 		]);
 		expect(rows).toHaveLength(1);
+		expect(rows[0]?.coefficient).toBe(4);
+		expect(rows[0]?.total).toBe(224);
+		expect(rows[0]).toMatchObject({
+			coefficientDisplay: "×4",
+			sourceName: "×4",
+		});
 	});
 });
 

@@ -1,12 +1,13 @@
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import Divider from "@mui/material/Divider";
 import type { IDockviewPanelProps } from "dockview-react";
 import type { V2LogicWorkspaceTab } from "@smart-anketa/api-contract";
 import { useCallback, useEffect } from "react";
 import {
-	CALCULATION_PANEL_ID,
 	DOCK_PANEL_HEADINGS,
 	ISSUES_PANEL_ID,
+	PREVIEW_PANEL_ID,
 	RELATIONS_PANEL_ID,
 } from "./constants";
 import { SchemaDesignerLayout } from "./components/SchemaDesignerLayout";
@@ -26,6 +27,7 @@ export const WORKSPACE_PANEL_IDS = DOCK_PANEL_HEADINGS.map(([id]) => id);
 
 export {
 	CALCULATION_PANEL_ID,
+	PREVIEW_PANEL_ID,
 	RELATIONS_PANEL_ID,
 } from "./constants";
 
@@ -129,6 +131,10 @@ export function PreviewWorkspacePanel(_props: IDockviewPanelProps) {
 			<CyclesWarning />
 			<Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
 				<SchemaPreviewPanel embedded />
+				<Divider sx={{ my: 2 }} />
+				<Box data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.panelCalculation}>
+					<SchemaCalculationPanel embedded />
+				</Box>
 			</Box>
 		</PanelHost>
 	);
@@ -140,14 +146,6 @@ export function IssuesWorkspacePanel(_props: IDockviewPanelProps) {
 			<Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
 				<SchemaIssuesPanel embedded />
 			</Box>
-		</PanelHost>
-	);
-}
-
-export function CalculationDockPanel(_props: IDockviewPanelProps) {
-	return (
-		<PanelHost dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.panelCalculation}>
-			<SchemaCalculationPanel embedded />
 		</PanelHost>
 	);
 }
@@ -167,7 +165,6 @@ export const workspacePanelComponents = {
 	json: JsonWorkspacePanel,
 	logic: LogicWorkspacePanel,
 	[ISSUES_PANEL_ID]: IssuesWorkspacePanel,
-	preview: PreviewWorkspacePanel,
-	[CALCULATION_PANEL_ID]: CalculationDockPanel,
+	[PREVIEW_PANEL_ID]: PreviewWorkspacePanel,
 	[RELATIONS_PANEL_ID]: RelationsDockPanel,
 } as const;
