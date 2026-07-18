@@ -4,27 +4,28 @@
     "factoryBundle": true,
     "description": "Заводской снимок каталога типовых работ и методологических параметров. Редактируется в репозитории; не генерируется из внешних CSV.",
     "counts": {
-      "typicalWorks": 117,
-      "typicalWorksWithNorm": 110,
+      "typicalWorks": 147,
+      "typicalWorksWithNorm": 140,
       "dictionaries": 48,
-      "streams": 4,
+      "streams": 5,
       "components": 6,
       "stages": 20,
-      "typicalWorksWithFormula": 88
+      "typicalWorksWithFormula": 118
     },
     "streams": [
       "ИД. Внутренний",
       "ИД. Внешний",
       "Контроль моделей",
-      "Модельный стрим"
+      "Модельный стрим",
+      "ПиРМ"
     ],
     "components": [
       "Система-источник",
       "Объект/Витрина данных",
       "Процесс обработки данных",
       "Модельный сервис",
-      "Объект / Витрина данных",
-      "Модель"
+      "Модель",
+      "Объект / Витрина данных"
     ],
     "stages": [
       "Этап 210",
@@ -10553,6 +10554,848 @@
           ]
         }
       ]
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модельный сервис",
+      "stage": "",
+      "name": "Регистрация / обновление сервиса в СУМ, обеспечение продвижения по ЖЦМ, обеспечение хранения артефактов модели",
+      "originalName": "Регистрация / обновление сервиса в СУМ, обеспечение продвижения по ЖЦМ, обеспечение хранения артефактов модели",
+      "workType": "Обязательная",
+      "norm": 10,
+      "normRaw": "10",
+      "triggerParam": "Нет — работа выводится всегда",
+      "triggerParams": [
+        "Нет — работа выводится всегда"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Нет — работа выводится всегда",
+          "paramCode": "__always__",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модельный сервис",
+      "stage": "",
+      "name": "Регистрация / обновление модели в СУРМ, обеспечение присутствия модели на дашборде",
+      "originalName": "Регистрация / обновление модели в СУРМ, обеспечение присутствия модели на дашборде",
+      "workType": "Обязательная",
+      "norm": 10,
+      "normRaw": "10",
+      "triggerParam": "Нет — работа выводится всегда",
+      "triggerParams": [
+        "Нет — работа выводится всегда"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Нет — работа выводится всегда",
+          "paramCode": "__always__",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модель",
+      "stage": "",
+      "name": "Регистрация / обновление версии модели в СУМ",
+      "originalName": "Регистрация / обновление версии модели в СУМ",
+      "workType": "Обязательная",
+      "norm": 5,
+      "normRaw": "5",
+      "triggerParam": "Нет — работа выводится всегда",
+      "triggerParams": [
+        "Нет — работа выводится всегда"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Нет — работа выводится всегда",
+          "paramCode": "__always__",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модельный сервис",
+      "stage": "",
+      "name": "Сбор и предоставление данных об аллокации модельного сервиса",
+      "originalName": "Сбор и предоставление данных об аллокации модельного сервиса",
+      "workType": "Обязательная",
+      "norm": 10,
+      "normRaw": "10",
+      "triggerParam": "Нет — работа выводится всегда",
+      "triggerParams": [
+        "Нет — работа выводится всегда"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Нет — работа выводится всегда",
+          "paramCode": "__always__",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модельный сервис",
+      "stage": "",
+      "name": "Создание и актуализация графа преобразования данных, используемых модельным сервисом",
+      "originalName": "Создание и актуализация графа преобразования данных, используемых модельным сервисом",
+      "workType": "Обязательная",
+      "norm": 10,
+      "normRaw": "10",
+      "triggerParam": "Нет — работа выводится всегда",
+      "triggerParams": [
+        "Нет — работа выводится всегда"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Нет — работа выводится всегда",
+          "paramCode": "__always__",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модельный сервис",
+      "stage": "",
+      "name": "Первичное подключение ИС к Репозиторию моделей",
+      "originalName": "Первичное подключение ИС к Репозиторию моделей",
+      "workType": "Опциональная",
+      "norm": 22,
+      "normRaw": "22",
+      "triggerParam": "Первичное подключение ИС к РЕПО",
+      "triggerParams": [
+        "Первичное подключение ИС к РЕПО"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Первичное подключение ИС к РЕПО",
+          "paramCode": "первичное_подключение_ис_к_репо",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модельный сервис",
+      "stage": "",
+      "name": "Организация хранения артефактов модели в Репозитории моделей",
+      "originalName": "Организация хранения артефактов модели в Репозитории моделей",
+      "workType": "Опциональная",
+      "norm": 10,
+      "normRaw": "10",
+      "triggerParam": "Хранение артефактов в РЕПО",
+      "triggerParams": [
+        "Хранение артефактов в РЕПО"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Хранение артефактов в РЕПО",
+          "paramCode": "хранение_артефактов_в_репо",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модельный сервис",
+      "stage": "",
+      "name": "Обеспечение переноса артефактов модели между контурами посредством Репозитория моделей",
+      "originalName": "Обеспечение переноса артефактов модели между контурами посредством Репозитория моделей",
+      "workType": "Опциональная",
+      "norm": 10,
+      "normRaw": "10",
+      "triggerParam": "Перекладка артефактов между контурами посредством РЕПО",
+      "triggerParams": [
+        "Перекладка артефактов между контурами посредством РЕПО"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Перекладка артефактов между контурами посредством РЕПО",
+          "paramCode": "перекладка_артефактов_между_контурами_посредством_репо",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модельный сервис",
+      "stage": "",
+      "name": "Предоставление данных из СХК через РЕПО",
+      "originalName": "Предоставление данных из СХК через РЕПО",
+      "workType": "Опциональная",
+      "norm": 12,
+      "normRaw": "12",
+      "triggerParam": "Использование данных СХК через РЕПО",
+      "triggerParams": [
+        "Использование данных СХК через РЕПО"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Использование данных СХК через РЕПО",
+          "paramCode": "использование_данных_схк_через_репо",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модель",
+      "stage": "",
+      "name": "Выделение ресурсного пула под обучение и применение модели",
+      "originalName": "Выделение ресурсного пула под обучение и применение модели",
+      "workType": "Опциональная",
+      "norm": 3,
+      "normRaw": "3",
+      "triggerParam": "Необходимость AutoML",
+      "triggerParams": [
+        "Необходимость AutoML"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Необходимость AutoML",
+          "paramCode": "необходимость_automl",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модель",
+      "stage": "",
+      "name": "Подключение источника данных для обучения модели",
+      "originalName": "Подключение источника данных для обучения модели",
+      "workType": "Опциональная",
+      "norm": 3,
+      "normRaw": "3",
+      "triggerParam": "Необходимость AutoML",
+      "triggerParams": [
+        "Необходимость AutoML"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Необходимость AutoML",
+          "paramCode": "необходимость_automl",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модель",
+      "stage": "",
+      "name": "Встраивание и отладка внешнего кода в конвейер AutoML по обучению модели",
+      "originalName": "Встраивание и отладка внешнего кода в конвейер AutoML по обучению модели",
+      "workType": "Опциональная",
+      "norm": 3,
+      "normRaw": "3",
+      "triggerParam": "Необходимость AutoML",
+      "triggerParams": [
+        "Необходимость AutoML",
+        "АвтоМЛ: встраивание внешнего кода"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Необходимость AutoML",
+          "paramCode": "необходимость_automl",
+          "operator": "exists",
+          "values": []
+        },
+        {
+          "paramName": "АвтоМЛ: встраивание внешнего кода",
+          "paramCode": "автомл_встраивание_внешнего_кода",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модель",
+      "stage": "",
+      "name": "Реализация преобразований данных в конвейере AutoML по обучению модели",
+      "originalName": "Реализация преобразований данных в конвейере AutoML по обучению модели",
+      "workType": "Опциональная",
+      "norm": 2,
+      "normRaw": "2",
+      "triggerParam": "Необходимость AutoML",
+      "triggerParams": [
+        "Необходимость AutoML",
+        "АвтоМЛ: требуется преобразование данных"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Необходимость AutoML",
+          "paramCode": "необходимость_automl",
+          "operator": "exists",
+          "values": []
+        },
+        {
+          "paramName": "АвтоМЛ: требуется преобразование данных",
+          "paramCode": "автомл_требуется_преобразование_данных",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модель",
+      "stage": "",
+      "name": "Постановка модели на регламентное переобучение",
+      "originalName": "Постановка модели на регламентное переобучение",
+      "workType": "Опциональная",
+      "norm": 2,
+      "normRaw": "2",
+      "triggerParam": "Необходимость AutoML",
+      "triggerParams": [
+        "Необходимость AutoML",
+        "АвтоМЛ: требуется постановка на регламент"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Необходимость AutoML",
+          "paramCode": "необходимость_automl",
+          "operator": "exists",
+          "values": []
+        },
+        {
+          "paramName": "АвтоМЛ: требуется постановка на регламент",
+          "paramCode": "автомл_требуется_постановка_на_регламент",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модель",
+      "stage": "",
+      "name": "Добавление новой ML-библиотеки и/или фреймворка",
+      "originalName": "Добавление новой ML-библиотеки и/или фреймворка",
+      "workType": "Опциональная",
+      "norm": 4,
+      "normRaw": "4",
+      "triggerParam": "Необходимость AutoML",
+      "triggerParams": [
+        "Необходимость AutoML",
+        "АвтоМЛ: требуется новая библиотека"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Необходимость AutoML",
+          "paramCode": "необходимость_automl",
+          "operator": "exists",
+          "values": []
+        },
+        {
+          "paramName": "АвтоМЛ: требуется новая библиотека",
+          "paramCode": "автомл_требуется_новая_библиотека",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модельный сервис",
+      "stage": "",
+      "name": "Airflow: обеспечение работоспособности и реконфигурация инфраструктуры для настройки DAG",
+      "originalName": "Airflow: обеспечение работоспособности и реконфигурация инфраструктуры для настройки DAG",
+      "workType": "Обязательная",
+      "norm": 7,
+      "normRaw": "7",
+      "triggerParam": "Нет — работа выводится всегда",
+      "triggerParams": [
+        "Нет — работа выводится всегда"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Нет — работа выводится всегда",
+          "paramCode": "__always__",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Процесс обработки данных",
+      "stage": "",
+      "name": "Подключение источника данных",
+      "originalName": "Подключение источника данных",
+      "workType": "Опциональная",
+      "norm": 20,
+      "normRaw": "20",
+      "triggerParam": "Реализуется в Хранилище признаков",
+      "triggerParams": [
+        "Реализуется в Хранилище признаков"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Реализуется в Хранилище признаков",
+          "paramCode": "реализуется_в_хранилище_признаков",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Объект / Витрина данных",
+      "stage": "",
+      "name": "Сохранение объекта сырых данных в Хранилище признаков",
+      "originalName": "Сохранение объекта сырых данных в Хранилище признаков",
+      "workType": "Опциональная",
+      "norm": 3,
+      "normRaw": "3",
+      "triggerParam": "Реализуется в Хранилище признаков",
+      "triggerParams": [
+        "Реализуется в Хранилище признаков",
+        "Требуется сохранять сырые данные в Хранилище признаков"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Реализуется в Хранилище признаков",
+          "paramCode": "реализуется_в_хранилище_признаков",
+          "operator": "exists",
+          "values": []
+        },
+        {
+          "paramName": "Требуется сохранять сырые данные в Хранилище признаков",
+          "paramCode": "требуется_сохранять_сырые_данные_в_хранилище_признаков",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Объект / Витрина данных",
+      "stage": "",
+      "name": "Разработка Набора признаков",
+      "originalName": "Разработка Набора признаков",
+      "workType": "Опциональная",
+      "norm": 0.5,
+      "normRaw": "0.5",
+      "triggerParam": "Реализуется в Хранилище признаков",
+      "triggerParams": [
+        "Реализуется в Хранилище признаков"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Реализуется в Хранилище признаков",
+          "paramCode": "реализуется_в_хранилище_признаков",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модельный сервис",
+      "stage": "",
+      "name": "Регистрация Признака в Хранилище признаков",
+      "originalName": "Регистрация Признака в Хранилище признаков",
+      "workType": "Обязательная",
+      "norm": 0.1,
+      "normRaw": "0.1",
+      "triggerParam": "Реализуется в Хранилище признаков",
+      "triggerParams": [
+        "Реализуется в Хранилище признаков"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Реализуется в Хранилище признаков",
+          "paramCode": "реализуется_в_хранилище_признаков",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Объект / Витрина данных",
+      "stage": "",
+      "name": "Создание контроля качества Признаков в Хранилище признаков",
+      "originalName": "Создание контроля качества Признаков в Хранилище признаков",
+      "workType": "Опциональная",
+      "norm": 10,
+      "normRaw": "10",
+      "triggerParam": "Реализуется в Хранилище признаков",
+      "triggerParams": [
+        "Реализуется в Хранилище признаков",
+        "Требуется контроль качества Признаков"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Реализуется в Хранилище признаков",
+          "paramCode": "реализуется_в_хранилище_признаков",
+          "operator": "exists",
+          "values": []
+        },
+        {
+          "paramName": "Требуется контроль качества Признаков",
+          "paramCode": "требуется_контроль_качества_признаков",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Система-источник",
+      "stage": "",
+      "name": "Настройка проекта и типового шаблона разметки",
+      "originalName": "Настройка проекта и типового шаблона разметки",
+      "workType": "Опциональная",
+      "norm": 11,
+      "normRaw": "11",
+      "triggerParam": "Требуется разметка данных источника в Маркере",
+      "triggerParams": [
+        "Требуется разметка данных источника в Маркере"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Требуется разметка данных источника в Маркере",
+          "paramCode": "требуется_разметка_данных_источника_в_маркере",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Система-источник",
+      "stage": "",
+      "name": "Добавление новой модели для автоматической разметки данных в ИС 1860, настройка Active Learning",
+      "originalName": "Добавление новой модели для автоматической разметки данных в ИС 1860, настройка Active Learning",
+      "workType": "Опциональная",
+      "norm": 130,
+      "normRaw": "130",
+      "triggerParam": "Требуется разметка данных источника в Маркере",
+      "triggerParams": [
+        "Требуется разметка данных источника в Маркере",
+        "Требуется новая модель Маркера для автоматической разметки данных"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Требуется разметка данных источника в Маркере",
+          "paramCode": "требуется_разметка_данных_источника_в_маркере",
+          "operator": "exists",
+          "values": []
+        },
+        {
+          "paramName": "Требуется новая модель Маркера для автоматической разметки данных",
+          "paramCode": "требуется_новая_модель_маркера_для_автоматической_разметки_данных",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Система-источник",
+      "stage": "",
+      "name": "Реализация регламентной загрузки данных в ИС 1860 и/или экспорта размеченных данных в ИС-потребитель",
+      "originalName": "Реализация регламентной загрузки данных в ИС 1860 и/или экспорта размеченных данных в ИС-потребитель",
+      "workType": "Опциональная",
+      "norm": 91,
+      "normRaw": "91",
+      "triggerParam": "Требуется разметка данных источника в Маркере",
+      "triggerParams": [
+        "Требуется разметка данных источника в Маркере",
+        "Требуется регламентный импорт/экспорт данных или отчетности в/из Маркер"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Требуется разметка данных источника в Маркере",
+          "paramCode": "требуется_разметка_данных_источника_в_маркере",
+          "operator": "exists",
+          "values": []
+        },
+        {
+          "paramName": "Требуется регламентный импорт/экспорт данных или отчетности в/из Маркер",
+          "paramCode": "требуется_регламентный_импорт_экспорт_данных_или_отчетности_в_из_маркер",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Система-источник",
+      "stage": "",
+      "name": "Развертывание отдельного экземпляра ИС 1860 под конфиденциальные данные",
+      "originalName": "Развертывание отдельного экземпляра ИС 1860 под конфиденциальные данные",
+      "workType": "Опциональная",
+      "norm": 251,
+      "normRaw": "251",
+      "triggerParam": "Требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом",
+      "triggerParams": [
+        "Требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом",
+          "paramCode": "требуются_специальные_условия_хранения_и_обработки_конфиденциальных_данных_не_поддерживаемые_коммунальным_сервисом",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модельный сервис",
+      "stage": "",
+      "name": "Ручная обработка результатов автоматизированной разметки обращений клиентов в случае низкой степени уверенности модели",
+      "originalName": "Ручная обработка результатов автоматизированной разметки обращений клиентов в случае низкой степени уверенности модели",
+      "workType": "Опциональная",
+      "norm": 103,
+      "normRaw": "103",
+      "triggerParam": "Требуется ручная обработка результатов автоматизированной разметки данных",
+      "triggerParams": [
+        "Требуется ручная обработка результатов автоматизированной разметки данных"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Требуется ручная обработка результатов автоматизированной разметки данных",
+          "paramCode": "требуется_ручная_обработка_результатов_автоматизированной_разметки_данных",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модельный сервис",
+      "stage": "",
+      "name": "Визуализация результатов работы модельного сервиса",
+      "originalName": "Визуализация результатов работы модельного сервиса",
+      "workType": "Опциональная",
+      "norm": 289,
+      "normRaw": "289",
+      "triggerParam": "Требуется визуализация результатов работы модельного сервиса",
+      "triggerParams": [
+        "Требуется визуализация результатов работы модельного сервиса"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Требуется визуализация результатов работы модельного сервиса",
+          "paramCode": "требуется_визуализация_результатов_работы_модельного_сервиса",
+          "operator": "exists",
+          "values": []
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модельный сервис",
+      "stage": "",
+      "name": "Настройка публикаций и бэкендов модельных сервисов на коммунальных HAPROXY балансировщиках",
+      "originalName": "Настройка публикаций и бэкендов модельных сервисов на коммунальных HAPROXY балансировщиках",
+      "workType": "Опциональная",
+      "norm": 2,
+      "normRaw": "2",
+      "triggerParam": "Тип работ",
+      "triggerParams": [
+        "Тип работ"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Тип работ",
+          "paramCode": "тип_работ",
+          "operator": "=",
+          "values": [
+            "Разработка"
+          ]
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модельный сервис",
+      "stage": "",
+      "name": "Выделение ресурсного пула под обучение и исполнение модели",
+      "originalName": "Выделение ресурсного пула под обучение и исполнение модели",
+      "workType": "Опциональная",
+      "norm": 3,
+      "normRaw": "3",
+      "triggerParam": "Тип работ",
+      "triggerParams": [
+        "Тип работ"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Тип работ",
+          "paramCode": "тип_работ",
+          "operator": "=",
+          "values": [
+            "Разработка"
+          ]
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
+    },
+    {
+      "stream": "ПиРМ",
+      "component": "Модельный сервис",
+      "stage": "",
+      "name": "Контроль соблюдение архитектурных требований ПИМ и использования коммунальных ресурсов",
+      "originalName": "Контроль соблюдение архитектурных требований ПИМ и использования коммунальных ресурсов",
+      "workType": "Опциональная",
+      "norm": 2,
+      "normRaw": "2",
+      "triggerParam": "Тип работ",
+      "triggerParams": [
+        "Тип работ"
+      ],
+      "triggerRules": [
+        {
+          "paramName": "Тип работ",
+          "paramCode": "тип_работ",
+          "operator": "=",
+          "values": [
+            "Разработка, Доработка"
+          ]
+        }
+      ],
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1
     }
   ],
   "dictionaries": [

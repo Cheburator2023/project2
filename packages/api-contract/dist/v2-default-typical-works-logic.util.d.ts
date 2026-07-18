@@ -19,6 +19,11 @@ export declare function buildModelStreamTypicalWorksCatalogRule(outputArrayPath:
 export declare function buildSourceTypicalWorksCatalogRule(outputArrayPath?: string, options?: {
     boundWorkIds?: string[] | undefined;
 }): V2LogicRuleDto;
+/** Каталог типовых работ стрима-исполнителя (ПиРМ и др.) — все типы арх. компонентов. */
+export declare function buildExecutorStreamTypicalWorksCatalogRule(outputArrayPath: string, options: {
+    streamExecutor: string;
+    boundWorkIds?: string[] | undefined;
+}): V2LogicRuleDto;
 export declare function buildControlTypicalWorksCatalogRule(): V2LogicRuleDto;
 export declare function isTypicalWorksCatalogLogicRule(rule: V2LogicRuleDto): boolean;
 /** Id catalog-правил, которые должны быть в зафиксированном logic snapshot шаблона. */

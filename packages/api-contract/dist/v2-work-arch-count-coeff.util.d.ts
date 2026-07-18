@@ -9,8 +9,18 @@ export declare function formatWorkArchCountKindLabel(kind: V2WorkFormulaArchCoun
 export declare function parseWorkArchCountKindLabel(label: string): V2WorkFormulaArchCountKind | null;
 export declare function formatArchCountCoeffSteps(steps: readonly V2WorkArchCountCoeffStep[]): string;
 export declare function parseArchCountCoeffSteps(raw: string): V2WorkArchCountCoeffStep[] | null;
+export declare function resolveLaborArchCountOperator(step: Pick<V2WorkArchCountCoeffStep, "operator">): V2TypicalWorkTriggerArchCountOperator;
+export declare function compareArchCount(actual: number, operator: V2TypicalWorkTriggerArchCountOperator, threshold: number): boolean;
+/**
+ * Безопасный eval формулы коэффициента от N (фактическое количество).
+ * Допускаются: N, числа, + - * /, скобки.
+ */
+export declare function evalArchCountCoefficientFormula(formula: string, n: number): number | null;
+export declare function validateArchCountCoefficientFormula(formula: string, sampleN: number): string | null;
 export declare function validateArchCountCoeffSteps(kind: V2WorkFormulaArchCountKind, steps: readonly V2WorkArchCountCoeffStep[]): string | null;
+/** Labor: first matching step (operator + threshold), const or formula. */
 export declare function lookupArchCountCoefficient(steps: readonly V2WorkArchCountCoeffStep[], count: number): number | null;
+export declare function formatLaborArchCountStepLabel(step: V2WorkArchCountCoeffStep): string;
 /** Количество арх. компонентов в formData анкеты (не в строке каталога). */
 export declare function resolveWorkArchComponentCount(formData: Record<string, unknown>, kind: V2WorkFormulaArchCountKind): number;
 export declare function resolveArchCountCoeffFromToken(formData: Record<string, unknown>, kind: V2WorkFormulaArchCountKind, steps: readonly V2WorkArchCountCoeffStep[]): number;

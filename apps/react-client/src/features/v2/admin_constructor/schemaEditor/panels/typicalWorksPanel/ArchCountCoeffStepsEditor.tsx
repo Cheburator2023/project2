@@ -4,21 +4,30 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
+import MenuItem from "@mui/material/MenuItem";
+import Select from "@mui/material/Select";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import AddIcon from "@mui/icons-material/Add";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import type {
+	V2TypicalWorkTriggerArchCountOperator,
 	V2WorkArchCountCoeffStep,
 	V2WorkFormulaArchCountKind,
 } from "@smart-anketa/api-contract";
 import {
+	V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES,
 	V2_WORK_ARCH_COUNT_LIMITS,
+	formatLaborArchCountStepLabel,
 	formatWorkArchCountKindLabel,
+	resolveLaborArchCountOperator,
 	validateArchCountCoeffSteps,
 } from "@smart-anketa/api-contract";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
 import { V2_TEMPLATE_EDIT_TEST_IDS as TID } from "@react-client/features/v2/admin_constructor/testIds";
 import { useEffect, useMemo, useState } from "react";
 
@@ -31,10 +40,29 @@ type ArchCountCoeffStepsEditorProps = {
 	onSave: (steps: V2WorkArchCountCoeffStep[]) => void;
 };
 
-function normalizeDraftSteps(
-	steps: V2WorkArchCountCoeffStep[],
-): V2WorkArchCountCoeffStep[] {
-	return [...steps].sort((a, b) => a.count - b.count);
+type CoeffMode = "const" | "formula";
+
+const OPERATOR_LABELS: Record<V2TypicalWorkTriggerArchCountOperator, string> = {
+	">=": "≥",
+	"<=": "≤",
+	"=": "=",
+	">": ">",
+	"<": "<",
+};
+
+function cloneSteps(steps: V2WorkArchCountCoeffStep[]): V2WorkArchCountCoeffStep[] {
+	return steps.map((step) => ({
+		count: step.count,
+		coefficient: step.coefficient,
+		operator: resolveLaborArchCountOperator(step),
+		coefficientFormula: step.coefficientFormula?.trim()
+			? step.coefficientFormula.trim()
+			: null,
+	}));
+}
+
+function stepCoeffMode(step: V2WorkArchCountCoeffStep): CoeffMode {
+	return step.coefficientFormula?.trim() ? "formula" : "const";
 }
 
 export function ArchCountCoeffStepsEditor({
@@ -46,13 +74,13 @@ export function ArchCountCoeffStepsEditor({
 	onSave,
 }: ArchCountCoeffStepsEditorProps) {
 	const [draft, setDraft] = useState<V2WorkArchCountCoeffStep[]>(() =>
-		normalizeDraftSteps(steps),
+		cloneSteps(steps),
 	);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (!open) return;
-		setDraft(normalizeDraftSteps(steps));
+		setDraft(cloneSteps(steps));
 		setError(null);
 	}, [open, steps]);
 
@@ -69,17 +97,43 @@ export function ArchCountCoeffStepsEditor({
 		setError(null);
 	};
 
+	const setCoeffMode = (index: number, mode: CoeffMode) => {
+		setDraft((prev) =>
+			prev.map((step, idx) => {
+				if (idx !== index) return step;
+				if (mode === "formula") {
+					return {
+						...step,
+						coefficientFormula: step.coefficientFormula?.trim() || "N/5",
+						coefficient:
+							Number.isFinite(step.coefficient) && step.coefficient > 0
+								? step.coefficient
+								: 1,
+					};
+				}
+				return {
+					...step,
+					coefficientFormula: null,
+					coefficient:
+						Number.isFinite(step.coefficient) && step.coefficient > 0
+							? step.coefficient
+							: 1,
+				};
+			}),
+		);
+		setError(null);
+	};
+
 	const addStep = () => {
-		setDraft((prev) => {
-			const used = new Set(prev.map((step) => step.count));
-			let nextCount = limits.min;
-			while (used.has(nextCount) && nextCount <= limits.max) nextCount += 1;
-			if (nextCount > limits.max) return prev;
-			return normalizeDraftSteps([
-				...prev,
-				{ count: nextCount, coefficient: 1 },
-			]);
-		});
+		setDraft((prev) => [
+			...prev,
+			{
+				count: limits.min,
+				coefficient: 1,
+				operator: "<=",
+				coefficientFormula: null,
+			},
+		]);
 		setError(null);
 	};
 
@@ -88,13 +142,27 @@ export function ArchCountCoeffStepsEditor({
 		setError(null);
 	};
 
+	const moveStep = (index: number, direction: -1 | 1) => {
+		setDraft((prev) => {
+			const nextIndex = index + direction;
+			if (nextIndex < 0 || nextIndex >= prev.length) return prev;
+			const copy = [...prev];
+			const [row] = copy.splice(index, 1);
+			if (!row) return prev;
+			copy.splice(nextIndex, 0, row);
+			return copy;
+		});
+		setError(null);
+	};
+
 	const handleSave = () => {
-		const validation = validateArchCountCoeffSteps(kind, draft);
+		const normalized = cloneSteps(draft);
+		const validation = validateArchCountCoeffSteps(kind, normalized);
 		if (validation) {
 			setError(validation);
 			return;
 		}
-		onSave(normalizeDraftSteps(draft));
+		onSave(normalized);
 		onClose();
 	};
 
@@ -102,7 +170,7 @@ export function ArchCountCoeffStepsEditor({
 		<Dialog
 			open={open}
 			onClose={onClose}
-			maxWidth="sm"
+			maxWidth="md"
 			fullWidth
 			data-test-id={TID.workFormulaArchCountDialog}
 		>
@@ -111,53 +179,137 @@ export function ArchCountCoeffStepsEditor({
 			</DialogTitle>
 			<DialogContent>
 				<Typography sx={{ fontSize: 13, color: "#64748b", mb: 1.5 }}>
-					Укажите коэффициент для каждого количества компонентов в анкете.
-					Диапазон количества: {limits.min}–{limits.max}.
+					Условия проверяются сверху вниз — срабатывает первое подходящее. N —
+					фактическое количество компонентов в анкете. Порог: {limits.min}–
+					{limits.max}.
 				</Typography>
-				<Flex flexDirection="column" gap={8}>
-					{draft.map((step, index) => (
-						<Flex key={`${step.count}-${index}`} alignItems="center" gap={8}>
-							<TextField
-								size="small"
-								label="Количество"
-								type="number"
-								disabled={readOnly}
-								value={step.count}
-								onChange={(event) => {
-									const count = Number(event.target.value);
-									if (!Number.isFinite(count)) return;
-									updateStep(index, { count: Math.floor(count) });
-								}}
-								inputProps={{ min: limits.min, max: limits.max }}
-								sx={{ width: 120 }}
-							/>
-							<TextField
-								size="small"
-								label="Коэффициент"
-								disabled={readOnly}
-								value={String(step.coefficient).replace(".", ",")}
-								onChange={(event) => {
-									const coefficient = Number(
-										event.target.value.replace(",", "."),
-									);
-									if (!Number.isFinite(coefficient)) return;
-									updateStep(index, { coefficient });
-								}}
-								sx={{ width: 120 }}
-							/>
-							{!readOnly ? (
-								<IconButton
+				<Flex flexDirection="column" gap={10}>
+					{draft.map((step, index) => {
+						const mode = stepCoeffMode(step);
+						const operator = resolveLaborArchCountOperator(step);
+						return (
+							<Flex
+								key={`step-${index}`}
+								alignItems="flex-start"
+								gap={8}
+								wrap="wrap"
+							>
+								<Select
 									size="small"
-									onClick={() => removeStep(index)}
-									disabled={draft.length <= 1}
-									title="Удалить строку"
-									aria-label="Удалить строку"
+									disabled={readOnly}
+									value={operator}
+									onChange={(event) =>
+										updateStep(index, {
+											operator: event.target
+												.value as V2TypicalWorkTriggerArchCountOperator,
+										})
+									}
+									sx={{
+										height: 40,
+										minWidth: 72,
+										bgcolor: "#fff",
+										"& .MuiSelect-select": { py: 0.75, fontSize: 13 },
+									}}
+									title="Оператор сравнения"
 								>
-									<DeleteOutlineIcon fontSize="small" />
-								</IconButton>
-							) : null}
-						</Flex>
-					))}
+									{V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES.map(
+										(op) => (
+											<MenuItem key={op} value={op}>
+												{OPERATOR_LABELS[op]}
+											</MenuItem>
+										),
+									)}
+								</Select>
+								<TextField
+									size="small"
+									label="Порог"
+									type="number"
+									disabled={readOnly}
+									value={step.count}
+									onChange={(event) => {
+										const count = Number(event.target.value);
+										if (!Number.isFinite(count)) return;
+										updateStep(index, { count: Math.floor(count) });
+									}}
+									inputProps={{ min: limits.min, max: limits.max }}
+									sx={{ width: 100 }}
+								/>
+								<SegmentBar
+									segments={[
+										{ id: "const", label: "Число" },
+										{ id: "formula", label: "Формула" },
+									]}
+									value={mode}
+									onChange={(next) => {
+										if (readOnly) return;
+										setCoeffMode(index, next as CoeffMode);
+									}}
+								/>
+								{mode === "formula" ? (
+									<TextField
+										size="small"
+										label="Формула (N)"
+										disabled={readOnly}
+										value={step.coefficientFormula ?? ""}
+										onChange={(event) =>
+											updateStep(index, {
+												coefficientFormula: event.target.value,
+											})
+										}
+										placeholder="N/5"
+										sx={{ width: 140 }}
+										title="Например N/5 или 1+(N-1)*0.75"
+									/>
+								) : (
+									<TextField
+										size="small"
+										label="Коэффициент"
+										disabled={readOnly}
+										value={String(step.coefficient).replace(".", ",")}
+										onChange={(event) => {
+											const coefficient = Number(
+												event.target.value.replace(",", "."),
+											);
+											if (!Number.isFinite(coefficient)) return;
+											updateStep(index, { coefficient });
+										}}
+										sx={{ width: 120 }}
+									/>
+								)}
+								{!readOnly ? (
+									<Flex alignItems="center" gap={0}>
+										<IconButton
+											size="small"
+											onClick={() => moveStep(index, -1)}
+											disabled={index === 0}
+											title="Выше"
+											aria-label="Переместить выше"
+										>
+											<ArrowUpwardIcon fontSize="small" />
+										</IconButton>
+										<IconButton
+											size="small"
+											onClick={() => moveStep(index, 1)}
+											disabled={index === draft.length - 1}
+											title="Ниже"
+											aria-label="Переместить ниже"
+										>
+											<ArrowDownwardIcon fontSize="small" />
+										</IconButton>
+										<IconButton
+											size="small"
+											onClick={() => removeStep(index)}
+											disabled={draft.length <= 1}
+											title="Удалить строку"
+											aria-label="Удалить строку"
+										>
+											<DeleteOutlineIcon fontSize="small" />
+										</IconButton>
+									</Flex>
+								) : null}
+							</Flex>
+						);
+					})}
 				</Flex>
 				{!readOnly ? (
 					<>
@@ -168,7 +320,7 @@ export function ArchCountCoeffStepsEditor({
 							onClick={addStep}
 							data-test-id={TID.workFormulaArchCountAddStep}
 						>
-							Добавить пару
+							Добавить условие
 						</Button>
 					</>
 				) : null}
@@ -196,11 +348,10 @@ export function ArchCountCoeffStepsEditor({
 export function formatArchCountCoeffChipSubtitle(
 	steps: readonly V2WorkArchCountCoeffStep[],
 ): string {
-	if (steps.length === 0) return "настройте пары";
-	const sorted = [...steps].sort((a, b) => a.count - b.count);
-	const preview = sorted
+	if (steps.length === 0) return "настройте условия";
+	const preview = steps
 		.slice(0, 3)
-		.map((step) => `${step.count}→${step.coefficient}`)
-		.join(", ");
-	return sorted.length > 3 ? `${preview}, …` : preview;
+		.map((step) => formatLaborArchCountStepLabel(step))
+		.join("; ");
+	return steps.length > 3 ? `${preview}; …` : preview;
 }

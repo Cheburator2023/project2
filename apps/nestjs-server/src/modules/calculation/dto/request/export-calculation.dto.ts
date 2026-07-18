@@ -127,11 +127,11 @@ export class ExportCalculationDto {
 	@ApiPropertyOptional({
 		example:
 			"550e8400-e29b-41d4-a716-446655440000,550e8400-e29b-41d4-a716-446655440001",
-		description: "ID расчетов через запятую",
+		description:
+			"ID расчетов: CSV-строка или массив UUID (как шлёт api-contract / v1 UI)",
 	})
 	@IsOptional()
-	@IsString()
-	selectedIds?: string;
+	selectedIds?: string | string[];
 }
 
 export interface TransformedExportCalculationDto extends ExportCalculationDto {

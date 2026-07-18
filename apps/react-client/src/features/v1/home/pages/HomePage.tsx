@@ -214,6 +214,7 @@ export const HomeTemplete = ({
 }) => {
 	const [hoveredRowId, _setHoveredRowId] = useState("");
 	const { setGridApi } = useGlobalSettingsStore();
+	const [localGridApi, setLocalGridApi] = useState<GridApi | null>(null);
 	const gridRef = useRef<AgGridReact>(null);
 	const gridPersistence = useAgGridColumnPersistence("v1.home.calculations");
 	const { mode } = useColorScheme();
@@ -406,20 +407,7 @@ export const HomeTemplete = ({
 
 		const customItems = [
 			{
-				name: "Просмотр анкеты",
-				action: () => {
-					if (calculationId) {
-						const route = registryRoutes.calculationPreview.rootPath.replace(
-							":id",
-							calculationId.toString(),
-						);
-
-						window.open(buildRegistryUrl(route, pathPrefix), "_blank");
-					}
-				},
-			},
-			{
-				name: "Просмотр анкеты в новой вкладке",
+				name: "Открыть в новой вкладке",
 				action: () => {
 					if (calculationId) {
 						const route = registryRoutes.calculationPreview.rootPath.replace(
@@ -462,14 +450,15 @@ export const HomeTemplete = ({
 
 	const onGridReady = (params: GridReadyEvent<any, any>) => {
 		gridPersistence.onGridReady(params);
-		console.log("Grid is ready, setting API in Zustand store.");
 		params.api.setFilterModel({
 			status: {
 				filterType: "set",
 				values: ["Активная"],
 			},
 		});
-		setGridApi(params.api as GridApi);
+		const api = params.api as GridApi;
+		setLocalGridApi(api);
+		setGridApi(api);
 	};
 
 	const onFilterChanged = () => {
@@ -495,6 +484,7 @@ export const HomeTemplete = ({
 		refetch();
 
 		return () => {
+			setLocalGridApi(null);
 			setGridApi(null);
 		};
 	}, []);
@@ -526,7 +516,10 @@ export const HomeTemplete = ({
 					data-test-id="home-page--Flex-0"
 				>
 					<Flex width="100%" maxWidth="550px" data-test-id="home-page--Flex-1">
-						<SearchInput data-test-id="home-page--SearchInput-0" />
+						<SearchInput
+							gridApi={localGridApi}
+							data-test-id="home-page--SearchInput-0"
+						/>
 					</Flex>
 					<Flex
 						gap={6}

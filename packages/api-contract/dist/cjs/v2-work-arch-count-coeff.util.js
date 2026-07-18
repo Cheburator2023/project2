@@ -5,8 +5,13 @@ exports.formatWorkArchCountKindLabel = formatWorkArchCountKindLabel;
 exports.parseWorkArchCountKindLabel = parseWorkArchCountKindLabel;
 exports.formatArchCountCoeffSteps = formatArchCountCoeffSteps;
 exports.parseArchCountCoeffSteps = parseArchCountCoeffSteps;
+exports.resolveLaborArchCountOperator = resolveLaborArchCountOperator;
+exports.compareArchCount = compareArchCount;
+exports.evalArchCountCoefficientFormula = evalArchCountCoefficientFormula;
+exports.validateArchCountCoefficientFormula = validateArchCountCoefficientFormula;
 exports.validateArchCountCoeffSteps = validateArchCountCoeffSteps;
 exports.lookupArchCountCoefficient = lookupArchCountCoefficient;
+exports.formatLaborArchCountStepLabel = formatLaborArchCountStepLabel;
 exports.resolveWorkArchComponentCount = resolveWorkArchComponentCount;
 exports.resolveArchCountCoeffFromToken = resolveArchCountCoeffFromToken;
 exports.encodeTriggerArchCountSteps = encodeTriggerArchCountSteps;
@@ -125,9 +130,158 @@ function parseArchCountCoeffSteps(raw) {
     }
     return steps.length > 0 ? steps : null;
 }
+function resolveLaborArchCountOperator(step) {
+    return step.operator ?? "=";
+}
+function compareArchCount(actual, operator, threshold) {
+    switch (operator) {
+        case ">=":
+            return actual >= threshold;
+        case "<=":
+            return actual <= threshold;
+        case "=":
+            return actual === threshold;
+        case ">":
+            return actual > threshold;
+        case "<":
+            return actual < threshold;
+        default:
+            return actual === threshold;
+    }
+}
+/**
+ * Безопасный eval формулы коэффициента от N (фактическое количество).
+ * Допускаются: N, числа, + - * /, скобки.
+ */
+function evalArchCountCoefficientFormula(formula, n) {
+    const trimmed = formula.trim().replace(/,/g, ".").replace(/\s+/g, "");
+    if (!trimmed)
+        return null;
+    if (!Number.isFinite(n))
+        return null;
+    if (!/^[0-9.N+\-*/()]+$/i.test(trimmed))
+        return null;
+    if (/[Nn]{2,}/.test(trimmed))
+        return null;
+    const tokens = [];
+    let i = 0;
+    while (i < trimmed.length) {
+        const ch = trimmed[i];
+        if (ch === "N" || ch === "n") {
+            tokens.push(n);
+            i += 1;
+            continue;
+        }
+        if (ch === "(" || ch === ")" || ch === "+" || ch === "*" || ch === "/") {
+            tokens.push(ch);
+            i += 1;
+            continue;
+        }
+        if (ch === "-") {
+            const prev = tokens[tokens.length - 1];
+            const unary = prev === undefined ||
+                prev === "(" ||
+                prev === "+" ||
+                prev === "-" ||
+                prev === "*" ||
+                prev === "/";
+            if (unary) {
+                i += 1;
+                let start = i;
+                while (i < trimmed.length && /[0-9.]/.test(trimmed[i]))
+                    i += 1;
+                if (start === i)
+                    return null;
+                const num = Number(trimmed.slice(start, i));
+                if (!Number.isFinite(num))
+                    return null;
+                tokens.push(-num);
+                continue;
+            }
+            tokens.push(ch);
+            i += 1;
+            continue;
+        }
+        if (/[0-9.]/.test(ch)) {
+            const start = i;
+            i += 1;
+            while (i < trimmed.length && /[0-9.]/.test(trimmed[i]))
+                i += 1;
+            const num = Number(trimmed.slice(start, i));
+            if (!Number.isFinite(num))
+                return null;
+            tokens.push(num);
+            continue;
+        }
+        return null;
+    }
+    let pos = 0;
+    const peek = () => tokens[pos];
+    const consume = () => tokens[pos++];
+    const parseExpr = () => {
+        let left = parseTerm();
+        if (left == null)
+            return null;
+        while (peek() === "+" || peek() === "-") {
+            const op = consume();
+            const right = parseTerm();
+            if (right == null)
+                return null;
+            left = op === "+" ? left + right : left - right;
+        }
+        return left;
+    };
+    const parseTerm = () => {
+        let left = parseFactor();
+        if (left == null)
+            return null;
+        while (peek() === "*" || peek() === "/") {
+            const op = consume();
+            const right = parseFactor();
+            if (right == null)
+                return null;
+            if (op === "/" && right === 0)
+                return null;
+            left = op === "*" ? left * right : left / right;
+        }
+        return left;
+    };
+    const parseFactor = () => {
+        const token = peek();
+        if (typeof token === "number") {
+            consume();
+            return token;
+        }
+        if (token === "(") {
+            consume();
+            const inner = parseExpr();
+            if (inner == null || peek() !== ")")
+                return null;
+            consume();
+            return inner;
+        }
+        return null;
+    };
+    const value = parseExpr();
+    if (value == null || pos !== tokens.length)
+        return null;
+    if (!Number.isFinite(value) || value <= 0)
+        return null;
+    return value;
+}
+function validateArchCountCoefficientFormula(formula, sampleN) {
+    const trimmed = formula.trim();
+    if (!trimmed)
+        return "Укажите формулу коэффициента";
+    const value = evalArchCountCoefficientFormula(trimmed, sampleN);
+    if (value == null) {
+        return "Формула должна использовать только N, числа и операции + − × ÷ (скобки)";
+    }
+    return null;
+}
 function validateArchCountCoeffSteps(kind, steps) {
     if (steps.length === 0) {
-        return "Укажите хотя бы одну пару «количество — коэффициент»";
+        return "Укажите хотя бы одно условие «количество — коэффициент»";
     }
     const limits = exports.V2_WORK_ARCH_COUNT_LIMITS[kind];
     const seen = new Set();
@@ -138,21 +292,61 @@ function validateArchCountCoeffSteps(kind, steps) {
         if (step.count < limits.min || step.count > limits.max) {
             return `Количество для «${formatWorkArchCountKindLabel(kind)}» должно быть от ${limits.min} до ${limits.max}`;
         }
+        const operator = resolveLaborArchCountOperator(step);
+        const key = `${operator}|${step.count}`;
+        if (seen.has(key)) {
+            return `Повторяющееся условие ${operator} ${step.count}`;
+        }
+        seen.add(key);
+        const formula = step.coefficientFormula?.trim() ?? "";
+        if (formula) {
+            const sampleA = validateArchCountCoefficientFormula(formula, step.count);
+            if (sampleA)
+                return sampleA;
+            const sampleB = validateArchCountCoefficientFormula(formula, Math.max(step.count, 1));
+            if (sampleB)
+                return sampleB;
+            continue;
+        }
         if (!Number.isFinite(step.coefficient) || step.coefficient <= 0) {
             return "Коэффициент должен быть положительным числом";
         }
-        if (seen.has(step.count)) {
-            return `Повторяющееся количество ${step.count}`;
-        }
-        seen.add(step.count);
     }
     return null;
 }
+/** Labor: first matching step (operator + threshold), const or formula. */
 function lookupArchCountCoefficient(steps, count) {
     if (!Number.isFinite(count) || count <= 0)
         return null;
-    const exact = steps.find((step) => step.count === count);
-    return exact ? exact.coefficient : null;
+    for (const step of steps) {
+        const operator = resolveLaborArchCountOperator(step);
+        if (!compareArchCount(count, operator, step.count))
+            continue;
+        const formula = step.coefficientFormula?.trim() ?? "";
+        if (formula) {
+            return evalArchCountCoefficientFormula(formula, count);
+        }
+        return Number.isFinite(step.coefficient) && step.coefficient > 0
+            ? step.coefficient
+            : null;
+    }
+    return null;
+}
+const LABOR_ARCH_COUNT_OPERATOR_LABELS = {
+    ">=": "≥",
+    "<=": "≤",
+    "=": "=",
+    ">": ">",
+    "<": "<",
+};
+function formatLaborArchCountStepLabel(step) {
+    const operator = resolveLaborArchCountOperator(step);
+    const threshold = step.count;
+    const formula = step.coefficientFormula?.trim();
+    const rhs = formula
+        ? formula.replace(/\s+/g, "")
+        : String(step.coefficient).replace(".", ",");
+    return `${LABOR_ARCH_COUNT_OPERATOR_LABELS[operator]}${threshold} → ${rhs}`;
 }
 /** Количество арх. компонентов в formData анкеты (не в строке каталога). */
 function resolveWorkArchComponentCount(formData, kind) {
@@ -273,19 +467,5 @@ function archCountTriggerMatches(formData, kind, steps) {
     const count = resolveWorkArchComponentCount(formData, kind);
     if (!Number.isFinite(count) || count < 0)
         return false;
-    const { operator, threshold } = condition;
-    switch (operator) {
-        case ">=":
-            return count >= threshold;
-        case "<=":
-            return count <= threshold;
-        case "=":
-            return count === threshold;
-        case ">":
-            return count > threshold;
-        case "<":
-            return count < threshold;
-        default:
-            return count >= threshold;
-    }
+    return compareArchCount(count, condition.operator, condition.threshold);
 }

@@ -14,9 +14,23 @@ export type V2LogicWorkspaceTab = (typeof V2_LOGIC_WORKSPACE_TAB_VALUES)[number]
 export type V2WorkFormulaOperatorToken = "+" | "-" | "*" | "/";
 export declare const V2_WORK_FORMULA_ARCH_COUNT_KINDS: readonly ["model", "sourceSystem", "dataMart", "dataProcess", "modelService"];
 export type V2WorkFormulaArchCountKind = (typeof V2_WORK_FORMULA_ARCH_COUNT_KINDS)[number];
+export declare const V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES: readonly [">=", "<=", "=", ">", "<"];
+export type V2TypicalWorkTriggerArchCountOperator = (typeof V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES)[number];
 export type V2WorkArchCountCoeffStep = {
+    /** Порог количества (для labor — сравнивается с operator; для trigger — см. encode/decode). */
     count: number;
+    /** Константный коэффициент (labor) или sentinel (trigger). */
     coefficient: number;
+    /**
+     * Labor only: оператор сравнения с фактическим количеством.
+     * По умолчанию "=" (legacy exact match). Триггеры поле игнорируют.
+     */
+    operator?: V2TypicalWorkTriggerArchCountOperator;
+    /**
+     * Labor only: формула коэффициента от N (фактическое количество), напр. "N/5".
+     * Если задана — runtime считает формулу вместо coefficient.
+     */
+    coefficientFormula?: string | null;
 };
 export type V2WorkFormulaToken = {
     kind: "norm";
@@ -63,8 +77,6 @@ export type V2TypicalWorkRuleValueDto = {
     label: string | null;
 };
 export type V2TypicalWorkTriggerArchCountCombinator = "and" | "or";
-export declare const V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES: readonly [">=", "<=", "=", ">", "<"];
-export type V2TypicalWorkTriggerArchCountOperator = (typeof V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES)[number];
 /** Глобальное условие по количеству арх. компонентов для стрима работы. */
 export type V2TypicalWorkTriggerArchCountDto = {
     kind: V2WorkFormulaArchCountKind | null;

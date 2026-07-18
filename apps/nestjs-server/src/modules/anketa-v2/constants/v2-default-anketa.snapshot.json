@@ -3122,10 +3122,44 @@
 					"addable": false,
 					"orderable": false,
 					"removable": false,
-					"schemaFieldUid": "field_c66b1077-3931-4e05-a1bb-9727393bb7ba"
+					"schemaFieldUid": "field_c66b1077-3931-4e05-a1bb-9727393bb7ba",
+					"archComponent": "typicalWork",
+					"streamExecutor": "ПиРМ",
+					"boundWorkIds": [
+						"0a891fad-046e-4f6e-a3fb-b7dbbe0e3795",
+						"9a9a6571-0df7-4c0a-bb96-2b8231bf7848",
+						"39702be0-0a54-45b7-8783-13bd6cde4f17",
+						"68bed804-1c9e-4728-9e95-a098326b54b8",
+						"d76435f4-d005-450e-a6dd-a8e2a7e75ff8",
+						"451bb0f7-7b08-4c0f-b862-2b2a119efea5",
+						"642696c7-bffe-4ab7-a6cc-6526872ad4c3",
+						"66b05a57-0720-48c0-8fdf-4a5f43b29099",
+						"7bef18a9-61c4-49b4-bc8e-1c511274914b",
+						"efb102a7-9632-483d-83b3-02e549b2ee82",
+						"c53ba32c-3873-4e72-8f64-96d9bf7675bf",
+						"33b9845d-7d99-47ce-b513-ceda538f3518",
+						"ed0a42a3-3fc9-449e-934f-9d7e6d48f43c",
+						"c8c113ef-4066-4363-8092-f5dfdd39486f",
+						"bacff5ca-e5d5-4392-a3dc-db691178d85f",
+						"92b120d5-3709-4e28-a796-44e4cd95f941",
+						"104f6a45-dc4d-4ee5-89a8-93b6aac75474",
+						"1e051394-7329-4776-b0b0-0df3f0c8cfca",
+						"ccf6872c-6992-499f-894f-f72944731280",
+						"2734115f-9ba8-43ee-b247-c87955384a55",
+						"f82b4477-239f-4a1c-89bf-1c93d036da1c",
+						"6ea181bd-e3e6-4dc4-81dd-178eb4375fa3",
+						"4c6f1360-0f9a-4d7c-ab09-eecd6c2b0f48",
+						"5af28c24-22c2-4cbf-9ca6-ca74f16b46f0",
+						"6036071b-7b4d-4671-bddb-5d4cca72b4a6",
+						"a576e350-d444-4bae-b91f-b6502ff2a5b3",
+						"57c093d1-ad1d-4231-a1dc-c76adf55f282",
+						"94166453-3be4-4652-af19-ae3982d4cd97",
+						"e4ca3452-e88a-4d0d-9a63-0610ff35b5b3",
+						"cc693bc4-fde0-434c-a65f-26aed7088ca8"
+					]
 				},
 				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника на основании локальных параметров стрима и компонентов «Система-источник».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
+				"ui:description": "Формируются автоматически по правилам справочника для стрима «ПиРМ».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
 			}
 		},
 		"field_i8dL7QZa": {
@@ -3875,333 +3909,6 @@
 				]
 			},
 			{
-				"id": "typical-works-catalog-detailInfo-detailTypicalTasks",
-				"kind": "task_trigger",
-				"targetPath": "/detailInfo/detailTypicalTasks",
-				"condition": true,
-				"description": "ФТ-024: типовые работы модельного стрима из справочника (10 этапов factory snapshot).",
-				"dependencies": [],
-				"payload": {
-					"hint": "Типовые работы модельного стрима: этапы по триггерам из generalInfo (модельный сервис), detailInfo и неопределённости.",
-					"mode": "generated_rows",
-					"label": "Типовые работы (Модельный стрим)",
-					"worksCatalog": true,
-					"worksCatalogStream": "Модельный стрим",
-					"worksCatalogAllArchComponents": true,
-					"outputArrayPath": "detailInfo.detailTypicalTasks",
-					"sourceArrayPath": "generalInfo.modelService",
-					"allowedWorkIds": [
-						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",
-						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4002",
-						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4003",
-						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4004",
-						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4005",
-						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4006",
-						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4007",
-						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4008",
-						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4009",
-						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4010"
-					],
-					"sourceContextPaths": [
-						"detailInfo",
-						"generalInfo",
-						"uncertaintyCalculation"
-					],
-					"taskCode": "CATALOG_MODEL_STREAM_TASKS",
-					"calcModel": "unified"
-				}
-			},
-			{
-				"id": "typical-works-catalog-streamDataSources-field_u-7AkDrP",
-				"kind": "task_trigger",
-				"targetPath": "/streamDataSources/field_u-7AkDrP",
-				"condition": true,
-				"description": "ФТ-024: типовые работы «Система-источник» из справочника работ (назначения + триггеры).",
-				"dependencies": [
-					"/detailInfo/sourceSystems"
-				],
-				"payload": {
-					"hint": "При заполнении систем-источников подтягиваются типовые работы из справочника (стрим «Источники данных»). Появление работ управляется их триггерами. Настройка — в конструкторе → Логика.",
-					"mode": "generated_rows",
-					"label": "Типовые работы (стрим «Источники данных»)",
-					"worksCatalog": true,
-					"worksCatalogArchComponent": "Система-источник",
-					"worksCatalogStream": "fromSourceType",
-					"sourceContextPaths": [
-						"detailInfo.dataMart",
-						"detailInfo.dataProcess"
-					],
-					"taskCode": "CATALOG_SOURCE_TASKS",
-					"calcModel": "unified",
-					"outputArrayPath": "streamDataSources.field_u-7AkDrP",
-					"sourceArrayPath": "detailInfo.sourceSystems"
-				}
-			},
-			{
-				"id": "typical-works-catalog-streamModelControl-field_G0AoYAl8",
-				"kind": "task_trigger",
-				"targetPath": "/streamModelControl/field_G0AoYAl8",
-				"condition": true,
-				"description": "ФТ-024: типовые работы «Система-источник» из справочника работ (назначения + триггеры).",
-				"dependencies": [
-					"/detailInfo/sourceSystems"
-				],
-				"payload": {
-					"hint": "При заполнении систем-источников подтягиваются типовые работы из справочника (стрим «Источники данных»). Появление работ управляется их триггерами. Настройка — в конструкторе → Логика.",
-					"mode": "generated_rows",
-					"label": "Типовые работы (стрим «Источники данных»)",
-					"worksCatalog": true,
-					"worksCatalogArchComponent": "Система-источник",
-					"worksCatalogStream": "fromSourceType",
-					"sourceContextPaths": [
-						"detailInfo.dataMart",
-						"detailInfo.dataProcess"
-					],
-					"taskCode": "CATALOG_SOURCE_TASKS",
-					"calcModel": "unified",
-					"outputArrayPath": "streamModelControl.field_G0AoYAl8",
-					"sourceArrayPath": "detailInfo.sourceSystems"
-				}
-			},
-			{
-				"id": "unified-typical-row-total:detailInfo_detailTypicalTasks",
-				"kind": "row_computed",
-				"payload": {
-					"label": "Per-row итог типовой работы",
-					"fieldVar": "total",
-					"arrayPath": "detailInfo.detailTypicalTasks",
-					"formulaHint": "row.total = каталог (округл.) или норматив (ч/д) × коэффициент"
-				},
-				"condition": {
-					"if": [
-						{
-							"and": [
-								{
-									"!!": [
-										{
-											"var": "workId"
-										}
-									]
-								},
-								{
-									"!=": [
-										{
-											"var": "total"
-										},
-										null
-									]
-								}
-							]
-						},
-						{
-							"var": "total"
-						},
-						{
-							"*": [
-								{
-									"var": "estimateHoursPerDay"
-								},
-								{
-									"var": "coefficient"
-								}
-							]
-						}
-					]
-				},
-				"targetPath": "/detailInfo/detailTypicalTasks",
-				"description": "ФТ-024: итог строки типовой работы.",
-				"dependencies": []
-			},
-			{
-				"id": "unified-typical-row-total:streamDataSources_field_u-7AkDrP",
-				"kind": "row_computed",
-				"payload": {
-					"label": "Per-row итог типовой работы",
-					"fieldVar": "total",
-					"arrayPath": "streamDataSources.field_u-7AkDrP",
-					"formulaHint": "row.total = каталог (округл.) или норматив (ч/д) × коэффициент"
-				},
-				"condition": {
-					"if": [
-						{
-							"and": [
-								{
-									"!!": [
-										{
-											"var": "workId"
-										}
-									]
-								},
-								{
-									"!=": [
-										{
-											"var": "total"
-										},
-										null
-									]
-								}
-							]
-						},
-						{
-							"var": "total"
-						},
-						{
-							"*": [
-								{
-									"var": "estimateHoursPerDay"
-								},
-								{
-									"var": "coefficient"
-								}
-							]
-						}
-					]
-				},
-				"targetPath": "/streamDataSources/field_u-7AkDrP",
-				"description": "ФТ-024: итог строки типовой работы.",
-				"dependencies": []
-			},
-			{
-				"id": "unified-typical-row-total:streamModelControl_field_G0AoYAl8",
-				"kind": "row_computed",
-				"payload": {
-					"label": "Per-row итог типовой работы",
-					"fieldVar": "total",
-					"arrayPath": "streamModelControl.field_G0AoYAl8",
-					"formulaHint": "row.total = каталог (округл.) или норматив (ч/д) × коэффициент"
-				},
-				"condition": {
-					"if": [
-						{
-							"and": [
-								{
-									"!!": [
-										{
-											"var": "workId"
-										}
-									]
-								},
-								{
-									"!=": [
-										{
-											"var": "total"
-										},
-										null
-									]
-								}
-							]
-						},
-						{
-							"var": "total"
-						},
-						{
-							"*": [
-								{
-									"var": "estimateHoursPerDay"
-								},
-								{
-									"var": "coefficient"
-								}
-							]
-						}
-					]
-				},
-				"targetPath": "/streamModelControl/field_G0AoYAl8",
-				"description": "ФТ-024: итог строки типовой работы.",
-				"dependencies": []
-			},
-			{
-				"id": "unified-typical-total",
-				"kind": "computed",
-				"payload": {
-					"mode": "expert",
-					"role": "typical_total",
-					"label": "Сумма по типовым работам",
-					"calcModel": "unified",
-					"formulaHint": "Σ типовые работы (detailInfo.detailTypicalTasks + streamDataSources.field_u-7AkDrP + streamModelControl.field_G0AoYAl8)"
-				},
-				"condition": {
-					"+": [
-						{
-							"reduce": [
-								{
-									"var": "detailInfo.detailTypicalTasks"
-								},
-								{
-									"+": [
-										{
-											"var": "accumulator"
-										},
-										{
-											"max": [
-												0,
-												{
-													"var": "current.total"
-												}
-											]
-										}
-									]
-								},
-								0
-							]
-						},
-						{
-							"reduce": [
-								{
-									"var": "streamDataSources.field_u-7AkDrP"
-								},
-								{
-									"+": [
-										{
-											"var": "accumulator"
-										},
-										{
-											"max": [
-												0,
-												{
-													"var": "current.total"
-												}
-											]
-										}
-									]
-								},
-								0
-							]
-						},
-						{
-							"reduce": [
-								{
-									"var": "streamModelControl.field_G0AoYAl8"
-								},
-								{
-									"+": [
-										{
-											"var": "accumulator"
-										},
-										{
-											"max": [
-												0,
-												{
-													"var": "current.total"
-												}
-											]
-										}
-									]
-								},
-								0
-							]
-						}
-					]
-				},
-				"targetPath": "/summary/typicalTotal",
-				"description": "ФТ-026: сумма итоговых оценок типовых работ.",
-				"dependencies": [
-					"/detailInfo/detailTypicalTasks",
-					"/streamDataSources/field_u-7AkDrP",
-					"/streamModelControl/field_G0AoYAl8"
-				]
-			},
-			{
 				"id": "unified-atypical-row-total:detailInfo_field_npwqpBHt",
 				"kind": "row_computed",
 				"payload": {
@@ -4578,6 +4285,462 @@
 					"/streamModelControl/field_hQeUoQl4",
 					"/streamDigitalAgents/field_AuPTJbZa",
 					"/streamStreamingData/field_xzzoJBAc"
+				]
+			},
+			{
+				"id": "typical-works-catalog-detailInfo-detailTypicalTasks",
+				"kind": "task_trigger",
+				"targetPath": "/detailInfo/detailTypicalTasks",
+				"condition": true,
+				"description": "ФТ-024: типовые работы модельного стрима из справочника (10 этапов factory snapshot).",
+				"dependencies": [],
+				"payload": {
+					"hint": "Типовые работы модельного стрима: этапы по триггерам из generalInfo (модельный сервис), detailInfo и неопределённости.",
+					"mode": "generated_rows",
+					"label": "Типовые работы (Модельный стрим)",
+					"worksCatalog": true,
+					"worksCatalogStream": "Модельный стрим",
+					"worksCatalogAllArchComponents": true,
+					"outputArrayPath": "detailInfo.detailTypicalTasks",
+					"sourceArrayPath": "generalInfo.modelService",
+					"allowedWorkIds": [
+						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",
+						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4002",
+						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4003",
+						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4004",
+						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4005",
+						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4006",
+						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4007",
+						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4008",
+						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4009",
+						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4010"
+					],
+					"sourceContextPaths": [
+						"detailInfo",
+						"generalInfo",
+						"uncertaintyCalculation"
+					],
+					"taskCode": "CATALOG_MODEL_STREAM_TASKS",
+					"calcModel": "unified"
+				}
+			},
+			{
+				"id": "typical-works-catalog-field_aJEu5ziT-sourceTypicalTasks",
+				"kind": "task_trigger",
+				"targetPath": "/field_aJEu5ziT/sourceTypicalTasks",
+				"condition": true,
+				"description": "ФТ-024: типовые работы стрима «ПиРМ» из справочника (все типы арх. компонентов).",
+				"dependencies": [],
+				"payload": {
+					"hint": "Типовые работы стрима «ПиРМ» из справочника. Появление работ управляется их условиями появления.",
+					"mode": "generated_rows",
+					"label": "Типовые работы (стрим «ПиРМ»)",
+					"worksCatalog": true,
+					"worksCatalogStream": "ПиРМ",
+					"worksCatalogAllArchComponents": true,
+					"outputArrayPath": "field_aJEu5ziT.sourceTypicalTasks",
+					"sourceContextPaths": [
+						"detailInfo",
+						"generalInfo",
+						"uncertaintyCalculation",
+						"field_aJEu5ziT"
+					],
+					"taskCode": "CATALOG_EXECUTOR_STREAM_TASKS",
+					"calcModel": "unified",
+					"allowedWorkIds": [
+						"0a891fad-046e-4f6e-a3fb-b7dbbe0e3795",
+						"9a9a6571-0df7-4c0a-bb96-2b8231bf7848",
+						"39702be0-0a54-45b7-8783-13bd6cde4f17",
+						"68bed804-1c9e-4728-9e95-a098326b54b8",
+						"d76435f4-d005-450e-a6dd-a8e2a7e75ff8",
+						"451bb0f7-7b08-4c0f-b862-2b2a119efea5",
+						"642696c7-bffe-4ab7-a6cc-6526872ad4c3",
+						"66b05a57-0720-48c0-8fdf-4a5f43b29099",
+						"7bef18a9-61c4-49b4-bc8e-1c511274914b",
+						"efb102a7-9632-483d-83b3-02e549b2ee82",
+						"c53ba32c-3873-4e72-8f64-96d9bf7675bf",
+						"33b9845d-7d99-47ce-b513-ceda538f3518",
+						"ed0a42a3-3fc9-449e-934f-9d7e6d48f43c",
+						"c8c113ef-4066-4363-8092-f5dfdd39486f",
+						"bacff5ca-e5d5-4392-a3dc-db691178d85f",
+						"92b120d5-3709-4e28-a796-44e4cd95f941",
+						"104f6a45-dc4d-4ee5-89a8-93b6aac75474",
+						"1e051394-7329-4776-b0b0-0df3f0c8cfca",
+						"ccf6872c-6992-499f-894f-f72944731280",
+						"2734115f-9ba8-43ee-b247-c87955384a55",
+						"f82b4477-239f-4a1c-89bf-1c93d036da1c",
+						"6ea181bd-e3e6-4dc4-81dd-178eb4375fa3",
+						"4c6f1360-0f9a-4d7c-ab09-eecd6c2b0f48",
+						"5af28c24-22c2-4cbf-9ca6-ca74f16b46f0",
+						"6036071b-7b4d-4671-bddb-5d4cca72b4a6",
+						"a576e350-d444-4bae-b91f-b6502ff2a5b3",
+						"57c093d1-ad1d-4231-a1dc-c76adf55f282",
+						"94166453-3be4-4652-af19-ae3982d4cd97",
+						"e4ca3452-e88a-4d0d-9a63-0610ff35b5b3",
+						"cc693bc4-fde0-434c-a65f-26aed7088ca8"
+					]
+				}
+			},
+			{
+				"id": "typical-works-catalog-streamDataSources-field_u-7AkDrP",
+				"kind": "task_trigger",
+				"targetPath": "/streamDataSources/field_u-7AkDrP",
+				"condition": true,
+				"description": "ФТ-024: типовые работы «Система-источник» из справочника работ (назначения + триггеры).",
+				"dependencies": [
+					"/detailInfo/sourceSystems"
+				],
+				"payload": {
+					"hint": "При заполнении систем-источников подтягиваются типовые работы из справочника (стрим «Источники данных»). Появление работ управляется их триггерами. Настройка — в конструкторе → Логика.",
+					"mode": "generated_rows",
+					"label": "Типовые работы (стрим «Источники данных»)",
+					"worksCatalog": true,
+					"worksCatalogArchComponent": "Система-источник",
+					"worksCatalogStream": "fromSourceType",
+					"sourceContextPaths": [
+						"detailInfo.dataMart",
+						"detailInfo.dataProcess"
+					],
+					"taskCode": "CATALOG_SOURCE_TASKS",
+					"calcModel": "unified",
+					"outputArrayPath": "streamDataSources.field_u-7AkDrP",
+					"sourceArrayPath": "detailInfo.sourceSystems"
+				}
+			},
+			{
+				"id": "typical-works-catalog-streamModelControl-field_G0AoYAl8",
+				"kind": "task_trigger",
+				"targetPath": "/streamModelControl/field_G0AoYAl8",
+				"condition": true,
+				"description": "ФТ-024: типовые работы стрима «Контроль моделей» из справочника (все типы арх. компонентов).",
+				"dependencies": [],
+				"payload": {
+					"hint": "Типовые работы стрима «Контроль моделей» из справочника. Появление работ управляется их условиями появления.",
+					"mode": "generated_rows",
+					"label": "Типовые работы (стрим «Контроль моделей»)",
+					"worksCatalog": true,
+					"worksCatalogStream": "Контроль моделей",
+					"worksCatalogAllArchComponents": true,
+					"outputArrayPath": "streamModelControl.field_G0AoYAl8",
+					"sourceContextPaths": [
+						"detailInfo",
+						"generalInfo",
+						"uncertaintyCalculation",
+						"streamModelControl"
+					],
+					"taskCode": "CATALOG_EXECUTOR_STREAM_TASKS",
+					"calcModel": "unified"
+				}
+			},
+			{
+				"id": "unified-typical-row-total:detailInfo_detailTypicalTasks",
+				"kind": "row_computed",
+				"payload": {
+					"label": "Per-row итог типовой работы",
+					"fieldVar": "total",
+					"arrayPath": "detailInfo.detailTypicalTasks",
+					"formulaHint": "row.total = каталог (округл.) или норматив (ч/д) × коэффициент"
+				},
+				"condition": {
+					"if": [
+						{
+							"and": [
+								{
+									"!!": [
+										{
+											"var": "workId"
+										}
+									]
+								},
+								{
+									"!=": [
+										{
+											"var": "total"
+										},
+										null
+									]
+								}
+							]
+						},
+						{
+							"var": "total"
+						},
+						{
+							"*": [
+								{
+									"var": "estimateHoursPerDay"
+								},
+								{
+									"var": "coefficient"
+								}
+							]
+						}
+					]
+				},
+				"targetPath": "/detailInfo/detailTypicalTasks",
+				"description": "ФТ-024: итог строки типовой работы.",
+				"dependencies": []
+			},
+			{
+				"id": "unified-typical-row-total:field_aJEu5ziT_sourceTypicalTasks",
+				"kind": "row_computed",
+				"payload": {
+					"label": "Per-row итог типовой работы",
+					"fieldVar": "total",
+					"arrayPath": "field_aJEu5ziT.sourceTypicalTasks",
+					"formulaHint": "row.total = каталог (округл.) или норматив (ч/д) × коэффициент"
+				},
+				"condition": {
+					"if": [
+						{
+							"and": [
+								{
+									"!!": [
+										{
+											"var": "workId"
+										}
+									]
+								},
+								{
+									"!=": [
+										{
+											"var": "total"
+										},
+										null
+									]
+								}
+							]
+						},
+						{
+							"var": "total"
+						},
+						{
+							"*": [
+								{
+									"var": "estimateHoursPerDay"
+								},
+								{
+									"var": "coefficient"
+								}
+							]
+						}
+					]
+				},
+				"targetPath": "/field_aJEu5ziT/sourceTypicalTasks",
+				"description": "ФТ-024: итог строки типовой работы.",
+				"dependencies": []
+			},
+			{
+				"id": "unified-typical-row-total:streamDataSources_field_u-7AkDrP",
+				"kind": "row_computed",
+				"payload": {
+					"label": "Per-row итог типовой работы",
+					"fieldVar": "total",
+					"arrayPath": "streamDataSources.field_u-7AkDrP",
+					"formulaHint": "row.total = каталог (округл.) или норматив (ч/д) × коэффициент"
+				},
+				"condition": {
+					"if": [
+						{
+							"and": [
+								{
+									"!!": [
+										{
+											"var": "workId"
+										}
+									]
+								},
+								{
+									"!=": [
+										{
+											"var": "total"
+										},
+										null
+									]
+								}
+							]
+						},
+						{
+							"var": "total"
+						},
+						{
+							"*": [
+								{
+									"var": "estimateHoursPerDay"
+								},
+								{
+									"var": "coefficient"
+								}
+							]
+						}
+					]
+				},
+				"targetPath": "/streamDataSources/field_u-7AkDrP",
+				"description": "ФТ-024: итог строки типовой работы.",
+				"dependencies": []
+			},
+			{
+				"id": "unified-typical-row-total:streamModelControl_field_G0AoYAl8",
+				"kind": "row_computed",
+				"payload": {
+					"label": "Per-row итог типовой работы",
+					"fieldVar": "total",
+					"arrayPath": "streamModelControl.field_G0AoYAl8",
+					"formulaHint": "row.total = каталог (округл.) или норматив (ч/д) × коэффициент"
+				},
+				"condition": {
+					"if": [
+						{
+							"and": [
+								{
+									"!!": [
+										{
+											"var": "workId"
+										}
+									]
+								},
+								{
+									"!=": [
+										{
+											"var": "total"
+										},
+										null
+									]
+								}
+							]
+						},
+						{
+							"var": "total"
+						},
+						{
+							"*": [
+								{
+									"var": "estimateHoursPerDay"
+								},
+								{
+									"var": "coefficient"
+								}
+							]
+						}
+					]
+				},
+				"targetPath": "/streamModelControl/field_G0AoYAl8",
+				"description": "ФТ-024: итог строки типовой работы.",
+				"dependencies": []
+			},
+			{
+				"id": "unified-typical-total",
+				"kind": "computed",
+				"payload": {
+					"mode": "expert",
+					"role": "typical_total",
+					"label": "Сумма по типовым работам",
+					"calcModel": "unified",
+					"formulaHint": "Σ типовые работы (detailInfo.detailTypicalTasks + field_aJEu5ziT.sourceTypicalTasks + streamDataSources.field_u-7AkDrP + streamModelControl.field_G0AoYAl8)"
+				},
+				"condition": {
+					"+": [
+						{
+							"reduce": [
+								{
+									"var": "detailInfo.detailTypicalTasks"
+								},
+								{
+									"+": [
+										{
+											"var": "accumulator"
+										},
+										{
+											"max": [
+												0,
+												{
+													"var": "current.total"
+												}
+											]
+										}
+									]
+								},
+								0
+							]
+						},
+						{
+							"reduce": [
+								{
+									"var": "field_aJEu5ziT.sourceTypicalTasks"
+								},
+								{
+									"+": [
+										{
+											"var": "accumulator"
+										},
+										{
+											"max": [
+												0,
+												{
+													"var": "current.total"
+												}
+											]
+										}
+									]
+								},
+								0
+							]
+						},
+						{
+							"reduce": [
+								{
+									"var": "streamDataSources.field_u-7AkDrP"
+								},
+								{
+									"+": [
+										{
+											"var": "accumulator"
+										},
+										{
+											"max": [
+												0,
+												{
+													"var": "current.total"
+												}
+											]
+										}
+									]
+								},
+								0
+							]
+						},
+						{
+							"reduce": [
+								{
+									"var": "streamModelControl.field_G0AoYAl8"
+								},
+								{
+									"+": [
+										{
+											"var": "accumulator"
+										},
+										{
+											"max": [
+												0,
+												{
+													"var": "current.total"
+												}
+											]
+										}
+									]
+								},
+								0
+							]
+						}
+					]
+				},
+				"targetPath": "/summary/typicalTotal",
+				"description": "ФТ-026: сумма итоговых оценок типовых работ.",
+				"dependencies": [
+					"/detailInfo/detailTypicalTasks",
+					"/field_aJEu5ziT/sourceTypicalTasks",
+					"/streamDataSources/field_u-7AkDrP",
+					"/streamModelControl/field_G0AoYAl8"
 				]
 			}
 		]

@@ -165,6 +165,53 @@ export function buildSourceTypicalWorksCatalogRule(
 	};
 }
 
+/** Каталог типовых работ стрима-исполнителя (ПиРМ и др.) — все типы арх. компонентов. */
+export function buildExecutorStreamTypicalWorksCatalogRule(
+	outputArrayPath: string,
+	options: {
+		streamExecutor: string;
+		boundWorkIds?: string[] | undefined;
+	},
+): V2LogicRuleDto {
+	const streamExecutor = options.streamExecutor.trim();
+	const boundWorkIds = options.boundWorkIds;
+	const hasExplicitBinding = boundWorkIds !== undefined;
+	const enabled =
+		!hasExplicitBinding || (boundWorkIds?.length ?? 0) > 0;
+	const streamRoot = outputArrayPath.split(".")[0] ?? outputArrayPath;
+
+	const payload: Record<string, unknown> = {
+		hint: `Типовые работы стрима «${streamExecutor}» из справочника. Появление работ управляется их условиями появления.`,
+		mode: "generated_rows",
+		label: `Типовые работы (стрим «${streamExecutor}»)`,
+		worksCatalog: true,
+		worksCatalogStream: streamExecutor,
+		worksCatalogAllArchComponents: true,
+		outputArrayPath,
+		sourceContextPaths: [
+			"detailInfo",
+			"generalInfo",
+			"uncertaintyCalculation",
+			streamRoot,
+		],
+		taskCode: "CATALOG_EXECUTOR_STREAM_TASKS",
+		calcModel: "unified",
+	};
+	if (hasExplicitBinding) {
+		payload.allowedWorkIds = boundWorkIds ?? [];
+	}
+
+	return {
+		id: typicalWorksCatalogRuleId(outputArrayPath),
+		kind: "task_trigger",
+		targetPath: `/${outputArrayPath.replace(/\./g, "/")}`,
+		condition: enabled,
+		description: `ФТ-024: типовые работы стрима «${streamExecutor}» из справочника (все типы арх. компонентов).`,
+		dependencies: [],
+		payload,
+	};
+}
+
 export function buildControlTypicalWorksCatalogRule(): V2LogicRuleDto {
 	return {
 		id: "unified-control-typical-works",
@@ -454,19 +501,13 @@ export function patchV2TypicalWorksLogicRules(
 							binding.outputPath,
 						)
 					: null;
-				if (streamExecutor === V2_MODEL_STREAM_EXECUTOR) {
-					patched.push(
-						buildModelStreamTypicalWorksCatalogRule(binding.outputPath, {
-							boundWorkIds: binding.boundWorkIds,
-						}),
-					);
-				} else {
-					patched.push(
-						buildSourceTypicalWorksCatalogRule(binding.outputPath, {
-							boundWorkIds: binding.boundWorkIds,
-						}),
-					);
-				}
+				patched.push(
+					buildCatalogRuleForTypicalWorkBinding(
+						binding.outputPath,
+						binding.boundWorkIds,
+						streamExecutor,
+					),
+				);
 			}
 		} else {
 			patched.push(
@@ -515,6 +556,31 @@ export function patchV2TypicalWorksLogicRules(
 	};
 }
 
+function buildCatalogRuleForTypicalWorkBinding(
+	outputPath: string,
+	boundWorkIds: string[] | undefined,
+	streamExecutor: string | null,
+): V2LogicRuleDto {
+	if (streamExecutor === V2_MODEL_STREAM_EXECUTOR) {
+		return buildModelStreamTypicalWorksCatalogRule(outputPath, {
+			boundWorkIds,
+		});
+	}
+	if (
+		streamExecutor &&
+		streamExecutor !== "Источники данных" &&
+		streamExecutor !== "fromSourceType"
+	) {
+		return buildExecutorStreamTypicalWorksCatalogRule(outputPath, {
+			streamExecutor,
+			boundWorkIds,
+		});
+	}
+	return buildSourceTypicalWorksCatalogRule(outputPath, {
+		boundWorkIds,
+	});
+}
+
 function buildCanonicalTypicalWorksCatalogRules(
 	options?: PatchV2TypicalWorksLogicOptions,
 ): Map<string, V2LogicRuleDto> {
@@ -531,14 +597,11 @@ function buildCanonicalTypicalWorksCatalogRules(
 						binding.outputPath,
 					)
 				: null;
-			const rule =
-				streamExecutor === V2_MODEL_STREAM_EXECUTOR
-					? buildModelStreamTypicalWorksCatalogRule(binding.outputPath, {
-							boundWorkIds: binding.boundWorkIds,
-						})
-					: buildSourceTypicalWorksCatalogRule(binding.outputPath, {
-							boundWorkIds: binding.boundWorkIds,
-						});
+			const rule = buildCatalogRuleForTypicalWorkBinding(
+				binding.outputPath,
+				binding.boundWorkIds,
+				streamExecutor,
+			);
 			rules.set(rule.id, rule);
 		}
 		return rules;

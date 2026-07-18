@@ -154,13 +154,29 @@ export function findCatalogRowsForRegistryWork(
 	catalogGroups: Map<string, V2FactoryTypicalWork[]>,
 ): V2FactoryTypicalWork[] {
 	const stage = extractWorkStage(entry.name);
-	if (!stage) return [];
-	const key = buildCatalogWorkKey(
-		entry.archComponentType,
-		stage,
-		stripWorkStagePrefix(entry.name),
-	);
-	return catalogGroups.get(key) ?? [];
+	if (stage) {
+		const key = buildCatalogWorkKey(
+			entry.archComponentType,
+			stage,
+			stripWorkStagePrefix(entry.name),
+		);
+		const byStage = catalogGroups.get(key);
+		if (byStage?.length) return byStage;
+	}
+
+	/** ПиРМ и др. работы без «01.» / «Этап N.» в названии — матч по компоненту + имени. */
+	const component = normalizeArchComponentType(entry.archComponentType);
+	const name = entry.name.trim();
+	const matches: V2FactoryTypicalWork[] = [];
+	for (const rows of catalogGroups.values()) {
+		for (const row of rows) {
+			if (normalizeArchComponentType(resolveCatalogWorkComponent(row)) !== component) {
+				continue;
+			}
+			if (row.name.trim() === name) matches.push(row);
+		}
+	}
+	return matches;
 }
 
 export function groupCatalogWorks(): Map<string, V2FactoryTypicalWork[]> {

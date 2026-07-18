@@ -114,6 +114,43 @@ export function buildSourceTypicalWorksCatalogRule(outputArrayPath = V2_SOURCE_T
         payload,
     };
 }
+/** Каталог типовых работ стрима-исполнителя (ПиРМ и др.) — все типы арх. компонентов. */
+export function buildExecutorStreamTypicalWorksCatalogRule(outputArrayPath, options) {
+    const streamExecutor = options.streamExecutor.trim();
+    const boundWorkIds = options.boundWorkIds;
+    const hasExplicitBinding = boundWorkIds !== undefined;
+    const enabled = !hasExplicitBinding || (boundWorkIds?.length ?? 0) > 0;
+    const streamRoot = outputArrayPath.split(".")[0] ?? outputArrayPath;
+    const payload = {
+        hint: `Типовые работы стрима «${streamExecutor}» из справочника. Появление работ управляется их условиями появления.`,
+        mode: "generated_rows",
+        label: `Типовые работы (стрим «${streamExecutor}»)`,
+        worksCatalog: true,
+        worksCatalogStream: streamExecutor,
+        worksCatalogAllArchComponents: true,
+        outputArrayPath,
+        sourceContextPaths: [
+            "detailInfo",
+            "generalInfo",
+            "uncertaintyCalculation",
+            streamRoot,
+        ],
+        taskCode: "CATALOG_EXECUTOR_STREAM_TASKS",
+        calcModel: "unified",
+    };
+    if (hasExplicitBinding) {
+        payload.allowedWorkIds = boundWorkIds ?? [];
+    }
+    return {
+        id: typicalWorksCatalogRuleId(outputArrayPath),
+        kind: "task_trigger",
+        targetPath: `/${outputArrayPath.replace(/\./g, "/")}`,
+        condition: enabled,
+        description: `ФТ-024: типовые работы стрима «${streamExecutor}» из справочника (все типы арх. компонентов).`,
+        dependencies: [],
+        payload,
+    };
+}
 export function buildControlTypicalWorksCatalogRule() {
     return {
         id: "unified-control-typical-works",
@@ -344,16 +381,7 @@ export function patchV2TypicalWorksLogicRules(logic, options) {
                 const streamExecutor = options?.uiSchema
                     ? resolveStreamExecutorForTypicalWorkOutputPath(options.uiSchema, binding.outputPath)
                     : null;
-                if (streamExecutor === V2_MODEL_STREAM_EXECUTOR) {
-                    patched.push(buildModelStreamTypicalWorksCatalogRule(binding.outputPath, {
-                        boundWorkIds: binding.boundWorkIds,
-                    }));
-                }
-                else {
-                    patched.push(buildSourceTypicalWorksCatalogRule(binding.outputPath, {
-                        boundWorkIds: binding.boundWorkIds,
-                    }));
-                }
+                patched.push(buildCatalogRuleForTypicalWorkBinding(binding.outputPath, binding.boundWorkIds, streamExecutor));
             }
         }
         else {
@@ -383,6 +411,24 @@ export function patchV2TypicalWorksLogicRules(logic, options) {
         ],
     };
 }
+function buildCatalogRuleForTypicalWorkBinding(outputPath, boundWorkIds, streamExecutor) {
+    if (streamExecutor === V2_MODEL_STREAM_EXECUTOR) {
+        return buildModelStreamTypicalWorksCatalogRule(outputPath, {
+            boundWorkIds,
+        });
+    }
+    if (streamExecutor &&
+        streamExecutor !== "Источники данных" &&
+        streamExecutor !== "fromSourceType") {
+        return buildExecutorStreamTypicalWorksCatalogRule(outputPath, {
+            streamExecutor,
+            boundWorkIds,
+        });
+    }
+    return buildSourceTypicalWorksCatalogRule(outputPath, {
+        boundWorkIds,
+    });
+}
 function buildCanonicalTypicalWorksCatalogRules(options) {
     const bindings = options?.uiSchema
         ? collectTypicalWorkBlockBindings(options.uiSchema)
@@ -393,13 +439,7 @@ function buildCanonicalTypicalWorksCatalogRules(options) {
             const streamExecutor = options?.uiSchema
                 ? resolveStreamExecutorForTypicalWorkOutputPath(options.uiSchema, binding.outputPath)
                 : null;
-            const rule = streamExecutor === V2_MODEL_STREAM_EXECUTOR
-                ? buildModelStreamTypicalWorksCatalogRule(binding.outputPath, {
-                    boundWorkIds: binding.boundWorkIds,
-                })
-                : buildSourceTypicalWorksCatalogRule(binding.outputPath, {
-                    boundWorkIds: binding.boundWorkIds,
-                });
+            const rule = buildCatalogRuleForTypicalWorkBinding(binding.outputPath, binding.boundWorkIds, streamExecutor);
             rules.set(rule.id, rule);
         }
         return rules;
