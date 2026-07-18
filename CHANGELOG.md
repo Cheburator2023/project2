@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+# [1.34.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.33.0...v1.34.0) (2026-07-18)
+
+
+### Features
+
+* enhance typical work schema and parameter handling ([53e4609](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/53e460937af084aa80337114a3e64b54a3915b4e))
+* enhance typical work synchronization and consistency checks ([bd16ed1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/bd16ed1cfe04deec2f46e35ba59b6074a5611179))
+
 # [1.33.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.32.0...v1.33.0) (2026-07-18)
 
 
