@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.35.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.34.0...v1.35.0) (2026-07-18)
+
+
+### Features
+
+* enhance ArchCountCoeffStepsEditor and TypicalWorkTriggersSection components ([153aeb3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/153aeb3552209684d44146ef11d067ed068fe1c2))
+
 # [1.34.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.33.0...v1.34.0) (2026-07-18)
 
 
