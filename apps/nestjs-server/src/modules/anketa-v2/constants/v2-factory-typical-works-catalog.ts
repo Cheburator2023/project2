@@ -51,7 +51,12 @@ export type V2FactoryTypicalWork = {
 	laborArchCounts?: Array<{
 		kind: string;
 		paramName?: string | null;
-		steps: Array<{ count: number; coefficient: number }>;
+		steps: Array<{
+			count: number;
+			coefficient: number;
+			operator?: ">=" | "<=" | "=" | ">" | "<";
+			coefficientFormula?: string | null;
+		}>;
 	}>;
 	formulaText?: string;
 	roundingMode?: "CEIL" | "FLOOR" | "ROUND" | "NONE";

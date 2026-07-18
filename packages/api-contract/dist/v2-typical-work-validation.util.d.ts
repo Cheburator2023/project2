@@ -74,11 +74,13 @@ export type WorkCoefficientRowInput = {
     paramCode: string;
     valueCode: string | null;
     valueLabel: string | null;
+    schemaFieldUid?: string | null;
 };
 export type WorkCoefficientCatalogParam = WorkTriggerStatusCatalogParam & {
     sourceKeys?: string[];
+    schemaFieldUid?: string | null;
 };
-export declare function resolveWorkCoefficientCatalogParam(catalog: WorkCoefficientCatalogParam[], paramCode: string): WorkCoefficientCatalogParam | undefined;
+export declare function resolveWorkCoefficientCatalogParam(catalog: WorkCoefficientCatalogParam[], paramCode: string, schemaFieldUid?: string | null): WorkCoefficientCatalogParam | undefined;
 /** Параметр трудоёмкости из поля схемы анкеты (`field_*`), не из глобального CSV. */
 export declare function isSchemaFieldLaborParamCode(paramCode: string): boolean;
 /**
@@ -95,6 +97,7 @@ export type WorkCoefficientCatalogSourceParam = {
     code: string;
     name?: string;
     sourceKeys?: string[];
+    schemaFieldUid?: string | null;
     values: Array<{
         code: string;
         label: string;
@@ -107,6 +110,7 @@ export declare function buildWorkCoefficientCatalog(input: {
     laborParams: Array<{
         paramCode: string;
         paramName?: string | null;
+        schemaFieldUid?: string | null;
     }>;
     methodologyCatalog?: WorkCoefficientCatalogSourceParam[];
 }): WorkCoefficientCatalogParam[];
@@ -120,6 +124,7 @@ export declare function collectUnavailableLaborCoefficientIssues(input: {
     laborParams: Array<{
         paramCode: string;
         paramName?: string | null;
+        schemaFieldUid?: string | null;
         kind?: string | null;
         coefficients?: Array<{
             valueCode: string | null;

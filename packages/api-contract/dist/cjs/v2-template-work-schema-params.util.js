@@ -231,6 +231,9 @@ function collectTypicalWorkSchemaConsistencyIssues(input) {
         if (!ruleRequiresSchemaBinding(rule)) {
             continue;
         }
+        if ((0, v2_works_catalog_match_util_1.isAlwaysShownTriggerParam)(rule.paramCode, rule.paramName)) {
+            continue;
+        }
         if ((0, v2_labor_arch_count_util_1.isArchCountLaborParamName)(rule.paramName ?? "")) {
             continue;
         }

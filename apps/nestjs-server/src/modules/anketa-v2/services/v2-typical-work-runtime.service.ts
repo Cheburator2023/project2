@@ -17,6 +17,7 @@ import {
 	resolveByValueLaborParamCoefficients,
 	resolveLaborAnyOfCoefficient,
 	resolveStreamFromSourceType,
+	resolveExecutorScopeDbStreams,
 	isModelStreamAlwaysActiveWork,
 	isModelStreamAlwaysShownWork,
 	matchTypicalWorkTriggers,
@@ -321,8 +322,12 @@ export class V2TypicalWorkRuntimeService {
 		if (!stream || !archComponentType) return [];
 		if (params.allowedWorkIds?.length === 0) return [];
 
+		const scopeStreams = [...resolveExecutorScopeDbStreams(stream)];
+		const streamScope =
+			scopeStreams.length > 0 ? scopeStreams : [stream];
+
 		const assignments = await this.assignmentRepository.find({
-			where: { streamExecutor: stream, isActive: true },
+			where: { streamExecutor: In(streamScope), isActive: true },
 		});
 		const assignedWorkIds = new Set(assignments.map((a) => a.workId));
 		if (assignedWorkIds.size === 0) return [];
@@ -367,23 +372,23 @@ export class V2TypicalWorkRuntimeService {
 		const workIds = filteredWorks.map((w) => w.id);
 		const [norms, rules, labor, laborParams, allConfigs] = await Promise.all([
 			this.normRepository.find({
-				where: { workId: In(workIds), streamExecutor: stream },
+				where: { workId: In(workIds), streamExecutor: In(streamScope) },
 			}),
 			this.ruleRepository.find({
-				where: { workId: In(workIds), streamExecutor: stream },
+				where: { workId: In(workIds), streamExecutor: In(streamScope) },
 			}),
 			this.laborRepository.find({
-				where: { workId: In(workIds), streamExecutor: stream },
+				where: { workId: In(workIds), streamExecutor: In(streamScope) },
 			}),
 			this.laborParamRepository.find({
-				where: { workId: In(workIds), streamExecutor: stream },
+				where: { workId: In(workIds), streamExecutor: In(streamScope) },
 			}),
 			params.templateVersionId
 				? this.versionConfigRepository.find({
 						where: {
 							workId: In(workIds),
 							templateVersionId: params.templateVersionId,
-							streamExecutor: stream,
+							streamExecutor: In(streamScope),
 						},
 					})
 				: Promise.resolve([]),
@@ -393,12 +398,20 @@ export class V2TypicalWorkRuntimeService {
 		const rulesByWork = groupBy(rules, (r) => r.workId);
 		const laborByWork = groupBy(labor, (l) => l.workId);
 		const laborParamsByWork = groupBy(laborParams, (l) => l.workId);
-		const configByWork = new Map(
-			allConfigs.map((config) => [config.workId, config] as const),
-		);
-		const assignmentByWorkId = new Map(
-			assignments.map((a) => [a.workId, a]),
-		);
+		const configByWork = new Map<string, V2TypicalWorkVersionConfigEntity>();
+		for (const config of allConfigs) {
+			const existing = configByWork.get(config.workId);
+			if (!existing || config.streamExecutor === stream) {
+				configByWork.set(config.workId, config);
+			}
+		}
+		const assignmentByWorkId = new Map<string, V2TypicalWorkAssignmentEntity>();
+		for (const assignment of assignments) {
+			const existing = assignmentByWorkId.get(assignment.workId);
+			if (!existing || assignment.streamExecutor === stream) {
+				assignmentByWorkId.set(assignment.workId, assignment);
+			}
+		}
 		const assignmentById = new Map(assignments.map((a) => [a.id, a]));
 		const coefficientValueCatalog =
 			await this.paramCatalogService.listTriggerStatusCatalog(params.atDate);
@@ -414,7 +427,7 @@ export class V2TypicalWorkRuntimeService {
 					validFrom: n.validFrom,
 					validTo: n.validTo,
 				})),
-				stream,
+				streamScope,
 				params.atDate,
 			);
 			if (normValue == null) continue;

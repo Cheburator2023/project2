@@ -63,6 +63,22 @@ const ARCH_COUNT_LABOR_PARAM_LABELS: Record<
 		kind: "sourceSystem",
 		defaultSteps: formatArchCountFormulaSteps(MODEL_STREAM_SOURCE_COUNT_STEPS),
 	},
+	[normalizeParamLabel("Кол-во источников в витрине")]: {
+		kind: "sourceSystem",
+		defaultSteps: formatArchCountFormulaSteps(MODEL_STREAM_SOURCE_COUNT_STEPS),
+	},
+	[normalizeParamLabel("Кол-во арх. компонентов Система-источник")]: {
+		kind: "sourceSystem",
+		defaultSteps: formatArchCountFormulaSteps(MODEL_STREAM_SOURCE_COUNT_STEPS),
+	},
+	[normalizeParamLabel('Кол-во арх. компонентов "Система-Источник"')]: {
+		kind: "sourceSystem",
+		defaultSteps: formatArchCountFormulaSteps(MODEL_STREAM_SOURCE_COUNT_STEPS),
+	},
+	[normalizeParamLabel("Арх. компонент Система источник количество")]: {
+		kind: "sourceSystem",
+		defaultSteps: formatArchCountFormulaSteps(MODEL_STREAM_SOURCE_COUNT_STEPS),
+	},
 };
 
 export function isArchCountLaborParamName(paramName: string): boolean {

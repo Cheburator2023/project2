@@ -2,7 +2,7 @@ import { slugParamCode } from "./v2-param-slug.util";
 import { V2_ARCH_COMPONENT_LABELS, resolveV2AnketaArchComponent, } from "./v2-anketa-section-ui.util";
 import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
 import { findWorkSchemaParameter, resolveWorkSchemaParamForRule, } from "./v2-work-schema-params-match.util";
-import { catalogValueMatchesTriggerRule, isBrokenTypicalWorkTriggerRef, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, } from "./v2-works-catalog-match.util";
+import { catalogValueMatchesTriggerRule, isAlwaysShownTriggerParam, isBrokenTypicalWorkTriggerRef, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, } from "./v2-works-catalog-match.util";
 import { collectUnavailableLaborCoefficientIssues } from "./v2-typical-work-validation.util";
 import { isArchCountLaborParamName } from "./v2-labor-arch-count.util";
 import { validateWorkFormulaTokens } from "./v2-work-formula.util";
@@ -222,6 +222,9 @@ export function collectTypicalWorkSchemaConsistencyIssues(input) {
     };
     for (const rule of input.rules) {
         if (!ruleRequiresSchemaBinding(rule)) {
+            continue;
+        }
+        if (isAlwaysShownTriggerParam(rule.paramCode, rule.paramName)) {
             continue;
         }
         if (isArchCountLaborParamName(rule.paramName ?? "")) {

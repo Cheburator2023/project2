@@ -1894,6 +1894,7 @@ export class V2TypicalWorkService {
 					assignmentRules,
 					triggerStatusCatalog,
 					atDate,
+					mapTriggerArchCountEntity(assignment),
 				),
 			});
 		}
@@ -2008,6 +2009,12 @@ export class V2TypicalWorkService {
 						),
 						triggerStatusCatalog,
 						atDate,
+						mapTriggerArchCountEntity(
+							workAssignments.find(
+								(row) =>
+									!streamForStatus || row.streamExecutor === streamForStatus,
+							) ?? workAssignments[0],
+						),
 					),
 					currentNorm,
 					streams,
@@ -2410,6 +2417,7 @@ export class V2TypicalWorkService {
 				rules,
 				triggerStatusCatalog,
 				todayIsoDate(),
+				mapTriggerArchCountEntity(assignment),
 			),
 			norms: norms.map(mapNormEntity),
 			rules: rules.map(mapRuleEntity),
@@ -2599,6 +2607,7 @@ function resolveTriggerStatus(
 	>[],
 	triggerStatusCatalog: WorkTriggerStatusCatalogParam[],
 	atDate: string,
+	triggerArchCount?: V2TypicalWorkCardDto["triggerArchCount"] | null,
 ): V2WorkTriggerStatus {
 	return computeWorkTriggerStatus(
 		rules.map((rule) => ({
@@ -2611,6 +2620,9 @@ function resolveTriggerStatus(
 		})),
 		triggerStatusCatalog,
 		atDate,
+		undefined,
+		undefined,
+		triggerArchCount,
 	);
 }
 

@@ -62,8 +62,13 @@ function defaultTriggerFormula() {
 /** Норма, действующая на дату (для дерева и превью). */
 function resolveActiveNormOnDate(norms, streamExecutor, atDate) {
     const day = atDate.slice(0, 10);
+    const streams = new Set((typeof streamExecutor === "string"
+        ? [streamExecutor]
+        : [...streamExecutor])
+        .map((value) => value.trim())
+        .filter(Boolean));
     const matching = norms.filter((n) => {
-        if (n.streamExecutor !== streamExecutor)
+        if (!streams.has(n.streamExecutor))
             return false;
         const from = n.validFrom.slice(0, 10);
         const to = n.validTo?.slice(0, 10) ?? null;

@@ -1015,6 +1015,10 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"type": "boolean",
 					"title": "Содержит сырые данные"
 				},
+				"field_saveRawFs": {
+					"type": "boolean",
+					"title": "Требуется сохранять сырые данные в Хранилище признаков"
+				},
 				"field_le47srI7": {
 					"enum": [
 						"Холодный",
@@ -1063,6 +1067,7 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"workType",
 				"field_lovKvLZc",
 				"field_hIM0c5gG",
+				"field_saveRawFs",
 				"field_w_EN6lWe",
 				"metricsCount",
 				"field_46LCnfWo",
@@ -1143,6 +1148,11 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 			"field_hIM0c5gG": {
 				"ui:options": {
 					"schemaFieldUid": "field_73e7ba4b-2124-44c9-bfc3-7d5d524c9076"
+				}
+			},
+			"field_saveRawFs": {
+				"ui:options": {
+					"schemaFieldUid": "field_a8c3e1d2-4b5f-6789-a0b1-c2d3e4f50607"
 				}
 			},
 			"field_le47srI7": {

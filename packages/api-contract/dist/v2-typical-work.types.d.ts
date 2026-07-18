@@ -437,6 +437,6 @@ export type V2ParameterDependencyListResponseDto = {
     items: V2ParameterDependencyDto[];
 };
 /** Норма, действующая на дату (для дерева и превью). */
-export declare function resolveActiveNormOnDate(norms: Pick<V2TypicalWorkNormDto, "streamExecutor" | "normValue" | "validFrom" | "validTo">[], streamExecutor: string, atDate: string): number | null;
+export declare function resolveActiveNormOnDate(norms: Pick<V2TypicalWorkNormDto, "streamExecutor" | "normValue" | "validFrom" | "validTo">[], streamExecutor: string | readonly string[], atDate: string): number | null;
 export declare function defaultWorkFormula(): V2TypicalWorkFormulaDto;
 export declare function defaultWorkRounding(): V2TypicalWorkRoundingDto;

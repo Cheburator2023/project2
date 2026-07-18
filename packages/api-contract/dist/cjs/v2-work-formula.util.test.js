@@ -143,6 +143,25 @@ const v2_typical_work_types_1 = require("./v2-typical-work.types");
             allowInvalidParamRefs: true,
         })).toBeNull();
     });
+    (0, vitest_1.it)("matches overallUncertainty formula token to labor param by Russian name", () => {
+        const tokens = [
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_coeff",
+                paramCode: "overallUncertainty",
+            },
+        ];
+        (0, vitest_1.expect)((0, v2_work_formula_util_1.validateWorkFormulaTokens)(tokens, {
+            laborParams: [
+                {
+                    paramCode: "общая_неопределённость",
+                    paramName: "Общая неопределённость",
+                },
+            ],
+            allowInvalidParamRefs: true,
+        })).toBeNull();
+    });
     (0, vitest_1.it)("reconciles schema field code with labor slug and drops invalid marker", () => {
         const tokens = [
             { kind: "norm" },

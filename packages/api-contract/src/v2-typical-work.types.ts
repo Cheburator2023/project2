@@ -560,12 +560,20 @@ export function resolveActiveNormOnDate(
 		V2TypicalWorkNormDto,
 		"streamExecutor" | "normValue" | "validFrom" | "validTo"
 	>[],
-	streamExecutor: string,
+	streamExecutor: string | readonly string[],
 	atDate: string,
 ): number | null {
 	const day = atDate.slice(0, 10);
+	const streams = new Set(
+		(typeof streamExecutor === "string"
+			? [streamExecutor]
+			: [...streamExecutor]
+		)
+			.map((value) => value.trim())
+			.filter(Boolean),
+	);
 	const matching = norms.filter((n) => {
-		if (n.streamExecutor !== streamExecutor) return false;
+		if (!streams.has(n.streamExecutor)) return false;
 		const from = n.validFrom.slice(0, 10);
 		const to = n.validTo?.slice(0, 10) ?? null;
 		if (day < from) return false;

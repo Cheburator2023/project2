@@ -12,6 +12,7 @@ import {
 import type { TypicalWorkRuleLike } from "./v2-works-catalog-match.util";
 import {
 	catalogValueMatchesTriggerRule,
+	isAlwaysShownTriggerParam,
 	isBrokenTypicalWorkTriggerRef,
 	isControlTypeTriggerParam,
 	isPresenceOnlyTriggerRule,
@@ -342,6 +343,9 @@ export function collectTypicalWorkSchemaConsistencyIssues(
 
 	for (const rule of input.rules) {
 		if (!ruleRequiresSchemaBinding(rule)) {
+			continue;
+		}
+		if (isAlwaysShownTriggerParam(rule.paramCode, rule.paramName)) {
 			continue;
 		}
 		if (isArchCountLaborParamName(rule.paramName ?? "")) {

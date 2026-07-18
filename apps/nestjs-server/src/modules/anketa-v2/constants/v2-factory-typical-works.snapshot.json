@@ -7415,14 +7415,18 @@
         "Тип системы-источника"
       ],
       "laborParams": [
-        "Наличие реплики в DAPP"
+        "Наличие реплики в DAPP",
+        "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик",
+        "Риск появления дополнительных систем-источников"
       ],
-      "formulaText": "N * коэф(наличие_реплики_в_dapp)",
+      "formulaText": "N * (коэф(field_8pFvwc-v) + коэф(field_lzP44Urx) + коэф(field_whHc-OoW))",
       "roundingMode": "CEIL",
       "roundingStep": 0.1,
       "laborCoefficients": [
         {
           "paramName": "Наличие реплики в DAPP",
+          "paramCode": "field_8pFvwc-v",
+          "schemaFieldUid": "field_f1bda400-9a8d-4ee0-b3ac-f4f73549792a",
           "values": [
             {
               "label": "Да",
@@ -7433,11 +7437,43 @@
               "coefficient": 1.5
             }
           ]
+        },
+        {
+          "paramName": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик",
+          "paramCode": "field_lzP44Urx",
+          "schemaFieldUid": "field_213d174a-4e1d-4843-8505-f7f5f4737feb",
+          "values": [
+            {
+              "label": "Да",
+              "coefficient": 0.3
+            },
+            {
+              "label": "Нет",
+              "coefficient": 1
+            }
+          ]
+        },
+        {
+          "paramName": "Риск появления дополнительных систем-источников",
+          "paramCode": "field_whHc-OoW",
+          "schemaFieldUid": "field_7464bec8-4d2e-4360-a38c-447fd0342be9",
+          "values": [
+            {
+              "label": "Да",
+              "coefficient": 1.5
+            },
+            {
+              "label": "Нет",
+              "coefficient": 1
+            }
+          ]
         }
       ],
       "triggerRules": [
         {
           "paramName": "Тип системы-источника",
+          "paramCode": "type",
+          "schemaFieldUid": "field_f0070137-09a8-432a-bd47-dd6e901d8cb2",
           "operator": "=",
           "values": [
             "Внутренний"
@@ -7461,28 +7497,30 @@
       "laborParams": [
         "Сложность реализации"
       ],
-      "formulaText": "N * коэф(сложность_реализации)",
+      "formulaText": "N * коэф(field_UEzs5Q87) + N * архкоэф(Система-источник; 1=1; 2=1; 3=1; 4=1; 5=1; 6=1,2; 7=1,4; 8=1,6; 9=1,8; 10=2,0; 11=2,2; 12=2,4; 13=2,6; 14=2,8; 15=3,0; 16=3,2; 17=3,4; 18=3,6; 19=3,8; 20=4,0)",
       "roundingMode": "CEIL",
       "roundingStep": 0.1,
       "laborCoefficients": [
         {
           "paramName": "Сложность реализации",
+          "paramCode": "field_UEzs5Q87",
+          "schemaFieldUid": "field_aa1dc517-1277-4ca5-ad9f-ed0bb8a9efe6",
           "values": [
             {
-              "label": "Низкая",
-              "coefficient": 0.75
-            },
-            {
-              "label": "Средняя",
-              "coefficient": 1
-            },
-            {
-              "label": "Высокая",
+              "label": "Неизвестно",
               "coefficient": 1.5
             },
             {
-              "label": "Неизвестно",
-              "coefficient": 1.25
+              "label": "Высокая",
+              "coefficient": 1.2
+            },
+            {
+              "label": "Средняя",
+              "coefficient": 0.8
+            },
+            {
+              "label": "Низкая",
+              "coefficient": 0.5
             }
           ]
         }
@@ -7490,9 +7528,30 @@
       "triggerRules": [
         {
           "paramName": "Тип системы-источника",
+          "paramCode": "type",
+          "schemaFieldUid": "field_f0070137-09a8-432a-bd47-dd6e901d8cb2",
           "operator": "=",
           "values": [
             "Внутренний"
+          ]
+        }
+      ],
+      "laborArchCounts": [
+        {
+          "kind": "sourceSystem",
+          "paramName": "Кол-во арх. компонентов «Система-Источник»",
+          "steps": [
+            {
+              "count": 5,
+              "coefficient": 1,
+              "operator": "<="
+            },
+            {
+              "count": 5,
+              "coefficient": 1,
+              "operator": ">",
+              "coefficientFormula": "N/5"
+            }
           ]
         }
       ]
@@ -7513,23 +7572,21 @@
       "laborParams": [
         "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик"
       ],
-      "formulaText": "N * коэф(необходимо_уточнение_требований_по_составу_выгружаемых_данных_и_алгоритмам_расче)",
+      "formulaText": "N * архкоэф(Система-источник; 1=1; 2=1; 3=1; 4=1; 5=1; 6=1,2; 7=1,4; 8=1,6; 9=1,8; 10=2,0; 11=2,2; 12=2,4; 13=2,6; 14=2,8; 15=3,0; 16=3,2; 17=3,4; 18=3,6; 19=3,8; 20=4,0) + N * коэф(field_xva1dRvW)",
       "roundingMode": "CEIL",
       "roundingStep": 0.1,
       "laborCoefficients": [
         {
           "paramName": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик",
+          "paramCode": "field_xva1dRvW",
+          "schemaFieldUid": "field_0845a1af-f430-4897-9300-4a3c580aa6ee",
           "values": [
             {
               "label": "Да",
-              "coefficient": 0.75
+              "coefficient": 10
             },
             {
               "label": "Нет",
-              "coefficient": 1.25
-            },
-            {
-              "label": "Неизвестно",
               "coefficient": 1
             }
           ]
@@ -7538,9 +7595,30 @@
       "triggerRules": [
         {
           "paramName": "Тип системы-источника",
+          "paramCode": "type",
+          "schemaFieldUid": "field_f0070137-09a8-432a-bd47-dd6e901d8cb2",
           "operator": "=",
           "values": [
             "Внутренний"
+          ]
+        }
+      ],
+      "laborArchCounts": [
+        {
+          "kind": "sourceSystem",
+          "paramName": "Кол-во арх. компонентов «Система-Источник»",
+          "steps": [
+            {
+              "count": 5,
+              "coefficient": 1,
+              "operator": "<="
+            },
+            {
+              "count": 5,
+              "coefficient": 1,
+              "operator": ">",
+              "coefficientFormula": "N/5"
+            }
           ]
         }
       ]
@@ -7560,35 +7638,53 @@
         "Необходима продуктивизация"
       ],
       "laborParams": [
-        "Тип работ"
+        "Тип работ",
+        "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
       ],
-      "formulaText": "N * коэф(field_yJ51GkCR)",
+      "formulaText": "N * (коэф(field_yJ51GkCR) + коэф(field_qMxSfHk1))",
       "roundingMode": "CEIL",
       "roundingStep": 0.1,
       "laborCoefficients": [
         {
           "paramName": "Тип работ",
+          "paramCode": "field_yJ51GkCR",
+          "schemaFieldUid": "field_68f5a4fa-579f-4b89-b4f3-11214957dffe",
           "values": [
             {
               "label": "Разработка",
-              "coefficient": 1.1
+              "coefficient": 1
             },
             {
               "label": "Доработка",
-              "coefficient": 0.75
+              "coefficient": 0.8
             },
             {
               "label": "Настройка",
               "coefficient": 0.5
             }
-          ],
-          "paramCode": "field_yJ51GkCR",
-          "schemaFieldUid": "field_68f5a4fa-579f-4b89-b4f3-11214957dffe"
+          ]
+        },
+        {
+          "paramName": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)",
+          "paramCode": "field_qMxSfHk1",
+          "schemaFieldUid": "field_2eeb9751-22b7-4545-afeb-75bc4c7ec74e",
+          "values": [
+            {
+              "label": "Да",
+              "coefficient": 1.5
+            },
+            {
+              "label": "Нет",
+              "coefficient": 1
+            }
+          ]
         }
       ],
       "triggerRules": [
         {
           "paramName": "Тип системы-источника",
+          "paramCode": "type",
+          "schemaFieldUid": "field_f0070137-09a8-432a-bd47-dd6e901d8cb2",
           "operator": "=",
           "values": [
             "Внутренний"
@@ -7596,6 +7692,8 @@
         },
         {
           "paramName": "Необходима продуктивизация",
+          "paramCode": "field_Ad1msOl7",
+          "schemaFieldUid": "field_08a71e6d-809b-41a3-aa63-10c8b89da9a0",
           "operator": "=",
           "values": [
             "Да"
@@ -7618,26 +7716,48 @@
         "Необходима продуктивизация"
       ],
       "laborParams": [
+        "Тип работ",
         "Количество метрик"
       ],
-      "formulaText": "N * коэф(количество_метрик)",
+      "formulaText": "N * (коэф(workType) + коэф(field_28IPlEQu))",
       "roundingMode": "CEIL",
       "roundingStep": 0.1,
       "laborCoefficients": [
         {
-          "paramName": "Количество метрик",
+          "paramName": "Тип работ",
+          "paramCode": "workType",
+          "schemaFieldUid": "field_6f91d0c5-3949-4468-88e9-29741af2b07d",
           "values": [
             {
-              "label": "до 20 метрик",
+              "label": "Разработка",
               "coefficient": 1
             },
             {
-              "label": "20–50 метрик",
-              "coefficient": 1.2
+              "label": "Доработка",
+              "coefficient": 0.8
             },
             {
-              "label": ">50 метрик",
-              "coefficient": 1.4
+              "label": "Настройка",
+              "coefficient": 0.5
+            }
+          ]
+        },
+        {
+          "paramName": "Количество метрик",
+          "paramCode": "field_28IPlEQu",
+          "schemaFieldUid": "field_e03806f6-01f4-44ee-835a-e9e5bae8f6c6",
+          "values": [
+            {
+              "label": "до 20",
+              "coefficient": 0
+            },
+            {
+              "label": "20–50",
+              "coefficient": 0.2
+            },
+            {
+              "label": ">50",
+              "coefficient": 0.4
             }
           ]
         }
@@ -7645,6 +7765,8 @@
       "triggerRules": [
         {
           "paramName": "Тип системы-источника",
+          "paramCode": "type",
+          "schemaFieldUid": "field_f0070137-09a8-432a-bd47-dd6e901d8cb2",
           "operator": "=",
           "values": [
             "Внутренний"
@@ -7652,6 +7774,8 @@
         },
         {
           "paramName": "Необходима продуктивизация",
+          "paramCode": "field_Ad1msOl7",
+          "schemaFieldUid": "field_08a71e6d-809b-41a3-aa63-10c8b89da9a0",
           "operator": "=",
           "values": [
             "Да"
@@ -10853,7 +10977,7 @@
       "triggerParam": "Необходимость AutoML",
       "triggerParams": [
         "Необходимость AutoML",
-        "АвтоМЛ: встраивание внешнего кода"
+        "AutoML: встраивание внешнего кода"
       ],
       "triggerRules": [
         {
@@ -10863,8 +10987,8 @@
           "values": []
         },
         {
-          "paramName": "АвтоМЛ: встраивание внешнего кода",
-          "paramCode": "автомл_встраивание_внешнего_кода",
+          "paramName": "AutoML: встраивание внешнего кода",
+          "paramCode": "automl_встраивание_внешнего_кода",
           "operator": "exists",
           "values": []
         }
@@ -10886,7 +11010,7 @@
       "triggerParam": "Необходимость AutoML",
       "triggerParams": [
         "Необходимость AutoML",
-        "АвтоМЛ: требуется преобразование данных"
+        "AutoML: требуется преобразование данных"
       ],
       "triggerRules": [
         {
@@ -10896,8 +11020,8 @@
           "values": []
         },
         {
-          "paramName": "АвтоМЛ: требуется преобразование данных",
-          "paramCode": "автомл_требуется_преобразование_данных",
+          "paramName": "AutoML: требуется преобразование данных",
+          "paramCode": "automl_требуется_преобразование_данных",
           "operator": "exists",
           "values": []
         }
@@ -10919,7 +11043,7 @@
       "triggerParam": "Необходимость AutoML",
       "triggerParams": [
         "Необходимость AutoML",
-        "АвтоМЛ: требуется постановка на регламент"
+        "AutoML: требуется постановка на регламент"
       ],
       "triggerRules": [
         {
@@ -10929,8 +11053,8 @@
           "values": []
         },
         {
-          "paramName": "АвтоМЛ: требуется постановка на регламент",
-          "paramCode": "автомл_требуется_постановка_на_регламент",
+          "paramName": "AutoML: требуется постановка на регламент",
+          "paramCode": "automl_требуется_постановка_на_регламент",
           "operator": "exists",
           "values": []
         }
@@ -10952,7 +11076,7 @@
       "triggerParam": "Необходимость AutoML",
       "triggerParams": [
         "Необходимость AutoML",
-        "АвтоМЛ: требуется новая библиотека"
+        "AutoML: требуется новая библиотека"
       ],
       "triggerRules": [
         {
@@ -10962,8 +11086,8 @@
           "values": []
         },
         {
-          "paramName": "АвтоМЛ: требуется новая библиотека",
-          "paramCode": "автомл_требуется_новая_библиотека",
+          "paramName": "AutoML: требуется новая библиотека",
+          "paramCode": "automl_требуется_новая_библиотека",
           "operator": "exists",
           "values": []
         }
@@ -11152,14 +11276,14 @@
       "workType": "Опциональная",
       "norm": 11,
       "normRaw": "11",
-      "triggerParam": "Требуется разметка данных источника в Маркере",
+      "triggerParam": "Требуется разметка данных источника",
       "triggerParams": [
-        "Требуется разметка данных источника в Маркере"
+        "Требуется разметка данных источника"
       ],
       "triggerRules": [
         {
-          "paramName": "Требуется разметка данных источника в Маркере",
-          "paramCode": "требуется_разметка_данных_источника_в_маркере",
+          "paramName": "Требуется разметка данных источника",
+          "paramCode": "требуется_разметка_данных_источника",
           "operator": "exists",
           "values": []
         }
@@ -11178,21 +11302,21 @@
       "workType": "Опциональная",
       "norm": 130,
       "normRaw": "130",
-      "triggerParam": "Требуется разметка данных источника в Маркере",
+      "triggerParam": "Требуется разметка данных источника",
       "triggerParams": [
-        "Требуется разметка данных источника в Маркере",
-        "Требуется новая модель Маркера для автоматической разметки данных"
+        "Требуется разметка данных источника",
+        "Требуется новая модель для автоматической разметки данных"
       ],
       "triggerRules": [
         {
-          "paramName": "Требуется разметка данных источника в Маркере",
-          "paramCode": "требуется_разметка_данных_источника_в_маркере",
+          "paramName": "Требуется разметка данных источника",
+          "paramCode": "требуется_разметка_данных_источника",
           "operator": "exists",
           "values": []
         },
         {
-          "paramName": "Требуется новая модель Маркера для автоматической разметки данных",
-          "paramCode": "требуется_новая_модель_маркера_для_автоматической_разметки_данных",
+          "paramName": "Требуется новая модель для автоматической разметки данных",
+          "paramCode": "требуется_новая_модель_для_автоматической_разметки_данных",
           "operator": "exists",
           "values": []
         }
@@ -11211,21 +11335,21 @@
       "workType": "Опциональная",
       "norm": 91,
       "normRaw": "91",
-      "triggerParam": "Требуется разметка данных источника в Маркере",
+      "triggerParam": "Требуется разметка данных источника",
       "triggerParams": [
-        "Требуется разметка данных источника в Маркере",
-        "Требуется регламентный импорт/экспорт данных или отчетности в/из Маркер"
+        "Требуется разметка данных источника",
+        "Требуется регламентный импорт/экспорт данных или отчетности в/из ИС 1860"
       ],
       "triggerRules": [
         {
-          "paramName": "Требуется разметка данных источника в Маркере",
-          "paramCode": "требуется_разметка_данных_источника_в_маркере",
+          "paramName": "Требуется разметка данных источника",
+          "paramCode": "требуется_разметка_данных_источника",
           "operator": "exists",
           "values": []
         },
         {
-          "paramName": "Требуется регламентный импорт/экспорт данных или отчетности в/из Маркер",
-          "paramCode": "требуется_регламентный_импорт_экспорт_данных_или_отчетности_в_из_маркер",
+          "paramName": "Требуется регламентный импорт/экспорт данных или отчетности в/из ИС 1860",
+          "paramCode": "требуется_регламентный_импорт_экспорт_данных_или_отчетности_в_из_ис_1860",
           "operator": "exists",
           "values": []
         }

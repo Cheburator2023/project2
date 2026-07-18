@@ -48,6 +48,22 @@ const ARCH_COUNT_LABOR_PARAM_LABELS = {
         kind: "sourceSystem",
         defaultSteps: formatArchCountFormulaSteps(MODEL_STREAM_SOURCE_COUNT_STEPS),
     },
+    [(0, v2_csv_formula_import_util_1.normalizeParamLabel)("Кол-во источников в витрине")]: {
+        kind: "sourceSystem",
+        defaultSteps: formatArchCountFormulaSteps(MODEL_STREAM_SOURCE_COUNT_STEPS),
+    },
+    [(0, v2_csv_formula_import_util_1.normalizeParamLabel)("Кол-во арх. компонентов Система-источник")]: {
+        kind: "sourceSystem",
+        defaultSteps: formatArchCountFormulaSteps(MODEL_STREAM_SOURCE_COUNT_STEPS),
+    },
+    [(0, v2_csv_formula_import_util_1.normalizeParamLabel)('Кол-во арх. компонентов "Система-Источник"')]: {
+        kind: "sourceSystem",
+        defaultSteps: formatArchCountFormulaSteps(MODEL_STREAM_SOURCE_COUNT_STEPS),
+    },
+    [(0, v2_csv_formula_import_util_1.normalizeParamLabel)("Арх. компонент Система источник количество")]: {
+        kind: "sourceSystem",
+        defaultSteps: formatArchCountFormulaSteps(MODEL_STREAM_SOURCE_COUNT_STEPS),
+    },
 };
 function isArchCountLaborParamName(paramName) {
     return Boolean(ARCH_COUNT_LABOR_PARAM_LABELS[(0, v2_csv_formula_import_util_1.normalizeParamLabel)(paramName)]);
