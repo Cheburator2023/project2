@@ -481,3 +481,13 @@ export function upgradeTypicalWorksCatalogLogicRules(logic, options) {
     });
     return changed ? { ...logic, rules } : logic;
 }
+/**
+ * Фиксирует в logic snapshot версии шаблона актуальный payload catalog-правил
+ * из uiSchema (boundWorkIds, sourceArrayPath, …). Вызывать при save/publish версии.
+ */
+export function syncTypicalWorksCatalogLogicSnapshot(logic, options) {
+    const upgraded = upgradeTypicalWorksCatalogLogicRules(logic, options);
+    return isTypicalWorksCatalogLogicComplete(upgraded, options)
+        ? upgraded
+        : patchV2TypicalWorksLogicRules(upgraded, options);
+}

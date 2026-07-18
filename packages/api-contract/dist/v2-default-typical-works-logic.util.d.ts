@@ -43,3 +43,8 @@ export declare function patchV2TypicalWorksLogicRules(logic: V2LogicGraphDto, op
  * (например sourceArrayPath для модельного стрима), не пересобирая весь logic.
  */
 export declare function upgradeTypicalWorksCatalogLogicRules(logic: V2LogicGraphDto, options?: PatchV2TypicalWorksLogicOptions): V2LogicGraphDto;
+/**
+ * Фиксирует в logic snapshot версии шаблона актуальный payload catalog-правил
+ * из uiSchema (boundWorkIds, sourceArrayPath, …). Вызывать при save/publish версии.
+ */
+export declare function syncTypicalWorksCatalogLogicSnapshot(logic: V2LogicGraphDto, options?: PatchV2TypicalWorksLogicOptions): V2LogicGraphDto;

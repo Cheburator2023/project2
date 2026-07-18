@@ -92,6 +92,8 @@ type TaskTriggerPayload = {
 	outputArrayPath?: string;
 	/** Id типовых работ, привязанных к блоку typicalWork в uiSchema. */
 	allowedWorkIds?: string[];
+	/** Все archComponentType назначенных работ стрима (модельный стрим). */
+	worksCatalogAllArchComponents?: boolean;
 	/**
 	 * ФТ-024: единый коэффициент группы для всех работ компонента — произведение
 	 * весов параметров. JsonLogic — по merge(localParams стрима, строка компонента);
@@ -635,6 +637,8 @@ export class V2CalculationService {
 							: Array.isArray(payload.allowedWorkIds)
 								? payload.allowedWorkIds
 								: undefined;
+					const worksCatalogAllArchComponents =
+						payload.worksCatalogAllArchComponents === true;
 
 					const taskDefs = usesCatalog
 						? (
@@ -650,6 +654,7 @@ export class V2CalculationService {
 											atDate,
 											hiddenParamCodes,
 											allowedWorkIds: allowedWorkIdsForCatalog,
+											worksCatalogAllArchComponents,
 										}),
 									),
 								)

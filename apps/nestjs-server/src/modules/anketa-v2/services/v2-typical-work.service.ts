@@ -32,6 +32,7 @@ import {
 	parseStoredTypicalWorkCalculationLogic,
 	backfillTypicalWorkBoundWorkIdsInUiSchema,
 	remapBoundWorkIdsInUiSchema,
+	syncTypicalWorksCatalogLogicSnapshot,
 	resolveActiveNormOnDate,
 	compileStoredTypicalWorkResultLogic,
 	defaultTriggerArchCount,
@@ -562,11 +563,29 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				),
 		});
 		if (!cleaned.changed && JSON.stringify(next) === JSON.stringify(uiSchema)) {
+			const syncedLogic = syncTypicalWorksCatalogLogicSnapshot(
+				version.logic ?? { rules: [] },
+				{
+					jsonSchema: version.jsonSchema,
+					uiSchema: next,
+				},
+			);
+			if (JSON.stringify(syncedLogic) !== JSON.stringify(version.logic ?? { rules: [] })) {
+				version.logic = syncedLogic;
+				await this.templateVersionRepository.save(version);
+			}
 			return;
 		}
 
 		version.jsonSchema = cleaned.jsonSchema;
 		version.uiSchema = next;
+		version.logic = syncTypicalWorksCatalogLogicSnapshot(
+			version.logic ?? { rules: [] },
+			{
+				jsonSchema: version.jsonSchema,
+				uiSchema: next,
+			},
+		);
 		await this.templateVersionRepository.save(version);
 	}
 

@@ -80,3 +80,94 @@ describe("V2TemplateVersionService.createDraftFromDefault", () => {
 		});
 	});
 });
+
+describe("V2TemplateVersionService.update", () => {
+	it("syncs typical works catalog logic from uiSchema boundWorkIds on save", async () => {
+		const templateWorkId = "7147da4f-b4cd-445e-8ac3-838c4b106ca7";
+		const versionRow = {
+			id: "version-1",
+			templateId: "template-1",
+			versionNumber: 1,
+			status: "draft",
+			jsonSchema: { type: "object" },
+			uiSchema: {
+				detailInfo: {
+					"ui:options": {
+						streamBlock: true,
+						streamExecutor: "Модельный стрим",
+					},
+					detailTypicalTasks: {
+						"ui:options": {
+							archComponent: "typicalWork",
+							streamExecutor: "Модельный стрим",
+							boundWorkIds: [templateWorkId],
+						},
+					},
+				},
+			},
+			logic: {
+				rules: [
+					{
+						id: "typical-works-catalog-detailInfo-detailTypicalTasks",
+						kind: "task_trigger",
+						targetPath: "/detailInfo/detailTypicalTasks",
+						condition: true,
+						dependencies: [],
+						payload: {
+							mode: "generated_rows",
+							worksCatalog: true,
+							worksCatalogStream: "Модельный стрим",
+							outputArrayPath: "detailInfo.detailTypicalTasks",
+							allowedWorkIds: [
+								"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4004",
+							],
+						},
+					},
+					{
+						id: "unified-typical-row-total:detailInfo_detailTypicalTasks",
+						kind: "row_computed",
+						targetPath: "/detailInfo/detailTypicalTasks",
+						condition: true,
+						dependencies: [],
+						payload: {
+							arrayPath: "detailInfo.detailTypicalTasks",
+							fieldVar: "total",
+						},
+					},
+					{
+						id: "unified-typical-total",
+						kind: "computed",
+						targetPath: "/summary/typicalTotal",
+						condition: true,
+						dependencies: [],
+						payload: {},
+					},
+				],
+			},
+		};
+
+		const versionRepository = {
+			findOne: jest.fn(async () => ({ ...versionRow })),
+			save: jest.fn(async (row) => row),
+		};
+		const service = new V2TemplateVersionService(
+			versionRepository as never,
+			{} as never,
+			{ assertTemplateExists: jest.fn() } as never,
+			{} as never,
+			{} as never,
+			{} as never,
+		);
+
+		await service.update("version-1", {}, "user-1");
+
+		const saved = versionRepository.save.mock.calls[0]?.[0] as {
+			logic: { rules: Array<{ payload?: Record<string, unknown> }> };
+		};
+		const catalogRule = saved.logic.rules.find(
+			(rule) => rule.payload?.outputArrayPath === "detailInfo.detailTypicalTasks",
+		);
+		expect(catalogRule?.payload?.allowedWorkIds).toEqual([templateWorkId]);
+		expect(catalogRule?.payload?.sourceArrayPath).toBe("generalInfo.modelService");
+	});
+});

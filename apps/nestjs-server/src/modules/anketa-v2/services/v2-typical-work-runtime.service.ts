@@ -70,6 +70,8 @@ export type BuildCatalogTasksParams = {
 	hiddenParamCodes?: ReadonlySet<string>;
 	/** Ограничение списка работ блока typicalWork; undefined — все назначенные. */
 	allowedWorkIds?: readonly string[];
+	/** Игнорировать archComponentType при выборе работ (модельный стрим и т.п.). */
+	worksCatalogAllArchComponents?: boolean;
 };
 
 type RuntimeWorkContext = {
@@ -330,10 +332,14 @@ export class V2TypicalWorkRuntimeService {
 			params.templateId,
 			assignedWorkIds,
 		);
+		const worksCatalogAllArchComponents =
+			params.worksCatalogAllArchComponents === true;
 		const workWhere =
 			allowedWorkIds !== undefined
 				? { id: In([...allowedWorkIds]) }
-				: { archComponentType };
+				: worksCatalogAllArchComponents
+					? {}
+					: { archComponentType };
 		let works = await this.workRepository.find({
 			where: {
 				...workWhere,

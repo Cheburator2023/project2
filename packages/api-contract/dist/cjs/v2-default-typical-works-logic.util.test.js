@@ -391,6 +391,68 @@ const v2_atypical_works_logic_util_1 = require("./v2-atypical-works-logic.util")
         const resolved = (0, v2_atypical_works_logic_util_1.resolveAnketaCalculationLogic)(staleLogic, { uiSchema });
         (0, vitest_1.expect)((resolved.rules.find((rule) => rule.id === "typical-works-catalog-detailInfo-detailTypicalTasks")?.payload).sourceArrayPath).toBe(v2_default_typical_works_logic_util_1.V2_MODEL_STREAM_SOURCE_ARRAY_PATH);
     });
+    (0, vitest_1.it)("syncTypicalWorksCatalogLogicSnapshot writes template boundWorkIds into logic", () => {
+        const templateWorkId = "7147da4f-b4cd-445e-8ac3-838c4b106ca7";
+        const uiSchema = {
+            detailInfo: {
+                "ui:options": {
+                    streamBlock: true,
+                    streamExecutor: "Модельный стрим",
+                },
+                detailTypicalTasks: {
+                    "ui:options": {
+                        archComponent: "typicalWork",
+                        streamExecutor: "Модельный стрим",
+                        boundWorkIds: [templateWorkId],
+                    },
+                },
+            },
+        };
+        const logic = {
+            rules: [
+                {
+                    id: "typical-works-catalog-detailInfo-detailTypicalTasks",
+                    kind: "task_trigger",
+                    targetPath: "/detailInfo/detailTypicalTasks",
+                    condition: true,
+                    dependencies: [],
+                    payload: {
+                        mode: "generated_rows",
+                        worksCatalog: true,
+                        worksCatalogStream: "Модельный стрим",
+                        outputArrayPath: "detailInfo.detailTypicalTasks",
+                        allowedWorkIds: [
+                            "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4004",
+                        ],
+                    },
+                },
+                {
+                    id: "unified-typical-row-total:detailInfo_detailTypicalTasks",
+                    kind: "row_computed",
+                    targetPath: "/detailInfo/detailTypicalTasks",
+                    condition: true,
+                    dependencies: [],
+                    payload: {
+                        arrayPath: "detailInfo.detailTypicalTasks",
+                        fieldVar: "total",
+                    },
+                },
+                {
+                    id: "unified-typical-total",
+                    kind: "computed",
+                    targetPath: "/summary/typicalTotal",
+                    condition: true,
+                    dependencies: [],
+                    payload: {},
+                },
+            ],
+        };
+        const synced = (0, v2_default_typical_works_logic_util_1.syncTypicalWorksCatalogLogicSnapshot)(logic, { uiSchema });
+        const catalogRule = synced.rules.find((rule) => rule.id === "typical-works-catalog-detailInfo-detailTypicalTasks");
+        (0, vitest_1.expect)((catalogRule?.payload).allowedWorkIds).toEqual([templateWorkId]);
+        (0, vitest_1.expect)((catalogRule?.payload).sourceArrayPath).toBe(v2_default_typical_works_logic_util_1.V2_MODEL_STREAM_SOURCE_ARRAY_PATH);
+        (0, vitest_1.expect)((catalogRule?.payload).worksCatalogAllArchComponents).toBe(true);
+    });
     (0, vitest_1.it)("shouldSkipLegacyModelStreamStageSummary for model stream typicalWork block", () => {
         (0, vitest_1.expect)((0, v2_default_typical_works_logic_util_1.shouldSkipLegacyModelStreamStageSummary)({
             detailInfo: {

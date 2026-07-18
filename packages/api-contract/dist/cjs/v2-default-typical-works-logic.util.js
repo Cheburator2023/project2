@@ -16,6 +16,7 @@ exports.buildUnifiedTypicalTotalRule = buildUnifiedTypicalTotalRule;
 exports.schemaSupportsSourceTypicalWorksCatalog = schemaSupportsSourceTypicalWorksCatalog;
 exports.patchV2TypicalWorksLogicRules = patchV2TypicalWorksLogicRules;
 exports.upgradeTypicalWorksCatalogLogicRules = upgradeTypicalWorksCatalogLogicRules;
+exports.syncTypicalWorksCatalogLogicSnapshot = syncTypicalWorksCatalogLogicSnapshot;
 const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
 const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typical-works.constants");
 /** Источник триггеров модельного стрима — arch object list «Модельный сервис». */
@@ -498,4 +499,14 @@ function upgradeTypicalWorksCatalogLogicRules(logic, options) {
         return { ...rule, payload: mergedPayload };
     });
     return changed ? { ...logic, rules } : logic;
+}
+/**
+ * Фиксирует в logic snapshot версии шаблона актуальный payload catalog-правил
+ * из uiSchema (boundWorkIds, sourceArrayPath, …). Вызывать при save/publish версии.
+ */
+function syncTypicalWorksCatalogLogicSnapshot(logic, options) {
+    const upgraded = upgradeTypicalWorksCatalogLogicRules(logic, options);
+    return isTypicalWorksCatalogLogicComplete(upgraded, options)
+        ? upgraded
+        : patchV2TypicalWorksLogicRules(upgraded, options);
 }

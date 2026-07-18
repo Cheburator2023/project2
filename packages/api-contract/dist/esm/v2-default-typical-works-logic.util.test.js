@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSourceTypicalWorksCatalogRule, buildTypicalWorkRowTotalCondition, isTypicalWorksCatalogLogicComplete, patchV2TypicalWorksLogicRules, shouldSkipLegacyModelStreamStageSummary, upgradeTypicalWorksCatalogLogicRules, V2_MODEL_STREAM_SOURCE_ARRAY_PATH, V2_SOURCE_SYSTEMS_ARRAY_PATH, } from "./v2-default-typical-works-logic.util";
+import { buildSourceTypicalWorksCatalogRule, buildTypicalWorkRowTotalCondition, isTypicalWorksCatalogLogicComplete, patchV2TypicalWorksLogicRules, shouldSkipLegacyModelStreamStageSummary, syncTypicalWorksCatalogLogicSnapshot, upgradeTypicalWorksCatalogLogicRules, V2_MODEL_STREAM_SOURCE_ARRAY_PATH, V2_SOURCE_SYSTEMS_ARRAY_PATH, } from "./v2-default-typical-works-logic.util";
 import { isAtypicalWorksLogicComplete, resolveAnketaCalculationLogic, } from "./v2-atypical-works-logic.util";
 describe("v2-default-typical-works-logic.util", () => {
     it("replaces legacy static-tasks rule with worksCatalog and v5 paths", () => {
@@ -388,6 +388,68 @@ describe("v2-default-typical-works-logic.util", () => {
         expect((catalogRule?.payload).sourceArrayPath).toBe(V2_MODEL_STREAM_SOURCE_ARRAY_PATH);
         const resolved = resolveAnketaCalculationLogic(staleLogic, { uiSchema });
         expect((resolved.rules.find((rule) => rule.id === "typical-works-catalog-detailInfo-detailTypicalTasks")?.payload).sourceArrayPath).toBe(V2_MODEL_STREAM_SOURCE_ARRAY_PATH);
+    });
+    it("syncTypicalWorksCatalogLogicSnapshot writes template boundWorkIds into logic", () => {
+        const templateWorkId = "7147da4f-b4cd-445e-8ac3-838c4b106ca7";
+        const uiSchema = {
+            detailInfo: {
+                "ui:options": {
+                    streamBlock: true,
+                    streamExecutor: "Модельный стрим",
+                },
+                detailTypicalTasks: {
+                    "ui:options": {
+                        archComponent: "typicalWork",
+                        streamExecutor: "Модельный стрим",
+                        boundWorkIds: [templateWorkId],
+                    },
+                },
+            },
+        };
+        const logic = {
+            rules: [
+                {
+                    id: "typical-works-catalog-detailInfo-detailTypicalTasks",
+                    kind: "task_trigger",
+                    targetPath: "/detailInfo/detailTypicalTasks",
+                    condition: true,
+                    dependencies: [],
+                    payload: {
+                        mode: "generated_rows",
+                        worksCatalog: true,
+                        worksCatalogStream: "Модельный стрим",
+                        outputArrayPath: "detailInfo.detailTypicalTasks",
+                        allowedWorkIds: [
+                            "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4004",
+                        ],
+                    },
+                },
+                {
+                    id: "unified-typical-row-total:detailInfo_detailTypicalTasks",
+                    kind: "row_computed",
+                    targetPath: "/detailInfo/detailTypicalTasks",
+                    condition: true,
+                    dependencies: [],
+                    payload: {
+                        arrayPath: "detailInfo.detailTypicalTasks",
+                        fieldVar: "total",
+                    },
+                },
+                {
+                    id: "unified-typical-total",
+                    kind: "computed",
+                    targetPath: "/summary/typicalTotal",
+                    condition: true,
+                    dependencies: [],
+                    payload: {},
+                },
+            ],
+        };
+        const synced = syncTypicalWorksCatalogLogicSnapshot(logic, { uiSchema });
+        const catalogRule = synced.rules.find((rule) => rule.id === "typical-works-catalog-detailInfo-detailTypicalTasks");
+        expect((catalogRule?.payload).allowedWorkIds).toEqual([templateWorkId]);
+        expect((catalogRule?.payload).sourceArrayPath).toBe(V2_MODEL_STREAM_SOURCE_ARRAY_PATH);
+        expect((catalogRule?.payload).worksCatalogAllArchComponents).toBe(true);
     });
     it("shouldSkipLegacyModelStreamStageSummary for model stream typicalWork block", () => {
         expect(shouldSkipLegacyModelStreamStageSummary({
