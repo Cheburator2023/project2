@@ -40,6 +40,15 @@ const v2_csv_formula_import_util_1 = require("./v2-csv-formula-import.util");
             },
         ]);
     });
+    (0, vitest_1.it)("parses always-shown model-stream trigger", () => {
+        (0, vitest_1.expect)((0, v2_csv_formula_import_util_1.parseModelStreamTriggerRules)("нет — работа выводится всегда.")).toEqual([
+            {
+                paramName: "Нет — работа выводится всегда",
+                operator: "exists",
+                values: [],
+            },
+        ]);
+    });
     (0, vitest_1.it)("parses model-stream triggers without splitting param names on «и»", () => {
         (0, vitest_1.expect)((0, v2_csv_formula_import_util_1.parseModelStreamTriggerRules)("Необходимость продуктивизации и количество дополнительных витрин ≠ «Не требуется»")).toEqual([
             {

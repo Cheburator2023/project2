@@ -13,9 +13,11 @@ import type {
 	TypicalWorkTriggerArchCountLike,
 } from "./v2-works-catalog-match.util";
 import {
+	isAlwaysShownTriggerParam,
 	matchSingleTypicalWorkRuleForTriggerFormula,
 	normalizeTypicalWorkTriggerRuleForMatch,
 	typicalWorkRulesMatchSource,
+	V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
 } from "./v2-works-catalog-match.util";
 import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
 import type { TypicalWorkTriggerMatchContext } from "./v2-typical-works.util";
@@ -79,6 +81,9 @@ export function describeTypicalWorkSimpleTriggerRule(
 	rule: TypicalWorkRuleLike,
 ): string {
 	const normalized = normalizeTypicalWorkTriggerRuleForMatch(rule);
+	if (isAlwaysShownTriggerParam(normalized.paramCode, normalized.paramName)) {
+		return V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME;
+	}
 	const label =
 		stripParamNameSourceKeys(normalized.paramName ?? "") || normalized.paramCode;
 	const op = normalized.operator || "=";

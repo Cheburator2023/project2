@@ -1,5 +1,7 @@
 import {
 	V2_SOURCE_STREAM,
+	V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE,
+	isAlwaysShownTriggerParam,
 	normalizeParamLabel,
 } from "@smart-anketa/api-contract";
 import {
@@ -96,6 +98,9 @@ export function resolveCatalogTriggerParamCode(
 	triggerParamName: string,
 ): string {
 	const trimmed = triggerParamName.trim();
+	if (isAlwaysShownTriggerParam("", trimmed) || isAlwaysShownTriggerParam(trimmed, trimmed)) {
+		return V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE;
+	}
 	const norm = normalizeParamLabel(trimmed);
 	const triggerRule = row.triggerRules?.find((rule) => {
 		const ruleNorm = normalizeParamLabel(rule.paramName);
@@ -105,6 +110,15 @@ export function resolveCatalogTriggerParamCode(
 			norm.startsWith(ruleNorm)
 		);
 	});
+	if (
+		triggerRule &&
+		isAlwaysShownTriggerParam(
+			triggerRule.paramCode ?? "",
+			triggerRule.paramName,
+		)
+	) {
+		return V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE;
+	}
 	if (triggerRule?.paramCode?.trim()) {
 		return triggerRule.paramCode.trim();
 	}

@@ -66,6 +66,10 @@ export type TriggerStatusCatalogParamLike = {
         validTo?: string | null;
     }>;
 };
+/** Сентинел: работа выводится всегда, без проверки полей анкеты. */
+export declare const V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE = "__always__";
+export declare const V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME = "\u041D\u0435\u0442 \u2014 \u0440\u0430\u0431\u043E\u0442\u0430 \u0432\u044B\u0432\u043E\u0434\u0438\u0442\u0441\u044F \u0432\u0441\u0435\u0433\u0434\u0430";
+export declare function isAlwaysShownTriggerParam(paramCode: string, paramName: string | null | undefined): boolean;
 export declare function isSourceTypeTriggerParam(paramCode: string, paramName: string | null | undefined): boolean;
 export declare function isControlTypeTriggerParam(paramCode: string, paramName: string | null | undefined): boolean;
 export declare function isPresenceOnlyTriggerRule(rule: {

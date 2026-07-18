@@ -288,6 +288,13 @@ function parseSingleModelStreamTriggerRule(raw) {
     const part = clean(raw);
     if (!part)
         return null;
+    if (/нет\s*[—–-]\s*работа\s+выводится\s+всегда/iu.test(part)) {
+        return {
+            paramName: v2_works_catalog_match_util_1.V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
+            operator: "exists",
+            values: [],
+        };
+    }
     const eqQuoted = part.match(/^(.+?)\s*=\s*«([^»]+)»\s*$/u);
     if (eqQuoted?.[1] && eqQuoted[2]) {
         return {
@@ -425,6 +432,13 @@ function parseCsvTriggerRules(raw) {
             return {
                 paramName: rawParam,
                 operator: "unresolved",
+                values: [],
+            };
+        }
+        if (/нет\s*[—–-]\s*работа\s+выводится\s+всегда/iu.test(rawParam)) {
+            return {
+                paramName: v2_works_catalog_match_util_1.V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
+                operator: "exists",
                 values: [],
             };
         }

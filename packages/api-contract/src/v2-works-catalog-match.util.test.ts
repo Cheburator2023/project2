@@ -132,6 +132,37 @@ describe("v2-works-catalog-match.util", () => {
 		expect(typicalWorkRulesMatchSource([], { type: "Внутренний" })).toBe(false);
 	});
 
+	it("matches always-shown trigger without reading form fields", () => {
+		expect(
+			typicalWorkRulesMatchSource(
+				[
+					{
+						paramCode: "__always__",
+						paramName: "Нет — работа выводится всегда",
+						operator: "=",
+						valueCode: null,
+						valueLabel: null,
+					},
+				],
+				{},
+			),
+		).toBe(true);
+		expect(
+			typicalWorkRulesMatchSource(
+				[
+					{
+						paramCode: "нет_работа_выводится_всегда",
+						paramName: "нет — работа выводится всегда.",
+						operator: "=",
+						valueCode: null,
+						valueLabel: null,
+					},
+				],
+				{},
+			),
+		).toBe(true);
+	});
+
 	it("matches numeric comparison operators", () => {
 		const rule = {
 			paramCode: "metric_count",

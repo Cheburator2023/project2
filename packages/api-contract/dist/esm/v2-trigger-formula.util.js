@@ -1,5 +1,5 @@
 import { archCountTriggerMatches, isTriggerArchCountConfigured, formatTriggerArchCountConditionLabel } from "./v2-work-arch-count-coeff.util";
-import { matchSingleTypicalWorkRuleForTriggerFormula, normalizeTypicalWorkTriggerRuleForMatch, typicalWorkRulesMatchSource, } from "./v2-works-catalog-match.util";
+import { isAlwaysShownTriggerParam, matchSingleTypicalWorkRuleForTriggerFormula, normalizeTypicalWorkTriggerRuleForMatch, typicalWorkRulesMatchSource, V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME, } from "./v2-works-catalog-match.util";
 import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
 const LOGIC_LABEL = {
     and: "И",
@@ -49,6 +49,9 @@ function describeTriggerRuleOperator(operator) {
 /** Человекочитаемое описание одного param-условия (simple mode). */
 export function describeTypicalWorkSimpleTriggerRule(rule) {
     const normalized = normalizeTypicalWorkTriggerRuleForMatch(rule);
+    if (isAlwaysShownTriggerParam(normalized.paramCode, normalized.paramName)) {
+        return V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME;
+    }
     const label = stripParamNameSourceKeys(normalized.paramName ?? "") || normalized.paramCode;
     const op = normalized.operator || "=";
     if (op === "in" || op === "not_in") {

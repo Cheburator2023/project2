@@ -94,6 +94,26 @@ const v2_work_schema_params_match_util_1 = require("./v2-work-schema-params-matc
     (0, vitest_1.it)("does not match works without triggers", () => {
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)([], { type: "Внутренний" })).toBe(false);
     });
+    (0, vitest_1.it)("matches always-shown trigger without reading form fields", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)([
+            {
+                paramCode: "__always__",
+                paramName: "Нет — работа выводится всегда",
+                operator: "=",
+                valueCode: null,
+                valueLabel: null,
+            },
+        ], {})).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)([
+            {
+                paramCode: "нет_работа_выводится_всегда",
+                paramName: "нет — работа выводится всегда.",
+                operator: "=",
+                valueCode: null,
+                valueLabel: null,
+            },
+        ], {})).toBe(true);
+    });
     (0, vitest_1.it)("matches numeric comparison operators", () => {
         const rule = {
             paramCode: "metric_count",

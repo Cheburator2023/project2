@@ -1,7 +1,7 @@
 import { defaultWorkRounding } from "./v2-typical-work.types";
 import { evaluateWorkFormula, roundWorkEffortValue, validateWorkFormulaTokens, } from "./v2-work-formula.util";
 import { evaluateTermsFormula, termsToTokenFormula, validateTermsFormula, } from "./v2-work-terms-formula.util";
-import { catalogValueMatchesTriggerRule, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, normalizeTypicalWorkTriggerRulesForMatch, } from "./v2-works-catalog-match.util";
+import { catalogValueMatchesTriggerRule, isAlwaysShownTriggerParam, isControlTypeTriggerParam, isPresenceOnlyTriggerRule, isSourceTypeTriggerParam, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, normalizeTypicalWorkTriggerRulesForMatch, } from "./v2-works-catalog-match.util";
 import { findWorkSchemaParameter } from "./v2-work-schema-params-match.util";
 import { isNumericLaborByValueParam } from "./v2-numeric-labor-range.util";
 import { hasTypicalWorkTriggersConfigured, matchTypicalWorkTriggers, validateTriggerFormulaTokens, } from "./v2-trigger-formula.util";
@@ -350,6 +350,8 @@ function isRuleInputInvalid(rule, catalog, atDate) {
         });
     }
     if (isPresenceOnlyTriggerRule(rule)) {
+        if (isAlwaysShownTriggerParam(rule.paramCode, rule.paramName))
+            return false;
         if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName))
             return false;
         if (isControlTypeTriggerParam(rule.paramCode, rule.paramName))

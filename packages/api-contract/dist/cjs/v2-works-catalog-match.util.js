@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CONTROL_MODELS_STREAM = exports.STREAM_BY_SOURCE_TYPE = exports.V2_SOURCE_STREAM = exports.stripParamNameSourceKeys = exports.parseParamNameSourceKeys = exports.formatParamNameWithSourceKeys = void 0;
+exports.V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME = exports.V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE = exports.CONTROL_MODELS_STREAM = exports.STREAM_BY_SOURCE_TYPE = exports.V2_SOURCE_STREAM = exports.stripParamNameSourceKeys = exports.parseParamNameSourceKeys = exports.formatParamNameWithSourceKeys = void 0;
 exports.normalizeSourceTypeLabel = normalizeSourceTypeLabel;
 exports.normalizeTypicalWorkTriggerRuleForMatch = normalizeTypicalWorkTriggerRuleForMatch;
 exports.normalizeTypicalWorkTriggerRulesForMatch = normalizeTypicalWorkTriggerRulesForMatch;
@@ -9,6 +9,7 @@ exports.resolveStreamsFromSourceSystems = resolveStreamsFromSourceSystems;
 exports.readLaborParamAnswer = readLaborParamAnswer;
 exports.readTypicalWorkSourceField = readTypicalWorkSourceField;
 exports.extractControlCode = extractControlCode;
+exports.isAlwaysShownTriggerParam = isAlwaysShownTriggerParam;
 exports.isSourceTypeTriggerParam = isSourceTypeTriggerParam;
 exports.isControlTypeTriggerParam = isControlTypeTriggerParam;
 exports.isPresenceOnlyTriggerRule = isPresenceOnlyTriggerRule;
@@ -197,6 +198,21 @@ function extractControlCode(label) {
     const param = label.match(/Вид контроля:\s*([A-ZА-Я0-9]+)/i);
     return param?.[1]?.toUpperCase() ?? null;
 }
+/** Сентинел: работа выводится всегда, без проверки полей анкеты. */
+exports.V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE = "__always__";
+exports.V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME = "Нет — работа выводится всегда";
+const ALWAYS_TRIGGER_NAME_RE = /нет\s*[—–-]\s*работа\s+выводится\s+всегда/iu;
+function isAlwaysShownTriggerParam(paramCode, paramName) {
+    const code = paramCode.trim().toLowerCase();
+    if (code === exports.V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE ||
+        code === "нет_работа_выводится_всегда") {
+        return true;
+    }
+    const name = (paramName ?? "").trim();
+    if (ALWAYS_TRIGGER_NAME_RE.test(name))
+        return true;
+    return ALWAYS_TRIGGER_NAME_RE.test(code.replace(/_/g, " "));
+}
 function isSourceTypeTriggerParam(paramCode, paramName) {
     const name = paramName?.toLowerCase() ?? "";
     const code = paramCode.toLowerCase();
@@ -230,6 +246,8 @@ function isBrokenTypicalWorkTriggerRef(rule) {
  */
 function isMethodologyPresenceTriggerRule(rule) {
     if (!isPresenceOnlyTriggerRule(rule))
+        return false;
+    if (isAlwaysShownTriggerParam(rule.paramCode, rule.paramName))
         return false;
     if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName))
         return false;
@@ -452,6 +470,9 @@ function matchSingleTypicalWorkRuleForTriggerFormula(rule, source) {
     return matchSingleTypicalWorkRule(rule, source);
 }
 function matchSingleTypicalWorkRule(rule, source) {
+    if (isAlwaysShownTriggerParam(rule.paramCode, rule.paramName)) {
+        return true;
+    }
     const paramName = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(rule.paramName) || rule.paramCode;
     const controlCode = extractControlCode(paramName);
     if (controlCode) {
@@ -494,6 +515,9 @@ function matchTypicalWorkParamRules(rules, source) {
     if (rules.length === 0)
         return false;
     const normalized = normalizeTypicalWorkTriggerRulesForMatch(rules);
+    if (normalized.some((rule) => isAlwaysShownTriggerParam(rule.paramCode, rule.paramName))) {
+        return true;
+    }
     const groups = groupTypicalWorkRulesByParam(normalized);
     return [...groups.values()].every((groupRules) => groupRules.every((rule) => matchSingleTypicalWorkRule(rule, source)));
 }

@@ -38,6 +38,15 @@ describe("v2-csv-formula-import.util", () => {
             },
         ]);
     });
+    it("parses always-shown model-stream trigger", () => {
+        expect(parseModelStreamTriggerRules("нет — работа выводится всегда.")).toEqual([
+            {
+                paramName: "Нет — работа выводится всегда",
+                operator: "exists",
+                values: [],
+            },
+        ]);
+    });
     it("parses model-stream triggers without splitting param names on «и»", () => {
         expect(parseModelStreamTriggerRules("Необходимость продуктивизации и количество дополнительных витрин ≠ «Не требуется»")).toEqual([
             {

@@ -21,6 +21,7 @@ import {
 } from "./v2-work-terms-formula.util";
 import {
 	catalogValueMatchesTriggerRule,
+	isAlwaysShownTriggerParam,
 	isControlTypeTriggerParam,
 	isPresenceOnlyTriggerRule,
 	isSourceTypeTriggerParam,
@@ -535,6 +536,7 @@ function isRuleInputInvalid(
 	}
 
 	if (isPresenceOnlyTriggerRule(rule)) {
+		if (isAlwaysShownTriggerParam(rule.paramCode, rule.paramName)) return false;
 		if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName)) return false;
 		if (isControlTypeTriggerParam(rule.paramCode, rule.paramName)) return false;
 		return resolveTriggerStatusCatalogParam(rule, catalog) === undefined;

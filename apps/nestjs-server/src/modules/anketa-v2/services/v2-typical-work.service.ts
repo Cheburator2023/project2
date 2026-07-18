@@ -57,6 +57,8 @@ import {
 	normalizeParamLabel,
 	stripParamNameSourceKeys,
 	isTriggerArchCountConfigured,
+	isAlwaysShownTriggerParam,
+	V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
 	type WorkFormulaLaborParamRef,
 } from "@smart-anketa/api-contract";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
@@ -868,21 +870,25 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 					trimmed,
 					originalStream,
 				);
+				const alwaysTrigger = isAlwaysShownTriggerParam(paramCode, trimmed);
 				pendingRules.push({
 					workId,
 					streamExecutor: stream,
-					schemaFieldUid:
-						("schemaFieldUid" in triggerRule
-							? triggerRule.schemaFieldUid?.trim()
-							: null) ??
-						coefficientGroup?.schemaFieldUid?.trim() ??
-						null,
+					schemaFieldUid: alwaysTrigger
+						? null
+						: (("schemaFieldUid" in triggerRule
+								? triggerRule.schemaFieldUid?.trim()
+								: null) ??
+							coefficientGroup?.schemaFieldUid?.trim() ??
+							null),
 					paramCode,
-					paramName: trimmed,
+					paramName: alwaysTrigger
+						? V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME
+						: trimmed,
 					operator: stored.operator,
-					valueCode: stored.valueCode,
-					valueLabel: stored.valueLabel,
-					valueCodes: stored.valueCodes,
+					valueCode: alwaysTrigger ? null : stored.valueCode,
+					valueLabel: alwaysTrigger ? null : stored.valueLabel,
+					valueCodes: alwaysTrigger ? null : stored.valueCodes,
 				});
 			}
 
@@ -1196,6 +1202,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 
 		const coefficientGroup = findCatalogLaborParamGroup(catalogRow, trimmed);
 		const paramCode = resolveCatalogTriggerParamCode(catalogRow, trimmed);
+		const alwaysTrigger = isAlwaysShownTriggerParam(paramCode, trimmed);
 		const existing = findExistingFactoryTriggerRule(
 			workRules,
 			stream,
@@ -1207,41 +1214,49 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			trimmed,
 			originalStream,
 		);
-		const schemaFieldUid =
-			triggerRule.schemaFieldUid?.trim() ??
-			coefficientGroup?.schemaFieldUid?.trim() ??
-			null;
+		const schemaFieldUid = alwaysTrigger
+			? null
+			: (triggerRule.schemaFieldUid?.trim() ??
+				coefficientGroup?.schemaFieldUid?.trim() ??
+				null);
+		const paramName = alwaysTrigger
+			? V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME
+			: trimmed;
+		const valueCode = alwaysTrigger ? null : stored.valueCode;
+		const valueLabel = alwaysTrigger ? null : stored.valueLabel;
+		const valueCodes = alwaysTrigger ? null : stored.valueCodes;
 
 		if (existing) {
 			const catalogValues =
 				triggerRule.values.length > 0 ? triggerRule.values : [];
 			const valueChanged =
+				!alwaysTrigger &&
 				catalogValues.length > 0 &&
-				(existing.valueLabel !== stored.valueLabel ||
-					existing.valueCode !== stored.valueCode ||
+				(existing.valueLabel !== valueLabel ||
+					existing.valueCode !== valueCode ||
 					JSON.stringify(existing.valueCodes ?? null) !==
-						JSON.stringify(stored.valueCodes ?? null));
+						JSON.stringify(valueCodes ?? null));
 			const operatorChanged = existing.operator !== stored.operator;
 			const paramCodeChanged = existing.paramCode !== paramCode;
-			const schemaFieldChanged =
-				Boolean(schemaFieldUid) && existing.schemaFieldUid !== schemaFieldUid;
+			const paramNameChanged = existing.paramName !== paramName;
+			const schemaFieldChanged = existing.schemaFieldUid !== schemaFieldUid;
 			if (
 				!valueChanged &&
 				!operatorChanged &&
 				!paramCodeChanged &&
+				!paramNameChanged &&
 				!schemaFieldChanged
 			) {
 				return 0;
 			}
 
 			existing.operator = stored.operator;
-			if (catalogValues.length > 0 || stored.valueLabel) {
-				existing.valueCode = stored.valueCode;
-				existing.valueLabel = stored.valueLabel;
-				existing.valueCodes = stored.valueCodes;
-			}
+			existing.paramName = paramName;
+			existing.valueCode = valueCode;
+			existing.valueLabel = valueLabel;
+			existing.valueCodes = valueCodes;
 			if (paramCodeChanged) existing.paramCode = paramCode;
-			if (schemaFieldChanged) existing.schemaFieldUid = schemaFieldUid;
+			existing.schemaFieldUid = schemaFieldUid;
 			await this.ruleRepository.save(existing);
 			return 1;
 		}
@@ -1252,11 +1267,11 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				streamExecutor: stream,
 				schemaFieldUid,
 				paramCode,
-				paramName: trimmed,
+				paramName,
 				operator: stored.operator,
-				valueCode: stored.valueCode,
-				valueLabel: stored.valueLabel,
-				valueCodes: stored.valueCodes,
+				valueCode,
+				valueLabel,
+				valueCodes,
 			}),
 		);
 		workRules.push(created);
@@ -2779,9 +2794,16 @@ function findExistingFactoryTriggerRule(
 	paramName: string,
 ): V2TypicalWorkRuleEntity | undefined {
 	const paramNorm = normalizeParamLabel(paramName);
+	const lookingForAlways = isAlwaysShownTriggerParam(paramCode, paramName);
 	return workRules.find((row) => {
 		if (row.streamExecutor !== stream) return false;
 		if (row.paramCode === paramCode) return true;
+		if (
+			lookingForAlways &&
+			isAlwaysShownTriggerParam(row.paramCode, row.paramName)
+		) {
+			return true;
+		}
 		const rowName = row.paramName?.trim();
 		return Boolean(rowName && normalizeParamLabel(rowName) === paramNorm);
 	});

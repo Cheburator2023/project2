@@ -373,6 +373,8 @@ function isRuleInputInvalid(rule, catalog, atDate) {
         });
     }
     if ((0, v2_works_catalog_match_util_1.isPresenceOnlyTriggerRule)(rule)) {
+        if ((0, v2_works_catalog_match_util_1.isAlwaysShownTriggerParam)(rule.paramCode, rule.paramName))
+            return false;
         if ((0, v2_works_catalog_match_util_1.isSourceTypeTriggerParam)(rule.paramCode, rule.paramName))
             return false;
         if ((0, v2_works_catalog_match_util_1.isControlTypeTriggerParam)(rule.paramCode, rule.paramName))

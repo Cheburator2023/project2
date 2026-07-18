@@ -7667,17 +7667,8 @@
       "workType": "Опциональная",
       "norm": 33,
       "normRaw": "33",
-      "triggerParam": "нет — работа выводится всегда.",
-      "triggerParams": [
-        "нет — работа выводится всегда."
-      ],
-      "triggerRules": [
-        {
-          "paramName": "нет — работа выводится всегда.",
-          "operator": "exists",
-          "values": []
-        }
-      ],
+      "triggerParam": "",
+      "triggerParams": [],
       "triggerArchCount": {
         "kind": "modelService",
         "steps": [
@@ -8979,17 +8970,8 @@
       "workType": "Опциональная",
       "norm": 37,
       "normRaw": "37",
-      "triggerParam": "нет — работа выводится всегда.",
-      "triggerParams": [
-        "нет — работа выводится всегда."
-      ],
-      "triggerRules": [
-        {
-          "paramName": "нет — работа выводится всегда.",
-          "operator": "exists",
-          "values": []
-        }
-      ],
+      "triggerParam": "",
+      "triggerParams": [],
       "triggerArchCount": {
         "kind": "model",
         "steps": [

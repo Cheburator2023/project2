@@ -18,4 +18,21 @@ describe("describeTypicalWorkTriggerConditions", () => {
 			}),
 		).toBe("Необходимость пилота (MVP) = Да");
 	});
+
+	it("renders always-shown trigger without ≠ пусто", () => {
+		expect(
+			describeTypicalWorkTriggerConditions({
+				mode: "simple",
+				rules: [
+					{
+						paramCode: "__always__",
+						paramName: "Нет — работа выводится всегда",
+						operator: "=",
+						valueCode: null,
+						valueLabel: null,
+					},
+				],
+			}),
+		).toBe("Нет — работа выводится всегда");
+	});
 });

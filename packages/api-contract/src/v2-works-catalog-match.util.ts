@@ -256,6 +256,31 @@ export type TriggerStatusCatalogParamLike = {
 	}>;
 };
 
+/** Сентинел: работа выводится всегда, без проверки полей анкеты. */
+export const V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE = "__always__";
+
+export const V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME =
+	"Нет — работа выводится всегда";
+
+const ALWAYS_TRIGGER_NAME_RE =
+	/нет\s*[—–-]\s*работа\s+выводится\s+всегда/iu;
+
+export function isAlwaysShownTriggerParam(
+	paramCode: string,
+	paramName: string | null | undefined,
+): boolean {
+	const code = paramCode.trim().toLowerCase();
+	if (
+		code === V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE ||
+		code === "нет_работа_выводится_всегда"
+	) {
+		return true;
+	}
+	const name = (paramName ?? "").trim();
+	if (ALWAYS_TRIGGER_NAME_RE.test(name)) return true;
+	return ALWAYS_TRIGGER_NAME_RE.test(code.replace(/_/g, " "));
+}
+
 export function isSourceTypeTriggerParam(
 	paramCode: string,
 	paramName: string | null | undefined,
@@ -310,6 +335,7 @@ export function isMethodologyPresenceTriggerRule(rule: {
 	values?: Array<{ code: string; label: string | null }>;
 }): boolean {
 	if (!isPresenceOnlyTriggerRule(rule)) return false;
+	if (isAlwaysShownTriggerParam(rule.paramCode, rule.paramName)) return false;
 	if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName)) return false;
 	if (isControlTypeTriggerParam(rule.paramCode, rule.paramName)) return false;
 
@@ -590,6 +616,9 @@ function matchSingleTypicalWorkRule(
 	rule: TypicalWorkRuleLike,
 	source: Record<string, unknown>,
 ): boolean {
+	if (isAlwaysShownTriggerParam(rule.paramCode, rule.paramName)) {
+		return true;
+	}
 	const paramName = stripParamNameSourceKeys(rule.paramName) || rule.paramCode;
 	const controlCode = extractControlCode(paramName);
 	if (controlCode) {
@@ -651,6 +680,13 @@ function matchTypicalWorkParamRules(
 ): boolean {
 	if (rules.length === 0) return false;
 	const normalized = normalizeTypicalWorkTriggerRulesForMatch(rules);
+	if (
+		normalized.some((rule) =>
+			isAlwaysShownTriggerParam(rule.paramCode, rule.paramName),
+		)
+	) {
+		return true;
+	}
 	const groups = groupTypicalWorkRulesByParam(normalized);
 	return [...groups.values()].every((groupRules) =>
 		groupRules.every((rule) => matchSingleTypicalWorkRule(rule, source)),

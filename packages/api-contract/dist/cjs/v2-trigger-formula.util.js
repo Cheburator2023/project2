@@ -63,6 +63,9 @@ function describeTriggerRuleOperator(operator) {
 /** Человекочитаемое описание одного param-условия (simple mode). */
 function describeTypicalWorkSimpleTriggerRule(rule) {
     const normalized = (0, v2_works_catalog_match_util_1.normalizeTypicalWorkTriggerRuleForMatch)(rule);
+    if ((0, v2_works_catalog_match_util_1.isAlwaysShownTriggerParam)(normalized.paramCode, normalized.paramName)) {
+        return v2_works_catalog_match_util_1.V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME;
+    }
     const label = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(normalized.paramName ?? "") || normalized.paramCode;
     const op = normalized.operator || "=";
     if (op === "in" || op === "not_in") {

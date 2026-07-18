@@ -19,6 +19,8 @@ import type {
 	V2WorkTriggerStatus,
 } from "@smart-anketa/api-contract";
 import {
+	V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE,
+	V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
 	V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES,
 	V2_WORK_FORMULA_ARCH_COUNT_KINDS,
 	V2_WORK_RULE_OPERATOR_VALUES,
@@ -30,6 +32,7 @@ import {
 	encodeTriggerArchCountSteps,
 	formatTriggerArchCountConditionLabel,
 	formatWorkArchCountKindLabel,
+	isAlwaysShownTriggerParam,
 	isControlTypeTriggerParam,
 	isSourceTypeTriggerParam,
 	isTriggerArchCountConfigured,
@@ -76,6 +79,14 @@ const TRIGGER_MODE_SEGMENTS: Array<{
 		title: "Произвольная логика: И, ИЛИ, скобки",
 	},
 ];
+
+const ALWAYS_SHOWN_TRIGGER_PARAM: V2TypicalWorkParameterDto = {
+	id: `pseudo:${V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE}`,
+	code: V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE,
+	name: V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
+	description: "Работа появляется всегда, без проверки полей анкеты",
+	values: [],
+};
 
 type TypicalWorkTriggersSectionProps = {
 	rules: V2TypicalWorkRuleDto[];
@@ -252,10 +263,19 @@ export function TypicalWorkTriggersSection({
 		[rules, paramOptions],
 	);
 
-	const pickerItems = useMemo(
-		() => paramOptions.filter((p) => !usedGroupKeys.has(p.code)),
-		[paramOptions, usedGroupKeys],
+	const hasAlwaysTrigger = useMemo(
+		() =>
+			rules.some((rule) =>
+				isAlwaysShownTriggerParam(rule.paramCode, rule.paramName),
+			),
+		[rules],
 	);
+
+	const pickerItems = useMemo(() => {
+		const schemaItems = paramOptions.filter((p) => !usedGroupKeys.has(p.code));
+		if (hasAlwaysTrigger) return schemaItems;
+		return [ALWAYS_SHOWN_TRIGGER_PARAM, ...schemaItems];
+	}, [paramOptions, usedGroupKeys, hasAlwaysTrigger]);
 
 	const emptyPickerHint = schemaWorkParameterEmptyPickerMessage(
 		schemaFieldCount,
@@ -415,9 +435,28 @@ export function TypicalWorkTriggersSection({
 	};
 
 	const addParam = (param: V2TypicalWorkParameterDto) => {
+		if (isAlwaysShownTriggerParam(param.code, param.name)) {
+			onChange([
+				{
+					id: `new-${Date.now()}`,
+					streamExecutor,
+					schemaFieldUid: null,
+					paramCode: V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE,
+					paramName: V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
+					operator: "=",
+					valueCode: null,
+					valueLabel: null,
+				},
+			]);
+			setPickerKey((key) => key + 1);
+			return;
+		}
 		const firstValue = param.values[0];
+		const withoutAlways = rules.filter(
+			(rule) => !isAlwaysShownTriggerParam(rule.paramCode, rule.paramName),
+		);
 		onChange([
-			...rules,
+			...withoutAlways,
 			{
 				id: `new-${Date.now()}`,
 				streamExecutor,
@@ -614,7 +653,12 @@ export function TypicalWorkTriggersSection({
 						const param =
 							paramOptions.find((item) => item.code === groupKey) ??
 							resolveSchemaParamForTriggerRule(ruleSeed, paramOptions);
+						const isAlwaysTrigger = isAlwaysShownTriggerParam(
+							ruleSeed.paramCode,
+							ruleSeed.paramName,
+						);
 						const isKnownPseudoTrigger =
+							isAlwaysTrigger ||
 							isSourceTypeTriggerParam(
 								ruleSeed.paramCode,
 								ruleSeed.paramName,
@@ -625,39 +669,45 @@ export function TypicalWorkTriggersSection({
 							paramOptions,
 							methodologyCatalog,
 						);
-						const groupInvalid = isWorkTriggerGroupInvalid(
-							groupKey,
-							paramRules,
-							validationCatalog,
-						);
+						const groupInvalid = isAlwaysTrigger
+							? false
+							: isWorkTriggerGroupInvalid(
+									groupKey,
+									paramRules,
+									validationCatalog,
+								);
 						const selectedCodes = new Set(
 							(
 								paramRules[0]?.values?.map((v) => v.code) ??
 								paramRules.map((r) => r.valueCode)
 							).filter(Boolean),
 						);
-						const staleRules = paramRules.filter((rule) => {
-							if (!rule.valueCode && !rule.valueLabel) return false;
-							if (param) {
-								return !param.values.some((value) =>
-									catalogValueMatchesTriggerRule(value, {
-										...ruleSeed,
-										valueCode: rule.valueCode,
-										valueLabel: rule.valueLabel,
-									}),
-								);
-							}
-							return isWorkTriggerGroupInvalid(
-								groupKey,
-								[rule],
-								validationCatalog,
-							);
-						});
-						const displayName =
-							param?.name ??
-							(isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName)
-								? "Тип источника данных"
-								: schemaParamDisplayName(paramRules[0]?.paramName) || groupKey);
+						const staleRules = isAlwaysTrigger
+							? []
+							: paramRules.filter((rule) => {
+									if (!rule.valueCode && !rule.valueLabel) return false;
+									if (param) {
+										return !param.values.some((value) =>
+											catalogValueMatchesTriggerRule(value, {
+												...ruleSeed,
+												valueCode: rule.valueCode,
+												valueLabel: rule.valueLabel,
+											}),
+										);
+									}
+									return isWorkTriggerGroupInvalid(
+										groupKey,
+										[rule],
+										validationCatalog,
+									);
+								});
+						const displayName = isAlwaysTrigger
+							? V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME
+							: (param?.name ??
+								(isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName)
+									? "Тип источника данных"
+									: schemaParamDisplayName(paramRules[0]?.paramName) ||
+										groupKey));
 						const fieldRef = resolveSchemaParamFieldRef(param);
 						return (
 							<Box
@@ -675,7 +725,7 @@ export function TypicalWorkTriggersSection({
 										display: "flex",
 										alignItems: "flex-start",
 										gap: 1,
-										mb: 1.1,
+										mb: isAlwaysTrigger ? 0 : 1.1,
 									}}
 								>
 									<Box sx={{ flex: 1, minWidth: 0 }}>
@@ -689,7 +739,13 @@ export function TypicalWorkTriggersSection({
 										>
 											{displayName}
 										</Typography>
-										{fieldRef.varPath ? (
+										{isAlwaysTrigger ? (
+											<Typography
+												sx={{ mt: 0.35, fontSize: 11, color: "#6b7484" }}
+											>
+												Работа появляется всегда, без проверки полей анкеты
+											</Typography>
+										) : fieldRef.varPath ? (
 											<Typography
 												sx={{
 													mt: 0.35,
@@ -711,7 +767,9 @@ export function TypicalWorkTriggersSection({
 											</Typography>
 										)}
 									</Box>
-									{fieldRef.pointer && onNavigateToSchemaField ? (
+									{!isAlwaysTrigger &&
+									fieldRef.pointer &&
+									onNavigateToSchemaField ? (
 										<Button
 											size="small"
 											variant="outlined"
@@ -742,6 +800,8 @@ export function TypicalWorkTriggersSection({
 										<DeleteOutlineIcon fontSize="small" />
 									</IconButton>
 								</Box>
+								{isAlwaysTrigger ? null : (
+									<>
 								<Typography sx={{ fontSize: 11, color: "#9a7b52", mb: 0.9 }}>
 									Работа появляется, если ответ соответствует условию:
 								</Typography>
@@ -886,6 +946,8 @@ export function TypicalWorkTriggersSection({
 										);
 									})}
 								</Box>
+									</>
+								)}
 							</Box>
 						);
 					})}

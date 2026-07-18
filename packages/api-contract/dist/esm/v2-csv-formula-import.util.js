@@ -1,6 +1,6 @@
 import { parseWorkFormulaText } from "./v2-work-formula.util";
 import { slugParamCode } from "./v2-param-slug.util";
-import { normalizeTypicalWorkTriggerRuleForMatch, } from "./v2-works-catalog-match.util";
+import { normalizeTypicalWorkTriggerRuleForMatch, V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME, } from "./v2-works-catalog-match.util";
 /** RFC4180-подобный парсер CSV с `;` и многострочными полями в кавычках. */
 export function parseCsvSemicolon(text) {
     const rows = [];
@@ -261,6 +261,13 @@ function parseSingleModelStreamTriggerRule(raw) {
     const part = clean(raw);
     if (!part)
         return null;
+    if (/нет\s*[—–-]\s*работа\s+выводится\s+всегда/iu.test(part)) {
+        return {
+            paramName: V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
+            operator: "exists",
+            values: [],
+        };
+    }
     const eqQuoted = part.match(/^(.+?)\s*=\s*«([^»]+)»\s*$/u);
     if (eqQuoted?.[1] && eqQuoted[2]) {
         return {
@@ -398,6 +405,13 @@ export function parseCsvTriggerRules(raw) {
             return {
                 paramName: rawParam,
                 operator: "unresolved",
+                values: [],
+            };
+        }
+        if (/нет\s*[—–-]\s*работа\s+выводится\s+всегда/iu.test(rawParam)) {
+            return {
+                paramName: V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
+                operator: "exists",
                 values: [],
             };
         }

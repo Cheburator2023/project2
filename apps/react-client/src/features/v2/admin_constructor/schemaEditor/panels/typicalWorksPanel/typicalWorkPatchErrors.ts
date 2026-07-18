@@ -14,6 +14,7 @@ import {
 	isWorkTriggerGroupInvalid,
 	catalogValueMatchesTriggerRule,
 	isPresenceOnlyTriggerRule,
+	isAlwaysShownTriggerParam,
 	isSourceTypeTriggerParam,
 	isControlTypeTriggerParam,
 	isTypicalWorkParameterValueActiveOnDate,
@@ -197,15 +198,18 @@ export function collectTriggerValidationIssues(
 			resolveSchemaParamForTriggerRule(ruleSeed, schemaParams);
 		const displayName =
 			schemaParam?.name ??
-			(isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName)
-				? "Тип источника данных"
-				: (paramRules[0]?.paramName ?? groupKey));
+			(isAlwaysShownTriggerParam(ruleSeed.paramCode, ruleSeed.paramName)
+				? "Нет — работа выводится всегда"
+				: isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName)
+					? "Тип источника данных"
+					: (paramRules[0]?.paramName ?? groupKey));
 		const catalog = catalogForTriggerRuleGroup(
 			ruleSeed,
 			schemaParams,
 			methodologyParams,
 		);
 		const knownPseudo =
+			isAlwaysShownTriggerParam(ruleSeed.paramCode, ruleSeed.paramName) ||
 			isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName) ||
 			isControlTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName);
 
