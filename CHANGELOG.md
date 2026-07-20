@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+# [1.37.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.36.0...v1.37.0) (2026-07-20)
+
+
+### Features
+
+* enhance ErrorPage and Page404 components ([00a739c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/00a739c1c24dfaf1ed6732c5b5d460df108c4ded))
+* enhance labor coefficient lookup and source handling ([8c56f7a](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/8c56f7a4155bfca06bf1487703344fa6be08d6f6))
+
 # [1.36.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.35.0...v1.36.0) (2026-07-20)
 
 
