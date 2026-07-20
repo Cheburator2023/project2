@@ -350,10 +350,11 @@ export function resolveWorkArchComponentCount(formData, kind) {
             return 0;
         }
         case "sourceSystem": {
-            const rows = [
-                ...readArray(detailInfo?.sourceSystems),
-                ...readArray(streamDataSources?.sourceSystems),
-            ];
+            // detailInfo и streamDataSources часто дублируют один массив (миграция) —
+            // считаем один канонический список, иначе N×2 (6+6→12→коэф 2.4 вместо 1.2).
+            const detailRows = readArray(detailInfo?.sourceSystems);
+            const streamRows = readArray(streamDataSources?.sourceSystems);
+            const rows = detailRows.length > 0 ? detailRows : streamRows;
             let filled = 0;
             for (const row of rows) {
                 const rec = readRecord(row);

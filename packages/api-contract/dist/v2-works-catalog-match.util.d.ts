@@ -125,6 +125,7 @@ export declare function readValueAtSchemaPointer(root: Record<string, unknown>, 
 /** Контекст для коэффициентов: строка arch-компонента + поля formData вне строки (generalInfo и т.д.). */
 export declare function buildLaborCoefficientLookupSource(source: Record<string, unknown>, formData: Record<string, unknown>, schemaParams: ReadonlyArray<{
     code: string;
+    name?: string | null;
     schemaPointer?: string | null;
 }>, paramCodes: readonly string[]): Record<string, unknown>;
 /** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */

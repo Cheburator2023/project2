@@ -68,4 +68,36 @@ const formulaText = "N * коэф(field_UEzs5Q87) + N * архкоэф(Сист�
         (0, vitest_1.expect)(preview.value).toBe(44);
         (0, vitest_1.expect)(preview.expanded).toContain("22");
     });
+    (0, vitest_1.it)("Этап 211: 6 источников + Высокая → 22×1.2 + 22×1.2 = 52.8", () => {
+        const sources = Array.from({ length: 6 }, (_, i) => ({
+            name: `Источник ${i + 1}`,
+            type: "Внутренний",
+            field_L1lRlgf1: i === 0 ? "Высокая" : "Средняя",
+        }));
+        const formData = {
+            detailInfo: {
+                sourceSystems: sources,
+                dataProcess: {},
+            },
+            streamDataSources: { sourceSystems: sources },
+        };
+        const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)(formulaText);
+        (0, vitest_1.expect)(parsed.error).toBeNull();
+        const terms = (0, v2_work_terms_formula_util_1.tokensToTermsFormula)({
+            tokens: parsed.tokens,
+            text: formulaText,
+        });
+        const total = (0, v2_typical_work_jsonlogic_util_1.computeTypicalWorkFormulaTotal)({
+            calculationLogic: null,
+            formula: terms,
+            formulaText,
+            terms,
+            rounding: { mode: "NONE", step: 0.1 },
+            norm: 22,
+            paramCoefficients: { field_UEzs5Q87: 1.2 },
+            formData,
+            resolveFactorCoeff: (code) => code === "field_UEzs5Q87" ? 1.2 : 1,
+        });
+        (0, vitest_1.expect)(total).toBe(52.8);
+    });
 });

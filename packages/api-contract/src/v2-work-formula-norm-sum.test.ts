@@ -92,4 +92,38 @@ describe("Этап 211 formula N*P + N*arch", () => {
 		expect(preview.value).toBe(44);
 		expect(preview.expanded).toContain("22");
 	});
+
+	it("Этап 211: 6 источников + Высокая → 22×1.2 + 22×1.2 = 52.8", () => {
+		const sources = Array.from({ length: 6 }, (_, i) => ({
+			name: `Источник ${i + 1}`,
+			type: "Внутренний",
+			field_L1lRlgf1: i === 0 ? "Высокая" : "Средняя",
+		}));
+		const formData = {
+			detailInfo: {
+				sourceSystems: sources,
+				dataProcess: {},
+			},
+			streamDataSources: { sourceSystems: sources },
+		};
+		const parsed = parseWorkFormulaText(formulaText);
+		expect(parsed.error).toBeNull();
+		const terms = tokensToTermsFormula({
+			tokens: parsed.tokens,
+			text: formulaText,
+		});
+		const total = computeTypicalWorkFormulaTotal({
+			calculationLogic: null,
+			formula: terms,
+			formulaText,
+			terms,
+			rounding: { mode: "NONE", step: 0.1 },
+			norm: 22,
+			paramCoefficients: { field_UEzs5Q87: 1.2 },
+			formData,
+			resolveFactorCoeff: (code) =>
+				code === "field_UEzs5Q87" ? 1.2 : 1,
+		});
+		expect(total).toBe(52.8);
+	});
 });

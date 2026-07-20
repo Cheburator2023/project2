@@ -17,6 +17,32 @@ const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util
             },
         }, "sourceSystem")).toBe(2);
     });
+    (0, vitest_1.it)("does not double-count sourceSystems mirrored into streamDataSources", () => {
+        const sources = [
+            { name: "S1", type: "Внутренний" },
+            { name: "S2", type: "Внутренний" },
+            { name: "S3", type: "Внутренний" },
+            { name: "S4", type: "Внутренний" },
+            { name: "S5", type: "Внутренний" },
+            { name: "S6", type: "Внутренний" },
+        ];
+        (0, vitest_1.expect)((0, v2_work_arch_count_coeff_util_1.resolveWorkArchComponentCount)({
+            detailInfo: { sourceSystems: sources },
+            streamDataSources: { sourceSystems: sources },
+        }, "sourceSystem")).toBe(6);
+        (0, vitest_1.expect)((0, v2_work_arch_count_coeff_util_1.resolveArchCountCoeffFromToken)({
+            detailInfo: { sourceSystems: sources },
+            streamDataSources: { sourceSystems: sources },
+        }, "sourceSystem", [
+            { count: 5, coefficient: 1, operator: "<=" },
+            {
+                count: 5,
+                coefficient: 1,
+                operator: ">",
+                coefficientFormula: "N/5",
+            },
+        ])).toBe(1.2);
+    });
     (0, vitest_1.it)("lookupArchCountCoefficient returns exact match for legacy steps", () => {
         const steps = [
             { count: 1, coefficient: 2 },
