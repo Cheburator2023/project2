@@ -20,13 +20,13 @@ body {
 #root {
 
 	// background-color: initial !important;
-    font-family: Inter, sans-serif;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 * {
 	scrollbar-color: #8d8d8d94 #bada5500;
 	scrollbar-width: thin;
-        font-family: Inter, sans-serif;
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 *, *::before, *::after {

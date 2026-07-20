@@ -24,11 +24,17 @@ import {
 	sumTypicalWorkTotals,
 	type AnketaArrayTableColumn,
 } from "../utils/anketaModalArrayTableConfig";
+import {
+	dedupeTypicalWorkRowsByWorkId,
+	resolveStreamExecutorForTypicalWorkOutputPath,
+} from "@smart-anketa/api-contract";
 import { useMemo, useState } from "react";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 import { TypicalWorkSummaryTotal } from "./TypicalWorkSummaryTotal";
+
+const SOURCE_STREAM_EXECUTOR = "Источники данных";
 
 type Props = {
 	pathKey: string;
@@ -118,13 +124,23 @@ export function AnketaModalArrayTable({
 		ctx.previewSchema,
 		ctx.previewUiSchema,
 	);
-	const items = getArrayAtPath(ctx.formData ?? {}, pathKey);
 	const readOnly = isAnketaArchPathReadOnly(formContext, pathKey);
 	const showRowActions = arrayTableShowsRowActions(pathKey, formContext);
-	const isTypicalWorks = isTypicalWorkArrayPath(
-		pathKey,
-		ctx.previewUiSchema as Record<string, unknown> | undefined,
-	);
+	const previewUiSchema = ctx.previewUiSchema as
+		| Record<string, unknown>
+		| undefined;
+	const isTypicalWorks = isTypicalWorkArrayPath(pathKey, previewUiSchema);
+	const items = useMemo(() => {
+		const rawItems = getArrayAtPath(ctx.formData ?? {}, pathKey);
+		if (!isTypicalWorks) return rawItems;
+		const streamExecutor = resolveStreamExecutorForTypicalWorkOutputPath(
+			previewUiSchema,
+			pathKey,
+		);
+		return dedupeTypicalWorkRowsByWorkId(rawItems, {
+			groupBySourceName: streamExecutor === SOURCE_STREAM_EXECUTOR,
+		});
+	}, [ctx.formData, isTypicalWorks, pathKey, previewUiSchema]);
 	const sourceNames = useMemo(
 		() => (isTypicalWorks ? collectTypicalWorkSourceNames(items) : []),
 		[isTypicalWorks, items],
@@ -430,7 +446,7 @@ export function AnketaModalArrayTable({
 					data-test-id={`${tableTestId}--empty`}
 				>
 					{isTypicalWorks
-						? "Типовые работы появятся при срабатывании триггеров"
+						? "Типовые работы появятся при выполнении условий появления"
 						: "Нет записей"}
 				</ListEmptyPlaceholder>
 			)}

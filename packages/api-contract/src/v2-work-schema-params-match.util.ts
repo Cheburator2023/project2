@@ -6,6 +6,7 @@ import {
 	typicalWorkRulesMatchSource,
 } from "./v2-works-catalog-match.util";
 import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
+import { slugParamCode } from "./v2-param-slug.util";
 
 /** Минимальное описание поля схемы для сопоставления с legacy-кодами каталога. */
 export type WorkSchemaParamDef = {
@@ -26,6 +27,39 @@ export type TypicalWorkRuleRefLike = {
 	schemaFieldUid?: string | null;
 };
 
+/**
+ * Нормализует legacy-ярлыки каталога (АвтоМЛ / Маркер) к названиям полей схемы.
+ */
+export function normalizeLegacySchemaParamLabel(name: string): string {
+	let next = stripParamNameSourceKeys(name).trim();
+	next = next.replace(/^АвтоМЛ\s*:/iu, "AutoML:");
+	next = next.replace(/\s+в\s+Маркере\s*$/iu, "");
+	next = next.replace(
+		/требуется\s+новая\s+модель\s+Маркера\s+для/iu,
+		"Требуется новая модель для",
+	);
+	next = next.replace(/в\/из\s+Маркер(?:е|а)?\s*$/iu, "в/из ИС 1860");
+	return next.trim();
+}
+
+/** Нормализует legacy paramCode (`автомл_*`, `*_в_маркере`) к slug поля схемы. */
+export function normalizeLegacySchemaParamCode(code: string): string {
+	return code
+		.trim()
+		.toLowerCase()
+		.replace(/^автомл_/, "automl_")
+		.replace(/_в_маркере$/, "")
+		.replace(/_маркера_для_/, "_для_")
+		.replace(/_в_из_маркер(?:е|а)?$/, "_в_из_ис_1860");
+}
+
+function paramLabelsEquivalent(a: string, b: string): boolean {
+	const left = normalizeLegacySchemaParamLabel(a);
+	const right = normalizeLegacySchemaParamLabel(b);
+	if (left.toLowerCase() === right.toLowerCase()) return true;
+	return slugParamCode(left) === slugParamCode(right);
+}
+
 export function findWorkSchemaParameter<T extends WorkSchemaParamDef>(
 	params: T[],
 	paramCode: string,
@@ -37,6 +71,23 @@ export function findWorkSchemaParameter<T extends WorkSchemaParamDef>(
 	const byAlias = params.find((param) => param.sourceKeys?.includes(paramCode));
 	if (byAlias) return byAlias;
 
+	const normalizedCode = normalizeLegacySchemaParamCode(paramCode);
+	if (normalizedCode) {
+		const byLegacyCode = params.find((param) => {
+			const schemaSlug = slugParamCode(
+				normalizeLegacySchemaParamLabel(param.name),
+			);
+			return (
+				schemaSlug === normalizedCode ||
+				normalizeLegacySchemaParamCode(param.code) === normalizedCode ||
+				param.sourceKeys?.some(
+					(key) => normalizeLegacySchemaParamCode(key) === normalizedCode,
+				)
+			);
+		});
+		if (byLegacyCode) return byLegacyCode;
+	}
+
 	if (paramName?.trim()) {
 		const name = stripParamNameSourceKeys(paramName).trim();
 		const byName = params.find((param) => param.name === name);
@@ -47,6 +98,10 @@ export function findWorkSchemaParameter<T extends WorkSchemaParamDef>(
 				stripParamNameSourceKeys(param.name).trim().toLowerCase() === normName,
 		);
 		if (byNormName) return byNormName;
+		const byLegacyLabel = params.find((param) =>
+			paramLabelsEquivalent(param.name, name),
+		);
+		if (byLegacyLabel) return byLegacyLabel;
 	}
 
 	return undefined;

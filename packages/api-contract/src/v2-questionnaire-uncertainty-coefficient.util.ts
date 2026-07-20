@@ -106,6 +106,64 @@ export function resolveV2QuestionnaireUncertaintyCoefficient(
 	return { calculated: true, coefficient };
 }
 
+/** Код параметра «Общая неопределённость» в формулах типовых работ модельного стрима. */
+export const V2_TYPICAL_WORK_UNCERTAINTY_PARAM_CODE = "overallUncertainty";
+
+function normalizeTypicalWorkUncertaintyParamLabel(value: string): string {
+	return value.trim().toLowerCase().replace(/ё/g, "е");
+}
+
+/** Параметр трудоёмкости «Общая неопределённость» — вычисляемый, не из справочника коэффициентов. */
+export function isTypicalWorkComputedUncertaintyParam(
+	paramCode: string,
+	paramName?: string | null,
+): boolean {
+	if (paramCode === V2_TYPICAL_WORK_UNCERTAINTY_PARAM_CODE) return true;
+	if (!paramName) return false;
+	return (
+		normalizeTypicalWorkUncertaintyParamLabel(paramName) ===
+		"общая неопределенность"
+	);
+}
+
+export type TypicalWorkLaborParamRef = {
+	paramCode: string;
+	paramName?: string | null;
+};
+
+/**
+ * Подставляет коэффициент общей неопределённости из uncertaintyCalculation
+ * (K = 1 + Σриски + поправка%/100; если не рассчитана — 1).
+ * Перекрывает фиксированные строки коэффициентов в конфигураторе.
+ */
+export function applyComputedOverallUncertaintyToTypicalWorkParamCoefficients(
+	formData: Record<string, unknown>,
+	paramCoefficients: Record<string, number>,
+	options?: {
+		laborParamRefs?: readonly TypicalWorkLaborParamRef[];
+		formulaParamCodes?: readonly string[];
+	},
+): void {
+	const refs = options?.laborParamRefs ?? [];
+	const formulaCodes = options?.formulaParamCodes ?? [];
+	const usesUncertainty =
+		refs.some((ref) =>
+			isTypicalWorkComputedUncertaintyParam(ref.paramCode, ref.paramName),
+		) ||
+		formulaCodes.some((code) =>
+			isTypicalWorkComputedUncertaintyParam(code, null),
+		);
+	if (!usesUncertainty) return;
+
+	const { coefficient } = resolveV2QuestionnaireUncertaintyCoefficient(formData);
+	paramCoefficients[V2_TYPICAL_WORK_UNCERTAINTY_PARAM_CODE] = coefficient;
+	for (const ref of refs) {
+		if (isTypicalWorkComputedUncertaintyParam(ref.paramCode, ref.paramName)) {
+			paramCoefficients[ref.paramCode] = coefficient;
+		}
+	}
+}
+
 export type SyncAtypicalWorkCoefficientsResult = {
 	formData: Record<string, unknown>;
 	updatedPaths: string[];

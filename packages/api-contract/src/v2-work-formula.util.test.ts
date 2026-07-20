@@ -179,6 +179,28 @@ describe("v2-work-formula.util", () => {
 		).toBeNull();
 	});
 
+	it("matches overallUncertainty formula token to labor param by Russian name", () => {
+		const tokens = [
+			{ kind: "norm" as const },
+			{ kind: "operator" as const, op: "*" as const },
+			{
+				kind: "param_coeff" as const,
+				paramCode: "overallUncertainty",
+			},
+		];
+		expect(
+			validateWorkFormulaTokens(tokens, {
+				laborParams: [
+					{
+						paramCode: "общая_неопределённость",
+						paramName: "Общая неопределённость",
+					},
+				],
+				allowInvalidParamRefs: true,
+			}),
+		).toBeNull();
+	});
+
 	it("reconciles schema field code with labor slug and drops invalid marker", () => {
 		const tokens = [
 			{ kind: "norm" as const },

@@ -7,15 +7,20 @@ import type {
 	V2TypicalWorkTriggerMode,
 	V2WorkRuleOperator,
 } from "./v2-typical-work.types";
-import { archCountTriggerMatches } from "./v2-work-arch-count-coeff.util";
+import { archCountTriggerMatches, isTriggerArchCountConfigured, formatTriggerArchCountConditionLabel } from "./v2-work-arch-count-coeff.util";
 import type {
 	TypicalWorkRuleLike,
 	TypicalWorkTriggerArchCountLike,
 } from "./v2-works-catalog-match.util";
 import {
+	isAlwaysShownTriggerParam,
 	matchSingleTypicalWorkRuleForTriggerFormula,
+	normalizeTypicalWorkTriggerRuleForMatch,
 	typicalWorkRulesMatchSource,
+	V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
 } from "./v2-works-catalog-match.util";
+import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
+import type { TypicalWorkTriggerMatchContext } from "./v2-typical-works.util";
 
 const LOGIC_LABEL: Record<V2TriggerFormulaLogicOp, string> = {
 	and: "И",
@@ -56,6 +61,93 @@ export function triggerFormulaTokensToText(
 	tokens: readonly V2TriggerFormulaToken[],
 ): string {
 	return tokens.map(describeTriggerFormulaToken).join(" ");
+}
+
+function describeTriggerRuleOperator(operator: string): string {
+	switch (operator) {
+		case "!=":
+			return "≠";
+		case "in":
+			return "∈";
+		case "not_in":
+			return "∉";
+		default:
+			return operator;
+	}
+}
+
+/** Человекочитаемое описание одного param-условия (simple mode). */
+export function describeTypicalWorkSimpleTriggerRule(
+	rule: TypicalWorkRuleLike,
+): string {
+	const normalized = normalizeTypicalWorkTriggerRuleForMatch(rule);
+	if (isAlwaysShownTriggerParam(normalized.paramCode, normalized.paramName)) {
+		return V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME;
+	}
+	const label =
+		stripParamNameSourceKeys(normalized.paramName ?? "") || normalized.paramCode;
+	const op = normalized.operator || "=";
+
+	if (op === "in" || op === "not_in") {
+		const values = normalized.values?.length
+			? normalized.values
+			: normalized.valueCode
+				? [{ code: normalized.valueCode, label: normalized.valueLabel }]
+				: [];
+		const rendered = values
+			.map((value) => value.label ?? value.code)
+			.filter(Boolean)
+			.join(", ");
+		return rendered
+			? `${label} ${describeTriggerRuleOperator(op)} {${rendered}}`
+			: label;
+	}
+
+	if (
+		normalized.valueCode == null &&
+		normalized.valueLabel == null &&
+		!normalized.values?.length
+	) {
+		return `${label} ≠ пусто`;
+	}
+
+	const value = normalized.valueLabel ?? normalized.valueCode ?? "";
+	return value ? `${label} ${describeTriggerRuleOperator(op)} ${value}` : label;
+}
+
+/** Формула условий появления работы для UI (simple или formula mode). */
+export function describeTypicalWorkTriggerConditions(input: {
+	mode?: V2TypicalWorkTriggerMode;
+	rules: TypicalWorkRuleLike[];
+	triggerFormula?: V2TypicalWorkTriggerFormulaDto | null;
+	triggerArchCount?: TypicalWorkTriggerArchCountLike | null;
+}): string | null {
+	if (input.mode === "formula") {
+		const text =
+			input.triggerFormula?.text?.trim() ||
+			triggerFormulaTokensToText(input.triggerFormula?.tokens ?? []);
+		return text || null;
+	}
+
+	const paramParts = input.rules.map(describeTypicalWorkSimpleTriggerRule);
+	if (paramParts.length === 0 && !isTriggerArchCountConfigured(input.triggerArchCount)) {
+		return null;
+	}
+
+	const paramExpr =
+		paramParts.length > 1 ? paramParts.map((part) => `(${part})`).join(" И ") : paramParts[0];
+
+	if (!isTriggerArchCountConfigured(input.triggerArchCount) || !input.triggerArchCount?.kind) {
+		return paramExpr ?? null;
+	}
+
+	const archExpr = formatTriggerArchCountConditionLabel(
+		input.triggerArchCount.kind,
+		input.triggerArchCount.steps ?? [],
+	);
+	if (!paramExpr) return archExpr;
+	const combinator = input.triggerArchCount.combinator === "or" ? " ИЛИ " : " И ";
+	return `${paramExpr}${combinator}${archExpr}`;
 }
 
 export function validateTriggerFormulaTokens(
@@ -345,6 +437,7 @@ export function matchTypicalWorkTriggers(
 	input: TypicalWorkTriggerMatchInput,
 	source: Record<string, unknown>,
 	formData?: Record<string, unknown>,
+	matchContext?: TypicalWorkTriggerMatchContext,
 ): boolean {
 	if (input.mode === "formula") {
 		return evaluateTriggerFormula(input.triggerFormula?.tokens ?? [], {
@@ -357,6 +450,7 @@ export function matchTypicalWorkTriggers(
 		source,
 		formData,
 		input.triggerArchCount,
+		matchContext,
 	);
 }
 
@@ -367,10 +461,6 @@ export function hasTypicalWorkTriggersConfigured(
 		return isTriggerFormulaConfigured(input.triggerFormula);
 	}
 	return (
-		input.rules.length > 0 ||
-		Boolean(
-			input.triggerArchCount?.kind &&
-				(input.triggerArchCount.steps?.length ?? 0) > 0,
-		)
+		input.rules.length > 0 || isTriggerArchCountConfigured(input.triggerArchCount)
 	);
 }

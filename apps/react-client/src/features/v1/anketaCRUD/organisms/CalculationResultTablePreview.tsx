@@ -5,7 +5,6 @@ import {
 	type CellClassParams,
 	type CellStyle,
 	type ColDef,
-	GetMainMenuItemsParams,
 	type ValueFormatterParams,
 	RowHeightParams,
 } from "ag-grid-community";
@@ -17,6 +16,7 @@ import {
 } from "../../../../theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "../../../../theme/ag-grid/agGridIconSet";
 import { AG_GRID_LOCALE_RU } from "../../../../common/tableStuff/agGridLocale.ru";
+import { getAgGridMainMenuItemsWithoutRowGroup } from "../../../../common/tableStuff/agGridMainMenuItems";
 
 interface EpicData {
 	stageName: string;
@@ -247,11 +247,7 @@ export const CalculationResultTablePreview = ({
 			editable: false,
 			wrapHeaderText: true,
 			autoHeaderHeight: true,
-			mainMenuItems: (params: GetMainMenuItemsParams) => {
-				return params.defaultItems.filter(
-					(item) => item !== "columnChooser" && item !== "rowGroup",
-				);
-			},
+			mainMenuItems: getAgGridMainMenuItemsWithoutRowGroup,
 		}),
 		[],
 	);

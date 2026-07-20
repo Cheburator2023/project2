@@ -58,9 +58,32 @@ export const V2_WORK_FORMULA_ARCH_COUNT_KINDS = [
 export type V2WorkFormulaArchCountKind =
 	(typeof V2_WORK_FORMULA_ARCH_COUNT_KINDS)[number];
 
+export const V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES = [
+	">=",
+	"<=",
+	"=",
+	">",
+	"<",
+] as const;
+
+export type V2TypicalWorkTriggerArchCountOperator =
+	(typeof V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES)[number];
+
 export type V2WorkArchCountCoeffStep = {
+	/** Порог количества (для labor — сравнивается с operator; для trigger — см. encode/decode). */
 	count: number;
+	/** Константный коэффициент (labor) или sentinel (trigger). */
 	coefficient: number;
+	/**
+	 * Labor only: оператор сравнения с фактическим количеством.
+	 * По умолчанию "=" (legacy exact match). Триггеры поле игнорируют.
+	 */
+	operator?: V2TypicalWorkTriggerArchCountOperator;
+	/**
+	 * Labor only: формула коэффициента от N (фактическое количество), напр. "N/5".
+	 * Если задана — runtime считает формулу вместо coefficient.
+	 */
+	coefficientFormula?: string | null;
 };
 
 export type V2WorkFormulaToken =
@@ -537,12 +560,20 @@ export function resolveActiveNormOnDate(
 		V2TypicalWorkNormDto,
 		"streamExecutor" | "normValue" | "validFrom" | "validTo"
 	>[],
-	streamExecutor: string,
+	streamExecutor: string | readonly string[],
 	atDate: string,
 ): number | null {
 	const day = atDate.slice(0, 10);
+	const streams = new Set(
+		(typeof streamExecutor === "string"
+			? [streamExecutor]
+			: [...streamExecutor]
+		)
+			.map((value) => value.trim())
+			.filter(Boolean),
+	);
 	const matching = norms.filter((n) => {
-		if (n.streamExecutor !== streamExecutor) return false;
+		if (!streams.has(n.streamExecutor)) return false;
 		const from = n.validFrom.slice(0, 10);
 		const to = n.validTo?.slice(0, 10) ?? null;
 		if (day < from) return false;

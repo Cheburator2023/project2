@@ -12,6 +12,7 @@ import {
 import type { TypicalWorkRuleLike } from "./v2-works-catalog-match.util";
 import {
 	catalogValueMatchesTriggerRule,
+	isAlwaysShownTriggerParam,
 	isBrokenTypicalWorkTriggerRef,
 	isControlTypeTriggerParam,
 	isPresenceOnlyTriggerRule,
@@ -19,6 +20,8 @@ import {
 } from "./v2-works-catalog-match.util";
 import { collectUnavailableLaborCoefficientIssues } from "./v2-typical-work-validation.util";
 import { isArchCountLaborParamName } from "./v2-labor-arch-count.util";
+import { validateWorkFormulaTokens } from "./v2-work-formula.util";
+import type { V2WorkFormulaToken } from "./v2-typical-work.types";
 
 type JsonSchemaNode = {
 	type?: string | string[];
@@ -223,6 +226,8 @@ export type TypicalWorkSchemaConsistencyInput = {
 		}>;
 	}>;
 	formulaParamCodes?: string[];
+	/** Токены формулы — для той же проверки, что в UI калькулятора. */
+	formulaTokens?: V2WorkFormulaToken[];
 	/** Параметры методологического каталога (заводской snapshot) — не требуют поля схемы. */
 	methodologyParams?: Array<{ code: string; name: string }>;
 	/** Полный методологический каталог со значениями — для проверки «Значение недоступно». */
@@ -340,6 +345,9 @@ export function collectTypicalWorkSchemaConsistencyIssues(
 		if (!ruleRequiresSchemaBinding(rule)) {
 			continue;
 		}
+		if (isAlwaysShownTriggerParam(rule.paramCode, rule.paramName)) {
+			continue;
+		}
 		if (isArchCountLaborParamName(rule.paramName ?? "")) {
 			continue;
 		}
@@ -418,17 +426,31 @@ export function collectTypicalWorkSchemaConsistencyIssues(
 		);
 	}
 
-	for (const paramCode of input.formulaParamCodes ?? []) {
-		if (
-			!findWorkSchemaParameter(input.schemaParams, paramCode) &&
-			!input.laborParamCodes.some((row) => row.paramCode === paramCode)
-		) {
-			report(
-				"formula",
-				paramCode,
-				null,
-				"Формула ссылается на параметр, которого нет в схеме или трудоёмкости",
-			);
+	const laborRefs = input.laborParamCodes.map((row) => ({
+		paramCode: row.paramCode,
+		paramName: row.paramName,
+	}));
+	if (input.formulaTokens && input.formulaTokens.length > 0) {
+		const formulaError = validateWorkFormulaTokens(input.formulaTokens, {
+			laborParams: laborRefs,
+			allowInvalidParamRefs: true,
+		});
+		if (formulaError) {
+			report("formula", "formula", null, formulaError);
+		}
+	} else {
+		for (const paramCode of input.formulaParamCodes ?? []) {
+			if (
+				!findWorkSchemaParameter(input.schemaParams, paramCode) &&
+				!input.laborParamCodes.some((row) => row.paramCode === paramCode)
+			) {
+				report(
+					"formula",
+					paramCode,
+					null,
+					"Формула ссылается на параметр, которого нет в схеме или трудоёмкости",
+				);
+			}
 		}
 	}
 

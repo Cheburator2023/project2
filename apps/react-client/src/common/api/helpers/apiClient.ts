@@ -1,5 +1,5 @@
 import {
-	ensureKeycloakSession,
+	redirectToKeycloakLogin,
 	refreshHostAccessToken,
 	resolveFreshAccessToken,
 } from "@react-client/common/auth/syncMfeAuth";
@@ -127,7 +127,12 @@ axiosInstance.interceptors.response.use(
 		const originalRequest = error.config as RetriableAxiosConfig | undefined;
 		const status = error.response?.status;
 
-		if (status !== 401 || !originalRequest || originalRequest._authRetry) {
+		if (status !== 401 || !originalRequest) {
+			return Promise.reject(error);
+		}
+
+		if (originalRequest._authRetry) {
+			redirectToKeycloakLogin();
 			return Promise.reject(error);
 		}
 
@@ -140,7 +145,7 @@ axiosInstance.interceptors.response.use(
 		try {
 			const nextToken = await queueTokenRefresh();
 			if (!nextToken) {
-				ensureKeycloakSession();
+				redirectToKeycloakLogin();
 				return Promise.reject(error);
 			}
 
@@ -150,7 +155,7 @@ axiosInstance.interceptors.response.use(
 			};
 			return axiosInstance(originalRequest);
 		} catch (refreshError) {
-			ensureKeycloakSession();
+			redirectToKeycloakLogin();
 			return Promise.reject(refreshError);
 		}
 	},

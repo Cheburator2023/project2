@@ -165,6 +165,12 @@ function describeUiChanges(
 		if (beforeOptions.gridColumns !== afterOptions.gridColumns) {
 			details.push("Изменено число колонок");
 		}
+		if (beforeOptions.fullWidth !== afterOptions.fullWidth) {
+			details.push("Изменена ширина поля");
+		}
+		if (beforeOptions.rows !== afterOptions.rows) {
+			details.push("Изменена высота textarea");
+		}
 		if (beforeOptions.hideTitle !== afterOptions.hideTitle) {
 			details.push("Изменена видимость заголовка");
 		}

@@ -11,10 +11,12 @@ import {
 	resolveStreamsFromSourceSystems,
 	resolveTriggerStatusCatalogParam,
 	triggerRuleCatalogGroupKey,
+	normalizeTypicalWorkTriggerRulesForMatch,
 	typicalWorkRulesMatchSource,
 	V2_SOURCE_STREAM,
 } from "./v2-works-catalog-match.util";
 import { archCountTriggerMatches } from "./v2-work-arch-count-coeff.util";
+import { defaultTriggerArchCount } from "./v2-typical-work.types";
 import { resolveWorkSchemaParamForRule } from "./v2-work-schema-params-match.util";
 
 describe("v2-works-catalog-match.util", () => {
@@ -128,6 +130,37 @@ describe("v2-works-catalog-match.util", () => {
 
 	it("does not match works without triggers", () => {
 		expect(typicalWorkRulesMatchSource([], { type: "Внутренний" })).toBe(false);
+	});
+
+	it("matches always-shown trigger without reading form fields", () => {
+		expect(
+			typicalWorkRulesMatchSource(
+				[
+					{
+						paramCode: "__always__",
+						paramName: "Нет — работа выводится всегда",
+						operator: "=",
+						valueCode: null,
+						valueLabel: null,
+					},
+				],
+				{},
+			),
+		).toBe(true);
+		expect(
+			typicalWorkRulesMatchSource(
+				[
+					{
+						paramCode: "нет_работа_выводится_всегда",
+						paramName: "нет — работа выводится всегда.",
+						operator: "=",
+						valueCode: null,
+						valueLabel: null,
+					},
+				],
+				{},
+			),
+		).toBe(true);
 	});
 
 	it("matches numeric comparison operators", () => {
@@ -532,6 +565,130 @@ describe("v2-works-catalog-match.util", () => {
 					kind: "dataMart",
 					steps: [{ count: 3, coefficient: 1 }],
 					combinator: "or",
+				},
+			),
+		).toBe(true);
+	});
+
+	it("reads model-stream param triggers from formData when source is a sourceSystems row", () => {
+		const rules = [
+			{
+				paramCode: "field_o_HRj6VO",
+				paramName: "Необходимость пилота (MVP)",
+				operator: "=",
+				valueCode: "true",
+				valueLabel: "Да",
+			},
+		];
+		const formDataObject = {
+			generalInfo: {
+				modelService: {
+					field_o_HRj6VO: true,
+				},
+			},
+			detailInfo: {
+				sourceSystems: [{ name: "SRC", type: "Внутренний" }],
+			},
+		};
+		const formDataArray = {
+			generalInfo: {
+				modelService: [{ field_o_HRj6VO: true }],
+			},
+			detailInfo: {
+				sourceSystems: [{ name: "SRC", type: "Внутренний" }],
+			},
+		};
+		for (const formData of [formDataObject, formDataArray]) {
+			expect(
+				typicalWorkRulesMatchSource(
+					rules,
+					{ name: "SRC", type: "Внутренний" },
+					formData,
+					defaultTriggerArchCount(),
+					{
+						referencePath: "generalInfo.modelService.controlTypicalTasks",
+					},
+				),
+			).toBe(true);
+		}
+		expect(
+			typicalWorkRulesMatchSource(
+				rules,
+				{ name: "SRC", type: "Внутренний" },
+				{
+					generalInfo: { modelService: [{ field_o_HRj6VO: false }] },
+					detailInfo: { sourceSystems: [{ name: "SRC", type: "Внутренний" }] },
+				},
+				defaultTriggerArchCount(),
+			),
+		).toBe(false);
+	});
+
+	it("normalizes snapshot-style trigger rule with label only", () => {
+		expect(
+			typicalWorkRulesMatchSource(
+				normalizeTypicalWorkTriggerRulesForMatch([
+					{
+						paramCode: "field_o_HRj6VO",
+						paramName: "MVP",
+						operator: "=",
+						valueCode: null,
+						valueLabel: "Да",
+					},
+				]),
+				{},
+				{ field_o_HRj6VO: true },
+			),
+		).toBe(true);
+	});
+
+	it("normalizes factory snapshot values: [\"Да\"] string array", () => {
+		expect(
+			typicalWorkRulesMatchSource(
+				normalizeTypicalWorkTriggerRulesForMatch([
+					{
+						paramCode: "field_o_HRj6VO",
+						paramName: "Необходимость пилота (MVP)",
+						operator: "=",
+						valueCode: null,
+						valueLabel: null,
+						values: ["Да"],
+					},
+				]),
+				{ field_o_HRj6VO: true },
+			),
+		).toBe(true);
+	});
+
+	it("reads trigger values via schemaPointer when flat context misses them", () => {
+		const rules = [
+			{
+				paramCode: "field_o_HRj6VO",
+				paramName: "Необходимость пилота (MVP)",
+				operator: "=",
+				valueCode: "true",
+				valueLabel: "Да",
+			},
+		];
+		const formData = {
+			generalInfo: {
+				modelService: [{ field_o_HRj6VO: true }],
+			},
+		};
+		expect(
+			typicalWorkRulesMatchSource(
+				rules,
+				{},
+				formData,
+				defaultTriggerArchCount(),
+				{
+					referencePath: "generalInfo.modelService.controlTypicalTasks",
+					schemaParams: [
+						{
+							code: "field_o_HRj6VO",
+							schemaPointer: "/generalInfo/modelService/items/field_o_HRj6VO",
+						},
+					],
 				},
 			),
 		).toBe(true);

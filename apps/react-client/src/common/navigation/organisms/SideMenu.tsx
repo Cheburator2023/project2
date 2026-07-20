@@ -1,7 +1,6 @@
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import MuiDrawer, { drawerClasses } from "@mui/material/Drawer";
-import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { styled, useColorScheme } from "@mui/material/styles";
@@ -10,6 +9,10 @@ import { useGlobalSettingsStore } from "@react-client/common/store/globalSetting
 import { MenuContent } from "@react-client/common/navigation/molecules/MenuContent";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { OptionsMenu } from "@react-client/common/navigation/organisms/OptionsMenu";
+import {
+	getKeycloakUserDisplayName,
+	getKeycloakUserInitial,
+} from "@react-client/common/auth/keycloakUserText.util";
 
 const drawerWidth = 260;
 
@@ -24,7 +27,7 @@ const Drawer = styled(MuiDrawer)({
 	},
 });
 
-const DrawerWrapper = styled(Card)(({ theme }) => ({
+const DrawerWrapper = styled(Card)(() => ({
 	flexShrink: 0,
 	boxSizing: "border-box",
 	padding: 0,
@@ -46,6 +49,8 @@ export function SideMenu({
 }) {
 	const { user } = useGlobalSettingsStore();
 	const { mode } = useColorScheme();
+	const displayName = getKeycloakUserDisplayName(user);
+	const userInitial = getKeycloakUserInitial(user);
 
 	return (
 		<Drawer variant="persistent" open={open} data-test-id="side-menu--Drawer-0">
@@ -86,13 +91,19 @@ export function SideMenu({
 						borderColor: "divider",
 					}}
 				>
-					<Avatar sizes="small" sx={{ width: 36, height: 36 }}>
-						{(user?.given_name ?? user?.family_name)?.charAt(0) ?? "?"}
+					<Avatar
+						sizes="small"
+						sx={{ width: 36, height: 36, fontFamily: "inherit" }}
+					>
+						{userInitial}
 					</Avatar>
 					<Box sx={{ mr: "auto", minWidth: 0 }}>
-						<Typography variant="body2" sx={{ fontWeight: 500, lineHeight: "16px" }} noWrap>
-							{`${user?.family_name ?? ""} ${user?.given_name ?? ""}`.trim() ||
-								"Пользователь"}
+						<Typography
+							variant="body2"
+							sx={{ fontWeight: 500, lineHeight: "16px", fontFamily: "inherit" }}
+							noWrap
+						>
+							{displayName}
 						</Typography>
 						{user?.email && (
 							<Typography variant="caption" color="text.secondary" noWrap display="block">

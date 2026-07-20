@@ -3,8 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeAtypicalWorkRowTotal = computeAtypicalWorkRowTotal;
 exports.withComputedAtypicalWorkRowTotal = withComputedAtypicalWorkRowTotal;
 exports.collectAtypicalWorkArrayPaths = collectAtypicalWorkArrayPaths;
+exports.isAtypicalWorksLogicComplete = isAtypicalWorksLogicComplete;
 exports.buildAtypicalWorkRowTotalRule = buildAtypicalWorkRowTotalRule;
 exports.buildUnifiedAtypicalTotalRule = buildUnifiedAtypicalTotalRule;
+exports.resolveAnketaCalculationLogic = resolveAnketaCalculationLogic;
 exports.patchV2AnketaCalculationLogicRules = patchV2AnketaCalculationLogicRules;
 exports.patchV2AtypicalWorksLogicRules = patchV2AtypicalWorksLogicRules;
 exports.collectAtypicalWorkRowsFromData = collectAtypicalWorkRowsFromData;
@@ -74,6 +76,18 @@ function collectAtypicalWorkArrayPaths(uiSchema, prefix = "") {
 function atypicalRowTotalRuleId(arrayPath) {
     return `unified-atypical-row-total:${arrayPath.replace(/\./g, "_")}`;
 }
+/** Logic snapshot уже содержит row/total правила нетиповых работ. */
+function isAtypicalWorksLogicComplete(logic, options) {
+    const arrayPaths = collectAtypicalWorkArrayPaths(options?.uiSchema);
+    if (arrayPaths.length === 0)
+        return true;
+    const ruleIds = new Set((logic?.rules ?? []).map((rule) => rule.id));
+    for (const path of arrayPaths) {
+        if (!ruleIds.has(atypicalRowTotalRuleId(path)))
+            return false;
+    }
+    return ruleIds.has("unified-atypical-total");
+}
 function isAtypicalPatchedRuleId(id) {
     return (id === "unified-atypical-total" || id.startsWith("unified-atypical-row-total:"));
 }
@@ -141,9 +155,23 @@ function buildUnifiedAtypicalTotalRule(arrayPaths) {
         dependencies: arrayPaths.map((path) => `/${path.replace(/\./g, "/")}`),
     };
 }
+/** Патч logic только если в snapshot/версии не хватает catalog/row-total правил. */
+function resolveAnketaCalculationLogic(logic, options) {
+    const upgraded = (0, v2_default_typical_works_logic_util_1.upgradeTypicalWorksCatalogLogicRules)(logic, options);
+    const withTypical = (0, v2_default_typical_works_logic_util_1.isTypicalWorksCatalogLogicComplete)(upgraded, options)
+        ? upgraded
+        : (0, v2_default_typical_works_logic_util_1.patchV2TypicalWorksLogicRules)(upgraded, options);
+    return isAtypicalWorksLogicComplete(withTypical, {
+        uiSchema: options?.uiSchema,
+    })
+        ? withTypical
+        : patchV2AtypicalWorksLogicRules(withTypical, {
+            uiSchema: options?.uiSchema,
+        });
+}
 /** Патч типовых + нетиповых правил калькуляции под uiSchema шаблона. */
 function patchV2AnketaCalculationLogicRules(logic, options) {
-    return patchV2AtypicalWorksLogicRules((0, v2_default_typical_works_logic_util_1.patchV2TypicalWorksLogicRules)(logic, options), { uiSchema: options?.uiSchema });
+    return resolveAnketaCalculationLogic(logic, options);
 }
 /** Добавляет row_computed и unified-atypical-total для arch-блоков «Нетиповые работы». */
 function patchV2AtypicalWorksLogicRules(logic, options) {

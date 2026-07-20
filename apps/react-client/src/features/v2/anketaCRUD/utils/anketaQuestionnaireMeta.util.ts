@@ -87,3 +87,26 @@ export function isQuestionnaireCalcNameValid(value: string): boolean {
 	const trimmed = normalizeQuestionnaireCalcName(value);
 	return trimmed.length > 0 && trimmed.length <= 255;
 }
+
+/** Предложение названия для копии анкеты (≤255 символов). */
+export function buildQuestionnaireCopyCalcName(sourceName: string): string {
+	const base = normalizeQuestionnaireCalcName(sourceName) || "Анкета";
+	const suffix = " (копия)";
+	const maxBaseLen = 255 - suffix.length;
+	const trimmedBase =
+		base.length > maxBaseLen ? base.slice(0, maxBaseLen).trimEnd() : base;
+	return `${trimmedBase}${suffix}`;
+}
+
+/** Предложение названия для новой версии в серии. */
+export function buildQuestionnaireVersionCalcName(
+	sourceName: string,
+	nextVersion: string | number,
+): string {
+	const base = normalizeQuestionnaireCalcName(sourceName) || "Анкета";
+	const suffix = ` (версия ${nextVersion})`;
+	const maxBaseLen = 255 - suffix.length;
+	const trimmedBase =
+		base.length > maxBaseLen ? base.slice(0, maxBaseLen).trimEnd() : base;
+	return `${trimmedBase}${suffix}`;
+}

@@ -1,5 +1,6 @@
 import { parseWorkFormulaText } from "./v2-work-formula.util";
 import { slugParamCode } from "./v2-param-slug.util";
+import { normalizeTypicalWorkTriggerRuleForMatch, V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME, } from "./v2-works-catalog-match.util";
 /** RFC4180-подобный парсер CSV с `;` и многострочными полями в кавычках. */
 export function parseCsvSemicolon(text) {
     const rows = [];
@@ -260,6 +261,13 @@ function parseSingleModelStreamTriggerRule(raw) {
     const part = clean(raw);
     if (!part)
         return null;
+    if (/нет\s*[—–-]\s*работа\s+выводится\s+всегда/iu.test(part)) {
+        return {
+            paramName: V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
+            operator: "exists",
+            values: [],
+        };
+    }
     const eqQuoted = part.match(/^(.+?)\s*=\s*«([^»]+)»\s*$/u);
     if (eqQuoted?.[1] && eqQuoted[2]) {
         return {
@@ -299,6 +307,16 @@ export function parseModelStreamTriggerRules(raw) {
     return splitModelStreamTriggerClauses(trimmed)
         .map((chunk) => parseSingleModelStreamTriggerRule(chunk))
         .filter((rule) => rule !== null);
+}
+/** Строка триггера из колонки «Результат выбора» (блок «Триггер: …»). */
+export function extractTriggerTextFromResultChoice(raw) {
+    const normalized = raw.replace(/\r/g, "").trim();
+    if (!normalized)
+        return "";
+    const match = normalized.match(/(?:^|\n)\s*Триггер:\s*([^\n]+)/iu);
+    if (!match?.[1])
+        return "";
+    return clean(match[1].replace(/\s*\(иначе.*$/iu, ""));
 }
 function splitTopLevelList(raw) {
     const parts = [];
@@ -390,6 +408,13 @@ export function parseCsvTriggerRules(raw) {
                 values: [],
             };
         }
+        if (/нет\s*[—–-]\s*работа\s+выводится\s+всегда/iu.test(rawParam)) {
+            return {
+                paramName: V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
+                operator: "exists",
+                values: [],
+            };
+        }
         return {
             paramName: rawParam,
             operator: "exists",
@@ -464,6 +489,7 @@ export function parseCsvFormulaImportRows(csvText) {
     const cWorkType = idx("Тип работы");
     const cNorm = idx("Наличие норматива");
     const cTrigger = idx("Параметр-триггер");
+    const cResult = header.findIndex((h) => clean(h).toLowerCase().includes("результат выбора"));
     const cLabor = idx("Параметры трудоемкости");
     const cFormula = idx("Формула");
     const cCoeffs = header.findIndex((h) => clean(h).toLowerCase().includes("коэффициенты параметров"));
@@ -482,8 +508,12 @@ export function parseCsvFormulaImportRows(csvText) {
             stripWorkStagePrefix(originalName) ||
             smartName ||
             originalName;
-        const triggerRaw = r[cTrigger] ?? "";
-        const triggerRules = stream === "Модельный стрим"
+        const triggerFromResult = cResult >= 0
+            ? extractTriggerTextFromResultChoice(r[cResult] ?? "")
+            : "";
+        const triggerRaw = triggerFromResult || (r[cTrigger] ?? "");
+        const isModelStream = stream === "Модельный стрим" || stream === "Модельные стримы";
+        const triggerRules = isModelStream
             ? parseModelStreamTriggerRules(triggerRaw)
             : parseCsvTriggerRules(triggerRaw);
         return {
@@ -938,12 +968,37 @@ export function csvRowToCatalogPatch(row, candidates, overrides = {}) {
                 ? parseModelStreamLaborCoefficients(row.laborCoefficientsRaw)
                 : parseCsvLaborCoefficients(row.formulaRaw, row.component),
             triggerParams: row.triggerParams,
-            triggerRules: row.triggerRules,
+            triggerRules: row.triggerRules.map((rule) => enrichFactorySnapshotTriggerRule(rule)),
             norm: row.norm,
             normRaw: row.normRaw,
             workType: row.workType || undefined,
         },
         build,
+    };
+}
+/** Нормализует triggerRules factory snapshot: valueCode/valueLabel для boolean «Да»/«Нет». */
+export function enrichFactorySnapshotTriggerRule(rule) {
+    const operator = rule.operator === "exists" || rule.operator === "unresolved"
+        ? rule.operator
+        : (rule.operator ?? "=");
+    if (operator === "exists" || operator === "unresolved") {
+        return { ...rule, operator };
+    }
+    const normalized = normalizeTypicalWorkTriggerRuleForMatch({
+        paramCode: rule.paramCode?.trim() || slugParamCode(rule.paramName),
+        paramName: rule.paramName,
+        operator,
+        valueCode: rule.valueCode ?? null,
+        valueLabel: rule.valueLabel ?? null,
+        values: rule.values?.length ? rule.values : undefined,
+    });
+    return {
+        ...rule,
+        operator: normalized.operator,
+        valueCode: normalized.valueCode,
+        valueLabel: normalized.valueLabel,
+        values: rule.values ??
+            (normalized.valueLabel ? [normalized.valueLabel] : undefined),
     };
 }
 export function validateImportedFormulaText(formulaText) {

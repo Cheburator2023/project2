@@ -1,6 +1,8 @@
 import type { ColDef, ColGroupDef, ColumnState } from "ag-grid-community";
 import {
+	flattenV2RegistryColumnTree,
 	registryFormColumnId,
+	type V2RegistryColumnNode,
 	type V2RegistrySchemaColumnOptions,
 } from "@smart-anketa/api-contract";
 import type { V2QuestionnaireGridRow } from "../types/v2QuestionnaireGrid.types";
@@ -130,6 +132,12 @@ export function applyQuestionnaireGridPreset(
 	api.onFilterChanged();
 }
 
+export function getAllGridColumnIdsFromTree(
+	columnTree: readonly V2RegistryColumnNode[],
+): string[] {
+	return flattenV2RegistryColumnTree(columnTree).map((leaf) => leaf.id);
+}
+
 export function getAllGridColumnIds(
 	jsonSchema?: Record<string, unknown>,
 	uiSchema?: Record<string, unknown>,
@@ -138,6 +146,32 @@ export function getAllGridColumnIds(
 	return collectLeafColumnIds(
 		buildV2QuestionnaireColumnDefs(jsonSchema, uiSchema, options),
 	);
+}
+
+function buildFactoryPresetsFromTree(
+	columnTree: readonly V2RegistryColumnNode[],
+): FactoryGridPreset[] {
+	const allIds = getAllGridColumnIdsFromTree(columnTree);
+	return [
+		{
+			id: FACTORY_PRESET_IDS.default,
+			name: "Базовый",
+			description:
+				"ID, название, даты, заказчик, стрим, версия, статусы разделов и общая стоимость.",
+			builtIn: true,
+			columnState: buildColumnState(allIds, DEFAULT_REGISTRY_VISIBLE),
+			filterModel: null,
+		},
+		{
+			id: FACTORY_PRESET_IDS.allInformation,
+			name: "Вся информация",
+			description:
+				"Все колонки анкеты: реестр, разделы, итоговая оценка и расчёты.",
+			builtIn: true,
+			columnState: buildColumnState(allIds, [PRIMARY_NAME_COL_ID, ...allIds]),
+			filterModel: null,
+		},
+	];
 }
 
 function buildFactoryPresets(
@@ -168,12 +202,27 @@ function buildFactoryPresets(
 	];
 }
 
+export function getFactoryGridPresetsFromTree(
+	columnTree: readonly V2RegistryColumnNode[],
+): FactoryGridPreset[] {
+	return buildFactoryPresetsFromTree(columnTree);
+}
+
 export function getFactoryGridPresets(
 	jsonSchema?: Record<string, unknown>,
 	uiSchema?: Record<string, unknown>,
 	options?: V2RegistrySchemaColumnOptions,
 ): FactoryGridPreset[] {
 	return buildFactoryPresets(jsonSchema, uiSchema, options);
+}
+
+export function getFactoryGridPresetFromTree(
+	id: string,
+	columnTree: readonly V2RegistryColumnNode[],
+): FactoryGridPreset | undefined {
+	return getFactoryGridPresetsFromTree(columnTree).find(
+		(preset) => preset.id === id,
+	);
 }
 
 export function getFactoryGridPreset(

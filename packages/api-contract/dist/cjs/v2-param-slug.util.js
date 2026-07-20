@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.slugParamCode = slugParamCode;
 exports.normalizeStoredValueCode = normalizeStoredValueCode;
 exports.normalizeStoredValueLabel = normalizeStoredValueLabel;
+exports.resolveCatalogTriggerStoredValue = resolveCatalogTriggerStoredValue;
 /** Legacy slug для paramCode из человекочитаемого названия параметра. */
 function slugParamCode(name) {
     return name
@@ -41,4 +42,20 @@ function normalizeStoredValueLabel(label) {
     if (trimmed.length <= MAX_STORED_VALUE_LABEL_LENGTH)
         return trimmed;
     return trimmed.slice(0, MAX_STORED_VALUE_LABEL_LENGTH);
+}
+/** Код/метка триггера из factory CSV («Да» → true для boolean-полей схемы). */
+function resolveCatalogTriggerStoredValue(label) {
+    const trimmed = label.trim();
+    if (!trimmed)
+        return { valueCode: "", valueLabel: "" };
+    const lower = trimmed.toLowerCase();
+    if (lower === "да")
+        return { valueCode: "true", valueLabel: "Да" };
+    if (lower === "нет")
+        return { valueCode: "false", valueLabel: "Нет" };
+    const valueLabel = normalizeStoredValueLabel(trimmed) ?? trimmed;
+    return {
+        valueCode: normalizeStoredValueCode(slugParamCode(trimmed), valueLabel),
+        valueLabel,
+    };
 }

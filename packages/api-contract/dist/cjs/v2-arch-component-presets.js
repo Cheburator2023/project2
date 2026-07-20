@@ -54,15 +54,15 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "title": "Способ загрузки данных в BI-систему"
                 },
                 "field_F7nK-We5": {
-                    "type": "string",
-                    "title": "Тип БД для BI-системы",
                     "enum": [
                         "Векторные",
                         "Графовые",
                         "Временные ряды и события",
                         "Документо-ориентированные",
                         "Специализированные"
-                    ]
+                    ],
+                    "type": "string",
+                    "title": "Тип БД для BI-системы"
                 },
                 "field_JcKtx9Mg": {
                     "type": "boolean",
@@ -75,7 +75,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "field_SvNx6iEq": {
                     "type": "array",
                     "items": {
-                        "type": "string",
                         "enum": [
                             "КД — Качество модельных данных",
                             "ТМ — Технический контроль",
@@ -83,7 +82,8 @@ const SNAPSHOT_ARCH_PRESETS = {
                             "АК — Аналитический контроль",
                             "КМЗ — Контроль модельных значений",
                             "ОВ — Оценка влияния моделей"
-                        ]
+                        ],
+                        "type": "string"
                     },
                     "title": "Вид контроля",
                     "uniqueItems": true
@@ -103,7 +103,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "field_jUm5syZf": {
                     "type": "array",
                     "items": {
-                        "type": "string",
                         "enum": [
                             "Батч",
                             "Батч + загрузка данных потребителю",
@@ -116,7 +115,8 @@ const SNAPSHOT_ARCH_PRESETS = {
                             "Гео-сервисы",
                             "Внедрение в облаке",
                             "Графовая платформа"
-                        ]
+                        ],
+                        "type": "string"
                     },
                     "title": "Каналы внедрения",
                     "uniqueItems": true
@@ -429,8 +429,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "title": "Требуется ручная обработка результатов автоматизированной разметки данных"
                     },
                     "field_Y_K0Hy0e": {
-                        "type": "string",
-                        "title": "Количество сущностей (исходных таблиц)",
                         "enum": [
                             "Точечное (1-4)",
                             "Малое (5-9)",
@@ -439,17 +437,19 @@ const SNAPSHOT_ARCH_PRESETS = {
                             "Большое (20-25)",
                             "Масштабное (25+)",
                             "Неизвестно"
-                        ]
+                        ],
+                        "type": "string",
+                        "title": "Количество сущностей (исходных таблиц)"
                     },
                     "field_d3OCFyaC": {
-                        "type": "string",
-                        "title": "Сложность предметной области",
                         "enum": [
                             "Низкая",
                             "Средняя",
                             "Высокая",
                             "Неизвестно"
-                        ]
+                        ],
+                        "type": "string",
+                        "title": "Сложность предметной области"
                     },
                     "field_fJ_7OdE7": {
                         "type": "boolean",
@@ -460,13 +460,13 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "title": "Требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
                     },
                     "field_lzP44Urx": {
-                        "type": "string",
-                        "title": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик",
                         "enum": [
                             "Да",
                             "Нет",
                             "Неизвестно"
-                        ]
+                        ],
+                        "type": "string",
+                        "title": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик"
                     },
                     "field_nE73kPQl": {
                         "enum": [
@@ -477,10 +477,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                         ],
                         "type": "string",
                         "title": "Детализация и ясность запроса постановки задачи"
-                    },
-                    "field_qMxSfHk1": {
-                        "type": "boolean",
-                        "title": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
                     },
                     "field_tpROQBf5": {
                         "enum": [
@@ -505,14 +501,14 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "title": "Риск появления дополнительных систем-источников"
                     },
                     "field_wuYlhnu0": {
-                        "type": "string",
-                        "title": "Сложность настройки шаблона разметки данных",
                         "enum": [
                             "Высокая",
                             "Средняя",
                             "Низкая",
                             "Неизвестно"
-                        ]
+                        ],
+                        "type": "string",
+                        "title": "Сложность настройки шаблона разметки данных"
                     }
                 }
             },
@@ -550,7 +546,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "field_whHc-OoW",
                     "field_-EGYyyJF",
                     "field_fJ_7OdE7",
-                    "field_qMxSfHk1",
                     "field_d3OCFyaC",
                     "field_Y_K0Hy0e",
                     "field_nE73kPQl",
@@ -731,12 +726,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "schemaFieldUid": "field_d8ea6134-00e5-4fc6-9253-4885103db9e2"
                     }
                 },
-                "field_qMxSfHk1": {
-                    "ui:options": {
-                        "schemaFieldUid": "field_2eeb9751-22b7-4545-afeb-75bc4c7ec74e"
-                    },
-                    "ui:placeholder": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
-                },
                 "field_tpROQBf5": {
                     "ui:widget": "select",
                     "ui:options": {
@@ -772,6 +761,9 @@ const SNAPSHOT_ARCH_PRESETS = {
         "schema": {
             "type": "object",
             "title": "Процессы обработки данных",
+            "required": [
+                "field_It-B8PfV"
+            ],
             "properties": {
                 "deliveryMode": {
                     "enum": [
@@ -822,6 +814,10 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "type": "string",
                     "title": "Сложность реализации"
                 },
+                "field_qMxSfHk1": {
+                    "type": "boolean",
+                    "title": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
+                },
                 "field_yJ51GkCR": {
                     "enum": [
                         "Разработка",
@@ -855,6 +851,7 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "deliveryMode",
                 "field_UEzs5Q87",
                 "confidentialData",
+                "field_qMxSfHk1",
                 "field_C6oqyTPh",
                 "field_R3Lx-csF",
                 "field_HgUCNn6E"
@@ -900,6 +897,12 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "schemaFieldUid": "field_aa1dc517-1277-4ca5-ad9f-ed0bb8a9efe6"
                 }
             },
+            "field_qMxSfHk1": {
+                "ui:options": {
+                    "schemaFieldUid": "field_2eeb9751-22b7-4545-afeb-75bc4c7ec74e"
+                },
+                "ui:placeholder": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
+            },
             "field_yJ51GkCR": {
                 "ui:widget": "select",
                 "ui:options": {
@@ -920,6 +923,9 @@ const SNAPSHOT_ARCH_PRESETS = {
         "schema": {
             "type": "object",
             "title": "Объект / Витрина данных",
+            "required": [
+                "field_zApubb5V"
+            ],
             "properties": {
                 "workType": {
                     "enum": [
@@ -1025,6 +1031,14 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "field_zApubb5V": {
                     "type": "string",
                     "title": "Название объекта/витрины данных"
+                },
+                "field_saveRawFs": {
+                    "type": "boolean",
+                    "title": "Требуется сохранять сырые данные в Хранилище признаков"
+                },
+                "readyPromReports": {
+                    "type": "boolean",
+                    "title": "Наличие готовых пром витрин (необходима продуктивизация)"
                 }
             }
         },
@@ -1040,6 +1054,7 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "workType",
                 "field_lovKvLZc",
                 "field_hIM0c5gG",
+                "field_saveRawFs",
                 "field_w_EN6lWe",
                 "metricsCount",
                 "field_46LCnfWo",
@@ -1047,6 +1062,7 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "field_rZeUo8a_",
                 "field_Q8DGJNTn",
                 "field_xva1dRvW",
+                "readyPromReports",
                 "field_Ad1msOl7",
                 "field_28IPlEQu",
                 "field_fRuMuWtn",
@@ -1152,6 +1168,17 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "ui:options": {
                     "schemaFieldUid": "field_877bae45-21cb-4237-a20a-83260f054e9e"
                 }
+            },
+            "field_saveRawFs": {
+                "ui:options": {
+                    "schemaFieldUid": "field_a8c3e1d2-4b5f-6789-a0b1-c2d3e4f50607"
+                }
+            },
+            "readyPromReports": {
+                "ui:widget": "checkbox",
+                "ui:options": {
+                    "schemaFieldUid": "field_12d42005-7d15-4d0f-9aa0-2b6eebc596c8"
+                }
             }
         }
     },
@@ -1159,6 +1186,9 @@ const SNAPSHOT_ARCH_PRESETS = {
         "schema": {
             "type": "object",
             "title": "Модель",
+            "required": [
+                "field_atxiq-UM"
+            ],
             "properties": {
                 "autoML": {
                     "type": "boolean",
@@ -1204,12 +1234,12 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "title": "AutoML: требуется новая библиотека"
                 },
                 "field_VbI-0aiT": {
-                    "type": "string",
-                    "title": "Роль модели",
                     "enum": [
                         "Обычная",
                         "Оркестратор"
-                    ]
+                    ],
+                    "type": "string",
+                    "title": "Роль модели"
                 },
                 "field_atxiq-UM": {
                     "type": "string",

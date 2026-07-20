@@ -57,6 +57,12 @@ export type V2WorkFormulaTermDto = {
 	sourceWorkId?: string | null;
 	sourceWorkName?: string | null;
 	factors: V2WorkFormulaFactorDto[];
+	/**
+	 * Слагаемое вида `N × …`: при расчёте умножается на базовый норматив.
+	 * `coeffTokens` — токены коэффициента (без ведущего N), включая архкоэф.
+	 */
+	scaleByNorm?: boolean;
+	coeffTokens?: import("./v2-typical-work.types").V2WorkFormulaToken[];
 };
 
 export type V2TypicalWorkFormulaTermsDto = {

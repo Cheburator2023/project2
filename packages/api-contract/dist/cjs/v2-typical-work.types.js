@@ -5,7 +5,7 @@
  * Формула и округление — конфигурация версии шаблона.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.V2_TYPICAL_WORK_TRIGGER_MODE_VALUES = exports.V2_WORK_FORMULA_ARCH_COUNT_KINDS = exports.V2_LOGIC_WORKSPACE_TAB_VALUES = exports.V2_WORK_TRIGGER_STATUS_VALUES = exports.V2_WORK_ROUNDING_MODE_VALUES = exports.V2_WORK_RULE_OPERATOR_VALUES = void 0;
+exports.V2_TYPICAL_WORK_TRIGGER_MODE_VALUES = exports.V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES = exports.V2_WORK_FORMULA_ARCH_COUNT_KINDS = exports.V2_LOGIC_WORKSPACE_TAB_VALUES = exports.V2_WORK_TRIGGER_STATUS_VALUES = exports.V2_WORK_ROUNDING_MODE_VALUES = exports.V2_WORK_RULE_OPERATOR_VALUES = void 0;
 exports.defaultTriggerArchCount = defaultTriggerArchCount;
 exports.defaultTriggerFormula = defaultTriggerFormula;
 exports.resolveActiveNormOnDate = resolveActiveNormOnDate;
@@ -45,6 +45,13 @@ exports.V2_WORK_FORMULA_ARCH_COUNT_KINDS = [
     "dataProcess",
     "modelService",
 ];
+exports.V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES = [
+    ">=",
+    "<=",
+    "=",
+    ">",
+    "<",
+];
 function defaultTriggerArchCount() {
     return { kind: null, steps: [], combinator: "and" };
 }
@@ -55,8 +62,13 @@ function defaultTriggerFormula() {
 /** Норма, действующая на дату (для дерева и превью). */
 function resolveActiveNormOnDate(norms, streamExecutor, atDate) {
     const day = atDate.slice(0, 10);
+    const streams = new Set((typeof streamExecutor === "string"
+        ? [streamExecutor]
+        : [...streamExecutor])
+        .map((value) => value.trim())
+        .filter(Boolean));
     const matching = norms.filter((n) => {
-        if (n.streamExecutor !== streamExecutor)
+        if (!streams.has(n.streamExecutor))
             return false;
         const from = n.validFrom.slice(0, 10);
         const to = n.validTo?.slice(0, 10) ?? null;

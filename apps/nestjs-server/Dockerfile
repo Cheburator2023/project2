@@ -35,6 +35,9 @@ RUN set -eux; \
 		echo "Unsupported Docker build context for nestjs-server." >&2; \
 		exit 1; \
 	fi; \
+	if [ -f /tmp/build-context/CHANGELOG.md ]; then \
+		cp /tmp/build-context/CHANGELOG.md /app/CHANGELOG.md; \
+	fi; \
 	rm -rf /tmp/build-context
 
 RUN npm --prefix packages/api-contract run build \

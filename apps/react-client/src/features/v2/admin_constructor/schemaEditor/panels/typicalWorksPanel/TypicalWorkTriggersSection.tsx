@@ -11,6 +11,7 @@ import type {
 	V2TypicalWorkRuleDto,
 	V2TypicalWorkTriggerArchCountCombinator,
 	V2TypicalWorkTriggerArchCountDto,
+	V2TypicalWorkTriggerArchCountOperator,
 	V2TypicalWorkTriggerFormulaDto,
 	V2TypicalWorkTriggerMode,
 	V2WorkFormulaArchCountKind,
@@ -18,28 +19,34 @@ import type {
 	V2WorkTriggerStatus,
 } from "@smart-anketa/api-contract";
 import {
+	V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE,
+	V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
+	V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES,
 	V2_WORK_FORMULA_ARCH_COUNT_KINDS,
 	V2_WORK_RULE_OPERATOR_VALUES,
 	catalogValueMatchesTriggerRule,
 	defaultTriggerArchCount,
 	defaultTriggerFormula,
+	decodeTriggerArchCountCondition,
+	describeTypicalWorkTriggerConditions,
+	encodeTriggerArchCountSteps,
+	formatTriggerArchCountConditionLabel,
 	formatWorkArchCountKindLabel,
+	isAlwaysShownTriggerParam,
 	isControlTypeTriggerParam,
 	isSourceTypeTriggerParam,
-	validateArchCountCoeffSteps,
+	isTriggerArchCountConfigured,
+	validateTriggerArchCountCondition,
 } from "@smart-anketa/api-contract";
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
 import { V2_TEMPLATE_EDIT_TEST_IDS as TID } from "@react-client/features/v2/admin_constructor/testIds";
 import { useEffect, useMemo, useState } from "react";
-import {
-	ArchCountCoeffStepsEditor,
-	formatArchCountCoeffChipSubtitle,
-} from "./ArchCountCoeffStepsEditor";
+import AddIcon from "@mui/icons-material/Add";
+import TextField from "@mui/material/TextField";
 import {
 	catalogForTriggerRuleGroup,
 	isWorkTriggerGroupInvalid,
-	type TriggerPreviewState,
 	type TriggerValidationIssue,
 } from "./typicalWorkPatchErrors";
 import {
@@ -64,7 +71,7 @@ const TRIGGER_MODE_SEGMENTS: Array<{
 	{
 		id: "simple",
 		label: "Простые условия",
-		title: "Параметры-триггеры с объединением по И",
+		title: "Условия появления типовых работ с объединением по И",
 	},
 	{
 		id: "formula",
@@ -73,13 +80,20 @@ const TRIGGER_MODE_SEGMENTS: Array<{
 	},
 ];
 
+const ALWAYS_SHOWN_TRIGGER_PARAM: V2TypicalWorkParameterDto = {
+	id: `pseudo:${V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE}`,
+	code: V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE,
+	name: V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
+	description: "Работа появляется всегда, без проверки полей анкеты",
+	values: [],
+};
+
 type TypicalWorkTriggersSectionProps = {
 	rules: V2TypicalWorkRuleDto[];
 	triggerMode?: V2TypicalWorkTriggerMode;
 	triggerFormula?: V2TypicalWorkTriggerFormulaDto;
 	triggerArchCount?: V2TypicalWorkTriggerArchCountDto;
 	triggerStatus: V2WorkTriggerStatus;
-	triggerPreviewState?: TriggerPreviewState;
 	validationIssues?: TriggerValidationIssue[];
 	schemaFieldCount?: number;
 	paramOptions: V2TypicalWorkParameterDto[];
@@ -104,6 +118,17 @@ const OPERATOR_LABELS: Record<V2WorkRuleOperator, string> = {
 	"<": "<",
 	in: "∈",
 	not_in: "∉",
+};
+
+const TRIGGER_ARCH_COUNT_OPERATOR_LABELS: Record<
+	V2TypicalWorkTriggerArchCountOperator,
+	string
+> = {
+	">=": "≥",
+	"<=": "≤",
+	"=": "=",
+	">": ">",
+	"<": "<",
 };
 
 type ArchCountOption = {
@@ -139,20 +164,7 @@ function triggerBanner(
 	status: V2WorkTriggerStatus,
 	ruleCount: number,
 	issues: TriggerValidationIssue[] = [],
-	previewState: TriggerPreviewState = "none",
 ) {
-	if (status === "hidden" && previewState === "none" && ruleCount > 0) {
-		return {
-			bg: "#eef4ff",
-			border: "#d4e2f7",
-			iconBg: "#2f6bd8",
-			icon: "i",
-			title: `Условия настроены (${ruleCount} ${ruleCount === 1 ? "условие" : "условия"})`,
-			sub: "заполните поля стрима или систему-источник в превью анкеты — тогда проверим появление работы",
-			fg: "#2f6bd8",
-		};
-	}
-
 	switch (status) {
 		case "appears":
 			return {
@@ -160,8 +172,8 @@ function triggerBanner(
 				border: "#cfe9d8",
 				iconBg: "#1f8a4d",
 				icon: "✓",
-				title: `Работа появляется в анкете (${ruleCount} ${ruleCount === 1 ? "условие" : "условия"})`,
-				sub: "все условия выполнены для источника в превью",
+				title: `Условия настроены (${ruleCount} ${ruleCount === 1 ? "условие" : "условия"})`,
+				sub: "условия появления заданы в этой работе — источник для анкеты",
 				fg: "#1f8a4d",
 			};
 		case "invalid":
@@ -174,18 +186,8 @@ function triggerBanner(
 				sub:
 					issues.length > 0
 						? issues.map((item) => item.message).join(" · ")
-						: "проверьте параметры-триггеры",
+						: "проверьте условия появления",
 				fg: "#c62828",
-			};
-		case "hidden":
-			return {
-				bg: "#eef1f6",
-				border: "#dfe2ea",
-				iconBg: "#5b6577",
-				icon: "–",
-				title: "Работа скрыта при текущих ответах",
-				sub: "есть триггеры, но условия не выполнены",
-				fg: "#5b6577",
 			};
 		default:
 			return {
@@ -193,7 +195,7 @@ function triggerBanner(
 				border: "#f0e3c8",
 				iconBg: "#b5791f",
 				icon: "•",
-				title: "Без триггеров — работа не появится в анкете",
+				title: "Без условий появления — работа не появится в анкете",
 				sub: "добавьте хотя бы одно условие, чтобы работа участвовала в расчёте",
 				fg: "#b5791f",
 			};
@@ -206,7 +208,6 @@ export function TypicalWorkTriggersSection({
 	triggerFormula = defaultTriggerFormula(),
 	triggerArchCount = defaultTriggerArchCount(),
 	triggerStatus,
-	triggerPreviewState = "none",
 	validationIssues = [],
 	schemaFieldCount = 0,
 	paramOptions,
@@ -222,7 +223,7 @@ export function TypicalWorkTriggersSection({
 }: TypicalWorkTriggersSectionProps) {
 	const [pickerKey, setPickerKey] = useState(0);
 	const [archCountPickerKey, setArchCountPickerKey] = useState(0);
-	const [archCountEditOpen, setArchCountEditOpen] = useState(false);
+	const [archCountPanelOpen, setArchCountPanelOpen] = useState(false);
 	const [triggerPickerSearchTerm, setTriggerPickerSearchTerm] = useState<
 		string | undefined
 	>(undefined);
@@ -232,19 +233,26 @@ export function TypicalWorkTriggersSection({
 				(token) => token.kind === "param" || token.kind === "arch_count",
 			).length;
 		}
-		return rules.length + (triggerArchCount.kind ? 1 : 0);
-	}, [
-		triggerMode,
-		triggerFormula.tokens,
-		rules.length,
-		triggerArchCount.kind,
-	]);
+		return (
+			rules.length + (isTriggerArchCountConfigured(triggerArchCount) ? 1 : 0)
+		);
+	}, [triggerMode, triggerFormula.tokens, rules.length, triggerArchCount]);
 
 	const banner = triggerBanner(
 		triggerStatus,
 		configuredConditionCount,
 		validationIssues,
-		triggerPreviewState,
+	);
+
+	const triggerConditionsSummary = useMemo(
+		() =>
+			describeTypicalWorkTriggerConditions({
+				mode: triggerMode,
+				rules,
+				triggerFormula,
+				triggerArchCount,
+			}),
+		[rules, triggerArchCount, triggerFormula, triggerMode],
 	);
 
 	const usedGroupKeys = useMemo(
@@ -252,10 +260,19 @@ export function TypicalWorkTriggersSection({
 		[rules, paramOptions],
 	);
 
-	const pickerItems = useMemo(
-		() => paramOptions.filter((p) => !usedGroupKeys.has(p.code)),
-		[paramOptions, usedGroupKeys],
+	const hasAlwaysTrigger = useMemo(
+		() =>
+			rules.some((rule) =>
+				isAlwaysShownTriggerParam(rule.paramCode, rule.paramName),
+			),
+		[rules],
 	);
+
+	const pickerItems = useMemo(() => {
+		const schemaItems = paramOptions.filter((p) => !usedGroupKeys.has(p.code));
+		if (hasAlwaysTrigger) return schemaItems;
+		return [ALWAYS_SHOWN_TRIGGER_PARAM, ...schemaItems];
+	}, [paramOptions, usedGroupKeys, hasAlwaysTrigger]);
 
 	const emptyPickerHint = schemaWorkParameterEmptyPickerMessage(
 		schemaFieldCount,
@@ -263,14 +280,40 @@ export function TypicalWorkTriggersSection({
 		pickerItems.length,
 	);
 
+	const archCountCondition = useMemo(
+		() =>
+			triggerArchCount.kind
+				? decodeTriggerArchCountCondition(triggerArchCount.steps)
+				: null,
+		[triggerArchCount.kind, triggerArchCount.steps],
+	);
+
 	const archCountInvalid =
 		triggerArchCount.kind != null &&
 		Boolean(
-			validateArchCountCoeffSteps(
+			validateTriggerArchCountCondition(
 				triggerArchCount.kind,
 				triggerArchCount.steps,
 			),
 		);
+
+	const updateTriggerArchCountCondition = (
+		patch: Partial<{
+			operator: V2TypicalWorkTriggerArchCountOperator;
+			threshold: number;
+		}>,
+	) => {
+		if (!triggerArchCount.kind) return;
+		const current = decodeTriggerArchCountCondition(triggerArchCount.steps) ?? {
+			operator: ">=" as const,
+			threshold: 1,
+		};
+		const next = { ...current, ...patch };
+		onTriggerArchCountChange({
+			...triggerArchCount,
+			steps: encodeTriggerArchCountSteps(next.operator, next.threshold),
+		});
+	};
 
 	useEffect(() => {
 		if (!triggerParamPickId?.trim()) return;
@@ -388,9 +431,28 @@ export function TypicalWorkTriggersSection({
 	};
 
 	const addParam = (param: V2TypicalWorkParameterDto) => {
+		if (isAlwaysShownTriggerParam(param.code, param.name)) {
+			onChange([
+				{
+					id: `new-${Date.now()}`,
+					streamExecutor,
+					schemaFieldUid: null,
+					paramCode: V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE,
+					paramName: V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
+					operator: "=",
+					valueCode: null,
+					valueLabel: null,
+				},
+			]);
+			setPickerKey((key) => key + 1);
+			return;
+		}
 		const firstValue = param.values[0];
+		const withoutAlways = rules.filter(
+			(rule) => !isAlwaysShownTriggerParam(rule.paramCode, rule.paramName),
+		);
 		onChange([
-			...rules,
+			...withoutAlways,
 			{
 				id: `new-${Date.now()}`,
 				streamExecutor,
@@ -436,48 +498,50 @@ export function TypicalWorkTriggersSection({
 					onChange={onTriggerModeChange}
 				/>
 				{triggerMode === "simple" ? (
-				<Box
-					sx={{ ml: "auto", minWidth: 280, maxWidth: 420, flex: "1 1 280px" }}
-				>
-					<FuzzyAutocomplete<V2TypicalWorkParameterDto>
-						key={pickerKey}
-						data-test-id="trig-picker-items"
-						options={pickerItems}
-						value={null}
-						onChange={(param) => {
-							if (!param) return;
-							addParam(param);
-							setTriggerPickerSearchTerm(undefined);
-						}}
-						getOptionLabel={(param) => param.name}
-						getOptionValue={(param) => param.code}
-						getOptionSecondaryText={(param) => {
-							const ref = resolveSchemaParamFieldRef(param);
-							if (ref.varPath) {
-								return `${param.id} · ${ref.varPath} · ${ref.fieldKey}`;
+					<Box
+						sx={{ ml: "auto", minWidth: 280, maxWidth: 420, flex: "1 1 280px" }}
+					>
+						<FuzzyAutocomplete<V2TypicalWorkParameterDto>
+							key={pickerKey}
+							data-test-id="trig-picker-items"
+							options={pickerItems}
+							value={null}
+							onChange={(param) => {
+								if (!param) return;
+								addParam(param);
+								setTriggerPickerSearchTerm(undefined);
+							}}
+							getOptionLabel={(param) => param.name}
+							getOptionValue={(param) => param.code}
+							getOptionSecondaryText={(param) => {
+								const ref = resolveSchemaParamFieldRef(param);
+								if (ref.varPath) {
+									return `${param.id} · ${ref.varPath} · ${ref.fieldKey}`;
+								}
+								return param.id;
+							}}
+							initialSearchTerm={triggerPickerSearchTerm}
+							autoOpenOnInitialSearch={Boolean(triggerPickerSearchTerm)}
+							label="Параметр условия появления"
+							placeholder="Выберите поле схемы…"
+							emptyLabel="Выберите поле схемы…"
+							searchPlaceholder="поиск параметра…"
+							noMatchesText="Параметры не найдены"
+							allowEmpty
+							disabled={pickerItems.length === 0}
+							helperText={
+								pickerItems.length === 0 ? emptyPickerHint : undefined
 							}
-							return param.id;
-						}}
-						initialSearchTerm={triggerPickerSearchTerm}
-						autoOpenOnInitialSearch={Boolean(triggerPickerSearchTerm)}
-						label="Параметр-триггер"
-						placeholder="Выберите поле схемы…"
-						emptyLabel="Выберите поле схемы…"
-						searchPlaceholder="поиск параметра…"
-						noMatchesText="Параметры не найдены"
-						allowEmpty
-						disabled={pickerItems.length === 0}
-						helperText={pickerItems.length === 0 ? emptyPickerHint : undefined}
-						statusAlert={
-							pickerItems.length === 0
-								? {
-										severity: "info",
-										message: emptyPickerHint,
-									}
-								: null
-						}
-					/>
-				</Box>
+							statusAlert={
+								pickerItems.length === 0
+									? {
+											severity: "info",
+											message: emptyPickerHint,
+										}
+									: null
+							}
+						/>
+					</Box>
 				) : null}
 			</Box>
 
@@ -547,466 +611,591 @@ export function TypicalWorkTriggersSection({
 				</Box>
 			</Box>
 
+			{triggerConditionsSummary ? (
+				<Box
+					sx={{
+						mb: 1.5,
+						px: 1.25,
+						py: 1,
+						borderRadius: "8px",
+						bgcolor: "#f8fafc",
+						border: "1px solid #e2e8f0",
+					}}
+				>
+					<Typography
+						sx={{ fontSize: 11, fontWeight: 700, color: "#64748b", mb: 0.35 }}
+					>
+						Формула условий
+					</Typography>
+					<Typography
+						sx={{
+							fontSize: 12.5,
+							color: "#1e293b",
+							fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+							lineHeight: 1.45,
+							wordBreak: "break-word",
+						}}
+					>
+						{triggerConditionsSummary}
+					</Typography>
+				</Box>
+			) : null}
+
 			{triggerMode === "simple" ? (
-			<>
-			{grouped.length > 0 ? (
-				<Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
-					{grouped.map(([groupKey, paramRules]) => {
-						const ruleSeed = {
-							paramCode: paramRules[0]?.paramCode ?? groupKey,
-							paramName: paramRules[0]?.paramName ?? null,
-						};
-						const param =
-							paramOptions.find((item) => item.code === groupKey) ??
-							resolveSchemaParamForTriggerRule(ruleSeed, paramOptions);
-						const isKnownPseudoTrigger =
-							isSourceTypeTriggerParam(
-								ruleSeed.paramCode,
-								ruleSeed.paramName,
-							) ||
-							isControlTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName);
-						const validationCatalog = catalogForTriggerRuleGroup(
-							ruleSeed,
-							paramOptions,
-							methodologyCatalog,
-						);
-						const groupInvalid = isWorkTriggerGroupInvalid(
-							groupKey,
-							paramRules,
-							validationCatalog,
-						);
-						const selectedCodes = new Set(
-							(
-								paramRules[0]?.values?.map((v) => v.code) ??
-								paramRules.map((r) => r.valueCode)
-							).filter(Boolean),
-						);
-						const staleRules = paramRules.filter((rule) => {
-							if (!rule.valueCode && !rule.valueLabel) return false;
-							if (param) {
-								return !param.values.some((value) =>
-									catalogValueMatchesTriggerRule(value, {
-										...ruleSeed,
-										valueCode: rule.valueCode,
-										valueLabel: rule.valueLabel,
-									}),
+				<>
+					{grouped.length > 0 ? (
+						<Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
+							{grouped.map(([groupKey, paramRules]) => {
+								const ruleSeed = {
+									paramCode: paramRules[0]?.paramCode ?? groupKey,
+									paramName: paramRules[0]?.paramName ?? null,
+								};
+								const param =
+									paramOptions.find((item) => item.code === groupKey) ??
+									resolveSchemaParamForTriggerRule(ruleSeed, paramOptions);
+								const isAlwaysTrigger = isAlwaysShownTriggerParam(
+									ruleSeed.paramCode,
+									ruleSeed.paramName,
 								);
-							}
-							return isWorkTriggerGroupInvalid(
-								groupKey,
-								[rule],
-								validationCatalog,
-							);
-						});
-						const displayName =
-							param?.name ??
-							(isSourceTypeTriggerParam(ruleSeed.paramCode, ruleSeed.paramName)
-								? "Тип источника данных"
-								: schemaParamDisplayName(paramRules[0]?.paramName) || groupKey);
-						const fieldRef = resolveSchemaParamFieldRef(param);
-						return (
-							<Box
-								key={groupKey}
-								data-work-trigger-param={groupKey}
-								sx={{
-									border: `1px solid ${groupInvalid ? "#f5c6c6" : "#f0e3d2"}`,
-									bgcolor: groupInvalid ? "#fff5f5" : "#fdf8f1",
-									borderRadius: "11px",
-									p: "11px 12px",
-								}}
-							>
-								<Box
-									sx={{
-										display: "flex",
-										alignItems: "flex-start",
-										gap: 1,
-										mb: 1.1,
-									}}
-								>
-									<Box sx={{ flex: 1, minWidth: 0 }}>
-										<Typography
+								const isKnownPseudoTrigger =
+									isAlwaysTrigger ||
+									isSourceTypeTriggerParam(
+										ruleSeed.paramCode,
+										ruleSeed.paramName,
+									) ||
+									isControlTypeTriggerParam(
+										ruleSeed.paramCode,
+										ruleSeed.paramName,
+									);
+								const validationCatalog = catalogForTriggerRuleGroup(
+									ruleSeed,
+									paramOptions,
+									methodologyCatalog,
+								);
+								const groupInvalid = isAlwaysTrigger
+									? false
+									: isWorkTriggerGroupInvalid(
+											groupKey,
+											paramRules,
+											validationCatalog,
+										);
+								const selectedCodes = new Set(
+									(
+										paramRules[0]?.values?.map((v) => v.code) ??
+										paramRules.map((r) => r.valueCode)
+									).filter(Boolean),
+								);
+								const staleRules = isAlwaysTrigger
+									? []
+									: paramRules.filter((rule) => {
+											if (!rule.valueCode && !rule.valueLabel) return false;
+											if (param) {
+												return !param.values.some((value) =>
+													catalogValueMatchesTriggerRule(value, {
+														...ruleSeed,
+														valueCode: rule.valueCode,
+														valueLabel: rule.valueLabel,
+													}),
+												);
+											}
+											return isWorkTriggerGroupInvalid(
+												groupKey,
+												[rule],
+												validationCatalog,
+											);
+										});
+								const displayName = isAlwaysTrigger
+									? V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME
+									: (param?.name ??
+										(isSourceTypeTriggerParam(
+											ruleSeed.paramCode,
+											ruleSeed.paramName,
+										)
+											? "Тип источника данных"
+											: schemaParamDisplayName(paramRules[0]?.paramName) ||
+												groupKey));
+								const fieldRef = resolveSchemaParamFieldRef(param);
+								return (
+									<Box
+										key={groupKey}
+										data-work-trigger-param={groupKey}
+										sx={{
+											border: `1px solid ${groupInvalid ? "#f5c6c6" : "#f0e3d2"}`,
+											bgcolor: groupInvalid ? "#fff5f5" : "#fdf8f1",
+											borderRadius: "11px",
+											p: "11px 12px",
+										}}
+									>
+										<Box
 											sx={{
-												fontSize: 12.5,
-												fontWeight: 700,
-												color: "#1d2435",
-												lineHeight: 1.25,
+												display: "flex",
+												alignItems: "flex-start",
+												gap: 1,
+												mb: isAlwaysTrigger ? 0 : 1.1,
 											}}
 										>
-											{displayName}
-										</Typography>
-										{fieldRef.varPath ? (
-											<Typography
-												sx={{
-													mt: 0.35,
-													fontSize: 10.5,
-													color: "#8a93a3",
-													fontFamily:
-														"ui-monospace, SFMono-Regular, Menlo, monospace",
-													lineHeight: 1.35,
-													wordBreak: "break-all",
-												}}
+											<Box sx={{ flex: 1, minWidth: 0 }}>
+												<Typography
+													sx={{
+														fontSize: 12.5,
+														fontWeight: 700,
+														color: "#1d2435",
+														lineHeight: 1.25,
+													}}
+												>
+													{displayName}
+												</Typography>
+												{isAlwaysTrigger ? (
+													<Typography
+														sx={{ mt: 0.35, fontSize: 11, color: "#6b7484" }}
+													>
+														Работа появляется всегда, без проверки полей анкеты
+													</Typography>
+												) : fieldRef.varPath ? (
+													<Typography
+														sx={{
+															mt: 0.35,
+															fontSize: 10.5,
+															color: "#8a93a3",
+															fontFamily:
+																"ui-monospace, SFMono-Regular, Menlo, monospace",
+															lineHeight: 1.35,
+															wordBreak: "break-all",
+														}}
+													>
+														{fieldRef.varPath} · {fieldRef.fieldKey}
+													</Typography>
+												) : (
+													<Typography
+														sx={{ mt: 0.35, fontSize: 10.5, color: "#8a93a3" }}
+													>
+														{groupKey}
+													</Typography>
+												)}
+											</Box>
+											{!isAlwaysTrigger &&
+											fieldRef.pointer &&
+											onNavigateToSchemaField ? (
+												<Button
+													size="small"
+													variant="outlined"
+													title="Выделить поле на холсте конструктора"
+													startIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+													onClick={() =>
+														onNavigateToSchemaField(fieldRef.pointer!)
+													}
+													sx={{
+														flexShrink: 0,
+														minWidth: 0,
+														px: 1,
+														py: 0.35,
+														fontSize: 11,
+														fontWeight: 600,
+														textTransform: "none",
+														borderColor: "#dfe2ea",
+														color: "#4b5565",
+													}}
+												>
+													К конструктору
+												</Button>
+											) : null}
+											<IconButton
+												size="small"
+												aria-label="Удалить условие появления"
+												onClick={() => removeParam(groupKey)}
+												sx={{ color: "#c2554c", mt: -0.25 }}
 											>
-												{fieldRef.varPath} · {fieldRef.fieldKey}
-											</Typography>
-										) : (
-											<Typography
-												sx={{ mt: 0.35, fontSize: 10.5, color: "#8a93a3" }}
-											>
-												{groupKey}
-											</Typography>
+												<DeleteOutlineIcon fontSize="small" />
+											</IconButton>
+										</Box>
+										{isAlwaysTrigger ? null : (
+											<>
+												<Typography
+													sx={{ fontSize: 11, color: "#9a7b52", mb: 0.9 }}
+												>
+													Работа появляется, если ответ соответствует условию:
+												</Typography>
+												<Box
+													sx={{
+														display: "flex",
+														alignItems: "center",
+														gap: 1,
+														mb: 1,
+														flexWrap: "wrap",
+													}}
+												>
+													<Typography sx={{ fontSize: 11.5, color: "#6b7484" }}>
+														Оператор
+													</Typography>
+													<Select
+														size="small"
+														value={paramRules[0]?.operator ?? "="}
+														onChange={(event) =>
+															updateParamOperator(
+																groupKey,
+																event.target.value as V2WorkRuleOperator,
+															)
+														}
+														sx={{
+															height: 30,
+															minWidth: 76,
+															bgcolor: "#fff",
+															"& .MuiSelect-select": { py: 0.4, fontSize: 12 },
+														}}
+													>
+														{V2_WORK_RULE_OPERATOR_VALUES.filter((op) => {
+															if (op === "in" || op === "not_in") {
+																return param?.numeric !== true;
+															}
+															if (op === "=" || op === "!=") return true;
+															return param?.numeric === true;
+														}).map((operator) => (
+															<MenuItem key={operator} value={operator}>
+																{OPERATOR_LABELS[operator]}
+															</MenuItem>
+														))}
+													</Select>
+												</Box>
+												{groupInvalid ? (
+													<Typography
+														sx={{ fontSize: 11.5, color: "#c62828", mb: 0.9 }}
+													>
+														{!param && !isKnownPseudoTrigger
+															? "Поле удалено из схемы — обновите условия"
+															: "Выбраны значения, которых больше нет в справочнике"}
+													</Typography>
+												) : null}
+												{staleRules.length > 0 ? (
+													<Box
+														sx={{
+															display: "flex",
+															flexWrap: "wrap",
+															gap: 0.75,
+															mb: 0.9,
+														}}
+													>
+														{staleRules.map((rule) => (
+															<Box
+																key={rule.id}
+																sx={{
+																	display: "inline-flex",
+																	alignItems: "center",
+																	height: 30,
+																	px: 1.4,
+																	borderRadius: "8px",
+																	fontSize: 12,
+																	fontWeight: 600,
+																	bgcolor: "#fdecec",
+																	color: "#c62828",
+																	border: "1px solid #f5c6c6",
+																}}
+																title="Значение удалено из схемы"
+															>
+																{rule.valueLabel ?? rule.valueCode}
+															</Box>
+														))}
+													</Box>
+												) : null}
+												{param &&
+												(param.values.length === 0 ||
+													isSchemaTextualParam(param)) ? (
+													<Typography
+														sx={{ fontSize: 11.5, color: "#6b7484", mb: 0.9 }}
+													>
+														{isSchemaTextualParam(param)
+															? "Работа появляется, если поле заполнено (любое непустое значение)."
+															: param.numeric
+																? "Задайте порог в условии через операторы сравнения."
+																: "Условие «поле заполнено» — значение не выбирается."}
+													</Typography>
+												) : null}
+												<Box
+													sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}
+												>
+													{(param?.values ?? []).map((value) => {
+														const selected =
+															selectedCodes.has(value.code) ||
+															paramRules.some((rule) =>
+																catalogValueMatchesTriggerRule(value, {
+																	...ruleSeed,
+																	valueCode: rule.valueCode,
+																	valueLabel: rule.valueLabel,
+																}),
+															);
+														return (
+															<Box
+																key={value.code}
+																component="button"
+																type="button"
+																onClick={() => {
+																	if (!param) return;
+																	toggleValue(
+																		groupKey,
+																		param,
+																		value.code,
+																		value.label,
+																		selected,
+																	);
+																}}
+																sx={{
+																	display: "inline-flex",
+																	alignItems: "center",
+																	gap: 0.75,
+																	height: 30,
+																	px: 1.4,
+																	borderRadius: "8px",
+																	cursor: "pointer",
+																	fontFamily: "inherit",
+																	fontSize: 12,
+																	fontWeight: selected ? 700 : 500,
+																	bgcolor: selected ? "#fff7ed" : "#fff",
+																	color: selected ? "#9a5b13" : "#5b6577",
+																	border: `1px solid ${selected ? "#e8c9a0" : "#dfe2ea"}`,
+																}}
+															>
+																<span>{selected ? "[v]" : "[ ]"}</span>
+																{value.label}
+															</Box>
+														);
+													})}
+												</Box>
+											</>
 										)}
 									</Box>
-									{fieldRef.pointer && onNavigateToSchemaField ? (
-										<Button
-											size="small"
-											variant="outlined"
-											title="Выделить поле на холсте конструктора"
-											startIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-											onClick={() => onNavigateToSchemaField(fieldRef.pointer!)}
-											sx={{
-												flexShrink: 0,
-												minWidth: 0,
-												px: 1,
-												py: 0.35,
-												fontSize: 11,
-												fontWeight: 600,
-												textTransform: "none",
-												borderColor: "#dfe2ea",
-												color: "#4b5565",
-											}}
-										>
-											К конструктору
-										</Button>
-									) : null}
-									<IconButton
-										size="small"
-										aria-label="Удалить триггер"
-										onClick={() => removeParam(groupKey)}
-										sx={{ color: "#c2554c", mt: -0.25 }}
-									>
-										<DeleteOutlineIcon fontSize="small" />
-									</IconButton>
-								</Box>
-								<Typography sx={{ fontSize: 11, color: "#9a7b52", mb: 0.9 }}>
-									Работа появляется, если ответ соответствует условию:
-								</Typography>
+								);
+							})}
+							<Typography sx={{ fontSize: 11, color: "#8a93a3", px: 0.25 }}>
+								Несколько параметров условий объединяются по <b>И</b> — работа
+								появляется, когда выполнены все параметры.
+								{isTriggerArchCountConfigured(triggerArchCount)
+									? " Условие по количеству компонентов связано с ними через «И/ИЛИ» выше."
+									: null}
+							</Typography>
+						</Box>
+					) : null}
+					{isTriggerArchCountConfigured(triggerArchCount) ||
+					archCountPanelOpen ? (
+						<Box
+							sx={{
+								mt: grouped.length > 0 ? 0.5 : 0,
+								border: "1px solid #e6e8ee",
+								borderRadius: "11px",
+								bgcolor: "#f8fafc",
+								p: "12px 13px",
+							}}
+						>
+							{grouped.length > 0 && triggerArchCount.kind ? (
 								<Box
 									sx={{
 										display: "flex",
 										alignItems: "center",
 										gap: 1,
-										mb: 1,
+										mb: 1.1,
 										flexWrap: "wrap",
 									}}
 								>
 									<Typography sx={{ fontSize: 11.5, color: "#6b7484" }}>
-										Оператор
+										Условия параметров
 									</Typography>
 									<Select
 										size="small"
-										value={paramRules[0]?.operator ?? "="}
+										value={triggerArchCount.combinator}
 										onChange={(event) =>
-											updateParamOperator(
-												groupKey,
-												event.target.value as V2WorkRuleOperator,
-											)
+											onTriggerArchCountChange({
+												...triggerArchCount,
+												combinator: event.target
+													.value as V2TypicalWorkTriggerArchCountCombinator,
+											})
 										}
 										sx={{
 											height: 30,
-											minWidth: 76,
+											minWidth: 72,
 											bgcolor: "#fff",
-											"& .MuiSelect-select": { py: 0.4, fontSize: 12 },
+											"& .MuiSelect-select": {
+												py: 0.4,
+												fontSize: 12,
+												fontWeight: 700,
+											},
 										}}
 									>
-										{V2_WORK_RULE_OPERATOR_VALUES.filter((op) => {
-											if (op === "in" || op === "not_in") {
-												return param?.numeric !== true;
-											}
-											if (op === "=" || op === "!=") return true;
-											return param?.numeric === true;
-										}).map((operator) => (
-											<MenuItem key={operator} value={operator}>
-												{OPERATOR_LABELS[operator]}
-											</MenuItem>
-										))}
+										<MenuItem value="and">И</MenuItem>
+										<MenuItem value="or">ИЛИ</MenuItem>
 									</Select>
-								</Box>
-								{groupInvalid ? (
-									<Typography
-										sx={{ fontSize: 11.5, color: "#c62828", mb: 0.9 }}
-									>
-										{!param && !isKnownPseudoTrigger
-											? "Поле удалено из схемы — обновите условия"
-											: "Выбраны значения, которых больше нет в справочнике"}
+									<Typography sx={{ fontSize: 11.5, color: "#6b7484" }}>
+										условие по количеству компонентов
 									</Typography>
-								) : null}
-								{staleRules.length > 0 ? (
+								</Box>
+							) : null}
+
+							{triggerArchCount.kind && archCountCondition ? (
+								<Box
+									sx={{
+										border: `1px solid ${archCountInvalid ? "#f5c6c6" : "#dbeafe"}`,
+										bgcolor: archCountInvalid ? "#fff5f5" : "#eff6ff",
+										borderRadius: "11px",
+										p: "11px 12px",
+									}}
+								>
 									<Box
 										sx={{
 											display: "flex",
+											alignItems: "flex-start",
+											gap: 1,
+											mb: 1,
 											flexWrap: "wrap",
-											gap: 0.75,
-											mb: 0.9,
 										}}
 									>
-										{staleRules.map((rule) => (
-											<Box
-												key={rule.id}
+										<Box sx={{ flex: 1, minWidth: 180 }}>
+											<Typography
 												sx={{
-													display: "inline-flex",
-													alignItems: "center",
-													height: 30,
-													px: 1.4,
-													borderRadius: "8px",
-													fontSize: 12,
-													fontWeight: 600,
-													bgcolor: "#fdecec",
-													color: "#c62828",
-													border: "1px solid #f5c6c6",
+													fontSize: 12.5,
+													fontWeight: 700,
+													color: "#1d2435",
 												}}
-												title="Значение удалено из схемы"
 											>
-												{rule.valueLabel ?? rule.valueCode}
-											</Box>
-										))}
+												{formatWorkArchCountKindLabel(triggerArchCount.kind)}
+											</Typography>
+											<Typography
+												sx={{ fontSize: 11, color: "#64748b", mt: 0.35 }}
+											>
+												{formatTriggerArchCountConditionLabel(
+													triggerArchCount.kind,
+													triggerArchCount.steps,
+												)}
+											</Typography>
+										</Box>
+										<IconButton
+											size="small"
+											aria-label="Удалить условие по количеству компонентов"
+											title="Удалить условие по количеству компонентов"
+											onClick={() => {
+												onTriggerArchCountChange(defaultTriggerArchCount());
+												setArchCountPanelOpen(false);
+											}}
+											sx={{ color: "#c2554c" }}
+										>
+											<DeleteOutlineIcon fontSize="small" />
+										</IconButton>
 									</Box>
-								) : null}
-								{param &&
-								(param.values.length === 0 || isSchemaTextualParam(param)) ? (
-									<Typography
-										sx={{ fontSize: 11.5, color: "#6b7484", mb: 0.9 }}
-									>
-										{isSchemaTextualParam(param)
-											? "Работа появляется, если поле заполнено (любое непустое значение)."
-											: param.numeric
-												? "Задайте порог в условии через операторы сравнения."
-												: "Условие «поле заполнено» — значение не выбирается."}
+									<Typography sx={{ fontSize: 11, color: "#64748b", mb: 0.9 }}>
+										Работа появляется, если в анкете выполняется условие по
+										числу компонентов:
 									</Typography>
-								) : null}
-								<Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
-									{(param?.values ?? []).map((value) => {
-										const selected =
-											selectedCodes.has(value.code) ||
-											paramRules.some((rule) =>
-												catalogValueMatchesTriggerRule(value, {
-													...ruleSeed,
-													valueCode: rule.valueCode,
-													valueLabel: rule.valueLabel,
-												}),
-											);
-										return (
-											<Box
-												key={value.code}
-												component="button"
-												type="button"
-												onClick={() => {
-													if (!param) return;
-													toggleValue(
-														groupKey,
-														param,
-														value.code,
-														value.label,
-														selected,
-													);
-												}}
-												sx={{
-													display: "inline-flex",
-													alignItems: "center",
-													gap: 0.75,
-													height: 30,
-													px: 1.4,
-													borderRadius: "8px",
-													cursor: "pointer",
-													fontFamily: "inherit",
-													fontSize: 12,
-													fontWeight: selected ? 700 : 500,
-													bgcolor: selected ? "#fff7ed" : "#fff",
-													color: selected ? "#9a5b13" : "#5b6577",
-													border: `1px solid ${selected ? "#e8c9a0" : "#dfe2ea"}`,
-												}}
-											>
-												<span>{selected ? "[v]" : "[ ]"}</span>
-												{value.label}
-											</Box>
-										);
-									})}
-								</Box>
-							</Box>
-						);
-					})}
-					<Typography sx={{ fontSize: 11, color: "#8a93a3", px: 0.25 }}>
-						Несколько параметров-триггеров объединяются по <b>И</b> — работа
-						появляется, когда выполнены все.
-					</Typography>
-				</Box>
-			) : null}
-			<Box
-				sx={{
-					mt: grouped.length > 0 ? 0.5 : 0,
-					border: "1px solid #e6e8ee",
-					borderRadius: "11px",
-					bgcolor: "#f8fafc",
-					p: "12px 13px",
-				}}
-			>
-						<Box
-							sx={{
-								display: "flex",
-								alignItems: "center",
-								gap: 1,
-								mb: 1.1,
-								flexWrap: "wrap",
-							}}
-						>
-							<Typography sx={{ fontSize: 11.5, color: "#6b7484" }}>
-								Все параметры-триггеры
-							</Typography>
-							<Select
-								size="small"
-								value={triggerArchCount.combinator}
-								onChange={(event) =>
-									onTriggerArchCountChange({
-										...triggerArchCount,
-										combinator: event.target
-											.value as V2TypicalWorkTriggerArchCountCombinator,
-									})
-								}
-								sx={{
-									height: 30,
-									minWidth: 72,
-									bgcolor: "#fff",
-									"& .MuiSelect-select": {
-										py: 0.4,
-										fontSize: 12,
-										fontWeight: 700,
-									},
-								}}
-							>
-								<MenuItem value="and">И</MenuItem>
-								<MenuItem value="or">ИЛИ</MenuItem>
-							</Select>
-							<Typography sx={{ fontSize: 11.5, color: "#6b7484" }}>
-								условие по количеству компонентов
-							</Typography>
-						</Box>
-						{triggerArchCount.kind ? (
-							<Box
-								sx={{
-									display: "flex",
-									flexWrap: "wrap",
-									gap: 0.75,
-									mb: 1,
-								}}
-							>
-								<Box
-									component="button"
-									type="button"
-									onClick={() => setArchCountEditOpen(true)}
-									title={`кол-во: ${formatWorkArchCountKindLabel(triggerArchCount.kind)}`}
-									sx={{
-										display: "inline-flex",
-										alignItems: "center",
-										gap: 0.75,
-										height: 30,
-										px: 1.4,
-										borderRadius: "8px",
-										cursor: "pointer",
-										fontFamily: "inherit",
-										fontSize: 12,
-										fontWeight: 600,
-										bgcolor: archCountInvalid ? "#fdecec" : "#eff6ff",
-										color: archCountInvalid ? "#c62828" : "#1d4ed8",
-										border: `1px solid ${archCountInvalid ? "#f5c6c6" : "#bfdbfe"}`,
-									}}
-								>
-									<span>
-										{formatWorkArchCountKindLabel(triggerArchCount.kind)}
-									</span>
-									<span style={{ opacity: 0.75 }}>
-										{formatArchCountCoeffChipSubtitle(triggerArchCount.steps)}
-									</span>
-								</Box>
-								<IconButton
-									size="small"
-									aria-label="Удалить условие по количеству компонентов"
-									onClick={() =>
-										onTriggerArchCountChange(defaultTriggerArchCount())
-									}
-									sx={{ color: "#c2554c" }}
-								>
-									<DeleteOutlineIcon fontSize="small" />
-								</IconButton>
-							</Box>
-						) : null}
-						<Box>
-							<Typography
-								sx={{
-									fontSize: 11,
-									color: "#64748b",
-									fontWeight: 600,
-									mb: 0.5,
-								}}
-							>
-								По количеству компонентов
-							</Typography>
-							<FuzzyAutocomplete<ArchCountOption>
-								key={`arch-count-global-${archCountPickerKey}`}
-								data-test-id={TID.workTriggerArchCountSelect}
-								options={V2_WORK_FORMULA_ARCH_COUNT_KINDS.filter(
-									(kind) => kind !== triggerArchCount.kind,
-								).map((kind) => ({
-									kind,
-									label: formatWorkArchCountKindLabel(kind),
-								}))}
-								value={null}
-								onChange={(option) => {
-									if (!option) return;
-									onTriggerArchCountChange({
-										...triggerArchCount,
-										kind: option.kind,
-										steps: [{ count: 1, coefficient: 1 }],
-									});
-									setArchCountEditOpen(true);
-									setArchCountPickerKey((key) => key + 1);
-								}}
-								getOptionLabel={(option) => option.label}
-								getOptionValue={(option) => option.kind}
-								getOptionSecondaryText={() =>
-									"условие появления зависит от числа компонентов в анкете"
-								}
-								placeholder="Выберите компонент…"
-								emptyLabel="Выберите компонент…"
-								searchPlaceholder="Поиск компонента…"
-								noMatchesText="Компоненты не найдены"
-								allowEmpty
-								size="small"
-								disabled={triggerArchCount.kind != null}
-								textFieldSx={TRIGGER_ARCH_COUNT_FIELD_SX}
-								statusAlert={
-									triggerArchCount.kind != null
-										? {
-												severity: "info",
-												message:
-													"Компонент уже выбран — удалите или отредактируйте текущее условие",
+									<Box
+										sx={{
+											display: "flex",
+											alignItems: "center",
+											gap: 1,
+											flexWrap: "wrap",
+										}}
+									>
+										<Select
+											size="small"
+											value={archCountCondition.operator}
+											onChange={(event) =>
+												updateTriggerArchCountCondition({
+													operator: event.target
+														.value as V2TypicalWorkTriggerArchCountOperator,
+												})
 											}
-										: null
-								}
-							/>
+											sx={{
+												height: 30,
+												minWidth: 76,
+												bgcolor: "#fff",
+												"& .MuiSelect-select": { py: 0.4, fontSize: 12 },
+											}}
+										>
+											{V2_TYPICAL_WORK_TRIGGER_ARCH_COUNT_OPERATOR_VALUES.map(
+												(operator: V2TypicalWorkTriggerArchCountOperator) => (
+													<MenuItem key={operator} value={operator}>
+														{TRIGGER_ARCH_COUNT_OPERATOR_LABELS[operator]}
+													</MenuItem>
+												),
+											)}
+										</Select>
+										<TextField
+											size="small"
+											type="number"
+											// label="Количество"
+											value={archCountCondition.threshold}
+											onChange={(event) => {
+												const threshold = Number(event.target.value);
+												if (!Number.isFinite(threshold)) return;
+												updateTriggerArchCountCondition({
+													threshold: Math.floor(threshold),
+												});
+											}}
+											inputProps={{ min: 1, max: 99 }}
+											sx={{ width: 120, bgcolor: "#fff" }}
+										/>
+									</Box>
+									{archCountInvalid ? (
+										<Typography
+											sx={{ fontSize: 11.5, color: "#c62828", mt: 0.9 }}
+										>
+											{validateTriggerArchCountCondition(
+												triggerArchCount.kind,
+												triggerArchCount.steps,
+											)}
+										</Typography>
+									) : null}
+								</Box>
+							) : (
+								<Box>
+									<Typography
+										sx={{
+											fontSize: 11,
+											color: "#64748b",
+											fontWeight: 600,
+											mb: 0.5,
+										}}
+									>
+										Компонент
+									</Typography>
+									<FuzzyAutocomplete<ArchCountOption>
+										key={`arch-count-global-${archCountPickerKey}`}
+										data-test-id={TID.workTriggerArchCountSelect}
+										options={V2_WORK_FORMULA_ARCH_COUNT_KINDS.map((kind) => ({
+											kind,
+											label: formatWorkArchCountKindLabel(kind),
+										}))}
+										value={null}
+										onChange={(option) => {
+											if (!option) return;
+											onTriggerArchCountChange({
+												...triggerArchCount,
+												kind: option.kind,
+												steps: encodeTriggerArchCountSteps(">=", 1),
+											});
+											setArchCountPickerKey((key) => key + 1);
+										}}
+										getOptionLabel={(option) => option.label}
+										getOptionValue={(option) => option.kind}
+										getOptionSecondaryText={() =>
+											"условие появления зависит от числа компонентов в анкете"
+										}
+										placeholder="Выберите компонент…"
+										emptyLabel="Выберите компонент…"
+										searchPlaceholder="Поиск компонента…"
+										noMatchesText="Компоненты не найдены"
+										allowEmpty
+										size="small"
+										textFieldSx={TRIGGER_ARCH_COUNT_FIELD_SX}
+									/>
+								</Box>
+							)}
 						</Box>
-					</Box>
-			</>
-			) : null}
-			{triggerMode === "simple" && triggerArchCount.kind ? (
-				<ArchCountCoeffStepsEditor
-					open={archCountEditOpen}
-					kind={triggerArchCount.kind}
-					steps={triggerArchCount.steps}
-					onClose={() => setArchCountEditOpen(false)}
-					onSave={(steps) => {
-						onTriggerArchCountChange({ ...triggerArchCount, steps });
-						setArchCountEditOpen(false);
-					}}
-				/>
+					) : (
+						<Button
+							size="small"
+							startIcon={<AddIcon />}
+							onClick={() => setArchCountPanelOpen(true)}
+							sx={{ mt: grouped.length > 0 ? 0.5 : 0, textTransform: "none" }}
+						>
+							Добавить условие по количеству компонентов
+						</Button>
+					)}
+				</>
 			) : null}
 		</Box>
 	);

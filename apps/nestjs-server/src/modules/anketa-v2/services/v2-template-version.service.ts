@@ -20,6 +20,7 @@ import { V2TypicalWorkWriteService } from "./v2-typical-work-write.service";
 import {
 	type V2TemplateStatus,
 	prepareFactorySnapshotWithoutTypicalWorks,
+	syncTypicalWorksCatalogLogicSnapshot,
 } from "@smart-anketa/api-contract";
 
 @Injectable()
@@ -133,8 +134,20 @@ export class V2TemplateVersionService {
 		}
 
 		Object.assign(version, dto, { updatedBy: userId });
+		this.syncTypicalWorksCatalogLogic(version);
 
 		return this.versionRepository.save(version);
+	}
+
+	private syncTypicalWorksCatalogLogic(version: V2TemplateVersionEntity): void {
+		if (!version.uiSchema || typeof version.uiSchema !== "object") return;
+		version.logic = syncTypicalWorksCatalogLogicSnapshot(
+			version.logic ?? { rules: [] },
+			{
+				jsonSchema: version.jsonSchema,
+				uiSchema: version.uiSchema,
+			},
+		);
 	}
 
 	async publish(
@@ -155,6 +168,8 @@ export class V2TemplateVersionService {
 		if (dto.releaseNotes) {
 			version.releaseNotes = dto.releaseNotes;
 		}
+
+		this.syncTypicalWorksCatalogLogic(version);
 
 		const updatedVersion = await this.versionRepository.save(version);
 

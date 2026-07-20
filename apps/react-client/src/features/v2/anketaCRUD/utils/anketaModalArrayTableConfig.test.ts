@@ -151,4 +151,38 @@ describe("typical work table helpers", () => {
 		expect(rows).toHaveLength(1);
 		expect(rows[0]?.name).toBe("Постановка задачи");
 	});
+
+	it("dedupes model stream rows by workId across legacy and canonical paths", () => {
+		const workId = "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001";
+		const uiSchema = {
+			detailInfo: {
+				detailTypicalTasks: {
+					"ui:options": {
+						archComponent: "typicalWork",
+						streamExecutor: "Модельный стрим",
+					},
+				},
+			},
+		};
+		const row = {
+			workId,
+			name: "01. Постановка задачи.",
+			estimateHoursPerDay: 33,
+			coefficient: 1,
+			total: 33,
+			generatedByRuleId: "rule-1",
+		};
+		const rows = collectAppearedTypicalWorkRows(
+			{
+				detailInfo: { detailTypicalTasks: [row] },
+				streamDataSources: { sourceTypicalTasks: [{ ...row, total: 33 }] },
+			},
+			uiSchema,
+			{
+				detailInfo: { detailTypicalTasks: [row] },
+			},
+		);
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.workId).toBe(workId);
+	});
 });

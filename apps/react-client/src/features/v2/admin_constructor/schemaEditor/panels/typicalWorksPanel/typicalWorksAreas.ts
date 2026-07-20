@@ -22,10 +22,7 @@ export function isAllLogicWorksScope(
 
 export const DEFAULT_LOGIC_STREAM = "Источники данных" as const;
 
-export const DEFAULT_SCOPE: LogicWorksScope = {
-	kind: "stream",
-	stream: DEFAULT_LOGIC_STREAM,
-};
+export const DEFAULT_SCOPE: LogicWorksScope = ALL_LOGIC_WORKS_SCOPE;
 
 export function scopeStreamExecutor(
 	scope: LogicWorksScope,

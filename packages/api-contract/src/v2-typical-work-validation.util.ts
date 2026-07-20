@@ -21,11 +21,13 @@ import {
 } from "./v2-work-terms-formula.util";
 import {
 	catalogValueMatchesTriggerRule,
+	isAlwaysShownTriggerParam,
 	isControlTypeTriggerParam,
 	isPresenceOnlyTriggerRule,
 	isSourceTypeTriggerParam,
 	resolveTriggerStatusCatalogParam,
 	triggerRuleCatalogGroupKey,
+	normalizeTypicalWorkTriggerRulesForMatch,
 	type TypicalWorkTriggerArchCountLike,
 } from "./v2-works-catalog-match.util";
 import type { WorkSchemaParamDef } from "./v2-work-schema-params-match.util";
@@ -534,6 +536,7 @@ function isRuleInputInvalid(
 	}
 
 	if (isPresenceOnlyTriggerRule(rule)) {
+		if (isAlwaysShownTriggerParam(rule.paramCode, rule.paramName)) return false;
 		if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName)) return false;
 		if (isControlTypeTriggerParam(rule.paramCode, rule.paramName)) return false;
 		return resolveTriggerStatusCatalogParam(rule, catalog) === undefined;
@@ -576,14 +579,16 @@ export function computeWorkTriggerStatus(
 	triggerMode: V2TypicalWorkTriggerMode = "simple",
 	triggerFormula?: V2TypicalWorkTriggerFormulaDto | null,
 ): V2WorkTriggerStatus {
-	const matchRules = rules.map((rule) => ({
-		paramCode: rule.paramCode,
-		paramName: rule.paramName ?? null,
-		operator: rule.operator ?? "=",
-		valueCode: rule.valueCode,
-		valueLabel: rule.valueLabel,
-		values: rule.values,
-	}));
+	const matchRules = normalizeTypicalWorkTriggerRulesForMatch(
+		rules.map((rule) => ({
+			paramCode: rule.paramCode,
+			paramName: rule.paramName ?? null,
+			operator: rule.operator ?? "=",
+			valueCode: rule.valueCode,
+			valueLabel: rule.valueLabel,
+			values: rule.values,
+		})),
+	);
 	const triggerInput = {
 		mode: triggerMode,
 		rules: matchRules,
@@ -609,7 +614,7 @@ export function computeWorkTriggerStatus(
 				? "appears"
 				: "hidden";
 		}
-		return "hidden";
+		return "appears";
 	}
 
 	if (rules.length > 0) {
@@ -657,16 +662,25 @@ export type WorkCoefficientRowInput = {
 	paramCode: string;
 	valueCode: string | null;
 	valueLabel: string | null;
+	schemaFieldUid?: string | null;
 };
 
 export type WorkCoefficientCatalogParam = WorkTriggerStatusCatalogParam & {
 	sourceKeys?: string[];
+	schemaFieldUid?: string | null;
 };
 
 export function resolveWorkCoefficientCatalogParam(
 	catalog: WorkCoefficientCatalogParam[],
 	paramCode: string,
+	schemaFieldUid?: string | null,
 ): WorkCoefficientCatalogParam | undefined {
+	if (schemaFieldUid?.trim()) {
+		const byUid = catalog.find(
+			(item) => item.schemaFieldUid === schemaFieldUid,
+		);
+		if (byUid) return byUid;
+	}
 	const direct = catalog.find((item) => item.code === paramCode);
 	if (direct) return direct;
 	return catalog.find((item) => item.sourceKeys?.includes(paramCode));
@@ -693,7 +707,11 @@ export function isWorkCoefficientValueAvailable(
 ): boolean {
 	if (row.valueCode == null && row.valueLabel == null) return true;
 	if (isSchemaFieldLaborParamCode(row.paramCode)) return true;
-	const param = resolveWorkCoefficientCatalogParam(catalog, row.paramCode);
+	const param = resolveWorkCoefficientCatalogParam(
+		catalog,
+		row.paramCode,
+		row.schemaFieldUid,
+	);
 	if (!param) return false;
 	if (param.values.length === 0) return true;
 	return param.values.some(
@@ -707,6 +725,7 @@ export type WorkCoefficientCatalogSourceParam = {
 	code: string;
 	name?: string;
 	sourceKeys?: string[];
+	schemaFieldUid?: string | null;
 	values: Array<{ code: string; label: string }>;
 };
 
@@ -714,6 +733,18 @@ export function isWorkSchemaLaborParamCandidate(
 	param: Pick<WorkSchemaParamDef, "values">,
 ): boolean {
 	return (param.values?.length ?? 0) > 0;
+}
+
+function mergeCatalogValues(
+	left: Array<{ code: string; label: string }>,
+	right: Array<{ code: string; label: string }>,
+): Array<{ code: string; label: string }> {
+	const byKey = new Map<string, { code: string; label: string }>();
+	for (const value of [...left, ...right]) {
+		const key = `${value.code}\0${value.label}`;
+		if (!byKey.has(key)) byKey.set(key, value);
+	}
+	return [...byKey.values()];
 }
 
 function toWorkCoefficientCatalogParam(
@@ -726,6 +757,7 @@ function toWorkCoefficientCatalogParam(
 	]);
 	return {
 		code: param.code,
+		schemaFieldUid: param.schemaFieldUid ?? null,
 		sourceKeys: [...sourceKeys],
 		values: param.values.map((value) => ({
 			code: value.code,
@@ -737,15 +769,52 @@ function toWorkCoefficientCatalogParam(
 /** Каталог коэффициентов как в TypicalWorkEditableCard.coefficientCatalog. */
 export function buildWorkCoefficientCatalog(input: {
 	schemaParams: WorkSchemaParamDef[];
-	laborParams: Array<{ paramCode: string; paramName?: string | null }>;
+	laborParams: Array<{
+		paramCode: string;
+		paramName?: string | null;
+		schemaFieldUid?: string | null;
+	}>;
 	methodologyCatalog?: WorkCoefficientCatalogSourceParam[];
 }): WorkCoefficientCatalogParam[] {
+	const byUid = new Map<string, WorkCoefficientCatalogParam>();
 	const byCode = new Map<string, WorkCoefficientCatalogParam>();
+
 	const addParam = (
 		param: WorkCoefficientCatalogSourceParam,
 		legacyCode?: string,
 	) => {
-		byCode.set(param.code, toWorkCoefficientCatalogParam(param, legacyCode));
+		const next = toWorkCoefficientCatalogParam(param, legacyCode);
+		const uid = next.schemaFieldUid?.trim();
+		if (uid) {
+			const existingUid = byUid.get(uid);
+			if (existingUid) {
+				existingUid.values = mergeCatalogValues(existingUid.values, next.values);
+				existingUid.sourceKeys = [
+					...new Set([
+						...(existingUid.sourceKeys ?? []),
+						...(next.sourceKeys ?? []),
+					]),
+				];
+			} else {
+				byUid.set(uid, next);
+			}
+		}
+
+		const existingCode = byCode.get(next.code);
+		if (existingCode) {
+			existingCode.values = mergeCatalogValues(existingCode.values, next.values);
+			existingCode.sourceKeys = [
+				...new Set([
+					...(existingCode.sourceKeys ?? []),
+					...(next.sourceKeys ?? []),
+				]),
+			];
+			if (!existingCode.schemaFieldUid && next.schemaFieldUid) {
+				existingCode.schemaFieldUid = next.schemaFieldUid;
+			}
+		} else {
+			byCode.set(next.code, { ...next });
+		}
 	};
 
 	for (const param of input.schemaParams.filter(isWorkSchemaLaborParamCandidate)) {
@@ -753,6 +822,7 @@ export function buildWorkCoefficientCatalog(input: {
 			code: param.code,
 			name: param.name,
 			sourceKeys: param.sourceKeys,
+			schemaFieldUid: param.schemaFieldUid,
 			values: param.values ?? [],
 		});
 	}
@@ -762,12 +832,31 @@ export function buildWorkCoefficientCatalog(input: {
 			code: param.code,
 			name: param.name ?? param.code,
 			sourceKeys: param.sourceKeys,
+			schemaFieldUid: param.schemaFieldUid,
 			values: param.values,
 		}),
 	);
 
 	for (const group of input.laborParams) {
-		const alreadyKnown = [...byCode.values()].some(
+		if (group.schemaFieldUid?.trim()) {
+			const byLaborUid = input.schemaParams.find(
+				(param) => param.schemaFieldUid === group.schemaFieldUid,
+			);
+			if (byLaborUid) {
+				addParam(
+					{
+						code: byLaborUid.code,
+						sourceKeys: byLaborUid.sourceKeys,
+						schemaFieldUid: byLaborUid.schemaFieldUid,
+						values: byLaborUid.values ?? [],
+					},
+					group.paramCode,
+				);
+				continue;
+			}
+		}
+
+		const alreadyKnown = [...byCode.values(), ...byUid.values()].some(
 			(entry) =>
 				entry.code === group.paramCode ||
 				entry.sourceKeys?.includes(group.paramCode),
@@ -784,6 +873,7 @@ export function buildWorkCoefficientCatalog(input: {
 				{
 					code: schemaMatch.code,
 					sourceKeys: schemaMatch.sourceKeys,
+					schemaFieldUid: schemaMatch.schemaFieldUid,
 					values: schemaMatch.values ?? [],
 				},
 				group.paramCode,
@@ -801,6 +891,7 @@ export function buildWorkCoefficientCatalog(input: {
 				{
 					code: catalogMatch.code,
 					sourceKeys: catalogMatch.sourceKeys,
+					schemaFieldUid: catalogMatch.schemaFieldUid,
 					values: catalogMatch.values ?? [],
 				},
 				group.paramCode,
@@ -808,7 +899,22 @@ export function buildWorkCoefficientCatalog(input: {
 		}
 	}
 
-	return [...byCode.values()];
+	const merged = new Map<string, WorkCoefficientCatalogParam>();
+	for (const entry of [...byUid.values(), ...byCode.values()]) {
+		const key = entry.schemaFieldUid?.trim()
+			? `uid:${entry.schemaFieldUid}`
+			: `code:${entry.code}`;
+		const existing = merged.get(key);
+		if (!existing) {
+			merged.set(key, entry);
+			continue;
+		}
+		existing.values = mergeCatalogValues(existing.values, entry.values);
+		existing.sourceKeys = [
+			...new Set([...(existing.sourceKeys ?? []), ...(entry.sourceKeys ?? [])]),
+		];
+	}
+	return [...merged.values()];
 }
 
 export type UnavailableLaborCoefficientIssue = {
@@ -822,6 +928,7 @@ export function collectUnavailableLaborCoefficientIssues(input: {
 	laborParams: Array<{
 		paramCode: string;
 		paramName?: string | null;
+		schemaFieldUid?: string | null;
 		kind?: string | null;
 		coefficients?: Array<{
 			valueCode: string | null;
@@ -844,6 +951,7 @@ export function collectUnavailableLaborCoefficientIssues(input: {
 		const catalogParam = resolveWorkCoefficientCatalogParam(
 			catalog,
 			group.paramCode,
+			group.schemaFieldUid,
 		);
 		if (
 			isNumericLaborByValueParam({
@@ -859,6 +967,7 @@ export function collectUnavailableLaborCoefficientIssues(input: {
 				isWorkCoefficientValueAvailable(
 					{
 						paramCode: group.paramCode,
+						schemaFieldUid: group.schemaFieldUid,
 						valueCode: row.valueCode,
 						valueLabel: row.valueLabel,
 					},

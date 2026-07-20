@@ -170,9 +170,12 @@ const MANUAL_ARCH_COMPONENT_PRESET_DEFS: Pick<
 			removable: false,
 			orderable: false,
 			boundWorkIds: [],
+			/** В форме анкеты скрыты — видны только в панели итоговой оценки. */
+			hidden: true,
 		},
 		uiBranch: {
 			...TYPICAL_WORK_ITEMS_UI_BRANCH,
+			"ui:widget": "hidden",
 			"ui:description":
 				"Список заполняется автоматически при срабатывании триггеров типовых работ.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах",
 		},

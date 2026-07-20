@@ -1,10 +1,20 @@
 import { createBridgeComponent } from "@module-federation/bridge-react/v19";
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
+import "@fontsource/inter/700.css";
 import { AuthProvider } from "@react-client/common/providers/AuthProvider";
+import {
+	getKeycloakUserDisplayName,
+	isSameKeycloakUser,
+	keycloakUserMemoKey,
+	normalizeKeycloakUser,
+} from "@react-client/common/auth/keycloakUserText.util";
 import { useUserStore } from "@react-client/common/store/userStore";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { globalStyles } from "@react-client/theme/GlobalStyle";
 import { Permission, Role } from "@react-client/types/roles";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
 import App from "./App";
 import { syncMfeAuthFromHost } from "@react-client/common/auth/syncMfeAuth";
@@ -47,12 +57,17 @@ export type Props = {
 
 const MfeRoot = (props: Props) => {
 	normalizeMfeUrlIfNeeded();
+	const userMemoKey = keycloakUserMemoKey(props.user);
+	const user = useMemo(
+		() => normalizeKeycloakUser(props.user),
+		[userMemoKey],
+	);
 
 	window.__SMART_ANKETA_MFE_DEBUG__ = {
 		mountedAt: new Date().toISOString(),
 		hasToken: Boolean(props.token),
 		hasUrlConfig: Boolean(props.urlConfig),
-		userName: props.user?.preferred_username,
+		userName: user ? getKeycloakUserDisplayName(user) : undefined,
 	};
 
 	useDeepEffect(() => {
@@ -60,17 +75,18 @@ const MfeRoot = (props: Props) => {
 			window.urlConfig = props.urlConfig;
 			window.keycloak = props.keycloak;
 		}
-		window.user = props.user;
+		window.user = user;
 		window.token =
 			props.keycloak?.authenticated === false ? undefined : props.token;
 		syncMfeAuthFromHost(props);
-	}, [props]);
+	}, [props, user]);
 
-	const { user } = props;
 	const { setUser } = useGlobalSettingsStore();
 	const { setUsername, setGroups, setRoles, setPermissions } = useUserStore();
 
 	useEffect(() => {
+		const currentUser = useGlobalSettingsStore.getState().user;
+		if (isSameKeycloakUser(currentUser, user)) return;
 		setUser(user);
 	}, [user, setUser]);
 
@@ -109,13 +125,13 @@ const MfeRoot = (props: Props) => {
 		<AuthProvider
 			token={props.token}
 			keycloak={props.keycloak}
-			user={props.user}
+			user={user}
 			onLogout={props.onLogout}
 		>
 			{globalStyles}
 
 			{props?.urlConfig && props?.keycloak ? (
-				<App {...props} bridged />
+				<App {...props} user={user} bridged />
 			) : (
 				<FullScreenLoader />
 			)}

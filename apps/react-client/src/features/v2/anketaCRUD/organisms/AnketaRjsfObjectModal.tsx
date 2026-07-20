@@ -13,6 +13,10 @@ import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import { v2AnketaFormTemplates } from "@react-client/features/v2/admin_constructor/templates/v2PreviewFormTemplates";
 import { v2AnketaFormWidgets } from "@react-client/features/v2/admin_constructor/templates/v2PreviewFormWidgets";
+import {
+	createAnketaModalCustomValidate,
+	isAnketaModalFormValid,
+} from "../utils/anketaModalFormValidation.util";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type Props = {
@@ -61,6 +65,16 @@ export function AnketaRjsfObjectModal({
 	}, [schema]);
 
 	const formUiSchema = useMemo(() => modalRootUiSchema(uiSchema), [uiSchema]);
+
+	const canSave = useMemo(
+		() => isAnketaModalFormValid(formData, formSchema, formUiSchema),
+		[formData, formSchema, formUiSchema],
+	);
+
+	const customValidate = useMemo(
+		() => createAnketaModalCustomValidate(formSchema),
+		[formSchema],
+	);
 
 	const formKey = useMemo(
 		() => JSON.stringify({ schema: formSchema, uiSchema: formUiSchema }),
@@ -111,6 +125,7 @@ export function AnketaRjsfObjectModal({
 						schema={formSchema}
 						uiSchema={formUiSchema}
 						formData={formData}
+						customValidate={customValidate}
 						templates={v2AnketaFormTemplates}
 						widgets={v2AnketaFormWidgets}
 						validator={validatorRu}
@@ -130,8 +145,11 @@ export function AnketaRjsfObjectModal({
 				</Button>
 				<Button
 					variant="contained"
-					onClick={() => onSubmit(formData)}
-					sx={{ textTransform: "uppercase", fontWeight: 600 }}
+					disabled={!canSave}
+					onClick={() => {
+						if (!canSave) return;
+						onSubmit(formData);
+					}}
 				>
 					Сохранить
 				</Button>

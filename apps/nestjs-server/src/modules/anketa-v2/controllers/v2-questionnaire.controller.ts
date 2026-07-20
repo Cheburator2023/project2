@@ -19,6 +19,7 @@ import type {
 	V2QuestionnaireCommentDto,
 	V2QuestionnaireDto,
 	V2QuestionnaireFormPackageDto,
+	V2QuestionnaireRegistryConfigDto,
 } from "@smart-anketa/api-contract";
 import {
 	BulkDeleteV2QuestionnairesDto,
@@ -52,6 +53,15 @@ export class V2QuestionnaireController {
         private readonly commentService: V2QuestionnaireCommentService,
         private readonly auditService: AuditService,
     ) {}
+
+	@Get("registry-config")
+	@ApiOperation({
+		summary:
+			"Колонки реестра анкет: объединение схем всех привязанных версий шаблонов",
+	})
+	async getRegistryConfig(): Promise<V2QuestionnaireRegistryConfigDto> {
+		return this.questionnaireService.getRegistryConfig();
+	}
 
 	@Get()
 	@ApiOperation({ summary: "Реестр анкет v2 (отдельно от реестра схем)" })

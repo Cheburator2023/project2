@@ -18,6 +18,7 @@ exports.termsToTokenFormula = termsToTokenFormula;
 exports.syncTermsFromTokenFormula = syncTermsFromTokenFormula;
 exports.computeFormulaBadgeFromTokens = computeFormulaBadgeFromTokens;
 exports.buildTransitiveEdges = buildTransitiveEdges;
+const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util");
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
 function createTermId(prefix = "term") {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -222,6 +223,33 @@ function parseAddSegment(segment, order, addOp = "+") {
     let baseValue = 1;
     const factors = [];
     let title = "Слагаемое";
+    // N × … → слагаемое, пропорциональное нормативу (в т.ч. N × архкоэф).
+    if (segment[0]?.kind === "norm") {
+        let coeffStart = 1;
+        if (segment[1]?.kind === "operator" &&
+            segment[1].op === "*" &&
+            segment.length >= 3) {
+            coeffStart = 2;
+        }
+        else if (segment.length > 1) {
+            // Неразборный хвост после N — не подменяем на «+1».
+            coeffStart = 1;
+        }
+        const coeffTokens = segment.slice(coeffStart);
+        const paramFactors = coeffTokens
+            .filter(v2_work_formula_util_1.isParamToken)
+            .map((token, index) => factorFromParamToken(token, index));
+        return {
+            id: createTermId("add"),
+            kind: "additive",
+            title: addOp === "-" ? "− N × …" : "+ N × …",
+            order,
+            baseValue: addOp === "-" ? -1 : 1,
+            factors: paramFactors,
+            scaleByNorm: true,
+            coeffTokens: coeffTokens.length > 0 ? coeffTokens : [{ kind: "number", value: 1 }],
+        };
+    }
     if (segment[0]?.kind === "number") {
         baseValue = segment[0].value;
         title = addOp === "-" ? `- ${baseValue}` : `+ ${baseValue}`;
@@ -518,7 +546,8 @@ function validateTermsFormula(terms) {
                 return "Заполните название члена формулы";
             }
             if (term.baseValue != null && term.baseValue < 0) {
-                if (term.kind !== "additive" || term.factors.length > 0) {
+                if (term.kind !== "additive" ||
+                    (!term.scaleByNorm && term.factors.length > 0)) {
                     return "Базовое значение члена должно быть неотрицательным";
                 }
             }
@@ -568,6 +597,40 @@ function computeFormulaBadge(terms) {
         return "additive";
     return "multiplier";
 }
+/** Произведение токенов коэффициента (числа, коэф. параметров, архкоэф). */
+function evaluateCoeffTokensProduct(tokens, resolveFactorCoeff, formData) {
+    if (tokens.length === 0)
+        return 1;
+    let product = 1;
+    let expectOperand = true;
+    for (const token of tokens) {
+        if (token.kind === "operator" && token.op === "*") {
+            if (expectOperand)
+                return null;
+            expectOperand = true;
+            continue;
+        }
+        if (!expectOperand)
+            return null;
+        if (token.kind === "number") {
+            product *= token.value;
+            expectOperand = false;
+            continue;
+        }
+        if ((0, v2_work_formula_util_1.isParamToken)(token)) {
+            product *= resolveFactorCoeff(token.paramCode);
+            expectOperand = false;
+            continue;
+        }
+        if (token.kind === "arch_count_coeff") {
+            product *= (0, v2_work_arch_count_coeff_util_1.resolveArchCountCoeffFromToken)(formData ?? {}, token.archComponentKind, token.steps);
+            expectOperand = false;
+            continue;
+        }
+        return null;
+    }
+    return expectOperand ? null : product;
+}
 function evaluateTermsFormula(params) {
     const error = validateTermsFormula(params.terms);
     if (error)
@@ -581,14 +644,26 @@ function evaluateTermsFormula(params) {
     const firstMultOrder = multTerms.length > 0
         ? Math.min(...multTerms.map((term) => term.order))
         : Number.POSITIVE_INFINITY;
+    const resolveAdditiveValue = (term) => {
+        const sign = term.baseValue ?? 1;
+        if (term.scaleByNorm) {
+            const coeff = evaluateCoeffTokensProduct(term.coeffTokens ?? [], params.resolveFactorCoeff, params.formData);
+            if (coeff == null)
+                return null;
+            return sign * params.baseNorm * coeff;
+        }
+        const coeff = term.factors.reduce((acc, f) => acc * params.resolveFactorCoeff(f.paramCode), 1);
+        return sign * coeff;
+    };
     let effectiveBase = params.baseNorm;
     if (multTerms.length > 0) {
         for (const term of sorted) {
             if (term.kind !== "additive" || term.order >= firstMultOrder)
                 continue;
-            const base = term.baseValue ?? 1;
-            const coeff = term.factors.reduce((acc, f) => acc * params.resolveFactorCoeff(f.paramCode), 1);
-            effectiveBase += base * coeff;
+            const value = resolveAdditiveValue(term);
+            if (value == null)
+                return null;
+            effectiveBase += value;
         }
     }
     let product = 1;
@@ -610,9 +685,10 @@ function evaluateTermsFormula(params) {
         if (term.kind === "additive") {
             if (multTerms.length > 0 && term.order < firstMultOrder)
                 continue;
-            const base = term.baseValue ?? 1;
-            const coeff = term.factors.reduce((acc, f) => acc * params.resolveFactorCoeff(f.paramCode), 1);
-            sum += base * coeff;
+            const value = resolveAdditiveValue(term);
+            if (value == null)
+                return null;
+            sum += value;
         }
     }
     if (!hasMult)

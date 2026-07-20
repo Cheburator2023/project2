@@ -34,4 +34,8 @@ for pkg in "$@"; do
 	cp -a "${SRC}" "${TARGET}/"
 done
 
+if [ -f "${ROOT}/CHANGELOG.md" ]; then
+	cp -a "${ROOT}/CHANGELOG.md" "${ROOT}/apps/${APP}/CHANGELOG.md"
+fi
+
 echo "Staged packages for ${APP} -> apps/${APP}/.ci-packages/ ($*)"

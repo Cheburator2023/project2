@@ -35,6 +35,12 @@ export type V2RegistrySchemaColumnOptions = {
     /** Подписи групп массивов: путь → индекс → заголовок. */
     arrayGroupLabelsByPath?: Record<string, Record<number, string>>;
 };
+export type V2QuestionnaireRegistryConfigDto = {
+    /** Дерево колонок реестра (объединение схем всех привязанных версий шаблонов). */
+    columnTree: V2RegistryColumnNode[];
+    arrayIndicesByPath: Record<string, number[]>;
+    arrayGroupLabelsByPath: Record<string, Record<number, string>>;
+};
 /** Подписи группы рисков (из jsonSchema.title заводской схемы). */
 export declare const V2_UNCERTAINTY_RISK_GROUP_LABELS: Record<string, string>;
 /** Порядок полей группы рисков в uncertaintyCalculation.riskGroup. */
@@ -53,6 +59,12 @@ export declare function deriveRegistryColumnOptionsFromRows(rows: V2Questionnair
 export declare function buildStaticV2QuestionnaireRegistryColumnTree(): V2RegistryColumnNode[];
 /** Колонки реестра из версии jsonSchema/uiSchema шаблона. */
 export declare function buildV2QuestionnaireRegistryColumnTree(jsonSchema?: Record<string, unknown>, uiSchema?: Record<string, unknown>, options?: V2RegistrySchemaColumnOptions): V2RegistryColumnNode[];
-export declare function flattenV2RegistryColumnTree(nodes: V2RegistryColumnNode[]): V2RegistryLeafColumn[];
+/** Объединяет деревья колонок из нескольких версий схем (как при экспорте XLSX). */
+export declare function mergeV2QuestionnaireRegistryColumnTrees(trees: readonly (readonly V2RegistryColumnNode[])[]): V2RegistryColumnNode[];
+export declare function buildV2QuestionnaireRegistryConfig(schemas: Array<{
+    jsonSchema: Record<string, unknown>;
+    uiSchema: Record<string, unknown>;
+}>, rows?: V2QuestionnaireDto[]): V2QuestionnaireRegistryConfigDto;
+export declare function flattenV2RegistryColumnTree(nodes: readonly V2RegistryColumnNode[]): V2RegistryLeafColumn[];
 export declare function getByFormPath(obj: unknown, path: string): unknown;
 export declare function buildV2QuestionnaireRegistryExportColumns(jsonSchema?: Record<string, unknown>, uiSchema?: Record<string, unknown>, options?: V2RegistrySchemaColumnOptions): V2RegistryExportColumn[];

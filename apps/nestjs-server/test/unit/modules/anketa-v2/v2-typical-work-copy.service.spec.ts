@@ -83,6 +83,7 @@ describe("V2TypicalWorkWriteService.copyWork", () => {
 			{} as never,
 			{} as never,
 			{ getWorkCard } as never,
+			{ waitForSeedInFlight: jest.fn(async () => undefined) } as never,
 			{} as never,
 		);
 

@@ -90,7 +90,6 @@ describe("schemaEditorDockLayout.util", () => {
 			"issues",
 			"preview",
 			"relations",
-			"calculation",
 		]);
 	});
 
@@ -183,9 +182,8 @@ describe("schemaEditorDockLayout.util", () => {
 			"issues",
 			"preview",
 			"relations",
-			"calculation",
 		]);
-		expect(api.addPanel).toHaveBeenCalledTimes(5);
+		expect(api.addPanel).toHaveBeenCalledTimes(4);
 	});
 
 	it("getMissingDockPanelIds returns ids absent from the current dock", () => {
@@ -199,7 +197,6 @@ describe("schemaEditorDockLayout.util", () => {
 			"issues",
 			"preview",
 			"relations",
-			"calculation",
 		]);
 	});
 

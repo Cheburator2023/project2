@@ -270,7 +270,7 @@ describe("collectTypicalWorkSchemaConsistencyIssues", () => {
             }),
         ]);
     });
-    it("reports unavailable labor values when duplicate schema codes overwrite catalog entry", () => {
+    it("keeps Настройка available when duplicate workType codes merge catalog values", () => {
         const issues = collectTypicalWorkSchemaConsistencyIssues({
             schemaParams: [
                 {
@@ -305,13 +305,63 @@ describe("collectTypicalWorkSchemaConsistencyIssues", () => {
                 },
             ],
         });
-        expect(issues).toEqual([
-            expect.objectContaining({
-                kind: "labor_value",
-                paramCode: "workType",
-                message: expect.stringContaining("Настройка"),
-            }),
-        ]);
+        expect(issues).toEqual([]);
+    });
+    it("does not report always-shown trigger as missing schema param", () => {
+        const issues = collectTypicalWorkSchemaConsistencyIssues({
+            schemaParams: [{ code: "type", name: "Тип системы-источника", values: [] }],
+            rules: [
+                {
+                    paramCode: "__always__",
+                    paramName: "Нет — работа выводится всегда",
+                    operator: "=",
+                    valueCode: null,
+                    valueLabel: null,
+                },
+            ],
+            laborParamCodes: [],
+        });
+        expect(issues).toEqual([]);
+    });
+    it("resolves AutоМЛ / Маркер legacy trigger labels to schema fields", () => {
+        const issues = collectTypicalWorkSchemaConsistencyIssues({
+            schemaParams: [
+                {
+                    code: "field_automl",
+                    name: "AutoML: встраивание внешнего кода",
+                    values: [
+                        { code: "true", label: "Да" },
+                        { code: "false", label: "Нет" },
+                    ],
+                },
+                {
+                    code: "field_marker",
+                    name: "Требуется разметка данных источника",
+                    values: [
+                        { code: "true", label: "Да" },
+                        { code: "false", label: "Нет" },
+                    ],
+                },
+            ],
+            rules: [
+                {
+                    paramCode: "автомл_встраивание_внешнего_кода",
+                    paramName: "АвтоМЛ: встраивание внешнего кода",
+                    operator: "=",
+                    valueCode: "true",
+                    valueLabel: "Да",
+                },
+                {
+                    paramCode: "требуется_разметка_данных_источника_в_маркере",
+                    paramName: "Требуется разметка данных источника в Маркере",
+                    operator: "=",
+                    valueCode: "true",
+                    valueLabel: "Да",
+                },
+            ],
+            laborParamCodes: [],
+        });
+        expect(issues).toEqual([]);
     });
     it("does not report unavailable badges for schema field coefficient codes", () => {
         const issues = collectTypicalWorkSchemaConsistencyIssues({

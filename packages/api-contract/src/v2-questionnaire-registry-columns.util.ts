@@ -57,6 +57,13 @@ export type V2RegistrySchemaColumnOptions = {
 	arrayGroupLabelsByPath?: Record<string, Record<number, string>>;
 };
 
+export type V2QuestionnaireRegistryConfigDto = {
+	/** Дерево колонок реестра (объединение схем всех привязанных версий шаблонов). */
+	columnTree: V2RegistryColumnNode[];
+	arrayIndicesByPath: Record<string, number[]>;
+	arrayGroupLabelsByPath: Record<string, Record<number, string>>;
+};
+
 const REGISTRY_SKIP_ROOT_KEYS = new Set([
 	"workflow",
 	"meta",
@@ -352,21 +359,47 @@ export function collectRegistryArrayGroupLabelsFromRows(
 	return labels;
 }
 
+function collectArrayPathsInFormData(
+	value: unknown,
+	prefix: string,
+	out: Set<string>,
+): void {
+	if (value == null || typeof value !== "object") return;
+	if (Array.isArray(value)) {
+		if (prefix) out.add(prefix);
+		return;
+	}
+	for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+		const path = prefix ? `${prefix}.${key}` : key;
+		if (Array.isArray(child)) {
+			out.add(path);
+		} else if (child && typeof child === "object") {
+			collectArrayPathsInFormData(child, path, out);
+		}
+	}
+}
+
 export function deriveRegistryColumnOptionsFromRows(
 	rows: V2QuestionnaireDto[],
 ): V2RegistrySchemaColumnOptions {
 	const arrayIndicesByPath: Record<string, number[]> = {};
 	const arrayGroupLabelsByPath: Record<string, Record<number, string>> = {};
 
-	for (const path of [
-		`${SUMMARY_ROOT}.platformStreams`,
-		`${SUMMARY_ROOT}.detailedCalculation`,
-	] as const) {
+	const arrayPaths = new Set<string>();
+	for (const row of rows) {
+		collectArrayPathsInFormData(row.formData, "", arrayPaths);
+	}
+	for (const path of arrayPaths) {
 		const indices = collectRegistryArrayIndicesFromRows(rows, path);
 		if (indices.length === 0) continue;
 		arrayIndicesByPath[path] = indices;
 		const nameField =
-			path === `${SUMMARY_ROOT}.platformStreams` ? "streamName" : "stageName";
+			path.endsWith("platformStreams") || path.includes("platformStreams")
+				? "streamName"
+				: path.endsWith("detailedCalculation") ||
+					  path.includes("detailedCalculation")
+					? "stageName"
+					: "name";
 		const labels = collectRegistryArrayGroupLabelsFromRows(
 			rows,
 			path,
@@ -486,21 +519,14 @@ function collectSchemaSectionColumns(
 		}
 
 		if (childType === "object") {
-			const nestedProps = readRecord(childSchema.properties);
-			if (!nestedProps) continue;
-			for (const nestedKey of listOrderedPropertyKeys(childSchema, childUi)) {
-				const nestedSchema = readRecord(nestedProps[nestedKey]);
-				const nestedUi = readRecord(childUi?.[nestedKey]);
-				if (!nestedSchema || !isScalarSchemaNode(nestedSchema)) continue;
-				if (nestedUi && isV2AnketaHiddenUiNode(nestedUi)) continue;
-				nodes.push(
-					formLeaf(
-						`${childPath}.${nestedKey}`,
-						readFieldTitle(nestedSchema, nestedKey),
-						resolveValueType(nestedSchema),
-					),
-				);
-			}
+			nodes.push(
+				...collectSchemaSectionColumns(
+					childSchema,
+					childUi,
+					childPath,
+					options,
+				),
+			);
 			continue;
 		}
 
@@ -939,8 +965,89 @@ export function buildV2QuestionnaireRegistryColumnTree(
 	return tree;
 }
 
+function flattenRegistryLeaves(
+	nodes: readonly V2RegistryColumnNode[],
+): V2RegistryLeafColumn[] {
+	const leaves: V2RegistryLeafColumn[] = [];
+	const walk = (node: V2RegistryColumnNode) => {
+		if (node.type === "leaf") {
+			leaves.push(node);
+			return;
+		}
+		for (const child of node.children) walk(child);
+	};
+	for (const node of nodes) walk(node);
+	return leaves;
+}
+
+/** Объединяет деревья колонок из нескольких версий схем (как при экспорте XLSX). */
+export function mergeV2QuestionnaireRegistryColumnTrees(
+	trees: readonly (readonly V2RegistryColumnNode[])[],
+): V2RegistryColumnNode[] {
+	if (!trees.length) return buildStaticV2QuestionnaireRegistryColumnTree();
+
+	const leavesById = new Map<string, V2RegistryLeafColumn>();
+	for (const tree of trees) {
+		for (const leaf of flattenRegistryLeaves(tree)) {
+			if (!leavesById.has(leaf.id)) leavesById.set(leaf.id, leaf);
+		}
+	}
+
+	const usedIds = new Set<string>();
+	const remapNode = (node: V2RegistryColumnNode): V2RegistryColumnNode | null => {
+		if (node.type === "leaf") {
+			const merged = leavesById.get(node.id);
+			if (!merged) return null;
+			usedIds.add(node.id);
+			return { ...merged };
+		}
+		const children = node.children
+			.map(remapNode)
+			.filter((child): child is V2RegistryColumnNode => child != null);
+		if (!children.length) return null;
+		return { ...node, children };
+	};
+
+	const primary = trees[0]!;
+	const merged = primary
+		.map(remapNode)
+		.filter((node): node is V2RegistryColumnNode => node != null);
+
+	const orphanLeaves = [...leavesById.values()].filter(
+		(leaf) => !usedIds.has(leaf.id),
+	);
+	if (orphanLeaves.length > 0) {
+		merged.push({
+			type: "group",
+			header: "Дополнительные поля",
+			children: orphanLeaves,
+		});
+	}
+
+	return merged.length > 0 ? merged : buildStaticV2QuestionnaireRegistryColumnTree();
+}
+
+export function buildV2QuestionnaireRegistryConfig(
+	schemas: Array<{
+		jsonSchema: Record<string, unknown>;
+		uiSchema: Record<string, unknown>;
+	}>,
+	rows: V2QuestionnaireDto[] = [],
+): V2QuestionnaireRegistryConfigDto {
+	const columnOptions = deriveRegistryColumnOptionsFromRows(rows);
+	const trees = schemas.map(({ jsonSchema, uiSchema }) =>
+		buildV2QuestionnaireRegistryColumnTree(jsonSchema, uiSchema, columnOptions),
+	);
+	const columnTree = mergeV2QuestionnaireRegistryColumnTrees(trees);
+	return {
+		columnTree,
+		arrayIndicesByPath: columnOptions.arrayIndicesByPath ?? {},
+		arrayGroupLabelsByPath: columnOptions.arrayGroupLabelsByPath ?? {},
+	};
+}
+
 export function flattenV2RegistryColumnTree(
-	nodes: V2RegistryColumnNode[],
+	nodes: readonly V2RegistryColumnNode[],
 ): V2RegistryLeafColumn[] {
 	const leaves: V2RegistryLeafColumn[] = [];
 	const walk = (node: V2RegistryColumnNode, groupHeader?: string) => {

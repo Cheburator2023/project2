@@ -12,9 +12,7 @@ import type {
 	ComputedRuleRole,
 } from "../../utils/calculationEngine";
 import { formatComputedNumber } from "../../utils/calculationEngine";
-import { V2FinalEvaluationPanel } from "../../organisms/V2FinalEvaluationPanel";
 import { TaskTriggerRow } from "../../organisms/TaskTriggerRow";
-import { readSummaryFromFormData } from "../../utils/readSummaryFromFormData";
 import {
 	isOverwrittenByLegacyStageEngine,
 	LEGACY_STAGE_ENGINE_DESCRIPTION,
@@ -170,13 +168,9 @@ export function SchemaCalculationPanel({ embedded = false }: { embedded?: boolea
 		taskTriggerItems,
 		calculationLoading,
 		calculationError,
-		liveFormData,
 		legacyStageEvaluation,
 		openLogicTabWithRule,
-		previewUiSchema,
 	} = useSchemaEditor();
-
-	const summary = readSummaryFromFormData(liveFormData);
 
 	const sectionsWithItems = useMemo(() => {
 		const byRole = new Map<ComputedRuleRole, CalculationItem[]>();
@@ -199,38 +193,17 @@ export function SchemaCalculationPanel({ embedded = false }: { embedded?: boolea
 	return (
 		<PanelChrome
 			embedded={embedded}
-			title="Калькуляция"
-			description="Два слоя: правила JsonLogic шаблона и движок этапов v1 (TypeScript на бекенде)."
+			title="Детали калькуляции"
+			description="Правила JsonLogic (computed / row_computed / триггеры). Итоговая оценка — в блоке превью выше."
 		>
 			<Alert severity="info" sx={{ mb: 1.5 }}>
 				<strong>JsonLogic</strong> — visibility, validation, computed, row_computed,
 				task_trigger (редактор «Логика»).{" "}
 				<strong>{LEGACY_STAGE_ENGINE_TITLE}</strong> — {LEGACY_STAGE_ENGINE_DESCRIPTION}
+				{legacyApplied
+					? ` После /calculate: ${legacyStageEvaluation?.stageRowCount ?? 0} этапов · ${legacyStageEvaluation?.platformStreamCount ?? 0} стримов.`
+					: null}
 			</Alert>
-
-			<Typography variant="caption" fontWeight={700} display="block" sx={{ mb: 0.5 }}>
-				{LEGACY_STAGE_ENGINE_TITLE}
-			</Typography>
-			<V2FinalEvaluationPanel
-				summary={summary}
-				formData={liveFormData}
-				calculationError={calculationError}
-				isLoading={calculationLoading}
-				compact
-				uiSchema={previewUiSchema as Record<string, unknown>}
-				liveFormData={liveFormData}
-				engineCaption={
-					legacyApplied
-						? `После /calculate · ${legacyStageEvaluation?.stageRowCount ?? 0} этапов · ${legacyStageEvaluation?.platformStreamCount ?? 0} стримов`
-						: "Данные появятся после расчёта на бекенде"
-				}
-			/>
-
-			<Divider sx={{ my: 2 }} />
-
-			<Typography variant="caption" fontWeight={700} display="block" sx={{ mb: 1 }}>
-				Правила JsonLogic (computed / row_computed / триггеры)
-			</Typography>
 
 			{calculationError ? (
 				<Alert severity="error" sx={{ mb: 1 }}>
@@ -245,7 +218,7 @@ export function SchemaCalculationPanel({ embedded = false }: { embedded?: boolea
 			{!hasAnything ? (
 				<Alert severity="info" sx={{ mb: 1 }}>
 					Добавьте правила типа «Вычисление» или «Триггер типовых задач» — здесь
-					появятся коэффициенты, этапы и итоговая оценка.
+					появятся коэффициенты, этапы и сработавшие триггеры.
 				</Alert>
 			) : null}
 
@@ -281,7 +254,7 @@ export function SchemaCalculationPanel({ embedded = false }: { embedded?: boolea
 						<Divider sx={{ mb: 1 }} />
 						<Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
 							<Typography variant="caption" fontWeight={700}>
-								Типовые работы (триггеры)
+								Типовые работы (условия появления)
 							</Typography>
 							<IconButton
 								size="small"

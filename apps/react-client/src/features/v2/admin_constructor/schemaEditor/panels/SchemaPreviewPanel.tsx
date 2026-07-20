@@ -47,7 +47,7 @@ export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean })
 		<PanelChrome
 			embedded={embedded}
 			title="Превью анкеты"
-			description="Тестовые значения для проверки логики и справочников."
+			description="Тестовые значения, логика справочников и итоговая оценка."
 			actions={embedded ? undefined : resetButton}
 		>
 			{embedded ? (
@@ -79,30 +79,21 @@ export function SchemaPreviewPanel({ embedded = false }: { embedded?: boolean })
 			) : null}
 
 			<SchemaEditorPanelErrorBoundary title="Ошибка превью анкеты">
-				{embedded ? (
+				<V2FormWithEvaluationLayout
+					summary={engine.summary}
+					formData={engine.displayFormData}
+					calculationError={calculationError}
+					calculationLoading={calculationLoading}
+					uiSchema={engine.previewUiSchema as Record<string, unknown>}
+					liveFormData={engine.calculationLiveFormData}
+				>
 					<V2AnketaFormWithModals
 						engine={engine}
 						formRemountKey={previewFormRemountKey}
 						showUncertaintySlot={showUncertaintySlot}
 						data-test-id="schema-editor-anketa-preview"
 					/>
-				) : (
-					<V2FormWithEvaluationLayout
-						summary={engine.summary}
-						formData={engine.displayFormData}
-						calculationError={calculationError}
-						calculationLoading={calculationLoading}
-						uiSchema={engine.previewUiSchema as Record<string, unknown>}
-						liveFormData={engine.calculationLiveFormData}
-					>
-						<V2AnketaFormWithModals
-							engine={engine}
-							formRemountKey={previewFormRemountKey}
-							showUncertaintySlot={showUncertaintySlot}
-							data-test-id="schema-editor-anketa-preview"
-						/>
-					</V2FormWithEvaluationLayout>
-				)}
+				</V2FormWithEvaluationLayout>
 			</SchemaEditorPanelErrorBoundary>
 
 			<Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>

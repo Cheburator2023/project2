@@ -48,20 +48,21 @@ export function TypicalWorkValueMatchingInfo({
 	sx,
 }: TypicalWorkValueMatchingInfoProps) {
 	const { title, lines } = COPY[variant];
-	return (
-		<Alert severity="info" sx={{ mb: 1.5, py: 0.75, ...sx }}>
-			<Typography sx={{ fontSize: 12, fontWeight: 700, mb: 0.5 }}>
-				{title}
-			</Typography>
-			{lines.map((line) => (
-				<Typography
-					key={line}
-					component="div"
-					sx={{ fontSize: 11.5, lineHeight: 1.45, color: "inherit" }}
-				>
-					{line}
-				</Typography>
-			))}
-		</Alert>
-	);
+	return null;
+	//  (
+	// 	<Alert severity="info" sx={{ mb: 1.5, py: 0.75, ...sx }}>
+	// 		<Typography sx={{ fontSize: 12, fontWeight: 700, mb: 0.5 }}>
+	// 			{title}
+	// 		</Typography>
+	// 		{lines.map((line) => (
+	// 			<Typography
+	// 				key={line}
+	// 				component="div"
+	// 				sx={{ fontSize: 11.5, lineHeight: 1.45, color: "inherit" }}
+	// 			>
+	// 				{line}
+	// 			</Typography>
+	// 		))}
+	// 	</Alert>
+	// );
 }

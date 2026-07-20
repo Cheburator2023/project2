@@ -69,7 +69,9 @@ export const MAIN_DOCK_PANEL_ID = "designer";
 
 export const SCHEMA_TREE_PANEL_ID = "schema-tree";
 export const RELATIONS_PANEL_ID = "relations";
+/** @deprecated Панель объединена с «Превью»; оставляем id для редиректов навигации. */
 export const CALCULATION_PANEL_ID = "calculation";
+export const PREVIEW_PANEL_ID = "preview";
 export const ISSUES_PANEL_ID = "issues";
 
 /** Вкладки дока; первая — главная (конструктор). Дерево схемы — в палитре/холсте конструктора. */
@@ -78,9 +80,8 @@ export const DOCK_PANEL_HEADINGS = [
 	["json", "Редактор JSON"],
 	["logic", "Логика"],
 	[ISSUES_PANEL_ID, "Проблемы"],
-	["preview", "Превью"],
+	[PREVIEW_PANEL_ID, "Превью и калькуляция"],
 	[RELATIONS_PANEL_ID, "Граф связей"],
-	[CALCULATION_PANEL_ID, "Калькуляция"],
 ] as const;
 
 /** @deprecated Используйте {@link DOCK_PANEL_HEADINGS}. */
@@ -174,6 +175,11 @@ export const PRIMITIVE_FIELD_TYPE_OPTIONS = [
 
 export type PrimitiveFieldTypeVariant =
 	(typeof PRIMITIVE_FIELD_TYPE_OPTIONS)[number]["id"];
+
+/** Исторический ориентир для коротких строк; в свойствах можно задать больше. */
+export const SCHEMA_DEFAULT_STRING_MAX_LENGTH = 255;
+/** Верхняя граница maxLength в JSON Schema (конструктор). */
+export const SCHEMA_STRING_MAX_LENGTH_CAP = 10_000;
 
 export const LAYOUT_PRESETS: PalettePreset[] = [
 	{

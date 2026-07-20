@@ -62,7 +62,8 @@ export function TypicalWorkLaborArchCountSection({
 			</Typography>
 			<Typography sx={{ fontSize: 11.5, color: "#6b7484", mb: 1.1 }}>
 				Без привязки к полю схемы — считается по числу арх. компонентов в анкете
-				(модели, источники и т.д.).
+				(модели, источники и т.д.). N в формуле — фактическое количество;
+				условия проверяются сверху вниз, срабатывает первое подходящее.
 			</Typography>
 
 			{laborArchCounts.length > 0 ? (
@@ -125,7 +126,14 @@ export function TypicalWorkLaborArchCountSection({
 						...laborArchCounts,
 						{
 							kind: option.kind,
-							steps: [{ count: 1, coefficient: 1 }],
+							steps: [
+								{
+									count: 1,
+									coefficient: 1,
+									operator: "=",
+									coefficientFormula: null,
+								},
+							],
 							paramName: null,
 						},
 					]);

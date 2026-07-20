@@ -60,7 +60,7 @@ export function LogicWorkspaceShell({
 				/>
 				<Typography variant="caption" color="text.secondary">
 					{tab === "works"
-						? "Норматив · триггеры появления · параметры трудоёмкости · формула"
+						? "Норматив · условия появления типовых работ · параметры трудоёмкости · формула"
 						: tab === "dependencies"
 							? "Зависимости между параметрами анкеты"
 							: "Расширенный редактор JsonLogic-правил"}

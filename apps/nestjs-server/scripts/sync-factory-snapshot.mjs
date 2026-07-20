@@ -14,6 +14,13 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const {
+	patchV2AnketaCalculationLogicRules,
+	stripQuestionnaireCalcNameFromTemplateSnapshot,
+} = require("@smart-anketa/api-contract");
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const serverRoot = join(__dirname, "..");
@@ -76,6 +83,15 @@ const snapshot = {
 		dictionariesSnapshot: version.dictionariesSnapshot,
 	}),
 };
+
+const stripped = stripQuestionnaireCalcNameFromTemplateSnapshot({
+	jsonSchema: snapshot.jsonSchema,
+	uiSchema: snapshot.uiSchema,
+});
+snapshot.logic = patchV2AnketaCalculationLogicRules(snapshot.logic, {
+	jsonSchema: stripped.jsonSchema,
+	uiSchema: stripped.uiSchema,
+});
 
 writeFileSync(snapshotPath, `${JSON.stringify(snapshot, null, "\t")}\n`, "utf-8");
 

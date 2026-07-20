@@ -1,6 +1,6 @@
 import type { V2LogicGraphDto, V2LogicRuleDto } from "@smart-anketa/api-contract";
 import {
-	patchV2AnketaCalculationLogicRules,
+	resolveAnketaCalculationLogic,
 	resolveSourceTypicalWorksOutputPath,
 } from "@smart-anketa/api-contract";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
@@ -13,8 +13,7 @@ export function resolveEffectiveLogicRules(
 	uiSchema: UiSchema,
 ): V2LogicRuleDto[] {
 	return (
-		patchV2AnketaCalculationLogicRules(logic, { jsonSchema, uiSchema }).rules ??
-		[]
+		resolveAnketaCalculationLogic(logic, { jsonSchema, uiSchema }).rules ?? []
 	);
 }
 

@@ -12,6 +12,7 @@
 		"sync:factory-template-works-registry": "node scripts/sync-factory-template-works-registry.mjs",
 		"import:csv-formulas": "tsx scripts/import-csv-formulas-to-factory.ts",
 		"import:model-stream": "tsx scripts/import-model-stream-to-factory.ts",
+		"import:pirm": "tsx scripts/import-pirm-to-factory.ts",
 		"repair:factory-dictionaries": "tsx scripts/repair-factory-dictionaries.ts",
 		"repair:typical-works-bindings": "node scripts/repair-typical-works-bindings.mjs",
 		"start": "NODE_ENV=production tsx dist/main",

@@ -86,3 +86,166 @@ export function sortModelStreamTypicalWorkRows<
 		return compareModelStreamTypicalWorkNames(leftName, rightName);
 	});
 }
+
+function readFiniteNumber(value: unknown): number | null {
+	if (typeof value === "number" && Number.isFinite(value)) return value;
+	if (typeof value === "string" && value.trim()) {
+		const parsed = Number(value.replace(",", "."));
+		return Number.isFinite(parsed) ? parsed : null;
+	}
+	return null;
+}
+
+function typicalWorkRowCollapseKey(
+	row: {
+		workId?: unknown;
+		name?: unknown;
+		taskCode?: unknown;
+		sourceName?: unknown;
+	},
+	options?: { groupBySourceName?: boolean },
+): string {
+	const workId =
+		typeof row.workId === "string" && row.workId.trim()
+			? row.workId.trim()
+			: "";
+	const sourceName =
+		typeof row.sourceName === "string" ? row.sourceName.trim() : "";
+	const sourceSuffix =
+		options?.groupBySourceName && sourceName && !sourceName.startsWith("×")
+			? `|src:${sourceName}`
+			: "";
+	if (workId) return `id:${workId}${sourceSuffix}`;
+	return [
+		"fb:",
+		typeof row.taskCode === "string" ? row.taskCode.trim() : "",
+		"|",
+		typeof row.name === "string" ? row.name.trim() : "",
+		sourceSuffix,
+	].join("");
+}
+
+export type DedupeTypicalWorkRowsOptions = {
+	/** Для стрима «Источники данных»: не склеивать разные объекты-источники. */
+	groupBySourceName?: boolean;
+};
+
+/**
+ * Одна работа — одна строка.
+ * Fan-out по источникам/компонентам схлопывается: коэффициент и итог суммируются
+ * (множитель = число дублей при исходном коэф. 1).
+ */
+export function dedupeTypicalWorkRowsByWorkId<
+	T extends {
+		workId?: unknown;
+		name?: unknown;
+		taskCode?: unknown;
+		coefficient?: unknown;
+		total?: unknown;
+		estimateHoursPerDay?: unknown;
+		coefficientDisplay?: unknown;
+		sourceName?: unknown;
+		reason?: unknown;
+		formulaBreakdown?: unknown;
+	},
+>(rows: T[], options?: DedupeTypicalWorkRowsOptions): T[] {
+	const groups = new Map<string, T[]>();
+	const order: string[] = [];
+
+	for (const row of rows) {
+		const key = typicalWorkRowCollapseKey(row, options);
+		if (!key || key === "fb:|" || key === "fb:||") {
+			const uniqKey = `uniq:${order.length}`;
+			order.push(uniqKey);
+			groups.set(uniqKey, [row]);
+			continue;
+		}
+		if (!groups.has(key)) {
+			groups.set(key, []);
+			order.push(key);
+		}
+		groups.get(key)!.push(row);
+	}
+
+	return order.map((key) => {
+		const group = groups.get(key) ?? [];
+		const first = group[0]!;
+		if (group.length <= 1) return first;
+
+		let coefficientSum = 0;
+		let totalSum = 0;
+		let hasCoeff = false;
+		let hasTotal = false;
+		for (const row of group) {
+			const coeff = readFiniteNumber(row.coefficient);
+			if (coeff != null) {
+				coefficientSum += coeff;
+				hasCoeff = true;
+			}
+			const total = readFiniteNumber(row.total);
+			if (total != null) {
+				totalSum += total;
+				hasTotal = true;
+			}
+		}
+
+		const multiplier = group.length;
+		const base = readFiniteNumber(first.estimateHoursPerDay);
+		const nextTotal =
+			hasTotal
+				? totalSum
+				: hasCoeff && base != null
+					? base * coefficientSum
+					: undefined;
+		const prevBreakdown =
+			first.formulaBreakdown &&
+			typeof first.formulaBreakdown === "object" &&
+			!Array.isArray(first.formulaBreakdown)
+				? (first.formulaBreakdown as Record<string, unknown>)
+				: null;
+		const next: T = {
+			...first,
+			...(hasCoeff ? { coefficient: coefficientSum } : {}),
+			...(nextTotal != null ? { total: nextTotal } : {}),
+			coefficientDisplay:
+				typeof first.coefficientDisplay === "string" &&
+				first.coefficientDisplay.trim() &&
+				multiplier === 1
+					? first.coefficientDisplay
+					: `×${hasCoeff ? String(coefficientSum).replace(".", ",") : multiplier}`,
+			sourceName: `×${multiplier}`,
+			reason:
+				typeof first.reason === "string" && first.reason.includes(":")
+					? first.reason.replace(/^[^:]+:\s*/, "Сводно: ")
+					: first.reason,
+			...(prevBreakdown
+				? {
+						formulaBreakdown: {
+							...prevBreakdown,
+							...(hasCoeff ? { coefficient: coefficientSum } : {}),
+							...(nextTotal != null ? { total: nextTotal } : {}),
+							expanded:
+								base != null && hasCoeff && nextTotal != null
+									? `${base} × ${coefficientSum} = ${nextTotal} (×${multiplier})`
+									: prevBreakdown.expanded,
+						},
+					}
+				: {}),
+		};
+		return next;
+	});
+}
+
+/** Строка модельного стрима для «Подробного расчёта»: только с ненулевым итогом. */
+export function isModelStreamTypicalWorkVisibleInSummary(row: {
+	total?: unknown;
+}): boolean {
+	if (row.total == null || row.total === "") return false;
+	const num =
+		typeof row.total === "number"
+			? row.total
+			: typeof row.total === "string" && row.total.trim()
+				? Number(row.total.replace(",", "."))
+				: Number.NaN;
+	return Number.isFinite(num) && num > 0;
+}

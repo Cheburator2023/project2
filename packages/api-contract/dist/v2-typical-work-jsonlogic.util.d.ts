@@ -80,6 +80,8 @@ export type VersionConfigFormulaLike = {
 export declare function compileCalculationLogicFromVersionConfig(config: VersionConfigFormulaLike): V2TypicalWorkStoredCalculationLogicDto | null;
 export declare function needsCalculationLogicBackfill(raw: unknown): boolean;
 export declare function parseStoredTypicalWorkCalculationLogic(raw: unknown): V2TypicalWorkStoredCalculationLogicDto | null;
+/** Дополняет paramCoefficients значениями из resolveFactorCoeff для всех коэф. в формуле. */
+export declare function fillFormulaParamCoefficients(tokens: readonly V2WorkFormulaToken[], paramCoefficients: Record<string, number>, resolveFactorCoeff: (paramCode: string) => number): Record<string, number>;
 /** Итог по формуле: JsonLogic (из токенов) → token-движок → terms (упрощённая модель). */
 export declare function computeTypicalWorkFormulaTotal(params: {
     calculationLogic: V2TypicalWorkStoredCalculationLogicDto | null | undefined;
@@ -93,3 +95,33 @@ export declare function computeTypicalWorkFormulaTotal(params: {
     formData?: Record<string, unknown>;
     resolveFactorCoeff: (paramCode: string) => number;
 }): number | null;
+export type TypicalWorkFormulaFactorLine = {
+    paramCode: string;
+    paramName: string;
+    value: number;
+};
+/** Разбор формулы типовой работы для «Подробного расчёта». */
+export type TypicalWorkFormulaBreakdownDto = {
+    symbolic: string;
+    expanded: string;
+    factors: TypicalWorkFormulaFactorLine[];
+    baseNorm: number;
+    coefficient: number;
+    total: number;
+};
+/** Собирает символьную формулу, подстановку и список коэффициентов с реальными значениями. */
+export declare function buildTypicalWorkFormulaBreakdown(params: {
+    calculationLogic?: V2TypicalWorkStoredCalculationLogicDto | null;
+    formula: unknown;
+    formulaText?: string | null;
+    terms: V2TypicalWorkFormulaTermsDto;
+    rounding: V2TypicalWorkRoundingDto;
+    norm: number;
+    paramCoefficients: Record<string, number>;
+    paramNames?: Record<string, string>;
+    source?: Record<string, unknown>;
+    formData?: Record<string, unknown>;
+    resolveFactorCoeff: (paramCode: string) => number;
+    coefficient: number;
+    total: number;
+}): TypicalWorkFormulaBreakdownDto;

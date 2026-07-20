@@ -40,6 +40,15 @@ const v2_csv_formula_import_util_1 = require("./v2-csv-formula-import.util");
             },
         ]);
     });
+    (0, vitest_1.it)("parses always-shown model-stream trigger", () => {
+        (0, vitest_1.expect)((0, v2_csv_formula_import_util_1.parseModelStreamTriggerRules)("нет — работа выводится всегда.")).toEqual([
+            {
+                paramName: "Нет — работа выводится всегда",
+                operator: "exists",
+                values: [],
+            },
+        ]);
+    });
     (0, vitest_1.it)("parses model-stream triggers without splitting param names on «и»", () => {
         (0, vitest_1.expect)((0, v2_csv_formula_import_util_1.parseModelStreamTriggerRules)("Необходимость продуктивизации и количество дополнительных витрин ≠ «Не требуется»")).toEqual([
             {
@@ -65,6 +74,19 @@ const v2_csv_formula_import_util_1 = require("./v2-csv-formula-import.util");
                 paramName: "Каналы внедрения",
                 operator: "exists",
                 values: [],
+            },
+        ]);
+    });
+    (0, vitest_1.it)("reads model-stream trigger from «Результат выбора» when param column is name-only", () => {
+        (0, vitest_1.expect)((0, v2_csv_formula_import_util_1.extractTriggerTextFromResultChoice)('Триггер: Необходимость пилота (MVP) = «Да» (иначе Итог = 0).\nНорматив: 40 чел-дн.')).toBe("Необходимость пилота (MVP) = «Да»");
+        const csv = `"Стрим";"Арх. Компонент";"Название в смарт-анкете СУМ";"Наличие норматива";"Параметр-триггер";"Параметры трудоемкости";"Коэффициенты параметров трудоёмкости";"Формула";"Результат выбора"
+"Модельный стрим";"Арх. Компонент. Модель";"05А. Разработка пилотной модели (MVP)";"40";"Необходимость пилота (MVP)";"Сложность постановки";"1→1";"N";"Триггер: Необходимость пилота (MVP) = «Да» (иначе Итог = 0)."`;
+        const row = (0, v2_csv_formula_import_util_1.parseCsvFormulaImportRows)(csv)[0];
+        (0, vitest_1.expect)(row?.triggerRules).toEqual([
+            {
+                paramName: "Необходимость пилота (MVP)",
+                operator: "=",
+                values: ["Да"],
             },
         ]);
     });

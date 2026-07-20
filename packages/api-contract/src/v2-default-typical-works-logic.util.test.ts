@@ -2,9 +2,18 @@ import { describe, expect, it } from "vitest";
 import {
 	buildSourceTypicalWorksCatalogRule,
 	buildTypicalWorkRowTotalCondition,
+	isTypicalWorksCatalogLogicComplete,
 	patchV2TypicalWorksLogicRules,
+	shouldSkipLegacyModelStreamStageSummary,
+	syncTypicalWorksCatalogLogicSnapshot,
+	upgradeTypicalWorksCatalogLogicRules,
+	V2_MODEL_STREAM_SOURCE_ARRAY_PATH,
 	V2_SOURCE_SYSTEMS_ARRAY_PATH,
 } from "./v2-default-typical-works-logic.util";
+import {
+	isAtypicalWorksLogicComplete,
+	resolveAnketaCalculationLogic,
+} from "./v2-atypical-works-logic.util";
 
 describe("v2-default-typical-works-logic.util", () => {
 	it("replaces legacy static-tasks rule with worksCatalog and v5 paths", () => {
@@ -377,6 +386,198 @@ describe("v2-default-typical-works-logic.util", () => {
 		const payload = rule?.payload as Record<string, unknown>;
 		expect(payload.worksCatalogStream).toBe("Модельный стрим");
 		expect(payload.worksCatalogAllArchComponents).toBe(true);
-		expect(payload.sourceArrayPath).toBeUndefined();
+		expect(payload.sourceArrayPath).toBe("generalInfo.modelService");
+	});
+
+	it("isTypicalWorksCatalogLogicComplete returns true for fully patched logic", () => {
+		const uiSchema = {
+			detailInfo: {
+				detailTypicalTasks: { "ui:options": { archComponent: "typicalWork" } },
+			},
+		};
+		const patched = patchV2TypicalWorksLogicRules({ rules: [] }, { uiSchema });
+		expect(isTypicalWorksCatalogLogicComplete(patched, { uiSchema })).toBe(true);
+	});
+
+	it("resolveAnketaCalculationLogic is no-op when logic snapshot is complete", () => {
+		const uiSchema = {
+			detailInfo: {
+				detailTypicalTasks: { "ui:options": { archComponent: "typicalWork" } },
+			},
+			field_a: {
+				field_b: { "ui:options": { archComponent: "atypicalWork" } },
+			},
+		};
+		const patched = resolveAnketaCalculationLogic({ rules: [] }, { uiSchema });
+		const resolved = resolveAnketaCalculationLogic(patched, { uiSchema });
+		expect(resolved).toEqual(patched);
+		expect(isAtypicalWorksLogicComplete(resolved, { uiSchema })).toBe(true);
+	});
+
+	it("upgradeTypicalWorksCatalogLogicRules adds model stream sourceArrayPath to stale logic", () => {
+		const uiSchema = {
+			detailInfo: {
+				"ui:options": {
+					streamBlock: true,
+					streamExecutor: "Модельный стрим",
+				},
+				detailTypicalTasks: {
+					"ui:options": {
+						archComponent: "typicalWork",
+						streamExecutor: "Модельный стрим",
+					},
+				},
+			},
+		};
+		const staleLogic = {
+			rules: [
+				{
+					id: "typical-works-catalog-detailInfo-detailTypicalTasks",
+					kind: "task_trigger" as const,
+					targetPath: "/detailInfo/detailTypicalTasks",
+					condition: true,
+					dependencies: [],
+					payload: {
+						mode: "generated_rows",
+						worksCatalog: true,
+						worksCatalogStream: "Модельный стрим",
+						outputArrayPath: "detailInfo.detailTypicalTasks",
+					},
+				},
+				{
+					id: "unified-typical-row-total:detailInfo_detailTypicalTasks",
+					kind: "row_computed" as const,
+					targetPath: "/detailInfo/detailTypicalTasks",
+					condition: true,
+					dependencies: [],
+					payload: {
+						arrayPath: "detailInfo.detailTypicalTasks",
+						fieldVar: "total",
+					},
+				},
+				{
+					id: "unified-typical-total",
+					kind: "computed" as const,
+					targetPath: "/summary/typicalTotal",
+					condition: true,
+					dependencies: [],
+					payload: {},
+				},
+			],
+		};
+
+		const upgraded = upgradeTypicalWorksCatalogLogicRules(staleLogic, { uiSchema });
+		const catalogRule = upgraded.rules.find(
+			(rule) => rule.id === "typical-works-catalog-detailInfo-detailTypicalTasks",
+		);
+		expect(
+			(catalogRule?.payload as Record<string, unknown>).sourceArrayPath,
+		).toBe(V2_MODEL_STREAM_SOURCE_ARRAY_PATH);
+
+		const resolved = resolveAnketaCalculationLogic(staleLogic, { uiSchema });
+		expect(
+			(
+				resolved.rules.find(
+					(rule) =>
+						rule.id === "typical-works-catalog-detailInfo-detailTypicalTasks",
+				)?.payload as Record<string, unknown>
+			).sourceArrayPath,
+		).toBe(V2_MODEL_STREAM_SOURCE_ARRAY_PATH);
+	});
+
+	it("syncTypicalWorksCatalogLogicSnapshot writes template boundWorkIds into logic", () => {
+		const templateWorkId = "7147da4f-b4cd-445e-8ac3-838c4b106ca7";
+		const uiSchema = {
+			detailInfo: {
+				"ui:options": {
+					streamBlock: true,
+					streamExecutor: "Модельный стрим",
+				},
+				detailTypicalTasks: {
+					"ui:options": {
+						archComponent: "typicalWork",
+						streamExecutor: "Модельный стрим",
+						boundWorkIds: [templateWorkId],
+					},
+				},
+			},
+		};
+		const logic = {
+			rules: [
+				{
+					id: "typical-works-catalog-detailInfo-detailTypicalTasks",
+					kind: "task_trigger" as const,
+					targetPath: "/detailInfo/detailTypicalTasks",
+					condition: true,
+					dependencies: [],
+					payload: {
+						mode: "generated_rows",
+						worksCatalog: true,
+						worksCatalogStream: "Модельный стрим",
+						outputArrayPath: "detailInfo.detailTypicalTasks",
+						allowedWorkIds: [
+							"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4004",
+						],
+					},
+				},
+				{
+					id: "unified-typical-row-total:detailInfo_detailTypicalTasks",
+					kind: "row_computed" as const,
+					targetPath: "/detailInfo/detailTypicalTasks",
+					condition: true,
+					dependencies: [],
+					payload: {
+						arrayPath: "detailInfo.detailTypicalTasks",
+						fieldVar: "total",
+					},
+				},
+				{
+					id: "unified-typical-total",
+					kind: "computed" as const,
+					targetPath: "/summary/typicalTotal",
+					condition: true,
+					dependencies: [],
+					payload: {},
+				},
+			],
+		};
+
+		const synced = syncTypicalWorksCatalogLogicSnapshot(logic, { uiSchema });
+		const catalogRule = synced.rules.find(
+			(rule) => rule.id === "typical-works-catalog-detailInfo-detailTypicalTasks",
+		);
+		expect(
+			(catalogRule?.payload as Record<string, unknown>).allowedWorkIds,
+		).toEqual([templateWorkId]);
+		expect(
+			(catalogRule?.payload as Record<string, unknown>).sourceArrayPath,
+		).toBe(V2_MODEL_STREAM_SOURCE_ARRAY_PATH);
+		expect(
+			(catalogRule?.payload as Record<string, unknown>).worksCatalogAllArchComponents,
+		).toBe(true);
+	});
+
+	it("shouldSkipLegacyModelStreamStageSummary for model stream typicalWork block", () => {
+		expect(
+			shouldSkipLegacyModelStreamStageSummary({
+				detailInfo: {
+					detailTypicalTasks: {
+						"ui:options": {
+							archComponent: "typicalWork",
+							streamExecutor: "Модельный стрим",
+						},
+					},
+				},
+			}),
+		).toBe(true);
+		expect(
+			shouldSkipLegacyModelStreamStageSummary({
+				streamDataSources: {
+					sourceTypicalTasks: {
+						"ui:options": { archComponent: "typicalWork" },
+					},
+				},
+			}),
+		).toBe(false);
 	});
 });

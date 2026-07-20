@@ -1,7 +1,10 @@
 import {
 	clearMfeAuthState,
 } from "@react-client/common/auth/clearMfeAuthState";
-import { ensureKeycloakSession } from "@react-client/common/auth/syncMfeAuth";
+import {
+	ensureKeycloakSession,
+	redirectToKeycloakLogin,
+} from "@react-client/common/auth/syncMfeAuth";
 import { queryClient } from "@react-client/common/api/queryClient";
 import {
 	subscribeAppSync,
@@ -56,7 +59,16 @@ export function registerAppCrossTabHandlers(): void {
 			case "auth:logout":
 				clearMfeAuthState();
 				queryClient.clear();
-				globalThis.setTimeout(() => ensureKeycloakSession(), 0);
+				globalThis.setTimeout(() => {
+					if (
+						event.reason === "session-expired" ||
+						event.reason === "refresh-failed"
+					) {
+						redirectToKeycloakLogin();
+						return;
+					}
+					ensureKeycloakSession();
+				}, 0);
 				break;
 			case "auth:session-changed":
 				// Host/Keycloak владеет user и permissions: полная гидратация надёжнее

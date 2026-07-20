@@ -21,6 +21,8 @@ import {
 	splitCatalogLaborArchCounts,
 	isArchCountLaborParamName,
 	resolveArchCountLaborFromCatalog,
+	enrichFactorySnapshotTriggerRule,
+	V2_MODEL_STREAM_SOURCE_ARRAY_PATH,
 	type CsvFormulaImportRow,
 } from "@smart-anketa/api-contract";
 import type { V2FactoryTypicalWork } from "../src/modules/anketa-v2/constants/v2-factory-typical-works-catalog";
@@ -374,15 +376,17 @@ function applyParamBindings(
 	applyTriggerArchCountFromRules(work);
 
 	if (work.triggerRules?.length) {
-		work.triggerRules = work.triggerRules.map((rule) => ({
-			...rule,
-			...bindCatalogParamRef(
-				rule.paramName,
-				overrides,
-				bindings,
-				work.laborParams,
-			),
-		}));
+		work.triggerRules = work.triggerRules.map((rule) =>
+			enrichFactorySnapshotTriggerRule({
+				...rule,
+				...bindCatalogParamRef(
+					rule.paramName,
+					overrides,
+					bindings,
+					work.laborParams,
+				),
+			}),
+		);
 	}
 
 	if (work.laborCoefficients?.length) {
@@ -461,6 +465,21 @@ function patchAnketaSnapshot(anketa: AnketaSnapshotFile): boolean {
 			};
 			changed = true;
 		}
+	}
+
+	const logic = anketa.logic as { rules?: Array<Record<string, unknown>> } | undefined;
+	const catalogRule = logic?.rules?.find(
+		(rule) => rule.id === "typical-works-catalog-detailInfo-detailTypicalTasks",
+	);
+	const catalogPayload = catalogRule?.payload as Record<string, unknown> | undefined;
+	if (
+		catalogPayload &&
+		catalogPayload.sourceArrayPath !== V2_MODEL_STREAM_SOURCE_ARRAY_PATH
+	) {
+		catalogPayload.sourceArrayPath = V2_MODEL_STREAM_SOURCE_ARRAY_PATH;
+		catalogPayload.hint =
+			"Типовые работы модельного стрима: этапы по триггерам из generalInfo (модельный сервис), detailInfo и неопределённости.";
+		changed = true;
 	}
 
 	return changed;

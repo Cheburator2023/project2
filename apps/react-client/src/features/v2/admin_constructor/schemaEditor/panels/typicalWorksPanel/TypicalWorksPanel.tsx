@@ -652,6 +652,7 @@ export function TypicalWorksPanel() {
 							/>
 							<Flex flexGrow={1} minWidth="0" minHeight="0" height="100%">
 								<TypicalWorkEditableCard
+									key={`${selectedWorkId ?? ""}::${streamExecutor ?? ""}::${templateVersionId ?? ""}`}
 									card={card}
 									fallbackArchComponentType={
 										selectedListItem?.archComponentType

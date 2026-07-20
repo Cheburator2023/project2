@@ -9,7 +9,6 @@ export const AG_GRID_LOCALE_RU = {
 	noMatches: "Нет совпадений",
 	before: "До",
 	after: "После",
-	chooseColumns: "Выберите колонки",
 	sortAscending: "Сортировать по возрастанию",
 	sortDescending: "Сортировать по убыванию",
 	sortUnSort: "Сортировать - отменить сортировку",

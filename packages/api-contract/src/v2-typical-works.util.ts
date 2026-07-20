@@ -23,6 +23,34 @@ function isStreamBlockDataRoot(
 	return inferLegacyStreamExecutorForBlockKey(streamKey) != null;
 }
 
+function readRecordAtDotPath(
+	data: Record<string, unknown>,
+	dotPath: string,
+): Record<string, unknown> | undefined {
+	let cur: unknown = data;
+	for (const key of dotPath.split(".").filter(Boolean)) {
+		cur = readRecord(cur)?.[key];
+	}
+	return readRecord(cur);
+}
+
+/** Путь блока стрима для outputArrayPath (например generalInfo.modelService.controlTypicalTasks → generalInfo.modelService). */
+function resolveTypicalWorkStreamBlockPath(
+	referencePath: string,
+	uiSchema?: Record<string, unknown>,
+): string | null {
+	const parts = referencePath.split(".").filter(Boolean);
+	if (parts.length === 0) return null;
+
+	const lastKey = parts[parts.length - 1]!;
+	if (TYPICAL_WORK_STREAM_TRIGGER_SKIP_KEYS.has(lastKey) && parts.length > 1) {
+		return parts.slice(0, -1).join(".");
+	}
+
+	const top = parts[0]!;
+	return isStreamBlockDataRoot(top, uiSchema) ? top : null;
+}
+
 /**
  * `localParams` стрима для массива типовых работ (любой блок с `streamBlock` /
  * legacy `streamDataSources` / `streamModelControl`).
@@ -32,11 +60,19 @@ export function readStreamLocalParamsForTypicalOutput(
 	outputArrayPath: string,
 	uiSchema?: Record<string, unknown>,
 ): Record<string, unknown> {
-	const streamKey = outputArrayPath.split(".")[0]?.trim();
-	if (!streamKey || !isStreamBlockDataRoot(streamKey, uiSchema)) {
-		return {};
+	const streamBlockPath = resolveTypicalWorkStreamBlockPath(
+		outputArrayPath,
+		uiSchema,
+	);
+	if (!streamBlockPath) return {};
+
+	const topKey = streamBlockPath.split(".")[0]?.trim();
+	if (!topKey || !isStreamBlockDataRoot(topKey, uiSchema)) {
+		return readRecord(readRecordAtDotPath(data, streamBlockPath)?.localParams) ??
+			{};
 	}
-	const stream = readRecord(data[streamKey]);
+
+	const stream = readRecord(data[topKey]);
 	return readRecord(stream?.localParams) ?? {};
 }
 
@@ -69,6 +105,18 @@ function isGeneratedTypicalWorkArray(value: unknown): boolean {
 	);
 }
 
+/** Arch object list в storage — массив объектов; поля элементов доступны по leaf-ключу. */
+function flattenArchObjectListItems(
+	value: unknown,
+	visitRecord: (row: Record<string, unknown>) => void,
+): void {
+	if (!Array.isArray(value) || isGeneratedTypicalWorkArray(value)) return;
+	for (const item of value) {
+		const row = readRecord(item);
+		if (row) visitRecord(row);
+	}
+}
+
 /**
  * Плоский контекст полей стрима для триггеров типовых работ.
  * Поля из вложенных групп (например «Группа Кирилла») доступны по ключу leaf-поля.
@@ -83,7 +131,7 @@ export function flattenTypicalWorkStreamTriggerFields(
 			if (TYPICAL_WORK_STREAM_TRIGGER_SKIP_KEYS.has(key)) continue;
 			if (isGeneratedTypicalWorkArray(value)) continue;
 			if (Array.isArray(value)) {
-				out[key] = value;
+				flattenArchObjectListItems(value, walk);
 				continue;
 			}
 			if (value && typeof value === "object") {
@@ -109,10 +157,14 @@ const TYPICAL_WORK_FORM_TRIGGER_SKIP_ROOT_KEYS = new Set([
 function readTypicalWorksRootFormTriggerContext(
 	data: Record<string, unknown>,
 	referencePath: string,
+	uiSchema?: Record<string, unknown>,
 ): Record<string, unknown> {
 	const outputRootKey = referencePath.split(".")[0]?.trim();
 	const skipRootKeys = new Set(TYPICAL_WORK_FORM_TRIGGER_SKIP_ROOT_KEYS);
-	if (outputRootKey) skipRootKeys.add(outputRootKey);
+	// Не пропускать generalInfo/detailInfo — только корневые stream-блоки (streamDataSources и т.п.).
+	if (outputRootKey && isStreamBlockDataRoot(outputRootKey, uiSchema)) {
+		skipRootKeys.add(outputRootKey);
+	}
 
 	const out: Record<string, unknown> = {};
 
@@ -122,7 +174,7 @@ function readTypicalWorksRootFormTriggerContext(
 			if (TYPICAL_WORK_STREAM_TRIGGER_SKIP_KEYS.has(key)) continue;
 			if (isGeneratedTypicalWorkArray(value)) continue;
 			if (Array.isArray(value)) {
-				out[key] = value;
+				flattenArchObjectListItems(value, (row) => walk(row, false));
 				continue;
 			}
 			if (value && typeof value === "object") {
@@ -137,15 +189,71 @@ function readTypicalWorksRootFormTriggerContext(
 	return out;
 }
 
+export type TypicalWorkTriggerMatchContext = {
+	referencePath?: string;
+	uiSchema?: Record<string, unknown>;
+	schemaParams?: ReadonlyArray<{
+		code: string;
+		schemaPointer?: string | null;
+	}>;
+};
+
+/** Все поля анкеты, релевантные триггерам (без привязки к outputArrayPath). */
+export function readTypicalWorksUniversalFormTriggerContext(
+	data: Record<string, unknown>,
+	uiSchema?: Record<string, unknown>,
+): Record<string, unknown> {
+	return readTypicalWorksRootFormTriggerContext(data, "", uiSchema);
+}
+
+export function hasTypicalWorkPreviewFormContext(
+	data: Record<string, unknown> | undefined | null,
+	uiSchema?: Record<string, unknown>,
+): boolean {
+	if (!data) return false;
+	return hasTypicalWorkStreamTriggerContext(
+		readTypicalWorksUniversalFormTriggerContext(data, uiSchema),
+	);
+}
+
+/** Контекст для проверки param-триггеров: поля формы + строка sourceSystems (строка перекрывает). */
+export function buildTypicalWorkTriggerLookupSource(
+	source: Record<string, unknown>,
+	formData?: Record<string, unknown>,
+	referencePath = "detailInfo.sourceTypicalTasks",
+	uiSchema?: Record<string, unknown>,
+): Record<string, unknown> {
+	if (!formData) return source;
+	const universal = readTypicalWorksUniversalFormTriggerContext(
+		formData,
+		uiSchema,
+	);
+	const scoped = readTypicalWorksStreamTriggerContext(
+		formData,
+		referencePath,
+		uiSchema,
+	);
+	const fromForm = { ...universal, ...scoped };
+	return { ...fromForm, ...source };
+}
+
 /** Контекст триггеров на уровне стрима (без строк sourceSystems). */
 export function readTypicalWorksStreamTriggerContext(
 	data: Record<string, unknown>,
 	referencePath: string,
 	uiSchema?: Record<string, unknown>,
 ): Record<string, unknown> {
-	const streamKey = referencePath.split(".")[0]?.trim();
-	if (streamKey && isStreamBlockDataRoot(streamKey, uiSchema)) {
-		const stream = readRecord(data[streamKey]);
+	const rootContext = readTypicalWorksRootFormTriggerContext(
+		data,
+		referencePath,
+		uiSchema,
+	);
+	const streamBlockPath = resolveTypicalWorkStreamBlockPath(
+		referencePath,
+		uiSchema,
+	);
+	if (streamBlockPath) {
+		const stream = readRecordAtDotPath(data, streamBlockPath);
 		if (stream) {
 			const localParams = readStreamLocalParamsForTypicalOutput(
 				data,
@@ -153,6 +261,7 @@ export function readTypicalWorksStreamTriggerContext(
 				uiSchema,
 			);
 			const context = {
+				...rootContext,
 				...flattenTypicalWorkStreamTriggerFields(stream),
 				...localParams,
 			};
@@ -160,7 +269,7 @@ export function readTypicalWorksStreamTriggerContext(
 		}
 	}
 
-	return readTypicalWorksRootFormTriggerContext(data, referencePath);
+	return rootContext;
 }
 
 export function hasTypicalWorkStreamTriggerContext(
@@ -187,4 +296,24 @@ export function isFilledTypicalWorkSourceRow(
 	row: Record<string, unknown>,
 ): boolean {
 	return Object.values(row).some(isMeaningfulTypicalWorkSourceValue);
+}
+
+/** Строки arch object list (массив или legacy singleton object). */
+export function readFilledArchComponentListRows(
+	value: unknown,
+): Record<string, unknown>[] {
+	if (Array.isArray(value)) {
+		return value.filter(
+			(item): item is Record<string, unknown> =>
+				item != null &&
+				typeof item === "object" &&
+				!Array.isArray(item) &&
+				isFilledTypicalWorkSourceRow(item),
+		);
+	}
+	const record = readRecord(value);
+	if (record && isFilledTypicalWorkSourceRow(record)) {
+		return [record];
+	}
+	return [];
 }

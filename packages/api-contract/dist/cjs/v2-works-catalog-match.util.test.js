@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const vitest_1 = require("vitest");
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
 const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util");
+const v2_typical_work_types_1 = require("./v2-typical-work.types");
 const v2_work_schema_params_match_util_1 = require("./v2-work-schema-params-match.util");
 (0, vitest_1.describe)("v2-works-catalog-match.util", () => {
     (0, vitest_1.it)("resolves the unified source stream for any source row", () => {
@@ -92,6 +93,26 @@ const v2_work_schema_params_match_util_1 = require("./v2-work-schema-params-matc
     });
     (0, vitest_1.it)("does not match works without triggers", () => {
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)([], { type: "Внутренний" })).toBe(false);
+    });
+    (0, vitest_1.it)("matches always-shown trigger without reading form fields", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)([
+            {
+                paramCode: "__always__",
+                paramName: "Нет — работа выводится всегда",
+                operator: "=",
+                valueCode: null,
+                valueLabel: null,
+            },
+        ], {})).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)([
+            {
+                paramCode: "нет_работа_выводится_всегда",
+                paramName: "нет — работа выводится всегда.",
+                operator: "=",
+                valueCode: null,
+                valueLabel: null,
+            },
+        ], {})).toBe(true);
     });
     (0, vitest_1.it)("matches numeric comparison operators", () => {
         const rule = {
@@ -357,6 +378,92 @@ const v2_work_schema_params_match_util_1 = require("./v2-work-schema-params-matc
             kind: "dataMart",
             steps: [{ count: 3, coefficient: 1 }],
             combinator: "or",
+        })).toBe(true);
+    });
+    (0, vitest_1.it)("reads model-stream param triggers from formData when source is a sourceSystems row", () => {
+        const rules = [
+            {
+                paramCode: "field_o_HRj6VO",
+                paramName: "Необходимость пилота (MVP)",
+                operator: "=",
+                valueCode: "true",
+                valueLabel: "Да",
+            },
+        ];
+        const formDataObject = {
+            generalInfo: {
+                modelService: {
+                    field_o_HRj6VO: true,
+                },
+            },
+            detailInfo: {
+                sourceSystems: [{ name: "SRC", type: "Внутренний" }],
+            },
+        };
+        const formDataArray = {
+            generalInfo: {
+                modelService: [{ field_o_HRj6VO: true }],
+            },
+            detailInfo: {
+                sourceSystems: [{ name: "SRC", type: "Внутренний" }],
+            },
+        };
+        for (const formData of [formDataObject, formDataArray]) {
+            (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, { name: "SRC", type: "Внутренний" }, formData, (0, v2_typical_work_types_1.defaultTriggerArchCount)(), {
+                referencePath: "generalInfo.modelService.controlTypicalTasks",
+            })).toBe(true);
+        }
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, { name: "SRC", type: "Внутренний" }, {
+            generalInfo: { modelService: [{ field_o_HRj6VO: false }] },
+            detailInfo: { sourceSystems: [{ name: "SRC", type: "Внутренний" }] },
+        }, (0, v2_typical_work_types_1.defaultTriggerArchCount)())).toBe(false);
+    });
+    (0, vitest_1.it)("normalizes snapshot-style trigger rule with label only", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)((0, v2_works_catalog_match_util_1.normalizeTypicalWorkTriggerRulesForMatch)([
+            {
+                paramCode: "field_o_HRj6VO",
+                paramName: "MVP",
+                operator: "=",
+                valueCode: null,
+                valueLabel: "Да",
+            },
+        ]), {}, { field_o_HRj6VO: true })).toBe(true);
+    });
+    (0, vitest_1.it)("normalizes factory snapshot values: [\"Да\"] string array", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)((0, v2_works_catalog_match_util_1.normalizeTypicalWorkTriggerRulesForMatch)([
+            {
+                paramCode: "field_o_HRj6VO",
+                paramName: "Необходимость пилота (MVP)",
+                operator: "=",
+                valueCode: null,
+                valueLabel: null,
+                values: ["Да"],
+            },
+        ]), { field_o_HRj6VO: true })).toBe(true);
+    });
+    (0, vitest_1.it)("reads trigger values via schemaPointer when flat context misses them", () => {
+        const rules = [
+            {
+                paramCode: "field_o_HRj6VO",
+                paramName: "Необходимость пилота (MVP)",
+                operator: "=",
+                valueCode: "true",
+                valueLabel: "Да",
+            },
+        ];
+        const formData = {
+            generalInfo: {
+                modelService: [{ field_o_HRj6VO: true }],
+            },
+        };
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(rules, {}, formData, (0, v2_typical_work_types_1.defaultTriggerArchCount)(), {
+            referencePath: "generalInfo.modelService.controlTypicalTasks",
+            schemaParams: [
+                {
+                    code: "field_o_HRj6VO",
+                    schemaPointer: "/generalInfo/modelService/items/field_o_HRj6VO",
+                },
+            ],
         })).toBe(true);
     });
 });

@@ -6,25 +6,32 @@ import type {
 	V2JsonLogicValue,
 	V2LogicGraphDto,
 	V2LogicRuleDto,
+	V2LegacyStageEvaluationDto,
 	V2TaskTriggerItemDto,
 	V2TemplateVersionDto,
 } from "@smart-anketa/api-contract";
 import {
 	clearStaleGeneratedTypicalWorkPaths,
+	dedupeTypicalWorkRowsByWorkId,
 	isCalculationPathActive,
 	mergeTypicalCoefficientContext,
 	parseParamDependencyGraphFromLogic,
 	filterCoefficientLogicForHiddenFields,
-	patchV2AnketaCalculationLogicRules,
+	resolveAnketaCalculationLogic,
 	hasTypicalWorkStreamTriggerContext,
 	isFilledTypicalWorkSourceRow,
+	readFilledArchComponentListRows,
 	readTypicalWorksStreamTriggerContext,
 	resolveHiddenParamCodesForSource,
 	resolveHiddenSourceFieldKeys,
 	readStreamLocalParamsForTypicalOutput,
+	readTypicalWorkBoundWorkIdsAtOutputPath,
 	resolveStreamFromSourceType,
 	resolveStreamsFromSourceSystems,
 	resolveSourceTypicalWorksOutputPath,
+	shouldSkipLegacyModelStreamStageSummary,
+	V2_MODEL_STREAM_EXECUTOR,
+	V2_MODEL_STREAM_SOURCE_ARRAY_PATH,
 	V2_SOURCE_SYSTEMS_ARRAY_PATH,
 	type V2ParamDependencyGraph,
 	type V2ParamDefLike,
@@ -86,6 +93,8 @@ type TaskTriggerPayload = {
 	outputArrayPath?: string;
 	/** Id типовых работ, привязанных к блоку typicalWork в uiSchema. */
 	allowedWorkIds?: string[];
+	/** Все archComponentType назначенных работ стрима (модельный стрим). */
+	worksCatalogAllArchComponents?: boolean;
 	/**
 	 * ФТ-024: единый коэффициент группы для всех работ компонента — произведение
 	 * весов параметров. JsonLogic — по merge(localParams стрима, строка компонента);
@@ -364,7 +373,7 @@ export class V2CalculationService {
 		},
 	): Promise<V2CalculationResultDto> {
 		const rules =
-			patchV2AnketaCalculationLogicRules(logic, {
+			resolveAnketaCalculationLogic(logic, {
 				jsonSchema: options?.jsonSchema,
 				uiSchema: options?.uiSchema,
 			})?.rules ?? [];
@@ -426,18 +435,20 @@ export class V2CalculationService {
 			};
 		});
 
-		// Legacy E2E + платформенные стримы: таблицы «Подробный расчёт» / «Платформенные стримы».
-		// При unified merge через spread не затирает total/typicalTotal/atypicalTotal.
+		// Legacy E2E — только если нет catalog модельного стрима в snapshot uiSchema.
 		const sourceTypicalWorksPath = resolveSourceTypicalWorksOutputPath(
 			options?.jsonSchema,
 			options?.uiSchema,
 		);
-		const legacy = applyLegacySummaryToFormData(liveData, {
-			sourceTypicalWorksPath,
-			uiSchema: options?.uiSchema,
-		});
-		liveData = legacy.formData;
-		const legacyStageEvaluation = legacy.legacyStageEvaluation;
+		let legacyStageEvaluation: V2LegacyStageEvaluationDto | null = null;
+		if (!shouldSkipLegacyModelStreamStageSummary(options?.uiSchema)) {
+			const legacy = applyLegacySummaryToFormData(liveData, {
+				sourceTypicalWorksPath,
+				uiSchema: options?.uiSchema,
+			});
+			liveData = legacy.formData;
+			legacyStageEvaluation = legacy.legacyStageEvaluation;
+		}
 
 		const validationIssues = evaluateLogicValidationRules(rules, liveData);
 
@@ -567,9 +578,21 @@ export class V2CalculationService {
 		const archComponent =
 			payload.worksCatalogArchComponent?.trim() ?? "Система-источник";
 
+		const catalogStream = payload.worksCatalogStream?.trim() ?? "";
+		const collapseByWorkId =
+			usesCatalog &&
+			(payload.worksCatalogAllArchComponents === true ||
+				catalogStream === V2_MODEL_STREAM_EXECUTOR);
+
+		// Модельный стрим: одна контекстная строка, без fan-out по источникам/моделям.
+		const effectiveSourceRows =
+			usesCatalog && catalogStream === V2_MODEL_STREAM_EXECUTOR
+				? sourceRows.slice(0, 1)
+				: sourceRows;
+
 		const generated = (
 			await Promise.all(
-				sourceRows.map(async (row, sourceIndex) => {
+				effectiveSourceRows.map(async (row, sourceIndex) => {
 					const source =
 						row && typeof row === "object" && !Array.isArray(row)
 							? (row as Record<string, unknown>)
@@ -617,6 +640,19 @@ export class V2CalculationService {
 						data,
 					);
 
+					const boundWorkIdsFromUi = readTypicalWorkBoundWorkIdsAtOutputPath(
+						uiSchema,
+						outputArrayPath,
+					);
+					const allowedWorkIdsForCatalog =
+						boundWorkIdsFromUi && boundWorkIdsFromUi.length > 0
+							? boundWorkIdsFromUi
+							: Array.isArray(payload.allowedWorkIds)
+								? payload.allowedWorkIds
+								: undefined;
+					const worksCatalogAllArchComponents =
+						payload.worksCatalogAllArchComponents === true;
+
 					const taskDefs = usesCatalog
 						? (
 								await Promise.all(
@@ -630,11 +666,8 @@ export class V2CalculationService {
 											templateId,
 											atDate,
 											hiddenParamCodes,
-											allowedWorkIds: Array.isArray(
-												payload.allowedWorkIds,
-											)
-												? payload.allowedWorkIds
-												: undefined,
+											allowedWorkIds: allowedWorkIdsForCatalog,
+											worksCatalogAllArchComponents,
 										}),
 									),
 								)
@@ -693,6 +726,12 @@ export class V2CalculationService {
 								typeof task.coefficientDisplay === "string"
 									? task.coefficientDisplay
 									: undefined,
+							formulaBreakdown:
+								"formulaBreakdown" in task &&
+								task.formulaBreakdown != null &&
+								typeof task.formulaBreakdown === "object"
+									? task.formulaBreakdown
+									: undefined,
 							total: catalogTotal,
 							sourceComponent: archComponent,
 							sourceName,
@@ -704,19 +743,29 @@ export class V2CalculationService {
 			)
 		).flat();
 
+		const collapsed = collapseByWorkId
+			? dedupeTypicalWorkRowsByWorkId(generated)
+			: generated;
+
 		if (payload.outputMode === "append") {
 			const existing = readByDotPath(data, outputArrayPath);
 			const merged = [
 				...(Array.isArray(existing) ? existing : []),
-				...generated,
+				...collapsed,
 			];
-			return writeByDotPath(data, outputArrayPath, merged);
+			return writeByDotPath(
+				data,
+				outputArrayPath,
+				collapseByWorkId
+					? dedupeTypicalWorkRowsByWorkId(merged)
+					: merged,
+			);
 		}
 
 		return this.writeGeneratedTypicalWorkOutput(
 			data,
 			outputArrayPath,
-			generated,
+			collapsed,
 			uiSchema,
 		);
 	}
@@ -750,17 +799,42 @@ export class V2CalculationService {
 		const arrayPath = payload.sourceArrayPath?.trim();
 		const outputPath = payload.outputArrayPath?.trim();
 		const referencePath = outputPath || arrayPath || "";
+		const catalogStream = payload.worksCatalogStream?.trim() ?? "";
+
+		// Модельный стрим всегда один контекст (arch-count / формула дают множитель).
+		if (payload.worksCatalog && catalogStream === V2_MODEL_STREAM_EXECUTOR) {
+			const modelServiceRows = readFilledArchComponentListRows(
+				readByDotPath(data, V2_MODEL_STREAM_SOURCE_ARRAY_PATH),
+			);
+			if (modelServiceRows.length > 0) return [modelServiceRows[0]!];
+			if (referencePath) {
+				const streamContext = readTypicalWorksStreamTriggerContext(
+					data,
+					referencePath,
+					uiSchema,
+				);
+				if (hasTypicalWorkStreamTriggerContext(streamContext)) {
+					return [streamContext];
+				}
+			}
+			return [{}];
+		}
 
 		if (arrayPath) {
-			const filledFromPath = this.readFilledSourceSystemRows(
+			const filledFromPath = readFilledArchComponentListRows(
 				readByDotPath(data, arrayPath),
 			);
 			if (filledFromPath.length > 0) return filledFromPath;
 
+			const legacyFilled = this.readFilledSourceSystemRows(
+				readByDotPath(data, arrayPath),
+			);
+			if (legacyFilled.length > 0) return legacyFilled;
+
+			// Fallback на системы-источники — только если правило реально завязано на них.
 			if (
 				arrayPath === "streamDataSources.sourceSystems" ||
-				arrayPath === V2_SOURCE_SYSTEMS_ARRAY_PATH ||
-				payload.worksCatalog
+				arrayPath === V2_SOURCE_SYSTEMS_ARRAY_PATH
 			) {
 				const canonical = this.readFilledSourceSystemRows(
 					readByDotPath(data, V2_SOURCE_SYSTEMS_ARRAY_PATH),

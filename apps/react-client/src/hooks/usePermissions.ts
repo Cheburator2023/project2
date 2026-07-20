@@ -1,6 +1,8 @@
 import { useUserStore } from "@react-client/common/store/userStore";
 import { Permission } from "@react-client/types/roles";
 
+const isDev = process.env.NODE_ENV === "development";
+
 export const usePermissions = () => {
 	const { permissions, hasPermission } = useUserStore();
 
@@ -16,7 +18,9 @@ export const usePermissions = () => {
 		canWorkflowApprove: hasPermission(Permission.ANKETA_WORKFLOW_APPROVE),
 		canAccessAdminPanel: hasPermission(Permission.ANKETA_ADMIN_PANEL),
 		canAccessTracker:
-			hasPermission(Permission.DEVELOPER) ||
-			hasPermission(Permission.ANKETA_ADMIN_PANEL),
+			isDev ||
+			(hasPermission(Permission.DEVELOPER) &&
+				window.location.hostname.toLowerCase().includes("dev") &&
+				!window.location.hostname.toLowerCase().includes("vtb")),
 	};
 };

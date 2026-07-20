@@ -190,6 +190,33 @@ export function syncMfeAuthFromHost(
 	return token;
 }
 
+/** Принудительный login после 401 / протухшего токена (не ждём authenticated === false). */
+export function redirectToKeycloakLogin(
+	props?: MfeAuthHostProps | null,
+): void {
+	const keycloak = resolveKeycloakInstance(props);
+	clearMfeAuthState();
+	if (!keycloak?.login) {
+		if (typeof window !== "undefined") {
+			window.location.reload();
+		}
+		return;
+	}
+	if (loginRedirectInFlight) return;
+
+	loginRedirectInFlight = true;
+	try {
+		const result = keycloak.login();
+		if (result && typeof result.then === "function") {
+			void result.catch(() => {
+				loginRedirectInFlight = false;
+			});
+		}
+	} catch {
+		loginRedirectInFlight = false;
+	}
+}
+
 /** Редирект на login Keycloak, если сессия host завершена. */
 export function ensureKeycloakSession(
 	props?: MfeAuthHostProps | null,

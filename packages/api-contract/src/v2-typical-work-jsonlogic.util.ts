@@ -18,10 +18,15 @@ import {
 } from "./v2-typical-work.types";
 import {
 	applyWorkRounding,
+	applyWorkFormulaParamNames,
+	formatWorkFormulaReadableSymbolic,
+	formatWorkFormulaReadableWithValues,
+	isParamToken,
 	previewWorkFormula,
 	tokensToText,
 	validateWorkFormulaTokens,
 } from "./v2-work-formula.util";
+import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
 import {
 	compileTriggerFormulaTokensToJsonLogic,
 	hasTypicalWorkTriggersConfigured,
@@ -31,10 +36,13 @@ import {
 import {
 	resolveArchCountCoeffFromToken,
 	archCountTriggerMatches,
+	formatWorkArchCountKindLabel,
+	isTriggerArchCountConfigured,
 	type V2WorkArchCountCoeffStep,
 } from "./v2-work-arch-count-coeff.util";
 import {
 	evaluateTermsFormula,
+	formatTermsSummary,
 	resolveVersionConfigTokenFormula,
 } from "./v2-work-terms-formula.util";
 import type { V2TypicalWorkFormulaTermsDto } from "./v2-typical-work-v4.types";
@@ -233,9 +241,7 @@ export function compileTypicalWorkTriggerRulesToJsonLogic(
 	rules: TypicalWorkRuleLike[],
 	triggerArchCount?: TypicalWorkTriggerArchCountLike | null,
 ): V2JsonLogicValue {
-	const hasArch = Boolean(
-		triggerArchCount?.kind && (triggerArchCount.steps?.length ?? 0) > 0,
-	);
+	const hasArch = isTriggerArchCountConfigured(triggerArchCount);
 	if (rules.length === 0 && !hasArch) return false;
 
 	const paramPart = compileParamRulesToJsonLogic(rules);
@@ -689,6 +695,26 @@ export function parseStoredTypicalWorkCalculationLogic(
 	};
 }
 
+/** Дополняет paramCoefficients значениями из resolveFactorCoeff для всех коэф. в формуле. */
+export function fillFormulaParamCoefficients(
+	tokens: readonly V2WorkFormulaToken[],
+	paramCoefficients: Record<string, number>,
+	resolveFactorCoeff: (paramCode: string) => number,
+): Record<string, number> {
+	const next = { ...paramCoefficients };
+	for (const token of tokens) {
+		if (!isParamToken(token)) continue;
+		if (next[token.paramCode] != null && Number.isFinite(next[token.paramCode]!)) {
+			continue;
+		}
+		const resolved = resolveFactorCoeff(token.paramCode);
+		if (Number.isFinite(resolved)) {
+			next[token.paramCode] = resolved;
+		}
+	}
+	return next;
+}
+
 /** Итог по формуле: JsonLogic (из токенов) → token-движок → terms (упрощённая модель). */
 export function computeTypicalWorkFormulaTotal(params: {
 	calculationLogic: V2TypicalWorkStoredCalculationLogicDto | null | undefined;
@@ -707,6 +733,7 @@ export function computeTypicalWorkFormulaTotal(params: {
 			terms: params.terms.terms,
 			baseNorm: params.norm,
 			resolveFactorCoeff: params.resolveFactorCoeff,
+			formData: params.formData ?? params.source,
 		});
 	}
 
@@ -714,9 +741,14 @@ export function computeTypicalWorkFormulaTotal(params: {
 		params.formula,
 		params.formulaText,
 	);
+	const paramCoefficients = fillFormulaParamCoefficients(
+		tokenFormula.tokens,
+		params.paramCoefficients,
+		params.resolveFactorCoeff,
+	);
 	const ctx: TypicalWorkJsonLogicEvalContext = {
 		norm: params.norm,
-		paramCoefficients: params.paramCoefficients,
+		paramCoefficients,
 		source: params.source,
 		formData: params.formData ?? params.source,
 	};
@@ -740,5 +772,168 @@ export function computeTypicalWorkFormulaTotal(params: {
 		terms: params.terms.terms,
 		baseNorm: params.norm,
 		resolveFactorCoeff: params.resolveFactorCoeff,
+		formData: params.formData ?? params.source,
 	});
+}
+
+export type TypicalWorkFormulaFactorLine = {
+	paramCode: string;
+	paramName: string;
+	value: number;
+};
+
+/** Разбор формулы типовой работы для «Подробного расчёта». */
+export type TypicalWorkFormulaBreakdownDto = {
+	symbolic: string;
+	expanded: string;
+	factors: TypicalWorkFormulaFactorLine[];
+	baseNorm: number;
+	coefficient: number;
+	total: number;
+};
+
+function formatBreakdownNumber(value: number): string {
+	if (!Number.isFinite(value)) return "—";
+	const rounded = Math.round(value * 10000) / 10000;
+	if (Number.isInteger(rounded)) return String(rounded);
+	return String(rounded)
+		.replace(/(\.\d*?)0+$/, "$1")
+		.replace(/\.$/, "");
+}
+
+function collectFormulaFactorLines(params: {
+	tokens: V2WorkFormulaToken[];
+	terms: V2TypicalWorkFormulaTermsDto;
+	paramCoefficients: Record<string, number>;
+	paramNames?: Record<string, string>;
+	formData?: Record<string, unknown>;
+	resolveFactorCoeff: (paramCode: string) => number;
+}): TypicalWorkFormulaFactorLine[] {
+	const seen = new Set<string>();
+	const factors: TypicalWorkFormulaFactorLine[] = [];
+
+	const push = (paramCode: string, paramName: string, value: number) => {
+		const key = paramCode.trim() || paramName.trim();
+		if (!key || seen.has(key)) return;
+		seen.add(key);
+		const displayName =
+			stripParamNameSourceKeys(paramName).trim() ||
+			paramCode.trim() ||
+			key;
+		factors.push({
+			paramCode: paramCode.trim() || key,
+			paramName: displayName,
+			value,
+		});
+	};
+
+	for (const token of params.tokens) {
+		if (isParamToken(token)) {
+			const name =
+				params.paramNames?.[token.paramCode]?.trim() ||
+				token.paramName?.trim() ||
+				token.paramCode;
+			push(
+				token.paramCode,
+				name,
+				params.resolveFactorCoeff(token.paramCode),
+			);
+			continue;
+		}
+		if (token.kind === "arch_count_coeff") {
+			const name = `Кол-${formatWorkArchCountKindLabel(token.archComponentKind)}`;
+			const value = resolveArchCountCoeffFromToken(
+				params.formData ?? {},
+				token.archComponentKind,
+				token.steps,
+			);
+			push(`arch:${token.archComponentKind}`, name, value);
+		}
+	}
+
+	if (factors.length === 0) {
+		for (const term of params.terms.terms) {
+			for (const factor of term.factors) {
+				const name =
+					params.paramNames?.[factor.paramCode]?.trim() ||
+					factor.paramName?.trim() ||
+					factor.paramCode;
+				push(
+					factor.paramCode,
+					name,
+					params.resolveFactorCoeff(factor.paramCode),
+				);
+			}
+		}
+	}
+
+	return factors;
+}
+
+/** Собирает символьную формулу, подстановку и список коэффициентов с реальными значениями. */
+export function buildTypicalWorkFormulaBreakdown(params: {
+	calculationLogic?: V2TypicalWorkStoredCalculationLogicDto | null;
+	formula: unknown;
+	formulaText?: string | null;
+	terms: V2TypicalWorkFormulaTermsDto;
+	rounding: V2TypicalWorkRoundingDto;
+	norm: number;
+	paramCoefficients: Record<string, number>;
+	paramNames?: Record<string, string>;
+	source?: Record<string, unknown>;
+	formData?: Record<string, unknown>;
+	resolveFactorCoeff: (paramCode: string) => number;
+	coefficient: number;
+	total: number;
+}): TypicalWorkFormulaBreakdownDto {
+	const tokenFormula = resolveVersionConfigTokenFormula(
+		params.formula,
+		params.formulaText,
+	);
+	const paramCoefficients = fillFormulaParamCoefficients(
+		tokenFormula.tokens,
+		params.paramCoefficients,
+		params.resolveFactorCoeff,
+	);
+	const ctx: TypicalWorkJsonLogicEvalContext = {
+		norm: params.norm,
+		paramCoefficients,
+		source: params.source,
+		formData: params.formData ?? params.source,
+	};
+	const namedTokens = applyWorkFormulaParamNames(
+		tokenFormula.tokens,
+		params.paramNames,
+	);
+	const symbolic =
+		formatWorkFormulaReadableSymbolic(namedTokens) ||
+		formatTermsSummary(params.terms.terms) ||
+		"N";
+
+	const totalLabel = formatBreakdownNumber(params.total);
+	const valuesFormula = formatWorkFormulaReadableWithValues(namedTokens, {
+		norm: params.norm,
+		paramCoefficients,
+		formData: ctx.formData,
+		resolveFactorCoeff: params.resolveFactorCoeff,
+	});
+	const expanded = valuesFormula
+		? `${valuesFormula} = ${totalLabel}`
+		: `${formatBreakdownNumber(params.norm)} × ${formatBreakdownNumber(params.coefficient)} = ${totalLabel}`;
+
+	return {
+		symbolic,
+		expanded,
+		factors: collectFormulaFactorLines({
+			tokens: namedTokens,
+			terms: params.terms,
+			paramCoefficients,
+			paramNames: params.paramNames,
+			formData: ctx.formData,
+			resolveFactorCoeff: params.resolveFactorCoeff,
+		}),
+		baseNorm: params.norm,
+		coefficient: params.coefficient,
+		total: params.total,
+	};
 }

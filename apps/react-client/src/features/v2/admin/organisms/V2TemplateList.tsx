@@ -13,6 +13,7 @@ import { toast } from "@react-client/common/toasts";
 import { toastWithUndo } from "@react-client/features/v2/admin/utils/v2UndoToast";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { getAgGridMainMenuItems } from "@react-client/common/tableStuff/agGridMainMenuItems";
 import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
 import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import {
@@ -652,6 +653,7 @@ export const V2TemplateList = forwardRef<
 					resizable: true,
 					floatingFilter: true,
 					minWidth: 100,
+					mainMenuItems: getAgGridMainMenuItems,
 				}}
 				getRowStyle={getRowStyle}
 				getContextMenuItems={getContextMenuItems}

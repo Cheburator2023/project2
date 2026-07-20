@@ -23,10 +23,13 @@ export class ExportValidationPipe
 
 		const transformed: TransformedExportCalculationDto = { ...value };
 
-		if (transformed.selectedIds) {
-			transformed.selectedIdsArray = transformed.selectedIds
-				.split(",")
-				.map((id) => id.trim())
+		if (transformed.selectedIds != null && transformed.selectedIds !== "") {
+			// Клиент (api-contract) шлёт string[]; часть старых вызовов — CSV-строку.
+			const rawIds = transformed.selectedIds as string | string[];
+			transformed.selectedIdsArray = (
+				Array.isArray(rawIds) ? rawIds : rawIds.split(",")
+			)
+				.map((id) => String(id).trim())
 				.filter((id) => id.length > 0);
 
 			if (transformed.selectedIdsArray.length === 0) {

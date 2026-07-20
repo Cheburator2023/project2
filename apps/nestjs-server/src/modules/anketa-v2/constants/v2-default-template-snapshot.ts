@@ -7,7 +7,6 @@ import type {
 	V2LogicGraphDto,
 	V2UiSchemaDto,
 } from "@smart-anketa/api-contract";
-import { patchV2AnketaCalculationLogicRules } from "@smart-anketa/api-contract";
 import { stripQuestionnaireCalcNameFromTemplateSnapshot } from "@smart-anketa/api-contract";
 
 import {
@@ -19,8 +18,8 @@ import {
 /**
  * Эталон схемы: заводской шаблон «Новая схема», версия 35.
  *
- * Factory bundle (committed snapshots, без CSV-генераторов):
- * - `v2-default-anketa.snapshot.json` — jsonSchema, uiSchema, logic, dictionariesSnapshot
+ * Factory bundle (committed snapshots, без CSV-генераторов в рантайме):
+ * - `v2-default-anketa.snapshot.json` — jsonSchema, uiSchema, logic (включая catalog rules), dictionariesSnapshot
  * - `v2-factory-typical-works.snapshot.json` — методологические параметры и CSV-каталог триггеров/трудоёмкости
  * - `v2-factory-template-typical-works.registry.json` — 73 типовые работы эталонной схемы (prod)
  *
@@ -79,10 +78,7 @@ const strippedSnapshot = stripQuestionnaireCalcNameFromTemplateSnapshot({
 export const V2_DEFAULT_TEMPLATE_SNAPSHOT = {
 	jsonSchema: strippedSnapshot.jsonSchema,
 	uiSchema: strippedSnapshot.uiSchema,
-	logic: patchV2AnketaCalculationLogicRules(asLogic(file.logic), {
-		jsonSchema: strippedSnapshot.jsonSchema,
-		uiSchema: strippedSnapshot.uiSchema,
-	}),
+	logic: asLogic(file.logic),
 	dictionariesSnapshot: (file.dictionariesSnapshot ??
 		({
 			referencedDictionaryCodes: collectDictionaryCodesFromUiSchema(

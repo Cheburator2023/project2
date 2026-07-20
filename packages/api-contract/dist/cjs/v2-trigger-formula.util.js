@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.triggerParamTokenToRule = triggerParamTokenToRule;
 exports.describeTriggerFormulaToken = describeTriggerFormulaToken;
 exports.triggerFormulaTokensToText = triggerFormulaTokensToText;
+exports.describeTypicalWorkSimpleTriggerRule = describeTypicalWorkSimpleTriggerRule;
+exports.describeTypicalWorkTriggerConditions = describeTypicalWorkTriggerConditions;
 exports.validateTriggerFormulaTokens = validateTriggerFormulaTokens;
 exports.compileTriggerFormulaTokensToJsonLogic = compileTriggerFormulaTokensToJsonLogic;
 exports.evaluateTriggerFormula = evaluateTriggerFormula;
@@ -12,6 +14,7 @@ exports.matchTypicalWorkTriggers = matchTypicalWorkTriggers;
 exports.hasTypicalWorkTriggersConfigured = hasTypicalWorkTriggersConfigured;
 const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util");
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
+const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
 const LOGIC_LABEL = {
     and: "И",
     or: "ИЛИ",
@@ -44,6 +47,69 @@ function describeTriggerFormulaToken(token) {
 }
 function triggerFormulaTokensToText(tokens) {
     return tokens.map(describeTriggerFormulaToken).join(" ");
+}
+function describeTriggerRuleOperator(operator) {
+    switch (operator) {
+        case "!=":
+            return "≠";
+        case "in":
+            return "∈";
+        case "not_in":
+            return "∉";
+        default:
+            return operator;
+    }
+}
+/** Человекочитаемое описание одного param-условия (simple mode). */
+function describeTypicalWorkSimpleTriggerRule(rule) {
+    const normalized = (0, v2_works_catalog_match_util_1.normalizeTypicalWorkTriggerRuleForMatch)(rule);
+    if ((0, v2_works_catalog_match_util_1.isAlwaysShownTriggerParam)(normalized.paramCode, normalized.paramName)) {
+        return v2_works_catalog_match_util_1.V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME;
+    }
+    const label = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(normalized.paramName ?? "") || normalized.paramCode;
+    const op = normalized.operator || "=";
+    if (op === "in" || op === "not_in") {
+        const values = normalized.values?.length
+            ? normalized.values
+            : normalized.valueCode
+                ? [{ code: normalized.valueCode, label: normalized.valueLabel }]
+                : [];
+        const rendered = values
+            .map((value) => value.label ?? value.code)
+            .filter(Boolean)
+            .join(", ");
+        return rendered
+            ? `${label} ${describeTriggerRuleOperator(op)} {${rendered}}`
+            : label;
+    }
+    if (normalized.valueCode == null &&
+        normalized.valueLabel == null &&
+        !normalized.values?.length) {
+        return `${label} ≠ пусто`;
+    }
+    const value = normalized.valueLabel ?? normalized.valueCode ?? "";
+    return value ? `${label} ${describeTriggerRuleOperator(op)} ${value}` : label;
+}
+/** Формула условий появления работы для UI (simple или formula mode). */
+function describeTypicalWorkTriggerConditions(input) {
+    if (input.mode === "formula") {
+        const text = input.triggerFormula?.text?.trim() ||
+            triggerFormulaTokensToText(input.triggerFormula?.tokens ?? []);
+        return text || null;
+    }
+    const paramParts = input.rules.map(describeTypicalWorkSimpleTriggerRule);
+    if (paramParts.length === 0 && !(0, v2_work_arch_count_coeff_util_1.isTriggerArchCountConfigured)(input.triggerArchCount)) {
+        return null;
+    }
+    const paramExpr = paramParts.length > 1 ? paramParts.map((part) => `(${part})`).join(" И ") : paramParts[0];
+    if (!(0, v2_work_arch_count_coeff_util_1.isTriggerArchCountConfigured)(input.triggerArchCount) || !input.triggerArchCount?.kind) {
+        return paramExpr ?? null;
+    }
+    const archExpr = (0, v2_work_arch_count_coeff_util_1.formatTriggerArchCountConditionLabel)(input.triggerArchCount.kind, input.triggerArchCount.steps ?? []);
+    if (!paramExpr)
+        return archExpr;
+    const combinator = input.triggerArchCount.combinator === "or" ? " ИЛИ " : " И ";
+    return `${paramExpr}${combinator}${archExpr}`;
 }
 function validateTriggerFormulaTokens(tokens) {
     if (tokens.length === 0)
@@ -271,20 +337,18 @@ function createDefaultTriggerParamToken(input) {
         values: input.values,
     };
 }
-function matchTypicalWorkTriggers(input, source, formData) {
+function matchTypicalWorkTriggers(input, source, formData, matchContext) {
     if (input.mode === "formula") {
         return evaluateTriggerFormula(input.triggerFormula?.tokens ?? [], {
             source,
             formData: formData ?? source,
         });
     }
-    return (0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(input.rules, source, formData, input.triggerArchCount);
+    return (0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)(input.rules, source, formData, input.triggerArchCount, matchContext);
 }
 function hasTypicalWorkTriggersConfigured(input) {
     if (input.mode === "formula") {
         return isTriggerFormulaConfigured(input.triggerFormula);
     }
-    return (input.rules.length > 0 ||
-        Boolean(input.triggerArchCount?.kind &&
-            (input.triggerArchCount.steps?.length ?? 0) > 0));
+    return (input.rules.length > 0 || (0, v2_work_arch_count_coeff_util_1.isTriggerArchCountConfigured)(input.triggerArchCount));
 }

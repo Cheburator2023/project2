@@ -35,6 +35,8 @@ export type T_CONFIG_MAP = {
 	SUM_FRONTEND: string;
 	SUM_API: string;
 	SUM_RM_FRONTEND: string;
+	/** Frontend Data Lineage (remote app). */
+	DATALINEAGE_FRONTEND?: string;
 	SMART_ANKETA_FRONTEND: string;
 	SMART_ANKETA_API: string;
 	SUM_RM_API: string;

@@ -26,6 +26,7 @@ export declare function evaluateTermsFormula(params: {
     baseNorm: number;
     resolveFactorCoeff: (paramCode: string) => number;
     resolveTransitive?: (sourceAssignmentId: string) => number | null;
+    formData?: Record<string, unknown>;
 }): number | null;
 /** Конвертация terms → token-формула для JsonLogic. */
 export declare function termsToTokenFormula(termsDto: V2TypicalWorkFormulaTermsDto): V2TypicalWorkFormulaDto;

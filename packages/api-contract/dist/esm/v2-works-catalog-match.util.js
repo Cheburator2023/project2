@@ -1,5 +1,7 @@
 import { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamNameSourceKeys, } from "./v2-work-param-source-keys.util";
-import { archCountTriggerMatches, } from "./v2-work-arch-count-coeff.util";
+import { resolveCatalogTriggerStoredValue } from "./v2-param-slug.util";
+import { archCountTriggerMatches, isTriggerArchCountConfigured, } from "./v2-work-arch-count-coeff.util";
+import { buildTypicalWorkTriggerLookupSource } from "./v2-typical-works.util";
 export { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamNameSourceKeys, };
 /** Единый стрим-исполнитель для типовых работ систем-источников. */
 export const V2_SOURCE_STREAM = "Источники данных";
@@ -30,6 +32,68 @@ export function normalizeSourceTypeLabel(raw) {
     return alias ?? null;
 }
 export const CONTROL_MODELS_STREAM = "Контроль моделей";
+function coerceTypicalWorkTriggerRuleValues(values) {
+    return values.map((entry) => {
+        if (typeof entry === "string") {
+            const stored = resolveCatalogTriggerStoredValue(entry);
+            return { code: stored.valueCode, label: stored.valueLabel };
+        }
+        if (entry.code?.trim() || entry.label?.trim()) {
+            return entry;
+        }
+        const stored = resolveCatalogTriggerStoredValue(entry.label ?? entry.code ?? "");
+        return { code: stored.valueCode, label: stored.valueLabel };
+    });
+}
+/** Приводит legacy/snapshot-правила к виду, пригодному для сопоставления с ответами анкеты. */
+export function normalizeTypicalWorkTriggerRuleForMatch(rule) {
+    const base = {
+        paramCode: rule.paramCode,
+        paramName: rule.paramName,
+        operator: rule.operator ?? "=",
+        valueCode: rule.valueCode,
+        valueLabel: rule.valueLabel,
+    };
+    if (rule.operator === "in" || rule.operator === "not_in") {
+        return {
+            ...base,
+            values: rule.values?.length
+                ? coerceTypicalWorkTriggerRuleValues(rule.values)
+                : undefined,
+        };
+    }
+    const hasScalar = (rule.valueCode != null && String(rule.valueCode).trim() !== "") ||
+        (rule.valueLabel != null && String(rule.valueLabel).trim() !== "");
+    if (hasScalar) {
+        if (rule.valueCode?.trim())
+            return base;
+        if (rule.valueLabel?.trim()) {
+            const stored = resolveCatalogTriggerStoredValue(rule.valueLabel);
+            return {
+                ...base,
+                valueCode: stored.valueCode || rule.valueCode,
+                valueLabel: stored.valueLabel || rule.valueLabel,
+            };
+        }
+        return base;
+    }
+    if (rule.values?.length) {
+        const normalizedValues = coerceTypicalWorkTriggerRuleValues(rule.values);
+        const first = normalizedValues[0];
+        if (!first)
+            return base;
+        return {
+            ...base,
+            valueCode: first.code || rule.valueCode,
+            valueLabel: first.label ?? rule.valueLabel,
+            values: normalizedValues,
+        };
+    }
+    return base;
+}
+export function normalizeTypicalWorkTriggerRulesForMatch(rules) {
+    return rules.map(normalizeTypicalWorkTriggerRuleForMatch);
+}
 /**
  * Стрим-исполнитель строки-источника. Разделение внутр/внеш убрано —
  * любой источник маршрутизируется в единый стрим `V2_SOURCE_STREAM`.
@@ -101,6 +165,21 @@ export function extractControlCode(label) {
     const param = label.match(/Вид контроля:\s*([A-ZА-Я0-9]+)/i);
     return param?.[1]?.toUpperCase() ?? null;
 }
+/** Сентинел: работа выводится всегда, без проверки полей анкеты. */
+export const V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE = "__always__";
+export const V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME = "Нет — работа выводится всегда";
+const ALWAYS_TRIGGER_NAME_RE = /нет\s*[—–-]\s*работа\s+выводится\s+всегда/iu;
+export function isAlwaysShownTriggerParam(paramCode, paramName) {
+    const code = paramCode.trim().toLowerCase();
+    if (code === V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE ||
+        code === "нет_работа_выводится_всегда") {
+        return true;
+    }
+    const name = (paramName ?? "").trim();
+    if (ALWAYS_TRIGGER_NAME_RE.test(name))
+        return true;
+    return ALWAYS_TRIGGER_NAME_RE.test(code.replace(/_/g, " "));
+}
 export function isSourceTypeTriggerParam(paramCode, paramName) {
     const name = paramName?.toLowerCase() ?? "";
     const code = paramCode.toLowerCase();
@@ -134,6 +213,8 @@ export function isBrokenTypicalWorkTriggerRef(rule) {
  */
 export function isMethodologyPresenceTriggerRule(rule) {
     if (!isPresenceOnlyTriggerRule(rule))
+        return false;
+    if (isAlwaysShownTriggerParam(rule.paramCode, rule.paramName))
         return false;
     if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName))
         return false;
@@ -356,6 +437,9 @@ export function matchSingleTypicalWorkRuleForTriggerFormula(rule, source) {
     return matchSingleTypicalWorkRule(rule, source);
 }
 function matchSingleTypicalWorkRule(rule, source) {
+    if (isAlwaysShownTriggerParam(rule.paramCode, rule.paramName)) {
+        return true;
+    }
     const paramName = stripParamNameSourceKeys(rule.paramName) || rule.paramCode;
     const controlCode = extractControlCode(paramName);
     if (controlCode) {
@@ -377,6 +461,9 @@ function matchSingleTypicalWorkRule(rule, source) {
         return compareRuleValuesSet(actual, values.map((v) => v.code), values.map((v) => v.label ?? ""), rule.operator);
     }
     if (rule.valueLabel == null && rule.valueCode == null) {
+        if (rule.values?.length) {
+            return compareRuleValuesSet(actual, rule.values.map((v) => v.code), rule.values.map((v) => v.label ?? ""), rule.operator === "!=" ? "not_in" : "in");
+        }
         return actual !== undefined && actual !== null && actual !== "";
     }
     return scalarRuleValueMatches(actual, rule);
@@ -394,18 +481,29 @@ function groupTypicalWorkRulesByParam(rules) {
 function matchTypicalWorkParamRules(rules, source) {
     if (rules.length === 0)
         return false;
-    const groups = groupTypicalWorkRulesByParam(rules);
+    const normalized = normalizeTypicalWorkTriggerRulesForMatch(rules);
+    if (normalized.some((rule) => isAlwaysShownTriggerParam(rule.paramCode, rule.paramName))) {
+        return true;
+    }
+    const groups = groupTypicalWorkRulesByParam(normalized);
     return [...groups.values()].every((groupRules) => groupRules.every((rule) => matchSingleTypicalWorkRule(rule, source)));
 }
 function hasTypicalWorkTriggerArchCount(triggerArchCount) {
-    return Boolean(triggerArchCount?.kind && (triggerArchCount.steps?.length ?? 0) > 0);
+    return isTriggerArchCountConfigured(triggerArchCount);
 }
 /** Все параметры-триггеры (И) и опционально глобальное условие по количеству компонентов. */
-export function typicalWorkRulesMatchSource(rules, source, formData, triggerArchCount) {
+export function typicalWorkRulesMatchSource(rules, source, formData, triggerArchCount, matchContext) {
     const hasArch = hasTypicalWorkTriggerArchCount(triggerArchCount);
     if (rules.length === 0 && !hasArch)
         return false;
-    const paramMatch = matchTypicalWorkParamRules(rules, source);
+    const lookupSource = buildTypicalWorkTriggerLookupSource(source, formData, matchContext?.referencePath, matchContext?.uiSchema);
+    const paramCodes = [
+        ...new Set(rules.map((rule) => rule.paramCode.trim()).filter(Boolean)),
+    ];
+    const enrichedLookup = formData && matchContext?.schemaParams?.length
+        ? buildLaborCoefficientLookupSource(lookupSource, formData, matchContext.schemaParams, paramCodes)
+        : lookupSource;
+    const paramMatch = matchTypicalWorkParamRules(rules, enrichedLookup);
     if (!hasArch)
         return paramMatch;
     const archMatch = formData

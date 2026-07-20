@@ -179,4 +179,33 @@ const v2_work_formula_util_1 = require("./v2-work-formula.util");
         });
         (0, vitest_1.expect)(total).toBe(36);
     });
+    (0, vitest_1.it)("buildTypicalWorkFormulaBreakdown lists real coefficient values", () => {
+        const formulaText = "N × коэф(p1)";
+        const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)(formulaText);
+        (0, vitest_1.expect)(parsed.error).toBeNull();
+        const terms = (0, v2_work_terms_formula_util_1.tokensToTermsFormula)({
+            tokens: parsed.tokens,
+            text: formulaText,
+        });
+        const breakdown = (0, v2_typical_work_jsonlogic_util_1.buildTypicalWorkFormulaBreakdown)({
+            formula: terms,
+            formulaText,
+            terms,
+            rounding: (0, v2_typical_work_types_1.defaultWorkRounding)(),
+            norm: 40,
+            paramCoefficients: { p1: 1.5 },
+            paramNames: {
+                p1: "Сложность реализации @ field_46LcNfWo|сложность_реализации",
+            },
+            resolveFactorCoeff: (code) => (code === "p1" ? 1.5 : 1),
+            coefficient: 1.5,
+            total: 60,
+        });
+        (0, vitest_1.expect)(breakdown.symbolic).toBe("N × Сложность реализации");
+        (0, vitest_1.expect)(breakdown.expanded).toBe("40 × 1.5 = 60");
+        (0, vitest_1.expect)(breakdown.factors).toEqual([
+            { paramCode: "p1", paramName: "Сложность реализации", value: 1.5 },
+        ]);
+        (0, vitest_1.expect)(breakdown.total).toBe(60);
+    });
 });

@@ -1,10 +1,18 @@
-import "@fontsource/inter";
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
+import "@fontsource/inter/700.css";
 import "./theme/dockview.css";
 
 import { StyledEngineProvider } from "@mui/material";
 import { unstable_ClassNameGenerator as ClassNameGenerator } from "@mui/material/className";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import {
+	isSameKeycloakUser,
+	keycloakUserMemoKey,
+	normalizeKeycloakUser,
+} from "@react-client/common/auth/keycloakUserText.util";
 import { ErrorBoundary } from "@react-client/common/errors/ErrorBoundary";
 import { ErrorPage } from "@react-client/common/errors/pages/ErrorPage";
 import { performMfeLogout } from "@react-client/common/auth/syncMfeAuth";
@@ -16,7 +24,7 @@ import { setDefaultOptions } from "date-fns/esm";
 
 import { isEmpty } from "lodash-es";
 import type React from "react";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { BrowserRouter } from "react-router";
 import type { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
 import { reportWebVitals } from "./reportWebVitals";
@@ -73,7 +81,12 @@ interface LayoutProps {
 }
 
 const App: React.FC<LayoutProps> = (props) => {
-	const { user, onLogout, bridged, urlConfig, keycloak } = props;
+	const { user: rawUser, onLogout, bridged, urlConfig, keycloak } = props;
+	const userMemoKey = keycloakUserMemoKey(rawUser);
+	const user = useMemo(
+		() => normalizeKeycloakUser(rawUser),
+		[userMemoKey],
+	);
 
 	const { setUser, setConfigMap } = useGlobalSettingsStore();
 
@@ -82,8 +95,12 @@ const App: React.FC<LayoutProps> = (props) => {
 	};
 
 	useEffect(() => {
-		setUser(isEmpty(user) ? undefined : user);
-	}, [user, setUser]);
+		if (bridged) return;
+		const nextUser = isEmpty(user) ? undefined : user;
+		const currentUser = useGlobalSettingsStore.getState().user;
+		if (isSameKeycloakUser(currentUser, nextUser)) return;
+		setUser(nextUser);
+	}, [bridged, user, setUser]);
 
 	useEffect(() => {
 		if (!isEmpty(urlConfig)) {

@@ -1,5 +1,7 @@
 import {
 	V2_SOURCE_STREAM,
+	V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE,
+	isAlwaysShownTriggerParam,
 	normalizeParamLabel,
 } from "@smart-anketa/api-contract";
 import {
@@ -96,6 +98,9 @@ export function resolveCatalogTriggerParamCode(
 	triggerParamName: string,
 ): string {
 	const trimmed = triggerParamName.trim();
+	if (isAlwaysShownTriggerParam("", trimmed) || isAlwaysShownTriggerParam(trimmed, trimmed)) {
+		return V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE;
+	}
 	const norm = normalizeParamLabel(trimmed);
 	const triggerRule = row.triggerRules?.find((rule) => {
 		const ruleNorm = normalizeParamLabel(rule.paramName);
@@ -105,6 +110,15 @@ export function resolveCatalogTriggerParamCode(
 			norm.startsWith(ruleNorm)
 		);
 	});
+	if (
+		triggerRule &&
+		isAlwaysShownTriggerParam(
+			triggerRule.paramCode ?? "",
+			triggerRule.paramName,
+		)
+	) {
+		return V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE;
+	}
 	if (triggerRule?.paramCode?.trim()) {
 		return triggerRule.paramCode.trim();
 	}
@@ -140,13 +154,29 @@ export function findCatalogRowsForRegistryWork(
 	catalogGroups: Map<string, V2FactoryTypicalWork[]>,
 ): V2FactoryTypicalWork[] {
 	const stage = extractWorkStage(entry.name);
-	if (!stage) return [];
-	const key = buildCatalogWorkKey(
-		entry.archComponentType,
-		stage,
-		stripWorkStagePrefix(entry.name),
-	);
-	return catalogGroups.get(key) ?? [];
+	if (stage) {
+		const key = buildCatalogWorkKey(
+			entry.archComponentType,
+			stage,
+			stripWorkStagePrefix(entry.name),
+		);
+		const byStage = catalogGroups.get(key);
+		if (byStage?.length) return byStage;
+	}
+
+	/** ПиРМ и др. работы без «01.» / «Этап N.» в названии — матч по компоненту + имени. */
+	const component = normalizeArchComponentType(entry.archComponentType);
+	const name = entry.name.trim();
+	const matches: V2FactoryTypicalWork[] = [];
+	for (const rows of catalogGroups.values()) {
+		for (const row of rows) {
+			if (normalizeArchComponentType(resolveCatalogWorkComponent(row)) !== component) {
+				continue;
+			}
+			if (row.name.trim() === name) matches.push(row);
+		}
+	}
+	return matches;
 }
 
 export function groupCatalogWorks(): Map<string, V2FactoryTypicalWork[]> {

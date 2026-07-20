@@ -125,7 +125,7 @@ export function TriggerFormulaEditor({
 	return (
 		<Box>
 			<Typography sx={{ fontSize: 11.5, color: "#6b7484", mb: 1 }}>
-				Соберите условие: параметры-триггеры, операторы <b>И</b> / <b>ИЛИ</b>,
+				Соберите условие появления: параметры, операторы <b>И</b> / <b>ИЛИ</b>,
 				скобки и условие по количеству компонентов.
 			</Typography>
 			<Box
@@ -152,7 +152,7 @@ export function TriggerFormulaEditor({
 			>
 				{formula.tokens.length === 0 ? (
 					<Typography sx={{ fontSize: 12, color: "#94a3b8" }}>
-						Добавьте параметр-триггер или оператор…
+						Добавьте параметр условия или оператор…
 					</Typography>
 				) : null}
 				{formula.tokens.map((token, index) => {
@@ -233,7 +233,7 @@ export function TriggerFormulaEditor({
 					<Typography
 						sx={{ fontSize: 11, color: "#64748b", fontWeight: 600, mb: 0.5 }}
 					>
-						Параметр-триггер
+						Параметр условия появления
 					</Typography>
 					<FuzzyAutocomplete<V2TypicalWorkParameterDto>
 						key={pickerKey}

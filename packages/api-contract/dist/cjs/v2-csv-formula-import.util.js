@@ -12,6 +12,7 @@ exports.buildLinearArchCountSteps = buildLinearArchCountSteps;
 exports.formatArchCountFormulaSteps = formatArchCountFormulaSteps;
 exports.parseModelStreamLaborCoefficients = parseModelStreamLaborCoefficients;
 exports.parseModelStreamTriggerRules = parseModelStreamTriggerRules;
+exports.extractTriggerTextFromResultChoice = extractTriggerTextFromResultChoice;
 exports.parseCsvTriggerRules = parseCsvTriggerRules;
 exports.parseCsvLaborCoefficients = parseCsvLaborCoefficients;
 exports.parseCsvFormulaImportRows = parseCsvFormulaImportRows;
@@ -22,9 +23,11 @@ exports.extractFormulaCoreFromCsvText = extractFormulaCoreFromCsvText;
 exports.buildFormulaTextFromCsvCore = buildFormulaTextFromCsvCore;
 exports.buildFormulaFromCsvRow = buildFormulaFromCsvRow;
 exports.csvRowToCatalogPatch = csvRowToCatalogPatch;
+exports.enrichFactorySnapshotTriggerRule = enrichFactorySnapshotTriggerRule;
 exports.validateImportedFormulaText = validateImportedFormulaText;
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
 const v2_param_slug_util_1 = require("./v2-param-slug.util");
+const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
 /** RFC4180-подобный парсер CSV с `;` и многострочными полями в кавычках. */
 function parseCsvSemicolon(text) {
     const rows = [];
@@ -285,6 +288,13 @@ function parseSingleModelStreamTriggerRule(raw) {
     const part = clean(raw);
     if (!part)
         return null;
+    if (/нет\s*[—–-]\s*работа\s+выводится\s+всегда/iu.test(part)) {
+        return {
+            paramName: v2_works_catalog_match_util_1.V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
+            operator: "exists",
+            values: [],
+        };
+    }
     const eqQuoted = part.match(/^(.+?)\s*=\s*«([^»]+)»\s*$/u);
     if (eqQuoted?.[1] && eqQuoted[2]) {
         return {
@@ -324,6 +334,16 @@ function parseModelStreamTriggerRules(raw) {
     return splitModelStreamTriggerClauses(trimmed)
         .map((chunk) => parseSingleModelStreamTriggerRule(chunk))
         .filter((rule) => rule !== null);
+}
+/** Строка триггера из колонки «Результат выбора» (блок «Триггер: …»). */
+function extractTriggerTextFromResultChoice(raw) {
+    const normalized = raw.replace(/\r/g, "").trim();
+    if (!normalized)
+        return "";
+    const match = normalized.match(/(?:^|\n)\s*Триггер:\s*([^\n]+)/iu);
+    if (!match?.[1])
+        return "";
+    return clean(match[1].replace(/\s*\(иначе.*$/iu, ""));
 }
 function splitTopLevelList(raw) {
     const parts = [];
@@ -415,6 +435,13 @@ function parseCsvTriggerRules(raw) {
                 values: [],
             };
         }
+        if (/нет\s*[—–-]\s*работа\s+выводится\s+всегда/iu.test(rawParam)) {
+            return {
+                paramName: v2_works_catalog_match_util_1.V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
+                operator: "exists",
+                values: [],
+            };
+        }
         return {
             paramName: rawParam,
             operator: "exists",
@@ -489,6 +516,7 @@ function parseCsvFormulaImportRows(csvText) {
     const cWorkType = idx("Тип работы");
     const cNorm = idx("Наличие норматива");
     const cTrigger = idx("Параметр-триггер");
+    const cResult = header.findIndex((h) => clean(h).toLowerCase().includes("результат выбора"));
     const cLabor = idx("Параметры трудоемкости");
     const cFormula = idx("Формула");
     const cCoeffs = header.findIndex((h) => clean(h).toLowerCase().includes("коэффициенты параметров"));
@@ -507,8 +535,12 @@ function parseCsvFormulaImportRows(csvText) {
             stripWorkStagePrefix(originalName) ||
             smartName ||
             originalName;
-        const triggerRaw = r[cTrigger] ?? "";
-        const triggerRules = stream === "Модельный стрим"
+        const triggerFromResult = cResult >= 0
+            ? extractTriggerTextFromResultChoice(r[cResult] ?? "")
+            : "";
+        const triggerRaw = triggerFromResult || (r[cTrigger] ?? "");
+        const isModelStream = stream === "Модельный стрим" || stream === "Модельные стримы";
+        const triggerRules = isModelStream
             ? parseModelStreamTriggerRules(triggerRaw)
             : parseCsvTriggerRules(triggerRaw);
         return {
@@ -963,12 +995,37 @@ function csvRowToCatalogPatch(row, candidates, overrides = {}) {
                 ? parseModelStreamLaborCoefficients(row.laborCoefficientsRaw)
                 : parseCsvLaborCoefficients(row.formulaRaw, row.component),
             triggerParams: row.triggerParams,
-            triggerRules: row.triggerRules,
+            triggerRules: row.triggerRules.map((rule) => enrichFactorySnapshotTriggerRule(rule)),
             norm: row.norm,
             normRaw: row.normRaw,
             workType: row.workType || undefined,
         },
         build,
+    };
+}
+/** Нормализует triggerRules factory snapshot: valueCode/valueLabel для boolean «Да»/«Нет». */
+function enrichFactorySnapshotTriggerRule(rule) {
+    const operator = rule.operator === "exists" || rule.operator === "unresolved"
+        ? rule.operator
+        : (rule.operator ?? "=");
+    if (operator === "exists" || operator === "unresolved") {
+        return { ...rule, operator };
+    }
+    const normalized = (0, v2_works_catalog_match_util_1.normalizeTypicalWorkTriggerRuleForMatch)({
+        paramCode: rule.paramCode?.trim() || (0, v2_param_slug_util_1.slugParamCode)(rule.paramName),
+        paramName: rule.paramName,
+        operator,
+        valueCode: rule.valueCode ?? null,
+        valueLabel: rule.valueLabel ?? null,
+        values: rule.values?.length ? rule.values : undefined,
+    });
+    return {
+        ...rule,
+        operator: normalized.operator,
+        valueCode: normalized.valueCode,
+        valueLabel: normalized.valueLabel,
+        values: rule.values ??
+            (normalized.valueLabel ? [normalized.valueLabel] : undefined),
     };
 }
 function validateImportedFormulaText(formulaText) {

@@ -1,3 +1,4 @@
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import SearchIcon from "@mui/icons-material/Search";
@@ -5,6 +6,7 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Box from "@mui/material/Box";
+import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -17,6 +19,7 @@ import { Card } from "@react-client/common/muiCustom/Card";
 import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import { toast } from "@react-client/common/toasts";
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { useParams } from "react-router";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
@@ -51,6 +54,19 @@ import { readParameterDependencyDraft } from "./typicalWorksPanel/parameterDepen
 const ISSUES_SEARCH_DEBOUNCE_MS = 300;
 
 type IssuesViewMode = "list" | "json";
+
+async function copyIssuesJson(issues: SchemaEditorIssue[]) {
+	try {
+		await navigator.clipboard.writeText(JSON.stringify(issues, null, 2));
+		toast.success(
+			issues.length === 1
+				? "JSON проблемы скопирован"
+				: `JSON проблем скопирован (${issues.length})`,
+		);
+	} catch {
+		toast.error("Не удалось скопировать JSON");
+	}
+}
 
 const SEVERITY_META: Record<
 	SchemaEditorIssueSeverity,
@@ -200,6 +216,8 @@ function IssuesPanelToolbar({
 	filteredCount,
 	totalCount,
 	filteredCounts,
+	onCopyJson,
+	copyDisabled,
 }: {
 	searchQuery: string;
 	onSearchQueryChange: (value: string) => void;
@@ -208,6 +226,8 @@ function IssuesPanelToolbar({
 	filteredCount: number;
 	totalCount: number;
 	filteredCounts: Record<SchemaEditorIssueSeverity, number>;
+	onCopyJson: () => void;
+	copyDisabled: boolean;
 }) {
 	const searchActive = searchQuery.trim().length > 0;
 
@@ -248,6 +268,16 @@ function IssuesPanelToolbar({
 						},
 					]}
 				/>
+				<IconButton
+					size="small"
+					onClick={onCopyJson}
+					disabled={copyDisabled}
+					title="Копировать JSON проблем"
+					aria-label="Копировать JSON проблем"
+					data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.issuesCopyJson}
+				>
+					<ContentCopyIcon fontSize="small" />
+				</IconButton>
 			</Flex>
 			{totalCount > 0 ? (
 				<Flex gap={8} wrap="wrap" alignItems="center">
@@ -293,6 +323,27 @@ function IssuesJsonView({ issues }: { issues: SchemaEditorIssue[] }) {
 			sx={{ overflow: "hidden" }}
 			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.issuesJson}
 		>
+			<Flex
+				alignItems="center"
+				justifyContent="space-between"
+				padding="8px 12px"
+				sx={{ borderBottom: "1px solid", borderColor: "divider" }}
+			>
+				<Typography variant="caption" color="text.secondary">
+					{issues.length}{" "}
+					{issues.length === 1 ? "проблема" : "проблем"}
+				</Typography>
+				<Button
+					size="small"
+					startIcon={<ContentCopyIcon />}
+					onClick={() => void copyIssuesJson(issues)}
+					disabled={issues.length === 0}
+					title="Копировать JSON проблем"
+					data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.issuesCopyJson}
+				>
+					Копировать JSON
+				</Button>
+			</Flex>
 			<Box
 				component="pre"
 				sx={{
@@ -327,6 +378,8 @@ export function SchemaIssuesPanel({
 		cycles,
 		logicValidationIssues,
 		schemaConsistencyIssues,
+		refreshSchemaConsistencyIssues,
+		templateVersionId,
 		dictionaryCodeByPointer,
 		enumMapByCode,
 		dictionaryEnumsLoading,
@@ -357,6 +410,26 @@ export function SchemaIssuesPanel({
 			),
 		[templateId, worksData?.items],
 	);
+
+	const workNameById = useMemo(() => {
+		const map = new Map<string, string>();
+		for (const work of assignedWorks) {
+			map.set(work.id, work.name);
+		}
+		return map;
+	}, [assignedWorks]);
+
+	// Вкладка «Проблемы» сама подтягивает актуальные ошибки типовых работ (dryRun),
+	// а не ждёт единственный apply при открытии редактора.
+	useEffect(() => {
+		if (!templateVersionId || dictionaryEnumsLoading) return;
+		refreshSchemaConsistencyIssues();
+	}, [
+		dictionaryEnumsLoading,
+		refreshSchemaConsistencyIssues,
+		templateVersionId,
+		worksData?.total,
+	]);
 
 	const schemaParams = useMemo(
 		() =>
@@ -436,6 +509,7 @@ export function SchemaIssuesPanel({
 				logicValidationIssues,
 				assignedWorks,
 				schemaConsistencyIssues,
+				workNameById,
 				paramDependencyDraft,
 				paramFieldBindings,
 				dictionaryCodeByPointer,
@@ -460,6 +534,7 @@ export function SchemaIssuesPanel({
 			paramFieldBindings,
 			schemaConsistencyIssues,
 			typicalWorkSaveDisplay,
+			workNameById,
 		],
 	);
 
@@ -496,6 +571,8 @@ export function SchemaIssuesPanel({
 			filteredCount={filteredIssues.length}
 			totalCount={issues.length}
 			filteredCounts={filteredCounts}
+			onCopyJson={() => void copyIssuesJson(issues)}
+			copyDisabled={issues.length === 0}
 		/>
 	);
 

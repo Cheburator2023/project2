@@ -1,5 +1,6 @@
 import type { WorkSchemaParamDef } from "./v2-work-schema-params-match.util";
 import type { TypicalWorkRuleLike } from "./v2-works-catalog-match.util";
+import type { V2WorkFormulaToken } from "./v2-typical-work.types";
 /** Строит список полей схемы шаблона для сопоставления с legacy-кодами работ. */
 export declare function buildWorkSchemaParamsFromTemplate(params: {
     jsonSchema: Record<string, unknown>;
@@ -27,6 +28,8 @@ export type TypicalWorkSchemaConsistencyInput = {
         }>;
     }>;
     formulaParamCodes?: string[];
+    /** Токены формулы — для той же проверки, что в UI калькулятора. */
+    formulaTokens?: V2WorkFormulaToken[];
     /** Параметры методологического каталога (заводской snapshot) — не требуют поля схемы. */
     methodologyParams?: Array<{
         code: string;

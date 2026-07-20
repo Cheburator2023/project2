@@ -9,6 +9,7 @@ import type { CalculationResponseDto } from "@smart-anketa/api-contract";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { getAgGridMainMenuItemsWithoutRowGroup } from "@react-client/common/tableStuff/agGridMainMenuItems";
 import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import { toast } from "@react-client/common/toasts";
 import { _columnDefs } from "@react-client/features/v1/home/colDefs";
@@ -24,7 +25,6 @@ import {
 	ColDef,
 	ColumnWidthCallbackParams,
 	ExcelStyle,
-	GetMainMenuItemsParams,
 	GetContextMenuItemsParams,
 	type GridApi,
 	type GridReadyEvent,
@@ -214,6 +214,7 @@ export const HomeTemplete = ({
 }) => {
 	const [hoveredRowId, _setHoveredRowId] = useState("");
 	const { setGridApi } = useGlobalSettingsStore();
+	const [localGridApi, setLocalGridApi] = useState<GridApi | null>(null);
 	const gridRef = useRef<AgGridReact>(null);
 	const gridPersistence = useAgGridColumnPersistence("v1.home.calculations");
 	const { mode } = useColorScheme();
@@ -297,11 +298,7 @@ export const HomeTemplete = ({
 		cellRendererParams: {
 			hoveredRowId,
 		},
-		mainMenuItems: (params: GetMainMenuItemsParams) => {
-			return params.defaultItems.filter(
-				(item) => item !== "columnChooser" && item !== "rowGroup",
-			);
-		},
+		mainMenuItems: getAgGridMainMenuItemsWithoutRowGroup,
 	};
 
 	const calculateColumnWidth = (params: ColumnWidthCallbackParams) => {
@@ -410,20 +407,7 @@ export const HomeTemplete = ({
 
 		const customItems = [
 			{
-				name: "Просмотр анкеты",
-				action: () => {
-					if (calculationId) {
-						const route = registryRoutes.calculationPreview.rootPath.replace(
-							":id",
-							calculationId.toString(),
-						);
-
-						window.open(buildRegistryUrl(route, pathPrefix), "_blank");
-					}
-				},
-			},
-			{
-				name: "Просмотр анкеты в новой вкладке",
+				name: "Открыть в новой вкладке",
 				action: () => {
 					if (calculationId) {
 						const route = registryRoutes.calculationPreview.rootPath.replace(
@@ -466,14 +450,15 @@ export const HomeTemplete = ({
 
 	const onGridReady = (params: GridReadyEvent<any, any>) => {
 		gridPersistence.onGridReady(params);
-		console.log("Grid is ready, setting API in Zustand store.");
 		params.api.setFilterModel({
 			status: {
 				filterType: "set",
 				values: ["Активная"],
 			},
 		});
-		setGridApi(params.api as GridApi);
+		const api = params.api as GridApi;
+		setLocalGridApi(api);
+		setGridApi(api);
 	};
 
 	const onFilterChanged = () => {
@@ -499,6 +484,7 @@ export const HomeTemplete = ({
 		refetch();
 
 		return () => {
+			setLocalGridApi(null);
 			setGridApi(null);
 		};
 	}, []);
@@ -530,7 +516,10 @@ export const HomeTemplete = ({
 					data-test-id="home-page--Flex-0"
 				>
 					<Flex width="100%" maxWidth="550px" data-test-id="home-page--Flex-1">
-						<SearchInput data-test-id="home-page--SearchInput-0" />
+						<SearchInput
+							gridApi={localGridApi}
+							data-test-id="home-page--SearchInput-0"
+						/>
 					</Flex>
 					<Flex
 						gap={6}

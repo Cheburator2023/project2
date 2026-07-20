@@ -4,7 +4,7 @@ import {
 	NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, IsNull, Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import type {
 	CreateV2TypicalWorkRequestDto,
 	CreateV2TypicalWorkParameterRequestDto,
@@ -28,6 +28,7 @@ import type {
 	BulkDeleteV2TypicalWorksResultDto,
 } from "@smart-anketa/api-contract";
 import {
+	applyComputedOverallUncertaintyToTypicalWorkParamCoefficients,
 	buildWorkSchemaParamsFromTemplate,
 	collectTypicalWorkSchemaConsistencyIssues,
 	enrichWorkSchemaParamsWithCatalogAliases,
@@ -54,6 +55,8 @@ import {
 	resolveLaborAnyOfCoefficient,
 	resolveByValueLaborParamCoefficients,
 	reconcileTypicalWorkCardWithSchemaField,
+	mergeLaborParamGroupsByParamCode,
+	dedupeLaborCoefficientsByStoredValue,
 	reconcileFormulaWithLaborArchCounts,
 	syncTermsFromTokenFormula,
 	termsToTokenFormula,
@@ -81,10 +84,16 @@ import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
 import { normalizeArchComponentType, slugParamCode } from "../utils/v2-typical-work-catalog.util";
 import { V2_FACTORY_TYPICAL_WORKS_SNAPSHOT } from "../constants/v2-factory-typical-works-catalog";
 import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
-import { V2TypicalWorkService } from "./v2-typical-work.service";
+import {
+	V2TypicalWorkSeedService,
+	V2TypicalWorkService,
+} from "./v2-typical-work.service";
 
 @Injectable()
 export class V2TypicalWorkWriteService {
+	/** Сериализация bulk schema-sync на версию (фон + HTTP одновременно → 500). */
+	private readonly reconcileTails = new Map<string, Promise<unknown>>();
+
 	constructor(
 		@InjectRepository(V2TypicalWorkEntity)
 		private readonly workRepository: Repository<V2TypicalWorkEntity>,
@@ -105,8 +114,26 @@ export class V2TypicalWorkWriteService {
 		@InjectRepository(V2QuestionnaireEntity)
 		private readonly questionnaireRepository: Repository<V2QuestionnaireEntity>,
 		private readonly typicalWorkService: V2TypicalWorkService,
+		private readonly typicalWorkSeedService: V2TypicalWorkSeedService,
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
 	) {}
+
+	private withReconcileLock<T>(
+		templateVersionId: string,
+		fn: () => Promise<T>,
+	): Promise<T> {
+		const key = templateVersionId.trim();
+		const previous = this.reconcileTails.get(key) ?? Promise.resolve();
+		const run = previous.catch(() => undefined).then(fn);
+		this.reconcileTails.set(
+			key,
+			run.then(
+				() => undefined,
+				() => undefined,
+			),
+		);
+		return run;
+	}
 
 	listParameters(
 		includeInactive = false,
@@ -692,10 +719,13 @@ export class V2TypicalWorkWriteService {
 			const assignment = await this.ensureAssignment(workId, stream);
 			if (dto.triggerArchCount !== undefined) {
 				const arch = dto.triggerArchCount;
-				assignment.triggerArchCountKind = arch?.kind ?? null;
-				assignment.triggerArchCountSteps = arch?.steps?.length
-					? arch.steps
-					: null;
+				const configured = Boolean(
+					arch?.kind &&
+						(arch.steps?.length ?? 0) > 0 &&
+						arch.steps?.some((step) => Number.isFinite(step.count)),
+				);
+				assignment.triggerArchCountKind = configured ? arch!.kind : null;
+				assignment.triggerArchCountSteps = configured ? arch!.steps : null;
 				assignment.triggerArchCountCombinator = arch?.combinator ?? "and";
 			}
 			if (dto.laborArchCounts !== undefined) {
@@ -727,7 +757,7 @@ export class V2TypicalWorkWriteService {
 				workId,
 				streamExecutor: stream,
 			});
-			for (const group of dto.laborParams) {
+			for (const group of mergeLaborParamGroupsByParamCode(dto.laborParams)) {
 				const kind = group.kind ?? "by_value";
 				await this.laborParamRepository.save(
 					this.laborParamRepository.create({
@@ -748,7 +778,9 @@ export class V2TypicalWorkWriteService {
 					}),
 				);
 				if (kind !== "any_of") {
-					for (const row of group.coefficients ?? []) {
+					for (const row of dedupeLaborCoefficientsByStoredValue(
+						group.coefficients ?? [],
+					)) {
 						await this.laborRepository.save(
 							this.laborRepository.create({
 								workId,
@@ -1182,6 +1214,21 @@ export class V2TypicalWorkWriteService {
 		}
 
 		const terms = card.formulaTerms ?? normalizeStoredFormula(null);
+		applyComputedOverallUncertaintyToTypicalWorkParamCoefficients(
+			answerSource as Record<string, unknown>,
+			paramCoefficients,
+			{
+				laborParamRefs:
+					card.laborParams?.map((group) => ({
+						paramCode: group.paramCode,
+						paramName: group.paramName,
+					})) ?? [],
+				formulaParamCodes: terms.terms.flatMap((term) =>
+					term.factors.map((factor) => factor.paramCode),
+				),
+			},
+		);
+
 		const anyOfParams =
 			card.laborParams
 				?.filter((group) => group.kind === "any_of" && group.anyOf)
@@ -1312,6 +1359,21 @@ export class V2TypicalWorkWriteService {
 		mode: "dryRun" | "apply" = "apply",
 		options?: { skipConsistencyReport?: boolean },
 	): Promise<V2TypicalWorkSchemaBulkSyncResponseDto> {
+		await this.typicalWorkSeedService.waitForSeedInFlight(templateVersionId);
+		return this.withReconcileLock(templateVersionId, () =>
+			this.runReconcileAllSchemaFieldsForVersion(
+				templateVersionId,
+				mode,
+				options,
+			),
+		);
+	}
+
+	private async runReconcileAllSchemaFieldsForVersion(
+		templateVersionId: string,
+		mode: "dryRun" | "apply" = "apply",
+		options?: { skipConsistencyReport?: boolean },
+	): Promise<V2TypicalWorkSchemaBulkSyncResponseDto> {
 		const version = await this.templateVersionRepository.findOne({
 			where: { id: templateVersionId },
 		});
@@ -1389,112 +1451,123 @@ export class V2TypicalWorkWriteService {
 			aggregate.formulasInvalidated += impact.formulasInvalidated;
 		}
 
-		const workIds = [...new Set(configs.map((config) => config.workId))];
-		const unboundLaborCount =
-			workIds.length > 0
-				? await this.laborParamRepository.count({
-						where: { workId: In(workIds), schemaFieldUid: IsNull() },
-					})
-				: 0;
-
-		if (unboundLaborCount > 0) {
-			const repairedBindings = new Set<string>();
-			for (const config of configs) {
-				const card = await this.typicalWorkService.getWorkCardForSchemaSync(
+		const repairedLaborBindings = new Set<string>();
+		for (const config of configs) {
+			let card: Awaited<
+				ReturnType<V2TypicalWorkService["getWorkCardForSchemaSync"]>
+			>;
+			try {
+				card = await this.typicalWorkService.getWorkCardForSchemaSync(
 					config.workId,
 					config.streamExecutor,
 					templateVersionId,
 				);
-				for (const labor of card.laborParams) {
-					if (labor.schemaFieldUid) continue;
-					const resolved = resolveWorkSchemaParamForRule(labor, schemaParams);
-					if (!resolved?.schemaFieldUid) continue;
+			} catch (error) {
+				if (error instanceof NotFoundException) continue;
+				throw error;
+			}
+			for (const labor of card.laborParams) {
+				const resolved = resolveWorkSchemaParamForRule(labor, schemaParams);
+				if (!resolved?.schemaFieldUid) continue;
+				const needsRebind =
+					labor.paramCode !== resolved.code ||
+					(labor.schemaFieldUid ?? null) !==
+						(resolved.schemaFieldUid ?? null);
+				if (!needsRebind) continue;
 
-					const bindingKey = `${config.workId}:${resolved.schemaFieldUid}`;
-					if (repairedBindings.has(bindingKey)) continue;
-					repairedBindings.add(bindingKey);
+				const bindingKey = `${config.workId}:${config.streamExecutor}:${labor.paramCode}:${resolved.schemaFieldUid}`;
+				if (repairedLaborBindings.has(bindingKey)) continue;
+				repairedLaborBindings.add(bindingKey);
 
-					const impact = await this.reconcileSchemaField(
-						{
-							templateVersionId,
-							mode,
-							operation: "upsert",
-							field: {
-								schemaFieldUid: resolved.schemaFieldUid,
-								previousCode: labor.paramCode,
-								aliasCodes: resolved.sourceKeys,
-								code: resolved.code,
-								name: resolved.name,
-								values:
-									resolved.values && resolved.values.length > 0
-										? resolved.values
-										: undefined,
-							},
+				const impact = await this.reconcileSchemaField(
+					{
+						templateVersionId,
+						mode,
+						operation: "upsert",
+						field: {
+							schemaFieldUid: resolved.schemaFieldUid,
+							previousCode: labor.paramCode,
+							aliasCodes: resolved.sourceKeys,
+							code: resolved.code,
+							name: resolved.name,
+							values:
+								resolved.values && resolved.values.length > 0
+									? resolved.values
+									: undefined,
 						},
-						null,
-						{
-							workId: config.workId,
-							unboundLaborOnly: true,
-							prefetchedConfigs: configs,
-						},
-					);
-					aggregate.worksMatched += impact.worksMatched;
-					aggregate.worksUpdated += impact.worksUpdated;
-					aggregate.rulesUpdated += impact.rulesUpdated;
-					aggregate.rulesRemoved += impact.rulesRemoved;
-					aggregate.laborParamsUpdated += impact.laborParamsUpdated;
-					aggregate.laborParamsRemoved += impact.laborParamsRemoved;
-					aggregate.formulasInvalidated += impact.formulasInvalidated;
-				}
+					},
+					null,
+					{
+						workId: config.workId,
+						unboundLaborOnly: !labor.schemaFieldUid,
+						prefetchedConfigs: configs,
+					},
+				);
+				aggregate.worksMatched += impact.worksMatched;
+				aggregate.worksUpdated += impact.worksUpdated;
+				aggregate.rulesUpdated += impact.rulesUpdated;
+				aggregate.rulesRemoved += impact.rulesRemoved;
+				aggregate.laborParamsUpdated += impact.laborParamsUpdated;
+				aggregate.laborParamsRemoved += impact.laborParamsRemoved;
+				aggregate.formulasInvalidated += impact.formulasInvalidated;
 			}
 		}
 
 		if (!options?.skipConsistencyReport) {
 			for (const config of configs) {
-			const card = await this.typicalWorkService.getWorkCardForSchemaSync(
-				config.workId,
-				config.streamExecutor,
-				templateVersionId,
-			);
-			aggregate.consistencyIssues.push(
-				...collectTypicalWorkSchemaConsistencyIssues({
-					schemaParams,
-					rules: card.rules,
-					laborParamCodes: card.laborParams.map((group) => ({
-						paramCode: group.paramCode,
-						paramName: group.paramName,
-						schemaFieldUid: group.schemaFieldUid,
-						kind: group.kind,
-						coefficients: group.coefficients.map((row) => ({
-							valueCode: row.valueCode,
-							valueLabel: row.valueLabel,
+				let card: Awaited<
+					ReturnType<V2TypicalWorkService["getWorkCardForSchemaSync"]>
+				>;
+				try {
+					card = await this.typicalWorkService.getWorkCardForSchemaSync(
+						config.workId,
+						config.streamExecutor,
+						templateVersionId,
+					);
+				} catch (error) {
+					if (error instanceof NotFoundException) continue;
+					throw error;
+				}
+				aggregate.consistencyIssues.push(
+					...collectTypicalWorkSchemaConsistencyIssues({
+						schemaParams,
+						rules: card.rules,
+						laborParamCodes: card.laborParams.map((group) => ({
+							paramCode: group.paramCode,
+							paramName: group.paramName,
+							schemaFieldUid: group.schemaFieldUid,
+							kind: group.kind,
+							coefficients: group.coefficients.map((row) => ({
+								valueCode: row.valueCode,
+								valueLabel: row.valueLabel,
+							})),
 						})),
+						formulaParamCodes: card.formula.tokens
+							.filter(
+								(token) =>
+									token.kind === "param_coeff" || token.kind === "param_anyof",
+							)
+							.map((token) => token.paramCode),
+						formulaTokens: card.formula.tokens,
+						methodologyParams:
+							V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.dictionaries.map((dict) => ({
+								code: slugParamCode(dict.name),
+								name: dict.name,
+							})),
+						methodologyCatalog: catalog.items.map((param) => ({
+							code: param.code,
+							name: param.name,
+							values: param.values.map((value) => ({
+								code: value.code,
+								label: value.label,
+							})),
+						})),
+					}).map((issue) => ({
+						...issue,
+						workId: config.workId,
+						streamExecutor: config.streamExecutor,
 					})),
-					formulaParamCodes: card.formula.tokens
-						.filter(
-							(token) =>
-								token.kind === "param_coeff" || token.kind === "param_anyof",
-						)
-						.map((token) => token.paramCode),
-					methodologyParams:
-						V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.dictionaries.map((dict) => ({
-							code: slugParamCode(dict.name),
-							name: dict.name,
-						})),
-					methodologyCatalog: catalog.items.map((param) => ({
-						code: param.code,
-						name: param.name,
-						values: param.values.map((value) => ({
-							code: value.code,
-							label: value.label,
-						})),
-					})),
-				}).map((issue) => ({
-					...issue,
-					workId: config.workId,
-					streamExecutor: config.streamExecutor,
-				})),
-			);
+				);
 			}
 		}
 

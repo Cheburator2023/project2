@@ -17,13 +17,10 @@ import {
 } from "@mui/material";
 import {
 	useBulkDeleteV2Questionnaires,
+	useV2QuestionnaireRegistryConfig,
 	useV2Questionnaires,
 	v2QuestionnairesExportXlsx,
 } from "@react-client/common/api/queries/v2-questionnaires";
-import {
-	useV2TemplateVersion,
-	useV2Templates,
-} from "@react-client/common/api/queries/v2-templates";
 import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import { toast } from "@react-client/common/toasts";
@@ -31,6 +28,7 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { getAgGridMainMenuItems } from "@react-client/common/tableStuff/agGridMainMenuItems";
 import { AG_GRID_SET_FILTER_PARAMS } from "@react-client/common/tableStuff/agGridSetFilterParams";
 import {
 	applyAgGridColumnState,
@@ -70,18 +68,15 @@ import {
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 import {
-	buildV2QuestionnaireColumnDefs,
+	buildV2QuestionnaireColumnDefsFromTree,
 } from "../utils/v2QuestionnaireGridColumns";
-import {
-	deriveRegistryColumnOptionsFromRows,
-	type V2RegistrySchemaColumnOptions,
-} from "@smart-anketa/api-contract";
+import type { V2RegistryColumnNode } from "@smart-anketa/api-contract";
 import {
 	FACTORY_PRESET_IDS,
 	applyQuestionnaireGridPreset,
 	clearQuestionnaireGridFilters,
-	getFactoryGridPreset,
-	getFactoryGridPresets,
+	getFactoryGridPresetFromTree,
+	getFactoryGridPresetsFromTree,
 	isFactoryPresetId,
 	type QuestionnaireGridPresetApi,
 } from "../utils/v2QuestionnaireGridFactoryPresets";
@@ -170,20 +165,16 @@ function newPresetId(): string {
 
 function GridPresetToolPanel({
 	api,
-	jsonSchema,
-	uiSchema,
-	columnOptions,
+	columnTree,
 }: {
 	api: PresetGridApi;
-	jsonSchema?: Record<string, unknown>;
-	uiSchema?: Record<string, unknown>;
-	columnOptions?: V2RegistrySchemaColumnOptions;
+	columnTree: readonly V2RegistryColumnNode[];
 }) {
 	const [presets, setPresets] = useState<GridPreset[]>(readGridPresets);
 	const [name, setName] = useState("");
 	const factoryPresets = useMemo(
-		() => getFactoryGridPresets(jsonSchema, uiSchema, columnOptions),
-		[jsonSchema, uiSchema, columnOptions],
+		() => getFactoryGridPresetsFromTree(columnTree),
+		[columnTree],
 	);
 
 	const updatePresets = (next: GridPreset[]) => {
@@ -227,11 +218,9 @@ function GridPresetToolPanel({
 
 	const resetGridState = () => {
 		clearAgGridColumnState(GRID_COLUMN_STATE_KEY);
-		const allInformationPreset = getFactoryGridPreset(
+		const allInformationPreset = getFactoryGridPresetFromTree(
 			FACTORY_PRESET_IDS.allInformation,
-			jsonSchema,
-			uiSchema,
-			columnOptions,
+			columnTree,
 		);
 		if (allInformationPreset) {
 			applyQuestionnaireGridPreset(api, allInformationPreset);
@@ -357,21 +346,8 @@ export function V2QuestionnaireList() {
 	const gridRef = useRef<AgGridReact<V2QuestionnaireGridRow>>(null);
 	const { canAccessAdminPanel, canCreateCalculation, canExportReports } = usePermissions();
 	const bulkDelete = useBulkDeleteV2Questionnaires();
-	const { data: templates } = useV2Templates();
-	const activeTemplate = useMemo(
-		() => templates?.find((t) => t.currentVersionId) ?? templates?.[0],
-		[templates],
-	);
-	const { data: templateVersion } = useV2TemplateVersion(
-		activeTemplate?.id ?? "",
-		activeTemplate?.currentVersionId ?? null,
-	);
-	const registryJsonSchema = templateVersion?.jsonSchema as
-		| Record<string, unknown>
-		| undefined;
-	const registryUiSchema = templateVersion?.uiSchema as
-		| Record<string, unknown>
-		| undefined;
+	const { data: registryConfig, isLoading: isRegistryConfigLoading } =
+		useV2QuestionnaireRegistryConfig();
 	const [selectedVersions, setSelectedVersions] = useState<
 		V2QuestionnaireVersionRow[]
 	>([]);
@@ -394,37 +370,24 @@ export function V2QuestionnaireList() {
 		}));
 	}, [questionnaires]);
 
-	const registryColumnOptions = useMemo(
-		() =>
-			rowData.length > 0
-				? deriveRegistryColumnOptionsFromRows(rowData)
-				: undefined,
-		[rowData],
+	const columnTree = useMemo(
+		() => registryConfig?.columnTree ?? [],
+		[registryConfig?.columnTree],
 	);
 
 	const columnDefs = useMemo(
-		() =>
-			buildV2QuestionnaireColumnDefs(
-				registryJsonSchema,
-				registryUiSchema,
-				registryColumnOptions,
-			),
-		[registryJsonSchema, registryUiSchema, registryColumnOptions],
+		() => buildV2QuestionnaireColumnDefsFromTree(columnTree),
+		[columnTree],
 	);
 
 	const GridPresetToolPanelBound = useMemo(
 		() =>
 			function GridPresetToolPanelBound(props: { api: PresetGridApi }) {
 				return (
-					<GridPresetToolPanel
-						{...props}
-						jsonSchema={registryJsonSchema}
-						uiSchema={registryUiSchema}
-						columnOptions={registryColumnOptions}
-					/>
+					<GridPresetToolPanel {...props} columnTree={columnTree} />
 				);
 			},
-		[registryJsonSchema, registryUiSchema, registryColumnOptions],
+		[columnTree],
 	);
 
 	const gridIcons = useMemo(
@@ -491,11 +454,9 @@ export function V2QuestionnaireList() {
 
 	const onGridReady = useCallback(
 		(e: GridReadyEvent) => {
-			const basicPreset = getFactoryGridPreset(
+			const basicPreset = getFactoryGridPresetFromTree(
 				FACTORY_PRESET_IDS.default,
-				registryJsonSchema,
-				registryUiSchema,
-				registryColumnOptions,
+				columnTree,
 			);
 			if (basicPreset) {
 				applyQuestionnaireGridPreset(e.api, basicPreset);
@@ -504,7 +465,7 @@ export function V2QuestionnaireList() {
 				e.api.applyColumnState({ state, applyOrder: true });
 			});
 		},
-		[registryJsonSchema, registryUiSchema, registryColumnOptions],
+		[columnTree],
 	);
 
 	const persistColumnState = useCallback((api: GridApi) => {
@@ -715,6 +676,7 @@ export function V2QuestionnaireList() {
 						filter: "agSetColumnFilter",
 						filterParams: AG_GRID_SET_FILTER_PARAMS,
 						minWidth: 90,
+						mainMenuItems: getAgGridMainMenuItems,
 					}}
 					headerHeight={32}
 					groupHeaderHeight={32}
@@ -732,7 +694,7 @@ export function V2QuestionnaireList() {
 					onColumnResized={(event) => {
 						if (event.finished) persistColumnState(event.api);
 					}}
-					loading={isLoading}
+					loading={isLoading || isRegistryConfigLoading}
 					rowSelection={{
 						mode: "multiRow",
 						checkboxes: true,

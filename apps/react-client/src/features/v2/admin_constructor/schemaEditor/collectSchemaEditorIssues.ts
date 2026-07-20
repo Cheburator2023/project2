@@ -73,6 +73,8 @@ type CollectSchemaEditorIssuesInput = {
 	logicValidationIssues: LogicValidationIssue[];
 	assignedWorks: V2TypicalWorkListItemDto[];
 	schemaConsistencyIssues: TypicalWorkSchemaConsistencyIssue[];
+	/** id → имя работы для заголовков проблем типовых работ */
+	workNameById?: Map<string, string>;
 	paramDependencyDraft: ParameterDependencyDraft;
 	paramFieldBindings: V2ParamFieldBinding[];
 	dictionaryCodeByPointer: Map<string, string>;
@@ -162,16 +164,26 @@ export function collectSchemaEditorIssues(
 	}
 
 	for (const consistency of input.schemaConsistencyIssues) {
+		const workName = consistency.workId
+			? input.workNameById?.get(consistency.workId)
+			: undefined;
+		const paramTitle =
+			consistency.paramName?.trim() ||
+			(consistency.paramCode !== "formula" ? consistency.paramCode : null);
+		const title = [workName, paramTitle].filter(Boolean).join(" · ") || "Типовая работа";
 		pushIssue(issues, {
 			severity: consistency.kind === "labor_value" ? "warning" : "error",
 			category: "typical_work",
-			title: consistency.paramName?.trim() || consistency.paramCode,
+			title,
 			message: consistency.message,
 			target: consistency.workId
 				? {
 						kind: "typical_work",
 						workId: consistency.workId,
-						paramCode: consistency.paramCode,
+						paramCode:
+							consistency.paramCode === "formula"
+								? undefined
+								: consistency.paramCode,
 					}
 				: { kind: "none" },
 		});

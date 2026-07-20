@@ -25,6 +25,8 @@ import type { TypicalWorkSchemaConsistencyIssue } from "@smart-anketa/api-contra
 
 export type SchemaEditorContextValue = {
 	templateId: string;
+	/** Активная версия шаблона — для независимого опроса проблем типовых работ. */
+	templateVersionId: string | null;
 	mainTab: SchemaEditorMainTab;
 	setMainTab: (tab: SchemaEditorMainTab) => void;
 
@@ -68,6 +70,8 @@ export type SchemaEditorContextValue = {
 	logicValidationIssues: LogicValidationIssue[];
 	legacyStageEvaluation: V2LegacyStageEvaluationDto | null;
 	schemaConsistencyIssues: TypicalWorkSchemaConsistencyIssue[];
+	/** Перезапросить consistency issues (dryRun bulk sync). */
+	refreshSchemaConsistencyIssues: () => void;
 	navigateToSchemaEditorIssue: (issue: SchemaEditorIssue) => void;
 	openDesignerAtPointer: (pointer: string) => void;
 	openLogicForIssueTarget: (
@@ -77,12 +81,9 @@ export type SchemaEditorContextValue = {
 	typicalWorkNavFocus: TypicalWorkNavFocus | null;
 	clearTypicalWorkNavFocus: () => void;
 
-	schemaMonacoText: string;
-	setSchemaMonacoText: (v: string) => void;
-	uiMonacoText: string;
-	setUiMonacoText: (v: string) => void;
-	logicMonacoText: string;
-	setLogicMonacoText: (v: string) => void;
+	/** Целый снепшот { jsonSchema, uiSchema, logic } в Monaco. */
+	snapshotMonacoText: string;
+	setSnapshotMonacoText: (v: string) => void;
 	monacoError: string | null;
 	setMonacoError: (v: string | null) => void;
 	syncMonacoApply: () => void;

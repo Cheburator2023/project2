@@ -6,9 +6,13 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import { toast } from "@react-client/common/toasts";
 import { AnketaFormShell } from "@react-client/features/v2/anketaCRUD/templates/AnketaFormShell";
 import { useV2AnketaSchemaEngine } from "@react-client/features/v2/anketaCRUD/hooks/useV2AnketaSchemaEngine";
-import { stripQuestionnaireCalcNameFromFormData } from "@react-client/features/v2/anketaCRUD/utils/anketaQuestionnaireMeta.util";
+import { AnketaCalcNameDialog } from "@react-client/features/v2/anketaCRUD/organisms/AnketaCalcNameDialog";
+import {
+	buildQuestionnaireVersionCalcName,
+	stripQuestionnaireCalcNameFromFormData,
+} from "@react-client/features/v2/anketaCRUD/utils/anketaQuestionnaireMeta.util";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
 export const AnketaNewVersionPageV2 = () => {
@@ -18,10 +22,21 @@ export const AnketaNewVersionPageV2 = () => {
 		id ?? "",
 	);
 	const createVersion = useCreateV2QuestionnaireVersion();
+	const [calcName, setCalcName] = useState<string | null>(null);
+
+	const suggestedVersionCalcName = useMemo(() => {
+		if (!formPackage) return "Анкета";
+		const currentVersion = Number.parseInt(formPackage.questionnaire.version, 10);
+		const nextVersion = Number.isFinite(currentVersion) ? currentVersion + 1 : 1;
+		return buildQuestionnaireVersionCalcName(
+			formPackage.questionnaire.calcName,
+			nextVersion,
+		);
+	}, [formPackage]);
 
 	const source = useMemo(
 		() =>
-			formPackage
+			formPackage && calcName
 				? {
 						templateId: formPackage.questionnaire.templateId,
 						versionId: formPackage.questionnaire.boundTemplateVersionId,
@@ -32,18 +47,18 @@ export const AnketaNewVersionPageV2 = () => {
 						initialLogic: formPackage.logic,
 					}
 				: null,
-		[formPackage],
+		[calcName, formPackage],
 	);
 
 	const engine = useV2AnketaSchemaEngine(source);
 
 	const onSave = () => {
-		if (!id || !formPackage) return;
+		if (!id || !formPackage || !calcName?.trim()) return;
 		createVersion.mutate(
 			{
 				id,
 				body: {
-					calcName: formPackage.questionnaire.calcName,
+					calcName: calcName.trim(),
 					formData: stripQuestionnaireCalcNameFromFormData(engine.formData),
 				},
 			},
@@ -69,16 +84,34 @@ export const AnketaNewVersionPageV2 = () => {
 				: "Анкета не найдена"
 			: null;
 
+	const showNameDialog =
+		Boolean(formPackage) && !errorMessage && calcName == null;
+
 	return (
-		<AnketaFormShell
-			data-test-id="anketa-new-version-page"
-			source={source}
-			engine={engine}
-			loading={isLoading}
-			errorMessage={errorMessage}
-			schemaBinding={formPackage?.questionnaire.schemaBinding}
-			onSave={formPackage && !errorMessage ? onSave : undefined}
-			savePending={createVersion.isPending}
-		/>
+		<>
+			<AnketaCalcNameDialog
+				open={showNameDialog}
+				title="Новая версия анкеты"
+				confirmLabel="Продолжить"
+				initialCalcName={suggestedVersionCalcName}
+				helperText="Название отображается в реестре. Версия в серии будет присвоена автоматически."
+				onCancel={() => navigate(-1)}
+				onConfirm={setCalcName}
+				data-test-id="anketa-new-version-name-dialog"
+			/>
+			{calcName ? (
+				<AnketaFormShell
+					data-test-id="anketa-new-version-page"
+					source={source}
+					engine={engine}
+					loading={isLoading}
+					errorMessage={errorMessage}
+					questionnaireCalcName={calcName}
+					schemaBinding={formPackage?.questionnaire.schemaBinding}
+					onSave={formPackage && !errorMessage ? onSave : undefined}
+					savePending={createVersion.isPending}
+				/>
+			) : null}
+		</>
 	);
 };

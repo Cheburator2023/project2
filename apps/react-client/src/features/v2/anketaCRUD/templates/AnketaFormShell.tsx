@@ -1,9 +1,11 @@
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import BugReportOutlinedIcon from "@mui/icons-material/BugReportOutlined";
 import Alert from "@mui/material/Alert";
 import {
 	Box,
 	Button,
 	CircularProgress,
+	IconButton,
 	Typography,
 } from "@mui/material";
 import type { V2SchemaBindingDto } from "@smart-anketa/api-contract";
@@ -23,6 +25,7 @@ import {
 	AnketaGlobalCompleteDialog,
 	type AnketaGlobalCompleteDialogPhase,
 } from "../organisms/AnketaGlobalCompleteDialog";
+import { AnketaCalcNameDialog } from "../organisms/AnketaCalcNameDialog";
 import { FinalScoreCard } from "../organisms/FinalScoreCard";
 import { V2AnketaFormWithModals } from "../organisms/V2AnketaFormWithModals";
 import { AnketaCommentsSection } from "../organisms/AnketaCommentsSection";
@@ -40,11 +43,13 @@ import { AnketaFormPageLayout } from "./AnketaFormPageLayout";
 import { useCreateV2QuestionnaireVersion } from "@react-client/common/api/queries/v2-questionnaires";
 import { useNavigate } from "react-router";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import { Flex } from "@react-client/common/primitives/Flex";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import { IS_DEV } from "@react-client/common/constants/dev";
+import { buildQuestionnaireCopyCalcName, stripQuestionnaireCalcNameFromFormData } from "../utils/anketaQuestionnaireMeta.util";
 
 type Engine = V2AnketaSchemaEngine;
 
@@ -58,6 +63,9 @@ type Props = {
 	savePending?: boolean;
 	headerExtra?: ReactNode;
 	questionnaireId?: string;
+	questionnaireCalcName?: string;
+	onRenameQuestionnaire?: (calcName: string) => void;
+	renamePending?: boolean;
 	/** Внешняя загрузка (например, form-package с сервера). */
 	loading?: boolean;
 	errorMessage?: string | null;
@@ -77,6 +85,9 @@ export function AnketaFormShell({
 	savePending,
 	headerExtra,
 	questionnaireId,
+	questionnaireCalcName,
+	onRenameQuestionnaire,
+	renamePending = false,
 	loading: externalLoading = false,
 	errorMessage = null,
 	debouncePreviewInputs = false,
@@ -105,6 +116,8 @@ export function AnketaFormShell({
 	const [calculationDebugOpen, setCalculationDebugOpen] = useState(false);
 	const [completeDialogPhase, setCompleteDialogPhase] =
 		useState<AnketaGlobalCompleteDialogPhase>("confirm");
+	const [copyNameDialogOpen, setCopyNameDialogOpen] = useState(false);
+	const [renameDialogOpen, setRenameDialogOpen] = useState(false);
 	const saveAfterCompleteRef = useRef(false);
 	const openCompleteDialog = useCallback(() => {
 		setCompleteDialogPhase("confirm");
@@ -117,31 +130,59 @@ export function AnketaFormShell({
 		saveAfterCompleteRef.current = false;
 	}, []);
 
-	const handleCreateCopy = useCallback(() => {
-		if (!questionnaireId) return;
-		createCopy.mutate(
-			{ id: questionnaireId, body: { formData: engine.displayFormData } },
-			{
-				onSuccess: (created) => {
-					toast.success("Создана копия анкеты");
-					closeCompleteDialog();
-					navigate(
-						`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", created.id)}`,
-					);
+	const handleCreateCopy = useCallback(
+		(calcName: string) => {
+			if (!questionnaireId) return;
+			createCopy.mutate(
+				{
+					id: questionnaireId,
+					body: {
+						calcName,
+						formData: stripQuestionnaireCalcNameFromFormData(
+							engine.displayFormData,
+						),
+					},
 				},
-				onError: (err) =>
-					toast.error("Не удалось создать копию", {
-						description: apiErrorMessage(err),
-					}),
-			},
-		);
-	}, [
-		closeCompleteDialog,
-		createCopy,
-		engine.displayFormData,
-		navigate,
-		questionnaireId,
-	]);
+				{
+					onSuccess: (created) => {
+						toast.success("Создана копия анкеты");
+						setCopyNameDialogOpen(false);
+						closeCompleteDialog();
+						navigate(
+							`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", created.id)}`,
+						);
+					},
+					onError: (err) =>
+						toast.error("Не удалось создать копию", {
+							description: apiErrorMessage(err),
+						}),
+				},
+			);
+		},
+		[
+			closeCompleteDialog,
+			createCopy,
+			engine.displayFormData,
+			navigate,
+			questionnaireId,
+		],
+	);
+
+	const openCopyNameDialog = useCallback(() => {
+		setCopyNameDialogOpen(true);
+	}, []);
+
+	const suggestedCopyName = useMemo(
+		() =>
+			buildQuestionnaireCopyCalcName(questionnaireCalcName ?? "Анкета"),
+		[questionnaireCalcName],
+	);
+
+	const canRenameQuestionnaire =
+		Boolean(onRenameQuestionnaire) &&
+		Boolean(questionnaireCalcName) &&
+		!globallyLocked &&
+		!effectiveReadOnly;
 
 	const finalizeComplete = useCallback(
 		(withSave: boolean) => {
@@ -190,6 +231,31 @@ export function AnketaFormShell({
 	const headerActions = useMemo(
 		() => (
 			<>
+				{questionnaireCalcName ? (
+					<Flex alignItems="center" gap={4} minWidth="0" flexShrink={1}>
+						<Typography
+							variant="body2"
+							color="text.secondary"
+							noWrap
+							title={questionnaireCalcName}
+							sx={{ maxWidth: { xs: 120, sm: 240, md: 360 } }}
+						>
+							{questionnaireCalcName}
+						</Typography>
+						{canRenameQuestionnaire ? (
+							<IconButton
+								size="small"
+								title="Переименовать анкету"
+								aria-label="Переименовать анкету"
+								disabled={renamePending}
+								onClick={() => setRenameDialogOpen(true)}
+								data-test-id={`${dataTestId}--rename`}
+							>
+								<EditOutlinedIcon fontSize="small" />
+							</IconButton>
+						) : null}
+					</Flex>
+				) : null}
 				<AnketaSectionStatusChip kind="global" status={workflow.globalStatus} />
 				{(!globallyLocked && canWorkflowApprove )? (
 					<Button
@@ -226,7 +292,7 @@ export function AnketaFormShell({
 						size="small"
 						disabled={createCopy.isPending}
 						title="Создать копию анкеты в статусе «Черновик»"
-						onClick={handleCreateCopy}
+						onClick={openCopyNameDialog}
 						sx={{ textTransform: "none", whiteSpace: "nowrap" }}
 					>
 						Создать копию
@@ -251,11 +317,16 @@ export function AnketaFormShell({
 			</>
 		),
 		[
+			canRenameQuestionnaire,
 			canSaveQuestionnaire,
 			canWorkflowApprove,
+			dataTestId,
 			headerExtra,
 			isEditingQuestionnaire,
 			onSave,
+			openCopyNameDialog,
+			questionnaireCalcName,
+			renamePending,
 			saveDisabled,
 			savePending,
 			effectiveReadOnly,
@@ -265,7 +336,6 @@ export function AnketaFormShell({
 			openCompleteDialog,
 			questionnaireId,
 			createCopy.isPending,
-			handleCreateCopy,
 		],
 	);
 
@@ -351,7 +421,7 @@ export function AnketaFormShell({
 				onConfirmComplete={() => finalizeComplete(false)}
 				onConfirmCompleteAndSave={() => finalizeComplete(true)}
 				onSave={() => onSave?.()}
-				onCreateCopy={handleCreateCopy}
+				onCreateCopy={openCopyNameDialog}
 				onNewVersion={() => {
 					if (!questionnaireId) return;
 					closeCompleteDialog();
@@ -368,6 +438,29 @@ export function AnketaFormShell({
 				open={calculationDebugOpen}
 				onClose={() => setCalculationDebugOpen(false)}
 				engine={engine}
+			/>
+			<AnketaCalcNameDialog
+				open={copyNameDialogOpen}
+				title="Создать копию анкеты"
+				confirmLabel="Создать копию"
+				initialCalcName={suggestedCopyName}
+				pending={createCopy.isPending}
+				onCancel={() => setCopyNameDialogOpen(false)}
+				onConfirm={handleCreateCopy}
+				data-test-id={`${dataTestId}--copy-name-dialog`}
+			/>
+			<AnketaCalcNameDialog
+				open={renameDialogOpen}
+				title="Переименовать анкету"
+				confirmLabel="Сохранить"
+				initialCalcName={questionnaireCalcName ?? ""}
+				pending={renamePending}
+				onCancel={() => setRenameDialogOpen(false)}
+				onConfirm={(calcName) => {
+					onRenameQuestionnaire?.(calcName);
+					setRenameDialogOpen(false);
+				}}
+				data-test-id={`${dataTestId}--rename-dialog`}
 			/>
 		</>
 	);

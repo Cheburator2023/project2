@@ -15,6 +15,7 @@ import { styled, useColorScheme } from "@mui/material/styles";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
+import { getAgGridMainMenuItems } from "@react-client/common/tableStuff/agGridMainMenuItems";
 import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
 import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import {
@@ -540,7 +541,11 @@ export function V2DictionaryDetail({
 									if (e.data) openEditItem(e.data);
 								}}
 								localeText={AG_GRID_LOCALE_RU}
-								defaultColDef={{ sortable: true, resizable: true }}
+								defaultColDef={{
+									sortable: true,
+									resizable: true,
+									mainMenuItems: getAgGridMainMenuItems,
+								}}
 								sideBar={itemsGridPersistence.sideBar}
 								onGridReady={itemsGridPersistence.onGridReady}
 								onColumnMoved={(event) =>
@@ -645,7 +650,11 @@ export function V2DictionaryDetail({
 										rowData={usages}
 										columnDefs={usageColumns}
 										localeText={AG_GRID_LOCALE_RU}
-										defaultColDef={{ sortable: true, resizable: true }}
+										defaultColDef={{
+									sortable: true,
+									resizable: true,
+									mainMenuItems: getAgGridMainMenuItems,
+								}}
 										sideBar={usageGridPersistence.sideBar}
 										onGridReady={usageGridPersistence.onGridReady}
 										onColumnMoved={(event) =>

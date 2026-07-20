@@ -2,8 +2,10 @@ import type { RJSFSchema } from "@rjsf/utils";
 import type { V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
 import {
 	V2_ARCH_COMPONENT_LABELS,
+	V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE,
 	type V2ArchComponentType,
 	formatParamNameWithSourceKeys,
+	isAlwaysShownTriggerParam,
 	isSourceTypeTriggerParam,
 	isV2AnketaSystemRootKey,
 	resolveV2AnketaArchComponent,
@@ -599,6 +601,9 @@ export function triggerRuleGroupKey(
 	rule: TriggerRuleLike,
 	paramOptions: V2TypicalWorkParameterDto[],
 ): string {
+	if (isAlwaysShownTriggerParam(rule.paramCode, rule.paramName)) {
+		return V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE;
+	}
 	const resolved = resolveSchemaParamForTriggerRule(rule, paramOptions);
 	if (resolved) return resolved.code;
 	if (isSourceTypeTriggerParam(rule.paramCode, rule.paramName)) return "type";

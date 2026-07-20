@@ -69,7 +69,7 @@ describe("trigger status validation for schema-picked params", () => {
 		expect(catalog[0]?.values.map((v) => v.label)).toEqual(["Да", "Нет"]);
 	});
 
-	it("marks boolean schema trigger as configured when preview source is missing", () => {
+	it("marks valid schema trigger as configured regardless of preview", () => {
 		expect(
 			analyzeTriggerRules(
 				[
@@ -83,10 +83,8 @@ describe("trigger status validation for schema-picked params", () => {
 				[schemaParam],
 				methodologyCatalog,
 			),
-		).toEqual({ status: "hidden", issues: [], previewState: "none" });
-	});
+		).toEqual({ status: "appears", issues: [], previewState: "none" });
 
-	it("marks boolean schema trigger as appears when preview source matches", () => {
 		expect(
 			analyzeTriggerRules(
 				[
@@ -101,7 +99,7 @@ describe("trigger status validation for schema-picked params", () => {
 				methodologyCatalog,
 				{ "field_8pFvwc-v": "false" },
 			),
-		).toEqual({ status: "appears", issues: [], previewState: "matched" });
+		).toEqual({ status: "appears", issues: [], previewState: "none" });
 	});
 
 	it("reports explicit issue when backend-style methodology catalog rejects schema param", () => {
@@ -162,23 +160,7 @@ describe("trigger status validation for schema-picked params", () => {
 				[sourceTypeParam],
 				methodologyCatalog,
 			),
-		).toEqual({ status: "hidden", issues: [], previewState: "none" });
-
-		expect(
-			analyzeTriggerRules(
-				[
-					{
-						paramCode: "type",
-						paramName: "Тип системы-источника",
-						valueCode: "external",
-						valueLabel: "Внешний",
-					},
-				],
-				[sourceTypeParam],
-				methodologyCatalog,
-				{ type: "Внешний" },
-			),
-		).toEqual({ status: "appears", issues: [], previewState: "matched" });
+		).toEqual({ status: "appears", issues: [], previewState: "none" });
 
 		expect(
 			analyzeTriggerRules(
@@ -193,6 +175,81 @@ describe("trigger status validation for schema-picked params", () => {
 				[sourceTypeParam],
 				methodologyCatalog,
 			),
-		).toEqual({ status: "hidden", issues: [], previewState: "none" });
+		).toEqual({ status: "appears", issues: [], previewState: "none" });
+	});
+
+	it("ignores preview formData — admin config is the source of truth", () => {
+		expect(
+			analyzeTriggerRules(
+				[
+					{
+						paramCode: "field_8pFvwc-v",
+						paramName: "Наличие реплики в DAPP",
+						valueCode: "true",
+						valueLabel: "Да",
+					},
+				],
+				[schemaParam],
+				methodologyCatalog,
+				undefined,
+				undefined,
+				{},
+			),
+		).toEqual({ status: "appears", issues: [], previewState: "none" });
+
+		expect(
+			analyzeTriggerRules(
+				[
+					{
+						paramCode: "field_o_HRj6VO",
+						paramName: "Необходимость пилота (MVP)",
+						valueCode: "true",
+						valueLabel: "Да",
+					},
+				],
+				[
+					{
+						id: "schema:mvp",
+						code: "field_o_HRj6VO",
+						name: "Необходимость пилота (MVP)",
+						description: null,
+						values: [
+							{
+								id: "v-true",
+								code: "true",
+								label: "Да",
+								coefficient: null,
+								sortOrder: 0,
+								validFrom: "2025-01-01",
+								validTo: null,
+							},
+						],
+					},
+				],
+				methodologyCatalog,
+				{ name: "SRC", type: "Внутренний" },
+				undefined,
+				{
+					generalInfo: { modelService: [{ field_o_HRj6VO: false }] },
+				},
+			),
+		).toEqual({ status: "appears", issues: [], previewState: "none" });
+	});
+
+	it("computeTriggerStatus mirrors configured-only analysis", () => {
+		expect(
+			computeTriggerStatus(
+				[
+					{
+						paramCode: "field_8pFvwc-v",
+						paramName: "Наличие реплики в DAPP",
+						valueCode: "true",
+						valueLabel: "Да",
+					},
+				],
+				[schemaParam],
+				methodologyCatalog,
+			),
+		).toBe("appears");
 	});
 });

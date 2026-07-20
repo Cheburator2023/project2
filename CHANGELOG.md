@@ -1,5 +1,75 @@
 # Semantic Versioning Changelog
 
+# [1.36.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.35.0...v1.36.0) (2026-07-20)
+
+
+### Features
+
+* enhance typical work handling and UI components ([f9b55e7](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f9b55e74cbf535effbbe9b6ba25bf15abded907a))
+
+# [1.35.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.34.0...v1.35.0) (2026-07-18)
+
+
+### Features
+
+* enhance ArchCountCoeffStepsEditor and TypicalWorkTriggersSection components ([153aeb3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/153aeb3552209684d44146ef11d067ed068fe1c2))
+
+# [1.34.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.33.0...v1.34.0) (2026-07-18)
+
+
+### Features
+
+* enhance typical work schema and parameter handling ([53e4609](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/53e460937af084aa80337114a3e64b54a3915b4e))
+* enhance typical work synchronization and consistency checks ([bd16ed1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/bd16ed1cfe04deec2f46e35ba59b6074a5611179))
+
+# [1.33.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.32.0...v1.33.0) (2026-07-18)
+
+
+### Features
+
+* add PиРМ import functionality and update related configurations ([5fff419](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5fff4194587bc631979b17e50ef80e7dba070473))
+* enhance factory snapshot and questionnaire registry configuration ([009c69f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/009c69f38dbab1f06b5179787d00b69ae67c6839))
+* enhance typical works catalog logic synchronization ([a507f1f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a507f1f4c6da2ea02d2c295885e40766e6f0696e))
+* implement always-shown trigger parameter logic in typical works ([4db971f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4db971fa2a5b60d9dc4de001939a52329cd2edc1))
+* update calculation logic and snapshot handling ([d0309bd](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/d0309bd7a50d3a0b30348afab623e17feffa6ea9))
+
+# [1.32.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.31.0...v1.32.0) (2026-07-17)
+
+
+### Features
+
+* implement labor parameter group merging functionality ([591862e](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/591862e5c62fe83a6ef637164dd4740568d58028))
+
+# [1.31.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.30.2...v1.31.0) (2026-07-17)
+
+
+### Features
+
+* enhance authentication flow and update Dockerfile for changelog handling ([7433a1f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/7433a1fa3e5bf2e838bf10b65c6199da6e85c1fd))
+
+## [1.30.2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.30.1...v1.30.2) (2026-07-16)
+
+## [1.30.1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.30.0...v1.30.1) (2026-07-16)
+
+
+### Bug Fixes
+
+* update tracker access logic in usePermissions hook ([3b1b8ab](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3b1b8ab84b29061a4506bd84b76622ca2bffbc20))
+
+# [1.30.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.29.0...v1.30.0) (2026-07-16)
+
+
+### Features
+
+* enhance user handling and improve UI components ([3b7a7a7](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3b7a7a7254d58f281cfc2dd01da6ced5be40c0f4))
+
+# [1.29.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.28.0...v1.29.0) (2026-07-16)
+
+
+### Features
+
+* enhance model stream handling and improve UI components ([6f4640f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6f4640f15a7065cc0898883797f7920a15812e13))
+
 # [1.28.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.27.1...v1.28.0) (2026-07-16)
 
 
