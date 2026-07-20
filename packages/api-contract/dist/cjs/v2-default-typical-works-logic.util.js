@@ -77,12 +77,17 @@ function typicalWorksCatalogRuleId(outputArrayPath) {
     return `typical-works-catalog-${outputArrayPath.replace(/\./g, "-")}`;
 }
 function buildModelStreamTypicalWorksCatalogRule(outputArrayPath, options) {
-    const boundWorkIds = options?.boundWorkIds ?? [...v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_FACTORY_WORK_IDS];
+    const boundWorkIds = options?.boundWorkIds;
+    const hasExplicitBinding = boundWorkIds !== undefined;
+    const enabled = !hasExplicitBinding || (boundWorkIds?.length ?? 0) > 0;
+    const allowedWorkIds = hasExplicitBinding
+        ? (boundWorkIds ?? [])
+        : [...v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_FACTORY_WORK_IDS];
     return {
         id: typicalWorksCatalogRuleId(outputArrayPath),
         kind: "task_trigger",
         targetPath: `/${outputArrayPath.replace(/\./g, "/")}`,
-        condition: true,
+        condition: enabled,
         description: "ФТ-024: типовые работы модельного стрима из справочника (10 этапов factory snapshot).",
         dependencies: [],
         payload: {
@@ -94,7 +99,7 @@ function buildModelStreamTypicalWorksCatalogRule(outputArrayPath, options) {
             worksCatalogAllArchComponents: true,
             outputArrayPath,
             sourceArrayPath: exports.V2_MODEL_STREAM_SOURCE_ARRAY_PATH,
-            allowedWorkIds: boundWorkIds,
+            allowedWorkIds,
             sourceContextPaths: ["detailInfo", "generalInfo", "uncertaintyCalculation"],
             taskCode: "CATALOG_MODEL_STREAM_TASKS",
             calcModel: "unified",

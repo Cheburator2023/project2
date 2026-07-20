@@ -270,10 +270,6 @@
 								"type": "boolean",
 								"title": "Содержит сырые данные"
 							},
-							"field_saveRawFs": {
-								"type": "boolean",
-								"title": "Требуется сохранять сырые данные в Хранилище признаков"
-							},
 							"field_le47srI7": {
 								"enum": [
 									"Холодный",
@@ -303,6 +299,10 @@
 							"field_zApubb5V": {
 								"type": "string",
 								"title": "Название объекта/витрины данных"
+							},
+							"field_saveRawFs": {
+								"type": "boolean",
+								"title": "Требуется сохранять сырые данные в Хранилище признаков"
 							},
 							"readyPromReports": {
 								"type": "boolean",
@@ -363,12 +363,12 @@
 									"title": "AutoML: требуется новая библиотека"
 								},
 								"field_VbI-0aiT": {
-									"type": "string",
-									"title": "Роль модели",
 									"enum": [
 										"Обычная",
 										"Оркестратор"
-									]
+									],
+									"type": "string",
+									"title": "Роль модели"
 								},
 								"field_atxiq-UM": {
 									"type": "string",
@@ -448,6 +448,10 @@
 								],
 								"type": "string",
 								"title": "Сложность реализации"
+							},
+							"field_qMxSfHk1": {
+								"type": "boolean",
+								"title": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
 							},
 							"field_yJ51GkCR": {
 								"enum": [
@@ -624,8 +628,6 @@
 									"title": "Требуется ручная обработка результатов автоматизированной разметки данных"
 								},
 								"field_Y_K0Hy0e": {
-									"type": "string",
-									"title": "Количество сущностей (исходных таблиц)",
 									"enum": [
 										"Точечное (1-4)",
 										"Малое (5-9)",
@@ -634,17 +636,19 @@
 										"Большое (20-25)",
 										"Масштабное (25+)",
 										"Неизвестно"
-									]
+									],
+									"type": "string",
+									"title": "Количество сущностей (исходных таблиц)"
 								},
 								"field_d3OCFyaC": {
-									"type": "string",
-									"title": "Сложность предметной области",
 									"enum": [
 										"Низкая",
 										"Средняя",
 										"Высокая",
 										"Неизвестно"
-									]
+									],
+									"type": "string",
+									"title": "Сложность предметной области"
 								},
 								"field_fJ_7OdE7": {
 									"type": "boolean",
@@ -655,13 +659,13 @@
 									"title": "Требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
 								},
 								"field_lzP44Urx": {
-									"type": "string",
-									"title": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик",
 									"enum": [
 										"Да",
 										"Нет",
 										"Неизвестно"
-									]
+									],
+									"type": "string",
+									"title": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик"
 								},
 								"field_nE73kPQl": {
 									"enum": [
@@ -672,10 +676,6 @@
 									],
 									"type": "string",
 									"title": "Детализация и ясность запроса постановки задачи"
-								},
-								"field_qMxSfHk1": {
-									"type": "boolean",
-									"title": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
 								},
 								"field_tpROQBf5": {
 									"enum": [
@@ -700,14 +700,14 @@
 									"title": "Риск появления дополнительных систем-источников"
 								},
 								"field_wuYlhnu0": {
-									"type": "string",
-									"title": "Сложность настройки шаблона разметки данных",
 									"enum": [
 										"Высокая",
 										"Средняя",
 										"Низкая",
 										"Неизвестно"
-									]
+									],
+									"type": "string",
+									"title": "Сложность настройки шаблона разметки данных"
 								}
 							}
 						},
@@ -732,15 +732,15 @@
 									"readOnly": true
 								},
 								"workType": {
-									"type": "string",
-									"title": "Тип работ",
 									"enum": [
 										"Архитектурная задача",
 										"Линейная деятельность",
 										"Новая функциональность",
 										"Сопровождение",
 										"Технический долг"
-									]
+									],
+									"type": "string",
+									"title": "Тип работ"
 								},
 								"coefficient": {
 									"type": "number",
@@ -807,10 +807,6 @@
 				"type": "object",
 				"title": "Общая информация",
 				"properties": {
-					"calcName": {
-						"type": "string",
-						"title": "Название анкеты"
-					},
 					"createIS": {
 						"type": "boolean",
 						"title": "Требуется создание информационной системы"
@@ -876,15 +872,15 @@
 								"title": "Способ загрузки данных в BI-систему"
 							},
 							"field_F7nK-We5": {
-								"type": "string",
-								"title": "Тип БД для BI-системы",
 								"enum": [
 									"Векторные",
 									"Графовые",
 									"Временные ряды и события",
 									"Документо-ориентированные",
 									"Специализированные"
-								]
+								],
+								"type": "string",
+								"title": "Тип БД для BI-системы"
 							},
 							"field_JcKtx9Mg": {
 								"type": "boolean",
@@ -897,7 +893,6 @@
 							"field_SvNx6iEq": {
 								"type": "array",
 								"items": {
-									"type": "string",
 									"enum": [
 										"КД — Качество модельных данных",
 										"ТМ — Технический контроль",
@@ -905,7 +900,8 @@
 										"АК — Аналитический контроль",
 										"КМЗ — Контроль модельных значений",
 										"ОВ — Оценка влияния моделей"
-									]
+									],
+									"type": "string"
 								},
 								"title": "Вид контроля",
 								"uniqueItems": true
@@ -925,7 +921,6 @@
 							"field_jUm5syZf": {
 								"type": "array",
 								"items": {
-									"type": "string",
 									"enum": [
 										"Батч",
 										"Батч + загрузка данных потребителю",
@@ -938,7 +933,8 @@
 										"Гео-сервисы",
 										"Внедрение в облаке",
 										"Графовая платформа"
-									]
+									],
+									"type": "string"
 								},
 								"title": "Каналы внедрения",
 								"uniqueItems": true
@@ -979,7 +975,6 @@
 					"businessCustomer": {
 						"type": "array",
 						"items": {
-							"type": "string",
 							"enum": [
 								"Административный департамент",
 								"Аппарат президента - председателя правления",
@@ -1148,7 +1143,8 @@
 								"Управление экспертизы и фрод-мониторинга",
 								"Финансовый департамент",
 								"Юридический департамент"
-							]
+							],
+							"type": "string"
 						},
 						"title": "Департамент заказчика",
 						"uniqueItems": true
@@ -1172,9 +1168,9 @@
 					"assessedInitiativesCount": {
 						"type": "integer",
 						"title": "Количество оцениваемых инициатив",
-						"minimum": 1,
+						"default": 1,
 						"maximum": 99,
-						"default": 1
+						"minimum": 1
 					},
 					"productionAdditionalReports": {
 						"type": "string",
@@ -1215,15 +1211,15 @@
 									"readOnly": true
 								},
 								"workType": {
-									"type": "string",
-									"title": "Тип работ",
 									"enum": [
 										"Архитектурная задача",
 										"Линейная деятельность",
 										"Новая функциональность",
 										"Сопровождение",
 										"Технический долг"
-									]
+									],
+									"type": "string",
+									"title": "Тип работ"
 								},
 								"coefficient": {
 									"type": "number",
@@ -1309,15 +1305,15 @@
 									"readOnly": true
 								},
 								"workType": {
-									"type": "string",
-									"title": "Тип работ",
 									"enum": [
 										"Архитектурная задача",
 										"Линейная деятельность",
 										"Новая функциональность",
 										"Сопровождение",
 										"Технический долг"
-									]
+									],
+									"type": "string",
+									"title": "Тип работ"
 								},
 								"coefficient": {
 									"type": "number",
@@ -1355,8 +1351,6 @@
 						"title": "Локальные параметры стрима",
 						"properties": {
 							"field_FLO128j-": {
-								"type": "string",
-								"title": "Объем изменений в ТИС",
 								"enum": [
 									"Неизвестно",
 									"Точечное (1-4)",
@@ -1365,34 +1359,36 @@
 									"Крупное (15-20)",
 									"Большое (20-25)",
 									"Масштабное (25+)"
-								]
+								],
+								"type": "string",
+								"title": "Объем изменений в ТИС"
 							},
 							"field_P1nnb5h5": {
-								"type": "string",
-								"title": "Необходимость изучения регламентов Банка",
 								"enum": [
 									"Да",
 									"Нет",
 									"Неизвестно"
-								]
+								],
+								"type": "string",
+								"title": "Необходимость изучения регламентов Банка"
 							},
 							"field_fWcU13WA": {
-								"type": "string",
-								"title": "Необходимо пересогласование артефакта",
 								"enum": [
 									"Да",
 									"Нет",
 									"Неизвестно"
-								]
+								],
+								"type": "string",
+								"title": "Необходимо пересогласование артефакта"
 							},
 							"field_oHrG3Q3A": {
-								"type": "string",
-								"title": "Стейкхолдеры известны (владелец сервиса, разработчик модели / витрин, РП и тд.)?",
 								"enum": [
 									"Да",
 									"Нет",
 									"Неизвестно"
-								]
+								],
+								"type": "string",
+								"title": "Стейкхолдеры известны (владелец сервиса, разработчик модели / витрин, РП и тд.)?"
 							}
 						}
 					},
@@ -1468,12 +1464,12 @@
 							"field_oVFNOrlT": {
 								"type": "array",
 								"items": {
-									"type": "string",
 									"enum": [
 										"Нет",
 										"Единая структура логов",
 										"Разные структуры логов"
-									]
+									],
+									"type": "string"
 								},
 								"title": "Разнородность пользовательских сценариев  применения модельного сервиса",
 								"uniqueItems": true
@@ -1534,15 +1530,15 @@
 									"readOnly": true
 								},
 								"workType": {
-									"type": "string",
-									"title": "Тип работ",
 									"enum": [
 										"Архитектурная задача",
 										"Линейная деятельность",
 										"Новая функциональность",
 										"Сопровождение",
 										"Технический долг"
-									]
+									],
+									"type": "string",
+									"title": "Тип работ"
 								},
 								"coefficient": {
 									"type": "number",
@@ -1595,15 +1591,15 @@
 									"readOnly": true
 								},
 								"workType": {
-									"type": "string",
-									"title": "Тип работ",
 									"enum": [
 										"Архитектурная задача",
 										"Линейная деятельность",
 										"Новая функциональность",
 										"Сопровождение",
 										"Технический долг"
-									]
+									],
+									"type": "string",
+									"title": "Тип работ"
 								},
 								"coefficient": {
 									"type": "number",
@@ -1656,15 +1652,15 @@
 									"readOnly": true
 								},
 								"workType": {
-									"type": "string",
-									"title": "Тип работ",
 									"enum": [
 										"Архитектурная задача",
 										"Линейная деятельность",
 										"Новая функциональность",
 										"Сопровождение",
 										"Технический долг"
-									]
+									],
+									"type": "string",
+									"title": "Тип работ"
 								},
 								"coefficient": {
 									"type": "number",
@@ -1798,26 +1794,26 @@
 						"title": "Поправка на общую неопределённость"
 					},
 					"field_bbTNlnC6": {
-						"type": "string",
-						"title": "Стоимость инициативы",
 						"enum": [
 							"до 45.3 млн",
 							"45.3 — 438 млн",
 							"438 — 870 млн",
 							"870 млн — 2 млрд",
 							"От 2 млрд"
-						]
+						],
+						"type": "string",
+						"title": "Стоимость инициативы"
 					},
 					"field_xGCMlbMP": {
-						"type": "string",
-						"title": "Сроки инициативы",
 						"enum": [
 							"Менее 1 мес.",
 							"1–4 мес.",
 							"4–10 мес.",
 							"10–18 мес.",
 							"Более 18 мес."
-						]
+						],
+						"type": "string",
+						"title": "Сроки инициативы"
 					}
 				}
 			}
@@ -2154,11 +2150,6 @@
 						"schemaFieldUid": "field_73e7ba4b-2124-44c9-bfc3-7d5d524c9076"
 					}
 				},
-				"field_saveRawFs": {
-					"ui:options": {
-						"schemaFieldUid": "field_a8c3e1d2-4b5f-6789-a0b1-c2d3e4f50607"
-					}
-				},
 				"field_le47srI7": {
 					"ui:widget": "select",
 					"ui:options": {
@@ -2189,6 +2180,11 @@
 				"field_zApubb5V": {
 					"ui:options": {
 						"schemaFieldUid": "field_877bae45-21cb-4237-a20a-83260f054e9e"
+					}
+				},
+				"field_saveRawFs": {
+					"ui:options": {
+						"schemaFieldUid": "field_a8c3e1d2-4b5f-6789-a0b1-c2d3e4f50607"
 					}
 				},
 				"readyPromReports": {
@@ -2286,8 +2282,9 @@
 					"streamNames"
 				],
 				"ui:options": {
-					"sectionRole": "flat",
-					"schemaFieldUid": "field_799212d3-0ea8-449f-a392-a0ba12223f74"
+					"sectionRole": "subsection",
+					"schemaFieldUid": "field_799212d3-0ea8-449f-a392-a0ba12223f74",
+					"showFilledCount": true
 				},
 				"streamNames": {
 					"ui:widget": "text",
@@ -2304,12 +2301,12 @@
 			},
 			"ui:options": {
 				"sectionRole": "main",
+				"streamBlock": true,
 				"titleVariant": "h5",
 				"schemaFieldUid": "field_bece32d7-0463-49e8-8591-4827109e563b",
+				"streamExecutor": "Модельный стрим",
 				"defaultExpanded": false,
-				"workflowSectionId": "detailInfo",
-				"streamBlock": true,
-				"streamExecutor": "Модельный стрим"
+				"workflowSectionId": "detailInfo"
 			},
 			"dataProcess": {
 				"ui:order": [
@@ -2318,6 +2315,7 @@
 					"deliveryMode",
 					"field_UEzs5Q87",
 					"confidentialData",
+					"field_qMxSfHk1",
 					"field_C6oqyTPh",
 					"field_R3Lx-csF",
 					"field_HgUCNn6E"
@@ -2369,6 +2367,12 @@
 						"schemaFieldUid": "field_aa1dc517-1277-4ca5-ad9f-ed0bb8a9efe6"
 					}
 				},
+				"field_qMxSfHk1": {
+					"ui:options": {
+						"schemaFieldUid": "field_2eeb9751-22b7-4545-afeb-75bc4c7ec74e"
+					},
+					"ui:placeholder": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
+				},
 				"field_yJ51GkCR": {
 					"ui:widget": "select",
 					"ui:options": {
@@ -2409,7 +2413,6 @@
 						"field_whHc-OoW",
 						"field_-EGYyyJF",
 						"field_fJ_7OdE7",
-						"field_qMxSfHk1",
 						"field_d3OCFyaC",
 						"field_Y_K0Hy0e",
 						"field_nE73kPQl",
@@ -2590,12 +2593,6 @@
 							"schemaFieldUid": "field_d8ea6134-00e5-4fc6-9253-4885103db9e2"
 						}
 					},
-					"field_qMxSfHk1": {
-						"ui:options": {
-							"schemaFieldUid": "field_2eeb9751-22b7-4545-afeb-75bc4c7ec74e"
-						},
-						"ui:placeholder": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
-					},
 					"field_tpROQBf5": {
 						"ui:widget": "select",
 						"ui:options": {
@@ -2723,13 +2720,12 @@
 						}
 					}
 				},
+				"ui:widget": "hidden",
 				"ui:options": {
+					"hidden": true,
 					"addable": false,
 					"orderable": false,
 					"removable": false,
-					"schemaFieldUid": "field_ec166924-3deb-4574-8fbc-1f88c316a64a",
-					"archComponent": "typicalWork",
-					"streamExecutor": "Модельный стрим",
 					"boundWorkIds": [
 						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",
 						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4002",
@@ -2742,22 +2738,15 @@
 						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4009",
 						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4010"
 					],
-					"hidden": true
+					"archComponent": "typicalWork",
+					"schemaFieldUid": "field_ec166924-3deb-4574-8fbc-1f88c316a64a",
+					"streamExecutor": "Модельный стрим"
 				},
 				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника при расчёте анкеты.\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог",
-				"ui:widget": "hidden"
+				"ui:description": "Формируются автоматически по правилам справочника при расчёте анкеты.\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
 			}
 		},
 		"generalInfo": {
-			"calcName": {
-				"ui:widget": "text",
-				"ui:options": {
-					"fullWidth": true,
-					"schemaFieldUid": "field_980e3837-5f9a-408b-8806-33004c3345a7"
-				},
-				"ui:placeholder": "Название анкеты"
-			},
 			"createIS": {
 				"ui:options": {
 					"schemaFieldUid": "field_4526e23d-6e82-4ced-b941-694236a1eb09"
@@ -2765,7 +2754,6 @@
 				"ui:placeholder": "Создание ИС"
 			},
 			"ui:order": [
-				"calcName",
 				"field__iu-GEg1",
 				"field_vz9bm7A3",
 				"businessCustomer",
@@ -3130,13 +3118,12 @@
 						"ui:readonly": true
 					}
 				},
+				"ui:widget": "hidden",
 				"ui:options": {
+					"hidden": true,
 					"addable": false,
 					"orderable": false,
 					"removable": false,
-					"schemaFieldUid": "field_c66b1077-3931-4e05-a1bb-9727393bb7ba",
-					"archComponent": "typicalWork",
-					"streamExecutor": "ПиРМ",
 					"boundWorkIds": [
 						"0a891fad-046e-4f6e-a3fb-b7dbbe0e3795",
 						"9a9a6571-0df7-4c0a-bb96-2b8231bf7848",
@@ -3169,11 +3156,12 @@
 						"e4ca3452-e88a-4d0d-9a63-0610ff35b5b3",
 						"cc693bc4-fde0-434c-a65f-26aed7088ca8"
 					],
-					"hidden": true
+					"archComponent": "typicalWork",
+					"schemaFieldUid": "field_c66b1077-3931-4e05-a1bb-9727393bb7ba",
+					"streamExecutor": "ПиРМ"
 				},
 				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника для стрима «ПиРМ».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог",
-				"ui:widget": "hidden"
+				"ui:description": "Формируются автоматически по правилам справочника для стрима «ПиРМ».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
 			}
 		},
 		"field_i8dL7QZa": {
@@ -3342,17 +3330,92 @@
 						"ui:readonly": true
 					}
 				},
+				"ui:widget": "hidden",
 				"ui:options": {
+					"hidden": true,
 					"addable": false,
 					"orderable": false,
 					"removable": false,
+					"boundWorkIds": [
+						"32f436ad-e8d0-45dd-9351-5aa65b934fae",
+						"59031aac-fa3a-41c4-afe1-379346a65b1c",
+						"69eb7a98-dd5c-4b38-8c35-f536b103bf24",
+						"116657f3-4f25-454a-8100-14569e68dc27",
+						"523dbce7-48be-47a5-8ab4-348d3b09fd85",
+						"001b91ac-d4b4-49ac-8c01-1d0e331f4f97",
+						"29081c3d-83e0-49db-a0a3-3d8902a8fb6c",
+						"74f5f093-3e46-4b38-8f6e-24aa5f5f50c2",
+						"3d9e4746-2f4e-4b76-8573-c6c8928e17a2",
+						"f763b2b4-9e67-45dd-99a9-fd7d3d6b453d",
+						"323accc4-3c4b-44c7-970e-2c1b6ceae4e7",
+						"da946286-8ab3-4ed8-9477-050eadf5c5bc",
+						"95304956-f3e8-44ea-9607-0eddf1c3b3b2",
+						"af8b75b8-07ac-443a-b123-33209ae9ab34",
+						"af3686c7-7da0-475e-be95-4253f40b8ce6",
+						"19a65da7-93e0-4bc4-944f-b0e4f573049d",
+						"a58e7cb0-3b29-442d-a459-070d679d0cd0",
+						"a18beb8d-45ab-45c1-8afc-659ad4e4473e",
+						"f45c6208-927a-4d75-9448-702bc888318e",
+						"070aba97-ff9e-44f1-a6a5-c09842e6b0af",
+						"a8d1994c-a969-4115-9f1d-3fc3fc68f060",
+						"b9736382-4c0b-4136-b8ae-f861b989ea29",
+						"c04fd1f6-6f4c-4c50-adba-30de430396ec",
+						"078426cc-e896-4af4-b765-d3cdc1d80dca",
+						"f0b53a54-67e3-4a4d-a0e6-dfa0cf643b22",
+						"2a201272-2bda-4861-9332-a22905a63772",
+						"eb2af90d-80e4-4fcf-9c9e-03fa00b0562f",
+						"6dc53d8c-cc84-4db2-ad69-c5b847955be6",
+						"e184872c-762b-4107-9a48-d9101dc07b01",
+						"33dd4b16-6f62-4d96-b403-18599ffaa354",
+						"30b2adff-b23d-4655-b93f-51df1b32bcfa",
+						"0f6275dd-a39a-4138-84a7-4b89bb8bfe44",
+						"0e7063d3-870b-4e9d-953d-29bb7db811b8",
+						"e2a6868f-31f3-4bd9-8c67-903d7689df9d",
+						"15c8b88e-9fe5-4fd0-ad39-eaa89e765675",
+						"045b18f8-3c88-439d-96d4-6baff9a47b46",
+						"dadf27c6-3c19-43e2-9fa0-469b5d14377e",
+						"97443563-db5a-423f-8f01-455716a42148",
+						"f614f16d-27ac-4b95-b5d6-78f3e62f686b",
+						"3e89e1ed-f9aa-45bf-80bc-326e52eceec4",
+						"f6e90170-f703-4a3a-9540-1f04b0aaab12",
+						"02304239-e14c-4cbb-9c2c-2fec4e5127ae",
+						"40d94691-370a-431d-a5ef-8a85ae605af1",
+						"37b23f35-8557-4503-aed8-751761a9d82c",
+						"72c97814-ec11-4478-bcbd-5622e64a7edf",
+						"89300be0-4014-4d57-8f32-803a1d8c24e4",
+						"9b4638bc-1e53-4098-af46-44d51d28d03b",
+						"9adad759-c740-4776-812e-74c54fdeaa88",
+						"dddfae11-1128-414a-8095-ce76b172fe2a",
+						"e24db00a-0dcb-419e-8d9b-9d60e4166472",
+						"f030f42e-77f1-4da0-a457-fb760c4d781e",
+						"cf3ba775-caf5-4f71-b1cf-5e01c91832b5",
+						"ca409b3e-85ce-4781-a4a8-f3a53fa18b16",
+						"7a9b311e-2857-4dfa-b907-5637ea74f1dc",
+						"941575ac-a433-4720-9ac0-c72e9e48ed25",
+						"74d22a80-cb95-4f06-9d47-a94520671da1",
+						"d1800d9b-868f-4c84-893a-218d1d3bbae2",
+						"3d6ee82b-5ffc-44ea-9388-420fb36ddaae",
+						"cc5c5c9b-c382-4a03-b211-f7ebcad3dd81",
+						"95046c4a-ddd6-4252-9a16-1e0c817bb903",
+						"f7f6a953-d4cb-413b-9ef6-910a41188e8c",
+						"6c020be2-d736-4264-84bb-8a4eb5fa6986",
+						"e9cdc481-0252-4473-bdd3-635465a49d47",
+						"baf7c0d6-ebb4-49a0-9a84-b0bafb61cd30",
+						"9852667d-10c4-4d64-b52f-cc69ec227f96",
+						"0eee8ce8-b9ca-4842-a950-d102625f46c7",
+						"227900db-8670-41df-af3d-4dc5b7b74f4a",
+						"4dcaad6e-9249-4bfb-9713-1379a6387ee2",
+						"5772ead6-3921-4dd1-97b3-480b71c9b246",
+						"97d144ad-ca0a-404f-8a17-5eef2b4934b4",
+						"c96931c3-be52-4835-a38b-88d84e29904a",
+						"9b8d9a7f-c6a8-4f2c-b653-194327be9827",
+						"ad738931-fcf6-4de9-b7eb-68defba4c47b"
+					],
 					"archComponent": "typicalWork",
 					"schemaFieldUid": "field_5f30f5f1-60e2-4e1e-8651-17ae5979e530",
-					"streamExecutor": "Источники данных",
-					"hidden": true
+					"streamExecutor": "Источники данных"
 				},
-				"ui:description": "Список заполняется автоматически при срабатывании триггеров типовых работ.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах",
-				"ui:widget": "hidden"
+				"ui:description": "Список заполняется автоматически при срабатывании триггеров типовых работ.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
 			}
 		},
 		"streamModelControl": {
@@ -3469,16 +3532,16 @@
 						"ui:readonly": true
 					}
 				},
+				"ui:widget": "hidden",
 				"ui:options": {
+					"hidden": true,
 					"addable": false,
 					"orderable": false,
 					"removable": false,
 					"archComponent": "typicalWork",
-					"schemaFieldUid": "field_3e1d8681-5311-43fa-9710-5b3c3ee5e301",
-					"hidden": true
+					"schemaFieldUid": "field_3e1d8681-5311-43fa-9710-5b3c3ee5e301"
 				},
-				"ui:description": "Список заполняется автоматически при срабатывании триггеров типовых работ.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах",
-				"ui:widget": "hidden"
+				"ui:description": "Список заполняется автоматически при срабатывании триггеров типовых работ.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
 			},
 			"field_hQeUoQl4": {
 				"items": {
@@ -4308,19 +4371,13 @@
 			{
 				"id": "typical-works-catalog-detailInfo-detailTypicalTasks",
 				"kind": "task_trigger",
-				"targetPath": "/detailInfo/detailTypicalTasks",
-				"condition": true,
-				"description": "ФТ-024: типовые работы модельного стрима из справочника (10 этапов factory snapshot).",
-				"dependencies": [],
 				"payload": {
 					"hint": "Типовые работы модельного стрима: этапы по триггерам из generalInfo (модельный сервис), detailInfo и неопределённости.",
 					"mode": "generated_rows",
 					"label": "Типовые работы (Модельный стрим)",
+					"taskCode": "CATALOG_MODEL_STREAM_TASKS",
+					"calcModel": "unified",
 					"worksCatalog": true,
-					"worksCatalogStream": "Модельный стрим",
-					"worksCatalogAllArchComponents": true,
-					"outputArrayPath": "detailInfo.detailTypicalTasks",
-					"sourceArrayPath": "generalInfo.modelService",
 					"allowedWorkIds": [
 						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",
 						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4002",
@@ -4333,38 +4390,31 @@
 						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4009",
 						"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4010"
 					],
+					"outputArrayPath": "detailInfo.detailTypicalTasks",
+					"sourceArrayPath": "generalInfo.modelService",
 					"sourceContextPaths": [
 						"detailInfo",
 						"generalInfo",
 						"uncertaintyCalculation"
 					],
-					"taskCode": "CATALOG_MODEL_STREAM_TASKS",
-					"calcModel": "unified"
-				}
+					"worksCatalogStream": "Модельный стрим",
+					"worksCatalogAllArchComponents": true
+				},
+				"condition": true,
+				"targetPath": "/detailInfo/detailTypicalTasks",
+				"description": "ФТ-024: типовые работы модельного стрима из справочника (10 этапов factory snapshot).",
+				"dependencies": []
 			},
 			{
 				"id": "typical-works-catalog-field_aJEu5ziT-sourceTypicalTasks",
 				"kind": "task_trigger",
-				"targetPath": "/field_aJEu5ziT/sourceTypicalTasks",
-				"condition": true,
-				"description": "ФТ-024: типовые работы стрима «ПиРМ» из справочника (все типы арх. компонентов).",
-				"dependencies": [],
 				"payload": {
 					"hint": "Типовые работы стрима «ПиРМ» из справочника. Появление работ управляется их условиями появления.",
 					"mode": "generated_rows",
 					"label": "Типовые работы (стрим «ПиРМ»)",
-					"worksCatalog": true,
-					"worksCatalogStream": "ПиРМ",
-					"worksCatalogAllArchComponents": true,
-					"outputArrayPath": "field_aJEu5ziT.sourceTypicalTasks",
-					"sourceContextPaths": [
-						"detailInfo",
-						"generalInfo",
-						"uncertaintyCalculation",
-						"field_aJEu5ziT"
-					],
 					"taskCode": "CATALOG_EXECUTOR_STREAM_TASKS",
 					"calcModel": "unified",
+					"worksCatalog": true,
 					"allowedWorkIds": [
 						"0a891fad-046e-4f6e-a3fb-b7dbbe0e3795",
 						"9a9a6571-0df7-4c0a-bb96-2b8231bf7848",
@@ -4396,49 +4446,133 @@
 						"94166453-3be4-4652-af19-ae3982d4cd97",
 						"e4ca3452-e88a-4d0d-9a63-0610ff35b5b3",
 						"cc693bc4-fde0-434c-a65f-26aed7088ca8"
-					]
-				}
+					],
+					"outputArrayPath": "field_aJEu5ziT.sourceTypicalTasks",
+					"sourceContextPaths": [
+						"detailInfo",
+						"generalInfo",
+						"uncertaintyCalculation",
+						"field_aJEu5ziT"
+					],
+					"worksCatalogStream": "ПиРМ",
+					"worksCatalogAllArchComponents": true
+				},
+				"condition": true,
+				"targetPath": "/field_aJEu5ziT/sourceTypicalTasks",
+				"description": "ФТ-024: типовые работы стрима «ПиРМ» из справочника (все типы арх. компонентов).",
+				"dependencies": []
 			},
 			{
 				"id": "typical-works-catalog-streamDataSources-field_u-7AkDrP",
 				"kind": "task_trigger",
-				"targetPath": "/streamDataSources/field_u-7AkDrP",
-				"condition": true,
-				"description": "ФТ-024: типовые работы «Система-источник» из справочника работ (назначения + триггеры).",
-				"dependencies": [
-					"/detailInfo/sourceSystems"
-				],
 				"payload": {
 					"hint": "При заполнении систем-источников подтягиваются типовые работы из справочника (стрим «Источники данных»). Появление работ управляется их триггерами. Настройка — в конструкторе → Логика.",
 					"mode": "generated_rows",
 					"label": "Типовые работы (стрим «Источники данных»)",
+					"taskCode": "CATALOG_SOURCE_TASKS",
+					"calcModel": "unified",
 					"worksCatalog": true,
-					"worksCatalogArchComponent": "Система-источник",
-					"worksCatalogStream": "fromSourceType",
+					"allowedWorkIds": [
+						"32f436ad-e8d0-45dd-9351-5aa65b934fae",
+						"59031aac-fa3a-41c4-afe1-379346a65b1c",
+						"69eb7a98-dd5c-4b38-8c35-f536b103bf24",
+						"116657f3-4f25-454a-8100-14569e68dc27",
+						"523dbce7-48be-47a5-8ab4-348d3b09fd85",
+						"001b91ac-d4b4-49ac-8c01-1d0e331f4f97",
+						"29081c3d-83e0-49db-a0a3-3d8902a8fb6c",
+						"74f5f093-3e46-4b38-8f6e-24aa5f5f50c2",
+						"3d9e4746-2f4e-4b76-8573-c6c8928e17a2",
+						"f763b2b4-9e67-45dd-99a9-fd7d3d6b453d",
+						"323accc4-3c4b-44c7-970e-2c1b6ceae4e7",
+						"da946286-8ab3-4ed8-9477-050eadf5c5bc",
+						"95304956-f3e8-44ea-9607-0eddf1c3b3b2",
+						"af8b75b8-07ac-443a-b123-33209ae9ab34",
+						"af3686c7-7da0-475e-be95-4253f40b8ce6",
+						"19a65da7-93e0-4bc4-944f-b0e4f573049d",
+						"a58e7cb0-3b29-442d-a459-070d679d0cd0",
+						"a18beb8d-45ab-45c1-8afc-659ad4e4473e",
+						"f45c6208-927a-4d75-9448-702bc888318e",
+						"070aba97-ff9e-44f1-a6a5-c09842e6b0af",
+						"a8d1994c-a969-4115-9f1d-3fc3fc68f060",
+						"b9736382-4c0b-4136-b8ae-f861b989ea29",
+						"c04fd1f6-6f4c-4c50-adba-30de430396ec",
+						"078426cc-e896-4af4-b765-d3cdc1d80dca",
+						"f0b53a54-67e3-4a4d-a0e6-dfa0cf643b22",
+						"2a201272-2bda-4861-9332-a22905a63772",
+						"eb2af90d-80e4-4fcf-9c9e-03fa00b0562f",
+						"6dc53d8c-cc84-4db2-ad69-c5b847955be6",
+						"e184872c-762b-4107-9a48-d9101dc07b01",
+						"33dd4b16-6f62-4d96-b403-18599ffaa354",
+						"30b2adff-b23d-4655-b93f-51df1b32bcfa",
+						"0f6275dd-a39a-4138-84a7-4b89bb8bfe44",
+						"0e7063d3-870b-4e9d-953d-29bb7db811b8",
+						"e2a6868f-31f3-4bd9-8c67-903d7689df9d",
+						"15c8b88e-9fe5-4fd0-ad39-eaa89e765675",
+						"045b18f8-3c88-439d-96d4-6baff9a47b46",
+						"dadf27c6-3c19-43e2-9fa0-469b5d14377e",
+						"97443563-db5a-423f-8f01-455716a42148",
+						"f614f16d-27ac-4b95-b5d6-78f3e62f686b",
+						"3e89e1ed-f9aa-45bf-80bc-326e52eceec4",
+						"f6e90170-f703-4a3a-9540-1f04b0aaab12",
+						"02304239-e14c-4cbb-9c2c-2fec4e5127ae",
+						"40d94691-370a-431d-a5ef-8a85ae605af1",
+						"37b23f35-8557-4503-aed8-751761a9d82c",
+						"72c97814-ec11-4478-bcbd-5622e64a7edf",
+						"89300be0-4014-4d57-8f32-803a1d8c24e4",
+						"9b4638bc-1e53-4098-af46-44d51d28d03b",
+						"9adad759-c740-4776-812e-74c54fdeaa88",
+						"dddfae11-1128-414a-8095-ce76b172fe2a",
+						"e24db00a-0dcb-419e-8d9b-9d60e4166472",
+						"f030f42e-77f1-4da0-a457-fb760c4d781e",
+						"cf3ba775-caf5-4f71-b1cf-5e01c91832b5",
+						"ca409b3e-85ce-4781-a4a8-f3a53fa18b16",
+						"7a9b311e-2857-4dfa-b907-5637ea74f1dc",
+						"941575ac-a433-4720-9ac0-c72e9e48ed25",
+						"74d22a80-cb95-4f06-9d47-a94520671da1",
+						"d1800d9b-868f-4c84-893a-218d1d3bbae2",
+						"3d6ee82b-5ffc-44ea-9388-420fb36ddaae",
+						"cc5c5c9b-c382-4a03-b211-f7ebcad3dd81",
+						"95046c4a-ddd6-4252-9a16-1e0c817bb903",
+						"f7f6a953-d4cb-413b-9ef6-910a41188e8c",
+						"6c020be2-d736-4264-84bb-8a4eb5fa6986",
+						"e9cdc481-0252-4473-bdd3-635465a49d47",
+						"baf7c0d6-ebb4-49a0-9a84-b0bafb61cd30",
+						"9852667d-10c4-4d64-b52f-cc69ec227f96",
+						"0eee8ce8-b9ca-4842-a950-d102625f46c7",
+						"227900db-8670-41df-af3d-4dc5b7b74f4a",
+						"4dcaad6e-9249-4bfb-9713-1379a6387ee2",
+						"5772ead6-3921-4dd1-97b3-480b71c9b246",
+						"97d144ad-ca0a-404f-8a17-5eef2b4934b4",
+						"c96931c3-be52-4835-a38b-88d84e29904a",
+						"9b8d9a7f-c6a8-4f2c-b653-194327be9827",
+						"ad738931-fcf6-4de9-b7eb-68defba4c47b"
+					],
+					"outputArrayPath": "streamDataSources.field_u-7AkDrP",
+					"sourceArrayPath": "detailInfo.sourceSystems",
 					"sourceContextPaths": [
 						"detailInfo.dataMart",
 						"detailInfo.dataProcess"
 					],
-					"taskCode": "CATALOG_SOURCE_TASKS",
-					"calcModel": "unified",
-					"outputArrayPath": "streamDataSources.field_u-7AkDrP",
-					"sourceArrayPath": "detailInfo.sourceSystems"
-				}
+					"worksCatalogStream": "fromSourceType",
+					"worksCatalogArchComponent": "Система-источник"
+				},
+				"condition": true,
+				"targetPath": "/streamDataSources/field_u-7AkDrP",
+				"description": "ФТ-024: типовые работы «Система-источник» из справочника работ (назначения + триггеры).",
+				"dependencies": [
+					"/detailInfo/sourceSystems"
+				]
 			},
 			{
 				"id": "typical-works-catalog-streamModelControl-field_G0AoYAl8",
 				"kind": "task_trigger",
-				"targetPath": "/streamModelControl/field_G0AoYAl8",
-				"condition": true,
-				"description": "ФТ-024: типовые работы стрима «Контроль моделей» из справочника (все типы арх. компонентов).",
-				"dependencies": [],
 				"payload": {
 					"hint": "Типовые работы стрима «Контроль моделей» из справочника. Появление работ управляется их условиями появления.",
 					"mode": "generated_rows",
 					"label": "Типовые работы (стрим «Контроль моделей»)",
+					"taskCode": "CATALOG_EXECUTOR_STREAM_TASKS",
+					"calcModel": "unified",
 					"worksCatalog": true,
-					"worksCatalogStream": "Контроль моделей",
-					"worksCatalogAllArchComponents": true,
 					"outputArrayPath": "streamModelControl.field_G0AoYAl8",
 					"sourceContextPaths": [
 						"detailInfo",
@@ -4446,9 +4580,13 @@
 						"uncertaintyCalculation",
 						"streamModelControl"
 					],
-					"taskCode": "CATALOG_EXECUTOR_STREAM_TASKS",
-					"calcModel": "unified"
-				}
+					"worksCatalogStream": "Контроль моделей",
+					"worksCatalogAllArchComponents": true
+				},
+				"condition": true,
+				"targetPath": "/streamModelControl/field_G0AoYAl8",
+				"description": "ФТ-024: типовые работы стрима «Контроль моделей» из справочника (все типы арх. компонентов).",
+				"dependencies": []
 			},
 			{
 				"id": "unified-typical-row-total:detailInfo_detailTypicalTasks",
