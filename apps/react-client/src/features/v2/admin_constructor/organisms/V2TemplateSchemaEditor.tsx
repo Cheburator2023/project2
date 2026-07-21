@@ -395,6 +395,7 @@ export const V2TemplateSchemaEditor = ({
 			const store = useSchemaEditorUiStore.getState();
 			if (
 				legacyLogicTab === "works" ||
+				legacyLogicTab === "atypicalWorks" ||
 				legacyLogicTab === "dependencies" ||
 				legacyLogicTab === "uncertainty" ||
 				legacyLogicTab === "jsonlogic"
@@ -1662,7 +1663,7 @@ export const V2TemplateSchemaEditor = ({
 
 	const placeTypicalWorkInStreamBlock = useCallback(
 		(
-			streamExecutor: V2ExecutorStreamLabel,
+			streamExecutor: string,
 			preferredPointer?: string | null,
 		): string | null => {
 			const result = placeTypicalWorkInStream(

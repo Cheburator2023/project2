@@ -3,6 +3,7 @@ import Typography from "@mui/material/Typography";
 import type { V2LogicWorkspaceTab } from "@smart-anketa/api-contract";
 import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
 import { ParameterDependenciesPanel } from "./ParameterDependenciesPanel";
+import { AtypicalWorksLogicPanel } from "./AtypicalWorksLogicPanel";
 import { TypicalWorksPanelMountHost } from "./typicalWorksPanelPersistentMount";
 import { OverallUncertaintyPanel } from "../overallUncertainty/OverallUncertaintyPanel";
 
@@ -18,6 +19,7 @@ const LOGIC_WORKSPACE_SEGMENTS: Array<{
 	title?: string;
 }> = [
 	{ id: "works", label: "Типовые работы" },
+	{ id: "atypicalWorks", label: "Нетиповые работы" },
 	{
 		id: "dependencies",
 		label: "Зависимости параметров",
@@ -39,11 +41,13 @@ export function LogicWorkspaceShell({
 	const hint =
 		tab === "works"
 			? "Норматив · условия появления типовых работ · параметры трудоёмкости · формула"
-			: tab === "dependencies"
-				? "Зависимости между параметрами анкеты"
-				: tab === "uncertainty"
-					? "Шкалы Сроков/Стоимости, поправка и группа рисков — итоговый коэффициент п.3 Опросника"
-					: "Расширенный редактор JsonLogic-правил";
+			: tab === "atypicalWorks"
+				? "Стрим-исполнитель · роли блоков нетиповых работ"
+				: tab === "dependencies"
+					? "Зависимости между параметрами анкеты"
+					: tab === "uncertainty"
+						? "Шкалы Сроков/Стоимости, поправка и группа рисков — итоговый коэффициент п.3 Опросника"
+						: "Расширенный редактор JsonLogic-правил";
 
 	return (
 		<Box
@@ -90,6 +94,16 @@ export function LogicWorkspaceShell({
 					}}
 				>
 					<TypicalWorksPanelMountHost />
+				</Box>
+				<Box
+					sx={{
+						display: tab === "atypicalWorks" ? "flex" : "none",
+						flexDirection: "column",
+						height: "100%",
+						minHeight: 0,
+					}}
+				>
+					<AtypicalWorksLogicPanel />
 				</Box>
 				{tab === "dependencies" ? <ParameterDependenciesPanel /> : null}
 				{tab === "uncertainty" ? <OverallUncertaintyPanel /> : null}

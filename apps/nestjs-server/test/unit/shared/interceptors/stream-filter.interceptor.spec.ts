@@ -124,4 +124,32 @@ describe("StreamFilterInterceptor", () => {
 		const next: any = { handle: () => of(obj) };
 		expect(await lastValueFrom(interceptor.intercept(ctx, next))).toBe(obj);
 	});
+
+	it("filters v2 questionnaires by formData.generalInfo.implementationStream", async () => {
+		const { interceptor, ctx } = buildSetup(true, {
+			user: { groups: ["g"] },
+			isFiltered: true,
+			allowed: ["rb"],
+		});
+		const next: any = {
+			handle: () =>
+				of([
+					{
+						id: "1",
+						formData: { generalInfo: { implementationStream: "rb" } },
+					},
+					{
+						id: "2",
+						formData: { generalInfo: { implementationStream: "rnd" } },
+					},
+				]),
+		};
+		const result: any = await lastValueFrom(interceptor.intercept(ctx, next));
+		expect(result).toEqual([
+			{
+				id: "1",
+				formData: { generalInfo: { implementationStream: "rb" } },
+			},
+		]);
+	});
 });

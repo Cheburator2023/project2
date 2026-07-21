@@ -10,6 +10,7 @@ import {
 	readTypicalWorkBoundWorkIdsAtOutputPath,
 	resolveStreamExecutorForTypicalWorkOutputPath,
 	TYPICAL_WORK_BOUND_WORK_IDS_KEY,
+	V2_IMPLEMENTATION_STREAM,
 } from "@smart-anketa/api-contract";
 import { describe, expect, it } from "vitest";
 import { placeTypicalWorkInStream } from "../schemaEditor/placeTypicalWorkInStream";
@@ -114,7 +115,7 @@ describe("typicalWork snapshot consistency", () => {
 				roundtripped,
 				"streamDataSources.field_tw",
 			),
-		).toBe("Источники данных");
+		).toEqual([V2_IMPLEMENTATION_STREAM.IDSRC]);
 	});
 
 	it("keeps patched catalog rules identical before and after coerceUiSchema", () => {

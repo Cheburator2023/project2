@@ -10,6 +10,7 @@ import {
 	Patch,
 	Post,
 	Res,
+	UseInterceptors,
 } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
@@ -33,9 +34,14 @@ import {
 import { V2QuestionnaireService } from "../services/v2-questionnaire.service";
 import { V2QuestionnaireCommentService } from "../services/v2-questionnaire-comment.service";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
+import { RealmRole } from "../../../shared/decorators/realm-role.decorator";
+import { StreamFilter } from "../../../shared/decorators/stream-filter.decorator";
+import { StreamFilterInterceptor } from "../../../shared/interceptors/stream-filter.interceptor";
+import { Permission } from "../../../shared/types/permissions";
 
 @ApiTags("v2-questionnaires")
 @Controller("v2/questionnaires")
+@UseInterceptors(StreamFilterInterceptor)
 export class V2QuestionnaireController {
 	constructor(
 		private readonly questionnaireService: V2QuestionnaireService,
@@ -52,6 +58,7 @@ export class V2QuestionnaireController {
 	}
 
 	@Get()
+	@StreamFilter()
 	@ApiOperation({ summary: "Реестр анкет v2 (отдельно от реестра схем)" })
 	async findAll(): Promise<V2QuestionnaireDto[]> {
 		return this.questionnaireService.findAll();
@@ -59,7 +66,11 @@ export class V2QuestionnaireController {
 
 	@Post("bulk-delete")
 	@HttpCode(200)
-	@ApiOperation({ summary: "Массовое удаление анкет v2 по id (админка)" })
+	@RealmRole(
+		Permission.ANKETA_DELETE_CALCULATION,
+		Permission.ANKETA_ADMIN_PANEL,
+	)
+	@ApiOperation({ summary: "Массовое удаление анкет v2 по id" })
 	async bulkDelete(
 		@Body() body: BulkDeleteV2QuestionnairesDto,
 	): Promise<BulkDeleteV2QuestionnairesResultDto> {
@@ -92,8 +103,8 @@ export class V2QuestionnaireController {
 			},
 		},
 	})
-	async exportRegistryXlsx(@Res() res: Response): Promise<void> {
-		const buffer = await this.questionnaireService.exportRegistryXlsx();
+	async exportRegistryXlsx(@Res() res: Response, @CurrentUser() user: Record<string, unknown> | undefined): Promise<void> {
+		const buffer = await this.questionnaireService.exportRegistryXlsx(undefined, user);
 		this.sendRegistryXlsxResponse(res, buffer, "v2-questionnaires");
 	}
 
@@ -111,8 +122,12 @@ export class V2QuestionnaireController {
 	async exportSelectedRegistryXlsx(
 		@Body() body: ExportV2QuestionnairesXlsxDto,
 		@Res() res: Response,
+		@CurrentUser() user: Record<string, unknown> | undefined,
 	): Promise<void> {
-		const buffer = await this.questionnaireService.exportRegistryXlsx(body.ids);
+		const buffer = await this.questionnaireService.exportRegistryXlsx(
+			body.ids,
+			user,
+		);
 		this.sendRegistryXlsxResponse(
 			res,
 			buffer,

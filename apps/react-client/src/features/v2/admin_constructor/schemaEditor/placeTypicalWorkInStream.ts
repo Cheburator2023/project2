@@ -1,8 +1,7 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import {
 	collectExecutorStreamBlocks,
-	isV2ExecutorStreamLabel,
-	type V2ExecutorStreamLabel,
+	normalizeStreamBlockExecutor,
 } from "@smart-anketa/api-contract";
 import { nanoid } from "nanoid";
 import { ARCH_COMPONENT_PRESET_DEFS } from "./archComponentPresets";
@@ -34,10 +33,11 @@ export function resolveStreamBlockPointer(
 	uiSchema: unknown,
 	streamExecutor: string,
 ): string | null {
-	if (!isV2ExecutorStreamLabel(streamExecutor)) return null;
+	const code = normalizeStreamBlockExecutor(streamExecutor);
+	if (!code) return null;
 	return (
-		collectExecutorStreamBlocks(uiSchema).find(
-			(block) => block.streamExecutor === streamExecutor,
+		collectExecutorStreamBlocks(uiSchema).find((block) =>
+			block.streamExecutors.includes(code),
 		)?.pointer ?? null
 	);
 }
@@ -67,13 +67,15 @@ export type PlaceTypicalWorkInStreamResult = {
 export function placeTypicalWorkInStream(
 	jsonSchema: RJSFSchema,
 	uiSchema: Record<string, unknown>,
-	streamExecutor: V2ExecutorStreamLabel,
+	streamExecutor: string,
 	preferredPointer?: string | null,
 ): PlaceTypicalWorkInStreamResult | null {
+	const code = normalizeStreamBlockExecutor(streamExecutor);
+	if (!code) return null;
 	let schema = jsonSchema;
 	let ui = uiSchema;
 
-	let streamPointer = resolveStreamBlockPointer(ui, streamExecutor);
+	let streamPointer = resolveStreamBlockPointer(ui, code);
 	if (!streamPointer) {
 		const streamKey = `field_${nanoid(8)}`;
 		const streamIndex = clampCanvasInsertIndex(
@@ -86,7 +88,7 @@ export function placeTypicalWorkInStream(
 			schema,
 			[],
 			streamKey,
-			makeStreamBlockJsonSchema(streamExecutor),
+			makeStreamBlockJsonSchema(code),
 			streamIndex,
 		);
 		if (!withStream) return null;
@@ -96,7 +98,7 @@ export function placeTypicalWorkInStream(
 		ui = patchUiOptionsAtPointer(
 			ui,
 			streamPointer,
-			makeStreamBlockUiOptions(streamExecutor),
+			makeStreamBlockUiOptions(code),
 		);
 	}
 
@@ -104,7 +106,7 @@ export function placeTypicalWorkInStream(
 	const def = ARCH_COMPONENT_PRESET_DEFS.typicalWork;
 	const typicalUiOptions = {
 		...def.uiOptions,
-		streamExecutor,
+		streamExecutor: code,
 	};
 
 	let typicalPointer: string | null = null;
@@ -165,7 +167,7 @@ export function placeTypicalWorkInStream(
 		}
 	}
 
-	ui = patchUiOptionsAtPointer(ui, typicalPointer, { streamExecutor });
+	ui = patchUiOptionsAtPointer(ui, typicalPointer, { streamExecutor: code });
 
 	return {
 		jsonSchema: schema,

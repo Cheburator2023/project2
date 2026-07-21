@@ -495,15 +495,13 @@ function SchemaCanvasFieldRow({
 	const typicalWorkTitleSuffix = useMemo(() => {
 		if (sectionUiOptions.archComponent !== "typicalWork") return "";
 		const outputPath = pointerToOutputPath(fieldPointer);
-		const streamExecutor =
-			sectionUiOptions.streamExecutor ??
-			resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPath) ??
-			"";
+		const streamExecutors =
+			resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPath);
 		const ids = resolveTypicalWorkDisplayBoundIds(
 			uiSchema,
 			fieldPointer,
 			typicalWorkCatalog,
-			streamExecutor,
+			streamExecutors,
 		);
 		const names = [
 			...new Set(

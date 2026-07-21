@@ -2,7 +2,7 @@ import {
 	resolveV2AnketaArchComponent,
 	resolveStreamExecutorForTypicalWorkOutputPath,
 } from "./v2-anketa-section-ui.util";
-import { typicalWorkAssignedToExecutorStream } from "./v2-executor-streams.util";
+import { typicalWorkAssignedToAnyExecutorStream } from "./v2-executor-streams.util";
 
 export const V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH =
 	"streamDataSources.sourceTypicalTasks";
@@ -221,14 +221,14 @@ export function backfillTypicalWorkBoundWorkIdsInUiSchema(
 		) {
 			continue;
 		}
-		const stream = resolveStreamExecutorForTypicalWorkOutputPath(
+		const streams = resolveStreamExecutorForTypicalWorkOutputPath(
 			next,
 			binding.outputPath,
 		);
-		if (!stream) continue;
+		if (streams.length === 0) continue;
 		const ids = catalog
 			.filter((work) =>
-				typicalWorkAssignedToExecutorStream(work.streams, stream),
+				typicalWorkAssignedToAnyExecutorStream(work.streams, streams),
 			)
 			.map((work) => work.id);
 		if (ids.length === 0) continue;

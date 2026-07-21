@@ -1,7 +1,7 @@
 import { collectAtypicalWorkArrayPaths } from "./v2-atypical-works-logic.util";
 import {
 	collectExecutorStreamBlocks,
-	formatV2StreamBlockSectionTitle,
+	formatV2StreamBlockSectionTitleFromExecutors,
 } from "./v2-anketa-section-ui.util";
 import { resolveGroupIsActive } from "./v2-group-activation.util";
 import { collectGeneratedTypicalWorkArrayPaths } from "./v2-typical-work-output-paths.util";
@@ -118,7 +118,9 @@ export function buildExecutorStreamWorkSummaryRows(
 			const adjustedTypicalScore = roundUp2(typicalTotal * multiplier);
 
 			return {
-				streamName: formatV2StreamBlockSectionTitle(block.streamExecutor),
+				streamName: formatV2StreamBlockSectionTitleFromExecutors(
+					block.streamExecutors,
+				),
 				blockKey: block.blockKey,
 				streamExecutor: block.streamExecutor,
 				baseTypicalScore: typicalTotal,

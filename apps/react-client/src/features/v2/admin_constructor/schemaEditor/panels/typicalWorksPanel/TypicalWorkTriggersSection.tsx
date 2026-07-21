@@ -41,7 +41,7 @@ import {
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
 import { V2_TEMPLATE_EDIT_TEST_IDS as TID } from "@react-client/features/v2/admin_constructor/testIds";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, memo } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import TextField from "@mui/material/TextField";
 import {
@@ -62,6 +62,7 @@ import {
 } from "./schemaWorkParameters";
 import { TypicalWorkValueMatchingInfo } from "./typicalWorkValueMatchingHelp";
 import { TriggerFormulaEditor } from "./TriggerFormulaEditor";
+import { TriggerValueChoices } from "./TriggerValueChoices";
 
 const TRIGGER_MODE_SEGMENTS: Array<{
 	id: V2TypicalWorkTriggerMode;
@@ -202,7 +203,7 @@ function triggerBanner(
 	}
 }
 
-export function TypicalWorkTriggersSection({
+export const TypicalWorkTriggersSection = memo(function TypicalWorkTriggersSection({
 	rules,
 	triggerMode = "simple",
 	triggerFormula = defaultTriggerFormula(),
@@ -346,23 +347,63 @@ export function TypicalWorkTriggersSection({
 		if (isAnyOf) {
 			const groupRules = filterRulesByGroupKey(rules, groupKey, paramOptions);
 			const current = groupRules[0];
-			const currentValues = current?.values?.length
-				? current.values
-				: current?.valueCode
-					? [{ code: current.valueCode, label: current.valueLabel }]
-					: [];
+			const currentValues: Array<{ code: string; label: string }> =
+				current?.values?.length
+					? current.values.map((v) => ({
+							code: v.code,
+							label: v.label ?? v.code,
+						}))
+					: current?.valueCode
+						? [
+								{
+									code: current.valueCode,
+									label: current.valueLabel ?? current.valueCode,
+								},
+							]
+						: [];
 			const nextValues = selected
 				? currentValues.filter((v) => v.code !== valueCode)
 				: [...currentValues, { code: valueCode, label: valueLabel }];
-			const withoutGroup = excludeRulesByGroupKey(
-				rules,
-				groupKey,
-				paramOptions,
+			replaceGroupValues(groupKey, param, nextValues);
+			return;
+		}
+
+		if (selected) {
+			onChange(
+				rules.filter(
+					(r) =>
+						!(
+							triggerRuleGroupKey(r, paramOptions) === groupKey &&
+							r.valueCode === valueCode
+						),
+				),
 			);
-			if (nextValues.length === 0) {
-				onChange(withoutGroup);
-				return;
-			}
+			return;
+		}
+		replaceGroupValues(groupKey, param, [
+			{ code: valueCode, label: valueLabel },
+		]);
+	};
+
+	const replaceGroupValues = (
+		groupKey: string,
+		param: V2TypicalWorkParameterDto,
+		nextValues: Array<{ code: string; label: string }>,
+	) => {
+		const operator = paramRulesOperator(rules, groupKey, paramOptions);
+		const isAnyOf = operator === "in" || operator === "not_in";
+		const withoutGroup = excludeRulesByGroupKey(
+			rules,
+			groupKey,
+			paramOptions,
+		);
+		if (nextValues.length === 0) {
+			onChange(withoutGroup);
+			return;
+		}
+		const groupRules = filterRulesByGroupKey(rules, groupKey, paramOptions);
+		const current = groupRules[0];
+		if (isAnyOf) {
 			onChange([
 				...withoutGroup,
 				{
@@ -382,33 +423,17 @@ export function TypicalWorkTriggersSection({
 			]);
 			return;
 		}
-
-		if (selected) {
-			onChange(
-				rules.filter(
-					(r) =>
-						!(
-							triggerRuleGroupKey(r, paramOptions) === groupKey &&
-							r.valueCode === valueCode
-						),
-				),
-			);
-			return;
-		}
-		const withoutGroup = excludeRulesByGroupKey(rules, groupKey, paramOptions);
-		const currentOperator =
-			filterRulesByGroupKey(rules, groupKey, paramOptions)[0]?.operator ?? "=";
 		onChange([
 			...withoutGroup,
 			{
-				id: `new-${Date.now()}-${valueCode}`,
+				id: current?.id ?? `new-${Date.now()}-${nextValues[0]!.code}`,
 				streamExecutor,
 				schemaFieldUid: param.schemaFieldUid ?? null,
 				paramCode: param.code,
 				paramName: schemaParamRuleName(param),
-				operator: currentOperator,
-				valueCode,
-				valueLabel,
+				operator,
+				valueCode: nextValues[0]!.code,
+				valueLabel: nextValues[0]!.label,
 			},
 		]);
 	};
@@ -679,12 +704,6 @@ export function TypicalWorkTriggersSection({
 											paramRules,
 											validationCatalog,
 										);
-								const selectedCodes = new Set(
-									(
-										paramRules[0]?.values?.map((v) => v.code) ??
-										paramRules.map((r) => r.valueCode)
-									).filter(Boolean),
-								);
 								const staleRules = isAlwaysTrigger
 									? []
 									: paramRules.filter((rule) => {
@@ -715,6 +734,10 @@ export function TypicalWorkTriggersSection({
 											: schemaParamDisplayName(paramRules[0]?.paramName) ||
 												groupKey));
 								const fieldRef = resolveSchemaParamFieldRef(param);
+								const showValueChoices =
+									Boolean(param) &&
+									param!.values.length > 0 &&
+									!isSchemaTextualParam(param!);
 								return (
 									<Box
 										key={groupKey}
@@ -909,56 +932,29 @@ export function TypicalWorkTriggersSection({
 																: "Условие «поле заполнено» — значение не выбирается."}
 													</Typography>
 												) : null}
-												<Box
-													sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}
-												>
-													{(param?.values ?? []).map((value) => {
-														const selected =
-															selectedCodes.has(value.code) ||
-															paramRules.some((rule) =>
-																catalogValueMatchesTriggerRule(value, {
-																	...ruleSeed,
-																	valueCode: rule.valueCode,
-																	valueLabel: rule.valueLabel,
-																}),
-															);
-														return (
-															<Box
-																key={value.code}
-																component="button"
-																type="button"
-																onClick={() => {
-																	if (!param) return;
-																	toggleValue(
-																		groupKey,
-																		param,
-																		value.code,
-																		value.label,
-																		selected,
-																	);
-																}}
-																sx={{
-																	display: "inline-flex",
-																	alignItems: "center",
-																	gap: 0.75,
-																	height: 30,
-																	px: 1.4,
-																	borderRadius: "8px",
-																	cursor: "pointer",
-																	fontFamily: "inherit",
-																	fontSize: 12,
-																	fontWeight: selected ? 700 : 500,
-																	bgcolor: selected ? "#fff7ed" : "#fff",
-																	color: selected ? "#9a5b13" : "#5b6577",
-																	border: `1px solid ${selected ? "#e8c9a0" : "#dfe2ea"}`,
-																}}
-															>
-																<span>{selected ? "[v]" : "[ ]"}</span>
-																{value.label}
-															</Box>
-														);
-													})}
-												</Box>
+												{showValueChoices && param ? (
+													<TriggerValueChoices
+														values={param.values}
+														paramRules={paramRules}
+														ruleSeed={ruleSeed}
+														operator={
+															(paramRules[0]?.operator ??
+																"=") as V2WorkRuleOperator
+														}
+														onToggle={(value, selected) =>
+															toggleValue(
+																groupKey,
+																param,
+																value.code,
+																value.label,
+																selected,
+															)
+														}
+														onReplace={(next) =>
+															replaceGroupValues(groupKey, param, next)
+														}
+													/>
+												) : null}
 											</>
 										)}
 									</Box>
@@ -1199,7 +1195,7 @@ export function TypicalWorkTriggersSection({
 			) : null}
 		</Box>
 	);
-}
+});
 
 function paramRulesOperator(
 	rules: V2TypicalWorkRuleDto[],

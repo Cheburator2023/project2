@@ -55,5 +55,16 @@ describe("user-groups util", () => {
 				expect.arrayContaining([dept, stream]),
 			);
 		});
+
+		it("recognizes v2 implementation stream codes and labels", () => {
+			expect(
+				extractDepartmentsAndStreams([
+					"rb",
+					"Моделирование РБ",
+					"idsrc",
+					"random",
+				]),
+			).toEqual(expect.arrayContaining(["rb", "Моделирование РБ", "idsrc"]));
+		});
 	});
 });

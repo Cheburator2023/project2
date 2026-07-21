@@ -5,6 +5,7 @@ import {
 	deriveRegistryColumnOptionsFromRows,
 	type V2RegistryExportColumn,
 	type V2QuestionnaireDto,
+	type V2AnketaViewerAccessContext,
 } from "@smart-anketa/api-contract";
 
 import { V2_DEFAULT_TEMPLATE_SNAPSHOT } from "../constants/v2-default-template-snapshot";
@@ -15,8 +16,16 @@ export async function buildV2QuestionnaireRegistryXlsx(
 		jsonSchema: Record<string, unknown>;
 		uiSchema: Record<string, unknown>;
 	}> = [],
+	exportOptions?: {
+		viewerAccess?: V2AnketaViewerAccessContext;
+		applyAccessRules?: boolean;
+	},
 ): Promise<Buffer> {
-	const columnOptions = deriveRegistryColumnOptionsFromRows(rows);
+	const columnOptions = {
+		...deriveRegistryColumnOptionsFromRows(rows),
+		viewerAccess: exportOptions?.viewerAccess,
+		applyAccessRules: exportOptions?.applyAccessRules,
+	};
 	const schemas =
 		versionSchemas.length > 0
 			? versionSchemas

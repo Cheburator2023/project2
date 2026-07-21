@@ -30,11 +30,12 @@ export function useTypicalWorkTriggerAnalysis(
 		| "assignmentId"
 	> | null,
 	methodologyCatalog: V2TypicalWorkParameterDto[],
+	schemaParamOptions?: V2TypicalWorkParameterDto[],
 ): TypicalWorkTriggerAnalysis {
 	const { fieldPathHints, uiSchema, jsonSchema, enumMapByCode } =
 		useSchemaEditor();
 
-	const paramOptions = useMemo(
+	const builtParamOptions = useMemo(
 		() =>
 			buildSchemaWorkParameters({
 				fieldPathHints,
@@ -44,6 +45,7 @@ export function useTypicalWorkTriggerAnalysis(
 			}),
 		[enumMapByCode, fieldPathHints, jsonSchema, uiSchema],
 	);
+	const paramOptions = schemaParamOptions ?? builtParamOptions;
 
 	return useMemo(() => {
 		if (!work) {

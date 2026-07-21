@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { StreamMappingService } from "../../shared/services/stream-mapping.service";
+import { StreamFilterInterceptor } from "../../shared/interceptors/stream-filter.interceptor";
 import { V2FactorySnapshotSettingEntity } from "./entities/v2-factory-snapshot-setting.entity";
 import { V2TemplateEntity } from "./entities/v2-template.entity";
 import { V2TemplateVersionEntity } from "./entities/v2-template-version.entity";
@@ -78,6 +80,8 @@ import { V2DataTransferService } from "./services/v2-data-transfer.service";
 		V2DataTransferController,
 	],
 	providers: [
+		StreamMappingService,
+		StreamFilterInterceptor,
 		V2TemplateService,
 		V2FactorySnapshotService,
 		V2TemplateVersionService,

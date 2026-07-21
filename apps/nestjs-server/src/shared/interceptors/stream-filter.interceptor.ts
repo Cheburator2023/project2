@@ -17,6 +17,7 @@ interface User {
 
 interface StreamFilterable {
 	streamExecutor?: string;
+	formData?: Record<string, unknown>;
 }
 
 type ResponseData =
@@ -27,6 +28,9 @@ type ResponseData =
 /**
  * Фильтрует ответы по стримам для DS/DE/ModelOps и т д ролей.
  * Применяется к методам с декоратором @StreamFilter().
+ *
+ * v1: поле `streamExecutor`
+ * v2: `formData.generalInfo.implementationStream` (код или подпись)
  */
 @Injectable()
 export class StreamFilterInterceptor implements NestInterceptor {
@@ -123,11 +127,30 @@ export class StreamFilterInterceptor implements NestInterceptor {
 	}
 
 	private hasAllowedStream(item: unknown, allowedStreams: string[]): boolean {
-		const streamItem = item as StreamFilterable;
-		return Boolean(
-			streamItem?.streamExecutor &&
-				allowedStreams.includes(streamItem.streamExecutor),
-		);
+		const stream = this.resolveItemStream(item);
+		return Boolean(stream && allowedStreams.includes(stream));
+	}
+
+	/** v1 `streamExecutor` или v2 `formData.generalInfo.implementationStream`. */
+	private resolveItemStream(item: unknown): string | undefined {
+		if (!item || typeof item !== "object") return undefined;
+		const row = item as StreamFilterable;
+		if (typeof row.streamExecutor === "string" && row.streamExecutor.trim()) {
+			return row.streamExecutor.trim();
+		}
+		const formData = row.formData;
+		if (!formData || typeof formData !== "object") return undefined;
+		const generalInfo = formData.generalInfo;
+		if (!generalInfo || typeof generalInfo !== "object") return undefined;
+		const implementationStream = (generalInfo as Record<string, unknown>)
+			.implementationStream;
+		if (
+			typeof implementationStream === "string" &&
+			implementationStream.trim()
+		) {
+			return implementationStream.trim();
+		}
+		return undefined;
 	}
 
 	private isPaginatedResult(

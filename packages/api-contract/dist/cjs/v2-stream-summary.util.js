@@ -96,7 +96,7 @@ function buildExecutorStreamWorkSummaryRows(data, uiSchema, typicalScoreMultipli
             : 1;
         const adjustedTypicalScore = roundUp2(typicalTotal * multiplier);
         return {
-            streamName: (0, v2_anketa_section_ui_util_1.formatV2StreamBlockSectionTitle)(block.streamExecutor),
+            streamName: (0, v2_anketa_section_ui_util_1.formatV2StreamBlockSectionTitleFromExecutors)(block.streamExecutors),
             blockKey: block.blockKey,
             streamExecutor: block.streamExecutor,
             baseTypicalScore: typicalTotal,

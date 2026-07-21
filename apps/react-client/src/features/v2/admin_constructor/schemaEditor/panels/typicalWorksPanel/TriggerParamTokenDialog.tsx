@@ -3,6 +3,7 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import FormControl from "@mui/material/FormControl";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Typography from "@mui/material/Typography";
@@ -126,6 +127,55 @@ export function TriggerParamTokenDialog({
 							? "Поле считается выполненным, если заполнено."
 							: "Задайте порог через операторы сравнения."}
 					</Typography>
+				) : param.values.length > 16 ? (
+					<FormControl fullWidth size="small">
+						<Select
+							displayEmpty
+							value={
+								draft.values?.length
+									? (draft.values[0]?.code ?? "")
+									: (draft.valueCode ?? "")
+							}
+							onChange={(event) => {
+								const code = String(event.target.value);
+								const found = param.values.find((v) => v.code === code);
+								if (!found) {
+									setDraft({
+										...draft,
+										valueCode: null,
+										valueLabel: null,
+										values: isAnyOf ? [] : undefined,
+									});
+									return;
+								}
+								if (isAnyOf) {
+									setDraft({
+										...draft,
+										valueCode: null,
+										valueLabel: null,
+										values: [{ code: found.code, label: found.label }],
+									});
+									return;
+								}
+								setDraft({
+									...draft,
+									valueCode: found.code,
+									valueLabel: found.label,
+									values: undefined,
+								});
+							}}
+							MenuProps={{ PaperProps: { sx: { maxHeight: 320 } } }}
+						>
+							<MenuItem value="">
+								<em>Не выбрано</em>
+							</MenuItem>
+							{param.values.map((value) => (
+								<MenuItem key={value.code} value={value.code} dense>
+									{value.label}
+								</MenuItem>
+							))}
+						</Select>
+					</FormControl>
 				) : (
 					<Flex wrap="wrap" gap={8}>
 						{param.values.map((value) => {

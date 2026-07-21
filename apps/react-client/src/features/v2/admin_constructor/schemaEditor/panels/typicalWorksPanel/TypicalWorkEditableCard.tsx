@@ -70,7 +70,7 @@ import {
 	coerceLogicGraph,
 	coerceUiSchema,
 } from "../../../utils/coerceV2TemplateSnapshot";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@react-client/common/toasts";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { TypicalWorkFormulaLockedDialog } from "./TypicalWorkFormulaLockedDialog";
@@ -92,8 +92,10 @@ import {
 } from "./useTypicalWorkTriggerPreview";
 import {
 	recommendedStreamsForComponent,
+	streamAreaKey,
 	streamColor,
 	streamDisplayLabel,
+	type LogicStreamCode,
 } from "./typicalWorksAreas";
 import {
 	ExecutorStreamMenuRow,
@@ -109,6 +111,7 @@ import {
 } from "./typicalWorksUi";
 import {
 	cardToPatchDto,
+	cardToTriggerPatchDto,
 	useDebouncedTypicalWorkSave,
 } from "./useDebouncedTypicalWorkSave";
 import { reconcileStreamNormPeriods } from "./typicalWorkNormPeriods";
@@ -173,6 +176,8 @@ export function TypicalWorkEditableCard({
 	const { data: methodologyCatalogData } = useV2WorkParametersCatalog();
 	const createVersion = useCreateV2TemplateVersion();
 	const [draft, setDraft] = useState<V2TypicalWorkCardDto | null>(null);
+	const draftRef = useRef<V2TypicalWorkCardDto | null>(null);
+	draftRef.current = draft;
 	const [formulaLockedOpen, setFormulaLockedOpen] = useState(false);
 	const [laborPickerKey, setLaborPickerKey] = useState(0);
 	const [laborDeleteTarget, setLaborDeleteTarget] = useState<{
@@ -186,7 +191,11 @@ export function TypicalWorkEditableCard({
 	const streamAnchorRef = useRef<HTMLButtonElement>(null);
 	const cardScrollRef = useRef<HTMLDivElement>(null);
 	const navFocusScrollKeyRef = useRef<string | null>(null);
-	const pendingRetryRef = useRef(false);
+	const pendingRetryRef = useRef<boolean>(false);
+	const refreshCalcAfterSaveRef = useRef(false);
+	const [expandedLaborCoeffGroups, setExpandedLaborCoeffGroups] = useState<
+		Record<string, boolean>
+	>({});
 	const {
 		status,
 		errorMessage,
@@ -198,7 +207,11 @@ export function TypicalWorkEditableCard({
 		hasPending,
 	} = useDebouncedTypicalWorkSave(card?.id ?? null, templateVersionId, {
 		onFormulaLocked: () => setFormulaLockedOpen(true),
-		onSaved: requestCalculationRefresh,
+		onSaved: () => {
+			if (!refreshCalcAfterSaveRef.current) return;
+			refreshCalcAfterSaveRef.current = false;
+			requestCalculationRefresh();
+		},
 	});
 
 	useEffect(() => {
@@ -266,13 +279,17 @@ export function TypicalWorkEditableCard({
 		if (!card) {
 			lastSyncedCardKeyRef.current = null;
 			setDraft(null);
+			setExpandedLaborCoeffGroups({});
 			return;
 		}
 		const cardKey = `${card.id}::${card.streamExecutor}::${templateVersionId ?? ""}`;
 		const isNewCard = cardKey !== lastSyncedCardKeyRef.current;
 		if (!isNewCard && (hasPending() || saveInProgressRef.current)) return;
 		lastSyncedCardKeyRef.current = cardKey;
-		if (isNewCard) defaultedArchKeyRef.current = null;
+		if (isNewCard) {
+			defaultedArchKeyRef.current = null;
+			setExpandedLaborCoeffGroups({});
+		}
 		setDraft(buildDraftFromCard(card));
 	}, [buildDraftFromCard, card, hasPending, templateVersionId]);
 
@@ -494,6 +511,7 @@ export function TypicalWorkEditableCard({
 	const triggerAnalysis = useTypicalWorkTriggerAnalysis(
 		activeTriggerWork,
 		methodologyCatalog,
+		paramOptions,
 	);
 
 	const commitDraft = (next: V2TypicalWorkCardDto) => {
@@ -530,8 +548,70 @@ export function TypicalWorkEditableCard({
 			triggerStatus: nextTrigger.status,
 		};
 		setDraft(withDerived);
+		refreshCalcAfterSaveRef.current = true;
 		scheduleSave(cardToPatchDto(withDerived, templateVersionId));
 	};
+
+	/** Лёгкий путь для триггеров: без пересборки формулы/норм на каждый клик в select. */
+	const commitTriggerPatch = useCallback(
+		(
+			patch: Partial<
+				Pick<
+					V2TypicalWorkCardDto,
+					"rules" | "triggerMode" | "triggerFormula" | "triggerArchCount"
+				>
+			>,
+		) => {
+			const prev = draftRef.current;
+			if (!prev) return;
+			const next = { ...prev, ...patch };
+			const nextTrigger = analyzeTriggerRules(
+				next.rules,
+				paramOptions,
+				methodologyCatalog,
+				undefined,
+				undefined,
+				undefined,
+				next.triggerArchCount,
+				next.triggerMode ?? "simple",
+				next.triggerFormula,
+			);
+			const withDerived = {
+				...next,
+				triggerStatus: nextTrigger.status,
+			};
+			startTransition(() => {
+				setDraft(withDerived);
+			});
+			scheduleSave(cardToTriggerPatchDto(withDerived, templateVersionId));
+		},
+		[methodologyCatalog, paramOptions, scheduleSave, templateVersionId],
+	);
+
+	const onTriggerRulesChange = useCallback(
+		(rules: V2TypicalWorkCardDto["rules"]) => {
+			commitTriggerPatch({ rules });
+		},
+		[commitTriggerPatch],
+	);
+	const onTriggerModeChange = useCallback(
+		(triggerMode: V2TypicalWorkCardDto["triggerMode"]) => {
+			commitTriggerPatch({ triggerMode });
+		},
+		[commitTriggerPatch],
+	);
+	const onTriggerFormulaChange = useCallback(
+		(triggerFormula: NonNullable<V2TypicalWorkCardDto["triggerFormula"]>) => {
+			commitTriggerPatch({ triggerFormula });
+		},
+		[commitTriggerPatch],
+	);
+	const onTriggerArchCountChange = useCallback(
+		(triggerArchCount: NonNullable<V2TypicalWorkCardDto["triggerArchCount"]>) => {
+			commitTriggerPatch({ triggerArchCount });
+		},
+		[commitTriggerPatch],
+	);
 
 	useEffect(() => {
 		if (!draft || !card) return;
@@ -587,7 +667,9 @@ export function TypicalWorkEditableCard({
 									paramCode: picked.code,
 									paramName,
 								})
-							: picked.values.map((v) => ({
+							: picked.values.length > 24
+								? []
+								: picked.values.map((v) => ({
 									id: `new-${Date.now()}-${v.code}`,
 									streamExecutor: draft.streamExecutor,
 									paramCode: picked.code,
@@ -705,7 +787,7 @@ export function TypicalWorkEditableCard({
 		effectiveArchComponentType,
 	);
 	const otherStreams = availableStreams.filter(
-		(s) => !recommended.includes(streamDisplayLabel(s)),
+		(s) => !recommended.includes(streamAreaKey(s) as LogicStreamCode),
 	);
 
 	return (
@@ -1006,7 +1088,11 @@ export function TypicalWorkEditableCard({
 										Рекомендованные для компонента
 									</Typography>
 									{availableStreams
-										.filter((s) => recommended.includes(streamDisplayLabel(s)))
+										.filter((s) =>
+											recommended.includes(
+												streamAreaKey(s) as LogicStreamCode,
+											),
+										)
 										.map((stream) => (
 											<MenuItem
 												key={`rec-${stream}`}
@@ -1134,16 +1220,10 @@ export function TypicalWorkEditableCard({
 							paramOptions={paramOptions}
 							methodologyCatalog={methodologyCatalog}
 							streamExecutor={streamExecutor ?? draft.streamExecutor}
-							onChange={(rules) => commitDraft({ ...draft, rules })}
-							onTriggerModeChange={(triggerMode) =>
-								commitDraft({ ...draft, triggerMode })
-							}
-							onTriggerFormulaChange={(triggerFormula) =>
-								commitDraft({ ...draft, triggerFormula })
-							}
-							onTriggerArchCountChange={(triggerArchCount) =>
-								commitDraft({ ...draft, triggerArchCount })
-							}
+							onChange={onTriggerRulesChange}
+							onTriggerModeChange={onTriggerModeChange}
+							onTriggerFormulaChange={onTriggerFormulaChange}
+							onTriggerArchCountChange={onTriggerArchCountChange}
 							onNavigateToSchemaField={(pointer) => {
 								openDesignerAtPointer(pointer);
 							}}
@@ -1261,6 +1341,10 @@ export function TypicalWorkEditableCard({
 										resolveNumericLaborPresetRows(
 											paramMeta?.name ?? group.paramName,
 										) != null;
+									const coeffCount = group.coefficients.length;
+									const laborTableCollapsed =
+										coeffCount > 24 &&
+										expandedLaborCoeffGroups[group.paramCode] !== true;
 									return (
 										<Box
 											key={group.paramCode}
@@ -1354,18 +1438,20 @@ export function TypicalWorkEditableCard({
 																						},
 																					);
 																				}
-																				return (param?.values ?? []).map(
-																					(v) => ({
-																						id: `new-${Date.now()}-${v.code}`,
-																						streamExecutor:
-																							draft.streamExecutor,
-																						paramCode: g.paramCode,
-																						paramName: g.paramName,
-																						valueCode: v.code,
-																						valueLabel: v.label,
-																						coefficient: 1,
-																					}),
-																				);
+																				return (param?.values ?? []).length > 24
+																					? []
+																					: (param?.values ?? []).map(
+																							(v) => ({
+																								id: `new-${Date.now()}-${v.code}`,
+																								streamExecutor:
+																									draft.streamExecutor,
+																								paramCode: g.paramCode,
+																								paramName: g.paramName,
+																								valueCode: v.code,
+																								valueLabel: v.label,
+																								coefficient: 1,
+																							}),
+																						);
 																			})(),
 															};
 														});
@@ -1421,8 +1507,29 @@ export function TypicalWorkEditableCard({
 															flexWrap: "wrap",
 															gap: 0.75,
 															mb: 1,
+															maxHeight:
+																(paramMeta?.values.length ?? 0) > 16
+																	? 160
+																	: undefined,
+															overflowY:
+																(paramMeta?.values.length ?? 0) > 16
+																	? "auto"
+																	: undefined,
 														}}
 													>
+														{(paramMeta?.values.length ?? 0) > 16 ? (
+															<Typography
+																sx={{
+																	width: "100%",
+																	fontSize: 11,
+																	color: "#8a93a3",
+																	mb: 0.25,
+																}}
+															>
+																{(paramMeta?.values ?? []).length} значений —
+																прокрутите список или сузьте enum в схеме
+															</Typography>
+														) : null}
 														{(paramMeta?.values ?? []).map((value) => {
 															const selected = group.anyOf?.valueCodes.includes(
 																value.code,
@@ -1544,6 +1651,27 @@ export function TypicalWorkEditableCard({
 														/>
 													</Box>
 												</Box>
+											) : laborTableCollapsed ? (
+												<Box>
+													<Typography
+														sx={{ fontSize: 12, color: "#6b7484", mb: 1 }}
+													>
+														{coeffCount} строк коэффициентов. Таблица свёрнута,
+														чтобы редактор не тормозил при смене триггеров.
+													</Typography>
+													<Button
+														size="small"
+														variant="outlined"
+														onClick={() =>
+															setExpandedLaborCoeffGroups((prev) => ({
+																...prev,
+																[group.paramCode]: true,
+															}))
+														}
+													>
+														Развернуть таблицу ({coeffCount})
+													</Button>
+												</Box>
 											) : (
 												<Box>
 													{numericLaborRows ? (
@@ -1555,6 +1683,40 @@ export function TypicalWorkEditableCard({
 															«более N» (как для количества метрик).
 														</Typography>
 													) : null}
+													{coeffCount > 24 ? (
+														<Flex
+															alignItems="center"
+															justifyContent="space-between"
+															gap={8}
+															sx={{ mb: 0.75 }}
+														>
+															<Typography
+																sx={{
+																	fontSize: 11,
+																	color: "#8a93a3",
+																}}
+															>
+																{coeffCount} строк — прокрутите таблицу
+															</Typography>
+															<Button
+																size="small"
+																onClick={() =>
+																	setExpandedLaborCoeffGroups((prev) => ({
+																		...prev,
+																		[group.paramCode]: false,
+																	}))
+																}
+															>
+																Свернуть
+															</Button>
+														</Flex>
+													) : null}
+													<Box
+														sx={{
+															maxHeight: coeffCount > 24 ? 360 : undefined,
+															overflowY: coeffCount > 24 ? "auto" : undefined,
+														}}
+													>
 													<Table size="small">
 													<TableBody>
 														{group.coefficients.map((row, index) => {
@@ -1564,6 +1726,8 @@ export function TypicalWorkEditableCard({
 																	row,
 																	coefficientCatalog,
 																);
+															const editableValueLabel =
+																numericLaborRows && coeffCount <= 24;
 															return (
 																<TableRow key={row.id ?? index}>
 																	<TableCell>
@@ -1575,7 +1739,7 @@ export function TypicalWorkEditableCard({
 																				flexWrap: "wrap",
 																			}}
 																		>
-																			{numericLaborRows ? (
+																			{editableValueLabel ? (
 																				<TextField
 																					size="small"
 																					value={row.valueLabel ?? ""}
@@ -1714,6 +1878,7 @@ export function TypicalWorkEditableCard({
 														})}
 													</TableBody>
 												</Table>
+													</Box>
 													{numericLaborRows ? (
 														<Button
 															size="small"

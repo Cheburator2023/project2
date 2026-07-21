@@ -39,6 +39,7 @@ import { AnketaSectionStatusChip } from "../molecules/AnketaSectionStatusChip";
 import { useAnketaWorkflow } from "../hooks/useAnketaWorkflow";
 import { useSchemaBindingToast } from "../hooks/useSchemaBindingToast";
 import type { AnketaFormContextValue } from "../utils/anketaFormContext";
+import { useAnketaViewerAccess } from "../utils/anketaViewerAccess";
 import { AnketaFormPageLayout } from "./AnketaFormPageLayout";
 import { useCreateV2QuestionnaireVersion } from "@react-client/common/api/queries/v2-questionnaires";
 import { useNavigate } from "react-router";
@@ -199,6 +200,8 @@ export function AnketaFormShell({
 		}
 	}, [completeDialogOpen, completeDialogPhase, onSave, workflow.globalStatus]);
 
+	const viewerAccess = useAnketaViewerAccess(!debouncePreviewInputs);
+
 	const anketaFormContext = useMemo((): AnketaFormContextValue => {
 		// Только page-level overrides; formData/schema/ui берёт V2AnketaFormWithModals из engine.
 		return {
@@ -209,6 +212,7 @@ export function AnketaFormShell({
 			anketaReadOnly: effectiveReadOnly,
 			schemaEditorPreview: false,
 			debouncePreviewInputs,
+			viewerAccess,
 		};
 	}, [
 		effectiveReadOnly,
@@ -217,6 +221,7 @@ export function AnketaFormShell({
 		touchMainSection,
 		isSectionLocked,
 		debouncePreviewInputs,
+		viewerAccess,
 	]);
 
 	const isEditingQuestionnaire = Boolean(questionnaireId);

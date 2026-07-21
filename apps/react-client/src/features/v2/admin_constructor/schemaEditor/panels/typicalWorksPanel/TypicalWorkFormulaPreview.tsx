@@ -1,5 +1,8 @@
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
+import FormControl from "@mui/material/FormControl";
+import MenuItem from "@mui/material/MenuItem";
+import Select from "@mui/material/Select";
 import Typography from "@mui/material/Typography";
 import type {
 	V2TypicalWorkLaborParamGroupDto,
@@ -262,38 +265,59 @@ export function TypicalWorkFormulaPreview({
 								<Typography sx={{ fontSize: 12, fontWeight: 600, mb: 0.5 }}>
 									{param.name}
 								</Typography>
-								<Flex wrap="wrap" gap={6}>
-									{param.values.map((value) => {
-										const on = value.code === current;
-										return (
-											<Box
-												key={value.code}
-												component="button"
-												type="button"
-												onClick={() =>
-													setAnswers((prev) => ({
-														...prev,
-														[param.code]: value.code,
-													}))
-												}
-												sx={{
-													height: 26,
-													px: 1.1,
-													borderRadius: "7px",
-													border: `1px solid ${on ? "#2f6bd8" : "#dfe2ea"}`,
-													bgcolor: on ? "#2f6bd8" : "#fff",
-													color: on ? "#fff" : "#5b6577",
-													fontSize: 11.5,
-													fontWeight: on ? 700 : 500,
-													cursor: "pointer",
-													fontFamily: "inherit",
-												}}
-											>
-												{value.label}
-											</Box>
-										);
-									})}
-								</Flex>
+								{param.values.length > 16 ? (
+									<FormControl fullWidth size="small">
+										<Select
+											value={current}
+											onChange={(event) =>
+												setAnswers((prev) => ({
+													...prev,
+													[param.code]: String(event.target.value),
+												}))
+											}
+											MenuProps={{ PaperProps: { sx: { maxHeight: 280 } } }}
+										>
+											{param.values.map((value) => (
+												<MenuItem key={value.code} value={value.code} dense>
+													{value.label}
+												</MenuItem>
+											))}
+										</Select>
+									</FormControl>
+								) : (
+									<Flex wrap="wrap" gap={6}>
+										{param.values.map((value) => {
+											const on = value.code === current;
+											return (
+												<Box
+													key={value.code}
+													component="button"
+													type="button"
+													onClick={() =>
+														setAnswers((prev) => ({
+															...prev,
+															[param.code]: value.code,
+														}))
+													}
+													sx={{
+														height: 26,
+														px: 1.1,
+														borderRadius: "7px",
+														border: `1px solid ${on ? "#2f6bd8" : "#dfe2ea"}`,
+														bgcolor: on ? "#2f6bd8" : "#fff",
+														color: on ? "#fff" : "#5b6577",
+														fontSize: 11.5,
+														fontWeight: on ? 700 : 500,
+														cursor: "pointer",
+														fontFamily: "inherit",
+													}}
+												>
+													{value.label}
+												</Box>
+											);
+										})}
+									</Flex>
+								)}
 							</Box>
 						);
 					})}

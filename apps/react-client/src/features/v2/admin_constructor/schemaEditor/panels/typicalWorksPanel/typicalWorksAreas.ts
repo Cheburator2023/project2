@@ -1,18 +1,31 @@
-/** Стримы-исполнители в редакторе логики типовых работ. */
+/** Стримы-исполнители в редакторе логики типовых работ (коды V2_IMPLEMENTATION_STREAM). */
 
 import {
-	V2_DB_STREAM_TO_EXECUTOR_AREA,
-	V2_EXECUTOR_STREAM_LABELS,
-	type V2ExecutorStreamLabel,
+	normalizeStreamBlockExecutor,
+	normalizeStreamBlockRoles,
+	resolveLogicStreamDbExecutor,
+	resolveLogicStreamForDbExecutor,
+	resolveStreamBlockExecutorLabel,
+	resolveStreamBlockExecutorScopeStreams,
+	resolveStreamBlockExecutorsLabel,
+	resolveStreamBlockRolesLabel,
+	V2_IMPLEMENTATION_STREAM,
+	V2_IMPLEMENTATION_STREAM_CODES,
+	V2_STREAM_BLOCK_ROLE_CODES,
+	type V2ImplementationStreamCode,
+	type V2StreamBlockRoleCode,
 } from "@smart-anketa/api-contract";
 
 export type LogicWorksScope =
-	| { kind: "stream"; stream: string }
+	| { kind: "stream"; streams: string[]; roles: string[] }
 	| { kind: "all" };
+
+export type LogicStreamCode = V2ImplementationStreamCode;
 
 export const ALL_LOGIC_WORKS_SCOPE: LogicWorksScope = { kind: "all" };
 
-export const LOGIC_EXECUTOR_STREAMS = V2_EXECUTOR_STREAM_LABELS;
+/** Коды стримов для фильтра области и матрицы назначений. */
+export const LOGIC_EXECUTOR_STREAMS = V2_IMPLEMENTATION_STREAM_CODES;
 
 export function isAllLogicWorksScope(
 	scope: LogicWorksScope,
@@ -20,49 +33,73 @@ export function isAllLogicWorksScope(
 	return scope.kind === "all";
 }
 
-export const DEFAULT_LOGIC_STREAM = "Источники данных" as const;
+export function isStreamLogicWorksScope(
+	scope: LogicWorksScope,
+): scope is { kind: "stream"; streams: string[]; roles: string[] } {
+	return scope.kind === "stream";
+}
+
+export const DEFAULT_LOGIC_STREAM = V2_IMPLEMENTATION_STREAM.IDSRC;
 
 export const DEFAULT_SCOPE: LogicWorksScope = ALL_LOGIC_WORKS_SCOPE;
 
+export const LOGIC_STREAM_BLOCK_ROLES = V2_STREAM_BLOCK_ROLE_CODES;
+
 export function scopeStreamExecutor(
 	scope: LogicWorksScope,
-	fallback: string = LOGIC_EXECUTOR_STREAMS[0],
+	fallback: string = DEFAULT_LOGIC_STREAM,
 ): string {
-	return scope.kind === "all" ? fallback : scope.stream;
+	return scope.kind === "all" ? fallback : (scope.streams[0] ?? fallback);
 }
 
-/** Имена стримов в БД → область в UI (для сопоставления с существующими назначениями). */
-const DB_STREAM_TO_AREA: Record<string, string> = V2_DB_STREAM_TO_EXECUTOR_AREA;
-
-const AREA_TO_DB_STREAMS: Record<string, string[]> = {
-	"Источники данных": ["ИД. Внутренний", "ИД. Внешний", "Источники данных"],
-	ПиРМ: ["ПиРМ", "ПиРМ (правила и развитие модели)"],
-};
-
-export const ARCH_COMPONENT_RECOMMENDED_STREAMS: Record<string, string[]> = {
-	"Система-источник": ["Источники данных", "ПиРМ"],
-	"Объект / Витрина данных": ["Источники данных", "ДАДМ"],
-	"Объект данных": ["Источники данных", "ДАДМ"],
-	"Процесс обработки данных": ["Источники данных", "Потоковые данные"],
-	Модель: ["Контроль моделей", "ПиРМ"],
-	"Модельный сервис": ["ДАДМ", "Цифровые агенты"],
+const ARCH_COMPONENT_RECOMMENDED_STREAMS: Record<
+	string,
+	V2ImplementationStreamCode[]
+> = {
+	"Система-источник": [
+		V2_IMPLEMENTATION_STREAM.IDSRC,
+		V2_IMPLEMENTATION_STREAM.PIRM,
+	],
+	"Объект / Витрина данных": [
+		V2_IMPLEMENTATION_STREAM.IDSRC,
+		V2_IMPLEMENTATION_STREAM.DADM,
+	],
+	"Объект данных": [
+		V2_IMPLEMENTATION_STREAM.IDSRC,
+		V2_IMPLEMENTATION_STREAM.DADM,
+	],
+	"Процесс обработки данных": [
+		V2_IMPLEMENTATION_STREAM.IDSRC,
+		V2_IMPLEMENTATION_STREAM.STRDAT,
+	],
+	Модель: [
+		V2_IMPLEMENTATION_STREAM.MDLCTL,
+		V2_IMPLEMENTATION_STREAM.PIRM,
+	],
+	"Модельный сервис": [
+		V2_IMPLEMENTATION_STREAM.DADM,
+		V2_IMPLEMENTATION_STREAM.DIGAGT,
+	],
 };
 
 export function streamDisplayLabel(stream: string): string {
-	return DB_STREAM_TO_AREA[stream] ?? stream;
+	return resolveStreamBlockExecutorLabel(stream);
 }
 
+/** Код implementationStream для DB-имени или кода стрима. */
 export function streamAreaKey(stream: string): string {
-	return DB_STREAM_TO_AREA[stream] ?? stream;
+	return resolveLogicStreamForDbExecutor(stream) ?? stream;
 }
 
 export function resolveScopeStreams(scope: LogicWorksScope): string[] {
 	if (scope.kind === "all") {
-		return LOGIC_EXECUTOR_STREAMS.flatMap(
-			(stream) => AREA_TO_DB_STREAMS[stream] ?? [stream],
-		);
+		return LOGIC_EXECUTOR_STREAMS.flatMap((code) => [
+			...resolveStreamBlockExecutorScopeStreams(code),
+		]);
 	}
-	return AREA_TO_DB_STREAMS[scope.stream] ?? [scope.stream];
+	return scope.streams.flatMap((stream) => [
+		...resolveStreamBlockExecutorScopeStreams(stream),
+	]);
 }
 
 export function workMatchesLogicScope(
@@ -74,22 +111,115 @@ export function workMatchesLogicScope(
 }
 
 export function scopeLabel(scope: LogicWorksScope): string {
-	return scope.kind === "all" ? "Все области" : scope.stream;
+	if (scope.kind === "all") return "Все области";
+	const streamPart =
+		scope.streams.length === 1
+			? streamDisplayLabel(scope.streams[0])
+			: resolveStreamBlockExecutorsLabel(scope.streams);
+	const rolePart =
+		scope.roles.length > 0 ? resolveStreamBlockRolesLabel(scope.roles) : "";
+	if (streamPart && rolePart) return `${streamPart} · ${rolePart}`;
+	return streamPart || rolePart || "Область";
 }
 
 export function scopeSubtitle(scope: LogicWorksScope): string {
-	return scope.kind === "all" ? "все области" : "стрим-исполнитель";
+	if (scope.kind === "all") return "все области";
+	const parts: string[] = [];
+	if (scope.streams.length === 1) parts.push("стрим-исполнитель");
+	else if (scope.streams.length > 1) parts.push(`${scope.streams.length} стрима`);
+	if (scope.roles.length === 1) parts.push("1 роль");
+	else if (scope.roles.length > 1) parts.push(`${scope.roles.length} роли`);
+	return parts.join(" · ") || "стрим-исполнитель";
+}
+
+export function isRoleSelectedInScope(
+	scope: LogicWorksScope,
+	role: string,
+): boolean {
+	if (scope.kind === "all") return false;
+	const code = normalizeStreamBlockRoles(role)[0];
+	return scope.roles.some(
+		(item) =>
+			item === role ||
+			(code != null && normalizeStreamBlockRoles(item)[0] === code),
+	);
+}
+
+export function toggleRoleInScope(
+	scope: LogicWorksScope,
+	role: string,
+): LogicWorksScope {
+	if (scope.kind === "all") {
+		return { kind: "stream", streams: [DEFAULT_LOGIC_STREAM], roles: [role] };
+	}
+	const selected = isRoleSelectedInScope(scope, role);
+	if (selected) {
+		const code = normalizeStreamBlockRoles(role)[0];
+		const next = scope.roles.filter(
+			(item) =>
+				item !== role &&
+				(code == null || normalizeStreamBlockRoles(item)[0] !== code),
+		);
+		return { ...scope, roles: next };
+	}
+	return { ...scope, roles: [...scope.roles, role] };
+}
+
+export function roleDisplayLabel(role: string): string {
+	return resolveStreamBlockRolesLabel(role) || role;
+}
+
+export function isStreamSelectedInScope(
+	scope: LogicWorksScope,
+	stream: string,
+): boolean {
+	if (scope.kind === "all") return false;
+	const code = normalizeStreamBlockExecutor(stream);
+	return scope.streams.some(
+		(item) =>
+			item === stream ||
+			(code != null && normalizeStreamBlockExecutor(item) === code),
+	);
+}
+
+export function toggleStreamInScope(
+	scope: LogicWorksScope,
+	stream: string,
+): LogicWorksScope {
+	if (scope.kind === "all") {
+		return { kind: "stream", streams: [stream], roles: [] };
+	}
+	const selected = isStreamSelectedInScope(scope, stream);
+	if (selected) {
+		const code = normalizeStreamBlockExecutor(stream);
+		const next = scope.streams.filter(
+			(item) =>
+				item !== stream &&
+				(code == null || normalizeStreamBlockExecutor(item) !== code),
+		);
+		if (next.length === 0) return ALL_LOGIC_WORKS_SCOPE;
+		return { kind: "stream", streams: next, roles: scope.roles };
+	}
+	return { kind: "stream", streams: [...scope.streams, stream], roles: scope.roles };
 }
 
 export function workAssignedToScope(
 	streams: string[],
-	scopeStreams: string[],
+	scopeStreams: readonly string[],
 ): boolean {
-	return streams.some(
-		(s) =>
-			scopeStreams.includes(s) ||
-			scopeStreams.includes(streamAreaKey(s)),
+	const scopeCodes = new Set(
+		scopeStreams
+			.map((value) => normalizeStreamBlockExecutor(value))
+			.filter((value): value is V2ImplementationStreamCode => value != null),
 	);
+	return streams.some((stream) => {
+		const code = resolveLogicStreamForDbExecutor(stream);
+		if (code && scopeCodes.has(code)) return true;
+		return (
+			scopeStreams.includes(stream) ||
+			scopeStreams.includes(streamAreaKey(stream))
+		);
+	});
 }
 
 export function pickStreamForScope(
@@ -107,41 +237,59 @@ export function pickStreamForScope(
 }
 
 export function streamColor(stream: string): string {
-	const label = streamDisplayLabel(stream);
-	if (label === "ДАДМ") return "#2f6bd8";
-	if (label === "ПиРМ") return "#e07b16";
-	if (label.includes("Контроль")) return "#7c5cd6";
-	if (label.includes("Источник")) return "#1f8a4d";
-	if (label.includes("Цифровые агент")) return "#8b5cf6";
-	if (label.includes("Потоков")) return "#0ea5e9";
-	return "#64748b";
+	const code = normalizeStreamBlockExecutor(stream);
+	switch (code) {
+		case V2_IMPLEMENTATION_STREAM.DADM:
+			return "#2f6bd8";
+		case V2_IMPLEMENTATION_STREAM.PIRM:
+			return "#e07b16";
+		case V2_IMPLEMENTATION_STREAM.MDLCTL:
+			return "#7c5cd6";
+		case V2_IMPLEMENTATION_STREAM.IDSRC:
+			return "#1f8a4d";
+		case V2_IMPLEMENTATION_STREAM.DIGAGT:
+			return "#8b5cf6";
+		case V2_IMPLEMENTATION_STREAM.STRDAT:
+			return "#0ea5e9";
+		default:
+			return "#64748b";
+	}
 }
 
 export function recommendedStreamsForComponent(
 	archComponentType: string,
-): string[] {
-	return ARCH_COMPONENT_RECOMMENDED_STREAMS[archComponentType] ?? ["ПиРМ"];
+): V2ImplementationStreamCode[] {
+	return (
+		ARCH_COMPONENT_RECOMMENDED_STREAMS[archComponentType] ?? [
+			V2_IMPLEMENTATION_STREAM.PIRM,
+		]
+	);
 }
 
 export function isWorkAssignedToLogicStream(
 	workStreams: string[],
 	logicStream: string,
 ): boolean {
-	const dbStreams = AREA_TO_DB_STREAMS[logicStream] ?? [logicStream];
-	return workStreams.some(
-		(s) => dbStreams.includes(s) || streamAreaKey(s) === logicStream,
+	return workAssignedToScope(
+		workStreams,
+		resolveStreamBlockExecutorScopeStreams(logicStream),
 	);
 }
 
-/**
- * Стрим для нового назначения. Разделение внутр/внеш убрано — назначаем на
- * канонический стрим области (её метка == имя стрима в БД), а не на legacy-стримы.
- */
+/** DB-имя стрима для нового назначения по коду области логики. */
 export function pickDbStreamForLogicStream(
 	logicStream: string,
-	_workStreams: string[],
+	workStreams: string[],
 ): string {
-	return logicStream;
+	const code = normalizeStreamBlockExecutor(logicStream);
+	if (!code) return logicStream.trim();
+	const scope = resolveStreamBlockExecutorScopeStreams(code);
+	const existing = workStreams.find(
+		(stream) =>
+			scope.includes(stream) || resolveLogicStreamForDbExecutor(stream) === code,
+	);
+	if (existing) return existing;
+	return resolveLogicStreamDbExecutor(code);
 }
 
 export function resolveDbStreamsForScope(scopeStreams: string[]): string[] {
@@ -153,4 +301,18 @@ export function shortenStreamLabel(stream: string, max = 16): string {
 	return label.length > max ? `${label.slice(0, max - 1)}…` : label;
 }
 
-export type { V2ExecutorStreamLabel };
+export function scopeStreamsPresentInSchema(
+	uiSchema: unknown,
+	scope: LogicWorksScope,
+	isPresent: (stream: string) => boolean,
+): { all: boolean; any: boolean; missing: string[] } {
+	if (scope.kind === "all") {
+		return { all: true, any: true, missing: [] };
+	}
+	const missing = scope.streams.filter((stream) => !isPresent(stream));
+	return {
+		all: missing.length === 0,
+		any: missing.length < scope.streams.length,
+		missing,
+	};
+}

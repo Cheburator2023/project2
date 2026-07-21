@@ -1,9 +1,10 @@
 import {
 	collectGeneratedTypicalWorkArrayPaths,
+	normalizeStreamBlockExecutors,
 	readTypicalWorkBoundWorkIdsAtOutputPath,
 	resolveStreamExecutorForTypicalWorkOutputPath,
 	TYPICAL_WORK_BOUND_WORK_IDS_KEY,
-	typicalWorkAssignedToExecutorStream,
+	typicalWorkAssignedToAnyExecutorStream,
 	type TypicalWorkCatalogBindingItem,
 } from "@smart-anketa/api-contract";
 import { normalizeJsonPointer } from "../utils/schemaPaths";
@@ -27,12 +28,12 @@ export function readBoundWorkIdsAtPointer(
 
 export function filterTypicalWorksForStreamExecutor(
 	catalog: readonly TypicalWorkCatalogItem[],
-	streamExecutor: string | null | undefined,
+	streamExecutor: string | readonly string[] | null | undefined,
 ): TypicalWorkCatalogItem[] {
-	const stream = streamExecutor?.trim();
-	if (!stream) return [];
+	const streams = normalizeStreamBlockExecutors(streamExecutor);
+	if (streams.length === 0) return [];
 	return catalog.filter((work) =>
-		typicalWorkAssignedToExecutorStream(work.streams, stream),
+		typicalWorkAssignedToAnyExecutorStream(work.streams, streams),
 	);
 }
 
@@ -41,7 +42,7 @@ export function resolveTypicalWorkDisplayBoundIds(
 	uiSchema: unknown,
 	pointer: string,
 	catalog: readonly TypicalWorkCatalogItem[],
-	streamExecutor: string | null | undefined,
+	streamExecutor: string | readonly string[] | null | undefined,
 ): string[] {
 	const explicit = readBoundWorkIdsAtPointer(uiSchema, pointer);
 	if (explicit !== undefined) return explicit;
@@ -65,7 +66,7 @@ function resolveBindingBaseIds(
 	uiSchema: unknown,
 	pointer: string,
 	catalog: readonly TypicalWorkCatalogItem[],
-	streamExecutor: string | null | undefined,
+	streamExecutor: string | readonly string[] | null | undefined,
 ): string[] {
 	return resolveTypicalWorkDisplayBoundIds(
 		uiSchema,
@@ -90,7 +91,7 @@ export function appendBoundWorkIdAtPointer(
 	pointer: string,
 	workId: string,
 	catalog: readonly TypicalWorkCatalogItem[],
-	streamExecutor: string | null | undefined,
+	streamExecutor: string | readonly string[] | null | undefined,
 ): Record<string, unknown> {
 	const current = resolveBindingBaseIds(
 		uiSchema,
@@ -109,7 +110,7 @@ export function removeBoundWorkIdAtPointer(
 	pointer: string,
 	workId: string,
 	catalog: readonly TypicalWorkCatalogItem[],
-	streamExecutor: string | null | undefined,
+	streamExecutor: string | readonly string[] | null | undefined,
 ): Record<string, unknown> {
 	const current = resolveBindingBaseIds(
 		uiSchema,
@@ -124,7 +125,7 @@ export function removeBoundWorkIdAtPointer(
 	);
 }
 
-function outputPathToPointer(outputPath: string): string {
+export function outputPathToPointer(outputPath: string): string {
 	return `/${outputPath.split(".").filter(Boolean).join("/")}`;
 }
 
@@ -140,18 +141,18 @@ export function removeWorkIdFromAllTypicalWorkBindings(
 	let next = uiSchema;
 	for (const outputPath of outputPaths) {
 		const pointer = outputPathToPointer(outputPath);
-		const streamExecutor = resolveStreamExecutorForTypicalWorkOutputPath(
+		const streamExecutors = resolveStreamExecutorForTypicalWorkOutputPath(
 			next,
 			outputPath,
 		);
-		const base = resolveBindingBaseIds(next, pointer, catalog, streamExecutor);
+		const base = resolveBindingBaseIds(next, pointer, catalog, streamExecutors);
 		if (!base.includes(workId)) continue;
 		next = removeBoundWorkIdAtPointer(
 			next,
 			pointer,
 			workId,
 			catalog,
-			streamExecutor,
+			streamExecutors,
 		);
 	}
 	return next;

@@ -3,6 +3,7 @@ import {
 	buildV2QuestionnaireRegistryColumnTree,
 	estimateRegistryColumnWidth,
 	formatV2SchemaBindingStatus,
+	resolveImplementationStreamLabel,
 	type V2RegistryColumnNode,
 	type V2RegistryLeafColumn,
 	type V2RegistrySchemaColumnOptions,
@@ -166,8 +167,16 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 		resizable: true,
 		...baseFilter,
 		...(leaf.valueType === "date" ? dateSetFilterExtras() : {}),
-		valueGetter: (p) =>
-			formatGridCellValue(getFormValue(p.data, leaf.formPath ?? "")),
+		valueGetter: (p) => {
+			const raw = getFormValue(p.data, leaf.formPath ?? "");
+			if (
+				leaf.formPath === "generalInfo.implementationStream" &&
+				typeof raw === "string"
+			) {
+				return resolveImplementationStreamLabel(raw);
+			}
+			return formatGridCellValue(raw);
+		},
 	};
 }
 
