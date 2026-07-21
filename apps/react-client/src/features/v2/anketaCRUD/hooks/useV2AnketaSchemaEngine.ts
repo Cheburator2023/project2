@@ -134,7 +134,10 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 	useEffect(() => {
 		if (!uiSchema || Object.keys(uiSchema).length === 0) return;
 		setFormData((prev) => {
-			const { coefficient } = resolveV2QuestionnaireUncertaintyCoefficient(prev);
+			const { coefficient } = resolveV2QuestionnaireUncertaintyCoefficient(
+				prev,
+				{ logicRules: logic.rules },
+			);
 			const synced = syncAtypicalWorkCoefficientsInFormData(
 				prev,
 				uiSchema,
@@ -142,7 +145,7 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 			);
 			return synced.changed ? synced.formData : prev;
 		});
-	}, [uiSchema, uncertaintySyncSignature]);
+	}, [uiSchema, uncertaintySyncSignature, logic.rules]);
 
 	const referencedDictionaryCodes = useMemo(
 		() => collectDictionaryCodesFromUiSchema(uiSchema),

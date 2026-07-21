@@ -1,15 +1,15 @@
 import { V2_ANKETA_MAIN_SECTION_TITLES } from "./v2-anketa-workflow.util";
-import {
-	V2_ANKETA_MAIN_SECTION_IDS,
-	type V2AnketaMainSectionId,
-} from "./v2-anketa-workflow.types";
+import { type V2AnketaMainSectionId } from "./v2-anketa-workflow.types";
 import { isV2AnketaHiddenUiNode } from "./v2-anketa-editor-ui.util";
 import {
 	readV2AnketaSectionUiOptions,
 	resolveAnketaSectionWorkflowBinding,
 	resolveV2AnketaSectionDisplayTitle,
 } from "./v2-anketa-section-ui.util";
-import type { V2QuestionnaireDto } from "./v2-questionnaire.types";
+import {
+	formatV2SchemaBindingStatus,
+	type V2QuestionnaireDto,
+} from "./v2-questionnaire.types";
 
 export type V2RegistryColumnValueType = "text" | "number" | "date" | "boolean";
 
@@ -1094,7 +1094,9 @@ export function getByFormPath(obj: unknown, path: string): unknown {
 
 function metaValue(row: V2QuestionnaireDto, metaKey: string): unknown {
 	if (metaKey === "readableId") return row.readableId ?? row.id;
-	if (metaKey === "schemaBinding.status") return row.schemaBinding.status;
+	if (metaKey === "schemaBinding.status") {
+		return formatV2SchemaBindingStatus(row.schemaBinding.status);
+	}
 	if (metaKey === "workflowGlobalStatus") return row.workflowGlobalStatus ?? "";
 	return (row as Record<string, unknown>)[metaKey];
 }

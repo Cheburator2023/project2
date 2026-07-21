@@ -110,8 +110,8 @@ export function resolveV2AnketaCanvasUiKind(uiNode, options) {
     return null;
 }
 export function isV2AnketaSystemRootPointer(fieldPointer) {
-    const key = fieldPointer.split("/").filter(Boolean)[0];
-    return key != null && isV2AnketaSystemRootKey(key);
+    const parts = fieldPointer.split("/").filter(Boolean);
+    return parts.length === 1 && isV2AnketaSystemRootKey(parts[0]);
 }
 export function isV2AnketaModalObjectArch(arch) {
     return (arch !== null &&

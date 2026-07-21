@@ -5,6 +5,8 @@ export type V2QuestionnaireStatus = (typeof V2_QUESTIONNAIRE_STATUS_VALUES)[numb
 /** Связь анкеты с версией схемы шаблона на момент создания / редактирования. */
 export declare const V2_SCHEMA_BINDING_STATUS_VALUES: readonly ["aligned", "superseded", "unavailable"];
 export type V2SchemaBindingStatus = (typeof V2_SCHEMA_BINDING_STATUS_VALUES)[number];
+export declare const V2_SCHEMA_BINDING_STATUS_RU: Record<V2SchemaBindingStatus, string>;
+export declare function formatV2SchemaBindingStatus(status: V2SchemaBindingStatus | string | null | undefined): string;
 export type V2SchemaBindingDto = {
     status: V2SchemaBindingStatus;
     /** Версия схемы, к которой привязана анкета. */

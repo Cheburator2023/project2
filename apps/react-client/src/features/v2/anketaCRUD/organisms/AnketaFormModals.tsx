@@ -1,6 +1,7 @@
 import {
 	TotalUncertaintyModal,
 	type TotalUncertaintyFormValues,
+	type UncertaintyRiskSelection,
 } from "@react-client/features/playground/v2_playground/organisms/TotalUncertaintyModal";
 import {
 	useCallback,
@@ -21,11 +22,16 @@ import { getArrayAtPath } from "../utils/anketaModalArrayTableConfig";
 import { getObjectUiSlice } from "../utils/anketaSchemaAtPath";
 import type { AnketaModalKind } from "../utils/anketaFormModalPaths";
 import {
+	createDefaultOverallUncertaintyConfig,
+	parseOverallUncertaintyConfigFromLogic,
+	parseUncertaintyRiskFormEntry,
 	resolveV2AnketaArchComponent,
 	resolveV2QuestionnaireUncertaintyCoefficient,
 	syncAtypicalWorkCoefficientsInFormData,
 	withComputedAtypicalWorkRowTotal,
 	type V2AnketaEditorBindings,
+	type V2LogicRuleDto,
+	type V2OverallUncertaintyConfig,
 } from "@smart-anketa/api-contract";
 import { ATYPICAL_WORK_NEW_ROW_DEFAULTS } from "@react-client/features/v2/admin_constructor/schemaEditor/archComponentPresets";
 import {
@@ -41,71 +47,15 @@ import {
 } from "../utils/anketaSchemaAtPath";
 import { AnketaRjsfObjectModal } from "./AnketaRjsfObjectModal";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
-import { touchSectionForPathInFormData, touchSectionInFormData } from "../hooks/useAnketaWorkflow";
-
-const RISK_FIELD_TO_MODAL: Record<string, string> = {
-	businessComplexity: "business_change",
-	defectsInSolution: "solution_defects",
-	adjacentProjectsImpact: "adjacent_projects",
-	laborCostIncrease: "labor_growth",
-	thirdPartyNegligence: "contractor_risk",
-	staffShortage: "staff_shortage",
-	sanctions: "sanctions",
-	controlProceduresLack: "lack_of_controls",
-	regulatoryChanges: "regulatory_changes",
-	isNotUsedAfterProject: "post_project_usage",
-	itArchitectureChanges: "target_architecture",
-};
-
-const RISK_FIELD_FROM_MODAL = Object.fromEntries(
-	Object.entries(RISK_FIELD_TO_MODAL).map(([schema, modal]) => [modal, schema]),
-);
-
-const RISK_LEVEL_TO_MODAL: Record<string, string> = {
-	Низкий: "low",
-	Средний: "medium",
-	Высокий: "high",
-};
-
-const RISK_LEVEL_FROM_MODAL: Record<string, string> = {
-	low: "Низкий",
-	medium: "Средний",
-	high: "Высокий",
-};
-
-function readUncertaintyField(
-	uncertainty: Record<string, unknown>,
-	canonicalKey: string,
-	legacyKey: string,
-): unknown {
-	if (uncertainty[canonicalKey] != null && uncertainty[canonicalKey] !== "") {
-		return uncertainty[canonicalKey];
-	}
-	return uncertainty[legacyKey];
-}
-
-function formatUncertaintyAdjustment(value: unknown): string {
-	if (value == null || value === "") return "";
-	const parsed = Number(String(value).replace(",", ".").replace("%", ""));
-	if (!Number.isFinite(parsed)) return toText(value);
-	return String(parsed);
-}
-
-function buildOverallUncertaintyLabel(
-	riskGroup: Record<string, unknown>,
-	adjustmentPercent: number | undefined,
-): string | undefined {
-	const { calculated, coefficient } = resolveV2QuestionnaireUncertaintyCoefficient(
-		{
-			uncertaintyCalculation: {
-				riskGroup,
-				uncertaintyAdjustment: adjustmentPercent,
-			},
-		},
-	);
-	if (!calculated) return undefined;
-	return `Средняя ×${coefficient.toFixed(2)}`;
-}
+import {
+	touchSectionForPathInFormData,
+	touchSectionInFormData,
+} from "../hooks/useAnketaWorkflow";
+import {
+	UNCERTAINTY_MODAL_RISK_ID_TO_SCHEMA_KEY,
+	UNCERTAINTY_SCHEMA_KEY_TO_MODAL_RISK_ID,
+	buildUncertaintyModalRiskGroups,
+} from "../utils/v2UncertaintyModalConfig";
 
 function asRecord(value: unknown): Record<string, unknown> {
 	return value && typeof value === "object" && !Array.isArray(value)
@@ -116,6 +66,53 @@ function asRecord(value: unknown): Record<string, unknown> {
 function toText(value: unknown): string {
 	if (value == null) return "";
 	return String(value);
+}
+
+function readStringEnum(field: unknown): string[] {
+	const rec = asRecord(field);
+	if (!Array.isArray(rec.enum)) return [];
+	return rec.enum.map((value) => String(value));
+}
+
+function emptyRiskSelection(): UncertaintyRiskSelection {
+	return { probability: "", goals: "" };
+}
+
+function readUncertaintyField(
+	uncertainty: Record<string, unknown>,
+	canonicalKey: string,
+	legacyKey: string,
+): unknown {
+	if (canonicalKey in uncertainty) return uncertainty[canonicalKey];
+	return uncertainty[legacyKey];
+}
+
+function formatUncertaintyAdjustment(value: unknown): string {
+	if (value == null || value === "") return "";
+	const parsed = Number(
+		String(value).replace(",", ".").replace("%", "").trim(),
+	);
+	if (!Number.isFinite(parsed)) return toText(value);
+	return String(parsed);
+}
+
+function resolveUncertaintyConfig(
+	logicRules?: readonly V2LogicRuleDto[],
+	config?: V2OverallUncertaintyConfig,
+): V2OverallUncertaintyConfig {
+	if (config) return config;
+	if (logicRules) return parseOverallUncertaintyConfigFromLogic(logicRules);
+	return createDefaultOverallUncertaintyConfig();
+}
+
+function buildOverallUncertaintyLabel(
+	formData: Record<string, unknown>,
+	config: V2OverallUncertaintyConfig,
+): string | undefined {
+	const { calculated, coefficient } =
+		resolveV2QuestionnaireUncertaintyCoefficient(formData, { config });
+	if (!calculated) return undefined;
+	return `Средняя ×${coefficient.toFixed(2)}`;
 }
 
 export function uncertaintyModalDefaults(
@@ -143,36 +140,55 @@ export function uncertaintyModalDefaults(
 			),
 		),
 		risks: Object.fromEntries(
-			Object.entries(RISK_FIELD_TO_MODAL).map(([schemaKey, modalKey]) => {
-				const stored = toText(riskGroup[schemaKey]);
-				return [modalKey, RISK_LEVEL_TO_MODAL[stored] ?? ""];
-			}),
+			Object.entries(UNCERTAINTY_SCHEMA_KEY_TO_MODAL_RISK_ID).map(
+				([schemaKey, modalKey]) => {
+					const parsed = parseUncertaintyRiskFormEntry(riskGroup[schemaKey]);
+					if (parsed && typeof parsed === "object") {
+						return [
+							modalKey,
+							{
+								probability: parsed.probability ?? "",
+								goals: parsed.goals ?? "",
+							},
+						];
+					}
+					if (typeof parsed === "string") {
+						const looksLikeGroup = [
+							"Низкий",
+							"Средний",
+							"Высокий",
+							"Очень высокий",
+						].includes(parsed);
+						return [
+							modalKey,
+							looksLikeGroup
+								? emptyRiskSelection()
+								: { probability: "", goals: parsed },
+						];
+					}
+					return [modalKey, emptyRiskSelection()];
+				},
+			),
 		),
 	};
 }
 
-export function uncertaintySummaryText(formData: Record<string, unknown>): string {
+export function uncertaintySummaryText(
+	formData: Record<string, unknown>,
+	options?: {
+		logicRules?: readonly V2LogicRuleDto[];
+		config?: V2OverallUncertaintyConfig;
+	},
+): string {
 	const generalInfo = asRecord(formData.generalInfo);
 	if (generalInfo.overallUncertainty) {
 		return toText(generalInfo.overallUncertainty);
 	}
-	const uncertainty = asRecord(formData.uncertaintyCalculation);
-	const adjustment = readUncertaintyField(
-		uncertainty,
-		"uncertaintyAdjustment",
-		"field_QCwwo5c5",
-	);
-	const adjustmentNumber =
-		adjustment == null || adjustment === "" ? undefined : Number(adjustment);
-	const finiteAdjustment =
-		adjustmentNumber != null && Number.isFinite(adjustmentNumber)
-			? adjustmentNumber
-			: undefined;
-	const derived = buildOverallUncertaintyLabel(
-		asRecord(uncertainty.riskGroup),
-		finiteAdjustment,
-	);
-	return derived ?? "не рассчитана";
+	const config = resolveUncertaintyConfig(options?.logicRules, options?.config);
+	const { calculated, coefficient } =
+		resolveV2QuestionnaireUncertaintyCoefficient(formData, { config });
+	if (!calculated) return "не рассчитана";
+	return `Средняя ×${coefficient.toFixed(2)}`;
 }
 
 type ActiveModal =
@@ -196,6 +212,9 @@ type Props = {
 	) => void;
 	onAtypicalCoefficientsUpdated?: (paths: string[]) => void;
 	controlsRef: MutableRefObject<AnketaFormModalControls>;
+	logicRules?: readonly V2LogicRuleDto[];
+	uncertaintyConfig?: V2OverallUncertaintyConfig;
+	"data-test-id"?: string;
 };
 
 export function AnketaFormModals({
@@ -206,8 +225,53 @@ export function AnketaFormModals({
 	onFormDataChange,
 	onAtypicalCoefficientsUpdated,
 	controlsRef,
+	logicRules,
+	uncertaintyConfig,
 }: Props) {
 	const [activeModal, setActiveModal] = useState<ActiveModal | null>(null);
+	const config = useMemo(
+		() => resolveUncertaintyConfig(logicRules, uncertaintyConfig),
+		[logicRules, uncertaintyConfig],
+	);
+
+	const scaleOptions = useMemo(() => {
+		const uc = asRecord(
+			asRecord(previewSchema.properties).uncertaintyCalculation,
+		);
+		const ucProps = asRecord(uc.properties);
+		const riskGroupProps = asRecord(asRecord(ucProps.riskGroup).properties);
+		const firstRisk = Object.values(riskGroupProps)[0];
+		const firstRiskProps = asRecord(asRecord(firstRisk).properties);
+		return {
+			timeline:
+				readStringEnum(ucProps.initiativeTimeline).length > 0
+					? readStringEnum(ucProps.initiativeTimeline)
+					: config.severityLevels.map((level) => level.timelineLabel),
+			cost:
+				readStringEnum(ucProps.initiativeCost).length > 0
+					? readStringEnum(ucProps.initiativeCost)
+					: config.severityLevels.map((level) => level.costLabel),
+			probability:
+				readStringEnum(firstRiskProps.probability).length > 0
+					? readStringEnum(firstRiskProps.probability)
+					: config.probabilityLevels.map((level) => level.label),
+			goals:
+				readStringEnum(firstRiskProps.goals).length > 0
+					? readStringEnum(firstRiskProps.goals)
+					: config.severityLevels.map((level) => level.goalsLabel),
+		};
+	}, [config, previewSchema]);
+
+	const riskGroups = useMemo(() => {
+		if (config.risks.length === 0) return buildUncertaintyModalRiskGroups();
+		const tooltips = buildUncertaintyModalRiskGroups();
+		return config.risks.map((risk) => {
+			const modalId =
+				UNCERTAINTY_SCHEMA_KEY_TO_MODAL_RISK_ID[risk.id] ?? risk.id;
+			const tip = tooltips.find((item) => item.id === modalId)?.tooltip;
+			return { id: modalId, label: risk.name, tooltip: tip };
+		});
+	}, [config.risks]);
 
 	const modalArrayPathSet = useMemo(
 		() => new Set(modalBindings.modalArrayPaths),
@@ -289,14 +353,20 @@ export function AnketaFormModals({
 				? readArchObjectListAtPath(formData, activeModal.path)
 				: getArrayAtPath(formData, activeModal.path);
 			const rawValues =
-				activeModal.editIndex != null
-					? ((items[activeModal.editIndex] as Record<string, unknown>) ?? {})
-					: newArrayRowDefaults(formData, previewUiSchema, activeModal.path);
-			const arch = resolveV2AnketaArchComponent(
-				getObjectUiSlice(previewUiSchema, activeModal.path),
-			);
+				activeModal.editIndex == null
+					? newArrayRowDefaults(
+							formData,
+							previewUiSchema,
+							activeModal.path,
+							config,
+						)
+					: ((items?.[activeModal.editIndex] as
+							| Record<string, unknown>
+							| undefined) ?? {});
 			const values =
-				arch === "atypicalWork"
+				resolveV2AnketaArchComponent(
+					getObjectUiSlice(previewUiSchema, activeModal.path),
+				) === "atypicalWork"
 					? withComputedAtypicalWorkRowTotal(rawValues)
 					: rawValues;
 			const parentNode = resolveSchemaNodeTitle(
@@ -309,7 +379,7 @@ export function AnketaFormModals({
 				title:
 					typeof slice.schema.title === "string" && slice.schema.title.trim()
 						? slice.schema.title
-						: parentNode ?? "Элемент",
+						: (parentNode ?? "Элемент"),
 				isArrayModal: true,
 			};
 		}
@@ -330,6 +400,7 @@ export function AnketaFormModals({
 		};
 	}, [
 		activeModal,
+		config,
 		formData,
 		modalArrayPathSet,
 		previewSchema,
@@ -340,7 +411,9 @@ export function AnketaFormModals({
 		data: Record<string, unknown>,
 		highlight = false,
 	): Record<string, unknown> => {
-		const { coefficient } = resolveV2QuestionnaireUncertaintyCoefficient(data);
+		const { coefficient } = resolveV2QuestionnaireUncertaintyCoefficient(data, {
+			config,
+		});
 		const synced = syncAtypicalWorkCoefficientsInFormData(
 			data,
 			previewUiSchema,
@@ -358,10 +431,16 @@ export function AnketaFormModals({
 			const currentRiskGroup = asRecord(currentUncertainty.riskGroup);
 			const nextRiskGroup = { ...currentRiskGroup };
 
-			for (const [modalKey, value] of Object.entries(values.risks)) {
-				const schemaKey = RISK_FIELD_FROM_MODAL[modalKey];
-				if (!schemaKey) continue;
-				nextRiskGroup[schemaKey] = RISK_LEVEL_FROM_MODAL[value] ?? "";
+			for (const [modalKey, selection] of Object.entries(values.risks)) {
+				const schemaKey =
+					UNCERTAINTY_MODAL_RISK_ID_TO_SCHEMA_KEY[modalKey] ?? modalKey;
+				const probability = selection?.probability?.trim() ?? "";
+				const goals = selection?.goals?.trim() ?? "";
+				if (!probability && !goals) {
+					nextRiskGroup[schemaKey] = "";
+					continue;
+				}
+				nextRiskGroup[schemaKey] = { probability, goals };
 			}
 
 			const adjustment =
@@ -369,12 +448,24 @@ export function AnketaFormModals({
 					? undefined
 					: Number(values.totalUncertaintyAdjustment.replace(",", "."));
 
-			const overallUncertainty = buildOverallUncertaintyLabel(
-				nextRiskGroup,
-				adjustment,
-			);
+			const nextFormData = {
+				...prev,
+				generalInfo: { ...asRecord(prev.generalInfo) },
+				uncertaintyCalculation: {
+					...currentUncertainty,
+					initiativeTimeline: values.initiativeTimeline || undefined,
+					initiativeCost:
+						values.initiativeCost === "" ? undefined : values.initiativeCost,
+					uncertaintyAdjustment: adjustment,
+					riskGroup: nextRiskGroup,
+				},
+			};
 
-			const nextGeneralInfo = { ...asRecord(prev.generalInfo) };
+			const overallUncertainty = buildOverallUncertaintyLabel(
+				nextFormData,
+				config,
+			);
+			const nextGeneralInfo = { ...asRecord(nextFormData.generalInfo) };
 			if (overallUncertainty) {
 				nextGeneralInfo.overallUncertainty = overallUncertainty;
 			} else {
@@ -384,16 +475,8 @@ export function AnketaFormModals({
 			return applyAtypicalCoefficientSync(
 				touchSectionInFormData(
 					{
-						...prev,
+						...nextFormData,
 						generalInfo: nextGeneralInfo,
-						uncertaintyCalculation: {
-							...currentUncertainty,
-							initiativeTimeline: values.initiativeTimeline || undefined,
-							initiativeCost:
-								values.initiativeCost === "" ? undefined : values.initiativeCost,
-							uncertaintyAdjustment: adjustment,
-							riskGroup: nextRiskGroup,
-						},
 					},
 					"generalInfo",
 				),
@@ -416,8 +499,9 @@ export function AnketaFormModals({
 				arch === "atypicalWork"
 					? withComputedAtypicalWorkRowTotal({
 							...values,
-							coefficient: resolveV2QuestionnaireUncertaintyCoefficient(prev)
-								.coefficient,
+							coefficient: resolveV2QuestionnaireUncertaintyCoefficient(prev, {
+								config,
+							}).coefficient,
 						})
 					: values;
 			const updated = isAnketaArchObjectListPath(path)
@@ -463,6 +547,11 @@ export function AnketaFormModals({
 				onClose={closeModal}
 				onSubmit={handleUncertaintySubmit}
 				defaultValues={uncertaintyModalDefaults(formData)}
+				timelineOptions={scaleOptions.timeline}
+				costOptions={scaleOptions.cost}
+				probabilityOptions={scaleOptions.probability}
+				goalsOptions={scaleOptions.goals}
+				riskGroups={riskGroups}
 			/>
 			{rjsfModalSlice ? (
 				<AnketaRjsfObjectModal
@@ -493,15 +582,11 @@ export function AnketaFormModals({
 	);
 }
 
-/**
- * Значения по умолчанию для НОВОЙ строки массива. Раньше их подставлял RJSF из
- * schema `default`, но это «портило» существующий снепшот, поэтому дефолты сняты
- * со схемы и применяются явно только при создании строки.
- */
 function newArrayRowDefaults(
 	formData: Record<string, unknown>,
 	previewUiSchema: UiSchema,
 	path: string,
+	config: V2OverallUncertaintyConfig,
 ): Record<string, unknown> {
 	const arch = resolveV2AnketaArchComponent(
 		getObjectUiSlice(previewUiSchema, path),
@@ -509,8 +594,9 @@ function newArrayRowDefaults(
 	if (arch === "atypicalWork") {
 		return {
 			...ATYPICAL_WORK_NEW_ROW_DEFAULTS,
-			coefficient: resolveV2QuestionnaireUncertaintyCoefficient(formData)
-				.coefficient,
+			coefficient: resolveV2QuestionnaireUncertaintyCoefficient(formData, {
+				config,
+			}).coefficient,
 		};
 	}
 	return {};

@@ -43,7 +43,6 @@ import { AnketaFormPageLayout } from "./AnketaFormPageLayout";
 import { useCreateV2QuestionnaireVersion } from "@react-client/common/api/queries/v2-questionnaires";
 import { useNavigate } from "react-router";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { Flex } from "@react-client/common/primitives/Flex";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
@@ -178,11 +177,8 @@ export function AnketaFormShell({
 		[questionnaireCalcName],
 	);
 
-	const canRenameQuestionnaire =
-		Boolean(onRenameQuestionnaire) &&
-		Boolean(questionnaireCalcName) &&
-		!globallyLocked &&
-		!effectiveReadOnly;
+	/** Переименование доступно на любой стадии (в т.ч. «Заполнено» / read-only). */
+	const canRenameQuestionnaire = Boolean(onRenameQuestionnaire);
 
 	const finalizeComplete = useCallback(
 		(withSave: boolean) => {
@@ -228,34 +224,26 @@ export function AnketaFormShell({
 		? canEditCalculation
 		: canCreateCalculation;
 
+	const headerLeadingAccessory = useMemo(
+		() =>
+			canRenameQuestionnaire ? (
+				<IconButton
+					size="small"
+					title="Переименовать анкету"
+					aria-label="Переименовать анкету"
+					disabled={renamePending}
+					onClick={() => setRenameDialogOpen(true)}
+					data-test-id={`${dataTestId}--rename`}
+				>
+					<EditOutlinedIcon fontSize="small" />
+				</IconButton>
+			) : null,
+		[canRenameQuestionnaire, dataTestId, renamePending],
+	);
+
 	const headerActions = useMemo(
 		() => (
 			<>
-				{questionnaireCalcName ? (
-					<Flex alignItems="center" gap={4} minWidth="0" flexShrink={1}>
-						<Typography
-							variant="body2"
-							color="text.secondary"
-							noWrap
-							title={questionnaireCalcName}
-							sx={{ maxWidth: { xs: 120, sm: 240, md: 360 } }}
-						>
-							{questionnaireCalcName}
-						</Typography>
-						{canRenameQuestionnaire ? (
-							<IconButton
-								size="small"
-								title="Переименовать анкету"
-								aria-label="Переименовать анкету"
-								disabled={renamePending}
-								onClick={() => setRenameDialogOpen(true)}
-								data-test-id={`${dataTestId}--rename`}
-							>
-								<EditOutlinedIcon fontSize="small" />
-							</IconButton>
-						) : null}
-					</Flex>
-				) : null}
 				<AnketaSectionStatusChip kind="global" status={workflow.globalStatus} />
 				{(!globallyLocked && canWorkflowApprove )? (
 					<Button
@@ -317,16 +305,12 @@ export function AnketaFormShell({
 			</>
 		),
 		[
-			canRenameQuestionnaire,
 			canSaveQuestionnaire,
 			canWorkflowApprove,
-			dataTestId,
 			headerExtra,
 			isEditingQuestionnaire,
 			onSave,
 			openCopyNameDialog,
-			questionnaireCalcName,
-			renamePending,
 			saveDisabled,
 			savePending,
 			effectiveReadOnly,
@@ -360,6 +344,8 @@ export function AnketaFormShell({
 		<>
 			<AnketaFormPageLayout
 				data-test-id={dataTestId}
+				title={questionnaireCalcName?.trim() || undefined}
+				leadingAccessory={headerLeadingAccessory}
 				headerActions={headerActions}
 				loading={isPageLoading}
 				main={

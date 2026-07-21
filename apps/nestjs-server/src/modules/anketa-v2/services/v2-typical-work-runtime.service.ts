@@ -78,6 +78,8 @@ export type BuildCatalogTasksParams = {
 	allowedWorkIds?: readonly string[];
 	/** Игнорировать archComponentType при выборе работ (модельный стрим и т.п.). */
 	worksCatalogAllArchComponents?: boolean;
+	/** Конфиг методики «Общая неопределённость» из logic шаблона. */
+	uncertaintyConfig?: import("@smart-anketa/api-contract").V2OverallUncertaintyConfig;
 };
 
 type RuntimeWorkContext = {
@@ -99,6 +101,7 @@ type RuntimeWorkContext = {
 	schemaParams: WorkSchemaParamDef[];
 	triggersMatch: boolean;
 	alwaysShown: boolean;
+	uncertaintyConfig?: import("@smart-anketa/api-contract").V2OverallUncertaintyConfig;
 };
 
 function decimalToNumber(value: string | number | null | undefined): number {
@@ -248,6 +251,7 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 				})),
 			],
 			formulaParamCodes,
+			config: ctx.uncertaintyConfig,
 		},
 	);
 
@@ -480,6 +484,7 @@ export class V2TypicalWorkRuntimeService {
 				schemaParams,
 				triggersMatch,
 				alwaysShown,
+				uncertaintyConfig: params.uncertaintyConfig,
 			});
 		}
 

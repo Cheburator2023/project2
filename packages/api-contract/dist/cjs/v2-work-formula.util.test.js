@@ -237,4 +237,34 @@ const v2_typical_work_types_1 = require("./v2-typical-work.types");
             paramName: "Поле справочника @ field_Hqtu1z5O",
         }, laborParams)).toBe(true);
     });
+    (0, vitest_1.it)("removes formula tokens incompatible with labor param kind", () => {
+        const tokens = [
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_coeff",
+                paramCode: "complexity",
+                paramName: "Сложность",
+            },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_anyof",
+                paramCode: "channel",
+                paramName: "Канал",
+            },
+        ];
+        const next = (0, v2_work_formula_util_1.removeIncompatibleLaborKindFormulaTokens)(tokens, [
+            { paramCode: "complexity", paramName: "Сложность", kind: "any_of" },
+            { paramCode: "channel", paramName: "Канал", kind: "any_of" },
+        ]);
+        (0, vitest_1.expect)(next).toEqual([
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_anyof",
+                paramCode: "channel",
+                paramName: "Канал",
+            },
+        ]);
+    });
 });

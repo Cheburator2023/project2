@@ -7,7 +7,6 @@ import { useV2AnketaSchemaEngine } from "@react-client/features/v2/anketaCRUD/ho
 import { AnketaCreateMetaDialog } from "@react-client/features/v2/anketaCRUD/organisms/AnketaCreateMetaDialog";
 import { stripQuestionnaireCalcNameFromFormData } from "@react-client/features/v2/anketaCRUD/utils/anketaQuestionnaireMeta.util";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
-import Typography from "@mui/material/Typography";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -81,14 +80,11 @@ export const AnketaCreatePageV2 = () => {
 					source={source}
 					engine={engine}
 					loading={templatesLoading}
+					questionnaireCalcName={calcName}
+					onRenameQuestionnaire={setCalcName}
 					onSave={onSave}
 					savePending={createMutation.isPending}
 					saveDisabled={!activeTemplate?.currentVersionId}
-					headerExtra={
-						<Typography variant="body2" color="text.secondary" noWrap>
-							{calcName}
-						</Typography>
-					}
 				/>
 			) : null}
 		</>

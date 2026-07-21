@@ -29,7 +29,7 @@ import type {
 } from "@smart-anketa/api-contract";
 import {
 	isParamUsedInFormula,
-	markFormulaParamInvalid,
+	removeIncompatibleLaborKindFormulaTokens,
 	syncTermsFromTokenFormula,
 	tokensToText,
 	computeFormulaBadgeFromTokens,
@@ -497,9 +497,17 @@ export function TypicalWorkEditableCard({
 	);
 
 	const commitDraft = (next: V2TypicalWorkCardDto) => {
+		const prunedTokens = removeIncompatibleLaborKindFormulaTokens(
+			next.formula.tokens,
+			next.laborParams.map((g) => ({
+				paramCode: g.paramCode,
+				paramName: g.paramName,
+				kind: g.kind ?? "by_value",
+			})),
+		);
 		const formula = {
-			tokens: next.formula.tokens,
-			text: tokensToText(next.formula.tokens),
+			tokens: prunedTokens,
+			text: tokensToText(prunedTokens),
 		};
 		const formulaTerms = syncTermsFromTokenFormula(formula);
 		const nextTrigger = analyzeTriggerRules(
@@ -601,15 +609,10 @@ export function TypicalWorkEditableCard({
 		const nextLabor = draft.laborParams.filter(
 			(g) => g.paramCode !== paramCode,
 		);
-		const nextTokens = markFormulaParamInvalid(draft.formula.tokens, paramCode);
+		// commitDraft сам вычистит токены отсутствующего параметра из формулы
 		commitDraft({
 			...draft,
 			laborParams: nextLabor,
-			formula: {
-				...draft.formula,
-				tokens: nextTokens,
-				text: tokensToText(nextTokens),
-			},
 		});
 	};
 
@@ -1366,7 +1369,24 @@ export function TypicalWorkEditableCard({
 																			})(),
 															};
 														});
-														commitDraft({ ...draft, laborParams: nextGroups });
+														const nextTokens =
+															removeIncompatibleLaborKindFormulaTokens(
+																draft.formula.tokens,
+																nextGroups.map((g) => ({
+																	paramCode: g.paramCode,
+																	paramName: g.paramName,
+																	kind: g.kind ?? "by_value",
+																})),
+															);
+														commitDraft({
+															...draft,
+															laborParams: nextGroups,
+															formula: {
+																...draft.formula,
+																tokens: nextTokens,
+																text: tokensToText(nextTokens),
+															},
+														});
 													}}
 													sx={{ minWidth: 130, height: 30 }}
 												>

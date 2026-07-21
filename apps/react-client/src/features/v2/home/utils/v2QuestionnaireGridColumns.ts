@@ -2,6 +2,7 @@ import type { ColDef, ColGroupDef } from "ag-grid-community";
 import {
 	buildV2QuestionnaireRegistryColumnTree,
 	estimateRegistryColumnWidth,
+	formatV2SchemaBindingStatus,
 	type V2RegistryColumnNode,
 	type V2RegistryLeafColumn,
 	type V2RegistrySchemaColumnOptions,
@@ -15,6 +16,7 @@ import {
 	v2WorkflowPanelStatusCell,
 	v2WorkflowSectionStatusCell,
 } from "../molecules/V2WorkflowStatusCell";
+import { V2SchemaBindingStatusCell } from "../molecules/V2SchemaBindingStatusCell";
 import type { V2QuestionnaireGridRow } from "../types/v2QuestionnaireGrid.types";
 import {
 	formatGridCellValue,
@@ -136,8 +138,11 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 				minWidth,
 				resizable: true,
 				...baseFilter,
+				cellRenderer: V2SchemaBindingStatusCell,
 				valueGetter: (p) =>
-					resolveVersionRow(p.data)?.schemaBinding.status ?? "",
+					formatV2SchemaBindingStatus(
+						resolveVersionRow(p.data)?.schemaBinding.status,
+					),
 			};
 		}
 		return {

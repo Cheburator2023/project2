@@ -1,6 +1,7 @@
 import {
 	collectAtypicalWorkRowsFromData,
 	isPositiveBinaryFormValue,
+	resolveV2QuestionnaireUncertaintyCoefficient,
 	V2_LEGACY_STAGE_SUMMARY_POINTERS,
 	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
 	type V2LegacyStageEvaluationDto,
@@ -170,33 +171,6 @@ function calculateAlgorithmComplexityCoefficient(
 	}, 0);
 }
 
-function mapRiskLevelToCoefficient(level: string): number {
-	switch (level) {
-		case "Низкий":
-			return 0.03;
-		case "Средний":
-			return 0.05;
-		case "Высокий":
-			return 0.07;
-		case "Очень высокий":
-			return 0.1;
-		default:
-			return 0;
-	}
-}
-
-function calculateTotalUncertaintyFromRiskGroup(
-	riskGroup: Record<string, unknown> | undefined,
-	correctionPercent: number,
-): number {
-	if (!riskGroup) return roundUp2(1 + correctionPercent / 100);
-	let sum = 0;
-	for (const v of Object.values(riskGroup)) {
-		if (typeof v === "string") sum += mapRiskLevelToCoefficient(v);
-	}
-	return roundUp2(1 + sum + correctionPercent / 100);
-}
-
 function calculateDeploymentChannelCoefficient(channels: string[]): number {
 	const coefficientMap: Record<string, number> = {
 		Батч: 0.5,
@@ -362,7 +336,6 @@ function extractCoefficients(data: Record<string, unknown>): Coefficients {
 	const detailInfo = readRecord(data.detailInfo);
 	const detailParams =
 		readRecord(detailInfo?.model) ?? readRecord(detailInfo?.parameters);
-	const uncertainty = readRecord(data.uncertaintyCalculation);
 	const ctx = resolveLegacyFormContext(data);
 
 	return {
@@ -372,10 +345,8 @@ function extractCoefficients(data: Record<string, unknown>): Coefficients {
 				? generalInfo.complexity
 				: undefined,
 		),
-		generalUncertaintyCoefficient: calculateTotalUncertaintyFromRiskGroup(
-			readRecord(uncertainty?.riskGroup),
-			ctx.uncertaintyAdjustmentPercent,
-		),
+		generalUncertaintyCoefficient:
+			resolveV2QuestionnaireUncertaintyCoefficient(data).coefficient,
 		readyPromReportsCoefficient: getReadyPromReportsCoefficient(
 			ctx.readyPromReports,
 		),

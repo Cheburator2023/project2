@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyWorkRounding, evaluateWorkFormula, formatWorkFormulaGeneralSummary, isParamUsedInFormula, isWorkFormulaLaborParamKnown, markFormulaParamInvalid, normalizeWorkFormulaLaborParamTokens, parseWorkFormulaText, previewWorkFormula, reconcileFormulaLaborParamTokens, tokensToText, validateWorkFormulaTokens, } from "./v2-work-formula.util";
+import { applyWorkRounding, evaluateWorkFormula, formatWorkFormulaGeneralSummary, isParamUsedInFormula, isWorkFormulaLaborParamKnown, markFormulaParamInvalid, normalizeWorkFormulaLaborParamTokens, parseWorkFormulaText, previewWorkFormula, reconcileFormulaLaborParamTokens, removeIncompatibleLaborKindFormulaTokens, tokensToText, validateWorkFormulaTokens, } from "./v2-work-formula.util";
 import { defaultWorkFormula, defaultWorkRounding } from "./v2-typical-work.types";
 describe("v2-work-formula.util", () => {
     it("parses and evaluates arch_count_coeff token", () => {
@@ -234,5 +234,35 @@ describe("v2-work-formula.util", () => {
             paramCode: "field_Hqtu1z5O",
             paramName: "Поле справочника @ field_Hqtu1z5O",
         }, laborParams)).toBe(true);
+    });
+    it("removes formula tokens incompatible with labor param kind", () => {
+        const tokens = [
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_coeff",
+                paramCode: "complexity",
+                paramName: "Сложность",
+            },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_anyof",
+                paramCode: "channel",
+                paramName: "Канал",
+            },
+        ];
+        const next = removeIncompatibleLaborKindFormulaTokens(tokens, [
+            { paramCode: "complexity", paramName: "Сложность", kind: "any_of" },
+            { paramCode: "channel", paramName: "Канал", kind: "any_of" },
+        ]);
+        expect(next).toEqual([
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            {
+                kind: "param_anyof",
+                paramCode: "channel",
+                paramName: "Канал",
+            },
+        ]);
     });
 });

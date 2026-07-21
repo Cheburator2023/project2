@@ -112,6 +112,11 @@ export const navigationCustomizations: Components<Theme> = {
 			select: ({ theme }) => ({
 				display: "flex",
 				alignItems: "center",
+				paddingRight: "36px !important",
+				textOverflow: "ellipsis",
+				overflow: "hidden",
+				whiteSpace: "nowrap",
+				boxSizing: "border-box",
 				...theme.applyStyles("dark", {
 					display: "flex",
 					alignItems: "center",
@@ -120,6 +125,9 @@ export const navigationCustomizations: Components<Theme> = {
 					},
 				}),
 			}),
+			icon: {
+				right: 8,
+			},
 		},
 	},
 	MuiLink: {

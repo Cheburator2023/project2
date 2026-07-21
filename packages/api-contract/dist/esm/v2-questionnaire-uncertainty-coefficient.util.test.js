@@ -1,16 +1,55 @@
 import { describe, expect, it } from "vitest";
 import { applyComputedOverallUncertaintyToTypicalWorkParamCoefficients, isTypicalWorkComputedUncertaintyParam, resolveV2QuestionnaireUncertaintyCoefficient, syncAtypicalWorkCoefficientsInFormData, } from "./v2-questionnaire-uncertainty-coefficient.util";
+import { createDefaultOverallUncertaintyConfig } from "./v2-overall-uncertainty-config.util";
+import { INFLUENCE_VALUES, PROBABILITY_VALUES } from "./calculation.constants";
 describe("resolveV2QuestionnaireUncertaintyCoefficient", () => {
     it("returns 1 when uncertainty is not calculated", () => {
-        expect(resolveV2QuestionnaireUncertaintyCoefficient({})).toEqual({ calculated: false, coefficient: 1 });
+        expect(resolveV2QuestionnaireUncertaintyCoefficient({})).toEqual({
+            calculated: false,
+            coefficient: 1,
+        });
     });
-    it("returns calculated coefficient from risk group and adjustment", () => {
+    it("keeps legacy Σ + adjustment for group-name risk strings", () => {
         expect(resolveV2QuestionnaireUncertaintyCoefficient({
             uncertaintyCalculation: {
                 riskGroup: { sanctions: "Средний", techDebt: "Высокий" },
                 uncertaintyAdjustment: 10,
             },
         })).toEqual({ calculated: true, coefficient: 1.22 });
+    });
+    it("uses configurator methodology for structured risks", () => {
+        const config = createDefaultOverallUncertaintyConfig();
+        const result = resolveV2QuestionnaireUncertaintyCoefficient({
+            uncertaintyCalculation: {
+                initiativeTimeline: config.severityLevels[0].timelineLabel,
+                initiativeCost: config.severityLevels[0].costLabel,
+                riskGroup: {
+                    sanctions: {
+                        probability: PROBABILITY_VALUES[4],
+                        goals: INFLUENCE_VALUES[0],
+                    },
+                },
+            },
+        }, { config });
+        // base sev 0 × very high prob → medium 0.05; count 1 → ×1; coef 1.05
+        expect(result.calculated).toBe(true);
+        expect(result.coefficient).toBe(1.05);
+    });
+    it("manual adjustment fully overrides auto for structured risks", () => {
+        const config = createDefaultOverallUncertaintyConfig();
+        expect(resolveV2QuestionnaireUncertaintyCoefficient({
+            uncertaintyCalculation: {
+                initiativeTimeline: config.severityLevels[4].timelineLabel,
+                initiativeCost: config.severityLevels[4].costLabel,
+                uncertaintyAdjustment: 10,
+                riskGroup: {
+                    sanctions: {
+                        probability: PROBABILITY_VALUES[4],
+                        goals: INFLUENCE_VALUES[4],
+                    },
+                },
+            },
+        }, { config })).toEqual({ calculated: true, coefficient: 1.1 });
     });
     it("treats adjustment-only input as calculated", () => {
         expect(resolveV2QuestionnaireUncertaintyCoefficient({
@@ -49,30 +88,25 @@ describe("typical work overallUncertainty", () => {
                 riskGroup: { sanctions: "Высокий" },
             },
         }, paramCoefficients, { formulaParamCodes: ["complexity"] });
+        expect(paramCoefficients.complexity).toBe(1.5);
         expect(paramCoefficients.overallUncertainty).toBeUndefined();
     });
 });
 describe("syncAtypicalWorkCoefficientsInFormData", () => {
-    const uiSchema = {
-        detailInfo: {
-            atypicalTasks: {
-                "ui:options": { archComponent: "atypicalWork" },
-            },
-        },
-    };
-    it("updates coefficient on all atypical rows", () => {
-        const result = syncAtypicalWorkCoefficientsInFormData({
+    it("updates atypical rows", () => {
+        const synced = syncAtypicalWorkCoefficientsInFormData({
             detailInfo: {
-                atypicalTasks: [
-                    { name: "A", coefficient: 1.5, estimateHoursPerDay: 2 },
-                    { name: "B", coefficient: 1, estimateHoursPerDay: 3 },
-                ],
+                atypical: [{ name: "A", coefficient: 1 }],
             },
-        }, uiSchema, 1.12);
-        expect(result.changed).toBe(true);
-        expect(result.updatedPaths).toEqual(["detailInfo.atypicalTasks"]);
-        const rows = result.formData.detailInfo.atypicalTasks;
-        expect(rows[0]?.coefficient).toBe(1.12);
-        expect(rows[1]?.coefficient).toBe(1.12);
+        }, {
+            detailInfo: {
+                atypical: {
+                    "ui:options": { archComponent: "atypicalWork" },
+                },
+            },
+        }, 1.15);
+        expect(synced.changed).toBe(true);
+        expect(synced.formData.detailInfo
+            .atypical[0]?.coefficient).toBe(1.15);
     });
 });

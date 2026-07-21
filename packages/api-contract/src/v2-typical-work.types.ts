@@ -39,6 +39,7 @@ export type V2WorkTriggerStatus =
 export const V2_LOGIC_WORKSPACE_TAB_VALUES = [
 	"works",
 	"dependencies",
+	"uncertainty",
 	"jsonlogic",
 ] as const;
 

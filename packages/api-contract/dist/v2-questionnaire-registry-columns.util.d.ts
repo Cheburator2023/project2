@@ -1,5 +1,5 @@
 import { type V2AnketaMainSectionId } from "./v2-anketa-workflow.types";
-import type { V2QuestionnaireDto } from "./v2-questionnaire.types";
+import { type V2QuestionnaireDto } from "./v2-questionnaire.types";
 export type V2RegistryColumnValueType = "text" | "number" | "date" | "boolean";
 export type V2RegistryColumnKind = "meta" | "form" | "sectionStatus" | "panelStatus";
 export type V2RegistryLeafColumn = {

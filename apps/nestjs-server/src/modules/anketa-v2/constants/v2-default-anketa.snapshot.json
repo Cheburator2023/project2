@@ -1175,6 +1175,10 @@
 					"productionAdditionalReports": {
 						"type": "string",
 						"title": "Необходимость продуктивизации и количество дополнительных витрин"
+					},
+					"overallUncertaintyModal": {
+						"type": "string",
+						"title": "Расчёт общей неопределённости"
 					}
 				}
 			},
@@ -1789,11 +1793,18 @@
 							}
 						}
 					},
-					"field_QCwwo5c5": {
-						"type": "integer",
-						"title": "Поправка на общую неопределённость"
+					"initiativeTimeline": {
+						"enum": [
+							"Менее 1 мес.",
+							"1–4 мес.",
+							"4–10 мес.",
+							"10–18 мес.",
+							"Более 18 мес."
+						],
+						"type": "string",
+						"title": "Сроки инициативы"
 					},
-					"field_bbTNlnC6": {
+					"initiativeCost": {
 						"enum": [
 							"до 45.3 млн",
 							"45.3 — 438 млн",
@@ -1804,16 +1815,11 @@
 						"type": "string",
 						"title": "Стоимость инициативы"
 					},
-					"field_xGCMlbMP": {
-						"enum": [
-							"Менее 1 мес.",
-							"1–4 мес.",
-							"4–10 мес.",
-							"10–18 мес.",
-							"Более 18 мес."
-						],
-						"type": "string",
-						"title": "Сроки инициативы"
+					"uncertaintyAdjustment": {
+						"type": "number",
+						"title": "Поправка на общую неопределённость",
+						"minimum": 0,
+						"maximum": 30
 					}
 				}
 			}
@@ -2764,6 +2770,7 @@
 				"field_GWL5PLfS",
 				"assessedInitiativesCount",
 				"productionAdditionalReports",
+				"overallUncertaintyModal",
 				"overallUncertainty",
 				"modelService"
 			],
@@ -2978,6 +2985,13 @@
 				"ui:options": {
 					"dictionaryCode": "v2.method.26.необходимость_продуктивизации_и_количество_допол",
 					"schemaFieldUid": "field_d2a78102-57a7-4f7e-aad2-0cb015948496"
+				}
+			},
+			"overallUncertaintyModal": {
+				"ui:widget": "V2UncertaintyModalWidget",
+				"ui:options": {
+					"fullWidth": true,
+					"schemaFieldUid": "field_overall_uncertainty_modal"
 				}
 			}
 		},
@@ -3775,9 +3789,9 @@
 		},
 		"uncertaintyCalculation": {
 			"ui:order": [
-				"field_xGCMlbMP",
-				"field_bbTNlnC6",
-				"field_QCwwo5c5",
+				"initiativeTimeline",
+				"initiativeCost",
+				"uncertaintyAdjustment",
 				"riskGroup"
 			],
 			"riskGroup": {
@@ -3889,27 +3903,30 @@
 			"ui:widget": "hidden",
 			"ui:options": {
 				"hidden": true,
-				"schemaFieldUid": "field_18ea6916-6593-4682-acdc-48ca5e31badb"
+				"schemaFieldUid": "field_18ea6916-6593-4682-acdc-48ca5e31badb",
+				"system": true
 			},
-			"field_QCwwo5c5": {
+			"initiativeTimeline": {
+				"ui:widget": "select",
 				"ui:options": {
-					"tooltip": "При необходимости учесть дополнительные экспертные риски, заполнив поле \"Поправка на общую неопределенность\" значением в диапазоне от 0-30%",
-					"schemaFieldUid": "field_59399372-52ef-4e49-9535-b011a7b30782"
+					"dictionaryCode": "v2.method.21.сроки_инициативы",
+					"schemaFieldUid": "field_82339b7f-0791-4a0b-8348-815ee6258d4b"
 				}
 			},
-			"field_bbTNlnC6": {
+			"initiativeCost": {
 				"ui:widget": "select",
 				"ui:options": {
 					"dictionaryCode": "v2.method.22.стоимость_инициативы",
 					"schemaFieldUid": "field_8c0fedd4-9ec5-4528-8376-e695e5bd0bc3"
 				}
 			},
-			"field_xGCMlbMP": {
-				"ui:widget": "select",
+			"uncertaintyAdjustment": {
 				"ui:options": {
-					"dictionaryCode": "v2.method.21.сроки_инициативы",
-					"schemaFieldUid": "field_82339b7f-0791-4a0b-8348-815ee6258d4b"
-				}
+					"tooltip": "При необходимости учесть дополнительные экспертные риски, заполнив поле \"Поправка на общую неопределенность\" значением в диапазоне от 0-30%",
+					"schemaFieldUid": "field_59399372-52ef-4e49-9535-b011a7b30782",
+					"suffix": "%"
+				},
+				"ui:widget": "NumberInputWidget"
 			}
 		}
 	},

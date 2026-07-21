@@ -10,6 +10,7 @@ import {
 	parseWorkFormulaText,
 	previewWorkFormula,
 	reconcileFormulaLaborParamTokens,
+	removeIncompatibleLaborKindFormulaTokens,
 	tokensToText,
 	validateWorkFormulaTokens,
 } from "./v2-work-formula.util";
@@ -296,5 +297,36 @@ describe("v2-work-formula.util", () => {
 				laborParams,
 			),
 		).toBe(true);
+	});
+
+	it("removes formula tokens incompatible with labor param kind", () => {
+		const tokens = [
+			{ kind: "norm" as const },
+			{ kind: "operator" as const, op: "*" as const },
+			{
+				kind: "param_coeff" as const,
+				paramCode: "complexity",
+				paramName: "Сложность",
+			},
+			{ kind: "operator" as const, op: "*" as const },
+			{
+				kind: "param_anyof" as const,
+				paramCode: "channel",
+				paramName: "Канал",
+			},
+		];
+		const next = removeIncompatibleLaborKindFormulaTokens(tokens, [
+			{ paramCode: "complexity", paramName: "Сложность", kind: "any_of" },
+			{ paramCode: "channel", paramName: "Канал", kind: "any_of" },
+		]);
+		expect(next).toEqual([
+			{ kind: "norm" },
+			{ kind: "operator", op: "*" },
+			{
+				kind: "param_anyof",
+				paramCode: "channel",
+				paramName: "Канал",
+			},
+		]);
 	});
 });

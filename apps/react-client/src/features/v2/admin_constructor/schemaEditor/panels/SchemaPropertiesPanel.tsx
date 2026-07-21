@@ -252,7 +252,7 @@ function FieldTypeControl({
 				label="Тип поля"
 				value="Расчёт общей неопределённости"
 				disabled
-				helperText="Кнопка открывает модалку расчёта; данные сохраняются в uncertaintyCalculation"
+				helperText="Кнопка открывает модалку расчёта; данные и шкалы настраиваются во вкладке «Общая неопределённость» (логика). Поля пишутся в uncertaintyCalculation."
 			/>
 		);
 	}

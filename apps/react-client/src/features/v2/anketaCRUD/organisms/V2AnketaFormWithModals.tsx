@@ -177,6 +177,7 @@ export function V2AnketaFormWithModals({
 				onFormDataChange={engine.setFormData}
 				onAtypicalCoefficientsUpdated={handleAtypicalCoefficientsUpdated}
 				controlsRef={modalControlsRef}
+				logicRules={engine.logicRules}
 				data-test-id={"anketa-form-modals"}
 			/>
 		</>
