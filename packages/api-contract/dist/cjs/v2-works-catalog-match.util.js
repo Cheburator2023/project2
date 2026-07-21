@@ -20,6 +20,8 @@ exports.triggerRuleCatalogGroupKey = triggerRuleCatalogGroupKey;
 exports.catalogValueMatchesTriggerRule = catalogValueMatchesTriggerRule;
 exports.coerceNumericLaborActual = coerceNumericLaborActual;
 exports.readValueAtSchemaPointer = readValueAtSchemaPointer;
+exports.flattenSourceContextValue = flattenSourceContextValue;
+exports.findFieldValueInFormData = findFieldValueInFormData;
 exports.buildLaborCoefficientLookupSource = buildLaborCoefficientLookupSource;
 exports.laborValueMatches = laborValueMatches;
 exports.matchSingleTypicalWorkRuleForTriggerFormula = matchSingleTypicalWorkRuleForTriggerFormula;
@@ -390,6 +392,51 @@ function readValueAtSchemaPointer(root, pointer) {
     }
     return cur;
 }
+/**
+ * Разворачивает значение sourceContextPaths в плоский объект полей.
+ * UI хранит dataProcess/dataMart/modelService как массив записей — берём первую.
+ */
+function flattenSourceContextValue(value) {
+    if (!value || typeof value !== "object")
+        return {};
+    if (Array.isArray(value)) {
+        for (const item of value) {
+            if (item && typeof item === "object" && !Array.isArray(item)) {
+                return { ...item };
+            }
+        }
+        return {};
+    }
+    return { ...value };
+}
+/** Ищет значение поля по коду в глубине formData (массивы арх. блоков и т.п.). */
+function findFieldValueInFormData(formData, fieldCode) {
+    const code = fieldCode.trim();
+    if (!code)
+        return undefined;
+    const visit = (node) => {
+        if (node == null || typeof node !== "object")
+            return undefined;
+        if (Array.isArray(node)) {
+            for (const item of node) {
+                const found = visit(item);
+                if (found !== undefined)
+                    return found;
+            }
+            return undefined;
+        }
+        const record = node;
+        if (Object.hasOwn(record, code))
+            return record[code];
+        for (const child of Object.values(record)) {
+            const found = visit(child);
+            if (found !== undefined)
+                return found;
+        }
+        return undefined;
+    };
+    return visit(formData);
+}
 /** Контекст для коэффициентов: строка arch-компонента + поля formData вне строки (generalInfo и т.д.). */
 function buildLaborCoefficientLookupSource(source, formData, schemaParams, paramCodes) {
     const merged = { ...source };
@@ -404,8 +451,9 @@ function buildLaborCoefficientLookupSource(source, formData, schemaParams, param
         if (!pointer)
             continue;
         const fromForm = readValueAtSchemaPointer(formData, pointer);
-        if (isPresent(fromForm))
+        if (isPresent(fromForm) || typeof fromForm === "boolean") {
             merged[param.code] = fromForm;
+        }
     }
     // Одинаковые названия полей на разных арх. компонентах (напр. «Сложность реализации»
     // на системе-источнике и на процессе): если целевой код пуст, берём значение
@@ -413,8 +461,9 @@ function buildLaborCoefficientLookupSource(source, formData, schemaParams, param
     for (const param of schemaParams) {
         if (!codes.has(param.code))
             continue;
-        if (isPresent(merged[param.code]))
+        if (isPresent(merged[param.code]) || typeof merged[param.code] === "boolean") {
             continue;
+        }
         const name = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(param.name)
             .trim()
             .toLowerCase();
@@ -428,10 +477,20 @@ function buildLaborCoefficientLookupSource(source, formData, schemaParams, param
                 .toLowerCase();
             if (aliasName !== name)
                 continue;
-            if (isPresent(merged[alias.code])) {
-                merged[param.code] = merged[alias.code];
+            const aliasValue = merged[alias.code];
+            if (isPresent(aliasValue) || typeof aliasValue === "boolean") {
+                merged[param.code] = aliasValue;
                 break;
             }
+        }
+    }
+    // Fallback: поле лежит в массиве арх. блока, а schemaPointer/schemaParams недоступны.
+    for (const code of codes) {
+        if (isPresent(merged[code]) || typeof merged[code] === "boolean")
+            continue;
+        const fromDeep = findFieldValueInFormData(formData, code);
+        if (isPresent(fromDeep) || typeof fromDeep === "boolean") {
+            merged[code] = fromDeep;
         }
     }
     return merged;

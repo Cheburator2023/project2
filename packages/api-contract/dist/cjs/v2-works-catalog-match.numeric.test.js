@@ -101,4 +101,43 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
             },
         ])).toEqual({ field_UEzs5Q87: 1.2 });
     });
+    (0, vitest_1.it)("reads boolean checkbox from array-shaped dataProcess without schemaParams", () => {
+        const formData = {
+            detailInfo: {
+                dataProcess: [
+                    {
+                        name: "Процесс 1",
+                        field_qMxSfHk1: true,
+                        field_yJ51GkCR: "Разработка",
+                    },
+                ],
+            },
+        };
+        const lookup = (0, v2_works_catalog_match_util_1.buildLaborCoefficientLookupSource)({ name: "Источник 1", type: "Внутренний" }, formData, [], ["field_qMxSfHk1", "field_yJ51GkCR"]);
+        (0, vitest_1.expect)(lookup.field_qMxSfHk1).toBe(true);
+        (0, vitest_1.expect)(lookup.field_yJ51GkCR).toBe("Разработка");
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)(lookup, [
+            {
+                paramCode: "field_qMxSfHk1",
+                paramName: "Требуется интеграция",
+                valueCode: "Да",
+                valueLabel: "Да",
+                coefficient: 1.5,
+            },
+            {
+                paramCode: "field_qMxSfHk1",
+                paramName: "Требуется интеграция",
+                valueCode: "Нет",
+                valueLabel: "Нет",
+                coefficient: 1,
+            },
+        ])).toEqual({ field_qMxSfHk1: 1.5 });
+    });
+    (0, vitest_1.it)("flattenSourceContextValue unwraps arch-object arrays", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.flattenSourceContextValue)([{ field_qMxSfHk1: true, a: 1 }])).toEqual({ field_qMxSfHk1: true, a: 1 });
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.flattenSourceContextValue)({ field_qMxSfHk1: false })).toEqual({
+            field_qMxSfHk1: false,
+        });
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.flattenSourceContextValue)([])).toEqual({});
+    });
 });

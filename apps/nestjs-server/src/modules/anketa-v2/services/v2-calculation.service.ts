@@ -28,6 +28,7 @@ import {
 	readTypicalWorkBoundWorkIdsAtOutputPath,
 	resolveStreamFromSourceType,
 	resolveStreamsFromSourceSystems,
+	flattenSourceContextValue,
 	resolveSourceTypicalWorksOutputPath,
 	shouldSkipLegacyModelStreamStageSummary,
 	V2_MODEL_STREAM_EXECUTOR,
@@ -880,9 +881,7 @@ export class V2CalculationService {
 		const merged: Record<string, unknown> = {};
 		for (const path of paths) {
 			const value = readByDotPath(data, path.trim());
-			if (value && typeof value === "object" && !Array.isArray(value)) {
-				Object.assign(merged, value as Record<string, unknown>);
-			}
+			Object.assign(merged, flattenSourceContextValue(value));
 		}
 		return merged;
 	}
