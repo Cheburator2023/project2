@@ -93,6 +93,7 @@ import {
 	streamExecutorsToUiValue,
 } from "../components/StreamExecutorMultiSelect";
 import { ArchWorkStreamRoleSettings } from "../components/ArchWorkStreamRoleSettings";
+import { FieldDefaultValueControl } from "../components/FieldDefaultValueControl";
 import { toast } from "@react-client/common/toasts";
 import { useBufferedDraftText } from "../hooks/useBufferedDraftText";
 import { usePropertiesPanelWidth } from "../hooks/usePropertiesPanelWidth";
@@ -917,6 +918,10 @@ export function SchemaPropertiesPanel() {
 		showArrayOptions ||
 		fieldKind === "general-uncertainty";
 	const workArch = isWorkArchComponent(archComponent);
+	const showDefaultValueField = fieldKind === "primitive";
+	const isWorkItemFieldDefaultBlocked = Boolean(
+		workArch && selectedPointer?.includes("/items/"),
+	);
 
 	const selectedSchemaParamId = useMemo(() => {
 		if (!selectedPointer) return "";
@@ -1155,6 +1160,23 @@ export function SchemaPropertiesPanel() {
 										slotProps={{
 											htmlInput: { min: 2, max: 30 },
 										}}
+									/>
+								) : null}
+								{showDefaultValueField ? (
+									<FieldDefaultValueControl
+										primitiveTypeVariant={primitiveTypeVariant}
+										resolvedField={resolvedField}
+										dictionaryCode={currentDictionaryCode}
+										enumMapByCode={enumMapByCode}
+										disabled={isWorkItemFieldDefaultBlocked}
+										warningText={
+											isWorkItemFieldDefaultBlocked
+												? "Для полей строк типовых/нетиповых работ schema default не рекомендуется: RJSF может подставить его в уже сохранённые строки. Для новых строк нетиповых работ используйте явные defaults при добавлении."
+												: undefined
+										}
+										onChange={(nextDefault) =>
+											commitFieldPatch({ default: nextDefault })
+										}
 									/>
 								) : null}
 							</>
