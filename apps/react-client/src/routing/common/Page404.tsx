@@ -4,10 +4,8 @@ import { ILL_404 } from "@react-client/common/illustrations/ILL_404";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { useLocation, useNavigate } from "react-router";
-import {
-	resolve404HomeLabel,
-	resolve404HomePath,
-} from "./page404Home";
+import { resolve404HomeLabel, resolve404HomePath } from "./page404Home";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 
 export function Page404() {
 	const navigate = useNavigate();
@@ -34,6 +32,7 @@ export function Page404() {
 				data-test-id="page404--content"
 			>
 				<ILL_404 data-test-id="page404--ILL_404-0" />
+				<Spacer space={24} />
 				<Typography
 					variant="body1"
 					color="text.secondary"
@@ -43,6 +42,7 @@ export function Page404() {
 				>
 					Запрошенная страница не существует или была удалена.
 				</Typography>
+				<Spacer space={12} />
 				<Button
 					color="primary"
 					size="large"

@@ -81,4 +81,48 @@ describe("numeric labor coefficient ranges", () => {
 			assessedInitiativesCount: 1.5,
 		});
 	});
+
+	it("falls back to same-titled field on source when formula code points elsewhere", () => {
+		const source = {
+			name: "Источник 1",
+			field_L1lRlgf1: "Высокая",
+		};
+		const lookup = buildLaborCoefficientLookupSource(
+			source,
+			{ detailInfo: { dataProcess: {}, sourceSystems: [source] } },
+			[
+				{
+					code: "field_UEzs5Q87",
+					name: "Сложность реализации",
+					schemaPointer: "/detailInfo/dataProcess/field_UEzs5Q87",
+				},
+				{
+					code: "field_L1lRlgf1",
+					name: "Сложность реализации",
+					schemaPointer:
+						"/detailInfo/sourceSystems/items/field_L1lRlgf1",
+				},
+			],
+			["field_UEzs5Q87"],
+		);
+		expect(lookup.field_UEzs5Q87).toBe("Высокая");
+		expect(
+			resolveByValueLaborParamCoefficients(lookup, [
+				{
+					paramCode: "field_UEzs5Q87",
+					paramName: "Сложность реализации",
+					valueCode: "Высокая",
+					valueLabel: "Высокая",
+					coefficient: 1.2,
+				},
+				{
+					paramCode: "field_UEzs5Q87",
+					paramName: "Сложность реализации",
+					valueCode: "Средняя",
+					valueLabel: "Средняя",
+					coefficient: 0.8,
+				},
+			]),
+		).toEqual({ field_UEzs5Q87: 1.2 });
+	});
 });

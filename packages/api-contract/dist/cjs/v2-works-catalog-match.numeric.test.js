@@ -66,4 +66,39 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
             assessedInitiativesCount: 1.5,
         });
     });
+    (0, vitest_1.it)("falls back to same-titled field on source when formula code points elsewhere", () => {
+        const source = {
+            name: "Источник 1",
+            field_L1lRlgf1: "Высокая",
+        };
+        const lookup = (0, v2_works_catalog_match_util_1.buildLaborCoefficientLookupSource)(source, { detailInfo: { dataProcess: {}, sourceSystems: [source] } }, [
+            {
+                code: "field_UEzs5Q87",
+                name: "Сложность реализации",
+                schemaPointer: "/detailInfo/dataProcess/field_UEzs5Q87",
+            },
+            {
+                code: "field_L1lRlgf1",
+                name: "Сложность реализации",
+                schemaPointer: "/detailInfo/sourceSystems/items/field_L1lRlgf1",
+            },
+        ], ["field_UEzs5Q87"]);
+        (0, vitest_1.expect)(lookup.field_UEzs5Q87).toBe("Высокая");
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)(lookup, [
+            {
+                paramCode: "field_UEzs5Q87",
+                paramName: "Сложность реализации",
+                valueCode: "Высокая",
+                valueLabel: "Высокая",
+                coefficient: 1.2,
+            },
+            {
+                paramCode: "field_UEzs5Q87",
+                paramName: "Сложность реализации",
+                valueCode: "Средняя",
+                valueLabel: "Средняя",
+                coefficient: 0.8,
+            },
+        ])).toEqual({ field_UEzs5Q87: 1.2 });
+    });
 });

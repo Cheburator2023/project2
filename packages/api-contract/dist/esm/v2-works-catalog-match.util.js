@@ -361,18 +361,45 @@ export function readValueAtSchemaPointer(root, pointer) {
 export function buildLaborCoefficientLookupSource(source, formData, schemaParams, paramCodes) {
     const merged = { ...source };
     const codes = new Set(paramCodes);
+    const isPresent = (value) => value !== undefined && value !== null && value !== "";
     for (const param of schemaParams) {
         if (!codes.has(param.code))
             continue;
-        const current = merged[param.code];
-        if (current !== undefined && current !== null && current !== "")
+        if (isPresent(merged[param.code]))
             continue;
         const pointer = param.schemaPointer?.trim();
         if (!pointer)
             continue;
         const fromForm = readValueAtSchemaPointer(formData, pointer);
-        if (fromForm !== undefined)
+        if (isPresent(fromForm))
             merged[param.code] = fromForm;
+    }
+    // Одинаковые названия полей на разных арх. компонентах (напр. «Сложность реализации»
+    // на системе-источнике и на процессе): если целевой код пуст, берём значение
+    // одноимённого поля уже лежащее в source/merged.
+    for (const param of schemaParams) {
+        if (!codes.has(param.code))
+            continue;
+        if (isPresent(merged[param.code]))
+            continue;
+        const name = stripParamNameSourceKeys(param.name)
+            .trim()
+            .toLowerCase();
+        if (!name)
+            continue;
+        for (const alias of schemaParams) {
+            if (alias.code === param.code)
+                continue;
+            const aliasName = stripParamNameSourceKeys(alias.name)
+                .trim()
+                .toLowerCase();
+            if (aliasName !== name)
+                continue;
+            if (isPresent(merged[alias.code])) {
+                merged[param.code] = merged[alias.code];
+                break;
+            }
+        }
     }
     return merged;
 }
