@@ -358,12 +358,8 @@ function SectionPanelAccordion({
 					}}
 				>
 					<Box sx={{ minWidth: 0, flex: 1, ...textDimSx }}>
-						<Typography
-							variant={titleVariant}
-							fontWeight={titleVariant === "h5" ? 700 : undefined}
-						>
-							{sectionTitle}
-						</Typography>
+						{/* Вес заголовка единый (из темы), titleVariant влияет только на размер. */}
+						<Typography variant={titleVariant}>{sectionTitle}</Typography>
 						{sectionCaption ? (
 							<Typography
 								variant="caption"

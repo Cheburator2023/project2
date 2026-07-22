@@ -41,7 +41,11 @@ import { useSchemaBindingToast } from "../hooks/useSchemaBindingToast";
 import type { AnketaFormContextValue } from "../utils/anketaFormContext";
 import { useAnketaViewerAccess } from "../utils/anketaViewerAccess";
 import { AnketaFormPageLayout } from "./AnketaFormPageLayout";
-import { useCreateV2QuestionnaireVersion } from "@react-client/common/api/queries/v2-questionnaires";
+import {
+	useCreateV2QuestionnaireVersion,
+	v2QuestionnairesExportXlsx,
+} from "@react-client/common/api/queries/v2-questionnaires";
+import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
 import { useNavigate } from "react-router";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
@@ -94,8 +98,12 @@ export function AnketaFormShell({
 	"data-test-id": dataTestId = "anketa-form-shell",
 }: Props) {
 	const navigate = useNavigate();
-	const { canCreateCalculation, canEditCalculation, canWorkflowApprove } =
-		usePermissions();
+	const {
+		canCreateCalculation,
+		canEditCalculation,
+		canExportReports,
+		canWorkflowApprove,
+	} = usePermissions();
 
 	const createCopy = useCreateV2QuestionnaireVersion();
 	const internalEngine = useV2AnketaSchemaEngine(engineProp ? null : source);
@@ -232,6 +240,25 @@ export function AnketaFormShell({
 	const canSaveQuestionnaire = isEditingQuestionnaire
 		? canEditCalculation
 		: canCreateCalculation;
+
+	/** Экспорт текущей анкеты в XLSX: только сохранённая анкета + право export. */
+	const onExportExcel = useMemo(() => {
+		if (!questionnaireId || !canExportReports) return undefined;
+		return async () => {
+			try {
+				const blob = await v2QuestionnairesExportXlsx({
+					ids: [questionnaireId],
+				});
+				const date = new Date().toISOString().slice(0, 10);
+				downloadBlob(blob, `v2-questionnaire-${date}.xlsx`);
+				toast.success("Анкета экспортирована");
+			} catch (error) {
+				toast.error("Не удалось экспортировать анкету", {
+					description: apiErrorMessage(error),
+				});
+			}
+		};
+	}, [questionnaireId, canExportReports]);
 
 	const headerLeadingAccessory = useMemo(
 		() =>
@@ -399,6 +426,7 @@ export function AnketaFormShell({
 							taskTriggerItems={engine.taskTriggerItems}
 							uiSchema={engine.previewUiSchema as Record<string, unknown>}
 							liveFormData={engine.calculationLiveFormData}
+							onExportExcel={onExportExcel}
 						/>
 					)
 				}
