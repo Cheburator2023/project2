@@ -124,8 +124,16 @@ export const ModalExample = () => {
                     initiativeCost: "15 000 000",
                     totalUncertaintyAdjustment: "12%",
                     risks: {
-                        business_change: "medium",
-                        solution_defects: "high",
+                        business_change: {
+                            probability:
+                                "Реализация 1 раз в год",
+                            goals: "Незначительное влияние на задачи и сроки достижения целей проекта",
+                        },
+                        solution_defects: {
+                            probability:
+                                "Реализация 1 раз в 6 мес. или чаще",
+                            goals: "Значительный негативный эффект на возможность достижения целей проекта",
+                        },
                     },
                 }}
             />

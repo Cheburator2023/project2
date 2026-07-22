@@ -1,4 +1,5 @@
 /** Справочник стримов-исполнителей в редакторе логики и на стримовых блоках анкеты. */
+import { normalizeStreamBlockExecutor, normalizeStreamBlockExecutors, resolveStreamBlockExecutorScopeStreams, } from "./v2-stream-block-executor.util";
 export const V2_EXECUTOR_STREAM_LABELS = [
     "ДАДМ",
     "ПиРМ",
@@ -58,7 +59,22 @@ export function resolveExecutorScopeDbStreams(executorStream) {
 }
 /** Работа назначена на стрим-исполнитель блока typicalWork (legacy без boundWorkIds). */
 export function typicalWorkAssignedToExecutorStream(workStreams, executorStream) {
+    const trimmed = executorStream.trim();
+    if (!trimmed)
+        return false;
+    if (normalizeStreamBlockExecutor(trimmed)) {
+        const scopeStreams = resolveStreamBlockExecutorScopeStreams(trimmed);
+        return workStreams.some((stream) => scopeStreams.includes(stream.trim()) ||
+            scopeStreams.includes(resolveExecutorStreamAreaLabel(stream)));
+    }
     const scopeStreams = resolveExecutorScopeDbStreams(executorStream);
     return workStreams.some((stream) => scopeStreams.includes(stream) ||
         scopeStreams.includes(resolveExecutorStreamAreaLabel(stream)));
+}
+/** Работа назначена хотя бы на один из стримов-исполнителей блока. */
+export function typicalWorkAssignedToAnyExecutorStream(workStreams, executorStreams) {
+    const executors = normalizeStreamBlockExecutors(executorStreams);
+    if (executors.length === 0)
+        return false;
+    return executors.some((executor) => typicalWorkAssignedToExecutorStream(workStreams, executor));
 }

@@ -117,7 +117,8 @@ export function Header({
 							flexDirection="row"
 							gap={8}
 							alignItems="center"
-							flexShrink={0}
+							minWidth={title ? undefined : "0"}
+							flexShrink={title ? 0 : 1}
 							data-test-id="header--Flex-1"
 						>
 							<MenuButton
@@ -142,8 +143,10 @@ export function Header({
 								</IconButton>
 							) : null}
 							{title ? (
-								<Flex gap={1} alignItems="baseline" minWidth="0">
-									<b>{title}</b>
+								<Flex gap={6} alignItems="center" flexShrink={0}>
+									<Typography component="span" fontWeight={700}>
+										{title}
+									</Typography>
 									{leadingAccessory}
 								</Flex>
 							) : (
@@ -164,7 +167,9 @@ export function Header({
 							gap={6}
 							alignItems="center"
 							justifyContent="flex-end"
-							width="fill-available"
+							minWidth="0"
+							flexShrink={1}
+							flexGrow={1}
 							data-test-id="header--Flex-2"
 						>
 							{children}

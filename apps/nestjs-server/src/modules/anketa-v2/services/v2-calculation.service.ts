@@ -17,6 +17,7 @@ import {
 	mergeTypicalCoefficientContext,
 	parseParamDependencyGraphFromLogic,
 	filterCoefficientLogicForHiddenFields,
+	parseOverallUncertaintyConfigFromLogic,
 	resolveAnketaCalculationLogic,
 	hasTypicalWorkStreamTriggerContext,
 	isFilledTypicalWorkSourceRow,
@@ -28,6 +29,7 @@ import {
 	readTypicalWorkBoundWorkIdsAtOutputPath,
 	resolveStreamFromSourceType,
 	resolveStreamsFromSourceSystems,
+	flattenSourceContextValue,
 	resolveSourceTypicalWorksOutputPath,
 	shouldSkipLegacyModelStreamStageSummary,
 	V2_MODEL_STREAM_EXECUTOR,
@@ -377,6 +379,7 @@ export class V2CalculationService {
 				jsonSchema: options?.jsonSchema,
 				uiSchema: options?.uiSchema,
 			})?.rules ?? [];
+		const uncertaintyConfig = parseOverallUncertaintyConfigFromLogic(rules);
 		const paramGraph = parseParamDependencyGraphFromLogic(rules);
 		const paramDefs = listCatalogParamDefs();
 		const rowComputed = rules.filter((r) => r.kind === "row_computed");
@@ -396,6 +399,7 @@ export class V2CalculationService {
 				paramGraph,
 				paramDefs,
 				options?.uiSchema as Record<string, unknown> | undefined,
+				uncertaintyConfig,
 			);
 		}
 
@@ -506,6 +510,7 @@ export class V2CalculationService {
 		paramGraph: V2ParamDependencyGraph,
 		paramDefs: V2ParamDefLike[],
 		uiSchema?: Record<string, unknown>,
+		uncertaintyConfig?: import("@smart-anketa/api-contract").V2OverallUncertaintyConfig,
 	): Promise<Record<string, unknown>> {
 		const payload = (rule.payload ?? {}) as TaskTriggerPayload;
 		if (payload.mode !== "generated_rows") return data;
@@ -668,6 +673,7 @@ export class V2CalculationService {
 											hiddenParamCodes,
 											allowedWorkIds: allowedWorkIdsForCatalog,
 											worksCatalogAllArchComponents,
+											uncertaintyConfig,
 										}),
 									),
 								)
@@ -880,9 +886,7 @@ export class V2CalculationService {
 		const merged: Record<string, unknown> = {};
 		for (const path of paths) {
 			const value = readByDotPath(data, path.trim());
-			if (value && typeof value === "object" && !Array.isArray(value)) {
-				Object.assign(merged, value as Record<string, unknown>);
-			}
+			Object.assign(merged, flattenSourceContextValue(value));
 		}
 		return merged;
 	}

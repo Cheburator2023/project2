@@ -16,6 +16,8 @@ exports.parseWorkFormulaText = parseWorkFormulaText;
 exports.validateWorkFormulaTokens = validateWorkFormulaTokens;
 exports.isParamUsedInFormula = isParamUsedInFormula;
 exports.markFormulaParamInvalid = markFormulaParamInvalid;
+exports.cleanupWorkFormulaTokensAfterOperandRemoval = cleanupWorkFormulaTokensAfterOperandRemoval;
+exports.removeIncompatibleLaborKindFormulaTokens = removeIncompatibleLaborKindFormulaTokens;
 exports.markUnknownFormulaLaborParamTokensInvalid = markUnknownFormulaLaborParamTokensInvalid;
 exports.evaluateWorkFormula = evaluateWorkFormula;
 exports.clampTypicalWorkEffort = clampTypicalWorkEffort;
@@ -746,6 +748,72 @@ function markFormulaParamInvalid(tokens, paramCode) {
     return tokens.map((token) => isParamToken(token) && token.paramCode === paramCode
         ? { ...token, invalid: true }
         : token);
+}
+function isLaborKindCompatibleWithToken(token, kind) {
+    const resolved = kind === "any_of" ? "any_of" : "by_value";
+    if (token.kind === "param_anyof")
+        return resolved === "any_of";
+    return resolved === "by_value";
+}
+/**
+ * Убирает «осиротевшие» операторы/скобки после удаления операндов из формулы.
+ */
+function cleanupWorkFormulaTokensAfterOperandRemoval(tokens) {
+    let next = [...tokens];
+    let changed = true;
+    while (changed) {
+        changed = false;
+        while (next.length > 0 && next[0]?.kind === "operator") {
+            next.shift();
+            changed = true;
+        }
+        while (next.length > 0 && next[next.length - 1]?.kind === "operator") {
+            next.pop();
+            changed = true;
+        }
+        for (let i = 0; i < next.length - 1; i++) {
+            if (next[i]?.kind === "operator" && next[i + 1]?.kind === "operator") {
+                next.splice(i + 1, 1);
+                changed = true;
+                break;
+            }
+            if (next[i]?.kind === "paren_open" &&
+                next[i + 1]?.kind === "paren_close") {
+                next.splice(i, 2);
+                changed = true;
+                break;
+            }
+            if (next[i]?.kind === "paren_open" &&
+                next[i + 1]?.kind === "operator") {
+                next.splice(i + 1, 1);
+                changed = true;
+                break;
+            }
+            if (next[i]?.kind === "operator" &&
+                next[i + 1]?.kind === "paren_close") {
+                next.splice(i, 1);
+                changed = true;
+                break;
+            }
+        }
+    }
+    return next;
+}
+/**
+ * Удаляет из формулы param-токены, которых нет в трудоёмкости
+ * или чей kind (param_coeff / param_anyof) не совпадает с типом параметра.
+ */
+function removeIncompatibleLaborKindFormulaTokens(tokens, laborParams) {
+    const filtered = tokens.filter((token) => {
+        if (token.kind !== "param_coeff" && token.kind !== "param_anyof") {
+            return true;
+        }
+        const group = laborParams.find((g) => workFormulaLaborParamMatches(token, g));
+        if (!group)
+            return false;
+        return isLaborKindCompatibleWithToken(token, group.kind);
+    });
+    return cleanupWorkFormulaTokensAfterOperandRemoval(filtered);
 }
 /** Помечает param-токены формулы invalid, если их нет в блоке трудоёмкости. */
 function markUnknownFormulaLaborParamTokensInvalid(tokens, laborParams) {

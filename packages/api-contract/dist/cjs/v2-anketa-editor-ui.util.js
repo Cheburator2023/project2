@@ -122,8 +122,8 @@ function resolveV2AnketaCanvasUiKind(uiNode, options) {
     return null;
 }
 function isV2AnketaSystemRootPointer(fieldPointer) {
-    const key = fieldPointer.split("/").filter(Boolean)[0];
-    return key != null && (0, v2_anketa_system_scaffold_util_1.isV2AnketaSystemRootKey)(key);
+    const parts = fieldPointer.split("/").filter(Boolean);
+    return parts.length === 1 && (0, v2_anketa_system_scaffold_util_1.isV2AnketaSystemRootKey)(parts[0]);
 }
 function isV2AnketaModalObjectArch(arch) {
     return (arch !== null &&

@@ -148,8 +148,8 @@ export function resolveV2AnketaCanvasUiKind(
 }
 
 export function isV2AnketaSystemRootPointer(fieldPointer: string): boolean {
-	const key = fieldPointer.split("/").filter(Boolean)[0];
-	return key != null && isV2AnketaSystemRootKey(key);
+	const parts = fieldPointer.split("/").filter(Boolean);
+	return parts.length === 1 && isV2AnketaSystemRootKey(parts[0]!);
 }
 
 export function isV2AnketaModalObjectArch(

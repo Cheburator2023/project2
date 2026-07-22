@@ -9,12 +9,20 @@ import { buildNavbarBreadcrumbTrail } from "./navbarBreadcrumbTrail";
 
 const StyledBreadcrumbs = styled(Breadcrumbs)(({ theme }) => ({
 	margin: theme.spacing(1, 0),
+	minWidth: 0,
 	[`& .${breadcrumbsClasses.separator}`]: {
 		color: (theme.vars || theme).palette.action.disabled,
 		margin: 1,
+		flexShrink: 0,
 	},
 	[`& .${breadcrumbsClasses.ol}`]: {
 		alignItems: "center",
+		flexWrap: "nowrap",
+		flexShrink: 1,
+		minWidth: 0,
+	},
+	[`& .${breadcrumbsClasses.li}`]: {
+		whiteSpace: "nowrap",
 	},
 }));
 

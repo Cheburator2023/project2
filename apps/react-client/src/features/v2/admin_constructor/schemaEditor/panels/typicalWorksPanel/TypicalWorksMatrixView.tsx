@@ -11,6 +11,7 @@ import {
 	pickDbStreamForLogicStream,
 	shortenStreamLabel,
 	streamColor,
+	streamDisplayLabel,
 } from "./typicalWorksAreas";
 import {
 	buildAssignWorkPatch,
@@ -55,7 +56,9 @@ export function TypicalWorksMatrixView({
 					templateVersionId: templateVersionId ?? undefined,
 				},
 			});
-			toast.success(`«${work.name}» назначена на «${logicStream}»`);
+			toast.success(
+				`«${work.name}» назначена на «${streamDisplayLabel(logicStream)}»`,
+			);
 			onOpenWork(work.id, streamExecutor);
 		} catch (err) {
 			toast.error("Не удалось назначить работу", {

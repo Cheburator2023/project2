@@ -1,8 +1,8 @@
-import { resolveStreamExecutorForTypicalWorkOutputPath } from "./v2-anketa-section-ui.util";
+import { resolveTypicalWorkCatalogStreamLabel } from "./v2-anketa-section-ui.util";
 import { V2_MODEL_STREAM_EXECUTOR, V2_MODEL_STREAM_FACTORY_WORK_IDS, } from "./v2-model-stream-typical-works.constants";
+import { collectTypicalWorkBlockBindings, collectGeneratedTypicalWorkArrayPaths, resolveSourceTypicalWorksOutputPath, LEGACY_CONTROL_TYPICAL_TASKS_OUTPUT_PATHS, V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH, V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH, } from "./v2-typical-work-output-paths.util";
 /** Источник триггеров модельного стрима — arch object list «Модельный сервис». */
 export const V2_MODEL_STREAM_SOURCE_ARRAY_PATH = "generalInfo.modelService";
-import { collectTypicalWorkBlockBindings, collectGeneratedTypicalWorkArrayPaths, resolveSourceTypicalWorksOutputPath, LEGACY_CONTROL_TYPICAL_TASKS_OUTPUT_PATHS, V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH, V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH, } from "./v2-typical-work-output-paths.util";
 /** Заменяет dot-путь в JsonLogic (`{"var": "a.b.c"}` и вложенные узлы). */
 export function replaceDotPathInJsonLogic(value, oldPath, newPath) {
     if (oldPath === newPath)
@@ -236,7 +236,8 @@ export function shouldSkipLegacyModelStreamStageSummary(uiSchema) {
         if (binding.boundWorkIds !== undefined && binding.boundWorkIds.length === 0) {
             return false;
         }
-        return (resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, binding.outputPath) === V2_MODEL_STREAM_EXECUTOR);
+        return (resolveTypicalWorkCatalogStreamLabel(uiSchema, binding.outputPath) ===
+            V2_MODEL_STREAM_EXECUTOR);
     });
 }
 function buildTypicalArrayReduceTerm(arrayPath) {
@@ -384,7 +385,7 @@ export function patchV2TypicalWorksLogicRules(logic, options) {
         if (bindings.length > 0) {
             for (const binding of bindings) {
                 const streamExecutor = options?.uiSchema
-                    ? resolveStreamExecutorForTypicalWorkOutputPath(options.uiSchema, binding.outputPath)
+                    ? resolveTypicalWorkCatalogStreamLabel(options.uiSchema, binding.outputPath)
                     : null;
                 patched.push(buildCatalogRuleForTypicalWorkBinding(binding.outputPath, binding.boundWorkIds, streamExecutor));
             }
@@ -442,7 +443,7 @@ function buildCanonicalTypicalWorksCatalogRules(options) {
     if (bindings.length > 0) {
         for (const binding of bindings) {
             const streamExecutor = options?.uiSchema
-                ? resolveStreamExecutorForTypicalWorkOutputPath(options.uiSchema, binding.outputPath)
+                ? resolveTypicalWorkCatalogStreamLabel(options.uiSchema, binding.outputPath)
                 : null;
             const rule = buildCatalogRuleForTypicalWorkBinding(binding.outputPath, binding.boundWorkIds, streamExecutor);
             rules.set(rule.id, rule);

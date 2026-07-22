@@ -741,7 +741,7 @@ describe("V2CalculationService", () => {
 						},
 					],
 				},
-				generalInfo: { implementationStream: "РБ (КМБ и КСБ)" },
+				generalInfo: { implementationStream: "rb" },
 			},
 			{ uiSchema },
 		);

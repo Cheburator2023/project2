@@ -6,7 +6,7 @@ import {
 	collectGeneratedTypicalWorkArrayPaths,
 	dedupeTypicalWorkRowsByWorkId,
 	listAllGeneratedTypicalWorkArrayPaths,
-	resolveStreamExecutorForTypicalWorkOutputPath,
+	resolveTypicalWorkCatalogStreamLabel,
 	sortModelStreamTypicalWorkRows,
 	V2_MODEL_STREAM_EXECUTOR,
 } from "@smart-anketa/api-contract";
@@ -611,7 +611,7 @@ export function collectAppearedTypicalWorkGroups(
 	const groups: AppearedTypicalWorkGroup[] = [];
 
 	for (const path of paths) {
-		const streamExecutor = resolveStreamExecutorForTypicalWorkOutputPath(
+		const streamExecutor = resolveTypicalWorkCatalogStreamLabel(
 			uiSchema,
 			path,
 		);

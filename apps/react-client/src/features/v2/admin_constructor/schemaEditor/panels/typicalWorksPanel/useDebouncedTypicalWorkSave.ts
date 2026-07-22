@@ -257,3 +257,31 @@ export function cardToPatchDto(
 		rounding: card.rounding,
 	};
 }
+
+/** Лёгкий PATCH только для триггеров — без laborParams/формулы (~80KB на больших работах). */
+export function cardToTriggerPatchDto(
+	card: V2TypicalWorkCardDto,
+	templateVersionId: string | null,
+): PatchV2TypicalWorkRequestDto {
+	const stream = card.streamExecutor.trim();
+	return {
+		streamExecutor: stream,
+		templateVersionId: templateVersionId ?? undefined,
+		rules: card.rules
+			.filter((rule) => rule.streamExecutor === stream)
+			.map((rule) => ({
+				id: rule.id,
+				schemaFieldUid: rule.schemaFieldUid ?? null,
+				paramCode: rule.paramCode,
+				paramName: rule.paramName,
+				operator: rule.operator,
+				valueCode: rule.valueCode,
+				valueLabel: rule.valueLabel,
+				values: rule.values,
+				sortOrder: rule.sortOrder,
+			})),
+		triggerArchCount: card.triggerArchCount ?? defaultTriggerArchCount(),
+		triggerMode: card.triggerMode ?? "simple",
+		triggerFormula: card.triggerFormula ?? defaultTriggerFormula(),
+	};
+}

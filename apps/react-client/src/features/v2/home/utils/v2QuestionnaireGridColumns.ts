@@ -2,6 +2,8 @@ import type { ColDef, ColGroupDef } from "ag-grid-community";
 import {
 	buildV2QuestionnaireRegistryColumnTree,
 	estimateRegistryColumnWidth,
+	formatV2SchemaBindingStatus,
+	resolveImplementationStreamLabel,
 	type V2RegistryColumnNode,
 	type V2RegistryLeafColumn,
 	type V2RegistrySchemaColumnOptions,
@@ -15,6 +17,7 @@ import {
 	v2WorkflowPanelStatusCell,
 	v2WorkflowSectionStatusCell,
 } from "../molecules/V2WorkflowStatusCell";
+import { V2SchemaBindingStatusCell } from "../molecules/V2SchemaBindingStatusCell";
 import type { V2QuestionnaireGridRow } from "../types/v2QuestionnaireGrid.types";
 import {
 	formatGridCellValue,
@@ -136,8 +139,11 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 				minWidth,
 				resizable: true,
 				...baseFilter,
+				cellRenderer: V2SchemaBindingStatusCell,
 				valueGetter: (p) =>
-					resolveVersionRow(p.data)?.schemaBinding.status ?? "",
+					formatV2SchemaBindingStatus(
+						resolveVersionRow(p.data)?.schemaBinding.status,
+					),
 			};
 		}
 		return {
@@ -161,8 +167,16 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 		resizable: true,
 		...baseFilter,
 		...(leaf.valueType === "date" ? dateSetFilterExtras() : {}),
-		valueGetter: (p) =>
-			formatGridCellValue(getFormValue(p.data, leaf.formPath ?? "")),
+		valueGetter: (p) => {
+			const raw = getFormValue(p.data, leaf.formPath ?? "");
+			if (
+				leaf.formPath === "generalInfo.implementationStream" &&
+				typeof raw === "string"
+			) {
+				return resolveImplementationStreamLabel(raw);
+			}
+			return formatGridCellValue(raw);
+		},
 	};
 }
 

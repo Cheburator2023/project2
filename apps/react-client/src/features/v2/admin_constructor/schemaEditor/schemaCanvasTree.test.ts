@@ -193,6 +193,63 @@ describe("buildSchemaCanvasTree", () => {
 		).toBe("/uncertaintyCalculation/riskGroup");
 	});
 
+	it("keeps uncertaintyCalculation editable when modal trigger is missing", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				generalInfo: {
+					type: "object",
+					title: "Общая информация",
+					properties: {
+						complexity: { type: "string", title: "Сложность" },
+					},
+				},
+				uncertaintyCalculation: {
+					type: "object",
+					title: "Расчёт общей неопределённости",
+					properties: {
+						initiativeTimeline: {
+							type: "string",
+							title: "Сроки инициативы",
+						},
+						riskGroup: {
+							type: "object",
+							title: "Группа рисков",
+							properties: {
+								sanctions: {
+									type: "string",
+									title: "Введение санкционных мер и других ограничений",
+								},
+							},
+						},
+					},
+				},
+			},
+		};
+		const ui: UiSchema = {
+			"ui:order": ["generalInfo", "uncertaintyCalculation"],
+			uncertaintyCalculation: {
+				"ui:options": { hidden: true, system: true },
+				"ui:order": ["initiativeTimeline", "riskGroup"],
+				riskGroup: {
+					"ui:order": ["sanctions"],
+				},
+			},
+		};
+
+		const tree = buildSchemaCanvasTree(schema, ui, { hideSystemFields: true });
+
+		expect(tree.find((n) => n.id === "/uncertaintyCalculation")).toBeTruthy();
+		expect(
+			tree.find((n) => n.id === "/uncertaintyCalculation/initiativeTimeline")
+				?.parent,
+		).toBe("/uncertaintyCalculation");
+		expect(
+			tree.find((n) => n.id === "/uncertaintyCalculation/riskGroup/sanctions")
+				?.parent,
+		).toBe("/uncertaintyCalculation/riskGroup");
+	});
+
 	it("appends summary row under typicalWork array blocks", () => {
 		const preset = ARCH_COMPONENT_PRESET_DEFS.typicalWork.make();
 		const schema: RJSFSchema = {

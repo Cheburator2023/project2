@@ -24,6 +24,7 @@ import {
 	isWorkFormulaLaborParamKnown,
 	normalizeWorkFormulaLaborParamTokens,
 	parseWorkFormulaText,
+	removeIncompatibleLaborKindFormulaTokens,
 	tokensToText,
 	validateWorkFormulaTokens,
 	V2_WORK_FORMULA_ARCH_COUNT_KINDS,
@@ -524,6 +525,7 @@ export function WorkFormulaEditor({
 			laborParams.map((group) => ({
 				paramCode: group.paramCode,
 				paramName: group.paramName,
+				kind: group.kind ?? "by_value",
 			})),
 		[laborParams],
 	);
@@ -533,7 +535,12 @@ export function WorkFormulaEditor({
 			if (token.kind !== "param_coeff" && token.kind !== "param_anyof") {
 				return false;
 			}
-			return isWorkFormulaLaborParamKnown(token, laborParamRefs);
+			const group = laborParamRefs.find((ref) =>
+				isWorkFormulaLaborParamKnown(token, [ref]),
+			);
+			if (!group) return false;
+			if (token.kind === "param_anyof") return group.kind === "any_of";
+			return group.kind !== "any_of";
 		},
 		[laborParamRefs],
 	);
@@ -560,6 +567,22 @@ export function WorkFormulaEditor({
 	useEffect(() => {
 		setCursorIndex((prev) => Math.min(prev, formula.tokens.length));
 	}, [formula.tokens.length]);
+
+	useEffect(() => {
+		if (readOnly) return;
+		const pruned = removeIncompatibleLaborKindFormulaTokens(
+			formula.tokens,
+			laborParamRefs,
+		);
+		if (pruned.length === formula.tokens.length) {
+			const same = pruned.every((token, index) => {
+				const prev = formula.tokens[index];
+				return prev != null && JSON.stringify(prev) === JSON.stringify(token);
+			});
+			if (same) return;
+		}
+		onFormulaChange({ tokens: pruned, text: tokensToText(pruned) });
+	}, [laborParamRefs, formula.tokens, onFormulaChange, readOnly]);
 
 	const commitTokens = useCallback(
 		(tokens: V2WorkFormulaToken[], cursor?: number) => {

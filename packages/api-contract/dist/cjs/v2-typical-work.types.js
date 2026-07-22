@@ -35,7 +35,9 @@ exports.V2_WORK_TRIGGER_STATUS_VALUES = [
 ];
 exports.V2_LOGIC_WORKSPACE_TAB_VALUES = [
     "works",
+    "atypicalWorks",
     "dependencies",
+    "uncertainty",
     "jsonlogic",
 ];
 exports.V2_WORK_FORMULA_ARCH_COUNT_KINDS = [

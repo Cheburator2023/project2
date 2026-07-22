@@ -895,6 +895,94 @@ export function markFormulaParamInvalid(
 	);
 }
 
+export type WorkFormulaLaborParamKindRef = WorkFormulaLaborParamRef & {
+	/** by_value → param_coeff; any_of → param_anyof. */
+	kind?: "by_value" | "any_of" | null;
+};
+
+function isLaborKindCompatibleWithToken(
+	token: Extract<V2WorkFormulaToken, { kind: "param_coeff" | "param_anyof" }>,
+	kind: "by_value" | "any_of" | null | undefined,
+): boolean {
+	const resolved = kind === "any_of" ? "any_of" : "by_value";
+	if (token.kind === "param_anyof") return resolved === "any_of";
+	return resolved === "by_value";
+}
+
+/**
+ * Убирает «осиротевшие» операторы/скобки после удаления операндов из формулы.
+ */
+export function cleanupWorkFormulaTokensAfterOperandRemoval(
+	tokens: V2WorkFormulaToken[],
+): V2WorkFormulaToken[] {
+	let next = [...tokens];
+	let changed = true;
+	while (changed) {
+		changed = false;
+		while (next.length > 0 && next[0]?.kind === "operator") {
+			next.shift();
+			changed = true;
+		}
+		while (next.length > 0 && next[next.length - 1]?.kind === "operator") {
+			next.pop();
+			changed = true;
+		}
+		for (let i = 0; i < next.length - 1; i++) {
+			if (next[i]?.kind === "operator" && next[i + 1]?.kind === "operator") {
+				next.splice(i + 1, 1);
+				changed = true;
+				break;
+			}
+			if (
+				next[i]?.kind === "paren_open" &&
+				next[i + 1]?.kind === "paren_close"
+			) {
+				next.splice(i, 2);
+				changed = true;
+				break;
+			}
+			if (
+				next[i]?.kind === "paren_open" &&
+				next[i + 1]?.kind === "operator"
+			) {
+				next.splice(i + 1, 1);
+				changed = true;
+				break;
+			}
+			if (
+				next[i]?.kind === "operator" &&
+				next[i + 1]?.kind === "paren_close"
+			) {
+				next.splice(i, 1);
+				changed = true;
+				break;
+			}
+		}
+	}
+	return next;
+}
+
+/**
+ * Удаляет из формулы param-токены, которых нет в трудоёмкости
+ * или чей kind (param_coeff / param_anyof) не совпадает с типом параметра.
+ */
+export function removeIncompatibleLaborKindFormulaTokens(
+	tokens: V2WorkFormulaToken[],
+	laborParams: readonly WorkFormulaLaborParamKindRef[],
+): V2WorkFormulaToken[] {
+	const filtered = tokens.filter((token) => {
+		if (token.kind !== "param_coeff" && token.kind !== "param_anyof") {
+			return true;
+		}
+		const group = laborParams.find((g) =>
+			workFormulaLaborParamMatches(token, g),
+		);
+		if (!group) return false;
+		return isLaborKindCompatibleWithToken(token, group.kind);
+	});
+	return cleanupWorkFormulaTokensAfterOperandRemoval(filtered);
+}
+
 /** Помечает param-токены формулы invalid, если их нет в блоке трудоёмкости. */
 export function markUnknownFormulaLaborParamTokensInvalid(
 	tokens: V2WorkFormulaToken[],

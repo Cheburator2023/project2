@@ -497,7 +497,12 @@ export const inputsCustomizations: Components<Theme> = {
 			},
 
 			input: {
-				padding: "10px !important",
+				// Не используем shorthand + !important на всех сторонах —
+				// иначе paddingRight селекта/number перекрывается и текст лезет на иконку.
+				paddingTop: "10px !important",
+				paddingBottom: "10px !important",
+				paddingLeft: "10px !important",
+				paddingRight: "10px !important",
 				"&::placeholder": {
 					opacity: 0.7,
 					color: gray[500],
@@ -505,6 +510,21 @@ export const inputsCustomizations: Components<Theme> = {
 				"&:focus": {
 					outline: "none",
 				},
+				"&.MuiSelect-select": {
+					// Место под UnfoldMore / стрелку Select (position: absolute справа).
+					paddingRight: "36px !important",
+					textOverflow: "ellipsis",
+					overflow: "hidden",
+					whiteSpace: "nowrap",
+				},
+				'&[type="number"]': {
+					// Место под нативный stepper браузера.
+					paddingRight: "28px !important",
+				},
+			},
+			inputAdornedEnd: {
+				// EndAdornment рядом, не поверх — хватает обычного правого отступа.
+				paddingRight: "0 !important",
 			},
 		},
 	},

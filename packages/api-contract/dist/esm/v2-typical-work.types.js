@@ -27,7 +27,9 @@ export const V2_WORK_TRIGGER_STATUS_VALUES = [
 ];
 export const V2_LOGIC_WORKSPACE_TAB_VALUES = [
     "works",
+    "atypicalWorks",
     "dependencies",
+    "uncertainty",
     "jsonlogic",
 ];
 export const V2_WORK_FORMULA_ARCH_COUNT_KINDS = [

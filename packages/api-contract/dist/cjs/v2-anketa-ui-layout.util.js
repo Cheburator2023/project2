@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.enrichAnketaLayoutUiSchema = enrichAnketaLayoutUiSchema;
 const v2_anketa_workflow_types_1 = require("./v2-anketa-workflow.types");
 const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
+const v2_stream_block_executor_util_1 = require("./v2-stream-block-executor.util");
+const v2_stream_block_role_util_1 = require("./v2-stream-block-role.util");
 function readRecord(value) {
     return value && typeof value === "object" && !Array.isArray(value)
         ? value
@@ -78,8 +80,15 @@ function enrichAnketaLayoutUiSchema(uiSchema, jsonSchema) {
             continue;
         mergeUiOptions(blockUi, {
             streamBlock: true,
-            ...(streamBlock.streamExecutor
-                ? { streamExecutor: streamBlock.streamExecutor }
+            ...(streamBlock.streamExecutors.length > 0
+                ? {
+                    streamExecutor: (0, v2_stream_block_executor_util_1.serializeStreamBlockExecutors)(streamBlock.streamExecutors),
+                }
+                : {}),
+            ...(streamBlock.streamBlockRoles.length > 0
+                ? {
+                    streamBlockRoles: (0, v2_stream_block_role_util_1.serializeStreamBlockRoles)(streamBlock.streamBlockRoles),
+                }
                 : {}),
         });
         const blockOpts = (0, v2_anketa_section_ui_util_1.readV2AnketaSectionUiOptions)(blockUi);

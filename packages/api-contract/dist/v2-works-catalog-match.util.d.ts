@@ -122,6 +122,13 @@ export declare function catalogValueMatchesTriggerRule(catalogValue: {
 export declare function coerceNumericLaborActual(actual: unknown): unknown;
 /** Читает значение по schemaPointer (`/generalInfo/field`, `/detailInfo/dataMart/items/field`). */
 export declare function readValueAtSchemaPointer(root: Record<string, unknown>, pointer: string): unknown;
+/**
+ * Разворачивает значение sourceContextPaths в плоский объект полей.
+ * UI хранит dataProcess/dataMart/modelService как массив записей — берём первую.
+ */
+export declare function flattenSourceContextValue(value: unknown): Record<string, unknown>;
+/** Ищет значение поля по коду в глубине formData (массивы арх. блоков и т.п.). */
+export declare function findFieldValueInFormData(formData: Record<string, unknown>, fieldCode: string): unknown;
 /** Контекст для коэффициентов: строка arch-компонента + поля formData вне строки (generalInfo и т.д.). */
 export declare function buildLaborCoefficientLookupSource(source: Record<string, unknown>, formData: Record<string, unknown>, schemaParams: ReadonlyArray<{
     code: string;

@@ -1,12 +1,9 @@
 import type { V2JsonLogicValue, V2LogicGraphDto, V2LogicRuleDto } from "./v2-template.types";
-import { resolveStreamExecutorForTypicalWorkOutputPath } from "./v2-anketa-section-ui.util";
+import { resolveTypicalWorkCatalogStreamLabel } from "./v2-anketa-section-ui.util";
 import {
 	V2_MODEL_STREAM_EXECUTOR,
 	V2_MODEL_STREAM_FACTORY_WORK_IDS,
 } from "./v2-model-stream-typical-works.constants";
-
-/** Источник триггеров модельного стрима — arch object list «Модельный сервис». */
-export const V2_MODEL_STREAM_SOURCE_ARRAY_PATH = "generalInfo.modelService";
 import {
 	collectTypicalWorkBlockBindings,
 	collectGeneratedTypicalWorkArrayPaths,
@@ -15,6 +12,9 @@ import {
 	V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
 	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
 } from "./v2-typical-work-output-paths.util";
+
+/** Источник триггеров модельного стрима — arch object list «Модельный сервис». */
+export const V2_MODEL_STREAM_SOURCE_ARRAY_PATH = "generalInfo.modelService";
 
 /** Заменяет dot-путь в JsonLogic (`{"var": "a.b.c"}` и вложенные узлы). */
 export function replaceDotPathInJsonLogic(
@@ -322,10 +322,8 @@ export function shouldSkipLegacyModelStreamStageSummary(
 			return false;
 		}
 		return (
-			resolveStreamExecutorForTypicalWorkOutputPath(
-				uiSchema,
-				binding.outputPath,
-			) === V2_MODEL_STREAM_EXECUTOR
+			resolveTypicalWorkCatalogStreamLabel(uiSchema, binding.outputPath) ===
+			V2_MODEL_STREAM_EXECUTOR
 		);
 	});
 }
@@ -503,7 +501,7 @@ export function patchV2TypicalWorksLogicRules(
 		if (bindings.length > 0) {
 			for (const binding of bindings) {
 				const streamExecutor = options?.uiSchema
-					? resolveStreamExecutorForTypicalWorkOutputPath(
+					? resolveTypicalWorkCatalogStreamLabel(
 							options.uiSchema,
 							binding.outputPath,
 						)
@@ -599,7 +597,7 @@ function buildCanonicalTypicalWorksCatalogRules(
 	if (bindings.length > 0) {
 		for (const binding of bindings) {
 			const streamExecutor = options?.uiSchema
-				? resolveStreamExecutorForTypicalWorkOutputPath(
+				? resolveTypicalWorkCatalogStreamLabel(
 						options.uiSchema,
 						binding.outputPath,
 					)

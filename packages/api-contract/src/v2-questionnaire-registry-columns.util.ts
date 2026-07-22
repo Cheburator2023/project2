@@ -1,15 +1,21 @@
 import { V2_ANKETA_MAIN_SECTION_TITLES } from "./v2-anketa-workflow.util";
-import {
-	V2_ANKETA_MAIN_SECTION_IDS,
-	type V2AnketaMainSectionId,
-} from "./v2-anketa-workflow.types";
+import { type V2AnketaMainSectionId } from "./v2-anketa-workflow.types";
 import { isV2AnketaHiddenUiNode } from "./v2-anketa-editor-ui.util";
 import {
 	readV2AnketaSectionUiOptions,
 	resolveAnketaSectionWorkflowBinding,
 	resolveV2AnketaSectionDisplayTitle,
 } from "./v2-anketa-section-ui.util";
-import type { V2QuestionnaireDto } from "./v2-questionnaire.types";
+import {
+	formatV2SchemaBindingStatus,
+	type V2QuestionnaireDto,
+} from "./v2-questionnaire.types";
+import {
+	isV2AnketaBlockVisibleForViewer,
+	isV2AnketaFormPathVisibleForViewer,
+	maskV2AnketaExportFormValue,
+	type V2AnketaViewerAccessContext,
+} from "./v2-anketa-block-access.util";
 
 export type V2RegistryColumnValueType = "text" | "number" | "date" | "boolean";
 
@@ -55,6 +61,10 @@ export type V2RegistrySchemaColumnOptions = {
 	arrayIndicesByPath?: Record<string, number[]>;
 	/** Подписи групп массивов: путь → индекс → заголовок. */
 	arrayGroupLabelsByPath?: Record<string, Record<number, string>>;
+	/** Контекст зрителя для ролевки колонок экспорта. */
+	viewerAccess?: V2AnketaViewerAccessContext;
+	/** Применять правила доступа к экспорту (false в админ-превью). */
+	applyAccessRules?: boolean;
 };
 
 export type V2QuestionnaireRegistryConfigDto = {
@@ -921,6 +931,18 @@ export function buildV2QuestionnaireRegistryColumnTree(
 	const tree: V2RegistryColumnNode[] = [buildMetaRegistryGroup()];
 
 	for (const sectionKey of listRegistryRootSectionKeys(rootSchema, rootUi)) {
+		if (
+			options.viewerAccess &&
+			options.applyAccessRules !== false &&
+			!isV2AnketaBlockVisibleForViewer(
+				options.viewerAccess,
+				uiSchema,
+				sectionKey,
+				{ applyAccessRules: true },
+			)
+		) {
+			continue;
+		}
 		const sectionSchema = readRecord(rootProps[sectionKey]);
 		if (!sectionSchema) continue;
 		const sectionUi = readRecord(rootUi?.[sectionKey]);
@@ -1094,7 +1116,9 @@ export function getByFormPath(obj: unknown, path: string): unknown {
 
 function metaValue(row: V2QuestionnaireDto, metaKey: string): unknown {
 	if (metaKey === "readableId") return row.readableId ?? row.id;
-	if (metaKey === "schemaBinding.status") return row.schemaBinding.status;
+	if (metaKey === "schemaBinding.status") {
+		return formatV2SchemaBindingStatus(row.schemaBinding.status);
+	}
 	if (metaKey === "workflowGlobalStatus") return row.workflowGlobalStatus ?? "";
 	return (row as Record<string, unknown>)[metaKey];
 }
@@ -1109,7 +1133,18 @@ export function buildV2QuestionnaireRegistryExportColumns(
 		uiSchema,
 		options,
 	);
-	const leaves = flattenV2RegistryColumnTree(tree);
+	const leaves = flattenV2RegistryColumnTree(tree).filter((leaf) => {
+		if (leaf.kind !== "form" || !leaf.formPath) return true;
+		if (!options?.viewerAccess || options.applyAccessRules === false) {
+			return true;
+		}
+		return isV2AnketaFormPathVisibleForViewer(
+			options.viewerAccess,
+			uiSchema,
+			leaf.formPath,
+			{ applyAccessRules: true },
+		);
+	});
 	return leaves.map((leaf) => {
 		if (leaf.kind === "meta") {
 			return {
@@ -1137,7 +1172,23 @@ export function buildV2QuestionnaireRegistryExportColumns(
 		return {
 			key: leaf.id,
 			header: leaf.header,
-			valueGetter: (row) => getByFormPath(row.formData ?? {}, leaf.formPath!),
+			valueGetter: (row) => {
+				const raw = getByFormPath(row.formData ?? {}, leaf.formPath!);
+				if (
+					!options?.viewerAccess ||
+					options.applyAccessRules === false ||
+					!uiSchema
+				) {
+					return raw;
+				}
+				return maskV2AnketaExportFormValue(
+					leaf.formPath!,
+					raw,
+					options.viewerAccess,
+					uiSchema,
+					{ applyAccessRules: true },
+				);
+			},
 		};
 	});
 }

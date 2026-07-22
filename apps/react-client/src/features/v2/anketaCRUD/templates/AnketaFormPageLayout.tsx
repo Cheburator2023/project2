@@ -14,6 +14,8 @@ const ANKETA_COLUMN_VIEWPORT_HEIGHT = `calc(100vh - ${ANKETA_HEADER_HEIGHT_PX}px
 export { ANKETA_COLUMN_VIEWPORT_HEIGHT };
 
 export function AnketaFormPageLayout({
+	title,
+	leadingAccessory,
 	headerActions,
 	main,
 	sidebar,
@@ -21,6 +23,9 @@ export function AnketaFormPageLayout({
 	loading = false,
 	"data-test-id": dataTestId = "anketa-form-page",
 }: {
+	/** Название анкеты — слева в Header, не среди кнопок справа. */
+	title?: string;
+	leadingAccessory?: ReactNode;
 	headerActions?: ReactNode;
 	main: ReactNode;
 	sidebar: ReactNode;
@@ -45,7 +50,12 @@ export function AnketaFormPageLayout({
 				boxSizing: "border-box",
 			}}
 		>
-			<Header fixed data-test-id={`${dataTestId}--Header`}>
+			<Header
+				fixed
+				title={title}
+				leadingAccessory={leadingAccessory}
+				data-test-id={`${dataTestId}--Header`}
+			>
 				{headerActions}
 			</Header>
 

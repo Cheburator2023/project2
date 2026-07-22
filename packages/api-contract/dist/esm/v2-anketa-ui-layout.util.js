@@ -1,5 +1,7 @@
 import { V2_ANKETA_MAIN_SECTION_IDS } from "./v2-anketa-workflow.types";
 import { readV2AnketaSectionUiOptions, resolveV2AnketaStreamBlockOptions, } from "./v2-anketa-section-ui.util";
+import { serializeStreamBlockExecutors } from "./v2-stream-block-executor.util";
+import { serializeStreamBlockRoles } from "./v2-stream-block-role.util";
 function readRecord(value) {
     return value && typeof value === "object" && !Array.isArray(value)
         ? value
@@ -75,8 +77,15 @@ export function enrichAnketaLayoutUiSchema(uiSchema, jsonSchema) {
             continue;
         mergeUiOptions(blockUi, {
             streamBlock: true,
-            ...(streamBlock.streamExecutor
-                ? { streamExecutor: streamBlock.streamExecutor }
+            ...(streamBlock.streamExecutors.length > 0
+                ? {
+                    streamExecutor: serializeStreamBlockExecutors(streamBlock.streamExecutors),
+                }
+                : {}),
+            ...(streamBlock.streamBlockRoles.length > 0
+                ? {
+                    streamBlockRoles: serializeStreamBlockRoles(streamBlock.streamBlockRoles),
+                }
                 : {}),
         });
         const blockOpts = readV2AnketaSectionUiOptions(blockUi);

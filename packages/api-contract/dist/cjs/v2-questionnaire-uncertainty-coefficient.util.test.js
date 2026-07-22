@@ -2,17 +2,56 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const vitest_1 = require("vitest");
 const v2_questionnaire_uncertainty_coefficient_util_1 = require("./v2-questionnaire-uncertainty-coefficient.util");
+const v2_overall_uncertainty_config_util_1 = require("./v2-overall-uncertainty-config.util");
+const calculation_constants_1 = require("./calculation.constants");
 (0, vitest_1.describe)("resolveV2QuestionnaireUncertaintyCoefficient", () => {
     (0, vitest_1.it)("returns 1 when uncertainty is not calculated", () => {
-        (0, vitest_1.expect)((0, v2_questionnaire_uncertainty_coefficient_util_1.resolveV2QuestionnaireUncertaintyCoefficient)({})).toEqual({ calculated: false, coefficient: 1 });
+        (0, vitest_1.expect)((0, v2_questionnaire_uncertainty_coefficient_util_1.resolveV2QuestionnaireUncertaintyCoefficient)({})).toEqual({
+            calculated: false,
+            coefficient: 1,
+        });
     });
-    (0, vitest_1.it)("returns calculated coefficient from risk group and adjustment", () => {
+    (0, vitest_1.it)("keeps legacy Σ + adjustment for group-name risk strings", () => {
         (0, vitest_1.expect)((0, v2_questionnaire_uncertainty_coefficient_util_1.resolveV2QuestionnaireUncertaintyCoefficient)({
             uncertaintyCalculation: {
                 riskGroup: { sanctions: "Средний", techDebt: "Высокий" },
                 uncertaintyAdjustment: 10,
             },
         })).toEqual({ calculated: true, coefficient: 1.22 });
+    });
+    (0, vitest_1.it)("uses configurator methodology for structured risks", () => {
+        const config = (0, v2_overall_uncertainty_config_util_1.createDefaultOverallUncertaintyConfig)();
+        const result = (0, v2_questionnaire_uncertainty_coefficient_util_1.resolveV2QuestionnaireUncertaintyCoefficient)({
+            uncertaintyCalculation: {
+                initiativeTimeline: config.severityLevels[0].timelineLabel,
+                initiativeCost: config.severityLevels[0].costLabel,
+                riskGroup: {
+                    sanctions: {
+                        probability: calculation_constants_1.PROBABILITY_VALUES[4],
+                        goals: calculation_constants_1.INFLUENCE_VALUES[0],
+                    },
+                },
+            },
+        }, { config });
+        // base sev 0 × very high prob → medium 0.05; count 1 → ×1; coef 1.05
+        (0, vitest_1.expect)(result.calculated).toBe(true);
+        (0, vitest_1.expect)(result.coefficient).toBe(1.05);
+    });
+    (0, vitest_1.it)("manual adjustment fully overrides auto for structured risks", () => {
+        const config = (0, v2_overall_uncertainty_config_util_1.createDefaultOverallUncertaintyConfig)();
+        (0, vitest_1.expect)((0, v2_questionnaire_uncertainty_coefficient_util_1.resolveV2QuestionnaireUncertaintyCoefficient)({
+            uncertaintyCalculation: {
+                initiativeTimeline: config.severityLevels[4].timelineLabel,
+                initiativeCost: config.severityLevels[4].costLabel,
+                uncertaintyAdjustment: 10,
+                riskGroup: {
+                    sanctions: {
+                        probability: calculation_constants_1.PROBABILITY_VALUES[4],
+                        goals: calculation_constants_1.INFLUENCE_VALUES[4],
+                    },
+                },
+            },
+        }, { config })).toEqual({ calculated: true, coefficient: 1.1 });
     });
     (0, vitest_1.it)("treats adjustment-only input as calculated", () => {
         (0, vitest_1.expect)((0, v2_questionnaire_uncertainty_coefficient_util_1.resolveV2QuestionnaireUncertaintyCoefficient)({
@@ -51,30 +90,25 @@ const v2_questionnaire_uncertainty_coefficient_util_1 = require("./v2-questionna
                 riskGroup: { sanctions: "Высокий" },
             },
         }, paramCoefficients, { formulaParamCodes: ["complexity"] });
+        (0, vitest_1.expect)(paramCoefficients.complexity).toBe(1.5);
         (0, vitest_1.expect)(paramCoefficients.overallUncertainty).toBeUndefined();
     });
 });
 (0, vitest_1.describe)("syncAtypicalWorkCoefficientsInFormData", () => {
-    const uiSchema = {
-        detailInfo: {
-            atypicalTasks: {
-                "ui:options": { archComponent: "atypicalWork" },
-            },
-        },
-    };
-    (0, vitest_1.it)("updates coefficient on all atypical rows", () => {
-        const result = (0, v2_questionnaire_uncertainty_coefficient_util_1.syncAtypicalWorkCoefficientsInFormData)({
+    (0, vitest_1.it)("updates atypical rows", () => {
+        const synced = (0, v2_questionnaire_uncertainty_coefficient_util_1.syncAtypicalWorkCoefficientsInFormData)({
             detailInfo: {
-                atypicalTasks: [
-                    { name: "A", coefficient: 1.5, estimateHoursPerDay: 2 },
-                    { name: "B", coefficient: 1, estimateHoursPerDay: 3 },
-                ],
+                atypical: [{ name: "A", coefficient: 1 }],
             },
-        }, uiSchema, 1.12);
-        (0, vitest_1.expect)(result.changed).toBe(true);
-        (0, vitest_1.expect)(result.updatedPaths).toEqual(["detailInfo.atypicalTasks"]);
-        const rows = result.formData.detailInfo.atypicalTasks;
-        (0, vitest_1.expect)(rows[0]?.coefficient).toBe(1.12);
-        (0, vitest_1.expect)(rows[1]?.coefficient).toBe(1.12);
+        }, {
+            detailInfo: {
+                atypical: {
+                    "ui:options": { archComponent: "atypicalWork" },
+                },
+            },
+        }, 1.15);
+        (0, vitest_1.expect)(synced.changed).toBe(true);
+        (0, vitest_1.expect)(synced.formData.detailInfo
+            .atypical[0]?.coefficient).toBe(1.15);
     });
 });

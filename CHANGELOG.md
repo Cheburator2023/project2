@@ -1,5 +1,22 @@
 # Semantic Versioning Changelog
 
+# [1.38.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.37.0...v1.38.0) (2026-07-22)
+
+
+### Features
+
+* add coded implementationStream dictionary and v2 stream filter ([bf2b05a](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/bf2b05abfa69b7c278674552c58b775c9c5c1851))
+* add FieldDefaultValueControl component and integrate into SchemaPropertiesPanel ([0ba64ef](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0ba64ef83fb9a4c41b9747454c1599c40c43cce1))
+* add flattenSourceContextValue utility and enhance labor coefficient lookup ([95349ac](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/95349ac1f53649e73a24be71058aad45222bdfb5))
+* add multi-select stream block roles for schema and logic editor ([228fff9](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/228fff95ee572933511a555696ed23e953fd2406))
+* add multi-select stream executors in schema and logic editor ([9817642](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/98176427fb907ee6ef92321ea0e067fdeb8e1590))
+* add stream and role settings for atypical work blocks ([6cbdcaf](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6cbdcaf627aa6d80536c409a0f4f2d3f116860cc))
+* enforce block access by stream and role in view and export ([b2b2b0f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/b2b2b0f73ba7321183db5fbb215e0ee801313e97))
+* gate anketa bulk delete with ANKETA_DELETE_CALCULATION ([c17fa47](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/c17fa47f0c7cf9d8000bc3339d5da8b7d4ce798f))
+* integrate overall uncertainty calculation features ([6922457](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/692245751ec8928c6af5b9b9b0e0ad041c751e2b))
+* map all v2 implementation stream codes in DEPARTMENT_TO_STREAM_MAPPING ([815d6f4](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/815d6f42ce2c2d2fdf547eafbcb334df19a817e7))
+* use V2_IMPLEMENTATION_STREAM codes in schema and logic editors ([4dda824](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4dda824de26433b13635b8cd7b004e2765763e70))
+
 # [1.37.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.36.0...v1.37.0) (2026-07-20)
 
 

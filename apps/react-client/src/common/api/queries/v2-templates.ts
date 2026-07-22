@@ -854,7 +854,7 @@ export const useV2DictionaryEnumsMaps = (dictionaryCodes: string[]) => {
 		for (const code of uniqueSorted) {
 			const snapshot = data[code];
 			if (!snapshot) continue;
-			const parsed = parseDictionaryJsonToEnumPair(snapshot);
+			const parsed = parseDictionaryJsonToEnumPair(snapshot, code);
 			if (parsed) result[code] = parsed;
 		}
 		return result;

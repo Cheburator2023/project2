@@ -1,6 +1,8 @@
 import { V2_ANKETA_MAIN_SECTION_TITLES } from "./v2-anketa-workflow.util";
 import { isV2AnketaHiddenUiNode } from "./v2-anketa-editor-ui.util";
 import { readV2AnketaSectionUiOptions, resolveAnketaSectionWorkflowBinding, resolveV2AnketaSectionDisplayTitle, } from "./v2-anketa-section-ui.util";
+import { formatV2SchemaBindingStatus, } from "./v2-questionnaire.types";
+import { isV2AnketaBlockVisibleForViewer, isV2AnketaFormPathVisibleForViewer, maskV2AnketaExportFormValue, } from "./v2-anketa-block-access.util";
 const REGISTRY_SKIP_ROOT_KEYS = new Set([
     "workflow",
     "meta",
@@ -582,6 +584,11 @@ export function buildV2QuestionnaireRegistryColumnTree(jsonSchema, uiSchema, opt
     }
     const tree = [buildMetaRegistryGroup()];
     for (const sectionKey of listRegistryRootSectionKeys(rootSchema, rootUi)) {
+        if (options.viewerAccess &&
+            options.applyAccessRules !== false &&
+            !isV2AnketaBlockVisibleForViewer(options.viewerAccess, uiSchema, sectionKey, { applyAccessRules: true })) {
+            continue;
+        }
         const sectionSchema = readRecord(rootProps[sectionKey]);
         if (!sectionSchema)
             continue;
@@ -716,15 +723,23 @@ export function getByFormPath(obj, path) {
 function metaValue(row, metaKey) {
     if (metaKey === "readableId")
         return row.readableId ?? row.id;
-    if (metaKey === "schemaBinding.status")
-        return row.schemaBinding.status;
+    if (metaKey === "schemaBinding.status") {
+        return formatV2SchemaBindingStatus(row.schemaBinding.status);
+    }
     if (metaKey === "workflowGlobalStatus")
         return row.workflowGlobalStatus ?? "";
     return row[metaKey];
 }
 export function buildV2QuestionnaireRegistryExportColumns(jsonSchema, uiSchema, options) {
     const tree = buildV2QuestionnaireRegistryColumnTree(jsonSchema, uiSchema, options);
-    const leaves = flattenV2RegistryColumnTree(tree);
+    const leaves = flattenV2RegistryColumnTree(tree).filter((leaf) => {
+        if (leaf.kind !== "form" || !leaf.formPath)
+            return true;
+        if (!options?.viewerAccess || options.applyAccessRules === false) {
+            return true;
+        }
+        return isV2AnketaFormPathVisibleForViewer(options.viewerAccess, uiSchema, leaf.formPath, { applyAccessRules: true });
+    });
     return leaves.map((leaf) => {
         if (leaf.kind === "meta") {
             return {
@@ -752,7 +767,15 @@ export function buildV2QuestionnaireRegistryExportColumns(jsonSchema, uiSchema, 
         return {
             key: leaf.id,
             header: leaf.header,
-            valueGetter: (row) => getByFormPath(row.formData ?? {}, leaf.formPath),
+            valueGetter: (row) => {
+                const raw = getByFormPath(row.formData ?? {}, leaf.formPath);
+                if (!options?.viewerAccess ||
+                    options.applyAccessRules === false ||
+                    !uiSchema) {
+                    return raw;
+                }
+                return maskV2AnketaExportFormValue(leaf.formPath, raw, options.viewerAccess, uiSchema, { applyAccessRules: true });
+            },
         };
     });
 }

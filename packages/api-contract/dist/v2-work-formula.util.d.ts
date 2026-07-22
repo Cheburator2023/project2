@@ -60,6 +60,19 @@ export type ValidateWorkFormulaTokenOptions = {
 export declare function validateWorkFormulaTokens(tokens: V2WorkFormulaToken[], options?: Set<string> | ValidateWorkFormulaTokenOptions): string | null;
 export declare function isParamUsedInFormula(tokens: V2WorkFormulaToken[], paramCode: string): boolean;
 export declare function markFormulaParamInvalid(tokens: V2WorkFormulaToken[], paramCode: string): V2WorkFormulaToken[];
+export type WorkFormulaLaborParamKindRef = WorkFormulaLaborParamRef & {
+    /** by_value → param_coeff; any_of → param_anyof. */
+    kind?: "by_value" | "any_of" | null;
+};
+/**
+ * Убирает «осиротевшие» операторы/скобки после удаления операндов из формулы.
+ */
+export declare function cleanupWorkFormulaTokensAfterOperandRemoval(tokens: V2WorkFormulaToken[]): V2WorkFormulaToken[];
+/**
+ * Удаляет из формулы param-токены, которых нет в трудоёмкости
+ * или чей kind (param_coeff / param_anyof) не совпадает с типом параметра.
+ */
+export declare function removeIncompatibleLaborKindFormulaTokens(tokens: V2WorkFormulaToken[], laborParams: readonly WorkFormulaLaborParamKindRef[]): V2WorkFormulaToken[];
 /** Помечает param-токены формулы invalid, если их нет в блоке трудоёмкости. */
 export declare function markUnknownFormulaLaborParamTokensInvalid(tokens: V2WorkFormulaToken[], laborParams: readonly WorkFormulaLaborParamRef[]): V2WorkFormulaToken[];
 export declare function evaluateWorkFormula(formula: V2TypicalWorkFormulaDto, ctx: WorkFormulaEvalContext): WorkFormulaEvalResult;

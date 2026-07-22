@@ -1,7 +1,9 @@
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Checkbox from "@mui/material/Checkbox";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 import Divider from "@mui/material/Divider";
+import ListItemText from "@mui/material/ListItemText";
 import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import Paper from "@mui/material/Paper";
@@ -11,10 +13,19 @@ import { useRef, useState } from "react";
 import {
 	ALL_LOGIC_WORKS_SCOPE,
 	LOGIC_EXECUTOR_STREAMS,
+	LOGIC_STREAM_BLOCK_ROLES,
 	type LogicWorksScope,
 	isAllLogicWorksScope,
+	isRoleSelectedInScope,
+	isStreamSelectedInScope,
+	roleDisplayLabel,
 	scopeLabel,
+	scopeStreamsPresentInSchema,
+	scopeSubtitle,
 	streamColor,
+	streamDisplayLabel,
+	toggleRoleInScope,
+	toggleStreamInScope,
 } from "./typicalWorksAreas";
 import { useSchemaEditor } from "../../SchemaEditorContext";
 import { isExecutorStreamPresentInSchema } from "@smart-anketa/api-contract";
@@ -33,9 +44,11 @@ export function LogicWorksToolbar({
 	const { uiSchema, typicalWorkSaveDisplay } = useSchemaEditor();
 	const anchorRef = useRef<HTMLButtonElement>(null);
 	const [pickerOpen, setPickerOpen] = useState(false);
-	const scopePresent =
-		!isAllLogicWorksScope(scope) &&
-		isExecutorStreamPresentInSchema(uiSchema, scope.stream);
+	const scopePresence = scopeStreamsPresentInSchema(
+		uiSchema,
+		scope,
+		(stream) => isExecutorStreamPresentInSchema(uiSchema, stream),
+	);
 
 	return (
 		<Box
@@ -90,21 +103,26 @@ export function LogicWorksToolbar({
 			</Button>
 			<Typography
 				component="span"
+				title={scopeSubtitle(scope)}
 				sx={{
 					fontSize: 11,
 					color: isAllLogicWorksScope(scope)
 						? "#8a93a3"
-						: scopePresent
+						: scopePresence.all
 							? "#1f8a4d"
-							: "#c62828",
+							: scopePresence.any
+								? "#e07b16"
+								: "#c62828",
 					fontWeight: 600,
 				}}
 			>
 				{isAllLogicWorksScope(scope)
 					? "все назначенные работы"
-					: scopePresent
-						? "стрим в схеме"
-						: "стрим не в схеме"}
+					: scopePresence.all
+						? "стримы в схеме"
+						: scopePresence.any
+							? "не все стримы в схеме"
+							: "стримы не в схеме"}
 			</Typography>
 			<Popper
 				open={pickerOpen}
@@ -118,7 +136,7 @@ export function LogicWorksToolbar({
 						sx={{
 							mt: 0.75,
 							width: 320,
-							maxHeight: 380,
+							maxHeight: 480,
 							overflow: "auto",
 							borderRadius: "11px",
 							border: "1px solid #e1e5ec",
@@ -159,8 +177,7 @@ export function LogicWorksToolbar({
 							</MenuItem>
 							<Divider sx={{ my: 0.5 }} />
 							{LOGIC_EXECUTOR_STREAMS.map((stream) => {
-								const selected =
-									!isAllLogicWorksScope(scope) && scope.stream === stream;
+								const selected = isStreamSelectedInScope(scope, stream);
 								const present = isExecutorStreamPresentInSchema(
 									uiSchema,
 									stream,
@@ -170,16 +187,66 @@ export function LogicWorksToolbar({
 										key={stream}
 										selected={selected}
 										onClick={() => {
-											onScopeChange({ kind: "stream", stream });
-											setPickerOpen(false);
+											onScopeChange(toggleStreamInScope(scope, stream));
 										}}
 										sx={{ borderRadius: 1, py: 0.9 }}
 									>
-										<ExecutorStreamMenuRow
-											stream={stream}
-											color={streamColor(stream)}
-											present={present}
-											selected={selected}
+										<Checkbox
+											checked={selected}
+											size="small"
+											sx={{ p: 0.5, mr: 0.5 }}
+											tabIndex={-1}
+										/>
+										<ListItemText
+											primary={
+												<ExecutorStreamMenuRow
+													stream={streamDisplayLabel(stream)}
+													color={streamColor(stream)}
+													present={present}
+													selected={selected}
+												/>
+											}
+										/>
+									</MenuItem>
+								);
+							})}
+							<Divider sx={{ my: 0.5 }} />
+							<Typography
+								sx={{
+									fontSize: 10,
+									fontWeight: 700,
+									letterSpacing: "0.04em",
+									textTransform: "uppercase",
+									color: "#aab1c0",
+									px: 1.1,
+									py: 0.75,
+								}}
+							>
+								Роли
+							</Typography>
+							{LOGIC_STREAM_BLOCK_ROLES.map((role) => {
+								const selected = isRoleSelectedInScope(scope, role);
+								return (
+									<MenuItem
+										key={role}
+										selected={selected}
+										onClick={() => {
+											onScopeChange(toggleRoleInScope(scope, role));
+										}}
+										sx={{ borderRadius: 1, py: 0.9 }}
+									>
+										<Checkbox
+											checked={selected}
+											size="small"
+											sx={{ p: 0.5, mr: 0.5 }}
+											tabIndex={-1}
+										/>
+										<ListItemText
+											primary={roleDisplayLabel(role)}
+											primaryTypographyProps={{
+												fontSize: 13,
+												fontWeight: selected ? 700 : 500,
+											}}
 										/>
 									</MenuItem>
 								);
@@ -214,24 +281,6 @@ export function LogicWorksToolbar({
 					/>
 				</Box>
 			) : null}
-
-			{/* <Button
-				onClick={() => navigate(routes.adminV2TypicalWorks.rootPath)}
-				title="Создание, удаление и параметры трудоёмкости — в разделе администрирования"
-				sx={{
-					textTransform: "none",
-					height: 36,
-					px: 1.25,
-					border: "1px solid #dfe2ea",
-					borderRadius: "9px",
-					bgcolor: "#fff",
-					color: "#5b6577",
-					fontSize: "12px",
-					fontWeight: 600,
-				}}
-			>
-				Администрирование
-			</Button> */}
 		</Box>
 	);
 }

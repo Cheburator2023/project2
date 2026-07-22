@@ -4,6 +4,7 @@ import {
 	isV2AnketaSystemRootPointer,
 	resolveV2AnketaCanvasUiKind,
 	resolveV2AnketaSectionDisplayTitle,
+	schemaHasUncertaintyModalWidget,
 } from "@smart-anketa/api-contract";
 import {
 	getObjectItemsSchema,
@@ -52,6 +53,9 @@ export function listCanvasOrderedChildKeys(
 	const keys = listOrderedChildKeys(jsonSchema, parentPointer, uiSchema);
 	if (!uiSchema) return keys;
 
+	const hasUncertaintyModal = schemaHasUncertaintyModalWidget(
+		uiSchema as Record<string, unknown>,
+	);
 	const primary: string[] = [];
 	const system: string[] = [];
 
@@ -59,7 +63,14 @@ export function listCanvasOrderedChildKeys(
 		const fieldPointer =
 			parentPointer === "/" ? `/${key}` : `${parentPointer}/${key}`;
 		const branch = readUiSchemaBranchAtPointer(uiSchema, fieldPointer);
-		if (resolveV2AnketaCanvasUiKind(branch, { fieldPointer }) === "system") {
+		const isSystem =
+			resolveV2AnketaCanvasUiKind(branch, { fieldPointer }) === "system";
+		/** Без модалки корневой блок параметров должен оставаться на холсте. */
+		const keepUncertaintyRootVisible =
+			!hasUncertaintyModal &&
+			fieldPointer === UNCERTAINTY_CALCULATION_ROOT_POINTER;
+
+		if (isSystem && !keepUncertaintyRootVisible) {
 			system.push(key);
 		} else {
 			primary.push(key);
@@ -313,13 +324,24 @@ function appendFieldNodes(
 		options,
 	);
 	const hideSystemFields = options?.hideSystemFields === true;
+	const hasUncertaintyModal = schemaHasUncertaintyModalWidget(
+		(uiSchema ?? {}) as Record<string, unknown>,
+	);
 	let systemDividerInserted = false;
 
 	for (const key of keys) {
 		const fieldPointer =
 			parentPointer === "/" ? `/${key}` : `${parentPointer}/${key}`;
 
-		if (hideSystemFields && isCanvasSystemField(uiSchema, fieldPointer)) {
+		const keepUncertaintyRootVisible =
+			!hasUncertaintyModal &&
+			fieldPointer === UNCERTAINTY_CALCULATION_ROOT_POINTER;
+
+		if (
+			hideSystemFields &&
+			isCanvasSystemField(uiSchema, fieldPointer) &&
+			!keepUncertaintyRootVisible
+		) {
 			continue;
 		}
 

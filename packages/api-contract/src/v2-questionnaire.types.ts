@@ -22,6 +22,22 @@ export const V2_SCHEMA_BINDING_STATUS_VALUES = [
 export type V2SchemaBindingStatus =
 	(typeof V2_SCHEMA_BINDING_STATUS_VALUES)[number];
 
+export const V2_SCHEMA_BINDING_STATUS_RU: Record<V2SchemaBindingStatus, string> =
+	{
+		aligned: "Актуальная",
+		superseded: "Устарела",
+		unavailable: "Недоступна",
+	};
+
+export function formatV2SchemaBindingStatus(
+	status: V2SchemaBindingStatus | string | null | undefined,
+): string {
+	if (!status) return "";
+	return (
+		V2_SCHEMA_BINDING_STATUS_RU[status as V2SchemaBindingStatus] ?? String(status)
+	);
+}
+
 export type V2SchemaBindingDto = {
 	status: V2SchemaBindingStatus;
 	/** Версия схемы, к которой привязана анкета. */

@@ -27,6 +27,7 @@ import type {
 	CreateV2TemplateVersionRequestDto,
 	TypicalWorkSchemaConsistencyIssue,
 	V2LogicRuleDto,
+	V2LogicWorkspaceTab,
 } from "@smart-anketa/api-contract";
 import {
 	buildEmptyV2AnketaTemplateSnapshot,
@@ -244,7 +245,7 @@ export const V2TemplateSchemaEditor = ({
 	}, []);
 
 	const setLogicWorkspaceTab = useCallback(
-		(tab: "works" | "dependencies" | "jsonlogic") => {
+		(tab: V2LogicWorkspaceTab) => {
 			runInternalEditorNavigation(() => {
 				setLogicWorkspaceTabInStore(tab);
 			});
@@ -394,7 +395,9 @@ export const V2TemplateSchemaEditor = ({
 			const store = useSchemaEditorUiStore.getState();
 			if (
 				legacyLogicTab === "works" ||
+				legacyLogicTab === "atypicalWorks" ||
 				legacyLogicTab === "dependencies" ||
+				legacyLogicTab === "uncertainty" ||
 				legacyLogicTab === "jsonlogic"
 			) {
 				store.setLogicWorkspaceTab(legacyLogicTab);
@@ -1660,7 +1663,7 @@ export const V2TemplateSchemaEditor = ({
 
 	const placeTypicalWorkInStreamBlock = useCallback(
 		(
-			streamExecutor: V2ExecutorStreamLabel,
+			streamExecutor: string,
 			preferredPointer?: string | null,
 		): string | null => {
 			const result = placeTypicalWorkInStream(

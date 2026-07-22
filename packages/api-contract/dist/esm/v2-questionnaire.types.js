@@ -5,3 +5,13 @@ export const V2_SCHEMA_BINDING_STATUS_VALUES = [
     "superseded",
     "unavailable",
 ];
+export const V2_SCHEMA_BINDING_STATUS_RU = {
+    aligned: "Актуальная",
+    superseded: "Устарела",
+    unavailable: "Недоступна",
+};
+export function formatV2SchemaBindingStatus(status) {
+    if (!status)
+        return "";
+    return (V2_SCHEMA_BINDING_STATUS_RU[status] ?? String(status));
+}

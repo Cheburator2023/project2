@@ -10,6 +10,7 @@ import {
 	Patch,
 	Post,
 	Res,
+	UseInterceptors,
 } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
@@ -33,6 +34,10 @@ import {
 import { V2QuestionnaireService } from "../services/v2-questionnaire.service";
 import { V2QuestionnaireCommentService } from "../services/v2-questionnaire-comment.service";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
+import { RealmRole } from "../../../shared/decorators/realm-role.decorator";
+import { StreamFilter } from "../../../shared/decorators/stream-filter.decorator";
+import { StreamFilterInterceptor } from "../../../shared/interceptors/stream-filter.interceptor";
+import { Permission } from "../../../shared/types/permissions";
 import { AuditService } from "../../../shared/audit/audit.service";
 import {
     AUDIT_EVENT_SUMD_CREATEANKETA,
@@ -47,6 +52,7 @@ import { normalizeV2AnketaWorkflow } from "../utils/v2-anketa-workflow.util";
 
 @ApiTags("v2-questionnaires")
 @Controller("v2/questionnaires")
+@UseInterceptors(StreamFilterInterceptor)
 export class V2QuestionnaireController {
     constructor(
         private readonly questionnaireService: V2QuestionnaireService,
@@ -64,15 +70,20 @@ export class V2QuestionnaireController {
 	}
 
 	@Get()
+	@StreamFilter()
 	@ApiOperation({ summary: "Реестр анкет v2 (отдельно от реестра схем)" })
 	async findAll(): Promise<V2QuestionnaireDto[]> {
 		return this.questionnaireService.findAll();
 	}
 
-    @Post("bulk-delete")
-    @HttpCode(200)
-    @ApiOperation({ summary: "Массовое удаление анкет v2 по id (админка)" })
-    async bulkDelete(
+	@Post("bulk-delete")
+	@HttpCode(200)
+	@RealmRole(
+		Permission.ANKETA_DELETE_CALCULATION,
+		Permission.ANKETA_ADMIN_PANEL,
+	)
+	@ApiOperation({ summary: "Массовое удаление анкет v2 по id" })
+       async bulkDelete(
         @Body() body: BulkDeleteV2QuestionnairesDto,
         @CurrentUser() user: Record<string, unknown> | undefined,
     ): Promise<BulkDeleteV2QuestionnairesResultDto> {

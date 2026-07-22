@@ -27,20 +27,17 @@ const INITIATIVE_TIMELINE_DICTIONARY = "v2.method.21.сроки_инициати
 const INITIATIVE_COST_DICTIONARY = "v2.method.22.стоимость_инициативы";
 const UNCERTAINTY_ADJUSTMENT_MAX = 30;
 
-const RISK_GROUPS = buildUncertaintyModalRiskGroups();
-
-const RISK_LEVEL_OPTIONS = [
-	{ value: "", label: "Не выбрано" },
-	{ value: "low", label: "Низкий" },
-	{ value: "medium", label: "Средний" },
-	{ value: "high", label: "Высокий" },
-];
+export type UncertaintyRiskSelection = {
+	probability: string;
+	goals: string;
+};
 
 export type TotalUncertaintyFormValues = {
 	initiativeTimeline: string;
 	initiativeCost: string;
 	totalUncertaintyAdjustment: string;
-	risks: Record<string, string>;
+	/** Ключ — id риска модалки; пустые probability+goals = не отмечен. */
+	risks: Record<string, UncertaintyRiskSelection>;
 };
 
 type DictionarySelectOption = {
@@ -63,6 +60,16 @@ function buildDictionaryOptions(
 	];
 }
 
+function toSelectOptions(values: string[] | undefined): DictionarySelectOption[] {
+	if (!values || values.length === 0) {
+		return [{ value: "", label: "Не выбрано" }];
+	}
+	return [
+		{ value: "", label: "Не выбрано" },
+		...values.map((value) => ({ value, label: value })),
+	];
+}
+
 function clampAdjustmentInput(raw: string): string {
 	const normalized = raw.replace(",", ".").replace(/%/g, "").trim();
 	if (!normalized) return "";
@@ -71,19 +78,22 @@ function clampAdjustmentInput(raw: string): string {
 	return String(Math.min(UNCERTAINTY_ADJUSTMENT_MAX, Math.max(0, parsed)));
 }
 
+function emptyRiskSelection(): UncertaintyRiskSelection {
+	return { probability: "", goals: "" };
+}
+
 type TotalUncertaintyModalProps = {
 	open: boolean;
 	onClose: () => void;
 	onSubmit: (values: TotalUncertaintyFormValues) => void;
 	loading?: boolean;
 	defaultValues?: Partial<TotalUncertaintyFormValues>;
-};
-
-const INITIAL_VALUES: TotalUncertaintyFormValues = {
-	initiativeTimeline: "",
-	initiativeCost: "",
-	totalUncertaintyAdjustment: "",
-	risks: Object.fromEntries(RISK_GROUPS.map((risk) => [risk.id, ""])),
+	/** Шкалы из конфигуратора / схемы (приоритетнее словарей). */
+	timelineOptions?: string[];
+	costOptions?: string[];
+	probabilityOptions?: string[];
+	goalsOptions?: string[];
+	riskGroups?: Array<{ id: string; label: string; tooltip?: string }>;
 };
 
 export const TotalUncertaintyModal = ({
@@ -92,55 +102,90 @@ export const TotalUncertaintyModal = ({
 	onSubmit,
 	loading = false,
 	defaultValues,
+	timelineOptions: timelineOptionsProp,
+	costOptions: costOptionsProp,
+	probabilityOptions: probabilityOptionsProp,
+	goalsOptions: goalsOptionsProp,
+	riskGroups: riskGroupsProp,
 }: TotalUncertaintyModalProps) => {
-	const { enumMapByCode } = useV2DictionaryEnumsMaps([
-		INITIATIVE_TIMELINE_DICTIONARY,
-		INITIATIVE_COST_DICTIONARY,
-	]);
+	const riskGroups = useMemo(
+		() => riskGroupsProp ?? buildUncertaintyModalRiskGroups(),
+		[riskGroupsProp],
+	);
+
+	const { enumMapByCode } = useV2DictionaryEnumsMaps(
+		timelineOptionsProp && costOptionsProp
+			? []
+			: [INITIATIVE_TIMELINE_DICTIONARY, INITIATIVE_COST_DICTIONARY],
+	);
+
 	const timelineOptions = useMemo(
-		() => buildDictionaryOptions(enumMapByCode, INITIATIVE_TIMELINE_DICTIONARY),
-		[enumMapByCode],
+		() =>
+			timelineOptionsProp
+				? toSelectOptions(timelineOptionsProp)
+				: buildDictionaryOptions(enumMapByCode, INITIATIVE_TIMELINE_DICTIONARY),
+		[enumMapByCode, timelineOptionsProp],
 	);
 	const costOptions = useMemo(
-		() => buildDictionaryOptions(enumMapByCode, INITIATIVE_COST_DICTIONARY),
-		[enumMapByCode],
+		() =>
+			costOptionsProp
+				? toSelectOptions(costOptionsProp)
+				: buildDictionaryOptions(enumMapByCode, INITIATIVE_COST_DICTIONARY),
+		[costOptionsProp, enumMapByCode],
+	);
+	const probabilityOptions = useMemo(
+		() => toSelectOptions(probabilityOptionsProp),
+		[probabilityOptionsProp],
+	);
+	const goalsOptions = useMemo(
+		() => toSelectOptions(goalsOptionsProp),
+		[goalsOptionsProp],
+	);
+
+	const initialRisks = useMemo(
+		() =>
+			Object.fromEntries(
+				riskGroups.map((risk) => [risk.id, emptyRiskSelection()]),
+			) as Record<string, UncertaintyRiskSelection>,
+		[riskGroups],
 	);
 
 	const [values, setValues] = useState<TotalUncertaintyFormValues>({
-		...INITIAL_VALUES,
-		...defaultValues,
-		risks: {
-			...INITIAL_VALUES.risks,
-			...defaultValues?.risks,
-		},
+		initiativeTimeline: "",
+		initiativeCost: "",
+		totalUncertaintyAdjustment: "",
+		risks: initialRisks,
 	});
 
 	useEffect(() => {
 		if (!open) return;
 		setValues({
-			...INITIAL_VALUES,
-			...defaultValues,
+			initiativeTimeline: defaultValues?.initiativeTimeline ?? "",
+			initiativeCost: defaultValues?.initiativeCost ?? "",
+			totalUncertaintyAdjustment:
+				defaultValues?.totalUncertaintyAdjustment ?? "",
 			risks: {
-				...INITIAL_VALUES.risks,
+				...initialRisks,
 				...defaultValues?.risks,
 			},
 		});
-	}, [defaultValues, open]);
+	}, [defaultValues, initialRisks, open]);
 
-	const handleRiskChange =
-		(riskId: string) => (event: SelectChangeEvent<string>) => {
-			const nextValue = event.target.value;
-			setValues((prev) => ({
-				...prev,
-				risks: {
-					...prev.risks,
-					[riskId]: nextValue,
+	const patchRisk = (
+		riskId: string,
+		field: keyof UncertaintyRiskSelection,
+		value: string,
+	) => {
+		setValues((prev) => ({
+			...prev,
+			risks: {
+				...prev.risks,
+				[riskId]: {
+					...(prev.risks[riskId] ?? emptyRiskSelection()),
+					[field]: value,
 				},
-			}));
-		};
-
-	const handleSubmit = () => {
-		onSubmit(values);
+			},
+		}));
 	};
 
 	return (
@@ -231,7 +276,7 @@ export const TotalUncertaintyModal = ({
 								<InputAdornment position="end">%</InputAdornment>
 							),
 						}}
-						helperText="Дополнительная экспертная поправка в диапазоне 0–30%"
+						helperText="Опционально, 0–30%. Если задана — полностью перекрывает автосчёт по рискам"
 					/>
 
 					<Divider sx={{ my: 0.5 }} />
@@ -239,40 +284,81 @@ export const TotalUncertaintyModal = ({
 					<Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
 						Группа рисков
 					</Typography>
+					<Typography variant="caption" color="text.secondary">
+						Отметьте применимые риски: вероятность и влияние на Цели
+					</Typography>
 
-					{RISK_GROUPS.map((risk) => (
-						<FormControl fullWidth key={risk.id}>
-							<Flex gap={0.5} alignItems="center" sx={{ mb: 0.5 }}>
-								<Typography variant="body2" color="text.secondary">
-									{risk.label}
-								</Typography>
-								{risk.tooltip ? (
-									<IconButton
-										size="small"
-										title={risk.tooltip}
-										aria-label={risk.tooltip}
-										disableRipple
-										sx={{ p: 0.25, flexShrink: 0, cursor: "help" }}
-									>
-										<InfoOutlineIcon
-											sx={{ fontSize: 16, color: "#88888877", pointerEvents: "none" }}
-										/>
-									</IconButton>
-								) : null}
-							</Flex>
-							<Select
-								displayEmpty
-								value={values.risks[risk.id]}
-								onChange={handleRiskChange(risk.id)}
-							>
-								{RISK_LEVEL_OPTIONS.map((option) => (
-									<MenuItem key={option.value} value={option.value}>
-										{option.label}
-									</MenuItem>
-								))}
-							</Select>
-						</FormControl>
-					))}
+					{riskGroups.map((risk) => {
+						const selection = values.risks[risk.id] ?? emptyRiskSelection();
+						return (
+							<Box key={risk.id}>
+								<Flex gap={0.5} alignItems="center" sx={{ mb: 0.5 }}>
+									<Typography variant="body2" color="text.secondary">
+										{risk.label}
+									</Typography>
+									{risk.tooltip ? (
+										<IconButton
+											size="small"
+											title={risk.tooltip}
+											aria-label={risk.tooltip}
+											disableRipple
+											sx={{ p: 0.25, flexShrink: 0, cursor: "help" }}
+										>
+											<InfoOutlineIcon
+												sx={{
+													fontSize: 16,
+													color: "#88888877",
+													pointerEvents: "none",
+												}}
+											/>
+										</IconButton>
+									) : null}
+								</Flex>
+								<Flex gap={1} wrap="wrap">
+									<FormControl sx={{ flex: 1, minWidth: 200 }}>
+										<Select
+											displayEmpty
+											value={selection.probability}
+											onChange={(event: SelectChangeEvent<string>) =>
+												patchRisk(risk.id, "probability", event.target.value)
+											}
+										>
+											{probabilityOptions.map((option) => (
+												<MenuItem
+													key={`p-${option.value || "__empty"}`}
+													value={option.value}
+												>
+													{option.value
+														? `Вероятность: ${option.label}`
+														: "Вероятность: не выбрано"}
+												</MenuItem>
+											))}
+										</Select>
+									</FormControl>
+									<FormControl sx={{ flex: 1, minWidth: 200 }}>
+										<Select
+											displayEmpty
+											value={selection.goals}
+											onChange={(event: SelectChangeEvent<string>) =>
+												patchRisk(risk.id, "goals", event.target.value)
+											}
+										>
+											{goalsOptions.map((option) => (
+												<MenuItem
+													key={`g-${option.value || "__empty"}`}
+													value={option.value}
+												>
+													{option.value
+														? `Цели: ${option.label}`
+														: "Цели: не выбрано"}
+												</MenuItem>
+											))}
+										</Select>
+									</FormControl>
+								</Flex>
+							</Box>
+						);
+					})}
 				</Stack>
 			</DialogContent>
 
@@ -281,7 +367,11 @@ export const TotalUncertaintyModal = ({
 					<Button onClick={onClose} color="inherit" disabled={loading}>
 						ОТМЕНА
 					</Button>
-					<Button onClick={handleSubmit} variant="contained" disabled={loading}>
+					<Button
+						onClick={() => onSubmit(values)}
+						variant="contained"
+						disabled={loading}
+					>
 						ПРИМЕНИТЬ
 					</Button>
 				</Box>

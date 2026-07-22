@@ -1,4 +1,6 @@
 import { collectAtypicalWorkArrayPaths } from "./v2-atypical-works-logic.util";
+import { calculateOverallUncertaintyPreview } from "./v2-overall-uncertainty-config.util";
+import { mapFormDataToOverallUncertaintyPreview, resolveLegacyUncertaintyCoefficientFromRiskGroupNames, resolveOverallUncertaintyConfig, } from "./v2-overall-uncertainty-runtime.util";
 function isPlainRecord(value) {
     return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -32,7 +34,7 @@ function writeByDotPath(data, dotPath, value) {
     current[segments[segments.length - 1]] = value;
     return next;
 }
-/** Приращение к коэффициенту неопределённости по уровню риска (v2 riskGroup). */
+/** Приращение к коэффициенту неопределённости по уровню риска (legacy v2 riskGroup). */
 export function mapV2UncertaintyRiskLevelIncrement(level) {
     switch (level) {
         case "Низкий":
@@ -47,32 +49,27 @@ export function mapV2UncertaintyRiskLevelIncrement(level) {
             return 0;
     }
 }
-function parseUncertaintyAdjustmentPercent(value) {
-    if (value == null || value === "")
-        return undefined;
-    const parsed = Number(String(value).replace(",", ".").replace("%", "").trim());
-    return Number.isFinite(parsed) ? parsed : undefined;
-}
-/** Коэффициент общей неопределённости для нетиповых работ (и legacy stage calc). */
-export function resolveV2QuestionnaireUncertaintyCoefficient(formData) {
-    const uncertainty = readRecord(formData.uncertaintyCalculation);
-    const riskGroup = readRecord(uncertainty?.riskGroup);
-    const adjustmentPercent = parseUncertaintyAdjustmentPercent(uncertainty?.uncertaintyAdjustment);
-    const hasRisks = riskGroup
-        ? Object.values(riskGroup).some((value) => typeof value === "string" && value.trim().length > 0)
-        : false;
-    if (!hasRisks && adjustmentPercent == null) {
+/**
+ * Коэффициент общей неопределённости по методике вкладки «Общая неопределённость».
+ * Config берётся из logic rules шаблона (или дефолт СА).
+ * Legacy riskGroup со строками «Низкий»/… сохраняет старую формулу Σ+поправка.
+ */
+export function resolveV2QuestionnaireUncertaintyCoefficient(formData, options) {
+    const config = resolveOverallUncertaintyConfig(options);
+    const legacy = resolveLegacyUncertaintyCoefficientFromRiskGroupNames(formData, config);
+    if (legacy)
+        return legacy;
+    const preview = mapFormDataToOverallUncertaintyPreview(formData, config);
+    if (!preview.enabled) {
         return { calculated: false, coefficient: 1 };
     }
-    const riskSum = riskGroup
-        ? Object.values(riskGroup).reduce((sum, value) => {
-            if (typeof value !== "string")
-                return sum;
-            return sum + mapV2UncertaintyRiskLevelIncrement(value);
-        }, 0)
-        : 0;
-    const coefficient = Math.round((1 + riskSum + (adjustmentPercent ?? 0) / 100) * 100) / 100;
-    return { calculated: true, coefficient };
+    const breakdown = calculateOverallUncertaintyPreview(config, preview);
+    const hasManual = preview.adjPct != null;
+    const hasRisks = preview.risks.some((risk) => risk.enabled);
+    return {
+        calculated: hasManual || hasRisks,
+        coefficient: breakdown.coefficient,
+    };
 }
 /** Код параметра «Общая неопределённость» в формулах типовых работ модельного стрима. */
 export const V2_TYPICAL_WORK_UNCERTAINTY_PARAM_CODE = "overallUncertainty";
@@ -90,8 +87,7 @@ export function isTypicalWorkComputedUncertaintyParam(paramCode, paramName) {
 }
 /**
  * Подставляет коэффициент общей неопределённости из uncertaintyCalculation
- * (K = 1 + Σриски + поправка%/100; если не рассчитана — 1).
- * Перекрывает фиксированные строки коэффициентов в конфигураторе.
+ * по методике конфигуратора (K = 1 + поправка).
  */
 export function applyComputedOverallUncertaintyToTypicalWorkParamCoefficients(formData, paramCoefficients, options) {
     const refs = options?.laborParamRefs ?? [];
@@ -100,7 +96,10 @@ export function applyComputedOverallUncertaintyToTypicalWorkParamCoefficients(fo
         formulaCodes.some((code) => isTypicalWorkComputedUncertaintyParam(code, null));
     if (!usesUncertainty)
         return;
-    const { coefficient } = resolveV2QuestionnaireUncertaintyCoefficient(formData);
+    const { coefficient } = resolveV2QuestionnaireUncertaintyCoefficient(formData, {
+        config: options?.config,
+        logicRules: options?.logicRules,
+    });
     paramCoefficients[V2_TYPICAL_WORK_UNCERTAINTY_PARAM_CODE] = coefficient;
     for (const ref of refs) {
         if (isTypicalWorkComputedUncertaintyParam(ref.paramCode, ref.paramName)) {
