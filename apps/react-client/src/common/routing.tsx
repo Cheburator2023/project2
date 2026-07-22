@@ -18,7 +18,9 @@ export default function AppRoutes({ onLogout }: { onLogout?: () => void }) {
 	return useRoutes([
 		{
 			path: "/",
-			element: <RootEntryRedirect />,
+			/** Layout с сайд-панелью и кнопкой выхода нужен и для заглушки «нет доступных страниц». */
+			element: <MainLayout onLogout={onLogout} />,
+			children: [{ index: true, element: <RootEntryRedirect /> }],
 		},
 		v1Routes({ onLogout }),
 		v2Routes({ onLogout }),
