@@ -84,6 +84,14 @@ const useV2UserNavItems = () => {
 	);
 };
 
+const useV1MainNestedItems = () => {
+	const { hasPermission } = useUserStore();
+
+	return getV1MainNestedItems().filter(
+		(item) => !item?.permission || hasPermission(item.permission),
+	);
+};
+
 function routeRowSelected(route: AppRouteConfig, pathname: string): boolean {
 	if (route.rootPath === commonRoutes.adminV2Schemas.rootPath) {
 		return (
@@ -167,8 +175,10 @@ function SmartAnketaSections({
 	pathname: string;
 	onNavigate: (path: string) => void;
 }) {
-	const { canAccessTracker, canAccessAdminPanel } = usePermissions();
+	const { canAccessTracker, canAccessAdminPanel, canViewAllCalculations } =
+		usePermissions();
 	const v2NavItems = useV2UserNavItems();
+	const v1NavItems = useV1MainNestedItems();
 
 	return (
 		<Box>
@@ -181,27 +191,32 @@ function SmartAnketaSections({
 				</ListItemButton>
 			) : null}
 
-			<NavSection
-				title="Калькулятор v2"
-				homeLabel={v2Routes.home.name}
-				homePath={V2_PREFIX}
-				nestedItems={v2NavItems}
-				pathname={pathname}
-				onNavigate={onNavigate}
-				indent={SHOW_SMART_ANKETA_APP_TITLE ? 1 : 0}
-			/>
+			{/* ФТ-13: без права просмотра реестра секции калькуляторов скрыты целиком. */}
+			{canViewAllCalculations ? (
+				<>
+					<NavSection
+						title="Калькулятор v2"
+						homeLabel={v2Routes.home.name}
+						homePath={V2_PREFIX}
+						nestedItems={v2NavItems}
+						pathname={pathname}
+						onNavigate={onNavigate}
+						indent={SHOW_SMART_ANKETA_APP_TITLE ? 1 : 0}
+					/>
 
-			<Divider sx={{ my: 1 }} />
+					<Divider sx={{ my: 1 }} />
 
-			<NavSection
-				title="Калькулятор v1"
-				homeLabel={v1Routes.home.name}
-				homePath={V1_PREFIX}
-				nestedItems={getV1MainNestedItems()}
-				pathname={pathname}
-				onNavigate={onNavigate}
-				indent={SHOW_SMART_ANKETA_APP_TITLE ? 1 : 0}
-			/>
+					<NavSection
+						title="Калькулятор v1"
+						homeLabel={v1Routes.home.name}
+						homePath={V1_PREFIX}
+						nestedItems={v1NavItems}
+						pathname={pathname}
+						onNavigate={onNavigate}
+						indent={SHOW_SMART_ANKETA_APP_TITLE ? 1 : 0}
+					/>
+				</>
+			) : null}
 
 			{canAccessTracker ? (
 				<>

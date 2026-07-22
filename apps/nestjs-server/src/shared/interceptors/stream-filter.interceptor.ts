@@ -5,6 +5,7 @@ import {
 	NestInterceptor,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
+import { inferLegacyStreamBlockExecutorCode } from "@smart-anketa/api-contract";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { PaginatedResult } from "../../modules/calculation/interfaces/paginated-result.interface";
@@ -126,13 +127,26 @@ export class StreamFilterInterceptor implements NestInterceptor {
 		return data;
 	}
 
+	/**
+	 * Участвует ли пользовательский стрим в анкете (F-05 §2.1):
+	 * - основной стрим-исполнитель (`streamExecutor` v1 /
+	 *   `generalInfo.implementationStream` v2) входит в разрешённые;
+	 * - либо в анкете активен стрим-блок разрешённого стрима;
+	 * - анкета без назначенного стрима-исполнителя (черновик, стрим ещё не
+	 *   выбран) не скрывается — жёсткий фильтр применяется только к анкетам
+	 *   с уже определённым стримом.
+	 */
 	private hasAllowedStream(item: unknown, allowedStreams: string[]): boolean {
-		const stream = this.resolveItemStream(item);
-		return Boolean(stream && allowedStreams.includes(stream));
+		const primaryStream = this.resolvePrimaryStream(item);
+		if (!primaryStream) return true;
+		if (allowedStreams.includes(primaryStream)) return true;
+		return this.resolveStreamBlockCodes(item).some((code) =>
+			allowedStreams.includes(code),
+		);
 	}
 
 	/** v1 `streamExecutor` или v2 `formData.generalInfo.implementationStream`. */
-	private resolveItemStream(item: unknown): string | undefined {
+	private resolvePrimaryStream(item: unknown): string | undefined {
 		if (!item || typeof item !== "object") return undefined;
 		const row = item as StreamFilterable;
 		if (typeof row.streamExecutor === "string" && row.streamExecutor.trim()) {
@@ -151,6 +165,29 @@ export class StreamFilterInterceptor implements NestInterceptor {
 			return implementationStream.trim();
 		}
 		return undefined;
+	}
+
+	/**
+	 * Коды стримов активных стрим-блоков анкеты v2 (корневые секции formData,
+	 * распознаваемые по ключу блока). Деактивированный опциональный стрим
+	 * (`groupActivation[key] === false`) участником не считается.
+	 */
+	private resolveStreamBlockCodes(item: unknown): string[] {
+		if (!item || typeof item !== "object") return [];
+		const formData = (item as StreamFilterable).formData;
+		if (!formData || typeof formData !== "object") return [];
+		const groupActivation =
+			formData.groupActivation && typeof formData.groupActivation === "object"
+				? (formData.groupActivation as Record<string, unknown>)
+				: {};
+		const codes = new Set<string>();
+		for (const key of Object.keys(formData)) {
+			const code = inferLegacyStreamBlockExecutorCode(key);
+			if (!code) continue;
+			if (groupActivation[key] === false) continue;
+			codes.add(code);
+		}
+		return [...codes];
 	}
 
 	private isPaginatedResult(
