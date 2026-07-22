@@ -126,16 +126,18 @@ export class KanbanBoardTaskImageService implements OnModuleInit {
 
 		const id = ulid();
 		const ext = kanbanBoardTaskImageExtension(payload.mimeType);
-		const relativeFullPath = join(taskId, `${id}-full.${ext}`);
-		const relativeThumbPath = join(taskId, `${id}-thumb.${ext}`);
-		const fullPath = join(this.uploadRoot, relativeFullPath);
-		const thumbPath = join(this.uploadRoot, relativeThumbPath);
-
-		await mkdir(join(this.uploadRoot, taskId), { recursive: true });
-		await writeFile(fullPath, payload.full);
-		await writeFile(thumbPath, payload.thumb);
+		// Относительные пути в БД — всегда posix (портативно между ОС/подами).
+		const relativeFullPath = `${taskId}/${id}-full.${ext}`;
+		const relativeThumbPath = `${taskId}/${id}-thumb.${ext}`;
 
 		const createdAt = new Date().toISOString();
+		const fullBuffer = Buffer.isBuffer(payload.full)
+			? payload.full
+			: Buffer.from(payload.full);
+		const thumbBuffer = Buffer.isBuffer(payload.thumb)
+			? payload.thumb
+			: Buffer.from(payload.thumb);
+
 		const entity = this.imageRepository.create({
 			id,
 			taskId,
@@ -143,18 +145,48 @@ export class KanbanBoardTaskImageService implements OnModuleInit {
 			mimeType: payload.mimeType,
 			width: payload.width,
 			height: payload.height,
-			fullByteSize: payload.full.length,
-			thumbByteSize: payload.thumb.length,
+			fullByteSize: fullBuffer.length,
+			thumbByteSize: thumbBuffer.length,
 			fullPath: relativeFullPath,
 			thumbPath: relativeThumbPath,
-			fullData: payload.full,
-			thumbData: payload.thumb,
+			fullData: fullBuffer,
+			thumbData: thumbBuffer,
 			createdAt,
 		});
+		// Blob в БД — источник истины: в k8s часто нет writable volume под data/.
 		await this.imageRepository.save(entity);
 		await this.appendImageRef(taskId, this.toDto(entity));
 
+		await this.tryWriteDiskFiles(
+			taskId,
+			relativeFullPath,
+			relativeThumbPath,
+			fullBuffer,
+			thumbBuffer,
+		);
+
 		return this.toDto(entity);
+	}
+
+	/** Кэш на диск опционален: ошибка FS не должна валить загрузку. */
+	private async tryWriteDiskFiles(
+		taskId: string,
+		relativeFullPath: string,
+		relativeThumbPath: string,
+		full: Buffer,
+		thumb: Buffer,
+	): Promise<void> {
+		try {
+			await mkdir(join(this.uploadRoot, taskId), { recursive: true });
+			await writeFile(join(this.uploadRoot, relativeFullPath), full);
+			await writeFile(join(this.uploadRoot, relativeThumbPath), thumb);
+		} catch (error) {
+			this.logger.warn(
+				`Не удалось записать изображение задачи на диск (${this.uploadRoot}): ${
+					error instanceof Error ? error.message : String(error)
+				}. Файл сохранён в БД (bytea).`,
+			);
+		}
 	}
 
 	async readFile(

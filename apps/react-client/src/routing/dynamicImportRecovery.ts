@@ -1,6 +1,9 @@
 const AUTO_RELOAD_FLAG = "dynamic-import:auto-reload";
 const DEPLOY_SYNC_CHANNEL = "smart-anketa:deploy-sync:v1";
 const BUILD_REVISION = process.env.GIT_REVISION ?? "unknown";
+const IS_DEV = process.env.NODE_ENV === "development";
+/** В prod не чаще одного reload на ревизию; защита от гонок/повторных error events. */
+const RELOAD_COOLDOWN_MS = 120_000;
 
 type DeploySyncMessage = {
 	type: "stale-chunks";
@@ -8,8 +11,15 @@ type DeploySyncMessage = {
 	label: string;
 };
 
+type AutoReloadState = {
+	revision: string;
+	label: string;
+	at: number;
+};
+
 let recoveryHandlersRegistered = false;
 let deploySyncChannel: BroadcastChannel | null = null;
+let reloadScheduled = false;
 
 function delay(ms: number): Promise<void> {
 	return new Promise((resolve) => {
@@ -17,21 +27,44 @@ function delay(ms: number): Promise<void> {
 	});
 }
 
+function readAutoReloadState(): AutoReloadState | null {
+	const raw = sessionStorage.getItem(AUTO_RELOAD_FLAG);
+	if (!raw) return null;
+	try {
+		const value = JSON.parse(raw) as Partial<AutoReloadState>;
+		if (typeof value.revision !== "string") return null;
+		return {
+			revision: value.revision,
+			label: typeof value.label === "string" ? value.label : "module",
+			at: typeof value.at === "number" ? value.at : 0,
+		};
+	} catch {
+		return null;
+	}
+}
+
+/** Уже перезагружались на этой сборке / слишком недавно — не крутим loop. */
 function shouldAttemptAutoReload(): boolean {
-	return !sessionStorage.getItem(AUTO_RELOAD_FLAG);
+	if (IS_DEV) return false;
+	if (reloadScheduled) return false;
+	const state = readAutoReloadState();
+	if (!state) return true;
+	if (state.revision === BUILD_REVISION) return false;
+	if (Date.now() - state.at < RELOAD_COOLDOWN_MS) return false;
+	return true;
 }
 
 function markAutoReloadAttempt(label?: string): void {
-	sessionStorage.setItem(
-		AUTO_RELOAD_FLAG,
-		JSON.stringify({
-			revision: BUILD_REVISION,
-			label: label ?? "module",
-		}),
-	);
+	const state: AutoReloadState = {
+		revision: BUILD_REVISION,
+		label: label ?? "module",
+		at: Date.now(),
+	};
+	sessionStorage.setItem(AUTO_RELOAD_FLAG, JSON.stringify(state));
 }
 
 function broadcastStaleChunks(label?: string): void {
+	if (IS_DEV) return;
 	deploySyncChannel?.postMessage({
 		type: "stale-chunks",
 		revision: BUILD_REVISION,
@@ -43,7 +76,14 @@ function reloadForStaleChunks(
 	label?: string,
 	{ broadcast = true }: { broadcast?: boolean } = {},
 ): void {
+	if (IS_DEV) {
+		console.warn(
+			`[dynamic-import] stale chunk in dev (${label ?? "module"}) — skip full reload to avoid loops`,
+		);
+		return;
+	}
 	if (!shouldAttemptAutoReload()) return;
+	reloadScheduled = true;
 	markAutoReloadAttempt(label);
 	if (broadcast) {
 		broadcastStaleChunks(label);
@@ -66,17 +106,16 @@ export function isDynamicImportFetchError(error: unknown): boolean {
 }
 
 /**
- * Повторяет dynamic import и один раз перезагружает страницу,
- * если lazy-чанк устарел после деплоя (или после HMR в dev).
+ * Повторяет dynamic import и один раз перезагружает страницу (только prod),
+ * если lazy-чанк устарел после деплоя.
+ * В development full reload отключён — иначе Vite deps 404 даёт бесконечный loop.
  */
 export async function importWithDynamicRecovery<T>(
 	loader: () => Promise<T>,
 	options?: { label?: string },
 ): Promise<T> {
 	try {
-		const result = await loader();
-		sessionStorage.removeItem(AUTO_RELOAD_FLAG);
-		return result;
+		return await loader();
 	} catch (firstError) {
 		if (!isDynamicImportFetchError(firstError)) {
 			throw firstError;
@@ -85,9 +124,7 @@ export async function importWithDynamicRecovery<T>(
 		await delay(200);
 
 		try {
-			const result = await loader();
-			sessionStorage.removeItem(AUTO_RELOAD_FLAG);
-			return result;
+			return await loader();
 		} catch (secondError) {
 			if (!isDynamicImportFetchError(secondError)) {
 				throw secondError;
@@ -104,25 +141,19 @@ export async function importWithDynamicRecovery<T>(
 }
 
 /**
- * Сбрасывает защиту от reload-loop только после загрузки другой сборки.
- * Успешный lazy import сбрасывает её сразу в importWithDynamicRecovery.
+ * Сбрасывает защиту от reload только после загрузки другой сборки (prod deploy).
+ * Не сбрасываем на каждый успешный import — иначе снова возможен loop.
  */
 export function clearDynamicImportReloadFlag(): void {
-	const raw = sessionStorage.getItem(AUTO_RELOAD_FLAG);
-	if (!raw) return;
-
-	try {
-		const value = JSON.parse(raw) as { revision?: string };
-		if (value.revision !== BUILD_REVISION) {
-			sessionStorage.removeItem(AUTO_RELOAD_FLAG);
-		}
-	} catch {
+	const state = readAutoReloadState();
+	if (!state) return;
+	if (state.revision !== BUILD_REVISION) {
 		sessionStorage.removeItem(AUTO_RELOAD_FLAG);
 	}
 }
 
 /**
- * Ловит ChunkLoadError вне lazyPage и синхронизирует reload между вкладками.
+ * Ловит ChunkLoadError вне lazyPage и синхронизирует reload между вкладками (prod).
  * Вкладки на другой ревизии игнорируют сообщение от устаревшего приложения.
  */
 export function registerDynamicImportRecoveryHandlers(): void {
@@ -134,7 +165,7 @@ export function registerDynamicImportRecoveryHandlers(): void {
 		reloadForStaleChunks("global");
 	};
 
-	if ("BroadcastChannel" in globalThis) {
+	if (!IS_DEV && "BroadcastChannel" in globalThis) {
 		deploySyncChannel = new BroadcastChannel(DEPLOY_SYNC_CHANNEL);
 		deploySyncChannel.addEventListener(
 			"message",
@@ -158,4 +189,12 @@ export function registerDynamicImportRecoveryHandlers(): void {
 	window.addEventListener("error", (event) => {
 		recover(event.error ?? event.message);
 	});
+}
+
+/** Для тестов. */
+export function resetDynamicImportRecoveryForTests(): void {
+	recoveryHandlersRegistered = false;
+	reloadScheduled = false;
+	deploySyncChannel?.close();
+	deploySyncChannel = null;
 }

@@ -70,11 +70,17 @@ export function registerAppCrossTabHandlers(): void {
 					ensureKeycloakSession();
 				}, 0);
 				break;
-			case "auth:session-changed":
+			case "auth:session-changed": {
 				// Host/Keycloak владеет user и permissions: полная гидратация надёжнее
 				// копирования security-sensitive данных через BroadcastChannel.
+				// Cooldown: иначе при мигании токена вкладки уходят в reload-loop.
+				const key = "auth:session-reload-at";
+				const lastAt = Number(sessionStorage.getItem(key) || 0);
+				if (Date.now() - lastAt < 30_000) break;
+				sessionStorage.setItem(key, String(Date.now()));
 				globalThis.location.reload();
 				break;
+			}
 			case "query:invalidate":
 				invalidateScope(event.scope, event.entityId);
 				break;
