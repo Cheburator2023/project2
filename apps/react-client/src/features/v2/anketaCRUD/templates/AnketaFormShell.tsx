@@ -206,7 +206,10 @@ export function AnketaFormShell({
 		// Только page-level overrides; formData/schema/ui берёт V2AnketaFormWithModals из engine.
 		return {
 			workflow,
-			onCompleteMainSection: completeMainSection,
+			// Approve блока (ФТ-6) — только роли с anketa_workflow_approve.
+			onCompleteMainSection: canWorkflowApprove
+				? completeMainSection
+				: undefined,
 			onTouchMainSection: touchMainSection,
 			isMainSectionLocked: isSectionLocked,
 			anketaReadOnly: effectiveReadOnly,
@@ -215,6 +218,7 @@ export function AnketaFormShell({
 			viewerAccess,
 		};
 	}, [
+		canWorkflowApprove,
 		effectiveReadOnly,
 		workflow,
 		completeMainSection,

@@ -1,0 +1,503 @@
+{
+  "exportedAt": "2026-07-22T12:55:43.158Z",
+  "realm": "cym",
+  "orgRolePermissionMatrix": {
+    "admin_it": [
+      "anketa_admin_panel",
+      "anketa_audit_view",
+      "anketa_create_calculation",
+      "anketa_edit_calculation",
+      "anketa_export_reports",
+      "anketa_view_all_calculations"
+    ],
+    "admin_it_lead": [
+      "anketa_admin_panel",
+      "anketa_audit_view",
+      "anketa_create_calculation",
+      "anketa_edit_calculation",
+      "anketa_export_reports",
+      "anketa_view_all_calculations"
+    ],
+    "business_customer": [
+      "anketa_admin_panel",
+      "anketa_audit_view",
+      "anketa_create_calculation",
+      "anketa_edit_calculation",
+      "anketa_export_reports",
+      "anketa_view_all_calculations"
+    ],
+    "de": [
+      "anketa_admin_panel",
+      "anketa_audit_view",
+      "anketa_create_calculation",
+      "anketa_edit_calculation",
+      "anketa_export_reports",
+      "anketa_view_all_calculations"
+    ],
+    "de_lead": [
+      "anketa_admin_panel",
+      "anketa_audit_view",
+      "anketa_create_calculation",
+      "anketa_edit_calculation",
+      "anketa_export_reports",
+      "anketa_view_all_calculations"
+    ],
+    "ds": [
+      "anketa_admin_panel",
+      "anketa_audit_view",
+      "anketa_create_calculation",
+      "anketa_edit_calculation",
+      "anketa_export_reports",
+      "anketa_view_all_calculations"
+    ],
+    "ds_lead": [
+      "anketa_admin_panel",
+      "anketa_audit_view",
+      "anketa_create_calculation",
+      "anketa_edit_calculation",
+      "anketa_export_reports",
+      "anketa_view_all_calculations"
+    ],
+    "mipm": [
+      "anketa_admin_panel",
+      "anketa_audit_view",
+      "anketa_create_calculation",
+      "anketa_edit_calculation",
+      "anketa_export_reports",
+      "anketa_view_all_calculations"
+    ],
+    "modelops": [
+      "anketa_admin_panel",
+      "anketa_audit_view",
+      "anketa_create_calculation",
+      "anketa_edit_calculation",
+      "anketa_export_reports",
+      "anketa_view_all_calculations"
+    ],
+    "modelops_lead": [
+      "anketa_admin_panel",
+      "anketa_audit_view",
+      "anketa_create_calculation",
+      "anketa_edit_calculation",
+      "anketa_export_reports",
+      "anketa_view_all_calculations"
+    ],
+    "validator": [
+      "anketa_admin_panel",
+      "anketa_audit_view",
+      "anketa_create_calculation",
+      "anketa_edit_calculation",
+      "anketa_export_reports",
+      "anketa_view_all_calculations"
+    ],
+    "validator_lead": [
+      "anketa_admin_panel",
+      "anketa_audit_view",
+      "anketa_create_calculation",
+      "anketa_edit_calculation",
+      "anketa_export_reports",
+      "anketa_view_all_calculations"
+    ]
+  },
+  "usersByOrgRole": {
+    "admin_it": [
+      "admin",
+      "bi_admin_it",
+      "bi_admin_it_lead",
+      "meetup_user",
+      "oleg",
+      "rost"
+    ],
+    "admin_it_lead": [
+      "admin",
+      "bi_admin_it_lead",
+      "meetup_user",
+      "oleg",
+      "rost",
+      "test_admin_it"
+    ],
+    "business_customer": [
+      "bi_business_customer_broker",
+      "bi_business_customer_invest",
+      "meetup_user",
+      "oleg",
+      "test_business_customer"
+    ],
+    "de": [
+      "bi_de",
+      "bi_de_lead",
+      "meetup_user",
+      "oleg",
+      "test_de",
+      "test_de_lead",
+      "test_de_sa"
+    ],
+    "de_lead": [
+      "bi_de_lead",
+      "meetup_user",
+      "oleg",
+      "rost",
+      "test_de_lead",
+      "test_de_lead_sa"
+    ],
+    "ds": [
+      "bi_ds_kib",
+      "bi_ds_kib_lead",
+      "bi_ds_rb",
+      "bi_ds_rb_lead",
+      "ds",
+      "ds_lead1",
+      "meetup_user",
+      "oleg",
+      "test_ds",
+      "test_ds2",
+      "test_ds_algorithms",
+      "test_ds_finance_models",
+      "test_ds_it_process",
+      "test_ds_kib_smb",
+      "test_ds_lead",
+      "test_ds_rb",
+      "test_ds_rb_lead",
+      "test_ds_sa",
+      "test_null",
+      "test_roles_ds"
+    ],
+    "ds_lead": [
+      "bi_ds_kib_lead",
+      "bi_ds_rb_lead",
+      "ds_lead1",
+      "meetup_user",
+      "oleg",
+      "test_ds_it_process",
+      "test_ds_lead",
+      "test_ds_lead_sa",
+      "test_ds_rb_lead",
+      "test_roles_ds"
+    ],
+    "mipm": [
+      "bi_mipm",
+      "bi_mipm_lead",
+      "meetup_user",
+      "mipm",
+      "oleg",
+      "rost",
+      "test_mipm",
+      "test_mipm_sa"
+    ],
+    "modelops": [
+      "bi_modelops",
+      "bi_modelops_lead",
+      "meetup_user",
+      "modelops",
+      "oleg",
+      "test_modelops",
+      "test_modelops_lead",
+      "test_modelops_sa"
+    ],
+    "modelops_lead": [
+      "bi_modelops_lead",
+      "meetup_user",
+      "modelops",
+      "oleg",
+      "rost",
+      "test_modelops_lead",
+      "test_modelops_lead_sa"
+    ],
+    "validator": [
+      "bi_validator",
+      "bi_validator_lead",
+      "meetup_user",
+      "oleg",
+      "test_validator",
+      "test_validator_lead",
+      "validator"
+    ],
+    "validator_lead": [
+      "bi_validator_lead",
+      "meetup_user",
+      "oleg",
+      "rost",
+      "test_validator_lead"
+    ]
+  },
+  "usersByAnketaPermissionEffective": {
+    "anketa_export_reports": [
+      "architect_data",
+      "bi_de_lead",
+      "bi_ds_kib",
+      "bi_ds_kib_lead",
+      "bi_ds_rb",
+      "bi_ds_rb_lead",
+      "bi_mipm",
+      "bi_mipm_lead",
+      "bi_modelops",
+      "bi_modelops_lead",
+      "developer",
+      "ds",
+      "ds_lead1",
+      "meetup_user",
+      "mipm",
+      "modelops",
+      "oleg",
+      "rost",
+      "test_de_lead",
+      "test_de_lead_sa",
+      "test_ds",
+      "test_ds2",
+      "test_ds_algorithms",
+      "test_ds_finance_models",
+      "test_ds_it_process",
+      "test_ds_kib_smb",
+      "test_ds_lead",
+      "test_ds_lead_sa",
+      "test_ds_rb",
+      "test_ds_rb_lead",
+      "test_ds_sa",
+      "test_mipm",
+      "test_mipm_sa",
+      "test_modelops",
+      "test_modelops_lead",
+      "test_modelops_lead_sa",
+      "test_modelops_sa",
+      "test_null",
+      "test_roles_ds"
+    ],
+    "anketa_view_all_calculations": [
+      "architect_data",
+      "bi_de",
+      "bi_de_lead",
+      "bi_ds_kib",
+      "bi_ds_kib_lead",
+      "bi_ds_rb",
+      "bi_ds_rb_lead",
+      "bi_mipm",
+      "bi_mipm_lead",
+      "bi_modelops",
+      "bi_modelops_lead",
+      "developer",
+      "ds",
+      "ds_lead1",
+      "meetup_user",
+      "mipm",
+      "modelops",
+      "oleg",
+      "rost",
+      "test_de",
+      "test_de_lead",
+      "test_de_lead_sa",
+      "test_de_sa",
+      "test_ds",
+      "test_ds2",
+      "test_ds_algorithms",
+      "test_ds_finance_models",
+      "test_ds_it_process",
+      "test_ds_kib_smb",
+      "test_ds_lead",
+      "test_ds_lead_sa",
+      "test_ds_rb",
+      "test_ds_rb_lead",
+      "test_ds_sa",
+      "test_mipm",
+      "test_mipm_sa",
+      "test_modelops",
+      "test_modelops_lead",
+      "test_modelops_lead_sa",
+      "test_modelops_sa",
+      "test_null",
+      "test_roles_ds",
+      "test_sum_sacfg",
+      "test_sum_saprg",
+      "test_sum_sarep_dadm",
+      "test_sum_sarep_digagt",
+      "test_sum_sarep_idsrc",
+      "test_sum_sarep_mdlctl",
+      "test_sum_sarep_pirm",
+      "test_sum_sarep_strdat"
+    ],
+    "anketa_edit_calculation": [
+      "bi_de_lead",
+      "bi_ds_kib_lead",
+      "bi_ds_rb_lead",
+      "bi_mipm",
+      "bi_mipm_lead",
+      "bi_modelops_lead",
+      "developer",
+      "ds_lead1",
+      "meetup_user",
+      "mipm",
+      "modelops",
+      "oleg",
+      "rost",
+      "test_de_lead",
+      "test_de_lead_sa",
+      "test_ds_it_process",
+      "test_ds_lead",
+      "test_ds_lead_sa",
+      "test_ds_rb_lead",
+      "test_mipm",
+      "test_mipm_sa",
+      "test_modelops_lead",
+      "test_modelops_lead_sa",
+      "test_roles_ds"
+    ],
+    "anketa_admin_panel": [
+      "bi_ds_kib_lead",
+      "bi_ds_rb_lead",
+      "bi_mipm",
+      "bi_mipm_lead",
+      "developer",
+      "ds_lead1",
+      "meetup_user",
+      "mipm",
+      "oleg",
+      "rost",
+      "test_ds_it_process",
+      "test_ds_lead",
+      "test_ds_lead_sa",
+      "test_ds_rb_lead",
+      "test_mipm",
+      "test_mipm_sa",
+      "test_roles_ds"
+    ],
+    "anketa_audit_view": [
+      "bi_ds_kib_lead",
+      "bi_ds_rb_lead",
+      "ds_lead1",
+      "meetup_user",
+      "oleg",
+      "test_ds_it_process",
+      "test_ds_lead",
+      "test_ds_lead_sa",
+      "test_ds_rb_lead",
+      "test_roles_ds"
+    ],
+    "anketa_create_calculation": [
+      "bi_ds_kib_lead",
+      "bi_ds_rb_lead",
+      "bi_mipm",
+      "bi_mipm_lead",
+      "bi_modelops_lead",
+      "developer",
+      "ds_lead1",
+      "meetup_user",
+      "mipm",
+      "modelops",
+      "oleg",
+      "rost",
+      "test_ds_it_process",
+      "test_ds_lead",
+      "test_ds_lead_sa",
+      "test_ds_rb_lead",
+      "test_mipm",
+      "test_mipm_sa",
+      "test_modelops_lead",
+      "test_modelops_lead_sa",
+      "test_roles_ds",
+      "test_sum_sacfg",
+      "test_sum_saprg"
+    ]
+  },
+  "groupsThatGrantAnketa": [
+    {
+      "path": "/architect",
+      "realmRoles": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ]
+    },
+    {
+      "path": "/de",
+      "realmRoles": [
+        "anketa_view_all_calculations"
+      ]
+    },
+    {
+      "path": "/de/de_lead",
+      "realmRoles": [
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ]
+    },
+    {
+      "path": "/DE/DE_Lead",
+      "realmRoles": [
+        "anketa_edit_calculation",
+        "anketa_export_reports"
+      ]
+    },
+    {
+      "path": "/ds",
+      "realmRoles": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ]
+    },
+    {
+      "path": "/ds/ds_lead",
+      "realmRoles": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ]
+    },
+    {
+      "path": "/mipm",
+      "realmRoles": [
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ]
+    },
+    {
+      "path": "/MIPM",
+      "realmRoles": [
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ]
+    },
+    {
+      "path": "/modelops",
+      "realmRoles": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ]
+    },
+    {
+      "path": "/modelops/modelops_lead",
+      "realmRoles": [
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ]
+    },
+    {
+      "path": "/sacfg",
+      "realmRoles": [
+        "anketa_create_calculation",
+        "anketa_view_all_calculations"
+      ]
+    },
+    {
+      "path": "/saprg",
+      "realmRoles": [
+        "anketa_view_all_calculations"
+      ]
+    },
+    {
+      "path": "/sarep",
+      "realmRoles": [
+        "anketa_view_all_calculations"
+      ]
+    }
+  ]
+}

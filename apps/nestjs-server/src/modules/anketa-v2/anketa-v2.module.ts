@@ -45,6 +45,8 @@ import { V2TypicalWorkParamCatalogService } from "./services/v2-typical-work-par
 import { V2TypicalWorkController } from "./controllers/v2-typical-work.controller";
 import { V2DataTransferController } from "./controllers/v2-data-transfer.controller";
 import { V2DataTransferService } from "./services/v2-data-transfer.service";
+import { V2KeycloakRoleSyncController } from "./controllers/v2-keycloak-role-sync.controller";
+import { V2KeycloakRoleSyncService } from "./services/v2-keycloak-role-sync.service";
 
 @Module({
 	imports: [
@@ -78,6 +80,7 @@ import { V2DataTransferService } from "./services/v2-data-transfer.service";
 		V2QuestionnaireController,
 		V2TypicalWorkController,
 		V2DataTransferController,
+		V2KeycloakRoleSyncController,
 	],
 	providers: [
 		StreamMappingService,
@@ -97,6 +100,7 @@ import { V2DataTransferService } from "./services/v2-data-transfer.service";
 		V2TypicalWorkRuntimeService,
 		V2TypicalWorkParamCatalogService,
 		V2DataTransferService,
+		V2KeycloakRoleSyncService,
 	],
 	exports: [
 		V2TemplateService,

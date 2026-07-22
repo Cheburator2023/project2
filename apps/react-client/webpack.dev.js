@@ -21,9 +21,24 @@ const changelog_version_match = changelog_content.match(
 );
 const app_version = changelog_version_match?.[1] ?? "0.0.0";
 
+/**
+ * publicPath:
+ * - standalone http://localhost:8004/ → "/" или "auto"
+ * - shell грузит http://localhost:8004/remoteEntry.js → нужен абсолютный
+ *   PUBLIC_PATH=http://localhost:8004/ (или "auto")
+ * - shell через /proxy/smart-anketa-frontend/ →
+ *   PUBLIC_PATH=/proxy/smart-anketa-frontend/
+ */
+const PUBLIC_PATH =
+	process.env.PUBLIC_PATH ||
+	(process.env.MF_SHELL === "1" ? "http://localhost:8004/" : "/");
+
 module.exports = merge(common, {
 	mode: "development",
 	devtool: "cheap-module-source-map",
+	output: {
+		publicPath: PUBLIC_PATH,
+	},
 	optimization: {
 		minimize: false,
 	},
@@ -31,6 +46,7 @@ module.exports = merge(common, {
 		new ReactRefreshWebpackPlugin({ overlay: false }),
 		new DefinePlugin({
 			"process.env": {},
+			"process.env.NODE_ENV": JSON.stringify("development"),
 			"process.env.MOCKED_REQUESTS": JSON.stringify(
 				process.env.MOCKED_REQUESTS || "",
 			),
@@ -42,16 +58,36 @@ module.exports = merge(common, {
 		}),
 	],
 	watchOptions: {
-		// poll только если файловая система не шлёт события (Docker/VM)
-		...(process.env.WEBPACK_POLL ? { poll: Number(process.env.WEBPACK_POLL) || 1000 } : {}),
+		...(process.env.WEBPACK_POLL
+			? { poll: Number(process.env.WEBPACK_POLL) || 1000 }
+			: {}),
 		ignored: /node_modules/,
 	},
 	devServer: {
-		static: "./",
-		port: 8004,
-		historyApiFallback: { disableDotRule: true },
+		static: [
+			{
+				directory: path.join(__dirname, "public"),
+				publicPath: "/",
+			},
+		],
+		port: Number(process.env.PORT) || 8004,
+		historyApiFallback: {
+			index: "/index.html",
+			disableDotRule: false,
+		},
 		hot: true,
+		liveReload: false,
 		allowedHosts: ["all"],
+		headers: {
+			// Shell на :8080 грузит remoteEntry/chunks с :8004
+			"Access-Control-Allow-Origin": "*",
+			"Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+			"Access-Control-Allow-Headers": "*",
+		},
+		devMiddleware: {
+			publicPath: PUBLIC_PATH.startsWith("http") ? "/" : PUBLIC_PATH,
+			writeToDisk: false,
+		},
 		client: {
 			overlay: {
 				runtimeErrors: (error) => {
@@ -61,6 +97,7 @@ module.exports = merge(common, {
 					return !ignoreErrors.includes(error.message);
 				},
 			},
+			reconnect: 5,
 		},
 	},
 });

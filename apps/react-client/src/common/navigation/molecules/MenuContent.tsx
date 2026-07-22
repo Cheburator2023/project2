@@ -167,7 +167,7 @@ function SmartAnketaSections({
 	pathname: string;
 	onNavigate: (path: string) => void;
 }) {
-	const { canAccessTracker } = usePermissions();
+	const { canAccessTracker, canAccessAdminPanel } = usePermissions();
 	const v2NavItems = useV2UserNavItems();
 
 	return (
@@ -221,33 +221,38 @@ function SmartAnketaSections({
 				</>
 			) : null}
 
-			<Divider sx={{ my: 1 }} />
+			{/* ФТ-13: без anketa_admin_panel раздел полностью скрыт (DS видел админку — баг). */}
+			{canAccessAdminPanel ? (
+				<>
+					<Divider sx={{ my: 1 }} />
 
-			<Box sx={{ display: "block", mb: 0.2 }}>
-				<ListItemButton
-					disabled
-					sx={{ pl: SHOW_SMART_ANKETA_APP_TITLE ? 2 : 1 }}
-				>
-					<ListItemText secondary={commonNavbarGroups.adminV2.title} />
-				</ListItemButton>
-				<List disablePadding sx={{ py: 0 }}>
-					{getAdminNavbarItems().map((route) => (
-						<ListItem
-							key={route.rootPath}
-							disablePadding
-							sx={{ display: "block", mb: 0.2, py: 0 }}
-							onClick={() => onNavigate(route.rootPath)}
+					<Box sx={{ display: "block", mb: 0.2 }}>
+						<ListItemButton
+							disabled
+							sx={{ pl: SHOW_SMART_ANKETA_APP_TITLE ? 2 : 1 }}
 						>
-							<ListItemButton
-								selected={routeRowSelected(route, pathname)}
-								sx={{ pl: SHOW_SMART_ANKETA_APP_TITLE ? 3 : 2 }}
-							>
-								<ListItemText primary={route.name} />
-							</ListItemButton>
-						</ListItem>
-					))}
-				</List>
-			</Box>
+							<ListItemText secondary={commonNavbarGroups.adminV2.title} />
+						</ListItemButton>
+						<List disablePadding sx={{ py: 0 }}>
+							{getAdminNavbarItems().map((route) => (
+								<ListItem
+									key={route.rootPath}
+									disablePadding
+									sx={{ display: "block", mb: 0.2, py: 0 }}
+									onClick={() => onNavigate(route.rootPath)}
+								>
+									<ListItemButton
+										selected={routeRowSelected(route, pathname)}
+										sx={{ pl: SHOW_SMART_ANKETA_APP_TITLE ? 3 : 2 }}
+									>
+										<ListItemText primary={route.name} />
+									</ListItemButton>
+								</ListItem>
+							))}
+						</List>
+					</Box>
+				</>
+			) : null}
 
 			{getDevNavbarItems().length > 0 ? (
 				<>

@@ -67,7 +67,7 @@ describe("importWithDynamicRecovery", () => {
 		expect(reload).not.toHaveBeenCalled();
 	});
 
-	it("skips full page reload when NODE_ENV is development", async () => {
+	it("skips full page reload when NODE_ENV is not production", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		vi.resetModules();
 		const mod = await import("./dynamicImportRecovery");
@@ -82,6 +82,31 @@ describe("importWithDynamicRecovery", () => {
 		const err = new TypeError(
 			"Failed to fetch dynamically imported module: http://localhost:8000/src/x.tsx",
 		);
+		await expect(
+			mod.importWithDynamicRecovery(() => Promise.reject(err), {
+				label: "test",
+			}),
+		).rejects.toBe(err);
+
+		expect(reload).not.toHaveBeenCalled();
+		mod.resetDynamicImportRecoveryForTests();
+		vi.unstubAllEnvs();
+	});
+
+	it("skips reload when NODE_ENV is undefined (webpack DefinePlugin gap)", async () => {
+		vi.stubEnv("NODE_ENV", undefined);
+		vi.resetModules();
+		const mod = await import("./dynamicImportRecovery");
+		const reload = vi.fn();
+		vi.stubGlobal("location", { reload });
+		vi.stubGlobal("sessionStorage", {
+			getItem: () => null,
+			setItem: vi.fn(),
+			removeItem: vi.fn(),
+		});
+
+		const err = new Error("Loading chunk layout-admin failed.");
+		err.name = "ChunkLoadError";
 		await expect(
 			mod.importWithDynamicRecovery(() => Promise.reject(err), {
 				label: "test",

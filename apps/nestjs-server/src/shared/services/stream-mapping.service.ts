@@ -5,10 +5,16 @@ import {
 	V2_IMPLEMENTATION_STREAM_CODES,
 	V2_IMPLEMENTATION_STREAM_LABELS,
 } from "@smart-anketa/api-contract";
-import { DEPARTMENTS, STREAM_FILTERED_ROLES, STREAMS } from "../constants";
+import {
+	DEPARTMENTS,
+	STREAM_FILTER_EXEMPT_LEAD_ROLES,
+	STREAM_FILTERED_ROLES,
+	STREAMS,
+} from "../constants";
 import {
 	extractDepartmentsAndStreams,
 	extractUserRoles,
+	normalizeUserGroups,
 } from "../utils/user-groups.util";
 
 /** Департамент Keycloak → стримы v1 (`streamExecutor`) и коды v2 (`implementationStream`). */
@@ -60,6 +66,15 @@ const DEPARTMENT_TO_STREAM_MAPPING: Record<string, readonly string[]> = {
 export class StreamMappingService {
 	isStreamFilteredUser(userGroups: string[]): boolean {
 		if (!Array.isArray(userGroups)) {
+			return false;
+		}
+
+		const normalized = normalizeUserGroups(userGroups);
+		if (
+			STREAM_FILTER_EXEMPT_LEAD_ROLES.some((role) =>
+				normalized.includes(role),
+			)
+		) {
 			return false;
 		}
 

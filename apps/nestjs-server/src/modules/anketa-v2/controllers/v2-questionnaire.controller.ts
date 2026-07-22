@@ -66,10 +66,7 @@ export class V2QuestionnaireController {
 
 	@Post("bulk-delete")
 	@HttpCode(200)
-	@RealmRole(
-		Permission.ANKETA_DELETE_CALCULATION,
-		Permission.ANKETA_ADMIN_PANEL,
-	)
+	@RealmRole(Permission.ANKETA_DELETE_CALCULATION)
 	@ApiOperation({ summary: "Массовое удаление анкет v2 по id" })
 	async bulkDelete(
 		@Body() body: BulkDeleteV2QuestionnairesDto,
@@ -94,6 +91,7 @@ export class V2QuestionnaireController {
 	}
 
 	@Get("export/xlsx")
+	@RealmRole(Permission.ANKETA_EXPORT_REPORTS)
 	@ApiOperation({ summary: "Выгрузка всех анкет v2 реестра в XLSX" })
 	@ApiResponse({
 		status: HttpStatus.OK,
@@ -110,6 +108,7 @@ export class V2QuestionnaireController {
 
 	@Post("export/xlsx")
 	@HttpCode(200)
+	@RealmRole(Permission.ANKETA_EXPORT_REPORTS)
 	@ApiOperation({ summary: "Выгрузка выбранных анкет v2 реестра в XLSX" })
 	@ApiResponse({
 		status: HttpStatus.OK,
@@ -200,6 +199,7 @@ export class V2QuestionnaireController {
 	}
 
 	@Post()
+	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
 	@ApiOperation({
 		summary:
 			"Создать анкету по актуальной опубликованной схеме шаблона (фиксируется boundTemplateVersionId)",
@@ -212,6 +212,7 @@ export class V2QuestionnaireController {
 	}
 
 	@Patch(":id")
+	@RealmRole(Permission.ANKETA_EDIT_CALCULATION)
 	@ApiOperation({ summary: "Обновить данные анкеты" })
 	async update(
 		@Param("id", ParseUUIDPipe) id: string,
@@ -221,6 +222,7 @@ export class V2QuestionnaireController {
 	}
 
 	@Post(":id/new-version")
+	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
 	@ApiOperation({
 		summary:
 			"Новая версия анкеты в серии (наследует привязку к схеме, как v1)",

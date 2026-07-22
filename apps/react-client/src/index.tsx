@@ -5,17 +5,17 @@ import { globalStyles } from "@react-client/theme/GlobalStyle";
 import React from "react";
 import ReactDOM from "react-dom/client";
 
-const IS_DEV = process.env.NODE_ENV === "development";
+const IS_PROD = process.env.NODE_ENV === "production";
 const VITE_PRELOAD_RELOAD_AT = "vite:preload-reload-at";
 const VITE_PRELOAD_COOLDOWN_MS = 120_000;
 
 if (typeof window !== "undefined") {
 	window.addEventListener("vite:preloadError", (event) => {
 		event.preventDefault();
-		// В dev full reload от Vite deps 404 даёт бесконечный loop — только log.
-		if (IS_DEV) {
+		// Вне production full reload от битых чанков даёт бесконечный loop.
+		if (!IS_PROD) {
 			console.warn(
-				"[vite:preloadError] skipped reload in development",
+				"[vite:preloadError] skipped reload outside production",
 				event,
 			);
 			return;

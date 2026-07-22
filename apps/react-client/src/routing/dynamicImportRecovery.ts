@@ -1,7 +1,12 @@
 const AUTO_RELOAD_FLAG = "dynamic-import:auto-reload";
 const DEPLOY_SYNC_CHANNEL = "smart-anketa:deploy-sync:v1";
 const BUILD_REVISION = process.env.GIT_REVISION ?? "unknown";
-const IS_DEV = process.env.NODE_ENV === "development";
+/**
+ * Auto-reload только в явном production.
+ * Webpack DefinePlugin с `"process.env": {}` без NODE_ENV давал undefined →
+ * IS_DEV=false → ChunkLoadError/HTML-as-JS крутил reload-loop.
+ */
+const IS_PROD = process.env.NODE_ENV === "production";
 /** В prod не чаще одного reload на ревизию; защита от гонок/повторных error events. */
 const RELOAD_COOLDOWN_MS = 120_000;
 
@@ -45,7 +50,7 @@ function readAutoReloadState(): AutoReloadState | null {
 
 /** Уже перезагружались на этой сборке / слишком недавно — не крутим loop. */
 function shouldAttemptAutoReload(): boolean {
-	if (IS_DEV) return false;
+	if (!IS_PROD) return false;
 	if (reloadScheduled) return false;
 	const state = readAutoReloadState();
 	if (!state) return true;
@@ -64,7 +69,7 @@ function markAutoReloadAttempt(label?: string): void {
 }
 
 function broadcastStaleChunks(label?: string): void {
-	if (IS_DEV) return;
+	if (!IS_PROD) return;
 	deploySyncChannel?.postMessage({
 		type: "stale-chunks",
 		revision: BUILD_REVISION,
@@ -76,9 +81,9 @@ function reloadForStaleChunks(
 	label?: string,
 	{ broadcast = true }: { broadcast?: boolean } = {},
 ): void {
-	if (IS_DEV) {
+	if (!IS_PROD) {
 		console.warn(
-			`[dynamic-import] stale chunk in dev (${label ?? "module"}) — skip full reload to avoid loops`,
+			`[dynamic-import] stale chunk outside production (${label ?? "module"}) — skip full reload to avoid loops`,
 		);
 		return;
 	}
@@ -165,7 +170,7 @@ export function registerDynamicImportRecoveryHandlers(): void {
 		reloadForStaleChunks("global");
 	};
 
-	if (!IS_DEV && "BroadcastChannel" in globalThis) {
+	if (IS_PROD && "BroadcastChannel" in globalThis) {
 		deploySyncChannel = new BroadcastChannel(DEPLOY_SYNC_CHANNEL);
 		deploySyncChannel.addEventListener(
 			"message",

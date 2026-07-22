@@ -18,6 +18,8 @@ export const usePermissions = () => {
 		canExportReports: hasPermission(Permission.ANKETA_EXPORT_REPORTS),
 		canWorkflowApprove: hasPermission(Permission.ANKETA_WORKFLOW_APPROVE),
 		canAccessAdminPanel: hasPermission(Permission.ANKETA_ADMIN_PANEL),
+		canAccessAudit: hasPermission(Permission.ANKETA_AUDIT_VIEW),
+		canHoldCalculation: hasPermission(Permission.ANKETA_HOLD),
 		canAccessTracker:
 			isDev ||
 			(hasPermission(Permission.DEVELOPER) &&

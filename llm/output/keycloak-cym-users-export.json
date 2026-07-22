@@ -1,0 +1,6187 @@
+{
+  "exportedAt": "2026-07-22T12:55:43.158Z",
+  "keycloakUrl": "https://keycloak-sumcore.sumd.dk1-sumd01.innodev.local/auth",
+  "realm": "cym",
+  "note": "realmRolesEffective = composite (прямые + через группы). Для сверки с JWT/матрицей используйте effective + groups.",
+  "counts": {
+    "users": 103,
+    "realmRoles": 64,
+    "groupsFlat": 83,
+    "clients": 10
+  },
+  "realmRoles": [
+    {
+      "name": "accounting",
+      "description": null
+    },
+    {
+      "name": "add_model_sumrm",
+      "description": "The role grants the right to add new models in Sum RM"
+    },
+    {
+      "name": "add_public_template_sumrm",
+      "description": "The role grants the right to create public templates in Sum RM"
+    },
+    {
+      "name": "admin",
+      "description": "realm admin"
+    },
+    {
+      "name": "anketa_admin_panel",
+      "description": "The permission grants the right to access the admin panel in Smart Anketa"
+    },
+    {
+      "name": "anketa_audit_view",
+      "description": null
+    },
+    {
+      "name": "anketa_create_calculation",
+      "description": "The permission grants the right to create new calculations in Smart Anketa"
+    },
+    {
+      "name": "anketa_edit_calculation",
+      "description": "The permission grants the right to edit calculations in Smart Anketa"
+    },
+    {
+      "name": "anketa_export_reports",
+      "description": "The permission grants the right to export reports in Smart Anketa"
+    },
+    {
+      "name": "anketa_view_all_calculations",
+      "description": "The permission grants the right to view all calculations in Smart Anketa"
+    },
+    {
+      "name": "camunda-admin",
+      "description": null
+    },
+    {
+      "name": "data",
+      "description": null
+    },
+    {
+      "name": "data_create",
+      "description": null
+    },
+    {
+      "name": "data_delete",
+      "description": null
+    },
+    {
+      "name": "data_expert",
+      "description": null
+    },
+    {
+      "name": "data_expert_lead",
+      "description": null
+    },
+    {
+      "name": "data_read",
+      "description": null
+    },
+    {
+      "name": "data_write",
+      "description": null
+    },
+    {
+      "name": "de",
+      "description": null
+    },
+    {
+      "name": "de_lead",
+      "description": null
+    },
+    {
+      "name": "developer",
+      "description": null
+    },
+    {
+      "name": "dit",
+      "description": null
+    },
+    {
+      "name": "dit_lead",
+      "description": null
+    },
+    {
+      "name": "dl_commit_abort",
+      "description": null
+    },
+    {
+      "name": "dl_commit_aplay",
+      "description": null
+    },
+    {
+      "name": "dl_commit_delete",
+      "description": null
+    },
+    {
+      "name": "dl_commit_edit_data",
+      "description": null
+    },
+    {
+      "name": "dl_commit_edit_description",
+      "description": null
+    },
+    {
+      "name": "dl_commit_import_s2t",
+      "description": null
+    },
+    {
+      "name": "dl_export_reports",
+      "description": null
+    },
+    {
+      "name": "dl_system_access",
+      "description": null
+    },
+    {
+      "name": "ds",
+      "description": null
+    },
+    {
+      "name": "ds_lead",
+      "description": null
+    },
+    {
+      "name": "edit_allocation_sumrm",
+      "description": "The role grants the right to edit allocation in Sum RM"
+    },
+    {
+      "name": "edit_model_sumrm",
+      "description": "The role grants the right to edit models in Sum RM"
+    },
+    {
+      "name": "integration",
+      "description": null
+    },
+    {
+      "name": "integration_create",
+      "description": null
+    },
+    {
+      "name": "integration_delete",
+      "description": null
+    },
+    {
+      "name": "integration_read",
+      "description": null
+    },
+    {
+      "name": "integration_write",
+      "description": null
+    },
+    {
+      "name": "management",
+      "description": null
+    },
+    {
+      "name": "model",
+      "description": null
+    },
+    {
+      "name": "model_create",
+      "description": null
+    },
+    {
+      "name": "model_delete",
+      "description": null
+    },
+    {
+      "name": "model_read",
+      "description": null
+    },
+    {
+      "name": "model_write",
+      "description": null
+    },
+    {
+      "name": "modelops",
+      "description": null
+    },
+    {
+      "name": "modelops_lead",
+      "description": null
+    },
+    {
+      "name": "monitoring",
+      "description": null
+    },
+    {
+      "name": "monitoring_create",
+      "description": null
+    },
+    {
+      "name": "monitoring_delete",
+      "description": null
+    },
+    {
+      "name": "monitoring_read",
+      "description": null
+    },
+    {
+      "name": "monitoring_write",
+      "description": null
+    },
+    {
+      "name": "offline_access",
+      "description": "${role_offline-access}"
+    },
+    {
+      "name": "release_manager",
+      "description": null
+    },
+    {
+      "name": "sales",
+      "description": null
+    },
+    {
+      "name": "uma_authorization",
+      "description": "${role_uma_authorization}"
+    },
+    {
+      "name": "validation",
+      "description": null
+    },
+    {
+      "name": "validation_create",
+      "description": null
+    },
+    {
+      "name": "validation_delete",
+      "description": null
+    },
+    {
+      "name": "validation_read",
+      "description": null
+    },
+    {
+      "name": "validation_write",
+      "description": null
+    },
+    {
+      "name": "validator",
+      "description": null
+    },
+    {
+      "name": "validator_lead",
+      "description": null
+    }
+  ],
+  "groupsWithRoles": [
+    {
+      "id": "ffc1e6ab-8271-4f9e-a3c3-4009b4379ea9",
+      "name": "access_during_freeze",
+      "path": "/access_during_freeze",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "1cf94fd4-02d5-45fe-93cc-03b50378a35e",
+      "name": "access_to_hadoopsync",
+      "path": "/access_to_hadoopsync",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "b409248f-a138-40ea-b8c9-58ca8720770e",
+      "name": "admin_it",
+      "path": "/admin_it",
+      "realmRoles": [
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "monitoring_read",
+        "validation_read",
+        "validation_write"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 1
+    },
+    {
+      "id": "efc768ff-33c0-41ce-898e-388a9238c0bb",
+      "name": "admin_it_lead",
+      "path": "/admin_it/admin_it_lead",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "d3bacdb1-a164-4b49-bd39-ebf0e21c1579",
+      "name": "AdministratorIT",
+      "path": "/AdministratorIT",
+      "realmRoles": [
+        "dit",
+        "integration",
+        "model",
+        "monitoring",
+        "validation"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 1
+    },
+    {
+      "id": "dbc8cd96-d97e-4a2e-be36-a31b81491859",
+      "name": "AdministratorIT_Lead",
+      "path": "/AdministratorIT/AdministratorIT_Lead",
+      "realmRoles": [
+        "dit",
+        "dit_lead",
+        "integration",
+        "model",
+        "monitoring",
+        "validation"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "995fb376-0681-45de-aa95-cc303d81c389",
+      "name": "architect",
+      "path": "/architect",
+      "realmRoles": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "dl_system_access"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "28bd2067-53ad-41e3-bda6-fba21ce0f801",
+      "name": "auditor",
+      "path": "/auditor",
+      "realmRoles": [
+        "data_read",
+        "integration_read",
+        "model_read",
+        "monitoring_read",
+        "validation_read"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 1
+    },
+    {
+      "id": "2b46028d-94c1-4b9a-86b5-39e12545d619",
+      "name": "auditor_lead",
+      "path": "/auditor/auditor_lead",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "9e783b7d-955e-43f1-a7b5-a562ed4d1f98",
+      "name": "business_customer",
+      "path": "/business_customer",
+      "realmRoles": [
+        "add_model_sumrm",
+        "data_read",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "model_read",
+        "monitoring_read",
+        "validation_read"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "41a4a40e-9edf-471b-b900-66d782589694",
+      "name": "cruel_test_kib_smb",
+      "path": "/cruel_test_kib_smb",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "a12068d1-e34a-4d0e-aea4-4f44229fc1f1",
+      "name": "cruel_test_mlops",
+      "path": "/cruel_test_mlops",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "ad5562e7-0002-4cff-ae7c-cb7c4458fd81",
+      "name": "cruel_test_rb",
+      "path": "/cruel_test_rb",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "b841269c-841f-4b2c-a0c8-02d6e95fc353",
+      "name": "data_expert",
+      "path": "/data_expert",
+      "realmRoles": [
+        "data",
+        "edit_model_sumrm",
+        "integration",
+        "model"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 1
+    },
+    {
+      "id": "e510b37c-33a1-4bbe-87d0-3b790c03b0b1",
+      "name": "data_expert_lead",
+      "path": "/data_expert/data_expert_lead",
+      "realmRoles": [
+        "data_read",
+        "data_write",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write"
+      ],
+      "clientRoles": {
+        "realm-management": [
+          "view-users"
+        ]
+      },
+      "subGroupCount": 0
+    },
+    {
+      "id": "345d3476-cd82-44eb-b0b9-26e25a01575d",
+      "name": "de",
+      "path": "/de",
+      "realmRoles": [
+        "anketa_view_all_calculations",
+        "data_read",
+        "data_write",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read",
+        "validation_write"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 1
+    },
+    {
+      "id": "ab0e1e7d-e882-436e-be1c-a52a959eaaed",
+      "name": "DE",
+      "path": "/DE",
+      "realmRoles": [
+        "data",
+        "de",
+        "integration",
+        "model"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 1
+    },
+    {
+      "id": "5be05391-1e69-457f-a6f8-243e47b0bbcf",
+      "name": "de_lead",
+      "path": "/de/de_lead",
+      "realmRoles": [
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "edit_model_sumrm"
+      ],
+      "clientRoles": {
+        "realm-management": [
+          "view-users"
+        ]
+      },
+      "subGroupCount": 0
+    },
+    {
+      "id": "d0c719dc-9da8-493d-9a98-1afa7dda36c6",
+      "name": "DE_Lead",
+      "path": "/DE/DE_Lead",
+      "realmRoles": [
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "data",
+        "de",
+        "de_lead",
+        "integration",
+        "model"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "e481fce1-33a7-4450-8a6a-dbcde07e1888",
+      "name": "departament",
+      "path": "/departament",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 6
+    },
+    {
+      "id": "a8a3cc53-8fd4-4bfa-b5bd-a5fc5df5f988",
+      "name": "departament_business_customer",
+      "path": "/departament_business_customer",
+      "realmRoles": [],
+      "clientRoles": {
+        "realm-management": [
+          "create-client",
+          "manage-clients",
+          "manage-realm",
+          "manage-users",
+          "query-users",
+          "realm-admin"
+        ]
+      },
+      "subGroupCount": 12
+    },
+    {
+      "id": "21c03e1c-bd4e-44d8-b4fa-182332291a81",
+      "name": "Департамент брокерского обслуживания",
+      "path": "/departament_business_customer/Департамент брокерского обслуживания",
+      "realmRoles": [],
+      "clientRoles": {
+        "realm-management": [
+          "create-client",
+          "manage-clients",
+          "manage-realm",
+          "manage-users",
+          "query-users",
+          "realm-admin"
+        ]
+      },
+      "subGroupCount": 0
+    },
+    {
+      "id": "dc0ce375-16a6-4c80-835b-763bbe0272ad",
+      "name": "Департамент инвестиционных продуктов",
+      "path": "/departament_business_customer/Департамент инвестиционных продуктов",
+      "realmRoles": [],
+      "clientRoles": {
+        "realm-management": [
+          "create-client",
+          "manage-clients",
+          "manage-realm",
+          "manage-users",
+          "query-users",
+          "realm-admin"
+        ]
+      },
+      "subGroupCount": 0
+    },
+    {
+      "id": "572c7d4f-282e-455d-b704-acc515ebb4c4",
+      "name": "Департамент интегрированного управления рисками",
+      "path": "/departament_business_customer/Департамент интегрированного управления рисками",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "5787bad0-4f6a-453e-a696-e12141d8fc16",
+      "name": "Департамент корпоративных кредитных рисков",
+      "path": "/departament_business_customer/Департамент корпоративных кредитных рисков",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "c475a319-198f-4d61-ac0f-a6894d67d6a6",
+      "name": "Департамент развития и координации розничного бизнеса",
+      "path": "/departament_business_customer/Департамент развития и координации розничного бизнеса",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "1359e314-135c-4be1-b0cd-59db4c25eed0",
+      "name": "Департамент розничных кредитных рисков",
+      "path": "/departament_business_customer/Департамент розничных кредитных рисков",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "4f972e2b-27c9-41dc-9891-f7cc8de9e1a6",
+      "name": "Департамент финансового урегулирования",
+      "path": "/departament_business_customer/Департамент финансового урегулирования",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "080270b6-2266-4bcc-9b7a-797853eb338f",
+      "name": "Депозитарий",
+      "path": "/departament_business_customer/Депозитарий",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "565159c9-578d-41d6-9b88-28354e7cb8e9",
+      "name": "Тестовый департамент",
+      "path": "/departament_business_customer/Тестовый департамент",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "e34cf07c-1c46-452f-9aef-3f29da118752",
+      "name": "Управление обслуживания приоритетных клиентов",
+      "path": "/departament_business_customer/Управление обслуживания приоритетных клиентов",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "5fd03f19-17a2-4ac5-b97e-ee8cd59808c3",
+      "name": "Управление структурных продуктов и структурирования",
+      "path": "/departament_business_customer/Управление структурных продуктов и структурирования",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "6f66fa32-1d74-47cb-99f5-d70b4d4ba0c5",
+      "name": "Финансовый департамент",
+      "path": "/departament_business_customer/Финансовый департамент",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "edacbfc3-c2be-4b74-a5de-09ee06d3acf5",
+      "name": "Модели партнерств и платформы больших данных",
+      "path": "/departament/Модели партнерств и платформы больших данных",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "689cc7d7-6933-4fe3-9b09-2b7f76fb9f36",
+      "name": "Управление моделирования КИБ и СМБ",
+      "path": "/departament/Управление моделирования КИБ и СМБ",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "6293784a-2f6c-427c-9395-ca910ef2774f",
+      "name": "Управление моделирования партнерств и ИТ-процессов",
+      "path": "/departament/Управление моделирования партнерств и ИТ-процессов",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "4943e96a-3007-4852-bf47-1ada3282d849",
+      "name": "Управление моделирования РБ",
+      "path": "/departament/Управление моделирования РБ",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "337db88b-17a0-433a-9a92-64998ee60567",
+      "name": "Управление перспективных алгоритмов машинного обучения",
+      "path": "/departament/Управление перспективных алгоритмов машинного обучения",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "3ea68a22-da93-40f2-a7fa-1e3b2d9604c9",
+      "name": "Управление процессных и финансовых моделей",
+      "path": "/departament/Управление процессных и финансовых моделей",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "660fb3fc-2633-47b1-aa22-02122cab6eb7",
+      "name": "ds",
+      "path": "/ds",
+      "realmRoles": [
+        "add_model_sumrm",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read"
+      ],
+      "clientRoles": {
+        "realm-management": [
+          "manage-realm",
+          "query-users",
+          "realm-admin"
+        ]
+      },
+      "subGroupCount": 1
+    },
+    {
+      "id": "05a08f9a-2678-40bd-93b2-18bcb9143be0",
+      "name": "DS",
+      "path": "/DS",
+      "realmRoles": [
+        "add_model_sumrm",
+        "data",
+        "ds",
+        "integration",
+        "model",
+        "monitoring",
+        "validation"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 1
+    },
+    {
+      "id": "ee2080a2-8743-47b5-bf49-c6bd62c903fb",
+      "name": "ds_lead",
+      "path": "/ds/ds_lead",
+      "realmRoles": [
+        "add_model_sumrm",
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "developer",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm"
+      ],
+      "clientRoles": {
+        "realm-management": [
+          "view-users"
+        ]
+      },
+      "subGroupCount": 1
+    },
+    {
+      "id": "56d9406d-459c-4388-aa9f-19dc85545f47",
+      "name": "DS_Lead",
+      "path": "/DS/DS_Lead",
+      "realmRoles": [
+        "accounting",
+        "add_model_sumrm",
+        "camunda-admin",
+        "data",
+        "data_create",
+        "data_delete",
+        "data_read",
+        "data_write",
+        "de",
+        "de_lead",
+        "dit",
+        "dit_lead",
+        "ds",
+        "ds_lead",
+        "integration",
+        "integration_create",
+        "integration_delete",
+        "integration_read",
+        "integration_write",
+        "management",
+        "model",
+        "model_create",
+        "model_delete",
+        "model_read",
+        "model_write",
+        "modelops",
+        "modelops_lead",
+        "monitoring",
+        "monitoring_create",
+        "monitoring_delete",
+        "monitoring_read",
+        "monitoring_write",
+        "offline_access",
+        "sales",
+        "uma_authorization",
+        "validation",
+        "validation_create",
+        "validation_delete",
+        "validation_read",
+        "validation_write",
+        "validator",
+        "validator_lead"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "c4898b46-7fe8-47ef-b9f2-3398174b4a54",
+      "name": "ds_lead_kmbkcb",
+      "path": "/ds/ds_lead/ds_lead_kmbkcb",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "f704896a-e116-480d-b3c5-4dcc48558a38",
+      "name": "mipm",
+      "path": "/mipm",
+      "realmRoles": [
+        "add_public_template_sumrm",
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_delete",
+        "data_read",
+        "data_write",
+        "dl_system_access",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_delete",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_delete",
+        "model_read",
+        "model_write",
+        "monitoring_delete",
+        "monitoring_read",
+        "validation_delete",
+        "validation_read"
+      ],
+      "clientRoles": {
+        "realm-management": [
+          "realm-admin"
+        ]
+      },
+      "subGroupCount": 0
+    },
+    {
+      "id": "0f95ed9a-a954-4e82-b8cf-426bf563efb3",
+      "name": "MIPM",
+      "path": "/MIPM",
+      "realmRoles": [
+        "add_public_template_sumrm",
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "data",
+        "integration",
+        "model",
+        "monitoring",
+        "validation"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 1
+    },
+    {
+      "id": "fe8c0599-c211-4dd0-b71a-511e0721ac06",
+      "name": "MIPM_Lead",
+      "path": "/MIPM/MIPM_Lead",
+      "realmRoles": [
+        "add_public_template_sumrm",
+        "data",
+        "integration",
+        "model",
+        "monitoring",
+        "validation"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "2520e4d2-6032-492e-a208-8413e061aa33",
+      "name": "modelops",
+      "path": "/modelops",
+      "realmRoles": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "dl_system_access",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 1
+    },
+    {
+      "id": "e2b74c49-bef5-4e46-a2b4-503d6539bc43",
+      "name": "Modelops",
+      "path": "/Modelops",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "90f349c2-497d-4c5e-afc1-fb09069f7788",
+      "name": "ModelOps",
+      "path": "/ModelOps",
+      "realmRoles": [
+        "data",
+        "integration",
+        "model",
+        "modelops"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 1
+    },
+    {
+      "id": "c2c08509-85f0-4180-99b8-0e5cf162df8e",
+      "name": "modelops_lead",
+      "path": "/modelops/modelops_lead",
+      "realmRoles": [
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "edit_model_sumrm"
+      ],
+      "clientRoles": {
+        "realm-management": [
+          "view-users"
+        ]
+      },
+      "subGroupCount": 0
+    },
+    {
+      "id": "500cfa43-351c-46c0-9583-58a2147322f9",
+      "name": "ModelOps_Lead",
+      "path": "/ModelOps/ModelOps_Lead",
+      "realmRoles": [
+        "data",
+        "integration",
+        "model",
+        "modelops",
+        "modelops_lead"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "1a60feb3-2562-449a-a928-7efec8e5a0b5",
+      "name": "mreg_dev_ds_kib_smb",
+      "path": "/mreg_dev_ds_kib_smb",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "6677ff35-da36-49aa-b3c6-c713f5b3775b",
+      "name": "mreg_dev_ds_perspect_alg",
+      "path": "/mreg_dev_ds_perspect_alg",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "78546679-4cea-41e8-a1ee-62cfe38f0e2a",
+      "name": "mreg_dev_ds_rb",
+      "path": "/mreg_dev_ds_rb",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "4bb129d8-0e87-45d5-b0bd-4920c00a7935",
+      "name": "mreg_dev_nlp_proj_rw",
+      "path": "/mreg_dev_nlp_proj_rw",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "4e9e08fd-e595-41c3-85b0-c5aa7fc423af",
+      "name": "mreg_dev_partner_it_proc",
+      "path": "/mreg_dev_partner_it_proc",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "563ba5cd-25d2-4740-b0f4-57ec3f274351",
+      "name": "mreg_dev_proc_fin_model",
+      "path": "/mreg_dev_proc_fin_model",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "a73d3c37-c7da-4bc1-856a-cee765207a3c",
+      "name": "mreg_dev_sum",
+      "path": "/mreg_dev_sum",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "fc867796-9788-49a2-a0f5-925fd8909d82",
+      "name": "project_office",
+      "path": "/project_office",
+      "realmRoles": [
+        "data_read",
+        "integration_read",
+        "model_read",
+        "monitoring_read",
+        "validation_read"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 1
+    },
+    {
+      "id": "1fbd35aa-6274-4713-9ee0-69ff24be118d",
+      "name": "dev_sum_prjtoffice",
+      "path": "/project_office/dev_sum_prjtoffice",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "6f44c5bb-d04d-4d29-8034-7d07585a4cbc",
+      "name": "release_manager",
+      "path": "/release_manager",
+      "realmRoles": [
+        "integration_create",
+        "integration_read",
+        "integration_write"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "106a57d2-5004-4fa8-9b06-88225c99f763",
+      "name": "rm_ds_kib",
+      "path": "/rm_ds_kib",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "8b3f857c-c446-4669-8388-1e2241c4a2fc",
+      "name": "rm_ds_kib1",
+      "path": "/rm_ds_kib1",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "7d8e7e60-08bd-4a85-920b-98d7eae768e2",
+      "name": "rm_ds_rb",
+      "path": "/rm_ds_rb",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "f0fdbc6e-7d1a-4092-9f02-8254de902785",
+      "name": "rm_ds_rb1",
+      "path": "/rm_ds_rb1",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "aaae9ac8-d455-41e6-a25d-79a831c138d3",
+      "name": "rm_modelops",
+      "path": "/rm_modelops",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "3d5d573c-3694-4aaa-8b4e-c8eda890dedc",
+      "name": "sacfg",
+      "path": "/sacfg",
+      "realmRoles": [
+        "anketa_create_calculation",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 1
+    },
+    {
+      "id": "935f87c5-103b-4ec2-9d9b-6c79fa7fa058",
+      "name": "dev_sum_sacfg",
+      "path": "/sacfg/dev_sum_sacfg",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "8ad4897d-77ed-45ce-83b8-87bd274d6f80",
+      "name": "saprg",
+      "path": "/saprg",
+      "realmRoles": [
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 1
+    },
+    {
+      "id": "a8d31592-56cc-4177-aded-fabe68b45992",
+      "name": "dev_sum_saprg",
+      "path": "/saprg/dev_sum_saprg",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "8b67a8c1-05b4-416b-b606-239c6f657360",
+      "name": "sarep",
+      "path": "/sarep",
+      "realmRoles": [
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 6
+    },
+    {
+      "id": "7ab6f182-2242-4be5-9f53-2c01ec83936b",
+      "name": "dev_sum_sarep_dadm",
+      "path": "/sarep/dev_sum_sarep_dadm",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "681a5389-4cb8-41e7-8465-3562b90f5736",
+      "name": "dev_sum_sarep_digagt",
+      "path": "/sarep/dev_sum_sarep_digagt",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "f79dd78c-1c7b-4213-9ef8-dda2beebd020",
+      "name": "dev_sum_sarep_idsrc",
+      "path": "/sarep/dev_sum_sarep_idsrc",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "f63204a9-0d63-4769-994d-c81819f89111",
+      "name": "dev_sum_sarep_mdlctl",
+      "path": "/sarep/dev_sum_sarep_mdlctl",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "a238eaab-a68e-417d-a229-ad14c1d56e84",
+      "name": "dev_sum_sarep_pirm",
+      "path": "/sarep/dev_sum_sarep_pirm",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "fba1e804-c382-4098-93e6-284fad5dbe3a",
+      "name": "dev_sum_sarep_strdat",
+      "path": "/sarep/dev_sum_sarep_strdat",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "6b570d73-541a-42c1-a0b1-929e856b6257",
+      "name": "tuz_dev_mr_automl",
+      "path": "/tuz_dev_mr_automl",
+      "realmRoles": [],
+      "clientRoles": {},
+      "subGroupCount": 0
+    },
+    {
+      "id": "7055a369-4c16-47fa-9793-225c0cdaeef0",
+      "name": "validator",
+      "path": "/validator",
+      "realmRoles": [
+        "add_model_sumrm",
+        "add_public_template_sumrm",
+        "data_read",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_delete",
+        "validation_read",
+        "validation_write"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 1
+    },
+    {
+      "id": "8e1b3796-8096-4d24-88ec-1ba86eb6b70b",
+      "name": "Validator",
+      "path": "/Validator",
+      "realmRoles": [
+        "add_model_sumrm",
+        "add_public_template_sumrm",
+        "data",
+        "integration",
+        "model",
+        "monitoring",
+        "validation",
+        "validator"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 1
+    },
+    {
+      "id": "5ffb63c4-339c-4a35-9001-e736bbfe9dd0",
+      "name": "validator_lead",
+      "path": "/validator/validator_lead",
+      "realmRoles": [
+        "add_model_sumrm",
+        "add_public_template_sumrm",
+        "edit_model_sumrm"
+      ],
+      "clientRoles": {
+        "realm-management": [
+          "view-users"
+        ]
+      },
+      "subGroupCount": 0
+    },
+    {
+      "id": "40651ddc-f720-427c-a583-a31bb0f34e16",
+      "name": "Validator_Lead",
+      "path": "/Validator/Validator_Lead",
+      "realmRoles": [
+        "add_model_sumrm",
+        "add_public_template_sumrm",
+        "data",
+        "integration",
+        "model",
+        "monitoring",
+        "validation",
+        "validator",
+        "validator_lead"
+      ],
+      "clientRoles": {},
+      "subGroupCount": 0
+    }
+  ],
+  "clients": [
+    {
+      "id": "8280ec19-9622-4b97-b40a-0f58e588c7b8",
+      "clientId": "account",
+      "name": "${client_account}"
+    },
+    {
+      "id": "39b16149-04f2-4f6d-a842-a6711e39090a",
+      "clientId": "account-console",
+      "name": "${client_account-console}"
+    },
+    {
+      "id": "87a8fbc3-5d83-433c-b7d1-e7ca2bdf3bd9",
+      "clientId": "admin-cli",
+      "name": "${client_admin-cli}"
+    },
+    {
+      "id": "401d2e79-0063-473c-8576-2695446f4437",
+      "clientId": "backend",
+      "name": null
+    },
+    {
+      "id": "2214f92c-15bc-435c-8aea-5f0030921a1f",
+      "clientId": "broker",
+      "name": "${client_broker}"
+    },
+    {
+      "id": "0619a663-baa3-4230-b9c7-ea6029dbfe39",
+      "clientId": "camunda-wildfly",
+      "name": null
+    },
+    {
+      "id": "f91d74cc-a1c9-43e8-be2a-eec87450fd5b",
+      "clientId": "frontend",
+      "name": null
+    },
+    {
+      "id": "b5614a8c-5eef-4937-879f-9d4b1bd2fcb0",
+      "clientId": "realm-management",
+      "name": "${client_realm-management}"
+    },
+    {
+      "id": "0596378a-22ef-4ddc-b228-f44a3461a1c2",
+      "clientId": "security-admin-console",
+      "name": "${client_security-admin-console}"
+    },
+    {
+      "id": "283affdb-7a9e-4973-adf6-efc02a404a4b",
+      "clientId": "swagger_test",
+      "name": null
+    }
+  ],
+  "matrixHints": {
+    "usersByOrgRole": {
+      "admin_it": [
+        "admin",
+        "bi_admin_it",
+        "bi_admin_it_lead",
+        "meetup_user",
+        "oleg",
+        "rost"
+      ],
+      "admin_it_lead": [
+        "admin",
+        "bi_admin_it_lead",
+        "meetup_user",
+        "oleg",
+        "rost",
+        "test_admin_it"
+      ],
+      "business_customer": [
+        "bi_business_customer_broker",
+        "bi_business_customer_invest",
+        "meetup_user",
+        "oleg",
+        "test_business_customer"
+      ],
+      "de": [
+        "bi_de",
+        "bi_de_lead",
+        "meetup_user",
+        "oleg",
+        "test_de",
+        "test_de_lead",
+        "test_de_sa"
+      ],
+      "de_lead": [
+        "bi_de_lead",
+        "meetup_user",
+        "oleg",
+        "rost",
+        "test_de_lead",
+        "test_de_lead_sa"
+      ],
+      "ds": [
+        "bi_ds_kib",
+        "bi_ds_kib_lead",
+        "bi_ds_rb",
+        "bi_ds_rb_lead",
+        "ds",
+        "ds_lead1",
+        "meetup_user",
+        "oleg",
+        "test_ds",
+        "test_ds2",
+        "test_ds_algorithms",
+        "test_ds_finance_models",
+        "test_ds_it_process",
+        "test_ds_kib_smb",
+        "test_ds_lead",
+        "test_ds_rb",
+        "test_ds_rb_lead",
+        "test_ds_sa",
+        "test_null",
+        "test_roles_ds"
+      ],
+      "ds_lead": [
+        "bi_ds_kib_lead",
+        "bi_ds_rb_lead",
+        "ds_lead1",
+        "meetup_user",
+        "oleg",
+        "test_ds_it_process",
+        "test_ds_lead",
+        "test_ds_lead_sa",
+        "test_ds_rb_lead",
+        "test_roles_ds"
+      ],
+      "mipm": [
+        "bi_mipm",
+        "bi_mipm_lead",
+        "meetup_user",
+        "mipm",
+        "oleg",
+        "rost",
+        "test_mipm",
+        "test_mipm_sa"
+      ],
+      "modelops": [
+        "bi_modelops",
+        "bi_modelops_lead",
+        "meetup_user",
+        "modelops",
+        "oleg",
+        "test_modelops",
+        "test_modelops_lead",
+        "test_modelops_sa"
+      ],
+      "modelops_lead": [
+        "bi_modelops_lead",
+        "meetup_user",
+        "modelops",
+        "oleg",
+        "rost",
+        "test_modelops_lead",
+        "test_modelops_lead_sa"
+      ],
+      "validator": [
+        "bi_validator",
+        "bi_validator_lead",
+        "meetup_user",
+        "oleg",
+        "test_validator",
+        "test_validator_lead",
+        "validator"
+      ],
+      "validator_lead": [
+        "bi_validator_lead",
+        "meetup_user",
+        "oleg",
+        "rost",
+        "test_validator_lead"
+      ]
+    },
+    "usersByAnketaPermissionEffective": {
+      "anketa_export_reports": [
+        "architect_data",
+        "bi_de_lead",
+        "bi_ds_kib",
+        "bi_ds_kib_lead",
+        "bi_ds_rb",
+        "bi_ds_rb_lead",
+        "bi_mipm",
+        "bi_mipm_lead",
+        "bi_modelops",
+        "bi_modelops_lead",
+        "developer",
+        "ds",
+        "ds_lead1",
+        "meetup_user",
+        "mipm",
+        "modelops",
+        "oleg",
+        "rost",
+        "test_de_lead",
+        "test_de_lead_sa",
+        "test_ds",
+        "test_ds2",
+        "test_ds_algorithms",
+        "test_ds_finance_models",
+        "test_ds_it_process",
+        "test_ds_kib_smb",
+        "test_ds_lead",
+        "test_ds_lead_sa",
+        "test_ds_rb",
+        "test_ds_rb_lead",
+        "test_ds_sa",
+        "test_mipm",
+        "test_mipm_sa",
+        "test_modelops",
+        "test_modelops_lead",
+        "test_modelops_lead_sa",
+        "test_modelops_sa",
+        "test_null",
+        "test_roles_ds"
+      ],
+      "anketa_view_all_calculations": [
+        "architect_data",
+        "bi_de",
+        "bi_de_lead",
+        "bi_ds_kib",
+        "bi_ds_kib_lead",
+        "bi_ds_rb",
+        "bi_ds_rb_lead",
+        "bi_mipm",
+        "bi_mipm_lead",
+        "bi_modelops",
+        "bi_modelops_lead",
+        "developer",
+        "ds",
+        "ds_lead1",
+        "meetup_user",
+        "mipm",
+        "modelops",
+        "oleg",
+        "rost",
+        "test_de",
+        "test_de_lead",
+        "test_de_lead_sa",
+        "test_de_sa",
+        "test_ds",
+        "test_ds2",
+        "test_ds_algorithms",
+        "test_ds_finance_models",
+        "test_ds_it_process",
+        "test_ds_kib_smb",
+        "test_ds_lead",
+        "test_ds_lead_sa",
+        "test_ds_rb",
+        "test_ds_rb_lead",
+        "test_ds_sa",
+        "test_mipm",
+        "test_mipm_sa",
+        "test_modelops",
+        "test_modelops_lead",
+        "test_modelops_lead_sa",
+        "test_modelops_sa",
+        "test_null",
+        "test_roles_ds",
+        "test_sum_sacfg",
+        "test_sum_saprg",
+        "test_sum_sarep_dadm",
+        "test_sum_sarep_digagt",
+        "test_sum_sarep_idsrc",
+        "test_sum_sarep_mdlctl",
+        "test_sum_sarep_pirm",
+        "test_sum_sarep_strdat"
+      ],
+      "anketa_edit_calculation": [
+        "bi_de_lead",
+        "bi_ds_kib_lead",
+        "bi_ds_rb_lead",
+        "bi_mipm",
+        "bi_mipm_lead",
+        "bi_modelops_lead",
+        "developer",
+        "ds_lead1",
+        "meetup_user",
+        "mipm",
+        "modelops",
+        "oleg",
+        "rost",
+        "test_de_lead",
+        "test_de_lead_sa",
+        "test_ds_it_process",
+        "test_ds_lead",
+        "test_ds_lead_sa",
+        "test_ds_rb_lead",
+        "test_mipm",
+        "test_mipm_sa",
+        "test_modelops_lead",
+        "test_modelops_lead_sa",
+        "test_roles_ds"
+      ],
+      "anketa_admin_panel": [
+        "bi_ds_kib_lead",
+        "bi_ds_rb_lead",
+        "bi_mipm",
+        "bi_mipm_lead",
+        "developer",
+        "ds_lead1",
+        "meetup_user",
+        "mipm",
+        "oleg",
+        "rost",
+        "test_ds_it_process",
+        "test_ds_lead",
+        "test_ds_lead_sa",
+        "test_ds_rb_lead",
+        "test_mipm",
+        "test_mipm_sa",
+        "test_roles_ds"
+      ],
+      "anketa_audit_view": [
+        "bi_ds_kib_lead",
+        "bi_ds_rb_lead",
+        "ds_lead1",
+        "meetup_user",
+        "oleg",
+        "test_ds_it_process",
+        "test_ds_lead",
+        "test_ds_lead_sa",
+        "test_ds_rb_lead",
+        "test_roles_ds"
+      ],
+      "anketa_create_calculation": [
+        "bi_ds_kib_lead",
+        "bi_ds_rb_lead",
+        "bi_mipm",
+        "bi_mipm_lead",
+        "bi_modelops_lead",
+        "developer",
+        "ds_lead1",
+        "meetup_user",
+        "mipm",
+        "modelops",
+        "oleg",
+        "rost",
+        "test_ds_it_process",
+        "test_ds_lead",
+        "test_ds_lead_sa",
+        "test_ds_rb_lead",
+        "test_mipm",
+        "test_mipm_sa",
+        "test_modelops_lead",
+        "test_modelops_lead_sa",
+        "test_roles_ds",
+        "test_sum_sacfg",
+        "test_sum_saprg"
+      ]
+    },
+    "usersByAnketaPermissionDirect": {
+      "anketa_admin_panel": [
+        "developer"
+      ],
+      "anketa_create_calculation": [
+        "developer"
+      ],
+      "anketa_edit_calculation": [
+        "developer"
+      ],
+      "anketa_export_reports": [
+        "developer"
+      ],
+      "anketa_view_all_calculations": [
+        "developer",
+        "test_sum_sacfg"
+      ]
+    },
+    "orgRolePermissionMatrix": {
+      "admin_it": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "admin_it_lead": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "business_customer": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "de": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "de_lead": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "ds": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "ds_lead": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "mipm": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "modelops": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "modelops_lead": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "validator": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "validator_lead": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ]
+    }
+  },
+  "users": [
+    {
+      "id": "c87affa1-63c5-4292-aa12-412ce6a1920e",
+      "username": "admin",
+      "email": null,
+      "firstName": "admin",
+      "lastName": "admin",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-02-09T14:51:03.510Z",
+      "attributes": {},
+      "groups": [
+        "/admin_it",
+        "/admin_it/admin_it_lead"
+      ],
+      "groupNames": [
+        "admin_it",
+        "admin_it_lead"
+      ],
+      "orgRolesFromGroups": [
+        "admin_it",
+        "admin_it_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "monitoring_read",
+        "validation_read",
+        "validation_write"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "377b28c5-2ce9-45cc-8be7-c06b78d1630d",
+      "username": "architect_data",
+      "email": null,
+      "firstName": "architect_data",
+      "lastName": "architect_data",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2026-03-19T09:25:53.805Z",
+      "attributes": {},
+      "groups": [
+        "/architect"
+      ],
+      "groupNames": [
+        "architect"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "dl_system_access"
+      ],
+      "anketaPermissions": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "08e4d38d-c481-4efd-b830-747e709d603d",
+      "username": "bi_admin_it",
+      "email": null,
+      "firstName": "bi_admin_it",
+      "lastName": "bi_admin_it",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T10:57:22.540Z",
+      "attributes": {},
+      "groups": [
+        "/AdministratorIT",
+        "/access_during_freeze",
+        "/admin_it"
+      ],
+      "groupNames": [
+        "AdministratorIT",
+        "access_during_freeze",
+        "admin_it"
+      ],
+      "orgRolesFromGroups": [
+        "admin_it"
+      ],
+      "realmRolesDirect": [
+        "edit_model_sumrm"
+      ],
+      "realmRolesEffective": [
+        "dit",
+        "edit_model_sumrm",
+        "integration",
+        "integration_read",
+        "integration_write",
+        "model",
+        "model_read",
+        "monitoring",
+        "monitoring_read",
+        "validation",
+        "validation_read",
+        "validation_write"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "024c6d39-29e8-4ac7-a21c-7e6765a34d96",
+      "username": "bi_admin_it_lead",
+      "email": null,
+      "firstName": "bi_admin_it_lead",
+      "lastName": "bi_admin_it_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T11:32:50.210Z",
+      "attributes": {},
+      "groups": [
+        "/AdministratorIT",
+        "/AdministratorIT/AdministratorIT_Lead",
+        "/access_during_freeze",
+        "/admin_it",
+        "/admin_it/admin_it_lead"
+      ],
+      "groupNames": [
+        "AdministratorIT",
+        "AdministratorIT_Lead",
+        "access_during_freeze",
+        "admin_it",
+        "admin_it_lead"
+      ],
+      "orgRolesFromGroups": [
+        "admin_it",
+        "admin_it_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "dit",
+        "dit_lead",
+        "integration",
+        "integration_read",
+        "integration_write",
+        "model",
+        "model_read",
+        "monitoring",
+        "monitoring_read",
+        "validation",
+        "validation_read",
+        "validation_write"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "823976c6-e9bb-461e-a872-e26f95cd6c80",
+      "username": "bi_auditor",
+      "email": null,
+      "firstName": "bi_auditor",
+      "lastName": "bi_auditor",
+      "enabled": true,
+      "emailVerified": true,
+      "createdTimestamp": "2022-03-17T11:25:30.665Z",
+      "attributes": {},
+      "groups": [
+        "/auditor"
+      ],
+      "groupNames": [
+        "auditor"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "data_read",
+        "integration_read",
+        "model_read",
+        "monitoring_read",
+        "validation_read"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "32ec4a5d-c40d-4819-a364-6a46670f49a1",
+      "username": "bi_auditor_lead",
+      "email": null,
+      "firstName": "bi_auditor_lead",
+      "lastName": "bi_auditor_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T11:26:14.186Z",
+      "attributes": {},
+      "groups": [
+        "/auditor",
+        "/auditor/auditor_lead"
+      ],
+      "groupNames": [
+        "auditor",
+        "auditor_lead"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "data_read",
+        "integration_read",
+        "model_read",
+        "monitoring_read",
+        "validation_read"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "dc87ecca-6655-4928-86e0-9542565201f6",
+      "username": "bi_business_customer_broker",
+      "email": null,
+      "firstName": "bi_business_customer_broker",
+      "lastName": "bi_business_customer_broker",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T11:19:28.972Z",
+      "attributes": {},
+      "groups": [
+        "/access_during_freeze",
+        "/business_customer",
+        "/departament_business_customer/Департамент брокерского обслуживания",
+        "/departament_business_customer/Департамент розничных кредитных рисков",
+        "/departament_business_customer/Департамент финансового урегулирования"
+      ],
+      "groupNames": [
+        "access_during_freeze",
+        "business_customer",
+        "Департамент брокерского обслуживания",
+        "Департамент розничных кредитных рисков",
+        "Департамент финансового урегулирования"
+      ],
+      "orgRolesFromGroups": [
+        "business_customer"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "data_read",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "model_read",
+        "monitoring_read",
+        "validation_read"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "71b2a01f-fcf7-4971-b0cb-f4f3eff0392f",
+      "username": "bi_business_customer_invest",
+      "email": null,
+      "firstName": "bi_business_customer_invest",
+      "lastName": "bi_business_customer_invest",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T11:20:19.984Z",
+      "attributes": {},
+      "groups": [
+        "/business_customer",
+        "/departament_business_customer/Департамент инвестиционных продуктов"
+      ],
+      "groupNames": [
+        "business_customer",
+        "Департамент инвестиционных продуктов"
+      ],
+      "orgRolesFromGroups": [
+        "business_customer"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "data_read",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "model_read",
+        "monitoring_read",
+        "validation_read"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "21e8b70a-d3b8-4d7d-abc2-ae6b06c5a4d3",
+      "username": "bi_data_expert",
+      "email": null,
+      "firstName": "bi_data_expert",
+      "lastName": "bi_data_expert",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T09:31:59.396Z",
+      "attributes": {},
+      "groups": [
+        "/data_expert"
+      ],
+      "groupNames": [
+        "data_expert"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "data",
+        "edit_model_sumrm",
+        "integration",
+        "model"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "02cf417c-6027-403d-8133-6cd4c5f6b79f",
+      "username": "bi_data_expert_lead",
+      "email": null,
+      "firstName": "bi_data_expert_lead",
+      "lastName": "bi_data_expert_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T11:31:14.768Z",
+      "attributes": {},
+      "groups": [
+        "/data_expert",
+        "/data_expert/data_expert_lead"
+      ],
+      "groupNames": [
+        "data_expert",
+        "data_expert_lead"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "data",
+        "data_read",
+        "data_write",
+        "edit_model_sumrm",
+        "integration",
+        "integration_read",
+        "integration_write",
+        "model"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "d358861c-b6dd-4448-bc02-0fbcfe67ca0f",
+      "username": "bi_de",
+      "email": null,
+      "firstName": "bi_de",
+      "lastName": "bi_de",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T09:12:27.934Z",
+      "attributes": {
+        "123": [
+          "123"
+        ]
+      },
+      "groups": [
+        "/DE",
+        "/de"
+      ],
+      "groupNames": [
+        "DE",
+        "de"
+      ],
+      "orgRolesFromGroups": [
+        "de"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_view_all_calculations",
+        "data",
+        "data_read",
+        "data_write",
+        "de",
+        "edit_model_sumrm",
+        "integration",
+        "integration_read",
+        "integration_write",
+        "model",
+        "model_read",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read",
+        "validation_write"
+      ],
+      "anketaPermissions": [
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "b810bcb1-0ec2-462a-b6c7-d065d365570b",
+      "username": "bi_de_lead",
+      "email": null,
+      "firstName": "bi_de_lead",
+      "lastName": "bi_de_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T09:21:53.936Z",
+      "attributes": {},
+      "groups": [
+        "/DE",
+        "/DE/DE_Lead",
+        "/de",
+        "/de/de_lead"
+      ],
+      "groupNames": [
+        "DE",
+        "DE_Lead",
+        "de",
+        "de_lead"
+      ],
+      "orgRolesFromGroups": [
+        "de",
+        "de_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "data",
+        "data_read",
+        "data_write",
+        "de",
+        "de_lead",
+        "edit_model_sumrm",
+        "integration",
+        "integration_read",
+        "integration_write",
+        "model",
+        "model_read",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read",
+        "validation_write"
+      ],
+      "anketaPermissions": [
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "cdf596b2-0ed5-4631-8bb3-8c66ba0a737f",
+      "username": "bi_ds_kib",
+      "email": null,
+      "firstName": "bi_ds_kib",
+      "lastName": "bi_ds_kib",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T09:24:38.661Z",
+      "attributes": {},
+      "groups": [
+        "/DS",
+        "/access_during_freeze",
+        "/departament/Управление моделирования партнерств и ИТ-процессов",
+        "/ds"
+      ],
+      "groupNames": [
+        "DS",
+        "access_during_freeze",
+        "ds",
+        "Управление моделирования партнерств и ИТ-процессов"
+      ],
+      "orgRolesFromGroups": [
+        "ds"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "ds",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration",
+        "integration_read",
+        "integration_write",
+        "model",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring",
+        "monitoring_read",
+        "monitoring_write",
+        "validation",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "5040cdd5-1951-45fb-a0ed-6bf5dfb7aacc",
+      "username": "bi_ds_kib_lead",
+      "email": null,
+      "firstName": "bi_ds_kib_lead",
+      "lastName": "bi_ds_kib_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T09:26:14.080Z",
+      "attributes": {},
+      "groups": [
+        "/DS",
+        "/DS/DS_Lead",
+        "/departament/Управление моделирования КИБ и СМБ",
+        "/ds",
+        "/ds/ds_lead"
+      ],
+      "groupNames": [
+        "DS",
+        "DS_Lead",
+        "ds",
+        "ds_lead",
+        "Управление моделирования КИБ и СМБ"
+      ],
+      "orgRolesFromGroups": [
+        "ds",
+        "ds_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "accounting",
+        "add_model_sumrm",
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data",
+        "data_create",
+        "data_delete",
+        "data_read",
+        "data_write",
+        "de",
+        "de_lead",
+        "developer",
+        "dit",
+        "dit_lead",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "ds",
+        "ds_lead",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration",
+        "integration_create",
+        "integration_delete",
+        "integration_read",
+        "integration_write",
+        "management",
+        "model",
+        "model_create",
+        "model_delete",
+        "model_read",
+        "model_write",
+        "modelops",
+        "modelops_lead",
+        "monitoring",
+        "monitoring_create",
+        "monitoring_delete",
+        "monitoring_read",
+        "monitoring_write",
+        "offline_access",
+        "sales",
+        "uma_authorization",
+        "validation",
+        "validation_create",
+        "validation_delete",
+        "validation_read",
+        "validation_write",
+        "validator",
+        "validator_lead"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "23aac696-c6e6-4b9a-ad09-8534f62fa896",
+      "username": "bi_ds_rb",
+      "email": null,
+      "firstName": "bi_ds_rb",
+      "lastName": "bi_ds_rb",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T10:54:23.647Z",
+      "attributes": {},
+      "groups": [
+        "/access_during_freeze",
+        "/departament",
+        "/departament/Управление моделирования РБ",
+        "/departament/Управление перспективных алгоритмов машинного обучения",
+        "/ds"
+      ],
+      "groupNames": [
+        "access_during_freeze",
+        "departament",
+        "ds",
+        "Управление моделирования РБ",
+        "Управление перспективных алгоритмов машинного обучения"
+      ],
+      "orgRolesFromGroups": [
+        "ds"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "8ec55964-cbdb-45bf-b716-188aa61ebc3a",
+      "username": "bi_ds_rb_lead",
+      "email": null,
+      "firstName": "bi_ds_rb_lead",
+      "lastName": "bi_ds_rb_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T10:55:26.735Z",
+      "attributes": {},
+      "groups": [
+        "/departament",
+        "/departament/Управление моделирования РБ",
+        "/ds",
+        "/ds/ds_lead"
+      ],
+      "groupNames": [
+        "departament",
+        "ds",
+        "ds_lead",
+        "Управление моделирования РБ"
+      ],
+      "orgRolesFromGroups": [
+        "ds",
+        "ds_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_read",
+        "data_write",
+        "developer",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "e6311fe3-08d6-414f-9447-3d120dcded4e",
+      "username": "bi_mipm",
+      "email": null,
+      "firstName": "bi_mipm",
+      "lastName": "bi_mipm",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T11:08:44.219Z",
+      "attributes": {},
+      "groups": [
+        "/MIPM",
+        "/mipm"
+      ],
+      "groupNames": [
+        "MIPM",
+        "mipm"
+      ],
+      "orgRolesFromGroups": [
+        "mipm"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_public_template_sumrm",
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data",
+        "data_delete",
+        "data_read",
+        "data_write",
+        "dl_system_access",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration",
+        "integration_delete",
+        "integration_read",
+        "integration_write",
+        "model",
+        "model_create",
+        "model_delete",
+        "model_read",
+        "model_write",
+        "monitoring",
+        "monitoring_delete",
+        "monitoring_read",
+        "validation",
+        "validation_delete",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "ed68a80e-3319-4e74-a568-22727e3facf1",
+      "username": "bi_mipm_lead",
+      "email": null,
+      "firstName": "bi_mipm_lead",
+      "lastName": "bi_mipm_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T11:12:16.533Z",
+      "attributes": {},
+      "groups": [
+        "/MIPM",
+        "/MIPM/MIPM_Lead",
+        "/mipm"
+      ],
+      "groupNames": [
+        "MIPM",
+        "MIPM_Lead",
+        "mipm"
+      ],
+      "orgRolesFromGroups": [
+        "mipm"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_public_template_sumrm",
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data",
+        "data_delete",
+        "data_read",
+        "data_write",
+        "dl_system_access",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration",
+        "integration_delete",
+        "integration_read",
+        "integration_write",
+        "model",
+        "model_create",
+        "model_delete",
+        "model_read",
+        "model_write",
+        "monitoring",
+        "monitoring_delete",
+        "monitoring_read",
+        "validation",
+        "validation_delete",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "fa5c8010-a4dc-4686-bd0e-aafe25294faa",
+      "username": "bi_modelops",
+      "email": null,
+      "firstName": "bi_modelops",
+      "lastName": "bi_modelops",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T11:14:36.594Z",
+      "attributes": {},
+      "groups": [
+        "/ModelOps",
+        "/modelops"
+      ],
+      "groupNames": [
+        "ModelOps",
+        "modelops"
+      ],
+      "orgRolesFromGroups": [
+        "modelops"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "data",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "dl_system_access",
+        "edit_model_sumrm",
+        "integration",
+        "integration_read",
+        "integration_write",
+        "model",
+        "model_read",
+        "model_write",
+        "modelops",
+        "monitoring_read",
+        "monitoring_write"
+      ],
+      "anketaPermissions": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "faa78677-640b-4889-a4f3-d296c9e22c0b",
+      "username": "bi_modelops_lead",
+      "email": null,
+      "firstName": "bi_modelops_lead",
+      "lastName": "bi_modelops_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T11:15:19.719Z",
+      "attributes": {},
+      "groups": [
+        "/ModelOps",
+        "/ModelOps/ModelOps_Lead",
+        "/departament/Управление моделирования партнерств и ИТ-процессов",
+        "/modelops",
+        "/modelops/modelops_lead"
+      ],
+      "groupNames": [
+        "ModelOps",
+        "ModelOps_Lead",
+        "modelops",
+        "modelops_lead",
+        "Управление моделирования партнерств и ИТ-процессов"
+      ],
+      "orgRolesFromGroups": [
+        "modelops",
+        "modelops_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "data",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "dl_system_access",
+        "edit_model_sumrm",
+        "integration",
+        "integration_read",
+        "integration_write",
+        "model",
+        "model_read",
+        "model_write",
+        "modelops",
+        "modelops_lead",
+        "monitoring_read",
+        "monitoring_write"
+      ],
+      "anketaPermissions": [
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "78a141f3-3454-4231-b038-59dd3f1e9a65",
+      "username": "bi_release_manager",
+      "email": null,
+      "firstName": "bi_release_manager",
+      "lastName": "bi_release_manager",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T11:34:23.606Z",
+      "attributes": {},
+      "groups": [
+        "/release_manager"
+      ],
+      "groupNames": [
+        "release_manager"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "integration_create",
+        "integration_read",
+        "integration_write"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "3eb57fee-2256-447d-8ae7-d347e950255c",
+      "username": "bi_validator",
+      "email": null,
+      "firstName": "bi_validator",
+      "lastName": "bi_validator",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T11:22:26.266Z",
+      "attributes": {},
+      "groups": [
+        "/Validator",
+        "/access_during_freeze",
+        "/validator"
+      ],
+      "groupNames": [
+        "Validator",
+        "access_during_freeze",
+        "validator"
+      ],
+      "orgRolesFromGroups": [
+        "validator"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "add_public_template_sumrm",
+        "data",
+        "data_read",
+        "edit_model_sumrm",
+        "integration",
+        "integration_read",
+        "integration_write",
+        "model",
+        "model_read",
+        "monitoring",
+        "monitoring_read",
+        "monitoring_write",
+        "validation",
+        "validation_delete",
+        "validation_read",
+        "validation_write",
+        "validator"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "1b7e9106-91b1-410e-a635-269deefcf3e5",
+      "username": "bi_validator_lead",
+      "email": null,
+      "firstName": "bi_validator_lead",
+      "lastName": "bi_validator_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-17T11:23:15.625Z",
+      "attributes": {},
+      "groups": [
+        "/Validator",
+        "/Validator/Validator_Lead",
+        "/access_during_freeze",
+        "/validator",
+        "/validator/validator_lead"
+      ],
+      "groupNames": [
+        "Validator",
+        "Validator_Lead",
+        "access_during_freeze",
+        "validator",
+        "validator_lead"
+      ],
+      "orgRolesFromGroups": [
+        "validator",
+        "validator_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "add_public_template_sumrm",
+        "data",
+        "data_read",
+        "edit_model_sumrm",
+        "integration",
+        "integration_read",
+        "integration_write",
+        "model",
+        "model_read",
+        "monitoring",
+        "monitoring_read",
+        "monitoring_write",
+        "validation",
+        "validation_delete",
+        "validation_read",
+        "validation_write",
+        "validator",
+        "validator_lead"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "d093f53f-084d-4f5e-bc47-936a0a2e12bd",
+      "username": "developer",
+      "email": null,
+      "firstName": "Девелопер",
+      "lastName": "Девелоперович",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2026-06-26T11:53:24.090Z",
+      "attributes": {},
+      "groups": [],
+      "groupNames": [],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [
+        "accounting",
+        "add_model_sumrm",
+        "add_public_template_sumrm",
+        "admin",
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data",
+        "data_create",
+        "data_delete",
+        "data_expert",
+        "data_expert_lead",
+        "data_read",
+        "data_write",
+        "de",
+        "de_lead",
+        "developer",
+        "dit",
+        "dit_lead",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "dl_export_reports",
+        "dl_system_access",
+        "ds",
+        "ds_lead",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration",
+        "integration_create",
+        "integration_delete",
+        "integration_read",
+        "integration_write",
+        "management",
+        "model",
+        "model_create",
+        "model_delete",
+        "model_read",
+        "model_write",
+        "modelops",
+        "modelops_lead",
+        "monitoring",
+        "monitoring_create",
+        "monitoring_delete",
+        "monitoring_read",
+        "monitoring_write",
+        "offline_access",
+        "release_manager",
+        "sales",
+        "uma_authorization",
+        "validation",
+        "validation_create",
+        "validation_delete",
+        "validation_read",
+        "validation_write",
+        "validator",
+        "validator_lead"
+      ],
+      "realmRolesEffective": [
+        "accounting",
+        "add_model_sumrm",
+        "add_public_template_sumrm",
+        "admin",
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data",
+        "data_create",
+        "data_delete",
+        "data_expert",
+        "data_expert_lead",
+        "data_read",
+        "data_write",
+        "de",
+        "de_lead",
+        "developer",
+        "dit",
+        "dit_lead",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "dl_export_reports",
+        "dl_system_access",
+        "ds",
+        "ds_lead",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration",
+        "integration_create",
+        "integration_delete",
+        "integration_read",
+        "integration_write",
+        "management",
+        "model",
+        "model_create",
+        "model_delete",
+        "model_read",
+        "model_write",
+        "modelops",
+        "modelops_lead",
+        "monitoring",
+        "monitoring_create",
+        "monitoring_delete",
+        "monitoring_read",
+        "monitoring_write",
+        "offline_access",
+        "release_manager",
+        "sales",
+        "uma_authorization",
+        "validation",
+        "validation_create",
+        "validation_delete",
+        "validation_read",
+        "validation_write",
+        "validator",
+        "validator_lead"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "6367bca7-64e5-4275-9a8f-8c74132aa490",
+      "username": "ds",
+      "email": null,
+      "firstName": "ds",
+      "lastName": "ds",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2021-11-19T09:15:48.342Z",
+      "attributes": {},
+      "groups": [
+        "/access_during_freeze",
+        "/departament",
+        "/departament/Управление моделирования партнерств и ИТ-процессов",
+        "/ds"
+      ],
+      "groupNames": [
+        "access_during_freeze",
+        "departament",
+        "ds",
+        "Управление моделирования партнерств и ИТ-процессов"
+      ],
+      "orgRolesFromGroups": [
+        "ds"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "1d81efc1-5c99-4221-b57d-1f207cb0814d",
+      "username": "ds_lead1",
+      "email": null,
+      "firstName": "ds_lead1",
+      "lastName": "ds_lead1",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-22T15:28:52.448Z",
+      "attributes": {},
+      "groups": [
+        "/departament",
+        "/departament/Управление моделирования КИБ и СМБ",
+        "/ds",
+        "/ds/ds_lead"
+      ],
+      "groupNames": [
+        "departament",
+        "ds",
+        "ds_lead",
+        "Управление моделирования КИБ и СМБ"
+      ],
+      "orgRolesFromGroups": [
+        "ds",
+        "ds_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_read",
+        "data_write",
+        "developer",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "c80cbdcd-987d-4feb-ad7d-153a9bebca9f",
+      "username": "meetup_user",
+      "email": null,
+      "firstName": "meetup_user",
+      "lastName": "meetup_user",
+      "enabled": true,
+      "emailVerified": true,
+      "createdTimestamp": "2021-09-21T10:23:05.185Z",
+      "attributes": {},
+      "groups": [
+        "/AdministratorIT",
+        "/AdministratorIT/AdministratorIT_Lead",
+        "/DE",
+        "/DE/DE_Lead",
+        "/DS",
+        "/DS/DS_Lead",
+        "/MIPM",
+        "/MIPM/MIPM_Lead",
+        "/ModelOps",
+        "/ModelOps/ModelOps_Lead",
+        "/Validator",
+        "/Validator/Validator_Lead",
+        "/admin_it",
+        "/admin_it/admin_it_lead",
+        "/auditor",
+        "/auditor/auditor_lead",
+        "/business_customer",
+        "/de",
+        "/de/de_lead",
+        "/departament",
+        "/departament_business_customer",
+        "/ds",
+        "/ds/ds_lead",
+        "/mipm",
+        "/modelops",
+        "/modelops/modelops_lead",
+        "/validator",
+        "/validator/validator_lead"
+      ],
+      "groupNames": [
+        "AdministratorIT",
+        "AdministratorIT_Lead",
+        "DE",
+        "DE_Lead",
+        "DS",
+        "DS_Lead",
+        "MIPM",
+        "MIPM_Lead",
+        "ModelOps",
+        "ModelOps_Lead",
+        "Validator",
+        "Validator_Lead",
+        "admin_it",
+        "admin_it_lead",
+        "auditor",
+        "auditor_lead",
+        "business_customer",
+        "de",
+        "de_lead",
+        "departament",
+        "departament_business_customer",
+        "ds",
+        "ds_lead",
+        "mipm",
+        "modelops",
+        "modelops_lead",
+        "validator",
+        "validator_lead"
+      ],
+      "orgRolesFromGroups": [
+        "admin_it",
+        "admin_it_lead",
+        "business_customer",
+        "de",
+        "de_lead",
+        "ds",
+        "ds_lead",
+        "mipm",
+        "modelops",
+        "modelops_lead",
+        "validator",
+        "validator_lead"
+      ],
+      "realmRolesDirect": [
+        "accounting"
+      ],
+      "realmRolesEffective": [
+        "accounting",
+        "add_model_sumrm",
+        "add_public_template_sumrm",
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data",
+        "data_create",
+        "data_delete",
+        "data_read",
+        "data_write",
+        "de",
+        "de_lead",
+        "developer",
+        "dit",
+        "dit_lead",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "dl_system_access",
+        "ds",
+        "ds_lead",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration",
+        "integration_create",
+        "integration_delete",
+        "integration_read",
+        "integration_write",
+        "management",
+        "model",
+        "model_create",
+        "model_delete",
+        "model_read",
+        "model_write",
+        "modelops",
+        "modelops_lead",
+        "monitoring",
+        "monitoring_create",
+        "monitoring_delete",
+        "monitoring_read",
+        "monitoring_write",
+        "offline_access",
+        "sales",
+        "uma_authorization",
+        "validation",
+        "validation_create",
+        "validation_delete",
+        "validation_read",
+        "validation_write",
+        "validator",
+        "validator_lead"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {
+        "account": [
+          "manage-account",
+          "view-profile"
+        ]
+      }
+    },
+    {
+      "id": "831bf344-98d5-429f-9347-8543b0e2a74d",
+      "username": "mipm",
+      "email": null,
+      "firstName": "mipm",
+      "lastName": "mipm",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2021-11-09T16:12:18.094Z",
+      "attributes": {},
+      "groups": [
+        "/mipm"
+      ],
+      "groupNames": [
+        "mipm"
+      ],
+      "orgRolesFromGroups": [
+        "mipm"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_public_template_sumrm",
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_delete",
+        "data_read",
+        "data_write",
+        "dl_system_access",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_delete",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_delete",
+        "model_read",
+        "model_write",
+        "monitoring_delete",
+        "monitoring_read",
+        "validation_delete",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "c798ee12-7b2a-48f0-b9f8-2b2ba1b9b117",
+      "username": "modelops",
+      "email": null,
+      "firstName": "modelops",
+      "lastName": "modelops",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2021-11-19T09:18:49.526Z",
+      "attributes": {},
+      "groups": [
+        "/access_during_freeze",
+        "/modelops",
+        "/modelops/modelops_lead"
+      ],
+      "groupNames": [
+        "access_during_freeze",
+        "modelops",
+        "modelops_lead"
+      ],
+      "orgRolesFromGroups": [
+        "modelops",
+        "modelops_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "dl_system_access",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write"
+      ],
+      "anketaPermissions": [
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "a16ca8a2-b6ee-4007-b68a-122c0858133f",
+      "username": "mr_ds_lead_kib_smb_1",
+      "email": null,
+      "firstName": "mr_ds_lead_kib_smb_1",
+      "lastName": "mr_ds_lead_kib_smb_1",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2024-04-25T16:07:16.830Z",
+      "attributes": {},
+      "groups": [
+        "/access_to_hadoopsync",
+        "/cruel_test_kib_smb"
+      ],
+      "groupNames": [
+        "access_to_hadoopsync",
+        "cruel_test_kib_smb"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "84c3a46e-88a2-4856-a1a3-58d0b4c580a4",
+      "username": "mr_ds_lead_kib_smb_2",
+      "email": null,
+      "firstName": "mr_ds_lead_kib_smb_2",
+      "lastName": "mr_ds_lead_kib_smb_2",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2024-04-25T16:09:49.677Z",
+      "attributes": {},
+      "groups": [
+        "/cruel_test_kib_smb"
+      ],
+      "groupNames": [
+        "cruel_test_kib_smb"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "941bf470-bfe0-4056-a859-9acc879873d0",
+      "username": "mr_ds_lead_rb_1",
+      "email": null,
+      "firstName": "mr_ds_lead_rb_1",
+      "lastName": "mr_ds_lead_rb_1",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2024-04-25T16:12:13.402Z",
+      "attributes": {},
+      "groups": [
+        "/access_to_hadoopsync",
+        "/cruel_test_rb"
+      ],
+      "groupNames": [
+        "access_to_hadoopsync",
+        "cruel_test_rb"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "2550afca-1999-4a8a-ac26-c08d23f5d03d",
+      "username": "mr_ds_lead_rb_2",
+      "email": null,
+      "firstName": "mr_ds_lead_rb_2",
+      "lastName": "mr_ds_lead_rb_2",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2024-04-25T16:13:10.507Z",
+      "attributes": {},
+      "groups": [
+        "/cruel_test_rb"
+      ],
+      "groupNames": [
+        "cruel_test_rb"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "4fc1a763-ab67-4ff0-beb3-822602265c06",
+      "username": "mr_ds_part_timer_job",
+      "email": null,
+      "firstName": "mr_ds_part_timer_job",
+      "lastName": "mr_ds_part_timer_job",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2024-04-25T16:34:59.234Z",
+      "attributes": {},
+      "groups": [
+        "/cruel_test_kib_smb",
+        "/cruel_test_rb"
+      ],
+      "groupNames": [
+        "cruel_test_kib_smb",
+        "cruel_test_rb"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "812c1854-4b72-45c7-9ca4-ba203de6062e",
+      "username": "mr_mlops_1",
+      "email": null,
+      "firstName": "mr_mlops_1",
+      "lastName": "mr_mlops_1",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2024-04-25T16:14:56.360Z",
+      "attributes": {},
+      "groups": [
+        "/access_to_hadoopsync",
+        "/cruel_test_mlops"
+      ],
+      "groupNames": [
+        "access_to_hadoopsync",
+        "cruel_test_mlops"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "4888a986-a9d7-4e49-a37e-f00353cffa65",
+      "username": "mr_mlops_2",
+      "email": null,
+      "firstName": "mr_mlops_2",
+      "lastName": "mr_mlops_2",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2024-04-25T16:16:10.019Z",
+      "attributes": {},
+      "groups": [
+        "/cruel_test_mlops"
+      ],
+      "groupNames": [
+        "cruel_test_mlops"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "ed8f6c39-745c-4034-808a-7f0d9f7d43d3",
+      "username": "mreg_dev_ds_kib_smb",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": true,
+      "createdTimestamp": "2025-05-06T06:59:54.680Z",
+      "attributes": {},
+      "groups": [
+        "/mreg_dev_ds_kib_smb"
+      ],
+      "groupNames": [
+        "mreg_dev_ds_kib_smb"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "ecd159d6-8576-4627-a588-a9403aad02c8",
+      "username": "mreg_dev_ds_perspect_alg",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": true,
+      "createdTimestamp": "2025-05-06T06:57:12.575Z",
+      "attributes": {},
+      "groups": [
+        "/mreg_dev_ds_perspect_alg"
+      ],
+      "groupNames": [
+        "mreg_dev_ds_perspect_alg"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "2f12bbdd-4b2b-4b32-8b5f-adf9917cca9b",
+      "username": "mreg_dev_ds_rb",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": true,
+      "createdTimestamp": "2025-05-06T07:01:35.876Z",
+      "attributes": {},
+      "groups": [
+        "/mreg_dev_ds_rb"
+      ],
+      "groupNames": [
+        "mreg_dev_ds_rb"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "d86a26e8-12b0-4632-bf4f-41228914dabf",
+      "username": "mreg_dev_partner_it_proc",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": true,
+      "createdTimestamp": "2025-05-06T06:59:26.995Z",
+      "attributes": {},
+      "groups": [
+        "/mreg_dev_partner_it_proc"
+      ],
+      "groupNames": [
+        "mreg_dev_partner_it_proc"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "f22bf652-95ce-4740-8eb0-ead0bfb66c5b",
+      "username": "mreg_dev_proc_fin_model",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": true,
+      "createdTimestamp": "2025-05-06T06:56:43.712Z",
+      "attributes": {},
+      "groups": [
+        "/mreg_dev_proc_fin_model"
+      ],
+      "groupNames": [
+        "mreg_dev_proc_fin_model"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "b9969abf-8bb0-42c1-a6d4-68c4a30e0e96",
+      "username": "oleg",
+      "email": "oleg.zubkov@glowbyteconsulting.com",
+      "firstName": "oleg",
+      "lastName": "z",
+      "enabled": true,
+      "emailVerified": true,
+      "createdTimestamp": "2021-10-26T14:22:51.212Z",
+      "attributes": {},
+      "groups": [
+        "/DS/DS_Lead",
+        "/MIPM",
+        "/MIPM/MIPM_Lead",
+        "/ModelOps",
+        "/ModelOps/ModelOps_Lead",
+        "/Validator",
+        "/Validator/Validator_Lead",
+        "/admin_it",
+        "/admin_it/admin_it_lead",
+        "/auditor",
+        "/auditor/auditor_lead",
+        "/business_customer",
+        "/de",
+        "/de/de_lead",
+        "/departament",
+        "/departament_business_customer",
+        "/departament_business_customer/Департамент брокерского обслуживания",
+        "/departament_business_customer/Департамент инвестиционных продуктов",
+        "/departament_business_customer/Депозитарий",
+        "/departament_business_customer/Управление структурных продуктов и структурирования",
+        "/ds",
+        "/ds/ds_lead",
+        "/mipm",
+        "/modelops",
+        "/modelops/modelops_lead",
+        "/validator",
+        "/validator/validator_lead"
+      ],
+      "groupNames": [
+        "DS_Lead",
+        "MIPM",
+        "MIPM_Lead",
+        "ModelOps",
+        "ModelOps_Lead",
+        "Validator",
+        "Validator_Lead",
+        "admin_it",
+        "admin_it_lead",
+        "auditor",
+        "auditor_lead",
+        "business_customer",
+        "de",
+        "de_lead",
+        "departament",
+        "departament_business_customer",
+        "ds",
+        "ds_lead",
+        "mipm",
+        "modelops",
+        "modelops_lead",
+        "validator",
+        "validator_lead",
+        "Департамент брокерского обслуживания",
+        "Департамент инвестиционных продуктов",
+        "Депозитарий",
+        "Управление структурных продуктов и структурирования"
+      ],
+      "orgRolesFromGroups": [
+        "admin_it",
+        "admin_it_lead",
+        "business_customer",
+        "de",
+        "de_lead",
+        "ds",
+        "ds_lead",
+        "mipm",
+        "modelops",
+        "modelops_lead",
+        "validator",
+        "validator_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "accounting",
+        "add_model_sumrm",
+        "add_public_template_sumrm",
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data",
+        "data_create",
+        "data_delete",
+        "data_read",
+        "data_write",
+        "de",
+        "de_lead",
+        "developer",
+        "dit",
+        "dit_lead",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "dl_system_access",
+        "ds",
+        "ds_lead",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration",
+        "integration_create",
+        "integration_delete",
+        "integration_read",
+        "integration_write",
+        "management",
+        "model",
+        "model_create",
+        "model_delete",
+        "model_read",
+        "model_write",
+        "modelops",
+        "modelops_lead",
+        "monitoring",
+        "monitoring_create",
+        "monitoring_delete",
+        "monitoring_read",
+        "monitoring_write",
+        "offline_access",
+        "sales",
+        "uma_authorization",
+        "validation",
+        "validation_create",
+        "validation_delete",
+        "validation_read",
+        "validation_write",
+        "validator",
+        "validator_lead"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {
+        "account": [
+          "manage-account",
+          "view-profile"
+        ]
+      }
+    },
+    {
+      "id": "c34526c3-6db7-4186-98b6-aca7adf94977",
+      "username": "project_office_test_member",
+      "email": "project_office_test_member@inno.tech",
+      "firstName": "project_office_test_member",
+      "lastName": "project_office_test_member",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2026-03-02T14:26:17.490Z",
+      "attributes": {},
+      "groups": [
+        "/project_office"
+      ],
+      "groupNames": [
+        "project_office"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "data_read",
+        "integration_read",
+        "model_read",
+        "monitoring_read",
+        "validation_read"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "b54f2bf8-f63e-469d-bca6-49e23a26935c",
+      "username": "rm_test_ds_kib",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2023-10-19T06:15:16.988Z",
+      "attributes": {},
+      "groups": [
+        "/rm_ds_kib"
+      ],
+      "groupNames": [
+        "rm_ds_kib"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "090f19ea-6d5d-43aa-bf7c-e03cb30ccf88",
+      "username": "rm_test_ds_kib1",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2023-10-19T06:15:26.827Z",
+      "attributes": {},
+      "groups": [
+        "/rm_ds_kib"
+      ],
+      "groupNames": [
+        "rm_ds_kib"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "c1f431bf-8438-4edf-adfc-e1bd09671314",
+      "username": "rm_test_ds_rb",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2023-10-19T06:14:16.135Z",
+      "attributes": {},
+      "groups": [
+        "/rm_ds_rb"
+      ],
+      "groupNames": [
+        "rm_ds_rb"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "497d6bce-4b82-48d4-9916-453d170f9904",
+      "username": "rm_test_ds_rb1",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2023-10-19T06:14:42.214Z",
+      "attributes": {},
+      "groups": [
+        "/rm_ds_rb"
+      ],
+      "groupNames": [
+        "rm_ds_rb"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "44c18521-52a6-49eb-9364-e4a0617f036c",
+      "username": "rm_test_modelops",
+      "email": "rm_test_modelops@inno.tech",
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": true,
+      "createdTimestamp": "2023-10-19T06:15:48.980Z",
+      "attributes": {
+        "test": [
+          "CN=ФИО,OU=Users,OU=MSK_VTB,DC=region,DC=vtb,DC=ru"
+        ]
+      },
+      "groups": [
+        "/rm_modelops"
+      ],
+      "groupNames": [
+        "rm_modelops"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "c799fa14-eddf-4b8e-a62a-d56389d83ee6",
+      "username": "rost",
+      "email": null,
+      "firstName": "rost",
+      "lastName": "rost",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2021-09-21T09:02:21.784Z",
+      "attributes": {},
+      "groups": [
+        "/DE/DE_Lead",
+        "/MIPM/MIPM_Lead",
+        "/ModelOps/ModelOps_Lead",
+        "/admin_it",
+        "/admin_it/admin_it_lead",
+        "/de/de_lead",
+        "/mipm",
+        "/modelops/modelops_lead",
+        "/validator/validator_lead"
+      ],
+      "groupNames": [
+        "DE_Lead",
+        "MIPM_Lead",
+        "ModelOps_Lead",
+        "admin_it",
+        "admin_it_lead",
+        "de_lead",
+        "mipm",
+        "modelops_lead",
+        "validator_lead"
+      ],
+      "orgRolesFromGroups": [
+        "admin_it",
+        "admin_it_lead",
+        "de_lead",
+        "mipm",
+        "modelops_lead",
+        "validator_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "add_public_template_sumrm",
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data",
+        "data_delete",
+        "data_read",
+        "data_write",
+        "de",
+        "de_lead",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "dl_system_access",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration",
+        "integration_delete",
+        "integration_read",
+        "integration_write",
+        "model",
+        "model_create",
+        "model_delete",
+        "model_read",
+        "model_write",
+        "modelops",
+        "modelops_lead",
+        "monitoring",
+        "monitoring_delete",
+        "monitoring_read",
+        "monitoring_write",
+        "validation",
+        "validation_delete",
+        "validation_read",
+        "validation_write"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {
+        "account": [
+          "manage-account",
+          "view-profile"
+        ]
+      }
+    },
+    {
+      "id": "c7cba088-ca0e-424f-bd48-257f584f4aef",
+      "username": "scibox_test",
+      "email": "scibox_test@inno.tech",
+      "firstName": "Scibox",
+      "lastName": "Test",
+      "enabled": true,
+      "emailVerified": true,
+      "createdTimestamp": "2025-04-08T10:15:40.518Z",
+      "attributes": {},
+      "groups": [
+        "/rm_modelops"
+      ],
+      "groupNames": [
+        "rm_modelops"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "9e2f3fd3-911e-4cfd-ab42-19f6f589fd87",
+      "username": "test",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2023-08-16T14:11:21.937Z",
+      "attributes": {},
+      "groups": [],
+      "groupNames": [],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "7db076cb-d1ef-42c2-9cd1-049ca89fcab7",
+      "username": "test_admin_it",
+      "email": null,
+      "firstName": "test_admin_it",
+      "lastName": "test_admin_it",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-01-28T13:04:26.326Z",
+      "attributes": {},
+      "groups": [
+        "/admin_it/admin_it_lead"
+      ],
+      "groupNames": [
+        "admin_it_lead"
+      ],
+      "orgRolesFromGroups": [
+        "admin_it_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "monitoring_read",
+        "validation_read",
+        "validation_write"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "25b4a5a8-c299-435e-bcd8-ededae674aa9",
+      "username": "test_blocked",
+      "email": null,
+      "firstName": "test_blocked",
+      "lastName": "test_blocked",
+      "enabled": false,
+      "emailVerified": false,
+      "createdTimestamp": "2022-01-21T13:38:52.491Z",
+      "attributes": {},
+      "groups": [],
+      "groupNames": [],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "f1f559f3-1f64-43bf-9839-61ab97259f66",
+      "username": "test_business_customer",
+      "email": null,
+      "firstName": "Елена",
+      "lastName": "Мазур",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2021-09-21T10:16:15.209Z",
+      "attributes": {},
+      "groups": [
+        "/access_during_freeze",
+        "/business_customer",
+        "/departament_business_customer/Департамент брокерского обслуживания"
+      ],
+      "groupNames": [
+        "access_during_freeze",
+        "business_customer",
+        "Департамент брокерского обслуживания"
+      ],
+      "orgRolesFromGroups": [
+        "business_customer"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "data_read",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "model_read",
+        "monitoring_read",
+        "validation_read"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {
+        "account": [
+          "manage-account",
+          "view-profile"
+        ]
+      }
+    },
+    {
+      "id": "a6c9edea-792e-4f9d-b7d0-78e39944aef1",
+      "username": "test_data_expert",
+      "email": null,
+      "firstName": "test_data_expert",
+      "lastName": "test_data_expert",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-01-31T10:04:41.221Z",
+      "attributes": {},
+      "groups": [
+        "/data_expert"
+      ],
+      "groupNames": [
+        "data_expert"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "data",
+        "edit_model_sumrm",
+        "integration",
+        "model"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "09bad11c-f232-4327-a1ef-73c8e3382cec",
+      "username": "test_data_expert_lead",
+      "email": null,
+      "firstName": "test_data_expert_lead",
+      "lastName": "test_data_expert_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-16T12:45:31.032Z",
+      "attributes": {},
+      "groups": [
+        "/data_expert/data_expert_lead"
+      ],
+      "groupNames": [
+        "data_expert_lead"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "data",
+        "data_read",
+        "data_write",
+        "edit_model_sumrm",
+        "integration",
+        "integration_read",
+        "integration_write",
+        "model"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "2207b773-a8db-426e-8c86-9a127b9abc83",
+      "username": "test_de",
+      "email": null,
+      "firstName": "test_de",
+      "lastName": "test_de",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2021-12-10T06:56:45.214Z",
+      "attributes": {},
+      "groups": [
+        "/access_during_freeze",
+        "/de"
+      ],
+      "groupNames": [
+        "access_during_freeze",
+        "de"
+      ],
+      "orgRolesFromGroups": [
+        "de"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_view_all_calculations",
+        "data_read",
+        "data_write",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read",
+        "validation_write"
+      ],
+      "anketaPermissions": [
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "85c25f8e-2ee6-465d-9fc2-91124becb2eb",
+      "username": "test_de_lead",
+      "email": null,
+      "firstName": "test_de_lead",
+      "lastName": "test_de_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-09-12T12:18:13.683Z",
+      "attributes": {},
+      "groups": [
+        "/de",
+        "/de/de_lead"
+      ],
+      "groupNames": [
+        "de",
+        "de_lead"
+      ],
+      "orgRolesFromGroups": [
+        "de",
+        "de_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "data_read",
+        "data_write",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read",
+        "validation_write"
+      ],
+      "anketaPermissions": [
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "93516b27-0d1f-46fe-9a50-6405a7357758",
+      "username": "test_de_lead_sa",
+      "email": null,
+      "firstName": "test_de_lead",
+      "lastName": "test_de_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2025-08-05T11:20:42.133Z",
+      "attributes": {},
+      "groups": [
+        "/de/de_lead",
+        "/departament/Управление моделирования КИБ и СМБ"
+      ],
+      "groupNames": [
+        "de_lead",
+        "Управление моделирования КИБ и СМБ"
+      ],
+      "orgRolesFromGroups": [
+        "de_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "data_read",
+        "data_write",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read",
+        "validation_write"
+      ],
+      "anketaPermissions": [
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "05a4a442-0376-48fc-9f78-532a87fdaac4",
+      "username": "test_de_sa",
+      "email": null,
+      "firstName": "test_de_sa",
+      "lastName": "test_de_sa",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2025-08-05T11:08:47.904Z",
+      "attributes": {},
+      "groups": [
+        "/de",
+        "/departament/Управление моделирования РБ"
+      ],
+      "groupNames": [
+        "de",
+        "Управление моделирования РБ"
+      ],
+      "orgRolesFromGroups": [
+        "de"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_view_all_calculations",
+        "data_read",
+        "data_write",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read",
+        "validation_write"
+      ],
+      "anketaPermissions": [
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "44a85055-39fa-48c5-90f1-65a382107922",
+      "username": "test_ds",
+      "email": null,
+      "firstName": "test_ds",
+      "lastName": "test_ds",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2021-12-10T07:00:06.540Z",
+      "attributes": {},
+      "groups": [
+        "/access_during_freeze",
+        "/departament",
+        "/departament/Модели партнерств и платформы больших данных",
+        "/departament/Управление моделирования КИБ и СМБ",
+        "/departament/Управление моделирования РБ",
+        "/departament/Управление моделирования партнерств и ИТ-процессов",
+        "/departament/Управление перспективных алгоритмов машинного обучения",
+        "/departament/Управление процессных и финансовых моделей",
+        "/ds"
+      ],
+      "groupNames": [
+        "access_during_freeze",
+        "departament",
+        "ds",
+        "Модели партнерств и платформы больших данных",
+        "Управление моделирования КИБ и СМБ",
+        "Управление моделирования РБ",
+        "Управление моделирования партнерств и ИТ-процессов",
+        "Управление перспективных алгоритмов машинного обучения",
+        "Управление процессных и финансовых моделей"
+      ],
+      "orgRolesFromGroups": [
+        "ds"
+      ],
+      "realmRolesDirect": [
+        "edit_allocation_sumrm"
+      ],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "4399e94b-a75b-4fb7-a6d7-c62ed397e5cc",
+      "username": "test_ds_algorithms",
+      "email": null,
+      "firstName": "test_ds_algorithms",
+      "lastName": "test_ds_algorithms",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-02-16T11:50:54.266Z",
+      "attributes": {},
+      "groups": [
+        "/departament/Управление моделирования партнерств и ИТ-процессов",
+        "/ds"
+      ],
+      "groupNames": [
+        "ds",
+        "Управление моделирования партнерств и ИТ-процессов"
+      ],
+      "orgRolesFromGroups": [
+        "ds"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "c5ef5560-a269-4b43-8822-0de50f5659cf",
+      "username": "test_ds_finance_models",
+      "email": null,
+      "firstName": "test_ds_finance_models",
+      "lastName": "test_ds_finance_models",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-02-16T11:51:56.549Z",
+      "attributes": {},
+      "groups": [
+        "/departament/Управление процессных и финансовых моделей",
+        "/ds"
+      ],
+      "groupNames": [
+        "ds",
+        "Управление процессных и финансовых моделей"
+      ],
+      "orgRolesFromGroups": [
+        "ds"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "b8ce856f-ac39-488b-90c4-5675cb6f263d",
+      "username": "test_ds_it_process",
+      "email": null,
+      "firstName": "test_ds_it_process",
+      "lastName": "test_ds_it_process",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-02-16T11:49:34.909Z",
+      "attributes": {},
+      "groups": [
+        "/DS/DS_Lead",
+        "/departament/Управление моделирования партнерств и ИТ-процессов",
+        "/ds",
+        "/ds/ds_lead"
+      ],
+      "groupNames": [
+        "DS_Lead",
+        "ds",
+        "ds_lead",
+        "Управление моделирования партнерств и ИТ-процессов"
+      ],
+      "orgRolesFromGroups": [
+        "ds",
+        "ds_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "accounting",
+        "add_model_sumrm",
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data",
+        "data_create",
+        "data_delete",
+        "data_read",
+        "data_write",
+        "de",
+        "de_lead",
+        "developer",
+        "dit",
+        "dit_lead",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "ds",
+        "ds_lead",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration",
+        "integration_create",
+        "integration_delete",
+        "integration_read",
+        "integration_write",
+        "management",
+        "model",
+        "model_create",
+        "model_delete",
+        "model_read",
+        "model_write",
+        "modelops",
+        "modelops_lead",
+        "monitoring",
+        "monitoring_create",
+        "monitoring_delete",
+        "monitoring_read",
+        "monitoring_write",
+        "offline_access",
+        "sales",
+        "uma_authorization",
+        "validation",
+        "validation_create",
+        "validation_delete",
+        "validation_read",
+        "validation_write",
+        "validator",
+        "validator_lead"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "0e0165c1-a080-4be0-8e93-c4b5eccf2620",
+      "username": "test_ds_kib_smb",
+      "email": null,
+      "firstName": "test_ds_kib_smb",
+      "lastName": "test_ds_kib_smb",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-02-16T11:39:56.277Z",
+      "attributes": {},
+      "groups": [
+        "/departament/Управление моделирования КИБ и СМБ",
+        "/ds"
+      ],
+      "groupNames": [
+        "ds",
+        "Управление моделирования КИБ и СМБ"
+      ],
+      "orgRolesFromGroups": [
+        "ds"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "89885dde-56e8-4606-b0c7-5322234144e1",
+      "username": "test_ds_lead",
+      "email": null,
+      "firstName": "test_ds_lead",
+      "lastName": "test_ds_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-01-20T11:10:13.755Z",
+      "attributes": {},
+      "groups": [
+        "/access_during_freeze",
+        "/departament",
+        "/departament/Управление моделирования КИБ и СМБ",
+        "/ds",
+        "/ds/ds_lead",
+        "/ds/ds_lead/ds_lead_kmbkcb"
+      ],
+      "groupNames": [
+        "access_during_freeze",
+        "departament",
+        "ds",
+        "ds_lead",
+        "ds_lead_kmbkcb",
+        "Управление моделирования КИБ и СМБ"
+      ],
+      "orgRolesFromGroups": [
+        "ds",
+        "ds_lead"
+      ],
+      "realmRolesDirect": [
+        "ds"
+      ],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_read",
+        "data_write",
+        "developer",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "ds",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "4e9a3093-b52b-474c-8b2f-b239aec40cba",
+      "username": "test_ds_lead_sa",
+      "email": null,
+      "firstName": "test_ds_lead",
+      "lastName": "test_ds_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2025-08-05T11:28:17.926Z",
+      "attributes": {},
+      "groups": [
+        "/departament/Управление моделирования КИБ и СМБ",
+        "/departament/Управление перспективных алгоритмов машинного обучения",
+        "/ds/ds_lead"
+      ],
+      "groupNames": [
+        "ds_lead",
+        "Управление моделирования КИБ и СМБ",
+        "Управление перспективных алгоритмов машинного обучения"
+      ],
+      "orgRolesFromGroups": [
+        "ds_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_read",
+        "data_write",
+        "developer",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "696ac315-07b9-4418-a500-64b3eacb913a",
+      "username": "test_ds_rb",
+      "email": null,
+      "firstName": "test_ds_rb",
+      "lastName": "test_ds_rb",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-02-16T11:48:12.233Z",
+      "attributes": {},
+      "groups": [
+        "/departament",
+        "/departament/Управление моделирования РБ",
+        "/ds"
+      ],
+      "groupNames": [
+        "departament",
+        "ds",
+        "Управление моделирования РБ"
+      ],
+      "orgRolesFromGroups": [
+        "ds"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "90034f9f-5bbc-4eb5-8db1-d3b37e7398bd",
+      "username": "test_ds_rb_lead",
+      "email": null,
+      "firstName": "test_ds_rb_lead",
+      "lastName": "test_ds_rb_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-03-18T08:23:13.623Z",
+      "attributes": {},
+      "groups": [
+        "/access_during_freeze",
+        "/departament",
+        "/departament/Управление моделирования РБ",
+        "/ds",
+        "/ds/ds_lead"
+      ],
+      "groupNames": [
+        "access_during_freeze",
+        "departament",
+        "ds",
+        "ds_lead",
+        "Управление моделирования РБ"
+      ],
+      "orgRolesFromGroups": [
+        "ds",
+        "ds_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_read",
+        "data_write",
+        "developer",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "44f902a5-b871-4d61-acc0-3fbc53c79858",
+      "username": "test_ds_sa",
+      "email": null,
+      "firstName": "test_ds",
+      "lastName": "test_ds",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2025-08-05T11:26:24.777Z",
+      "attributes": {},
+      "groups": [
+        "/departament/Управление моделирования партнерств и ИТ-процессов",
+        "/ds"
+      ],
+      "groupNames": [
+        "ds",
+        "Управление моделирования партнерств и ИТ-процессов"
+      ],
+      "orgRolesFromGroups": [
+        "ds"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "51fb83f2-eff7-4f0e-a239-0d9408abb7cf",
+      "username": "test_ds2",
+      "email": null,
+      "firstName": "test_ds2",
+      "lastName": "test_ds2",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2024-12-11T06:29:41.910Z",
+      "attributes": {},
+      "groups": [
+        "/access_during_freeze",
+        "/departament/Управление моделирования партнерств и ИТ-процессов",
+        "/ds"
+      ],
+      "groupNames": [
+        "access_during_freeze",
+        "ds",
+        "Управление моделирования партнерств и ИТ-процессов"
+      ],
+      "orgRolesFromGroups": [
+        "ds"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "f951fa0b-9047-4042-b60a-eabb7db184a5",
+      "username": "test_mipm",
+      "email": "asvechtomov@vtb.ru",
+      "firstName": "test_mipm",
+      "lastName": "test_mipm",
+      "enabled": true,
+      "emailVerified": true,
+      "createdTimestamp": "2022-01-20T11:18:06.605Z",
+      "attributes": {},
+      "groups": [
+        "/access_during_freeze",
+        "/mipm"
+      ],
+      "groupNames": [
+        "access_during_freeze",
+        "mipm"
+      ],
+      "orgRolesFromGroups": [
+        "mipm"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_public_template_sumrm",
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_delete",
+        "data_read",
+        "data_write",
+        "dl_system_access",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_delete",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_delete",
+        "model_read",
+        "model_write",
+        "monitoring_delete",
+        "monitoring_read",
+        "validation_delete",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "0366c08b-0046-449d-ad85-31c601cd5dc9",
+      "username": "test_mipm_sa",
+      "email": null,
+      "firstName": "mipm",
+      "lastName": "mipm",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2025-08-05T10:52:46.926Z",
+      "attributes": {},
+      "groups": [
+        "/departament/Управление моделирования КИБ и СМБ",
+        "/mipm"
+      ],
+      "groupNames": [
+        "mipm",
+        "Управление моделирования КИБ и СМБ"
+      ],
+      "orgRolesFromGroups": [
+        "mipm"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_public_template_sumrm",
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_delete",
+        "data_read",
+        "data_write",
+        "dl_system_access",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_delete",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_delete",
+        "model_read",
+        "model_write",
+        "monitoring_delete",
+        "monitoring_read",
+        "validation_delete",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "83416277-7fc7-4ff2-a5c2-0fe5b769dc96",
+      "username": "test_modelops",
+      "email": null,
+      "firstName": "test_modelops",
+      "lastName": "test_modelops",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2021-12-10T07:01:28.118Z",
+      "attributes": {},
+      "groups": [
+        "/modelops"
+      ],
+      "groupNames": [
+        "modelops"
+      ],
+      "orgRolesFromGroups": [
+        "modelops"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "dl_system_access",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write"
+      ],
+      "anketaPermissions": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "d2f068f4-a328-4626-95fa-b4c931ebaf66",
+      "username": "test_modelops_lead",
+      "email": null,
+      "firstName": "test_modelops_lead",
+      "lastName": "test_modelops_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-09-12T12:19:52.614Z",
+      "attributes": {},
+      "groups": [
+        "/modelops",
+        "/modelops/modelops_lead"
+      ],
+      "groupNames": [
+        "modelops",
+        "modelops_lead"
+      ],
+      "orgRolesFromGroups": [
+        "modelops",
+        "modelops_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "dl_system_access",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write"
+      ],
+      "anketaPermissions": [
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "6baf4f11-aa31-4e18-b26d-33fd0b2e72e0",
+      "username": "test_modelops_lead_sa",
+      "email": null,
+      "firstName": "test_modelops_lead",
+      "lastName": "test_modelops_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2025-08-05T11:42:34.706Z",
+      "attributes": {},
+      "groups": [
+        "/departament/Управление моделирования РБ",
+        "/departament/Управление моделирования партнерств и ИТ-процессов",
+        "/modelops/modelops_lead"
+      ],
+      "groupNames": [
+        "modelops_lead",
+        "Управление моделирования РБ",
+        "Управление моделирования партнерств и ИТ-процессов"
+      ],
+      "orgRolesFromGroups": [
+        "modelops_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "dl_system_access",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write"
+      ],
+      "anketaPermissions": [
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "edf8ad64-2956-406f-9ca5-fdc15b9b694d",
+      "username": "test_modelops_sa",
+      "email": null,
+      "firstName": "test_modelops",
+      "lastName": "test_modelops",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2025-08-05T11:35:44.260Z",
+      "attributes": {},
+      "groups": [
+        "/departament/Управление моделирования КИБ и СМБ",
+        "/departament/Управление процессных и финансовых моделей",
+        "/modelops"
+      ],
+      "groupNames": [
+        "modelops",
+        "Управление моделирования КИБ и СМБ",
+        "Управление процессных и финансовых моделей"
+      ],
+      "orgRolesFromGroups": [
+        "modelops"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "dl_system_access",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write"
+      ],
+      "anketaPermissions": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "495025df-8123-413b-a14b-f0e86842c047",
+      "username": "test_no_pass",
+      "email": null,
+      "firstName": "test_no_pass",
+      "lastName": "test_no_pass",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-01-21T13:01:50.686Z",
+      "attributes": {},
+      "groups": [],
+      "groupNames": [],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "5c71c5e7-09be-46c2-84f7-653295041b65",
+      "username": "test_null",
+      "email": null,
+      "firstName": "test_null",
+      "lastName": "test_null",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-01-12T14:38:55.077Z",
+      "attributes": {},
+      "groups": [
+        "/departament/Управление моделирования КИБ и СМБ",
+        "/ds"
+      ],
+      "groupNames": [
+        "ds",
+        "Управление моделирования КИБ и СМБ"
+      ],
+      "orgRolesFromGroups": [
+        "ds"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data_read",
+        "data_write",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "4379f011-00b7-4c81-a348-58a120b2b982",
+      "username": "test_pim_user",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2023-09-04T09:00:01.320Z",
+      "attributes": {},
+      "groups": [],
+      "groupNames": [],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "e9d8c21f-b6da-40b8-92fb-c8c5cf9662e2",
+      "username": "test_release_manager",
+      "email": null,
+      "firstName": "test_release_manager",
+      "lastName": "test_release_manager",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-01-28T12:40:44.890Z",
+      "attributes": {},
+      "groups": [
+        "/release_manager"
+      ],
+      "groupNames": [
+        "release_manager"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "integration_create",
+        "integration_read",
+        "integration_write"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "fd60698d-eba8-4a83-ad9b-a2cd94e8a7ff",
+      "username": "test_roles_ds",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2025-01-17T11:25:57.044Z",
+      "attributes": {},
+      "groups": [
+        "/DS",
+        "/access_during_freeze",
+        "/departament/Управление моделирования партнерств и ИТ-процессов",
+        "/ds",
+        "/ds/ds_lead"
+      ],
+      "groupNames": [
+        "DS",
+        "access_during_freeze",
+        "ds",
+        "ds_lead",
+        "Управление моделирования партнерств и ИТ-процессов"
+      ],
+      "orgRolesFromGroups": [
+        "ds",
+        "ds_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations",
+        "camunda-admin",
+        "data",
+        "data_read",
+        "data_write",
+        "developer",
+        "dl_commit_abort",
+        "dl_commit_aplay",
+        "dl_commit_delete",
+        "dl_commit_edit_data",
+        "dl_commit_edit_description",
+        "dl_commit_import_s2t",
+        "ds",
+        "edit_allocation_sumrm",
+        "edit_model_sumrm",
+        "integration",
+        "integration_read",
+        "integration_write",
+        "model",
+        "model_create",
+        "model_read",
+        "model_write",
+        "monitoring",
+        "monitoring_read",
+        "monitoring_write",
+        "validation",
+        "validation_read"
+      ],
+      "anketaPermissions": [
+        "anketa_admin_panel",
+        "anketa_audit_view",
+        "anketa_create_calculation",
+        "anketa_edit_calculation",
+        "anketa_export_reports",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "ed57c5a9-a375-49f9-8981-9a71a3ca455f",
+      "username": "test_sum_sacfg",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2026-07-21T13:26:13.088Z",
+      "attributes": {},
+      "groups": [
+        "/sacfg/dev_sum_sacfg"
+      ],
+      "groupNames": [
+        "dev_sum_sacfg"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [
+        "anketa_view_all_calculations"
+      ],
+      "realmRolesEffective": [
+        "anketa_create_calculation",
+        "anketa_view_all_calculations"
+      ],
+      "anketaPermissions": [
+        "anketa_create_calculation",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "52c6ee9b-f222-459d-9d0a-8cc5c72920fc",
+      "username": "test_sum_saprg",
+      "email": null,
+      "firstName": "sum_saprg",
+      "lastName": "sum_saprg",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2026-07-21T13:22:42.887Z",
+      "attributes": {},
+      "groups": [
+        "/sacfg/dev_sum_sacfg"
+      ],
+      "groupNames": [
+        "dev_sum_sacfg"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_create_calculation",
+        "anketa_view_all_calculations"
+      ],
+      "anketaPermissions": [
+        "anketa_create_calculation",
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "1b329089-12d8-419e-ab50-9d4c9b28e0fc",
+      "username": "test_sum_sarep_dadm",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2026-07-21T22:39:40.496Z",
+      "attributes": {},
+      "groups": [
+        "/sarep/dev_sum_sarep_dadm"
+      ],
+      "groupNames": [
+        "dev_sum_sarep_dadm"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_view_all_calculations"
+      ],
+      "anketaPermissions": [
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "70e07e69-6a41-4dca-aa32-308bd485ae40",
+      "username": "test_sum_sarep_digagt",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2026-07-21T22:38:11.491Z",
+      "attributes": {},
+      "groups": [
+        "/sarep/dev_sum_sarep_digagt"
+      ],
+      "groupNames": [
+        "dev_sum_sarep_digagt"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_view_all_calculations"
+      ],
+      "anketaPermissions": [
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "8744a638-3d3b-4e6d-bcdf-cda302c8459a",
+      "username": "test_sum_sarep_idsrc",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2026-07-21T13:30:44.666Z",
+      "attributes": {},
+      "groups": [
+        "/sarep/dev_sum_sarep_idsrc"
+      ],
+      "groupNames": [
+        "dev_sum_sarep_idsrc"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_view_all_calculations"
+      ],
+      "anketaPermissions": [
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "4770973f-5599-48c3-a26a-41f84b5c216b",
+      "username": "test_sum_sarep_mdlctl",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2026-07-21T22:33:52.648Z",
+      "attributes": {},
+      "groups": [
+        "/sarep/dev_sum_sarep_mdlctl"
+      ],
+      "groupNames": [
+        "dev_sum_sarep_mdlctl"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_view_all_calculations"
+      ],
+      "anketaPermissions": [
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "9bc08fc8-870a-45a0-9fb6-9d9540d13c76",
+      "username": "test_sum_sarep_pirm",
+      "email": null,
+      "firstName": "",
+      "lastName": "",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2026-07-21T22:36:02.034Z",
+      "attributes": {},
+      "groups": [
+        "/sarep/dev_sum_sarep_pirm"
+      ],
+      "groupNames": [
+        "dev_sum_sarep_pirm"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_view_all_calculations"
+      ],
+      "anketaPermissions": [
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "da3285b1-ed25-4935-b554-658f5496672f",
+      "username": "test_sum_sarep_strdat",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2026-07-21T22:36:57.758Z",
+      "attributes": {},
+      "groups": [
+        "/sarep/dev_sum_sarep_strdat"
+      ],
+      "groupNames": [
+        "dev_sum_sarep_strdat"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "anketa_view_all_calculations"
+      ],
+      "anketaPermissions": [
+        "anketa_view_all_calculations"
+      ],
+      "clientRoles": {}
+    },
+    {
+      "id": "b2db6e13-0bb0-481d-8abc-f57580d418dd",
+      "username": "test_validator",
+      "email": null,
+      "firstName": "test_validator",
+      "lastName": "test_validator",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2021-12-10T07:03:02.165Z",
+      "attributes": {},
+      "groups": [
+        "/access_during_freeze",
+        "/validator"
+      ],
+      "groupNames": [
+        "access_during_freeze",
+        "validator"
+      ],
+      "orgRolesFromGroups": [
+        "validator"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "add_public_template_sumrm",
+        "data_read",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_delete",
+        "validation_read",
+        "validation_write"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "db56575d-b69e-42d8-8ac3-1b3022e3cf30",
+      "username": "test_validator_lead",
+      "email": null,
+      "firstName": "test_validator_lead",
+      "lastName": "test_validator_lead",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2022-09-12T12:20:53.731Z",
+      "attributes": {},
+      "groups": [
+        "/access_during_freeze",
+        "/validator",
+        "/validator/validator_lead"
+      ],
+      "groupNames": [
+        "access_during_freeze",
+        "validator",
+        "validator_lead"
+      ],
+      "orgRolesFromGroups": [
+        "validator",
+        "validator_lead"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "add_public_template_sumrm",
+        "data_read",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_delete",
+        "validation_read",
+        "validation_write"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "48113801-7f31-453b-8980-49c93f9acd0b",
+      "username": "tuz_dev_auml2mreg4nlp",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2024-10-28T10:04:27.186Z",
+      "attributes": {},
+      "groups": [
+        "/mreg_dev_nlp_proj_rw"
+      ],
+      "groupNames": [
+        "mreg_dev_nlp_proj_rw"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "204e24d0-65b0-47ef-9dd4-430925597fda",
+      "username": "tuz_dev_mlnlp2mreg",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2024-10-28T09:12:24.173Z",
+      "attributes": {},
+      "groups": [
+        "/mreg_dev_nlp_proj_rw"
+      ],
+      "groupNames": [
+        "mreg_dev_nlp_proj_rw"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "2b50373f-9432-4ca3-acb8-db0de86ab543",
+      "username": "tuz_dev_mr_automl",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2023-11-30T13:37:12.616Z",
+      "attributes": {},
+      "groups": [
+        "/rm_modelops"
+      ],
+      "groupNames": [
+        "rm_modelops"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "fb0948d5-e015-40a0-992b-94e2731323d2",
+      "username": "tuz_dev_nlp2mreg",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2024-10-28T09:09:36.181Z",
+      "attributes": {},
+      "groups": [
+        "/mreg_dev_nlp_proj_rw"
+      ],
+      "groupNames": [
+        "mreg_dev_nlp_proj_rw"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "47001f55-1aa7-4d2f-9615-8de07665094a",
+      "username": "tuz_dev_nlp2sum",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2024-10-28T10:37:10.830Z",
+      "attributes": {},
+      "groups": [],
+      "groupNames": [],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "bfb7b3ea-c4b3-4f4e-a3a3-e3d454ac29f0",
+      "username": "tuz_dev_pim2mreg4nlp",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2024-10-28T10:04:01.136Z",
+      "attributes": {},
+      "groups": [
+        "/mreg_dev_nlp_proj_rw"
+      ],
+      "groupNames": [
+        "mreg_dev_nlp_proj_rw"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "6b9e7f94-d1c5-424c-b2ae-c37db607442b",
+      "username": "tuz_dev_sum2mreg",
+      "email": null,
+      "firstName": null,
+      "lastName": null,
+      "enabled": true,
+      "emailVerified": true,
+      "createdTimestamp": "2025-10-01T14:26:37.507Z",
+      "attributes": {},
+      "groups": [
+        "/mreg_dev_sum"
+      ],
+      "groupNames": [
+        "mreg_dev_sum"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "e6e923d8-d2d5-4812-b324-e4e231a1ef98",
+      "username": "user_for_vova",
+      "email": "vova@inno.tech",
+      "firstName": "Vova",
+      "lastName": "Vova",
+      "enabled": true,
+      "emailVerified": true,
+      "createdTimestamp": "2025-04-14T07:24:51.932Z",
+      "attributes": {},
+      "groups": [
+        "/rm_modelops"
+      ],
+      "groupNames": [
+        "rm_modelops"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "48591c82-891d-4576-be45-3ce634173eda",
+      "username": "user_mr_fs",
+      "email": "user_mr_fs@inno.tech",
+      "firstName": "User",
+      "lastName": "Mrfs",
+      "enabled": true,
+      "emailVerified": true,
+      "createdTimestamp": "2025-04-14T07:31:35.525Z",
+      "attributes": {},
+      "groups": [
+        "/rm_modelops"
+      ],
+      "groupNames": [
+        "rm_modelops"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "ffd71ea9-18f8-4779-9322-21b1bdefe742",
+      "username": "validator",
+      "email": null,
+      "firstName": "validator",
+      "lastName": "validator",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2021-11-16T08:56:18.083Z",
+      "attributes": {},
+      "groups": [
+        "/validator"
+      ],
+      "groupNames": [
+        "validator"
+      ],
+      "orgRolesFromGroups": [
+        "validator"
+      ],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [
+        "add_model_sumrm",
+        "add_public_template_sumrm",
+        "data_read",
+        "edit_model_sumrm",
+        "integration_read",
+        "integration_write",
+        "model_read",
+        "monitoring_read",
+        "monitoring_write",
+        "validation_delete",
+        "validation_read",
+        "validation_write"
+      ],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    },
+    {
+      "id": "41c0f061-43fc-41fa-9036-50b06eb9a909",
+      "username": "вася пупкин",
+      "email": "vasyapupkin@mail.ri",
+      "firstName": "Вася",
+      "lastName": "Пупкин",
+      "enabled": true,
+      "emailVerified": false,
+      "createdTimestamp": "2024-11-22T12:23:46.306Z",
+      "attributes": {},
+      "groups": [
+        "/access_during_freeze"
+      ],
+      "groupNames": [
+        "access_during_freeze"
+      ],
+      "orgRolesFromGroups": [],
+      "realmRolesDirect": [],
+      "realmRolesEffective": [],
+      "anketaPermissions": [],
+      "clientRoles": {}
+    }
+  ]
+}

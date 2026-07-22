@@ -67,6 +67,7 @@ module.exports = merge(common, {
 	plugins: [
 		new DefinePlugin({
 			"process.env": {},
+			"process.env.NODE_ENV": JSON.stringify("production"),
 			"process.env.MOCKED_REQUESTS": JSON.stringify(
 				process.env.MOCKED_REQUESTS || "",
 			),
