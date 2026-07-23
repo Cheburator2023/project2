@@ -1,5 +1,4 @@
 import {
-	readV2AnketaSectionUiOptions,
 	resolveStreamBlockRolesForTypicalWorkOutputPath,
 	resolveStreamExecutorForTypicalWorkOutputPath,
 	resolveV2AnketaArchComponent,
@@ -12,7 +11,6 @@ import {
 import {
 	isV2StreamBlockRoleCode,
 	normalizeStreamBlockRole,
-	normalizeStreamBlockRoles,
 	type V2StreamBlockRoleCode,
 } from "./v2-stream-block-role.util";
 
@@ -23,6 +21,48 @@ export const V2_ANKETA_LEAD_ROLE_CODES = [
 ] as const;
 
 export type V2AnketaLeadRoleCode = (typeof V2_ANKETA_LEAD_ROLE_CODES)[number];
+
+/**
+ * Уровень B (§2): в чужих стримах скрывать оценки типовых/нетиповых работ.
+ * Лиды + архитектор / аналитики / sarep.
+ */
+export const V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES = [
+	...V2_ANKETA_LEAD_ROLE_CODES,
+	"architect",
+	"mntranlst",
+	"da",
+	"sarep",
+] as const;
+
+/** Валидатор / руководитель валидации — без оценок работ вообще. */
+export const V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES = [
+	"validator",
+	"validator_lead",
+] as const;
+
+/** Роли доменных групп Keycloak, учитываемые в viewerAccess (кроме Permission). */
+export const V2_ANKETA_VIEWER_ROLE_CODES = [
+	...V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES,
+	...V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES,
+	"ds",
+	"de",
+	"modelops",
+	"mipm",
+	"mipm_stream",
+	"da_stream",
+	"data_expert",
+	"saprg",
+	"sacfg",
+	"appadmin",
+	"admin_it",
+	"admin_it_lead",
+	"business_customer",
+	"auditor",
+	"auditor_lead",
+	"auditorib",
+	"prjtoffice",
+	"project_office",
+] as const;
 
 export type V2AnketaViewerAccessContext = {
 	roles: readonly string[];
@@ -75,6 +115,24 @@ export function userHasV2AnketaStreamBlockFilteredRole(
 export function userIsV2AnketaLead(roles: readonly string[]): boolean {
 	return roles.some((role) =>
 		(V2_ANKETA_LEAD_ROLE_CODES as readonly string[]).includes(role.trim()),
+	);
+}
+
+export function userMasksAllWorkEstimates(roles: readonly string[]): boolean {
+	return roles.some((role) =>
+		(V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES as readonly string[]).includes(
+			role.trim(),
+		),
+	);
+}
+
+export function userMasksForeignWorkEstimates(
+	roles: readonly string[],
+): boolean {
+	return roles.some((role) =>
+		(V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES as readonly string[]).includes(
+			role.trim(),
+		),
 	);
 }
 
@@ -184,13 +242,18 @@ export function isV2AnketaBlockVisibleForViewer(
 	return isBlockVisibleForUser(viewer, restrictions);
 }
 
-/** Маскировать оценки в блоке типовых/нетиповых работ для лида (чужие стримы). */
+/**
+ * Маскировать оценки в блоке типовых/нетиповых работ (уровень B / валидатор).
+ * Свой стрим — видно; чужой — скрыто. Без своего стрима все блоки со streamExecutor — «чужие».
+ */
 export function shouldMaskWorkEstimatesForUser(
 	viewer: V2AnketaViewerAccessContext,
 	blockStreamExecutors: readonly V2StreamBlockExecutor[],
 ): boolean {
-	if (!userIsV2AnketaLead(viewer.roles)) return false;
+	if (userMasksAllWorkEstimates(viewer.roles)) return true;
+	if (!userMasksForeignWorkEstimates(viewer.roles)) return false;
 	if (blockStreamExecutors.length === 0) return false;
+	if (viewer.streams.length === 0) return true;
 	return !blockStreamExecutors.every((code) =>
 		streamsIntersectViewerAndBlock(viewer.streams, [code]),
 	);

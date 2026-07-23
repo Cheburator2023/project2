@@ -78,6 +78,13 @@ export const commonRoutes = {
 		disabled: false,
 		showInNavbar: false,
 	},
+	adminV2Audit: {
+		rootPath: "/admin/audit",
+		name: "Журнал аудита",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "adminV2", order: 9 },
+	},
 	adminV2TemplateHistory: {
 		rootPath: "/admin/schemas/:templateId/history",
 		name: "История изменений шаблона",

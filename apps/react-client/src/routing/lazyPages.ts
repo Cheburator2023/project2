@@ -154,6 +154,13 @@ export const AdminV2HistoryPage = lazyPage(
 		),
 	"AdminV2HistoryPage",
 );
+export const AdminV2AuditJournalPage = lazyPage(
+	() =>
+		import(
+			/* webpackChunkName: "page-admin-audit" */ "@react-client/features/v2/admin/pages/AdminV2AuditJournalPage"
+		),
+	"AdminV2AuditJournalPage",
+);
 export const AdminV2SettingsPage = lazyPage(
 	() =>
 		import(

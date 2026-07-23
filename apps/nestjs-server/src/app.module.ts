@@ -10,6 +10,7 @@ import { AnketaV2Module } from "./modules/anketa-v2/anketa-v2.module";
 import { KanbanBoardModule } from "./modules/kanban-board/kanban-board.module";
 import { DatabaseModule } from "./shared/database/database.module";
 import { GodModeGuard } from "./shared/keycloak/god-mode.guard";
+import { DomainRolesGuard } from "./shared/keycloak/domain-roles.guard";
 import { KeycloakModule } from "./shared/keycloak/keycloak.module";
 import { CustomLogger } from "./shared/services/logger.service";
 import { AbortInterceptor } from "./shared/interceptors/abort.interceptor";
@@ -67,6 +68,10 @@ import { RetryInterceptor } from "./shared/interceptors/retry.interceptor";
 			useFactory: (reflector: Reflector, delegateGuard: RoleGuard) =>
 				new GodModeGuard(reflector, delegateGuard),
 			inject: [Reflector, "DELEGATE_GUARD_ROLE"],
+		},
+		{
+			provide: APP_GUARD,
+			useClass: DomainRolesGuard,
 		},
 		{
 			provide: APP_INTERCEPTOR,

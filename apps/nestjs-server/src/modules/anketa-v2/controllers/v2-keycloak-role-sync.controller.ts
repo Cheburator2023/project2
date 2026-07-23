@@ -1,7 +1,6 @@
 import { Body, Controller, Get, Post } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
-import { RealmRole } from "../../../shared/decorators/realm-role.decorator";
-import { Permission } from "../../../shared/types/permissions";
+import { DomainRoles } from "../../../shared/decorators/domain-roles.decorator";
 import {
 	V2KeycloakAdminCredsDto,
 	V2KeycloakRoleSyncDto,
@@ -14,7 +13,7 @@ export class V2KeycloakRoleSyncController {
 	constructor(private readonly syncService: V2KeycloakRoleSyncService) {}
 
 	@Get("status")
-	@RealmRole(Permission.ANKETA_ADMIN_PANEL)
+	@DomainRoles("appadmin", "sacfg")
 	@ApiOperation({
 		summary:
 			"Доступна ли кнопка синхронизации ролей Keycloak (ИФТ/dev)",
@@ -24,7 +23,7 @@ export class V2KeycloakRoleSyncController {
 	}
 
 	@Post("backup")
-	@RealmRole(Permission.ANKETA_ADMIN_PANEL)
+	@DomainRoles("appadmin", "sacfg")
 	@ApiOperation({
 		summary:
 			"Скачать JSON-бекап групп/ролей/юзеров Keycloak перед sync (креды не сохраняются)",
@@ -37,7 +36,7 @@ export class V2KeycloakRoleSyncController {
 	}
 
 	@Post()
-	@RealmRole(Permission.ANKETA_ADMIN_PANEL)
+	@DomainRoles("appadmin", "sacfg")
 	@ApiOperation({
 		summary:
 			"Remap realm roles групп по F-05 (без склейки/удаления Latin-дублей; креды admin не сохраняются)",

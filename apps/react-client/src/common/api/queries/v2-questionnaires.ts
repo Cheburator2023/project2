@@ -120,6 +120,24 @@ export const useCreateV2QuestionnaireVersion = () => {
 	});
 };
 
+export const useHoldV2Questionnaire = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) =>
+			apiClient<V2QuestionnaireDto>({
+				url: `/v2/questionnaires/${id}/hold`,
+				method: "POST",
+			}),
+		onSuccess: (_data, id) => {
+			qc.invalidateQueries({ queryKey: ROOT_KEY });
+			qc.invalidateQueries({ queryKey: [...ROOT_KEY, id] });
+			qc.invalidateQueries({
+				queryKey: [...ROOT_KEY, id, "form-package"],
+			});
+		},
+	});
+};
+
 export const useBulkDeleteV2Questionnaires = () => {
 	const qc = useQueryClient();
 	return useMutation({

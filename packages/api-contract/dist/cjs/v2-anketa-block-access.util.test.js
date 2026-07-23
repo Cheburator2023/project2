@@ -53,4 +53,19 @@ const uiSchema = {
         (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.shouldMaskWorkEstimatesForUser)(viewer, pirmRestrictions.streamExecutors)).toBe(true);
         (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.shouldMaskWorkEstimatesForUser)(viewer, (0, v2_anketa_block_access_util_1.resolveV2AnketaBlockAccessRestrictionsForOutputPath)(uiSchema, "streamDataSources").streamExecutors)).toBe(false);
     });
+    (0, vitest_1.it)("masks all estimates for validator", () => {
+        const viewer = {
+            roles: ["validator"],
+            streams: [],
+        };
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.shouldMaskWorkEstimatesForUser)(viewer, [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC])).toBe(true);
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.shouldMaskWorkEstimatesForUser)(viewer, [])).toBe(true);
+    });
+    (0, vitest_1.it)("masks foreign estimates for architect without own stream", () => {
+        const viewer = {
+            roles: ["architect"],
+            streams: [],
+        };
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.shouldMaskWorkEstimatesForUser)(viewer, [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM])).toBe(true);
+    });
 });

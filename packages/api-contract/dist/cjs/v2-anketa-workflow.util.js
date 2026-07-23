@@ -1,14 +1,17 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.V2_ANKETA_GLOBAL_STATUS_CHIP_COLOR = exports.V2_ANKETA_SECTION_STATUS_CHIP_COLOR = exports.V2_ANKETA_MAIN_SECTION_TITLES = exports.V2_ANKETA_SECTION_COMPLETE_LABELS = exports.V2_ANKETA_GLOBAL_COMPLETE_LABEL = void 0;
+exports.V2_ANKETA_GLOBAL_STATUS_CHIP_COLOR = exports.V2_ANKETA_SECTION_STATUS_CHIP_COLOR = exports.V2_ANKETA_MAIN_SECTION_TITLES = exports.V2_ANKETA_SECTION_COMPLETE_LABELS = exports.V2_ANKETA_HOLD_LABEL = exports.V2_ANKETA_GLOBAL_COMPLETE_LABEL = void 0;
 exports.createDefaultV2AnketaWorkflow = createDefaultV2AnketaWorkflow;
 exports.normalizeV2AnketaWorkflow = normalizeV2AnketaWorkflow;
+exports.isWorkflowTargetCompleted = isWorkflowTargetCompleted;
 exports.allRequiredSectionsCompleted = allRequiredSectionsCompleted;
+exports.isAnketaGloballyLocked = isAnketaGloballyLocked;
 exports.markSectionInProgress = markSectionInProgress;
 exports.completeSection = completeSection;
 exports.readPanelSectionStatus = readPanelSectionStatus;
 exports.completePanelSection = completePanelSection;
 exports.completeGlobalQuestionnaire = completeGlobalQuestionnaire;
+exports.holdQuestionnaire = holdQuestionnaire;
 exports.mainSectionIdForFormPath = mainSectionIdForFormPath;
 exports.isAnketaFormPathLocked = isAnketaFormPathLocked;
 const v2_anketa_workflow_types_1 = require("./v2-anketa-workflow.types");
@@ -53,11 +56,33 @@ function normalizeV2AnketaWorkflow(raw) {
         ...(Object.keys(panelSections).length > 0 ? { panelSections } : {}),
     };
 }
-function allRequiredSectionsCompleted(workflow) {
+function isWorkflowTargetCompleted(workflow, target) {
+    if (target.kind === "main") {
+        return workflow.sections[target.sectionId] === "Заполнено";
+    }
+    return readPanelSectionStatus(workflow, target.pathKey) === "Заполнено";
+}
+/**
+ * Все обязательные разделы подтверждены.
+ * Без `requiredTargets` — legacy: все `V2_ANKETA_MAIN_SECTION_IDS`.
+ * С `requiredTargets` (из uiSchema) — только реально присутствующие/активные секции,
+ * включая кастомные stream-блоки в `panelSections`.
+ */
+function allRequiredSectionsCompleted(workflow, requiredTargets) {
+    if (requiredTargets) {
+        if (requiredTargets.length === 0)
+            return false;
+        return requiredTargets.every((target) => isWorkflowTargetCompleted(workflow, target));
+    }
     return v2_anketa_workflow_types_1.V2_ANKETA_MAIN_SECTION_IDS.every((id) => workflow.sections[id] === "Заполнено");
 }
+/** Анкета заблокирована для правок (заполнена или зафиксирован срез). */
+function isAnketaGloballyLocked(workflow) {
+    return (workflow.globalStatus === "Заполнено" ||
+        workflow.globalStatus === "Утверждена");
+}
 function markSectionInProgress(workflow, sectionId) {
-    if (workflow.globalStatus === "Заполнено")
+    if (isAnketaGloballyLocked(workflow))
         return workflow;
     const status = workflow.sections[sectionId];
     if (status !== "Создано")
@@ -68,7 +93,7 @@ function markSectionInProgress(workflow, sectionId) {
     };
 }
 function completeSection(workflow, sectionId) {
-    if (workflow.globalStatus === "Заполнено")
+    if (isAnketaGloballyLocked(workflow))
         return workflow;
     return {
         ...workflow,
@@ -83,7 +108,7 @@ function readPanelSectionStatus(workflow, pathKey) {
     return workflow.panelSections?.[pathKey] ?? "Создано";
 }
 function completePanelSection(workflow, pathKey) {
-    if (workflow.globalStatus === "Заполнено")
+    if (isAnketaGloballyLocked(workflow))
         return workflow;
     const trimmed = pathKey.trim();
     if (!trimmed)
@@ -97,12 +122,18 @@ function completePanelSection(workflow, pathKey) {
     };
 }
 /** Глобальное «Заполнено» — только когда все разделы подтверждены (кнопка в шапке). */
-function completeGlobalQuestionnaire(workflow) {
-    if (workflow.globalStatus === "Заполнено")
+function completeGlobalQuestionnaire(workflow, requiredTargets) {
+    if (isAnketaGloballyLocked(workflow))
         return workflow;
-    if (!allRequiredSectionsCompleted(workflow))
+    if (!allRequiredSectionsCompleted(workflow, requiredTargets))
         return workflow;
     return { ...workflow, globalStatus: "Заполнено" };
+}
+/** Фиксация среза (§3.13): Заполнено → Утверждена. */
+function holdQuestionnaire(workflow) {
+    if (workflow.globalStatus !== "Заполнено")
+        return workflow;
+    return { ...workflow, globalStatus: "Утверждена" };
 }
 function mainSectionIdForFormPath(path) {
     const root = path.split(".")[0]?.trim();
@@ -114,7 +145,7 @@ function mainSectionIdForFormPath(path) {
 }
 /** Поле/арх-компонент недоступен для редактирования после завершения раздела или анкеты. */
 function isAnketaFormPathLocked(workflow, pathKey) {
-    if (workflow.globalStatus === "Заполнено")
+    if (isAnketaGloballyLocked(workflow))
         return true;
     const trimmed = pathKey.trim();
     if (!trimmed)
@@ -137,6 +168,7 @@ function isAnketaFormPathLocked(workflow, pathKey) {
     return false;
 }
 exports.V2_ANKETA_GLOBAL_COMPLETE_LABEL = "Завершить заполнение анкеты";
+exports.V2_ANKETA_HOLD_LABEL = "Зафиксировать срез";
 exports.V2_ANKETA_SECTION_COMPLETE_LABELS = {
     generalInfo: "Завершить заполнение общей информации",
     detailInfo: "Завершить заполнение детальной информации",
@@ -157,4 +189,5 @@ exports.V2_ANKETA_SECTION_STATUS_CHIP_COLOR = {
 exports.V2_ANKETA_GLOBAL_STATUS_CHIP_COLOR = {
     Черновик: "default",
     Заполнено: "success",
+    Утверждена: "primary",
 };

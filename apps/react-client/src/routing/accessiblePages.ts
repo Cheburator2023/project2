@@ -21,6 +21,9 @@ export function getAccessiblePages(p: PermissionsShape): AccessiblePage[] {
 	if (p.canAccessAdminPanel) {
 		pages.push({ path: "/admin/schemas", name: "Администрирование" });
 	}
+	if (p.canAccessAudit && !p.canAccessAdminPanel) {
+		pages.push({ path: "/admin/audit", name: "Журнал аудита" });
+	}
 	if (p.canAccessTracker) {
 		pages.push({ path: "/tracker/projects", name: "Трекер" });
 	}

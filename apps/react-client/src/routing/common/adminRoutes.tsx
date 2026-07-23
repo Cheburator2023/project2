@@ -4,6 +4,7 @@ import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
 import {
 	AdminLayout,
+	AdminV2AuditJournalPage,
 	AdminV2DictionariesPage,
 	AdminV2DictionaryDetailPage,
 	AdminV2GuidePage,
@@ -22,6 +23,17 @@ import { commonRoutes } from "./routes";
 
 function adminChildRoutes(): RouteObject[] {
 	return [
+		{
+			path: "audit",
+			element: (
+				<PermissionGuard
+					check={(p) => p.canAccessAudit || p.canAccessAdminPanel}
+					message="У вас нет прав на просмотр журнала аудита"
+				>
+					<AdminV2AuditJournalPage />
+				</PermissionGuard>
+			),
+		},
 		{
 			element: (
 				<PermissionGuard

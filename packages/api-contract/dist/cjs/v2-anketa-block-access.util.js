@@ -1,9 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.V2_ANKETA_LEAD_ROLE_CODES = void 0;
+exports.V2_ANKETA_VIEWER_ROLE_CODES = exports.V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES = exports.V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES = exports.V2_ANKETA_LEAD_ROLE_CODES = void 0;
 exports.blockHasV2AnketaAccessRestrictions = blockHasV2AnketaAccessRestrictions;
 exports.userHasV2AnketaStreamBlockFilteredRole = userHasV2AnketaStreamBlockFilteredRole;
 exports.userIsV2AnketaLead = userIsV2AnketaLead;
+exports.userMasksAllWorkEstimates = userMasksAllWorkEstimates;
+exports.userMasksForeignWorkEstimates = userMasksForeignWorkEstimates;
 exports.rolesIntersectViewerAndBlock = rolesIntersectViewerAndBlock;
 exports.streamsIntersectViewerAndBlock = streamsIntersectViewerAndBlock;
 exports.resolveV2AnketaBlockAccessRestrictionsForOutputPath = resolveV2AnketaBlockAccessRestrictionsForOutputPath;
@@ -21,6 +23,45 @@ exports.V2_ANKETA_LEAD_ROLE_CODES = [
     "ds_lead",
     "de_lead",
     "modelops_lead",
+];
+/**
+ * Уровень B (§2): в чужих стримах скрывать оценки типовых/нетиповых работ.
+ * Лиды + архитектор / аналитики / sarep.
+ */
+exports.V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES = [
+    ...exports.V2_ANKETA_LEAD_ROLE_CODES,
+    "architect",
+    "mntranlst",
+    "da",
+    "sarep",
+];
+/** Валидатор / руководитель валидации — без оценок работ вообще. */
+exports.V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES = [
+    "validator",
+    "validator_lead",
+];
+/** Роли доменных групп Keycloak, учитываемые в viewerAccess (кроме Permission). */
+exports.V2_ANKETA_VIEWER_ROLE_CODES = [
+    ...exports.V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES,
+    ...exports.V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES,
+    "ds",
+    "de",
+    "modelops",
+    "mipm",
+    "mipm_stream",
+    "da_stream",
+    "data_expert",
+    "saprg",
+    "sacfg",
+    "appadmin",
+    "admin_it",
+    "admin_it_lead",
+    "business_customer",
+    "auditor",
+    "auditor_lead",
+    "auditorib",
+    "prjtoffice",
+    "project_office",
 ];
 function readRecord(value) {
     return value && typeof value === "object" && !Array.isArray(value)
@@ -50,6 +91,12 @@ function userHasV2AnketaStreamBlockFilteredRole(roles) {
 }
 function userIsV2AnketaLead(roles) {
     return roles.some((role) => exports.V2_ANKETA_LEAD_ROLE_CODES.includes(role.trim()));
+}
+function userMasksAllWorkEstimates(roles) {
+    return roles.some((role) => exports.V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES.includes(role.trim()));
+}
+function userMasksForeignWorkEstimates(roles) {
+    return roles.some((role) => exports.V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES.includes(role.trim()));
 }
 function rolesIntersectViewerAndBlock(viewerRoles, blockRoles) {
     if (blockRoles.length === 0)
@@ -121,12 +168,19 @@ function isV2AnketaBlockVisibleForViewer(viewer, uiSchema, outputPath, options) 
     const restrictions = resolveV2AnketaBlockAccessRestrictionsForOutputPath(uiSchema, outputPath);
     return isBlockVisibleForUser(viewer, restrictions);
 }
-/** Маскировать оценки в блоке типовых/нетиповых работ для лида (чужие стримы). */
+/**
+ * Маскировать оценки в блоке типовых/нетиповых работ (уровень B / валидатор).
+ * Свой стрим — видно; чужой — скрыто. Без своего стрима все блоки со streamExecutor — «чужие».
+ */
 function shouldMaskWorkEstimatesForUser(viewer, blockStreamExecutors) {
-    if (!userIsV2AnketaLead(viewer.roles))
+    if (userMasksAllWorkEstimates(viewer.roles))
+        return true;
+    if (!userMasksForeignWorkEstimates(viewer.roles))
         return false;
     if (blockStreamExecutors.length === 0)
         return false;
+    if (viewer.streams.length === 0)
+        return true;
     return !blockStreamExecutors.every((code) => streamsIntersectViewerAndBlock(viewer.streams, [code]));
 }
 function shouldMaskWorkEstimatesForViewerAtPath(viewer, uiSchema, outputPath, options) {

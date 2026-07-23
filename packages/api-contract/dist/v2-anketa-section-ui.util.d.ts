@@ -1,6 +1,7 @@
 import { type V2StreamBlockRoleCode, type V2StreamBlockRoleValue } from "./v2-stream-block-role.util";
 import { type V2StreamBlockExecutor, type V2StreamBlockExecutorValue } from "./v2-stream-block-executor.util";
 import { type V2AnketaMainSectionId } from "./v2-anketa-workflow.types";
+import { type V2AnketaRequiredWorkflowTarget } from "./v2-anketa-workflow.util";
 export declare const V2_ANKETA_SECTION_ROLE_VALUES: readonly ["main", "subsection", "panel", "flat"];
 export type V2AnketaSectionRole = (typeof V2_ANKETA_SECTION_ROLE_VALUES)[number];
 export type V2AnketaSectionTitleVariant = "h5" | "h6";
@@ -117,4 +118,10 @@ export type AnketaSectionWorkflowBinding = {
  */
 export declare function resolveAnketaSectionWorkflowBinding(pathKey: string, uiOptions: Pick<V2AnketaSectionUiOptions, "workflowSectionId" | "streamBlock" | "groupActivatable" | "sectionRole">): AnketaSectionWorkflowBinding;
 export declare function resolveV2AnketaSectionTitleVariant(uiNode: unknown, fallback?: V2AnketaSectionTitleVariant): V2AnketaSectionTitleVariant;
+/**
+ * Обязательные цели workflow для кнопки «Завершить заполнение анкеты»:
+ * корневые секции uiSchema с привязкой к workflow (main/panel),
+ * кроме деактивированных `groupActivatable` групп.
+ */
+export declare function collectRequiredWorkflowTargets(uiSchema: unknown, formData?: Record<string, unknown> | null): V2AnketaRequiredWorkflowTarget[];
 export { STREAM_SECTION_IDS as V2_ANKETA_STREAM_SECTION_IDS };

@@ -40,16 +40,33 @@ describe("StreamMappingService", () => {
 			);
 		});
 
-		it("filters da (Аналитик качества модельных данных) by stream", () => {
-			expect(service.isStreamFilteredUser(["/da"])).toBe(true);
-			expect(service.isStreamFilteredUser(["da"])).toBe(true);
+		it("filters da_stream (Аналитик качества модельных данных стрима)", () => {
+			expect(service.isStreamFilteredUser(["/da_stream"])).toBe(true);
+			expect(service.isStreamFilteredUser(["da_stream"])).toBe(true);
 		});
 
-		it("does not filter mntranlst / mipm / saprg / sacfg (see all list)", () => {
+		it("does not filter da / sarep / mntranlst / mipm-without-dept / saprg / sacfg", () => {
+			expect(service.isStreamFilteredUser(["/da"])).toBe(false);
+			expect(service.isStreamFilteredUser(["/sarep"])).toBe(false);
 			expect(service.isStreamFilteredUser(["/mntranlst"])).toBe(false);
 			expect(service.isStreamFilteredUser(["/mipm"])).toBe(false);
 			expect(service.isStreamFilteredUser(["/saprg"])).toBe(false);
 			expect(service.isStreamFilteredUser(["/sacfg"])).toBe(false);
+		});
+
+		it("filters mipm with department (Бизнес-партнёр стрима)", () => {
+			expect(
+				service.isStreamFilteredUser([
+					"/mipm",
+					"/departament/Управление моделирования РБ",
+				]),
+			).toBe(true);
+		});
+
+		it("does not hard-filter sarep subgroup (уровень B — свой + привлечён)", () => {
+			expect(
+				service.isStreamFilteredUser(["/sarep", "/sarep/dev_sum_sarep_idsrc"]),
+			).toBe(false);
 		});
 	});
 

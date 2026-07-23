@@ -63,11 +63,49 @@ export function normalizeV2AnketaWorkflow(raw: unknown): V2AnketaWorkflowDto {
 	};
 }
 
+/** Цель workflow, которую нужно завершить до глобального «Заполнено». */
+export type V2AnketaRequiredWorkflowTarget =
+	| { kind: "main"; sectionId: V2AnketaMainSectionId }
+	| { kind: "panel"; pathKey: string };
+
+export function isWorkflowTargetCompleted(
+	workflow: V2AnketaWorkflowDto,
+	target: V2AnketaRequiredWorkflowTarget,
+): boolean {
+	if (target.kind === "main") {
+		return workflow.sections[target.sectionId] === "Заполнено";
+	}
+	return readPanelSectionStatus(workflow, target.pathKey) === "Заполнено";
+}
+
+/**
+ * Все обязательные разделы подтверждены.
+ * Без `requiredTargets` — legacy: все `V2_ANKETA_MAIN_SECTION_IDS`.
+ * С `requiredTargets` (из uiSchema) — только реально присутствующие/активные секции,
+ * включая кастомные stream-блоки в `panelSections`.
+ */
 export function allRequiredSectionsCompleted(
 	workflow: V2AnketaWorkflowDto,
+	requiredTargets?: readonly V2AnketaRequiredWorkflowTarget[],
 ): boolean {
+	if (requiredTargets) {
+		if (requiredTargets.length === 0) return false;
+		return requiredTargets.every((target) =>
+			isWorkflowTargetCompleted(workflow, target),
+		);
+	}
 	return V2_ANKETA_MAIN_SECTION_IDS.every(
 		(id) => workflow.sections[id] === "Заполнено",
+	);
+}
+
+/** Анкета заблокирована для правок (заполнена или зафиксирован срез). */
+export function isAnketaGloballyLocked(
+	workflow: Pick<V2AnketaWorkflowDto, "globalStatus">,
+): boolean {
+	return (
+		workflow.globalStatus === "Заполнено" ||
+		workflow.globalStatus === "Утверждена"
 	);
 }
 
@@ -75,7 +113,7 @@ export function markSectionInProgress(
 	workflow: V2AnketaWorkflowDto,
 	sectionId: V2AnketaMainSectionId,
 ): V2AnketaWorkflowDto {
-	if (workflow.globalStatus === "Заполнено") return workflow;
+	if (isAnketaGloballyLocked(workflow)) return workflow;
 	const status = workflow.sections[sectionId];
 	if (status !== "Создано") return workflow;
 	return {
@@ -88,7 +126,7 @@ export function completeSection(
 	workflow: V2AnketaWorkflowDto,
 	sectionId: V2AnketaMainSectionId,
 ): V2AnketaWorkflowDto {
-	if (workflow.globalStatus === "Заполнено") return workflow;
+	if (isAnketaGloballyLocked(workflow)) return workflow;
 	return {
 		...workflow,
 		globalStatus: workflow.globalStatus,
@@ -110,7 +148,7 @@ export function completePanelSection(
 	workflow: V2AnketaWorkflowDto,
 	pathKey: string,
 ): V2AnketaWorkflowDto {
-	if (workflow.globalStatus === "Заполнено") return workflow;
+	if (isAnketaGloballyLocked(workflow)) return workflow;
 	const trimmed = pathKey.trim();
 	if (!trimmed) return workflow;
 	return {
@@ -125,10 +163,19 @@ export function completePanelSection(
 /** Глобальное «Заполнено» — только когда все разделы подтверждены (кнопка в шапке). */
 export function completeGlobalQuestionnaire(
 	workflow: V2AnketaWorkflowDto,
+	requiredTargets?: readonly V2AnketaRequiredWorkflowTarget[],
 ): V2AnketaWorkflowDto {
-	if (workflow.globalStatus === "Заполнено") return workflow;
-	if (!allRequiredSectionsCompleted(workflow)) return workflow;
+	if (isAnketaGloballyLocked(workflow)) return workflow;
+	if (!allRequiredSectionsCompleted(workflow, requiredTargets)) return workflow;
 	return { ...workflow, globalStatus: "Заполнено" };
+}
+
+/** Фиксация среза (§3.13): Заполнено → Утверждена. */
+export function holdQuestionnaire(
+	workflow: V2AnketaWorkflowDto,
+): V2AnketaWorkflowDto {
+	if (workflow.globalStatus !== "Заполнено") return workflow;
+	return { ...workflow, globalStatus: "Утверждена" };
 }
 
 export function mainSectionIdForFormPath(
@@ -146,7 +193,7 @@ export function isAnketaFormPathLocked(
 	workflow: V2AnketaWorkflowDto,
 	pathKey: string,
 ): boolean {
-	if (workflow.globalStatus === "Заполнено") return true;
+	if (isAnketaGloballyLocked(workflow)) return true;
 
 	const trimmed = pathKey.trim();
 	if (!trimmed) return false;
@@ -174,6 +221,8 @@ export function isAnketaFormPathLocked(
 
 export const V2_ANKETA_GLOBAL_COMPLETE_LABEL =
 	"Завершить заполнение анкеты";
+
+export const V2_ANKETA_HOLD_LABEL = "Зафиксировать срез";
 
 export const V2_ANKETA_SECTION_COMPLETE_LABELS: Record<
 	V2AnketaMainSectionId,
@@ -204,8 +253,9 @@ export const V2_ANKETA_SECTION_STATUS_CHIP_COLOR: Record<
 
 export const V2_ANKETA_GLOBAL_STATUS_CHIP_COLOR: Record<
 	V2AnketaGlobalStatus,
-	"default" | "success"
+	"default" | "success" | "primary"
 > = {
 	Черновик: "default",
 	Заполнено: "success",
+	Утверждена: "primary",
 };

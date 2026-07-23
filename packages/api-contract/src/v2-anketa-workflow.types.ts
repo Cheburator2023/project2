@@ -1,5 +1,9 @@
-/** Глобальный статус заполнения анкеты (первая итерация). */
-export const V2_ANKETA_GLOBAL_STATUS_VALUES = ["Черновик", "Заполнено"] as const;
+/** Глобальный статус заполнения анкеты. */
+export const V2_ANKETA_GLOBAL_STATUS_VALUES = [
+	"Черновик",
+	"Заполнено",
+	"Утверждена",
+] as const;
 export type V2AnketaGlobalStatus =
 	(typeof V2_ANKETA_GLOBAL_STATUS_VALUES)[number];
 

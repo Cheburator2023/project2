@@ -1,5 +1,9 @@
-/** Глобальный статус заполнения анкеты (первая итерация). */
-export const V2_ANKETA_GLOBAL_STATUS_VALUES = ["Черновик", "Заполнено"];
+/** Глобальный статус заполнения анкеты. */
+export const V2_ANKETA_GLOBAL_STATUS_VALUES = [
+    "Черновик",
+    "Заполнено",
+    "Утверждена",
+];
 /** Локальный статус раздела (линейный, без отката). */
 export const V2_ANKETA_SECTION_STATUS_VALUES = [
     "Создано",

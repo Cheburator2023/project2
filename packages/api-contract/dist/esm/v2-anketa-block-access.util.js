@@ -6,6 +6,45 @@ export const V2_ANKETA_LEAD_ROLE_CODES = [
     "de_lead",
     "modelops_lead",
 ];
+/**
+ * Уровень B (§2): в чужих стримах скрывать оценки типовых/нетиповых работ.
+ * Лиды + архитектор / аналитики / sarep.
+ */
+export const V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES = [
+    ...V2_ANKETA_LEAD_ROLE_CODES,
+    "architect",
+    "mntranlst",
+    "da",
+    "sarep",
+];
+/** Валидатор / руководитель валидации — без оценок работ вообще. */
+export const V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES = [
+    "validator",
+    "validator_lead",
+];
+/** Роли доменных групп Keycloak, учитываемые в viewerAccess (кроме Permission). */
+export const V2_ANKETA_VIEWER_ROLE_CODES = [
+    ...V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES,
+    ...V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES,
+    "ds",
+    "de",
+    "modelops",
+    "mipm",
+    "mipm_stream",
+    "da_stream",
+    "data_expert",
+    "saprg",
+    "sacfg",
+    "appadmin",
+    "admin_it",
+    "admin_it_lead",
+    "business_customer",
+    "auditor",
+    "auditor_lead",
+    "auditorib",
+    "prjtoffice",
+    "project_office",
+];
 function readRecord(value) {
     return value && typeof value === "object" && !Array.isArray(value)
         ? value
@@ -34,6 +73,12 @@ export function userHasV2AnketaStreamBlockFilteredRole(roles) {
 }
 export function userIsV2AnketaLead(roles) {
     return roles.some((role) => V2_ANKETA_LEAD_ROLE_CODES.includes(role.trim()));
+}
+export function userMasksAllWorkEstimates(roles) {
+    return roles.some((role) => V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES.includes(role.trim()));
+}
+export function userMasksForeignWorkEstimates(roles) {
+    return roles.some((role) => V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES.includes(role.trim()));
 }
 export function rolesIntersectViewerAndBlock(viewerRoles, blockRoles) {
     if (blockRoles.length === 0)
@@ -105,12 +150,19 @@ export function isV2AnketaBlockVisibleForViewer(viewer, uiSchema, outputPath, op
     const restrictions = resolveV2AnketaBlockAccessRestrictionsForOutputPath(uiSchema, outputPath);
     return isBlockVisibleForUser(viewer, restrictions);
 }
-/** Маскировать оценки в блоке типовых/нетиповых работ для лида (чужие стримы). */
+/**
+ * Маскировать оценки в блоке типовых/нетиповых работ (уровень B / валидатор).
+ * Свой стрим — видно; чужой — скрыто. Без своего стрима все блоки со streamExecutor — «чужие».
+ */
 export function shouldMaskWorkEstimatesForUser(viewer, blockStreamExecutors) {
-    if (!userIsV2AnketaLead(viewer.roles))
+    if (userMasksAllWorkEstimates(viewer.roles))
+        return true;
+    if (!userMasksForeignWorkEstimates(viewer.roles))
         return false;
     if (blockStreamExecutors.length === 0)
         return false;
+    if (viewer.streams.length === 0)
+        return true;
     return !blockStreamExecutors.every((code) => streamsIntersectViewerAndBlock(viewer.streams, [code]));
 }
 export function shouldMaskWorkEstimatesForViewerAtPath(viewer, uiSchema, outputPath, options) {

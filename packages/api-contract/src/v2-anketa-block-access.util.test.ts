@@ -90,4 +90,25 @@ describe("v2-anketa-block-access.util", () => {
 			),
 		).toBe(false);
 	});
+
+	it("masks all estimates for validator", () => {
+		const viewer: V2AnketaViewerAccessContext = {
+			roles: ["validator"],
+			streams: [],
+		};
+		expect(
+			shouldMaskWorkEstimatesForUser(viewer, [V2_IMPLEMENTATION_STREAM.IDSRC]),
+		).toBe(true);
+		expect(shouldMaskWorkEstimatesForUser(viewer, [])).toBe(true);
+	});
+
+	it("masks foreign estimates for architect without own stream", () => {
+		const viewer: V2AnketaViewerAccessContext = {
+			roles: ["architect"],
+			streams: [],
+		};
+		expect(
+			shouldMaskWorkEstimatesForUser(viewer, [V2_IMPLEMENTATION_STREAM.PIRM]),
+		).toBe(true);
+	});
 });

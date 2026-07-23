@@ -20,8 +20,7 @@ import {
 } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import type { Response } from "express";
-import { RealmRole } from "../../../shared/decorators/realm-role.decorator";
-import { Permission } from "../../../shared/types/permissions";
+import { DomainRoles } from "../../../shared/decorators/domain-roles.decorator";
 import {
 	SnapshotIntegrityError,
 	SnapshotSchemaError,
@@ -40,7 +39,7 @@ export class V2DataTransferController {
 	constructor(private readonly transferService: V2DataTransferService) {}
 
 	@Get("export")
-	@RealmRole(Permission.ANKETA_ADMIN_PANEL)
+	@DomainRoles("appadmin", "sacfg")
 	@ApiOperation({
 		summary: "Экспорт всех данных v2",
 		description:
@@ -76,7 +75,7 @@ export class V2DataTransferController {
 	}
 
 	@Post("import")
-	@RealmRole(Permission.ANKETA_ADMIN_PANEL)
+	@DomainRoles("appadmin", "sacfg")
 	@UseInterceptors(FileInterceptor("file"))
 	@ApiConsumes("multipart/form-data")
 	@ApiQuery({

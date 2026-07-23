@@ -3,11 +3,16 @@ import { isV2ImplementationStreamCode, V2_IMPLEMENTATION_STREAM, V2_IMPLEMENTATI
 export const V2_USER_STREAM_FILTERED_ROLE_CODES = [
     "ds",
     "de",
-    "sarep",
     "data_expert",
     "mipm_stream",
     "modelops",
+    /** Аналитик качества модельных данных стрима (sum_da_<стрим>). */
+    "da_stream",
 ];
+/** `/mipm` без департамента = Бизнес-партнёр (все стримы); с департаментом = Бизнес-партнёр стрима. */
+export const V2_USER_CONDITIONAL_STREAM_FILTER_ROLE_CODES = ["mipm"];
+/** Суффиксы стримов в AD/Keycloak path (как в groups-department mapper). */
+const V2_STREAM_SUFFIX_RE = /(?:^|_)(kmbkcb|ptitpc|rnd|rb|finmdl|idsrc|mdlctl|pirm|strdat|digagt|dadm)$/i;
 const V2_DEPARTMENT_GROUPS = {
     KIB_SMB: "Управление моделирования КИБ и СМБ",
     PARTNERSHIPS_IT: "Управление моделирования партнерств и ИТ-процессов",
@@ -73,14 +78,29 @@ export function extractV2UserRoleCodes(userGroups) {
     return normalized.filter((group) => V2_USER_STREAM_FILTERED_ROLE_CODES.includes(group));
 }
 export function isV2UserStreamFilteredByGroups(userGroups) {
-    return extractV2UserRoleCodes(userGroups).length > 0;
+    if (extractV2UserRoleCodes(userGroups).length > 0)
+        return true;
+    const normalized = normalizeV2UserGroups(userGroups);
+    /** mipm + департамент/стрим → «Бизнес-партнёр стрима». */
+    if (normalized.includes("mipm") &&
+        extractDepartmentsAndStreamGroups(userGroups).length > 0) {
+        return true;
+    }
+    return false;
 }
 function extractDepartmentsAndStreamGroups(userGroups) {
     const normalized = normalizeV2UserGroups(userGroups);
-    return normalized.filter((group) => Object.values(V2_DEPARTMENT_GROUPS).includes(group) ||
+    const fromGroups = normalized.filter((group) => Object.values(V2_DEPARTMENT_GROUPS).includes(group) ||
         Object.values(V2_LEGACY_STREAM_GROUPS).includes(group) ||
         V2_IMPLEMENTATION_STREAM_CODES.includes(group) ||
         V2_IMPLEMENTATION_STREAM_LABEL_VALUES.includes(group));
+    const fromSuffixes = [];
+    for (const group of normalized) {
+        const match = group.match(V2_STREAM_SUFFIX_RE);
+        if (match)
+            fromSuffixes.push(match[1].toLowerCase());
+    }
+    return [...new Set([...fromGroups, ...fromSuffixes])];
 }
 function expandStreamCodeAliases(streams) {
     const expanded = new Set();

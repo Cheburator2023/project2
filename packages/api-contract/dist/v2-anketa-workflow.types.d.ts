@@ -1,5 +1,5 @@
-/** Глобальный статус заполнения анкеты (первая итерация). */
-export declare const V2_ANKETA_GLOBAL_STATUS_VALUES: readonly ["Черновик", "Заполнено"];
+/** Глобальный статус заполнения анкеты. */
+export declare const V2_ANKETA_GLOBAL_STATUS_VALUES: readonly ["Черновик", "Заполнено", "Утверждена"];
 export type V2AnketaGlobalStatus = (typeof V2_ANKETA_GLOBAL_STATUS_VALUES)[number];
 /** Локальный статус раздела (линейный, без отката). */
 export declare const V2_ANKETA_SECTION_STATUS_VALUES: readonly ["Создано", "В работе", "Заполнено"];

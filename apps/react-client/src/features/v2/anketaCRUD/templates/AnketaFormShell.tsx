@@ -5,13 +5,20 @@ import {
 	Box,
 	Button,
 	CircularProgress,
+	Dialog,
+	DialogActions,
+	DialogContent,
+	DialogContentText,
+	DialogTitle,
 	IconButton,
 	Typography,
 } from "@mui/material";
 import type { V2SchemaBindingDto } from "@smart-anketa/api-contract";
 import {
 	schemaHasUncertaintyModalWidget,
+	userMasksAllWorkEstimates,
 	V2_ANKETA_GLOBAL_COMPLETE_LABEL,
+	V2_ANKETA_HOLD_LABEL,
 } from "@smart-anketa/api-contract";
 import {
 	useCallback,
@@ -43,6 +50,7 @@ import { useAnketaViewerAccess } from "../utils/anketaViewerAccess";
 import { AnketaFormPageLayout } from "./AnketaFormPageLayout";
 import {
 	useCreateV2QuestionnaireVersion,
+	useHoldV2Questionnaire,
 	v2QuestionnairesExportXlsx,
 } from "@react-client/common/api/queries/v2-questionnaires";
 import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
@@ -103,9 +111,13 @@ export function AnketaFormShell({
 		canEditCalculation,
 		canExportReports,
 		canWorkflowApprove,
+		canCompleteAnketa,
+		canHoldCalculation,
 	} = usePermissions();
 
 	const createCopy = useCreateV2QuestionnaireVersion();
+	const holdMutation = useHoldV2Questionnaire();
+	const [holdDialogOpen, setHoldDialogOpen] = useState(false);
 	const internalEngine = useV2AnketaSchemaEngine(engineProp ? null : source);
 	const engine = engineProp ?? internalEngine;
 	const setFormData = (next: Record<string, unknown>) =>
@@ -118,8 +130,17 @@ export function AnketaFormShell({
 		touchMainSection,
 		completeGlobalFill,
 		isSectionLocked,
-	} = useAnketaWorkflow(engine.formData, setFormData);
-	const effectiveReadOnly = readOnly || globallyLocked;
+	} = useAnketaWorkflow(
+		engine.formData,
+		setFormData,
+		engine.previewUiSchema,
+	);
+	/** Без create/edit поля только для чтения (матрица F-05: saprg и т.п.). */
+	const permissionReadOnly = questionnaireId
+		? !canEditCalculation
+		: !canCreateCalculation;
+	const effectiveReadOnly =
+		readOnly || globallyLocked || permissionReadOnly;
 	const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
 	const [calculationDebugOpen, setCalculationDebugOpen] = useState(false);
 	const [completeDialogPhase, setCompleteDialogPhase] =
@@ -209,6 +230,21 @@ export function AnketaFormShell({
 	}, [completeDialogOpen, completeDialogPhase, onSave, workflow.globalStatus]);
 
 	const viewerAccess = useAnketaViewerAccess(!debouncePreviewInputs);
+	const hideWorkEstimates = userMasksAllWorkEstimates(viewerAccess.roles);
+
+	const confirmHold = useCallback(() => {
+		if (!questionnaireId) return;
+		holdMutation.mutate(questionnaireId, {
+			onSuccess: () => {
+				toast.success("Срез анкеты зафиксирован");
+				setHoldDialogOpen(false);
+			},
+			onError: (err) =>
+				toast.error("Не удалось зафиксировать срез", {
+					description: apiErrorMessage(err),
+				}),
+		});
+	}, [holdMutation, questionnaireId]);
 
 	const anketaFormContext = useMemo((): AnketaFormContextValue => {
 		// Только page-level overrides; formData/schema/ui берёт V2AnketaFormWithModals из engine.
@@ -281,7 +317,7 @@ export function AnketaFormShell({
 		() => (
 			<>
 				<AnketaSectionStatusChip kind="global" status={workflow.globalStatus} />
-				{(!globallyLocked && canWorkflowApprove )? (
+				{!globallyLocked && canCompleteAnketa ? (
 					<Button
 						variant="contained"
 						size="small"
@@ -310,7 +346,25 @@ export function AnketaFormShell({
 						Диагностика расчёта
 					</Button>
 				)}
-				{workflow.globalStatus === "Заполнено" && questionnaireId ? (
+				{workflow.globalStatus === "Заполнено" &&
+				canHoldCalculation &&
+				questionnaireId ? (
+					<Button
+						variant="contained"
+						color="primary"
+						size="small"
+						disabled={holdMutation.isPending}
+						title="Зафиксировать срез: статус «Утверждена», анкета станет неизменяемой"
+						onClick={() => setHoldDialogOpen(true)}
+						sx={{ fontWeight: 600, whiteSpace: "nowrap" }}
+					>
+						{V2_ANKETA_HOLD_LABEL}
+					</Button>
+				) : null}
+				{(workflow.globalStatus === "Заполнено" ||
+					workflow.globalStatus === "Утверждена") &&
+				questionnaireId &&
+				canCreateCalculation ? (
 					<Button
 						variant="outlined"
 						size="small"
@@ -343,6 +397,9 @@ export function AnketaFormShell({
 		[
 			canSaveQuestionnaire,
 			canWorkflowApprove,
+			canCompleteAnketa,
+			canHoldCalculation,
+			canCreateCalculation,
 			headerExtra,
 			isEditingQuestionnaire,
 			onSave,
@@ -356,6 +413,7 @@ export function AnketaFormShell({
 			openCompleteDialog,
 			questionnaireId,
 			createCopy.isPending,
+			holdMutation.isPending,
 		],
 	);
 
@@ -427,6 +485,7 @@ export function AnketaFormShell({
 							uiSchema={engine.previewUiSchema as Record<string, unknown>}
 							liveFormData={engine.calculationLiveFormData}
 							onExportExcel={onExportExcel}
+							hideWorkEstimates={hideWorkEstimates}
 						/>
 					)
 				}
@@ -472,6 +531,39 @@ export function AnketaFormShell({
 				onConfirm={handleCreateCopy}
 				data-test-id={`${dataTestId}--copy-name-dialog`}
 			/>
+			<Dialog
+				open={holdDialogOpen}
+				onClose={() =>
+					holdMutation.isPending ? undefined : setHoldDialogOpen(false)
+				}
+			>
+				<DialogTitle>{V2_ANKETA_HOLD_LABEL}</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						Анкета перейдёт в статус «Утверждена» и станет неизменяемой
+						историческим срезом. Для следующего периода создайте копию.
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button
+						onClick={() => setHoldDialogOpen(false)}
+						disabled={holdMutation.isPending}
+					>
+						Отмена
+					</Button>
+					<Button
+						variant="contained"
+						onClick={confirmHold}
+						disabled={holdMutation.isPending}
+					>
+						{holdMutation.isPending ? (
+							<CircularProgress size={18} color="inherit" />
+						) : (
+							"Зафиксировать"
+						)}
+					</Button>
+				</DialogActions>
+			</Dialog>
 			<AnketaCalcNameDialog
 				open={renameDialogOpen}
 				title="Переименовать анкету"

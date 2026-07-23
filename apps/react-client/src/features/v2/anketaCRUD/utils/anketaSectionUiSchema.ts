@@ -1,5 +1,6 @@
 import type { UiSchema } from "@rjsf/utils";
 import {
+	isAnketaGloballyLocked,
 	V2_ANKETA_MAIN_SECTION_IDS,
 	type V2AnketaMainSectionId,
 	type V2AnketaWorkflowDto,
@@ -50,12 +51,12 @@ function lockUiSchemaAtPath(uiSchema: UiSchema, path: string): UiSchema {
 	return next;
 }
 
-/** Блокирует поля завершённых разделов и всей анкеты в «Заполнено». */
+/** Блокирует поля завершённых разделов и всей анкеты в «Заполнено» / «Утверждена». */
 export function applySectionLocksToUiSchema(
 	uiSchema: UiSchema,
 	workflow: V2AnketaWorkflowDto,
 ): UiSchema {
-	const globallyLocked = workflow.globalStatus === "Заполнено";
+	const globallyLocked = isAnketaGloballyLocked(workflow);
 	let next: UiSchema = { ...uiSchema };
 
 	for (const sectionId of V2_ANKETA_MAIN_SECTION_IDS) {

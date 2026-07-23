@@ -79,7 +79,20 @@ export class StreamMappingService {
 		}
 
 		const userRoles = extractUserRoles(userGroups);
-		return STREAM_FILTERED_ROLES.some((role) => userRoles.includes(role));
+		if (STREAM_FILTERED_ROLES.some((role) => userRoles.includes(role))) {
+			return true;
+		}
+		/**
+		 * `/mipm` без департамента = Бизнес-партнёр (все стримы);
+		 * `/mipm` + департамент/стрим = Бизнес-партнёр стрима (жёсткий фильтр).
+		 */
+		if (
+			normalized.includes("mipm") &&
+			extractDepartmentsAndStreams(userGroups).length > 0
+		) {
+			return true;
+		}
+		return false;
 	}
 
 	getGroupsAfterMapping(userGroups: string[]): string[] {

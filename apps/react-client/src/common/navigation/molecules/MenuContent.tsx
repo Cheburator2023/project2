@@ -175,10 +175,20 @@ function SmartAnketaSections({
 	pathname: string;
 	onNavigate: (path: string) => void;
 }) {
-	const { canAccessTracker, canAccessAdminPanel, canViewAllCalculations } =
-		usePermissions();
+	const {
+		canAccessTracker,
+		canAccessAdminPanel,
+		canAccessAudit,
+		canViewAllCalculations,
+	} = usePermissions();
 	const v2NavItems = useV2UserNavItems();
 	const v1NavItems = useV1MainNestedItems();
+	const adminNavItems = getAdminNavbarItems().filter((route) => {
+		if (route.rootPath === commonRoutes.adminV2Audit.rootPath) {
+			return canAccessAudit || canAccessAdminPanel;
+		}
+		return true;
+	});
 
 	return (
 		<Box>
@@ -236,7 +246,28 @@ function SmartAnketaSections({
 				</>
 			) : null}
 
-			{/* ФТ-13: без anketa_admin_panel раздел полностью скрыт (DS видел админку — баг). */}
+			{/* Аудитор без admin_panel: только журнал аудита. */}
+			{canAccessAudit && !canAccessAdminPanel ? (
+				<>
+					<Divider sx={{ my: 1 }} />
+					<Box sx={{ display: "block", mb: 0.2 }}>
+						<ListItem
+							disablePadding
+							sx={{ display: "block", mb: 0.2, py: 0 }}
+							onClick={() => onNavigate(commonRoutes.adminV2Audit.rootPath)}
+						>
+							<ListItemButton
+								selected={pathname === commonRoutes.adminV2Audit.rootPath}
+								sx={{ pl: SHOW_SMART_ANKETA_APP_TITLE ? 2 : 1 }}
+							>
+								<ListItemText primary={commonRoutes.adminV2Audit.name} />
+							</ListItemButton>
+						</ListItem>
+					</Box>
+				</>
+			) : null}
+
+			{/* ФТ-13: админка только для appadmin / sacfg. */}
 			{canAccessAdminPanel ? (
 				<>
 					<Divider sx={{ my: 1 }} />
@@ -249,7 +280,7 @@ function SmartAnketaSections({
 							<ListItemText secondary={commonNavbarGroups.adminV2.title} />
 						</ListItemButton>
 						<List disablePadding sx={{ py: 0 }}>
-							{getAdminNavbarItems().map((route) => (
+							{adminNavItems.map((route) => (
 								<ListItem
 									key={route.rootPath}
 									disablePadding

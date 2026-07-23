@@ -14,6 +14,7 @@ import { useUserStore } from "@react-client/common/store/userStore";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { globalStyles } from "@react-client/theme/GlobalStyle";
 import { Permission, Role } from "@react-client/types/roles";
+import { normalizeV2UserGroups } from "@smart-anketa/api-contract";
 import { useEffect, useMemo } from "react";
 import type { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
 import App from "./App";
@@ -245,9 +246,14 @@ const MfeRoot = (props: Props) => {
 		if (user.groups) {
 			setGroups(user.groups);
 
-			const roles = user.groups.filter((group) =>
-				Object.values(Role).includes(group as Role),
-			) as Role[];
+			const roleValues = new Set(Object.values(Role) as string[]);
+			const roles = [
+				...new Set(
+					normalizeV2UserGroups(user.groups).filter((group) =>
+						roleValues.has(group),
+					),
+				),
+			] as Role[];
 			setRoles(roles);
 		}
 
