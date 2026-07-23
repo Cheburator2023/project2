@@ -17,6 +17,30 @@ export function isFilledRequiredValue(value: unknown): boolean {
 }
 
 /**
+ * Select/MUI кладут `""` в formData для незаполненных optional enum.
+ * AJV тогда падает с «Выберите одно из значений» и Save остаётся disabled.
+ * Required-ключи с пустой строкой оставляем — их ловит customValidate.
+ */
+export function omitUnsetOptionalFields(
+	formData: Record<string, unknown>,
+	schema: RJSFSchema,
+): Record<string, unknown> {
+	const required = new Set(collectRequiredFieldKeys(schema));
+	const next: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(formData)) {
+		if (
+			!required.has(key) &&
+			typeof value === "string" &&
+			value.trim().length === 0
+		) {
+			continue;
+		}
+		next[key] = value;
+	}
+	return next;
+}
+
+/**
  * AJV `required` проверяет только наличие ключа; пустая строка проходит.
  * Добавляем ошибку только если ключ уже есть в formData — иначе AJV уже
  * показал required, а extraErrors давали дубль из‑за рассинхрона с liveValidate.
@@ -46,9 +70,10 @@ export function isAnketaModalFormValid(
 	schema: RJSFSchema,
 	uiSchema: UiSchema,
 ): boolean {
+	const sanitized = omitUnsetOptionalFields(formData, schema);
 	if (
 		collectRequiredFieldKeys(schema).some(
-			(key) => !isFilledRequiredValue(formData[key]),
+			(key) => !isFilledRequiredValue(sanitized[key]),
 		)
 	) {
 		return false;
@@ -56,7 +81,7 @@ export function isAnketaModalFormValid(
 
 	const customValidate = createAnketaModalCustomValidate(schema);
 	const { errors } = validatorRu.validateFormData(
-		formData,
+		sanitized,
 		schema,
 		customValidate,
 		undefined,

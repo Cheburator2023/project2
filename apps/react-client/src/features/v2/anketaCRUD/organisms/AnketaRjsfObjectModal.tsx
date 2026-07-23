@@ -16,6 +16,7 @@ import { v2AnketaFormWidgets } from "@react-client/features/v2/admin_constructor
 import {
 	createAnketaModalCustomValidate,
 	isAnketaModalFormValid,
+	omitUnsetOptionalFields,
 } from "../utils/anketaModalFormValidation.util";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -86,11 +87,11 @@ export function AnketaRjsfObjectModal({
 	const wasOpenRef = useRef(false);
 	useEffect(() => {
 		if (open && !wasOpenRef.current) {
-			const initial = defaultValues ?? {};
+			const initial = omitUnsetOptionalFields(defaultValues ?? {}, formSchema);
 			setFormData(transformFormData ? transformFormData(initial) : initial);
 		}
 		wasOpenRef.current = open;
-	}, [open, defaultValues, transformFormData]);
+	}, [open, defaultValues, transformFormData, formSchema]);
 
 	return (
 		<Dialog
@@ -134,7 +135,10 @@ export function AnketaRjsfObjectModal({
 						showErrorList={false}
 						onChange={(evt) => {
 							const raw = (evt.formData as Record<string, unknown>) ?? {};
-							setFormData(transformFormData ? transformFormData(raw) : raw);
+							const cleaned = omitUnsetOptionalFields(raw, formSchema);
+							setFormData(
+								transformFormData ? transformFormData(cleaned) : cleaned,
+							);
 						}}
 					/>
 				</Box>
@@ -148,7 +152,7 @@ export function AnketaRjsfObjectModal({
 					disabled={!canSave}
 					onClick={() => {
 						if (!canSave) return;
-						onSubmit(formData);
+						onSubmit(omitUnsetOptionalFields(formData, formSchema));
 					}}
 				>
 					Сохранить
