@@ -17,6 +17,7 @@ import {
 } from "./AnketaFormModals";
 import { V2AnketaSchemaForm } from "./V2AnketaSchemaForm";
 import { Flex } from "@react-client/common/primitives/Flex";
+import { usePermissions } from "@react-client/hooks/usePermissions";
 import { ANKETA_COLUMN_VIEWPORT_HEIGHT } from "../templates/AnketaFormPageLayout";
 
 type Props = {
@@ -47,6 +48,10 @@ export function V2AnketaFormWithModals({
 	"data-test-id": dataTestId = "v2-anketa-form-with-modals",
 }: Props) {
 	const effectiveReadOnly = readOnly || engine.readOnly;
+	const { canWorkflowApprove } = usePermissions();
+	/** Завершение блока (approve, ФТ-6) — только с anketa_workflow_approve; превью конструктора не режем. */
+	const allowSectionApprove =
+		canWorkflowApprove || anketaFormContextProp?.schemaEditorPreview === true;
 
 	const {
 		workflow,
@@ -115,8 +120,12 @@ export function V2AnketaFormWithModals({
 			previewSchema: engine.previewSchema,
 			previewUiSchema: engine.previewUiSchema,
 			workflow,
-			onCompleteMainSection: completeMainSection,
-			onCompletePanelSection: completePanelSectionByPath,
+			onCompleteMainSection: allowSectionApprove
+				? completeMainSection
+				: undefined,
+			onCompletePanelSection: allowSectionApprove
+				? completePanelSectionByPath
+				: undefined,
 			onTouchMainSection: touchMainSection,
 			isMainSectionLocked: isSectionLocked,
 			objectFieldSlots: uncertaintySlot
@@ -138,6 +147,7 @@ export function V2AnketaFormWithModals({
 		});
 	}, [
 		anketaFormContextProp,
+		allowSectionApprove,
 		engine.displayFormData,
 		effectiveReadOnly,
 		showUncertaintySlot,

@@ -1,0 +1,15 @@
+{
+	"name": "Smart Anketa",
+	"short_name": "SmartAnketa",
+	"start_url": "/",
+	"display": "standalone",
+	"background_color": "#0f141c",
+	"theme_color": "#0f141c",
+	"icons": [
+		{
+			"src": "/logo.svg",
+			"sizes": "any",
+			"type": "image/svg+xml"
+		}
+	]
+}

@@ -535,19 +535,34 @@ export class KanbanBoardController {
 
 	@Post("tasks/:taskId/images")
 	@UseInterceptors(
-		FileFieldsInterceptor([
-			{ name: "full", maxCount: 1 },
-			{ name: "thumb", maxCount: 1 },
-		]),
+		FileFieldsInterceptor(
+			[
+				{ name: "full", maxCount: 1 },
+				{ name: "thumb", maxCount: 1 },
+			],
+			{
+				limits: {
+					/** full + thumb + поля формы; full ограничен 2 МБ на клиенте/сервисе */
+					fileSize: 3 * 1024 * 1024,
+					files: 2,
+				},
+			},
+		),
 	)
 	@ApiConsumes("multipart/form-data")
 	async uploadTaskImage(
 		@Param("taskId") taskId: string,
 		@UploadedFiles()
-		files: {
-			full?: Array<{ buffer: Buffer; originalname?: string; mimetype?: string }>;
-			thumb?: Array<{ buffer: Buffer }>;
-		},
+		files:
+			| {
+					full?: Array<{
+						buffer: Buffer;
+						originalname?: string;
+						mimetype?: string;
+					}>;
+					thumb?: Array<{ buffer: Buffer }>;
+			  }
+			| undefined,
 		@Body()
 		body: {
 			name?: string;
@@ -556,10 +571,12 @@ export class KanbanBoardController {
 			mimeType?: string;
 		},
 	): Promise<KanbanBoardTaskImageDto> {
-		const full = files.full?.[0];
-		const thumb = files.thumb?.[0];
+		const full = files?.full?.[0];
+		const thumb = files?.thumb?.[0];
 		if (!full?.buffer?.length || !thumb?.buffer?.length) {
-			throw new BadRequestException("Передайте full и thumb");
+			throw new BadRequestException(
+				"Передайте full и thumb (multipart/form-data). Если файлы не дошли — проверьте Content-Type и размер (макс. ~2 МБ).",
+			);
 		}
 		return this.taskImageService.upload(taskId, {
 			originalName: body.name ?? full.originalname ?? "image",

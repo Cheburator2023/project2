@@ -125,6 +125,60 @@ describe("StreamFilterInterceptor", () => {
 		expect(await lastValueFrom(interceptor.intercept(ctx, next))).toBe(obj);
 	});
 
+	it("keeps анкеты without assigned stream visible (draft, стрим не выбран)", async () => {
+		const { interceptor, ctx } = buildSetup(true, {
+			user: { groups: ["g"] },
+			isFiltered: true,
+			allowed: ["rb"],
+		});
+		const draft = { id: "1", formData: { generalInfo: {} } };
+		const next: any = { handle: () => of([draft]) };
+		expect(await lastValueFrom(interceptor.intercept(ctx, next))).toEqual([
+			draft,
+		]);
+	});
+
+	it("keeps анкеты where user's stream participates via active stream block", async () => {
+		const { interceptor, ctx } = buildSetup(true, {
+			user: { groups: ["g"] },
+			isFiltered: true,
+			allowed: ["idsrc"],
+		});
+		const withBlock = {
+			id: "1",
+			formData: {
+				generalInfo: { implementationStream: "rb" },
+				streamDataSources: {},
+			},
+		};
+		const otherStream = {
+			id: "2",
+			formData: { generalInfo: { implementationStream: "rb" } },
+		};
+		const next: any = { handle: () => of([withBlock, otherStream]) };
+		expect(await lastValueFrom(interceptor.intercept(ctx, next))).toEqual([
+			withBlock,
+		]);
+	});
+
+	it("ignores deactivated stream blocks (groupActivation=false)", async () => {
+		const { interceptor, ctx } = buildSetup(true, {
+			user: { groups: ["g"] },
+			isFiltered: true,
+			allowed: ["idsrc"],
+		});
+		const deactivated = {
+			id: "1",
+			formData: {
+				generalInfo: { implementationStream: "rb" },
+				groupActivation: { streamDataSources: false },
+				streamDataSources: {},
+			},
+		};
+		const next: any = { handle: () => of([deactivated]) };
+		expect(await lastValueFrom(interceptor.intercept(ctx, next))).toEqual([]);
+	});
+
 	it("filters v2 questionnaires by formData.generalInfo.implementationStream", async () => {
 		const { interceptor, ctx } = buildSetup(true, {
 			user: { groups: ["g"] },

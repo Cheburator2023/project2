@@ -84,6 +84,14 @@ const useV2UserNavItems = () => {
 	);
 };
 
+const useV1MainNestedItems = () => {
+	const { hasPermission } = useUserStore();
+
+	return getV1MainNestedItems().filter(
+		(item) => !item?.permission || hasPermission(item.permission),
+	);
+};
+
 function routeRowSelected(route: AppRouteConfig, pathname: string): boolean {
 	if (route.rootPath === commonRoutes.adminV2Schemas.rootPath) {
 		return (
@@ -167,8 +175,10 @@ function SmartAnketaSections({
 	pathname: string;
 	onNavigate: (path: string) => void;
 }) {
-	const { canAccessTracker } = usePermissions();
+	const { canAccessTracker, canAccessAdminPanel, canViewAllCalculations } =
+		usePermissions();
 	const v2NavItems = useV2UserNavItems();
+	const v1NavItems = useV1MainNestedItems();
 
 	return (
 		<Box>
@@ -181,27 +191,32 @@ function SmartAnketaSections({
 				</ListItemButton>
 			) : null}
 
-			<NavSection
-				title="Калькулятор v2"
-				homeLabel={v2Routes.home.name}
-				homePath={V2_PREFIX}
-				nestedItems={v2NavItems}
-				pathname={pathname}
-				onNavigate={onNavigate}
-				indent={SHOW_SMART_ANKETA_APP_TITLE ? 1 : 0}
-			/>
+			{/* ФТ-13: без права просмотра реестра секции калькуляторов скрыты целиком. */}
+			{canViewAllCalculations ? (
+				<>
+					<NavSection
+						title="Калькулятор v2"
+						homeLabel={v2Routes.home.name}
+						homePath={V2_PREFIX}
+						nestedItems={v2NavItems}
+						pathname={pathname}
+						onNavigate={onNavigate}
+						indent={SHOW_SMART_ANKETA_APP_TITLE ? 1 : 0}
+					/>
 
-			<Divider sx={{ my: 1 }} />
+					<Divider sx={{ my: 1 }} />
 
-			<NavSection
-				title="Калькулятор v1"
-				homeLabel={v1Routes.home.name}
-				homePath={V1_PREFIX}
-				nestedItems={getV1MainNestedItems()}
-				pathname={pathname}
-				onNavigate={onNavigate}
-				indent={SHOW_SMART_ANKETA_APP_TITLE ? 1 : 0}
-			/>
+					<NavSection
+						title="Калькулятор v1"
+						homeLabel={v1Routes.home.name}
+						homePath={V1_PREFIX}
+						nestedItems={v1NavItems}
+						pathname={pathname}
+						onNavigate={onNavigate}
+						indent={SHOW_SMART_ANKETA_APP_TITLE ? 1 : 0}
+					/>
+				</>
+			) : null}
 
 			{canAccessTracker ? (
 				<>
@@ -221,33 +236,38 @@ function SmartAnketaSections({
 				</>
 			) : null}
 
-			<Divider sx={{ my: 1 }} />
+			{/* ФТ-13: без anketa_admin_panel раздел полностью скрыт (DS видел админку — баг). */}
+			{canAccessAdminPanel ? (
+				<>
+					<Divider sx={{ my: 1 }} />
 
-			<Box sx={{ display: "block", mb: 0.2 }}>
-				<ListItemButton
-					disabled
-					sx={{ pl: SHOW_SMART_ANKETA_APP_TITLE ? 2 : 1 }}
-				>
-					<ListItemText secondary={commonNavbarGroups.adminV2.title} />
-				</ListItemButton>
-				<List disablePadding sx={{ py: 0 }}>
-					{getAdminNavbarItems().map((route) => (
-						<ListItem
-							key={route.rootPath}
-							disablePadding
-							sx={{ display: "block", mb: 0.2, py: 0 }}
-							onClick={() => onNavigate(route.rootPath)}
+					<Box sx={{ display: "block", mb: 0.2 }}>
+						<ListItemButton
+							disabled
+							sx={{ pl: SHOW_SMART_ANKETA_APP_TITLE ? 2 : 1 }}
 						>
-							<ListItemButton
-								selected={routeRowSelected(route, pathname)}
-								sx={{ pl: SHOW_SMART_ANKETA_APP_TITLE ? 3 : 2 }}
-							>
-								<ListItemText primary={route.name} />
-							</ListItemButton>
-						</ListItem>
-					))}
-				</List>
-			</Box>
+							<ListItemText secondary={commonNavbarGroups.adminV2.title} />
+						</ListItemButton>
+						<List disablePadding sx={{ py: 0 }}>
+							{getAdminNavbarItems().map((route) => (
+								<ListItem
+									key={route.rootPath}
+									disablePadding
+									sx={{ display: "block", mb: 0.2, py: 0 }}
+									onClick={() => onNavigate(route.rootPath)}
+								>
+									<ListItemButton
+										selected={routeRowSelected(route, pathname)}
+										sx={{ pl: SHOW_SMART_ANKETA_APP_TITLE ? 3 : 2 }}
+									>
+										<ListItemText primary={route.name} />
+									</ListItemButton>
+								</ListItem>
+							))}
+						</List>
+					</Box>
+				</>
+			) : null}
 
 			{getDevNavbarItems().length > 0 ? (
 				<>

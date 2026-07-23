@@ -41,7 +41,8 @@ export function AnketaSectionAccordion({
 				expandIcon={<ExpandMoreIcon />}
 				data-test-id={ANKETA_MOLECULE_TEST_IDS.sectionAccordionSummary}
 			>
-				<Typography variant={titleVariant} fontWeight={titleVariant === "h5" ? 700 : 600}>
+				{/* Вес заголовка единый, titleVariant влияет только на размер. */}
+				<Typography variant={titleVariant} fontWeight={600}>
 					{title}
 				</Typography>
 			</AccordionSummary>

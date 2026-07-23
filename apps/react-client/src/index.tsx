@@ -5,16 +5,27 @@ import { globalStyles } from "@react-client/theme/GlobalStyle";
 import React from "react";
 import ReactDOM from "react-dom/client";
 
+const IS_PROD = process.env.NODE_ENV === "production";
+const VITE_PRELOAD_RELOAD_AT = "vite:preload-reload-at";
+const VITE_PRELOAD_COOLDOWN_MS = 120_000;
+
 if (typeof window !== "undefined") {
 	window.addEventListener("vite:preloadError", (event) => {
 		event.preventDefault();
-		if (!sessionStorage.getItem("vite:preload-reload")) {
-			sessionStorage.setItem("vite:preload-reload", "1");
-			window.location.reload();
+		// Вне production full reload от битых чанков даёт бесконечный loop.
+		if (!IS_PROD) {
+			console.warn(
+				"[vite:preloadError] skipped reload outside production",
+				event,
+			);
+			return;
 		}
+		const lastAt = Number(sessionStorage.getItem(VITE_PRELOAD_RELOAD_AT) || 0);
+		if (Date.now() - lastAt < VITE_PRELOAD_COOLDOWN_MS) return;
+		sessionStorage.setItem(VITE_PRELOAD_RELOAD_AT, String(Date.now()));
+		window.location.reload();
 	});
 	window.addEventListener("load", () => {
-		sessionStorage.removeItem("vite:preload-reload");
 		clearDynamicImportReloadFlag();
 	});
 }

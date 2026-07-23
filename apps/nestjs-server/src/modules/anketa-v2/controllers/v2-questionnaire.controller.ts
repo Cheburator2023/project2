@@ -78,10 +78,7 @@ export class V2QuestionnaireController {
 
 	@Post("bulk-delete")
 	@HttpCode(200)
-	@RealmRole(
-		Permission.ANKETA_DELETE_CALCULATION,
-		Permission.ANKETA_ADMIN_PANEL,
-	)
+	@RealmRole(Permission.ANKETA_DELETE_CALCULATION)
 	@ApiOperation({ summary: "Массовое удаление анкет v2 по id" })
        async bulkDelete(
         @Body() body: BulkDeleteV2QuestionnairesDto,
@@ -181,16 +178,17 @@ export class V2QuestionnaireController {
         }
     }
 
-    @Get("export/xlsx")
-    @ApiOperation({ summary: "Выгрузка всех анкет v2 реестра в XLSX" })
-    @ApiResponse({
-        status: HttpStatus.OK,
-        content: {
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
-                schema: { type: "string", format: "binary" },
-            },
-        },
-    })
+	@Get("export/xlsx")
+	@RealmRole(Permission.ANKETA_EXPORT_REPORTS)
+	@ApiOperation({ summary: "Выгрузка всех анкет v2 реестра в XLSX" })
+	@ApiResponse({
+		status: HttpStatus.OK,
+		content: {
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+				schema: { type: "string", format: "binary" },
+			},
+		},
+	})
     async exportRegistryXlsx(
         @Res() res: Response,
         @CurrentUser() user: Record<string, unknown> | undefined,
@@ -228,17 +226,18 @@ export class V2QuestionnaireController {
         }
     }
 
-    @Post("export/xlsx")
-    @HttpCode(200)
-    @ApiOperation({ summary: "Выгрузка выбранных анкет v2 реестра в XLSX" })
-    @ApiResponse({
-        status: HttpStatus.OK,
-        content: {
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
-                schema: { type: "string", format: "binary" },
-            },
-        },
-    })
+	@Post("export/xlsx")
+	@HttpCode(200)
+	@RealmRole(Permission.ANKETA_EXPORT_REPORTS)
+	@ApiOperation({ summary: "Выгрузка выбранных анкет v2 реестра в XLSX" })
+	@ApiResponse({
+		status: HttpStatus.OK,
+		content: {
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+				schema: { type: "string", format: "binary" },
+			},
+		},
+	})
     async exportSelectedRegistryXlsx(
         @Body() body: ExportV2QuestionnairesXlsxDto,
         @Res() res: Response,
@@ -345,11 +344,12 @@ export class V2QuestionnaireController {
 		return this.commentService.delete(id, commentId);
 	}
 
-    @Post()
-    @ApiOperation({
-        summary:
-            "Создать анкету по актуальной опубликованной схеме шаблона (фиксируется boundTemplateVersionId)",
-    })
+	@Post()
+	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
+	@ApiOperation({
+		summary:
+			"Создать анкету по актуальной опубликованной схеме шаблона (фиксируется boundTemplateVersionId)",
+	})
     async create(
         @Body() body: CreateV2QuestionnaireDto,
         @CurrentUser() user: Record<string, unknown> | undefined,
@@ -387,9 +387,10 @@ export class V2QuestionnaireController {
         }
     }
 
-    @Patch(":id")
-    @ApiOperation({ summary: "Обновить данные анкеты" })
-    async update(
+	@Patch(":id")
+	@RealmRole(Permission.ANKETA_EDIT_CALCULATION)
+	@ApiOperation({ summary: "Обновить данные анкеты" })
+	    async update(
         @Param("id", ParseUUIDPipe) id: string,
         @Body() body: UpdateV2QuestionnaireDto,
         @CurrentUser() user: Record<string, unknown> | undefined,
@@ -492,11 +493,12 @@ export class V2QuestionnaireController {
         }
     }
 
-    @Post(":id/new-version")
-    @ApiOperation({
-        summary:
-            "Новая версия анкеты в серии (наследует привязку к схеме, как v1)",
-    })
+	@Post(":id/new-version")
+	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
+	@ApiOperation({
+		summary:
+			"Новая версия анкеты в серии (наследует привязку к схеме, как v1)",
+	})
     async createNewVersion(
         @Param("id", ParseUUIDPipe) id: string,
         @Body() body: CreateV2QuestionnaireVersionDto,

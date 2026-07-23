@@ -197,9 +197,13 @@ export function redirectToKeycloakLogin(
 	const keycloak = resolveKeycloakInstance(props);
 	clearMfeAuthState();
 	if (!keycloak?.login) {
-		if (typeof window !== "undefined") {
-			window.location.reload();
-		}
+		// Без Keycloak reload часто даёт loop (401 → reload → 401). Один раз с cooldown.
+		if (typeof window === "undefined") return;
+		const key = "auth:login-fallback-reload-at";
+		const lastAt = Number(sessionStorage.getItem(key) || 0);
+		if (Date.now() - lastAt < 60_000) return;
+		sessionStorage.setItem(key, String(Date.now()));
+		window.location.reload();
 		return;
 	}
 	if (loginRedirectInFlight) return;

@@ -18,6 +18,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useSchemaConstructorSettings } from "@react-client/common/settings/schemaConstructorSettings";
 import { toast } from "@react-client/common/toasts";
+import { KeycloakRoleSyncPanel } from "@react-client/features/v2/admin/organisms/KeycloakRoleSyncPanel";
 import { commonRoutes } from "@react-client/routing/common/routes";
 
 export function AdminV2SettingsPage() {
@@ -56,6 +57,10 @@ export function AdminV2SettingsPage() {
 						отображаются на холсте и в дереве полей. Порядок и данные в схеме
 						сохраняются.
 					</Typography>
+
+					<Divider />
+
+					<KeycloakRoleSyncPanel />
 
 					<Divider />
 

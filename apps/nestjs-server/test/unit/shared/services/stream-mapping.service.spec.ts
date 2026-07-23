@@ -30,6 +30,27 @@ describe("StreamMappingService", () => {
 				true,
 			);
 		});
+
+		it("returns false for lead even if nested path also yields ds/de/modelops", () => {
+			expect(service.isStreamFilteredUser(["/ds/ds_lead"])).toBe(false);
+			expect(service.isStreamFilteredUser(["ds", "ds_lead"])).toBe(false);
+			expect(service.isStreamFilteredUser(["/de/de_lead"])).toBe(false);
+			expect(service.isStreamFilteredUser(["/modelops/modelops_lead"])).toBe(
+				false,
+			);
+		});
+
+		it("filters da (Аналитик качества модельных данных) by stream", () => {
+			expect(service.isStreamFilteredUser(["/da"])).toBe(true);
+			expect(service.isStreamFilteredUser(["da"])).toBe(true);
+		});
+
+		it("does not filter mntranlst / mipm / saprg / sacfg (see all list)", () => {
+			expect(service.isStreamFilteredUser(["/mntranlst"])).toBe(false);
+			expect(service.isStreamFilteredUser(["/mipm"])).toBe(false);
+			expect(service.isStreamFilteredUser(["/saprg"])).toBe(false);
+			expect(service.isStreamFilteredUser(["/sacfg"])).toBe(false);
+		});
 	});
 
 	describe("getGroupsAfterMapping", () => {

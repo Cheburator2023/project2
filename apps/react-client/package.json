@@ -10,6 +10,8 @@
 		"start:vite": "serve -s build",
 		"serve:vite": "npm run build:vite && PORT=8004 npx serve ./dist",
 		"dev:webpack": "cross-env NODE_ENV=development webpack serve --mode development --config ./webpack.dev.js",
+		"dev:webpack:shell": "cross-env NODE_ENV=development MF_SHELL=1 webpack serve --mode development --config ./webpack.dev.js",
+		"dev:webpack:shell:proxy": "cross-env NODE_ENV=development PUBLIC_PATH=/proxy/smart-anketa-frontend/ webpack serve --mode development --config ./webpack.dev.js",
 		"build:webpack": "cross-env NODE_ENV=production webpack --mode production --config webpack.prod.js",
 		"build:webpack:god": "cross-env NODE_ENV=production NO_ROLES=true webpack --mode production --config webpack.prod.js",
 		"serve:webpack": "npm run build:webpack && PORT=8004 npx serve ./dist",

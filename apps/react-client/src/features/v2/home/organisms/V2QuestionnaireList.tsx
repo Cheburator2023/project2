@@ -345,7 +345,6 @@ export function V2QuestionnaireList() {
 	const navigate = useNavigate();
 	const gridRef = useRef<AgGridReact<V2QuestionnaireGridRow>>(null);
 	const {
-		canAccessAdminPanel,
 		canCreateCalculation,
 		canDeleteCalculation,
 		canExportReports,
@@ -617,7 +616,7 @@ export function V2QuestionnaireList() {
 							</Button>
 						</>
 					) : null}
-					{canDeleteCalculation || canAccessAdminPanel ? (
+					{canDeleteCalculation ? (
 						<Button
 							variant="outlined"
 							size="small"

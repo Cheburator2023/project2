@@ -214,20 +214,18 @@ export function V2FinalEvaluationPanel({
 					<Typography variant={compact ? "h5" : "h4"} fontWeight={700}>
 						Итоговая оценка
 					</Typography>
-					<Button
-						size="small"
-						variant="contained"
-						startIcon={<FileDownloadOutlinedIcon />}
-						disabled={isLoading || !onExportExcel}
-						title={
-							onExportExcel
-								? "Экспорт расчёта в Excel"
-								: "Экспорт будет доступен позже"
-						}
-						onClick={onExportExcel}
-					>
-						Экспорт в Excel
-					</Button>
+					{onExportExcel ? (
+						<Button
+							size="small"
+							variant="contained"
+							startIcon={<FileDownloadOutlinedIcon />}
+							disabled={isLoading}
+							title="Экспорт расчёта в Excel"
+							onClick={onExportExcel}
+						>
+							Экспорт в Excel
+						</Button>
+					) : null}
 					{isLoading ? <CircularProgress size={16} /> : null}
 				</Stack>
 
@@ -452,7 +450,9 @@ function readFormulaBreakdown(
 		? record.factors
 				.filter(
 					(factor): factor is Record<string, unknown> =>
-						factor != null && typeof factor === "object" && !Array.isArray(factor),
+						factor != null &&
+						typeof factor === "object" &&
+						!Array.isArray(factor),
 				)
 				.map((factor) => ({
 					paramCode:
@@ -515,7 +515,11 @@ function buildFallbackFormulaBreakdown(
 	};
 }
 
-function TypicalWorkFormulaDetails({ item }: { item: Record<string, unknown> }) {
+function TypicalWorkFormulaDetails({
+	item,
+}: {
+	item: Record<string, unknown>;
+}) {
 	const breakdown =
 		readFormulaBreakdown(item) ?? buildFallbackFormulaBreakdown(item);
 
@@ -544,7 +548,7 @@ function TypicalWorkFormulaDetails({ item }: { item: Record<string, unknown> }) 
 				fontWeight={600}
 				sx={{
 					fontFamily:
-						'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+						"ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
 					fontSize: 13,
 					letterSpacing: 0.15,
 					lineHeight: 1.45,

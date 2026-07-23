@@ -2328,7 +2328,6 @@
 			"ui:options": {
 				"sectionRole": "main",
 				"streamBlock": true,
-				"titleVariant": "h5",
 				"schemaFieldUid": "field_bece32d7-0463-49e8-8591-4827109e563b",
 				"streamExecutor": "Модельный стрим",
 				"defaultExpanded": false,

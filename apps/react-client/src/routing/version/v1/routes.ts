@@ -1,4 +1,5 @@
 import type { AppRouteConfig } from "@react-client/routing/common/types";
+import { Permission } from "@react-client/types/roles";
 
 export const navbarGroups = {
 	main: { title: "Разделы" },
@@ -19,6 +20,7 @@ export const v1Routes = {
 		disabled: false,
 		showInNavbar: true,
 		navbar: { group: "main", order: 10 },
+		permission: Permission.ANKETA_CREATE_CALCULATION,
 	},
 	calculationPreview: {
 		rootPath: "calculation/preview/:id",

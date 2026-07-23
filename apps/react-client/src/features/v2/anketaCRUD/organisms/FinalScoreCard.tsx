@@ -17,6 +17,7 @@ export const FinalScoreCard = ({
 	taskTriggerItems,
 	uiSchema,
 	liveFormData,
+	onExportExcel,
 }: {
 	summary?: V2SummaryFormSlice | null;
 	formData?: Record<string, unknown> | null;
@@ -26,6 +27,7 @@ export const FinalScoreCard = ({
 	taskTriggerItems?: TaskTriggerItem[];
 	uiSchema?: Record<string, unknown>;
 	liveFormData?: Record<string, unknown> | null;
+	onExportExcel?: () => void;
 }) => {
 	const devCaption =
 		IS_DEV && (calculationItems?.length || taskTriggerItems?.length)
@@ -42,6 +44,7 @@ export const FinalScoreCard = ({
 			engineCaption={devCaption}
 			uiSchema={uiSchema}
 			liveFormData={liveFormData}
+			onExportExcel={onExportExcel}
 		/>
 	);
 };

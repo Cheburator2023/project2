@@ -8,4 +8,6 @@ export enum Permission {
 	ANKETA_DELETE_CALCULATION = "anketa_delete_calculation",
 	ANKETA_WORKFLOW_APPROVE = "anketa_workflow_approve",
 	ANKETA_AUDIT_VIEW = "anketa_audit_view",
+	/** Фиксация среза / блокировка анкеты (матрица hold) — saprg. */
+	ANKETA_HOLD = "anketa_hold",
 }
