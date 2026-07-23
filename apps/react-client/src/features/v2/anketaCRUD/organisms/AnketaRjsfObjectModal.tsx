@@ -10,14 +10,16 @@ import {
 } from "@mui/material";
 import Form from "@rjsf/mui";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
-import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
+import { toast } from "@react-client/common/toasts";
 import { v2AnketaFormTemplates } from "@react-client/features/v2/admin_constructor/templates/v2PreviewFormTemplates";
 import { v2AnketaFormWidgets } from "@react-client/features/v2/admin_constructor/templates/v2PreviewFormWidgets";
 import {
-	createAnketaModalCustomValidate,
+	collectRequiredFieldKeys,
 	isAnketaModalFormValid,
+	isFilledRequiredValue,
 	omitUnsetOptionalFields,
 } from "../utils/anketaModalFormValidation.util";
+import { anketaModalNoAjvValidator } from "../utils/anketaModalNoAjvValidator";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type Props = {
@@ -48,6 +50,23 @@ function modalRootUiSchema(uiSchema: UiSchema): UiSchema {
 	};
 }
 
+function missingRequiredLabels(
+	formData: Record<string, unknown>,
+	schema: RJSFSchema,
+): string[] {
+	const props = schema.properties;
+	const propMap =
+		props && typeof props === "object" && !Array.isArray(props)
+			? (props as Record<string, RJSFSchema>)
+			: {};
+	return collectRequiredFieldKeys(schema)
+		.filter((key) => !isFilledRequiredValue(formData[key]))
+		.map((key) => {
+			const title = propMap[key]?.title;
+			return typeof title === "string" && title.trim() ? title : key;
+		});
+}
+
 export function AnketaRjsfObjectModal({
 	open,
 	title,
@@ -72,26 +91,30 @@ export function AnketaRjsfObjectModal({
 		[formData, formSchema, formUiSchema],
 	);
 
-	const customValidate = useMemo(
-		() => createAnketaModalCustomValidate(formSchema),
-		[formSchema],
-	);
-
-	const formKey = useMemo(
-		() => JSON.stringify({ schema: formSchema, uiSchema: formUiSchema }),
-		[formSchema, formUiSchema],
-	);
-
-	// Снимок значений берём только при открытии модалки. Иначе перерендер
-	// родителя (новый ref defaultValues) затирал бы текущие правки пользователя.
+	// Remount только при новом открытии — не при подгрузке справочников.
+	const [formSession, setFormSession] = useState(0);
 	const wasOpenRef = useRef(false);
 	useEffect(() => {
 		if (open && !wasOpenRef.current) {
-			const initial = omitUnsetOptionalFields(defaultValues ?? {}, formSchema);
+			setFormSession((n) => n + 1);
+			const initial = { ...(defaultValues ?? {}) };
 			setFormData(transformFormData ? transformFormData(initial) : initial);
 		}
 		wasOpenRef.current = open;
-	}, [open, defaultValues, transformFormData, formSchema]);
+	}, [open, defaultValues, transformFormData]);
+
+	const handleSave = () => {
+		if (!canSave) {
+			const missing = missingRequiredLabels(formData, formSchema);
+			toast.error(
+				missing.length
+					? `Заполните: ${missing.join(", ")}`
+					: "Заполните обязательные поля",
+			);
+			return;
+		}
+		onSubmit(omitUnsetOptionalFields(formData, formSchema));
+	};
 
 	return (
 		<Dialog
@@ -122,22 +145,21 @@ export function AnketaRjsfObjectModal({
 			<DialogContent dividers sx={{ overflow: "auto", flex: 1, minHeight: 0 }}>
 				<Box sx={{ pt: 0.5 }}>
 					<Form
-						key={formKey}
+						key={`anketa-rjsf-modal-${formSession}`}
 						schema={formSchema}
 						uiSchema={formUiSchema}
 						formData={formData}
-						customValidate={customValidate}
 						templates={v2AnketaFormTemplates}
 						widgets={v2AnketaFormWidgets}
-						validator={validatorRu}
-						liveValidate
+						validator={anketaModalNoAjvValidator}
+						liveValidate={false}
 						noHtml5Validate
 						showErrorList={false}
+						formContext={{ debouncePreviewInputs: false }}
 						onChange={(evt) => {
 							const raw = (evt.formData as Record<string, unknown>) ?? {};
-							const cleaned = omitUnsetOptionalFields(raw, formSchema);
 							setFormData(
-								transformFormData ? transformFormData(cleaned) : cleaned,
+								transformFormData ? transformFormData(raw) : raw,
 							);
 						}}
 					/>
@@ -150,10 +172,10 @@ export function AnketaRjsfObjectModal({
 				<Button
 					variant="contained"
 					disabled={!canSave}
-					onClick={() => {
-						if (!canSave) return;
-						onSubmit(omitUnsetOptionalFields(formData, formSchema));
-					}}
+					onClick={handleSave}
+					title={
+						canSave ? undefined : "Заполните обязательные поля"
+					}
 				>
 					Сохранить
 				</Button>
