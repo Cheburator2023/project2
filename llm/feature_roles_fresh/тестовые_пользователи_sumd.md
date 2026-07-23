@@ -6,11 +6,11 @@ Keycloak: `https://keycloak-sumd.sumd.dk1-sumd01.innodev.local/auth` · realm `c
 
 | Роль (матрица) | Логин SUMD | Группы Keycloak | Статус |
 |---|---|---|---|
-| DS | `test_ds` | `/ds` (+ департаменты стримов) | был |
+| DS | `test_ds` | `/ds` + департаменты модельных стримов | был |
 | Руководитель DS | `test_ds_lead` | `/ds`, `/ds/ds_lead` | был |
-| DE | `test_de` | `/de` | был |
+| DE | `test_de` | `/de` + департаменты модельных стримов | был (**добавлены департаменты**) |
 | Руководитель DE | `test_de_lead` | `/de`, `/de/de_lead` | был |
-| ModelOps | `test_modelops` | `/modelops` | был |
+| ModelOps | `test_modelops` | `/modelops` + департаменты модельных стримов | был (**добавлены департаменты**) |
 | Руководитель ModelOps | `test_modelops_lead` | `/modelops`, `/modelops/modelops_lead` | был |
 | Бизнес-партнёр | `test_mipm` | `/mipm` | был |
 | Бизнес-партнёр стрима | `test_mipm_sa` | `/mipm` + `/departament/…` | был |
@@ -45,3 +45,6 @@ Keycloak: `https://keycloak-sumd.sumd.dk1-sumd01.innodev.local/auth` · realm `c
 - Создано только на **SUMD** (sumcore не трогали).
 - Для ролей «нет доступа» (`business_customer`, `prjtoffice`) группы есть, `anketa_*` на них пустые — так и задумано.
 - `test_sum_sacfg` сидит в дочерней `/sacfg/dev_sum_sacfg` (наследует роли `/sacfg`).
+- Level A (`ds` / `de` / `modelops`): без департаментов/стримов в groups реестр пустой (interceptor).  
+  У `test_ds`, `test_de`, `test_modelops` должны быть `/departament/Управление моделирования …`.
+- Удаление анкеты у `ds` / `de` / `modelops` **не** выдаётся (нет `anketa_delete_calculation`).

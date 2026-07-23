@@ -43,7 +43,8 @@ export const V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES = [
 ] as const;
 
 /**
- * Уровень A (§2): жёсткий фильтр вкладок — только блоки своего стрима / роли.
+ * Уровень A (§2): жёсткий фильтр **реестра** (анкеты своего стрима).
+ * Вкладки в карточке не режутся — «полная детализация» (§2).
  * DS, DE, ModelOps, бизнес-партнёр стрима, аналитик качества данных стрима.
  */
 export const V2_ANKETA_OWN_STREAM_BLOCK_FILTER_ROLE_CODES = [
@@ -268,19 +269,38 @@ export function shouldApplyV2AnketaBlockAccessAtPath(
 	return resolveV2AnketaStreamBlockOptions(leaf, rootKey).streamBlock;
 }
 
-export function isBlockVisibleForUser(
+/**
+ * Блок «свой» для Level A (реестр / complete / правка секции).
+ * Пересечение роли или стрима с ограничениями блока.
+ */
+export function isBlockInViewerOwnStreamScope(
 	viewer: V2AnketaViewerAccessContext,
 	restrictions: V2AnketaBlockAccessRestrictions,
 ): boolean {
 	if (!blockHasV2AnketaAccessRestrictions(restrictions)) return true;
-	/** B/C / лиды: все вкладки (маскировка оценок — отдельно). */
 	if (userSeesAllAnketaStreamBlocks(viewer.roles)) return true;
-	/** Без роли уровня A — не режем вкладки (нет stream-block контекста). */
 	if (!userIsRestrictedToOwnStreamBlocks(viewer.roles)) return true;
 	return (
 		rolesIntersectViewerAndBlock(viewer.roles, restrictions.streamBlockRoles) ||
 		streamsIntersectViewerAndBlock(viewer.streams, restrictions.streamExecutors)
 	);
+}
+
+/**
+ * Видимость вкладки в карточке.
+ * F-05 §2: Level A — жёсткий фильтр на **реестр/чужие анкеты**, а в доступной
+ * карточке — «полная детализация» (все стрим-блоки видны). Маскировка оценок
+ * для Level B — отдельно (`shouldMaskWorkEstimatesForUser`).
+ */
+export function isBlockVisibleForUser(
+	viewer: V2AnketaViewerAccessContext,
+	restrictions: V2AnketaBlockAccessRestrictions,
+): boolean {
+	if (!blockHasV2AnketaAccessRestrictions(restrictions)) return true;
+	if (userSeesAllAnketaStreamBlocks(viewer.roles)) return true;
+	/** Level A: вкладки не режем — только реестр фильтрует анкеты. */
+	if (userIsRestrictedToOwnStreamBlocks(viewer.roles)) return true;
+	return isBlockInViewerOwnStreamScope(viewer, restrictions);
 }
 
 export function isV2AnketaBlockVisibleForViewer(
@@ -312,7 +332,14 @@ export function collectRequiredWorkflowTargetsForViewer(
 	if (options?.applyAccessRules === false || !viewer) return targets;
 	return targets.filter((target) => {
 		const path = target.kind === "main" ? target.sectionId : target.pathKey;
-		return isV2AnketaBlockVisibleForViewer(viewer, uiSchema, path, options);
+		if (options?.applyAccessRules === false) return true;
+		if (!shouldApplyV2AnketaBlockAccessAtPath(uiSchema, path)) return true;
+		const restrictions = resolveV2AnketaBlockAccessRestrictionsForOutputPath(
+			uiSchema,
+			path,
+		);
+		/** Complete: Level A обязан только по «своим» блокам, даже если вкладки видны. */
+		return isBlockInViewerOwnStreamScope(viewer, restrictions);
 	});
 }
 

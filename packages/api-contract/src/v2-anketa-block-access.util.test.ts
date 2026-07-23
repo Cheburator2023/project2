@@ -44,7 +44,7 @@ describe("v2-anketa-block-access.util", () => {
 		);
 	});
 
-	it("hides block when role and stream do not match", () => {
+	it("shows all stream tabs for Level A (ds/de/modelops) — full card detail", () => {
 		const viewer: V2AnketaViewerAccessContext = {
 			roles: ["de"],
 			streams: [V2_IMPLEMENTATION_STREAM.DADM],
@@ -53,7 +53,7 @@ describe("v2-anketa-block-access.util", () => {
 			uiSchema,
 			"streamDataSources",
 		);
-		expect(isBlockVisibleForUser(viewer, restrictions)).toBe(false);
+		expect(isBlockVisibleForUser(viewer, restrictions)).toBe(true);
 	});
 
 	it("shows block when stream matches", () => {
@@ -142,7 +142,7 @@ describe("v2-anketa-block-access.util", () => {
 		).toBe(false);
 	});
 
-	it("excludes role-hidden stream panels from required complete targets", () => {
+	it("excludes non-own stream panels from required complete targets for Level A", () => {
 		const schema = {
 			generalInfo: {
 				"ui:options": { sectionRole: "main", workflowSectionId: "generalInfo" },

@@ -83,10 +83,10 @@ import { ensureFormulaTerms } from "./WorkTermsFormulaEditor";
 import {
 	analyzeTriggerRules,
 	DEFAULT_WORK_ARCH_COMPONENT_TYPE,
-	isWorkCoefficientValueAvailable,
 	resolveCanonicalWorkArchComponentType,
 	WORK_ARCH_COMPONENT_TYPES,
 } from "./typicalWorkPatchErrors";
+import { isWorkCoefficientValueAvailable } from "@smart-anketa/api-contract";
 import {
 	useTypicalWorkTriggerAnalysis,
 } from "./useTypicalWorkTriggerPreview";

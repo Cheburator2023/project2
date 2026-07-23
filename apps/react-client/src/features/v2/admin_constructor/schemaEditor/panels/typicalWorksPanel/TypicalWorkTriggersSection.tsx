@@ -37,6 +37,7 @@ import {
 	isSourceTypeTriggerParam,
 	isTriggerArchCountConfigured,
 	validateTriggerArchCountCondition,
+	isWorkTriggerGroupInvalid,
 } from "@smart-anketa/api-contract";
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
@@ -46,7 +47,6 @@ import AddIcon from "@mui/icons-material/Add";
 import TextField from "@mui/material/TextField";
 import {
 	catalogForTriggerRuleGroup,
-	isWorkTriggerGroupInvalid,
 	type TriggerValidationIssue,
 } from "./typicalWorkPatchErrors";
 import {

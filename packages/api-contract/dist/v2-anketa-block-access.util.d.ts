@@ -11,7 +11,8 @@ export declare const V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES: readonly ["ds_
 /** Валидатор / руководитель валидации — без оценок работ вообще. */
 export declare const V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES: readonly ["validator", "validator_lead"];
 /**
- * Уровень A (§2): жёсткий фильтр вкладок — только блоки своего стрима / роли.
+ * Уровень A (§2): жёсткий фильтр **реестра** (анкеты своего стрима).
+ * Вкладки в карточке не режутся — «полная детализация» (§2).
  * DS, DE, ModelOps, бизнес-партнёр стрима, аналитик качества данных стрима.
  */
 export declare const V2_ANKETA_OWN_STREAM_BLOCK_FILTER_ROLE_CODES: readonly ["ds", "de", "modelops", "da_stream", "mipm_stream", "data_expert"];
@@ -45,6 +46,17 @@ export declare function streamsIntersectViewerAndBlock(viewerStreams: readonly s
 export declare function resolveV2AnketaBlockAccessRestrictionsForOutputPath(uiSchema: unknown, outputPath: string): V2AnketaBlockAccessRestrictions;
 /** Нужно ли проверять доступ на этом пути (корневой streamBlock или arch work). */
 export declare function shouldApplyV2AnketaBlockAccessAtPath(uiSchema: unknown, outputPath: string): boolean;
+/**
+ * Блок «свой» для Level A (реестр / complete / правка секции).
+ * Пересечение роли или стрима с ограничениями блока.
+ */
+export declare function isBlockInViewerOwnStreamScope(viewer: V2AnketaViewerAccessContext, restrictions: V2AnketaBlockAccessRestrictions): boolean;
+/**
+ * Видимость вкладки в карточке.
+ * F-05 §2: Level A — жёсткий фильтр на **реестр/чужие анкеты**, а в доступной
+ * карточке — «полная детализация» (все стрим-блоки видны). Маскировка оценок
+ * для Level B — отдельно (`shouldMaskWorkEstimatesForUser`).
+ */
 export declare function isBlockVisibleForUser(viewer: V2AnketaViewerAccessContext, restrictions: V2AnketaBlockAccessRestrictions): boolean;
 export declare function isV2AnketaBlockVisibleForViewer(viewer: V2AnketaViewerAccessContext | undefined, uiSchema: unknown, outputPath: string, options?: {
     applyAccessRules?: boolean;

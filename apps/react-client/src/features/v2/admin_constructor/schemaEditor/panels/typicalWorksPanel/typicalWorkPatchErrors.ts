@@ -10,8 +10,6 @@ import type {
 	TypicalWorkTriggerMatchContext,
 } from "@smart-anketa/api-contract";
 import {
-	isWorkCoefficientValueAvailable,
-	isWorkTriggerGroupInvalid,
 	catalogValueMatchesTriggerRule,
 	isPresenceOnlyTriggerRule,
 	isAlwaysShownTriggerParam,
@@ -23,6 +21,7 @@ import {
 	type WorkTriggerStatusCatalogParam,
 	hasTypicalWorkTriggersConfigured,
 	validateTriggerFormulaTokens,
+	isWorkTriggerGroupInvalid,
 	type TriggerPreviewState,
 } from "@smart-anketa/api-contract";
 import {
@@ -479,5 +478,3 @@ export function computeTriggerStatus(
 		triggerMatchContext,
 	).status;
 }
-
-export { isWorkCoefficientValueAvailable, isWorkTriggerGroupInvalid };

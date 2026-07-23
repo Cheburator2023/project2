@@ -25,13 +25,13 @@ describe("v2-anketa-block-access.util", () => {
         expect(shouldApplyV2AnketaBlockAccessAtPath(uiSchema, "streamDataSources.sourceTypicalTasks")).toBe(true);
         expect(shouldApplyV2AnketaBlockAccessAtPath(uiSchema, "generalInfo")).toBe(false);
     });
-    it("hides block when role and stream do not match", () => {
+    it("shows all stream tabs for Level A (ds/de/modelops) — full card detail", () => {
         const viewer = {
             roles: ["de"],
             streams: [V2_IMPLEMENTATION_STREAM.DADM],
         };
         const restrictions = resolveV2AnketaBlockAccessRestrictionsForOutputPath(uiSchema, "streamDataSources");
-        expect(isBlockVisibleForUser(viewer, restrictions)).toBe(false);
+        expect(isBlockVisibleForUser(viewer, restrictions)).toBe(true);
     });
     it("shows block when stream matches", () => {
         const viewer = {
@@ -69,7 +69,7 @@ describe("v2-anketa-block-access.util", () => {
         expect(shouldMaskWorkEstimatesForUser(viewer, [V2_IMPLEMENTATION_STREAM.PIRM])).toBe(true);
         expect(shouldMaskWorkEstimatesForUser(viewer, [V2_IMPLEMENTATION_STREAM.DADM])).toBe(false);
     });
-    it("excludes role-hidden stream panels from required complete targets", () => {
+    it("excludes non-own stream panels from required complete targets for Level A", () => {
         const schema = {
             generalInfo: {
                 "ui:options": { sectionRole: "main", workflowSectionId: "generalInfo" },
@@ -100,7 +100,7 @@ describe("v2-anketa-block-access.util", () => {
         })).toEqual([
             { kind: "main", sectionId: "generalInfo" },
             { kind: "main", sectionId: "detailInfo" },
-            { kind: "panel", pathKey: "streamDataSources" },
+            { kind: "main", sectionId: "streamDataSources" },
         ]);
     });
     it("masks all estimates for validator", () => {
