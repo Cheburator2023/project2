@@ -129,15 +129,27 @@ export const V2_KEYCLOAK_GROUP_ROLE_TARGET: Record<string, readonly string[]> = 
 	],
 };
 
-export const V2_KEYCLOAK_GROUPS_TO_ENSURE: readonly string[] = [
-	"/mntranlst",
-	"/da",
-	"/da_stream",
-	"/auditorib",
-	"/appadmin",
-	"/prjtoffice",
-	"/project_office",
-];
+/** Все path из TARGET + родители, parents first (create-only). */
+function collectGroupPathsToEnsure(
+	target: Record<string, readonly string[]>,
+): readonly string[] {
+	const paths = new Set<string>();
+	for (const path of Object.keys(target)) {
+		const parts = path.split("/").filter(Boolean);
+		let cur = "";
+		for (const part of parts) {
+			cur += `/${part}`;
+			paths.add(cur);
+		}
+	}
+	return [...paths].sort(
+		(a, b) =>
+			a.split("/").length - b.split("/").length || a.localeCompare(b),
+	);
+}
+
+export const V2_KEYCLOAK_GROUPS_TO_ENSURE: readonly string[] =
+	collectGroupPathsToEnsure(V2_KEYCLOAK_GROUP_ROLE_TARGET);
 
 export const V2_KEYCLOAK_ROLES_TO_ENSURE = [
 	"anketa_view_all_calculations",

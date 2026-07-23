@@ -5,7 +5,7 @@
  *
  * Делает:
  *  1) создаёт недостающие realm roles anketa_* (в т.ч. anketa_complete_anketa);
- *  2) создаёт недостающие top-level группы (/mntranlst, /da, /da_stream, /auditorib, /appadmin, /prjtoffice);
+ *  2) создаёт недостающие группы из TARGET (в т.ч. /sacfg, nested lead-подгруппы);
  *  3) выставляет anketa_* realm-role mappings канонических групп ровно по TARGET.
  *
  * НЕ делает:
@@ -140,15 +140,23 @@ const TARGET = {
 	],
 };
 
-const GROUPS_TO_ENSURE = [
-	"/mntranlst",
-	"/da",
-	"/da_stream",
-	"/auditorib",
-	"/appadmin",
-	"/prjtoffice",
-	"/project_office",
-];
+/** Все path из TARGET + родители, parents first (create-only). */
+function collectGroupPathsToEnsure(target) {
+	const paths = new Set();
+	for (const path of Object.keys(target)) {
+		const parts = path.split("/").filter(Boolean);
+		let cur = "";
+		for (const part of parts) {
+			cur += `/${part}`;
+			paths.add(cur);
+		}
+	}
+	return [...paths].sort(
+		(a, b) => a.split("/").length - b.split("/").length || a.localeCompare(b),
+	);
+}
+
+const GROUPS_TO_ENSURE = collectGroupPathsToEnsure(TARGET);
 
 const ROLES_TO_ENSURE = [
 	"anketa_view_all_calculations",
@@ -311,26 +319,33 @@ function sortUniq(arr) {
 	let byPath = await loadGroupsByPath(t);
 
 	console.log("\n== Ensure groups (create-only, никого не удаляем) ==");
-	let createdAny = false;
 	for (const path of GROUPS_TO_ENSURE) {
 		if (byPath[path]) {
 			console.log(`  ok ${path}`);
 			continue;
 		}
 		console.log(`  CREATE ${path}`);
-		if (APPLY) {
-			try {
-				await api(t, "POST", "/groups", { name: path.replace(/^\//, "") });
-				createdAny = true;
-			} catch (e) {
-				const msg = String(e.message || e);
-				if (!msg.includes("409")) throw e;
-				console.log(`  (already exists) ${path}`);
-				createdAny = true;
+		if (!APPLY) continue;
+		const parts = path.split("/").filter(Boolean);
+		const name = parts[parts.length - 1];
+		try {
+			if (parts.length === 1) {
+				await api(t, "POST", "/groups", { name });
+			} else {
+				const parentPath = `/${parts.slice(0, -1).join("/")}`;
+				const parent = byPath[parentPath];
+				if (!parent?.id) {
+					throw new Error(`cannot create ${path}: missing parent ${parentPath}`);
+				}
+				await api(t, "POST", `/groups/${parent.id}/children`, { name });
 			}
+		} catch (e) {
+			const msg = String(e.message || e);
+			if (!msg.includes("409")) throw e;
+			console.log(`  (already exists) ${path}`);
 		}
+		byPath = await loadGroupsByPath(t);
 	}
-	if (APPLY) byPath = await loadGroupsByPath(t);
 
 	console.log("\n== Group role mappings ==");
 	for (const [path, desired] of Object.entries(TARGET)) {

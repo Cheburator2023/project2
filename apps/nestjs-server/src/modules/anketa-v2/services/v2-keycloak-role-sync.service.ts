@@ -474,17 +474,46 @@ export class V2KeycloakRoleSyncService {
 			args.token,
 		);
 
-		// Создаём недостающие top-level группы из матрицы (ничего не удаляем).
+		// Создаём недостающие группы из матрицы (parents first; ничего не удаляем).
 		const groupsCreated: string[] = [];
 		for (const path of V2_KEYCLOAK_GROUPS_TO_ENSURE) {
 			if (byPath[path]) continue;
 			groupsCreated.push(path);
 			if (!args.apply) continue;
-			await this.api(args.keycloakUrl, args.realm, args.token, "POST", "/groups", {
-				name: path.replace(/^\//, ""),
-			});
-		}
-		if (args.apply && groupsCreated.length) {
+
+			const parts = path.split("/").filter(Boolean);
+			const name = parts[parts.length - 1];
+			try {
+				if (parts.length === 1) {
+					await this.api(
+						args.keycloakUrl,
+						args.realm,
+						args.token,
+						"POST",
+						"/groups",
+						{ name },
+					);
+				} else {
+					const parentPath = `/${parts.slice(0, -1).join("/")}`;
+					const parent = byPath[parentPath];
+					if (!parent?.id) {
+						throw new ServiceUnavailableException(
+							`Нельзя создать ${path}: нет родителя ${parentPath}`,
+						);
+					}
+					await this.api(
+						args.keycloakUrl,
+						args.realm,
+						args.token,
+						"POST",
+						`/groups/${parent.id}/children`,
+						{ name },
+					);
+				}
+			} catch (e) {
+				const msg = String(e);
+				if (!msg.includes("409")) throw e;
+			}
 			byPath = await this.loadGroupsByPath(
 				args.keycloakUrl,
 				args.realm,
