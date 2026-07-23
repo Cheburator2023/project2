@@ -17,10 +17,16 @@ export function isFilledRequiredValue(value: unknown): boolean {
 }
 
 /**
- * Select/MUI кладут `""` в formData для незаполненных optional enum.
- * AJV тогда падает с «Выберите одно из значений» и Save остаётся disabled.
+ * Select/MUI/RJSF кладут `""` / `null` в formData для незаполненных optional.
+ * AJV тогда падает («Выберите одно из значений» / type) и Save остаётся disabled.
  * Required-ключи с пустой строкой оставляем — их ловит customValidate.
  */
+export function isUnsetOptionalValue(value: unknown): boolean {
+	if (value === null || value === undefined) return true;
+	if (typeof value === "string" && value.trim().length === 0) return true;
+	return false;
+}
+
 export function omitUnsetOptionalFields(
 	formData: Record<string, unknown>,
 	schema: RJSFSchema,
@@ -28,11 +34,7 @@ export function omitUnsetOptionalFields(
 	const required = new Set(collectRequiredFieldKeys(schema));
 	const next: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(formData)) {
-		if (
-			!required.has(key) &&
-			typeof value === "string" &&
-			value.trim().length === 0
-		) {
+		if (!required.has(key) && isUnsetOptionalValue(value)) {
 			continue;
 		}
 		next[key] = value;
@@ -87,5 +89,26 @@ export function isAnketaModalFormValid(
 		undefined,
 		uiSchema,
 	);
-	return errors.length === 0;
+	if (errors.length === 0) return true;
+
+	/**
+	 * Запасной путь: иногда schema/uiSchema тянут dependentRequired /
+	 * лишние ключи. Для Save достаточно required + валидность явно
+	 * заполненных optional (без «пустых» значений).
+	 */
+	const props =
+		schema.properties && typeof schema.properties === "object"
+			? (schema.properties as Record<string, RJSFSchema>)
+			: {};
+	const lean: RJSFSchema = {
+		type: "object",
+		properties: props,
+		required: collectRequiredFieldKeys(schema),
+	};
+	const { errors: leanErrors } = validatorRu.validateFormData(
+		sanitized,
+		lean,
+		customValidate,
+	);
+	return leanErrors.length === 0;
 }

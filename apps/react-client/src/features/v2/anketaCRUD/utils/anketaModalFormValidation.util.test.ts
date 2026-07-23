@@ -91,6 +91,12 @@ describe("anketaModalFormValidation.util", () => {
 		expect(
 			omitUnsetOptionalFields({ name: "", type: "" }, sourceLikeSchema),
 		).toEqual({ name: "" });
+		expect(
+			omitUnsetOptionalFields(
+				{ name: "CRM", type: null, risk: undefined },
+				sourceLikeSchema,
+			),
+		).toEqual({ name: "CRM" });
 	});
 
 	it("allows save when required name is set and optional enums are empty strings", () => {
