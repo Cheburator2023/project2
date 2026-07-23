@@ -9,9 +9,31 @@ GET http://localhost:8080/proxy/smart-anketa-frontend/remoteEntry.js 404
 
 при том что `http://localhost:8004/remoteEntry.js` открывается.
 
-**Причина:** shell на `:8080` не проксирует `/proxy/smart-anketa-frontend` на локальный webpack. Это настройка **хоста (СУМ shell)**, не баг remoteEntry на 8004.
+**Причина:** shell на `:8080` не проксирует `/proxy/smart-anketa-frontend` на локальный webpack/vite. Это настройка **хоста (СУМ shell)**, не баг remoteEntry на 8004.
 
 Ошибки `sum-rm-frontend` / `sum-frontend` / `data-lineage-frontend` — то же самое для других MFE (их тоже нет за proxy).
+
+---
+
+## Vite: remoteEntry vs React Router
+
+В `vite serve` Module Federation **включён** — `http://localhost:8004/remoteEntry.js` должен отдавать JS, а не `index.html`/роутер.
+
+Проверка:
+
+```bash
+curl -sI http://localhost:8004/remoteEntry.js | head
+# content-type: …javascript (не text/html)
+```
+
+Для shell с CORS/origin:
+
+```bash
+npm run dev:vite:shell
+# MF_SHELL=1 → server.origin=http://localhost:8004 + CORS *
+```
+
+> Webpack-host shell обычно ждёт **var**-контейнер. Надёжный вариант под СУМ shell — `npm run dev:webpack:shell`. Vite remoteEntry — ESM (удобно для MF/vite-host).
 
 ---
 
@@ -23,6 +45,9 @@ GET http://localhost:8080/proxy/smart-anketa-frontend/remoteEntry.js 404
 cd apps/react-client
 npm run dev:webpack:shell
 # → http://localhost:8004/remoteEntry.js + CORS + publicPath http://localhost:8004/
+
+# или vite (ESM remote):
+npm run dev:vite:shell
 ```
 
 2. В конфиге remotes shell (локальный override / `IS_LOCAL_START`) указать:
@@ -75,6 +100,6 @@ npm run dev:webpack:shell:proxy
 | Проверка | Ожидание |
 |----------|----------|
 | `curl -I http://localhost:8004/remoteEntry.js` | 200, `content-type: …javascript` |
-| `Access-Control-Allow-Origin` на 8004 | `*` (dev:webpack:shell) |
+| `Access-Control-Allow-Origin` на 8004 | `*` (dev:webpack:shell / dev:vite:shell) |
 | Запрос remote из Network на странице 8080 | 200, не `/proxy/...` 404 (если вариант A) |
 | Backend API | Nest на `:3000` / как в urlConfig shell |

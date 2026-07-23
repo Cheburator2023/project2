@@ -1,5 +1,5 @@
 import child_process from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
@@ -18,6 +18,11 @@ const publicEnvVars: any[] = [];
 const STAGE = process.env.STAGE;
 const IS_DEV = process.env.NODE_ENV === "development";
 const NO_ROLES = process.env.NO_ROLES;
+/** Shell на :8080 грузит remote с :8004 — нужен absolute origin + CORS. */
+const MF_SHELL = process.env.MF_SHELL === "1";
+const DEV_ORIGIN =
+	process.env.VITE_DEV_ORIGIN ||
+	(MF_SHELL || IS_DEV ? "http://localhost:8004" : undefined);
 
 const ROOT_DIR = path.resolve(__dirname, "./");
 const DIST_DIR = path.resolve(ROOT_DIR, "./dist");
@@ -98,6 +103,59 @@ function jsonLogicEsmInteropPlugin() {
 	};
 }
 
+/**
+ * Убирает зависшие deps_temp_* до старта optimizeDeps.
+ * Иначе браузер ловит 404 на chunk-*.js при том же ?v=browserHash.
+ */
+function cleanOrphanViteDepsTempPlugin(cacheDir: string) {
+	return {
+		name: "clean-orphan-vite-deps-temp",
+		buildStart() {
+			if (!existsSync(cacheDir)) return;
+			for (const name of readdirSync(cacheDir)) {
+				if (!name.startsWith("deps_temp_")) continue;
+				rmSync(path.join(cacheDir, name), { recursive: true, force: true });
+			}
+		},
+	};
+}
+
+/**
+ * @module-federation/vite отдаёт remoteEntry.js с Content-Type: text/html —
+ * shell/script tag и проверка curl ломаются; SPA-роут выглядит как «попали в React».
+ */
+function remoteEntryMimePlugin() {
+	return {
+		name: "remote-entry-javascript-mime",
+		configureServer(server: { middlewares: { use: Function } }) {
+			server.middlewares.use(
+				(
+					req: { url?: string },
+					res: {
+						setHeader: (name: string, value: string) => void;
+					},
+					next: () => void,
+				) => {
+					const url = req.url?.split("?")[0] ?? "";
+					if (url === "/remoteEntry.js" || url.endsWith("/remoteEntry.js")) {
+						const originalSetHeader = res.setHeader.bind(res);
+						res.setHeader = (name: string, value: string) => {
+							if (String(name).toLowerCase() === "content-type") {
+								return originalSetHeader(
+									"Content-Type",
+									"application/javascript",
+								);
+							}
+							return originalSetHeader(name, value);
+						};
+					}
+					next();
+				},
+			);
+		},
+	};
+}
+
 export const viteCommonConfig = ({
 	appName,
 	base = "/",
@@ -155,37 +213,21 @@ export const viteCommonConfig = ({
 				},
 			},
 
-			// resolve: {
-			// 	alias: {
-			// 	  '@smart-anketa/api-contract': '../../node_modules/@smart-anketa/api-contract/dist/index.js'
-			// 	}
-			// },
-
 			plugins: [
+				cleanOrphanViteDepsTempPlugin(
+					fileURLToPath(new URL("./.cache/vite-app", import.meta.url)),
+				),
+				remoteEntryMimePlugin(),
 				jsonLogicEsmInteropPlugin(),
-				// {
-				//   name: 'deep-index',
-				//   configureServer(server) {
-				//     server.middlewares.use((req, res, next) => {
-				//       if (req.url === '/') {
-				//         req.url = '/public/index.html';
-				//       }
-				//       next();
-				//     });
-				//   },
-				// },
-				...(!IS_DEV
-					? [
-							federation({
-								name: APP_NAME,
-								filename: "remoteEntry.js",
-								exposes: {
-									"./App": "./src/indexFederated",
-								},
-								shared: [],
-							}),
-						]
-					: []),
+				// remoteEntry.js нужен и в vite serve (shell :8080), не только в prod build.
+				federation({
+					name: APP_NAME,
+					filename: "remoteEntry.js",
+					exposes: {
+						"./App": "./src/indexFederated",
+					},
+					shared: {},
+				}),
 				tsconfigPaths(),
 				nodePolyfills({
 					// To add only specific polyfills, add them here. If no option is passed, adds all polyfills
@@ -198,15 +240,7 @@ export const viteCommonConfig = ({
 						focusable: "{false}",
 					},
 				}),
-				// viteStaticCopy({
-				//   targets: [{}],
-				// }),
 				checker({
-					// biome: {
-					// 	dev: {
-					// 		logLevel: ["error"],
-					// 	},
-					// },
 					typescript: true,
 					overlay: {
 						initialIsOpen: false,
@@ -240,11 +274,18 @@ export const viteCommonConfig = ({
 
 			server: {
 				// host: "www.test.vtb.ru",
+				...(DEV_ORIGIN ? { origin: DEV_ORIGIN } : {}),
 				fs: {
 					strict: false,
 					cachedChecks: false,
 				},
 				port: 8004,
+				cors: true,
+				headers: {
+					"Access-Control-Allow-Origin": "*",
+					"Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+					"Access-Control-Allow-Headers": "*",
+				},
 				hmr: {
 					overlay: false,
 				},
