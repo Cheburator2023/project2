@@ -4,8 +4,12 @@
 	"private": true,
 	"scripts": {
 		"dev": "npm run dev:vite",
+		"vite:ensure-deps": "node ./scripts/ensure-vite-deps-cache.mjs",
+		"predev:god": "npm run vite:ensure-deps",
+		"predev:vite": "npm run vite:ensure-deps",
 		"dev:god": "cross-env NODE_ENV=development NO_ROLES=true vite serve",
 		"dev:vite": "cross-env NODE_ENV=development vite serve",
+		"dev:god:force": "cross-env NODE_ENV=development NO_ROLES=true VITE_FORCE_DEPS=1 npm run vite:ensure-deps && cross-env NODE_ENV=development NO_ROLES=true vite serve --force",
 		"build:vite": "cross-env NODE_ENV=production vite build",
 		"start:vite": "serve -s build",
 		"serve:vite": "npm run build:vite && PORT=8004 npx serve ./dist",

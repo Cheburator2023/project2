@@ -1,5 +1,6 @@
 import { V2_IMPLEMENTATION_STREAM } from "./v2-implementation-streams.util";
 import {
+	collectRequiredWorkflowTargetsForViewer,
 	isBlockVisibleForUser,
 	resolveV2AnketaBlockAccessRestrictionsForOutputPath,
 	shouldApplyV2AnketaBlockAccessAtPath,
@@ -89,6 +90,93 @@ describe("v2-anketa-block-access.util", () => {
 				).streamExecutors,
 			),
 		).toBe(false);
+	});
+
+	it("shows all stream tabs for sacfg (level C) without own stream", () => {
+		const viewer: V2AnketaViewerAccessContext = {
+			roles: ["sacfg"],
+			streams: [],
+		};
+		expect(
+			isBlockVisibleForUser(
+				viewer,
+				resolveV2AnketaBlockAccessRestrictionsForOutputPath(
+					uiSchema,
+					"streamPirm",
+				),
+			),
+		).toBe(true);
+		expect(
+			isBlockVisibleForUser(
+				viewer,
+				resolveV2AnketaBlockAccessRestrictionsForOutputPath(
+					uiSchema,
+					"streamDataSources",
+				),
+			),
+		).toBe(true);
+		expect(
+			shouldMaskWorkEstimatesForUser(viewer, [V2_IMPLEMENTATION_STREAM.PIRM]),
+		).toBe(false);
+	});
+
+	it("shows all stream tabs for sarep (level B) and masks foreign estimates", () => {
+		const viewer: V2AnketaViewerAccessContext = {
+			roles: ["sarep"],
+			streams: [V2_IMPLEMENTATION_STREAM.DADM],
+		};
+		expect(
+			isBlockVisibleForUser(
+				viewer,
+				resolveV2AnketaBlockAccessRestrictionsForOutputPath(
+					uiSchema,
+					"streamPirm",
+				),
+			),
+		).toBe(true);
+		expect(
+			shouldMaskWorkEstimatesForUser(viewer, [V2_IMPLEMENTATION_STREAM.PIRM]),
+		).toBe(true);
+		expect(
+			shouldMaskWorkEstimatesForUser(viewer, [V2_IMPLEMENTATION_STREAM.DADM]),
+		).toBe(false);
+	});
+
+	it("excludes role-hidden stream panels from required complete targets", () => {
+		const schema = {
+			generalInfo: {
+				"ui:options": { sectionRole: "main", workflowSectionId: "generalInfo" },
+			},
+			detailInfo: {
+				"ui:options": { sectionRole: "main", workflowSectionId: "detailInfo" },
+			},
+			streamDataSources: {
+				"ui:options": {
+					streamBlock: true,
+					streamExecutor: V2_IMPLEMENTATION_STREAM.IDSRC,
+					streamBlockRoles: ["ds"],
+				},
+			},
+			streamPirm: {
+				"ui:options": {
+					streamBlock: true,
+					streamExecutor: V2_IMPLEMENTATION_STREAM.PIRM,
+				},
+			},
+		};
+		const dsViewer: V2AnketaViewerAccessContext = {
+			roles: ["ds"],
+			streams: [V2_IMPLEMENTATION_STREAM.IDSRC],
+		};
+		expect(
+			collectRequiredWorkflowTargetsForViewer(schema, {}, dsViewer, {
+				applyAccessRules: true,
+			}),
+		).toEqual([
+			{ kind: "main", sectionId: "generalInfo" },
+			{ kind: "main", sectionId: "detailInfo" },
+			{ kind: "main", sectionId: "streamDataSources" },
+		]);
 	});
 
 	it("masks all estimates for validator", () => {

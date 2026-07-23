@@ -1,6 +1,6 @@
 import {
 	allRequiredSectionsCompleted,
-	collectRequiredWorkflowTargets,
+	collectRequiredWorkflowTargetsForViewer,
 	completeGlobalQuestionnaire,
 	completePanelSection,
 	completeSection,
@@ -10,6 +10,7 @@ import {
 	markSectionInProgress,
 	normalizeV2AnketaWorkflow,
 	type V2AnketaMainSectionId,
+	type V2AnketaViewerAccessContext,
 	type V2AnketaWorkflowDto,
 } from "@smart-anketa/api-contract";
 import { useCallback, useMemo } from "react";
@@ -51,16 +52,21 @@ export function useAnketaWorkflow(
 	formData: Record<string, unknown>,
 	setFormData: (next: Record<string, unknown>) => void,
 	uiSchema?: unknown,
+	viewerAccess?: V2AnketaViewerAccessContext & {
+		applyAccessRules?: boolean;
+	},
 ) {
 	const workflow = useMemo(() => readWorkflowFromFormData(formData), [formData]);
 	const globallyLocked = isAnketaGloballyLocked(workflow);
-	const requiredTargets = useMemo(
-		() =>
-			uiSchema
-				? collectRequiredWorkflowTargets(uiSchema, formData)
-				: undefined,
-		[uiSchema, formData],
-	);
+	const requiredTargets = useMemo(() => {
+		if (!uiSchema) return undefined;
+		return collectRequiredWorkflowTargetsForViewer(
+			uiSchema,
+			formData,
+			viewerAccess,
+			{ applyAccessRules: viewerAccess?.applyAccessRules !== false },
+		);
+	}, [uiSchema, formData, viewerAccess]);
 	const allSectionsCompleted = useMemo(
 		() => allRequiredSectionsCompleted(workflow, requiredTargets),
 		[workflow, requiredTargets],

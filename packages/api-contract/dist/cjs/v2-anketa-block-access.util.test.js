@@ -53,6 +53,58 @@ const uiSchema = {
         (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.shouldMaskWorkEstimatesForUser)(viewer, pirmRestrictions.streamExecutors)).toBe(true);
         (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.shouldMaskWorkEstimatesForUser)(viewer, (0, v2_anketa_block_access_util_1.resolveV2AnketaBlockAccessRestrictionsForOutputPath)(uiSchema, "streamDataSources").streamExecutors)).toBe(false);
     });
+    (0, vitest_1.it)("shows all stream tabs for sacfg (level C) without own stream", () => {
+        const viewer = {
+            roles: ["sacfg"],
+            streams: [],
+        };
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.isBlockVisibleForUser)(viewer, (0, v2_anketa_block_access_util_1.resolveV2AnketaBlockAccessRestrictionsForOutputPath)(uiSchema, "streamPirm"))).toBe(true);
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.isBlockVisibleForUser)(viewer, (0, v2_anketa_block_access_util_1.resolveV2AnketaBlockAccessRestrictionsForOutputPath)(uiSchema, "streamDataSources"))).toBe(true);
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.shouldMaskWorkEstimatesForUser)(viewer, [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM])).toBe(false);
+    });
+    (0, vitest_1.it)("shows all stream tabs for sarep (level B) and masks foreign estimates", () => {
+        const viewer = {
+            roles: ["sarep"],
+            streams: [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DADM],
+        };
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.isBlockVisibleForUser)(viewer, (0, v2_anketa_block_access_util_1.resolveV2AnketaBlockAccessRestrictionsForOutputPath)(uiSchema, "streamPirm"))).toBe(true);
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.shouldMaskWorkEstimatesForUser)(viewer, [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM])).toBe(true);
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.shouldMaskWorkEstimatesForUser)(viewer, [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DADM])).toBe(false);
+    });
+    (0, vitest_1.it)("excludes role-hidden stream panels from required complete targets", () => {
+        const schema = {
+            generalInfo: {
+                "ui:options": { sectionRole: "main", workflowSectionId: "generalInfo" },
+            },
+            detailInfo: {
+                "ui:options": { sectionRole: "main", workflowSectionId: "detailInfo" },
+            },
+            streamDataSources: {
+                "ui:options": {
+                    streamBlock: true,
+                    streamExecutor: v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC,
+                    streamBlockRoles: ["ds"],
+                },
+            },
+            streamPirm: {
+                "ui:options": {
+                    streamBlock: true,
+                    streamExecutor: v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM,
+                },
+            },
+        };
+        const dsViewer = {
+            roles: ["ds"],
+            streams: [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC],
+        };
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.collectRequiredWorkflowTargetsForViewer)(schema, {}, dsViewer, {
+            applyAccessRules: true,
+        })).toEqual([
+            { kind: "main", sectionId: "generalInfo" },
+            { kind: "main", sectionId: "detailInfo" },
+            { kind: "panel", pathKey: "streamDataSources" },
+        ]);
+    });
     (0, vitest_1.it)("masks all estimates for validator", () => {
         const viewer = {
             roles: ["validator"],

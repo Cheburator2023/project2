@@ -122,6 +122,8 @@ export function AnketaFormShell({
 	const engine = engineProp ?? internalEngine;
 	const setFormData = (next: Record<string, unknown>) =>
 		engine.setFormData(next);
+	/** Ролевая видимость блоков: скрытые секции не входят в allSectionsCompleted. */
+	const viewerAccess = useAnketaViewerAccess(!debouncePreviewInputs);
 	const {
 		workflow,
 		globallyLocked,
@@ -134,6 +136,7 @@ export function AnketaFormShell({
 		engine.formData,
 		setFormData,
 		engine.previewUiSchema,
+		viewerAccess,
 	);
 	/** Без create/edit поля только для чтения (матрица F-05: saprg и т.п.). */
 	const permissionReadOnly = questionnaireId
@@ -229,7 +232,6 @@ export function AnketaFormShell({
 		}
 	}, [completeDialogOpen, completeDialogPhase, onSave, workflow.globalStatus]);
 
-	const viewerAccess = useAnketaViewerAccess(!debouncePreviewInputs);
 	const hideWorkEstimates = userMasksAllWorkEstimates(viewerAccess.roles);
 
 	const confirmHold = useCallback(() => {
