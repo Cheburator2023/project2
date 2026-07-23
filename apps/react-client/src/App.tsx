@@ -13,6 +13,7 @@ import {
 	keycloakUserMemoKey,
 	normalizeKeycloakUser,
 } from "@react-client/common/auth/keycloakUserText.util";
+import { applyKeycloakUserToStore } from "@react-client/common/auth/applyKeycloakUserToStore";
 import { ErrorBoundary } from "@react-client/common/errors/ErrorBoundary";
 import { ErrorPage } from "@react-client/common/errors/pages/ErrorPage";
 import { performMfeLogout } from "@react-client/common/auth/syncMfeAuth";
@@ -98,8 +99,10 @@ const App: React.FC<LayoutProps> = (props) => {
 		if (bridged) return;
 		const nextUser = isEmpty(user) ? undefined : user;
 		const currentUser = useGlobalSettingsStore.getState().user;
-		if (isSameKeycloakUser(currentUser, nextUser)) return;
-		setUser(nextUser);
+		if (!isSameKeycloakUser(currentUser, nextUser)) {
+			setUser(nextUser);
+		}
+		applyKeycloakUserToStore(nextUser);
 	}, [bridged, user, setUser]);
 
 	useEffect(() => {

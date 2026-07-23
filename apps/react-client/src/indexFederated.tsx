@@ -4,17 +4,15 @@ import "@fontsource/inter/500.css";
 import "@fontsource/inter/600.css";
 import "@fontsource/inter/700.css";
 import { AuthProvider } from "@react-client/common/providers/AuthProvider";
+import { applyKeycloakUserToStore } from "@react-client/common/auth/applyKeycloakUserToStore";
 import {
 	getKeycloakUserDisplayName,
 	isSameKeycloakUser,
 	keycloakUserMemoKey,
 	normalizeKeycloakUser,
 } from "@react-client/common/auth/keycloakUserText.util";
-import { useUserStore } from "@react-client/common/store/userStore";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import { globalStyles } from "@react-client/theme/GlobalStyle";
-import { Permission, Role } from "@react-client/types/roles";
-import { normalizeV2UserGroups } from "@smart-anketa/api-contract";
 import { useEffect, useMemo } from "react";
 import type { T_CONFIG_MAP, T_KEYCLOAK_USER } from "types";
 import App from "./App";
@@ -222,7 +220,6 @@ const MfeRoot = (props: Props) => {
 	}, [props, user]);
 
 	const { setUser } = useGlobalSettingsStore();
-	const { setUsername, setGroups, setRoles, setPermissions } = useUserStore();
 
 	useEffect(() => {
 		const currentUser = useGlobalSettingsStore.getState().user;
@@ -231,40 +228,8 @@ const MfeRoot = (props: Props) => {
 	}, [user, setUser]);
 
 	useEffect(() => {
-		if (!user) {
-			setUsername("");
-			setGroups([]);
-			setRoles([]);
-			setPermissions([]);
-			return;
-		}
-
-		if (user.preferred_username) {
-			setUsername(user.preferred_username);
-		}
-
-		if (user.groups) {
-			setGroups(user.groups);
-
-			const roleValues = new Set(Object.values(Role) as string[]);
-			const roles = [
-				...new Set(
-					normalizeV2UserGroups(user.groups).filter((group) =>
-						roleValues.has(group),
-					),
-				),
-			] as Role[];
-			setRoles(roles);
-		}
-
-		if (user.realm_access?.roles) {
-			const permissions = user.realm_access.roles.filter((permission) =>
-				Object.values(Permission).includes(permission as Permission),
-			) as Permission[];
-
-			setPermissions(permissions);
-		}
-	}, [user, setUsername, setGroups, setRoles, setPermissions]);
+		applyKeycloakUserToStore(user);
+	}, [user]);
 
 	return (
 		<AuthProvider

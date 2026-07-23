@@ -11,6 +11,9 @@ type PermissionsShape = ReturnType<typeof usePermissions>;
  * - редиректа с корня `/`;
  * - заглушки «Для вас нет доступных страниц в приложении», когда список пуст
  *   (Бизнес-заказчик, Сотрудник Проектного офиса — view_list ❌ по матрице F-05).
+ *
+ * Трекер — в конце: в development `canAccessTracker` всегда true, и до гидрации
+ * permissions редирект на `/` иначе уводил в `/tracker/projects` вместо реестра.
  */
 export function getAccessiblePages(p: PermissionsShape): AccessiblePage[] {
 	const pages: AccessiblePage[] = [];
