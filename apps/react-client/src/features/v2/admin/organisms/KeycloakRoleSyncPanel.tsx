@@ -407,6 +407,10 @@ export function KeycloakRoleSyncPanel() {
 						{mode === "backup" ? (
 							<Flex flexDirection="column" gap={4}>
 								<Typography variant="subtitle2">Секции бекапа</Typography>
+								<Typography variant="caption" color="text.secondary">
+									«Realm roles» — справочник ролей realm. «Roles групп /
+									юзеров» — кому эти роли назначены.
+								</Typography>
 								<FormControlLabel
 									control={
 										<Checkbox
@@ -417,7 +421,20 @@ export function KeycloakRoleSyncPanel() {
 											disabled={pending}
 										/>
 									}
-									label="Realm roles"
+									label={
+										<span>
+											Realm roles — справочник
+											<Typography
+												component="span"
+												variant="caption"
+												color="text.secondary"
+												display="block"
+											>
+												какие роли существуют в realm (имя, description,
+												composite), не назначения
+											</Typography>
+										</span>
+									}
 								/>
 								<FormControlLabel
 									control={
@@ -454,7 +471,20 @@ export function KeycloakRoleSyncPanel() {
 												disabled={pending || !backupInclude.groups}
 											/>
 										}
-										label="realm roles групп"
+										label={
+											<span>
+												realm roles групп
+												<Typography
+													component="span"
+													variant="caption"
+													color="text.secondary"
+													display="block"
+												>
+													роли, повешенные на группу (юзеры наследуют через
+													membership)
+												</Typography>
+											</span>
+										}
 									/>
 									<FormControlLabel
 										control={
@@ -531,7 +561,20 @@ export function KeycloakRoleSyncPanel() {
 												disabled={pending || !backupInclude.users}
 											/>
 										}
-										label="realm roles юзеров"
+										label={
+											<span>
+												realm roles юзеров
+												<Typography
+													component="span"
+													variant="caption"
+													color="text.secondary"
+													display="block"
+												>
+													какие роли назначены юзеру (direct + effective через
+													группы)
+												</Typography>
+											</span>
+										}
 									/>
 								</Flex>
 								{!hasBackupSection ? (

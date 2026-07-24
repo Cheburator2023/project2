@@ -557,8 +557,17 @@ export class V2KeycloakRoleSyncService {
 		return out;
 	}
 
+	private flattenGroups(nodes: KcGroup[] | undefined, acc: KcGroup[] = []) {
+		for (const g of nodes || []) {
+			acc.push(g);
+			if (g.subGroups?.length) this.flattenGroups(g.subGroups, acc);
+		}
+		return acc;
+	}
+
 	/**
-	 * Top-level + children (KC часто не отдаёт полное дерево в /groups).
+	 * Дерево групп через `/groups` + flatten subGroups.
+	 * GET `/groups/{id}/children` на старых KC (SUMD) → 405 — не используем.
 	 */
 	private async loadGroupsByPath(
 		keycloakUrl: string,
@@ -566,41 +575,22 @@ export class V2KeycloakRoleSyncService {
 		token: string,
 	): Promise<Record<string, KcGroup>> {
 		const byPath: Record<string, KcGroup> = {};
-		const queue: KcGroup[] = [];
+		const pageSize = 100;
 
-		for (let first = 0; ; first += 100) {
+		for (let first = 0; ; first += pageSize) {
 			const batch =
 				(await this.api<KcGroup[]>(
 					keycloakUrl,
 					realm,
 					token,
 					"GET",
-					`/groups?briefRepresentation=false&first=${first}&max=100`,
+					`/groups?briefRepresentation=false&first=${first}&max=${pageSize}`,
 				)) || [];
 			if (!batch.length) break;
-			queue.push(...batch);
-			if (batch.length < 100) break;
-		}
-
-		while (queue.length) {
-			const g = queue.shift()!;
-			if (!g.path || byPath[g.path]) continue;
-			byPath[g.path] = g;
-
-			if (g.subGroups?.length) {
-				queue.push(...g.subGroups);
-				continue;
+			for (const g of this.flattenGroups(batch)) {
+				if (g?.path) byPath[g.path] = g;
 			}
-
-			const children =
-				(await this.api<KcGroup[]>(
-					keycloakUrl,
-					realm,
-					token,
-					"GET",
-					`/groups/${g.id}/children?briefRepresentation=false&max=1000`,
-				)) || [];
-			if (children.length) queue.push(...children);
+			if (batch.length < pageSize) break;
 		}
 
 		return byPath;
