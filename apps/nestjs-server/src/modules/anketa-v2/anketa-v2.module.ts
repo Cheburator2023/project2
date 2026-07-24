@@ -15,6 +15,7 @@ import { V2TemplateService } from "./services/v2-template.service";
 import { V2TemplateVersionService } from "./services/v2-template-version.service";
 import { V2DictionaryService } from "./services/v2-dictionary.service";
 import { V2DictionarySeedService } from "./services/v2-dictionary-seed.service";
+import { V2TemplateSeedService } from "./services/v2-template-seed.service";
 import { V2AuditService } from "./services/v2-audit.service";
 import { V2FactorySnapshotController } from "./controllers/v2-factory-snapshot.controller";
 import { V2TemplateController } from "./controllers/v2-template.controller";
@@ -90,6 +91,7 @@ import { V2KeycloakRoleSyncService } from "./services/v2-keycloak-role-sync.serv
 		V2TemplateVersionService,
 		V2DictionaryService,
 		V2DictionarySeedService,
+		V2TemplateSeedService,
 		V2AuditService,
 		V2CalculationService,
 		V2QuestionnaireService,
