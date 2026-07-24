@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+# [1.42.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.41.0...v1.42.0) (2026-07-24)
+
+
+### Features
+
+* add restore functionality for Keycloak role synchronization ([eee790e](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/eee790e02bd86a26c6b6c97d9c5e74814a1c9fc8))
+* implement stream filter toggle and enhance Keycloak role sync ([b5e2a7b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/b5e2a7b48776dd2d438822984180f9ef5759bfa6))
+
 # [1.41.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.40.0...v1.41.0) (2026-07-24)
 
 
